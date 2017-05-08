@@ -668,6 +668,12 @@ TARGET_BUILTIN(__builtin_ia32_pext_si, "UiUiUi", "", "bmi2")
 // TBM
 TARGET_BUILTIN(__builtin_ia32_bextri_u32, "UiUiIUi", "", "tbm")
 
+// LWP
+TARGET_BUILTIN(__builtin_ia32_llwpcb, "vv*", "", "lwp")
+TARGET_BUILTIN(__builtin_ia32_slwpcb, "v*", "", "lwp")
+TARGET_BUILTIN(__builtin_ia32_lwpins32, "UcUiUiUi", "", "lwp")
+TARGET_BUILTIN(__builtin_ia32_lwpval32, "vUiUiUi", "", "lwp")
+
 // SHA
 TARGET_BUILTIN(__builtin_ia32_sha1rnds4, "V4iV4iV4iIc", "", "sha")
 TARGET_BUILTIN(__builtin_ia32_sha1nexte, "V4iV4iV4i", "", "sha")

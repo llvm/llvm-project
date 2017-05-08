@@ -31561,20 +31561,22 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 //   (sub (xor X, M), M)
 static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
                                             const X86Subtarget &Subtarget) {
-  assert(N->getOpcode() == ISD::OR);
+  assert(N->getOpcode() == ISD::OR && "Unexpected Opcode");
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
 
-  if (!((VT == MVT::v2i64) || (VT == MVT::v4i64 && Subtarget.hasInt256())))
+  if (!((VT.is128BitVector() && Subtarget.hasSSE2()) ||
+        (VT.is256BitVector() && Subtarget.hasInt256())))
     return SDValue();
-  assert(Subtarget.hasSSE2() && "Unexpected i64 vector without SSE2!");
 
-  // Canonicalize pandn to RHS
-  if (N0.getOpcode() == X86ISD::ANDNP)
+  // Canonicalize AND to LHS.
+  if (N1.getOpcode() == ISD::AND)
     std::swap(N0, N1);
 
+  // TODO: Attempt to match against AND(XOR(-1,X),Y) as well, waiting for
+  // ANDNP combine allows other combines to happen that prevent matching.
   if (N0.getOpcode() != ISD::AND || N1.getOpcode() != X86ISD::ANDNP)
     return SDValue();
 
@@ -31596,20 +31598,10 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
   Y = peekThroughBitcasts(Y);
 
   EVT MaskVT = Mask.getValueType();
-
-  // Validate that the Mask operand is a vector sra node.
-  // FIXME: what to do for bytes, since there is a psignb/pblendvb, but
-  // there is no psrai.b
   unsigned EltBits = MaskVT.getScalarSizeInBits();
-  unsigned SraAmt = ~0;
-  if (Mask.getOpcode() == ISD::SRA) {
-    if (auto *AmtBV = dyn_cast<BuildVectorSDNode>(Mask.getOperand(1)))
-      if (auto *AmtConst = AmtBV->getConstantSplatNode())
-        SraAmt = AmtConst->getZExtValue();
-  } else if (Mask.getOpcode() == X86ISD::VSRAI)
-    SraAmt = Mask.getConstantOperandVal(1);
 
-  if ((SraAmt + 1) != EltBits)
+  // TODO: Attempt to handle floating point cases as well?
+  if (!MaskVT.isInteger() || DAG.ComputeNumSignBits(Mask) != EltBits)
     return SDValue();
 
   SDLoc DL(N);
@@ -31630,7 +31622,8 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
   //   (add (xor X, M), (and M, 1))
   // And further to:
   //   (sub (xor X, M), M)
-  if (X.getValueType() == MaskVT && Y.getValueType() == MaskVT) {
+  if (X.getValueType() == MaskVT && Y.getValueType() == MaskVT &&
+      DAG.getTargetLoweringInfo().isOperationLegal(ISD::SUB, MaskVT)) {
     auto IsNegV = [](SDNode *N, SDValue V) {
       return N->getOpcode() == ISD::SUB && N->getOperand(1) == V &&
         ISD::isBuildVectorAllZeros(N->getOperand(0).getNode());
@@ -31642,9 +31635,6 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
       V = Y;
 
     if (V) {
-      if (EltBits != 8 && EltBits != 16 && EltBits != 32)
-        return SDValue();
-
       SDValue SubOp1 = DAG.getNode(ISD::XOR, DL, MaskVT, V, Mask);
       SDValue SubOp2 = Mask;
 
@@ -31661,8 +31651,8 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
       if (V == Y)
          std::swap(SubOp1, SubOp2);
 
-      return DAG.getBitcast(VT,
-                            DAG.getNode(ISD::SUB, DL, MaskVT, SubOp1, SubOp2));
+      SDValue Res = DAG.getNode(ISD::SUB, DL, MaskVT, SubOp1, SubOp2);
+      return DAG.getBitcast(VT, Res);
     }
   }
 

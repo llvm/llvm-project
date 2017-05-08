@@ -8,6 +8,22 @@ define <8 x i8> @vabss8(<8 x i8>* %A) nounwind {
 	ret <8 x i8> %tmp2
 }
 
+define <8 x i8> @vabss8_fold(<8 x i8>* %A) nounwind {
+; CHECK-LABEL: vabss8_fold:
+; CHECK:       vldr d16, .LCPI1_0
+; CHECK:       .LCPI1_0:
+; CHECK-NEXT:    .byte 128 @ 0x80
+; CHECK-NEXT:    .byte 127 @ 0x7f
+; CHECK-NEXT:    .byte 1 @ 0x1
+; CHECK-NEXT:    .byte 0 @ 0x0
+; CHECK-NEXT:    .byte 1 @ 0x1
+; CHECK-NEXT:    .byte 127 @ 0x7f
+; CHECK-NEXT:    .byte 128 @ 0x80
+; CHECK-NEXT:    .byte 1 @ 0x1
+	%tmp1 = call <8 x i8> @llvm.arm.neon.vabs.v8i8(<8 x i8> <i8 -128, i8 -127, i8 -1, i8 0, i8 1, i8 127, i8 128, i8 255>)
+	ret <8 x i8> %tmp1
+}
+
 define <4 x i16> @vabss16(<4 x i16>* %A) nounwind {
 ;CHECK-LABEL: vabss16:
 ;CHECK: vabs.s16
@@ -16,12 +32,34 @@ define <4 x i16> @vabss16(<4 x i16>* %A) nounwind {
 	ret <4 x i16> %tmp2
 }
 
+define <4 x i16> @vabss16_fold() nounwind {
+; CHECK-LABEL: vabss16_fold:
+; CHECK:       vldr d16, .LCPI3_0
+; CHECK:       .LCPI3_0:
+; CHECK-NEXT:    .short 32768 @ 0x8000
+; CHECK-NEXT:    .short 32767 @ 0x7fff
+; CHECK-NEXT:    .short 255 @ 0xff
+; CHECK-NEXT:    .short 32768 @ 0x8000
+	%tmp1 = call <4 x i16> @llvm.arm.neon.vabs.v4i16(<4 x i16> <i16 -32768, i16 -32767, i16 255, i16 32768>)
+	ret <4 x i16> %tmp1
+}
+
 define <2 x i32> @vabss32(<2 x i32>* %A) nounwind {
 ;CHECK-LABEL: vabss32:
 ;CHECK: vabs.s32
 	%tmp1 = load <2 x i32>, <2 x i32>* %A
 	%tmp2 = call <2 x i32> @llvm.arm.neon.vabs.v2i32(<2 x i32> %tmp1)
 	ret <2 x i32> %tmp2
+}
+
+define <2 x i32> @vabss32_fold() nounwind {
+; CHECK-LABEL: vabss32_fold:
+; CHECK:       vldr d16, .LCPI5_0
+; CHECK:       .LCPI5_0:
+; CHECK-NEXT:    .long 2147483647 @ 0x7fffffff
+; CHECK-NEXT:    .long 2147483648 @ 0x80000000
+	%tmp1 = call <2 x i32> @llvm.arm.neon.vabs.v2i32(<2 x i32> <i32 -2147483647, i32 2147483648>)
+	ret <2 x i32> %tmp1
 }
 
 define <2 x float> @vabsf32(<2 x float>* %A) nounwind {

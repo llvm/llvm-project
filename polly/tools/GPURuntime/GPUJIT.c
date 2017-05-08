@@ -859,10 +859,10 @@ static void printOpenCLError(int Error) {
   case CL_INVALID_DEVICE_PARTITION_COUNT:
     fprintf(stderr, "Invalid device partition count.\n");
     break;
-  case CL_INVALID_PIPE_SIZE:
+  case -69: // OpenCL 2.0 Code for CL_INVALID_PIPE_SIZE
     fprintf(stderr, "Invalid pipe size.\n");
     break;
-  case CL_INVALID_DEVICE_QUEUE:
+  case -70: // OpenCL 2.0 Code for CL_INVALID_DEVICE_QUEUE
     fprintf(stderr, "Invalid device queue.\n");
     break;
 

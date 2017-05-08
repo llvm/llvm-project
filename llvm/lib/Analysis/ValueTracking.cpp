@@ -88,9 +88,8 @@ struct Query {
   /// classic case of this is assume(x = y), which will attempt to determine
   /// bits in x from bits in y, which will attempt to determine bits in y from
   /// bits in x, etc. Regarding the mutual recursion, computeKnownBits can call
-  /// isKnownNonZero, which calls computeKnownBits and ComputeSignBit and
-  /// isKnownToBeAPowerOfTwo (all of which can call computeKnownBits), and so
-  /// on.
+  /// isKnownNonZero, which calls computeKnownBits and isKnownToBeAPowerOfTwo
+  /// (all of which can call computeKnownBits), and so on.
   std::array<const Value *, MaxDepth> Excluded;
   unsigned NumExcluded;
 
@@ -143,6 +142,16 @@ void llvm::computeKnownBits(const Value *V, KnownBits &Known,
                      Query(DL, AC, safeCxtI(V, CxtI), DT, ORE));
 }
 
+static KnownBits computeKnownBits(const Value *V, unsigned Depth,
+                                  const Query &Q);
+
+KnownBits llvm::computeKnownBits(const Value *V, const DataLayout &DL,
+                                 unsigned Depth, AssumptionCache *AC,
+                                 const Instruction *CxtI,
+                                 const DominatorTree *DT) {
+  return ::computeKnownBits(V, Depth, Query(DL, AC, safeCxtI(V, CxtI), DT));
+}
+
 bool llvm::haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
                                const DataLayout &DL,
                                AssumptionCache *AC, const Instruction *CxtI,
@@ -159,15 +168,14 @@ bool llvm::haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
   return (LHSKnown.Zero | RHSKnown.Zero).isAllOnesValue();
 }
 
-static void ComputeSignBit(const Value *V, bool &KnownZero, bool &KnownOne,
-                           unsigned Depth, const Query &Q);
 
 void llvm::ComputeSignBit(const Value *V, bool &KnownZero, bool &KnownOne,
                           const DataLayout &DL, unsigned Depth,
                           AssumptionCache *AC, const Instruction *CxtI,
                           const DominatorTree *DT) {
-  ::ComputeSignBit(V, KnownZero, KnownOne, Depth,
-                   Query(DL, AC, safeCxtI(V, CxtI), DT));
+  KnownBits Known = computeKnownBits(V, DL, Depth, AC, CxtI, DT);
+  KnownZero = Known.isNonNegative();
+  KnownOne = Known.isNegative();
 }
 
 static bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
@@ -194,9 +202,8 @@ bool llvm::isKnownNonNegative(const Value *V, const DataLayout &DL,
                               unsigned Depth,
                               AssumptionCache *AC, const Instruction *CxtI,
                               const DominatorTree *DT) {
-  bool NonNegative, Negative;
-  ComputeSignBit(V, NonNegative, Negative, DL, Depth, AC, CxtI, DT);
-  return NonNegative;
+  KnownBits Known = computeKnownBits(V, DL, Depth, AC, CxtI, DT);
+  return Known.isNonNegative();
 }
 
 bool llvm::isKnownPositive(const Value *V, const DataLayout &DL, unsigned Depth,
@@ -214,9 +221,8 @@ bool llvm::isKnownPositive(const Value *V, const DataLayout &DL, unsigned Depth,
 bool llvm::isKnownNegative(const Value *V, const DataLayout &DL, unsigned Depth,
                            AssumptionCache *AC, const Instruction *CxtI,
                            const DominatorTree *DT) {
-  bool NonNegative, Negative;
-  ComputeSignBit(V, NonNegative, Negative, DL, Depth, AC, CxtI, DT);
-  return Negative;
+  KnownBits Known = computeKnownBits(V, DL, Depth, AC, CxtI, DT);
+  return Known.isNegative();
 }
 
 static bool isKnownNonEqual(const Value *V1, const Value *V2, const Query &Q);
@@ -1450,6 +1456,14 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
 }
 
 /// Determine which bits of V are known to be either zero or one and return
+/// them.
+KnownBits computeKnownBits(const Value *V, unsigned Depth, const Query &Q) {
+  KnownBits Known(getBitWidth(V->getType(), Q.DL));
+  computeKnownBits(V, Known, Depth, Q);
+  return Known;
+}
+
+/// Determine which bits of V are known to be either zero or one and return
 /// them in the Known bit set.
 ///
 /// NOTE: we cannot consider 'undef' to be "IsZero" here.  The problem is that
@@ -1566,16 +1580,6 @@ void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
   computeKnownBitsFromAssume(V, Known, Depth, Q);
 
   assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
-}
-
-/// Determine whether the sign bit is known to be zero or one.
-/// Convenience wrapper around computeKnownBits.
-void ComputeSignBit(const Value *V, bool &KnownZero, bool &KnownOne,
-                    unsigned Depth, const Query &Q) {
-  KnownBits Bits(getBitWidth(V->getType(), Q.DL));
-  computeKnownBits(V, Bits, Depth, Q);
-  KnownOne = Bits.isNegative();
-  KnownZero = Bits.isNonNegative();
 }
 
 /// Return true if the given value is known to have exactly one
@@ -1842,18 +1846,14 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
     if (BO->isExact())
       return isKnownNonZero(X, Depth, Q);
 
-    bool XKnownNonNegative, XKnownNegative;
-    ComputeSignBit(X, XKnownNonNegative, XKnownNegative, Depth, Q);
-    if (XKnownNegative)
+    KnownBits Known = computeKnownBits(X, Depth, Q);
+    if (Known.isNegative())
       return true;
 
     // If the shifter operand is a constant, and all of the bits shifted
     // out are known to be zero, and X is known non-zero then at least one
     // non-zero bit must remain.
     if (ConstantInt *Shift = dyn_cast<ConstantInt>(Y)) {
-      KnownBits Known(BitWidth);
-      computeKnownBits(X, Known, Depth, Q);
-
       auto ShiftVal = Shift->getLimitedValue(BitWidth - 1);
       // Is there a known one in the portion not shifted out?
       if (Known.One.countLeadingZeros() < BitWidth - ShiftVal)
@@ -1869,39 +1869,34 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
   }
   // X + Y.
   else if (match(V, m_Add(m_Value(X), m_Value(Y)))) {
-    bool XKnownNonNegative, XKnownNegative;
-    bool YKnownNonNegative, YKnownNegative;
-    ComputeSignBit(X, XKnownNonNegative, XKnownNegative, Depth, Q);
-    ComputeSignBit(Y, YKnownNonNegative, YKnownNegative, Depth, Q);
+    KnownBits XKnown = computeKnownBits(X, Depth, Q);
+    KnownBits YKnown = computeKnownBits(Y, Depth, Q);
 
     // If X and Y are both non-negative (as signed values) then their sum is not
     // zero unless both X and Y are zero.
-    if (XKnownNonNegative && YKnownNonNegative)
+    if (XKnown.isNonNegative() && YKnown.isNonNegative())
       if (isKnownNonZero(X, Depth, Q) || isKnownNonZero(Y, Depth, Q))
         return true;
 
     // If X and Y are both negative (as signed values) then their sum is not
     // zero unless both X and Y equal INT_MIN.
-    if (XKnownNegative && YKnownNegative) {
-      KnownBits Known(BitWidth);
+    if (XKnown.isNegative() && YKnown.isNegative()) {
       APInt Mask = APInt::getSignedMaxValue(BitWidth);
       // The sign bit of X is set.  If some other bit is set then X is not equal
       // to INT_MIN.
-      computeKnownBits(X, Known, Depth, Q);
-      if (Known.One.intersects(Mask))
+      if (XKnown.One.intersects(Mask))
         return true;
       // The sign bit of Y is set.  If some other bit is set then Y is not equal
       // to INT_MIN.
-      computeKnownBits(Y, Known, Depth, Q);
-      if (Known.One.intersects(Mask))
+      if (YKnown.One.intersects(Mask))
         return true;
     }
 
     // The sum of a non-negative number and a power of two is not zero.
-    if (XKnownNonNegative &&
+    if (XKnown.isNonNegative() &&
         isKnownToBeAPowerOfTwo(Y, /*OrZero*/ false, Depth, Q))
       return true;
-    if (YKnownNonNegative &&
+    if (YKnown.isNonNegative() &&
         isKnownToBeAPowerOfTwo(X, /*OrZero*/ false, Depth, Q))
       return true;
   }
@@ -3475,21 +3470,17 @@ OverflowResult llvm::computeOverflowForUnsignedAdd(const Value *LHS,
                                                    AssumptionCache *AC,
                                                    const Instruction *CxtI,
                                                    const DominatorTree *DT) {
-  bool LHSKnownNonNegative, LHSKnownNegative;
-  ComputeSignBit(LHS, LHSKnownNonNegative, LHSKnownNegative, DL, /*Depth=*/0,
-                 AC, CxtI, DT);
-  if (LHSKnownNonNegative || LHSKnownNegative) {
-    bool RHSKnownNonNegative, RHSKnownNegative;
-    ComputeSignBit(RHS, RHSKnownNonNegative, RHSKnownNegative, DL, /*Depth=*/0,
-                   AC, CxtI, DT);
+  KnownBits LHSKnown = computeKnownBits(LHS, DL, /*Depth=*/0, AC, CxtI, DT);
+  if (LHSKnown.isNonNegative() || LHSKnown.isNegative()) {
+    KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT);
 
-    if (LHSKnownNegative && RHSKnownNegative) {
+    if (LHSKnown.isNegative() && RHSKnown.isNegative()) {
       // The sign bit is set in both cases: this MUST overflow.
       // Create a simple add instruction, and insert it into the struct.
       return OverflowResult::AlwaysOverflows;
     }
 
-    if (LHSKnownNonNegative && RHSKnownNonNegative) {
+    if (LHSKnown.isNonNegative() && RHSKnown.isNonNegative()) {
       // The sign bit is clear in both cases: this CANNOT overflow.
       // Create a simple add instruction, and insert it into the struct.
       return OverflowResult::NeverOverflows;
@@ -3510,15 +3501,11 @@ static OverflowResult computeOverflowForSignedAdd(const Value *LHS,
     return OverflowResult::NeverOverflows;
   }
 
-  bool LHSKnownNonNegative, LHSKnownNegative;
-  bool RHSKnownNonNegative, RHSKnownNegative;
-  ComputeSignBit(LHS, LHSKnownNonNegative, LHSKnownNegative, DL, /*Depth=*/0,
-                 AC, CxtI, DT);
-  ComputeSignBit(RHS, RHSKnownNonNegative, RHSKnownNegative, DL, /*Depth=*/0,
-                 AC, CxtI, DT);
+  KnownBits LHSKnown = computeKnownBits(LHS, DL, /*Depth=*/0, AC, CxtI, DT);
+  KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT);
 
-  if ((LHSKnownNonNegative && RHSKnownNegative) ||
-      (LHSKnownNegative && RHSKnownNonNegative)) {
+  if ((LHSKnown.isNonNegative() && RHSKnown.isNegative()) ||
+      (LHSKnown.isNegative() && RHSKnown.isNonNegative())) {
     // The sign bits are opposite: this CANNOT overflow.
     return OverflowResult::NeverOverflows;
   }
@@ -3532,14 +3519,12 @@ static OverflowResult computeOverflowForSignedAdd(const Value *LHS,
   // @llvm.assume'ed non-negative rather than proved so from analyzing its
   // operands.
   bool LHSOrRHSKnownNonNegative =
-      (LHSKnownNonNegative || RHSKnownNonNegative);
-  bool LHSOrRHSKnownNegative = (LHSKnownNegative || RHSKnownNegative);
+      (LHSKnown.isNonNegative() || RHSKnown.isNonNegative());
+  bool LHSOrRHSKnownNegative = (LHSKnown.isNegative() || RHSKnown.isNegative());
   if (LHSOrRHSKnownNonNegative || LHSOrRHSKnownNegative) {
-    bool AddKnownNonNegative, AddKnownNegative;
-    ComputeSignBit(Add, AddKnownNonNegative, AddKnownNegative, DL,
-                   /*Depth=*/0, AC, CxtI, DT);
-    if ((AddKnownNonNegative && LHSOrRHSKnownNonNegative) ||
-        (AddKnownNegative && LHSOrRHSKnownNegative)) {
+    KnownBits AddKnown = computeKnownBits(Add, DL, /*Depth=*/0, AC, CxtI, DT);
+    if ((AddKnown.isNonNegative() && LHSOrRHSKnownNonNegative) ||
+        (AddKnown.isNegative() && LHSOrRHSKnownNegative)) {
       return OverflowResult::NeverOverflows;
     }
   }

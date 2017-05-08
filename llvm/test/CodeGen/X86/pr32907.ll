@@ -35,11 +35,8 @@ define <2 x i64> @PR32907(<2 x i64> %astype.i, <2 x i64> %astype6.i) {
 ; AVX512:       # BB#0: # %entry
 ; AVX512-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpsraq $63, %zmm0, %zmm1
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpsubq %xmm0, %xmm2, %xmm2
-; AVX512-NEXT:    vpandn %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 entry:

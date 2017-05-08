@@ -188,3 +188,30 @@ define <32 x i16> @shuffle_v32i16_32_zz_33_zz_34_zz_35_zz_36_zz_37_zz_38_zz_39_z
   %shuffle = shufflevector <32 x i16> zeroinitializer, <32 x i16> %a, <32 x i32> <i32 32, i32 0, i32 33, i32 0, i32 34, i32 0, i32 35, i32 0, i32 36, i32 0, i32 37, i32 0, i32 38, i32 0, i32 39, i32 0, i32 40, i32 0, i32 41, i32 0, i32 42, i32 0, i32 43, i32 0, i32 44, i32 0, i32 45, i32 0, i32 46, i32 0, i32 47, i32 0>
   ret <32 x i16> %shuffle
 }
+
+define <8 x i16> @pr32967(<32 x i16> %v) {
+; ALL-LABEL: pr32967:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpextrw $5, %xmm0, %eax
+; ALL-NEXT:    vpextrw $1, %xmm0, %ecx
+; ALL-NEXT:    vmovd %ecx, %xmm1
+; ALL-NEXT:    vpinsrw $1, %eax, %xmm1, %xmm1
+; ALL-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; ALL-NEXT:    vpextrw $1, %xmm2, %eax
+; ALL-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
+; ALL-NEXT:    vpextrw $5, %xmm2, %eax
+; ALL-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm1
+; ALL-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
+; ALL-NEXT:    vpextrw $1, %xmm2, %eax
+; ALL-NEXT:    vpinsrw $4, %eax, %xmm1, %xmm1
+; ALL-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4],xmm2[5],xmm1[6,7]
+; ALL-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; ALL-NEXT:    vpextrw $1, %xmm0, %eax
+; ALL-NEXT:    vpinsrw $6, %eax, %xmm1, %xmm1
+; ALL-NEXT:    vpextrw $5, %xmm0, %eax
+; ALL-NEXT:    vpinsrw $7, %eax, %xmm1, %xmm0
+; ALL-NEXT:    vzeroupper
+; ALL-NEXT:    retq
+ %shuffle = shufflevector <32 x i16> %v, <32 x i16> undef, <8 x i32> <i32 1,i32 5,i32 9,i32 13,i32 17,i32 21,i32 25,i32 29>
+ ret <8 x i16> %shuffle
+}

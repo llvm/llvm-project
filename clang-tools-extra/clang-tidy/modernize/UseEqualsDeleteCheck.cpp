@@ -57,13 +57,18 @@ void UseEqualsDeleteCheck::check(const MatchFinder::MatchResult &Result) {
     SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         Func->getLocEnd(), 0, *Result.SourceManager, getLangOpts());
 
-    // FIXME: Improve FixItHint to make method public
+    // FIXME: Improve FixItHint to make the method public.
     diag(Func->getLocation(),
          "use '= delete' to prohibit calling of a special member function")
         << FixItHint::CreateInsertion(EndLoc, " = delete");
   } else if (const auto *Func =
                  Result.Nodes.getNodeAs<CXXMethodDecl>(DeletedNotPublic)) {
-    // FIXME: Add FixItHint to make method public
+    // Ignore this warning in macros, since it's extremely noisy in code using
+    // DISALLOW_COPY_AND_ASSIGN-style macros and there's no easy way to
+    // automatically fix the warning when macros are in play.
+    if (Func->getLocation().isMacroID())
+      return;
+    // FIXME: Add FixItHint to make the method public.
     diag(Func->getLocation(), "deleted member function should be public");
   }
 }
