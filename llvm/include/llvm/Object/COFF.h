@@ -20,7 +20,9 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/COFF.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
@@ -40,6 +42,7 @@ class DelayImportDirectoryEntryRef;
 class ExportDirectoryEntryRef;
 class ImportDirectoryEntryRef;
 class ImportedSymbolRef;
+class ResourceSectionRef;
 
 using import_directory_iterator = content_iterator<ImportDirectoryEntryRef>;
 using delay_import_directory_iterator =
@@ -623,6 +626,26 @@ struct coff_base_reloc_block_entry {
   int getOffset() const { return Data & ((1 << 12) - 1); }
 };
 
+struct coff_resource_dir_entry {
+  union {
+    support::ulittle32_t NameOffset;
+    support::ulittle32_t ID;
+    uint32_t getNameOffset() const {
+      return maskTrailingOnes<uint32_t>(31) & NameOffset;
+    }
+  } Identifier;
+  union {
+    support::ulittle32_t DataEntryOffset;
+    support::ulittle32_t SubdirOffset;
+
+    bool isSubDir() const { return SubdirOffset >> 31; }
+    uint32_t value() const {
+      return maskTrailingOnes<uint32_t>(31) & SubdirOffset;
+    }
+
+  } Offset;
+};
+
 struct coff_resource_dir_table {
   support::ulittle32_t Characteristics;
   support::ulittle32_t TimeDateStamp;
@@ -1045,6 +1068,23 @@ private:
   const coff_base_reloc_block_header *Header;
   uint32_t Index;
   const COFFObjectFile *OwningObject = nullptr;
+};
+
+class ResourceSectionRef {
+public:
+  ResourceSectionRef() = default;
+  explicit ResourceSectionRef(StringRef Ref) : BBS(Ref, support::little) {}
+
+  ErrorOr<ArrayRef<UTF16>> getEntryNameString(const coff_resource_dir_entry &Entry);
+  ErrorOr<const coff_resource_dir_table &>
+  getEntrySubDir(const coff_resource_dir_entry &Entry);
+  ErrorOr<const coff_resource_dir_table &> getBaseTable();
+
+private:
+  BinaryByteStream BBS;
+
+  ErrorOr<const coff_resource_dir_table &> getTableAtOffset(uint32_t Offset);
+  ErrorOr<ArrayRef<UTF16>> getDirStringAtOffset(uint32_t Offset);
 };
 
 // Corresponds to `_FPO_DATA` structure in the PE/COFF spec.

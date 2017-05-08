@@ -1,0 +1,480 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  define <8 x i16> @test_mul_v8i16(<8 x i16> %arg1, <8 x i16> %arg2) #0 {
+    %ret = mul <8 x i16> %arg1, %arg2
+    ret <8 x i16> %ret
+  }
+
+  define <8 x i16> @test_mul_v8i16_avx(<8 x i16> %arg1, <8 x i16> %arg2) #1 {
+    %ret = mul <8 x i16> %arg1, %arg2
+    ret <8 x i16> %ret
+  }
+
+  define <8 x i16> @test_mul_v8i16_avx512bwvl(<8 x i16> %arg1, <8 x i16> %arg2) #2 {
+    %ret = mul <8 x i16> %arg1, %arg2
+    ret <8 x i16> %ret
+  }
+
+  define <4 x i32> @test_mul_v4i32(<4 x i32> %arg1, <4 x i32> %arg2) #3 {
+    %ret = mul <4 x i32> %arg1, %arg2
+    ret <4 x i32> %ret
+  }
+
+  define <4 x i32> @test_mul_v4i32_avx(<4 x i32> %arg1, <4 x i32> %arg2) #1 {
+    %ret = mul <4 x i32> %arg1, %arg2
+    ret <4 x i32> %ret
+  }
+
+  define <4 x i32> @test_mul_v4i32_avx512vl(<4 x i32> %arg1, <4 x i32> %arg2) #4 {
+    %ret = mul <4 x i32> %arg1, %arg2
+    ret <4 x i32> %ret
+  }
+
+  define <2 x i64> @test_mul_v2i64(<2 x i64> %arg1, <2 x i64> %arg2) #5 {
+    %ret = mul <2 x i64> %arg1, %arg2
+    ret <2 x i64> %ret
+  }
+
+  define <16 x i16> @test_mul_v16i16(<16 x i16> %arg1, <16 x i16> %arg2) #6 {
+    %ret = mul <16 x i16> %arg1, %arg2
+    ret <16 x i16> %ret
+  }
+
+  define <16 x i16> @test_mul_v16i16_avx512bwvl(<16 x i16> %arg1, <16 x i16> %arg2) #2 {
+    %ret = mul <16 x i16> %arg1, %arg2
+    ret <16 x i16> %ret
+  }
+
+  define <8 x i32> @test_mul_v8i32(<8 x i32> %arg1, <8 x i32> %arg2) #6 {
+    %ret = mul <8 x i32> %arg1, %arg2
+    ret <8 x i32> %ret
+  }
+
+  define <8 x i32> @test_mul_v8i32_avx512vl(<8 x i32> %arg1, <8 x i32> %arg2) #4 {
+    %ret = mul <8 x i32> %arg1, %arg2
+    ret <8 x i32> %ret
+  }
+
+  define <4 x i64> @test_mul_v4i64(<4 x i64> %arg1, <4 x i64> %arg2) #5 {
+    %ret = mul <4 x i64> %arg1, %arg2
+    ret <4 x i64> %ret
+  }
+
+  define <32 x i16> @test_mul_v32i16(<32 x i16> %arg1, <32 x i16> %arg2) #7 {
+    %ret = mul <32 x i16> %arg1, %arg2
+    ret <32 x i16> %ret
+  }
+
+  define <16 x i32> @test_mul_v16i32(<16 x i32> %arg1, <16 x i32> %arg2) #8 {
+    %ret = mul <16 x i32> %arg1, %arg2
+    ret <16 x i32> %ret
+  }
+
+  define <8 x i64> @test_mul_v8i64(<8 x i64> %arg1, <8 x i64> %arg2) #9 {
+    %ret = mul <8 x i64> %arg1, %arg2
+    ret <8 x i64> %ret
+  }
+
+  attributes #0 = { "target-features"="+sse2" }
+  attributes #1 = { "target-features"="+avx" }
+  attributes #2 = { "target-features"="+avx512vl,+avx512f,+avx512bw" }
+  attributes #3 = { "target-features"="+sse4.1" }
+  attributes #4 = { "target-features"="+avx512vl,+avx512f" }
+  attributes #5 = { "target-features"="+avx2,+avx512vl,+avx512f,+avx512dq" }
+  attributes #6 = { "target-features"="+avx2" }
+  attributes #7 = { "target-features"="+avx512f,+avx512bw" }
+  attributes #8 = { "target-features"="+avx512f" }
+  attributes #9 = { "target-features"="+avx512f,+avx512dq" }
+
+...
+---
+name:            test_mul_v8i16
+# CHECK-LABEL: name:  test_mul_v8i16
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr128 }
+# CHECK-NEXT:   - { id: 1, class: vr128 }
+# CHECK-NEXT:   - { id: 2, class: vr128 }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = PMULLWrr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(<8 x s16>) = COPY %xmm0
+    %1(<8 x s16>) = COPY %xmm1
+    %2(<8 x s16>) = G_MUL %0, %1
+    %xmm0 = COPY %2(<8 x s16>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_mul_v8i16_avx
+# CHECK-LABEL: name:  test_mul_v8i16_avx
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr128 }
+# CHECK-NEXT:   - { id: 1, class: vr128 }
+# CHECK-NEXT:   - { id: 2, class: vr128 }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = VPMULLWrr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(<8 x s16>) = COPY %xmm0
+    %1(<8 x s16>) = COPY %xmm1
+    %2(<8 x s16>) = G_MUL %0, %1
+    %xmm0 = COPY %2(<8 x s16>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_mul_v8i16_avx512bwvl
+# CHECK-LABEL: name:  test_mul_v8i16_avx512bwvl
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr128x }
+# CHECK-NEXT:   - { id: 1, class: vr128x }
+# CHECK-NEXT:   - { id: 2, class: vr128x }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = VPMULLWZ128rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(<8 x s16>) = COPY %xmm0
+    %1(<8 x s16>) = COPY %xmm1
+    %2(<8 x s16>) = G_MUL %0, %1
+    %xmm0 = COPY %2(<8 x s16>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_mul_v4i32
+# CHECK-LABEL: name:  test_mul_v4i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr128 }
+# CHECK-NEXT:   - { id: 1, class: vr128 }
+# CHECK-NEXT:   - { id: 2, class: vr128 }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = PMULLDrr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(<4 x s32>) = COPY %xmm0
+    %1(<4 x s32>) = COPY %xmm1
+    %2(<4 x s32>) = G_MUL %0, %1
+    %xmm0 = COPY %2(<4 x s32>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_mul_v4i32_avx
+# CHECK-LABEL: name:  test_mul_v4i32_avx
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr128 }
+# CHECK-NEXT:   - { id: 1, class: vr128 }
+# CHECK-NEXT:   - { id: 2, class: vr128 }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = VPMULLDrr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(<4 x s32>) = COPY %xmm0
+    %1(<4 x s32>) = COPY %xmm1
+    %2(<4 x s32>) = G_MUL %0, %1
+    %xmm0 = COPY %2(<4 x s32>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_mul_v4i32_avx512vl
+# CHECK-LABEL: name:  test_mul_v4i32_avx512vl
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr128x }
+# CHECK-NEXT:   - { id: 1, class: vr128x }
+# CHECK-NEXT:   - { id: 2, class: vr128x }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = VPMULLDZ128rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(<4 x s32>) = COPY %xmm0
+    %1(<4 x s32>) = COPY %xmm1
+    %2(<4 x s32>) = G_MUL %0, %1
+    %xmm0 = COPY %2(<4 x s32>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_mul_v2i64
+# CHECK-LABEL: name:  test_mul_v2i64
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr128x }
+# CHECK-NEXT:   - { id: 1, class: vr128x }
+# CHECK-NEXT:   - { id: 2, class: vr128x }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = VPMULLQZ128rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0, %xmm1
+
+    %0(<2 x s64>) = COPY %xmm0
+    %1(<2 x s64>) = COPY %xmm1
+    %2(<2 x s64>) = G_MUL %0, %1
+    %xmm0 = COPY %2(<2 x s64>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_mul_v16i16
+# CHECK-LABEL: name:  test_mul_v16i16
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr256 }
+# CHECK-NEXT:   - { id: 1, class: vr256 }
+# CHECK-NEXT:   - { id: 2, class: vr256 }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = VPMULLWYrr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<16 x s16>) = COPY %ymm0
+    %1(<16 x s16>) = COPY %ymm1
+    %2(<16 x s16>) = G_MUL %0, %1
+    %ymm0 = COPY %2(<16 x s16>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_mul_v16i16_avx512bwvl
+# CHECK-LABEL: name:  test_mul_v16i16_avx512bwvl
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr256x }
+# CHECK-NEXT:   - { id: 1, class: vr256x }
+# CHECK-NEXT:   - { id: 2, class: vr256x }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = VPMULLWZ256rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<16 x s16>) = COPY %ymm0
+    %1(<16 x s16>) = COPY %ymm1
+    %2(<16 x s16>) = G_MUL %0, %1
+    %ymm0 = COPY %2(<16 x s16>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_mul_v8i32
+# CHECK-LABEL: name:  test_mul_v8i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr256 }
+# CHECK-NEXT:   - { id: 1, class: vr256 }
+# CHECK-NEXT:   - { id: 2, class: vr256 }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = VPMULLDYrr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<8 x s32>) = COPY %ymm0
+    %1(<8 x s32>) = COPY %ymm1
+    %2(<8 x s32>) = G_MUL %0, %1
+    %ymm0 = COPY %2(<8 x s32>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_mul_v8i32_avx512vl
+# CHECK-LABEL: name:  test_mul_v8i32_avx512vl
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr256x }
+# CHECK-NEXT:   - { id: 1, class: vr256x }
+# CHECK-NEXT:   - { id: 2, class: vr256x }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = VPMULLDZ256rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<8 x s32>) = COPY %ymm0
+    %1(<8 x s32>) = COPY %ymm1
+    %2(<8 x s32>) = G_MUL %0, %1
+    %ymm0 = COPY %2(<8 x s32>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_mul_v4i64
+# CHECK-LABEL: name:  test_mul_v4i64
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr256x }
+# CHECK-NEXT:   - { id: 1, class: vr256x }
+# CHECK-NEXT:   - { id: 2, class: vr256x }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = VPMULLQZ256rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<4 x s64>) = COPY %ymm0
+    %1(<4 x s64>) = COPY %ymm1
+    %2(<4 x s64>) = G_MUL %0, %1
+    %ymm0 = COPY %2(<4 x s64>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_mul_v32i16
+# CHECK-LABEL: name:  test_mul_v32i16
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr512 }
+# CHECK-NEXT:   - { id: 1, class: vr512 }
+# CHECK-NEXT:   - { id: 2, class: vr512 }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = VPMULLWZrr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %zmm1
+
+    %0(<32 x s16>) = COPY %zmm0
+    %1(<32 x s16>) = COPY %zmm1
+    %2(<32 x s16>) = G_MUL %0, %1
+    %zmm0 = COPY %2(<32 x s16>)
+    RET 0, implicit %zmm0
+
+...
+---
+name:            test_mul_v16i32
+# CHECK-LABEL: name:  test_mul_v16i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr512 }
+# CHECK-NEXT:   - { id: 1, class: vr512 }
+# CHECK-NEXT:   - { id: 2, class: vr512 }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = VPMULLDZrr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %zmm1
+
+    %0(<16 x s32>) = COPY %zmm0
+    %1(<16 x s32>) = COPY %zmm1
+    %2(<16 x s32>) = G_MUL %0, %1
+    %zmm0 = COPY %2(<16 x s32>)
+    RET 0, implicit %zmm0
+
+...
+---
+name:            test_mul_v8i64
+# CHECK-LABEL: name:  test_mul_v8i64
+alignment:       4
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vr512 }
+# CHECK-NEXT:   - { id: 1, class: vr512 }
+# CHECK-NEXT:   - { id: 2, class: vr512 }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# CHECK:          %2 = VPMULLQZrr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %zmm1
+
+    %0(<8 x s64>) = COPY %zmm0
+    %1(<8 x s64>) = COPY %zmm1
+    %2(<8 x s64>) = G_MUL %0, %1
+    %zmm0 = COPY %2(<8 x s64>)
+    RET 0, implicit %zmm0
+
+...

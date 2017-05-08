@@ -251,13 +251,24 @@ APInt ConstantRange::getSetSize() const {
 }
 
 bool
-ConstantRange::isSizeStrictlySmallerThanOf(const ConstantRange &Other) const {
+ConstantRange::isSizeStrictlySmallerThan(const ConstantRange &Other) const {
   assert(getBitWidth() == Other.getBitWidth());
   if (isFullSet())
     return false;
   if (Other.isFullSet())
     return true;
   return (Upper - Lower).ult(Other.Upper - Other.Lower);
+}
+
+bool
+ConstantRange::isSizeLargerThan(uint64_t MaxSize) const {
+  assert(MaxSize && "MaxSize can't be 0.");
+  // If this a full set, we need special handling to avoid needing an extra bit
+  // to represent the size.
+  if (isFullSet())
+    return APInt::getMaxValue(getBitWidth()).ugt(MaxSize - 1);
+
+  return (Upper - Lower).ugt(MaxSize);
 }
 
 APInt ConstantRange::getUnsignedMax() const {
@@ -374,7 +385,7 @@ ConstantRange ConstantRange::intersectWith(const ConstantRange &CR) const {
       if (CR.Upper.ule(Lower))
         return ConstantRange(CR.Lower, Upper);
 
-      if (isSizeStrictlySmallerThanOf(CR))
+      if (isSizeStrictlySmallerThan(CR))
         return *this;
       return CR;
     }
@@ -389,7 +400,7 @@ ConstantRange ConstantRange::intersectWith(const ConstantRange &CR) const {
 
   if (CR.Upper.ult(Upper)) {
     if (CR.Lower.ult(Upper)) {
-      if (isSizeStrictlySmallerThanOf(CR))
+      if (isSizeStrictlySmallerThan(CR))
         return *this;
       return CR;
     }
@@ -405,7 +416,7 @@ ConstantRange ConstantRange::intersectWith(const ConstantRange &CR) const {
 
     return ConstantRange(CR.Lower, Upper);
   }
-  if (isSizeStrictlySmallerThanOf(CR))
+  if (isSizeStrictlySmallerThan(CR))
     return *this;
   return CR;
 }
@@ -676,8 +687,8 @@ ConstantRange::add(const ConstantRange &Other) const {
     return ConstantRange(getBitWidth(), /*isFullSet=*/true);
 
   ConstantRange X = ConstantRange(std::move(NewLower), std::move(NewUpper));
-  if (X.isSizeStrictlySmallerThanOf(*this) ||
-      X.isSizeStrictlySmallerThanOf(Other))
+  if (X.isSizeStrictlySmallerThan(*this) ||
+      X.isSizeStrictlySmallerThan(Other))
     // We've wrapped, therefore, full set.
     return ConstantRange(getBitWidth(), /*isFullSet=*/true);
   return X;
@@ -709,8 +720,8 @@ ConstantRange::sub(const ConstantRange &Other) const {
     return ConstantRange(getBitWidth(), /*isFullSet=*/true);
 
   ConstantRange X = ConstantRange(std::move(NewLower), std::move(NewUpper));
-  if (X.isSizeStrictlySmallerThanOf(*this) ||
-      X.isSizeStrictlySmallerThanOf(Other))
+  if (X.isSizeStrictlySmallerThan(*this) ||
+      X.isSizeStrictlySmallerThan(Other))
     // We've wrapped, therefore, full set.
     return ConstantRange(getBitWidth(), /*isFullSet=*/true);
   return X;
@@ -766,7 +777,7 @@ ConstantRange::multiply(const ConstantRange &Other) const {
   ConstantRange Result_sext(std::min(L, Compare), std::max(L, Compare) + 1);
   ConstantRange SR = Result_sext.truncate(getBitWidth());
 
-  return UR.isSizeStrictlySmallerThanOf(SR) ? UR : SR;
+  return UR.isSizeStrictlySmallerThan(SR) ? UR : SR;
 }
 
 ConstantRange

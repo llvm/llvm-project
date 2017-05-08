@@ -57,6 +57,10 @@ const MCExpr *ConstantPool::addEntry(const MCExpr *Value, MCContext &Context,
 
 bool ConstantPool::empty() { return Entries.empty(); }
 
+void ConstantPool::clearCache() {
+  CachedEntries.clear();
+}
+
 //
 // AssemblerConstantPools implementation
 //
@@ -95,6 +99,13 @@ void AssemblerConstantPools::emitForCurrentSection(MCStreamer &Streamer) {
   MCSection *Section = Streamer.getCurrentSectionOnly();
   if (ConstantPool *CP = getConstantPool(Section)) {
     emitConstantPool(Streamer, Section, *CP);
+  }
+}
+
+void AssemblerConstantPools::clearCacheForCurrentSection(MCStreamer &Streamer) {
+  MCSection *Section = Streamer.getCurrentSectionOnly();
+  if (ConstantPool *CP = getConstantPool(Section)) {
+    CP->clearCache();
   }
 }
 

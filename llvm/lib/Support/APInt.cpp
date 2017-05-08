@@ -256,6 +256,16 @@ APInt& APInt::operator*=(const APInt& RHS) {
   return *this;
 }
 
+APInt& APInt::operator*=(uint64_t RHS) {
+  if (isSingleWord()) {
+    U.VAL *= RHS;
+  } else {
+    unsigned NumWords = getNumWords();
+    tcMultiplyPart(U.pVal, U.pVal, RHS, 0, NumWords, NumWords, false);
+  }
+  return clearUnusedBits();
+}
+
 bool APInt::EqualSlowCase(const APInt& RHS) const {
   return std::equal(U.pVal, U.pVal + getNumWords(), RHS.U.pVal);
 }
@@ -1832,10 +1842,6 @@ void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
   // Figure out if we can shift instead of multiply
   unsigned shift = (radix == 16 ? 4 : radix == 8 ? 3 : radix == 2 ? 1 : 0);
 
-  // Set up an APInt for the radix multiplier outside the loop so we don't
-  // constantly construct/destruct it.
-  APInt apradix(getBitWidth(), radix);
-
   // Enter digit traversal loop
   for (StringRef::iterator e = str.end(); p != e; ++p) {
     unsigned digit = getDigit(*p, radix);
@@ -1846,7 +1852,7 @@ void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
       if (shift)
         *this <<= shift;
       else
-        *this *= apradix;
+        *this *= radix;
     }
 
     // Add in the digit we just interpreted
@@ -2246,10 +2252,9 @@ int APInt::tcMultiplyPart(WordType *dst, const WordType *src,
   assert(dstParts <= srcParts + 1);
 
   /* N loops; minimum of dstParts and srcParts.  */
-  unsigned n = dstParts < srcParts ? dstParts: srcParts;
+  unsigned n = std::min(dstParts, srcParts);
 
-  unsigned i;
-  for (i = 0; i < n; i++) {
+  for (unsigned i = 0; i < n; i++) {
     WordType low, mid, high, srcPart;
 
       /* [ LOW, HIGH ] = MULTIPLIER * SRC[i] + DST[i] + CARRY.
@@ -2300,27 +2305,27 @@ int APInt::tcMultiplyPart(WordType *dst, const WordType *src,
     carry = high;
   }
 
-  if (i < dstParts) {
+  if (srcParts < dstParts) {
     /* Full multiplication, there is no overflow.  */
-    assert(i + 1 == dstParts);
-    dst[i] = carry;
-    return 0;
-  } else {
-    /* We overflowed if there is carry.  */
-    if (carry)
-      return 1;
-
-    /* We would overflow if any significant unwritten parts would be
-       non-zero.  This is true if any remaining src parts are non-zero
-       and the multiplier is non-zero.  */
-    if (multiplier)
-      for (; i < srcParts; i++)
-        if (src[i])
-          return 1;
-
-    /* We fitted in the narrow destination.  */
+    assert(srcParts + 1 == dstParts);
+    dst[srcParts] = carry;
     return 0;
   }
+
+  /* We overflowed if there is carry.  */
+  if (carry)
+    return 1;
+
+  /* We would overflow if any significant unwritten parts would be
+     non-zero.  This is true if any remaining src parts are non-zero
+     and the multiplier is non-zero.  */
+  if (multiplier)
+    for (unsigned i = dstParts; i < srcParts; i++)
+      if (src[i])
+        return 1;
+
+  /* We fitted in the narrow destination.  */
+  return 0;
 }
 
 /* DST = LHS * RHS, where DST has the same width as the operands and
@@ -2349,20 +2354,19 @@ unsigned APInt::tcFullMultiply(WordType *dst, const WordType *lhs,
                                const WordType *rhs, unsigned lhsParts,
                                unsigned rhsParts) {
   /* Put the narrower number on the LHS for less loops below.  */
-  if (lhsParts > rhsParts) {
+  if (lhsParts > rhsParts)
     return tcFullMultiply (dst, rhs, lhs, rhsParts, lhsParts);
-  } else {
-    assert(dst != lhs && dst != rhs);
 
-    tcSet(dst, 0, rhsParts);
+  assert(dst != lhs && dst != rhs);
 
-    for (unsigned i = 0; i < lhsParts; i++)
-      tcMultiplyPart(&dst[i], rhs, lhs[i], 0, rhsParts, rhsParts + 1, true);
+  tcSet(dst, 0, rhsParts);
 
-    unsigned n = lhsParts + rhsParts;
+  for (unsigned i = 0; i < lhsParts; i++)
+    tcMultiplyPart(&dst[i], rhs, lhs[i], 0, rhsParts, rhsParts + 1, true);
 
-    return n - (dst[n - 1] == 0);
-  }
+  unsigned n = lhsParts + rhsParts;
+
+  return n - (dst[n - 1] == 0);
 }
 
 /* If RHS is zero LHS and REMAINDER are left unchanged, return one.

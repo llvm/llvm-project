@@ -22,6 +22,12 @@
 // XFAIL: with_system_cxx_lib=macosx10.7
 // XFAIL: with_system_cxx_lib=macosx10.8
 
+
+// On Windows libc++ doesn't provide its own definitions for new/delete
+// but instead depends on the ones in VCRuntime. However VCRuntime does not
+// yet provide aligned new/delete definitions so this test fails to link.
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // test operator new
 
 #include <new>
@@ -36,7 +42,7 @@ constexpr auto OverAligned = alignof(std::max_align_t) * 2;
 
 int new_handler_called = 0;
 
-void new_handler()
+void my_new_handler()
 {
     ++new_handler_called;
     std::set_new_handler(0);
@@ -52,7 +58,7 @@ struct alignas(OverAligned) A
 
 void test_throw_max_size() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    std::set_new_handler(new_handler);
+    std::set_new_handler(my_new_handler);
     try
     {
         void* vp = operator new[] (std::numeric_limits<std::size_t>::max(),
