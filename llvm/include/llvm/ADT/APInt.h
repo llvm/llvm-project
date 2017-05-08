@@ -842,6 +842,7 @@ public:
   ///
   /// \returns *this
   APInt &operator*=(const APInt &RHS);
+  APInt &operator*=(uint64_t RHS);
 
   /// \brief Addition assignment operator.
   ///
@@ -2040,6 +2041,16 @@ inline APInt operator-(APInt a, uint64_t RHS) {
 inline APInt operator-(uint64_t LHS, APInt b) {
   b = -std::move(b);
   b += LHS;
+  return b;
+}
+
+inline APInt operator*(APInt a, uint64_t RHS) {
+  a *= RHS;
+  return a;
+}
+
+inline APInt operator*(uint64_t LHS, APInt b) {
+  b *= LHS;
   return b;
 }
 

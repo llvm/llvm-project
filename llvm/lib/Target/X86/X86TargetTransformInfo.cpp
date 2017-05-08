@@ -1426,25 +1426,25 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::FSQRT,      MVT::v4f64,  28 }, // Haswell from http://www.agner.org/
   };
   static const CostTblEntry AVX1CostTbl[] = {
-    { ISD::BITREVERSE, MVT::v4i64,  10 },
-    { ISD::BITREVERSE, MVT::v8i32,  10 },
-    { ISD::BITREVERSE, MVT::v16i16, 10 },
-    { ISD::BITREVERSE, MVT::v32i8,  10 },
+    { ISD::BITREVERSE, MVT::v4i64,  12 }, // 2 x 128-bit Op + extract/insert
+    { ISD::BITREVERSE, MVT::v8i32,  12 }, // 2 x 128-bit Op + extract/insert
+    { ISD::BITREVERSE, MVT::v16i16, 12 }, // 2 x 128-bit Op + extract/insert
+    { ISD::BITREVERSE, MVT::v32i8,  12 }, // 2 x 128-bit Op + extract/insert
     { ISD::BSWAP,      MVT::v4i64,   4 },
     { ISD::BSWAP,      MVT::v8i32,   4 },
     { ISD::BSWAP,      MVT::v16i16,  4 },
-    { ISD::CTLZ,       MVT::v4i64,  46 },
-    { ISD::CTLZ,       MVT::v8i32,  36 },
-    { ISD::CTLZ,       MVT::v16i16, 28 },
-    { ISD::CTLZ,       MVT::v32i8,  18 },
-    { ISD::CTPOP,      MVT::v4i64,  14 },
-    { ISD::CTPOP,      MVT::v8i32,  22 },
-    { ISD::CTPOP,      MVT::v16i16, 18 },
-    { ISD::CTPOP,      MVT::v32i8,  12 },
-    { ISD::CTTZ,       MVT::v4i64,  20 },
-    { ISD::CTTZ,       MVT::v8i32,  28 },
-    { ISD::CTTZ,       MVT::v16i16, 24 },
-    { ISD::CTTZ,       MVT::v32i8,  18 },
+    { ISD::CTLZ,       MVT::v4i64,  48 }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTLZ,       MVT::v8i32,  38 }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTLZ,       MVT::v16i16, 30 }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTLZ,       MVT::v32i8,  20 }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTPOP,      MVT::v4i64,  16 }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTPOP,      MVT::v8i32,  24 }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTPOP,      MVT::v16i16, 20 }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTPOP,      MVT::v32i8,  14 }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTTZ,       MVT::v4i64,  22 }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTTZ,       MVT::v8i32,  30 }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTTZ,       MVT::v16i16, 26 }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTTZ,       MVT::v32i8,  20 }, // 2 x 128-bit Op + extract/insert
     { ISD::FSQRT,      MVT::f32,    14 }, // SNB from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f32,  14 }, // SNB from http://www.agner.org/
     { ISD::FSQRT,      MVT::v8f32,  28 }, // SNB from http://www.agner.org/

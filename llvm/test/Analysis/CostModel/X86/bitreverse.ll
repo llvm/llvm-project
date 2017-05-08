@@ -79,7 +79,7 @@ define <4 x i64> @var_bitreverse_v4i64(<4 x i64> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'var_bitreverse_v4i64':
 ; SSE2: Found an estimated cost of 58 for instruction:   %bitreverse
 ; SSE42: Found an estimated cost of 10 for instruction:   %bitreverse
-; AVX: Found an estimated cost of 10 for instruction:   %bitreverse
+; AVX: Found an estimated cost of 12 for instruction:   %bitreverse
 ; AVX2: Found an estimated cost of 5 for instruction:   %bitreverse
 ; XOP: Found an estimated cost of 4 for instruction:   %bitreverse
   %bitreverse = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
@@ -101,7 +101,7 @@ define <8 x i32> @var_bitreverse_v8i32(<8 x i32> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'var_bitreverse_v8i32':
 ; SSE2: Found an estimated cost of 54 for instruction:   %bitreverse
 ; SSE42: Found an estimated cost of 10 for instruction:   %bitreverse
-; AVX: Found an estimated cost of 10 for instruction:   %bitreverse
+; AVX: Found an estimated cost of 12 for instruction:   %bitreverse
 ; AVX2: Found an estimated cost of 5 for instruction:   %bitreverse
 ; XOP: Found an estimated cost of 4 for instruction:   %bitreverse
   %bitreverse = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
@@ -123,7 +123,7 @@ define <16 x i16> @var_bitreverse_v16i16(<16 x i16> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'var_bitreverse_v16i16':
 ; SSE2: Found an estimated cost of 54 for instruction:   %bitreverse
 ; SSE42: Found an estimated cost of 10 for instruction:   %bitreverse
-; AVX: Found an estimated cost of 10 for instruction:   %bitreverse
+; AVX: Found an estimated cost of 12 for instruction:   %bitreverse
 ; AVX2: Found an estimated cost of 5 for instruction:   %bitreverse
 ; XOP: Found an estimated cost of 4 for instruction:   %bitreverse
   %bitreverse = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
@@ -145,7 +145,7 @@ define <32 x i8> @var_bitreverse_v32i8(<32 x i8> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'var_bitreverse_v32i8':
 ; SSE2: Found an estimated cost of 40 for instruction:   %bitreverse
 ; SSE42: Found an estimated cost of 10 for instruction:   %bitreverse
-; AVX: Found an estimated cost of 10 for instruction:   %bitreverse
+; AVX: Found an estimated cost of 12 for instruction:   %bitreverse
 ; AVX2: Found an estimated cost of 5 for instruction:   %bitreverse
 ; XOP: Found an estimated cost of 4 for instruction:   %bitreverse
   %bitreverse = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> %a)

@@ -1,0 +1,112 @@
+# RUN: llc -mtriple=x86_64-linux-gnu                                  -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL 
+
+--- |
+  define i16 @test_mul_i16(i16 %arg1, i16 %arg2) {
+    %ret = mul i16 %arg1, %arg2
+    ret i16 %ret
+  }
+
+  define i32 @test_mul_i32(i32 %arg1, i32 %arg2) {
+    %ret = mul i32 %arg1, %arg2
+    ret i32 %ret
+  }
+
+  define i64 @test_mul_i64(i64 %arg1, i64 %arg2) {
+    %ret = mul i64 %arg1, %arg2
+    ret i64 %ret
+  }
+
+...
+---
+name:            test_mul_i16
+# ALL-LABEL: name:  test_mul_i16
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr16 }
+# ALL-NEXT:   - { id: 1, class: gr16 }
+# ALL-NEXT:   - { id: 2, class: gr16 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:      body:             |
+# ALL:          %0 = COPY %di
+# ALL-NEXT:     %1 = COPY %si
+# ALL-NEXT:     %2 = IMUL16rr %0, %1, implicit-def %eflags
+# ALL-NEXT:     %ax = COPY %2
+# ALL-NEXT:     RET 0, implicit %ax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s16) = COPY %edi
+    %1(s16) = COPY %esi
+    %2(s16) = G_MUL %0, %1
+    %ax = COPY %2(s16)
+    RET 0, implicit %ax
+
+...
+---
+name:            test_mul_i32
+# ALL-LABEL: name:  test_mul_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr32 }
+# ALL-NEXT:   - { id: 1, class: gr32 }
+# ALL-NEXT:   - { id: 2, class: gr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:      body:             |
+# ALL:          %0 = COPY %edi
+# ALL-NEXT:     %1 = COPY %esi
+# ALL-NEXT:     %2 = IMUL32rr %0, %1, implicit-def %eflags
+# ALL-NEXT:     %eax = COPY %2
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s32) = G_MUL %0, %1
+    %eax = COPY %2(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_mul_i64
+# ALL-LABEL: name:  test_mul_i64
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr64 }
+# ALL-NEXT:   - { id: 1, class: gr64 }
+# ALL-NEXT:   - { id: 2, class: gr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:      body:             |
+# ALL:          %0 = COPY %rdi
+# ALL-NEXT:     %1 = COPY %rsi
+# ALL-NEXT:     %2 = IMUL64rr %0, %1, implicit-def %eflags
+# ALL-NEXT:     %rax = COPY %2
+# ALL-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %rsi
+
+    %0(s64) = COPY %rdi
+    %1(s64) = COPY %rsi
+    %2(s64) = G_MUL %0, %1
+    %rax = COPY %2(s64)
+    RET 0, implicit %rax
+
+...

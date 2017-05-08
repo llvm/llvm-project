@@ -152,9 +152,10 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 option(POLLY_ENABLE_GPGPU_CODEGEN "Enable GPGPU code generation feature" OFF)
 if (POLLY_ENABLE_GPGPU_CODEGEN)
-  # Do not require CUDA, as GPU code generation test cases can be run without
-  # a cuda library.
+  # Do not require CUDA/OpenCL, as GPU code generation test cases can be run
+  # without a CUDA/OpenCL library.
   FIND_PACKAGE(CUDA)
+  FIND_PACKAGE(OpenCL)
   set(GPU_CODEGEN TRUE)
 else(POLLY_ENABLE_GPGPU_CODEGEN)
   set(GPU_CODEGEN FALSE)
@@ -163,8 +164,13 @@ endif(POLLY_ENABLE_GPGPU_CODEGEN)
 
 # Support GPGPU code generation if the library is available.
 if (CUDALIB_FOUND)
+  add_definitions(-DHAS_LIBCUDART)
   INCLUDE_DIRECTORIES( ${CUDALIB_INCLUDE_DIR} )
 endif(CUDALIB_FOUND)
+if (OpenCL_FOUND)
+  add_definitions(-DHAS_LIBOPENCL)
+  INCLUDE_DIRECTORIES( ${OpenCL_INCLUDE_DIR} )
+endif(OpenCL_FOUND)
 
 option(POLLY_BUNDLED_ISL "Use the bundled version of libisl included in Polly" ON)
 if (NOT POLLY_BUNDLED_ISL)

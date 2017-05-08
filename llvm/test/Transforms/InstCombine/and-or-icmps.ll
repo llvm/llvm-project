@@ -15,9 +15,7 @@ define i1 @PR1817_1(i32 %X) {
 define i1 @PR1817_2(i32 %X) {
 ; CHECK-LABEL: @PR1817_2(
 ; CHECK-NEXT:    [[A:%.*]] = icmp slt i32 %X, 10
-; CHECK-NEXT:    [[B:%.*]] = icmp ult i32 %X, 10
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %A = icmp slt i32 %X, 10
   %B = icmp ult i32 %X, 10

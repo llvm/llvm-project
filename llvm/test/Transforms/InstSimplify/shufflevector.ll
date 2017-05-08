@@ -233,3 +233,17 @@ define <8 x i64> @PR30630(<8 x i64> %x) {
   ret <8 x i64> %s7
 }
 
+; This case covers internal canonicalization of shuffles with one constant input vector.
+
+;FIXME: Another issue exposed here, this whole function could be simplified to:
+;         ret <2 x float> zeroinitializer
+define <2 x float> @PR32872(<2 x float> %x) {
+; CHECK-LABEL: @PR32872(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> zeroinitializer, <4 x i32> <i32 2, i32 2, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> zeroinitializer, <4 x float> [[TMP1]], <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    ret <2 x float> [[TMP4]]
+;
+  %tmp1 = shufflevector <2 x float> %x, <2 x float> zeroinitializer, <4 x i32> <i32 2, i32 2, i32 0, i32 1>
+  %tmp4 = shufflevector <4 x float> zeroinitializer, <4 x float> %tmp1, <2 x i32> <i32 4, i32 5>
+  ret <2 x float> %tmp4
+}
