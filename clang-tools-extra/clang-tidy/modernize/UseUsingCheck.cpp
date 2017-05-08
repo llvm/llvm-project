@@ -19,7 +19,7 @@ namespace modernize {
 
 UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
 
 void UseUsingCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus11)

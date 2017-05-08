@@ -209,23 +209,45 @@ the configuration (without a prefix: ``Auto``).
     float       b = 23;
     std::string ccc = 23;
 
-**AlignEscapedNewlinesLeft** (``bool``)
-  If ``true``, aligns escaped newlines as far left as possible.
-  Otherwise puts them into the right-most column.
+**AlignEscapedNewlines** (``EscapedNewlineAlignmentStyle``)
+  Options for aligning backslashes in escaped newlines.
 
-  .. code-block:: c++
+  Possible values:
 
-    true:
-    #define A   \
-      int aaaa; \
-      int b;    \
-      int dddddddddd;
+  * ``ENAS_DontAlign`` (in configuration: ``DontAlign``)
+    Don't align escaped newlines.
 
-    false:
-    #define A                                                                      \
-      int aaaa;                                                                    \
-      int b;                                                                       \
-      int dddddddddd;
+    .. code-block:: c++
+
+      #define A \
+        int aaaa; \
+        int b; \
+        int dddddddddd;
+
+  * ``ENAS_Left`` (in configuration: ``Left``)
+    Align escaped newlines as far left as possible.
+
+    .. code-block:: c++
+
+      true:
+      #define A   \
+        int aaaa; \
+        int b;    \
+        int dddddddddd;
+
+      false:
+
+  * ``ENAS_Right`` (in configuration: ``Right``)
+    Align escaped newlines in the right-most column.
+
+    .. code-block:: c++
+
+      #define A                                                                      \
+        int aaaa;                                                                    \
+        int b;                                                                       \
+        int dddddddddd;
+
+
 
 **AlignOperands** (``bool``)
   If ``true``, horizontally align operands of binary and ternary
@@ -1525,7 +1547,7 @@ the configuration (without a prefix: ``Auto``).
     Use C++03-compatible syntax.
 
   * ``LS_Cpp11`` (in configuration: ``Cpp11``)
-    Use features of C++11, C++14 and C++1z (e.g. ``A<A<int>>`` instead of 
+    Use features of C++11, C++14 and C++1z (e.g. ``A<A<int>>`` instead of
     ``A<A<int> >``).
 
   * ``LS_Auto`` (in configuration: ``Auto``)

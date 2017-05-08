@@ -1536,7 +1536,7 @@ static Value *simplifyAndOrOfICmpsWithConstants(ICmpInst *Cmp0, ICmpInst *Cmp1,
   auto Range0 = ConstantRange::makeExactICmpRegion(Cmp0->getPredicate(), *C0);
   auto Range1 = ConstantRange::makeExactICmpRegion(Cmp1->getPredicate(), *C1);
 
-  // For and-of-comapares, check if the intersection is empty:
+  // For and-of-compares, check if the intersection is empty:
   // (icmp X, C0) && (icmp X, C1) --> empty set --> false
   if (IsAnd && Range0.intersectWith(Range1).isEmptySet())
     return getFalse(Cmp0->getType());
@@ -2535,6 +2535,9 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
   return nullptr;
 }
 
+/// TODO: A large part of this logic is duplicated in InstCombine's
+/// foldICmpBinOp(). We should be able to share that and avoid the code
+/// duplication.
 static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
                                     Value *RHS, const SimplifyQuery &Q,
                                     unsigned MaxRecurse) {
@@ -4034,24 +4037,21 @@ Value *llvm::SimplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
 /// match a root vector source operand that contains that element in the same
 /// vector lane (ie, the same mask index), so we can eliminate the shuffle(s).
 static Value *foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1,
-                                   Constant *Mask, Value *RootVec, int RootElt,
+                                   int MaskVal, Value *RootVec,
                                    unsigned MaxRecurse) {
   if (!MaxRecurse--)
     return nullptr;
 
   // Bail out if any mask value is undefined. That kind of shuffle may be
   // simplified further based on demanded bits or other folds.
-  int MaskVal = ShuffleVectorInst::getMaskValue(Mask, RootElt);
   if (MaskVal == -1)
     return nullptr;
 
   // The mask value chooses which source operand we need to look at next.
-  Value *SourceOp;
   int InVecNumElts = Op0->getType()->getVectorNumElements();
-  if (MaskVal < InVecNumElts) {
-    RootElt = MaskVal;
-    SourceOp = Op0;
-  } else {
+  int RootElt = MaskVal;
+  Value *SourceOp = Op0;
+  if (MaskVal >= InVecNumElts) {
     RootElt = MaskVal - InVecNumElts;
     SourceOp = Op1;
   }
@@ -4061,7 +4061,7 @@ static Value *foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1,
   if (auto *SourceShuf = dyn_cast<ShuffleVectorInst>(SourceOp)) {
     return foldIdentityShuffles(
         DestElt, SourceShuf->getOperand(0), SourceShuf->getOperand(1),
-        SourceShuf->getMask(), RootVec, RootElt, MaxRecurse);
+        SourceShuf->getMaskValue(RootElt), RootVec, MaxRecurse);
   }
 
   // TODO: Look through bitcasts? What if the bitcast changes the vector element
@@ -4127,10 +4127,6 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   if (Op0Const && !Op1Const) {
     std::swap(Op0, Op1);
     ShuffleVectorInst::commuteShuffleMask(Indices, InVecNumElts);
-    Mask = ConstantDataVector::get(
-        Mask->getContext(),
-        makeArrayRef(reinterpret_cast<uint32_t *>(Indices.data()),
-                     MaskNumElts));
   }
 
   // A shuffle of a splat is always the splat itself. Legal if the shuffle's
@@ -4154,7 +4150,8 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   for (unsigned i = 0; i != MaskNumElts; ++i) {
     // Note that recursion is limited for each vector element, so if any element
     // exceeds the limit, this will fail to simplify.
-    RootVec = foldIdentityShuffles(i, Op0, Op1, Mask, RootVec, i, MaxRecurse);
+    RootVec =
+        foldIdentityShuffles(i, Op0, Op1, Indices[i], RootVec, MaxRecurse);
 
     // We can't replace a widening/narrowing shuffle with one of its operands.
     if (!RootVec || RootVec->getType() != RetTy)

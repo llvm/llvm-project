@@ -98,22 +98,39 @@ struct FormatStyle {
   /// \endcode
   bool AlignConsecutiveDeclarations;
 
-  /// \brief If ``true``, aligns escaped newlines as far left as possible.
-  /// Otherwise puts them into the right-most column.
-  /// \code
-  ///   true:
-  ///   #define A   \
-  ///     int aaaa; \
-  ///     int b;    \
-  ///     int dddddddddd;
-  ///
-  ///   false:
-  ///   #define A                                                                      \
-  ///     int aaaa;                                                                    \
-  ///     int b;                                                                       \
-  ///     int dddddddddd;
-  /// \endcode
-  bool AlignEscapedNewlinesLeft;
+  /// \brief Different styles for aligning escaped newlines.
+  enum EscapedNewlineAlignmentStyle {
+    /// \brief Don't align escaped newlines.
+    /// \code
+    ///   #define A \
+    ///     int aaaa; \
+    ///     int b; \
+    ///     int dddddddddd;
+    /// \endcode
+    ENAS_DontAlign,
+    /// \brief Align escaped newlines as far left as possible.
+    /// \code
+    ///   true:
+    ///   #define A   \
+    ///     int aaaa; \
+    ///     int b;    \
+    ///     int dddddddddd;
+    ///
+    ///   false:
+    /// \endcode
+    ENAS_Left,
+    /// \brief Align escaped newlines in the right-most column.
+    /// \code
+    ///   #define A                                                                      \
+    ///     int aaaa;                                                                    \
+    ///     int b;                                                                       \
+    ///     int dddddddddd;
+    /// \endcode
+    ENAS_Right,
+  };
+
+  /// \brief Options for aligning backslashes in escaped newlines.
+  EscapedNewlineAlignmentStyle AlignEscapedNewlines;
 
   /// \brief If ``true``, horizontally align operands of binary and ternary
   /// expressions.
@@ -1347,7 +1364,7 @@ struct FormatStyle {
            AlignAfterOpenBracket == R.AlignAfterOpenBracket &&
            AlignConsecutiveAssignments == R.AlignConsecutiveAssignments &&
            AlignConsecutiveDeclarations == R.AlignConsecutiveDeclarations &&
-           AlignEscapedNewlinesLeft == R.AlignEscapedNewlinesLeft &&
+           AlignEscapedNewlines == R.AlignEscapedNewlines &&
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&
            AllowAllParametersOfDeclarationOnNextLine ==

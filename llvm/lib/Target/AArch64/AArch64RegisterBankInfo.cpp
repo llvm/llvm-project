@@ -529,8 +529,22 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // for the greedy mode the cost of the cross bank copy will
     // offset this number.
     // FIXME: Should be derived from the scheduling model.
-    if (OpRegBankIdx[0] >= PMI_FirstFPR)
+    if (OpRegBankIdx[0] != PMI_FirstGPR)
       Cost = 2;
+    else
+      // Check if that load feeds fp instructions.
+      // In that case, we want the default mapping to be on FPR
+      // instead of blind map every scalar to GPR.
+      for (const MachineInstr &UseMI :
+           MRI.use_instructions(MI.getOperand(0).getReg()))
+        // If we have at least one direct use in a FP instruction,
+        // assume this was a floating point load in the IR.
+        // If it was not, we would have had a bitcast before
+        // reaching that instruction.
+        if (isPreISelGenericFloatingPointOpcode(UseMI.getOpcode())) {
+          OpRegBankIdx[0] = PMI_FirstFPR;
+          break;
+        }
     break;
   }
 

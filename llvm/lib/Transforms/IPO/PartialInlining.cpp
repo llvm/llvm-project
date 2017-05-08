@@ -157,7 +157,7 @@ PartialInlinerImpl::computeOutliningInfo(Function *F) {
     return isa<ReturnInst>(TI);
   };
 
-  auto GetReturnBlock = [=](BasicBlock *Succ1, BasicBlock *Succ2) {
+  auto GetReturnBlock = [&](BasicBlock *Succ1, BasicBlock *Succ2) {
     if (IsReturnBlock(Succ1))
       return std::make_tuple(Succ1, Succ2);
     if (IsReturnBlock(Succ2))
@@ -167,7 +167,7 @@ PartialInlinerImpl::computeOutliningInfo(Function *F) {
   };
 
   // Detect a triangular shape:
-  auto GetCommonSucc = [=](BasicBlock *Succ1, BasicBlock *Succ2) {
+  auto GetCommonSucc = [&](BasicBlock *Succ1, BasicBlock *Succ2) {
     if (IsSuccessor(Succ1, Succ2))
       return std::make_tuple(Succ1, Succ2);
     if (IsSuccessor(Succ2, Succ1))
@@ -423,7 +423,7 @@ Function *PartialInlinerImpl::unswitchFunction(Function *F) {
 
   // Returns true if the block is to be partial inlined into the caller
   // (i.e. not to be extracted to the out of line function)
-  auto ToBeInlined = [=](BasicBlock *BB) {
+  auto ToBeInlined = [&](BasicBlock *BB) {
     return BB == NewReturnBlock || NewEntries.count(BB);
   };
   // Gather up the blocks that we're going to extract.

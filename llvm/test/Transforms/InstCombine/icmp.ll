@@ -695,6 +695,19 @@ define i1 @test48(i32 %X, i32 %Y, i32 %Z) {
   ret i1 %C
 }
 
+; FIXME: The above transform only works for equality predicates.
+
+define i1 @PR32949(i32 %X, i32 %Y, i32 %Z) {
+; CHECK-LABEL: @PR32949(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 %X, %Y
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = sdiv exact i32 %X, %Z
+  %B = sdiv exact i32 %Y, %Z
+  %C = icmp sgt i32 %A, %B
+  ret i1 %C
+}
+
 ; PR8469
 define <2 x i1> @test49(<2 x i32> %tmp3) {
 ; CHECK-LABEL: @test49(
