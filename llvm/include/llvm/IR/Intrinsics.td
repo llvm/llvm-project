@@ -795,6 +795,14 @@ def int_type_checked_load : Intrinsic<[llvm_ptr_ty, llvm_i1_ty],
 def int_load_relative: Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_anyint_ty],
                                  [IntrReadMem, IntrArgMemOnly]>;
 
+// Xray intrinsics
+//===----------------------------------------------------------------------===//
+// Custom event logging for x-ray.
+// Takes a pointer to a string and the length of the string.
+def int_xray_customevent : Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
+                                     [NoCapture<0>, ReadOnly<0>, IntrWriteMem]>;
+//===----------------------------------------------------------------------===//
+
 //===------ Memory intrinsics with element-wise atomicity guarantees ------===//
 //
 

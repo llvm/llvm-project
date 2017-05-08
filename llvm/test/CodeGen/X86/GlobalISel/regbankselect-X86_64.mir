@@ -27,6 +27,10 @@
     ret i64 %ret
   }
 
+  define void @test_mul_gpr() {
+    ret void
+  }
+
   define float @test_add_float(float %arg1, float %arg2) {
     %ret = fadd float %arg1, %arg2
     ret float %ret
@@ -107,6 +111,12 @@
   }
 
   define void @trunc_check() {
+    ret void
+  }
+
+  define void @test_gep() {
+    %p1 = getelementptr i32, i32* undef, i32 5
+    %p2 = getelementptr i32, i32* undef, i64 5
     ret void
   }
 
@@ -218,6 +228,45 @@ body:             |
     %rax = COPY %2(s64)
     RET 0, implicit %rax
 
+...
+---
+name:            test_mul_gpr
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_mul_gpr
+# CHECK: registers:
+# CHECK:  - { id: 0, class: gpr }
+# CHECK:  - { id: 1, class: gpr }
+# CHECK:  - { id: 2, class: gpr }
+# CHECK:  - { id: 3, class: gpr }
+# CHECK:  - { id: 4, class: gpr }
+# CHECK:  - { id: 5, class: gpr }
+# CHECK:  - { id: 6, class: gpr }
+# CHECK:  - { id: 7, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }  
+body:             |
+  bb.1 (%ir-block.0):
+    
+    %0(s64) = IMPLICIT_DEF
+    %1(s32) = IMPLICIT_DEF
+    %2(s16) = IMPLICIT_DEF
+    %3(s8)  = IMPLICIT_DEF
+    %4(s64) = G_MUL %0, %0
+    %5(s32) = G_MUL %1, %1
+    %6(s16) = G_MUL %2, %2
+    %7(s8)  = G_MUL %3, %3
+    RET 0
 ...
 ---
 name:            test_add_float
@@ -657,6 +706,32 @@ body:             |
     %1(s1) = G_TRUNC %0(s32)
     %2(s8) = G_TRUNC %0(s32)
     %3(s16) = G_TRUNC %0(s32)
+    RET 0
+
+...
+---
+name:            test_gep
+legalized:       true
+# CHECK-LABEL: name:            test_gep
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gpr }
+# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 2, class: gpr }
+# CHECK-NEXT:  - { id: 3, class: gpr }
+# CHECK-NEXT:  - { id: 4, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+body:             |
+  bb.0 (%ir-block.0):
+    %0(p0) = IMPLICIT_DEF
+    %1(s32) = G_CONSTANT i32 20
+    %2(p0) = G_GEP %0, %1(s32)
+    %3(s64) = G_CONSTANT i64 20
+    %4(p0) = G_GEP %0, %3(s64)
     RET 0
 
 ...

@@ -4126,13 +4126,7 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   // second one.
   if (Op0Const && !Op1Const) {
     std::swap(Op0, Op1);
-    for (int &Idx : Indices) {
-      if (Idx == -1)
-        continue;
-      Idx = Idx < (int)InVecNumElts ? Idx + InVecNumElts : Idx - InVecNumElts;
-      assert(Idx >= 0 && Idx < (int)InVecNumElts * 2 &&
-             "shufflevector mask index out of range");
-    }
+    ShuffleVectorInst::commuteShuffleMask(Indices, InVecNumElts);
     Mask = ConstantDataVector::get(
         Mask->getContext(),
         makeArrayRef(reinterpret_cast<uint32_t *>(Indices.data()),

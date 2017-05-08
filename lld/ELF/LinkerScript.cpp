@@ -406,15 +406,8 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
       }
 
       // Add input sections to an output section.
-      unsigned Pos = 0;
-      for (InputSectionBase *S : V) {
-        // The actual offset will be computed during
-        // assignAddresses. For now, use the index as a very crude
-        // approximation so that it is at least easy for other code to
-        // know the section order.
-        cast<InputSection>(S)->OutSecOff = Pos++;
+      for (InputSectionBase *S : V)
         Factory.addInputSec(S, Cmd->Name, Cmd->Sec);
-      }
       if (OutputSection *Sec = Cmd->Sec) {
         assert(Sec->SectionIndex == INT_MAX);
         Sec->SectionIndex = I;
@@ -647,6 +640,11 @@ void LinkerScript::assignOffsets(OutputSectionCommand *Cmd) {
   if (CurMemRegion)
     Dot = CurMemRegion->Offset;
   switchTo(Sec);
+
+  // We do not support custom layout for compressed debug sectons.
+  // At this point we already know their size and have compressed content.
+  if (CurOutSec->Flags & SHF_COMPRESSED)
+    return;
 
   for (BaseCommand *C : Cmd->Commands)
     process(*C);

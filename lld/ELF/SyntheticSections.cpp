@@ -1038,6 +1038,15 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
   if (!Config->SoName.empty())
     add({DT_SONAME, In<ELFT>::DynStrTab->addString(Config->SoName)});
 
+  if (!Config->Shared && !Config->Relocatable)
+    add({DT_DEBUG, (uint64_t)0});
+}
+
+// Add remaining entries to complete .dynamic contents.
+template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
+  if (this->Size)
+    return; // Already finalized.
+
   // Set DT_FLAGS and DT_FLAGS_1.
   uint32_t DtFlags = 0;
   uint32_t DtFlags1 = 0;
@@ -1055,20 +1064,13 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
     DtFlags |= DF_ORIGIN;
     DtFlags1 |= DF_1_ORIGIN;
   }
+  if (Config->HasStaticTlsModel)
+    DtFlags |= DF_STATIC_TLS;
 
   if (DtFlags)
     add({DT_FLAGS, DtFlags});
   if (DtFlags1)
     add({DT_FLAGS_1, DtFlags1});
-
-  if (!Config->Shared && !Config->Relocatable)
-    add({DT_DEBUG, (uint64_t)0});
-}
-
-// Add remaining entries to complete .dynamic contents.
-template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
-  if (this->Size)
-    return; // Already finalized.
 
   this->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
   if (In<ELFT>::RelaDyn->OutSec->Size > 0) {

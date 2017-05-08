@@ -182,6 +182,10 @@ HANDLE_TARGET_OPCODE(PATCHABLE_FUNCTION_EXIT)
 /// PATCHABLE_RET which specifically only works for return instructions.
 HANDLE_TARGET_OPCODE(PATCHABLE_TAIL_CALL)
 
+/// Wraps a logging call and its arguments with nop sleds. At runtime, this can be
+/// patched to insert instrumentation instructions.
+HANDLE_TARGET_OPCODE(PATCHABLE_EVENT_CALL)
+
 /// The following generic opcodes are not supposed to appear after ISel.
 /// This is something we might want to relax, but for now, this is convenient
 /// to produce diagnostics.

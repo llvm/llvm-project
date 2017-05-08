@@ -861,6 +861,25 @@ bool FastISel::selectPatchpoint(const CallInst *I) {
   return true;
 }
 
+bool FastISel::selectXRayCustomEvent(const CallInst *I) {
+  const auto &Triple = TM.getTargetTriple();
+  if (Triple.getArch() != Triple::x86_64 || !Triple.isOSLinux())
+    return true; // don't do anything to this instruction.
+  SmallVector<MachineOperand, 8> Ops;
+  Ops.push_back(MachineOperand::CreateReg(getRegForValue(I->getArgOperand(0)),
+                                          /*IsDef=*/false));
+  Ops.push_back(MachineOperand::CreateReg(getRegForValue(I->getArgOperand(1)),
+                                          /*IsDef=*/false));
+  MachineInstrBuilder MIB =
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(TargetOpcode::PATCHABLE_EVENT_CALL));
+  for (auto &MO : Ops)
+    MIB.add(MO);
+  // Insert the Patchable Event Call instruction, that gets lowered properly.
+  return true;
+}
+
+
 /// Returns an AttributeList representing the attributes applied to the return
 /// value of the given call.
 static AttributeList getReturnAttrs(FastISel::CallLoweringInfo &CLI) {
@@ -1252,6 +1271,9 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   case Intrinsic::experimental_patchpoint_void:
   case Intrinsic::experimental_patchpoint_i64:
     return selectPatchpoint(II);
+
+  case Intrinsic::xray_customevent:
+    return selectXRayCustomEvent(II);
   }
 
   return fastLowerIntrinsicCall(II);

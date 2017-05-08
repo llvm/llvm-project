@@ -73,6 +73,7 @@ struct VersionDefinition {
 // Most fields are initialized by the driver.
 struct Configuration {
   InputFile *FirstElf = nullptr;
+  bool HasStaticTlsModel = false;
   uint8_t OSABI = 0;
   llvm::CachePruningPolicy ThinLTOCachePolicy;
   llvm::StringMap<uint64_t> SectionStartMap;
