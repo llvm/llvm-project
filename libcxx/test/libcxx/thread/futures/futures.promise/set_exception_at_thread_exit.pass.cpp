@@ -7,9 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test depends on std::exception_ptr which has not yet been implemented.
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // UNSUPPORTED: libcpp-no-exceptions
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03

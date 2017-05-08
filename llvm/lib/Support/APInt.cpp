@@ -256,6 +256,16 @@ APInt& APInt::operator*=(const APInt& RHS) {
   return *this;
 }
 
+APInt& APInt::operator*=(uint64_t RHS) {
+  if (isSingleWord()) {
+    U.VAL *= RHS;
+  } else {
+    unsigned NumWords = getNumWords();
+    tcMultiplyPart(U.pVal, U.pVal, RHS, 0, NumWords, NumWords, false);
+  }
+  return clearUnusedBits();
+}
+
 bool APInt::EqualSlowCase(const APInt& RHS) const {
   return std::equal(U.pVal, U.pVal + getNumWords(), RHS.U.pVal);
 }
@@ -1832,10 +1842,6 @@ void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
   // Figure out if we can shift instead of multiply
   unsigned shift = (radix == 16 ? 4 : radix == 8 ? 3 : radix == 2 ? 1 : 0);
 
-  // Set up an APInt for the radix multiplier outside the loop so we don't
-  // constantly construct/destruct it.
-  APInt apradix(getBitWidth(), radix);
-
   // Enter digit traversal loop
   for (StringRef::iterator e = str.end(); p != e; ++p) {
     unsigned digit = getDigit(*p, radix);
@@ -1846,7 +1852,7 @@ void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
       if (shift)
         *this <<= shift;
       else
-        *this *= apradix;
+        *this *= radix;
     }
 
     // Add in the digit we just interpreted

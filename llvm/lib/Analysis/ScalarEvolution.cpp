@@ -4842,7 +4842,7 @@ ScalarEvolution::getRange(const SCEV *S,
 // from StartRange and then is changed by Step up to MaxBECount times. Signed
 // argument defines if we treat Step as signed or unsigned.
 static ConstantRange getRangeForAffineARHelper(APInt Step,
-                                               ConstantRange StartRange,
+                                               const ConstantRange &StartRange,
                                                const APInt &MaxBECount,
                                                unsigned BitWidth, bool Signed) {
   // If either Step or MaxBECount is 0, then the expression won't change, and we
@@ -7376,7 +7376,6 @@ SolveQuadraticEquation(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
   const APInt &M = MC->getAPInt();
   const APInt &N = NC->getAPInt();
   APInt Two(BitWidth, 2);
-  APInt Four(BitWidth, 4);
 
   {
     using namespace APIntOps;
@@ -7392,7 +7391,7 @@ SolveQuadraticEquation(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
     // Compute the B^2-4ac term.
     APInt SqrtTerm(B);
     SqrtTerm *= B;
-    SqrtTerm -= Four * (A * C);
+    SqrtTerm -= 4 * (A * C);
 
     if (SqrtTerm.isNegative()) {
       // The loop is provably infinite.

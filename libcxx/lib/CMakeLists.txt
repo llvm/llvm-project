@@ -121,6 +121,7 @@ if (LIBCXX_TARGETING_MSVC)
   add_library_flags(ucrt${LIB_SUFFIX}) # Universal C runtime
   add_library_flags(vcruntime${LIB_SUFFIX}) # C++ runtime
   add_library_flags(msvcrt${LIB_SUFFIX}) # C runtime startup files
+  add_library_flags(msvcprt${LIB_SUFFIX}) # C++ standard library. Required for exception_ptr internals.
   # Required for standards-complaint wide character formatting functions
   # (e.g. `printfw`/`scanfw`)
   add_library_flags(iso_stdio_wide_specifiers)
