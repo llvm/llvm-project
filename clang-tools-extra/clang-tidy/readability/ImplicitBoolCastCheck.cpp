@@ -227,7 +227,8 @@ bool isAllowedConditionalCast(const ImplicitCastExpr *Cast,
       const Stmt *S = N.get<Stmt>();
       if (!S)
         return false;
-      if (isa<IfStmt>(S) || isa<ConditionalOperator>(S))
+      if (isa<IfStmt>(S) || isa<ConditionalOperator>(S) || isa<ForStmt>(S) ||
+          isa<WhileStmt>(S) || isa<BinaryConditionalOperator>(S))
         return true;
       if (isa<ParenExpr>(S) || isa<ImplicitCastExpr>(S) ||
           isUnaryLogicalNotOperator(S) ||

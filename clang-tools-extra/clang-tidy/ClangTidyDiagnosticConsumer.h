@@ -223,7 +223,8 @@ private:
 // implementation file.
 class ClangTidyDiagnosticConsumer : public DiagnosticConsumer {
 public:
-  ClangTidyDiagnosticConsumer(ClangTidyContext &Ctx);
+  ClangTidyDiagnosticConsumer(ClangTidyContext &Ctx,
+                              bool RemoveIncompatibleErrors = true);
 
   // FIXME: The concept of converting between FixItHints and Replacements is
   // more generic and should be pulled out into a more useful Diagnostics
@@ -249,6 +250,7 @@ private:
   bool passesLineFilter(StringRef FileName, unsigned LineNumber) const;
 
   ClangTidyContext &Context;
+  bool RemoveIncompatibleErrors;
   std::unique_ptr<DiagnosticsEngine> Diags;
   SmallVector<ClangTidyError, 8> Errors;
   std::unique_ptr<llvm::Regex> HeaderFilter;

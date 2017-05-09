@@ -140,11 +140,23 @@ template <class ELFT> void OutputSection::finalize() {
   this->Info = S->OutSec->SectionIndex;
 }
 
+static uint64_t updateOffset(uint64_t Off, InputSection *S) {
+  Off = alignTo(Off, S->Alignment);
+  S->OutSecOff = Off;
+  return Off + S->getSize();
+}
+
 void OutputSection::addSection(InputSection *S) {
   assert(S->Live);
   Sections.push_back(S);
   S->OutSec = this;
   this->updateAlignment(S->Alignment);
+
+  // The actual offsets will be computed by assignAddresses. For now, use
+  // crude approximation so that it is at least easy for other code to know the
+  // section order. It is also used to calculate the output section size early
+  // for compressed debug sections.
+  this->Size = updateOffset(Size, S);
 
   // If this section contains a table of fixed-size entries, sh_entsize
   // holds the element size. Consequently, if this contains two or more
@@ -160,11 +172,8 @@ void OutputSection::addSection(InputSection *S) {
 // and scan relocations to setup sections' offsets.
 void OutputSection::assignOffsets() {
   uint64_t Off = 0;
-  for (InputSection *S : Sections) {
-    Off = alignTo(Off, S->Alignment);
-    S->OutSecOff = Off;
-    Off += S->getSize();
-  }
+  for (InputSection *S : Sections)
+    Off = updateOffset(Off, S);
   this->Size = Off;
 }
 

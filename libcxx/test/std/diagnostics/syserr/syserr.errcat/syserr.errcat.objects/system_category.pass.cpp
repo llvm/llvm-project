@@ -31,7 +31,7 @@ void test_message_for_bad_value() {
     errno = E2BIG; // something that message will never generate
     const std::error_category& e_cat1 = std::system_category();
     const std::string msg = e_cat1.message(-1);
-    LIBCPP_ASSERT(msg == "Unknown error -1");
+    LIBCPP_ASSERT(msg == "Unknown error -1" || msg == "Unknown error");
     assert(errno == E2BIG);
 }
 

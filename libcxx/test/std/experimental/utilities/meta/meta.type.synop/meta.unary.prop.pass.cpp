@@ -8,6 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
+
+// GCC returns true for __is_trivially_constructible(void, int)
+// See gcc.gnu.org/PR80682
+// XFAIL: gcc
+
 // <experimental/type_traits>
 
 #include <experimental/type_traits>

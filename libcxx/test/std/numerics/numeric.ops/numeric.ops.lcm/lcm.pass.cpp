@@ -11,12 +11,14 @@
 // <numeric>
 
 // template<class _M, class _N>
-// constexpr common_type_t<_M,_N> gcd(_M __m, _N __n)
+// constexpr common_type_t<_M,_N> lcm(_M __m, _N __n)
 
 #include <numeric>
 #include <cassert>
+#include <climits>
+#include <cstdint>
 #include <cstdlib>
-#include <iostream>
+#include <type_traits>
 
 constexpr struct {
   int x;
@@ -34,21 +36,24 @@ constexpr struct {
 };
 
 template <typename Input1, typename Input2, typename Output>
-constexpr bool test0(Input1 in1, Input2 in2, Output out)
+constexpr bool test0(int in1, int in2, int out)
 {
-    static_assert((std::is_same<Output, decltype(std::lcm(Input1(0), Input2(0)))>::value), "" );
-    static_assert((std::is_same<Output, decltype(std::lcm(Input2(0), Input1(0)))>::value), "" );
-    return out == std::lcm(in1, in2) ? true : (std::abort(), false);
+    auto value1 = static_cast<Input1>(in1);
+    auto value2 = static_cast<Input2>(in2);
+    static_assert(std::is_same_v<Output, decltype(std::lcm(value1, value2))>, "");
+    static_assert(std::is_same_v<Output, decltype(std::lcm(value2, value1))>, "");
+    assert(static_cast<Output>(out) == std::lcm(value1, value2));
+    return true;
 }
 
 
 template <typename Input1, typename Input2 = Input1>
 constexpr bool do_test(int = 0)
 {
-    using S1 = typename std::make_signed<Input1>::type;
-    using S2 = typename std::make_signed<Input2>::type;
-    using U1 = typename std::make_unsigned<Input1>::type;
-    using U2 = typename std::make_unsigned<Input2>::type;
+    using S1 = std::make_signed_t<Input1>;
+    using S2 = std::make_signed_t<Input2>;
+    using U1 = std::make_unsigned_t<Input1>;
+    using U2 = std::make_unsigned_t<Input2>;
     bool accumulate = true;
     for (auto TC : Cases) {
         { // Test with two signed types
@@ -101,15 +106,15 @@ int main()
     assert(do_test<long>(non_cce));
     assert(do_test<long long>(non_cce));
 
-    static_assert(do_test< int8_t>(), "");
-    static_assert(do_test<int16_t>(), "");
-    static_assert(do_test<int32_t>(), "");
-    static_assert(do_test<int64_t>(), "");
+    static_assert(do_test<std::int8_t>(), "");
+    static_assert(do_test<std::int16_t>(), "");
+    static_assert(do_test<std::int32_t>(), "");
+    static_assert(do_test<std::int64_t>(), "");
 
-    assert(do_test< int8_t>(non_cce));
-    assert(do_test<int16_t>(non_cce));
-    assert(do_test<int32_t>(non_cce));
-    assert(do_test<int64_t>(non_cce));
+    assert(do_test<std::int8_t>(non_cce));
+    assert(do_test<std::int16_t>(non_cce));
+    assert(do_test<std::int32_t>(non_cce));
+    assert(do_test<std::int64_t>(non_cce));
 
     static_assert(do_test<signed char, int>(), "");
     static_assert(do_test<int, signed char>(), "");
@@ -131,9 +136,9 @@ int main()
 
 //  LWG#2837
     {
-    auto res1 = std::lcm((int64_t)1234, (int32_t)-2147483648);
-    (void) std::lcm<int, unsigned long>(INT_MIN, 2);	// this used to trigger UBSAN
-    static_assert( std::is_same<decltype(res1), std::common_type<int64_t, int32_t>::type>::value, "");
-	assert(res1 == 1324997410816LL);
+    auto res1 = std::lcm(static_cast<std::int64_t>(1234), INT32_MIN);
+    (void)std::lcm(INT_MIN, 2UL);	// this used to trigger UBSAN
+    static_assert(std::is_same_v<decltype(res1), std::int64_t>, "");
+    assert(res1 == 1324997410816LL);
     }
 }

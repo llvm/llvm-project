@@ -7,10 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// exception_ptr has not been implemented on Windows
+// UNSUPPORTED: libcpp-no-exceptions
+
+// This test fails due to a stack overflow
 // XFAIL: LIBCXX-WINDOWS-FIXME
 
-// UNSUPPORTED: libcpp-no-exceptions
 // <exception>
 
 // class nested_exception;

@@ -11,6 +11,7 @@
 #ifndef _LIBCPP_SUPPORT_WIN32_LOCALE_WIN32_H
 #define _LIBCPP_SUPPORT_WIN32_LOCALE_WIN32_H
 
+#include <__config>
 #include "support/win32/support.h"
 #include "support/win32/locale_mgmt_win32.h"
 #include <stdio.h>
@@ -83,9 +84,9 @@ isupper_l(int c, _locale_t loc)
 #define sprintf_l( __s, __l, __f, ... ) _sprintf_l( __s, __f, __l, __VA_ARGS__ )
 #define vsprintf_l( __s, __l, __f, ... ) _vsprintf_l( __s, __f, __l, __VA_ARGS__ )
 #define vsnprintf_l( __s, __n, __l, __f, ... ) _vsnprintf_l( __s, __n, __f, __l, __VA_ARGS__ )
-int snprintf_l(char *ret, size_t n, locale_t loc, const char *format, ...);
-int asprintf_l( char **ret, locale_t loc, const char *format, ... );
-int vasprintf_l( char **ret, locale_t loc, const char *format, va_list ap );
+_LIBCPP_FUNC_VIS int snprintf_l(char *ret, size_t n, locale_t loc, const char *format, ...);
+_LIBCPP_FUNC_VIS int asprintf_l( char **ret, locale_t loc, const char *format, ... );
+_LIBCPP_FUNC_VIS int vasprintf_l( char **ret, locale_t loc, const char *format, va_list ap );
 
 
 // not-so-pressing FIXME: use locale to determine blank characters

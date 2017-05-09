@@ -546,6 +546,7 @@ class Configuration(object):
 
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test', 'support')
+        self.configure_config_site_header()
         if self.cxx_stdlib_under_test != 'libstdc++' and \
            not self.is_windows:
             self.cxx.compile_flags += [
@@ -561,7 +562,6 @@ class Configuration(object):
                 '-include', os.path.join(support_path,
                                          'set_windows_crt_report_mode.h')
             ]
-        self.configure_config_site_header()
         cxx_headers = self.get_lit_conf('cxx_headers')
         if cxx_headers == '' or (cxx_headers is None
                                  and self.cxx_stdlib_under_test != 'libc++'):

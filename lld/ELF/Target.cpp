@@ -351,6 +351,15 @@ X86TargetInfo::X86TargetInfo() {
 
 RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S,
                                   const uint8_t *Loc) const {
+  // There are 4 different TLS variable models with varying degrees of
+  // flexibility and performance. LocalExec and InitialExec models are fast but
+  // less-flexible models. They cannot be used for dlopen(). If they are in use,
+  // we set DF_STATIC_TLS in the ELF header so that the runtime can reject such
+  // DSOs.
+  if (Type == R_386_TLS_LE || Type == R_386_TLS_LE_32 || Type == R_386_TLS_IE ||
+      Type == R_386_TLS_GOTIE)
+    Config->HasStaticTlsModel = true;
+
   switch (Type) {
   case R_386_8:
   case R_386_16:
