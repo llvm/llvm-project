@@ -76,7 +76,7 @@ void CVTypeVisitor::addTypeServerHandler(TypeServerHandler &Handler) {
   Handlers.push_back(&Handler);
 }
 
-Error CVTypeVisitor::visitTypeRecord(CVType &Record) {
+Expected<bool> CVTypeVisitor::handleTypeServer(CVType &Record) {
   if (Record.Type == TypeLeafKind::LF_TYPESERVER2 && !Handlers.empty()) {
     auto TS = deserializeTypeServerRecord(Record);
     if (!TS)
@@ -90,16 +90,16 @@ Error CVTypeVisitor::visitTypeRecord(CVType &Record) {
 
       // If the handler processed the record, return success.
       if (*ExpectedResult)
-        return Error::success();
+        return true;
 
       // Otherwise keep searching for a handler, eventually falling out and
       // using the default record handler.
     }
   }
+  return false;
+}
 
-  if (auto EC = Callbacks.visitTypeBegin(Record))
-    return EC;
-
+Error CVTypeVisitor::finishVisitation(CVType &Record) {
   switch (Record.Type) {
   default:
     if (auto EC = Callbacks.visitUnknownType(Record))
@@ -122,6 +122,32 @@ Error CVTypeVisitor::visitTypeRecord(CVType &Record) {
     return EC;
 
   return Error::success();
+}
+
+Error CVTypeVisitor::visitTypeRecord(CVType &Record, TypeIndex Index) {
+  auto ExpectedResult = handleTypeServer(Record);
+  if (!ExpectedResult)
+    return ExpectedResult.takeError();
+  if (*ExpectedResult)
+    return Error::success();
+
+  if (auto EC = Callbacks.visitTypeBegin(Record, Index))
+    return EC;
+
+  return finishVisitation(Record);
+}
+
+Error CVTypeVisitor::visitTypeRecord(CVType &Record) {
+  auto ExpectedResult = handleTypeServer(Record);
+  if (!ExpectedResult)
+    return ExpectedResult.takeError();
+  if (*ExpectedResult)
+    return Error::success();
+
+  if (auto EC = Callbacks.visitTypeBegin(Record))
+    return EC;
+
+  return finishVisitation(Record);
 }
 
 static Error visitMemberRecord(CVMemberRecord &Record,

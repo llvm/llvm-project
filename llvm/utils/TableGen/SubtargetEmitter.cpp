@@ -415,7 +415,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
   BypassTable += " 0, // No itinerary\n";
 
   // For each Itinerary across all processors, add a unique entry to the stages,
-  // operand cycles, and pipepine bypess tables. Then add the new Itinerary
+  // operand cycles, and pipeline bypass tables. Then add the new Itinerary
   // object with computed offsets to the ProcItinLists result.
   unsigned StageCount = 1, OperandCycleCount = 1;
   std::map<std::string, unsigned> ItinStageMap, ItinOperandMap;

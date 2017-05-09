@@ -40,7 +40,7 @@ class DWARFVerifier {
   ///
   /// @param Die          The DWARF DIE that owns the attribute value
   /// @param AttrValue    The DWARF attribute value to check
-  void verifyDebugInfoAttribute(DWARFDie &Die, DWARFAttribute &AttrValue);
+  void verifyDebugInfoAttribute(const DWARFDie &Die, DWARFAttribute &AttrValue);
 
   /// Verifies the attribute's DWARF form.
   ///
@@ -51,7 +51,7 @@ class DWARFVerifier {
   ///
   /// @param Die          The DWARF DIE that owns the attribute value
   /// @param AttrValue    The DWARF attribute value to check
-  void verifyDebugInfoForm(DWARFDie &Die, DWARFAttribute &AttrValue);
+  void verifyDebugInfoForm(const DWARFDie &Die, DWARFAttribute &AttrValue);
 
   /// Verifies the all valid references that were found when iterating through
   /// all of the DIE attributes.
@@ -60,7 +60,7 @@ class DWARFVerifier {
   /// offset matches. This helps to ensure if a DWARF link phase moved things
   /// around, that it doesn't create invalid references by failing to relocate
   /// CU relative and absolute references.
-  void veifyDebugInfoReferences();
+  void verifyDebugInfoReferences();
 
   /// Verify the the DW_AT_stmt_list encoding and value and ensure that no
   /// compile units that have the same DW_AT_stmt_list value.

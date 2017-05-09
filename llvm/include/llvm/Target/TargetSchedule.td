@@ -334,7 +334,7 @@ class ReadAdvance<SchedRead read, int cycles, list<SchedWrite> writes = []>
 }
 
 // Directly associate a new SchedRead type with a delay and optional
-// pipeline bypess. For use with InstRW or ItinRW.
+// pipeline bypass. For use with InstRW or ItinRW.
 class SchedReadAdvance<int cycles, list<SchedWrite> writes = []> : SchedRead,
   ProcReadAdvance<cycles, writes>;
 

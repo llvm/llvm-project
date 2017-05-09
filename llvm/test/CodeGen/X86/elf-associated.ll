@@ -37,3 +37,8 @@
 @l = global i32 1, section "ccc", !associated !5
 !5 = !{i32* null}
 ; CHECK-DAG: .section	ccc,"aw",@progbits
+
+; Null metadata.
+@m = global i32 1, section "ddd", !associated !6
+!6 = distinct !{null}
+; CHECK-DAG: .section	ddd,"aw",@progbits

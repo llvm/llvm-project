@@ -57,17 +57,6 @@ define i32 @test3(i32 %tmp1) {
   ret i32 %ov110
 }
 
-define i32 @test4(i32 %A, i32 %B) {
-; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 %A, %B
-; CHECK-NEXT:    ret i32 [[TMP1]]
-;
-  %1 = xor i32 %A, -1
-  %2 = ashr i32 %1, %B
-  %3 = xor i32 %2, -1
-  ret i32 %3
-}
-
 ; defect-2 in rdar://12329730
 ; (X^C1) >> C2) ^ C3 -> (X>>C2) ^ ((C1>>C2)^C3)
 ;   where the "X" has more than one use

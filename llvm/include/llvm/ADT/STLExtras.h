@@ -1079,7 +1079,7 @@ private:
 ///
 /// std::vector<char> Items = {'A', 'B', 'C', 'D'};
 /// for (auto X : enumerate(Items)) {
-///   printf("Item %d - %c\n", X.Index, X.Value);
+///   printf("Item %d - %c\n", X.index(), X.value());
 /// }
 ///
 /// Output:

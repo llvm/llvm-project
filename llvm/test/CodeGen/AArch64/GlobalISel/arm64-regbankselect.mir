@@ -74,6 +74,14 @@
     %res = bitcast <2 x i32> %vres to i64
     ret i64 %res
   }
+
+  define i64 @floatingPointLoad(i64 %arg1, double* %addr) {
+    %varg1 = bitcast i64 %arg1 to double
+    %varg2 = load double, double* %addr
+    %vres = fadd double %varg1, %varg2
+    %res = bitcast double %vres to i64
+    ret i64 %res
+  }
 ...
 
 ---
@@ -647,6 +655,48 @@ body:             |
     %4(<2 x s32>) = G_OR %2, %3
     %5(s64) = G_BITCAST %4(<2 x s32>)
     %x0 = COPY %5(s64)
+    RET_ReallyLR implicit %x0
+
+...
+
+---
+# Make sure we map what looks like floating point
+# loads to floating point register bank.
+# CHECK-LABEL: name: floatingPointLoad
+name:            floatingPointLoad
+legalized:       true
+
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gpr }
+# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:   - { id: 2, class: fpr }
+# CHECK-NEXT:   - { id: 3, class: fpr }
+# CHECK-NEXT:   - { id: 4, class: fpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+
+# No repairing should be necessary for both modes.
+# CHECK:         %0(s64) = COPY %x0
+# CHECK-NEXT:    %1(p0) = COPY %x1
+# CHECK-NEXT:    %2(s64) = G_LOAD %1(p0) :: (load 8 from %ir.addr)
+# %0 has been mapped to GPR, we need to repair to match FPR.
+# CHECK-NEXT:    %4(s64) = COPY %0
+# CHECK-NEXT:    %3(s64) = G_FADD %4, %2
+# CHECK-NEXT:    %x0 = COPY %3(s64)
+# CHECK-NEXT:    RET_ReallyLR implicit %x0
+
+body:             |
+  bb.0:
+    liveins: %x0, %x1
+
+    %0(s64) = COPY %x0
+    %1(p0) = COPY %x1
+    %2(s64) = G_LOAD %1(p0) :: (load 8 from %ir.addr)
+    %3(s64) = G_FADD %0, %2
+    %x0 = COPY %3(s64)
     RET_ReallyLR implicit %x0
 
 ...

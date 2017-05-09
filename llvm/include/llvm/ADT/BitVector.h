@@ -255,7 +255,7 @@ public:
 
   /// find_prev - Returns the index of the first set bit that precedes the
   /// the bit at \p PriorTo.  Returns -1 if all previous bits are unset.
-  int find_prev(unsigned PriorTo) {
+  int find_prev(unsigned PriorTo) const {
     if (PriorTo == 0)
       return -1;
 

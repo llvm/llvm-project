@@ -278,7 +278,7 @@ APInt ConstantRange::getUnsignedMax() const {
 }
 
 APInt ConstantRange::getUnsignedMin() const {
-  if (isFullSet() || (isWrappedSet() && getUpper() != 0))
+  if (isFullSet() || (isWrappedSet() && !getUpper().isNullValue()))
     return APInt::getMinValue(getBitWidth());
   return getLower();
 }
@@ -442,7 +442,7 @@ ConstantRange ConstantRange::unionWith(const ConstantRange &CR) const {
     APInt L = CR.Lower.ult(Lower) ? CR.Lower : Lower;
     APInt U = (CR.Upper - 1).ugt(Upper - 1) ? CR.Upper : Upper;
 
-    if (L == 0 && U == 0)
+    if (L.isNullValue() && U.isNullValue())
       return ConstantRange(getBitWidth());
 
     return ConstantRange(std::move(L), std::move(U));
@@ -834,7 +834,7 @@ ConstantRange::umin(const ConstantRange &Other) const {
 
 ConstantRange
 ConstantRange::udiv(const ConstantRange &RHS) const {
-  if (isEmptySet() || RHS.isEmptySet() || RHS.getUnsignedMax() == 0)
+  if (isEmptySet() || RHS.isEmptySet() || RHS.getUnsignedMax().isNullValue())
     return ConstantRange(getBitWidth(), /*isFullSet=*/false);
   if (RHS.isFullSet())
     return ConstantRange(getBitWidth(), /*isFullSet=*/true);
@@ -842,7 +842,7 @@ ConstantRange::udiv(const ConstantRange &RHS) const {
   APInt Lower = getUnsignedMin().udiv(RHS.getUnsignedMax());
 
   APInt RHS_umin = RHS.getUnsignedMin();
-  if (RHS_umin == 0) {
+  if (RHS_umin.isNullValue()) {
     // We want the lowest value in RHS excluding zero. Usually that would be 1
     // except for a range in the form of [X, 1) in which case it would be X.
     if (RHS.getUpper() == 1)
@@ -892,29 +892,33 @@ ConstantRange::shl(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return ConstantRange(getBitWidth(), /*isFullSet=*/false);
 
-  APInt min = getUnsignedMin().shl(Other.getUnsignedMin());
-  APInt max = getUnsignedMax().shl(Other.getUnsignedMax());
+  APInt max = getUnsignedMax();
+  APInt Other_umax = Other.getUnsignedMax();
 
-  // there's no overflow!
-  APInt Zeros(getBitWidth(), getUnsignedMax().countLeadingZeros());
-  if (Zeros.ugt(Other.getUnsignedMax()))
-    return ConstantRange(std::move(min), std::move(max) + 1);
+  // there's overflow!
+  if (Other_umax.uge(max.countLeadingZeros()))
+    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
 
   // FIXME: implement the other tricky cases
-  return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+
+  APInt min = getUnsignedMin();
+  min <<= Other.getUnsignedMin();
+  max <<= Other_umax;
+
+  return ConstantRange(std::move(min), std::move(max) + 1);
 }
 
 ConstantRange
 ConstantRange::lshr(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return ConstantRange(getBitWidth(), /*isFullSet=*/false);
-  
-  APInt max = getUnsignedMax().lshr(Other.getUnsignedMin());
+
+  APInt max = getUnsignedMax().lshr(Other.getUnsignedMin()) + 1;
   APInt min = getUnsignedMin().lshr(Other.getUnsignedMax());
-  if (min == max + 1)
+  if (min == max)
     return ConstantRange(getBitWidth(), /*isFullSet=*/true);
 
-  return ConstantRange(std::move(min), std::move(max) + 1);
+  return ConstantRange(std::move(min), std::move(max));
 }
 
 ConstantRange ConstantRange::inverse() const {
