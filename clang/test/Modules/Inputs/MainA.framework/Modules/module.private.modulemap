@@ -1,0 +1,12 @@
+framework module MainA_Private {
+  umbrella header "MainPriv.h"
+
+  module * { export * }
+  export *
+
+  explicit framework module Sub {
+    umbrella header "SubPriv.h"
+    module * { export * }
+    export *
+  }
+}
