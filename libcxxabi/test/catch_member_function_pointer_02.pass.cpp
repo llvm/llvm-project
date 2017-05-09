@@ -11,6 +11,10 @@
 // clause?
 // UNSUPPORTED: libcxxabi-no-exceptions, libcxxabi-no-noexcept-function-type
 
+// GCC 7 and 8 support noexcept function types but this test still fails.
+// This is likely a bug in their implementation. Investigation needed.
+// XFAIL: gcc-7, gcc-8
+
 #include <cassert>
 
 struct X {

@@ -13,7 +13,7 @@
 // UNSUPPORTED: sanitizer-new-delete
 
 // FIXME change this to XFAIL.
-// UNSUPPORTED: no-aligned-allocation
+// UNSUPPORTED: no-aligned-allocation && !gcc
 
 // XFAIL: with_system_cxx_lib=macosx10.12
 // XFAIL: with_system_cxx_lib=macosx10.11

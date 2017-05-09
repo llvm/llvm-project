@@ -45,6 +45,24 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+struct __libcpp_unique_locale {
+  __libcpp_unique_locale(const char* nm) : __loc_(newlocale(LC_ALL_MASK, nm, 0)) {}
+
+  ~__libcpp_unique_locale() {
+    if (__loc_)
+      freelocale(__loc_);
+  }
+
+  explicit operator bool() const { return __loc_; }
+
+  locale_t& get() { return __loc_; }
+
+  locale_t __loc_;
+private:
+  __libcpp_unique_locale(__libcpp_unique_locale const&);
+  __libcpp_unique_locale& operator=(__libcpp_unique_locale const&);
+};
+
 #ifdef __cloc_defined
 locale_t __cloc() {
   // In theory this could create a race condition. In practice
@@ -4185,7 +4203,7 @@ __widen_from_utf8<32>::~__widen_from_utf8()
 
 static bool checked_string_to_wchar_convert(wchar_t& dest,
                                             const char* ptr,
-                                            __locale_struct* loc) {
+                                            locale_t loc) {
   if (*ptr == '\0')
     return false;
   mbstate_t mb = {};
@@ -4200,7 +4218,7 @@ static bool checked_string_to_wchar_convert(wchar_t& dest,
 
 static bool checked_string_to_char_convert(char& dest,
                                            const char* ptr,
-                                           __locale_struct* __loc) {
+                                           locale_t __loc) {
   if (*ptr == '\0')
     return false;
   if (!ptr[1]) {
@@ -4295,8 +4313,8 @@ numpunct_byname<char>::__init(const char* nm)
 {
     if (strcmp(nm, "C") != 0)
     {
-        __locale_unique_ptr loc(newlocale(LC_ALL_MASK, nm, 0), freelocale);
-        if (loc == nullptr)
+        __libcpp_unique_locale loc(nm);
+        if (!loc)
             __throw_runtime_error("numpunct_byname<char>::numpunct_byname"
                                 " failed to construct for " + string(nm));
 
@@ -4333,8 +4351,8 @@ numpunct_byname<wchar_t>::__init(const char* nm)
 {
     if (strcmp(nm, "C") != 0)
     {
-        __locale_unique_ptr loc(newlocale(LC_ALL_MASK, nm, 0), freelocale);
-        if (loc == nullptr)
+        __libcpp_unique_locale loc(nm);
+        if (!loc)
             __throw_runtime_error("numpunct_byname<wchar_t>::numpunct_byname"
                                 " failed to construct for " + string(nm));
 
@@ -5820,8 +5838,8 @@ void
 moneypunct_byname<char, false>::init(const char* nm)
 {
     typedef moneypunct<char, false> base;
-    __locale_unique_ptr loc(newlocale(LC_ALL_MASK, nm, 0), freelocale);
-    if (loc == nullptr)
+    __libcpp_unique_locale loc(nm);
+    if (!loc)
         __throw_runtime_error("moneypunct_byname"
                             " failed to construct for " + string(nm));
 
@@ -5864,8 +5882,8 @@ void
 moneypunct_byname<char, true>::init(const char* nm)
 {
     typedef moneypunct<char, true> base;
-    __locale_unique_ptr loc(newlocale(LC_ALL_MASK, nm, 0), freelocale);
-    if (loc == nullptr)
+    __libcpp_unique_locale loc(nm);
+    if (!loc)
         __throw_runtime_error("moneypunct_byname"
                             " failed to construct for " + string(nm));
 
@@ -5924,8 +5942,8 @@ void
 moneypunct_byname<wchar_t, false>::init(const char* nm)
 {
     typedef moneypunct<wchar_t, false> base;
-    __locale_unique_ptr loc(newlocale(LC_ALL_MASK, nm, 0), freelocale);
-    if (loc == nullptr)
+    __libcpp_unique_locale loc(nm);
+    if (!loc)
         __throw_runtime_error("moneypunct_byname"
                             " failed to construct for " + string(nm));
     lconv* lc = __libcpp_localeconv_l(loc.get());
@@ -5989,8 +6007,8 @@ void
 moneypunct_byname<wchar_t, true>::init(const char* nm)
 {
     typedef moneypunct<wchar_t, true> base;
-    __locale_unique_ptr loc(newlocale(LC_ALL_MASK, nm, 0), freelocale);
-    if (loc == nullptr)
+    __libcpp_unique_locale loc(nm);
+    if (!loc)
         __throw_runtime_error("moneypunct_byname"
                             " failed to construct for " + string(nm));
 

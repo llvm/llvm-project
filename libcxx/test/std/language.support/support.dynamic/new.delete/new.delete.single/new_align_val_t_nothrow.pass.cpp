@@ -20,7 +20,7 @@
 // UNSUPPORTED: sanitizer-new-delete
 
 // FIXME turn this into an XFAIL
-// UNSUPPORTED: no-aligned-allocation
+// UNSUPPORTED: no-aligned-allocation && !gcc
 
 // On Windows libc++ doesn't provide its own definitions for new/delete
 // but instead depends on the ones in VCRuntime. However VCRuntime does not

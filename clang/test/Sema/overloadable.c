@@ -151,3 +151,18 @@ void dropping_qualifiers_is_incompatible() {
   foo(ccharbuf); // expected-error{{call to 'foo' is ambiguous}} expected-note@148{{candidate function}} expected-note@149{{candidate function}}
   foo(vcharbuf); // expected-error{{call to 'foo' is ambiguous}} expected-note@148{{candidate function}} expected-note@149{{candidate function}}
 }
+
+// Bug: we used to treat `__typeof__(foo)` as though it was `__typeof__(&foo)`
+// if `foo` was overloaded with only one function that could have its address
+// taken.
+void typeof_function_is_not_a_pointer() {
+  void not_a_pointer(void *) __attribute__((overloadable));
+  void not_a_pointer(char *__attribute__((pass_object_size(1))))
+    __attribute__((overloadable));
+
+  __typeof__(not_a_pointer) *fn;
+
+  void take_fn(void (*)(void *));
+  // if take_fn is passed a void (**)(void *), we'll get a warning.
+  take_fn(fn);
+}

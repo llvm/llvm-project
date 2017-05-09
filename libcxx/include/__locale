@@ -49,6 +49,25 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if !defined(_LIBCPP_LOCALE__L_EXTENSIONS) || defined(_LIBCPP_MSVCRT)
+struct __libcpp_locale_guard {
+  _LIBCPP_INLINE_VISIBILITY
+  __libcpp_locale_guard(locale_t& __loc) : __old_loc_(uselocale(__loc)) {}
+
+  _LIBCPP_INLINE_VISIBILITY
+  ~__libcpp_locale_guard() {
+    if (__old_loc_)
+      uselocale(__old_loc_);
+  }
+
+  locale_t __old_loc_;
+private:
+  __libcpp_locale_guard(__libcpp_locale_guard const&);
+  __libcpp_locale_guard& operator=(__libcpp_locale_guard const&);
+};
+#endif
+
+
 class _LIBCPP_TYPE_VIS locale;
 
 template <class _Facet>

@@ -12,8 +12,10 @@ void Derived::VariadicFunction(...) { }
 
 // CHECK: define void @_ZN7Derived16VariadicFunctionEz({{.*}} !dbg ![[SP:[0-9]+]]
 // CHECK: ret void, !dbg ![[LOC:[0-9]+]]
-// CHECK-LABEL: define void @_ZT{{.+}}N7Derived16VariadicFunctionEz(
-// CHECK: ret void, !dbg ![[LOC:[0-9]+]]
+// CHECK: define void @_ZT{{.+}}N7Derived16VariadicFunctionEz({{.*}} !dbg ![[SP_I:[0-9]+]]
+// CHECK: ret void, !dbg ![[LOC_I:[0-9]+]]
 //
 // CHECK: ![[SP]] = distinct !DISubprogram(name: "VariadicFunction"
 // CHECK: ![[LOC]] = !DILocation({{.*}}scope: ![[SP]])
+// CHECK: ![[SP_I]] = distinct !DISubprogram(name: "VariadicFunction"
+// CHECK: ![[LOC_I]] = !DILocation({{.*}}scope: ![[SP_I]])

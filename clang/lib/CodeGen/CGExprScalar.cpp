@@ -89,14 +89,14 @@ struct BinOpInfo {
   }
 
   /// Check if the binop computes a division or a remainder.
-  bool isDivisionLikeOperation() const {
+  bool isDivremOp() const {
     return Opcode == BO_Div || Opcode == BO_Rem || Opcode == BO_DivAssign ||
            Opcode == BO_RemAssign;
   }
 
   /// Check if the binop can result in an integer division by zero.
   bool mayHaveIntegerDivisionByZero() const {
-    if (isDivisionLikeOperation())
+    if (isDivremOp())
       if (auto *CI = dyn_cast<llvm::ConstantInt>(RHS))
         return CI->isZero();
     return true;
@@ -104,7 +104,7 @@ struct BinOpInfo {
 
   /// Check if the binop can result in a float division by zero.
   bool mayHaveFloatDivisionByZero() const {
-    if (isDivisionLikeOperation())
+    if (isDivremOp())
       if (auto *CFP = dyn_cast<llvm::ConstantFP>(RHS))
         return CFP->isZero();
     return true;

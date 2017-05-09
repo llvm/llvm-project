@@ -499,3 +499,17 @@ void run() {
   }
 }
 }
+
+namespace TypeOfFn {
+  template <typename T, typename U>
+  struct is_same;
+
+  template <typename T> struct is_same<T, T> {
+    enum { value = 1 };
+  };
+
+  void foo(int a) __attribute__((enable_if(a, "")));
+  void foo(float a) __attribute__((enable_if(1, "")));
+
+  static_assert(is_same<__typeof__(foo)*, decltype(&foo)>::value, "");
+}

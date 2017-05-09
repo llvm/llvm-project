@@ -104,6 +104,7 @@ set(Tests
   OneHugeAllocTest
   OutOfMemoryTest
   OutOfMemorySingleLargeMallocTest
+  OverwriteInputTest
   RepeatedMemcmp
   RepeatedBytesTest
   SimpleCmpTest

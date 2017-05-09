@@ -91,6 +91,7 @@ public:
 private:
   void AlarmCallback();
   void CrashCallback();
+  void CrashOnOverwrittenData();
   void InterruptCallback();
   void MutateAndTestOne();
   void ReportNewCoverage(InputInfo *II, const Unit &U);
