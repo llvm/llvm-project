@@ -2933,6 +2933,11 @@ Optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
     return AvailabilitySpec(ConsumeToken());
   } else {
     // Parse the platform name.
+    if (Tok.is(tok::code_completion)) {
+      Actions.CodeCompleteAvailabilityPlatformName();
+      cutOffParsing();
+      return None;
+    }
     if (Tok.isNot(tok::identifier)) {
       Diag(Tok, diag::err_avail_query_expected_platform_name);
       return None;
@@ -2945,12 +2950,14 @@ Optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
     if (Version.empty())
       return None;
 
-    StringRef Platform = PlatformIdentifier->Ident->getName();
+    StringRef GivenPlatform = PlatformIdentifier->Ident->getName();
+    StringRef Platform =
+        AvailabilityAttr::canonicalizePlatformName(GivenPlatform);
 
     if (AvailabilityAttr::getPrettyPlatformName(Platform).empty()) {
       Diag(PlatformIdentifier->Loc,
            diag::err_avail_query_unrecognized_platform_name)
-          << Platform;
+          << GivenPlatform;
       return None;
     }
 
