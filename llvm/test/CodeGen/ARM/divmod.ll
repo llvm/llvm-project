@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=arm-apple-ios5.0 -mcpu=cortex-a8 | FileCheck %s -check-prefix=A8
 ; RUN: llc < %s -mtriple=arm-apple-ios5.0 -mcpu=swift     | FileCheck %s -check-prefix=SWIFT
+; RUN: llc < %s -mtriple=thumbv7-apple-macho -mcpu=cortex-a8     | FileCheck %s -check-prefix=A8
 
 ; rdar://12481395
 

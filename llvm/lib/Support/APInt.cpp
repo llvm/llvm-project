@@ -1588,19 +1588,18 @@ APInt APInt::udiv(const APInt& RHS) const {
   if (!lhsWords)
     // 0 / X ===> 0
     return APInt(BitWidth, 0);
-  else if (lhsWords < rhsWords || this->ult(RHS)) {
+  if (lhsWords < rhsWords || this->ult(RHS))
     // X / Y ===> 0, iff X < Y
     return APInt(BitWidth, 0);
-  } else if (*this == RHS) {
+  if (*this == RHS)
     // X / X ===> 1
     return APInt(BitWidth, 1);
-  } else if (lhsWords == 1 && rhsWords == 1) {
+  if (lhsWords == 1 && rhsWords == 1)
     // All high words are zero, just use native divide
     return APInt(BitWidth, this->U.pVal[0] / RHS.U.pVal[0]);
-  }
 
   // We have to compute it the hard way. Invoke the Knuth divide algorithm.
-  APInt Quotient(1,0); // to hold result.
+  APInt Quotient; // to hold result.
   divide(*this, lhsWords, RHS, rhsWords, &Quotient, nullptr);
   return Quotient;
 }
@@ -1633,22 +1632,21 @@ APInt APInt::urem(const APInt& RHS) const {
   assert(rhsWords && "Performing remainder operation by zero ???");
 
   // Check the degenerate cases
-  if (lhsWords == 0) {
+  if (lhsWords == 0)
     // 0 % Y ===> 0
     return APInt(BitWidth, 0);
-  } else if (lhsWords < rhsWords || this->ult(RHS)) {
+  if (lhsWords < rhsWords || this->ult(RHS))
     // X % Y ===> X, iff X < Y
     return *this;
-  } else if (*this == RHS) {
+  if (*this == RHS)
     // X % X == 0;
     return APInt(BitWidth, 0);
-  } else if (lhsWords == 1) {
+  if (lhsWords == 1)
     // All high words are zero, just use native remainder
     return APInt(BitWidth, U.pVal[0] % RHS.U.pVal[0]);
-  }
 
   // We have to compute it the hard way. Invoke the Knuth divide algorithm.
-  APInt Remainder(1,0);
+  APInt Remainder;
   divide(*this, lhsWords, RHS, rhsWords, nullptr, &Remainder);
   return Remainder;
 }

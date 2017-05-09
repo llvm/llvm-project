@@ -1392,12 +1392,25 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
         Known.Zero |= Known2.Zero.byteSwap();
         Known.One |= Known2.One.byteSwap();
         break;
-      case Intrinsic::ctlz:
-      case Intrinsic::cttz: {
-        unsigned LowBits = Log2_32(BitWidth)+1;
+      case Intrinsic::ctlz: {
+        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+        // If we have a known 1, its position is our upper bound.
+        unsigned PossibleLZ = Known2.One.countLeadingZeros();
         // If this call is undefined for 0, the result will be less than 2^n.
         if (II->getArgOperand(1) == ConstantInt::getTrue(II->getContext()))
-          LowBits -= 1;
+          PossibleLZ = std::min(PossibleLZ, BitWidth - 1);
+        unsigned LowBits = Log2_32(PossibleLZ)+1;
+        Known.Zero.setBitsFrom(LowBits);
+        break;
+      }
+      case Intrinsic::cttz: {
+        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+        // If we have a known 1, its position is our upper bound.
+        unsigned PossibleTZ = Known2.One.countTrailingZeros();
+        // If this call is undefined for 0, the result will be less than 2^n.
+        if (II->getArgOperand(1) == ConstantInt::getTrue(II->getContext()))
+          PossibleTZ = std::min(PossibleTZ, BitWidth - 1);
+        unsigned LowBits = Log2_32(PossibleTZ)+1;
         Known.Zero.setBitsFrom(LowBits);
         break;
       }

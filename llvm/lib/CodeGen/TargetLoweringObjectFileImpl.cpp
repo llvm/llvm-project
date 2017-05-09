@@ -232,7 +232,11 @@ static const MCSymbolELF *getAssociatedSymbol(const GlobalObject *GO,
   if (!MD)
     return nullptr;
 
-  auto *VM = dyn_cast<ValueAsMetadata>(MD->getOperand(0));
+  const MDOperand &Op = MD->getOperand(0);
+  if (!Op.get())
+    return nullptr;
+
+  auto *VM = dyn_cast<ValueAsMetadata>(Op);
   if (!VM)
     report_fatal_error("MD_associated operand is not ValueAsMetadata");
 

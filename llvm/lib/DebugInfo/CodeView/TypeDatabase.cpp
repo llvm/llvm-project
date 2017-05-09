@@ -112,16 +112,61 @@ StringRef TypeDatabase::getTypeName(TypeIndex Index) const {
 }
 
 const CVType &TypeDatabase::getTypeRecord(TypeIndex Index) const {
-  return TypeRecords[Index.getIndex() - TypeIndex::FirstNonSimpleIndex];
+  return TypeRecords[toArrayIndex(Index)];
 }
 
 CVType &TypeDatabase::getTypeRecord(TypeIndex Index) {
-  return TypeRecords[Index.getIndex() - TypeIndex::FirstNonSimpleIndex];
+  return TypeRecords[toArrayIndex(Index)];
 }
 
 bool TypeDatabase::containsTypeIndex(TypeIndex Index) const {
-  uint32_t I = Index.getIndex() - TypeIndex::FirstNonSimpleIndex;
-  return I < CVUDTNames.size();
+  return toArrayIndex(Index) < CVUDTNames.size();
 }
 
 uint32_t TypeDatabase::size() const { return CVUDTNames.size(); }
+
+uint32_t TypeDatabase::toArrayIndex(TypeIndex Index) const {
+  assert(Index.getIndex() >= TypeIndex::FirstNonSimpleIndex);
+  return Index.getIndex() - TypeIndex::FirstNonSimpleIndex;
+}
+
+RandomAccessTypeDatabase::RandomAccessTypeDatabase(uint32_t ExpectedSize)
+    : TypeDatabase(ExpectedSize) {
+  ValidRecords.resize(ExpectedSize);
+  CVUDTNames.resize(ExpectedSize);
+  TypeRecords.resize(ExpectedSize);
+}
+
+void RandomAccessTypeDatabase::recordType(StringRef Name, TypeIndex Index,
+                                          const CVType &Data) {
+  assert(!containsTypeIndex(Index));
+  uint32_t ZI = Index.getIndex() - TypeIndex::FirstNonSimpleIndex;
+
+  CVUDTNames[ZI] = Name;
+  TypeRecords[ZI] = Data;
+  ValidRecords.set(ZI);
+}
+
+StringRef RandomAccessTypeDatabase::getTypeName(TypeIndex Index) const {
+  assert(containsTypeIndex(Index));
+  return TypeDatabase::getTypeName(Index);
+}
+
+const CVType &RandomAccessTypeDatabase::getTypeRecord(TypeIndex Index) const {
+  assert(containsTypeIndex(Index));
+  return TypeDatabase::getTypeRecord(Index);
+}
+
+CVType &RandomAccessTypeDatabase::getTypeRecord(TypeIndex Index) {
+  assert(containsTypeIndex(Index));
+  return TypeDatabase::getTypeRecord(Index);
+}
+
+bool RandomAccessTypeDatabase::containsTypeIndex(TypeIndex Index) const {
+  if (Index.isSimple())
+    return true;
+
+  return ValidRecords.test(toArrayIndex(Index));
+}
+
+uint32_t RandomAccessTypeDatabase::size() const { return ValidRecords.count(); }

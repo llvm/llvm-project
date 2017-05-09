@@ -1485,7 +1485,19 @@ void ModuleMapParser::parseModuleDecl() {
   
   // Determine whether this (sub)module has already been defined.
   if (Module *Existing = Map.lookupModuleQualified(ModuleName, ActiveModule)) {
-    if (Existing->DefinitionLoc.isInvalid() && !ActiveModule) {
+    // We might see a (re)definition of a module that we already have a
+    // definition for in two cases:
+    //  - If we loaded one definition from an AST file and we've just found a
+    //    corresponding definition in a module map file, or
+    bool LoadedFromASTFile = Existing->DefinitionLoc.isInvalid();
+    //  - If we're building a (preprocessed) module and we've just loaded the
+    //    module map file from which it was created.
+    bool ParsedAsMainInput =
+        Map.LangOpts.getCompilingModule() == LangOptions::CMK_ModuleMap &&
+        Map.LangOpts.CurrentModule == ModuleName &&
+        SourceMgr.getDecomposedLoc(ModuleNameLoc).first !=
+            SourceMgr.getDecomposedLoc(Existing->DefinitionLoc).first;
+    if (!ActiveModule && (LoadedFromASTFile || ParsedAsMainInput)) {
       // Skip the module definition.
       skipUntil(MMToken::RBrace);
       if (Tok.is(MMToken::RBrace))
@@ -1901,8 +1913,10 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
         // 'framework module FrameworkName.Private', since a 'Private.Framework'
         // does not usually exist. However, since both are currently widely used
         // for private modules, make sure we find the right path in both cases.
-        RelativePathName.resize(ActiveModule->IsFramework ? 0
-                                                          : RelativePathLength);
+        if (ActiveModule->IsFramework && ActiveModule->Name == "Private")
+          RelativePathName.clear();
+        else
+          RelativePathName.resize(RelativePathLength);
         FullPathName.resize(FullPathLength);
         llvm::sys::path::append(RelativePathName, "PrivateHeaders",
                                 Header.FileName);

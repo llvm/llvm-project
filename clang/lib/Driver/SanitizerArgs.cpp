@@ -563,12 +563,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       }
     }
 
-    if (Arg *A = Args.getLastArg(
-            options::OPT_fsanitize_address_use_after_scope,
-            options::OPT_fno_sanitize_address_use_after_scope)) {
-      AsanUseAfterScope = A->getOption().getID() ==
-                          options::OPT_fsanitize_address_use_after_scope;
-    }
+    AsanUseAfterScope = Args.hasFlag(
+        options::OPT_fsanitize_address_use_after_scope,
+        options::OPT_fno_sanitize_address_use_after_scope, AsanUseAfterScope);
+  } else {
+    AsanUseAfterScope = false;
   }
 
   // Parse -link-cxx-sanitizer flag.

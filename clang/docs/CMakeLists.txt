@@ -91,8 +91,8 @@ endif()
 endif()
 
 if (LLVM_ENABLE_SPHINX)
+  include(AddSphinxTarget)
   if (SPHINX_FOUND)
-    include(AddSphinxTarget)
     if (${SPHINX_OUTPUT_HTML})
       add_sphinx_target(html clang)
       add_custom_command(TARGET docs-clang-html POST_BUILD

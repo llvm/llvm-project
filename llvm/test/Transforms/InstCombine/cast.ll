@@ -1432,3 +1432,41 @@ define <2 x i32> @test90() {
   %tmp6 = bitcast <4 x half> <half undef, half undef, half undef, half 0xH3C00> to <2 x i32>
   ret <2 x i32> %tmp6
 }
+
+; Do not optimize to ashr i64 (shift by 48 > 96 - 64)
+define i64 @test91(i64 %A) {
+; CHECK-LABEL: @test91(
+; CHECK-NEXT:    [[C:%.*]] = ashr i64 %A, 48
+; CHECK-NEXT:    ret i64 [[C]]
+;
+  %B = sext i64 %A to i96
+  %C = lshr i96 %B, 48
+  %D = trunc i96 %C to i64
+  ret i64 %D
+}
+
+; Do optimize to ashr i64 (shift by 32 <= 96 - 64)
+define i64 @test92(i64 %A) {
+; CHECK-LABEL: @test92(
+; CHECK-NEXT:    [[C:%.*]] = ashr i64 %A, 32
+; CHECK-NEXT:    ret i64 [[C]]
+;
+  %B = sext i64 %A to i96
+  %C = lshr i96 %B, 32
+  %D = trunc i96 %C to i64
+  ret i64 %D
+}
+
+; When optimizing to ashr i32, don't shift by more than 31.
+define i32 @test93(i32 %A) {
+; CHECK-LABEL: @test93(
+; CHECK-NEXT:    [[B:%.*]] = sext i32 %A to i96
+; CHECK-NEXT:    [[C:%.*]] = lshr i96 [[B]], 64
+; CHECK-NEXT:    [[D:%.*]] = trunc i96 [[C]] to i32
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %B = sext i32 %A to i96
+  %C = lshr i96 %B, 64
+  %D = trunc i96 %C to i32
+  ret i32 %D
+}

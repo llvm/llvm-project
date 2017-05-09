@@ -23,7 +23,7 @@ using namespace llvm;
 using namespace dwarf;
 using namespace object;
 
-void DWARFVerifier::verifyDebugInfoAttribute(DWARFDie &Die,
+void DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
                                              DWARFAttribute &AttrValue) {
   const auto Attr = AttrValue.Attr;
   switch (Attr) {
@@ -68,7 +68,7 @@ void DWARFVerifier::verifyDebugInfoAttribute(DWARFDie &Die,
   }
 }
 
-void DWARFVerifier::verifyDebugInfoForm(DWARFDie &Die,
+void DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
                                         DWARFAttribute &AttrValue) {
   const auto Form = AttrValue.Value.getForm();
   switch (Form) {
@@ -136,7 +136,7 @@ void DWARFVerifier::verifyDebugInfoForm(DWARFDie &Die,
   }
 }
 
-void DWARFVerifier::veifyDebugInfoReferences() {
+void DWARFVerifier::verifyDebugInfoReferences() {
   // Take all references and make sure they point to an actual DIE by
   // getting the DIE by offset and emitting an error
   OS << "Verifying .debug_info references...\n";
@@ -172,7 +172,7 @@ bool DWARFVerifier::handleDebugInfo() {
       }
     }
   }
-  veifyDebugInfoReferences();
+  verifyDebugInfoReferences();
   return NumDebugInfoErrors == 0;
 }
 

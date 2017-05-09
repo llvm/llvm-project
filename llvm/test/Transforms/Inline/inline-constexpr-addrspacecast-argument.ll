@@ -6,7 +6,7 @@ target datalayout = "e-p3:32:32-p4:64:64-n32"
 @lds = internal addrspace(3) global [64 x i64] zeroinitializer
 
 ; CHECK-LABEL: @constexpr_addrspacecast_ptr_size_change(
-; CHECK: load i64, i64 addrspace(4)* getelementptr (i64, i64 addrspace(4)* addrspacecast (i64 addrspace(3)* getelementptr inbounds ([64 x i64], [64 x i64] addrspace(3)* @lds, i32 0, i32 0) to i64 addrspace(4)*), i64 undef)
+; CHECK: load i64, i64 addrspace(4)* addrspacecast (i64 addrspace(3)* getelementptr inbounds ([64 x i64], [64 x i64] addrspace(3)* @lds, i32 0, i32 0) to i64 addrspace(4)*)
 ; CHECK-NEXT: br
 define void @constexpr_addrspacecast_ptr_size_change() #0 {
   %tmp0 = call i32 @foo(i64 addrspace(4)* addrspacecast (i64 addrspace(3)* getelementptr inbounds ([64 x i64], [64 x i64] addrspace(3)* @lds, i32 0, i32 0) to i64 addrspace(4)*)) #1

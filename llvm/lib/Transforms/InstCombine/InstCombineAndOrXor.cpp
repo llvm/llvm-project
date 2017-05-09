@@ -2399,27 +2399,44 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   }
 
   // Is this a 'not' (~) fed by a binary operator?
-  BinaryOperator *NotOp;
-  if (match(&I, m_Not(m_BinOp(NotOp)))) {
-    if (NotOp->getOpcode() == Instruction::And ||
-        NotOp->getOpcode() == Instruction::Or) {
+  BinaryOperator *NotVal;
+  if (match(&I, m_Not(m_BinOp(NotVal)))) {
+    if (NotVal->getOpcode() == Instruction::And ||
+        NotVal->getOpcode() == Instruction::Or) {
       // Apply DeMorgan's Law when inverts are free:
       // ~(X & Y) --> (~X | ~Y)
       // ~(X | Y) --> (~X & ~Y)
-      if (IsFreeToInvert(NotOp->getOperand(0),
-                         NotOp->getOperand(0)->hasOneUse()) &&
-          IsFreeToInvert(NotOp->getOperand(1),
-                         NotOp->getOperand(1)->hasOneUse())) {
-        Value *NotX = Builder->CreateNot(NotOp->getOperand(0), "notlhs");
-        Value *NotY = Builder->CreateNot(NotOp->getOperand(1), "notrhs");
-        if (NotOp->getOpcode() == Instruction::And)
+      if (IsFreeToInvert(NotVal->getOperand(0),
+                         NotVal->getOperand(0)->hasOneUse()) &&
+          IsFreeToInvert(NotVal->getOperand(1),
+                         NotVal->getOperand(1)->hasOneUse())) {
+        Value *NotX = Builder->CreateNot(NotVal->getOperand(0), "notlhs");
+        Value *NotY = Builder->CreateNot(NotVal->getOperand(1), "notrhs");
+        if (NotVal->getOpcode() == Instruction::And)
           return BinaryOperator::CreateOr(NotX, NotY);
         return BinaryOperator::CreateAnd(NotX, NotY);
       }
-    } else if (NotOp->getOpcode() == Instruction::AShr) {
-      // ~(~X >>s Y) --> (X >>s Y)
-      if (Value *Op0NotVal = dyn_castNotVal(NotOp->getOperand(0)))
-        return BinaryOperator::CreateAShr(Op0NotVal, NotOp->getOperand(1));
+    }
+
+    // ~(~X >>s Y) --> (X >>s Y)
+    if (match(NotVal, m_AShr(m_Not(m_Value(X)), m_Value(Y))))
+      return BinaryOperator::CreateAShr(X, Y);
+
+    // If we are inverting a right-shifted constant, we may be able to eliminate
+    // the 'not' by inverting the constant and using the opposite shift type.
+    // Canonicalization rules ensure that only a negative constant uses 'ashr',
+    // but we must check that in case that transform has not fired yet.
+    const APInt *C;
+    if (match(NotVal, m_AShr(m_APInt(C), m_Value(Y))) && C->isNegative()) {
+      // ~(C >>s Y) --> ~C >>u Y (when inverting the replicated sign bits)
+      Constant *NotC = ConstantInt::get(I.getType(), ~(*C));
+      return BinaryOperator::CreateLShr(NotC, Y);
+    }
+
+    if (match(NotVal, m_LShr(m_APInt(C), m_Value(Y))) && C->isNonNegative()) {
+      // ~(C >>u Y) --> ~C >>s Y (when inverting the replicated sign bits)
+      Constant *NotC = ConstantInt::get(I.getType(), ~(*C));
+      return BinaryOperator::CreateAShr(NotC, Y);
     }
   }
 

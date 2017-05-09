@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPEDATABASE_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEDATABASE_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
@@ -20,6 +21,8 @@
 namespace llvm {
 namespace codeview {
 class TypeDatabase {
+  friend class RandomAccessTypeVisitor;
+
 public:
   explicit TypeDatabase(uint32_t ExpectedSize);
 
@@ -41,7 +44,9 @@ public:
 
   uint32_t size() const;
 
-private:
+protected:
+  uint32_t toArrayIndex(TypeIndex Index) const;
+
   BumpPtrAllocator Allocator;
 
   /// All user defined type records in .debug$T live in here. Type indices
@@ -51,6 +56,28 @@ private:
   SmallVector<CVType, 10> TypeRecords;
 
   StringSaver TypeNameStorage;
+};
+
+class RandomAccessTypeDatabase : private TypeDatabase {
+public:
+  explicit RandomAccessTypeDatabase(uint32_t ExpectedSize);
+
+  /// Records the name of a type, and reserves its type index.
+  void recordType(StringRef Name, TypeIndex Index, const CVType &Data);
+
+  using TypeDatabase::saveTypeName;
+
+  StringRef getTypeName(TypeIndex Index) const;
+
+  const CVType &getTypeRecord(TypeIndex Index) const;
+  CVType &getTypeRecord(TypeIndex Index);
+
+  bool containsTypeIndex(TypeIndex Index) const;
+
+  uint32_t size() const;
+
+private:
+  BitVector ValidRecords;
 };
 }
 }

@@ -656,7 +656,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
       SMR.WaitClient();
       size_t Size = SMR.ReadByteArraySize();
       SMR.WriteByteArray(nullptr, 0);
-      F->RunOne(SMR.GetByteArray(), Size);
+      const Unit tmp(SMR.GetByteArray(), SMR.GetByteArray() + Size);
+      F->RunOne(tmp.data(), tmp.size());
       SMR.PostServer();
     }
     return 0;
