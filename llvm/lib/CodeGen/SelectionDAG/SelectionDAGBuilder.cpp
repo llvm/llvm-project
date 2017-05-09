@@ -5737,6 +5737,24 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   case Intrinsic::experimental_deoptimize:
     LowerDeoptimizeCall(&I);
     return nullptr;
+
+  case Intrinsic::experimental_vector_reduce_fadd:
+  case Intrinsic::experimental_vector_reduce_fmul:
+  case Intrinsic::experimental_vector_reduce_add:
+  case Intrinsic::experimental_vector_reduce_mul:
+  case Intrinsic::experimental_vector_reduce_and:
+  case Intrinsic::experimental_vector_reduce_or:
+  case Intrinsic::experimental_vector_reduce_xor:
+  case Intrinsic::experimental_vector_reduce_smax:
+  case Intrinsic::experimental_vector_reduce_smin:
+  case Intrinsic::experimental_vector_reduce_umax:
+  case Intrinsic::experimental_vector_reduce_umin:
+  case Intrinsic::experimental_vector_reduce_fmax:
+  case Intrinsic::experimental_vector_reduce_fmin: {
+    visitVectorReduce(I, Intrinsic);
+    return nullptr;
+  }
+
   }
 }
 
@@ -7614,6 +7632,76 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
 
   // Inform the Frame Information that we have a patchpoint in this function.
   FuncInfo.MF->getFrameInfo().setHasPatchPoint();
+}
+
+void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
+                                            unsigned Intrinsic) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Op1 = getValue(I.getArgOperand(0));
+  SDValue Op2;
+  if (I.getNumArgOperands() > 1)
+    Op2 = getValue(I.getArgOperand(1));
+  SDLoc dl = getCurSDLoc();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+  SDValue Res;
+  FastMathFlags FMF;
+  if (isa<FPMathOperator>(I))
+    FMF = I.getFastMathFlags();
+  SDNodeFlags SDFlags;
+  SDFlags.setNoNaNs(FMF.noNaNs());
+
+  switch (Intrinsic) {
+  case Intrinsic::experimental_vector_reduce_fadd:
+    if (FMF.unsafeAlgebra())
+      Res = DAG.getNode(ISD::VECREDUCE_FADD, dl, VT, Op2);
+    else
+      Res = DAG.getNode(ISD::VECREDUCE_STRICT_FADD, dl, VT, Op1, Op2);
+    break;
+  case Intrinsic::experimental_vector_reduce_fmul:
+    if (FMF.unsafeAlgebra())
+      Res = DAG.getNode(ISD::VECREDUCE_FMUL, dl, VT, Op2);
+    else
+      Res = DAG.getNode(ISD::VECREDUCE_STRICT_FMUL, dl, VT, Op1, Op2);
+    break;
+  case Intrinsic::experimental_vector_reduce_add:
+    Res = DAG.getNode(ISD::VECREDUCE_ADD, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_mul:
+    Res = DAG.getNode(ISD::VECREDUCE_MUL, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_and:
+    Res = DAG.getNode(ISD::VECREDUCE_AND, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_or:
+    Res = DAG.getNode(ISD::VECREDUCE_OR, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_xor:
+    Res = DAG.getNode(ISD::VECREDUCE_XOR, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_smax:
+    Res = DAG.getNode(ISD::VECREDUCE_SMAX, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_smin:
+    Res = DAG.getNode(ISD::VECREDUCE_SMIN, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_umax:
+    Res = DAG.getNode(ISD::VECREDUCE_UMAX, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_umin:
+    Res = DAG.getNode(ISD::VECREDUCE_UMIN, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_fmax: {
+    Res = DAG.getNode(ISD::VECREDUCE_FMAX, dl, VT, Op1, SDFlags);
+    break;
+  }
+  case Intrinsic::experimental_vector_reduce_fmin: {
+    Res = DAG.getNode(ISD::VECREDUCE_FMIN, dl, VT, Op1, SDFlags);
+    break;
+  }
+  default:
+    llvm_unreachable("Unhandled vector reduce intrinsic");
+  }
+  setValue(&I, Res);
 }
 
 /// Returns an AttributeList representing the attributes applied to the return

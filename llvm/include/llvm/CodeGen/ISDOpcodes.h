@@ -783,6 +783,20 @@ namespace ISD {
     /// known nonzero constant. The only operand here is the chain.
     GET_DYNAMIC_AREA_OFFSET,
 
+    /// Generic reduction nodes. These nodes represent horizontal vector
+    /// reduction operations, producing a scalar result.
+    /// The STRICT variants perform reductions in sequential order. The first
+    /// operand is an initial scalar accumulator value, and the second operand
+    /// is the vector to reduce.
+    VECREDUCE_STRICT_FADD, VECREDUCE_STRICT_FMUL,
+    /// These reductions are non-strict, and have a single vector operand.
+    VECREDUCE_FADD, VECREDUCE_FMUL,
+    VECREDUCE_ADD, VECREDUCE_MUL,
+    VECREDUCE_AND, VECREDUCE_OR, VECREDUCE_XOR,
+    VECREDUCE_SMAX, VECREDUCE_SMIN, VECREDUCE_UMAX, VECREDUCE_UMIN,
+    /// FMIN/FMAX nodes can have flags, for NaN/NoNaN variants.
+    VECREDUCE_FMAX, VECREDUCE_FMIN,
+
     /// BUILTIN_OP_END - This must be the last enum value in this list.
     /// The target-specific pre-isel opcode values start here.
     BUILTIN_OP_END

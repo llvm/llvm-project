@@ -477,6 +477,13 @@ static bool ShouldRemoveFromUnused(Sema *SemaRef, const DeclaratorDecl *D) {
     return true;
 
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+    // If this is a function template and none of its specializations is used,
+    // we should warn.
+    if (FunctionTemplateDecl *Template = FD->getDescribedFunctionTemplate())
+      for (const auto *Spec : Template->specializations())
+        if (ShouldRemoveFromUnused(SemaRef, Spec))
+          return true;
+
     // UnusedFileScopedDecls stores the first declaration.
     // The declaration may have become definition so check again.
     const FunctionDecl *DeclToCheck;
@@ -499,6 +506,13 @@ static bool ShouldRemoveFromUnused(Sema *SemaRef, const DeclaratorDecl *D) {
     if (VD->isReferenced() &&
         VD->isUsableInConstantExpressions(SemaRef->Context))
       return true;
+
+    if (VarTemplateDecl *Template = VD->getDescribedVarTemplate())
+      // If this is a variable template and none of its specializations is used,
+      // we should warn.
+      for (const auto *Spec : Template->specializations())
+        if (ShouldRemoveFromUnused(SemaRef, Spec))
+          return true;
 
     // UnusedFileScopedDecls stores the first declaration.
     // The declaration may have become definition so check again.
@@ -905,10 +919,14 @@ void Sema::ActOnEndOfTranslationUnit() {
                    << /*function*/0 << DiagD->getDeclName();
           }
         } else {
-          Diag(DiagD->getLocation(),
-               isa<CXXMethodDecl>(DiagD) ? diag::warn_unused_member_function
-                                         : diag::warn_unused_function)
-                << DiagD->getDeclName();
+          if (FD->getDescribedFunctionTemplate())
+            Diag(DiagD->getLocation(), diag::warn_unused_template)
+              << /*function*/0 << DiagD->getDeclName();
+          else
+            Diag(DiagD->getLocation(),
+                 isa<CXXMethodDecl>(DiagD) ? diag::warn_unused_member_function
+                                           : diag::warn_unused_function)
+              << DiagD->getDeclName();
         }
       } else {
         const VarDecl *DiagD = cast<VarDecl>(*I)->getDefinition();
@@ -924,7 +942,11 @@ void Sema::ActOnEndOfTranslationUnit() {
             Diag(DiagD->getLocation(), diag::warn_unused_const_variable)
                 << DiagD->getDeclName();
         } else {
-          Diag(DiagD->getLocation(), diag::warn_unused_variable)
+          if (DiagD->getDescribedVarTemplate())
+            Diag(DiagD->getLocation(), diag::warn_unused_template)
+              << /*variable*/1 << DiagD->getDeclName();
+          else
+            Diag(DiagD->getLocation(), diag::warn_unused_variable)
               << DiagD->getDeclName();
         }
       }

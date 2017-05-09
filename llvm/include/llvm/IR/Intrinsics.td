@@ -812,6 +812,50 @@ def int_memcpy_element_atomic  : Intrinsic<[],
                                  [IntrArgMemOnly, NoCapture<0>, NoCapture<1>,
                                   WriteOnly<0>, ReadOnly<1>]>;
 
+//===------------------------ Reduction Intrinsics ------------------------===//
+//
+def int_experimental_vector_reduce_fadd : Intrinsic<[llvm_anyfloat_ty],
+                                                    [llvm_anyfloat_ty,
+                                                     llvm_anyvector_ty],
+                                                    [IntrNoMem]>;
+def int_experimental_vector_reduce_fmul : Intrinsic<[llvm_anyfloat_ty],
+                                                    [llvm_anyfloat_ty,
+                                                     llvm_anyvector_ty],
+                                                    [IntrNoMem]>;
+def int_experimental_vector_reduce_add : Intrinsic<[llvm_anyint_ty],
+                                                   [llvm_anyvector_ty],
+                                                   [IntrNoMem]>;
+def int_experimental_vector_reduce_mul : Intrinsic<[llvm_anyint_ty],
+                                                   [llvm_anyvector_ty],
+                                                   [IntrNoMem]>;
+def int_experimental_vector_reduce_and : Intrinsic<[llvm_anyint_ty],
+                                                   [llvm_anyvector_ty],
+                                                   [IntrNoMem]>;
+def int_experimental_vector_reduce_or : Intrinsic<[llvm_anyint_ty],
+                                                  [llvm_anyvector_ty],
+                                                  [IntrNoMem]>;
+def int_experimental_vector_reduce_xor : Intrinsic<[llvm_anyint_ty],
+                                                   [llvm_anyvector_ty],
+                                                   [IntrNoMem]>;
+def int_experimental_vector_reduce_smax : Intrinsic<[llvm_anyint_ty],
+                                                    [llvm_anyvector_ty],
+                                                    [IntrNoMem]>;
+def int_experimental_vector_reduce_smin : Intrinsic<[llvm_anyint_ty],
+                                                    [llvm_anyvector_ty],
+                                                    [IntrNoMem]>;
+def int_experimental_vector_reduce_umax : Intrinsic<[llvm_anyint_ty],
+                                                    [llvm_anyvector_ty],
+                                                    [IntrNoMem]>;
+def int_experimental_vector_reduce_umin : Intrinsic<[llvm_anyint_ty],
+                                                    [llvm_anyvector_ty],
+                                                    [IntrNoMem]>;
+def int_experimental_vector_reduce_fmax : Intrinsic<[llvm_anyfloat_ty],
+                                                    [llvm_anyvector_ty],
+                                                    [IntrNoMem]>;
+def int_experimental_vector_reduce_fmin : Intrinsic<[llvm_anyfloat_ty],
+                                                    [llvm_anyvector_ty],
+                                                    [IntrNoMem]>;
+
 //===----- Intrinsics that are used to provide predicate information -----===//
 
 def int_ssa_copy : Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],

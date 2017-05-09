@@ -1700,6 +1700,9 @@ public:
   /// access that can be widened.
   bool memoryInstructionCanBeWidened(Instruction *I, unsigned VF = 1);
 
+  // Returns true if the NoNaN attribute is set on the function.
+  bool hasFunNoNaNAttr() const { return HasFunNoNaNAttr; }
+
 private:
   /// Check if a single basic block loop is vectorizable.
   /// At this point we know that this is a loop with a constant trip count
@@ -4258,39 +4261,9 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   }
 
   if (VF > 1) {
-    // VF is a power of 2 so we can emit the reduction using log2(VF) shuffles
-    // and vector ops, reducing the set of values being computed by half each
-    // round.
-    assert(isPowerOf2_32(VF) &&
-           "Reduction emission only supported for pow2 vectors!");
-    Value *TmpVec = ReducedPartRdx;
-    SmallVector<Constant *, 32> ShuffleMask(VF, nullptr);
-    for (unsigned i = VF; i != 1; i >>= 1) {
-      // Move the upper half of the vector to the lower half.
-      for (unsigned j = 0; j != i / 2; ++j)
-        ShuffleMask[j] = Builder.getInt32(i / 2 + j);
-
-      // Fill the rest of the mask with undef.
-      std::fill(&ShuffleMask[i / 2], ShuffleMask.end(),
-                UndefValue::get(Builder.getInt32Ty()));
-
-      Value *Shuf = Builder.CreateShuffleVector(
-          TmpVec, UndefValue::get(TmpVec->getType()),
-          ConstantVector::get(ShuffleMask), "rdx.shuf");
-
-      if (Op != Instruction::ICmp && Op != Instruction::FCmp)
-        // Floating point operations had to be 'fast' to enable the reduction.
-        TmpVec = addFastMathFlag(Builder.CreateBinOp(
-                                     (Instruction::BinaryOps)Op, TmpVec, Shuf, "bin.rdx"));
-      else
-        TmpVec = RecurrenceDescriptor::createMinMaxOp(Builder, MinMaxKind,
-                                                      TmpVec, Shuf);
-    }
-
-    // The result is in the first element of the vector.
+    bool NoNaN = Legal->hasFunNoNaNAttr();
     ReducedPartRdx =
-      Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
-
+        createTargetReduction(Builder, TTI, RdxDesc, ReducedPartRdx, NoNaN);
     // If the reduction can be performed in a smaller type, we need to extend
     // the reduction to the wider type before we branch to the original loop.
     if (Phi->getType() != RdxDesc.getRecurrenceType())

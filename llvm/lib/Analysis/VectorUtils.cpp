@@ -23,6 +23,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/IRBuilder.h"
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
