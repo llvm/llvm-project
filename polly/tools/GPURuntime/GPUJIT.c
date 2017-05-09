@@ -554,28 +554,12 @@ static void launchKernelCL(PollyGPUFunction *Kernel, unsigned int GridDimX,
                               sizeof(cl_uint), &NumArgs, NULL);
   checkOpenCLError(Ret, "Failed to get number of kernel arguments.\n");
 
-  // TODO: Pass the size of the kernel arguments in to launchKernelCL, along
-  // with the arguments themselves. This is a dirty workaround that can be
-  // broken.
+  /* Argument sizes are stored at the end of the Parameters array. */
   for (cl_uint i = 0; i < NumArgs; i++) {
-    Ret = clSetKernelArgFcnPtr(CLKernel->Kernel, i, 8, (void *)Parameters[i]);
-    if (Ret == CL_INVALID_ARG_SIZE) {
-      Ret = clSetKernelArgFcnPtr(CLKernel->Kernel, i, 4, (void *)Parameters[i]);
-      if (Ret == CL_INVALID_ARG_SIZE) {
-        Ret =
-            clSetKernelArgFcnPtr(CLKernel->Kernel, i, 2, (void *)Parameters[i]);
-        if (Ret == CL_INVALID_ARG_SIZE) {
-          Ret = clSetKernelArgFcnPtr(CLKernel->Kernel, i, 1,
-                                     (void *)Parameters[i]);
-          checkOpenCLError(Ret, "Failed to set Kernel argument %d.\n", i);
-        }
-      }
-    }
-    if (Ret != CL_SUCCESS && Ret != CL_INVALID_ARG_SIZE) {
-      fprintf(stderr, "Failed to set Kernel argument.\n");
-      printOpenCLError(Ret);
-      exit(-1);
-    }
+    Ret = clSetKernelArgFcnPtr(CLKernel->Kernel, i,
+                               *((int *)Parameters[NumArgs + i]),
+                               (void *)Parameters[i]);
+    checkOpenCLError(Ret, "Failed to set Kernel argument %d.\n", i);
   }
 
   unsigned int GridDimZ = 1;

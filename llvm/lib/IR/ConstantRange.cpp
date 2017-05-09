@@ -892,29 +892,33 @@ ConstantRange::shl(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return ConstantRange(getBitWidth(), /*isFullSet=*/false);
 
-  APInt min = getUnsignedMin().shl(Other.getUnsignedMin());
-  APInt max = getUnsignedMax().shl(Other.getUnsignedMax());
+  APInt max = getUnsignedMax();
+  APInt Other_umax = Other.getUnsignedMax();
 
-  // there's no overflow!
-  APInt Zeros(getBitWidth(), getUnsignedMax().countLeadingZeros());
-  if (Zeros.ugt(Other.getUnsignedMax()))
-    return ConstantRange(std::move(min), std::move(max) + 1);
+  // there's overflow!
+  if (Other_umax.uge(max.countLeadingZeros()))
+    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
 
   // FIXME: implement the other tricky cases
-  return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+
+  APInt min = getUnsignedMin();
+  min <<= Other.getUnsignedMin();
+  max <<= Other_umax;
+
+  return ConstantRange(std::move(min), std::move(max) + 1);
 }
 
 ConstantRange
 ConstantRange::lshr(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return ConstantRange(getBitWidth(), /*isFullSet=*/false);
-  
-  APInt max = getUnsignedMax().lshr(Other.getUnsignedMin());
+
+  APInt max = getUnsignedMax().lshr(Other.getUnsignedMin()) + 1;
   APInt min = getUnsignedMin().lshr(Other.getUnsignedMax());
-  if (min == max + 1)
+  if (min == max)
     return ConstantRange(getBitWidth(), /*isFullSet=*/true);
 
-  return ConstantRange(std::move(min), std::move(max) + 1);
+  return ConstantRange(std::move(min), std::move(max));
 }
 
 ConstantRange ConstantRange::inverse() const {

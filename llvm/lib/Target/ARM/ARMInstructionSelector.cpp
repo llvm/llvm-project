@@ -135,28 +135,6 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   return true;
 }
 
-static bool selectFAdd(MachineInstrBuilder &MIB, const ARMBaseInstrInfo &TII,
-                       MachineRegisterInfo &MRI) {
-  assert(TII.getSubtarget().hasVFP2() && "Can't select fp add without vfp");
-
-  LLT Ty = MRI.getType(MIB->getOperand(0).getReg());
-  unsigned ValSize = Ty.getSizeInBits();
-
-  if (ValSize == 32) {
-    if (TII.getSubtarget().useNEONForSinglePrecisionFP())
-      return false;
-    MIB->setDesc(TII.get(ARM::VADDS));
-  } else {
-    assert(ValSize == 64 && "Unsupported size for floating point value");
-    if (TII.getSubtarget().isFPOnlySP())
-      return false;
-    MIB->setDesc(TII.get(ARM::VADDD));
-  }
-  MIB.add(predOps(ARMCC::AL));
-
-  return true;
-}
-
 static bool selectSequence(MachineInstrBuilder &MIB,
                            const ARMBaseInstrInfo &TII,
                            MachineRegisterInfo &MRI,
@@ -392,10 +370,6 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
       MIB->getOperand(0).setIsEarlyClobber(true);
     }
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
-    break;
-  case G_FADD:
-    if (!selectFAdd(MIB, TII, MRI))
-      return false;
     break;
   case G_FRAME_INDEX:
     // Add 0 to the given frame index and hope it will eventually be folded into

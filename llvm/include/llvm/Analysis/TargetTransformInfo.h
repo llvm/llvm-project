@@ -740,6 +740,19 @@ public:
                                 unsigned ChainSizeInBytes,
                                 VectorType *VecTy) const;
 
+  /// Flags describing the kind of vector reduction.
+  struct ReductionFlags {
+    ReductionFlags() : IsMaxOp(false), IsSigned(false), NoNaN(false) {}
+    bool IsMaxOp;  ///< If the op a min/max kind, true if it's a max operation.
+    bool IsSigned; ///< Whether the operation is a signed int reduction.
+    bool NoNaN;    ///< If op is an fp min/max, whether NaNs may be present.
+  };
+
+  /// \returns True if the target wants to handle the given reduction idiom in
+  /// the intrinsics form instead of the shuffle form.
+  bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
+                             ReductionFlags Flags) const;
+
   /// @}
 
 private:
@@ -895,6 +908,8 @@ public:
   virtual unsigned getStoreVectorFactor(unsigned VF, unsigned StoreSize,
                                         unsigned ChainSizeInBytes,
                                         VectorType *VecTy) const = 0;
+  virtual bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
+                                     ReductionFlags) const = 0;
 };
 
 template <typename T>
@@ -1199,6 +1214,10 @@ public:
                                 unsigned ChainSizeInBytes,
                                 VectorType *VecTy) const override {
     return Impl.getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
+  }
+  bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
+                             ReductionFlags Flags) const override {
+    return Impl.useReductionIntrinsic(Opcode, Ty, Flags);
   }
 };
 

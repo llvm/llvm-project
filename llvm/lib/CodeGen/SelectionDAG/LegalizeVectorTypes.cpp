@@ -1513,6 +1513,22 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     case ISD::ZERO_EXTEND_VECTOR_INREG:
       Res = SplitVecOp_ExtVecInRegOp(N);
       break;
+
+    case ISD::VECREDUCE_FADD:
+    case ISD::VECREDUCE_FMUL:
+    case ISD::VECREDUCE_ADD:
+    case ISD::VECREDUCE_MUL:
+    case ISD::VECREDUCE_AND:
+    case ISD::VECREDUCE_OR:
+    case ISD::VECREDUCE_XOR:
+    case ISD::VECREDUCE_SMAX:
+    case ISD::VECREDUCE_SMIN:
+    case ISD::VECREDUCE_UMAX:
+    case ISD::VECREDUCE_UMIN:
+    case ISD::VECREDUCE_FMAX:
+    case ISD::VECREDUCE_FMIN:
+      Res = SplitVecOp_VECREDUCE(N, OpNo);
+      break;
     }
   }
 
@@ -1563,6 +1579,48 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSELECT(SDNode *N, unsigned OpNo) {
     DAG.getNode(ISD::VSELECT, DL, HiOpVT, HiMask, HiOp0, HiOp1);
 
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, Src0VT, LoSelect, HiSelect);
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo) {
+  EVT ResVT = N->getValueType(0);
+  SDValue Lo, Hi;
+  SDLoc dl(N);
+
+  SDValue VecOp = N->getOperand(OpNo);
+  EVT VecVT = VecOp.getValueType();
+  assert(VecVT.isVector() && "Can only split reduce vector operand");
+  GetSplitVector(VecOp, Lo, Hi);
+  EVT LoOpVT, HiOpVT;
+  std::tie(LoOpVT, HiOpVT) = DAG.GetSplitDestVTs(VecVT);
+
+  bool NoNaN = N->getFlags().hasNoNaNs();
+  unsigned CombineOpc = 0;
+  switch (N->getOpcode()) {
+  case ISD::VECREDUCE_FADD: CombineOpc = ISD::FADD; break;
+  case ISD::VECREDUCE_FMUL: CombineOpc = ISD::FMUL; break;
+  case ISD::VECREDUCE_ADD:  CombineOpc = ISD::ADD; break;
+  case ISD::VECREDUCE_MUL:  CombineOpc = ISD::MUL; break;
+  case ISD::VECREDUCE_AND:  CombineOpc = ISD::AND; break;
+  case ISD::VECREDUCE_OR:   CombineOpc = ISD::OR; break;
+  case ISD::VECREDUCE_XOR:  CombineOpc = ISD::XOR; break;
+  case ISD::VECREDUCE_SMAX: CombineOpc = ISD::SMAX; break;
+  case ISD::VECREDUCE_SMIN: CombineOpc = ISD::SMIN; break;
+  case ISD::VECREDUCE_UMAX: CombineOpc = ISD::UMAX; break;
+  case ISD::VECREDUCE_UMIN: CombineOpc = ISD::UMIN; break;
+  case ISD::VECREDUCE_FMAX:
+    CombineOpc = NoNaN ? ISD::FMAXNUM : ISD::FMAXNAN;
+    break;
+  case ISD::VECREDUCE_FMIN:
+    CombineOpc = NoNaN ? ISD::FMINNUM : ISD::FMINNAN;
+    break;
+  default:
+    llvm_unreachable("Unexpected reduce ISD node");
+  }
+
+  // Use the appropriate scalar instruction on the split subvectors before
+  // reducing the now partially reduced smaller vector.
+  SDValue Partial = DAG.getNode(CombineOpc, dl, LoOpVT, Lo, Hi);
+  return DAG.getNode(N->getOpcode(), dl, ResVT, Partial);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_UnaryOp(SDNode *N) {

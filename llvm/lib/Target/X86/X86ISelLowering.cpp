@@ -21741,6 +21741,14 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
     MVT ExVT = MVT::getVectorVT(MVT::i32, VT.getVectorNumElements() * 2);
     SDValue Ex = DAG.getBitcast(ExVT, R);
 
+    // ashr(R, 63) === cmp_slt(R, 0)
+    if (ShiftAmt == 63 && Subtarget.hasSSE42()) {
+      assert((VT != MVT::v4i64 || Subtarget.hasInt256()) &&
+             "Unsupported PCMPGT op");
+      return DAG.getNode(X86ISD::PCMPGT, dl, VT,
+                         getZeroVector(VT, Subtarget, DAG, dl), R);
+    }
+
     if (ShiftAmt >= 32) {
       // Splat sign to upper i32 dst, and SRA upper i32 src to lower i32.
       SDValue Upper =

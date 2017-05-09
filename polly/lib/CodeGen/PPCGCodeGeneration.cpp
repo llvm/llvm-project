@@ -142,6 +142,14 @@ static __isl_give isl_id_to_ast_expr *pollyBuildAstExprForStmt(
   return RefToExpr;
 }
 
+/// Given a LLVM Type, compute its size in bytes,
+static int computeSizeInBytes(const Type *T) {
+  int bytes = T->getPrimitiveSizeInBits() / 8;
+  if (bytes == 0)
+    bytes = T->getScalarSizeInBits() / 8;
+  return bytes;
+}
+
 /// Generate code for a GPU specific isl AST.
 ///
 /// The GPUNodeBuilder augments the general existing IslNodeBuilder, which
@@ -271,6 +279,16 @@ private:
   ///
   /// @returns A tuple with thread block sizes for X, Y, and Z dimensions.
   std::tuple<Value *, Value *, Value *> getBlockSizes(ppcg_kernel *Kernel);
+
+  /// Store a specific kernel launch parameter in the array of kernel launch
+  /// parameters.
+  ///
+  /// @param Parameters The list of parameters in which to store.
+  /// @param Param      The kernel launch parameter to store.
+  /// @param Index      The index in the parameter list, at which to store the
+  ///                   parameter.
+  void insertStoreParameter(Instruction *Parameters, Instruction *Param,
+                            int Index);
 
   /// Create kernel launch parameters.
   ///
@@ -1192,11 +1210,21 @@ GPUNodeBuilder::getBlockSizes(ppcg_kernel *Kernel) {
   return std::make_tuple(Sizes[0], Sizes[1], Sizes[2]);
 }
 
+void GPUNodeBuilder::insertStoreParameter(Instruction *Parameters,
+                                          Instruction *Param, int Index) {
+  Value *Slot = Builder.CreateGEP(
+      Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
+  Value *ParamTyped = Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
+  Builder.CreateStore(ParamTyped, Slot);
+}
+
 Value *
 GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
                                        SetVector<Value *> SubtreeValues) {
-  Type *ArrayTy = ArrayType::get(Builder.getInt8PtrTy(),
-                                 std::distance(F->arg_begin(), F->arg_end()));
+  const int NumArgs = F->arg_size();
+  std::vector<int> ArgSizes(NumArgs);
+
+  Type *ArrayTy = ArrayType::get(Builder.getInt8PtrTy(), 2 * NumArgs);
 
   BasicBlock *EntryBlock =
       &Builder.GetInsertBlock()->getParent()->getEntryBlock();
@@ -1212,6 +1240,8 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
     const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
+
+    ArgSizes[Index] = SAI->getElemSizeInBytes();
 
     Value *DevArray = nullptr;
     if (ManagedMemory) {
@@ -1265,16 +1295,15 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
     isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_set, i);
     Value *Val = IDToValue[Id];
     isl_id_free(Id);
+
+    ArgSizes[Index] = computeSizeInBytes(Val->getType());
+
     Instruction *Param =
         new AllocaInst(Val->getType(), AddressSpace,
                        Launch + "_param_" + std::to_string(Index),
                        EntryBlock->getTerminator());
     Builder.CreateStore(Val, Param);
-    Value *Slot = Builder.CreateGEP(
-        Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
-    Value *ParamTyped =
-        Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
-    Builder.CreateStore(ParamTyped, Slot);
+    insertStoreParameter(Parameters, Param, Index);
     Index++;
   }
 
@@ -1284,30 +1313,38 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
     isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_param, i);
     Value *Val = IDToValue[Id];
     isl_id_free(Id);
+
+    ArgSizes[Index] = computeSizeInBytes(Val->getType());
+
     Instruction *Param =
         new AllocaInst(Val->getType(), AddressSpace,
                        Launch + "_param_" + std::to_string(Index),
                        EntryBlock->getTerminator());
     Builder.CreateStore(Val, Param);
-    Value *Slot = Builder.CreateGEP(
-        Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
-    Value *ParamTyped =
-        Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
-    Builder.CreateStore(ParamTyped, Slot);
+    insertStoreParameter(Parameters, Param, Index);
     Index++;
   }
 
   for (auto Val : SubtreeValues) {
+    ArgSizes[Index] = computeSizeInBytes(Val->getType());
+
     Instruction *Param =
         new AllocaInst(Val->getType(), AddressSpace,
                        Launch + "_param_" + std::to_string(Index),
                        EntryBlock->getTerminator());
     Builder.CreateStore(Val, Param);
-    Value *Slot = Builder.CreateGEP(
-        Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
-    Value *ParamTyped =
-        Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
-    Builder.CreateStore(ParamTyped, Slot);
+    insertStoreParameter(Parameters, Param, Index);
+    Index++;
+  }
+
+  for (int i = 0; i < NumArgs; i++) {
+    Value *Val = ConstantInt::get(Builder.getInt32Ty(), ArgSizes[i]);
+    Instruction *Param =
+        new AllocaInst(Builder.getInt32Ty(), AddressSpace,
+                       Launch + "_param_size_" + std::to_string(i),
+                       EntryBlock->getTerminator());
+    Builder.CreateStore(Val, Param);
+    insertStoreParameter(Parameters, Param, Index);
     Index++;
   }
 

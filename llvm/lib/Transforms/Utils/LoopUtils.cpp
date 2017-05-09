@@ -18,6 +18,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
@@ -1111,4 +1112,205 @@ Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
     return (TrueVal + (FalseVal / 2)) / FalseVal;
   else
     return (FalseVal + (TrueVal / 2)) / TrueVal;
+}
+
+/// \brief Adds a 'fast' flag to floating point operations.
+static Value *addFastMathFlag(Value *V) {
+  if (isa<FPMathOperator>(V)) {
+    FastMathFlags Flags;
+    Flags.setUnsafeAlgebra();
+    cast<Instruction>(V)->setFastMathFlags(Flags);
+  }
+  return V;
+}
+
+// Helper to generate a log2 shuffle reduction.
+static Value *
+getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
+                    RecurrenceDescriptor::MinMaxRecurrenceKind MinMaxKind =
+                        RecurrenceDescriptor::MRK_Invalid,
+                    ArrayRef<Value *> RedOps = ArrayRef<Value *>()) {
+  unsigned VF = Src->getType()->getVectorNumElements();
+  // VF is a power of 2 so we can emit the reduction using log2(VF) shuffles
+  // and vector ops, reducing the set of values being computed by half each
+  // round.
+  assert(isPowerOf2_32(VF) &&
+         "Reduction emission only supported for pow2 vectors!");
+  Value *TmpVec = Src;
+  SmallVector<Constant *, 32> ShuffleMask(VF, nullptr);
+  for (unsigned i = VF; i != 1; i >>= 1) {
+    // Move the upper half of the vector to the lower half.
+    for (unsigned j = 0; j != i / 2; ++j)
+      ShuffleMask[j] = Builder.getInt32(i / 2 + j);
+
+    // Fill the rest of the mask with undef.
+    std::fill(&ShuffleMask[i / 2], ShuffleMask.end(),
+              UndefValue::get(Builder.getInt32Ty()));
+
+    Value *Shuf = Builder.CreateShuffleVector(
+        TmpVec, UndefValue::get(TmpVec->getType()),
+        ConstantVector::get(ShuffleMask), "rdx.shuf");
+
+    if (Op != Instruction::ICmp && Op != Instruction::FCmp) {
+      // Floating point operations had to be 'fast' to enable the reduction.
+      TmpVec = addFastMathFlag(Builder.CreateBinOp((Instruction::BinaryOps)Op,
+                                                   TmpVec, Shuf, "bin.rdx"));
+    } else {
+      assert(MinMaxKind != RecurrenceDescriptor::MRK_Invalid &&
+             "Invalid min/max");
+      TmpVec = RecurrenceDescriptor::createMinMaxOp(Builder, MinMaxKind, TmpVec,
+                                                    Shuf);
+    }
+    if (!RedOps.empty())
+      propagateIRFlags(TmpVec, RedOps);
+  }
+  // The result is in the first element of the vector.
+  return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
+}
+
+/// Create a simple vector reduction specified by an opcode and some
+/// flags (if generating min/max reductions).
+Value *llvm::createSimpleTargetReduction(
+    IRBuilder<> &Builder, const TargetTransformInfo *TTI, unsigned Opcode,
+    Value *Src, TargetTransformInfo::ReductionFlags Flags,
+    ArrayRef<Value *> RedOps) {
+  assert(isa<VectorType>(Src->getType()) && "Type must be a vector");
+
+  Value *ScalarUdf = UndefValue::get(Src->getType()->getVectorElementType());
+  std::function<Value*()> BuildFunc;
+  using RD = RecurrenceDescriptor;
+  RD::MinMaxRecurrenceKind MinMaxKind = RD::MRK_Invalid;
+  // TODO: Support creating ordered reductions.
+  FastMathFlags FMFUnsafe;
+  FMFUnsafe.setUnsafeAlgebra();
+
+  switch (Opcode) {
+  case Instruction::Add:
+    BuildFunc = [&]() { return Builder.CreateAddReduce(Src); };
+    break;
+  case Instruction::Mul:
+    BuildFunc = [&]() { return Builder.CreateMulReduce(Src); };
+    break;
+  case Instruction::And:
+    BuildFunc = [&]() { return Builder.CreateAndReduce(Src); };
+    break;
+  case Instruction::Or:
+    BuildFunc = [&]() { return Builder.CreateOrReduce(Src); };
+    break;
+  case Instruction::Xor:
+    BuildFunc = [&]() { return Builder.CreateXorReduce(Src); };
+    break;
+  case Instruction::FAdd:
+    BuildFunc = [&]() {
+      auto Rdx = Builder.CreateFAddReduce(ScalarUdf, Src);
+      cast<CallInst>(Rdx)->setFastMathFlags(FMFUnsafe);
+      return Rdx;
+    };
+    break;
+  case Instruction::FMul:
+    BuildFunc = [&]() {
+      auto Rdx = Builder.CreateFMulReduce(ScalarUdf, Src);
+      cast<CallInst>(Rdx)->setFastMathFlags(FMFUnsafe);
+      return Rdx;
+    };
+    break;
+  case Instruction::ICmp:
+    if (Flags.IsMaxOp) {
+      MinMaxKind = Flags.IsSigned ? RD::MRK_SIntMax : RD::MRK_UIntMax;
+      BuildFunc = [&]() {
+        return Builder.CreateIntMaxReduce(Src, Flags.IsSigned);
+      };
+    } else {
+      MinMaxKind = Flags.IsSigned ? RD::MRK_SIntMin : RD::MRK_UIntMin;
+      BuildFunc = [&]() {
+        return Builder.CreateIntMinReduce(Src, Flags.IsSigned);
+      };
+    }
+    break;
+  case Instruction::FCmp:
+    if (Flags.IsMaxOp) {
+      MinMaxKind = RD::MRK_FloatMax;
+      BuildFunc = [&]() { return Builder.CreateFPMaxReduce(Src, Flags.NoNaN); };
+    } else {
+      MinMaxKind = RD::MRK_FloatMin;
+      BuildFunc = [&]() { return Builder.CreateFPMinReduce(Src, Flags.NoNaN); };
+    }
+    break;
+  default:
+    llvm_unreachable("Unhandled opcode");
+    break;
+  }
+  if (TTI->useReductionIntrinsic(Opcode, Src->getType(), Flags))
+    return BuildFunc();
+  return getShuffleReduction(Builder, Src, Opcode, MinMaxKind, RedOps);
+}
+
+/// Create a vector reduction using a given recurrence descriptor.
+Value *llvm::createTargetReduction(IRBuilder<> &Builder,
+                                   const TargetTransformInfo *TTI,
+                                   RecurrenceDescriptor &Desc, Value *Src,
+                                   bool NoNaN) {
+  // TODO: Support in-order reductions based on the recurrence descriptor.
+  RecurrenceDescriptor::RecurrenceKind RecKind = Desc.getRecurrenceKind();
+  TargetTransformInfo::ReductionFlags Flags;
+  Flags.NoNaN = NoNaN;
+  auto getSimpleRdx = [&](unsigned Opc) {
+    return createSimpleTargetReduction(Builder, TTI, Opc, Src, Flags);
+  };
+  switch (RecKind) {
+  case RecurrenceDescriptor::RK_FloatAdd:
+    return getSimpleRdx(Instruction::FAdd);
+  case RecurrenceDescriptor::RK_FloatMult:
+    return getSimpleRdx(Instruction::FMul);
+  case RecurrenceDescriptor::RK_IntegerAdd:
+    return getSimpleRdx(Instruction::Add);
+  case RecurrenceDescriptor::RK_IntegerMult:
+    return getSimpleRdx(Instruction::Mul);
+  case RecurrenceDescriptor::RK_IntegerAnd:
+    return getSimpleRdx(Instruction::And);
+  case RecurrenceDescriptor::RK_IntegerOr:
+    return getSimpleRdx(Instruction::Or);
+  case RecurrenceDescriptor::RK_IntegerXor:
+    return getSimpleRdx(Instruction::Xor);
+  case RecurrenceDescriptor::RK_IntegerMinMax: {
+    switch (Desc.getMinMaxRecurrenceKind()) {
+    case RecurrenceDescriptor::MRK_SIntMax:
+      Flags.IsSigned = true;
+      Flags.IsMaxOp = true;
+      break;
+    case RecurrenceDescriptor::MRK_UIntMax:
+      Flags.IsMaxOp = true;
+      break;
+    case RecurrenceDescriptor::MRK_SIntMin:
+      Flags.IsSigned = true;
+      break;
+    case RecurrenceDescriptor::MRK_UIntMin:
+      break;
+    default:
+      llvm_unreachable("Unhandled MRK");
+    }
+    return getSimpleRdx(Instruction::ICmp);
+  }
+  case RecurrenceDescriptor::RK_FloatMinMax: {
+    Flags.IsMaxOp =
+        Desc.getMinMaxRecurrenceKind() == RecurrenceDescriptor::MRK_FloatMax;
+    return getSimpleRdx(Instruction::FCmp);
+  }
+  default:
+    llvm_unreachable("Unhandled RecKind");
+  }
+}
+
+void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL) {
+  if (auto *VecOp = dyn_cast<Instruction>(I)) {
+    if (auto *I0 = dyn_cast<Instruction>(VL[0])) {
+      // VecOVp is initialized to the 0th scalar, so start counting from index
+      // '1'.
+      VecOp->copyIRFlags(I0);
+      for (int i = 1, e = VL.size(); i < e; ++i) {
+        if (auto *Scalar = dyn_cast<Instruction>(VL[i]))
+          VecOp->andIRFlags(Scalar);
+      }
+    }
+  }
 }
