@@ -21,6 +21,12 @@ void f() {
   (void)@available; // expected-error{{expected '('}}
 }
 
+void prettyPlatformNames() {
+  (void)@available(iOS 8, tvOS 10, watchOS 3, macOS 10.11, *);
+  (void)__builtin_available(iOSApplicationExtension 8, tvOSApplicationExtension 10,
+                   watchOSApplicationExtension 3, macOSApplicationExtension 10.11, *);
+}
+
 #if __has_builtin(__builtin_available)
 #error expected
 // expected-error@-1 {{expected}}
