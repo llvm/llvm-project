@@ -85,6 +85,12 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
+
+  int64_t getFramePoppedByCallee(const MachineInstr &I) const {
+    assert(isFrameInstr(I) && "Not a frame instruction");
+    assert(I.getOperand(1).getImm() >= 0 && "Size must not be negative");
+    return I.getOperand(1).getImm();
+  }
 };
 
 }

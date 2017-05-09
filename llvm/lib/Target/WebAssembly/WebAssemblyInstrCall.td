@@ -19,8 +19,8 @@ let Defs = [ARGUMENTS] in {
 // Call sequence markers. These have an immediate which represents the amount of
 // stack space to allocate or free, which is used for varargs lowering.
 let Uses = [SP32, SP64], Defs = [SP32, SP64], isCodeGenOnly = 1 in {
-def ADJCALLSTACKDOWN : I<(outs), (ins i32imm:$amt),
-                         [(WebAssemblycallseq_start timm:$amt)]>;
+def ADJCALLSTACKDOWN : I<(outs), (ins i32imm:$amt, i32imm:$amt2),
+                         [(WebAssemblycallseq_start timm:$amt, timm:$amt2)]>;
 def ADJCALLSTACKUP : I<(outs), (ins i32imm:$amt, i32imm:$amt2),
                        [(WebAssemblycallseq_end timm:$amt, timm:$amt2)]>;
 } // isCodeGenOnly = 1

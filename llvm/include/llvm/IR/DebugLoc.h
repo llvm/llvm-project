@@ -80,22 +80,6 @@ namespace llvm {
     static DebugLoc get(unsigned Line, unsigned Col, const MDNode *Scope,
                         const MDNode *InlinedAt = nullptr);
 
-    enum { ReplaceLastInlinedAt = true };
-    /// Rebuild the entire inlined-at chain for this instruction so that the top of
-    /// the chain now is inlined-at the new call site.
-    /// \param   InlinedAt    The new outermost inlined-at in the chain.
-    /// \param   ReplaceLast  Replace the last location in the inlined-at chain.
-    static DebugLoc appendInlinedAt(DebugLoc DL, DILocation *InlinedAt,
-                                    LLVMContext &Ctx,
-                                    DenseMap<const MDNode *, MDNode *> &Cache,
-                                    bool ReplaceLast = false);
-
-    /// Reparent all debug locations referenced by \c I that belong to \c OrigSP
-    /// to become (possibly indirect) children of \c NewSP.
-    static void reparentDebugInfo(Instruction &I, DISubprogram *OrigSP,
-                                  DISubprogram *NewSP,
-                                  DenseMap<const MDNode *, MDNode *> &Cache);
-
     unsigned getLine() const;
     unsigned getCol() const;
     MDNode *getScope() const;

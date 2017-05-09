@@ -534,6 +534,30 @@ bool Instruction::isAtomic() const {
   }
 }
 
+bool Instruction::hasAtomicLoad() const {
+  assert(isAtomic());
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::AtomicCmpXchg:
+  case Instruction::AtomicRMW:
+  case Instruction::Load:
+    return true;
+  }
+}
+
+bool Instruction::hasAtomicStore() const {
+  assert(isAtomic());
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::AtomicCmpXchg:
+  case Instruction::AtomicRMW:
+  case Instruction::Store:
+    return true;
+  }
+}
+
 bool Instruction::mayThrow() const {
   if (const CallInst *CI = dyn_cast<CallInst>(this))
     return !CI->doesNotThrow();

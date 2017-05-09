@@ -267,9 +267,6 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// \brief Keep track of the metadata nodes that have been checked already.
   SmallPtrSet<const Metadata *, 32> MDNodes;
 
-  /// Keep track which DISubprogram is attached to which function.
-  DenseMap<const DISubprogram *, const Function *> DISubprogramAttachments;
-
   /// Track all DICompileUnits visited.
   SmallPtrSet<const Metadata *, 2> CUVisited;
 
@@ -389,7 +386,7 @@ public:
     verifyCompileUnits();
 
     verifyDeoptimizeCallingConvs();
-    DISubprogramAttachments.clear();
+
     return !Broken;
   }
 
@@ -2088,19 +2085,13 @@ void Verifier::visitFunction(const Function &F) {
       switch (I.first) {
       default:
         break;
-      case LLVMContext::MD_dbg: {
+      case LLVMContext::MD_dbg:
         ++NumDebugAttachments;
         AssertDI(NumDebugAttachments == 1,
                  "function must have a single !dbg attachment", &F, I.second);
         AssertDI(isa<DISubprogram>(I.second),
                  "function !dbg attachment must be a subprogram", &F, I.second);
-        auto *SP = cast<DISubprogram>(I.second);
-        const Function *&AttachedTo = DISubprogramAttachments[SP];
-        AssertDI(!AttachedTo || AttachedTo == &F,
-                 "DISubprogram attached to more than one function", SP, &F);
-        AttachedTo = &F;
         break;
-      }
       case LLVMContext::MD_prof:
         ++NumProfAttachments;
         Assert(NumProfAttachments == 1,

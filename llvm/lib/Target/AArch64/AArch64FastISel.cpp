@@ -3014,7 +3014,7 @@ bool AArch64FastISel::processCallArgs(CallLoweringInfo &CLI,
   // Issue CALLSEQ_START
   unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(AdjStackDown))
-    .addImm(NumBytes);
+    .addImm(NumBytes).addImm(0);
 
   // Process the args.
   for (CCValAssign &VA : ArgLocs) {

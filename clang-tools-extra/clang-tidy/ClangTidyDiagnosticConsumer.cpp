@@ -237,9 +237,11 @@ StringRef ClangTidyContext::getCheckName(unsigned DiagnosticID) const {
   return "";
 }
 
-ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(ClangTidyContext &Ctx)
-    : Context(Ctx), LastErrorRelatesToUserCode(false),
-      LastErrorPassesLineFilter(false), LastErrorWasIgnored(false) {
+ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(
+    ClangTidyContext &Ctx, bool RemoveIncompatibleErrors)
+    : Context(Ctx), RemoveIncompatibleErrors(RemoveIncompatibleErrors),
+      LastErrorRelatesToUserCode(false), LastErrorPassesLineFilter(false),
+      LastErrorWasIgnored(false) {
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   Diags.reset(new DiagnosticsEngine(
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts, this,
@@ -611,7 +613,9 @@ void ClangTidyDiagnosticConsumer::finish() {
   std::sort(Errors.begin(), Errors.end(), LessClangTidyError());
   Errors.erase(std::unique(Errors.begin(), Errors.end(), EqualClangTidyError()),
                Errors.end());
-  removeIncompatibleErrors(Errors);
+
+  if (RemoveIncompatibleErrors)
+    removeIncompatibleErrors(Errors);
 
   for (const ClangTidyError &Error : Errors)
     Context.storeError(Error);

@@ -35,7 +35,7 @@ define void @cold_func() !prof !16 {
 }
 
 ; CHECK: ![[HOT_ID]] = !{!"function_section_prefix", !".hot"}
-; CHECK: ![[COLD_ID]] = !{!"function_section_prefix", !".cold"}
+; CHECK: ![[COLD_ID]] = !{!"function_section_prefix", !".unlikely"}
 !llvm.module.flags = !{!1}
 !1 = !{i32 1, !"ProfileSummary", !2}
 !2 = !{!3, !4, !5, !6, !7, !8, !9, !10}

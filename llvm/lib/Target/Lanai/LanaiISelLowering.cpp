@@ -649,10 +649,7 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
     ByValArgs.push_back(FIPtr);
   }
 
-  Chain = DAG.getCALLSEQ_START(
-      Chain,
-      DAG.getConstant(NumBytes, DL, getPointerTy(DAG.getDataLayout()), true),
-      DL);
+  Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, DL);
 
   SmallVector<std::pair<unsigned, SDValue>, 4> RegsToPass;
   SmallVector<SDValue, 12> MemOpChains;

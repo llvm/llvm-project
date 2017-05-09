@@ -848,8 +848,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   SDValue Glue;
   if (!IsTailCall) {
-    SDValue C = DAG.getConstant(NumBytes, dl, PtrVT, true);
-    Chain = DAG.getCALLSEQ_START(Chain, C, dl);
+    Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
     Glue = Chain.getValue(1);
   }
 

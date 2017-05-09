@@ -41,7 +41,6 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB,
                                   ValueToValueMapTy &VMap,
                                   const Twine &NameSuffix, Function *F,
                                   ClonedCodeInfo *CodeInfo) {
-  DenseMap<const MDNode *, MDNode *> Cache;
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "", F);
   if (BB->hasName()) NewBB->setName(BB->getName()+NameSuffix);
 
@@ -51,9 +50,6 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB,
   for (BasicBlock::const_iterator II = BB->begin(), IE = BB->end();
        II != IE; ++II) {
     Instruction *NewInst = II->clone();
-    if (F && F->getSubprogram())
-      DebugLoc::reparentDebugInfo(*NewInst, BB->getParent()->getSubprogram(),
-                                  F->getSubprogram(), Cache);
     if (II->hasName())
       NewInst->setName(II->getName()+NameSuffix);
     NewBB->getInstList().push_back(NewInst);
@@ -124,28 +120,12 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
 
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
   OldFunc->getAllMetadata(MDs);
-  for (auto MD : MDs) {
-    MDNode *NewMD;
-    bool MustCloneSP =
-        (MD.first == LLVMContext::MD_dbg && OldFunc->getParent() &&
-         OldFunc->getParent() == NewFunc->getParent());
-    if (MustCloneSP) {
-      auto *SP = cast<DISubprogram>(MD.second);
-      NewMD = DISubprogram::getDistinct(
-          NewFunc->getContext(), SP->getScope(), SP->getName(),
-          NewFunc->getName(), SP->getFile(), SP->getLine(), SP->getType(),
-          SP->isLocalToUnit(), SP->isDefinition(), SP->getScopeLine(),
-          SP->getContainingType(), SP->getVirtuality(), SP->getVirtualIndex(),
-          SP->getThisAdjustment(), SP->getFlags(), SP->isOptimized(),
-          SP->getUnit(), SP->getTemplateParams(), SP->getDeclaration(),
-          SP->getVariables(), SP->getThrownTypes());
-    } else
-      NewMD =
-          MapMetadata(MD.second, VMap,
-                      ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
-                      TypeMapper, Materializer);
-    NewFunc->addMetadata(MD.first, *NewMD);
-  }
+  for (auto MD : MDs)
+    NewFunc->addMetadata(
+        MD.first,
+        *MapMetadata(MD.second, VMap,
+                     ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
+                     TypeMapper, Materializer));
 
   // Loop over all of the basic blocks in the function, cloning them as
   // appropriate.  Note that we save BE this way in order to handle cloning of

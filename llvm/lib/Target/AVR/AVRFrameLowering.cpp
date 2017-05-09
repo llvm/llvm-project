@@ -375,7 +375,7 @@ MachineBasicBlock::iterator AVRFrameLowering::eliminateCallFramePseudoInstr(
 
   DebugLoc DL = MI->getDebugLoc();
   unsigned int Opcode = MI->getOpcode();
-  int Amount = MI->getOperand(0).getImm();
+  int Amount = TII.getFrameSize(*MI);
 
   // Adjcallstackup does not need to allocate stack space for the call, instead
   // we insert push instructions that will allocate the necessary stack.

@@ -1,8 +1,17 @@
 # RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
 --- !WASM
 FileHeader:
   Version:         0x00000001
 Sections:
+  - Type:            TYPE
+    Signatures:
+      - ReturnType:      I32
+        ParamTypes:
+          - F32
+          - F32
+  - Type:            FUNCTION
+    FunctionTypes: [ 0, 0, 0 ]
   - Type:            START
     StartFunction:   1
 ...

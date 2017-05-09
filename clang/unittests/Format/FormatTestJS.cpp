@@ -1785,6 +1785,7 @@ TEST_F(FormatTestJS, ImportComments) {
   verifyFormat("import {x} from 'x';  // from some location",
                getGoogleJSStyleWithColumns(25));
   verifyFormat("// taze: x from 'location'", getGoogleJSStyleWithColumns(10));
+  verifyFormat("/// <reference path=\"some/location\" />", getGoogleJSStyleWithColumns(10));
 }
 
 TEST_F(FormatTestJS, Exponentiation) {

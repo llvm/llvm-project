@@ -1430,8 +1430,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     return Chain;
 
   SDValue tempChain = Chain;
-  Chain = DAG.getCALLSEQ_START(
-      Chain, DAG.getIntPtrConstant(uniqueCallSite, dl, true), dl);
+  Chain = DAG.getCALLSEQ_START(Chain, uniqueCallSite, 0, dl);
   SDValue InFlag = Chain.getValue(1);
 
   unsigned paramCount = 0;

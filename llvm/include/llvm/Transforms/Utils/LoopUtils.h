@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -42,6 +43,7 @@ class PredIteratorCache;
 class ScalarEvolution;
 class SCEV;
 class TargetLibraryInfo;
+class TargetTransformInfo;
 
 /// \brief Captures loop safety information.
 /// It keep information for loop & its header may throw exception.
@@ -488,6 +490,30 @@ bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         Loop *CurLoop, AliasSetTracker *CurAST,
                         LoopSafetyInfo *SafetyInfo,
                         OptimizationRemarkEmitter *ORE = nullptr);
+
+/// Create a target reduction of the given vector. The reduction operation
+/// is described by the \p Opcode parameter. min/max reductions require
+/// additional information supplied in \p Flags.
+/// The target is queried to determine if intrinsics or shuffle sequences are
+/// required to implement the reduction.
+Value *
+createSimpleTargetReduction(IRBuilder<> &B, const TargetTransformInfo *TTI,
+                            unsigned Opcode, Value *Src,
+                            TargetTransformInfo::ReductionFlags Flags =
+                                TargetTransformInfo::ReductionFlags(),
+                            ArrayRef<Value *> RedOps = ArrayRef<Value *>());
+
+/// Create a generic target reduction using a recurrence descriptor \p Desc
+/// The target is queried to determine if intrinsics or shuffle sequences are
+/// required to implement the reduction.
+Value *createTargetReduction(IRBuilder<> &B, const TargetTransformInfo *TTI,
+                             RecurrenceDescriptor &Desc, Value *Src,
+                             bool NoNaN = false);
+
+/// Get the intersection (logical and) of all of the potential IR flags
+/// of each scalar operation (VL) that will be converted into a vector (I).
+/// Flag set: NSW, NUW, exact, and all of fast-math.
+void propagateIRFlags(Value *I, ArrayRef<Value *> VL);
 
 } // end namespace llvm
 

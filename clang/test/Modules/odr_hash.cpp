@@ -1078,6 +1078,39 @@ S<X> s;
 #endif
 }
 
+namespace MultipleTypedefs {
+#if defined(FIRST)
+typedef int B1;
+typedef B1 A1;
+struct S1 {
+  A1 x;
+};
+#elif defined(SECOND)
+typedef int A1;
+struct S1 {
+  A1 x;
+};
+#else
+S1 s1;
+#endif
+
+#if defined(FIRST)
+struct T2 { int x; };
+typedef T2 B2;
+typedef B2 A2;
+struct S2 {
+  T2 x;
+};
+#elif defined(SECOND)
+struct T2 { int x; };
+typedef T2 A2;
+struct S2 {
+  T2 x;
+};
+#else
+S2 s2;
+#endif
+}
 
 // Keep macros contained to one file.
 #ifdef FIRST

@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "scudo_allocator.h"
+#include "scudo_crc32.h"
 #include "scudo_tls.h"
 #include "scudo_utils.h"
 
@@ -34,21 +35,28 @@ static uptr Cookie;
 // at compilation or at runtime.
 static atomic_uint8_t HashAlgorithm = { CRC32Software };
 
-SANITIZER_WEAK_ATTRIBUTE u32 computeHardwareCRC32(u32 Crc, uptr Data);
-
-INLINE u32 computeCRC32(u32 Crc, uptr Data, u8 HashType) {
-  // If SSE4.2 is defined here, it was enabled everywhere, as opposed to only
-  // for scudo_crc32.cpp. This means that other SSE instructions were likely
-  // emitted at other places, and as a result there is no reason to not use
-  // the hardware version of the CRC32.
+INLINE u32 computeCRC32(uptr Crc, uptr Value, uptr *Array, uptr ArraySize) {
+  // If the hardware CRC32 feature is defined here, it was enabled everywhere,
+  // as opposed to only for scudo_crc32.cpp. This means that other hardware
+  // specific instructions were likely emitted at other places, and as a
+  // result there is no reason to not use it here.
 #if defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
-  return computeHardwareCRC32(Crc, Data);
+  Crc = CRC32_INTRINSIC(Crc, Value);
+  for (uptr i = 0; i < ArraySize; i++)
+    Crc = CRC32_INTRINSIC(Crc, Array[i]);
+  return Crc;
 #else
-  if (computeHardwareCRC32 && HashType == CRC32Hardware)
-    return computeHardwareCRC32(Crc, Data);
-  else
-    return computeSoftwareCRC32(Crc, Data);
-#endif  // defined(__SSE4_2__)
+  if (atomic_load_relaxed(&HashAlgorithm) == CRC32Hardware) {
+    Crc = computeHardwareCRC32(Crc, Value);
+    for (uptr i = 0; i < ArraySize; i++)
+      Crc = computeHardwareCRC32(Crc, Array[i]);
+    return Crc;
+  }
+  Crc = computeSoftwareCRC32(Crc, Value);
+  for (uptr i = 0; i < ArraySize; i++)
+    Crc = computeSoftwareCRC32(Crc, Array[i]);
+  return Crc;
+#endif  // defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
 }
 
 static ScudoBackendAllocator &getBackendAllocator();
@@ -78,10 +86,8 @@ struct ScudoChunk : UnpackedHeader {
     ZeroChecksumHeader.Checksum = 0;
     uptr HeaderHolder[sizeof(UnpackedHeader) / sizeof(uptr)];
     memcpy(&HeaderHolder, &ZeroChecksumHeader, sizeof(HeaderHolder));
-    u8 HashType = atomic_load_relaxed(&HashAlgorithm);
-    u32 Crc = computeCRC32(Cookie, reinterpret_cast<uptr>(this), HashType);
-    for (uptr i = 0; i < ARRAY_SIZE(HeaderHolder); i++)
-      Crc = computeCRC32(Crc, HeaderHolder[i], HashType);
+    u32 Crc = computeCRC32(Cookie, reinterpret_cast<uptr>(this), HeaderHolder,
+                           ARRAY_SIZE(HeaderHolder));
     return static_cast<u16>(Crc);
   }
 
@@ -195,10 +201,10 @@ void initScudo() {
   CHECK(!ScudoInitIsRunning && "Scudo init calls itself!");
   ScudoInitIsRunning = true;
 
-  // Check is SSE4.2 is supported, if so, opt for the CRC32 hardware version.
-  if (testCPUFeature(CRC32CPUFeature)) {
+  // Check if hardware CRC32 is supported in the binary and by the platform, if
+  // so, opt for the CRC32 hardware version of the checksum.
+  if (computeHardwareCRC32 && testCPUFeature(CRC32CPUFeature))
     atomic_store_relaxed(&HashAlgorithm, CRC32Hardware);
-  }
 
   initFlags();
 
@@ -228,7 +234,7 @@ struct QuarantineCallback {
     getBackendAllocator().Deallocate(Cache_, Ptr);
   }
 
-  /// Internal quarantine allocation and deallocation functions.
+  // Internal quarantine allocation and deallocation functions.
   void *Allocate(uptr Size) {
     // TODO(kostyak): figure out the best way to protect the batches.
     return getBackendAllocator().Allocate(Cache_, Size, MinAlignment);
