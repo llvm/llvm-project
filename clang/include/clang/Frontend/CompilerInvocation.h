@@ -174,7 +174,7 @@ public:
   
   /// \brief Retrieve a module hash string that is suitable for uniquely 
   /// identifying the conditions under which the module was built.
-  std::string getModuleHash(DiagnosticsEngine &Diags) const;
+  std::string getModuleHash() const;
   
   /// @}
   /// @name Option Subgroups
