@@ -2933,6 +2933,11 @@ Optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
     return AvailabilitySpec(ConsumeToken());
   } else {
     // Parse the platform name.
+    if (Tok.is(tok::code_completion)) {
+      Actions.CodeCompleteAvailabilityPlatformName();
+      cutOffParsing();
+      return None;
+    }
     if (Tok.isNot(tok::identifier)) {
       Diag(Tok, diag::err_avail_query_expected_platform_name);
       return None;
