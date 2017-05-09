@@ -769,10 +769,6 @@ namespace llvm {
     /// and some i16 instructions are slow.
     bool IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const override;
 
-    /// Return true if the MachineFunction contains a COPY which would imply
-    /// HasOpaqueSPAdjustment.
-    bool hasCopyImplyingStackAdjustment(MachineFunction *MF) const override;
-
     MachineBasicBlock *
     EmitInstrWithCustomInserter(MachineInstr &MI,
                                 MachineBasicBlock *MBB) const override;
@@ -1049,6 +1045,9 @@ namespace llvm {
                               ArrayRef<ShuffleVectorInst *> Shuffles,
                               ArrayRef<unsigned> Indices,
                               unsigned Factor) const override;
+
+    void finalizeLowering(MachineFunction &MF) const override;
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,

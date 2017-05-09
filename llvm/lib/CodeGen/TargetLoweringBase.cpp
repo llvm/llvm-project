@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -2095,4 +2096,8 @@ int TargetLoweringBase::getSqrtRefinementSteps(EVT VT,
 int TargetLoweringBase::getDivRefinementSteps(EVT VT,
                                               MachineFunction &MF) const {
   return getOpRefinementSteps(false, VT, getRecipEstimateForFunc(MF));
+}
+
+void TargetLoweringBase::finalizeLowering(MachineFunction &MF) const {
+  MF.getRegInfo().freezeReservedRegs(MF);
 }

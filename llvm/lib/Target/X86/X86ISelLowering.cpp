@@ -33983,12 +33983,19 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
 /// know that the code that lowers COPY of EFLAGS has to use the stack, and if
 /// we don't adjust the stack we clobber the first frame index.
 /// See X86InstrInfo::copyPhysReg.
-bool X86TargetLowering::hasCopyImplyingStackAdjustment(
-    MachineFunction *MF) const {
-  const MachineRegisterInfo &MRI = MF->getRegInfo();
-
+static bool hasCopyImplyingStackAdjustment(const MachineFunction &MF) {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   return any_of(MRI.reg_instructions(X86::EFLAGS),
                 [](const MachineInstr &RI) { return RI.isCopy(); });
+}
+
+void X86TargetLowering::finalizeLowering(MachineFunction &MF) const {
+  if (hasCopyImplyingStackAdjustment(MF)) {
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+    MFI.setHasCopyImplyingStackAdjustment(true);
+  }
+
+  TargetLoweringBase::finalizeLowering(MF);
 }
 
 /// This method query the target whether it is beneficial for dag combiner to
