@@ -186,6 +186,8 @@ public:
   /// setup..destroy sequence (e.g. by pushes, or inside the callee).
   int64_t getFrameAdjustment(const MachineInstr &I) const {
     assert(isFrameInstr(I));
+    if (isFrameSetup(I))
+      return I.getOperand(2).getImm();
     return I.getOperand(1).getImm();
   }
 
@@ -193,7 +195,10 @@ public:
   /// instruction.
   void setFrameAdjustment(MachineInstr &I, int64_t V) const {
     assert(isFrameInstr(I));
-    I.getOperand(1).setImm(V);
+    if (isFrameSetup(I))
+      I.getOperand(2).setImm(V);
+    else
+      I.getOperand(1).setImm(V);
   }
 
   /// getSPAdjust - This returns the stack pointer adjustment made by

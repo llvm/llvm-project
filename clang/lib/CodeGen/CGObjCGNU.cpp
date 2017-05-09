@@ -34,7 +34,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Compiler.h"
-#include <cstdarg>
 
 using namespace clang;
 using namespace CodeGen;
@@ -58,18 +57,19 @@ public:
 
   /// Initialises the lazy function with the name, return type, and the types
   /// of the arguments.
-  LLVM_END_WITH_NULL
-  void init(CodeGenModule *Mod, const char *name, llvm::Type *RetTy, ...) {
+  template <typename... Tys>
+  void init(CodeGenModule *Mod, const char *name, llvm::Type *RetTy,
+            Tys *... Types) {
     CGM = Mod;
     FunctionName = name;
     Function = nullptr;
-    std::vector<llvm::Type *> ArgTys;
-    va_list Args;
-    va_start(Args, RetTy);
-    while (llvm::Type *ArgTy = va_arg(Args, llvm::Type *))
-      ArgTys.push_back(ArgTy);
-    va_end(Args);
-    FTy = llvm::FunctionType::get(RetTy, ArgTys, false);
+    if(sizeof...(Tys)) {
+      SmallVector<llvm::Type *, 8> ArgTys({Types...});
+      FTy = llvm::FunctionType::get(RetTy, ArgTys, false);
+    }
+    else {
+      FTy = llvm::FunctionType::get(RetTy, None, false);
+    }
   }
 
   llvm::FunctionType *getType() { return FTy; }
@@ -603,11 +603,10 @@ protected:
 public:
   CGObjCGCC(CodeGenModule &Mod) : CGObjCGNU(Mod, 8, 2) {
     // IMP objc_msg_lookup(id, SEL);
-    MsgLookupFn.init(&CGM, "objc_msg_lookup", IMPTy, IdTy, SelectorTy,
-                     nullptr);
+    MsgLookupFn.init(&CGM, "objc_msg_lookup", IMPTy, IdTy, SelectorTy);
     // IMP objc_msg_lookup_super(struct objc_super*, SEL);
     MsgLookupSuperFn.init(&CGM, "objc_msg_lookup_super", IMPTy,
-                          PtrToObjCSuperTy, SelectorTy, nullptr);
+                          PtrToObjCSuperTy, SelectorTy);
   }
 };
 
@@ -702,52 +701,51 @@ class CGObjCGNUstep : public CGObjCGNU {
     CGObjCGNUstep(CodeGenModule &Mod) : CGObjCGNU(Mod, 9, 3) {
       const ObjCRuntime &R = CGM.getLangOpts().ObjCRuntime;
 
-      llvm::StructType *SlotStructTy = llvm::StructType::get(PtrTy,
-          PtrTy, PtrTy, IntTy, IMPTy, nullptr);
+      llvm::StructType *SlotStructTy =
+          llvm::StructType::get(PtrTy, PtrTy, PtrTy, IntTy, IMPTy);
       SlotTy = llvm::PointerType::getUnqual(SlotStructTy);
       // Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender);
       SlotLookupFn.init(&CGM, "objc_msg_lookup_sender", SlotTy, PtrToIdTy,
-          SelectorTy, IdTy, nullptr);
+                        SelectorTy, IdTy);
       // Slot_t objc_msg_lookup_super(struct objc_super*, SEL);
       SlotLookupSuperFn.init(&CGM, "objc_slot_lookup_super", SlotTy,
-              PtrToObjCSuperTy, SelectorTy, nullptr);
+                             PtrToObjCSuperTy, SelectorTy);
       // If we're in ObjC++ mode, then we want to make 
       if (CGM.getLangOpts().CPlusPlus) {
         llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
         // void *__cxa_begin_catch(void *e)
-        EnterCatchFn.init(&CGM, "__cxa_begin_catch", PtrTy, PtrTy, nullptr);
+        EnterCatchFn.init(&CGM, "__cxa_begin_catch", PtrTy, PtrTy);
         // void __cxa_end_catch(void)
-        ExitCatchFn.init(&CGM, "__cxa_end_catch", VoidTy, nullptr);
+        ExitCatchFn.init(&CGM, "__cxa_end_catch", VoidTy);
         // void _Unwind_Resume_or_Rethrow(void*)
         ExceptionReThrowFn.init(&CGM, "_Unwind_Resume_or_Rethrow", VoidTy,
-            PtrTy, nullptr);
+                                PtrTy);
       } else if (R.getVersion() >= VersionTuple(1, 7)) {
         llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
         // id objc_begin_catch(void *e)
-        EnterCatchFn.init(&CGM, "objc_begin_catch", IdTy, PtrTy, nullptr);
+        EnterCatchFn.init(&CGM, "objc_begin_catch", IdTy, PtrTy);
         // void objc_end_catch(void)
-        ExitCatchFn.init(&CGM, "objc_end_catch", VoidTy, nullptr);
+        ExitCatchFn.init(&CGM, "objc_end_catch", VoidTy);
         // void _Unwind_Resume_or_Rethrow(void*)
-        ExceptionReThrowFn.init(&CGM, "objc_exception_rethrow", VoidTy,
-            PtrTy, nullptr);
+        ExceptionReThrowFn.init(&CGM, "objc_exception_rethrow", VoidTy, PtrTy);
       }
       llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
       SetPropertyAtomic.init(&CGM, "objc_setProperty_atomic", VoidTy, IdTy,
-          SelectorTy, IdTy, PtrDiffTy, nullptr);
+                             SelectorTy, IdTy, PtrDiffTy);
       SetPropertyAtomicCopy.init(&CGM, "objc_setProperty_atomic_copy", VoidTy,
-          IdTy, SelectorTy, IdTy, PtrDiffTy, nullptr);
+                                 IdTy, SelectorTy, IdTy, PtrDiffTy);
       SetPropertyNonAtomic.init(&CGM, "objc_setProperty_nonatomic", VoidTy,
-          IdTy, SelectorTy, IdTy, PtrDiffTy, nullptr);
+                                IdTy, SelectorTy, IdTy, PtrDiffTy);
       SetPropertyNonAtomicCopy.init(&CGM, "objc_setProperty_nonatomic_copy",
-          VoidTy, IdTy, SelectorTy, IdTy, PtrDiffTy, nullptr);
+                                    VoidTy, IdTy, SelectorTy, IdTy, PtrDiffTy);
       // void objc_setCppObjectAtomic(void *dest, const void *src, void
       // *helper);
       CxxAtomicObjectSetFn.init(&CGM, "objc_setCppObjectAtomic", VoidTy, PtrTy,
-          PtrTy, PtrTy, nullptr);
+                                PtrTy, PtrTy);
       // void objc_getCppObjectAtomic(void *dest, const void *src, void
       // *helper);
       CxxAtomicObjectGetFn.init(&CGM, "objc_getCppObjectAtomic", VoidTy, PtrTy,
-          PtrTy, PtrTy, nullptr);
+                                PtrTy, PtrTy);
     }
 
     llvm::Constant *GetCppAtomicObjectGetFunction() override {
@@ -849,14 +847,14 @@ protected:
 public:
   CGObjCObjFW(CodeGenModule &Mod): CGObjCGNU(Mod, 9, 3) {
     // IMP objc_msg_lookup(id, SEL);
-    MsgLookupFn.init(&CGM, "objc_msg_lookup", IMPTy, IdTy, SelectorTy, nullptr);
+    MsgLookupFn.init(&CGM, "objc_msg_lookup", IMPTy, IdTy, SelectorTy);
     MsgLookupFnSRet.init(&CGM, "objc_msg_lookup_stret", IMPTy, IdTy,
-                         SelectorTy, nullptr);
+                         SelectorTy);
     // IMP objc_msg_lookup_super(struct objc_super*, SEL);
     MsgLookupSuperFn.init(&CGM, "objc_msg_lookup_super", IMPTy,
-                          PtrToObjCSuperTy, SelectorTy, nullptr);
+                          PtrToObjCSuperTy, SelectorTy);
     MsgLookupSuperFnSRet.init(&CGM, "objc_msg_lookup_super_stret", IMPTy,
-                              PtrToObjCSuperTy, SelectorTy, nullptr);
+                              PtrToObjCSuperTy, SelectorTy);
   }
 };
 } // end anonymous namespace
@@ -945,35 +943,34 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
   }
   PtrToIdTy = llvm::PointerType::getUnqual(IdTy);
 
-  ObjCSuperTy = llvm::StructType::get(IdTy, IdTy, nullptr);
+  ObjCSuperTy = llvm::StructType::get(IdTy, IdTy);
   PtrToObjCSuperTy = llvm::PointerType::getUnqual(ObjCSuperTy);
 
   llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
 
   // void objc_exception_throw(id);
-  ExceptionThrowFn.init(&CGM, "objc_exception_throw", VoidTy, IdTy, nullptr);
-  ExceptionReThrowFn.init(&CGM, "objc_exception_throw", VoidTy, IdTy, nullptr);
+  ExceptionThrowFn.init(&CGM, "objc_exception_throw", VoidTy, IdTy);
+  ExceptionReThrowFn.init(&CGM, "objc_exception_throw", VoidTy, IdTy);
   // int objc_sync_enter(id);
-  SyncEnterFn.init(&CGM, "objc_sync_enter", IntTy, IdTy, nullptr);
+  SyncEnterFn.init(&CGM, "objc_sync_enter", IntTy, IdTy);
   // int objc_sync_exit(id);
-  SyncExitFn.init(&CGM, "objc_sync_exit", IntTy, IdTy, nullptr);
+  SyncExitFn.init(&CGM, "objc_sync_exit", IntTy, IdTy);
 
   // void objc_enumerationMutation (id)
-  EnumerationMutationFn.init(&CGM, "objc_enumerationMutation", VoidTy,
-      IdTy, nullptr);
+  EnumerationMutationFn.init(&CGM, "objc_enumerationMutation", VoidTy, IdTy);
 
   // id objc_getProperty(id, SEL, ptrdiff_t, BOOL)
   GetPropertyFn.init(&CGM, "objc_getProperty", IdTy, IdTy, SelectorTy,
-      PtrDiffTy, BoolTy, nullptr);
+                     PtrDiffTy, BoolTy);
   // void objc_setProperty(id, SEL, ptrdiff_t, id, BOOL, BOOL)
   SetPropertyFn.init(&CGM, "objc_setProperty", VoidTy, IdTy, SelectorTy,
-      PtrDiffTy, IdTy, BoolTy, BoolTy, nullptr);
+                     PtrDiffTy, IdTy, BoolTy, BoolTy);
   // void objc_setPropertyStruct(void*, void*, ptrdiff_t, BOOL, BOOL)
-  GetStructPropertyFn.init(&CGM, "objc_getPropertyStruct", VoidTy, PtrTy, PtrTy, 
-      PtrDiffTy, BoolTy, BoolTy, nullptr);
+  GetStructPropertyFn.init(&CGM, "objc_getPropertyStruct", VoidTy, PtrTy, PtrTy,
+                           PtrDiffTy, BoolTy, BoolTy);
   // void objc_setPropertyStruct(void*, void*, ptrdiff_t, BOOL, BOOL)
-  SetStructPropertyFn.init(&CGM, "objc_setPropertyStruct", VoidTy, PtrTy, PtrTy, 
-      PtrDiffTy, BoolTy, BoolTy, nullptr);
+  SetStructPropertyFn.init(&CGM, "objc_setPropertyStruct", VoidTy, PtrTy, PtrTy,
+                           PtrDiffTy, BoolTy, BoolTy);
 
   // IMP type
   llvm::Type *IMPArgs[] = { IdTy, SelectorTy };
@@ -997,21 +994,19 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
     // Get functions needed in GC mode
 
     // id objc_assign_ivar(id, id, ptrdiff_t);
-    IvarAssignFn.init(&CGM, "objc_assign_ivar", IdTy, IdTy, IdTy, PtrDiffTy,
-        nullptr);
+    IvarAssignFn.init(&CGM, "objc_assign_ivar", IdTy, IdTy, IdTy, PtrDiffTy);
     // id objc_assign_strongCast (id, id*)
     StrongCastAssignFn.init(&CGM, "objc_assign_strongCast", IdTy, IdTy,
-        PtrToIdTy, nullptr);
+                            PtrToIdTy);
     // id objc_assign_global(id, id*);
-    GlobalAssignFn.init(&CGM, "objc_assign_global", IdTy, IdTy, PtrToIdTy,
-        nullptr);
+    GlobalAssignFn.init(&CGM, "objc_assign_global", IdTy, IdTy, PtrToIdTy);
     // id objc_assign_weak(id, id*);
-    WeakAssignFn.init(&CGM, "objc_assign_weak", IdTy, IdTy, PtrToIdTy, nullptr);
+    WeakAssignFn.init(&CGM, "objc_assign_weak", IdTy, IdTy, PtrToIdTy);
     // id objc_read_weak(id*);
-    WeakReadFn.init(&CGM, "objc_read_weak", IdTy, PtrToIdTy, nullptr);
+    WeakReadFn.init(&CGM, "objc_read_weak", IdTy, PtrToIdTy);
     // void *objc_memmove_collectable(void*, void *, size_t);
     MemMoveFn.init(&CGM, "objc_memmove_collectable", PtrTy, PtrTy, PtrTy,
-        SizeTy, nullptr);
+                   SizeTy);
   }
 }
 
@@ -1317,7 +1312,7 @@ CGObjCGNU::GenerateMessageSendSuper(CodeGenFunction &CGF,
     }
   }
   // Cast the pointer to a simplified version of the class structure
-  llvm::Type *CastTy = llvm::StructType::get(IdTy, IdTy, nullptr);
+  llvm::Type *CastTy = llvm::StructType::get(IdTy, IdTy);
   ReceiverClass = Builder.CreateBitCast(ReceiverClass,
                                         llvm::PointerType::getUnqual(CastTy));
   // Get the superclass pointer
@@ -1326,8 +1321,8 @@ CGObjCGNU::GenerateMessageSendSuper(CodeGenFunction &CGF,
   ReceiverClass =
     Builder.CreateAlignedLoad(ReceiverClass, CGF.getPointerAlign());
   // Construct the structure used to look up the IMP
-  llvm::StructType *ObjCSuperTy = llvm::StructType::get(
-      Receiver->getType(), IdTy, nullptr);
+  llvm::StructType *ObjCSuperTy =
+      llvm::StructType::get(Receiver->getType(), IdTy);
 
   // FIXME: Is this really supposed to be a dynamic alloca?
   Address ObjCSuper = Address(Builder.CreateAlloca(ObjCSuperTy),
@@ -1565,11 +1560,8 @@ GenerateIvarList(ArrayRef<llvm::Constant *> IvarNames,
   IvarList.addInt(IntTy, (int)IvarNames.size());
 
   // Get the ivar structure type.
-  llvm::StructType *ObjCIvarTy = llvm::StructType::get(
-    PtrToInt8Ty,
-    PtrToInt8Ty,
-    IntTy,
-    nullptr);
+  llvm::StructType *ObjCIvarTy =
+      llvm::StructType::get(PtrToInt8Ty, PtrToInt8Ty, IntTy);
 
   // Array of ivar structures.
   auto Ivars = IvarList.beginArray(ObjCIvarTy);
@@ -1611,7 +1603,7 @@ llvm::Constant *CGObjCGNU::GenerateClassStructure(
   // anyway; the classes will still work with the GNU runtime, they will just
   // be ignored.
   llvm::StructType *ClassTy = llvm::StructType::get(
-      PtrToInt8Ty,        // isa 
+      PtrToInt8Ty,        // isa
       PtrToInt8Ty,        // super_class
       PtrToInt8Ty,        // name
       LongTy,             // version
@@ -1620,18 +1612,18 @@ llvm::Constant *CGObjCGNU::GenerateClassStructure(
       IVars->getType(),   // ivars
       Methods->getType(), // methods
       // These are all filled in by the runtime, so we pretend
-      PtrTy,              // dtable
-      PtrTy,              // subclass_list
-      PtrTy,              // sibling_class
-      PtrTy,              // protocols
-      PtrTy,              // gc_object_type
+      PtrTy, // dtable
+      PtrTy, // subclass_list
+      PtrTy, // sibling_class
+      PtrTy, // protocols
+      PtrTy, // gc_object_type
       // New ABI:
       LongTy,                 // abi_version
       IvarOffsets->getType(), // ivar_offsets
       Properties->getType(),  // properties
       IntPtrTy,               // strong_pointers
-      IntPtrTy,               // weak_pointers
-      nullptr);
+      IntPtrTy                // weak_pointers
+      );
 
   ConstantInitBuilder Builder(CGM);
   auto Elements = Builder.beginStruct(ClassTy);

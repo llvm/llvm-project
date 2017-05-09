@@ -16,7 +16,8 @@
 //
 
 // Type profiles.
-def SDT_ARMCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32> ]>;
+def SDT_ARMCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
+                                           SDTCisVT<1, i32> ]>;
 def SDT_ARMCallSeqEnd   : SDCallSeqEnd<[ SDTCisVT<0, i32>, SDTCisVT<1, i32> ]>;
 def SDT_ARMStructByVal : SDTypeProfile<0, 4,
                                        [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
@@ -1968,8 +1969,8 @@ PseudoInst<(outs), (ins i32imm:$amt1, i32imm:$amt2, pred:$p), NoItinerary,
            [(ARMcallseq_end timm:$amt1, timm:$amt2)]>;
 
 def ADJCALLSTACKDOWN :
-PseudoInst<(outs), (ins i32imm:$amt, pred:$p), NoItinerary,
-           [(ARMcallseq_start timm:$amt)]>;
+PseudoInst<(outs), (ins i32imm:$amt, i32imm:$amt2, pred:$p), NoItinerary,
+           [(ARMcallseq_start timm:$amt, timm:$amt2)]>;
 }
 
 def HINT : AI<(outs), (ins imm0_239:$imm), MiscFrm, NoItinerary,

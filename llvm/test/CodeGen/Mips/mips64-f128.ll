@@ -418,17 +418,18 @@ entry:
 declare fp128 @llvm.powi.f128(fp128, i32) #3
 
 ; ALL-LABEL:     libcall2_copysignl:
-; NOT-R2R6-DAG: daddiu $[[R2:[0-9]+]], $zero, 1
-; NOT-R2R6-DAG: dsll   $[[R3:[0-9]+]], $[[R2]], 63
+; ALL-DAG:      daddiu $[[R2:[0-9]+]], $zero, 1
+; ALL-DAG:      dsll   $[[R3:[0-9]+]], $[[R2]], 63
 ; ALL-DAG:      ld     $[[R0:[0-9]+]], %got_disp(gld1)
 ; ALL-DAG:      ld     $[[R1:[0-9]+]], 8($[[R0]])
-; NOT-R2R6-DAG: and    $[[R4:[0-9]+]], $[[R1]], $[[R3]]
+; ALL-DAG:      and    $[[R4:[0-9]+]], $[[R1]], $[[R3]]
 ; ALL-DAG:      ld     $[[R5:[0-9]+]], %got_disp(gld0)
 ; ALL-DAG:      ld     $[[R6:[0-9]+]], 8($[[R5]])
-; R2R6:         dins   $[[R0:[0-9]+]], $[[R1:[0-9]+]], 63, 1
 ; NOT-R2R6-DAG: daddiu $[[R7:[0-9]+]], $[[R3]], -1
 ; NOT-R2R6-DAG: and    $[[R8:[0-9]+]], $[[R6]], $[[R7]]
 ; NOT-R2R6-DAG: or     $4, $[[R8]], $[[R4]]
+; R2R6-DAG:     dextm  $[[R7:[0-9]+]], $[[R6]], 0, 63
+; R2R6-DAG:     or     $4, $[[R7]], $[[R4]]
 ; ALL-DAG:      ld     $2, 0($[[R5]])
 
 define fp128 @libcall2_copysignl() {

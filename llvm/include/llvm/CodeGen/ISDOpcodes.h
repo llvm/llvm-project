@@ -644,6 +644,13 @@ namespace ISD {
     /// of a call sequence, and carry arbitrary information that target might
     /// want to know.  The first operand is a chain, the rest are specified by
     /// the target and not touched by the DAG optimizers.
+    /// Targets that may use stack to pass call arguments define additional
+    /// operands:
+    /// - size of the call frame part that must be set up within the
+    ///   CALLSEQ_START..CALLSEQ_END pair,
+    /// - part of the call frame prepared prior to CALLSEQ_START.
+    /// Both these parameters must be constants, their sum is the total call
+    /// frame size.
     /// CALLSEQ_START..CALLSEQ_END pairs may not be nested.
     CALLSEQ_START,  // Beginning of a call sequence
     CALLSEQ_END,    // End of a call sequence

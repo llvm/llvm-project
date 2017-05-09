@@ -19,6 +19,7 @@
 #define LLVM_IR_DERIVEDTYPES_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
@@ -228,7 +229,14 @@ public:
   static StructType *create(LLVMContext &Context, ArrayRef<Type *> Elements,
                             StringRef Name, bool isPacked = false);
   static StructType *create(LLVMContext &Context, ArrayRef<Type *> Elements);
-  static StructType *create(StringRef Name, Type *elt1, ...) LLVM_END_WITH_NULL;
+  template <class... Tys>
+  static typename std::enable_if<are_base_of<Type, Tys...>::value,
+                                 StructType *>::type
+  create(StringRef Name, Type *elt1, Tys *... elts) {
+    assert(elt1 && "Cannot create a struct type with no elements with this");
+    SmallVector<llvm::Type *, 8> StructFields{{elt1, elts...}};
+    return create(StructFields, Name);
+  }
 
   /// This static method is the primary way to create a literal StructType.
   static StructType *get(LLVMContext &Context, ArrayRef<Type*> Elements,
@@ -240,7 +248,15 @@ public:
   /// This static method is a convenience method for creating structure types by
   /// specifying the elements as arguments. Note that this method always returns
   /// a non-packed struct, and requires at least one element type.
-  static StructType *get(Type *elt1, ...) LLVM_END_WITH_NULL;
+  template <class... Tys>
+  static typename std::enable_if<are_base_of<Type, Tys...>::value,
+                                 StructType *>::type
+  get(Type *elt1, Tys *... elts) {
+    assert(elt1 && "Cannot create a struct type with no elements with this");
+    LLVMContext &Ctx = elt1->getContext();
+    SmallVector<llvm::Type *, 8> StructFields{{elt1, elts...}};
+    return llvm::StructType::get(Ctx, StructFields);
+  }
 
   bool isPacked() const { return (getSubclassData() & SCDB_Packed) != 0; }
 
@@ -269,7 +285,14 @@ public:
 
   /// Specify a body for an opaque identified type.
   void setBody(ArrayRef<Type*> Elements, bool isPacked = false);
-  void setBody(Type *elt1, ...) LLVM_END_WITH_NULL;
+
+  template <typename... Tys>
+  typename std::enable_if<are_base_of<Type, Tys...>::value, void>::type
+  setBody(Type *elt1, Tys *... elts) {
+    assert(elt1 && "Cannot create a struct type with no elements with this");
+    SmallVector<llvm::Type *, 8> StructFields{{elt1, elts...}};
+    setBody(StructFields);
+  }
 
   /// Return true if the specified type is valid as a element type.
   static bool isValidElementType(Type *ElemTy);

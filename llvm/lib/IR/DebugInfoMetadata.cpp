@@ -672,6 +672,24 @@ void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
   }
 }
 
+bool DIExpression::extractIfOffset(int64_t &Offset) const {
+  if (getNumElements() == 0) {
+    Offset = 0;
+    return true;
+  }
+  if (getNumElements() != 2)
+    return false;
+  if (Elements[0] == dwarf::DW_OP_plus) {
+    Offset = Elements[1];
+    return true;
+  }
+  if (Elements[0] == dwarf::DW_OP_minus) {
+    Offset = -Elements[1];
+    return true;
+  }
+  return false;
+}
+
 DIExpression *DIExpression::prepend(const DIExpression *Expr, bool Deref,
                                     int64_t Offset, bool StackValue) {
   SmallVector<uint64_t, 8> Ops;

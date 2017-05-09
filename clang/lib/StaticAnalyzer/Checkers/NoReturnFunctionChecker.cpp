@@ -123,14 +123,14 @@ void NoReturnFunctionChecker::checkPostObjCMessage(const ObjCMethodCall &Msg,
   case 4:
     lazyInitKeywordSelector(HandleFailureInFunctionSel, C.getASTContext(),
                             "handleFailureInFunction", "file", "lineNumber",
-                            "description", nullptr);
+                            "description");
     if (Sel != HandleFailureInFunctionSel)
       return;
     break;
   case 5:
     lazyInitKeywordSelector(HandleFailureInMethodSel, C.getASTContext(),
                             "handleFailureInMethod", "object", "file",
-                            "lineNumber", "description", nullptr);
+                            "lineNumber", "description");
     if (Sel != HandleFailureInMethodSel)
       return;
     break;

@@ -3,7 +3,7 @@
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES -mllvm -dfsan-args-abi %s -o %t && %run %t
 
-// XFAIL: target-is-mips64el
+// XFAIL: target-is-mips64,target-is-mips64el
 
 // Tests custom implementations of various glibc functions.
 

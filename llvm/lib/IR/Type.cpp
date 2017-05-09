@@ -16,7 +16,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Module.h"
 #include <algorithm>
-#include <cstdarg>
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -419,21 +418,6 @@ StructType *StructType::get(LLVMContext &Context, bool isPacked) {
   return get(Context, None, isPacked);
 }
 
-StructType *StructType::get(Type *type, ...) {
-  assert(type && "Cannot create a struct type with no elements with this");
-  LLVMContext &Ctx = type->getContext();
-  va_list ap;
-  SmallVector<llvm::Type*, 8> StructFields;
-  va_start(ap, type);
-  while (type) {
-    StructFields.push_back(type);
-    type = va_arg(ap, llvm::Type*);
-  }
-  auto *Ret = llvm::StructType::get(Ctx, StructFields);
-  va_end(ap);
-  return Ret;
-}
-
 StructType *StructType::create(LLVMContext &Context, ArrayRef<Type*> Elements,
                                StringRef Name, bool isPacked) {
   StructType *ST = create(Context, Name);
@@ -460,21 +444,6 @@ StructType *StructType::create(ArrayRef<Type*> Elements) {
   assert(!Elements.empty() &&
          "This method may not be invoked with an empty list");
   return create(Elements[0]->getContext(), Elements, StringRef());
-}
-
-StructType *StructType::create(StringRef Name, Type *type, ...) {
-  assert(type && "Cannot create a struct type with no elements with this");
-  LLVMContext &Ctx = type->getContext();
-  va_list ap;
-  SmallVector<llvm::Type*, 8> StructFields;
-  va_start(ap, type);
-  while (type) {
-    StructFields.push_back(type);
-    type = va_arg(ap, llvm::Type*);
-  }
-  auto *Ret = llvm::StructType::create(Ctx, StructFields, Name);
-  va_end(ap);
-  return Ret;
 }
 
 bool StructType::isSized(SmallPtrSetImpl<Type*> *Visited) const {
@@ -506,19 +475,6 @@ StringRef StructType::getName() const {
   if (!SymbolTableEntry) return StringRef();
 
   return ((StringMapEntry<StructType*> *)SymbolTableEntry)->getKey();
-}
-
-void StructType::setBody(Type *type, ...) {
-  assert(type && "Cannot create a struct type with no elements with this");
-  va_list ap;
-  SmallVector<llvm::Type*, 8> StructFields;
-  va_start(ap, type);
-  while (type) {
-    StructFields.push_back(type);
-    type = va_arg(ap, llvm::Type*);
-  }
-  setBody(StructFields);
-  va_end(ap);
 }
 
 bool StructType::isValidElementType(Type *ElemTy) {

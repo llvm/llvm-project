@@ -888,13 +888,21 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
     if (!Scope)
       continue;
 
+    // If the variable has an attached offset expression, extract it.
+    // FIXME: Try to handle DW_OP_deref as well.
+    int64_t ExprOffset = 0;
+    if (VI.Expr)
+      if (!VI.Expr->extractIfOffset(ExprOffset))
+        continue;
+
     // Get the frame register used and the offset.
     unsigned FrameReg = 0;
     int FrameOffset = TFI->getFrameIndexReference(*Asm->MF, VI.Slot, FrameReg);
     uint16_t CVReg = TRI->getCodeViewRegNum(FrameReg);
 
     // Calculate the label ranges.
-    LocalVarDefRange DefRange = createDefRangeMem(CVReg, FrameOffset);
+    LocalVarDefRange DefRange =
+        createDefRangeMem(CVReg, FrameOffset + ExprOffset);
     for (const InsnRange &Range : Scope->getRanges()) {
       const MCSymbol *Begin = getLabelBeforeInsn(Range.first);
       const MCSymbol *End = getLabelAfterInsn(Range.second);

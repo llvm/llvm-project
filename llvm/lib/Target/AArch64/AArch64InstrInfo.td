@@ -156,7 +156,8 @@ def AArch64adrp          : SDNode<"AArch64ISD::ADRP", SDTIntUnaryOp, []>;
 def AArch64addlow        : SDNode<"AArch64ISD::ADDlow", SDTIntBinOp, []>;
 def AArch64LOADgot       : SDNode<"AArch64ISD::LOADgot", SDTIntUnaryOp>;
 def AArch64callseq_start : SDNode<"ISD::CALLSEQ_START",
-                                SDCallSeqStart<[ SDTCisVT<0, i32> ]>,
+                                SDCallSeqStart<[ SDTCisVT<0, i32>,
+                                                 SDTCisVT<1, i32> ]>,
                                 [SDNPHasChain, SDNPOutGlue]>;
 def AArch64callseq_end   : SDNode<"ISD::CALLSEQ_END",
                                 SDCallSeqEnd<[ SDTCisVT<0, i32>,
@@ -328,8 +329,9 @@ include "AArch64InstrFormats.td"
 let Defs = [SP], Uses = [SP], hasSideEffects = 1, isCodeGenOnly = 1 in {
 // We set Sched to empty list because we expect these instructions to simply get
 // removed in most cases.
-def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt),
-                              [(AArch64callseq_start timm:$amt)]>, Sched<[]>;
+def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                              [(AArch64callseq_start timm:$amt1, timm:$amt2)]>,
+                              Sched<[]>;
 def ADJCALLSTACKUP : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                             [(AArch64callseq_end timm:$amt1, timm:$amt2)]>,
                             Sched<[]>;

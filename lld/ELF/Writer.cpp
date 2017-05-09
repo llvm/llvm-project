@@ -975,6 +975,34 @@ static bool canSharePtLoad(const OutputSection &S1, const OutputSection &S2) {
   return (S1.Flags & SHF_EXECINSTR) == (S2.Flags & SHF_EXECINSTR);
 }
 
+// We assume, like createPhdrs that all allocs are at the start.
+template <typename ELFT>
+static std::vector<OutputSection *>::iterator
+findOrphanPos(std::vector<OutputSection *>::iterator B,
+              std::vector<OutputSection *>::iterator E) {
+  OutputSection *Sec = *E;
+
+  // If it is not allocatable, just leave it at the end.
+  if (!(Sec->Flags & SHF_ALLOC))
+    return E;
+
+  // Find the first sharable.
+  auto Pos = std::find_if(
+      B, E, [=](OutputSection *S) { return canSharePtLoad(*S, *Sec); });
+  if (Pos != E) {
+    // Ony consider the sharable range.
+    B = Pos;
+    E = std::find_if(
+        B, E, [=](OutputSection *S) { return !canSharePtLoad(*S, *Sec); });
+    assert(B != E);
+  }
+
+  // Find the fist position that Sec compares less to.
+  return std::find_if(B, E, [=](OutputSection *S) {
+    return compareSectionsNonScript<ELFT>(Sec, S);
+  });
+}
+
 template <class ELFT> void Writer<ELFT>::sortSections() {
   // Don't sort if using -r. It is not necessary and we want to preserve the
   // relative order for SHF_LINK_ORDER sections.
@@ -1018,33 +1046,8 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   auto NonScriptI =
       std::find_if(OutputSections.begin(), E,
                    [](OutputSection *S) { return S->SectionIndex == INT_MAX; });
-  while (NonScriptI != E) {
-    auto BestPos = std::max_element(
-        I, NonScriptI, [&](OutputSection *&A, OutputSection *&B) {
-          bool ACanSharePtLoad = canSharePtLoad(**NonScriptI, *A);
-          bool BCanSharePtLoad = canSharePtLoad(**NonScriptI, *B);
-          if (ACanSharePtLoad != BCanSharePtLoad)
-            return BCanSharePtLoad;
-
-          bool ACmp = compareSectionsNonScript<ELFT>(*NonScriptI, A);
-          bool BCmp = compareSectionsNonScript<ELFT>(*NonScriptI, B);
-          if (ACmp != BCmp)
-            return BCmp; // FIXME: missing test
-
-          size_t PosA = &A - &OutputSections[0];
-          size_t PosB = &B - &OutputSections[0];
-          return ACmp ? PosA > PosB : PosA < PosB;
-        });
-
-    // max_element only returns NonScriptI if the range is empty. If the range
-    // is not empty we should consider moving the the element forward one
-    // position.
-    if (BestPos != NonScriptI &&
-        !compareSectionsNonScript<ELFT>(*NonScriptI, *BestPos))
-      ++BestPos;
-    std::rotate(BestPos, NonScriptI, NonScriptI + 1);
-    ++NonScriptI;
-  }
+  for (; NonScriptI != E; ++NonScriptI)
+    std::rotate(findOrphanPos<ELFT>(I, NonScriptI), NonScriptI, NonScriptI + 1);
 
   Script->adjustSectionsAfterSorting();
 }

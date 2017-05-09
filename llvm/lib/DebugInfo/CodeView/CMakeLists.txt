@@ -13,7 +13,6 @@ add_llvm_library(LLVMDebugInfoCodeView
   ModuleDebugFragmentVisitor.cpp
   ModuleDebugInlineeLinesFragment.cpp
   ModuleDebugLineFragment.cpp
-  ModuleDebugUnknownFragment.cpp
   RecordSerialization.cpp
   StringTable.cpp
   SymbolRecordMapping.cpp

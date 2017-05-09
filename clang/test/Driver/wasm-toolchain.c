@@ -27,18 +27,18 @@
 
 // RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s 2>&1 | FileCheck -check-prefix=LINK %s
 // LINK: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
-// LINK: lld{{.*}}" "-flavor" "ld" "-L/foo/lib32" "crt1.o" "crti.o" "[[temp]]" "-lc" "-lcompiler_rt" "crtn.o" "-o" "a.out"
+// LINK: lld{{.*}}" "-flavor" "wasm" "-L/foo/lib32" "crt1.o" "crti.o" "[[temp]]" "-lc" "-lcompiler_rt" "crtn.o" "-o" "a.out"
 
 // A basic C link command-line with optimization. WebAssembly is somewhat
 // special in enabling --gc-sections by default.
 
 // RUN: %clang -### -O2 -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s 2>&1 | FileCheck -check-prefix=LINK_OPT %s
 // LINK_OPT: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
-// LINK_OPT: lld{{.*}}" "-flavor" "ld" "--gc-sections" "-L/foo/lib32" "crt1.o" "crti.o" "[[temp]]" "-lc" "-lcompiler_rt" "crtn.o" "-o" "a.out"
+// LINK_OPT: lld{{.*}}" "-flavor" "wasm" "--gc-sections" "-L/foo/lib32" "crt1.o" "crti.o" "[[temp]]" "-lc" "-lcompiler_rt" "crtn.o" "-o" "a.out"
 
 // Ditto, but ensure that a user --no-gc-sections comes after the
 // default --gc-sections.
 
 // RUN: %clang -### -O2 -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo -Wl,--no-gc-sections %s 2>&1 | FileCheck -check-prefix=NO_GC_SECTIONS %s
 // NO_GC_SECTIONS: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
-// NO_GC_SECTIONS: lld{{.*}}" "-flavor" "ld" "--gc-sections" "-L/foo/lib32" "crt1.o" "crti.o" "--no-gc-sections" "[[temp]]" "-lc" "-lcompiler_rt" "crtn.o" "-o" "a.out"
+// NO_GC_SECTIONS: lld{{.*}}" "-flavor" "wasm" "--gc-sections" "-L/foo/lib32" "crt1.o" "crti.o" "--no-gc-sections" "[[temp]]" "-lc" "-lcompiler_rt" "crtn.o" "-o" "a.out"

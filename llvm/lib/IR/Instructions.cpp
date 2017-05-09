@@ -1543,8 +1543,7 @@ AtomicCmpXchgInst::AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
                                      SynchronizationScope SynchScope,
                                      Instruction *InsertBefore)
     : Instruction(
-          StructType::get(Cmp->getType(), Type::getInt1Ty(Cmp->getContext()),
-                          nullptr),
+          StructType::get(Cmp->getType(), Type::getInt1Ty(Cmp->getContext())),
           AtomicCmpXchg, OperandTraits<AtomicCmpXchgInst>::op_begin(this),
           OperandTraits<AtomicCmpXchgInst>::operands(this), InsertBefore) {
   Init(Ptr, Cmp, NewVal, SuccessOrdering, FailureOrdering, SynchScope);
@@ -1556,8 +1555,7 @@ AtomicCmpXchgInst::AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
                                      SynchronizationScope SynchScope,
                                      BasicBlock *InsertAtEnd)
     : Instruction(
-          StructType::get(Cmp->getType(), Type::getInt1Ty(Cmp->getContext()),
-                          nullptr),
+          StructType::get(Cmp->getType(), Type::getInt1Ty(Cmp->getContext())),
           AtomicCmpXchg, OperandTraits<AtomicCmpXchgInst>::op_begin(this),
           OperandTraits<AtomicCmpXchgInst>::operands(this), InsertAtEnd) {
   Init(Ptr, Cmp, NewVal, SuccessOrdering, FailureOrdering, SynchScope);

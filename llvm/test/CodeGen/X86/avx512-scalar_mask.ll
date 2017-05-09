@@ -26,6 +26,7 @@ define <4 x float>@test_var_maskz(<4 x float> %v0, <4 x float> %v1, <4 x float> 
   ret < 4 x float> %res
 }
 
+; FIXME: we should just return %xmm0 here.
 define <4 x float>@test_const0_mask(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: test_const0_mask:
 ; CHECK:       ## BB#0:
@@ -36,6 +37,7 @@ define <4 x float>@test_const0_mask(<4 x float> %v0, <4 x float> %v1, <4 x float
   ret < 4 x float> %res
 }
 
+; FIXME: we should zero the lower element of xmm0 and return it.
 define <4 x float>@test_const0_maskz(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: test_const0_maskz:
 ; CHECK:       ## BB#0:
@@ -46,6 +48,7 @@ define <4 x float>@test_const0_maskz(<4 x float> %v0, <4 x float> %v1, <4 x floa
   ret < 4 x float> %res
 }
 
+; FIXME: we should just return %xmm0 here.
 define <4 x float>@test_const2_mask(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: test_const2_mask:
 ; CHECK:       ## BB#0:
@@ -56,6 +59,7 @@ define <4 x float>@test_const2_mask(<4 x float> %v0, <4 x float> %v1, <4 x float
   ret < 4 x float> %res
 }
 
+; FIXME: we should zero the lower element of xmm0 and return it.
 define <4 x float>@test_const2_maskz(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: test_const2_maskz:
 ; CHECK:       ## BB#0:
@@ -87,9 +91,7 @@ define <4 x float>@test_const_allone_maskz(<4 x float> %v0, <4 x float> %v1, <4 
 define <4 x float>@test_const_3_mask(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: test_const_3_mask:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k0
-; CHECK-NEXT:    kshiftrw $15, %k0, %k1
-; CHECK-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.mask.vfmadd.ss(<4 x float> %v0,<4 x float> %v1, <4 x float> %v2,  i8 3, i32 4)
   ret < 4 x float> %res
@@ -98,9 +100,7 @@ define <4 x float>@test_const_3_mask(<4 x float> %v0, <4 x float> %v1, <4 x floa
 define <4 x float>@test_const_3_maskz(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: test_const_3_maskz:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k0
-; CHECK-NEXT:    kshiftrw $15, %k0, %k1
-; CHECK-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.maskz.vfmadd.ss(<4 x float> %v0,<4 x float> %v1, <4 x float> %v2,  i8 3, i32 4)
   ret < 4 x float> %res

@@ -26,6 +26,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -452,7 +453,14 @@ class ConstantStruct final : public ConstantAggregate {
 public:
   // ConstantStruct accessors
   static Constant *get(StructType *T, ArrayRef<Constant*> V);
-  static Constant *get(StructType *T, ...) LLVM_END_WITH_NULL;
+
+  template <typename... Csts>
+  static typename std::enable_if<are_base_of<Constant, Csts...>::value,
+                                 Constant *>::type
+  get(StructType *T, Csts *... Vs) {
+    SmallVector<Constant *, 8> Values{{Vs...}};
+    return get(T, Values);
+  }
 
   /// Return an anonymous struct that has the specified elements.
   /// If the struct is possibly empty, then you must specify a context.

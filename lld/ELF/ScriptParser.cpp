@@ -900,9 +900,21 @@ Expr ScriptParser::readPrimary() {
     StringRef Name = readParenLiteral();
     return [=] { return Script->isDefined(Name) ? 1 : 0; };
   }
+  if (Tok == "LENGTH") {
+    StringRef Name = readParenLiteral();
+    if (Script->Opt.MemoryRegions.count(Name) == 0)
+      setError("memory region not defined: " + Name);
+    return [=] { return Script->Opt.MemoryRegions[Name].Length; };
+  }
   if (Tok == "LOADADDR") {
     StringRef Name = readParenLiteral();
     return [=] { return Script->getOutputSection(Location, Name)->getLMA(); };
+  }
+  if (Tok == "ORIGIN") {
+    StringRef Name = readParenLiteral();
+    if (Script->Opt.MemoryRegions.count(Name) == 0)
+      setError("memory region not defined: " + Name);
+    return [=] { return Script->Opt.MemoryRegions[Name].Origin; };
   }
   if (Tok == "SEGMENT_START") {
     expect("(");

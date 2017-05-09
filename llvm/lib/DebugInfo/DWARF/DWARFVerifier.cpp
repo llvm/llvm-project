@@ -172,8 +172,7 @@ bool DWARFVerifier::handleDebugInfo() {
       }
     }
   }
-  // FIXME: This introduced unexplained failures on buildbots (PR32972)
-  //verifyDebugInfoReferences();
+  verifyDebugInfoReferences();
   return NumDebugInfoErrors == 0;
 }
 

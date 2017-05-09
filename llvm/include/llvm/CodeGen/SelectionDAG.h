@@ -737,11 +737,15 @@ public:
   /// \brief Create a logical NOT operation as (XOR Val, BooleanOne).
   SDValue getLogicalNOT(const SDLoc &DL, SDValue Val, EVT VT);
 
-  /// Return a new CALLSEQ_START node, which always must have a glue result
-  /// (to ensure it's not CSE'd).  CALLSEQ_START does not have a useful SDLoc.
-  SDValue getCALLSEQ_START(SDValue Chain, SDValue Op, const SDLoc &DL) {
+  /// Return a new CALLSEQ_START node, that starts new call frame, in which
+  /// InSize bytes are set up inside CALLSEQ_START..CALLSEQ_END sequence and
+  /// OutSize specifies part of the frame set up prior to the sequence.
+  SDValue getCALLSEQ_START(SDValue Chain, uint64_t InSize, uint64_t OutSize,
+                           const SDLoc &DL) {
     SDVTList VTs = getVTList(MVT::Other, MVT::Glue);
-    SDValue Ops[] = { Chain,  Op };
+    SDValue Ops[] = { Chain,
+                      getIntPtrConstant(InSize, DL, true),
+                      getIntPtrConstant(OutSize, DL, true) };
     return getNode(ISD::CALLSEQ_START, DL, VTs, Ops);
   }
 
