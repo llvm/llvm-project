@@ -7,12 +7,12 @@
 void test() {
   extern volatile unsigned x, y, z;
 
-  // RECOVER: uadd.with.overflow.i32
-  // RECOVER: ubsan_handle_add_overflow(
+  // RECOVER: uadd.with.overflow.i32{{.*}}, !nosanitize
+  // RECOVER: ubsan_handle_add_overflow({{.*}}, !nosanitize
   // RECOVER-NOT: unreachable
-  // ABORT: uadd.with.overflow.i32
-  // ABORT: ubsan_handle_add_overflow_abort(
-  // ABORT: unreachable
+  // ABORT: uadd.with.overflow.i32{{.*}}, !nosanitize
+  // ABORT: ubsan_handle_add_overflow_abort({{.*}}, !nosanitize
+  // ABORT: unreachable{{.*}}, !nosanitize
   x = y + z;
 }
 
