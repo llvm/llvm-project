@@ -454,6 +454,30 @@ entry:
   ret i32 %and
 }
 
+define i32 @bzhi32d(i32 %a, i32 %b) {
+; CHECK-LABEL: bzhi32d:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    bzhil %esi, %edi, %eax
+; CHECK-NEXT:    retq
+entry:
+  %sub = sub i32 32, %b
+  %shr = lshr i32 -1, %sub
+  %and = and i32 %shr, %a
+  ret i32 %and
+}
+
+define i32 @bzhi32e(i32 %a, i32 %b) {
+; CHECK-LABEL: bzhi32e:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    bzhil %esi, %edi, %eax
+; CHECK-NEXT:    retq
+entry:
+  %sub = sub i32 32, %b
+  %shl = shl i32 %a, %sub
+  %shr = lshr i32 %shl, %sub
+  ret i32 %shr
+}
+
 define i64 @bzhi64b(i64 %x, i8 zeroext %index) {
 ; CHECK-LABEL: bzhi64b:
 ; CHECK:       # BB#0: # %entry
@@ -466,6 +490,58 @@ entry:
   %sub = add nsw i64 %shl, -1
   %and = and i64 %x, %sub
   ret i64 %and
+}
+
+define i64 @bzhi64c(i64 %a, i64 %b) {
+; CHECK-LABEL: bzhi64c:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    bzhiq %rsi, %rdi, %rax
+; CHECK-NEXT:    retq
+entry:
+  %sub = sub i64 64, %b
+  %shr = lshr i64 -1, %sub
+  %and = and i64 %shr, %a
+  ret i64 %and
+}
+
+define i64 @bzhi64d(i64 %a, i32 %b) {
+; CHECK-LABEL: bzhi64d:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; CHECK-NEXT:    bzhiq %rsi, %rdi, %rax
+; CHECK-NEXT:    retq
+entry:
+  %sub = sub i32 64, %b
+  %sh_prom = zext i32 %sub to i64
+  %shr = lshr i64 -1, %sh_prom
+  %and = and i64 %shr, %a
+  ret i64 %and
+}
+
+define i64 @bzhi64e(i64 %a, i64 %b) {
+; CHECK-LABEL: bzhi64e:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    bzhiq %rsi, %rdi, %rax
+; CHECK-NEXT:    retq
+entry:
+  %sub = sub i64 64, %b
+  %shl = shl i64 %a, %sub
+  %shr = lshr i64 %shl, %sub
+  ret i64 %shr
+}
+
+define i64 @bzhi64f(i64 %a, i32 %b) {
+; CHECK-LABEL: bzhi64f:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; CHECK-NEXT:    bzhiq %rsi, %rdi, %rax
+; CHECK-NEXT:    retq
+entry:
+  %sub = sub i32 64, %b
+  %sh_prom = zext i32 %sub to i64
+  %shl = shl i64 %a, %sh_prom
+  %shr = lshr i64 %shl, %sh_prom
+  ret i64 %shr
 }
 
 define i64 @bzhi64_constant_mask(i64 %x) {

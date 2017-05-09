@@ -150,8 +150,7 @@ public:
     /// be the case for local execution) these two values will be the same.
     virtual void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr,
                                   size_t Size) = 0;
-    virtual void deregisterEHFrames(uint8_t *addr, uint64_t LoadAddr,
-                                    size_t Size) = 0;
+    virtual void deregisterEHFrames() = 0;
 
     /// This method is called when object loading is complete and section page
     /// permissions can be applied.  It is up to the memory manager implementation

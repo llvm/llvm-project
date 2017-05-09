@@ -1361,9 +1361,8 @@ llvm::Constant *CodeGenModule::EmitConstantValue(const APValue &Value,
                                         Value.getComplexIntImag());
 
     // FIXME: the target may want to specify that this is packed.
-    llvm::StructType *STy = llvm::StructType::get(Complex[0]->getType(),
-                                                  Complex[1]->getType(),
-                                                  nullptr);
+    llvm::StructType *STy =
+        llvm::StructType::get(Complex[0]->getType(), Complex[1]->getType());
     return llvm::ConstantStruct::get(STy, Complex);
   }
   case APValue::Float: {
@@ -1384,9 +1383,8 @@ llvm::Constant *CodeGenModule::EmitConstantValue(const APValue &Value,
                                        Value.getComplexFloatImag());
 
     // FIXME: the target may want to specify that this is packed.
-    llvm::StructType *STy = llvm::StructType::get(Complex[0]->getType(),
-                                                  Complex[1]->getType(),
-                                                  nullptr);
+    llvm::StructType *STy =
+        llvm::StructType::get(Complex[0]->getType(), Complex[1]->getType());
     return llvm::ConstantStruct::get(STy, Complex);
   }
   case APValue::Vector: {

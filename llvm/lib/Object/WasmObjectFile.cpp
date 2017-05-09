@@ -507,7 +507,7 @@ Error WasmObjectFile::parseExportSection(const uint8_t *Ptr, const uint8_t *End)
 
 Error WasmObjectFile::parseStartSection(const uint8_t *Ptr, const uint8_t *End) {
   StartFunction = readVaruint32(Ptr);
-  if (StartFunction < FunctionTypes.size())
+  if (StartFunction >= FunctionTypes.size())
     return make_error<GenericBinaryError>("Invalid start function",
                                           object_error::parse_failed);
   return Error::success();

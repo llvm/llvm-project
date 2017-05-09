@@ -4052,8 +4052,11 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
 
   // Set the insertion point after the previous value if it is an instruction.
   // Note that the previous value may have been constant-folded so it is not
-  // guaranteed to be an instruction in the vector loop.
-  if (LI->getLoopFor(LoopVectorBody)->isLoopInvariant(PreviousParts[UF - 1]))
+  // guaranteed to be an instruction in the vector loop. Also, if the previous
+  // value is a phi node, we should insert after all the phi nodes to avoid
+  // breaking basic block verification.
+  if (LI->getLoopFor(LoopVectorBody)->isLoopInvariant(PreviousParts[UF - 1]) ||
+      isa<PHINode>(PreviousParts[UF - 1]))
     Builder.SetInsertPoint(&*LoopVectorBody->getFirstInsertionPt());
   else
     Builder.SetInsertPoint(

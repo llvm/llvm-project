@@ -3101,7 +3101,8 @@ def : Pat<(brcond (i1 (setne Int1Regs:$a, -1)), bb:$target),
           (CBranchOther Int1Regs:$a, bb:$target)>;
 
 // Call
-def SDT_NVPTXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;
+def SDT_NVPTXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
+                                            SDTCisVT<1, i32>]>;
 def SDT_NVPTXCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_NVPTXCallSeqStart,
@@ -3126,10 +3127,10 @@ class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
    : NVPTXInst<outs, ins, asmstr, pattern>;
 
 def Callseq_Start :
-  NVPTXInst<(outs), (ins i32imm:$amt),
-            "\\{ // callseq $amt\n"
+  NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+            "\\{ // callseq $amt1, $amt2\n"
             "\t.reg .b32 temp_param_reg;",
-           [(callseq_start timm:$amt)]>;
+            [(callseq_start timm:$amt1, timm:$amt2)]>;
 def Callseq_End :
   NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
             "\\} // callseq $amt1",

@@ -404,21 +404,11 @@ public:
   /// Returns predicate register associated with the given frame instruction.
   unsigned getFramePred(const MachineInstr &MI) const {
     assert(isFrameInstr(MI));
-    if (isFrameSetup(MI))
-      // Operands of ADJCALLSTACKDOWN:
-      // - argument declared in ADJCALLSTACKDOWN pattern:
-      // 0 - frame size
-      // 1 - predicate code (like ARMCC::AL)
-      // - added by predOps:
-      // 2 - predicate reg
-      return MI.getOperand(2).getReg();
-    assert(MI.getOpcode() == ARM::ADJCALLSTACKUP ||
-           MI.getOpcode() == ARM::tADJCALLSTACKUP);
-    // Operands of ADJCALLSTACKUP:
-    // - argument declared in ADJCALLSTACKUP pattern:
+    // Operands of ADJCALLSTACKDOWN/ADJCALLSTACKUP:
+    // - argument declared in the pattern:
     // 0 - frame size
-    // 1 - arg of CALLSEQ_END
-    // 2 - predicate code
+    // 1 - arg of CALLSEQ_START/CALLSEQ_END
+    // 2 - predicate code (like ARMCC::AL)
     // - added by predOps:
     // 3 - predicate reg
     return MI.getOperand(3).getReg();

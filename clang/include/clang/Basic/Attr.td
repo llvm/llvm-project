@@ -652,6 +652,30 @@ def Availability : InheritableAttr {
              .Case("tvos_app_extension", "tvOS (App Extension)")
              .Case("watchos_app_extension", "watchOS (App Extension)")
              .Default(llvm::StringRef());
+}
+static llvm::StringRef getPlatformNameSourceSpelling(llvm::StringRef Platform) {
+    return llvm::StringSwitch<llvm::StringRef>(Platform)
+             .Case("ios", "iOS")
+             .Case("macos", "macOS")
+             .Case("tvos", "tvOS")
+             .Case("watchos", "watchOS")
+             .Case("ios_app_extension", "iOSApplicationExtension")
+             .Case("macos_app_extension", "macOSApplicationExtension")
+             .Case("tvos_app_extension", "tvOSApplicationExtension")
+             .Case("watchos_app_extension", "watchOSApplicationExtension")
+             .Default(Platform);
+}
+static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
+    return llvm::StringSwitch<llvm::StringRef>(Platform)
+             .Case("iOS", "ios")
+             .Case("macOS", "macos")
+             .Case("tvOS", "tvos")
+             .Case("watchOS", "watchos")
+             .Case("iOSApplicationExtension", "ios_app_extension")
+             .Case("macOSApplicationExtension", "macos_app_extension")
+             .Case("tvOSApplicationExtension", "tvos_app_extension")
+             .Case("watchOSApplicationExtension", "watchos_app_extension")
+             .Default(Platform);
 } }];
   let HasCustomParsing = 1;
   let DuplicatesAllowedWhileMerging = 1;

@@ -1450,11 +1450,11 @@ static void insertSinCosCall(IRBuilder<> &B, Function *OrigCallee, Value *Arg,
     // x86_64 can't use {float, float} since that would be returned in both
     // xmm0 and xmm1, which isn't what a real struct would do.
     ResTy = T.getArch() == Triple::x86_64
-    ? static_cast<Type *>(VectorType::get(ArgTy, 2))
-    : static_cast<Type *>(StructType::get(ArgTy, ArgTy, nullptr));
+                ? static_cast<Type *>(VectorType::get(ArgTy, 2))
+                : static_cast<Type *>(StructType::get(ArgTy, ArgTy));
   } else {
     Name = "__sincospi_stret";
-    ResTy = StructType::get(ArgTy, ArgTy, nullptr);
+    ResTy = StructType::get(ArgTy, ArgTy);
   }
 
   Module *M = OrigCallee->getParent();

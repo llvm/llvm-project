@@ -111,12 +111,6 @@
 #define LLVM_PREFETCH(addr, rw, locality)
 #endif
 
-#if __has_attribute(sentinel) || LLVM_GNUC_PREREQ(3, 0, 0)
-#define LLVM_END_WITH_NULL __attribute__((sentinel))
-#else
-#define LLVM_END_WITH_NULL
-#endif
-
 #if __has_attribute(used) || LLVM_GNUC_PREREQ(3, 1, 0)
 #define LLVM_ATTRIBUTE_USED __attribute__((__used__))
 #else

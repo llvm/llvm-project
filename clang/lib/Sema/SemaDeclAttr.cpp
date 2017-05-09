@@ -7346,7 +7346,9 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
     llvm::raw_string_ostream FixItOS(FixItString);
     FixItOS << "if (" << (SemaRef.getLangOpts().ObjC1 ? "@available"
                                                       : "__builtin_available")
-            << "(" << SemaRef.getASTContext().getTargetInfo().getPlatformName()
+            << "("
+            << AvailabilityAttr::getPlatformNameSourceSpelling(
+                   SemaRef.getASTContext().getTargetInfo().getPlatformName())
             << " " << Introduced.getAsString() << ", *)) {\n"
             << Indentation << ExtraIndentation;
     FixitDiag << FixItHint::CreateInsertion(IfInsertionLoc, FixItOS.str());

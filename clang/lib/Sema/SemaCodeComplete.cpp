@@ -7811,6 +7811,23 @@ void Sema::CodeCompleteNaturalLanguage() {
                             nullptr, 0);
 }
 
+void Sema::CodeCompleteAvailabilityPlatformName() {
+  ResultBuilder Results(*this, CodeCompleter->getAllocator(),
+                        CodeCompleter->getCodeCompletionTUInfo(),
+                        CodeCompletionContext::CCC_Other);
+  Results.EnterNewScope();
+  static const char *Platforms[] = {"macOS", "iOS", "watchOS", "tvOS"};
+  for (const char *Platform : llvm::makeArrayRef(Platforms)) {
+    Results.AddResult(CodeCompletionResult(Platform));
+    Results.AddResult(CodeCompletionResult(Results.getAllocator().CopyString(
+        Twine(Platform) + "ApplicationExtension")));
+  }
+  Results.ExitScope();
+  HandleCodeCompleteResults(this, CodeCompleter,
+                            CodeCompletionContext::CCC_Other, Results.data(),
+                            Results.size());
+}
+
 void Sema::GatherGlobalCodeCompletions(CodeCompletionAllocator &Allocator,
                                        CodeCompletionTUInfo &CCTUInfo,
                  SmallVectorImpl<CodeCompletionResult> &Results) {

@@ -28,7 +28,6 @@
 ; ASM: .seh_proc f
 ; ASM: # BB#0:                                 # %entry
 ; ASM:         subq    $56, %rsp
-; ASM:         #DEBUG_VALUE: f:param <- [%RSP+52]
 ; ASM:         movl    %ecx, 52(%rsp)
 ; ASM: [[prologue_end:\.Ltmp.*]]:
 ; ASM:         .cv_loc 0 1 8 7                 # t.cpp:8:7
@@ -36,8 +35,6 @@
 ; ASM:         je      .LBB0_2
 ; ASM: [[if_start:\.Ltmp.*]]:
 ; ASM: # BB#1:                                 # %if.then
-; ASM:         #DEBUG_VALUE: f:param <- [%RSP+52]
-; ASM:         #DEBUG_VALUE: a <- [%RSP+40]
 ; ASM:         .cv_loc 0 1 9 9                 # t.cpp:9:9
 ; ASM:         movl    $42, 40(%rsp)
 ; ASM: [[inline_site1:\.Ltmp.*]]:
@@ -51,8 +48,6 @@
 ; ASM:         jmp     .LBB0_3
 ; ASM: [[else_start:\.Ltmp.*]]:
 ; ASM: .LBB0_2:                                # %if.else
-; ASM:         #DEBUG_VALUE: f:param <- [%RSP+52]
-; ASM:         #DEBUG_VALUE: b <- [%RSP+36]
 ; ASM:         .cv_loc 0 1 13 9                # t.cpp:13:9
 ; ASM:         movl    $42, 36(%rsp)
 ; ASM: [[inline_site2:\.Ltmp.*]]:

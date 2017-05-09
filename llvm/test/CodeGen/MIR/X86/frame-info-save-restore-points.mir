@@ -60,7 +60,7 @@ body: |
     liveins: %eax
 
     MOV32mr %stack.0.tmp, 1, _, 0, _, killed %eax
-    ADJCALLSTACKDOWN64 0, 0, implicit-def %rsp, implicit-def dead %eflags, implicit %rsp
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def dead %eflags, implicit %rsp
     %rsi = LEA64r %stack.0.tmp, 1, _, 0, _
     %edi = MOV32r0 implicit-def dead %eflags
     CALL64pcrel32 @doSomething, csr_64, implicit %rsp, implicit %edi, implicit %rsi, implicit-def %rsp, implicit-def %eax

@@ -1396,7 +1396,10 @@ public:
   /// It is called by AtomicExpandPass before expanding an
   ///   AtomicRMW/AtomicCmpXchg/AtomicStore/AtomicLoad
   ///   if shouldInsertFencesForAtomic returns true.
-  /// RMW and CmpXchg set both IsStore and IsLoad to true.
+  ///
+  /// Inst is the original atomic instruction, prior to other expansions that
+  /// may be performed.
+  ///
   /// This function should either return a nullptr, or a pointer to an IR-level
   ///   Instruction*. Even complex fence sequences can be represented by a
   ///   single Instruction* through an intrinsic to be lowered later.
@@ -1422,18 +1425,17 @@ public:
   ///  seq_cst. But if they are lowered to monotonic accesses, no amount of
   ///  IR-level fences can prevent it.
   /// @{
-  virtual Instruction *emitLeadingFence(IRBuilder<> &Builder,
-                                        AtomicOrdering Ord, bool IsStore,
-                                        bool IsLoad) const {
-    if (isReleaseOrStronger(Ord) && IsStore)
+  virtual Instruction *emitLeadingFence(IRBuilder<> &Builder, Instruction *Inst,
+                                        AtomicOrdering Ord) const {
+    if (isReleaseOrStronger(Ord) && Inst->hasAtomicStore())
       return Builder.CreateFence(Ord);
     else
       return nullptr;
   }
 
   virtual Instruction *emitTrailingFence(IRBuilder<> &Builder,
-                                         AtomicOrdering Ord, bool IsStore,
-                                         bool IsLoad) const {
+                                         Instruction *Inst,
+                                         AtomicOrdering Ord) const {
     if (isAcquireOrStronger(Ord))
       return Builder.CreateFence(Ord);
     else

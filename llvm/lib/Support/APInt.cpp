@@ -2344,13 +2344,11 @@ int APInt::tcMultiply(WordType *dst, const WordType *lhs,
   return overflow;
 }
 
-/* DST = LHS * RHS, where DST has width the sum of the widths of the
-   operands.  No overflow occurs.  DST must be disjoint from both
-   operands.  Returns the number of parts required to hold the
-   result.  */
-unsigned APInt::tcFullMultiply(WordType *dst, const WordType *lhs,
-                               const WordType *rhs, unsigned lhsParts,
-                               unsigned rhsParts) {
+/// DST = LHS * RHS, where DST has width the sum of the widths of the
+/// operands. No overflow occurs. DST must be disjoint from both operands.
+void APInt::tcFullMultiply(WordType *dst, const WordType *lhs,
+                           const WordType *rhs, unsigned lhsParts,
+                           unsigned rhsParts) {
   /* Put the narrower number on the LHS for less loops below.  */
   if (lhsParts > rhsParts)
     return tcFullMultiply (dst, rhs, lhs, rhsParts, lhsParts);
@@ -2361,10 +2359,6 @@ unsigned APInt::tcFullMultiply(WordType *dst, const WordType *lhs,
 
   for (unsigned i = 0; i < lhsParts; i++)
     tcMultiplyPart(&dst[i], rhs, lhs[i], 0, rhsParts, rhsParts + 1, true);
-
-  unsigned n = lhsParts + rhsParts;
-
-  return n - (dst[n - 1] == 0);
 }
 
 /* If RHS is zero LHS and REMAINDER are left unchanged, return one.

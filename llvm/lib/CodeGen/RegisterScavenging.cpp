@@ -62,10 +62,9 @@ void RegScavenger::init(MachineBasicBlock &MBB) {
   }
   this->MBB = &MBB;
 
-  for (SmallVectorImpl<ScavengedInfo>::iterator I = Scavenged.begin(),
-         IE = Scavenged.end(); I != IE; ++I) {
-    I->Reg = 0;
-    I->Restore = nullptr;
+  for (ScavengedInfo &SI : Scavenged) {
+    SI.Reg = 0;
+    SI.Restore = nullptr;
   }
 
   Tracking = false;

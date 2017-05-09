@@ -421,7 +421,7 @@ entry:
 define arm_aapcscc void @test_indirect_call(void() *%fptr) {
 ; CHECK-LABEL: name: test_indirect_call
 ; CHECK: [[FPTR:%[0-9]+]](p0) = COPY %r0
-; CHECK: ADJCALLSTACKDOWN 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: ADJCALLSTACKDOWN 0, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: BLX [[FPTR]](p0), csr_aapcs, implicit-def %lr, implicit %sp
 ; CHECK: ADJCALLSTACKUP 0, 0, 14, _, implicit-def %sp, implicit %sp
 entry:
@@ -433,7 +433,7 @@ declare arm_aapcscc void @call_target()
 
 define arm_aapcscc void @test_direct_call() {
 ; CHECK-LABEL: name: test_direct_call
-; CHECK: ADJCALLSTACKDOWN 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: ADJCALLSTACKDOWN 0, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: BLX @call_target, csr_aapcs, implicit-def %lr, implicit %sp
 ; CHECK: ADJCALLSTACKUP 0, 0, 14, _, implicit-def %sp, implicit %sp
 entry:
@@ -447,7 +447,7 @@ define arm_aapcscc i32* @test_call_simple_reg_params(i32 *%a, i32 %b) {
 ; CHECK-LABEL: name: test_call_simple_reg_params
 ; CHECK-DAG: [[AVREG:%[0-9]+]](p0) = COPY %r0
 ; CHECK-DAG: [[BVREG:%[0-9]+]](s32) = COPY %r1
-; CHECK: ADJCALLSTACKDOWN 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: ADJCALLSTACKDOWN 0, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK-DAG: %r0 = COPY [[BVREG]]
 ; CHECK-DAG: %r1 = COPY [[AVREG]]
 ; CHECK: BLX @simple_reg_params_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit-def %r0
@@ -466,7 +466,7 @@ define arm_aapcscc i32* @test_call_simple_stack_params(i32 *%a, i32 %b) {
 ; CHECK-LABEL: name: test_call_simple_stack_params
 ; CHECK-DAG: [[AVREG:%[0-9]+]](p0) = COPY %r0
 ; CHECK-DAG: [[BVREG:%[0-9]+]](s32) = COPY %r1
-; CHECK: ADJCALLSTACKDOWN 8, 14, _, implicit-def %sp, implicit %sp
+; CHECK: ADJCALLSTACKDOWN 8, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK-DAG: %r0 = COPY [[BVREG]]
 ; CHECK-DAG: %r1 = COPY [[AVREG]]
 ; CHECK-DAG: %r2 = COPY [[BVREG]]
@@ -496,7 +496,7 @@ define arm_aapcscc signext i16 @test_call_ext_params(i8 %a, i16 %b, i1 %c) {
 ; CHECK-DAG: [[AVREG:%[0-9]+]](s8) = COPY %r0
 ; CHECK-DAG: [[BVREG:%[0-9]+]](s16) = COPY %r1
 ; CHECK-DAG: [[CVREG:%[0-9]+]](s1) = COPY %r2
-; CHECK: ADJCALLSTACKDOWN 20, 14, _, implicit-def %sp, implicit %sp
+; CHECK: ADJCALLSTACKDOWN 20, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: [[SEXTA:%[0-9]+]](s32) = G_SEXT [[AVREG]](s8)
 ; CHECK: %r0 = COPY [[SEXTA]]
 ; CHECK: [[ZEXTA:%[0-9]+]](s32) = G_ZEXT [[AVREG]](s8)
@@ -547,7 +547,7 @@ define arm_aapcs_vfpcc double @test_call_vfpcc_fp_params(double %a, float %b) {
 ; CHECK-LABEL: name: test_call_vfpcc_fp_params
 ; CHECK-DAG: [[AVREG:%[0-9]+]](s64) = COPY %d0
 ; CHECK-DAG: [[BVREG:%[0-9]+]](s32) = COPY %s2
-; CHECK: ADJCALLSTACKDOWN 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: ADJCALLSTACKDOWN 0, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK-DAG: %s0 = COPY [[BVREG]]
 ; CHECK-DAG: %d1 = COPY [[AVREG]]
 ; CHECK: BLX @vfpcc_fp_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %s0, implicit %d1, implicit-def %d0
@@ -569,7 +569,7 @@ define arm_aapcscc double @test_call_aapcs_fp_params(double %a, float %b) {
 ; LITTLE-DAG: [[AVREG:%[0-9]+]](s64) = G_SEQUENCE [[A1]](s32), 0, [[A2]](s32), 32
 ; BIG-DAG: [[AVREG:%[0-9]+]](s64) = G_SEQUENCE [[A2]](s32), 0, [[A1]](s32), 32
 ; CHECK-DAG: [[BVREG:%[0-9]+]](s32) = COPY %r2
-; CHECK: ADJCALLSTACKDOWN 16, 14, _, implicit-def %sp, implicit %sp
+; CHECK: ADJCALLSTACKDOWN 16, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK-DAG: %r0 = COPY [[BVREG]]
 ; CHECK-DAG: [[A1:%[0-9]+]](s32) = G_EXTRACT [[AVREG]](s64), 0
 ; CHECK-DAG: [[A2:%[0-9]+]](s32) = G_EXTRACT [[AVREG]](s64), 32
@@ -608,7 +608,7 @@ declare arm_aapcscc float @different_call_conv_target(float)
 define arm_aapcs_vfpcc float @test_call_different_call_conv(float %x) {
 ; CHECK-LABEL: name: test_call_different_call_conv
 ; CHECK: [[X:%[0-9]+]](s32) = COPY %s0
-; CHECK: ADJCALLSTACKDOWN 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: ADJCALLSTACKDOWN 0, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: %r0 = COPY [[X]]
 ; CHECK: BLX @different_call_conv_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit-def %r0
 ; CHECK: [[R:%[0-9]+]](s32) = COPY %r0

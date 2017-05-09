@@ -617,10 +617,10 @@ namespace llvm {
       return true;
     }
 
-    Instruction* emitLeadingFence(IRBuilder<> &Builder, AtomicOrdering Ord,
-                                  bool IsStore, bool IsLoad) const override;
-    Instruction* emitTrailingFence(IRBuilder<> &Builder, AtomicOrdering Ord,
-                                   bool IsStore, bool IsLoad) const override;
+    Instruction *emitLeadingFence(IRBuilder<> &Builder, Instruction *Inst,
+                                  AtomicOrdering Ord) const override;
+    Instruction *emitTrailingFence(IRBuilder<> &Builder, Instruction *Inst,
+                                   AtomicOrdering Ord) const override;
 
     MachineBasicBlock *
     EmitInstrWithCustomInserter(MachineInstr &MI,

@@ -172,9 +172,20 @@ public:
   /// inalloca arguments. This function reports only the size of the frame part
   /// that is set up between the frame setup and destroy pseudo instructions.
   int64_t getFrameSize(const MachineInstr &I) const {
-    assert(isFrameInstr(I));
+    assert(isFrameInstr(I) && "Not a frame instruction");
     assert(I.getOperand(0).getImm() >= 0);
     return I.getOperand(0).getImm();
+  }
+
+  /// Returns the total frame size, which is made up of the space set up inside
+  /// the pair of frame start-stop instructions and the space that is set up
+  /// prior to the pair.
+  int64_t getFrameTotalSize(const MachineInstr &I) const {
+    if (isFrameSetup(I)) {
+      assert(I.getOperand(1).getImm() >= 0 && "Frame size must not be negative");
+      return getFrameSize(I) + I.getOperand(1).getImm();
+    }
+    return getFrameSize(I);
   }
 
   unsigned getCatchReturnOpcode() const { return CatchRetOpcode; }

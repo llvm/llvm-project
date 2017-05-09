@@ -257,8 +257,7 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   auto PtrVT = getPointerTy(MF.getDataLayout());
-  Chain = DAG.getCALLSEQ_START(
-      Chain, DAG.getConstant(NumBytes, CLI.DL, PtrVT, true), CLI.DL);
+  Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, CLI.DL);
 
   SmallVector<std::pair<unsigned, SDValue>, MaxArgs> RegsToPass;
 

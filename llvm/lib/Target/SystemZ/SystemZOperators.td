@@ -10,7 +10,8 @@
 //===----------------------------------------------------------------------===//
 // Type profiles
 //===----------------------------------------------------------------------===//
-def SDT_CallSeqStart        : SDCallSeqStart<[SDTCisVT<0, i64>]>;
+def SDT_CallSeqStart        : SDCallSeqStart<[SDTCisVT<0, i64>,
+                                              SDTCisVT<1, i64>]>;
 def SDT_CallSeqEnd          : SDCallSeqEnd<[SDTCisVT<0, i64>,
                                             SDTCisVT<1, i64>]>;
 def SDT_ZCall               : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;

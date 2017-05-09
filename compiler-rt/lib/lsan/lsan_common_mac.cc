@@ -144,6 +144,11 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
     if (info.user_tag == VM_MEMORY_OS_ALLOC_ONCE) {
       ScanRangeForPointers(address, end_address, frontier, "GLOBAL",
                            kReachable);
+
+      // Recursing over the full memory map is very slow, break out
+      // early if we don't need the full iteration.
+      if (!flags()->use_root_regions || !root_regions->size())
+        break;
     }
 
     // This additional root region scan is required on Darwin in order to

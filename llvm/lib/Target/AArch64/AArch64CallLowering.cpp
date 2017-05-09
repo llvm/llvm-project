@@ -380,7 +380,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       MIRBuilder.buildSequence(OrigRet.Reg, SplitRegs, RegOffsets);
   }
 
-  CallSeqStart.addImm(Handler.StackSize);
+  CallSeqStart.addImm(Handler.StackSize).addImm(0);
   MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP)
       .addImm(Handler.StackSize)
       .addImm(0);

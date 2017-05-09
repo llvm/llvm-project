@@ -1782,7 +1782,7 @@ void AddressSanitizerModule::InstrumentGlobalsMachO(
   // On recent Mach-O platforms, use a structure which binds the liveness of
   // the global variable to the metadata struct. Keep the list of "Liveness" GV
   // created to be added to llvm.compiler.used
-  StructType *LivenessTy = StructType::get(IntptrTy, IntptrTy, nullptr);
+  StructType *LivenessTy = StructType::get(IntptrTy, IntptrTy);
   SmallVector<GlobalValue *, 16> LivenessGlobals(ExtendedGlobals.size());
 
   for (size_t i = 0; i < ExtendedGlobals.size(); i++) {
@@ -1793,9 +1793,9 @@ void AddressSanitizerModule::InstrumentGlobalsMachO(
 
     // On recent Mach-O platforms, we emit the global metadata in a way that
     // allows the linker to properly strip dead globals.
-    auto LivenessBinder = ConstantStruct::get(
-        LivenessTy, Initializer->getAggregateElement(0u),
-        ConstantExpr::getPointerCast(Metadata, IntptrTy), nullptr);
+    auto LivenessBinder =
+        ConstantStruct::get(LivenessTy, Initializer->getAggregateElement(0u),
+                            ConstantExpr::getPointerCast(Metadata, IntptrTy));
     GlobalVariable *Liveness = new GlobalVariable(
         M, LivenessTy, false, GlobalVariable::InternalLinkage, LivenessBinder,
         Twine("__asan_binder_") + G->getName());
@@ -1893,7 +1893,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
   // We initialize an array of such structures and pass it to a run-time call.
   StructType *GlobalStructTy =
       StructType::get(IntptrTy, IntptrTy, IntptrTy, IntptrTy, IntptrTy,
-                      IntptrTy, IntptrTy, IntptrTy, nullptr);
+                      IntptrTy, IntptrTy, IntptrTy);
   SmallVector<GlobalVariable *, 16> NewGlobals(n);
   SmallVector<Constant *, 16> Initializers(n);
 
@@ -1929,10 +1929,9 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
     assert(((RightRedzoneSize + SizeInBytes) % MinRZ) == 0);
     Type *RightRedZoneTy = ArrayType::get(IRB.getInt8Ty(), RightRedzoneSize);
 
-    StructType *NewTy = StructType::get(Ty, RightRedZoneTy, nullptr);
-    Constant *NewInitializer =
-        ConstantStruct::get(NewTy, G->getInitializer(),
-                            Constant::getNullValue(RightRedZoneTy), nullptr);
+    StructType *NewTy = StructType::get(Ty, RightRedZoneTy);
+    Constant *NewInitializer = ConstantStruct::get(
+        NewTy, G->getInitializer(), Constant::getNullValue(RightRedZoneTy));
 
     // Create a new global variable with enough space for a redzone.
     GlobalValue::LinkageTypes Linkage = G->getLinkage();
@@ -2013,7 +2012,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
         ConstantExpr::getPointerCast(Name, IntptrTy),
         ConstantExpr::getPointerCast(ModuleName, IntptrTy),
         ConstantInt::get(IntptrTy, MD.IsDynInit), SourceLoc,
-        ConstantExpr::getPointerCast(ODRIndicator, IntptrTy), nullptr);
+        ConstantExpr::getPointerCast(ODRIndicator, IntptrTy));
 
     if (ClInitializers && MD.IsDynInit) HasDynamicallyInitializedGlobals = true;
 

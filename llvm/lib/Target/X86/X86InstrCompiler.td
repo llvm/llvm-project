@@ -43,7 +43,8 @@ let hasSideEffects = 0, isNotDuplicable = 1, Uses = [ESP] in
 // Pessimistically assume ADJCALLSTACKDOWN / ADJCALLSTACKUP will become
 // sub / add which can clobber EFLAGS.
 let Defs = [ESP, EFLAGS], Uses = [ESP] in {
-def ADJCALLSTACKDOWN32 : I<0, Pseudo, (outs), (ins i32imm:$amt1, i32imm:$amt2),
+def ADJCALLSTACKDOWN32 : I<0, Pseudo, (outs),
+                           (ins i32imm:$amt1, i32imm:$amt2, i32imm:$amt3),
                            "#ADJCALLSTACKDOWN",
                            []>,
                           Requires<[NotLP64]>;
@@ -52,8 +53,8 @@ def ADJCALLSTACKUP32   : I<0, Pseudo, (outs), (ins i32imm:$amt1, i32imm:$amt2),
                            [(X86callseq_end timm:$amt1, timm:$amt2)]>,
                           Requires<[NotLP64]>;
 }
-def : Pat<(X86callseq_start timm:$amt1),
-          (ADJCALLSTACKDOWN32 i32imm:$amt1, 0)>, Requires<[NotLP64]>;
+def : Pat<(X86callseq_start timm:$amt1, timm:$amt2),
+       (ADJCALLSTACKDOWN32 i32imm:$amt1, i32imm:$amt2, 0)>, Requires<[NotLP64]>;
 
 
 // ADJCALLSTACKDOWN/UP implicitly use/def RSP because they may be expanded into
@@ -62,7 +63,8 @@ def : Pat<(X86callseq_start timm:$amt1),
 // Pessimistically assume ADJCALLSTACKDOWN / ADJCALLSTACKUP will become
 // sub / add which can clobber EFLAGS.
 let Defs = [RSP, EFLAGS], Uses = [RSP] in {
-def ADJCALLSTACKDOWN64 : I<0, Pseudo, (outs), (ins i32imm:$amt1, i32imm:$amt2),
+def ADJCALLSTACKDOWN64 : I<0, Pseudo, (outs),
+                           (ins i32imm:$amt1, i32imm:$amt2, i32imm:$amt3),
                            "#ADJCALLSTACKDOWN",
                            []>,
                           Requires<[IsLP64]>;
@@ -71,8 +73,8 @@ def ADJCALLSTACKUP64   : I<0, Pseudo, (outs), (ins i32imm:$amt1, i32imm:$amt2),
                            [(X86callseq_end timm:$amt1, timm:$amt2)]>,
                           Requires<[IsLP64]>;
 }
-def : Pat<(X86callseq_start timm:$amt1),
-          (ADJCALLSTACKDOWN64 i32imm:$amt1, 0)>, Requires<[IsLP64]>;
+def : Pat<(X86callseq_start timm:$amt1, timm:$amt2),
+        (ADJCALLSTACKDOWN64 i32imm:$amt1, i32imm:$amt2, 0)>, Requires<[IsLP64]>;
 
 
 // x86-64 va_start lowering magic.

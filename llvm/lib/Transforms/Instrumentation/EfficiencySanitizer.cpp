@@ -398,8 +398,8 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
   //   u64 *ArrayCounter;
   // };
   auto *StructInfoTy =
-    StructType::get(Int8PtrTy, Int32Ty, Int32Ty, Int32PtrTy, Int32PtrTy,
-                    Int8PtrPtrTy, Int64PtrTy, Int64PtrTy, nullptr);
+      StructType::get(Int8PtrTy, Int32Ty, Int32Ty, Int32PtrTy, Int32PtrTy,
+                      Int8PtrPtrTy, Int64PtrTy, Int64PtrTy);
   auto *StructInfoPtrTy = StructInfoTy->getPointerTo();
   // This structure should be kept consistent with the CacheFragInfo struct
   // in the runtime library.
@@ -408,8 +408,7 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
   //   u32 NumStructs;
   //   StructInfo *Structs;
   // };
-  auto *CacheFragInfoTy =
-    StructType::get(Int8PtrTy, Int32Ty, StructInfoPtrTy, nullptr);
+  auto *CacheFragInfoTy = StructType::get(Int8PtrTy, Int32Ty, StructInfoPtrTy);
 
   std::vector<StructType *> Vec = M.getIdentifiedStructTypes();
   unsigned NumStructs = 0;
@@ -457,24 +456,23 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
     ArrayCounterIdx[0] = ConstantInt::get(Int32Ty, 0);
     ArrayCounterIdx[1] = ConstantInt::get(Int32Ty,
                                           getArrayCounterIdx(StructTy));
-    Initializers.push_back(
-        ConstantStruct::get(
-            StructInfoTy,
-            ConstantExpr::getPointerCast(StructCounterName, Int8PtrTy),
-            ConstantInt::get(Int32Ty,
-                             DL.getStructLayout(StructTy)->getSizeInBytes()),
-            ConstantInt::get(Int32Ty, StructTy->getNumElements()),
-            Offset == nullptr ? ConstantPointerNull::get(Int32PtrTy) :
-                ConstantExpr::getPointerCast(Offset, Int32PtrTy),
-            Size == nullptr ? ConstantPointerNull::get(Int32PtrTy) :
-                ConstantExpr::getPointerCast(Size, Int32PtrTy),
-            TypeName == nullptr ? ConstantPointerNull::get(Int8PtrPtrTy) :
-                ConstantExpr::getPointerCast(TypeName, Int8PtrPtrTy),
-            ConstantExpr::getGetElementPtr(CounterArrayTy, Counters,
-                                           FieldCounterIdx),
-            ConstantExpr::getGetElementPtr(CounterArrayTy, Counters,
-                                           ArrayCounterIdx),
-            nullptr));
+    Initializers.push_back(ConstantStruct::get(
+        StructInfoTy,
+        ConstantExpr::getPointerCast(StructCounterName, Int8PtrTy),
+        ConstantInt::get(Int32Ty,
+                         DL.getStructLayout(StructTy)->getSizeInBytes()),
+        ConstantInt::get(Int32Ty, StructTy->getNumElements()),
+        Offset == nullptr ? ConstantPointerNull::get(Int32PtrTy)
+                          : ConstantExpr::getPointerCast(Offset, Int32PtrTy),
+        Size == nullptr ? ConstantPointerNull::get(Int32PtrTy)
+                        : ConstantExpr::getPointerCast(Size, Int32PtrTy),
+        TypeName == nullptr
+            ? ConstantPointerNull::get(Int8PtrPtrTy)
+            : ConstantExpr::getPointerCast(TypeName, Int8PtrPtrTy),
+        ConstantExpr::getGetElementPtr(CounterArrayTy, Counters,
+                                       FieldCounterIdx),
+        ConstantExpr::getGetElementPtr(CounterArrayTy, Counters,
+                                       ArrayCounterIdx)));
   }
   // Structs.
   Constant *StructInfo;
@@ -491,11 +489,8 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
 
   auto *CacheFragInfoGV = new GlobalVariable(
       M, CacheFragInfoTy, true, GlobalVariable::InternalLinkage,
-      ConstantStruct::get(CacheFragInfoTy,
-                          UnitName,
-                          ConstantInt::get(Int32Ty, NumStructs),
-                          StructInfo,
-                          nullptr));
+      ConstantStruct::get(CacheFragInfoTy, UnitName,
+                          ConstantInt::get(Int32Ty, NumStructs), StructInfo));
   return CacheFragInfoGV;
 }
 

@@ -120,6 +120,10 @@ private:
       buildInitialSymbolTable(PFC->Objects);
     }
 
+    ~ConcreteLinkedObjectSet() override {
+      MemMgr->deregisterEHFrames();
+    }
+    
     void setHandle(ObjSetHandleT H) {
       PFC->Handle = H;
     }

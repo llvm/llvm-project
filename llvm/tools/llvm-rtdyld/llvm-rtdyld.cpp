@@ -175,8 +175,7 @@ public:
 
   void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr,
                         size_t Size) override {}
-  void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr,
-                          size_t Size) override {}
+  void deregisterEHFrames() override {}
 
   void preallocateSlab(uint64_t Size) {
     std::string Err;

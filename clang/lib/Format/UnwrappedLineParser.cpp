@@ -476,6 +476,24 @@ static bool isGoogScope(const UnwrappedLine &Line) {
   return I->Tok->is(tok::l_paren);
 }
 
+static bool isIIFE(const UnwrappedLine &Line,
+                   const AdditionalKeywords &Keywords) {
+  // Look for the start of an immediately invoked anonymous function.
+  // https://en.wikipedia.org/wiki/Immediately-invoked_function_expression
+  // This is commonly done in JavaScript to create a new, anonymous scope.
+  // Example: (function() { ... })()
+  if (Line.Tokens.size() < 3)
+    return false;
+  auto I = Line.Tokens.begin();
+  if (I->Tok->isNot(tok::l_paren))
+    return false;
+  ++I;
+  if (I->Tok->isNot(Keywords.kw_function))
+    return false;
+  ++I;
+  return I->Tok->is(tok::l_paren);
+}
+
 static bool ShouldBreakBeforeBrace(const FormatStyle &Style,
                                    const FormatToken &InitialToken) {
   if (InitialToken.is(tok::kw_namespace))
@@ -493,15 +511,16 @@ void UnwrappedLineParser::parseChildBlock() {
   FormatTok->BlockKind = BK_Block;
   nextToken();
   {
-    bool GoogScope =
-        Style.Language == FormatStyle::LK_JavaScript && isGoogScope(*Line);
+    bool SkipIndent =
+        (Style.Language == FormatStyle::LK_JavaScript &&
+         (isGoogScope(*Line) || isIIFE(*Line, Keywords)));
     ScopedLineState LineState(*this);
     ScopedDeclarationState DeclarationState(*Line, DeclarationScopeStack,
                                             /*MustBeDeclaration=*/false);
-    Line->Level += GoogScope ? 0 : 1;
+    Line->Level += SkipIndent ? 0 : 1;
     parseLevel(/*HasOpeningBrace=*/true);
     flushComments(isOnNewLine(*FormatTok));
-    Line->Level -= GoogScope ? 0 : 1;
+    Line->Level -= SkipIndent ? 0 : 1;
   }
   nextToken();
 }

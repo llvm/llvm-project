@@ -1110,9 +1110,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Mark the start of the call.
   if (!IsTailCall)
-    Chain = DAG.getCALLSEQ_START(Chain,
-                                 DAG.getConstant(NumBytes, DL, PtrVT, true),
-                                 DL);
+    Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, DL);
 
   // Copy argument values to their designated locations.
   SmallVector<std::pair<unsigned, SDValue>, 9> RegsToPass;

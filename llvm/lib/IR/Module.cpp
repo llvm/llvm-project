@@ -30,7 +30,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include <algorithm>
-#include <cstdarg>
 #include <cstdlib>
 
 using namespace llvm;

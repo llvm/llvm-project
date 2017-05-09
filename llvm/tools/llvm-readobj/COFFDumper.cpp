@@ -1562,6 +1562,14 @@ void COFFDumper::printResourceDirectoryTable(
     raw_svector_ostream OS(IDStr);
     if (i < Table.NumberOfNameEntries) {
       ArrayRef<UTF16> RawEntryNameString = unwrapOrError(RSF.getEntryNameString(Entry));
+      std::vector<UTF16> EndianCorrectedNameString;
+      if (llvm::sys::IsBigEndianHost) {
+        EndianCorrectedNameString.resize(RawEntryNameString.size() + 1);
+        std::copy(RawEntryNameString.begin(), RawEntryNameString.end(),
+                  EndianCorrectedNameString.begin() + 1);
+        EndianCorrectedNameString[0] = UNI_UTF16_BYTE_ORDER_MARK_SWAPPED;
+        RawEntryNameString = makeArrayRef(EndianCorrectedNameString);
+      }
       std::string EntryNameString;
       if (!llvm::convertUTF16ToUTF8String(RawEntryNameString, EntryNameString))
         error(object_error::parse_failed);

@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -1145,6 +1146,51 @@ static void createSwiftErrorEntriesInEntryBlock(FunctionLoweringInfo *FuncInfo,
   }
 }
 
+/// Collect llvm.dbg.declare information. This is done after argument lowering
+/// in case the declarations refer to arguments.
+static void processDbgDeclares(FunctionLoweringInfo *FuncInfo) {
+  MachineFunction *MF = FuncInfo->MF;
+  const DataLayout &DL = MF->getDataLayout();
+  for (const BasicBlock &BB : *FuncInfo->Fn) {
+    for (const Instruction &I : BB) {
+      const DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(&I);
+      if (!DI)
+        continue;
+
+      assert(DI->getVariable() && "Missing variable");
+      assert(DI->getDebugLoc() && "Missing location");
+      const Value *Address = DI->getAddress();
+      if (!Address)
+        continue;
+
+      // Look through casts and constant offset GEPs. These mostly come from
+      // inalloca.
+      APInt Offset(DL.getPointerSizeInBits(0), 0);
+      Address = Address->stripAndAccumulateInBoundsConstantOffsets(DL, Offset);
+
+      // Check if the variable is a static alloca or a byval or inalloca
+      // argument passed in memory. If it is not, then we will ignore this
+      // intrinsic and handle this during isel like dbg.value.
+      int FI = INT_MAX;
+      if (const auto *AI = dyn_cast<AllocaInst>(Address)) {
+        auto SI = FuncInfo->StaticAllocaMap.find(AI);
+        if (SI != FuncInfo->StaticAllocaMap.end())
+          FI = SI->second;
+      } else if (const auto *Arg = dyn_cast<Argument>(Address))
+        FI = FuncInfo->getArgumentFrameIndex(Arg);
+
+      if (FI == INT_MAX)
+        continue;
+
+      DIExpression *Expr = DI->getExpression();
+      if (Offset.getBoolValue())
+        Expr = DIExpression::prepend(Expr, DIExpression::NoDeref,
+                                     Offset.getZExtValue());
+      MF->setVariableDbgInfo(DI->getVariable(), Expr, FI, DI->getDebugLoc());
+    }
+  }
+}
+
 /// Propagate swifterror values through the machine function CFG.
 static void propagateSwiftErrorVRegs(FunctionLoweringInfo *FuncInfo) {
   auto *TLI = FuncInfo->TLI;
@@ -1316,6 +1362,8 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
       FastIS->setLastLocalValue(nullptr);
   }
   createSwiftErrorEntriesInEntryBlock(FuncInfo, FastIS, TLI, TII, SDB);
+
+  processDbgDeclares(FuncInfo);
 
   // Iterate over all basic blocks in the function.
   for (const BasicBlock *LLVMBB : RPOT) {

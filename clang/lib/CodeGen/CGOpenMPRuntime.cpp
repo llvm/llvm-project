@@ -728,7 +728,7 @@ CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
   IdentTy = llvm::StructType::create(
       "ident_t", CGM.Int32Ty /* reserved_1 */, CGM.Int32Ty /* flags */,
       CGM.Int32Ty /* reserved_2 */, CGM.Int32Ty /* reserved_3 */,
-      CGM.Int8PtrTy /* psource */, nullptr);
+      CGM.Int8PtrTy /* psource */);
   KmpCriticalNameTy = llvm::ArrayType::get(CGM.Int32Ty, /*NumElements*/ 8);
 
   loadOffloadInfoMetadata();

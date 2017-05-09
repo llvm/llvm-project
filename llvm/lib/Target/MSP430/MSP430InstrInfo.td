@@ -23,7 +23,8 @@ class SDTCisI16<int OpNum> : SDTCisVT<OpNum, i16>;
 // Type Profiles.
 //===----------------------------------------------------------------------===//
 def SDT_MSP430Call         : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
-def SDT_MSP430CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i16>]>;
+def SDT_MSP430CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i16>,
+                                             SDTCisVT<1, i16>]>;
 def SDT_MSP430CallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i16>, SDTCisVT<1, i16>]>;
 def SDT_MSP430Wrapper      : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                   SDTCisPtrTy<0>]>;
@@ -113,9 +114,9 @@ def and_su : PatFrag<(ops node:$lhs, node:$rhs), (and node:$lhs, node:$rhs), [{
 // Pessimistically assume ADJCALLSTACKDOWN / ADJCALLSTACKUP will become
 // sub / add which can clobber SR.
 let Defs = [SP, SR], Uses = [SP] in {
-def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i16imm:$amt),
+def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i16imm:$amt1, i16imm:$amt2),
                               "#ADJCALLSTACKDOWN",
-                              [(MSP430callseq_start timm:$amt)]>;
+                              [(MSP430callseq_start timm:$amt1, timm:$amt2)]>;
 def ADJCALLSTACKUP   : Pseudo<(outs), (ins i16imm:$amt1, i16imm:$amt2),
                               "#ADJCALLSTACKUP",
                               [(MSP430callseq_end timm:$amt1, timm:$amt2)]>;

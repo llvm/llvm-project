@@ -118,78 +118,78 @@ define <4 x float> @test_rcp28_ss(<4 x float> %a0) {
 }
 declare <4 x float> @llvm.x86.avx512.rcp28.ss(<4 x float>, <4 x float>, <4 x float>, i8, i32) nounwind readnone
 
-define <4 x float> @test_rsqrt28_ss_maskz(<4 x float> %a0) {
+define <4 x float> @test_rsqrt28_ss_maskz(<4 x float> %a0, i8 %mask) {
 ; CHECK-LABEL: test_rsqrt28_ss_maskz:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k0 # encoding: [0xc5,0xfc,0x46,0xc0]
-; CHECK-NEXT:    kshiftrw $15, %k0, %k1 # encoding: [0xc4,0xe3,0xf9,0x30,0xc8,0x0f]
+; CHECK-NEXT:    andl $1, %edi # encoding: [0x83,0xe7,0x01]
+; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vrsqrt28ss {sae}, %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0x99,0xcd,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float> %a0, <4 x float> %a0, <4 x float> zeroinitializer, i8 7, i32 8) ;
+  %res = call <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float> %a0, <4 x float> %a0, <4 x float> zeroinitializer, i8 %mask, i32 8) ;
   ret <4 x float> %res
 }
 
-define <4 x float> @test_rsqrt28_ss_mask(<4 x float> %a0, <4 x float> %b0, <4 x float> %c0) {
+define <4 x float> @test_rsqrt28_ss_mask(<4 x float> %a0, <4 x float> %b0, <4 x float> %c0, i8 %mask) {
 ; CHECK-LABEL: test_rsqrt28_ss_mask:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k0 # encoding: [0xc5,0xfc,0x46,0xc0]
-; CHECK-NEXT:    kshiftrw $15, %k0, %k1 # encoding: [0xc4,0xe3,0xf9,0x30,0xc8,0x0f]
+; CHECK-NEXT:    andl $1, %edi # encoding: [0x83,0xe7,0x01]
+; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vrsqrt28ss {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0x7d,0x19,0xcd,0xd1]
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0 # encoding: [0xc5,0xf8,0x28,0xc2]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float> %a0, <4 x float> %b0, <4 x float> %c0, i8 7, i32 8) ;
+  %res = call <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float> %a0, <4 x float> %b0, <4 x float> %c0, i8 %mask, i32 8) ;
   ret <4 x float> %res
 }
 
-define <2 x double> @test_rsqrt28_sd_maskz(<2 x double> %a0) {
+define <2 x double> @test_rsqrt28_sd_maskz(<2 x double> %a0, i8 %mask) {
 ; CHECK-LABEL: test_rsqrt28_sd_maskz:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k0 # encoding: [0xc5,0xfc,0x46,0xc0]
-; CHECK-NEXT:    kshiftrw $15, %k0, %k1 # encoding: [0xc4,0xe3,0xf9,0x30,0xc8,0x0f]
+; CHECK-NEXT:    andl $1, %edi # encoding: [0x83,0xe7,0x01]
+; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vrsqrt28sd {sae}, %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x99,0xcd,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %a0, <2 x double> zeroinitializer, i8 7, i32 8) ;
+  %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %a0, <2 x double> zeroinitializer, i8 %mask, i32 8) ;
   ret <2 x double> %res
 }
 
-define <2 x double> @test_rsqrt28_sd_mask(<2 x double> %a0, <2 x double> %b0, <2 x double> %c0) {
+define <2 x double> @test_rsqrt28_sd_mask(<2 x double> %a0, <2 x double> %b0, <2 x double> %c0, i8 %mask) {
 ; CHECK-LABEL: test_rsqrt28_sd_mask:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k0 # encoding: [0xc5,0xfc,0x46,0xc0]
-; CHECK-NEXT:    kshiftrw $15, %k0, %k1 # encoding: [0xc4,0xe3,0xf9,0x30,0xc8,0x0f]
+; CHECK-NEXT:    andl $1, %edi # encoding: [0x83,0xe7,0x01]
+; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vrsqrt28sd {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0xfd,0x19,0xcd,0xd1]
 ; CHECK-NEXT:    vmovapd %xmm2, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc2]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %b0, <2 x double> %c0, i8 7, i32 8) ;
+  %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %b0, <2 x double> %c0, i8 %mask, i32 8) ;
   ret <2 x double> %res
 }
 
 declare <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double>, <2 x double>, <2 x double>, i8, i32) nounwind readnone
 
-define <2 x double> @test_rsqrt28_sd_maskz_mem(<2 x double> %a0, double* %ptr ) {
+define <2 x double> @test_rsqrt28_sd_maskz_mem(<2 x double> %a0, double* %ptr, i8 %mask) {
 ; CHECK-LABEL: test_rsqrt28_sd_maskz_mem:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k0 # encoding: [0xc5,0xfc,0x46,0xc0]
-; CHECK-NEXT:    kshiftrw $15, %k0, %k1 # encoding: [0xc4,0xe3,0xf9,0x30,0xc8,0x0f]
+; CHECK-NEXT:    andl $1, %esi # encoding: [0x83,0xe6,0x01]
+; CHECK-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; CHECK-NEXT:    vrsqrt28sd (%rdi), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %mem = load double , double * %ptr, align 8
   %mem_v = insertelement <2 x double> undef, double %mem, i32 0
-  %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %mem_v, <2 x double> zeroinitializer, i8 7, i32 4) ;
+  %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %mem_v, <2 x double> zeroinitializer, i8 %mask, i32 4) ;
   ret <2 x double> %res
 }
 
-define <2 x double> @test_rsqrt28_sd_maskz_mem_offset(<2 x double> %a0, double* %ptr ) {
+define <2 x double> @test_rsqrt28_sd_maskz_mem_offset(<2 x double> %a0, double* %ptr, i8 %mask) {
 ; CHECK-LABEL: test_rsqrt28_sd_maskz_mem_offset:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    kxnorw %k0, %k0, %k0 # encoding: [0xc5,0xfc,0x46,0xc0]
-; CHECK-NEXT:    kshiftrw $15, %k0, %k1 # encoding: [0xc4,0xe3,0xf9,0x30,0xc8,0x0f]
+; CHECK-NEXT:    andl $1, %esi # encoding: [0x83,0xe6,0x01]
+; CHECK-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; CHECK-NEXT:    vrsqrt28sd 144(%rdi), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0x47,0x12]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %ptr1 = getelementptr double, double* %ptr, i32 18
   %mem = load double , double * %ptr1, align 8
   %mem_v = insertelement <2 x double> undef, double %mem, i32 0
-  %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %mem_v, <2 x double> zeroinitializer, i8 7, i32 4) ;
+  %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %mem_v, <2 x double> zeroinitializer, i8 %mask, i32 4) ;
   ret <2 x double> %res
 }
 

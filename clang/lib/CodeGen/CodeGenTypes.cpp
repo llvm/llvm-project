@@ -490,7 +490,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     llvm_unreachable("Unexpected undeduced type!");
   case Type::Complex: {
     llvm::Type *EltTy = ConvertType(cast<ComplexType>(Ty)->getElementType());
-    ResultType = llvm::StructType::get(EltTy, EltTy, nullptr);
+    ResultType = llvm::StructType::get(EltTy, EltTy);
     break;
   }
   case Type::LValueReference:

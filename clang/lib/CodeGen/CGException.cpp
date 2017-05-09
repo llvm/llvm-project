@@ -765,8 +765,8 @@ llvm::BasicBlock *CodeGenFunction::EmitLandingPad() {
   llvm::BasicBlock *lpad = createBasicBlock("lpad");
   EmitBlock(lpad);
 
-  llvm::LandingPadInst *LPadInst = Builder.CreateLandingPad(
-      llvm::StructType::get(Int8PtrTy, Int32Ty, nullptr), 0);
+  llvm::LandingPadInst *LPadInst =
+      Builder.CreateLandingPad(llvm::StructType::get(Int8PtrTy, Int32Ty), 0);
 
   llvm::Value *LPadExn = Builder.CreateExtractValue(LPadInst, 0);
   Builder.CreateStore(LPadExn, getExceptionSlot());
@@ -1310,8 +1310,8 @@ llvm::BasicBlock *CodeGenFunction::getTerminateLandingPad() {
   if (!CurFn->hasPersonalityFn())
     CurFn->setPersonalityFn(getOpaquePersonalityFn(CGM, Personality));
 
-  llvm::LandingPadInst *LPadInst = Builder.CreateLandingPad(
-      llvm::StructType::get(Int8PtrTy, Int32Ty, nullptr), 0);
+  llvm::LandingPadInst *LPadInst =
+      Builder.CreateLandingPad(llvm::StructType::get(Int8PtrTy, Int32Ty), 0);
   LPadInst->addClause(getCatchAllValue(*this));
 
   llvm::Value *Exn = nullptr;
@@ -1387,8 +1387,7 @@ llvm::BasicBlock *CodeGenFunction::getEHResumeBlock(bool isCleanup) {
   llvm::Value *Exn = getExceptionFromSlot();
   llvm::Value *Sel = getSelectorFromSlot();
 
-  llvm::Type *LPadType = llvm::StructType::get(Exn->getType(),
-                                               Sel->getType(), nullptr);
+  llvm::Type *LPadType = llvm::StructType::get(Exn->getType(), Sel->getType());
   llvm::Value *LPadVal = llvm::UndefValue::get(LPadType);
   LPadVal = Builder.CreateInsertValue(LPadVal, Exn, 0, "lpad.val");
   LPadVal = Builder.CreateInsertValue(LPadVal, Sel, 1, "lpad.val");
@@ -1747,7 +1746,7 @@ void CodeGenFunction::EmitSEHExceptionCodeSave(CodeGenFunction &ParentCGF,
   // };
   // int exceptioncode = exception_pointers->ExceptionRecord->ExceptionCode;
   llvm::Type *RecordTy = CGM.Int32Ty->getPointerTo();
-  llvm::Type *PtrsTy = llvm::StructType::get(RecordTy, CGM.VoidPtrTy, nullptr);
+  llvm::Type *PtrsTy = llvm::StructType::get(RecordTy, CGM.VoidPtrTy);
   llvm::Value *Ptrs = Builder.CreateBitCast(SEHInfo, PtrsTy->getPointerTo());
   llvm::Value *Rec = Builder.CreateStructGEP(PtrsTy, Ptrs, 0);
   Rec = Builder.CreateAlignedLoad(Rec, getPointerAlign());

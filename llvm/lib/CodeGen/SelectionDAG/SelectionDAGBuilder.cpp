@@ -4676,7 +4676,8 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   bool IsIndirect = false;
   Optional<MachineOperand> Op;
   // Some arguments' frame index is recorded during argument lowering.
-  if (int FI = FuncInfo.getArgumentFrameIndex(Arg))
+  int FI = FuncInfo.getArgumentFrameIndex(Arg);
+  if (FI != INT_MAX)
     Op = MachineOperand::CreateFI(FI);
 
   if (!Op && N.getNode()) {
@@ -4927,6 +4928,13 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       return nullptr;
     }
 
+    // Byval arguments with frame indices were already handled after argument
+    // lowering and before isel.
+    const auto *Arg =
+        dyn_cast<Argument>(Address->stripInBoundsConstantOffsets());
+    if (Arg && FuncInfo.getArgumentFrameIndex(Arg) != INT_MAX)
+      return nullptr;
+
     SDValue &N = NodeMap[Address];
     if (!N.getNode() && isa<Argument>(Address))
       // Check unused arguments map.
@@ -4957,20 +4965,6 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       // virtual register info from the FuncInfo.ValueMap.
       if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, 0, true,
                                     N)) {
-        // If variable is pinned by a alloca in dominating bb then
-        // use StaticAllocaMap.
-        if (const AllocaInst *AI = dyn_cast<AllocaInst>(Address)) {
-          if (AI->getParent() != DI.getParent()) {
-            DenseMap<const AllocaInst*, int>::iterator SI =
-              FuncInfo.StaticAllocaMap.find(AI);
-            if (SI != FuncInfo.StaticAllocaMap.end()) {
-              SDV = DAG.getFrameIndexDbgValue(Variable, Expression, SI->second,
-                                              0, dl, SDNodeOrder);
-              DAG.AddDbgValue(SDV, nullptr, false);
-              return nullptr;
-            }
-          }
-        }
         DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
       }
     }
@@ -7440,11 +7434,11 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
   // have to worry about calling conventions and target specific lowering code.
   // Instead we perform the call lowering right here.
   //
-  // chain, flag = CALLSEQ_START(chain, 0)
+  // chain, flag = CALLSEQ_START(chain, 0, 0)
   // chain, flag = STACKMAP(id, nbytes, ..., chain, flag)
   // chain, flag = CALLSEQ_END(chain, 0, 0, flag)
   //
-  Chain = DAG.getCALLSEQ_START(getRoot(), NullPtr, DL);
+  Chain = DAG.getCALLSEQ_START(getRoot(), 0, 0, DL);
   InFlag = Chain.getValue(1);
 
   // Add the <id> and <numBytes> constants.

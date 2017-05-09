@@ -233,19 +233,16 @@ void NilArgChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     if (StringSelectors.empty()) {
       ASTContext &Ctx = C.getASTContext();
       Selector Sels[] = {
-        getKeywordSelector(Ctx, "caseInsensitiveCompare", nullptr),
-        getKeywordSelector(Ctx, "compare", nullptr),
-        getKeywordSelector(Ctx, "compare", "options", nullptr),
-        getKeywordSelector(Ctx, "compare", "options", "range", nullptr),
-        getKeywordSelector(Ctx, "compare", "options", "range", "locale",
-                           nullptr),
-        getKeywordSelector(Ctx, "componentsSeparatedByCharactersInSet",
-                           nullptr),
-        getKeywordSelector(Ctx, "initWithFormat",
-                           nullptr),
-        getKeywordSelector(Ctx, "localizedCaseInsensitiveCompare", nullptr),
-        getKeywordSelector(Ctx, "localizedCompare", nullptr),
-        getKeywordSelector(Ctx, "localizedStandardCompare", nullptr),
+          getKeywordSelector(Ctx, "caseInsensitiveCompare"),
+          getKeywordSelector(Ctx, "compare"),
+          getKeywordSelector(Ctx, "compare", "options"),
+          getKeywordSelector(Ctx, "compare", "options", "range"),
+          getKeywordSelector(Ctx, "compare", "options", "range", "locale"),
+          getKeywordSelector(Ctx, "componentsSeparatedByCharactersInSet"),
+          getKeywordSelector(Ctx, "initWithFormat"),
+          getKeywordSelector(Ctx, "localizedCaseInsensitiveCompare"),
+          getKeywordSelector(Ctx, "localizedCompare"),
+          getKeywordSelector(Ctx, "localizedStandardCompare"),
       };
       for (Selector KnownSel : Sels)
         StringSelectors[KnownSel] = 0;
@@ -262,16 +259,15 @@ void NilArgChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
 
     if (ArrayWithObjectSel.isNull()) {
       ASTContext &Ctx = C.getASTContext();
-      ArrayWithObjectSel = getKeywordSelector(Ctx, "arrayWithObject", nullptr);
-      AddObjectSel = getKeywordSelector(Ctx, "addObject", nullptr);
+      ArrayWithObjectSel = getKeywordSelector(Ctx, "arrayWithObject");
+      AddObjectSel = getKeywordSelector(Ctx, "addObject");
       InsertObjectAtIndexSel =
-        getKeywordSelector(Ctx, "insertObject", "atIndex", nullptr);
+          getKeywordSelector(Ctx, "insertObject", "atIndex");
       ReplaceObjectAtIndexWithObjectSel =
-        getKeywordSelector(Ctx, "replaceObjectAtIndex", "withObject", nullptr);
+          getKeywordSelector(Ctx, "replaceObjectAtIndex", "withObject");
       SetObjectAtIndexedSubscriptSel =
-        getKeywordSelector(Ctx, "setObject", "atIndexedSubscript", nullptr);
-      ArrayByAddingObjectSel =
-        getKeywordSelector(Ctx, "arrayByAddingObject", nullptr);
+          getKeywordSelector(Ctx, "setObject", "atIndexedSubscript");
+      ArrayByAddingObjectSel = getKeywordSelector(Ctx, "arrayByAddingObject");
     }
 
     if (S == ArrayWithObjectSel || S == AddObjectSel ||
@@ -292,13 +288,11 @@ void NilArgChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     if (DictionaryWithObjectForKeySel.isNull()) {
       ASTContext &Ctx = C.getASTContext();
       DictionaryWithObjectForKeySel =
-        getKeywordSelector(Ctx, "dictionaryWithObject", "forKey", nullptr);
-      SetObjectForKeySel =
-        getKeywordSelector(Ctx, "setObject", "forKey", nullptr);
+          getKeywordSelector(Ctx, "dictionaryWithObject", "forKey");
+      SetObjectForKeySel = getKeywordSelector(Ctx, "setObject", "forKey");
       SetObjectForKeyedSubscriptSel =
-        getKeywordSelector(Ctx, "setObject", "forKeyedSubscript", nullptr);
-      RemoveObjectForKeySel =
-        getKeywordSelector(Ctx, "removeObjectForKey", nullptr);
+          getKeywordSelector(Ctx, "setObject", "forKeyedSubscript");
+      RemoveObjectForKeySel = getKeywordSelector(Ctx, "removeObjectForKey");
     }
 
     if (S == DictionaryWithObjectForKeySel || S == SetObjectForKeySel) {
