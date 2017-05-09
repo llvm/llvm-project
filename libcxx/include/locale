@@ -233,9 +233,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #define __cloc_defined
 #endif
 
-typedef _VSTD::remove_pointer<locale_t>::type __locale_struct;
-typedef _VSTD::unique_ptr<__locale_struct, decltype(&freelocale)> __locale_unique_ptr;
-
 // __scan_keyword
 // Scans [__b, __e) until a match is found in the basic_strings range
 //  [__kb, __ke) or until it can be shown that there is no match in [__kb, __ke).

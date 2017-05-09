@@ -753,7 +753,8 @@ static bool compareSections(const OutputSection *A, const OutputSection *B) {
   if (AIndex != BIndex)
     return AIndex < BIndex;
 
-  return compareSectionsNonScript<ELFT>(A, B);
+  // The sections are not in the linker script, so don't sort for now.
+  return false;
 }
 
 // Program header entry
@@ -1004,8 +1005,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   //   .d (ro) # not in script
   //
   // The way we define an order then is:
-  // *  First put script sections at the start and sort the script and
-  //    non-script sections independently.
+  // *  First put script sections at the start and sort the script sections.
   // *  Move each non-script section to its preferred position. We try
   //    to put each section in the last position where it it can share
   //    a PT_LOAD.

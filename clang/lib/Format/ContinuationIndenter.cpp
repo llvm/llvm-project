@@ -920,6 +920,10 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     NewParenState.NoLineBreak =
         NewParenState.NoLineBreak || State.Stack.back().NoLineBreakInOperand;
 
+    // Don't propagate AvoidBinPacking into subexpressions of arg/param lists.
+    if (*I > prec::Comma)
+      NewParenState.AvoidBinPacking = false;
+
     // Indent from 'LastSpace' unless these are fake parentheses encapsulating
     // a builder type call after 'return' or, if the alignment after opening
     // brackets is disabled.

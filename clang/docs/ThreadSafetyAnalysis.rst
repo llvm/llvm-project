@@ -884,11 +884,11 @@ implementation.
 
   // Deprecated.
   #define PT_GUARDED_VAR \
-    THREAD_ANNOTATION_ATTRIBUTE__(pt_guarded)
+    THREAD_ANNOTATION_ATTRIBUTE__(pt_guarded_var)
 
   // Deprecated.
   #define GUARDED_VAR \
-    THREAD_ANNOTATION_ATTRIBUTE__(guarded)
+    THREAD_ANNOTATION_ATTRIBUTE__(guarded_var)
 
   // Replaced by REQUIRES
   #define EXCLUSIVE_LOCKS_REQUIRED(...) \

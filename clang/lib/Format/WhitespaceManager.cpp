@@ -517,8 +517,11 @@ void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
 }
 
 void WhitespaceManager::alignEscapedNewlines() {
-  unsigned MaxEndOfLine =
-      Style.AlignEscapedNewlinesLeft ? 0 : Style.ColumnLimit;
+  if (Style.AlignEscapedNewlines == FormatStyle::ENAS_DontAlign)
+    return;
+
+  bool AlignLeft = Style.AlignEscapedNewlines == FormatStyle::ENAS_Left;
+  unsigned MaxEndOfLine = AlignLeft ? 0 : Style.ColumnLimit;
   unsigned StartOfMacro = 0;
   for (unsigned i = 1, e = Changes.size(); i < e; ++i) {
     Change &C = Changes[i];
@@ -527,7 +530,7 @@ void WhitespaceManager::alignEscapedNewlines() {
         MaxEndOfLine = std::max(C.PreviousEndOfTokenColumn + 2, MaxEndOfLine);
       } else {
         alignEscapedNewlines(StartOfMacro + 1, i, MaxEndOfLine);
-        MaxEndOfLine = Style.AlignEscapedNewlinesLeft ? 0 : Style.ColumnLimit;
+        MaxEndOfLine = AlignLeft ? 0 : Style.ColumnLimit;
         StartOfMacro = i;
       }
     }
@@ -602,7 +605,7 @@ void WhitespaceManager::appendNewlineText(std::string &Text, unsigned Newlines,
                                           unsigned EscapedNewlineColumn) {
   if (Newlines > 0) {
     unsigned Offset =
-        std::min<int>(EscapedNewlineColumn - 1, PreviousEndOfTokenColumn);
+        std::min<int>(EscapedNewlineColumn - 2, PreviousEndOfTokenColumn);
     for (unsigned i = 0; i < Newlines; ++i) {
       Text.append(EscapedNewlineColumn - Offset - 1, ' ');
       Text.append(UseCRLF ? "\\\r\n" : "\\\n");

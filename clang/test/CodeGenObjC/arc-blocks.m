@@ -752,6 +752,16 @@ void test19(void (^b)(void)) {
 // CHECK-NEXT: call void @objc_release(i8* [[X]])
 // CHECK-NEXT: ret void
 
+// CHECK-UNOPT-LABEL: define void @test20(
+// CHECK-UNOPT: [[XADDR:%.*]] = alloca i8*
+// CHECK-UNOPT-NEXT: [[BLOCK:%.*]] = alloca <[[BLOCKTY:.*]]>
+// CHECK-UNOPT: [[CAPTUREFIELD:%.*]] = getelementptr inbounds <[[BLOCKTY]]>, <[[BLOCKTY]]>* [[BLOCK]], i32 0, i32 5
+// CHECK-UNOPT: [[BLOCKCAPTURED:%.*]] = getelementptr inbounds <[[BLOCKTY]]>, <[[BLOCKTY]]>* [[BLOCK]], i32 0, i32 5
+// CHECK-UNOPT: [[CAPTURED:%.*]] = load i8*, i8** [[XADDR]]
+// CHECK-UNOPT: [[RETAINED:%.*]] = call i8* @objc_retain(i8* [[CAPTURED]])
+// CHECK-UNOPT: store i8* [[RETAINED]], i8** [[BLOCKCAPTURED]]
+// CHECK-UNOPT: call void @objc_storeStrong(i8** [[CAPTUREFIELD]], i8* null)
+
 // CHECK-LABEL: define internal void @__copy_helper_block
 // CHECK: [[BLOCKSOURCE:%.*]] = bitcast i8* %{{.*}} to <[[BLOCKTY]]>*
 // CHECK: [[CAPTUREFIELD:%.*]] = getelementptr inbounds <[[BLOCKTY]]>, <[[BLOCKTY]]>* [[BLOCKSOURCE]], i32 0, i32 5

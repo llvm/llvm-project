@@ -1140,7 +1140,7 @@ public:
       : __impl(in_place_index<_Ip>, _VSTD::forward<_Arg>(__arg)) {}
 
   template <size_t _Ip, class... _Args,
-            enable_if_t<(_Ip < sizeof...(_Types)), int> = 0,
+            class = enable_if_t<(_Ip < sizeof...(_Types)), int>,
             class _Tp = variant_alternative_t<_Ip, variant<_Types...>>,
             enable_if_t<is_constructible_v<_Tp, _Args...>, int> = 0>
   inline _LIBCPP_INLINE_VISIBILITY
