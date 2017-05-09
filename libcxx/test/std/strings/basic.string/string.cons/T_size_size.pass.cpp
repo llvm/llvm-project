@@ -27,16 +27,17 @@
 
 template <class S, class SV>
 void
-test(SV sv, unsigned pos, unsigned n)
+test(SV sv, std::size_t pos, std::size_t n)
 {
     typedef typename S::traits_type T;
     typedef typename S::allocator_type A;
+    typedef typename S::size_type Size;
     if (pos <= sv.size())
     {
-        S s2(sv, pos, n);
+        S s2(sv, static_cast<Size>(pos), static_cast<Size>(n));
         LIBCPP_ASSERT(s2.__invariants());
         assert(pos <= sv.size());
-        unsigned rlen = std::min<unsigned>(sv.size() - pos, n);
+        std::size_t rlen = std::min(sv.size() - pos, n);
         assert(s2.size() == rlen);
         assert(T::compare(s2.data(), sv.data() + pos, rlen) == 0);
         assert(s2.get_allocator() == A());
@@ -47,7 +48,7 @@ test(SV sv, unsigned pos, unsigned n)
     {
         try
         {
-            S s2(sv, pos, n);
+            S s2(sv, static_cast<Size>(pos), static_cast<Size>(n));
             assert(false);
         }
         catch (std::out_of_range&)
@@ -60,15 +61,16 @@ test(SV sv, unsigned pos, unsigned n)
 
 template <class S, class SV>
 void
-test(SV sv, unsigned pos, unsigned n, const typename S::allocator_type& a)
+test(SV sv, std::size_t pos, std::size_t n, const typename S::allocator_type& a)
 {
     typedef typename S::traits_type T;
+    typedef typename S::size_type Size;
     if (pos <= sv.size())
     {
-        S s2(sv, pos, n, a);
+        S s2(sv, static_cast<Size>(pos), static_cast<Size>(n), a);
         LIBCPP_ASSERT(s2.__invariants());
         assert(pos <= sv.size());
-        unsigned rlen = std::min<unsigned>(sv.size() - pos, n);
+        std::size_t rlen = std::min(sv.size() - pos, n);
         assert(s2.size() == rlen);
         assert(T::compare(s2.data(), sv.data() + pos, rlen) == 0);
         assert(s2.get_allocator() == a);
@@ -79,7 +81,7 @@ test(SV sv, unsigned pos, unsigned n, const typename S::allocator_type& a)
     {
         try
         {
-            S s2(sv, pos, n, a);
+            S s2(sv, static_cast<Size>(pos), static_cast<Size>(n), a);
             assert(false);
         }
         catch (std::out_of_range&)

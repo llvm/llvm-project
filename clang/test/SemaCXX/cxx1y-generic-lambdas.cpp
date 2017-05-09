@@ -986,3 +986,10 @@ class Enclosing3 {
   );
 };
 }
+
+namespace PR32638 {
+ //https://bugs.llvm.org/show_bug.cgi?id=32638
+ void test() {
+    [](auto x) noexcept(noexcept(x)) { } (0);
+ }
+}

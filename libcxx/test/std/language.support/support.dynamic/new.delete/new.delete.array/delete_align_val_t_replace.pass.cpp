@@ -15,7 +15,7 @@
 // XFAIL: clang-3, apple-clang-7, apple-clang-8
 
 // None of the current GCC compilers support this.
-// XFAIL: gcc
+// XFAIL: gcc-5, gcc-6
 
 // XFAIL: with_system_cxx_lib=macosx10.12
 // XFAIL: with_system_cxx_lib=macosx10.11

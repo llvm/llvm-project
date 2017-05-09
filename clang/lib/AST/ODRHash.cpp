@@ -411,7 +411,7 @@ public:
 
   void VisitTypedefType(const TypedefType *T) {
     AddDecl(T->getDecl());
-    Hash.AddQualType(T->getDecl()->getUnderlyingType());
+    AddQualType(T->getDecl()->getUnderlyingType().getCanonicalType());
     VisitType(T);
   }
 };

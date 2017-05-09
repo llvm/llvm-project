@@ -878,7 +878,8 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
 
     // If type is const-qualified, copy the value into the block field.
     } else if (type.isConstQualified() &&
-               type.getObjCLifetime() == Qualifiers::OCL_Strong) {
+               type.getObjCLifetime() == Qualifiers::OCL_Strong &&
+               CGM.getCodeGenOpts().OptimizationLevel != 0) {
       llvm::Value *value = Builder.CreateLoad(src, "captured");
       Builder.CreateStore(value, blockField);
 

@@ -92,10 +92,10 @@ FUZZER_FLAG_INT(print_pcs, 0, "If 1, print out newly covered PCs.")
 FUZZER_FLAG_INT(print_final_stats, 0, "If 1, print statistics at exit.")
 FUZZER_FLAG_INT(print_corpus_stats, 0,
   "If 1, print statistics on corpus elements at exit.")
-FUZZER_FLAG_INT(print_coverage, 0, "If 1, print coverage information at exit."
-                                   " Experimental, only with trace-pc-guard")
-FUZZER_FLAG_INT(dump_coverage, 0, "If 1, dump coverage information at exit."
-                                  " Experimental, only with trace-pc-guard")
+FUZZER_FLAG_INT(print_coverage, 0, "If 1, print coverage information as text"
+                                   " at exit.")
+FUZZER_FLAG_INT(dump_coverage, 0, "If 1, dump coverage information as a"
+                                  " .sancov file at exit.")
 FUZZER_FLAG_INT(handle_segv, 1, "If 1, try to intercept SIGSEGV.")
 FUZZER_FLAG_INT(handle_bus, 1, "If 1, try to intercept SIGBUS.")
 FUZZER_FLAG_INT(handle_abrt, 1, "If 1, try to intercept SIGABRT.")

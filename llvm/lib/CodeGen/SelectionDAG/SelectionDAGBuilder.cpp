@@ -4957,6 +4957,20 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       // virtual register info from the FuncInfo.ValueMap.
       if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, 0, true,
                                     N)) {
+        // If variable is pinned by a alloca in dominating bb then
+        // use StaticAllocaMap.
+        if (const AllocaInst *AI = dyn_cast<AllocaInst>(Address)) {
+          if (AI->getParent() != DI.getParent()) {
+            DenseMap<const AllocaInst*, int>::iterator SI =
+              FuncInfo.StaticAllocaMap.find(AI);
+            if (SI != FuncInfo.StaticAllocaMap.end()) {
+              SDV = DAG.getFrameIndexDbgValue(Variable, Expression, SI->second,
+                                              0, dl, SDNodeOrder);
+              DAG.AddDbgValue(SDV, nullptr, false);
+              return nullptr;
+            }
+          }
+        }
         DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
       }
     }

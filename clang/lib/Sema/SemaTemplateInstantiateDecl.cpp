@@ -3660,6 +3660,7 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
       New->setType(SemaRef.Context.getFunctionType(
           NewProto->getReturnType(), NewProto->getParamTypes(), EPI));
     } else {
+      Sema::ContextRAII SwitchContext(SemaRef, New);
       SemaRef.SubstExceptionSpec(New, Proto, TemplateArgs);
     }
   }

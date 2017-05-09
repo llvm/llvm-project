@@ -1913,8 +1913,10 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
         // 'framework module FrameworkName.Private', since a 'Private.Framework'
         // does not usually exist. However, since both are currently widely used
         // for private modules, make sure we find the right path in both cases.
-        RelativePathName.resize(ActiveModule->IsFramework ? 0
-                                                          : RelativePathLength);
+        if (ActiveModule->IsFramework && ActiveModule->Name == "Private")
+          RelativePathName.clear();
+        else
+          RelativePathName.resize(RelativePathLength);
         FullPathName.resize(FullPathLength);
         llvm::sys::path::append(RelativePathName, "PrivateHeaders",
                                 Header.FileName);

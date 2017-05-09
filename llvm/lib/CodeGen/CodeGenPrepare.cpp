@@ -295,7 +295,7 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     if (PSI->isFunctionHotInCallGraph(&F))
       F.setSectionPrefix(".hot");
     else if (PSI->isFunctionColdInCallGraph(&F))
-      F.setSectionPrefix(".cold");
+      F.setSectionPrefix(".unlikely");
   }
 
   /// This optimization identifies DIV instructions that can be

@@ -278,7 +278,7 @@ APInt ConstantRange::getUnsignedMax() const {
 }
 
 APInt ConstantRange::getUnsignedMin() const {
-  if (isFullSet() || (isWrappedSet() && getUpper() != 0))
+  if (isFullSet() || (isWrappedSet() && !getUpper().isNullValue()))
     return APInt::getMinValue(getBitWidth());
   return getLower();
 }
@@ -442,7 +442,7 @@ ConstantRange ConstantRange::unionWith(const ConstantRange &CR) const {
     APInt L = CR.Lower.ult(Lower) ? CR.Lower : Lower;
     APInt U = (CR.Upper - 1).ugt(Upper - 1) ? CR.Upper : Upper;
 
-    if (L == 0 && U == 0)
+    if (L.isNullValue() && U.isNullValue())
       return ConstantRange(getBitWidth());
 
     return ConstantRange(std::move(L), std::move(U));
@@ -834,7 +834,7 @@ ConstantRange::umin(const ConstantRange &Other) const {
 
 ConstantRange
 ConstantRange::udiv(const ConstantRange &RHS) const {
-  if (isEmptySet() || RHS.isEmptySet() || RHS.getUnsignedMax() == 0)
+  if (isEmptySet() || RHS.isEmptySet() || RHS.getUnsignedMax().isNullValue())
     return ConstantRange(getBitWidth(), /*isFullSet=*/false);
   if (RHS.isFullSet())
     return ConstantRange(getBitWidth(), /*isFullSet=*/true);
@@ -842,7 +842,7 @@ ConstantRange::udiv(const ConstantRange &RHS) const {
   APInt Lower = getUnsignedMin().udiv(RHS.getUnsignedMax());
 
   APInt RHS_umin = RHS.getUnsignedMin();
-  if (RHS_umin == 0) {
+  if (RHS_umin.isNullValue()) {
     // We want the lowest value in RHS excluding zero. Usually that would be 1
     // except for a range in the form of [X, 1) in which case it would be X.
     if (RHS.getUpper() == 1)
