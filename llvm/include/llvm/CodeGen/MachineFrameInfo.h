@@ -21,15 +21,9 @@
 
 namespace llvm {
 class raw_ostream;
-class DataLayout;
-class TargetRegisterClass;
-class Type;
 class MachineFunction;
 class MachineBasicBlock;
-class TargetFrameLowering;
-class TargetMachine;
 class BitVector;
-class Value;
 class AllocaInst;
 
 /// The CalleeSavedInfo class tracks the information need to locate where a
@@ -226,7 +220,7 @@ class MachineFrameInfo {
   /// setup/destroy pseudo instructions (as defined in the TargetFrameInfo
   /// class).  This information is important for frame pointer elimination.
   /// It is only valid during and after prolog/epilog code insertion.
-  unsigned MaxCallFrameSize = 0;
+  unsigned MaxCallFrameSize = ~0u;
 
   /// The prolog/epilog code inserter fills in this vector with each
   /// callee saved register saved in the frame.  Beyond its use by the prolog/
@@ -531,7 +525,16 @@ public:
   /// CallFrameSetup/Destroy pseudo instructions are used by the target, and
   /// then only during or after prolog/epilog code insertion.
   ///
-  unsigned getMaxCallFrameSize() const { return MaxCallFrameSize; }
+  unsigned getMaxCallFrameSize() const {
+    // TODO: Enable this assert when targets are fixed.
+    //assert(isMaxCallFrameSizeComputed() && "MaxCallFrameSize not computed yet");
+    if (!isMaxCallFrameSizeComputed())
+      return 0;
+    return MaxCallFrameSize;
+  }
+  bool isMaxCallFrameSizeComputed() const {
+    return MaxCallFrameSize != ~0u;
+  }
   void setMaxCallFrameSize(unsigned S) { MaxCallFrameSize = S; }
 
   /// Create a new object at a fixed location on the stack.
