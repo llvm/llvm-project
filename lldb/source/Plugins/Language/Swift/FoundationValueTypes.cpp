@@ -102,22 +102,39 @@ bool lldb_private::formatters::swift::URL_SummaryProvider(
 bool lldb_private::formatters::swift::IndexPath_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   static ConstString g__indexes("_indexes");
+  static ConstString g_empty("empty");
+  static ConstString g_single("single");
+  static ConstString g_pair("pair");
+  static ConstString g_array("array");
+  
+  ValueObjectSP underlying_enum_sp(valobj.GetChildAtNamePath({g__indexes}));
 
-  ValueObjectSP underlying_array_sp(valobj.GetChildAtNamePath({g__indexes}));
-
-  if (!underlying_array_sp)
+  if (!underlying_enum_sp)
     return false;
 
-  underlying_array_sp =
-      underlying_array_sp->GetQualifiedRepresentationIfAvailable(
+  underlying_enum_sp =
+      underlying_enum_sp->GetQualifiedRepresentationIfAvailable(
           lldb::eDynamicDontRunTarget, true);
-
-  size_t num_children = underlying_array_sp->GetNumChildren();
-
-  if (num_children == 1)
+  ConstString value(underlying_enum_sp->GetValueAsCString());
+  if (value.IsEmpty())
+    return false;
+  
+  if (value == g_empty)
+    stream.PutCString("0 indices");
+  else if (value == g_single)
     stream.PutCString("1 index");
-  else
+  else if (value == g_pair)
+    stream.PutCString("2 indices");
+  else if (value == g_array)
+  {
+    if (underlying_enum_sp->GetNumChildren() != 1) 
+      return false;
+  
+    underlying_enum_sp = underlying_enum_sp->GetChildAtIndex(0, true)
+       ->GetQualifiedRepresentationIfAvailable(lldb::eDynamicDontRunTarget, true);
+    size_t num_children = underlying_enum_sp->GetNumChildren();
     stream.Printf("%zu indices", num_children);
+  }
   return true;
 }
 
