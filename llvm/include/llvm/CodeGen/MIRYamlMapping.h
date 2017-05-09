@@ -345,7 +345,7 @@ struct MachineFrameInfo {
   bool HasCalls = false;
   StringValue StackProtector;
   // TODO: Serialize FunctionContextIdx
-  unsigned MaxCallFrameSize = 0;
+  unsigned MaxCallFrameSize = ~0u; ///< ~0u means: not computed yet.
   bool HasOpaqueSPAdjustment = false;
   bool HasVAStart = false;
   bool HasMustTailInVarArgFunc = false;
@@ -366,7 +366,7 @@ template <> struct MappingTraits<MachineFrameInfo> {
     YamlIO.mapOptional("hasCalls", MFI.HasCalls);
     YamlIO.mapOptional("stackProtector", MFI.StackProtector,
                        StringValue()); // Don't print it out when it's empty.
-    YamlIO.mapOptional("maxCallFrameSize", MFI.MaxCallFrameSize);
+    YamlIO.mapOptional("maxCallFrameSize", MFI.MaxCallFrameSize, ~0u);
     YamlIO.mapOptional("hasOpaqueSPAdjustment", MFI.HasOpaqueSPAdjustment);
     YamlIO.mapOptional("hasVAStart", MFI.HasVAStart);
     YamlIO.mapOptional("hasMustTailInVarArgFunc", MFI.HasMustTailInVarArgFunc);
