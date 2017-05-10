@@ -778,6 +778,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     Opts.SanitizeAddressUseAfterScope =
         A->getOption().getID() == OPT_fsanitize_address_use_after_scope;
   }
+  Opts.SanitizeAddressGlobalsDeadStripping =
+      Args.hasArg(OPT_fsanitize_address_globals_dead_stripping);
   Opts.SSPBufferSize =
       getLastArgIntValue(Args, OPT_stack_protector_buffer_size, 8, Diags);
   Opts.StackRealignment = Args.hasArg(OPT_mstackrealign);

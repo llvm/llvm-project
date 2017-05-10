@@ -42,7 +42,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   ArgStringList CmdArgs;
   CmdArgs.push_back("-flavor");
-  CmdArgs.push_back("ld");
+  CmdArgs.push_back("wasm");
 
   // Enable garbage collection of unused input sections by default, since code
   // size is of particular importance. This is significantly facilitated by
@@ -101,6 +101,9 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
   : ToolChain(D, Triple, Args) {
 
   assert(Triple.isArch32Bit() != Triple.isArch64Bit());
+
+  getProgramPaths().push_back(getDriver().getInstalledDir());
+
   getFilePaths().push_back(
       getDriver().SysRoot + "/lib" + (Triple.isArch32Bit() ? "32" : "64"));
 }

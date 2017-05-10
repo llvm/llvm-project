@@ -85,9 +85,6 @@ void __inwordstring(unsigned short, unsigned short *, unsigned long);
 void __lidt(void *);
 unsigned __int64 __ll_lshift(unsigned __int64, int);
 __int64 __ll_rshift(__int64, int);
-void __llwpcb(void *);
-unsigned char __lwpins32(unsigned int, unsigned int, unsigned int);
-void __lwpval32(unsigned int, unsigned int, unsigned int);
 unsigned int __lzcnt(unsigned int);
 unsigned short __lzcnt16(unsigned short);
 static __inline__
@@ -126,7 +123,6 @@ unsigned __int64 __readmsr(unsigned long);
 unsigned __int64 __readpmc(unsigned long);
 unsigned long __segmentlimit(unsigned long);
 void __sidt(void *);
-void *__slwpcb(void);
 static __inline__
 void __stosb(unsigned char *, unsigned char, size_t);
 static __inline__
@@ -227,8 +223,6 @@ void __incgsbyte(unsigned long);
 void __incgsdword(unsigned long);
 void __incgsqword(unsigned long);
 void __incgsword(unsigned long);
-unsigned char __lwpins64(unsigned __int64, unsigned int, unsigned int);
-void __lwpval64(unsigned __int64, unsigned int, unsigned int);
 unsigned __int64 __lzcnt64(unsigned __int64);
 static __inline__
 void __movsq(unsigned long long *, unsigned long long const *, size_t);

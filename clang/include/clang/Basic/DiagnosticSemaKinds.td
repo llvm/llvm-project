@@ -303,6 +303,8 @@ def note_empty_parens_zero_initialize : Note<
   "replace parentheses with an initializer to declare a variable">;
 def warn_unused_function : Warning<"unused function %0">,
   InGroup<UnusedFunction>, DefaultIgnore;
+def warn_unused_template : Warning<"unused %select{function|variable}0 template %1">,
+  InGroup<UnusedTemplate>, DefaultIgnore;
 def warn_unused_member_function : Warning<"unused member function %0">,
   InGroup<UnusedMemberFunction>, DefaultIgnore;
 def warn_used_but_marked_unused: Warning<"%0 was marked unused but was used">,
@@ -8265,6 +8267,15 @@ def err_undeclared_var_use_suggest : Error<
 def err_no_template_suggest : Error<"no template named %0; did you mean %1?">;
 def err_no_member_template_suggest : Error<
   "no template named %0 in %1; did you mean %select{|simply }2%3?">;
+def err_non_template_in_template_id : Error<
+  "%0 does not name a template but is followed by template arguments">;
+def err_non_template_in_template_id_suggest : Error<
+  "%0 does not name a template but is followed by template arguments; "
+  "did you mean %1?">;
+def err_non_template_in_member_template_id_suggest : Error<
+  "member %0 of %1 is not a template; did you mean %select{|simply }2%3?">;
+def note_non_template_in_template_id_found : Note<
+  "non-template declaration found by name lookup">;
 def err_mem_init_not_member_or_class_suggest : Error<
   "initializer %0 does not name a non-static data member or base "
   "class; did you mean the %select{base class|member}1 %2?">;

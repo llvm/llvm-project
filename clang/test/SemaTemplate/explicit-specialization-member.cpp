@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s -fcxx-exceptions
 template<typename T>
 struct X0 {
   typedef T* type;
@@ -56,4 +56,13 @@ template<typename T> struct Helper {
 
 template<typename T> void Helper<T>::func<2>() {} // expected-error {{cannot specialize a member}} \
                                                   // expected-error {{no function template matches}}
+}
+
+namespace SpecLoc {
+  template <typename T> struct A {
+    static int n; // expected-note {{previous}}
+    static void f(); // expected-note {{previous}}
+  };
+  template<> float A<int>::n; // expected-error {{different type}}
+  template<> void A<int>::f() throw(); // expected-error {{does not match}}
 }

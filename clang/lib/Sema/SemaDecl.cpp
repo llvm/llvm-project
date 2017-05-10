@@ -1488,6 +1488,11 @@ bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
       return false;
+    // A non-out-of-line declaration of a member specialization was implicitly
+    // instantiated; it's the out-of-line declaration that we're interested in.
+    if (FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization &&
+        FD->getMemberSpecializationInfo() && !FD->isOutOfLine())
+      return false;
 
     if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
       if (MD->isVirtual() || IsDisallowedCopyOrAssign(MD))
@@ -1513,6 +1518,10 @@ bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
 
     if (VD->isStaticDataMember() &&
         VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return false;
+    if (VD->isStaticDataMember() &&
+        VD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization &&
+        VD->getMemberSpecializationInfo() && !VD->isOutOfLine())
       return false;
 
     if (VD->isInline() && !isMainFileLoc(*this, VD->getLocation()))
@@ -6712,6 +6721,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     return NewTemplate;
   }
 
+  if (IsMemberSpecialization && !NewVD->isInvalidDecl())
+    CompleteMemberSpecialization(NewVD, Previous);
+
   return NewVD;
 }
 
@@ -8925,12 +8937,17 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
   }
 
+  MarkUnusedFileScopedDecl(NewFD);
+
   if (getLangOpts().CPlusPlus) {
     if (FunctionTemplate) {
       if (NewFD->isInvalidDecl())
         FunctionTemplate->setInvalidDecl();
       return FunctionTemplate;
     }
+
+    if (isMemberSpecialization && !NewFD->isInvalidDecl())
+      CompleteMemberSpecialization(NewFD, Previous);
   }
 
   if (NewFD->hasAttr<OpenCLKernelAttr>()) {
@@ -8969,8 +8986,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       }
     }
   }
-
-  MarkUnusedFileScopedDecl(NewFD);
 
   // Here we have an function template explicit specialization at class scope.
   // The actually specialization will be postponed to template instatiation
@@ -9188,7 +9203,9 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
         if (OldTemplateDecl->getTemplatedDecl()->isDeleted()) {
           FunctionDecl *const OldTemplatedDecl =
               OldTemplateDecl->getTemplatedDecl();
+          // FIXME: This assert will not hold in the presence of modules.
           assert(OldTemplatedDecl->getCanonicalDecl() == OldTemplatedDecl);
+          // FIXME: We need an update record for this AST mutation.
           OldTemplatedDecl->setDeletedAsWritten(false);
         }
       }
@@ -11029,8 +11046,7 @@ static bool hasDependentAlignment(VarDecl *VD) {
 
 /// FinalizeDeclaration - called by ParseDeclarationAfterDeclarator to perform
 /// any semantic actions necessary after any initializer has been attached.
-void
-Sema::FinalizeDeclaration(Decl *ThisDecl) {
+void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   // Note that we are no longer parsing the initializer for this declaration.
   ParsingInitForAutoVars.erase(ThisDecl);
 
@@ -11195,9 +11211,8 @@ Sema::FinalizeDeclaration(Decl *ThisDecl) {
   if (DC->getRedeclContext()->isFileContext() && VD->isExternallyVisible())
     AddPushedVisibilityAttribute(VD);
 
-  // FIXME: Warn on unused templates.
-  if (VD->isFileVarDecl() && !VD->getDescribedVarTemplate() &&
-      !isa<VarTemplatePartialSpecializationDecl>(VD))
+  // FIXME: Warn on unused var template partial specializations.
+  if (VD->isFileVarDecl() && !isa<VarTemplatePartialSpecializationDecl>(VD))
     MarkUnusedFileScopedDecl(VD);
 
   // Now we have parsed the initializer and can update the table of magic
@@ -13768,6 +13783,9 @@ CreateNewDecl:
   // If there's a #pragma GCC visibility in scope, set the visibility of this
   // record.
   AddPushedVisibilityAttribute(New);
+
+  if (isMemberSpecialization && !New->isInvalidDecl())
+    CompleteMemberSpecialization(New, Previous);
 
   OwnedDecl = true;
   // In C++, don't return an invalid declaration. We can't recover well from

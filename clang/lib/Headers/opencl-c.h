@@ -14962,6 +14962,7 @@ float __purefn __ovld read_imagef(read_only image2d_array_msaa_depth_t image, in
 #endif //cl_khr_gl_msaa_sharing
 
 // OpenCL Extension v2.0 s9.18 - Mipmaps
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 #ifdef cl_khr_mipmap_image
 
 float4 __purefn __ovld read_imagef(read_only image1d_t image, sampler_t sampler, float coord, float lod);
@@ -15037,6 +15038,7 @@ int4 __purefn __ovld read_imagei(read_only image3d_t image, sampler_t sampler, f
 uint4 __purefn __ovld read_imageui(read_only image3d_t image, sampler_t sampler, float4 coord, float lod);
 
 #endif //cl_khr_mipmap_image
+#endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
 /**
 * Sampler-less Image Access
@@ -15135,6 +15137,7 @@ float __purefn __ovld read_imagef(read_write image2d_msaa_depth_t image, int2 co
 float __purefn __ovld read_imagef(read_write image2d_array_msaa_depth_t image, int4 coord, int sample);
 #endif //cl_khr_gl_msaa_sharing
 
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 #ifdef cl_khr_mipmap_image
 float4 __purefn __ovld read_imagef(read_write image1d_t image, sampler_t sampler, float coord, float lod);
 int4 __purefn __ovld read_imagei(read_write image1d_t image, sampler_t sampler, float coord, float lod);
@@ -15208,6 +15211,7 @@ float4 __purefn __ovld read_imagef(read_write image3d_t image, sampler_t sampler
 int4 __purefn __ovld read_imagei(read_write image3d_t image, sampler_t sampler, float4 coord, float lod);
 uint4 __purefn __ovld read_imageui(read_write image3d_t image, sampler_t sampler, float4 coord, float lod);
 #endif //cl_khr_mipmap_image
+#endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
 // Image read functions returning half4 type
 #ifdef cl_khr_fp16
@@ -15319,6 +15323,7 @@ void __ovld write_imagef(write_only image2d_array_depth_t image, int4 coord, flo
 #endif //cl_khr_depth_images
 
 // OpenCL Extension v2.0 s9.18 - Mipmaps
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 #ifdef cl_khr_mipmap_image
 void __ovld write_imagef(write_only image1d_t image, int coord, int lod, float4 color);
 void __ovld write_imagei(write_only image1d_t image, int coord, int lod, int4 color);
@@ -15345,6 +15350,7 @@ void __ovld write_imagei(write_only image3d_t image, int4 coord, int lod, int4 c
 void __ovld write_imageui(write_only image3d_t image, int4 coord, int lod, uint4 color);
 #endif
 #endif //cl_khr_mipmap_image
+#endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
 // Image write functions for half4 type
 #ifdef cl_khr_fp16
@@ -15391,6 +15397,7 @@ void __ovld write_imagef(read_write image2d_depth_t image, int2 coord, float col
 void __ovld write_imagef(read_write image2d_array_depth_t image, int4 coord, float color);
 #endif //cl_khr_depth_images
 
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 #ifdef cl_khr_mipmap_image
 void __ovld write_imagef(read_write image1d_t image, int coord, int lod, float4 color);
 void __ovld write_imagei(read_write image1d_t image, int coord, int lod, int4 color);
@@ -15417,6 +15424,7 @@ void __ovld write_imagei(read_write image3d_t image, int4 coord, int lod, int4 c
 void __ovld write_imageui(read_write image3d_t image, int4 coord, int lod, uint4 color);
 #endif
 #endif //cl_khr_mipmap_image
+#endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
 // Image write functions for half4 type
 #ifdef cl_khr_fp16
@@ -15559,6 +15567,7 @@ int __ovld __cnfn get_image_depth(read_write image3d_t image);
 #endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
 // OpenCL Extension v2.0 s9.18 - Mipmaps
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 #ifdef cl_khr_mipmap_image
 /**
  * Return the image miplevels.
@@ -15574,11 +15583,9 @@ int __ovld get_image_num_mip_levels(write_only image2d_t image);
 int __ovld get_image_num_mip_levels(write_only image3d_t image);
 #endif
 
-#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 int __ovld get_image_num_mip_levels(read_write image1d_t image);
 int __ovld get_image_num_mip_levels(read_write image2d_t image);
 int __ovld get_image_num_mip_levels(read_write image3d_t image);
-#endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
 int __ovld get_image_num_mip_levels(read_only image1d_array_t image);
 int __ovld get_image_num_mip_levels(read_only image2d_array_t image);
@@ -15590,14 +15597,13 @@ int __ovld get_image_num_mip_levels(write_only image2d_array_t image);
 int __ovld get_image_num_mip_levels(write_only image2d_array_depth_t image);
 int __ovld get_image_num_mip_levels(write_only image2d_depth_t image);
 
-#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 int __ovld get_image_num_mip_levels(read_write image1d_array_t image);
 int __ovld get_image_num_mip_levels(read_write image2d_array_t image);
 int __ovld get_image_num_mip_levels(read_write image2d_array_depth_t image);
 int __ovld get_image_num_mip_levels(read_write image2d_depth_t image);
-#endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
 #endif //cl_khr_mipmap_image
+#endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
 /**
  * Return the channel data type. Valid values are:

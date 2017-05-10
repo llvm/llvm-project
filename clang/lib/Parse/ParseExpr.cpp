@@ -235,6 +235,30 @@ bool Parser::isNotExpressionStart() {
   return isKnownToBeDeclarationSpecifier();
 }
 
+/// We've parsed something that could plausibly be intended to be a template
+/// name (\p LHS) followed by a '<' token, and the following code can't possibly
+/// be an expression. Determine if this is likely to be a template-id and if so,
+/// diagnose it.
+bool Parser::diagnoseUnknownTemplateId(ExprResult LHS, SourceLocation Less) {
+  TentativeParsingAction TPA(*this);
+  // FIXME: We could look at the token sequence in a lot more detail here.
+  if (SkipUntil(tok::greater, tok::greatergreater, tok::greatergreatergreater,
+                StopAtSemi | StopBeforeMatch)) {
+    TPA.Commit();
+
+    SourceLocation Greater;
+    ParseGreaterThanInTemplateList(Greater, true, false);
+    Actions.diagnoseExprIntendedAsTemplateName(getCurScope(), LHS,
+                                               Less, Greater);
+    return true;
+  }
+
+  // There's no matching '>' token, this probably isn't supposed to be
+  // interpreted as a template-id. Parse it as an (ill-formed) comparison.
+  TPA.Revert();
+  return false;
+}
+
 static bool isFoldOperator(prec::Level Level) {
   return Level > prec::Unknown && Level != prec::Conditional;
 }
@@ -275,6 +299,16 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
       Tok = OpToken;
       return LHS;
     }
+
+    // If a '<' token is followed by a type that can be a template argument and
+    // cannot be an expression, then this is ill-formed, but might be intended
+    // to be a template-id.
+    if (OpToken.is(tok::less) && Actions.mightBeIntendedToBeTemplateName(LHS) &&
+        (isKnownToBeDeclarationSpecifier() ||
+         Tok.isOneOf(tok::greater, tok::greatergreater,
+                     tok::greatergreatergreater)) &&
+        diagnoseUnknownTemplateId(LHS, OpToken.getLocation()))
+      return ExprError();
 
     // If the next token is an ellipsis, then this is a fold-expression. Leave
     // it alone so we can handle it in the paren expression.
@@ -2989,6 +3023,11 @@ Optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
     return AvailabilitySpec(ConsumeToken());
   } else {
     // Parse the platform name.
+    if (Tok.is(tok::code_completion)) {
+      Actions.CodeCompleteAvailabilityPlatformName();
+      cutOffParsing();
+      return None;
+    }
     if (Tok.isNot(tok::identifier)) {
       Diag(Tok, diag::err_avail_query_expected_platform_name);
       return None;
@@ -3001,12 +3040,14 @@ Optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
     if (Version.empty())
       return None;
 
-    StringRef Platform = PlatformIdentifier->Ident->getName();
+    StringRef GivenPlatform = PlatformIdentifier->Ident->getName();
+    StringRef Platform =
+        AvailabilityAttr::canonicalizePlatformName(GivenPlatform);
 
     if (AvailabilityAttr::getPrettyPlatformName(Platform).empty()) {
       Diag(PlatformIdentifier->Loc,
            diag::err_avail_query_unrecognized_platform_name)
-          << Platform;
+          << GivenPlatform;
       return None;
     }
 

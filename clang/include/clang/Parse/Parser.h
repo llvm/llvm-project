@@ -1488,6 +1488,8 @@ private:
             K == tok::plusplus || K == tok::minusminus);
   }
 
+  bool diagnoseUnknownTemplateId(ExprResult TemplateName, SourceLocation Less);
+
   ExprResult ParsePostfixExpressionSuffix(ExprResult LHS);
   ExprResult ParseUnaryExprOrTypeTraitExpression();
   ExprResult ParseBuiltinPrimaryExpression();
