@@ -4054,7 +4054,7 @@ CINDEX_LINKAGE unsigned clang_Cursor_isVariadic(CXCursor C);
  * the 'definedIn' string from the attribute.
  *
  * \param isGenerated If non-NULL, and the attribute is present, will be set to
- * non-zero is the 'generated_declaration' is set in the attribute.
+ * non-zero if the 'generated_declaration' is set in the attribute.
  */
 CINDEX_LINKAGE unsigned clang_Cursor_isExternalSymbol(CXCursor C,
                                        CXString *language, CXString *definedIn,
