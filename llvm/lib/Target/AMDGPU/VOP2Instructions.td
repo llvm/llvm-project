@@ -164,8 +164,11 @@ multiclass VOP2eInst <string opName,
 class VOP_MADAK <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
   field Operand ImmOpType = !if(!eq(vt.Size, 32), f32kimm, f16kimm);
   field dag Ins32 = (ins VCSrc_f32:$src0, VGPR_32:$src1, ImmOpType:$imm);
-  field string Asm32 = "$vdst, $src0, $src1, $imm";
   field bit HasExt = 0;
+
+  // Hack to stop printing _e64
+  let DstRC = RegisterOperand<VGPR_32>;
+  field string Asm32 = " $vdst, $src0, $src1, $imm";
 }
 
 def VOP_MADAK_F16 : VOP_MADAK <f16>;
@@ -174,8 +177,11 @@ def VOP_MADAK_F32 : VOP_MADAK <f32>;
 class VOP_MADMK <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
   field Operand ImmOpType = !if(!eq(vt.Size, 32), f32kimm, f16kimm);
   field dag Ins32 = (ins VCSrc_f32:$src0, ImmOpType:$imm, VGPR_32:$src1);
-  field string Asm32 = "$vdst, $src0, $imm, $src1";
   field bit HasExt = 0;
+
+  // Hack to stop printing _e64
+  let DstRC = RegisterOperand<VGPR_32>;
+  field string Asm32 = " $vdst, $src0, $imm, $src1";
 }
 
 def VOP_MADMK_F16 : VOP_MADMK <f16>;
@@ -298,7 +304,7 @@ def VOP_WRITELANE : VOPProfile<[i32, i32, i32]> {
 let SubtargetPredicate = isGCN in {
 
 defm V_CNDMASK_B32 : VOP2eInst <"v_cndmask_b32", VOP2e_I32_I32_I32_I1>;
-def V_MADMK_F32 : VOP2_Pseudo <"v_madmk_f32", VOP_MADMK_F32>;
+def V_MADMK_F32 : VOP2_Pseudo <"v_madmk_f32", VOP_MADMK_F32, [], "">;
 
 let isCommutable = 1 in {
 defm V_ADD_F32 : VOP2Inst <"v_add_f32", VOP_F32_F32_F32, fadd>;
@@ -328,7 +334,7 @@ let Constraints = "$vdst = $src2", DisableEncoding="$src2",
 defm V_MAC_F32 : VOP2Inst <"v_mac_f32", VOP_MAC_F32>;
 }
 
-def V_MADAK_F32 : VOP2_Pseudo <"v_madak_f32", VOP_MADAK_F32>;
+def V_MADAK_F32 : VOP2_Pseudo <"v_madak_f32", VOP_MADAK_F32, [], "">;
 
 // No patterns so that the scalar instructions are always selected.
 // The scalar versions will be replaced with vector when needed later.
@@ -383,7 +389,7 @@ defm V_LSHL_B32 : VOP2Inst <"v_lshl_b32", VOP_I32_I32_I32>;
 
 let SubtargetPredicate = isVI in {
 
-def V_MADMK_F16 : VOP2_Pseudo <"v_madmk_f16", VOP_MADMK_F16>;
+def V_MADMK_F16 : VOP2_Pseudo <"v_madmk_f16", VOP_MADMK_F16, [], "">;
 defm V_LSHLREV_B16 : VOP2Inst <"v_lshlrev_b16", VOP_I16_I16_I16>;
 defm V_LSHRREV_B16 : VOP2Inst <"v_lshrrev_b16", VOP_I16_I16_I16>;
 defm V_ASHRREV_I16 : VOP2Inst <"v_ashrrev_i16", VOP_I16_I16_I16>;
@@ -394,7 +400,7 @@ defm V_ADD_F16 : VOP2Inst <"v_add_f16", VOP_F16_F16_F16, fadd>;
 defm V_SUB_F16 : VOP2Inst <"v_sub_f16", VOP_F16_F16_F16, fsub>;
 defm V_SUBREV_F16 : VOP2Inst <"v_subrev_f16", VOP_F16_F16_F16, null_frag, "v_sub_f16">;
 defm V_MUL_F16 : VOP2Inst <"v_mul_f16", VOP_F16_F16_F16, fmul>;
-def V_MADAK_F16 : VOP2_Pseudo <"v_madak_f16", VOP_MADAK_F16>;
+def V_MADAK_F16 : VOP2_Pseudo <"v_madak_f16", VOP_MADAK_F16, [], "">;
 defm V_ADD_U16 : VOP2Inst <"v_add_u16", VOP_I16_I16_I16>;
 defm V_SUB_U16 : VOP2Inst <"v_sub_u16" , VOP_I16_I16_I16>;
 defm V_SUBREV_U16 : VOP2Inst <"v_subrev_u16", VOP_I16_I16_I16, null_frag, "v_sub_u16">;

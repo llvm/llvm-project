@@ -487,6 +487,9 @@ void TargetPassConfig::addIRPasses() {
 
   // Insert calls to mcount-like functions.
   addPass(createCountingFunctionInserterPass());
+
+  // Expand reduction intrinsics into shuffle sequences if the target wants to.
+  addPass(createExpandReductionsPass());
 }
 
 /// Turn exception handling constructs into something the code generators can

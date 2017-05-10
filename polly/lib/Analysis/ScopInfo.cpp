@@ -279,6 +279,20 @@ bool ScopArrayInfo::isReadOnly() {
   return IsReadOnly;
 }
 
+bool ScopArrayInfo::isCompatibleWith(const ScopArrayInfo *Array) const {
+  if (Array->getElementType() != getElementType())
+    return false;
+
+  if (Array->getNumberOfDimensions() != getNumberOfDimensions())
+    return false;
+
+  for (unsigned i = 0; i < getNumberOfDimensions(); i++)
+    if (Array->getDimensionSize(i) != getDimensionSize(i))
+      return false;
+
+  return true;
+}
+
 void ScopArrayInfo::updateElementType(Type *NewElementType) {
   if (NewElementType == ElementType)
     return;
@@ -971,7 +985,7 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
       Sizes(Sizes.begin(), Sizes.end()), AccessInstruction(AccessInst),
       AccessValue(AccessValue), IsAffine(Affine),
       Subscripts(Subscripts.begin(), Subscripts.end()), AccessRelation(nullptr),
-      NewAccessRelation(nullptr) {
+      NewAccessRelation(nullptr), FAD(nullptr) {
   static const std::string TypeStrings[] = {"", "_Read", "_Write", "_MayWrite"};
   const std::string Access = TypeStrings[AccType] + utostr(Stmt->size());
 
@@ -983,7 +997,8 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, AccessType AccType,
                            __isl_take isl_map *AccRel)
     : Kind(MemoryKind::Array), AccType(AccType), RedType(RT_NONE),
       Statement(Stmt), InvalidDomain(nullptr), AccessInstruction(nullptr),
-      IsAffine(true), AccessRelation(nullptr), NewAccessRelation(AccRel) {
+      IsAffine(true), AccessRelation(nullptr), NewAccessRelation(AccRel),
+      FAD(nullptr) {
   auto *ArrayInfoId = isl_map_get_tuple_id(NewAccessRelation, isl_dim_out);
   auto *SAI = ScopArrayInfo::getFromId(ArrayInfoId);
   Sizes.push_back(nullptr);
@@ -1019,6 +1034,22 @@ raw_ostream &polly::operator<<(raw_ostream &OS,
   return OS;
 }
 
+void MemoryAccess::setFortranArrayDescriptor(GlobalValue *FAD) {
+  this->FAD = FAD;
+
+// TODO: write checks to make sure it looks _exactly_ like a Fortran array
+// descriptor
+#ifdef NDEBUG
+  StructType *ty = dyn_cast<StructType>(Descriptor->getValueType());
+  assert(ty && "expected value of type Fortran array descriptor");
+  assert(ty->hasName() && ty->getName().startswith("struct.array") &&
+         "expected global to follow Fortran array descriptor type naming "
+         "convention");
+  assert(ty->getNumElements() == 4 &&
+         "expected layout to be like Fortran array descriptor type");
+#endif
+}
+
 void MemoryAccess::print(raw_ostream &OS) const {
   switch (AccType) {
   case READ:
@@ -1031,7 +1062,14 @@ void MemoryAccess::print(raw_ostream &OS) const {
     OS.indent(12) << "MayWriteAccess :=\t";
     break;
   }
+
   OS << "[Reduction Type: " << getReductionType() << "] ";
+
+  if (FAD) {
+    OS << "[Fortran array descriptor: " << FAD->getName();
+    OS << "] ";
+  };
+
   OS << "[Scalar: " << isScalarKind() << "]\n";
   OS.indent(16) << getOriginalAccessRelationStr() << ";\n";
   if (hasNewAccessRelation())
@@ -3765,6 +3803,76 @@ void Scop::hoistInvariantLoads() {
   isl_union_map_free(Writes);
 }
 
+/// Find the canonical scop array info object for a set of invariant load
+/// hoisted loads. The canonical array is the one that corresponds to the
+/// first load in the list of accesses which is used as base pointer of a
+/// scop array.
+static const ScopArrayInfo *findCanonicalArray(Scop *S,
+                                               MemoryAccessList &Accesses) {
+  for (MemoryAccess *Access : Accesses) {
+    const ScopArrayInfo *CanonicalArray = S->getScopArrayInfoOrNull(
+        Access->getAccessInstruction(), MemoryKind::Array);
+    if (CanonicalArray)
+      return CanonicalArray;
+  }
+  return nullptr;
+}
+
+/// Check if @p Array severs as base array in an invariant load.
+static bool isUsedForIndirectHoistedLoad(Scop *S, const ScopArrayInfo *Array) {
+  for (InvariantEquivClassTy &EqClass2 : S->getInvariantAccesses())
+    for (MemoryAccess *Access2 : EqClass2.InvariantAccesses)
+      if (Access2->getScopArrayInfo() == Array)
+        return true;
+  return false;
+}
+
+/// Replace the base pointer arrays in all memory accesses referencing @p Old,
+/// with a reference to @p New.
+static void replaceBasePtrArrays(Scop *S, const ScopArrayInfo *Old,
+                                 const ScopArrayInfo *New) {
+  for (ScopStmt &Stmt : *S)
+    for (MemoryAccess *Access : Stmt) {
+      if (Access->getLatestScopArrayInfo() != Old)
+        continue;
+
+      isl_id *Id = New->getBasePtrId();
+      isl_map *Map = Access->getAccessRelation();
+      Map = isl_map_set_tuple_id(Map, isl_dim_out, Id);
+      Access->setAccessRelation(Map);
+    }
+}
+
+void Scop::canonicalizeDynamicBasePtrs() {
+  for (InvariantEquivClassTy &EqClass : InvariantEquivClasses) {
+    MemoryAccessList &BasePtrAccesses = EqClass.InvariantAccesses;
+
+    const ScopArrayInfo *CanonicalBasePtrSAI =
+        findCanonicalArray(this, BasePtrAccesses);
+
+    if (!CanonicalBasePtrSAI)
+      continue;
+
+    for (MemoryAccess *BasePtrAccess : BasePtrAccesses) {
+      const ScopArrayInfo *BasePtrSAI = getScopArrayInfoOrNull(
+          BasePtrAccess->getAccessInstruction(), MemoryKind::Array);
+      if (!BasePtrSAI || BasePtrSAI == CanonicalBasePtrSAI ||
+          !BasePtrSAI->isCompatibleWith(CanonicalBasePtrSAI))
+        continue;
+
+      // we currently do not canonicalize arrays where some accesses are
+      // hoisted as invariant loads. If we would, we need to update the access
+      // function of the invariant loads as well. However, as this is not a
+      // very common situation, we leave this for now to avoid further
+      // complexity increases.
+      if (isUsedForIndirectHoistedLoad(this, BasePtrSAI))
+        continue;
+
+      replaceBasePtrArrays(this, BasePtrSAI, CanonicalBasePtrSAI);
+    }
+  }
+}
+
 const ScopArrayInfo *
 Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
                                ArrayRef<const SCEV *> Sizes, MemoryKind Kind,
@@ -3806,8 +3914,14 @@ Scop::createScopArrayInfo(Type *ElementType, const std::string &BaseName,
   return SAI;
 }
 
-const ScopArrayInfo *Scop::getScopArrayInfo(Value *BasePtr, MemoryKind Kind) {
+const ScopArrayInfo *Scop::getScopArrayInfoOrNull(Value *BasePtr,
+                                                  MemoryKind Kind) {
   auto *SAI = ScopArrayInfoMap[std::make_pair(BasePtr, Kind)].get();
+  return SAI;
+}
+
+const ScopArrayInfo *Scop::getScopArrayInfo(Value *BasePtr, MemoryKind Kind) {
+  auto *SAI = getScopArrayInfoOrNull(BasePtr, Kind);
   assert(SAI && "No ScopArrayInfo available for this base pointer");
   return SAI;
 }

@@ -6,30 +6,12 @@
 define <4 x i32> @combine_vec_lshr_zero(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_lshr_zero:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    psrldq {{.*#+}} xmm2 = xmm2[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pxor %xmm3, %xmm3
-; SSE-NEXT:    psrld %xmm2, %xmm3
-; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    psrlq $32, %xmm2
-; SSE-NEXT:    pxor %xmm4, %xmm4
-; SSE-NEXT:    psrld %xmm2, %xmm4
-; SSE-NEXT:    pblendw {{.*#+}} xmm4 = xmm4[0,1,2,3],xmm3[4,5,6,7]
-; SSE-NEXT:    pmovzxdq {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; SSE-NEXT:    pxor %xmm3, %xmm3
-; SSE-NEXT:    psrld %xmm0, %xmm3
-; SSE-NEXT:    psrld %xmm2, %xmm1
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm3[4,5,6,7]
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm4[2,3],xmm1[4,5],xmm4[6,7]
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_lshr_zero:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpsrlvd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = lshr <4 x i32> zeroinitializer, %x
   ret <4 x i32> %1

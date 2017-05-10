@@ -464,6 +464,11 @@ def MVGHI : StoreSIL<"mvghi", 0xE548, store,         imm64sx16>;
 // Memory-to-memory moves.
 let mayLoad = 1, mayStore = 1 in
   defm MVC : MemorySS<"mvc", 0xD2, z_mvc, z_mvc_loop>;
+let mayLoad = 1, mayStore = 1, Defs = [CC] in {
+  def MVCL  : SideEffectBinaryMemMemRR<"mvcl", 0x0E, GR128, GR128>;
+  def MVCLE : SideEffectTernaryMemMemRS<"mvcle", 0xA8, GR128, GR128>;
+  def MVCLU : SideEffectTernaryMemMemRSY<"mvclu", 0xEB8E, GR128, GR128>;
+}
 
 // String moves.
 let mayLoad = 1, mayStore = 1, Defs = [CC] in
@@ -741,6 +746,10 @@ def LRVG : UnaryRXY<"lrvg", 0xE30F, z_lrvg, GR64, 8>;
 def STRVH : StoreRXY<"strvh", 0xE33F, z_strvh, GR32, 2>;
 def STRV  : StoreRXY<"strv",  0xE33E, z_strv,  GR32, 4>;
 def STRVG : StoreRXY<"strvg", 0xE32F, z_strvg, GR64, 8>;
+
+// Byte-swapping memory-to-memory moves.
+let mayLoad = 1, mayStore = 1 in
+  def MVCIN : SideEffectBinarySSa<"mvcin", 0xE8>;
 
 //===----------------------------------------------------------------------===//
 // Load address instructions
@@ -1351,8 +1360,12 @@ let Defs = [CC], CCValues = 0xE, IsLogical = 1 in {
 defm : ZXB<z_ucmp, GR64, CLGFR>;
 
 // Memory-to-memory comparison.
-let mayLoad = 1, Defs = [CC] in
+let mayLoad = 1, Defs = [CC] in {
   defm CLC : MemorySS<"clc", 0xD5, z_clc, z_clc_loop>;
+  def CLCL  : SideEffectBinaryMemMemRR<"clcl", 0x0F, GR128, GR128>;
+  def CLCLE : SideEffectTernaryMemMemRS<"clcle", 0xA9, GR128, GR128>;
+  def CLCLU : SideEffectTernaryMemMemRSY<"clclu", 0xEB8F, GR128, GR128>;
+}
 
 // String comparison.
 let mayLoad = 1, Defs = [CC] in
@@ -1581,6 +1594,115 @@ let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {
 }
 
 //===----------------------------------------------------------------------===//
+// Translate and convert
+//===----------------------------------------------------------------------===//
+
+let mayLoad = 1, mayStore = 1 in
+  def TR : SideEffectBinarySSa<"tr", 0xDC>;
+
+let mayLoad = 1, Defs = [CC, R0L, R1D] in {
+  def TRT  : SideEffectBinarySSa<"trt", 0xDD>;
+  def TRTR : SideEffectBinarySSa<"trtr", 0xD0>;
+}
+
+let mayLoad = 1, mayStore = 1, Uses = [R0L] in
+  def TRE : SideEffectBinaryMemMemRRE<"tre", 0xB2A5, GR128, GR64>;
+
+let mayLoad = 1, Uses = [R1D], Defs = [CC] in {
+  defm TRTE  : BinaryMemRRFcOpt<"trte",  0xB9BF, GR128, GR64>;
+  defm TRTRE : BinaryMemRRFcOpt<"trtre", 0xB9BD, GR128, GR64>;
+}
+
+let mayLoad = 1, mayStore = 1, Uses = [R0L, R1D], Defs = [CC] in {
+  defm TROO : SideEffectTernaryMemMemRRFcOpt<"troo", 0xB993, GR128, GR64>;
+  defm TROT : SideEffectTernaryMemMemRRFcOpt<"trot", 0xB992, GR128, GR64>;
+  defm TRTO : SideEffectTernaryMemMemRRFcOpt<"trto", 0xB991, GR128, GR64>;
+  defm TRTT : SideEffectTernaryMemMemRRFcOpt<"trtt", 0xB990, GR128, GR64>;
+}
+
+let mayLoad = 1, mayStore = 1, Defs = [CC] in {
+  defm CU12 : SideEffectTernaryMemMemRRFcOpt<"cu12", 0xB2A7, GR128, GR128>;
+  defm CU14 : SideEffectTernaryMemMemRRFcOpt<"cu14", 0xB9B0, GR128, GR128>;
+  defm CU21 : SideEffectTernaryMemMemRRFcOpt<"cu21", 0xB2A6, GR128, GR128>;
+  defm CU24 : SideEffectTernaryMemMemRRFcOpt<"cu24", 0xB9B1, GR128, GR128>;
+  def  CU41 : SideEffectBinaryMemMemRRE<"cu41", 0xB9B2, GR128, GR128>;
+  def  CU42 : SideEffectBinaryMemMemRRE<"cu42", 0xB9B3, GR128, GR128>;
+
+  let isAsmParserOnly = 1 in {
+    defm CUUTF : SideEffectTernaryMemMemRRFcOpt<"cuutf", 0xB2A6, GR128, GR128>;
+    defm CUTFU : SideEffectTernaryMemMemRRFcOpt<"cutfu", 0xB2A7, GR128, GR128>;
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Message-security assist
+//===----------------------------------------------------------------------===//
+
+let mayLoad = 1, mayStore = 1, Uses = [R0L, R1D], Defs = [CC] in {
+  def KM  : SideEffectBinaryMemMemRRE<"km",  0xB92E, GR128, GR128>;
+  def KMC : SideEffectBinaryMemMemRRE<"kmc", 0xB92F, GR128, GR128>;
+
+  def KIMD : SideEffectBinaryMemRRE<"kimd", 0xB93E, GR64, GR128>;
+  def KLMD : SideEffectBinaryMemRRE<"klmd", 0xB93F, GR64, GR128>;
+  def KMAC : SideEffectBinaryMemRRE<"kmac", 0xB91E, GR64, GR128>;
+
+  let Predicates = [FeatureMessageSecurityAssist4] in {
+    def KMF   : SideEffectBinaryMemMemRRE<"kmf", 0xB92A, GR128, GR128>;
+    def KMO   : SideEffectBinaryMemMemRRE<"kmo", 0xB92B, GR128, GR128>;
+    def KMCTR : SideEffectTernaryMemMemMemRRFb<"kmctr", 0xB92D,
+                                               GR128, GR128, GR128>;
+    def PCC   : SideEffectInherentRRE<"pcc", 0xB92C>;
+  }
+  let Predicates = [FeatureMessageSecurityAssist5] in
+    def PPNO  : SideEffectBinaryMemMemRRE<"ppno", 0xB93C, GR128, GR128>;
+}
+
+//===----------------------------------------------------------------------===//
+// Decimal arithmetic
+//===----------------------------------------------------------------------===//
+
+defm CVB  : BinaryRXPair<"cvb",0x4F, 0xE306, null_frag, GR32, load, 4>;
+def  CVBG : BinaryRXY<"cvbg", 0xE30E, null_frag, GR64, load, 8>;
+
+defm CVD  : StoreRXPair<"cvd", 0x4E, 0xE326, null_frag, GR32, 4>;
+def  CVDG : StoreRXY<"cvdg", 0xE32E, null_frag, GR64, 8>;
+
+let mayLoad = 1, mayStore = 1 in {
+  def MVN : SideEffectBinarySSa<"mvn", 0xD1>;
+  def MVZ : SideEffectBinarySSa<"mvz", 0xD3>;
+  def MVO : SideEffectBinarySSb<"mvo", 0xF1>;
+
+  def PACK : SideEffectBinarySSb<"pack", 0xF2>;
+  def PKA  : SideEffectBinarySSf<"pka", 0xE9>;
+  def PKU  : SideEffectBinarySSf<"pku", 0xE1>;
+  def UNPK : SideEffectBinarySSb<"unpk", 0xF3>;
+  let Defs = [CC] in {
+    def UNPKA : SideEffectBinarySSa<"unpka", 0xEA>;
+    def UNPKU : SideEffectBinarySSa<"unpku", 0xE2>;
+  }
+}
+
+let mayLoad = 1, mayStore = 1 in {
+  let Defs = [CC] in {
+    def AP : SideEffectBinarySSb<"ap", 0xFA>;
+    def SP : SideEffectBinarySSb<"sp", 0xFB>;
+    def ZAP : SideEffectBinarySSb<"zap", 0xF8>;
+    def SRP : SideEffectTernarySSc<"srp", 0xF0>;
+  }
+  def MP : SideEffectBinarySSb<"mp", 0xFC>;
+  def DP : SideEffectBinarySSb<"dp", 0xFD>;
+  let Defs = [CC] in {
+    def ED : SideEffectBinarySSa<"ed", 0xDE>;
+    def EDMK : SideEffectBinarySSa<"edmk", 0xDF>;
+  }
+}
+
+let Defs = [CC] in {
+  def CP : CompareSSb<"cp", 0xF9>;
+  def TP : TestRSL<"tp", 0xEBC0>;
+}
+
+//===----------------------------------------------------------------------===//
 // Access registers
 //===----------------------------------------------------------------------===//
 
@@ -1712,7 +1834,13 @@ let usesCustomInserter = 1 in {
 
 // Search a block of memory for a character.
 let mayLoad = 1, Defs = [CC] in
-  defm SRST : StringRRE<"srst", 0xb25e, z_search_string>;
+  defm SRST : StringRRE<"srst", 0xB25E, z_search_string>;
+let mayLoad = 1, Defs = [CC], Uses = [R0L] in
+  def SRSTU : SideEffectBinaryMemMemRRE<"srstu", 0xB9BE, GR64, GR64>;
+
+// Compare until substring equal.
+let mayLoad = 1, Defs = [CC], Uses = [R0L, R1L] in
+  def CUSE : SideEffectBinaryMemMemRRE<"cuse", 0xB257, GR128, GR128>;
 
 // Supervisor call.
 let hasSideEffects = 1, isCall = 1, Defs = [CC] in

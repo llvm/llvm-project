@@ -2,7 +2,8 @@
 // RUN: %run %t.nossp 2>&1 | FileCheck --check-prefix=NOSSP %s
 
 // RUN: %clang_safestack -fstack-protector-all -D_FORTIFY_SOURCE=0 -g %s -o %t.ssp
-// RUN: not --crash %run %t.ssp 2>&1 | FileCheck -check-prefix=SSP %s
+// RUN: env LIBC_FATAL_STDERR_=1 not --crash %run %t.ssp 2>&1 | \
+// RUN:     FileCheck -check-prefix=SSP %s
 
 // Test stack canaries on the unsafe stack.
 

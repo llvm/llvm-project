@@ -178,6 +178,14 @@
 	clgtnl	%r0, 0(%r15)
 	clgtnh	%r0, 0(%r15)
 
+#CHECK: etnd	%r0                     # encoding: [0xb2,0xec,0x00,0x00]
+#CHECK: etnd	%r15                    # encoding: [0xb2,0xec,0x00,0xf0]
+#CHECK: etnd	%r7                     # encoding: [0xb2,0xec,0x00,0x70]
+
+	etnd	%r0
+	etnd	%r15
+	etnd	%r7
+
 #CHECK: lat	%r0, -524288            # encoding: [0xe3,0x00,0x00,0x00,0x80,0x9f]
 #CHECK: lat	%r0, -1                 # encoding: [0xe3,0x00,0x0f,0xff,0xff,0x9f]
 #CHECK: lat	%r0, 0                  # encoding: [0xe3,0x00,0x00,0x00,0x00,0x9f]
@@ -287,14 +295,6 @@
 	llgtat	%r0, 524287(%r1,%r15)
 	llgtat	%r0, 524287(%r15,%r1)
 	llgtat	%r15, 0
-
-#CHECK: etnd	%r0                     # encoding: [0xb2,0xec,0x00,0x00]
-#CHECK: etnd	%r15                    # encoding: [0xb2,0xec,0x00,0xf0]
-#CHECK: etnd	%r7                     # encoding: [0xb2,0xec,0x00,0x70]
-
-	etnd	%r0
-	etnd	%r15
-	etnd	%r7
 
 #CHECK: niai	0, 0                    # encoding: [0xb2,0xfa,0x00,0x00]
 #CHECK: niai	15, 0                   # encoding: [0xb2,0xfa,0x00,0xf0]

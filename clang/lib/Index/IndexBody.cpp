@@ -150,6 +150,50 @@ public:
                                     Parent, ParentDC, Roles, Relations, E);
   }
 
+  bool indexDependentReference(
+      const Expr *E, const Type *T, const DeclarationNameInfo &NameInfo,
+      llvm::function_ref<bool(const NamedDecl *ND)> Filter) {
+    if (!T)
+      return true;
+    const TemplateSpecializationType *TST =
+        T->getAs<TemplateSpecializationType>();
+    if (!TST)
+      return true;
+    TemplateName TN = TST->getTemplateName();
+    const ClassTemplateDecl *TD =
+        dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl());
+    if (!TD)
+      return true;
+    CXXRecordDecl *RD = TD->getTemplatedDecl();
+    std::vector<const NamedDecl *> Symbols =
+        RD->lookupDependentName(NameInfo.getName(), Filter);
+    // FIXME: Improve overload handling.
+    if (Symbols.size() != 1)
+      return true;
+    SourceLocation Loc = NameInfo.getLoc();
+    if (Loc.isInvalid())
+      Loc = E->getLocStart();
+    SmallVector<SymbolRelation, 4> Relations;
+    SymbolRoleSet Roles = getRolesForRef(E, Relations);
+    return IndexCtx.handleReference(Symbols[0], Loc, Parent, ParentDC, Roles,
+                                    Relations, E);
+  }
+
+  bool VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) {
+    const DeclarationNameInfo &Info = E->getMemberNameInfo();
+    return indexDependentReference(
+        E, E->getBaseType().getTypePtrOrNull(), Info,
+        [](const NamedDecl *D) { return D->isCXXInstanceMember(); });
+  }
+
+  bool VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) {
+    const DeclarationNameInfo &Info = E->getNameInfo();
+    const NestedNameSpecifier *NNS = E->getQualifier();
+    return indexDependentReference(
+        E, NNS->getAsType(), Info,
+        [](const NamedDecl *D) { return !D->isCXXInstanceMember(); });
+  }
+
   bool VisitDesignatedInitExpr(DesignatedInitExpr *E) {
     for (DesignatedInitExpr::Designator &D : llvm::reverse(E->designators())) {
       if (D.isFieldDesignator() && D.getField())

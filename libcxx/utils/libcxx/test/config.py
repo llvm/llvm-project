@@ -1006,18 +1006,8 @@ class Configuration(object):
         sub.append(('%link', link_str))
         sub.append(('%build', build_str))
         # Configure exec prefix substitutions.
-        exec_env_str = ''
-        if not self.is_windows and len(self.exec_env) != 0:
-            exec_env_str = 'env '
-            for k, v in self.exec_env.items():
-                exec_env_str += ' %s=%s' % (k, v)
         # Configure run env substitution.
-        exec_str = exec_env_str
-        if self.lit_config.useValgrind:
-            exec_str = ' '.join(self.lit_config.valgrindArgs) + exec_env_str
-        sub.append(('%exec', exec_str))
-        # Configure run shortcut
-        sub.append(('%run', exec_str + ' %t.exe'))
+        sub.append(('%run', '%t.exe'))
         # Configure not program substitutions
         not_py = os.path.join(self.libcxx_src_root, 'utils', 'not.py')
         not_str = '%s %s ' % (pipes.quote(sys.executable), pipes.quote(not_py))

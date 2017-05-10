@@ -137,6 +137,10 @@ public:
   unsigned getMinPrefetchStride();
 
   unsigned getMaxPrefetchIterationsAhead();
+
+  bool shouldExpandReduction(const IntrinsicInst *II) const {
+    return false;
+  }
   /// @}
 };
 

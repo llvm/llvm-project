@@ -4,7 +4,7 @@
 ; GCN-LABEL: {{^}}madak_f16
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; GCN: buffer_load_ushort v[[B_F16:[0-9]+]]
-; VI:  v_madak_f16_e32 v[[R_F16:[0-9]+]], v[[A_F16]], v[[B_F16]], 0x4900{{$}}
+; VI:  v_madak_f16 v[[R_F16:[0-9]+]], v[[A_F16]], v[[B_F16]], 0x4900{{$}}
 ; VI:  buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @madak_f16(

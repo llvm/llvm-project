@@ -1,6 +1,12 @@
 # RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
 
 --- |
+  define i64 @test_zext_i1(i8 %a) {
+    %val = trunc i8 %a to i1
+    %r = zext i1 %val to i64
+    ret i64 %r
+  }
+
   define i64 @test_sext_i8(i8 %val) {
     %r = sext i8 %val to i64
     ret i64 %r
@@ -10,6 +16,38 @@
     %r = sext i16 %val to i64
     ret i64 %r
   }
+
+...
+---
+name:            test_zext_i1
+# ALL-LABEL: name:  test_zext_i1
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr8 }
+# ALL-NEXT:   - { id: 1, class: gr8 }
+# ALL-NEXT:   - { id: 2, class: gr64 }
+# ALL-NEXT:   - { id: 3, class: gr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:          %0 = COPY %dil
+# ALL-NEXT:     %1 = COPY %0
+# ALL-NEXT:     %3 = SUBREG_TO_REG 0, %1, 1
+# ALL-NEXT:     %2 = AND64ri8 %3, 1, implicit-def %eflags
+# ALL-NEXT:     %rax = COPY %2
+# ALL-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s8) = COPY %edi
+    %1(s1) = G_TRUNC %0(s8)
+    %2(s64) = G_ZEXT %1(s1)
+    %rax = COPY %2(s64)
+    RET 0, implicit %rax
 
 ...
 ---

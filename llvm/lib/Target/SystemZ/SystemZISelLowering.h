@@ -590,6 +590,8 @@ private:
   MachineBasicBlock *emitLoadAndTestCmp0(MachineInstr &MI,
                                          MachineBasicBlock *MBB,
                                          unsigned Opcode) const;
+
+  const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 };
 } // end namespace llvm
 
