@@ -4044,6 +4044,23 @@ CINDEX_LINKAGE unsigned clang_Cursor_isObjCOptional(CXCursor C);
 CINDEX_LINKAGE unsigned clang_Cursor_isVariadic(CXCursor C);
 
 /**
+ * \brief Returns non-zero if the given cursor points to a symbol marked with
+ * external_source_symbol attribute.
+ *
+ * \param language If non-NULL, and the attribute is present, will be set to
+ * the 'language' string from the attribute.
+ *
+ * \param definedIn If non-NULL, and the attribute is present, will be set to
+ * the 'definedIn' string from the attribute.
+ *
+ * \param isGenerated If non-NULL, and the attribute is present, will be set to
+ * non-zero if the 'generated_declaration' is set in the attribute.
+ */
+CINDEX_LINKAGE unsigned clang_Cursor_isExternalSymbol(CXCursor C,
+                                       CXString *language, CXString *definedIn,
+                                       unsigned *isGenerated);
+
+/**
  * \brief Given a cursor that represents a declaration, return the associated
  * comment's source range.  The range may include multiple consecutive comments
  * with whitespace in between.
