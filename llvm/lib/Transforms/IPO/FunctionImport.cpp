@@ -610,8 +610,7 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
       return true;
 
     // Lookup the linkage recorded in the summaries during global analysis.
-    const auto &GS = DefinedGlobals.find(GV.getGUID());
-    GlobalValue::LinkageTypes Linkage;
+    auto GS = DefinedGlobals.find(GV.getGUID());
     if (GS == DefinedGlobals.end()) {
       // Must have been promoted (possibly conservatively). Find original
       // name so that we can access the correct summary and see if it can
@@ -623,7 +622,7 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
       std::string OrigId = GlobalValue::getGlobalIdentifier(
           OrigName, GlobalValue::InternalLinkage,
           TheModule.getSourceFileName());
-      const auto &GS = DefinedGlobals.find(GlobalValue::getGUID(OrigId));
+      GS = DefinedGlobals.find(GlobalValue::getGUID(OrigId));
       if (GS == DefinedGlobals.end()) {
         // Also check the original non-promoted non-globalized name. In some
         // cases a preempted weak value is linked in as a local copy because
@@ -631,15 +630,11 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
         // In that case, since it was originally not a local value, it was
         // recorded in the index using the original name.
         // FIXME: This may not be needed once PR27866 is fixed.
-        const auto &GS = DefinedGlobals.find(GlobalValue::getGUID(OrigName));
+        GS = DefinedGlobals.find(GlobalValue::getGUID(OrigName));
         assert(GS != DefinedGlobals.end());
-        Linkage = GS->second->linkage();
-      } else {
-        Linkage = GS->second->linkage();
       }
-    } else
-      Linkage = GS->second->linkage();
-    return !GlobalValue::isLocalLinkage(Linkage);
+    }
+    return !GlobalValue::isLocalLinkage(GS->second->linkage());
   };
 
   // FIXME: See if we can just internalize directly here via linkage changes

@@ -390,13 +390,14 @@ int main(int argc, char **argv) {
   initializeRewriteSymbolsLegacyPassPass(Registry);
   initializeWinEHPreparePass(Registry);
   initializeDwarfEHPreparePass(Registry);
-  initializeSafeStackPass(Registry);
+  initializeSafeStackLegacyPassPass(Registry);
   initializeSjLjEHPreparePass(Registry);
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
   initializeGlobalMergePass(Registry);
   initializeInterleavedAccessPass(Registry);
   initializeCountingFunctionInserterPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
+  initializeExpandReductionsPass(Registry);
 
 #ifdef LINK_POLLY_INTO_TOOLS
   polly::initializePollyPasses(Registry);

@@ -118,9 +118,8 @@ public:
     MemMgr->registerEHFrames(Addr, LoadAddr, Size);
   }
 
-  void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr,
-                          size_t Size) override {
-    MemMgr->deregisterEHFrames(Addr, LoadAddr, Size);
+  void deregisterEHFrames() override {
+    MemMgr->deregisterEHFrames();
   }
 
   bool finalizeMemory(std::string *ErrMsg = nullptr) override {

@@ -1133,7 +1133,7 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
   if (NumBytes < 16)
     NumBytes = 16;
 
-  emitInst(Mips::ADJCALLSTACKDOWN).addImm(16);
+  emitInst(Mips::ADJCALLSTACKDOWN).addImm(16).addImm(0);
   // Process the args.
   MVT firstMVT;
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {

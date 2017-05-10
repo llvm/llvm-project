@@ -1602,8 +1602,6 @@ ErrorOr<ArrayRef<UTF16>> ResourceSectionRef::getDirStringAtOffset(uint32_t Offse
   uint16_t Length;
   RETURN_IF_ERROR(Reader.readInteger(Length));
   ArrayRef<UTF16> RawDirString;
-  // Strings are stored as 2-byte aligned unicode characters but readFixedString
-  // assumes byte string, so we double length.
   RETURN_IF_ERROR(Reader.readArray(RawDirString, Length));
   return RawDirString;
 }

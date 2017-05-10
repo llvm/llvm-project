@@ -93,8 +93,8 @@ bool SjLjEHPrepare::doInitialization(Module &M) {
                                       doubleUnderDataTy, // __data
                                       VoidPtrTy,         // __personality
                                       VoidPtrTy,         // __lsda
-                                      doubleUnderJBufTy, // __jbuf
-                                      nullptr);
+                                      doubleUnderJBufTy  // __jbuf
+                                      );
 
   return true;
 }

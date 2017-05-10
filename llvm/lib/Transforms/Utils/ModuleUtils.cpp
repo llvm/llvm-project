@@ -35,7 +35,7 @@ static void appendToGlobalArray(const char *Array, Module &M, Function *F,
     // Upgrade a 2-field global array type to the new 3-field format if needed.
     if (Data && OldEltTy->getNumElements() < 3)
       EltTy = StructType::get(IRB.getInt32Ty(), PointerType::getUnqual(FnTy),
-                              IRB.getInt8PtrTy(), nullptr);
+                              IRB.getInt8PtrTy());
     else
       EltTy = OldEltTy;
     if (Constant *Init = GVCtor->getInitializer()) {
@@ -44,10 +44,10 @@ static void appendToGlobalArray(const char *Array, Module &M, Function *F,
       for (unsigned i = 0; i != n; ++i) {
         auto Ctor = cast<Constant>(Init->getOperand(i));
         if (EltTy != OldEltTy)
-          Ctor = ConstantStruct::get(
-              EltTy, Ctor->getAggregateElement((unsigned)0),
-              Ctor->getAggregateElement(1),
-              Constant::getNullValue(IRB.getInt8PtrTy()), nullptr);
+          Ctor =
+              ConstantStruct::get(EltTy, Ctor->getAggregateElement((unsigned)0),
+                                  Ctor->getAggregateElement(1),
+                                  Constant::getNullValue(IRB.getInt8PtrTy()));
         CurrentCtors.push_back(Ctor);
       }
     }
@@ -55,7 +55,7 @@ static void appendToGlobalArray(const char *Array, Module &M, Function *F,
   } else {
     // Use the new three-field struct if there isn't one already.
     EltTy = StructType::get(IRB.getInt32Ty(), PointerType::getUnqual(FnTy),
-                            IRB.getInt8PtrTy(), nullptr);
+                            IRB.getInt8PtrTy());
   }
 
   // Build a 2 or 3 field global_ctor entry.  We don't take a comdat key.

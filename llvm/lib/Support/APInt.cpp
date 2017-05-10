@@ -1578,11 +1578,9 @@ APInt APInt::udiv(const APInt& RHS) const {
   }
 
   // Get some facts about the LHS and RHS number of bits and words
-  unsigned rhsBits = RHS.getActiveBits();
-  unsigned rhsWords = !rhsBits ? 0 : (APInt::whichWord(rhsBits - 1) + 1);
+  unsigned rhsWords = getNumWords(RHS.getActiveBits());
   assert(rhsWords && "Divided by zero???");
-  unsigned lhsBits = this->getActiveBits();
-  unsigned lhsWords = !lhsBits ? 0 : (APInt::whichWord(lhsBits - 1) + 1);
+  unsigned lhsWords = getNumWords(getActiveBits());
 
   // Deal with some degenerate cases
   if (!lhsWords)
@@ -1623,12 +1621,10 @@ APInt APInt::urem(const APInt& RHS) const {
   }
 
   // Get some facts about the LHS
-  unsigned lhsBits = getActiveBits();
-  unsigned lhsWords = !lhsBits ? 0 : (whichWord(lhsBits - 1) + 1);
+  unsigned lhsWords = getNumWords(getActiveBits());
 
   // Get some facts about the RHS
-  unsigned rhsBits = RHS.getActiveBits();
-  unsigned rhsWords = !rhsBits ? 0 : (APInt::whichWord(rhsBits - 1) + 1);
+  unsigned rhsWords = getNumWords(RHS.getActiveBits());
   assert(rhsWords && "Performing remainder operation by zero ???");
 
   // Check the degenerate cases
@@ -1677,10 +1673,8 @@ void APInt::udivrem(const APInt &LHS, const APInt &RHS,
   }
 
   // Get some size facts about the dividend and divisor
-  unsigned lhsBits  = LHS.getActiveBits();
-  unsigned lhsWords = !lhsBits ? 0 : (APInt::whichWord(lhsBits - 1) + 1);
-  unsigned rhsBits  = RHS.getActiveBits();
-  unsigned rhsWords = !rhsBits ? 0 : (APInt::whichWord(rhsBits - 1) + 1);
+  unsigned lhsWords = getNumWords(LHS.getActiveBits());
+  unsigned rhsWords = getNumWords(RHS.getActiveBits());
 
   // Check the degenerate cases
   if (lhsWords == 0) {
@@ -2344,13 +2338,11 @@ int APInt::tcMultiply(WordType *dst, const WordType *lhs,
   return overflow;
 }
 
-/* DST = LHS * RHS, where DST has width the sum of the widths of the
-   operands.  No overflow occurs.  DST must be disjoint from both
-   operands.  Returns the number of parts required to hold the
-   result.  */
-unsigned APInt::tcFullMultiply(WordType *dst, const WordType *lhs,
-                               const WordType *rhs, unsigned lhsParts,
-                               unsigned rhsParts) {
+/// DST = LHS * RHS, where DST has width the sum of the widths of the
+/// operands. No overflow occurs. DST must be disjoint from both operands.
+void APInt::tcFullMultiply(WordType *dst, const WordType *lhs,
+                           const WordType *rhs, unsigned lhsParts,
+                           unsigned rhsParts) {
   /* Put the narrower number on the LHS for less loops below.  */
   if (lhsParts > rhsParts)
     return tcFullMultiply (dst, rhs, lhs, rhsParts, lhsParts);
@@ -2361,10 +2353,6 @@ unsigned APInt::tcFullMultiply(WordType *dst, const WordType *lhs,
 
   for (unsigned i = 0; i < lhsParts; i++)
     tcMultiplyPart(&dst[i], rhs, lhs[i], 0, rhsParts, rhsParts + 1, true);
-
-  unsigned n = lhsParts + rhsParts;
-
-  return n - (dst[n - 1] == 0);
 }
 
 /* If RHS is zero LHS and REMAINDER are left unchanged, return one.
@@ -2398,22 +2386,20 @@ int APInt::tcDivide(WordType *lhs, const WordType *rhs,
   /* Loop, subtracting SRHS if REMAINDER is greater and adding that to
      the total.  */
   for (;;) {
-      int compare;
+    int compare = tcCompare(remainder, srhs, parts);
+    if (compare >= 0) {
+      tcSubtract(remainder, srhs, 0, parts);
+      lhs[n] |= mask;
+    }
 
-      compare = tcCompare(remainder, srhs, parts);
-      if (compare >= 0) {
-        tcSubtract(remainder, srhs, 0, parts);
-        lhs[n] |= mask;
-      }
-
-      if (shiftCount == 0)
-        break;
-      shiftCount--;
-      tcShiftRight(srhs, parts, 1);
-      if ((mask >>= 1) == 0) {
-        mask = (WordType) 1 << (APINT_BITS_PER_WORD - 1);
-        n--;
-      }
+    if (shiftCount == 0)
+      break;
+    shiftCount--;
+    tcShiftRight(srhs, parts, 1);
+    if ((mask >>= 1) == 0) {
+      mask = (WordType) 1 << (APINT_BITS_PER_WORD - 1);
+      n--;
+    }
   }
 
   return false;

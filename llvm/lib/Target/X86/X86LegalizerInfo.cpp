@@ -87,7 +87,7 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   setAction({G_ZEXT, s32}, Legal);
   setAction({G_SEXT, s32}, Legal);
 
-  for (auto Ty : {s8, s16}) {
+  for (auto Ty : {s1, s8, s16}) {
     setAction({G_ZEXT, 1, Ty}, Legal);
     setAction({G_SEXT, 1, Ty}, Legal);
   }
@@ -139,7 +139,7 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
     setAction({G_SEXT, Ty}, Legal);
   }
 
-  for (auto Ty : {s8, s16, s32}) {
+  for (auto Ty : {s1, s8, s16, s32}) {
     setAction({G_ZEXT, 1, Ty}, Legal);
     setAction({G_SEXT, 1, Ty}, Legal);
   }

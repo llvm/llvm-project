@@ -73,7 +73,9 @@ namespace llvm {
 
 void RuntimeDyldImpl::registerEHFrames() {}
 
-void RuntimeDyldImpl::deregisterEHFrames() {}
+void RuntimeDyldImpl::deregisterEHFrames() {
+  MemMgr.deregisterEHFrames();
+}
 
 #ifndef NDEBUG
 static void dumpSectionMemory(const SectionEntry &S, StringRef State) {

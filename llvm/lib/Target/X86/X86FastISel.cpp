@@ -3293,7 +3293,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // Issue CALLSEQ_START
   unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(AdjStackDown))
-    .addImm(NumBytes).addImm(0);
+    .addImm(NumBytes).addImm(0).addImm(0);
 
   // Walk the register/memloc assignments, inserting copies/loads.
   const X86RegisterInfo *RegInfo = Subtarget->getRegisterInfo();

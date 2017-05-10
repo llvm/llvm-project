@@ -5970,7 +5970,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   unsigned NumOps = Ops.size();
   switch (NumOps) {
   case 0: return getNode(Opcode, DL, VT);
-  case 1: return getNode(Opcode, DL, VT, Ops[0]);
+  case 1: return getNode(Opcode, DL, VT, Ops[0], Flags);
   case 2: return getNode(Opcode, DL, VT, Ops[0], Ops[1], Flags);
   case 3: return getNode(Opcode, DL, VT, Ops[0], Ops[1], Ops[2]);
   default: break;

@@ -13,7 +13,9 @@
 #include "ARM.h"
 #include "ARMCallLowering.h"
 #include "ARMLegalizerInfo.h"
+#ifdef LLVM_BUILD_GLOBAL_ISEL
 #include "ARMRegisterBankInfo.h"
+#endif
 #include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
 #include "ARMTargetObjectFile.h"

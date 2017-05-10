@@ -17,7 +17,7 @@ include "AVRInstrFormats.td"
 // AVR Type Profiles
 //===----------------------------------------------------------------------===//
 
-def SDT_AVRCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i16>]>;
+def SDT_AVRCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i16>, SDTCisVT<1, i16>]>;
 def SDT_AVRCallSeqEnd : SDCallSeqEnd<[SDTCisVT<0, i16>, SDTCisVT<1, i16>]>;
 def SDT_AVRCall : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 def SDT_AVRWrapper : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>, SDTCisPtrTy<0>]>;
@@ -333,9 +333,9 @@ let Defs = [SP, SREG],
 Uses = [SP] in
 {
   def ADJCALLSTACKDOWN : Pseudo<(outs),
-                                (ins i16imm:$amt),
+                                (ins i16imm:$amt, i16imm:$amt2),
                                 "#ADJCALLSTACKDOWN",
-                                [(AVRcallseq_start timm:$amt)]>;
+                                [(AVRcallseq_start timm:$amt, timm:$amt2)]>;
 
   // R31R30 is used to update SP, since it is a scratch reg and this instruction
   // is placed after the function call then R31R30 should be always free.

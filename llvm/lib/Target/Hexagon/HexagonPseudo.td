@@ -80,7 +80,7 @@ def PS_false : InstHexagon<(outs PredRegs:$dst), (ins), "",
                [(set I1:$dst, 0)], "", C2_andn.Itinerary, TypeCR>;
 
 let Defs = [R29, R30], Uses = [R31, R30, R29], isPseudo = 1 in
-def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt),
+def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                               ".error \"should not emit\" ", []>;
 
 let Defs = [R29, R30, R31], Uses = [R29], isPseudo = 1 in

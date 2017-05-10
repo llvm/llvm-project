@@ -456,6 +456,16 @@ public:
                                 VectorType *VecTy) const {
     return VF;
   }
+
+  bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
+                             TTI::ReductionFlags Flags) const {
+    return false;
+  }
+
+  bool shouldExpandReduction(const IntrinsicInst *II) const {
+    return true;
+  }
+
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
   // In case of a vector it returns the min required size for one element.

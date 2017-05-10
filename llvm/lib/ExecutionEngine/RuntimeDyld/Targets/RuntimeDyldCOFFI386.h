@@ -217,7 +217,6 @@ public:
   }
 
   void registerEHFrames() override {}
-  void deregisterEHFrames() override {}
 };
 
 }

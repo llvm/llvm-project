@@ -456,6 +456,12 @@ public:
   /// higher.
   bool isAtomic() const;
 
+  /// Return true if this atomic instruction loads from memory.
+  bool hasAtomicLoad() const;
+
+  /// Return true if this atomic instruction stores to memory.
+  bool hasAtomicStore() const;
+
   /// Return true if this instruction may throw an exception.
   bool mayThrow() const;
 

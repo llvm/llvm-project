@@ -1330,7 +1330,7 @@ bool PPCFastISel::processCallArgs(SmallVectorImpl<Value*> &Args,
   // Issue CALLSEQ_START.
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
           TII.get(TII.getCallFrameSetupOpcode()))
-    .addImm(NumBytes);
+    .addImm(NumBytes).addImm(0);
 
   // Prepare to assign register arguments.  Every argument uses up a
   // GPR protocol register even if it's passed in a floating-point

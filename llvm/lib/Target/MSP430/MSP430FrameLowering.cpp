@@ -236,7 +236,7 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
     // adjcallstackdown instruction into 'add SP, <amt>'
     // TODO: consider using push / pop instead of sub + store / add
     MachineInstr &Old = *I;
-    uint64_t Amount = Old.getOperand(0).getImm();
+    uint64_t Amount = TII.getFrameSize(Old);
     if (Amount != 0) {
       // We need to keep the stack aligned properly.  To do this, we round the
       // amount of space needed for the outgoing arguments up to the next
@@ -252,8 +252,7 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
       } else {
         assert(Old.getOpcode() == TII.getCallFrameDestroyOpcode());
         // factor out the amount the callee already popped.
-        uint64_t CalleeAmt = Old.getOperand(1).getImm();
-        Amount -= CalleeAmt;
+        Amount -= TII.getFramePoppedByCallee(Old);
         if (Amount)
           New = BuildMI(MF, Old.getDebugLoc(), TII.get(MSP430::ADD16ri),
                         MSP430::SP)
@@ -272,7 +271,7 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
   } else if (I->getOpcode() == TII.getCallFrameDestroyOpcode()) {
     // If we are performing frame pointer elimination and if the callee pops
     // something off the stack pointer, add it back.
-    if (uint64_t CalleeAmt = I->getOperand(1).getImm()) {
+    if (uint64_t CalleeAmt = TII.getFramePoppedByCallee(*I)) {
       MachineInstr &Old = *I;
       MachineInstr *New =
           BuildMI(MF, Old.getDebugLoc(), TII.get(MSP430::SUB16ri), MSP430::SP)

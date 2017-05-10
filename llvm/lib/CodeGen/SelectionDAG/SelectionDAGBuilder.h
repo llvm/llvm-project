@@ -604,11 +604,11 @@ public:
   SelectionDAGBuilder(SelectionDAG &dag, FunctionLoweringInfo &funcinfo,
                       CodeGenOpt::Level ol)
     : CurInst(nullptr), SDNodeOrder(LowestSDNodeOrder), TM(dag.getTarget()),
-      DAG(dag), FuncInfo(funcinfo),
+      DAG(dag), DL(nullptr), AA(nullptr), FuncInfo(funcinfo),
       HasTailCall(false) {
   }
 
-  void init(GCFunctionInfo *gfi, AliasAnalysis &aa,
+  void init(GCFunctionInfo *gfi, AliasAnalysis *AA,
             const TargetLibraryInfo *li);
 
   /// Clear out the current SelectionDAG and the associated state and prepare
@@ -908,6 +908,8 @@ private:
   // These two are implemented in StatepointLowering.cpp
   void visitGCRelocate(const GCRelocateInst &I);
   void visitGCResult(const GCResultInst &I);
+
+  void visitVectorReduce(const CallInst &I, unsigned Intrinsic);
 
   void visitUserOp1(const Instruction &I) {
     llvm_unreachable("UserOp1 should not exist at instruction selection time!");

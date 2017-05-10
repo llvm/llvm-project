@@ -30,7 +30,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <cstdarg>
+
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -966,16 +966,6 @@ Constant *ConstantStruct::get(StructType *ST, ArrayRef<Constant*> V) {
   return ST->getContext().pImpl->StructConstants.getOrCreate(ST, V);
 }
 
-Constant *ConstantStruct::get(StructType *T, ...) {
-  va_list ap;
-  SmallVector<Constant*, 8> Values;
-  va_start(ap, T);
-  while (Constant *Val = va_arg(ap, llvm::Constant*))
-    Values.push_back(Val);
-  va_end(ap);
-  return get(T, Values);
-}
-
 ConstantVector::ConstantVector(VectorType *T, ArrayRef<Constant *> V)
     : ConstantAggregate(T, ConstantVectorVal, V) {
   assert(V.size() == T->getNumElements() &&
@@ -1810,8 +1800,7 @@ Constant *ConstantExpr::getSizeOf(Type* Ty) {
 Constant *ConstantExpr::getAlignOf(Type* Ty) {
   // alignof is implemented as: (i64) gep ({i1,Ty}*)null, 0, 1
   // Note that a non-inbounds gep is used, as null isn't within any object.
-  Type *AligningTy = 
-    StructType::get(Type::getInt1Ty(Ty->getContext()), Ty, nullptr);
+  Type *AligningTy = StructType::get(Type::getInt1Ty(Ty->getContext()), Ty);
   Constant *NullPtr = Constant::getNullValue(AligningTy->getPointerTo(0));
   Constant *Zero = ConstantInt::get(Type::getInt64Ty(Ty->getContext()), 0);
   Constant *One = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);

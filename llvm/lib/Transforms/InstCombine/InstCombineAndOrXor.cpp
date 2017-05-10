@@ -23,21 +23,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
-static inline Value *dyn_castNotVal(Value *V) {
-  // If this is not(not(x)) don't return that this is a not: we want the two
-  // not's to be folded first.
-  if (BinaryOperator::isNot(V)) {
-    Value *Operand = BinaryOperator::getNotArgument(V);
-    if (!IsFreeToInvert(Operand, Operand->hasOneUse()))
-      return Operand;
-  }
-
-  // Constants can be considered to be not'ed values...
-  if (ConstantInt *C = dyn_cast<ConstantInt>(V))
-    return ConstantInt::get(C->getType(), ~C->getValue());
-  return nullptr;
-}
-
 /// Similar to getICmpCode but for FCmpInst. This encodes a fcmp predicate into
 /// a four bit mask.
 static unsigned getFCmpCode(FCmpInst::Predicate CC) {
@@ -1013,26 +998,22 @@ Value *InstCombiner::FoldAndOfFCmps(FCmpInst *LHS, FCmpInst *RHS) {
 /// (~A & ~B) == (~(A | B))
 /// (~A | ~B) == (~(A & B))
 static Instruction *matchDeMorgansLaws(BinaryOperator &I,
-                                       InstCombiner::BuilderTy *Builder) {
+                                       InstCombiner::BuilderTy &Builder) {
   auto Opcode = I.getOpcode();
   assert((Opcode == Instruction::And || Opcode == Instruction::Or) &&
          "Trying to match De Morgan's Laws with something other than and/or");
-  // Flip the logic operation.
-  if (Opcode == Instruction::And)
-    Opcode = Instruction::Or;
-  else
-    Opcode = Instruction::And;
 
-  Value *Op0 = I.getOperand(0);
-  Value *Op1 = I.getOperand(1);
-  // TODO: Use pattern matchers instead of dyn_cast.
-  if (Value *Op0NotVal = dyn_castNotVal(Op0))
-    if (Value *Op1NotVal = dyn_castNotVal(Op1))
-      if (Op0->hasOneUse() && Op1->hasOneUse()) {
-        Value *LogicOp = Builder->CreateBinOp(Opcode, Op0NotVal, Op1NotVal,
-                                              I.getName() + ".demorgan");
-        return BinaryOperator::CreateNot(LogicOp);
-      }
+  // Flip the logic operation.
+  Opcode = (Opcode == Instruction::And) ? Instruction::Or : Instruction::And;
+
+  Value *A, *B;
+  if (match(I.getOperand(0), m_OneUse(m_Not(m_Value(A)))) &&
+      match(I.getOperand(1), m_OneUse(m_Not(m_Value(B)))) &&
+      !IsFreeToInvert(A, A->hasOneUse()) &&
+      !IsFreeToInvert(B, B->hasOneUse())) {
+    Value *AndOr = Builder.CreateBinOp(Opcode, A, B, I.getName() + ".demorgan");
+    return BinaryOperator::CreateNot(AndOr);
+  }
 
   return nullptr;
 }
@@ -1376,7 +1357,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
     if (Instruction *FoldedLogic = foldOpWithConstantIntoOperand(I))
       return FoldedLogic;
 
-  if (Instruction *DeMorgan = matchDeMorgansLaws(I, Builder))
+  if (Instruction *DeMorgan = matchDeMorgansLaws(I, *Builder))
     return DeMorgan;
 
   {
@@ -2167,7 +2148,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (match(Op0, m_And(m_Or(m_Specific(Op1), m_Value(C)), m_Value(A))))
     return BinaryOperator::CreateOr(Op1, Builder->CreateAnd(A, C));
 
-  if (Instruction *DeMorgan = matchDeMorgansLaws(I, Builder))
+  if (Instruction *DeMorgan = matchDeMorgansLaws(I, *Builder))
     return DeMorgan;
 
   // Canonicalize xor to the RHS.

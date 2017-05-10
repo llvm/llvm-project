@@ -811,9 +811,9 @@ void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
   }
 }
 
-void SelectionDAGBuilder::init(GCFunctionInfo *gfi, AliasAnalysis &aa,
+void SelectionDAGBuilder::init(GCFunctionInfo *gfi, AliasAnalysis *aa,
                                const TargetLibraryInfo *li) {
-  AA = &aa;
+  AA = aa;
   GFI = gfi;
   LibInfo = li;
   DL = &DAG.getDataLayout();
@@ -3423,7 +3423,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   if (isVolatile || NumValues > MaxParallelChains)
     // Serialize volatile loads with other side effects.
     Root = getRoot();
-  else if (AA->pointsToConstantMemory(MemoryLocation(
+  else if (AA && AA->pointsToConstantMemory(MemoryLocation(
                SV, DAG.getDataLayout().getTypeStoreSize(Ty), AAInfo))) {
     // Do not serialize (non-volatile) loads of constant memory with anything.
     Root = DAG.getEntryNode();
@@ -3535,8 +3535,8 @@ void SelectionDAGBuilder::visitLoadFromSwiftError(const LoadInst &I) {
   Type *Ty = I.getType();
   AAMDNodes AAInfo;
   I.getAAMetadata(AAInfo);
-  assert(!AA->pointsToConstantMemory(MemoryLocation(
-             SV, DAG.getDataLayout().getTypeStoreSize(Ty), AAInfo)) &&
+  assert((!AA || !AA->pointsToConstantMemory(MemoryLocation(
+             SV, DAG.getDataLayout().getTypeStoreSize(Ty), AAInfo))) &&
          "load_from_swift_error should not be constant memory");
 
   SmallVector<EVT, 4> ValueVTs;
@@ -3817,7 +3817,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   const MDNode *Ranges = I.getMetadata(LLVMContext::MD_range);
 
   // Do not serialize masked loads of constant memory with anything.
-  bool AddToChain = !AA->pointsToConstantMemory(MemoryLocation(
+  bool AddToChain = !AA || !AA->pointsToConstantMemory(MemoryLocation(
       PtrOperand, DAG.getDataLayout().getTypeStoreSize(I.getType()), AAInfo));
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
 
@@ -3861,7 +3861,7 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   bool UniformBase = getUniformBase(BasePtr, Base, Index, this);
   bool ConstantMemory = false;
   if (UniformBase &&
-      AA->pointsToConstantMemory(MemoryLocation(
+      AA && AA->pointsToConstantMemory(MemoryLocation(
           BasePtr, DAG.getDataLayout().getTypeStoreSize(I.getType()),
           AAInfo))) {
     // Do not serialize (non-volatile) loads of constant memory with anything.
@@ -4676,7 +4676,8 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   bool IsIndirect = false;
   Optional<MachineOperand> Op;
   // Some arguments' frame index is recorded during argument lowering.
-  if (int FI = FuncInfo.getArgumentFrameIndex(Arg))
+  int FI = FuncInfo.getArgumentFrameIndex(Arg);
+  if (FI != INT_MAX)
     Op = MachineOperand::CreateFI(FI);
 
   if (!Op && N.getNode()) {
@@ -4927,6 +4928,13 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       return nullptr;
     }
 
+    // Byval arguments with frame indices were already handled after argument
+    // lowering and before isel.
+    const auto *Arg =
+        dyn_cast<Argument>(Address->stripInBoundsConstantOffsets());
+    if (Arg && FuncInfo.getArgumentFrameIndex(Arg) != INT_MAX)
+      return nullptr;
+
     SDValue &N = NodeMap[Address];
     if (!N.getNode() && isa<Argument>(Address))
       // Check unused arguments map.
@@ -4957,20 +4965,6 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       // virtual register info from the FuncInfo.ValueMap.
       if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, 0, true,
                                     N)) {
-        // If variable is pinned by a alloca in dominating bb then
-        // use StaticAllocaMap.
-        if (const AllocaInst *AI = dyn_cast<AllocaInst>(Address)) {
-          if (AI->getParent() != DI.getParent()) {
-            DenseMap<const AllocaInst*, int>::iterator SI =
-              FuncInfo.StaticAllocaMap.find(AI);
-            if (SI != FuncInfo.StaticAllocaMap.end()) {
-              SDV = DAG.getFrameIndexDbgValue(Variable, Expression, SI->second,
-                                              0, dl, SDNodeOrder);
-              DAG.AddDbgValue(SDV, nullptr, false);
-              return nullptr;
-            }
-          }
-        }
         DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
       }
     }
@@ -5737,6 +5731,24 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   case Intrinsic::experimental_deoptimize:
     LowerDeoptimizeCall(&I);
     return nullptr;
+
+  case Intrinsic::experimental_vector_reduce_fadd:
+  case Intrinsic::experimental_vector_reduce_fmul:
+  case Intrinsic::experimental_vector_reduce_add:
+  case Intrinsic::experimental_vector_reduce_mul:
+  case Intrinsic::experimental_vector_reduce_and:
+  case Intrinsic::experimental_vector_reduce_or:
+  case Intrinsic::experimental_vector_reduce_xor:
+  case Intrinsic::experimental_vector_reduce_smax:
+  case Intrinsic::experimental_vector_reduce_smin:
+  case Intrinsic::experimental_vector_reduce_umax:
+  case Intrinsic::experimental_vector_reduce_umin:
+  case Intrinsic::experimental_vector_reduce_fmax:
+  case Intrinsic::experimental_vector_reduce_fmin: {
+    visitVectorReduce(I, Intrinsic);
+    return nullptr;
+  }
+
   }
 }
 
@@ -5982,7 +5994,7 @@ static SDValue getMemCmpLoad(const Value *PtrVal, MVT LoadVT,
   bool ConstantMemory = false;
 
   // Do not serialize (non-volatile) loads of constant memory with anything.
-  if (Builder.AA->pointsToConstantMemory(PtrVal)) {
+  if (Builder.AA && Builder.AA->pointsToConstantMemory(PtrVal)) {
     Root = Builder.DAG.getEntryNode();
     ConstantMemory = true;
   } else {
@@ -7422,11 +7434,11 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
   // have to worry about calling conventions and target specific lowering code.
   // Instead we perform the call lowering right here.
   //
-  // chain, flag = CALLSEQ_START(chain, 0)
+  // chain, flag = CALLSEQ_START(chain, 0, 0)
   // chain, flag = STACKMAP(id, nbytes, ..., chain, flag)
   // chain, flag = CALLSEQ_END(chain, 0, 0, flag)
   //
-  Chain = DAG.getCALLSEQ_START(getRoot(), NullPtr, DL);
+  Chain = DAG.getCALLSEQ_START(getRoot(), 0, 0, DL);
   InFlag = Chain.getValue(1);
 
   // Add the <id> and <numBytes> constants.
@@ -7614,6 +7626,76 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
 
   // Inform the Frame Information that we have a patchpoint in this function.
   FuncInfo.MF->getFrameInfo().setHasPatchPoint();
+}
+
+void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
+                                            unsigned Intrinsic) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Op1 = getValue(I.getArgOperand(0));
+  SDValue Op2;
+  if (I.getNumArgOperands() > 1)
+    Op2 = getValue(I.getArgOperand(1));
+  SDLoc dl = getCurSDLoc();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+  SDValue Res;
+  FastMathFlags FMF;
+  if (isa<FPMathOperator>(I))
+    FMF = I.getFastMathFlags();
+  SDNodeFlags SDFlags;
+  SDFlags.setNoNaNs(FMF.noNaNs());
+
+  switch (Intrinsic) {
+  case Intrinsic::experimental_vector_reduce_fadd:
+    if (FMF.unsafeAlgebra())
+      Res = DAG.getNode(ISD::VECREDUCE_FADD, dl, VT, Op2);
+    else
+      Res = DAG.getNode(ISD::VECREDUCE_STRICT_FADD, dl, VT, Op1, Op2);
+    break;
+  case Intrinsic::experimental_vector_reduce_fmul:
+    if (FMF.unsafeAlgebra())
+      Res = DAG.getNode(ISD::VECREDUCE_FMUL, dl, VT, Op2);
+    else
+      Res = DAG.getNode(ISD::VECREDUCE_STRICT_FMUL, dl, VT, Op1, Op2);
+    break;
+  case Intrinsic::experimental_vector_reduce_add:
+    Res = DAG.getNode(ISD::VECREDUCE_ADD, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_mul:
+    Res = DAG.getNode(ISD::VECREDUCE_MUL, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_and:
+    Res = DAG.getNode(ISD::VECREDUCE_AND, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_or:
+    Res = DAG.getNode(ISD::VECREDUCE_OR, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_xor:
+    Res = DAG.getNode(ISD::VECREDUCE_XOR, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_smax:
+    Res = DAG.getNode(ISD::VECREDUCE_SMAX, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_smin:
+    Res = DAG.getNode(ISD::VECREDUCE_SMIN, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_umax:
+    Res = DAG.getNode(ISD::VECREDUCE_UMAX, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_umin:
+    Res = DAG.getNode(ISD::VECREDUCE_UMIN, dl, VT, Op1);
+    break;
+  case Intrinsic::experimental_vector_reduce_fmax: {
+    Res = DAG.getNode(ISD::VECREDUCE_FMAX, dl, VT, Op1, SDFlags);
+    break;
+  }
+  case Intrinsic::experimental_vector_reduce_fmin: {
+    Res = DAG.getNode(ISD::VECREDUCE_FMIN, dl, VT, Op1, SDFlags);
+    break;
+  }
+  default:
+    llvm_unreachable("Unhandled vector reduce intrinsic");
+  }
+  setValue(&I, Res);
 }
 
 /// Returns an AttributeList representing the attributes applied to the return

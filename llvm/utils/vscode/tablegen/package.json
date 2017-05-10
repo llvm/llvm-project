@@ -1,0 +1,26 @@
+{
+    "name": "tablegen",
+    "displayName": "TableGen",
+    "description": "VSCode Language Colorizer for LLVM's TableGen language.",
+    "version": "0.0.1",
+    "publisher": "llvm",
+    "engines": {
+        "vscode": "^1.12.0"
+    },
+    "categories": [
+        "Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "tablegen",
+            "aliases": ["TableGen", "tablegen"],
+            "extensions": [".td"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "tablegen",
+            "scopeName": "source.tablegen",
+            "path": "./syntaxes/TableGen.tmLanguage"
+        }]
+    }
+}

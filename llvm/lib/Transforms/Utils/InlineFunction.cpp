@@ -1396,11 +1396,12 @@ static void updateCallerBFI(BasicBlock *CallSiteBlock,
 /// Update the branch metadata for cloned call instructions.
 static void updateCallProfile(Function *Callee, const ValueToValueMapTy &VMap,
                               const Optional<uint64_t> &CalleeEntryCount,
-                              const Instruction *TheCall) {
+                              const Instruction *TheCall,
+                              ProfileSummaryInfo *PSI) {
   if (!CalleeEntryCount.hasValue() || CalleeEntryCount.getValue() < 1)
     return;
   Optional<uint64_t> CallSiteCount =
-      ProfileSummaryInfo::getProfileCount(TheCall, nullptr);
+      PSI ? PSI->getProfileCount(TheCall, nullptr) : None;
   uint64_t CallCount =
       std::min(CallSiteCount.hasValue() ? CallSiteCount.getValue() : 0,
                CalleeEntryCount.getValue());
@@ -1423,16 +1424,16 @@ static void updateCallProfile(Function *Callee, const ValueToValueMapTy &VMap,
 /// The callsite's block count is subtracted from the callee's function entry
 /// count.
 static void updateCalleeCount(BlockFrequencyInfo *CallerBFI, BasicBlock *CallBB,
-                              Instruction *CallInst, Function *Callee) {
+                              Instruction *CallInst, Function *Callee,
+                              ProfileSummaryInfo *PSI) {
   // If the callee has a original count of N, and the estimated count of
   // callsite is M, the new callee count is set to N - M. M is estimated from
   // the caller's entry count, its entry block frequency and the block frequency
   // of the callsite.
   Optional<uint64_t> CalleeCount = Callee->getEntryCount();
-  if (!CalleeCount.hasValue())
+  if (!CalleeCount.hasValue() || !PSI)
     return;
-  Optional<uint64_t> CallCount =
-      ProfileSummaryInfo::getProfileCount(CallInst, CallerBFI);
+  Optional<uint64_t> CallCount = PSI->getProfileCount(CallInst, CallerBFI);
   if (!CallCount.hasValue())
     return;
   // Since CallSiteCount is an estimate, it could exceed the original callee
@@ -1635,9 +1636,10 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       updateCallerBFI(OrigBB, VMap, IFI.CallerBFI, IFI.CalleeBFI,
                       CalledFunc->front());
 
-    updateCallProfile(CalledFunc, VMap, CalledFunc->getEntryCount(), TheCall);
+    updateCallProfile(CalledFunc, VMap, CalledFunc->getEntryCount(), TheCall,
+                      IFI.PSI);
     // Update the profile count of callee.
-    updateCalleeCount(IFI.CallerBFI, OrigBB, TheCall, CalledFunc);
+    updateCalleeCount(IFI.CallerBFI, OrigBB, TheCall, CalledFunc, IFI.PSI);
 
     // Inject byval arguments initialization.
     for (std::pair<Value*, Value*> &Init : ByValInit)

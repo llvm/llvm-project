@@ -155,7 +155,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<AAResultsWrapperPass>();
+    AU.addUsedIfAvailable<AAResultsWrapperPass>();
     AU.addUsedIfAvailable<LiveVariables>();
     AU.addPreserved<LiveVariables>();
     AU.addPreserved<SlotIndexes>();
@@ -1627,7 +1627,10 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
   InstrItins = MF->getSubtarget().getInstrItineraryData();
   LV = getAnalysisIfAvailable<LiveVariables>();
   LIS = getAnalysisIfAvailable<LiveIntervals>();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  if (auto *AAPass = getAnalysisIfAvailable<AAResultsWrapperPass>())
+    AA = &AAPass->getAAResults();
+  else
+    AA = nullptr;
   OptLevel = TM.getOptLevel();
 
   bool MadeChange = false;

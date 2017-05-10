@@ -714,7 +714,8 @@ def: Pat<(i1 0), (PS_false)>;
 def: Pat<(i1 1), (PS_true)>;
 
 // Pseudo instructions.
-def SDT_SPCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32> ]>;
+def SDT_SPCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
+                                          SDTCisVT<1, i32> ]>;
 def SDT_SPCallSeqEnd   : SDCallSeqEnd<[ SDTCisVT<0, i32>,
                                         SDTCisVT<1, i32> ]>;
 
@@ -732,8 +733,8 @@ def HexagonTCRet : SDNode<"HexagonISD::TC_RETURN", SDT_SPCall,
                           [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
 
 
-def: Pat<(callseq_start timm:$amt),
-          (ADJCALLSTACKDOWN imm:$amt)>;
+def: Pat<(callseq_start timm:$amt, timm:$amt2),
+          (ADJCALLSTACKDOWN imm:$amt, imm:$amt2)>;
 def: Pat<(callseq_end timm:$amt1, timm:$amt2),
          (ADJCALLSTACKUP imm:$amt1, imm:$amt2)>;
 

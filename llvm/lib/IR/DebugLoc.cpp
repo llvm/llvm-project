@@ -141,7 +141,7 @@ void DebugLoc::reparentDebugInfo(Instruction &I, DISubprogram *OrigSP,
                                  DISubprogram *NewSP,
                                  DenseMap<const MDNode *, MDNode *> &Cache) {
   auto DL = I.getDebugLoc();
-  if (!OrigSP || !NewSP || !DL)
+  if (!OrigSP || !NewSP || OrigSP == NewSP || !DL)
     return;
 
   // Reparent the debug location.

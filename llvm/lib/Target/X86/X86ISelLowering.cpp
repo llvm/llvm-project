@@ -3415,8 +3415,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   if (!IsSibcall)
-    Chain = DAG.getCALLSEQ_START(
-        Chain, DAG.getIntPtrConstant(NumBytesToPush, dl, true), dl);
+    Chain = DAG.getCALLSEQ_START(Chain, NumBytesToPush,
+                                 NumBytes - NumBytesToPush, dl);
 
   SDValue RetAddrFrIdx;
   // Load return address for tail calls.
@@ -14725,7 +14725,7 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
     // location.
     SDValue Chain = DAG.getEntryNode();
     SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-    Chain = DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(0, DL, true), DL);
+    Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
     SDValue Args[] = { Chain, Offset };
     Chain = DAG.getNode(X86ISD::TLSCALL, DL, NodeTys, Args);
     Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(0, DL, true),
@@ -18572,7 +18572,7 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
 
   // Chain the dynamic stack allocation so that it doesn't modify the stack
   // pointer when other instructions are using the stack.
-  Chain = DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(0, dl, true), dl);
+  Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
 
   bool Is64Bit = Subtarget.is64Bit();
   MVT SPTy = getPointerTy(DAG.getDataLayout());
@@ -19021,8 +19021,10 @@ static SDValue getScalarMaskingNode(SDValue Op, SDValue Mask,
                                     SDValue PreservedSrc,
                                     const X86Subtarget &Subtarget,
                                     SelectionDAG &DAG) {
-  if (isAllOnesConstant(Mask))
-    return Op;
+
+  if (auto *MaskConst = dyn_cast<ConstantSDNode>(Mask))
+    if (MaskConst->getZExtValue() & 0x1)
+      return Op;
 
   MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
@@ -21741,6 +21743,14 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
     MVT ExVT = MVT::getVectorVT(MVT::i32, VT.getVectorNumElements() * 2);
     SDValue Ex = DAG.getBitcast(ExVT, R);
 
+    // ashr(R, 63) === cmp_slt(R, 0)
+    if (ShiftAmt == 63 && Subtarget.hasSSE42()) {
+      assert((VT != MVT::v4i64 || Subtarget.hasInt256()) &&
+             "Unsupported PCMPGT op");
+      return DAG.getNode(X86ISD::PCMPGT, dl, VT,
+                         getZeroVector(VT, Subtarget, DAG, dl), R);
+    }
+
     if (ShiftAmt >= 32) {
       // Splat sign to upper i32 dst, and SRA upper i32 src to lower i32.
       SDValue Upper =
@@ -23296,9 +23306,8 @@ static SDValue LowerFSINCOS(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Callee =
       DAG.getExternalSymbol(LibcallName, TLI.getPointerTy(DAG.getDataLayout()));
 
-  Type *RetTy = isF64
-    ? (Type*)StructType::get(ArgTy, ArgTy, nullptr)
-    : (Type*)VectorType::get(ArgTy, 4);
+  Type *RetTy = isF64 ? (Type *)StructType::get(ArgTy, ArgTy)
+                      : (Type *)VectorType::get(ArgTy, 4);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
@@ -25779,7 +25788,7 @@ X86TargetLowering::EmitLoweredTLSAddr(MachineInstr &MI,
   // Emit CALLSEQ_START right before the instruction.
   unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
   MachineInstrBuilder CallseqStart =
-    BuildMI(MF, DL, TII.get(AdjStackDown)).addImm(0).addImm(0);
+    BuildMI(MF, DL, TII.get(AdjStackDown)).addImm(0).addImm(0).addImm(0);
   BB->insert(MachineBasicBlock::iterator(MI), CallseqStart);
 
   // Emit CALLSEQ_END right after the instruction.

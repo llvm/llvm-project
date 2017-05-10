@@ -33,7 +33,8 @@ def SDT_PPCVexts  : SDTypeProfile<1, 2, [
   SDTCisVT<0, f64>, SDTCisVT<1, f64>, SDTCisPtrTy<2>
 ]>;
 
-def SDT_PPCCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32> ]>;
+def SDT_PPCCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
+                                           SDTCisVT<1, i32> ]>;
 def SDT_PPCCallSeqEnd   : SDCallSeqEnd<[ SDTCisVT<0, i32>,
                                          SDTCisVT<1, i32> ]>;
 def SDT_PPCvperm   : SDTypeProfile<1, 3, [
@@ -1099,9 +1100,11 @@ multiclass AForm_3r<bits<6> opcode, bits<5> xo, dag OOL, dag IOL,
 
 let hasCtrlDep = 1 in {
 let Defs = [R1], Uses = [R1] in {
-def ADJCALLSTACKDOWN : Pseudo<(outs), (ins u16imm:$amt), "#ADJCALLSTACKDOWN $amt",
-                              [(callseq_start timm:$amt)]>;
-def ADJCALLSTACKUP   : Pseudo<(outs), (ins u16imm:$amt1, u16imm:$amt2), "#ADJCALLSTACKUP $amt1 $amt2",
+def ADJCALLSTACKDOWN : Pseudo<(outs), (ins u16imm:$amt1, u16imm:$amt2),
+                              "#ADJCALLSTACKDOWN $amt1 $amt2",
+                              [(callseq_start timm:$amt1, timm:$amt2)]>;
+def ADJCALLSTACKUP   : Pseudo<(outs), (ins u16imm:$amt1, u16imm:$amt2),
+                              "#ADJCALLSTACKUP $amt1 $amt2",
                               [(callseq_end timm:$amt1, timm:$amt2)]>;
 }
 

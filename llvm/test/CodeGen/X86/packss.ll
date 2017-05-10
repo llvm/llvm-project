@@ -26,18 +26,17 @@ define <4 x i32> @trunc_ashr_v4i64(<4 x i64> %a) nounwind {
 ; X64-AVX1-LABEL: trunc_ashr_v4i64:
 ; X64-AVX1:       # BB#0:
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-AVX1-NEXT:    vpsrad $31, %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; X64-AVX1-NEXT:    vpsrad $31, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; X64-AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-AVX1-NEXT:    vpcmpgtq %xmm1, %xmm2, %xmm1
+; X64-AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm0
 ; X64-AVX1-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: trunc_ashr_v4i64:
 ; X64-AVX2:       # BB#0:
-; X64-AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
+; X64-AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X64-AVX2-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vzeroupper

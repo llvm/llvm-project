@@ -33,19 +33,19 @@ struct GCNRegPressure {
     clear();
   }
 
-  bool empty() const { return getSGRPNum() == 0 && getVGRPNum() == 0; }
+  bool empty() const { return getSGPRNum() == 0 && getVGPRNum() == 0; }
 
   void clear() { std::fill(&Value[0], &Value[TOTAL_KINDS], 0); }
 
-  unsigned getSGRPNum() const { return Value[SGPR32]; }
-  unsigned getVGRPNum() const { return Value[VGPR32]; }
+  unsigned getSGPRNum() const { return Value[SGPR32]; }
+  unsigned getVGPRNum() const { return Value[VGPR32]; }
 
   unsigned getVGPRTuplesWeight() const { return Value[VGPR_TUPLE]; }
   unsigned getSGPRTuplesWeight() const { return Value[SGPR_TUPLE]; }
 
   unsigned getOccupancy(const SISubtarget &ST) const {
-    return std::min(ST.getOccupancyWithNumSGPRs(getSGRPNum()),
-                    ST.getOccupancyWithNumVGPRs(getVGRPNum()));
+    return std::min(ST.getOccupancyWithNumSGPRs(getSGPRNum()),
+                    ST.getOccupancyWithNumVGPRs(getVGPRNum()));
   }
 
   void inc(unsigned Reg,
