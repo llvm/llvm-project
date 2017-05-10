@@ -12,8 +12,9 @@
 
 #include "lld/Core/LLVM.h"
 #include "lld/Core/TaskGroup.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <algorithm>
 
@@ -24,25 +25,40 @@
 
 namespace lld {
 
-#if !LLVM_ENABLE_THREADS
+namespace parallel {
+struct sequential_execution_policy {};
+struct parallel_execution_policy {};
+
+template <typename T>
+struct is_execution_policy
+    : public std::integral_constant<
+          bool, llvm::is_one_of<T, sequential_execution_policy,
+                                parallel_execution_policy>::value> {};
+
+constexpr sequential_execution_policy seq{};
+constexpr parallel_execution_policy par{};
+
+#if LLVM_ENABLE_THREADS
+
+namespace detail {
+
+#if defined(_MSC_VER)
 template <class RandomAccessIterator, class Comparator>
-void parallel_sort(
-    RandomAccessIterator Start, RandomAccessIterator End,
-    const Comparator &Comp = std::less<
-        typename std::iterator_traits<RandomAccessIterator>::value_type>()) {
-  std::sort(Start, End, Comp);
-}
-#elif defined(_MSC_VER)
-// Use ppl parallel_sort on Windows.
-template <class RandomAccessIterator, class Comparator>
-void parallel_sort(
-    RandomAccessIterator Start, RandomAccessIterator End,
-    const Comparator &Comp = std::less<
-        typename std::iterator_traits<RandomAccessIterator>::value_type>()) {
+void parallel_sort(RandomAccessIterator Start, RandomAccessIterator End,
+                   const Comparator &Comp) {
   concurrency::parallel_sort(Start, End, Comp);
 }
+template <class IterTy, class FuncTy>
+void parallel_for_each(IterTy Begin, IterTy End, FuncTy Fn) {
+  concurrency::parallel_for_each(Begin, End, Fn);
+}
+
+template <class IndexTy, class FuncTy>
+void parallel_for_each_n(IndexTy Begin, IndexTy End, FuncTy Fn) {
+  concurrency::parallel_for(Begin, End, Fn);
+}
+
 #else
-namespace detail {
 const ptrdiff_t MinParallelSize = 1024;
 
 /// \brief Inclusive median.
@@ -83,46 +99,15 @@ void parallel_quick_sort(RandomAccessIterator Start, RandomAccessIterator End,
   });
   parallel_quick_sort(Pivot + 1, End, Comp, TG, Depth - 1);
 }
-}
 
 template <class RandomAccessIterator, class Comparator>
-void parallel_sort(
-    RandomAccessIterator Start, RandomAccessIterator End,
-    const Comparator &Comp = std::less<
-        typename std::iterator_traits<RandomAccessIterator>::value_type>()) {
+void parallel_sort(RandomAccessIterator Start, RandomAccessIterator End,
+                   const Comparator &Comp) {
   TaskGroup TG;
-  detail::parallel_quick_sort(Start, End, Comp, TG,
-                              llvm::Log2_64(std::distance(Start, End)) + 1);
-}
-#endif
-
-template <class T> void parallel_sort(T *Start, T *End) {
-  parallel_sort(Start, End, std::less<T>());
+  parallel_quick_sort(Start, End, Comp, TG,
+                      llvm::Log2_64(std::distance(Start, End)) + 1);
 }
 
-#if !LLVM_ENABLE_THREADS
-template <class IterTy, class FuncTy>
-void parallel_for_each(IterTy Begin, IterTy End, FuncTy Fn) {
-  std::for_each(Begin, End, Fn);
-}
-
-template <class IndexTy, class FuncTy>
-void parallel_for(IndexTy Begin, IndexTy End, FuncTy Fn) {
-  for (IndexTy I = Begin; I != End; ++I)
-    Fn(I);
-}
-#elif defined(_MSC_VER)
-// Use ppl parallel_for_each on Windows.
-template <class IterTy, class FuncTy>
-void parallel_for_each(IterTy Begin, IterTy End, FuncTy Fn) {
-  concurrency::parallel_for_each(Begin, End, Fn);
-}
-
-template <class IndexTy, class FuncTy>
-void parallel_for(IndexTy Begin, IndexTy End, FuncTy Fn) {
-  concurrency::parallel_for(Begin, End, Fn);
-}
-#else
 template <class IterTy, class FuncTy>
 void parallel_for_each(IterTy Begin, IterTy End, FuncTy Fn) {
   // TaskGroup has a relatively high overhead, so we want to reduce
@@ -142,7 +127,7 @@ void parallel_for_each(IterTy Begin, IterTy End, FuncTy Fn) {
 }
 
 template <class IndexTy, class FuncTy>
-void parallel_for(IndexTy Begin, IndexTy End, FuncTy Fn) {
+void parallel_for_each_n(IndexTy Begin, IndexTy End, FuncTy Fn) {
   ptrdiff_t TaskSize = (End - Begin) / 1024;
   if (TaskSize == 0)
     TaskSize = 1;
@@ -160,7 +145,65 @@ void parallel_for(IndexTy Begin, IndexTy End, FuncTy Fn) {
       Fn(J);
   });
 }
+
 #endif
+
+template <typename Iter>
+using DefComparator =
+    std::less<typename std::iterator_traits<Iter>::value_type>;
+
+} // namespace detail
+#endif
+
+// sequential algorithm implementations.
+template <class Policy, class RandomAccessIterator,
+          class Comparator = detail::DefComparator<RandomAccessIterator>>
+void sort(Policy policy, RandomAccessIterator Start, RandomAccessIterator End,
+          const Comparator &Comp = Comparator()) {
+  static_assert(is_execution_policy<Policy>::value,
+                "Invalid execution policy!");
+  std::sort(Start, End, Comp);
+}
+
+template <class Policy, class IterTy, class FuncTy>
+void for_each(Policy policy, IterTy Begin, IterTy End, FuncTy Fn) {
+  static_assert(is_execution_policy<Policy>::value,
+                "Invalid execution policy!");
+  std::for_each(Begin, End, Fn);
+}
+
+template <class Policy, class IndexTy, class FuncTy>
+void for_each_n(Policy policy, IndexTy Begin, IndexTy End, FuncTy Fn) {
+  static_assert(is_execution_policy<Policy>::value,
+                "Invalid execution policy!");
+  for (IndexTy I = Begin; I != End; ++I)
+    Fn(I);
+}
+
+// Parallel algorithm implementations, only available when LLVM_ENABLE_THREADS
+// is true.
+#if defined(LLVM_ENABLE_THREADS)
+template <class RandomAccessIterator,
+          class Comparator = detail::DefComparator<RandomAccessIterator>>
+void sort(parallel_execution_policy policy, RandomAccessIterator Start,
+          RandomAccessIterator End, const Comparator &Comp = Comparator()) {
+  detail::parallel_sort(Start, End, Comp);
+}
+
+template <class IterTy, class FuncTy>
+void for_each(parallel_execution_policy policy, IterTy Begin, IterTy End,
+              FuncTy Fn) {
+  detail::parallel_for_each(Begin, End, Fn);
+}
+
+template <class IndexTy, class FuncTy>
+void for_each_n(parallel_execution_policy policy, IndexTy Begin, IndexTy End,
+                FuncTy Fn) {
+  detail::parallel_for_each_n(Begin, End, Fn);
+}
+#endif
+
+} // namespace parallel
 } // End namespace lld
 
 #endif // LLD_CORE_PARALLEL_H

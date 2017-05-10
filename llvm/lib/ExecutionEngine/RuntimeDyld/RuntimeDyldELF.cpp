@@ -221,20 +221,8 @@ void RuntimeDyldELF::registerEHFrames() {
     uint64_t EHFrameLoadAddr = Sections[EHFrameSID].getLoadAddress();
     size_t EHFrameSize = Sections[EHFrameSID].getSize();
     MemMgr.registerEHFrames(EHFrameAddr, EHFrameLoadAddr, EHFrameSize);
-    RegisteredEHFrameSections.push_back(EHFrameSID);
   }
   UnregisteredEHFrameSections.clear();
-}
-
-void RuntimeDyldELF::deregisterEHFrames() {
-  for (int i = 0, e = RegisteredEHFrameSections.size(); i != e; ++i) {
-    SID EHFrameSID = RegisteredEHFrameSections[i];
-    uint8_t *EHFrameAddr = Sections[EHFrameSID].getAddress();
-    uint64_t EHFrameLoadAddr = Sections[EHFrameSID].getLoadAddress();
-    size_t EHFrameSize = Sections[EHFrameSID].getSize();
-    MemMgr.deregisterEHFrames(EHFrameAddr, EHFrameLoadAddr, EHFrameSize);
-  }
-  RegisteredEHFrameSections.clear();
 }
 
 std::unique_ptr<RuntimeDyldELF>

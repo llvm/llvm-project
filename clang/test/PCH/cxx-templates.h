@@ -358,3 +358,6 @@ namespace rdar15468709c {
   }
 }
 
+namespace MemberSpecializationLocation {
+  template<typename T> struct A { static int n; };
+}

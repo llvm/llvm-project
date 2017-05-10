@@ -811,9 +811,9 @@ void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
   }
 }
 
-void SelectionDAGBuilder::init(GCFunctionInfo *gfi, AliasAnalysis &aa,
+void SelectionDAGBuilder::init(GCFunctionInfo *gfi, AliasAnalysis *aa,
                                const TargetLibraryInfo *li) {
-  AA = &aa;
+  AA = aa;
   GFI = gfi;
   LibInfo = li;
   DL = &DAG.getDataLayout();
@@ -3423,7 +3423,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   if (isVolatile || NumValues > MaxParallelChains)
     // Serialize volatile loads with other side effects.
     Root = getRoot();
-  else if (AA->pointsToConstantMemory(MemoryLocation(
+  else if (AA && AA->pointsToConstantMemory(MemoryLocation(
                SV, DAG.getDataLayout().getTypeStoreSize(Ty), AAInfo))) {
     // Do not serialize (non-volatile) loads of constant memory with anything.
     Root = DAG.getEntryNode();
@@ -3535,8 +3535,8 @@ void SelectionDAGBuilder::visitLoadFromSwiftError(const LoadInst &I) {
   Type *Ty = I.getType();
   AAMDNodes AAInfo;
   I.getAAMetadata(AAInfo);
-  assert(!AA->pointsToConstantMemory(MemoryLocation(
-             SV, DAG.getDataLayout().getTypeStoreSize(Ty), AAInfo)) &&
+  assert((!AA || !AA->pointsToConstantMemory(MemoryLocation(
+             SV, DAG.getDataLayout().getTypeStoreSize(Ty), AAInfo))) &&
          "load_from_swift_error should not be constant memory");
 
   SmallVector<EVT, 4> ValueVTs;
@@ -3817,7 +3817,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   const MDNode *Ranges = I.getMetadata(LLVMContext::MD_range);
 
   // Do not serialize masked loads of constant memory with anything.
-  bool AddToChain = !AA->pointsToConstantMemory(MemoryLocation(
+  bool AddToChain = !AA || !AA->pointsToConstantMemory(MemoryLocation(
       PtrOperand, DAG.getDataLayout().getTypeStoreSize(I.getType()), AAInfo));
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
 
@@ -3861,7 +3861,7 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   bool UniformBase = getUniformBase(BasePtr, Base, Index, this);
   bool ConstantMemory = false;
   if (UniformBase &&
-      AA->pointsToConstantMemory(MemoryLocation(
+      AA && AA->pointsToConstantMemory(MemoryLocation(
           BasePtr, DAG.getDataLayout().getTypeStoreSize(I.getType()),
           AAInfo))) {
     // Do not serialize (non-volatile) loads of constant memory with anything.
@@ -5994,7 +5994,7 @@ static SDValue getMemCmpLoad(const Value *PtrVal, MVT LoadVT,
   bool ConstantMemory = false;
 
   // Do not serialize (non-volatile) loads of constant memory with anything.
-  if (Builder.AA->pointsToConstantMemory(PtrVal)) {
+  if (Builder.AA && Builder.AA->pointsToConstantMemory(PtrVal)) {
     Root = Builder.DAG.getEntryNode();
     ConstantMemory = true;
   } else {

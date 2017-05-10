@@ -69,13 +69,8 @@ public:
   /// Deregister EH frames in the current proces.
   static void deregisterEHFramesInProcess(uint8_t *Addr, size_t Size);
 
-  void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override {
-    registerEHFramesInProcess(Addr, Size);
-  }
-
-  void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override {
-    deregisterEHFramesInProcess(Addr, Size);
-  }
+  void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override;
+  void deregisterEHFrames() override;
 
   /// This method returns the address of the specified function or variable in
   /// the current process.
@@ -139,6 +134,13 @@ public:
   /// MCJIT or RuntimeDyld.  Use getSymbolAddress instead.
   virtual void *getPointerToNamedFunction(const std::string &Name,
                                           bool AbortOnFailure = true);
+
+private:
+  struct EHFrame {
+    uint8_t *Addr;
+    size_t Size;
+  };
+  std::vector<EHFrame> EHFrames;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

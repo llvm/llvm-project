@@ -304,7 +304,7 @@ TEST(ObjectTransformLayerTest, Main) {
       return nullptr;
     }
     void registerEHFrames(uint8_t *, uint64_t, size_t) override {}
-    void deregisterEHFrames(uint8_t *, uint64_t, size_t) override {}
+    void deregisterEHFrames() override {}
     bool finalizeMemory(std::string *) override { return false; }
   };
 

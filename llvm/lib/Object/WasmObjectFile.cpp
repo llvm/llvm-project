@@ -168,6 +168,13 @@ static wasm::WasmLimits readLimits(const uint8_t *&Ptr) {
   return Result;
 }
 
+static wasm::WasmTable readTable(const uint8_t *&Ptr) {
+  wasm::WasmTable Table;
+  Table.ElemType = readVarint7(Ptr);
+  Table.Limits = readLimits(Ptr);
+  return Table;
+}
+
 static Error readSection(WasmSection &Section, const uint8_t *&Ptr,
                          const uint8_t *Start) {
   // TODO(sbc): Avoid reading past EOF in the case of malformed files.
@@ -397,13 +404,22 @@ Error WasmObjectFile::parseImportSection(const uint8_t *Ptr, const uint8_t *End)
                            Sections.size(), i);
       break;
     case wasm::WASM_EXTERNAL_GLOBAL:
-      Im.GlobalType = readVarint7(Ptr);
-      Im.GlobalMutable = readVaruint1(Ptr);
+      Im.Global.Type = readVarint7(Ptr);
+      Im.Global.Mutable = readVaruint1(Ptr);
       Symbols.emplace_back(Im.Field, WasmSymbol::SymbolType::GLOBAL_IMPORT,
                            Sections.size(), i);
       break;
+    case wasm::WASM_EXTERNAL_MEMORY:
+      Im.Memory = readLimits(Ptr);
+      break;
+    case wasm::WASM_EXTERNAL_TABLE:
+      Im.Table = readTable(Ptr);
+      if (Im.Table.ElemType != wasm::WASM_TYPE_ANYFUNC) {
+        return make_error<GenericBinaryError>("Invalid table element type",
+                                              object_error::parse_failed);
+      }
+      break;
     default:
-      // TODO(sbc): Handle other kinds of imports
       return make_error<GenericBinaryError>(
           "Unexpected import kind", object_error::parse_failed);
     }
@@ -431,14 +447,11 @@ Error WasmObjectFile::parseTableSection(const uint8_t *Ptr, const uint8_t *End) 
   uint32_t Count = readVaruint32(Ptr);
   Tables.reserve(Count);
   while (Count--) {
-    wasm::WasmTable Table;
-    Table.ElemType = readVarint7(Ptr);
-    if (Table.ElemType != wasm::WASM_TYPE_ANYFUNC) {
+    Tables.push_back(readTable(Ptr));
+    if (Tables.back().ElemType != wasm::WASM_TYPE_ANYFUNC) {
       return make_error<GenericBinaryError>("Invalid table element type",
                                             object_error::parse_failed);
     }
-    Table.Limits = readLimits(Ptr);
-    Tables.push_back(Table);
   }
   if (Ptr != End)
     return make_error<GenericBinaryError>("Table section ended prematurely",
@@ -493,8 +506,10 @@ Error WasmObjectFile::parseExportSection(const uint8_t *Ptr, const uint8_t *End)
       Symbols.emplace_back(Ex.Name, WasmSymbol::SymbolType::GLOBAL_EXPORT,
                            Sections.size(), i);
       break;
+    case wasm::WASM_EXTERNAL_MEMORY:
+    case wasm::WASM_EXTERNAL_TABLE:
+      break;
     default:
-      // TODO(sbc): Handle other kinds of exports
       return make_error<GenericBinaryError>(
           "Unexpected export kind", object_error::parse_failed);
     }
@@ -638,8 +653,12 @@ basic_symbol_iterator WasmObjectFile::symbol_end() const {
   return BasicSymbolRef(Ref, this);
 }
 
-const WasmSymbol &WasmObjectFile::getWasmSymbol(DataRefImpl Symb) const {
+const WasmSymbol &WasmObjectFile::getWasmSymbol(const DataRefImpl &Symb) const {
   return Symbols[Symb.d.a];
+}
+
+const WasmSymbol &WasmObjectFile::getWasmSymbol(const SymbolRef &Symb) const {
+  return getWasmSymbol(Symb.getRawDataRefImpl());
 }
 
 Expected<StringRef> WasmObjectFile::getSymbolName(DataRefImpl Symb) const {

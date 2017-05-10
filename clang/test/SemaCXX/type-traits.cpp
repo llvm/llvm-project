@@ -1256,7 +1256,7 @@ void is_trivially_copyable2()
   int t33[F(__is_trivially_copyable(ExtDefaulted))];
 
   int t34[T(__is_trivially_copyable(const int))];
-  int t35[F(__is_trivially_copyable(volatile int))];
+  int t35[T(__is_trivially_copyable(volatile int))];
 }
 
 struct CStruct {

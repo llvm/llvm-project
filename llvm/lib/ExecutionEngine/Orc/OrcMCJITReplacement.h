@@ -94,9 +94,8 @@ class OrcMCJITReplacement : public ExecutionEngine {
       return ClientMM->registerEHFrames(Addr, LoadAddr, Size);
     }
 
-    void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr,
-                            size_t Size) override {
-      return ClientMM->deregisterEHFrames(Addr, LoadAddr, Size);
+    void deregisterEHFrames() override {
+      return ClientMM->deregisterEHFrames();
     }
 
     void notifyObjectLoaded(RuntimeDyld &RTDyld,

@@ -172,6 +172,11 @@ private:
       return nullptr;
     }
 
+    void removeModulesFromBaseLayer(BaseLayerT &BaseLayer) {
+      for (auto &BLH : BaseLayerHandles)
+        BaseLayer.removeModuleSet(BLH);
+    }
+
     std::unique_ptr<JITSymbolResolver> ExternalSymbolResolver;
     std::unique_ptr<ResourceOwner<RuntimeDyld::MemoryManager>> MemMgr;
     std::unique_ptr<IndirectStubsMgrT> StubsMgr;
@@ -204,6 +209,11 @@ public:
         CreateIndirectStubsManager(std::move(CreateIndirectStubsManager)),
         CloneStubsIntoPartitions(CloneStubsIntoPartitions) {}
 
+  ~CompileOnDemandLayer() {
+    while (!LogicalDylibs.empty())
+      removeModuleSet(LogicalDylibs.begin());
+  }
+  
   /// @brief Add a module to the compile-on-demand layer.
   template <typename ModuleSetT, typename MemoryManagerPtrT,
             typename SymbolResolverPtrT>
@@ -239,6 +249,7 @@ public:
   ///   This will remove all modules in the layers below that were derived from
   /// the module represented by H.
   void removeModuleSet(ModuleSetHandleT H) {
+    H->removeModulesFromBaseLayer(BaseLayer);
     LogicalDylibs.erase(H);
   }
 
@@ -477,6 +488,8 @@ private:
       if (auto EC = LD.StubsMgr->updatePointer(FnName, FnBodyAddr))
         return 0;
     }
+
+    LD.BaseLayerHandles.push_back(PartH);
 
     return CalledAddr;
   }

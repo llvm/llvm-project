@@ -152,7 +152,6 @@ private:
   // in a table until we receive a request to register all unregistered
   // EH frame sections with the memory manager.
   SmallVector<SID, 2> UnregisteredEHFrameSections;
-  SmallVector<SID, 2> RegisteredEHFrameSections;
 
   // Map between GOT relocation value and corresponding GOT offset
   std::map<RelocationValueRef, uint64_t> GOTOffsetMap;
@@ -180,7 +179,6 @@ public:
                        StubMap &Stubs) override;
   bool isCompatibleFile(const object::ObjectFile &Obj) const override;
   void registerEHFrames() override;
-  void deregisterEHFrames() override;
   Error finalizeLoad(const ObjectFile &Obj,
                      ObjSectionToIDMap &SectionMap) override;
 };

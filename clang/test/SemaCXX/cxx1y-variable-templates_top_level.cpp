@@ -9,7 +9,7 @@
 #endif
 
 template<typename T> 
-T pi = T(3.1415926535897932385); // expected-note {{template is declared here}}
+T pi = T(3.1415926535897932385); // expected-note 2{{declared here}}
 
 template<typename T> 
 CONST T cpi = T(3.1415926535897932385); // expected-note {{template is declared here}}
@@ -58,10 +58,9 @@ namespace use_in_top_level_funcs {
 namespace shadow {
   void foo() {
     int ipi0 = pi<int>;
-    int pi;
+    int pi; // expected-note {{found}}
     int a = pi;
-    int ipi = pi<int>;  // expected-error {{expected '(' for function-style cast or type construction}} \
-                        // expected-error {{expected expression}}
+    int ipi = pi<int>;  // expected-error {{'pi' does not name a template but is followed by template arguments; did you mean '::pi'?}}
   }
 }
 

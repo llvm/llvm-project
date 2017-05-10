@@ -11,14 +11,25 @@ configuration:
 environment:
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CMAKE_OPTIONS: -DCMAKE_C_COMPILER=clang-cl.exe -DCMAKE_CXX_COMPILER=clang-cl.exe
       CLANG_VERSION: ToT
       MSVC_SETUP_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat
       MSVC_SETUP_ARG: x86
+      GENERATOR: Ninja
+      MAKE_PROGRAM: ninja
       APPVEYOR_SAVE_CACHE_ON_ERROR: true
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      CMAKE_OPTIONS: -DCMAKE_C_COMPILER=clang-cl.exe -DCMAKE_CXX_COMPILER=clang-cl.exe
       CLANG_VERSION: 4
       MSVC_SETUP_PATH: C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat
       MSVC_SETUP_ARG: x86_amd64
+      GENERATOR: Ninja
+      MAKE_PROGRAM: ninja
+      APPVEYOR_SAVE_CACHE_ON_ERROR: true
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      MINGW_PATH: C:\mingw-w64\i686-6.3.0-posix-dwarf-rt_v5-rev1\mingw32\bin
+      GENERATOR: MinGW Makefiles
+      MAKE_PROGRAM: mingw32-make
       APPVEYOR_SAVE_CACHE_ON_ERROR: true
 
 install:
@@ -28,7 +39,7 @@ install:
   - call "%APPVEYOR_BUILD_FOLDER%\\install-appveyor-reqs.cmd"
 
 before_build:
-  - call "%MSVC_SETUP_PATH%" %MSVC_SETUP_ARG%
+  - if DEFINED MSVC_SETUP_PATH call "%MSVC_SETUP_PATH%" %MSVC_SETUP_ARG%
   - cd %APPVEYOR_BUILD_FOLDER%
 
 build_script:
@@ -39,8 +50,7 @@ build_script:
   #############################################################################
   # Configuration Step
   #############################################################################
-  - cmake -G Ninja %extra_cmake_flags%
-    -DCMAKE_C_COMPILER=clang-cl.exe -DCMAKE_CXX_COMPILER=clang-cl.exe
+  - cmake -G "%GENERATOR%" %CMAKE_OPTIONS%
     "-DCMAKE_BUILD_TYPE=%configuration%"
     "-DLLVM_PATH=C:\projects\deps\llvm" -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
     -DLLVM_LIT_ARGS="-sv --show-xfail --show-unsupported"
@@ -49,10 +59,10 @@ build_script:
   #############################################################################
   # Build Step
   #############################################################################
-  - ninja
+  - "%MAKE_PROGRAM%"
 
 test_script:
-  - ninja check-cxx
+  - "%MAKE_PROGRAM%" check-cxx
 
 on_failure:
   - appveyor PushArtifact CMakeFiles/CMakeOutput.log

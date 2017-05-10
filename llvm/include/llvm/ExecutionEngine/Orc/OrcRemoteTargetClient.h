@@ -144,16 +144,16 @@ public:
 
     void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr,
                           size_t Size) override {
-      UnfinalizedEHFrames.push_back(
-          std::make_pair(LoadAddr, static_cast<uint32_t>(Size)));
+      UnfinalizedEHFrames.push_back({LoadAddr, Size});
     }
 
-    void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr,
-                            size_t Size) override {
-      auto Err = Client.deregisterEHFrames(LoadAddr, Size);
-      // FIXME: Add error poll.
-      assert(!Err && "Failed to register remote EH frames.");
-      (void)Err;
+    void deregisterEHFrames() override {
+      for (auto &Frame : RegisteredEHFrames) {
+        auto Err = Client.deregisterEHFrames(Frame.Addr, Frame.Size);
+        // FIXME: Add error poll.
+        assert(!Err && "Failed to register remote EH frames.");
+        (void)Err;
+      }
     }
 
     void notifyObjectLoaded(RuntimeDyld &Dyld,
@@ -320,7 +320,7 @@ public:
       Unfinalized.clear();
 
       for (auto &EHFrame : UnfinalizedEHFrames) {
-        if (auto Err = Client.registerEHFrames(EHFrame.first, EHFrame.second)) {
+        if (auto Err = Client.registerEHFrames(EHFrame.Addr, EHFrame.Size)) {
           // FIXME: Replace this once finalizeMemory can return an Error.
           handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
             if (ErrMsg) {
@@ -331,7 +331,8 @@ public:
           return false;
         }
       }
-      UnfinalizedEHFrames.clear();
+      RegisteredEHFrames = std::move(UnfinalizedEHFrames);
+      UnfinalizedEHFrames = {};
 
       return false;
     }
@@ -387,7 +388,13 @@ public:
     ResourceIdMgr::ResourceId Id;
     std::vector<ObjectAllocs> Unmapped;
     std::vector<ObjectAllocs> Unfinalized;
-    std::vector<std::pair<uint64_t, uint32_t>> UnfinalizedEHFrames;
+
+    struct EHFrame {
+      JITTargetAddress Addr;
+      uint64_t Size;
+    };
+    std::vector<EHFrame> UnfinalizedEHFrames;
+    std::vector<EHFrame> RegisteredEHFrames;
   };
 
   /// Remote indirect stubs manager.

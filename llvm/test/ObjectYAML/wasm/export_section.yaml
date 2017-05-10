@@ -5,12 +5,18 @@ FileHeader:
 Sections:
   - Type:            EXPORT
     Exports:         
-      - Name:            foo
-        Kind:            FUNCTION
-        Index:           0
-      - Name:            bar
+      - Name:            function_export
         Kind:            FUNCTION
         Index:           1
+      - Name:            global_export
+        Kind:            GLOBAL
+        Index:           1
+      - Name:            memory_export
+        Kind:            MEMORY
+        Index:           0
+      - Name:            table_export
+        Kind:            TABLE
+        Index:           0
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
@@ -18,10 +24,16 @@ Sections:
 # CHECK: Sections:
 # CHECK:   - Type:            EXPORT
 # CHECK:     Exports:         
-# CHECK:       - Name:            foo
-# CHECK:         Kind:            FUNCTION
-# CHECK:         Index:           0
-# CHECK:       - Name:            bar
+# CHECK:       - Name:            function_export
 # CHECK:         Kind:            FUNCTION
 # CHECK:         Index:           1
+# CHECK:       - Name:            global_export
+# CHECK:         Kind:            GLOBAL
+# CHECK:         Index:           1
+# CHECK:       - Name:            memory_export
+# CHECK:         Kind:            MEMORY
+# CHECK:         Index:           0
+# CHECK:       - Name:            table_export
+# CHECK:         Kind:            TABLE
+# CHECK:         Index:           0
 # CHECK: ...

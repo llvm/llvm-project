@@ -566,6 +566,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     AsanUseAfterScope = Args.hasFlag(
         options::OPT_fsanitize_address_use_after_scope,
         options::OPT_fno_sanitize_address_use_after_scope, AsanUseAfterScope);
+
+    // As a workaround for a bug in gold 2.26 and earlier, dead stripping of
+    // globals in ASan is disabled by default on ELF targets.
+    // See https://sourceware.org/bugzilla/show_bug.cgi?id=19002
+    AsanGlobalsDeadStripping =
+        !TC.getTriple().isOSBinFormatELF() ||
+        Args.hasArg(options::OPT_fsanitize_address_globals_dead_stripping);
   } else {
     AsanUseAfterScope = false;
   }
@@ -633,7 +640,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     std::make_pair(CoverageNoPrune, "-fsanitize-coverage-no-prune")};
   for (auto F : CoverageFlags) {
     if (CoverageFeatures & F.first)
-      CmdArgs.push_back(Args.MakeArgString(F.second));
+      CmdArgs.push_back(F.second);
   }
 
   if (TC.getTriple().isOSWindows() && needsUbsanRt()) {
@@ -686,7 +693,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                                          llvm::utostr(MsanTrackOrigins)));
 
   if (MsanUseAfterDtor)
-    CmdArgs.push_back(Args.MakeArgString("-fsanitize-memory-use-after-dtor"));
+    CmdArgs.push_back("-fsanitize-memory-use-after-dtor");
 
   // FIXME: Pass these parameters as function attributes, not as -llvm flags.
   if (!TsanMemoryAccess) {
@@ -705,17 +712,20 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   }
 
   if (CfiCrossDso)
-    CmdArgs.push_back(Args.MakeArgString("-fsanitize-cfi-cross-dso"));
+    CmdArgs.push_back("-fsanitize-cfi-cross-dso");
 
   if (Stats)
-    CmdArgs.push_back(Args.MakeArgString("-fsanitize-stats"));
+    CmdArgs.push_back("-fsanitize-stats");
 
   if (AsanFieldPadding)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-field-padding=" +
                                          llvm::utostr(AsanFieldPadding)));
 
   if (AsanUseAfterScope)
-    CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-use-after-scope"));
+    CmdArgs.push_back("-fsanitize-address-use-after-scope");
+
+  if (AsanGlobalsDeadStripping)
+    CmdArgs.push_back("-fsanitize-address-globals-dead-stripping");
 
   // MSan: Workaround for PR16386.
   // ASan: This is mainly to help LSan with cases such as
@@ -723,7 +733,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   // We can't make this conditional on -fsanitize=leak, as that flag shouldn't
   // affect compilation.
   if (Sanitizers.has(Memory) || Sanitizers.has(Address))
-    CmdArgs.push_back(Args.MakeArgString("-fno-assume-sane-operator-new"));
+    CmdArgs.push_back("-fno-assume-sane-operator-new");
 
   // Require -fvisibility= flag on non-Windows when compiling if vptr CFI is
   // enabled.

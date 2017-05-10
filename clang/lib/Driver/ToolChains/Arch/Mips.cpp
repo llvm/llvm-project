@@ -282,18 +282,18 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   if (Arg *A = Args.getLastArg(options::OPT_mfp32, options::OPT_mfpxx,
                                options::OPT_mfp64)) {
     if (A->getOption().matches(options::OPT_mfp32))
-      Features.push_back(Args.MakeArgString("-fp64"));
+      Features.push_back("-fp64");
     else if (A->getOption().matches(options::OPT_mfpxx)) {
-      Features.push_back(Args.MakeArgString("+fpxx"));
-      Features.push_back(Args.MakeArgString("+nooddspreg"));
+      Features.push_back("+fpxx");
+      Features.push_back("+nooddspreg");
     } else
-      Features.push_back(Args.MakeArgString("+fp64"));
+      Features.push_back("+fp64");
   } else if (mips::shouldUseFPXX(Args, Triple, CPUName, ABIName, FloatABI)) {
-    Features.push_back(Args.MakeArgString("+fpxx"));
-    Features.push_back(Args.MakeArgString("+nooddspreg"));
+    Features.push_back("+fpxx");
+    Features.push_back("+nooddspreg");
   } else if (mips::isFP64ADefault(Triple, CPUName)) {
-    Features.push_back(Args.MakeArgString("+fp64"));
-    Features.push_back(Args.MakeArgString("+nooddspreg"));
+    Features.push_back("+fp64");
+    Features.push_back("+nooddspreg");
   }
 
   AddTargetFeature(Args, Features, options::OPT_mno_odd_spreg,

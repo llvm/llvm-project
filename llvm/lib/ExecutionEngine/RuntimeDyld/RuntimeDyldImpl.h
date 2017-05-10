@@ -515,7 +515,7 @@ public:
 
   virtual void registerEHFrames();
 
-  virtual void deregisterEHFrames();
+  void deregisterEHFrames();
 
   virtual Error finalizeLoad(const ObjectFile &ObjImg,
                              ObjSectionToIDMap &SectionMap) {
