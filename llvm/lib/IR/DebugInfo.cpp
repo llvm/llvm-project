@@ -79,9 +79,19 @@ void DebugInfoFinder::processModule(const Module &M) {
         processScope(M->getScope());
     }
   }
-  for (auto &F : M.functions())
+  for (auto &F : M.functions()) {
     if (auto *SP = cast_or_null<DISubprogram>(F.getSubprogram()))
       processSubprogram(SP);
+    // There could be subprograms from inlined functions referenced from
+    // instructions only. Walk the function to find them.
+    for (const BasicBlock &BB : F) {
+      for (const Instruction &I : BB) {
+        if (!I.getDebugLoc())
+          continue;
+        processLocation(M, I.getDebugLoc().get());
+      }
+    }
+  }
 }
 
 void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
