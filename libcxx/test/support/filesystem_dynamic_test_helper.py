@@ -25,7 +25,7 @@ def sanitize(p):
 
 """
 Some of the tests restrict permissions to induce failures.
-Before we delete the test enviroment, we have to walk it and re-raise the
+Before we delete the test environment, we have to walk it and re-raise the
 permissions.
 """
 def clean_recursive(root_p):

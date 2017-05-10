@@ -194,9 +194,6 @@ public:
     }
     UnregisteredEHFrameSections.clear();
   }
-  void deregisterEHFrames() override {
-    // Stub
-  }
   Error finalizeLoad(const ObjectFile &Obj,
                      ObjSectionToIDMap &SectionMap) override {
     // Look for and record the EH frame section IDs.

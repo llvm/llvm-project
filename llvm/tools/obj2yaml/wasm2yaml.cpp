@@ -25,6 +25,23 @@ public:
   ErrorOr<WasmYAML::Object *> dump();
 };
 
+WasmYAML::Table make_table(const wasm::WasmTable &Table) {
+  WasmYAML::Table T;
+  T.ElemType = Table.ElemType;
+  T.TableLimits.Flags = Table.Limits.Flags;
+  T.TableLimits.Initial = Table.Limits.Initial;
+  T.TableLimits.Maximum = Table.Limits.Maximum;
+  return T;
+}
+
+WasmYAML::Limits make_limits(const wasm::WasmLimits &Limits) {
+  WasmYAML::Limits L;
+  L.Flags = Limits.Flags;
+  L.Initial = Limits.Initial;
+  L.Maximum = Limits.Maximum;
+  return L;
+}
+
 ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
   auto Y = make_unique<WasmYAML::Object>();
 
@@ -82,17 +99,26 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
     case wasm::WASM_SEC_IMPORT: {
       auto ImportSec = make_unique<WasmYAML::ImportSection>();
       for (auto &Import : Obj.imports()) {
-        WasmYAML::Import Ex;
-        Ex.Module = Import.Module;
-        Ex.Field = Import.Field;
-        Ex.Kind = Import.Kind;
-        if (Ex.Kind == wasm::WASM_EXTERNAL_FUNCTION) {
-          Ex.SigIndex = Import.SigIndex;
-        } else if (Ex.Kind == wasm::WASM_EXTERNAL_GLOBAL) {
-          Ex.GlobalType = Import.GlobalType;
-          Ex.GlobalMutable = Import.GlobalMutable;
+        WasmYAML::Import Im;
+        Im.Module = Import.Module;
+        Im.Field = Import.Field;
+        Im.Kind = Import.Kind;
+        switch (Im.Kind) {
+        case wasm::WASM_EXTERNAL_FUNCTION:
+          Im.SigIndex = Import.SigIndex;
+          break;
+        case wasm::WASM_EXTERNAL_GLOBAL:
+          Im.GlobalImport.Type = Import.Global.Type;
+          Im.GlobalImport.Mutable = Import.Global.Mutable;
+          break;
+        case wasm::WASM_EXTERNAL_TABLE:
+          Im.TableImport = make_table(Import.Table);
+          break;
+        case wasm::WASM_EXTERNAL_MEMORY:
+          Im.Memory = make_limits(Import.Memory);
+          break;
         }
-        ImportSec->Imports.push_back(Ex);
+        ImportSec->Imports.push_back(Im);
       }
       S = std::move(ImportSec);
       break;
@@ -107,25 +133,16 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
     }
     case wasm::WASM_SEC_TABLE: {
       auto TableSec = make_unique<WasmYAML::TableSection>();
-      for (auto &Table : Obj.tables()) {
-        WasmYAML::Table T;
-        T.ElemType = Table.ElemType;
-        T.TableLimits.Flags = Table.Limits.Flags;
-        T.TableLimits.Initial = Table.Limits.Initial;
-        T.TableLimits.Maximum = Table.Limits.Maximum;
-        TableSec->Tables.push_back(T);
+      for (const wasm::WasmTable &Table : Obj.tables()) {
+        TableSec->Tables.push_back(make_table(Table));
       }
       S = std::move(TableSec);
       break;
     }
     case wasm::WASM_SEC_MEMORY: {
       auto MemorySec = make_unique<WasmYAML::MemorySection>();
-      for (auto &Memory : Obj.memories()) {
-        WasmYAML::Limits L;
-        L.Flags = Memory.Flags;
-        L.Initial = Memory.Initial;
-        L.Maximum = Memory.Maximum;
-        MemorySec->Memories.push_back(L);
+      for (const wasm::WasmLimits &Memory : Obj.memories()) {
+        MemorySec->Memories.push_back(make_limits(Memory));
       }
       S = std::move(MemorySec);
       break;

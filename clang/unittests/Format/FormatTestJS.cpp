@@ -367,6 +367,25 @@ TEST_F(FormatTestJS, GoogScopes) {
                "});");
 }
 
+TEST_F(FormatTestJS, IIFEs) {
+  // Internal calling parens; no semi.
+  verifyFormat("(function() {\n"
+               "var a = 1;\n"
+               "}())");
+  // External calling parens; no semi.
+  verifyFormat("(function() {\n"
+               "var b = 2;\n"
+               "})()");
+  // Internal calling parens; with semi.
+  verifyFormat("(function() {\n"
+               "var c = 3;\n"
+               "}());");
+  // External calling parens; with semi.
+  verifyFormat("(function() {\n"
+               "var d = 4;\n"
+               "})();");
+}
+
 TEST_F(FormatTestJS, GoogModules) {
   verifyFormat("goog.module('this.is.really.absurdly.long');",
                getGoogleJSStyleWithColumns(40));

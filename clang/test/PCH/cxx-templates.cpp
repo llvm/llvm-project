@@ -108,3 +108,11 @@ namespace cyclic_module_load {
 template int local_extern::f<int[]>(); // expected-note {{in instantiation of}}
 #endif
 template int local_extern::g<int[]>();
+
+namespace MemberSpecializationLocation {
+#ifndef NO_ERRORS
+  // expected-note@cxx-templates.h:* {{previous}}
+  template<> float A<int>::n; // expected-error {{redeclaration of 'n' with a different type}}
+#endif
+  int k = A<int>::n;
+}

@@ -134,6 +134,18 @@ void RTDyldMemoryManager::deregisterEHFramesInProcess(uint8_t *Addr,
 
 #endif
 
+void RTDyldMemoryManager::registerEHFrames(uint8_t *Addr, uint64_t LoadAddr,
+                                          size_t Size) {
+  registerEHFramesInProcess(Addr, Size);
+  EHFrames.push_back({Addr, Size});
+}
+
+void RTDyldMemoryManager::deregisterEHFrames() {
+  for (auto &Frame : EHFrames)
+    deregisterEHFramesInProcess(Frame.Addr, Frame.Size);
+  EHFrames.clear();
+}
+
 static int jit_noop() {
   return 0;
 }

@@ -101,7 +101,7 @@ class TypeBuilder<DummyStruct, XCompile> {
 public:
   static StructType *get(LLVMContext &Context) {
     return StructType::get(
-      TypeBuilder<types::i<32>[256], XCompile>::get(Context), nullptr);
+        TypeBuilder<types::i<32>[256], XCompile>::get(Context));
   }
 };
 

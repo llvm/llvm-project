@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LanaiISelLowering.h"
 #include "Lanai.h"
 #include "LanaiCondCode.h"
-#include "LanaiISelLowering.h"
 #include "LanaiMachineFunctionInfo.h"
 #include "LanaiSubtarget.h"
 #include "LanaiTargetObjectFile.h"
@@ -38,10 +38,11 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetCallingConv.h"
@@ -1498,4 +1499,25 @@ SDValue LanaiTargetLowering::PerformDAGCombine(SDNode *N,
   }
 
   return SDValue();
+}
+
+void LanaiTargetLowering::computeKnownBitsForTargetNode(
+    const SDValue Op, KnownBits &Known, const APInt &DemandedElts,
+    const SelectionDAG &DAG, unsigned Depth) const {
+  unsigned BitWidth = Known.getBitWidth();
+  switch (Op.getOpcode()) {
+  default:
+    break;
+  case LanaiISD::SETCC:
+    Known = KnownBits(BitWidth);
+    Known.Zero.setBits(1, BitWidth);
+    break;
+  case LanaiISD::SELECT_CC:
+    KnownBits Known2;
+    DAG.computeKnownBits(Op->getOperand(0), Known, Depth + 1);
+    DAG.computeKnownBits(Op->getOperand(1), Known2, Depth + 1);
+    Known.Zero &= Known2.Zero;
+    Known.One &= Known2.One;
+    break;
+  }
 }

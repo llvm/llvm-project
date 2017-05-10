@@ -949,11 +949,10 @@ void Mapper::mapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
     Constant *NewV;
     if (IsOldCtorDtor) {
       auto *S = cast<ConstantStruct>(V);
-      auto *E1 = mapValue(S->getOperand(0));
-      auto *E2 = mapValue(S->getOperand(1));
-      Value *Null = Constant::getNullValue(VoidPtrTy);
-      NewV =
-          ConstantStruct::get(cast<StructType>(EltTy), E1, E2, Null, nullptr);
+      auto *E1 = cast<Constant>(mapValue(S->getOperand(0)));
+      auto *E2 = cast<Constant>(mapValue(S->getOperand(1)));
+      Constant *Null = Constant::getNullValue(VoidPtrTy);
+      NewV = ConstantStruct::get(cast<StructType>(EltTy), E1, E2, Null);
     } else {
       NewV = cast_or_null<Constant>(mapValue(V));
     }

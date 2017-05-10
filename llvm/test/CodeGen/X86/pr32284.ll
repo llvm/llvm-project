@@ -30,25 +30,24 @@ define void @foo() {
 ; X86-O0-NEXT:    subl $12, %esp
 ; X86-O0-NEXT:  .Lcfi0:
 ; X86-O0-NEXT:    .cfi_def_cfa_offset 16
-; X86-O0-NEXT:    movzbl c, %eax
-; X86-O0-NEXT:    testl %eax, %eax
-; X86-O0-NEXT:    setne %cl
-; X86-O0-NEXT:    movl %eax, %edx
-; X86-O0-NEXT:    movb %dl, %ch
-; X86-O0-NEXT:    testb %ch, %ch
+; X86-O0-NEXT:    movb c, %al
+; X86-O0-NEXT:    testb %al, %al
 ; X86-O0-NEXT:    setne {{[0-9]+}}(%esp)
-; X86-O0-NEXT:    movzbl %cl, %edx
-; X86-O0-NEXT:    subl %eax, %edx
-; X86-O0-NEXT:    setle %cl
-; X86-O0-NEXT:    # implicit-def: %EAX
-; X86-O0-NEXT:    movb %cl, %al
-; X86-O0-NEXT:    andl $1, %eax
-; X86-O0-NEXT:    kmovd %eax, %k0
-; X86-O0-NEXT:    kmovd %k0, %eax
+; X86-O0-NEXT:    movzbl c, %ecx
+; X86-O0-NEXT:    testl %ecx, %ecx
+; X86-O0-NEXT:    setne %al
+; X86-O0-NEXT:    movzbl %al, %edx
+; X86-O0-NEXT:    subl %ecx, %edx
+; X86-O0-NEXT:    setle %al
+; X86-O0-NEXT:    # implicit-def: %ECX
 ; X86-O0-NEXT:    movb %al, %cl
-; X86-O0-NEXT:    andb $1, %cl
-; X86-O0-NEXT:    movzbl %cl, %eax
-; X86-O0-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-O0-NEXT:    andl $1, %ecx
+; X86-O0-NEXT:    kmovd %ecx, %k0
+; X86-O0-NEXT:    kmovd %k0, %ecx
+; X86-O0-NEXT:    movb %cl, %al
+; X86-O0-NEXT:    andb $1, %al
+; X86-O0-NEXT:    movzbl %al, %ecx
+; X86-O0-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-O0-NEXT:    movl %edx, (%esp) # 4-byte Spill
 ; X86-O0-NEXT:    addl $12, %esp
 ; X86-O0-NEXT:    retl
@@ -69,27 +68,25 @@ define void @foo() {
 ;
 ; X64-O0-LABEL: foo:
 ; X64-O0:       # BB#0: # %entry
-; X64-O0-NEXT:    movzbl {{.*}}(%rip), %eax
-; X64-O0-NEXT:    movl %eax, %ecx
-; X64-O0-NEXT:    movb %cl, %dl
-; X64-O0-NEXT:    movl %ecx, %eax
-; X64-O0-NEXT:    testq %rcx, %rcx
-; X64-O0-NEXT:    setne %sil
-; X64-O0-NEXT:    testb %dl, %dl
+; X64-O0-NEXT:    movb {{.*}}(%rip), %al
+; X64-O0-NEXT:    testb %al, %al
 ; X64-O0-NEXT:    setne -{{[0-9]+}}(%rsp)
-; X64-O0-NEXT:    movzbl %sil, %edi
-; X64-O0-NEXT:    subl %eax, %edi
-; X64-O0-NEXT:    setle %dl
-; X64-O0-NEXT:    # implicit-def: %EAX
-; X64-O0-NEXT:    movb %dl, %al
-; X64-O0-NEXT:    andl $1, %eax
-; X64-O0-NEXT:    kmovd %eax, %k0
-; X64-O0-NEXT:    kmovd %k0, %eax
-; X64-O0-NEXT:    movb %al, %dl
-; X64-O0-NEXT:    andb $1, %dl
-; X64-O0-NEXT:    movzbl %dl, %eax
-; X64-O0-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-O0-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # 4-byte Spill
+; X64-O0-NEXT:    movzbl {{.*}}(%rip), %ecx
+; X64-O0-NEXT:    testl %ecx, %ecx
+; X64-O0-NEXT:    setne %al
+; X64-O0-NEXT:    movzbl %al, %edx
+; X64-O0-NEXT:    subl %ecx, %edx
+; X64-O0-NEXT:    setle %al
+; X64-O0-NEXT:    # implicit-def: %ECX
+; X64-O0-NEXT:    movb %al, %cl
+; X64-O0-NEXT:    andl $1, %ecx
+; X64-O0-NEXT:    kmovd %ecx, %k0
+; X64-O0-NEXT:    kmovd %k0, %ecx
+; X64-O0-NEXT:    movb %cl, %al
+; X64-O0-NEXT:    andb $1, %al
+; X64-O0-NEXT:    movzbl %al, %ecx
+; X64-O0-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
+; X64-O0-NEXT:    movl %edx, -{{[0-9]+}}(%rsp) # 4-byte Spill
 ; X64-O0-NEXT:    retq
 entry:
   %a = alloca i8, align 1

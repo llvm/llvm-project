@@ -303,6 +303,15 @@ static T *getStoreValueForLoadHelper(T *SrcVal, unsigned Offset, Type *LoadTy,
                                      const DataLayout &DL) {
   LLVMContext &Ctx = SrcVal->getType()->getContext();
 
+  // If two pointers are in the same address space, they have the same size,
+  // so we don't need to do any truncation, etc. This avoids introducing
+  // ptrtoint instructions for pointers that may be non-integral.
+  if (SrcVal->getType()->isPointerTy() && LoadTy->isPointerTy() &&
+      cast<PointerType>(SrcVal->getType())->getAddressSpace() ==
+          cast<PointerType>(LoadTy)->getAddressSpace()) {
+    return SrcVal;
+  }
+
   uint64_t StoreSize = (DL.getTypeSizeInBits(SrcVal->getType()) + 7) / 8;
   uint64_t LoadSize = (DL.getTypeSizeInBits(LoadTy) + 7) / 8;
   // Compute which bits of the stored value are being used by the load.  Convert

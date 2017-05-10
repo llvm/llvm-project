@@ -264,23 +264,21 @@ namespace {
 
 TEST(TypeBuilderTest, Extensions) {
   LLVMContext Context;
-  EXPECT_EQ(PointerType::getUnqual(StructType::get(
-                TypeBuilder<int, false>::get(Context),
-                TypeBuilder<int *, false>::get(Context),
-                TypeBuilder<void *[], false>::get(Context), (void *)nullptr)),
+  EXPECT_EQ(PointerType::getUnqual(
+                StructType::get(TypeBuilder<int, false>::get(Context),
+                                TypeBuilder<int *, false>::get(Context),
+                                TypeBuilder<void *[], false>::get(Context))),
             (TypeBuilder<MyType *, false>::get(Context)));
-  EXPECT_EQ(
-      PointerType::getUnqual(StructType::get(
-          TypeBuilder<types::i<32>, false>::get(Context),
-          TypeBuilder<types::i<32> *, false>::get(Context),
-          TypeBuilder<types::i<8> *[], false>::get(Context), (void *)nullptr)),
-      (TypeBuilder<MyPortableType *, false>::get(Context)));
-  EXPECT_EQ(
-      PointerType::getUnqual(StructType::get(
-          TypeBuilder<types::i<32>, false>::get(Context),
-          TypeBuilder<types::i<32> *, false>::get(Context),
-          TypeBuilder<types::i<8> *[], false>::get(Context), (void *)nullptr)),
-      (TypeBuilder<MyPortableType *, true>::get(Context)));
+  EXPECT_EQ(PointerType::getUnqual(StructType::get(
+                TypeBuilder<types::i<32>, false>::get(Context),
+                TypeBuilder<types::i<32> *, false>::get(Context),
+                TypeBuilder<types::i<8> *[], false>::get(Context))),
+            (TypeBuilder<MyPortableType *, false>::get(Context)));
+  EXPECT_EQ(PointerType::getUnqual(StructType::get(
+                TypeBuilder<types::i<32>, false>::get(Context),
+                TypeBuilder<types::i<32> *, false>::get(Context),
+                TypeBuilder<types::i<8> *[], false>::get(Context))),
+            (TypeBuilder<MyPortableType *, true>::get(Context)));
 }
 
 }  // anonymous namespace

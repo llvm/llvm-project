@@ -771,9 +771,6 @@ let Uses = [SR] in {
                     [(set (i32 GPR:$Rs1), (LanaiSetCC imm:$DDDI))]>;
 }
 
-// SCC's output is already 1-bit so and'ing with 1 is redundant.
-def : Pat<(and (LanaiSetCC imm:$DDDI), 1), (SCC imm:$DDDI)>;
-
 // Select with hardware support
 let Uses = [SR], isSelect = 1 in {
   def SELECT : InstRR<0b111, (outs GPR:$Rd),

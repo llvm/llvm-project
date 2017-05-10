@@ -1302,41 +1302,6 @@ static bool hasLifetimeMarkers(AllocaInst *AI) {
   return false;
 }
 
-/// Rebuild the entire inlined-at chain for this instruction so that the top of
-/// the chain now is inlined-at the new call site.
-static DebugLoc
-updateInlinedAtInfo(const DebugLoc &DL, DILocation *InlinedAtNode,
-                    LLVMContext &Ctx,
-                    DenseMap<const DILocation *, DILocation *> &IANodes) {
-  SmallVector<DILocation *, 3> InlinedAtLocations;
-  DILocation *Last = InlinedAtNode;
-  DILocation *CurInlinedAt = DL;
-
-  // Gather all the inlined-at nodes
-  while (DILocation *IA = CurInlinedAt->getInlinedAt()) {
-    // Skip any we've already built nodes for
-    if (DILocation *Found = IANodes[IA]) {
-      Last = Found;
-      break;
-    }
-
-    InlinedAtLocations.push_back(IA);
-    CurInlinedAt = IA;
-  }
-
-  // Starting from the top, rebuild the nodes to point to the new inlined-at
-  // location (then rebuilding the rest of the chain behind it) and update the
-  // map of already-constructed inlined-at nodes.
-  for (const DILocation *MD : reverse(InlinedAtLocations)) {
-    Last = IANodes[MD] = DILocation::getDistinct(
-        Ctx, MD->getLine(), MD->getColumn(), MD->getScope(), Last);
-  }
-
-  // And finally create the normal location for this instruction, referring to
-  // the new inlined-at chain.
-  return DebugLoc::get(DL.getLine(), DL.getCol(), DL.getScope(), Last);
-}
-
 /// Return the result of AI->isStaticAlloca() if AI were moved to the entry
 /// block. Allocas used in inalloca calls and allocas of dynamic array size
 /// cannot be static.
@@ -1364,14 +1329,16 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   // Cache the inlined-at nodes as they're built so they are reused, without
   // this every instruction's inlined-at chain would become distinct from each
   // other.
-  DenseMap<const DILocation *, DILocation *> IANodes;
+  DenseMap<const MDNode *, MDNode *> IANodes;
 
   for (; FI != Fn->end(); ++FI) {
     for (BasicBlock::iterator BI = FI->begin(), BE = FI->end();
          BI != BE; ++BI) {
       if (DebugLoc DL = BI->getDebugLoc()) {
-        BI->setDebugLoc(
-            updateInlinedAtInfo(DL, InlinedAtNode, BI->getContext(), IANodes));
+        auto IA = DebugLoc::appendInlinedAt(DL, InlinedAtNode, BI->getContext(),
+                                            IANodes);
+        auto IDL = DebugLoc::get(DL.getLine(), DL.getCol(), DL.getScope(), IA);
+        BI->setDebugLoc(IDL);
         continue;
       }
 
@@ -1429,11 +1396,12 @@ static void updateCallerBFI(BasicBlock *CallSiteBlock,
 /// Update the branch metadata for cloned call instructions.
 static void updateCallProfile(Function *Callee, const ValueToValueMapTy &VMap,
                               const Optional<uint64_t> &CalleeEntryCount,
-                              const Instruction *TheCall) {
+                              const Instruction *TheCall,
+                              ProfileSummaryInfo *PSI) {
   if (!CalleeEntryCount.hasValue() || CalleeEntryCount.getValue() < 1)
     return;
   Optional<uint64_t> CallSiteCount =
-      ProfileSummaryInfo::getProfileCount(TheCall, nullptr);
+      PSI ? PSI->getProfileCount(TheCall, nullptr) : None;
   uint64_t CallCount =
       std::min(CallSiteCount.hasValue() ? CallSiteCount.getValue() : 0,
                CalleeEntryCount.getValue());
@@ -1456,16 +1424,16 @@ static void updateCallProfile(Function *Callee, const ValueToValueMapTy &VMap,
 /// The callsite's block count is subtracted from the callee's function entry
 /// count.
 static void updateCalleeCount(BlockFrequencyInfo *CallerBFI, BasicBlock *CallBB,
-                              Instruction *CallInst, Function *Callee) {
+                              Instruction *CallInst, Function *Callee,
+                              ProfileSummaryInfo *PSI) {
   // If the callee has a original count of N, and the estimated count of
   // callsite is M, the new callee count is set to N - M. M is estimated from
   // the caller's entry count, its entry block frequency and the block frequency
   // of the callsite.
   Optional<uint64_t> CalleeCount = Callee->getEntryCount();
-  if (!CalleeCount.hasValue())
+  if (!CalleeCount.hasValue() || !PSI)
     return;
-  Optional<uint64_t> CallCount =
-      ProfileSummaryInfo::getProfileCount(CallInst, CallerBFI);
+  Optional<uint64_t> CallCount = PSI->getProfileCount(CallInst, CallerBFI);
   if (!CallCount.hasValue())
     return;
   // Since CallSiteCount is an estimate, it could exceed the original callee
@@ -1668,9 +1636,10 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       updateCallerBFI(OrigBB, VMap, IFI.CallerBFI, IFI.CalleeBFI,
                       CalledFunc->front());
 
-    updateCallProfile(CalledFunc, VMap, CalledFunc->getEntryCount(), TheCall);
+    updateCallProfile(CalledFunc, VMap, CalledFunc->getEntryCount(), TheCall,
+                      IFI.PSI);
     // Update the profile count of callee.
-    updateCalleeCount(IFI.CallerBFI, OrigBB, TheCall, CalledFunc);
+    updateCalleeCount(IFI.CallerBFI, OrigBB, TheCall, CalledFunc, IFI.PSI);
 
     // Inject byval arguments initialization.
     for (std::pair<Value*, Value*> &Init : ByValInit)
