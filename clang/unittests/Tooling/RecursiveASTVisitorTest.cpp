@@ -52,6 +52,14 @@ TEST(RecursiveASTVisitor, TraverseLambdaBodyCanBeOverridden) {
   EXPECT_TRUE(Visitor.allBodiesHaveBeenTraversed());
 }
 
+TEST(RecursiveASTVisitor, VisitsAttributedLambdaExpr) {
+  LambdaExprVisitor Visitor;
+  Visitor.ExpectMatch("", 1, 12);
+  EXPECT_TRUE(Visitor.runOver(
+      "void f() { [] () __attribute__ (( fastcall )) { return; }(); }",
+      LambdaExprVisitor::Lang_CXX14));
+}
+
 // Matches the (optional) capture-default of a lambda-introducer.
 class LambdaDefaultCaptureVisitor
   : public ExpectedLocationVisitor<LambdaDefaultCaptureVisitor> {
