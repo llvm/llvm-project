@@ -3,6 +3,9 @@
 ; CHECK: ModuleID = '{{.*}}'
 ; CHECK-NOT: "bar"
 ; CHECK-NOT: "abcd"
+; CHECK-NOT: "GCC"
+; CHECK: "Globals"
+; CHECK: "abcd2"
 
 source_filename = "test/Transforms/StripSymbols/strip-dead-debug-info.ll"
 
@@ -29,7 +32,7 @@ attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind readnone ssp }
 attributes #2 = { nounwind readonly ssp }
 
-!llvm.dbg.cu = !{!4}
+!llvm.dbg.cu = !{!4, !23, !24}
 !llvm.module.flags = !{!9}
 
 !0 = !DIGlobalVariableExpression(var: !1)
@@ -55,4 +58,8 @@ attributes #2 = { nounwind readonly ssp }
 !20 = !DILocation(line: 7, scope: !15)
 !21 = !DILocation(line: 10, scope: !22)
 !22 = distinct !DILexicalBlock(scope: !15, file: !2, line: 7)
-
+!23 = distinct !DICompileUnit(language: DW_LANG_C89, file: !2, producer: "GCC", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !5)
+!24 = distinct !DICompileUnit(language: DW_LANG_C89, file: !2, producer: "Globals", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !25)
+!25 = !{!26}
+!26 = !DIGlobalVariableExpression(var: !27, expr: !DIExpression(DW_OP_constu, 0, DW_OP_stack_value))
+!27 = !DIGlobalVariable(name: "abcd2", scope: !2, file: !2, line: 2, type: !3, isLocal: true, isDefinition: true)
