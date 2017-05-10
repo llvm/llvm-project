@@ -34,17 +34,6 @@ struct FileHeader {
   yaml::Hex32 Version;
 };
 
-struct Import {
-  StringRef Module;
-  StringRef Field;
-  ExportKind Kind;
-  union {
-    uint32_t SigIndex;
-    ValueType GlobalType;
-  };
-  bool GlobalMutable;
-};
-
 struct Limits {
   yaml::Hex32 Flags;
   yaml::Hex32 Initial;
@@ -72,6 +61,18 @@ struct Global {
   ValueType Type;
   bool Mutable;
   wasm::WasmInitExpr InitExpr;
+};
+
+struct Import {
+  StringRef Module;
+  StringRef Field;
+  ExportKind Kind;
+  union {
+    uint32_t SigIndex;
+    Global GlobalImport;
+    Table TableImport;
+    Limits Memory;
+  };
 };
 
 struct LocalDecl {

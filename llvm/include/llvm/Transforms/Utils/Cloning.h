@@ -43,6 +43,7 @@ class InvokeInst;
 class Loop;
 class LoopInfo;
 class Module;
+class ProfileSummaryInfo;
 class ReturnInst;
 
 /// Return an exact copy of the specified module
@@ -175,15 +176,17 @@ public:
   explicit InlineFunctionInfo(CallGraph *cg = nullptr,
                               std::function<AssumptionCache &(Function &)>
                                   *GetAssumptionCache = nullptr,
+                              ProfileSummaryInfo *PSI = nullptr,
                               BlockFrequencyInfo *CallerBFI = nullptr,
                               BlockFrequencyInfo *CalleeBFI = nullptr)
-      : CG(cg), GetAssumptionCache(GetAssumptionCache), CallerBFI(CallerBFI),
-        CalleeBFI(CalleeBFI) {}
+      : CG(cg), GetAssumptionCache(GetAssumptionCache), PSI(PSI),
+        CallerBFI(CallerBFI), CalleeBFI(CalleeBFI) {}
 
   /// CG - If non-null, InlineFunction will update the callgraph to reflect the
   /// changes it makes.
   CallGraph *CG;
   std::function<AssumptionCache &(Function &)> *GetAssumptionCache;
+  ProfileSummaryInfo *PSI;
   BlockFrequencyInfo *CallerBFI, *CalleeBFI;
 
   /// StaticAllocas - InlineFunction fills this in with all static allocas that

@@ -7825,6 +7825,9 @@ bool Sema::CheckFunctionTemplateSpecialization(
     // C++11 [dcl.constexpr]p1: An explicit specialization of a constexpr
     // function can differ from the template declaration with respect to
     // the constexpr specifier.
+    // FIXME: We need an update record for this AST mutation.
+    // FIXME: What if there are multiple such prior declarations (for instance,
+    // from different modules)?
     Specialization->setConstexpr(FD->isConstexpr());
   }
 
@@ -7872,9 +7875,11 @@ bool Sema::CheckFunctionTemplateSpecialization(
     // flag to not-deleted, so that we can inherit that information from 'FD'.
     if (Specialization->isDeleted() && !SpecInfo->isExplicitSpecialization() &&
         !Specialization->getCanonicalDecl()->isReferenced()) {
+      // FIXME: This assert will not hold in the presence of modules.
       assert(
           Specialization->getCanonicalDecl() == Specialization &&
           "This must be the only existing declaration of this specialization");
+      // FIXME: We need an update record for this AST mutation.
       Specialization->setDeletedAsWritten(false);
     }
     SpecInfo->setTemplateSpecializationKind(TSK_ExplicitSpecialization);
@@ -7987,8 +7992,11 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
     return false;
   }
 
-  // If this is a friend, just bail out here before we start turning
-  // things into explicit specializations.
+  // A member specialization in a friend declaration isn't really declaring
+  // an explicit specialization, just identifying a specific (possibly implicit)
+  // specialization. Don't change the template specialization kind.
+  //
+  // FIXME: Is this really valid? Other compilers reject.
   if (Member->getFriendObjectKind() != Decl::FOK_None) {
     // Preserve instantiation information.
     if (InstantiatedFrom && isa<CXXMethodDecl>(Member)) {
@@ -8038,66 +8046,36 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
                                        false))
     return true;
 
-  // Note that this is an explicit instantiation of a member.
-  // the original declaration to note that it is an explicit specialization
-  // (if it was previously an implicit instantiation). This latter step
-  // makes bookkeeping easier.
-  if (isa<FunctionDecl>(Member)) {
+  // Note that this member specialization is an "instantiation of" the
+  // corresponding member of the original template.
+  if (auto *MemberFunction = dyn_cast<FunctionDecl>(Member)) {
     FunctionDecl *InstantiationFunction = cast<FunctionDecl>(Instantiation);
     if (InstantiationFunction->getTemplateSpecializationKind() ==
           TSK_ImplicitInstantiation) {
-      InstantiationFunction->setTemplateSpecializationKind(
-                                                  TSK_ExplicitSpecialization);
-      InstantiationFunction->setLocation(Member->getLocation());
       // Explicit specializations of member functions of class templates do not
       // inherit '=delete' from the member function they are specializing.
       if (InstantiationFunction->isDeleted()) {
+        // FIXME: This assert will not hold in the presence of modules.
         assert(InstantiationFunction->getCanonicalDecl() ==
                InstantiationFunction);
+        // FIXME: We need an update record for this AST mutation.
         InstantiationFunction->setDeletedAsWritten(false);
       }
     }
 
-    cast<FunctionDecl>(Member)->setInstantiationOfMemberFunction(
-                                        cast<CXXMethodDecl>(InstantiatedFrom),
-                                                  TSK_ExplicitSpecialization);
-    MarkUnusedFileScopedDecl(InstantiationFunction);
-  } else if (isa<VarDecl>(Member)) {
-    VarDecl *InstantiationVar = cast<VarDecl>(Instantiation);
-    if (InstantiationVar->getTemplateSpecializationKind() ==
-          TSK_ImplicitInstantiation) {
-      InstantiationVar->setTemplateSpecializationKind(
-                                                  TSK_ExplicitSpecialization);
-      InstantiationVar->setLocation(Member->getLocation());
-    }
-
-    cast<VarDecl>(Member)->setInstantiationOfStaticDataMember(
+    MemberFunction->setInstantiationOfMemberFunction(
+        cast<CXXMethodDecl>(InstantiatedFrom), TSK_ExplicitSpecialization);
+  } else if (auto *MemberVar = dyn_cast<VarDecl>(Member)) {
+    MemberVar->setInstantiationOfStaticDataMember(
         cast<VarDecl>(InstantiatedFrom), TSK_ExplicitSpecialization);
-    MarkUnusedFileScopedDecl(InstantiationVar);
-  } else if (isa<CXXRecordDecl>(Member)) {
-    CXXRecordDecl *InstantiationClass = cast<CXXRecordDecl>(Instantiation);
-    if (InstantiationClass->getTemplateSpecializationKind() ==
-          TSK_ImplicitInstantiation) {
-      InstantiationClass->setTemplateSpecializationKind(
-                                                   TSK_ExplicitSpecialization);
-      InstantiationClass->setLocation(Member->getLocation());
-    }
-
-    cast<CXXRecordDecl>(Member)->setInstantiationOfMemberClass(
-                                        cast<CXXRecordDecl>(InstantiatedFrom),
-                                                   TSK_ExplicitSpecialization);
-  } else {
-    assert(isa<EnumDecl>(Member) && "Only member enums remain");
-    EnumDecl *InstantiationEnum = cast<EnumDecl>(Instantiation);
-    if (InstantiationEnum->getTemplateSpecializationKind() ==
-          TSK_ImplicitInstantiation) {
-      InstantiationEnum->setTemplateSpecializationKind(
-                                                   TSK_ExplicitSpecialization);
-      InstantiationEnum->setLocation(Member->getLocation());
-    }
-
-    cast<EnumDecl>(Member)->setInstantiationOfMemberEnum(
+  } else if (auto *MemberClass = dyn_cast<CXXRecordDecl>(Member)) {
+    MemberClass->setInstantiationOfMemberClass(
+        cast<CXXRecordDecl>(InstantiatedFrom), TSK_ExplicitSpecialization);
+  } else if (auto *MemberEnum = dyn_cast<EnumDecl>(Member)) {
+    MemberEnum->setInstantiationOfMemberEnum(
         cast<EnumDecl>(InstantiatedFrom), TSK_ExplicitSpecialization);
+  } else {
+    llvm_unreachable("unknown member specialization kind");
   }
 
   // Save the caller the trouble of having to figure out which declaration
@@ -8105,6 +8083,43 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
   Previous.clear();
   Previous.addDecl(FoundInstantiation);
   return false;
+}
+
+/// Complete the explicit specialization of a member of a class template by
+/// updating the instantiated member to be marked as an explicit specialization.
+///
+/// \param OrigD The member declaration instantiated from the template.
+/// \param Loc The location of the explicit specialization of the member.
+template<typename DeclT>
+static void completeMemberSpecializationImpl(Sema &S, DeclT *OrigD,
+                                             SourceLocation Loc) {
+  if (OrigD->getTemplateSpecializationKind() != TSK_ImplicitInstantiation)
+    return;
+
+  // FIXME: Inform AST mutation listeners of this AST mutation.
+  // FIXME: If there are multiple in-class declarations of the member (from
+  // multiple modules, or a declaration and later definition of a member type),
+  // should we update all of them?
+  OrigD->setTemplateSpecializationKind(TSK_ExplicitSpecialization);
+  OrigD->setLocation(Loc);
+}
+
+void Sema::CompleteMemberSpecialization(NamedDecl *Member,
+                                        LookupResult &Previous) {
+  NamedDecl *Instantiation = cast<NamedDecl>(Member->getCanonicalDecl());
+  if (Instantiation == Member)
+    return;
+
+  if (auto *Function = dyn_cast<CXXMethodDecl>(Instantiation))
+    completeMemberSpecializationImpl(*this, Function, Member->getLocation());
+  else if (auto *Var = dyn_cast<VarDecl>(Instantiation))
+    completeMemberSpecializationImpl(*this, Var, Member->getLocation());
+  else if (auto *Record = dyn_cast<CXXRecordDecl>(Instantiation))
+    completeMemberSpecializationImpl(*this, Record, Member->getLocation());
+  else if (auto *Enum = dyn_cast<EnumDecl>(Instantiation))
+    completeMemberSpecializationImpl(*this, Enum, Member->getLocation());
+  else
+    llvm_unreachable("unknown member specialization kind");
 }
 
 /// \brief Check the scope of an explicit instantiation.

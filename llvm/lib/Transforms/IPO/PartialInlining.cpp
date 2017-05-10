@@ -473,7 +473,7 @@ Function *PartialInlinerImpl::unswitchFunction(Function *F) {
              << ore::NV("Callee", F) << " partially inlined into "
              << ore::NV("Caller", CS.getCaller()));
 
-    InlineFunctionInfo IFI(nullptr, GetAssumptionCache);
+    InlineFunctionInfo IFI(nullptr, GetAssumptionCache, PSI);
     InlineFunction(CS, IFI);
     NumPartialInlining++;
     // update stats

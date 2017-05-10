@@ -67,8 +67,8 @@ public:
   }
 
   /// Returns the profile count for \p CallInst.
-  static Optional<uint64_t> getProfileCount(const Instruction *CallInst,
-                                            BlockFrequencyInfo *BFI);
+  Optional<uint64_t> getProfileCount(const Instruction *CallInst,
+                                     BlockFrequencyInfo *BFI);
   /// \brief Returns true if \p F has hot function entry.
   bool isFunctionEntryHot(const Function *F);
   /// Returns true if \p F has hot function entry or hot call edge.

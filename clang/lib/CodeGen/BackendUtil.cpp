@@ -194,6 +194,8 @@ static void addSanitizerCoveragePass(const PassManagerBuilder &Builder,
 // where this is not a factor). Also, on ELF this feature requires an assembler
 // extension that only works with -integrated-as at the moment.
 static bool asanUseGlobalsGC(const Triple &T, const CodeGenOptions &CGOpts) {
+  if (!CGOpts.SanitizeAddressGlobalsDeadStripping)
+    return false;
   switch (T.getObjectFormat()) {
   case Triple::MachO:
   case Triple::COFF:

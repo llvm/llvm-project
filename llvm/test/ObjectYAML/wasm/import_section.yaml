@@ -9,19 +9,32 @@ Sections:
         ParamTypes:
           - I32
   - Type:            IMPORT
-    Imports:         
+    Imports:
       - Module:          foo
-        Field:           bar
+        Field:           imported_function
         Kind:            FUNCTION
         SigIndex:        0
       - Module:          fiz
-        Field:           baz
+        Field:           imported_global
         Kind:            GLOBAL
         GlobalType:      I32
         GlobalMutable:   false
-  - Type:            FUNCTION
-    FunctionTypes:
-      - 0
+      - Module:          foo
+        Field:           imported_memory
+        Kind:            MEMORY
+        Memory:
+          Flags:           0x00000001
+          Initial:         0x00000010
+          Maximum:         0x00000011
+      - Module:          foo
+        Field:           imported_table
+        Kind:            TABLE
+        Table:
+          ElemType:      ANYFUNC
+          Limits:
+            Flags:           0x00000001
+            Initial:         0x00000020
+            Maximum:         0x00000022
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
@@ -30,12 +43,28 @@ Sections:
 # CHECK:   - Type:            IMPORT
 # CHECK:     Imports:         
 # CHECK:       - Module:          foo
-# CHECK:         Field:           bar
+# CHECK:         Field:           imported_function
 # CHECK:         Kind:            FUNCTION
 # CHECK:         SigIndex:        0
 # CHECK:       - Module:          fiz
-# CHECK:         Field:           baz
+# CHECK:         Field:           imported_global
 # CHECK:         Kind:            GLOBAL
 # CHECK:         GlobalType:      I32
 # CHECK:         GlobalMutable:   false
+# CHECK:       - Module:          foo
+# CHECK:         Field:           imported_memory
+# CHECK:         Kind:            MEMORY
+# CHECK:         Memory:
+# CHECK:           Flags:           0x00000001
+# CHECK:           Initial:         0x00000010
+# CHECK:           Maximum:         0x00000011
+# CHECK:       - Module:          foo
+# CHECK:         Field:           imported_table
+# CHECK:         Kind:            TABLE
+# CHECK:         Table:
+# CHECK:           ElemType:      ANYFUNC
+# CHECK:           Limits:
+# CHECK:             Flags:           0x00000001
+# CHECK:             Initial:         0x00000020
+# CHECK:             Maximum:         0x00000022
 # CHECK: ...

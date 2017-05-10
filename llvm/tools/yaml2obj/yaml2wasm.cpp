@@ -169,8 +169,15 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
       encodeULEB128(Import.SigIndex, OS);
       break;
     case wasm::WASM_EXTERNAL_GLOBAL:
-      encodeSLEB128(Import.GlobalType, OS);
-      writeUint8(OS, Import.GlobalMutable);
+      encodeSLEB128(Import.GlobalImport.Type, OS);
+      writeUint8(OS, Import.GlobalImport.Mutable);
+      break;
+    case wasm::WASM_EXTERNAL_MEMORY:
+      writeLimits(Import.Memory, OS);
+      break;
+    case wasm::WASM_EXTERNAL_TABLE:
+      encodeSLEB128(Import.TableImport.ElemType, OS);
+      writeLimits(Import.TableImport.TableLimits, OS);
       break;
     default:
       errs() << "Unknown import type: " << Import.Kind;

@@ -37,17 +37,6 @@ struct WasmSignature {
   int32_t ReturnType;
 };
 
-struct WasmImport {
-  StringRef Module;
-  StringRef Field;
-  uint32_t Kind;
-  union {
-    uint32_t SigIndex;
-    int32_t GlobalType;
-  };
-  bool GlobalMutable;
-};
-
 struct WasmExport {
   StringRef Name;
   uint32_t Kind;
@@ -80,6 +69,18 @@ struct WasmGlobal {
   int32_t Type;
   bool Mutable;
   WasmInitExpr InitExpr;
+};
+
+struct WasmImport {
+  StringRef Module;
+  StringRef Field;
+  uint32_t Kind;
+  union {
+    uint32_t SigIndex;
+    WasmGlobal Global;
+    WasmTable Table;
+    WasmLimits Memory;
+  };
 };
 
 struct WasmLocalDecl {
