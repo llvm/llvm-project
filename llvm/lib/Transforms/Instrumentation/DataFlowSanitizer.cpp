@@ -476,14 +476,14 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
     GetArgTLS = ConstantExpr::getIntToPtr(
         ConstantInt::get(IntptrTy, uintptr_t(GetArgTLSPtr)),
         PointerType::getUnqual(
-            FunctionType::get(PointerType::getUnqual(ArgTLSTy), (Type*)nullptr)));
+            FunctionType::get(PointerType::getUnqual(ArgTLSTy), false)));
   }
   if (GetRetvalTLSPtr) {
     RetvalTLS = nullptr;
     GetRetvalTLS = ConstantExpr::getIntToPtr(
         ConstantInt::get(IntptrTy, uintptr_t(GetRetvalTLSPtr)),
         PointerType::getUnqual(
-            FunctionType::get(PointerType::getUnqual(ShadowTy), (Type*)nullptr)));
+            FunctionType::get(PointerType::getUnqual(ShadowTy), false)));
   }
 
   ColdCallWeights = MDBuilder(*Ctx).createBranchWeights(1, 1000);

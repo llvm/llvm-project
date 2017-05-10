@@ -234,7 +234,7 @@ public:
                                  StructType *>::type
   create(StringRef Name, Type *elt1, Tys *... elts) {
     assert(elt1 && "Cannot create a struct type with no elements with this");
-    SmallVector<llvm::Type *, 8> StructFields{{elt1, elts...}};
+    SmallVector<llvm::Type *, 8> StructFields({elt1, elts...});
     return create(StructFields, Name);
   }
 
@@ -254,7 +254,7 @@ public:
   get(Type *elt1, Tys *... elts) {
     assert(elt1 && "Cannot create a struct type with no elements with this");
     LLVMContext &Ctx = elt1->getContext();
-    SmallVector<llvm::Type *, 8> StructFields{{elt1, elts...}};
+    SmallVector<llvm::Type *, 8> StructFields({elt1, elts...});
     return llvm::StructType::get(Ctx, StructFields);
   }
 
@@ -290,7 +290,7 @@ public:
   typename std::enable_if<are_base_of<Type, Tys...>::value, void>::type
   setBody(Type *elt1, Tys *... elts) {
     assert(elt1 && "Cannot create a struct type with no elements with this");
-    SmallVector<llvm::Type *, 8> StructFields{{elt1, elts...}};
+    SmallVector<llvm::Type *, 8> StructFields({elt1, elts...});
     setBody(StructFields);
   }
 

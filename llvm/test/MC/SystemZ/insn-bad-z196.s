@@ -503,6 +503,33 @@
 	fixbra	%f0, 0, %f2, 0
 	fixbra	%f2, 0, %f0, 0
 
+#CHECK: error: invalid register pair
+#CHECK: kmctr	%r1, %r2, %r4
+#CHECK: error: invalid register pair
+#CHECK: kmctr	%r2, %r1, %r4
+#CHECK: error: invalid register pair
+#CHECK: kmctr	%r2, %r4, %r1
+
+	kmctr	%r1, %r2, %r4
+	kmctr	%r2, %r1, %r4
+	kmctr	%r2, %r4, %r1
+
+#CHECK: error: invalid register pair
+#CHECK: kmf	%r1, %r2
+#CHECK: error: invalid register pair
+#CHECK: kmf	%r2, %r1
+
+	kmf	%r1, %r2
+	kmf	%r2, %r1
+
+#CHECK: error: invalid register pair
+#CHECK: kmo	%r1, %r2
+#CHECK: error: invalid register pair
+#CHECK: kmo	%r2, %r1
+
+	kmo	%r1, %r2
+	kmo	%r2, %r1
+
 #CHECK: error: invalid operand
 #CHECK: laa	%r0, %r0, -524289
 #CHECK: error: invalid operand
@@ -757,11 +784,6 @@
 	locr	%r0,%r0,-1
 	locr	%r0,%r0,16
 
-#CHECK: error: instruction requires: execution-hint
-#CHECK: niai	0, 0
-
-	niai	0, 0
-
 #CHECK: error: invalid register pair
 #CHECK: lpd	%r1, 0, 0
 #CHECK: error: invalid use of indexed addressing
@@ -801,6 +823,11 @@
 	lpdg	%r2, 4096(%r1), 160(%r15)
 	lpdg	%r2, 0(%r1), -1(%r15)
 	lpdg	%r2, 0(%r1), 4096(%r15)
+
+#CHECK: error: instruction requires: execution-hint
+#CHECK: niai	0, 0
+
+	niai	0, 0
 
 #CHECK: error: instruction requires: transactional-execution
 #CHECK: ntstg	%r0, 524287(%r1,%r15)
@@ -933,20 +960,20 @@
 	stch	%r0, 524288
 
 #CHECK: error: invalid operand
-#CHECK: sthh	%r0, -524289
-#CHECK: error: invalid operand
-#CHECK: sthh	%r0, 524288
-
-	sthh	%r0, -524289
-	sthh	%r0, 524288
-
-#CHECK: error: invalid operand
 #CHECK: stfh	%r0, -524289
 #CHECK: error: invalid operand
 #CHECK: stfh	%r0, 524288
 
 	stfh	%r0, -524289
 	stfh	%r0, 524288
+
+#CHECK: error: invalid operand
+#CHECK: sthh	%r0, -524289
+#CHECK: error: invalid operand
+#CHECK: sthh	%r0, 524288
+
+	sthh	%r0, -524289
+	sthh	%r0, 524288
 
 #CHECK: error: invalid operand
 #CHECK: stoc	%r0,0,-1

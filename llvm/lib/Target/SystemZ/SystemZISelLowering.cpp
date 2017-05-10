@@ -6352,3 +6352,12 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     llvm_unreachable("Unexpected instr type to insert");
   }
 }
+
+// This is only used by the isel schedulers, and is needed only to prevent
+// compiler from crashing when list-ilp is used.
+const TargetRegisterClass *
+SystemZTargetLowering::getRepRegClassFor(MVT VT) const {
+  if (VT == MVT::Untyped)
+    return &SystemZ::ADDR128BitRegClass;
+  return TargetLowering::getRepRegClassFor(VT);
+}

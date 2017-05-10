@@ -1125,11 +1125,10 @@ static Value *addFastMathFlag(Value *V) {
 }
 
 // Helper to generate a log2 shuffle reduction.
-static Value *
-getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
-                    RecurrenceDescriptor::MinMaxRecurrenceKind MinMaxKind =
-                        RecurrenceDescriptor::MRK_Invalid,
-                    ArrayRef<Value *> RedOps = ArrayRef<Value *>()) {
+Value *
+llvm::getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
+                          RecurrenceDescriptor::MinMaxRecurrenceKind MinMaxKind,
+                          ArrayRef<Value *> RedOps) {
   unsigned VF = Src->getType()->getVectorNumElements();
   // VF is a power of 2 so we can emit the reduction using log2(VF) shuffles
   // and vector ops, reducing the set of values being computed by half each

@@ -37,12 +37,13 @@ SystemZSubtarget::SystemZSubtarget(const Triple &TT, const std::string &CPU,
                                    const TargetMachine &TM)
     : SystemZGenSubtargetInfo(TT, CPU, FS), HasDistinctOps(false),
       HasLoadStoreOnCond(false), HasHighWord(false), HasFPExtension(false),
-      HasPopulationCount(false), HasFastSerialization(false),
-      HasInterlockedAccess1(false), HasMiscellaneousExtensions(false),
+      HasPopulationCount(false), HasMessageSecurityAssist4(false),
+      HasFastSerialization(false), HasInterlockedAccess1(false),
+      HasMiscellaneousExtensions(false),
       HasExecutionHint(false), HasLoadAndTrap(false),
       HasTransactionalExecution(false), HasProcessorAssist(false),
       HasVector(false), HasLoadStoreOnCond2(false),
-      HasLoadAndZeroRightmostByte(false),
+      HasLoadAndZeroRightmostByte(false), HasMessageSecurityAssist5(false),
       TargetTriple(TT), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
       TLInfo(TM, *this), TSInfo(), FrameLowering() {}
 

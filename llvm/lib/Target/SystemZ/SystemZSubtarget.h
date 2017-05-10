@@ -39,6 +39,7 @@ protected:
   bool HasHighWord;
   bool HasFPExtension;
   bool HasPopulationCount;
+  bool HasMessageSecurityAssist4;
   bool HasFastSerialization;
   bool HasInterlockedAccess1;
   bool HasMiscellaneousExtensions;
@@ -49,6 +50,7 @@ protected:
   bool HasVector;
   bool HasLoadStoreOnCond2;
   bool HasLoadAndZeroRightmostByte;
+  bool HasMessageSecurityAssist5;
 
 private:
   Triple TargetTriple;
@@ -104,6 +106,10 @@ public:
   // Return true if the target has the population-count facility.
   bool hasPopulationCount() const { return HasPopulationCount; }
 
+  // Return true if the target has the message-security-assist
+  // extension facility 4.
+  bool hasMessageSecurityAssist4() const { return HasMessageSecurityAssist4; }
+
   // Return true if the target has the fast-serialization facility.
   bool hasFastSerialization() const { return HasFastSerialization; }
 
@@ -131,6 +137,10 @@ public:
   bool hasLoadAndZeroRightmostByte() const {
     return HasLoadAndZeroRightmostByte;
   }
+
+  // Return true if the target has the message-security-assist
+  // extension facility 5.
+  bool hasMessageSecurityAssist5() const { return HasMessageSecurityAssist5; }
 
   // Return true if the target has the vector facility.
   bool hasVector() const { return HasVector; }

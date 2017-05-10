@@ -1,11 +1,12 @@
 @echo on
+
 if NOT EXIST C:\projects\deps (
   mkdir C:\projects\deps
 )
 cd C:\projects\deps
 
 ::###########################################################################
-:: Setup the path to Clang-cl
+:: Setup Compiler
 ::###########################################################################
 if NOT EXIST llvm-installer.exe (
   appveyor DownloadFile http://llvm.org/pre-releases/win-snapshots/LLVM-5.0.0-r301646-win32.exe -FileName llvm-installer.exe
@@ -13,8 +14,13 @@ if NOT EXIST llvm-installer.exe (
 if "%CLANG_VERSION%"=="ToT" (
     START /WAIT llvm-installer.exe /S /D=C:\"Program Files\LLVM"
 )
-@set PATH="C:\Program Files\LLVM\bin";%PATH%
-clang-cl -v
+if DEFINED CLANG_VERSION  @set PATH="C:\Program Files\LLVM\bin";%PATH%
+if DEFINED CLANG_VERSION  clang-cl -v
+
+if DEFINED MINGW_PATH rename "C:\Program Files\Git\usr\bin\sh.exe" "sh-ignored.exe"
+if DEFINED MINGW_PATH @set "PATH=%PATH:C:\Program Files (x86)\Git\bin=%"
+if DEFINED MINGW_PATH @set "PATH=%PATH%;%MINGW_PATH%"
+if DEFINED MINGW_PATH g++ -v
 
 ::###########################################################################
 :: Install a recent CMake

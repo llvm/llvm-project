@@ -20,7 +20,7 @@ static inline Selector getKeywordSelector(ASTContext &Ctx,
                                           IdentifierInfos *... IIs) {
   static_assert(sizeof...(IdentifierInfos),
                 "keyword selectors must have at least one argument");
-  SmallVector<IdentifierInfo *, 10> II{{&Ctx.Idents.get(IIs)...}};
+  SmallVector<IdentifierInfo *, 10> II({&Ctx.Idents.get(IIs)...});
 
   return Ctx.Selectors.getSelector(II.size(), &II[0]);
 }

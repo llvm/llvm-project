@@ -405,6 +405,10 @@ namespace llvm {
   /// printing assembly.
   ModulePass *createMachineOutlinerPass();
 
+  /// This pass expands the experimental reduction intrinsics into sequences of
+  /// shuffles.
+  FunctionPass *createExpandReductionsPass();
+
 } // End llvm namespace
 
 /// Target machine pass initializer for passes with dependencies. Use with

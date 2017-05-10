@@ -455,6 +455,85 @@ void Sema::LookupTemplateName(LookupResult &Found,
   }
 }
 
+void Sema::diagnoseExprIntendedAsTemplateName(Scope *S, ExprResult TemplateName,
+                                              SourceLocation Less,
+                                              SourceLocation Greater) {
+  if (TemplateName.isInvalid())
+    return;
+
+  DeclarationNameInfo NameInfo;
+  CXXScopeSpec SS;
+  LookupNameKind LookupKind;
+
+  DeclContext *LookupCtx = nullptr;
+  NamedDecl *Found = nullptr;
+
+  // Figure out what name we looked up.
+  if (auto *ME = dyn_cast<MemberExpr>(TemplateName.get())) {
+    NameInfo = ME->getMemberNameInfo();
+    SS.Adopt(ME->getQualifierLoc());
+    LookupKind = LookupMemberName;
+    LookupCtx = ME->getBase()->getType()->getAsCXXRecordDecl();
+    Found = ME->getMemberDecl();
+  } else {
+    auto *DRE = cast<DeclRefExpr>(TemplateName.get());
+    NameInfo = DRE->getNameInfo();
+    SS.Adopt(DRE->getQualifierLoc());
+    LookupKind = LookupOrdinaryName;
+    Found = DRE->getFoundDecl();
+  }
+
+  // Try to correct the name by looking for templates and C++ named casts.
+  struct TemplateCandidateFilter : CorrectionCandidateCallback {
+    TemplateCandidateFilter() {
+      WantTypeSpecifiers = false;
+      WantExpressionKeywords = false;
+      WantRemainingKeywords = false;
+      WantCXXNamedCasts = true;
+    };
+    bool ValidateCandidate(const TypoCorrection &Candidate) override {
+      if (auto *ND = Candidate.getCorrectionDecl())
+        return isAcceptableTemplateName(ND->getASTContext(), ND, true);
+      return Candidate.isKeyword();
+    }
+  };
+
+  DeclarationName Name = NameInfo.getName();
+  if (TypoCorrection Corrected =
+          CorrectTypo(NameInfo, LookupKind, S, &SS,
+                      llvm::make_unique<TemplateCandidateFilter>(),
+                      CTK_ErrorRecovery, LookupCtx)) {
+    auto *ND = Corrected.getFoundDecl();
+    if (ND)
+      ND = isAcceptableTemplateName(Context, ND,
+                                    /*AllowFunctionTemplates*/ true);
+    if (ND || Corrected.isKeyword()) {
+      if (LookupCtx) {
+        std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
+        bool DroppedSpecifier = Corrected.WillReplaceSpecifier() &&
+                                Name.getAsString() == CorrectedStr;
+        diagnoseTypo(Corrected,
+                     PDiag(diag::err_non_template_in_member_template_id_suggest)
+                         << Name << LookupCtx << DroppedSpecifier
+                         << SS.getRange());
+      } else {
+        diagnoseTypo(Corrected,
+                     PDiag(diag::err_non_template_in_template_id_suggest)
+                         << Name);
+      }
+      if (Found)
+        Diag(Found->getLocation(),
+             diag::note_non_template_in_template_id_found);
+      return;
+    }
+  }
+
+  Diag(NameInfo.getLoc(), diag::err_non_template_in_template_id)
+    << Name << SourceRange(Less, Greater);
+  if (Found)
+    Diag(Found->getLocation(), diag::note_non_template_in_template_id_found);
+}
+
 /// ActOnDependentIdExpression - Handle a dependent id-expression that
 /// was just parsed.  This is only possible with an explicit scope
 /// specifier naming a dependent type.

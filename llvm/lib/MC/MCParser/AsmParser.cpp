@@ -288,6 +288,7 @@ public:
 
 private:
   bool isAltmacroString(SMLoc &StrLoc, SMLoc &EndLoc);
+  void altMacroString(StringRef AltMacroStr, std::string &Res);
   bool parseStatement(ParseStatementInfo &Info,
                       MCAsmParserSemaCallback *SI);
   bool parseCurlyBlockScope(SmallVectorImpl<AsmRewrite>& AsmStrRewrites);
@@ -1209,6 +1210,8 @@ bool AsmParser::isAltmacroString(SMLoc &StrLoc, SMLoc &EndLoc) {
   const char *CharPtr = StrLoc.getPointer();
   while ((*CharPtr != '>') && (*CharPtr != '\n') &&
          (*CharPtr != '\r') && (*CharPtr != '\0')){
+	  if(*CharPtr == '!')
+		  CharPtr++;
     CharPtr++;
   }
   if (*CharPtr == '>') {
@@ -1216,6 +1219,15 @@ bool AsmParser::isAltmacroString(SMLoc &StrLoc, SMLoc &EndLoc) {
     return true;
   }
   return false;
+}
+
+/// \brief creating a string without the escape characters '!'.
+void AsmParser::altMacroString(StringRef AltMacroStr,std::string &Res) {
+  for (int Pos = 0; Pos < AltMacroStr.size(); Pos++) {
+    if (AltMacroStr[Pos] == '!')
+      Pos++;
+    Res += AltMacroStr[Pos];
+  }
 }
 
 /// \brief Parse an expression and return it.
@@ -2309,6 +2321,15 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
                  (*(Token.getString().begin()) == '%') && Token.is(AsmToken::Integer))
               // Emit an integer value to the buffer.
               OS << Token.getIntVal();
+            // Only Token that was validated as a string and begins with '<'
+            // is considered altMacroString!!!
+            else if ((Lexer.IsaAltMacroMode()) &&
+                     (*(Token.getString().begin()) == '<') &&
+                     Token.is(AsmToken::String)) {
+              std::string Res;
+              altMacroString(Token.getStringContents(), Res);
+              OS << Res;
+            }
             // We expect no quotes around the string's contents when
             // parsing for varargs.
             else if (Token.isNot(AsmToken::String) || VarargParameter)
