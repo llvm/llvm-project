@@ -987,7 +987,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
     defined(__linux__) || \
     defined(__APPLE__) || \
     defined(__CloudABI__) || \
-    defined(__sun__)
+    defined(__sun__) || \
+    defined(__WINPTHREADS_VERSION)
 #   define _LIBCPP_HAS_THREAD_API_PTHREAD
 # elif defined(_LIBCPP_WIN32API)
 #  define _LIBCPP_HAS_THREAD_API_WIN32

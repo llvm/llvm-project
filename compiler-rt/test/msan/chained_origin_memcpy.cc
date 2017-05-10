@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 
 // CHECK: Uninitialized value was stored to memory at
 // CHECK-FULL-STACK: {{#1 .* in fn_h.*chained_origin_memcpy.cc:}}[[@LINE-15]]
-// CHECK-SHORT-STACK: {{#0 .* in __msan_memcpy .*msan_interceptors.cc:}}
+// CHECK-SHORT-STACK: {{#0 .* in __msan_memcpy.*msan_interceptors.cc:}}
 
 // CHECK: Uninitialized value was stored to memory at
 // CHECK-FULL-STACK: {{#0 .* in fn_g.*chained_origin_memcpy.cc:}}[[@LINE-29]]

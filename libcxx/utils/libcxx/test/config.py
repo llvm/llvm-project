@@ -67,7 +67,7 @@ class Configuration(object):
         self.abi_library_root = None
         self.link_shared = self.get_lit_bool('enable_shared', default=True)
         self.debug_build = self.get_lit_bool('debug_build',   default=False)
-        self.exec_env = {}
+        self.exec_env = dict(os.environ)
         self.use_target = False
         self.use_system_cxx_lib = False
         self.use_clang_verify = False
@@ -160,7 +160,11 @@ class Configuration(object):
         # Print as list to prevent "set([...])" from being printed.
         self.lit_config.note('Using available_features: %s' %
                              list(self.config.available_features))
-        self.lit_config.note('Using environment: %r' % self.exec_env)
+        show_env_vars = {}
+        for k,v in self.exec_env.items():
+            if k not in os.environ or os.environ[k] != v:
+                show_env_vars[k] = v
+        self.lit_config.note('Adding environment variables: %r' % show_env_vars)
         sys.stderr.flush()  # Force flushing to avoid broken output on Windows
 
     def get_test_format(self):
@@ -1002,18 +1006,8 @@ class Configuration(object):
         sub.append(('%link', link_str))
         sub.append(('%build', build_str))
         # Configure exec prefix substitutions.
-        exec_env_str = ''
-        if not self.is_windows and len(self.exec_env) != 0:
-            exec_env_str = 'env '
-            for k, v in self.exec_env.items():
-                exec_env_str += ' %s=%s' % (k, v)
         # Configure run env substitution.
-        exec_str = exec_env_str
-        if self.lit_config.useValgrind:
-            exec_str = ' '.join(self.lit_config.valgrindArgs) + exec_env_str
-        sub.append(('%exec', exec_str))
-        # Configure run shortcut
-        sub.append(('%run', exec_str + ' %t.exe'))
+        sub.append(('%run', '%t.exe'))
         # Configure not program substitutions
         not_py = os.path.join(self.libcxx_src_root, 'utils', 'not.py')
         not_str = '%s %s ' % (pipes.quote(sys.executable), pipes.quote(not_py))
