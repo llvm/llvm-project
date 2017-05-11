@@ -886,22 +886,12 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation &RAngleLoc,
 /// list ('<' template-parameter-list [opt] '>') and placing the
 /// results into a form that can be transferred to semantic analysis.
 ///
-/// \param Template the template declaration produced by isTemplateName
-///
-/// \param TemplateNameLoc the source location of the template name
-///
-/// \param SS if non-NULL, the nested-name-specifier preceding the
-/// template name.
-///
 /// \param ConsumeLastToken if true, then we will consume the last
 /// token that forms the template-id. Otherwise, we will leave the
 /// last token in the stream (e.g., so that it can be replaced with an
 /// annotation token).
 bool
-Parser::ParseTemplateIdAfterTemplateName(TemplateTy Template,
-                                         SourceLocation TemplateNameLoc,
-                                         const CXXScopeSpec &SS,
-                                         bool ConsumeLastToken,
+Parser::ParseTemplateIdAfterTemplateName(bool ConsumeLastToken,
                                          SourceLocation &LAngleLoc,
                                          TemplateArgList &TemplateArgs,
                                          SourceLocation &RAngleLoc) {
@@ -983,9 +973,7 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
   // Parse the enclosed template argument list.
   SourceLocation LAngleLoc, RAngleLoc;
   TemplateArgList TemplateArgs;
-  bool Invalid = ParseTemplateIdAfterTemplateName(Template, 
-                                                  TemplateNameLoc,
-                                                  SS, false, LAngleLoc,
+  bool Invalid = ParseTemplateIdAfterTemplateName(false, LAngleLoc,
                                                   TemplateArgs,
                                                   RAngleLoc);
 

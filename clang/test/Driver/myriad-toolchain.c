@@ -54,9 +54,11 @@
 // -fno-split-dwarf-inlining is consumed but not passed to moviCompile.
 // RUN: %clang -target shave-myriad -c -### %s -g -fno-inline-functions \
 // RUN: -fno-inline-functions-called-once -Os -Wall -MF dep.d -fno-split-dwarf-inlining \
-// RUN: -ffunction-sections 2>&1 | FileCheck %s -check-prefix=PASSTHRU_OPTIONS
+// RUN: -ffunction-sections -Xclang -xclangflag -mllvm -llvm-flag 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=PASSTHRU_OPTIONS
 // PASSTHRU_OPTIONS: "-g" "-fno-inline-functions" "-fno-inline-functions-called-once"
 // PASSTHRU_OPTIONS: "-Os" "-Wall" "-MF" "dep.d" "-ffunction-sections"
+// PASSTHRU_OPTIONS: "-Xclang" "-xclangflag" "-mllvm" "-llvm-flag"
 
 // RUN: %clang -target shave-myriad -c %s -o foo.o -### -MD -MF dep.d 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=MDMF

@@ -63,7 +63,7 @@ via a register.)
 
 --
 
-We don't use ICM or STCM.
+We don't use ICM, STCM, or CLM.
 
 --
 

@@ -1,6 +1,6 @@
 ; RUN: opt -S -polly-detect-fortran-arrays -analyze -polly-process-unprofitable \
 ; RUN: -polly-remarks-minimal -polly-canonicalize -polly-scops \
-; RUN: -polly-dependences -debug-only=polly-dependence -polly-canonicalize \
+; RUN: -polly-dependences -polly-canonicalize \
 ; RUN: -polly-allow-nonaffine -polly-ignore-aliasing \
 ; RUN: -polly-invariant-load-hoisting < %s| FileCheck %s
 ;

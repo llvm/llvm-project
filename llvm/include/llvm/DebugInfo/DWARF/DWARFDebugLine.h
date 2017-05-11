@@ -30,7 +30,7 @@ public:
   struct FileNameEntry {
     FileNameEntry() = default;
 
-    StringRef Name = StringRef();
+    StringRef Name;
     uint64_t DirIdx = 0;
     uint64_t ModTime = 0;
     uint64_t Length = 0;

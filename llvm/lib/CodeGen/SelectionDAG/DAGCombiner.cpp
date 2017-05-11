@@ -2131,17 +2131,17 @@ SDValue DAGCombiner::visitADDCARRY(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDValue CarryIn = N->getOperand(2);
+  SDLoc DL(N);
 
   // canonicalize constant to RHS
   ConstantSDNode *N0C = dyn_cast<ConstantSDNode>(N0);
   ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
   if (N0C && !N1C)
-    return DAG.getNode(ISD::ADDCARRY, SDLoc(N), N->getVTList(),
-                       N1, N0, CarryIn);
+    return DAG.getNode(ISD::ADDCARRY, DL, N->getVTList(), N1, N0, CarryIn);
 
   // fold (addcarry x, y, false) -> (uaddo x, y)
   if (isNullConstant(CarryIn))
-    return DAG.getNode(ISD::UADDO, SDLoc(N), N->getVTList(), N0, N1);
+    return DAG.getNode(ISD::UADDO, DL, N->getVTList(), N0, N1);
 
   if (SDValue Combined = visitADDCARRYLike(N0, N1, CarryIn, N))
     return Combined;

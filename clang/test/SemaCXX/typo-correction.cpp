@@ -524,11 +524,14 @@ namespace shadowed_template {
 template <typename T> class Fizbin {};  // expected-note {{'::shadowed_template::Fizbin' declared here}}
 class Baz {
    int Fizbin();
-   // TODO: Teach the parser to recover from the typo correction instead of
-   // continuing to treat the template name as an implicit-int declaration.
-   Fizbin<int> qux;  // expected-error {{unknown type name 'Fizbin'; did you mean '::shadowed_template::Fizbin'?}} \
-                     // expected-error {{expected member name or ';' after declaration specifiers}}
+   Fizbin<int> qux;  // expected-error {{no template named 'Fizbin'; did you mean '::shadowed_template::Fizbin'?}}
 };
+}
+
+namespace no_correct_template_id_to_non_template {
+  struct Frobnatz {}; // expected-note {{declared here}}
+  Frobnats fn; // expected-error {{unknown type name 'Frobnats'; did you mean 'Frobnatz'?}}
+  Frobnats<int> fni; // expected-error-re {{no template named 'Frobnats'{{$}}}}
 }
 
 namespace PR18852 {

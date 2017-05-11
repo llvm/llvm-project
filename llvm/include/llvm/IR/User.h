@@ -1,4 +1,4 @@
-//===-- llvm/User.h - User class definition ---------------------*- C++ -*-===//
+//===- llvm/User.h - User class definition ----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -114,6 +114,7 @@ protected:
       ? OperandTraits<U>::op_end(const_cast<U*>(that))[Idx]
       : OperandTraits<U>::op_begin(const_cast<U*>(that))[Idx];
   }
+
   template <int Idx> Use &Op() {
     return OpFrom<Idx>(this);
   }
@@ -205,10 +206,10 @@ public:
   // ---------------------------------------------------------------------------
   // Operand Iterator interface...
   //
-  typedef Use*       op_iterator;
-  typedef const Use* const_op_iterator;
-  typedef iterator_range<op_iterator> op_range;
-  typedef iterator_range<const_op_iterator> const_op_range;
+  using op_iterator = Use*;
+  using const_op_iterator = const Use*;
+  using op_range = iterator_range<op_iterator>;
+  using const_op_range = iterator_range<const_op_iterator>;
 
   op_iterator       op_begin()       { return getOperandList(); }
   const_op_iterator op_begin() const { return getOperandList(); }
@@ -252,6 +253,7 @@ public:
                               ptrdiff_t, const Value *, const Value *> {
     explicit const_value_op_iterator(const Use *U = nullptr) :
       iterator_adaptor_base(U) {}
+
     const Value *operator*() const { return *I; }
     const Value *operator->() const { return operator*(); }
   };
@@ -290,6 +292,7 @@ public:
     return isa<Instruction>(V) || isa<Constant>(V);
   }
 };
+
 // Either Use objects, or a Use pointer can be prepended to User.
 static_assert(alignof(Use) >= alignof(User),
               "Alignment is insufficient after objects prepended to User");
@@ -297,13 +300,15 @@ static_assert(alignof(Use *) >= alignof(User),
               "Alignment is insufficient after objects prepended to User");
 
 template<> struct simplify_type<User::op_iterator> {
-  typedef Value* SimpleType;
+  using SimpleType = Value*;
+
   static SimpleType getSimplifiedValue(User::op_iterator &Val) {
     return Val->get();
   }
 };
 template<> struct simplify_type<User::const_op_iterator> {
-  typedef /*const*/ Value* SimpleType;
+  using SimpleType = /*const*/ Value*;
+
   static SimpleType getSimplifiedValue(User::const_op_iterator &Val) {
     return Val->get();
   }

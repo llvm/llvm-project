@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Constants.h"
@@ -320,7 +321,8 @@ void splitAndWriteThinLTOBitcode(
 
 
   // FIXME: Try to re-use BSI and PFI from the original module here.
-  ModuleSummaryIndex Index = buildModuleSummaryIndex(M, nullptr, nullptr);
+  ProfileSummaryInfo PSI(M);
+  ModuleSummaryIndex Index = buildModuleSummaryIndex(M, nullptr, &PSI);
 
   SmallVector<char, 0> Buffer;
 

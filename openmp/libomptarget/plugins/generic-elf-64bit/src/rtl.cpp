@@ -22,7 +22,7 @@
 #include <list>
 #include <vector>
 
-#include "omptarget.h"
+#include "omptargetplugin.h"
 
 #ifndef TARGET_NAME
 #define TARGET_NAME Generic ELF - 64bit
@@ -251,7 +251,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
   return DeviceInfo.getOffloadEntriesTable(device_id);
 }
 
-void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size) {
+void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *hst_ptr) {
   void *ptr = malloc(size);
   return ptr;
 }
@@ -274,8 +274,8 @@ int32_t __tgt_rtl_data_delete(int32_t device_id, void *tgt_ptr) {
 }
 
 int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
-    void **tgt_args, int32_t arg_num, int32_t team_num, int32_t thread_limit,
-    uint64_t loop_tripcount /*not used*/) {
+    void **tgt_args, ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t team_num,
+    int32_t thread_limit, uint64_t loop_tripcount /*not used*/) {
   // ignore team num and thread limit.
 
   // Use libffi to launch execution.
@@ -284,9 +284,12 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
   // All args are references.
   std::vector<ffi_type *> args_types(arg_num, &ffi_type_pointer);
   std::vector<void *> args(arg_num);
+  std::vector<void *> ptrs(arg_num);
 
-  for (int32_t i = 0; i < arg_num; ++i)
-    args[i] = &tgt_args[i];
+  for (int32_t i = 0; i < arg_num; ++i) {
+    ptrs[i] = (void *)((intptr_t)tgt_args[i] + tgt_offsets[i]);
+    args[i] = &ptrs[i];
+  }
 
   ffi_status status = ffi_prep_cif(&cif, FFI_DEFAULT_ABI, arg_num,
                                    &ffi_type_void, &args_types[0]);
@@ -303,10 +306,10 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
 }
 
 int32_t __tgt_rtl_run_target_region(int32_t device_id, void *tgt_entry_ptr,
-                                    void **tgt_args, int32_t arg_num) {
+    void **tgt_args, ptrdiff_t *tgt_offsets, int32_t arg_num) {
   // use one team and one thread.
   return __tgt_rtl_run_target_team_region(device_id, tgt_entry_ptr, tgt_args,
-                                          arg_num, 1, 1, 0);
+      tgt_offsets, arg_num, 1, 1, 0);
 }
 
 #ifdef __cplusplus

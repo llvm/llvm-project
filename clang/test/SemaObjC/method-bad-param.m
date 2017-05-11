@@ -20,6 +20,12 @@
 }
 @end
 
+// Ensure that this function is properly marked as a failure.
+void func_with_bad_call(bar* b, foo* f) {
+  [b cccccc:5]; // expected-warning {{instance method '-cccccc:' not found}}
+                // expected-note@-17 {{receiver is instance of class declared here}}
+}
+
 void somefunc(foo x) {} // expected-error {{interface type 'foo' cannot be passed by value; did you forget * in 'foo'}}
 foo somefunc2() {} // expected-error {{interface type 'foo' cannot be returned by value; did you forget * in 'foo'}}
 

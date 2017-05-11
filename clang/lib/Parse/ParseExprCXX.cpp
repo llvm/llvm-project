@@ -2114,11 +2114,8 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
   // Parse the enclosed template argument list.
   SourceLocation LAngleLoc, RAngleLoc;
   TemplateArgList TemplateArgs;
-  if (Tok.is(tok::less) &&
-      ParseTemplateIdAfterTemplateName(Template, Id.StartLocation,
-                                       SS, true, LAngleLoc,
-                                       TemplateArgs,
-                                       RAngleLoc))
+  if (Tok.is(tok::less) && ParseTemplateIdAfterTemplateName(
+                               true, LAngleLoc, TemplateArgs, RAngleLoc))
     return true;
   
   if (Id.getKind() == UnqualifiedId::IK_Identifier ||

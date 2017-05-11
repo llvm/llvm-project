@@ -1,4 +1,4 @@
-//===-- Module.cpp - Implement the Module class ---------------------------===//
+//===- Module.cpp - Implement the Module class ----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,26 +11,46 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Module.h"
 #include "SymbolTableListTraitsImpl.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalIFunc.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/GVMaterializer.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/SymbolTableListTraits.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/TypeFinder.h"
-#include "llvm/Support/Dwarf.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include <algorithm>
-#include <cstdlib>
+#include <cassert>
+#include <cstdint>
+#include <memory>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 

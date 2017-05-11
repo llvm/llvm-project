@@ -48,8 +48,12 @@ using namespace lld::elf;
 LinkerScript *elf::Script;
 
 uint64_t ExprValue::getValue() const {
-  if (Sec)
-    return Sec->getOffset(Val) + Sec->getOutputSection()->Addr;
+  if (Sec) {
+    if (Sec->getOutputSection())
+      return Sec->getOffset(Val) + Sec->getOutputSection()->Addr;
+    error("unable to evaluate expression: input section " + Sec->Name +
+          " has no output section assigned");
+  }
   return Val;
 }
 
@@ -411,6 +415,7 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
       if (OutputSection *Sec = Cmd->Sec) {
         assert(Sec->SectionIndex == INT_MAX);
         Sec->SectionIndex = I;
+        SecToCommand[Sec] = Cmd;
       }
     }
   }
@@ -440,6 +445,7 @@ void LinkerScript::fabricateDefaultCommands() {
 
     auto *OSCmd = make<OutputSectionCommand>(Sec->Name);
     OSCmd->Sec = Sec;
+    SecToCommand[Sec] = OSCmd;
 
     // Prefer user supplied address over additional alignment constraint
     auto I = Config->SectionStartMap.find(Sec->Name);
@@ -484,6 +490,7 @@ void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
       auto *Cmd = cast<OutputSectionCommand>(*I);
       Factory.addInputSec(S, Name, Cmd->Sec);
       if (OutputSection *Sec = Cmd->Sec) {
+        SecToCommand[Sec] = Cmd;
         unsigned Index = std::distance(Opt.Commands.begin(), I);
         assert(Sec->SectionIndex == INT_MAX || Sec->SectionIndex == Index);
         Sec->SectionIndex = Index;
@@ -699,6 +706,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     OutSec->SectionIndex = I;
     OutputSections->push_back(OutSec);
     Cmd->Sec = OutSec;
+    SecToCommand[OutSec] = Cmd;
   }
 }
 
@@ -822,16 +830,14 @@ void LinkerScript::placeOrphanSections() {
     // If there is no command corresponding to this output section,
     // create one and put a InputSectionDescription in it so that both
     // representations agree on which input sections to use.
-    auto Pos = std::find_if(CmdIter, E, [&](BaseCommand *Base) {
-      auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
-      return Cmd && Cmd->Name == Name;
-    });
-    if (Pos == E) {
-      auto *Cmd = make<OutputSectionCommand>(Name);
+    OutputSectionCommand *Cmd = getCmd(Sec);
+    if (!Cmd) {
+      Cmd = make<OutputSectionCommand>(Name);
       Opt.Commands.insert(CmdIter, Cmd);
       ++CmdIndex;
 
       Cmd->Sec = Sec;
+      SecToCommand[Sec] = Cmd;
       auto *ISD = make<InputSectionDescription>("");
       for (InputSection *IS : Sec->Sections)
         ISD->Sections.push_back(IS);
@@ -841,7 +847,11 @@ void LinkerScript::placeOrphanSections() {
     }
 
     // Continue from where we found it.
-    CmdIndex = (Pos - Opt.Commands.begin()) + 1;
+    while (*CmdIter != Cmd) {
+      ++CmdIter;
+      ++CmdIndex;
+    }
+    ++CmdIndex;
   }
 }
 
@@ -1000,7 +1010,7 @@ std::vector<PhdrEntry> LinkerScript::createPhdrs() {
       break;
 
     // Assign headers specified by linker script
-    for (size_t Id : getPhdrIndices(Sec->Name)) {
+    for (size_t Id : getPhdrIndices(Sec)) {
       Ret[Id].add(Sec);
       if (Opt.PhdrsCommands[Id].Flags == UINT_MAX)
         Ret[Id].p_flags |= Sec->getPhdrFlags();
@@ -1020,11 +1030,16 @@ bool LinkerScript::ignoreInterpSection() {
   return true;
 }
 
-Optional<uint32_t> LinkerScript::getFiller(StringRef Name) {
-  for (BaseCommand *Base : Opt.Commands)
-    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
-      if (Cmd->Name == Name)
-        return Cmd->Filler;
+OutputSectionCommand *LinkerScript::getCmd(OutputSection *Sec) const {
+  auto I = SecToCommand.find(Sec);
+  if (I == SecToCommand.end())
+    return nullptr;
+  return I->second;
+}
+
+Optional<uint32_t> LinkerScript::getFiller(OutputSection *Sec) {
+  if (OutputSectionCommand *Cmd = getCmd(Sec))
+    return Cmd->Filler;
   return None;
 }
 
@@ -1042,26 +1057,16 @@ static void writeInt(uint8_t *Buf, uint64_t Data, uint64_t Size) {
 }
 
 void LinkerScript::writeDataBytes(OutputSection *Sec, uint8_t *Buf) {
-  auto I = std::find_if(Opt.Commands.begin(), Opt.Commands.end(),
-                        [=](BaseCommand *Base) {
-                          if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
-                            if (Cmd->Sec == Sec)
-                              return true;
-                          return false;
-                        });
-  if (I == Opt.Commands.end())
-    return;
-  auto *Cmd = cast<OutputSectionCommand>(*I);
-  for (BaseCommand *Base : Cmd->Commands)
-    if (auto *Data = dyn_cast<BytesDataCommand>(Base))
-      writeInt(Buf + Data->Offset, Data->Expression().getValue(), Data->Size);
+  if (OutputSectionCommand *Cmd = getCmd(Sec))
+    for (BaseCommand *Base : Cmd->Commands)
+      if (auto *Data = dyn_cast<BytesDataCommand>(Base))
+        writeInt(Buf + Data->Offset, Data->Expression().getValue(), Data->Size);
 }
 
-bool LinkerScript::hasLMA(StringRef Name) {
-  for (BaseCommand *Base : Opt.Commands)
-    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
-      if (Cmd->LMAExpr && Cmd->Name == Name)
-        return true;
+bool LinkerScript::hasLMA(OutputSection *Sec) {
+  if (OutputSectionCommand *Cmd = getCmd(Sec))
+    if (Cmd->LMAExpr)
+      return true;
   return false;
 }
 
@@ -1080,15 +1085,10 @@ ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {
 
 bool LinkerScript::isDefined(StringRef S) { return findSymbol(S) != nullptr; }
 
-// Returns indices of ELF headers containing specific section, identified
-// by Name. Each index is a zero based number of ELF header listed within
-// PHDRS {} script block.
-std::vector<size_t> LinkerScript::getPhdrIndices(StringRef SectionName) {
-  for (BaseCommand *Base : Opt.Commands) {
-    auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
-    if (!Cmd || Cmd->Name != SectionName)
-      continue;
-
+// Returns indices of ELF headers containing specific section. Each index is a
+// zero based number of ELF header listed within PHDRS {} script block.
+std::vector<size_t> LinkerScript::getPhdrIndices(OutputSection *Sec) {
+  if (OutputSectionCommand *Cmd = getCmd(Sec)) {
     std::vector<size_t> Ret;
     for (StringRef PhdrName : Cmd->Phdrs)
       Ret.push_back(getPhdrIndex(Cmd->Location, PhdrName));

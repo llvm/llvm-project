@@ -368,9 +368,10 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
               (Style.Language == FormatStyle::LK_JavaScript &&
                NextTok->isOneOf(Keywords.kw_of, Keywords.kw_in,
                                 Keywords.kw_as)) ||
+              (Style.isCpp() && NextTok->is(tok::l_paren)) ||
               NextTok->isOneOf(tok::comma, tok::period, tok::colon,
                                tok::r_paren, tok::r_square, tok::l_brace,
-                               tok::l_square, tok::l_paren, tok::ellipsis) ||
+                               tok::l_square, tok::ellipsis) ||
               (NextTok->is(tok::identifier) &&
                !PrevTok->isOneOf(tok::semi, tok::r_brace, tok::l_brace)) ||
               (NextTok->is(tok::semi) &&

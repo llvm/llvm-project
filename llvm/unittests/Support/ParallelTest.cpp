@@ -1,4 +1,4 @@
-//===- lld/unittest/ParallelTest.cpp --------------------------------------===//
+//===- llvm/unittest/Support/ParallelTest.cpp -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,12 +12,14 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/Parallel.h"
 #include "gtest/gtest.h"
-#include "lld/Core/Parallel.h"
 #include <array>
 #include <random>
 
 uint32_t array[1024 * 1024];
+
+using namespace llvm;
 
 TEST(Parallel, sort) {
   std::mt19937 randEngine;
@@ -26,7 +28,7 @@ TEST(Parallel, sort) {
   for (auto &i : array)
     i = dist(randEngine);
 
-  sort(lld::parallel::par, std::begin(array), std::end(array));
+  sort(parallel::par, std::begin(array), std::end(array));
   ASSERT_TRUE(std::is_sorted(std::begin(array), std::end(array)));
 }
 
@@ -36,7 +38,7 @@ TEST(Parallel, parallel_for) {
   // writing.
   uint32_t range[2050];
   std::fill(range, range + 2050, 1);
-  for_each_n(lld::parallel::par, 0, 2049, [&range](size_t I) { ++range[I]; });
+  for_each_n(parallel::par, 0, 2049, [&range](size_t I) { ++range[I]; });
 
   uint32_t expected[2049];
   std::fill(expected, expected + 2049, 2);

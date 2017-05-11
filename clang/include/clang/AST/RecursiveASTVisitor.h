@@ -2326,7 +2326,7 @@ DEF_TRAVERSE_STMT(LambdaExpr, {
   }
 
   TypeLoc TL = S->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
-  FunctionProtoTypeLoc Proto = TL.castAs<FunctionProtoTypeLoc>();
+  FunctionProtoTypeLoc Proto = TL.getAsAdjusted<FunctionProtoTypeLoc>();
 
   if (S->hasExplicitParameters() && S->hasExplicitResultType()) {
     // Visit the whole type.

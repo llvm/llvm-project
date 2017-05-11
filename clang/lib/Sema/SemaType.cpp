@@ -2285,8 +2285,9 @@ bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
   // Methods cannot return interface types. All ObjC objects are
   // passed by reference.
   if (T->isObjCObjectType()) {
-    Diag(Loc, diag::err_object_cannot_be_passed_returned_by_value) << 0 << T;
-    return 0;
+    Diag(Loc, diag::err_object_cannot_be_passed_returned_by_value)
+        << 0 << T << FixItHint::CreateInsertion(Loc, "*");
+    return true;
   }
 
   return false;

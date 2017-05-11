@@ -1,25 +1,20 @@
-//===- lld/Core/TaskGroup.cpp - Task Group --------------------------------===//
+//===- llvm/Support/Parallel.cpp - Parallel algorithms --------------------===//
 //
-//                             The LLVM Linker
+//                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
 
-#include "lld/Core/TaskGroup.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Config/llvm-config.h"
 
 #include <atomic>
 #include <stack>
 #include <thread>
 
-#if defined(_MSC_VER) && LLVM_ENABLE_THREADS
-#include <concrt.h>
-#include <ppl.h>
-#endif
-
-using namespace lld;
+using namespace llvm;
 
 namespace {
 
@@ -122,7 +117,7 @@ private:
   std::stack<std::function<void()>> WorkStack;
   std::mutex Mutex;
   std::condition_variable Cond;
-  Latch Done;
+  parallel::detail::Latch Done;
 };
 
 Executor *Executor::getDefaultExecutor() {
@@ -132,10 +127,10 @@ Executor *Executor::getDefaultExecutor() {
 #endif
 }
 
-void TaskGroup::spawn(std::function<void()> f) {
-  _latch.inc();
-  Executor::getDefaultExecutor()->add([&, f] {
-    f();
-    _latch.dec();
+void parallel::detail::TaskGroup::spawn(std::function<void()> F) {
+  L.inc();
+  Executor::getDefaultExecutor()->add([&, F] {
+    F();
+    L.dec();
   });
 }

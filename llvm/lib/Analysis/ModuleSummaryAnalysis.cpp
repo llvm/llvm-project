@@ -330,6 +330,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     const Module &M,
     std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
     ProfileSummaryInfo *PSI) {
+  assert(PSI);
   ModuleSummaryIndex Index;
 
   // Identify the local values in the llvm.used and llvm.compiler.used sets,

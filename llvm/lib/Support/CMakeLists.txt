@@ -81,6 +81,7 @@ add_llvm_library(LLVMSupport
   MD5.cpp
   NativeFormatting.cpp
   Options.cpp
+  Parallel.cpp
   PluginLoader.cpp
   PrettyStackTrace.cpp
   RandomNumberGenerator.cpp

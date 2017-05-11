@@ -53,7 +53,7 @@ INVALID-SYMTAB-SIZE: size is not a multiple of sh_entsize
 
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-xindex-size.elf 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
-INVALID-XINDEX-SIZE: Invalid data was encountered while parsing the file.
+INVALID-XINDEX-SIZE: Invalid data was encountered while parsing the file
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-e_shnum.elf 2>&1 | FileCheck --check-prefix=INVALID-SH-NUM %s
 INVALID-SH-NUM: invalid e_phentsize
@@ -77,7 +77,7 @@ RUN:   FileCheck --check-prefix=INVALID-SECTION-SIZE2 %s
 INVALID-SECTION-SIZE2: invalid section offset
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-sections-num.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-NUM %s
-INVALID-SECTION-NUM: Invalid data was encountered while parsing the file.
+INVALID-SECTION-NUM: Invalid data was encountered while parsing the file
 
 RUN: not llvm-readobj -r %p/Inputs/invalid-rel-sym.elf 2>&1 | FileCheck --check-prefix=INVALID-REL-SYM %s
 INVALID-REL-SYM: invalid section offset

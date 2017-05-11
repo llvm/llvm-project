@@ -1039,8 +1039,8 @@ void MemoryAccess::setFortranArrayDescriptor(GlobalValue *FAD) {
 
 // TODO: write checks to make sure it looks _exactly_ like a Fortran array
 // descriptor
-#ifdef NDEBUG
-  StructType *ty = dyn_cast<StructType>(Descriptor->getValueType());
+#ifndef NDEBUG
+  StructType *ty = dyn_cast<StructType>(FAD->getValueType());
   assert(ty && "expected value of type Fortran array descriptor");
   assert(ty->hasName() && ty->getName().startswith("struct.array") &&
          "expected global to follow Fortran array descriptor type naming "

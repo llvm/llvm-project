@@ -63,6 +63,7 @@ int main()
     assert(A::count == 1);
     assert(f.target<A>());
     assert(f.target<int(*)(int)>() == 0);
+    assert(f.target<int>() == nullptr);
     }
     assert(A::count == 0);
     {
@@ -70,6 +71,7 @@ int main()
     assert(A::count == 0);
     assert(f.target<int(*)(int)>());
     assert(f.target<A>() == 0);
+    assert(f.target<int>() == nullptr);
     }
     assert(A::count == 0);
     {
@@ -77,6 +79,7 @@ int main()
     assert(A::count == 1);
     assert(f.target<A>());
     assert(f.target<int(*)(int)>() == 0);
+    assert(f.target<int>() == nullptr);
     }
     assert(A::count == 0);
     {
@@ -84,6 +87,7 @@ int main()
     assert(A::count == 0);
     assert(f.target<int(*)(int)>());
     assert(f.target<A>() == 0);
+    assert(f.target<int>() == nullptr);
     }
     assert(A::count == 0);
 }

@@ -66,7 +66,6 @@ set(GENERIC_SOURCES
   divti3.c
   divtf3.c
   divxc3.c
-  enable_execute_stack.c
   eprintf.c
   extendsfdf2.c
   extendhfsf2.c
@@ -190,6 +189,12 @@ set(GENERIC_TF_SOURCES
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (this may be needed if system headers are unavailable)"
   Off)
+
+if(NOT COMPILER_RT_BAREMETAL_BUILD)
+  set(GENERIC_SOURCES
+    ${GENERIC_SOURCES}
+    enable_execute_stack.c)
+endif()
 
 if(COMPILER_RT_HAS_ATOMIC_KEYWORD AND NOT COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN)
   set(GENERIC_SOURCES

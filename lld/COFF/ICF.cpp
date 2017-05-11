@@ -21,9 +21,9 @@
 #include "Chunks.h"
 #include "Error.h"
 #include "Symbols.h"
-#include "lld/Core/Parallel.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <atomic>

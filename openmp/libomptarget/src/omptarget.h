@@ -16,6 +16,7 @@
 #define _OMPTARGET_H_
 
 #include <stdint.h>
+#include <stddef.h>
 
 #define OFFLOAD_SUCCESS (0)
 #define OFFLOAD_FAIL (~0)
