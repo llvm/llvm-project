@@ -61,8 +61,7 @@
 
 #include "Config.h"
 
-#include "lld/Core/Parallel.h"
-#include <algorithm>
+#include "llvm/Support/Parallel.h"
 #include <functional>
 
 namespace lld {
@@ -71,17 +70,17 @@ namespace elf {
 template <class IterTy, class FuncTy>
 void parallelForEach(IterTy Begin, IterTy End, FuncTy Fn) {
   if (Config->Threads)
-    for_each(parallel::par, Begin, End, Fn);
+    for_each(llvm::parallel::par, Begin, End, Fn);
   else
-    for_each(parallel::seq, Begin, End, Fn);
+    for_each(llvm::parallel::seq, Begin, End, Fn);
 }
 
-inline void parallelFor(size_t Begin, size_t End,
-                        std::function<void(size_t)> Fn) {
+inline void parallelForEachN(size_t Begin, size_t End,
+                             std::function<void(size_t)> Fn) {
   if (Config->Threads)
-    for_each_n(parallel::par, Begin, End, Fn);
+    for_each_n(llvm::parallel::par, Begin, End, Fn);
   else
-    for_each_n(parallel::seq, Begin, End, Fn);
+    for_each_n(llvm::parallel::seq, Begin, End, Fn);
 }
 }
 }

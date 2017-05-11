@@ -262,6 +262,9 @@ public:
   bool isMemDisp20(MemoryKind MemKind, RegisterKind RegKind) const {
     return isMem(MemKind, RegKind) && inRange(Mem.Disp, -524288, 524287);
   }
+  bool isMemDisp12Len4(RegisterKind RegKind) const {
+    return isMemDisp12(BDLMem, RegKind) && inRange(Mem.Length.Imm, 1, 0x10);
+  }
   bool isMemDisp12Len8(RegisterKind RegKind) const {
     return isMemDisp12(BDLMem, RegKind) && inRange(Mem.Length.Imm, 1, 0x100);
   }
@@ -347,6 +350,7 @@ public:
   bool isBDAddr64Disp20() const { return isMemDisp20(BDMem, ADDR64Reg); }
   bool isBDXAddr64Disp12() const { return isMemDisp12(BDXMem, ADDR64Reg); }
   bool isBDXAddr64Disp20() const { return isMemDisp20(BDXMem, ADDR64Reg); }
+  bool isBDLAddr64Disp12Len4() const { return isMemDisp12Len4(ADDR64Reg); }
   bool isBDLAddr64Disp12Len8() const { return isMemDisp12Len8(ADDR64Reg); }
   bool isBDRAddr64Disp12() const { return isMemDisp12(BDRMem, ADDR64Reg); }
   bool isBDVAddr64Disp12() const { return isMemDisp12(BDVMem, ADDR64Reg); }

@@ -1209,7 +1209,7 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
 
   } else {
     assert((ElemType->isRecordType() || ElemType->isVectorType() ||
-            ElemType->isClkEventT()) && "Unexpected type");
+            ElemType->isOpenCLSpecificType()) && "Unexpected type");
 
     // C99 6.7.8p13:
     //

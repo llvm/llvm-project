@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===--------------------- support/win32/limits_win32.h -------------------===//
+//===------------------ support/win32/limits_msvc_win32.h -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,17 +8,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_SUPPORT_WIN32_LIMITS_WIN32_H
-#define _LIBCPP_SUPPORT_WIN32_LIMITS_WIN32_H
+#ifndef _LIBCPP_SUPPORT_WIN32_LIMITS_MSVC_WIN32_H
+#define _LIBCPP_SUPPORT_WIN32_LIMITS_MSVC_WIN32_H
 
 #if !defined(_LIBCPP_MSVCRT)
 #error "This header complements the Microsoft C Runtime library, and should not be included otherwise."
-#else
+#endif
+#if defined(__clang__)
+#error "This header should only be included when using Microsofts C1XX frontend"
+#endif
 
 #include <limits.h> // CHAR_BIT
 #include <float.h> // limit constants
+#include <math.h> // HUGE_VAL
+#include <ymath.h> // internal MSVC header providing the needed functionality
 
-#if ! defined(__clang__)
 #define __CHAR_BIT__       CHAR_BIT
 
 #define __FLT_MANT_DIG__   FLT_MANT_DIG
@@ -61,19 +65,8 @@
 #define __LDBL_DENORM_MIN__ 3.64519953188247460253e-4951L
 
 // __builtin replacements/workarounds
-#include <math.h> // HUGE_VAL
-#include <ymath.h> // internal MSVC header providing the needed functionality
-#define __builtin_huge_val()     HUGE_VAL
-#define __builtin_huge_valf()    _FInf._Float
 #define __builtin_huge_vall()    _LInf._Long_double
-#define __builtin_nan(__dummy)   _Nan._Double
-#define __builtin_nanf(__dummy)  _FNan._Float
 #define __builtin_nanl(__dummmy) _LNan._Long_double
-#define __builtin_nans(__dummy)  _Snan._Double
-#define __builtin_nansf(__dummy) _FSnan._Float
 #define __builtin_nansl(__dummy) _LSnan._Long_double
-#endif // ! defined(__clang__)
 
-#endif // _LIBCPP_MSVCRT
-
-#endif // _LIBCPP_SUPPORT_WIN32_LIMITS_WIN32_H
+#endif // _LIBCPP_SUPPORT_WIN32_LIMITS_MSVC_WIN32_H

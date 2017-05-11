@@ -1,4 +1,4 @@
-//===-- llvm/Function.h - Class to represent a single function --*- C++ -*-===//
+//===- llvm/Function.h - Class to represent a single function ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -22,15 +22,19 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalObject.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
@@ -40,27 +44,31 @@
 
 namespace llvm {
 
-template <typename T> class Optional;
 class AssemblyAnnotationWriter;
-class FunctionType;
-class LLVMContext;
+class Constant;
 class DISubprogram;
+class LLVMContext;
+class Module;
+template <typename T> class Optional;
+class raw_ostream;
+class Type;
+class User;
 
 class Function : public GlobalObject, public ilist_node<Function> {
 public:
-  typedef SymbolTableList<BasicBlock> BasicBlockListType;
+  using BasicBlockListType = SymbolTableList<BasicBlock>;
 
   // BasicBlock iterators...
-  typedef BasicBlockListType::iterator iterator;
-  typedef BasicBlockListType::const_iterator const_iterator;
+  using iterator = BasicBlockListType::iterator;
+  using const_iterator = BasicBlockListType::const_iterator;
 
-  typedef Argument *arg_iterator;
-  typedef const Argument *const_arg_iterator;
+  using arg_iterator = Argument *;
+  using const_arg_iterator = const Argument *;
 
 private:
   // Important things that make up a function!
-  BasicBlockListType  BasicBlocks;        ///< The basic blocks
-  mutable Argument *Arguments;            ///< The formal arguments
+  BasicBlockListType BasicBlocks;         ///< The basic blocks
+  mutable Argument *Arguments = nullptr;  ///< The formal arguments
   size_t NumArgs;
   std::unique_ptr<ValueSymbolTable>
       SymTab;                             ///< Symbol table of args/instructions
@@ -124,10 +132,12 @@ public:
 
   // Provide fast operand accessors.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
   /// Returns the FunctionType for me.
   FunctionType *getFunctionType() const {
     return cast<FunctionType>(getValueType());
   }
+
   /// Returns the type of the ret val.
   Type *getReturnType() const { return getFunctionType()->getReturnType(); }
 

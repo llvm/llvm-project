@@ -1,4 +1,4 @@
-//===-- llvm/DerivedTypes.h - Classes for handling data types ---*- C++ -*-===//
+//===- llvm/DerivedTypes.h - Classes for handling data types ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -123,7 +123,8 @@ public:
   bool isVarArg() const { return getSubclassData()!=0; }
   Type *getReturnType() const { return ContainedTys[0]; }
 
-  typedef Type::subtype_iterator param_iterator;
+  using param_iterator = Type::subtype_iterator;
+
   param_iterator param_begin() const { return ContainedTys + 1; }
   param_iterator param_end() const { return &ContainedTys[NumContainedTys]; }
   ArrayRef<Type *> params() const {
@@ -198,8 +199,7 @@ public:
 /// generator for a target expects).
 ///
 class StructType : public CompositeType {
-  StructType(LLVMContext &C)
-    : CompositeType(C, StructTyID), SymbolTableEntry(nullptr) {}
+  StructType(LLVMContext &C) : CompositeType(C, StructTyID) {}
 
   enum {
     /// This is the contents of the SubClassData field.
@@ -213,7 +213,7 @@ class StructType : public CompositeType {
   /// symbol table entry (maintained by LLVMContext) for the struct.
   /// This is null if the type is an literal struct or if it is a identified
   /// type that has an empty name.
-  void *SymbolTableEntry;
+  void *SymbolTableEntry = nullptr;
 
 public:
   StructType(const StructType &) = delete;
@@ -234,7 +234,7 @@ public:
                                  StructType *>::type
   create(StringRef Name, Type *elt1, Tys *... elts) {
     assert(elt1 && "Cannot create a struct type with no elements with this");
-    SmallVector<llvm::Type *, 8> StructFields{{elt1, elts...}};
+    SmallVector<llvm::Type *, 8> StructFields({elt1, elts...});
     return create(StructFields, Name);
   }
 
@@ -254,7 +254,7 @@ public:
   get(Type *elt1, Tys *... elts) {
     assert(elt1 && "Cannot create a struct type with no elements with this");
     LLVMContext &Ctx = elt1->getContext();
-    SmallVector<llvm::Type *, 8> StructFields{{elt1, elts...}};
+    SmallVector<llvm::Type *, 8> StructFields({elt1, elts...});
     return llvm::StructType::get(Ctx, StructFields);
   }
 
@@ -290,7 +290,7 @@ public:
   typename std::enable_if<are_base_of<Type, Tys...>::value, void>::type
   setBody(Type *elt1, Tys *... elts) {
     assert(elt1 && "Cannot create a struct type with no elements with this");
-    SmallVector<llvm::Type *, 8> StructFields{{elt1, elts...}};
+    SmallVector<llvm::Type *, 8> StructFields({elt1, elts...});
     setBody(StructFields);
   }
 
@@ -298,7 +298,8 @@ public:
   static bool isValidElementType(Type *ElemTy);
 
   // Iterator access to the elements.
-  typedef Type::subtype_iterator element_iterator;
+  using element_iterator = Type::subtype_iterator;
+
   element_iterator element_begin() const { return ContainedTys; }
   element_iterator element_end() const { return &ContainedTys[NumContainedTys];}
   ArrayRef<Type *> const elements() const {

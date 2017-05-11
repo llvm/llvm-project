@@ -21,7 +21,9 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
 #include "llvm/Support/Casting.h"
+#include <cassert> 
 #include <cstddef>
+#include <cstdint> 
 #include <iterator>
 
 namespace llvm {
@@ -29,13 +31,13 @@ namespace llvm {
   template<typename ItTy = User::const_op_iterator>
   class generic_gep_type_iterator
     : public std::iterator<std::forward_iterator_tag, Type *, ptrdiff_t> {
-    typedef std::iterator<std::forward_iterator_tag,
-                          Type *, ptrdiff_t> super;
+    using super = std::iterator<std::forward_iterator_tag, Type *, ptrdiff_t>;
 
     ItTy OpIt;
     PointerUnion<StructType *, Type *> CurTy;
     enum : uint64_t { Unbounded = -1ull };
     uint64_t NumElements = Unbounded;
+
     generic_gep_type_iterator() = default;
 
   public:
@@ -121,7 +123,7 @@ namespace llvm {
     }
   };
 
-  typedef generic_gep_type_iterator<> gep_type_iterator;
+  using gep_type_iterator = generic_gep_type_iterator<>;
 
   inline gep_type_iterator gep_type_begin(const User *GEP) {
     auto *GEPOp = cast<GEPOperator>(GEP);

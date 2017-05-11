@@ -347,8 +347,7 @@ template <typename T> struct B : A<T> {
 };
 template <typename T> struct C : A<T> {
   // Incorrect form.
-  NameFromBase<T> m; // expected-error {{unknown type name 'NameFromBase'}}
-  //expected-error@-1 {{expected member name or ';' after declaration specifiers}}
+  NameFromBase<T> m; // expected-error {{no template named 'NameFromBase'}}
 };
 }
 

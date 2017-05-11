@@ -327,6 +327,18 @@ static DecodeStatus decodeBDXAddr20Operand(MCInst &Inst, uint64_t Field,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeBDLAddr12Len4Operand(MCInst &Inst, uint64_t Field,
+                                               const unsigned *Regs) {
+  uint64_t Length = Field >> 16;
+  uint64_t Base = (Field >> 12) & 0xf;
+  uint64_t Disp = Field & 0xfff;
+  assert(Length < 16 && "Invalid BDLAddr12Len4");
+  Inst.addOperand(MCOperand::createReg(Base == 0 ? 0 : Regs[Base]));
+  Inst.addOperand(MCOperand::createImm(Disp));
+  Inst.addOperand(MCOperand::createImm(Length + 1));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeBDLAddr12Len8Operand(MCInst &Inst, uint64_t Field,
                                                const unsigned *Regs) {
   uint64_t Length = Field >> 16;
@@ -397,6 +409,13 @@ static DecodeStatus decodeBDXAddr64Disp20Operand(MCInst &Inst, uint64_t Field,
                                                  uint64_t Address,
                                                  const void *Decoder) {
   return decodeBDXAddr20Operand(Inst, Field, SystemZMC::GR64Regs);
+}
+
+static DecodeStatus decodeBDLAddr64Disp12Len4Operand(MCInst &Inst,
+                                                     uint64_t Field,
+                                                     uint64_t Address,
+                                                     const void *Decoder) {
+  return decodeBDLAddr12Len4Operand(Inst, Field, SystemZMC::GR64Regs);
 }
 
 static DecodeStatus decodeBDLAddr64Disp12Len8Operand(MCInst &Inst,

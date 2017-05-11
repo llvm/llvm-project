@@ -161,7 +161,8 @@ class CXXBasePaths {
   void ComputeDeclsFound();
 
   bool lookupInBases(ASTContext &Context, const CXXRecordDecl *Record,
-                     CXXRecordDecl::BaseMatchesCallback BaseMatches);
+                     CXXRecordDecl::BaseMatchesCallback BaseMatches,
+                     bool LookupInDependent = false);
 
 public:
   typedef std::list<CXXBasePath>::iterator paths_iterator;

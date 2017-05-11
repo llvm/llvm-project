@@ -809,6 +809,19 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
     if (clang_Cursor_isObjCOptional(Cursor))
       printf(" (@optional)");
 
+    {
+      CXString language;
+      CXString definedIn;
+      unsigned generated;
+      if (clang_Cursor_isExternalSymbol(Cursor, &language, &definedIn,
+                                        &generated)) {
+        printf(" (external lang: %s, defined: %s, gen: %d)",
+            clang_getCString(language), clang_getCString(definedIn), generated);
+        clang_disposeString(language);
+        clang_disposeString(definedIn);
+      }
+    }
+
     if (Cursor.kind == CXCursor_IBOutletCollectionAttr) {
       CXType T =
         clang_getCanonicalType(clang_getIBOutletCollectionType(Cursor));

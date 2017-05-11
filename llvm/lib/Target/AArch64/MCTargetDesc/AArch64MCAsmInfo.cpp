@@ -32,8 +32,9 @@ static cl::opt<AsmWriterVariantTy> AsmWriterVariant(
                clEnumValN(Apple, "apple", "Emit Apple-style NEON assembly")));
 
 AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin() {
-  // We prefer NEON instructions to be printed in the short form.
-  AssemblerDialect = AsmWriterVariant == Default ? 1 : AsmWriterVariant;
+  // We prefer NEON instructions to be printed in the short, Apple-specific
+  // form when targeting Darwin.
+  AssemblerDialect = AsmWriterVariant == Default ? Apple : AsmWriterVariant;
 
   PrivateGlobalPrefix = "L";
   PrivateLabelPrefix = "L";
@@ -68,8 +69,9 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
   if (T.getArch() == Triple::aarch64_be)
     IsLittleEndian = false;
 
-  // We prefer NEON instructions to be printed in the short form.
-  AssemblerDialect = AsmWriterVariant == Default ? 0 : AsmWriterVariant;
+  // We prefer NEON instructions to be printed in the generic form when
+  // targeting ELF.
+  AssemblerDialect = AsmWriterVariant == Default ? Generic : AsmWriterVariant;
 
   CodePointerSize = 8;
 

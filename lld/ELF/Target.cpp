@@ -1874,7 +1874,8 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
       // BLX (always unconditional) instruction to an ARM Target, select an
       // unconditional BL.
       write32le(Loc, 0xeb000000 | (read32le(Loc) & 0x00ffffff));
-  // fall through as BL encoding is shared with B
+    // fall through as BL encoding is shared with B
+    LLVM_FALLTHROUGH;
   case R_ARM_JUMP24:
   case R_ARM_PC24:
   case R_ARM_PLT32:
@@ -1908,7 +1909,8 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     }
     // Bit 12 is 0 for BLX, 1 for BL
     write16le(Loc + 2, (read16le(Loc + 2) & ~0x1000) | (Val & 1) << 12);
-  // Fall through as rest of encoding is the same as B.W
+    // Fall through as rest of encoding is the same as B.W
+    LLVM_FALLTHROUGH;
   case R_ARM_THM_JUMP24:
     // Encoding B  T4, BL T1, BLX T2: Val = S:I1:I2:imm10:imm11:0
     // FIXME: Use of I1 and I2 require v6T2ops

@@ -491,6 +491,12 @@ bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         LoopSafetyInfo *SafetyInfo,
                         OptimizationRemarkEmitter *ORE = nullptr);
 
+/// Generates a vector reduction using shufflevectors to reduce the value.
+Value *getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
+                           RecurrenceDescriptor::MinMaxRecurrenceKind
+                               MinMaxKind = RecurrenceDescriptor::MRK_Invalid,
+                           ArrayRef<Value *> RedOps = ArrayRef<Value *>());
+
 /// Create a target reduction of the given vector. The reduction operation
 /// is described by the \p Opcode parameter. min/max reductions require
 /// additional information supplied in \p Flags.

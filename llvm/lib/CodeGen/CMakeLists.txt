@@ -23,6 +23,7 @@ add_llvm_library(LLVMCodeGen
   ExecutionDepsFix.cpp
   ExpandISelPseudos.cpp
   ExpandPostRAPseudos.cpp
+  ExpandReductions.cpp
   FaultMaps.cpp
   FEntryInserter.cpp
   FuncletLayout.cpp

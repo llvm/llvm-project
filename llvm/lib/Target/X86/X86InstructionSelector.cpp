@@ -71,6 +71,8 @@ private:
                       MachineFunction &MF) const;
   bool selectTrunc(MachineInstr &I, MachineRegisterInfo &MRI,
                    MachineFunction &MF) const;
+  bool selectZext(MachineInstr &I, MachineRegisterInfo &MRI,
+                  MachineFunction &MF) const;
 
   const X86TargetMachine &TM;
   const X86Subtarget &STI;
@@ -226,7 +228,7 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
          "Generic instruction has unexpected implicit operands\n");
 
   if (selectImpl(I))
-     return true;
+    return true;
 
   DEBUG(dbgs() << " C++ instruction selection: "; I.print(dbgs()));
 
@@ -240,6 +242,8 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   if (selectConstant(I, MRI, MF))
     return true;
   if (selectTrunc(I, MRI, MF))
+    return true;
+  if (selectZext(I, MRI, MF))
     return true;
 
   return false;
@@ -560,6 +564,52 @@ bool X86InstructionSelector::selectTrunc(MachineInstr &I,
 
   I.setDesc(TII.get(X86::COPY));
   return true;
+}
+
+bool X86InstructionSelector::selectZext(MachineInstr &I,
+                                        MachineRegisterInfo &MRI,
+                                        MachineFunction &MF) const {
+  if (I.getOpcode() != TargetOpcode::G_ZEXT)
+    return false;
+
+  const unsigned DstReg = I.getOperand(0).getReg();
+  const unsigned SrcReg = I.getOperand(1).getReg();
+
+  const LLT DstTy = MRI.getType(DstReg);
+  const LLT SrcTy = MRI.getType(SrcReg);
+
+  if (SrcTy == LLT::scalar(1)) {
+
+    unsigned AndOpc;
+    if (DstTy == LLT::scalar(32))
+      AndOpc = X86::AND32ri8;
+    else if (DstTy == LLT::scalar(64))
+      AndOpc = X86::AND64ri8;
+    else
+      return false;
+
+    const RegisterBank &RegBank = *RBI.getRegBank(DstReg, MRI, TRI);
+    unsigned DefReg =
+        MRI.createVirtualRegister(getRegClassForTypeOnBank(DstTy, RegBank));
+
+    BuildMI(*I.getParent(), I, I.getDebugLoc(),
+            TII.get(TargetOpcode::SUBREG_TO_REG), DefReg)
+        .addImm(0)
+        .addReg(SrcReg)
+        .addImm(X86::sub_8bit);
+
+    MachineInstr &AndInst =
+        *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AndOpc), DstReg)
+             .addReg(DefReg)
+             .addImm(1);
+
+    constrainSelectedInstRegOperands(AndInst, TII, TRI, RBI);
+
+    I.eraseFromParent();
+    return true;
+  }
+
+  return false;
 }
 
 InstructionSelector *

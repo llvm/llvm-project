@@ -1,29 +1,70 @@
-//===- lld/Core/Parallel.h - Parallel utilities ---------------------------===//
+//===- llvm/Support/Parallel.h - Parallel algorithms ----------------------===//
 //
-//                             The LLVM Linker
+//                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_CORE_PARALLEL_H
-#define LLD_CORE_PARALLEL_H
+#ifndef LLVM_SUPPORT_PARALLEL_H
+#define LLVM_SUPPORT_PARALLEL_H
 
-#include "lld/Core/LLVM.h"
-#include "lld/Core/TaskGroup.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <algorithm>
+#include <condition_variable>
+#include <functional>
+#include <mutex>
 
 #if defined(_MSC_VER) && LLVM_ENABLE_THREADS
+#pragma warning(push)
+#pragma warning(disable : 4530)
 #include <concrt.h>
 #include <ppl.h>
+#pragma warning(pop)
 #endif
 
-namespace lld {
+namespace llvm {
+
+namespace detail {
+class Latch {
+  uint32_t Count;
+  mutable std::mutex Mutex;
+  mutable std::condition_variable Cond;
+
+public:
+  explicit Latch(uint32_t count = 0) : Count(Count) {}
+  ~Latch() { sync(); }
+
+  void inc() {
+    std::unique_lock<std::mutex> lock(Mutex);
+    ++Count;
+  }
+
+  void dec() {
+    std::unique_lock<std::mutex> lock(Mutex);
+    if (--Count == 0)
+      Cond.notify_all();
+  }
+
+  void sync() const {
+    std::unique_lock<std::mutex> lock(Mutex);
+    Cond.wait(lock, [&] { return Count == 0; });
+  }
+};
+
+class TaskGroup {
+  Latch L;
+
+public:
+  void spawn(std::function<void()> f);
+
+  void sync() const { L.sync(); }
+};
+}
 
 namespace parallel {
 struct sequential_execution_policy {};
@@ -38,9 +79,9 @@ struct is_execution_policy
 constexpr sequential_execution_policy seq{};
 constexpr parallel_execution_policy par{};
 
-#if LLVM_ENABLE_THREADS
-
 namespace detail {
+
+#if LLVM_ENABLE_THREADS
 
 #if defined(_MSC_VER)
 template <class RandomAccessIterator, class Comparator>
@@ -148,12 +189,13 @@ void parallel_for_each_n(IndexTy Begin, IndexTy End, FuncTy Fn) {
 
 #endif
 
+#endif
+
 template <typename Iter>
 using DefComparator =
     std::less<typename std::iterator_traits<Iter>::value_type>;
 
 } // namespace detail
-#endif
 
 // sequential algorithm implementations.
 template <class Policy, class RandomAccessIterator,
@@ -182,7 +224,7 @@ void for_each_n(Policy policy, IndexTy Begin, IndexTy End, FuncTy Fn) {
 
 // Parallel algorithm implementations, only available when LLVM_ENABLE_THREADS
 // is true.
-#if defined(LLVM_ENABLE_THREADS)
+#if LLVM_ENABLE_THREADS
 template <class RandomAccessIterator,
           class Comparator = detail::DefComparator<RandomAccessIterator>>
 void sort(parallel_execution_policy policy, RandomAccessIterator Start,
@@ -204,6 +246,6 @@ void for_each_n(parallel_execution_policy policy, IndexTy Begin, IndexTy End,
 #endif
 
 } // namespace parallel
-} // End namespace lld
+} // namespace llvm
 
-#endif // LLD_CORE_PARALLEL_H
+#endif // LLVM_SUPPORT_PARALLEL_H

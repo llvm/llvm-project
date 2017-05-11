@@ -2203,10 +2203,51 @@ TEST(MemorySanitizer, localtime_r) {
   EXPECT_NE(0U, strlen(time.tm_zone));
 }
 
+#if !defined(__FreeBSD__)
+/* Creates a temporary file with contents similar to /etc/fstab to be used
+   with getmntent{_r}.  */
+class TempFstabFile {
+ public:
+   TempFstabFile() : fd (-1) { }
+   ~TempFstabFile() {
+     if (fd >= 0)
+       close (fd);
+   }
+
+   bool Create(void) {
+     snprintf(tmpfile, sizeof(tmpfile), "/tmp/msan.getmntent.tmp.XXXXXX");
+
+     fd = mkstemp(tmpfile);
+     if (fd == -1)
+       return false;
+
+     const char entry[] = "/dev/root / ext4 errors=remount-ro 0 1";
+     size_t entrylen = sizeof(entry);
+
+     size_t bytesWritten = write(fd, entry, entrylen);
+     if (entrylen != bytesWritten)
+       return false;
+
+     return true;
+   }
+
+   const char* FileName(void) {
+     return tmpfile;
+   }
+
+ private:
+  char tmpfile[128];
+  int fd;
+};
+#endif
+
 // There's no getmntent() on FreeBSD.
 #if !defined(__FreeBSD__)
 TEST(MemorySanitizer, getmntent) {
-  FILE *fp = setmntent("/etc/fstab", "r");
+  TempFstabFile fstabtmp;
+  ASSERT_TRUE(fstabtmp.Create());
+  FILE *fp = setmntent(fstabtmp.FileName(), "r");
+
   struct mntent *mnt = getmntent(fp);
   ASSERT_TRUE(mnt != NULL);
   ASSERT_NE(0U, strlen(mnt->mnt_fsname));
@@ -2222,7 +2263,10 @@ TEST(MemorySanitizer, getmntent) {
 // There's no getmntent_r() on FreeBSD.
 #if !defined(__FreeBSD__)
 TEST(MemorySanitizer, getmntent_r) {
-  FILE *fp = setmntent("/etc/fstab", "r");
+  TempFstabFile fstabtmp;
+  ASSERT_TRUE(fstabtmp.Create());
+  FILE *fp = setmntent(fstabtmp.FileName(), "r");
+
   struct mntent mntbuf;
   char buf[1000];
   struct mntent *mnt = getmntent_r(fp, &mntbuf, buf, sizeof(buf));

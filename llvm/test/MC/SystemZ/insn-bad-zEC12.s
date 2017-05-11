@@ -63,31 +63,6 @@
 	bprp	0, 0, 0x1000000
 
 #CHECK: error: invalid operand
-#CHECK: clt	%r0, -1, 0
-#CHECK: error: invalid operand
-#CHECK: clt	%r0, 16, 0
-#CHECK: error: invalid operand
-#CHECK: clt	%r0, 12, -524289
-#CHECK: error: invalid operand
-#CHECK: clt	%r0, 12, 524288
-#CHECK: error: invalid use of indexed addressing
-#CHECK: clt	%r0, 12, 0(%r1,%r2)
-
-	clt	%r0, -1, 0
-	clt	%r0, 16, 0
-	clt	%r0, 12, -524289
-	clt	%r0, 12, 524288
-	clt	%r0, 12, 0(%r1,%r2)
-
-#CHECK: error: invalid instruction
-#CHECK: clto    %r0, 0
-#CHECK: error: invalid instruction
-#CHECK: cltno   %r0, 0
-
-        clto    %r0, 0
-        cltno   %r0, 0
-
-#CHECK: error: invalid operand
 #CHECK: clgt	%r0, -1, 0
 #CHECK: error: invalid operand
 #CHECK: clgt	%r0, 16, 0
@@ -105,12 +80,37 @@
 	clgt	%r0, 12, 0(%r1,%r2)
 
 #CHECK: error: invalid instruction
-#CHECK: clgto    %r0, 0
-#CHECK: error: invalid instruction
 #CHECK: clgtno   %r0, 0
+#CHECK: error: invalid instruction
+#CHECK: clgto    %r0, 0
 
-        clgto    %r0, 0
         clgtno   %r0, 0
+        clgto    %r0, 0
+
+#CHECK: error: invalid operand
+#CHECK: clt	%r0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: clt	%r0, 16, 0
+#CHECK: error: invalid operand
+#CHECK: clt	%r0, 12, -524289
+#CHECK: error: invalid operand
+#CHECK: clt	%r0, 12, 524288
+#CHECK: error: invalid use of indexed addressing
+#CHECK: clt	%r0, 12, 0(%r1,%r2)
+
+	clt	%r0, -1, 0
+	clt	%r0, 16, 0
+	clt	%r0, 12, -524289
+	clt	%r0, 12, 524288
+	clt	%r0, 12, 0(%r1,%r2)
+
+#CHECK: error: invalid instruction
+#CHECK: cltno   %r0, 0
+#CHECK: error: invalid instruction
+#CHECK: clto    %r0, 0
+
+        cltno   %r0, 0
+        clto    %r0, 0
 
 #CHECK: error: invalid operand
 #CHECK: lat	%r0, -524289
@@ -119,6 +119,11 @@
 
 	lat	%r0, -524289
 	lat	%r0, 524288
+
+#CHECK: error: instruction requires: vector
+#CHECK: lcbb	%r0, 0, 0
+
+	lcbb	%r0, 0, 0
 
 #CHECK: error: invalid operand
 #CHECK: lfhat	%r0, -524289
@@ -152,10 +157,15 @@
 	llgtat	%r0, -524289
 	llgtat	%r0, 524288
 
-#CHECK: error: instruction requires: vector
-#CHECK: lcbb	%r0, 0, 0
+#CHECK: error: instruction requires: load-store-on-cond-2
+#CHECK: locghio %r11, 42
 
-	lcbb	%r0, 0, 0
+        locghio %r11, 42
+
+#CHECK: error: instruction requires: load-store-on-cond-2
+#CHECK: lochio %r11, 42
+
+        lochio %r11, 42
 
 #CHECK: error: invalid operand
 #CHECK:	niai	-1, 0
@@ -186,6 +196,11 @@
 
 	ppa	%r0, %r0, -1
 	ppa	%r0, %r0, 16
+
+#CHECK: error: instruction requires: message-security-assist-extension5
+#CHECK: ppno	%r2, %r4
+
+	ppno	%r2, %r4
 
 #CHECK: error: invalid operand
 #CHECK: risbgn	%r0,%r0,0,0,-1
@@ -337,28 +352,28 @@
 #CHECK: error: instruction requires: vector
 #CHECK: vceqb	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vceqf	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vceqg	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vceqh	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
 #CHECK: vceqbs	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vceqhs	%v0, %v0, %v0
+#CHECK: vceqf	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
 #CHECK: vceqfs	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
+#CHECK: vceqg	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
 #CHECK: vceqgs	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vceqh	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vceqhs	%v0, %v0, %v0
 
 	vceqb	%v0, %v0, %v0
-	vceqf	%v0, %v0, %v0
-	vceqg	%v0, %v0, %v0
-	vceqh	%v0, %v0, %v0
 	vceqbs	%v0, %v0, %v0
-	vceqhs	%v0, %v0, %v0
+	vceqf	%v0, %v0, %v0
 	vceqfs	%v0, %v0, %v0
+	vceqg	%v0, %v0, %v0
 	vceqgs	%v0, %v0, %v0
+	vceqh	%v0, %v0, %v0
+	vceqhs	%v0, %v0, %v0
 
 #CHECK: error: instruction requires: vector
 #CHECK: vcgdb	%v0, %v0, 0, 0
@@ -368,54 +383,54 @@
 #CHECK: error: instruction requires: vector
 #CHECK: vchb	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vchf	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vchg	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vchh	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
 #CHECK: vchbs	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vchhs	%v0, %v0, %v0
+#CHECK: vchf	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
 #CHECK: vchfs	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
+#CHECK: vchg	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
 #CHECK: vchgs	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vchh	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vchhs	%v0, %v0, %v0
 
 	vchb	%v0, %v0, %v0
-	vchf	%v0, %v0, %v0
-	vchg	%v0, %v0, %v0
-	vchh	%v0, %v0, %v0
 	vchbs	%v0, %v0, %v0
-	vchhs	%v0, %v0, %v0
+	vchf	%v0, %v0, %v0
 	vchfs	%v0, %v0, %v0
+	vchg	%v0, %v0, %v0
 	vchgs	%v0, %v0, %v0
+	vchh	%v0, %v0, %v0
+	vchhs	%v0, %v0, %v0
 
 #CHECK: error: instruction requires: vector
 #CHECK: vchlb	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vchlf	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vchlg	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vchlh	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
 #CHECK: vchlbs	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vchlhs	%v0, %v0, %v0
+#CHECK: vchlf	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
 #CHECK: vchlfs	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
+#CHECK: vchlg	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
 #CHECK: vchlgs	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vchlh	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vchlhs	%v0, %v0, %v0
 
 	vchlb	%v0, %v0, %v0
-	vchlf	%v0, %v0, %v0
-	vchlg	%v0, %v0, %v0
-	vchlh	%v0, %v0, %v0
 	vchlbs	%v0, %v0, %v0
-	vchlhs	%v0, %v0, %v0
+	vchlf	%v0, %v0, %v0
 	vchlfs	%v0, %v0, %v0
+	vchlg	%v0, %v0, %v0
 	vchlgs	%v0, %v0, %v0
+	vchlh	%v0, %v0, %v0
+	vchlhs	%v0, %v0, %v0
 
 #CHECK: error: instruction requires: vector
 #CHECK: vcksm	%v0, %v0, %v0
@@ -470,20 +485,6 @@
 	vech	%v0, %v0
 
 #CHECK: error: instruction requires: vector
-#CHECK: verimb	%v0, %v0, %v0, 0
-#CHECK: error: instruction requires: vector
-#CHECK: verimf	%v0, %v0, %v0, 0
-#CHECK: error: instruction requires: vector
-#CHECK: verimg	%v0, %v0, %v0, 0
-#CHECK: error: instruction requires: vector
-#CHECK: verimh	%v0, %v0, %v0, 0
-
-	verimb	%v0, %v0, %v0, 0
-	verimf	%v0, %v0, %v0, 0
-	verimg	%v0, %v0, %v0, 0
-	verimh	%v0, %v0, %v0, 0
-
-#CHECK: error: instruction requires: vector
 #CHECK: veclb	%v0, %v0
 #CHECK: error: instruction requires: vector
 #CHECK: veclf	%v0, %v0
@@ -498,18 +499,18 @@
 	veclh	%v0, %v0
 
 #CHECK: error: instruction requires: vector
-#CHECK: verllvb	%v0, %v0, %v0
+#CHECK: verimb	%v0, %v0, %v0, 0
 #CHECK: error: instruction requires: vector
-#CHECK: verllvf	%v0, %v0, %v0
+#CHECK: verimf	%v0, %v0, %v0, 0
 #CHECK: error: instruction requires: vector
-#CHECK: verllvg	%v0, %v0, %v0
+#CHECK: verimg	%v0, %v0, %v0, 0
 #CHECK: error: instruction requires: vector
-#CHECK: verllvh	%v0, %v0, %v0
+#CHECK: verimh	%v0, %v0, %v0, 0
 
-	verllvb	%v0, %v0, %v0
-	verllvf	%v0, %v0, %v0
-	verllvg	%v0, %v0, %v0
-	verllvh	%v0, %v0, %v0
+	verimb	%v0, %v0, %v0, 0
+	verimf	%v0, %v0, %v0, 0
+	verimg	%v0, %v0, %v0, 0
+	verimh	%v0, %v0, %v0, 0
 
 #CHECK: error: instruction requires: vector
 #CHECK: verllb	%v0, %v0, 0
@@ -526,18 +527,18 @@
 	verllh	%v0, %v0, 0
 
 #CHECK: error: instruction requires: vector
-#CHECK: veslvb	%v0, %v0, %v0
+#CHECK: verllvb	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: veslvf	%v0, %v0, %v0
+#CHECK: verllvf	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: veslvg	%v0, %v0, %v0
+#CHECK: verllvg	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: veslvh	%v0, %v0, %v0
+#CHECK: verllvh	%v0, %v0, %v0
 
-	veslvb	%v0, %v0, %v0
-	veslvf	%v0, %v0, %v0
-	veslvg	%v0, %v0, %v0
-	veslvh	%v0, %v0, %v0
+	verllvb	%v0, %v0, %v0
+	verllvf	%v0, %v0, %v0
+	verllvg	%v0, %v0, %v0
+	verllvh	%v0, %v0, %v0
 
 #CHECK: error: instruction requires: vector
 #CHECK: veslb	%v0, %v0, 0
@@ -554,18 +555,18 @@
 	veslh	%v0, %v0, 0
 
 #CHECK: error: instruction requires: vector
-#CHECK: vesravb	%v0, %v0, %v0
+#CHECK: veslvb	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vesravf	%v0, %v0, %v0
+#CHECK: veslvf	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vesravg	%v0, %v0, %v0
+#CHECK: veslvg	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vesravh	%v0, %v0, %v0
+#CHECK: veslvh	%v0, %v0, %v0
 
-	vesravb	%v0, %v0, %v0
-	vesravf	%v0, %v0, %v0
-	vesravg	%v0, %v0, %v0
-	vesravh	%v0, %v0, %v0
+	veslvb	%v0, %v0, %v0
+	veslvf	%v0, %v0, %v0
+	veslvg	%v0, %v0, %v0
+	veslvh	%v0, %v0, %v0
 
 #CHECK: error: instruction requires: vector
 #CHECK: vesrab	%v0, %v0, 0
@@ -582,18 +583,18 @@
 	vesrah	%v0, %v0, 0
 
 #CHECK: error: instruction requires: vector
-#CHECK: vesrlvb	%v0, %v0, %v0
+#CHECK: vesravb	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vesrlvf	%v0, %v0, %v0
+#CHECK: vesravf	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vesrlvg	%v0, %v0, %v0
+#CHECK: vesravg	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vesrlvh	%v0, %v0, %v0
+#CHECK: vesravh	%v0, %v0, %v0
 
-	vesrlvb	%v0, %v0, %v0
-	vesrlvf	%v0, %v0, %v0
-	vesrlvg	%v0, %v0, %v0
-	vesrlvh	%v0, %v0, %v0
+	vesravb	%v0, %v0, %v0
+	vesravf	%v0, %v0, %v0
+	vesravg	%v0, %v0, %v0
+	vesravh	%v0, %v0, %v0
 
 #CHECK: error: instruction requires: vector
 #CHECK: vesrlb	%v0, %v0, 0
@@ -610,9 +611,61 @@
 	vesrlh	%v0, %v0, 0
 
 #CHECK: error: instruction requires: vector
+#CHECK: vesrlvb	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vesrlvf	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vesrlvg	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vesrlvh	%v0, %v0, %v0
+
+	vesrlvb	%v0, %v0, %v0
+	vesrlvf	%v0, %v0, %v0
+	vesrlvg	%v0, %v0, %v0
+	vesrlvh	%v0, %v0, %v0
+
+#CHECK: error: instruction requires: vector
 #CHECK: vfadb	%v0, %v0, %v0
 
 	vfadb	%v0, %v0, %v0
+
+#CHECK: error: instruction requires: vector
+#CHECK: vfaeb	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfaebs	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfaef	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfaefs	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfaeh	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfaehs	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfaezb	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfaezbs	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfaezf	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfaezfs	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfaezh	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfaezhs	%v0, %v0, %v0
+
+	vfaeb	%v0, %v0, %v0
+	vfaebs	%v0, %v0, %v0
+	vfaef	%v0, %v0, %v0
+	vfaefs	%v0, %v0, %v0
+	vfaeh	%v0, %v0, %v0
+	vfaehs	%v0, %v0, %v0
+	vfaezb	%v0, %v0, %v0
+	vfaezbs	%v0, %v0, %v0
+	vfaezf	%v0, %v0, %v0
+	vfaezfs	%v0, %v0, %v0
+	vfaezh	%v0, %v0, %v0
+	vfaezhs	%v0, %v0, %v0
 
 #CHECK: error: instruction requires: vector
 #CHECK: vfcedb	%v0, %v0, %v0
@@ -634,143 +687,85 @@
 	vfddb	%v0, %v0, %v0
 
 #CHECK: error: instruction requires: vector
-#CHECK: vfaeb	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfaezb	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfaebs	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfaezbs	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfaeh	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfaezh	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfaehs	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfaezhs	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfaef	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfaezf	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfaefs	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfaezfs	%v0, %v0, %v0
-
-	vfaeb	%v0, %v0, %v0
-	vfaezb	%v0, %v0, %v0
-	vfaebs	%v0, %v0, %v0
-	vfaezbs	%v0, %v0, %v0
-	vfaeh	%v0, %v0, %v0
-	vfaezh	%v0, %v0, %v0
-	vfaehs	%v0, %v0, %v0
-	vfaezhs	%v0, %v0, %v0
-	vfaef	%v0, %v0, %v0
-	vfaezf	%v0, %v0, %v0
-	vfaefs	%v0, %v0, %v0
-	vfaezfs	%v0, %v0, %v0
-
-#CHECK: error: instruction requires: vector
 #CHECK: vfeeb	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfeezb	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
 #CHECK: vfeebs	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vfeezbs	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfeeh	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfeezh	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfeehs	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfeezhs	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
 #CHECK: vfeef	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfeezf	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
 #CHECK: vfeefs	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
+#CHECK: vfeeh	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfeehs	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfeezb	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfeezbs	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfeezf	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
 #CHECK: vfeezfs	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfeezh	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfeezhs	%v0, %v0, %v0
 
 	vfeeb	%v0, %v0, %v0
-	vfeezb	%v0, %v0, %v0
 	vfeebs	%v0, %v0, %v0
-	vfeezbs	%v0, %v0, %v0
-	vfeeh	%v0, %v0, %v0
-	vfeezh	%v0, %v0, %v0
-	vfeehs	%v0, %v0, %v0
-	vfeezhs	%v0, %v0, %v0
 	vfeef	%v0, %v0, %v0
-	vfeezf	%v0, %v0, %v0
 	vfeefs	%v0, %v0, %v0
+	vfeeh	%v0, %v0, %v0
+	vfeehs	%v0, %v0, %v0
+	vfeezb	%v0, %v0, %v0
+	vfeezbs	%v0, %v0, %v0
+	vfeezf	%v0, %v0, %v0
 	vfeezfs	%v0, %v0, %v0
+	vfeezh	%v0, %v0, %v0
+	vfeezhs	%v0, %v0, %v0
 
 #CHECK: error: instruction requires: vector
 #CHECK: vfeneb   %v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vfenezb  %v0, %v0, %v0
-#CHECK: error: instruction requires: vector
 #CHECK: vfenebs  %v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfenezbs %v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfeneh   %v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfenezh  %v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfenehs  %v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vfenezhs %v0, %v0, %v0
 #CHECK: error: instruction requires: vector
 #CHECK: vfenef   %v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vfenezf  %v0, %v0, %v0
-#CHECK: error: instruction requires: vector
 #CHECK: vfenefs  %v0, %v0, %v0
 #CHECK: error: instruction requires: vector
+#CHECK: vfeneh   %v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfenehs  %v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfenezb  %v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfenezbs %v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfenezf  %v0, %v0, %v0
+#CHECK: error: instruction requires: vector
 #CHECK: vfenezfs %v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfenezh  %v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vfenezhs %v0, %v0, %v0
 
 	vfeneb   %v0, %v0, %v0
-	vfenezb  %v0, %v0, %v0
 	vfenebs  %v0, %v0, %v0
-	vfenezbs %v0, %v0, %v0
-	vfeneh   %v0, %v0, %v0
-	vfenezh  %v0, %v0, %v0
-	vfenehs  %v0, %v0, %v0
-	vfenezhs %v0, %v0, %v0
 	vfenef   %v0, %v0, %v0
-	vfenezf  %v0, %v0, %v0
 	vfenefs  %v0, %v0, %v0
+	vfeneh   %v0, %v0, %v0
+	vfenehs  %v0, %v0, %v0
+	vfenezb  %v0, %v0, %v0
+	vfenezbs %v0, %v0, %v0
+	vfenezf  %v0, %v0, %v0
 	vfenezfs %v0, %v0, %v0
+	vfenezh  %v0, %v0, %v0
+	vfenezhs %v0, %v0, %v0
 
 #CHECK: error: instruction requires: vector
 #CHECK: vfidb	%v0, %v0, 0, 0
 
 	vfidb	%v0, %v0, 0, 0
-
-#CHECK: error: instruction requires: vector
-#CHECK: vistrb	%v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vistrbs	%v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vistrh	%v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vistrhs	%v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vistrf	%v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vistrfs	%v0, %v0
-
-	vistrb	%v0, %v0
-	vistrbs	%v0, %v0
-	vistrh	%v0, %v0
-	vistrhs	%v0, %v0
-	vistrf	%v0, %v0
-	vistrfs	%v0, %v0
 
 #CHECK: error: instruction requires: vector
 #CHECK: vflcdb	%v0, %v0
@@ -871,6 +866,26 @@
 	vgmf	%v0, 0, 0
 	vgmg	%v0, 0, 0
 	vgmh	%v0, 0, 0
+
+#CHECK: error: instruction requires: vector
+#CHECK: vistrb	%v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vistrbs	%v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vistrf	%v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vistrfs	%v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vistrh	%v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vistrhs	%v0, %v0
+
+	vistrb	%v0, %v0
+	vistrbs	%v0, %v0
+	vistrf	%v0, %v0
+	vistrfs	%v0, %v0
+	vistrh	%v0, %v0
+	vistrhs	%v0, %v0
 
 #CHECK: error: instruction requires: vector
 #CHECK: vl	%v0, 0
@@ -1309,44 +1324,44 @@
 	vpkh	%v0, %v0, %v0
 
 #CHECK: error: instruction requires: vector
-#CHECK: vpksf	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vpksg	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vpksh	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vpksfs	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vpksgs	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vpkshs	%v0, %v0, %v0
-
-	vpksf	%v0, %v0, %v0
-	vpksg	%v0, %v0, %v0
-	vpksh	%v0, %v0, %v0
-	vpksfs	%v0, %v0, %v0
-	vpksgs	%v0, %v0, %v0
-	vpkshs	%v0, %v0, %v0
-
-#CHECK: error: instruction requires: vector
 #CHECK: vpklsf	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vpklsg	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vpklsh	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
 #CHECK: vpklsfs	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
+#CHECK: vpklsg	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
 #CHECK: vpklsgs	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vpklsh	%v0, %v0, %v0
 #CHECK: error: instruction requires: vector
 #CHECK: vpklshs	%v0, %v0, %v0
 
 	vpklsf	%v0, %v0, %v0
-	vpklsg	%v0, %v0, %v0
-	vpklsh	%v0, %v0, %v0
 	vpklsfs	%v0, %v0, %v0
+	vpklsg	%v0, %v0, %v0
 	vpklsgs	%v0, %v0, %v0
+	vpklsh	%v0, %v0, %v0
 	vpklshs	%v0, %v0, %v0
+
+#CHECK: error: instruction requires: vector
+#CHECK: vpksf	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vpksfs	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vpksg	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vpksgs	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vpksh	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vpkshs	%v0, %v0, %v0
+
+	vpksf	%v0, %v0, %v0
+	vpksfs	%v0, %v0, %v0
+	vpksg	%v0, %v0, %v0
+	vpksgs	%v0, %v0, %v0
+	vpksh	%v0, %v0, %v0
+	vpkshs	%v0, %v0, %v0
 
 #CHECK: error: instruction requires: vector
 #CHECK: vpopct	%v0, %v0, 0
@@ -1502,40 +1517,48 @@
 #CHECK: error: instruction requires: vector
 #CHECK: vstrcb   %v0, %v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vstrczb  %v0, %v0, %v0, %v0
-#CHECK: error: instruction requires: vector
 #CHECK: vstrcbs  %v0, %v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vstrczbs %v0, %v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vstrch   %v0, %v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vstrczh  %v0, %v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vstrchs  %v0, %v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vstrczhs %v0, %v0, %v0, %v0
 #CHECK: error: instruction requires: vector
 #CHECK: vstrcf   %v0, %v0, %v0, %v0
 #CHECK: error: instruction requires: vector
-#CHECK: vstrczf  %v0, %v0, %v0, %v0
-#CHECK: error: instruction requires: vector
 #CHECK: vstrcfs  %v0, %v0, %v0, %v0
 #CHECK: error: instruction requires: vector
+#CHECK: vstrch   %v0, %v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vstrchs  %v0, %v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vstrczb  %v0, %v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vstrczbs %v0, %v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vstrczf  %v0, %v0, %v0, %v0
+#CHECK: error: instruction requires: vector
 #CHECK: vstrczfs %v0, %v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vstrczh  %v0, %v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vstrczhs %v0, %v0, %v0, %v0
 
         vstrcb   %v0, %v0, %v0, %v0
-        vstrczb  %v0, %v0, %v0, %v0
         vstrcbs  %v0, %v0, %v0, %v0
-        vstrczbs %v0, %v0, %v0, %v0
-        vstrch   %v0, %v0, %v0, %v0
-        vstrczh  %v0, %v0, %v0, %v0
-        vstrchs  %v0, %v0, %v0, %v0
-        vstrczhs %v0, %v0, %v0, %v0
         vstrcf   %v0, %v0, %v0, %v0
-        vstrczf  %v0, %v0, %v0, %v0
         vstrcfs  %v0, %v0, %v0, %v0
+        vstrch   %v0, %v0, %v0, %v0
+        vstrchs  %v0, %v0, %v0, %v0
+        vstrczb  %v0, %v0, %v0, %v0
+        vstrczbs %v0, %v0, %v0, %v0
+        vstrczf  %v0, %v0, %v0, %v0
         vstrczfs %v0, %v0, %v0, %v0
+        vstrczh  %v0, %v0, %v0, %v0
+        vstrczhs %v0, %v0, %v0, %v0
+
+#CHECK: error: instruction requires: vector
+#CHECK: vsumb	%v0, %v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vsumh	%v0, %v0, %v0
+
+	vsumb	%v0, %v0, %v0
+	vsumh	%v0, %v0, %v0
 
 #CHECK: error: instruction requires: vector
 #CHECK: vsumgh	%v0, %v0, %v0
@@ -1554,14 +1577,6 @@
 	vsumqg	%v0, %v0, %v0
 
 #CHECK: error: instruction requires: vector
-#CHECK: vsumb	%v0, %v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vsumh	%v0, %v0, %v0
-
-	vsumb	%v0, %v0, %v0
-	vsumh	%v0, %v0, %v0
-
-#CHECK: error: instruction requires: vector
 #CHECK: vtm	%v0, %v0
 
 	vtm	%v0, %v0
@@ -1578,17 +1593,6 @@
 	vuphh	%v0, %v0
 
 #CHECK: error: instruction requires: vector
-#CHECK: vuplhb	%v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vuplhf	%v0, %v0
-#CHECK: error: instruction requires: vector
-#CHECK: vuplhh	%v0, %v0
-
-	vuplhb	%v0, %v0
-	vuplhf	%v0, %v0
-	vuplhh	%v0, %v0
-
-#CHECK: error: instruction requires: vector
 #CHECK: vuplb	%v0, %v0
 #CHECK: error: instruction requires: vector
 #CHECK: vuplf	%v0, %v0
@@ -1598,6 +1602,17 @@
 	vuplb	%v0, %v0
 	vuplf	%v0, %v0
 	vuplhw	%v0, %v0
+
+#CHECK: error: instruction requires: vector
+#CHECK: vuplhb	%v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vuplhf	%v0, %v0
+#CHECK: error: instruction requires: vector
+#CHECK: vuplhh	%v0, %v0
+
+	vuplhb	%v0, %v0
+	vuplhf	%v0, %v0
+	vuplhh	%v0, %v0
 
 #CHECK: error: instruction requires: vector
 #CHECK: vupllb	%v0, %v0
@@ -1741,13 +1756,3 @@
 
 	wledb	%v0, %v0, 0, 0
 
-#CHECK: error: instruction requires: load-store-on-cond-2
-#CHECK: lochio %r11, 42
-        
-        lochio %r11, 42        
-
-#CHECK: error: instruction requires: load-store-on-cond-2
-#CHECK: locghio %r11, 42
-        
-        locghio %r11, 42        
-        

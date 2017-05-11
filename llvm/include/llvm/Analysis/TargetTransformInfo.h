@@ -753,6 +753,9 @@ public:
   bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
                              ReductionFlags Flags) const;
 
+  /// \returns True if the target wants to expand the given reduction intrinsic
+  /// into a shuffle sequence.
+  bool shouldExpandReduction(const IntrinsicInst *II) const;
   /// @}
 
 private:
@@ -910,6 +913,7 @@ public:
                                         VectorType *VecTy) const = 0;
   virtual bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
                                      ReductionFlags) const = 0;
+  virtual bool shouldExpandReduction(const IntrinsicInst *II) const = 0;
 };
 
 template <typename T>
@@ -1218,6 +1222,9 @@ public:
   bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
                              ReductionFlags Flags) const override {
     return Impl.useReductionIntrinsic(Opcode, Ty, Flags);
+  }
+  bool shouldExpandReduction(const IntrinsicInst *II) const override {
+    return Impl.shouldExpandReduction(II);
   }
 };
 

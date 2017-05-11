@@ -1318,7 +1318,8 @@ static bool canFallThroughTo(MachineBasicBlock &MBB, MachineBasicBlock &ToMBB) {
       return false;
     PI = I++;
   }
-  return true;
+  // Finally see if the last I is indeed a successor to PI.
+  return PI->isSuccessor(&*I);
 }
 
 /// Invalidate predecessor BB info so it would be re-analyzed to determine if it

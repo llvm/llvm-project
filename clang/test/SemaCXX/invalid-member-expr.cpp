@@ -53,9 +53,7 @@ namespace test3 {
 namespace rdar11293995 {
 
 struct Length {
-  explicit Length(PassRefPtr<CalculationValue>); // expected-error {{unknown type name}} \
-                    expected-error {{expected ')'}} \
-                    expected-note {{to match this '('}}
+  explicit Length(PassRefPtr<CalculationValue>); // expected-error {{no template named 'PassRefPtr}} expected-error {{undeclared identifier 'CalculationValue'}}
 };
 
 struct LengthSize {

@@ -82,6 +82,13 @@
     %res = bitcast double %vres to i64
     ret i64 %res
   }
+
+  define void @floatingPointStore(i64 %arg1, double* %addr) {
+    %varg1 = bitcast i64 %arg1 to double
+    %vres = fadd double %varg1, %varg1
+    store double %vres, double* %addr
+    ret void
+  }
 ...
 
 ---
@@ -698,5 +705,44 @@ body:             |
     %3(s64) = G_FADD %0, %2
     %x0 = COPY %3(s64)
     RET_ReallyLR implicit %x0
+
+...
+
+---
+# Make sure we map what looks like floating point
+# stores to floating point register bank.
+# CHECK-LABEL: name: floatingPointStore
+name:            floatingPointStore
+legalized:       true
+
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gpr }
+# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:   - { id: 2, class: fpr }
+# CHECK-NEXT:   - { id: 3, class: fpr }
+# CHECK-NEXT:   - { id: 4, class: fpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+
+# CHECK:         %0(s64) = COPY %x0
+# CHECK-NEXT:    %1(p0) = COPY %x1
+# %0 has been mapped to GPR, we need to repair to match FPR.
+# CHECK-NEXT:    %3(s64) = COPY %0
+# CHECK-NEXT:    %4(s64) = COPY %0
+# CHECK-NEXT:    %2(s64) = G_FADD %3, %4
+# CHECK-NEXT:    G_STORE %2(s64), %1(p0) :: (store 8 into %ir.addr)
+# CHECK-NEXT:    RET_ReallyLR
+
+body:             |
+  bb.0:
+    liveins: %x0, %x1
+
+    %0(s64) = COPY %x0
+    %1(p0) = COPY %x1
+    %2(s64) = G_FADD %0, %0
+    G_STORE %2(s64), %1(p0) :: (store 8 into %ir.addr)
+    RET_ReallyLR
 
 ...

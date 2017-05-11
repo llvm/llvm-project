@@ -154,6 +154,12 @@ SomeT someVar;
 typedef MY_TYPE2(SomeT2) { int x; };
 SomeT2 someVar2;
 
+#define GEN_DECL(mod_name) __attribute__((external_source_symbol(language="Swift", defined_in=mod_name, generated_declaration)))
+
+GEN_DECL("some_module")
+@interface ExtCls
+-(void)method;
+@end
 
 // RUN: c-index-test -cursor-at=%s:4:28 -cursor-at=%s:5:28 %s | FileCheck -check-prefix=CHECK-PROP %s
 // CHECK-PROP: ObjCPropertyDecl=foo1:4:26
@@ -226,3 +232,8 @@ SomeT2 someVar2;
 // CHECK-TRANSPARENT: 147:1 TypeRef=TokenPaste_t:144:9 Extent=[147:1 - 147:13] Spelling=TokenPaste_t ([147:1 - 147:13])
 // CHECK-TRANSPARENT: 151:1 TypeRef=SomeT:150:17 (Transparent: struct SomeT) Extent=[151:1 - 151:6] Spelling=SomeT ([151:1 - 151:6])
 // CHECK-TRANSPARENT: 155:1 TypeRef=SomeT2:154:18 Extent=[155:1 - 155:7] Spelling=SomeT2 ([155:1 - 155:7])
+
+// RUN: c-index-test -cursor-at=%s:160:12 -cursor-at=%s:161:8 %s | FileCheck -check-prefix=CHECK-EXTERNAL %s
+// CHECK-EXTERNAL: 160:12 ObjCInterfaceDecl=ExtCls:160:12 (external lang: Swift, defined: some_module, gen: 1)
+// CHECK-EXTERNAL: 161:8 ObjCInstanceMethodDecl=method:161:8 (external lang: Swift, defined: some_module, gen: 1)
+C

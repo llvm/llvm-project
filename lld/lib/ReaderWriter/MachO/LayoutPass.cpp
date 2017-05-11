@@ -9,12 +9,12 @@
 
 #include "LayoutPass.h"
 #include "lld/Core/Instrumentation.h"
-#include "lld/Core/Parallel.h"
 #include "lld/Core/PassManager.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Parallel.h"
 #include <algorithm>
 #include <set>
 #include <utility>
@@ -461,7 +461,7 @@ llvm::Error LayoutPass::perform(SimpleFile &mergedFile) {
   });
 
   std::vector<LayoutPass::SortKey> vec = decorate(atomRange);
-  sort(parallel::par, vec.begin(), vec.end(),
+  sort(llvm::parallel::par, vec.begin(), vec.end(),
        [&](const LayoutPass::SortKey &l, const LayoutPass::SortKey &r) -> bool {
          return compareAtoms(l, r, _customSorter);
        });

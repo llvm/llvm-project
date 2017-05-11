@@ -1986,18 +1986,6 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (Value *V = SimplifyBSwap(I))
     return replaceInstUsesWith(I, V);
 
-  if (ConstantInt *RHS = dyn_cast<ConstantInt>(Op1)) {
-    ConstantInt *C1 = nullptr; Value *X = nullptr;
-    // (X ^ C1) | C2 --> (X | C2) ^ (C1&~C2)
-    if (match(Op0, m_Xor(m_Value(X), m_ConstantInt(C1))) &&
-        Op0->hasOneUse()) {
-      Value *Or = Builder->CreateOr(X, RHS);
-      Or->takeName(Op0);
-      return BinaryOperator::CreateXor(Or,
-                            Builder->getInt(C1->getValue() & ~RHS->getValue()));
-    }
-  }
-
   if (isa<Constant>(Op1))
     if (Instruction *FoldedLogic = foldOpWithConstantIntoOperand(I))
       return FoldedLogic;

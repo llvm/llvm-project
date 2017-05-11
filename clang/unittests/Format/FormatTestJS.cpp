@@ -470,6 +470,16 @@ TEST_F(FormatTestJS, FormatsFreestandingFunctions) {
                "  inner2(a, b);\n"
                "}");
   verifyFormat("function f() {}");
+  verifyFormat("function aFunction() {}\n"
+               "(function f() {\n"
+               "  var x = 1;\n"
+               "}());\n");
+  // Known issue: this should wrap after {}, but calculateBraceTypes
+  // misclassifies the first braces as a BK_BracedInit.
+  verifyFormat("function aFunction(){} {\n"
+               "  let x = 1;\n"
+               "  console.log(x);\n"
+               "}\n");
 }
 
 TEST_F(FormatTestJS, GeneratorFunctions) {

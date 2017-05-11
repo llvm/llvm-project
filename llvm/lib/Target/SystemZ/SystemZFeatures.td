@@ -68,6 +68,11 @@ def FeaturePopulationCount : SystemZFeature<
   "Assume that the population-count facility is installed"
 >;
 
+def FeatureMessageSecurityAssist4 : SystemZFeature<
+  "message-security-assist-extension4", "MessageSecurityAssist4",
+  "Assume that the message-security-assist extension facility 4 is installed"
+>;
+
 def Arch9NewFeatures : SystemZFeatureList<[
     FeatureDistinctOps,
     FeatureFastSerialization,
@@ -75,7 +80,8 @@ def Arch9NewFeatures : SystemZFeatureList<[
     FeatureHighWord,
     FeatureInterlockedAccess1,
     FeatureLoadStoreOnCond,
-    FeaturePopulationCount
+    FeaturePopulationCount,
+    FeatureMessageSecurityAssist4
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -133,6 +139,11 @@ def FeatureLoadStoreOnCond2 : SystemZFeature<
   "Assume that the load/store-on-condition facility 2 is installed"
 >;
 
+def FeatureMessageSecurityAssist5 : SystemZFeature<
+  "message-security-assist-extension5", "MessageSecurityAssist5",
+  "Assume that the message-security-assist extension facility 5 is installed"
+>;
+
 def FeatureVector : SystemZFeature<
   "vector", "Vector",
   "Assume that the vectory facility is installed"
@@ -142,6 +153,7 @@ def FeatureNoVector : SystemZMissingFeature<"Vector">;
 def Arch11NewFeatures : SystemZFeatureList<[
     FeatureLoadAndZeroRightmostByte,
     FeatureLoadStoreOnCond2,
+    FeatureMessageSecurityAssist5,
     FeatureVector
 ]>;
 

@@ -111,8 +111,9 @@ void perror(const char* s);
 
 // snprintf
 #if defined(_LIBCPP_MSVCRT)
-extern "C++" {
-#include "support/win32/support.h"
+extern "C" {
+int vasprintf(char **sptr, const char *__restrict fmt, va_list ap);
+int asprintf(char **sptr, const char *__restrict fmt, ...);
 }
 #endif
 

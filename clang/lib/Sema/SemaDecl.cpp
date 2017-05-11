@@ -64,22 +64,45 @@ namespace {
 
 class TypeNameValidatorCCC : public CorrectionCandidateCallback {
  public:
-  TypeNameValidatorCCC(bool AllowInvalid, bool WantClass=false,
-                       bool AllowTemplates=false)
-      : AllowInvalidDecl(AllowInvalid), WantClassName(WantClass),
-        AllowTemplates(AllowTemplates) {
-    WantExpressionKeywords = false;
-    WantCXXNamedCasts = false;
-    WantRemainingKeywords = false;
+   TypeNameValidatorCCC(bool AllowInvalid, bool WantClass = false,
+                        bool AllowTemplates = false,
+                        bool AllowNonTemplates = true)
+       : AllowInvalidDecl(AllowInvalid), WantClassName(WantClass),
+         AllowTemplates(AllowTemplates), AllowNonTemplates(AllowNonTemplates) {
+     WantExpressionKeywords = false;
+     WantCXXNamedCasts = false;
+     WantRemainingKeywords = false;
   }
 
   bool ValidateCandidate(const TypoCorrection &candidate) override {
     if (NamedDecl *ND = candidate.getCorrectionDecl()) {
+      if (!AllowInvalidDecl && ND->isInvalidDecl())
+        return false;
+
+      if (getAsTypeTemplateDecl(ND))
+        return AllowTemplates;
+
       bool IsType = isa<TypeDecl>(ND) || isa<ObjCInterfaceDecl>(ND);
-      bool AllowedTemplate = AllowTemplates && getAsTypeTemplateDecl(ND);
-      return (IsType || AllowedTemplate) &&
-             (AllowInvalidDecl || !ND->isInvalidDecl());
+      if (!IsType)
+        return false;
+
+      if (AllowNonTemplates)
+        return true;
+
+      // An injected-class-name of a class template (specialization) is valid
+      // as a template or as a non-template.
+      if (AllowTemplates) {
+        auto *RD = dyn_cast<CXXRecordDecl>(ND);
+        if (!RD || !RD->isInjectedClassName())
+          return false;
+        RD = cast<CXXRecordDecl>(RD->getDeclContext());
+        return RD->getDescribedClassTemplate() ||
+               isa<ClassTemplateSpecializationDecl>(RD);
+      }
+
+      return false;
     }
+
     return !WantClassName && candidate.isKeyword();
   }
 
@@ -87,6 +110,7 @@ class TypeNameValidatorCCC : public CorrectionCandidateCallback {
   bool AllowInvalidDecl;
   bool WantClassName;
   bool AllowTemplates;
+  bool AllowNonTemplates;
 };
 
 } // end anonymous namespace
@@ -627,7 +651,7 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
                                    Scope *S,
                                    CXXScopeSpec *SS,
                                    ParsedType &SuggestedType,
-                                   bool AllowClassTemplates) {
+                                   bool IsTemplateName) {
   // Don't report typename errors for editor placeholders.
   if (II->isEditorPlaceholder())
     return;
@@ -639,27 +663,40 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
   if (TypoCorrection Corrected =
           CorrectTypo(DeclarationNameInfo(II, IILoc), LookupOrdinaryName, S, SS,
                       llvm::make_unique<TypeNameValidatorCCC>(
-                          false, false, AllowClassTemplates),
+                          false, false, IsTemplateName, !IsTemplateName),
                       CTK_ErrorRecovery)) {
+    // FIXME: Support error recovery for the template-name case.
+    bool CanRecover = !IsTemplateName;
     if (Corrected.isKeyword()) {
       // We corrected to a keyword.
-      diagnoseTypo(Corrected, PDiag(diag::err_unknown_typename_suggest) << II);
+      diagnoseTypo(Corrected,
+                   PDiag(IsTemplateName ? diag::err_no_template_suggest
+                                        : diag::err_unknown_typename_suggest)
+                       << II);
       II = Corrected.getCorrectionAsIdentifierInfo();
     } else {
       // We found a similarly-named type or interface; suggest that.
       if (!SS || !SS->isSet()) {
         diagnoseTypo(Corrected,
-                     PDiag(diag::err_unknown_typename_suggest) << II);
+                     PDiag(IsTemplateName ? diag::err_no_template_suggest
+                                          : diag::err_unknown_typename_suggest)
+                         << II, CanRecover);
       } else if (DeclContext *DC = computeDeclContext(*SS, false)) {
         std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
         bool DroppedSpecifier = Corrected.WillReplaceSpecifier() &&
                                 II->getName().equals(CorrectedStr);
         diagnoseTypo(Corrected,
-                     PDiag(diag::err_unknown_nested_typename_suggest)
-                       << II << DC << DroppedSpecifier << SS->getRange());
+                     PDiag(IsTemplateName
+                               ? diag::err_no_member_template_suggest
+                               : diag::err_unknown_nested_typename_suggest)
+                         << II << DC << DroppedSpecifier << SS->getRange(),
+                     CanRecover);
       } else {
         llvm_unreachable("could not have corrected a typo here");
       }
+
+      if (!CanRecover)
+        return;
 
       CXXScopeSpec tmpSS;
       if (Corrected.getCorrectionSpecifier())
@@ -675,7 +712,7 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
     return;
   }
 
-  if (getLangOpts().CPlusPlus) {
+  if (getLangOpts().CPlusPlus && !IsTemplateName) {
     // See if II is a class template that the user forgot to pass arguments to.
     UnqualifiedId Name;
     Name.setIdentifier(II, IILoc);
@@ -700,10 +737,13 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
   // (struct, union, enum) from Parser::ParseImplicitInt here, instead?
 
   if (!SS || (!SS->isSet() && !SS->isInvalid()))
-    Diag(IILoc, diag::err_unknown_typename) << II;
+    Diag(IILoc, IsTemplateName ? diag::err_no_template
+                               : diag::err_unknown_typename)
+        << II;
   else if (DeclContext *DC = computeDeclContext(*SS, false))
-    Diag(IILoc, diag::err_typename_nested_not_found)
-      << II << DC << SS->getRange();
+    Diag(IILoc, IsTemplateName ? diag::err_no_member_template
+                               : diag::err_typename_nested_not_found)
+        << II << DC << SS->getRange();
   else if (isDependentScopeSpecifier(*SS)) {
     unsigned DiagID = diag::err_typename_missing;
     if (getLangOpts().MSVCCompat && isMicrosoftMissingTypename(SS, S))

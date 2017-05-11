@@ -3924,7 +3924,10 @@ private:
 
     template <class _Yp, class _OrigPtr>
         _LIBCPP_INLINE_VISIBILITY
-        void
+        typename enable_if<is_convertible<_OrigPtr*,
+                                          const enable_shared_from_this<_Yp>*
+        >::value,
+            void>::type
         __enable_weak_this(const enable_shared_from_this<_Yp>* __e,
                            _OrigPtr* __ptr) _NOEXCEPT
         {
@@ -3942,6 +3945,7 @@ private:
     template <class _Up> friend class _LIBCPP_TEMPLATE_VIS shared_ptr;
     template <class _Up> friend class _LIBCPP_TEMPLATE_VIS weak_ptr;
 };
+
 
 template<class _Tp>
 inline
