@@ -1595,24 +1595,17 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                                             : containing_decl_ctx,
                   type_name_cstr, clang_type, storage, is_inline);
 
-              //                            if (template_param_infos.GetSize() >
-              //                            0)
-              //                            {
-              //                                clang::FunctionTemplateDecl
-              //                                *func_template_decl =
-              //                                CreateFunctionTemplateDecl
-              //                                (containing_decl_ctx,
-              //                                                                                                              function_decl,
-              //                                                                                                              type_name_cstr,
-              //                                                                                                              template_param_infos);
-              //
-              //                                CreateFunctionTemplateSpecializationInfo
-              //                                (function_decl,
-              //                                                                          func_template_decl,
-              //                                                                          template_param_infos);
-              //                            }
-              // Add the decl to our DIE to decl context map
-
+              if (has_template_params) {
+                ClangASTContext::TemplateParameterInfos template_param_infos;
+                ParseTemplateParameterInfos(die, template_param_infos);
+                clang::FunctionTemplateDecl *func_template_decl =
+                    m_ast.CreateFunctionTemplateDecl(
+                        containing_decl_ctx, function_decl, type_name_cstr,
+                        template_param_infos);
+                m_ast.CreateFunctionTemplateSpecializationInfo(
+                    function_decl, func_template_decl, template_param_infos);
+              }
+              
               lldbassert(function_decl);
 
               if (function_decl) {
@@ -1951,6 +1944,19 @@ bool DWARFASTParserClang::ParseTemplateDIE(
   const dw_tag_t tag = die.Tag();
 
   switch (tag) {
+  case DW_TAG_GNU_template_parameter_pack: {
+    template_param_infos.packed_args.reset(
+      new ClangASTContext::TemplateParameterInfos);
+    for (DWARFDIE child_die = die.GetFirstChild(); child_die.IsValid();
+         child_die = child_die.GetSibling()) {
+      if (!ParseTemplateDIE(child_die, *template_param_infos.packed_args))
+        return false;
+    }
+    if (const char *name = die.GetName()) {
+      template_param_infos.pack_name = name;
+    }
+    return true;
+  }
   case DW_TAG_template_type_parameter:
   case DW_TAG_template_value_parameter: {
     DWARFAttributes attributes;
@@ -2040,6 +2046,7 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
     switch (tag) {
     case DW_TAG_template_type_parameter:
     case DW_TAG_template_value_parameter:
+    case DW_TAG_GNU_template_parameter_pack:
       ParseTemplateDIE(die, template_param_infos);
       break;
 
@@ -3450,6 +3457,7 @@ size_t DWARFASTParserClang::ParseChildParameters(
 
     case DW_TAG_template_type_parameter:
     case DW_TAG_template_value_parameter:
+    case DW_TAG_GNU_template_parameter_pack:
       // The one caller of this was never using the template_param_infos,
       // and the local variable was taking up a large amount of stack space
       // in SymbolFileDWARF::ParseType() so this was removed. If we ever need

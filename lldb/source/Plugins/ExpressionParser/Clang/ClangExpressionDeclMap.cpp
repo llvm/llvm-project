@@ -2009,8 +2009,33 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
                 .GetOpaqueDeclContext();
         clang::FunctionDecl *src_function_decl =
             llvm::dyn_cast_or_null<clang::FunctionDecl>(src_decl_context);
-
-        if (src_function_decl) {
+        if (src_function_decl &&
+            src_function_decl->getTemplateSpecializationInfo()) {
+          clang::FunctionTemplateDecl *function_template =
+              src_function_decl->getTemplateSpecializationInfo()->getTemplate();
+          clang::FunctionTemplateDecl *copied_function_template =
+              llvm::dyn_cast_or_null<clang::FunctionTemplateDecl>(
+                 m_ast_importer_sp->CopyDecl(m_ast_context,
+                                             src_ast->getASTContext(),
+                                             function_template));
+          if (copied_function_template) {
+            if (log) {
+              ASTDumper ast_dumper((clang::Decl *)copied_function_template);
+              
+              StreamString ss;
+              
+              function->DumpSymbolContext(&ss);
+              
+              log->Printf("  CEDM::FEVD[%u] Imported decl for function template"
+                          " %s (description %s), returned %s",
+                          current_id,
+                          copied_function_template->getNameAsString().c_str(),
+                          ss.GetData(), ast_dumper.GetCString());
+            }
+            
+            context.AddNamedDecl(copied_function_template);
+          }
+        } else if (src_function_decl) {
           if (clang::FunctionDecl *copied_function_decl =
                   llvm::dyn_cast_or_null<clang::FunctionDecl>(
                       m_ast_importer_sp->CopyDecl(m_ast_context,
