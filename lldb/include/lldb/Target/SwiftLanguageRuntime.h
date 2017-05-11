@@ -386,6 +386,9 @@ public:
   lldb::SyntheticChildrenSP
   GetBridgedSyntheticChildProvider(ValueObject &valobj);
 
+  void WillStartExecutingUserExpression();
+  void DidFinishExecutingUserExpression();
+
 protected:
   //------------------------------------------------------------------
   // Classes that inherit from SwiftLanguageRuntime can see and modify these
@@ -444,6 +447,7 @@ protected:
   AppleObjCRuntimeV2 *GetObjCRuntime();
 
   void SetupSwiftError();
+  void SetupExclusivity();
 
   const CompilerType &GetBoxMetadataType();
 
@@ -484,6 +488,12 @@ protected:
       m_bridged_synthetics_map;
 
   CompilerType m_box_metadata_type;
+
+  std::mutex m_active_user_expr_mutex;
+  uint32_t m_active_user_expr_count = 0;
+  llvm::Optional<lldb::addr_t> m_dynamic_exclusivity_flag_addr =
+    llvm::Optional<lldb::addr_t>();
+  bool m_original_dynamic_exclusivity_flag_state = false;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(SwiftLanguageRuntime);

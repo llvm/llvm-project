@@ -55,6 +55,20 @@ SwiftUserExpression::SwiftUserExpression(
 
 SwiftUserExpression::~SwiftUserExpression() {}
 
+void SwiftUserExpression::WillStartExecuting() {
+  // Can we assert that the process weak-ptr is non-null here?
+  // What's the 'retry_if_fail' argument to GetSwiftLanguageRuntime?
+  // Can the runtime ever come back as null?
+  if (auto process = m_jit_process_wp.lock())
+    process->GetSwiftLanguageRuntime()->WillStartExecutingUserExpression();
+}
+
+void SwiftUserExpression::DidFinishExecuting() {
+  // Same questions as above.
+  if (auto process = m_jit_process_wp.lock())
+    process->GetSwiftLanguageRuntime()->DidFinishExecutingUserExpression();
+}
+
 void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
