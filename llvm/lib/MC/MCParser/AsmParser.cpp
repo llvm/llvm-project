@@ -1223,7 +1223,7 @@ bool AsmParser::isAltmacroString(SMLoc &StrLoc, SMLoc &EndLoc) {
 
 /// \brief creating a string without the escape characters '!'.
 void AsmParser::altMacroString(StringRef AltMacroStr,std::string &Res) {
-  for (int Pos = 0; Pos < AltMacroStr.size(); Pos++) {
+  for (size_t Pos = 0; Pos < AltMacroStr.size(); Pos++) {
     if (AltMacroStr[Pos] == '!')
       Pos++;
     Res += AltMacroStr[Pos];

@@ -17,10 +17,10 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include <cassert>
 
 namespace llvm {
-class ValueHandleBase;
-template<typename From> struct simplify_type;
 
 /// \brief This is the common base class of value handles.
 ///
@@ -29,6 +29,7 @@ template<typename From> struct simplify_type;
 /// below for details.
 class ValueHandleBase {
   friend class Value;
+
 protected:
   /// \brief This indicates what sub class the handle actually is.
   ///
@@ -40,24 +41,23 @@ protected:
       : ValueHandleBase(RHS.PrevPair.getInt(), RHS) {}
 
   ValueHandleBase(HandleBaseKind Kind, const ValueHandleBase &RHS)
-      : PrevPair(nullptr, Kind), Next(nullptr), Val(RHS.getValPtr()) {
+      : PrevPair(nullptr, Kind), Val(RHS.getValPtr()) {
     if (isValid(getValPtr()))
       AddToExistingUseList(RHS.getPrevPtr());
   }
 
 private:
   PointerIntPair<ValueHandleBase**, 2, HandleBaseKind> PrevPair;
-  ValueHandleBase *Next;
-
-  Value *Val;
+  ValueHandleBase *Next = nullptr;
+  Value *Val = nullptr;
 
   void setValPtr(Value *V) { Val = V; }
 
 public:
   explicit ValueHandleBase(HandleBaseKind Kind)
-      : PrevPair(nullptr, Kind), Next(nullptr), Val(nullptr) {}
+      : PrevPair(nullptr, Kind) {}
   ValueHandleBase(HandleBaseKind Kind, Value *V)
-      : PrevPair(nullptr, Kind), Next(nullptr), Val(V) {
+      : PrevPair(nullptr, Kind), Val(V) {
     if (isValid(getValPtr()))
       AddToUseList();
   }
@@ -162,11 +162,13 @@ public:
 // Specialize simplify_type to allow WeakVH to participate in
 // dyn_cast, isa, etc.
 template <> struct simplify_type<WeakVH> {
-  typedef Value *SimpleType;
+  using SimpleType = Value *;
+
   static SimpleType getSimplifiedValue(WeakVH &WVH) { return WVH; }
 };
 template <> struct simplify_type<const WeakVH> {
-  typedef Value *SimpleType;
+  using SimpleType = Value *;
+
   static SimpleType getSimplifiedValue(const WeakVH &WVH) { return WVH; }
 };
 
@@ -205,11 +207,13 @@ public:
 // Specialize simplify_type to allow WeakTrackingVH to participate in
 // dyn_cast, isa, etc.
 template <> struct simplify_type<WeakTrackingVH> {
-  typedef Value *SimpleType;
+  using SimpleType = Value *;
+
   static SimpleType getSimplifiedValue(WeakTrackingVH &WVH) { return WVH; }
 };
 template <> struct simplify_type<const WeakTrackingVH> {
-  typedef Value *SimpleType;
+  using SimpleType = Value *;
+
   static SimpleType getSimplifiedValue(const WeakTrackingVH &WVH) {
     return WVH;
   }
@@ -236,7 +240,7 @@ class AssertingVH
   : public ValueHandleBase
 #endif
   {
-  friend struct DenseMapInfo<AssertingVH<ValueTy> >;
+  friend struct DenseMapInfo<AssertingVH<ValueTy>>;
 
 #ifndef NDEBUG
   Value *getRawValPtr() const { return ValueHandleBase::getValPtr(); }
@@ -282,20 +286,23 @@ public:
 
 // Specialize DenseMapInfo to allow AssertingVH to participate in DenseMap.
 template<typename T>
-struct DenseMapInfo<AssertingVH<T> > {
+struct DenseMapInfo<AssertingVH<T>> {
   static inline AssertingVH<T> getEmptyKey() {
     AssertingVH<T> Res;
     Res.setRawValPtr(DenseMapInfo<Value *>::getEmptyKey());
     return Res;
   }
+
   static inline AssertingVH<T> getTombstoneKey() {
     AssertingVH<T> Res;
     Res.setRawValPtr(DenseMapInfo<Value *>::getTombstoneKey());
     return Res;
   }
+
   static unsigned getHashValue(const AssertingVH<T> &Val) {
     return DenseMapInfo<Value *>::getHashValue(Val.getRawValPtr());
   }
+
   static bool isEqual(const AssertingVH<T> &LHS, const AssertingVH<T> &RHS) {
     return DenseMapInfo<Value *>::isEqual(LHS.getRawValPtr(),
                                           RHS.getRawValPtr());
@@ -303,7 +310,7 @@ struct DenseMapInfo<AssertingVH<T> > {
 };
 
 template <typename T>
-struct isPodLike<AssertingVH<T> > {
+struct isPodLike<AssertingVH<T>> {
 #ifdef NDEBUG
   static const bool value = true;
 #else
@@ -356,7 +363,7 @@ public:
   static Value *GetAsValue(const Value *V) { return const_cast<Value*>(V); }
 
 public:
-  TrackingVH() {}
+  TrackingVH() = default;
   TrackingVH(ValueTy *P) { setValPtr(P); }
 
   operator ValueTy*() const {
@@ -495,10 +502,12 @@ public:
   PoisoningVH(ValueTy *P) : CallbackVH(GetAsValue(P)) {}
   PoisoningVH(const PoisoningVH &RHS)
       : CallbackVH(RHS), Poisoned(RHS.Poisoned) {}
+
   ~PoisoningVH() {
     if (Poisoned)
       clearValPtr();
   }
+
   PoisoningVH &operator=(const PoisoningVH &RHS) {
     if (Poisoned)
       clearValPtr();
@@ -523,14 +532,17 @@ template <typename T> struct DenseMapInfo<PoisoningVH<T>> {
     Res.setRawValPtr(DenseMapInfo<Value *>::getEmptyKey());
     return Res;
   }
+
   static inline PoisoningVH<T> getTombstoneKey() {
     PoisoningVH<T> Res;
     Res.setRawValPtr(DenseMapInfo<Value *>::getTombstoneKey());
     return Res;
   }
+
   static unsigned getHashValue(const PoisoningVH<T> &Val) {
     return DenseMapInfo<Value *>::getHashValue(Val.getRawValPtr());
   }
+
   static bool isEqual(const PoisoningVH<T> &LHS, const PoisoningVH<T> &RHS) {
     return DenseMapInfo<Value *>::isEqual(LHS.getRawValPtr(),
                                           RHS.getRawValPtr());
@@ -545,6 +557,6 @@ template <typename T> struct isPodLike<PoisoningVH<T>> {
 #endif
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_VALUEHANDLE_H

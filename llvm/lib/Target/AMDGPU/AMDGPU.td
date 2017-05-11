@@ -61,6 +61,24 @@ def FeatureFlatAddressSpace : SubtargetFeature<"flat-address-space",
   "Support flat address space"
 >;
 
+def FeatureFlatInstOffsets : SubtargetFeature<"flat-inst-offsets",
+  "FlatInstOffsets",
+  "true",
+  "Flat instructions have immediate offset addressing mode"
+>;
+
+def FeatureFlatGlobalInsts : SubtargetFeature<"flat-global-insts",
+  "FlatGlobalInsts",
+  "true",
+  "Have global_* flat memory instructions"
+>;
+
+def FeatureFlatScratchInsts : SubtargetFeature<"flat-scratch-insts",
+  "FlatScratchInsts",
+  "true",
+  "Have scratch_* flat memory instructions"
+>;
+
 def FeatureUnalignedBufferAccess : SubtargetFeature<"unaligned-buffer-access",
   "UnalignedBufferAccess",
   "true",
@@ -407,7 +425,8 @@ def FeatureGFX9 : SubtargetFeatureGeneration<"GFX9",
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureScalarStores, FeatureInv2PiInlineImm,
    FeatureApertureRegs, FeatureGFX9Insts, FeatureVOP3P, FeatureVGPRIndexMode,
-   FeatureFastFMAF32, FeatureDPP
+   FeatureFastFMAF32, FeatureDPP,
+   FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts
   ]
 >;
 

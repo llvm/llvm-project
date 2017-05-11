@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define _LIBCPP_EXTERN_TEMPLATE(...)
 #define _LIBCPP_NO_EXCEPTIONS
 
 #include "__cxxabi_config.h"

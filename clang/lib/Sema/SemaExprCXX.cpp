@@ -4720,10 +4720,24 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
     // regard to cv-qualifiers.
 
     const RecordType *lhsRecord = LhsT->getAs<RecordType>();
-    if (!lhsRecord) return false;
-
     const RecordType *rhsRecord = RhsT->getAs<RecordType>();
-    if (!rhsRecord) return false;
+    if (!rhsRecord || !lhsRecord) {
+      const ObjCObjectType *LHSObjTy = LhsT->getAs<ObjCObjectType>();
+      const ObjCObjectType *RHSObjTy = RhsT->getAs<ObjCObjectType>();
+      if (!LHSObjTy || !RHSObjTy)
+        return false;
+
+      ObjCInterfaceDecl *BaseInterface = LHSObjTy->getInterface();
+      ObjCInterfaceDecl *DerivedInterface = RHSObjTy->getInterface();
+      if (!BaseInterface || !DerivedInterface)
+        return false;
+
+      if (Self.RequireCompleteType(
+              KeyLoc, RhsT, diag::err_incomplete_type_used_in_type_trait_expr))
+        return false;
+
+      return BaseInterface->isSuperClassOf(DerivedInterface);
+    }
 
     assert(Self.Context.hasSameUnqualifiedType(LhsT, RhsT)
              == (lhsRecord == rhsRecord));

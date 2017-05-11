@@ -2725,10 +2725,7 @@ private:
   bool ParseGreaterThanInTemplateList(SourceLocation &RAngleLoc,
                                       bool ConsumeLastToken,
                                       bool ObjCGenericList);
-  bool ParseTemplateIdAfterTemplateName(TemplateTy Template,
-                                        SourceLocation TemplateNameLoc,
-                                        const CXXScopeSpec &SS,
-                                        bool ConsumeLastToken,
+  bool ParseTemplateIdAfterTemplateName(bool ConsumeLastToken,
                                         SourceLocation &LAngleLoc,
                                         TemplateArgList &TemplateArgs,
                                         SourceLocation &RAngleLoc);

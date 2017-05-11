@@ -1627,6 +1627,9 @@ class ICV<string name>
 //   Inherent:
 //     One register output operand and no input operands.
 //
+//   InherentDual:
+//     Two register output operands and no input operands.
+//
 //   StoreInherent:
 //     One address operand.  The instruction stores to the address.
 //
@@ -1751,6 +1754,10 @@ class InherentRRE<string mnemonic, bits<16> opcode, RegisterOperand cls,
             [(set cls:$R1, (operator))]> {
   let R2 = 0;
 }
+
+class InherentDualRRE<string mnemonic, bits<16> opcode, RegisterOperand cls>
+  : InstRRE<opcode, (outs cls:$R1, cls:$R2), (ins),
+            mnemonic#"\t$R1, $R2", []>;
 
 class InherentVRIa<string mnemonic, bits<16> opcode, bits<16> value>
   : InstVRIa<opcode, (outs VR128:$V1), (ins), mnemonic#"\t$V1", []> {
@@ -2149,6 +2156,13 @@ multiclass LoadMultipleRSPair<string mnemonic, bits<8> rsOpcode,
     let DispSize = "20" in
       def Y  : LoadMultipleRSY<mnemonic#"y", rsyOpcode, cls, bdaddr20pair>;
   }
+}
+
+class LoadMultipleSSe<string mnemonic, bits<8> opcode, RegisterOperand cls>
+  : InstSSe<opcode, (outs cls:$R1, cls:$R3),
+            (ins bdaddr12only:$BD2, bdaddr12only:$BD4),
+            mnemonic#"\t$R1, $R3, $BD2, $BD4", []> {
+  let mayLoad = 1;
 }
 
 class LoadMultipleVRSa<string mnemonic, bits<16> opcode>
@@ -2660,6 +2674,10 @@ class SideEffectBinaryIE<string mnemonic, bits<16> opcode,
                          Immediate imm1, Immediate imm2>
   : InstIE<opcode, (outs), (ins imm1:$I1, imm2:$I2),
            mnemonic#"\t$I1, $I2", []>;
+
+class SideEffectBinarySI<string mnemonic, bits<8> opcode, Operand imm>
+  : InstSI<opcode, (outs), (ins bdaddr12only:$BD1, imm:$I2),
+           mnemonic#"\t$BD1, $I2", []>;
 
 class SideEffectBinarySIL<string mnemonic, bits<16> opcode,
                           SDPatternOperator operator, Immediate imm>
@@ -3248,6 +3266,34 @@ class BinaryVRX<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let AccessBytes = bytes;
 }
 
+class StoreBinaryRS<string mnemonic, bits<8> opcode, RegisterOperand cls,
+                    bits<5> bytes, AddressingMode mode = bdaddr12only>
+  : InstRSb<opcode, (outs), (ins cls:$R1, imm32zx4:$M3, mode:$BD2),
+            mnemonic#"\t$R1, $M3, $BD2", []> {
+  let mayStore = 1;
+  let AccessBytes = bytes;
+}
+
+class StoreBinaryRSY<string mnemonic, bits<16> opcode, RegisterOperand cls,
+                     bits<5> bytes, AddressingMode mode = bdaddr20only>
+  : InstRSYb<opcode, (outs), (ins cls:$R1, imm32zx4:$M3, mode:$BD2),
+             mnemonic#"\t$R1, $M3, $BD2", []> {
+  let mayStore = 1;
+  let AccessBytes = bytes;
+}
+
+multiclass StoreBinaryRSPair<string mnemonic, bits<8> rsOpcode,
+                             bits<16> rsyOpcode, RegisterOperand cls,
+                             bits<5> bytes> {
+  let DispKey = mnemonic ## #cls in {
+    let DispSize = "12" in
+      def "" : StoreBinaryRS<mnemonic, rsOpcode, cls, bytes, bdaddr12pair>;
+    let DispSize = "20" in
+      def Y  : StoreBinaryRSY<mnemonic#"y", rsyOpcode, cls, bytes,
+                              bdaddr20pair>;
+  }
+}
+
 class StoreBinaryVRV<string mnemonic, bits<16> opcode, bits<5> bytes,
                      Immediate index>
   : InstVRV<opcode, (outs), (ins VR128:$V1, bdvaddr12only:$VBD2, index:$M3),
@@ -3370,6 +3416,32 @@ multiclass CompareRXPair<string mnemonic, bits<8> rxOpcode, bits<16> rxyOpcode,
     let DispSize = "20" in
       def Y  : CompareRXY<mnemonic#"y", rxyOpcode, operator, cls,
                           load, bytes, bdxaddr20pair>;
+  }
+}
+
+class CompareRS<string mnemonic, bits<8> opcode, RegisterOperand cls,
+                bits<5> bytes, AddressingMode mode = bdaddr12only>
+  : InstRSb<opcode, (outs), (ins cls:$R1, imm32zx4:$M3, mode:$BD2),
+            mnemonic#"\t$R1, $M3, $BD2", []> {
+  let mayLoad = 1;
+  let AccessBytes = bytes;
+}
+
+class CompareRSY<string mnemonic, bits<16> opcode, RegisterOperand cls,
+                 bits<5> bytes, AddressingMode mode = bdaddr20only>
+  : InstRSYb<opcode, (outs), (ins cls:$R1, imm32zx4:$M3, mode:$BD2),
+             mnemonic#"\t$R1, $M3, $BD2", []> {
+  let mayLoad = 1;
+  let AccessBytes = bytes;
+}
+
+multiclass CompareRSPair<string mnemonic, bits<8> rsOpcode, bits<16> rsyOpcode,
+                         RegisterOperand cls, bits<5> bytes> {
+  let DispKey = mnemonic ## #cls in {
+    let DispSize = "12" in
+      def "" : CompareRS<mnemonic, rsOpcode, cls, bytes, bdaddr12pair>;
+    let DispSize = "20" in
+      def Y  : CompareRSY<mnemonic#"y", rsyOpcode, cls, bytes, bdaddr20pair>;
   }
 }
 
@@ -3508,6 +3580,16 @@ class SideEffectTernarySSF<string mnemonic, bits<12> opcode,
   : InstSSF<opcode, (outs),
             (ins bdaddr12only:$BD1, bdaddr12only:$BD2, cls:$R3),
             mnemonic#"\t$BD1, $BD2, $R3", []>;
+
+class TernaryRRFb<string mnemonic, bits<16> opcode,
+                  RegisterOperand cls1, RegisterOperand cls2,
+                  RegisterOperand cls3>
+  : InstRRFb<opcode, (outs cls1:$R1, cls3:$R3),
+             (ins cls1:$R1src, cls2:$R2, imm32zx4:$M4),
+             mnemonic#"\t$R1, $R3, $R2, $M4", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+}
 
 class TernaryRRFe<string mnemonic, bits<16> opcode, RegisterOperand cls1,
                   RegisterOperand cls2>

@@ -310,7 +310,7 @@ define i8 @test27(i8 %A) {
   ret i8 %E
 }
 
-;; This is juse a zero extending shr.
+;; This is just a zero-extending shr.
 define i32 @test28(i32 %X) {
 ; CHECK-LABEL: @test28(
 ; CHECK-NEXT:    [[Y1:%.*]] = lshr i32 %X, 24

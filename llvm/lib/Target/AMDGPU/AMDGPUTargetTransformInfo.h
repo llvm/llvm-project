@@ -114,6 +114,9 @@ public:
   }
 
   unsigned getVectorSplitCost() { return 0; }
+
+  unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
+                          Type *SubTp);
 };
 
 } // end namespace llvm

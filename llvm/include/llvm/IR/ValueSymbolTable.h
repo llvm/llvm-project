@@ -49,13 +49,13 @@ class ValueSymbolTable {
 /// @{
 public:
   /// @brief A mapping of names to values.
-  typedef StringMap<Value*> ValueMap;
+  using ValueMap = StringMap<Value*>;
 
   /// @brief An iterator over a ValueMap.
-  typedef ValueMap::iterator iterator;
+  using iterator = ValueMap::iterator;
 
   /// @brief A const_iterator over a ValueMap.
-  typedef ValueMap::const_iterator const_iterator;
+  using const_iterator = ValueMap::const_iterator;
 
 /// @}
 /// @name Constructors

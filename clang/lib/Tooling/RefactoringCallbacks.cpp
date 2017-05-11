@@ -171,7 +171,7 @@ ReplaceNodeWithTemplate::create(StringRef FromId, StringRef ToTemplate) {
           return make_error<StringError>(
               "Unterminated ${...} in replacement template near " +
                   ToTemplate.substr(Index),
-              std::make_error_code(std::errc::bad_message));
+              llvm::inconvertibleErrorCode());
         }
         std::string SourceNodeName =
             ToTemplate.substr(Index + 2, EndOfIdentifier - Index - 2);
@@ -182,7 +182,7 @@ ReplaceNodeWithTemplate::create(StringRef FromId, StringRef ToTemplate) {
         return make_error<StringError>(
             "Invalid $ in replacement template near " +
                 ToTemplate.substr(Index),
-            std::make_error_code(std::errc::bad_message));
+            llvm::inconvertibleErrorCode());
       }
     } else {
       size_t NextIndex = ToTemplate.find('$', Index + 1);

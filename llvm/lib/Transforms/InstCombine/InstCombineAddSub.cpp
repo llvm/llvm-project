@@ -1079,6 +1079,16 @@ static Instruction *foldAddWithConstant(BinaryOperator &Add,
     return new ZExtInst(Builder.CreateNUWAdd(X, NewC), Ty);
   }
 
+  // Shifts and add used to flip and mask off the low bit:
+  // add (ashr (shl i32 X, 31), 31), 1 --> and (not X), 1
+  const APInt *C3;
+  if (*C == 1 && match(Op0, m_OneUse(m_AShr(m_Shl(m_Value(X), m_APInt(C2)),
+                                            m_APInt(C3)))) &&
+      C2 == C3 && *C2 == Ty->getScalarSizeInBits() - 1) {
+    Value *NotX = Builder.CreateNot(X);
+    return BinaryOperator::CreateAnd(NotX, ConstantInt::get(Ty, 1));
+  }
+
   return nullptr;
 }
 

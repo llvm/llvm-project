@@ -13,11 +13,13 @@
 // This header is force-included when running the libc++ tests against the
 // MSVC standard library.
 
-// Silence warnings about CRT machinery.
-#define _CRT_SECURE_NO_WARNINGS
+#ifndef _LIBCXX_IN_DEVCRT
+    // Silence warnings about CRT machinery.
+    #define _CRT_SECURE_NO_WARNINGS
 
-// Avoid assertion dialogs.
-#define _CRT_SECURE_INVALID_PARAMETER(EXPR) ::abort()
+    // Avoid assertion dialogs.
+    #define _CRT_SECURE_INVALID_PARAMETER(EXPR) ::abort()
+#endif // _LIBCXX_IN_DEVCRT
 
 #include <crtdbg.h>
 #include <stdlib.h>
@@ -31,6 +33,7 @@
     #define _MSVC_STL_VER 42
 #endif
 
+#ifndef _LIBCXX_IN_DEVCRT
 struct AssertionDialogAvoider {
     AssertionDialogAvoider() {
         _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
@@ -42,6 +45,7 @@ struct AssertionDialogAvoider {
 };
 
 const AssertionDialogAvoider assertion_dialog_avoider{};
+#endif // _LIBCXX_IN_DEVCRT
 
 // MSVC frontend only configurations
 #if !defined(__clang__)
@@ -66,16 +70,18 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 // MSVC has quick_exit() and at_quick_exit().
 #define _LIBCPP_HAS_QUICK_EXIT
 
-// atomic_is_lock_free.pass.cpp needs this VS 2015 Update 2 fix.
-#define _ENABLE_ATOMIC_ALIGNMENT_FIX
+#ifndef _LIBCXX_IN_DEVCRT
+    // atomic_is_lock_free.pass.cpp needs this VS 2015 Update 2 fix.
+    #define _ENABLE_ATOMIC_ALIGNMENT_FIX
 
-// Enable features that /std:c++latest removes by default.
-#define _HAS_AUTO_PTR_ETC          1
-#define _HAS_FUNCTION_ASSIGN       1
-#define _HAS_OLD_IOSTREAMS_MEMBERS 1
+    // Enable features that /std:c++latest removes by default.
+    #define _HAS_AUTO_PTR_ETC          1
+    #define _HAS_FUNCTION_ASSIGN       1
+    #define _HAS_OLD_IOSTREAMS_MEMBERS 1
 
-// Silence warnings about raw pointers and other unchecked iterators.
-#define _SCL_SECURE_NO_WARNINGS
+    // Silence warnings about raw pointers and other unchecked iterators.
+    #define _SCL_SECURE_NO_WARNINGS
+#endif // _LIBCXX_IN_DEVCRT
 
 #include <ciso646>
 

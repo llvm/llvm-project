@@ -128,7 +128,7 @@ F:
 define i32 @test10(i32 %i) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[B1:%.*]] = shl i32 %i, 30
-; CHECK-NEXT:    [[B:%.*]] = ashr exact i32 [[B:%.*]]1, 30
+; CHECK-NEXT:    [[B:%.*]] = ashr exact i32 [[B1]], 30
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %tmp12 = trunc i32 %i to i8

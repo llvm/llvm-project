@@ -757,7 +757,8 @@ ConstantRange::multiply(const ConstantRange &Other) const {
   // from one positive number to another which is as good as we can generate.
   // In this case, skip the extra work of generating signed ranges which aren't
   // going to be better than this range.
-  if (!UR.isWrappedSet() && UR.getLower().isNonNegative())
+  if (!UR.isWrappedSet() &&
+      (UR.getUpper().isNonNegative() || UR.getUpper().isMinSignedValue()))
     return UR;
 
   // Now the signed range. Because we could be dealing with negative numbers

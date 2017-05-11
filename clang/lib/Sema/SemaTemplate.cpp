@@ -515,11 +515,11 @@ void Sema::diagnoseExprIntendedAsTemplateName(Scope *S, ExprResult TemplateName,
         diagnoseTypo(Corrected,
                      PDiag(diag::err_non_template_in_member_template_id_suggest)
                          << Name << LookupCtx << DroppedSpecifier
-                         << SS.getRange());
+                         << SS.getRange(), false);
       } else {
         diagnoseTypo(Corrected,
                      PDiag(diag::err_non_template_in_template_id_suggest)
-                         << Name);
+                         << Name, false);
       }
       if (Found)
         Diag(Found->getLocation(),

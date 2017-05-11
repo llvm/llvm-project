@@ -7479,6 +7479,35 @@ unsigned clang_Cursor_isVariadic(CXCursor C) {
   return 0;
 }
 
+unsigned clang_Cursor_isExternalSymbol(CXCursor C,
+                                     CXString *language, CXString *definedIn,
+                                     unsigned *isGenerated) {
+  if (!clang_isDeclaration(C.kind))
+    return 0;
+
+  const Decl *D = getCursorDecl(C);
+
+  auto getExternalSymAttr = [](const Decl *D) -> ExternalSourceSymbolAttr* {
+    if (auto *attr = D->getAttr<ExternalSourceSymbolAttr>())
+      return attr;
+    if (auto *dcd = dyn_cast<Decl>(D->getDeclContext())) {
+      if (auto *attr = dcd->getAttr<ExternalSourceSymbolAttr>())
+        return attr;
+    }
+    return nullptr;
+  };
+  if (auto *attr = getExternalSymAttr(D)) {
+    if (language)
+      *language = cxstring::createDup(attr->getLanguage());
+    if (definedIn)
+      *definedIn = cxstring::createDup(attr->getDefinedIn());
+    if (isGenerated)
+      *isGenerated = attr->getGeneratedDeclaration();
+    return 1;
+  }
+  return 0;
+}
+
 CXSourceRange clang_Cursor_getCommentRange(CXCursor C) {
   if (!clang_isDeclaration(C.kind))
     return clang_getNullRange();

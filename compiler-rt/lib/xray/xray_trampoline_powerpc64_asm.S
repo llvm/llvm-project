@@ -145,27 +145,91 @@ __xray_FunctionEntry:
 	.p2align	4
 __xray_FunctionExit:
 	std 0, 16(1)
-	ld 0, -8(1) # FuncId
-	stdu 1, -72(1)
-# Spill r3, f1, and vsr34, the return value registers.
+	stdu 1, -256(1)
+# Spill r3-r4, f1-f8, and vsr34-vsr41, which are return registers.
+# If this appears to be slow, the caller needs to pass in number of generic,
+# floating point, and vector parameters, so that we only spill those live ones.
 	std 3, 32(1)
-	mr 3, 0
-	addi 4, 1, 40
-	stxsdx 1, 0, 4
+	ld 3, 248(1) # FuncId
+	std 4, 40(1)
 	addi 4, 1, 48
+	stxsdx 1, 0, 4
+	addi 4, 1, 56
+	stxsdx 2, 0, 4
+	addi 4, 1, 64
+	stxsdx 3, 0, 4
+	addi 4, 1, 72
+	stxsdx 4, 0, 4
+	addi 4, 1, 80
+	stxsdx 5, 0, 4
+	addi 4, 1, 88
+	stxsdx 6, 0, 4
+	addi 4, 1, 96
+	stxsdx 7, 0, 4
+	addi 4, 1, 104
+	stxsdx 8, 0, 4
+	addi 4, 1, 112
 	stxvd2x 34, 0, 4
+	addi 4, 1, 128
+	stxvd2x 35, 0, 4
+	addi 4, 1, 144
+	stxvd2x 36, 0, 4
+	addi 4, 1, 160
+	stxvd2x 37, 0, 4
+	addi 4, 1, 176
+	stxvd2x 38, 0, 4
+	addi 4, 1, 192
+	stxvd2x 39, 0, 4
+	addi 4, 1, 208
+	stxvd2x 40, 0, 4
+	addi 4, 1, 224
+	stxvd2x 41, 0, 4
+	std 2, 240(1)
 	mflr 0
-	std 0, 64(1)
+	std 0, 248(1)
+
 	li 4, 1
 	bl _ZN6__xray23CallXRayPatchedFunctionEi13XRayEntryType
 	nop
-	ld 0, 64(1)
-	mtlr 0
-	ld 3, 32(1)
-	addi 4, 1, 40
-	lxsdx 1, 0, 4
+
 	addi 4, 1, 48
+	lxsdx 1, 0, 4
+	addi 4, 1, 56
+	lxsdx 2, 0, 4
+	addi 4, 1, 64
+	lxsdx 3, 0, 4
+	addi 4, 1, 72
+	lxsdx 4, 0, 4
+	addi 4, 1, 80
+	lxsdx 5, 0, 4
+	addi 4, 1, 88
+	lxsdx 6, 0, 4
+	addi 4, 1, 96
+	lxsdx 7, 0, 4
+	addi 4, 1, 104
+	lxsdx 8, 0, 4
+	addi 4, 1, 112
 	lxvd2x 34, 0, 4
-	addi 1, 1, 72
+	addi 4, 1, 128
+	lxvd2x 35, 0, 4
+	addi 4, 1, 144
+	lxvd2x 36, 0, 4
+	addi 4, 1, 160
+	lxvd2x 37, 0, 4
+	addi 4, 1, 176
+	lxvd2x 38, 0, 4
+	addi 4, 1, 192
+	lxvd2x 39, 0, 4
+	addi 4, 1, 208
+	lxvd2x 40, 0, 4
+	addi 4, 1, 224
+	lxvd2x 41, 0, 4
+	ld 0, 248(1)
+	mtlr 0
+	ld 2, 240(1)
+	ld 3, 32(1)
+	ld 4, 40(1)
+
+	addi 1, 1, 256
 	ld 0, 16(1)
 	blr
