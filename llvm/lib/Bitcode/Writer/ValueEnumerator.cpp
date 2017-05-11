@@ -314,10 +314,13 @@ ValueEnumerator::ValueEnumerator(const Module &M,
   // Remember what is the cutoff between globalvalue's and other constants.
   unsigned FirstConstant = Values.size();
 
-  // Enumerate the global variable initializers.
-  for (const GlobalVariable &GV : M.globals())
+  // Enumerate the global variable initializers and attributes.
+  for (const GlobalVariable &GV : M.globals()) {
     if (GV.hasInitializer())
       EnumerateValue(GV.getInitializer());
+    if (GV.hasAttributes())
+      EnumerateAttributes(GV.getAttributesAsList(AttributeList::FunctionIndex));
+  }
 
   // Enumerate the aliasees.
   for (const GlobalAlias &GA : M.aliases())

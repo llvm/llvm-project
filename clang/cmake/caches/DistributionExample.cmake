@@ -29,6 +29,13 @@ set(CLANG_BOOTSTRAP_TARGETS
 
 # Setup the bootstrap build.
 set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
-set(CLANG_BOOTSTRAP_CMAKE_ARGS
-  -C ${CMAKE_CURRENT_LIST_DIR}/DistributionExample-stage2.cmake
-  CACHE STRING "")
+
+if(STAGE2_CACHE_FILE)
+  set(CLANG_BOOTSTRAP_CMAKE_ARGS
+    -C ${STAGE2_CACHE_FILE}
+    CACHE STRING "")
+else()
+  set(CLANG_BOOTSTRAP_CMAKE_ARGS
+    -C ${CMAKE_CURRENT_LIST_DIR}/DistributionExample-stage2.cmake
+    CACHE STRING "")
+endif()

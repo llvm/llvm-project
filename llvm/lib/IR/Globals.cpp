@@ -338,6 +338,7 @@ void GlobalVariable::copyAttributesFrom(const GlobalValue *Src) {
   if (const GlobalVariable *SrcVar = dyn_cast<GlobalVariable>(Src)) {
     setThreadLocalMode(SrcVar->getThreadLocalMode());
     setExternallyInitialized(SrcVar->isExternallyInitialized());
+    setAttributes(SrcVar->getAttributes());
   }
 }
 

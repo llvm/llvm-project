@@ -21,129 +21,6 @@
 #include <string>
 
 using namespace llvm;
-
-#define MRM_MAPPING     \
-  MAP(C0, 64)           \
-  MAP(C1, 65)           \
-  MAP(C2, 66)           \
-  MAP(C3, 67)           \
-  MAP(C4, 68)           \
-  MAP(C5, 69)           \
-  MAP(C6, 70)           \
-  MAP(C7, 71)           \
-  MAP(C8, 72)           \
-  MAP(C9, 73)           \
-  MAP(CA, 74)           \
-  MAP(CB, 75)           \
-  MAP(CC, 76)           \
-  MAP(CD, 77)           \
-  MAP(CE, 78)           \
-  MAP(CF, 79)           \
-  MAP(D0, 80)           \
-  MAP(D1, 81)           \
-  MAP(D2, 82)           \
-  MAP(D3, 83)           \
-  MAP(D4, 84)           \
-  MAP(D5, 85)           \
-  MAP(D6, 86)           \
-  MAP(D7, 87)           \
-  MAP(D8, 88)           \
-  MAP(D9, 89)           \
-  MAP(DA, 90)           \
-  MAP(DB, 91)           \
-  MAP(DC, 92)           \
-  MAP(DD, 93)           \
-  MAP(DE, 94)           \
-  MAP(DF, 95)           \
-  MAP(E0, 96)           \
-  MAP(E1, 97)           \
-  MAP(E2, 98)           \
-  MAP(E3, 99)           \
-  MAP(E4, 100)          \
-  MAP(E5, 101)          \
-  MAP(E6, 102)          \
-  MAP(E7, 103)          \
-  MAP(E8, 104)          \
-  MAP(E9, 105)          \
-  MAP(EA, 106)          \
-  MAP(EB, 107)          \
-  MAP(EC, 108)          \
-  MAP(ED, 109)          \
-  MAP(EE, 110)          \
-  MAP(EF, 111)          \
-  MAP(F0, 112)          \
-  MAP(F1, 113)          \
-  MAP(F2, 114)          \
-  MAP(F3, 115)          \
-  MAP(F4, 116)          \
-  MAP(F5, 117)          \
-  MAP(F6, 118)          \
-  MAP(F7, 119)          \
-  MAP(F8, 120)          \
-  MAP(F9, 121)          \
-  MAP(FA, 122)          \
-  MAP(FB, 123)          \
-  MAP(FC, 124)          \
-  MAP(FD, 125)          \
-  MAP(FE, 126)          \
-  MAP(FF, 127)
-
-// A clone of X86 since we can't depend on something that is generated.
-namespace X86Local {
-  enum {
-    Pseudo        = 0,
-    RawFrm        = 1,
-    AddRegFrm     = 2,
-    RawFrmMemOffs = 3,
-    RawFrmSrc     = 4,
-    RawFrmDst     = 5,
-    RawFrmDstSrc  = 6,
-    RawFrmImm8    = 7,
-    RawFrmImm16   = 8,
-    MRMDestMem     = 32,
-    MRMSrcMem      = 33,
-    MRMSrcMem4VOp3 = 34,
-    MRMSrcMemOp4   = 35,
-    MRMXm = 39,
-    MRM0m = 40, MRM1m = 41, MRM2m = 42, MRM3m = 43,
-    MRM4m = 44, MRM5m = 45, MRM6m = 46, MRM7m = 47,
-    MRMDestReg     = 48,
-    MRMSrcReg      = 49,
-    MRMSrcReg4VOp3 = 50,
-    MRMSrcRegOp4   = 51,
-    MRMXr = 55,
-    MRM0r = 56, MRM1r = 57, MRM2r = 58, MRM3r = 59,
-    MRM4r = 60, MRM5r = 61, MRM6r = 62, MRM7r = 63,
-#define MAP(from, to) MRM_##from = to,
-    MRM_MAPPING
-#undef MAP
-  };
-
-  enum {
-    OB = 0, TB = 1, T8 = 2, TA = 3, XOP8 = 4, XOP9 = 5, XOPA = 6
-  };
-
-  enum {
-    PS = 1, PD = 2, XS = 3, XD = 4
-  };
-
-  enum {
-    VEX = 1, XOP = 2, EVEX = 3
-  };
-
-  enum {
-    OpSize16 = 1, OpSize32 = 2
-  };
-
-  enum {
-    AdSize16 = 1, AdSize32 = 2, AdSize64 = 3
-  };
-
-  enum {
-    VEX_W0 = 0, VEX_W1 = 1, VEX_WIG = 2
-  };
-}
-
 using namespace X86Disassembler;
 
 /// byteFromBitsInit - Extracts a value at most 8 bits in width from a BitsInit.
@@ -890,7 +767,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
     case X86Local::MRM6m:      case X86Local::MRM7m:
       filter = new ExtendedFilter(false, Form - X86Local::MRM0m);
       break;
-    MRM_MAPPING
+    X86_INSTR_MRM_MAPPING
       filter = new ExactFilter(0xC0 + Form - X86Local::MRM_C0);   \
       break;
     } // switch (Form)

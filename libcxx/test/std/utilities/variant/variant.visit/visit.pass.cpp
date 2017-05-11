@@ -94,6 +94,16 @@ void test_call_operator_forwarding() {
   using Fn = ForwardingCallObject;
   Fn obj{};
   const Fn &cobj = obj;
+  { // test call operator forwarding - no variant
+    std::visit(obj);
+    assert(Fn::check_call<>(CT_NonConst | CT_LValue));
+    std::visit(cobj);
+    assert(Fn::check_call<>(CT_Const | CT_LValue));
+    std::visit(std::move(obj));
+    assert(Fn::check_call<>(CT_NonConst | CT_RValue));
+    std::visit(std::move(cobj));
+    assert(Fn::check_call<>(CT_Const | CT_RValue));
+  }
   { // test call operator forwarding - single variant, single arg
     using V = std::variant<int>;
     V v(42);
