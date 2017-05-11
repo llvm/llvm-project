@@ -4,6 +4,8 @@
   define void @test_sext_s1() { ret void }
   define void @test_sext_s8() { ret void }
   define void @test_zext_s16() { ret void }
+  define void @test_anyext_s8() { ret void }
+  define void @test_anyext_s16() { ret void }
 
   define void @test_trunc_s32_16() { ret void }
 
@@ -149,6 +151,58 @@ body:             |
     ; CHECK: BX_RET 14, _, implicit %r0
 ...
 ---
+name:            test_anyext_s8
+# CHECK-LABEL: name: test_anyext_s8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s8) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = G_ANYEXT %0(s8)
+    ; CHECK: [[VREGEXT:%[0-9]+]] = COPY [[VREGX]]
+
+    %r0 = COPY %1(s32)
+    ; CHECK: %r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_anyext_s16
+# CHECK-LABEL: name: test_anyext_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s16) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = G_ANYEXT %0(s16)
+    ; CHECK: [[VREGEXT:%[0-9]+]] = COPY [[VREGX]]
+
+    %r0 = COPY %1(s32)
+    ; CHECK: %r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
 name:            test_trunc_s32_16
 # CHECK-LABEL: name: test_trunc_s32_16
 legalized:       true
@@ -187,9 +241,15 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
 # CHECK-DAG: id: 0, class: gpr
 # CHECK-DAG: id: 1, class: gpr
 # CHECK-DAG: id: 2, class: gpr
+# CHECK-DAG: id: 3, class: gpr
+# CHECK-DAG: id: 4, class: gpr
+# CHECK-DAG: id: 5, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -200,11 +260,20 @@ body:             |
     %1(s8) = COPY %r1
     ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
 
-    %2(s8) = G_ADD %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]] = ADDrr [[VREGX]], [[VREGY]], 14, _, _
+    %2(s32) = G_ANYEXT %0(s8)
+    ; CHECK: [[VREGXEXT:%[0-9]+]] = COPY [[VREGX]]
 
-    %r0 = COPY %2(s8)
-    ; CHECK: %r0 = COPY [[VREGSUM]]
+    %3(s32) = G_ANYEXT %1(s8)
+    ; CHECK: [[VREGYEXT:%[0-9]+]] = COPY [[VREGY]]
+
+    %4(s32) = G_ADD %2, %3
+    ; CHECK: [[VREGSUM:%[0-9]+]] = ADDrr [[VREGXEXT]], [[VREGYEXT]], 14, _, _
+
+    %5(s8) = G_TRUNC %4(s32)
+    ; CHECK: [[VREGSUMTR:%[0-9]+]] = COPY [[VREGSUM]]
+
+    %r0 = COPY %5(s8)
+    ; CHECK: %r0 = COPY [[VREGSUMTR]]
 
     BX_RET 14, _, implicit %r0
     ; CHECK: BX_RET 14, _, implicit %r0
@@ -220,9 +289,15 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
 # CHECK-DAG: id: 0, class: gpr
 # CHECK-DAG: id: 1, class: gpr
 # CHECK-DAG: id: 2, class: gpr
+# CHECK-DAG: id: 3, class: gpr
+# CHECK-DAG: id: 4, class: gpr
+# CHECK-DAG: id: 5, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -233,11 +308,20 @@ body:             |
     %1(s16) = COPY %r1
     ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
 
-    %2(s16) = G_ADD %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]] = ADDrr [[VREGX]], [[VREGY]], 14, _, _
+    %2(s32) = G_ANYEXT %0(s16)
+    ; CHECK: [[VREGXEXT:%[0-9]+]] = COPY [[VREGX]]
 
-    %r0 = COPY %2(s16)
-    ; CHECK: %r0 = COPY [[VREGSUM]]
+    %3(s32) = G_ANYEXT %1(s16)
+    ; CHECK: [[VREGYEXT:%[0-9]+]] = COPY [[VREGY]]
+
+    %4(s32) = G_ADD %2, %3
+    ; CHECK: [[VREGSUM:%[0-9]+]] = ADDrr [[VREGXEXT]], [[VREGYEXT]], 14, _, _
+
+    %5(s16) = G_TRUNC %4(s32)
+    ; CHECK: [[VREGSUMTR:%[0-9]+]] = COPY [[VREGSUM]]
+
+    %r0 = COPY %5(s16)
+    ; CHECK: %r0 = COPY [[VREGSUMTR]]
 
     BX_RET 14, _, implicit %r0
     ; CHECK: BX_RET 14, _, implicit %r0
@@ -352,9 +436,15 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
 # CHECK-DAG: id: 0, class: gpr
 # CHECK-DAG: id: 1, class: gpr
 # CHECK-DAG: id: 2, class: gpr
+# CHECK-DAG: id: 3, class: gpr
+# CHECK-DAG: id: 4, class: gpr
+# CHECK-DAG: id: 5, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -365,11 +455,20 @@ body:             |
     %1(s8) = COPY %r1
     ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
 
-    %2(s8) = G_SUB %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]] = SUBrr [[VREGX]], [[VREGY]], 14, _, _
+    %2(s32) = G_ANYEXT %0(s8)
+    ; CHECK: [[VREGXEXT:%[0-9]+]] = COPY [[VREGX]]
 
-    %r0 = COPY %2(s8)
-    ; CHECK: %r0 = COPY [[VREGRES]]
+    %3(s32) = G_ANYEXT %1(s8)
+    ; CHECK: [[VREGYEXT:%[0-9]+]] = COPY [[VREGY]]
+
+    %4(s32) = G_SUB %2, %3
+    ; CHECK: [[VREGRES:%[0-9]+]] = SUBrr [[VREGXEXT]], [[VREGYEXT]], 14, _, _
+
+    %5(s8) = G_TRUNC %4(s32)
+    ; CHECK: [[VREGRESTR:%[0-9]+]] = COPY [[VREGRES]]
+
+    %r0 = COPY %5(s8)
+    ; CHECK: %r0 = COPY [[VREGRESTR]]
 
     BX_RET 14, _, implicit %r0
     ; CHECK: BX_RET 14, _, implicit %r0
@@ -385,9 +484,15 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
 # CHECK-DAG: id: 0, class: gpr
 # CHECK-DAG: id: 1, class: gpr
 # CHECK-DAG: id: 2, class: gpr
+# CHECK-DAG: id: 3, class: gpr
+# CHECK-DAG: id: 4, class: gpr
+# CHECK-DAG: id: 5, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -398,11 +503,20 @@ body:             |
     %1(s16) = COPY %r1
     ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
 
-    %2(s16) = G_SUB %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]] = SUBrr [[VREGX]], [[VREGY]], 14, _, _
+    %2(s32) = G_ANYEXT %0(s16)
+    ; CHECK: [[VREGXEXT:%[0-9]+]] = COPY [[VREGX]]
 
-    %r0 = COPY %2(s16)
-    ; CHECK: %r0 = COPY [[VREGRES]]
+    %3(s32) = G_ANYEXT %1(s16)
+    ; CHECK: [[VREGYEXT:%[0-9]+]] = COPY [[VREGY]]
+
+    %4(s32) = G_SUB %2, %3
+    ; CHECK: [[VREGRES:%[0-9]+]] = SUBrr [[VREGXEXT]], [[VREGYEXT]], 14, _, _
+
+    %5(s16) = G_TRUNC %4(s32)
+    ; CHECK: [[VREGRESTR:%[0-9]+]] = COPY [[VREGRES]]
+
+    %r0 = COPY %5(s16)
+    ; CHECK: %r0 = COPY [[VREGRESTR]]
 
     BX_RET 14, _, implicit %r0
     ; CHECK: BX_RET 14, _, implicit %r0
@@ -451,9 +565,15 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK-DAG: id: 0, class: gprnopc
-# CHECK-DAG: id: 1, class: gprnopc
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
+# CHECK-DAG: id: 0, class: gpr
+# CHECK-DAG: id: 1, class: gpr
 # CHECK-DAG: id: 2, class: gprnopc
+# CHECK-DAG: id: 3, class: gprnopc
+# CHECK-DAG: id: 4, class: gprnopc
+# CHECK-DAG: id: 5, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -464,11 +584,20 @@ body:             |
     %1(s8) = COPY %r1
     ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
 
-    %2(s8) = G_MUL %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]] = MUL [[VREGX]], [[VREGY]], 14, _, _
+    %2(s32) = G_ANYEXT %0(s8)
+    ; CHECK: [[VREGXEXT:%[0-9]+]] = COPY [[VREGX]]
 
-    %r0 = COPY %2(s8)
-    ; CHECK: %r0 = COPY [[VREGRES]]
+    %3(s32) = G_ANYEXT %1(s8)
+    ; CHECK: [[VREGYEXT:%[0-9]+]] = COPY [[VREGY]]
+
+    %4(s32) = G_MUL %2, %3
+    ; CHECK: [[VREGRES:%[0-9]+]] = MUL [[VREGXEXT]], [[VREGYEXT]], 14, _, _
+
+    %5(s8) = G_TRUNC %4(s32)
+    ; CHECK: [[VREGRESTR:%[0-9]+]] = COPY [[VREGRES]]
+
+    %r0 = COPY %5(s8)
+    ; CHECK: %r0 = COPY [[VREGRESTR]]
 
     BX_RET 14, _, implicit %r0
     ; CHECK: BX_RET 14, _, implicit %r0
@@ -484,9 +613,15 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK-DAG: id: 0, class: gprnopc
-# CHECK-DAG: id: 1, class: gprnopc
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
+# CHECK-DAG: id: 0, class: gpr
+# CHECK-DAG: id: 1, class: gpr
 # CHECK-DAG: id: 2, class: gprnopc
+# CHECK-DAG: id: 3, class: gprnopc
+# CHECK-DAG: id: 4, class: gprnopc
+# CHECK-DAG: id: 5, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -497,11 +632,20 @@ body:             |
     %1(s16) = COPY %r1
     ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
 
-    %2(s16) = G_MUL %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]] = MUL [[VREGX]], [[VREGY]], 14, _, _
+    %2(s32) = G_ANYEXT %0(s16)
+    ; CHECK: [[VREGXEXT:%[0-9]+]] = COPY [[VREGX]]
 
-    %r0 = COPY %2(s16)
-    ; CHECK: %r0 = COPY [[VREGRES]]
+    %3(s32) = G_ANYEXT %1(s16)
+    ; CHECK: [[VREGYEXT:%[0-9]+]] = COPY [[VREGY]]
+
+    %4(s32) = G_MUL %2, %3
+    ; CHECK: [[VREGRES:%[0-9]+]] = MUL [[VREGXEXT]], [[VREGYEXT]], 14, _, _
+
+    %5(s16) = G_TRUNC %4(s32)
+    ; CHECK: [[VREGRESTR:%[0-9]+]] = COPY [[VREGRES]]
+
+    %r0 = COPY %5(s16)
+    ; CHECK: %r0 = COPY [[VREGRESTR]]
 
     BX_RET 14, _, implicit %r0
     ; CHECK: BX_RET 14, _, implicit %r0

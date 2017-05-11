@@ -1381,7 +1381,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SHUFFLE,      VT, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT,   VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR,        VT, Custom);
-      setOperationAction(ISD::VSELECT,             VT, Legal);
+      setOperationAction(ISD::VSELECT,             VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT,  VT, Custom);
       setOperationAction(ISD::SCALAR_TO_VECTOR,    VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR,    VT, Legal);
@@ -1445,8 +1445,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v64i1, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v32i16, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v64i8, Custom);
-    setOperationAction(ISD::VSELECT,            MVT::v32i16, Legal);
-    setOperationAction(ISD::VSELECT,            MVT::v64i8, Legal);
     setOperationAction(ISD::TRUNCATE,           MVT::v32i1, Custom);
     setOperationAction(ISD::TRUNCATE,           MVT::v64i1, Custom);
     setOperationAction(ISD::TRUNCATE,           MVT::v32i8, Custom);
@@ -1479,7 +1477,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto VT : { MVT::v64i8, MVT::v32i16 }) {
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
-      setOperationAction(ISD::VSELECT,      VT, Legal);
+      setOperationAction(ISD::VSELECT,      VT, Custom);
       setOperationAction(ISD::ABS,          VT, Legal);
       setOperationAction(ISD::SRL,          VT, Custom);
       setOperationAction(ISD::SHL,          VT, Custom);
@@ -13817,6 +13815,11 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
       ISD::isBuildVectorOfConstantSDNodes(Op.getOperand(2).getNode()))
     return SDValue();
 
+  // If this VSELECT has a vector if i1 as a mask, it will be directly matched
+  // with patterns on the mask registers on AVX-512.
+  if (Op->getOperand(0).getValueType().getScalarSizeInBits() == 1)
+    return Op;
+
   // Try to lower this to a blend-style vector shuffle. This can handle all
   // constant condition cases.
   if (SDValue BlendOp = lowerVSELECTtoVectorShuffle(Op, Subtarget, DAG))
@@ -13826,10 +13829,31 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (!Subtarget.hasSSE41())
     return SDValue();
 
+  SDLoc dl(Op);
+  MVT VT = Op.getSimpleValueType();
+
+  // If the VSELECT is on a 512-bit type, we have to convert a non-i1 condition
+  // into an i1 condition so that we can use the mask-based 512-bit blend
+  // instructions.
+  if (VT.getSizeInBits() == 512) {
+    SDValue Cond = Op.getOperand(0);
+    // The vNi1 condition case should be handled above as it can be trivially
+    // lowered.
+    assert(Cond.getValueType().getScalarSizeInBits() ==
+               VT.getScalarSizeInBits() &&
+           "Should have a size-matched integer condition!");
+    // Build a mask by testing the condition against itself (tests for zero).
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+    SDValue Mask = DAG.getNode(X86ISD::TESTM, dl, MaskVT, Cond, Cond);
+    // Now return a new VSELECT using the mask.
+    return DAG.getNode(ISD::VSELECT, dl, VT, Mask, Op.getOperand(1),
+                       Op.getOperand(2));
+  }
+
   // Only some types will be legal on some subtargets. If we can emit a legal
   // VSELECT-matching blend, return Op, and but if we need to expand, return
   // a null value.
-  switch (Op.getSimpleValueType().SimpleTy) {
+  switch (VT.SimpleTy) {
   default:
     // Most of the vector types have blends past SSE4.1.
     return Op;
@@ -26526,7 +26550,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case TargetOpcode::STACKMAP:
   case TargetOpcode::PATCHPOINT:
     return emitPatchPoint(MI, BB);
-    
+
   case TargetOpcode::PATCHABLE_EVENT_CALL:
     // Do nothing here, handle in xray instrumentation pass.
     return BB;

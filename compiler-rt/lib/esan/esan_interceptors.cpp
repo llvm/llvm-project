@@ -31,6 +31,8 @@ using namespace __esan; // NOLINT
 // Get the per-platform defines for what is possible to intercept
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
+DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr)
+
 // TODO(bruening): tsan disables several interceptors (getpwent, etc.) claiming
 // that interception is a perf hit: should we do the same?
 

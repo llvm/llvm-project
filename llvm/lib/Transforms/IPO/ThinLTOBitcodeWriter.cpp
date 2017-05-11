@@ -179,7 +179,7 @@ void filterModule(
     else
       GO = new GlobalVariable(
           *M, GA->getValueType(), false, GlobalValue::ExternalLinkage,
-          (Constant *)nullptr, "", (GlobalVariable *)nullptr,
+          nullptr, "", nullptr,
           GA->getThreadLocalMode(), GA->getType()->getAddressSpace());
     GO->takeName(GA);
     GA->replaceAllUsesWith(GO);

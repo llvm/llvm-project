@@ -4609,6 +4609,8 @@ def err_abi_tag_on_redeclaration : Error<
   "cannot add 'abi_tag' attribute in a redeclaration">;
 def err_new_abi_tag_on_redeclaration : Error<
   "'abi_tag' %0 missing in original declaration">;
+def note_use_ifdef_guards : Note<
+  "unguarded header; consider using #ifdef guards or #pragma once">;
 
 def note_deleted_dtor_no_operator_delete : Note<
   "virtual destructor requires an unambiguous, accessible 'operator delete'">;
@@ -8888,6 +8890,13 @@ def ext_equivalent_internal_linkage_decl_in_modules : ExtWarn<
   InGroup<DiagGroup<"modules-ambiguous-internal-linkage">>;
 def note_equivalent_internal_linkage_decl : Note<
   "declared here%select{ in module '%1'|}0">;
+
+def note_redefinition_modules_same_file : Note<
+	"'%0' included multiple times, additional include site in header from module '%1'">;
+def note_redefinition_modules_same_file_modulemap : Note<
+	"consider adding '%0' as part of '%1' definition">;
+def note_redefinition_include_same_file : Note<
+	"'%0' included multiple times, additional include site here">;
 }
 
 let CategoryName = "Coroutines Issue" in {

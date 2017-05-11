@@ -391,13 +391,14 @@ public:
         TripCount(nullptr), VectorTripCount(nullptr), Legal(LVL), Cost(CM),
         AddedSafetyChecks(false) {}
 
-  // Perform the actual loop widening (vectorization).
-  void vectorize() {
-    // Create a new empty loop. Unlink the old loop and connect the new one.
-    createEmptyLoop();
-    // Widen each instruction in the old loop to a new one in the new loop.
-    vectorizeLoop();
-  }
+  /// Create a new empty loop. Unlink the old loop and connect the new one.
+  void createVectorizedLoopSkeleton();
+
+  /// Vectorize a single instruction within the innermost loop.
+  void vectorizeInstruction(Instruction &I);
+
+  /// Fix the vectorized code, taking care of header phi's, live-outs, and more.
+  void fixVectorizedLoop();
 
   // Return true if any runtime check is added.
   bool areSafetyChecksAdded() { return AddedSafetyChecks; }
@@ -425,9 +426,6 @@ protected:
       EdgeMaskCacheTy;
   typedef DenseMap<BasicBlock *, VectorParts> BlockMaskCacheTy;
 
-  /// Create an empty loop, based on the loop ranges of the old loop.
-  void createEmptyLoop();
-
   /// Set up the values of the IVs correctly when exiting the vector loop.
   void fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II,
                     Value *CountRoundDown, Value *EndValue,
@@ -436,8 +434,6 @@ protected:
   /// Create a new induction variable inside L.
   PHINode *createInductionVariable(Loop *L, Value *Start, Value *End,
                                    Value *Step, Instruction *DL);
-  /// Copy and widen the instructions from the old loop.
-  virtual void vectorizeLoop();
 
   /// Handle all cross-iteration phis in the header.
   void fixCrossIterationPHIs();
@@ -464,11 +460,6 @@ protected:
   /// respective conditions.
   void predicateInstructions();
 
-  /// Collect the instructions from the original loop that would be trivially
-  /// dead in the vectorized loop if generated.
-  void collectTriviallyDeadInstructions(
-      SmallPtrSetImpl<Instruction *> &DeadInstructions);
-
   /// Shrinks vector element sizes to the smallest bitwidth they can be legally
   /// represented as.
   void truncateToMinimalBitwidths();
@@ -480,10 +471,6 @@ protected:
   /// A helper function that computes the predicate of the edge between SRC
   /// and DST.
   VectorParts createEdgeMask(BasicBlock *Src, BasicBlock *Dst);
-
-  /// A helper function to vectorize a single instruction within the innermost
-  /// loop.
-  void vectorizeInstruction(Instruction &I);
 
   /// Vectorize a single PHINode in a block. This method handles the induction
   /// variable canonicalization. It supports both VF = 1 for unrolled loops and
@@ -2188,7 +2175,10 @@ public:
 /// passed Legality checks.
 class LoopVectorizationPlanner {
 public:
-  LoopVectorizationPlanner(LoopVectorizationCostModel &CM) : CM(CM) {}
+  LoopVectorizationPlanner(Loop *OrigLoop, LoopInfo *LI,
+                           LoopVectorizationLegality *Legal,
+                           LoopVectorizationCostModel &CM)
+      : OrigLoop(OrigLoop), LI(LI), Legal(Legal), CM(CM) {}
 
   ~LoopVectorizationPlanner() {}
 
@@ -2196,7 +2186,25 @@ public:
   LoopVectorizationCostModel::VectorizationFactor plan(bool OptForSize,
                                                        unsigned UserVF);
 
+  /// Generate the IR code for the vectorized loop.
+  void executePlan(InnerLoopVectorizer &ILV);
+
+protected:
+  /// Collect the instructions from the original loop that would be trivially
+  /// dead in the vectorized loop if generated.
+  void collectTriviallyDeadInstructions(
+      SmallPtrSetImpl<Instruction *> &DeadInstructions);
+
 private:
+  /// The loop that we evaluate.
+  Loop *OrigLoop;
+
+  /// Loop Info analysis.
+  LoopInfo *LI;
+
+  /// The legality analysis.
+  LoopVectorizationLegality *Legal;
+
   /// The profitablity analysis.
   LoopVectorizationCostModel &CM;
 };
@@ -3364,7 +3372,7 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
   LVer->prepareNoAliasMetadata();
 }
 
-void InnerLoopVectorizer::createEmptyLoop() {
+void InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   /*
    In this function we generate a new loop. The new loop will contain
    the vectorized instructions while the old loop will continue to run the
@@ -3886,36 +3894,7 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
   }
 }
 
-void InnerLoopVectorizer::vectorizeLoop() {
-  //===------------------------------------------------===//
-  //
-  // Notice: any optimization or new instruction that go
-  // into the code below should be also be implemented in
-  // the cost-model.
-  //
-  //===------------------------------------------------===//
-
-  // Collect instructions from the original loop that will become trivially dead
-  // in the vectorized loop. We don't need to vectorize these instructions. For
-  // example, original induction update instructions can become dead because we
-  // separately emit induction "steps" when generating code for the new loop.
-  // Similarly, we create a new latch condition when setting up the structure
-  // of the new loop, so the old one can become dead.
-  SmallPtrSet<Instruction *, 4> DeadInstructions;
-  collectTriviallyDeadInstructions(DeadInstructions);
-
-  // Scan the loop in a topological order to ensure that defs are vectorized
-  // before users.
-  LoopBlocksDFS DFS(OrigLoop);
-  DFS.perform(LI);
-
-  // Vectorize all instructions in the original loop that will not become
-  // trivially dead when vectorized.
-  for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO()))
-    for (Instruction &I : *BB)
-      if (!DeadInstructions.count(&I))
-        vectorizeInstruction(I);
-
+void InnerLoopVectorizer::fixVectorizedLoop() {
   // Insert truncates and extends for any truncated instructions as hints to
   // InstCombine.
   if (VF > 1)
@@ -4324,30 +4303,6 @@ void InnerLoopVectorizer::fixLCSSAPHIs() {
     if (LCSSAPhi->getNumIncomingValues() == 1)
       LCSSAPhi->addIncoming(UndefValue::get(LCSSAPhi->getType()),
                             LoopMiddleBlock);
-  }
-}
-
-void InnerLoopVectorizer::collectTriviallyDeadInstructions(
-    SmallPtrSetImpl<Instruction *> &DeadInstructions) {
-  BasicBlock *Latch = OrigLoop->getLoopLatch();
-
-  // We create new control-flow for the vectorized loop, so the original
-  // condition will be dead after vectorization if it's only used by the
-  // branch.
-  auto *Cmp = dyn_cast<Instruction>(Latch->getTerminator()->getOperand(0));
-  if (Cmp && Cmp->hasOneUse())
-    DeadInstructions.insert(Cmp);
-
-  // We create new "steps" for induction variable updates to which the original
-  // induction variables map. An original update instruction will be dead if
-  // all its users except the induction variable are dead.
-  for (auto &Induction : *Legal->getInductionVars()) {
-    PHINode *Ind = Induction.first;
-    auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
-    if (all_of(IndUpdate->users(), [&](User *U) -> bool {
-          return U == Ind || DeadInstructions.count(cast<Instruction>(U));
-        }))
-      DeadInstructions.insert(IndUpdate);
   }
 }
 
@@ -7553,6 +7508,72 @@ LoopVectorizationPlanner::plan(bool OptForSize, unsigned UserVF) {
   return CM.selectVectorizationFactor(MaxVF);
 }
 
+void LoopVectorizationPlanner::executePlan(InnerLoopVectorizer &ILV) {
+  // Perform the actual loop transformation.
+
+  // 1. Create a new empty loop. Unlink the old loop and connect the new one.
+  ILV.createVectorizedLoopSkeleton();
+
+  //===------------------------------------------------===//
+  //
+  // Notice: any optimization or new instruction that go
+  // into the code below should also be implemented in
+  // the cost-model.
+  //
+  //===------------------------------------------------===//
+
+  // 2. Copy and widen instructions from the old loop into the new loop.
+
+  // Collect instructions from the original loop that will become trivially dead
+  // in the vectorized loop. We don't need to vectorize these instructions. For
+  // example, original induction update instructions can become dead because we
+  // separately emit induction "steps" when generating code for the new loop.
+  // Similarly, we create a new latch condition when setting up the structure
+  // of the new loop, so the old one can become dead.
+  SmallPtrSet<Instruction *, 4> DeadInstructions;
+  collectTriviallyDeadInstructions(DeadInstructions);
+
+  // Scan the loop in a topological order to ensure that defs are vectorized
+  // before users.
+  LoopBlocksDFS DFS(OrigLoop);
+  DFS.perform(LI);
+
+  // Vectorize all instructions in the original loop that will not become
+  // trivially dead when vectorized.
+  for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO()))
+    for (Instruction &I : *BB)
+      if (!DeadInstructions.count(&I))
+        ILV.vectorizeInstruction(I);
+
+  // 3. Fix the vectorized code: take care of header phi's, live-outs,
+  //    predication, updating analyses.
+  ILV.fixVectorizedLoop();
+}
+
+void LoopVectorizationPlanner::collectTriviallyDeadInstructions(
+    SmallPtrSetImpl<Instruction *> &DeadInstructions) {
+  BasicBlock *Latch = OrigLoop->getLoopLatch();
+
+  // We create new control-flow for the vectorized loop, so the original
+  // condition will be dead after vectorization if it's only used by the
+  // branch.
+  auto *Cmp = dyn_cast<Instruction>(Latch->getTerminator()->getOperand(0));
+  if (Cmp && Cmp->hasOneUse())
+    DeadInstructions.insert(Cmp);
+
+  // We create new "steps" for induction variable updates to which the original
+  // induction variables map. An original update instruction will be dead if
+  // all its users except the induction variable are dead.
+  for (auto &Induction : *Legal->getInductionVars()) {
+    PHINode *Ind = Induction.first;
+    auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
+    if (all_of(IndUpdate->users(), [&](User *U) -> bool {
+          return U == Ind || DeadInstructions.count(cast<Instruction>(U));
+        }))
+      DeadInstructions.insert(IndUpdate);
+  }
+}
+
 void InnerLoopUnroller::vectorizeMemoryInstruction(Instruction *Instr) {
   auto *SI = dyn_cast<StoreInst>(Instr);
   bool IfPredicateInstr = (SI && Legal->blockNeedsPredication(SI->getParent()));
@@ -7735,7 +7756,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   CM.collectValuesToIgnore();
 
   // Use the planner for vectorization.
-  LoopVectorizationPlanner LVP(CM);
+  LoopVectorizationPlanner LVP(L, LI, &LVL, CM);
 
   // Get user vectorization factor.
   unsigned UserVF = Hints.getWidth();
@@ -7829,7 +7850,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // interleave it.
     InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC, &LVL,
                                &CM);
-    Unroller.vectorize();
+    LVP.executePlan(Unroller);
 
     ORE->emit(OptimizationRemark(LV_NAME, "Interleaved", L->getStartLoc(),
                                  L->getHeader())
@@ -7839,7 +7860,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // If we decided that it is *legal* to vectorize the loop, then do it.
     InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width, IC,
                            &LVL, &CM);
-    LB.vectorize();
+    LVP.executePlan(LB);
     ++LoopsVectorized;
 
     // Add metadata to disable runtime unrolling a scalar loop when there are

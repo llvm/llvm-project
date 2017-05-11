@@ -91,6 +91,12 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
     setAction({G_ZEXT, 1, Ty}, Legal);
     setAction({G_SEXT, 1, Ty}, Legal);
   }
+
+  // Comparison
+  setAction({G_ICMP, s1}, Legal);
+
+  for (auto Ty : {s8, s16, s32, p0})
+    setAction({G_ICMP, 1, Ty}, Legal);
 }
 
 void X86LegalizerInfo::setLegalizerInfo64bit() {
@@ -143,6 +149,12 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
     setAction({G_ZEXT, 1, Ty}, Legal);
     setAction({G_SEXT, 1, Ty}, Legal);
   }
+
+  // Comparison
+  setAction({G_ICMP, s1}, Legal);
+
+  for (auto Ty : {s8, s16, s32, s64, p0})
+    setAction({G_ICMP, 1, Ty}, Legal);
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE1() {

@@ -1710,12 +1710,12 @@ void APInt::sdivrem(const APInt &LHS, const APInt &RHS,
       APInt::udivrem(-LHS, -RHS, Quotient, Remainder);
     else {
       APInt::udivrem(-LHS, RHS, Quotient, Remainder);
-      Quotient = -Quotient;
+      Quotient.negate();
     }
-    Remainder = -Remainder;
+    Remainder.negate();
   } else if (RHS.isNegative()) {
     APInt::udivrem(LHS, -RHS, Quotient, Remainder);
-    Quotient = -Quotient;
+    Quotient.negate();
   } else {
     APInt::udivrem(LHS, RHS, Quotient, Remainder);
   }
@@ -1953,15 +1953,11 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
   } else {
     APInt divisor(Tmp.getBitWidth(), Radix);
     APInt APdigit;
-    APInt tmp2(Tmp.getBitWidth(), 0);
     while (Tmp.getBoolValue()) {
-      udivrem(Tmp, divisor, tmp2, APdigit);
+      udivrem(Tmp, divisor, Tmp, APdigit);
       unsigned Digit = (unsigned)APdigit.getZExtValue();
       assert(Digit < Radix && "divide failed");
       Str.push_back(Digits[Digit]);
-      // Move the quotient into Tmp and move the old allocation of Tmp into
-      // tmp2 to be used on the next loop iteration.
-      std::swap(Tmp, tmp2);
     }
   }
 

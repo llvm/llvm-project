@@ -117,7 +117,7 @@ private:
   std::stack<std::function<void()>> WorkStack;
   std::mutex Mutex;
   std::condition_variable Cond;
-  Latch Done;
+  parallel::detail::Latch Done;
 };
 
 Executor *Executor::getDefaultExecutor() {
@@ -127,7 +127,7 @@ Executor *Executor::getDefaultExecutor() {
 #endif
 }
 
-void detail::TaskGroup::spawn(std::function<void()> F) {
+void parallel::detail::TaskGroup::spawn(std::function<void()> F) {
   L.inc();
   Executor::getDefaultExecutor()->add([&, F] {
     F();

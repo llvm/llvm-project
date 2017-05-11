@@ -29,14 +29,30 @@
 
 namespace llvm {
 
+namespace parallel {
+struct sequential_execution_policy {};
+struct parallel_execution_policy {};
+
+template <typename T>
+struct is_execution_policy
+    : public std::integral_constant<
+          bool, llvm::is_one_of<T, sequential_execution_policy,
+                                parallel_execution_policy>::value> {};
+
+constexpr sequential_execution_policy seq{};
+constexpr parallel_execution_policy par{};
+
 namespace detail {
+
+#if LLVM_ENABLE_THREADS
+
 class Latch {
   uint32_t Count;
   mutable std::mutex Mutex;
   mutable std::condition_variable Cond;
 
 public:
-  explicit Latch(uint32_t count = 0) : Count(Count) {}
+  explicit Latch(uint32_t Count = 0) : Count(Count) {}
   ~Latch() { sync(); }
 
   void inc() {
@@ -64,24 +80,6 @@ public:
 
   void sync() const { L.sync(); }
 };
-}
-
-namespace parallel {
-struct sequential_execution_policy {};
-struct parallel_execution_policy {};
-
-template <typename T>
-struct is_execution_policy
-    : public std::integral_constant<
-          bool, llvm::is_one_of<T, sequential_execution_policy,
-                                parallel_execution_policy>::value> {};
-
-constexpr sequential_execution_policy seq{};
-constexpr parallel_execution_policy par{};
-
-namespace detail {
-
-#if LLVM_ENABLE_THREADS
 
 #if defined(_MSC_VER)
 template <class RandomAccessIterator, class Comparator>

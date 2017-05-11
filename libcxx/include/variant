@@ -425,30 +425,21 @@ struct __base {
     constexpr auto __fmatrix =
         __make_fmatrix<_Visitor&&,
                        decltype(_VSTD::forward<_Vs>(__vs).__as_base())...>();
-    const size_t __indices[] = {__vs.index()...};
-    return __at(__fmatrix, __indices)(_VSTD::forward<_Visitor>(__visitor),
-                                      _VSTD::forward<_Vs>(__vs).__as_base()...);
+    return __at(__fmatrix, __vs.index()...)(
+        _VSTD::forward<_Visitor>(__visitor),
+        _VSTD::forward<_Vs>(__vs).__as_base()...);
   }
 
 private:
   template <class _Tp>
   inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr const _Tp& __at_impl(const _Tp& __elem, const size_t*) {
-    return __elem;
-  }
+  static constexpr const _Tp& __at(const _Tp& __elem) { return __elem; }
 
-  template <class _Tp, size_t _Np>
-  inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr auto&& __at_impl(const array<_Tp, _Np>& __elems,
-                                    const size_t* __index) {
-    return __at_impl(__elems[*__index], __index + 1);
-  }
-
-  template <class _Tp, size_t _Np, size_t _Ip>
+  template <class _Tp, size_t _Np, typename... _Indices>
   inline _LIBCPP_INLINE_VISIBILITY
   static constexpr auto&& __at(const array<_Tp, _Np>& __elems,
-                               const size_t (&__indices)[_Ip]) {
-    return __at_impl(__elems, begin(__indices));
+                               size_t __index, _Indices... __indices) {
+    return __at(__elems[__index], __indices...);
   }
 
   template <class _Fp, class... _Fs>
