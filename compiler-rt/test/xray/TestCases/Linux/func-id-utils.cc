@@ -3,8 +3,6 @@
 //
 // RUN: %clangxx_xray -std=c++11 %s -o %t
 // RUN: XRAY_OPTIONS="patch_premain=false xray_naive_log=false" %run %t
-// FIXME: When we know why this fails in ppc, un-xfail it.
-// XFAIL: powerpc64le
 
 #include "xray/xray_interface.h"
 #include <algorithm>
@@ -32,13 +30,21 @@
   assert(all_instrumented.size() == __xray_max_function_id() &&
          "each function id must be assigned to a unique function");
 
-  std::set<void *> common;
-  std::set_intersection(all_instrumented.begin(), all_instrumented.end(),
-                        must_be_instrumented.begin(),
-                        must_be_instrumented.end(),
-                        std::inserter(common, common.begin()));
+  std::set<void *> not_instrumented;
+  const auto comp = [](void *lhs, void *rhs) {
+#ifdef __PPC__
+    return reinterpret_cast<uintptr_t>(lhs) + 8 <
+           reinterpret_cast<uintptr_t>(rhs);
+#else
+    return lhs < rhs;
+#endif
+  };
+  std::set_difference(must_be_instrumented.begin(), must_be_instrumented.end(),
+                      all_instrumented.begin(), all_instrumented.end(),
+                      std::inserter(not_instrumented, not_instrumented.begin()),
+                      comp);
   assert(
-      common == must_be_instrumented &&
+      not_instrumented.empty() &&
       "we should see all explicitly instrumented functions with function ids");
-  return common == must_be_instrumented ? 0 : 1;
+  return not_instrumented.empty() ? 0 : 1;
 }
