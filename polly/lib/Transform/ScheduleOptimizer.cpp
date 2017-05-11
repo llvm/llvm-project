@@ -1304,7 +1304,8 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
     __isl_take isl_schedule_node *Node, const llvm::TargetTransformInfo *TTI,
     MatMulInfoTy &MMI) {
   assert(TTI && "The target transform info should be provided.");
-  Node = markInterIterationAliasFree(Node, MMI.WriteToC->getLatestBaseAddr());
+  Node = markInterIterationAliasFree(
+      Node, MMI.WriteToC->getLatestScopArrayInfo()->getBasePtr());
   int DimOutNum = isl_schedule_node_band_n_member(Node);
   assert(DimOutNum > 2 && "In case of the matrix multiplication the loop nest "
                           "and, consequently, the corresponding scheduling "

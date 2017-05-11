@@ -273,7 +273,7 @@ uint32_t OutputSection::getFiller() {
   // linker script. If nothing is specified and this is an executable section,
   // fall back to trap instructions to prevent bad diassembly and detect invalid
   // jumps to padding.
-  if (Optional<uint32_t> Filler = Script->getFiller(Name))
+  if (Optional<uint32_t> Filler = Script->getFiller(this))
     return *Filler;
   if (Flags & SHF_EXECINSTR)
     return Target->TrapInstr;
@@ -297,7 +297,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
   if (Filler)
     fill(Buf, Sections.empty() ? Size : Sections[0]->OutSecOff, Filler);
 
-  parallelFor(0, Sections.size(), [=](size_t I) {
+  parallelForEachN(0, Sections.size(), [=](size_t I) {
     InputSection *Sec = Sections[I];
     Sec->writeTo<ELFT>(Buf);
 
@@ -429,8 +429,11 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
       if (canMergeToProgbits(Sec->Type) && canMergeToProgbits(IS->Type))
         Sec->Type = SHT_PROGBITS;
       else
-        error("Section has different type from others with the same name " +
-              toString(IS));
+        error("section type mismatch for " + IS->Name +
+              "\n>>> " + toString(IS) + ": " +
+              getELFSectionTypeName(Config->EMachine, IS->Type) +
+              "\n>>> output section " + Sec->Name + ": " +
+              getELFSectionTypeName(Config->EMachine, Sec->Type));
     }
     Sec->Flags |= Flags;
   } else {

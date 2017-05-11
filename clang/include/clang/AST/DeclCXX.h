@@ -1563,10 +1563,13 @@ public:
   /// \param Paths used to record the paths from this class to its base class
   /// subobjects that match the search criteria.
   ///
+  /// \param LookupInDependent can be set to true to extend the search to
+  /// dependent base classes.
+  ///
   /// \returns true if there exists any path from this class to a base class
   /// subobject that matches the search criteria.
-  bool lookupInBases(BaseMatchesCallback BaseMatches,
-                     CXXBasePaths &Paths) const;
+  bool lookupInBases(BaseMatchesCallback BaseMatches, CXXBasePaths &Paths,
+                     bool LookupInDependent = false) const;
 
   /// \brief Base-class lookup callback that determines whether the given
   /// base class specifier refers to a specific class declaration.
@@ -1608,6 +1611,16 @@ public:
                                  CXXBasePath &Path, DeclarationName Name);
 
   /// \brief Base-class lookup callback that determines whether there exists
+  /// a member with the given name.
+  ///
+  /// This callback can be used with \c lookupInBases() to find members
+  /// of the given name within a C++ class hierarchy, including dependent
+  /// classes.
+  static bool
+  FindOrdinaryMemberInDependentClasses(const CXXBaseSpecifier *Specifier,
+                                       CXXBasePath &Path, DeclarationName Name);
+
+  /// \brief Base-class lookup callback that determines whether there exists
   /// an OpenMP declare reduction member with the given name.
   ///
   /// This callback can be used with \c lookupInBases() to find members
@@ -1632,6 +1645,14 @@ public:
 
   /// \brief Get the indirect primary bases for this class.
   void getIndirectPrimaryBases(CXXIndirectPrimaryBaseSet& Bases) const;
+
+  /// Performs an imprecise lookup of a dependent name in this class.
+  ///
+  /// This function does not follow strict semantic rules and should be used
+  /// only when lookup rules can be relaxed, e.g. indexing.
+  std::vector<const NamedDecl *>
+  lookupDependentName(const DeclarationName &Name,
+                      llvm::function_ref<bool(const NamedDecl *ND)> Filter);
 
   /// Renders and displays an inheritance diagram
   /// for this C++ class and all of its base classes (transitively) using

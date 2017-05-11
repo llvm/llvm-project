@@ -872,6 +872,9 @@ class Configuration(object):
         # FIXME: Enable the two warnings below.
         self.cxx.addWarningFlagIfSupported('-Wno-conversion')
         self.cxx.addWarningFlagIfSupported('-Wno-unused-local-typedef')
+        # FIXME: Remove this warning once the min/max handling patch lands
+        # See https://reviews.llvm.org/D33080
+        self.cxx.addWarningFlagIfSupported('-Wno-#warnings')
         std = self.get_lit_conf('std', None)
         if std in ['c++98', 'c++03']:
             # The '#define static_assert' provided by libc++ in C++03 mode

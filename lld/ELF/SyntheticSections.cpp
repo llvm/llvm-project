@@ -356,7 +356,7 @@ void BuildIdSection::computeHash(
   std::vector<uint8_t> Hashes(Chunks.size() * HashSize);
 
   // Compute hash values.
-  parallelFor(0, Chunks.size(), [&](size_t I) {
+  parallelForEachN(0, Chunks.size(), [&](size_t I) {
     HashFn(Hashes.data() + I * HashSize, Chunks[I]);
   });
 
@@ -2187,7 +2187,7 @@ MipsRldMapSection::MipsRldMapSection()
 
 void MipsRldMapSection::writeTo(uint8_t *Buf) {
   // Apply filler from linker script.
-  Optional<uint32_t> Fill = Script->getFiller(this->Name);
+  Optional<uint32_t> Fill = Script->getFiller(this->OutSec);
   if (!Fill || *Fill == 0)
     return;
 

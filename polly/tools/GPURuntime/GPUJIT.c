@@ -218,18 +218,25 @@ static int initialDeviceAPILibrariesCL() {
   return 1;
 }
 
+/* Get function pointer to OpenCL Runtime API.
+ *
+ * Note that compilers conforming to the ISO C standard are required to
+ * generate a warning if a conversion from a void * pointer to a function
+ * pointer is attempted as in the following statements. The warning
+ * of this kind of cast may not be emitted by clang and new versions of gcc
+ * as it is valid on POSIX 2008. For compilers required to generate a warning,
+ * we temporarily disable -Wpedantic, to avoid bloating the output with
+ * unnecessary warnings.
+ *
+ * Reference:
+ * http://pubs.opengroup.org/onlinepubs/9699919799/functions/dlsym.html
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 static int initialDeviceAPIsCL() {
   if (initialDeviceAPILibrariesCL() == 0)
     return 0;
 
-  /* Get function pointer to OpenCL Runtime API.
-   *
-   * Note that compilers conforming to the ISO C standard are required to
-   * generate a warning if a conversion from a void * pointer to a function
-   * pointer is attempted as in the following statements. The warning
-   * of this kind of cast may not be emitted by clang and new versions of gcc
-   * as it is valid on POSIX 2008.
-   */
   clGetPlatformIDsFcnPtr =
       (clGetPlatformIDsFcnTy *)getAPIHandleCL(HandleOpenCL, "clGetPlatformIDs");
 
@@ -294,6 +301,7 @@ static int initialDeviceAPIsCL() {
 
   return 1;
 }
+#pragma GCC diagnostic pop
 
 /* Context and Device. */
 static PollyGPUContext *GlobalContext = NULL;
@@ -999,18 +1007,25 @@ static int initialDeviceAPILibrariesCUDA() {
   return 1;
 }
 
+/* Get function pointer to CUDA Driver APIs.
+ *
+ * Note that compilers conforming to the ISO C standard are required to
+ * generate a warning if a conversion from a void * pointer to a function
+ * pointer is attempted as in the following statements. The warning
+ * of this kind of cast may not be emitted by clang and new versions of gcc
+ * as it is valid on POSIX 2008. For compilers required to generate a warning,
+ * we temporarily disable -Wpedantic, to avoid bloating the output with
+ * unnecessary warnings.
+ *
+ * Reference:
+ * http://pubs.opengroup.org/onlinepubs/9699919799/functions/dlsym.html
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 static int initialDeviceAPIsCUDA() {
   if (initialDeviceAPILibrariesCUDA() == 0)
     return 0;
 
-  /* Get function pointer to CUDA Driver APIs.
-   *
-   * Note that compilers conforming to the ISO C standard are required to
-   * generate a warning if a conversion from a void * pointer to a function
-   * pointer is attempted as in the following statements. The warning
-   * of this kind of cast may not be emitted by clang and new versions of gcc
-   * as it is valid on POSIX 2008.
-   */
   CuLaunchKernelFcnPtr =
       (CuLaunchKernelFcnTy *)getAPIHandleCUDA(HandleCuda, "cuLaunchKernel");
 
@@ -1080,6 +1095,7 @@ static int initialDeviceAPIsCUDA() {
 
   return 1;
 }
+#pragma GCC diagnostic pop
 
 static PollyGPUContext *initContextCUDA() {
   dump_function();

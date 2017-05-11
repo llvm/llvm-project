@@ -2,7 +2,7 @@
 
 // Note that the error count below doesn't matter. We just want to
 // make sure that the parser doesn't crash.
-// CHECK: 16 errors
+// CHECK: 17 errors
 
 // PR7511
 template<a>

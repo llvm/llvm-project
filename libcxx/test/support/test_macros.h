@@ -52,10 +52,12 @@
 #define TEST_HAS_BUILTIN_IDENTIFIER(X) 0
 #endif
 
-#if defined(__clang__)
-#define TEST_COMPILER_CLANG
+#if defined(__EDG__)
+# define TEST_COMPILER_EDG
+#elif defined(__clang__)
+# define TEST_COMPILER_CLANG
 # if defined(__apple_build_version__)
-#   define TEST_COMPILER_APPLE_CLANG
+#  define TEST_COMPILER_APPLE_CLANG
 # endif
 #elif defined(_MSC_VER)
 # define TEST_COMPILER_C1XX

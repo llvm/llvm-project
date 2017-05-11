@@ -49,6 +49,10 @@ struct Bar : public Foo {
 };
 
 
+struct PrivateBase : private std::enable_shared_from_this<PrivateBase> {
+};
+
+
 int main()
 {
     {  // https://bugs.llvm.org/show_bug.cgi?id=18843
@@ -73,6 +77,12 @@ int main()
     std::shared_ptr<T> q = p->shared_from_this();
     assert(p == q);
     assert(!p.owner_before(q) && !q.owner_before(p)); // p and q share ownership
+    }
+    {
+      typedef std::shared_ptr<PrivateBase> APtr;
+      typedef std::weak_ptr<PrivateBase> WeakAPtr;
+      APtr a1 = std::make_shared<PrivateBase>();
+      assert(a1.use_count() == 1);
     }
     // Test LWG issue 2529. Only reset '__weak_ptr_' when it's already expired.
     // http://cplusplus.github.io/LWG/lwg-active.html#2529.

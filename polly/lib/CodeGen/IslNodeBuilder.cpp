@@ -1229,7 +1229,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
       // current SAI could be the base pointer of the derived SAI, however we
       // should only change the base pointer of the derived SAI if we actually
       // preloaded it.
-      if (BasePtr == MA->getBaseAddr()) {
+      if (BasePtr == MA->getOriginalBaseAddr()) {
         assert(BasePtr->getType() == PreloadVal->getType());
         DerivedSAI->setBasePtr(PreloadVal);
       }

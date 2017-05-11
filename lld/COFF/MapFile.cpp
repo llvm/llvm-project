@@ -25,7 +25,7 @@
 #include "Symbols.h"
 #include "Writer.h"
 
-#include "lld/Core/Parallel.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;

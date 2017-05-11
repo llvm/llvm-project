@@ -40,15 +40,6 @@ int toupper(int c);
 
 #ifdef __cplusplus
 
-#if defined(_LIBCPP_MSVCRT)
-// We support including .h headers inside 'extern "C"' contexts, so switch
-// back to C++ linkage before including these C++ headers.
-extern "C++" {
-  #include "support/win32/support.h"
-  #include "support/win32/locale_win32.h"
-}
-#endif // _LIBCPP_MSVCRT
-
 #undef isalnum
 #undef isalpha
 #undef isblank
