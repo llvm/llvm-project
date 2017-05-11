@@ -464,6 +464,11 @@ def MVGHI : StoreSIL<"mvghi", 0xE548, store,         imm64sx16>;
 // Memory-to-memory moves.
 let mayLoad = 1, mayStore = 1 in
   defm MVC : MemorySS<"mvc", 0xD2, z_mvc, z_mvc_loop>;
+let mayLoad = 1, mayStore = 1, Defs = [CC] in {
+  def MVCL  : SideEffectBinaryMemMemRR<"mvcl", 0x0E, GR128, GR128>;
+  def MVCLE : SideEffectTernaryMemMemRS<"mvcle", 0xA8, GR128, GR128>;
+  def MVCLU : SideEffectTernaryMemMemRSY<"mvclu", 0xEB8E, GR128, GR128>;
+}
 
 // String moves.
 let mayLoad = 1, mayStore = 1, Defs = [CC] in
@@ -707,6 +712,10 @@ def  : StoreGR64PC<STHRL, aligned_truncstorei16>;
 defm : StoreGR64Pair<ST, STY, truncstorei32>;
 def  : StoreGR64PC<STRL, aligned_truncstorei32>;
 
+// Store characters under mask -- not (yet) used for codegen.
+defm STCM : StoreBinaryRSPair<"stcm", 0xBE, 0xEB2D, GR32, 0>;
+def STCMH : StoreBinaryRSY<"stcmh", 0xEB2C, GRH32, 0>;
+
 //===----------------------------------------------------------------------===//
 // Multi-register moves
 //===----------------------------------------------------------------------===//
@@ -715,6 +724,7 @@ def  : StoreGR64PC<STRL, aligned_truncstorei32>;
 defm LM : LoadMultipleRSPair<"lm", 0x98, 0xEB98, GR32>;
 def LMG : LoadMultipleRSY<"lmg", 0xEB04, GR64>;
 def LMH : LoadMultipleRSY<"lmh", 0xEB96, GRH32>;
+def LMD : LoadMultipleSSe<"lmd", 0xEF, GR64>;
 
 // Multi-register stores.
 defm STM : StoreMultipleRSPair<"stm", 0x90, 0xEB90, GR32>;
@@ -741,6 +751,10 @@ def LRVG : UnaryRXY<"lrvg", 0xE30F, z_lrvg, GR64, 8>;
 def STRVH : StoreRXY<"strvh", 0xE33F, z_strvh, GR32, 2>;
 def STRV  : StoreRXY<"strv",  0xE33E, z_strv,  GR32, 4>;
 def STRVG : StoreRXY<"strvg", 0xE32F, z_strvg, GR64, 8>;
+
+// Byte-swapping memory-to-memory moves.
+let mayLoad = 1, mayStore = 1 in
+  def MVCIN : SideEffectBinarySSa<"mvcin", 0xE8>;
 
 //===----------------------------------------------------------------------===//
 // Load address instructions
@@ -816,6 +830,7 @@ defm : InsertMem<"inserti8", IC32Y, GR32, azextloadi8, bdxaddr20pair>;
 defm : InsertMem<"inserti8", IC,  GR64, azextloadi8, bdxaddr12pair>;
 defm : InsertMem<"inserti8", ICY, GR64, azextloadi8, bdxaddr20pair>;
 
+// Insert characters under mask -- not (yet) used for codegen.
 let Defs = [CC] in {
   defm ICM : TernaryRSPair<"icm", 0xBF, 0xEB81, GR32, 0>;
   def ICMH : TernaryRSY<"icmh", 0xEB80, GRH32, 0>;
@@ -919,6 +934,10 @@ let Defs = [CC] in {
   defm AL   : BinaryRXPair<"al", 0x5E, 0xE35E, addc, GR32, load, 4>;
   def  ALGF : BinaryRXY<"algf", 0xE31A, addc, GR64, azextloadi32, 4>;
   def  ALG  : BinaryRXY<"alg",  0xE30A, addc, GR64, load, 8>;
+
+  // Addition to memory.
+  def ALSI  : BinarySIY<"alsi",  0xEB6E, null_frag, imm32sx8>;
+  def ALGSI : BinarySIY<"algsi", 0xEB7E, null_frag, imm64sx8>;
 }
 defm : ZXB<addc, GR64, ALGFR>;
 
@@ -1166,9 +1185,14 @@ def  MSGF : BinaryRXY<"msgf", 0xE31C, mul, GR64, asextloadi32, 4>;
 def  MSG  : BinaryRXY<"msg",  0xE30C, mul, GR64, load, 8>;
 
 // Multiplication of a register, producing two results.
+def MR   : BinaryRR <"mr",   0x1C,   null_frag, GR128, GR32>;
+def MLR  : BinaryRRE<"mlr",  0xB996, null_frag, GR128, GR32>;
 def MLGR : BinaryRRE<"mlgr", 0xB986, z_umul_lohi64, GR128, GR64>;
 
 // Multiplication of memory, producing two results.
+def M   : BinaryRX <"m",   0x5C,   null_frag, GR128, load, 4>;
+def MFY : BinaryRXY<"mfy", 0xE35C, null_frag, GR128, load, 4>;
+def ML  : BinaryRXY<"ml",  0xE396, null_frag, GR128, load, 4>;
 def MLG : BinaryRXY<"mlg", 0xE386, z_umul_lohi64, GR128, load, 8>;
 
 //===----------------------------------------------------------------------===//
@@ -1177,12 +1201,14 @@ def MLG : BinaryRXY<"mlg", 0xE386, z_umul_lohi64, GR128, load, 8>;
 
 let hasSideEffects = 1 in {  // Do not speculatively execute.
   // Division and remainder, from registers.
+  def DR    : BinaryRR <"dr",    0x1D,   null_frag,   GR128, GR32>;
   def DSGFR : BinaryRRE<"dsgfr", 0xB91D, z_sdivrem32, GR128, GR32>;
   def DSGR  : BinaryRRE<"dsgr",  0xB90D, z_sdivrem64, GR128, GR64>;
   def DLR   : BinaryRRE<"dlr",   0xB997, z_udivrem32, GR128, GR32>;
   def DLGR  : BinaryRRE<"dlgr",  0xB987, z_udivrem64, GR128, GR64>;
 
   // Division and remainder, from memory.
+  def D    : BinaryRX <"d",    0x5D,   null_frag,   GR128, load, 4>;
   def DSGF : BinaryRXY<"dsgf", 0xE31D, z_sdivrem32, GR128, load, 4>;
   def DSG  : BinaryRXY<"dsg",  0xE30D, z_sdivrem64, GR128, load, 8>;
   def DL   : BinaryRXY<"dl",   0xE397, z_udivrem32, GR128, load, 4>;
@@ -1193,23 +1219,32 @@ let hasSideEffects = 1 in {  // Do not speculatively execute.
 // Shifts
 //===----------------------------------------------------------------------===//
 
-// Shift left.
+// Logical shift left.
 let hasSideEffects = 0 in {
   defm SLL : BinaryRSAndK<"sll", 0x89, 0xEBDF, shl, GR32>;
-  defm SLA : BinaryRSAndK<"sla", 0x8B, 0xEBDD, null_frag, GR32>;
   def SLLG : BinaryRSY<"sllg", 0xEB0D, shl, GR64>;
+  def SLDL : BinaryRS<"sldl", 0x8D, null_frag, GR128>;
+}
+
+// Arithmetic shift left.
+let Defs = [CC] in {
+  defm SLA : BinaryRSAndK<"sla", 0x8B, 0xEBDD, null_frag, GR32>;
+  def SLAG : BinaryRSY<"slag", 0xEB0B, null_frag, GR64>;
+  def SLDA : BinaryRS<"slda", 0x8F, null_frag, GR128>;
 }
 
 // Logical shift right.
 let hasSideEffects = 0 in {
   defm SRL : BinaryRSAndK<"srl", 0x88, 0xEBDE, srl, GR32>;
   def SRLG : BinaryRSY<"srlg", 0xEB0C, srl, GR64>;
+  def SRDL : BinaryRS<"srdl", 0x8C, null_frag, GR128>;
 }
 
 // Arithmetic shift right.
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
   defm SRA : BinaryRSAndK<"sra", 0x8A, 0xEBDC, sra, GR32>;
   def SRAG : BinaryRSY<"srag", 0xEB0A, sra, GR64>;
+  def SRDA : BinaryRS<"srda", 0x8E, null_frag, GR128>;
 }
 
 // Rotate left.
@@ -1351,8 +1386,12 @@ let Defs = [CC], CCValues = 0xE, IsLogical = 1 in {
 defm : ZXB<z_ucmp, GR64, CLGFR>;
 
 // Memory-to-memory comparison.
-let mayLoad = 1, Defs = [CC] in
+let mayLoad = 1, Defs = [CC] in {
   defm CLC : MemorySS<"clc", 0xD5, z_clc, z_clc_loop>;
+  def CLCL  : SideEffectBinaryMemMemRR<"clcl", 0x0F, GR128, GR128>;
+  def CLCLE : SideEffectTernaryMemMemRS<"clcle", 0xA9, GR128, GR128>;
+  def CLCLU : SideEffectTernaryMemMemRSY<"clclu", 0xEB8F, GR128, GR128>;
+}
 
 // String comparison.
 let mayLoad = 1, Defs = [CC] in
@@ -1380,6 +1419,12 @@ let Defs = [CC] in {
 
 def TML : InstAlias<"tml\t$R, $I", (TMLL GR32:$R, imm32ll16:$I), 0>;
 def TMH : InstAlias<"tmh\t$R, $I", (TMLH GR32:$R, imm32lh16:$I), 0>;
+
+// Compare logical characters under mask -- not (yet) used for codegen.
+let Defs = [CC] in {
+  defm CLM : CompareRSPair<"clm", 0xBD, 0xEB21, GR32, 0>;
+  def CLMH : CompareRSY<"clmh", 0xEB20, GRH32, 0>;
+}
 
 //===----------------------------------------------------------------------===//
 // Prefetch and execution hint
@@ -1581,6 +1626,115 @@ let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {
 }
 
 //===----------------------------------------------------------------------===//
+// Translate and convert
+//===----------------------------------------------------------------------===//
+
+let mayLoad = 1, mayStore = 1 in
+  def TR : SideEffectBinarySSa<"tr", 0xDC>;
+
+let mayLoad = 1, Defs = [CC, R0L, R1D] in {
+  def TRT  : SideEffectBinarySSa<"trt", 0xDD>;
+  def TRTR : SideEffectBinarySSa<"trtr", 0xD0>;
+}
+
+let mayLoad = 1, mayStore = 1, Uses = [R0L] in
+  def TRE : SideEffectBinaryMemMemRRE<"tre", 0xB2A5, GR128, GR64>;
+
+let mayLoad = 1, Uses = [R1D], Defs = [CC] in {
+  defm TRTE  : BinaryMemRRFcOpt<"trte",  0xB9BF, GR128, GR64>;
+  defm TRTRE : BinaryMemRRFcOpt<"trtre", 0xB9BD, GR128, GR64>;
+}
+
+let mayLoad = 1, mayStore = 1, Uses = [R0L, R1D], Defs = [CC] in {
+  defm TROO : SideEffectTernaryMemMemRRFcOpt<"troo", 0xB993, GR128, GR64>;
+  defm TROT : SideEffectTernaryMemMemRRFcOpt<"trot", 0xB992, GR128, GR64>;
+  defm TRTO : SideEffectTernaryMemMemRRFcOpt<"trto", 0xB991, GR128, GR64>;
+  defm TRTT : SideEffectTernaryMemMemRRFcOpt<"trtt", 0xB990, GR128, GR64>;
+}
+
+let mayLoad = 1, mayStore = 1, Defs = [CC] in {
+  defm CU12 : SideEffectTernaryMemMemRRFcOpt<"cu12", 0xB2A7, GR128, GR128>;
+  defm CU14 : SideEffectTernaryMemMemRRFcOpt<"cu14", 0xB9B0, GR128, GR128>;
+  defm CU21 : SideEffectTernaryMemMemRRFcOpt<"cu21", 0xB2A6, GR128, GR128>;
+  defm CU24 : SideEffectTernaryMemMemRRFcOpt<"cu24", 0xB9B1, GR128, GR128>;
+  def  CU41 : SideEffectBinaryMemMemRRE<"cu41", 0xB9B2, GR128, GR128>;
+  def  CU42 : SideEffectBinaryMemMemRRE<"cu42", 0xB9B3, GR128, GR128>;
+
+  let isAsmParserOnly = 1 in {
+    defm CUUTF : SideEffectTernaryMemMemRRFcOpt<"cuutf", 0xB2A6, GR128, GR128>;
+    defm CUTFU : SideEffectTernaryMemMemRRFcOpt<"cutfu", 0xB2A7, GR128, GR128>;
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Message-security assist
+//===----------------------------------------------------------------------===//
+
+let mayLoad = 1, mayStore = 1, Uses = [R0L, R1D], Defs = [CC] in {
+  def KM  : SideEffectBinaryMemMemRRE<"km",  0xB92E, GR128, GR128>;
+  def KMC : SideEffectBinaryMemMemRRE<"kmc", 0xB92F, GR128, GR128>;
+
+  def KIMD : SideEffectBinaryMemRRE<"kimd", 0xB93E, GR64, GR128>;
+  def KLMD : SideEffectBinaryMemRRE<"klmd", 0xB93F, GR64, GR128>;
+  def KMAC : SideEffectBinaryMemRRE<"kmac", 0xB91E, GR64, GR128>;
+
+  let Predicates = [FeatureMessageSecurityAssist4] in {
+    def KMF   : SideEffectBinaryMemMemRRE<"kmf", 0xB92A, GR128, GR128>;
+    def KMO   : SideEffectBinaryMemMemRRE<"kmo", 0xB92B, GR128, GR128>;
+    def KMCTR : SideEffectTernaryMemMemMemRRFb<"kmctr", 0xB92D,
+                                               GR128, GR128, GR128>;
+    def PCC   : SideEffectInherentRRE<"pcc", 0xB92C>;
+  }
+  let Predicates = [FeatureMessageSecurityAssist5] in
+    def PPNO  : SideEffectBinaryMemMemRRE<"ppno", 0xB93C, GR128, GR128>;
+}
+
+//===----------------------------------------------------------------------===//
+// Decimal arithmetic
+//===----------------------------------------------------------------------===//
+
+defm CVB  : BinaryRXPair<"cvb",0x4F, 0xE306, null_frag, GR32, load, 4>;
+def  CVBG : BinaryRXY<"cvbg", 0xE30E, null_frag, GR64, load, 8>;
+
+defm CVD  : StoreRXPair<"cvd", 0x4E, 0xE326, null_frag, GR32, 4>;
+def  CVDG : StoreRXY<"cvdg", 0xE32E, null_frag, GR64, 8>;
+
+let mayLoad = 1, mayStore = 1 in {
+  def MVN : SideEffectBinarySSa<"mvn", 0xD1>;
+  def MVZ : SideEffectBinarySSa<"mvz", 0xD3>;
+  def MVO : SideEffectBinarySSb<"mvo", 0xF1>;
+
+  def PACK : SideEffectBinarySSb<"pack", 0xF2>;
+  def PKA  : SideEffectBinarySSf<"pka", 0xE9>;
+  def PKU  : SideEffectBinarySSf<"pku", 0xE1>;
+  def UNPK : SideEffectBinarySSb<"unpk", 0xF3>;
+  let Defs = [CC] in {
+    def UNPKA : SideEffectBinarySSa<"unpka", 0xEA>;
+    def UNPKU : SideEffectBinarySSa<"unpku", 0xE2>;
+  }
+}
+
+let mayLoad = 1, mayStore = 1 in {
+  let Defs = [CC] in {
+    def AP : SideEffectBinarySSb<"ap", 0xFA>;
+    def SP : SideEffectBinarySSb<"sp", 0xFB>;
+    def ZAP : SideEffectBinarySSb<"zap", 0xF8>;
+    def SRP : SideEffectTernarySSc<"srp", 0xF0>;
+  }
+  def MP : SideEffectBinarySSb<"mp", 0xFC>;
+  def DP : SideEffectBinarySSb<"dp", 0xFD>;
+  let Defs = [CC] in {
+    def ED : SideEffectBinarySSa<"ed", 0xDE>;
+    def EDMK : SideEffectBinarySSa<"edmk", 0xDF>;
+  }
+}
+
+let Defs = [CC] in {
+  def CP : CompareSSb<"cp", 0xF9>;
+  def TP : TestRSL<"tp", 0xEBC0>;
+}
+
+//===----------------------------------------------------------------------===//
 // Access registers
 //===----------------------------------------------------------------------===//
 
@@ -1712,11 +1866,38 @@ let usesCustomInserter = 1 in {
 
 // Search a block of memory for a character.
 let mayLoad = 1, Defs = [CC] in
-  defm SRST : StringRRE<"srst", 0xb25e, z_search_string>;
+  defm SRST : StringRRE<"srst", 0xB25E, z_search_string>;
+let mayLoad = 1, Defs = [CC], Uses = [R0L] in
+  def SRSTU : SideEffectBinaryMemMemRRE<"srstu", 0xB9BE, GR64, GR64>;
+
+// Compare until substring equal.
+let mayLoad = 1, Defs = [CC], Uses = [R0L, R1L] in
+  def CUSE : SideEffectBinaryMemMemRRE<"cuse", 0xB257, GR128, GR128>;
+
+// Compare and form codeword.
+let mayLoad = 1, Defs = [CC, R1D, R2D, R3D], Uses = [R1D, R2D, R3D] in
+  def CFC : SideEffectAddressS<"cfc", 0xB21A, null_frag>;
+
+// Update tree.
+let mayLoad = 1, mayStore = 1, Defs = [CC, R0D, R1D, R2D, R3D, R5D],
+    Uses = [R0D, R1D, R2D, R3D, R4D, R5D] in
+  def UPT : SideEffectInherentE<"upt", 0x0102>;
+
+// Checksum.
+let mayLoad = 1, Defs = [CC] in
+  def CKSM : SideEffectBinaryMemMemRRE<"cksm", 0xB241, GR64, GR128>;
+
+// Compression call.
+let mayLoad = 1, mayStore = 1, Defs = [CC, R1D], Uses = [R0L, R1D] in
+  def CMPSC : SideEffectBinaryMemMemRRE<"cmpsc", 0xB263, GR128, GR128>;
 
 // Supervisor call.
 let hasSideEffects = 1, isCall = 1, Defs = [CC] in
   def SVC : SideEffectUnaryI<"svc", 0x0A, imm32zx8>;
+
+// Monitor call.
+let hasSideEffects = 1, isCall = 1 in
+  def MC : SideEffectBinarySI<"mc", 0xAF, imm32zx8>;
 
 // Store clock.
 let hasSideEffects = 1, Defs = [CC] in {
@@ -1729,9 +1910,17 @@ let hasSideEffects = 1, Defs = [CC] in {
 let hasSideEffects = 1, Uses = [R0D], Defs = [R0D, CC] in
   def STFLE : StoreInherentS<"stfle", 0xB2B0, null_frag, 0>;
 
+// Extract CPU attribute.
+let hasSideEffects = 1 in
+  def ECAG : BinaryRSY<"ecag", 0xEB4C, null_frag, GR64>;
+
 // Extract CPU time.
 let Defs = [R0D, R1D], hasSideEffects = 1, mayLoad = 1 in
   def ECTG : SideEffectTernarySSF<"ectg", 0xC81, GR64>;
+
+// Extract PSW.
+let hasSideEffects = 1, Uses = [CC] in
+  def EPSW : InherentDualRRE<"epsw", 0xB98D, GR32>;
 
 // Execute.
 let hasSideEffects = 1 in {

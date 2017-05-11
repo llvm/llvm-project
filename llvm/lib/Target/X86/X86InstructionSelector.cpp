@@ -73,6 +73,8 @@ private:
                    MachineFunction &MF) const;
   bool selectZext(MachineInstr &I, MachineRegisterInfo &MRI,
                   MachineFunction &MF) const;
+  bool selectCmp(MachineInstr &I, MachineRegisterInfo &MRI,
+                 MachineFunction &MF) const;
 
   const X86TargetMachine &TM;
   const X86Subtarget &STI;
@@ -244,6 +246,8 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   if (selectTrunc(I, MRI, MF))
     return true;
   if (selectZext(I, MRI, MF))
+    return true;
+  if (selectCmp(I, MRI, MF))
     return true;
 
   return false;
@@ -610,6 +614,59 @@ bool X86InstructionSelector::selectZext(MachineInstr &I,
   }
 
   return false;
+}
+
+bool X86InstructionSelector::selectCmp(MachineInstr &I,
+                                       MachineRegisterInfo &MRI,
+                                       MachineFunction &MF) const {
+  if (I.getOpcode() != TargetOpcode::G_ICMP)
+    return false;
+
+  X86::CondCode CC;
+  bool SwapArgs;
+  std::tie(CC, SwapArgs) = X86::getX86ConditionCode(
+      (CmpInst::Predicate)I.getOperand(1).getPredicate());
+  unsigned OpSet = X86::getSETFromCond(CC);
+
+  unsigned LHS = I.getOperand(2).getReg();
+  unsigned RHS = I.getOperand(3).getReg();
+
+  if (SwapArgs)
+    std::swap(LHS, RHS);
+
+  unsigned OpCmp;
+  LLT Ty = MRI.getType(LHS);
+
+  switch (Ty.getSizeInBits()) {
+  default:
+    return false;
+  case 8:
+    OpCmp = X86::CMP8rr;
+    break;
+  case 16:
+    OpCmp = X86::CMP16rr;
+    break;
+  case 32:
+    OpCmp = X86::CMP32rr;
+    break;
+  case 64:
+    OpCmp = X86::CMP64rr;
+    break;
+  }
+
+  MachineInstr &CmpInst =
+      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpCmp))
+           .addReg(LHS)
+           .addReg(RHS);
+
+  MachineInstr &SetInst = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                   TII.get(OpSet), I.getOperand(0).getReg());
+
+  constrainSelectedInstRegOperands(CmpInst, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(SetInst, TII, TRI, RBI);
+
+  I.eraseFromParent();
+  return true;
 }
 
 InstructionSelector *

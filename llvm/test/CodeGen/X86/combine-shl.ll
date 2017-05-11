@@ -11,8 +11,7 @@ define <4 x i32> @combine_vec_shl_zero(<4 x i32> %x) {
 ;
 ; AVX-LABEL: combine_vec_shl_zero:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpsllvd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = shl <4 x i32> zeroinitializer, %x
   ret <4 x i32> %1

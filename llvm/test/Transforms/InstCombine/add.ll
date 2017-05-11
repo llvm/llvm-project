@@ -31,9 +31,8 @@ define <2 x i32> @select_0_or_1_from_bool_vec(<2 x i1> %x) {
 
 define i32 @flip_and_mask(i32 %x) {
 ; CHECK-LABEL: @flip_and_mask(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 %x, 31
-; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i32 [[SHL]], 31
-; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[SHR]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %x, 1
+; CHECK-NEXT:    [[INC:%.*]] = xor i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[INC]]
 ;
   %shl = shl i32 %x, 31
@@ -44,9 +43,8 @@ define i32 @flip_and_mask(i32 %x) {
 
 define <2 x i8> @flip_and_mask_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @flip_and_mask_splat(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> %x, <i8 7, i8 7>
-; CHECK-NEXT:    [[SHR:%.*]] = ashr exact <2 x i8> [[SHL]], <i8 7, i8 7>
-; CHECK-NEXT:    [[INC:%.*]] = add nsw <2 x i8> [[SHR]], <i8 1, i8 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> %x, <i8 1, i8 1>
+; CHECK-NEXT:    [[INC:%.*]] = and <2 x i8> [[TMP1]], <i8 1, i8 1>
 ; CHECK-NEXT:    ret <2 x i8> [[INC]]
 ;
   %shl = shl <2 x i8> %x, <i8 7, i8 7>

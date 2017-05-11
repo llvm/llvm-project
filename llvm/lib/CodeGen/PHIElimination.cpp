@@ -34,7 +34,7 @@
 #include <algorithm>
 using namespace llvm;
 
-#define DEBUG_TYPE "phielim"
+#define DEBUG_TYPE "phi-node-elimination"
 
 static cl::opt<bool>
 DisableEdgeSplitting("disable-phi-elim-edge-splitting", cl::init(false),

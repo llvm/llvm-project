@@ -37,7 +37,7 @@ struct UseListOrder {
   UseListOrder &operator=(UseListOrder &&) = default;
 };
 
-typedef std::vector<UseListOrder> UseListOrderStack;
+using UseListOrderStack = std::vector<UseListOrder>;
 
 } // end namespace llvm
 

@@ -7377,48 +7377,49 @@ SolveQuadraticEquation(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
   const APInt &N = NC->getAPInt();
   APInt Two(BitWidth, 2);
 
-  {
-    using namespace APIntOps;
-    const APInt& C = L;
-    // Convert from chrec coefficients to polynomial coefficients AX^2+BX+C
-    // The B coefficient is M-N/2
-    APInt B(M);
-    B -= N.sdiv(Two);
+  // Convert from chrec coefficients to polynomial coefficients AX^2+BX+C
 
-    // The A coefficient is N/2
-    APInt A(N.sdiv(Two));
+  // The A coefficient is N/2
+  APInt A(N.sdiv(Two));
 
-    // Compute the B^2-4ac term.
-    APInt SqrtTerm(B);
-    SqrtTerm *= B;
-    SqrtTerm -= 4 * (A * C);
+  // The B coefficient is M-N/2
+  APInt B(M);
+  B -= A; // A is the same as N/2.
 
-    if (SqrtTerm.isNegative()) {
-      // The loop is provably infinite.
-      return None;
-    }
+  // The C coefficient is L.
+  const APInt& C = L;
 
-    // Compute sqrt(B^2-4ac). This is guaranteed to be the nearest
-    // integer value or else APInt::sqrt() will assert.
-    APInt SqrtVal(SqrtTerm.sqrt());
+  // Compute the B^2-4ac term.
+  APInt SqrtTerm(B);
+  SqrtTerm *= B;
+  SqrtTerm -= 4 * (A * C);
 
-    // Compute the two solutions for the quadratic formula.
-    // The divisions must be performed as signed divisions.
-    APInt NegB(-B);
-    APInt TwoA(A << 1);
-    if (TwoA.isMinValue())
-      return None;
+  if (SqrtTerm.isNegative()) {
+    // The loop is provably infinite.
+    return None;
+  }
 
-    LLVMContext &Context = SE.getContext();
+  // Compute sqrt(B^2-4ac). This is guaranteed to be the nearest
+  // integer value or else APInt::sqrt() will assert.
+  APInt SqrtVal(SqrtTerm.sqrt());
 
-    ConstantInt *Solution1 =
-      ConstantInt::get(Context, (NegB + SqrtVal).sdiv(TwoA));
-    ConstantInt *Solution2 =
-      ConstantInt::get(Context, (NegB - SqrtVal).sdiv(TwoA));
+  // Compute the two solutions for the quadratic formula.
+  // The divisions must be performed as signed divisions.
+  APInt NegB(-std::move(B));
+  APInt TwoA(std::move(A));
+  TwoA <<= 1;
+  if (TwoA.isNullValue())
+    return None;
 
-    return std::make_pair(cast<SCEVConstant>(SE.getConstant(Solution1)),
-                          cast<SCEVConstant>(SE.getConstant(Solution2)));
-  } // end APIntOps namespace
+  LLVMContext &Context = SE.getContext();
+
+  ConstantInt *Solution1 =
+    ConstantInt::get(Context, (NegB + SqrtVal).sdiv(TwoA));
+  ConstantInt *Solution2 =
+    ConstantInt::get(Context, (NegB - SqrtVal).sdiv(TwoA));
+
+  return std::make_pair(cast<SCEVConstant>(SE.getConstant(Solution1)),
+                        cast<SCEVConstant>(SE.getConstant(Solution2)));
 }
 
 ScalarEvolution::ExitLimit

@@ -1,4 +1,4 @@
-//===-- Function.cpp - Implement the Global object classes ----------------===//
+//===- Function.cpp - Implement the Global object classes -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,21 +11,51 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Function.h"
 #include "LLVMContextImpl.h"
 #include "SymbolTableListTraitsImpl.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/SymbolTableListTraits.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <string>
+
 using namespace llvm;
 
 // Explicit instantiations of SymbolTableListTraits since some of the methods
@@ -36,7 +66,7 @@ template class llvm::SymbolTableListTraits<BasicBlock>;
 // Argument Implementation
 //===----------------------------------------------------------------------===//
 
-void Argument::anchor() { }
+void Argument::anchor() {}
 
 Argument::Argument(Type *Ty, const Twine &Name, Function *Par, unsigned ArgNo)
     : Value(Ty, Value::ArgumentVal), Parent(Par), ArgNo(ArgNo) {
@@ -186,7 +216,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, const Twine &name,
                    Module *ParentModule)
     : GlobalObject(Ty, Value::FunctionVal,
                    OperandTraits<Function>::op_begin(this), 0, Linkage, name),
-      Arguments(nullptr), NumArgs(Ty->getNumParams()) {
+      NumArgs(Ty->getNumParams()) {
   assert(FunctionType::isValidReturnType(getReturnType()) &&
          "invalid return type");
   setGlobalObjectSubClassData(0);
@@ -486,10 +516,10 @@ void Function::recalculateIntrinsicID() {
 static std::string getMangledTypeStr(Type* Ty) {
   std::string Result;
   if (PointerType* PTyp = dyn_cast<PointerType>(Ty)) {
-    Result += "p" + llvm::utostr(PTyp->getAddressSpace()) +
+    Result += "p" + utostr(PTyp->getAddressSpace()) +
       getMangledTypeStr(PTyp->getElementType());
   } else if (ArrayType* ATyp = dyn_cast<ArrayType>(Ty)) {
-    Result += "a" + llvm::utostr(ATyp->getNumElements()) +
+    Result += "a" + utostr(ATyp->getNumElements()) +
       getMangledTypeStr(ATyp->getElementType());
   } else if (StructType *STyp = dyn_cast<StructType>(Ty)) {
     if (!STyp->isLiteral()) {
@@ -533,7 +563,6 @@ std::string Intrinsic::getName(ID id, ArrayRef<Type*> Tys) {
   }
   return Result;
 }
-
 
 /// IIT_Info - These are enumerators that describe the entries returned by the
 /// getIntrinsicInfoTableEntries function.
@@ -585,9 +614,10 @@ enum IIT_Info {
 
 static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
                       SmallVectorImpl<Intrinsic::IITDescriptor> &OutputTable) {
+  using namespace Intrinsic;
+
   IIT_Info Info = IIT_Info(Infos[NextElt++]);
   unsigned StructElts = 2;
-  using namespace Intrinsic;
 
   switch (Info) {
   case IIT_Done:
@@ -742,7 +772,6 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   llvm_unreachable("unhandled");
 }
 
-
 #define GET_INTRINSIC_GENERATOR_GLOBAL
 #include "llvm/IR/Intrinsics.gen"
 #undef GET_INTRINSIC_GENERATOR_GLOBAL
@@ -780,10 +809,10 @@ void Intrinsic::getIntrinsicInfoTableEntries(ID id,
     DecodeIITType(NextElt, IITEntries, T);
 }
 
-
 static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
                              ArrayRef<Type*> Tys, LLVMContext &Context) {
   using namespace Intrinsic;
+
   IITDescriptor D = Infos.front();
   Infos = Infos.slice(1);
 
@@ -855,11 +884,9 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::VecOfAnyPtrsToElt:
     // Return the overloaded type (which determines the pointers address space)
     return Tys[D.getOverloadArgNumber()];
- }
+  }
   llvm_unreachable("unhandled");
 }
-
-
 
 FunctionType *Intrinsic::getType(LLVMContext &Context,
                                  ID id, ArrayRef<Type*> Tys) {

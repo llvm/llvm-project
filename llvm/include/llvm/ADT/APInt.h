@@ -1437,6 +1437,12 @@ public:
   /// as "bitPosition".
   void flipBit(unsigned bitPosition);
 
+  /// Negate this APInt in place.
+  void negate() {
+    flipAllBits();
+    ++(*this);
+  }
+
   /// Insert the bits from a smaller APInt starting at bitPosition.
   void insertBits(const APInt &SubBits, unsigned bitPosition);
 
@@ -1996,8 +2002,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const APInt &I) {
 }
 
 inline APInt operator-(APInt v) {
-  v.flipAllBits();
-  ++v;
+  v.negate();
   return v;
 }
 

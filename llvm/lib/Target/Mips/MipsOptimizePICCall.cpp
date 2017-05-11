@@ -257,7 +257,7 @@ bool OptimizePICCall::isCallViaRegister(MachineInstr &MI, unsigned &Reg,
 
   // Get the instruction that loads the function address from the GOT.
   Reg = MO->getReg();
-  Val = (Value*)nullptr;
+  Val = nullptr;
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   MachineInstr *DefMI = MRI.getVRegDef(Reg);
 

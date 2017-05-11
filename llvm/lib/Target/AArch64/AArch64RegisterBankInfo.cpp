@@ -546,6 +546,17 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
           break;
         }
     break;
+  case TargetOpcode::G_STORE:
+    // Check if that store is fed by fp instructions.
+    if (OpRegBankIdx[0] == PMI_FirstGPR) {
+      unsigned VReg = MI.getOperand(0).getReg();
+      if (!VReg)
+        break;
+      MachineInstr *DefMI = MRI.getVRegDef(VReg);
+      if (isPreISelGenericFloatingPointOpcode(DefMI->getOpcode()))
+        OpRegBankIdx[0] = PMI_FirstFPR;
+      break;
+    }
   }
 
   // Finally construct the computed mapping.

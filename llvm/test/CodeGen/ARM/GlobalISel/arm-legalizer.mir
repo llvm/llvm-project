@@ -91,8 +91,9 @@ body:             |
     %0(s8) = COPY %r0
     %1(s8) = COPY %r1
     %2(s8) = G_ADD %0, %1
-    ; G_ADD with s8 is legal, so we should find it unchanged in the output
-    ; CHECK: {{%[0-9]+}}(s8) = G_ADD {{%[0-9]+, %[0-9]+}}
+    ; G_ADD with s8 should widen
+    ; CHECK: {{%[0-9]+}}(s32) = G_ADD {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_ADD {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s8)
     BX_RET 14, _, implicit %r0
 ...
@@ -115,8 +116,9 @@ body:             |
     %0(s16) = COPY %r0
     %1(s16) = COPY %r1
     %2(s16) = G_ADD %0, %1
-    ; G_ADD with s16 is legal, so we should find it unchanged in the output
-    ; CHECK: {{%[0-9]+}}(s16) = G_ADD {{%[0-9]+, %[0-9]+}}
+    ; G_ADD with s16 should widen
+    ; CHECK: {{%[0-9]+}}(s32) = G_ADD {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_ADD {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s16)
     BX_RET 14, _, implicit %r0
 
@@ -165,8 +167,9 @@ body:             |
     %0(s8) = COPY %r0
     %1(s8) = COPY %r1
     %2(s8) = G_SUB %0, %1
-    ; G_SUB with s8 is legal, so we should find it unchanged in the output
-    ; CHECK: {{%[0-9]+}}(s8) = G_SUB {{%[0-9]+, %[0-9]+}}
+    ; G_SUB with s8 should widen
+    ; CHECK: {{%[0-9]+}}(s32) = G_SUB {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_SUB {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s8)
     BX_RET 14, _, implicit %r0
 ...
@@ -189,8 +192,9 @@ body:             |
     %0(s16) = COPY %r0
     %1(s16) = COPY %r1
     %2(s16) = G_SUB %0, %1
-    ; G_SUB with s16 is legal, so we should find it unchanged in the output
-    ; CHECK: {{%[0-9]+}}(s16) = G_SUB {{%[0-9]+, %[0-9]+}}
+    ; G_SUB with s16 should widen
+    ; CHECK: {{%[0-9]+}}(s32) = G_SUB {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_SUB {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s16)
     BX_RET 14, _, implicit %r0
 
@@ -239,8 +243,9 @@ body:             |
     %0(s8) = COPY %r0
     %1(s8) = COPY %r1
     %2(s8) = G_MUL %0, %1
-    ; G_MUL with s8 is legal, so we should find it unchanged in the output
-    ; CHECK: {{%[0-9]+}}(s8) = G_MUL {{%[0-9]+, %[0-9]+}}
+    ; G_MUL with s8 should widen
+    ; CHECK: {{%[0-9]+}}(s32) = G_MUL {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_MUL {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s8)
     BX_RET 14, _, implicit %r0
 ...
@@ -263,8 +268,9 @@ body:             |
     %0(s16) = COPY %r0
     %1(s16) = COPY %r1
     %2(s16) = G_MUL %0, %1
-    ; G_MUL with s16 is legal, so we should find it unchanged in the output
-    ; CHECK: {{%[0-9]+}}(s16) = G_MUL {{%[0-9]+, %[0-9]+}}
+    ; G_MUL with s16 should widen
+    ; CHECK: {{%[0-9]+}}(s32) = G_MUL {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_MUL {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s16)
     BX_RET 14, _, implicit %r0
 

@@ -458,7 +458,7 @@ public:
   static typename std::enable_if<are_base_of<Constant, Csts...>::value,
                                  Constant *>::type
   get(StructType *T, Csts *... Vs) {
-    SmallVector<Constant *, 8> Values{{Vs...}};
+    SmallVector<Constant *, 8> Values({Vs...});
     return get(T, Values);
   }
 

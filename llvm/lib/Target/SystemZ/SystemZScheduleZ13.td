@@ -76,6 +76,8 @@ def : WriteRes<VecBF,   [Z13_VecUnit]> { let Latency = 8; }
 def : WriteRes<VecBF2,  [Z13_VecUnit, Z13_VecUnit]> { let Latency = 9; }
 def : WriteRes<VecDF,   [Z13_VecUnit]> { let Latency = 8; }
 def : WriteRes<VecDF2,  [Z13_VecUnit, Z13_VecUnit]> { let Latency = 9; }
+def : WriteRes<VecDFX,  [Z13_VecUnit]> { let Latency = 1; }
+def : WriteRes<VecDFX2, [Z13_VecUnit, Z13_VecUnit]> { let Latency = 2; }
 def : WriteRes<VecFPd,  [Z13_VecFPdUnit, Z13_VecFPdUnit, Z13_VecFPdUnit,
                          Z13_VecFPdUnit, Z13_VecFPdUnit, Z13_VecFPdUnit,
                          Z13_VecFPdUnit, Z13_VecFPdUnit, Z13_VecFPdUnit,
@@ -179,6 +181,7 @@ def : InstRW<[FXb, LSU, Lat5], (instregex "MVI(Y)?$")>;
 
 // Move character
 def : InstRW<[FXb, LSU, LSU, LSU, Lat8, GroupAlone], (instregex "MVC$")>;
+def : InstRW<[LSU, Lat30, GroupAlone], (instregex "MVCL(E|U)?$")>;
 
 // Pseudo -> reg move
 def : InstRW<[FXa], (instregex "COPY(_TO_REGCLASS)?$")>;
@@ -268,6 +271,7 @@ def : InstRW<[FXb, LSU, Lat5], (instregex "LLG(F|T)?AT$")>;
 
 def : InstRW<[FXb, LSU, Lat5], (instregex "STC(H|Y|Mux)?$")>;
 def : InstRW<[FXb, LSU, Lat5], (instregex "STH(H|Y|RL|Mux)?$")>;
+def : InstRW<[FXb, LSU, Lat5], (instregex "STCM(H|Y)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Multi-register moves
@@ -276,6 +280,9 @@ def : InstRW<[FXb, LSU, Lat5], (instregex "STH(H|Y|RL|Mux)?$")>;
 // Load multiple (estimated average of 5 ops)
 def : InstRW<[LSU, LSU, LSU, LSU, LSU, Lat10, GroupAlone],
              (instregex "LM(H|Y|G)?$")>;
+
+// Load multiple disjoint
+def : InstRW<[FXb, Lat30, GroupAlone], (instregex "LMD$")>;
 
 // Store multiple (estimated average of ceil(5/2) FXb ops)
 def : InstRW<[LSU, LSU, FXb, FXb, FXb, Lat10,
@@ -288,6 +295,7 @@ def : InstRW<[LSU, LSU, FXb, FXb, FXb, Lat10,
 def : InstRW<[FXa], (instregex "LRV(G)?R$")>;
 def : InstRW<[FXa, LSU, Lat5], (instregex "LRV(G|H)?$")>;
 def : InstRW<[FXb, LSU, Lat5], (instregex "STRV(G|H)?$")>;
+def : InstRW<[LSU, Lat30, GroupAlone], (instregex "MVCIN$")>;
 
 //===----------------------------------------------------------------------===//
 // Load address instructions
@@ -345,7 +353,7 @@ def : InstRW<[FXa], (instregex "ALGF(I|R)$")>;
 def : InstRW<[FXa], (instregex "ALGR(K)?$")>;
 def : InstRW<[FXa], (instregex "ALR(K)?$")>;
 def : InstRW<[FXa], (instregex "AR(K)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "A(G)?SI$")>;
+def : InstRW<[FXb, LSU, Lat5], (instregex "A(L)?(G)?SI$")>;
 
 // Logical addition with carry
 def : InstRW<[FXa, LSU, Lat6, GroupAlone], (instregex "ALC(G)?$")>;
@@ -438,11 +446,15 @@ def : InstRW<[FXa, Lat9, GroupAlone], (instregex "MLGR$")>;
 def : InstRW<[FXa, Lat5], (instregex "MGHI$")>;
 def : InstRW<[FXa, Lat5], (instregex "MHI$")>;
 def : InstRW<[FXa, LSU, Lat9], (instregex "MH(Y)?$")>;
+def : InstRW<[FXa, Lat7, GroupAlone], (instregex "M(L)?R$")>;
+def : InstRW<[FXa, LSU, Lat7, GroupAlone], (instregex "M(FY|L)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Division and remainder
 //===----------------------------------------------------------------------===//
 
+def : InstRW<[FXa2, FXa2, Lat20, GroupAlone], (instregex "DR$")>;
+def : InstRW<[FXa2, FXa2, LSU, Lat30, GroupAlone], (instregex "D$")>;
 def : InstRW<[FXa, Lat30, GroupAlone], (instregex "DSG(F)?R$")>;
 def : InstRW<[LSU, FXa, Lat30, GroupAlone], (instregex "DSG(F)?$")>;
 def : InstRW<[FXa2, FXa2, Lat20, GroupAlone], (instregex "DLR$")>;
@@ -456,7 +468,8 @@ def : InstRW<[FXa2, FXa2, LSU, Lat30, GroupAlone], (instregex "DL(G)?$")>;
 def : InstRW<[FXa], (instregex "SLL(G|K)?$")>;
 def : InstRW<[FXa], (instregex "SRL(G|K)?$")>;
 def : InstRW<[FXa], (instregex "SRA(G|K)?$")>;
-def : InstRW<[FXa], (instregex "SLA(K)?$")>;
+def : InstRW<[FXa], (instregex "SLA(G|K)?$")>;
+def : InstRW<[FXa, FXa, FXa, FXa, Lat8], (instregex "S(L|R)D(A|L)$")>;
 
 // Rotate
 def : InstRW<[FXa, LSU, Lat6], (instregex "RLL(G)?$")>;
@@ -505,7 +518,7 @@ def : InstRW<[FXb, Lat2], (instregex "CGFR$")>;
 
 // Compare logical character
 def : InstRW<[FXb, LSU, LSU, Lat9, BeginGroup], (instregex "CLC$")>;
-
+def : InstRW<[LSU, Lat30, GroupAlone], (instregex "CLCL(E|U)?$")>;
 def : InstRW<[LSU, Lat30, GroupAlone], (instregex "CLST$")>;
 
 // Test under mask
@@ -515,6 +528,9 @@ def : InstRW<[FXb], (instregex "TMHH(64)?$")>;
 def : InstRW<[FXb], (instregex "TMHL(64)?$")>;
 def : InstRW<[FXb], (instregex "TMLH(64)?$")>;
 def : InstRW<[FXb], (instregex "TMLL(64)?$")>;
+
+// Compare logical characters under mask
+def : InstRW<[FXb, LSU, Lat5], (instregex "CLM(H|Y)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Prefetch and execution hint
@@ -561,6 +577,42 @@ def : InstRW<[FXb, FXb, LSU, Lat6, GroupAlone], (instregex "STPQ$")>;
 
 // Load pair disjoint
 def : InstRW<[LSU, LSU, Lat5, GroupAlone], (instregex "LPD(G)?$")>;
+
+//===----------------------------------------------------------------------===//
+// Translate and convert
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXa, Lat30, GroupAlone], (instregex "TR(T|TR)?(E|EOpt)?$")>;
+def : InstRW<[FXa, Lat30, GroupAlone], (instregex "TR(T|O)(T|O)(Opt)?$")>;
+def : InstRW<[FXa, Lat30, GroupAlone], (instregex "CU(12|14|21|24|41|42)(Opt)?$")>;
+def : InstRW<[FXa, Lat30, GroupAlone], (instregex "(CUUTF|CUTFU)(Opt)?$")>;
+
+//===----------------------------------------------------------------------===//
+// Message-security assist
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXa, Lat30, GroupAlone], (instregex "KM(C|F|O|CTR)?$")>;
+def : InstRW<[FXa, Lat30, GroupAlone], (instregex "(KIMD|KLMD|KMAC|PCC|PPNO)$")>;
+
+//===----------------------------------------------------------------------===//
+// Decimal arithmetic
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXb, VecDF, LSU, Lat30, GroupAlone], (instregex "CVB(Y|G)?$")>;
+def : InstRW<[FXb, VecDF, FXb, Lat30, GroupAlone], (instregex "CVD(Y|G)?$")>;
+def : InstRW<[LSU, Lat30, GroupAlone], (instregex "MV(N|Z|O)$")>;
+def : InstRW<[LSU, Lat30, GroupAlone], (instregex "(PACK|PKA|PKU)$")>;
+def : InstRW<[LSU, Lat30, GroupAlone], (instregex "UNPK(A|U)?$")>;
+
+def : InstRW<[FXb, VecDFX, LSU, LSU, Lat9, GroupAlone],
+             (instregex "(A|S|ZA)P$")>;
+def : InstRW<[FXb, VecDFX2, LSU, LSU, Lat30, GroupAlone],
+             (instregex "(M|D)P$")>;
+def : InstRW<[FXb, FXb, VecDFX2, LSU, LSU, LSU, Lat15, GroupAlone],
+             (instregex "SRP$")>;
+def : InstRW<[VecDFX, LSU, LSU, Lat5, GroupAlone], (instregex "CP$")>;
+def : InstRW<[VecDFX, LSU, Lat4, GroupAlone], (instregex "TP$")>;
+def : InstRW<[LSU, Lat30, GroupAlone], (instregex "ED(MK)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Access registers
@@ -640,12 +692,29 @@ def : InstRW<[FXa], (instregex "ZEXT128_(32|64)$")>;
 
 // String instructions
 def : InstRW<[FXa, LSU, Lat30], (instregex "SRST$")>;
+def : InstRW<[LSU, Lat30], (instregex "SRSTU$")>;
+def : InstRW<[LSU, Lat30, GroupAlone], (instregex "CUSE$")>;
+
+// Various complex instructions
+def : InstRW<[LSU, Lat30, GroupAlone], (instregex "CFC$")>;
+def : InstRW<[LSU, Lat30, GroupAlone], (instregex "UPT$")>;
+def : InstRW<[LSU, Lat30, GroupAlone], (instregex "CKSM$")>;
+def : InstRW<[LSU, Lat30, GroupAlone], (instregex "CMPSC$")>;
 
 // Move with key
 def : InstRW<[FXa, FXa, FXb, LSU, Lat8, GroupAlone], (instregex "MVCK$")>;
 
+// Monitor call
+def : InstRW<[FXb], (instregex "MC$")>;
+
+// Extract CPU attribute
+def : InstRW<[FXb, Lat30], (instregex "ECAG$")>;
+
 // Extract CPU Time
 def : InstRW<[FXa, Lat5, LSU], (instregex "ECTG$")>;
+
+// Extract PSW
+def : InstRW<[FXb, Lat30], (instregex "EPSW$")>;
 
 // Execute
 def : InstRW<[FXb, GroupAlone], (instregex "EX(RL)?$")>;
@@ -811,14 +880,17 @@ def : InstRW<[VecFPd, LSU], (instregex "D(E|D)B$")>;
 def : InstRW<[VecFPd], (instregex "D(E|D)BR$")>;
 def : InstRW<[VecFPd, VecFPd, GroupAlone], (instregex "DXBR$")>;
 
+// Divide to integer
+def : InstRW<[VecFPd, Lat30, GroupAlone], (instregex "DI(E|D)BR$")>;
+
 //===----------------------------------------------------------------------===//
 // FP: Comparisons
 //===----------------------------------------------------------------------===//
 
 // Compare
-def : InstRW<[VecXsPm, LSU, Lat8], (instregex "C(E|D)B$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "C(E|D)BR?$")>;
-def : InstRW<[VecDF, VecDF, Lat20, GroupAlone], (instregex "CXBR$")>;
+def : InstRW<[VecXsPm, LSU, Lat8], (instregex "(K|C)(E|D)B$")>;
+def : InstRW<[VecXsPm, Lat4], (instregex "(K|C)(E|D)BR?$")>;
+def : InstRW<[VecDF, VecDF, Lat20, GroupAlone], (instregex "(K|C)XBR$")>;
 
 // Test Data Class
 def : InstRW<[LSU, VecXsPm, Lat9], (instregex "TC(E|D)B$")>;

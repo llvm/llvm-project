@@ -126,7 +126,7 @@ bool SIAnnotateControlFlow::doInitialization(Module &M) {
   Void = Type::getVoidTy(Context);
   Boolean = Type::getInt1Ty(Context);
   Int64 = Type::getInt64Ty(Context);
-  ReturnStruct = StructType::get(Boolean, Int64, (Type *)nullptr);
+  ReturnStruct = StructType::get(Boolean, Int64);
 
   BoolTrue = ConstantInt::getTrue(Context);
   BoolFalse = ConstantInt::getFalse(Context);

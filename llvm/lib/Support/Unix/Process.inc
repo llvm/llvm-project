@@ -347,7 +347,7 @@ static bool terminalHasColors(int fd) {
   MutexGuard G(*TermColorMutex);
 
   int errret = 0;
-  if (setupterm((char *)nullptr, fd, &errret) != 0)
+  if (setupterm(nullptr, fd, &errret) != 0)
     // Regardless of why, if we can't get terminfo, we shouldn't try to print
     // colors.
     return false;
@@ -369,7 +369,7 @@ static bool terminalHasColors(int fd) {
 
   // Now extract the structure allocated by setupterm and free its memory
   // through a really silly dance.
-  struct term *termp = set_curterm((struct term *)nullptr);
+  struct term *termp = set_curterm(nullptr);
   (void)del_curterm(termp); // Drop any errors here.
 
   // Return true if we found a color capabilities for the current terminal.

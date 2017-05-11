@@ -1240,7 +1240,7 @@ APInt::mu APInt::magicu(unsigned LeadingZeros) const {
 /// from "Art of Computer Programming, Volume 2", section 4.3.1, p. 272. The
 /// variables here have the same names as in the algorithm. Comments explain
 /// the algorithm and any deviation from it.
-static void KnuthDiv(unsigned *u, unsigned *v, unsigned *q, unsigned* r,
+static void KnuthDiv(uint32_t *u, uint32_t *v, uint32_t *q, uint32_t* r,
                      unsigned m, unsigned n) {
   assert(u && "Must provide dividend");
   assert(v && "Must provide divisor");
@@ -1266,16 +1266,16 @@ static void KnuthDiv(unsigned *u, unsigned *v, unsigned *q, unsigned* r,
   // overflow. Note that this can require an extra word in u so that u must
   // be of length m+n+1.
   unsigned shift = countLeadingZeros(v[n-1]);
-  unsigned v_carry = 0;
-  unsigned u_carry = 0;
+  uint32_t v_carry = 0;
+  uint32_t u_carry = 0;
   if (shift) {
     for (unsigned i = 0; i < m+n; ++i) {
-      unsigned u_tmp = u[i] >> (32 - shift);
+      uint32_t u_tmp = u[i] >> (32 - shift);
       u[i] = (u[i] << shift) | u_carry;
       u_carry = u_tmp;
     }
     for (unsigned i = 0; i < n; ++i) {
-      unsigned v_tmp = v[i] >> (32 - shift);
+      uint32_t v_tmp = v[i] >> (32 - shift);
       v[i] = (v[i] << shift) | v_carry;
       v_carry = v_tmp;
     }
@@ -1349,7 +1349,7 @@ static void KnuthDiv(unsigned *u, unsigned *v, unsigned *q, unsigned* r,
       // since it cancels with the borrow that occurred in D4.
       bool carry = false;
       for (unsigned i = 0; i < n; i++) {
-        unsigned limit = std::min(u[j+i],v[i]);
+        uint32_t limit = std::min(u[j+i],v[i]);
         u[j+i] += v[i] + carry;
         carry = u[j+i] < limit || (carry && u[j+i] == limit);
       }
@@ -1374,7 +1374,7 @@ static void KnuthDiv(unsigned *u, unsigned *v, unsigned *q, unsigned* r,
     // multiplication by d by using a shift left. So, all we have to do is
     // shift right here.
     if (shift) {
-      unsigned carry = 0;
+      uint32_t carry = 0;
       DEBUG(dbgs() << "KnuthDiv: remainder:");
       for (int i = n-1; i >= 0; i--) {
         r[i] = (u[i] >> shift) | carry;
@@ -1403,17 +1403,16 @@ void APInt::divide(const APInt &LHS, unsigned lhsWords, const APInt &RHS,
   // can't use 64-bit operands here because we don't have native results of
   // 128-bits. Furthermore, casting the 64-bit values to 32-bit values won't
   // work on large-endian machines.
-  uint64_t mask = ~0ull >> (sizeof(unsigned)*CHAR_BIT);
   unsigned n = rhsWords * 2;
   unsigned m = (lhsWords * 2) - n;
 
   // Allocate space for the temporary values we need either on the stack, if
   // it will fit, or on the heap if it won't.
-  unsigned SPACE[128];
-  unsigned *U = nullptr;
-  unsigned *V = nullptr;
-  unsigned *Q = nullptr;
-  unsigned *R = nullptr;
+  uint32_t SPACE[128];
+  uint32_t *U = nullptr;
+  uint32_t *V = nullptr;
+  uint32_t *Q = nullptr;
+  uint32_t *R = nullptr;
   if ((Remainder?4:3)*n+2*m+1 <= 128) {
     U = &SPACE[0];
     V = &SPACE[m+n+1];
@@ -1421,34 +1420,34 @@ void APInt::divide(const APInt &LHS, unsigned lhsWords, const APInt &RHS,
     if (Remainder)
       R = &SPACE[(m+n+1) + n + (m+n)];
   } else {
-    U = new unsigned[m + n + 1];
-    V = new unsigned[n];
-    Q = new unsigned[m+n];
+    U = new uint32_t[m + n + 1];
+    V = new uint32_t[n];
+    Q = new uint32_t[m+n];
     if (Remainder)
-      R = new unsigned[n];
+      R = new uint32_t[n];
   }
 
   // Initialize the dividend
-  memset(U, 0, (m+n+1)*sizeof(unsigned));
+  memset(U, 0, (m+n+1)*sizeof(uint32_t));
   for (unsigned i = 0; i < lhsWords; ++i) {
-    uint64_t tmp = (LHS.getNumWords() == 1 ? LHS.U.VAL : LHS.U.pVal[i]);
-    U[i * 2] = (unsigned)(tmp & mask);
-    U[i * 2 + 1] = (unsigned)(tmp >> (sizeof(unsigned)*CHAR_BIT));
+    uint64_t tmp = LHS.getRawData()[i];
+    U[i * 2] = Lo_32(tmp);
+    U[i * 2 + 1] = Hi_32(tmp);
   }
   U[m+n] = 0; // this extra word is for "spill" in the Knuth algorithm.
 
   // Initialize the divisor
-  memset(V, 0, (n)*sizeof(unsigned));
+  memset(V, 0, (n)*sizeof(uint32_t));
   for (unsigned i = 0; i < rhsWords; ++i) {
-    uint64_t tmp = (RHS.getNumWords() == 1 ? RHS.U.VAL : RHS.U.pVal[i]);
-    V[i * 2] = (unsigned)(tmp & mask);
-    V[i * 2 + 1] = (unsigned)(tmp >> (sizeof(unsigned)*CHAR_BIT));
+    uint64_t tmp = RHS.getRawData()[i];
+    V[i * 2] = Lo_32(tmp);
+    V[i * 2 + 1] = Hi_32(tmp);
   }
 
   // initialize the quotient and remainder
-  memset(Q, 0, (m+n) * sizeof(unsigned));
+  memset(Q, 0, (m+n) * sizeof(uint32_t));
   if (Remainder)
-    memset(R, 0, n * sizeof(unsigned));
+    memset(R, 0, n * sizeof(uint32_t));
 
   // Now, adjust m and n for the Knuth division. n is the number of words in
   // the divisor. m is the number of words by which the dividend exceeds the
@@ -1469,22 +1468,22 @@ void APInt::divide(const APInt &LHS, unsigned lhsWords, const APInt &RHS,
   // are using base 2^32 instead of base 10.
   assert(n != 0 && "Divide by zero?");
   if (n == 1) {
-    unsigned divisor = V[0];
-    unsigned remainder = 0;
+    uint32_t divisor = V[0];
+    uint32_t remainder = 0;
     for (int i = m+n-1; i >= 0; i--) {
-      uint64_t partial_dividend = uint64_t(remainder) << 32 | U[i];
+      uint64_t partial_dividend = Make_64(remainder, U[i]);
       if (partial_dividend == 0) {
         Q[i] = 0;
         remainder = 0;
       } else if (partial_dividend < divisor) {
         Q[i] = 0;
-        remainder = (unsigned)partial_dividend;
+        remainder = Lo_32(partial_dividend);
       } else if (partial_dividend == divisor) {
         Q[i] = 1;
         remainder = 0;
       } else {
-        Q[i] = (unsigned)(partial_dividend / divisor);
-        remainder = (unsigned)(partial_dividend - (Q[i] * divisor));
+        Q[i] = Lo_32(partial_dividend / divisor);
+        remainder = Lo_32(partial_dividend - (Q[i] * divisor));
       }
     }
     if (R)
@@ -1514,8 +1513,7 @@ void APInt::divide(const APInt &LHS, unsigned lhsWords, const APInt &RHS,
     // This case is currently dead as all users of divide() handle trivial cases
     // earlier.
     if (lhsWords == 1) {
-      uint64_t tmp =
-        uint64_t(Q[0]) | (uint64_t(Q[1]) << (APINT_BITS_PER_WORD / 2));
+      uint64_t tmp = Make_64(Q[1], Q[0]);
       if (Quotient->isSingleWord())
         Quotient->U.VAL = tmp;
       else
@@ -1523,8 +1521,7 @@ void APInt::divide(const APInt &LHS, unsigned lhsWords, const APInt &RHS,
     } else {
       assert(!Quotient->isSingleWord() && "Quotient APInt not large enough");
       for (unsigned i = 0; i < lhsWords; ++i)
-        Quotient->U.pVal[i] =
-          uint64_t(Q[i*2]) | (uint64_t(Q[i*2+1]) << (APINT_BITS_PER_WORD / 2));
+        Quotient->U.pVal[i] = Make_64(Q[i*2+1], Q[i*2]);
     }
   }
 
@@ -1545,8 +1542,7 @@ void APInt::divide(const APInt &LHS, unsigned lhsWords, const APInt &RHS,
     // The remainder is in R. Reconstitute the remainder into Remainder's low
     // order words.
     if (rhsWords == 1) {
-      uint64_t tmp =
-        uint64_t(R[0]) | (uint64_t(R[1]) << (APINT_BITS_PER_WORD / 2));
+      uint64_t tmp = Make_64(R[1], R[0]);
       if (Remainder->isSingleWord())
         Remainder->U.VAL = tmp;
       else
@@ -1554,8 +1550,7 @@ void APInt::divide(const APInt &LHS, unsigned lhsWords, const APInt &RHS,
     } else {
       assert(!Remainder->isSingleWord() && "Remainder APInt not large enough");
       for (unsigned i = 0; i < rhsWords; ++i)
-        Remainder->U.pVal[i] =
-          uint64_t(R[i*2]) | (uint64_t(R[i*2+1]) << (APINT_BITS_PER_WORD / 2));
+        Remainder->U.pVal[i] = Make_64(R[i*2+1], R[i*2]);
     }
   }
 
@@ -1697,8 +1692,8 @@ void APInt::udivrem(const APInt &LHS, const APInt &RHS,
 
   if (lhsWords == 1 && rhsWords == 1) {
     // There is only one word to consider so use the native versions.
-    uint64_t lhsValue = LHS.isSingleWord() ? LHS.U.VAL : LHS.U.pVal[0];
-    uint64_t rhsValue = RHS.isSingleWord() ? RHS.U.VAL : RHS.U.pVal[0];
+    uint64_t lhsValue = LHS.U.pVal[0];
+    uint64_t rhsValue = RHS.U.pVal[0];
     Quotient = APInt(LHS.getBitWidth(), lhsValue / rhsValue);
     Remainder = APInt(LHS.getBitWidth(), lhsValue % rhsValue);
     return;
@@ -1715,12 +1710,12 @@ void APInt::sdivrem(const APInt &LHS, const APInt &RHS,
       APInt::udivrem(-LHS, -RHS, Quotient, Remainder);
     else {
       APInt::udivrem(-LHS, RHS, Quotient, Remainder);
-      Quotient = -Quotient;
+      Quotient.negate();
     }
-    Remainder = -Remainder;
+    Remainder.negate();
   } else if (RHS.isNegative()) {
     APInt::udivrem(LHS, -RHS, Quotient, Remainder);
-    Quotient = -Quotient;
+    Quotient.negate();
   } else {
     APInt::udivrem(LHS, RHS, Quotient, Remainder);
   }
@@ -1851,10 +1846,8 @@ void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
     *this += digit;
   }
   // If its negative, put it in two's complement form
-  if (isNeg) {
-    --(*this);
-    this->flipAllBits();
-  }
+  if (isNeg)
+    this->negate();
 }
 
 void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
@@ -1932,8 +1925,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
     // They want to print the signed version and it is a negative value
     // Flip the bits and add one to turn it into the equivalent positive
     // value and put a '-' in the result.
-    Tmp.flipAllBits();
-    ++Tmp;
+    Tmp.negate();
     Str.push_back('-');
   }
 
@@ -1953,22 +1945,19 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
     unsigned ShiftAmt = (Radix == 16 ? 4 : (Radix == 8 ? 3 : 1));
     unsigned MaskAmt = Radix - 1;
 
-    while (Tmp != 0) {
+    while (Tmp.getBoolValue()) {
       unsigned Digit = unsigned(Tmp.getRawData()[0]) & MaskAmt;
       Str.push_back(Digits[Digit]);
       Tmp.lshrInPlace(ShiftAmt);
     }
   } else {
-    APInt divisor(Radix == 10? 4 : 8, Radix);
-    while (Tmp != 0) {
-      APInt APdigit(1, 0);
-      APInt tmp2(Tmp.getBitWidth(), 0);
-      divide(Tmp, Tmp.getNumWords(), divisor, divisor.getNumWords(), &tmp2,
-             &APdigit);
+    APInt divisor(Tmp.getBitWidth(), Radix);
+    APInt APdigit;
+    while (Tmp.getBoolValue()) {
+      udivrem(Tmp, divisor, Tmp, APdigit);
       unsigned Digit = (unsigned)APdigit.getZExtValue();
       assert(Digit < Radix && "divide failed");
       Str.push_back(Digits[Digit]);
-      Tmp = tmp2;
     }
   }
 

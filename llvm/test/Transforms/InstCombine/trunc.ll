@@ -24,7 +24,7 @@ define i64 @test2(i64 %a) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[B:%.*]] = trunc i64 %a to i32
 ; CHECK-NEXT:    [[D1:%.*]] = shl i64 %a, 36
-; CHECK-NEXT:    [[D:%.*]] = ashr exact i64 [[D:%.*]]1, 36
+; CHECK-NEXT:    [[D:%.*]] = ashr exact i64 [[D1]], 36
 ; CHECK-NEXT:    call void @use(i32 [[B]])
 ; CHECK-NEXT:    ret i64 [[D]]
 ;

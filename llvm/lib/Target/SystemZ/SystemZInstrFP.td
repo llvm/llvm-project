@@ -458,6 +458,12 @@ def DXBR : BinaryRRE<"dxbr", 0xB34D, fdiv, FP128, FP128>;
 def DEB : BinaryRXE<"deb", 0xED0D, fdiv, FP32, load, 4>;
 def DDB : BinaryRXE<"ddb", 0xED1D, fdiv, FP64, load, 8>;
 
+// Divide to integer.
+let Defs = [CC] in {
+  def DIEBR : TernaryRRFb<"diebr", 0xB353, FP32, FP32, FP32>;
+  def DIDBR : TernaryRRFb<"didbr", 0xB35B, FP64, FP64, FP64>;
+}
+
 //===----------------------------------------------------------------------===//
 // Comparisons
 //===----------------------------------------------------------------------===//
@@ -469,6 +475,13 @@ let Defs = [CC], CCValues = 0xF in {
 
   def CEB : CompareRXE<"ceb", 0xED09, z_fcmp, FP32, load, 4>;
   def CDB : CompareRXE<"cdb", 0xED19, z_fcmp, FP64, load, 8>;
+
+  def KEBR : CompareRRE<"kebr", 0xB308, null_frag, FP32,  FP32>;
+  def KDBR : CompareRRE<"kdbr", 0xB318, null_frag, FP64,  FP64>;
+  def KXBR : CompareRRE<"kxbr", 0xB348, null_frag, FP128, FP128>;
+
+  def KEB : CompareRXE<"keb", 0xED08, null_frag, FP32, load, 4>;
+  def KDB : CompareRXE<"kdb", 0xED18, null_frag, FP64, load, 8>;
 }
 
 // Test Data Class.
