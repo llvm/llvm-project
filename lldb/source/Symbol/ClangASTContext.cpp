@@ -1448,6 +1448,12 @@ CompilerType ClangASTContext::CreateRecordType(DeclContext *decl_ctx,
   return CompilerType();
 }
 
+namespace {
+  bool IsValueParam(const clang::TemplateArgument &argument) {
+    return argument.getKind() == TemplateArgument::Integral;
+  }
+}
+
 static TemplateParameterList *CreateTemplateParameterList(
     ASTContext *ast,
     const ClangASTContext::TemplateParameterInfos &template_param_infos,
@@ -1455,31 +1461,51 @@ static TemplateParameterList *CreateTemplateParameterList(
   const bool parameter_pack = false;
   const bool is_typename = false;
   const unsigned depth = 0;
-  const size_t num_template_params = template_param_infos.GetSize();
+  const size_t num_template_params = template_param_infos.args.size();
+  DeclContext *const decl_context =
+      ast->getTranslationUnitDecl(); // Is this the right decl context?,
   for (size_t i = 0; i < num_template_params; ++i) {
     const char *name = template_param_infos.names[i];
 
     IdentifierInfo *identifier_info = nullptr;
     if (name && name[0])
       identifier_info = &ast->Idents.get(name);
-    if (template_param_infos.args[i].getKind() == TemplateArgument::Integral) {
+    if (IsValueParam(template_param_infos.args[i])) {
       template_param_decls.push_back(NonTypeTemplateParmDecl::Create(
-          *ast,
-          ast->getTranslationUnitDecl(), // Is this the right decl context?,
-                                         // SourceLocation StartLoc,
+          *ast, decl_context,
           SourceLocation(), SourceLocation(), depth, i, identifier_info,
           template_param_infos.args[i].getIntegralType(), parameter_pack,
           nullptr));
 
     } else {
       template_param_decls.push_back(TemplateTypeParmDecl::Create(
-          *ast,
-          ast->getTranslationUnitDecl(), // Is this the right decl context?
+          *ast, decl_context,
           SourceLocation(), SourceLocation(), depth, i, identifier_info,
           is_typename, parameter_pack));
     }
   }
-
+  
+  if (template_param_infos.packed_args &&
+      template_param_infos.packed_args->args.size()) {
+    IdentifierInfo *identifier_info = nullptr;
+    if (template_param_infos.pack_name && template_param_infos.pack_name[0])
+      identifier_info = &ast->Idents.get(template_param_infos.pack_name);
+    const bool parameter_pack_true = true;
+    if (IsValueParam(template_param_infos.packed_args->args[0])) {
+      template_param_decls.push_back(NonTypeTemplateParmDecl::Create(
+          *ast, decl_context,
+          SourceLocation(), SourceLocation(), depth, num_template_params,
+          identifier_info,
+          template_param_infos.packed_args->args[0].getIntegralType(),
+          parameter_pack_true, nullptr));
+    } else {
+      template_param_decls.push_back(TemplateTypeParmDecl::Create(
+          *ast, decl_context,
+          SourceLocation(), SourceLocation(), depth, num_template_params,
+          identifier_info,
+          is_typename, parameter_pack_true));
+    }
+  }
   clang::Expr *const requires_clause = nullptr; // TODO: Concepts
   TemplateParameterList *template_param_list = TemplateParameterList::Create(
       *ast, SourceLocation(), SourceLocation(), template_param_decls,
@@ -1589,10 +1615,19 @@ ClangASTContext::CreateClassTemplateSpecializationDecl(
     DeclContext *decl_ctx, ClassTemplateDecl *class_template_decl, int kind,
     const TemplateParameterInfos &template_param_infos) {
   ASTContext *ast = getASTContext();
+  llvm::SmallVector<clang::TemplateArgument, 2> args(
+      template_param_infos.args.size() +
+      (template_param_infos.packed_args ? 1 : 0));
+  std::copy(template_param_infos.args.begin(), template_param_infos.args.end(),
+            args.begin());
+  if (template_param_infos.packed_args) {
+    args[args.size() - 1] = TemplateArgument::CreatePackCopy(
+        *ast, template_param_infos.packed_args->args);
+  }
   ClassTemplateSpecializationDecl *class_template_specialization_decl =
       ClassTemplateSpecializationDecl::Create(
           *ast, (TagDecl::TagKind)kind, decl_ctx, SourceLocation(),
-          SourceLocation(), class_template_decl, template_param_infos.args,
+          SourceLocation(), class_template_decl, args,
           nullptr);
 
   class_template_specialization_decl->setSpecializationKind(
