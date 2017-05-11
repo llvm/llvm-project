@@ -2,11 +2,6 @@
 # RUN: llc -mtriple=x86_64-linux-gnu -global-isel -regbankselect-greedy -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=GREEDY
 
 --- |
-  ; ModuleID = 'tmp.ll'
-  source_filename = "tmp.ll"
-  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-  target triple = "x86_64--linux-gnu"
-
   define i8 @test_add_i8(i8 %arg1, i8 %arg2) {
     %ret = add i8 %arg1, %arg2
     ret i8 %ret
@@ -118,6 +113,26 @@
     %p1 = getelementptr i32, i32* undef, i32 5
     %p2 = getelementptr i32, i32* undef, i64 5
     ret void
+  }
+
+  define i1 @test_icmp_eq_i8(i8 %a, i8 %b) {
+    %r = icmp eq i8 %a, %b
+    ret i1 %r
+  }
+
+  define i1 @test_icmp_eq_i16(i16 %a, i16 %b) {
+    %r = icmp eq i16 %a, %b
+    ret i1 %r
+  }
+
+  define i1 @test_icmp_eq_i32(i32 %a, i32 %b) {
+    %r = icmp eq i32 %a, %b
+    ret i1 %r
+  }
+
+  define i1 @test_icmp_eq_i64(i64 %a, i64 %b) {
+    %r = icmp eq i64 %a, %b
+    ret i1 %r
   }
 
 ...
@@ -733,5 +748,105 @@ body:             |
     %3(s64) = G_CONSTANT i64 20
     %4(p0) = G_GEP %0, %3(s64)
     RET 0
+
+...
+---
+name:            test_icmp_eq_i8
+# CHECK-LABEL: name:  test_icmp_eq_i8
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr }
+# CHECK-NEXT:   - { id: 1, class: gpr }
+# CHECK-NEXT:   - { id: 2, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s8) = COPY %edi
+    %1(s8) = COPY %esi
+    %2(s1) = G_ICMP intpred(eq), %0(s8), %1
+    %al = COPY %2(s1)
+    RET 0, implicit %al
+
+...
+---
+name:            test_icmp_eq_i16
+# CHECK-LABEL: name:  test_icmp_eq_i16
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr }
+# CHECK-NEXT:   - { id: 1, class: gpr }
+# CHECK-NEXT:   - { id: 2, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s16) = COPY %edi
+    %1(s16) = COPY %esi
+    %2(s1) = G_ICMP intpred(eq), %0(s16), %1
+    %al = COPY %2(s1)
+    RET 0, implicit %al
+
+...
+---
+name:            test_icmp_eq_i32
+# CHECK-LABEL: name:  test_icmp_eq_i32
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr }
+# CHECK-NEXT:   - { id: 1, class: gpr }
+# CHECK-NEXT:   - { id: 2, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s1) = G_ICMP intpred(eq), %0(s32), %1
+    %al = COPY %2(s1)
+    RET 0, implicit %al
+
+...
+---
+name:            test_icmp_eq_i64
+# CHECK-LABEL: name:  test_icmp_eq_i64
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr }
+# CHECK-NEXT:   - { id: 1, class: gpr }
+# CHECK-NEXT:   - { id: 2, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %rsi
+
+    %0(s64) = COPY %rdi
+    %1(s64) = COPY %rsi
+    %2(s1) = G_ICMP intpred(eq), %0(s64), %1
+    %al = COPY %2(s1)
+    RET 0, implicit %al
 
 ...

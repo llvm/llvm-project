@@ -1,6 +1,9 @@
 // RUN: %clangxx_msan -fsanitize-memory-track-origins -O0 %s -o %t && not %run %t >%t.out 2>&1
 // RUN: FileCheck %s < %t.out && FileCheck %s < %t.out
 
+// XFAIL: mips
+// REQUIRES: stable-runtime
+
 #include <assert.h>
 #include <wchar.h>
 

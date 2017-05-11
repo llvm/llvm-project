@@ -96,7 +96,7 @@ std::unique_ptr<Module> llvm::CloneModule(
       else
         GV = new GlobalVariable(
             *New, I->getValueType(), false, GlobalValue::ExternalLinkage,
-            (Constant *)nullptr, I->getName(), (GlobalVariable *)nullptr,
+            nullptr, I->getName(), nullptr,
             I->getThreadLocalMode(), I->getType()->getAddressSpace());
       VMap[&*I] = GV;
       // We do not copy attributes (mainly because copying between different

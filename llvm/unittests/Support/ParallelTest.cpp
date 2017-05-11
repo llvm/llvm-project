@@ -21,6 +21,9 @@ uint32_t array[1024 * 1024];
 
 using namespace llvm;
 
+// Tests below are hanging up on mingw. Investigating.
+#if !defined(__MINGW32__)
+
 TEST(Parallel, sort) {
   std::mt19937 randEngine;
   std::uniform_int_distribution<uint32_t> dist;
@@ -46,3 +49,5 @@ TEST(Parallel, parallel_for) {
   // Check that we don't write past the end of the requested range.
   ASSERT_EQ(range[2049], 1u);
 }
+
+#endif
