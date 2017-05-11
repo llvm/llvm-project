@@ -1699,6 +1699,8 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
       break;
     case DW_TAG_template_value_parameter:
       break;
+    case DW_TAG_GNU_template_parameter_pack:
+      break;
     case DW_TAG_thrown_type:
       break;
     case DW_TAG_try_block:
