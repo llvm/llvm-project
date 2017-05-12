@@ -87,7 +87,7 @@ public:
 
   ~ProcessWindowsData() { ::CloseHandle(m_initial_stop_event); }
 
-  Error m_launch_error;
+  Status m_launch_error;
   DebuggerThreadSP m_debugger;
   StopInfoSP m_pending_stop_info;
   HANDLE m_initial_stop_event = nullptr;
@@ -132,18 +132,18 @@ ProcessWindows::ProcessWindows(lldb::TargetSP target_sp,
 
 ProcessWindows::~ProcessWindows() {}
 
-size_t ProcessWindows::GetSTDOUT(char *buf, size_t buf_size, Error &error) {
+size_t ProcessWindows::GetSTDOUT(char *buf, size_t buf_size, Status &error) {
   error.SetErrorString("GetSTDOUT unsupported on Windows");
   return 0;
 }
 
-size_t ProcessWindows::GetSTDERR(char *buf, size_t buf_size, Error &error) {
+size_t ProcessWindows::GetSTDERR(char *buf, size_t buf_size, Status &error) {
   error.SetErrorString("GetSTDERR unsupported on Windows");
   return 0;
 }
 
 size_t ProcessWindows::PutSTDIN(const char *buf, size_t buf_size,
-                                Error &error) {
+                                Status &error) {
   error.SetErrorString("PutSTDIN unsupported on Windows");
   return 0;
 }
@@ -157,30 +157,30 @@ lldb_private::ConstString ProcessWindows::GetPluginName() {
 
 uint32_t ProcessWindows::GetPluginVersion() { return 1; }
 
-Error ProcessWindows::EnableBreakpointSite(BreakpointSite *bp_site) {
+Status ProcessWindows::EnableBreakpointSite(BreakpointSite *bp_site) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_BREAKPOINTS);
   LLDB_LOG(log, "bp_site = {0:x}, id={1}, addr={2:x}", bp_site,
            bp_site->GetID(), bp_site->GetLoadAddress());
 
-  Error error = EnableSoftwareBreakpoint(bp_site);
+  Status error = EnableSoftwareBreakpoint(bp_site);
   if (!error.Success())
     LLDB_LOG(log, "error: {0}", error);
   return error;
 }
 
-Error ProcessWindows::DisableBreakpointSite(BreakpointSite *bp_site) {
+Status ProcessWindows::DisableBreakpointSite(BreakpointSite *bp_site) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_BREAKPOINTS);
   LLDB_LOG(log, "bp_site = {0:x}, id={1}, addr={2:x}", bp_site,
            bp_site->GetID(), bp_site->GetLoadAddress());
 
-  Error error = DisableSoftwareBreakpoint(bp_site);
+  Status error = DisableSoftwareBreakpoint(bp_site);
 
   if (!error.Success())
     LLDB_LOG(log, "error: {0}", error);
   return error;
 }
 
-Error ProcessWindows::DoDetach(bool keep_stopped) {
+Status ProcessWindows::DoDetach(bool keep_stopped) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
   DebuggerThreadSP debugger_thread;
   StateType private_state;
@@ -196,13 +196,13 @@ Error ProcessWindows::DoDetach(bool keep_stopped) {
     if (!m_session_data) {
       LLDB_LOG(log, "state = {0}, but there is no active session.",
                private_state);
-      return Error();
+      return Status();
     }
 
     debugger_thread = m_session_data->m_debugger;
   }
 
-  Error error;
+  Status error;
   if (private_state != eStateExited && private_state != eStateDetached) {
     LLDB_LOG(log, "detaching from process {0} while state = {1}.",
              debugger_thread->GetProcess().GetNativeProcess().GetSystemHandle(),
@@ -226,8 +226,8 @@ Error ProcessWindows::DoDetach(bool keep_stopped) {
   return error;
 }
 
-Error ProcessWindows::DoLaunch(Module *exe_module,
-                               ProcessLaunchInfo &launch_info) {
+Status ProcessWindows::DoLaunch(Module *exe_module,
+                                ProcessLaunchInfo &launch_info) {
   // Even though m_session_data is accessed here, it is before a debugger thread
   // has been
   // kicked off.  So there's no race conditions, and it shouldn't be necessary
@@ -235,7 +235,7 @@ Error ProcessWindows::DoLaunch(Module *exe_module,
   // the mutex.
 
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
-  Error result;
+  Status result;
   if (!launch_info.GetFlags().Test(eLaunchFlagDebug)) {
     StreamString stream;
     stream.Printf("ProcessWindows unable to launch '%s'.  ProcessWindows can "
@@ -265,7 +265,7 @@ Error ProcessWindows::DoLaunch(Module *exe_module,
   }
 
   HostProcess process;
-  Error error = WaitForDebuggerConnection(debugger, process);
+  Status error = WaitForDebuggerConnection(debugger, process);
   if (error.Fail()) {
     LLDB_LOG(log, "failed launching '{0}'. {1}",
              launch_info.GetExecutableFile().GetPath(), error);
@@ -288,8 +288,9 @@ Error ProcessWindows::DoLaunch(Module *exe_module,
   return result;
 }
 
-Error ProcessWindows::DoAttachToProcessWithID(
-    lldb::pid_t pid, const ProcessAttachInfo &attach_info) {
+Status
+ProcessWindows::DoAttachToProcessWithID(lldb::pid_t pid,
+                                        const ProcessAttachInfo &attach_info) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
   m_session_data.reset(
       new ProcessWindowsData(!attach_info.GetContinueOnceAttached()));
@@ -300,7 +301,7 @@ Error ProcessWindows::DoAttachToProcessWithID(
   m_session_data->m_debugger = debugger;
 
   DWORD process_id = static_cast<DWORD>(pid);
-  Error error = debugger->DebugAttach(process_id, attach_info);
+  Status error = debugger->DebugAttach(process_id, attach_info);
   if (error.Fail()) {
     LLDB_LOG(
         log,
@@ -331,10 +332,10 @@ Error ProcessWindows::DoAttachToProcessWithID(
   return error;
 }
 
-Error ProcessWindows::DoResume() {
+Status ProcessWindows::DoResume() {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
   llvm::sys::ScopedLock lock(m_mutex);
-  Error error;
+  Status error;
 
   StateType private_state = GetPrivateState();
   if (private_state == eStateStopped || private_state == eStateCrashed) {
@@ -369,7 +370,7 @@ Error ProcessWindows::DoResume() {
   return error;
 }
 
-Error ProcessWindows::DoDestroy() {
+Status ProcessWindows::DoDestroy() {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
   DebuggerThreadSP debugger_thread;
   StateType private_state;
@@ -386,13 +387,13 @@ Error ProcessWindows::DoDestroy() {
     if (!m_session_data) {
       LLDB_LOG(log, "warning: state = {0}, but there is no active session.",
                private_state);
-      return Error();
+      return Status();
     }
 
     debugger_thread = m_session_data->m_debugger;
   }
 
-  Error error;
+  Status error;
   if (private_state != eStateExited && private_state != eStateDetached) {
     LLDB_LOG(log, "Shutting down process {0} while state = {1}.",
              debugger_thread->GetProcess().GetNativeProcess().GetSystemHandle(),
@@ -411,9 +412,9 @@ Error ProcessWindows::DoDestroy() {
   return error;
 }
 
-Error ProcessWindows::DoHalt(bool &caused_stop) {
+Status ProcessWindows::DoHalt(bool &caused_stop) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
-  Error error;
+  Status error;
   StateType state = GetPrivateState();
   if (state == eStateStopped)
     caused_stop = false;
@@ -623,7 +624,7 @@ bool ProcessWindows::IsAlive() {
 }
 
 size_t ProcessWindows::DoReadMemory(lldb::addr_t vm_addr, void *buf,
-                                    size_t size, Error &error) {
+                                    size_t size, Status &error) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_MEMORY);
   llvm::sys::ScopedLock lock(m_mutex);
 
@@ -645,7 +646,7 @@ size_t ProcessWindows::DoReadMemory(lldb::addr_t vm_addr, void *buf,
 }
 
 size_t ProcessWindows::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
-                                     size_t size, Error &error) {
+                                     size_t size, Status &error) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_MEMORY);
   llvm::sys::ScopedLock lock(m_mutex);
   LLDB_LOG(log, "attempting to write {0} bytes into address {1:x}", size,
@@ -669,10 +670,10 @@ size_t ProcessWindows::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
   return bytes_written;
 }
 
-Error ProcessWindows::GetMemoryRegionInfo(lldb::addr_t vm_addr,
-                                          MemoryRegionInfo &info) {
+Status ProcessWindows::GetMemoryRegionInfo(lldb::addr_t vm_addr,
+                                           MemoryRegionInfo &info) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_MEMORY);
-  Error error;
+  Status error;
   llvm::sys::ScopedLock lock(m_mutex);
   info.Clear();
 
@@ -807,7 +808,7 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
 
     FileSpec executable_file(file_name, true);
     ModuleSpec module_spec(executable_file);
-    Error error;
+    Status error;
     module = GetTarget().GetSharedModule(module_spec, &error);
     if (!module) {
       return;
@@ -931,7 +932,7 @@ void ProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
   // GetSharedModule() with
   // a new module will add it to the module list and return a corresponding
   // ModuleSP.
-  Error error;
+  Status error;
   ModuleSP module = GetTarget().GetSharedModule(module_spec, &error);
   bool load_addr_changed = false;
   module->SetLoadAddress(GetTarget(), module_addr, false, load_addr_changed);
@@ -955,7 +956,7 @@ void ProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
 
 void ProcessWindows::OnDebugString(const std::string &string) {}
 
-void ProcessWindows::OnDebuggerError(const Error &error, uint32_t type) {
+void ProcessWindows::OnDebuggerError(const Status &error, uint32_t type) {
   llvm::sys::ScopedLock lock(m_mutex);
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
 
@@ -981,9 +982,9 @@ void ProcessWindows::OnDebuggerError(const Error &error, uint32_t type) {
   }
 }
 
-Error ProcessWindows::WaitForDebuggerConnection(DebuggerThreadSP debugger,
-                                                HostProcess &process) {
-  Error result;
+Status ProcessWindows::WaitForDebuggerConnection(DebuggerThreadSP debugger,
+                                                 HostProcess &process) {
+  Status result;
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS |
                                             WINDOWS_LOG_BREAKPOINTS);
   LLDB_LOG(log, "Waiting for loader breakpoint.");
@@ -996,7 +997,7 @@ Error ProcessWindows::WaitForDebuggerConnection(DebuggerThreadSP debugger,
     process = debugger->GetProcess();
     return m_session_data->m_launch_error;
   } else
-    return Error(::GetLastError(), eErrorTypeWin32);
+    return Status(::GetLastError(), eErrorTypeWin32);
 }
 
 // The Windows page protection bits are NOT independent masks that can be

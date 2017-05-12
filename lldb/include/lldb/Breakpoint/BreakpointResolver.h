@@ -140,7 +140,7 @@ public:
 
   static lldb::BreakpointResolverSP
   CreateFromStructuredData(const StructuredData::Dictionary &resolver_dict,
-                           Error &error);
+                           Status &error);
 
   virtual StructuredData::ObjectSP SerializeToStructuredData() {
     return StructuredData::ObjectSP();
@@ -192,7 +192,7 @@ public:
 
   static const char *ResolverTyToName(enum ResolverTy);
 
-  static ResolverTy NameToResolverTy(const char *name);
+  static ResolverTy NameToResolverTy(llvm::StringRef name);
 
   virtual lldb::BreakpointResolverSP
   CopyForBreakpoint(Breakpoint &breakpoint) = 0;

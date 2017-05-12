@@ -24,15 +24,11 @@ ThreadMemory::ThreadMemory(Process &process, tid_t tid,
     : Thread(process, tid), m_backing_thread_sp(),
       m_thread_info_valobj_sp(thread_info_valobj_sp), m_name(), m_queue() {}
 
-ThreadMemory::ThreadMemory(Process &process, lldb::tid_t tid, const char *name,
-                           const char *queue, lldb::addr_t register_data_addr)
+ThreadMemory::ThreadMemory(Process &process, lldb::tid_t tid,
+                           llvm::StringRef name, llvm::StringRef queue,
+                           lldb::addr_t register_data_addr)
     : Thread(process, tid), m_backing_thread_sp(), m_thread_info_valobj_sp(),
-      m_name(), m_queue(), m_register_data_addr(register_data_addr) {
-  if (name)
-    m_name = name;
-  if (queue)
-    m_queue = queue;
-}
+      m_name(name), m_queue(queue), m_register_data_addr(register_data_addr) {}
 
 ThreadMemory::~ThreadMemory() { DestroyThread(); }
 

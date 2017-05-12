@@ -56,11 +56,11 @@ const char *FindSchemeByProtocol(const Socket::SocketProtocol protocol) {
 }
 }
 
-Error Acceptor::Listen(int backlog) {
+Status Acceptor::Listen(int backlog) {
   return m_listener_socket_up->Listen(StringRef(m_name), backlog);
 }
 
-Error Acceptor::Accept(const bool child_processes_inherit, Connection *&conn) {
+Status Acceptor::Accept(const bool child_processes_inherit, Connection *&conn) {
   Socket *conn_socket = nullptr;
   auto error = m_listener_socket_up->Accept(conn_socket);
   if (error.Success())
@@ -81,7 +81,7 @@ std::string Acceptor::GetLocalSocketId() const { return m_local_socket_id(); }
 
 std::unique_ptr<Acceptor> Acceptor::Create(StringRef name,
                                            const bool child_processes_inherit,
-                                           Error &error) {
+                                           Status &error) {
   error.Clear();
 
   Socket::SocketProtocol socket_protocol = Socket::ProtocolUnixDomain;

@@ -37,9 +37,9 @@ public:
     return llvm::ArrayRef<OptionDefinition>(&m_option_definition, 1);
   }
 
-  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
-                       ExecutionContext *execution_context) override;
-  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
+  Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+                        ExecutionContext *execution_context) override;
+  Status SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 
@@ -70,9 +70,9 @@ public:
     return llvm::ArrayRef<OptionDefinition>(&m_option_definition, 1);
   }
 
-  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
-                       ExecutionContext *execution_context) override;
-  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
+  Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+                        ExecutionContext *execution_context) override;
+  Status SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 

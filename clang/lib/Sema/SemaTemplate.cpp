@@ -1330,8 +1330,8 @@ Sema::CheckClassTemplate(Scope *S, unsigned TagSpec, TagUseKind TUK,
           auto *Tmpl = cast<CXXRecordDecl>(Hidden)->getDescribedClassTemplate();
           assert(Tmpl && "original definition of a class template is not a "
                          "class template?");
-          makeMergedDefinitionVisible(Hidden, KWLoc);
-          makeMergedDefinitionVisible(Tmpl, KWLoc);
+          makeMergedDefinitionVisible(Hidden);
+          makeMergedDefinitionVisible(Tmpl);
           return Def;
         }
 
@@ -7431,7 +7431,7 @@ Sema::ActOnClassTemplateSpecialization(Scope *S, unsigned TagSpec,
     NamedDecl *Hidden = nullptr;
     if (Def && SkipBody && !hasVisibleDefinition(Def, &Hidden)) {
       SkipBody->ShouldSkip = true;
-      makeMergedDefinitionVisible(Hidden, KWLoc);
+      makeMergedDefinitionVisible(Hidden);
       // From here on out, treat this as just a redeclaration.
       TUK = TUK_Declaration;
     } else if (Def) {

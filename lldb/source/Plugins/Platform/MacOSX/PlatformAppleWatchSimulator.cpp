@@ -23,9 +23,9 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
@@ -171,10 +171,10 @@ void PlatformAppleWatchSimulator::GetStatus(Stream &strm) {
     strm.PutCString("  SDK Path: error: unable to locate SDK\n");
 }
 
-Error PlatformAppleWatchSimulator::ResolveExecutable(
+Status PlatformAppleWatchSimulator::ResolveExecutable(
     const ModuleSpec &module_spec, lldb::ModuleSP &exe_module_sp,
     const FileSpecList *module_search_paths_ptr) {
-  Error error;
+  Status error;
   // Nothing special to do here, just use the actual file and architecture
 
   ModuleSpec resolved_module_spec(module_spec);
@@ -301,10 +301,10 @@ const char *PlatformAppleWatchSimulator::GetSDKDirectoryAsCString() {
   return NULL;
 }
 
-Error PlatformAppleWatchSimulator::GetSymbolFile(const FileSpec &platform_file,
-                                                 const UUID *uuid_ptr,
-                                                 FileSpec &local_file) {
-  Error error;
+Status PlatformAppleWatchSimulator::GetSymbolFile(const FileSpec &platform_file,
+                                                  const UUID *uuid_ptr,
+                                                  FileSpec &local_file) {
+  Status error;
   char platform_file_path[PATH_MAX];
   if (platform_file.GetPath(platform_file_path, sizeof(platform_file_path))) {
     char resolved_path[PATH_MAX];
@@ -333,7 +333,7 @@ Error PlatformAppleWatchSimulator::GetSymbolFile(const FileSpec &platform_file,
   return error;
 }
 
-Error PlatformAppleWatchSimulator::GetSharedModule(
+Status PlatformAppleWatchSimulator::GetSharedModule(
     const ModuleSpec &module_spec, lldb_private::Process *process,
     ModuleSP &module_sp, const FileSpecList *module_search_paths_ptr,
     ModuleSP *old_module_sp_ptr, bool *did_create_ptr) {
@@ -341,7 +341,7 @@ Error PlatformAppleWatchSimulator::GetSharedModule(
   // system. So first we ask for the file in the cached SDK,
   // then we attempt to get a shared module for the right architecture
   // with the right UUID.
-  Error error;
+  Status error;
   ModuleSpec platform_module_spec(module_spec);
   const FileSpec &platform_file = module_spec.GetFileSpec();
   error = GetSymbolFile(platform_file, module_spec.GetUUIDPtr(),

@@ -12,9 +12,9 @@
 
 #include "lldb/Core/Event.h"
 #include "lldb/Core/StructuredData.h"
-#include "lldb/Utility/Error.h"
-#include "lldb/Utility/Stream.h"
 #include "lldb/Target/StructuredDataPlugin.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-forward.h"
 
 #pragma mark--
@@ -45,8 +45,8 @@ public:
     m_data_sp.reset();
   }
 
-  Error GetAsJSON(Stream &stream) const {
-    Error error;
+  Status GetAsJSON(Stream &stream) const {
+    Status error;
 
     if (!m_data_sp) {
       error.SetErrorString("No structured data.");
@@ -57,8 +57,8 @@ public:
     return error;
   }
 
-  Error GetDescription(Stream &stream) const {
-    Error error;
+  Status GetDescription(Stream &stream) const {
+    Status error;
 
     if (!m_data_sp) {
       error.SetErrorString("Cannot pretty print structured data: "

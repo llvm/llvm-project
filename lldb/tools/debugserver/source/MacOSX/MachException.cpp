@@ -267,7 +267,7 @@ kern_return_t MachException::Message::Receive(mach_port_t port,
                     exc_msg.hdr.msgh_reserved, exc_msg.hdr.msgh_id, options, 0,
                     sizeof(exc_msg.data), port, mach_msg_timeout, notify_port);
   }
-  return err.Error();
+  return err.Status();
 }
 
 bool MachException::Message::CatchExceptionRaise(task_t task) {
@@ -349,7 +349,7 @@ kern_return_t MachException::Message::Reply(MachProcess *process, int signal) {
                    MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
 
   if (err.Fail()) {
-    if (err.Error() == MACH_SEND_INTERRUPTED) {
+    if (err.Status() == MACH_SEND_INTERRUPTED) {
       if (DNBLogCheckLogBit(LOG_EXCEPTIONS))
         err.LogThreaded("::mach_msg() - send interrupted");
       // TODO: keep retrying to reply???
@@ -357,7 +357,7 @@ kern_return_t MachException::Message::Reply(MachProcess *process, int signal) {
       if (state.task_port == process->Task().TaskPort()) {
         DNBLogThreaded("error: mach_msg() returned an error when replying to a "
                        "mach exception: error = %u",
-                       err.Error());
+                       err.Status());
       } else {
         if (DNBLogCheckLogBit(LOG_EXCEPTIONS))
           err.LogThreaded("::mach_msg() - failed (child of task)");
@@ -365,7 +365,7 @@ kern_return_t MachException::Message::Reply(MachProcess *process, int signal) {
     }
   }
 
-  return err.Error();
+  return err.Status();
 }
 
 void MachException::Data::Dump() const {
@@ -430,7 +430,7 @@ kern_return_t MachException::PortInfo::Save(task_t task) {
                     "maskCnt => %u, ports, behaviors, flavors )",
                     task, mask, count);
 
-  if (err.Error() == KERN_INVALID_ARGUMENT && mask != PREV_EXC_MASK_ALL) {
+  if (err.Status() == KERN_INVALID_ARGUMENT && mask != PREV_EXC_MASK_ALL) {
     mask = PREV_EXC_MASK_ALL;
     count = (sizeof(ports) / sizeof(ports[0]));
     err = ::task_get_exception_ports(task, mask, masks, &count, ports,
@@ -444,7 +444,7 @@ kern_return_t MachException::PortInfo::Save(task_t task) {
     mask = 0;
     count = 0;
   }
-  return err.Error();
+  return err.Status();
 }
 
 kern_return_t MachException::PortInfo::Restore(task_t task) {
@@ -469,7 +469,7 @@ kern_return_t MachException::PortInfo::Restore(task_t task) {
     }
   }
   count = 0;
-  return err.Error();
+  return err.Status();
 }
 
 const char *MachException::Name(exception_type_t exc_type) {

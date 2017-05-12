@@ -17,7 +17,7 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -52,20 +52,20 @@ static OptionDefinition g_variable_options[] = {
      "Specify a summary string to use to format the variable output."},
 };
 
-static Error ValidateNamedSummary(const char *str, void *) {
+static Status ValidateNamedSummary(const char *str, void *) {
   if (!str || !str[0])
-    return Error("must specify a valid named summary");
+    return Status("must specify a valid named summary");
   TypeSummaryImplSP summary_sp;
   if (DataVisualization::NamedSummaryFormats::GetSummaryFormat(
           ConstString(str), summary_sp) == false)
-    return Error("must specify a valid named summary");
-  return Error();
+    return Status("must specify a valid named summary");
+  return Status();
 }
 
-static Error ValidateSummaryString(const char *str, void *) {
+static Status ValidateSummaryString(const char *str, void *) {
   if (!str || !str[0])
-    return Error("must specify a non-empty summary string");
-  return Error();
+    return Status("must specify a non-empty summary string");
+  return Status();
 }
 
 OptionGroupVariable::OptionGroupVariable(bool show_frame_options)
@@ -74,10 +74,11 @@ OptionGroupVariable::OptionGroupVariable(bool show_frame_options)
 
 OptionGroupVariable::~OptionGroupVariable() {}
 
-Error OptionGroupVariable::SetOptionValue(uint32_t option_idx,
-                                          llvm::StringRef option_arg,
-                                          ExecutionContext *execution_context) {
-  Error error;
+Status
+OptionGroupVariable::SetOptionValue(uint32_t option_idx,
+                                    llvm::StringRef option_arg,
+                                    ExecutionContext *execution_context) {
+  Status error;
   if (!include_frame_options)
     option_idx += 3;
   const int short_option = g_variable_options[option_idx].short_option;

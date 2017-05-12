@@ -2837,4 +2837,54 @@ define <8 x float> @test_xorps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
   ret <8 x float> %8
 }
 
+define void @test_zeroall() {
+; SANDY-LABEL: test_zeroall:
+; SANDY:       # BB#0:
+; SANDY-NEXT:    vzeroall # sched: [?:0.000000e+00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_zeroall:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    vzeroall # sched: [1:0.00]
+; HASWELL-NEXT:    retq # sched: [1:1.00]
+;
+; BTVER2-LABEL: test_zeroall:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    vzeroall # sched: [?:0.000000e+00]
+; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_zeroall:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    vzeroall # sched: [?:0.000000e+00]
+; ZNVER1-NEXT:    retq # sched: [4:1.00]
+  call void @llvm.x86.avx.vzeroall()
+  ret void
+}
+declare void @llvm.x86.avx.vzeroall() nounwind
+
+define void @test_zeroupper() {
+; SANDY-LABEL: test_zeroupper:
+; SANDY:       # BB#0:
+; SANDY-NEXT:    vzeroupper # sched: [?:0.000000e+00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_zeroupper:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    vzeroupper # sched: [1:0.00]
+; HASWELL-NEXT:    retq # sched: [1:1.00]
+;
+; BTVER2-LABEL: test_zeroupper:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    vzeroupper # sched: [?:0.000000e+00]
+; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_zeroupper:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    vzeroupper # sched: [?:0.000000e+00]
+; ZNVER1-NEXT:    retq # sched: [4:1.00]
+  call void @llvm.x86.avx.vzeroupper()
+  ret void
+}
+declare void @llvm.x86.avx.vzeroupper() nounwind
+
 !0 = !{i32 1}

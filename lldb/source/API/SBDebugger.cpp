@@ -57,7 +57,7 @@ using namespace lldb_private;
 
 static llvm::sys::DynamicLibrary LoadPlugin(const lldb::DebuggerSP &debugger_sp,
                                             const FileSpec &spec,
-                                            Error &error) {
+                                            Status &error) {
   llvm::sys::DynamicLibrary dynlib =
       llvm::sys::DynamicLibrary::getPermanentLibrary(spec.GetPath().c_str());
   if (dynlib.isValid()) {
@@ -551,7 +551,7 @@ SBDebugger::CreateTargetWithFileAndTargetTriple(const char *filename,
   TargetSP target_sp;
   if (m_opaque_sp) {
     const bool add_dependent_modules = true;
-    Error error(m_opaque_sp->GetTargetList().CreateTarget(
+    Status error(m_opaque_sp->GetTargetList().CreateTarget(
         *m_opaque_sp, filename, target_triple, add_dependent_modules, nullptr,
         target_sp));
     sb_target.SetSP(target_sp);
@@ -574,7 +574,7 @@ SBTarget SBDebugger::CreateTargetWithFileAndArch(const char *filename,
   SBTarget sb_target;
   TargetSP target_sp;
   if (m_opaque_sp) {
-    Error error;
+    Status error;
     const bool add_dependent_modules = true;
 
     error = m_opaque_sp->GetTargetList().CreateTarget(
@@ -600,7 +600,7 @@ SBTarget SBDebugger::CreateTarget(const char *filename) {
   SBTarget sb_target;
   TargetSP target_sp;
   if (m_opaque_sp) {
-    Error error;
+    Status error;
     const bool add_dependent_modules = true;
     error = m_opaque_sp->GetTargetList().CreateTarget(
         *m_opaque_sp, filename, "", add_dependent_modules, nullptr, target_sp);
@@ -873,7 +873,7 @@ SBError SBDebugger::SetInternalVariable(const char *var_name, const char *value,
   SBError sb_error;
   DebuggerSP debugger_sp(Debugger::FindDebuggerWithInstanceName(
       ConstString(debugger_instance_name)));
-  Error error;
+  Status error;
   if (debugger_sp) {
     ExecutionContext exe_ctx(
         debugger_sp->GetCommandInterpreter().GetExecutionContext());
@@ -894,7 +894,7 @@ SBDebugger::GetInternalVariableValue(const char *var_name,
   SBStringList ret_value;
   DebuggerSP debugger_sp(Debugger::FindDebuggerWithInstanceName(
       ConstString(debugger_instance_name)));
-  Error error;
+  Status error;
   if (debugger_sp) {
     ExecutionContext exe_ctx(
         debugger_sp->GetCommandInterpreter().GetExecutionContext());

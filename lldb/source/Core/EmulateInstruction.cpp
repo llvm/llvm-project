@@ -19,7 +19,7 @@
 #include "lldb/Target/StackFrame.h"   // for StackFrame
 #include "lldb/Utility/ConstString.h" // for ConstString
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h" // for Stream, Stream::::eBinary
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-forward.h"            // for ProcessSP
@@ -263,7 +263,7 @@ size_t EmulateInstruction::ReadMemoryFrame(EmulateInstruction *instruction,
 
   ProcessSP process_sp(frame->CalculateProcess());
   if (process_sp) {
-    Error error;
+    Status error;
     return process_sp->ReadMemory(addr, dst, dst_len, error);
   }
   return 0;
@@ -280,7 +280,7 @@ size_t EmulateInstruction::WriteMemoryFrame(EmulateInstruction *instruction,
 
   ProcessSP process_sp(frame->CalculateProcess());
   if (process_sp) {
-    Error error;
+    Status error;
     return process_sp->WriteMemory(addr, src, src_len, error);
   }
 

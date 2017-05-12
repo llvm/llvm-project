@@ -27,7 +27,7 @@ namespace lldb_private {
 class DataExtractor;
 }
 namespace lldb_private {
-class Error;
+class Status;
 }
 
 using namespace lldb;
@@ -39,7 +39,7 @@ ValueObjectConstResultImpl::ValueObjectConstResultImpl(
       m_live_address_type(eAddressTypeLoad), m_load_addr_backend(),
       m_address_of_backend() {}
 
-lldb::ValueObjectSP ValueObjectConstResultImpl::Dereference(Error &error) {
+lldb::ValueObjectSP ValueObjectConstResultImpl::Dereference(Status &error) {
   if (m_impl_backend == NULL)
     return lldb::ValueObjectSP();
 
@@ -108,7 +108,7 @@ lldb::ValueObjectSP ValueObjectConstResultImpl::GetSyntheticChildAtOffset(
       offset, type, can_create, name_const_str);
 }
 
-lldb::ValueObjectSP ValueObjectConstResultImpl::AddressOf(Error &error) {
+lldb::ValueObjectSP ValueObjectConstResultImpl::AddressOf(Status &error) {
   if (m_address_of_backend.get() != NULL)
     return m_address_of_backend;
 

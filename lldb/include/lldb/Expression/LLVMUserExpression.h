@@ -81,7 +81,7 @@ protected:
             lldb::ExpressionVariableSP &result) override;
 
   virtual void ScanContext(ExecutionContext &exe_ctx,
-                           lldb_private::Error &err) = 0;
+                           lldb_private::Status &err) = 0;
 
   bool PrepareToExecuteJITExpression(DiagnosticManager &diagnostic_manager,
                                      ExecutionContext &exe_ctx,

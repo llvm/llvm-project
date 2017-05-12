@@ -3543,7 +3543,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(Operand.getValueType().bitsLT(VT) &&
            "Invalid sext node, dst < src!");
     if (OpOpcode == ISD::SIGN_EXTEND || OpOpcode == ISD::ZERO_EXTEND)
-      return getNode(OpOpcode, DL, VT, Operand.getNode()->getOperand(0));
+      return getNode(OpOpcode, DL, VT, Operand.getOperand(0));
     else if (OpOpcode == ISD::UNDEF)
       // sext(undef) = 0, because the top bits will all be the same.
       return getConstant(0, DL, VT);
@@ -3559,8 +3559,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(Operand.getValueType().bitsLT(VT) &&
            "Invalid zext node, dst < src!");
     if (OpOpcode == ISD::ZERO_EXTEND)   // (zext (zext x)) -> (zext x)
-      return getNode(ISD::ZERO_EXTEND, DL, VT,
-                     Operand.getNode()->getOperand(0));
+      return getNode(ISD::ZERO_EXTEND, DL, VT, Operand.getOperand(0));
     else if (OpOpcode == ISD::UNDEF)
       // zext(undef) = 0, because the top bits will be zero.
       return getConstant(0, DL, VT);
@@ -3579,13 +3578,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (OpOpcode == ISD::ZERO_EXTEND || OpOpcode == ISD::SIGN_EXTEND ||
         OpOpcode == ISD::ANY_EXTEND)
       // (ext (zext x)) -> (zext x)  and  (ext (sext x)) -> (sext x)
-      return getNode(OpOpcode, DL, VT, Operand.getNode()->getOperand(0));
+      return getNode(OpOpcode, DL, VT, Operand.getOperand(0));
     else if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
 
     // (ext (trunx x)) -> x
     if (OpOpcode == ISD::TRUNCATE) {
-      SDValue OpOp = Operand.getNode()->getOperand(0);
+      SDValue OpOp = Operand.getOperand(0);
       if (OpOp.getValueType() == VT)
         return OpOp;
     }
@@ -3601,16 +3600,16 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(Operand.getValueType().bitsGT(VT) &&
            "Invalid truncate node, src < dst!");
     if (OpOpcode == ISD::TRUNCATE)
-      return getNode(ISD::TRUNCATE, DL, VT, Operand.getNode()->getOperand(0));
+      return getNode(ISD::TRUNCATE, DL, VT, Operand.getOperand(0));
     if (OpOpcode == ISD::ZERO_EXTEND || OpOpcode == ISD::SIGN_EXTEND ||
         OpOpcode == ISD::ANY_EXTEND) {
       // If the source is smaller than the dest, we still need an extend.
-      if (Operand.getNode()->getOperand(0).getValueType().getScalarType()
+      if (Operand.getOperand(0).getValueType().getScalarType()
             .bitsLT(VT.getScalarType()))
-        return getNode(OpOpcode, DL, VT, Operand.getNode()->getOperand(0));
-      if (Operand.getNode()->getOperand(0).getValueType().bitsGT(VT))
-        return getNode(ISD::TRUNCATE, DL, VT, Operand.getNode()->getOperand(0));
-      return Operand.getNode()->getOperand(0);
+        return getNode(OpOpcode, DL, VT, Operand.getOperand(0));
+      if (Operand.getOperand(0).getValueType().bitsGT(VT))
+        return getNode(ISD::TRUNCATE, DL, VT, Operand.getOperand(0));
+      return Operand.getOperand(0);
     }
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
@@ -3665,15 +3664,14 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // -(X-Y) -> (Y-X) is unsafe because when X==Y, -0.0 != +0.0
     if (getTarget().Options.UnsafeFPMath && OpOpcode == ISD::FSUB)
       // FIXME: FNEG has no fast-math-flags to propagate; use the FSUB's flags?
-      return getNode(ISD::FSUB, DL, VT, Operand.getNode()->getOperand(1),
-                     Operand.getNode()->getOperand(0),
-                     Operand.getNode()->getFlags());
+      return getNode(ISD::FSUB, DL, VT, Operand.getOperand(1),
+                     Operand.getOperand(0), Operand.getNode()->getFlags());
     if (OpOpcode == ISD::FNEG)  // --X -> X
-      return Operand.getNode()->getOperand(0);
+      return Operand.getOperand(0);
     break;
   case ISD::FABS:
     if (OpOpcode == ISD::FNEG)  // abs(-X) -> abs(X)
-      return getNode(ISD::FABS, DL, VT, Operand.getNode()->getOperand(0));
+      return getNode(ISD::FABS, DL, VT, Operand.getOperand(0));
     break;
   }
 

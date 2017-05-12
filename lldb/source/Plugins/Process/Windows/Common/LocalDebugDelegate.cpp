@@ -62,7 +62,7 @@ void LocalDebugDelegate::OnDebugString(const std::string &string) {
     process->OnDebugString(string);
 }
 
-void LocalDebugDelegate::OnDebuggerError(const Error &error, uint32_t type) {
+void LocalDebugDelegate::OnDebuggerError(const Status &error, uint32_t type) {
   if (ProcessWindowsSP process = GetProcessPointer())
     process->OnDebuggerError(error, type);
 }

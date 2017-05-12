@@ -1,4 +1,6 @@
-; RUN: llc < %s -O=3 -mtriple=arm64-apple-ios  -mcpu=cyclone -enable-unsafe-fp-math | FileCheck %s
+; RUN: llc < %s -O3 -mtriple=arm64-apple-ios -enable-unsafe-fp-math | FileCheck %s
+; RUN: llc < %s -O3 -mtriple=arm64-apple-ios -fp-contract=fast | FileCheck %s
+
 define void @foo_2d(double* %src) {
 entry:
   %arrayidx1 = getelementptr inbounds double, double* %src, i64 5
@@ -125,4 +127,24 @@ for.body:                                         ; preds = %for.body, %entry
 
 for.end:                                          ; preds = %for.body
   ret void
+}
+
+; CHECK-LABEL: test1:
+; CHECK: fnmadd s0, s0, s1, s2
+define float @test1(float %a, float %b, float %c) {
+entry:
+  %0 = fmul float %a, %b
+  %mul = fsub float -0.000000e+00, %0
+  %sub1 = fsub float %mul, %c
+  ret float %sub1
+}
+
+; CHECK-LABEL: test2:
+; CHECK: fnmadd d0, d0, d1, d2
+define double @test2(double %a, double %b, double %c) {
+entry:
+  %0 = fmul double %a, %b
+  %mul = fsub double -0.000000e+00, %0
+  %sub1 = fsub double %mul, %c
+  ret double %sub1
 }

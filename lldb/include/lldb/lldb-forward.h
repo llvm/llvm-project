@@ -87,7 +87,7 @@ class DynamicCheckerFunctions;
 class DynamicLoader;
 class Editline;
 class EmulateInstruction;
-class Error;
+class Status;
 class EvaluateExpressionOptions;
 class Event;
 class EventData;

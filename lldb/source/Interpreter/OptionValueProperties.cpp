@@ -116,8 +116,8 @@ OptionValueProperties::GetValueForKey(const ExecutionContext *exe_ctx,
 
 lldb::OptionValueSP
 OptionValueProperties::GetSubValue(const ExecutionContext *exe_ctx,
-  llvm::StringRef name, bool will_modify,
-                                   Error &error) const {
+                                   llvm::StringRef name, bool will_modify,
+                                   Status &error) const {
   lldb::OptionValueSP value_sp;
   if (name.empty())
     return OptionValueSP();
@@ -201,10 +201,11 @@ OptionValueProperties::GetSubValue(const ExecutionContext *exe_ctx,
   return value_sp;
 }
 
-Error OptionValueProperties::SetSubValue(const ExecutionContext *exe_ctx,
-                                         VarSetOperationType op,
-                                         llvm::StringRef name, llvm::StringRef value) {
-  Error error;
+Status OptionValueProperties::SetSubValue(const ExecutionContext *exe_ctx,
+                                          VarSetOperationType op,
+                                          llvm::StringRef name,
+                                          llvm::StringRef value) {
+  Status error;
   const bool will_modify = true;
   lldb::OptionValueSP value_sp(GetSubValue(exe_ctx, name, will_modify, error));
   if (value_sp)
@@ -523,9 +524,9 @@ bool OptionValueProperties::Clear() {
   return true;
 }
 
-Error OptionValueProperties::SetValueFromString(llvm::StringRef value,
-                                                VarSetOperationType op) {
-  Error error;
+Status OptionValueProperties::SetValueFromString(llvm::StringRef value,
+                                                 VarSetOperationType op) {
+  Status error;
 
   //    Args args(value_cstr);
   //    const size_t argc = args.GetArgumentCount();
@@ -564,11 +565,11 @@ void OptionValueProperties::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
-Error OptionValueProperties::DumpPropertyValue(const ExecutionContext *exe_ctx,
-                                               Stream &strm,
-                                               llvm::StringRef property_path,
-                                               uint32_t dump_mask) {
-  Error error;
+Status OptionValueProperties::DumpPropertyValue(const ExecutionContext *exe_ctx,
+                                                Stream &strm,
+                                                llvm::StringRef property_path,
+                                                uint32_t dump_mask) {
+  Status error;
   const bool will_modify = false;
   lldb::OptionValueSP value_sp(
       GetSubValue(exe_ctx, property_path, will_modify, error));

@@ -51,7 +51,7 @@ DynamicCheckerFunctions::~DynamicCheckerFunctions() = default;
 
 bool DynamicCheckerFunctions::Install(DiagnosticManager &diagnostic_manager,
                                       ExecutionContext &exe_ctx) {
-  Error error;
+  Status error;
   m_valid_pointer_check.reset(
       exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
           g_valid_pointer_check_text, lldb::eLanguageTypeC,

@@ -15,6 +15,10 @@
 
 // ~tuple();
 
+// C++17 added:
+//   The destructor of tuple shall be a trivial destructor 
+//     if (is_trivially_destructible_v<Types> && ...) is true.
+
 #include <tuple>
 #include <string>
 #include <cassert>

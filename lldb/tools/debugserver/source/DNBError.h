@@ -49,7 +49,7 @@ public:
     m_flavor = Generic;
     m_str.clear();
   }
-  ValueType Error() const { return m_err; }
+  ValueType Status() const { return m_err; }
   FlavorType Flavor() const { return m_flavor; }
 
   ValueType operator=(kern_return_t err) {

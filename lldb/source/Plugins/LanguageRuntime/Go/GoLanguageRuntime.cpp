@@ -27,8 +27,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "llvm/ADT/Twine.h"
 
 #include <vector>
@@ -42,7 +42,7 @@ ValueObjectSP GetChild(ValueObject &obj, const char *name,
   ConstString name_const_str(name);
   ValueObjectSP result = obj.GetChildMemberWithName(name_const_str, true);
   if (dereference && result && result->IsPointerType()) {
-    Error err;
+    Status err;
     result = result->Dereference(err);
     if (err.Fail())
       result.reset();
@@ -55,7 +55,7 @@ ConstString ReadString(ValueObject &str, Process *process) {
   ValueObjectSP data = GetChild(str, "str", false);
   ValueObjectSP len = GetChild(str, "len");
   if (len && data) {
-    Error err;
+    Status err;
     lldb::addr_t addr = data->GetPointerValue();
     if (addr == LLDB_INVALID_ADDRESS)
       return result;
@@ -97,7 +97,7 @@ CompilerType LookupRuntimeType(ValueObjectSP type, ExecutionContext *exe_ctx,
   *is_direct = GoASTContext::IsDirectIface(kind);
   if (GoASTContext::IsPointerKind(kind)) {
     CompilerType type_ptr = type->GetCompilerType().GetPointerType();
-    Error err;
+    Status err;
     ValueObjectSP elem =
         type->CreateValueObjectFromAddress("elem", type->GetAddressOf() +
                                                        type->GetByteSize(),
@@ -138,7 +138,7 @@ bool GoLanguageRuntime::GetDynamicTypeAndAddress(
   value_type = Value::eValueTypeScalar;
   class_type_or_name.Clear();
   if (CouldHaveDynamicValue(in_value)) {
-    Error err;
+    Status err;
     ValueObjectSP iface = in_value.GetStaticValue();
     ValueObjectSP data_sp = GetChild(*iface, "data", false);
     if (!data_sp)

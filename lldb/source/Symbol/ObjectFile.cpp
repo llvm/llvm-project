@@ -454,7 +454,7 @@ DataBufferSP ObjectFile::ReadMemory(const ProcessSP &process_sp,
   DataBufferSP data_sp;
   if (process_sp) {
     std::unique_ptr<DataBufferHeap> data_ap(new DataBufferHeap(byte_size, 0));
-    Error error;
+    Status error;
     const size_t bytes_read = process_sp->ReadMemory(
         addr, data_ap->GetBytes(), data_ap->GetByteSize(), error);
     if (bytes_read == byte_size)
@@ -493,7 +493,7 @@ size_t ObjectFile::ReadSectionData(const Section *section,
   if (IsInMemory()) {
     ProcessSP process_sp(m_process_wp.lock());
     if (process_sp) {
-      Error error;
+      Status error;
       const addr_t base_load_addr =
           section->GetLoadBaseAddress(&process_sp->GetTarget());
       if (base_load_addr != LLDB_INVALID_ADDRESS)
@@ -654,17 +654,17 @@ ConstString ObjectFile::GetNextSyntheticSymbolName() {
   return ConstString(ss.GetString());
 }
 
-Error ObjectFile::LoadInMemory(Target &target, bool set_pc) {
-  Error error;
+Status ObjectFile::LoadInMemory(Target &target, bool set_pc) {
+  Status error;
   ProcessSP process = target.CalculateProcess();
   if (!process)
-    return Error("No Process");
+    return Status("No Process");
   if (set_pc && !GetEntryPointAddress().IsValid())
-    return Error("No entry address in object file");
+    return Status("No entry address in object file");
 
   SectionList *section_list = GetSectionList();
   if (!section_list)
-      return Error("No section in object file");
+    return Status("No section in object file");
   size_t section_count = section_list->GetNumSections(0);
   for (size_t i = 0; i < section_count; ++i) {
     SectionSP section_sp = section_list->GetSectionAtIndex(i);

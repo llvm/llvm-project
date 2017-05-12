@@ -10,7 +10,7 @@
 #ifndef liblldb_Scalar_h_
 #define liblldb_Scalar_h_
 
-#include "lldb/Utility/Error.h"      // for Error
+#include "lldb/Utility/Status.h"     // for Status
 #include "lldb/lldb-enumerations.h"  // for Encoding, ByteOrder
 #include "lldb/lldb-private-types.h" // for type128
 
@@ -146,7 +146,7 @@ public:
   bool GetData(DataExtractor &data, size_t limit_byte_size = UINT32_MAX) const;
 
   size_t GetAsMemoryData(void *dst, size_t dst_len,
-                         lldb::ByteOrder dst_byte_order, Error &error) const;
+                         lldb::ByteOrder dst_byte_order, Status &error) const;
 
   bool IsZero() const;
 
@@ -272,11 +272,11 @@ public:
 
   long double LongDouble(long double fail_value = 0.0) const;
 
-  Error SetValueFromCString(const char *s, lldb::Encoding encoding,
-                            size_t byte_size);
+  Status SetValueFromCString(const char *s, lldb::Encoding encoding,
+                             size_t byte_size);
 
-  Error SetValueFromData(DataExtractor &data, lldb::Encoding encoding,
-                         size_t byte_size);
+  Status SetValueFromData(DataExtractor &data, lldb::Encoding encoding,
+                          size_t byte_size);
 
   static bool UIntValueIsValidForSize(uint64_t uval64, size_t total_byte_size) {
     if (total_byte_size > 8)

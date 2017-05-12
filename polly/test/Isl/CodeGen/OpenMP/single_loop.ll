@@ -70,8 +70,7 @@
 ; IR-NEXT:   %[[gep:[._a-zA-Z0-9]*]] = getelementptr [1024 x float], [1024 x float]* {{.*}}, i64 0, i64 %polly.indvar
 ; IR-NEXT:   store float 1.000000e+00, float* %[[gep]]
 ; IR-NEXT:   %polly.indvar_next = add nsw i64 %polly.indvar, 1
-; IR-NEXT:   %polly.adjust_ub = sub i64 %polly.par.UBAdjusted, 1
-; IR-NEXT:   %polly.loop_cond = icmp sle i64 %polly.indvar, %polly.adjust_ub
+; IR-NEXT:   %polly.loop_cond = icmp sle i64 %polly.indvar_next, %polly.par.UBAdjusted
 ; IR-NEXT:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit
 
 ; IR-LABEL: polly.loop_preheader:

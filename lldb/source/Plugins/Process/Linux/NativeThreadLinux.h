@@ -41,14 +41,14 @@ public:
 
   NativeRegisterContextSP GetRegisterContext() override;
 
-  Error SetWatchpoint(lldb::addr_t addr, size_t size, uint32_t watch_flags,
-                      bool hardware) override;
+  Status SetWatchpoint(lldb::addr_t addr, size_t size, uint32_t watch_flags,
+                       bool hardware) override;
 
-  Error RemoveWatchpoint(lldb::addr_t addr) override;
+  Status RemoveWatchpoint(lldb::addr_t addr) override;
 
-  Error SetHardwareBreakpoint(lldb::addr_t addr, size_t size) override;
+  Status SetHardwareBreakpoint(lldb::addr_t addr, size_t size) override;
 
-  Error RemoveHardwareBreakpoint(lldb::addr_t addr) override;
+  Status RemoveHardwareBreakpoint(lldb::addr_t addr) override;
 
 private:
   // ---------------------------------------------------------------------
@@ -57,11 +57,11 @@ private:
 
   /// Resumes the thread.  If @p signo is anything but
   /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
-  Error Resume(uint32_t signo);
+  Status Resume(uint32_t signo);
 
   /// Single steps the thread.  If @p signo is anything but
   /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
-  Error SingleStep(uint32_t signo);
+  Status SingleStep(uint32_t signo);
 
   void SetStoppedBySignal(uint32_t signo, const siginfo_t *info = nullptr);
 
@@ -86,7 +86,7 @@ private:
 
   void SetExited();
 
-  Error RequestStop();
+  Status RequestStop();
 
   // ---------------------------------------------------------------------
   // Private interface

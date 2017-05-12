@@ -281,7 +281,7 @@ size_t SBProcess::PutSTDIN(const char *src, size_t src_len) {
   size_t ret_val = 0;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    Error error;
+    Status error;
     ret_val = process_sp->PutSTDIN(src, src_len, error);
   }
 
@@ -298,7 +298,7 @@ size_t SBProcess::GetSTDOUT(char *dst, size_t dst_len) const {
   size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    Error error;
+    Status error;
     bytes_read = process_sp->GetSTDOUT(dst, dst_len, error);
   }
 
@@ -317,7 +317,7 @@ size_t SBProcess::GetSTDERR(char *dst, size_t dst_len) const {
   size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    Error error;
+    Status error;
     bytes_read = process_sp->GetSTDERR(dst, dst_len, error);
   }
 
@@ -336,7 +336,7 @@ size_t SBProcess::GetAsyncProfileData(char *dst, size_t dst_len) const {
   size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    Error error;
+    Status error;
     bytes_read = process_sp->GetAsyncProfileData(dst, dst_len, error);
   }
 

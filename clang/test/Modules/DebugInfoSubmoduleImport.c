@@ -2,6 +2,11 @@
 // RUN: %clang_cc1 -fmodules -fmodule-format=obj -debug-info-kind=limited -dwarf-ext-refs \
 // RUN:     -fimplicit-module-maps -x c -fmodules-cache-path=%t -I %S/Inputs \
 // RUN:     %s -emit-llvm -debugger-tuning=lldb -o - | FileCheck %s
+//
+// RUN: %clang_cc1 -fmodules -fmodule-format=obj -debug-info-kind=limited -dwarf-ext-refs \
+// RUN:     -fimplicit-module-maps -x c -fmodules-cache-path=%t -I %S/Inputs \
+// RUN:     -fmodules-local-submodule-visibility \
+// RUN:     %s -emit-llvm -debugger-tuning=lldb -o - | FileCheck %s
 #include "DebugSubmoduleA.h"
 #include "DebugSubmoduleB.h"
 

@@ -210,7 +210,6 @@ class DwarfDebug : public DebugHandlerBase {
   DenseMap<const MCSymbol *, uint64_t> SymSize;
 
   /// Collection of abstract variables.
-  DenseMap<const MDNode *, std::unique_ptr<DbgVariable>> AbstractVariables;
   SmallVector<std::unique_ptr<DbgVariable>, 64> ConcreteVariables;
 
   /// Collection of DebugLocEntry. Stored in a linked list so that DIELocLists
@@ -313,20 +312,16 @@ class DwarfDebug : public DebugHandlerBase {
 
   typedef DbgValueHistoryMap::InlinedVariable InlinedVariable;
 
-  /// Find abstract variable associated with Var.
-  DbgVariable *getExistingAbstractVariable(InlinedVariable IV,
-                                           const DILocalVariable *&Cleansed);
-  DbgVariable *getExistingAbstractVariable(InlinedVariable IV);
-  void createAbstractVariable(const DILocalVariable *DV, LexicalScope *Scope);
-  void ensureAbstractVariableIsCreated(InlinedVariable Var,
+  void ensureAbstractVariableIsCreated(DwarfCompileUnit &CU, InlinedVariable Var,
                                        const MDNode *Scope);
-  void ensureAbstractVariableIsCreatedIfScoped(InlinedVariable Var,
+  void ensureAbstractVariableIsCreatedIfScoped(DwarfCompileUnit &CU, InlinedVariable Var,
                                                const MDNode *Scope);
 
-  DbgVariable *createConcreteVariable(LexicalScope &Scope, InlinedVariable IV);
+  DbgVariable *createConcreteVariable(DwarfCompileUnit &TheCU,
+                                      LexicalScope &Scope, InlinedVariable IV);
 
   /// Construct a DIE for this abstract scope.
-  void constructAbstractSubprogramScopeDIE(LexicalScope *Scope);
+  void constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU, LexicalScope *Scope);
 
   void finishVariableDefinitions();
 
@@ -446,7 +441,8 @@ class DwarfDebug : public DebugHandlerBase {
                          const DbgValueHistoryMap::InstrRanges &Ranges);
 
   /// Collect variable information from the side table maintained by MF.
-  void collectVariableInfoFromMFTable(DenseSet<InlinedVariable> &P);
+  void collectVariableInfoFromMFTable(DwarfCompileUnit &TheCU,
+                                      DenseSet<InlinedVariable> &P);
 
 protected:
   /// Gather pre-function debug information.
@@ -517,6 +513,8 @@ public:
   /// Returns whether or not to change the current debug info for the
   /// split dwarf proposal support.
   bool useSplitDwarf() const { return HasSplitDwarf; }
+
+  bool shareAcrossDWOCUs() const;
 
   /// Returns the Dwarf Version.
   uint16_t getDwarfVersion() const;

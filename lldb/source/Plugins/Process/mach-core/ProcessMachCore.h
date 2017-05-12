@@ -19,7 +19,7 @@
 // Project includes
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 class ThreadKDP;
 
@@ -54,7 +54,7 @@ public:
   //------------------------------------------------------------------
   // Creating a new process, or attaching to an existing one
   //------------------------------------------------------------------
-  lldb_private::Error DoLoadCore() override;
+  lldb_private::Status DoLoadCore() override;
 
   lldb_private::DynamicLoader *GetDynamicLoader() override;
 
@@ -68,7 +68,7 @@ public:
   //------------------------------------------------------------------
   // Process Control
   //------------------------------------------------------------------
-  lldb_private::Error DoDestroy() override;
+  lldb_private::Status DoDestroy() override;
 
   void RefreshStateAfterStop() override;
 
@@ -83,12 +83,12 @@ public:
   // Process Memory
   //------------------------------------------------------------------
   size_t ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                    lldb_private::Error &error) override;
+                    lldb_private::Status &error) override;
 
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Error &error) override;
+                      lldb_private::Status &error) override;
 
-  lldb_private::Error
+  lldb_private::Status
   GetMemoryRegionInfo(lldb::addr_t load_addr,
                       lldb_private::MemoryRegionInfo &region_info) override;
 

@@ -40,21 +40,24 @@ using namespace llvm;
 
 typedef enum {
   NoHWMult,
-  HWMultIntr,
-  HWMultNoIntr
+  HWMult16,
+  HWMult32,
+  HWMultF5
 } HWMultUseMode;
 
 static cl::opt<HWMultUseMode>
-HWMultMode("msp430-hwmult-mode", cl::Hidden,
+HWMultMode("mhwmult", cl::Hidden,
            cl::desc("Hardware multiplier use mode"),
-           cl::init(HWMultNoIntr),
+           cl::init(NoHWMult),
            cl::values(
-             clEnumValN(NoHWMult, "no",
+             clEnumValN(NoHWMult, "none",
                 "Do not use hardware multiplier"),
-             clEnumValN(HWMultIntr, "interrupts",
-                "Assume hardware multiplier can be used inside interrupts"),
-             clEnumValN(HWMultNoIntr, "use",
-                "Assume hardware multiplier cannot be used inside interrupts")));
+             clEnumValN(HWMult16, "16bit",
+                "Use 16-bit hardware multiplier"),
+             clEnumValN(HWMult32, "32bit",
+                "Use 32-bit hardware multiplier"),
+             clEnumValN(HWMultF5, "f5series",
+                "Use F5 series hardware multiplier")));
 
 MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
                                            const MSP430Subtarget &STI)
@@ -131,29 +134,29 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1,   Expand);
 
   // FIXME: Implement efficiently multiplication by a constant
-  setOperationAction(ISD::MUL,              MVT::i8,    Expand);
-  setOperationAction(ISD::MULHS,            MVT::i8,    Expand);
-  setOperationAction(ISD::MULHU,            MVT::i8,    Expand);
-  setOperationAction(ISD::SMUL_LOHI,        MVT::i8,    Expand);
-  setOperationAction(ISD::UMUL_LOHI,        MVT::i8,    Expand);
-  setOperationAction(ISD::MUL,              MVT::i16,   Expand);
+  setOperationAction(ISD::MUL,              MVT::i8,    Promote);
+  setOperationAction(ISD::MULHS,            MVT::i8,    Promote);
+  setOperationAction(ISD::MULHU,            MVT::i8,    Promote);
+  setOperationAction(ISD::SMUL_LOHI,        MVT::i8,    Promote);
+  setOperationAction(ISD::UMUL_LOHI,        MVT::i8,    Promote);
+  setOperationAction(ISD::MUL,              MVT::i16,   LibCall);
   setOperationAction(ISD::MULHS,            MVT::i16,   Expand);
   setOperationAction(ISD::MULHU,            MVT::i16,   Expand);
   setOperationAction(ISD::SMUL_LOHI,        MVT::i16,   Expand);
   setOperationAction(ISD::UMUL_LOHI,        MVT::i16,   Expand);
 
-  setOperationAction(ISD::UDIV,             MVT::i8,    Expand);
-  setOperationAction(ISD::UDIVREM,          MVT::i8,    Expand);
-  setOperationAction(ISD::UREM,             MVT::i8,    Expand);
-  setOperationAction(ISD::SDIV,             MVT::i8,    Expand);
-  setOperationAction(ISD::SDIVREM,          MVT::i8,    Expand);
-  setOperationAction(ISD::SREM,             MVT::i8,    Expand);
-  setOperationAction(ISD::UDIV,             MVT::i16,   Expand);
+  setOperationAction(ISD::UDIV,             MVT::i8,    Promote);
+  setOperationAction(ISD::UDIVREM,          MVT::i8,    Promote);
+  setOperationAction(ISD::UREM,             MVT::i8,    Promote);
+  setOperationAction(ISD::SDIV,             MVT::i8,    Promote);
+  setOperationAction(ISD::SDIVREM,          MVT::i8,    Promote);
+  setOperationAction(ISD::SREM,             MVT::i8,    Promote);
+  setOperationAction(ISD::UDIV,             MVT::i16,   LibCall);
   setOperationAction(ISD::UDIVREM,          MVT::i16,   Expand);
-  setOperationAction(ISD::UREM,             MVT::i16,   Expand);
-  setOperationAction(ISD::SDIV,             MVT::i16,   Expand);
+  setOperationAction(ISD::UREM,             MVT::i16,   LibCall);
+  setOperationAction(ISD::SDIV,             MVT::i16,   LibCall);
   setOperationAction(ISD::SDIVREM,          MVT::i16,   Expand);
-  setOperationAction(ISD::SREM,             MVT::i16,   Expand);
+  setOperationAction(ISD::SREM,             MVT::i16,   LibCall);
 
   // varargs support
   setOperationAction(ISD::VASTART,          MVT::Other, Custom);
@@ -162,14 +165,182 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VACOPY,           MVT::Other, Expand);
   setOperationAction(ISD::JumpTable,        MVT::i16,   Custom);
 
-  // Libcalls names.
-  if (HWMultMode == HWMultIntr) {
-    setLibcallName(RTLIB::MUL_I8,  "__mulqi3hw");
-    setLibcallName(RTLIB::MUL_I16, "__mulhi3hw");
-  } else if (HWMultMode == HWMultNoIntr) {
-    setLibcallName(RTLIB::MUL_I8,  "__mulqi3hw_noint");
-    setLibcallName(RTLIB::MUL_I16, "__mulhi3hw_noint");
+  // EABI Libcalls - EABI Section 6.2
+  const struct {
+    const RTLIB::Libcall Op;
+    const char * const Name;
+    const ISD::CondCode Cond;
+  } LibraryCalls[] = {
+    // Floating point conversions - EABI Table 6
+    { RTLIB::FPROUND_F64_F32,   "__mspabi_cvtdf",   ISD::SETCC_INVALID },
+    { RTLIB::FPEXT_F32_F64,     "__mspabi_cvtfd",   ISD::SETCC_INVALID },
+    // The following is NOT implemented in libgcc
+    //{ RTLIB::FPTOSINT_F64_I16,  "__mspabi_fixdi", ISD::SETCC_INVALID },
+    { RTLIB::FPTOSINT_F64_I32,  "__mspabi_fixdli",  ISD::SETCC_INVALID },
+    { RTLIB::FPTOSINT_F64_I64,  "__mspabi_fixdlli", ISD::SETCC_INVALID },
+    // The following is NOT implemented in libgcc
+    //{ RTLIB::FPTOUINT_F64_I16,  "__mspabi_fixdu", ISD::SETCC_INVALID },
+    { RTLIB::FPTOUINT_F64_I32,  "__mspabi_fixdul",  ISD::SETCC_INVALID },
+    { RTLIB::FPTOUINT_F64_I64,  "__mspabi_fixdull", ISD::SETCC_INVALID },
+    // The following is NOT implemented in libgcc
+    //{ RTLIB::FPTOSINT_F32_I16,  "__mspabi_fixfi", ISD::SETCC_INVALID },
+    { RTLIB::FPTOSINT_F32_I32,  "__mspabi_fixfli",  ISD::SETCC_INVALID },
+    { RTLIB::FPTOSINT_F32_I64,  "__mspabi_fixflli", ISD::SETCC_INVALID },
+    // The following is NOT implemented in libgcc
+    //{ RTLIB::FPTOUINT_F32_I16,  "__mspabi_fixfu", ISD::SETCC_INVALID },
+    { RTLIB::FPTOUINT_F32_I32,  "__mspabi_fixful",  ISD::SETCC_INVALID },
+    { RTLIB::FPTOUINT_F32_I64,  "__mspabi_fixfull", ISD::SETCC_INVALID },
+    // TODO The following IS implemented in libgcc
+    //{ RTLIB::SINTTOFP_I16_F64,  "__mspabi_fltid", ISD::SETCC_INVALID },
+    { RTLIB::SINTTOFP_I32_F64,  "__mspabi_fltlid",  ISD::SETCC_INVALID },
+    // TODO The following IS implemented in libgcc but is not in the EABI
+    { RTLIB::SINTTOFP_I64_F64,  "__mspabi_fltllid", ISD::SETCC_INVALID },
+    // TODO The following IS implemented in libgcc
+    //{ RTLIB::UINTTOFP_I16_F64,  "__mspabi_fltud", ISD::SETCC_INVALID },
+    { RTLIB::UINTTOFP_I32_F64,  "__mspabi_fltuld",  ISD::SETCC_INVALID },
+    // The following IS implemented in libgcc but is not in the EABI
+    { RTLIB::UINTTOFP_I64_F64,  "__mspabi_fltulld", ISD::SETCC_INVALID },
+    // TODO The following IS implemented in libgcc
+    //{ RTLIB::SINTTOFP_I16_F32,  "__mspabi_fltif", ISD::SETCC_INVALID },
+    { RTLIB::SINTTOFP_I32_F32,  "__mspabi_fltlif",  ISD::SETCC_INVALID },
+    // TODO The following IS implemented in libgcc but is not in the EABI
+    { RTLIB::SINTTOFP_I64_F32,  "__mspabi_fltllif", ISD::SETCC_INVALID },
+    // TODO The following IS implemented in libgcc
+    //{ RTLIB::UINTTOFP_I16_F32,  "__mspabi_fltuf", ISD::SETCC_INVALID },
+    { RTLIB::UINTTOFP_I32_F32,  "__mspabi_fltulf",  ISD::SETCC_INVALID },
+    // The following IS implemented in libgcc but is not in the EABI
+    { RTLIB::UINTTOFP_I64_F32,  "__mspabi_fltullf", ISD::SETCC_INVALID },
+
+    // Floating point comparisons - EABI Table 7
+    { RTLIB::OEQ_F64, "__mspabi_cmpd", ISD::SETEQ },
+    { RTLIB::UNE_F64, "__mspabi_cmpd", ISD::SETNE },
+    { RTLIB::OGE_F64, "__mspabi_cmpd", ISD::SETGE },
+    { RTLIB::OLT_F64, "__mspabi_cmpd", ISD::SETLT },
+    { RTLIB::OLE_F64, "__mspabi_cmpd", ISD::SETLE },
+    { RTLIB::OGT_F64, "__mspabi_cmpd", ISD::SETGT },
+    { RTLIB::OEQ_F32, "__mspabi_cmpf", ISD::SETEQ },
+    { RTLIB::UNE_F32, "__mspabi_cmpf", ISD::SETNE },
+    { RTLIB::OGE_F32, "__mspabi_cmpf", ISD::SETGE },
+    { RTLIB::OLT_F32, "__mspabi_cmpf", ISD::SETLT },
+    { RTLIB::OLE_F32, "__mspabi_cmpf", ISD::SETLE },
+    { RTLIB::OGT_F32, "__mspabi_cmpf", ISD::SETGT },
+
+    // Floating point arithmetic - EABI Table 8
+    { RTLIB::ADD_F64,  "__mspabi_addd", ISD::SETCC_INVALID },
+    { RTLIB::ADD_F32,  "__mspabi_addf", ISD::SETCC_INVALID },
+    { RTLIB::DIV_F64,  "__mspabi_divd", ISD::SETCC_INVALID },
+    { RTLIB::DIV_F32,  "__mspabi_divf", ISD::SETCC_INVALID },
+    { RTLIB::MUL_F64,  "__mspabi_mpyd", ISD::SETCC_INVALID },
+    { RTLIB::MUL_F32,  "__mspabi_mpyf", ISD::SETCC_INVALID },
+    { RTLIB::SUB_F64,  "__mspabi_subd", ISD::SETCC_INVALID },
+    { RTLIB::SUB_F32,  "__mspabi_subf", ISD::SETCC_INVALID },
+    // The following are NOT implemented in libgcc
+    // { RTLIB::NEG_F64,  "__mspabi_negd", ISD::SETCC_INVALID },
+    // { RTLIB::NEG_F32,  "__mspabi_negf", ISD::SETCC_INVALID },
+
+    // TODO: SLL/SRA/SRL are in libgcc, RLL isn't
+
+    // Universal Integer Operations - EABI Table 9
+    { RTLIB::SDIV_I16,   "__mspabi_divi", ISD::SETCC_INVALID },
+    { RTLIB::SDIV_I32,   "__mspabi_divli", ISD::SETCC_INVALID },
+    { RTLIB::SDIV_I64,   "__mspabi_divlli", ISD::SETCC_INVALID },
+    { RTLIB::UDIV_I16,   "__mspabi_divu", ISD::SETCC_INVALID },
+    { RTLIB::UDIV_I32,   "__mspabi_divul", ISD::SETCC_INVALID },
+    { RTLIB::UDIV_I64,   "__mspabi_divull", ISD::SETCC_INVALID },
+    { RTLIB::SREM_I16,   "__mspabi_remi", ISD::SETCC_INVALID },
+    { RTLIB::SREM_I32,   "__mspabi_remli", ISD::SETCC_INVALID },
+    { RTLIB::SREM_I64,   "__mspabi_remlli", ISD::SETCC_INVALID },
+    { RTLIB::UREM_I16,   "__mspabi_remu", ISD::SETCC_INVALID },
+    { RTLIB::UREM_I32,   "__mspabi_remul", ISD::SETCC_INVALID },
+    { RTLIB::UREM_I64,   "__mspabi_remull", ISD::SETCC_INVALID },
+
+  };
+
+  for (const auto &LC : LibraryCalls) {
+    setLibcallName(LC.Op, LC.Name);
+    if (LC.Cond != ISD::SETCC_INVALID)
+      setCmpLibcallCC(LC.Op, LC.Cond);
   }
+
+  if (HWMultMode == HWMult16) {
+    const struct {
+      const RTLIB::Libcall Op;
+      const char * const Name;
+    } LibraryCalls[] = {
+      // Integer Multiply - EABI Table 9
+      { RTLIB::MUL_I16,   "__mspabi_mpyi_hw" },
+      { RTLIB::MUL_I32,   "__mspabi_mpyl_hw" },
+      { RTLIB::MUL_I64,   "__mspabi_mpyll_hw" },
+      // TODO The __mspabi_mpysl*_hw functions ARE implemented in libgcc
+      // TODO The __mspabi_mpyul*_hw functions ARE implemented in libgcc
+    };
+    for (const auto &LC : LibraryCalls) {
+      setLibcallName(LC.Op, LC.Name);
+    }
+  } else if (HWMultMode == HWMult32) {
+    const struct {
+      const RTLIB::Libcall Op;
+      const char * const Name;
+    } LibraryCalls[] = {
+      // Integer Multiply - EABI Table 9
+      { RTLIB::MUL_I16,   "__mspabi_mpyi_hw" },
+      { RTLIB::MUL_I32,   "__mspabi_mpyl_hw32" },
+      { RTLIB::MUL_I64,   "__mspabi_mpyll_hw32" },
+      // TODO The __mspabi_mpysl*_hw32 functions ARE implemented in libgcc
+      // TODO The __mspabi_mpyul*_hw32 functions ARE implemented in libgcc
+    };
+    for (const auto &LC : LibraryCalls) {
+      setLibcallName(LC.Op, LC.Name);
+    }
+  } else if (HWMultMode == HWMultF5) {
+    const struct {
+      const RTLIB::Libcall Op;
+      const char * const Name;
+    } LibraryCalls[] = {
+      // Integer Multiply - EABI Table 9
+      { RTLIB::MUL_I16,   "__mspabi_mpyi_f5hw" },
+      { RTLIB::MUL_I32,   "__mspabi_mpyl_f5hw" },
+      { RTLIB::MUL_I64,   "__mspabi_mpyll_f5hw" },
+      // TODO The __mspabi_mpysl*_f5hw functions ARE implemented in libgcc
+      // TODO The __mspabi_mpyul*_f5hw functions ARE implemented in libgcc
+    };
+    for (const auto &LC : LibraryCalls) {
+      setLibcallName(LC.Op, LC.Name);
+    }
+  } else { // NoHWMult
+    const struct {
+      const RTLIB::Libcall Op;
+      const char * const Name;
+    } LibraryCalls[] = {
+      // Integer Multiply - EABI Table 9
+      { RTLIB::MUL_I16,   "__mspabi_mpyi" },
+      { RTLIB::MUL_I32,   "__mspabi_mpyl" },
+      { RTLIB::MUL_I64,   "__mspabi_mpyll" },
+      // The __mspabi_mpysl* functions are NOT implemented in libgcc
+      // The __mspabi_mpyul* functions are NOT implemented in libgcc
+    };
+    for (const auto &LC : LibraryCalls) {
+      setLibcallName(LC.Op, LC.Name);
+    }
+    setLibcallCallingConv(RTLIB::MUL_I64, CallingConv::MSP430_BUILTIN);
+  }
+
+  // Several of the runtime library functions use a special calling conv
+  setLibcallCallingConv(RTLIB::UDIV_I64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::UREM_I64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::SDIV_I64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::SREM_I64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::ADD_F64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::SUB_F64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::MUL_F64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::DIV_F64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::OEQ_F64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::UNE_F64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::OGE_F64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::OLT_F64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::OLE_F64, CallingConv::MSP430_BUILTIN);
+  setLibcallCallingConv(RTLIB::OGT_F64, CallingConv::MSP430_BUILTIN);
+  // TODO: __mspabi_srall, __mspabi_srlll, __mspabi_sllll
 
   setMinFunctionAlignment(1);
   setPrefFunctionAlignment(2);
@@ -281,10 +452,27 @@ template<typename ArgT>
 static void AnalyzeArguments(CCState &State,
                              SmallVectorImpl<CCValAssign> &ArgLocs,
                              const SmallVectorImpl<ArgT> &Args) {
-  static const MCPhysReg RegList[] = {
+  static const MCPhysReg CRegList[] = {
     MSP430::R12, MSP430::R13, MSP430::R14, MSP430::R15
   };
-  static const unsigned NbRegs = array_lengthof(RegList);
+  static const unsigned CNbRegs = array_lengthof(CRegList);
+  static const MCPhysReg BuiltinRegList[] = {
+    MSP430::R8, MSP430::R9, MSP430::R10, MSP430::R11,
+    MSP430::R12, MSP430::R13, MSP430::R14, MSP430::R15
+  };
+  static const unsigned BuiltinNbRegs = array_lengthof(BuiltinRegList);
+
+  ArrayRef<MCPhysReg> RegList;
+  unsigned NbRegs;
+
+  bool Builtin = (State.getCallingConv() == CallingConv::MSP430_BUILTIN);
+  if (Builtin) {
+    RegList = BuiltinRegList;
+    NbRegs = BuiltinNbRegs;
+  } else {
+    RegList = CRegList;
+    NbRegs = CNbRegs;
+  }
 
   if (State.isVarArg()) {
     AnalyzeVarArgs(State, Args);
@@ -293,6 +481,11 @@ static void AnalyzeArguments(CCState &State,
 
   SmallVector<unsigned, 4> ArgsParts;
   ParseFunctionArgs(Args, ArgsParts);
+
+  if (Builtin) {
+    assert(ArgsParts.size() == 2 &&
+        "Builtin calling convention requires two arguments");
+  }
 
   unsigned RegsLeft = NbRegs;
   bool UsedStack = false;
@@ -322,6 +515,11 @@ static void AnalyzeArguments(CCState &State,
     }
 
     unsigned Parts = ArgsParts[i];
+
+    if (Builtin) {
+      assert(Parts == 4 &&
+          "Builtin calling convention requires 64-bit arguments");
+    }
 
     if (!UsedStack && Parts == 2 && RegsLeft == 1) {
       // Special case for 32-bit register split, see EABI section 3.3.3
@@ -400,6 +598,7 @@ MSP430TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   switch (CallConv) {
   default:
     llvm_unreachable("Unsupported calling convention");
+  case CallingConv::MSP430_BUILTIN:
   case CallingConv::Fast:
   case CallingConv::C:
     return LowerCCCCallTo(Chain, Callee, CallConv, isVarArg, isTailCall,
@@ -598,7 +797,6 @@ MSP430TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
 /// LowerCCCCallTo - functions arguments are copied from virtual regs to
 /// (physical regs)/(stack frame), CALLSEQ_START and CALLSEQ_END are emitted.
-// TODO: sret.
 SDValue MSP430TargetLowering::LowerCCCCallTo(
     SDValue Chain, SDValue Callee, CallingConv::ID CallConv, bool isVarArg,
     bool isTailCall, const SmallVectorImpl<ISD::OutputArg> &Outs,

@@ -34,7 +34,7 @@ public:
 
   ~GDBRemoteCommunicationServerPlatform() override;
 
-  Error LaunchProcess() override;
+  Status LaunchProcess() override;
 
   // Set both ports to zero to let the platform automatically bind to
   // a port chosen by the OS.
@@ -61,9 +61,9 @@ public:
 
   void SetInferiorArguments(const lldb_private::Args &args);
 
-  Error LaunchGDBServer(const lldb_private::Args &args, std::string hostname,
-                        lldb::pid_t &pid, uint16_t &port,
-                        std::string &socket_name);
+  Status LaunchGDBServer(const lldb_private::Args &args, std::string hostname,
+                         lldb::pid_t &pid, uint16_t &port,
+                         std::string &socket_name);
 
   void SetPendingGdbServer(lldb::pid_t pid, uint16_t port,
                            const std::string &socket_name);

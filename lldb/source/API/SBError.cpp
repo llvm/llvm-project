@@ -9,8 +9,8 @@
 
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 #include <stdarg.h>
 
@@ -21,7 +21,7 @@ SBError::SBError() : m_opaque_ap() {}
 
 SBError::SBError(const SBError &rhs) : m_opaque_ap() {
   if (rhs.IsValid())
-    m_opaque_ap.reset(new Error(*rhs));
+    m_opaque_ap.reset(new Status(*rhs));
 }
 
 SBError::~SBError() {}
@@ -31,7 +31,7 @@ const SBError &SBError::operator=(const SBError &rhs) {
     if (m_opaque_ap.get())
       *m_opaque_ap = *rhs;
     else
-      m_opaque_ap.reset(new Error(*rhs));
+      m_opaque_ap.reset(new Status(*rhs));
   } else
     m_opaque_ap.reset();
 
@@ -108,7 +108,7 @@ void SBError::SetError(uint32_t err, ErrorType type) {
   m_opaque_ap->SetError(err, type);
 }
 
-void SBError::SetError(const Error &lldb_error) {
+void SBError::SetError(const Status &lldb_error) {
   CreateIfNeeded();
   *m_opaque_ap = lldb_error;
 }
@@ -141,19 +141,19 @@ bool SBError::IsValid() const { return m_opaque_ap.get() != NULL; }
 
 void SBError::CreateIfNeeded() {
   if (m_opaque_ap.get() == NULL)
-    m_opaque_ap.reset(new Error());
+    m_opaque_ap.reset(new Status());
 }
 
-lldb_private::Error *SBError::operator->() { return m_opaque_ap.get(); }
+lldb_private::Status *SBError::operator->() { return m_opaque_ap.get(); }
 
-lldb_private::Error *SBError::get() { return m_opaque_ap.get(); }
+lldb_private::Status *SBError::get() { return m_opaque_ap.get(); }
 
-lldb_private::Error &SBError::ref() {
+lldb_private::Status &SBError::ref() {
   CreateIfNeeded();
   return *m_opaque_ap;
 }
 
-const lldb_private::Error &SBError::operator*() const {
+const lldb_private::Status &SBError::operator*() const {
   // Be sure to call "IsValid()" before calling this function or it will crash
   return *m_opaque_ap;
 }

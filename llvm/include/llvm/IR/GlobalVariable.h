@@ -158,17 +158,17 @@ public:
 
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a GlobalVariable) from the GlobalVariable Src to this one.
-  void copyAttributesFrom(const GlobalValue *Src) override;
+  void copyAttributesFrom(const GlobalVariable *Src);
 
   /// removeFromParent - This method unlinks 'this' from the containing module,
   /// but does not delete it.
   ///
-  void removeFromParent() override;
+  void removeFromParent();
 
   /// eraseFromParent - This method unlinks 'this' from the containing module
   /// and deletes it.
   ///
-  void eraseFromParent() override;
+  void eraseFromParent();
 
   /// Drop all references in preparation to destroy the GlobalVariable. This
   /// drops not only the reference to the initializer but also to any metadata.

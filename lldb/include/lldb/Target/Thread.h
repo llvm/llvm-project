@@ -441,16 +441,16 @@ public:
     return GetStackFrameList()->GetCurrentInlinedDepth();
   }
 
-  Error ReturnFromFrameWithIndex(uint32_t frame_idx,
-                                 lldb::ValueObjectSP return_value_sp,
-                                 bool broadcast = false);
+  Status ReturnFromFrameWithIndex(uint32_t frame_idx,
+                                  lldb::ValueObjectSP return_value_sp,
+                                  bool broadcast = false);
 
-  Error ReturnFromFrame(lldb::StackFrameSP frame_sp,
-                        lldb::ValueObjectSP return_value_sp,
-                        bool broadcast = false);
+  Status ReturnFromFrame(lldb::StackFrameSP frame_sp,
+                         lldb::ValueObjectSP return_value_sp,
+                         bool broadcast = false);
 
-  Error JumpToLine(const FileSpec &file, uint32_t line, bool can_leave_function,
-                   std::string *warnings = nullptr);
+  Status JumpToLine(const FileSpec &file, uint32_t line,
+                    bool can_leave_function, std::string *warnings = nullptr);
 
   virtual lldb::StackFrameSP GetFrameWithStackID(const StackID &stack_id) {
     if (stack_id.IsValid())
@@ -530,7 +530,7 @@ public:
   /// @return
   ///     An error that describes anything that went wrong
   //------------------------------------------------------------------
-  virtual Error
+  virtual Status
   StepIn(bool source_step,
          LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate,
          LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
@@ -548,7 +548,7 @@ public:
   /// @return
   ///     An error that describes anything that went wrong
   //------------------------------------------------------------------
-  virtual Error StepOver(
+  virtual Status StepOver(
       bool source_step,
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
 
@@ -561,7 +561,7 @@ public:
   /// @return
   ///     An error that describes anything that went wrong
   //------------------------------------------------------------------
-  virtual Error StepOut();
+  virtual Status StepOut();
 
   //------------------------------------------------------------------
   /// Retrieves the per-thread data area.
@@ -973,7 +973,7 @@ public:
   ///     An error if the thread plan could not be unwound.
   //------------------------------------------------------------------
 
-  Error UnwindInnermostExpression();
+  Status UnwindInnermostExpression();
 
   //------------------------------------------------------------------
   /// Gets the outer-most plan that was popped off the plan stack in the

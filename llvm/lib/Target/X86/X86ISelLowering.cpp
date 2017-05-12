@@ -40,6 +40,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -78,6 +79,17 @@ static cl::opt<int> ExperimentalPrefLoopAlignment(
              "(the last x86-experimental-pref-loop-alignment bits"
              " of the loop header PC will be 0)."),
     cl::Hidden);
+
+/// Call this when the user attempts to do something unsupported, like
+/// returning a double without SSE2 enabled on x86_64. This is not fatal, unlike
+/// report_fatal_error, so calling code should attempt to recover without
+/// crashing.
+static void errorUnsupported(SelectionDAG &DAG, const SDLoc &dl,
+                             const char *Msg) {
+  MachineFunction &MF = DAG.getMachineFunction();
+  DAG.getContext()->diagnose(
+      DiagnosticInfoUnsupported(*MF.getFunction(), Msg, dl.getDebugLoc()));
+}
 
 X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                                      const X86Subtarget &STI)
@@ -2205,15 +2217,17 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     // or SSE or MMX vectors.
     if ((ValVT == MVT::f32 || ValVT == MVT::f64 ||
          VA.getLocReg() == X86::XMM0 || VA.getLocReg() == X86::XMM1) &&
-          (Subtarget.is64Bit() && !Subtarget.hasSSE1())) {
-      report_fatal_error("SSE register return with SSE disabled");
+        (Subtarget.is64Bit() && !Subtarget.hasSSE1())) {
+      errorUnsupported(DAG, dl, "SSE register return with SSE disabled");
+      VA.convertToReg(X86::FP0); // Set reg to FP0, avoid hitting asserts.
+    } else if (ValVT == MVT::f64 &&
+               (Subtarget.is64Bit() && !Subtarget.hasSSE2())) {
+      // Likewise we can't return F64 values with SSE1 only.  gcc does so, but
+      // llvm-gcc has never done it right and no one has noticed, so this
+      // should be OK for now.
+      errorUnsupported(DAG, dl, "SSE2 register return with SSE2 disabled");
+      VA.convertToReg(X86::FP0); // Set reg to FP0, avoid hitting asserts.
     }
-    // Likewise we can't return F64 values with SSE1 only.  gcc does so, but
-    // llvm-gcc has never done it right and no one has noticed, so this
-    // should be OK for now.
-    if (ValVT == MVT::f64 &&
-        (Subtarget.is64Bit() && !Subtarget.hasSSE2()))
-      report_fatal_error("SSE2 register return with SSE2 disabled");
 
     // Returns in ST0/ST1 are handled specially: these are pushed as operands to
     // the RET instruction and handled by the FP Stackifier.
@@ -2526,7 +2540,8 @@ SDValue X86TargetLowering::LowerCallResult(
     // If this is x86-64, and we disabled SSE, we can't return FP values
     if ((CopyVT == MVT::f32 || CopyVT == MVT::f64 || CopyVT == MVT::f128) &&
         ((Is64Bit || Ins[InsIndex].Flags.isInReg()) && !Subtarget.hasSSE1())) {
-      report_fatal_error("SSE register return with SSE disabled");
+      errorUnsupported(DAG, dl, "SSE register return with SSE disabled");
+      VA.convertToReg(X86::FP0); // Set reg to FP0, avoid hitting asserts.
     }
 
     // If we prefer to use the value in xmm registers, copy it out as f80 and

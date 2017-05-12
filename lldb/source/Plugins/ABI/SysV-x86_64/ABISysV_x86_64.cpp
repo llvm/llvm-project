@@ -31,8 +31,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1152,7 +1152,7 @@ bool ABISysV_x86_64::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   sp -= 8;
 
-  Error error;
+  Status error;
   const RegisterInfo *pc_reg_info =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
   const RegisterInfo *sp_reg_info =
@@ -1246,7 +1246,7 @@ static bool ReadIntegerArgument(Scalar &scalar, unsigned int bit_width,
       scalar.SignExtend(bit_width);
   } else {
     uint32_t byte_size = (bit_width + (8 - 1)) / 8;
-    Error error;
+    Status error;
     if (thread.GetProcess()->ReadScalarIntegerFromMemory(
             current_stack_argument, byte_size, is_signed, scalar, error)) {
       current_stack_argument += byte_size;
@@ -1329,9 +1329,9 @@ bool ABISysV_x86_64::GetArgumentValues(Thread &thread,
   return true;
 }
 
-Error ABISysV_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                           lldb::ValueObjectSP &new_value_sp) {
-  Error error;
+Status ABISysV_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                            lldb::ValueObjectSP &new_value_sp) {
+  Status error;
   if (!new_value_sp) {
     error.SetErrorString("Empty value object for return value.");
     return error;
@@ -1357,7 +1357,7 @@ Error ABISysV_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName("rax", 0);
 
     DataExtractor data;
-    Error data_error;
+    Status data_error;
     size_t num_bytes = new_value_sp->GetData(data, data_error);
     if (data_error.Fail()) {
       error.SetErrorStringWithFormat(
@@ -1386,7 +1386,7 @@ Error ABISysV_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
             reg_ctx->GetRegisterInfoByName("xmm0", 0);
         RegisterValue xmm0_value;
         DataExtractor data;
-        Error data_error;
+        Status data_error;
         size_t num_bytes = new_value_sp->GetData(data, data_error);
         if (data_error.Fail()) {
           error.SetErrorStringWithFormat(
@@ -1542,7 +1542,7 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectSimple(
             const ByteOrder byte_order = process_sp->GetByteOrder();
             RegisterValue reg_value;
             if (reg_ctx->ReadRegister(altivec_reg, reg_value)) {
-              Error error;
+              Status error;
               if (reg_value.GetAsMemoryData(
                       altivec_reg, heap_data_ap->GetBytes(),
                       heap_data_ap->GetByteSize(), byte_order, error)) {
@@ -1569,7 +1569,7 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectSimple(
               if (reg_ctx->ReadRegister(altivec_reg, reg_value) &&
                   reg_ctx->ReadRegister(altivec_reg2, reg_value2)) {
 
-                Error error;
+                Status error;
                 if (reg_value.GetAsMemoryData(
                         altivec_reg, heap_data_ap->GetBytes(),
                         altivec_reg->byte_size, byte_order, error) &&

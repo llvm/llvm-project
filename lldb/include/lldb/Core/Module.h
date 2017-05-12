@@ -17,8 +17,8 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/Utility/Error.h"       // for Error
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Status.h" // for Status
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
 #include "lldb/lldb-enumerations.h" // for LanguageType, SymbolType
@@ -652,7 +652,7 @@ public:
   //------------------------------------------------------------------
   bool IsLoadedInTarget(Target *target);
 
-  bool LoadScriptingResourceInTarget(Target *target, Error &error,
+  bool LoadScriptingResourceInTarget(Target *target, Status &error,
                                      Stream *feedback_stream = nullptr);
 
   //------------------------------------------------------------------
@@ -728,7 +728,7 @@ public:
   ///     failed (see the `error` for more information in that case).
   //------------------------------------------------------------------
   ObjectFile *GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
-                                  lldb::addr_t header_addr, Error &error,
+                                  lldb::addr_t header_addr, Status &error,
                                   size_t size_to_read = 512);
   //------------------------------------------------------------------
   /// Get the symbol vendor interface for the current architecture.
@@ -1033,7 +1033,7 @@ public:
   ///
   /// @return
   //------------------------------------------------------------------
-  Error LoadInMemory(Target &target, bool set_pc);
+  Status LoadInMemory(Target &target, bool set_pc);
 
   //----------------------------------------------------------------------
   /// @class LookupInfo Module.h "lldb/Core/Module.h"

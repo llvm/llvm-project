@@ -12,7 +12,7 @@
 #define lldb_Host_ThreadLauncher_h_
 
 #include "lldb/Host/HostThread.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -23,7 +23,7 @@ class ThreadLauncher {
 public:
   static HostThread
   LaunchThread(llvm::StringRef name, lldb::thread_func_t thread_function,
-               lldb::thread_arg_t thread_arg, Error *error_ptr,
+               lldb::thread_arg_t thread_arg, Status *error_ptr,
                size_t min_stack_byte_size = 0); // Minimum stack size in bytes,
                                                 // set stack size to zero for
                                                 // default platform thread stack

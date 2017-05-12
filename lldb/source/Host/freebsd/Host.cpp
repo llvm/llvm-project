@@ -34,8 +34,8 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "lldb/Utility/CleanUp.h"
@@ -248,6 +248,6 @@ size_t Host::GetEnvironment(StringList &env) {
   return i;
 }
 
-Error Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
-  return Error("unimplemented");
+Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
+  return Status("unimplemented");
 }

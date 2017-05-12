@@ -10,7 +10,7 @@
 #include "lldb/API/SBStream.h"
 
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 

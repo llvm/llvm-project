@@ -440,7 +440,7 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope) {
   auto *InlinedSP = getDISubprogram(DS);
   // Find the subprogram's DwarfCompileUnit in the SPMap in case the subprogram
   // was inlined from another compile unit.
-  DIE *OriginDIE = DU->getAbstractSPDies()[InlinedSP];
+  DIE *OriginDIE = getAbstractSPDies()[InlinedSP];
   assert(OriginDIE && "Unable to find original DIE for an inlined subprogram.");
 
   auto ScopeDIE = DIE::get(DIEValueAllocator, dwarf::DW_TAG_inlined_subroutine);
@@ -634,7 +634,7 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
 
 void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
     LexicalScope *Scope) {
-  DIE *&AbsDef = DU->getAbstractSPDies()[Scope->getScopeNode()];
+  DIE *&AbsDef = getAbstractSPDies()[Scope->getScopeNode()];
   if (AbsDef)
     return;
 
@@ -696,7 +696,7 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
 
 void DwarfCompileUnit::finishSubprogramDefinition(const DISubprogram *SP) {
   DIE *D = getDIE(SP);
-  if (DIE *AbsSPDIE = DU->getAbstractSPDies().lookup(SP)) {
+  if (DIE *AbsSPDIE = getAbstractSPDies().lookup(SP)) {
     if (D)
       // If this subprogram has an abstract definition, reference that
       addDIEEntry(*D, dwarf::DW_AT_abstract_origin, *AbsSPDIE);
@@ -706,6 +706,42 @@ void DwarfCompileUnit::finishSubprogramDefinition(const DISubprogram *SP) {
       // And attach the attributes
       applySubprogramAttributesToDefinition(SP, *D);
   }
+}
+
+void DwarfCompileUnit::finishVariableDefinition(const DbgVariable &Var) {
+  DbgVariable *AbsVar = getExistingAbstractVariable(
+      InlinedVariable(Var.getVariable(), Var.getInlinedAt()));
+  auto *VariableDie = Var.getDIE();
+  if (AbsVar && AbsVar->getDIE()) {
+    addDIEEntry(*VariableDie, dwarf::DW_AT_abstract_origin,
+                      *AbsVar->getDIE());
+  } else
+    applyVariableAttributes(Var, *VariableDie);
+}
+
+DbgVariable *DwarfCompileUnit::getExistingAbstractVariable(InlinedVariable IV) {
+  const DILocalVariable *Cleansed;
+  return getExistingAbstractVariable(IV, Cleansed);
+}
+
+// Find abstract variable, if any, associated with Var.
+DbgVariable *DwarfCompileUnit::getExistingAbstractVariable(
+    InlinedVariable IV, const DILocalVariable *&Cleansed) {
+  // More then one inlined variable corresponds to one abstract variable.
+  Cleansed = IV.first;
+  auto &AbstractVariables = getAbstractVariables();
+  auto I = AbstractVariables.find(Cleansed);
+  if (I != AbstractVariables.end())
+    return I->second.get();
+  return nullptr;
+}
+
+void DwarfCompileUnit::createAbstractVariable(const DILocalVariable *Var,
+                                        LexicalScope *Scope) {
+  assert(Scope && Scope->isAbstractScope());
+  auto AbsDbgVariable = make_unique<DbgVariable>(Var, /* IA */ nullptr);
+  DU->addScopeVariable(Scope, AbsDbgVariable.get());
+  getAbstractVariables()[Var] = std::move(AbsDbgVariable);
 }
 
 void DwarfCompileUnit::emitHeader(bool UseOffsets) {

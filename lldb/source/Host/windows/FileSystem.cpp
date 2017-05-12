@@ -27,8 +27,8 @@ const char *FileSystem::DEV_NULL = "nul";
 const char *FileSystem::PATH_CONVERSION_ERROR =
     "Error converting path between UTF-8 and native encoding";
 
-Error FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
-  Error error;
+Status FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
+  Status error;
   std::wstring wsrc, wdst;
   if (!llvm::ConvertUTF8toWide(src.GetCString(), wsrc) ||
       !llvm::ConvertUTF8toWide(dst.GetCString(), wdst))
@@ -48,8 +48,8 @@ Error FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
   return error;
 }
 
-Error FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
-  Error error;
+Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
+  Status error;
   std::wstring wsrc;
   if (!llvm::ConvertUTF8toWide(src.GetCString(), wsrc)) {
     error.SetErrorString(PATH_CONVERSION_ERROR);
@@ -81,8 +81,8 @@ Error FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
   return error;
 }
 
-Error FileSystem::ResolveSymbolicLink(const FileSpec &src, FileSpec &dst) {
-  return Error("ResolveSymbolicLink() isn't implemented on Windows");
+Status FileSystem::ResolveSymbolicLink(const FileSpec &src, FileSpec &dst) {
+  return Status("ResolveSymbolicLink() isn't implemented on Windows");
 }
 
 FILE *FileSystem::Fopen(const char *path, const char *mode) {

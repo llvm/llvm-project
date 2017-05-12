@@ -40,8 +40,8 @@ public:
   HostProcess(lldb::process_t process);
   ~HostProcess();
 
-  Error Terminate();
-  Error GetMainModule(FileSpec &file_spec) const;
+  Status Terminate();
+  Status GetMainModule(FileSpec &file_spec) const;
 
   lldb::pid_t GetProcessId() const;
   bool IsRunning() const;

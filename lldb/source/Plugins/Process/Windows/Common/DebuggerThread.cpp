@@ -19,9 +19,9 @@
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/Windows/Common/ProcessWindowsLog.h"
 
@@ -60,11 +60,11 @@ DebuggerThread::DebuggerThread(DebugDelegateSP debug_delegate)
 
 DebuggerThread::~DebuggerThread() { ::CloseHandle(m_debugging_ended_event); }
 
-Error DebuggerThread::DebugLaunch(const ProcessLaunchInfo &launch_info) {
+Status DebuggerThread::DebugLaunch(const ProcessLaunchInfo &launch_info) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
   LLDB_LOG(log, "launching '{0}'", launch_info.GetExecutableFile().GetPath());
 
-  Error error;
+  Status error;
   DebugLaunchContext *context = new DebugLaunchContext(this, launch_info);
   HostThread slave_thread(ThreadLauncher::LaunchThread(
       "lldb.plugin.process-windows.slave[?]", DebuggerThreadLaunchRoutine,
@@ -76,12 +76,12 @@ Error DebuggerThread::DebugLaunch(const ProcessLaunchInfo &launch_info) {
   return error;
 }
 
-Error DebuggerThread::DebugAttach(lldb::pid_t pid,
-                                  const ProcessAttachInfo &attach_info) {
+Status DebuggerThread::DebugAttach(lldb::pid_t pid,
+                                   const ProcessAttachInfo &attach_info) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
   LLDB_LOG(log, "attaching to '{0}'", pid);
 
-  Error error;
+  Status error;
   DebugAttachContext *context = new DebugAttachContext(this, pid, attach_info);
   HostThread slave_thread(ThreadLauncher::LaunchThread(
       "lldb.plugin.process-windows.slave[?]", DebuggerThreadAttachRoutine,
@@ -120,7 +120,7 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadLaunchRoutine(
   LLDB_LOG(log, "preparing to launch '{0}' on background thread.",
            launch_info.GetExecutableFile().GetPath());
 
-  Error error;
+  Status error;
   ProcessLauncherWindows launcher;
   HostProcess process(launcher.LaunchProcess(launch_info, error));
   // If we couldn't create the process, notify waiters immediately.  Otherwise
@@ -152,7 +152,7 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(
            pid);
 
   if (!DebugActiveProcess((DWORD)pid)) {
-    Error error(::GetLastError(), eErrorTypeWin32);
+    Status error(::GetLastError(), eErrorTypeWin32);
     m_debug_delegate->OnDebuggerError(error, 0);
     return 0;
   }
@@ -167,8 +167,8 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(
   return 0;
 }
 
-Error DebuggerThread::StopDebugging(bool terminate) {
-  Error error;
+Status DebuggerThread::StopDebugging(bool terminate) {
+  Status error;
 
   lldb::pid_t pid = m_process.GetProcessId();
 
@@ -515,7 +515,7 @@ DebuggerThread::HandleRipEvent(const RIP_INFO &info, DWORD thread_id) {
   LLDB_LOG(log, "encountered error {0} (type={1}) in process {2} thread {3}",
            info.dwError, info.dwType, m_process.GetProcessId(), thread_id);
 
-  Error error(info.dwError, eErrorTypeWin32);
+  Status error(info.dwError, eErrorTypeWin32);
   m_debug_delegate->OnDebuggerError(error, info.dwType);
 
   return DBG_CONTINUE;

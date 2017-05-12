@@ -54,6 +54,7 @@ public:
 
   std::string GetAsString(const char *separator = nullptr) const;
 
+  size_t SetFromStringRef(llvm::StringRef str, uint32_t num_uuid_bytes = 16);
   size_t SetFromCString(const char *c_str, uint32_t num_uuid_bytes = 16);
 
   // Decode as many UUID bytes (up to 16) as possible from the C string "cstr"

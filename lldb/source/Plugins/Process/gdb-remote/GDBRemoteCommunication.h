@@ -65,9 +65,9 @@ public:
 
   enum class PacketResult {
     Success = 0,        // Success
-    ErrorSendFailed,    // Error sending the packet
+    ErrorSendFailed,    // Status sending the packet
     ErrorSendAck,       // Didn't get an ack back after sending a packet
-    ErrorReplyFailed,   // Error getting the reply
+    ErrorReplyFailed,   // Status getting the reply
     ErrorReplyTimeout,  // Timed out waiting for reply
     ErrorReplyInvalid,  // Got a reply but it wasn't valid for the packet that
                         // was sent
@@ -131,7 +131,7 @@ public:
   // Start a debugserver instance on the current host using the
   // supplied connection URL.
   //------------------------------------------------------------------
-  Error StartDebugserverProcess(
+  Status StartDebugserverProcess(
       const char *url,
       Platform *platform, // If non nullptr, then check with the platform for
                           // the GDB server binary if it can't be located
@@ -255,8 +255,8 @@ protected:
   // on m_bytes.  The checksum was for the compressed packet.
   bool DecompressPacket();
 
-  Error StartListenThread(const char *hostname = "127.0.0.1",
-                          uint16_t port = 0);
+  Status StartListenThread(const char *hostname = "127.0.0.1",
+                           uint16_t port = 0);
 
   bool JoinListenThread();
 

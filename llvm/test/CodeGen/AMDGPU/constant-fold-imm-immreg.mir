@@ -219,19 +219,19 @@ body:             |
     %34 = V_MOV_B32_e32 63, implicit %exec
 
     %27 = V_AND_B32_e64 %26, %24, implicit %exec
-    FLAT_STORE_DWORD %37, %27, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %37, %27, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %28 = V_AND_B32_e64 %24, %26, implicit %exec
-    FLAT_STORE_DWORD %37, %28, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %37, %28, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %29 = V_AND_B32_e32 %26, %24, implicit %exec
-    FLAT_STORE_DWORD %37, %29, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %37, %29, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %30 = V_AND_B32_e64 %26, %26, implicit %exec
-    FLAT_STORE_DWORD %37, %30, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %37, %30, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %31 = V_AND_B32_e64 %34, %34, implicit %exec
-    FLAT_STORE_DWORD %37, %31, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %37, %31, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     S_ENDPGM
 
@@ -407,34 +407,34 @@ body:             |
     %27 = S_MOV_B32 -4
 
     %11 = V_LSHLREV_B32_e64 12, %10, implicit %exec
-    FLAT_STORE_DWORD %20, %11, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %11, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %12 = V_LSHLREV_B32_e64 %7, 12, implicit %exec
-    FLAT_STORE_DWORD %20, %12, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %12, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %13 = V_LSHL_B32_e64 %7, 12, implicit %exec
-    FLAT_STORE_DWORD %20, %13, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %13, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %14 = V_LSHL_B32_e64 12, %7, implicit %exec
-    FLAT_STORE_DWORD %20, %14, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %14, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %15 = V_LSHL_B32_e64 12, %24, implicit %exec
-    FLAT_STORE_DWORD %20, %15, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %15, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %22 = V_LSHL_B32_e64 %6, 12, implicit %exec
-    FLAT_STORE_DWORD %20, %22, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %22, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %23 = V_LSHL_B32_e64 %6, 32, implicit %exec
-    FLAT_STORE_DWORD %20, %23, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %23, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %25 = V_LSHL_B32_e32 %6, %6, implicit %exec
-    FLAT_STORE_DWORD %20, %25, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %25, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %26 = V_LSHLREV_B32_e32 11, %24, implicit %exec
-    FLAT_STORE_DWORD %20, %26, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %26, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %28 = V_LSHL_B32_e32 %27, %6, implicit %exec
-    FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %28, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     S_ENDPGM
 
@@ -615,34 +615,34 @@ body:             |
     %35 = V_MOV_B32_e32 2, implicit %exec
 
     %11 = V_ASHRREV_I32_e64 8, %10, implicit %exec
-    FLAT_STORE_DWORD %20, %11, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %11, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %12 = V_ASHRREV_I32_e64 %8, %10, implicit %exec
-    FLAT_STORE_DWORD %20, %12, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %12, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %13 = V_ASHR_I32_e64 %7, 3, implicit %exec
-    FLAT_STORE_DWORD %20, %13, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %13, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %14 = V_ASHR_I32_e64 7, %32, implicit %exec
-    FLAT_STORE_DWORD %20, %14, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %14, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %15 = V_ASHR_I32_e64 %27, %24, implicit %exec
-    FLAT_STORE_DWORD %20, %15, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %15, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %22 = V_ASHR_I32_e64 %6, 4, implicit %exec
-    FLAT_STORE_DWORD %20, %22, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %22, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %23 = V_ASHR_I32_e64 %6, %33, implicit %exec
-    FLAT_STORE_DWORD %20, %23, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %23, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %25 = V_ASHR_I32_e32 %34, %34, implicit %exec
-    FLAT_STORE_DWORD %20, %25, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %25, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %26 = V_ASHRREV_I32_e32 11, %10, implicit %exec
-    FLAT_STORE_DWORD %20, %26, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %26, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %28 = V_ASHR_I32_e32 %27, %35, implicit %exec
-    FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %28, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     S_ENDPGM
 
@@ -824,34 +824,34 @@ body:             |
     %35 = V_MOV_B32_e32 2, implicit %exec
 
     %11 = V_LSHRREV_B32_e64 8, %10, implicit %exec
-    FLAT_STORE_DWORD %20, %11, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %11, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %12 = V_LSHRREV_B32_e64 %8, %10, implicit %exec
-    FLAT_STORE_DWORD %20, %12, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %12, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %13 = V_LSHR_B32_e64 %7, 3, implicit %exec
-    FLAT_STORE_DWORD %20, %13, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %13, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %14 = V_LSHR_B32_e64 7, %32, implicit %exec
-    FLAT_STORE_DWORD %20, %14, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %14, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %15 = V_LSHR_B32_e64 %27, %24, implicit %exec
-    FLAT_STORE_DWORD %20, %15, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %15, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %22 = V_LSHR_B32_e64 %6, 4, implicit %exec
-    FLAT_STORE_DWORD %20, %22, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %22, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %23 = V_LSHR_B32_e64 %6, %33, implicit %exec
-    FLAT_STORE_DWORD %20, %23, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %23, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %25 = V_LSHR_B32_e32 %34, %34, implicit %exec
-    FLAT_STORE_DWORD %20, %25, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %25, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %26 = V_LSHRREV_B32_e32 11, %10, implicit %exec
-    FLAT_STORE_DWORD %20, %26, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %26, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     %28 = V_LSHR_B32_e32 %27, %35, implicit %exec
-    FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
+    FLAT_STORE_DWORD %20, %28, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store 4 into %ir.gep.out)
 
     S_ENDPGM
 

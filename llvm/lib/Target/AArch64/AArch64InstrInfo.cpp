@@ -3427,6 +3427,10 @@ static bool getFMAPatterns(MachineInstr &Root,
       Patterns.push_back(MachineCombinerPattern::FMLSv1i32_indexed_OP2);
       Found = true;
     }
+    if (canCombineWithFMUL(MBB, Root.getOperand(1), AArch64::FNMULSrr)) {
+      Patterns.push_back(MachineCombinerPattern::FNMULSUBS_OP1);
+      Found = true;
+    }
     break;
   case AArch64::FSUBDrr:
     if (canCombineWithFMUL(MBB, Root.getOperand(1), AArch64::FMULDrr)) {
@@ -3439,6 +3443,10 @@ static bool getFMAPatterns(MachineInstr &Root,
     } else if (canCombineWithFMUL(MBB, Root.getOperand(2),
                                   AArch64::FMULv1i64_indexed)) {
       Patterns.push_back(MachineCombinerPattern::FMLSv1i64_indexed_OP2);
+      Found = true;
+    }
+    if (canCombineWithFMUL(MBB, Root.getOperand(1), AArch64::FNMULDrr)) {
+      Patterns.push_back(MachineCombinerPattern::FNMULSUBD_OP1);
       Found = true;
     }
     break;
@@ -3495,6 +3503,8 @@ AArch64InstrInfo::isThroughputPattern(MachineCombinerPattern Pattern) const {
   case MachineCombinerPattern::FMULADDD_OP2:
   case MachineCombinerPattern::FMULSUBD_OP1:
   case MachineCombinerPattern::FMULSUBD_OP2:
+  case MachineCombinerPattern::FNMULSUBS_OP1:
+  case MachineCombinerPattern::FNMULSUBD_OP1:
   case MachineCombinerPattern::FMLAv1i32_indexed_OP1:
   case MachineCombinerPattern::FMLAv1i32_indexed_OP2:
   case MachineCombinerPattern::FMLAv1i64_indexed_OP1:
@@ -3996,6 +4006,24 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
   }
+
+  case MachineCombinerPattern::FNMULSUBS_OP1:
+  case MachineCombinerPattern::FNMULSUBD_OP1: {
+    // FNMUL I=A,B,0
+    // FSUB R,I,C
+    // ==> FNMADD R,A,B,C // = -A*B - C
+    // --- Create(FNMADD);
+    if (Pattern == MachineCombinerPattern::FNMULSUBS_OP1) {
+      Opc = AArch64::FNMADDSrrr;
+      RC = &AArch64::FPR32RegClass;
+    } else {
+      Opc = AArch64::FNMADDDrrr;
+      RC = &AArch64::FPR64RegClass;
+    }
+    MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
+    break;
+  }
+
   case MachineCombinerPattern::FMULSUBS_OP2:
   case MachineCombinerPattern::FMULSUBD_OP2: {
     // FMUL I=A,B,0

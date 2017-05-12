@@ -60,6 +60,7 @@ bool patchFunctionEntry(bool Enable, uint32_t FuncId,
 bool patchFunctionExit(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled);
 bool patchFunctionTailExit(bool Enable, uint32_t FuncId,
                            const XRaySledEntry &Sled);
+bool patchCustomEvent(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled);
 
 } // namespace __xray
 
@@ -70,6 +71,7 @@ extern void __xray_FunctionEntry();
 extern void __xray_FunctionExit();
 extern void __xray_FunctionTailExit();
 extern void __xray_ArgLoggerEntry();
+extern void __xray_CustomEvent();
 }
 
 #endif

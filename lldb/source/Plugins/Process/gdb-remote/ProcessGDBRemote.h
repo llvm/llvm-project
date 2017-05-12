@@ -30,7 +30,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "lldb/Utility/StringList.h"
@@ -78,25 +78,25 @@ public:
   //------------------------------------------------------------------
   // Creating a new process, or attaching to an existing one
   //------------------------------------------------------------------
-  Error WillLaunch(Module *module) override;
+  Status WillLaunch(Module *module) override;
 
-  Error DoLaunch(Module *exe_module, ProcessLaunchInfo &launch_info) override;
+  Status DoLaunch(Module *exe_module, ProcessLaunchInfo &launch_info) override;
 
   void DidLaunch() override;
 
-  Error WillAttachToProcessWithID(lldb::pid_t pid) override;
+  Status WillAttachToProcessWithID(lldb::pid_t pid) override;
 
-  Error WillAttachToProcessWithName(const char *process_name,
-                                    bool wait_for_launch) override;
+  Status WillAttachToProcessWithName(const char *process_name,
+                                     bool wait_for_launch) override;
 
-  Error DoConnectRemote(Stream *strm, llvm::StringRef remote_url) override;
+  Status DoConnectRemote(Stream *strm, llvm::StringRef remote_url) override;
 
-  Error WillLaunchOrAttach();
+  Status WillLaunchOrAttach();
 
-  Error DoAttachToProcessWithID(lldb::pid_t pid,
-                                const ProcessAttachInfo &attach_info) override;
+  Status DoAttachToProcessWithID(lldb::pid_t pid,
+                                 const ProcessAttachInfo &attach_info) override;
 
-  Error
+  Status
   DoAttachToProcessWithName(const char *process_name,
                             const ProcessAttachInfo &attach_info) override;
 
@@ -112,19 +112,19 @@ public:
   //------------------------------------------------------------------
   // Process Control
   //------------------------------------------------------------------
-  Error WillResume() override;
+  Status WillResume() override;
 
-  Error DoResume() override;
+  Status DoResume() override;
 
-  Error DoHalt(bool &caused_stop) override;
+  Status DoHalt(bool &caused_stop) override;
 
-  Error DoDetach(bool keep_stopped) override;
+  Status DoDetach(bool keep_stopped) override;
 
   bool DetachRequiresHalt() override { return true; }
 
-  Error DoSignal(int signal) override;
+  Status DoSignal(int signal) override;
 
-  Error DoDestroy() override;
+  Status DoDestroy() override;
 
   void RefreshStateAfterStop() override;
 
@@ -143,41 +143,41 @@ public:
   // Process Memory
   //------------------------------------------------------------------
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      Error &error) override;
+                      Status &error) override;
 
   size_t DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
-                       Error &error) override;
+                       Status &error) override;
 
   lldb::addr_t DoAllocateMemory(size_t size, uint32_t permissions,
-                                Error &error) override;
+                                Status &error) override;
 
-  Error GetMemoryRegionInfo(lldb::addr_t load_addr,
-                            MemoryRegionInfo &region_info) override;
+  Status GetMemoryRegionInfo(lldb::addr_t load_addr,
+                             MemoryRegionInfo &region_info) override;
 
-  Error DoDeallocateMemory(lldb::addr_t ptr) override;
+  Status DoDeallocateMemory(lldb::addr_t ptr) override;
 
   //------------------------------------------------------------------
   // Process STDIO
   //------------------------------------------------------------------
-  size_t PutSTDIN(const char *buf, size_t buf_size, Error &error) override;
+  size_t PutSTDIN(const char *buf, size_t buf_size, Status &error) override;
 
   //----------------------------------------------------------------------
   // Process Breakpoints
   //----------------------------------------------------------------------
-  Error EnableBreakpointSite(BreakpointSite *bp_site) override;
+  Status EnableBreakpointSite(BreakpointSite *bp_site) override;
 
-  Error DisableBreakpointSite(BreakpointSite *bp_site) override;
+  Status DisableBreakpointSite(BreakpointSite *bp_site) override;
 
   //----------------------------------------------------------------------
   // Process Watchpoints
   //----------------------------------------------------------------------
-  Error EnableWatchpoint(Watchpoint *wp, bool notify = true) override;
+  Status EnableWatchpoint(Watchpoint *wp, bool notify = true) override;
 
-  Error DisableWatchpoint(Watchpoint *wp, bool notify = true) override;
+  Status DisableWatchpoint(Watchpoint *wp, bool notify = true) override;
 
-  Error GetWatchpointSupportInfo(uint32_t &num) override;
+  Status GetWatchpointSupportInfo(uint32_t &num) override;
 
-  Error GetWatchpointSupportInfo(uint32_t &num, bool &after) override;
+  Status GetWatchpointSupportInfo(uint32_t &num, bool &after) override;
 
   bool StartNoticingNewThreads() override;
 
@@ -185,7 +185,7 @@ public:
 
   GDBRemoteCommunicationClient &GetGDBRemote() { return m_gdb_comm; }
 
-  Error SendEventData(const char *data) override;
+  Status SendEventData(const char *data) override;
 
   //----------------------------------------------------------------------
   // Override DidExit so we can disconnect from the remote GDB server
@@ -207,8 +207,8 @@ public:
 
   size_t LoadModules() override;
 
-  Error GetFileLoadAddress(const FileSpec &file, bool &is_loaded,
-                           lldb::addr_t &load_addr) override;
+  Status GetFileLoadAddress(const FileSpec &file, bool &is_loaded,
+                            lldb::addr_t &load_addr) override;
 
   void ModulesDidLoad(ModuleList &module_list) override;
 
@@ -216,7 +216,7 @@ public:
   GetLoadedDynamicLibrariesInfos(lldb::addr_t image_list_address,
                                  lldb::addr_t image_count) override;
 
-  Error
+  Status
   ConfigureStructuredData(const ConstString &type_name,
                           const StructuredData::ObjectSP &config_sp) override;
 
@@ -315,9 +315,9 @@ protected:
   bool UpdateThreadList(ThreadList &old_thread_list,
                         ThreadList &new_thread_list) override;
 
-  Error EstablishConnectionIfNeeded(const ProcessInfo &process_info);
+  Status EstablishConnectionIfNeeded(const ProcessInfo &process_info);
 
-  Error LaunchAndConnectToDebugserver(const ProcessInfo &process_info);
+  Status LaunchAndConnectToDebugserver(const ProcessInfo &process_info);
 
   void KillDebugserverProcess();
 
@@ -379,7 +379,7 @@ protected:
 
   void DidLaunchOrAttach(ArchSpec &process_arch);
 
-  Error ConnectToDebugserver(llvm::StringRef host_port);
+  Status ConnectToDebugserver(llvm::StringRef host_port);
 
   const char *GetDispatchQueueNameForThread(lldb::addr_t thread_dispatch_qaddr,
                                             std::string &dispatch_queue_name);
@@ -390,14 +390,14 @@ protected:
   bool GetGDBServerRegisterInfo(ArchSpec &arch);
 
   // Query remote GDBServer for a detailed loaded library list
-  Error GetLoadedModuleList(LoadedModuleInfoList &);
+  Status GetLoadedModuleList(LoadedModuleInfoList &);
 
   lldb::ModuleSP LoadModuleAtAddress(const FileSpec &file,
                                      lldb::addr_t link_map,
                                      lldb::addr_t base_addr,
                                      bool value_is_offset);
 
-  Error UpdateAutomaticSignalFiltering() override;
+  Status UpdateAutomaticSignalFiltering() override;
 
 private:
   //------------------------------------------------------------------

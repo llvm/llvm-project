@@ -14,9 +14,9 @@ using namespace lldb_private;
 
 namespace {
 
-Error AlreadyLocked() { return Error("Already locked"); }
+Status AlreadyLocked() { return Status("Already locked"); }
 
-Error NotLocked() { return Error("Not locked"); }
+Status NotLocked() { return Status("Not locked"); }
 }
 
 LockFileBase::LockFileBase(int fd)
@@ -24,31 +24,31 @@ LockFileBase::LockFileBase(int fd)
 
 bool LockFileBase::IsLocked() const { return m_locked; }
 
-Error LockFileBase::WriteLock(const uint64_t start, const uint64_t len) {
+Status LockFileBase::WriteLock(const uint64_t start, const uint64_t len) {
   return DoLock([&](const uint64_t start,
                     const uint64_t len) { return DoWriteLock(start, len); },
                 start, len);
 }
 
-Error LockFileBase::TryWriteLock(const uint64_t start, const uint64_t len) {
+Status LockFileBase::TryWriteLock(const uint64_t start, const uint64_t len) {
   return DoLock([&](const uint64_t start,
                     const uint64_t len) { return DoTryWriteLock(start, len); },
                 start, len);
 }
 
-Error LockFileBase::ReadLock(const uint64_t start, const uint64_t len) {
+Status LockFileBase::ReadLock(const uint64_t start, const uint64_t len) {
   return DoLock([&](const uint64_t start,
                     const uint64_t len) { return DoReadLock(start, len); },
                 start, len);
 }
 
-Error LockFileBase::TryReadLock(const uint64_t start, const uint64_t len) {
+Status LockFileBase::TryReadLock(const uint64_t start, const uint64_t len) {
   return DoLock([&](const uint64_t start,
                     const uint64_t len) { return DoTryReadLock(start, len); },
                 start, len);
 }
 
-Error LockFileBase::Unlock() {
+Status LockFileBase::Unlock() {
   if (!IsLocked())
     return NotLocked();
 
@@ -63,10 +63,10 @@ Error LockFileBase::Unlock() {
 
 bool LockFileBase::IsValidFile() const { return m_fd != -1; }
 
-Error LockFileBase::DoLock(const Locker &locker, const uint64_t start,
-                           const uint64_t len) {
+Status LockFileBase::DoLock(const Locker &locker, const uint64_t start,
+                            const uint64_t len) {
   if (!IsValidFile())
-    return Error("File is invalid");
+    return Status("File is invalid");
 
   if (IsLocked())
     return AlreadyLocked();

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/windows.h"
@@ -33,8 +33,8 @@ HostThreadWindows::~HostThreadWindows() { Reset(); }
 
 void HostThreadWindows::SetOwnsHandle(bool owns) { m_owns_handle = owns; }
 
-Error HostThreadWindows::Join(lldb::thread_result_t *result) {
-  Error error;
+Status HostThreadWindows::Join(lldb::thread_result_t *result) {
+  Status error;
   if (IsJoinable()) {
     DWORD wait_result = ::WaitForSingleObject(m_thread, INFINITE);
     if (WAIT_OBJECT_0 == wait_result && result) {
@@ -51,8 +51,8 @@ Error HostThreadWindows::Join(lldb::thread_result_t *result) {
   return error;
 }
 
-Error HostThreadWindows::Cancel() {
-  Error error;
+Status HostThreadWindows::Cancel() {
+  Status error;
 
   DWORD result = ::QueueUserAPC(::ExitThreadProxy, m_thread, 0);
   error.SetError(result, eErrorTypeWin32);

@@ -22,10 +22,10 @@ public:
   HostThreadPosix(lldb::thread_t thread);
   ~HostThreadPosix() override;
 
-  Error Join(lldb::thread_result_t *result) override;
-  Error Cancel() override;
+  Status Join(lldb::thread_result_t *result) override;
+  Status Cancel() override;
 
-  Error Detach();
+  Status Detach();
 };
 
 } // namespace lldb_private

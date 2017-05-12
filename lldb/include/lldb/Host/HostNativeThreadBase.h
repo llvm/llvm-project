@@ -10,7 +10,7 @@
 #ifndef lldb_Host_HostNativeThreadBase_h_
 #define lldb_Host_HostNativeThreadBase_h_
 
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 
@@ -31,8 +31,8 @@ public:
   explicit HostNativeThreadBase(lldb::thread_t thread);
   virtual ~HostNativeThreadBase() {}
 
-  virtual Error Join(lldb::thread_result_t *result) = 0;
-  virtual Error Cancel() = 0;
+  virtual Status Join(lldb::thread_result_t *result) = 0;
+  virtual Status Cancel() = 0;
   virtual bool IsJoinable() const;
   virtual void Reset();
   lldb::thread_t Release();

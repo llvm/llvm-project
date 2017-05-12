@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=kaveri -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=CIVI -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=CIVI -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx901 -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=CIVI -check-prefix=GCN -check-prefix=GFX89 %s
+; RUN: llc -march=amdgcn -mcpu=gfx901 -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN -check-prefix=GFX89 %s
 
 ; FIXME: Should be able to do scalar op
 ; GCN-LABEL: {{^}}s_fneg_f16:
@@ -126,6 +126,41 @@ define amdgpu_kernel void @v_fneg_fold_v2f16(<2 x half> addrspace(1)* %out, <2 x
   %fsub = fsub <2 x half> <half -0.0, half -0.0>, %val
   %fmul = fmul <2 x half> %fsub, %val
   store <2 x half> %fmul, <2 x half> addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_extract_fneg_fold_v2f16:
+; GCN: flat_load_dword [[VAL:v[0-9]+]]
+; CI-DAG: v_mul_f32_e32 v{{[0-9]+}}, -4.0, v{{[0-9]+}}
+; CI-DAG: v_sub_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
+
+; GFX89: v_lshrrev_b32_e32 [[ELT1:v[0-9]+]], 16, [[VAL]]
+; GFX89-DAG: v_mul_f16_e32 v{{[0-9]+}}, -4.0, [[VAL]]
+; GFX89-DAG: v_sub_f16_e32 v{{[0-9]+}}, 2.0, [[ELT1]]
+define amdgpu_kernel void @v_extract_fneg_fold_v2f16(<2 x half> addrspace(1)* %in) #0 {
+  %val = load <2 x half>, <2 x half> addrspace(1)* %in
+  %fneg = fsub <2 x half> <half -0.0, half -0.0>, %val
+  %elt0 = extractelement <2 x half> %fneg, i32 0
+  %elt1 = extractelement <2 x half> %fneg, i32 1
+
+  %fmul0 = fmul half %elt0, 4.0
+  %fadd1 = fadd half %elt1, 2.0
+  store volatile half %fmul0, half addrspace(1)* undef
+  store volatile half %fadd1, half addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_extract_fneg_no_fold_v2f16:
+; GCN: flat_load_dword [[VAL:v[0-9]+]]
+; GCN: v_xor_b32_e32 [[NEG:v[0-9]+]], 0x80008000, [[VAL]]
+; GCN: v_lshrrev_b32_e32 [[ELT1:v[0-9]+]], 16, [[NEG]]
+define amdgpu_kernel void @v_extract_fneg_no_fold_v2f16(<2 x half> addrspace(1)* %in) #0 {
+  %val = load <2 x half>, <2 x half> addrspace(1)* %in
+  %fneg = fsub <2 x half> <half -0.0, half -0.0>, %val
+  %elt0 = extractelement <2 x half> %fneg, i32 0
+  %elt1 = extractelement <2 x half> %fneg, i32 1
+  store volatile half %elt0, half addrspace(1)* undef
+  store volatile half %elt1, half addrspace(1)* undef
   ret void
 }
 

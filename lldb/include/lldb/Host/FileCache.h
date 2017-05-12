@@ -15,8 +15,8 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Status.h"
 
 namespace lldb_private {
 class FileCache {
@@ -29,13 +29,13 @@ public:
   static FileCache &GetInstance();
 
   lldb::user_id_t OpenFile(const FileSpec &file_spec, uint32_t flags,
-                           uint32_t mode, Error &error);
-  bool CloseFile(lldb::user_id_t fd, Error &error);
+                           uint32_t mode, Status &error);
+  bool CloseFile(lldb::user_id_t fd, Status &error);
 
   uint64_t WriteFile(lldb::user_id_t fd, uint64_t offset, const void *src,
-                     uint64_t src_len, Error &error);
+                     uint64_t src_len, Status &error);
   uint64_t ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
-                    uint64_t dst_len, Error &error);
+                    uint64_t dst_len, Status &error);
 
 private:
   static FileCache *m_instance;

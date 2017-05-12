@@ -20,20 +20,53 @@
 #include <codecvt>
 #include <cassert>
 
-int main()
-{
-    {
-        std::wstring_convert<std::codecvt_utf8<wchar_t> > myconv;
-        std::wstring ws(1, L'\x40003');
-        std::string bs = myconv.to_bytes(ws[0]);
-        assert(bs == "\xF1\x80\x80\x83");
-        bs = myconv.to_bytes(ws.c_str());
-        assert(bs == "\xF1\x80\x80\x83");
-        bs = myconv.to_bytes(ws);
-        assert(bs == "\xF1\x80\x80\x83");
-        bs = myconv.to_bytes(ws.data(), ws.data() + ws.size());
-        assert(bs == "\xF1\x80\x80\x83");
-        bs = myconv.to_bytes(L"");
-        assert(bs.size() == 0);
-    }
+template <class CharT, size_t = sizeof(CharT)>
+struct TestHelper;
+template <class CharT>
+struct TestHelper<CharT, 2> {
+  static void test();
+};
+template <class CharT>
+struct TestHelper<CharT, 4> {
+  static void test();
+};
+
+template <class CharT>
+void TestHelper<CharT, 2>::test() {
+  static_assert((std::is_same<CharT, wchar_t>::value), "");
+  {
+    std::wstring_convert<std::codecvt_utf8<CharT> > myconv;
+    std::wstring ws(1, CharT(0x1005));
+    std::string bs = myconv.to_bytes(ws[0]);
+    assert(bs == "\xE1\x80\x85\x00");
+    bs = myconv.to_bytes(ws.c_str());
+    assert(bs == "\xE1\x80\x85\x00");
+    bs = myconv.to_bytes(ws);
+    assert(bs == "\xE1\x80\x85\x00");
+    bs = myconv.to_bytes(ws.data(), ws.data() + ws.size());
+    assert(bs == "\xE1\x80\x85\x00");
+    bs = myconv.to_bytes(L"");
+    assert(bs.size() == 0);
+  }
 }
+
+template <class CharT>
+void TestHelper<CharT, 4>::test() {
+  static_assert((std::is_same<CharT, wchar_t>::value), "");
+  {
+    std::wstring_convert<std::codecvt_utf8<CharT> > myconv;
+    std::wstring ws(1, CharT(0x40003));
+    std::string bs = myconv.to_bytes(ws[0]);
+    assert(bs == "\xF1\x80\x80\x83");
+    bs = myconv.to_bytes(ws.c_str());
+    assert(bs == "\xF1\x80\x80\x83");
+    bs = myconv.to_bytes(ws);
+    assert(bs == "\xF1\x80\x80\x83");
+    bs = myconv.to_bytes(ws.data(), ws.data() + ws.size());
+    assert(bs == "\xF1\x80\x80\x83");
+    bs = myconv.to_bytes(L"");
+    assert(bs.size() == 0);
+  }
+}
+
+int main() { TestHelper<wchar_t>::test(); }

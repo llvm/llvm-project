@@ -13,7 +13,7 @@
 #include "lldb/Core/Scalar.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"         // for ByteOrder, ByteOrder::eB...
 #include "lldb/lldb-private-enumerations.h" // for AddressType
 #include "lldb/lldb-private-types.h"        // for type128, RegisterInfo
@@ -219,11 +219,11 @@ public:
 
   lldb::Format GetValueDefaultFormat();
 
-  uint64_t GetValueByteSize(Error *error_ptr, ExecutionContext *exe_ctx);
+  uint64_t GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx);
 
-  Error GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
-                       uint32_t data_offset,
-                       Module *module); // Can be nullptr
+  Status GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
+                        uint32_t data_offset,
+                        Module *module); // Can be nullptr
 
   static const char *GetValueTypeAsCString(ValueType context_type);
 

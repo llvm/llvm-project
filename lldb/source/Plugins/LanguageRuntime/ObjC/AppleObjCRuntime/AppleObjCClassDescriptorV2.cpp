@@ -52,7 +52,7 @@ bool ClassDescriptorV2::objc_class_t::Read(Process *process,
                            + ptr_size; // uintptr_t data_NEVER_USE;
 
   DataBufferHeap objc_class_buf(objc_class_size, '\0');
-  Error error;
+  Status error;
 
   process->ReadMemory(addr, objc_class_buf.GetBytes(), objc_class_size, error);
   if (error.Fail()) {
@@ -92,7 +92,7 @@ bool ClassDescriptorV2::class_rw_t::Read(Process *process, lldb::addr_t addr) {
                 + ptr_size;        // Class nextSiblingClass;
 
   DataBufferHeap buffer(size, '\0');
-  Error error;
+  Status error;
 
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
   if (error.Fail()) {
@@ -132,7 +132,7 @@ bool ClassDescriptorV2::class_ro_t::Read(Process *process, lldb::addr_t addr) {
                 + ptr_size;           // const property_list_t *baseProperties;
 
   DataBufferHeap buffer(size, '\0');
-  Error error;
+  Status error;
 
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
   if (error.Fail()) {
@@ -180,7 +180,7 @@ bool ClassDescriptorV2::Read_class_row(
   class_ro.reset();
   class_rw.reset();
 
-  Error error;
+  Status error;
   uint32_t class_row_t_flags = process->ReadUnsignedIntegerFromMemory(
       objc_class.m_data_ptr, sizeof(uint32_t), 0, error);
   if (!error.Success())
@@ -219,7 +219,7 @@ bool ClassDescriptorV2::method_list_t::Read(Process *process,
                 + sizeof(uint32_t); // uint32_t count;
 
   DataBufferHeap buffer(size, '\0');
-  Error error;
+  Status error;
 
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
   if (error.Fail()) {
@@ -242,7 +242,7 @@ bool ClassDescriptorV2::method_t::Read(Process *process, lldb::addr_t addr) {
   size_t size = GetSize(process);
 
   DataBufferHeap buffer(size, '\0');
-  Error error;
+  Status error;
 
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
   if (error.Fail()) {
@@ -276,7 +276,7 @@ bool ClassDescriptorV2::ivar_list_t::Read(Process *process, lldb::addr_t addr) {
                 + sizeof(uint32_t); // uint32_t count;
 
   DataBufferHeap buffer(size, '\0');
-  Error error;
+  Status error;
 
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
   if (error.Fail()) {
@@ -299,7 +299,7 @@ bool ClassDescriptorV2::ivar_t::Read(Process *process, lldb::addr_t addr) {
   size_t size = GetSize(process);
 
   DataBufferHeap buffer(size, '\0');
-  Error error;
+  Status error;
 
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
   if (error.Fail()) {
@@ -527,7 +527,7 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
                 "{3}, type_size = {4}",
                 name, type, offset_ptr, size, ivar_type.GetByteSize(nullptr));
       Scalar offset_scalar;
-      Error error;
+      Status error;
       const int offset_ptr_size = 4;
       const bool is_signed = false;
       size_t read = process->ReadScalarIntegerFromMemory(

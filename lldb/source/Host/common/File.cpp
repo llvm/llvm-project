@@ -157,8 +157,8 @@ void File::SetStream(FILE *fh, bool transfer_ownership) {
   m_own_stream = transfer_ownership;
 }
 
-Error File::Open(const char *path, uint32_t options, uint32_t permissions) {
-  Error error;
+Status File::Open(const char *path, uint32_t options, uint32_t permissions) {
+  Status error;
   if (IsValid())
     Close();
 
@@ -246,20 +246,20 @@ Error File::Open(const char *path, uint32_t options, uint32_t permissions) {
   return error;
 }
 
-uint32_t File::GetPermissions(const FileSpec &file_spec, Error &error) {
+uint32_t File::GetPermissions(const FileSpec &file_spec, Status &error) {
   if (file_spec) {
     error.Clear();
     auto Perms = llvm::sys::fs::getPermissions(file_spec.GetPath());
     if (Perms)
       return *Perms;
-    error = Error(Perms.getError());
+    error = Status(Perms.getError());
     return 0;
   } else
     error.SetErrorString("empty file spec");
   return 0;
 }
 
-uint32_t File::GetPermissions(Error &error) const {
+uint32_t File::GetPermissions(Status &error) const {
   int fd = GetDescriptor();
   if (fd != kInvalidDescriptor) {
     struct stat file_stats;
@@ -275,8 +275,8 @@ uint32_t File::GetPermissions(Error &error) const {
   return 0;
 }
 
-Error File::Close() {
-  Error error;
+Status File::Close() {
+  Status error;
   if (StreamIsValid() && m_own_stream) {
     if (::fclose(m_stream) == EOF)
       error.SetErrorToErrno();
@@ -305,8 +305,8 @@ void File::Clear() {
       eLazyBoolCalculate;
 }
 
-Error File::GetFileSpec(FileSpec &file_spec) const {
-  Error error;
+Status File::GetFileSpec(FileSpec &file_spec) const {
+  Status error;
 #ifdef F_GETPATH
   if (IsValid()) {
     char path[PATH_MAX];
@@ -340,7 +340,7 @@ Error File::GetFileSpec(FileSpec &file_spec) const {
   return error;
 }
 
-off_t File::SeekFromStart(off_t offset, Error *error_ptr) {
+off_t File::SeekFromStart(off_t offset, Status *error_ptr) {
   off_t result = 0;
   if (DescriptorIsValid()) {
     result = ::lseek(m_descriptor, offset, SEEK_SET);
@@ -366,7 +366,7 @@ off_t File::SeekFromStart(off_t offset, Error *error_ptr) {
   return result;
 }
 
-off_t File::SeekFromCurrent(off_t offset, Error *error_ptr) {
+off_t File::SeekFromCurrent(off_t offset, Status *error_ptr) {
   off_t result = -1;
   if (DescriptorIsValid()) {
     result = ::lseek(m_descriptor, offset, SEEK_CUR);
@@ -392,7 +392,7 @@ off_t File::SeekFromCurrent(off_t offset, Error *error_ptr) {
   return result;
 }
 
-off_t File::SeekFromEnd(off_t offset, Error *error_ptr) {
+off_t File::SeekFromEnd(off_t offset, Status *error_ptr) {
   off_t result = -1;
   if (DescriptorIsValid()) {
     result = ::lseek(m_descriptor, offset, SEEK_END);
@@ -418,8 +418,8 @@ off_t File::SeekFromEnd(off_t offset, Error *error_ptr) {
   return result;
 }
 
-Error File::Flush() {
-  Error error;
+Status File::Flush() {
+  Status error;
   if (StreamIsValid()) {
     int err = 0;
     do {
@@ -434,8 +434,8 @@ Error File::Flush() {
   return error;
 }
 
-Error File::Sync() {
-  Error error;
+Status File::Sync() {
+  Status error;
   if (DescriptorIsValid()) {
 #ifdef _WIN32
     int err = FlushFileBuffers((HANDLE)_get_osfhandle(m_descriptor));
@@ -462,8 +462,8 @@ Error File::Sync() {
 #define MAX_WRITE_SIZE INT_MAX
 #endif
 
-Error File::Read(void *buf, size_t &num_bytes) {
-  Error error;
+Status File::Read(void *buf, size_t &num_bytes) {
+  Status error;
 
 #if defined(MAX_READ_SIZE)
   if (num_bytes > MAX_READ_SIZE) {
@@ -524,8 +524,8 @@ Error File::Read(void *buf, size_t &num_bytes) {
   return error;
 }
 
-Error File::Write(const void *buf, size_t &num_bytes) {
-  Error error;
+Status File::Write(const void *buf, size_t &num_bytes) {
+  Status error;
 
 #if defined(MAX_WRITE_SIZE)
   if (num_bytes > MAX_WRITE_SIZE) {
@@ -588,8 +588,8 @@ Error File::Write(const void *buf, size_t &num_bytes) {
   return error;
 }
 
-Error File::Read(void *buf, size_t &num_bytes, off_t &offset) {
-  Error error;
+Status File::Read(void *buf, size_t &num_bytes, off_t &offset) {
+  Status error;
 
 #if defined(MAX_READ_SIZE)
   if (num_bytes > MAX_READ_SIZE) {
@@ -650,9 +650,9 @@ Error File::Read(void *buf, size_t &num_bytes, off_t &offset) {
   return error;
 }
 
-Error File::Read(size_t &num_bytes, off_t &offset, bool null_terminate,
-                 DataBufferSP &data_buffer_sp) {
-  Error error;
+Status File::Read(size_t &num_bytes, off_t &offset, bool null_terminate,
+                  DataBufferSP &data_buffer_sp) {
+  Status error;
 
   if (num_bytes > 0) {
     int fd = GetDescriptor();
@@ -694,8 +694,8 @@ Error File::Read(size_t &num_bytes, off_t &offset, bool null_terminate,
   return error;
 }
 
-Error File::Write(const void *buf, size_t &num_bytes, off_t &offset) {
-  Error error;
+Status File::Write(const void *buf, size_t &num_bytes, off_t &offset) {
+  Status error;
 
 #if defined(MAX_WRITE_SIZE)
   if (num_bytes > MAX_WRITE_SIZE) {

@@ -8,8 +8,8 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;

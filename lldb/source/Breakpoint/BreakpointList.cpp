@@ -139,7 +139,7 @@ BreakpointList::FindBreakpointByID(break_id_t break_id) const {
 
 bool BreakpointList::FindBreakpointsByName(const char *name,
                                            BreakpointList &matching_bps) {
-  Error error;
+  Status error;
   if (!name)
     return false;
 

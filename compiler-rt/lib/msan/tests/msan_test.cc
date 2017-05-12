@@ -3724,8 +3724,10 @@ TEST(MemorySanitizer, ICmpRelational) {
 
   EXPECT_POISONED(poisoned(6, 0xF) > poisoned(7, 0));
   EXPECT_POISONED(poisoned(0xF, 0xF) > poisoned(7, 0));
-
-  EXPECT_NOT_POISONED(poisoned(-1, 0x80000000U) >= poisoned(-1, 0U));
+  // Note that "icmp op X, Y" is approximated with "or shadow(X), shadow(Y)"
+  // and therefore may generate false positives in some cases, e.g. the
+  // following one:
+  // EXPECT_NOT_POISONED(poisoned(-1, 0x80000000U) >= poisoned(-1, 0U));
 }
 
 #if MSAN_HAS_M128

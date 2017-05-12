@@ -13,14 +13,14 @@
 namespace lldb_private {
 
 class ProcessLaunchInfo;
-class Error;
+class Status;
 class HostProcess;
 
 class ProcessLauncher {
 public:
   virtual ~ProcessLauncher() {}
   virtual HostProcess LaunchProcess(const ProcessLaunchInfo &launch_info,
-                                    Error &error) = 0;
+                                    Status &error) = 0;
 };
 }
 

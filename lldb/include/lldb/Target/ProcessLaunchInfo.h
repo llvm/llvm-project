@@ -94,7 +94,7 @@ public:
 
   void Clear();
 
-  bool ConvertArgumentsForLaunchingInShell(Error &error, bool localhost,
+  bool ConvertArgumentsForLaunchingInShell(Status &error, bool localhost,
                                            bool will_debug,
                                            bool first_arg_is_full_shell_command,
                                            int32_t num_resumes);

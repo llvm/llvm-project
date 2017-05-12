@@ -10,8 +10,8 @@
 #ifndef liblldb_FormatEntity_h_
 #define liblldb_FormatEntity_h_
 
-#include "lldb/Utility/Error.h"
-#include "lldb/Utility/FileSpec.h"  // for FileSpec
+#include "lldb/Utility/FileSpec.h" // for FileSpec
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h" // for Format::eFormatDefault, Format
 #include "lldb/lldb-types.h"        // for addr_t
 #include <algorithm>                // for min
@@ -205,11 +205,11 @@ public:
                             const Address *addr, ValueObject *valobj,
                             bool function_changed, bool initial_function);
 
-  static Error Parse(const llvm::StringRef &format, Entry &entry);
+  static Status Parse(const llvm::StringRef &format, Entry &entry);
 
-  static Error ExtractVariableInfo(llvm::StringRef &format_str,
-                                   llvm::StringRef &variable_name,
-                                   llvm::StringRef &variable_format);
+  static Status ExtractVariableInfo(llvm::StringRef &format_str,
+                                    llvm::StringRef &variable_name,
+                                    llvm::StringRef &variable_format);
 
   static size_t AutoComplete(llvm::StringRef s, int match_start_point,
                              int max_return_elements, bool &word_complete,
@@ -228,8 +228,8 @@ public:
                              llvm::StringRef element_format);
 
 protected:
-  static Error ParseInternal(llvm::StringRef &format, Entry &parent_entry,
-                             uint32_t depth);
+  static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
+                              uint32_t depth);
 };
 } // namespace lldb_private
 

@@ -303,7 +303,7 @@ void FormatEntity::Entry::AppendText(const char *cstr) {
   return AppendText(llvm::StringRef(cstr));
 }
 
-Error FormatEntity::Parse(const llvm::StringRef &format_str, Entry &entry) {
+Status FormatEntity::Parse(const llvm::StringRef &format_str, Entry &entry) {
   entry.Clear();
   entry.type = Entry::Type::Root;
   llvm::StringRef modifiable_format(format_str);
@@ -408,7 +408,7 @@ static bool RunScriptFormatKeyword(Stream &s, const SymbolContext *sc,
     ScriptInterpreter *script_interpreter =
         target->GetDebugger().GetCommandInterpreter().GetScriptInterpreter();
     if (script_interpreter) {
-      Error error;
+      Status error;
       std::string script_output;
 
       if (script_interpreter->RunScriptFormatKeyword(script_function_name, t,
@@ -778,7 +778,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
                        var_name_final_if_array_range, index_lower,
                        index_higher);
 
-    Error error;
+    Status error;
 
     const std::string &expr_path = entry.string;
 
@@ -824,7 +824,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     // this happens when we are not going through
     // GetValueForVariableExpressionPath
     // to get to the target ValueObject
-    Error error;
+    Status error;
     target = target->Dereference(error).get();
     if (error.Fail()) {
       if (log)
@@ -1050,7 +1050,7 @@ static bool FormatThreadExtendedInfoRecurse(
       s.Printf("%f", value->GetAsFloat()->GetValue());
       return true;
     } else if (value->GetType() == StructuredData::Type::eTypeString) {
-      s.Printf("%s", value->GetAsString()->GetValue().c_str());
+      s.Format("{0}", value->GetAsString()->GetValue());
       return true;
     } else if (value->GetType() == StructuredData::Type::eTypeArray) {
       if (value->GetAsArray()->GetSize() > 0) {
@@ -1079,7 +1079,7 @@ bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
                                    bool initial_function) {
   if (!format_str.empty()) {
     FormatEntity::Entry root;
-    Error error = FormatEntity::Parse(format_str, root);
+    Status error = FormatEntity::Parse(format_str, root);
     if (error.Success()) {
       return FormatEntity::Format(root, s, sc, exe_ctx, addr, valobj,
                                   function_changed, initial_function);
@@ -1096,7 +1096,7 @@ bool FormatEntity::FormatCString(const char *format, Stream &s,
   if (format && format[0]) {
     FormatEntity::Entry root;
     llvm::StringRef format_str(format);
-    Error error = FormatEntity::Parse(format_str, root);
+    Status error = FormatEntity::Parse(format_str, root);
     if (error.Success()) {
       return FormatEntity::Format(root, s, sc, exe_ctx, addr, valobj,
                                   function_changed, initial_function);
@@ -1866,10 +1866,10 @@ static bool DumpCommaSeparatedChildEntryNames(
   return false;
 }
 
-static Error ParseEntry(const llvm::StringRef &format_str,
-                        const FormatEntity::Entry::Definition *parent,
-                        FormatEntity::Entry &entry) {
-  Error error;
+static Status ParseEntry(const llvm::StringRef &format_str,
+                         const FormatEntity::Entry::Definition *parent,
+                         FormatEntity::Entry &entry) {
+  Status error;
 
   const size_t sep_pos = format_str.find_first_of(".[:");
   const char sep_char =
@@ -1956,7 +1956,7 @@ static const FormatEntity::Entry::Definition *
 FindEntry(const llvm::StringRef &format_str,
           const FormatEntity::Entry::Definition *parent,
           llvm::StringRef &remainder) {
-  Error error;
+  Status error;
 
   std::pair<llvm::StringRef, llvm::StringRef> p = format_str.split('.');
   const size_t n = parent->num_children;
@@ -1983,9 +1983,9 @@ FindEntry(const llvm::StringRef &format_str,
   return parent;
 }
 
-Error FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
-                                  uint32_t depth) {
-  Error error;
+Status FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
+                                   uint32_t depth) {
+  Status error;
   while (!format.empty() && error.Success()) {
     const size_t non_special_chars = format.find_first_of("${}\\");
 
@@ -2279,10 +2279,10 @@ Error FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
   return error;
 }
 
-Error FormatEntity::ExtractVariableInfo(llvm::StringRef &format_str,
-                                        llvm::StringRef &variable_name,
-                                        llvm::StringRef &variable_format) {
-  Error error;
+Status FormatEntity::ExtractVariableInfo(llvm::StringRef &format_str,
+                                         llvm::StringRef &variable_name,
+                                         llvm::StringRef &variable_format) {
+  Status error;
   variable_name = llvm::StringRef();
   variable_format = llvm::StringRef();
 

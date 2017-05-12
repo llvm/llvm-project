@@ -32,7 +32,7 @@ namespace lldb_private {
 class Declaration;
 }
 namespace lldb_private {
-class Error;
+class Status;
 }
 namespace lldb_private {
 
@@ -86,9 +86,9 @@ public:
     m_owning_valobj_sp = owning_sp;
   }
 
-  bool SetValueFromCString(const char *value_str, Error &error) override;
+  bool SetValueFromCString(const char *value_str, Status &error) override;
 
-  bool SetData(DataExtractor &data, Error &error) override;
+  bool SetData(DataExtractor &data, Status &error) override;
 
   TypeImpl GetTypeImpl() override;
 

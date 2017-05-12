@@ -246,15 +246,15 @@ body: |
     S_BRANCH %bb.1
 
   bb.1:
-    FLAT_STORE_DWORDX2 %vgpr0_vgpr1, %vgpr2_vgpr3, 0, 0, 0, implicit %exec, implicit %flat_scr
+    FLAT_STORE_DWORDX2 %vgpr0_vgpr1, %vgpr2_vgpr3, 0, 0, implicit %exec, implicit %flat_scr
     %vgpr3 = V_MOV_B32_e32 0, implicit %exec
-    FLAT_STORE_DWORDX3 %vgpr0_vgpr1, %vgpr2_vgpr3_vgpr4, 0, 0, 0, implicit %exec, implicit %flat_scr
+    FLAT_STORE_DWORDX3 %vgpr0_vgpr1, %vgpr2_vgpr3_vgpr4, 0, 0, implicit %exec, implicit %flat_scr
     %vgpr3 = V_MOV_B32_e32 0, implicit %exec
-    FLAT_STORE_DWORDX4 %vgpr0_vgpr1, %vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, 0, implicit %exec, implicit %flat_scr
+    FLAT_STORE_DWORDX4 %vgpr0_vgpr1, %vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, implicit %exec, implicit %flat_scr
     %vgpr3 = V_MOV_B32_e32 0, implicit %exec
-    FLAT_ATOMIC_CMPSWAP_X2 %vgpr0_vgpr1, %vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, implicit %exec, implicit %flat_scr
+    FLAT_ATOMIC_CMPSWAP_X2 %vgpr0_vgpr1, %vgpr2_vgpr3_vgpr4_vgpr5, 0, implicit %exec, implicit %flat_scr
     %vgpr3 = V_MOV_B32_e32 0, implicit %exec
-    FLAT_ATOMIC_FCMPSWAP_X2 %vgpr0_vgpr1, %vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, implicit %exec, implicit %flat_scr
+    FLAT_ATOMIC_FCMPSWAP_X2 %vgpr0_vgpr1, %vgpr2_vgpr3_vgpr4_vgpr5, 0, implicit %exec, implicit %flat_scr
     %vgpr3 = V_MOV_B32_e32 0, implicit %exec
     S_ENDPGM
 

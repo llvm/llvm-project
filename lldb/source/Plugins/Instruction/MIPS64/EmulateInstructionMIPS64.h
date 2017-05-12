@@ -16,7 +16,7 @@
 // Project includes
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Interpreter/OptionValue.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 namespace llvm {
 class MCDisassembler;

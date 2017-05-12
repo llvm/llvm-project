@@ -31,9 +31,9 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/FileSystem.h"
@@ -664,11 +664,11 @@ bool PlatformDarwinKernel::KernelHasdSYMSibling(const FileSpec &kernel_binary) {
   return false;
 }
 
-Error PlatformDarwinKernel::GetSharedModule(
+Status PlatformDarwinKernel::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
     const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
     bool *did_create_ptr) {
-  Error error;
+  Status error;
   module_sp.reset();
   const FileSpec &platform_file = module_spec.GetFileSpec();
 
@@ -774,10 +774,10 @@ Error PlatformDarwinKernel::GetSharedModule(
                                          old_module_sp_ptr, did_create_ptr);
 }
 
-Error PlatformDarwinKernel::ExamineKextForMatchingUUID(
+Status PlatformDarwinKernel::ExamineKextForMatchingUUID(
     const FileSpec &kext_bundle_path, const lldb_private::UUID &uuid,
     const ArchSpec &arch, ModuleSP &exe_module_sp) {
-  Error error;
+  Status error;
   FileSpec exe_file = kext_bundle_path;
   Host::ResolveExecutableInBundle(exe_file);
   if (exe_file.Exists()) {

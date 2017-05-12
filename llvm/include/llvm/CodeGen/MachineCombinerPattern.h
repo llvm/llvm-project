@@ -48,6 +48,8 @@ enum class MachineCombinerPattern {
   FMULADDD_OP2,
   FMULSUBD_OP1,
   FMULSUBD_OP2,
+  FNMULSUBS_OP1,
+  FNMULSUBD_OP1,
   FMLAv1i32_indexed_OP1,
   FMLAv1i32_indexed_OP2,
   FMLAv1i64_indexed_OP1,

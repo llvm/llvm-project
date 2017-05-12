@@ -38,35 +38,36 @@ public:
 
   const RegisterSet *GetRegisterSet(uint32_t set_index) const override;
 
-  Error ReadRegister(const RegisterInfo *reg_info,
-                     RegisterValue &reg_value) override;
+  Status ReadRegister(const RegisterInfo *reg_info,
+                      RegisterValue &reg_value) override;
 
-  Error WriteRegister(const RegisterInfo *reg_info,
-                      const RegisterValue &reg_value) override;
+  Status WriteRegister(const RegisterInfo *reg_info,
+                       const RegisterValue &reg_value) override;
 
-  Error ReadAllRegisterValues(lldb::DataBufferSP &data_sp) override;
+  Status ReadAllRegisterValues(lldb::DataBufferSP &data_sp) override;
 
-  Error WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
+  Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
-  Error ReadCP1();
+  Status ReadCP1();
 
-  Error WriteCP1();
+  Status WriteCP1();
 
   uint8_t *ReturnFPOffset(uint8_t reg_index, uint32_t byte_offset);
 
-  Error IsWatchpointHit(uint32_t wp_index, bool &is_hit) override;
+  Status IsWatchpointHit(uint32_t wp_index, bool &is_hit) override;
 
-  Error GetWatchpointHitIndex(uint32_t &wp_index,
-                              lldb::addr_t trap_addr) override;
+  Status GetWatchpointHitIndex(uint32_t &wp_index,
+                               lldb::addr_t trap_addr) override;
 
-  Error IsWatchpointVacant(uint32_t wp_index, bool &is_vacant) override;
+  Status IsWatchpointVacant(uint32_t wp_index, bool &is_vacant) override;
 
   bool ClearHardwareWatchpoint(uint32_t wp_index) override;
 
-  Error ClearAllHardwareWatchpoints() override;
+  Status ClearAllHardwareWatchpoints() override;
 
-  Error SetHardwareWatchpointWithIndex(lldb::addr_t addr, size_t size,
-                                       uint32_t watch_flags, uint32_t wp_index);
+  Status SetHardwareWatchpointWithIndex(lldb::addr_t addr, size_t size,
+                                        uint32_t watch_flags,
+                                        uint32_t wp_index);
 
   uint32_t SetHardwareWatchpoint(lldb::addr_t addr, size_t size,
                                  uint32_t watch_flags) override;
@@ -78,17 +79,17 @@ public:
   static bool IsMSAAvailable();
 
 protected:
-  Error Read_SR_Config(uint32_t offset, const char *reg_name, uint32_t size,
-                       RegisterValue &value);
+  Status Read_SR_Config(uint32_t offset, const char *reg_name, uint32_t size,
+                        RegisterValue &value);
 
-  Error ReadRegisterRaw(uint32_t reg_index, RegisterValue &value) override;
+  Status ReadRegisterRaw(uint32_t reg_index, RegisterValue &value) override;
 
-  Error WriteRegisterRaw(uint32_t reg_index,
-                         const RegisterValue &value) override;
+  Status WriteRegisterRaw(uint32_t reg_index,
+                          const RegisterValue &value) override;
 
-  Error DoReadWatchPointRegisterValue(lldb::tid_t tid, void *watch_readback);
+  Status DoReadWatchPointRegisterValue(lldb::tid_t tid, void *watch_readback);
 
-  Error DoWriteWatchPointRegisterValue(lldb::tid_t tid, void *watch_readback);
+  Status DoWriteWatchPointRegisterValue(lldb::tid_t tid, void *watch_readback);
 
   bool IsFR0();
 

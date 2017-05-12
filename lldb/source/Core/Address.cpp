@@ -33,8 +33,8 @@
 #include "lldb/Utility/ConstString.h"   // for ConstString
 #include "lldb/Utility/DataExtractor.h" // for DataExtractor
 #include "lldb/Utility/Endian.h"        // for InlHostByteOrder
-#include "lldb/Utility/Error.h"         // for Error
 #include "lldb/Utility/FileSpec.h"      // for FileSpec
+#include "lldb/Utility/Status.h"        // for Status
 #include "lldb/Utility/Stream.h"        // for Stream
 #include "lldb/Utility/StreamString.h"  // for StreamString
 
@@ -67,7 +67,7 @@ static size_t ReadBytes(ExecutionContextScope *exe_scope,
 
   TargetSP target_sp(exe_scope->CalculateTarget());
   if (target_sp) {
-    Error error;
+    Status error;
     bool prefer_file_cache = false;
     return target_sp->ReadMemory(address, prefer_file_cache, dst, dst_len,
                                  error);
@@ -322,7 +322,7 @@ addr_t Address::GetCallableLoadAddress(Target *target, bool is_indirect) const {
 
   if (is_indirect && target) {
     ProcessSP processSP = target->GetProcessSP();
-    Error error;
+    Status error;
     if (processSP) {
       code_addr = processSP->ResolveIndirectFunction(this, error);
       if (!error.Success())
@@ -734,7 +734,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
     if (process) {
       addr_t load_addr = GetLoadAddress(target);
       if (load_addr != LLDB_INVALID_ADDRESS) {
-        Error memory_error;
+        Status memory_error;
         addr_t dereferenced_load_addr =
             process->ReadPointerFromMemory(load_addr, memory_error);
         if (dereferenced_load_addr != LLDB_INVALID_ADDRESS) {

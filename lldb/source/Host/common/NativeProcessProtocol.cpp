@@ -36,8 +36,8 @@ NativeProcessProtocol::NativeProcessProtocol(lldb::pid_t pid)
       m_delegates_mutex(), m_delegates(), m_breakpoint_list(),
       m_watchpoint_list(), m_terminal_fd(-1), m_stop_id(0) {}
 
-lldb_private::Error NativeProcessProtocol::Interrupt() {
-  Error error;
+lldb_private::Status NativeProcessProtocol::Interrupt() {
+  Status error;
 #if !defined(SIGSTOP)
   error.SetErrorString("local host does not support signaling");
   return error;
@@ -46,17 +46,17 @@ lldb_private::Error NativeProcessProtocol::Interrupt() {
 #endif
 }
 
-Error NativeProcessProtocol::IgnoreSignals(llvm::ArrayRef<int> signals) {
+Status NativeProcessProtocol::IgnoreSignals(llvm::ArrayRef<int> signals) {
   m_signals_to_ignore.clear();
   m_signals_to_ignore.insert(signals.begin(), signals.end());
-  return Error();
+  return Status();
 }
 
-lldb_private::Error
+lldb_private::Status
 NativeProcessProtocol::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                            MemoryRegionInfo &range_info) {
   // Default: not implemented.
-  return Error("not implemented");
+  return Status("not implemented");
 }
 
 bool NativeProcessProtocol::GetExitStatus(ExitType *exit_type, int *status,
@@ -173,9 +173,9 @@ NativeProcessProtocol::GetHardwareDebugSupportInfo() const {
                         reg_ctx_sp->NumSupportedHardwareWatchpoints());
 }
 
-Error NativeProcessProtocol::SetWatchpoint(lldb::addr_t addr, size_t size,
-                                           uint32_t watch_flags,
-                                           bool hardware) {
+Status NativeProcessProtocol::SetWatchpoint(lldb::addr_t addr, size_t size,
+                                            uint32_t watch_flags,
+                                            bool hardware) {
   // This default implementation assumes setting the watchpoint for
   // the process will require setting the watchpoint for each of the
   // threads.  Furthermore, it will track watchpoints set for the
@@ -205,7 +205,7 @@ Error NativeProcessProtocol::SetWatchpoint(lldb::addr_t addr, size_t size,
     if (!thread_sp)
       continue;
 
-    Error thread_error =
+    Status thread_error =
         thread_sp->SetWatchpoint(addr, size, watch_flags, hardware);
     if (thread_error.Fail() && hardware) {
       // Try software watchpoints since we failed on hardware watchpoint setting
@@ -227,7 +227,7 @@ Error NativeProcessProtocol::SetWatchpoint(lldb::addr_t addr, size_t size,
       // set so that we get back to a consistent state of "not
       // set" for the watchpoint.
       for (auto unwatch_thread_sp : watchpoint_established_threads) {
-        Error remove_error = unwatch_thread_sp->RemoveWatchpoint(addr);
+        Status remove_error = unwatch_thread_sp->RemoveWatchpoint(addr);
         if (remove_error.Fail() && log) {
           log->Warning("NativeProcessProtocol::%s (): RemoveWatchpoint failed "
                        "for pid=%" PRIu64 ", tid=%" PRIu64 ": %s",
@@ -242,11 +242,11 @@ Error NativeProcessProtocol::SetWatchpoint(lldb::addr_t addr, size_t size,
   return m_watchpoint_list.Add(addr, size, watch_flags, hardware);
 }
 
-Error NativeProcessProtocol::RemoveWatchpoint(lldb::addr_t addr) {
+Status NativeProcessProtocol::RemoveWatchpoint(lldb::addr_t addr) {
   // Update the thread list
   UpdateThreads();
 
-  Error overall_error;
+  Status overall_error;
 
   std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   for (auto thread_sp : m_threads) {
@@ -254,7 +254,7 @@ Error NativeProcessProtocol::RemoveWatchpoint(lldb::addr_t addr) {
     if (!thread_sp)
       continue;
 
-    const Error thread_error = thread_sp->RemoveWatchpoint(addr);
+    const Status thread_error = thread_sp->RemoveWatchpoint(addr);
     if (thread_error.Fail()) {
       // Keep track of the first thread error if any threads
       // fail. We want to try to remove the watchpoint from
@@ -263,7 +263,7 @@ Error NativeProcessProtocol::RemoveWatchpoint(lldb::addr_t addr) {
         overall_error = thread_error;
     }
   }
-  const Error error = m_watchpoint_list.Remove(addr);
+  const Status error = m_watchpoint_list.Remove(addr);
   return overall_error.Fail() ? overall_error : error;
 }
 
@@ -272,8 +272,8 @@ NativeProcessProtocol::GetHardwareBreakpointMap() const {
   return m_hw_breakpoints_map;
 }
 
-Error NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
-                                                   size_t size) {
+Status NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
+                                                    size_t size) {
   // This default implementation assumes setting a hardware breakpoint for
   // this process will require setting same hardware breakpoint for each
   // of its existing threads. New thread will do the same once created.
@@ -287,7 +287,7 @@ Error NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
 
   if (hw_debug_cap == llvm::None || hw_debug_cap->first == 0 ||
       hw_debug_cap->first <= m_hw_breakpoints_map.size())
-    return Error("Target does not have required no of hardware breakpoints");
+    return Status("Target does not have required no of hardware breakpoints");
 
   // Vector below stores all thread pointer for which we have we successfully
   // set this hardware breakpoint. If any of the current process threads fails
@@ -302,7 +302,7 @@ Error NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
     if (!thread_sp)
       continue;
 
-    Error thread_error = thread_sp->SetHardwareBreakpoint(addr, size);
+    Status thread_error = thread_sp->SetHardwareBreakpoint(addr, size);
     if (thread_error.Success()) {
       // Remember that we set this breakpoint successfully in
       // case we need to clear it later.
@@ -312,7 +312,8 @@ Error NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
       // set so that we get back to a consistent state of "not
       // set" for this hardware breakpoint.
       for (auto rollback_thread_sp : breakpoint_established_threads) {
-        Error remove_error = rollback_thread_sp->RemoveHardwareBreakpoint(addr);
+        Status remove_error =
+            rollback_thread_sp->RemoveHardwareBreakpoint(addr);
         if (remove_error.Fail() && log) {
           log->Warning("NativeProcessProtocol::%s (): RemoveHardwareBreakpoint"
                        " failed for pid=%" PRIu64 ", tid=%" PRIu64 ": %s",
@@ -329,14 +330,14 @@ Error NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
   // process.
   m_hw_breakpoints_map[addr] = {addr, size};
 
-  return Error();
+  return Status();
 }
 
-Error NativeProcessProtocol::RemoveHardwareBreakpoint(lldb::addr_t addr) {
+Status NativeProcessProtocol::RemoveHardwareBreakpoint(lldb::addr_t addr) {
   // Update the thread list
   UpdateThreads();
 
-  Error error;
+  Status error;
 
   std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   for (auto thread_sp : m_threads) {
@@ -413,8 +414,8 @@ void NativeProcessProtocol::NotifyDidExec() {
   }
 }
 
-Error NativeProcessProtocol::SetSoftwareBreakpoint(lldb::addr_t addr,
-                                                   uint32_t size_hint) {
+Status NativeProcessProtocol::SetSoftwareBreakpoint(lldb::addr_t addr,
+                                                    uint32_t size_hint) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
   if (log)
     log->Printf("NativeProcessProtocol::%s addr = 0x%" PRIx64, __FUNCTION__,
@@ -423,25 +424,25 @@ Error NativeProcessProtocol::SetSoftwareBreakpoint(lldb::addr_t addr,
   return m_breakpoint_list.AddRef(
       addr, size_hint, false,
       [this](lldb::addr_t addr, size_t size_hint, bool /* hardware */,
-             NativeBreakpointSP &breakpoint_sp) -> Error {
+             NativeBreakpointSP &breakpoint_sp) -> Status {
         return SoftwareBreakpoint::CreateSoftwareBreakpoint(
             *this, addr, size_hint, breakpoint_sp);
       });
 }
 
-Error NativeProcessProtocol::RemoveBreakpoint(lldb::addr_t addr,
-                                              bool hardware) {
+Status NativeProcessProtocol::RemoveBreakpoint(lldb::addr_t addr,
+                                               bool hardware) {
   if (hardware)
     return RemoveHardwareBreakpoint(addr);
   else
     return m_breakpoint_list.DecRef(addr);
 }
 
-Error NativeProcessProtocol::EnableBreakpoint(lldb::addr_t addr) {
+Status NativeProcessProtocol::EnableBreakpoint(lldb::addr_t addr) {
   return m_breakpoint_list.EnableBreakpoint(addr);
 }
 
-Error NativeProcessProtocol::DisableBreakpoint(lldb::addr_t addr) {
+Status NativeProcessProtocol::DisableBreakpoint(lldb::addr_t addr) {
   return m_breakpoint_list.DisableBreakpoint(addr);
 }
 
@@ -483,25 +484,26 @@ void NativeProcessProtocol::DoStopIDBumped(uint32_t /* newBumpId */) {
   // Default implementation does nothing.
 }
 
-Error NativeProcessProtocol::ResolveProcessArchitecture(lldb::pid_t pid,
-                                                        ArchSpec &arch) {
+Status NativeProcessProtocol::ResolveProcessArchitecture(lldb::pid_t pid,
+                                                         ArchSpec &arch) {
   // Grab process info for the running process.
   ProcessInstanceInfo process_info;
   if (!Host::GetProcessInfo(pid, process_info))
-    return Error("failed to get process info");
+    return Status("failed to get process info");
 
   // Resolve the executable module.
   ModuleSpecList module_specs;
   if (!ObjectFile::GetModuleSpecifications(process_info.GetExecutableFile(), 0,
                                            0, module_specs))
-    return Error("failed to get module specifications");
+    return Status("failed to get module specifications");
   lldbassert(module_specs.GetSize() == 1);
 
   arch = module_specs.GetModuleSpecRefAtIndex(0).GetArchitecture();
   if (arch.IsValid())
-    return Error();
+    return Status();
   else
-    return Error("failed to retrieve a valid architecture from the exe module");
+    return Status(
+        "failed to retrieve a valid architecture from the exe module");
 }
 
 #if !defined(__linux__) && !defined(__NetBSD__)
@@ -509,17 +511,17 @@ Error NativeProcessProtocol::ResolveProcessArchitecture(lldb::pid_t pid,
 // Stubs are
 // provided to make the rest of the code link on non-supported platforms.
 
-Error NativeProcessProtocol::Launch(ProcessLaunchInfo &launch_info,
-                                    NativeDelegate &native_delegate,
-                                    MainLoop &mainloop,
-                                    NativeProcessProtocolSP &process_sp) {
+Status NativeProcessProtocol::Launch(ProcessLaunchInfo &launch_info,
+                                     NativeDelegate &native_delegate,
+                                     MainLoop &mainloop,
+                                     NativeProcessProtocolSP &process_sp) {
   llvm_unreachable("Platform has no NativeProcessProtocol support");
 }
 
-Error NativeProcessProtocol::Attach(lldb::pid_t pid,
-                                    NativeDelegate &native_delegate,
-                                    MainLoop &mainloop,
-                                    NativeProcessProtocolSP &process_sp) {
+Status NativeProcessProtocol::Attach(lldb::pid_t pid,
+                                     NativeDelegate &native_delegate,
+                                     MainLoop &mainloop,
+                                     NativeProcessProtocolSP &process_sp) {
   llvm_unreachable("Platform has no NativeProcessProtocol support");
 }
 

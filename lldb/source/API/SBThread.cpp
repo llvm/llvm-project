@@ -562,7 +562,7 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
             info_root_sp->GetObjectForDotSeparatedPath(path);
         if (node) {
           if (node->GetType() == StructuredData::Type::eTypeString) {
-            strm.Printf("%s", node->GetAsString()->GetValue().c_str());
+            strm.Printf("%s", node->GetAsString()->GetValue().str().c_str());
             success = true;
           }
           if (node->GetType() == StructuredData::Type::eTypeInteger) {
@@ -1037,7 +1037,7 @@ SBError SBThread::JumpToLine(lldb::SBFileSpec &file_spec, uint32_t line) {
 
   Thread *thread = exe_ctx.GetThreadPtr();
 
-  Error err = thread->JumpToLine(file_spec.get(), line, true);
+  Status err = thread->JumpToLine(file_spec.get(), line, true);
   sb_error.SetError(err);
   return sb_error;
 }

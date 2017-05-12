@@ -60,7 +60,7 @@ public:
   /// @return
   ///     The range of the containing object in the target process.
   //------------------------------------------------------------------
-  static lldb::REPLSP Create(Error &Error, lldb::LanguageType language,
+  static lldb::REPLSP Create(Status &Status, lldb::LanguageType language,
                              Debugger *debugger, Target *target,
                              const char *repl_options);
 
@@ -85,7 +85,7 @@ public:
 
   lldb::IOHandlerSP GetIOHandler();
 
-  Error RunLoop();
+  Status RunLoop();
 
   //------------------------------------------------------------------
   // IOHandler::Delegate functions
@@ -126,7 +126,7 @@ protected:
   // Subclasses should override these functions to implement a functional REPL.
   //----------------------------------------------------------------------
 
-  virtual Error DoInitialization() = 0;
+  virtual Status DoInitialization() = 0;
 
   virtual ConstString GetSourceFileBasename() = 0;
 

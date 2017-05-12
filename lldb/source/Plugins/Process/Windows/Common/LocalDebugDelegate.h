@@ -55,7 +55,7 @@ public:
                  lldb::addr_t module_addr) override;
   void OnUnloadDll(lldb::addr_t module_addr) override;
   void OnDebugString(const std::string &message) override;
-  void OnDebuggerError(const Error &error, uint32_t type) override;
+  void OnDebuggerError(const Status &error, uint32_t type) override;
 
 private:
   ProcessWindowsSP GetProcessPointer();

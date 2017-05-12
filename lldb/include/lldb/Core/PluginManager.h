@@ -10,8 +10,8 @@
 #ifndef liblldb_PluginManager_h_
 #define liblldb_PluginManager_h_
 
-#include "lldb/Utility/Error.h" // for Error
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Status.h"          // for Status
 #include "lldb/lldb-enumerations.h"       // for ScriptLanguage
 #include "lldb/lldb-forward.h"            // for OptionValuePropertiesSP
 #include "lldb/lldb-private-interfaces.h" // for DebuggerInitializeCallback
@@ -202,8 +202,8 @@ public:
   static ObjectFileCreateMemoryInstance
   GetObjectFileCreateMemoryCallbackForPluginName(const ConstString &name);
 
-  static Error SaveCore(const lldb::ProcessSP &process_sp,
-                        const FileSpec &outfile);
+  static Status SaveCore(const lldb::ProcessSP &process_sp,
+                         const FileSpec &outfile);
 
   //------------------------------------------------------------------
   // ObjectContainer

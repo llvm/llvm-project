@@ -93,6 +93,12 @@ bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
 // FIXME: Maybe implement this better?
 bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT { return true; }
 
+bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
+                      const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+  // FIXME: Implement in powerpc64?
+  return false;
+}
+
 } // namespace __xray
 
 extern "C" void __xray_ArgLoggerEntry() XRAY_NEVER_INSTRUMENT {

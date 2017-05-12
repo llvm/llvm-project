@@ -171,7 +171,7 @@ SBBreakpointLocation::SetScriptCallbackBody(const char *callback_body_text) {
     std::lock_guard<std::recursive_mutex> guard(
         loc_sp->GetTarget().GetAPIMutex());
     BreakpointOptions *bp_options = loc_sp->GetLocationOptions();
-    Error error =
+    Status error =
         loc_sp->GetBreakpoint()
             .GetTarget()
             .GetDebugger()

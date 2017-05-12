@@ -150,7 +150,7 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
 
     if (!m_get_item_info_impl_code.get()) {
       if (g_get_item_info_function_code != NULL) {
-        Error error;
+        Status error;
         m_get_item_info_impl_code.reset(
             exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
                 g_get_item_info_function_code, eLanguageTypeObjC,
@@ -177,7 +177,7 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
       }
 
       // Next make the runner function for our implementation utility function.
-      Error error;
+      Status error;
 
       TypeSystem *type_system =
           thread.GetProcess()->GetTarget().GetScratchTypeSystemForLanguage(
@@ -230,7 +230,8 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
 AppleGetItemInfoHandler::GetItemInfoReturnInfo
 AppleGetItemInfoHandler::GetItemInfo(Thread &thread, uint64_t item,
                                      addr_t page_to_free,
-                                     uint64_t page_to_free_size, Error &error) {
+                                     uint64_t page_to_free_size,
+                                     Status &error) {
   lldb::StackFrameSP thread_cur_frame = thread.GetStackFrameAtIndex(0);
   ProcessSP process_sp(thread.CalculateProcess());
   TargetSP target_sp(thread.CalculateTarget());

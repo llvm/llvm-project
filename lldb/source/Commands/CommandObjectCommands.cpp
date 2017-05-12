@@ -71,9 +71,9 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -261,9 +261,9 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -371,9 +371,9 @@ protected:
       return llvm::makeArrayRef(g_alias_options);
     }
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+                          ExecutionContext *execution_context) override {
+      Status error;
 
       const int short_option = GetDefinitions()[option_idx].short_option;
       std::string option_str(option_value);
@@ -579,7 +579,7 @@ protected:
         if (!ParseOptions(args, result))
           return false;
 
-        Error error(m_option_group.NotifyOptionParsingFinished(&exe_ctx));
+        Status error(m_option_group.NotifyOptionParsingFinished(&exe_ctx));
         if (error.Fail()) {
           result.AppendError(error.AsCString());
           result.SetStatus(eReturnStatusFailed);
@@ -1030,7 +1030,7 @@ protected:
         bool check_only = false;
         for (size_t i = 0; i < num_lines; ++i) {
           llvm::StringRef bytes_strref(lines[i]);
-          Error error = AppendRegexSubstitution(bytes_strref, check_only);
+          Status error = AppendRegexSubstitution(bytes_strref, check_only);
           if (error.Fail()) {
             if (!m_interpreter.GetDebugger()
                      .GetCommandInterpreter()
@@ -1058,7 +1058,7 @@ protected:
       return false;
     }
 
-    Error error;
+    Status error;
     auto name = command[0].ref;
     m_regex_cmd_ap = llvm::make_unique<CommandObjectRegexCommand>(
         m_interpreter, name, m_options.GetHelp(), m_options.GetSyntax(), 10, 0,
@@ -1101,9 +1101,9 @@ protected:
     return result.Succeeded();
   }
 
-  Error AppendRegexSubstitution(const llvm::StringRef &regex_sed,
-                                bool check_only) {
-    Error error;
+  Status AppendRegexSubstitution(const llvm::StringRef &regex_sed,
+                                 bool check_only) {
+    Status error;
 
     if (!m_regex_cmd_ap) {
       error.SetErrorStringWithFormat(
@@ -1215,9 +1215,9 @@ private:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -1311,7 +1311,7 @@ protected:
                  CommandReturnObject &result) override {
     ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
 
-    Error error;
+    Status error;
 
     result.SetStatus(eReturnStatusInvalid);
 
@@ -1400,7 +1400,7 @@ protected:
                  CommandReturnObject &result) override {
     ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
 
-    Error error;
+    Status error;
 
     result.SetStatus(eReturnStatusInvalid);
 
@@ -1487,9 +1487,9 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -1534,7 +1534,7 @@ protected:
     }
 
     for (auto &entry : command.entries()) {
-      Error error;
+      Status error;
 
       const bool init_session = true;
       // FIXME: this is necessary because CommandObject::CheckRequirements()
@@ -1619,9 +1619,9 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
