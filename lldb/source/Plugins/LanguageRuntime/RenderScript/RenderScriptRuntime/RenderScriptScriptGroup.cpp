@@ -21,8 +21,8 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 #include "RenderScriptRuntime.h"
 #include "RenderScriptScriptGroup.h"

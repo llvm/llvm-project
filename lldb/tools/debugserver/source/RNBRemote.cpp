@@ -1628,7 +1628,7 @@ rnb_err_t RNBRemote::HandlePacket_H(const char *p) {
 }
 
 rnb_err_t RNBRemote::HandlePacket_qLaunchSuccess(const char *p) {
-  if (m_ctx.HasValidProcessID() || m_ctx.LaunchStatus().Error() == 0)
+  if (m_ctx.HasValidProcessID() || m_ctx.LaunchStatus().Status() == 0)
     return SendPacket("OK");
   std::ostringstream ret_str;
   std::string status_str;

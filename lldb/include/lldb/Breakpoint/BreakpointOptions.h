@@ -50,7 +50,7 @@ public:
 
     static std::unique_ptr<CommandData>
     CreateFromStructuredData(const StructuredData::Dictionary &options_dict,
-                             Error &error);
+                             Status &error);
 
     StringList user_source;
     std::string script_source;
@@ -119,7 +119,7 @@ public:
   static std::unique_ptr<BreakpointOptions>
   CreateFromStructuredData(Target &target,
                            const StructuredData::Dictionary &data_dict,
-                           Error &error);
+                           Status &error);
 
   virtual StructuredData::ObjectSP SerializeToStructuredData();
 

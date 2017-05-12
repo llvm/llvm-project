@@ -16,7 +16,7 @@
 #include <vector>
 // Other libraries and framework includes
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 // Project includes
 
 namespace lldb_private {

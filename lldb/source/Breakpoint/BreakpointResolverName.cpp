@@ -92,16 +92,16 @@ BreakpointResolverName::BreakpointResolverName(
 
 BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
     Breakpoint *bkpt, const StructuredData::Dictionary &options_dict,
-    Error &error) {
+    Status &error) {
   LanguageType language = eLanguageTypeUnknown;
-  std::string language_name;
+  llvm::StringRef language_name;
   bool success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::LanguageName), language_name);
   if (success) {
     language = Language::GetLanguageTypeFromString(language_name);
     if (language == eLanguageTypeUnknown) {
-      error.SetErrorStringWithFormat("BRN::CFSD: Unknown language: %s.",
-                                     language_name.c_str());
+      error.SetErrorStringWithFormatv("BRN::CFSD: Unknown language: {0}.",
+                                      language_name);
       return nullptr;
     }
   }
@@ -122,7 +122,7 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
     return nullptr;
   }
 
-  std::string regex_text;
+  llvm::StringRef regex_text;
   success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::RegexString), regex_text);
   if (success) {
@@ -162,7 +162,7 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
     std::vector<uint32_t> name_masks;
     for (size_t i = 0; i < num_elem; i++) {
       uint32_t name_mask;
-      std::string name;
+      llvm::StringRef name;
 
       success = names_array->GetItemAtIndexAsString(i, name);
       if (!success) {

@@ -115,6 +115,7 @@ struct FDRState {
   uint16_t CPUId;
   uint16_t ThreadId;
   uint64_t BaseTSC;
+
   /// Encode some of the state transitions for the FDR log reader as explicit
   /// checks. These are expectations for the next Record in the stream.
   enum class Token {
@@ -123,8 +124,10 @@ struct FDRState {
     NEW_CPU_ID_RECORD,
     FUNCTION_SEQUENCE,
     SCAN_TO_END_OF_THREAD_BUF,
+    CUSTOM_EVENT_DATA,
   };
   Token Expects;
+
   // Each threads buffer may have trailing garbage to scan over, so we track our
   // progress.
   uint64_t CurrentBufferSize;
@@ -143,6 +146,8 @@ Twine fdrStateToTwine(const FDRState::Token &state) {
     return "FUNCTION_SEQUENCE";
   case FDRState::Token::SCAN_TO_END_OF_THREAD_BUF:
     return "SCAN_TO_END_OF_THREAD_BUF";
+  case FDRState::Token::CUSTOM_EVENT_DATA:
+    return "CUSTOM_EVENT_DATA";
   }
   return "UNKNOWN";
 }
@@ -212,13 +217,32 @@ Error processFDRWallTimeRecord(FDRState &State, uint8_t RecordFirstByte,
   return Error::success();
 }
 
+/// State transition when a CustomEventMarker is encountered.
+Error processCustomEventMarker(FDRState &State, uint8_t RecordFirstByte,
+                               DataExtractor &RecordExtractor,
+                               size_t &RecordSize) {
+  // We can encounter a CustomEventMarker anywhere in the log, so we can handle
+  // it regardless of the expectation. However, we do se the expectation to read
+  // a set number of fixed bytes, as described in the metadata.
+  uint32_t OffsetPtr = 1; // Read after the first byte.
+  uint32_t DataSize = RecordExtractor.getU32(&OffsetPtr);
+  uint64_t TSC = RecordExtractor.getU64(&OffsetPtr);
+
+  // FIXME: Actually represent the record through the API. For now we only skip
+  // through the data.
+  (void)TSC;
+  RecordSize = 16 + DataSize;
+  return Error::success();
+}
+
 /// Advances the state machine for reading the FDR record type by reading one
 /// Metadata Record and updating the State appropriately based on the kind of
 /// record encountered. The RecordKind is encoded in the first byte of the
 /// Record, which the caller should pass in because they have already read it
 /// to determine that this is a metadata record as opposed to a function record.
 Error processFDRMetadataRecord(FDRState &State, uint8_t RecordFirstByte,
-                               DataExtractor &RecordExtractor) {
+                               DataExtractor &RecordExtractor,
+                               size_t &RecordSize) {
   // The remaining 7 bits are the RecordKind enum.
   uint8_t RecordKind = RecordFirstByte >> 1;
   switch (RecordKind) {
@@ -245,6 +269,11 @@ Error processFDRMetadataRecord(FDRState &State, uint8_t RecordFirstByte,
   case 4: // WallTimeMarker
     if (auto E =
             processFDRWallTimeRecord(State, RecordFirstByte, RecordExtractor))
+      return E;
+    break;
+  case 5: // CustomEventMarker
+    if (auto E = processCustomEventMarker(State, RecordFirstByte,
+                                          RecordExtractor, RecordSize))
       return E;
     break;
   default:
@@ -400,7 +429,8 @@ Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
     bool isMetadataRecord = BitField & 0x01uL;
     if (isMetadataRecord) {
       RecordSize = 16;
-      if (auto E = processFDRMetadataRecord(State, BitField, RecordExtractor))
+      if (auto E = processFDRMetadataRecord(State, BitField, RecordExtractor,
+                                            RecordSize))
         return E;
       State.CurrentBufferConsumed += RecordSize;
     } else { // Process Function Record

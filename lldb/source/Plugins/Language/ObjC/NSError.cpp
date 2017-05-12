@@ -24,7 +24,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 #include "Plugins/Language/ObjC/NSString.h"
@@ -46,7 +46,7 @@ static lldb::addr_t DerefToNSErrorPointer(ValueObject &valobj) {
       Flags pointee_flags(pointee_type.GetTypeInfo());
       if (pointee_flags.AllSet(eTypeIsPointer)) {
         if (ProcessSP process_sp = valobj.GetProcessSP()) {
-          Error error;
+          Status error;
           ptr_value = process_sp->ReadPointerFromMemory(ptr_value, error);
         }
       }
@@ -71,7 +71,7 @@ bool lldb_private::formatters::NSError_SummaryProvider(
   lldb::addr_t code_location = ptr_value + 2 * ptr_size;
   lldb::addr_t domain_location = ptr_value + 3 * ptr_size;
 
-  Error error;
+  Status error;
   uint64_t code = process_sp->ReadUnsignedIntegerFromMemory(code_location,
                                                             ptr_size, 0, error);
   if (error.Fail())
@@ -152,7 +152,7 @@ public:
     size_t ptr_size = process_sp->GetAddressByteSize();
 
     userinfo_location += 4 * ptr_size;
-    Error error;
+    Status error;
     lldb::addr_t userinfo =
         process_sp->ReadPointerFromMemory(userinfo_location, error);
     if (userinfo == LLDB_INVALID_ADDRESS || error.Fail())

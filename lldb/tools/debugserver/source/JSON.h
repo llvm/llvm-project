@@ -270,7 +270,7 @@ class JSONParser : public StdStringExtractor {
 public:
   enum Token {
     Invalid,
-    Error,
+    Status,
     ObjectStart,
     ObjectEnd,
     ArrayStart,

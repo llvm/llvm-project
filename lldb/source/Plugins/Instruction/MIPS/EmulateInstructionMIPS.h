@@ -23,7 +23,7 @@ class MCInst;
 
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Interpreter/OptionValue.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 class EmulateInstructionMIPS : public lldb_private::EmulateInstruction {
 public:

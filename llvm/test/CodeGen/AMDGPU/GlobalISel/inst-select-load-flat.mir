@@ -14,7 +14,7 @@ regBankSelected: true
 
 # GCN: global_addrspace
 # GCN: [[PTR:%[0-9]+]] = COPY %vgpr0_vgpr1
-# GCN: FLAT_LOAD_DWORD  [[PTR]], 0, 0, 0
+# GCN: FLAT_LOAD_DWORD  [[PTR]], 0, 0
 
 body: |
   bb.0:

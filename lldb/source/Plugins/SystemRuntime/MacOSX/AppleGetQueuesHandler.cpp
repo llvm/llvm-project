@@ -167,7 +167,7 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
 
     if (!m_get_queues_impl_code_up.get()) {
       if (g_get_current_queues_function_code != NULL) {
-        Error error;
+        Status error;
         m_get_queues_impl_code_up.reset(
             exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
                 g_get_current_queues_function_code, eLanguageTypeC,
@@ -202,7 +202,7 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
         thread.GetProcess()->GetTarget().GetScratchClangASTContext();
     CompilerType get_queues_return_type =
         clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
-    Error error;
+    Status error;
     get_queues_caller = m_get_queues_impl_code_up->MakeFunctionCaller(
         get_queues_return_type, get_queues_arglist, thread_sp, error);
     if (error.Fail() || get_queues_caller == nullptr) {
@@ -237,7 +237,7 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
 AppleGetQueuesHandler::GetQueuesReturnInfo
 AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
                                         uint64_t page_to_free_size,
-                                        Error &error) {
+                                        Status &error) {
   lldb::StackFrameSP thread_cur_frame = thread.GetStackFrameAtIndex(0);
   ProcessSP process_sp(thread.CalculateProcess());
   TargetSP target_sp(thread.CalculateTarget());

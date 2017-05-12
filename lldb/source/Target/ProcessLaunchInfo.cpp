@@ -330,7 +330,7 @@ void ProcessLaunchInfo::FinalizeFileActions(Target *target,
 }
 
 bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
-    Error &error, bool localhost, bool will_debug,
+    Status &error, bool localhost, bool will_debug,
     bool first_arg_is_full_shell_command, int32_t num_resumes) {
   error.Clear();
 

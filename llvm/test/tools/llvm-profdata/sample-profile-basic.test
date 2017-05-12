@@ -25,9 +25,10 @@ RUN: diff %t-binary %t-text
    counters have doubled.
 RUN: llvm-profdata merge --sample %p/Inputs/sample-profile.proftext -o %t-binprof
 RUN: llvm-profdata merge --sample --text %p/Inputs/sample-profile.proftext %t-binprof -o - | FileCheck %s --check-prefix=MERGE1
-MERGE1-DAG: main:368038:0
-MERGE1-DAG: 9: 4128 _Z3fooi:1262 _Z3bari:2942
-MERGE1-DAG: _Z3fooi:15422:1220
+MERGE1: main:368038:0
+MERGE1: 9: 4128 _Z3fooi:1262 _Z3bari:2942
+MERGE1: _Z3bari:40602:2874
+MERGE1: _Z3fooi:15422:1220
 
 5- Detect invalid text encoding (e.g. instrumentation profile text format).
 RUN: not llvm-profdata show --sample %p/Inputs/foo3bar3-1.proftext 2>&1 | FileCheck %s --check-prefix=BADTEXT

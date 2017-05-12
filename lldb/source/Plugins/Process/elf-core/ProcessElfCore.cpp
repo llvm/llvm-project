@@ -84,8 +84,8 @@ bool ProcessElfCore::CanDebug(lldb::TargetSP target_sp,
   // For now we are just making sure the file exists for a given module
   if (!m_core_module_sp && m_core_file.Exists()) {
     ModuleSpec core_module_spec(m_core_file, target_sp->GetArchitecture());
-    Error error(ModuleList::GetSharedModule(core_module_spec, m_core_module_sp,
-                                            NULL, NULL, NULL));
+    Status error(ModuleList::GetSharedModule(core_module_spec, m_core_module_sp,
+                                             NULL, NULL, NULL));
     if (m_core_module_sp) {
       ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
       if (core_objfile && core_objfile->GetType() == ObjectFile::eTypeCoreFile)
@@ -157,8 +157,8 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
 //----------------------------------------------------------------------
 // Process Control
 //----------------------------------------------------------------------
-Error ProcessElfCore::DoLoadCore() {
-  Error error;
+Status ProcessElfCore::DoLoadCore() {
+  Status error;
   if (!m_core_module_sp) {
     error.SetErrorString("invalid core module");
     return error;
@@ -289,7 +289,7 @@ bool ProcessElfCore::UpdateThreadList(ThreadList &old_thread_list,
 
 void ProcessElfCore::RefreshStateAfterStop() {}
 
-Error ProcessElfCore::DoDestroy() { return Error(); }
+Status ProcessElfCore::DoDestroy() { return Status(); }
 
 //------------------------------------------------------------------
 // Process Queries
@@ -301,14 +301,14 @@ bool ProcessElfCore::IsAlive() { return true; }
 // Process Memory
 //------------------------------------------------------------------
 size_t ProcessElfCore::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                  Error &error) {
+                                  Status &error) {
   // Don't allow the caching that lldb_private::Process::ReadMemory does
   // since in core files we have it all cached our our core file anyway.
   return DoReadMemory(addr, buf, size, error);
 }
 
-Error ProcessElfCore::GetMemoryRegionInfo(lldb::addr_t load_addr,
-                                          MemoryRegionInfo &region_info) {
+Status ProcessElfCore::GetMemoryRegionInfo(lldb::addr_t load_addr,
+                                           MemoryRegionInfo &region_info) {
   region_info.Clear();
   const VMRangeToPermissions::Entry *permission_entry =
       m_core_range_infos.FindEntryThatContainsOrFollows(load_addr);
@@ -335,7 +335,7 @@ Error ProcessElfCore::GetMemoryRegionInfo(lldb::addr_t load_addr,
       region_info.SetExecutable(MemoryRegionInfo::eNo);
       region_info.SetMapped(MemoryRegionInfo::eNo);
     }
-    return Error();
+    return Status();
   }
 
   region_info.GetRange().SetRangeBase(load_addr);
@@ -344,11 +344,11 @@ Error ProcessElfCore::GetMemoryRegionInfo(lldb::addr_t load_addr,
   region_info.SetWritable(MemoryRegionInfo::eNo);
   region_info.SetExecutable(MemoryRegionInfo::eNo);
   region_info.SetMapped(MemoryRegionInfo::eNo);
-  return Error();
+  return Status();
 }
 
 size_t ProcessElfCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                    Error &error) {
+                                    Status &error) {
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
 
   if (core_objfile == NULL)
@@ -540,7 +540,7 @@ static void ParseOpenBSDProcInfo(ThreadData &thread_data, DataExtractor &data) {
 ///        new thread when it finds NT_PRSTATUS or NT_PRPSINFO NOTE entry.
 ///    For case (b) there may be either one NT_PRPSINFO per thread, or a single
 ///    one that applies to all threads (depending on the platform type).
-Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
+Status ProcessElfCore::ParseThreadContextsFromNoteSegment(
     const elf::ELFProgramHeader *segment_header, DataExtractor segment_data) {
   assert(segment_header && segment_header->p_type == llvm::ELF::PT_NOTE);
 
@@ -555,7 +555,7 @@ Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
   ELFLinuxSigInfo siginfo;
   size_t header_size;
   size_t len;
-  Error error;
+  Status error;
 
   // Loop through the NOTE entires in the segment
   while (offset < segment_header->p_filesz) {

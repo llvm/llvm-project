@@ -1588,22 +1588,32 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
     BBCvt = MBPI->getEdgeProbability(BBI.BB, &CvtMBB);
   }
 
+  // To be able to insert code freely at the end of BBI we sometimes remove
+  // the branch from BBI to NextMBB temporarily. Remember if this happened.
+  bool RemovedBranchToNextMBB = false;
   if (CvtMBB.pred_size() > 1) {
     BBI.NonPredSize -= TII->removeBranch(*BBI.BB);
     // Copy instructions in the true block, predicate them, and add them to
     // the entry block.
     CopyAndPredicateBlock(BBI, *CvtBBI, Cond, true);
 
-    // RemoveExtraEdges won't work if the block has an unanalyzable branch, so
-    // explicitly remove CvtBBI as a successor.
+    // Keep the CFG updated.
     BBI.BB->removeSuccessor(&CvtMBB, true);
   } else {
     // Predicate the 'true' block after removing its branch.
     CvtBBI->NonPredSize -= TII->removeBranch(CvtMBB);
     PredicateBlock(*CvtBBI, CvtMBB.end(), Cond);
 
-    // Now merge the entry of the triangle with the true block.
+    // Remove the branch from the entry of the triangle to NextBB to be able to
+    // do the merge below. Keep the CFG updated, but remember we removed the
+    // branch since we do want to execute NextMBB, either by introducing a
+    // branch to it again, or merging it into the entry block.
+    // How it's handled is decided further down.
     BBI.NonPredSize -= TII->removeBranch(*BBI.BB);
+    BBI.BB->removeSuccessor(&NextMBB, true);
+    RemovedBranchToNextMBB = true;
+
+    // Now merge the entry of the triangle with the true block.
     MergeBlocks(BBI, *CvtBBI, false);
   }
 
@@ -1641,20 +1651,25 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
     // block. By not merging them, we make it possible to iteratively
     // ifcvt the blocks.
     if (!HasEarlyExit &&
-        NextMBB.pred_size() == 1 && !NextBBI->HasFallThrough &&
+        // We might have removed BBI from NextMBB's predecessor list above but
+        // we want it to be there, so consider that too.
+        (NextMBB.pred_size() == (RemovedBranchToNextMBB ? 0 : 1)) &&
+        !NextBBI->HasFallThrough &&
         !NextMBB.hasAddressTaken()) {
+      // We will merge NextBBI into BBI, and thus remove the current
+      // fallthrough from BBI into CvtBBI.
+      BBI.BB->removeSuccessor(&CvtMBB, true);
       MergeBlocks(BBI, *NextBBI);
       FalseBBDead = true;
     } else {
       InsertUncondBranch(*BBI.BB, NextMBB, TII);
+      BBI.BB->addSuccessor(&NextMBB);
       BBI.HasFallThrough = false;
     }
     // Mixed predicated and unpredicated code. This cannot be iteratively
     // predicated.
     IterIfcvt = false;
   }
-
-  RemoveExtraEdges(BBI);
 
   // Update block info. BB can be iteratively if-converted.
   if (!IterIfcvt)

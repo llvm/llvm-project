@@ -14,7 +14,7 @@ namespace lldb_private {
 class DataExtractor;
 }
 namespace lldb_private {
-class Error;
+class Status;
 }
 namespace lldb_private {
 class ValueObject;
@@ -37,7 +37,7 @@ ValueObjectConstResultChild::ValueObjectConstResultChild(
 
 ValueObjectConstResultChild::~ValueObjectConstResultChild() {}
 
-lldb::ValueObjectSP ValueObjectConstResultChild::Dereference(Error &error) {
+lldb::ValueObjectSP ValueObjectConstResultChild::Dereference(Status &error) {
   return m_impl.Dereference(error);
 }
 
@@ -48,7 +48,7 @@ lldb::ValueObjectSP ValueObjectConstResultChild::GetSyntheticChildAtOffset(
                                           name_const_str);
 }
 
-lldb::ValueObjectSP ValueObjectConstResultChild::AddressOf(Error &error) {
+lldb::ValueObjectSP ValueObjectConstResultChild::AddressOf(Status &error) {
   return m_impl.AddressOf(error);
 }
 

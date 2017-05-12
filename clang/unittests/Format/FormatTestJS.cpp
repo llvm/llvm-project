@@ -1799,6 +1799,7 @@ TEST_F(FormatTestJS, NonNullAssertionOperator) {
       "            .foo()!\n"
       "            .foo()!;\n",
       getGoogleJSStyleWithColumns(20));
+  verifyFormat("let x = namespace!;\n");
 }
 
 TEST_F(FormatTestJS, Conditional) {

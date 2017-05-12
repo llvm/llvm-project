@@ -32,7 +32,7 @@ public:
   //------------------------------------------------------------
   // lldb_private::Platform functions
   //------------------------------------------------------------
-  lldb_private::Error
+  lldb_private::Status
   ResolveSymbolFile(lldb_private::Target &target,
                     const lldb_private::ModuleSpec &sym_spec,
                     lldb_private::FileSpec &sym_file) override;
@@ -41,7 +41,7 @@ public:
       lldb_private::Target *target, lldb_private::Module &module,
       lldb_private::Stream *feedback_stream) override;
 
-  lldb_private::Error
+  lldb_private::Status
   GetSharedModule(const lldb_private::ModuleSpec &module_spec,
                   lldb_private::Process *process, lldb::ModuleSP &module_sp,
                   const lldb_private::FileSpecList *module_search_paths_ptr,
@@ -79,7 +79,7 @@ public:
 
   lldb_private::FileSpec LocateExecutable(const char *basename) override;
 
-  lldb_private::Error
+  lldb_private::Status
   LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
 
   static std::tuple<uint32_t, uint32_t, uint32_t, llvm::StringRef>
@@ -90,7 +90,7 @@ protected:
 
   void ReadLibdispatchOffsets(lldb_private::Process *process);
 
-  virtual lldb_private::Error GetSharedModuleWithLocalCache(
+  virtual lldb_private::Status GetSharedModuleWithLocalCache(
       const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
       const lldb_private::FileSpecList *module_search_paths_ptr,
       lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr);

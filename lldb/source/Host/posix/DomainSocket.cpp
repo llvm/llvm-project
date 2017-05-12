@@ -72,13 +72,13 @@ DomainSocket::DomainSocket(NativeSocket socket,
   m_socket = socket;
 }
 
-Error DomainSocket::Connect(llvm::StringRef name) {
+Status DomainSocket::Connect(llvm::StringRef name) {
   sockaddr_un saddr_un;
   socklen_t saddr_un_len;
   if (!SetSockAddr(name, GetNameOffset(), &saddr_un, saddr_un_len))
-    return Error("Failed to set socket address");
+    return Status("Failed to set socket address");
 
-  Error error;
+  Status error;
   m_socket = CreateSocket(kDomain, kType, 0, m_child_processes_inherit, error);
   if (error.Fail())
     return error;
@@ -89,15 +89,15 @@ Error DomainSocket::Connect(llvm::StringRef name) {
   return error;
 }
 
-Error DomainSocket::Listen(llvm::StringRef name, int backlog) {
+Status DomainSocket::Listen(llvm::StringRef name, int backlog) {
   sockaddr_un saddr_un;
   socklen_t saddr_un_len;
   if (!SetSockAddr(name, GetNameOffset(), &saddr_un, saddr_un_len))
-    return Error("Failed to set socket address");
+    return Status("Failed to set socket address");
 
   DeleteSocketFile(name);
 
-  Error error;
+  Status error;
   m_socket = CreateSocket(kDomain, kType, 0, m_child_processes_inherit, error);
   if (error.Fail())
     return error;
@@ -110,8 +110,8 @@ Error DomainSocket::Listen(llvm::StringRef name, int backlog) {
   return error;
 }
 
-Error DomainSocket::Accept(Socket *&socket) {
-  Error error;
+Status DomainSocket::Accept(Socket *&socket) {
+  Status error;
   auto conn_fd = AcceptSocket(GetNativeSocket(), nullptr, nullptr,
                               m_child_processes_inherit, error);
   if (error.Success())

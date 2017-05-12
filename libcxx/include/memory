@@ -996,11 +996,11 @@ struct __rebind_pointer {
 
 // allocator_traits
 
-namespace __has_pointer_type_imp
+struct __has_pointer_type_imp
 {
     template <class _Up> static __two __test(...);
     template <class _Up> static char __test(typename _Up::pointer* = 0);
-}
+};
 
 template <class _Tp>
 struct __has_pointer_type

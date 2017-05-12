@@ -79,7 +79,7 @@ Socket::~Socket() { Close(); }
 
 std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
                                        bool child_processes_inherit,
-                                       Error &error) {
+                                       Status &error) {
   error.Clear();
 
   std::unique_ptr<Socket> socket_up;
@@ -118,14 +118,14 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
   return socket_up;
 }
 
-Error Socket::TcpConnect(llvm::StringRef host_and_port,
-                         bool child_processes_inherit, Socket *&socket) {
+Status Socket::TcpConnect(llvm::StringRef host_and_port,
+                          bool child_processes_inherit, Socket *&socket) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
   if (log)
     log->Printf("Socket::%s (host/port = %s)", __FUNCTION__,
                 host_and_port.data());
 
-  Error error;
+  Status error;
   std::unique_ptr<Socket> connect_socket(
       Create(ProtocolTcp, child_processes_inherit, error));
   if (error.Fail())
@@ -138,14 +138,14 @@ Error Socket::TcpConnect(llvm::StringRef host_and_port,
   return error;
 }
 
-Error Socket::TcpListen(llvm::StringRef host_and_port,
-                        bool child_processes_inherit, Socket *&socket,
-                        Predicate<uint16_t> *predicate, int backlog) {
+Status Socket::TcpListen(llvm::StringRef host_and_port,
+                         bool child_processes_inherit, Socket *&socket,
+                         Predicate<uint16_t> *predicate, int backlog) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
     log->Printf("Socket::%s (%s)", __FUNCTION__, host_and_port.data());
 
-  Error error;
+  Status error;
   std::string host_str;
   std::string port_str;
   int32_t port = INT32_MIN;
@@ -179,8 +179,8 @@ Error Socket::TcpListen(llvm::StringRef host_and_port,
   return error;
 }
 
-Error Socket::UdpConnect(llvm::StringRef host_and_port,
-                         bool child_processes_inherit, Socket *&socket) {
+Status Socket::UdpConnect(llvm::StringRef host_and_port,
+                          bool child_processes_inherit, Socket *&socket) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
     log->Printf("Socket::%s (host/port = %s)", __FUNCTION__,
@@ -189,9 +189,10 @@ Error Socket::UdpConnect(llvm::StringRef host_and_port,
   return UDPSocket::Connect(host_and_port, child_processes_inherit, socket);
 }
 
-Error Socket::UnixDomainConnect(llvm::StringRef name,
-                                bool child_processes_inherit, Socket *&socket) {
-  Error error;
+Status Socket::UnixDomainConnect(llvm::StringRef name,
+                                 bool child_processes_inherit,
+                                 Socket *&socket) {
+  Status error;
   std::unique_ptr<Socket> connect_socket(
       Create(ProtocolUnixDomain, child_processes_inherit, error));
   if (error.Fail())
@@ -204,9 +205,9 @@ Error Socket::UnixDomainConnect(llvm::StringRef name,
   return error;
 }
 
-Error Socket::UnixDomainAccept(llvm::StringRef name,
-                               bool child_processes_inherit, Socket *&socket) {
-  Error error;
+Status Socket::UnixDomainAccept(llvm::StringRef name,
+                                bool child_processes_inherit, Socket *&socket) {
+  Status error;
   std::unique_ptr<Socket> listen_socket(
       Create(ProtocolUnixDomain, child_processes_inherit, error));
   if (error.Fail())
@@ -220,10 +221,10 @@ Error Socket::UnixDomainAccept(llvm::StringRef name,
   return error;
 }
 
-Error Socket::UnixAbstractConnect(llvm::StringRef name,
-                                  bool child_processes_inherit,
-                                  Socket *&socket) {
-  Error error;
+Status Socket::UnixAbstractConnect(llvm::StringRef name,
+                                   bool child_processes_inherit,
+                                   Socket *&socket) {
+  Status error;
   std::unique_ptr<Socket> connect_socket(
       Create(ProtocolUnixAbstract, child_processes_inherit, error));
   if (error.Fail())
@@ -235,10 +236,10 @@ Error Socket::UnixAbstractConnect(llvm::StringRef name,
   return error;
 }
 
-Error Socket::UnixAbstractAccept(llvm::StringRef name,
-                                 bool child_processes_inherit,
-                                 Socket *&socket) {
-  Error error;
+Status Socket::UnixAbstractAccept(llvm::StringRef name,
+                                  bool child_processes_inherit,
+                                  Socket *&socket) {
+  Status error;
   std::unique_ptr<Socket> listen_socket(
       Create(ProtocolUnixAbstract, child_processes_inherit, error));
   if (error.Fail())
@@ -254,7 +255,7 @@ Error Socket::UnixAbstractAccept(llvm::StringRef name,
 
 bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
                                std::string &host_str, std::string &port_str,
-                               int32_t &port, Error *error_ptr) {
+                               int32_t &port, Status *error_ptr) {
   static RegularExpression g_regex(
       llvm::StringRef("([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)"));
   RegularExpression::Match regex_match(2);
@@ -304,8 +305,8 @@ IOObject::WaitableHandle Socket::GetWaitableHandle() {
   return m_socket;
 }
 
-Error Socket::Read(void *buf, size_t &num_bytes) {
-  Error error;
+Status Socket::Read(void *buf, size_t &num_bytes) {
+  Status error;
   int bytes_received = 0;
   do {
     bytes_received = ::recv(m_socket, static_cast<char *>(buf), num_bytes, 0);
@@ -330,8 +331,8 @@ Error Socket::Read(void *buf, size_t &num_bytes) {
   return error;
 }
 
-Error Socket::Write(const void *buf, size_t &num_bytes) {
-  Error error;
+Status Socket::Write(const void *buf, size_t &num_bytes) {
+  Status error;
   int bytes_sent = 0;
   do {
     bytes_sent = Send(buf, num_bytes);
@@ -356,13 +357,13 @@ Error Socket::Write(const void *buf, size_t &num_bytes) {
   return error;
 }
 
-Error Socket::PreDisconnect() {
-  Error error;
+Status Socket::PreDisconnect() {
+  Status error;
   return error;
 }
 
-Error Socket::Close() {
-  Error error;
+Status Socket::Close() {
+  Status error;
   if (!IsValid() || !m_should_close_fd)
     return error;
 
@@ -404,7 +405,7 @@ size_t Socket::Send(const void *buf, const size_t num_bytes) {
   return ::send(m_socket, static_cast<const char *>(buf), num_bytes, 0);
 }
 
-void Socket::SetLastError(Error &error) {
+void Socket::SetLastError(Status &error) {
 #if defined(_WIN32)
   error.SetError(::WSAGetLastError(), lldb::eErrorTypeWin32);
 #else
@@ -414,7 +415,7 @@ void Socket::SetLastError(Error &error) {
 
 NativeSocket Socket::CreateSocket(const int domain, const int type,
                                   const int protocol,
-                                  bool child_processes_inherit, Error &error) {
+                                  bool child_processes_inherit, Status &error) {
   error.Clear();
   auto socket_type = type;
 #ifdef SOCK_CLOEXEC
@@ -430,7 +431,7 @@ NativeSocket Socket::CreateSocket(const int domain, const int type,
 
 NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
                                   socklen_t *addrlen,
-                                  bool child_processes_inherit, Error &error) {
+                                  bool child_processes_inherit, Status &error) {
   error.Clear();
 #if defined(ANDROID_USE_ACCEPT_WORKAROUND)
   // Hack:

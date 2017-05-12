@@ -163,8 +163,8 @@ uint64_t SymbolBody::getVA(int64_t Addend) const {
   return OutVA + Addend;
 }
 
-template <class ELFT> typename ELFT::uint SymbolBody::getGotVA() const {
-  return In<ELFT>::Got->getVA() + getGotOffset();
+uint64_t SymbolBody::getGotVA() const {
+  return InX::Got->getVA() + getGotOffset();
 }
 
 uint64_t SymbolBody::getGotOffset() const {
@@ -369,11 +369,6 @@ std::string lld::toString(const SymbolBody &B) {
       return *S;
   return B.getName();
 }
-
-template uint32_t SymbolBody::template getGotVA<ELF32LE>() const;
-template uint32_t SymbolBody::template getGotVA<ELF32BE>() const;
-template uint64_t SymbolBody::template getGotVA<ELF64LE>() const;
-template uint64_t SymbolBody::template getGotVA<ELF64BE>() const;
 
 template uint32_t SymbolBody::template getSize<ELF32LE>() const;
 template uint32_t SymbolBody::template getSize<ELF32BE>() const;

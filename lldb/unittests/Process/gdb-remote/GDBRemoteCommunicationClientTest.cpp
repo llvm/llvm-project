@@ -318,7 +318,7 @@ TEST_F(GDBRemoteCommunicationClientTest, SendSignalsToIgnore) {
 
   const lldb::tid_t tid = 0x47;
   const uint32_t reg_num = 4;
-  std::future<Error> result = std::async(std::launch::async, [&] {
+  std::future<Status> result = std::async(std::launch::async, [&] {
     return client.SendSignalsToIgnore({2, 3, 5, 7, 0xB, 0xD, 0x11});
   });
 
@@ -342,7 +342,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
 
   const lldb::addr_t addr = 0xa000;
   MemoryRegionInfo region_info;
-  std::future<Error> result = std::async(std::launch::async, [&] {
+  std::future<Status> result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
   });
 
@@ -363,7 +363,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
 
   const lldb::addr_t addr = 0x4000;
   MemoryRegionInfo region_info;
-  std::future<Error> result = std::async(std::launch::async, [&] {
+  std::future<Status> result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
   });
 

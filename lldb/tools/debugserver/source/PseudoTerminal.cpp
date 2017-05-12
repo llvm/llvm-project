@@ -65,7 +65,7 @@ void PseudoTerminal::CloseSlave() {
 // RETURNS:
 //  Zero when successful, non-zero indicating an error occurred.
 //----------------------------------------------------------------------
-PseudoTerminal::Error PseudoTerminal::OpenFirstAvailableMaster(int oflag) {
+PseudoTerminal::Status PseudoTerminal::OpenFirstAvailableMaster(int oflag) {
   // Open the master side of a pseudo terminal
   m_master_fd = ::posix_openpt(oflag);
   if (m_master_fd < 0) {
@@ -97,7 +97,7 @@ PseudoTerminal::Error PseudoTerminal::OpenFirstAvailableMaster(int oflag) {
 // RETURNS:
 //  Zero when successful, non-zero indicating an error occurred.
 //----------------------------------------------------------------------
-PseudoTerminal::Error PseudoTerminal::OpenSlave(int oflag) {
+PseudoTerminal::Status PseudoTerminal::OpenSlave(int oflag) {
   CloseSlave();
 
   // Open the master side of a pseudo terminal
@@ -153,7 +153,7 @@ const char *PseudoTerminal::SlaveName() const {
 //  in the child process: zero
 //----------------------------------------------------------------------
 
-pid_t PseudoTerminal::Fork(PseudoTerminal::Error &error) {
+pid_t PseudoTerminal::Fork(PseudoTerminal::Status &error) {
   pid_t pid = invalid_pid;
   error = OpenFirstAvailableMaster(O_RDWR | O_NOCTTY);
 

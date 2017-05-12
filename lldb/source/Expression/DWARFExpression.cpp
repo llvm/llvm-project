@@ -655,7 +655,7 @@ void DWARFExpression::GetDescription(Stream *s, lldb::DescriptionLevel level,
 
 static bool ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
                                       lldb::RegisterKind reg_kind,
-                                      uint32_t reg_num, Error *error_ptr,
+                                      uint32_t reg_num, Status *error_ptr,
                                       Value &value) {
   if (reg_ctx == NULL) {
     if (error_ptr)
@@ -1250,7 +1250,7 @@ bool DWARFExpression::Evaluate(ExecutionContextScope *exe_scope,
                                lldb::addr_t loclist_base_load_addr,
                                const Value *initial_value_ptr,
                                const Value *object_address_ptr, Value &result,
-                               Error *error_ptr) const {
+                               Status *error_ptr) const {
   ExecutionContext exe_ctx(exe_scope);
   return Evaluate(&exe_ctx, expr_locals, decl_map, nullptr,
                   loclist_base_load_addr, initial_value_ptr, object_address_ptr,
@@ -1261,7 +1261,7 @@ bool DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, ClangExpressionVariableList *expr_locals,
     ClangExpressionDeclMap *decl_map, RegisterContext *reg_ctx,
     lldb::addr_t loclist_base_load_addr, const Value *initial_value_ptr,
-    const Value *object_address_ptr, Value &result, Error *error_ptr) const {
+    const Value *object_address_ptr, Value &result, Status *error_ptr) const {
   ModuleSP module_sp = m_module_wp.lock();
 
   if (IsLocationList()) {
@@ -1333,7 +1333,7 @@ bool DWARFExpression::Evaluate(
     DWARFCompileUnit *dwarf_cu, const lldb::offset_t opcodes_offset,
     const lldb::offset_t opcodes_length, const lldb::RegisterKind reg_kind,
     const Value *initial_value_ptr, const Value *object_address_ptr,
-    Value &result, Error *error_ptr) {
+    Value &result, Status *error_ptr) {
 
   if (opcodes_length == 0) {
     if (error_ptr)
@@ -1467,7 +1467,7 @@ bool DWARFExpression::Evaluate(
           if (process) {
             lldb::addr_t pointer_addr =
                 stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-            Error error;
+            Status error;
             lldb::addr_t pointer_value =
                 process->ReadPointerFromMemory(pointer_addr, error);
             if (pointer_value != LLDB_INVALID_ADDRESS) {
@@ -1572,7 +1572,7 @@ bool DWARFExpression::Evaluate(
             lldb::addr_t pointer_addr =
                 stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
             uint8_t addr_bytes[sizeof(lldb::addr_t)];
-            Error error;
+            Status error;
             if (process->ReadMemory(pointer_addr, &addr_bytes, size, error) ==
                 size) {
               DataExtractor addr_data(addr_bytes, sizeof(addr_bytes),
@@ -2568,7 +2568,7 @@ bool DWARFExpression::Evaluate(
           ::memset(curr_piece.GetBuffer().GetBytes(), 0, piece_byte_size);
           pieces.AppendDataToHostBuffer(curr_piece);
         } else {
-          Error error;
+          Status error;
           // Extract the current piece into "curr_piece"
           Value curr_piece_source_value(stack.back());
           stack.pop_back();

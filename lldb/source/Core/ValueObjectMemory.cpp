@@ -17,7 +17,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h" // for DataExtractor
-#include "lldb/Utility/Error.h"         // for Error
+#include "lldb/Utility/Status.h"        // for Status
 #include "lldb/lldb-types.h"            // for addr_t
 #include "llvm/Support/ErrorHandling.h" // for llvm_unreachable
 

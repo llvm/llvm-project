@@ -21,23 +21,18 @@ using namespace llvm;
 //
 
 CallGraph::CallGraph(Module &M)
-    : M(M), Root(nullptr), ExternalCallingNode(getOrInsertFunction(nullptr)),
+    : M(M), ExternalCallingNode(getOrInsertFunction(nullptr)),
       CallsExternalNode(llvm::make_unique<CallGraphNode>(nullptr)) {
   // Add every function to the call graph.
   for (Function &F : M)
     addToCallGraph(&F);
-
-  // If we didn't find a main function, use the external call graph node
-  if (!Root)
-    Root = ExternalCallingNode;
 }
 
 CallGraph::CallGraph(CallGraph &&Arg)
-    : M(Arg.M), FunctionMap(std::move(Arg.FunctionMap)), Root(Arg.Root),
+    : M(Arg.M), FunctionMap(std::move(Arg.FunctionMap)),
       ExternalCallingNode(Arg.ExternalCallingNode),
       CallsExternalNode(std::move(Arg.CallsExternalNode)) {
   Arg.FunctionMap.clear();
-  Arg.Root = nullptr;
   Arg.ExternalCallingNode = nullptr;
 }
 
@@ -57,21 +52,9 @@ CallGraph::~CallGraph() {
 void CallGraph::addToCallGraph(Function *F) {
   CallGraphNode *Node = getOrInsertFunction(F);
 
-  // If this function has external linkage, anything could call it.
-  if (!F->hasLocalLinkage()) {
-    ExternalCallingNode->addCalledFunction(CallSite(), Node);
-
-    // Found the entry point?
-    if (F->getName() == "main") {
-      if (Root) // Found multiple external mains?  Don't pick one.
-        Root = ExternalCallingNode;
-      else
-        Root = Node; // Found a main, keep track of it!
-    }
-  }
-
-  // If this function has its address taken, anything could call it.
-  if (F->hasAddressTaken())
+  // If this function has external linkage or has its address taken, anything
+  // could call it.
+  if (!F->hasLocalLinkage() || F->hasAddressTaken())
     ExternalCallingNode->addCalledFunction(CallSite(), Node);
 
   // If this function is not defined in this translation unit, it could call
@@ -96,13 +79,6 @@ void CallGraph::addToCallGraph(Function *F) {
 }
 
 void CallGraph::print(raw_ostream &OS) const {
-  OS << "CallGraph Root is: ";
-  if (Function *F = Root->getFunction())
-    OS << F->getName() << "\n";
-  else {
-    OS << "<<null function: 0x" << Root << ">>\n";
-  }
-
   // Print in a deterministic order by sorting CallGraphNodes by name.  We do
   // this here to avoid slowing down the non-printing fast path.
 

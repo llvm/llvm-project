@@ -169,7 +169,7 @@ public:
 
     virtual bool EvaluatePrecondition(StoppointCallbackContext &context);
 
-    virtual Error ConfigurePrecondition(Args &options);
+    virtual Status ConfigurePrecondition(Args &options);
 
     virtual void GetDescription(Stream &stream, lldb::DescriptionLevel level);
   };
@@ -178,7 +178,7 @@ public:
 
   // Saving & restoring breakpoints:
   static lldb::BreakpointSP CreateFromStructuredData(
-      Target &target, StructuredData::ObjectSP &data_object_sp, Error &error);
+      Target &target, StructuredData::ObjectSP &data_object_sp, Status &error);
 
   static bool
   SerializedBreakpointMatchesNames(StructuredData::ObjectSP &bkpt_object_sp,
@@ -613,7 +613,7 @@ public:
 
   lldb::SearchFilterSP GetSearchFilter() { return m_filter_sp; }
 
-  bool AddName(const char *new_name, Error &error);
+  bool AddName(llvm::StringRef new_name, Status &error);
 
   void RemoveName(const char *name_to_remove) {
     if (name_to_remove)

@@ -30,7 +30,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Utility/ARM_DWARF_Registers.h"
@@ -1533,7 +1533,7 @@ bool ABIMacOSX_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
 
           // Arguments 5 on up are on the stack
           const uint32_t arg_byte_size = (bit_width + (8 - 1)) / 8;
-          Error error;
+          Status error;
           if (!exe_ctx.GetProcessRef().ReadScalarIntegerFromMemory(
                   sp, arg_byte_size, is_signed, value->GetScalar(), error))
             return false;
@@ -1619,7 +1619,7 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
                   reg_ctx->ReadRegister(r1_reg_info, r1_reg_value) &&
                   reg_ctx->ReadRegister(r2_reg_info, r2_reg_value) &&
                   reg_ctx->ReadRegister(r3_reg_info, r3_reg_value)) {
-                Error error;
+                Status error;
                 if (r0_reg_value.GetAsMemoryData(r0_reg_info,
                                                  heap_data_ap->GetBytes() + 0,
                                                  4, byte_order, error) &&
@@ -1702,9 +1702,9 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-Error ABIMacOSX_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                          lldb::ValueObjectSP &new_value_sp) {
-  Error error;
+Status ABIMacOSX_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                           lldb::ValueObjectSP &new_value_sp) {
+  Status error;
   if (!new_value_sp) {
     error.SetErrorString("Empty value object for return value.");
     return error;
@@ -1728,7 +1728,7 @@ Error ABIMacOSX_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
       compiler_type.IsPointerType()) {
     DataExtractor data;
-    Error data_error;
+    Status data_error;
     size_t num_bytes = new_value_sp->GetData(data, data_error);
     if (data_error.Fail()) {
       error.SetErrorStringWithFormat(

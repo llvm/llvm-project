@@ -58,10 +58,10 @@ llvm::ArrayRef<OptionDefinition> OptionGroupFormat::GetDefinitions() {
   return result.take_front(2);
 }
 
-Error OptionGroupFormat::SetOptionValue(uint32_t option_idx,
-                                        llvm::StringRef option_arg,
-                                        ExecutionContext *execution_context) {
-  Error error;
+Status OptionGroupFormat::SetOptionValue(uint32_t option_idx,
+                                         llvm::StringRef option_arg,
+                                         ExecutionContext *execution_context) {
+  Status error;
   const int short_option = g_option_table[option_idx].short_option;
 
   switch (short_option) {

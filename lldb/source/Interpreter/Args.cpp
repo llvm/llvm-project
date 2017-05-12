@@ -420,10 +420,10 @@ void Args::SetArguments(const char **argv) {
   SetArguments(ArgvToArgc(argv), argv);
 }
 
-Error Args::ParseOptions(Options &options, ExecutionContext *execution_context,
-                         PlatformSP platform_sp, bool require_validation) {
+Status Args::ParseOptions(Options &options, ExecutionContext *execution_context,
+                          PlatformSP platform_sp, bool require_validation) {
   StreamString sstr;
-  Error error;
+  Status error;
   Option *long_options = options.GetLongOptions();
   if (long_options == nullptr) {
     error.SetErrorStringWithFormat("invalid long options");
@@ -547,7 +547,7 @@ void Args::Clear() {
 
 lldb::addr_t Args::StringToAddress(const ExecutionContext *exe_ctx,
                                    llvm::StringRef s, lldb::addr_t fail_value,
-                                   Error *error_ptr) {
+                                   Status *error_ptr) {
   bool error_set = false;
   if (s.empty()) {
     if (error_ptr)
@@ -630,7 +630,7 @@ lldb::addr_t Args::StringToAddress(const ExecutionContext *exe_ctx,
 
           if (regex_match.GetMatchAtIndex(s, 3, str)) {
             if (!llvm::StringRef(str).getAsInteger(0, offset)) {
-              Error error;
+              Status error;
               addr = StringToAddress(exe_ctx, name.c_str(),
                                      LLDB_INVALID_ADDRESS, &error);
               if (addr != LLDB_INVALID_ADDRESS) {
@@ -774,7 +774,7 @@ const char *Args::GetShellSafeArgument(const FileSpec &shell,
 
 int64_t Args::StringToOptionEnum(llvm::StringRef s,
                                  OptionEnumValueElement *enum_values,
-                                 int32_t fail_value, Error &error) {
+                                 int32_t fail_value, Status &error) {
   error.Clear();
   if (!enum_values) {
     error.SetErrorString("invalid enumeration argument");
@@ -819,10 +819,10 @@ Args::StringToScriptLanguage(llvm::StringRef s, lldb::ScriptLanguage fail_value,
   return fail_value;
 }
 
-Error Args::StringToFormat(const char *s, lldb::Format &format,
-                           size_t *byte_size_ptr) {
+Status Args::StringToFormat(const char *s, lldb::Format &format,
+                            size_t *byte_size_ptr) {
   format = eFormatInvalid;
-  Error error;
+  Status error;
 
   if (s && s[0]) {
     if (byte_size_ptr) {

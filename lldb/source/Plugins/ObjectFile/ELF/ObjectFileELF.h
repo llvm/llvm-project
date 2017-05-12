@@ -375,7 +375,7 @@ private:
 
   unsigned PLTRelocationType();
 
-  static lldb_private::Error
+  static lldb_private::Status
   RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
                               lldb_private::ArchSpec &arch_spec,
                               lldb_private::UUID &uuid);

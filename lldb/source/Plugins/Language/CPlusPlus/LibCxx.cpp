@@ -26,7 +26,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -53,7 +53,7 @@ bool lldb_private::formatters::LibcxxSmartPointerSummaryProvider(
     return true;
   } else {
     bool print_pointee = false;
-    Error error;
+    Status error;
     ValueObjectSP pointee_sp = ptr_sp->Dereference(error);
     if (pointee_sp && error.Success()) {
       if (pointee_sp->DumpPrintableRepresentation(
@@ -181,7 +181,7 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
         });
         DataBufferSP buffer_sp(new DataBufferHeap(tree_node_type.GetByteSize(nullptr),0));
         ProcessSP process_sp(target_sp->GetProcessSP());
-        Error error;
+        Status error;
         process_sp->ReadMemory(addr, buffer_sp->GetBytes(), buffer_sp->GetByteSize(), error);
         if (error.Fail())
           return false;

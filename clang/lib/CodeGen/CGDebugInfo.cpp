@@ -208,8 +208,10 @@ llvm::DIScope *CGDebugInfo::getContextDescriptor(const Decl *Context,
   }
 
   // Check namespace.
-  if (const auto *NSDecl = dyn_cast<NamespaceDecl>(Context))
-    return getOrCreateNameSpace(NSDecl);
+  if (const auto *NSDecl = dyn_cast<NamespaceDecl>(Context)) {
+    auto *ParentModule = dyn_cast<llvm::DIModule>(Default);
+    return getOrCreateNamespace(NSDecl, ParentModule);
+  }
 
   if (const auto *RDecl = dyn_cast<RecordDecl>(Context))
     if (!RDecl->isDependentType())
@@ -2861,7 +2863,7 @@ void CGDebugInfo::collectFunctionDeclProps(GlobalDecl GD, llvm::DIFile *Unit,
   if (DebugKind >= codegenoptions::LimitedDebugInfo) {
     if (const NamespaceDecl *NSDecl =
         dyn_cast_or_null<NamespaceDecl>(FD->getDeclContext()))
-      FDContext = getOrCreateNameSpace(NSDecl);
+    FDContext = getOrCreateNamespace(NSDecl, getParentModuleOrNull(FD));
     else if (const RecordDecl *RDecl =
              dyn_cast_or_null<RecordDecl>(FD->getDeclContext())) {
       llvm::DIScope *Mod = getParentModuleOrNull(RDecl);
@@ -3961,7 +3963,7 @@ void CGDebugInfo::EmitUsingDirective(const UsingDirectiveDecl &UD) {
       CGM.getCodeGenOpts().DebugExplicitImport) {
     DBuilder.createImportedModule(
         getCurrentContextDescriptor(cast<Decl>(UD.getDeclContext())),
-        getOrCreateNameSpace(NSDecl),
+        getOrCreateNamespace(NSDecl, getParentModuleOrNull(&UD)),
         getLineNumber(UD.getLocation()));
   }
 }
@@ -4021,23 +4023,32 @@ CGDebugInfo::EmitNamespaceAlias(const NamespaceAliasDecl &NA) {
   else
     R = DBuilder.createImportedDeclaration(
         getCurrentContextDescriptor(cast<Decl>(NA.getDeclContext())),
-        getOrCreateNameSpace(cast<NamespaceDecl>(NA.getAliasedNamespace())),
+        getOrCreateNamespace(cast<NamespaceDecl>(NA.getAliasedNamespace()),
+                             getParentModuleOrNull(&NA)),
         getLineNumber(NA.getLocation()), NA.getName());
   VH.reset(R);
   return R;
 }
 
 llvm::DINamespace *
-CGDebugInfo::getOrCreateNameSpace(const NamespaceDecl *NSDecl) {
+CGDebugInfo::getOrCreateNamespace(const NamespaceDecl *NSDecl,
+                                  llvm::DIModule *ParentModule) {
   NSDecl = NSDecl->getCanonicalDecl();
-  auto I = NameSpaceCache.find(NSDecl);
-  if (I != NameSpaceCache.end())
+  // The AST merges NamespaceDecls, but for module debug info it is important to
+  // put a namespace decl (or rather its children) into the correct
+  // (sub-)module, so use the parent module of the decl that triggered this
+  // namespace to be serialized as a second key.
+  NamespaceKey Key = {NSDecl, ParentModule};
+  auto I = NamespaceCache.find(Key);
+  if (I != NamespaceCache.end())
     return cast<llvm::DINamespace>(I->second);
 
   llvm::DIScope *Context = getDeclContextDescriptor(NSDecl);
-  llvm::DINamespace *NS =
-      DBuilder.createNameSpace(Context, NSDecl->getName(), NSDecl->isInline());
-  NameSpaceCache[NSDecl].reset(NS);
+  // Don't trust the context if it is a DIModule (see comment above).
+  llvm::DINamespace *NS = DBuilder.createNameSpace(
+      isa<llvm::DIModule>(Context) ? ParentModule : Context, NSDecl->getName(),
+      NSDecl->isInline());
+  NamespaceCache[Key].reset(NS);
   return NS;
 }
 

@@ -210,7 +210,7 @@ private:
   // Member variables
   //------------------------------------------------------------------
   std::string m_re; ///< A copy of the original regular expression text
-  int m_comp_err;   ///< Error code for the regular expression compilation
+  int m_comp_err;   ///< Status code for the regular expression compilation
   regex_t m_preg;   ///< The compiled regular expression
 };
 

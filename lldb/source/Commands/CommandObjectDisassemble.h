@@ -32,8 +32,8 @@ public:
 
     ~CommandOptions() override;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override;
 
@@ -49,7 +49,7 @@ public:
       return flavor_string.c_str();
     }
 
-    Error OptionParsingFinished(ExecutionContext *execution_context) override;
+    Status OptionParsingFinished(ExecutionContext *execution_context) override;
 
     bool show_mixed; // Show mixed source/assembly
     bool show_bytes;

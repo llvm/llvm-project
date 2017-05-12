@@ -28,7 +28,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
@@ -218,7 +218,7 @@ bool lldb_private::formatters::NSMachPortSummaryProvider(
 
   if (!strcmp(class_name, "NSMachPort")) {
     uint64_t offset = (ptr_size == 4 ? 12 : 20);
-    Error error;
+    Status error;
     port_number = process_sp->ReadUnsignedIntegerFromMemory(
         offset + valobj_addr, 4, 0, error);
     if (error.Success()) {
@@ -267,7 +267,7 @@ bool lldb_private::formatters::NSIndexSetSummaryProvider(
   do {
     if (!strcmp(class_name, "NSIndexSet") ||
         !strcmp(class_name, "NSMutableIndexSet")) {
-      Error error;
+      Status error;
       uint32_t mode = process_sp->ReadUnsignedIntegerFromMemory(
           valobj_addr + ptr_size, 4, 0, error);
       if (error.Fail())
@@ -461,7 +461,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
       }
       return true;
     } else {
-      Error error;
+      Status error;
       uint8_t data_type = (process_sp->ReadUnsignedIntegerFromMemory(
                                valobj_addr + ptr_size, 1, 0, error) &
                            0x1F);
@@ -653,7 +653,7 @@ bool lldb_private::formatters::NSDateSummaryProvider(
           process_sp->GetTarget().GetArchitecture().GetTriple());
       uint32_t delta =
           (triple.isWatchOS() && triple.isWatchABI()) ? 8 : ptr_size;
-      Error error;
+      Status error;
       date_value_bits = process_sp->ReadUnsignedIntegerFromMemory(
           valobj_addr + delta, 8, 0, error);
       memcpy(&date_value, &date_value_bits, sizeof(date_value_bits));
@@ -661,7 +661,7 @@ bool lldb_private::formatters::NSDateSummaryProvider(
         return false;
     }
   } else if (class_name == g_NSCalendarDate) {
-    Error error;
+    Status error;
     date_value_bits = process_sp->ReadUnsignedIntegerFromMemory(
         valobj_addr + 2 * ptr_size, 8, 0, error);
     memcpy(&date_value, &date_value_bits, sizeof(date_value_bits));
@@ -788,14 +788,14 @@ bool lldb_private::formatters::NSDataSummaryProvider(
       !strcmp(class_name, "NSConcreteMutableData") ||
       !strcmp(class_name, "__NSCFData")) {
     uint32_t offset = (is_64bit ? 16 : 8);
-    Error error;
+    Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(
         valobj_addr + offset, is_64bit ? 8 : 4, 0, error);
     if (error.Fail())
       return false;
   } else if (!strcmp(class_name, "_NSInlineData")) {
     uint32_t offset = (is_64bit ? 8 : 4);
-    Error error;
+    Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + offset, 2,
                                                       0, error);
     if (error.Fail())
@@ -818,7 +818,7 @@ bool lldb_private::formatters::ObjCBOOLSummaryProvider(
   ValueObjectSP real_guy_sp = valobj.GetSP();
 
   if (type_info & eTypeIsPointer) {
-    Error err;
+    Status err;
     real_guy_sp = valobj.Dereference(err);
     if (err.Fail() || !real_guy_sp)
       return false;
@@ -893,7 +893,7 @@ bool lldb_private::formatters::ObjCSELSummaryProvider(
                                                           exe_ctx, charstar);
   } else {
     DataExtractor data;
-    Error error;
+    Status error;
     valobj.GetData(data, error);
     if (error.Fail())
       return false;

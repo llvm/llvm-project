@@ -31,8 +31,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -237,7 +237,7 @@ bool ABISysV_i386::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (!reg_info_32)
     return false; // TODO this should actually never happen
 
-  Error error;
+  Status error;
   RegisterValue reg_value;
 
   // Make room for the argument(s) on the stack
@@ -280,7 +280,7 @@ static bool ReadIntegerArgument(Scalar &scalar, unsigned int bit_width,
                                 bool is_signed, Process *process,
                                 addr_t &current_stack_argument) {
   uint32_t byte_size = (bit_width + (8 - 1)) / 8;
-  Error error;
+  Status error;
 
   if (!process)
     return false;
@@ -333,9 +333,9 @@ bool ABISysV_i386::GetArgumentValues(Thread &thread, ValueList &values) const {
   return true;
 }
 
-Error ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                         lldb::ValueObjectSP &new_value_sp) {
-  Error error;
+Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                          lldb::ValueObjectSP &new_value_sp) {
+  Status error;
   if (!new_value_sp) {
     error.SetErrorString("Empty value object for return value.");
     return error;
@@ -351,7 +351,7 @@ Error ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
   DataExtractor data;
-  Error data_error;
+  Status data_error;
   size_t num_bytes = new_value_sp->GetData(data, data_error);
   bool register_write_successful = true;
 
@@ -661,7 +661,7 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
             const ByteOrder byte_order = process_sp->GetByteOrder();
             RegisterValue reg_value;
             if (reg_ctx->ReadRegister(vec_reg, reg_value)) {
-              Error error;
+              Status error;
               if (reg_value.GetAsMemoryData(vec_reg, heap_data_ap->GetBytes(),
                                             heap_data_ap->GetByteSize(),
                                             byte_order, error)) {
@@ -688,7 +688,7 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
               if (reg_ctx->ReadRegister(vec_reg, reg_value) &&
                   reg_ctx->ReadRegister(vec_reg2, reg_value2)) {
 
-                Error error;
+                Status error;
                 if (reg_value.GetAsMemoryData(vec_reg, heap_data_ap->GetBytes(),
                                               vec_reg->byte_size, byte_order,
                                               error) &&

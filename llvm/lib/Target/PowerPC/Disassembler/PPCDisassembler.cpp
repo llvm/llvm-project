@@ -204,6 +204,17 @@ static const unsigned G8Regs[] = {
   PPC::X28, PPC::X29, PPC::X30, PPC::X31
 };
 
+static const unsigned G80Regs[] = {
+  PPC::ZERO8, PPC::X1, PPC::X2, PPC::X3,
+  PPC::X4, PPC::X5, PPC::X6, PPC::X7,
+  PPC::X8, PPC::X9, PPC::X10, PPC::X11,
+  PPC::X12, PPC::X13, PPC::X14, PPC::X15,
+  PPC::X16, PPC::X17, PPC::X18, PPC::X19,
+  PPC::X20, PPC::X21, PPC::X22, PPC::X23,
+  PPC::X24, PPC::X25, PPC::X26, PPC::X27,
+  PPC::X28, PPC::X29, PPC::X30, PPC::X31
+};
+
 static const unsigned QFRegs[] = {
   PPC::QF0, PPC::QF1, PPC::QF2, PPC::QF3,
   PPC::QF4, PPC::QF5, PPC::QF6, PPC::QF7,
@@ -299,6 +310,12 @@ static DecodeStatus DecodeG8RCRegisterClass(MCInst &Inst, uint64_t RegNo,
                                             uint64_t Address,
                                             const void *Decoder) {
   return decodeRegisterClass(Inst, RegNo, G8Regs);
+}
+
+static DecodeStatus DecodeG8RC_NOX0RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, G80Regs);
 }
 
 #define DecodePointerLikeRegClass0 DecodeGPRCRegisterClass

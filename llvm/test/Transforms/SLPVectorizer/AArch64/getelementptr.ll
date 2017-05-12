@@ -1,4 +1,5 @@
-; RUN: opt -S -slp-vectorizer -slp-threshold=-18 -dce -instcombine < %s | FileCheck %s
+; RUN: opt -S -slp-vectorizer -slp-threshold=-18 -dce -instcombine -pass-remarks-output=%t < %s | FileCheck %s
+; RUN: cat %t | FileCheck -check-prefix=YAML %s
 
 target datalayout = "e-m:e-i32:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -23,7 +24,25 @@ target triple = "aarch64--linux-gnu"
 ; CHECK: [[A:%[a-zA-Z0-9.]+]] = add nsw <4 x i32>
 ; CHECK: [[X:%[a-zA-Z0-9.]+]] = extractelement <4 x i32> [[A]]
 ; CHECK: sext i32 [[X]] to i64
-;
+
+; YAML:      Pass:            slp-vectorizer
+; YAML-NEXT: Name:            VectorizedList
+; YAML-NEXT: Function:        getelementptr_4x32
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'SLP vectorized with cost '
+; YAML-NEXT:   - Cost:            '11'
+; YAML-NEXT:   - String:          ' and with tree size '
+; YAML-NEXT:   - TreeSize:        '5'
+
+; YAML:      Pass:            slp-vectorizer
+; YAML-NEXT: Name:            VectorizedList
+; YAML-NEXT: Function:        getelementptr_4x32
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'SLP vectorized with cost '
+; YAML-NEXT:   - Cost:            '16'
+; YAML-NEXT:   - String:          ' and with tree size '
+; YAML-NEXT:   - TreeSize:        '3'
+
 define i32 @getelementptr_4x32(i32* nocapture readonly %g, i32 %n, i32 %x, i32 %y, i32 %z) {
 entry:
   %cmp31 = icmp sgt i32 %n, 0
@@ -69,7 +88,25 @@ for.body:
 ; CHECK: [[A:%[a-zA-Z0-9.]+]] = add nsw <2 x i32>
 ; CHECK: [[X:%[a-zA-Z0-9.]+]] = extractelement <2 x i32> [[A]]
 ; CHECK: sext i32 [[X]] to i64
-;
+
+; YAML:      Pass:            slp-vectorizer
+; YAML-NEXT: Name:            VectorizedList
+; YAML-NEXT: Function:        getelementptr_2x32
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'SLP vectorized with cost '
+; YAML-NEXT:   - Cost:            '11'
+; YAML-NEXT:   - String:          ' and with tree size '
+; YAML-NEXT:   - TreeSize:        '5'
+
+; YAML:      Pass:            slp-vectorizer
+; YAML-NEXT: Name:            VectorizedList
+; YAML-NEXT: Function:        getelementptr_2x32
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'SLP vectorized with cost '
+; YAML-NEXT:   - Cost:            '6'
+; YAML-NEXT:   - String:          ' and with tree size '
+; YAML-NEXT:   - TreeSize:        '3'
+
 define i32 @getelementptr_2x32(i32* nocapture readonly %g, i32 %n, i32 %x, i32 %y, i32 %z) {
 entry:
   %cmp31 = icmp sgt i32 %n, 0

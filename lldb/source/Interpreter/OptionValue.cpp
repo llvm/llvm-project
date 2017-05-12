@@ -42,10 +42,10 @@ uint64_t OptionValue::GetUInt64Value(uint64_t fail_value, bool *success_ptr) {
   return fail_value;
 }
 
-Error OptionValue::SetSubValue(const ExecutionContext *exe_ctx,
-                               VarSetOperationType op, llvm::StringRef name,
-  llvm::StringRef value) {
-  Error error;
+Status OptionValue::SetSubValue(const ExecutionContext *exe_ctx,
+                                VarSetOperationType op, llvm::StringRef name,
+                                llvm::StringRef value) {
+  Status error;
   error.SetErrorStringWithFormat("SetSubValue is not supported");
   return error;
 }
@@ -507,7 +507,7 @@ const char *OptionValue::GetBuiltinTypeAsCString(Type t) {
 }
 
 lldb::OptionValueSP OptionValue::CreateValueFromCStringForTypeMask(
-    const char *value_cstr, uint32_t type_mask, Error &error) {
+    const char *value_cstr, uint32_t type_mask, Status &error) {
   // If only 1 bit is set in the type mask for a dictionary or array
   // then we know how to decode a value from a cstring
   lldb::OptionValueSP value_sp;
@@ -582,9 +582,9 @@ size_t OptionValue::AutoComplete(CommandInterpreter &interpreter,
   return matches.GetSize();
 }
 
-Error OptionValue::SetValueFromString(llvm::StringRef value,
-                                      VarSetOperationType op) {
-  Error error;
+Status OptionValue::SetValueFromString(llvm::StringRef value,
+                                       VarSetOperationType op) {
+  Status error;
   switch (op) {
   case eVarSetOperationReplace:
     error.SetErrorStringWithFormat(

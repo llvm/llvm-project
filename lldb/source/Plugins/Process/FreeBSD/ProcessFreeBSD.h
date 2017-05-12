@@ -47,7 +47,7 @@ public:
 
   ~ProcessFreeBSD();
 
-  virtual lldb_private::Error WillResume() override;
+  virtual lldb_private::Status WillResume() override;
 
   //------------------------------------------------------------------
   // PluginInterface protocol
@@ -65,27 +65,27 @@ public:
   bool CanDebug(lldb::TargetSP target_sp,
                 bool plugin_specified_by_name) override;
 
-  lldb_private::Error WillLaunch(lldb_private::Module *module) override;
+  lldb_private::Status WillLaunch(lldb_private::Module *module) override;
 
-  lldb_private::Error DoAttachToProcessWithID(
+  lldb_private::Status DoAttachToProcessWithID(
       lldb::pid_t pid,
       const lldb_private::ProcessAttachInfo &attach_info) override;
 
-  lldb_private::Error
+  lldb_private::Status
   DoLaunch(lldb_private::Module *exe_module,
            lldb_private::ProcessLaunchInfo &launch_info) override;
 
   void DidLaunch() override;
 
-  lldb_private::Error DoResume() override;
+  lldb_private::Status DoResume() override;
 
-  lldb_private::Error DoHalt(bool &caused_stop) override;
+  lldb_private::Status DoHalt(bool &caused_stop) override;
 
-  lldb_private::Error DoDetach(bool keep_stopped) override;
+  lldb_private::Status DoDetach(bool keep_stopped) override;
 
-  lldb_private::Error DoSignal(int signal) override;
+  lldb_private::Status DoSignal(int signal) override;
 
-  lldb_private::Error DoDestroy() override;
+  lldb_private::Status DoDestroy() override;
 
   void DoDidExec() override;
 
@@ -94,35 +94,35 @@ public:
   bool IsAlive() override;
 
   size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                      lldb_private::Error &error) override;
+                      lldb_private::Status &error) override;
 
   size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
-                       lldb_private::Error &error) override;
+                       lldb_private::Status &error) override;
 
   lldb::addr_t DoAllocateMemory(size_t size, uint32_t permissions,
-                                lldb_private::Error &error) override;
+                                lldb_private::Status &error) override;
 
-  lldb_private::Error DoDeallocateMemory(lldb::addr_t ptr) override;
+  lldb_private::Status DoDeallocateMemory(lldb::addr_t ptr) override;
 
   virtual size_t
   GetSoftwareBreakpointTrapOpcode(lldb_private::BreakpointSite *bp_site);
 
-  lldb_private::Error
+  lldb_private::Status
   EnableBreakpointSite(lldb_private::BreakpointSite *bp_site) override;
 
-  lldb_private::Error
+  lldb_private::Status
   DisableBreakpointSite(lldb_private::BreakpointSite *bp_site) override;
 
-  lldb_private::Error EnableWatchpoint(lldb_private::Watchpoint *wp,
-                                       bool notify = true) override;
-
-  lldb_private::Error DisableWatchpoint(lldb_private::Watchpoint *wp,
+  lldb_private::Status EnableWatchpoint(lldb_private::Watchpoint *wp,
                                         bool notify = true) override;
 
-  lldb_private::Error GetWatchpointSupportInfo(uint32_t &num) override;
+  lldb_private::Status DisableWatchpoint(lldb_private::Watchpoint *wp,
+                                         bool notify = true) override;
 
-  lldb_private::Error GetWatchpointSupportInfo(uint32_t &num,
-                                               bool &after) override;
+  lldb_private::Status GetWatchpointSupportInfo(uint32_t &num) override;
+
+  lldb_private::Status GetWatchpointSupportInfo(uint32_t &num,
+                                                bool &after) override;
 
   virtual uint32_t UpdateThreadListIfNeeded();
 
@@ -134,7 +134,7 @@ public:
   lldb::addr_t GetImageInfoAddress() override;
 
   size_t PutSTDIN(const char *buf, size_t len,
-                  lldb_private::Error &error) override;
+                  lldb_private::Status &error) override;
 
   const lldb::DataBufferSP GetAuxvData() override;
 
@@ -169,10 +169,10 @@ public:
       void *baton, lldb_private::StoppointCallbackContext *context,
       lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
 
-  lldb_private::Error SetupSoftwareSingleStepping(lldb::tid_t tid);
+  lldb_private::Status SetupSoftwareSingleStepping(lldb::tid_t tid);
 
-  lldb_private::Error SetSoftwareSingleStepBreakpoint(lldb::tid_t tid,
-                                                      lldb::addr_t addr);
+  lldb_private::Status SetSoftwareSingleStepBreakpoint(lldb::tid_t tid,
+                                                       lldb::addr_t addr);
 
   bool IsSoftwareStepBreakpoint(lldb::tid_t tid);
 

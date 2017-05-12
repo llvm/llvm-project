@@ -63,9 +63,9 @@
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBufferLLVM.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-forward.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
@@ -484,19 +484,19 @@ MonitorShellCommand(std::shared_ptr<ShellInfo> shell_info, lldb::pid_t pid,
   return true;
 }
 
-Error Host::RunShellCommand(const char *command, const FileSpec &working_dir,
-                            int *status_ptr, int *signo_ptr,
-                            std::string *command_output_ptr,
-                            uint32_t timeout_sec, bool run_in_default_shell) {
+Status Host::RunShellCommand(const char *command, const FileSpec &working_dir,
+                             int *status_ptr, int *signo_ptr,
+                             std::string *command_output_ptr,
+                             uint32_t timeout_sec, bool run_in_default_shell) {
   return RunShellCommand(Args(command), working_dir, status_ptr, signo_ptr,
                          command_output_ptr, timeout_sec, run_in_default_shell);
 }
 
-Error Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
-                            int *status_ptr, int *signo_ptr,
-                            std::string *command_output_ptr,
-                            uint32_t timeout_sec, bool run_in_default_shell) {
-  Error error;
+Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
+                             int *status_ptr, int *signo_ptr,
+                             std::string *command_output_ptr,
+                             uint32_t timeout_sec, bool run_in_default_shell) {
+  Status error;
   ProcessLaunchInfo launch_info;
   launch_info.SetArchitecture(HostInfo::GetArchitecture());
   if (run_in_default_shell) {
@@ -654,10 +654,10 @@ short Host::GetPosixspawnFlags(const ProcessLaunchInfo &launch_info) {
   return flags;
 }
 
-Error Host::LaunchProcessPosixSpawn(const char *exe_path,
-                                    const ProcessLaunchInfo &launch_info,
-                                    lldb::pid_t &pid) {
-  Error error;
+Status Host::LaunchProcessPosixSpawn(const char *exe_path,
+                                     const ProcessLaunchInfo &launch_info,
+                                     lldb::pid_t &pid) {
+  Status error;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST |
                                                   LIBLLDB_LOG_PROCESS));
 
@@ -866,7 +866,7 @@ Error Host::LaunchProcessPosixSpawn(const char *exe_path,
 }
 
 bool Host::AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
-                                   Log *log, Error &error) {
+                                   Log *log, Status &error) {
   if (info == NULL)
     return false;
 
@@ -947,7 +947,7 @@ bool Host::AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
 // The functions below implement process launching via posix_spawn() for Linux,
 // FreeBSD and NetBSD.
 
-Error Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
+Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   std::unique_ptr<ProcessLauncher> delegate_launcher;
 #if defined(_WIN32)
   delegate_launcher.reset(new ProcessLauncherWindows());
@@ -958,7 +958,7 @@ Error Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
 #endif
   MonitoringProcessLauncher launcher(std::move(delegate_launcher));
 
-  Error error;
+  Status error;
   HostProcess process = launcher.LaunchProcess(launch_info, error);
 
   // TODO(zturner): It would be better if the entire HostProcess were returned

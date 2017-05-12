@@ -299,7 +299,7 @@ void AppleObjCTrampolineHandler::AppleObjCVTables::VTableRegion::SetUpRegion() {
                      process_sp->GetByteOrder(),
                      process_sp->GetAddressByteSize());
   size_t actual_size = 8 + process_sp->GetAddressByteSize();
-  Error error;
+  Status error;
   size_t bytes_read =
       process_sp->ReadMemory(m_header_addr, memory_buffer, actual_size, error);
   if (bytes_read != actual_size) {
@@ -534,7 +534,7 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::RefreshTrampolines(
       return false;
 
     // Now get a pointer value from the zeroth argument.
-    Error error;
+    Status error;
     DataExtractor data;
     error = argument_values.GetValueAtIndex(0)->GetValueAsData(&exe_ctx, data,
                                                                0, NULL);
@@ -555,7 +555,7 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::ReadRegions() {
   m_regions.clear();
   if (!InitializeVTableSymbols())
     return false;
-  Error error;
+  Status error;
   ProcessSP process_sp = GetProcessSP();
   if (process_sp) {
     lldb::addr_t region_addr =
@@ -770,7 +770,7 @@ AppleObjCTrampolineHandler::SetupDispatchFunction(Thread &thread,
 
     if (!m_impl_code.get()) {
       if (m_lookup_implementation_function_code != NULL) {
-        Error error;
+        Status error;
         m_impl_code.reset(exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
             m_lookup_implementation_function_code, eLanguageTypeObjC,
             g_lookup_implementation_function_name, error));
@@ -802,7 +802,7 @@ AppleObjCTrampolineHandler::SetupDispatchFunction(Thread &thread,
           thread.GetProcess()->GetTarget().GetScratchClangASTContext();
       CompilerType clang_void_ptr_type =
           clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
-      Error error;
+      Status error;
 
       impl_function_caller = m_impl_code->MakeFunctionCaller(
           clang_void_ptr_type, dispatch_values, thread_sp, error);

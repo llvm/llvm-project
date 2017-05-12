@@ -136,8 +136,7 @@ private:
   bool SelectMUBUFIntrinsicVOffset(SDValue Offset, SDValue &SOffset,
                                    SDValue &ImmOffset, SDValue &VOffset) const;
 
-  bool SelectFlat(SDValue Addr, SDValue &VAddr,
-                  SDValue &SLC, SDValue &TFE) const;
+  bool SelectFlat(SDValue Addr, SDValue &VAddr, SDValue &SLC) const;
 
   bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue &Offset,
                         bool &Imm) const;
@@ -1278,10 +1277,9 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFIntrinsicVOffset(SDValue Offset,
 
 bool AMDGPUDAGToDAGISel::SelectFlat(SDValue Addr,
                                     SDValue &VAddr,
-                                    SDValue &SLC,
-                                    SDValue &TFE) const {
+                                    SDValue &SLC) const {
   VAddr = Addr;
-  TFE = SLC = CurDAG->getTargetConstant(0, SDLoc(), MVT::i1);
+  SLC = CurDAG->getTargetConstant(0, SDLoc(), MVT::i1);
   return true;
 }
 

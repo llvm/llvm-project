@@ -31,8 +31,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -617,7 +617,7 @@ bool ABISysV_mips64::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   sp &= ~(0xfull); // 16-byte alignment
 
-  Error error;
+  Status error;
   const RegisterInfo *pc_reg_info =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
   const RegisterInfo *sp_reg_info =
@@ -674,9 +674,9 @@ bool ABISysV_mips64::GetArgumentValues(Thread &thread,
   return false;
 }
 
-Error ABISysV_mips64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                           lldb::ValueObjectSP &new_value_sp) {
-  Error error;
+Status ABISysV_mips64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                            lldb::ValueObjectSP &new_value_sp) {
+  Status error;
   if (!new_value_sp) {
     error.SetErrorString("Empty value object for return value.");
     return error;
@@ -696,7 +696,7 @@ Error ABISysV_mips64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     error.SetErrorString("no registers are available");
 
   DataExtractor data;
-  Error data_error;
+  Status data_error;
   size_t num_bytes = new_value_sp->GetData(data, data_error);
   if (data_error.Fail()) {
     error.SetErrorStringWithFormat(
@@ -754,7 +754,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
     Thread &thread, CompilerType &return_compiler_type) const {
   ValueObjectSP return_valobj_sp;
   Value value;
-  Error error;
+  Status error;
 
   ExecutionContext exe_ctx(thread.shared_from_this());
   if (exe_ctx.GetTargetPtr() == nullptr || exe_ctx.GetProcessPtr() == nullptr)

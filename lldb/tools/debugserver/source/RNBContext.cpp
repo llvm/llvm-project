@@ -266,7 +266,7 @@ const char *RNBContext::LaunchStatusAsString(std::string &s) {
   else {
     char error_num_str[64];
     snprintf(error_num_str, sizeof(error_num_str), "%u",
-             m_launch_status.Error());
+             m_launch_status.Status());
     s = error_num_str;
   }
   return s.c_str();

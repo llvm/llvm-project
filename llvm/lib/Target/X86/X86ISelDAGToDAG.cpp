@@ -1178,8 +1178,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     if (AM.IndexReg.getNode() != nullptr || AM.Scale != 1)
       break;
 
-    if (ConstantSDNode
-          *CN = dyn_cast<ConstantSDNode>(N.getNode()->getOperand(1))) {
+    if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
       unsigned Val = CN->getZExtValue();
       // Note that we handle x<<1 as (,x,2) rather than (x,x) here so
       // that the base operand remains free for further matching. If
@@ -1187,15 +1186,14 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
       // in MatchAddress turns (,x,2) into (x,x), which is cheaper.
       if (Val == 1 || Val == 2 || Val == 3) {
         AM.Scale = 1 << Val;
-        SDValue ShVal = N.getNode()->getOperand(0);
+        SDValue ShVal = N.getOperand(0);
 
         // Okay, we know that we have a scale by now.  However, if the scaled
         // value is an add of something and a constant, we can fold the
         // constant into the disp field here.
         if (CurDAG->isBaseWithConstantOffset(ShVal)) {
-          AM.IndexReg = ShVal.getNode()->getOperand(0);
-          ConstantSDNode *AddVal =
-            cast<ConstantSDNode>(ShVal.getNode()->getOperand(1));
+          AM.IndexReg = ShVal.getOperand(0);
+          ConstantSDNode *AddVal = cast<ConstantSDNode>(ShVal.getOperand(1));
           uint64_t Disp = (uint64_t)AddVal->getSExtValue() << Val;
           if (!foldOffsetIntoAddress(Disp, AM))
             return false;
@@ -1245,28 +1243,27 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     if (AM.BaseType == X86ISelAddressMode::RegBase &&
         AM.Base_Reg.getNode() == nullptr &&
         AM.IndexReg.getNode() == nullptr) {
-      if (ConstantSDNode
-            *CN = dyn_cast<ConstantSDNode>(N.getNode()->getOperand(1)))
+      if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N.getOperand(1)))
         if (CN->getZExtValue() == 3 || CN->getZExtValue() == 5 ||
             CN->getZExtValue() == 9) {
           AM.Scale = unsigned(CN->getZExtValue())-1;
 
-          SDValue MulVal = N.getNode()->getOperand(0);
+          SDValue MulVal = N.getOperand(0);
           SDValue Reg;
 
           // Okay, we know that we have a scale by now.  However, if the scaled
           // value is an add of something and a constant, we can fold the
           // constant into the disp field here.
           if (MulVal.getNode()->getOpcode() == ISD::ADD && MulVal.hasOneUse() &&
-              isa<ConstantSDNode>(MulVal.getNode()->getOperand(1))) {
-            Reg = MulVal.getNode()->getOperand(0);
+              isa<ConstantSDNode>(MulVal.getOperand(1))) {
+            Reg = MulVal.getOperand(0);
             ConstantSDNode *AddVal =
-              cast<ConstantSDNode>(MulVal.getNode()->getOperand(1));
+              cast<ConstantSDNode>(MulVal.getOperand(1));
             uint64_t Disp = AddVal->getSExtValue() * CN->getZExtValue();
             if (foldOffsetIntoAddress(Disp, AM))
-              Reg = N.getNode()->getOperand(0);
+              Reg = N.getOperand(0);
           } else {
-            Reg = N.getNode()->getOperand(0);
+            Reg = N.getOperand(0);
           }
 
           AM.IndexReg = AM.Base_Reg = Reg;
@@ -1289,7 +1286,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
 
     // Test if the LHS of the sub can be folded.
     X86ISelAddressMode Backup = AM;
-    if (matchAddressRecursively(N.getNode()->getOperand(0), AM, Depth+1)) {
+    if (matchAddressRecursively(N.getOperand(0), AM, Depth+1)) {
       AM = Backup;
       break;
     }
@@ -1300,7 +1297,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     }
 
     int Cost = 0;
-    SDValue RHS = Handle.getValue().getNode()->getOperand(1);
+    SDValue RHS = Handle.getValue().getOperand(1);
     // If the RHS involves a register with multiple uses, this
     // transformation incurs an extra mov, due to the neg instruction
     // clobbering its operand.
@@ -1309,7 +1306,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
         RHS.getNode()->getOpcode() == ISD::TRUNCATE ||
         RHS.getNode()->getOpcode() == ISD::ANY_EXTEND ||
         (RHS.getNode()->getOpcode() == ISD::ZERO_EXTEND &&
-         RHS.getNode()->getOperand(0).getValueType() == MVT::i32))
+         RHS.getOperand(0).getValueType() == MVT::i32))
       ++Cost;
     // If the base is a register with multiple uses, this
     // transformation may save a mov.
@@ -2524,7 +2521,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         N0.getNode()->hasOneUse() &&
         N0.getValueType() != MVT::i8 &&
         X86::isZeroNode(N1)) {
-      ConstantSDNode *C = dyn_cast<ConstantSDNode>(N0.getNode()->getOperand(1));
+      ConstantSDNode *C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
       if (!C) break;
 
       // For example, convert "testl %eax, $8" to "testb %al, $8"
@@ -2532,7 +2529,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
           (!(C->getZExtValue() & 0x80) ||
            hasNoSignedComparisonUses(Node))) {
         SDValue Imm = CurDAG->getTargetConstant(C->getZExtValue(), dl, MVT::i8);
-        SDValue Reg = N0.getNode()->getOperand(0);
+        SDValue Reg = N0.getOperand(0);
 
         // On x86-32, only the ABCD registers have 8-bit subregisters.
         if (!Subtarget->is64Bit()) {
@@ -2568,7 +2565,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         // Shift the immediate right by 8 bits.
         SDValue ShiftedImm = CurDAG->getTargetConstant(C->getZExtValue() >> 8,
                                                        dl, MVT::i8);
-        SDValue Reg = N0.getNode()->getOperand(0);
+        SDValue Reg = N0.getOperand(0);
 
         // Put the value in an ABCD register.
         const TargetRegisterClass *TRC;
@@ -2605,7 +2602,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
            hasNoSignedComparisonUses(Node))) {
         SDValue Imm = CurDAG->getTargetConstant(C->getZExtValue(), dl,
                                                 MVT::i16);
-        SDValue Reg = N0.getNode()->getOperand(0);
+        SDValue Reg = N0.getOperand(0);
 
         // Extract the 16-bit subregister.
         SDValue Subreg = CurDAG->getTargetExtractSubreg(X86::sub_16bit, dl,
@@ -2628,7 +2625,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
            hasNoSignedComparisonUses(Node))) {
         SDValue Imm = CurDAG->getTargetConstant(C->getZExtValue(), dl,
                                                 MVT::i32);
-        SDValue Reg = N0.getNode()->getOperand(0);
+        SDValue Reg = N0.getOperand(0);
 
         // Extract the 32-bit subregister.
         SDValue Subreg = CurDAG->getTargetExtractSubreg(X86::sub_32bit, dl,

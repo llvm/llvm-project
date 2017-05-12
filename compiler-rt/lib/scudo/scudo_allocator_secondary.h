@@ -26,20 +26,19 @@ class ScudoLargeMmapAllocator {
 
   void Init(bool AllocatorMayReturnNull) {
     PageSize = GetPageSizeCached();
-    atomic_store(&MayReturnNull, AllocatorMayReturnNull, memory_order_relaxed);
+    atomic_store_relaxed(&MayReturnNull, AllocatorMayReturnNull);
   }
 
   void *Allocate(AllocatorStats *Stats, uptr Size, uptr Alignment) {
+    uptr UserSize = Size - AlignedChunkHeaderSize;
     // The Scudo frontend prevents us from allocating more than
     // MaxAllowedMallocSize, so integer overflow checks would be superfluous.
     uptr MapSize = Size + SecondaryHeaderSize;
+    if (Alignment > MinAlignment)
+      MapSize += Alignment;
     MapSize = RoundUpTo(MapSize, PageSize);
     // Account for 2 guard pages, one before and one after the chunk.
     MapSize += 2 * PageSize;
-    // The size passed to the Secondary comprises the alignment, if large
-    // enough. Subtract it here to get the requested size, including header.
-    if (Alignment > MinAlignment)
-      Size -= Alignment;
 
     uptr MapBeg = reinterpret_cast<uptr>(MmapNoAccess(MapSize));
     if (MapBeg == ~static_cast<uptr>(0))
@@ -51,32 +50,32 @@ class ScudoLargeMmapAllocator {
     // initial guard page, and both headers. This is the pointer that has to
     // abide by alignment requirements.
     uptr UserBeg = MapBeg + PageSize + HeadersSize;
+    uptr UserEnd = UserBeg + UserSize;
 
     // In the rare event of larger alignments, we will attempt to fit the mmap
     // area better and unmap extraneous memory. This will also ensure that the
     // offset and unused bytes field of the header stay small.
     if (Alignment > MinAlignment) {
-      if (UserBeg & (Alignment - 1))
-        UserBeg += Alignment - (UserBeg & (Alignment - 1));
-      CHECK_GE(UserBeg, MapBeg);
-      uptr NewMapBeg = RoundDownTo(UserBeg - HeadersSize, PageSize) - PageSize;
-      CHECK_GE(NewMapBeg, MapBeg);
-      uptr NewMapEnd = RoundUpTo(UserBeg + (Size - AlignedChunkHeaderSize),
-                                 PageSize) + PageSize;
-      CHECK_LE(NewMapEnd, MapEnd);
-      // Unmap the extra memory if it's large enough, on both sides.
-      uptr Diff = NewMapBeg - MapBeg;
-      if (Diff > PageSize)
-        UnmapOrDie(reinterpret_cast<void *>(MapBeg), Diff);
-      Diff = MapEnd - NewMapEnd;
-      if (Diff > PageSize)
-        UnmapOrDie(reinterpret_cast<void *>(NewMapEnd), Diff);
-      MapBeg = NewMapBeg;
-      MapEnd = NewMapEnd;
-      MapSize = NewMapEnd - NewMapBeg;
+      if (!IsAligned(UserBeg, Alignment)) {
+        UserBeg = RoundUpTo(UserBeg, Alignment);
+        CHECK_GE(UserBeg, MapBeg);
+        uptr NewMapBeg = RoundDownTo(UserBeg - HeadersSize, PageSize) -
+            PageSize;
+        CHECK_GE(NewMapBeg, MapBeg);
+        if (NewMapBeg != MapBeg) {
+          UnmapOrDie(reinterpret_cast<void *>(MapBeg), NewMapBeg - MapBeg);
+          MapBeg = NewMapBeg;
+        }
+        UserEnd = UserBeg + UserSize;
+      }
+      uptr NewMapEnd = RoundUpTo(UserEnd, PageSize) + PageSize;
+      if (NewMapEnd != MapEnd) {
+        UnmapOrDie(reinterpret_cast<void *>(NewMapEnd), MapEnd - NewMapEnd);
+        MapEnd = NewMapEnd;
+      }
+      MapSize = MapEnd - MapBeg;
     }
 
-    uptr UserEnd = UserBeg + (Size - AlignedChunkHeaderSize);
     CHECK_LE(UserEnd, MapEnd - PageSize);
     // Actually mmap the memory, preserving the guard pages on either side.
     CHECK_EQ(MapBeg + PageSize, reinterpret_cast<uptr>(
@@ -94,23 +93,13 @@ class ScudoLargeMmapAllocator {
       Stats->Add(AllocatorStatMapped, MapSize - 2 * PageSize);
     }
 
-    return reinterpret_cast<void *>(UserBeg);
-  }
-
-  void *ReturnNullOrDieOnBadRequest() {
-    if (atomic_load(&MayReturnNull, memory_order_acquire))
-      return nullptr;
-    ReportAllocatorCannotReturnNull(false);
+    return reinterpret_cast<void *>(Ptr);
   }
 
   void *ReturnNullOrDieOnOOM() {
-    if (atomic_load(&MayReturnNull, memory_order_acquire))
+    if (atomic_load_relaxed(&MayReturnNull))
       return nullptr;
     ReportAllocatorCannotReturnNull(true);
-  }
-
-  void SetMayReturnNull(bool AllocatorMayReturnNull) {
-    atomic_store(&MayReturnNull, AllocatorMayReturnNull, memory_order_release);
   }
 
   void Deallocate(AllocatorStats *Stats, void *Ptr) {
@@ -123,14 +112,6 @@ class ScudoLargeMmapAllocator {
     UnmapOrDie(reinterpret_cast<void *>(Header->MapBeg), Header->MapSize);
   }
 
-  uptr TotalMemoryUsed() {
-    UNIMPLEMENTED();
-  }
-
-  bool PointerIsMine(const void *Ptr) {
-    UNIMPLEMENTED();
-  }
-
   uptr GetActuallyAllocatedSize(void *Ptr) {
     SecondaryHeader *Header = getHeader(Ptr);
     // Deduct PageSize as MapSize includes the trailing guard page.
@@ -138,39 +119,9 @@ class ScudoLargeMmapAllocator {
     return MapEnd - reinterpret_cast<uptr>(Ptr);
   }
 
-  void *GetMetaData(const void *Ptr) {
-    UNIMPLEMENTED();
-  }
-
-  void *GetBlockBegin(const void *Ptr) {
-    UNIMPLEMENTED();
-  }
-
-  void *GetBlockBeginFastLocked(void *Ptr) {
-    UNIMPLEMENTED();
-  }
-
-  void PrintStats() {
-    UNIMPLEMENTED();
-  }
-
-  void ForceLock() {
-    UNIMPLEMENTED();
-  }
-
-  void ForceUnlock() {
-    UNIMPLEMENTED();
-  }
-
-  void ForEachChunk(ForEachChunkCallback Callback, void *Arg) {
-    UNIMPLEMENTED();
-  }
-
  private:
   // A Secondary allocated chunk header contains the base of the mapping and
-  // its size. Currently, the base is always a page before the header, but
-  // we might want to extend that number in the future based on the size of
-  // the allocation.
+  // its size, which comprises the guard pages.
   struct SecondaryHeader {
     uptr MapBeg;
     uptr MapSize;

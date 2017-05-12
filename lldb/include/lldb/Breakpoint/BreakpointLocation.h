@@ -161,7 +161,7 @@ public:
   //------------------------------------------------------------------
   const char *GetConditionText(size_t *hash = nullptr) const;
 
-  bool ConditionSaysStop(ExecutionContext &exe_ctx, Error &error);
+  bool ConditionSaysStop(ExecutionContext &exe_ctx, Status &error);
 
   //------------------------------------------------------------------
   /// Set the valid thread to be checked when the breakpoint is hit.

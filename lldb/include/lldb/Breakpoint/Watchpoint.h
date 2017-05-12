@@ -100,7 +100,7 @@ public:
   void DumpSnapshots(Stream *s, const char *prefix = nullptr) const;
   void DumpWithLevel(Stream *s, lldb::DescriptionLevel description_level) const;
   Target &GetTarget() { return m_target; }
-  const Error &GetError() { return m_error; }
+  const Status &GetError() { return m_error; }
 
   //------------------------------------------------------------------
   /// Returns the WatchpointOptions structure set for this watchpoint.
@@ -213,8 +213,8 @@ private:
   lldb::ValueObjectSP m_old_value_sp;
   lldb::ValueObjectSP m_new_value_sp;
   CompilerType m_type;
-  Error m_error; // An error object describing errors associated with this
-                 // watchpoint.
+  Status m_error; // An error object describing errors associated with this
+                  // watchpoint.
   WatchpointOptions
       m_options; // Settable watchpoint options, which is a delegate to handle
                  // the callback machinery.

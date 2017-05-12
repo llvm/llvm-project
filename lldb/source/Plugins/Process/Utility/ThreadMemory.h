@@ -24,7 +24,7 @@ public:
                const lldb::ValueObjectSP &thread_info_valobj_sp);
 
   ThreadMemory(lldb_private::Process &process, lldb::tid_t tid,
-               const char *name, const char *queue,
+               llvm::StringRef name, llvm::StringRef queue,
                lldb::addr_t register_data_addr);
 
   ~ThreadMemory() override;

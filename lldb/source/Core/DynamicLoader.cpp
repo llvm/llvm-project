@@ -181,7 +181,7 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
     // address to read the file out of the memory instead of a load bias.
     bool is_loaded = false;
     lldb::addr_t load_addr;
-    Error error = m_process->GetFileLoadAddress(file, is_loaded, load_addr);
+    Status error = m_process->GetFileLoadAddress(file, is_loaded, load_addr);
     if (error.Success() && is_loaded) {
       check_alternative_file_name = false;
       base_addr = load_addr;
@@ -193,7 +193,7 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
   // different name based on the memory region info.
   if (check_alternative_file_name) {
     MemoryRegionInfo memory_info;
-    Error error = m_process->GetMemoryRegionInfo(base_addr, memory_info);
+    Status error = m_process->GetMemoryRegionInfo(base_addr, memory_info);
     if (error.Success() && memory_info.GetMapped() &&
         memory_info.GetRange().GetRangeBase() == base_addr && 
         !(memory_info.GetName().IsEmpty())) {
@@ -223,7 +223,7 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
 
 int64_t DynamicLoader::ReadUnsignedIntWithSizeInBytes(addr_t addr,
                                                       int size_in_bytes) {
-  Error error;
+  Status error;
   uint64_t value =
       m_process->ReadUnsignedIntegerFromMemory(addr, size_in_bytes, 0, error);
   if (error.Fail())
@@ -233,7 +233,7 @@ int64_t DynamicLoader::ReadUnsignedIntWithSizeInBytes(addr_t addr,
 }
 
 addr_t DynamicLoader::ReadPointer(addr_t addr) {
-  Error error;
+  Status error;
   addr_t value = m_process->ReadPointerFromMemory(addr, error);
   if (error.Fail())
     return LLDB_INVALID_ADDRESS;

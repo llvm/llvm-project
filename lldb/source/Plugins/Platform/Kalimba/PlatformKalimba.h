@@ -56,11 +56,11 @@ public:
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;
 
-  lldb_private::Error
+  lldb_private::Status
   LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
 
   lldb::ProcessSP Attach(ProcessAttachInfo &attach_info, Debugger &debugger,
-                         Target *target, Error &error) override;
+                         Target *target, Status &error) override;
 
   // Kalimba processes can not be launched by spawning and attaching.
   bool CanDebugProcess() override { return false; }

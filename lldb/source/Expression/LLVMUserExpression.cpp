@@ -106,7 +106,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
         return lldb::eExpressionSetupError;
       }
 
-      Error interpreter_error;
+      Status interpreter_error;
 
       std::vector<lldb::addr_t> args;
 
@@ -270,7 +270,7 @@ bool LLVMUserExpression::FinalizeJITExecution(
     return false;
   }
 
-  Error dematerialize_error;
+  Status dematerialize_error;
 
   m_dematerializer_sp->Dematerialize(dematerialize_error, function_stack_bottom,
                                      function_stack_top);
@@ -309,7 +309,7 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
 
   if (m_jit_start_addr != LLDB_INVALID_ADDRESS || m_can_interpret) {
     if (m_materialized_address == LLDB_INVALID_ADDRESS) {
-      Error alloc_error;
+      Status alloc_error;
 
       IRMemoryMap::AllocationPolicy policy =
           m_can_interpret ? IRMemoryMap::eAllocationPolicyHostOnly
@@ -335,7 +335,7 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
     struct_address = m_materialized_address;
 
     if (m_can_interpret && m_stack_frame_bottom == LLDB_INVALID_ADDRESS) {
-      Error alloc_error;
+      Status alloc_error;
 
       const size_t stack_frame_size = 512 * 1024;
 
@@ -357,7 +357,7 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
       }
     }
 
-    Error materialize_error;
+    Status materialize_error;
 
     m_dematerializer_sp = m_materializer_ap->Materialize(
         frame, *m_execution_unit_sp, struct_address, materialize_error);

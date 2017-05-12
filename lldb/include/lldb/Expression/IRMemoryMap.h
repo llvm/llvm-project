@@ -54,25 +54,25 @@ public:
   };
 
   lldb::addr_t Malloc(size_t size, uint8_t alignment, uint32_t permissions,
-                      AllocationPolicy policy, bool zero_memory, Error &error);
-  void Leak(lldb::addr_t process_address, Error &error);
-  void Free(lldb::addr_t process_address, Error &error);
+                      AllocationPolicy policy, bool zero_memory, Status &error);
+  void Leak(lldb::addr_t process_address, Status &error);
+  void Free(lldb::addr_t process_address, Status &error);
 
   void WriteMemory(lldb::addr_t process_address, const uint8_t *bytes,
-                   size_t size, Error &error);
+                   size_t size, Status &error);
   void WriteScalarToMemory(lldb::addr_t process_address, Scalar &scalar,
-                           size_t size, Error &error);
+                           size_t size, Status &error);
   void WritePointerToMemory(lldb::addr_t process_address, lldb::addr_t address,
-                            Error &error);
+                            Status &error);
   void ReadMemory(uint8_t *bytes, lldb::addr_t process_address, size_t size,
-                  Error &error);
+                  Status &error);
   void ReadScalarFromMemory(Scalar &scalar, lldb::addr_t process_address,
-                            size_t size, Error &error);
+                            size_t size, Status &error);
   void ReadPointerFromMemory(lldb::addr_t *address,
-                             lldb::addr_t process_address, Error &error);
+                             lldb::addr_t process_address, Status &error);
   bool GetAllocSize(lldb::addr_t address, size_t &size);
   void GetMemoryData(DataExtractor &extractor, lldb::addr_t process_address,
-                     size_t size, Error &error);
+                     size_t size, Status &error);
 
   lldb::ByteOrder GetByteOrder();
   uint32_t GetAddressByteSize();

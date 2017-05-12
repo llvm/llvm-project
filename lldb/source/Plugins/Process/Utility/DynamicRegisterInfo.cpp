@@ -48,10 +48,10 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
   if (dict.GetValueForKeyAsArray("sets", sets)) {
     const uint32_t num_sets = sets->GetSize();
     for (uint32_t i = 0; i < num_sets; ++i) {
-      std::string set_name_str;
+      llvm::StringRef set_name_str;
       ConstString set_name;
       if (sets->GetItemAtIndexAsString(i, set_name_str))
-        set_name.SetCString(set_name_str.c_str());
+        set_name.SetString(set_name_str);
       if (set_name) {
         RegisterSet new_set = {set_name.AsCString(), NULL, 0, NULL};
         m_sets.push_back(new_set);
@@ -115,7 +115,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
       // expression
       // we can calculate the offset
       bool success = false;
-      std::string slice_str;
+      llvm::StringRef slice_str;
       if (reg_info_dict->GetValueForKeyAsString("slice", slice_str, nullptr)) {
         // Slices use the following format:
         //  REGNAME[MSBIT:LSBIT]
@@ -131,9 +131,9 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
           llvm::StringRef reg_name_str;
           std::string msbit_str;
           std::string lsbit_str;
-          if (regex_match.GetMatchAtIndex(slice_str.c_str(), 1, reg_name_str) &&
-              regex_match.GetMatchAtIndex(slice_str.c_str(), 2, msbit_str) &&
-              regex_match.GetMatchAtIndex(slice_str.c_str(), 3, lsbit_str)) {
+          if (regex_match.GetMatchAtIndex(slice_str, 1, reg_name_str) &&
+              regex_match.GetMatchAtIndex(slice_str, 2, msbit_str) &&
+              regex_match.GetMatchAtIndex(slice_str, 3, lsbit_str)) {
             const uint32_t msbit =
                 StringConvert::ToUInt32(msbit_str.c_str(), UINT32_MAX);
             const uint32_t lsbit =
@@ -269,17 +269,15 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
 
     reg_info.byte_size = bitsize / 8;
 
-    std::string dwarf_opcode_string;
+    llvm::StringRef dwarf_opcode_string;
     if (reg_info_dict->GetValueForKeyAsString("dynamic_size_dwarf_expr_bytes",
                                               dwarf_opcode_string)) {
-      reg_info.dynamic_size_dwarf_len = dwarf_opcode_string.length() / 2;
+      reg_info.dynamic_size_dwarf_len = dwarf_opcode_string.size() / 2;
       assert(reg_info.dynamic_size_dwarf_len > 0);
 
       std::vector<uint8_t> dwarf_opcode_bytes(reg_info.dynamic_size_dwarf_len);
       uint32_t j;
-      StringExtractor opcode_extractor;
-      // Swap "dwarf_opcode_string" over into "opcode_extractor"
-      opcode_extractor.GetStringRef().swap(dwarf_opcode_string);
+      StringExtractor opcode_extractor(dwarf_opcode_string);
       uint32_t ret_val = opcode_extractor.GetHexBytesAvail(dwarf_opcode_bytes);
       UNUSED_IF_ASSERT_DISABLED(ret_val);
       assert(ret_val == reg_info.dynamic_size_dwarf_len);
@@ -290,9 +288,9 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
       reg_info.dynamic_size_dwarf_expr_bytes = m_dynamic_reg_size_map[i].data();
     }
 
-    std::string format_str;
+    llvm::StringRef format_str;
     if (reg_info_dict->GetValueForKeyAsString("format", format_str, nullptr)) {
-      if (Args::StringToFormat(format_str.c_str(), reg_info.format, NULL)
+      if (Args::StringToFormat(format_str.str().c_str(), reg_info.format, NULL)
               .Fail()) {
         Clear();
         printf("error: invalid 'format' value in register dictionary\n");
@@ -304,7 +302,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
                                              eFormatHex);
     }
 
-    std::string encoding_str;
+    llvm::StringRef encoding_str;
     if (reg_info_dict->GetValueForKeyAsString("encoding", encoding_str))
       reg_info.encoding = Args::StringToEncoding(encoding_str, eEncodingUint);
     else
@@ -334,7 +332,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
     reg_info.kinds[lldb::eRegisterKindEHFrame] = eh_frame_regno;
     reg_info_dict->GetValueForKeyAsInteger(
         "dwarf", reg_info.kinds[lldb::eRegisterKindDWARF], LLDB_INVALID_REGNUM);
-    std::string generic_str;
+    llvm::StringRef generic_str;
     if (reg_info_dict->GetValueForKeyAsString("generic", generic_str))
       reg_info.kinds[lldb::eRegisterKindGeneric] =
           Args::StringToGenericRegister(generic_str);

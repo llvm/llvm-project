@@ -45,9 +45,9 @@ void OptionValueEnumeration::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
-Error OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
-                                                 VarSetOperationType op) {
-  Error error;
+Status OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
+                                                  VarSetOperationType op) {
+  Status error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

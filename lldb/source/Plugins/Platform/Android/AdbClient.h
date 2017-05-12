@@ -10,7 +10,7 @@
 #ifndef liblldb_AdbClient_h_
 #define liblldb_AdbClient_h_
 
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include <chrono>
 #include <functional>
 #include <list>
@@ -39,42 +39,42 @@ public:
   public:
     ~SyncService();
 
-    Error PullFile(const FileSpec &remote_file, const FileSpec &local_file);
+    Status PullFile(const FileSpec &remote_file, const FileSpec &local_file);
 
-    Error PushFile(const FileSpec &local_file, const FileSpec &remote_file);
+    Status PushFile(const FileSpec &local_file, const FileSpec &remote_file);
 
-    Error Stat(const FileSpec &remote_file, uint32_t &mode, uint32_t &size,
-               uint32_t &mtime);
+    Status Stat(const FileSpec &remote_file, uint32_t &mode, uint32_t &size,
+                uint32_t &mtime);
 
     bool IsConnected() const;
 
   private:
     explicit SyncService(std::unique_ptr<Connection> &&conn);
 
-    Error SendSyncRequest(const char *request_id, const uint32_t data_len,
-                          const void *data);
+    Status SendSyncRequest(const char *request_id, const uint32_t data_len,
+                           const void *data);
 
-    Error ReadSyncHeader(std::string &response_id, uint32_t &data_len);
+    Status ReadSyncHeader(std::string &response_id, uint32_t &data_len);
 
-    Error PullFileChunk(std::vector<char> &buffer, bool &eof);
+    Status PullFileChunk(std::vector<char> &buffer, bool &eof);
 
-    Error ReadAllBytes(void *buffer, size_t size);
+    Status ReadAllBytes(void *buffer, size_t size);
 
-    Error internalPullFile(const FileSpec &remote_file,
-                           const FileSpec &local_file);
+    Status internalPullFile(const FileSpec &remote_file,
+                            const FileSpec &local_file);
 
-    Error internalPushFile(const FileSpec &local_file,
-                           const FileSpec &remote_file);
+    Status internalPushFile(const FileSpec &local_file,
+                            const FileSpec &remote_file);
 
-    Error internalStat(const FileSpec &remote_file, uint32_t &mode,
-                       uint32_t &size, uint32_t &mtime);
+    Status internalStat(const FileSpec &remote_file, uint32_t &mode,
+                        uint32_t &size, uint32_t &mtime);
 
-    Error executeCommand(const std::function<Error()> &cmd);
+    Status executeCommand(const std::function<Status()> &cmd);
 
     std::unique_ptr<Connection> m_conn;
   };
 
-  static Error CreateByDeviceID(const std::string &device_id, AdbClient &adb);
+  static Status CreateByDeviceID(const std::string &device_id, AdbClient &adb);
 
   AdbClient();
   explicit AdbClient(const std::string &device_id);
@@ -83,52 +83,53 @@ public:
 
   const std::string &GetDeviceID() const;
 
-  Error GetDevices(DeviceIDList &device_list);
+  Status GetDevices(DeviceIDList &device_list);
 
-  Error SetPortForwarding(const uint16_t local_port,
-                          const uint16_t remote_port);
+  Status SetPortForwarding(const uint16_t local_port,
+                           const uint16_t remote_port);
 
-  Error SetPortForwarding(const uint16_t local_port,
-                          llvm::StringRef remote_socket_name,
-                          const UnixSocketNamespace socket_namespace);
+  Status SetPortForwarding(const uint16_t local_port,
+                           llvm::StringRef remote_socket_name,
+                           const UnixSocketNamespace socket_namespace);
 
-  Error DeletePortForwarding(const uint16_t local_port);
+  Status DeletePortForwarding(const uint16_t local_port);
 
-  Error Shell(const char *command, std::chrono::milliseconds timeout,
-              std::string *output);
+  Status Shell(const char *command, std::chrono::milliseconds timeout,
+               std::string *output);
 
-  Error ShellToFile(const char *command, std::chrono::milliseconds timeout,
-                    const FileSpec &output_file_spec);
+  Status ShellToFile(const char *command, std::chrono::milliseconds timeout,
+                     const FileSpec &output_file_spec);
 
-  std::unique_ptr<SyncService> GetSyncService(Error &error);
+  std::unique_ptr<SyncService> GetSyncService(Status &error);
 
-  Error SwitchDeviceTransport();
+  Status SwitchDeviceTransport();
 
 private:
-  Error Connect();
+  Status Connect();
 
   void SetDeviceID(const std::string &device_id);
 
-  Error SendMessage(const std::string &packet, const bool reconnect = true);
+  Status SendMessage(const std::string &packet, const bool reconnect = true);
 
-  Error SendDeviceMessage(const std::string &packet);
+  Status SendDeviceMessage(const std::string &packet);
 
-  Error ReadMessage(std::vector<char> &message);
+  Status ReadMessage(std::vector<char> &message);
 
-  Error ReadMessageStream(std::vector<char> &message, std::chrono::milliseconds timeout);
+  Status ReadMessageStream(std::vector<char> &message,
+                           std::chrono::milliseconds timeout);
 
-  Error GetResponseError(const char *response_id);
+  Status GetResponseError(const char *response_id);
 
-  Error ReadResponseStatus();
+  Status ReadResponseStatus();
 
-  Error Sync();
+  Status Sync();
 
-  Error StartSync();
+  Status StartSync();
 
-  Error internalShell(const char *command, std::chrono::milliseconds timeout,
-                      std::vector<char> &output_buf);
+  Status internalShell(const char *command, std::chrono::milliseconds timeout,
+                       std::vector<char> &output_buf);
 
-  Error ReadAllBytes(void *buffer, size_t size);
+  Status ReadAllBytes(void *buffer, size_t size);
 
   std::string m_device_id;
   std::unique_ptr<Connection> m_conn;

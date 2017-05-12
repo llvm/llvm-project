@@ -40,7 +40,7 @@ public:
 
   void Flush(lldb::addr_t addr, size_t size);
 
-  size_t Read(lldb::addr_t addr, void *dst, size_t dst_len, Error &error);
+  size_t Read(lldb::addr_t addr, void *dst, size_t dst_len, Status &error);
 
   uint32_t GetMemoryCacheLineSize() const { return m_L2_cache_line_byte_size; }
 
@@ -135,7 +135,7 @@ public:
   void Clear();
 
   lldb::addr_t AllocateMemory(size_t byte_size, uint32_t permissions,
-                              Error &error);
+                              Status &error);
 
   bool DeallocateMemory(lldb::addr_t ptr);
 
@@ -143,7 +143,7 @@ protected:
   typedef std::shared_ptr<AllocatedBlock> AllocatedBlockSP;
 
   AllocatedBlockSP AllocatePage(uint32_t byte_size, uint32_t permissions,
-                                uint32_t chunk_size, Error &error);
+                                uint32_t chunk_size, Status &error);
 
   //------------------------------------------------------------------
   // Classes that inherit from MemoryCache can see and modify these

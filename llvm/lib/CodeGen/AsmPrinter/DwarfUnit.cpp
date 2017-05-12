@@ -173,7 +173,7 @@ int64_t DwarfUnit::getDefaultLowerBound() const {
 }
 
 /// Check whether the DIE for this MDNode can be shared across CUs.
-static bool isShareableAcrossCUs(const DINode *D) {
+bool DwarfUnit::isShareableAcrossCUs(const DINode *D) const {
   // When the MDNode can be part of the type system, the DIE can be shared
   // across CUs.
   // Combining type units and cross-CU DIE sharing is lower value (since
@@ -181,6 +181,8 @@ static bool isShareableAcrossCUs(const DINode *D) {
   // level already) but may be implementable for some value in projects
   // building multiple independent libraries with LTO and then linking those
   // together.
+  if (isDwoUnit() && !DD->shareAcrossDWOCUs())
+    return false;
   return (isa<DIType>(D) ||
           (isa<DISubprogram>(D) && !cast<DISubprogram>(D)->isDefinition())) &&
          !GenerateDwarfTypeUnits;

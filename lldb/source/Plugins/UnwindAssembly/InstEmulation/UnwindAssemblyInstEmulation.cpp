@@ -21,8 +21,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
@@ -37,7 +37,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
   std::vector<uint8_t> function_text(range.GetByteSize());
   ProcessSP process_sp(thread.GetProcess());
   if (process_sp) {
-    Error error;
+    Status error;
     const bool prefer_file_cache = true;
     if (process_sp->GetTarget().ReadMemory(
             range.GetBaseAddress(), prefer_file_cache, function_text.data(),

@@ -4166,6 +4166,8 @@ def : InstAlias<"rotldi. $rA, $rS, $n", (RLDICLo g8rc:$rA, g8rc:$rS, u6imm:$n, 0
 def : InstAlias<"rotld $rA, $rS, $rB", (RLDCL g8rc:$rA, g8rc:$rS, gprc:$rB, 0)>;
 def : InstAlias<"rotld. $rA, $rS, $rB", (RLDCLo g8rc:$rA, g8rc:$rS, gprc:$rB, 0)>;
 def : InstAlias<"clrldi $rA, $rS, $n", (RLDICL g8rc:$rA, g8rc:$rS, 0, u6imm:$n)>;
+def : InstAlias<"clrldi $rA, $rS, $n",
+                (RLDICL_32 gprc:$rA, gprc:$rS, 0, u6imm:$n)>;
 def : InstAlias<"clrldi. $rA, $rS, $n", (RLDICLo g8rc:$rA, g8rc:$rS, 0, u6imm:$n)>;
 
 def RLWINMbm : PPCAsmPseudo<"rlwinm $rA, $rS, $n, $b",

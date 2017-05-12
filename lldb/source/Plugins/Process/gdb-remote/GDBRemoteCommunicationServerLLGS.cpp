@@ -184,35 +184,36 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       &GDBRemoteCommunicationServerLLGS::Handle_QPassSignals);
 
   RegisterPacketHandler(StringExtractorGDBRemote::eServerPacketType_k,
-                        [this](StringExtractorGDBRemote packet, Error &error,
+                        [this](StringExtractorGDBRemote packet, Status &error,
                                bool &interrupt, bool &quit) {
                           quit = true;
                           return this->Handle_k(packet);
                         });
 }
 
-Error GDBRemoteCommunicationServerLLGS::SetLaunchArguments(
-    const char *const args[], int argc) {
+Status
+GDBRemoteCommunicationServerLLGS::SetLaunchArguments(const char *const args[],
+                                                     int argc) {
   if ((argc < 1) || !args || !args[0] || !args[0][0])
-    return Error("%s: no process command line specified to launch",
-                 __FUNCTION__);
+    return Status("%s: no process command line specified to launch",
+                  __FUNCTION__);
 
   m_process_launch_info.SetArguments(const_cast<const char **>(args), true);
-  return Error();
+  return Status();
 }
 
-Error GDBRemoteCommunicationServerLLGS::SetLaunchFlags(
-    unsigned int launch_flags) {
+Status
+GDBRemoteCommunicationServerLLGS::SetLaunchFlags(unsigned int launch_flags) {
   m_process_launch_info.GetFlags().Set(launch_flags);
-  return Error();
+  return Status();
 }
 
-Error GDBRemoteCommunicationServerLLGS::LaunchProcess() {
+Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   if (!m_process_launch_info.GetArguments().GetArgumentCount())
-    return Error("%s: no process command line specified to launch",
-                 __FUNCTION__);
+    return Status("%s: no process command line specified to launch",
+                  __FUNCTION__);
 
   const bool should_forward_stdio =
       m_process_launch_info.GetFileActionForFD(STDIN_FILENO) == nullptr ||
@@ -224,7 +225,7 @@ Error GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   const bool default_to_use_pty = true;
   m_process_launch_info.FinalizeFileActions(nullptr, default_to_use_pty);
 
-  Error error;
+  Status error;
   {
     std::lock_guard<std::recursive_mutex> guard(m_debugged_process_mutex);
     assert(!m_debugged_process_sp && "lldb-server creating debugged "
@@ -286,8 +287,8 @@ Error GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   return error;
 }
 
-Error GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
-  Error error;
+Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
+  Status error;
 
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
   if (log)
@@ -298,10 +299,10 @@ Error GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
   // else.
   if (m_debugged_process_sp &&
       m_debugged_process_sp->GetID() != LLDB_INVALID_PROCESS_ID)
-    return Error("cannot attach to a process %" PRIu64
-                 " when another process with pid %" PRIu64
-                 " is being debugged.",
-                 pid, m_debugged_process_sp->GetID());
+    return Status("cannot attach to a process %" PRIu64
+                  " when another process with pid %" PRIu64
+                  " is being debugged.",
+                  pid, m_debugged_process_sp->GetID());
 
   // Try to attach.
   error = NativeProcessProtocol::Attach(pid, *this, m_mainloop,
@@ -420,7 +421,7 @@ static void WriteRegisterValueInHexFixedWidth(
     lldb::ByteOrder byte_order) {
   RegisterValue reg_value;
   if (!reg_value_p) {
-    Error error = reg_ctx_sp->ReadRegister(&reg_info, reg_value);
+    Status error = reg_ctx_sp->ReadRegister(&reg_info, reg_value);
     if (error.Success())
       reg_value_p = &reg_value;
     // else log.
@@ -488,7 +489,7 @@ static JSONObject::SP GetRegistersAsJSON(NativeThreadProtocol &thread) {
                 // registers.
 
     RegisterValue reg_value;
-    Error error = reg_ctx_sp->ReadRegister(reg_info_p, reg_value);
+    Status error = reg_ctx_sp->ReadRegister(reg_info_p, reg_value);
     if (error.Fail()) {
       if (log)
         log->Printf("%s failed to read register '%s' index %" PRIu32 ": %s",
@@ -739,7 +740,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
           reg_ctx_sp->GetRegisterInfoAtIndex(reg_to_read);
 
       RegisterValue reg_value;
-      Error error = reg_ctx_sp->ReadRegister(reg_info_p, reg_value);
+      Status error = reg_ctx_sp->ReadRegister(reg_info_p, reg_value);
       if (error.Fail()) {
         if (log)
           log->Printf("%s failed to read register '%s' index %" PRIu32 ": %s",
@@ -793,7 +794,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
         } else if (reg_info_p->value_regs == nullptr) {
           // Only expediate registers that are not contained in other registers.
           RegisterValue reg_value;
-          Error error = reg_ctx_sp->ReadRegister(reg_info_p, reg_value);
+          Status error = reg_ctx_sp->ReadRegister(reg_info_p, reg_value);
           if (error.Success()) {
             response.Printf("%.02x:", *reg_num_p);
             WriteRegisterValueInHexFixedWidth(response, reg_ctx_sp, *reg_info_p,
@@ -960,7 +961,7 @@ void GDBRemoteCommunicationServerLLGS::DataAvailableCallback() {
 
   bool interrupt = false;
   bool done = false;
-  Error error;
+  Status error;
   while (true) {
     const PacketResult result = GetPacketAndSendResponse(
         std::chrono::microseconds(0), error, interrupt, done);
@@ -978,12 +979,12 @@ void GDBRemoteCommunicationServerLLGS::DataAvailableCallback() {
   }
 }
 
-Error GDBRemoteCommunicationServerLLGS::InitializeConnection(
+Status GDBRemoteCommunicationServerLLGS::InitializeConnection(
     std::unique_ptr<Connection> &&connection) {
   IOObjectSP read_object_sp = connection->GetReadObject();
   GDBRemoteCommunicationServer::SetConnection(connection.release());
 
-  Error error;
+  Status error;
   m_network_handle_up = m_mainloop.RegisterReadObject(
       read_object_sp, [this](MainLoopBase &) { DataAvailableCallback(); },
       error);
@@ -1005,8 +1006,8 @@ GDBRemoteCommunicationServerLLGS::SendONotification(const char *buffer,
   return SendPacketNoLock(response.GetString());
 }
 
-Error GDBRemoteCommunicationServerLLGS::SetSTDIOFileDescriptor(int fd) {
-  Error error;
+Status GDBRemoteCommunicationServerLLGS::SetSTDIOFileDescriptor(int fd) {
+  Status error;
 
   // Set up the reading/handling of process I/O
   std::unique_ptr<ConnectionFileDescriptor> conn_up(
@@ -1024,7 +1025,7 @@ Error GDBRemoteCommunicationServerLLGS::SetSTDIOFileDescriptor(int fd) {
     return error;
   }
 
-  return Error();
+  return Status();
 }
 
 void GDBRemoteCommunicationServerLLGS::StartSTDIOForwarding() {
@@ -1032,7 +1033,7 @@ void GDBRemoteCommunicationServerLLGS::StartSTDIOForwarding() {
   if (!m_stdio_communication.IsConnected())
     return;
 
-  Error error;
+  Status error;
   lldbassert(!m_stdio_handle_up);
   m_stdio_handle_up = m_mainloop.RegisterReadObject(
       m_stdio_communication.GetConnection()->GetReadObject(),
@@ -1055,7 +1056,7 @@ void GDBRemoteCommunicationServerLLGS::StopSTDIOForwarding() {
 void GDBRemoteCommunicationServerLLGS::SendProcessOutput() {
   char buffer[1024];
   ConnectionStatus status;
-  Error error;
+  Status error;
   while (true) {
     size_t bytes_read = m_stdio_communication.Read(
         buffer, sizeof buffer, std::chrono::microseconds(0), status, &error);
@@ -1140,7 +1141,7 @@ GDBRemoteCommunicationServerLLGS::Handle_k(StringExtractorGDBRemote &packet) {
     return PacketResult::Success;
   }
 
-  Error error = m_debugged_process_sp->Kill();
+  Status error = m_debugged_process_sp->Kill();
   if (error.Fail() && log)
     log->Printf("GDBRemoteCommunicationServerLLGS::%s Failed to kill debugged "
                 "process %" PRIu64 ": %s",
@@ -1223,7 +1224,7 @@ GDBRemoteCommunicationServerLLGS::Handle_C(StringExtractorGDBRemote &packet) {
   }
 
   ResumeActionList resume_actions(StateType::eStateRunning, 0);
-  Error error;
+  Status error;
 
   // We have two branches: what to do if a continue thread is specified (in
   // which case we target
@@ -1304,7 +1305,7 @@ GDBRemoteCommunicationServerLLGS::Handle_c(StringExtractorGDBRemote &packet) {
   // Build the ResumeActionList
   ResumeActionList actions(StateType::eStateRunning, 0);
 
-  Error error = m_debugged_process_sp->Resume(actions);
+  Status error = m_debugged_process_sp->Resume(actions);
   if (error.Fail()) {
     if (log) {
       log->Printf(
@@ -1428,7 +1429,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
     thread_actions.Append(thread_action);
   }
 
-  Error error = m_debugged_process_sp->Resume(thread_actions);
+  Status error = m_debugged_process_sp->Resume(thread_actions);
   if (error.Fail()) {
     if (log) {
       log->Printf("GDBRemoteCommunicationServerLLGS::%s vCont failed for "
@@ -1853,7 +1854,7 @@ GDBRemoteCommunicationServerLLGS::Handle_p(StringExtractorGDBRemote &packet) {
 
   // Retrieve the value
   RegisterValue reg_value;
-  Error error = reg_context_sp->ReadRegister(reg_info, reg_value);
+  Status error = reg_context_sp->ReadRegister(reg_info, reg_value);
   if (error.Fail()) {
     if (log)
       log->Printf("GDBRemoteCommunicationServerLLGS::%s failed, read of "
@@ -1973,7 +1974,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
   StreamGDBRemote response;
 
   RegisterValue reg_value(reg_bytes, reg_size, process_arch.GetByteOrder());
-  Error error = reg_context_sp->WriteRegister(reg_info, reg_value);
+  Status error = reg_context_sp->WriteRegister(reg_info, reg_value);
   if (error.Fail()) {
     if (log)
       log->Printf("GDBRemoteCommunicationServerLLGS::%s failed, write of "
@@ -2088,7 +2089,7 @@ GDBRemoteCommunicationServerLLGS::Handle_I(StringExtractorGDBRemote &packet) {
     // TODO: enqueue this block in circular buffer and send window size to
     // remote host
     ConnectionStatus status;
-    Error error;
+    Status error;
     m_stdio_communication.Write(tmp, read, status, &error);
     if (error.Fail()) {
       return SendErrorResponse(0x15);
@@ -2114,7 +2115,7 @@ GDBRemoteCommunicationServerLLGS::Handle_interrupt(
   }
 
   // Interrupt the process.
-  Error error = m_debugged_process_sp->Interrupt();
+  Status error = m_debugged_process_sp->Interrupt();
   if (error.Fail()) {
     if (log) {
       log->Printf(
@@ -2181,7 +2182,7 @@ GDBRemoteCommunicationServerLLGS::Handle_memory_read(
 
   // Retrieve the process memory.
   size_t bytes_read = 0;
-  Error error = m_debugged_process_sp->ReadMemoryWithoutTrap(
+  Status error = m_debugged_process_sp->ReadMemoryWithoutTrap(
       read_addr, &buf[0], byte_count, bytes_read);
   if (error.Fail()) {
     if (log)
@@ -2282,8 +2283,8 @@ GDBRemoteCommunicationServerLLGS::Handle_M(StringExtractorGDBRemote &packet) {
 
   // Write the process memory.
   size_t bytes_written = 0;
-  Error error = m_debugged_process_sp->WriteMemory(write_addr, &buf[0],
-                                                   byte_count, bytes_written);
+  Status error = m_debugged_process_sp->WriteMemory(write_addr, &buf[0],
+                                                    byte_count, bytes_written);
   if (error.Fail()) {
     if (log)
       log->Printf("GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
@@ -2329,7 +2330,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfoSupported(
 
   // Test if we can get any region back when asking for the region around NULL.
   MemoryRegionInfo region_info;
-  const Error error =
+  const Status error =
       m_debugged_process_sp->GetMemoryRegionInfo(0, region_info);
   if (error.Fail()) {
     // We don't support memory region info collection for this
@@ -2367,7 +2368,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
 
   // Get the memory region info for the target address.
   MemoryRegionInfo region_info;
-  const Error error =
+  const Status error =
       m_debugged_process_sp->GetMemoryRegionInfo(read_addr, region_info);
   if (error.Fail()) {
     // Return the error message.
@@ -2485,7 +2486,7 @@ GDBRemoteCommunicationServerLLGS::Handle_Z(StringExtractorGDBRemote &packet) {
 
   if (want_breakpoint) {
     // Try to set the breakpoint.
-    const Error error =
+    const Status error =
         m_debugged_process_sp->SetBreakpoint(addr, size, want_hardware);
     if (error.Success())
       return SendOKResponse();
@@ -2498,7 +2499,7 @@ GDBRemoteCommunicationServerLLGS::Handle_Z(StringExtractorGDBRemote &packet) {
     return SendErrorResponse(0x09);
   } else {
     // Try to set the watchpoint.
-    const Error error = m_debugged_process_sp->SetWatchpoint(
+    const Status error = m_debugged_process_sp->SetWatchpoint(
         addr, size, watch_flags, want_hardware);
     if (error.Success())
       return SendOKResponse();
@@ -2582,7 +2583,7 @@ GDBRemoteCommunicationServerLLGS::Handle_z(StringExtractorGDBRemote &packet) {
 
   if (want_breakpoint) {
     // Try to clear the breakpoint.
-    const Error error =
+    const Status error =
         m_debugged_process_sp->RemoveBreakpoint(addr, want_hardware);
     if (error.Success())
       return SendOKResponse();
@@ -2595,7 +2596,7 @@ GDBRemoteCommunicationServerLLGS::Handle_z(StringExtractorGDBRemote &packet) {
     return SendErrorResponse(0x09);
   } else {
     // Try to clear the watchpoint.
-    const Error error = m_debugged_process_sp->RemoveWatchpoint(addr);
+    const Status error = m_debugged_process_sp->RemoveWatchpoint(addr);
     if (error.Success())
       return SendOKResponse();
     Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
@@ -2646,7 +2647,7 @@ GDBRemoteCommunicationServerLLGS::Handle_s(StringExtractorGDBRemote &packet) {
 
   // All other threads stop while we're single stepping a thread.
   actions.SetDefaultThreadActionIfNeeded(eStateStopped, 0);
-  Error error = m_debugged_process_sp->Resume(actions);
+  Status error = m_debugged_process_sp->Resume(actions);
   if (error.Fail()) {
     if (log)
       log->Printf("GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
@@ -2782,7 +2783,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QSaveRegisterState(
 
   // Save registers to a buffer.
   DataBufferSP register_data_sp;
-  Error error = reg_context_sp->ReadAllRegisterValues(register_data_sp);
+  Status error = reg_context_sp->ReadAllRegisterValues(register_data_sp);
   if (error.Fail()) {
     if (log)
       log->Printf("GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
@@ -2871,7 +2872,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QRestoreRegisterState(
     m_saved_registers_map.erase(it);
   }
 
-  Error error = reg_context_sp->WriteAllRegisterValues(register_data_sp);
+  Status error = reg_context_sp->WriteAllRegisterValues(register_data_sp);
   if (error.Fail()) {
     if (log)
       log->Printf("GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
@@ -2906,7 +2907,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vAttach(
                 "pid %" PRIu64,
                 __FUNCTION__, pid);
 
-  Error error = AttachToProcess(pid);
+  Status error = AttachToProcess(pid);
 
   if (error.Fail()) {
     if (log)
@@ -2954,7 +2955,7 @@ GDBRemoteCommunicationServerLLGS::Handle_D(StringExtractorGDBRemote &packet) {
     return SendIllFormedResponse(packet, "Invalid pid");
   }
 
-  const Error error = m_debugged_process_sp->Detach();
+  const Status error = m_debugged_process_sp->Detach();
   if (error.Fail()) {
     if (log)
       log->Printf("GDBRemoteCommunicationServerLLGS::%s failed to detach from "
@@ -3058,7 +3059,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qFileLoadAddress(
   packet.GetHexByteString(file_name);
 
   lldb::addr_t file_load_address = LLDB_INVALID_ADDRESS;
-  Error error =
+  Status error =
       m_debugged_process_sp->GetFileLoadAddress(file_name, file_load_address);
   if (error.Fail())
     return SendErrorResponse(69);
@@ -3098,7 +3099,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QPassSignals(
   if (!m_debugged_process_sp)
     return SendErrorResponse(68);
 
-  Error error = m_debugged_process_sp->IgnoreSignals(signals);
+  Status error = m_debugged_process_sp->IgnoreSignals(signals);
   if (error.Fail())
     return SendErrorResponse(69);
 
@@ -3112,7 +3113,7 @@ void GDBRemoteCommunicationServerLLGS::MaybeCloseInferiorTerminalConnection() {
   if (m_stdio_communication.IsConnected()) {
     auto connection = m_stdio_communication.GetConnection();
     if (connection) {
-      Error error;
+      Status error;
       connection->Disconnect(&error);
 
       if (error.Success()) {

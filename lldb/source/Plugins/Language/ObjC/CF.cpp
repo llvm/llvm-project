@@ -20,7 +20,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -88,7 +88,7 @@ bool lldb_private::formatters::CFBagSummaryProvider(
 
   if (is_type_ok) {
     lldb::addr_t offset = 2 * ptr_size + 4 + valobj_addr;
-    Error error;
+    Status error;
     count = process_sp->ReadUnsignedIntegerFromMemory(offset, 4, 0, error);
     if (error.Fail())
       return false;
@@ -152,7 +152,7 @@ bool lldb_private::formatters::CFBitVectorSummaryProvider(
   if (is_type_ok == false)
     return false;
 
-  Error error;
+  Status error;
   count = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + 2 * ptr_size,
                                                     ptr_size, 0, error);
   if (error.Fail())
@@ -281,7 +281,7 @@ bool lldb_private::formatters::CFBinaryHeapSummaryProvider(
 
   if (is_type_ok) {
     lldb::addr_t offset = 2 * ptr_size + valobj_addr;
-    Error error;
+    Status error;
     count = process_sp->ReadUnsignedIntegerFromMemory(offset, 4, 0, error);
     if (error.Fail())
       return false;

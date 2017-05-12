@@ -488,6 +488,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::FCANONICALIZE);
   setTargetDAGCombine(ISD::SCALAR_TO_VECTOR);
   setTargetDAGCombine(ISD::ZERO_EXTEND);
+  setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
 
   // All memory operations. Some folding on the pointer operand is done to help
   // matching the constant offsets in the addressing modes.
@@ -2003,6 +2004,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
       break;
     }
     assert(Found);
+    (void)Found;
 
     // This should be before all vector instructions.
     BuildMI(*BB, FirstMI, DebugLoc(), TII->get(AMDGPU::S_BFE_U32), CountReg)
@@ -4604,6 +4606,24 @@ SDValue SITargetLowering::performCvtPkRTZCombine(SDNode *N,
   return SDValue();
 }
 
+SDValue SITargetLowering::performExtractVectorEltCombine(
+  SDNode *N, DAGCombinerInfo &DCI) const {
+  SDValue Vec = N->getOperand(0);
+
+  SelectionDAG &DAG= DCI.DAG;
+  if (Vec.getOpcode() == ISD::FNEG && allUsesHaveSourceMods(N)) {
+    SDLoc SL(N);
+    EVT EltVT = N->getValueType(0);
+    SDValue Idx = N->getOperand(1);
+    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
+                              Vec.getOperand(0), Idx);
+    return DAG.getNode(ISD::FNEG, SL, EltVT, Elt);
+  }
+
+  return SDValue();
+}
+
+
 unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
                                           const SDNode *N0,
                                           const SDNode *N1) const {
@@ -4891,6 +4911,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
 
     break;
   }
+  case ISD::EXTRACT_VECTOR_ELT:
+    return performExtractVectorEltCombine(N, DCI);
   }
   return AMDGPUTargetLowering::PerformDAGCombine(N, DCI);
 }

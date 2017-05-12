@@ -201,7 +201,7 @@ void DynamicLoaderMacOSXDYLD::DoInitialImageFetch() {
           m_process->GetTarget().GetArchitecture().GetByteOrder();
       uint8_t buf[4];
       DataExtractor data(buf, sizeof(buf), byte_order, 4);
-      Error error;
+      Status error;
       if (m_process->ReadMemory(shlib_addr, buf, 4, error) == 4) {
         lldb::offset_t offset = 0;
         uint32_t magic = data.GetU32(&offset);
@@ -463,7 +463,7 @@ bool DynamicLoaderMacOSXDYLD::ReadAllImageInfosStructure() {
     UNUSED_IF_ASSERT_DISABLED(count_v13);
     assert(sizeof(buf) >= count_v13);
 
-    Error error;
+    Status error;
     if (m_process->ReadMemory(m_dyld_all_image_infos_addr, buf, 4, error) ==
         4) {
       m_dyld_all_image_infos.version = data.GetU32(&offset);
@@ -683,7 +683,7 @@ bool DynamicLoaderMacOSXDYLD::ReadImageInfos(
   image_infos.resize(image_infos_count);
   const size_t count = image_infos.size() * 3 * addr_size;
   DataBufferHeap info_data(count, 0);
-  Error error;
+  Status error;
   const size_t bytes_read = m_process->ReadMemory(
       image_infos_addr, info_data.GetBytes(), info_data.GetByteSize(), error);
   if (bytes_read == count) {
@@ -793,7 +793,7 @@ bool DynamicLoaderMacOSXDYLD::ReadMachHeader(lldb::addr_t addr,
                                              llvm::MachO::mach_header *header,
                                              DataExtractor *load_command_data) {
   DataBufferHeap header_bytes(sizeof(llvm::MachO::mach_header), 0);
-  Error error;
+  Status error;
   size_t bytes_read = m_process->ReadMemory(addr, header_bytes.GetBytes(),
                                             header_bytes.GetByteSize(), error);
   if (bytes_read == sizeof(llvm::MachO::mach_header)) {
@@ -1069,8 +1069,8 @@ bool DynamicLoaderMacOSXDYLD::SetNotificationBreakpoint() {
   return m_break_id != LLDB_INVALID_BREAK_ID;
 }
 
-Error DynamicLoaderMacOSXDYLD::CanLoadImage() {
-  Error error;
+Status DynamicLoaderMacOSXDYLD::CanLoadImage() {
+  Status error;
   // In order for us to tell if we can load a shared library we verify that
   // the dylib_info_addr isn't zero (which means no shared libraries have
   // been set yet, or dyld is currently mucking with the shared library list).
@@ -1107,7 +1107,7 @@ bool DynamicLoaderMacOSXDYLD::GetSharedCacheInformation(
     // Version 13 and higher of dyld_all_image_infos is required to get the
     // sharedCacheUUID field.
 
-    Error err;
+    Status err;
     uint32_t version_or_magic =
         m_process->ReadUnsignedIntegerFromMemory(all_image_infos, 4, -1, err);
     if (version_or_magic != static_cast<uint32_t>(-1) &&
@@ -1140,7 +1140,7 @@ bool DynamicLoaderMacOSXDYLD::GetSharedCacheInformation(
           // The sharedCacheBaseAddress field is the next one in the
           // dyld_all_image_infos struct.
           addr_t sharedCacheBaseAddr_address = sharedCacheUUID_address + 16;
-          Error error;
+          Status error;
           base_address = m_process->ReadUnsignedIntegerFromMemory(
               sharedCacheBaseAddr_address, wordsize, LLDB_INVALID_ADDRESS,
               error);

@@ -58,10 +58,10 @@ public:
 
   NativeRegisterContextSP GetRegisterContext() override;
 
-  Error SetWatchpoint(lldb::addr_t addr, size_t size, uint32_t watch_flags,
-                      bool hardware) override;
+  Status SetWatchpoint(lldb::addr_t addr, size_t size, uint32_t watch_flags,
+                       bool hardware) override;
 
-  Error RemoveWatchpoint(lldb::addr_t addr) override;
+  Status RemoveWatchpoint(lldb::addr_t addr) override;
 
   // -----------------------------------------------------------------
   // New methods that are fine for others to call.
@@ -75,11 +75,11 @@ private:
 
   /// Resumes the thread.  If @p signo is anything but
   /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
-  Error Resume(uint32_t signo);
+  Status Resume(uint32_t signo);
 
   /// Single steps the thread.  If @p signo is anything but
   /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
-  Error SingleStep(uint32_t signo);
+  Status SingleStep(uint32_t signo);
 
   bool NotifyException(MachException::Data &exc);
 
@@ -117,7 +117,7 @@ private:
 
   void SetExited();
 
-  Error RequestStop();
+  Status RequestStop();
 
   // -------------------------------------------------------------------------
   /// Return the mach thread port number for this thread.

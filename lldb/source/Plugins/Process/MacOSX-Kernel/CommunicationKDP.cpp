@@ -199,7 +199,7 @@ CommunicationKDP::WaitForPacketWithTimeoutMicroSeconds(DataExtractor &packet,
 size_t CommunicationKDP::WaitForPacketWithTimeoutMicroSecondsNoLock(
     DataExtractor &packet, uint32_t timeout_usec) {
   uint8_t buffer[8192];
-  Error error;
+  Status error;
 
   Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PACKETS));
 
@@ -602,7 +602,7 @@ bool CommunicationKDP::SendRequestDisconnect() {
 
 uint32_t CommunicationKDP::SendRequestReadMemory(lldb::addr_t addr, void *dst,
                                                  uint32_t dst_len,
-                                                 Error &error) {
+                                                 Status &error) {
   PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
                                   m_byte_order);
   bool use_64 = (GetVersion() >= 11);
@@ -641,7 +641,7 @@ uint32_t CommunicationKDP::SendRequestReadMemory(lldb::addr_t addr, void *dst,
 uint32_t CommunicationKDP::SendRequestWriteMemory(lldb::addr_t addr,
                                                   const void *src,
                                                   uint32_t src_len,
-                                                  Error &error) {
+                                                  Status &error) {
   PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
                                   m_byte_order);
   bool use_64 = (GetVersion() >= 11);
@@ -675,7 +675,7 @@ bool CommunicationKDP::SendRawRequest(
     uint8_t command_byte,
     const void *src,  // Raw packet payload bytes
     uint32_t src_len, // Raw packet payload length
-    DataExtractor &reply_packet, Error &error) {
+    DataExtractor &reply_packet, Status &error) {
   PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
                                   m_byte_order);
   // Size is header + address size + uint32_t length
@@ -1224,7 +1224,7 @@ void CommunicationKDP::DumpPacket(Stream &s, const DataExtractor &packet) {
 uint32_t CommunicationKDP::SendRequestReadRegisters(uint32_t cpu,
                                                     uint32_t flavor, void *dst,
                                                     uint32_t dst_len,
-                                                    Error &error) {
+                                                    Status &error) {
   PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
                                   m_byte_order);
   const CommandType command = KDP_READREGS;
@@ -1267,7 +1267,7 @@ uint32_t CommunicationKDP::SendRequestWriteRegisters(uint32_t cpu,
                                                      uint32_t flavor,
                                                      const void *src,
                                                      uint32_t src_len,
-                                                     Error &error) {
+                                                     Status &error) {
   PacketStreamType request_packet(Stream::eBinary, m_addr_byte_size,
                                   m_byte_order);
   const CommandType command = KDP_WRITEREGS;

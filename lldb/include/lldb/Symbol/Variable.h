@@ -97,7 +97,7 @@ public:
   typedef size_t (*GetVariableCallback)(void *baton, const char *name,
                                         VariableList &var_list);
 
-  static Error GetValuesForVariableExpressionPath(
+  static Status GetValuesForVariableExpressionPath(
       llvm::StringRef variable_expr_path, ExecutionContextScope *scope,
       GetVariableCallback callback, void *baton, VariableList &variable_list,
       ValueObjectList &valobj_list);

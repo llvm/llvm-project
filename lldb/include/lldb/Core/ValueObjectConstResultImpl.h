@@ -25,7 +25,7 @@ namespace lldb_private {
 class DataExtractor;
 }
 namespace lldb_private {
-class Error;
+class Status;
 }
 namespace lldb_private {
 class ValueObject;
@@ -45,7 +45,7 @@ public:
 
   virtual ~ValueObjectConstResultImpl() = default;
 
-  lldb::ValueObjectSP Dereference(Error &error);
+  lldb::ValueObjectSP Dereference(Status &error);
 
   ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
                                   int32_t synthetic_index);
@@ -55,7 +55,7 @@ public:
                             bool can_create,
                             ConstString name_const_str = ConstString());
 
-  lldb::ValueObjectSP AddressOf(Error &error);
+  lldb::ValueObjectSP AddressOf(Status &error);
 
   lldb::addr_t GetLiveAddress() { return m_live_address; }
 

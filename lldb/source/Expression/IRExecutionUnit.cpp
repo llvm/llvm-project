@@ -50,7 +50,7 @@ IRExecutionUnit::IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_ap,
       m_reported_allocations(false) {}
 
 lldb::addr_t IRExecutionUnit::WriteNow(const uint8_t *bytes, size_t size,
-                                       Error &error) {
+                                       Status &error) {
   const bool zero_memory = false;
   lldb::addr_t allocation_process_addr =
       Malloc(size, 8, lldb::ePermissionsWritable | lldb::ePermissionsReadable,
@@ -62,7 +62,7 @@ lldb::addr_t IRExecutionUnit::WriteNow(const uint8_t *bytes, size_t size,
   WriteMemory(allocation_process_addr, bytes, size, error);
 
   if (!error.Success()) {
-    Error err;
+    Status err;
     Free(allocation_process_addr, err);
 
     return LLDB_INVALID_ADDRESS;
@@ -71,7 +71,7 @@ lldb::addr_t IRExecutionUnit::WriteNow(const uint8_t *bytes, size_t size,
   if (Log *log =
           lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {
     DataBufferHeap my_buffer(size, 0);
-    Error err;
+    Status err;
     ReadMemory(my_buffer.GetBytes(), allocation_process_addr, size, err);
 
     if (err.Success()) {
@@ -90,18 +90,18 @@ void IRExecutionUnit::FreeNow(lldb::addr_t allocation) {
   if (allocation == LLDB_INVALID_ADDRESS)
     return;
 
-  Error err;
+  Status err;
 
   Free(allocation, err);
 }
 
-Error IRExecutionUnit::DisassembleFunction(Stream &stream,
-                                           lldb::ProcessSP &process_wp) {
+Status IRExecutionUnit::DisassembleFunction(Stream &stream,
+                                            lldb::ProcessSP &process_wp) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   ExecutionContext exe_ctx(process_wp);
 
-  Error ret;
+  Status ret;
 
   ret.Clear();
 
@@ -152,7 +152,7 @@ Error IRExecutionUnit::DisassembleFunction(Stream &stream,
   lldb::DataBufferSP buffer_sp(new DataBufferHeap(func_range.second, 0));
 
   Process *process = exe_ctx.GetProcessPtr();
-  Error err;
+  Status err;
   process->ReadMemory(func_remote_addr, buffer_sp->GetBytes(),
                       buffer_sp->GetByteSize(), err);
 
@@ -203,7 +203,7 @@ Error IRExecutionUnit::DisassembleFunction(Stream &stream,
 
 static void ReportInlineAsmError(const llvm::SMDiagnostic &diagnostic,
                                  void *Context, unsigned LocCookie) {
-  Error *err = static_cast<Error *>(Context);
+  Status *err = static_cast<Status *>(Context);
 
   if (err && err->Success()) {
     err->SetErrorToGenericError();
@@ -216,7 +216,7 @@ void IRExecutionUnit::ReportSymbolLookupError(const ConstString &name) {
   m_failed_lookups.push_back(name);
 }
 
-void IRExecutionUnit::GetRunnableInfo(Error &error, lldb::addr_t &func_addr,
+void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
                                       lldb::addr_t &func_end) {
   lldb::ProcessSP process_sp(GetProcessWP().lock());
 
@@ -452,7 +452,7 @@ void IRExecutionUnit::GetRunnableInfo(Error &error, lldb::addr_t &func_addr,
 
     StreamString disassembly_stream;
 
-    Error err = DisassembleFunction(disassembly_stream, process_sp);
+    Status err = DisassembleFunction(disassembly_stream, process_sp);
 
     if (!err.Success()) {
       log->Printf("Couldn't disassemble function : %s",
@@ -467,7 +467,7 @@ void IRExecutionUnit::GetRunnableInfo(Error &error, lldb::addr_t &func_addr,
         record.dump(log);
 
         DataBufferHeap my_buffer(record.m_size, 0);
-        Error err;
+        Status err;
         ReadMemory(my_buffer.GetBytes(), record.m_process_address,
                    record.m_size, err);
 
@@ -643,7 +643,7 @@ uint8_t *IRExecutionUnit::MemoryManager::allocateCodeSection(
   }
 
   if (m_parent.m_reported_allocations) {
-    Error err;
+    Status err;
     lldb::ProcessSP process_sp =
         m_parent.GetBestExecutionContextScope()->CalculateProcess();
 
@@ -675,7 +675,7 @@ uint8_t *IRExecutionUnit::MemoryManager::allocateDataSection(
   }
 
   if (m_parent.m_reported_allocations) {
-    Error err;
+    Status err;
     lldb::ProcessSP process_sp =
         m_parent.GetBestExecutionContextScope()->CalculateProcess();
 
@@ -1104,7 +1104,7 @@ IRExecutionUnit::GetRemoteRangeForLocal(lldb::addr_t local_address) {
 }
 
 bool IRExecutionUnit::CommitOneAllocation(lldb::ProcessSP &process_sp,
-                                          Error &error,
+                                          Status &error,
                                           AllocationRecord &record) {
   if (record.m_process_address != LLDB_INVALID_ADDRESS) {
     return true;
@@ -1145,7 +1145,7 @@ bool IRExecutionUnit::CommitOneAllocation(lldb::ProcessSP &process_sp,
 bool IRExecutionUnit::CommitAllocations(lldb::ProcessSP &process_sp) {
   bool ret = true;
 
-  lldb_private::Error err;
+  lldb_private::Status err;
 
   for (AllocationRecord &record : m_records) {
     ret = CommitOneAllocation(process_sp, err, record);
@@ -1189,7 +1189,7 @@ bool IRExecutionUnit::WriteData(lldb::ProcessSP &process_sp) {
   bool wrote_something = false;
   for (AllocationRecord &record : m_records) {
     if (record.m_process_address != LLDB_INVALID_ADDRESS) {
-      lldb_private::Error err;
+      lldb_private::Status err;
       WriteMemory(record.m_process_address, (uint8_t *)record.m_host_address,
                   record.m_size, err);
       if (err.Success())

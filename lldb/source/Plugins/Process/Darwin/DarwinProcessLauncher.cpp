@@ -32,8 +32,8 @@
 
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "CFBundle.h"
@@ -131,10 +131,10 @@ static bool ResolveExecutablePath(const char *path, char *resolved_path,
 
 // TODO check if we have a general purpose fork and exec.  We may be
 // able to get rid of this entirely.
-static Error ForkChildForPTraceDebugging(const char *path, char const *argv[],
-                                         char const *envp[], ::pid_t *pid,
-                                         int *pty_fd) {
-  Error error;
+static Status ForkChildForPTraceDebugging(const char *path, char const *argv[],
+                                          char const *envp[], ::pid_t *pid,
+                                          int *pty_fd) {
+  Status error;
   if (!path || !argv || !envp || !pid || !pty_fd) {
     error.SetErrorString("invalid arguments");
     return error;
@@ -149,7 +149,7 @@ static Error ForkChildForPTraceDebugging(const char *path, char const *argv[],
   *pid = static_cast<::pid_t>(pty.Fork(fork_error, sizeof(fork_error)));
   if (*pid < 0) {
     //--------------------------------------------------------------
-    // Error during fork.
+    // Status during fork.
     //--------------------------------------------------------------
     *pid = static_cast<::pid_t>(LLDB_INVALID_PROCESS_ID);
     error.SetErrorStringWithFormat("%s(): fork failed: %s", __FUNCTION__,
@@ -205,10 +205,10 @@ static Error ForkChildForPTraceDebugging(const char *path, char const *argv[],
   return error;
 }
 
-static Error
+static Status
 CreatePosixSpawnFileAction(const FileAction &action,
                            posix_spawn_file_actions_t *file_actions) {
-  Error error;
+  Status error;
 
   // Log it.
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
@@ -270,11 +270,11 @@ CreatePosixSpawnFileAction(const FileAction &action,
   return error;
 }
 
-static Error PosixSpawnChildForPTraceDebugging(const char *path,
-                                               ProcessLaunchInfo &launch_info,
-                                               ::pid_t *pid,
-                                               cpu_type_t *actual_cpu_type) {
-  Error error;
+static Status PosixSpawnChildForPTraceDebugging(const char *path,
+                                                ProcessLaunchInfo &launch_info,
+                                                ::pid_t *pid,
+                                                cpu_type_t *actual_cpu_type) {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   if (!pid) {
@@ -436,9 +436,9 @@ static Error PosixSpawnChildForPTraceDebugging(const char *path,
   return error;
 }
 
-Error LaunchInferior(ProcessLaunchInfo &launch_info, int *pty_master_fd,
-                     LaunchFlavor *launch_flavor) {
-  Error error;
+Status LaunchInferior(ProcessLaunchInfo &launch_info, int *pty_master_fd,
+                      LaunchFlavor *launch_flavor) {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   if (!launch_flavor) {

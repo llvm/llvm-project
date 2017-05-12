@@ -10,8 +10,8 @@
 #include "lldb/Host/common/SoftwareBreakpoint.h"
 
 #include "lldb/Host/Debug.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
 
@@ -21,7 +21,7 @@ using namespace lldb_private;
 // static members
 // -------------------------------------------------------------------
 
-Error SoftwareBreakpoint::CreateSoftwareBreakpoint(
+Status SoftwareBreakpoint::CreateSoftwareBreakpoint(
     NativeProcessProtocol &process, lldb::addr_t addr, size_t size_hint,
     NativeBreakpointSP &breakpoint_sp) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
@@ -30,15 +30,15 @@ Error SoftwareBreakpoint::CreateSoftwareBreakpoint(
 
   // Validate the address.
   if (addr == LLDB_INVALID_ADDRESS)
-    return Error("SoftwareBreakpoint::%s invalid load address specified.",
-                 __FUNCTION__);
+    return Status("SoftwareBreakpoint::%s invalid load address specified.",
+                  __FUNCTION__);
 
   // Ask the NativeProcessProtocol subclass to fill in the correct software
   // breakpoint
   // trap for the breakpoint site.
   size_t bp_opcode_size = 0;
   const uint8_t *bp_opcode_bytes = NULL;
-  Error error = process.GetSoftwareBreakpointTrapOpcode(
+  Status error = process.GetSoftwareBreakpointTrapOpcode(
       size_hint, bp_opcode_size, bp_opcode_bytes);
 
   if (error.Fail()) {
@@ -54,10 +54,10 @@ Error SoftwareBreakpoint::CreateSoftwareBreakpoint(
     if (log)
       log->Printf("SoftwareBreakpoint::%s failed to retrieve any trap opcodes",
                   __FUNCTION__);
-    return Error("SoftwareBreakpoint::GetSoftwareBreakpointTrapOpcode() "
-                 "returned zero, unable to get breakpoint trap for address "
-                 "0x%" PRIx64,
-                 addr);
+    return Status("SoftwareBreakpoint::GetSoftwareBreakpointTrapOpcode() "
+                  "returned zero, unable to get breakpoint trap for address "
+                  "0x%" PRIx64,
+                  addr);
   }
 
   if (bp_opcode_size > MAX_TRAP_OPCODE_SIZE) {
@@ -65,10 +65,10 @@ Error SoftwareBreakpoint::CreateSoftwareBreakpoint(
       log->Printf("SoftwareBreakpoint::%s cannot support %zu trapcode bytes, "
                   "max size is %zu",
                   __FUNCTION__, bp_opcode_size, MAX_TRAP_OPCODE_SIZE);
-    return Error("SoftwareBreakpoint::GetSoftwareBreakpointTrapOpcode() "
-                 "returned too many trap opcode bytes: requires %zu but we "
-                 "only support a max of %zu",
-                 bp_opcode_size, MAX_TRAP_OPCODE_SIZE);
+    return Status("SoftwareBreakpoint::GetSoftwareBreakpointTrapOpcode() "
+                  "returned too many trap opcode bytes: requires %zu but we "
+                  "only support a max of %zu",
+                  bp_opcode_size, MAX_TRAP_OPCODE_SIZE);
   }
 
   // Validate that we received opcodes.
@@ -76,10 +76,10 @@ Error SoftwareBreakpoint::CreateSoftwareBreakpoint(
     if (log)
       log->Printf("SoftwareBreakpoint::%s failed to retrieve trap opcode bytes",
                   __FUNCTION__);
-    return Error("SoftwareBreakpoint::GetSoftwareBreakpointTrapOpcode() "
-                 "returned NULL trap opcode bytes, unable to get breakpoint "
-                 "trap for address 0x%" PRIx64,
-                 addr);
+    return Status("SoftwareBreakpoint::GetSoftwareBreakpointTrapOpcode() "
+                  "returned NULL trap opcode bytes, unable to get breakpoint "
+                  "trap for address 0x%" PRIx64,
+                  addr);
   }
 
   // Enable the breakpoint.
@@ -103,10 +103,10 @@ Error SoftwareBreakpoint::CreateSoftwareBreakpoint(
   // breakpoint.
   breakpoint_sp.reset(new SoftwareBreakpoint(process, addr, saved_opcode_bytes,
                                              bp_opcode_bytes, bp_opcode_size));
-  return Error();
+  return Status();
 }
 
-Error SoftwareBreakpoint::EnableSoftwareBreakpoint(
+Status SoftwareBreakpoint::EnableSoftwareBreakpoint(
     NativeProcessProtocol &process, lldb::addr_t addr, size_t bp_opcode_size,
     const uint8_t *bp_opcode_bytes, uint8_t *saved_opcode_bytes) {
   assert(bp_opcode_size <= MAX_TRAP_OPCODE_SIZE &&
@@ -121,7 +121,7 @@ Error SoftwareBreakpoint::EnableSoftwareBreakpoint(
   // Save the original opcodes by reading them so we can restore later.
   size_t bytes_read = 0;
 
-  Error error =
+  Status error =
       process.ReadMemory(addr, saved_opcode_bytes, bp_opcode_size, bytes_read);
   if (error.Fail()) {
     if (log)
@@ -138,10 +138,10 @@ Error SoftwareBreakpoint::EnableSoftwareBreakpoint(
                   "attempting to set breakpoint: attempted to read %zu bytes "
                   "but only read %zu",
                   __FUNCTION__, bp_opcode_size, bytes_read);
-    return Error("SoftwareBreakpoint::%s failed to read memory while "
-                 "attempting to set breakpoint: attempted to read %zu bytes "
-                 "but only read %zu",
-                 __FUNCTION__, bp_opcode_size, bytes_read);
+    return Status("SoftwareBreakpoint::%s failed to read memory while "
+                  "attempting to set breakpoint: attempted to read %zu bytes "
+                  "but only read %zu",
+                  __FUNCTION__, bp_opcode_size, bytes_read);
   }
 
   // Log what we read.
@@ -197,10 +197,11 @@ Error SoftwareBreakpoint::EnableSoftwareBreakpoint(
                   "attempting to verify breakpoint: attempted to read %zu "
                   "bytes but only read %zu",
                   __FUNCTION__, bp_opcode_size, verify_bytes_read);
-    return Error("SoftwareBreakpoint::%s failed to read memory while "
-                 "attempting to verify breakpoint: attempted to read %zu bytes "
-                 "but only read %zu",
-                 __FUNCTION__, bp_opcode_size, verify_bytes_read);
+    return Status(
+        "SoftwareBreakpoint::%s failed to read memory while "
+        "attempting to verify breakpoint: attempted to read %zu bytes "
+        "but only read %zu",
+        __FUNCTION__, bp_opcode_size, verify_bytes_read);
   }
 
   if (::memcmp(bp_opcode_bytes, verify_bp_opcode_bytes, bp_opcode_size) != 0) {
@@ -209,17 +210,17 @@ Error SoftwareBreakpoint::EnableSoftwareBreakpoint(
                   "writing failed - trap opcodes not successfully read back "
                   "after writing when setting breakpoint at 0x%" PRIx64,
                   __FUNCTION__, addr);
-    return Error("SoftwareBreakpoint::%s: verification of software breakpoint "
-                 "writing failed - trap opcodes not successfully read back "
-                 "after writing when setting breakpoint at 0x%" PRIx64,
-                 __FUNCTION__, addr);
+    return Status("SoftwareBreakpoint::%s: verification of software breakpoint "
+                  "writing failed - trap opcodes not successfully read back "
+                  "after writing when setting breakpoint at 0x%" PRIx64,
+                  __FUNCTION__, addr);
   }
 
   if (log)
     log->Printf("SoftwareBreakpoint::%s addr = 0x%" PRIx64 " -- SUCCESS",
                 __FUNCTION__, addr);
 
-  return Error();
+  return Status();
 }
 
 // -------------------------------------------------------------------
@@ -240,13 +241,13 @@ SoftwareBreakpoint::SoftwareBreakpoint(NativeProcessProtocol &process,
   ::memcpy(m_trap_opcodes, trap_opcodes, opcode_size);
 }
 
-Error SoftwareBreakpoint::DoEnable() {
+Status SoftwareBreakpoint::DoEnable() {
   return EnableSoftwareBreakpoint(m_process, m_addr, m_opcode_size,
                                   m_trap_opcodes, m_saved_opcodes);
 }
 
-Error SoftwareBreakpoint::DoDisable() {
-  Error error;
+Status SoftwareBreakpoint::DoDisable() {
+  Status error;
   assert(m_addr && (m_addr != LLDB_INVALID_ADDRESS) &&
          "can't remove a software breakpoint for an invalid address");
 

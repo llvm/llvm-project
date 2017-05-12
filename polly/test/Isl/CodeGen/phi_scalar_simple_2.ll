@@ -31,7 +31,7 @@ entry:
 ; CHECK-NEXT:    store i32 %x, i32* %x.addr.0.phiops
 ; CHECK-NEXT:    sext
 
-; CHECK-LABEL: polly.merge21:
+; CHECK-LABEL: polly.merge{{[a-z_0-9]*}}:
 ; CHECK:         %x.addr.0.final_reload = load i32, i32* %x.addr.0.s2a
 
 for.cond:                                         ; preds = %for.inc5, %entry

@@ -34,8 +34,8 @@
 #include "lldb/Host/HostGetOpt.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/common/TCPSocket.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -98,13 +98,13 @@ static void display_usage(const char *progname, const char *subcommand) {
   exit(0);
 }
 
-static Error save_socket_id_to_file(const std::string &socket_id,
-                                    const FileSpec &file_spec) {
+static Status save_socket_id_to_file(const std::string &socket_id,
+                                     const FileSpec &file_spec) {
   FileSpec temp_file_spec(file_spec.GetDirectory().AsCString(), false);
-  Error error(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
+  Status error(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
   if (error.Fail())
-    return Error("Failed to create directory %s: %s",
-                 temp_file_spec.GetCString(), error.AsCString());
+    return Status("Failed to create directory %s: %s",
+                  temp_file_spec.GetCString(), error.AsCString());
 
   llvm::SmallString<64> temp_file_path;
   temp_file_spec.AppendPathComponent("port-file.%%%%%%");
@@ -112,7 +112,7 @@ static Error save_socket_id_to_file(const std::string &socket_id,
   auto err_code = llvm::sys::fs::createUniqueFile(temp_file_spec.GetPath(), FD,
                                                   temp_file_path);
   if (err_code)
-    return Error("Failed to create temp file: %s", err_code.message().c_str());
+    return Status("Failed to create temp file: %s", err_code.message().c_str());
 
   llvm::FileRemover tmp_file_remover(temp_file_path);
 
@@ -121,16 +121,16 @@ static Error save_socket_id_to_file(const std::string &socket_id,
     temp_file << socket_id;
     temp_file.close();
     if (temp_file.has_error())
-      return Error("Failed to write to port file.");
+      return Status("Failed to write to port file.");
   }
 
   err_code = llvm::sys::fs::rename(temp_file_path, file_spec.GetPath());
   if (err_code)
-    return Error("Failed to rename file %s to %s: %s", temp_file_path.c_str(),
-                 file_spec.GetPath().c_str(), err_code.message().c_str());
+    return Status("Failed to rename file %s to %s: %s", temp_file_path.c_str(),
+                  file_spec.GetPath().c_str(), err_code.message().c_str());
 
   tmp_file_remover.releaseFile();
-  return Error();
+  return Status();
 }
 
 //----------------------------------------------------------------------
@@ -144,7 +144,7 @@ int main_platform(int argc, char *argv[]) {
   signal(SIGPIPE, SIG_IGN);
   signal(SIGHUP, signal_handler);
   int long_option_index = 0;
-  Error error;
+  Status error;
   std::string listen_host_port;
   int ch;
 
@@ -350,9 +350,9 @@ int main_platform(int argc, char *argv[]) {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
         uint16_t port = 0;
         std::string socket_name;
-        Error error = platform.LaunchGDBServer(inferior_arguments,
-                                               "", // hostname
-                                               pid, port, socket_name);
+        Status error = platform.LaunchGDBServer(inferior_arguments,
+                                                "", // hostname
+                                                pid, port, socket_name);
         if (error.Success())
           platform.SetPendingGdbServer(pid, port, socket_name);
         else

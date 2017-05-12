@@ -80,7 +80,7 @@ lldb::thread_t SBHostOS::ThreadCreate(const char *name,
 void SBHostOS::ThreadCreated(const char *name) {}
 
 bool SBHostOS::ThreadCancel(lldb::thread_t thread, SBError *error_ptr) {
-  Error error;
+  Status error;
   HostThread host_thread(thread);
   error = host_thread.Cancel();
   if (error_ptr)
@@ -90,7 +90,7 @@ bool SBHostOS::ThreadCancel(lldb::thread_t thread, SBError *error_ptr) {
 }
 
 bool SBHostOS::ThreadDetach(lldb::thread_t thread, SBError *error_ptr) {
-  Error error;
+  Status error;
 #if defined(_WIN32)
   if (error_ptr)
     error_ptr->SetErrorString("ThreadDetach is not supported on this platform");
@@ -106,7 +106,7 @@ bool SBHostOS::ThreadDetach(lldb::thread_t thread, SBError *error_ptr) {
 
 bool SBHostOS::ThreadJoin(lldb::thread_t thread, lldb::thread_result_t *result,
                           SBError *error_ptr) {
-  Error error;
+  Status error;
   HostThread host_thread(thread);
   error = host_thread.Join(result);
   if (error_ptr)

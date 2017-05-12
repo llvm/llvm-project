@@ -160,40 +160,40 @@ NativeRegisterContextSP NativeThreadNetBSD::GetRegisterContext() {
   return m_reg_context_sp;
 }
 
-Error NativeThreadNetBSD::SetWatchpoint(lldb::addr_t addr, size_t size,
-                                        uint32_t watch_flags, bool hardware) {
+Status NativeThreadNetBSD::SetWatchpoint(lldb::addr_t addr, size_t size,
+                                         uint32_t watch_flags, bool hardware) {
   if (!hardware)
-    return Error("not implemented");
+    return Status("not implemented");
   if (m_state == eStateLaunching)
-    return Error();
-  Error error = RemoveWatchpoint(addr);
+    return Status();
+  Status error = RemoveWatchpoint(addr);
   if (error.Fail())
     return error;
   NativeRegisterContextSP reg_ctx = GetRegisterContext();
   uint32_t wp_index = reg_ctx->SetHardwareWatchpoint(addr, size, watch_flags);
   if (wp_index == LLDB_INVALID_INDEX32)
-    return Error("Setting hardware watchpoint failed.");
+    return Status("Setting hardware watchpoint failed.");
   m_watchpoint_index_map.insert({addr, wp_index});
-  return Error();
+  return Status();
 }
 
-Error NativeThreadNetBSD::RemoveWatchpoint(lldb::addr_t addr) {
+Status NativeThreadNetBSD::RemoveWatchpoint(lldb::addr_t addr) {
   auto wp = m_watchpoint_index_map.find(addr);
   if (wp == m_watchpoint_index_map.end())
-    return Error();
+    return Status();
   uint32_t wp_index = wp->second;
   m_watchpoint_index_map.erase(wp);
   if (GetRegisterContext()->ClearHardwareWatchpoint(wp_index))
-    return Error();
-  return Error("Clearing hardware watchpoint failed.");
+    return Status();
+  return Status("Clearing hardware watchpoint failed.");
 }
 
-Error NativeThreadNetBSD::SetHardwareBreakpoint(lldb::addr_t addr,
-                                                size_t size) {
+Status NativeThreadNetBSD::SetHardwareBreakpoint(lldb::addr_t addr,
+                                                 size_t size) {
   if (m_state == eStateLaunching)
-    return Error();
+    return Status();
 
-  Error error = RemoveHardwareBreakpoint(addr);
+  Status error = RemoveHardwareBreakpoint(addr);
   if (error.Fail())
     return error;
 
@@ -201,22 +201,22 @@ Error NativeThreadNetBSD::SetHardwareBreakpoint(lldb::addr_t addr,
   uint32_t bp_index = reg_ctx->SetHardwareBreakpoint(addr, size);
 
   if (bp_index == LLDB_INVALID_INDEX32)
-    return Error("Setting hardware breakpoint failed.");
+    return Status("Setting hardware breakpoint failed.");
 
   m_hw_break_index_map.insert({addr, bp_index});
-  return Error();
+  return Status();
 }
 
-Error NativeThreadNetBSD::RemoveHardwareBreakpoint(lldb::addr_t addr) {
+Status NativeThreadNetBSD::RemoveHardwareBreakpoint(lldb::addr_t addr) {
   auto bp = m_hw_break_index_map.find(addr);
   if (bp == m_hw_break_index_map.end())
-    return Error();
+    return Status();
 
   uint32_t bp_index = bp->second;
   if (GetRegisterContext()->ClearHardwareBreakpoint(bp_index)) {
     m_hw_break_index_map.erase(bp);
-    return Error();
+    return Status();
   }
 
-  return Error("Clearing hardware breakpoint failed.");
+  return Status("Clearing hardware breakpoint failed.");
 }
