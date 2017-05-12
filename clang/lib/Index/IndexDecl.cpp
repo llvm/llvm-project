@@ -52,6 +52,22 @@ public:
     return MD && !MD->isImplicit() && MD->isThisDeclarationADefinition();
   }
 
+  void handleTemplateArgumentLoc(const TemplateArgumentLoc &TALoc,
+                                 const NamedDecl *Parent,
+                                 const DeclContext *DC) {
+    const TemplateArgumentLocInfo &LocInfo = TALoc.getLocInfo();
+    switch (TALoc.getArgument().getKind()) {
+    case TemplateArgument::Expression:
+      IndexCtx.indexBody(LocInfo.getAsExpr(), Parent, DC);
+      break;
+    case TemplateArgument::Type:
+      IndexCtx.indexTypeSourceInfo(LocInfo.getAsTypeSourceInfo(), Parent, DC);
+      break;
+    default:
+      break;
+    }
+  }
+
   void handleDeclarator(const DeclaratorDecl *D,
                         const NamedDecl *Parent = nullptr,
                         bool isIBType = false) {
@@ -232,6 +248,12 @@ public:
                                  TypeNameInfo->getTypeLoc().getLocStart(),
                                  Dtor->getParent(), Dtor->getDeclContext());
       }
+    }
+    // Template specialization arguments.
+    if (const ASTTemplateArgumentListInfo *TemplateArgInfo =
+            D->getTemplateSpecializationArgsAsWritten()) {
+      for (const auto &Arg : TemplateArgInfo->arguments())
+        handleTemplateArgumentLoc(Arg, D, D->getLexicalDeclContext());
     }
 
     if (D->isThisDeclarationADefinition()) {
