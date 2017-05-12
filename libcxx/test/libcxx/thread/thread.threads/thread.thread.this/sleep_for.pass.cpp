@@ -35,7 +35,6 @@
 
 void sig_action(int) {}
 
-#include <iostream>
 int main()
 {
     int ec;

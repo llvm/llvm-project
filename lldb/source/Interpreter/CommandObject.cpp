@@ -99,7 +99,7 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
   // See if the subclass has options?
   Options *options = GetOptions();
   if (options != nullptr) {
-    Error error;
+    Status error;
 
     auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
     options->NotifyOptionParsingStarting(&exe_ctx);

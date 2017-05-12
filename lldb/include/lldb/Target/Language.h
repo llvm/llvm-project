@@ -199,7 +199,7 @@ public:
   // it should return an appropriate closure here
   virtual DumpValueObjectOptions::DeclPrintingHelper GetDeclPrintingHelper();
 
-  virtual LazyBool IsLogicalTrue(ValueObject &valobj, Error &error);
+  virtual LazyBool IsLogicalTrue(ValueObject &valobj, Status &error);
 
   // for a ValueObject of some "reference type", if the value points to the
   // nil/null object, this method returns true

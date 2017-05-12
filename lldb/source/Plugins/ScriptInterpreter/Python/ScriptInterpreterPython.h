@@ -161,11 +161,11 @@ public:
       void *ret_value,
       const ExecuteScriptOptions &options = ExecuteScriptOptions()) override;
 
-  lldb_private::Error ExecuteMultipleLines(
+  lldb_private::Status ExecuteMultipleLines(
       const char *in_string,
       const ExecuteScriptOptions &options = ExecuteScriptOptions()) override;
 
-  Error
+  Status
   ExportFunctionDefinitionToInterpreter(StringList &function_def) override;
 
   bool GenerateTypeScriptFunction(StringList &input, std::string &output,
@@ -229,12 +229,12 @@ public:
 
   StructuredData::ObjectSP
   LoadPluginModule(const FileSpec &file_spec,
-                   lldb_private::Error &error) override;
+                   lldb_private::Status &error) override;
 
   StructuredData::DictionarySP
   GetDynamicSettings(StructuredData::ObjectSP plugin_module_sp, Target *target,
                      const char *setting_name,
-                     lldb_private::Error &error) override;
+                     lldb_private::Status &error) override;
 
   size_t CalculateNumChildren(const StructuredData::ObjectSP &implementor,
                               uint32_t max) override;
@@ -262,21 +262,21 @@ public:
   RunScriptBasedCommand(const char *impl_function, const char *args,
                         ScriptedCommandSynchronicity synchronicity,
                         lldb_private::CommandReturnObject &cmd_retobj,
-                        Error &error,
+                        Status &error,
                         const lldb_private::ExecutionContext &exe_ctx) override;
 
   bool
   RunScriptBasedCommand(StructuredData::GenericSP impl_obj_sp, const char *args,
                         ScriptedCommandSynchronicity synchronicity,
                         lldb_private::CommandReturnObject &cmd_retobj,
-                        Error &error,
+                        Status &error,
                         const lldb_private::ExecutionContext &exe_ctx) override;
 
-  Error GenerateFunction(const char *signature,
-                         const StringList &input) override;
+  Status GenerateFunction(const char *signature,
+                          const StringList &input) override;
 
-  Error GenerateBreakpointCommandCallbackData(StringList &input,
-                                              std::string &output) override;
+  Status GenerateBreakpointCommandCallbackData(StringList &input,
+                                               std::string &output) override;
 
   bool GenerateWatchpointCommandCallbackData(StringList &input,
                                              std::string &output) override;
@@ -332,23 +332,23 @@ public:
   }
 
   bool RunScriptFormatKeyword(const char *impl_function, Process *process,
-                              std::string &output, Error &error) override;
+                              std::string &output, Status &error) override;
 
   bool RunScriptFormatKeyword(const char *impl_function, Thread *thread,
-                              std::string &output, Error &error) override;
+                              std::string &output, Status &error) override;
 
   bool RunScriptFormatKeyword(const char *impl_function, Target *target,
-                              std::string &output, Error &error) override;
+                              std::string &output, Status &error) override;
 
   bool RunScriptFormatKeyword(const char *impl_function, StackFrame *frame,
-                              std::string &output, Error &error) override;
+                              std::string &output, Status &error) override;
 
   bool RunScriptFormatKeyword(const char *impl_function, ValueObject *value,
-                              std::string &output, Error &error) override;
+                              std::string &output, Status &error) override;
 
   bool
   LoadScriptingModule(const char *filename, bool can_reload, bool init_session,
-                      lldb_private::Error &error,
+                      lldb_private::Status &error,
                       StructuredData::ObjectSP *module_sp = nullptr) override;
 
   bool IsReservedWord(const char *word) override;
@@ -364,14 +364,14 @@ public:
                                           CommandReturnObject &result) override;
 
   /// Set the callback body text into the callback for the breakpoint.
-  Error SetBreakpointCommandCallback(BreakpointOptions *bp_options,
-                                     const char *callback_body) override;
+  Status SetBreakpointCommandCallback(BreakpointOptions *bp_options,
+                                      const char *callback_body) override;
 
   void SetBreakpointCommandCallbackFunction(BreakpointOptions *bp_options,
                                             const char *function_name) override;
 
   /// This one is for deserialization:
-  Error SetBreakpointCommandCallback(
+  Status SetBreakpointCommandCallback(
       BreakpointOptions *bp_options,
       std::unique_ptr<BreakpointOptions::CommandData> &data_up) override;
 

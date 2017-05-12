@@ -12,9 +12,9 @@
 
 #include "lldb/Core/Address.h"     // for Address
 #include "lldb/Core/ModuleSpec.h"  // for ModuleSpec
-#include "lldb/Utility/Error.h"    // for Error
 #include "lldb/Utility/FileSpec.h" // for FileSpec
 #include "lldb/Utility/Iterable.h"
+#include "lldb/Utility/Status.h" // for Status
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
@@ -530,18 +530,18 @@ public:
   //------------------------------------------------------------------
   size_t GetSize() const;
 
-  bool LoadScriptingResourcesInTarget(Target *target, std::list<Error> &errors,
+  bool LoadScriptingResourcesInTarget(Target *target, std::list<Status> &errors,
                                       Stream *feedback_stream = nullptr,
                                       bool continue_on_error = true);
 
   static bool ModuleIsInCache(const Module *module_ptr);
 
-  static Error GetSharedModule(const ModuleSpec &module_spec,
-                               lldb::ModuleSP &module_sp,
-                               const FileSpecList *module_search_paths_ptr,
-                               lldb::ModuleSP *old_module_sp_ptr,
-                               bool *did_create_ptr,
-                               bool always_create = false);
+  static Status GetSharedModule(const ModuleSpec &module_spec,
+                                lldb::ModuleSP &module_sp,
+                                const FileSpecList *module_search_paths_ptr,
+                                lldb::ModuleSP *old_module_sp_ptr,
+                                bool *did_create_ptr,
+                                bool always_create = false);
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 

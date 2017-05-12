@@ -12,7 +12,7 @@
 
 #include "lldb/Core/Scalar.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"     // for Error
+#include "lldb/Utility/Status.h"    // for Status
 #include "lldb/lldb-enumerations.h" // for ByteOrder, Format
 #include "lldb/lldb-types.h"        // for offset_t
 
@@ -105,11 +105,11 @@ public:
   // into "dst".
   uint32_t GetAsMemoryData(const RegisterInfo *reg_info, void *dst,
                            uint32_t dst_len, lldb::ByteOrder dst_byte_order,
-                           Error &error) const;
+                           Status &error) const;
 
   uint32_t SetFromMemoryData(const RegisterInfo *reg_info, const void *src,
                              uint32_t src_len, lldb::ByteOrder src_byte_order,
-                             Error &error);
+                             Status &error);
 
   bool GetScalarValue(Scalar &scalar) const;
 
@@ -241,13 +241,13 @@ public:
 
   bool SignExtend(uint32_t sign_bitpos);
 
-  Error SetValueFromString(const RegisterInfo *reg_info,
-                           llvm::StringRef value_str);
-  Error SetValueFromString(const RegisterInfo *reg_info,
-                           const char *value_str) = delete;
+  Status SetValueFromString(const RegisterInfo *reg_info,
+                            llvm::StringRef value_str);
+  Status SetValueFromString(const RegisterInfo *reg_info,
+                            const char *value_str) = delete;
 
-  Error SetValueFromData(const RegisterInfo *reg_info, DataExtractor &data,
-                         lldb::offset_t offset, bool partial_data_ok);
+  Status SetValueFromData(const RegisterInfo *reg_info, DataExtractor &data,
+                          lldb::offset_t offset, bool partial_data_ok);
 
   // The default value of 0 for reg_name_right_align_at means no alignment at
   // all.

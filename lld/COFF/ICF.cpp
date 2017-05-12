@@ -21,9 +21,9 @@
 #include "Chunks.h"
 #include "Error.h"
 #include "Symbols.h"
-#include "lld/Core/Parallel.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <atomic>
@@ -192,7 +192,7 @@ void ICF::forEachClass(std::function<void(size_t, size_t)> Fn) {
   // Split sections into 256 shards and call Fn in parallel.
   size_t NumShards = 256;
   size_t Step = Chunks.size() / NumShards;
-  parallel_for(size_t(0), NumShards, [&](size_t I) {
+  for_each_n(parallel::par, size_t(0), NumShards, [&](size_t I) {
     forEachClassRange(I * Step, (I + 1) * Step, Fn);
   });
   forEachClassRange(Step * NumShards, Chunks.size(), Fn);

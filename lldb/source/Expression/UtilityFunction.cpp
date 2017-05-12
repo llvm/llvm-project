@@ -65,7 +65,7 @@ UtilityFunction::~UtilityFunction() {
 
 FunctionCaller *UtilityFunction::MakeFunctionCaller(
     const CompilerType &return_type, const ValueList &arg_value_list,
-    lldb::ThreadSP thread_to_use_sp, Error &error) {
+    lldb::ThreadSP thread_to_use_sp, Status &error) {
   if (m_caller_up)
     return m_caller_up.get();
 

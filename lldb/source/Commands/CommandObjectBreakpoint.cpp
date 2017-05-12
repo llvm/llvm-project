@@ -178,9 +178,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -662,7 +662,7 @@ protected:
                .get();
     } break;
     case eSetTypeException: {
-      Error precond_error;
+      Status precond_error;
       bp = target
                ->CreateExceptionBreakpoint(
                    m_options.m_exception_language, m_options.m_catch_bp,
@@ -705,7 +705,7 @@ protected:
         bp->GetOptions()->SetCondition(m_options.m_condition.c_str());
 
       if (!m_options.m_breakpoint_names.empty()) {
-        Error name_error;
+        Status name_error;
         for (auto name : m_options.m_breakpoint_names) {
           bp->AddName(name.c_str(), name_error);
           if (name_error.Fail()) {
@@ -844,9 +844,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -1305,9 +1305,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -1452,9 +1452,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -1611,9 +1611,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -1751,9 +1751,9 @@ public:
     return llvm::makeArrayRef(g_breakpoint_name_options);
   }
 
-  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                       ExecutionContext *execution_context) override {
-    Error error;
+  Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                        ExecutionContext *execution_context) override {
+    Status error;
     const int short_option = g_breakpoint_name_options[option_idx].short_option;
 
     switch (short_option) {
@@ -1864,8 +1864,8 @@ protected:
         lldb::break_id_t bp_id =
             valid_bp_ids.GetBreakpointIDAtIndex(index).GetBreakpointID();
         BreakpointSP bp_sp = breakpoints.FindBreakpointByID(bp_id);
-        Error error; // We don't need to check the error here, since the option
-                     // parser checked it...
+        Status error; // We don't need to check the error here, since the option
+                      // parser checked it...
         bp_sp->AddName(m_name_options.m_name.GetCurrentValue(), error);
       }
     }
@@ -2093,9 +2093,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -2103,7 +2103,7 @@ public:
         m_filename.assign(option_arg);
         break;
       case 'N': {
-        Error name_error;
+        Status name_error;
         if (!BreakpointID::StringIsBreakpointName(llvm::StringRef(option_arg),
                                                   name_error)) {
           error.SetErrorStringWithFormat("Invalid breakpoint name: %s",
@@ -2150,8 +2150,8 @@ protected:
 
     FileSpec input_spec(m_options.m_filename, true);
     BreakpointIDList new_bps;
-    Error error = target->CreateBreakpointsFromFile(input_spec,
-                                                    m_options.m_names, new_bps);
+    Status error = target->CreateBreakpointsFromFile(
+        input_spec, m_options.m_names, new_bps);
 
     if (!error.Success()) {
       result.AppendError(error.AsCString());
@@ -2223,9 +2223,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -2281,7 +2281,7 @@ protected:
         return false;
       }
     }
-    Error error = target->SerializeBreakpointsToFile(
+    Status error = target->SerializeBreakpointsToFile(
         FileSpec(m_options.m_filename, true), valid_bp_ids, m_options.m_append);
     if (!error.Success()) {
       result.AppendErrorWithFormat("error serializing breakpoints: %s.",

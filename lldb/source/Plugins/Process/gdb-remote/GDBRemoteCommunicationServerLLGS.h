@@ -51,10 +51,10 @@ public:
   ///     The number of elements in the args array of cstring pointers.
   ///
   /// @return
-  ///     An Error object indicating the success or failure of making
+  ///     An Status object indicating the success or failure of making
   ///     the setting.
   //------------------------------------------------------------------
-  Error SetLaunchArguments(const char *const args[], int argc);
+  Status SetLaunchArguments(const char *const args[], int argc);
 
   //------------------------------------------------------------------
   /// Specify the launch flags for the process.
@@ -63,10 +63,10 @@ public:
   ///     The launch flags to use when launching this process.
   ///
   /// @return
-  ///     An Error object indicating the success or failure of making
+  ///     An Status object indicating the success or failure of making
   ///     the setting.
   //------------------------------------------------------------------
-  Error SetLaunchFlags(unsigned int launch_flags);
+  Status SetLaunchFlags(unsigned int launch_flags);
 
   //------------------------------------------------------------------
   /// Launch a process with the current launch settings.
@@ -76,10 +76,10 @@ public:
   /// with all the information for a child process to be launched.
   ///
   /// @return
-  ///     An Error object indicating the success or failure of the
+  ///     An Status object indicating the success or failure of the
   ///     launch.
   //------------------------------------------------------------------
-  Error LaunchProcess() override;
+  Status LaunchProcess() override;
 
   //------------------------------------------------------------------
   /// Attach to a process.
@@ -88,10 +88,10 @@ public:
   /// configured Platform.
   ///
   /// @return
-  ///     An Error object indicating the success or failure of the
+  ///     An Status object indicating the success or failure of the
   ///     attach operation.
   //------------------------------------------------------------------
-  Error AttachToProcess(lldb::pid_t pid);
+  Status AttachToProcess(lldb::pid_t pid);
 
   //------------------------------------------------------------------
   // NativeProcessProtocol::NativeDelegate overrides
@@ -103,7 +103,7 @@ public:
 
   void DidExec(NativeProcessProtocol *process) override;
 
-  Error InitializeConnection(std::unique_ptr<Connection> &&connection);
+  Status InitializeConnection(std::unique_ptr<Connection> &&connection);
 
 protected:
   MainLoop &m_mainloop;
@@ -213,7 +213,7 @@ protected:
 
   lldb::tid_t GetContinueThreadID() const { return m_continue_tid; }
 
-  Error SetSTDIOFileDescriptor(int fd);
+  Status SetSTDIOFileDescriptor(int fd);
 
   FileSpec FindModuleFile(const std::string &module_path,
                           const ArchSpec &arch) override;

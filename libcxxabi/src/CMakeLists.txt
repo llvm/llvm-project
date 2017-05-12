@@ -74,6 +74,10 @@ if (LIBCXXABI_USE_LLVM_UNWINDER)
 else()
   append_if(libraries LIBCXXABI_HAS_GCC_S_LIB gcc_s)
 endif()
+if (MINGW)
+  # MINGW_LIBRARIES is defined in config-ix.cmake
+  list(APPEND libraries ${MINGW_LIBRARIES})
+endif()
 
 # Setup flags.
 append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_FPIC_FLAG -fPIC)

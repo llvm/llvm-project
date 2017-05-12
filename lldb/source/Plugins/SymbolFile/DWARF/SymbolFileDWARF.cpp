@@ -1599,7 +1599,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
             dwo_module_spec.GetArchitecture() =
                 m_obj_file->GetModule()->GetArchitecture();
             // printf ("Loading dwo = '%s'\n", dwo_path);
-            Error error = ModuleList::GetSharedModule(
+            Status error = ModuleList::GetSharedModule(
                 dwo_module_spec, module_sp, NULL, NULL, NULL);
             if (!module_sp) {
               GetObjectFile()->GetModule()->ReportWarning(
@@ -1637,7 +1637,7 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
               if (var_sp && !var_sp->GetLocationIsConstantValueData()) {
                 const DWARFExpression &location = var_sp->LocationExpression();
                 Value location_result;
-                Error error;
+                Status error;
                 if (location.Evaluate(nullptr, nullptr, nullptr,
                                       LLDB_INVALID_ADDRESS, nullptr, nullptr,
                                       location_result, &error)) {

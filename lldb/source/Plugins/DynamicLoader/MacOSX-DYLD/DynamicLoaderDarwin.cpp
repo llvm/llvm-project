@@ -440,8 +440,8 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
       Segment segment;
       StructuredData::Dictionary *seg =
           segments->GetItemAtIndex(j)->GetAsDictionary();
-      segment.name = ConstString(
-          seg->GetValueForKey("name")->GetAsString()->GetValue().c_str());
+      segment.name =
+          ConstString(seg->GetValueForKey("name")->GetAsString()->GetValue());
       segment.vmaddr =
           seg->GetValueForKey("vmaddr")->GetAsInteger()->GetValue();
       segment.vmsize =
@@ -478,8 +478,8 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
       image_infos[i].segments.push_back(segment);
     }
 
-    image_infos[i].uuid.SetFromCString(
-        image->GetValueForKey("uuid")->GetAsString()->GetValue().c_str());
+    image_infos[i].uuid.SetFromStringRef(
+        image->GetValueForKey("uuid")->GetAsString()->GetValue());
 
     // All sections listed in the dyld image info structure will all
     // either be fixed up already, or they will all be off by a single
@@ -962,7 +962,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
       for (Address address : addresses) {
         Symbol *symbol = address.CalculateSymbolContextSymbol();
         if (symbol && symbol->IsIndirect()) {
-          Error error;
+          Status error;
           Address symbol_address = symbol->GetAddress();
           addr_t resolved_addr = thread.GetProcess()->ResolveIndirectFunction(
               &symbol_address, error);
@@ -1062,7 +1062,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
 
   lldb_private::Address tls_addr;
   if (module_sp->ResolveFileAddress(tls_file_addr, tls_addr)) {
-    Error error;
+    Status error;
     const size_t tsl_data_size = addr_size * 3;
     Target &target = m_process->GetTarget();
     if (target.ReadMemory(tls_addr, false, buf, tsl_data_size, error) ==

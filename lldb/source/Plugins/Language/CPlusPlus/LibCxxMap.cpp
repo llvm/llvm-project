@@ -20,7 +20,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -259,7 +259,7 @@ bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
     return true;
   m_element_type.Clear();
   ValueObjectSP deref;
-  Error error;
+  Status error;
   deref = m_root_node->Dereference(error);
   if (!deref || error.Fail())
     return false;
@@ -365,7 +365,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
   }
   if (GetDataType()) {
     if (!need_to_skip) {
-      Error error;
+      Status error;
       iterated_sp = iterated_sp->Dereference(error);
       if (!iterated_sp || error.Fail()) {
         m_tree = nullptr;
@@ -406,7 +406,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
   // we need to copy current_sp into a new object otherwise we will end up with
   // all items named __value_
   DataExtractor data;
-  Error error;
+  Status error;
   iterated_sp->GetData(data, error);
   if (error.Fail()) {
     m_tree = nullptr;

@@ -24,7 +24,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 #include <algorithm>
@@ -129,7 +129,7 @@ bool lldb_private::formatters::WCharStringSummaryProvider(
 bool lldb_private::formatters::Char16SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
   DataExtractor data;
-  Error error;
+  Status error;
   valobj.GetData(data, error);
 
   if (error.Fail())
@@ -155,7 +155,7 @@ bool lldb_private::formatters::Char16SummaryProvider(
 bool lldb_private::formatters::Char32SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
   DataExtractor data;
-  Error error;
+  Status error;
   valobj.GetData(data, error);
 
   if (error.Fail())
@@ -181,7 +181,7 @@ bool lldb_private::formatters::Char32SummaryProvider(
 bool lldb_private::formatters::WCharSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
   DataExtractor data;
-  Error error;
+  Status error;
   valobj.GetData(data, error);
 
   if (error.Fail())

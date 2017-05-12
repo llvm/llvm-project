@@ -319,7 +319,7 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
                                             Timeout<std::micro> timeout,
                                             bool sync_on_timeout) {
   uint8_t buffer[8192];
-  Error error;
+  Status error;
 
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS));
 
@@ -933,9 +933,9 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
   return GDBRemoteCommunication::PacketType::Invalid;
 }
 
-Error GDBRemoteCommunication::StartListenThread(const char *hostname,
-                                                uint16_t port) {
-  Error error;
+Status GDBRemoteCommunication::StartListenThread(const char *hostname,
+                                                 uint16_t port) {
+  Status error;
   if (m_listen_thread.IsJoinable()) {
     error.SetErrorString("listen thread already running");
   } else {
@@ -962,7 +962,7 @@ bool GDBRemoteCommunication::JoinListenThread() {
 lldb::thread_result_t
 GDBRemoteCommunication::ListenThread(lldb::thread_arg_t arg) {
   GDBRemoteCommunication *comm = (GDBRemoteCommunication *)arg;
-  Error error;
+  Status error;
   ConnectionFileDescriptor *connection =
       (ConnectionFileDescriptor *)comm->GetConnection();
 
@@ -975,7 +975,7 @@ GDBRemoteCommunication::ListenThread(lldb::thread_arg_t arg) {
   return NULL;
 }
 
-Error GDBRemoteCommunication::StartDebugserverProcess(
+Status GDBRemoteCommunication::StartDebugserverProcess(
     const char *url, Platform *platform, ProcessLaunchInfo &launch_info,
     uint16_t *port, const Args *inferior_args, int pass_comm_fd) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
@@ -984,7 +984,7 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
                 __FUNCTION__, url ? url : "<empty>",
                 port ? *port : uint16_t(0));
 
-  Error error;
+  Status error;
   // If we locate debugserver, keep that located version around
   static FileSpec g_debugserver_file_spec;
 

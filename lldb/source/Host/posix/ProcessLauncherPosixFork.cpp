@@ -190,7 +190,7 @@ static void LLVM_ATTRIBUTE_NORETURN ChildFunc(int error_fd,
 
 HostProcess
 ProcessLauncherPosixFork::LaunchProcess(const ProcessLaunchInfo &launch_info,
-                                        Error &error) {
+                                        Status &error) {
   char exe_path[PATH_MAX];
   launch_info.GetExecutableFile().GetPath(exe_path, sizeof(exe_path));
 

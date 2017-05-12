@@ -78,7 +78,7 @@ public:
   uint64_t getVA(int64_t Addend = 0) const;
 
   uint64_t getGotOffset() const;
-  template <class ELFT> typename ELFT::uint getGotVA() const;
+  uint64_t getGotVA() const;
   uint64_t getGotPltOffset() const;
   uint64_t getGotPltVA() const;
   uint64_t getPltVA() const;

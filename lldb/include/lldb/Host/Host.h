@@ -190,19 +190,19 @@ public:
 
   static short GetPosixspawnFlags(const ProcessLaunchInfo &launch_info);
 
-  static Error LaunchProcessPosixSpawn(const char *exe_path,
-                                       const ProcessLaunchInfo &launch_info,
-                                       lldb::pid_t &pid);
+  static Status LaunchProcessPosixSpawn(const char *exe_path,
+                                        const ProcessLaunchInfo &launch_info,
+                                        lldb::pid_t &pid);
 
   static bool AddPosixSpawnFileAction(void *file_actions,
                                       const FileAction *info, Log *log,
-                                      Error &error);
+                                      Status &error);
 
 #endif
 
   static const lldb::UnixSignalsSP &GetUnixSignals();
 
-  static Error LaunchProcess(ProcessLaunchInfo &launch_info);
+  static Status LaunchProcess(ProcessLaunchInfo &launch_info);
 
   //------------------------------------------------------------------
   /// Perform expansion of the command-line for this launch info
@@ -211,10 +211,10 @@ public:
   //  argument magic the platform defines as part of its typical
   //  user experience
   //------------------------------------------------------------------
-  static Error ShellExpandArguments(ProcessLaunchInfo &launch_info);
+  static Status ShellExpandArguments(ProcessLaunchInfo &launch_info);
 
   // TODO: Convert this function to take a StringRef.
-  static Error RunShellCommand(
+  static Status RunShellCommand(
       const char *command,         // Shouldn't be NULL
       const FileSpec &working_dir, // Pass empty FileSpec to use the current
                                    // working directory
@@ -226,7 +226,7 @@ public:
       uint32_t timeout_sec,
       bool run_in_default_shell = true);
 
-  static Error RunShellCommand(
+  static Status RunShellCommand(
       const Args &args,
       const FileSpec &working_dir, // Pass empty FileSpec to use the current
                                    // working directory

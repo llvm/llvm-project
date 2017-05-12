@@ -704,17 +704,17 @@ size_t ModuleList::RemoveOrphanSharedModules(bool mandatory) {
   return GetSharedModuleList().RemoveOrphans(mandatory);
 }
 
-Error ModuleList::GetSharedModule(const ModuleSpec &module_spec,
-                                  ModuleSP &module_sp,
-                                  const FileSpecList *module_search_paths_ptr,
-                                  ModuleSP *old_module_sp_ptr,
-                                  bool *did_create_ptr, bool always_create) {
+Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
+                                   ModuleSP &module_sp,
+                                   const FileSpecList *module_search_paths_ptr,
+                                   ModuleSP *old_module_sp_ptr,
+                                   bool *did_create_ptr, bool always_create) {
   ModuleList &shared_module_list = GetSharedModuleList();
   std::lock_guard<std::recursive_mutex> guard(
       shared_module_list.m_modules_mutex);
   char path[PATH_MAX];
 
-  Error error;
+  Status error;
 
   module_sp.reset();
 
@@ -821,7 +821,7 @@ Error ModuleList::GetSharedModule(const ModuleSpec &module_spec,
               *did_create_ptr = true;
 
             shared_module_list.ReplaceEquivalent(module_sp);
-            return Error();
+            return Status();
           }
         }
       } else {
@@ -955,14 +955,14 @@ bool ModuleList::RemoveSharedModuleIfOrphaned(const Module *module_ptr) {
 }
 
 bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
-                                                std::list<Error> &errors,
+                                                std::list<Status> &errors,
                                                 Stream *feedback_stream,
                                                 bool continue_on_error) {
   if (!target)
     return false;
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   for (auto module : m_modules) {
-    Error error;
+    Status error;
     if (module) {
       if (!module->LoadScriptingResourceInTarget(target, error,
                                                  feedback_stream)) {

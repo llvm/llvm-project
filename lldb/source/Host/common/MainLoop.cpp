@@ -10,13 +10,13 @@
 #include "llvm/Config/llvm-config.h"
 
 #include "lldb/Host/MainLoop.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include <algorithm>
 #include <cassert>
 #include <cerrno>
 #include <csignal>
-#include <vector>
 #include <time.h>
+#include <vector>
 
 // Multiplexing is implemented using kqueue on systems that support it (BSD
 // variants including OSX). On linux we use ppoll, while android uses pselect
@@ -73,7 +73,7 @@ public:
   RunImpl(MainLoop &loop);
   ~RunImpl() = default;
 
-  Error Poll();
+  Status Poll();
   void ProcessEvents();
 
 private:
@@ -100,7 +100,7 @@ MainLoop::RunImpl::RunImpl(MainLoop &loop) : loop(loop) {
   in_events.reserve(loop.m_read_fds.size());
 }
 
-Error MainLoop::RunImpl::Poll() {
+Status MainLoop::RunImpl::Poll() {
   in_events.resize(loop.m_read_fds.size());
   unsigned i = 0;
   for (auto &fd : loop.m_read_fds)
@@ -110,8 +110,8 @@ Error MainLoop::RunImpl::Poll() {
                       out_events, llvm::array_lengthof(out_events), nullptr);
 
   if (num_events < 0)
-    return Error("kevent() failed with error %d\n", num_events);
-  return Error();
+    return Status("kevent() failed with error %d\n", num_events);
+  return Status();
 }
 
 void MainLoop::RunImpl::ProcessEvents() {
@@ -154,7 +154,7 @@ sigset_t MainLoop::RunImpl::get_sigmask() {
 }
 
 #ifdef FORCE_PSELECT
-Error MainLoop::RunImpl::Poll() {
+Status MainLoop::RunImpl::Poll() {
   FD_ZERO(&read_fd_set);
   int nfds = 0;
   for (const auto &fd : loop.m_read_fds) {
@@ -165,12 +165,12 @@ Error MainLoop::RunImpl::Poll() {
   sigset_t sigmask = get_sigmask();
   if (pselect(nfds, &read_fd_set, nullptr, nullptr, nullptr, &sigmask) == -1 &&
       errno != EINTR)
-    return Error(errno, eErrorTypePOSIX);
+    return Status(errno, eErrorTypePOSIX);
 
-  return Error();
+  return Status();
 }
 #else
-Error MainLoop::RunImpl::Poll() {
+Status MainLoop::RunImpl::Poll() {
   read_fds.clear();
 
   sigset_t sigmask = get_sigmask();
@@ -185,9 +185,9 @@ Error MainLoop::RunImpl::Poll() {
 
   if (ppoll(read_fds.data(), read_fds.size(), nullptr, &sigmask) == -1 &&
       errno != EINTR)
-    return Error(errno, eErrorTypePOSIX);
+    return Status(errno, eErrorTypePOSIX);
 
-  return Error();
+  return Status();
 }
 #endif
 
@@ -234,9 +234,9 @@ MainLoop::~MainLoop() {
   assert(m_signals.size() == 0);
 }
 
-MainLoop::ReadHandleUP
-MainLoop::RegisterReadObject(const IOObjectSP &object_sp,
-                                  const Callback &callback, Error &error) {
+MainLoop::ReadHandleUP MainLoop::RegisterReadObject(const IOObjectSP &object_sp,
+                                                    const Callback &callback,
+                                                    Status &error) {
 #ifdef LLVM_ON_WIN32
   if (object_sp->GetFdType() != IOObject:: eFDTypeSocket) {
     error.SetErrorString("MainLoop: non-socket types unsupported on Windows");
@@ -263,8 +263,7 @@ MainLoop::RegisterReadObject(const IOObjectSP &object_sp,
 // be unblocked in
 // the Run() function to check for signal delivery.
 MainLoop::SignalHandleUP
-MainLoop::RegisterSignal(int signo, const Callback &callback,
-                              Error &error) {
+MainLoop::RegisterSignal(int signo, const Callback &callback, Status &error) {
 #ifdef SIGNAL_POLLING_UNSUPPORTED
   error.SetErrorString("Signal polling is not supported on this platform.");
   return nullptr;
@@ -318,7 +317,7 @@ void MainLoop::UnregisterReadObject(IOObject::WaitableHandle handle) {
 
 void MainLoop::UnregisterSignal(int signo) {
 #if SIGNAL_POLLING_UNSUPPORTED
-  Error("Signal polling is not supported on this platform.");
+  Status("Signal polling is not supported on this platform.");
 #else
   auto it = m_signals.find(signo);
   assert(it != m_signals.end());
@@ -344,10 +343,10 @@ void MainLoop::UnregisterSignal(int signo) {
 #endif
 }
 
-Error MainLoop::Run() {
+Status MainLoop::Run() {
   m_terminate_request = false;
-  
-  Error error;
+
+  Status error;
   RunImpl impl(*this);
 
   // run until termination or until we run out of things to listen to
@@ -360,9 +359,9 @@ Error MainLoop::Run() {
     impl.ProcessEvents();
 
     if (m_terminate_request)
-      return Error();
+      return Status();
   }
-  return Error();
+  return Status();
 }
 
 void MainLoop::ProcessSignal(int signo) {

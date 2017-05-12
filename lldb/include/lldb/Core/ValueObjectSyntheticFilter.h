@@ -29,7 +29,7 @@ namespace lldb_private {
 class Declaration;
 }
 namespace lldb_private {
-class Error;
+class Status;
 }
 namespace lldb_private {
 class SyntheticChildrenFrontEnd;
@@ -110,7 +110,7 @@ public:
 
   bool GetIsConstant() const override { return false; }
 
-  bool SetValueFromCString(const char *value_str, Error &error) override;
+  bool SetValueFromCString(const char *value_str, Status &error) override;
 
   void SetFormat(lldb::Format format) override;
 

@@ -383,9 +383,9 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
     // we see. The eglibc ARM dynamic loaders require the presence of an
     // attribute section for dlopen to work.
     // In a full implementation we would merge all attribute sections.
-    if (In<ELFT>::ARMAttributes == nullptr) {
-      In<ELFT>::ARMAttributes = make<InputSection>(this, &Sec, Name);
-      return In<ELFT>::ARMAttributes;
+    if (InX::ARMAttributes == nullptr) {
+      InX::ARMAttributes = make<InputSection>(this, &Sec, Name);
+      return InX::ARMAttributes;
     }
     return &InputSection::Discarded;
   case SHT_RELA:

@@ -52,7 +52,7 @@ public:
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(lldb_private::Thread &thread,
                                                   bool stop_others) override;
 
-  lldb_private::Error CanLoadImage() override;
+  lldb_private::Status CanLoadImage() override;
 
   lldb::addr_t GetThreadLocalData(const lldb::ModuleSP module,
                                   const lldb::ThreadSP thread,

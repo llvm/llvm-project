@@ -24,7 +24,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
 
@@ -68,26 +68,26 @@ public:
   //------------------------------------------------------------------
   // Creating a new process, or attaching to an existing one
   //------------------------------------------------------------------
-  lldb_private::Error WillLaunch(lldb_private::Module *module) override;
+  lldb_private::Status WillLaunch(lldb_private::Module *module) override;
 
-  lldb_private::Error
+  lldb_private::Status
   DoLaunch(lldb_private::Module *exe_module,
            lldb_private::ProcessLaunchInfo &launch_info) override;
 
-  lldb_private::Error WillAttachToProcessWithID(lldb::pid_t pid) override;
+  lldb_private::Status WillAttachToProcessWithID(lldb::pid_t pid) override;
 
-  lldb_private::Error
+  lldb_private::Status
   WillAttachToProcessWithName(const char *process_name,
                               bool wait_for_launch) override;
 
-  lldb_private::Error DoConnectRemote(lldb_private::Stream *strm,
-                                      llvm::StringRef remote_url) override;
+  lldb_private::Status DoConnectRemote(lldb_private::Stream *strm,
+                                       llvm::StringRef remote_url) override;
 
-  lldb_private::Error DoAttachToProcessWithID(
+  lldb_private::Status DoAttachToProcessWithID(
       lldb::pid_t pid,
       const lldb_private::ProcessAttachInfo &attach_info) override;
 
-  lldb_private::Error DoAttachToProcessWithName(
+  lldb_private::Status DoAttachToProcessWithName(
       const char *process_name,
       const lldb_private::ProcessAttachInfo &attach_info) override;
 
@@ -107,17 +107,17 @@ public:
   //------------------------------------------------------------------
   // Process Control
   //------------------------------------------------------------------
-  lldb_private::Error WillResume() override;
+  lldb_private::Status WillResume() override;
 
-  lldb_private::Error DoResume() override;
+  lldb_private::Status DoResume() override;
 
-  lldb_private::Error DoHalt(bool &caused_stop) override;
+  lldb_private::Status DoHalt(bool &caused_stop) override;
 
-  lldb_private::Error DoDetach(bool keep_stopped) override;
+  lldb_private::Status DoDetach(bool keep_stopped) override;
 
-  lldb_private::Error DoSignal(int signal) override;
+  lldb_private::Status DoSignal(int signal) override;
 
-  lldb_private::Error DoDestroy() override;
+  lldb_private::Status DoDestroy() override;
 
   void RefreshStateAfterStop() override;
 
@@ -130,33 +130,33 @@ public:
   // Process Memory
   //------------------------------------------------------------------
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Error &error) override;
+                      lldb_private::Status &error) override;
 
   size_t DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
-                       lldb_private::Error &error) override;
+                       lldb_private::Status &error) override;
 
   lldb::addr_t DoAllocateMemory(size_t size, uint32_t permissions,
-                                lldb_private::Error &error) override;
+                                lldb_private::Status &error) override;
 
-  lldb_private::Error DoDeallocateMemory(lldb::addr_t ptr) override;
+  lldb_private::Status DoDeallocateMemory(lldb::addr_t ptr) override;
 
   //----------------------------------------------------------------------
   // Process Breakpoints
   //----------------------------------------------------------------------
-  lldb_private::Error
+  lldb_private::Status
   EnableBreakpointSite(lldb_private::BreakpointSite *bp_site) override;
 
-  lldb_private::Error
+  lldb_private::Status
   DisableBreakpointSite(lldb_private::BreakpointSite *bp_site) override;
 
   //----------------------------------------------------------------------
   // Process Watchpoints
   //----------------------------------------------------------------------
-  lldb_private::Error EnableWatchpoint(lldb_private::Watchpoint *wp,
-                                       bool notify = true) override;
-
-  lldb_private::Error DisableWatchpoint(lldb_private::Watchpoint *wp,
+  lldb_private::Status EnableWatchpoint(lldb_private::Watchpoint *wp,
                                         bool notify = true) override;
+
+  lldb_private::Status DisableWatchpoint(lldb_private::Watchpoint *wp,
+                                         bool notify = true) override;
 
   CommunicationKDP &GetCommunication() { return m_comm; }
 

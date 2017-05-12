@@ -55,7 +55,7 @@ public:
 
   lldb::ProcessSP DebugProcess(ProcessLaunchInfo &launch_info,
                                Debugger &debugger, Target *target,
-                               Error &error) override;
+                               Status &error) override;
 
   void CalculateTrapHandlerSymbolNames() override;
 

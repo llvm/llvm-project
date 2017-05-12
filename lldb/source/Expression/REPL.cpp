@@ -42,7 +42,7 @@ REPL::REPL(LLVMCastKind kind, Target &target) : m_target(target), m_kind(kind) {
 
 REPL::~REPL() = default;
 
-lldb::REPLSP REPL::Create(Error &err, lldb::LanguageType language,
+lldb::REPLSP REPL::Create(Status &err, lldb::LanguageType language,
                           Debugger *debugger, Target *target,
                           const char *repl_options) {
   uint32_t idx = 0;
@@ -309,7 +309,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
 
       const char *expr_prefix = nullptr;
       lldb::ValueObjectSP result_valobj_sp;
-      Error error;
+      Status error;
       lldb::ModuleSP jit_module_sp;
       lldb::ExpressionResults execution_results =
           UserExpression::Evaluate(exe_ctx, expr_options, code.c_str(),
@@ -518,8 +518,8 @@ bool QuitCommandOverrideCallback(void *baton, const char **argv) {
   return false;
 }
 
-Error REPL::RunLoop() {
-  Error error;
+Status REPL::RunLoop() {
+  Status error;
 
   error = DoInitialization();
   m_repl_source_path = GetSourcePath();

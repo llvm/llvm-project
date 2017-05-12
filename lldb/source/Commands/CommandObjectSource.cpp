@@ -59,9 +59,9 @@ class CommandObjectSourceInfo : public CommandObjectParsed {
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = GetDefinitions()[option_idx].short_option;
       switch (short_option) {
       case 'l':
@@ -683,9 +683,9 @@ class CommandObjectSourceList : public CommandObjectParsed {
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = GetDefinitions()[option_idx].short_option;
       switch (short_option) {
       case 'l':

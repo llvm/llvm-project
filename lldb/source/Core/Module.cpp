@@ -39,10 +39,10 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h" // for GetLogIfAn...
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h" // for Stream
 #include "lldb/Utility/StreamString.h"
 
@@ -322,7 +322,7 @@ Module::~Module() {
 }
 
 ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
-                                        lldb::addr_t header_addr, Error &error,
+                                        lldb::addr_t header_addr, Status &error,
                                         size_t size_to_read) {
   if (m_objfile_sp) {
     error.SetErrorString("object file already exists");
@@ -331,7 +331,7 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
     if (process_sp) {
       m_did_load_objfile = true;
       auto data_ap = llvm::make_unique<DataBufferHeap>(size_to_read, 0);
-      Error readmem_error;
+      Status readmem_error;
       const size_t bytes_read =
           process_sp->ReadMemory(header_addr, data_ap->GetBytes(),
                                  data_ap->GetByteSize(), readmem_error);
@@ -1537,7 +1537,7 @@ bool Module::IsLoadedInTarget(Target *target) {
   return false;
 }
 
-bool Module::LoadScriptingResourceInTarget(Target *target, Error &error,
+bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
                                            Stream *feedback_stream) {
   if (!target) {
     error.SetErrorString("invalid destination Target");
@@ -1717,6 +1717,6 @@ bool Module::GetIsDynamicLinkEditor() {
   return false;
 }
 
-Error Module::LoadInMemory(Target &target, bool set_pc) {
+Status Module::LoadInMemory(Target &target, bool set_pc) {
   return m_objfile_sp->LoadInMemory(target, set_pc);
 }

@@ -50,38 +50,38 @@ public:
   //------------------------------------------------------------
   // lldb_private::Platform functions
   //------------------------------------------------------------
-  Error ResolveExecutable(const ModuleSpec &module_spec,
-                          lldb::ModuleSP &module_sp,
-                          const FileSpecList *module_search_paths_ptr) override;
+  Status
+  ResolveExecutable(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
+                    const FileSpecList *module_search_paths_ptr) override;
 
   bool GetModuleSpec(const FileSpec &module_file_spec, const ArchSpec &arch,
                      ModuleSpec &module_spec) override;
 
   const char *GetDescription() override;
 
-  Error GetFileWithUUID(const FileSpec &platform_file, const UUID *uuid_ptr,
-                        FileSpec &local_file) override;
+  Status GetFileWithUUID(const FileSpec &platform_file, const UUID *uuid_ptr,
+                         FileSpec &local_file) override;
 
   bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info) override;
 
   uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
                          ProcessInstanceInfoList &process_infos) override;
 
-  Error LaunchProcess(ProcessLaunchInfo &launch_info) override;
+  Status LaunchProcess(ProcessLaunchInfo &launch_info) override;
 
-  Error KillProcess(const lldb::pid_t pid) override;
+  Status KillProcess(const lldb::pid_t pid) override;
 
   lldb::ProcessSP DebugProcess(ProcessLaunchInfo &launch_info,
                                Debugger &debugger,
                                Target *target, // Can be NULL, if NULL create a
                                                // new target, else use existing
                                                // one
-                               Error &error) override;
+                               Status &error) override;
 
   lldb::ProcessSP Attach(ProcessAttachInfo &attach_info, Debugger &debugger,
                          Target *target, // Can be NULL, if NULL create a new
                                          // target, else use existing one
-                         Error &error) override;
+                         Status &error) override;
 
   bool GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) override;
 
@@ -111,42 +111,42 @@ public:
 
   bool IsConnected() const override;
 
-  Error ConnectRemote(Args &args) override;
+  Status ConnectRemote(Args &args) override;
 
-  Error DisconnectRemote() override;
+  Status DisconnectRemote() override;
 
-  Error MakeDirectory(const FileSpec &file_spec,
-                      uint32_t file_permissions) override;
+  Status MakeDirectory(const FileSpec &file_spec,
+                       uint32_t file_permissions) override;
 
-  Error GetFilePermissions(const FileSpec &file_spec,
-                           uint32_t &file_permissions) override;
+  Status GetFilePermissions(const FileSpec &file_spec,
+                            uint32_t &file_permissions) override;
 
-  Error SetFilePermissions(const FileSpec &file_spec,
-                           uint32_t file_permissions) override;
+  Status SetFilePermissions(const FileSpec &file_spec,
+                            uint32_t file_permissions) override;
 
   lldb::user_id_t OpenFile(const FileSpec &file_spec, uint32_t flags,
-                           uint32_t mode, Error &error) override;
+                           uint32_t mode, Status &error) override;
 
-  bool CloseFile(lldb::user_id_t fd, Error &error) override;
+  bool CloseFile(lldb::user_id_t fd, Status &error) override;
 
   uint64_t ReadFile(lldb::user_id_t fd, uint64_t offset, void *data_ptr,
-                    uint64_t len, Error &error) override;
+                    uint64_t len, Status &error) override;
 
   uint64_t WriteFile(lldb::user_id_t fd, uint64_t offset, const void *data,
-                     uint64_t len, Error &error) override;
+                     uint64_t len, Status &error) override;
 
   lldb::user_id_t GetFileSize(const FileSpec &file_spec) override;
 
-  Error PutFile(const FileSpec &source, const FileSpec &destination,
-                uint32_t uid = UINT32_MAX, uint32_t gid = UINT32_MAX) override;
+  Status PutFile(const FileSpec &source, const FileSpec &destination,
+                 uint32_t uid = UINT32_MAX, uint32_t gid = UINT32_MAX) override;
 
-  Error CreateSymlink(const FileSpec &src, const FileSpec &dst) override;
+  Status CreateSymlink(const FileSpec &src, const FileSpec &dst) override;
 
   bool GetFileExists(const FileSpec &file_spec) override;
 
-  Error Unlink(const FileSpec &path) override;
+  Status Unlink(const FileSpec &path) override;
 
-  Error RunShellCommand(
+  Status RunShellCommand(
       const char *command,         // Shouldn't be NULL
       const FileSpec &working_dir, // Pass empty FileSpec to use the current
                                    // working directory
@@ -166,10 +166,10 @@ public:
                                  llvm::StringRef plugin_name,
                                  lldb_private::Debugger &debugger,
                                  lldb_private::Target *target,
-                                 lldb_private::Error &error) override;
+                                 lldb_private::Status &error) override;
 
   size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
-                                   lldb_private::Error &error) override;
+                                   lldb_private::Status &error) override;
 
   virtual size_t
   GetPendingGdbServerList(std::vector<std::string> &connection_urls);

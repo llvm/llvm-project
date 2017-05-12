@@ -488,7 +488,7 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
-    VariableSP &var_sp, Error &error) {
+    VariableSP &var_sp, Status &error) {
   llvm::StringRef original_var_expr = var_expr;
   // We can't fetch variable information for a history stack frame.
   if (m_is_history_frame)
@@ -631,7 +631,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       // If we have a non pointer type with a sythetic value then lets check if
       // we have an sythetic dereference specified.
       if (!valobj_sp->IsPointerType() && valobj_sp->HasSyntheticValue()) {
-        Error deref_error;
+        Status deref_error;
         if (valobj_sp->GetCompilerType().IsReferenceType()) {
           valobj_sp = valobj_sp->GetSyntheticValue()->Dereference(deref_error);
           if (error.Fail()) {
@@ -775,7 +775,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           // what we have is *ptr[low]. the most similar C++ syntax is to deref
           // ptr and extract bit low out of it. reading array item low would be
           // done by saying ptr[low], without a deref * sign
-          Error error;
+          Status error;
           ValueObjectSP temp(valobj_sp->Dereference(error));
           if (error.Fail()) {
             valobj_sp->GetExpressionPath(var_expr_path_strm, false);
@@ -794,7 +794,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           // (an operation that is equivalent to deref-ing arr)
           // and extract bit low out of it. reading array item low
           // would be done by saying arr[low], without a deref * sign
-          Error error;
+          Status error;
           ValueObjectSP temp(valobj_sp->GetChildAtIndex(0, true));
           if (error.Fail()) {
             valobj_sp->GetExpressionPath(var_expr_path_strm, false);
@@ -977,7 +977,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         // deref ptr and extract bits low thru high out of it. reading array
         // items low thru high would be done by saying ptr[low-high], without
         // a deref * sign
-        Error error;
+        Status error;
         ValueObjectSP temp(valobj_sp->Dereference(error));
         if (error.Fail()) {
           valobj_sp->GetExpressionPath(var_expr_path_strm, false);
@@ -994,7 +994,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         // arr[0] (an operation that is equivalent to deref-ing arr) and extract
         // bits low thru high out of it. reading array items low thru high would
         // be done by saying arr[low-high], without a deref * sign
-        Error error;
+        Status error;
         ValueObjectSP temp(valobj_sp->GetChildAtIndex(0, true));
         if (error.Fail()) {
           valobj_sp->GetExpressionPath(var_expr_path_strm, false);
@@ -1065,7 +1065,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
   return valobj_sp;
 }
 
-bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Error *error_ptr) {
+bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_cfa_is_valid) {
     m_frame_base_error.SetErrorString(
@@ -1111,7 +1111,7 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Error *error_ptr) {
   return m_frame_base_error.Success();
 }
 
-DWARFExpression *StackFrame::GetFrameBaseExpression(Error *error_ptr) {
+DWARFExpression *StackFrame::GetFrameBaseExpression(Status *error_ptr) {
   if (!m_sc.function) {
     if (error_ptr) {
       error_ptr->SetErrorString("No function in symbol context.");
@@ -1426,7 +1426,7 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
     return ValueObjectSP();
   }
 
-  Error error;
+  Status error;
   ValueObjectSP pointee = base->Dereference(error);
     
   if (!pointee) {

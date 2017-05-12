@@ -24,7 +24,7 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/StackID.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UserID.h"
 
@@ -201,7 +201,7 @@ public:
   ///   Returns true if the CFA value was successfully set in value.  Some
   ///   frames may be unable to provide this value; they will return false.
   //------------------------------------------------------------------
-  bool GetFrameBaseValue(Scalar &value, Error *error_ptr);
+  bool GetFrameBaseValue(Scalar &value, Status *error_ptr);
 
   //------------------------------------------------------------------
   /// Get the DWARFExpression corresponding to the Canonical Frame Address.
@@ -215,7 +215,7 @@ public:
   /// @return
   ///   Returns the corresponding DWARF expression, or NULL.
   //------------------------------------------------------------------
-  DWARFExpression *GetFrameBaseExpression(Error *error_ptr);
+  DWARFExpression *GetFrameBaseExpression(Status *error_ptr);
 
   //------------------------------------------------------------------
   /// Get the current lexical scope block for this StackFrame, if possible.
@@ -315,7 +315,7 @@ public:
   //------------------------------------------------------------------
   lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Error &error);
+      uint32_t options, lldb::VariableSP &var_sp, Status &error);
 
   //------------------------------------------------------------------
   /// Determine whether this StackFrame has debug information available or not
@@ -535,7 +535,7 @@ private:
   SymbolContext m_sc;
   Flags m_flags;
   Scalar m_frame_base;
-  Error m_frame_base_error;
+  Status m_frame_base_error;
   bool m_cfa_is_valid; // Does this frame have a CFA?  Different from CFA ==
                        // LLDB_INVALID_ADDRESS
   uint32_t m_stop_id;

@@ -23,9 +23,9 @@
 
 // LLDB includes
 #include "lldb/Target/UnixSignals.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -211,11 +211,11 @@ bool MachException::Data::GetStopInfo(struct ThreadStopInfo *stop_info,
   return true;
 }
 
-Error MachException::Message::Receive(mach_port_t port,
-                                      mach_msg_option_t options,
-                                      mach_msg_timeout_t timeout,
-                                      mach_port_t notify_port) {
-  Error error;
+Status MachException::Message::Receive(mach_port_t port,
+                                       mach_msg_option_t options,
+                                       mach_msg_timeout_t timeout,
+                                       mach_port_t notify_port) {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
 
   mach_msg_timeout_t mach_msg_timeout =
@@ -312,10 +312,10 @@ bool MachException::Message::CatchExceptionRaise(task_t task) {
   return success;
 }
 
-Error MachException::Message::Reply(::pid_t inferior_pid, task_t inferior_task,
-                                    int signal) {
+Status MachException::Message::Reply(::pid_t inferior_pid, task_t inferior_task,
+                                     int signal) {
   // Reply to the exception...
-  Error error;
+  Status error;
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
 
@@ -412,8 +412,8 @@ Error MachException::Message::Reply(::pid_t inferior_pid, task_t inferior_task,
 
 #define LLDB_EXC_MASK (EXC_MASK_ALL & ~EXC_MASK_RESOURCE)
 
-Error MachException::PortInfo::Save(task_t task) {
-  Error error;
+Status MachException::PortInfo::Save(task_t task) {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
 
   if (log)
@@ -471,8 +471,8 @@ Error MachException::PortInfo::Save(task_t task) {
   return error;
 }
 
-Error MachException::PortInfo::Restore(task_t task) {
-  Error error;
+Status MachException::PortInfo::Restore(task_t task) {
+  Status error;
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
 

@@ -606,7 +606,7 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
       frame = exe_ctx.GetFramePtr();
       if (frame) {
         VariableSP var_sp;
-        Error error;
+        Status error;
         ValueObjectSP value_sp(frame->GetValueForVariableExpressionPath(
             var_path, eNoDynamicValues,
             StackFrame::eExpressionPathOptionCheckPtrVsMember |

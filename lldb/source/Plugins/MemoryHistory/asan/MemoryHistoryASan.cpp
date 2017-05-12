@@ -170,7 +170,7 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   ExecutionContext exe_ctx(frame_sp);
   ValueObjectSP return_value_sp;
   StreamString expr;
-  Error eval_error;
+  Status eval_error;
   expr.Printf(memory_history_asan_command_format, address, address);
 
   EvaluateExpressionOptions options;

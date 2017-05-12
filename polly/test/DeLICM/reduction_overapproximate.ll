@@ -1,7 +1,4 @@
-; FIXME: For some unknown reason the first test is behaving differently on
-;        differently systems. It is disabled for now to avoid buildbot noise.
-
-; DISABLED: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=true -polly-delicm -analyze < %s | FileCheck %s --check-prefix=APPROX
+; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=true -polly-delicm -analyze < %s | FileCheck %s --check-prefix=APPROX
 ; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-compute-known=true -polly-delicm-overapproximate-writes=false -polly-delicm -analyze < %s | FileCheck %s --check-prefix=EXACT
 ;
 ;    void func(double *A {
@@ -105,7 +102,7 @@ return:
 ; APPROX-NEXT:            new: { Stmt_reduction_inc[i0, i1] -> MemRef_A[2] : i0 <= 3 and 0 <= i1 <= -2 + i0 };
 ; APPROX-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; APPROX-NEXT:                 { Stmt_reduction_inc[i0, i1] -> MemRef_val__phi[] };
-; APPROX-NEXT:            new: { Stmt_reduction_inc[i0, i1] -> MemRef_A[-1 + i0] : 2 <= i0 <= 3 and 0 <= i1 <= -2 + i0 };
+; APPROX-NEXT:            new: { Stmt_reduction_inc[i0, i1] -> MemRef_A[-1 + i0] : i0 <= 3 and 0 <= i1 <= -2 + i0 };
 ; APPROX-NEXT:     Stmt_reduction_exit
 ; APPROX-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
 ; APPROX-NEXT:                 { Stmt_reduction_exit[i0] -> MemRef_val__phi[] };

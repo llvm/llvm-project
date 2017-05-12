@@ -54,9 +54,9 @@ void OptionValueFileSpec::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
-Error OptionValueFileSpec::SetValueFromString(llvm::StringRef value,
-                                              VarSetOperationType op) {
-  Error error;
+Status OptionValueFileSpec::SetValueFromString(llvm::StringRef value,
+                                               VarSetOperationType op) {
+  Status error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

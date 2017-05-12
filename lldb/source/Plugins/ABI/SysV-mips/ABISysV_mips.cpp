@@ -31,8 +31,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -654,7 +654,7 @@ bool ABISysV_mips::PrepareTrivialCall(Thread &thread, addr_t sp,
     }
   }
 
-  Error error;
+  Status error;
   const RegisterInfo *pc_reg_info =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
   const RegisterInfo *sp_reg_info =
@@ -710,9 +710,9 @@ bool ABISysV_mips::GetArgumentValues(Thread &thread, ValueList &values) const {
   return false;
 }
 
-Error ABISysV_mips::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                         lldb::ValueObjectSP &new_value_sp) {
-  Error error;
+Status ABISysV_mips::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                          lldb::ValueObjectSP &new_value_sp) {
+  Status error;
   if (!new_value_sp) {
     error.SetErrorString("Empty value object for return value.");
     return error;
@@ -736,7 +736,7 @@ Error ABISysV_mips::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
       compiler_type.IsPointerType()) {
     DataExtractor data;
-    Error data_error;
+    Status data_error;
     size_t num_bytes = new_value_sp->GetData(data, data_error);
     if (data_error.Fail()) {
       error.SetErrorStringWithFormat(

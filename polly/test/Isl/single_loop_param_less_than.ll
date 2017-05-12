@@ -49,8 +49,7 @@ ret:
 ; CODEGEN:   [[PTR:%[a-zA-Z0-9_\.]+]] =  getelementptr [1024 x i32], [1024 x i32]* @A, i64 0, i64 %polly.indvar
 ; CODEGEN:   store i32 1, i32* [[PTR]]
 ; CODEGEN:   %polly.indvar_next = add nsw i64 %polly.indvar, 1
-; CODEGEN:   %polly.adjust_ub = sub i64 %n, 1
-; CODEGEN:   %polly.loop_cond = icmp slt i64 %polly.indvar, %polly.adjust_ub
+; CODEGEN:   %polly.loop_cond = icmp slt i64 %polly.indvar_next, %n
 ; CODEGEN:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit
 
 ; CODEGEN: polly.loop_preheader:

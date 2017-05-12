@@ -10,7 +10,7 @@
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
 
 #include "RegisterContextThreadMemory.h"
@@ -194,26 +194,26 @@ bool RegisterContextThreadMemory::HardwareSingleStep(bool enable) {
   return false;
 }
 
-Error RegisterContextThreadMemory::ReadRegisterValueFromMemory(
+Status RegisterContextThreadMemory::ReadRegisterValueFromMemory(
     const lldb_private::RegisterInfo *reg_info, lldb::addr_t src_addr,
     uint32_t src_len, RegisterValue &reg_value) {
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->ReadRegisterValueFromMemory(reg_info, src_addr,
                                                      src_len, reg_value);
-  Error error;
+  Status error;
   error.SetErrorString("invalid register context");
   return error;
 }
 
-Error RegisterContextThreadMemory::WriteRegisterValueToMemory(
+Status RegisterContextThreadMemory::WriteRegisterValueToMemory(
     const lldb_private::RegisterInfo *reg_info, lldb::addr_t dst_addr,
     uint32_t dst_len, const RegisterValue &reg_value) {
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->WriteRegisterValueToMemory(reg_info, dst_addr, dst_len,
                                                     reg_value);
-  Error error;
+  Status error;
   error.SetErrorString("invalid register context");
   return error;
 }

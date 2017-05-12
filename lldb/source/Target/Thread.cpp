@@ -1335,8 +1335,8 @@ bool Thread::PlanIsBasePlan(ThreadPlan *plan_ptr) {
     return m_plan_stack[0].get() == plan_ptr;
 }
 
-Error Thread::UnwindInnermostExpression() {
-  Error error;
+Status Thread::UnwindInnermostExpression() {
+  Status error;
   int stack_size = m_plan_stack.size();
 
   // If the input plan is nullptr, discard all plans.  Otherwise make sure this
@@ -1635,11 +1635,11 @@ lldb::StackFrameSP Thread::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
   return GetStackFrameList()->GetFrameWithConcreteFrameIndex(unwind_idx);
 }
 
-Error Thread::ReturnFromFrameWithIndex(uint32_t frame_idx,
-                                       lldb::ValueObjectSP return_value_sp,
-                                       bool broadcast) {
+Status Thread::ReturnFromFrameWithIndex(uint32_t frame_idx,
+                                        lldb::ValueObjectSP return_value_sp,
+                                        bool broadcast) {
   StackFrameSP frame_sp = GetStackFrameAtIndex(frame_idx);
-  Error return_error;
+  Status return_error;
 
   if (!frame_sp) {
     return_error.SetErrorStringWithFormat(
@@ -1650,10 +1650,10 @@ Error Thread::ReturnFromFrameWithIndex(uint32_t frame_idx,
   return ReturnFromFrame(frame_sp, return_value_sp, broadcast);
 }
 
-Error Thread::ReturnFromFrame(lldb::StackFrameSP frame_sp,
-                              lldb::ValueObjectSP return_value_sp,
-                              bool broadcast) {
-  Error return_error;
+Status Thread::ReturnFromFrame(lldb::StackFrameSP frame_sp,
+                               lldb::ValueObjectSP return_value_sp,
+                               bool broadcast) {
+  Status return_error;
 
   if (!frame_sp) {
     return_error.SetErrorString("Can't return to a null frame.");
@@ -1740,8 +1740,8 @@ static void DumpAddressList(Stream &s, const std::vector<Address> &list,
   }
 }
 
-Error Thread::JumpToLine(const FileSpec &file, uint32_t line,
-                         bool can_leave_function, std::string *warnings) {
+Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
+                          bool can_leave_function, std::string *warnings) {
   ExecutionContext exe_ctx(GetStackFrameAtIndex(0));
   Target *target = exe_ctx.GetTargetPtr();
   TargetSP target_sp = exe_ctx.GetTargetSP();
@@ -1769,16 +1769,16 @@ Error Thread::JumpToLine(const FileSpec &file, uint32_t line,
   // Check if we got anything.
   if (candidates.empty()) {
     if (outside_function.empty()) {
-      return Error("Cannot locate an address for %s:%i.",
-                   file.GetFilename().AsCString(), line);
+      return Status("Cannot locate an address for %s:%i.",
+                    file.GetFilename().AsCString(), line);
     } else if (outside_function.size() == 1) {
-      return Error("%s:%i is outside the current function.",
-                   file.GetFilename().AsCString(), line);
+      return Status("%s:%i is outside the current function.",
+                    file.GetFilename().AsCString(), line);
     } else {
       StreamString sstr;
       DumpAddressList(sstr, outside_function, target);
-      return Error("%s:%i has multiple candidate locations:\n%s",
-                   file.GetFilename().AsCString(), line, sstr.GetData());
+      return Status("%s:%i has multiple candidate locations:\n%s",
+                    file.GetFilename().AsCString(), line, sstr.GetData());
     }
   }
 
@@ -1794,9 +1794,9 @@ Error Thread::JumpToLine(const FileSpec &file, uint32_t line,
   }
 
   if (!reg_ctx->SetPC(dest))
-    return Error("Cannot change PC to target address.");
+    return Status("Cannot change PC to target address.");
 
-  return Error();
+  return Status();
 }
 
 void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
@@ -2001,8 +2001,8 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
       StructuredData::ObjectSP name = activity_dict->GetValueForKey("name");
       if (name && name->GetType() == StructuredData::Type::eTypeString && id &&
           id->GetType() == StructuredData::Type::eTypeInteger) {
-        strm.Printf("  Activity '%s', 0x%" PRIx64 "\n",
-                    name->GetAsString()->GetValue().c_str(),
+        strm.Format("  Activity '{0}', {1:x}\n",
+                    name->GetAsString()->GetValue(),
                     id->GetAsInteger()->GetValue());
       }
       printed_activity = true;
@@ -2018,8 +2018,8 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
           breadcrumb_dict->GetValueForKey("name");
       if (breadcrumb_text &&
           breadcrumb_text->GetType() == StructuredData::Type::eTypeString) {
-        strm.Printf("  Current Breadcrumb: %s\n",
-                    breadcrumb_text->GetAsString()->GetValue().c_str());
+        strm.Format("  Current Breadcrumb: {0}\n",
+                    breadcrumb_text->GetAsString()->GetValue());
       }
       printed_breadcrumb = true;
     }
@@ -2040,8 +2040,7 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
                 message_dict->GetValueForKey("message");
             if (message_text &&
                 message_text->GetType() == StructuredData::Type::eTypeString) {
-              strm.Printf("    %s\n",
-                          message_text->GetAsString()->GetValue().c_str());
+              strm.Format("    {0}\n", message_text->GetAsString()->GetValue());
             }
           }
         }
@@ -2117,12 +2116,12 @@ bool Thread::IsStillAtLastBreakpointHit() {
   return false;
 }
 
-Error Thread::StepIn(bool source_step,
-                     LazyBool step_in_avoids_code_without_debug_info,
-                     LazyBool step_out_avoids_code_without_debug_info)
+Status Thread::StepIn(bool source_step,
+                      LazyBool step_in_avoids_code_without_debug_info,
+                      LazyBool step_out_avoids_code_without_debug_info)
 
 {
-  Error error;
+  Status error;
   Process *process = GetProcess().get();
   if (StateIsStoppedState(process->GetState(), true)) {
     StackFrameSP frame_sp = GetStackFrameAtIndex(0);
@@ -2153,9 +2152,9 @@ Error Thread::StepIn(bool source_step,
   return error;
 }
 
-Error Thread::StepOver(bool source_step,
-                       LazyBool step_out_avoids_code_without_debug_info) {
-  Error error;
+Status Thread::StepOver(bool source_step,
+                        LazyBool step_out_avoids_code_without_debug_info) {
+  Status error;
   Process *process = GetProcess().get();
   if (StateIsStoppedState(process->GetState(), true)) {
     StackFrameSP frame_sp = GetStackFrameAtIndex(0);
@@ -2186,8 +2185,8 @@ Error Thread::StepOver(bool source_step,
   return error;
 }
 
-Error Thread::StepOut() {
-  Error error;
+Status Thread::StepOut() {
+  Status error;
   Process *process = GetProcess().get();
   if (StateIsStoppedState(process->GetState(), true)) {
     const bool first_instruction = false;

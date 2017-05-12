@@ -18,8 +18,8 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 #include "llvm/Support/Path.h"
 
@@ -34,7 +34,7 @@ static addr_t ResolveRendezvousAddress(Process *process) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
   addr_t info_location;
   addr_t info_addr;
-  Error error;
+  Status error;
 
   if (!process) {
     if (log)
@@ -420,7 +420,7 @@ bool DYLDRendezvous::TakeSnapshot(SOEntryList &entry_list) {
 }
 
 addr_t DYLDRendezvous::ReadWord(addr_t addr, uint64_t *dst, size_t size) {
-  Error error;
+  Status error;
 
   *dst = m_process->ReadUnsignedIntegerFromMemory(addr, size, 0, error);
   if (error.Fail())
@@ -430,7 +430,7 @@ addr_t DYLDRendezvous::ReadWord(addr_t addr, uint64_t *dst, size_t size) {
 }
 
 addr_t DYLDRendezvous::ReadPointer(addr_t addr, addr_t *dst) {
-  Error error;
+  Status error;
 
   *dst = m_process->ReadPointerFromMemory(addr, error);
   if (error.Fail())
@@ -441,7 +441,7 @@ addr_t DYLDRendezvous::ReadPointer(addr_t addr, addr_t *dst) {
 
 std::string DYLDRendezvous::ReadStringFromMemory(addr_t addr) {
   std::string str;
-  Error error;
+  Status error;
 
   if (addr == LLDB_INVALID_ADDRESS)
     return std::string();
@@ -479,7 +479,7 @@ void DYLDRendezvous::UpdateBaseAddrIfNecessary(SOEntry &entry,
   if (isLoadBiasIncorrect(m_process->GetTarget(), file_path)) {
     lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
     bool is_loaded = false;
-    Error error =
+    Status error =
         m_process->GetFileLoadAddress(entry.file_spec, is_loaded, load_addr);
     if (error.Success() && is_loaded)
       entry.base_addr = load_addr;
@@ -545,7 +545,7 @@ bool DYLDRendezvous::FindMetadata(const char *name, PThreadField field,
   if (addr == LLDB_INVALID_ADDRESS)
     return false;
 
-  Error error;
+  Status error;
   value = (uint32_t)m_process->ReadUnsignedIntegerFromMemory(
       addr + field * sizeof(uint32_t), sizeof(uint32_t), 0, error);
   if (error.Fail())

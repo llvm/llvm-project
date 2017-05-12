@@ -38,19 +38,19 @@ public:
 
   virtual ~PlatformAppleSimulator();
 
-  lldb_private::Error
+  lldb_private::Status
   LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
 
   void GetStatus(lldb_private::Stream &strm) override;
 
-  lldb_private::Error ConnectRemote(lldb_private::Args &args) override;
+  lldb_private::Status ConnectRemote(lldb_private::Args &args) override;
 
-  lldb_private::Error DisconnectRemote() override;
+  lldb_private::Status DisconnectRemote() override;
 
   lldb::ProcessSP DebugProcess(lldb_private::ProcessLaunchInfo &launch_info,
                                lldb_private::Debugger &debugger,
                                lldb_private::Target *target,
-                               lldb_private::Error &error) override;
+                               lldb_private::Status &error) override;
 
 protected:
   std::mutex m_core_sim_path_mutex;

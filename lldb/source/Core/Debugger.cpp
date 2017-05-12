@@ -287,9 +287,10 @@ enum {
 
 LoadPluginCallbackType Debugger::g_load_plugin_callback = nullptr;
 
-Error Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
-                                 VarSetOperationType op,
-  llvm::StringRef property_path, llvm::StringRef value) {
+Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
+                                  VarSetOperationType op,
+                                  llvm::StringRef property_path,
+                                  llvm::StringRef value) {
   bool is_load_script = (property_path == "target.load-script-from-symbol-file");
   bool is_escape_non_printables = (property_path == "escape-non-printables");
   TargetSP target_sp;
@@ -299,7 +300,7 @@ Error Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
     load_script_old_value =
         target_sp->TargetProperties::GetLoadScriptFromSymbolFile();
   }
-  Error error(Properties::SetPropertyValue(exe_ctx, op, property_path, value));
+  Status error(Properties::SetPropertyValue(exe_ctx, op, property_path, value));
   if (error.Success()) {
     // FIXME it would be nice to have "on-change" callbacks for properties
     if (property_path == g_properties[ePropertyPrompt].name) {
@@ -321,7 +322,7 @@ Error Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
                load_script_old_value == eLoadScriptFromSymFileWarn) {
       if (target_sp->TargetProperties::GetLoadScriptFromSymbolFile() ==
           eLoadScriptFromSymFileTrue) {
-        std::list<Error> errors;
+        std::list<Status> errors;
         StreamString feedback_stream;
         if (!target_sp->LoadScriptingResources(errors, &feedback_stream)) {
           StreamFileSP stream_sp(GetErrorFile());
@@ -550,7 +551,7 @@ void Debugger::SettingsInitialize() { Target::SettingsInitialize(); }
 
 void Debugger::SettingsTerminate() { Target::SettingsTerminate(); }
 
-bool Debugger::LoadPlugin(const FileSpec &spec, Error &error) {
+bool Debugger::LoadPlugin(const FileSpec &spec, Status &error) {
   if (g_load_plugin_callback) {
     llvm::sys::DynamicLibrary dynlib =
         g_load_plugin_callback(shared_from_this(), spec, error);
@@ -570,7 +571,7 @@ bool Debugger::LoadPlugin(const FileSpec &spec, Error &error) {
 static FileSpec::EnumerateDirectoryResult
 LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
                    const FileSpec &file_spec) {
-  Error error;
+  Status error;
 
   static ConstString g_dylibext("dylib");
   static ConstString g_solibext("so");
@@ -595,7 +596,7 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
       return FileSpec::eEnumerateDirectoryResultNext;
     }
 
-    Error plugin_load_error;
+    Status plugin_load_error;
     debugger->LoadPlugin(plugin_file_spec, plugin_load_error);
 
     return FileSpec::eEnumerateDirectoryResultNext;
@@ -1365,7 +1366,7 @@ size_t Debugger::GetProcessSTDOUT(Process *process, Stream *stream) {
         process = target_sp->GetProcessSP().get();
     }
     if (process) {
-      Error error;
+      Status error;
       size_t len;
       char stdio_buffer[1024];
       while ((len = process->GetSTDOUT(stdio_buffer, sizeof(stdio_buffer),
@@ -1393,7 +1394,7 @@ size_t Debugger::GetProcessSTDERR(Process *process, Stream *stream) {
         process = target_sp->GetProcessSP().get();
     }
     if (process) {
-      Error error;
+      Status error;
       size_t len;
       char stdio_buffer[1024];
       while ((len = process->GetSTDERR(stdio_buffer, sizeof(stdio_buffer),
@@ -1463,7 +1464,7 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
             EventDataStructuredData::GetObjectFromEvent(event_sp.get());
         if (output_stream_sp) {
           StreamString content_stream;
-          Error error =
+          Status error =
               plugin_sp->GetDescription(structured_data_sp, content_stream);
           if (error.Success()) {
             if (!content_stream.GetString().empty()) {
@@ -1702,8 +1703,8 @@ Target *Debugger::GetSelectedOrDummyTarget(bool prefer_dummy) {
   return GetDummyTarget();
 }
 
-Error Debugger::RunREPL(LanguageType language, const char *repl_options) {
-  Error err;
+Status Debugger::RunREPL(LanguageType language, const char *repl_options) {
+  Status err;
   FileSpec repl_executable;
 
   if (language == eLanguageTypeUnknown) {

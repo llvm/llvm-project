@@ -84,7 +84,7 @@ template <class ELFT>
 DenseMap<DefinedRegular *, std::string>
 getSymbolStrings(ArrayRef<DefinedRegular *> Syms) {
   std::vector<std::string> Str(Syms.size());
-  parallelFor(0, Syms.size(), [&](size_t I) {
+  parallelForEachN(0, Syms.size(), [&](size_t I) {
     raw_string_ostream OS(Str[I]);
     writeHeader<ELFT>(OS, Syms[I]->getVA(), Syms[I]->template getSize<ELFT>(),
                       0);

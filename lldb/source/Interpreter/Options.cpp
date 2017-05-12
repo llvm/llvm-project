@@ -42,8 +42,8 @@ void Options::NotifyOptionParsingStarting(ExecutionContext *execution_context) {
   OptionParsingStarting(execution_context);
 }
 
-Error Options::NotifyOptionParsingFinished(
-    ExecutionContext *execution_context) {
+Status
+Options::NotifyOptionParsingFinished(ExecutionContext *execution_context) {
   return OptionParsingFinished(execution_context);
 }
 
@@ -905,13 +905,13 @@ void OptionGroupOptions::Finalize() {
   m_did_finalize = true;
 }
 
-Error OptionGroupOptions::SetOptionValue(uint32_t option_idx,
-                                         llvm::StringRef option_value,
-                                         ExecutionContext *execution_context) {
+Status OptionGroupOptions::SetOptionValue(uint32_t option_idx,
+                                          llvm::StringRef option_value,
+                                          ExecutionContext *execution_context) {
   // After calling OptionGroupOptions::Append(...), you must finalize the groups
   // by calling OptionGroupOptions::Finlize()
   assert(m_did_finalize);
-  Error error;
+  Status error;
   if (option_idx < m_option_infos.size()) {
     error = m_option_infos[option_idx].option_group->SetOptionValue(
         m_option_infos[option_idx].option_index, option_value,
@@ -935,10 +935,10 @@ void OptionGroupOptions::OptionParsingStarting(
     }
   }
 }
-Error OptionGroupOptions::OptionParsingFinished(
-    ExecutionContext *execution_context) {
+Status
+OptionGroupOptions::OptionParsingFinished(ExecutionContext *execution_context) {
   std::set<OptionGroup *> group_set;
-  Error error;
+  Status error;
   OptionInfos::iterator pos, end = m_option_infos.end();
   for (pos = m_option_infos.begin(); pos != end; ++pos) {
     OptionGroup *group = pos->option_group;

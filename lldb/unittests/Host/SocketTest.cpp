@@ -43,7 +43,7 @@ protected:
   static void AcceptThread(Socket *listen_socket,
                            const char *listen_remote_address,
                            bool child_processes_inherit, Socket **accept_socket,
-                           Error *error) {
+                           Status *error) {
     *error = listen_socket->Accept(*accept_socket);
   }
 
@@ -53,7 +53,7 @@ protected:
       const std::function<std::string(const SocketType &)> &get_connect_addr,
       std::unique_ptr<SocketType> *a_up, std::unique_ptr<SocketType> *b_up) {
     bool child_processes_inherit = false;
-    Error error;
+    Status error;
     std::unique_ptr<SocketType> listen_socket_up(
         new SocketType(true, child_processes_inherit));
     EXPECT_FALSE(error.Fail());
@@ -61,7 +61,7 @@ protected:
     EXPECT_FALSE(error.Fail());
     EXPECT_TRUE(listen_socket_up->IsValid());
 
-    Error accept_error;
+    Status accept_error;
     Socket *accept_socket;
     std::thread accept_thread(AcceptThread, listen_socket_up.get(),
                               listen_remote_address, child_processes_inherit,
@@ -94,7 +94,7 @@ TEST_F(SocketTest, DecodeHostAndPort) {
   std::string host_str;
   std::string port_str;
   int32_t port;
-  Error error;
+  Status error;
   EXPECT_TRUE(Socket::DecodeHostAndPort("localhost:1138", host_str, port_str,
                                         port, &error));
   EXPECT_STREQ("localhost", host_str.c_str());

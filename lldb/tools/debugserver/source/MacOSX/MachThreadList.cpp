@@ -294,7 +294,7 @@ MachThreadList::UpdateThreadList(MachProcess *process, bool update,
                       "thread_list_count => %u )",
                       task, thread_list, thread_list_count);
 
-    if (err.Error() == KERN_SUCCESS && thread_list_count > 0) {
+    if (err.Status() == KERN_SUCCESS && thread_list_count > 0) {
       MachThreadList::collection currThreads;
       size_t idx;
       // Iterator through the current thread list and see which threads

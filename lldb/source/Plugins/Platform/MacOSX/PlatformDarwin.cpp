@@ -36,8 +36,8 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferLLVM.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
@@ -195,10 +195,10 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
   return file_list;
 }
 
-Error PlatformDarwin::ResolveSymbolFile(Target &target,
-                                        const ModuleSpec &sym_spec,
-                                        FileSpec &sym_file) {
-  Error error;
+Status PlatformDarwin::ResolveSymbolFile(Target &target,
+                                         const ModuleSpec &sym_spec,
+                                         FileSpec &sym_file) {
+  Status error;
   sym_file = sym_spec.GetSymbolFileSpec();
 
   llvm::sys::fs::file_status st;
@@ -219,23 +219,23 @@ Error PlatformDarwin::ResolveSymbolFile(Target &target,
   return error;
 }
 
-static lldb_private::Error
+static lldb_private::Status
 MakeCacheFolderForFile(const FileSpec &module_cache_spec) {
   FileSpec module_cache_folder =
       module_cache_spec.CopyByRemovingLastPathComponent();
   return llvm::sys::fs::create_directory(module_cache_folder.GetPath());
 }
 
-static lldb_private::Error
+static lldb_private::Status
 BringInRemoteFile(Platform *platform,
                   const lldb_private::ModuleSpec &module_spec,
                   const FileSpec &module_cache_spec) {
   MakeCacheFolderForFile(module_cache_spec);
-  Error err = platform->GetFile(module_spec.GetFileSpec(), module_cache_spec);
+  Status err = platform->GetFile(module_spec.GetFileSpec(), module_cache_spec);
   return err;
 }
 
-lldb_private::Error PlatformDarwin::GetSharedModuleWithLocalCache(
+lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
     const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
     const lldb_private::FileSpecList *module_search_paths_ptr,
     lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr) {
@@ -252,7 +252,7 @@ lldb_private::Error PlatformDarwin::GetSharedModuleWithLocalCache(
                 module_spec.GetSymbolFileSpec().GetDirectory().AsCString(),
                 module_spec.GetSymbolFileSpec().GetFilename().AsCString());
 
-  Error err;
+  Status err;
 
   err = ModuleList::GetSharedModule(module_spec, module_sp,
                                     module_search_paths_ptr, old_module_sp_ptr,
@@ -286,7 +286,7 @@ lldb_private::Error PlatformDarwin::GetSharedModuleWithLocalCache(
                                 module_spec.GetArchitecture());
           module_sp.reset(new Module(local_spec));
           module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
-          return Error();
+          return Status();
         }
       }
 
@@ -300,7 +300,7 @@ lldb_private::Error PlatformDarwin::GetSharedModuleWithLocalCache(
           uint64_t high_local, high_remote, low_local, low_remote;
           auto MD5 = llvm::sys::fs::md5_contents(module_cache_spec.GetPath());
           if (!MD5)
-            return Error(MD5.getError());
+            return Status(MD5.getError());
           std::tie(high_local, low_local) = MD5->words();
 
           m_remote_platform_sp->CalculateMD5(module_spec.GetFileSpec(),
@@ -314,7 +314,8 @@ lldb_private::Error PlatformDarwin::GetSharedModuleWithLocalCache(
                   (IsHost() ? "host" : "remote"),
                   module_spec.GetFileSpec().GetDirectory().AsCString(),
                   module_spec.GetFileSpec().GetFilename().AsCString());
-            Error err = BringInRemoteFile(this, module_spec, module_cache_spec);
+            Status err =
+                BringInRemoteFile(this, module_spec, module_cache_spec);
             if (err.Fail())
               return err;
           }
@@ -329,7 +330,7 @@ lldb_private::Error PlatformDarwin::GetSharedModuleWithLocalCache(
                       (IsHost() ? "host" : "remote"),
                       module_spec.GetFileSpec().GetDirectory().AsCString(),
                       module_spec.GetFileSpec().GetFilename().AsCString());
-        return Error();
+        return Status();
       }
 
       // bring in the remote module file
@@ -338,7 +339,7 @@ lldb_private::Error PlatformDarwin::GetSharedModuleWithLocalCache(
                     (IsHost() ? "host" : "remote"),
                     module_spec.GetFileSpec().GetDirectory().AsCString(),
                     module_spec.GetFileSpec().GetFilename().AsCString());
-      Error err = BringInRemoteFile(this, module_spec, module_cache_spec);
+      Status err = BringInRemoteFile(this, module_spec, module_cache_spec);
       if (err.Fail())
         return err;
       if (module_cache_spec.Exists()) {
@@ -351,20 +352,20 @@ lldb_private::Error PlatformDarwin::GetSharedModuleWithLocalCache(
         ModuleSpec local_spec(module_cache_spec, module_spec.GetArchitecture());
         module_sp.reset(new Module(local_spec));
         module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
-        return Error();
+        return Status();
       } else
-        return Error("unable to obtain valid module file");
+        return Status("unable to obtain valid module file");
     } else
-      return Error("no cache path");
+      return Status("no cache path");
   } else
-    return Error("unable to resolve module");
+    return Status("unable to resolve module");
 }
 
-Error PlatformDarwin::GetSharedModule(
+Status PlatformDarwin::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
     const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
     bool *did_create_ptr) {
-  Error error;
+  Status error;
   module_sp.reset();
 
   if (IsRemote()) {
@@ -393,7 +394,7 @@ Error PlatformDarwin::GetSharedModule(
           ModuleSpec new_module_spec(module_spec);
           new_module_spec.GetFileSpec() = bundle_directory;
           if (Host::ResolveExecutableInBundle(new_module_spec.GetFileSpec())) {
-            Error new_error(Platform::GetSharedModule(
+            Status new_error(Platform::GetSharedModule(
                 new_module_spec, process, module_sp, NULL, old_module_sp_ptr,
                 did_create_ptr));
 
@@ -420,7 +421,7 @@ Error PlatformDarwin::GetSharedModule(
               if (new_file_spec.Exists()) {
                 ModuleSpec new_module_spec(module_spec);
                 new_module_spec.GetFileSpec() = new_file_spec;
-                Error new_error(Platform::GetSharedModule(
+                Status new_error(Platform::GetSharedModule(
                     new_module_spec, process, module_sp, NULL,
                     old_module_sp_ptr, did_create_ptr));
 
@@ -1185,7 +1186,7 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
         int exit_status = -1;
         int signo = -1;
         std::string command_output;
-        Error error =
+        Status error =
             Host::RunShellCommand("/usr/bin/xcode-select --print-path",
                                   NULL, // current working directory
                                   &exit_status, &signo, &command_output,
@@ -1361,7 +1362,7 @@ static FileSpec GetXcodeContentsPath() {
         int signo = 0;
         std::string output;
         const char *command = "/usr/bin/xcode-select -p";
-        lldb_private::Error error = Host::RunShellCommand(
+        lldb_private::Status error = Host::RunShellCommand(
             command, // shell command to run
             NULL,    // current working directory
             &status, // Put the exit status of the process in here
@@ -1739,7 +1740,7 @@ lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
   return FileSpec();
 }
 
-lldb_private::Error
+lldb_private::Status
 PlatformDarwin::LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) {
   // Starting in Fall 2016 OSes, NSLog messages only get mirrored to stderr
   // if the OS_ACTIVITY_DT_MODE environment variable is set.  (It doesn't

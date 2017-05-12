@@ -12,14 +12,14 @@
 ; This test case checks whether Polly generates second level alias metadata
 ; to distinguish the specific accesses in case of the ublas gemm kernel.
 ;
-; CHECK: %tmp22_p_scalar_ = load double, double* %scevgep168, align 8, !alias.scope !10, !noalias !2
-; CHECK: store double %p_tmp23, double* %scevgep168, align 8, !alias.scope !10, !noalias !2
-; CHECK: %tmp22_p_scalar_188 = load double, double* %scevgep187, align 8, !alias.scope !11, !noalias !12
-; CHECK: store double %p_tmp23189, double* %scevgep187, align 8, !alias.scope !11, !noalias !12
-; CHECK: %tmp22_p_scalar_209 = load double, double* %scevgep208, align 8, !alias.scope !13, !noalias !14
-; CHECK: store double %p_tmp23210, double* %scevgep208, align 8, !alias.scope !13, !noalias !14
-; CHECK: %tmp22_p_scalar_230 = load double, double* %scevgep229, align 8, !alias.scope !15, !noalias !16
-; CHECK: store double %p_tmp23231, double* %scevgep229, align 8, !alias.scope !15, !noalias !16
+; CHECK: %tmp22_p_scalar_{{[0-9]*}} = load double, double* %scevgep[[N0:[a-z_0-9]*]], align 8, !alias.scope !10, !noalias !2
+; CHECK: store double %p_tmp23{{[0-9]*}}, double* %scevgep[[N0]], align 8, !alias.scope !10, !noalias !2
+; CHECK: %tmp22_p_scalar_{{[0-9]*}} = load double, double* %scevgep[[N1:[a-z_0-9]*]], align 8, !alias.scope !11, !noalias !12
+; CHECK: store double %p_tmp23{{[0-9]*}}, double* %scevgep[[N1]], align 8, !alias.scope !11, !noalias !12
+; CHECK: %tmp22_p_scalar_{{[0-9]*}} = load double, double* %scevgep[[N2:[a-z_0-9]*]], align 8, !alias.scope !13, !noalias !14
+; CHECK: store double %p_tmp23{{[0-9]*}}, double* %scevgep[[N2]], align 8, !alias.scope !13, !noalias !14
+; CHECK: %tmp22_p_scalar_{{[0-9]*}} = load double, double* %scevgep[[N3:[a-z_0-9]*]], align 8, !alias.scope !15, !noalias !16
+; CHECK: store double %p_tmp23{{[0-9]*}}, double* %scevgep[[N3]], align 8, !alias.scope !15, !noalias !16
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

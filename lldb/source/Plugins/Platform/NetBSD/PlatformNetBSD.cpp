@@ -25,9 +25,9 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
 // Define these constants from NetBSD mman.h for use when targeting
@@ -262,11 +262,11 @@ bool PlatformNetBSD::CanDebugProcess() {
 // lldb-launch, llgs-attach.  This differs from current lldb-launch,
 // debugserver-attach
 // approach on MacOSX.
-lldb::ProcessSP
-PlatformNetBSD::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
-                            Target *target, // Can be NULL, if NULL create a new
-                                            // target, else use existing one
-                            Error &error) {
+lldb::ProcessSP PlatformNetBSD::DebugProcess(
+    ProcessLaunchInfo &launch_info, Debugger &debugger,
+    Target *target, // Can be NULL, if NULL create a new
+                    // target, else use existing one
+    Status &error) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
   if (log)
     log->Printf("PlatformNetBSD::%s entered (target %p)", __FUNCTION__,

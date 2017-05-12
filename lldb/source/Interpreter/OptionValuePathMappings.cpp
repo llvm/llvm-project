@@ -40,9 +40,9 @@ void OptionValuePathMappings::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
-Error OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
-                                                  VarSetOperationType op) {
-  Error error;
+Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
+                                                   VarSetOperationType op) {
+  Status error;
   Args args(value.str());
   const size_t argc = args.GetArgumentCount();
 

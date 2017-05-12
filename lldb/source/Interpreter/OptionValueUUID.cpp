@@ -32,9 +32,9 @@ void OptionValueUUID::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-Error OptionValueUUID::SetValueFromString(llvm::StringRef value,
-                                          VarSetOperationType op) {
-  Error error;
+Status OptionValueUUID::SetValueFromString(llvm::StringRef value,
+                                           VarSetOperationType op) {
+  Status error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

@@ -3,21 +3,21 @@
 ; RUN:                 < %s -S | FileCheck %s
 
 ; CHECK-LABEL: polly.stmt.loop1:
-; CHECK-NEXT:   %3 = mul nsw i64 5, %polly.indvar
+; CHECK-NEXT:   %3 = mul nsw i64 5, %polly.indvar{{[0-9]*}}
 ; CHECK-NEXT:   %4 = sub nsw i64 %3, 10
 ; CHECK-NEXT:   %polly.access.A = getelementptr double, double* %A, i64 %4
 ; CHECK-NEXT:   store double 4.200000e+01, double* %polly.access.A, align 8
 
 ; CHECK-LABEL: polly.stmt.loop2:
-; CHECK-NEXT:   %polly.access.A10 = getelementptr double, double* %A, i64 42
-; CHECK-NEXT:   %val_p_scalar_ = load double, double* %polly.access.A10, align 8
+; CHECK-NEXT:   %polly.access.A[[Num0:[0-9]*]] = getelementptr double, double* %A, i64 42
+; CHECK-NEXT:   %val_p_scalar_ = load double, double* %polly.access.A[[Num0]], align 8
 
 ; CHECK-LABEL: polly.stmt.loop3:
 ; CHECK-NEXT:   %val.s2a.reload = load double, double* %val.s2a
-; CHECK-NEXT:   [[REG0:%.*]] = mul nsw i64 13, %polly.indvar16
+; CHECK-NEXT:   [[REG0:%.*]] = mul nsw i64 13, %polly.indvar{{[0-9]*}}
 ; CHECK-NEXT:   [[REG1:%.*]] = add nsw i64 [[REG0]], 5
-; CHECK-NEXT:   %polly.access.A20 = getelementptr double, double* %A, i64 [[REG1]]
-; CHECK-NEXT:   store double %val.s2a.reload, double* %polly.access.A20, align 8,
+; CHECK-NEXT:   %polly.access.A[[Num1:[0-9]*]] = getelementptr double, double* %A, i64 [[REG1]]
+; CHECK-NEXT:   store double %val.s2a.reload, double* %polly.access.A[[Num1]], align 8,
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

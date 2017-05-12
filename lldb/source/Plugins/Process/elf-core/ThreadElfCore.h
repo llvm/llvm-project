@@ -57,8 +57,8 @@ struct ELFLinuxPrStatus {
 
   ELFLinuxPrStatus();
 
-  lldb_private::Error Parse(lldb_private::DataExtractor &data,
-                            lldb_private::ArchSpec &arch);
+  lldb_private::Status Parse(lldb_private::DataExtractor &data,
+                             lldb_private::ArchSpec &arch);
 
   // Return the bytesize of the structure
   // 64 bit - just sizeof
@@ -78,8 +78,8 @@ struct ELFLinuxSigInfo {
 
   ELFLinuxSigInfo();
 
-  lldb_private::Error Parse(lldb_private::DataExtractor &data,
-                            const lldb_private::ArchSpec &arch);
+  lldb_private::Status Parse(lldb_private::DataExtractor &data,
+                             const lldb_private::ArchSpec &arch);
 
   // Return the bytesize of the structure
   // 64 bit - just sizeof
@@ -113,8 +113,8 @@ struct ELFLinuxPrPsInfo {
 
   ELFLinuxPrPsInfo();
 
-  lldb_private::Error Parse(lldb_private::DataExtractor &data,
-                            lldb_private::ArchSpec &arch);
+  lldb_private::Status Parse(lldb_private::DataExtractor &data,
+                             lldb_private::ArchSpec &arch);
 
   // Return the bytesize of the structure
   // 64 bit - just sizeof

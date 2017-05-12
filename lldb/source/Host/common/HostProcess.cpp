@@ -21,9 +21,9 @@ HostProcess::HostProcess(lldb::process_t process)
 
 HostProcess::~HostProcess() {}
 
-Error HostProcess::Terminate() { return m_native_process->Terminate(); }
+Status HostProcess::Terminate() { return m_native_process->Terminate(); }
 
-Error HostProcess::GetMainModule(FileSpec &file_spec) const {
+Status HostProcess::GetMainModule(FileSpec &file_spec) const {
   return m_native_process->GetMainModule(file_spec);
 }
 

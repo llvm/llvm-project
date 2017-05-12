@@ -27,9 +27,9 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
 // Define these constants from FreeBSD mman.h for use when targeting
@@ -255,8 +255,8 @@ PlatformFreeBSD::GetSoftwareBreakpointTrapOpcode(Target &target,
   }
 }
 
-Error PlatformFreeBSD::LaunchProcess(ProcessLaunchInfo &launch_info) {
-  Error error;
+Status PlatformFreeBSD::LaunchProcess(ProcessLaunchInfo &launch_info) {
+  Status error;
   if (IsHost()) {
     error = Platform::LaunchProcess(launch_info);
   } else {
@@ -270,7 +270,7 @@ Error PlatformFreeBSD::LaunchProcess(ProcessLaunchInfo &launch_info) {
 
 lldb::ProcessSP PlatformFreeBSD::Attach(ProcessAttachInfo &attach_info,
                                         Debugger &debugger, Target *target,
-                                        Error &error) {
+                                        Status &error) {
   lldb::ProcessSP process_sp;
   if (IsHost()) {
     if (target == NULL) {

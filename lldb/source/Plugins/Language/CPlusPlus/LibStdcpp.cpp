@@ -21,7 +21,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -209,7 +209,7 @@ bool VectorIteratorSyntheticFrontEnd::Update() {
     return false;
   if (item_ptr->GetValueAsUnsigned(0) == 0)
     return false;
-  Error err;
+  Status err;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
   m_item_sp = CreateValueObjectFromAddress(
       "item", item_ptr->GetValueAsUnsigned(0), m_exe_ctx_ref,
@@ -251,7 +251,7 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
         return false;
 
       StringPrinter::ReadStringAndDumpToStreamOptions options(valobj);
-      Error error;
+      Status error;
       lldb::addr_t addr_of_data =
           process_sp->ReadPointerFromMemory(addr_of_string, error);
       if (error.Fail() || addr_of_data == 0 ||
@@ -308,7 +308,7 @@ bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
           nullptr); // Safe to pass NULL for exe_scope here
 
       StringPrinter::ReadStringAndDumpToStreamOptions options(valobj);
-      Error error;
+      Status error;
       lldb::addr_t addr_of_data =
           process_sp->ReadPointerFromMemory(addr_of_string, error);
       if (error.Fail() || addr_of_data == 0 ||
@@ -414,7 +414,7 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
     return true;
   }
 
-  Error error;
+  Status error;
   ValueObjectSP pointee_sp = ptr_sp->Dereference(error);
   if (pointee_sp && error.Success()) {
     if (pointee_sp->DumpPrintableRepresentation(

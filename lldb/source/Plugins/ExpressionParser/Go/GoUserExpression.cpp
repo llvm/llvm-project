@@ -150,7 +150,7 @@ public:
 
   CompilerType EvaluateType(const GoASTExpr *e);
 
-  Error &error() { return m_error; }
+  Status &error() { return m_error; }
 
 private:
   std::nullptr_t NotImplemented(const GoASTExpr *e) {
@@ -163,7 +163,7 @@ private:
   lldb::StackFrameSP m_frame;
   GoParser m_parser;
   DynamicValueType m_use_dynamic;
-  Error m_error;
+  Status m_error;
   llvm::StringRef m_package;
   std::vector<std::unique_ptr<GoASTStmt>> m_statements;
 };
@@ -254,7 +254,7 @@ GoUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
 
   m_interpreter->set_use_dynamic(options.GetUseDynamic());
   ValueObjectSP result_val_sp = m_interpreter->Evaluate(exe_ctx);
-  Error err = m_interpreter->error();
+  Status err = m_interpreter->error();
   m_interpreter.reset();
 
   if (!result_val_sp) {

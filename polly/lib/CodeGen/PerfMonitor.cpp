@@ -44,11 +44,11 @@ void PerfMonitor::addToGlobalConstructors(Function *Fn) {
   }
 
   StructType *ST = StructType::get(Builder.getInt32Ty(), Fn->getType(),
-                                   Builder.getInt8PtrTy(), nullptr);
+                                   Builder.getInt8PtrTy());
 
-  V.push_back(ConstantStruct::get(
-      ST, Builder.getInt32(10), Fn,
-      ConstantPointerNull::get(Builder.getInt8PtrTy()), nullptr));
+  V.push_back(
+      ConstantStruct::get(ST, Builder.getInt32(10), Fn,
+                          ConstantPointerNull::get(Builder.getInt8PtrTy())));
   ArrayType *Ty = ArrayType::get(ST, V.size());
 
   GV = new GlobalVariable(*M, Ty, true, GlobalValue::AppendingLinkage,

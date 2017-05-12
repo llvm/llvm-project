@@ -367,6 +367,16 @@ public:
   /// If the array is read only
   bool isReadOnly();
 
+  /// Verify that @p Array is compatible to this ScopArrayInfo.
+  ///
+  /// Two arrays are compatible if their dimensionality, the sizes of their
+  /// dimensions, and their element sizes match.
+  ///
+  /// @param Array The array to compare against.
+  ///
+  /// @returns True, if the arrays are compatible, False otherwise.
+  bool isCompatibleWith(const ScopArrayInfo *Array) const;
+
 private:
   void addDerivedSAI(ScopArrayInfo *DerivedSAI) {
     DerivedSAIs.insert(DerivedSAI);
@@ -604,6 +614,13 @@ private:
 
   /// Updated access relation read from JSCOP file.
   isl_map *NewAccessRelation;
+
+  /// Fortran arrays that are created using "Allocate" are stored in terms
+  /// of a descriptor struct. This maintains a raw pointer to the memory,
+  /// along with auxiliary fields with information such as dimensions.
+  /// We hold a reference to the descriptor corresponding to a MemoryAccess
+  /// into a Fortran array. FAD for "Fortran Array Descriptor"
+  AssertingVH<GlobalValue> FAD;
   // @}
 
   __isl_give isl_basic_map *createBasicAccessMap(ScopStmt *Statement);
@@ -804,22 +821,14 @@ public:
   /// Get an isl string representing a new access function, if available.
   std::string getNewAccessRelationStr() const;
 
-  /// Get the base address of this access (e.g. A for A[i+j]) when
+  /// Get the original base address of this access (e.g. A for A[i+j]) when
   /// detected.
-  Value *getOriginalBaseAddr() const {
-    assert(!getOriginalScopArrayInfo() /* may noy yet be initialized */ ||
-           getOriginalScopArrayInfo()->getBasePtr() == BaseAddr);
-    return BaseAddr;
-  }
-
-  /// Get the base address of this access (e.g. A for A[i+j]) after a
-  /// potential change by setNewAccessRelation().
-  Value *getLatestBaseAddr() const {
-    return getLatestScopArrayInfo()->getBasePtr();
-  }
-
-  /// Old name for getOriginalBaseAddr().
-  Value *getBaseAddr() const { return getOriginalBaseAddr(); }
+  ///
+  /// This adress may differ from the base address referenced by the Original
+  /// ScopArrayInfo to which this array belongs, as this memory access may
+  /// have been unified to a ScopArray which has a different but identically
+  /// valued base pointer in case invariant load hoisting is enabled.
+  Value *getOriginalBaseAddr() const { return BaseAddr; }
 
   /// Get the detection-time base array isl_id for this access.
   __isl_give isl_id *getOriginalArrayId() const;
@@ -1007,6 +1016,10 @@ public:
 
   /// Get the reduction type of this access
   ReductionType getReductionType() const { return RedType; }
+
+  /// Set the array descriptor corresponding to the Array on which the
+  /// memory access is performed.
+  void setFortranArrayDescriptor(GlobalValue *FAD);
 
   /// Update the original access relation.
   ///
@@ -1240,6 +1253,9 @@ private:
                                 llvm::SmallVectorImpl<MemoryAccess *> &Loads);
   //@}
 
+  /// Remove @p MA from dictionaries pointing to them.
+  void removeAccessData(MemoryAccess *MA);
+
 public:
   ~ScopStmt();
 
@@ -1406,12 +1422,38 @@ public:
     return ValueReads.lookup(Inst);
   }
 
+  /// Return the MemoryAccess that loads a PHINode value, or nullptr if not
+  /// existing, respectively not yet added.
+  MemoryAccess *lookupPHIReadOf(PHINode *PHI) const;
+
   /// Return the PHI write MemoryAccess for the incoming values from any
   ///        basic block in this ScopStmt, or nullptr if not existing,
   ///        respectively not yet added.
   MemoryAccess *lookupPHIWriteOf(PHINode *PHI) const {
     assert(isBlockStmt() || R->getExit() == PHI->getParent());
     return PHIWrites.lookup(PHI);
+  }
+
+  /// Return the input access of the value, or null if no such MemoryAccess
+  /// exists.
+  ///
+  /// The input access is the MemoryAccess that makes an inter-statement value
+  /// available in this statement by reading it at the start of this statement.
+  /// This can be a MemoryKind::Value if defined in another statement or a
+  /// MemoryKind::PHI if the value is a PHINode in this statement.
+  MemoryAccess *lookupInputAccessOf(Value *Val) const {
+    if (isa<PHINode>(Val))
+      if (auto InputMA = lookupPHIReadOf(cast<PHINode>(Val))) {
+        assert(!lookupValueReadOf(Val) && "input accesses must be unique; a "
+                                          "statement cannot read a .s2a and "
+                                          ".phiops simultaneously");
+        return InputMA;
+      }
+
+    if (auto *InputMA = lookupValueReadOf(Val))
+      return InputMA;
+
+    return nullptr;
   }
 
   /// Add @p Access to this statement's list of accesses.
@@ -1889,6 +1931,34 @@ private:
   /// Required inv. loads: LB[0], LB[1], (V, if it may alias with A or LB)
   ///
   void hoistInvariantLoads();
+
+  /// Canonicalize arrays with base pointers from the same equivalence class.
+  ///
+  /// Some context: in our normal model we assume that each base pointer is
+  /// related to a single specific memory region, where memory regions
+  /// associated with different base pointers are disjoint. Consequently we do
+  /// not need to compute additional data dependences that model possible
+  /// overlaps of these memory regions. To verify our assumption we compute
+  /// alias checks that verify that modeled arrays indeed do not overlap. In
+  /// case an overlap is detected the runtime check fails and we fall back to
+  /// the original code.
+  ///
+  /// In case of arrays where the base pointers are know to be identical,
+  /// because they are dynamically loaded by accesses that are in the same
+  /// invariant load equivalence class, such run-time alias check would always
+  /// be false.
+  ///
+  /// This function makes sure that we do not generate consistently failing
+  /// run-time checks for code that contains distinct arrays with known
+  /// equivalent base pointers. It identifies for each invariant load
+  /// equivalence class a single canonical array and canonicalizes all memory
+  /// accesses that reference arrays that have base pointers that are known to
+  /// be equal to the base pointer of such a canonical array to this canonical
+  /// array.
+  ///
+  /// We currently do not canonicalize arrays for which certain memory accesses
+  /// have been hoisted as loop invariant.
+  void canonicalizeDynamicBasePtrs();
 
   /// Add invariant loads listed in @p InvMAs with the domain of @p Stmt.
   void addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs);
@@ -2483,6 +2553,18 @@ public:
   ///
   /// @param BasePtr   The base pointer the object has been stored for.
   /// @param Kind      The kind of array info object.
+  ///
+  /// @returns The ScopArrayInfo pointer or NULL if no such pointer is
+  ///          available.
+  const ScopArrayInfo *getScopArrayInfoOrNull(Value *BasePtr, MemoryKind Kind);
+
+  /// Return the cached ScopArrayInfo object for @p BasePtr.
+  ///
+  /// @param BasePtr   The base pointer the object has been stored for.
+  /// @param Kind      The kind of array info object.
+  ///
+  /// @returns The ScopArrayInfo pointer (may assert if no such pointer is
+  ///          available).
   const ScopArrayInfo *getScopArrayInfo(Value *BasePtr, MemoryKind Kind);
 
   /// Invalidate ScopArrayInfo object for base address.

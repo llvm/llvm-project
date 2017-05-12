@@ -11,7 +11,8 @@
 
 // GCC returns true for __is_trivially_constructible(void, int)
 // See gcc.gnu.org/PR80682
-// XFAIL: gcc
+// NOTE: This has been fixed in trunk and will be backported soon.
+// XFAIL: gcc-7, gcc-6, gcc-5, gcc-4
 
 // <experimental/type_traits>
 

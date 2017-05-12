@@ -22,7 +22,7 @@ class PseudoTerminal {
 public:
   enum { invalid_fd = -1, invalid_pid = -1 };
 
-  enum Error {
+  enum Status {
     success = 0,
     err_posix_openpt_failed = -2,
     err_grantpt_failed = -3,
@@ -44,8 +44,8 @@ public:
 
   void CloseMaster();
   void CloseSlave();
-  Error OpenFirstAvailableMaster(int oflag);
-  Error OpenSlave(int oflag);
+  Status OpenFirstAvailableMaster(int oflag);
+  Status OpenSlave(int oflag);
   int MasterFD() const { return m_master_fd; }
   int SlaveFD() const { return m_slave_fd; }
   int ReleaseMasterFD() {
@@ -67,7 +67,7 @@ public:
 
   const char *SlaveName() const;
 
-  pid_t Fork(Error &error);
+  pid_t Fork(Status &error);
 
 protected:
   //------------------------------------------------------------------

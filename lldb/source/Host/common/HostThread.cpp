@@ -18,11 +18,11 @@ HostThread::HostThread() : m_native_thread(new HostNativeThread) {}
 HostThread::HostThread(lldb::thread_t thread)
     : m_native_thread(new HostNativeThread(thread)) {}
 
-Error HostThread::Join(lldb::thread_result_t *result) {
+Status HostThread::Join(lldb::thread_result_t *result) {
   return m_native_thread->Join(result);
 }
 
-Error HostThread::Cancel() { return m_native_thread->Cancel(); }
+Status HostThread::Cancel() { return m_native_thread->Cancel(); }
 
 void HostThread::Reset() { return m_native_thread->Reset(); }
 

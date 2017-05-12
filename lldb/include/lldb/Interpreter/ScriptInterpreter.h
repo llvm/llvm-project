@@ -20,7 +20,7 @@
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/StructuredData.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 #include "lldb/Host/PseudoTerminal.h"
 
@@ -107,24 +107,24 @@ public:
     return true;
   }
 
-  virtual Error ExecuteMultipleLines(
+  virtual Status ExecuteMultipleLines(
       const char *in_string,
       const ExecuteScriptOptions &options = ExecuteScriptOptions()) {
-    Error error;
+    Status error;
     error.SetErrorString("not implemented");
     return error;
   }
 
-  virtual Error
+  virtual Status
   ExportFunctionDefinitionToInterpreter(StringList &function_def) {
-    Error error;
+    Status error;
     error.SetErrorString("not implemented");
     return error;
   }
 
-  virtual Error GenerateBreakpointCommandCallbackData(StringList &input,
-                                                      std::string &output) {
-    Error error;
+  virtual Status GenerateBreakpointCommandCallbackData(StringList &input,
+                                                       std::string &output) {
+    Status error;
     error.SetErrorString("not implemented");
     return error;
   }
@@ -235,19 +235,19 @@ public:
   }
 
   virtual StructuredData::ObjectSP
-  LoadPluginModule(const FileSpec &file_spec, lldb_private::Error &error) {
+  LoadPluginModule(const FileSpec &file_spec, lldb_private::Status &error) {
     return StructuredData::ObjectSP();
   }
 
   virtual StructuredData::DictionarySP
   GetDynamicSettings(StructuredData::ObjectSP plugin_module_sp, Target *target,
-                     const char *setting_name, lldb_private::Error &error) {
+                     const char *setting_name, lldb_private::Status &error) {
     return StructuredData::DictionarySP();
   }
 
-  virtual Error GenerateFunction(const char *signature,
-                                 const StringList &input) {
-    Error error;
+  virtual Status GenerateFunction(const char *signature,
+                                  const StringList &input) {
+    Status error;
     error.SetErrorString("unimplemented");
     return error;
   }
@@ -260,22 +260,22 @@ public:
                                           CommandReturnObject &result);
 
   /// Set the specified text as the callback for the breakpoint.
-  Error
+  Status
   SetBreakpointCommandCallback(std::vector<BreakpointOptions *> &bp_options_vec,
                                const char *callback_text);
 
-  virtual Error SetBreakpointCommandCallback(BreakpointOptions *bp_options,
-                                             const char *callback_text) {
-    Error error;
+  virtual Status SetBreakpointCommandCallback(BreakpointOptions *bp_options,
+                                              const char *callback_text) {
+    Status error;
     error.SetErrorString("unimplemented");
     return error;
   }
 
   /// This one is for deserialization:
-  virtual Error SetBreakpointCommandCallback(
+  virtual Status SetBreakpointCommandCallback(
       BreakpointOptions *bp_options,
       std::unique_ptr<BreakpointOptions::CommandData> &data_up) {
-    Error error;
+    Status error;
     error.SetErrorString("unimplemented");
     return error;
   }
@@ -346,7 +346,7 @@ public:
   RunScriptBasedCommand(const char *impl_function, const char *args,
                         ScriptedCommandSynchronicity synchronicity,
                         lldb_private::CommandReturnObject &cmd_retobj,
-                        Error &error,
+                        Status &error,
                         const lldb_private::ExecutionContext &exe_ctx) {
     return false;
   }
@@ -355,40 +355,40 @@ public:
   RunScriptBasedCommand(StructuredData::GenericSP impl_obj_sp, const char *args,
                         ScriptedCommandSynchronicity synchronicity,
                         lldb_private::CommandReturnObject &cmd_retobj,
-                        Error &error,
+                        Status &error,
                         const lldb_private::ExecutionContext &exe_ctx) {
     return false;
   }
 
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       Process *process, std::string &output,
-                                      Error &error) {
+                                      Status &error) {
     error.SetErrorString("unimplemented");
     return false;
   }
 
   virtual bool RunScriptFormatKeyword(const char *impl_function, Thread *thread,
-                                      std::string &output, Error &error) {
+                                      std::string &output, Status &error) {
     error.SetErrorString("unimplemented");
     return false;
   }
 
   virtual bool RunScriptFormatKeyword(const char *impl_function, Target *target,
-                                      std::string &output, Error &error) {
+                                      std::string &output, Status &error) {
     error.SetErrorString("unimplemented");
     return false;
   }
 
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       StackFrame *frame, std::string &output,
-                                      Error &error) {
+                                      Status &error) {
     error.SetErrorString("unimplemented");
     return false;
   }
 
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       ValueObject *value, std::string &output,
-                                      Error &error) {
+                                      Status &error) {
     error.SetErrorString("unimplemented");
     return false;
   }
@@ -420,7 +420,7 @@ public:
 
   virtual bool
   LoadScriptingModule(const char *filename, bool can_reload, bool init_session,
-                      lldb_private::Error &error,
+                      lldb_private::Status &error,
                       StructuredData::ObjectSP *module_sp = nullptr) {
     error.SetErrorString("loading unimplemented");
     return false;

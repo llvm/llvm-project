@@ -40,10 +40,10 @@ OptionGroupBoolean::OptionGroupBoolean(uint32_t usage_mask, bool required,
 
 OptionGroupBoolean::~OptionGroupBoolean() {}
 
-Error OptionGroupBoolean::SetOptionValue(uint32_t option_idx,
-                                         llvm::StringRef option_value,
-                                         ExecutionContext *execution_context) {
-  Error error;
+Status OptionGroupBoolean::SetOptionValue(uint32_t option_idx,
+                                          llvm::StringRef option_value,
+                                          ExecutionContext *execution_context) {
+  Status error;
   if (m_option_definition.option_has_arg == OptionParser::eNoArgument) {
     // Not argument, toggle the default value and mark the option as having been
     // set

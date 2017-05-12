@@ -65,7 +65,7 @@ public:
   //------------------------------------------------------------------
   bool ProcessDidExec() override;
 
-  lldb_private::Error CanLoadImage() override;
+  lldb_private::Status CanLoadImage() override;
 
   bool GetSharedCacheInformation(
       lldb::addr_t &base_address, lldb_private::UUID &uuid,

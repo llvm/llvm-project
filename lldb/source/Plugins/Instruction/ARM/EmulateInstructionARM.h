@@ -13,7 +13,7 @@
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 namespace lldb_private {
 

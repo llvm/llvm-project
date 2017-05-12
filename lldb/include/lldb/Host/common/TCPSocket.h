@@ -39,11 +39,11 @@ public:
   int SetOptionNoDelay();
   int SetOptionReuseAddress();
 
-  Error Connect(llvm::StringRef name) override;
-  Error Listen(llvm::StringRef name, int backlog) override;
-  Error Accept(Socket *&conn_socket) override;
+  Status Connect(llvm::StringRef name) override;
+  Status Listen(llvm::StringRef name, int backlog) override;
+  Status Accept(Socket *&conn_socket) override;
 
-  Error CreateSocket(int domain);
+  Status CreateSocket(int domain);
 
   bool IsValid() const override;
 

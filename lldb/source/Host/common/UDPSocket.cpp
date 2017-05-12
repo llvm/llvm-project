@@ -42,27 +42,27 @@ size_t UDPSocket::Send(const void *buf, const size_t num_bytes) {
                   m_sockaddr, m_sockaddr.GetLength());
 }
 
-Error UDPSocket::Connect(llvm::StringRef name) {
-  return Error("%s", g_not_supported_error);
+Status UDPSocket::Connect(llvm::StringRef name) {
+  return Status("%s", g_not_supported_error);
 }
 
-Error UDPSocket::Listen(llvm::StringRef name, int backlog) {
-  return Error("%s", g_not_supported_error);
+Status UDPSocket::Listen(llvm::StringRef name, int backlog) {
+  return Status("%s", g_not_supported_error);
 }
 
-Error UDPSocket::Accept(Socket *&socket) {
-  return Error("%s", g_not_supported_error);
+Status UDPSocket::Accept(Socket *&socket) {
+  return Status("%s", g_not_supported_error);
 }
 
-Error UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
-                         Socket *&socket) {
+Status UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
+                          Socket *&socket) {
   std::unique_ptr<UDPSocket> final_socket;
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
     log->Printf("UDPSocket::%s (host/port = %s)", __FUNCTION__, name.data());
 
-  Error error;
+  Status error;
   std::string host_str;
   std::string port_str;
   int32_t port = INT32_MIN;

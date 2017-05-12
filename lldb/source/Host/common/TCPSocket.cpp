@@ -117,8 +117,8 @@ std::string TCPSocket::GetRemoteIPAddress() const {
   return "";
 }
 
-Error TCPSocket::CreateSocket(int domain) {
-  Error error;
+Status TCPSocket::CreateSocket(int domain) {
+  Status error;
   if (IsValid())
     error = Close();
   if (error.Fail())
@@ -128,13 +128,13 @@ Error TCPSocket::CreateSocket(int domain) {
   return error;
 }
 
-Error TCPSocket::Connect(llvm::StringRef name) {
+Status TCPSocket::Connect(llvm::StringRef name) {
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
   if (log)
     log->Printf("TCPSocket::%s (host/port = %s)", __FUNCTION__, name.data());
 
-  Error error;
+  Status error;
   std::string host_str;
   std::string port_str;
   int32_t port = INT32_MIN;
@@ -166,12 +166,12 @@ Error TCPSocket::Connect(llvm::StringRef name) {
   return error;
 }
 
-Error TCPSocket::Listen(llvm::StringRef name, int backlog) {
+Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
     log->Printf("TCPSocket::%s (%s)", __FUNCTION__, name.data());
 
-  Error error;
+  Status error;
   std::string host_str;
   std::string port_str;
   int32_t port = INT32_MIN;
@@ -227,8 +227,8 @@ void TCPSocket::CloseListenSockets() {
   m_listen_sockets.clear();
 }
 
-Error TCPSocket::Accept(Socket *&conn_socket) {
-  Error error;
+Status TCPSocket::Accept(Socket *&conn_socket) {
+  Status error;
   if (m_listen_sockets.size() == 0) {
     error.SetErrorString("No open listening sockets!");
     return error;

@@ -104,7 +104,7 @@ void ModuleCacheTest::TryGetAndPut(const FileSpec &cache_dir,
   bool did_create;
   bool download_called = false;
 
-  Error error = mc.GetAndPut(
+  Status error = mc.GetAndPut(
       cache_dir, hostname, module_spec,
       [this, &download_called](const ModuleSpec &module_spec,
                                const FileSpec &tmp_download_file_spec) {
@@ -114,10 +114,10 @@ void ModuleCacheTest::TryGetAndPut(const FileSpec &cache_dir,
         std::error_code ec = llvm::sys::fs::copy_file(
             s_test_executable, tmp_download_file_spec.GetCString());
         EXPECT_FALSE(ec);
-        return Error();
+        return Status();
       },
       [](const ModuleSP &module_sp, const FileSpec &tmp_download_file_spec) {
-        return Error("Not supported.");
+        return Status("Not supported.");
       },
       module_sp, &did_create);
   EXPECT_EQ(expect_download, download_called);

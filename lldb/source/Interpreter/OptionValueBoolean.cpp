@@ -35,9 +35,9 @@ void OptionValueBoolean::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
-Error OptionValueBoolean::SetValueFromString(llvm::StringRef value_str,
-                                             VarSetOperationType op) {
-  Error error;
+Status OptionValueBoolean::SetValueFromString(llvm::StringRef value_str,
+                                              VarSetOperationType op) {
+  Status error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

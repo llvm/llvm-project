@@ -12,7 +12,7 @@
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-types.h" // for offset_t
 
@@ -2460,9 +2460,9 @@ const Scalar lldb_private::operator>>(const Scalar &lhs, const Scalar &rhs) {
   return result;
 }
 
-Error Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
-                                  size_t byte_size) {
-  Error error;
+Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
+                                   size_t byte_size) {
+  Status error;
   if (value_str == nullptr || value_str[0] == '\0') {
     error.SetErrorString("Invalid c-string value string.");
     return error;
@@ -2596,9 +2596,9 @@ Error Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
   return error;
 }
 
-Error Scalar::SetValueFromData(DataExtractor &data, lldb::Encoding encoding,
-                               size_t byte_size) {
-  Error error;
+Status Scalar::SetValueFromData(DataExtractor &data, lldb::Encoding encoding,
+                                size_t byte_size) {
+  Status error;
 
   type128 int128;
   type256 int256;
@@ -2762,7 +2762,7 @@ bool Scalar::SignExtend(uint32_t sign_bit_pos) {
 
 size_t Scalar::GetAsMemoryData(void *dst, size_t dst_len,
                                lldb::ByteOrder dst_byte_order,
-                               Error &error) const {
+                               Status &error) const {
   // Get a data extractor that points to the native scalar data
   DataExtractor data;
   if (!GetData(data)) {

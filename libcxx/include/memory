@@ -996,11 +996,11 @@ struct __rebind_pointer {
 
 // allocator_traits
 
-namespace __has_pointer_type_imp
+struct __has_pointer_type_imp
 {
     template <class _Up> static __two __test(...);
     template <class _Up> static char __test(typename _Up::pointer* = 0);
-}
+};
 
 template <class _Tp>
 struct __has_pointer_type
@@ -3924,7 +3924,10 @@ private:
 
     template <class _Yp, class _OrigPtr>
         _LIBCPP_INLINE_VISIBILITY
-        void
+        typename enable_if<is_convertible<_OrigPtr*,
+                                          const enable_shared_from_this<_Yp>*
+        >::value,
+            void>::type
         __enable_weak_this(const enable_shared_from_this<_Yp>* __e,
                            _OrigPtr* __ptr) _NOEXCEPT
         {
@@ -3942,6 +3945,7 @@ private:
     template <class _Up> friend class _LIBCPP_TEMPLATE_VIS shared_ptr;
     template <class _Up> friend class _LIBCPP_TEMPLATE_VIS weak_ptr;
 };
+
 
 template<class _Tp>
 inline

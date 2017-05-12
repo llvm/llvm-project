@@ -10,7 +10,7 @@
 #ifndef liblldb_NativeWatchpointList_h_
 #define liblldb_NativeWatchpointList_h_
 
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-forward.h"
 
 #include <map>
@@ -25,10 +25,10 @@ struct NativeWatchpoint {
 
 class NativeWatchpointList {
 public:
-  Error Add(lldb::addr_t addr, size_t size, uint32_t watch_flags,
-            bool hardware);
+  Status Add(lldb::addr_t addr, size_t size, uint32_t watch_flags,
+             bool hardware);
 
-  Error Remove(lldb::addr_t addr);
+  Status Remove(lldb::addr_t addr);
 
   using WatchpointMap = std::map<lldb::addr_t, NativeWatchpoint>;
 
