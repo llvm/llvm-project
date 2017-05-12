@@ -164,11 +164,10 @@ static void combineMergableSections() {
     uint64_t Flags = MS->Flags & ~(uint64_t)(SHF_GROUP | SHF_COMPRESSED);
     uint32_t Alignment = std::max<uint32_t>(MS->Alignment, MS->Entsize);
 
-    auto I =
-        llvm::find_if(MergeSections, [=](MergeSyntheticSection *Sec) {
-          return Sec->Name == OutsecName && Sec->Flags == Flags &&
-                 Sec->Alignment == Alignment;
-        });
+    auto I = llvm::find_if(MergeSections, [=](MergeSyntheticSection *Sec) {
+      return Sec->Name == OutsecName && Sec->Flags == Flags &&
+             Sec->Alignment == Alignment;
+    });
     if (I == MergeSections.end()) {
       MergeSyntheticSection *Syn =
           make<MergeSyntheticSection>(OutsecName, MS->Type, Flags, Alignment);
@@ -546,32 +545,6 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
   }
 }
 
-// PPC64 has a number of special SHT_PROGBITS+SHF_ALLOC+SHF_WRITE sections that
-// we would like to make sure appear is a specific order to maximize their
-// coverage by a single signed 16-bit offset from the TOC base pointer.
-// Conversely, the special .tocbss section should be first among all SHT_NOBITS
-// sections. This will put it next to the loaded special PPC64 sections (and,
-// thus, within reach of the TOC base pointer).
-static int getPPC64SectionRank(StringRef SectionName) {
-  return StringSwitch<int>(SectionName)
-      .Case(".tocbss", 0)
-      .Case(".branch_lt", 2)
-      .Case(".toc", 3)
-      .Case(".toc1", 4)
-      .Case(".opd", 5)
-      .Default(1);
-}
-
-// All sections with SHF_MIPS_GPREL flag should be grouped together
-// because data in these sections is addressable with a gp relative address.
-static int getMipsSectionRank(const OutputSection *S) {
-  if ((S->Flags & SHF_MIPS_GPREL) == 0)
-    return 0;
-  if (S->Name == ".got")
-    return 1;
-  return 2;
-}
-
 // Today's loaders have a feature to make segments read-only after
 // processing dynamic relocations to enhance security. PT_GNU_RELRO
 // is defined for that.
@@ -645,99 +618,145 @@ bool elf::isRelroSection(const OutputSection *Sec) {
          S == ".eh_frame" || S == ".openbsd.randomdata";
 }
 
-static bool compareSectionsNonScript(const OutputSection *A,
-                                     const OutputSection *B) {
-  // Put .interp first because some loaders want to see that section
-  // on the first page of the executable file when loaded into memory.
-  bool AIsInterp = A->Name == ".interp";
-  bool BIsInterp = B->Name == ".interp";
-  if (AIsInterp != BIsInterp)
-    return AIsInterp;
+// We compute a rank for each section. The rank indicates where the
+// section should be placed in the file.  Instead of using simple
+// numbers (0,1,2...), we use a series of flags. One for each decision
+// point when placing the section.
+// Using flags has two key properties:
+// * It is easy to check if a give branch was taken.
+// * It is easy two see how similar two ranks are (see getRankProximity).
+enum RankFlags {
+  RF_NOT_ADDR_SET = 1 << 16,
+  RF_NOT_INTERP = 1 << 15,
+  RF_NOT_ALLOC = 1 << 14,
+  RF_WRITE = 1 << 13,
+  RF_EXEC = 1 << 12,
+  RF_NON_TLS_BSS = 1 << 11,
+  RF_NON_TLS_BSS_RO = 1 << 10,
+  RF_NOT_TLS = 1 << 9,
+  RF_BSS = 1 << 8,
+  RF_PPC_NOT_TOCBSS = 1 << 7,
+  RF_PPC_OPD = 1 << 6,
+  RF_PPC_TOCL = 1 << 5,
+  RF_PPC_TOC = 1 << 4,
+  RF_PPC_BRANCH_LT = 1 << 3,
+  RF_MIPS_GPREL = 1 << 2,
+  RF_MIPS_NOT_GOT = 1 << 1
+};
 
-  // Allocatable sections go first to reduce the total PT_LOAD size and
-  // so debug info doesn't change addresses in actual code.
-  bool AIsAlloc = A->Flags & SHF_ALLOC;
-  bool BIsAlloc = B->Flags & SHF_ALLOC;
-  if (AIsAlloc != BIsAlloc)
-    return AIsAlloc;
-
-  // We don't have any special requirements for the relative order of two non
-  // allocatable sections.
-  if (!AIsAlloc)
-    return false;
+static unsigned getSectionRank(const OutputSection *Sec) {
+  unsigned Rank = 0;
 
   // We want to put section specified by -T option first, so we
   // can start assigning VA starting from them later.
-  auto AAddrSetI = Config->SectionStartMap.find(A->Name);
-  auto BAddrSetI = Config->SectionStartMap.find(B->Name);
-  bool AHasAddrSet = AAddrSetI != Config->SectionStartMap.end();
-  bool BHasAddrSet = BAddrSetI != Config->SectionStartMap.end();
-  if (AHasAddrSet != BHasAddrSet)
-    return AHasAddrSet;
-  if (AHasAddrSet)
-    return AAddrSetI->second < BAddrSetI->second;
+  if (Config->SectionStartMap.count(Sec->Name))
+    return Rank;
+  Rank |= RF_NOT_ADDR_SET;
+
+  // Put .interp first because some loaders want to see that section
+  // on the first page of the executable file when loaded into memory.
+  if (Sec->Name == ".interp")
+    return Rank;
+  Rank |= RF_NOT_INTERP;
+
+  // Allocatable sections go first to reduce the total PT_LOAD size and
+  // so debug info doesn't change addresses in actual code.
+  if (!(Sec->Flags & SHF_ALLOC))
+    return Rank | RF_NOT_ALLOC;
 
   // We want the read only sections first so that they go in the PT_LOAD
   // covering the program headers at the start of the file.
-  bool AIsWritable = A->Flags & SHF_WRITE;
-  bool BIsWritable = B->Flags & SHF_WRITE;
-  if (AIsWritable != BIsWritable)
-    return BIsWritable;
+  if (Sec->Flags & SHF_WRITE)
+    Rank |= RF_WRITE;
 
-  if (!Config->SingleRoRx) {
+  if (Sec->Flags & SHF_EXECINSTR) {
     // For a corresponding reason, put non exec sections first (the program
     // header PT_LOAD is not executable).
     // We only do that if we are not using linker scripts, since with linker
     // scripts ro and rx sections are in the same PT_LOAD, so their relative
     // order is not important. The same applies for -no-rosegment.
-    bool AIsExec = A->Flags & SHF_EXECINSTR;
-    bool BIsExec = B->Flags & SHF_EXECINSTR;
-    if (AIsExec != BIsExec)
-      return BIsExec;
+    if ((Rank & RF_WRITE) || !Config->SingleRoRx)
+      Rank |= RF_EXEC;
   }
 
   // If we got here we know that both A and B are in the same PT_LOAD.
 
-  bool AIsTls = A->Flags & SHF_TLS;
-  bool BIsTls = B->Flags & SHF_TLS;
-  bool AIsNoBits = A->Type == SHT_NOBITS;
-  bool BIsNoBits = B->Type == SHT_NOBITS;
+  bool IsTls = Sec->Flags & SHF_TLS;
+  bool IsNoBits = Sec->Type == SHT_NOBITS;
 
   // The first requirement we have is to put (non-TLS) nobits sections last. The
   // reason is that the only thing the dynamic linker will see about them is a
   // p_memsz that is larger than p_filesz. Seeing that it zeros the end of the
   // PT_LOAD, so that has to correspond to the nobits sections.
-  bool AIsNonTlsNoBits = AIsNoBits && !AIsTls;
-  bool BIsNonTlsNoBits = BIsNoBits && !BIsTls;
-  if (AIsNonTlsNoBits != BIsNonTlsNoBits)
-    return BIsNonTlsNoBits;
+  bool IsNonTlsNoBits = IsNoBits && !IsTls;
+  if (IsNonTlsNoBits)
+    Rank |= RF_NON_TLS_BSS;
 
   // We place nobits RelRo sections before plain r/w ones, and non-nobits RelRo
   // sections after r/w ones, so that the RelRo sections are contiguous.
-  bool AIsRelRo = isRelroSection(A);
-  bool BIsRelRo = isRelroSection(B);
-  if (AIsRelRo != BIsRelRo)
-    return AIsNonTlsNoBits ? AIsRelRo : BIsRelRo;
+  bool IsRelRo = isRelroSection(Sec);
+  if (IsNonTlsNoBits && !IsRelRo)
+    Rank |= RF_NON_TLS_BSS_RO;
+  if (!IsNonTlsNoBits && IsRelRo)
+    Rank |= RF_NON_TLS_BSS_RO;
 
   // The TLS initialization block needs to be a single contiguous block in a R/W
   // PT_LOAD, so stick TLS sections directly before the other RelRo R/W
   // sections. The TLS NOBITS sections are placed here as they don't take up
   // virtual address space in the PT_LOAD.
-  if (AIsTls != BIsTls)
-    return AIsTls;
+  if (!IsTls)
+    Rank |= RF_NOT_TLS;
 
   // Within the TLS initialization block, the non-nobits sections need to appear
   // first.
-  if (AIsNoBits != BIsNoBits)
-    return BIsNoBits;
+  if (IsNoBits)
+    Rank |= RF_BSS;
 
-  // Some architectures have additional ordering restrictions for sections
-  // within the same PT_LOAD.
-  if (Config->EMachine == EM_PPC64)
-    return getPPC64SectionRank(A->Name) < getPPC64SectionRank(B->Name);
-  if (Config->EMachine == EM_MIPS)
-    return getMipsSectionRank(A) < getMipsSectionRank(B);
+  // // Some architectures have additional ordering restrictions for sections
+  // // within the same PT_LOAD.
+  if (Config->EMachine == EM_PPC64) {
+    // PPC64 has a number of special SHT_PROGBITS+SHF_ALLOC+SHF_WRITE sections
+    // that we would like to make sure appear is a specific order to maximize
+    // their coverage by a single signed 16-bit offset from the TOC base
+    // pointer. Conversely, the special .tocbss section should be first among
+    // all SHT_NOBITS sections. This will put it next to the loaded special
+    // PPC64 sections (and, thus, within reach of the TOC base pointer).
+    StringRef Name = Sec->Name;
+    if (Name != ".tocbss")
+      Rank |= RF_PPC_NOT_TOCBSS;
 
+    if (Name == ".opd")
+      Rank |= RF_PPC_OPD;
+
+    if (Name == ".toc1")
+      Rank |= RF_PPC_TOCL;
+
+    if (Name == ".toc")
+      Rank |= RF_PPC_TOC;
+
+    if (Name == ".branch_lt")
+      Rank |= RF_PPC_BRANCH_LT;
+  }
+  if (Config->EMachine == EM_MIPS) {
+    // All sections with SHF_MIPS_GPREL flag should be grouped together
+    // because data in these sections is addressable with a gp relative address.
+    if (Sec->Flags & SHF_MIPS_GPREL)
+      Rank |= RF_MIPS_GPREL;
+
+    if (Sec->Name != ".got")
+      Rank |= RF_MIPS_NOT_GOT;
+  }
+
+  return Rank;
+}
+
+static bool compareSectionsNonScript(const OutputSection *A,
+                                     const OutputSection *B) {
+  if (A->SortRank != B->SortRank)
+    return A->SortRank < B->SortRank;
+  if (!(A->SortRank & RF_NOT_ADDR_SET))
+    return Config->SectionStartMap.lookup(A->Name) <
+           Config->SectionStartMap.lookup(B->Name);
   return false;
 }
 
@@ -751,8 +770,7 @@ static bool compareSections(const OutputSection *A, const OutputSection *B) {
   if (AIndex != BIndex)
     return AIndex < BIndex;
 
-  // The sections are not in the linker script, so don't sort for now.
-  return false;
+  return compareSectionsNonScript(A, B);
 }
 
 // Program header entry
@@ -962,45 +980,36 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     Sec->assignOffsets();
 }
 
-static bool canSharePtLoad(const OutputSection &S1, const OutputSection &S2) {
-  if (!(S1.Flags & SHF_ALLOC) || !(S2.Flags & SHF_ALLOC))
-    return false;
-
-  bool S1IsWrite = S1.Flags & SHF_WRITE;
-  bool S2IsWrite = S2.Flags & SHF_WRITE;
-  if (S1IsWrite != S2IsWrite)
-    return false;
-
-  if (!S1IsWrite)
-    return true; // RO and RX share a PT_LOAD with linker scripts.
-  return (S1.Flags & SHF_EXECINSTR) == (S2.Flags & SHF_EXECINSTR);
+// We want to find how similar two ranks are.
+// The more branches in getSectionRank that match, the more similar they are.
+// Since each branch corresponds to a bit flag, we can just use
+// countLeadingZeros.
+static unsigned getRankProximity(OutputSection *A, OutputSection *B) {
+  return countLeadingZeros(A->SortRank ^ B->SortRank);
 }
 
-// We assume, like createPhdrs that all allocs are at the start.
+// We want to place orphan sections so that they share as much
+// characteristics with their neighbors as possible. For example, if
+// both are rw, or both are tls.
 template <typename ELFT>
 static std::vector<OutputSection *>::iterator
 findOrphanPos(std::vector<OutputSection *>::iterator B,
               std::vector<OutputSection *>::iterator E) {
   OutputSection *Sec = *E;
 
-  // If it is not allocatable, just leave it at the end.
-  if (!(Sec->Flags & SHF_ALLOC))
+  // Find the first element that has as close a rank as possible.
+  auto I = std::max_element(B, E, [=](OutputSection *A, OutputSection *B) {
+    return getRankProximity(Sec, A) < getRankProximity(Sec, B);
+  });
+  if (I == E)
     return E;
 
-  // Find the first sharable.
-  auto Pos = std::find_if(
-      B, E, [=](OutputSection *S) { return canSharePtLoad(*S, *Sec); });
-  if (Pos != E) {
-    // Ony consider the sharable range.
-    B = Pos;
-    E = std::find_if(
-        B, E, [=](OutputSection *S) { return !canSharePtLoad(*S, *Sec); });
-    assert(B != E);
-  }
-
-  // Find the fist position that Sec compares less to.
-  return std::find_if(
-      B, E, [=](OutputSection *S) { return compareSectionsNonScript(Sec, S); });
+  // Consider all existing sections with the same proximity.
+  unsigned Proximity = getRankProximity(Sec, *I);
+  while (I != E && getRankProximity(Sec, *I) == Proximity &&
+         Sec->SortRank >= (*I)->SortRank)
+    ++I;
+  return I;
 }
 
 template <class ELFT> void Writer<ELFT>::sortSections() {
@@ -1008,12 +1017,18 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   // relative order for SHF_LINK_ORDER sections.
   if (Config->Relocatable)
     return;
+
+  if (Script->Opt.HasSections)
+    Script->adjustSectionsBeforeSorting();
+
+  for (OutputSection *Sec : OutputSections)
+    Sec->SortRank = getSectionRank(Sec);
+
   if (!Script->Opt.HasSections) {
     std::stable_sort(OutputSections.begin(), OutputSections.end(),
                      compareSectionsNonScript);
     return;
   }
-  Script->adjustSectionsBeforeSorting();
 
   // The order of the sections in the script is arbitrary and may not agree with
   // compareSectionsNonScript. This means that we cannot easily define a
@@ -1046,8 +1061,18 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   auto NonScriptI =
       std::find_if(OutputSections.begin(), E,
                    [](OutputSection *S) { return S->SectionIndex == INT_MAX; });
-  for (; NonScriptI != E; ++NonScriptI)
-    std::rotate(findOrphanPos<ELFT>(I, NonScriptI), NonScriptI, NonScriptI + 1);
+  while (NonScriptI != E) {
+    auto Pos = findOrphanPos<ELFT>(I, NonScriptI);
+
+    // As an optimization, find all sections with the same sort rank
+    // and insert them with one rotate.
+    unsigned Rank = (*NonScriptI)->SortRank;
+    auto End = std::find_if(NonScriptI + 1, E, [=](OutputSection *Sec) {
+      return Sec->SortRank != Rank;
+    });
+    std::rotate(Pos, NonScriptI, End);
+    NonScriptI = End;
+  }
 
   Script->adjustSectionsAfterSorting();
 }
@@ -1178,14 +1203,30 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
-  applySynthetic({In<ELFT>::DynSymTab,  InX::Bss,           InX::BssRelRo,
-                  In<ELFT>::GnuHashTab, In<ELFT>::HashTab,  In<ELFT>::SymTab,
-                  InX::ShStrTab,        InX::StrTab,        In<ELFT>::VerDef,
-                  InX::DynStrTab,       InX::GdbIndex,      InX::Got,
-                  InX::MipsGot,         InX::IgotPlt,       InX::GotPlt,
-                  In<ELFT>::RelaDyn,    In<ELFT>::RelaIplt, In<ELFT>::RelaPlt,
-                  InX::Plt,             InX::Iplt,          In<ELFT>::EhFrameHdr,
-                  In<ELFT>::VerSym,     In<ELFT>::VerNeed,  InX::Dynamic},
+  applySynthetic({In<ELFT>::DynSymTab,
+                  InX::Bss,
+                  InX::BssRelRo,
+                  In<ELFT>::GnuHashTab,
+                  In<ELFT>::HashTab,
+                  In<ELFT>::SymTab,
+                  InX::ShStrTab,
+                  InX::StrTab,
+                  In<ELFT>::VerDef,
+                  InX::DynStrTab,
+                  InX::GdbIndex,
+                  InX::Got,
+                  InX::MipsGot,
+                  InX::IgotPlt,
+                  InX::GotPlt,
+                  In<ELFT>::RelaDyn,
+                  In<ELFT>::RelaIplt,
+                  In<ELFT>::RelaPlt,
+                  InX::Plt,
+                  InX::Iplt,
+                  In<ELFT>::EhFrameHdr,
+                  In<ELFT>::VerSym,
+                  In<ELFT>::VerNeed,
+                  InX::Dynamic},
                  [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   // Some architectures use small displacements for jump instructions.

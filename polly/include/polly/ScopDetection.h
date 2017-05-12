@@ -119,7 +119,7 @@ extern llvm::StringRef PollySkipFnAttr;
 //===----------------------------------------------------------------------===//
 /// Pass to detect the maximal static control parts (Scops) of a
 /// function.
-class ScopDetection : public FunctionPass {
+class ScopDetection {
 public:
   typedef SetVector<const Region *> RegionSet;
 
@@ -198,16 +198,14 @@ public:
 
 private:
   //===--------------------------------------------------------------------===//
-  ScopDetection(const ScopDetection &) = delete;
-  const ScopDetection &operator=(const ScopDetection &) = delete;
 
-  /// Analysis passes used.
+  /// Analyses used
   //@{
-  const DominatorTree *DT;
-  ScalarEvolution *SE;
-  LoopInfo *LI;
-  RegionInfo *RI;
-  AliasAnalysis *AA;
+  const DominatorTree &DT;
+  ScalarEvolution &SE;
+  LoopInfo &LI;
+  RegionInfo &RI;
+  AliasAnalysis &AA;
   //@}
 
   /// Map to remember detection contexts for all regions.
@@ -527,16 +525,16 @@ private:
                       Args &&... Arguments) const;
 
 public:
-  static char ID;
-  explicit ScopDetection();
+  ScopDetection(Function &F, const DominatorTree &DT, ScalarEvolution &SE,
+                LoopInfo &LI, RegionInfo &RI, AliasAnalysis &AA);
 
   /// Get the RegionInfo stored in this pass.
   ///
   /// This was added to give the DOT printer easy access to this information.
-  RegionInfo *getRI() const { return RI; }
+  RegionInfo *getRI() const { return &RI; }
 
   /// Get the LoopInfo stored in this pass.
-  LoopInfo *getLI() const { return LI; }
+  LoopInfo *getLI() const { return &LI; }
 
   /// Is the region is the maximum region of a Scop?
   ///
@@ -598,14 +596,6 @@ public:
   /// @param R The Region to verify.
   void verifyRegion(const Region &R) const;
 
-  /// @name FunctionPass interface
-  //@{
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const;
-  virtual void releaseMemory();
-  virtual bool runOnFunction(Function &F);
-  virtual void print(raw_ostream &OS, const Module *) const;
-  //@}
-
   /// Count the number of loops and the maximal loop depth in @p R.
   ///
   /// @param R The region to check
@@ -619,11 +609,40 @@ public:
                        unsigned MinProfitableTrips);
 };
 
+struct ScopAnalysis : public AnalysisInfoMixin<ScopAnalysis> {
+  static AnalysisKey Key;
+  using Result = ScopDetection;
+  Result run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+struct ScopAnalysisPrinterPass : public PassInfoMixin<ScopAnalysisPrinterPass> {
+  ScopAnalysisPrinterPass(raw_ostream &O) : Stream(O) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  raw_ostream &Stream;
+};
+
+struct ScopDetectionWrapperPass : public FunctionPass {
+  static char ID;
+  std::unique_ptr<ScopDetection> Result;
+
+  ScopDetectionWrapperPass();
+  /// @name FunctionPass interface
+  //@{
+  virtual void getAnalysisUsage(AnalysisUsage &AU) const;
+  virtual void releaseMemory();
+  virtual bool runOnFunction(Function &F);
+  virtual void print(raw_ostream &OS, const Module *) const;
+  //@}
+
+  ScopDetection &getSD() { return *Result; }
+  const ScopDetection &getSD() const { return *Result; }
+};
+
 } // end namespace polly
 
 namespace llvm {
 class PassRegistry;
-void initializeScopDetectionPass(llvm::PassRegistry &);
+void initializeScopDetectionWrapperPassPass(llvm::PassRegistry &);
 } // namespace llvm
 
 #endif

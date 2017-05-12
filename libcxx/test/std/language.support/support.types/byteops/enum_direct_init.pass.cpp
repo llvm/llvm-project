@@ -11,17 +11,11 @@
 #include <test_macros.h>
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
-
-// constexpr byte operator~(byte b) noexcept;
+// The following compilers don't like "std::byte b1{1}"
+// XFAIL: clang-3.5, clang-3.6, clang-3.7, clang-3.8
+// XFAIL: apple-clang-6, apple-clang-7, apple-clang-8.0
 
 int main () {
-	constexpr std::byte b1{static_cast<std::byte>(1)};
-	constexpr std::byte b2{static_cast<std::byte>(2)};
-	constexpr std::byte b8{static_cast<std::byte>(8)};
-
-	static_assert(noexcept(~b1), "" );
-
-	static_assert(std::to_integer<int>(~b1) == 254, "");
-	static_assert(std::to_integer<int>(~b2) == 253, "");
-	static_assert(std::to_integer<int>(~b8) == 247, "");
+  constexpr std::byte b{42};
+  static_assert(std::to_integer<int>(b) == 42, "");
 }
