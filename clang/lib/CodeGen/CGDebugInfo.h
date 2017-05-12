@@ -125,8 +125,7 @@ class CGDebugInfo {
   /// Cache declarations relevant to DW_TAG_imported_declarations (C++
   /// using declarations) that aren't covered by other more specific caches.
   llvm::DenseMap<const Decl *, llvm::TrackingMDRef> DeclCache;
-  typedef std::pair<const NamespaceDecl *, const llvm::DIModule *> NamespaceKey;
-  llvm::DenseMap<NamespaceKey, llvm::TrackingMDRef> NamespaceCache;
+  llvm::DenseMap<const NamespaceDecl *, llvm::TrackingMDRef> NamespaceCache;
   llvm::DenseMap<const NamespaceAliasDecl *, llvm::TrackingMDRef>
       NamespaceAliasCache;
   llvm::DenseMap<const Decl *, llvm::TypedTrackingMDRef<llvm::DIDerivedType>>
@@ -197,13 +196,7 @@ class CGDebugInfo {
   llvm::DIType *getOrCreateVTablePtrType(llvm::DIFile *F);
 
   /// \return namespace descriptor for the given namespace decl.
-  ///
-  /// \return namespace descriptor for the given namespace decl.
-  /// \param ParentModule  The parent module (or nullptr) of this particular
-  ///                      namespace decl. This needs to be passed in because
-  ///                      the AST merges namespace decls.
-  llvm::DINamespace *getOrCreateNamespace(const NamespaceDecl *N,
-                                          llvm::DIModule *ParentModule);
+  llvm::DINamespace *getOrCreateNamespace(const NamespaceDecl *N);
   llvm::DIType *CreatePointerLikeType(llvm::dwarf::Tag Tag, const Type *Ty,
                                       QualType PointeeTy, llvm::DIFile *F);
   llvm::DIType *getOrCreateStructPtrType(StringRef Name, llvm::DIType *&Cache);
