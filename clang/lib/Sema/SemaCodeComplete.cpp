@@ -3880,7 +3880,8 @@ static void AddRecordMembersCompletionResults(Sema &SemaRef,
   Results.allowNestedNameSpecifiers();
   CodeCompletionDeclConsumer Consumer(Results, SemaRef.CurContext);
   SemaRef.LookupVisibleDecls(RD, Sema::LookupMemberName, Consumer,
-                             SemaRef.CodeCompleter->includeGlobals());
+                             SemaRef.CodeCompleter->includeGlobals(),
+                             /*IncludeDependentBases=*/true);
 
   if (SemaRef.getLangOpts().CPlusPlus) {
     if (!Results.empty()) {
@@ -3948,6 +3949,16 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
   if (const RecordType *Record = BaseType->getAs<RecordType>()) {
     AddRecordMembersCompletionResults(*this, Results, S, BaseType,
                                       Record->getDecl());
+  } else if (const auto *TST = BaseType->getAs<TemplateSpecializationType>()) {
+    TemplateName TN = TST->getTemplateName();
+    if (const auto *TD =
+            dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl())) {
+      CXXRecordDecl *RD = TD->getTemplatedDecl();
+      AddRecordMembersCompletionResults(*this, Results, S, BaseType, RD);
+    }
+  } else if (const auto *ICNT = BaseType->getAs<InjectedClassNameType>()) {
+    if (auto *RD = ICNT->getDecl())
+      AddRecordMembersCompletionResults(*this, Results, S, BaseType, RD);
   } else if (!IsArrow && BaseType->isObjCObjectPointerType()) {
     // Objective-C property reference.
     AddedPropertiesSet AddedProperties;
