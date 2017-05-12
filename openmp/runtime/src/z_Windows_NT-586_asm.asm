@@ -42,13 +42,10 @@ endif
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_x86_pause
 ;
 ; void
 ; __kmp_x86_pause( void )
-;
-
 PUBLIC  ___kmp_x86_pause
 _p$ = 4
 _d$ = 8
@@ -64,13 +61,10 @@ ___kmp_x86_pause ENDP
 _TEXT   ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_x86_cpuid
 ;
 ; void
 ; __kmp_x86_cpuid( int mode, int mode2, struct kmp_cpuid *p );
-;
-
 PUBLIC  ___kmp_x86_cpuid
 _TEXT   SEGMENT
         ALIGN 16
@@ -115,13 +109,10 @@ ___kmp_x86_cpuid ENDP
 _TEXT     ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_test_then_add32
 ;
 ; kmp_int32
 ; __kmp_test_then_add32( volatile kmp_int32 *p, kmp_int32 d );
-;
-
 PUBLIC  ___kmp_test_then_add32
 _p$ = 4
 _d$ = 8
@@ -138,13 +129,10 @@ ___kmp_test_then_add32 ENDP
 _TEXT   ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_compare_and_store8
 ;
 ; kmp_int8
 ; __kmp_compare_and_store8( volatile kmp_int8 *p, kmp_int8 cv, kmp_int8 sv );
-;
-
 PUBLIC  ___kmp_compare_and_store8
 _TEXT   SEGMENT
         ALIGN 16
@@ -166,13 +154,10 @@ ___kmp_compare_and_store8 ENDP
 _TEXT     ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_compare_and_store16
 ;
 ; kmp_int16
 ; __kmp_compare_and_store16( volatile kmp_int16 *p, kmp_int16 cv, kmp_int16 sv );
-;
-
 PUBLIC  ___kmp_compare_and_store16
 _TEXT   SEGMENT
         ALIGN 16
@@ -194,13 +179,10 @@ ___kmp_compare_and_store16 ENDP
 _TEXT     ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_compare_and_store32
 ;
 ; kmp_int32
 ; __kmp_compare_and_store32( volatile kmp_int32 *p, kmp_int32 cv, kmp_int32 sv );
-;
-
 PUBLIC  ___kmp_compare_and_store32
 _TEXT   SEGMENT
         ALIGN 16
@@ -222,13 +204,10 @@ ___kmp_compare_and_store32 ENDP
 _TEXT     ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_compare_and_store64
 ;
 ; kmp_int32
 ; __kmp_compare_and_store64( volatile kmp_int64 *p, kmp_int64 cv, kmp_int64 sv );
-;
-
 PUBLIC  ___kmp_compare_and_store64
 _TEXT   SEGMENT
         ALIGN 16
@@ -262,13 +241,10 @@ ___kmp_compare_and_store64 ENDP
 _TEXT     ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_xchg_fixed8
 ;
 ; kmp_int8
 ; __kmp_xchg_fixed8( volatile kmp_int8 *p, kmp_int8 d );
-;
-
 PUBLIC  ___kmp_xchg_fixed8
 _TEXT   SEGMENT
         ALIGN 16
@@ -286,13 +262,10 @@ ___kmp_xchg_fixed8 ENDP
 _TEXT     ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_xchg_fixed16
 ;
 ; kmp_int16
 ; __kmp_xchg_fixed16( volatile kmp_int16 *p, kmp_int16 d );
-;
-
 PUBLIC  ___kmp_xchg_fixed16
 _TEXT   SEGMENT
         ALIGN 16
@@ -310,13 +283,10 @@ ___kmp_xchg_fixed16 ENDP
 _TEXT     ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_xchg_fixed32
 ;
 ; kmp_int32
 ; __kmp_xchg_fixed32( volatile kmp_int32 *p, kmp_int32 d );
-;
-
 PUBLIC  ___kmp_xchg_fixed32
 _TEXT   SEGMENT
         ALIGN 16
@@ -335,13 +305,10 @@ _TEXT     ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_xchg_real32
 ;
 ; kmp_real32
 ; __kmp_xchg_real32( volatile kmp_real32 *p, kmp_real32 d );
-;
-
 PUBLIC  ___kmp_xchg_real32
 _TEXT   SEGMENT
         ALIGN 16
@@ -378,13 +345,10 @@ _TEXT   ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_compare_and_store_ret8
 ;
 ; kmp_int8
 ; __kmp_compare_and_store_ret8( volatile kmp_int8 *p, kmp_int8 cv, kmp_int8 sv );
-;
-
 PUBLIC  ___kmp_compare_and_store_ret8
 _TEXT   SEGMENT
         ALIGN 16
@@ -404,13 +368,10 @@ ___kmp_compare_and_store_ret8 ENDP
 _TEXT     ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_compare_and_store_ret16
 ;
 ; kmp_int16
 ; __kmp_compare_and_store_ret16( volatile kmp_int16 *p, kmp_int16 cv, kmp_int16 sv );
-;
-
 PUBLIC  ___kmp_compare_and_store_ret16
 _TEXT   SEGMENT
         ALIGN 16
@@ -430,13 +391,10 @@ ___kmp_compare_and_store_ret16 ENDP
 _TEXT     ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_compare_and_store_ret32
 ;
 ; kmp_int32
 ; __kmp_compare_and_store_ret32( volatile kmp_int32 *p, kmp_int32 cv, kmp_int32 sv );
-;
-
 PUBLIC  ___kmp_compare_and_store_ret32
 _TEXT   SEGMENT
         ALIGN 16
@@ -456,13 +414,10 @@ ___kmp_compare_and_store_ret32 ENDP
 _TEXT     ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_compare_and_store_ret64
 ;
 ; kmp_int64
 ; __kmp_compare_and_store_ret64( volatile kmp_int64 *p, kmp_int64 cv, kmp_int64 sv );
-;
-
 PUBLIC  ___kmp_compare_and_store_ret64
 _TEXT   SEGMENT
         ALIGN 16
@@ -494,7 +449,6 @@ ___kmp_compare_and_store_ret64 ENDP
 _TEXT     ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_load_x87_fpu_control_word
 ;
 ; void
@@ -502,7 +456,6 @@ _TEXT     ENDS
 ;
 ; parameters:
 ;       p:      4(%esp)
-
 PUBLIC  ___kmp_load_x87_fpu_control_word
 _TEXT   SEGMENT
         ALIGN 16
@@ -518,7 +471,6 @@ ___kmp_load_x87_fpu_control_word ENDP
 _TEXT     ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_store_x87_fpu_control_word
 ;
 ; void
@@ -526,7 +478,6 @@ _TEXT     ENDS
 ;
 ; parameters:
 ;       p:      4(%esp)
-
 PUBLIC  ___kmp_store_x87_fpu_control_word
 _TEXT   SEGMENT
         ALIGN 16
@@ -542,13 +493,10 @@ ___kmp_store_x87_fpu_control_word ENDP
 _TEXT     ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_clear_x87_fpu_status_word
 ;
 ; void
 ; __kmp_clear_x87_fpu_status_word();
-;
-
 PUBLIC  ___kmp_clear_x87_fpu_status_word
 _TEXT   SEGMENT
         ALIGN 16
@@ -563,7 +511,6 @@ _TEXT     ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_invoke_microtask
 ;
 ; typedef void  (*microtask_t)( int *gtid, int *tid, ... );
@@ -572,8 +519,6 @@ _TEXT     ENDS
 ; __kmp_invoke_microtask( microtask_t pkfn,
 ;                         int gtid, int tid,
 ;                         int argc, void *p_argv[] )
-;
-
 PUBLIC  ___kmp_invoke_microtask
 _TEXT   SEGMENT
         ALIGN 16
@@ -677,7 +622,6 @@ endif
 ifdef _M_AMD64
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_x86_cpuid
 ;
 ; void
@@ -687,7 +631,6 @@ ifdef _M_AMD64
 ;	mode:		ecx
 ;	mode2:		edx
 ;	cpuid_buffer: 	r8
-
 PUBLIC  __kmp_x86_cpuid
 _TEXT   SEGMENT
         ALIGN 16
@@ -722,7 +665,6 @@ _TEXT     ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_test_then_add32
 ;
 ; kmp_int32
@@ -733,7 +675,6 @@ _TEXT     ENDS
 ;	d:	edx
 ;
 ; return: 	eax
-
 PUBLIC  __kmp_test_then_add32
 _TEXT   SEGMENT
         ALIGN 16
@@ -748,7 +689,6 @@ _TEXT   ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_test_then_add64
 ;
 ; kmp_int32
@@ -759,7 +699,6 @@ _TEXT   ENDS
 ;	d:	rdx
 ;
 ; return: 	rax
-
 PUBLIC  __kmp_test_then_add64
 _TEXT   SEGMENT
         ALIGN 16
@@ -774,7 +713,6 @@ _TEXT   ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_compare_and_store8
 ;
 ; kmp_int8
@@ -785,7 +723,6 @@ _TEXT   ENDS
 ;	sv:	r8d
 ;
 ; return:	eax
-
 PUBLIC  __kmp_compare_and_store8
 _TEXT   SEGMENT
         ALIGN 16
@@ -804,7 +741,6 @@ _TEXT     ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_compare_and_store16
 ;
 ; kmp_int16
@@ -815,7 +751,6 @@ _TEXT     ENDS
 ;	sv:	r8d
 ;
 ; return:	eax
-
 PUBLIC  __kmp_compare_and_store16
 _TEXT   SEGMENT
         ALIGN 16
@@ -834,7 +769,6 @@ _TEXT     ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_compare_and_store32
 ;
 ; kmp_int32
@@ -845,7 +779,6 @@ _TEXT     ENDS
 ;	sv:	r8d
 ;
 ; return:	eax
-
 PUBLIC  __kmp_compare_and_store32
 _TEXT   SEGMENT
         ALIGN 16
@@ -864,7 +797,6 @@ _TEXT     ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_compare_and_store64
 ;
 ; kmp_int32
@@ -875,7 +807,6 @@ _TEXT     ENDS
 ;	sv:	r8
 ;
 ; return:	eax
-
 PUBLIC  __kmp_compare_and_store64
 _TEXT   SEGMENT
         ALIGN 16
@@ -894,7 +825,6 @@ _TEXT     ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_xchg_fixed8
 ;
 ; kmp_int8
@@ -905,7 +835,6 @@ _TEXT     ENDS
 ;	d:	dl
 ;
 ; return: 	al
-
 PUBLIC  __kmp_xchg_fixed8
 _TEXT   SEGMENT
         ALIGN 16
@@ -921,7 +850,6 @@ _TEXT     ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_xchg_fixed16
 ;
 ; kmp_int16
@@ -932,7 +860,6 @@ _TEXT     ENDS
 ;	d:	dx
 ;
 ; return: 	ax
-
 PUBLIC  __kmp_xchg_fixed16
 _TEXT   SEGMENT
         ALIGN 16
@@ -948,7 +875,6 @@ _TEXT     ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_xchg_fixed32
 ;
 ; kmp_int32
@@ -959,7 +885,6 @@ _TEXT     ENDS
 ;	d:	edx
 ;
 ; return: 	eax
-
 PUBLIC  __kmp_xchg_fixed32
 _TEXT   SEGMENT
         ALIGN 16
@@ -974,7 +899,6 @@ _TEXT   ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION ___kmp_xchg_fixed64
 ;
 ; kmp_int64
@@ -985,7 +909,6 @@ _TEXT   ENDS
 ;	d:	rdx
 ;
 ; return: 	rax
-
 PUBLIC  __kmp_xchg_fixed64
 _TEXT   SEGMENT
         ALIGN 16
@@ -1000,7 +923,6 @@ _TEXT   ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_compare_and_store_ret8
 ;
 ; kmp_int8
@@ -1011,7 +933,6 @@ _TEXT   ENDS
 ;	sv:	r8d
 ;
 ; return:	eax
-
 PUBLIC  __kmp_compare_and_store_ret8
 _TEXT   SEGMENT
         ALIGN 16
@@ -1030,7 +951,6 @@ _TEXT     ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_compare_and_store_ret16
 ;
 ; kmp_int16
@@ -1041,7 +961,6 @@ _TEXT     ENDS
 ;	sv:	r8d
 ;
 ; return:	eax
-
 PUBLIC  __kmp_compare_and_store_ret16
 _TEXT   SEGMENT
         ALIGN 16
@@ -1058,7 +977,6 @@ _TEXT     ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_compare_and_store_ret32
 ;
 ; kmp_int32
@@ -1069,7 +987,6 @@ _TEXT     ENDS
 ;	sv:	r8d
 ;
 ; return:	eax
-
 PUBLIC  __kmp_compare_and_store_ret32
 _TEXT   SEGMENT
         ALIGN 16
@@ -1086,7 +1003,6 @@ _TEXT     ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_compare_and_store_ret64
 ;
 ; kmp_int64
@@ -1097,7 +1013,6 @@ _TEXT     ENDS
 ;	sv:	r8
 ;
 ; return:	rax
-
 PUBLIC  __kmp_compare_and_store_ret64
 _TEXT   SEGMENT
         ALIGN 16
@@ -1114,7 +1029,6 @@ _TEXT     ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_compare_and_store_loop8
 ;
 ; kmp_int8
@@ -1125,7 +1039,6 @@ _TEXT     ENDS
 ;	sv:	r8d
 ;
 ; return:	al
-
 PUBLIC  __kmp_compare_and_store_loop8
 _TEXT   SEGMENT
         ALIGN 16
@@ -1153,7 +1066,6 @@ _TEXT     ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_xchg_real32
 ;
 ; kmp_real32
@@ -1164,7 +1076,6 @@ _TEXT     ENDS
 ;       d:	xmm1 (lower 4 bytes)
 ;
 ; return:	xmm0 (lower 4 bytes)
-
 PUBLIC  __kmp_xchg_real32
 _TEXT   SEGMENT
         ALIGN 16
@@ -1182,7 +1093,6 @@ _TEXT   ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_xchg_real64
 ;
 ; kmp_real64
@@ -1193,7 +1103,6 @@ _TEXT   ENDS
 ;	d:	xmm1 (lower 8 bytes)
 ;
 ; return:	xmm0 (lower 8 bytes)
-
 PUBLIC  __kmp_xchg_real64
 _TEXT   SEGMENT
         ALIGN 16
@@ -1210,7 +1119,6 @@ __kmp_xchg_real64 ENDP
 _TEXT   ENDS
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_load_x87_fpu_control_word
 ;
 ; void
@@ -1218,8 +1126,6 @@ _TEXT   ENDS
 ;
 ; parameters:
 ;	p:	rcx
-;
-
 PUBLIC  __kmp_load_x87_fpu_control_word
 _TEXT   SEGMENT
         ALIGN 16
@@ -1233,7 +1139,6 @@ _TEXT   ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_store_x87_fpu_control_word
 ;
 ; void
@@ -1241,8 +1146,6 @@ _TEXT   ENDS
 ;
 ; parameters:
 ;	p:	rcx
-;
-
 PUBLIC  __kmp_store_x87_fpu_control_word
 _TEXT   SEGMENT
         ALIGN 16
@@ -1256,13 +1159,10 @@ _TEXT   ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_clear_x87_fpu_status_word
 ;
 ; void
 ; __kmp_clear_x87_fpu_status_word()
-;
-
 PUBLIC  __kmp_clear_x87_fpu_status_word
 _TEXT   SEGMENT
         ALIGN 16
@@ -1276,7 +1176,6 @@ _TEXT   ENDS
 
 
 ;------------------------------------------------------------------------
-;
 ; FUNCTION __kmp_invoke_microtask
 ;
 ; typedef void  (*microtask_t)( int *gtid, int *tid, ... );
@@ -1307,8 +1206,6 @@ _TEXT   ENDS
 ;      r10:   used to hold pkfn function pointer argument
 ;
 ; return:      eax    (always 1/TRUE)
-;
-
 $_pkfn   = 16
 $_gtid   = 24
 $_tid    = 32

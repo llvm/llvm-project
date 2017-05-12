@@ -44,39 +44,39 @@ entry:
 entry.split:                                      ; preds = %entry
   store i64 537, i64* getelementptr inbounds (%"struct.array1_real(kind=8)", %"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs, i64 0, i32 2), align 16, !tbaa !0
   store i64 1, i64* getelementptr inbounds (%"struct.array1_real(kind=8)", %"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs, i64 0, i32 3, i64 0, i32 1), align 8, !tbaa !0
-  %0 = load i32, i32* %n, align 4, !tbaa !3
-  %1 = sext i32 %0 to i64
-  store i64 %1, i64* getelementptr inbounds (%"struct.array1_real(kind=8)", %"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs, i64 0, i32 3, i64 0, i32 2), align 8, !tbaa !0
+  %tmp = load i32, i32* %n, align 4, !tbaa !3
+  %tmp1 = sext i32 %tmp to i64
+  store i64 %tmp1, i64* getelementptr inbounds (%"struct.array1_real(kind=8)", %"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs, i64 0, i32 3, i64 0, i32 2), align 8, !tbaa !0
   store i64 1, i64* getelementptr inbounds (%"struct.array1_real(kind=8)", %"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs, i64 0, i32 3, i64 0, i32 0), align 8, !tbaa !0
-  %2 = icmp slt i32 %0, 1
-  %3 = zext i32 %0 to i64
-  %4 = shl nuw nsw i64 %3, 3
-  %.24 = select i1 %2, i64 0, i64 %4
-  %5 = icmp ne i64 %.24, 0
-  %6 = select i1 %5, i64 %.24, i64 1
-  %7 = tail call noalias i8* @malloc(i64 %6) #2
-  store i8* %7, i8** getelementptr inbounds (%"struct.array1_real(kind=8)", %"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs, i64 0, i32 0), align 32, !tbaa !5
+  %tmp2 = icmp slt i32 %tmp, 1
+  %tmp3 = zext i32 %tmp to i64
+  %tmp4 = shl nuw nsw i64 %tmp3, 3
+  %.24 = select i1 %tmp2, i64 0, i64 %tmp4
+  %tmp5 = icmp ne i64 %.24, 0
+  %tmp6 = select i1 %tmp5, i64 %.24, i64 1
+  %tmp7 = tail call noalias i8* @malloc(i64 %tmp6) #2
+  store i8* %tmp7, i8** getelementptr inbounds (%"struct.array1_real(kind=8)", %"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs, i64 0, i32 0), align 32, !tbaa !5
   store i64 -1, i64* getelementptr inbounds (%"struct.array1_real(kind=8)", %"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs, i64 0, i32 1), align 8, !tbaa !0
-  %8 = icmp sgt i32 %0, 1
-  br i1 %8, label %"21.preheader", label %return
+  %tmp8 = icmp sgt i32 %tmp, 1
+  br i1 %tmp8, label %"21.preheader", label %return
 
 "21.preheader":                                   ; preds = %entry.split
-  %9 = bitcast i8* %7 to double*
-  %10 = add i32 %0, 1
+  %tmp9 = bitcast i8* %tmp7 to double*
+  %tmp10 = add i32 %tmp, 1
   br label %"21"
 
 "21":                                             ; preds = %"21", %"21.preheader"
-  %11 = phi double [ undef, %"21.preheader" ], [ %16, %"21" ]
+  %tmp11 = phi double [ undef, %"21.preheader" ], [ %tmp16, %"21" ]
   %indvars.iv = phi i64 [ 2, %"21.preheader" ], [ %indvars.iv.next, %"21" ]
-  %12 = add nsw i64 %indvars.iv, -1
-  %13 = getelementptr inbounds double, double* %9, i64 %12
-  %14 = load double, double* %13, align 8, !tbaa !7
-  %15 = fmul double %14, %14
-  %16 = fadd double %11, %15
-  store double %16, double* %13, align 8, !tbaa !7
+  %tmp12 = add nsw i64 %indvars.iv, -1
+  %tmp13 = getelementptr inbounds double, double* %tmp9, i64 %tmp12
+  %tmp14 = load double, double* %tmp13, align 8, !tbaa !7
+  %tmp15 = fmul double %tmp14, %tmp14
+  %tmp16 = fadd double %tmp11, %tmp15
+  store double %tmp16, double* %tmp13, align 8, !tbaa !7
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv1 = trunc i64 %indvars.iv.next to i32
-  %exitcond2 = icmp eq i32 %lftr.wideiv1, %10
+  %exitcond2 = icmp eq i32 %lftr.wideiv1, %tmp10
   br i1 %exitcond2, label %return.loopexit, label %"21"
 
 return.loopexit:                                  ; preds = %"21"

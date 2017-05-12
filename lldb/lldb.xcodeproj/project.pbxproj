@@ -333,7 +333,6 @@
 		26744EF11338317700EF765A /* GDBRemoteCommunicationClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26744EED1338317700EF765A /* GDBRemoteCommunicationClient.cpp */; };
 		26744EF31338317700EF765A /* GDBRemoteCommunicationServer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26744EEF1338317700EF765A /* GDBRemoteCommunicationServer.cpp */; };
 		26764C971E48F482008D3573 /* ConstString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26764C961E48F482008D3573 /* ConstString.cpp */; };
-		26764C991E48F4D2008D3573 /* Error.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26764C981E48F4D2008D3573 /* Error.cpp */; };
 		26764C9E1E48F51E008D3573 /* Stream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26764C9D1E48F51E008D3573 /* Stream.cpp */; };
 		26764CA01E48F528008D3573 /* RegularExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26764C9F1E48F528008D3573 /* RegularExpression.cpp */; };
 		26764CA21E48F547008D3573 /* StreamString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26764CA11E48F547008D3573 /* StreamString.cpp */; };
@@ -691,6 +690,8 @@
 		3FDFED2D19C257A0009756A7 /* HostProcess.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFED2C19C257A0009756A7 /* HostProcess.cpp */; };
 		490A36C0180F0E6F00BA31F8 /* PlatformWindows.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 490A36BD180F0E6F00BA31F8 /* PlatformWindows.cpp */; };
 		490A966B1628C3BF00F0002E /* SBDeclaration.h in Headers */ = {isa = PBXBuildFile; fileRef = 9452573816262CEF00325455 /* SBDeclaration.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		492DB7E71EC662B100B9E9AF /* Status.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 492DB7E61EC662B100B9E9AF /* Status.h */; };
+		492DB7EB1EC662E200B9E9AF /* Status.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 492DB7E81EC662D100B9E9AF /* Status.cpp */; };
 		4939EA8D1BD56B6D00084382 /* REPL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4939EA8C1BD56B6D00084382 /* REPL.cpp */; };
 		494260DA14579144003C1C78 /* VerifyDecl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 494260D914579144003C1C78 /* VerifyDecl.cpp */; };
 		4959511F1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4959511E1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp */; };
@@ -1193,6 +1194,7 @@
 			dstPath = "$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
+				492DB7E71EC662B100B9E9AF /* Status.h in CopyFiles */,
 				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
@@ -1853,8 +1855,6 @@
 		2675F6FF1332BE690067997B /* PlatformRemoteiOS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformRemoteiOS.h; sourceTree = "<group>"; };
 		26764C951E48F46F008D3573 /* ConstString.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ConstString.h; path = include/lldb/Utility/ConstString.h; sourceTree = "<group>"; };
 		26764C961E48F482008D3573 /* ConstString.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ConstString.cpp; path = source/Utility/ConstString.cpp; sourceTree = "<group>"; };
-		26764C981E48F4D2008D3573 /* Error.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Error.cpp; path = source/Utility/Error.cpp; sourceTree = "<group>"; };
-		26764C9A1E48F4DD008D3573 /* Error.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Error.h; path = include/lldb/Utility/Error.h; sourceTree = "<group>"; };
 		26764C9B1E48F50C008D3573 /* Stream.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Stream.h; path = include/lldb/Utility/Stream.h; sourceTree = "<group>"; };
 		26764C9C1E48F516008D3573 /* RegularExpression.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = RegularExpression.h; path = include/lldb/Utility/RegularExpression.h; sourceTree = "<group>"; };
 		26764C9D1E48F51E008D3573 /* Stream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Stream.cpp; path = source/Utility/Stream.cpp; sourceTree = "<group>"; };
@@ -2412,6 +2412,8 @@
 		490A36BE180F0E6F00BA31F8 /* PlatformWindows.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformWindows.h; sourceTree = "<group>"; };
 		4911934B1226383D00578B7F /* ASTStructExtractor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ASTStructExtractor.h; path = ExpressionParser/Clang/ASTStructExtractor.h; sourceTree = "<group>"; };
 		491193501226386000578B7F /* ASTStructExtractor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ASTStructExtractor.cpp; path = ExpressionParser/Clang/ASTStructExtractor.cpp; sourceTree = "<group>"; };
+		492DB7E61EC662B100B9E9AF /* Status.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Status.h; path = include/lldb/Utility/Status.h; sourceTree = "<group>"; };
+		492DB7E81EC662D100B9E9AF /* Status.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Status.cpp; path = source/Utility/Status.cpp; sourceTree = "<group>"; };
 		49307AAD11DEA4D90081F992 /* IRForTarget.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = IRForTarget.cpp; path = ExpressionParser/Clang/IRForTarget.cpp; sourceTree = "<group>"; };
 		49307AB111DEA4F20081F992 /* IRForTarget.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = IRForTarget.h; path = ExpressionParser/Clang/IRForTarget.h; sourceTree = "<group>"; };
 		4939EA8B1BD56B3700084382 /* REPL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = REPL.h; path = include/lldb/Expression/REPL.h; sourceTree = "<group>"; };
@@ -4240,8 +4242,6 @@
 				49CA96F41E6AAC8E00C03FEE /* DataExtractor.h */,
 				49CA96E91E6AAC6600C03FEE /* DataExtractor.cpp */,
 				9481FE6B1B5F2D9200DED357 /* Either.h */,
-				26764C9A1E48F4DD008D3573 /* Error.h */,
-				26764C981E48F4D2008D3573 /* Error.cpp */,
 				AFC2DCE61E6E2ED000283714 /* FastDemangle.cpp */,
 				AFC2DCED1E6E2F9800283714 /* FastDemangle.h */,
 				AFC2DCF21E6E30CF00283714 /* History.cpp */,
@@ -4261,6 +4261,8 @@
 				261B5A5211C3F2AD00AABD0A /* SharingPtr.cpp */,
 				4C2FAE2E135E3A70001EDE44 /* SharedCluster.h */,
 				261B5A5311C3F2AD00AABD0A /* SharingPtr.h */,
+				492DB7E61EC662B100B9E9AF /* Status.h */,
+				492DB7E81EC662D100B9E9AF /* Status.cpp */,
 				26764C9B1E48F50C008D3573 /* Stream.h */,
 				26764C9D1E48F51E008D3573 /* Stream.cpp */,
 				AFC2DCF51E6E316A00283714 /* StreamCallback.cpp */,
@@ -7249,6 +7251,7 @@
 				6D0F61591C80AB3500A4ECEE /* JavaFormatterFunctions.cpp in Sources */,
 				2689005913353E0400698AC0 /* ValueObjectConstResult.cpp in Sources */,
 				2689005A13353E0400698AC0 /* ValueObjectList.cpp in Sources */,
+				492DB7EB1EC662E200B9E9AF /* Status.cpp in Sources */,
 				2689005B13353E0400698AC0 /* ValueObjectRegister.cpp in Sources */,
 				2689005C13353E0400698AC0 /* ValueObjectVariable.cpp in Sources */,
 				264A58EE1A7DBCAD00A6B1B0 /* OptionValueFormatEntity.cpp in Sources */,
@@ -7360,7 +7363,6 @@
 				268900B413353E5000698AC0 /* RegisterContextMacOSXFrameBackchain.cpp in Sources */,
 				AE44FB321BB07EBC0033EB62 /* GoParser.cpp in Sources */,
 				3F8169311ABB7A6D001DA9DF /* SystemInitializer.cpp in Sources */,
-				26764C991E48F4D2008D3573 /* Error.cpp in Sources */,
 				949EEDB21BA76731008C63CF /* NSIndexPath.cpp in Sources */,
 				3FDFED2D19C257A0009756A7 /* HostProcess.cpp in Sources */,
 				268900B513353E5000698AC0 /* StopInfoMachException.cpp in Sources */,

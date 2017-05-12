@@ -38,31 +38,31 @@ entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  %0 = load i32, i32* %n, align 4, !tbaa !0
-  %1 = icmp sgt i32 %0, 21
-  br i1 %1, label %"3.preheader", label %return
+  %tmp = load i32, i32* %n, align 4, !tbaa !0
+  %tmp1 = icmp sgt i32 %tmp, 21
+  br i1 %tmp1, label %"3.preheader", label %return
 
 "3.preheader":                                    ; preds = %entry.split
-  %2 = load i64, i64* getelementptr inbounds (%"struct.array1_real(kind=8)", %"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs, i64 0, i32 1), align 8, !tbaa !3
-  %3 = load double*, double** bitcast (%"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs to double**), align 32, !tbaa !5
-  %4 = add i32 %0, 1
+  %tmp2 = load i64, i64* getelementptr inbounds (%"struct.array1_real(kind=8)", %"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs, i64 0, i32 1), align 8, !tbaa !3
+  %tmp3 = load double*, double** bitcast (%"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs to double**), align 32, !tbaa !5
+  %tmp4 = add i32 %tmp, 1
   br label %"3"
 
 "3":                                              ; preds = %"3", %"3.preheader"
   %indvars.iv = phi i64 [ 22, %"3.preheader" ], [ %indvars.iv.next, %"3" ]
-  %5 = add nsw i64 %indvars.iv, %2
-  %6 = getelementptr inbounds double, double* %3, i64 %5
-  %7 = load double, double* %6, align 8, !tbaa !7
-  %8 = fmul double %7, %7
-  %9 = add i64 %2, -1
-  %10 = add i64 %9, %indvars.iv
-  %11 = getelementptr inbounds double, double* %3, i64 %10
-  %12 = load double, double* %11, align 8, !tbaa !7
-  %13 = fadd double %8, %12
-  store double %13, double* %6, align 8, !tbaa !7
+  %tmp5 = add nsw i64 %indvars.iv, %tmp2
+  %tmp6 = getelementptr inbounds double, double* %tmp3, i64 %tmp5
+  %tmp7 = load double, double* %tmp6, align 8, !tbaa !7
+  %tmp8 = fmul double %tmp7, %tmp7
+  %tmp9 = add i64 %tmp2, -1
+  %tmp10 = add i64 %tmp9, %indvars.iv
+  %tmp11 = getelementptr inbounds double, double* %tmp3, i64 %tmp10
+  %tmp12 = load double, double* %tmp11, align 8, !tbaa !7
+  %tmp13 = fadd double %tmp8, %tmp12
+  store double %tmp13, double* %tmp6, align 8, !tbaa !7
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv1 = trunc i64 %indvars.iv.next to i32
-  %exitcond2 = icmp eq i32 %lftr.wideiv1, %4
+  %exitcond2 = icmp eq i32 %lftr.wideiv1, %tmp4
   br i1 %exitcond2, label %return.loopexit, label %"3"
 
 return.loopexit:                                  ; preds = %"3"

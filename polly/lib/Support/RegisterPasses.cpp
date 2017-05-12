@@ -234,7 +234,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeIslScheduleOptimizerPass(Registry);
   initializePollyCanonicalizePass(Registry);
   initializePolyhedralInfoPass(Registry);
-  initializeScopDetectionPass(Registry);
+  initializeScopDetectionWrapperPassPass(Registry);
   initializeScopInfoRegionPassPass(Registry);
   initializeScopInfoWrapperPassPass(Registry);
   initializeCodegenCleanupPass(Registry);
@@ -277,7 +277,7 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
   for (auto &Filename : DumpBeforeFile)
     PM.add(polly::createDumpModulePass(Filename, false));
 
-  PM.add(polly::createScopDetectionPass());
+  PM.add(polly::createScopDetectionWrapperPassPass());
 
   if (PollyDetectOnly)
     return;
