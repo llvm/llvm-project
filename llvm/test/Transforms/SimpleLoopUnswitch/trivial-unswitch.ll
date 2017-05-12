@@ -183,3 +183,202 @@ loop_exit3:
 ; CHECK:       [[UNREACHABLE]]:
 ; CHECK-NEXT:    unreachable
 }
+
+; This test contains a trivially unswitchable branch with an LCSSA phi node in
+; a loop exit block.
+define i32 @test5(i1 %cond1, i32 %x, i32 %y) {
+; CHECK-LABEL: @test5(
+entry:
+  br label %loop_begin
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 %{{.*}}, label %entry.split, label %loop_exit
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %loop_begin
+
+loop_begin:
+  br i1 %cond1, label %latch, label %loop_exit
+; CHECK:       loop_begin:
+; CHECK-NEXT:    br label %latch
+
+latch:
+  call void @some_func() noreturn nounwind
+  br label %loop_begin
+; CHECK:       latch:
+; CHECK-NEXT:    call
+; CHECK-NEXT:    br label %loop_begin
+
+loop_exit:
+  %result1 = phi i32 [ %x, %loop_begin ]
+  %result2 = phi i32 [ %y, %loop_begin ]
+  %result = add i32 %result1, %result2
+  ret i32 %result
+; CHECK:       loop_exit:
+; CHECK-NEXT:    %[[R1:.*]] = phi i32 [ %x, %entry ]
+; CHECK-NEXT:    %[[R2:.*]] = phi i32 [ %y, %entry ]
+; CHECK-NEXT:    %[[R:.*]] = add i32 %[[R1]], %[[R2]]
+; CHECK-NEXT:    ret i32 %[[R]]
+}
+
+; This test contains a trivially unswitchable branch with a real phi node in LCSSA
+; position in a shared exit block where a different path through the loop
+; produces a non-invariant input to the PHI node.
+define i32 @test6(i32* %var, i1 %cond1, i1 %cond2, i32 %x, i32 %y) {
+; CHECK-LABEL: @test6(
+entry:
+  br label %loop_begin
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 %{{.*}}, label %entry.split, label %loop_exit.split
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %loop_begin
+
+loop_begin:
+  br i1 %cond1, label %continue, label %loop_exit
+; CHECK:       loop_begin:
+; CHECK-NEXT:    br label %continue
+
+continue:
+  %var_val = load i32, i32* %var
+  br i1 %cond2, label %latch, label %loop_exit
+; CHECK:       continue:
+; CHECK-NEXT:    load
+; CHECK-NEXT:    br i1 %cond2, label %latch, label %loop_exit
+
+latch:
+  call void @some_func() noreturn nounwind
+  br label %loop_begin
+; CHECK:       latch:
+; CHECK-NEXT:    call
+; CHECK-NEXT:    br label %loop_begin
+
+loop_exit:
+  %result1 = phi i32 [ %x, %loop_begin ], [ %var_val, %continue ]
+  %result2 = phi i32 [ %var_val, %continue ], [ %y, %loop_begin ]
+  %result = add i32 %result1, %result2
+  ret i32 %result
+; CHECK:       loop_exit:
+; CHECK-NEXT:    %[[R1:.*]] = phi i32 [ %var_val, %continue ]
+; CHECK-NEXT:    %[[R2:.*]] = phi i32 [ %var_val, %continue ]
+; CHECK-NEXT:    br label %loop_exit.split
+;
+; CHECK:       loop_exit.split:
+; CHECK-NEXT:    %[[R1S:.*]] = phi i32 [ %x, %entry ], [ %[[R1]], %loop_exit ]
+; CHECK-NEXT:    %[[R2S:.*]] = phi i32 [ %y, %entry ], [ %[[R2]], %loop_exit ]
+; CHECK-NEXT:    %[[R:.*]] = add i32 %[[R1S]], %[[R2S]]
+; CHECK-NEXT:    ret i32 %[[R]]
+}
+
+; This test contains a trivially unswitchable switch with an LCSSA phi node in
+; a loop exit block.
+define i32 @test7(i32 %cond1, i32 %x, i32 %y) {
+; CHECK-LABEL: @test7(
+entry:
+  br label %loop_begin
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 %cond1, label %entry.split [
+; CHECK-NEXT:      i32 0, label %loop_exit
+; CHECK-NEXT:      i32 1, label %loop_exit
+; CHECK-NEXT:    ]
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %loop_begin
+
+loop_begin:
+  switch i32 %cond1, label %latch [
+    i32 0, label %loop_exit
+    i32 1, label %loop_exit
+  ]
+; CHECK:       loop_begin:
+; CHECK-NEXT:    br label %latch
+
+latch:
+  call void @some_func() noreturn nounwind
+  br label %loop_begin
+; CHECK:       latch:
+; CHECK-NEXT:    call
+; CHECK-NEXT:    br label %loop_begin
+
+loop_exit:
+  %result1 = phi i32 [ %x, %loop_begin ], [ %x, %loop_begin ]
+  %result2 = phi i32 [ %y, %loop_begin ], [ %y, %loop_begin ]
+  %result = add i32 %result1, %result2
+  ret i32 %result
+; CHECK:       loop_exit:
+; CHECK-NEXT:    %[[R1:.*]] = phi i32 [ %x, %entry ], [ %x, %entry ]
+; CHECK-NEXT:    %[[R2:.*]] = phi i32 [ %y, %entry ], [ %y, %entry ]
+; CHECK-NEXT:    %[[R:.*]] = add i32 %[[R1]], %[[R2]]
+; CHECK-NEXT:    ret i32 %[[R]]
+}
+
+; This test contains a trivially unswitchable switch with a real phi node in
+; LCSSA position in a shared exit block where a different path through the loop
+; produces a non-invariant input to the PHI node.
+define i32 @test8(i32* %var, i32 %cond1, i32 %cond2, i32 %x, i32 %y) {
+; CHECK-LABEL: @test8(
+entry:
+  br label %loop_begin
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 %cond1, label %entry.split [
+; CHECK-NEXT:      i32 0, label %loop_exit.split
+; CHECK-NEXT:      i32 1, label %loop_exit2
+; CHECK-NEXT:      i32 2, label %loop_exit.split
+; CHECK-NEXT:    ]
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %loop_begin
+
+loop_begin:
+  switch i32 %cond1, label %continue [
+    i32 0, label %loop_exit
+    i32 1, label %loop_exit2
+    i32 2, label %loop_exit
+  ]
+; CHECK:       loop_begin:
+; CHECK-NEXT:    br label %continue
+
+continue:
+  %var_val = load i32, i32* %var
+  switch i32 %cond2, label %latch [
+    i32 0, label %loop_exit
+  ]
+; CHECK:       continue:
+; CHECK-NEXT:    load
+; CHECK-NEXT:    switch i32 %cond2, label %latch [
+; CHECK-NEXT:      i32 0, label %loop_exit
+; CHECK-NEXT:    ]
+
+latch:
+  call void @some_func() noreturn nounwind
+  br label %loop_begin
+; CHECK:       latch:
+; CHECK-NEXT:    call
+; CHECK-NEXT:    br label %loop_begin
+
+loop_exit:
+  %result1.1 = phi i32 [ %x, %loop_begin ], [ %x, %loop_begin ], [ %var_val, %continue ]
+  %result1.2 = phi i32 [ %var_val, %continue ], [ %y, %loop_begin ], [ %y, %loop_begin ]
+  %result1 = add i32 %result1.1, %result1.2
+  ret i32 %result1
+; CHECK:       loop_exit:
+; CHECK-NEXT:    %[[R1:.*]] = phi i32 [ %var_val, %continue ]
+; CHECK-NEXT:    %[[R2:.*]] = phi i32 [ %var_val, %continue ]
+; CHECK-NEXT:    br label %loop_exit.split
+;
+; CHECK:       loop_exit.split:
+; CHECK-NEXT:    %[[R1S:.*]] = phi i32 [ %x, %entry ], [ %x, %entry ], [ %[[R1]], %loop_exit ]
+; CHECK-NEXT:    %[[R2S:.*]] = phi i32 [ %y, %entry ], [ %y, %entry ], [ %[[R2]], %loop_exit ]
+; CHECK-NEXT:    %[[R:.*]] = add i32 %[[R1S]], %[[R2S]]
+; CHECK-NEXT:    ret i32 %[[R]]
+
+loop_exit2:
+  %result2.1 = phi i32 [ %x, %loop_begin ]
+  %result2.2 = phi i32 [ %y, %loop_begin ]
+  %result2 = add i32 %result2.1, %result2.2
+  ret i32 %result2
+; CHECK:       loop_exit2:
+; CHECK-NEXT:    %[[R1:.*]] = phi i32 [ %x, %entry ]
+; CHECK-NEXT:    %[[R2:.*]] = phi i32 [ %y, %entry ]
+; CHECK-NEXT:    %[[R:.*]] = add i32 %[[R1]], %[[R2]]
+; CHECK-NEXT:    ret i32 %[[R]]
+}

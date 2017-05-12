@@ -299,10 +299,10 @@ public:
   BoUpSLP(Function *Func, ScalarEvolution *Se, TargetTransformInfo *Tti,
           TargetLibraryInfo *TLi, AliasAnalysis *Aa, LoopInfo *Li,
           DominatorTree *Dt, AssumptionCache *AC, DemandedBits *DB,
-          const DataLayout *DL)
+          const DataLayout *DL, OptimizationRemarkEmitter *ORE)
       : NumLoadsWantToKeepOrder(0), NumLoadsWantToChangeOrder(0), F(Func),
         SE(Se), TTI(Tti), TLI(TLi), AA(Aa), LI(Li), DT(Dt), AC(AC), DB(DB),
-        DL(DL), Builder(Se->getContext()) {
+        DL(DL), ORE(ORE), Builder(Se->getContext()) {
     CodeMetrics::collectEphemeralValues(F, AC, EphValues);
     // Use the vector register size specified by the target unless overridden
     // by a command-line option.
@@ -361,6 +361,8 @@ public:
     MinBWs.clear();
   }
 
+  unsigned getTreeSize() const { return VectorizableTree.size(); }
+
   /// \brief Perform LICM and CSE on the newly generated gather sequences.
   void optimizeGatherSequence();
 
@@ -398,6 +400,8 @@ public:
   /// \returns True if the VectorizableTree is both tiny and not fully
   /// vectorizable. We do not vectorize such trees.
   bool isTreeTinyAndNotFullyVectorizable();
+
+  OptimizationRemarkEmitter *getORE() { return ORE; }
 
 private:
   struct TreeEntry;
@@ -928,6 +932,8 @@ private:
   AssumptionCache *AC;
   DemandedBits *DB;
   const DataLayout *DL;
+  OptimizationRemarkEmitter *ORE;
+
   unsigned MaxVecRegSize; // This is set by TTI or overridden by cl::opt.
   unsigned MinVecRegSize; // Set by cl::opt (default: 128).
   /// Instruction builder to construct the vectorized tree.
@@ -3772,8 +3778,9 @@ struct SLPVectorizer : public FunctionPass {
     auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     auto *DB = &getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
+    auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
-    return Impl.runImpl(F, SE, TTI, TLI, AA, LI, DT, AC, DB);
+    return Impl.runImpl(F, SE, TTI, TLI, AA, LI, DT, AC, DB, ORE);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -3785,6 +3792,7 @@ struct SLPVectorizer : public FunctionPass {
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<DemandedBitsWrapperPass>();
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<AAResultsWrapperPass>();
@@ -3803,8 +3811,9 @@ PreservedAnalyses SLPVectorizerPass::run(Function &F, FunctionAnalysisManager &A
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   auto *AC = &AM.getResult<AssumptionAnalysis>(F);
   auto *DB = &AM.getResult<DemandedBitsAnalysis>(F);
+  auto *ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  bool Changed = runImpl(F, SE, TTI, TLI, AA, LI, DT, AC, DB);
+  bool Changed = runImpl(F, SE, TTI, TLI, AA, LI, DT, AC, DB, ORE);
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -3819,7 +3828,8 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
                                 TargetTransformInfo *TTI_,
                                 TargetLibraryInfo *TLI_, AliasAnalysis *AA_,
                                 LoopInfo *LI_, DominatorTree *DT_,
-                                AssumptionCache *AC_, DemandedBits *DB_) {
+                                AssumptionCache *AC_, DemandedBits *DB_,
+                                OptimizationRemarkEmitter *ORE_) {
   SE = SE_;
   TTI = TTI_;
   TLI = TLI_;
@@ -3847,7 +3857,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 
   // Use the bottom up slp vectorizer to construct chains that start with
   // store instructions.
-  BoUpSLP R(&F, SE, TTI, TLI, AA, LI, DT, AC, DB, DL);
+  BoUpSLP R(&F, SE, TTI, TLI, AA, LI, DT, AC, DB, DL, ORE_);
 
   // A general note: the vectorizer must use BoUpSLP::eraseInstruction() to
   // delete instructions.
@@ -3936,6 +3946,13 @@ bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
     DEBUG(dbgs() << "SLP: Found cost=" << Cost << " for VF=" << VF << "\n");
     if (Cost < -SLPCostThreshold) {
       DEBUG(dbgs() << "SLP: Decided to vectorize cost=" << Cost << "\n");
+      using namespace ore;
+      R.getORE()->emit(OptimizationRemark(SV_NAME, "StoresVectorized",
+                                          cast<StoreInst>(Chain[i]))
+                       << "Stores SLP vectorized with cost " << NV("Cost", Cost)
+                       << " and with tree size "
+                       << NV("TreeSize", R.getTreeSize()));
+
       R.vectorizeTree();
 
       // Move to the next bundle.
@@ -4149,6 +4166,12 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
       if (Cost < -SLPCostThreshold) {
         DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
+        R.getORE()->emit(OptimizationRemark(SV_NAME, "VectorizedList",
+                                            cast<Instruction>(Ops[0]))
+                         << "SLP vectorized with cost " << ore::NV("Cost", Cost)
+                         << " and with tree size "
+                         << ore::NV("TreeSize", R.getTreeSize()));
+
         Value *VectorizedRoot = R.vectorizeTree();
 
         // Reconstruct the build vector by extracting the vectorized root. This
@@ -4492,6 +4515,12 @@ public:
 
       DEBUG(dbgs() << "SLP: Vectorizing horizontal reduction at cost:" << Cost
                    << ". (HorRdx)\n");
+      auto *I0 = cast<Instruction>(VL[0]);
+      V.getORE()->emit(
+          OptimizationRemark(SV_NAME, "VectorizedHorizontalReduction", I0)
+          << "Vectorized horizontal reduction with cost "
+          << ore::NV("Cost", Cost) << " and with tree size "
+          << ore::NV("TreeSize", V.getTreeSize()));
 
       // Vectorize a tree.
       DebugLoc Loc = cast<Instruction>(ReducedVals[i])->getDebugLoc();
@@ -5146,6 +5175,7 @@ INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(DemandedBitsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(SLPVectorizer, SV_NAME, lv_name, false, false)
 
 namespace llvm {

@@ -68,6 +68,9 @@ class DwarfCompileUnit final : public DwarfUnit {
   // ranges/locs.
   const MCSymbol *BaseAddress;
 
+  DenseMap<const MDNode *, DIE *> AbstractSPDies;
+  DenseMap<const MDNode *, std::unique_ptr<DbgVariable>> AbstractVariables;
+
   /// \brief Construct a DIE for the given DbgVariable without initializing the
   /// DbgVariable's DIE reference.
   DIE *constructVariableDIEImpl(const DbgVariable &DV, bool Abstract);
@@ -75,6 +78,18 @@ class DwarfCompileUnit final : public DwarfUnit {
   bool isDwoUnit() const override;
 
   bool includeMinimalInlineScopes() const;
+
+  DenseMap<const MDNode *, DIE *> &getAbstractSPDies() {
+    if (isDwoUnit() && !DD->shareAcrossDWOCUs())
+      return AbstractSPDies;
+    return DU->getAbstractSPDies();
+  }
+
+  DenseMap<const MDNode *, std::unique_ptr<DbgVariable>> &getAbstractVariables() {
+    if (isDwoUnit() && !DD->shareAcrossDWOCUs())
+      return AbstractVariables;
+    return DU->getAbstractVariables();
+  }
 
 public:
   DwarfCompileUnit(unsigned UID, const DICompileUnit *Node, AsmPrinter *A,
@@ -189,6 +204,13 @@ public:
   DIE *constructImportedEntityDIE(const DIImportedEntity *Module);
 
   void finishSubprogramDefinition(const DISubprogram *SP);
+  void finishVariableDefinition(const DbgVariable &Var);
+  /// Find abstract variable associated with Var.
+  typedef DbgValueHistoryMap::InlinedVariable InlinedVariable;
+  DbgVariable *getExistingAbstractVariable(InlinedVariable IV,
+                                           const DILocalVariable *&Cleansed);
+  DbgVariable *getExistingAbstractVariable(InlinedVariable IV);
+  void createAbstractVariable(const DILocalVariable *DV, LexicalScope *Scope);
 
   /// Set the skeleton unit associated with this unit.
   void setSkeleton(DwarfCompileUnit &Skel) { Skeleton = &Skel; }

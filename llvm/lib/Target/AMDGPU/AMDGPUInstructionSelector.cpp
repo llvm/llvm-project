@@ -127,8 +127,8 @@ bool AMDGPUInstructionSelector::selectG_STORE(MachineInstr &I) const {
           .add(I.getOperand(1))
           .add(I.getOperand(0))
           .addImm(0)
-          .addImm(0)
           .addImm(0);
+
 
   // Now that we selected an opcode, we need to constrain the register
   // operands to use appropriate classes.
@@ -392,7 +392,6 @@ bool AMDGPUInstructionSelector::selectG_LOAD(MachineInstr &I) const {
   MachineInstr *Flat = BuildMI(*BB, &I, DL, TII.get(Opcode))
                                .add(I.getOperand(0))
                                .addReg(PtrReg)
-                               .addImm(0)
                                .addImm(0)
                                .addImm(0);
 

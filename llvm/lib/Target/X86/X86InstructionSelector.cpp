@@ -56,13 +56,9 @@ private:
   bool selectImpl(MachineInstr &I) const;
 
   // TODO: remove after suported by Tablegen-erated instruction selection.
-  unsigned getFAddOp(LLT &Ty, const RegisterBank &RB) const;
-  unsigned getFSubOp(LLT &Ty, const RegisterBank &RB) const;
   unsigned getLoadStoreOp(LLT &Ty, const RegisterBank &RB, unsigned Opc,
                           uint64_t Alignment) const;
 
-  bool selectBinaryOp(MachineInstr &I, MachineRegisterInfo &MRI,
-                      MachineFunction &MF) const;
   bool selectLoadStoreOp(MachineInstr &I, MachineRegisterInfo &MRI,
                          MachineFunction &MF) const;
   bool selectFrameIndexOrGep(MachineInstr &I, MachineRegisterInfo &MRI,
@@ -235,8 +231,6 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   DEBUG(dbgs() << " C++ instruction selection: "; I.print(dbgs()));
 
   // TODO: This should be implemented by tblgen.
-  if (selectBinaryOp(I, MRI, MF))
-    return true;
   if (selectLoadStoreOp(I, MRI, MF))
     return true;
   if (selectFrameIndexOrGep(I, MRI, MF))
@@ -251,105 +245,6 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
     return true;
 
   return false;
-}
-
-unsigned X86InstructionSelector::getFAddOp(LLT &Ty,
-                                           const RegisterBank &RB) const {
-
-  if (X86::VECRRegBankID != RB.getID())
-    return TargetOpcode::G_FADD;
-
-  if (Ty == LLT::scalar(32)) {
-    if (STI.hasAVX512()) {
-      return X86::VADDSSZrr;
-    } else if (STI.hasAVX()) {
-      return X86::VADDSSrr;
-    } else if (STI.hasSSE1()) {
-      return X86::ADDSSrr;
-    }
-  } else if (Ty == LLT::scalar(64)) {
-    if (STI.hasAVX512()) {
-      return X86::VADDSDZrr;
-    } else if (STI.hasAVX()) {
-      return X86::VADDSDrr;
-    } else if (STI.hasSSE2()) {
-      return X86::ADDSDrr;
-    }
-  } else if (Ty == LLT::vector(4, 32)) {
-    if ((STI.hasAVX512()) && (STI.hasVLX())) {
-      return X86::VADDPSZ128rr;
-    } else if (STI.hasAVX()) {
-      return X86::VADDPSrr;
-    } else if (STI.hasSSE1()) {
-      return X86::ADDPSrr;
-    }
-  }
-
-  return TargetOpcode::G_FADD;
-}
-
-unsigned X86InstructionSelector::getFSubOp(LLT &Ty,
-                                           const RegisterBank &RB) const {
-
-  if (X86::VECRRegBankID != RB.getID())
-    return TargetOpcode::G_FSUB;
-
-  if (Ty == LLT::scalar(32)) {
-    if (STI.hasAVX512()) {
-      return X86::VSUBSSZrr;
-    } else if (STI.hasAVX()) {
-      return X86::VSUBSSrr;
-    } else if (STI.hasSSE1()) {
-      return X86::SUBSSrr;
-    }
-  } else if (Ty == LLT::scalar(64)) {
-    if (STI.hasAVX512()) {
-      return X86::VSUBSDZrr;
-    } else if (STI.hasAVX()) {
-      return X86::VSUBSDrr;
-    } else if (STI.hasSSE2()) {
-      return X86::SUBSDrr;
-    }
-  } else if (Ty == LLT::vector(4, 32)) {
-    if ((STI.hasAVX512()) && (STI.hasVLX())) {
-      return X86::VSUBPSZ128rr;
-    } else if (STI.hasAVX()) {
-      return X86::VSUBPSrr;
-    } else if (STI.hasSSE1()) {
-      return X86::SUBPSrr;
-    }
-  }
-
-  return TargetOpcode::G_FSUB;
-}
-
-bool X86InstructionSelector::selectBinaryOp(MachineInstr &I,
-                                            MachineRegisterInfo &MRI,
-                                            MachineFunction &MF) const {
-
-  const unsigned DefReg = I.getOperand(0).getReg();
-  LLT Ty = MRI.getType(DefReg);
-  const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
-
-  unsigned NewOpc = I.getOpcode();
-
-  switch (NewOpc) {
-  case TargetOpcode::G_FADD:
-    NewOpc = getFAddOp(Ty, RB);
-    break;
-  case TargetOpcode::G_FSUB:
-    NewOpc = getFSubOp(Ty, RB);
-    break;
-  default:
-    break;
-  }
-
-  if (NewOpc == I.getOpcode())
-    return false;
-
-  I.setDesc(TII.get(NewOpc));
-
-  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 }
 
 unsigned X86InstructionSelector::getLoadStoreOp(LLT &Ty, const RegisterBank &RB,

@@ -162,6 +162,12 @@ TEST_F(ProfileSummaryInfoTest, InstrProf) {
 
   EXPECT_TRUE(PSI.isHotCallSite(CS1, &BFI));
   EXPECT_FALSE(PSI.isHotCallSite(CS2, &BFI));
+
+  // Test that adding an MD_prof metadata with a hot count on CS2 does not
+  // change its hotness as it has no effect in instrumented profiling.
+  MDBuilder MDB(M->getContext());
+  CI2->setMetadata(llvm::LLVMContext::MD_prof, MDB.createBranchWeights({400}));
+  EXPECT_FALSE(PSI.isHotCallSite(CS2, &BFI));
 }
 
 TEST_F(ProfileSummaryInfoTest, SampleProf) {

@@ -361,7 +361,7 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
                                          getPointerTy(DAG.getDataLayout()));
 
-  Type *RetTy = (Type *)StructType::get(Ty, Ty, nullptr);
+  Type *RetTy = (Type *)StructType::get(Ty, Ty);
 
   SDLoc dl(Op);
   TargetLowering::CallLoweringInfo CLI(DAG);

@@ -8,7 +8,7 @@ target triple = "msp430-elf"
 define signext i8 @foo(i8 signext %_si1, i8 signext %_si2) nounwind readnone {
 entry:
 ; CHECK-LABEL: foo:
-; CHECK: call #__mulqi3
+; CHECK: call #__mspabi_mpyi
   %mul = mul i8 %_si2, %_si1                      ; <i8> [#uses=1]
   ret i8 %mul
 }

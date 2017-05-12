@@ -416,24 +416,20 @@ void Function::clearGC() {
 
 /// Copy all additional attributes (those not needed to create a Function) from
 /// the Function Src to this one.
-void Function::copyAttributesFrom(const GlobalValue *Src) {
+void Function::copyAttributesFrom(const Function *Src) {
   GlobalObject::copyAttributesFrom(Src);
-  const Function *SrcF = dyn_cast<Function>(Src);
-  if (!SrcF)
-    return;
-
-  setCallingConv(SrcF->getCallingConv());
-  setAttributes(SrcF->getAttributes());
-  if (SrcF->hasGC())
-    setGC(SrcF->getGC());
+  setCallingConv(Src->getCallingConv());
+  setAttributes(Src->getAttributes());
+  if (Src->hasGC())
+    setGC(Src->getGC());
   else
     clearGC();
-  if (SrcF->hasPersonalityFn())
-    setPersonalityFn(SrcF->getPersonalityFn());
-  if (SrcF->hasPrefixData())
-    setPrefixData(SrcF->getPrefixData());
-  if (SrcF->hasPrologueData())
-    setPrologueData(SrcF->getPrologueData());
+  if (Src->hasPersonalityFn())
+    setPersonalityFn(Src->getPersonalityFn());
+  if (Src->hasPrefixData())
+    setPrefixData(Src->getPrefixData());
+  if (Src->hasPrologueData())
+    setPrologueData(Src->getPrologueData());
 }
 
 /// Table of string intrinsic names indexed by enum value.

@@ -504,6 +504,64 @@ AttributeSet AttributeSet::get(LLVMContext &C, ArrayRef<Attribute> Attrs) {
   return AttributeSet(AttributeSetNode::get(C, Attrs));
 }
 
+AttributeSet AttributeSet::addAttribute(LLVMContext &C,
+                          Attribute::AttrKind Kind) const {
+  if (hasAttribute(Kind)) return *this;
+  AttrBuilder B;
+  B.addAttribute(Kind);
+  return addAttributes(C, AttributeSet::get(C, B));
+}
+
+AttributeSet AttributeSet::addAttribute(LLVMContext &C, StringRef Kind,
+                          StringRef Value) const {
+  AttrBuilder B;
+  B.addAttribute(Kind, Value);
+  return addAttributes(C, AttributeSet::get(C, B));
+}
+
+AttributeSet AttributeSet::addAttributes(LLVMContext &C,
+                                         const AttributeSet AS) const {
+  if (!hasAttributes())
+    return AS;
+
+  if (!AS.hasAttributes())
+    return *this;
+
+  AttrBuilder B(AS);
+  for (Attribute I : *this)
+    B.addAttribute(I);
+
+ return get(C, B);
+}
+
+AttributeSet AttributeSet::removeAttribute(LLVMContext &C,
+                                             Attribute::AttrKind Kind) const {
+  if (!hasAttribute(Kind)) return *this;
+  AttrBuilder B;
+  B.addAttribute(Kind);
+  return removeAttributes(C, B);
+}
+
+AttributeSet AttributeSet::removeAttribute(LLVMContext &C,
+                                             StringRef Kind) const {
+  if (!hasAttribute(Kind)) return *this;
+  AttrBuilder B;
+  B.addAttribute(Kind);
+  return removeAttributes(C, B);
+}
+
+AttributeSet AttributeSet::removeAttributes(LLVMContext &C,
+                                              const AttrBuilder &Attrs) const {
+
+  // FIXME it is not obvious how this should work for alignment.
+  // For now, say we can't pass in alignment, which no current use does.
+  assert(!Attrs.hasAlignmentAttr() && "Attempt to change alignment!");
+
+  AttrBuilder B(*this);
+  B.remove(Attrs);
+  return get(C, B);
+}
+
 unsigned AttributeSet::getNumAttributes() const {
   return SetNode ? SetNode->getNumAttributes() : 0;
 }
@@ -556,6 +614,14 @@ AttributeSet::iterator AttributeSet::begin() const {
 AttributeSet::iterator AttributeSet::end() const {
   return SetNode ? SetNode->end() : nullptr;
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void AttributeSet::dump() const {
+  dbgs() << "AS =\n";
+    dbgs() << "  { ";
+    dbgs() << getAsString(true) << " }\n";
+}
+#endif
 
 //===----------------------------------------------------------------------===//
 // AttributeSetNode Definition

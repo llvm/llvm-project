@@ -7436,11 +7436,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
                            N0.getValueType()) ||
        !TLI.isZExtFree(N0.getValueType(), VT))) {
     SDValue X = N0.getOperand(0).getOperand(0);
-    if (X.getValueType().bitsLT(VT)) {
-      X = DAG.getNode(ISD::ANY_EXTEND, SDLoc(X), VT, X);
-    } else if (X.getValueType().bitsGT(VT)) {
-      X = DAG.getNode(ISD::TRUNCATE, SDLoc(X), VT, X);
-    }
+    X = DAG.getAnyExtOrTrunc(X, SDLoc(X), VT);
     APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
     Mask = Mask.zext(VT.getSizeInBits());
     SDLoc DL(N);
@@ -7665,14 +7661,8 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   }
 
   // fold (aext (truncate x))
-  if (N0.getOpcode() == ISD::TRUNCATE) {
-    SDValue TruncOp = N0.getOperand(0);
-    if (TruncOp.getValueType() == VT)
-      return TruncOp; // x iff x size == zext size.
-    if (TruncOp.getValueType().bitsGT(VT))
-      return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, TruncOp);
-    return DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), VT, TruncOp);
-  }
+  if (N0.getOpcode() == ISD::TRUNCATE)
+    return DAG.getAnyExtOrTrunc(N0.getOperand(0), SDLoc(N), VT);
 
   // Fold (aext (and (trunc x), cst)) -> (and x, cst)
   // if the trunc is not free.
@@ -7683,11 +7673,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
                           N0.getValueType())) {
     SDLoc DL(N);
     SDValue X = N0.getOperand(0).getOperand(0);
-    if (X.getValueType().bitsLT(VT)) {
-      X = DAG.getNode(ISD::ANY_EXTEND, DL, VT, X);
-    } else if (X.getValueType().bitsGT(VT)) {
-      X = DAG.getNode(ISD::TRUNCATE, DL, VT, X);
-    }
+    X = DAG.getAnyExtOrTrunc(X, DL, VT);
     APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
     Mask = Mask.zext(VT.getSizeInBits());
     return DAG.getNode(ISD::AND, DL, VT,

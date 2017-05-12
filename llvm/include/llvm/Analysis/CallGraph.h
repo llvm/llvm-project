@@ -41,12 +41,6 @@
 /// of all of the caller-callee relationships, which is useful for
 /// transformations.
 ///
-/// The CallGraph class also attempts to figure out what the root of the
-/// CallGraph is, which it currently does by looking for a function named
-/// 'main'. If no function named 'main' is found, the external node is used as
-/// the entry node, reflecting the fact that any function without internal
-/// linkage could be called into (which is common for libraries).
-///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_CALLGRAPH_H
@@ -81,10 +75,6 @@ class CallGraph {
 
   /// \brief A map from \c Function* to \c CallGraphNode*.
   FunctionMapTy FunctionMap;
-
-  /// \brief Root is root of the call graph, or the external node if a 'main'
-  /// function couldn't be found.
-  CallGraphNode *Root;
 
   /// \brief This node has edges to all external functions and those internal
   /// functions that have their address taken.

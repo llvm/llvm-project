@@ -65,7 +65,7 @@ public:
 //===----------------------------------------------------------------------===//
 /// This dwarf writer support class manages information associated with a
 /// source file.
-  class DwarfUnit : public DIEUnit {
+class DwarfUnit : public DIEUnit {
 protected:
   /// MDNode for the compile unit.
   const DICompileUnit *CUNode;
@@ -102,6 +102,9 @@ protected:
             DwarfFile *DWU);
 
   bool applySubprogramDefinitionAttributes(const DISubprogram *SP, DIE &SPDie);
+
+  bool shareAcrossDWOCUs() const;
+  bool isShareableAcrossCUs(const DINode *D) const;
 
 public:
   // Accessors.

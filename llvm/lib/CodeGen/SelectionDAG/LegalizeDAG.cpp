@@ -4187,6 +4187,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     ReplacedNode(Node);
     break;
   }
+  case ISD::MUL:
   case ISD::SDIV:
   case ISD::SREM:
   case ISD::UDIV:

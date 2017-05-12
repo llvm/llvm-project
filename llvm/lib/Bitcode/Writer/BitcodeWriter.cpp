@@ -1109,7 +1109,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     // GLOBALVAR: [strtab offset, strtab size, type, isconst, initid,
     //             linkage, alignment, section, visibility, threadlocal,
     //             unnamed_addr, externally_initialized, dllstorageclass,
-    //             comdat]
+    //             comdat, attributes]
     Vals.push_back(StrtabBuilder.add(GV.getName()));
     Vals.push_back(GV.getName().size());
     Vals.push_back(VE.getTypeID(GV.getValueType()));
@@ -1124,13 +1124,17 @@ void ModuleBitcodeWriter::writeModuleInfo() {
         GV.getUnnamedAddr() != GlobalValue::UnnamedAddr::None ||
         GV.isExternallyInitialized() ||
         GV.getDLLStorageClass() != GlobalValue::DefaultStorageClass ||
-        GV.hasComdat()) {
+        GV.hasComdat() ||
+        GV.hasAttributes()) {
       Vals.push_back(getEncodedVisibility(GV));
       Vals.push_back(getEncodedThreadLocalMode(GV));
       Vals.push_back(getEncodedUnnamedAddr(GV));
       Vals.push_back(GV.isExternallyInitialized());
       Vals.push_back(getEncodedDLLStorageClass(GV));
       Vals.push_back(GV.hasComdat() ? VE.getComdatID(GV.getComdat()) : 0);
+
+      auto AL = GV.getAttributesAsList(AttributeList::FunctionIndex);
+      Vals.push_back(VE.getAttributeListID(AL));
     } else {
       AbbrevToUse = SimpleGVarAbbrev;
     }

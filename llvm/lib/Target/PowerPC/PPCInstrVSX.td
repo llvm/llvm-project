@@ -1436,7 +1436,7 @@ let Predicates = [IsISA3_0, HasDirectMove] in {
   def MTVSRWS: XX1_RS6_RD5_XO<31, 403, (outs vsrc:$XT), (ins gprc:$rA),
                               "mtvsrws $XT, $rA", IIC_VecGeneral, []>;
 
-  def MTVSRDD: XX1Form<31, 435, (outs vsrc:$XT), (ins g8rc:$rA, g8rc:$rB),
+  def MTVSRDD: XX1Form<31, 435, (outs vsrc:$XT), (ins g8rc_nox0:$rA, g8rc:$rB),
                        "mtvsrdd $XT, $rA, $rB", IIC_VecGeneral,
                        []>, Requires<[In64BitMode]>;
 

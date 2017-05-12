@@ -301,6 +301,8 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
       WeightSum += Weights[i];
     }
   }
+  assert(WeightSum <= UINT32_MAX &&
+         "Expected weights to scale down to 32 bits");
 
   if (WeightSum == 0 || ReachableIdxs.size() == 0) {
     for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
@@ -328,20 +330,13 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
     // the difference between reachable blocks.
     if (ToDistribute > BranchProbability::getZero()) {
       BranchProbability PerEdge = ToDistribute / ReachableIdxs.size();
-      for (auto i : ReachableIdxs) {
+      for (auto i : ReachableIdxs)
         BP[i] += PerEdge;
-        ToDistribute -= PerEdge;
-      }
-      // Tail goes to the first reachable edge.
-      BP[ReachableIdxs[0]] += ToDistribute;
     }
   }
 
   for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
     setEdgeProbability(BB, i, BP[i]);
-
-  assert(WeightSum <= UINT32_MAX &&
-         "Expected weights to scale down to 32 bits");
 
   return true;
 }

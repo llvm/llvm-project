@@ -40,6 +40,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -78,6 +79,17 @@ static cl::opt<int> ExperimentalPrefLoopAlignment(
              "(the last x86-experimental-pref-loop-alignment bits"
              " of the loop header PC will be 0)."),
     cl::Hidden);
+
+/// Call this when the user attempts to do something unsupported, like
+/// returning a double without SSE2 enabled on x86_64. This is not fatal, unlike
+/// report_fatal_error, so calling code should attempt to recover without
+/// crashing.
+static void errorUnsupported(SelectionDAG &DAG, const SDLoc &dl,
+                             const char *Msg) {
+  MachineFunction &MF = DAG.getMachineFunction();
+  DAG.getContext()->diagnose(
+      DiagnosticInfoUnsupported(*MF.getFunction(), Msg, dl.getDebugLoc()));
+}
 
 X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                                      const X86Subtarget &STI)
@@ -1381,7 +1393,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SHUFFLE,      VT, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT,   VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR,        VT, Custom);
-      setOperationAction(ISD::VSELECT,             VT, Legal);
+      setOperationAction(ISD::VSELECT,             VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT,  VT, Custom);
       setOperationAction(ISD::SCALAR_TO_VECTOR,    VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR,    VT, Legal);
@@ -1445,8 +1457,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v64i1, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v32i16, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v64i8, Custom);
-    setOperationAction(ISD::VSELECT,            MVT::v32i16, Legal);
-    setOperationAction(ISD::VSELECT,            MVT::v64i8, Legal);
     setOperationAction(ISD::TRUNCATE,           MVT::v32i1, Custom);
     setOperationAction(ISD::TRUNCATE,           MVT::v64i1, Custom);
     setOperationAction(ISD::TRUNCATE,           MVT::v32i8, Custom);
@@ -1479,7 +1489,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto VT : { MVT::v64i8, MVT::v32i16 }) {
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
-      setOperationAction(ISD::VSELECT,      VT, Legal);
+      setOperationAction(ISD::VSELECT,      VT, Custom);
       setOperationAction(ISD::ABS,          VT, Legal);
       setOperationAction(ISD::SRL,          VT, Custom);
       setOperationAction(ISD::SHL,          VT, Custom);
@@ -2207,15 +2217,17 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     // or SSE or MMX vectors.
     if ((ValVT == MVT::f32 || ValVT == MVT::f64 ||
          VA.getLocReg() == X86::XMM0 || VA.getLocReg() == X86::XMM1) &&
-          (Subtarget.is64Bit() && !Subtarget.hasSSE1())) {
-      report_fatal_error("SSE register return with SSE disabled");
+        (Subtarget.is64Bit() && !Subtarget.hasSSE1())) {
+      errorUnsupported(DAG, dl, "SSE register return with SSE disabled");
+      VA.convertToReg(X86::FP0); // Set reg to FP0, avoid hitting asserts.
+    } else if (ValVT == MVT::f64 &&
+               (Subtarget.is64Bit() && !Subtarget.hasSSE2())) {
+      // Likewise we can't return F64 values with SSE1 only.  gcc does so, but
+      // llvm-gcc has never done it right and no one has noticed, so this
+      // should be OK for now.
+      errorUnsupported(DAG, dl, "SSE2 register return with SSE2 disabled");
+      VA.convertToReg(X86::FP0); // Set reg to FP0, avoid hitting asserts.
     }
-    // Likewise we can't return F64 values with SSE1 only.  gcc does so, but
-    // llvm-gcc has never done it right and no one has noticed, so this
-    // should be OK for now.
-    if (ValVT == MVT::f64 &&
-        (Subtarget.is64Bit() && !Subtarget.hasSSE2()))
-      report_fatal_error("SSE2 register return with SSE2 disabled");
 
     // Returns in ST0/ST1 are handled specially: these are pushed as operands to
     // the RET instruction and handled by the FP Stackifier.
@@ -2528,7 +2540,8 @@ SDValue X86TargetLowering::LowerCallResult(
     // If this is x86-64, and we disabled SSE, we can't return FP values
     if ((CopyVT == MVT::f32 || CopyVT == MVT::f64 || CopyVT == MVT::f128) &&
         ((Is64Bit || Ins[InsIndex].Flags.isInReg()) && !Subtarget.hasSSE1())) {
-      report_fatal_error("SSE register return with SSE disabled");
+      errorUnsupported(DAG, dl, "SSE register return with SSE disabled");
+      VA.convertToReg(X86::FP0); // Set reg to FP0, avoid hitting asserts.
     }
 
     // If we prefer to use the value in xmm registers, copy it out as f80 and
@@ -13817,6 +13830,11 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
       ISD::isBuildVectorOfConstantSDNodes(Op.getOperand(2).getNode()))
     return SDValue();
 
+  // If this VSELECT has a vector if i1 as a mask, it will be directly matched
+  // with patterns on the mask registers on AVX-512.
+  if (Op->getOperand(0).getValueType().getScalarSizeInBits() == 1)
+    return Op;
+
   // Try to lower this to a blend-style vector shuffle. This can handle all
   // constant condition cases.
   if (SDValue BlendOp = lowerVSELECTtoVectorShuffle(Op, Subtarget, DAG))
@@ -13826,10 +13844,31 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (!Subtarget.hasSSE41())
     return SDValue();
 
+  SDLoc dl(Op);
+  MVT VT = Op.getSimpleValueType();
+
+  // If the VSELECT is on a 512-bit type, we have to convert a non-i1 condition
+  // into an i1 condition so that we can use the mask-based 512-bit blend
+  // instructions.
+  if (VT.getSizeInBits() == 512) {
+    SDValue Cond = Op.getOperand(0);
+    // The vNi1 condition case should be handled above as it can be trivially
+    // lowered.
+    assert(Cond.getValueType().getScalarSizeInBits() ==
+               VT.getScalarSizeInBits() &&
+           "Should have a size-matched integer condition!");
+    // Build a mask by testing the condition against itself (tests for zero).
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+    SDValue Mask = DAG.getNode(X86ISD::TESTM, dl, MaskVT, Cond, Cond);
+    // Now return a new VSELECT using the mask.
+    return DAG.getNode(ISD::VSELECT, dl, VT, Mask, Op.getOperand(1),
+                       Op.getOperand(2));
+  }
+
   // Only some types will be legal on some subtargets. If we can emit a legal
   // VSELECT-matching blend, return Op, and but if we need to expand, return
   // a null value.
-  switch (Op.getSimpleValueType().SimpleTy) {
+  switch (VT.SimpleTy) {
   default:
     // Most of the vector types have blends past SSE4.1.
     return Op;
@@ -26526,7 +26565,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case TargetOpcode::STACKMAP:
   case TargetOpcode::PATCHPOINT:
     return emitPatchPoint(MI, BB);
-    
+
   case TargetOpcode::PATCHABLE_EVENT_CALL:
     // Do nothing here, handle in xray instrumentation pass.
     return BB;

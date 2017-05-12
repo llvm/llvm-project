@@ -35,6 +35,7 @@ namespace llvm {
 class AttrBuilder;
 class AttributeImpl;
 class AttributeListImpl;
+class AttributeList;
 class AttributeSetNode;
 template<typename T> struct DenseMapInfo;
 class Function;
@@ -227,14 +228,51 @@ public:
   bool operator==(const AttributeSet &O) { return SetNode == O.SetNode; }
   bool operator!=(const AttributeSet &O) { return !(*this == O); }
 
+  /// Add an argument attribute. Because
+  /// attribute sets are immutable, this returns a new set.
+  AttributeSet addAttribute(LLVMContext &C,
+                            Attribute::AttrKind Kind) const;
+
+  /// Add a target-dependent attribute. Because
+  /// attribute sets are immutable, this returns a new set.
+  AttributeSet addAttribute(LLVMContext &C, StringRef Kind,
+                            StringRef Value = StringRef()) const;
+
+  /// Add attributes to the attribute set. Because
+  /// attribute sets are immutable, this returns a new set.
+  AttributeSet addAttributes(LLVMContext &C, AttributeSet AS) const;
+
+  /// Remove the specified attribute from this set. Because
+  /// attribute sets are immutable, this returns a new set.
+  AttributeSet removeAttribute(LLVMContext &C,
+                                Attribute::AttrKind Kind) const;
+
+  /// Remove the specified attribute from this set. Because
+  /// attribute sets are immutable, this returns a new set.
+  AttributeSet removeAttribute(LLVMContext &C,
+                                StringRef Kind) const;
+
+  /// Remove the specified attributes from this set. Because
+  /// attribute sets are immutable, this returns a new set.
+  AttributeSet removeAttributes(LLVMContext &C,
+                                 const AttrBuilder &AttrsToRemove) const;
+
+  /// Return the number of attributes in this set.
   unsigned getNumAttributes() const;
 
+  /// Return true if attributes exists in this set.
   bool hasAttributes() const { return SetNode != nullptr; }
 
+  /// Return true if the attribute exists in this set.
   bool hasAttribute(Attribute::AttrKind Kind) const;
+
+  /// Return true if the attribute exists in this set.
   bool hasAttribute(StringRef Kind) const;
 
+  /// Return the attribute object.
   Attribute getAttribute(Attribute::AttrKind Kind) const;
+
+  /// Return the target-dependent attribute object.
   Attribute getAttribute(StringRef Kind) const;
 
   unsigned getAlignment() const;
@@ -248,6 +286,9 @@ public:
 
   iterator begin() const;
   iterator end() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void dump() const;
+#endif
 };
 
 //===----------------------------------------------------------------------===//

@@ -2950,9 +2950,10 @@ public:
   }
 
 private:
-  BasicBlock *getSuccessorV(unsigned idx) const override;
-  unsigned getNumSuccessorsV() const override;
-  void setSuccessorV(unsigned idx, BasicBlock *B) override;
+  friend TerminatorInst;
+  BasicBlock *getSuccessorV(unsigned idx) const;
+  unsigned getNumSuccessorsV() const;
+  void setSuccessorV(unsigned idx, BasicBlock *B);
 };
 
 template <>
@@ -3060,9 +3061,10 @@ public:
   }
 
 private:
-  BasicBlock *getSuccessorV(unsigned idx) const override;
-  unsigned getNumSuccessorsV() const override;
-  void setSuccessorV(unsigned idx, BasicBlock *B) override;
+  friend TerminatorInst;
+  BasicBlock *getSuccessorV(unsigned idx) const;
+  unsigned getNumSuccessorsV() const;
+  void setSuccessorV(unsigned idx, BasicBlock *B);
 };
 
 template <>
@@ -3424,9 +3426,10 @@ public:
   }
 
 private:
-  BasicBlock *getSuccessorV(unsigned idx) const override;
-  unsigned getNumSuccessorsV() const override;
-  void setSuccessorV(unsigned idx, BasicBlock *B) override;
+  friend TerminatorInst;
+  BasicBlock *getSuccessorV(unsigned idx) const;
+  unsigned getNumSuccessorsV() const;
+  void setSuccessorV(unsigned idx, BasicBlock *B);
 };
 
 template <>
@@ -3529,9 +3532,10 @@ public:
   }
 
 private:
-  BasicBlock *getSuccessorV(unsigned idx) const override;
-  unsigned getNumSuccessorsV() const override;
-  void setSuccessorV(unsigned idx, BasicBlock *B) override;
+  friend TerminatorInst;
+  BasicBlock *getSuccessorV(unsigned idx) const;
+  unsigned getNumSuccessorsV() const;
+  void setSuccessorV(unsigned idx, BasicBlock *B);
 };
 
 template <>
@@ -4009,9 +4013,10 @@ public:
   }
 
 private:
-  BasicBlock *getSuccessorV(unsigned idx) const override;
-  unsigned getNumSuccessorsV() const override;
-  void setSuccessorV(unsigned idx, BasicBlock *B) override;
+  friend TerminatorInst;
+  BasicBlock *getSuccessorV(unsigned idx) const;
+  unsigned getNumSuccessorsV() const;
+  void setSuccessorV(unsigned idx, BasicBlock *B);
 
   template <typename AttrKind> bool hasFnAttrImpl(AttrKind Kind) const {
     if (Attrs.hasAttribute(AttributeList::FunctionIndex, Kind))
@@ -4108,9 +4113,10 @@ public:
   }
 
 private:
-  BasicBlock *getSuccessorV(unsigned idx) const override;
-  unsigned getNumSuccessorsV() const override;
-  void setSuccessorV(unsigned idx, BasicBlock *B) override;
+  friend TerminatorInst;
+  BasicBlock *getSuccessorV(unsigned idx) const;
+  unsigned getNumSuccessorsV() const;
+  void setSuccessorV(unsigned idx, BasicBlock *B);
 };
 
 template <>
@@ -4291,9 +4297,10 @@ public:
   }
 
 private:
-  BasicBlock *getSuccessorV(unsigned Idx) const override;
-  unsigned getNumSuccessorsV() const override;
-  void setSuccessorV(unsigned Idx, BasicBlock *B) override;
+  friend TerminatorInst;
+  BasicBlock *getSuccessorV(unsigned Idx) const;
+  unsigned getNumSuccessorsV() const;
+  void setSuccessorV(unsigned Idx, BasicBlock *B);
 };
 
 template <>
@@ -4456,9 +4463,10 @@ public:
   }
 
 private:
-  BasicBlock *getSuccessorV(unsigned Idx) const override;
-  unsigned getNumSuccessorsV() const override;
-  void setSuccessorV(unsigned Idx, BasicBlock *B) override;
+  friend TerminatorInst;
+  BasicBlock *getSuccessorV(unsigned Idx) const;
+  unsigned getNumSuccessorsV() const;
+  void setSuccessorV(unsigned Idx, BasicBlock *B);
 };
 
 template <>
@@ -4544,9 +4552,10 @@ public:
   }
 
 private:
-  BasicBlock *getSuccessorV(unsigned Idx) const override;
-  unsigned getNumSuccessorsV() const override;
-  void setSuccessorV(unsigned Idx, BasicBlock *B) override;
+  friend TerminatorInst;
+  BasicBlock *getSuccessorV(unsigned Idx) const;
+  unsigned getNumSuccessorsV() const;
+  void setSuccessorV(unsigned Idx, BasicBlock *B);
 
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
@@ -4599,9 +4608,10 @@ public:
   }
 
 private:
-  BasicBlock *getSuccessorV(unsigned idx) const override;
-  unsigned getNumSuccessorsV() const override;
-  void setSuccessorV(unsigned idx, BasicBlock *B) override;
+  friend TerminatorInst;
+  BasicBlock *getSuccessorV(unsigned idx) const;
+  unsigned getNumSuccessorsV() const;
+  void setSuccessorV(unsigned idx, BasicBlock *B);
 };
 
 //===----------------------------------------------------------------------===//

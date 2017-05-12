@@ -55,7 +55,7 @@ static void replaceLoopUsesWithConstant(Loop &L, Value &LIC,
 /// Update the dominator tree after removing one exiting predecessor of a loop
 /// exit block.
 static void updateLoopExitIDom(BasicBlock *LoopExitBB, Loop &L,
-                                            DominatorTree &DT) {
+                               DominatorTree &DT) {
   assert(pred_begin(LoopExitBB) != pred_end(LoopExitBB) &&
          "Cannot have empty predecessors of the loop exit block if we split "
          "off a block to unswitch!");
@@ -137,6 +137,98 @@ static void updateDTAfterUnswitch(BasicBlock *UnswitchedBB, BasicBlock *OldPH,
   }
 }
 
+/// Check that all the LCSSA PHI nodes in the loop exit block have trivial
+/// incoming values along this edge.
+static bool areLoopExitPHIsLoopInvariant(Loop &L, BasicBlock &ExitingBB,
+                                         BasicBlock &ExitBB) {
+  for (Instruction &I : ExitBB) {
+    auto *PN = dyn_cast<PHINode>(&I);
+    if (!PN)
+      // No more PHIs to check.
+      return true;
+
+    // If the incoming value for this edge isn't loop invariant the unswitch
+    // won't be trivial.
+    if (!L.isLoopInvariant(PN->getIncomingValueForBlock(&ExitingBB)))
+      return false;
+  }
+  llvm_unreachable("Basic blocks should never be empty!");
+}
+
+/// Rewrite the PHI nodes in an unswitched loop exit basic block.
+///
+/// Requires that the loop exit and unswitched basic block are the same, and
+/// that the exiting block was a unique predecessor of that block. Rewrites the
+/// PHI nodes in that block such that what were LCSSA PHI nodes become trivial
+/// PHI nodes from the old preheader that now contains the unswitched
+/// terminator.
+static void rewritePHINodesForUnswitchedExitBlock(BasicBlock &UnswitchedBB,
+                                                  BasicBlock &OldExitingBB,
+                                                  BasicBlock &OldPH) {
+  for (Instruction &I : UnswitchedBB) {
+    auto *PN = dyn_cast<PHINode>(&I);
+    if (!PN)
+      // No more PHIs to check.
+      break;
+
+    // When the loop exit is directly unswitched we just need to update the
+    // incoming basic block. We loop to handle weird cases with repeated
+    // incoming blocks, but expect to typically only have one operand here.
+    for (auto i : llvm::seq<int>(0, PN->getNumOperands())) {
+      assert(PN->getIncomingBlock(i) == &OldExitingBB &&
+             "Found incoming block different from unique predecessor!");
+      PN->setIncomingBlock(i, &OldPH);
+    }
+  }
+}
+
+/// Rewrite the PHI nodes in the loop exit basic block and the split off
+/// unswitched block.
+///
+/// Because the exit block remains an exit from the loop, this rewrites the
+/// LCSSA PHI nodes in it to remove the unswitched edge and introduces PHI
+/// nodes into the unswitched basic block to select between the value in the
+/// old preheader and the loop exit.
+static void rewritePHINodesForExitAndUnswitchedBlocks(BasicBlock &ExitBB,
+                                                      BasicBlock &UnswitchedBB,
+                                                      BasicBlock &OldExitingBB,
+                                                      BasicBlock &OldPH) {
+  assert(&ExitBB != &UnswitchedBB &&
+         "Must have different loop exit and unswitched blocks!");
+  Instruction *InsertPt = &*UnswitchedBB.begin();
+  for (Instruction &I : ExitBB) {
+    auto *PN = dyn_cast<PHINode>(&I);
+    if (!PN)
+      // No more PHIs to check.
+      break;
+
+    auto *NewPN = PHINode::Create(PN->getType(), /*NumReservedValues*/ 2,
+                                  PN->getName() + ".split", InsertPt);
+
+    // Walk backwards over the old PHI node's inputs to minimize the cost of
+    // removing each one. We have to do this weird loop manually so that we
+    // create the same number of new incoming edges in the new PHI as we expect
+    // each case-based edge to be included in the unswitched switch in some
+    // cases.
+    // FIXME: This is really, really gross. It would be much cleaner if LLVM
+    // allowed us to create a single entry for a predecessor block without
+    // having separate entries for each "edge" even though these edges are
+    // required to produce identical results.
+    for (int i = PN->getNumIncomingValues() - 1; i >= 0; --i) {
+      if (PN->getIncomingBlock(i) != &OldExitingBB)
+        continue;
+
+      Value *Incoming = PN->removeIncomingValue(i);
+      NewPN->addIncoming(Incoming, &OldPH);
+    }
+
+    // Now replace the old PHI with the new one and wire the old one in as an
+    // input to the new one.
+    PN->replaceAllUsesWith(NewPN);
+    NewPN->addIncoming(PN, &ExitBB);
+  }
+}
+
 /// Unswitch a trivial branch if the condition is loop invariant.
 ///
 /// This routine should only be called when loop code leading to the branch has
@@ -187,10 +279,8 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   assert(L.contains(ContinueBB) &&
          "Cannot have both successors exit and still be in the loop!");
 
-  // If the loop exit block contains phi nodes, this isn't trivial.
-  // FIXME: We should examine the PHI to determine whether or not we can handle
-  // it trivially.
-  if (isa<PHINode>(LoopExitBB->begin()))
+  auto *ParentBB = BI.getParent();
+  if (!areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB))
     return false;
 
   DEBUG(dbgs() << "    unswitching trivial branch when: " << CondVal
@@ -209,13 +299,12 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   BasicBlock *UnswitchedBB;
   if (BasicBlock *PredBB = LoopExitBB->getUniquePredecessor()) {
     (void)PredBB;
-    assert(PredBB == BI.getParent() && "A branch's parent is't a predecessor!");
+    assert(PredBB == BI.getParent() &&
+           "A branch's parent isn't a predecessor!");
     UnswitchedBB = LoopExitBB;
   } else {
     UnswitchedBB = SplitBlock(LoopExitBB, &LoopExitBB->front(), &DT, &LI);
   }
-
-  BasicBlock *ParentBB = BI.getParent();
 
   // Now splice the branch to gate reaching the new preheader and re-point its
   // successors.
@@ -228,6 +317,13 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // Create a new unconditional branch that will continue the loop as a new
   // terminator.
   BranchInst::Create(ContinueBB, ParentBB);
+
+  // Rewrite the relevant PHI nodes.
+  if (UnswitchedBB == LoopExitBB)
+    rewritePHINodesForUnswitchedExitBlock(*UnswitchedBB, *ParentBB, *OldPH);
+  else
+    rewritePHINodesForExitAndUnswitchedBlocks(*LoopExitBB, *UnswitchedBB,
+                                              *ParentBB, *OldPH);
 
   // Now we need to update the dominator tree.
   updateDTAfterUnswitch(UnswitchedBB, OldPH, DT);
@@ -278,6 +374,8 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   if (!L.isLoopInvariant(LoopCond))
     return false;
 
+  auto *ParentBB = SI.getParent();
+
   // FIXME: We should compute this once at the start and update it!
   SmallVector<BasicBlock *, 16> ExitBlocks;
   L.getExitBlocks(ExitBlocks);
@@ -287,12 +385,13 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   SmallVector<int, 4> ExitCaseIndices;
   for (auto Case : SI.cases()) {
     auto *SuccBB = Case.getCaseSuccessor();
-    if (ExitBlockSet.count(SuccBB) && !isa<PHINode>(SuccBB->begin()))
+    if (ExitBlockSet.count(SuccBB) &&
+        areLoopExitPHIsLoopInvariant(L, *ParentBB, *SuccBB))
       ExitCaseIndices.push_back(Case.getCaseIndex());
   }
   BasicBlock *DefaultExitBB = nullptr;
   if (ExitBlockSet.count(SI.getDefaultDest()) &&
-      !isa<PHINode>(SI.getDefaultDest()->begin()) &&
+      areLoopExitPHIsLoopInvariant(L, *ParentBB, *SI.getDefaultDest()) &&
       !isa<UnreachableInst>(SI.getDefaultDest()->getTerminator()))
     DefaultExitBB = SI.getDefaultDest();
   else if (ExitCaseIndices.empty())
@@ -330,7 +429,6 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     if (CommonSuccBB) {
       SI.setDefaultDest(CommonSuccBB);
     } else {
-      BasicBlock *ParentBB = SI.getParent();
       BasicBlock *UnreachableBB = BasicBlock::Create(
           ParentBB->getContext(),
           Twine(ParentBB->getName()) + ".unreachable_default",
@@ -358,30 +456,44 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   // Now add the unswitched switch.
   auto *NewSI = SwitchInst::Create(LoopCond, NewPH, ExitCases.size(), OldPH);
 
-  // Split any exit blocks with remaining in-loop predecessors. We walk in
-  // reverse so that we split in the same order as the cases appeared. This is
-  // purely for convenience of reading the resulting IR, but it doesn't cost
-  // anything really.
+  // Rewrite the IR for the unswitched basic blocks. This requires two steps.
+  // First, we split any exit blocks with remaining in-loop predecessors. Then
+  // we update the PHIs in one of two ways depending on if there was a split.
+  // We walk in reverse so that we split in the same order as the cases
+  // appeared. This is purely for convenience of reading the resulting IR, but
+  // it doesn't cost anything really.
+  SmallPtrSet<BasicBlock *, 2> UnswitchedExitBBs;
   SmallDenseMap<BasicBlock *, BasicBlock *, 2> SplitExitBBMap;
   // Handle the default exit if necessary.
   // FIXME: It'd be great if we could merge this with the loop below but LLVM's
   // ranges aren't quite powerful enough yet.
-  if (DefaultExitBB && !pred_empty(DefaultExitBB)) {
-    auto *SplitBB =
-        SplitBlock(DefaultExitBB, &DefaultExitBB->front(), &DT, &LI);
-    updateLoopExitIDom(DefaultExitBB, L, DT);
-    DefaultExitBB = SplitExitBBMap[DefaultExitBB] = SplitBB;
+  if (DefaultExitBB) {
+    if (pred_empty(DefaultExitBB)) {
+      UnswitchedExitBBs.insert(DefaultExitBB);
+      rewritePHINodesForUnswitchedExitBlock(*DefaultExitBB, *ParentBB, *OldPH);
+    } else {
+      auto *SplitBB =
+          SplitBlock(DefaultExitBB, &DefaultExitBB->front(), &DT, &LI);
+      rewritePHINodesForExitAndUnswitchedBlocks(*DefaultExitBB, *SplitBB,
+                                                *ParentBB, *OldPH);
+      updateLoopExitIDom(DefaultExitBB, L, DT);
+      DefaultExitBB = SplitExitBBMap[DefaultExitBB] = SplitBB;
+    }
   }
   // Note that we must use a reference in the for loop so that we update the
   // container.
   for (auto &CasePair : reverse(ExitCases)) {
     // Grab a reference to the exit block in the pair so that we can update it.
-    BasicBlock *&ExitBB = CasePair.second;
+    BasicBlock *ExitBB = CasePair.second;
 
     // If this case is the last edge into the exit block, we can simply reuse it
     // as it will no longer be a loop exit. No mapping necessary.
-    if (pred_empty(ExitBB))
+    if (pred_empty(ExitBB)) {
+      // Only rewrite once.
+      if (UnswitchedExitBBs.insert(ExitBB).second)
+        rewritePHINodesForUnswitchedExitBlock(*ExitBB, *ParentBB, *OldPH);
       continue;
+    }
 
     // Otherwise we need to split the exit block so that we retain an exit
     // block from the loop and a target for the unswitched condition.
@@ -389,9 +501,12 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     if (!SplitExitBB) {
       // If this is the first time we see this, do the split and remember it.
       SplitExitBB = SplitBlock(ExitBB, &ExitBB->front(), &DT, &LI);
+      rewritePHINodesForExitAndUnswitchedBlocks(*ExitBB, *SplitExitBB,
+                                                *ParentBB, *OldPH);
       updateLoopExitIDom(ExitBB, L, DT);
     }
-    ExitBB = SplitExitBB;
+    // Update the case pair to point to the split block.
+    CasePair.second = SplitExitBB;
   }
 
   // Now add the unswitched cases. We do this in reverse order as we built them

@@ -634,10 +634,19 @@ let Interpretation64Bit = 1, isCodeGenOnly = 1 in
 defm EXTSW_32_64 : XForm_11r<31, 986, (outs g8rc:$rA), (ins gprc:$rS),
                              "extsw", "$rA, $rS", IIC_IntSimple,
                              [(set i64:$rA, (sext i32:$rS))]>, isPPC64;
+let isCodeGenOnly = 1 in
+def EXTSW_32 : XForm_11<31, 986, (outs gprc:$rA), (ins gprc:$rS),
+                        "extsw $rA, $rS", IIC_IntSimple,
+                        []>, isPPC64;
 
 defm SRADI  : XSForm_1rc<31, 413, (outs g8rc:$rA), (ins g8rc:$rS, u6imm:$SH),
                          "sradi", "$rA, $rS, $SH", IIC_IntRotateDI,
                          [(set i64:$rA, (sra i64:$rS, (i32 imm:$SH)))]>, isPPC64;
+// For fast-isel:
+let isCodeGenOnly = 1 in
+def SRADI_32  : XSForm_1<31, 413, (outs gprc:$rA), (ins gprc:$rS, u6imm:$SH),
+                         "sradi $rA, $rS, $SH", IIC_IntRotateDI, []>, isPPC64;
+
 defm CNTLZD : XForm_11r<31,  58, (outs g8rc:$rA), (ins g8rc:$rS),
                         "cntlzd", "$rA, $rS", IIC_IntGeneral,
                         [(set i64:$rA, (ctlz i64:$rS))]>;
@@ -721,15 +730,26 @@ defm RLDICL : MDForm_1r<30, 0,
 // For fast-isel:
 let isCodeGenOnly = 1 in
 def RLDICL_32_64 : MDForm_1<30, 0,
-                           (outs g8rc:$rA),
-                           (ins gprc:$rS, u6imm:$SH, u6imm:$MBE),
-                           "rldicl $rA, $rS, $SH, $MBE", IIC_IntRotateDI,
-                           []>, isPPC64;
+                            (outs g8rc:$rA),
+                            (ins gprc:$rS, u6imm:$SH, u6imm:$MBE),
+                            "rldicl $rA, $rS, $SH, $MBE", IIC_IntRotateDI,
+                            []>, isPPC64;
 // End fast-isel.
+let isCodeGenOnly = 1 in
+def RLDICL_32 : MDForm_1<30, 0,
+                         (outs gprc:$rA),
+                         (ins gprc:$rS, u6imm:$SH, u6imm:$MBE),
+                         "rldicl $rA, $rS, $SH, $MBE", IIC_IntRotateDI,
+                         []>, isPPC64;
 defm RLDICR : MDForm_1r<30, 1,
                         (outs g8rc:$rA), (ins g8rc:$rS, u6imm:$SH, u6imm:$MBE),
                         "rldicr", "$rA, $rS, $SH, $MBE", IIC_IntRotateDI,
                         []>, isPPC64;
+let isCodeGenOnly = 1 in
+def RLDICR_32 : MDForm_1<30, 1,
+                         (outs gprc:$rA), (ins gprc:$rS, u6imm:$SH, u6imm:$MBE),
+                         "rldicr $rA, $rS, $SH, $MBE", IIC_IntRotateDI,
+                         []>, isPPC64;
 defm RLDIC  : MDForm_1r<30, 2,
                         (outs g8rc:$rA), (ins g8rc:$rS, u6imm:$SH, u6imm:$MBE),
                         "rldic", "$rA, $rS, $SH, $MBE", IIC_IntRotateDI,
