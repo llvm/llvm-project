@@ -59,14 +59,23 @@ void SwiftUserExpression::WillStartExecuting() {
   // Can we assert that the process weak-ptr is non-null here?
   // What's the 'retry_if_fail' argument to GetSwiftLanguageRuntime?
   // Can the runtime ever come back as null?
-  if (auto process = m_jit_process_wp.lock())
-    process->GetSwiftLanguageRuntime()->WillStartExecutingUserExpression();
+  if (auto process = m_jit_process_wp.lock()) {
+    if (auto *swift_runtime = process->GetSwiftLanguageRuntime())
+      swift_runtime->WillStartExecutingUserExpression();
+    else
+      llvm_unreachable("Can't execute a swift expression without a runtime");
+  } else
+    llvm_unreachable("Can't execute an expression without a process");
 }
 
 void SwiftUserExpression::DidFinishExecuting() {
-  // Same questions as above.
-  if (auto process = m_jit_process_wp.lock())
-    process->GetSwiftLanguageRuntime()->DidFinishExecutingUserExpression();
+  if (auto process = m_jit_process_wp.lock()) {
+    if (auto swift_runtime = process->GetSwiftLanguageRuntime())
+      swift_runtime->DidFinishExecutingUserExpression();
+    else
+      llvm_unreachable("Can't execute a swift expression without a runtime");
+  } else
+    llvm_unreachable("Can't execute an expression without a process");
 }
 
 void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err) {

@@ -61,13 +61,13 @@ class TestExclusivitySuppression(TestBase):
     # Test that we properly handle nested expression evaluations by:
     # (1) Breaking at breakpoint 1
     # (2) Running 'expr get()' (which will hit breakpoint 2)
-    # (3) Evaluating w.s.i at breakpoint 2 (this is a nested evaluation)
-    # (4) Contininging the evaluation of 'expr get()' to return to bp 1
+    # (3) Evaluating i at breakpoint 2 (this is a nested evaluation)
+    # (4) Continuing the evaluation of 'expr get()' to return to bp 1
     # (5) Evaluating w.s.i again to check that finishing the nested expression
     #     did not prematurely re-enable exclusivity checks.
     @decorators.swiftTest
     def test_exclusivity_suppression_for_concurrent_expressions(self):
-        """Test that exclusively owned values can still be accessed"""
+        """Test that exclusivity suppression works with concurrent expressions"""
         self.buildAll()
 
         target = self.create_target()
@@ -85,22 +85,25 @@ class TestExclusivitySuppression(TestBase):
 
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        # Frame #0 should be at our breakpoint.
+        # Break at Breakpoint 1, then evaluate 'get()' to hit breakpoint 2.
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, bp1)
 
         self.assertTrue(len(threads) == 1)
         thread = threads[0]
-        frame = thread.frames[0]
         self.assertTrue(frame, "Frame 0 is valid.")
 
-        self.check_expression(frame, "w.s.i", "8", use_summary=False)
+        opts = lldb.SBExpressionOptions()
+        opts.SetIgnoreBreakpoints(False)
+        thread.frame[0].EvaluateExpression('get()', opts)
 
+        # Evaluate w.s.i at breakpoint 2 to check that exclusivity checking
+        # is suppressed inside the nested expression
+        self.check_expression(thread.frames[0], "i", "8", use_summary=False)
 
-    @decorators.swiftTest
-    def test_exclusivity_suppression_on_expression_bailout(self):
-        """Test that exclusively owned values can still be accessed"""
-        self.buildAll()
-
+        # Return to breakpoint 1 and evaluate w.s.i again to check that
+        # exclusivity checking is still suppressed
+        self.dbg.HandleCommand('thread ret -x')
+        self.check_expression(thread.frame[0], "w.s.i", "8", use_summary=False)
 
     def setUp(self):
         TestBase.setUp(self)
@@ -116,7 +119,7 @@ class TestExclusivitySuppression(TestBase):
 
     def check_expression(self, frame, expression, expected_result, use_summary=True):
         value = frame.EvaluateExpression(expression)
-        self.assertTrue(value.IsValid(), expression + "returned a valid value")
+        self.assertTrue(value.IsValid(), expression + " returned a valid value")
         if self.TraceOn():
             print value.GetSummary()
             print value.GetValue()

@@ -144,7 +144,7 @@ void SwiftLanguageRuntime::SetupExclusivity() {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   if (log)
-    log->Printf("SwiftLanguageRuntime: _swift_disableExclusivityChecking = %p",
+    log->Printf("SwiftLanguageRuntime: _swift_disableExclusivityChecking = %llu",
                 m_dynamic_exclusivity_flag_addr ?
                 *m_dynamic_exclusivity_flag_addr : 0);
 }
@@ -3898,34 +3898,46 @@ void SwiftLanguageRuntime::WillStartExecutingUserExpression() {
       m_dynamic_exclusivity_flag_addr) {
     // We're executing the first user expression. Toggle the flag.
     Error error;
-    size_t bytes_read =
-      m_process->DoReadMemory(*m_dynamic_exclusivity_flag_addr,
-                              &m_original_dynamic_exclusivity_flag_state,
-                              sizeof(m_original_dynamic_exclusivity_flag_state),
-                              error);
+    TypeSystem *type_system =
+      m_process->GetTarget().GetScratchTypeSystemForLanguage(
+                                                      &error,
+                                                      eLanguageTypeC_plus_plus);
+    if (error.Fail()) {
+      if (log)
+        log->Printf("SwiftLanguageRuntime: Unable to get pointer to type "
+                    "system: %s", error.AsCString());
+      return;
+    }
+    ConstString BoolName("bool");
+    size_t bool_size =
+      type_system->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
 
-    if (bytes_read != sizeof(m_original_dynamic_exclusivity_flag_state)) {
+    Scalar original_value;
+    m_process->ReadScalarIntegerFromMemory(*m_dynamic_exclusivity_flag_addr,
+                                           bool_size, false, original_value,
+                                           error);
+
+    m_original_dynamic_exclusivity_flag_state = original_value.UInt() != 0;
+
+    if (error.Fail()) {
       if (log)
         log->Printf("SwiftLanguageRuntime: Unable to read "
-                    "disableExclusivityChecking flag state");
+                    "disableExclusivityChecking flag state: %s",
+                    error.AsCString());
     } else {
-      bool new_flag_state = true;
-      size_t bytes_written =
-        m_process->DoWriteMemory(
-                              *m_dynamic_exclusivity_flag_addr,
-                              &new_flag_state,
-                              sizeof(m_original_dynamic_exclusivity_flag_state),
-                              error);
-      if (bytes_written != sizeof(m_original_dynamic_exclusivity_flag_state)) {
+      Scalar new_value(1U);
+      m_process->WriteScalarToMemory(*m_dynamic_exclusivity_flag_addr,
+                                     new_value, bool_size, error);
+      if (error.Fail()) {
         if (log)
           log->Printf("SwiftLanguageRuntime: Unable to set "
-                      "disableExclusivityChecking flag state");
+                      "disableExclusivityChecking flag state: %s",
+                      error.AsCString());
       } else {
         if (log)
           log->Printf("SwiftLanguageRuntime: Changed "
-                      "disableExclusivityChecking flag state from %u to %u",
-                      m_original_dynamic_exclusivity_flag_state,
-                      new_flag_state);
+                      "disableExclusivityChecking flag state from %u to 1",
+                      m_original_dynamic_exclusivity_flag_state);
       }
     }
   }
@@ -3948,16 +3960,28 @@ void SwiftLanguageRuntime::DidFinishExecutingUserExpression() {
   if (m_active_user_expr_count == 0 &&
       m_dynamic_exclusivity_flag_addr) {
     Error error;
-    size_t bytes_written =
-      m_process->DoWriteMemory(
-                              *m_dynamic_exclusivity_flag_addr,
-                              &m_original_dynamic_exclusivity_flag_state,
-                              sizeof(m_original_dynamic_exclusivity_flag_state),
-                              error);
-    if (bytes_written != sizeof(m_original_dynamic_exclusivity_flag_state)) {
+    TypeSystem *type_system =
+      m_process->GetTarget().GetScratchTypeSystemForLanguage(
+                                                      &error,
+                                                      eLanguageTypeC_plus_plus);
+    if (error.Fail()) {
+      if (log)
+        log->Printf("SwiftLanguageRuntime: Unable to get pointer to type "
+                    "system: %s", error.AsCString());
+      return;
+    }
+    ConstString BoolName("bool");
+    size_t bool_size =
+      type_system->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
+
+    Scalar original_value(m_original_dynamic_exclusivity_flag_state ? 1U : 0U);
+    m_process->WriteScalarToMemory(*m_dynamic_exclusivity_flag_addr,
+                                   original_value, bool_size, error);
+    if (error.Fail()) {
       if (log)
         log->Printf("SwiftLanguageRuntime: Unable to reset "
-                    "disableExclusivityChecking flag state");
+                    "disableExclusivityChecking flag state: %s",
+                    error.AsCString());
     } else {
       if (log)
         log->Printf("SwiftLanguageRuntime: Changed "
