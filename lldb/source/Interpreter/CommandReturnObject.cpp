@@ -13,7 +13,7 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
@@ -111,7 +111,7 @@ void CommandReturnObject::AppendError(llvm::StringRef in_string) {
   GetErrorStream() << "error: " << in_string << "\n";
 }
 
-void CommandReturnObject::SetError(const Error &error,
+void CommandReturnObject::SetError(const Status &error,
                                    const char *fallback_error_cstr) {
   const char *error_cstr = error.AsCString();
   if (error_cstr == nullptr)
@@ -127,7 +127,7 @@ void CommandReturnObject::SetError(llvm::StringRef error_str) {
   SetStatus(eReturnStatusFailed);
 }
 
-// Similar to AppendError, but do not prepend 'Error: ' to message, and
+// Similar to AppendError, but do not prepend 'Status: ' to message, and
 // don't append "\n" to the end of it.
 
 void CommandReturnObject::AppendRawError(llvm::StringRef in_string) {

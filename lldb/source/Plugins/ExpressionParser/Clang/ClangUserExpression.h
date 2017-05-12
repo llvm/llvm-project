@@ -168,7 +168,7 @@ private:
   //------------------------------------------------------------------
 
   void ScanContext(ExecutionContext &exe_ctx,
-                   lldb_private::Error &err) override;
+                   lldb_private::Status &err) override;
 
   bool AddArguments(ExecutionContext &exe_ctx, std::vector<lldb::addr_t> &args,
                     lldb::addr_t struct_address,

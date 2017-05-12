@@ -222,7 +222,7 @@ void DynamicLoaderPOSIXDYLD::DidLaunch() {
   }
 }
 
-Error DynamicLoaderPOSIXDYLD::CanLoadImage() { return Error(); }
+Status DynamicLoaderPOSIXDYLD::CanLoadImage() { return Status(); }
 
 void DynamicLoaderPOSIXDYLD::UpdateLoadedSections(ModuleSP module,
                                                   addr_t link_map_addr,

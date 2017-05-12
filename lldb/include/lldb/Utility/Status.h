@@ -1,4 +1,5 @@
-//===-- Error.h -------------------------------------------------*- C++ -*-===//
+//===-- Status.h -------------------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -30,12 +31,12 @@ class raw_ostream;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Error Error.h "lldb/Utility/Error.h"
+/// @class Status Status.h "lldb/Utility/Status.h"
 /// @brief An error handling class.
 ///
 /// This class is designed to be able to hold any error code that can be
 /// encountered on a given platform. The errors are stored as a value
-/// of type Error::ValueType. This value should be large enough to hold
+/// of type Status::ValueType. This value should be large enough to hold
 /// any and all errors that the class supports. Each error has an
 /// associated type that is of type lldb::ErrorType. New types
 /// can be added to support new error types, and architecture specific
@@ -49,7 +50,7 @@ namespace lldb_private {
 /// be cached until the error is cleared of the value of the error
 /// changes.
 //----------------------------------------------------------------------
-class Error {
+class Status {
 public:
   //------------------------------------------------------------------
   /// Every error value that this object can contain needs to be able
@@ -68,15 +69,17 @@ public:
   /// @param[in] type
   ///     The type for \a err.
   //------------------------------------------------------------------
-  Error();
+  Status();
 
-  explicit Error(ValueType err, lldb::ErrorType type = lldb::eErrorTypeGeneric);
+  explicit Status(ValueType err,
+                  lldb::ErrorType type = lldb::eErrorTypeGeneric);
 
-  /* implicit */ Error(std::error_code EC);
+  /* implicit */ Status(std::error_code EC);
 
-  explicit Error(const char *format, ...) __attribute__((format(printf, 2, 3)));
+  explicit Status(const char *format, ...)
+      __attribute__((format(printf, 2, 3)));
 
-  Error(const Error &rhs);
+  Status(const Status &rhs);
   //------------------------------------------------------------------
   /// Assignment operator.
   ///
@@ -86,7 +89,7 @@ public:
   /// @return
   ///     A const reference to this object.
   //------------------------------------------------------------------
-  const Error &operator=(const Error &rhs);
+  const Status &operator=(const Status &rhs);
 
   //------------------------------------------------------------------
   /// Assignment operator from a kern_return_t.
@@ -99,9 +102,9 @@ public:
   /// @return
   ///     A const reference to this object.
   //------------------------------------------------------------------
-  const Error &operator=(uint32_t err);
+  const Status &operator=(uint32_t err);
 
-  ~Error();
+  ~Status();
 
   //------------------------------------------------------------------
   /// Get the error string associated with the current error.
@@ -186,7 +189,7 @@ public:
   /// Set the current error to errno.
   ///
   /// Update the error value to be \c errno and update the type to
-  /// be \c Error::POSIX.
+  /// be \c Status::POSIX.
   //------------------------------------------------------------------
   void SetErrorToErrno();
 
@@ -194,7 +197,7 @@ public:
   /// Set the current error to a generic error.
   ///
   /// Update the error value to be \c LLDB_GENERIC_ERROR and update the
-  /// type to be \c Error::Generic.
+  /// type to be \c Status::Generic.
   //------------------------------------------------------------------
   void SetErrorToGenericError();
 
@@ -257,7 +260,7 @@ protected:
   //------------------------------------------------------------------
   /// Member variables
   //------------------------------------------------------------------
-  ValueType m_code;             ///< Error code as an integer value.
+  ValueType m_code;             ///< Status code as an integer value.
   lldb::ErrorType m_type;       ///< The type of the above error code.
   mutable std::string m_string; ///< A string representation of the error code.
 };
@@ -265,8 +268,8 @@ protected:
 } // namespace lldb_private
 
 namespace llvm {
-template <> struct format_provider<lldb_private::Error> {
-  static void format(const lldb_private::Error &error, llvm::raw_ostream &OS,
+template <> struct format_provider<lldb_private::Status> {
+  static void format(const lldb_private::Status &error, llvm::raw_ostream &OS,
                      llvm::StringRef Options);
 };
 }

@@ -20,7 +20,7 @@
 
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/linux/Ptrace.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -66,7 +66,7 @@ bool WorkaroundNeeded() {
   Log *log = ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD);
   ::pid_t child_pid = fork();
   if (child_pid == -1) {
-    LLDB_LOG(log, "failed to fork(): {0}", Error(errno, eErrorTypePOSIX));
+    LLDB_LOG(log, "failed to fork(): {0}", Status(errno, eErrorTypePOSIX));
     return false;
   }
   if (child_pid == 0)
@@ -77,7 +77,7 @@ bool WorkaroundNeeded() {
   if (sched_getaffinity(child_pid, sizeof available_cpus, &available_cpus) ==
       -1) {
     LLDB_LOG(log, "failed to get available cpus: {0}",
-             Error(errno, eErrorTypePOSIX));
+             Status(errno, eErrorTypePOSIX));
     return false;
   }
 
@@ -85,7 +85,7 @@ bool WorkaroundNeeded() {
   ::pid_t wpid = waitpid(child_pid, &status, __WALL);
   if (wpid != child_pid || !WIFSTOPPED(status)) {
     LLDB_LOG(log, "waitpid() failed (status = {0:x}): {1}", status,
-             Error(errno, eErrorTypePOSIX));
+             Status(errno, eErrorTypePOSIX));
     return false;
   }
 
@@ -99,12 +99,12 @@ bool WorkaroundNeeded() {
     CPU_SET(cpu, &cpus);
     if (sched_setaffinity(child_pid, sizeof cpus, &cpus) == -1) {
       LLDB_LOG(log, "failed to switch to cpu {0}: {1}", cpu,
-               Error(errno, eErrorTypePOSIX));
+               Status(errno, eErrorTypePOSIX));
       continue;
     }
 
     int status;
-    Error error =
+    Status error =
         NativeProcessLinux::PtraceWrapper(PTRACE_SINGLESTEP, child_pid);
     if (error.Fail()) {
       LLDB_LOG(log, "single step failed: {0}", error);
@@ -114,7 +114,7 @@ bool WorkaroundNeeded() {
     wpid = waitpid(child_pid, &status, __WALL);
     if (wpid != child_pid || !WIFSTOPPED(status)) {
       LLDB_LOG(log, "waitpid() failed (status = {0:x}): {1}", status,
-               Error(errno, eErrorTypePOSIX));
+               Status(errno, eErrorTypePOSIX));
       break;
     }
     if (WSTOPSIG(status) != SIGTRAP) {
@@ -152,7 +152,7 @@ std::unique_ptr<SingleStepWorkaround> SingleStepWorkaround::Get(::pid_t tid) {
   if (sched_getaffinity(tid, sizeof original_set, &original_set) != 0) {
     // This should really not fail. But, just in case...
     LLDB_LOG(log, "Unable to get cpu affinity for thread {0}: {1}", tid,
-             Error(errno, eErrorTypePOSIX));
+             Status(errno, eErrorTypePOSIX));
     return nullptr;
   }
 
@@ -164,7 +164,7 @@ std::unique_ptr<SingleStepWorkaround> SingleStepWorkaround::Get(::pid_t tid) {
     // to run on cpu 0. If that happens, only thing we can do is it log it and
     // continue...
     LLDB_LOG(log, "Unable to set cpu affinity for thread {0}: {1}", tid,
-             Error(errno, eErrorTypePOSIX));
+             Status(errno, eErrorTypePOSIX));
   }
 
   LLDB_LOG(log, "workaround for thread {0} prepared", tid);
@@ -176,7 +176,7 @@ SingleStepWorkaround::~SingleStepWorkaround() {
   LLDB_LOG(log, "Removing workaround");
   if (sched_setaffinity(m_tid, sizeof m_original_set, &m_original_set) != 0) {
     LLDB_LOG(log, "Unable to reset cpu affinity for thread {0}: {1}", m_tid,
-             Error(errno, eErrorTypePOSIX));
+             Status(errno, eErrorTypePOSIX));
   }
 }
 #endif

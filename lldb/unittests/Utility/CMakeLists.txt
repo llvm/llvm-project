@@ -2,9 +2,9 @@ add_subdirectory(Mocks)
 
 add_lldb_unittest(UtilityTests
   ConstStringTest.cpp
-  ErrorTest.cpp
   LogTest.cpp
   NameMatchesTest.cpp
+  StatusTest.cpp
   StringExtractorTest.cpp
   TaskPoolTest.cpp
   TildeExpressionResolverTest.cpp

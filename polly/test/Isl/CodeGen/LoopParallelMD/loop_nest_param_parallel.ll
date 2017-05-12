@@ -2,10 +2,10 @@
 ;
 ; Check that we mark multiple parallel loops correctly including the memory instructions.
 ;
-; CHECK-DAG:  %polly.loop_cond[[COuter:[0-9]*]] = icmp sle i64 %polly.indvar{{[0-9]*}}, 1022
+; CHECK-DAG:  %polly.loop_cond[[COuter:[0-9]*]] = icmp sle i64 %polly.indvar_next{{[0-9]*}}, 1023
 ; CHECK-DAG:  br i1 %polly.loop_cond[[COuter]], label %polly.loop_header{{[0-9]*}}, label %polly.loop_exit{{[0-9]*}}, !llvm.loop ![[IDOuter:[0-9]*]]
 ;
-; CHECK-DAG:  %polly.loop_cond[[CInner:[0-9]*]] = icmp sle i64 %polly.indvar{{[0-9]*}}, 510
+; CHECK-DAG:  %polly.loop_cond[[CInner:[0-9]*]] = icmp sle i64 %polly.indvar_next{{[0-9]*}}, 511
 ; CHECK-DAG:  br i1 %polly.loop_cond[[CInner]], label %polly.loop_header{{[0-9]*}}, label %polly.loop_exit{{[0-9]*}}, !llvm.loop ![[IDInner:[0-9]*]]
 ;
 ; CHECK-DAG: store i32 %{{[a-z_0-9]*}}, i32* %{{[a-z_0-9]*}}, {{[ ._!,a-zA-Z0-9]*}}, !llvm.mem.parallel_loop_access !4

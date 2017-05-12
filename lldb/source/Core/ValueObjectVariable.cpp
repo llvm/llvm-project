@@ -29,7 +29,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"     // for DataExtractor
-#include "lldb/Utility/Error.h"             // for Error
+#include "lldb/Utility/Status.h"            // for Status
 #include "lldb/lldb-private-enumerations.h" // for AddressType::eAddressTy...
 #include "lldb/lldb-types.h"                // for addr_t
 
@@ -344,7 +344,7 @@ const char *ValueObjectVariable::GetLocationAsCString() {
 }
 
 bool ValueObjectVariable::SetValueFromCString(const char *value_str,
-                                              Error &error) {
+                                              Status &error) {
   if (!UpdateValueIfNeeded()) {
     error.SetErrorString("unable to update value before writing");
     return false;
@@ -373,7 +373,7 @@ bool ValueObjectVariable::SetValueFromCString(const char *value_str,
     return ValueObject::SetValueFromCString(value_str, error);
 }
 
-bool ValueObjectVariable::SetData(DataExtractor &data, Error &error) {
+bool ValueObjectVariable::SetData(DataExtractor &data, Status &error) {
   if (!UpdateValueIfNeeded()) {
     error.SetErrorString("unable to update value before writing");
     return false;

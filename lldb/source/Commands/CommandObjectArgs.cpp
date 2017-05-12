@@ -55,10 +55,10 @@ CommandObjectArgs::CommandOptions::CommandOptions(
 
 CommandObjectArgs::CommandOptions::~CommandOptions() = default;
 
-Error CommandObjectArgs::CommandOptions::SetOptionValue(
+Status CommandObjectArgs::CommandOptions::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
-  Error error;
+  Status error;
 
   const int short_option = m_getopt_table[option_idx].val;
   error.SetErrorStringWithFormat("invalid short option character '%c'",

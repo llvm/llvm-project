@@ -32,8 +32,8 @@ public:
   DebuggerThread(DebugDelegateSP debug_delegate);
   virtual ~DebuggerThread();
 
-  Error DebugLaunch(const ProcessLaunchInfo &launch_info);
-  Error DebugAttach(lldb::pid_t pid, const ProcessAttachInfo &attach_info);
+  Status DebugLaunch(const ProcessLaunchInfo &launch_info);
+  Status DebugAttach(lldb::pid_t pid, const ProcessAttachInfo &attach_info);
 
   HostProcess GetProcess() const { return m_process; }
   HostThread GetMainThread() const { return m_main_thread; }
@@ -41,7 +41,7 @@ public:
     return m_active_exception;
   }
 
-  Error StopDebugging(bool terminate);
+  Status StopDebugging(bool terminate);
 
   void ContinueAsyncException(ExceptionResult result);
 

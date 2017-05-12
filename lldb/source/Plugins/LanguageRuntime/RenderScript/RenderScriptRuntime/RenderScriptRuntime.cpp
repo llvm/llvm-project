@@ -42,9 +42,9 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferLLVM.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -123,7 +123,7 @@ struct GetArgsCtx {
 bool GetArgsX86(const GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
 
-  Error err;
+  Status err;
 
   // get the current stack pointer
   uint64_t sp = ctx.reg_ctx->GetSP();
@@ -136,7 +136,7 @@ bool GetArgsX86(const GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
     size_t arg_size = sizeof(uint32_t);
     // read the argument from memory
     arg.value = 0;
-    Error err;
+    Status err;
     size_t read =
         ctx.process->ReadMemory(sp, &arg.value, sizeof(uint32_t), err);
     if (read != arg_size || !err.Success()) {
@@ -166,7 +166,7 @@ bool GetArgsX86_64(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
       4, // eBool,
   }};
 
-  Error err;
+  Status err;
 
   // get the current stack pointer
   uint64_t sp = ctx.reg_ctx->GetSP();
@@ -230,7 +230,7 @@ bool GetArgsArm(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
 
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
 
-  Error err;
+  Status err;
 
   // get the current stack pointer
   uint64_t sp = ctx.reg_ctx->GetSP();
@@ -310,7 +310,7 @@ bool GetArgsMipsel(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
 
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
 
-  Error err;
+  Status err;
 
   // find offset to arguments on the stack (+16 to skip over a0-a3 shadow space)
   uint64_t sp = ctx.reg_ctx->GetSP() + 16;
@@ -355,7 +355,7 @@ bool GetArgsMips64el(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args) {
 
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
 
-  Error err;
+  Status err;
 
   // get the current stack pointer
   uint64_t sp = ctx.reg_ctx->GetSP();
@@ -1189,7 +1189,7 @@ void RenderScriptRuntime::CaptureDebugHintScriptGroup2(
   // parse script group name
   ConstString group_name;
   {
-    Error err;
+    Status err;
     const uint64_t len = uint64_t(args[eGroupNameSize]);
     std::unique_ptr<char[]> buffer(new char[uint32_t(len + 1)]);
     m_process->ReadMemory(addr_t(args[eGroupName]), buffer.get(), len, err);
@@ -1238,7 +1238,7 @@ void RenderScriptRuntime::CaptureDebugHintScriptGroup2(
     // extract script group kernel addresses from the target
     const addr_t ptr_addr = addr_t(args[eKernel]) + i * target_ptr_size;
     uint64_t kernel_addr = 0;
-    Error err;
+    Status err;
     size_t read =
         m_process->ReadMemory(ptr_addr, &kernel_addr, target_ptr_size, err);
     if (!err.Success() || read != target_ptr_size) {
@@ -1337,7 +1337,7 @@ void RenderScriptRuntime::CaptureScriptInvokeForEachMulti(
   }
 
   const uint32_t target_ptr_size = m_process->GetAddressByteSize();
-  Error err;
+  Status err;
   std::vector<uint64_t> allocs;
 
   // traverse allocation list
@@ -1524,7 +1524,7 @@ void RenderScriptRuntime::CaptureScriptInit(RuntimeHook *hook,
                                             ExecutionContext &exe_ctx) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
 
-  Error err;
+  Status err;
   Process *process = exe_ctx.GetProcessPtr();
 
   enum { eRsContext, eRsScript, eRsResNamePtr, eRsCachedDirPtr };
@@ -1756,7 +1756,7 @@ bool RenderScriptRuntime::EvalRSExpression(const char *expr,
 
   // The result of the expression is invalid
   if (!expr_result->GetError().Success()) {
-    Error err = expr_result->GetError();
+    Status err = expr_result->GetError();
     // Expression returned is void, so this is actually a success
     if (err.GetError() == UserExpression::kNoResult) {
       if (log)
@@ -2140,7 +2140,7 @@ bool RenderScriptRuntime::JITSubelements(Element &elem,
       case 1: // Name of child
       {
         lldb::addr_t address = static_cast<addr_t>(results);
-        Error err;
+        Status err;
         std::string name;
         GetProcess()->ReadCStringFromMemory(address, name, err);
         if (!err.Fail())
@@ -2386,7 +2386,7 @@ void RenderScriptRuntime::FindStructTypeName(Element &elem,
     if (found) {
       // Dereference since our Element type isn't a pointer.
       if (valobj_sp->IsPointerType()) {
-        Error err;
+        Status err;
         ValueObjectSP deref_valobj = valobj_sp->Dereference(err);
         if (!err.Fail())
           valobj_sp = deref_valobj;
@@ -2482,7 +2482,7 @@ RenderScriptRuntime::GetAllocationData(AllocationDetails *alloc,
   }
 
   // Read the inferior memory
-  Error err;
+  Status err;
   lldb::addr_t data_ptr = *alloc->data_ptr.get();
   GetProcess()->ReadMemory(data_ptr, buffer.get(), size, err);
   if (err.Fail()) {
@@ -2643,7 +2643,7 @@ bool RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id,
 
   // Copy file data from our buffer into the target allocation.
   lldb::addr_t alloc_data = *alloc->data_ptr.get();
-  Error err;
+  Status err;
   size_t written = GetProcess()->WriteMemory(alloc_data, file_buf, size, err);
   if (!err.Success() || written != size) {
     strm.Printf("Error: Couldn't write data to allocation %s", err.AsCString());
@@ -2795,7 +2795,7 @@ bool RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id,
     log->Printf("%s - writing File Header, 0x%" PRIx64 " bytes", __FUNCTION__,
                 (uint64_t)num_bytes);
 
-  Error err = file.Write(&head, num_bytes);
+  Status err = file.Write(&head, num_bytes);
   if (!err.Success()) {
     strm.Printf("Error: '%s' when writing to file '%s'", err.AsCString(), path);
     strm.EOL();
@@ -2900,7 +2900,7 @@ bool RenderScriptRuntime::LoadModule(const lldb::ModuleSP &module_sp) {
         const Symbol *debug_present = m_libRS->FindFirstSymbolWithNameAndType(
             gDbgPresentStr, eSymbolTypeData);
         if (debug_present) {
-          Error err;
+          Status err;
           uint32_t flag = 0x00000001U;
           Target &target = GetProcess()->GetTarget();
           addr_t addr = debug_present->GetLoadAddress(&target);
@@ -3179,7 +3179,7 @@ bool RSModuleDescriptor::ParseRSInfo() {
   return info_lines.size() > 0;
 }
 
-void RenderScriptRuntime::Status(Stream &strm) const {
+void RenderScriptRuntime::DumpStatus(Stream &strm) const {
   if (m_libRS) {
     strm.Printf("Runtime Library discovered.");
     strm.EOL();
@@ -3620,7 +3620,7 @@ RenderScriptRuntime::CreateKernelBreakpoint(const ConstString &name) {
 
   // Give RS breakpoints a specific name, so the user can manipulate them as a
   // group.
-  Error err;
+  Status err;
   if (!bp->AddName("RenderScriptKernel", err))
     if (log)
       log->Printf("%s - error setting break name, '%s'.", __FUNCTION__,
@@ -3648,7 +3648,7 @@ RenderScriptRuntime::CreateReductionBreakpoint(const ConstString &name,
 
   // Give RS breakpoints a specific name, so the user can manipulate them as a
   // group.
-  Error err;
+  Status err;
   if (!bp->AddName("RenderScriptReduction", err))
     if (log)
       log->Printf("%s - error setting break name, '%s'.", __FUNCTION__,
@@ -3664,7 +3664,7 @@ bool RenderScriptRuntime::GetFrameVarAsUnsigned(const StackFrameSP frame_sp,
                                                 const char *var_name,
                                                 uint64_t &val) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE));
-  Error err;
+  Status err;
   VariableSP var_sp;
 
   // Find variable in stack frame
@@ -3889,7 +3889,7 @@ RenderScriptRuntime::CreateScriptGroupBreakpoint(const ConstString &name,
       m_filtersp, resolver_sp, false, false, false);
   // Give RS breakpoints a specific name, so the user can manipulate them as a
   // group.
-  Error err;
+  Status err;
   if (!bp->AddName(name.AsCString(), err))
     if (log)
       log->Printf("%s - error setting break name, '%s'.", __FUNCTION__,
@@ -4213,9 +4213,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *exe_ctx) override {
-      Error err;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *exe_ctx) override {
+      Status err;
       StreamString err_str;
       const int short_option = m_getopt_table[option_idx].val;
       switch (short_option) {
@@ -4369,9 +4369,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *exe_ctx) override {
-      Error err;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *exe_ctx) override {
+      Status err;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -4650,9 +4650,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *exe_ctx) override {
-      Error err;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *exe_ctx) override {
+      Status err;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -4772,9 +4772,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *exe_ctx) override {
-      Error err;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *exe_ctx) override {
+      Status err;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -4993,7 +4993,7 @@ public:
     RenderScriptRuntime *runtime =
         (RenderScriptRuntime *)m_exe_ctx.GetProcessPtr()->GetLanguageRuntime(
             eLanguageTypeExtRenderScript);
-    runtime->Status(result.GetOutputStream());
+    runtime->DumpStatus(result.GetOutputStream());
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return true;
   }

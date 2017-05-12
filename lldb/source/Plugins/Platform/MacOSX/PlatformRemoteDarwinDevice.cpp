@@ -22,9 +22,9 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
@@ -75,10 +75,10 @@ void PlatformRemoteDarwinDevice::GetStatus(Stream &strm) {
   }
 }
 
-Error PlatformRemoteDarwinDevice::ResolveExecutable(
+Status PlatformRemoteDarwinDevice::ResolveExecutable(
     const ModuleSpec &ms, lldb::ModuleSP &exe_module_sp,
     const FileSpecList *module_search_paths_ptr) {
-  Error error;
+  Status error;
   // Nothing special to do here, just use the actual file and architecture
 
   ModuleSpec resolved_module_spec(ms);
@@ -429,11 +429,11 @@ bool PlatformRemoteDarwinDevice::GetFileInSDK(const char *platform_file_path,
   return false;
 }
 
-Error PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
-                                       const UUID *uuid_ptr,
-                                       FileSpec &local_file) {
+Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
+                                                 const UUID *uuid_ptr,
+                                                 FileSpec &local_file) {
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
-  Error error;
+  Status error;
   char platform_file_path[PATH_MAX];
   if (platform_file.GetPath(platform_file_path, sizeof(platform_file_path))) {
     char resolved_path[PATH_MAX];
@@ -489,7 +489,7 @@ Error PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
   return error;
 }
 
-Error PlatformRemoteDarwinDevice::GetSharedModule(
+Status PlatformRemoteDarwinDevice::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
     const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
     bool *did_create_ptr) {
@@ -500,7 +500,7 @@ Error PlatformRemoteDarwinDevice::GetSharedModule(
   const FileSpec &platform_file = module_spec.GetFileSpec();
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
 
-  Error error;
+  Status error;
   char platform_file_path[PATH_MAX];
 
   if (platform_file.GetPath(platform_file_path, sizeof(platform_file_path))) {
@@ -657,7 +657,7 @@ Error PlatformRemoteDarwinDevice::GetSharedModule(
         if (path_to_try.Exists()) {
           ModuleSpec new_module_spec(module_spec);
           new_module_spec.GetFileSpec() = path_to_try;
-          Error new_error(Platform::GetSharedModule(
+          Status new_error(Platform::GetSharedModule(
               new_module_spec, process, module_sp, NULL, old_module_sp_ptr,
               did_create_ptr));
 

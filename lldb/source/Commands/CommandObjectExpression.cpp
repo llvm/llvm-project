@@ -69,10 +69,10 @@ static OptionDefinition g_expression_options[] = {
     // clang-format on
 };
 
-Error CommandObjectExpression::CommandOptions::SetOptionValue(
+Status CommandObjectExpression::CommandOptions::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
-  Error error;
+  Status error;
 
   const int short_option = GetDefinitions()[option_idx].short_option;
 
@@ -295,15 +295,15 @@ CommandObjectExpression::~CommandObjectExpression() = default;
 
 Options *CommandObjectExpression::GetOptions() { return &m_option_group; }
 
-static lldb_private::Error
+static lldb_private::Status
 CanBeUsedForElementCountPrinting(ValueObject &valobj) {
   CompilerType type(valobj.GetCompilerType());
   CompilerType pointee;
   if (!type.IsPointerType(&pointee))
-    return Error("as it does not refer to a pointer");
+    return Status("as it does not refer to a pointer");
   if (pointee.IsVoidType())
-    return Error("as it refers to a pointer to void");
-  return Error();
+    return Status("as it refers to a pointer to void");
+  return Status();
 }
 
 bool CommandObjectExpression::EvaluateExpression(const char *expr,
@@ -384,7 +384,7 @@ bool CommandObjectExpression::EvaluateExpression(const char *expr,
             result_valobj_sp->SetFormat(format);
 
           if (m_varobj_options.elem_count > 0) {
-            Error error(CanBeUsedForElementCountPrinting(*result_valobj_sp));
+            Status error(CanBeUsedForElementCountPrinting(*result_valobj_sp));
             if (error.Fail()) {
               result->AppendErrorWithFormat(
                   "expression cannot be used with --element-count %s\n",
@@ -533,7 +533,7 @@ bool CommandObjectExpression::DoExecute(const char *command,
       if (!ParseOptions(args, result))
         return false;
 
-      Error error(m_option_group.NotifyOptionParsingFinished(&exe_ctx));
+      Status error(m_option_group.NotifyOptionParsingFinished(&exe_ctx));
       if (error.Fail()) {
         result.AppendError(error.AsCString());
         result.SetStatus(eReturnStatusFailed);
@@ -564,7 +564,7 @@ bool CommandObjectExpression::DoExecute(const char *command,
             // interpreter,
             // so just push one
             bool initialize = false;
-            Error repl_error;
+            Status repl_error;
             REPLSP repl_sp(target->GetREPL(
                 repl_error, m_command_options.language, nullptr, false));
 

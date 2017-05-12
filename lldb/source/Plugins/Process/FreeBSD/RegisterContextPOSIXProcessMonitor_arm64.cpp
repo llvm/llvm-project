@@ -77,7 +77,7 @@ bool RegisterContextPOSIXProcessMonitor_arm64::WriteRegister(
 
     // Read the full register.
     if (ReadRegister(full_reg_info, full_value)) {
-      lldb_private::Error error;
+      lldb_private::Status error;
       lldb::ByteOrder byte_order = GetByteOrder();
       uint8_t dst[lldb_private::RegisterValue::kMaxRegisterByteSize];
 

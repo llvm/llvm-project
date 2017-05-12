@@ -49,9 +49,10 @@ public:
                      const lldb_private::ArchSpec &arch,
                      lldb_private::ModuleSpec &module_spec) override;
 
-  Error ResolveExecutable(const lldb_private::ModuleSpec &module_spec,
-                          lldb::ModuleSP &module_sp,
-                          const FileSpecList *module_search_paths_ptr) override;
+  Status
+  ResolveExecutable(const lldb_private::ModuleSpec &module_spec,
+                    lldb::ModuleSP &module_sp,
+                    const FileSpecList *module_search_paths_ptr) override;
 
   const char *GetDescription() override {
     return GetPluginDescriptionStatic(IsHost());
@@ -68,9 +69,9 @@ public:
 
   bool IsConnected() const override;
 
-  lldb_private::Error ConnectRemote(lldb_private::Args &args) override;
+  lldb_private::Status ConnectRemote(lldb_private::Args &args) override;
 
-  lldb_private::Error DisconnectRemote() override;
+  lldb_private::Status DisconnectRemote() override;
 
   const char *GetHostname() override;
 
@@ -85,25 +86,25 @@ public:
   FindProcesses(const lldb_private::ProcessInstanceInfoMatch &match_info,
                 lldb_private::ProcessInstanceInfoList &process_infos) override;
 
-  lldb_private::Error
+  lldb_private::Status
   LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
 
   lldb::ProcessSP DebugProcess(lldb_private::ProcessLaunchInfo &launch_info,
                                lldb_private::Debugger &debugger,
                                lldb_private::Target *target,
-                               lldb_private::Error &error) override;
+                               lldb_private::Status &error) override;
 
   lldb::ProcessSP Attach(lldb_private::ProcessAttachInfo &attach_info,
                          lldb_private::Debugger &debugger,
                          lldb_private::Target *target,
-                         lldb_private::Error &error) override;
+                         lldb_private::Status &error) override;
 
-  lldb_private::Error
+  lldb_private::Status
   GetFileWithUUID(const lldb_private::FileSpec &platform_file,
                   const lldb_private::UUID *uuid,
                   lldb_private::FileSpec &local_file) override;
 
-  lldb_private::Error
+  lldb_private::Status
   GetSharedModule(const lldb_private::ModuleSpec &module_spec,
                   lldb_private::Process *process, lldb::ModuleSP &module_sp,
                   const lldb_private::FileSpecList *module_search_paths_ptr,

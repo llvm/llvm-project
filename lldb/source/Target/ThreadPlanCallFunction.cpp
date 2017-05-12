@@ -58,7 +58,7 @@ bool ThreadPlanCallFunction::ConstructorSetup(
   // If we can't read memory at the point of the process where we are planning
   // to put our function, we're
   // not going to get any further...
-  Error error;
+  Status error;
   process_sp->ReadUnsignedIntegerFromMemory(m_function_sp, 4, 0, error);
   if (!error.Success()) {
     m_constructor_errors.Printf(

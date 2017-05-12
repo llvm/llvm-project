@@ -548,9 +548,9 @@ void BackendConsumer::UnsupportedDiagHandler(
 
   StringRef Filename;
   unsigned Line, Column;
-  bool BadDebugInfo;
-  FullSourceLoc Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename,
-      Line, Column);
+  bool BadDebugInfo = false;
+  FullSourceLoc Loc =
+      getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
 
   Diags.Report(Loc, diag::err_fe_backend_unsupported) << D.getMessage().str();
 
@@ -572,8 +572,8 @@ void BackendConsumer::EmitOptimizationMessage(
   StringRef Filename;
   unsigned Line, Column;
   bool BadDebugInfo = false;
-  FullSourceLoc Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename,
-      Line, Column);
+  FullSourceLoc Loc =
+      getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
 
   std::string Msg;
   raw_string_ostream MsgStream(Msg);

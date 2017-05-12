@@ -26,7 +26,7 @@ namespace lldb_private {
 class DataExtractor;
 }
 namespace lldb_private {
-class Error;
+class Status;
 }
 namespace lldb_private {
 class ExecutionContextScope;
@@ -148,9 +148,9 @@ public:
 
   size_t CalculateNumChildren(uint32_t max) override;
 
-  bool SetValueFromCString(const char *value_str, Error &error) override;
+  bool SetValueFromCString(const char *value_str, Status &error) override;
 
-  bool SetData(DataExtractor &data, Error &error) override;
+  bool SetData(DataExtractor &data, Status &error) override;
 
   bool ResolveValue(Scalar &scalar) override;
 

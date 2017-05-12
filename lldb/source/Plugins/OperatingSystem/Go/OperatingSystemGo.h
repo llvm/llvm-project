@@ -80,7 +80,7 @@ private:
 
   bool Init(lldb_private::ThreadList &threads);
 
-  Goroutine CreateGoroutineAtIndex(uint64_t idx, lldb_private::Error &err);
+  Goroutine CreateGoroutineAtIndex(uint64_t idx, lldb_private::Status &err);
 
   std::unique_ptr<DynamicRegisterInfo> m_reginfo;
   lldb::ValueObjectSP m_allg_sp;

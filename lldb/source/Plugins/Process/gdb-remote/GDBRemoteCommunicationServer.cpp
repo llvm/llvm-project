@@ -39,7 +39,7 @@ void GDBRemoteCommunicationServer::RegisterPacketHandler(
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServer::GetPacketAndSendResponse(
-    Timeout<std::micro> timeout, Error &error, bool &interrupt, bool &quit) {
+    Timeout<std::micro> timeout, Status &error, bool &interrupt, bool &quit) {
   StringExtractorGDBRemote packet;
 
   PacketResult packet_result = WaitForPacketNoLock(packet, timeout, false);

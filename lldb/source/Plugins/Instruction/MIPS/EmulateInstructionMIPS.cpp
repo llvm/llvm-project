@@ -63,10 +63,10 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
     const lldb_private::ArchSpec &arch)
     : EmulateInstruction(arch) {
   /* Create instance of llvm::MCDisassembler */
-  std::string Error;
+  std::string Status;
   llvm::Triple triple = arch.GetTriple();
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple.getTriple(), Error);
+      llvm::TargetRegistry::lookupTarget(triple.getTriple(), Status);
 
 /*
  * If we fail to get the target then we haven't registered it. The
@@ -83,7 +83,7 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
     LLVMInitializeMipsAsmPrinter();
     LLVMInitializeMipsTargetMC();
     LLVMInitializeMipsDisassembler();
-    target = llvm::TargetRegistry::lookupTarget(triple.getTriple(), Error);
+    target = llvm::TargetRegistry::lookupTarget(triple.getTriple(), Status);
   }
 #endif
 
@@ -1019,7 +1019,7 @@ bool EmulateInstructionMIPS::SetInstruction(const Opcode &insn_opcode,
 
   if (EmulateInstruction::SetInstruction(insn_opcode, inst_addr, target)) {
     if (inst_addr.GetAddressClass() == eAddressClassCodeAlternateISA) {
-      Error error;
+      Status error;
       lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
 
       /*
@@ -1297,7 +1297,7 @@ bool EmulateInstructionMIPS::Emulate_SW(llvm::MCInst &insn) {
     context.SetRegisterToRegisterPlusOffset(reg_info_src, reg_info_base, 0);
 
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
-    Error error;
+    Status error;
 
     if (!ReadRegister(&reg_info_base, data_src))
       return false;
@@ -1563,7 +1563,7 @@ bool EmulateInstructionMIPS::Emulate_SWSP(llvm::MCInst &insn) {
     context.SetRegisterToRegisterPlusOffset(reg_info_src, reg_info_base, 0);
 
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
-    Error error;
+    Status error;
 
     if (!ReadRegister(&reg_info_base, data_src))
       return false;
@@ -1646,7 +1646,7 @@ bool EmulateInstructionMIPS::Emulate_SWM16_32(llvm::MCInst &insn) {
     context.SetRegisterToRegisterPlusOffset(reg_info_src, reg_info_base, 0);
 
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
-    Error error;
+    Status error;
 
     if (!ReadRegister(&reg_info_base, data_src))
       return false;

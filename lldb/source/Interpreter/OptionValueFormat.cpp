@@ -31,9 +31,9 @@ void OptionValueFormat::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-Error OptionValueFormat::SetValueFromString(llvm::StringRef value,
-                                            VarSetOperationType op) {
-  Error error;
+Status OptionValueFormat::SetValueFromString(llvm::StringRef value,
+                                             VarSetOperationType op) {
+  Status error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

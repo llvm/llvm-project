@@ -22,7 +22,7 @@ using namespace lldb_private;
 
 PlatformSP OptionGroupPlatform::CreatePlatformWithOptions(
     CommandInterpreter &interpreter, const ArchSpec &arch, bool make_selected,
-    Error &error, ArchSpec &platform_arch) const {
+    Status &error, ArchSpec &platform_arch) const {
   PlatformSP platform_sp;
 
   if (!m_platform_name.empty()) {
@@ -92,10 +92,11 @@ llvm::ArrayRef<OptionDefinition> OptionGroupPlatform::GetDefinitions() {
   return result.drop_front();
 }
 
-Error OptionGroupPlatform::SetOptionValue(uint32_t option_idx,
-                                          llvm::StringRef option_arg,
-                                          ExecutionContext *execution_context) {
-  Error error;
+Status
+OptionGroupPlatform::SetOptionValue(uint32_t option_idx,
+                                    llvm::StringRef option_arg,
+                                    ExecutionContext *execution_context) {
+  Status error;
   if (!m_include_platform_option)
     ++option_idx;
 

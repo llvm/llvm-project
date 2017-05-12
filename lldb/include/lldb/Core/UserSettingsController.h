@@ -10,7 +10,7 @@
 #ifndef liblldb_UserSettingsController_h_
 #define liblldb_UserSettingsController_h_
 
-#include "lldb/Utility/Error.h"             // for Error
+#include "lldb/Utility/Status.h"            // for Status
 #include "lldb/lldb-forward.h"              // for OptionValuePropertiesSP
 #include "lldb/lldb-private-enumerations.h" // for VarSetOperationType
 
@@ -57,15 +57,16 @@ public:
   virtual lldb::OptionValueSP GetPropertyValue(const ExecutionContext *exe_ctx,
                                                llvm::StringRef property_path,
                                                bool will_modify,
-                                               Error &error) const;
+                                               Status &error) const;
 
-  virtual Error SetPropertyValue(const ExecutionContext *exe_ctx,
-                                 VarSetOperationType op,
-    llvm::StringRef property_path, llvm::StringRef value);
+  virtual Status SetPropertyValue(const ExecutionContext *exe_ctx,
+                                  VarSetOperationType op,
+                                  llvm::StringRef property_path,
+                                  llvm::StringRef value);
 
-  virtual Error DumpPropertyValue(const ExecutionContext *exe_ctx, Stream &strm,
-    llvm::StringRef property_path,
-                                  uint32_t dump_mask);
+  virtual Status DumpPropertyValue(const ExecutionContext *exe_ctx,
+                                   Stream &strm, llvm::StringRef property_path,
+                                   uint32_t dump_mask);
 
   virtual void DumpAllPropertyValues(const ExecutionContext *exe_ctx,
                                      Stream &strm, uint32_t dump_mask);

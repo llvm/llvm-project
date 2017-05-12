@@ -140,7 +140,7 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) {
 static void *AcceptPIDFromInferior(void *arg) {
   const char *connect_url = (const char *)arg;
   ConnectionFileDescriptor file_conn;
-  Error error;
+  Status error;
   if (file_conn.Connect(connect_url, &error) == eConnectionStatusSuccess) {
     char pid_str[256];
     ::memset(pid_str, 0, sizeof(pid_str));
@@ -310,7 +310,7 @@ static bool WaitForProcessToSIGSTOP(const lldb::pid_t pid,
 //
 //    lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
 //
-//    Error lldb_error;
+//    Status lldb_error;
 //    // Sleep and wait a bit for debugserver to start to listen...
 //    char connect_url[128];
 //    ::snprintf (connect_url, sizeof(connect_url), "unix-accept://%s",
@@ -377,10 +377,10 @@ tell application \"Terminal\"\n\
 	do script the_shell_script\n\
 end tell\n";
 
-static Error
+static Status
 LaunchInNewTerminalWithAppleScript(const char *exe_path,
                                    ProcessLaunchInfo &launch_info) {
-  Error error;
+  Status error;
   char unix_socket_name[PATH_MAX] = "/tmp/XXXXXX";
   if (::mktemp(unix_socket_name) == NULL) {
     error.SetErrorString("failed to make temporary path for a unix socket");
@@ -500,7 +500,7 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
 
   lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
 
-  Error lldb_error;
+  Status lldb_error;
   // Sleep and wait a bit for debugserver to start to listen...
   ConnectionFileDescriptor file_conn;
   char connect_url[128];
@@ -946,8 +946,8 @@ static void PackageXPCArguments(xpc_object_t message, const char *prefix,
  Once obtained, it will be valid for as long as the process lives.
  */
 static AuthorizationRef authorizationRef = NULL;
-static Error getXPCAuthorization(ProcessLaunchInfo &launch_info) {
-  Error error;
+static Status getXPCAuthorization(ProcessLaunchInfo &launch_info) {
+  Status error;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST |
                                                   LIBLLDB_LOG_PROCESS));
 
@@ -1024,11 +1024,11 @@ static Error getXPCAuthorization(ProcessLaunchInfo &launch_info) {
 }
 #endif
 
-static Error LaunchProcessXPC(const char *exe_path,
-                              ProcessLaunchInfo &launch_info,
-                              lldb::pid_t &pid) {
+static Status LaunchProcessXPC(const char *exe_path,
+                               ProcessLaunchInfo &launch_info,
+                               lldb::pid_t &pid) {
 #if !NO_XPC_SERVICES
-  Error error = getXPCAuthorization(launch_info);
+  Status error = getXPCAuthorization(launch_info);
   if (error.Fail())
     return error;
 
@@ -1156,7 +1156,7 @@ static Error LaunchProcessXPC(const char *exe_path,
 
   return error;
 #else
-  Error error;
+  Status error;
   return error;
 #endif
 }
@@ -1177,8 +1177,8 @@ static bool ShouldLaunchUsingXPC(ProcessLaunchInfo &launch_info) {
   return result;
 }
 
-Error Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
-  Error error;
+Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
+  Status error;
   char exe_path[PATH_MAX];
   PlatformSP host_platform_sp(Platform::GetHostPlatform());
 
@@ -1246,8 +1246,8 @@ Error Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   return error;
 }
 
-Error Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
-  Error error;
+Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
+  Status error;
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
     FileSpec expand_tool_spec;
     if (!HostInfo::GetLLDBPath(lldb::ePathTypeSupportExecutableDir,

@@ -9,8 +9,8 @@
 
 #include "lldb/Host/common/NativeBreakpoint.h"
 
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 
 using namespace lldb_private;
@@ -44,7 +44,7 @@ int32_t NativeBreakpoint::DecRef() {
   return m_ref_count;
 }
 
-Error NativeBreakpoint::Enable() {
+Status NativeBreakpoint::Enable() {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
 
   if (m_enabled) {
@@ -53,7 +53,7 @@ Error NativeBreakpoint::Enable() {
       log->Printf("NativeBreakpoint::%s addr = 0x%" PRIx64
                   " already enabled, ignoring.",
                   __FUNCTION__, m_addr);
-    return Error();
+    return Status();
   }
 
   // Log and enable.
@@ -61,7 +61,7 @@ Error NativeBreakpoint::Enable() {
     log->Printf("NativeBreakpoint::%s addr = 0x%" PRIx64 " enabling...",
                 __FUNCTION__, m_addr);
 
-  Error error = DoEnable();
+  Status error = DoEnable();
   if (error.Success()) {
     m_enabled = true;
     if (log)
@@ -76,7 +76,7 @@ Error NativeBreakpoint::Enable() {
   return error;
 }
 
-Error NativeBreakpoint::Disable() {
+Status NativeBreakpoint::Disable() {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
 
   if (!m_enabled) {
@@ -85,7 +85,7 @@ Error NativeBreakpoint::Disable() {
       log->Printf("NativeBreakpoint::%s addr = 0x%" PRIx64
                   " already disabled, ignoring.",
                   __FUNCTION__, m_addr);
-    return Error();
+    return Status();
   }
 
   // Log and disable.
@@ -93,7 +93,7 @@ Error NativeBreakpoint::Disable() {
     log->Printf("NativeBreakpoint::%s addr = 0x%" PRIx64 " disabling...",
                 __FUNCTION__, m_addr);
 
-  Error error = DoDisable();
+  Status error = DoDisable();
   if (error.Success()) {
     m_enabled = false;
     if (log)

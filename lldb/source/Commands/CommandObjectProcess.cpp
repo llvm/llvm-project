@@ -74,7 +74,7 @@ protected:
         } else {
           if (process->GetShouldDetach()) {
             bool keep_stopped = false;
-            Error detach_error(process->Detach(keep_stopped));
+            Status detach_error(process->Detach(keep_stopped));
             if (detach_error.Success()) {
               result.SetStatus(eReturnStatusSuccessFinishResult);
               process = nullptr;
@@ -85,7 +85,7 @@ protected:
               result.SetStatus(eReturnStatusFailed);
             }
           } else {
-            Error destroy_error(process->Destroy(false));
+            Status destroy_error(process->Destroy(false));
             if (destroy_error.Success()) {
               result.SetStatus(eReturnStatusSuccessFinishResult);
               process = nullptr;
@@ -231,7 +231,7 @@ protected:
     }
 
     StreamString stream;
-    Error error = target->Launch(m_options.launch_info, &stream);
+    Status error = target->Launch(m_options.launch_info, &stream);
 
     if (error.Success()) {
       ProcessSP process_sp(target->GetProcessSP());
@@ -338,9 +338,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
       switch (short_option) {
       case 'c':
@@ -470,7 +470,7 @@ protected:
     if (target == nullptr) {
       // If there isn't a current target create one.
       TargetSP new_target_sp;
-      Error error;
+      Status error;
 
       error = m_interpreter.GetDebugger().GetTargetList().CreateTarget(
           m_interpreter.GetDebugger(), "", "", false,
@@ -603,9 +603,9 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
       switch (short_option) {
       case 'i':
@@ -687,7 +687,7 @@ protected:
       const uint32_t iohandler_id = process->GetIOHandlerID();
 
       StreamString stream;
-      Error error;
+      Status error;
       if (synchronous_execution)
         error = process->ResumeSynchronous(&stream);
       else
@@ -751,9 +751,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -816,7 +816,7 @@ protected:
     else
       keep_stopped = false;
 
-    Error error(process->Detach(keep_stopped));
+    Status error(process->Detach(keep_stopped));
     if (error.Success()) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
@@ -854,9 +854,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -919,7 +919,7 @@ protected:
     if (!m_options.plugin_name.empty())
       plugin_name = m_options.plugin_name.c_str();
 
-    Error error;
+    Status error;
     Debugger &debugger = m_interpreter.GetDebugger();
     PlatformSP platform_sp = m_interpreter.GetPlatform(true);
     ProcessSP process_sp = platform_sp->ConnectProcess(
@@ -983,9 +983,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
       switch (short_option) {
       case 'i':
@@ -1033,7 +1033,7 @@ protected:
     Process *process = m_exe_ctx.GetProcessPtr();
 
     for (auto &entry : command.entries()) {
-      Error error;
+      Status error;
       PlatformSP platform = process->GetTarget().GetPlatform();
       llvm::StringRef image_path = entry.ref;
       uint32_t image_token = LLDB_INVALID_IMAGE_TOKEN;
@@ -1103,7 +1103,7 @@ protected:
         result.SetStatus(eReturnStatusFailed);
         break;
       } else {
-        Error error(process->GetTarget().GetPlatform()->UnloadImage(
+        Status error(process->GetTarget().GetPlatform()->UnloadImage(
             process, image_token));
         if (error.Success()) {
           result.AppendMessageWithFormat(
@@ -1169,7 +1169,7 @@ protected:
                                      command.GetArgumentAtIndex(0));
         result.SetStatus(eReturnStatusFailed);
       } else {
-        Error error(process->Signal(signo));
+        Status error(process->Signal(signo));
         if (error.Success()) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
@@ -1215,7 +1215,7 @@ protected:
 
     if (command.GetArgumentCount() == 0) {
       bool clear_thread_plans = true;
-      Error error(process->Halt(clear_thread_plans));
+      Status error(process->Halt(clear_thread_plans));
       if (error.Success()) {
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
@@ -1258,7 +1258,7 @@ protected:
     }
 
     if (command.GetArgumentCount() == 0) {
-      Error error(process->Destroy(true));
+      Status error(process->Destroy(true));
       if (error.Success()) {
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
@@ -1298,7 +1298,7 @@ protected:
     if (process_sp) {
       if (command.GetArgumentCount() == 1) {
         FileSpec output_file(command.GetArgumentAtIndex(0), false);
-        Error error = PluginManager::SaveCore(process_sp, output_file);
+        Status error = PluginManager::SaveCore(process_sp, output_file);
         if (error.Success()) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
@@ -1377,9 +1377,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {

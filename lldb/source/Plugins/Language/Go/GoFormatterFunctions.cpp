@@ -96,7 +96,7 @@ bool lldb_private::formatters::GoStringSummaryProvider(
     return false;
 
   if (valobj.IsPointerType()) {
-    Error err;
+    Status err;
     ValueObjectSP deref = valobj.Dereference(err);
     if (!err.Success())
       return false;

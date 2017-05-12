@@ -47,7 +47,7 @@ public:
 
   ReadHandleUP RegisterReadObject(const lldb::IOObjectSP &object_sp,
                                   const Callback &callback,
-                                  Error &error) override;
+                                  Status &error) override;
 
   // Listening for signals from multiple MainLoop instances is perfectly safe as
   // long as they don't try to listen for the same signal. The callback function
@@ -57,9 +57,9 @@ public:
   // However, since the callback is not invoked synchronously, you cannot use
   // this mechanism to handle SIGSEGV and the like.
   SignalHandleUP RegisterSignal(int signo, const Callback &callback,
-                                Error &error);
+                                Status &error);
 
-  Error Run() override;
+  Status Run() override;
 
   // This should only be performed from a callback. Do not attempt to terminate
   // the processing from another thread.

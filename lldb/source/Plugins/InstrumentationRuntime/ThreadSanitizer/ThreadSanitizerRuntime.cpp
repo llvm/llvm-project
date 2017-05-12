@@ -256,7 +256,7 @@ static std::string RetrieveString(ValueObjectSP return_value_sp,
       return_value_sp->GetValueForExpressionPath(expression_path.c_str())
           ->GetValueAsUnsigned(0);
   std::string str;
-  Error error;
+  Status error;
   process_sp->ReadCStringFromMemory(ptr, str, error);
   return str;
 }
@@ -325,7 +325,7 @@ ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
 
   ValueObjectSP main_value;
   ExecutionContext exe_ctx;
-  Error eval_error;
+  Status eval_error;
   frame_sp->CalculateExecutionContext(exe_ctx);
   ExpressionResults result = UserExpression::Evaluate(
       exe_ctx, options, thread_sanitizer_retrieve_report_data_command, "",

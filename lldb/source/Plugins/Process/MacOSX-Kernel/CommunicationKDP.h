@@ -128,22 +128,24 @@ public:
   bool SendRequestDisconnect();
 
   uint32_t SendRequestReadMemory(lldb::addr_t addr, void *dst,
-                                 uint32_t dst_size, lldb_private::Error &error);
+                                 uint32_t dst_size,
+                                 lldb_private::Status &error);
 
   uint32_t SendRequestWriteMemory(lldb::addr_t addr, const void *src,
-                                  uint32_t src_len, lldb_private::Error &error);
+                                  uint32_t src_len,
+                                  lldb_private::Status &error);
 
   bool SendRawRequest(uint8_t command_byte, const void *src, uint32_t src_len,
                       lldb_private::DataExtractor &reply,
-                      lldb_private::Error &error);
+                      lldb_private::Status &error);
 
   uint32_t SendRequestReadRegisters(uint32_t cpu, uint32_t flavor, void *dst,
                                     uint32_t dst_size,
-                                    lldb_private::Error &error);
+                                    lldb_private::Status &error);
 
   uint32_t SendRequestWriteRegisters(uint32_t cpu, uint32_t flavor,
                                      const void *src, uint32_t src_size,
-                                     lldb_private::Error &error);
+                                     lldb_private::Status &error);
 
   const char *GetKernelVersion();
 

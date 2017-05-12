@@ -75,7 +75,7 @@ bool RegisterContextPOSIXProcessMonitor_arm::WriteRegister(
 
     // Read the full register.
     if (ReadRegister(full_reg_info, full_value)) {
-      Error error;
+      Status error;
       ByteOrder byte_order = GetByteOrder();
       uint8_t dst[RegisterValue::kMaxRegisterByteSize];
 

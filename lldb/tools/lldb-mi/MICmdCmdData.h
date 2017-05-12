@@ -77,7 +77,7 @@ private:
   bool m_bExpressionValid;     // True = yes is valid, false = not valid
   bool m_bEvaluatedExpression; // True = yes is expression evaluated, false =
                                // failed
-  lldb::SBError m_Error;       // Error object, which is examined when
+  lldb::SBError m_Error;       // Status object, which is examined when
                                // m_bEvaluatedExpression is false
   CMIUtilString m_strValue;
   CMICmnMIValueTuple m_miValueTuple;

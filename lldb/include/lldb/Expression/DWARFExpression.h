@@ -14,7 +14,7 @@
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
 #include <functional>
 
@@ -266,7 +266,7 @@ public:
                 ClangExpressionDeclMap *decl_map,
                 lldb::addr_t loclist_base_load_addr,
                 const Value *initial_value_ptr, const Value *object_address_ptr,
-                Value &result, Error *error_ptr) const;
+                Value &result, Status *error_ptr) const;
 
   //------------------------------------------------------------------
   /// Wrapper for the static evaluate function that uses member
@@ -277,7 +277,7 @@ public:
                 ClangExpressionDeclMap *decl_map, RegisterContext *reg_ctx,
                 lldb::addr_t loclist_base_load_addr,
                 const Value *initial_value_ptr, const Value *object_address_ptr,
-                Value &result, Error *error_ptr) const;
+                Value &result, Status *error_ptr) const;
 
   //------------------------------------------------------------------
   /// Evaluate a DWARF location expression in a particular context
@@ -345,7 +345,7 @@ public:
            DWARFCompileUnit *dwarf_cu, const lldb::offset_t offset,
            const lldb::offset_t length, const lldb::RegisterKind reg_set,
            const Value *initial_value_ptr, const Value *object_address_ptr,
-           Value &result, Error *error_ptr);
+           Value &result, Status *error_ptr);
 
   //------------------------------------------------------------------
   /// Loads a ClangExpressionVariableList into the object

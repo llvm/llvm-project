@@ -885,9 +885,9 @@ DisassemblerLLVMC::LLVMCDisassembler::LLVMCDisassembler(
     const char *triple, const char *cpu, const char *features_str,
     unsigned flavor, DisassemblerLLVMC &owner)
     : m_is_valid(true) {
-  std::string Error;
+  std::string Status;
   const llvm::Target *curr_target =
-      llvm::TargetRegistry::lookupTarget(triple, Error);
+      llvm::TargetRegistry::lookupTarget(triple, Status);
   if (!curr_target) {
     m_is_valid = false;
     return;

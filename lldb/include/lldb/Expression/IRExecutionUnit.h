@@ -39,7 +39,7 @@ class ObjectCache;
 
 namespace lldb_private {
 
-class Error;
+class Status;
 
 //----------------------------------------------------------------------
 /// @class IRExecutionUnit IRExecutionUnit.h "lldb/Expression/IRExecutionUnit.h"
@@ -86,7 +86,7 @@ public:
                                   : nullptr);
   }
 
-  void GetRunnableInfo(Error &error, lldb::addr_t &func_addr,
+  void GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
                        lldb::addr_t &func_end);
 
   //------------------------------------------------------------------
@@ -95,7 +95,7 @@ public:
   /// IRExecutionUnit unless the client explicitly chooses to free it.
   //------------------------------------------------------------------
 
-  lldb::addr_t WriteNow(const uint8_t *bytes, size_t size, Error &error);
+  lldb::addr_t WriteNow(const uint8_t *bytes, size_t size, Status &error);
 
   void FreeNow(lldb::addr_t allocation);
 
@@ -240,7 +240,7 @@ private:
   //------------------------------------------------------------------
   bool WriteData(lldb::ProcessSP &process_sp);
 
-  Error DisassembleFunction(Stream &stream, lldb::ProcessSP &process_sp);
+  Status DisassembleFunction(Stream &stream, lldb::ProcessSP &process_sp);
 
   struct SearchSpec;
 
@@ -391,7 +391,7 @@ private:
     void dump(Log *log);
   };
 
-  bool CommitOneAllocation(lldb::ProcessSP &process_sp, Error &error,
+  bool CommitOneAllocation(lldb::ProcessSP &process_sp, Status &error,
                            AllocationRecord &record);
 
   typedef std::vector<AllocationRecord> RecordVector;

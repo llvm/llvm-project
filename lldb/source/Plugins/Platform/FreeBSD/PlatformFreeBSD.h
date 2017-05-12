@@ -54,10 +54,10 @@ public:
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;
 
-  Error LaunchProcess(ProcessLaunchInfo &launch_info) override;
+  Status LaunchProcess(ProcessLaunchInfo &launch_info) override;
 
   lldb::ProcessSP Attach(ProcessAttachInfo &attach_info, Debugger &debugger,
-                         Target *target, Error &error) override;
+                         Target *target, Status &error) override;
 
   void CalculateTrapHandlerSymbolNames() override;
 

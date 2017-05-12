@@ -30,7 +30,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Utility/ARM_DWARF_Registers.h"
@@ -1518,7 +1518,7 @@ bool ABISysV_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
 
           // Arguments 5 on up are on the stack
           const uint32_t arg_byte_size = (bit_width + (8 - 1)) / 8;
-          Error error;
+          Status error;
           if (!exe_ctx.GetProcessRef().ReadScalarIntegerFromMemory(
                   sp, arg_byte_size, is_signed, value->GetScalar(), error))
             return false;
@@ -1534,7 +1534,7 @@ bool ABISysV_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
 static bool GetReturnValuePassedInMemory(Thread &thread,
                                          RegisterContext *reg_ctx,
                                          size_t byte_size, Value &value) {
-  Error error;
+  Status error;
   DataBufferHeap buffer(byte_size, 0);
 
   const RegisterInfo *r0_reg_info =
@@ -1815,7 +1815,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
 
       // Make sure we have enough room in "data_sp"
       if ((data_offset + vfp_byte_size) <= data_sp->GetByteSize()) {
-        Error error;
+        Status error;
         const size_t bytes_copied = reg_value.GetAsMemoryData(
             reg_info, data_sp->GetBytes() + data_offset, vfp_byte_size,
             byte_order, error);
@@ -1846,9 +1846,9 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-Error ABISysV_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                        lldb::ValueObjectSP &new_value_sp) {
-  Error error;
+Status ABISysV_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                         lldb::ValueObjectSP &new_value_sp) {
+  Status error;
   if (!new_value_sp) {
     error.SetErrorString("Empty value object for return value.");
     return error;
@@ -1872,7 +1872,7 @@ Error ABISysV_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
       compiler_type.IsPointerType()) {
     DataExtractor data;
-    Error data_error;
+    Status data_error;
     size_t num_bytes = new_value_sp->GetData(data, data_error);
     if (data_error.Fail()) {
       error.SetErrorStringWithFormat(

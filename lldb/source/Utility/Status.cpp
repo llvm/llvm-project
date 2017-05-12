@@ -1,4 +1,5 @@
-//===-- Error.cpp -----------------------------------------------*- C++ -*-===//
+//===-- Status.cpp -----------------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 #include "lldb/Utility/VASPrintf.h"
 #include "lldb/lldb-defines.h"            // for LLDB_GENERIC_ERROR
@@ -35,18 +36,18 @@ class raw_ostream;
 using namespace lldb;
 using namespace lldb_private;
 
-Error::Error() : m_code(0), m_type(eErrorTypeInvalid), m_string() {}
+Status::Status() : m_code(0), m_type(eErrorTypeInvalid), m_string() {}
 
-Error::Error(ValueType err, ErrorType type)
+Status::Status(ValueType err, ErrorType type)
     : m_code(err), m_type(type), m_string() {}
 
-Error::Error(std::error_code EC)
+Status::Status(std::error_code EC)
     : m_code(EC.value()), m_type(ErrorType::eErrorTypeGeneric),
       m_string(EC.message()) {}
 
-Error::Error(const Error &rhs) = default;
+Status::Status(const Status &rhs) = default;
 
-Error::Error(const char *format, ...)
+Status::Status(const char *format, ...)
     : m_code(0), m_type(eErrorTypeInvalid), m_string() {
   va_list args;
   va_start(args, format);
@@ -58,7 +59,7 @@ Error::Error(const char *format, ...)
 //----------------------------------------------------------------------
 // Assignment operator
 //----------------------------------------------------------------------
-const Error &Error::operator=(const Error &rhs) {
+const Status &Status::operator=(const Status &rhs) {
   if (this != &rhs) {
     m_code = rhs.m_code;
     m_type = rhs.m_type;
@@ -70,21 +71,21 @@ const Error &Error::operator=(const Error &rhs) {
 //----------------------------------------------------------------------
 // Assignment operator
 //----------------------------------------------------------------------
-const Error &Error::operator=(uint32_t err) {
+const Status &Status::operator=(uint32_t err) {
   m_code = err;
   m_type = eErrorTypeMachKernel;
   m_string.clear();
   return *this;
 }
 
-Error::~Error() = default;
+Status::~Status() = default;
 
 //----------------------------------------------------------------------
 // Get the error value as a NULL C string. The error string will be
 // fetched and cached on demand. The cached error string value will
 // remain until the error value is changed or cleared.
 //----------------------------------------------------------------------
-const char *Error::AsCString(const char *default_error_str) const {
+const char *Status::AsCString(const char *default_error_str) const {
   if (Success())
     return nullptr;
 
@@ -119,7 +120,7 @@ const char *Error::AsCString(const char *default_error_str) const {
 //----------------------------------------------------------------------
 // Clear the error and any cached error string that it might contain.
 //----------------------------------------------------------------------
-void Error::Clear() {
+void Status::Clear() {
   m_code = 0;
   m_type = eErrorTypeInvalid;
   m_string.clear();
@@ -128,38 +129,38 @@ void Error::Clear() {
 //----------------------------------------------------------------------
 // Access the error value.
 //----------------------------------------------------------------------
-Error::ValueType Error::GetError() const { return m_code; }
+Status::ValueType Status::GetError() const { return m_code; }
 
 //----------------------------------------------------------------------
 // Access the error type.
 //----------------------------------------------------------------------
-ErrorType Error::GetType() const { return m_type; }
+ErrorType Status::GetType() const { return m_type; }
 
 //----------------------------------------------------------------------
 // Returns true if this object contains a value that describes an
 // error or otherwise non-success result.
 //----------------------------------------------------------------------
-bool Error::Fail() const { return m_code != 0; }
+bool Status::Fail() const { return m_code != 0; }
 
 //----------------------------------------------------------------------
 // Set accesssor for the error value to "err" and the type to
 // "eErrorTypeMachKernel"
 //----------------------------------------------------------------------
-void Error::SetMachError(uint32_t err) {
+void Status::SetMachError(uint32_t err) {
   m_code = err;
   m_type = eErrorTypeMachKernel;
   m_string.clear();
 }
 
-void Error::SetExpressionError(lldb::ExpressionResults result,
-                               const char *mssg) {
+void Status::SetExpressionError(lldb::ExpressionResults result,
+                                const char *mssg) {
   m_code = result;
   m_type = eErrorTypeExpression;
   m_string = mssg;
 }
 
-int Error::SetExpressionErrorWithFormat(lldb::ExpressionResults result,
-                                        const char *format, ...) {
+int Status::SetExpressionErrorWithFormat(lldb::ExpressionResults result,
+                                         const char *format, ...) {
   int length = 0;
 
   if (format != nullptr && format[0]) {
@@ -178,7 +179,7 @@ int Error::SetExpressionErrorWithFormat(lldb::ExpressionResults result,
 //----------------------------------------------------------------------
 // Set accesssor for the error value and type.
 //----------------------------------------------------------------------
-void Error::SetError(ValueType err, ErrorType type) {
+void Status::SetError(ValueType err, ErrorType type) {
   m_code = err;
   m_type = type;
   m_string.clear();
@@ -188,7 +189,7 @@ void Error::SetError(ValueType err, ErrorType type) {
 // Update the error value to be "errno" and update the type to
 // be "POSIX".
 //----------------------------------------------------------------------
-void Error::SetErrorToErrno() {
+void Status::SetErrorToErrno() {
   m_code = errno;
   m_type = eErrorTypePOSIX;
   m_string.clear();
@@ -198,7 +199,7 @@ void Error::SetErrorToErrno() {
 // Update the error value to be LLDB_GENERIC_ERROR and update the type
 // to be "Generic".
 //----------------------------------------------------------------------
-void Error::SetErrorToGenericError() {
+void Status::SetErrorToGenericError() {
   m_code = LLDB_GENERIC_ERROR;
   m_type = eErrorTypeGeneric;
   m_string.clear();
@@ -210,7 +211,7 @@ void Error::SetErrorToGenericError() {
 // The error string value will remain until the error value is
 // cleared or a new error value/type is assigned.
 //----------------------------------------------------------------------
-void Error::SetErrorString(llvm::StringRef err_str) {
+void Status::SetErrorString(llvm::StringRef err_str) {
   if (!err_str.empty()) {
     // If we have an error string, we should always at least have an error
     // set to a generic value.
@@ -226,7 +227,7 @@ void Error::SetErrorString(llvm::StringRef err_str) {
 /// @param format
 ///     A printf style format string
 //------------------------------------------------------------------
-int Error::SetErrorStringWithFormat(const char *format, ...) {
+int Status::SetErrorStringWithFormat(const char *format, ...) {
   if (format != nullptr && format[0]) {
     va_list args;
     va_start(args, format);
@@ -239,7 +240,7 @@ int Error::SetErrorStringWithFormat(const char *format, ...) {
   return 0;
 }
 
-int Error::SetErrorStringWithVarArg(const char *format, va_list args) {
+int Status::SetErrorStringWithVarArg(const char *format, va_list args) {
   if (format != nullptr && format[0]) {
     // If we have an error string, we should always at least have
     // an error set to a generic value.
@@ -260,14 +261,14 @@ int Error::SetErrorStringWithVarArg(const char *format, va_list args) {
 // Returns true if the error code in this object is considered a
 // successful return value.
 //----------------------------------------------------------------------
-bool Error::Success() const { return m_code == 0; }
+bool Status::Success() const { return m_code == 0; }
 
-bool Error::WasInterrupted() const {
+bool Status::WasInterrupted() const {
   return (m_type == eErrorTypePOSIX && m_code == EINTR);
 }
 
-void llvm::format_provider<lldb_private::Error>::format(
-    const lldb_private::Error &error, llvm::raw_ostream &OS,
+void llvm::format_provider<lldb_private::Status>::format(
+    const lldb_private::Status &error, llvm::raw_ostream &OS,
     llvm::StringRef Options) {
   llvm::format_provider<llvm::StringRef>::format(error.AsCString(), OS,
                                                  Options);

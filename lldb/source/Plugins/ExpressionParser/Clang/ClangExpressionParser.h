@@ -14,7 +14,7 @@
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionParser.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-public.h"
 
 #include <string>
@@ -110,7 +110,7 @@ public:
   ///     An error code indicating the success or failure of the operation.
   ///     Test with Success().
   //------------------------------------------------------------------
-  Error
+  Status
   PrepareForExecution(lldb::addr_t &func_addr, lldb::addr_t &func_end,
                       lldb::IRExecutionUnitSP &execution_unit_sp,
                       ExecutionContext &exe_ctx, bool &can_interpret,
@@ -128,8 +128,8 @@ public:
   /// @return
   ///     The error code indicating the
   //------------------------------------------------------------------
-  Error RunStaticInitializers(lldb::IRExecutionUnitSP &execution_unit_sp,
-                              ExecutionContext &exe_ctx);
+  Status RunStaticInitializers(lldb::IRExecutionUnitSP &execution_unit_sp,
+                               ExecutionContext &exe_ctx);
 
   //------------------------------------------------------------------
   /// Returns a string representing current ABI.

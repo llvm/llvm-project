@@ -86,7 +86,7 @@ bool FunctionCaller::WriteFunctionWrapper(
 
   bool can_interpret = false; // should stay that way
 
-  Error jit_error(m_parser->PrepareForExecution(
+  Status jit_error(m_parser->PrepareForExecution(
       m_jit_start_addr, m_jit_end_addr, m_execution_unit_sp, exe_ctx,
       can_interpret, eExecutionPolicyAlways));
 
@@ -135,7 +135,7 @@ bool FunctionCaller::WriteFunctionArguments(
     return false;
   }
 
-  Error error;
+  Status error;
   lldb::ExpressionResults return_value = lldb::eExpressionSetupError;
 
   Process *process = exe_ctx.GetProcessPtr();
@@ -172,7 +172,7 @@ bool FunctionCaller::WriteFunctionArguments(
 
   // FIXME: We will need to extend this for Variadic functions.
 
-  Error value_error;
+  Status value_error;
 
   size_t num_args = arg_values.GetSize();
   if (num_args != m_arg_values.GetSize()) {
@@ -289,7 +289,7 @@ bool FunctionCaller::FetchFunctionResults(ExecutionContext &exe_ctx,
   if (process != jit_process_sp.get())
     return false;
 
-  Error error;
+  Status error;
   ret_value.GetScalar() = process->ReadUnsignedIntegerFromMemory(
       args_addr + m_return_offset, m_return_size, 0, error);
 

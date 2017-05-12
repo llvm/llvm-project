@@ -127,8 +127,8 @@ private:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override;
 
@@ -213,7 +213,7 @@ public:
                     options->m_flags, funct_name_str.c_str(),
                     lines.CopyList("    ").c_str()));
 
-                Error error;
+                Status error;
 
                 for (size_t i = 0; i < options->m_target_types.GetSize(); i++) {
                   const char *type_name =
@@ -283,7 +283,7 @@ public:
 
   static bool AddSummary(ConstString type_name, lldb::TypeSummaryImplSP entry,
                          SummaryFormatType type, std::string category,
-                         Error *error = nullptr);
+                         Status *error = nullptr);
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override;
@@ -321,9 +321,9 @@ private:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
       bool success;
 
@@ -464,7 +464,7 @@ protected:
                 DataVisualization::Categories::GetCategory(
                     ConstString(options->m_category.c_str()), category);
 
-                Error error;
+                Status error;
 
                 for (size_t i = 0; i < options->m_target_types.GetSize(); i++) {
                   const char *type_name =
@@ -523,7 +523,7 @@ public:
 
   static bool AddSynth(ConstString type_name, lldb::SyntheticChildrenSP entry,
                        SynthFormatType type, std::string category_name,
-                       Error *error);
+                       Status *error);
 };
 
 //-------------------------------------------------------------------------
@@ -562,9 +562,9 @@ private:
       m_custom_type_name.clear();
     }
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option =
           g_type_format_add_options[option_idx].short_option;
       bool success;
@@ -769,9 +769,9 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -909,9 +909,9 @@ private:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -1025,9 +1025,9 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed {
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
       switch (short_option) {
       case 'w':
@@ -1243,10 +1243,10 @@ public:
 
 #endif // LLDB_DISABLE_PYTHON
 
-Error CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
+Status CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
-  Error error;
+  Status error;
   const int short_option = m_getopt_table[option_idx].val;
   bool success;
 
@@ -1423,7 +1423,7 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
   // if I am here, script_format must point to something good, so I can add that
   // as a script summary to all interested parties
 
-  Error error;
+  Status error;
 
   for (auto &entry : command.entries()) {
     CommandObjectTypeSummaryAdd::AddSummary(
@@ -1498,7 +1498,7 @@ bool CommandObjectTypeSummaryAdd::Execute_StringSummary(
   lldb::TypeSummaryImplSP entry(string_format.release());
 
   // now I have a valid format, let's add it to every type
-  Error error;
+  Status error;
   for (auto &arg_entry : command.entries()) {
     if (arg_entry.ref.empty()) {
       result.AppendError("empty typenames not allowed");
@@ -1681,7 +1681,7 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
                                              TypeSummaryImplSP entry,
                                              SummaryFormatType type,
                                              std::string category_name,
-                                             Error *error) {
+                                             Status *error) {
   lldb::TypeCategoryImplSP category;
   DataVisualization::Categories::GetCategory(ConstString(category_name.c_str()),
                                              category);
@@ -1799,9 +1799,9 @@ class CommandObjectTypeCategoryDefine : public CommandObjectParsed {
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -1903,9 +1903,9 @@ class CommandObjectTypeCategoryEnable : public CommandObjectParsed {
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -2080,9 +2080,9 @@ class CommandObjectTypeCategoryDisable : public CommandObjectParsed {
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -2407,7 +2407,7 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   DataVisualization::Categories::GetCategory(
       ConstString(m_options.m_category.c_str()), category);
 
-  Error error;
+  Status error;
 
   for (auto &arg_entry : command.entries()) {
     if (arg_entry.ref.empty()) {
@@ -2450,7 +2450,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
                                          SyntheticChildrenSP entry,
                                          SynthFormatType type,
                                          std::string category_name,
-                                         Error *error) {
+                                         Status *error) {
   lldb::TypeCategoryImplSP category;
   DataVisualization::Categories::GetCategory(ConstString(category_name.c_str()),
                                              category);
@@ -2512,9 +2512,9 @@ private:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
       bool success;
 
@@ -2586,7 +2586,7 @@ private:
 
   bool AddFilter(ConstString type_name, TypeFilterImplSP entry,
                  FilterFormatType type, std::string category_name,
-                 Error *error) {
+                 Status *error) {
     lldb::TypeCategoryImplSP category;
     DataVisualization::Categories::GetCategory(
         ConstString(category_name.c_str()), category);
@@ -2717,7 +2717,7 @@ protected:
     DataVisualization::Categories::GetCategory(
         ConstString(m_options.m_category.c_str()), category);
 
-    Error error;
+    Status error;
 
     WarnOnPotentialUnquotedUnsignedType(command, result);
 
@@ -2787,9 +2787,9 @@ protected:
       return llvm::makeArrayRef(g_type_lookup_options);
     }
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+                          ExecutionContext *execution_context) override {
+      Status error;
 
       const int short_option = g_type_lookup_options[option_idx].short_option;
 
@@ -2899,7 +2899,7 @@ public:
         if (!ParseOptions(args, result))
           return false;
 
-        Error error(m_option_group.NotifyOptionParsingFinished(&exe_ctx));
+        Status error(m_option_group.NotifyOptionParsingFinished(&exe_ctx));
         if (error.Fail()) {
           result.AppendError(error.AsCString());
           result.SetStatus(eReturnStatusFailed);

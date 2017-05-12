@@ -44,7 +44,7 @@ CMIDriverBase::~CMIDriverBase() { m_pDriverFallThru = NULL; }
 //          Check the error message if the function returns a failure.
 // Type:    Overridden.
 // Args:    vCmd        - (R) Command instruction to interpret.
-//          vwErrMsg    - (W) Error description on command failing.
+//          vwErrMsg    - (W) Status description on command failing.
 // Return:  MIstatus::success - Command succeeded.
 //          MIstatus::failure - Command failed.
 // Throws:  None.

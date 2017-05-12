@@ -26,7 +26,7 @@
 
 // lldb Includes
 #include "lldb/Host/Host.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/FileSystem.h"
@@ -36,15 +36,15 @@ using namespace lldb_private;
 
 const char *FileSystem::DEV_NULL = "/dev/null";
 
-Error FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
-  Error error;
+Status FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
+  Status error;
   if (::symlink(dst.GetCString(), src.GetCString()) == -1)
     error.SetErrorToErrno();
   return error;
 }
 
-Error FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
-  Error error;
+Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
+  Status error;
   char buf[PATH_MAX];
   ssize_t count = ::readlink(src.GetCString(), buf, sizeof(buf) - 1);
   if (count < 0)
@@ -56,22 +56,22 @@ Error FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
   return error;
 }
 
-Error FileSystem::ResolveSymbolicLink(const FileSpec &src, FileSpec &dst) {
+Status FileSystem::ResolveSymbolicLink(const FileSpec &src, FileSpec &dst) {
   char resolved_path[PATH_MAX];
   if (!src.GetPath(resolved_path, sizeof(resolved_path))) {
-    return Error("Couldn't get the canonical path for %s", src.GetCString());
+    return Status("Couldn't get the canonical path for %s", src.GetCString());
   }
 
   char real_path[PATH_MAX + 1];
   if (realpath(resolved_path, real_path) == nullptr) {
-    Error err;
+    Status err;
     err.SetErrorToErrno();
     return err;
   }
 
   dst = FileSpec(real_path, false);
 
-  return Error();
+  return Status();
 }
 
 FILE *FileSystem::Fopen(const char *path, const char *mode) {

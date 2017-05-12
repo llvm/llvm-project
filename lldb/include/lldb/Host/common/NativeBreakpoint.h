@@ -24,9 +24,9 @@ public:
 
   virtual ~NativeBreakpoint();
 
-  Error Enable();
+  Status Enable();
 
-  Error Disable();
+  Status Disable();
 
   lldb::addr_t GetAddress() const { return m_addr; }
 
@@ -38,9 +38,9 @@ protected:
   const lldb::addr_t m_addr;
   int32_t m_ref_count;
 
-  virtual Error DoEnable() = 0;
+  virtual Status DoEnable() = 0;
 
-  virtual Error DoDisable() = 0;
+  virtual Status DoDisable() = 0;
 
 private:
   bool m_enabled;

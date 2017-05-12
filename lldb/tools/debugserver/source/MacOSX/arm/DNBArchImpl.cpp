@@ -696,14 +696,14 @@ kern_return_t DNBArchMachARM::EnableHardwareSingleStep(bool enable) {
 
   if (err.Fail()) {
     err.LogThreaded("%s: failed to read the GPR registers", __FUNCTION__);
-    return err.Error();
+    return err.Status();
   }
 
   err = GetDBGState(false);
 
   if (err.Fail()) {
     err.LogThreaded("%s: failed to read the DBG registers", __FUNCTION__);
-    return err.Error();
+    return err.Status();
   }
 
 // The use of __arm64__ here is not ideal.  If debugserver is running on

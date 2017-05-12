@@ -34,9 +34,9 @@ void OptionValueSInt64::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-Error OptionValueSInt64::SetValueFromString(llvm::StringRef value_ref,
-                                            VarSetOperationType op) {
-  Error error;
+Status OptionValueSInt64::SetValueFromString(llvm::StringRef value_ref,
+                                             VarSetOperationType op) {
+  Status error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

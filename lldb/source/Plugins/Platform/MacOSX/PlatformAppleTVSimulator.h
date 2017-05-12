@@ -51,7 +51,7 @@ public:
   //------------------------------------------------------------
   // lldb_private::Platform functions
   //------------------------------------------------------------
-  lldb_private::Error ResolveExecutable(
+  lldb_private::Status ResolveExecutable(
       const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
       const lldb_private::FileSpecList *module_search_paths_ptr) override;
 
@@ -59,12 +59,12 @@ public:
 
   void GetStatus(lldb_private::Stream &strm) override;
 
-  virtual lldb_private::Error
+  virtual lldb_private::Status
   GetSymbolFile(const lldb_private::FileSpec &platform_file,
                 const lldb_private::UUID *uuid_ptr,
                 lldb_private::FileSpec &local_file);
 
-  lldb_private::Error
+  lldb_private::Status
   GetSharedModule(const lldb_private::ModuleSpec &module_spec,
                   lldb_private::Process *process, lldb::ModuleSP &module_sp,
                   const lldb_private::FileSpecList *module_search_paths_ptr,

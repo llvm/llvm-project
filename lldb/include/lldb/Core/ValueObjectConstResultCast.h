@@ -25,7 +25,7 @@ namespace lldb_private {
 class DataExtractor;
 }
 namespace lldb_private {
-class Error;
+class Status;
 }
 namespace lldb_private {
 class ValueObject;
@@ -41,7 +41,7 @@ public:
 
   ~ValueObjectConstResultCast() override;
 
-  lldb::ValueObjectSP Dereference(Error &error) override;
+  lldb::ValueObjectSP Dereference(Status &error) override;
 
   ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
                                   int32_t synthetic_index) override;
@@ -54,7 +54,7 @@ public:
       uint32_t offset, const CompilerType &type, bool can_create,
       ConstString name_const_str = ConstString()) override;
 
-  lldb::ValueObjectSP AddressOf(Error &error) override;
+  lldb::ValueObjectSP AddressOf(Status &error) override;
 
   size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                         uint32_t item_count = 1) override;

@@ -12,7 +12,7 @@
 #include "GoParser.h"
 
 #include "Plugins/ExpressionParser/Go/GoAST.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "llvm/ADT/SmallString.h"
 
 using namespace lldb_private;
@@ -860,7 +860,7 @@ llvm::StringRef GoParser::CopyString(llvm::StringRef s) {
   return m_strings.insert(std::make_pair(s, 'x')).first->getKey();
 }
 
-void GoParser::GetError(Error &error) {
+void GoParser::GetError(Status &error) {
   llvm::StringRef want;
   if (m_failed)
     want =

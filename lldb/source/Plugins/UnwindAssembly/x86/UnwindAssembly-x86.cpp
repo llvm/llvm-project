@@ -26,7 +26,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/UnwindAssembly.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -54,7 +54,7 @@ bool UnwindAssembly_x86::GetNonCallSiteUnwindPlanFromAssembly(
     return false;
   const bool prefer_file_cache = true;
   std::vector<uint8_t> function_text(func.GetByteSize());
-  Error error;
+  Status error;
   if (process_sp->GetTarget().ReadMemory(
           func.GetBaseAddress(), prefer_file_cache, function_text.data(),
           func.GetByteSize(), error) == func.GetByteSize()) {
@@ -161,7 +161,7 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
       return false;
     const bool prefer_file_cache = true;
     std::vector<uint8_t> function_text(func.GetByteSize());
-    Error error;
+    Status error;
     if (process_sp->GetTarget().ReadMemory(
             func.GetBaseAddress(), prefer_file_cache, function_text.data(),
             func.GetByteSize(), error) == func.GetByteSize()) {
@@ -192,7 +192,7 @@ bool UnwindAssembly_x86::GetFastUnwindPlan(AddressRange &func, Thread &thread,
   if (process_sp) {
     Target &target(process_sp->GetTarget());
     const bool prefer_file_cache = true;
-    Error error;
+    Status error;
     if (target.ReadMemory(func.GetBaseAddress(), prefer_file_cache,
                           opcode_data.data(), 4, error) == 4) {
       uint8_t i386_push_mov[] = {0x55, 0x89, 0xe5};
@@ -228,7 +228,7 @@ bool UnwindAssembly_x86::FirstNonPrologueInsn(
 
   const bool prefer_file_cache = true;
   std::vector<uint8_t> function_text(func.GetByteSize());
-  Error error;
+  Status error;
   if (target->ReadMemory(func.GetBaseAddress(), prefer_file_cache,
                          function_text.data(), func.GetByteSize(),
                          error) == func.GetByteSize()) {

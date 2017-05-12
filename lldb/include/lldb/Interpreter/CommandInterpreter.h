@@ -510,7 +510,7 @@ protected:
                                      StringList *matches = nullptr) const;
 
 private:
-  Error PreprocessCommand(std::string &command);
+  Status PreprocessCommand(std::string &command);
 
   // Completely resolves aliases and abbreviations, returning a pointer to the
   // final command object and updating command_line to the fully substituted

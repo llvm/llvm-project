@@ -19,7 +19,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-public.h"
 
 // This class will insert a UtilityFunction into the inferior process for
@@ -92,7 +92,7 @@ public:
   GetQueuesReturnInfo GetCurrentQueues(Thread &thread,
                                        lldb::addr_t page_to_free,
                                        uint64_t page_to_free_size,
-                                       lldb_private::Error &error);
+                                       lldb_private::Status &error);
 
   void Detach();
 

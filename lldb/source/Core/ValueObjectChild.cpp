@@ -14,9 +14,9 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/Error.h" // for Error
-#include "lldb/Utility/Flags.h" // for Flags
-#include "lldb/lldb-forward.h"  // for ProcessSP, ModuleSP
+#include "lldb/Utility/Flags.h"  // for Flags
+#include "lldb/Utility/Status.h" // for Status
+#include "lldb/lldb-forward.h"   // for ProcessSP, ModuleSP
 
 #include <functional> // for _Func_impl<>::_Mybase
 #include <memory>     // for shared_ptr

@@ -1373,7 +1373,7 @@ CommandObject *CommandInterpreter::BuildAliasResult(
   return alias_cmd_obj;
 }
 
-Error CommandInterpreter::PreprocessCommand(std::string &command) {
+Status CommandInterpreter::PreprocessCommand(std::string &command) {
   // The command preprocessor needs to do things to the command
   // line before any parsing of arguments or anything else is done.
   // The only current stuff that gets preprocessed is anything enclosed
@@ -1381,7 +1381,7 @@ Error CommandInterpreter::PreprocessCommand(std::string &command) {
   // the result of the expression must be a scalar that can be substituted
   // into the command. An example would be:
   // (lldb) memory read `$rsp + 20`
-  Error error; // Error for any expressions that might not evaluate
+  Status error; // Status for any expressions that might not evaluate
   size_t start_backtick;
   size_t pos = 0;
   while ((start_backtick = command.find('`', pos)) != std::string::npos) {
@@ -1601,7 +1601,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     return true;
   }
 
-  Error error(PreprocessCommand(command_string));
+  Status error(PreprocessCommand(command_string));
 
   if (error.Fail()) {
     result.AppendError(error.AsCString());
@@ -2355,8 +2355,8 @@ void CommandInterpreter::HandleCommandsFromFile(
     StreamFileSP input_file_sp(new StreamFile());
 
     std::string cmd_file_path = cmd_file.GetPath();
-    Error error = input_file_sp->GetFile().Open(cmd_file_path.c_str(),
-                                                File::eOpenOptionRead);
+    Status error = input_file_sp->GetFile().Open(cmd_file_path.c_str(),
+                                                 File::eOpenOptionRead);
 
     if (error.Success()) {
       Debugger &debugger = GetDebugger();
@@ -2653,7 +2653,7 @@ size_t CommandInterpreter::GetProcessOutput() {
   char stdio_buffer[1024];
   size_t len;
   size_t total_bytes = 0;
-  Error error;
+  Status error;
   TargetSP target_sp(m_debugger.GetTargetList().GetSelectedTarget());
   if (target_sp) {
     ProcessSP process_sp(target_sp->GetProcessSP());

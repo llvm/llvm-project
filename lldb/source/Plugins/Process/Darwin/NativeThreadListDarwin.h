@@ -123,7 +123,7 @@ protected:
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
 
-  // Consider having this return an lldb_private::Error.
+  // Consider having this return an lldb_private::Status.
   uint32_t UpdateThreadList(NativeProcessDarwin &process, bool update,
                             collection *num_threads = nullptr);
 
