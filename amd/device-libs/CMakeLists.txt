@@ -7,12 +7,6 @@
 
 cmake_minimum_required(VERSION 2.6)
 
-if (AMDHSACOD)
-else()
-  message(WARNING "amdhsacod is not found, testing disabled")
-  message(WARNING "Specify amdhsacod executable with -DAMDHSACOD=<...>")
-endif()
-
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 project(ROCm-Device-Libs)
 
@@ -23,6 +17,8 @@ endif()
 find_package(LLVM REQUIRED CONFIG PATHS ${LLVM_DIR} NO_DEFAULT_PATH)
 list(APPEND CMAKE_MODULE_PATH ${LLVM_CMAKE_DIR})
 include(AddLLVM)
+
+ set(ROCM_DEVICELIB_STANDALONE_BUILD ON)
 endif(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
 set(AMDGPU_TARGET_TRIPLE "amdgcn--amdhsa")
@@ -42,18 +38,9 @@ endif (GENERIC_IS_ZERO)
 option(BUILD_HC_LIB "Build Heterogeneous Compute built-in library (hc)" ON)
 option(ROCM_DEVICELIB_INCLUDE_TESTS "Build tests" ON)
 
-list(APPEND CMAKE_OCL_SOURCE_FILE_EXTENSIONS .cl)
-list(APPEND CMAKE_C_SOURCE_FILE_EXTENSIONS .cl)
-list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS .cl)
-
-set (CLANG_OCL_FLAGS "-Werror -x cl -Xclang -cl-std=CL2.0 -fblocks -target ${AMDGPU_TARGET_TRIPLE} -DCL_VERSION_2_0=200 -D__OPENCL_C_VERSION__=200 -Dcl_khr_fp64 -Dcl_khr_fp16 -Dcl_khr_subgroups -Dcl_khr_int64_base_atomics -Dcl_khr_int64_extended_atomics -Xclang -finclude-default-header ${CLANG_OPTIONS_APPEND}")
-set (CLANG_OCL_LINK_FLAGS "-target ${AMDGPU_TARGET_TRIPLE} -mcpu=fiji")
-
-if (PREPARE_BUILTINS)
-add_custom_target(prepare-builtins COMMAND true)
-else()
-add_subdirectory(utils/prepare-builtins)
-set (PREPARE_BUILTINS $<TARGET_FILE:prepare-builtins>)
+if (NOT PREPARE_BUILTINS)
+  add_subdirectory(utils/prepare-builtins)
+  set (PREPARE_BUILTINS $<TARGET_FILE:prepare-builtins>)
 endif()
 
 include(OCL.cmake)
@@ -65,12 +52,17 @@ add_subdirectory(ockl)
 add_subdirectory(opencl)
 
 if(BUILD_HC_LIB)
-add_subdirectory(hc)
+  add_subdirectory(hc)
 endif(BUILD_HC_LIB)
 
 if(ROCM_DEVICELIB_INCLUDE_TESTS)
-add_subdirectory(test/opencl)
-add_subdirectory(test/opencl_conformance)
+  if (NOT AMDHSACOD)
+    message(WARNING "amdhsacod is not found, testing disabled")
+    message(WARNING "Specify amdhsacod executable with -DAMDHSACOD=<...>")
+  endif()
+  enable_testing()
+  add_subdirectory(test/opencl)
+  add_subdirectory(test/opencl_conformance)
 endif(ROCM_DEVICELIB_INCLUDE_TESTS)
 
 ## CPack standard variables
