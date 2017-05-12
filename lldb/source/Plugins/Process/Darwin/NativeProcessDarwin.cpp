@@ -53,13 +53,13 @@ struct hack_task_dyld_info {
 // Public Static Methods
 // -----------------------------------------------------------------------------
 
-Error NativeProcessProtocol::Launch(
+Status NativeProcessProtocol::Launch(
     ProcessLaunchInfo &launch_info,
     NativeProcessProtocol::NativeDelegate &native_delegate, MainLoop &mainloop,
     NativeProcessProtocolSP &native_process_sp) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
-  Error error;
+  Status error;
 
   // Verify the working directory is valid if one was specified.
   FileSpec working_dir(launch_info.GetWorkingDirectory());
@@ -120,7 +120,7 @@ Error NativeProcessProtocol::Launch(
   return error;
 }
 
-Error NativeProcessProtocol::Attach(
+Status NativeProcessProtocol::Attach(
     lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
     MainLoop &mainloop, NativeProcessProtocolSP &native_process_sp) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
@@ -130,7 +130,7 @@ Error NativeProcessProtocol::Attach(
 
   // Retrieve the architecture for the running process.
   ArchSpec process_arch;
-  Error error = ResolveProcessArchitecture(pid, process_arch);
+  Status error = ResolveProcessArchitecture(pid, process_arch);
   if (!error.Success())
     return error;
 
@@ -174,9 +174,9 @@ NativeProcessDarwin::~NativeProcessDarwin() {}
 // Instance methods
 // -----------------------------------------------------------------------------
 
-Error NativeProcessDarwin::FinalizeLaunch(LaunchFlavor launch_flavor,
-                                          MainLoop &main_loop) {
-  Error error;
+Status NativeProcessDarwin::FinalizeLaunch(LaunchFlavor launch_flavor,
+                                           MainLoop &main_loop) {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
 #if 0
@@ -261,7 +261,7 @@ Error NativeProcessDarwin::FinalizeLaunch(LaunchFlavor launch_flavor,
   return error;
 }
 
-Error NativeProcessDarwin::SaveExceptionPortInfo() {
+Status NativeProcessDarwin::SaveExceptionPortInfo() {
   return m_exc_port_info.Save(m_task);
 }
 
@@ -348,7 +348,7 @@ void *NativeProcessDarwin::DoExceptionThread() {
   // polling is expensive.  On devices, we need to minimize overhead caused
   // by the process monitor.
   uint32_t num_exceptions_received = 0;
-  Error error;
+  Status error;
   task_t task = m_task;
   mach_msg_timeout_t periodic_timeout = 0;
 
@@ -550,8 +550,8 @@ void *NativeProcessDarwin::DoExceptionThread() {
   return nullptr;
 }
 
-Error NativeProcessDarwin::StartExceptionThread() {
-  Error error;
+Status NativeProcessDarwin::StartExceptionThread() {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
   if (log)
     log->Printf("NativeProcessDarwin::%s() called", __FUNCTION__);
@@ -640,7 +640,7 @@ Error NativeProcessDarwin::StartExceptionThread() {
 }
 
 lldb::addr_t
-NativeProcessDarwin::GetDYLDAllImageInfosAddress(Error &error) const {
+NativeProcessDarwin::GetDYLDAllImageInfosAddress(Status &error) const {
   error.Clear();
 
   struct hack_task_dyld_info dyld_info;
@@ -694,7 +694,7 @@ uint32_t NativeProcessDarwin::GetCPUType() const {
 
 task_t NativeProcessDarwin::ExceptionMessageBundleComplete() {
   // We have a complete bundle of exceptions for our child process.
-  Error error;
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
 
   std::lock_guard<std::recursive_mutex> locker(m_exception_messages_mutex);
@@ -737,7 +737,7 @@ task_t NativeProcessDarwin::ExceptionMessageBundleComplete() {
         const addr_t info_array_count_addr = aii_addr + 4;
         uint32_t info_array_count = 0;
         size_t bytes_read = 0;
-        Error read_error;
+        Status read_error;
         read_error = ReadMemory(info_array_count_addr, // source addr
                                 &info_array_count,     // dest addr
                                 4,                     // byte count
@@ -885,8 +885,8 @@ void NativeProcessDarwin::StartSTDIOThread() {
   // TODO implement
 }
 
-Error NativeProcessDarwin::StartWaitpidThread(MainLoop &main_loop) {
-  Error error;
+Status NativeProcessDarwin::StartWaitpidThread(MainLoop &main_loop) {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   // Strategy: create a thread that sits on waitpid(), waiting for the
@@ -973,7 +973,7 @@ void *NativeProcessDarwin::DoWaitpidThread() {
   // Ensure we don't get CPU starved.
   MaybeRaiseThreadPriority();
 
-  Error error;
+  Status error;
   int status = -1;
 
   while (1) {
@@ -1038,9 +1038,9 @@ void *NativeProcessDarwin::DoWaitpidThread() {
   return nullptr;
 }
 
-Error NativeProcessDarwin::SendInferiorExitStatusToMainLoop(::pid_t pid,
-                                                            int status) {
-  Error error;
+Status NativeProcessDarwin::SendInferiorExitStatusToMainLoop(::pid_t pid,
+                                                             int status) {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   size_t bytes_written = 0;
@@ -1069,8 +1069,8 @@ Error NativeProcessDarwin::SendInferiorExitStatusToMainLoop(::pid_t pid,
   return error;
 }
 
-Error NativeProcessDarwin::HandleWaitpidResult() {
-  Error error;
+Status NativeProcessDarwin::HandleWaitpidResult() {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   // Read the pid.
@@ -1126,7 +1126,7 @@ Error NativeProcessDarwin::HandleWaitpidResult() {
   return error;
 }
 
-task_t NativeProcessDarwin::TaskPortForProcessID(Error &error,
+task_t NativeProcessDarwin::TaskPortForProcessID(Status &error,
                                                  bool force) const {
   if ((m_task == TASK_NULL) || force) {
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
@@ -1178,12 +1178,12 @@ task_t NativeProcessDarwin::TaskPortForProcessID(Error &error,
 }
 
 void NativeProcessDarwin::AttachToInferior(MainLoop &mainloop, lldb::pid_t pid,
-                                           Error &error) {
+                                           Status &error) {
   error.SetErrorString("TODO: implement");
 }
 
-Error NativeProcessDarwin::PrivateResume() {
-  Error error;
+Status NativeProcessDarwin::PrivateResume() {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   std::lock_guard<std::recursive_mutex> locker(m_exception_messages_mutex);
@@ -1225,8 +1225,8 @@ Error NativeProcessDarwin::PrivateResume() {
   return error;
 }
 
-Error NativeProcessDarwin::ReplyToAllExceptions() {
-  Error error;
+Status NativeProcessDarwin::ReplyToAllExceptions() {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
 
   TaskPortForProcessID(error);
@@ -1282,8 +1282,8 @@ Error NativeProcessDarwin::ReplyToAllExceptions() {
   return error;
 }
 
-Error NativeProcessDarwin::ResumeTask() {
-  Error error;
+Status NativeProcessDarwin::ResumeTask() {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   TaskPortForProcessID(error);
@@ -1364,9 +1364,10 @@ bool NativeProcessDarwin::IsExceptionPortValid() const {
   return MACH_PORT_VALID(m_exception_port);
 }
 
-Error NativeProcessDarwin::GetTaskBasicInfo(
-    task_t task, struct task_basic_info *info) const {
-  Error error;
+Status
+NativeProcessDarwin::GetTaskBasicInfo(task_t task,
+                                      struct task_basic_info *info) const {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   // Validate args.
@@ -1412,8 +1413,8 @@ Error NativeProcessDarwin::GetTaskBasicInfo(
   return error;
 }
 
-Error NativeProcessDarwin::SuspendTask() {
-  Error error;
+Status NativeProcessDarwin::SuspendTask() {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   if (m_task == TASK_NULL) {
@@ -1432,8 +1433,8 @@ Error NativeProcessDarwin::SuspendTask() {
   return error;
 }
 
-Error NativeProcessDarwin::Resume(const ResumeActionList &resume_actions) {
-  Error error;
+Status NativeProcessDarwin::Resume(const ResumeActionList &resume_actions) {
+  Status error;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   if (log)
@@ -1461,74 +1462,74 @@ Error NativeProcessDarwin::Resume(const ResumeActionList &resume_actions) {
   return error;
 }
 
-Error NativeProcessDarwin::Halt() {
-  Error error;
+Status NativeProcessDarwin::Halt() {
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }
 
-Error NativeProcessDarwin::Detach() {
-  Error error;
+Status NativeProcessDarwin::Detach() {
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }
 
-Error NativeProcessDarwin::Signal(int signo) {
-  Error error;
+Status NativeProcessDarwin::Signal(int signo) {
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }
 
-Error NativeProcessDarwin::Interrupt() {
-  Error error;
+Status NativeProcessDarwin::Interrupt() {
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }
 
-Error NativeProcessDarwin::Kill() {
-  Error error;
+Status NativeProcessDarwin::Kill() {
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }
 
-Error NativeProcessDarwin::GetMemoryRegionInfo(lldb::addr_t load_addr,
-                                               MemoryRegionInfo &range_info) {
-  Error error;
+Status NativeProcessDarwin::GetMemoryRegionInfo(lldb::addr_t load_addr,
+                                                MemoryRegionInfo &range_info) {
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }
 
-Error NativeProcessDarwin::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                      size_t &bytes_read) {
-  Error error;
+Status NativeProcessDarwin::ReadMemory(lldb::addr_t addr, void *buf,
+                                       size_t size, size_t &bytes_read) {
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }
 
-Error NativeProcessDarwin::ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf,
-                                                 size_t size,
-                                                 size_t &bytes_read) {
-  Error error;
+Status NativeProcessDarwin::ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf,
+                                                  size_t size,
+                                                  size_t &bytes_read) {
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }
 
-Error NativeProcessDarwin::WriteMemory(lldb::addr_t addr, const void *buf,
-                                       size_t size, size_t &bytes_written) {
-  Error error;
+Status NativeProcessDarwin::WriteMemory(lldb::addr_t addr, const void *buf,
+                                        size_t size, size_t &bytes_written) {
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }
 
-Error NativeProcessDarwin::AllocateMemory(size_t size, uint32_t permissions,
-                                          lldb::addr_t &addr) {
-  Error error;
+Status NativeProcessDarwin::AllocateMemory(size_t size, uint32_t permissions,
+                                           lldb::addr_t &addr) {
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }
 
-Error NativeProcessDarwin::DeallocateMemory(lldb::addr_t addr) {
-  Error error;
+Status NativeProcessDarwin::DeallocateMemory(lldb::addr_t addr) {
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }
@@ -1543,25 +1544,25 @@ bool NativeProcessDarwin::GetArchitecture(ArchSpec &arch) const {
   return false;
 }
 
-Error NativeProcessDarwin::SetBreakpoint(lldb::addr_t addr, uint32_t size,
-                                         bool hardware) {
-  Error error;
+Status NativeProcessDarwin::SetBreakpoint(lldb::addr_t addr, uint32_t size,
+                                          bool hardware) {
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }
 
 void NativeProcessDarwin::DoStopIDBumped(uint32_t newBumpId) {}
 
-Error NativeProcessDarwin::GetLoadedModuleFileSpec(const char *module_path,
-                                                   FileSpec &file_spec) {
-  Error error;
+Status NativeProcessDarwin::GetLoadedModuleFileSpec(const char *module_path,
+                                                    FileSpec &file_spec) {
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }
 
-Error NativeProcessDarwin::GetFileLoadAddress(const llvm::StringRef &file_name,
-                                              lldb::addr_t &load_addr) {
-  Error error;
+Status NativeProcessDarwin::GetFileLoadAddress(const llvm::StringRef &file_name,
+                                               lldb::addr_t &load_addr) {
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }
@@ -1569,10 +1570,10 @@ Error NativeProcessDarwin::GetFileLoadAddress(const llvm::StringRef &file_name,
 // -----------------------------------------------------------------
 // NativeProcessProtocol protected interface
 // -----------------------------------------------------------------
-Error NativeProcessDarwin::GetSoftwareBreakpointTrapOpcode(
+Status NativeProcessDarwin::GetSoftwareBreakpointTrapOpcode(
     size_t trap_opcode_size_hint, size_t &actual_opcode_size,
     const uint8_t *&trap_opcode_bytes) {
-  Error error;
+  Status error;
   error.SetErrorString("TODO: implement");
   return error;
 }

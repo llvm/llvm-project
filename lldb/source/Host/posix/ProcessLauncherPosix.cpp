@@ -20,7 +20,7 @@ using namespace lldb_private;
 
 HostProcess
 ProcessLauncherPosix::LaunchProcess(const ProcessLaunchInfo &launch_info,
-                                    Error &error) {
+                                    Status &error) {
   lldb::pid_t pid;
   char exe_path[PATH_MAX];
 

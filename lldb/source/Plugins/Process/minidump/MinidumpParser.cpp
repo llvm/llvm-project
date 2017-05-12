@@ -45,7 +45,7 @@ MinidumpParser::Create(const lldb::DataBufferSP &data_buf_sp) {
   }
 
   const MinidumpDirectory *directory = nullptr;
-  Error error;
+  Status error;
   llvm::ArrayRef<uint8_t> directory_data(
       data_buf_sp->GetBytes() + directory_list_offset,
       sizeof(MinidumpDirectory) * header->streams_count);
@@ -126,7 +126,7 @@ MinidumpParser::GetThreadContextWow64(const MinidumpThread &td) {
     return {};
 
   const TEB64 *wow64teb;
-  Error error = consumeObject(teb_mem, wow64teb);
+  Status error = consumeObject(teb_mem, wow64teb);
   if (error.Fail())
     return {};
 

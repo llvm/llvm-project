@@ -1004,7 +1004,7 @@ bool CompilerType::ReadFromMemory(lldb_private::ExecutionContext *exe_ctx,
       if (exe_ctx)
         process = exe_ctx->GetProcessPtr();
       if (process) {
-        Error error;
+        Status error;
         return process->ReadMemory(addr, dst, byte_size, error) == byte_size;
       }
     }
@@ -1039,7 +1039,7 @@ bool CompilerType::WriteToMemory(lldb_private::ExecutionContext *exe_ctx,
       if (exe_ctx)
         process = exe_ctx->GetProcessPtr();
       if (process) {
-        Error error;
+        Status error;
         return process->WriteMemory(addr, new_value.GetData(), byte_size,
                                     error) == byte_size;
       }

@@ -10,7 +10,7 @@
 #include "lldb/Core/UserSettingsController.h"
 
 #include "lldb/Interpreter/OptionValueProperties.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 #include <memory> // for shared_ptr
@@ -32,21 +32,23 @@ using namespace lldb;
 using namespace lldb_private;
 
 lldb::OptionValueSP
-Properties::GetPropertyValue(const ExecutionContext *exe_ctx, llvm::StringRef path,
-                             bool will_modify, Error &error) const {
+Properties::GetPropertyValue(const ExecutionContext *exe_ctx,
+                             llvm::StringRef path, bool will_modify,
+                             Status &error) const {
   OptionValuePropertiesSP properties_sp(GetValueProperties());
   if (properties_sp)
     return properties_sp->GetSubValue(exe_ctx, path, will_modify, error);
   return lldb::OptionValueSP();
 }
 
-Error Properties::SetPropertyValue(const ExecutionContext *exe_ctx,
-                                   VarSetOperationType op, llvm::StringRef path,
-  llvm::StringRef value) {
+Status Properties::SetPropertyValue(const ExecutionContext *exe_ctx,
+                                    VarSetOperationType op,
+                                    llvm::StringRef path,
+                                    llvm::StringRef value) {
   OptionValuePropertiesSP properties_sp(GetValueProperties());
   if (properties_sp)
     return properties_sp->SetSubValue(exe_ctx, op, path, value);
-  Error error;
+  Status error;
   error.SetErrorString("no properties");
   return error;
 }
@@ -67,15 +69,16 @@ void Properties::DumpAllDescriptions(CommandInterpreter &interpreter,
     return properties_sp->DumpAllDescriptions(interpreter, strm);
 }
 
-Error Properties::DumpPropertyValue(const ExecutionContext *exe_ctx,
-                                    Stream &strm, llvm::StringRef property_path,
-                                    uint32_t dump_mask) {
+Status Properties::DumpPropertyValue(const ExecutionContext *exe_ctx,
+                                     Stream &strm,
+                                     llvm::StringRef property_path,
+                                     uint32_t dump_mask) {
   OptionValuePropertiesSP properties_sp(GetValueProperties());
   if (properties_sp) {
     return properties_sp->DumpPropertyValue(exe_ctx, strm, property_path,
                                             dump_mask);
   }
-  Error error;
+  Status error;
   error.SetErrorString("empty property list");
   return error;
 }

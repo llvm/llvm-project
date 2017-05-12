@@ -127,6 +127,7 @@ Executor *Executor::getDefaultExecutor() {
 #endif
 }
 
+#if LLVM_ENABLE_THREADS
 void parallel::detail::TaskGroup::spawn(std::function<void()> F) {
   L.inc();
   Executor::getDefaultExecutor()->add([&, F] {
@@ -134,3 +135,4 @@ void parallel::detail::TaskGroup::spawn(std::function<void()> F) {
     L.dec();
   });
 }
+#endif

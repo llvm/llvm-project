@@ -31,8 +31,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1073,7 +1073,7 @@ bool ABISysV_hexagon::PrepareTrivialCall(
     llvm::Type &prototype, llvm::ArrayRef<ABI::CallArgument> args) const {
   // default number of register passed arguments for varg functions
   const int nVArgRegParams = 1;
-  Error error;
+  Status error;
 
   // grab the process so we have access to the memory for spilling
   lldb::ProcessSP proc = thread.GetProcess();
@@ -1195,9 +1195,10 @@ bool ABISysV_hexagon::GetArgumentValues(Thread &thread,
   return false;
 }
 
-Error ABISysV_hexagon::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                            lldb::ValueObjectSP &new_value_sp) {
-  Error error;
+Status
+ABISysV_hexagon::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                      lldb::ValueObjectSP &new_value_sp) {
+  Status error;
   return error;
 }
 

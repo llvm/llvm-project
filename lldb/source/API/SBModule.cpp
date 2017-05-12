@@ -37,8 +37,8 @@ SBModule::SBModule(const lldb::ModuleSP &module_sp) : m_opaque_sp(module_sp) {}
 
 SBModule::SBModule(const SBModuleSpec &module_spec) : m_opaque_sp() {
   ModuleSP module_sp;
-  Error error = ModuleList::GetSharedModule(*module_spec.m_opaque_ap, module_sp,
-                                            NULL, NULL, NULL);
+  Status error = ModuleList::GetSharedModule(*module_spec.m_opaque_ap,
+                                             module_sp, NULL, NULL, NULL);
   if (module_sp)
     SetSP(module_sp);
 }

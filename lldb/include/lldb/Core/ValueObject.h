@@ -18,8 +18,8 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/SharedCluster.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-defines.h"              // for LLDB_INVALID...
 #include "lldb/lldb-enumerations.h"         // for DynamicValue...
@@ -462,7 +462,7 @@ public:
 
   virtual int64_t GetValueAsSigned(int64_t fail_value, bool *success = nullptr);
 
-  virtual bool SetValueFromCString(const char *value_str, Error &error);
+  virtual bool SetValueFromCString(const char *value_str, Status &error);
 
   // Return the module associated with this value object in case the
   // value is from an executable file and might have its data in
@@ -482,7 +482,7 @@ public:
   //------------------------------------------------------------------
   // The functions below should NOT be modified by subclasses
   //------------------------------------------------------------------
-  const Error &GetError();
+  const Status &GetError();
 
   const ConstString &GetName() const;
 
@@ -520,7 +520,7 @@ public:
   // return 'false' whenever you set the error, otherwise
   // callers may assume true means everything is OK - this will
   // break breakpoint conditions among potentially a few others
-  virtual bool IsLogicalTrue(Error &error);
+  virtual bool IsLogicalTrue(Status &error);
 
   virtual const char *GetLocationAsCString();
 
@@ -620,7 +620,7 @@ public:
 
   virtual lldb::ValueObjectSP CreateConstantValue(const ConstString &name);
 
-  virtual lldb::ValueObjectSP Dereference(Error &error);
+  virtual lldb::ValueObjectSP Dereference(Status &error);
 
   // Creates a copy of the ValueObject with a new name and setting the current
   // ValueObject as its parent. It should be used when we want to change the
@@ -628,7 +628,7 @@ public:
   // (e.g. sythetic child provider).
   virtual lldb::ValueObjectSP Clone(const ConstString &new_name);
 
-  virtual lldb::ValueObjectSP AddressOf(Error &error);
+  virtual lldb::ValueObjectSP AddressOf(Status &error);
 
   virtual lldb::addr_t GetLiveAddress() { return LLDB_INVALID_ADDRESS; }
 
@@ -700,16 +700,16 @@ public:
   bool IsCStringContainer(bool check_pointer = false);
 
   std::pair<size_t, bool>
-  ReadPointedString(lldb::DataBufferSP &buffer_sp, Error &error,
+  ReadPointedString(lldb::DataBufferSP &buffer_sp, Status &error,
                     uint32_t max_length = 0, bool honor_array = true,
                     lldb::Format item_format = lldb::eFormatCharArray);
 
   virtual size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                                 uint32_t item_count = 1);
 
-  virtual uint64_t GetData(DataExtractor &data, Error &error);
+  virtual uint64_t GetData(DataExtractor &data, Status &error);
 
-  virtual bool SetData(DataExtractor &data, Error &error);
+  virtual bool SetData(DataExtractor &data, Status &error);
 
   virtual bool GetIsConstant() const { return m_update_point.IsConstant(); }
 
@@ -880,8 +880,9 @@ protected:
   DataExtractor
       m_data; // A data extractor that can be used to extract the value.
   Value m_value;
-  Error m_error; // An error object that can describe any errors that occur when
-                 // updating values.
+  Status
+      m_error; // An error object that can describe any errors that occur when
+               // updating values.
   std::string m_value_str; // Cached value string that will get cleared if/when
                            // the value is updated.
   std::string m_old_value_str; // Cached old value string from the last time the

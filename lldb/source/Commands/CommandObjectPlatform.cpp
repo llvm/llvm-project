@@ -85,10 +85,10 @@ public:
 
   ~OptionPermissions() override = default;
 
-  lldb_private::Error
+  lldb_private::Status
   SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                  ExecutionContext *execution_context) override {
-    Error error;
+    Status error;
     char short_option = (char)GetDefinitions()[option_idx].short_option;
     switch (short_option) {
     case 'v': {
@@ -200,7 +200,7 @@ protected:
       if (platform_name && platform_name[0]) {
         const bool select = true;
         m_platform_options.SetPlatformName(platform_name);
-        Error error;
+        Status error;
         ArchSpec platform_arch;
         PlatformSP platform_sp(m_platform_options.CreatePlatformWithOptions(
             m_interpreter, ArchSpec(), select, error, platform_arch));
@@ -329,7 +329,7 @@ protected:
     PlatformSP platform_sp(
         m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
-      Error error(platform_sp->ConnectRemote(args));
+      Status error(platform_sp->ConnectRemote(args));
       if (error.Success()) {
         platform_sp->GetStatus(ostrm);
         result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -382,7 +382,7 @@ protected:
         m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       if (args.GetArgumentCount() == 0) {
-        Error error;
+        Status error;
 
         if (platform_sp->IsConnected()) {
           // Cache the instance name if there is one since we are
@@ -498,7 +498,8 @@ public:
       else
         mode = lldb::eFilePermissionsUserRWX | lldb::eFilePermissionsGroupRWX |
                lldb::eFilePermissionsWorldRX;
-      Error error = platform_sp->MakeDirectory(FileSpec{cmd_line, false}, mode);
+      Status error =
+          platform_sp->MakeDirectory(FileSpec{cmd_line, false}, mode);
       if (error.Success()) {
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
@@ -539,7 +540,7 @@ public:
     PlatformSP platform_sp(
         m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
-      Error error;
+      Status error;
       std::string cmd_line;
       args.GetCommandString(cmd_line);
       mode_t perms;
@@ -599,7 +600,7 @@ public:
       args.GetCommandString(cmd_line);
       const lldb::user_id_t fd =
           StringConvert::ToUInt64(cmd_line.c_str(), UINT64_MAX);
-      Error error;
+      Status error;
       bool success = platform_sp->CloseFile(fd, error);
       if (success) {
         result.AppendMessageWithFormat("file %" PRIu64 " closed.\n", fd);
@@ -646,7 +647,7 @@ public:
       const lldb::user_id_t fd =
           StringConvert::ToUInt64(cmd_line.c_str(), UINT64_MAX);
       std::string buffer(m_options.m_count, 0);
-      Error error;
+      Status error;
       uint32_t retcode = platform_sp->ReadFile(
           fd, m_options.m_offset, &buffer[0], m_options.m_count, error);
       result.AppendMessageWithFormat("Return = %d\n", retcode);
@@ -668,9 +669,9 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       char short_option = (char)m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -738,7 +739,7 @@ public:
     if (platform_sp) {
       std::string cmd_line;
       args.GetCommandString(cmd_line);
-      Error error;
+      Status error;
       const lldb::user_id_t fd =
           StringConvert::ToUInt64(cmd_line.c_str(), UINT64_MAX);
       uint32_t retcode =
@@ -762,9 +763,9 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       char short_option = (char)m_getopt_table[option_idx].val;
 
       switch (short_option) {
@@ -889,8 +890,8 @@ public:
     if (platform_sp) {
       const char *remote_file_path = args.GetArgumentAtIndex(0);
       const char *local_file_path = args.GetArgumentAtIndex(1);
-      Error error = platform_sp->GetFile(FileSpec(remote_file_path, false),
-                                         FileSpec(local_file_path, false));
+      Status error = platform_sp->GetFile(FileSpec(remote_file_path, false),
+                                          FileSpec(local_file_path, false));
       if (error.Success()) {
         result.AppendMessageWithFormat(
             "successfully get-file from %s (remote) to %s (host)\n",
@@ -999,7 +1000,7 @@ public:
     PlatformSP platform_sp(
         m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
-      Error error(platform_sp->PutFile(src_fs, dst_fs));
+      Status error(platform_sp->PutFile(src_fs, dst_fs));
       if (error.Success()) {
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
@@ -1043,7 +1044,7 @@ protected:
     }
 
     if (platform_sp) {
-      Error error;
+      Status error;
       const size_t argc = args.GetArgumentCount();
       Target *target = m_exe_ctx.GetTargetPtr();
       Module *exe_module = target->GetExecutableModulePointer();
@@ -1153,7 +1154,7 @@ protected:
     }
 
     if (platform_sp) {
-      Error error;
+      Status error;
       if (args.GetArgumentCount() == 0) {
         if (platform_sp) {
           Stream &ostrm = result.GetOutputStream();
@@ -1271,9 +1272,9 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       const int short_option = m_getopt_table[option_idx].val;
       bool success = false;
 
@@ -1449,7 +1450,7 @@ protected:
     if (platform_sp) {
       const size_t argc = args.GetArgumentCount();
       if (argc > 0) {
-        Error error;
+        Status error;
 
         if (platform_sp->IsConnected()) {
           Stream &ostrm = result.GetOutputStream();
@@ -1515,9 +1516,9 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
       char short_option = (char)m_getopt_table[option_idx].val;
       switch (short_option) {
       case 'p': {
@@ -1624,7 +1625,7 @@ public:
     PlatformSP platform_sp(
         m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
-      Error err;
+      Status err;
       ProcessSP remote_process_sp = platform_sp->Attach(
           m_options.attach_info, m_interpreter.GetDebugger(), nullptr, err);
       if (err.Fail()) {
@@ -1700,9 +1701,9 @@ public:
       return llvm::makeArrayRef(g_platform_shell_options);
     }
 
-    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                         ExecutionContext *execution_context) override {
-      Error error;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
 
       const char short_option = (char)GetDefinitions()[option_idx].short_option;
 
@@ -1782,7 +1783,7 @@ public:
 
     PlatformSP platform_sp(
         m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
-    Error error;
+    Status error;
     if (platform_sp) {
       FileSpec working_dir{};
       std::string output;
@@ -1861,7 +1862,7 @@ public:
       return false;
     }
 
-    Error error = platform_sp->Install(src, dst);
+    Status error = platform_sp->Install(src, dst);
     if (error.Success()) {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {

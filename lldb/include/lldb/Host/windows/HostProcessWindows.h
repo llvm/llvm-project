@@ -25,8 +25,8 @@ public:
 
   void SetOwnsHandle(bool owns);
 
-  Error Terminate() override;
-  Error GetMainModule(FileSpec &file_spec) const override;
+  Status Terminate() override;
+  Status GetMainModule(FileSpec &file_spec) const override;
 
   lldb::pid_t GetProcessId() const override;
   bool IsRunning() const override;

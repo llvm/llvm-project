@@ -174,20 +174,20 @@ LLT LegalizerInfo::findLegalType(const InstrAspect &Aspect,
     return Aspect.Type;
   case NarrowScalar: {
     return findLegalType(Aspect,
-                         [&](LLT Ty) -> LLT { return Ty.halfScalarSize(); });
+                         [](LLT Ty) -> LLT { return Ty.halfScalarSize(); });
   }
   case WidenScalar: {
-    return findLegalType(Aspect, [&](LLT Ty) -> LLT {
+    return findLegalType(Aspect, [](LLT Ty) -> LLT {
       return Ty.getSizeInBits() < 8 ? LLT::scalar(8) : Ty.doubleScalarSize();
     });
   }
   case FewerElements: {
     return findLegalType(Aspect,
-                         [&](LLT Ty) -> LLT { return Ty.halfElements(); });
+                         [](LLT Ty) -> LLT { return Ty.halfElements(); });
   }
   case MoreElements: {
     return findLegalType(Aspect,
-                         [&](LLT Ty) -> LLT { return Ty.doubleElements(); });
+                         [](LLT Ty) -> LLT { return Ty.doubleElements(); });
   }
   }
 }

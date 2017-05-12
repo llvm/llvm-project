@@ -1471,11 +1471,10 @@ define amdgpu_kernel void @v_fneg_mul_legacy_store_use_mul_legacy_f32(float addr
 ; GCN-LABEL: {{^}}v_fneg_mul_legacy_multi_use_mul_legacy_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN-DAG: v_mul_legacy_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
-; GCN-DAG: v_xor_b32_e32 [[NEG_MUL_LEGACY:v[0-9]+]], 0x80000000, [[ADD]]
-; GCN: v_mul_legacy_f32_e32 [[MUL:v[0-9]+]], 4.0, [[ADD]]
-; GCN-NEXT: buffer_store_dword [[NEG_MUL_LEGACY]]
-; GCN: buffer_store_dword [[MUL]]
+; GCN: v_mul_legacy_f32_e64 [[ADD:v[0-9]+]], [[A]], -[[B]]
+; GCN-NEXT: v_mul_legacy_f32_e64 [[MUL:v[0-9]+]], -[[ADD]], 4.0
+; GCN-NEXT: buffer_store_dword [[ADD]]
+; GCN-NEXT: buffer_store_dword [[MUL]]
 define amdgpu_kernel void @v_fneg_mul_legacy_multi_use_mul_legacy_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64

@@ -14,8 +14,8 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 #include "llvm/Support/FileSystem.h"
 
@@ -28,7 +28,7 @@ MonitoringProcessLauncher::MonitoringProcessLauncher(
 
 HostProcess
 MonitoringProcessLauncher::LaunchProcess(const ProcessLaunchInfo &launch_info,
-                                         Error &error) {
+                                         Status &error) {
   ProcessLaunchInfo resolved_info(launch_info);
 
   error.Clear();

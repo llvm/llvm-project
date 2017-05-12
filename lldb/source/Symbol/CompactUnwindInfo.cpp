@@ -272,7 +272,7 @@ void CompactUnwindInfo::ScanIndex(const ProcessSP &process_sp) {
         return;
       m_section_contents_if_encrypted.reset(
           new DataBufferHeap(m_section_sp->GetByteSize(), 0));
-      Error error;
+      Status error;
       if (process_sp->ReadMemory(
               m_section_sp->GetLoadBaseAddress(&process_sp->GetTarget()),
               m_section_contents_if_encrypted->GetBytes(),
@@ -836,7 +836,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_x86_64(Target &target,
         if (process_sp) {
           Address subl_payload_addr(function_info.valid_range_offset_start, sl);
           subl_payload_addr.Slide(offset_to_subl_insn);
-          Error error;
+          Status error;
           uint64_t large_stack_size = process_sp->ReadUnsignedIntegerFromMemory(
               subl_payload_addr.GetLoadAddress(&target), 4, 0, error);
           if (large_stack_size != 0 && error.Success()) {
@@ -1100,7 +1100,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_i386(Target &target,
         if (process_sp) {
           Address subl_payload_addr(function_info.valid_range_offset_start, sl);
           subl_payload_addr.Slide(offset_to_subl_insn);
-          Error error;
+          Status error;
           uint64_t large_stack_size = process_sp->ReadUnsignedIntegerFromMemory(
               subl_payload_addr.GetLoadAddress(&target), 4, 0, error);
           if (large_stack_size != 0 && error.Success()) {

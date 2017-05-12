@@ -31,8 +31,8 @@ class GDBRemoteCommunicationServer : public GDBRemoteCommunication {
 public:
   using PortMap = std::map<uint16_t, lldb::pid_t>;
   using PacketHandler =
-      std::function<PacketResult(StringExtractorGDBRemote &packet, Error &error,
-                                 bool &interrupt, bool &quit)>;
+      std::function<PacketResult(StringExtractorGDBRemote &packet,
+                                 Status &error, bool &interrupt, bool &quit)>;
 
   GDBRemoteCommunicationServer(const char *comm_name,
                                const char *listener_name);
@@ -44,7 +44,7 @@ public:
                         PacketHandler handler);
 
   PacketResult GetPacketAndSendResponse(Timeout<std::micro> timeout,
-                                        Error &error, bool &interrupt,
+                                        Status &error, bool &interrupt,
                                         bool &quit);
 
   // After connecting, do a little handshake with the client to make sure

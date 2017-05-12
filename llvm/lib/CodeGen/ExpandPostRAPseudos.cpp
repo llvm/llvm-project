@@ -142,8 +142,9 @@ bool ExpandPostRA::LowerCopy(MachineInstr *MI) {
   MachineOperand &DstMO = MI->getOperand(0);
   MachineOperand &SrcMO = MI->getOperand(1);
 
-  if (SrcMO.getReg() == DstMO.getReg()) {
-    DEBUG(dbgs() << "identity copy: " << *MI);
+  bool IdentityCopy = (SrcMO.getReg() == DstMO.getReg());
+  if (IdentityCopy || SrcMO.isUndef()) {
+    DEBUG(dbgs() << (IdentityCopy ? "identity copy: " : "undef copy:    ") << *MI);
     // No need to insert an identity copy instruction, but replace with a KILL
     // if liveness is changed.
     if (SrcMO.isUndef() || MI->getNumOperands() > 2) {

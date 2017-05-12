@@ -1,4 +1,5 @@
-; RUN: opt -slp-vectorizer -slp-threshold=-6 -S <  %s | FileCheck %s
+; RUN: opt -slp-vectorizer -slp-threshold=-6 -S -pass-remarks-output=%t <  %s | FileCheck %s
+; RUN: cat %t | FileCheck -check-prefix=YAML %s
 
 ; FIXME: The threshold is changed to keep this test case a bit smaller.
 ; The AArch64 cost model should not give such high costs to select statements.
@@ -10,6 +11,16 @@ target triple = "aarch64--linux"
 ; CHECK: load <4 x i32>
 ; CHECK: load <4 x i32>
 ; CHECK: select <4 x i1>
+
+; YAML:      Pass:            slp-vectorizer
+; YAML-NEXT: Name:            VectorizedHorizontalReduction
+; YAML-NEXT: Function:        test_select
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
+; YAML-NEXT:   - Cost:            '4'
+; YAML-NEXT:   - String:          ' and with tree size '
+; YAML-NEXT:   - TreeSize:        '8'
+
 define i32 @test_select(i32* noalias nocapture readonly %blk1, i32* noalias nocapture readonly %blk2, i32 %lx, i32 %h) {
 entry:
   %cmp.22 = icmp sgt i32 %h, 0
@@ -93,6 +104,16 @@ define i32 @reduction_with_br(i32* noalias nocapture readonly %blk1, i32* noalia
 ; CHECK: load <4 x i32>
 ; CHECK: load <4 x i32>
 ; CHECK: mul nsw <4 x i32>
+
+; YAML:      Pass:            slp-vectorizer
+; YAML-NEXT: Name:            VectorizedHorizontalReduction
+; YAML-NEXT: Function:        reduction_with_br
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
+; YAML-NEXT:   - Cost:            '1'
+; YAML-NEXT:   - String:          ' and with tree size '
+; YAML-NEXT:   - TreeSize:        '3'
+
 entry:
   %cmp.16 = icmp sgt i32 %h, 0
   br i1 %cmp.16, label %for.body.lr.ph, label %for.end
@@ -150,6 +171,16 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK: load <8 x i8>
 ; CHECK: load <8 x i8>
 ; CHECK: select <8 x i1>
+
+; YAML:      Pass:            slp-vectorizer
+; YAML-NEXT: Name:            VectorizedHorizontalReduction
+; YAML-NEXT: Function:        test_unrolled_select
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
+; YAML-NEXT:   - Cost:            '-33'
+; YAML-NEXT:   - String:          ' and with tree size '
+; YAML-NEXT:   - TreeSize:        '10'
+
 define i32 @test_unrolled_select(i8* noalias nocapture readonly %blk1, i8* noalias nocapture readonly %blk2, i32 %lx, i32 %h, i32 %lim) #0 {
 entry:
   %cmp.43 = icmp sgt i32 %h, 0

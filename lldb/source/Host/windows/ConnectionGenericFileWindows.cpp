@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/windows/ConnectionGenericFileWindows.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timeout.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -43,10 +43,10 @@ public:
 
   size_t GetBytes() const { return m_bytes; }
   ConnectionStatus GetStatus() const { return m_status; }
-  const Error &GetError() const { return m_error; }
+  const Status &GetError() const { return m_error; }
 
 private:
-  Error m_error;
+  Status m_error;
   size_t m_bytes;
   ConnectionStatus m_status;
 };
@@ -94,7 +94,7 @@ bool ConnectionGenericFile::IsConnected() const {
 }
 
 lldb::ConnectionStatus ConnectionGenericFile::Connect(llvm::StringRef path,
-                                                      Error *error_ptr) {
+                                                      Status *error_ptr) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
     log->Printf("%p ConnectionGenericFile::Connect (url = '%s')",
@@ -137,7 +137,7 @@ lldb::ConnectionStatus ConnectionGenericFile::Connect(llvm::StringRef path,
   return eConnectionStatusSuccess;
 }
 
-lldb::ConnectionStatus ConnectionGenericFile::Disconnect(Error *error_ptr) {
+lldb::ConnectionStatus ConnectionGenericFile::Disconnect(Status *error_ptr) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
     log->Printf("%p ConnectionGenericFile::Disconnect ()",
@@ -171,7 +171,7 @@ lldb::ConnectionStatus ConnectionGenericFile::Disconnect(Error *error_ptr) {
 size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
                                    const Timeout<std::micro> &timeout,
                                    lldb::ConnectionStatus &status,
-                                   Error *error_ptr) {
+                                   Status *error_ptr) {
   ReturnInfo return_info;
   BOOL result = 0;
   DWORD bytes_read = 0;
@@ -269,7 +269,7 @@ finish:
 
 size_t ConnectionGenericFile::Write(const void *src, size_t src_len,
                                     lldb::ConnectionStatus &status,
-                                    Error *error_ptr) {
+                                    Status *error_ptr) {
   ReturnInfo return_info;
   DWORD bytes_written = 0;
   BOOL result = 0;

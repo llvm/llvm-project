@@ -20,7 +20,7 @@
 #include "lldb/Target/StackFrame.h" // for StackFrame
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h" // for DataExtractor
-#include "lldb/Utility/Error.h"         // for Error
+#include "lldb/Utility/Status.h"        // for Status
 #include "lldb/Utility/Stream.h"        // for Stream
 
 #include "llvm/ADT/StringRef.h" // for StringRef
@@ -318,7 +318,7 @@ bool ValueObjectRegister::UpdateValue() {
 }
 
 bool ValueObjectRegister::SetValueFromCString(const char *value_str,
-                                              Error &error) {
+                                              Status &error) {
   // The new value will be in the m_data.  Copy that into our register value.
   error =
       m_reg_value.SetValueFromString(&m_reg_info, llvm::StringRef(value_str));
@@ -332,7 +332,7 @@ bool ValueObjectRegister::SetValueFromCString(const char *value_str,
     return false;
 }
 
-bool ValueObjectRegister::SetData(DataExtractor &data, Error &error) {
+bool ValueObjectRegister::SetData(DataExtractor &data, Status &error) {
   error = m_reg_value.SetValueFromData(&m_reg_info, data, 0, false);
   if (error.Success()) {
     if (m_reg_ctx_sp->WriteRegister(&m_reg_info, m_reg_value)) {

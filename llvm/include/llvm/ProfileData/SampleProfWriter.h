@@ -43,16 +43,7 @@ public:
   /// Write all the sample profiles in the given map of samples.
   ///
   /// \returns status code of the file update operation.
-  std::error_code write(const StringMap<FunctionSamples> &ProfileMap) {
-    if (std::error_code EC = writeHeader(ProfileMap))
-      return EC;
-    for (const auto &I : ProfileMap) {
-      const FunctionSamples &Profile = I.second;
-      if (std::error_code EC = write(Profile))
-        return EC;
-    }
-    return sampleprof_error::success;
-  }
+  std::error_code write(const StringMap<FunctionSamples> &ProfileMap);
 
   raw_ostream &getOutputStream() { return *OutputStream; }
 

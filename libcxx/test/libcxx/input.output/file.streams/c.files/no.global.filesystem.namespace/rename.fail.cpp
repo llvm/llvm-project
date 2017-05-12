@@ -7,9 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: libcpp-has-no-global-filesystem-namespace
+
 #include <cstdio>
 
 int main() {
-    // fopen is not available on systems without a global filesystem namespace.
-    std::fopen("", "");
+    // rename is not available on systems without a global filesystem namespace.
+    std::rename("", "");
 }

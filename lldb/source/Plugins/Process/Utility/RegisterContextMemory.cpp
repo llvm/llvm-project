@@ -18,7 +18,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -101,8 +101,8 @@ bool RegisterContextMemory::WriteRegister(const RegisterInfo *reg_info,
   if (m_reg_data_addr != LLDB_INVALID_ADDRESS) {
     const uint32_t reg_num = reg_info->kinds[eRegisterKindLLDB];
     addr_t reg_addr = m_reg_data_addr + reg_info->byte_offset;
-    Error error(WriteRegisterValueToMemory(reg_info, reg_addr,
-                                           reg_info->byte_size, reg_value));
+    Status error(WriteRegisterValueToMemory(reg_info, reg_addr,
+                                            reg_info->byte_size, reg_value));
     m_reg_valid[reg_num] = false;
     return error.Success();
   }
@@ -113,7 +113,7 @@ bool RegisterContextMemory::ReadAllRegisterValues(DataBufferSP &data_sp) {
   if (m_reg_data_addr != LLDB_INVALID_ADDRESS) {
     ProcessSP process_sp(CalculateProcess());
     if (process_sp) {
-      Error error;
+      Status error;
       if (process_sp->ReadMemory(m_reg_data_addr, data_sp->GetBytes(),
                                  data_sp->GetByteSize(),
                                  error) == data_sp->GetByteSize()) {
@@ -130,7 +130,7 @@ bool RegisterContextMemory::WriteAllRegisterValues(
   if (m_reg_data_addr != LLDB_INVALID_ADDRESS) {
     ProcessSP process_sp(CalculateProcess());
     if (process_sp) {
-      Error error;
+      Status error;
       SetAllRegisterValid(false);
       if (process_sp->WriteMemory(m_reg_data_addr, data_sp->GetBytes(),
                                   data_sp->GetByteSize(),

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def FLATAtomic : ComplexPattern<i64, 3, "SelectFlat">;
+def FLATAtomic : ComplexPattern<i64, 2, "SelectFlat">;
 
 //===----------------------------------------------------------------------===//
 // FLAT classes
@@ -62,7 +62,9 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
   bits<8> vdst;
   bits<1> slc;
   bits<1> glc;
-  bits<1> tfe;
+
+  // We don't use tfe right now, and it was removed in gfx9.
+  bits<1> tfe = 0;
 
   // 15-0 is reserved.
   let Inst{16}    = !if(ps.has_glc, glc, ps.glcValue);
@@ -79,8 +81,8 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
 class FLAT_Load_Pseudo <string opName, RegisterClass regClass> : FLAT_Pseudo<
   opName,
   (outs regClass:$vdst),
-  (ins VReg_64:$vaddr, GLC:$glc, slc:$slc, tfe:$tfe),
-  " $vdst, $vaddr$glc$slc$tfe"> {
+  (ins VReg_64:$vaddr, GLC:$glc, slc:$slc),
+  " $vdst, $vaddr$glc$slc"> {
   let has_data = 0;
   let mayLoad = 1;
 }
@@ -88,8 +90,8 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass> : FLAT_Pseudo<
 class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass> : FLAT_Pseudo<
   opName,
   (outs),
-  (ins VReg_64:$vaddr, vdataClass:$vdata, GLC:$glc, slc:$slc, tfe:$tfe),
-  " $vaddr, $vdata$glc$slc$tfe"> {
+  (ins VReg_64:$vaddr, vdataClass:$vdata, GLC:$glc, slc:$slc),
+  " $vaddr, $vdata$glc$slc"> {
   let mayLoad  = 0;
   let mayStore = 1;
   let has_vdst = 0;
@@ -105,8 +107,8 @@ multiclass FLAT_Atomic_Pseudo<
 
   def "" : FLAT_Pseudo <opName,
     (outs),
-    (ins VReg_64:$vaddr, data_rc:$vdata, slc:$slc, tfe:$tfe),
-    " $vaddr, $vdata$slc$tfe",
+    (ins VReg_64:$vaddr, data_rc:$vdata, slc:$slc),
+    " $vaddr, $vdata$slc",
     []>,
     AtomicNoRet <NAME, 0> {
     let mayLoad = 1;
@@ -119,10 +121,10 @@ multiclass FLAT_Atomic_Pseudo<
 
   def _RTN : FLAT_Pseudo <opName,
     (outs vdst_rc:$vdst),
-    (ins VReg_64:$vaddr, data_rc:$vdata, slc:$slc, tfe:$tfe),
-    " $vdst, $vaddr, $vdata glc$slc$tfe",
+    (ins VReg_64:$vaddr, data_rc:$vdata, slc:$slc),
+    " $vdst, $vaddr, $vdata glc$slc",
     [(set vt:$vdst,
-      (atomic (FLATAtomic i64:$vaddr, i1:$slc, i1:$tfe), data_vt:$vdata))]>,
+      (atomic (FLATAtomic i64:$vaddr, i1:$slc), data_vt:$vdata))]>,
     AtomicNoRet <NAME, 1> {
     let mayLoad  = 1;
     let mayStore = 1;
@@ -311,30 +313,30 @@ def flat_truncstorei16 : flat_st <truncstorei16>;
 // Patterns for global loads with no offset.
 class FlatLoadPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
   (vt (node i64:$addr)),
-  (inst $addr, 0, 0, 0)
+  (inst $addr, 0, 0)
 >;
 
 class FlatLoadAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
   (vt (node i64:$addr)),
-  (inst $addr, 1, 0, 0)
+  (inst $addr, 1, 0)
 >;
 
 class FlatStorePat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
   (node vt:$data, i64:$addr),
-  (inst $addr, $data, 0, 0, 0)
+  (inst $addr, $data, 0, 0)
 >;
 
 class FlatStoreAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
   // atomic store follows atomic binop convention so the address comes
   // first.
   (node i64:$addr, vt:$data),
-  (inst $addr, $data, 1, 0, 0)
+  (inst $addr, $data, 1, 0)
 >;
 
 class FlatAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
                      ValueType data_vt = vt> : Pat <
   (vt (node i64:$addr, data_vt:$data)),
-  (inst $addr, $data, 0, 0)
+  (inst $addr, $data, 0)
 >;
 
 let Predicates = [isCIVI] in {

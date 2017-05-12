@@ -30,8 +30,8 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/Utility/Error.h"       // for Error
 #include "lldb/Utility/FileSpec.h"    // for FileSpec
+#include "lldb/Utility/Status.h"      // for Status
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-defines.h"              // for DISALLOW_COPY_AND_ASSIGN
 #include "lldb/lldb-enumerations.h"         // for ScriptLanguage, Langua...
@@ -239,9 +239,9 @@ public:
     eStopDisassemblyTypeAlways
   };
 
-  Error SetPropertyValue(const ExecutionContext *exe_ctx,
-                         VarSetOperationType op, llvm::StringRef property_path,
-    llvm::StringRef value) override;
+  Status SetPropertyValue(const ExecutionContext *exe_ctx,
+                          VarSetOperationType op, llvm::StringRef property_path,
+                          llvm::StringRef value) override;
 
   bool GetAutoConfirm() const;
 
@@ -306,7 +306,7 @@ public:
 
   const ConstString &GetInstanceName() { return m_instance_name; }
 
-  bool LoadPlugin(const FileSpec &spec, Error &error);
+  bool LoadPlugin(const FileSpec &spec, Status &error);
 
   void ExecuteIOHandlers();
 
@@ -318,7 +318,7 @@ public:
 
   bool IsHandlingEvents() const { return m_event_handler_thread.IsJoinable(); }
 
-  Error RunREPL(lldb::LanguageType language, const char *repl_options);
+  Status RunREPL(lldb::LanguageType language, const char *repl_options);
 
   // This is for use in the command interpreter, when you either want the
   // selected target, or if no target

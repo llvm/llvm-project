@@ -16,7 +16,7 @@
 // Project includes
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private-interfaces.h"
@@ -91,7 +91,7 @@ public:
   virtual void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                          uint32_t dump_mask) = 0;
 
-  virtual Error
+  virtual Status
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign);
 
@@ -108,15 +108,16 @@ public:
   // Subclasses can override these functions
   //-----------------------------------------------------------------
   virtual lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
-    llvm::StringRef name, bool will_modify,
-                                          Error &error) const {
+                                          llvm::StringRef name,
+                                          bool will_modify,
+                                          Status &error) const {
     error.SetErrorStringWithFormat("'%s' is not a value subvalue", name.str().c_str());
     return lldb::OptionValueSP();
   }
 
-  virtual Error SetSubValue(const ExecutionContext *exe_ctx,
-                            VarSetOperationType op, llvm::StringRef name,
-    llvm::StringRef value);
+  virtual Status SetSubValue(const ExecutionContext *exe_ctx,
+                             VarSetOperationType op, llvm::StringRef name,
+                             llvm::StringRef value);
 
   virtual bool IsAggregateValue() const { return false; }
 
@@ -180,7 +181,7 @@ public:
 
   static lldb::OptionValueSP
   CreateValueFromCStringForTypeMask(const char *value_cstr, uint32_t type_mask,
-                                    Error &error);
+                                    Status &error);
 
   // Get this value as a uint64_t value if it is encoded as a boolean,
   // uint64_t or int64_t. Other types will cause "fail_value" to be

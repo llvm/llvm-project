@@ -20,9 +20,9 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h" // for DataExtractor
-#include "lldb/Utility/Error.h"         // for Error
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h" // for GetLogIfAllCategoriesSet
+#include "lldb/Utility/Status.h"  // for Status
 #include "lldb/lldb-types.h"      // for addr_t, offset_t
 
 #include <string.h> // for strcmp, size_t
@@ -275,7 +275,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
 bool ValueObjectDynamicValue::IsInScope() { return m_parent->IsInScope(); }
 
 bool ValueObjectDynamicValue::SetValueFromCString(const char *value_str,
-                                                  Error &error) {
+                                                  Status &error) {
   if (!UpdateValueIfNeeded(false)) {
     error.SetErrorString("unable to read value");
     return false;
@@ -310,7 +310,7 @@ bool ValueObjectDynamicValue::SetValueFromCString(const char *value_str,
   return ret_val;
 }
 
-bool ValueObjectDynamicValue::SetData(DataExtractor &data, Error &error) {
+bool ValueObjectDynamicValue::SetData(DataExtractor &data, Status &error) {
   if (!UpdateValueIfNeeded(false)) {
     error.SetErrorString("unable to read value");
     return false;

@@ -38,7 +38,7 @@ void ASTMatchRefactorer::addDynamicMatcher(
 
 class RefactoringASTConsumer : public ASTConsumer {
 public:
-  RefactoringASTConsumer(ASTMatchRefactorer &Refactoring)
+  explicit RefactoringASTConsumer(ASTMatchRefactorer &Refactoring)
       : Refactoring(Refactoring) {}
 
   void HandleTranslationUnit(ASTContext &Context) override {
@@ -153,8 +153,8 @@ void ReplaceIfStmtWithItsBody::run(
 }
 
 ReplaceNodeWithTemplate::ReplaceNodeWithTemplate(
-    llvm::StringRef FromId, std::vector<TemplateElement> &&Template)
-    : FromId(FromId), Template(Template) {}
+    llvm::StringRef FromId, std::vector<TemplateElement> Template)
+    : FromId(FromId), Template(std::move(Template)) {}
 
 llvm::Expected<std::unique_ptr<ReplaceNodeWithTemplate>>
 ReplaceNodeWithTemplate::create(StringRef FromId, StringRef ToTemplate) {

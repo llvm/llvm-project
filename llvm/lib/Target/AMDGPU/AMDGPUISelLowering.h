@@ -132,6 +132,8 @@ public:
     return false;
   }
 
+  static bool allUsesHaveSourceMods(const SDNode *N,
+                                    unsigned CostThreshold = 4);
   bool isFAbsFree(EVT VT) const override;
   bool isFNegFree(EVT VT) const override;
   bool isTruncateFree(EVT Src, EVT Dest) const override;

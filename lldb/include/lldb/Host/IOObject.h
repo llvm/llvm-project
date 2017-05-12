@@ -34,10 +34,10 @@ public:
       : m_fd_type(type), m_should_close_fd(should_close) {}
   virtual ~IOObject() {}
 
-  virtual Error Read(void *buf, size_t &num_bytes) = 0;
-  virtual Error Write(const void *buf, size_t &num_bytes) = 0;
+  virtual Status Read(void *buf, size_t &num_bytes) = 0;
+  virtual Status Write(const void *buf, size_t &num_bytes) = 0;
   virtual bool IsValid() const = 0;
-  virtual Error Close() = 0;
+  virtual Status Close() = 0;
 
   FDType GetFdType() const { return m_fd_type; }
 

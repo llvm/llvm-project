@@ -50,6 +50,9 @@ __sanitizer::atomic_uintptr_t XRayPatchedFunction{0};
 // This is the function to call from the arg1-enabled sleds/trampolines.
 __sanitizer::atomic_uintptr_t XRayArgLogger{0};
 
+// This is the function to call when we encounter a custom event log call.
+__sanitizer::atomic_uintptr_t XRayPatchedCustomEvent{0};
+
 // MProtectHelper is an RAII wrapper for calls to mprotect(...) that will undo
 // any successful mprotect(...) changes. This is used to make a page writeable
 // and executable, and upon destruction if it was successful in doing so returns
@@ -97,7 +100,19 @@ int __xray_set_handler(void (*entry)(int32_t,
                                __sanitizer::memory_order_acquire)) {
 
     __sanitizer::atomic_store(&__xray::XRayPatchedFunction,
-                              reinterpret_cast<uint64_t>(entry),
+                              reinterpret_cast<uintptr_t>(entry),
+                              __sanitizer::memory_order_release);
+    return 1;
+  }
+  return 0;
+}
+
+int __xray_set_customevent_handler(void (*entry)(void *, size_t))
+    XRAY_NEVER_INSTRUMENT {
+  if (__sanitizer::atomic_load(&XRayInitialized,
+                               __sanitizer::memory_order_acquire)) {
+    __sanitizer::atomic_store(&__xray::XRayPatchedCustomEvent,
+                              reinterpret_cast<uintptr_t>(entry),
                               __sanitizer::memory_order_release);
     return 1;
   }
@@ -160,6 +175,9 @@ inline bool patchSled(const XRaySledEntry &Sled, bool Enable,
     break;
   case XRayEntryType::LOG_ARGS_ENTRY:
     Success = patchFunctionEntry(Enable, FuncId, Sled, __xray_ArgLoggerEntry);
+    break;
+  case XRayEntryType::CUSTOM_EVENT:
+    Success = patchCustomEvent(Enable, FuncId, Sled);
     break;
   default:
     Report("Unsupported sled kind '%d' @%04x\n", Sled.Address, int(Sled.Kind));
@@ -301,6 +319,7 @@ int __xray_set_handler_arg1(void (*Handler)(int32_t, XRayEntryType, uint64_t)) {
                             __sanitizer::memory_order_release);
   return 1;
 }
+
 int __xray_remove_handler_arg1() { return __xray_set_handler_arg1(nullptr); }
 
 uintptr_t __xray_function_address(int32_t FuncId) XRAY_NEVER_INSTRUMENT {

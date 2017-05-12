@@ -56,7 +56,7 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
     if (context_type == Value::eContextTypeRegisterInfo) {
       const RegisterInfo *reg_info = value.GetRegisterInfo();
       if (reg_info) {
-        Error error;
+        Status error;
         valobj->GetData(data, error);
         if (error.Fail())
           return false;
@@ -82,7 +82,7 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
             TargetSP target_sp(valobj->GetTargetSP());
             if (target_sp) {
               size_t max_len = target_sp->GetMaximumSizeOfStringSummary();
-              Error error;
+              Status error;
               DataBufferSP buffer_sp(new DataBufferHeap(max_len + 1, 0));
               Address address(valobj->GetPointerValue());
               if (target_sp->ReadCStringFromMemory(
@@ -92,7 +92,7 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
             }
           }
         } else {
-          Error error;
+          Status error;
           valobj->GetData(data, error);
           if (error.Fail())
             return false;
@@ -185,7 +185,7 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
   if (valobj_enum_type.IsValid() == false)
     return false;
   DataExtractor data;
-  Error error;
+  Status error;
   valobj->GetData(data, error);
   if (error.Fail())
     return false;

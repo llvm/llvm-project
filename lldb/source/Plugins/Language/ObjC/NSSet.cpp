@@ -22,7 +22,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -185,14 +185,14 @@ bool lldb_private::formatters::NSSetSummaryProvider(
     return false;
 
   if (!strcmp(class_name, "__NSSetI")) {
-    Error error;
+    Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
     if (error.Fail())
       return false;
     value &= (is_64bit ? ~0xFC00000000000000UL : ~0xFC000000U);
   } else if (!strcmp(class_name, "__NSSetM")) {
-    Error error;
+    Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
     if (error.Fail())
@@ -201,7 +201,7 @@ bool lldb_private::formatters::NSSetSummaryProvider(
   }
   /*else if (!strcmp(class_name,"__NSCFSet"))
    {
-   Error error;
+   Status error;
    value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + (is_64bit ?
    20 : 12), 4, 0, error);
    if (error.Fail())
@@ -211,7 +211,7 @@ bool lldb_private::formatters::NSSetSummaryProvider(
    }
    else if (!strcmp(class_name,"NSCountedSet"))
    {
-   Error error;
+   Status error;
    value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
    ptr_size, 0, error);
    if (error.Fail())
@@ -262,7 +262,7 @@ lldb_private::formatters::NSSetSyntheticFrontEndCreator(
   Flags flags(valobj_type.GetTypeInfo());
 
   if (flags.IsClear(eTypeIsPointer)) {
-    Error error;
+    Status error;
     valobj_sp = valobj_sp->AddressOf(error);
     if (error.Fail() || !valobj_sp)
       return nullptr;
@@ -338,7 +338,7 @@ bool lldb_private::formatters::NSSetISyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return false;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  Error error;
+  Status error;
   if (valobj_sp->IsPointerType()) {
     valobj_sp = valobj_sp->Dereference(error);
     if (error.Fail() || !valobj_sp)
@@ -391,7 +391,7 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::GetChildAtIndex(size_t idx) {
       obj_at_idx = m_data_ptr + (test_idx * m_ptr_size);
       if (!process_sp)
         return lldb::ValueObjectSP();
-      Error error;
+      Status error;
       obj_at_idx = process_sp->ReadPointerFromMemory(obj_at_idx, error);
       if (error.Fail())
         return lldb::ValueObjectSP();
@@ -487,7 +487,7 @@ bool lldb_private::formatters::NSSetMSyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return false;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  Error error;
+  Status error;
   if (valobj_sp->IsPointerType()) {
     valobj_sp = valobj_sp->Dereference(error);
     if (error.Fail() || !valobj_sp)
@@ -542,7 +542,7 @@ lldb_private::formatters::NSSetMSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
       obj_at_idx = m_objs_addr + (test_idx * m_ptr_size);
       if (!process_sp)
         return lldb::ValueObjectSP();
-      Error error;
+      Status error;
       obj_at_idx = process_sp->ReadPointerFromMemory(obj_at_idx, error);
       if (error.Fail())
         return lldb::ValueObjectSP();

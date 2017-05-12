@@ -602,6 +602,7 @@ GlobalVariable *IRLinker::copyGlobalVariableProto(const GlobalVariable *SGVar) {
                          /*insertbefore*/ nullptr, SGVar->getThreadLocalMode(),
                          SGVar->getType()->getAddressSpace());
   NewDGV->setAlignment(SGVar->getAlignment());
+  NewDGV->copyAttributesFrom(SGVar);
   return NewDGV;
 }
 
@@ -610,8 +611,11 @@ GlobalVariable *IRLinker::copyGlobalVariableProto(const GlobalVariable *SGVar) {
 Function *IRLinker::copyFunctionProto(const Function *SF) {
   // If there is no linkage to be performed or we are linking from the source,
   // bring SF over.
-  return Function::Create(TypeMap.get(SF->getFunctionType()),
-                          GlobalValue::ExternalLinkage, SF->getName(), &DstM);
+  auto *F =
+      Function::Create(TypeMap.get(SF->getFunctionType()),
+                       GlobalValue::ExternalLinkage, SF->getName(), &DstM);
+  F->copyAttributesFrom(SF);
+  return F;
 }
 
 /// Set up prototypes for any aliases that come over from the source module.
@@ -619,9 +623,11 @@ GlobalValue *IRLinker::copyGlobalAliasProto(const GlobalAlias *SGA) {
   // If there is no linkage to be performed or we're linking from the source,
   // bring over SGA.
   auto *Ty = TypeMap.get(SGA->getValueType());
-  return GlobalAlias::create(Ty, SGA->getType()->getPointerAddressSpace(),
-                             GlobalValue::ExternalLinkage, SGA->getName(),
-                             &DstM);
+  auto *GA =
+      GlobalAlias::create(Ty, SGA->getType()->getPointerAddressSpace(),
+                          GlobalValue::ExternalLinkage, SGA->getName(), &DstM);
+  GA->copyAttributesFrom(SGA);
+  return GA;
 }
 
 GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
@@ -647,8 +653,6 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
     NewGV->setLinkage(SGV->getLinkage());
   else if (SGV->hasExternalWeakLinkage())
     NewGV->setLinkage(GlobalValue::ExternalWeakLinkage);
-
-  NewGV->copyAttributesFrom(SGV);
 
   if (auto *NewGO = dyn_cast<GlobalObject>(NewGV)) {
     // Metadata for global variables and function declarations is copied eagerly.

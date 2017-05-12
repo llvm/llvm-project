@@ -536,7 +536,7 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
             log->Printf("Calling %s with file %s to find dSYM",
                         g_dsym_for_uuid_exe_path, file_path);
         }
-        Error error = Host::RunShellCommand(
+        Status error = Host::RunShellCommand(
             command.GetData(),
             NULL,            // current working directory
             &exit_status,    // Exit status

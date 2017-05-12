@@ -25,9 +25,9 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 #define NT_MIPS_MSA 0x600
@@ -178,7 +178,7 @@ uint32_t NativeRegisterContextLinux_mips64::GetRegisterSetCount() const {
 
 lldb::addr_t NativeRegisterContextLinux_mips64::GetPCfromBreakpointLocation(
     lldb::addr_t fail_value) {
-  Error error;
+  Status error;
   RegisterValue pc_value;
   lldb::addr_t pc = fail_value;
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
@@ -244,10 +244,10 @@ NativeRegisterContextLinux_mips64::GetRegisterSet(uint32_t set_index) const {
   }
 }
 
-lldb_private::Error
+lldb_private::Status
 NativeRegisterContextLinux_mips64::ReadRegister(const RegisterInfo *reg_info,
                                                 RegisterValue &reg_value) {
-  Error error;
+  Status error;
 
   if (!reg_info) {
     error.SetErrorString("reg_info NULL");
@@ -315,18 +315,18 @@ NativeRegisterContextLinux_mips64::ReadRegister(const RegisterInfo *reg_info,
   return error;
 }
 
-lldb_private::Error NativeRegisterContextLinux_mips64::WriteRegister(
+lldb_private::Status NativeRegisterContextLinux_mips64::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &reg_value) {
-  Error error;
+  Status error;
 
   assert(reg_info && "reg_info is null");
 
   const uint32_t reg_index = reg_info->kinds[lldb::eRegisterKindLLDB];
 
   if (reg_index == LLDB_INVALID_REGNUM)
-    return Error("no lldb regnum for %s", reg_info && reg_info->name
-                                              ? reg_info->name
-                                              : "<unknown register>");
+    return Status("no lldb regnum for %s", reg_info && reg_info->name
+                                               ? reg_info->name
+                                               : "<unknown register>");
 
   if (IsMSA(reg_index) && !IsMSAAvailable()) {
     error.SetErrorString("MSA not available on this processor");
@@ -383,9 +383,9 @@ lldb_private::Error NativeRegisterContextLinux_mips64::WriteRegister(
   return error;
 }
 
-Error NativeRegisterContextLinux_mips64::ReadAllRegisterValues(
+Status NativeRegisterContextLinux_mips64::ReadAllRegisterValues(
     lldb::DataBufferSP &data_sp) {
-  Error error;
+  Status error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
   if (!data_sp) {
@@ -426,9 +426,9 @@ Error NativeRegisterContextLinux_mips64::ReadAllRegisterValues(
   return error;
 }
 
-Error NativeRegisterContextLinux_mips64::WriteAllRegisterValues(
+Status NativeRegisterContextLinux_mips64::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
-  Error error;
+  Status error;
 
   if (!data_sp) {
     error.SetErrorStringWithFormat(
@@ -481,8 +481,8 @@ Error NativeRegisterContextLinux_mips64::WriteAllRegisterValues(
   return error;
 }
 
-Error NativeRegisterContextLinux_mips64::ReadCP1() {
-  Error error;
+Status NativeRegisterContextLinux_mips64::ReadCP1() {
+  Status error;
 
   uint8_t *src = nullptr;
   uint8_t *dst = nullptr;
@@ -529,8 +529,8 @@ NativeRegisterContextLinux_mips64::ReturnFPOffset(uint8_t reg_index,
   return fp_buffer_ptr;
 }
 
-Error NativeRegisterContextLinux_mips64::WriteCP1() {
-  Error error;
+Status NativeRegisterContextLinux_mips64::WriteCP1() {
+  Status error;
 
   uint8_t *src = nullptr;
   uint8_t *dst = nullptr;
@@ -740,7 +740,7 @@ bool NativeRegisterContextLinux_mips64::IsMSAAvailable() {
   MSA_linux_mips msa_buf;
   unsigned int regset = NT_MIPS_MSA;
 
-  Error error = NativeProcessLinux::PtraceWrapper(
+  Status error = NativeProcessLinux::PtraceWrapper(
       PTRACE_GETREGSET, Host::GetCurrentProcessID(),
       static_cast<void *>(&regset), &msa_buf, sizeof(MSA_linux_mips));
 
@@ -751,14 +751,14 @@ bool NativeRegisterContextLinux_mips64::IsMSAAvailable() {
   return false;
 }
 
-Error NativeRegisterContextLinux_mips64::IsWatchpointHit(uint32_t wp_index,
-                                                         bool &is_hit) {
+Status NativeRegisterContextLinux_mips64::IsWatchpointHit(uint32_t wp_index,
+                                                          bool &is_hit) {
   if (wp_index >= NumSupportedHardwareWatchpoints())
-    return Error("Watchpoint index out of range");
+    return Status("Watchpoint index out of range");
 
   // reading the current state of watch regs
   struct pt_watch_regs watch_readback;
-  Error error = DoReadWatchPointRegisterValue(
+  Status error = DoReadWatchPointRegisterValue(
       m_thread.GetID(), static_cast<void *>(&watch_readback));
 
   if (GetWatchHi(&watch_readback, wp_index) & (IRW)) {
@@ -775,12 +775,12 @@ Error NativeRegisterContextLinux_mips64::IsWatchpointHit(uint32_t wp_index,
   return error;
 }
 
-Error NativeRegisterContextLinux_mips64::GetWatchpointHitIndex(
+Status NativeRegisterContextLinux_mips64::GetWatchpointHitIndex(
     uint32_t &wp_index, lldb::addr_t trap_addr) {
   uint32_t num_hw_wps = NumSupportedHardwareWatchpoints();
   for (wp_index = 0; wp_index < num_hw_wps; ++wp_index) {
     bool is_hit;
-    Error error = IsWatchpointHit(wp_index, is_hit);
+    Status error = IsWatchpointHit(wp_index, is_hit);
     if (error.Fail()) {
       wp_index = LLDB_INVALID_INDEX32;
     } else if (is_hit) {
@@ -788,15 +788,15 @@ Error NativeRegisterContextLinux_mips64::GetWatchpointHitIndex(
     }
   }
   wp_index = LLDB_INVALID_INDEX32;
-  return Error();
+  return Status();
 }
 
-Error NativeRegisterContextLinux_mips64::IsWatchpointVacant(uint32_t wp_index,
-                                                            bool &is_vacant) {
+Status NativeRegisterContextLinux_mips64::IsWatchpointVacant(uint32_t wp_index,
+                                                             bool &is_vacant) {
   is_vacant = false;
-  return Error("MIPS TODO: "
-               "NativeRegisterContextLinux_mips64::IsWatchpointVacant not "
-               "implemented");
+  return Status("MIPS TODO: "
+                "NativeRegisterContextLinux_mips64::IsWatchpointVacant not "
+                "implemented");
 }
 
 bool NativeRegisterContextLinux_mips64::ClearHardwareWatchpoint(
@@ -821,8 +821,8 @@ bool NativeRegisterContextLinux_mips64::ClearHardwareWatchpoint(
         default_watch_regs.mips64.watch_masks[wp_index];
   }
 
-  Error error = DoWriteWatchPointRegisterValue(m_thread.GetID(),
-                                               static_cast<void *>(&regs));
+  Status error = DoWriteWatchPointRegisterValue(m_thread.GetID(),
+                                                static_cast<void *>(&regs));
   if (!error.Fail()) {
     hw_addr_map[wp_index] = LLDB_INVALID_ADDRESS;
     return true;
@@ -830,14 +830,14 @@ bool NativeRegisterContextLinux_mips64::ClearHardwareWatchpoint(
   return false;
 }
 
-Error NativeRegisterContextLinux_mips64::ClearAllHardwareWatchpoints() {
+Status NativeRegisterContextLinux_mips64::ClearAllHardwareWatchpoints() {
   return DoWriteWatchPointRegisterValue(
       m_thread.GetID(), static_cast<void *>(&default_watch_regs));
 }
 
-Error NativeRegisterContextLinux_mips64::SetHardwareWatchpointWithIndex(
+Status NativeRegisterContextLinux_mips64::SetHardwareWatchpointWithIndex(
     lldb::addr_t addr, size_t size, uint32_t watch_flags, uint32_t wp_index) {
-  Error error;
+  Status error;
   error.SetErrorString("MIPS TODO: "
                        "NativeRegisterContextLinux_mips64::"
                        "SetHardwareWatchpointWithIndex not implemented");
@@ -910,7 +910,7 @@ static bool ReadRegisterCallback(EmulateInstruction *instruction, void *baton,
       emulator_baton->m_reg_context->GetRegisterInfo(
           lldb::eRegisterKindDWARF, reg_info->kinds[lldb::eRegisterKindDWARF]);
 
-  Error error =
+  Status error =
       emulator_baton->m_reg_context->ReadRegister(full_reg_info, reg_value);
   if (error.Success())
     return true;
@@ -991,12 +991,13 @@ uint32_t NativeRegisterContextLinux_mips64::NumSupportedHardwareWatchpoints() {
   return num_valid;
 }
 
-Error NativeRegisterContextLinux_mips64::ReadRegisterRaw(uint32_t reg_index,
-                                                         RegisterValue &value) {
+Status
+NativeRegisterContextLinux_mips64::ReadRegisterRaw(uint32_t reg_index,
+                                                   RegisterValue &value) {
   const RegisterInfo *const reg_info = GetRegisterInfoAtIndex(reg_index);
 
   if (!reg_info)
-    return Error("register %" PRIu32 " not found", reg_index);
+    return Status("register %" PRIu32 " not found", reg_index);
 
   uint32_t offset = reg_info->kinds[lldb::eRegisterKindProcessPlugin];
 
@@ -1008,12 +1009,12 @@ Error NativeRegisterContextLinux_mips64::ReadRegisterRaw(uint32_t reg_index,
                              value);
 }
 
-Error NativeRegisterContextLinux_mips64::WriteRegisterRaw(
+Status NativeRegisterContextLinux_mips64::WriteRegisterRaw(
     uint32_t reg_index, const RegisterValue &value) {
   const RegisterInfo *const reg_info = GetRegisterInfoAtIndex(reg_index);
 
   if (!reg_info)
-    return Error("register %" PRIu32 " not found", reg_index);
+    return Status("register %" PRIu32 " not found", reg_index);
 
   if (reg_info->invalidate_regs)
     lldbassert(false && "reg_info->invalidate_regs is unhandled");
@@ -1022,14 +1023,14 @@ Error NativeRegisterContextLinux_mips64::WriteRegisterRaw(
   return DoWriteRegisterValue(offset, reg_info->name, value);
 }
 
-Error NativeRegisterContextLinux_mips64::Read_SR_Config(uint32_t offset,
-                                                        const char *reg_name,
-                                                        uint32_t size,
-                                                        RegisterValue &value) {
+Status NativeRegisterContextLinux_mips64::Read_SR_Config(uint32_t offset,
+                                                         const char *reg_name,
+                                                         uint32_t size,
+                                                         RegisterValue &value) {
   GPR_linux_mips regs;
   ::memset(&regs, 0, sizeof(GPR_linux_mips));
 
-  Error error = NativeProcessLinux::PtraceWrapper(
+  Status error = NativeProcessLinux::PtraceWrapper(
       PTRACE_GETREGS, m_thread.GetID(), NULL, &regs, sizeof regs);
   if (error.Success()) {
     lldb_private::ArchSpec arch;
@@ -1043,13 +1044,13 @@ Error NativeRegisterContextLinux_mips64::Read_SR_Config(uint32_t offset,
   return error;
 }
 
-Error NativeRegisterContextLinux_mips64::DoReadWatchPointRegisterValue(
+Status NativeRegisterContextLinux_mips64::DoReadWatchPointRegisterValue(
     lldb::tid_t tid, void *watch_readback) {
   return NativeProcessLinux::PtraceWrapper(PTRACE_GET_WATCH_REGS,
                                            m_thread.GetID(), watch_readback);
 }
 
-Error NativeRegisterContextLinux_mips64::DoWriteWatchPointRegisterValue(
+Status NativeRegisterContextLinux_mips64::DoWriteWatchPointRegisterValue(
     lldb::tid_t tid, void *watch_reg_value) {
   return NativeProcessLinux::PtraceWrapper(PTRACE_SET_WATCH_REGS,
                                            m_thread.GetID(), watch_reg_value);

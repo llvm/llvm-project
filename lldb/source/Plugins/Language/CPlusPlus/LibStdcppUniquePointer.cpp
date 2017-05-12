@@ -79,7 +79,7 @@ bool LibStdcppUniquePtrSyntheticFrontEnd::Update() {
     m_del_obj = del_obj->Clone(ConstString("deleter"));
 
   if (m_ptr_obj) {
-    Error error;
+    Status error;
     ValueObjectSP obj_obj = m_ptr_obj->Dereference(error);
     if (error.Success()) {
       m_obj_obj = obj_obj->Clone(ConstString("object"));

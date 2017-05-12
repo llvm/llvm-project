@@ -123,8 +123,8 @@ public:
   ///     The error if formatting the object contents failed; otherwise,
   ///     success.
   // -------------------------------------------------------------------------
-  virtual Error GetDescription(const StructuredData::ObjectSP &object_sp,
-                               lldb_private::Stream &stream) = 0;
+  virtual Status GetDescription(const StructuredData::ObjectSP &object_sp,
+                                lldb_private::Stream &stream) = 0;
 
   // -------------------------------------------------------------------------
   /// Returns whether the plugin's features are enabled.

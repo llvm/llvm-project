@@ -32,9 +32,9 @@ void OptionValueLanguage::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
-Error OptionValueLanguage::SetValueFromString(llvm::StringRef value,
-                                              VarSetOperationType op) {
-  Error error;
+Status OptionValueLanguage::SetValueFromString(llvm::StringRef value,
+                                               VarSetOperationType op) {
+  Status error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

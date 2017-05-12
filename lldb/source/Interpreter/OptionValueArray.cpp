@@ -70,18 +70,19 @@ void OptionValueArray::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-Error OptionValueArray::SetValueFromString(llvm::StringRef value,
-                                           VarSetOperationType op) {
+Status OptionValueArray::SetValueFromString(llvm::StringRef value,
+                                            VarSetOperationType op) {
   Args args(value.str());
-  Error error = SetArgs(args, op);
+  Status error = SetArgs(args, op);
   if (error.Success())
     NotifyValueChanged();
   return error;
 }
 
 lldb::OptionValueSP
-OptionValueArray::GetSubValue(const ExecutionContext *exe_ctx, llvm::StringRef name,
-                              bool will_modify, Error &error) const {
+OptionValueArray::GetSubValue(const ExecutionContext *exe_ctx,
+                              llvm::StringRef name, bool will_modify,
+                              Status &error) const {
   if (name.empty() || name.front() != '[') {
     error.SetErrorStringWithFormat(
       "invalid value path '%s', %s values only support '[<index>]' subvalues "
@@ -149,8 +150,8 @@ size_t OptionValueArray::GetArgs(Args &args) const {
   return args.GetArgumentCount();
 }
 
-Error OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
-  Error error;
+Status OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
+  Status error;
   const size_t argc = args.GetArgumentCount();
   switch (op) {
   case eVarSetOperationInvalid:

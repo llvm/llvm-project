@@ -13,8 +13,8 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringList.h" // for StringList
 
 #if defined(LLVM_ON_WIN32)
@@ -93,7 +93,7 @@ static FileSpec::EnumerateDirectoryResult
 LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
                    const FileSpec &file_spec) {
   //    PluginManager *plugin_manager = (PluginManager *)baton;
-  Error error;
+  Status error;
 
   namespace fs = llvm::sys::fs;
   // If we have a regular file, a symbolic link or unknown file type, try
@@ -1066,9 +1066,9 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
   return nullptr;
 }
 
-Error PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
-                              const FileSpec &outfile) {
-  Error error;
+Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
+                               const FileSpec &outfile) {
+  Status error;
   std::lock_guard<std::recursive_mutex> guard(GetObjectFileMutex());
   ObjectFileInstances &instances = GetObjectFileInstances();
 

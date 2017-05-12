@@ -11,7 +11,7 @@
 
 #include "lldb/Core/Connection.h"
 #include "lldb/Host/Socket.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 #include <functional>
 #include <memory>
@@ -28,13 +28,13 @@ class Acceptor {
 public:
   virtual ~Acceptor() = default;
 
-  Error Listen(int backlog);
+  Status Listen(int backlog);
 
-  Error Accept(const bool child_processes_inherit, Connection *&conn);
+  Status Accept(const bool child_processes_inherit, Connection *&conn);
 
   static std::unique_ptr<Acceptor> Create(llvm::StringRef name,
                                           const bool child_processes_inherit,
-                                          Error &error);
+                                          Status &error);
 
   Socket::SocketProtocol GetSocketProtocol() const;
 

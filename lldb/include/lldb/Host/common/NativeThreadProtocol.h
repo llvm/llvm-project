@@ -33,13 +33,13 @@ public:
 
   virtual NativeRegisterContextSP GetRegisterContext() = 0;
 
-  virtual Error ReadRegister(uint32_t reg, RegisterValue &reg_value);
+  virtual Status ReadRegister(uint32_t reg, RegisterValue &reg_value);
 
-  virtual Error WriteRegister(uint32_t reg, const RegisterValue &reg_value);
+  virtual Status WriteRegister(uint32_t reg, const RegisterValue &reg_value);
 
-  virtual Error SaveAllRegisters(lldb::DataBufferSP &data_sp);
+  virtual Status SaveAllRegisters(lldb::DataBufferSP &data_sp);
 
-  virtual Error RestoreAllRegisters(lldb::DataBufferSP &data_sp);
+  virtual Status RestoreAllRegisters(lldb::DataBufferSP &data_sp);
 
   virtual bool GetStopReason(ThreadStopInfo &stop_info,
                              std::string &description) = 0;
@@ -51,17 +51,17 @@ public:
   // ---------------------------------------------------------------------
   // Thread-specific watchpoints
   // ---------------------------------------------------------------------
-  virtual Error SetWatchpoint(lldb::addr_t addr, size_t size,
-                              uint32_t watch_flags, bool hardware) = 0;
+  virtual Status SetWatchpoint(lldb::addr_t addr, size_t size,
+                               uint32_t watch_flags, bool hardware) = 0;
 
-  virtual Error RemoveWatchpoint(lldb::addr_t addr) = 0;
+  virtual Status RemoveWatchpoint(lldb::addr_t addr) = 0;
 
   // ---------------------------------------------------------------------
   // Thread-specific Hardware Breakpoint routines
   // ---------------------------------------------------------------------
-  virtual Error SetHardwareBreakpoint(lldb::addr_t addr, size_t size) = 0;
+  virtual Status SetHardwareBreakpoint(lldb::addr_t addr, size_t size) = 0;
 
-  virtual Error RemoveHardwareBreakpoint(lldb::addr_t addr) = 0;
+  virtual Status RemoveHardwareBreakpoint(lldb::addr_t addr) = 0;
 
 protected:
   NativeProcessProtocolWP m_process_wp;

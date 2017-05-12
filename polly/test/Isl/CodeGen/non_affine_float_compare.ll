@@ -34,7 +34,7 @@
 ; CHECK:   %p_tmp11b = fadd float %tmp10b_p_scalar_, 1.000000e+00
 ; CHECK:   store float %p_tmp11b, float* %scevgep[[R4]], align 4, !alias.scope !0, !noalias !2
 ; CHECK:   %polly.indvar_next = add nsw i64 %polly.indvar, 1
-; CHECK:   %polly.loop_cond = icmp sle i64 %polly.indvar, 1022
+; CHECK:   %polly.loop_cond = icmp sle i64 %polly.indvar_next, 1023
 ; CHECK:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

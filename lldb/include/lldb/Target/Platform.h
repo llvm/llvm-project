@@ -111,10 +111,10 @@ public:
   // Find an existing platform plug-in by name
   static lldb::PlatformSP Find(const ConstString &name);
 
-  static lldb::PlatformSP Create(const ConstString &name, Error &error);
+  static lldb::PlatformSP Create(const ConstString &name, Status &error);
 
   static lldb::PlatformSP Create(const ArchSpec &arch,
-                                 ArchSpec *platform_arch_ptr, Error &error);
+                                 ArchSpec *platform_arch_ptr, Status &error);
 
   static uint32_t GetNumConnectedRemotePlatforms();
 
@@ -156,9 +156,9 @@ public:
   ///     Returns \b true if this Platform plug-in was able to find
   ///     a suitable executable, \b false otherwise.
   //------------------------------------------------------------------
-  virtual Error ResolveExecutable(const ModuleSpec &module_spec,
-                                  lldb::ModuleSP &module_sp,
-                                  const FileSpecList *module_search_paths_ptr);
+  virtual Status ResolveExecutable(const ModuleSpec &module_spec,
+                                   lldb::ModuleSP &module_sp,
+                                   const FileSpecList *module_search_paths_ptr);
 
   //------------------------------------------------------------------
   /// Find a symbol file given a symbol file module specification.
@@ -207,8 +207,8 @@ public:
   /// @return
   ///     Returns an error that describes success or failure.
   //------------------------------------------------------------------
-  virtual Error ResolveSymbolFile(Target &target, const ModuleSpec &sym_spec,
-                                  FileSpec &sym_file);
+  virtual Status ResolveSymbolFile(Target &target, const ModuleSpec &sym_spec,
+                                   FileSpec &sym_file);
 
   //------------------------------------------------------------------
   /// Resolves the FileSpec to a (possibly) remote path. Remote
@@ -316,8 +316,8 @@ public:
   /// @return
   ///     An error object.
   //------------------------------------------------------------------
-  virtual Error GetFileWithUUID(const FileSpec &platform_file,
-                                const UUID *uuid_ptr, FileSpec &local_file);
+  virtual Status GetFileWithUUID(const FileSpec &platform_file,
+                                 const UUID *uuid_ptr, FileSpec &local_file);
 
   //----------------------------------------------------------------------
   // Locate the scripting resource given a module specification.
@@ -329,18 +329,18 @@ public:
   LocateExecutableScriptingResources(Target *target, Module &module,
                                      Stream *feedback_stream);
 
-  virtual Error GetSharedModule(const ModuleSpec &module_spec, Process *process,
-                                lldb::ModuleSP &module_sp,
-                                const FileSpecList *module_search_paths_ptr,
-                                lldb::ModuleSP *old_module_sp_ptr,
-                                bool *did_create_ptr);
+  virtual Status GetSharedModule(const ModuleSpec &module_spec,
+                                 Process *process, lldb::ModuleSP &module_sp,
+                                 const FileSpecList *module_search_paths_ptr,
+                                 lldb::ModuleSP *old_module_sp_ptr,
+                                 bool *did_create_ptr);
 
   virtual bool GetModuleSpec(const FileSpec &module_file_spec,
                              const ArchSpec &arch, ModuleSpec &module_spec);
 
-  virtual Error ConnectRemote(Args &args);
+  virtual Status ConnectRemote(Args &args);
 
-  virtual Error DisconnectRemote();
+  virtual Status DisconnectRemote();
 
   //------------------------------------------------------------------
   /// Get the platform's supported architectures in the order in which
@@ -367,7 +367,7 @@ public:
   /// Launch a new process on a platform, not necessarily for
   /// debugging, it could be just for running the process.
   //------------------------------------------------------------------
-  virtual Error LaunchProcess(ProcessLaunchInfo &launch_info);
+  virtual Status LaunchProcess(ProcessLaunchInfo &launch_info);
 
   //------------------------------------------------------------------
   /// Perform expansion of the command-line for this launch info
@@ -376,12 +376,12 @@ public:
   //  argument magic the platform defines as part of its typical
   //  user experience
   //------------------------------------------------------------------
-  virtual Error ShellExpandArguments(ProcessLaunchInfo &launch_info);
+  virtual Status ShellExpandArguments(ProcessLaunchInfo &launch_info);
 
   //------------------------------------------------------------------
   /// Kill process on a platform.
   //------------------------------------------------------------------
-  virtual Error KillProcess(const lldb::pid_t pid);
+  virtual Status KillProcess(const lldb::pid_t pid);
 
   //------------------------------------------------------------------
   /// Lets a platform answer if it is compatible with a given
@@ -411,13 +411,13 @@ public:
   DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
                Target *target, // Can be nullptr, if nullptr create a new
                                // target, else use existing one
-               Error &error);
+               Status &error);
 
   virtual lldb::ProcessSP ConnectProcess(llvm::StringRef connect_url,
                                          llvm::StringRef plugin_name,
                                          lldb_private::Debugger &debugger,
                                          lldb_private::Target *target,
-                                         lldb_private::Error &error);
+                                         lldb_private::Status &error);
 
   //------------------------------------------------------------------
   /// Attach to an existing process using a process ID.
@@ -442,7 +442,7 @@ public:
                                  Target *target, // Can be nullptr, if nullptr
                                                  // create a new target, else
                                                  // use existing one
-                                 Error &error) = 0;
+                                 Status &error) = 0;
 
   //------------------------------------------------------------------
   /// Attach to an existing process by process name.
@@ -464,7 +464,7 @@ public:
   //        virtual lldb::ProcessSP
   //        Attach (const char *process_name,
   //                bool wait_for_launch,
-  //                Error &error) = 0;
+  //                Status &error) = 0;
 
   //------------------------------------------------------------------
   // The base class Platform will take care of the host platform.
@@ -552,27 +552,27 @@ public:
     return false;
   }
 
-  virtual Error MakeDirectory(const FileSpec &file_spec, uint32_t permissions);
+  virtual Status MakeDirectory(const FileSpec &file_spec, uint32_t permissions);
 
-  virtual Error GetFilePermissions(const FileSpec &file_spec,
-                                   uint32_t &file_permissions);
+  virtual Status GetFilePermissions(const FileSpec &file_spec,
+                                    uint32_t &file_permissions);
 
-  virtual Error SetFilePermissions(const FileSpec &file_spec,
-                                   uint32_t file_permissions);
+  virtual Status SetFilePermissions(const FileSpec &file_spec,
+                                    uint32_t file_permissions);
 
   virtual lldb::user_id_t OpenFile(const FileSpec &file_spec, uint32_t flags,
-                                   uint32_t mode, Error &error) {
+                                   uint32_t mode, Status &error) {
     return UINT64_MAX;
   }
 
-  virtual bool CloseFile(lldb::user_id_t fd, Error &error) { return false; }
+  virtual bool CloseFile(lldb::user_id_t fd, Status &error) { return false; }
 
   virtual lldb::user_id_t GetFileSize(const FileSpec &file_spec) {
     return UINT64_MAX;
   }
 
   virtual uint64_t ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
-                            uint64_t dst_len, Error &error) {
+                            uint64_t dst_len, Status &error) {
     error.SetErrorStringWithFormat(
         "Platform::ReadFile() is not supported in the %s platform",
         GetName().GetCString());
@@ -580,19 +580,19 @@ public:
   }
 
   virtual uint64_t WriteFile(lldb::user_id_t fd, uint64_t offset,
-                             const void *src, uint64_t src_len, Error &error) {
+                             const void *src, uint64_t src_len, Status &error) {
     error.SetErrorStringWithFormat(
         "Platform::ReadFile() is not supported in the %s platform",
         GetName().GetCString());
     return -1;
   }
 
-  virtual Error GetFile(const FileSpec &source, const FileSpec &destination);
+  virtual Status GetFile(const FileSpec &source, const FileSpec &destination);
 
-  virtual Error PutFile(const FileSpec &source, const FileSpec &destination,
-                        uint32_t uid = UINT32_MAX, uint32_t gid = UINT32_MAX);
+  virtual Status PutFile(const FileSpec &source, const FileSpec &destination,
+                         uint32_t uid = UINT32_MAX, uint32_t gid = UINT32_MAX);
 
-  virtual Error
+  virtual Status
   CreateSymlink(const FileSpec &src,  // The name of the link is in src
                 const FileSpec &dst); // The symlink points to dst
 
@@ -620,13 +620,13 @@ public:
   /// @return
   ///     An error object that describes anything that went wrong.
   //----------------------------------------------------------------------
-  virtual Error Install(const FileSpec &src, const FileSpec &dst);
+  virtual Status Install(const FileSpec &src, const FileSpec &dst);
 
   virtual size_t GetEnvironment(StringList &environment);
 
   virtual bool GetFileExists(const lldb_private::FileSpec &file_spec);
 
-  virtual Error Unlink(const FileSpec &file_spec);
+  virtual Status Unlink(const FileSpec &file_spec);
 
   virtual uint64_t ConvertMmapFlagsToPlatform(const ArchSpec &arch,
                                               unsigned flags);
@@ -664,7 +664,7 @@ public:
     return nullptr;
   }
 
-  virtual lldb_private::Error RunShellCommand(
+  virtual lldb_private::Status RunShellCommand(
       const char *command,         // Shouldn't be nullptr
       const FileSpec &working_dir, // Pass empty FileSpec to use the current
                                    // working directory
@@ -830,14 +830,14 @@ public:
   uint32_t LoadImage(lldb_private::Process *process,
                      const lldb_private::FileSpec &local_file,
                      const lldb_private::FileSpec &remote_file,
-                     lldb_private::Error &error);
+                     lldb_private::Status &error);
 
   virtual uint32_t DoLoadImage(lldb_private::Process *process,
                                const lldb_private::FileSpec &remote_file,
-                               lldb_private::Error &error);
+                               lldb_private::Status &error);
 
-  virtual Error UnloadImage(lldb_private::Process *process,
-                            uint32_t image_token);
+  virtual Status UnloadImage(lldb_private::Process *process,
+                             uint32_t image_token);
 
   //------------------------------------------------------------------
   /// Connect to all processes waiting for a debugger to attach
@@ -856,7 +856,7 @@ public:
   ///     The number of processes we are successfully connected to.
   //------------------------------------------------------------------
   virtual size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
-                                           lldb_private::Error &error);
+                                           lldb_private::Status &error);
 
 protected:
   bool m_is_host;
@@ -977,35 +977,35 @@ protected:
     m_gid_map.clear();
   }
 
-  Error GetCachedExecutable(ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                            const FileSpecList *module_search_paths_ptr,
-                            Platform &remote_platform);
+  Status GetCachedExecutable(ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
+                             const FileSpecList *module_search_paths_ptr,
+                             Platform &remote_platform);
 
-  virtual Error DownloadModuleSlice(const FileSpec &src_file_spec,
-                                    const uint64_t src_offset,
-                                    const uint64_t src_size,
+  virtual Status DownloadModuleSlice(const FileSpec &src_file_spec,
+                                     const uint64_t src_offset,
+                                     const uint64_t src_size,
+                                     const FileSpec &dst_file_spec);
+
+  virtual Status DownloadSymbolFile(const lldb::ModuleSP &module_sp,
                                     const FileSpec &dst_file_spec);
-
-  virtual Error DownloadSymbolFile(const lldb::ModuleSP &module_sp,
-                                   const FileSpec &dst_file_spec);
 
   virtual const char *GetCacheHostname();
 
 private:
-  typedef std::function<Error(const ModuleSpec &)> ModuleResolver;
+  typedef std::function<Status(const ModuleSpec &)> ModuleResolver;
 
-  Error GetRemoteSharedModule(const ModuleSpec &module_spec, Process *process,
-                              lldb::ModuleSP &module_sp,
-                              const ModuleResolver &module_resolver,
-                              bool *did_create_ptr);
+  Status GetRemoteSharedModule(const ModuleSpec &module_spec, Process *process,
+                               lldb::ModuleSP &module_sp,
+                               const ModuleResolver &module_resolver,
+                               bool *did_create_ptr);
 
   bool GetCachedSharedModule(const ModuleSpec &module_spec,
                              lldb::ModuleSP &module_sp, bool *did_create_ptr);
 
-  Error LoadCachedExecutable(const ModuleSpec &module_spec,
-                             lldb::ModuleSP &module_sp,
-                             const FileSpecList *module_search_paths_ptr,
-                             Platform &remote_platform);
+  Status LoadCachedExecutable(const ModuleSpec &module_spec,
+                              lldb::ModuleSP &module_sp,
+                              const FileSpecList *module_search_paths_ptr,
+                              Platform &remote_platform);
 
   FileSpec GetModuleCacheRoot();
 
@@ -1088,7 +1088,7 @@ public:
 
   ~OptionGroupPlatformRSync() override = default;
 
-  lldb_private::Error
+  lldb_private::Status
   SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                  ExecutionContext *execution_context) override;
 
@@ -1117,7 +1117,7 @@ public:
 
   ~OptionGroupPlatformSSH() override = default;
 
-  lldb_private::Error
+  lldb_private::Status
   SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                  ExecutionContext *execution_context) override;
 
@@ -1144,7 +1144,7 @@ public:
 
   ~OptionGroupPlatformCaching() override = default;
 
-  lldb_private::Error
+  lldb_private::Status
   SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                  ExecutionContext *execution_context) override;
 

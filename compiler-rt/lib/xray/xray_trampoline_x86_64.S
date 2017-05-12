@@ -176,9 +176,15 @@ __xray_ArgLoggerEntry:
 	je	.Larg1entryFail
 
 .Larg1entryLog:
-	movq	%rdi, %rdx	// first argument will become the third
-	xorq	%rsi, %rsi	// XRayEntryType::ENTRY into the second
-	movl	%r10d, %edi	// 32-bit function ID becomes the first
+
+  // First argument will become the third
+	movq	%rdi, %rdx
+
+  // XRayEntryType::ENTRY into the second
+	xorq	%rsi, %rsi
+
+	// 32-bit function ID becomes the first
+	movl	%r10d, %edi
 	callq	*%rax
 
 .Larg1entryFail:
@@ -187,6 +193,40 @@ __xray_ArgLoggerEntry:
 
 .Larg1entryEnd:
 	.size __xray_ArgLoggerEntry, .Larg1entryEnd-__xray_ArgLoggerEntry
+	.cfi_endproc
+
+//===----------------------------------------------------------------------===//
+
+	.global __xray_CustomEvent
+	.align 16, 0x90
+	.type __xray_CustomEvent,@function
+__xray_CustomEvent:
+  .cfi_startproc
+	subq $16, %rsp
+	.cfi_def_cfa_offset 24
+	movq %rbp, 8(%rsp)
+	movq %rax, 0(%rsp)
+
+	// We take two arguments to this trampoline, which should be in rdi	and rsi
+	// already. We also make sure that we stash %rax because we use that register
+	// to call the logging handler.
+	movq _ZN6__xray22XRayPatchedCustomEventE(%rip), %rax
+	testq %rax,%rax
+	je .LcustomEventCleanup
+
+	// At this point we know that rcx and rdx already has the data, so we just
+	// call the logging handler.
+  callq *%rax
+
+.LcustomEventCleanup:
+	movq 0(%rsp), %rax
+	movq 8(%rsp), %rbp
+	addq $16, %rsp
+	.cfi_def_cfa_offset 8
+	retq
+
+.Ltmp8:
+	.size __xray_CustomEvent, .Ltmp8-__xray_CustomEvent
 	.cfi_endproc
 
 NO_EXEC_STACK_DIRECTIVE

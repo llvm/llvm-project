@@ -39,8 +39,9 @@ namespace darwin_process_launcher {
 /// @param[out] launch_flavor
 ///     Contains the launch flavor used when launching the process.
 // =============================================================================
-Error LaunchInferior(ProcessLaunchInfo &launch_info, int *pty_master_fd,
-                     lldb_private::process_darwin::LaunchFlavor *launch_flavor);
+Status
+LaunchInferior(ProcessLaunchInfo &launch_info, int *pty_master_fd,
+               lldb_private::process_darwin::LaunchFlavor *launch_flavor);
 
 } // darwin_process_launcher
 } // lldb_private

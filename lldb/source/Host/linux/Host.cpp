@@ -22,8 +22,8 @@
 #include "llvm/Support/ScopedPrinter.h"
 // Project includes
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -162,7 +162,7 @@ static bool GetProcessAndStatInfo(::pid_t pid,
   ssize_t len = readlink(ProcExe.c_str(), &ExePath[0], PATH_MAX);
   if (len <= 0) {
     LLDB_LOG(log, "failed to read link exe link for {0}: {1}", pid,
-             Error(errno, eErrorTypePOSIX));
+             Status(errno, eErrorTypePOSIX));
     return false;
   }
   ExePath.resize(len);
@@ -305,6 +305,6 @@ size_t Host::GetEnvironment(StringList &env) {
   return i;
 }
 
-Error Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
-  return Error("unimplemented");
+Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
+  return Status("unimplemented");
 }

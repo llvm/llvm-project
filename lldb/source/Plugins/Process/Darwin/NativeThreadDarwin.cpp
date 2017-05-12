@@ -94,15 +94,15 @@ NativeRegisterContextSP NativeThreadDarwin::GetRegisterContext() {
   return NativeRegisterContextSP();
 }
 
-Error NativeThreadDarwin::SetWatchpoint(lldb::addr_t addr, size_t size,
-                                        uint32_t watch_flags, bool hardware) {
-  Error error;
+Status NativeThreadDarwin::SetWatchpoint(lldb::addr_t addr, size_t size,
+                                         uint32_t watch_flags, bool hardware) {
+  Status error;
   error.SetErrorString("not yet implemented");
   return error;
 }
 
-Error NativeThreadDarwin::RemoveWatchpoint(lldb::addr_t addr) {
-  Error error;
+Status NativeThreadDarwin::RemoveWatchpoint(lldb::addr_t addr) {
+  Status error;
   error.SetErrorString("not yet implemented");
   return error;
 }

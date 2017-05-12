@@ -44,7 +44,7 @@ public:
       return;
     }
 
-    Error err;
+    Status err;
     TypeSystem *type_system = target_sp->GetScratchTypeSystemForLanguage(
         &err, lldb::eLanguageTypeC_plus_plus);
 
@@ -133,7 +133,7 @@ public:
       return lldb::ValueObjectSP();
     }
 
-    Error err;
+    Status err;
     ValueObjectSP struct_sp = struct_pointer_sp->Dereference(err);
 
     if (!struct_sp || !err.Success()) {

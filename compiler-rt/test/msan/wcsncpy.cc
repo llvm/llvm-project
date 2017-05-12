@@ -2,7 +2,6 @@
 // RUN: FileCheck %s < %t.out && FileCheck %s < %t.out
 
 // XFAIL: mips
-// REQUIRES: stable-runtime
 
 #include <assert.h>
 #include <wchar.h>
@@ -30,12 +29,12 @@ int main() {
 }
 // CHECK:  Uninitialized bytes in __msan_check_mem_is_initialized
 // CHECK:  WARNING: MemorySanitizer: use-of-uninitialized-value
-// CHECK:    in main {{.*}}wcsncpy.cc:26
+// CHECK:    in main {{.*}}wcsncpy.cc:28
 
 // CHECK:  Uninitialized value was stored to memory at
 // CHECK:    in {{[^\s]*}}wcsncpy
-// CHECK:    in main {{.*}}wcsncpy.cc:25
+// CHECK:    in main {{.*}}wcsncpy.cc:27
 
 // CHECK:  Memory was marked as uninitialized
 // CHECK:    in __msan_allocated_memory
-// CHECK:    in main {{.*}}wcsncpy.cc:23
+// CHECK:    in main {{.*}}wcsncpy.cc:25

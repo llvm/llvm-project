@@ -234,7 +234,7 @@ public:
                        bool use_inline_block_range, AddressRange &range) const;
 
   bool GetAddressRangeFromHereToEndLine(uint32_t end_line, AddressRange &range,
-                                        Error &error);
+                                        Status &error);
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level,
                       Target *target) const;

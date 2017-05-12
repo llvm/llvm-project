@@ -107,5 +107,11 @@ int main()
         assert((a.inner_allocator() ==
             std::scoped_allocator_adaptor<A2<int>, A3<int>>(A2<int>(5), A3<int>(6))));
     }
-
+//  Test for LWG2782
+    {
+        static_assert(!std::is_convertible<A1<int>, A2<int>>::value, "");
+        static_assert(!std::is_convertible<
+             std::scoped_allocator_adaptor<A1<int>>, 
+             std::scoped_allocator_adaptor<A2<int>>>::value, "");
+    }
 }

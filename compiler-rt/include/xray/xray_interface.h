@@ -25,6 +25,7 @@ enum XRayEntryType {
   EXIT = 1,
   TAIL = 2,
   LOG_ARGS_ENTRY = 3,
+  CUSTOM_EVENT = 4,
 };
 
 /// Provide a function to invoke for when instrumentation points are hit. This
@@ -63,6 +64,9 @@ extern int __xray_set_handler_arg1(void (*)(int32_t, XRayEntryType, uint64_t));
 /// Disables the XRay handler used to log first arguments of function calls.
 /// Returns 1 on success, 0 on error.
 extern int __xray_remove_handler_arg1();
+
+/// Provide a function to invoke when XRay encounters a custom event.
+extern int __xray_set_customevent_handler(void (*entry)(void*, std::size_t));
 
 enum XRayPatchingStatus {
   NOT_INITIALIZED = 0,

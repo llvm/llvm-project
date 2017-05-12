@@ -18,8 +18,7 @@
 #include <atomic>
 #include <cassert>
 
-
-extern "C" void __clear_cache(void* start, void* end);
+extern "C" void __clear_cache(void *start, void *end);
 
 namespace __xray {
 
@@ -86,8 +85,8 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
         reinterpret_cast<std::atomic<uint32_t> *>(FirstAddress),
         uint32_t(PatchOpcodes::PO_B32), std::memory_order_release);
   }
-  __clear_cache(reinterpret_cast<char*>(FirstAddress),
-      reinterpret_cast<char*>(CurAddress));
+  __clear_cache(reinterpret_cast<char *>(FirstAddress),
+                reinterpret_cast<char *>(CurAddress));
   return true;
 }
 
@@ -105,6 +104,12 @@ bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
 bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
                            const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
   return patchSled(Enable, FuncId, Sled, __xray_FunctionTailExit);
+}
+
+bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
+                      const XRaySledEntry &Sled)
+    XRAY_NEVER_INSTRUMENT { // FIXME: Implement in aarch64?
+  return false;
 }
 
 // FIXME: Maybe implement this better?

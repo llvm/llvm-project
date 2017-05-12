@@ -123,7 +123,7 @@ public:
   FunctionCaller *MakeFunctionCaller(const CompilerType &return_type,
                                      const ValueList &arg_value_list,
                                      lldb::ThreadSP compilation_thread,
-                                     Error &error);
+                                     Status &error);
 
   // This one retrieves the function caller that is already made.  If you
   // haven't made it yet, this returns nullptr

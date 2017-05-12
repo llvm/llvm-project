@@ -24,7 +24,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 #include "Plugins/Language/ObjC/NSString.h"
@@ -55,7 +55,7 @@ bool lldb_private::formatters::NSException_SummaryProvider(
   lldb::addr_t name_location = ptr_value + 1 * ptr_size;
   lldb::addr_t reason_location = ptr_value + 2 * ptr_size;
 
-  Error error;
+  Status error;
   lldb::addr_t name = process_sp->ReadPointerFromMemory(name_location, error);
   if (error.Fail() || name == LLDB_INVALID_ADDRESS)
     return false;
@@ -146,7 +146,7 @@ public:
     size_t ptr_size = process_sp->GetAddressByteSize();
 
     userinfo_location += 3 * ptr_size;
-    Error error;
+    Status error;
     lldb::addr_t userinfo =
         process_sp->ReadPointerFromMemory(userinfo_location, error);
     if (userinfo == LLDB_INVALID_ADDRESS || error.Fail())

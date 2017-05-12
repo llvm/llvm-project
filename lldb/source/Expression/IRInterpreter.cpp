@@ -18,8 +18,8 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "lldb/Target/ABI.h"
@@ -189,7 +189,7 @@ public:
       size_t value_size = m_target_data.getTypeStoreSize(value->getType());
 
       lldb_private::DataExtractor value_extractor;
-      lldb_private::Error extract_error;
+      lldb_private::Status extract_error;
 
       m_execution_unit.GetMemoryData(value_extractor, process_address,
                                      value_size, extract_error);
@@ -224,13 +224,13 @@ public:
 
     lldb_private::DataBufferHeap buf(value_byte_size, 0);
 
-    lldb_private::Error get_data_error;
+    lldb_private::Status get_data_error;
 
     if (!cast_scalar.GetAsMemoryData(buf.GetBytes(), buf.GetByteSize(),
                                      m_byte_order, get_data_error))
       return false;
 
-    lldb_private::Error write_error;
+    lldb_private::Status write_error;
 
     m_execution_unit.WriteMemory(process_address, buf.GetBytes(),
                                  buf.GetByteSize(), write_error);
@@ -322,12 +322,12 @@ public:
     if (data_address == LLDB_INVALID_ADDRESS)
       return false;
 
-    lldb_private::Error write_error;
+    lldb_private::Status write_error;
 
     m_execution_unit.WritePointerToMemory(data_address, address, write_error);
 
     if (!write_error.Success()) {
-      lldb_private::Error free_error;
+      lldb_private::Status free_error;
       m_execution_unit.Free(data_address, free_error);
       return false;
     }
@@ -356,7 +356,7 @@ public:
     size_t constant_size = m_target_data.getTypeStoreSize(constant->getType());
     lldb_private::DataBufferHeap buf(constant_size, 0);
 
-    lldb_private::Error get_data_error;
+    lldb_private::Status get_data_error;
 
     lldb_private::Scalar resolved_scalar(
         resolved_value.zextOrTrunc(llvm::NextPowerOf2(constant_size) * 8));
@@ -364,7 +364,7 @@ public:
                                          m_byte_order, get_data_error))
       return false;
 
-    lldb_private::Error write_error;
+    lldb_private::Status write_error;
 
     m_execution_unit.WriteMemory(process_address, buf.GetBytes(),
                                  buf.GetByteSize(), write_error);
@@ -391,7 +391,7 @@ public:
   }
 
   lldb::addr_t Malloc(llvm::Type *type) {
-    lldb_private::Error alloc_error;
+    lldb_private::Status alloc_error;
 
     return Malloc(m_target_data.getTypeAllocSize(type),
                   m_target_data.getPrefTypeAlignment(type));
@@ -402,7 +402,7 @@ public:
 
     lldb_private::DataBufferHeap buf(length, 0);
 
-    lldb_private::Error read_error;
+    lldb_private::Status read_error;
 
     m_execution_unit.ReadMemory(buf.GetBytes(), addr, length, read_error);
 
@@ -433,7 +433,7 @@ public:
 
     if (const Constant *constant = dyn_cast<Constant>(value)) {
       if (!ResolveConstant(data_address, constant)) {
-        lldb_private::Error free_error;
+        lldb_private::Status free_error;
         m_execution_unit.Free(data_address, free_error);
         return LLDB_INVALID_ADDRESS;
       }
@@ -499,7 +499,7 @@ static bool CanResolveConstant(llvm::Constant *constant) {
 }
 
 bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
-                                 lldb_private::Error &error,
+                                 lldb_private::Status &error,
                                  const bool support_function_calls) {
   lldb_private::Log *log(
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
@@ -648,7 +648,7 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
 bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
                               llvm::ArrayRef<lldb::addr_t> args,
                               lldb_private::IRExecutionUnit &execution_unit,
-                              lldb_private::Error &error,
+                              lldb_private::Status &error,
                               lldb::addr_t stack_frame_bottom,
                               lldb::addr_t stack_frame_top,
                               lldb_private::ExecutionContext &exe_ctx) {
@@ -867,7 +867,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
-      lldb_private::Error write_error;
+      lldb_private::Status write_error;
 
       execution_unit.WritePointerToMemory(P, R, write_error);
 
@@ -876,7 +876,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
           log->Printf("Couldn't write the result pointer for an AllocaInst");
         error.SetErrorToGenericError();
         error.SetErrorString(memory_write_error);
-        lldb_private::Error free_error;
+        lldb_private::Status free_error;
         execution_unit.Free(P, free_error);
         execution_unit.Free(R, free_error);
         return false;
@@ -1349,7 +1349,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       }
 
       lldb::addr_t R;
-      lldb_private::Error read_error;
+      lldb_private::Status read_error;
       execution_unit.ReadPointerFromMemory(&R, P, read_error);
 
       if (!read_error.Success()) {
@@ -1374,7 +1374,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
-      lldb_private::Error write_error;
+      lldb_private::Status write_error;
       execution_unit.WriteMemory(D, buffer.GetBytes(), buffer.GetByteSize(),
                                  write_error);
       if (!write_error.Success()) {
@@ -1442,7 +1442,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       }
 
       lldb::addr_t R;
-      lldb_private::Error read_error;
+      lldb_private::Status read_error;
       execution_unit.ReadPointerFromMemory(&R, P, read_error);
 
       if (!read_error.Success()) {
@@ -1467,7 +1467,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
-      lldb_private::Error write_error;
+      lldb_private::Status write_error;
       execution_unit.WriteMemory(R, buffer.GetBytes(), buffer.GetByteSize(),
                                  write_error);
       if (!write_error.Success()) {

@@ -20,7 +20,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -83,7 +83,7 @@ lldb::ValueObjectSP lldb_private::formatters::
     if (m_next_element == nullptr)
       return lldb::ValueObjectSP();
 
-    Error error;
+    Status error;
     ValueObjectSP node_sp = m_next_element->Dereference(error);
     if (!node_sp || error.Fail())
       return lldb::ValueObjectSP();
@@ -153,7 +153,7 @@ lldb::ValueObjectSP lldb_private::formatters::
   StreamString stream;
   stream.Printf("[%" PRIu64 "]", (uint64_t)idx);
   DataExtractor data;
-  Error error;
+  Status error;
   val_hash.first->GetData(data, error);
   if (error.Fail())
     return lldb::ValueObjectSP();

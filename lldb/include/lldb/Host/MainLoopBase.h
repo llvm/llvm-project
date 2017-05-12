@@ -15,7 +15,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include "lldb/Host/IOObject.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 namespace lldb_private {
 
@@ -49,14 +49,14 @@ public:
 
   virtual ReadHandleUP RegisterReadObject(const lldb::IOObjectSP &object_sp,
                                           const Callback &callback,
-                                          Error &error) {
+                                          Status &error) {
     llvm_unreachable("Not implemented");
   }
 
   // Waits for registered events and invoke the proper callbacks. Returns when
   // all callbacks
   // deregister themselves or when someone requests termination.
-  virtual Error Run() { llvm_unreachable("Not implemented"); }
+  virtual Status Run() { llvm_unreachable("Not implemented"); }
 
   // Requests the exit of the Run() function.
   virtual void RequestTermination() { llvm_unreachable("Not implemented"); }

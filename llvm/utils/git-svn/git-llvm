@@ -205,21 +205,26 @@ def fix_eol_style_native(rev, sr, svn_sr_path):
     # Use ignore_errors because 'svn propget' prints errors if the file doesn't
     # have the named property. There doesn't seem to be a way to suppress that.
     eol_props = svn(svn_sr_path, 'propget', 'svn:eol-style', *files,
-                    ignore_errors=True).split('\n')
+                    ignore_errors=True)
     crlf_files = []
-    for eol_prop in eol_props:
-        # Remove spare CR.
-        eol_prop = eol_prop.strip('\r')
-        if not eol_prop:
-            continue
-        prop_parts = eol_prop.rsplit(' - ', 1)
-        if len(prop_parts) != 2:
-            eprint("unable to parse svn propget line:")
-            eprint(eol_prop)
-            continue
-        (f, eol_style) = prop_parts
-        if eol_style == 'native':
-            crlf_files.append(f)
+    if len(files) == 1:
+        # No need to split propget output on ' - ' when we have one file.
+        if eol_props.strip() == 'native':
+            crlf_files = files
+    else:
+        for eol_prop in eol_props.split('\n'):
+            # Remove spare CR.
+            eol_prop = eol_prop.strip('\r')
+            if not eol_prop:
+                continue
+            prop_parts = eol_prop.rsplit(' - ', 1)
+            if len(prop_parts) != 2:
+                eprint("unable to parse svn propget line:")
+                eprint(eol_prop)
+                continue
+            (f, eol_style) = prop_parts
+            if eol_style == 'native':
+                crlf_files.append(f)
     # Reformat all files with native SVN line endings to Unix format. SVN knows
     # files with native line endings are text files. It will commit just the
     # diff, and not a mass line ending change.

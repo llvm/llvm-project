@@ -10,7 +10,7 @@
 #ifndef liblldb_ExpressionParser_h_
 #define liblldb_ExpressionParser_h_
 
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-public.h"
 
 namespace lldb_private {
@@ -108,7 +108,7 @@ public:
   ///     An error code indicating the success or failure of the operation.
   ///     Test with Success().
   //------------------------------------------------------------------
-  virtual Error
+  virtual Status
   PrepareForExecution(lldb::addr_t &func_addr, lldb::addr_t &func_end,
                       std::shared_ptr<IRExecutionUnit> &execution_unit_sp,
                       ExecutionContext &exe_ctx, bool &can_interpret,

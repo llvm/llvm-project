@@ -490,7 +490,7 @@ public:
   //    UpdateInstanceName ();
 
   lldb::ModuleSP GetSharedModule(const ModuleSpec &module_spec,
-                                 Error *error_ptr = nullptr);
+                                 Status *error_ptr = nullptr);
 
   //----------------------------------------------------------------------
   // Settings accessors
@@ -528,11 +528,11 @@ public:
 
   void Destroy();
 
-  Error Launch(ProcessLaunchInfo &launch_info,
-               Stream *stream); // Optional stream to receive first stop info
+  Status Launch(ProcessLaunchInfo &launch_info,
+                Stream *stream); // Optional stream to receive first stop info
 
-  Error Attach(ProcessAttachInfo &attach_info,
-               Stream *stream); // Optional stream to receive first stop info
+  Status Attach(ProcessAttachInfo &attach_info,
+                Stream *stream); // Optional stream to receive first stop info
 
   //------------------------------------------------------------------
   // This part handles the breakpoints.
@@ -611,7 +611,7 @@ public:
   CreateExceptionBreakpoint(enum lldb::LanguageType language, bool catch_bp,
                             bool throw_bp, bool internal,
                             Args *additional_args = nullptr,
-                            Error *additional_args_error = nullptr);
+                            Status *additional_args_error = nullptr);
 
   // This is the same as the func_name breakpoint except that you can specify a
   // vector of names.  This is cheaper
@@ -644,7 +644,7 @@ public:
   // Use this to create a watchpoint:
   lldb::WatchpointSP CreateWatchpoint(lldb::addr_t addr, size_t size,
                                       const CompilerType *type, uint32_t kind,
-                                      Error &error);
+                                      Status &error);
 
   lldb::WatchpointSP GetLastCreatedWatchpoint() {
     return m_last_created_watchpoint;
@@ -687,15 +687,16 @@ public:
 
   bool IgnoreWatchpointByID(lldb::watch_id_t watch_id, uint32_t ignore_count);
 
-  Error SerializeBreakpointsToFile(const FileSpec &file,
-                                   const BreakpointIDList &bp_ids, bool append);
+  Status SerializeBreakpointsToFile(const FileSpec &file,
+                                    const BreakpointIDList &bp_ids,
+                                    bool append);
 
-  Error CreateBreakpointsFromFile(const FileSpec &file,
-                                  BreakpointIDList &new_bps);
+  Status CreateBreakpointsFromFile(const FileSpec &file,
+                                   BreakpointIDList &new_bps);
 
-  Error CreateBreakpointsFromFile(const FileSpec &file,
-                                  std::vector<std::string> &names,
-                                  BreakpointIDList &new_bps);
+  Status CreateBreakpointsFromFile(const FileSpec &file,
+                                   std::vector<std::string> &names,
+                                   BreakpointIDList &new_bps);
 
   //------------------------------------------------------------------
   /// Get \a load_addr as a callable code load address for this target
@@ -808,7 +809,7 @@ public:
   //------------------------------------------------------------------
   void SetExecutableModule(lldb::ModuleSP &module_sp, bool get_dependent_files);
 
-  bool LoadScriptingResources(std::list<Error> &errors,
+  bool LoadScriptingResources(std::list<Status> &errors,
                               Stream *feedback_stream = nullptr,
                               bool continue_on_error = true) {
     return m_images.LoadScriptingResourcesInTarget(
@@ -914,7 +915,7 @@ public:
   Debugger &GetDebugger() { return m_debugger; }
 
   size_t ReadMemoryFromFileCache(const Address &addr, void *dst, size_t dst_len,
-                                 Error &error);
+                                 Status &error);
 
   // Reading memory through the target allows us to skip going to the process
   // for reading memory if possible and it allows us to try and read from
@@ -927,27 +928,27 @@ public:
   // 2 - if there is a valid process, try and read from its memory
   // 3 - if (prefer_file_cache == false) then read from object file cache
   size_t ReadMemory(const Address &addr, bool prefer_file_cache, void *dst,
-                    size_t dst_len, Error &error,
+                    size_t dst_len, Status &error,
                     lldb::addr_t *load_addr_ptr = nullptr);
 
   size_t ReadCStringFromMemory(const Address &addr, std::string &out_str,
-                               Error &error);
+                               Status &error);
 
   size_t ReadCStringFromMemory(const Address &addr, char *dst,
-                               size_t dst_max_len, Error &result_error);
+                               size_t dst_max_len, Status &result_error);
 
   size_t ReadScalarIntegerFromMemory(const Address &addr,
                                      bool prefer_file_cache, uint32_t byte_size,
                                      bool is_signed, Scalar &scalar,
-                                     Error &error);
+                                     Status &error);
 
   uint64_t ReadUnsignedIntegerFromMemory(const Address &addr,
                                          bool prefer_file_cache,
                                          size_t integer_byte_size,
-                                         uint64_t fail_value, Error &error);
+                                         uint64_t fail_value, Status &error);
 
   bool ReadPointerFromMemory(const Address &addr, bool prefer_file_cache,
-                             Error &error, Address &pointer_addr);
+                             Status &error, Address &pointer_addr);
 
   SectionLoadList &GetSectionLoadList() {
     return m_section_load_history.GetCurrentSectionLoadList();
@@ -978,7 +979,7 @@ public:
 
   PathMappingList &GetImageSearchPathList();
 
-  TypeSystem *GetScratchTypeSystemForLanguage(Error *error,
+  TypeSystem *GetScratchTypeSystemForLanguage(Status *error,
                                               lldb::LanguageType language,
                                               bool create_on_demand = true);
 
@@ -993,7 +994,7 @@ public:
   UserExpression *GetUserExpressionForLanguage(
       llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
       Expression::ResultType desired_type,
-      const EvaluateExpressionOptions &options, Error &error);
+      const EvaluateExpressionOptions &options, Status &error);
 
   // Creates a FunctionCaller for the given language, the rest of the parameters
   // have the
@@ -1008,7 +1009,7 @@ public:
                                                const CompilerType &return_type,
                                                const Address &function_address,
                                                const ValueList &arg_value_list,
-                                               const char *name, Error &error);
+                                               const char *name, Status &error);
 
   // Creates a UtilityFunction for the given language, the rest of the
   // parameters have the
@@ -1018,7 +1019,7 @@ public:
   UtilityFunction *GetUtilityFunctionForLanguage(const char *expr,
                                                  lldb::LanguageType language,
                                                  const char *name,
-                                                 Error &error);
+                                                 Status &error);
 
   ClangASTContext *GetScratchClangASTContext(bool create_on_demand = true);
 
@@ -1028,7 +1029,7 @@ public:
   // Install any files through the platform that need be to installed
   // prior to launching or attaching.
   //----------------------------------------------------------------------
-  Error Install(ProcessLaunchInfo *launch_info);
+  Status Install(ProcessLaunchInfo *launch_info);
 
   bool ResolveFileAddress(lldb::addr_t load_addr, Address &so_addr);
 
@@ -1183,7 +1184,7 @@ public:
   GetSearchFilterForModuleAndCUList(const FileSpecList *containingModules,
                                     const FileSpecList *containingSourceFiles);
 
-  lldb::REPLSP GetREPL(Error &err, lldb::LanguageType language,
+  lldb::REPLSP GetREPL(Status &err, lldb::LanguageType language,
                        const char *repl_options, bool can_create);
 
   void SetREPL(lldb::LanguageType language, lldb::REPLSP repl_sp);

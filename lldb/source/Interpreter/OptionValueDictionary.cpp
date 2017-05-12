@@ -90,8 +90,9 @@ size_t OptionValueDictionary::GetArgs(Args &args) const {
   return args.GetArgumentCount();
 }
 
-Error OptionValueDictionary::SetArgs(const Args &args, VarSetOperationType op) {
-  Error error;
+Status OptionValueDictionary::SetArgs(const Args &args,
+                                      VarSetOperationType op) {
+  Status error;
   const size_t argc = args.GetArgumentCount();
   switch (op) {
   case eVarSetOperationClear:
@@ -197,10 +198,10 @@ Error OptionValueDictionary::SetArgs(const Args &args, VarSetOperationType op) {
   return error;
 }
 
-Error OptionValueDictionary::SetValueFromString(llvm::StringRef value,
-                                                VarSetOperationType op) {
+Status OptionValueDictionary::SetValueFromString(llvm::StringRef value,
+                                                 VarSetOperationType op) {
   Args args(value.str());
-  Error error = SetArgs(args, op);
+  Status error = SetArgs(args, op);
   if (error.Success())
     NotifyValueChanged();
   return error;
@@ -208,8 +209,8 @@ Error OptionValueDictionary::SetValueFromString(llvm::StringRef value,
 
 lldb::OptionValueSP
 OptionValueDictionary::GetSubValue(const ExecutionContext *exe_ctx,
-  llvm::StringRef name, bool will_modify,
-                                   Error &error) const {
+                                   llvm::StringRef name, bool will_modify,
+                                   Status &error) const {
   lldb::OptionValueSP value_sp;
   if (name.empty())
     return nullptr;
@@ -258,10 +259,11 @@ OptionValueDictionary::GetSubValue(const ExecutionContext *exe_ctx,
   return value_sp->GetSubValue(exe_ctx, sub_name, will_modify, error);
 }
 
-Error OptionValueDictionary::SetSubValue(const ExecutionContext *exe_ctx,
-                                         VarSetOperationType op,
-  llvm::StringRef name, llvm::StringRef value) {
-  Error error;
+Status OptionValueDictionary::SetSubValue(const ExecutionContext *exe_ctx,
+                                          VarSetOperationType op,
+                                          llvm::StringRef name,
+                                          llvm::StringRef value) {
+  Status error;
   const bool will_modify = true;
   lldb::OptionValueSP value_sp(GetSubValue(exe_ctx, name, will_modify, error));
   if (value_sp)

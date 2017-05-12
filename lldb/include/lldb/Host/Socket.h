@@ -18,7 +18,7 @@
 #include "lldb/Host/IOObject.h"
 #include "lldb/Host/Predicate.h"
 #include "lldb/Host/SocketAddress.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 #ifdef _WIN32
 #include "lldb/Host/windows/windows.h"
@@ -53,34 +53,35 @@ public:
 
   static std::unique_ptr<Socket> Create(const SocketProtocol protocol,
                                         bool child_processes_inherit,
-                                        Error &error);
+                                        Status &error);
 
-  virtual Error Connect(llvm::StringRef name) = 0;
-  virtual Error Listen(llvm::StringRef name, int backlog) = 0;
-  virtual Error Accept(Socket *&socket) = 0;
+  virtual Status Connect(llvm::StringRef name) = 0;
+  virtual Status Listen(llvm::StringRef name, int backlog) = 0;
+  virtual Status Accept(Socket *&socket) = 0;
 
   // Initialize a Tcp Socket object in listening mode.  listen and accept are
   // implemented
   // separately because the caller may wish to manipulate or query the socket
   // after it is
   // initialized, but before entering a blocking accept.
-  static Error TcpListen(llvm::StringRef host_and_port,
-                         bool child_processes_inherit, Socket *&socket,
-                         Predicate<uint16_t> *predicate, int backlog = 5);
-  static Error TcpConnect(llvm::StringRef host_and_port,
-                          bool child_processes_inherit, Socket *&socket);
-  static Error UdpConnect(llvm::StringRef host_and_port,
-                          bool child_processes_inherit, Socket *&socket);
-  static Error UnixDomainConnect(llvm::StringRef host_and_port,
-                                 bool child_processes_inherit, Socket *&socket);
-  static Error UnixDomainAccept(llvm::StringRef host_and_port,
-                                bool child_processes_inherit, Socket *&socket);
-  static Error UnixAbstractConnect(llvm::StringRef host_and_port,
-                                   bool child_processes_inherit,
-                                   Socket *&socket);
-  static Error UnixAbstractAccept(llvm::StringRef host_and_port,
+  static Status TcpListen(llvm::StringRef host_and_port,
+                          bool child_processes_inherit, Socket *&socket,
+                          Predicate<uint16_t> *predicate, int backlog = 5);
+  static Status TcpConnect(llvm::StringRef host_and_port,
+                           bool child_processes_inherit, Socket *&socket);
+  static Status UdpConnect(llvm::StringRef host_and_port,
+                           bool child_processes_inherit, Socket *&socket);
+  static Status UnixDomainConnect(llvm::StringRef host_and_port,
                                   bool child_processes_inherit,
                                   Socket *&socket);
+  static Status UnixDomainAccept(llvm::StringRef host_and_port,
+                                 bool child_processes_inherit, Socket *&socket);
+  static Status UnixAbstractConnect(llvm::StringRef host_and_port,
+                                    bool child_processes_inherit,
+                                    Socket *&socket);
+  static Status UnixAbstractAccept(llvm::StringRef host_and_port,
+                                   bool child_processes_inherit,
+                                   Socket *&socket);
 
   int GetOption(int level, int option_name, int &option_value);
   int SetOption(int level, int option_name, int option_value);
@@ -88,18 +89,18 @@ public:
   NativeSocket GetNativeSocket() const { return m_socket; }
   SocketProtocol GetSocketProtocol() const { return m_protocol; }
 
-  Error Read(void *buf, size_t &num_bytes) override;
-  Error Write(const void *buf, size_t &num_bytes) override;
+  Status Read(void *buf, size_t &num_bytes) override;
+  Status Write(const void *buf, size_t &num_bytes) override;
 
-  virtual Error PreDisconnect();
-  Error Close() override;
+  virtual Status PreDisconnect();
+  Status Close() override;
 
   bool IsValid() const override { return m_socket != kInvalidSocketValue; }
   WaitableHandle GetWaitableHandle() override;
 
   static bool DecodeHostAndPort(llvm::StringRef host_and_port,
                                 std::string &host_str, std::string &port_str,
-                                int32_t &port, Error *error_ptr);
+                                int32_t &port, Status *error_ptr);
 
 protected:
   Socket(SocketProtocol protocol, bool should_close,
@@ -107,13 +108,13 @@ protected:
 
   virtual size_t Send(const void *buf, const size_t num_bytes);
 
-  static void SetLastError(Error &error);
+  static void SetLastError(Status &error);
   static NativeSocket CreateSocket(const int domain, const int type,
                                    const int protocol,
-                                   bool child_processes_inherit, Error &error);
+                                   bool child_processes_inherit, Status &error);
   static NativeSocket AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
                                    socklen_t *addrlen,
-                                   bool child_processes_inherit, Error &error);
+                                   bool child_processes_inherit, Status &error);
 
   SocketProtocol m_protocol;
   NativeSocket m_socket;

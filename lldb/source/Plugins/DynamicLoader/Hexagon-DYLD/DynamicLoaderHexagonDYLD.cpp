@@ -213,7 +213,7 @@ ModuleSP DynamicLoaderHexagonDYLD::GetTargetExecutable() {
 }
 
 // AD: Needs to be updated?
-Error DynamicLoaderHexagonDYLD::CanLoadImage() { return Error(); }
+Status DynamicLoaderHexagonDYLD::CanLoadImage() { return Status(); }
 
 void DynamicLoaderHexagonDYLD::UpdateLoadedSections(ModuleSP module,
                                                     addr_t link_map_addr,
@@ -558,7 +558,7 @@ const SectionList *DynamicLoaderHexagonDYLD::GetSectionListFromModule(
 }
 
 static int ReadInt(Process *process, addr_t addr) {
-  Error error;
+  Status error;
   int value = (int)process->ReadUnsignedIntegerFromMemory(
       addr, sizeof(uint32_t), 0, error);
   if (error.Fail())

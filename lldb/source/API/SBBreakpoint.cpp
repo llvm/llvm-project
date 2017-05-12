@@ -557,7 +557,7 @@ SBError SBBreakpoint::SetScriptCallbackBody(const char *callback_body_text) {
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
     BreakpointOptions *bp_options = bkpt_sp->GetOptions();
-    Error error =
+    Status error =
         bkpt_sp->GetTarget()
             .GetDebugger()
             .GetCommandInterpreter()
@@ -578,8 +578,8 @@ bool SBBreakpoint::AddName(const char *new_name) {
   if (bkpt_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
-    Error error; // Think I'm just going to swallow the error here, it's
-                 // probably more annoying to have to provide it.
+    Status error; // Think I'm just going to swallow the error here, it's
+                  // probably more annoying to have to provide it.
     return bkpt_sp->AddName(new_name, error);
   }
 

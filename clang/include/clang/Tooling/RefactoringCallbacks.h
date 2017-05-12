@@ -53,7 +53,8 @@ protected:
 /// Runs AST matchers and stores the \c tooling::Replacements in a map.
 class ASTMatchRefactorer {
 public:
-  ASTMatchRefactorer(std::map<std::string, Replacements> &FileToReplaces);
+  explicit ASTMatchRefactorer(
+    std::map<std::string, Replacements> &FileToReplaces);
 
   template <typename T>
   void addMatcher(const T &Matcher, RefactoringCallback *Callback) {
@@ -103,7 +104,7 @@ private:
     std::string Value;
   };
   ReplaceNodeWithTemplate(llvm::StringRef FromId,
-                          std::vector<TemplateElement> &&Template);
+                          std::vector<TemplateElement> Template);
   std::string FromId;
   std::vector<TemplateElement> Template;
 };

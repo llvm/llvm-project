@@ -37,8 +37,8 @@ HostProcessWindows::~HostProcessWindows() { Close(); }
 
 void HostProcessWindows::SetOwnsHandle(bool owns) { m_owns_handle = owns; }
 
-Error HostProcessWindows::Terminate() {
-  Error error;
+Status HostProcessWindows::Terminate() {
+  Status error;
   if (m_process == nullptr)
     error.SetError(ERROR_INVALID_HANDLE, lldb::eErrorTypeWin32);
 
@@ -48,8 +48,8 @@ Error HostProcessWindows::Terminate() {
   return error;
 }
 
-Error HostProcessWindows::GetMainModule(FileSpec &file_spec) const {
-  Error error;
+Status HostProcessWindows::GetMainModule(FileSpec &file_spec) const {
+  Status error;
   if (m_process == nullptr)
     error.SetError(ERROR_INVALID_HANDLE, lldb::eErrorTypeWin32);
 

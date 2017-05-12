@@ -452,7 +452,7 @@ entry:
                                  i32 3, label %case_d
                                  i32 4, label %case_e ], !prof !8
 ; CHECK: edge entry -> case_a probability is 0x00000800 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_b probability is 0x07fffe01 / 0x80000000 = 6.25%
+; CHECK: edge entry -> case_b probability is 0x07fffdff / 0x80000000 = 6.25%
 ; CHECK: edge entry -> case_c probability is 0x67fffdff / 0x80000000 = 81.25% [HOT edge]
 ; CHECK: edge entry -> case_d probability is 0x07fffdff / 0x80000000 = 6.25%
 ; CHECK: edge entry -> case_e probability is 0x07fffdff / 0x80000000 = 6.25%
@@ -495,7 +495,7 @@ entry:
                                  i32 4, label %case_e ], !prof !9
 ; CHECK: edge entry -> case_a probability is 0x00000400 / 0x80000000 = 0.00%
 ; CHECK: edge entry -> case_b probability is 0x00000400 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_c probability is 0x6aaaa800 / 0x80000000 = 83.33% [HOT edge]
+; CHECK: edge entry -> case_c probability is 0x6aaaa7ff / 0x80000000 = 83.33% [HOT edge]
 ; CHECK: edge entry -> case_d probability is 0x0aaaa7ff / 0x80000000 = 8.33%
 ; CHECK: edge entry -> case_e probability is 0x0aaaa7ff / 0x80000000 = 8.33%
 
@@ -535,7 +535,7 @@ entry:
                                  i32 4, label %case_e ], !prof !10
 ; CHECK: edge entry -> case_a probability is 0x00000000 / 0x80000000 = 0.00%
 ; CHECK: edge entry -> case_b probability is 0x00000400 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_c probability is 0x6e08fa2e / 0x80000000 = 85.96% [HOT edge]
+; CHECK: edge entry -> case_c probability is 0x6e08fa2d / 0x80000000 = 85.96% [HOT edge]
 ; CHECK: edge entry -> case_d probability is 0x08fb80e9 / 0x80000000 = 7.02%
 ; CHECK: edge entry -> case_e probability is 0x08fb80e9 / 0x80000000 = 7.02%
 

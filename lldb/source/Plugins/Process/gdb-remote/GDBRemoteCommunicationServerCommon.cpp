@@ -523,7 +523,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Open(
           File::ConvertOpenOptionsForPOSIXOpen(packet.GetHexMaxU32(false, 0));
       if (packet.GetChar() == ',') {
         mode_t mode = packet.GetHexMaxU32(false, 0600);
-        Error error;
+        Status error;
         const FileSpec path_spec{path, true};
         int fd = ::open(path_spec.GetCString(), flags, mode);
         const int save_errno = fd == -1 ? errno : 0;
@@ -544,7 +544,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Close(
     StringExtractorGDBRemote &packet) {
   packet.SetFilePos(::strlen("vFile:close:"));
   int fd = packet.GetS32(-1);
-  Error error;
+  Status error;
   int err = -1;
   int save_errno = 0;
   if (fd >= 0) {
@@ -663,7 +663,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Mode(
   std::string path;
   packet.GetHexByteString(path);
   if (!path.empty()) {
-    Error error;
+    Status error;
     const uint32_t mode = File::GetPermissions(FileSpec{path, true}, error);
     StreamString response;
     response.Printf("F%u", mode);
@@ -702,7 +702,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_symlink(
   packet.GetHexByteStringTerminatedBy(dst, ',');
   packet.GetChar(); // Skip ',' char
   packet.GetHexByteString(src);
-  Error error = FileSystem::Symlink(FileSpec{src, true}, FileSpec{dst, false});
+  Status error = FileSystem::Symlink(FileSpec{src, true}, FileSpec{dst, false});
   StreamString response;
   response.Printf("F%u,%u", error.GetError(), error.GetError());
   return SendPacketNoLock(response.GetString());
@@ -714,7 +714,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_unlink(
   packet.SetFilePos(::strlen("vFile:unlink:"));
   std::string path;
   packet.GetHexByteString(path);
-  Error error(llvm::sys::fs::remove(path));
+  Status error(llvm::sys::fs::remove(path));
   StreamString response;
   response.Printf("F%u,%u", error.GetError(), error.GetError());
   return SendPacketNoLock(response.GetString());
@@ -736,7 +736,7 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_shell(
         packet.GetHexByteString(working_dir);
       int status, signo;
       std::string output;
-      Error err =
+      Status err =
           Host::RunShellCommand(path.c_str(), FileSpec{working_dir, true},
                                 &status, &signo, &output, timeout);
       StreamGDBRemote response;
@@ -794,7 +794,7 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_mkdir(
   if (packet.GetChar() == ',') {
     std::string path;
     packet.GetHexByteString(path);
-    Error error(llvm::sys::fs::create_directory(path, mode));
+    Status error(llvm::sys::fs::create_directory(path, mode));
 
     StreamGDBRemote response;
     response.Printf("F%u", error.GetError());
@@ -814,7 +814,7 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_chmod(
   if (packet.GetChar() == ',') {
     std::string path;
     packet.GetHexByteString(path);
-    Error error(llvm::sys::fs::setPermissions(path, perms));
+    Status error(llvm::sys::fs::setPermissions(path, perms));
 
     StreamGDBRemote response;
     response.Printf("F%u", error.GetError());
@@ -1140,7 +1140,7 @@ GDBRemoteCommunicationServerCommon::Handle_jModulesInfo(
         packet_array->GetItemAtIndex(i)->GetAsDictionary();
     if (!query)
       continue;
-    std::string file, triple;
+    llvm::StringRef file, triple;
     if (!query->GetValueForKeyAsString("file", file) ||
         !query->GetValueForKeyAsString("triple", triple))
       continue;
@@ -1278,9 +1278,10 @@ FileSpec GDBRemoteCommunicationServerCommon::FindModuleFile(
 #endif
 }
 
-ModuleSpec GDBRemoteCommunicationServerCommon::GetModuleInfo(
-    const std::string &module_path, const std::string &triple) {
-  ArchSpec arch(triple.c_str());
+ModuleSpec
+GDBRemoteCommunicationServerCommon::GetModuleInfo(llvm::StringRef module_path,
+                                                  llvm::StringRef triple) {
+  ArchSpec arch(triple);
 
   const FileSpec req_module_path_spec(module_path, true);
   const FileSpec module_path_spec =

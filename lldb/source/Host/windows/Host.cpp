@@ -16,8 +16,8 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredData.h"
@@ -50,7 +50,7 @@ bool GetTripleForProcess(const FileSpec &executable, llvm::Triple &triple) {
   imageBinary.SeekFromStart(peOffset);
   imageBinary.Read(&peHead, readSize);
   if (peHead != 0x00004550) // "PE\0\0", little-endian
-    return false;           // Error: Can't find PE header
+    return false;           // Status: Can't find PE header
   readSize = 2;
   imageBinary.Read(&machineType, readSize);
   triple.setVendor(llvm::Triple::PC);
@@ -196,8 +196,8 @@ HostThread Host::StartMonitoringChildProcess(
   return HostThread();
 }
 
-Error Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
-  Error error;
+Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
+  Status error;
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
     FileSpec expand_tool_spec;
     if (!HostInfo::GetLLDBPath(lldb::ePathTypeSupportExecutableDir,

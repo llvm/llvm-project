@@ -12,8 +12,8 @@
 
 // Project includes
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/FileSpec.h" // for FileSpec
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-defines.h"              // for LLDB_INVALID_ADDRESS
 #include "lldb/lldb-forward.h"              // for ModuleSP, ThreadPlanSP
@@ -213,7 +213,7 @@ public:
   ///     \b true if it is currently ok to try and load a shared
   ///     library into the process, \b false otherwise.
   //------------------------------------------------------------------
-  virtual Error CanLoadImage() = 0;
+  virtual Status CanLoadImage() = 0;
 
   //------------------------------------------------------------------
   /// Ask if the eh_frame information for the given SymbolContext should
