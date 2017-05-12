@@ -20,30 +20,24 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/dist CACHE INTERNAL "Prefix prepended to install directories")
 endif()
 
-# Introduce GENERIC_IS_ZERO CMake option
-option(GENERIC_IS_ZERO "Teach LLVM/Clang that generic address space IS address space 0 for AMDGPU target" OFF)
-if (GENERIC_IS_ZERO)
-  set(AMDGPU_TARGET_TRIPLE "amdgcn--amdhsa-amdgizcl")
-
-  # execute utils/change-addr-space.sh
-  # the script would apply utils/add_amdgiz.sed
-  execute_process(COMMAND "utils/change-addr-space.sh"
-                  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-
-else (GENERIC_IS_ZERO)
-  set(AMDGPU_TARGET_TRIPLE "amdgcn--amdhsa")
-
-  # execute utils/change-addr-space.sh x
-  # the script would apply utils/remove_amdgiz.sed
-  execute_process(COMMAND "utils/change-addr-space.sh" "x"
-                  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-
-endif (GENERIC_IS_ZERO)
-
 find_package(LLVM REQUIRED CONFIG PATHS ${LLVM_DIR} NO_DEFAULT_PATH)
 list(APPEND CMAKE_MODULE_PATH ${LLVM_CMAKE_DIR})
 include(AddLLVM)
 endif(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+
+set(AMDGPU_TARGET_TRIPLE "amdgcn--amdhsa")
+
+# Introduce GENERIC_IS_ZERO CMake option
+option(GENERIC_IS_ZERO "Teach LLVM/Clang that generic address space IS address space 0 for AMDGPU target" OFF)
+if (GENERIC_IS_ZERO)
+  # set the target triple to amdgizcl to show to the compiler
+  # that we are using a newer address space mapping
+  set(AMDGPU_TARGET_TRIPLE "amdgcn--amdhsa-amdgizcl")
+  # execute utils/change-addr-space.sh
+  # the script would apply utils/add_amdgiz.sed
+  execute_process(COMMAND "utils/change-addr-space.sh"
+                  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endif (GENERIC_IS_ZERO)
 
 option(BUILD_HC_LIB "Build Heterogeneous Compute built-in library (hc)" ON)
 option(ROCM_DEVICELIB_INCLUDE_TESTS "Build tests" ON)
