@@ -95,7 +95,8 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
   //   B #44
 
   if (Enable) {
-    uint32_t LoTracingHookAddr = reinterpret_cast<int32_t>(TracingHook) & 0xffff;
+    uint32_t LoTracingHookAddr =
+        reinterpret_cast<int32_t>(TracingHook) & 0xffff;
     uint32_t HiTracingHookAddr =
         (reinterpret_cast<int32_t>(TracingHook) >> 16) & 0xffff;
     uint32_t LoFunctionID = FuncId & 0xffff;
@@ -149,6 +150,12 @@ bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
   // FIXME: In the future we'd need to distinguish between non-tail exits and
   // tail exits for better information preservation.
   return patchSled(Enable, FuncId, Sled, __xray_FunctionExit);
+}
+
+bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
+                      const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+  // FIXME: Implement in mips?
+  return false;
 }
 
 } // namespace __xray

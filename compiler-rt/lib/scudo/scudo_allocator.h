@@ -107,11 +107,12 @@ typedef SizeClassAllocator32<0, SANITIZER_MMAP_RANGE_SIZE, 0, SizeClassMap,
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
 #include "scudo_allocator_secondary.h"
+#include "scudo_allocator_combined.h"
 
 typedef SizeClassAllocatorLocalCache<PrimaryAllocator> AllocatorCache;
 typedef ScudoLargeMmapAllocator SecondaryAllocator;
-typedef CombinedAllocator<PrimaryAllocator, AllocatorCache, SecondaryAllocator>
-    ScudoBackendAllocator;
+typedef ScudoCombinedAllocator<PrimaryAllocator, AllocatorCache,
+    SecondaryAllocator> ScudoBackendAllocator;
 
 void initScudo();
 

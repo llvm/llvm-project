@@ -41,45 +41,12 @@ namespace __xray {
 // Global BufferQueue.
 std::shared_ptr<BufferQueue> BQ;
 
-__sanitizer::atomic_sint32_t LoggingStatus = {
-    XRayLogInitStatus::XRAY_LOG_UNINITIALIZED};
-
 __sanitizer::atomic_sint32_t LogFlushStatus = {
     XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING};
 
-std::unique_ptr<FDRLoggingOptions> FDROptions;
+FDRLoggingOptions FDROptions;
 
-XRayLogInitStatus fdrLoggingInit(std::size_t BufferSize, std::size_t BufferMax,
-                                 void *Options,
-                                 size_t OptionsSize) XRAY_NEVER_INSTRUMENT {
-  if (OptionsSize != sizeof(FDRLoggingOptions))
-    return static_cast<XRayLogInitStatus>(__sanitizer::atomic_load(
-        &LoggingStatus, __sanitizer::memory_order_acquire));
-  s32 CurrentStatus = XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
-  if (!__sanitizer::atomic_compare_exchange_strong(
-          &LoggingStatus, &CurrentStatus,
-          XRayLogInitStatus::XRAY_LOG_INITIALIZING,
-          __sanitizer::memory_order_release))
-    return static_cast<XRayLogInitStatus>(CurrentStatus);
-
-  FDROptions.reset(new FDRLoggingOptions());
-  memcpy(FDROptions.get(), Options, OptionsSize);
-  bool Success = false;
-  BQ = std::make_shared<BufferQueue>(BufferSize, BufferMax, Success);
-  if (!Success) {
-    Report("BufferQueue init failed.\n");
-    return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
-  }
-
-  // Install the actual handleArg0 handler after initialising the buffers.
-  __xray_set_handler(fdrLoggingHandleArg0);
-
-  __sanitizer::atomic_store(&LoggingStatus,
-                            XRayLogInitStatus::XRAY_LOG_INITIALIZED,
-                            __sanitizer::memory_order_release);
-  Report("XRay FDR init successful.\n");
-  return XRayLogInitStatus::XRAY_LOG_INITIALIZED;
-}
+__sanitizer::SpinMutex FDROptionsMutex;
 
 // Must finalize before flushing.
 XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
@@ -108,7 +75,11 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   //      (fixed-sized) and let the tools reading the buffers deal with the data
   //      afterwards.
   //
-  int Fd = FDROptions->Fd;
+  int Fd = -1;
+  {
+    __sanitizer::SpinMutexLock Guard(&FDROptionsMutex);
+    Fd = FDROptions.Fd;
+  }
   if (Fd == -1)
     Fd = getLogFD();
   if (Fd == -1) {
@@ -120,8 +91,8 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
 
   // Test for required CPU features and cache the cycle frequency
   static bool TSCSupported = probeRequiredCPUFeatures();
-  static uint64_t CycleFrequency = TSCSupported ? getTSCFrequency()
-                                   : __xray::NanosecondsPerSecond;
+  static uint64_t CycleFrequency =
+      TSCSupported ? getTSCFrequency() : __xray::NanosecondsPerSecond;
 
   XRayFileHeader Header;
   Header.Version = 1;
@@ -192,8 +163,8 @@ XRayLogInitStatus fdrLoggingReset() XRAY_NEVER_INSTRUMENT {
   return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
 }
 
-void fdrLoggingHandleArg0(int32_t FuncId,
-                          XRayEntryType Entry) XRAY_NEVER_INSTRUMENT {
+static std::tuple<uint64_t, unsigned char>
+getTimestamp() XRAY_NEVER_INSTRUMENT {
   // We want to get the TSC as early as possible, so that we can check whether
   // we've seen this CPU before. We also do it before we load anything else, to
   // allow for forward progress with the scheduling.
@@ -203,7 +174,7 @@ void fdrLoggingHandleArg0(int32_t FuncId,
   // Test once for required CPU features
   static bool TSCSupported = probeRequiredCPUFeatures();
 
-  if(TSCSupported) {
+  if (TSCSupported) {
     TSC = __xray::readTSC(CPU);
   } else {
     // FIXME: This code needs refactoring as it appears in multiple locations
@@ -216,9 +187,102 @@ void fdrLoggingHandleArg0(int32_t FuncId,
     CPU = 0;
     TSC = TS.tv_sec * __xray::NanosecondsPerSecond + TS.tv_nsec;
   }
+  return std::make_tuple(TSC, CPU);
+}
 
-  __xray_fdr_internal::processFunctionHook(FuncId, Entry, TSC, CPU,
-                                           clock_gettime, LoggingStatus, BQ);
+void fdrLoggingHandleArg0(int32_t FuncId,
+                          XRayEntryType Entry) XRAY_NEVER_INSTRUMENT {
+  auto TSC_CPU = getTimestamp();
+  __xray_fdr_internal::processFunctionHook(FuncId, Entry, std::get<0>(TSC_CPU),
+                                           std::get<1>(TSC_CPU), clock_gettime,
+                                           LoggingStatus, BQ);
+}
+
+void fdrLoggingHandleCustomEvent(void *Event,
+                                 std::size_t EventSize) XRAY_NEVER_INSTRUMENT {
+  using namespace __xray_fdr_internal;
+  auto TSC_CPU = getTimestamp();
+  auto &TSC = std::get<0>(TSC_CPU);
+  auto &CPU = std::get<1>(TSC_CPU);
+  thread_local bool Running = false;
+  RecursionGuard Guard{Running};
+  if (!Guard) {
+    assert(Running && "RecursionGuard is buggy!");
+    return;
+  }
+  if (EventSize > std::numeric_limits<int32_t>::max()) {
+    using Empty = struct {};
+    static Empty Once = [&] {
+      Report("Event size too large = %zu ; > max = %d\n", EventSize,
+             std::numeric_limits<int32_t>::max());
+      return Empty();
+    }();
+    (void)Once;
+  }
+  int32_t ReducedEventSize = static_cast<int32_t>(EventSize);
+  if (!isLogInitializedAndReady(LocalBQ, TSC, CPU, clock_gettime))
+    return;
+
+  // Here we need to prepare the log to handle:
+  //   - The metadata record we're going to write. (16 bytes)
+  //   - The additional data we're going to write. Currently, that's the size of
+  //   the event we're going to dump into the log as free-form bytes.
+  if (!prepareBuffer(clock_gettime, MetadataRecSize + EventSize)) {
+    LocalBQ = nullptr;
+    return;
+  }
+
+  // Write the custom event metadata record, which consists of the following
+  // information:
+  //   - 8 bytes (64-bits) for the full TSC when the event started.
+  //   - 4 bytes (32-bits) for the length of the data.
+  MetadataRecord CustomEvent;
+  CustomEvent.Type = uint8_t(RecordType::Metadata);
+  CustomEvent.RecordKind =
+      uint8_t(MetadataRecord::RecordKinds::CustomEventMarker);
+  constexpr auto TSCSize = sizeof(std::get<0>(TSC_CPU));
+  std::memcpy(&CustomEvent.Data, &ReducedEventSize, sizeof(int32_t));
+  std::memcpy(&CustomEvent.Data[sizeof(int32_t)], &TSC, TSCSize);
+  std::memcpy(RecordPtr, &CustomEvent, sizeof(CustomEvent));
+  RecordPtr += sizeof(CustomEvent);
+  std::memcpy(RecordPtr, Event, ReducedEventSize);
+  endBufferIfFull();
+}
+
+XRayLogInitStatus fdrLoggingInit(std::size_t BufferSize, std::size_t BufferMax,
+                                 void *Options,
+                                 size_t OptionsSize) XRAY_NEVER_INSTRUMENT {
+  if (OptionsSize != sizeof(FDRLoggingOptions))
+    return static_cast<XRayLogInitStatus>(__sanitizer::atomic_load(
+        &LoggingStatus, __sanitizer::memory_order_acquire));
+  s32 CurrentStatus = XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
+  if (!__sanitizer::atomic_compare_exchange_strong(
+          &LoggingStatus, &CurrentStatus,
+          XRayLogInitStatus::XRAY_LOG_INITIALIZING,
+          __sanitizer::memory_order_release))
+    return static_cast<XRayLogInitStatus>(CurrentStatus);
+
+  {
+    __sanitizer::SpinMutexLock Guard(&FDROptionsMutex);
+    memcpy(&FDROptions, Options, OptionsSize);
+  }
+
+  bool Success = false;
+  BQ = std::make_shared<BufferQueue>(BufferSize, BufferMax, Success);
+  if (!Success) {
+    Report("BufferQueue init failed.\n");
+    return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
+  }
+
+  // Install the actual handleArg0 handler after initialising the buffers.
+  __xray_set_handler(fdrLoggingHandleArg0);
+  __xray_set_customevent_handler(fdrLoggingHandleCustomEvent);
+
+  __sanitizer::atomic_store(&LoggingStatus,
+                            XRayLogInitStatus::XRAY_LOG_INITIALIZED,
+                            __sanitizer::memory_order_release);
+  Report("XRay FDR init successful.\n");
+  return XRayLogInitStatus::XRAY_LOG_INITIALIZED;
 }
 
 } // namespace __xray
