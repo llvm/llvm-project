@@ -3908,10 +3908,9 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
         if (src_name) {
           ConstString src_const_name(src_name);
           if (src_die.GetAttributeValueAsUnsigned(DW_AT_artificial, 0))
-            src_name_to_die_artificial.Append(src_const_name.GetStringRef(),
-                                              src_die);
+            src_name_to_die_artificial.Append(src_const_name, src_die);
           else
-            src_name_to_die.Append(src_const_name.GetStringRef(), src_die);
+            src_name_to_die.Append(src_const_name, src_die);
         }
       }
     }
@@ -3928,10 +3927,9 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
         if (dst_name) {
           ConstString dst_const_name(dst_name);
           if (dst_die.GetAttributeValueAsUnsigned(DW_AT_artificial, 0))
-            dst_name_to_die_artificial.Append(dst_const_name.GetStringRef(),
-                                              dst_die);
+            dst_name_to_die_artificial.Append(dst_const_name, dst_die);
           else
-            dst_name_to_die.Append(dst_const_name.GetStringRef(), dst_die);
+            dst_name_to_die.Append(dst_const_name, dst_die);
         }
       }
     }
@@ -4044,7 +4042,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
       src_name_to_die.Sort();
 
       for (idx = 0; idx < dst_size; ++idx) {
-        llvm::StringRef dst_name = dst_name_to_die.GetCStringAtIndex(idx);
+        ConstString dst_name = dst_name_to_die.GetCStringAtIndex(idx);
         dst_die = dst_name_to_die.GetValueAtIndexUnchecked(idx);
         src_die = src_name_to_die.Find(dst_name, DWARFDIE());
 
@@ -4099,7 +4097,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
     dst_name_to_die_artificial.Sort();
 
     for (idx = 0; idx < src_size_artificial; ++idx) {
-      llvm::StringRef src_name_artificial =
+      ConstString src_name_artificial =
           src_name_to_die_artificial.GetCStringAtIndex(idx);
       src_die = src_name_to_die_artificial.GetValueAtIndexUnchecked(idx);
       dst_die =
@@ -4143,13 +4141,13 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
 
   if (dst_size_artificial) {
     for (idx = 0; idx < dst_size_artificial; ++idx) {
-      llvm::StringRef dst_name_artificial =
+      ConstString dst_name_artificial =
           dst_name_to_die_artificial.GetCStringAtIndex(idx);
       dst_die = dst_name_to_die_artificial.GetValueAtIndexUnchecked(idx);
       if (log)
         log->Printf("warning: need to create artificial method for 0x%8.8x for "
                     "method '%s'",
-                    dst_die.GetOffset(), dst_name_artificial.str().c_str());
+                    dst_die.GetOffset(), dst_name_artificial.GetCString());
 
       failures.Append(dst_die);
     }

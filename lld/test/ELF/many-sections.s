@@ -14,6 +14,11 @@
 // RUN: ld.lld %t -o %t2
 // RUN: llvm-readobj -t %t2 | FileCheck --check-prefix=LINKED %s
 
+// Test also with a linker script.
+// RUN: echo "SECTIONS { . = SIZEOF_HEADERS; .text : { *(.text) } }" > %t.script
+// RUN: ld.lld -T %t.script %t -o %t2
+// RUN: llvm-readobj -t %t2 | FileCheck --check-prefix=LINKED %s
+
 // Test that _start is in the correct section.
 // LINKED:      Name: _start
 // LINKED-NEXT: Value: 0x0

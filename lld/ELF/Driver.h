@@ -31,7 +31,6 @@ public:
   void addLibrary(StringRef Name);
 
 private:
-  std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB);
   void readConfigs(llvm::opt::InputArgList &Args);
   void createFiles(llvm::opt::InputArgList &Args);
   void inferMachineType();
@@ -65,8 +64,6 @@ enum {
 };
 
 void printHelp(const char *Argv0);
-std::vector<uint8_t> parseHexstring(StringRef S);
-
 std::string createResponseFile(const llvm::opt::InputArgList &Args);
 
 llvm::Optional<std::string> findFromSearchPaths(StringRef Path);

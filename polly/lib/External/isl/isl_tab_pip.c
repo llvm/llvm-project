@@ -998,7 +998,8 @@ static struct isl_vec *get_row_split_div(struct isl_tab *tab, int row)
  *
  *	m d <= e
  */
-static struct isl_vec *ineq_for_div(struct isl_basic_set *bset, unsigned div)
+static __isl_give isl_vec *ineq_for_div(__isl_keep isl_basic_set *bset,
+	unsigned div)
 {
 	unsigned total;
 	unsigned div_pos;
@@ -2235,8 +2236,8 @@ static int add_parametric_cut(struct isl_tab *tab, int row,
  * of the variables in all constraints are negated prior to adding them
  * to the tableau.
  */
-static struct isl_tab *tab_for_lexmin(struct isl_basic_map *bmap,
-	struct isl_basic_set *dom, unsigned M, int max)
+static __isl_give struct isl_tab *tab_for_lexmin(__isl_keep isl_basic_map *bmap,
+	__isl_keep isl_basic_set *dom, unsigned M, int max)
 {
 	int i;
 	struct isl_tab *tab;
@@ -2748,7 +2749,7 @@ struct isl_context_op isl_context_lex_op = {
 	context_lex_free,
 };
 
-static struct isl_tab *context_tab_for_lexmin(struct isl_basic_set *bset)
+static struct isl_tab *context_tab_for_lexmin(__isl_take isl_basic_set *bset)
 {
 	struct isl_tab *tab;
 
@@ -2885,7 +2886,8 @@ static struct isl_vec *gbr_get_shifted_sample(struct isl_context_gbr *cgbr)
 	return sample;
 }
 
-static struct isl_basic_set *drop_constant_terms(struct isl_basic_set *bset)
+static __isl_give isl_basic_set *drop_constant_terms(
+	__isl_take isl_basic_set *bset)
 {
 	int i;
 
@@ -4267,8 +4269,8 @@ static int find_context_div(struct isl_basic_map *bmap,
  * after any other integer divisions that the map may have.
  * This function performs the required reordering.
  */
-static struct isl_basic_map *align_context_divs(struct isl_basic_map *bmap,
-	struct isl_basic_set *dom)
+static __isl_give isl_basic_map *align_context_divs(
+	__isl_take isl_basic_map *bmap, __isl_keep isl_basic_set *dom)
 {
 	int i;
 	int common = 0;

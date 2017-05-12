@@ -25,6 +25,7 @@ Contents
    modularize
    pp-trace
    clang-rename
+   clangd
 
 
 Doxygen Documentation

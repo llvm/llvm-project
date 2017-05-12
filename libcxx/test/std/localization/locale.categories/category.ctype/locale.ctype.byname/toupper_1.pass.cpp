@@ -15,9 +15,6 @@
 
 // charT toupper(charT) const;
 
-// XFAIL: with_system_cxx_lib=x86_64-apple-macosx10.7
-// XFAIL: with_system_cxx_lib=x86_64-apple-macosx10.8
-
 
 #include <locale>
 #include <cassert>

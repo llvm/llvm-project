@@ -119,7 +119,7 @@ configuration. Passing the option on the command line will override the default.
 .. option:: libcxx_site_config=<path/to/lit.site.cfg>
 
   Specify the site configuration to use when running the tests.  This option
-  overrides the enviroment variable LIBCXX_SITE_CONFIG.
+  overrides the environment variable LIBCXX_SITE_CONFIG.
 
 .. option:: cxx_headers=<path/to/headers>
 

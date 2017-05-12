@@ -15,7 +15,7 @@
 namespace lldb_private {
 class UDPSocket : public Socket {
 public:
-  UDPSocket(bool child_processes_inherit, Error &error);
+  UDPSocket(bool should_close, bool child_processes_inherit);
 
   static Error Connect(llvm::StringRef name, bool child_processes_inherit,
                        Socket *&socket);
@@ -26,8 +26,7 @@ private:
   size_t Send(const void *buf, const size_t num_bytes) override;
   Error Connect(llvm::StringRef name) override;
   Error Listen(llvm::StringRef name, int backlog) override;
-  Error Accept(llvm::StringRef name, bool child_processes_inherit,
-               Socket *&socket) override;
+  Error Accept(Socket *&socket) override;
 
   SocketAddress m_sockaddr;
 };

@@ -236,6 +236,8 @@ public:
   void GetLoadedModules(lldb::LanguageType language,
                         lldb_private::FileSpecList &modules) override;
 
+  void PreloadSymbols() override;
+
   //------------------------------------------------------------------
   // PluginInterface protocol
   //------------------------------------------------------------------

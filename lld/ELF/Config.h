@@ -73,6 +73,7 @@ struct VersionDefinition {
 // Most fields are initialized by the driver.
 struct Configuration {
   InputFile *FirstElf = nullptr;
+  bool HasStaticTlsModel = false;
   uint8_t OSABI = 0;
   llvm::CachePruningPolicy ThinLTOCachePolicy;
   llvm::StringMap<uint64_t> SectionStartMap;
@@ -89,7 +90,7 @@ struct Configuration {
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
   llvm::StringRef ThinLTOCacheDir;
-  std::string RPath;
+  std::string Rpath;
   std::vector<VersionDefinition> VersionDefinitions;
   std::vector<llvm::StringRef> AuxiliaryList;
   std::vector<llvm::StringRef> SearchPaths;
@@ -99,7 +100,6 @@ struct Configuration {
   std::vector<SymbolVersion> VersionScriptLocals;
   std::vector<uint8_t> BuildIdVector;
   bool AllowMultipleDefinition;
-  bool ArchiveWithoutSymbolsSeen = false;
   bool AsNeeded = false;
   bool Bsymbolic;
   bool BsymbolicFunctions;

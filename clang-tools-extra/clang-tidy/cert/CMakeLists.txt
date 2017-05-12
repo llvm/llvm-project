@@ -6,6 +6,7 @@ add_clang_library(clangTidyCERTModule
   DontModifyStdNamespaceCheck.cpp
   FloatLoopCounter.cpp
   LimitedRandomnessCheck.cpp
+  PostfixOperatorCheck.cpp
   SetLongJmpCheck.cpp
   StaticObjectExceptionCheck.cpp
   StrToNumCheck.cpp

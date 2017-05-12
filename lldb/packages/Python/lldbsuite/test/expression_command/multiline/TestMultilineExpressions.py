@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 class MultilineExpressionsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         # Call super's setUp().
@@ -60,3 +61,30 @@ class MultilineExpressionsTestCase(TestBase):
         child.expect_exact(prompt)
         self.expect(child.before, exe=False,
                     patterns=['= 5'])
+
+    @skipIfRemote
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    def test_empty_list(self):
+        """Test printing an empty list of expressions"""
+        import pexpect
+        prompt = "(lldb) "
+
+        # So that the child gets torn down after the test
+        self.child = pexpect.spawn(
+                "%s %s" %
+                (lldbtest_config.lldbExec, self.lldbOption))
+        child = self.child
+
+        # Turn on logging for what the child sends back.
+        if self.TraceOn():
+            child.logfile_read = sys.stdout
+
+        # We expect a prompt, then send "print" to start a list of expressions,
+        # then an empty line. We expect a prompt back.
+        child.expect_exact(prompt)
+        child.sendline("print")
+        child.expect_exact('1:')
+        child.sendline("")
+        child.expect_exact(prompt)

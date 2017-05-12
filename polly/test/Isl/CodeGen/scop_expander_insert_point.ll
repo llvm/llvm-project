@@ -29,7 +29,7 @@ for.body17:                                       ; preds = %for.body17, %for.bo
   %outvalue.141 = phi i64 [ undef, %for.body17.lr.ph ], [ %add19, %for.body17 ]
   %inptr.040 = phi i8* [ %add.ptr, %for.body17.lr.ph ], [ undef, %for.body17 ]
   %1 = load i8, i8* %inptr.040
-  %add19 = add nsw i64 0, %outvalue.141
+  %add19 = mul nsw i64 0, %outvalue.141
   br i1 false, label %for.body17, label %for.end22
 
 for.end22:                                        ; preds = %for.body17

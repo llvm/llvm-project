@@ -9,6 +9,18 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
+// This test uses the POSIX header <sys/time.h> which Windows doesn't provide
+// UNSUPPORTED: windows
+
+// This test depends on signal behaviour until r210210, so some system libs
+// don't pass.
+//
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.8
+// XFAIL: with_system_cxx_lib=macosx10.7
+
 // <thread>
 
 // template <class Rep, class Period>
@@ -23,6 +35,7 @@
 
 void sig_action(int) {}
 
+#include <iostream>
 int main()
 {
     int ec;

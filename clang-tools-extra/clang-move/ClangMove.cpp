@@ -504,8 +504,11 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
       isExpansionInFile(makeAbsolutePath(Context->Spec.OldHeader));
   auto InOldCC = isExpansionInFile(makeAbsolutePath(Context->Spec.OldCC));
   auto InOldFiles = anyOf(InOldHeader, InOldCC);
-  auto ForwardDecls =
-      cxxRecordDecl(unless(anyOf(isImplicit(), isDefinition())));
+  auto classTemplateForwardDecls =
+      classTemplateDecl(unless(has(cxxRecordDecl(isDefinition()))));
+  auto ForwardClassDecls = namedDecl(
+      anyOf(cxxRecordDecl(unless(anyOf(isImplicit(), isDefinition()))),
+            classTemplateForwardDecls));
   auto TopLevelDecl =
       hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl()));
 
@@ -518,9 +521,8 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // We consider declarations inside a class belongs to the class. So these
   // declarations will be ignored.
   auto AllDeclsInHeader = namedDecl(
-      unless(ForwardDecls), unless(namespaceDecl()),
-      unless(usingDirectiveDecl()),                 // using namespace decl.
-      unless(classTemplateDecl(has(ForwardDecls))), // template forward decl.
+      unless(ForwardClassDecls), unless(namespaceDecl()),
+      unless(usingDirectiveDecl()), // using namespace decl.
       InOldHeader,
       hasParent(decl(anyOf(namespaceDecl(), translationUnitDecl()))),
       hasDeclContext(decl(anyOf(namespaceDecl(), translationUnitDecl()))));
@@ -531,7 +533,7 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
     return;
 
   // Match forward declarations in old header.
-  Finder->addMatcher(namedDecl(ForwardDecls, InOldHeader).bind("fwd_decl"),
+  Finder->addMatcher(namedDecl(ForwardClassDecls, InOldHeader).bind("fwd_decl"),
                      this);
 
   //============================================================================

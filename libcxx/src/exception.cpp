@@ -20,7 +20,7 @@
 
 #if defined(_LIBCPP_ABI_MICROSOFT)
 #include "support/runtime/exception_msvc.ipp"
-#include "support/runtime/exception_pointer_unimplemented.ipp"
+#include "support/runtime/exception_pointer_msvc.ipp"
 #elif defined(_LIBCPPABI_VERSION)
 #include "support/runtime/exception_libcxxabi.ipp"
 #include "support/runtime/exception_pointer_cxxabi.ipp"

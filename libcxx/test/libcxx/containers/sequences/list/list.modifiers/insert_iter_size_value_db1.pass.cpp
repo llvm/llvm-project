@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Can't test the system lib because this test enables debug mode
+// UNSUPPORTED: with_system_cxx_lib
+
 // <list>
 
 // iterator insert(const_iterator position, size_type n, const value_type& x);

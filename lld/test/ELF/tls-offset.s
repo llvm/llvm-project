@@ -10,7 +10,7 @@
 // RUN:   .tbss : { *(.tbss) } \
 // RUN:   .data.rel.ro : { *(.data.rel.ro) } \
 // RUN: }" > %t.script
-        // RUN: ld.lld -T %t.script %t -o %tout2
+// RUN: ld.lld -T %t.script %t -o %tout2
 // RUN: echo SCRIPT
 // RUN: llvm-readobj -s %tout2 | FileCheck %s
         .global _start
@@ -61,6 +61,6 @@ _start:
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x202010
-// CHECK-NEXT: Offset: 0x2010
+// CHECK-NEXT: Address: 0x202004
+// CHECK-NEXT: Offset: 0x2004
 // CHECK-NEXT: Size: 4

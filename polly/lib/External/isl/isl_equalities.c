@@ -305,8 +305,8 @@ error:
  * as any y = y_0 + G y' with y' integer is a solution to the original
  * modulo constraints.
  */
-struct isl_mat *isl_mat_parameter_compression(
-			struct isl_mat *B, struct isl_vec *d)
+__isl_give isl_mat *isl_mat_parameter_compression(__isl_take isl_mat *B,
+	__isl_take isl_vec *d)
 {
 	int i;
 	struct isl_mat *cst = NULL;

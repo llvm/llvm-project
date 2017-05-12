@@ -11,9 +11,31 @@
 #ifndef _LIBCPP_SUPPORT_WIN32_LOCALE_WIN32_H
 #define _LIBCPP_SUPPORT_WIN32_LOCALE_WIN32_H
 
-#include "support/win32/support.h"
-#include "support/win32/locale_mgmt_win32.h"
+#include <__config>
 #include <stdio.h>
+#include <xlocinfo.h> // _locale_t
+
+#define LC_COLLATE_MASK _M_COLLATE
+#define LC_CTYPE_MASK _M_CTYPE
+#define LC_MONETARY_MASK _M_MONETARY
+#define LC_NUMERIC_MASK _M_NUMERIC
+#define LC_TIME_MASK _M_TIME
+#define LC_MESSAGES_MASK _M_MESSAGES
+#define LC_ALL_MASK (  LC_COLLATE_MASK \
+                     | LC_CTYPE_MASK \
+                     | LC_MESSAGES_MASK \
+                     | LC_MONETARY_MASK \
+                     | LC_NUMERIC_MASK \
+                     | LC_TIME_MASK )
+
+#define locale_t _locale_t
+
+// Locale management functions
+#define freelocale _free_locale
+// FIXME: base currently unused. Needs manual work to construct the new locale
+locale_t newlocale( int mask, const char * locale, locale_t base );
+locale_t uselocale( locale_t newloc );
+
 
 lconv *localeconv_l( locale_t loc );
 size_t mbrlen_l( const char *__restrict s, size_t n,
@@ -83,10 +105,9 @@ isupper_l(int c, _locale_t loc)
 #define sprintf_l( __s, __l, __f, ... ) _sprintf_l( __s, __f, __l, __VA_ARGS__ )
 #define vsprintf_l( __s, __l, __f, ... ) _vsprintf_l( __s, __f, __l, __VA_ARGS__ )
 #define vsnprintf_l( __s, __n, __l, __f, ... ) _vsnprintf_l( __s, __n, __f, __l, __VA_ARGS__ )
-int snprintf_l(char *ret, size_t n, locale_t loc, const char *format, ...);
-int asprintf_l( char **ret, locale_t loc, const char *format, ... );
-int vasprintf_l( char **ret, locale_t loc, const char *format, va_list ap );
-
+_LIBCPP_FUNC_VIS int snprintf_l(char *ret, size_t n, locale_t loc, const char *format, ...);
+_LIBCPP_FUNC_VIS int asprintf_l( char **ret, locale_t loc, const char *format, ... );
+_LIBCPP_FUNC_VIS int vasprintf_l( char **ret, locale_t loc, const char *format, va_list ap );
 
 // not-so-pressing FIXME: use locale to determine blank characters
 inline int isblank_l( int c, locale_t /*loc*/ )
@@ -98,10 +119,4 @@ inline int iswblank_l( wint_t c, locale_t /*loc*/ )
     return ( c == L' ' || c == L'\t' );
 }
 
-#if defined(_LIBCPP_MSVCRT)
-inline int isblank( int c, locale_t /*loc*/ )
-{ return ( c == ' ' || c == '\t' ); }
-inline int iswblank( wint_t c, locale_t /*loc*/ )
-{ return ( c == L' ' || c == L'\t' ); }
-#endif // _LIBCPP_MSVCRT
 #endif // _LIBCPP_SUPPORT_WIN32_LOCALE_WIN32_H

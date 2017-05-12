@@ -15,10 +15,16 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
-static const auto DefaultContainersWithPushBack =
+namespace {
+AST_MATCHER(DeclRefExpr, hasExplicitTemplateArgs) {
+  return Node.hasExplicitTemplateArgs();
+}
+
+const auto DefaultContainersWithPushBack =
     "::std::vector; ::std::list; ::std::deque";
-static const auto DefaultSmartPointers =
+const auto DefaultSmartPointers =
     "::std::shared_ptr; ::std::unique_ptr; ::std::auto_ptr; ::std::weak_ptr";
+} // namespace
 
 UseEmplaceCheck::UseEmplaceCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -39,8 +45,7 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   // because this requires special treatment (it could cause performance
   // regression)
   // + match for emplace calls that should be replaced with insertion
-  // + match for make_pair calls.
-  auto callPushBack = cxxMemberCallExpr(
+  auto CallPushBack = cxxMemberCallExpr(
       hasDeclaration(functionDecl(hasName("push_back"))),
       on(hasType(cxxRecordDecl(hasAnyName(SmallVector<StringRef, 5>(
           ContainersWithPushBack.begin(), ContainersWithPushBack.end()))))));
@@ -49,41 +54,56 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   // if emplacement fails (f.e. bad_alloc in vector) we will have leak of
   // passed pointer because smart pointer won't be constructed
   // (and destructed) as in push_back case.
-  auto isCtorOfSmartPtr = hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(
+  auto IsCtorOfSmartPtr = hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(
       SmallVector<StringRef, 5>(SmartPointers.begin(), SmartPointers.end())))));
 
   // Bitfields binds only to consts and emplace_back take it by universal ref.
-  auto bitFieldAsArgument = hasAnyArgument(
+  auto BitFieldAsArgument = hasAnyArgument(
       ignoringImplicit(memberExpr(hasDeclaration(fieldDecl(isBitField())))));
 
   // Initializer list can't be passed to universal reference.
-  auto initializerListAsArgument = hasAnyArgument(
+  auto InitializerListAsArgument = hasAnyArgument(
       ignoringImplicit(cxxConstructExpr(isListInitialization())));
 
   // We could have leak of resource.
-  auto newExprAsArgument = hasAnyArgument(ignoringImplicit(cxxNewExpr()));
+  auto NewExprAsArgument = hasAnyArgument(ignoringImplicit(cxxNewExpr()));
   // We would call another constructor.
-  auto constructingDerived =
+  auto ConstructingDerived =
       hasParent(implicitCastExpr(hasCastKind(CastKind::CK_DerivedToBase)));
 
   // emplace_back can't access private constructor.
-  auto isPrivateCtor = hasDeclaration(cxxConstructorDecl(isPrivate()));
+  auto IsPrivateCtor = hasDeclaration(cxxConstructorDecl(isPrivate()));
 
-  auto hasInitList = has(ignoringImplicit(initListExpr()));
+  auto HasInitList = anyOf(has(ignoringImplicit(initListExpr())),
+                           has(cxxStdInitializerListExpr()));
+
   // FIXME: Discard 0/NULL (as nullptr), static inline const data members,
   // overloaded functions and template names.
-  auto soughtConstructExpr =
+  auto SoughtConstructExpr =
       cxxConstructExpr(
-          unless(anyOf(isCtorOfSmartPtr, hasInitList, bitFieldAsArgument,
-                       initializerListAsArgument, newExprAsArgument,
-                       constructingDerived, isPrivateCtor)))
+          unless(anyOf(IsCtorOfSmartPtr, HasInitList, BitFieldAsArgument,
+                       InitializerListAsArgument, NewExprAsArgument,
+                       ConstructingDerived, IsPrivateCtor)))
           .bind("ctor");
-  auto hasConstructExpr = has(ignoringImplicit(soughtConstructExpr));
+  auto HasConstructExpr = has(ignoringImplicit(SoughtConstructExpr));
 
-  auto ctorAsArgument = materializeTemporaryExpr(
-      anyOf(hasConstructExpr, has(cxxFunctionalCastExpr(hasConstructExpr))));
+  auto MakePair = ignoringImplicit(
+      callExpr(callee(expr(ignoringImplicit(
+          declRefExpr(unless(hasExplicitTemplateArgs()),
+                      to(functionDecl(hasName("::std::make_pair"))))
+      )))).bind("make_pair"));
 
-  Finder->addMatcher(cxxMemberCallExpr(callPushBack, has(ctorAsArgument),
+  // make_pair can return type convertible to container's element type.
+  // Allow the conversion only on containers of pairs.
+  auto MakePairCtor = ignoringImplicit(cxxConstructExpr(
+      has(materializeTemporaryExpr(MakePair)),
+      hasDeclaration(cxxConstructorDecl(ofClass(hasName("::std::pair"))))));
+
+  auto SoughtParam = materializeTemporaryExpr(
+      anyOf(has(MakePair), has(MakePairCtor),
+            HasConstructExpr, has(cxxFunctionalCastExpr(HasConstructExpr))));
+
+  Finder->addMatcher(cxxMemberCallExpr(CallPushBack, has(SoughtParam),
                                        unless(isInTemplateInstantiation()))
                          .bind("call"),
                      this);
@@ -92,8 +112,10 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
 void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CXXMemberCallExpr>("call");
   const auto *InnerCtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
+  const auto *MakePairCall = Result.Nodes.getNodeAs<CallExpr>("make_pair");
+  assert((InnerCtorCall || MakePairCall) && "No push_back parameter matched");
 
-  auto FunctionNameSourceRange = CharSourceRange::getCharRange(
+  const auto FunctionNameSourceRange = CharSourceRange::getCharRange(
       Call->getExprLoc(), Call->getArg(0)->getExprLoc());
 
   auto Diag = diag(Call->getExprLoc(), "use emplace_back instead of push_back");
@@ -101,22 +123,28 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   if (FunctionNameSourceRange.getBegin().isMacroID())
     return;
 
-  Diag << FixItHint::CreateReplacement(FunctionNameSourceRange,
-                                       "emplace_back(");
+  const auto *EmplacePrefix = MakePairCall ? "emplace_back" : "emplace_back(";
+  Diag << FixItHint::CreateReplacement(FunctionNameSourceRange, EmplacePrefix);
 
-  auto CallParensRange = InnerCtorCall->getParenOrBraceRange();
+  const SourceRange CallParensRange =
+      MakePairCall ? SourceRange(MakePairCall->getCallee()->getLocEnd(),
+                                 MakePairCall->getRParenLoc())
+                   : InnerCtorCall->getParenOrBraceRange();
 
   // Finish if there is no explicit constructor call.
   if (CallParensRange.getBegin().isInvalid())
     return;
 
-  // Range for constructor name and opening brace.
-  auto CtorCallSourceRange = CharSourceRange::getTokenRange(
-      InnerCtorCall->getExprLoc(), CallParensRange.getBegin());
+  const SourceLocation ExprBegin =
+      MakePairCall ? MakePairCall->getExprLoc() : InnerCtorCall->getExprLoc();
 
-  Diag << FixItHint::CreateRemoval(CtorCallSourceRange)
+  // Range for constructor name and opening brace.
+  const auto ParamCallSourceRange =
+      CharSourceRange::getTokenRange(ExprBegin, CallParensRange.getBegin());
+
+  Diag << FixItHint::CreateRemoval(ParamCallSourceRange)
        << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-              CallParensRange.getEnd(), CallParensRange.getEnd()));
+           CallParensRange.getEnd(), CallParensRange.getEnd()));
 }
 
 void UseEmplaceCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

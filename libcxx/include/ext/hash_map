@@ -207,7 +207,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <ext/__hash>
 
 #if __DEPRECATED
-#if defined(_LIBCPP_MSVC)
+#if defined(_LIBCPP_WARNING)
     _LIBCPP_WARNING("Use of the header <ext/hash_map> is deprecated.  Migrate to <unordered_map>")
 #else
 #   warning Use of the header <ext/hash_map> is deprecated.  Migrate to <unordered_map>

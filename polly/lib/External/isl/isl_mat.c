@@ -194,7 +194,7 @@ void isl_mat_sub_neg(struct isl_ctx *ctx, isl_int **dst, isl_int **src,
 		isl_seq_neg(dst[i]+dst_col, src[i]+src_col, n_col);
 }
 
-struct isl_mat *isl_mat_copy(struct isl_mat *mat)
+__isl_give isl_mat *isl_mat_copy(__isl_keep isl_mat *mat)
 {
 	if (!mat)
 		return NULL;
@@ -420,7 +420,8 @@ int isl_mat_is_scaled_identity(__isl_keep isl_mat *mat)
 	return 1;
 }
 
-struct isl_vec *isl_mat_vec_product(struct isl_mat *mat, struct isl_vec *vec)
+__isl_give isl_vec *isl_mat_vec_product(__isl_take isl_mat *mat,
+	__isl_take isl_vec *vec)
 {
 	int i;
 	struct isl_vec *prod;
@@ -475,7 +476,8 @@ error:
 	return NULL;
 }
 
-struct isl_vec *isl_vec_mat_product(struct isl_vec *vec, struct isl_mat *mat)
+__isl_give isl_vec *isl_vec_mat_product(__isl_take isl_vec *vec,
+	__isl_take isl_mat *mat)
 {
 	int i, j;
 	struct isl_vec *prod;
@@ -503,8 +505,8 @@ error:
 	return NULL;
 }
 
-struct isl_mat *isl_mat_aff_direct_sum(struct isl_mat *left,
-	struct isl_mat *right)
+__isl_give isl_mat *isl_mat_aff_direct_sum(__isl_take isl_mat *left,
+	__isl_take isl_mat *right)
 {
 	int i;
 	struct isl_mat *sum;
@@ -609,8 +611,8 @@ static void oppose(struct isl_mat *M, struct isl_mat **U,
  * column.
  * If U or Q are NULL, then these matrices are not computed.
  */
-struct isl_mat *isl_mat_left_hermite(struct isl_mat *M, int neg,
-	struct isl_mat **U, struct isl_mat **Q)
+__isl_give isl_mat *isl_mat_left_hermite(__isl_take isl_mat *M, int neg,
+	__isl_give isl_mat **U, __isl_give isl_mat **Q)
 {
 	isl_int c;
 	int row, col;
@@ -716,7 +718,7 @@ error:
 	return NULL;
 }
 
-struct isl_mat *isl_mat_lin_to_aff(struct isl_mat *mat)
+__isl_give isl_mat *isl_mat_lin_to_aff(__isl_take isl_mat *mat)
 {
 	int i;
 	struct isl_mat *mat2;
@@ -831,8 +833,8 @@ static void inv_subtract(struct isl_mat *left, struct isl_mat *right,
 
 /* Compute inv(left)*right
  */
-struct isl_mat *isl_mat_inverse_product(struct isl_mat *left,
-	struct isl_mat *right)
+__isl_give isl_mat *isl_mat_inverse_product(__isl_take isl_mat *left,
+	__isl_take isl_mat *right)
 {
 	int row;
 	isl_int a, b;
@@ -947,7 +949,7 @@ void isl_mat_col_combine(struct isl_mat *mat, unsigned dst,
 	isl_int_clear(tmp);
 }
 
-struct isl_mat *isl_mat_right_inverse(struct isl_mat *mat)
+__isl_give isl_mat *isl_mat_right_inverse(__isl_take isl_mat *mat)
 {
 	struct isl_mat *inv;
 	int row;
@@ -1026,7 +1028,7 @@ error:
 	return NULL;
 }
 
-struct isl_mat *isl_mat_transpose(struct isl_mat *mat)
+__isl_give isl_mat *isl_mat_transpose(__isl_take isl_mat *mat)
 {
 	struct isl_mat *transpose = NULL;
 	int i, j;
@@ -1056,7 +1058,8 @@ error:
 	return NULL;
 }
 
-struct isl_mat *isl_mat_swap_cols(struct isl_mat *mat, unsigned i, unsigned j)
+__isl_give isl_mat *isl_mat_swap_cols(__isl_take isl_mat *mat,
+	unsigned i, unsigned j)
 {
 	int r;
 
@@ -1074,7 +1077,8 @@ error:
 	return NULL;
 }
 
-struct isl_mat *isl_mat_swap_rows(struct isl_mat *mat, unsigned i, unsigned j)
+__isl_give isl_mat *isl_mat_swap_rows(__isl_take isl_mat *mat,
+	unsigned i, unsigned j)
 {
 	isl_int *t;
 
@@ -1541,7 +1545,7 @@ __isl_give isl_mat *isl_mat_col_neg(__isl_take isl_mat *mat, int col)
 	return mat;
 }
 
-struct isl_mat *isl_mat_unimodular_complete(struct isl_mat *M, int row)
+__isl_give isl_mat *isl_mat_unimodular_complete(__isl_take isl_mat *M, int row)
 {
 	int r;
 	struct isl_mat *H = NULL, *Q = NULL;

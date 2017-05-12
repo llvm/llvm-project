@@ -30,11 +30,12 @@ const int kType = SOCK_DGRAM;
 static const char *g_not_supported_error = "Not supported";
 }
 
-UDPSocket::UDPSocket(NativeSocket socket) : Socket(socket, ProtocolUdp, true) {}
+UDPSocket::UDPSocket(NativeSocket socket) : Socket(ProtocolUdp, true, true) {
+  m_socket = socket;
+}
 
-UDPSocket::UDPSocket(bool child_processes_inherit, Error &error)
-    : UDPSocket(
-          CreateSocket(kDomain, kType, 0, child_processes_inherit, error)) {}
+UDPSocket::UDPSocket(bool should_close, bool child_processes_inherit)
+    : Socket(ProtocolUdp, should_close, child_processes_inherit) {}
 
 size_t UDPSocket::Send(const void *buf, const size_t num_bytes) {
   return ::sendto(m_socket, static_cast<const char *>(buf), num_bytes, 0,
@@ -49,8 +50,7 @@ Error UDPSocket::Listen(llvm::StringRef name, int backlog) {
   return Error("%s", g_not_supported_error);
 }
 
-Error UDPSocket::Accept(llvm::StringRef name, bool child_processes_inherit,
-                        Socket *&socket) {
+Error UDPSocket::Accept(Socket *&socket) {
   return Error("%s", g_not_supported_error);
 }
 

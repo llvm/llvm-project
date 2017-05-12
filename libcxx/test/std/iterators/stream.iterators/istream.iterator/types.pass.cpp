@@ -40,12 +40,22 @@
 #include <type_traits>
 #include <string>
 
+#include "test_macros.h"
+
 int main()
 {
     typedef std::istream_iterator<double> I1; // double is trivially destructible
+#if TEST_STD_VER <= 14
     static_assert((std::is_convertible<I1,
         std::iterator<std::input_iterator_tag, double, std::ptrdiff_t,
         const double*, const double&> >::value), "");
+#else
+    static_assert((std::is_same<I1::iterator_category, std::input_iterator_tag>::value), "");
+    static_assert((std::is_same<I1::value_type, double>::value), "");
+    static_assert((std::is_same<I1::difference_type, std::ptrdiff_t>::value), "");
+    static_assert((std::is_same<I1::pointer, const double*>::value), "");
+    static_assert((std::is_same<I1::reference, const double&>::value), "");
+#endif
     static_assert((std::is_same<I1::char_type, char>::value), "");
     static_assert((std::is_same<I1::traits_type, std::char_traits<char> >::value), "");
     static_assert((std::is_same<I1::istream_type, std::istream>::value), "");
@@ -53,9 +63,17 @@ int main()
     static_assert( std::is_trivially_destructible<I1>::value, "");
 
     typedef std::istream_iterator<unsigned, wchar_t> I2; // unsigned is trivially destructible
+#if TEST_STD_VER <= 14
     static_assert((std::is_convertible<I2,
         std::iterator<std::input_iterator_tag, unsigned, std::ptrdiff_t,
         const unsigned*, const unsigned&> >::value), "");
+#else
+    static_assert((std::is_same<I2::iterator_category, std::input_iterator_tag>::value), "");
+    static_assert((std::is_same<I2::value_type, unsigned>::value), "");
+    static_assert((std::is_same<I2::difference_type, std::ptrdiff_t>::value), "");
+    static_assert((std::is_same<I2::pointer, const unsigned*>::value), "");
+    static_assert((std::is_same<I2::reference, const unsigned&>::value), "");
+#endif
     static_assert((std::is_same<I2::char_type, wchar_t>::value), "");
     static_assert((std::is_same<I2::traits_type, std::char_traits<wchar_t> >::value), "");
     static_assert((std::is_same<I2::istream_type, std::wistream>::value), "");

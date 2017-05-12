@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include "omptarget.h"
+#include "omptargetplugin.h"
 
 #ifndef TARGET_NAME
 #define TARGET_NAME CUDA
@@ -473,7 +473,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
   return DeviceInfo.getOffloadEntriesTable(device_id);
 }
 
-void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size) {
+void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *hst_ptr) {
   if (size == 0) {
     return NULL;
   }
@@ -559,8 +559,8 @@ int32_t __tgt_rtl_data_delete(int32_t device_id, void *tgt_ptr) {
 }
 
 int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
-    void **tgt_args, int32_t arg_num, int32_t team_num, int32_t thread_limit,
-    uint64_t loop_tripcount) {
+    void **tgt_args, ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t team_num,
+    int32_t thread_limit, uint64_t loop_tripcount) {
   // Set the context we are using.
   CUresult err = cuCtxSetCurrent(DeviceInfo.Contexts[device_id]);
   if (err != CUDA_SUCCESS) {
@@ -571,9 +571,12 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
 
   // All args are references.
   std::vector<void *> args(arg_num);
+  std::vector<void *> ptrs(arg_num);
 
-  for (int32_t i = 0; i < arg_num; ++i)
-    args[i] = &tgt_args[i];
+  for (int32_t i = 0; i < arg_num; ++i) {
+    ptrs[i] = (void *)((intptr_t)tgt_args[i] + tgt_offsets[i]);
+    args[i] = &ptrs[i];
+  }
 
   KernelTy *KernelInfo = (KernelTy *)tgt_entry_ptr;
 
@@ -678,12 +681,12 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
 }
 
 int32_t __tgt_rtl_run_target_region(int32_t device_id, void *tgt_entry_ptr,
-    void **tgt_args, int32_t arg_num) {
+    void **tgt_args, ptrdiff_t *tgt_offsets, int32_t arg_num) {
   // use one team and the default number of threads.
   const int32_t team_num = 1;
   const int32_t thread_limit = 0;
   return __tgt_rtl_run_target_team_region(device_id, tgt_entry_ptr, tgt_args,
-      arg_num, team_num, thread_limit, 0);
+      tgt_offsets, arg_num, team_num, thread_limit, 0);
 }
 
 #ifdef __cplusplus

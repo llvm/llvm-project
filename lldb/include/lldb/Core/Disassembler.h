@@ -173,6 +173,8 @@ public:
 
   virtual bool HasDelaySlot();
 
+  bool CanSetBreakpoint ();
+
   virtual size_t Decode(const Disassembler &disassembler,
                         const DataExtractor &data,
                         lldb::offset_t data_offset) = 0;

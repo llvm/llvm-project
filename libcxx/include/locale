@@ -233,9 +233,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #define __cloc_defined
 #endif
 
-typedef _VSTD::remove_pointer<locale_t>::type __locale_struct;
-typedef _VSTD::unique_ptr<__locale_struct, decltype(&freelocale)> __locale_unique_ptr;
-
 // __scan_keyword
 // Scans [__b, __e) until a match is found in the basic_strings range
 //  [__kb, __ke) or until it can be shown that there is no match in [__kb, __ke).
@@ -1402,6 +1399,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
     this->__format_int(__fmt+1, __len, true, __iob.flags());
     const unsigned __nbuf = (numeric_limits<long>::digits / 3)
                           + ((numeric_limits<long>::digits % 3) != 0)
+                          + ((__iob.flags() & ios_base::showbase) != 0)
                           + 2;
     char __nar[__nbuf];
     int __nc = __libcpp_snprintf_l(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, __fmt, __v);
@@ -1428,6 +1426,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
     this->__format_int(__fmt+1, __len, true, __iob.flags());
     const unsigned __nbuf = (numeric_limits<long long>::digits / 3)
                           + ((numeric_limits<long long>::digits % 3) != 0)
+                          + ((__iob.flags() & ios_base::showbase) != 0)
                           + 2;
     char __nar[__nbuf];
     int __nc = __libcpp_snprintf_l(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, __fmt, __v);
@@ -1454,6 +1453,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
     this->__format_int(__fmt+1, __len, false, __iob.flags());
     const unsigned __nbuf = (numeric_limits<unsigned long>::digits / 3)
                           + ((numeric_limits<unsigned long>::digits % 3) != 0)
+                          + ((__iob.flags() & ios_base::showbase) != 0)
                           + 1;
     char __nar[__nbuf];
     int __nc = __libcpp_snprintf_l(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, __fmt, __v);
@@ -1480,6 +1480,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
     this->__format_int(__fmt+1, __len, false, __iob.flags());
     const unsigned __nbuf = (numeric_limits<unsigned long long>::digits / 3)
                           + ((numeric_limits<unsigned long long>::digits % 3) != 0)
+                          + ((__iob.flags() & ios_base::showbase) != 0)
                           + 1;
     char __nar[__nbuf];
     int __nc = __libcpp_snprintf_l(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, __fmt, __v);
@@ -1684,6 +1685,22 @@ protected:
     _LIBCPP_ALWAYS_INLINE
     ~__time_get_c_storage() {}
 };
+
+template <> _LIBCPP_FUNC_VIS const string* __time_get_c_storage<char>::__weeks() const;
+template <> _LIBCPP_FUNC_VIS const string* __time_get_c_storage<char>::__months() const;
+template <> _LIBCPP_FUNC_VIS const string* __time_get_c_storage<char>::__am_pm() const;
+template <> _LIBCPP_FUNC_VIS const string& __time_get_c_storage<char>::__c() const;
+template <> _LIBCPP_FUNC_VIS const string& __time_get_c_storage<char>::__r() const;
+template <> _LIBCPP_FUNC_VIS const string& __time_get_c_storage<char>::__x() const;
+template <> _LIBCPP_FUNC_VIS const string& __time_get_c_storage<char>::__X() const;
+
+template <> _LIBCPP_FUNC_VIS const wstring* __time_get_c_storage<wchar_t>::__weeks() const;
+template <> _LIBCPP_FUNC_VIS const wstring* __time_get_c_storage<wchar_t>::__months() const;
+template <> _LIBCPP_FUNC_VIS const wstring* __time_get_c_storage<wchar_t>::__am_pm() const;
+template <> _LIBCPP_FUNC_VIS const wstring& __time_get_c_storage<wchar_t>::__c() const;
+template <> _LIBCPP_FUNC_VIS const wstring& __time_get_c_storage<wchar_t>::__r() const;
+template <> _LIBCPP_FUNC_VIS const wstring& __time_get_c_storage<wchar_t>::__x() const;
+template <> _LIBCPP_FUNC_VIS const wstring& __time_get_c_storage<wchar_t>::__X() const;
 
 template <class _CharT, class _InputIterator = istreambuf_iterator<_CharT> >
 class _LIBCPP_TEMPLATE_VIS time_get
@@ -2825,7 +2842,7 @@ money_get<_CharT, _InputIterator>::__do_get(iter_type& __b, iter_type __e,
                     return false;
                 }
             }
-            // drop through
+            _LIBCPP_FALLTHROUGH();
         case money_base::none:
             if (__p != 3)
             {

@@ -47,3 +47,8 @@ Options
     int i = 5;
     double j = 10.0;
   };
+
+.. option:: IgnoreMacros
+
+   If this option is set to non-zero (default is `1`), the check will not warn
+   about members declared inside macros.

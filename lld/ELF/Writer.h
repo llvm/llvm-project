@@ -24,7 +24,7 @@ template <class ELFT> class ObjectFile;
 template <class ELFT> class SymbolTable;
 template <class ELFT> void writeResult();
 template <class ELFT> void markLive();
-template <class ELFT> bool isRelroSection(const OutputSection *Sec);
+bool isRelroSection(const OutputSection *Sec);
 
 // This describes a program header entry.
 // Each contains type, access flags and range of output sections that will be
@@ -48,9 +48,6 @@ struct PhdrEntry {
 };
 
 llvm::StringRef getOutputSectionName(llvm::StringRef Name);
-
-bool allocateHeaders(std::vector<PhdrEntry> &, llvm::ArrayRef<OutputSection *>,
-                     uint64_t Min);
 
 template <class ELFT> uint32_t getMipsEFlags();
 

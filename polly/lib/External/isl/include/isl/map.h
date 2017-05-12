@@ -50,16 +50,16 @@ ISL_DEPRECATED
 unsigned isl_basic_map_n_param(__isl_keep const isl_basic_map *bmap);
 ISL_DEPRECATED
 unsigned isl_basic_map_n_div(__isl_keep const isl_basic_map *bmap);
-unsigned isl_basic_map_total_dim(const struct isl_basic_map *bmap);
+unsigned isl_basic_map_total_dim(__isl_keep const isl_basic_map *bmap);
 unsigned isl_basic_map_dim(__isl_keep isl_basic_map *bmap,
 				enum isl_dim_type type);
 
 ISL_DEPRECATED
-unsigned isl_map_n_in(const struct isl_map *map);
+unsigned isl_map_n_in(__isl_keep const isl_map *map);
 ISL_DEPRECATED
-unsigned isl_map_n_out(const struct isl_map *map);
+unsigned isl_map_n_out(__isl_keep const isl_map *map);
 ISL_DEPRECATED
-unsigned isl_map_n_param(const struct isl_map *map);
+unsigned isl_map_n_param(__isl_keep const isl_map *map);
 unsigned isl_map_dim(__isl_keep isl_map *map, enum isl_dim_type type);
 
 isl_ctx *isl_basic_map_get_ctx(__isl_keep isl_basic_map *bmap);
@@ -227,9 +227,9 @@ __isl_give isl_basic_map *isl_basic_map_upper_bound_si(
 	__isl_take isl_basic_map *bmap,
 	enum isl_dim_type type, unsigned pos, int value);
 
-struct isl_basic_map *isl_basic_map_sum(
-		struct isl_basic_map *bmap1, struct isl_basic_map *bmap2);
-struct isl_basic_map *isl_basic_map_neg(struct isl_basic_map *bmap);
+__isl_give isl_basic_map *isl_basic_map_sum(__isl_take isl_basic_map *bmap1,
+	__isl_take isl_basic_map *bmap2);
+__isl_give isl_basic_map *isl_basic_map_neg(__isl_take isl_basic_map *bmap);
 
 __isl_give isl_map *isl_map_sum(__isl_take isl_map *map1,
 	__isl_take isl_map *map2);

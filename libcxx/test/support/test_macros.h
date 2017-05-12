@@ -52,10 +52,12 @@
 #define TEST_HAS_BUILTIN_IDENTIFIER(X) 0
 #endif
 
-#if defined(__clang__)
-#define TEST_COMPILER_CLANG
+#if defined(__EDG__)
+# define TEST_COMPILER_EDG
+#elif defined(__clang__)
+# define TEST_COMPILER_CLANG
 # if defined(__apple_build_version__)
-#   define TEST_COMPILER_APPLE_CLANG
+#  define TEST_COMPILER_APPLE_CLANG
 # endif
 #elif defined(_MSC_VER)
 # define TEST_COMPILER_C1XX
@@ -209,7 +211,8 @@ inline void DoNotOptimize(Tp const& value) {
 #include <intrin.h>
 template <class Tp>
 inline void DoNotOptimize(Tp const& value) {
-  const volatile void* volatile = __builtin_addressof(value);
+  const volatile void* volatile unused = __builtin_addressof(value);
+  static_cast<void>(unused);
   _ReadWriteBarrier();
 }
 #endif

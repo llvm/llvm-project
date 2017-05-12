@@ -6,6 +6,12 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// Note: This file is used on Darwin by debugserver, so it needs to remain as
+//       self contained as possible, and devoid of references to LLVM unless 
+//       there is compelling reason.
+//
+//===----------------------------------------------------------------------===//
 
 #if defined(_MSC_VER)
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -227,7 +233,8 @@ bool SocketAddress::getaddrinfo(const char *host, const char *service,
                                 int ai_flags) {
   Clear();
 
-  auto addresses = GetAddressInfo(host, service, ai_family, ai_socktype, ai_protocol, ai_flags);
+  auto addresses = GetAddressInfo(host, service, ai_family, ai_socktype,
+                                  ai_protocol, ai_flags);
   if (!addresses.empty())
     *this = addresses[0];
   return IsValid();

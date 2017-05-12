@@ -13,14 +13,13 @@ class SharedLibTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def test_expr(self):
-        """Test that types work when defined in a shared library and forward-declared in the main executable"""
+    def common_test_expr(self, preload_symbols):
         if "clang" in self.getCompiler() and "3.4" in self.getCompilerVersion():
             self.skipTest(
                 "llvm.org/pr16214 -- clang emits partial DWARF for structures referenced via typedef")
 
         self.build()
-        self.common_setup()
+        self.common_setup(preload_symbols)
 
         # This should display correctly.
         self.expect(
@@ -30,6 +29,18 @@ class SharedLibTestCase(TestBase):
                 "(foo)",
                 "(sub_foo)",
                 "other_element = 3"])
+
+        self.expect(
+            "expression GetMeASubFoo(my_foo_ptr)",
+            startstr="(sub_foo *) $")
+
+    def test_expr(self):
+        """Test that types work when defined in a shared library and forward-declared in the main executable"""
+        self.common_test_expr(True)
+
+    def test_expr_no_preload(self):
+        """Test that types work when defined in a shared library and forward-declared in the main executable, but with preloading disabled"""
+        self.common_test_expr(False)
 
     @unittest2.expectedFailure("rdar://problem/10704639")
     def test_frame_variable(self):
@@ -54,13 +65,15 @@ class SharedLibTestCase(TestBase):
         self.line = line_number(self.source, '// Set breakpoint 0 here.')
         self.shlib_names = ["foo"]
 
-    def common_setup(self):
+    def common_setup(self, preload_symbols = True):
         # Run in synchronous mode
         self.dbg.SetAsync(False)
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget("a.out")
         self.assertTrue(target, VALID_TARGET)
+
+        self.runCmd("settings set target.preload-symbols " + str(preload_symbols).lower())
 
         # Break inside the foo function which takes a bar_ptr argument.
         lldbutil.run_break_set_by_file_and_line(

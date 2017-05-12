@@ -9,6 +9,8 @@
 
 // UNSUPPORTED: c++98, c++03, c++11
 // UNSUPPORTED: libcpp-no-exceptions
+// XFAIL: availability
+
 // dynarray.overview
 
 // const_reference at(size_type n) const;

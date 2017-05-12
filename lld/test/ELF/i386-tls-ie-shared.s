@@ -13,8 +13,8 @@
 // GOTRELSHARED-NEXT:     SHF_ALLOC
 // GOTRELSHARED-NEXT:     SHF_WRITE
 // GOTRELSHARED-NEXT:   ]
-// GOTRELSHARED-NEXT:   Address: 0x1058
-// GOTRELSHARED-NEXT:   Offset: 0x1058
+// GOTRELSHARED-NEXT:   Address: 0x1060
+// GOTRELSHARED-NEXT:   Offset: 0x1060
 // GOTRELSHARED-NEXT:   Size: 16
 // GOTRELSHARED-NEXT:   Link: 0
 // GOTRELSHARED-NEXT:   Info: 0
@@ -31,36 +31,36 @@
 // GOTRELSHARED-NEXT:     0x202D R_386_RELATIVE - 0x0
 // GOTRELSHARED-NEXT:     0x2036 R_386_RELATIVE - 0x0
 // GOTRELSHARED-NEXT:     0x203F R_386_RELATIVE - 0x0
-// GOTRELSHARED-NEXT:     0x1058 R_386_TLS_TPOFF tlslocal0 0x0
-// GOTRELSHARED-NEXT:     0x105C R_386_TLS_TPOFF tlslocal1 0x0
-// GOTRELSHARED-NEXT:     0x1060 R_386_TLS_TPOFF tlsshared0 0x0
-// GOTRELSHARED-NEXT:     0x1064 R_386_TLS_TPOFF tlsshared1 0x0
+// GOTRELSHARED-NEXT:     0x1060 R_386_TLS_TPOFF tlslocal0 0x0
+// GOTRELSHARED-NEXT:     0x1064 R_386_TLS_TPOFF tlslocal1 0x0
+// GOTRELSHARED-NEXT:     0x1068 R_386_TLS_TPOFF tlsshared0 0x0
+// GOTRELSHARED-NEXT:     0x106C R_386_TLS_TPOFF tlsshared1 0x0
 // GOTRELSHARED-NEXT:   }
 // GOTRELSHARED-NEXT: ]
 // GOTRELSHARED:      0x6FFFFFFA RELCOUNT             8
 
 // DISASMSHARED:       Disassembly of section test:
 // DISASMSHARED-NEXT:  _start:
-// (.got)[0] = 0x2050 = 8272
-// (.got)[1] = 0x2054 = 8276
-// (.got)[2] = 0x2058 = 8280
-// (.got)[3] = 0x205C = 8284
-// DISASMSHARED-NEXT:  2000: 8b 0d 58 10 00 00   movl  4184, %ecx
-// DISASMSHARED-NEXT:  2006: 65 8b 01  movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  2009: a1 58 10 00 00  movl  4184, %eax
-// DISASMSHARED-NEXT:  200e: 65 8b 00  movl  %gs:(%eax), %eax
-// DISASMSHARED-NEXT:  2011: 03 0d 58 10 00 00   addl  4184, %ecx
-// DISASMSHARED-NEXT:  2017: 65 8b 01  movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  201a: 8b 0d 5c 10 00 00   movl  4188, %ecx
-// DISASMSHARED-NEXT:  2020: 65 8b 01  movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  2023: a1 5c 10 00 00  movl  4188, %eax
-// DISASMSHARED-NEXT:  2028: 65 8b 00  movl  %gs:(%eax), %eax
-// DISASMSHARED-NEXT:  202b: 03 0d 5c 10 00 00   addl  4188, %ecx
-// DISASMSHARED-NEXT:  2031: 65 8b 01  movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  2034: 8b 0d 60 10 00 00   movl  4192, %ecx
-// DISASMSHARED-NEXT:  203a: 65 8b 01  movl  %gs:(%ecx), %eax
-// DISASMSHARED-NEXT:  203d: 03 0d 64 10 00 00   addl  4196, %ecx
-// DISASMSHARED-NEXT:  2043: 65 8b 01  movl  %gs:(%ecx), %eax
+// (.got)[0] = 0x1060 = 4192
+// (.got)[1] = 0x1064 = 4196
+// (.got)[2] = 0x1068 = 4200
+// (.got)[3] = 0x106C = 4204
+// DISASMSHARED-NEXT:  2000: {{.*}}  movl  4192, %ecx
+// DISASMSHARED-NEXT:  2006: {{.*}}  movl  %gs:(%ecx), %eax
+// DISASMSHARED-NEXT:  2009: {{.*}}  movl  4192, %eax
+// DISASMSHARED-NEXT:  200e: {{.*}}  movl  %gs:(%eax), %eax
+// DISASMSHARED-NEXT:  2011: {{.*}}  addl  4192, %ecx
+// DISASMSHARED-NEXT:  2017: {{.*}}  movl  %gs:(%ecx), %eax
+// DISASMSHARED-NEXT:  201a: {{.*}}  movl  4196, %ecx
+// DISASMSHARED-NEXT:  2020: {{.*}}  movl  %gs:(%ecx), %eax
+// DISASMSHARED-NEXT:  2023: {{.*}}  movl  4196, %eax
+// DISASMSHARED-NEXT:  2028: {{.*}}  movl  %gs:(%eax), %eax
+// DISASMSHARED-NEXT:  202b: {{.*}}  addl  4196, %ecx
+// DISASMSHARED-NEXT:  2031: {{.*}}  movl  %gs:(%ecx), %eax
+// DISASMSHARED-NEXT:  2034: {{.*}}  movl  4200, %ecx
+// DISASMSHARED-NEXT:  203a: {{.*}}  movl  %gs:(%ecx), %eax
+// DISASMSHARED-NEXT:  203d: {{.*}}  addl  4204, %ecx
+// DISASMSHARED-NEXT:  2043: {{.*}}  movl  %gs:(%ecx), %eax
 
 .type tlslocal0,@object
 .section .tbss,"awT",@nobits

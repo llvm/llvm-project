@@ -416,7 +416,7 @@ void throws_in_constructor_test()
       ThrowsOnCopy() = default;
       bool operator()() const {
         assert(false);
-#if defined(_LIBCPP_MSVC)
+#if defined(TEST_COMPILER_C1XX)
         __assume(0);
 #else
         __builtin_unreachable();

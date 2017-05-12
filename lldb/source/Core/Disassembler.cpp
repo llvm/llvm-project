@@ -759,6 +759,10 @@ bool Instruction::DumpEmulation(const ArchSpec &arch) {
   return false;
 }
 
+bool Instruction::CanSetBreakpoint () {
+  return !HasDelaySlot();
+}
+
 bool Instruction::HasDelaySlot() {
   // Default is false.
   return false;

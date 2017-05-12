@@ -266,8 +266,8 @@ void Symtab::InitNameIndexes() {
         continue;
 
       const Mangled &mangled = symbol->GetMangled();
-      entry.cstring = mangled.GetMangledName().GetStringRef();
-      if (!entry.cstring.empty()) {
+      entry.cstring = mangled.GetMangledName();
+      if (entry.cstring) {
         m_name_to_index.Append(entry);
 
         // Now try and figure out the basename and figure out if the
@@ -278,26 +278,27 @@ void Symtab::InitNameIndexes() {
           // If the symbol has linker annotations, also add the version without
           // the annotations.
           entry.cstring = ConstString(m_objfile->StripLinkerSymbolAnnotations(
-                                          entry.cstring))
-                              .GetStringRef();
+                                        entry.cstring.GetStringRef()));
           m_name_to_index.Append(entry);
         }
 
         const SymbolType symbol_type = symbol->GetType();
         if (symbol_type == eSymbolTypeCode ||
             symbol_type == eSymbolTypeResolver) {
-          if (name.size() >= 2 && name[0] == '_' && name[1] == 'Z' &&
-              ((name.size() < 3) || (name[2] != 'T' && // avoid virtual table, VTT structure, typeinfo
-                                 // structure, and typeinfo name
-               name[2] != 'G' && // avoid guard variables
-               name[2] != 'Z'))) // named local entities (if we eventually handle
-                                // eSymbolTypeData, we will want this back)
+          llvm::StringRef entry_ref(entry.cstring.GetStringRef());
+          if (entry_ref[0] == '_' && entry_ref[1] == 'Z' &&
+              (entry_ref[2] != 'T' && // avoid virtual table, VTT structure,
+                                      // typeinfo structure, and typeinfo
+                                      // name
+               entry_ref[2] != 'G' && // avoid guard variables
+               entry_ref[2] != 'Z'))  // named local entities (if we
+                                          // eventually handle eSymbolTypeData,
+                                          // we will want this back)
           {
             CPlusPlusLanguage::MethodName cxx_method(
                 mangled.GetDemangledName(lldb::eLanguageTypeC_plus_plus));
-            entry.cstring =
-                ConstString(cxx_method.GetBasename()).GetStringRef();
-            if (!entry.cstring.empty()) {
+            entry.cstring = ConstString(cxx_method.GetBasename());
+            if (entry.cstring) {
               // ConstString objects permanently store the string in the pool so
               // calling
               // GetCString() on the value gets us a const char * that will
@@ -305,16 +306,24 @@ void Symtab::InitNameIndexes() {
               const char *const_context =
                   ConstString(cxx_method.GetContext()).GetCString();
 
-              if (entry.cstring[0] == '~' ||
-                  !cxx_method.GetQualifiers().empty()) {
-                // The first character of the demangled basename is '~' which
-                // means we have a class destructor. We can use this information
-                // to help us know what is a class and what isn't.
-                if (class_contexts.find(const_context) == class_contexts.end())
-                  class_contexts.insert(const_context);
-                m_method_to_index.Append(entry);
+              if (!const_context || const_context[0] == 0) {
+                // No context for this function so this has to be a basename
+                m_basename_to_index.Append(entry);
+                // If there is no context (no namespaces or class scopes that
+                // come before the function name) then this also could be a
+                // fullname.
+                m_name_to_index.Append(entry);
               } else {
-                if (const_context && const_context[0]) {
+                entry_ref = entry.cstring.GetStringRef();
+                if (entry_ref[0] == '~' ||
+                    !cxx_method.GetQualifiers().empty()) {
+                  // The first character of the demangled basename is '~' which
+                  // means we have a class destructor. We can use this information
+                  // to help us know what is a class and what isn't.
+                  if (class_contexts.find(const_context) == class_contexts.end())
+                    class_contexts.insert(const_context);
+                  m_method_to_index.Append(entry);
+                } else {
                   if (class_contexts.find(const_context) !=
                       class_contexts.end()) {
                     // The current decl context is in our "class_contexts" which
@@ -331,14 +340,6 @@ void Symtab::InitNameIndexes() {
                     mangled_name_to_index.Append(entry);
                     symbol_contexts[entry.value] = const_context;
                   }
-                } else {
-                  // No context for this function so this has to be a basename
-                  m_basename_to_index.Append(entry);
-                  // If there is no context (no namespaces or class scopes that
-                  // come before the function name) then this also could be a
-                  // fullname.
-                  if (cxx_method.GetContext().empty())
-                    m_name_to_index.Append(entry);
                 }
               }
             }
@@ -361,17 +362,15 @@ void Symtab::InitNameIndexes() {
         }
       }
 
-      entry.cstring =
-          mangled.GetDemangledName(symbol->GetLanguage()).GetStringRef();
-      if (!entry.cstring.empty()) {
+      entry.cstring = mangled.GetDemangledName(symbol->GetLanguage());
+      if (entry.cstring) {
         m_name_to_index.Append(entry);
 
         if (symbol->ContainsLinkerAnnotations()) {
           // If the symbol has linker annotations, also add the version without
           // the annotations.
           entry.cstring = ConstString(m_objfile->StripLinkerSymbolAnnotations(
-                                          entry.cstring))
-                              .GetStringRef();
+                                        entry.cstring.GetStringRef()));
           m_name_to_index.Append(entry);
         }
       }
@@ -379,15 +378,15 @@ void Symtab::InitNameIndexes() {
       // If the demangled name turns out to be an ObjC name, and
       // is a category name, add the version without categories to the index
       // too.
-      ObjCLanguage::MethodName objc_method(entry.cstring, true);
+      ObjCLanguage::MethodName objc_method(entry.cstring.GetStringRef(), true);
       if (objc_method.IsValid(true)) {
-        entry.cstring = objc_method.GetSelector().GetStringRef();
+        entry.cstring = objc_method.GetSelector();
         m_selector_to_index.Append(entry);
 
         ConstString objc_method_no_category(
             objc_method.GetFullNameWithoutCategory(true));
         if (objc_method_no_category) {
-          entry.cstring = objc_method_no_category.GetStringRef();
+          entry.cstring = objc_method_no_category;
           m_name_to_index.Append(entry);
         }
       }
@@ -447,6 +446,11 @@ void Symtab::InitNameIndexes() {
   }
 }
 
+void Symtab::PreloadSymbols() {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  InitNameIndexes();
+}
+
 void Symtab::AppendSymbolNamesToMap(const IndexCollection &indexes,
                                     bool add_demangled, bool add_mangled,
                                     NameToIndexMap &name_to_index_map) const {
@@ -464,15 +468,14 @@ void Symtab::AppendSymbolNamesToMap(const IndexCollection &indexes,
 
       const Mangled &mangled = symbol->GetMangled();
       if (add_demangled) {
-        entry.cstring =
-            mangled.GetDemangledName(symbol->GetLanguage()).GetStringRef();
-        if (!entry.cstring.empty())
+        entry.cstring = mangled.GetDemangledName(symbol->GetLanguage());
+        if (entry.cstring)
           name_to_index_map.Append(entry);
       }
 
       if (add_mangled) {
-        entry.cstring = mangled.GetMangledName().GetStringRef();
-        if (!entry.cstring.empty())
+        entry.cstring = mangled.GetMangledName();
+        if (entry.cstring)
           name_to_index_map.Append(entry);
       }
     }
@@ -645,7 +648,7 @@ uint32_t Symtab::AppendSymbolIndexesWithName(const ConstString &symbol_name,
     if (!m_name_indexes_computed)
       InitNameIndexes();
 
-    return m_name_to_index.GetValues(symbol_name.GetStringRef(), indexes);
+    return m_name_to_index.GetValues(symbol_name, indexes);
   }
   return 0;
 }
@@ -664,7 +667,7 @@ uint32_t Symtab::AppendSymbolIndexesWithName(const ConstString &symbol_name,
 
     std::vector<uint32_t> all_name_indexes;
     const size_t name_match_count =
-        m_name_to_index.GetValues(symbol_name.GetStringRef(), all_name_indexes);
+        m_name_to_index.GetValues(symbol_name, all_name_indexes);
     for (size_t i = 0; i < name_match_count; ++i) {
       if (CheckSymbolAtIndex(all_name_indexes[i], symbol_debug_type,
                              symbol_visibility))
@@ -1088,8 +1091,6 @@ size_t Symtab::FindFunctionSymbols(const ConstString &name,
   size_t count = 0;
   std::vector<uint32_t> symbol_indexes;
 
-  llvm::StringRef name_cstr = name.GetStringRef();
-
   // eFunctionNameTypeAuto should be pre-resolved by a call to
   // Module::LookupInfo::LookupInfo()
   assert((name_type_mask & eFunctionNameTypeAuto) == 0);
@@ -1127,7 +1128,7 @@ size_t Symtab::FindFunctionSymbols(const ConstString &name,
 
     if (!m_basename_to_index.IsEmpty()) {
       const UniqueCStringMap<uint32_t>::Entry *match;
-      for (match = m_basename_to_index.FindFirstValueForName(name_cstr);
+      for (match = m_basename_to_index.FindFirstValueForName(name);
            match != nullptr;
            match = m_basename_to_index.FindNextValueForName(match)) {
         symbol_indexes.push_back(match->value);
@@ -1141,7 +1142,7 @@ size_t Symtab::FindFunctionSymbols(const ConstString &name,
 
     if (!m_method_to_index.IsEmpty()) {
       const UniqueCStringMap<uint32_t>::Entry *match;
-      for (match = m_method_to_index.FindFirstValueForName(name_cstr);
+      for (match = m_method_to_index.FindFirstValueForName(name);
            match != nullptr;
            match = m_method_to_index.FindNextValueForName(match)) {
         symbol_indexes.push_back(match->value);
@@ -1155,7 +1156,7 @@ size_t Symtab::FindFunctionSymbols(const ConstString &name,
 
     if (!m_selector_to_index.IsEmpty()) {
       const UniqueCStringMap<uint32_t>::Entry *match;
-      for (match = m_selector_to_index.FindFirstValueForName(name_cstr);
+      for (match = m_selector_to_index.FindFirstValueForName(name);
            match != nullptr;
            match = m_selector_to_index.FindNextValueForName(match)) {
         symbol_indexes.push_back(match->value);

@@ -97,10 +97,6 @@ void *aligned_alloc(size_t alignment, size_t size);                       // C11
 
 extern "C++" {
 
-#ifdef _LIBCPP_MSVCRT
-#include "support/win32/locale_win32.h"
-#endif // _LIBCPP_MSVCRT
-
 #undef abs
 #undef div
 #undef labs

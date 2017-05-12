@@ -14,6 +14,11 @@
 int
 main(int argc, char const *argv[])
 {
+// PR_MPX_ENABLE_MANAGEMENT won't be defined on linux kernel versions below 3.19
+#ifndef PR_MPX_ENABLE_MANAGEMENT
+    return -1;
+#endif
+
     // This call returns 0 only if the CPU and the kernel support Intel(R) MPX.
     if (prctl(PR_MPX_ENABLE_MANAGEMENT, 0, 0, 0, 0) != 0)
         return -1;

@@ -9,11 +9,23 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.7
+// XFAIL: with_system_cxx_lib=macosx10.8
+
 // asan and msan will not call the new handler.
 // UNSUPPORTED: sanitizer-new-delete
 
 // FIXME turn this into an XFAIL
-// UNSUPPORTED: no-aligned-allocation
+// UNSUPPORTED: no-aligned-allocation && !gcc
+
+// On Windows libc++ doesn't provide its own definitions for new/delete
+// but instead depends on the ones in VCRuntime. However VCRuntime does not
+// yet provide aligned new/delete definitions so this test fails to compile/link.
+// XFAIL: LIBCXX-WINDOWS-FIXME
 
 // test operator new (nothrow)
 

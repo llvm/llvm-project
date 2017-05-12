@@ -129,6 +129,12 @@
 
 #define __has_keyword(__x) !(__is_identifier(__x))
 
+#ifdef __has_include
+#define __libcpp_has_include(__x) __has_include(__x)
+#else
+#define __libcpp_has_include(__x) 0
+#endif
+
 #if defined(__clang__)
 #define _LIBCPP_COMPILER_CLANG
 # ifndef __apple_build_version__
@@ -314,7 +320,7 @@ typedef __char32_t char32_t;
 #define _LIBCPP_NO_EXCEPTIONS
 #endif
 
-#if !(__has_feature(cxx_rtti))
+#if !(__has_feature(cxx_rtti)) && !defined(_LIBCPP_NO_RTTI)
 #define _LIBCPP_NO_RTTI
 #endif
 
@@ -968,7 +974,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  if defined(__GNUC__) && ((__GNUC__ >= 5) || (__GNUC__ == 4 && \
    (__GNUC_MINOR__ >= 3 || __GNUC_PATCHLEVEL__ >= 2))) && !defined(__GXX_RTTI)
 #    define _LIBCPP_NO_RTTI
-#  elif defined(_LIBCPP_MSVC) && !defined(_CPPRTTI)
+#  elif defined(_LIBCPP_COMPILER_MSVC) && !defined(_CPPRTTI)
 #    define _LIBCPP_NO_RTTI
 #  endif
 #endif
@@ -980,6 +986,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 // Thread API
 #if !defined(_LIBCPP_HAS_NO_THREADS) && \
     !defined(_LIBCPP_HAS_THREAD_API_PTHREAD) && \
+    !defined(_LIBCPP_HAS_THREAD_API_WIN32) && \
     !defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
 # if defined(__FreeBSD__) || \
     defined(__Fuchsia__) || \
@@ -987,7 +994,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
     defined(__linux__) || \
     defined(__APPLE__) || \
     defined(__CloudABI__) || \
-    defined(__sun__)
+    defined(__sun__) || \
+    (defined(__MINGW32__) && __libcpp_has_include(<pthread.h>))
 #   define _LIBCPP_HAS_THREAD_API_PTHREAD
 # elif defined(_LIBCPP_WIN32API)
 #  define _LIBCPP_HAS_THREAD_API_WIN32
@@ -1089,6 +1097,13 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 # define _LIBCPP_DIAGNOSE_ERROR(...)
 #endif
 
+#if __has_attribute(fallthough) || _GNUC_VER >= 700
+// Use a function like macro to imply that it must be followed by a semicolon
+#define _LIBCPP_FALLTHROUGH() __attribute__((__fallthrough__))
+#else
+#define _LIBCPP_FALLTHROUGH() ((void)0)
+#endif
+
 #if defined(_LIBCPP_ABI_MICROSOFT) && \
    (defined(_LIBCPP_COMPILER_MSVC) || __has_declspec_attribute(empty_bases))
 # define _LIBCPP_DECLSPEC_EMPTY_BASES __declspec(empty_bases)
@@ -1112,5 +1127,78 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #endif
 
 #endif // __cplusplus
+
+// Decide whether to use availability macros.
+#if !defined(_LIBCPP_BUILDING_LIBRARY) &&                                      \
+    !defined(_LIBCPP_DISABLE_AVAILABILITY) &&                                  \
+    __has_feature(attribute_availability_with_strict) &&                       \
+    __has_feature(attribute_availability_in_templates)
+#ifdef __APPLE__
+#define _LIBCPP_USE_AVAILABILITY_APPLE
+#endif
+#endif
+
+// Define availability macros.
+#if defined(_LIBCPP_USE_AVAILABILITY_APPLE)
+#define _LIBCPP_AVAILABILITY_SHARED_MUTEX                                      \
+  __attribute__((availability(macosx,strict,introduced=10.12)))                \
+  __attribute__((availability(ios,strict,introduced=10.0)))                    \
+  __attribute__((availability(tvos,strict,introduced=10.0)))                   \
+  __attribute__((availability(watchos,strict,introduced=3.0)))
+#define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS __attribute__((unavailable))
+#define _LIBCPP_AVAILABILITY_BAD_ARRAY_LENGTH __attribute__((unavailable))
+#define _LIBCPP_AVAILABILITY_UNCAUGHT_EXCEPTIONS                               \
+  __attribute__((availability(macosx,strict,introduced=10.12)))                \
+  __attribute__((availability(ios,strict,introduced=10.0)))                    \
+  __attribute__((availability(tvos,strict,introduced=10.0)))                   \
+  __attribute__((availability(watchos,strict,introduced=3.0)))
+#define _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE                                  \
+  __attribute__((availability(macosx,strict,introduced=10.12)))                \
+  __attribute__((availability(ios,strict,introduced=10.0)))                    \
+  __attribute__((availability(tvos,strict,introduced=10.0)))                   \
+  __attribute__((availability(watchos,strict,introduced=3.0)))
+#define _LIBCPP_AVAILABILITY_FUTURE_ERROR                                      \
+  __attribute__((availability(ios,strict,introduced=6.0)))
+#define _LIBCPP_AVAILABILITY_TYPEINFO_VTABLE                                   \
+  __attribute__((availability(macosx,strict,introduced=10.9)))                 \
+  __attribute__((availability(ios,strict,introduced=7.0)))
+#define _LIBCPP_AVAILABILITY_LOCALE_CATEGORY                                   \
+  __attribute__((availability(macosx,strict,introduced=10.9)))                 \
+  __attribute__((availability(ios,strict,introduced=7.0)))
+#define _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR                                 \
+  __attribute__((availability(macosx,strict,introduced=10.9)))                 \
+  __attribute__((availability(ios,strict,introduced=7.0)))
+#else
+#define _LIBCPP_AVAILABILITY_SHARED_MUTEX
+#define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
+#define _LIBCPP_AVAILABILITY_BAD_ARRAY_LENGTH
+#define _LIBCPP_AVAILABILITY_UNCAUGHT_EXCEPTIONS
+#define _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE
+#define _LIBCPP_AVAILABILITY_FUTURE_ERROR
+#define _LIBCPP_AVAILABILITY_TYPEINFO_VTABLE
+#define _LIBCPP_AVAILABILITY_LOCALE_CATEGORY
+#define _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
+#endif
+
+// Define availability that depends on _LIBCPP_NO_EXCEPTIONS.
+#ifdef _LIBCPP_NO_EXCEPTIONS
+#define _LIBCPP_AVAILABILITY_DYNARRAY
+#define _LIBCPP_AVAILABILITY_FUTURE
+#else
+#define _LIBCPP_AVAILABILITY_DYNARRAY _LIBCPP_AVAILABILITY_BAD_ARRAY_LENGTH
+#define _LIBCPP_AVAILABILITY_FUTURE _LIBCPP_AVAILABILITY_FUTURE_ERROR
+#endif
+
+// Availability of stream API in the dylib got dropped and re-added.  The
+// extern template should effectively be available at:
+//    availability(macosx,introduced=10.9)
+//    availability(ios,introduced=7.0)
+#if defined(_LIBCPP_USE_AVAILABILITY_APPLE) &&                                 \
+    ((defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                \
+      __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ <= 1090) ||                \
+     (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) &&               \
+      __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ <= 70000))
+#define _LIBCPP_AVAILABILITY_NO_STREAMS_EXTERN_TEMPLATE
+#endif
 
 #endif // _LIBCPP_CONFIG

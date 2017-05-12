@@ -76,18 +76,34 @@
  *
  */
 
+typedef enum PollyGPURuntimeT {
+  RUNTIME_NONE,
+  RUNTIME_CUDA,
+  RUNTIME_CL
+} PollyGPURuntime;
+
 typedef struct PollyGPUContextT PollyGPUContext;
 typedef struct PollyGPUFunctionT PollyGPUFunction;
 typedef struct PollyGPUDevicePtrT PollyGPUDevicePtr;
 
-PollyGPUContext *polly_initContext();
-PollyGPUFunction *polly_getKernel(const char *PTXBuffer,
+typedef struct OpenCLContextT OpenCLContext;
+typedef struct OpenCLKernelT OpenCLKernel;
+typedef struct OpenCLDevicePtrT OpenCLDevicePtr;
+
+typedef struct CUDAContextT CUDAContext;
+typedef struct CUDAKernelT CUDAKernel;
+typedef struct CUDADevicePtrT CUDADevicePtr;
+
+PollyGPUContext *polly_initContextCUDA();
+PollyGPUContext *polly_initContextCL();
+PollyGPUFunction *polly_getKernel(const char *BinaryBuffer,
                                   const char *KernelName);
 void polly_freeKernel(PollyGPUFunction *Kernel);
 void polly_copyFromHostToDevice(void *HostData, PollyGPUDevicePtr *DevData,
                                 long MemSize);
 void polly_copyFromDeviceToHost(PollyGPUDevicePtr *DevData, void *HostData,
                                 long MemSize);
+void polly_synchronizeDevice();
 void polly_launchKernel(PollyGPUFunction *Kernel, unsigned int GridDimX,
                         unsigned int GridDimY, unsigned int BlockSizeX,
                         unsigned int BlockSizeY, unsigned int BlockSizeZ,

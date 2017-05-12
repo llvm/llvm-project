@@ -67,7 +67,7 @@ class Configuration(object):
         self.abi_library_root = None
         self.link_shared = self.get_lit_bool('enable_shared', default=True)
         self.debug_build = self.get_lit_bool('debug_build',   default=False)
-        self.exec_env = {}
+        self.exec_env = dict(os.environ)
         self.use_target = False
         self.use_system_cxx_lib = False
         self.use_clang_verify = False
@@ -123,6 +123,7 @@ class Configuration(object):
         self.configure_cxx()
         self.configure_triple()
         self.configure_deployment()
+        self.configure_availability()
         self.configure_src_root()
         self.configure_obj_root()
         self.configure_cxx_stdlib_under_test()
@@ -159,7 +160,11 @@ class Configuration(object):
         # Print as list to prevent "set([...])" from being printed.
         self.lit_config.note('Using available_features: %s' %
                              list(self.config.available_features))
-        self.lit_config.note('Using environment: %r' % self.exec_env)
+        show_env_vars = {}
+        for k,v in self.exec_env.items():
+            if k not in os.environ or os.environ[k] != v:
+                show_env_vars[k] = v
+        self.lit_config.note('Adding environment variables: %r' % show_env_vars)
         sys.stderr.flush()  # Force flushing to avoid broken output on Windows
 
     def get_test_format(self):
@@ -285,6 +290,12 @@ class Configuration(object):
         self.lit_config.note(
             "inferred use_system_cxx_lib as: %r" % self.use_system_cxx_lib)
 
+    def configure_availability(self):
+        # See http://llvm.org/docs/AvailabilityMarkup.html
+        self.with_availability = self.get_lit_bool('with_availability', False)
+        self.lit_config.note(
+            "inferred with_availability as: %r" % self.with_availability)
+
     def configure_cxx_stdlib_under_test(self):
         self.cxx_stdlib_under_test = self.get_lit_conf(
             'cxx_stdlib_under_test', 'libc++')
@@ -306,6 +317,9 @@ class Configuration(object):
 
     def configure_use_clang_verify(self):
         '''If set, run clang with -verify on failing tests.'''
+        if self.with_availability:
+            self.use_clang_verify = False
+            return
         self.use_clang_verify = self.get_lit_bool('use_clang_verify')
         if self.use_clang_verify is None:
             # NOTE: We do not test for the -verify flag directly because
@@ -346,6 +360,12 @@ class Configuration(object):
             self.cxx.use_ccache = True
             self.lit_config.note('enabling ccache')
 
+    def add_deployment_feature(self, feature):
+        (arch, name, version) = self.config.deployment
+        self.config.available_features.add('%s=%s-%s' % (feature, arch, name))
+        self.config.available_features.add('%s=%s' % (feature, name))
+        self.config.available_features.add('%s=%s%s' % (feature, name, version))
+
     def configure_features(self):
         additional_features = self.get_lit_conf('additional_features')
         if additional_features:
@@ -364,15 +384,31 @@ class Configuration(object):
             self.config.available_features.add(
                 'with_system_cxx_lib=%s' % self.config.target_triple)
 
+            # Add subcomponents individually.
+            target_components = self.config.target_triple.split('-')
+            for component in target_components:
+                self.config.available_features.add(
+                    'with_system_cxx_lib=%s' % component)
+
+            # Add available features for more generic versions of the target
+            # triple attached to  with_system_cxx_lib.
+            if self.use_deployment:
+                self.add_deployment_feature('with_system_cxx_lib')
+
+        # Configure the availability markup checks features.
+        if self.with_availability:
+            self.config.available_features.add('availability_markup')
+            self.add_deployment_feature('availability_markup')
+
+        if self.use_system_cxx_lib or self.with_availability:
+            self.config.available_features.add('availability')
+            self.add_deployment_feature('availability')
+
+        if platform.system() == 'Darwin':
+            self.config.available_features.add('apple-darwin')
+
         # Insert the platform name into the available features as a lower case.
         self.config.available_features.add(target_platform)
-
-        # If we're using deployment, add sub-components of the triple using
-        # "darwin" instead of the platform name.
-        if self.use_deployment:
-            arch, _, _ = self.config.deployment
-            self.config.available_features.add('apple-darwin')
-            self.config.available_features.add(arch + '-apple-darwin')
 
         # Simulator testing can take a really long time for some of these tests
         # so add a feature check so we can REQUIRES: long_tests in them
@@ -508,8 +544,13 @@ class Configuration(object):
             self.cxx.flags += ['-arch', arch]
             self.cxx.flags += ['-m' + name + '-version-min=' + version]
 
+        # Disable availability unless explicitely requested
+        if not self.with_availability:
+            self.cxx.flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
+
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test', 'support')
+        self.configure_config_site_header()
         if self.cxx_stdlib_under_test != 'libstdc++' and \
            not self.is_windows:
             self.cxx.compile_flags += [
@@ -525,7 +566,6 @@ class Configuration(object):
                 '-include', os.path.join(support_path,
                                          'set_windows_crt_report_mode.h')
             ]
-        self.configure_config_site_header()
         cxx_headers = self.get_lit_conf('cxx_headers')
         if cxx_headers == '' or (cxx_headers is None
                                  and self.cxx_stdlib_under_test != 'libc++'):
@@ -832,6 +872,9 @@ class Configuration(object):
         # FIXME: Enable the two warnings below.
         self.cxx.addWarningFlagIfSupported('-Wno-conversion')
         self.cxx.addWarningFlagIfSupported('-Wno-unused-local-typedef')
+        # FIXME: Remove this warning once the min/max handling patch lands
+        # See https://reviews.llvm.org/D33080
+        self.cxx.addWarningFlagIfSupported('-Wno-#warnings')
         std = self.get_lit_conf('std', None)
         if std in ['c++98', 'c++03']:
             # The '#define static_assert' provided by libc++ in C++03 mode
@@ -966,18 +1009,8 @@ class Configuration(object):
         sub.append(('%link', link_str))
         sub.append(('%build', build_str))
         # Configure exec prefix substitutions.
-        exec_env_str = ''
-        if not self.is_windows and len(self.exec_env) != 0:
-            exec_env_str = 'env '
-            for k, v in self.exec_env.items():
-                exec_env_str += ' %s=%s' % (k, v)
         # Configure run env substitution.
-        exec_str = exec_env_str
-        if self.lit_config.useValgrind:
-            exec_str = ' '.join(self.lit_config.valgrindArgs) + exec_env_str
-        sub.append(('%exec', exec_str))
-        # Configure run shortcut
-        sub.append(('%run', exec_str + ' %t.exe'))
+        sub.append(('%run', '%t.exe'))
         # Configure not program substitutions
         not_py = os.path.join(self.libcxx_src_root, 'utils', 'not.py')
         not_str = '%s %s ' % (pipes.quote(sys.executable), pipes.quote(not_py))

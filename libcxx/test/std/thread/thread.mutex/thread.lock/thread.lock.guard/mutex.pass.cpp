@@ -52,7 +52,7 @@ int main()
     std::this_thread::sleep_for(ms(250));
     m.unlock();
     t.join();
-    
+
 #ifdef __cpp_deduction_guides
     std::lock_guard lg(m);
     static_assert((std::is_same<decltype(lg), std::lock_guard<decltype(m)>>::value), "" );

@@ -68,7 +68,8 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *Shdr) {
 OutputSection::OutputSection(StringRef Name, uint32_t Type, uint64_t Flags)
     : SectionBase(Output, Name, Flags, /*Entsize*/ 0, /*Alignment*/ 1, Type,
                   /*Info*/ 0,
-                  /*Link*/ 0) {}
+                  /*Link*/ 0),
+      SectionIndex(INT_MAX) {}
 
 static bool compareByFilePosition(InputSection *A, InputSection *B) {
   // Synthetic doesn't have link order dependecy, stable_sort will keep it last
@@ -139,11 +140,23 @@ template <class ELFT> void OutputSection::finalize() {
   this->Info = S->OutSec->SectionIndex;
 }
 
+static uint64_t updateOffset(uint64_t Off, InputSection *S) {
+  Off = alignTo(Off, S->Alignment);
+  S->OutSecOff = Off;
+  return Off + S->getSize();
+}
+
 void OutputSection::addSection(InputSection *S) {
   assert(S->Live);
   Sections.push_back(S);
   S->OutSec = this;
   this->updateAlignment(S->Alignment);
+
+  // The actual offsets will be computed by assignAddresses. For now, use
+  // crude approximation so that it is at least easy for other code to know the
+  // section order. It is also used to calculate the output section size early
+  // for compressed debug sections.
+  this->Size = updateOffset(Size, S);
 
   // If this section contains a table of fixed-size entries, sh_entsize
   // holds the element size. Consequently, if this contains two or more
@@ -159,11 +172,8 @@ void OutputSection::addSection(InputSection *S) {
 // and scan relocations to setup sections' offsets.
 void OutputSection::assignOffsets() {
   uint64_t Off = 0;
-  for (InputSection *S : Sections) {
-    Off = alignTo(Off, S->Alignment);
-    S->OutSecOff = Off;
-    Off += S->getSize();
-  }
+  for (InputSection *S : Sections)
+    Off = updateOffset(Off, S);
   this->Size = Off;
 }
 
@@ -263,7 +273,7 @@ uint32_t OutputSection::getFiller() {
   // linker script. If nothing is specified and this is an executable section,
   // fall back to trap instructions to prevent bad diassembly and detect invalid
   // jumps to padding.
-  if (Optional<uint32_t> Filler = Script->getFiller(Name))
+  if (Optional<uint32_t> Filler = Script->getFiller(this))
     return *Filler;
   if (Flags & SHF_EXECINSTR)
     return Target->TrapInstr;
@@ -287,7 +297,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
   if (Filler)
     fill(Buf, Sections.empty() ? Size : Sections[0]->OutSecOff, Filler);
 
-  parallelFor(0, Sections.size(), [=](size_t I) {
+  parallelForEachN(0, Sections.size(), [=](size_t I) {
     InputSection *Sec = Sections[I];
     Sec->writeTo<ELFT>(Buf);
 
@@ -305,7 +315,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
 
   // Linker scripts may have BYTE()-family commands with which you
   // can write arbitrary bytes to the output. Process them if any.
-  Script->writeDataBytes(Name, Buf);
+  Script->writeDataBytes(this, Buf);
 }
 
 static uint64_t getOutFlags(InputSectionBase *S) {
@@ -395,14 +405,20 @@ static void reportDiscarded(InputSectionBase *IS) {
 
 void OutputSectionFactory::addInputSec(InputSectionBase *IS,
                                        StringRef OutsecName) {
+  SectionKey Key = createKey(IS, OutsecName);
+  OutputSection *&Sec = Map[Key];
+  return addInputSec(IS, OutsecName, Sec);
+}
+
+void OutputSectionFactory::addInputSec(InputSectionBase *IS,
+                                       StringRef OutsecName,
+                                       OutputSection *&Sec) {
   if (!IS->Live) {
     reportDiscarded(IS);
     return;
   }
 
-  SectionKey Key = createKey(IS, OutsecName);
   uint64_t Flags = getOutFlags(IS);
-  OutputSection *&Sec = Map[Key];
   if (Sec) {
     if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(IS->Flags))
       error("incompatible section flags for " + Sec->Name +
@@ -413,12 +429,15 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
       if (canMergeToProgbits(Sec->Type) && canMergeToProgbits(IS->Type))
         Sec->Type = SHT_PROGBITS;
       else
-        error("Section has different type from others with the same name " +
-              toString(IS));
+        error("section type mismatch for " + IS->Name +
+              "\n>>> " + toString(IS) + ": " +
+              getELFSectionTypeName(Config->EMachine, IS->Type) +
+              "\n>>> output section " + Sec->Name + ": " +
+              getELFSectionTypeName(Config->EMachine, Sec->Type));
     }
     Sec->Flags |= Flags;
   } else {
-    Sec = make<OutputSection>(Key.Name, IS->Type, Flags);
+    Sec = make<OutputSection>(OutsecName, IS->Type, Flags);
     OutputSections.push_back(Sec);
   }
 

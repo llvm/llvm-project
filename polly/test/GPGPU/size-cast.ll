@@ -29,7 +29,7 @@
 ; CODE-NEXT:   if (arg >= 32 * b0 + t0 + 1048576 * c0 + 1)
 ; CODE-NEXT:     Stmt_bb6(0, 32 * b0 + t0 + 1048576 * c0);
 
-; IR:        call i8* @polly_initContext()
+; IR:        call i8* @polly_initContextCUDA()
 ; IR-NEXT:   sext i32 %arg to i64
 ; IR-NEXT:   mul i64
 ; IR-NEXT:   @polly_allocateMemoryForDevice

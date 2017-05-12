@@ -123,13 +123,13 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
 
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
-std::vector<MemoryBufferRef>
-LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
+std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
+    MemoryBufferRef MB) {
   std::unique_ptr<Archive> File =
       check(Archive::create(MB),
             MB.getBufferIdentifier() + ": failed to parse archive");
 
-  std::vector<MemoryBufferRef> V;
+  std::vector<std::pair<MemoryBufferRef, uint64_t>> V;
   Error Err = Error::success();
   for (const ErrorOr<Archive::Child> &COrErr : File->children(Err)) {
     Archive::Child C =
@@ -139,7 +139,7 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
         check(C.getMemoryBufferRef(),
               MB.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
-    V.push_back(MBRef);
+    V.push_back(std::make_pair(MBRef, C.getChildOffset()));
   }
   if (Err)
     fatal(MB.getBufferIdentifier() + ": Archive::children failed: " +
@@ -152,8 +152,7 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
   return V;
 }
 
-// Opens and parses a file. Path has to be resolved already.
-// Newly created memory buffers are owned by this driver.
+// Opens a file and create a file object. Path has to be resolved already.
 void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
   using namespace sys::fs;
 
@@ -171,14 +170,31 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
   case file_magic::unknown:
     readLinkerScript(MBRef);
     return;
-  case file_magic::archive:
+  case file_magic::archive: {
+    // Handle -whole-archive.
     if (InWholeArchive) {
-      for (MemoryBufferRef MB : getArchiveMembers(MBRef))
-        Files.push_back(createObjectFile(MB, Path));
+      for (const auto &P : getArchiveMembers(MBRef))
+        Files.push_back(createObjectFile(P.first, Path, P.second));
       return;
     }
-    Files.push_back(make<ArchiveFile>(MBRef));
+
+    std::unique_ptr<Archive> File =
+        check(Archive::create(MBRef), Path + ": failed to parse archive");
+
+    // If an archive file has no symbol table, it is likely that a user
+    // is attempting LTO and using a default ar command that doesn't
+    // understand the LLVM bitcode file. It is a pretty common error, so
+    // we'll handle it as if it had a symbol table.
+    if (!File->hasSymbolTable()) {
+      for (const auto &P : getArchiveMembers(MBRef))
+        Files.push_back(make<LazyObjectFile>(P.first, Path, P.second));
+      return;
+    }
+
+    // Handle the regular case.
+    Files.push_back(make<ArchiveFile>(std::move(File)));
     return;
+  }
   case file_magic::elf_shared_object:
     if (Config->Relocatable) {
       error("attempted static link of dynamic object " + Path);
@@ -199,7 +215,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     return;
   default:
     if (InLib)
-      Files.push_back(make<LazyObjectFile>(MBRef));
+      Files.push_back(make<LazyObjectFile>(MBRef, "", 0));
     else
       Files.push_back(createObjectFile(MBRef));
   }
@@ -399,7 +415,7 @@ static std::vector<StringRef> getArgs(opt::InputArgList &Args, int Id) {
   return V;
 }
 
-static std::string getRPath(opt::InputArgList &Args) {
+static std::string getRpath(opt::InputArgList &Args) {
   std::vector<StringRef> V = getArgs(Args, OPT_rpath);
   return llvm::join(V.begin(), V.end(), ":");
 }
@@ -447,16 +463,14 @@ static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &Args) {
 }
 
 static Target2Policy getTarget2(opt::InputArgList &Args) {
-  if (auto *Arg = Args.getLastArg(OPT_target2)) {
-    StringRef S = Arg->getValue();
-    if (S == "rel")
-      return Target2Policy::Rel;
-    if (S == "abs")
-      return Target2Policy::Abs;
-    if (S == "got-rel")
-      return Target2Policy::GotRel;
-    error("unknown --target2 option: " + S);
-  }
+  StringRef S = getString(Args, OPT_target2, "got-rel");
+  if (S == "rel")
+    return Target2Policy::Rel;
+  if (S == "abs")
+    return Target2Policy::Abs;
+  if (S == "got-rel")
+    return Target2Policy::GotRel;
+  error("unknown --target2 option: " + S);
   return Target2Policy::GotRel;
 }
 
@@ -561,11 +575,7 @@ getBuildId(opt::InputArgList &Args) {
   if (Args.hasArg(OPT_build_id))
     return {BuildIdKind::Fast, {}};
 
-  auto *Arg = Args.getLastArg(OPT_build_id_eq);
-  if (!Arg)
-    return {BuildIdKind::None, {}};
-
-  StringRef S = Arg->getValue();
+  StringRef S = getString(Args, OPT_build_id_eq, "none");
   if (S == "md5")
     return {BuildIdKind::Md5, {}};
   if (S == "sha1" || S == "tree")
@@ -594,14 +604,14 @@ static std::vector<StringRef> getLines(MemoryBufferRef MB) {
 }
 
 static bool getCompressDebugSections(opt::InputArgList &Args) {
-  if (auto *Arg = Args.getLastArg(OPT_compress_debug_sections)) {
-    StringRef S = Arg->getValue();
-    if (S == "zlib")
-      return zlib::isAvailable();
-    if (S != "none")
-      error("unknown --compress-debug-sections value: " + S);
-  }
-  return false;
+  StringRef S = getString(Args, OPT_compress_debug_sections, "none");
+  if (S == "none")
+    return false;
+  if (S != "zlib")
+    error("unknown --compress-debug-sections value: " + S);
+  if (!zlib::isAvailable())
+    error("--compress-debug-sections: zlib is not available");
+  return true;
 }
 
 // Initializes Config members by the command line options.
@@ -646,7 +656,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->OutputFile = getString(Args, OPT_o);
   Config->Pie = getArg(Args, OPT_pie, OPT_nopie, false);
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
-  Config->RPath = getRPath(Args);
+  Config->Rpath = getRpath(Args);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
   Config->SearchPaths = getArgs(Args, OPT_L);
