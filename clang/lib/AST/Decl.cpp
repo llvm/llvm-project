@@ -47,9 +47,7 @@ bool Decl::isOutOfLine() const {
 
 TranslationUnitDecl::TranslationUnitDecl(ASTContext &ctx)
     : Decl(TranslationUnit, nullptr, SourceLocation()),
-      DeclContext(TranslationUnit), Ctx(ctx), AnonymousNamespace(nullptr) {
-  Hidden = Ctx.getLangOpts().ModulesLocalVisibility;
-}
+      DeclContext(TranslationUnit), Ctx(ctx), AnonymousNamespace(nullptr) {}
 
 //===----------------------------------------------------------------------===//
 // NamedDecl Implementation

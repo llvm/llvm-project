@@ -1432,8 +1432,9 @@ bool CXXRecordDecl::isAnyDestructorNoReturn() const {
 
   // Check base classes destructor for noreturn.
   for (const auto &Base : bases())
-    if (Base.getType()->getAsCXXRecordDecl()->isAnyDestructorNoReturn())
-      return true;
+    if (const CXXRecordDecl *RD = Base.getType()->getAsCXXRecordDecl())
+      if (RD->isAnyDestructorNoReturn())
+        return true;
 
   // Check fields for noreturn.
   for (const auto *Field : fields())

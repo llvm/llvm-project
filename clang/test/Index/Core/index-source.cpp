@@ -287,3 +287,30 @@ class PartialSpecilizationClass<Cls, Cls> : Cls { };
 // CHECK-NEXT: [[@LINE-5]]:7 | class(Gen)/C++ | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass | <no-cgname> | Ref | rel: 0
 // CHECK-NEXT: [[@LINE-6]]:33 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref | rel: 0
 // CHECK-NEXT: [[@LINE-7]]:38 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref | rel: 0
+
+template<typename T, int x>
+void functionSp() { }
+
+struct Record {
+  constexpr static int C = 2;
+};
+
+template<>
+void functionSp<SpecializationDecl<Cls>, Record::C>() {
+// CHECK: [[@LINE-1]]:6 | function(Gen,TS)/C++ | functionSp | c:@F@functionSp<#$@S@SpecializationDecl>#$@S@Cls#VI2># | __Z10functionSpI18SpecializationDeclI3ClsELi2EEvv | Def,RelSpecialization | rel: 1
+// CHECK:   RelSpecialization | functionSp | c:@FT@>2#T#NIfunctionSp#v#
+// CHECK: [[@LINE-3]]:17 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-4]]:36 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-5]]:50 | static-property/C++ | C | c:@S@Record@C | __ZN6Record1CE | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-6]]:42 | struct/C++ | Record | c:@S@Record | <no-cgname> | Ref,RelCont | rel: 1
+}
+
+template<typename T, int x>
+class ClassWithCorrectSpecialization { };
+
+template<>
+class ClassWithCorrectSpecialization<SpecializationDecl<Cls>, Record::C> { };
+// CHECK: [[@LINE-1]]:38 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Ref | rel: 0
+// CHECK: [[@LINE-2]]:57 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref | rel: 0
+// CHECK: [[@LINE-3]]:71 | static-property/C++ | C | c:@S@Record@C | __ZN6Record1CE | Ref,Read | rel: 0
+// CHECK: [[@LINE-4]]:63 | struct/C++ | Record | c:@S@Record | <no-cgname> | Ref | rel: 0

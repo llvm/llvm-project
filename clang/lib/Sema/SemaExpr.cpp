@@ -8031,6 +8031,33 @@ QualType Sema::InvalidOperands(SourceLocation Loc, ExprResult &LHS,
   return QualType();
 }
 
+// Diagnose cases where a scalar was implicitly converted to a vector and
+// diagnose the underlying types. Otherwise, diagnose the error
+// as invalid vector logical operands for non-C++ cases.
+QualType Sema::InvalidLogicalVectorOperands(SourceLocation Loc, ExprResult &LHS,
+                                            ExprResult &RHS) {
+  QualType LHSType = LHS.get()->IgnoreImpCasts()->getType();
+  QualType RHSType = RHS.get()->IgnoreImpCasts()->getType();
+
+  bool LHSNatVec = LHSType->isVectorType();
+  bool RHSNatVec = RHSType->isVectorType();
+
+  if (!(LHSNatVec && RHSNatVec)) {
+    Expr *Vector = LHSNatVec ? LHS.get() : RHS.get();
+    Expr *NonVector = !LHSNatVec ? LHS.get() : RHS.get();
+    Diag(Loc, diag::err_typecheck_logical_vector_expr_gnu_cpp_restrict)
+        << 0 << Vector->getType() << NonVector->IgnoreImpCasts()->getType()
+        << Vector->getSourceRange();
+    return QualType();
+  }
+
+  Diag(Loc, diag::err_typecheck_logical_vector_expr_gnu_cpp_restrict)
+      << 1 << LHSType << RHSType << LHS.get()->getSourceRange()
+      << RHS.get()->getSourceRange();
+
+  return QualType();
+}
+
 /// Try to convert a value of non-vector type to a vector type by converting
 /// the type to the element type of the vector and then performing a splat.
 /// If the language is OpenCL, we only use conversions that promote scalar
@@ -8074,6 +8101,162 @@ static bool tryVectorConvertAndSplat(Sema &S, ExprResult *scalar,
     if (scalarCast != CK_Invalid)
       *scalar = S.ImpCastExprToType(scalar->get(), vectorEltTy, scalarCast);
     *scalar = S.ImpCastExprToType(scalar->get(), vectorTy, CK_VectorSplat);
+  }
+  return false;
+}
+
+/// Test if a (constant) integer Int can be casted to another integer type
+/// IntTy without losing precision.
+static bool canConvertIntToOtherIntTy(Sema &S, ExprResult *Int,
+                                      QualType OtherIntTy) {
+  QualType IntTy = Int->get()->getType().getUnqualifiedType();
+
+  // Reject cases where the value of the Int is unknown as that would
+  // possibly cause truncation, but accept cases where the scalar can be
+  // demoted without loss of precision.
+  llvm::APSInt Result;
+  bool CstInt = Int->get()->EvaluateAsInt(Result, S.Context);
+  int Order = S.Context.getIntegerTypeOrder(OtherIntTy, IntTy);
+  bool IntSigned = IntTy->hasSignedIntegerRepresentation();
+  bool OtherIntSigned = OtherIntTy->hasSignedIntegerRepresentation();
+
+  if (CstInt) {
+    // If the scalar is constant and is of a higher order and has more active
+    // bits that the vector element type, reject it.
+    unsigned NumBits = IntSigned
+                           ? (Result.isNegative() ? Result.getMinSignedBits()
+                                                  : Result.getActiveBits())
+                           : Result.getActiveBits();
+    if (Order < 0 && S.Context.getIntWidth(OtherIntTy) < NumBits)
+      return true;
+
+    // If the signedness of the scalar type and the vector element type
+    // differs and the number of bits is greater than that of the vector
+    // element reject it.
+    return (IntSigned != OtherIntSigned &&
+            NumBits > S.Context.getIntWidth(OtherIntTy));
+  }
+
+  // Reject cases where the value of the scalar is not constant and it's
+  // order is greater than that of the vector element type.
+  return (Order < 0);
+}
+
+/// Test if a (constant) integer Int can be casted to floating point type
+/// FloatTy without losing precision.
+static bool canConvertIntTyToFloatTy(Sema &S, ExprResult *Int,
+                                     QualType FloatTy) {
+  QualType IntTy = Int->get()->getType().getUnqualifiedType();
+
+  // Determine if the integer constant can be expressed as a floating point
+  // number of the appropiate type.
+  llvm::APSInt Result;
+  bool CstInt = Int->get()->EvaluateAsInt(Result, S.Context);
+  uint64_t Bits = 0;
+  if (CstInt) {
+    // Reject constants that would be truncated if they were converted to
+    // the floating point type. Test by simple to/from conversion.
+    // FIXME: Ideally the conversion to an APFloat and from an APFloat
+    //        could be avoided if there was a convertFromAPInt method
+    //        which could signal back if implicit truncation occurred.
+    llvm::APFloat Float(S.Context.getFloatTypeSemantics(FloatTy));
+    Float.convertFromAPInt(Result, IntTy->hasSignedIntegerRepresentation(),
+                           llvm::APFloat::rmTowardZero);
+    llvm::APSInt ConvertBack(S.Context.getIntWidth(IntTy),
+                             !IntTy->hasSignedIntegerRepresentation());
+    bool Ignored = false;
+    Float.convertToInteger(ConvertBack, llvm::APFloat::rmNearestTiesToEven,
+                           &Ignored);
+    if (Result != ConvertBack)
+      return true;
+  } else {
+    // Reject types that cannot be fully encoded into the mantissa of
+    // the float.
+    Bits = S.Context.getTypeSize(IntTy);
+    unsigned FloatPrec = llvm::APFloat::semanticsPrecision(
+        S.Context.getFloatTypeSemantics(FloatTy));
+    if (Bits > FloatPrec)
+      return true;
+  }
+
+  return false;
+}
+
+/// Attempt to convert and splat Scalar into a vector whose types matches
+/// Vector following GCC conversion rules. The rule is that implicit
+/// conversion can occur when Scalar can be casted to match Vector's element
+/// type without causing truncation of Scalar.
+static bool tryGCCVectorConvertAndSplat(Sema &S, ExprResult *Scalar,
+                                        ExprResult *Vector) {
+  QualType ScalarTy = Scalar->get()->getType().getUnqualifiedType();
+  QualType VectorTy = Vector->get()->getType().getUnqualifiedType();
+  const VectorType *VT = VectorTy->getAs<VectorType>();
+
+  assert(!isa<ExtVectorType>(VT) &&
+         "ExtVectorTypes should not be handled here!");
+
+  QualType VectorEltTy = VT->getElementType();
+
+  // Reject cases where the vector element type or the scalar element type are
+  // not integral or floating point types.
+  if (!VectorEltTy->isArithmeticType() || !ScalarTy->isArithmeticType())
+    return true;
+
+  // The conversion to apply to the scalar before splatting it,
+  // if necessary.
+  CastKind ScalarCast = CK_Invalid;
+
+  // Accept cases where the vector elements are integers and the scalar is
+  // an integer.
+  // FIXME: Notionally if the scalar was a floating point value with a precise
+  //        integral representation, we could cast it to an appropriate integer
+  //        type and then perform the rest of the checks here. GCC will perform
+  //        this conversion in some cases as determined by the input language.
+  //        We should accept it on a language independent basis.
+  if (VectorEltTy->isIntegralType(S.Context) &&
+      ScalarTy->isIntegralType(S.Context) &&
+      S.Context.getIntegerTypeOrder(VectorEltTy, ScalarTy)) {
+
+    if (canConvertIntToOtherIntTy(S, Scalar, VectorEltTy))
+      return true;
+
+    ScalarCast = CK_IntegralCast;
+  } else if (VectorEltTy->isRealFloatingType()) {
+    if (ScalarTy->isRealFloatingType()) {
+
+      // Reject cases where the scalar type is not a constant and has a higher
+      // Order than the vector element type.
+      llvm::APFloat Result(0.0);
+      bool CstScalar = Scalar->get()->EvaluateAsFloat(Result, S.Context);
+      int Order = S.Context.getFloatingTypeOrder(VectorEltTy, ScalarTy);
+      if (!CstScalar && Order < 0)
+        return true;
+
+      // If the scalar cannot be safely casted to the vector element type,
+      // reject it.
+      if (CstScalar) {
+        bool Truncated = false;
+        Result.convert(S.Context.getFloatTypeSemantics(VectorEltTy),
+                       llvm::APFloat::rmNearestTiesToEven, &Truncated);
+        if (Truncated)
+          return true;
+      }
+
+      ScalarCast = CK_FloatingCast;
+    } else if (ScalarTy->isIntegralType(S.Context)) {
+      if (canConvertIntTyToFloatTy(S, Scalar, VectorEltTy))
+        return true;
+
+      ScalarCast = CK_IntegralToFloating;
+    } else
+      return true;
+  }
+
+  // Adjust scalar if desired.
+  if (Scalar) {
+    if (ScalarCast != CK_Invalid)
+      *Scalar = S.ImpCastExprToType(Scalar->get(), VectorEltTy, ScalarCast);
+    *Scalar = S.ImpCastExprToType(Scalar->get(), VectorTy, CK_VectorSplat);
   }
   return false;
 }
@@ -8146,19 +8329,29 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
     }
   }
 
-  // If there's an ext-vector type and a scalar, try to convert the scalar to
+  // If there's a vector type and a scalar, try to convert the scalar to
   // the vector element type and splat.
-  // FIXME: this should also work for regular vector types as supported in GCC.
-  if (!RHSVecType && isa<ExtVectorType>(LHSVecType)) {
-    if (!tryVectorConvertAndSplat(*this, &RHS, RHSType,
-                                  LHSVecType->getElementType(), LHSType))
-      return LHSType;
+  if (!RHSVecType) {
+    if (isa<ExtVectorType>(LHSVecType)) {
+      if (!tryVectorConvertAndSplat(*this, &RHS, RHSType,
+                                    LHSVecType->getElementType(), LHSType))
+        return LHSType;
+    } else {
+      if (!tryGCCVectorConvertAndSplat(*this, &RHS, &LHS))
+        return LHSType;
+    }
   }
-  if (!LHSVecType && isa<ExtVectorType>(RHSVecType)) {
-    if (!tryVectorConvertAndSplat(*this, (IsCompAssign ? nullptr : &LHS),
-                                  LHSType, RHSVecType->getElementType(),
-                                  RHSType))
-      return RHSType;
+  if (!LHSVecType) {
+    if (isa<ExtVectorType>(RHSVecType)) {
+      if (!tryVectorConvertAndSplat(*this, (IsCompAssign ? nullptr : &LHS),
+                                    LHSType, RHSVecType->getElementType(),
+                                    RHSType))
+        return RHSType;
+    } else {
+      if (LHS.get()->getValueKind() == VK_LValue ||
+          !tryGCCVectorConvertAndSplat(*this, &LHS, &RHS))
+        return RHSType;
+    }
   }
 
   // FIXME: The code below also handles conversion between vectors and
@@ -8208,6 +8401,22 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
       LHSVecType && isa<ExtVectorType>(LHSVecType)) {
     Diag(Loc, diag::err_opencl_implicit_vector_conversion) << LHSType
                                                            << RHSType;
+    return QualType();
+  }
+
+
+  // If there is a vector type that is not a ExtVector and a scalar, we reach
+  // this point if scalar could not be converted to the vector's element type
+  // without truncation.
+  if ((RHSVecType && !isa<ExtVectorType>(RHSVecType)) ||
+      (LHSVecType && !isa<ExtVectorType>(LHSVecType))) {
+    QualType Scalar = LHSVecType ? RHSType : LHSType;
+    QualType Vector = LHSVecType ? LHSType : RHSType;
+    unsigned ScalarOrVector = LHSVecType && RHSVecType ? 1 : 0;
+    Diag(Loc,
+         diag::err_typecheck_vector_not_convertable_implict_truncation)
+        << ScalarOrVector << Scalar << Vector;
+
     return QualType();
   }
 
@@ -9830,6 +10039,12 @@ QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   if (getLangOpts().OpenCL && getLangOpts().OpenCLVersion < 120 &&
       vType->hasFloatingRepresentation())
     return InvalidOperands(Loc, LHS, RHS);
+  // FIXME: The check for C++ here is for GCC compatibility. GCC rejects the
+  //        usage of the logical operators && and || with vectors in C. This
+  //        check could be notionally dropped.
+  if (!getLangOpts().CPlusPlus &&
+      !(isa<ExtVectorType>(vType->getAs<VectorType>())))
+    return InvalidLogicalVectorOperands(Loc, LHS, RHS);
 
   return GetSignedVectorType(LHS.get()->getType());
 }
@@ -11773,6 +11988,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       resultType = GetSignedVectorType(resultType);
       break;
     } else {
+      // FIXME: GCC's vector extension permits the usage of '!' with a vector
+      //        type in C++. We should allow that here too.
       return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
         << resultType << Input.get()->getSourceRange());
     }

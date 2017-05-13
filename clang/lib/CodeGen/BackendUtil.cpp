@@ -1073,7 +1073,8 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
     // into memory and pass it into runThinLTOBackend, which will run the
     // function importer and invoke LTO passes.
     Expected<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
-        llvm::getModuleSummaryIndexForFile(CGOpts.ThinLTOIndexFile);
+        llvm::getModuleSummaryIndexForFile(CGOpts.ThinLTOIndexFile,
+                                           /*IgnoreEmptyThinLTOIndexFile*/true);
     if (!IndexOrErr) {
       logAllUnhandledErrors(IndexOrErr.takeError(), errs(),
                             "Error loading index file '" +

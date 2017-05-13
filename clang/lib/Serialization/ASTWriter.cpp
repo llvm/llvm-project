@@ -2413,7 +2413,6 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
     }
 
     AddIdentifierRef(Name, Record);
-    Record.push_back(inferSubmoduleIDFromLocation(MI->getDefinitionLoc()));
     AddSourceLocation(MI->getDefinitionLoc(), Record);
     AddSourceLocation(MI->getDefinitionEndLoc(), Record);
     Record.push_back(MI->isUsed());

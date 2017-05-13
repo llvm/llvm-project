@@ -54,33 +54,10 @@ using namespace clang;
 // Utility Methods for Preprocessor Directive Handling.
 //===----------------------------------------------------------------------===//
 
-MacroInfo *Preprocessor::AllocateMacroInfo() {
-  MacroInfoChain *MIChain = BP.Allocate<MacroInfoChain>();
-  MIChain->Next = MIChainHead;
+MacroInfo *Preprocessor::AllocateMacroInfo(SourceLocation L) {
+  auto *MIChain = new (BP) MacroInfoChain{L, MIChainHead};
   MIChainHead = MIChain;
   return &MIChain->MI;
-}
-
-MacroInfo *Preprocessor::AllocateMacroInfo(SourceLocation L) {
-  MacroInfo *MI = AllocateMacroInfo();
-  new (MI) MacroInfo(L);
-  return MI;
-}
-
-MacroInfo *Preprocessor::AllocateDeserializedMacroInfo(SourceLocation L,
-                                                       unsigned SubModuleID) {
-  static_assert(alignof(MacroInfo) >= sizeof(SubModuleID),
-                "alignment for MacroInfo is less than the ID");
-  DeserializedMacroInfoChain *MIChain =
-      BP.Allocate<DeserializedMacroInfoChain>();
-  MIChain->Next = DeserialMIChainHead;
-  DeserialMIChainHead = MIChain;
-
-  MacroInfo *MI = &MIChain->MI;
-  new (MI) MacroInfo(L);
-  MI->FromASTFile = true;
-  MI->setOwningModuleID(SubModuleID);
-  return MI;
 }
 
 DefMacroDirective *Preprocessor::AllocateDefMacroDirective(MacroInfo *MI,

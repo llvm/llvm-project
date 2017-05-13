@@ -1,10 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm -o - %s -triple %itanium_abi_triple | FileCheck %s
 // RUN: %clang_cc1 -emit-llvm -o - %s -triple %itanium_abi_triple -std=c++98 -fexceptions -fcxx-exceptions | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-EH
 
-// Hexagon calling convention lowering is horribly broken and fails to pass A
-// object to B constructor at all!
-// XFAIL: hexagon
-
 struct A {
   A();
   ~A();
