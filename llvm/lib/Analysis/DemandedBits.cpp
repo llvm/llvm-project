@@ -118,7 +118,7 @@ void DemandedBits::determineLiveOperandBits(
           // known to be one.
           ComputeKnownBits(BitWidth, I, nullptr);
           AB = APInt::getHighBitsSet(BitWidth,
-                 std::min(BitWidth, Known.One.countLeadingZeros()+1));
+                 std::min(BitWidth, Known.countMaxLeadingZeros()+1));
         }
         break;
       case Intrinsic::cttz:
@@ -128,7 +128,7 @@ void DemandedBits::determineLiveOperandBits(
           // known to be one.
           ComputeKnownBits(BitWidth, I, nullptr);
           AB = APInt::getLowBitsSet(BitWidth,
-                 std::min(BitWidth, Known.One.countTrailingZeros()+1));
+                 std::min(BitWidth, Known.countMaxTrailingZeros()+1));
         }
         break;
       }

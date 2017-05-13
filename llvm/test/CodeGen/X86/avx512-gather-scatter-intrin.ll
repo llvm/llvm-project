@@ -852,16 +852,16 @@ define <16 x float> @gather_mask_test(<16 x i32> %ind, <16 x float> %src, i8* %b
 ; CHECK-NEXT:    kxorw %k0, %k0, %k1
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm3
 ; CHECK-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm3 {%k1}
+; CHECK-NEXT:    vaddps %zmm3, %zmm2, %zmm2
 ; CHECK-NEXT:    movw $1, %ax
 ; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vmovaps %zmm1, %zmm4
-; CHECK-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm4 {%k1}
+; CHECK-NEXT:    vmovaps %zmm1, %zmm3
+; CHECK-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm3 {%k1}
 ; CHECK-NEXT:    movw $220, %ax
 ; CHECK-NEXT:    kmovd %eax, %k1
 ; CHECK-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
-; CHECK-NEXT:    vaddps %zmm3, %zmm2, %zmm0
-; CHECK-NEXT:    vaddps %zmm4, %zmm1, %zmm1
-; CHECK-NEXT:    vaddps %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    vaddps %zmm3, %zmm1, %zmm0
+; CHECK-NEXT:    vaddps %zmm2, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <16 x float> @llvm.x86.avx512.gather.dps.512 (<16 x float> %src, i8* %base, <16 x i32>%ind, i16 -1, i32 4)
   %res1 = call <16 x float> @llvm.x86.avx512.gather.dps.512 (<16 x float> %src, i8* %base, <16 x i32>%ind, i16 0, i32 4)

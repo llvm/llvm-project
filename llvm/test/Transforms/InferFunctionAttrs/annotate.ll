@@ -22,11 +22,137 @@ declare i32 @__nvvm_reflect(i8*)
 ; Use an opaque pointer type for all the (possibly opaque) structs.
 %opaque = type opaque
 
+; CHECK: declare double @__acos_finite(double)
+declare double @__acos_finite(double)
+
+; CHECK: declare float @__acosf_finite(float)
+declare float @__acosf_finite(float)
+
+; CHECK: declare double @__acosh_finite(double)
+declare double @__acosh_finite(double)
+
+; CHECK: declare float @__acoshf_finite(float)
+declare float @__acoshf_finite(float)
+
+; CHECK: declare x86_fp80 @__acoshl_finite(x86_fp80)
+declare x86_fp80 @__acoshl_finite(x86_fp80)
+
+; CHECK: declare x86_fp80 @__acosl_finite(x86_fp80)
+declare x86_fp80 @__acosl_finite(x86_fp80)
+
+; CHECK: declare double @__asin_finite(double)
+declare double @__asin_finite(double)
+
+; CHECK: declare float @__asinf_finite(float)
+declare float @__asinf_finite(float)
+
+; CHECK: declare x86_fp80 @__asinl_finite(x86_fp80)
+declare x86_fp80 @__asinl_finite(x86_fp80)
+
+; CHECK: declare double @__atan2_finite(double, double)
+declare double @__atan2_finite(double, double)
+
+; CHECK: declare float @__atan2f_finite(float, float)
+declare float @__atan2f_finite(float, float)
+
+; CHECK: declare x86_fp80 @__atan2l_finite(x86_fp80, x86_fp80)
+declare x86_fp80 @__atan2l_finite(x86_fp80, x86_fp80)
+
+; CHECK: declare double @__atanh_finite(double)
+declare double @__atanh_finite(double)
+
+; CHECK: declare float @__atanhf_finite(float)
+declare float @__atanhf_finite(float)
+
+; CHECK: declare x86_fp80 @__atanhl_finite(x86_fp80)
+declare x86_fp80 @__atanhl_finite(x86_fp80)
+
+; CHECK: declare double @__cosh_finite(double)
+declare double @__cosh_finite(double)
+
+; CHECK: declare float @__coshf_finite(float)
+declare float @__coshf_finite(float)
+
+; CHECK: declare x86_fp80 @__coshl_finite(x86_fp80)
+declare x86_fp80 @__coshl_finite(x86_fp80)
+
 ; CHECK: declare double @__cospi(double)
 declare double @__cospi(double)
 
 ; CHECK: declare float @__cospif(float)
 declare float @__cospif(float)
+
+; CHECK: declare double @__exp10_finite(double)
+declare double @__exp10_finite(double)
+
+; CHECK: declare float @__exp10f_finite(float)
+declare float @__exp10f_finite(float)
+
+; CHECK: declare x86_fp80 @__exp10l_finite(x86_fp80)
+declare x86_fp80 @__exp10l_finite(x86_fp80)
+
+; CHECK: declare double @__exp2_finite(double)
+declare double @__exp2_finite(double)
+
+; CHECK: declare float @__exp2f_finite(float)
+declare float @__exp2f_finite(float)
+
+; CHECK: declare x86_fp80 @__exp2l_finite(x86_fp80)
+declare x86_fp80 @__exp2l_finite(x86_fp80)
+
+; CHECK: declare double @__exp_finite(double)
+declare double @__exp_finite(double)
+
+; CHECK: declare float @__expf_finite(float)
+declare float @__expf_finite(float)
+
+; CHECK: declare x86_fp80 @__expl_finite(x86_fp80)
+declare x86_fp80 @__expl_finite(x86_fp80)
+
+; CHECK: declare double @__log10_finite(double)
+declare double @__log10_finite(double)
+
+; CHECK: declare float @__log10f_finite(float)
+declare float @__log10f_finite(float)
+
+; CHECK: declare x86_fp80 @__log10l_finite(x86_fp80)
+declare x86_fp80 @__log10l_finite(x86_fp80)
+
+; CHECK: declare double @__log2_finite(double)
+declare double @__log2_finite(double)
+
+; CHECK: declare float @__log2f_finite(float)
+declare float @__log2f_finite(float)
+
+; CHECK: declare x86_fp80 @__log2l_finite(x86_fp80)
+declare x86_fp80 @__log2l_finite(x86_fp80)
+
+; CHECK: declare double @__log_finite(double)
+declare double @__log_finite(double)
+
+; CHECK: declare float @__logf_finite(float)
+declare float @__logf_finite(float)
+
+; CHECK: declare x86_fp80 @__logl_finite(x86_fp80)
+declare x86_fp80 @__logl_finite(x86_fp80)
+
+; CHECK: declare double @__pow_finite(double, double)
+declare double @__pow_finite(double, double)
+
+; CHECK: declare float @__powf_finite(float, float)
+declare float @__powf_finite(float, float)
+
+; CHECK: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
+declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
+
+; CHECK: declare double @__sinh_finite(double)
+declare double @__sinh_finite(double)
+
+; CHECK: declare float @__sinhf_finite(float)
+declare float @__sinhf_finite(float)
+
+; CHECK: declare x86_fp80 @__sinhl_finite(x86_fp80)
+declare x86_fp80 @__sinhl_finite(x86_fp80)
 
 ; CHECK: declare double @__sinpi(double)
 declare double @__sinpi(double)

@@ -320,14 +320,14 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
       if (IsWin64) {
-        return (HasSSE ? CSR_Win64_RegCall_SaveList : 
+        return (HasSSE ? CSR_Win64_RegCall_SaveList :
                          CSR_Win64_RegCall_NoSSE_SaveList);
       } else {
-        return (HasSSE ? CSR_SysV64_RegCall_SaveList : 
+        return (HasSSE ? CSR_SysV64_RegCall_SaveList :
                          CSR_SysV64_RegCall_NoSSE_SaveList);
       }
     } else {
-      return (HasSSE ? CSR_32_RegCall_SaveList : 
+      return (HasSSE ? CSR_32_RegCall_SaveList :
                        CSR_32_RegCall_NoSSE_SaveList);
     }
   case CallingConv::Cold:
@@ -435,15 +435,15 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return CSR_64_HHVM_RegMask;
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
-      if (IsWin64) { 
-        return (HasSSE ? CSR_Win64_RegCall_RegMask : 
+      if (IsWin64) {
+        return (HasSSE ? CSR_Win64_RegCall_RegMask :
                          CSR_Win64_RegCall_NoSSE_RegMask);
       } else {
-        return (HasSSE ? CSR_SysV64_RegCall_RegMask : 
+        return (HasSSE ? CSR_SysV64_RegCall_RegMask :
                          CSR_SysV64_RegCall_NoSSE_RegMask);
       }
     } else {
-      return (HasSSE ? CSR_32_RegCall_RegMask : 
+      return (HasSSE ? CSR_32_RegCall_RegMask :
                        CSR_32_RegCall_NoSSE_RegMask);
     }
   case CallingConv::Cold:

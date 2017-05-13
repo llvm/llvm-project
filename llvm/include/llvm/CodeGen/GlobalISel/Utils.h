@@ -30,6 +30,7 @@ class TargetInstrInfo;
 class TargetPassConfig;
 class TargetRegisterInfo;
 class Twine;
+class ConstantFP;
 
 /// Try to constrain Reg so that it is usable by argument OpIdx of the
 /// provided MCInstrDesc \p II. If this fails, create a new virtual
@@ -62,6 +63,8 @@ void reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
 
 Optional<int64_t> getConstantVRegVal(unsigned VReg,
                                      const MachineRegisterInfo &MRI);
+const ConstantFP* getConstantFPVRegVal(unsigned VReg,
+                                       const MachineRegisterInfo &MRI);
 
 } // End namespace llvm.
 #endif

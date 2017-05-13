@@ -1209,7 +1209,7 @@ bool PolynomialMultiplyRecognize::highBitsAreZero(Value *V,
 
   KnownBits Known(T->getBitWidth());
   computeKnownBits(V, Known, DL);
-  return Known.Zero.countLeadingOnes() >= IterCount;
+  return Known.countMinLeadingZeros() >= IterCount;
 }
 
 

@@ -2063,14 +2063,6 @@ public:
     return false;
   }
 
-  // Return true if the instruction that performs a << b actually performs
-  // a << (b % (sizeof(a) * 8)).
-  virtual bool supportsModuloShift(ISD::NodeType Inst, EVT ReturnType) const {
-    assert((Inst == ISD::SHL || Inst == ISD::SRA || Inst == ISD::SRL) &&
-           "Expect a shift instruction");
-    return false;
-  }
-
   //===--------------------------------------------------------------------===//
   // Runtime Library hooks
   //

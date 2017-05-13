@@ -52,7 +52,6 @@ AVRRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
 BitVector AVRRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   const AVRTargetMachine &TM = static_cast<const AVRTargetMachine&>(MF.getTarget());
-  const TargetFrameLowering *TFI = TM.getSubtargetImpl()->getFrameLowering();
 
   // Reserve the intermediate result registers r1 and r2
   // The result of instructions like 'mul' is always stored here.

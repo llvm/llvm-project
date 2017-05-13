@@ -45,6 +45,7 @@ public:
   /// Paired begin/end actions for all types. Receives all record data,
   /// including the fixed-length record prefix.
   Error visitTypeBegin(CVType &Record) override;
+  Error visitTypeBegin(CVType &Record, TypeIndex Index) override;
   Error visitTypeEnd(CVType &Record) override;
   Error visitMemberBegin(CVMemberRecord &Record) override;
   Error visitMemberEnd(CVMemberRecord &Record) override;

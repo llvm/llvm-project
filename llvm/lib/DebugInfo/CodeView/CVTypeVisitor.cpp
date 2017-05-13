@@ -26,8 +26,7 @@ CVTypeVisitor::CVTypeVisitor(TypeVisitorCallbacks &Callbacks)
     : Callbacks(Callbacks) {}
 
 template <typename T>
-static Error visitKnownRecord(CVTypeVisitor &Visitor, CVType &Record,
-                              TypeVisitorCallbacks &Callbacks) {
+static Error visitKnownRecord(CVType &Record, TypeVisitorCallbacks &Callbacks) {
   TypeRecordKind RK = static_cast<TypeRecordKind>(Record.Type);
   T KnownRecord(RK);
   if (auto EC = Callbacks.visitKnownRecord(Record, KnownRecord))
@@ -107,7 +106,7 @@ Error CVTypeVisitor::finishVisitation(CVType &Record) {
     break;
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   case EnumName: {                                                             \
-    if (auto EC = visitKnownRecord<Name##Record>(*this, Record, Callbacks))    \
+    if (auto EC = visitKnownRecord<Name##Record>(Record, Callbacks))           \
       return EC;                                                               \
     break;                                                                     \
   }

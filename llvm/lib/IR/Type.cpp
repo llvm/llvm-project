@@ -1,4 +1,4 @@
-//===-- Type.cpp - Implement the Type class -------------------------------===//
+//===- Type.cpp - Implement the Type class --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,11 +11,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Type.h"
 #include "LLVMContextImpl.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include <algorithm>
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <utility>
+
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -219,7 +233,6 @@ PointerType *Type::getInt64PtrTy(LLVMContext &C, unsigned AS) {
   return getInt64Ty(C)->getPointerTo(AS);
 }
 
-
 //===----------------------------------------------------------------------===//
 //                       IntegerType Implementation
 //===----------------------------------------------------------------------===//
@@ -361,7 +374,8 @@ void StructType::setName(StringRef Name) {
   if (Name == getName()) return;
 
   StringMap<StructType *> &SymbolTable = getContext().pImpl->NamedStructTypes;
-  typedef StringMap<StructType *>::MapEntryTy EntryTy;
+
+  using EntryTy = StringMap<StructType *>::MapEntryTy;
 
   // If this struct already had a name, remove its symbol table entry. Don't
   // delete the data yet because it may be part of the new name.
@@ -496,7 +510,6 @@ StructType *Module::getTypeByName(StringRef Name) const {
   return getContext().pImpl->NamedStructTypes.lookup(Name);
 }
 
-
 //===----------------------------------------------------------------------===//
 //                       CompositeType Implementation
 //===----------------------------------------------------------------------===//
@@ -544,7 +557,6 @@ bool CompositeType::indexValid(unsigned Idx) const {
   // Sequential types can be indexed by any integer.
   return true;
 }
-
 
 //===----------------------------------------------------------------------===//
 //                           ArrayType Implementation
@@ -616,7 +628,6 @@ PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
     Entry = new (CImpl->TypeAllocator) PointerType(EltTy, AddressSpace);
   return Entry;
 }
-
 
 PointerType::PointerType(Type *E, unsigned AddrSpace)
   : Type(E->getContext(), PointerTyID), PointeeTy(E) {

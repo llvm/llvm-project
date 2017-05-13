@@ -48,7 +48,7 @@ class ValueSymbolTable;
 template <typename NodeTy> struct SymbolTableListParentType {};
 
 #define DEFINE_SYMBOL_TABLE_PARENT_TYPE(NODE, PARENT)                          \
-  template <> struct SymbolTableListParentType<NODE> { typedef PARENT type; };
+  template <> struct SymbolTableListParentType<NODE> { using type = PARENT; };
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(Instruction, BasicBlock)
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(BasicBlock, Function)
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(Argument, Function)
@@ -65,10 +65,10 @@ template <typename NodeTy> class SymbolTableList;
 //
 template <typename ValueSubClass>
 class SymbolTableListTraits : public ilist_alloc_traits<ValueSubClass> {
-  typedef SymbolTableList<ValueSubClass> ListTy;
-  typedef typename simple_ilist<ValueSubClass>::iterator iterator;
-  typedef
-      typename SymbolTableListParentType<ValueSubClass>::type ItemParentClass;
+  using ListTy = SymbolTableList<ValueSubClass>;
+  using iterator = typename simple_ilist<ValueSubClass>::iterator;
+  using ItemParentClass =
+      typename SymbolTableListParentType<ValueSubClass>::type;
 
 public:
   SymbolTableListTraits() = default;

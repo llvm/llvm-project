@@ -44,8 +44,8 @@ public:
   void run(const Module &M, bool onlyNamed);
   void clear();
 
-  typedef std::vector<StructType*>::iterator iterator;
-  typedef std::vector<StructType*>::const_iterator const_iterator;
+  using iterator = std::vector<StructType*>::iterator;
+  using const_iterator = std::vector<StructType*>::const_iterator;
 
   iterator begin() { return StructTypes.begin(); }
   iterator end() { return StructTypes.end(); }

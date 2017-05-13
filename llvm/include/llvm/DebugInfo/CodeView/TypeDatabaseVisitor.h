@@ -24,8 +24,6 @@ namespace codeview {
 class TypeDatabaseVisitor : public TypeVisitorCallbacks {
 public:
   explicit TypeDatabaseVisitor(TypeDatabase &TypeDB) : TypeDB(&TypeDB) {}
-  explicit TypeDatabaseVisitor(RandomAccessTypeDatabase &TypeDB)
-      : TypeDB(&TypeDB) {}
 
   /// Paired begin/end actions for all types. Receives all record data,
   /// including the fixed-length record prefix.
@@ -53,9 +51,9 @@ private:
   StringRef Name;
   /// Current type index.  Only valid before visitTypeEnd, and if we are
   /// visiting a random access type database.
-  TypeIndex CurrentTypeIndex;
+  Optional<TypeIndex> CurrentTypeIndex;
 
-  PointerUnion<TypeDatabase *, RandomAccessTypeDatabase *> TypeDB;
+  TypeDatabase *TypeDB;
 };
 
 } // end namespace codeview

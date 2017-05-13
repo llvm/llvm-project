@@ -241,6 +241,50 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
       TLI.setUnavailable(LibFunc_tanhf);
     }
 
+    // These definitions are due to math-finite.h header on Linux
+    TLI.setUnavailable(LibFunc_acos_finite);
+    TLI.setUnavailable(LibFunc_acosf_finite);
+    TLI.setUnavailable(LibFunc_acosl_finite);
+    TLI.setUnavailable(LibFunc_acosh_finite);
+    TLI.setUnavailable(LibFunc_acoshf_finite);
+    TLI.setUnavailable(LibFunc_acoshl_finite);
+    TLI.setUnavailable(LibFunc_asin_finite);
+    TLI.setUnavailable(LibFunc_asinf_finite);
+    TLI.setUnavailable(LibFunc_asinl_finite);
+    TLI.setUnavailable(LibFunc_atan2_finite);
+    TLI.setUnavailable(LibFunc_atan2f_finite);
+    TLI.setUnavailable(LibFunc_atan2l_finite);
+    TLI.setUnavailable(LibFunc_atanh_finite);
+    TLI.setUnavailable(LibFunc_atanhf_finite);
+    TLI.setUnavailable(LibFunc_atanhl_finite);
+    TLI.setUnavailable(LibFunc_cosh_finite);
+    TLI.setUnavailable(LibFunc_coshf_finite);
+    TLI.setUnavailable(LibFunc_coshl_finite);
+    TLI.setUnavailable(LibFunc_exp10_finite);
+    TLI.setUnavailable(LibFunc_exp10f_finite);
+    TLI.setUnavailable(LibFunc_exp10l_finite);
+    TLI.setUnavailable(LibFunc_exp2_finite);
+    TLI.setUnavailable(LibFunc_exp2f_finite);
+    TLI.setUnavailable(LibFunc_exp2l_finite);
+    TLI.setUnavailable(LibFunc_exp_finite);
+    TLI.setUnavailable(LibFunc_expf_finite);
+    TLI.setUnavailable(LibFunc_expl_finite);
+    TLI.setUnavailable(LibFunc_log10_finite);
+    TLI.setUnavailable(LibFunc_log10f_finite);
+    TLI.setUnavailable(LibFunc_log10l_finite);
+    TLI.setUnavailable(LibFunc_log2_finite);
+    TLI.setUnavailable(LibFunc_log2f_finite);
+    TLI.setUnavailable(LibFunc_log2l_finite);
+    TLI.setUnavailable(LibFunc_log_finite);
+    TLI.setUnavailable(LibFunc_logf_finite);
+    TLI.setUnavailable(LibFunc_logl_finite);
+    TLI.setUnavailable(LibFunc_pow_finite);
+    TLI.setUnavailable(LibFunc_powf_finite);
+    TLI.setUnavailable(LibFunc_powl_finite);
+    TLI.setUnavailable(LibFunc_sinh_finite);
+    TLI.setUnavailable(LibFunc_sinhf_finite);
+    TLI.setUnavailable(LibFunc_sinhl_finite);
+
     // Win32 does *not* provide provide these functions, but they are
     // generally available on POSIX-compliant systems:
     TLI.setUnavailable(LibFunc_access);
@@ -1004,22 +1048,34 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     return (NumParams == 1 && FTy.getParamType(0)->isFloatingPointTy());
 
   case LibFunc_acos:
+  case LibFunc_acos_finite:
   case LibFunc_acosf:
+  case LibFunc_acosf_finite:
   case LibFunc_acosh:
+  case LibFunc_acosh_finite:
   case LibFunc_acoshf:
+  case LibFunc_acoshf_finite:
   case LibFunc_acoshl:
+  case LibFunc_acoshl_finite:
   case LibFunc_acosl:
+  case LibFunc_acosl_finite:
   case LibFunc_asin:
+  case LibFunc_asin_finite:
   case LibFunc_asinf:
+  case LibFunc_asinf_finite:
   case LibFunc_asinh:
   case LibFunc_asinhf:
   case LibFunc_asinhl:
   case LibFunc_asinl:
+  case LibFunc_asinl_finite:
   case LibFunc_atan:
   case LibFunc_atanf:
   case LibFunc_atanh:
+  case LibFunc_atanh_finite:
   case LibFunc_atanhf:
+  case LibFunc_atanhf_finite:
   case LibFunc_atanhl:
+  case LibFunc_atanhl_finite:
   case LibFunc_atanl:
   case LibFunc_cbrt:
   case LibFunc_cbrtf:
@@ -1030,18 +1086,30 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_cos:
   case LibFunc_cosf:
   case LibFunc_cosh:
+  case LibFunc_cosh_finite:
   case LibFunc_coshf:
+  case LibFunc_coshf_finite:
   case LibFunc_coshl:
+  case LibFunc_coshl_finite:
   case LibFunc_cosl:
   case LibFunc_exp10:
+  case LibFunc_exp10_finite:
   case LibFunc_exp10f:
+  case LibFunc_exp10f_finite:
   case LibFunc_exp10l:
+  case LibFunc_exp10l_finite:
   case LibFunc_exp2:
+  case LibFunc_exp2_finite:
   case LibFunc_exp2f:
+  case LibFunc_exp2f_finite:
   case LibFunc_exp2l:
+  case LibFunc_exp2l_finite:
   case LibFunc_exp:
+  case LibFunc_exp_finite:
   case LibFunc_expf:
+  case LibFunc_expf_finite:
   case LibFunc_expl:
+  case LibFunc_expl_finite:
   case LibFunc_expm1:
   case LibFunc_expm1f:
   case LibFunc_expm1l:
@@ -1052,20 +1120,29 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_floorf:
   case LibFunc_floorl:
   case LibFunc_log10:
+  case LibFunc_log10_finite:
   case LibFunc_log10f:
+  case LibFunc_log10f_finite:
   case LibFunc_log10l:
+  case LibFunc_log10l_finite:
   case LibFunc_log1p:
   case LibFunc_log1pf:
   case LibFunc_log1pl:
   case LibFunc_log2:
+  case LibFunc_log2_finite:
   case LibFunc_log2f:
+  case LibFunc_log2f_finite:
   case LibFunc_log2l:
+  case LibFunc_log2l_finite:
   case LibFunc_log:
+  case LibFunc_log_finite:
   case LibFunc_logb:
   case LibFunc_logbf:
   case LibFunc_logbl:
   case LibFunc_logf:
+  case LibFunc_logf_finite:
   case LibFunc_logl:
+  case LibFunc_logl_finite:
   case LibFunc_nearbyint:
   case LibFunc_nearbyintf:
   case LibFunc_nearbyintl:
@@ -1078,8 +1155,11 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_sin:
   case LibFunc_sinf:
   case LibFunc_sinh:
+  case LibFunc_sinh_finite:
   case LibFunc_sinhf:
+  case LibFunc_sinhf_finite:
   case LibFunc_sinhl:
+  case LibFunc_sinhl_finite:
   case LibFunc_sinl:
   case LibFunc_sqrt:
   case LibFunc_sqrt_finite:
@@ -1100,8 +1180,11 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
             FTy.getReturnType() == FTy.getParamType(0));
 
   case LibFunc_atan2:
+  case LibFunc_atan2_finite:
   case LibFunc_atan2f:
+  case LibFunc_atan2f_finite:
   case LibFunc_atan2l:
+  case LibFunc_atan2l_finite:
   case LibFunc_fmin:
   case LibFunc_fminf:
   case LibFunc_fminl:
@@ -1115,8 +1198,11 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_copysignf:
   case LibFunc_copysignl:
   case LibFunc_pow:
+  case LibFunc_pow_finite:
   case LibFunc_powf:
+  case LibFunc_powf_finite:
   case LibFunc_powl:
+  case LibFunc_powl_finite:
     return (NumParams == 2 && FTy.getReturnType()->isFloatingPointTy() &&
             FTy.getReturnType() == FTy.getParamType(0) &&
             FTy.getReturnType() == FTy.getParamType(1));
@@ -1294,6 +1380,14 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
         {"powf", "__svml_powf8", 8},
         {"powf", "__svml_powf16", 16},
 
+        { "__pow_finite", "__svml_pow2", 2 },
+        { "__pow_finite", "__svml_pow4", 4 },
+        { "__pow_finite", "__svml_pow8", 8 },
+
+        { "__powf_finite", "__svml_powf4", 4 },
+        { "__powf_finite", "__svml_powf8", 8 },
+        { "__powf_finite", "__svml_powf16", 16 },
+
         {"llvm.pow.f64", "__svml_pow2", 2},
         {"llvm.pow.f64", "__svml_pow4", 4},
         {"llvm.pow.f64", "__svml_pow8", 8},
@@ -1310,6 +1404,14 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
         {"expf", "__svml_expf8", 8},
         {"expf", "__svml_expf16", 16},
 
+        { "__exp_finite", "__svml_exp2", 2 },
+        { "__exp_finite", "__svml_exp4", 4 },
+        { "__exp_finite", "__svml_exp8", 8 },
+
+        { "__expf_finite", "__svml_expf4", 4 },
+        { "__expf_finite", "__svml_expf8", 8 },
+        { "__expf_finite", "__svml_expf16", 16 },
+
         {"llvm.exp.f64", "__svml_exp2", 2},
         {"llvm.exp.f64", "__svml_exp4", 4},
         {"llvm.exp.f64", "__svml_exp8", 8},
@@ -1325,6 +1427,14 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
         {"logf", "__svml_logf4", 4},
         {"logf", "__svml_logf8", 8},
         {"logf", "__svml_logf16", 16},
+
+        { "__log_finite", "__svml_log2", 2 },
+        { "__log_finite", "__svml_log4", 4 },
+        { "__log_finite", "__svml_log8", 8 },
+
+        { "__logf_finite", "__svml_logf4", 4 },
+        { "__logf_finite", "__svml_logf8", 8 },
+        { "__logf_finite", "__svml_logf16", 16 },
 
         {"llvm.log.f64", "__svml_log2", 2},
         {"llvm.log.f64", "__svml_log4", 4},

@@ -73,13 +73,6 @@ struct SecMapEntry {
   support::ulittle32_t SecByteLength; // Byte count of the segment or group.
 };
 
-// Used for serialized hash table in TPI stream.
-// In the reference, it is an array of TI and cbOff pair.
-struct TypeIndexOffset {
-  codeview::TypeIndex Type;
-  support::ulittle32_t Offset;
-};
-
 /// Some of the values are stored in bitfields.  Since this needs to be portable
 /// across compilers and architectures (big / little endian in particular) we
 /// can't use the actual structures below, but must instead do the shifting

@@ -1041,7 +1041,7 @@ unsigned llvm::getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
 
   KnownBits Known(BitWidth);
   computeKnownBits(V, Known, DL, 0, AC, CxtI, DT);
-  unsigned TrailZ = Known.Zero.countTrailingOnes();
+  unsigned TrailZ = Known.countMinTrailingZeros();
 
   // Avoid trouble with ridiculously large TrailZ values, such as
   // those computed from a null pointer.

@@ -162,7 +162,7 @@ bool LegalizerInfo::isLegal(const MachineInstr &MI,
   return std::get<0>(getAction(MI, MRI)) == Legal;
 }
 
-LLT LegalizerInfo::findLegalType(const InstrAspect &Aspect,
+Optional<LLT> LegalizerInfo::findLegalType(const InstrAspect &Aspect,
                                  LegalizeAction Action) const {
   switch(Action) {
   default:

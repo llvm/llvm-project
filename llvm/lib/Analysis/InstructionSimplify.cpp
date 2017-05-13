@@ -1317,7 +1317,7 @@ static Value *SimplifyShift(Instruction::BinaryOps Opcode, Value *Op0,
   // If all valid bits in the shift amount are known zero, the first operand is
   // unchanged.
   unsigned NumValidShiftBits = Log2_32_Ceil(BitWidth);
-  if (Known.Zero.countTrailingOnes() >= NumValidShiftBits)
+  if (Known.countMinTrailingZeros() >= NumValidShiftBits)
     return Op0;
 
   return nullptr;

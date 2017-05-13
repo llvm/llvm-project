@@ -94,3 +94,21 @@ entry:
   %0 = call i64 asm sideeffect "xor $1, %g0, $0", "=r,0,~{i1}"(i64 5);
   ret i64 %0
 }
+
+
+;; Ensures that inline-asm accepts and uses 'f' and 'e' register constraints.
+; CHECK-LABEL: fadds:
+; CHECK: fadds  %f0, %f1, %f0
+define float @fadds(float, float) local_unnamed_addr #2 {
+entry:
+  %2 = tail call float asm sideeffect "fadds  $1, $2, $0;", "=f,f,e"(float %0, float %1) #7
+  ret float %2
+}
+
+; CHECK-LABEL: faddd:
+; CHECK: faddd  %f0, %f2, %f0
+define double @faddd(double, double) local_unnamed_addr #2 {
+entry:
+  %2 = tail call double asm sideeffect "faddd  $1, $2, $0;", "=f,f,e"(double %0, double %1) #7
+  ret double %2
+}

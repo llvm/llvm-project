@@ -3673,6 +3673,9 @@ Sparc:
 
 - ``I``: An immediate 13-bit signed integer.
 - ``r``: A 32-bit integer register.
+- ``f``: Any floating-point register on SparcV8, or a floating point
+  register in the "low" half of the registers on SparcV9.
+- ``e``: Any floating point register. (Same as ``f`` on SparcV8.)
 
 SystemZ:
 

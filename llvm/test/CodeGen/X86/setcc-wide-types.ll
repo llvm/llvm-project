@@ -58,25 +58,25 @@ define i32 @ne_i256(<4 x i64> %x, <4 x i64> %y) {
 ; SSE2-LABEL: ne_i256:
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
-; SSE2-NEXT:    movq %xmm4, %r8
+; SSE2-NEXT:    movq %xmm4, %rax
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,0,1]
-; SSE2-NEXT:    movq %xmm4, %r9
-; SSE2-NEXT:    movq %xmm0, %r10
-; SSE2-NEXT:    movq %xmm1, %rsi
+; SSE2-NEXT:    movq %xmm4, %rcx
+; SSE2-NEXT:    movq %xmm0, %rdx
+; SSE2-NEXT:    movq %xmm1, %r8
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
 ; SSE2-NEXT:    movq %xmm0, %rdi
+; SSE2-NEXT:    xorq %rax, %rdi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,0,1]
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    movq %xmm2, %rcx
-; SSE2-NEXT:    movq %xmm3, %rdx
-; SSE2-NEXT:    xorq %rsi, %rdx
-; SSE2-NEXT:    xorq %r10, %rcx
-; SSE2-NEXT:    orq %rdx, %rcx
-; SSE2-NEXT:    xorq %r9, %rax
-; SSE2-NEXT:    xorq %r8, %rdi
-; SSE2-NEXT:    orq %rax, %rdi
+; SSE2-NEXT:    movq %xmm0, %rsi
+; SSE2-NEXT:    xorq %rcx, %rsi
+; SSE2-NEXT:    orq %rdi, %rsi
+; SSE2-NEXT:    movq %xmm2, %rax
+; SSE2-NEXT:    xorq %rdx, %rax
+; SSE2-NEXT:    movq %xmm3, %rcx
+; SSE2-NEXT:    xorq %r8, %rcx
+; SSE2-NEXT:    orq %rax, %rcx
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    orq %rcx, %rdi
+; SSE2-NEXT:    orq %rsi, %rcx
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
 ;
@@ -100,25 +100,25 @@ define i32 @eq_i256(<4 x i64> %x, <4 x i64> %y) {
 ; SSE2-LABEL: eq_i256:
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
-; SSE2-NEXT:    movq %xmm4, %r8
+; SSE2-NEXT:    movq %xmm4, %rax
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,0,1]
-; SSE2-NEXT:    movq %xmm4, %r9
-; SSE2-NEXT:    movq %xmm0, %r10
-; SSE2-NEXT:    movq %xmm1, %rsi
+; SSE2-NEXT:    movq %xmm4, %rcx
+; SSE2-NEXT:    movq %xmm0, %rdx
+; SSE2-NEXT:    movq %xmm1, %r8
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
 ; SSE2-NEXT:    movq %xmm0, %rdi
+; SSE2-NEXT:    xorq %rax, %rdi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,0,1]
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    movq %xmm2, %rcx
-; SSE2-NEXT:    movq %xmm3, %rdx
-; SSE2-NEXT:    xorq %rsi, %rdx
-; SSE2-NEXT:    xorq %r10, %rcx
-; SSE2-NEXT:    orq %rdx, %rcx
-; SSE2-NEXT:    xorq %r9, %rax
-; SSE2-NEXT:    xorq %r8, %rdi
-; SSE2-NEXT:    orq %rax, %rdi
+; SSE2-NEXT:    movq %xmm0, %rsi
+; SSE2-NEXT:    xorq %rcx, %rsi
+; SSE2-NEXT:    orq %rdi, %rsi
+; SSE2-NEXT:    movq %xmm2, %rax
+; SSE2-NEXT:    xorq %rdx, %rax
+; SSE2-NEXT:    movq %xmm3, %rcx
+; SSE2-NEXT:    xorq %r8, %rcx
+; SSE2-NEXT:    orq %rax, %rcx
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    orq %rcx, %rdi
+; SSE2-NEXT:    orq %rsi, %rcx
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;

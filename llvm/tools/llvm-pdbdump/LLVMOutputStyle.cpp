@@ -180,7 +180,7 @@ private:
     CompactTypeDumpVisitor CTDV(DB, Index, &P);
     CVTypeVisitor Visitor(CTDV);
     DictScope D(P, Label);
-    if (DB.containsTypeIndex(Index)) {
+    if (DB.contains(Index)) {
       CVType &Type = DB.getTypeRecord(Index);
       if (auto EC = Visitor.visitTypeRecord(Type))
         return EC;
