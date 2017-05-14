@@ -212,8 +212,6 @@ void MIRPrinter::print(const MachineFunction &MF) {
   }
   StrOS.flush();
   yaml::Output Out(OS);
-  if (!SimplifyMIR)
-      Out.setWriteDefaultValues(true);
   Out << YamlMF;
 }
 

@@ -99,16 +99,16 @@ define <8 x float> @test_mm256_and_ps(<8 x float> %a0, <8 x float> %a1) nounwind
 define <4 x double> @test_mm256_andnot_pd(<4 x double> %a0, <4 x double> %a1) nounwind {
 ; X32-LABEL: test_mm256_andnot_pd:
 ; X32:       # BB#0:
-; X32-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; X32-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
+; X32-NEXT:    vxorps %ymm2, %ymm2, %ymm2
+; X32-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
 ; X32-NEXT:    vxorps %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_andnot_pd:
 ; X64:       # BB#0:
-; X64-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; X64-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
+; X64-NEXT:    vxorps %ymm2, %ymm2, %ymm2
+; X64-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
 ; X64-NEXT:    vxorps %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq

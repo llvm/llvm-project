@@ -2855,6 +2855,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   EVT VT = Op.getValueType();
   assert(VT.isInteger() && "Invalid VT!");
   unsigned VTBits = VT.getScalarSizeInBits();
+  unsigned NumElts = DemandedElts.getBitWidth();
   unsigned Tmp, Tmp2;
   unsigned FirstAnswer = 1;
 
@@ -2897,6 +2898,39 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       Tmp = std::min(Tmp, Tmp2);
     }
     return Tmp;
+
+  case ISD::VECTOR_SHUFFLE: {
+    // Collect the minimum number of sign bits that are shared by every vector
+    // element referenced by the shuffle.
+    APInt DemandedLHS(NumElts, 0), DemandedRHS(NumElts, 0);
+    const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op);
+    assert(NumElts == SVN->getMask().size() && "Unexpected vector size");
+    for (unsigned i = 0; i != NumElts; ++i) {
+      int M = SVN->getMaskElt(i);
+      if (!DemandedElts[i])
+        continue;
+      // For UNDEF elements, we don't know anything about the common state of
+      // the shuffle result.
+      if (M < 0)
+        return 1;
+      if ((unsigned)M < NumElts)
+        DemandedLHS.setBit((unsigned)M % NumElts);
+      else
+        DemandedRHS.setBit((unsigned)M % NumElts);
+    }
+    Tmp = UINT_MAX;
+    if (!!DemandedLHS)
+      Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedLHS, Depth + 1);
+    if (!!DemandedRHS) {
+      Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedRHS, Depth + 1);
+      Tmp = std::min(Tmp, Tmp2);
+    }
+    // If we don't know anything, early out and try computeKnownBits fall-back.
+    if (Tmp == 1)
+      break;
+    assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
+    return Tmp;
+  }
 
   case ISD::SIGN_EXTEND:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
@@ -3137,14 +3171,36 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
     return ComputeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
   }
-  case ISD::EXTRACT_SUBVECTOR:
-    return ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+  case ISD::EXTRACT_SUBVECTOR: {
+    // If we know the element index, just demand that subvector elements,
+    // otherwise demand them all.
+    SDValue Src = Op.getOperand(0);
+    ConstantSDNode *SubIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
+    if (SubIdx && SubIdx->getAPIntValue().ule(NumSrcElts - NumElts)) {
+      // Offset the demanded elts by the subvector index.
+      uint64_t Idx = SubIdx->getZExtValue();
+      APInt DemandedSrc = DemandedElts.zext(NumSrcElts).shl(Idx);
+      return ComputeNumSignBits(Src, DemandedSrc, Depth + 1);
+    }
+    return ComputeNumSignBits(Src, Depth + 1);
+  }
   case ISD::CONCAT_VECTORS:
-    // Determine the minimum number of sign bits across all input vectors.
-    // Early out if the result is already 1.
-    Tmp = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
-    for (unsigned i = 1, e = Op.getNumOperands(); (i < e) && (Tmp > 1); ++i)
-      Tmp = std::min(Tmp, ComputeNumSignBits(Op.getOperand(i), Depth + 1));
+    // Determine the minimum number of sign bits across all demanded
+    // elts of the input vectors. Early out if the result is already 1.
+    Tmp = UINT_MAX;
+    EVT SubVectorVT = Op.getOperand(0).getValueType();
+    unsigned NumSubVectorElts = SubVectorVT.getVectorNumElements();
+    unsigned NumSubVectors = Op.getNumOperands();
+    for (unsigned i = 0; (i < NumSubVectors) && (Tmp > 1); ++i) {
+      APInt DemandedSub = DemandedElts.lshr(i * NumSubVectorElts);
+      DemandedSub = DemandedSub.trunc(NumSubVectorElts);
+      if (!DemandedSub)
+        continue;
+      Tmp2 = ComputeNumSignBits(Op.getOperand(i), DemandedSub, Depth + 1);
+      Tmp = std::min(Tmp, Tmp2);
+    }
+    assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
     return Tmp;
   }
 
@@ -7513,8 +7569,7 @@ unsigned SelectionDAG::InferPtrAlignment(SDValue Ptr) const {
   if (TLI->isGAPlusOffset(Ptr.getNode(), GV, GVOffset)) {
     unsigned PtrWidth = getDataLayout().getPointerTypeSizeInBits(GV->getType());
     KnownBits Known(PtrWidth);
-    llvm::computeKnownBits(const_cast<GlobalValue *>(GV), Known,
-                           getDataLayout());
+    llvm::computeKnownBits(GV, Known, getDataLayout());
     unsigned AlignBits = Known.countMinTrailingZeros();
     unsigned Align = AlignBits ? 1 << std::min(31U, AlignBits) : 0;
     if (Align)

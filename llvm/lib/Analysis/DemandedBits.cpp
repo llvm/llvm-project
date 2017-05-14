@@ -86,13 +86,11 @@ void DemandedBits::determineLiveOperandBits(
       [&](unsigned BitWidth, const Value *V1, const Value *V2) {
         const DataLayout &DL = I->getModule()->getDataLayout();
         Known = KnownBits(BitWidth);
-        computeKnownBits(const_cast<Value *>(V1), Known, DL, 0,
-                         &AC, UserI, &DT);
+        computeKnownBits(V1, Known, DL, 0, &AC, UserI, &DT);
 
         if (V2) {
           Known2 = KnownBits(BitWidth);
-          computeKnownBits(const_cast<Value *>(V2), Known2, DL,
-                           0, &AC, UserI, &DT);
+          computeKnownBits(V2, Known2, DL, 0, &AC, UserI, &DT);
         }
       };
 

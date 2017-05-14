@@ -715,9 +715,15 @@ Function *PartialInlinerImpl::unswitchFunction(Function *F) {
   // users (function pointers, etc.) back to the original function.
   DuplicateFunction->replaceAllUsesWith(F);
   DuplicateFunction->eraseFromParent();
-  if (!AnyInline && OutlinedFunction)
+
+  if (AnyInline)
+    return OutlinedFunction;
+
+  // Remove the function that is speculatively created:
+  if (OutlinedFunction)
     OutlinedFunction->eraseFromParent();
-  return OutlinedFunction;
+
+  return nullptr;
 }
 
 bool PartialInlinerImpl::tryPartialInline(Function *DuplicateFunction,

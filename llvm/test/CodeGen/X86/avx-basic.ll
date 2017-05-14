@@ -34,8 +34,8 @@ define void @zero256() nounwind ssp {
 define void @ones([0 x float]* nocapture %RET, [0 x float]* nocapture %aFOO) nounwind {
 ; CHECK-LABEL: ones:
 ; CHECK:       ## BB#0: ## %allocas
-; CHECK-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovaps %ymm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -51,8 +51,8 @@ float>* %ptr2vec615, align 32
 define void @ones2([0 x i32]* nocapture %RET, [0 x i32]* nocapture %aFOO) nounwind {
 ; CHECK-LABEL: ones2:
 ; CHECK:       ## BB#0: ## %allocas
-; CHECK-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovaps %ymm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
