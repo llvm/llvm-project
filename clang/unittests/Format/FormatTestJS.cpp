@@ -1800,6 +1800,7 @@ TEST_F(FormatTestJS, NonNullAssertionOperator) {
       "            .foo()!;\n",
       getGoogleJSStyleWithColumns(20));
   verifyFormat("let x = namespace!;\n");
+  verifyFormat("return !!x;\n");
 }
 
 TEST_F(FormatTestJS, Conditional) {

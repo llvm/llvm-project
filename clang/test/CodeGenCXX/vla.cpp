@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin %s -emit-llvm -o - | FileCheck %s
 
 template<typename T>
 struct S {
@@ -54,3 +54,60 @@ void test0(void *array, int n) {
 
   // CHECK-NEXT: ret void
 }
+
+
+void test2(int b) {
+  // CHECK-LABEL: define void {{.*}}test2{{.*}}(i32 %b)
+  int varr[b];
+  // get the address of %b by checking the first store that stores it 
+  //CHECK: store i32 %b, i32* [[PTR_B:%.*]]
+
+  // get the size of the VLA by getting the first load of the PTR_B
+  //CHECK: [[VLA_NUM_ELEMENTS_PREZEXT:%.*]] = load i32, i32* [[PTR_B]]
+  //CHECK-NEXT: [[VLA_NUM_ELEMENTS_PRE:%.*]] = zext i32 [[VLA_NUM_ELEMENTS_PREZEXT]]
+  
+  b = 15;
+  //CHECK: store i32 15, i32* [[PTR_B]]
+  
+  // Now get the sizeof, and then divide by the element size
+  
+  
+  //CHECK: [[VLA_SIZEOF:%.*]] = mul nuw i64 4, [[VLA_NUM_ELEMENTS_PRE]]
+  //CHECK-NEXT: [[VLA_NUM_ELEMENTS_POST:%.*]] = udiv i64 [[VLA_SIZEOF]], 4
+  //CHECK-NEXT: [[VLA_END_PTR:%.*]] = getelementptr inbounds i32, i32* {{%.*}}, i64 [[VLA_NUM_ELEMENTS_POST]]
+  //CHECK-NEXT: store i32* [[VLA_END_PTR]], i32** %__end
+  for (int d : varr) 0;
+}
+
+void test3(int b, int c) {
+  // CHECK-LABEL: define void {{.*}}test3{{.*}}(i32 %b, i32 %c)
+  int varr[b][c];
+  // get the address of %b by checking the first store that stores it 
+  //CHECK: store i32 %b, i32* [[PTR_B:%.*]]
+  //CHECK-NEXT: store i32 %c, i32* [[PTR_C:%.*]]
+  
+  // get the size of the VLA by getting the first load of the PTR_B
+  //CHECK: [[VLA_DIM1_PREZEXT:%.*]] = load i32, i32* [[PTR_B]]
+  //CHECK-NEXT: [[VLA_DIM1_PRE:%.*]] = zext i32 [[VLA_DIM1_PREZEXT]]
+  //CHECK: [[VLA_DIM2_PREZEXT:%.*]] = load i32, i32* [[PTR_C]]
+  //CHECK-NEXT: [[VLA_DIM2_PRE:%.*]] = zext i32 [[VLA_DIM2_PREZEXT]]
+  
+  b = 15;
+  c = 15;
+  //CHECK: store i32 15, i32* [[PTR_B]]
+  //CHECK: store i32 15, i32* [[PTR_C]]
+  // Now get the sizeof, and then divide by the element size
+  
+  // multiply the two dimensions, then by the element type and then divide by the sizeof dim2
+  //CHECK: [[VLA_DIM1_X_DIM2:%.*]] = mul nuw i64 [[VLA_DIM1_PRE]], [[VLA_DIM2_PRE]]
+  //CHECK-NEXT: [[VLA_SIZEOF:%.*]] = mul nuw i64 4, [[VLA_DIM1_X_DIM2]]
+  //CHECK-NEXT: [[VLA_SIZEOF_DIM2:%.*]] = mul nuw i64 4, [[VLA_DIM2_PRE]]
+  //CHECK-NEXT: [[VLA_NUM_ELEMENTS:%.*]] = udiv i64 [[VLA_SIZEOF]], [[VLA_SIZEOF_DIM2]]
+  //CHECK-NEXT: [[VLA_END_INDEX:%.*]] = mul nsw i64 [[VLA_NUM_ELEMENTS]], [[VLA_DIM2_PRE]]
+  //CHECK-NEXT: [[VLA_END_PTR:%.*]] = getelementptr inbounds i32, i32* {{%.*}}, i64 [[VLA_END_INDEX]]
+  //CHECK-NEXT: store i32* [[VLA_END_PTR]], i32** %__end
+ 
+  for (auto &d : varr) 0;
+}
+
+

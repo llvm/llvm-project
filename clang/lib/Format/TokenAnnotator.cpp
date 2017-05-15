@@ -1034,9 +1034,9 @@ private:
     if (Style.Language == FormatStyle::LK_JavaScript) {
       if (Current.is(tok::exclaim)) {
         if (Current.Previous &&
-            (Current.Previous->Tok.getIdentifierInfo() ||
-             Current.Previous->isOneOf(tok::identifier, tok::r_paren,
-                                       tok::r_square, tok::r_brace) ||
+            (Current.Previous->isOneOf(tok::identifier, tok::kw_namespace,
+                                       tok::r_paren, tok::r_square,
+                                       tok::r_brace) ||
              Current.Previous->Tok.isLiteral())) {
           Current.Type = TT_JsNonNullAssertion;
           return;

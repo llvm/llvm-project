@@ -2331,8 +2331,10 @@ _mm_mulhi_pu16(__m64 __a, __m64 __b)
 /// \brief Conditionally copies the values from each 8-bit element in the first
 ///    64-bit integer vector operand to the specified memory location, as
 ///    specified by the most significant bit in the corresponding element in the
-///    second 64-bit integer vector operand. To minimize caching, the data is
-///    flagged as non-temporal (unlikely to be used again soon).
+///    second 64-bit integer vector operand.
+///
+///    To minimize caching, the data is flagged as non-temporal
+///    (unlikely to be used again soon).
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2815,11 +2817,12 @@ _mm_cvtpi32x2_ps(__m64 __a, __m64 __b)
 
 /// \brief Converts each single-precision floating-point element of a 128-bit
 ///    floating-point vector of [4 x float] into a 16-bit signed integer, and
-///    packs the results into a 64-bit integer vector of [4 x i16]. If the
-///    floating-point element is NaN or infinity, or if the floating-point
-///    element is greater than 0x7FFFFFFF or less than -0x8000, it is converted
-///    to 0x8000. Otherwise if the floating-point element is greater than
-///    0x7FFF, it is converted to 0x7FFF.
+///    packs the results into a 64-bit integer vector of [4 x i16].
+///
+///    If the floating-point element is NaN or infinity, or if the
+///    floating-point element is greater than 0x7FFFFFFF or less than -0x8000,
+///    it is converted to 0x8000. Otherwise if the floating-point element is
+///    greater than 0x7FFF, it is converted to 0x7FFF.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2845,11 +2848,12 @@ _mm_cvtps_pi16(__m128 __a)
 /// \brief Converts each single-precision floating-point element of a 128-bit
 ///    floating-point vector of [4 x float] into an 8-bit signed integer, and
 ///    packs the results into the lower 32 bits of a 64-bit integer vector of
-///    [8 x i8]. The upper 32 bits of the vector are set to 0. If the
-///    floating-point element is NaN or infinity, or if the floating-point
-///    element is greater than 0x7FFFFFFF or less than -0x80, it is converted
-///    to 0x80. Otherwise if the floating-point element is greater than 0x7F,
-///    it is converted to 0x7F.
+///    [8 x i8]. The upper 32 bits of the vector are set to 0.
+///
+///    If the floating-point element is NaN or infinity, or if the
+///    floating-point element is greater than 0x7FFFFFFF or less than -0x80, it
+///    is converted to 0x80. Otherwise if the floating-point element is greater
+///    than 0x7F, it is converted to 0x7F.
 ///
 /// \headerfile <x86intrin.h>
 ///

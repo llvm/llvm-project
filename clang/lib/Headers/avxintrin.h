@@ -1458,12 +1458,13 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \brief Computes two dot products in parallel, using the lower and upper
 ///    halves of two [8 x float] vectors as input to the two computations, and
 ///    returning the two dot products in the lower and upper halves of the
-///    [8 x float] result. The immediate integer operand controls which input
-///    elements will contribute to the dot product, and where the final results
-///    are returned. In general, for each dot product, the four corresponding
-///    elements of the input vectors are multiplied; the first two and second
-///    two products are summed, then the two sums are added to form the final
-///    result.
+///    [8 x float] result.
+///
+///    The immediate integer operand controls which input elements will
+///    contribute to the dot product, and where the final results are returned.
+///    In general, for each dot product, the four corresponding elements of the
+///    input vectors are multiplied; the first two and second two products are
+///    summed, then the two sums are added to form the final result.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1497,15 +1498,16 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 
 /* Vector shuffle */
 /// \brief Selects 8 float values from the 256-bit operands of [8 x float], as
-///    specified by the immediate value operand. The four selected elements in
-///    each operand are copied to the destination according to the bits
-///    specified in the immediate operand. The selected elements from the first
-///    256-bit operand are copied to bits [63:0] and bits [191:128] of the
-///    destination, and the selected elements from the second 256-bit operand
-///    are copied to bits [127:64] and bits [255:192] of the destination. For
-///    example, if bits [7:0] of the immediate operand contain a value of 0xFF,
-///    the 256-bit destination vector would contain the following values: b[7],
-///    b[7], a[7], a[7], b[3], b[3], a[3], a[3].
+///    specified by the immediate value operand.
+///
+///    The four selected elements in each operand are copied to the destination
+///    according to the bits specified in the immediate operand. The selected
+///    elements from the first 256-bit operand are copied to bits [63:0] and
+///    bits [191:128] of the destination, and the selected elements from the
+///    second 256-bit operand are copied to bits [127:64] and bits [255:192] of
+///    the destination. For example, if bits [7:0] of the immediate operand
+///    contain a value of 0xFF, the 256-bit destination vector would contain the
+///    following values: b[7], b[7], a[7], a[7], b[3], b[3], a[3], a[3].
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1557,13 +1559,14 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
                                   12 + (((mask) >> 6) & 0x3)); })
 
 /// \brief Selects four double-precision values from the 256-bit operands of
-///    [4 x double], as specified by the immediate value operand. The selected
-///    elements from the first 256-bit operand are copied to bits [63:0] and
-///    bits [191:128] in the destination, and the selected elements from the
-///    second 256-bit operand are copied to bits [127:64] and bits [255:192] in
-///    the destination. For example, if bits [3:0] of the immediate operand
-///    contain a value of 0xF, the 256-bit destination vector would contain the
-///    following values: b[3], a[3], b[1], a[1].
+///    [4 x double], as specified by the immediate value operand.
+///
+///    The selected elements from the first 256-bit operand are copied to bits
+///    [63:0] and bits [191:128] in the destination, and the selected elements
+///    from the second 256-bit operand are copied to bits [127:64] and bits
+///    [255:192] in the destination. For example, if bits [3:0] of the immediate
+///    operand contain a value of 0xF, the 256-bit destination vector would
+///    contain the following values: b[3], a[3], b[1], a[1].
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1641,9 +1644,11 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 
 /// \brief Compares each of the corresponding double-precision values of two
 ///    128-bit vectors of [2 x double], using the operation specified by the
-///    immediate integer operand. Returns a [2 x double] vector consisting of
-///    two doubles corresponding to the two comparison results: zero if the
-///    comparison is false, and all 1's if the comparison is true.
+///    immediate integer operand.
+///
+///    Returns a [2 x double] vector consisting of two doubles corresponding to
+///    the two comparison results: zero if the comparison is false, and all 1's
+///    if the comparison is true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1699,9 +1704,11 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 
 /// \brief Compares each of the corresponding values of two 128-bit vectors of
 ///    [4 x float], using the operation specified by the immediate integer
-///    operand. Returns a [4 x float] vector consisting of four floats
-///    corresponding to the four comparison results: zero if the comparison is
-///    false, and all 1's if the comparison is true.
+///    operand.
+///
+///    Returns a [4 x float] vector consisting of four floats corresponding to
+///    the four comparison results: zero if the comparison is false, and all 1's
+///    if the comparison is true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1757,9 +1764,11 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 
 /// \brief Compares each of the corresponding double-precision values of two
 ///    256-bit vectors of [4 x double], using the operation specified by the
-///    immediate integer operand. Returns a [4 x double] vector consisting of
-///    four doubles corresponding to the four comparison results: zero if the
-///    comparison is false, and all 1's if the comparison is true.
+///    immediate integer operand.
+///
+///    Returns a [4 x double] vector consisting of four doubles corresponding to
+///    the four comparison results: zero if the comparison is false, and all 1's
+///    if the comparison is true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1815,9 +1824,11 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 
 /// \brief Compares each of the corresponding values of two 256-bit vectors of
 ///    [8 x float], using the operation specified by the immediate integer
-///    operand. Returns a [8 x float] vector consisting of eight floats
-///    corresponding to the eight comparison results: zero if the comparison is
-///    false, and all 1's if the comparison is true.
+///    operand.
+///
+///    Returns a [8 x float] vector consisting of eight floats corresponding to
+///    the eight comparison results: zero if the comparison is false, and all
+///    1's if the comparison is true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1873,8 +1884,10 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 
 /// \brief Compares each of the corresponding scalar double-precision values of
 ///    two 128-bit vectors of [2 x double], using the operation specified by the
-///    immediate integer operand. If the result is true, all 64 bits of the
-///    destination vector are set; otherwise they are cleared.
+///    immediate integer operand.
+///
+///    If the result is true, all 64 bits of the destination vector are set;
+///    otherwise they are cleared.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1930,8 +1943,10 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 
 /// \brief Compares each of the corresponding scalar values of two 128-bit
 ///    vectors of [4 x float], using the operation specified by the immediate
-///    integer operand. If the result is true, all 32 bits of the destination
-///    vector are set; otherwise they are cleared.
+///    integer operand.
+///
+///    If the result is true, all 32 bits of the destination vector are set;
+///    otherwise they are cleared.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2536,7 +2551,9 @@ _mm256_unpacklo_ps(__m256 __a, __m256 __b)
 /// \brief Given two 128-bit floating-point vectors of [2 x double], perform an
 ///    element-by-element comparison of the double-precision element in the
 ///    first source vector and the corresponding element in the second source
-///    vector. The EFLAGS register is updated as follows: \n
+///    vector.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of double-precision elements where the
 ///    sign-bits of both elements are 1, the ZF flag is set to 0. Otherwise the
 ///    ZF flag is set to 1. \n
@@ -2563,7 +2580,9 @@ _mm_testz_pd(__m128d __a, __m128d __b)
 /// \brief Given two 128-bit floating-point vectors of [2 x double], perform an
 ///    element-by-element comparison of the double-precision element in the
 ///    first source vector and the corresponding element in the second source
-///    vector. The EFLAGS register is updated as follows: \n
+///    vector.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of double-precision elements where the
 ///    sign-bits of both elements are 1, the ZF flag is set to 0. Otherwise the
 ///    ZF flag is set to 1. \n
@@ -2590,7 +2609,9 @@ _mm_testc_pd(__m128d __a, __m128d __b)
 /// \brief Given two 128-bit floating-point vectors of [2 x double], perform an
 ///    element-by-element comparison of the double-precision element in the
 ///    first source vector and the corresponding element in the second source
-///    vector. The EFLAGS register is updated as follows: \n
+///    vector.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of double-precision elements where the
 ///    sign-bits of both elements are 1, the ZF flag is set to 0. Otherwise the
 ///    ZF flag is set to 1. \n
@@ -2618,7 +2639,9 @@ _mm_testnzc_pd(__m128d __a, __m128d __b)
 /// \brief Given two 128-bit floating-point vectors of [4 x float], perform an
 ///    element-by-element comparison of the single-precision element in the
 ///    first source vector and the corresponding element in the second source
-///    vector. The EFLAGS register is updated as follows: \n
+///    vector.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of single-precision elements where the
 ///    sign-bits of both elements are 1, the ZF flag is set to 0. Otherwise the
 ///    ZF flag is set to 1. \n
@@ -2645,7 +2668,9 @@ _mm_testz_ps(__m128 __a, __m128 __b)
 /// \brief Given two 128-bit floating-point vectors of [4 x float], perform an
 ///    element-by-element comparison of the single-precision element in the
 ///    first source vector and the corresponding element in the second source
-///    vector. The EFLAGS register is updated as follows: \n
+///    vector.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of single-precision elements where the
 ///    sign-bits of both elements are 1, the ZF flag is set to 0. Otherwise the
 ///    ZF flag is set to 1. \n
@@ -2672,7 +2697,9 @@ _mm_testc_ps(__m128 __a, __m128 __b)
 /// \brief Given two 128-bit floating-point vectors of [4 x float], perform an
 ///    element-by-element comparison of the single-precision element in the
 ///    first source vector and the corresponding element in the second source
-///    vector. The EFLAGS register is updated as follows: \n
+///    vector.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of single-precision elements where the
 ///    sign-bits of both elements are 1, the ZF flag is set to 0. Otherwise the
 ///    ZF flag is set to 1. \n
@@ -2700,7 +2727,9 @@ _mm_testnzc_ps(__m128 __a, __m128 __b)
 /// \brief Given two 256-bit floating-point vectors of [4 x double], perform an
 ///    element-by-element comparison of the double-precision elements in the
 ///    first source vector and the corresponding elements in the second source
-///    vector. The EFLAGS register is updated as follows: \n
+///    vector.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of double-precision elements where the
 ///    sign-bits of both elements are 1, the ZF flag is set to 0. Otherwise the
 ///    ZF flag is set to 1. \n
@@ -2727,7 +2756,9 @@ _mm256_testz_pd(__m256d __a, __m256d __b)
 /// \brief Given two 256-bit floating-point vectors of [4 x double], perform an
 ///    element-by-element comparison of the double-precision elements in the
 ///    first source vector and the corresponding elements in the second source
-///    vector. The EFLAGS register is updated as follows: \n
+///    vector.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of double-precision elements where the
 ///    sign-bits of both elements are 1, the ZF flag is set to 0. Otherwise the
 ///    ZF flag is set to 1. \n
@@ -2754,7 +2785,9 @@ _mm256_testc_pd(__m256d __a, __m256d __b)
 /// \brief Given two 256-bit floating-point vectors of [4 x double], perform an
 ///    element-by-element comparison of the double-precision elements in the
 ///    first source vector and the corresponding elements in the second source
-///    vector. The EFLAGS register is updated as follows: \n
+///    vector.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of double-precision elements where the
 ///    sign-bits of both elements are 1, the ZF flag is set to 0. Otherwise the
 ///    ZF flag is set to 1. \n
@@ -2782,7 +2815,9 @@ _mm256_testnzc_pd(__m256d __a, __m256d __b)
 /// \brief Given two 256-bit floating-point vectors of [8 x float], perform an
 ///    element-by-element comparison of the single-precision element in the
 ///    first source vector and the corresponding element in the second source
-///    vector. The EFLAGS register is updated as follows: \n
+///    vector.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of single-precision elements where the
 ///    sign-bits of both elements are 1, the ZF flag is set to 0. Otherwise the
 ///    ZF flag is set to 1. \n
@@ -2809,7 +2844,9 @@ _mm256_testz_ps(__m256 __a, __m256 __b)
 /// \brief Given two 256-bit floating-point vectors of [8 x float], perform an
 ///    element-by-element comparison of the single-precision element in the
 ///    first source vector and the corresponding element in the second source
-///    vector. The EFLAGS register is updated as follows: \n
+///    vector.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of single-precision elements where the
 ///    sign-bits of both elements are 1, the ZF flag is set to 0. Otherwise the
 ///    ZF flag is set to 1. \n
@@ -2836,7 +2873,9 @@ _mm256_testc_ps(__m256 __a, __m256 __b)
 /// \brief Given two 256-bit floating-point vectors of [8 x float], perform an
 ///    element-by-element comparison of the single-precision elements in the
 ///    first source vector and the corresponding elements in the second source
-///    vector. The EFLAGS register is updated as follows: \n
+///    vector.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of single-precision elements where the
 ///    sign-bits of both elements are 1, the ZF flag is set to 0. Otherwise the
 ///    ZF flag is set to 1. \n
@@ -2862,7 +2901,9 @@ _mm256_testnzc_ps(__m256 __a, __m256 __b)
 }
 
 /// \brief Given two 256-bit integer vectors, perform a bit-by-bit comparison
-///    of the two source vectors and update the EFLAGS register as follows: \n
+///    of the two source vectors.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of bits where both bits are 1, the ZF flag
 ///    is set to 0. Otherwise the ZF flag is set to 1. \n
 ///    If there is at least one pair of bits where the bit from the first source
@@ -2886,7 +2927,9 @@ _mm256_testz_si256(__m256i __a, __m256i __b)
 }
 
 /// \brief Given two 256-bit integer vectors, perform a bit-by-bit comparison
-///    of the two source vectors and update the EFLAGS register as follows: \n
+///    of the two source vectors.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of bits where both bits are 1, the ZF flag
 ///    is set to 0. Otherwise the ZF flag is set to 1. \n
 ///    If there is at least one pair of bits where the bit from the first source
@@ -2910,7 +2953,9 @@ _mm256_testc_si256(__m256i __a, __m256i __b)
 }
 
 /// \brief Given two 256-bit integer vectors, perform a bit-by-bit comparison
-///    of the two source vectors and update the EFLAGS register as follows: \n
+///    of the two source vectors.
+///
+///    The EFLAGS register is updated as follows: \n
 ///    If there is at least one pair of bits where both bits are 1, the ZF flag
 ///    is set to 0. Otherwise the ZF flag is set to 1. \n
 ///    If there is at least one pair of bits where the bit from the first source
@@ -4466,9 +4511,10 @@ _mm256_castsi256_si128(__m256i __a)
 }
 
 /// \brief Constructs a 256-bit floating-point vector of [4 x double] from a
-///    128-bit floating-point vector of [2 x double]. The lower 128 bits
-///    contain the value of the source vector. The contents of the upper 128
-///    bits are undefined.
+///    128-bit floating-point vector of [2 x double].
+///
+///    The lower 128 bits contain the value of the source vector. The contents
+///    of the upper 128 bits are undefined.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -4486,9 +4532,10 @@ _mm256_castpd128_pd256(__m128d __a)
 }
 
 /// \brief Constructs a 256-bit floating-point vector of [8 x float] from a
-///    128-bit floating-point vector of [4 x float]. The lower 128 bits contain
-///    the value of the source vector. The contents of the upper 128 bits are
-///    undefined.
+///    128-bit floating-point vector of [4 x float].
+///
+///    The lower 128 bits contain the value of the source vector. The contents
+///    of the upper 128 bits are undefined.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -4506,6 +4553,7 @@ _mm256_castps128_ps256(__m128 __a)
 }
 
 /// \brief Constructs a 256-bit integer vector from a 128-bit integer vector.
+///
 ///    The lower 128 bits contain the value of the source vector. The contents
 ///    of the upper 128 bits are undefined.
 ///
@@ -4586,8 +4634,10 @@ _mm256_zextsi128_si256(__m128i __a)
 /// \brief Constructs a new 256-bit vector of [8 x float] by first duplicating
 ///    a 256-bit vector of [8 x float] given in the first parameter, and then
 ///    replacing either the upper or the lower 128 bits with the contents of a
-///    128-bit vector of [4 x float] in the second parameter. The immediate
-///    integer parameter determines between the upper or the lower 128 bits.
+///    128-bit vector of [4 x float] in the second parameter.
+///
+///    The immediate integer parameter determines between the upper or the lower
+///    128 bits.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -4631,8 +4681,10 @@ _mm256_zextsi128_si256(__m128i __a)
 /// \brief Constructs a new 256-bit vector of [4 x double] by first duplicating
 ///    a 256-bit vector of [4 x double] given in the first parameter, and then
 ///    replacing either the upper or the lower 128 bits with the contents of a
-///    128-bit vector of [2 x double] in the second parameter. The immediate
-///    integer parameter determines between the upper or the lower 128 bits.
+///    128-bit vector of [2 x double] in the second parameter.
+///
+///    The immediate integer parameter determines between the upper or the lower
+///    128 bits.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -4672,8 +4724,10 @@ _mm256_zextsi128_si256(__m128i __a)
 /// \brief Constructs a new 256-bit integer vector by first duplicating a
 ///    256-bit integer vector given in the first parameter, and then replacing
 ///    either the upper or the lower 128 bits with the contents of a 128-bit
-///    integer vector in the second parameter. The immediate integer parameter
-///    determines between the upper or the lower 128 bits.
+///    integer vector in the second parameter.
+///
+///    The immediate integer parameter determines between the upper or the lower
+///    128 bits.
 ///
 /// \headerfile <x86intrin.h>
 ///

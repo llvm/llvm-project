@@ -36,32 +36,6 @@ STATISTIC(TotalRedundantWritesRemoved,
           "Number of writes of same value removed in any SCoP");
 STATISTIC(TotalStmtsRemoved, "Number of statements removed in any SCoP");
 
-/// Find the llvm::Value that is written by a MemoryAccess. Return nullptr if
-/// there is no such unique value.
-static Value *getWrittenScalar(MemoryAccess *WA) {
-  assert(WA->isWrite());
-
-  if (WA->isOriginalAnyPHIKind()) {
-    Value *Result = nullptr;
-    for (auto Incoming : WA->getIncoming()) {
-      assert(Incoming.second);
-
-      if (!Result) {
-        Result = Incoming.second;
-        continue;
-      }
-
-      if (Result == Incoming.second)
-        continue;
-
-      return nullptr;
-    }
-    return Result;
-  }
-
-  return WA->getAccessInstruction();
-}
-
 static bool isImplicitRead(MemoryAccess *MA) {
   return MA->isRead() && MA->isOriginalScalarKind();
 }
