@@ -568,27 +568,16 @@ private:
       Predicates.insert(P);
     }
 
-    /*implicit*/ ExitLimit(const SCEV *E)
-        : ExactNotTaken(E), MaxNotTaken(E), MaxOrZero(false) {}
+    /*implicit*/ ExitLimit(const SCEV *E);
 
     ExitLimit(
         const SCEV *E, const SCEV *M, bool MaxOrZero,
-        ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList)
-        : ExactNotTaken(E), MaxNotTaken(M), MaxOrZero(MaxOrZero) {
-      assert((isa<SCEVCouldNotCompute>(ExactNotTaken) ||
-              !isa<SCEVCouldNotCompute>(MaxNotTaken)) &&
-             "Exact is not allowed to be less precise than Max");
-      for (auto *PredSet : PredSetList)
-        for (auto *P : *PredSet)
-          addPredicate(P);
-    }
+        ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList);
 
     ExitLimit(const SCEV *E, const SCEV *M, bool MaxOrZero,
-              const SmallPtrSetImpl<const SCEVPredicate *> &PredSet)
-        : ExitLimit(E, M, MaxOrZero, {&PredSet}) {}
+              const SmallPtrSetImpl<const SCEVPredicate *> &PredSet);
 
-    ExitLimit(const SCEV *E, const SCEV *M, bool MaxOrZero)
-        : ExitLimit(E, M, MaxOrZero, None) {}
+    ExitLimit(const SCEV *E, const SCEV *M, bool MaxOrZero);
 
     /// Test whether this ExitLimit contains any computed information, or
     /// whether it's all SCEVCouldNotCompute values.

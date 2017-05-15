@@ -5955,6 +5955,30 @@ bool ScalarEvolution::BackedgeTakenInfo::hasOperand(const SCEV *S,
   return false;
 }
 
+ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E)
+    : ExactNotTaken(E), MaxNotTaken(E), MaxOrZero(false) {}
+
+ScalarEvolution::ExitLimit::ExitLimit(
+    const SCEV *E, const SCEV *M, bool MaxOrZero,
+    ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList)
+    : ExactNotTaken(E), MaxNotTaken(M), MaxOrZero(MaxOrZero) {
+  assert((isa<SCEVCouldNotCompute>(ExactNotTaken) ||
+          !isa<SCEVCouldNotCompute>(MaxNotTaken)) &&
+         "Exact is not allowed to be less precise than Max");
+  for (auto *PredSet : PredSetList)
+    for (auto *P : *PredSet)
+      addPredicate(P);
+}
+
+ScalarEvolution::ExitLimit::ExitLimit(
+    const SCEV *E, const SCEV *M, bool MaxOrZero,
+    const SmallPtrSetImpl<const SCEVPredicate *> &PredSet)
+    : ExitLimit(E, M, MaxOrZero, {&PredSet}) {}
+
+ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E, const SCEV *M,
+                                      bool MaxOrZero)
+    : ExitLimit(E, M, MaxOrZero, None) {}
+
 /// Allocate memory for BackedgeTakenInfo and copy the not-taken count of each
 /// computable exit into a persistent ExitNotTakenInfo array.
 ScalarEvolution::BackedgeTakenInfo::BackedgeTakenInfo(
@@ -6637,13 +6661,12 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
     // {K,ashr,<positive-constant>} stabilizes to signum(K) in at most
     // bitwidth(K) iterations.
     Value *FirstValue = PN->getIncomingValueForBlock(Predecessor);
-    bool KnownZero, KnownOne;
-    ComputeSignBit(FirstValue, KnownZero, KnownOne, DL, 0, nullptr,
-                   Predecessor->getTerminator(), &DT);
+    KnownBits Known = computeKnownBits(FirstValue, DL, 0, nullptr,
+                                       Predecessor->getTerminator(), &DT);
     auto *Ty = cast<IntegerType>(RHS->getType());
-    if (KnownZero)
+    if (Known.isNonNegative())
       StableValue = ConstantInt::get(Ty, 0);
-    else if (KnownOne)
+    else if (Known.isNegative())
       StableValue = ConstantInt::get(Ty, -1, true);
     else
       return getCouldNotCompute();
@@ -7380,17 +7403,17 @@ SolveQuadraticEquation(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
   // Convert from chrec coefficients to polynomial coefficients AX^2+BX+C
 
   // The A coefficient is N/2
-  APInt A(N.sdiv(Two));
+  APInt A = N.sdiv(Two);
 
   // The B coefficient is M-N/2
-  APInt B(M);
+  APInt B = M;
   B -= A; // A is the same as N/2.
 
   // The C coefficient is L.
   const APInt& C = L;
 
   // Compute the B^2-4ac term.
-  APInt SqrtTerm(B);
+  APInt SqrtTerm = B;
   SqrtTerm *= B;
   SqrtTerm -= 4 * (A * C);
 
@@ -7401,12 +7424,12 @@ SolveQuadraticEquation(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
 
   // Compute sqrt(B^2-4ac). This is guaranteed to be the nearest
   // integer value or else APInt::sqrt() will assert.
-  APInt SqrtVal(SqrtTerm.sqrt());
+  APInt SqrtVal = SqrtTerm.sqrt();
 
   // Compute the two solutions for the quadratic formula.
   // The divisions must be performed as signed divisions.
-  APInt NegB(-std::move(B));
-  APInt TwoA(std::move(A));
+  APInt NegB = -std::move(B);
+  APInt TwoA = std::move(A);
   TwoA <<= 1;
   if (TwoA.isNullValue())
     return None;

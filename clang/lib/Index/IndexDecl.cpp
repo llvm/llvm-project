@@ -544,6 +544,14 @@ public:
     return true;
   }
 
+  bool VisitNamespaceAliasDecl(const NamespaceAliasDecl *D) {
+    TRY_DECL(D, IndexCtx.handleDecl(D));
+    IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), D);
+    IndexCtx.handleReference(D->getAliasedNamespace(), D->getTargetNameLoc(), D,
+                             D->getLexicalDeclContext());
+    return true;
+  }
+
   bool VisitUsingDecl(const UsingDecl *D) {
     const DeclContext *DC = D->getDeclContext()->getRedeclContext();
     const NamedDecl *Parent = dyn_cast<NamedDecl>(DC);

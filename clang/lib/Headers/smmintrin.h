@@ -586,7 +586,9 @@ _mm_mul_epi32 (__m128i __V1, __m128i __V2)
 /* SSE4 Floating Point Dot Product Instructions.  */
 /// \brief Computes the dot product of the two 128-bit vectors of [4 x float]
 ///    and returns it in the elements of the 128-bit result vector of
-///    [4 x float]. The immediate integer operand controls which input elements
+///    [4 x float].
+///
+///    The immediate integer operand controls which input elements
 ///    will contribute to the dot product, and where the final results are
 ///    returned.
 ///
@@ -620,7 +622,9 @@ _mm_mul_epi32 (__m128i __V1, __m128i __V2)
 
 /// \brief Computes the dot product of the two 128-bit vectors of [2 x double]
 ///    and returns it in the elements of the 128-bit result vector of
-///    [2 x double]. The immediate integer operand controls which input
+///    [2 x double].
+///
+///    The immediate integer operand controls which input
 ///    elements will contribute to the dot product, and where the final results
 ///    are returned.
 ///
@@ -875,7 +879,7 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 /// int _mm_extract_ps(__m128 X, const int N);
 /// \endcode
 ///
-/// This intrinsic corresponds to the <c> VEXTRACTPS / EXTRACTPS </c> 
+/// This intrinsic corresponds to the <c> VEXTRACTPS / EXTRACTPS </c>
 /// instruction.
 ///
 /// \param X

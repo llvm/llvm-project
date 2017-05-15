@@ -2212,9 +2212,9 @@ Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
 
   // Canonicalize fcmp_one -> fcmp_oeq
   FCmpInst::Predicate FPred; Value *Y;
-  if (match(&BI, m_Br(m_FCmp(FPred, m_Value(X), m_Value(Y)),
-                             TrueDest, FalseDest)) &&
-      BI.getCondition()->hasOneUse())
+  if (match(&BI, m_Br(m_OneUse(m_FCmp(FPred, m_Value(X), m_Value(Y))),
+                      TrueDest, FalseDest))) {
+    // TODO: Why are we only transforming these 3 predicates?
     if (FPred == FCmpInst::FCMP_ONE || FPred == FCmpInst::FCMP_OLE ||
         FPred == FCmpInst::FCMP_OGE) {
       FCmpInst *Cond = cast<FCmpInst>(BI.getCondition());
@@ -2225,12 +2225,12 @@ Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
       Worklist.Add(Cond);
       return &BI;
     }
+  }
 
   // Canonicalize icmp_ne -> icmp_eq
   ICmpInst::Predicate IPred;
-  if (match(&BI, m_Br(m_ICmp(IPred, m_Value(X), m_Value(Y)),
-                      TrueDest, FalseDest)) &&
-      BI.getCondition()->hasOneUse())
+  if (match(&BI, m_Br(m_OneUse(m_ICmp(IPred, m_Value(X), m_Value(Y))),
+                      TrueDest, FalseDest))) {
     if (IPred == ICmpInst::ICMP_NE  || IPred == ICmpInst::ICMP_ULE ||
         IPred == ICmpInst::ICMP_SLE || IPred == ICmpInst::ICMP_UGE ||
         IPred == ICmpInst::ICMP_SGE) {
@@ -2241,6 +2241,7 @@ Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
       Worklist.Add(Cond);
       return &BI;
     }
+  }
 
   return nullptr;
 }

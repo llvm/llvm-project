@@ -400,7 +400,8 @@ void SystemInitializerFull::InitializeSWIG() {
 }
 
 void SystemInitializerFull::Terminate() {
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
 
   Debugger::SettingsTerminate();
 

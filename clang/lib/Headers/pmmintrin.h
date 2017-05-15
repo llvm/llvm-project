@@ -31,9 +31,11 @@
   __attribute__((__always_inline__, __nodebug__, __target__("sse3")))
 
 /// \brief Loads data from an unaligned memory location to elements in a 128-bit
-///    vector. If the address of the data is not 16-byte aligned, the
-///    instruction may read two adjacent aligned blocks of memory to retrieve
-///    the requested data.
+///    vector.
+///
+///    If the address of the data is not 16-byte aligned, the instruction may
+///    read two adjacent aligned blocks of memory to retrieve the requested
+///    data.
 ///
 /// \headerfile <x86intrin.h>
 ///

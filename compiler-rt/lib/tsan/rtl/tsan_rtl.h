@@ -55,16 +55,22 @@ namespace __tsan {
 #if !SANITIZER_GO
 struct MapUnmapCallback;
 #if defined(__mips64) || defined(__aarch64__) || defined(__powerpc__)
-static const uptr kAllocatorSpace = 0;
-static const uptr kAllocatorSize = SANITIZER_MMAP_RANGE_SIZE;
 static const uptr kAllocatorRegionSizeLog = 20;
 static const uptr kAllocatorNumRegions =
-    kAllocatorSize >> kAllocatorRegionSizeLog;
+    SANITIZER_MMAP_RANGE_SIZE >> kAllocatorRegionSizeLog;
 typedef TwoLevelByteMap<(kAllocatorNumRegions >> 12), 1 << 12,
     MapUnmapCallback> ByteMap;
-typedef SizeClassAllocator32<kAllocatorSpace, kAllocatorSize, 0,
-    CompactSizeClassMap, kAllocatorRegionSizeLog, ByteMap,
-    MapUnmapCallback> PrimaryAllocator;
+struct AP32 {
+  static const uptr kSpaceBeg = 0;
+  static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
+  static const uptr kMetadataSize = 0;
+  typedef __sanitizer::CompactSizeClassMap SizeClassMap;
+  static const uptr kRegionSizeLog = kAllocatorRegionSizeLog;
+  typedef __tsan::ByteMap ByteMap;
+  typedef __tsan::MapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
+typedef SizeClassAllocator32<AP32> PrimaryAllocator;
 #else
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = Mapping::kHeapMemBeg;

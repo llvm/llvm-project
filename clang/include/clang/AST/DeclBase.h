@@ -706,20 +706,6 @@ public:
     reinterpret_cast<Module **>(this)[-1] = M;
   }
 
-  Module *getOwningModule() const {
-    return isFromASTFile() ? getImportedOwningModule() : getLocalOwningModule();
-  }
-
-  /// \brief Determine whether this declaration is hidden from name lookup.
-  bool isHidden() const { return Hidden; }
-
-  /// \brief Set whether this declaration is hidden from name lookup.
-  void setHidden(bool Hide) {
-    assert((!Hide || isFromASTFile() || hasLocalOwningModuleStorage()) &&
-           "declaration with no owning module can't be hidden");
-    Hidden = Hide;
-  }
-
   unsigned getIdentifierNamespace() const {
     return IdentifierNamespace;
   }

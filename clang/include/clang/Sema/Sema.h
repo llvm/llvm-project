@@ -1463,9 +1463,11 @@ private:
 
   VisibleModuleSet VisibleModules;
 
+  Module *CachedFakeTopLevelModule;
+
 public:
   /// \brief Get the module owning an entity.
-  Module *getOwningModule(Decl *Entity) { return Entity->getOwningModule(); }
+  Module *getOwningModule(Decl *Entity);
 
   /// \brief Make a merged definition of an existing hidden definition \p ND
   /// visible at the specified location.

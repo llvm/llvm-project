@@ -462,8 +462,9 @@ _mm_cmplt_pd(__m128d __a, __m128d __b)
 
 /// \brief Compares each of the corresponding double-precision values of the
 ///    128-bit vectors of [2 x double] to determine if the values in the first
-///    operand are less than or equal to those in the second operand. Each
-///    comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///    operand are less than or equal to those in the second operand.
+///
+///    Each comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -482,8 +483,9 @@ _mm_cmple_pd(__m128d __a, __m128d __b)
 
 /// \brief Compares each of the corresponding double-precision values of the
 ///    128-bit vectors of [2 x double] to determine if the values in the first
-///    operand are greater than those in the second operand. Each comparison
-///    yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///    operand are greater than those in the second operand.
+///
+///    Each comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -502,8 +504,9 @@ _mm_cmpgt_pd(__m128d __a, __m128d __b)
 
 /// \brief Compares each of the corresponding double-precision values of the
 ///    128-bit vectors of [2 x double] to determine if the values in the first
-///    operand are greater than or equal to those in the second operand. Each
-///    comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///    operand are greater than or equal to those in the second operand.
+///
+///    Each comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -522,9 +525,10 @@ _mm_cmpge_pd(__m128d __a, __m128d __b)
 
 /// \brief Compares each of the corresponding double-precision values of the
 ///    128-bit vectors of [2 x double] to determine if the values in the first
-///    operand are ordered with respect to those in the second operand. A pair
-///    of double-precision values are "ordered" with respect to each other if
-///    neither value is a NaN. Each comparison yields 0h for false,
+///    operand are ordered with respect to those in the second operand.
+///
+///    A pair of double-precision values are "ordered" with respect to each
+///    other if neither value is a NaN. Each comparison yields 0h for false,
 ///    FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
@@ -544,9 +548,10 @@ _mm_cmpord_pd(__m128d __a, __m128d __b)
 
 /// \brief Compares each of the corresponding double-precision values of the
 ///    128-bit vectors of [2 x double] to determine if the values in the first
-///    operand are unordered with respect to those in the second operand. A pair
-///    of double-precision values are "unordered" with respect to each other if
-///    one or both values are NaN. Each comparison yields 0h for false,
+///    operand are unordered with respect to those in the second operand.
+///
+///    A pair of double-precision values are "unordered" with respect to each
+///    other if one or both values are NaN. Each comparison yields 0h for false,
 ///    FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
@@ -567,8 +572,9 @@ _mm_cmpunord_pd(__m128d __a, __m128d __b)
 
 /// \brief Compares each of the corresponding double-precision values of the
 ///    128-bit vectors of [2 x double] to determine if the values in the first
-///    operand are unequal to those in the second operand. Each comparison
-///    yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///    operand are unequal to those in the second operand.
+///
+///    Each comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -587,8 +593,9 @@ _mm_cmpneq_pd(__m128d __a, __m128d __b)
 
 /// \brief Compares each of the corresponding double-precision values of the
 ///    128-bit vectors of [2 x double] to determine if the values in the first
-///    operand are not less than those in the second operand. Each comparison
-///    yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///    operand are not less than those in the second operand.
+///
+///    Each comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -607,8 +614,9 @@ _mm_cmpnlt_pd(__m128d __a, __m128d __b)
 
 /// \brief Compares each of the corresponding double-precision values of the
 ///    128-bit vectors of [2 x double] to determine if the values in the first
-///    operand are not less than or equal to those in the second operand. Each
-///    comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///    operand are not less than or equal to those in the second operand.
+///
+///    Each comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -627,8 +635,9 @@ _mm_cmpnle_pd(__m128d __a, __m128d __b)
 
 /// \brief Compares each of the corresponding double-precision values of the
 ///    128-bit vectors of [2 x double] to determine if the values in the first
-///    operand are not greater than those in the second operand. Each
-///    comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///    operand are not greater than those in the second operand.
+///
+///    Each comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -648,6 +657,7 @@ _mm_cmpngt_pd(__m128d __a, __m128d __b)
 /// \brief Compares each of the corresponding double-precision values of the
 ///    128-bit vectors of [2 x double] to determine if the values in the first
 ///    operand are not greater than or equal to those in the second operand.
+///
 ///    Each comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
@@ -666,8 +676,9 @@ _mm_cmpnge_pd(__m128d __a, __m128d __b)
 }
 
 /// \brief Compares the lower double-precision floating-point values in each of
-///    the two 128-bit floating-point vectors of [2 x double] for equality. The
-///    comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
+///    the two 128-bit floating-point vectors of [2 x double] for equality.
+///
+///    The comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -690,8 +701,9 @@ _mm_cmpeq_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is less than the corresponding value in
-///    the second parameter. The comparison yields 0h for false,
-///    FFFFFFFFFFFFFFFFh for true.
+///    the second parameter.
+///
+///    The comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -714,8 +726,9 @@ _mm_cmplt_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is less than or equal to the
-///    corresponding value in the second parameter. The comparison yields 0h for
-///    false, FFFFFFFFFFFFFFFFh for true.
+///    corresponding value in the second parameter.
+///
+///    The comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -738,8 +751,9 @@ _mm_cmple_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is greater than the corresponding value
-///    in the second parameter. The comparison yields 0h for false,
-///    FFFFFFFFFFFFFFFFh for true.
+///    in the second parameter.
+///
+///    The comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -763,8 +777,9 @@ _mm_cmpgt_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is greater than or equal to the
-///    corresponding value in the second parameter. The comparison yields 0h for
-///    false, FFFFFFFFFFFFFFFFh for true.
+///    corresponding value in the second parameter.
+///
+///    The comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -788,9 +803,11 @@ _mm_cmpge_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is "ordered" with respect to the
-///    corresponding value in the second parameter. The comparison yields 0h for
-///    false, FFFFFFFFFFFFFFFFh for true. A pair of double-precision values are
-///    "ordered" with respect to each other if neither value is a NaN.
+///    corresponding value in the second parameter.
+///
+///    The comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true. A pair of
+///    double-precision values are "ordered" with respect to each other if
+///    neither value is a NaN.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -813,9 +830,11 @@ _mm_cmpord_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is "unordered" with respect to the
-///    corresponding value in the second parameter. The comparison yields 0h
-///    for false, FFFFFFFFFFFFFFFFh for true. A pair of double-precision values
-///    are "unordered" with respect to each other if one or both values are NaN.
+///    corresponding value in the second parameter.
+///
+///    The comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true. A pair of
+///    double-precision values are "unordered" with respect to each other if one
+///    or both values are NaN.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -839,8 +858,9 @@ _mm_cmpunord_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is unequal to the corresponding value in
-///    the second parameter. The comparison yields 0h for false,
-///    FFFFFFFFFFFFFFFFh for true.
+///    the second parameter.
+///
+///    The comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -863,8 +883,9 @@ _mm_cmpneq_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is not less than the corresponding
-///    value in the second parameter. The comparison yields 0h for false,
-///    FFFFFFFFFFFFFFFFh for true.
+///    value in the second parameter.
+///
+///    The comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -887,8 +908,9 @@ _mm_cmpnlt_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is not less than or equal to the
-///    corresponding value in the second parameter. The comparison yields 0h
-///    for false, FFFFFFFFFFFFFFFFh for true.
+///    corresponding value in the second parameter.
+///
+///    The comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -911,8 +933,9 @@ _mm_cmpnle_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is not greater than the corresponding
-///    value in the second parameter. The comparison yields 0h for false,
-///    FFFFFFFFFFFFFFFFh for true.
+///    value in the second parameter.
+///
+///    The comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -936,8 +959,9 @@ _mm_cmpngt_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is not greater than or equal to the
-///    corresponding value in the second parameter. The comparison yields 0h
-///    for false, FFFFFFFFFFFFFFFFh for true.
+///    corresponding value in the second parameter.
+///
+///    The comparison yields 0h for false, FFFFFFFFFFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -982,7 +1006,9 @@ _mm_comieq_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is less than the corresponding value in
-///    the second parameter. The comparison yields 0 for false, 1 for true.
+///    the second parameter.
+///
+///    The comparison yields 0 for false, 1 for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1004,8 +1030,9 @@ _mm_comilt_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is less than or equal to the
-///    corresponding value in the second parameter. The comparison yields 0 for
-///    false, 1 for true.
+///    corresponding value in the second parameter.
+///
+///    The comparison yields 0 for false, 1 for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1027,7 +1054,9 @@ _mm_comile_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is greater than the corresponding value
-///    in the second parameter. The comparison yields 0 for false, 1 for true.
+///    in the second parameter.
+///
+///    The comparison yields 0 for false, 1 for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1049,8 +1078,9 @@ _mm_comigt_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is greater than or equal to the
-///    corresponding value in the second parameter. The comparison yields 0 for
-///    false, 1 for true.
+///    corresponding value in the second parameter.
+///
+///    The comparison yields 0 for false, 1 for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1072,7 +1102,9 @@ _mm_comige_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is unequal to the corresponding value in
-///    the second parameter. The comparison yields 0 for false, 1 for true.
+///    the second parameter.
+///
+///    The comparison yields 0 for false, 1 for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1093,8 +1125,9 @@ _mm_comineq_sd(__m128d __a, __m128d __b)
 
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] for equality. The
-///    comparison yields 0 for false, 1 for true. If either of the two lower
-///    double-precision values is NaN, 1 is returned.
+///    comparison yields 0 for false, 1 for true.
+///
+///    If either of the two lower double-precision values is NaN, 1 is returned.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1117,8 +1150,10 @@ _mm_ucomieq_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is less than the corresponding value in
-///    the second parameter. The comparison yields 0 for false, 1 for true. If
-///    either of the two lower double-precision values is NaN, 1 is returned.
+///    the second parameter.
+///
+///    The comparison yields 0 for false, 1 for true. If either of the two lower
+///    double-precision values is NaN, 1 is returned.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1141,9 +1176,10 @@ _mm_ucomilt_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is less than or equal to the
-///    corresponding value in the second parameter. The comparison yields 0 for
-///    false, 1 for true. If either of the two lower double-precision values is
-///    NaN, 1 is returned.
+///    corresponding value in the second parameter.
+///
+///    The comparison yields 0 for false, 1 for true. If either of the two lower
+///    double-precision values is NaN, 1 is returned.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1166,8 +1202,10 @@ _mm_ucomile_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is greater than the corresponding value
-///    in the second parameter. The comparison yields 0 for false, 1 for true.
-///    If either of the two lower double-precision values is NaN, 0 is returned.
+///    in the second parameter.
+///
+///    The comparison yields 0 for false, 1 for true. If either of the two lower
+///    double-precision values is NaN, 0 is returned.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1190,9 +1228,10 @@ _mm_ucomigt_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is greater than or equal to the
-///    corresponding value in the second parameter. The comparison yields 0 for
-///    false, 1 for true.  If either of the two lower double-precision values
-///    is NaN, 0 is returned.
+///    corresponding value in the second parameter.
+///
+///    The comparison yields 0 for false, 1 for true.  If either of the two
+///    lower double-precision values is NaN, 0 is returned.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1215,8 +1254,10 @@ _mm_ucomige_sd(__m128d __a, __m128d __b)
 /// \brief Compares the lower double-precision floating-point values in each of
 ///    the two 128-bit floating-point vectors of [2 x double] to determine if
 ///    the value in the first parameter is unequal to the corresponding value in
-///    the second parameter. The comparison yields 0 for false, 1 for true. If
-///    either of the two lower double-precision values is NaN, 0 is returned.
+///    the second parameter.
+///
+///    The comparison yields 0 for false, 1 for true. If either of the two lower
+///    double-precision values is NaN, 0 is returned.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1278,8 +1319,9 @@ _mm_cvtps_pd(__m128 __a)
 
 /// \brief Converts the lower two integer elements of a 128-bit vector of
 ///    [4 x i32] into two double-precision floating-point values, returned in a
-///    128-bit vector of [2 x double]. The upper two elements of the input
-///    vector are unused.
+///    128-bit vector of [2 x double].
+///
+///    The upper two elements of the input vector are unused.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1287,7 +1329,9 @@ _mm_cvtps_pd(__m128 __a)
 ///
 /// \param __a
 ///    A 128-bit integer vector of [4 x i32]. The lower two integer elements are
-///    converted to double-precision values. The upper two elements are unused.
+///    converted to double-precision values.
+///
+///    The upper two elements are unused.
 /// \returns A 128-bit vector of [2 x double] containing the converted values.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cvtepi32_pd(__m128i __a)
@@ -1409,10 +1453,11 @@ _mm_cvtss_sd(__m128d __a, __m128 __b)
 
 /// \brief Converts the two double-precision floating-point elements of a
 ///    128-bit vector of [2 x double] into two signed 32-bit integer values,
-///    returned in the lower 64 bits of a 128-bit vector of [4 x i32]. If the
-///    result of either conversion is inexact, the result is truncated (rounded
-///    towards zero) regardless of the current MXCSR setting. The upper 64 bits
-///    of the result vector are set to zero.
+///    returned in the lower 64 bits of a 128-bit vector of [4 x i32].
+///
+///    If the result of either conversion is inexact, the result is truncated
+///    (rounded towards zero) regardless of the current MXCSR setting. The upper
+///    64 bits of the result vector are set to zero.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1466,9 +1511,10 @@ _mm_cvtpd_pi32(__m128d __a)
 
 /// \brief Converts the two double-precision floating-point elements of a
 ///    128-bit vector of [2 x double] into two signed 32-bit integer values,
-///    returned in a 64-bit vector of [2 x i32]. If the result of either
-///    conversion is inexact, the result is truncated (rounded towards zero)
-///    regardless of the current MXCSR setting.
+///    returned in a 64-bit vector of [2 x i32].
+///
+///    If the result of either conversion is inexact, the result is truncated
+///    (rounded towards zero) regardless of the current MXCSR setting.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1980,8 +2026,9 @@ _mm_storel_pd(double *__dp, __m128d __a)
 
 /// \brief Adds the corresponding elements of two 128-bit vectors of [16 x i8],
 ///    saving the lower 8 bits of each sum in the corresponding element of a
-///    128-bit result vector of [16 x i8]. The integer elements of both
-///    parameters can be either signed or unsigned.
+///    128-bit result vector of [16 x i8].
+///
+///    The integer elements of both parameters can be either signed or unsigned.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2001,8 +2048,9 @@ _mm_add_epi8(__m128i __a, __m128i __b)
 
 /// \brief Adds the corresponding elements of two 128-bit vectors of [8 x i16],
 ///    saving the lower 16 bits of each sum in the corresponding element of a
-///    128-bit result vector of [8 x i16]. The integer elements of both
-///    parameters can be either signed or unsigned.
+///    128-bit result vector of [8 x i16].
+///
+///    The integer elements of both parameters can be either signed or unsigned.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2022,8 +2070,9 @@ _mm_add_epi16(__m128i __a, __m128i __b)
 
 /// \brief Adds the corresponding elements of two 128-bit vectors of [4 x i32],
 ///    saving the lower 32 bits of each sum in the corresponding element of a
-///    128-bit result vector of [4 x i32]. The integer elements of both
-///    parameters can be either signed or unsigned.
+///    128-bit result vector of [4 x i32].
+///
+///    The integer elements of both parameters can be either signed or unsigned.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2061,8 +2110,9 @@ _mm_add_si64(__m64 __a, __m64 __b)
 
 /// \brief Adds the corresponding elements of two 128-bit vectors of [2 x i64],
 ///    saving the lower 64 bits of each sum in the corresponding element of a
-///    128-bit result vector of [2 x i64]. The integer elements of both
-///    parameters can be either signed or unsigned.
+///    128-bit result vector of [2 x i64].
+///
+///    The integer elements of both parameters can be either signed or unsigned.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2208,10 +2258,12 @@ _mm_avg_epu16(__m128i __a, __m128i __b)
 /// \brief Multiplies the corresponding elements of two 128-bit signed [8 x i16]
 ///    vectors, producing eight intermediate 32-bit signed integer products, and
 ///    adds the consecutive pairs of 32-bit products to form a 128-bit signed
-///    [4 x i32] vector. For example, bits [15:0] of both parameters are
-///    multiplied producing a 32-bit product, bits [31:16] of both parameters
-///    are multiplied producing a 32-bit product, and the sum of those two
-///    products becomes bits [31:0] of the result.
+///    [4 x i32] vector.
+///
+///    For example, bits [15:0] of both parameters are multiplied producing a
+///    32-bit product, bits [31:16] of both parameters are multiplied producing
+///    a 32-bit product, and the sum of those two products becomes bits [31:0]
+///    of the result.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3146,8 +3198,9 @@ _mm_cmpgt_epi8(__m128i __a, __m128i __b)
 
 /// \brief Compares each of the corresponding signed 16-bit values of the
 ///    128-bit integer vectors to determine if the values in the first operand
-///    are greater than those in the second operand. Each comparison yields 0h
-///    for false, FFFFh for true.
+///    are greater than those in the second operand.
+///
+///    Each comparison yields 0h for false, FFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3166,8 +3219,9 @@ _mm_cmpgt_epi16(__m128i __a, __m128i __b)
 
 /// \brief Compares each of the corresponding signed 32-bit values of the
 ///    128-bit integer vectors to determine if the values in the first operand
-///    are greater than those in the second operand. Each comparison yields 0h
-///    for false, FFFFFFFFh for true.
+///    are greater than those in the second operand.
+///
+///    Each comparison yields 0h for false, FFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3186,8 +3240,9 @@ _mm_cmpgt_epi32(__m128i __a, __m128i __b)
 
 /// \brief Compares each of the corresponding signed 8-bit values of the 128-bit
 ///    integer vectors to determine if the values in the first operand are less
-///    than those in the second operand. Each comparison yields 0h for false,
-///    FFh for true.
+///    than those in the second operand.
+///
+///    Each comparison yields 0h for false, FFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3206,8 +3261,9 @@ _mm_cmplt_epi8(__m128i __a, __m128i __b)
 
 /// \brief Compares each of the corresponding signed 16-bit values of the
 ///    128-bit integer vectors to determine if the values in the first operand
-///    are less than those in the second operand. Each comparison yields 0h for
-///    false, FFFFh for true.
+///    are less than those in the second operand.
+///
+///    Each comparison yields 0h for false, FFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3226,8 +3282,9 @@ _mm_cmplt_epi16(__m128i __a, __m128i __b)
 
 /// \brief Compares each of the corresponding signed 32-bit values of the
 ///    128-bit integer vectors to determine if the values in the first operand
-///    are less than those in the second operand. Each comparison yields 0h for
-///    false, FFFFFFFFh for true.
+///    are less than those in the second operand.
+///
+///    Each comparison yields 0h for false, FFFFFFFFh for true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3925,10 +3982,11 @@ _mm_storeu_si128(__m128i *__p, __m128i __b)
 
 /// \brief Moves bytes selected by the mask from the first operand to the
 ///    specified unaligned memory location. When a mask bit is 1, the
-///    corresponding byte is written, otherwise it is not written. To minimize
-///    caching, the date is flagged as non-temporal (unlikely to be used again
-///    soon). Exception and trap behavior for elements not selected for storage
-///    to memory are implementation dependent.
+///    corresponding byte is written, otherwise it is not written.
+///
+///    To minimize caching, the date is flagged as non-temporal (unlikely to be
+///    used again soon). Exception and trap behavior for elements not selected
+///    for storage to memory are implementation dependent.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3972,8 +4030,10 @@ _mm_storel_epi64(__m128i *__p, __m128i __a)
 }
 
 /// \brief Stores a 128-bit floating point vector of [2 x double] to a 128-bit
-///    aligned memory location. To minimize caching, the data is flagged as
-///    non-temporal (unlikely to be used again soon).
+///    aligned memory location.
+///
+///    To minimize caching, the data is flagged as non-temporal (unlikely to be
+///    used again soon).
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3990,6 +4050,7 @@ _mm_stream_pd(double *__p, __m128d __a)
 }
 
 /// \brief Stores a 128-bit integer vector to a 128-bit aligned memory location.
+///
 ///    To minimize caching, the data is flagged as non-temporal (unlikely to be
 ///    used again soon).
 ///
@@ -4007,8 +4068,9 @@ _mm_stream_si128(__m128i *__p, __m128i __a)
   __builtin_nontemporal_store((__v2di)__a, (__v2di*)__p);
 }
 
-/// \brief Stores a 32-bit integer value in the specified memory location. To
-///    minimize caching, the data is flagged as non-temporal (unlikely to be
+/// \brief Stores a 32-bit integer value in the specified memory location.
+///
+///    To minimize caching, the data is flagged as non-temporal (unlikely to be
 ///    used again soon).
 ///
 /// \headerfile <x86intrin.h>
@@ -4026,8 +4088,9 @@ _mm_stream_si32(int *__p, int __a)
 }
 
 #ifdef __x86_64__
-/// \brief Stores a 64-bit integer value in the specified memory location. To
-///    minimize caching, the data is flagged as non-temporal (unlikely to be
+/// \brief Stores a 64-bit integer value in the specified memory location.
+///
+///    To minimize caching, the data is flagged as non-temporal (unlikely to be
 ///    used again soon).
 ///
 /// \headerfile <x86intrin.h>

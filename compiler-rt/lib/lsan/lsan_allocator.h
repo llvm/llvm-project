@@ -55,10 +55,18 @@ struct ChunkMetadata {
 static const uptr kRegionSizeLog = 20;
 static const uptr kNumRegions = SANITIZER_MMAP_RANGE_SIZE >> kRegionSizeLog;
 typedef TwoLevelByteMap<(kNumRegions >> 12), 1 << 12> ByteMap;
-typedef CompactSizeClassMap SizeClassMap;
-typedef SizeClassAllocator32<0, SANITIZER_MMAP_RANGE_SIZE,
-    sizeof(ChunkMetadata), SizeClassMap, kRegionSizeLog, ByteMap>
-    PrimaryAllocator;
+
+struct AP32 {
+  static const uptr kSpaceBeg = 0;
+  static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
+  static const uptr kMetadataSize = sizeof(ChunkMetadata);
+  typedef __sanitizer::CompactSizeClassMap SizeClassMap;
+  static const uptr kRegionSizeLog = __lsan::kRegionSizeLog;
+  typedef __lsan::ByteMap ByteMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
+typedef SizeClassAllocator32<AP32> PrimaryAllocator;
 #elif defined(__x86_64__) || defined(__powerpc64__)
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = 0x600000000000ULL;

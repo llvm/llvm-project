@@ -657,6 +657,17 @@ multiclass VOP2_Real_e64_vi <bits<10> op> {
     VOP3e_vi <op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
 }
 
+multiclass VOP2_Real_e64only_vi <bits<10> op> {
+  def _e64_vi :
+    VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.VI>,
+    VOP3e_vi <op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl> {
+      // Hack to stop printing _e64
+      VOP3_Pseudo ps = !cast<VOP3_Pseudo>(NAME#"_e64");
+      let OutOperandList = (outs VGPR_32:$vdst);
+      let AsmString = ps.Mnemonic # " " # ps.AsmOperands;
+    }
+}
+
 multiclass Base_VOP2be_Real_e32e64_vi <bits<6> op> : VOP2_Real_e32_vi<op> {
   def _e64_vi :
     VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.VI>,
@@ -724,17 +735,17 @@ defm V_SUBBREV_U32        : VOP2be_Real_e32e64_vi <0x1e>;
 defm V_READLANE_B32       : VOP32_Real_vi <0x289>;
 defm V_WRITELANE_B32      : VOP32_Real_vi <0x28a>;
 
-defm V_BFM_B32            : VOP2_Real_e64_vi <0x293>;
-defm V_BCNT_U32_B32       : VOP2_Real_e64_vi <0x28b>;
-defm V_MBCNT_LO_U32_B32   : VOP2_Real_e64_vi <0x28c>;
-defm V_MBCNT_HI_U32_B32   : VOP2_Real_e64_vi <0x28d>;
-defm V_LDEXP_F32          : VOP2_Real_e64_vi <0x288>;
-defm V_CVT_PKACCUM_U8_F32 : VOP2_Real_e64_vi <0x1f0>;
-defm V_CVT_PKNORM_I16_F32 : VOP2_Real_e64_vi <0x294>;
-defm V_CVT_PKNORM_U16_F32 : VOP2_Real_e64_vi <0x295>;
-defm V_CVT_PKRTZ_F16_F32  : VOP2_Real_e64_vi <0x296>;
-defm V_CVT_PK_U16_U32     : VOP2_Real_e64_vi <0x297>;
-defm V_CVT_PK_I16_I32     : VOP2_Real_e64_vi <0x298>;
+defm V_BFM_B32            : VOP2_Real_e64only_vi <0x293>;
+defm V_BCNT_U32_B32       : VOP2_Real_e64only_vi <0x28b>;
+defm V_MBCNT_LO_U32_B32   : VOP2_Real_e64only_vi <0x28c>;
+defm V_MBCNT_HI_U32_B32   : VOP2_Real_e64only_vi <0x28d>;
+defm V_LDEXP_F32          : VOP2_Real_e64only_vi <0x288>;
+defm V_CVT_PKACCUM_U8_F32 : VOP2_Real_e64only_vi <0x1f0>;
+defm V_CVT_PKNORM_I16_F32 : VOP2_Real_e64only_vi <0x294>;
+defm V_CVT_PKNORM_U16_F32 : VOP2_Real_e64only_vi <0x295>;
+defm V_CVT_PKRTZ_F16_F32  : VOP2_Real_e64only_vi <0x296>;
+defm V_CVT_PK_U16_U32     : VOP2_Real_e64only_vi <0x297>;
+defm V_CVT_PK_I16_I32     : VOP2_Real_e64only_vi <0x298>;
 
 defm V_ADD_F16            : VOP2_Real_e32e64_vi <0x1f>;
 defm V_SUB_F16            : VOP2_Real_e32e64_vi <0x20>;

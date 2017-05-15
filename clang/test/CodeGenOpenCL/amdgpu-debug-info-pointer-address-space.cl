@@ -58,16 +58,16 @@ kernel void kernel1(
   // CHECK-DAG: !DILocalVariable(name: "FuncVar4", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DWARF_ADDRESS_SPACE_NONE]])
   int *FuncVar4 = Tmp1;
 
-  // CHECK-DAG: !DILocalVariable(name: "FuncVar5", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DWARF_ADDRESS_SPACE_NONE]])
-  global int *constant FuncVar5 = KernelArg0;
-  // CHECK-DAG: !DILocalVariable(name: "FuncVar6", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DWARF_ADDRESS_SPACE_NONE]])
-  constant int *constant FuncVar6 = KernelArg1;
-  // CHECK-DAG: !DILocalVariable(name: "FuncVar7", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DWARF_ADDRESS_SPACE_LOCAL]])
-  local int *constant FuncVar7 = KernelArg2;
-  // CHECK-DAG: !DILocalVariable(name: "FuncVar8", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DWARF_ADDRESS_SPACE_PRIVATE]])
-  private int *constant FuncVar8 = Tmp0;
-  // CHECK-DAG: !DILocalVariable(name: "FuncVar9", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DWARF_ADDRESS_SPACE_NONE]])
-  int *constant FuncVar9 = Tmp1;
+  // CHECK-DAG: distinct !DIGlobalVariable(name: "FuncVar5", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DWARF_ADDRESS_SPACE_NONE]], isLocal: true, isDefinition: true)
+  global int *constant FuncVar5 = 0;
+  // CHECK-DAG: distinct !DIGlobalVariable(name: "FuncVar6", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DWARF_ADDRESS_SPACE_NONE]], isLocal: true, isDefinition: true)
+  constant int *constant FuncVar6 = 0;
+  // CHECK-DAG: distinct !DIGlobalVariable(name: "FuncVar7", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DWARF_ADDRESS_SPACE_LOCAL]], isLocal: true, isDefinition: true)
+  local int *constant FuncVar7 = 0;
+  // CHECK-DAG: distinct !DIGlobalVariable(name: "FuncVar8", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DWARF_ADDRESS_SPACE_PRIVATE]], isLocal: true, isDefinition: true)
+  private int *constant FuncVar8 = 0;
+  // CHECK-DAG: distinct !DIGlobalVariable(name: "FuncVar9", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DWARF_ADDRESS_SPACE_NONE]], isLocal: true, isDefinition: true)
+  int *constant FuncVar9 = 0;
 
   // CHECK-DAG: distinct !DIGlobalVariable(name: "FuncVar10", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DWARF_ADDRESS_SPACE_NONE]], isLocal: true, isDefinition: true)
   global int *local FuncVar10; FuncVar10 = KernelArg0;

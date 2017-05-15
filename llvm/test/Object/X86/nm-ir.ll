@@ -12,7 +12,7 @@
 ; CHECK-NEXT: C g3
 ; CHECK-NOT: g4
 ; CHECK-NEXT: T global_asm_sym
-; CHECK-NEXT: D ifunc_f1
+; CHECK-NEXT: T ifunc_f1
 ; CHECK-NEXT: t local_asm_sym
 ; CHECK-NEXT: U undef_asm_sy
 

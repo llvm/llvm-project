@@ -37,10 +37,23 @@ namespace lldb_private {
 
 class Timer {
 public:
+  class Category {
+  public:
+    explicit Category(const char *category_name);
+
+  private:
+    friend class Timer;
+    const char *m_name;
+    std::atomic<uint64_t> m_nanos;
+    std::atomic<Category *> m_next;
+
+    DISALLOW_COPY_AND_ASSIGN(Category);
+  };
+
   //--------------------------------------------------------------
   /// Default constructor.
   //--------------------------------------------------------------
-  Timer(const char *category, const char *format, ...)
+  Timer(Category &category, const char *format, ...)
       __attribute__((format(printf, 3, 4)));
 
   //--------------------------------------------------------------
@@ -62,7 +75,7 @@ protected:
   using TimePoint = std::chrono::steady_clock::time_point;
   void ChildDuration(TimePoint::duration dur) { m_child_duration += dur; }
 
-  const char *m_category;
+  Category &m_category;
   TimePoint m_total_start;
   TimePoint::duration m_child_duration{0};
 

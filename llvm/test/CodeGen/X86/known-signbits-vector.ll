@@ -173,33 +173,12 @@ define <4 x double> @signbits_sext_shuffle_sitofp(<4 x i32> %a0, <4 x i64> %a1) 
 define <2 x double> @signbits_ashr_concat_ashr_extract_sitofp(<2 x i64> %a0, <4 x i64> %a1) nounwind {
 ; X32-LABEL: signbits_ashr_concat_ashr_extract_sitofp:
 ; X32:       # BB#0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    andl $-8, %esp
-; X32-NEXT:    subl $32, %esp
 ; X32-NEXT:    vpsrad $16, %xmm0, %xmm1
 ; X32-NEXT:    vpsrlq $16, %xmm0, %xmm0
 ; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
-; X32-NEXT:    vmovaps {{.*#+}} ymm1 = [16,0,16,0,16,0,16,0]
-; X32-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,2147483648,0,2147483648]
-; X32-NEXT:    vpsrlq %xmm1, %xmm2, %xmm2
-; X32-NEXT:    vpsrlq %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; X32-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
-; X32-NEXT:    vmovq {{.*#+}} xmm1 = xmm0[0],zero
-; X32-NEXT:    vmovq %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X32-NEXT:    vmovq %xmm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    fildll {{[0-9]+}}(%esp)
-; X32-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X32-NEXT:    fildll {{[0-9]+}}(%esp)
-; X32-NEXT:    fstpl (%esp)
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; X32-NEXT:    movl %ebp, %esp
-; X32-NEXT:    popl %ebp
-; X32-NEXT:    vzeroupper
+; X32-NEXT:    vpsrlq $16, %xmm0, %xmm0
+; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X32-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: signbits_ashr_concat_ashr_extract_sitofp:
@@ -207,14 +186,9 @@ define <2 x double> @signbits_ashr_concat_ashr_extract_sitofp(<2 x i64> %a0, <4 
 ; X64-NEXT:    vpsrad $16, %xmm0, %xmm1
 ; X64-NEXT:    vpsrlq $16, %xmm0, %xmm0
 ; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
-; X64-NEXT:    vpsrad $16, %xmm0, %xmm1
 ; X64-NEXT:    vpsrlq $16, %xmm0, %xmm0
-; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
-; X64-NEXT:    vpextrq $1, %xmm0, %rax
-; X64-NEXT:    vcvtsi2sdq %rax, %xmm2, %xmm1
-; X64-NEXT:    vmovq %xmm0, %rax
-; X64-NEXT:    vcvtsi2sdq %rax, %xmm2, %xmm0
-; X64-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X64-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = ashr <2 x i64> %a0, <i64 16, i64 16>
   %2 = shufflevector <2 x i64> %1, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>

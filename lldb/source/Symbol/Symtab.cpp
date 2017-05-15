@@ -220,7 +220,8 @@ void Symtab::InitNameIndexes() {
   // Protected function, no need to lock mutex...
   if (!m_name_indexes_computed) {
     m_name_indexes_computed = true;
-    Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
+    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+    Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
     // Create the name index vector to be able to quickly search by name
     const size_t num_symbols = m_symbols.size();
 #if 1
@@ -433,7 +434,8 @@ void Symtab::AppendSymbolNamesToMap(const IndexCollection &indexes,
                                     bool add_demangled, bool add_mangled,
                                     NameToIndexMap &name_to_index_map) const {
   if (add_demangled || add_mangled) {
-    Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
+    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+    Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     // Create the name index vector to be able to quickly search by name
@@ -595,7 +597,8 @@ void Symtab::SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,
                                       bool remove_duplicates) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
   // No need to sort if we have zero or one items...
   if (indexes.size() <= 1)
     return;
@@ -621,7 +624,8 @@ uint32_t Symtab::AppendSymbolIndexesWithName(const ConstString &symbol_name,
                                              std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
   if (symbol_name) {
     if (!m_name_indexes_computed)
       InitNameIndexes();
@@ -637,7 +641,8 @@ uint32_t Symtab::AppendSymbolIndexesWithName(const ConstString &symbol_name,
                                              std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
   if (symbol_name) {
     const size_t old_size = indexes.size();
     if (!m_name_indexes_computed)
@@ -766,7 +771,8 @@ Symtab::FindAllSymbolsWithNameAndType(const ConstString &name,
                                       std::vector<uint32_t> &symbol_indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
   // Initialize all of the lookup by name indexes before converting NAME
   // to a uniqued string NAME_STR below.
   if (!m_name_indexes_computed)
@@ -785,7 +791,8 @@ size_t Symtab::FindAllSymbolsWithNameAndType(
     Visibility symbol_visibility, std::vector<uint32_t> &symbol_indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
   // Initialize all of the lookup by name indexes before converting NAME
   // to a uniqued string NAME_STR below.
   if (!m_name_indexes_computed)
@@ -817,7 +824,8 @@ Symbol *Symtab::FindFirstSymbolWithNameAndType(const ConstString &name,
                                                Visibility symbol_visibility) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
   if (!m_name_indexes_computed)
     InitNameIndexes();
 

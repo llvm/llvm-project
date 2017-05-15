@@ -32,7 +32,7 @@ namespace clangd {
 /// Using 'unsigned' here to avoid undefined behaviour on overflow.
 typedef unsigned DocVersion;
 
-/// Stores ASTUnit and FixIts map for an opened document
+/// Stores ASTUnit and FixIts map for an opened document.
 class DocData {
 public:
   typedef std::map<clangd::Diagnostic, std::vector<clang::tooling::Replacement>>

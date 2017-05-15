@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
 
+
 define i32 @foo(i64* nocapture %perm, i32 %n) {
 entry:
   br label %body

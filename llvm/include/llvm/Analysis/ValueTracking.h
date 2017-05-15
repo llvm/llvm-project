@@ -73,14 +73,6 @@ template <typename T> class ArrayRef;
                            const Instruction *CxtI = nullptr,
                            const DominatorTree *DT = nullptr);
 
-  /// Determine whether the sign bit is known to be zero or one. Convenience
-  /// wrapper around computeKnownBits.
-  void ComputeSignBit(const Value *V, bool &KnownZero, bool &KnownOne,
-                      const DataLayout &DL, unsigned Depth = 0,
-                      AssumptionCache *AC = nullptr,
-                      const Instruction *CxtI = nullptr,
-                      const DominatorTree *DT = nullptr);
-
   /// Return true if the given value is known to have exactly one bit set when
   /// defined. For vectors return true if every element is known to be a power
   /// of two when defined. Supports values with integer or pointer type and

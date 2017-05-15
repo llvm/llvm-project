@@ -1,4 +1,4 @@
-; RUN: opt -analyze -S -polly-detect-fortran-arrays \
+; RUN: opt %loadPolly -analyze -S -polly-detect-fortran-arrays \
 ; RUN: -polly-process-unprofitable -polly-scops  < %s | FileCheck %s
 
 ; MODULE src_soil

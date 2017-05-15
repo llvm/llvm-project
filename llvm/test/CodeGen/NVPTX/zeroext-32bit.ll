@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 | FileCheck %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 -verify-machineinstrs | FileCheck %s
 
 ; The zeroext attribute below should be silently ignored because
 ; we can pass a 32-bit integer across a function call without

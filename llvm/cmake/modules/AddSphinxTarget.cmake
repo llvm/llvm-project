@@ -1,9 +1,9 @@
 
 # Create sphinx target
-if (LLVM_ENABLE_SPHINX AND NOT TARGET sphinx)
+if (LLVM_ENABLE_SPHINX)
   message(STATUS "Sphinx enabled.")
   find_package(Sphinx REQUIRED)
-  if (LLVM_BUILD_DOCS)
+  if (LLVM_BUILD_DOCS AND NOT TARGET sphinx)
     add_custom_target(sphinx ALL)
   endif()
 else()

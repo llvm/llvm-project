@@ -301,6 +301,16 @@ public:
   using Decl::isModulePrivate;
   using Decl::setModulePrivate;
 
+  /// \brief Determine whether this declaration is hidden from name lookup.
+  bool isHidden() const { return Hidden; }
+
+  /// \brief Set whether this declaration is hidden from name lookup.
+  void setHidden(bool Hide) {
+    assert((!Hide || isFromASTFile() || hasLocalOwningModuleStorage()) &&
+           "declaration with no owning module can't be hidden");
+    Hidden = Hide;
+  }
+
   /// \brief Determine whether this declaration is a C++ class member.
   bool isCXXClassMember() const {
     const DeclContext *DC = getDeclContext();
@@ -956,9 +966,16 @@ public:
   /// hasLocalStorage - Returns true if a variable with function scope
   ///  is a non-static local variable.
   bool hasLocalStorage() const {
-    if (getStorageClass() == SC_None)
+    if (getStorageClass() == SC_None) {
+      // OpenCL v1.2 s6.5.3: The __constant or constant address space name is
+      // used to describe variables allocated in global memory and which are
+      // accessed inside a kernel(s) as read-only variables. As such, variables
+      // in constant address space cannot have local storage.
+      if (getType().getAddressSpace() == LangAS::opencl_constant)
+        return false;
       // Second check is for C++11 [dcl.stc]p4.
       return !isFileVarDecl() && getTSCSpec() == TSCS_unspecified;
+    }
 
     // Global Named Register (GNU extension)
     if (getStorageClass() == SC_Register && !isLocalVarDeclOrParm())

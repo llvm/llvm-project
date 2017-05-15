@@ -1,5 +1,5 @@
-; RUN: llvm-pdbdump pretty -symbols %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=SYM_FORMAT_FPO %s
-; RUN: llvm-pdbdump pretty -symbols %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=SYM_FORMAT %s
+; RUN: llvm-pdbdump pretty -module-syms %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=SYM_FORMAT_FPO %s
+; RUN: llvm-pdbdump pretty -module-syms %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=SYM_FORMAT %s
 ; RUN: llvm-pdbdump pretty -types %p/../Inputs/symbolformat.pdb > %t.types
 ; RUN: FileCheck --check-prefix=TYPES_FORMAT %s < %t.types
 ; RUN: FileCheck --check-prefix=TYPES_1 %s < %t.types

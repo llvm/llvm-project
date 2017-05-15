@@ -157,6 +157,9 @@ public:
     if (!TD)
       return true;
     CXXRecordDecl *RD = TD->getTemplatedDecl();
+    if (!RD->hasDefinition())
+      return true;
+    RD = RD->getDefinition();
     DeclarationName Name(DNT->getIdentifier());
     std::vector<const NamedDecl *> Symbols = RD->lookupDependentName(
         Name, [](const NamedDecl *ND) { return isa<TypeDecl>(ND); });
@@ -209,7 +212,7 @@ void IndexingContext::indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
 
   if (!DC)
     DC = Parent->getLexicalDeclContext();
-  SourceLocation Loc = NNS.getSourceRange().getBegin();
+  SourceLocation Loc = NNS.getLocalBeginLoc();
 
   switch (NNS.getNestedNameSpecifier()->getKind()) {
   case NestedNameSpecifier::Identifier:
