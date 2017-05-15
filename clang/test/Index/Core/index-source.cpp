@@ -314,3 +314,21 @@ class ClassWithCorrectSpecialization<SpecializationDecl<Cls>, Record::C> { };
 // CHECK: [[@LINE-2]]:57 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref | rel: 0
 // CHECK: [[@LINE-3]]:71 | static-property/C++ | C | c:@S@Record@C | __ZN6Record1CE | Ref,Read | rel: 0
 // CHECK: [[@LINE-4]]:63 | struct/C++ | Record | c:@S@Record | <no-cgname> | Ref | rel: 0
+
+namespace ns {
+// CHECK: [[@LINE-1]]:11 | namespace/C++ | ns | c:@N@ns | <no-cgname> | Decl | rel: 0
+namespace inner {
+// CHECK: [[@LINE-1]]:11 | namespace/C++ | inner | c:@N@ns@N@inner | <no-cgname> | Decl,RelChild | rel: 1
+void func();
+
+}
+namespace innerAlias = inner;
+}
+
+void ::ns::inner::func() {
+// CHECK: [[@LINE-1]]:8 | namespace/C++ | ns | c:@N@ns | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-2]]:12 | namespace/C++ | inner | c:@N@ns@N@inner | <no-cgname> | Ref,RelCont | rel: 1
+  ns::innerAlias::func();
+// CHECK: [[@LINE-1]]:3 | namespace/C++ | ns | c:@N@ns | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-2]]:7 | namespace-alias/C++ | innerAlias | c:@N@ns@NA@innerAlias | <no-cgname> | Ref,RelCont | rel: 1
+}
