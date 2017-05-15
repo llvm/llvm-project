@@ -90,7 +90,6 @@ class TestExclusivitySuppression(TestBase):
 
         self.assertTrue(len(threads) == 1)
         thread = threads[0]
-        self.assertTrue(frame, "Frame 0 is valid.")
 
         opts = lldb.SBExpressionOptions()
         opts.SetIgnoreBreakpoints(False)

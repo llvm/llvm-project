@@ -489,6 +489,12 @@ protected:
 
   CompilerType m_box_metadata_type;
 
+
+  // These members are used to track and toggle the state of the "dynamic
+  // exclusivity enforcement flag" in the swift runtime. This flag is set to
+  // true when an LLDB expression starts running, and reset to its original
+  // state after that expression (and any other concurrently running
+  // expressions) terminates.
   std::mutex m_active_user_expr_mutex;
   uint32_t m_active_user_expr_count = 0;
   llvm::Optional<lldb::addr_t> m_dynamic_exclusivity_flag_addr =
