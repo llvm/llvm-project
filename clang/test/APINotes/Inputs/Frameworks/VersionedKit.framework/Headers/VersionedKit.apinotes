@@ -58,6 +58,10 @@ SwiftVersions:
           - Name: accessorsOnlyForClassExceptInVersion3
             PropertyKind:    Class
             SwiftImportAsAccessors: false
+      - Name: Swift3RenamedOnlyDUMP
+        SwiftName: SpecialSwift3Name
+      - Name: Swift3RenamedAlsoDUMP
+        SwiftName: SpecialSwift3Also
     Functions:
       - Name: moveToPointDUMP
         SwiftName: 'moveTo(a:b:)'

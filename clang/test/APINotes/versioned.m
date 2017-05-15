@@ -22,11 +22,31 @@
 // CHECK-UNVERSIONED-DUMP: SwiftNameAttr {{.+}} "moveTo(x:y:)"
 // CHECK-UNVERSIONED-DUMP-NEXT: SwiftVersionedAttr {{.+}} Implicit 3.0
 // CHECK-UNVERSIONED-DUMP-NEXT: SwiftNameAttr {{.+}} Implicit "moveTo(a:b:)"
+// CHECK-DUMP-NOT: Attr
 
 // CHECK-DUMP-LABEL: Dumping TestGenericDUMP
 // CHECK-VERSIONED-DUMP: SwiftImportAsNonGenericAttr {{.+}} Implicit
 // CHECK-UNVERSIONED-DUMP: SwiftVersionedAttr {{.+}} Implicit 3.0
 // CHECK-UNVERSIONED-DUMP-NEXT: SwiftImportAsNonGenericAttr {{.+}} Implicit
+// CHECK-DUMP-NOT: Attr
+
+// CHECK-DUMP-LABEL: Dumping Swift3RenamedOnlyDUMP
+// CHECK-DUMP: in VersionedKit Swift3RenamedOnlyDUMP
+// CHECK-VERSIONED-DUMP-NEXT: SwiftVersionedRemovalAttr {{.+}} Implicit 0 {{[0-9]+}}
+// CHECK-VERSIONED-DUMP-NEXT: SwiftNameAttr {{.+}} "SpecialSwift3Name"
+// CHECK-UNVERSIONED-DUMP-NEXT: SwiftVersionedAttr {{.+}} Implicit 3.0
+// CHECK-UNVERSIONED-DUMP-NEXT: SwiftNameAttr {{.+}} Implicit "SpecialSwift3Name"
+// CHECK-DUMP-NOT: Attr
+
+// CHECK-DUMP-LABEL: Dumping Swift3RenamedAlsoDUMP
+// CHECK-DUMP: in VersionedKit Swift3RenamedAlsoDUMP
+// CHECK-VERSIONED-DUMP-NEXT: SwiftVersionedAttr {{.+}} Implicit 0
+// CHECK-VERSIONED-DUMP-NEXT: SwiftNameAttr {{.+}} <line:{{.+}}, col:{{.+}}> "Swift4Name"
+// CHECK-VERSIONED-DUMP-NEXT: SwiftNameAttr {{.+}} "SpecialSwift3Also"
+// CHECK-UNVERSIONED-DUMP-NEXT: SwiftNameAttr {{.+}} <line:{{.+}}, col:{{.+}}> "Swift4Name"
+// CHECK-UNVERSIONED-DUMP-NEXT: SwiftVersionedAttr {{.+}} Implicit 3.0
+// CHECK-UNVERSIONED-DUMP-NEXT: SwiftNameAttr {{.+}} Implicit "SpecialSwift3Also"
+// CHECK-DUMP-NOT: Attr
 
 // CHECK-DUMP-NOT: Dumping
 
