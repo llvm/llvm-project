@@ -222,7 +222,7 @@ DictionaryEntry MutationDispatcher::MakeDictionaryEntryFromCMP(
       if (!Cur) break;
       Positions[NumPositions++] = Cur - Data;
     }
-    if (!NumPositions) break;
+    if (!NumPositions) continue;
     return DictionaryEntry(W, Positions[Rand(NumPositions)]);
   }
   DictionaryEntry DE(W);

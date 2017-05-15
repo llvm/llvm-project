@@ -25,7 +25,7 @@ define amdgpu_kernel void @s_ctpop_i32(i32 addrspace(1)* noalias %out, i32 %val)
 ; XXX - Why 0 in register?
 ; FUNC-LABEL: {{^}}v_ctpop_i32:
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]],
-; GCN: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL]], 0
+; GCN: v_bcnt_u32_b32{{(_e64)*}} [[RESULT:v[0-9]+]], [[VAL]], 0
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 
@@ -40,9 +40,9 @@ define amdgpu_kernel void @v_ctpop_i32(i32 addrspace(1)* noalias %out, i32 addrs
 ; FUNC-LABEL: {{^}}v_ctpop_add_chain_i32:
 ; GCN: buffer_load_dword [[VAL1:v[0-9]+]],
 ; GCN: buffer_load_dword [[VAL0:v[0-9]+]],
-; GCN: v_bcnt_u32_b32_e64 [[MIDRESULT:v[0-9]+]], [[VAL1]], 0
+; GCN: v_bcnt_u32_b32{{(_e64)*}} [[MIDRESULT:v[0-9]+]], [[VAL1]], 0
 ; SI: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], [[VAL0]], [[MIDRESULT]]
-; VI: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL0]], [[MIDRESULT]]
+; VI: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], [[VAL0]], [[MIDRESULT]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 
@@ -61,7 +61,7 @@ define amdgpu_kernel void @v_ctpop_add_chain_i32(i32 addrspace(1)* noalias %out,
 ; FUNC-LABEL: {{^}}v_ctpop_add_sgpr_i32:
 ; GCN: buffer_load_dword [[VAL0:v[0-9]+]],
 ; GCN: s_waitcnt
-; GCN-NEXT: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL0]], s{{[0-9]+}}
+; GCN-NEXT: v_bcnt_u32_b32{{(_e64)*}} [[RESULT:v[0-9]+]], [[VAL0]], s{{[0-9]+}}
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 define amdgpu_kernel void @v_ctpop_add_sgpr_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in0, i32 addrspace(1)* noalias %in1, i32 %sval) nounwind {
@@ -73,8 +73,8 @@ define amdgpu_kernel void @v_ctpop_add_sgpr_i32(i32 addrspace(1)* noalias %out, 
 }
 
 ; FUNC-LABEL: {{^}}v_ctpop_v2i32:
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
 ; GCN: s_endpgm
 
 ; EG: BCNT_INT
@@ -87,10 +87,10 @@ define amdgpu_kernel void @v_ctpop_v2i32(<2 x i32> addrspace(1)* noalias %out, <
 }
 
 ; FUNC-LABEL: {{^}}v_ctpop_v4i32:
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
 ; GCN: s_endpgm
 
 ; EG: BCNT_INT
@@ -105,14 +105,14 @@ define amdgpu_kernel void @v_ctpop_v4i32(<4 x i32> addrspace(1)* noalias %out, <
 }
 
 ; FUNC-LABEL: {{^}}v_ctpop_v8i32:
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
 ; GCN: s_endpgm
 
 ; EG: BCNT_INT
@@ -131,22 +131,22 @@ define amdgpu_kernel void @v_ctpop_v8i32(<8 x i32> addrspace(1)* noalias %out, <
 }
 
 ; FUNC-LABEL: {{^}}v_ctpop_v16i32:
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
-; GCN: v_bcnt_u32_b32_e64
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}}
 ; GCN: s_endpgm
 
 ; EG: BCNT_INT
@@ -174,7 +174,7 @@ define amdgpu_kernel void @v_ctpop_v16i32(<16 x i32> addrspace(1)* noalias %out,
 
 ; FUNC-LABEL: {{^}}v_ctpop_i32_add_inline_constant:
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]],
-; GCN: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL]], 4
+; GCN: v_bcnt_u32_b32{{(_e64)*}} [[RESULT:v[0-9]+]], [[VAL]], 4
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 
@@ -189,7 +189,7 @@ define amdgpu_kernel void @v_ctpop_i32_add_inline_constant(i32 addrspace(1)* noa
 
 ; FUNC-LABEL: {{^}}v_ctpop_i32_add_inline_constant_inv:
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]],
-; GCN: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL]], 4
+; GCN: v_bcnt_u32_b32{{(_e64)*}} [[RESULT:v[0-9]+]], [[VAL]], 4
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 
@@ -206,7 +206,7 @@ define amdgpu_kernel void @v_ctpop_i32_add_inline_constant_inv(i32 addrspace(1)*
 ; GCN-DAG: buffer_load_dword [[VAL:v[0-9]+]],
 ; GCN-DAG: v_mov_b32_e32 [[LIT:v[0-9]+]], 0x1869f
 ; SI: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], [[VAL]], [[LIT]]
-; VI: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL]], [[LIT]]
+; VI: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], [[VAL]], [[LIT]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 define amdgpu_kernel void @v_ctpop_i32_add_literal(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) nounwind {
@@ -220,7 +220,7 @@ define amdgpu_kernel void @v_ctpop_i32_add_literal(i32 addrspace(1)* noalias %ou
 ; FUNC-LABEL: {{^}}v_ctpop_i32_add_var:
 ; GCN-DAG: buffer_load_dword [[VAL:v[0-9]+]],
 ; GCN-DAG: s_load_dword [[VAR:s[0-9]+]],
-; GCN: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL]], [[VAR]]
+; GCN: v_bcnt_u32_b32{{(_e64)*}} [[RESULT:v[0-9]+]], [[VAL]], [[VAR]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 
@@ -236,7 +236,7 @@ define amdgpu_kernel void @v_ctpop_i32_add_var(i32 addrspace(1)* noalias %out, i
 ; FUNC-LABEL: {{^}}v_ctpop_i32_add_var_inv:
 ; GCN-DAG: buffer_load_dword [[VAL:v[0-9]+]],
 ; GCN-DAG: s_load_dword [[VAR:s[0-9]+]],
-; GCN: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL]], [[VAR]]
+; GCN: v_bcnt_u32_b32{{(_e64)*}} [[RESULT:v[0-9]+]], [[VAL]], [[VAR]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 
@@ -253,7 +253,7 @@ define amdgpu_kernel void @v_ctpop_i32_add_var_inv(i32 addrspace(1)* noalias %ou
 ; GCN-DAG: buffer_load_dword [[VAL:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], {{0$}}
 ; GCN-DAG: buffer_load_dword [[VAR:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:16
 ; SI: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], [[VAL]], [[VAR]]
-; VI: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL]], [[VAR]]
+; VI: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], [[VAL]], [[VAR]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 

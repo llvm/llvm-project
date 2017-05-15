@@ -2121,8 +2121,8 @@ UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
 }
 
 size_t ObjectFileMachO::ParseSymtab() {
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
-                     "ObjectFileMachO::ParseSymtab () module = %s",
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "ObjectFileMachO::ParseSymtab () module = %s",
                      m_file.GetFilename().AsCString(""));
   ModuleSP module_sp(GetModule());
   if (!module_sp)

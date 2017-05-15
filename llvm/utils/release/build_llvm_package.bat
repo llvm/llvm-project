@@ -10,7 +10,8 @@ REM Prerequisites:
 REM
 REM   Visual Studio 2017, CMake, Ninja, SVN, GNUWin32, SWIG, Python 3,
 REM   NSIS with the strlen_8192 patch,
-REM   Visual Studio 2017 SDK (for the clang-format plugin).
+REM   Visual Studio 2017 SDK and Nuget (for the clang-format plugin),
+REM   Perl (for the OpenMP run-time).
 REM
 REM
 REM   For LLDB, SWIG version <= 3.0.8 needs to be used to work around
@@ -20,9 +21,8 @@ REM   https://github.com/swig/swig/issues/769
 REM You need to modify the paths below:
 set vsdevcmd=C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\Tools\VsDevCmd.bat
 
-set python32_dir=C:\Users\hwennborg\AppData\Local\Programs\Python\Python35-32
-set python64_dir=C:\Users\hwennborg\AppData\Local\Programs\Python\Python35
-set PATH=%PATH%;c:\gnuwin32\bin
+set python32_dir=C:\Users\%USER%\AppData\Local\Programs\Python\Python35-32
+set python64_dir=C:\Users\%USER%\AppData\Local\Programs\Python\Python35
 
 set revision=%1
 set branch=trunk

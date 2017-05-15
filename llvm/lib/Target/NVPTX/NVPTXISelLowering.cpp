@@ -1549,7 +1549,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
           Chain = DAG.getMemIntrinsicNode(
               Op, dl, DAG.getVTList(MVT::Other, MVT::Glue), StoreOperands,
               TheStoreType, MachinePointerInfo(), EltAlign,
-              /* Volatile */ false, /* ReadMem */ true,
+              /* Volatile */ false, /* ReadMem */ false,
               /* WriteMem */ true, /* Size */ 0);
           InFlag = Chain.getValue(1);
 
@@ -1611,7 +1611,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       Chain = DAG.getMemIntrinsicNode(NVPTXISD::StoreParam, dl, CopyParamVTs,
                                       CopyParamOps, elemtype,
                                       MachinePointerInfo(), /* Align */ 0,
-                                      /* Volatile */ false, /* ReadMem */ true,
+                                      /* Volatile */ false, /* ReadMem */ false,
                                       /* WriteMem */ true, /* Size */ 0);
 
       InFlag = Chain.getValue(1);
@@ -1799,7 +1799,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         SDValue RetVal = DAG.getMemIntrinsicNode(
             Op, dl, DAG.getVTList(LoadVTs), LoadOperands, TheLoadType,
             MachinePointerInfo(), EltAlign, /* Volatile */ false,
-            /* ReadMem */ true, /* WriteMem */ true, /* Size */ 0);
+            /* ReadMem */ true, /* WriteMem */ false, /* Size */ 0);
 
         for (unsigned j = 0; j < NumElts; ++j) {
           SDValue Ret = RetVal.getValue(j);

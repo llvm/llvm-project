@@ -36,13 +36,27 @@ template<class SizeClassAllocator> struct SizeClassAllocator32LocalCache;
 //
 // In order to avoid false sharing the objects of this class should be
 // chache-line aligned.
-template <const uptr kSpaceBeg, const u64 kSpaceSize,
-          const uptr kMetadataSize, class SizeClassMap,
-          const uptr kRegionSizeLog,
-          class ByteMap,
-          class MapUnmapCallback = NoOpMapUnmapCallback>
+
+struct SizeClassAllocator32FlagMasks {  //  Bit masks.
+  enum {
+    kRandomShuffleChunks = 1,
+  };
+};
+
+template <class Params>
 class SizeClassAllocator32 {
  public:
+  static const uptr kSpaceBeg = Params::kSpaceBeg;
+  static const u64 kSpaceSize = Params::kSpaceSize;
+  static const uptr kMetadataSize = Params::kMetadataSize;
+  typedef typename Params::SizeClassMap SizeClassMap;
+  static const uptr kRegionSizeLog = Params::kRegionSizeLog;
+  typedef typename Params::ByteMap ByteMap;
+  typedef typename Params::MapUnmapCallback MapUnmapCallback;
+
+  static const bool kRandomShuffleChunks =
+      Params::kFlags & SizeClassAllocator32FlagMasks::kRandomShuffleChunks;
+
   struct TransferBatch {
     static const uptr kMaxNumCached = SizeClassMap::kMaxNumCachedHint - 2;
     void SetFromArray(uptr region_beg_unused, void *batch[], uptr count) {
@@ -86,8 +100,7 @@ class SizeClassAllocator32 {
     return SizeClassMap::Size(class_id);
   }
 
-  typedef SizeClassAllocator32<kSpaceBeg, kSpaceSize, kMetadataSize,
-      SizeClassMap, kRegionSizeLog, ByteMap, MapUnmapCallback> ThisT;
+  typedef SizeClassAllocator32<Params> ThisT;
   typedef SizeClassAllocator32LocalCache<ThisT> AllocatorCache;
 
   void Init(s32 release_to_os_interval_ms) {

@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=i386-unknown-linux-gnu  -mattr=+avx512f < %s | FileCheck %s --check-prefix=ALL --check-prefix=KNL_32
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+avx512vl -mattr=+avx512dq < %s | FileCheck %s --check-prefix=ALL --check-prefix=SKX
 ; RUN: llc -mtriple=i386-unknown-linux-gnu  -mattr=+avx512vl -mattr=+avx512dq < %s | FileCheck %s --check-prefix=ALL --check-prefix=SKX_32
-; RUN: opt -mtriple=x86_64-apple-darwin -codegenprepare -mcpu=corei7-avx -S < %s | FileCheck %s -check-prefix=SCALAR
+; RUN: opt -mtriple=x86_64-apple-darwin -scalarize-masked-mem-intrin -mcpu=corei7-avx -S < %s | FileCheck %s -check-prefix=SCALAR
 ; RUN: llc -O0 -mtriple=x86_64-unknown-linux-gnu -mcpu=skx < %s -o /dev/null
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

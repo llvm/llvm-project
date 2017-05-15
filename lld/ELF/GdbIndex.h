@@ -21,7 +21,7 @@ class InputSection;
 
 // Struct represents single entry of address area of gdb index.
 struct AddressEntry {
-  InputSectionBase *Section;
+  InputSection *Section;
   uint64_t LowAddress;
   uint64_t HighAddress;
   size_t CuIndex;

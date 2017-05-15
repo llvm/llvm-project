@@ -258,8 +258,8 @@ Mangled::GetDemangledName(lldb::LanguageType language) const {
   // haven't already decoded our mangled name.
   if (m_mangled && !m_demangled) {
     // We need to generate and cache the demangled name.
-    Timer scoped_timer(LLVM_PRETTY_FUNCTION,
-                       "Mangled::GetDemangledName (m_mangled = %s)",
+    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+    Timer scoped_timer(func_cat, "Mangled::GetDemangledName (m_mangled = %s)",
                        m_mangled.GetCString());
 
     Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE);

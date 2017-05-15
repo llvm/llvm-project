@@ -143,6 +143,23 @@ public:
                                     RegScavenger *RS, unsigned TmpReg,
                                     unsigned Offset, unsigned Size) const;
 
+  void materializeImmediate(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MI,
+                            const DebugLoc &DL,
+                            unsigned DestReg,
+                            int64_t Value) const;
+
+  const TargetRegisterClass *getPreferredSelectRegClass(
+                               unsigned Size) const;
+
+  unsigned insertNE(MachineBasicBlock *MBB,
+                    MachineBasicBlock::iterator I, const DebugLoc &DL,
+                    unsigned SrcReg, int Value)  const;
+
+  unsigned insertEQ(MachineBasicBlock *MBB,
+                    MachineBasicBlock::iterator I, const DebugLoc &DL,
+                    unsigned SrcReg, int Value)  const;
+
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, unsigned SrcReg,
                            bool isKill, int FrameIndex,
@@ -193,7 +210,7 @@ public:
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
-                     bool AllowModify) const override;
+                     bool AllowModify = false) const override;
 
   unsigned removeBranch(MachineBasicBlock &MBB,
                         int *BytesRemoved = nullptr) const override;
@@ -217,6 +234,11 @@ public:
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
                     unsigned DstReg, ArrayRef<MachineOperand> Cond,
                     unsigned TrueReg, unsigned FalseReg) const override;
+
+  void insertVectorSelect(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator I, const DebugLoc &DL,
+                          unsigned DstReg, ArrayRef<MachineOperand> Cond,
+                          unsigned TrueReg, unsigned FalseReg) const;
 
   bool
   areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
@@ -705,6 +727,7 @@ public:
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;
 
+  void insertReturn(MachineBasicBlock &MBB) const;
   /// \brief Return the number of wait states that result from executing this
   /// instruction.
   unsigned getNumWaitStates(const MachineInstr &MI) const;
@@ -749,6 +772,14 @@ public:
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   bool mayAccessFlatAddressSpace(const MachineInstr &MI) const;
+
+  bool isNonUniformBranchInstr(MachineInstr &Instr) const;
+
+  void convertNonUniformIfRegion(MachineBasicBlock *IfEntry,
+                                 MachineBasicBlock *IfEnd) const;
+
+  void convertNonUniformLoopRegion(MachineBasicBlock *LoopEntry,
+                                   MachineBasicBlock *LoopEnd) const;
 
   ArrayRef<std::pair<int, const char *>>
   getSerializableTargetIndices() const override;

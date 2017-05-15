@@ -682,10 +682,9 @@ static int __kmp_affinity_create_proc_group_map(AddrUnsPair **address2os,
   *address2os = NULL;
   *msg_id = kmp_i18n_null;
 
-  // If we don't have multiple processor groups, return now.
+  // If we aren't affinity capable, then return now.
   // The flat mapping will be used.
-  if ((!KMP_AFFINITY_CAPABLE()) ||
-      (__kmp_get_proc_group(__kmp_affin_fullMask) >= 0)) {
+  if (!KMP_AFFINITY_CAPABLE()) {
     // FIXME set *msg_id
     return -1;
   }

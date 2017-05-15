@@ -161,10 +161,17 @@ typedef FlatByteMap<kNumRegions> ByteMap;
 typedef TwoLevelByteMap<(kNumRegions >> 12), 1 << 12> ByteMap;
 # endif
 typedef CompactSizeClassMap SizeClassMap;
-typedef SizeClassAllocator32<0, SANITIZER_MMAP_RANGE_SIZE, 16,
-  SizeClassMap, kRegionSizeLog,
-  ByteMap,
-  AsanMapUnmapCallback> PrimaryAllocator;
+struct AP32 {
+  static const uptr kSpaceBeg = 0;
+  static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
+  static const uptr kMetadataSize = 16;
+  typedef __asan::SizeClassMap SizeClassMap;
+  static const uptr kRegionSizeLog = __asan::kRegionSizeLog;
+  typedef __asan::ByteMap ByteMap;
+  typedef AsanMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
+typedef SizeClassAllocator32<AP32> PrimaryAllocator;
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
 static const uptr kNumberOfSizeClasses = SizeClassMap::kNumClasses;

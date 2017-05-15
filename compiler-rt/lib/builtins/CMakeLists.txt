@@ -483,11 +483,18 @@ else ()
 
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
     if (CAN_TARGET_${arch})
+      # NOTE: some architectures (e.g. i386) have multiple names.  Ensure that
+      # we catch them all.
+      set(_arch ${arch})
+      if("${arch}" STREQUAL "i686")
+        set(_arch "i386|i686")
+      endif()
+
       # Filter out generic versions of routines that are re-implemented in
       # architecture specific manner.  This prevents multiple definitions of the
       # same symbols, making the symbol selection non-deterministic.
       foreach (_file ${${arch}_SOURCES})
-        if (${_file} MATCHES ${arch}/*)
+        if (${_file} MATCHES ${_arch}/*)
           get_filename_component(_name ${_file} NAME)
           string(REPLACE ".S" ".c" _cname "${_name}")
           list(REMOVE_ITEM ${arch}_SOURCES ${_cname})

@@ -7403,17 +7403,17 @@ SolveQuadraticEquation(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
   // Convert from chrec coefficients to polynomial coefficients AX^2+BX+C
 
   // The A coefficient is N/2
-  APInt A(N.sdiv(Two));
+  APInt A = N.sdiv(Two);
 
   // The B coefficient is M-N/2
-  APInt B(M);
+  APInt B = M;
   B -= A; // A is the same as N/2.
 
   // The C coefficient is L.
   const APInt& C = L;
 
   // Compute the B^2-4ac term.
-  APInt SqrtTerm(B);
+  APInt SqrtTerm = B;
   SqrtTerm *= B;
   SqrtTerm -= 4 * (A * C);
 
@@ -7424,12 +7424,12 @@ SolveQuadraticEquation(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
 
   // Compute sqrt(B^2-4ac). This is guaranteed to be the nearest
   // integer value or else APInt::sqrt() will assert.
-  APInt SqrtVal(SqrtTerm.sqrt());
+  APInt SqrtVal = SqrtTerm.sqrt();
 
   // Compute the two solutions for the quadratic formula.
   // The divisions must be performed as signed divisions.
-  APInt NegB(-std::move(B));
-  APInt TwoA(std::move(A));
+  APInt NegB = -std::move(B);
+  APInt TwoA = std::move(A);
   TwoA <<= 1;
   if (TwoA.isNullValue())
     return None;

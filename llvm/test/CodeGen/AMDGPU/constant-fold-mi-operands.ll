@@ -25,7 +25,7 @@ define amdgpu_kernel void @fold_mi_s_and_0(i32 addrspace(1)* %out, i32 %x) #0 {
 }
 
 ; GCN-LABEL: {{^}}fold_mi_v_or_0:
-; GCN: v_mbcnt_lo_u32_b32_e64 [[RESULT:v[0-9]+]]
+; GCN: v_mbcnt_lo_u32_b32{{(_e64)*}} [[RESULT:v[0-9]+]]
 ; GCN-NOT: [[RESULT]]
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @fold_mi_v_or_0(i32 addrspace(1)* %out) {
@@ -50,7 +50,7 @@ define amdgpu_kernel void @fold_mi_s_or_0(i32 addrspace(1)* %out, i32 %x) #0 {
 }
 
 ; GCN-LABEL: {{^}}fold_mi_v_xor_0:
-; GCN: v_mbcnt_lo_u32_b32_e64 [[RESULT:v[0-9]+]]
+; GCN: v_mbcnt_lo_u32_b32{{(_e64)*}} [[RESULT:v[0-9]+]]
 ; GCN-NOT: [[RESULT]]
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @fold_mi_v_xor_0(i32 addrspace(1)* %out) {
@@ -86,8 +86,8 @@ define amdgpu_kernel void @fold_mi_s_not_0(i32 addrspace(1)* %out, i32 %x) #0 {
 }
 
 ; GCN-LABEL: {{^}}fold_mi_v_not_0:
-; GCN: v_bcnt_u32_b32_e64 v[[RESULT_LO:[0-9]+]], v{{[0-9]+}}, 0{{$}}
-; GCN: v_bcnt_u32_b32_e{{[0-9]+}} v[[RESULT_LO:[0-9]+]], v{{[0-9]+}}, v[[RESULT_LO]]{{$}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}} v[[RESULT_LO:[0-9]+]], v{{[0-9]+}}, 0{{$}}
+; GCN: v_bcnt_u32_b32{{(_e32)*(_e64)*}} v[[RESULT_LO:[0-9]+]], v{{[0-9]+}}, v[[RESULT_LO]]{{$}}
 ; GCN-NEXT: v_not_b32_e32 v[[RESULT_LO]]
 ; GCN-NEXT: v_mov_b32_e32 v[[RESULT_HI:[0-9]+]], -1{{$}}
 ; GCN-NEXT: buffer_store_dwordx2 v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
@@ -104,8 +104,8 @@ define amdgpu_kernel void @fold_mi_v_not_0(i64 addrspace(1)* %out) {
 ; GCN: buffer_load_dwordx2
 ; GCN: buffer_load_dwordx2 v{{\[}}[[VREG1_LO:[0-9]+]]:[[VREG1_HI:[0-9]+]]{{\]}}
 
-; GCN: v_bcnt_u32_b32_e64 v[[RESULT_LO:[0-9]+]], v{{[0-9]+}}, 0{{$}}
-; GCN: v_bcnt_u32_b32_e{{[0-9]+}} v[[RESULT_LO:[0-9]+]], v{{[0-9]+}}, v[[RESULT_LO]]{{$}}
+; GCN: v_bcnt_u32_b32{{(_e64)*}} v[[RESULT_LO:[0-9]+]], v{{[0-9]+}}, 0{{$}}
+; GCN: v_bcnt_u32_b32{{(_e32)*(_e64)*}} v[[RESULT_LO:[0-9]+]], v{{[0-9]+}}, v[[RESULT_LO]]{{$}}
 ; GCN-DAG: v_not_b32_e32 v[[RESULT_LO]], v[[RESULT_LO]]
 ; GCN-DAG: v_or_b32_e32 v[[RESULT_LO]], v[[VREG1_LO]], v[[RESULT_LO]]
 ; GCN-DAG: v_mov_b32_e32 v[[RESULT_HI:[0-9]+]], v[[VREG1_HI]]

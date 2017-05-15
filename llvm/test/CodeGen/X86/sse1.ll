@@ -66,7 +66,10 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X32-NEXT:    jne .LBB1_8
 ; X32-NEXT:  .LBB1_7:
 ; X32-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; X32-NEXT:    jmp .LBB1_9
+; X32-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; X32-NEXT:    je .LBB1_10
+; X32-NEXT:    jmp .LBB1_11
 ; X32-NEXT:  .LBB1_1:
 ; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
@@ -77,11 +80,10 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X32-NEXT:    je .LBB1_7
 ; X32-NEXT:  .LBB1_8: # %entry
 ; X32-NEXT:    xorps %xmm3, %xmm3
-; X32-NEXT:  .LBB1_9: # %entry
 ; X32-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
 ; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    jne .LBB1_11
-; X32-NEXT:  # BB#10:
+; X32-NEXT:  .LBB1_10:
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:  .LBB1_11: # %entry
 ; X32-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
@@ -103,7 +105,10 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X64-NEXT:    jne .LBB1_8
 ; X64-NEXT:  .LBB1_7:
 ; X64-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; X64-NEXT:    jmp .LBB1_9
+; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; X64-NEXT:    testl %esi, %esi
+; X64-NEXT:    je .LBB1_10
+; X64-NEXT:    jmp .LBB1_11
 ; X64-NEXT:  .LBB1_1:
 ; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    testl %edx, %edx
@@ -114,11 +119,10 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X64-NEXT:    je .LBB1_7
 ; X64-NEXT:  .LBB1_8: # %entry
 ; X64-NEXT:    xorps %xmm3, %xmm3
-; X64-NEXT:  .LBB1_9: # %entry
 ; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
 ; X64-NEXT:    testl %esi, %esi
 ; X64-NEXT:    jne .LBB1_11
-; X64-NEXT:  # BB#10:
+; X64-NEXT:  .LBB1_10:
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:  .LBB1_11: # %entry
 ; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
