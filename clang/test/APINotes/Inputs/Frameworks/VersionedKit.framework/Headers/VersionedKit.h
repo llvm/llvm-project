@@ -36,6 +36,13 @@ typedef double MyDoubleWrapper __attribute__((swift_wrapper(struct)));
 - (Element)element;
 @end
 
+@interface Swift3RenamedOnlyDUMP
+@end
+
+__attribute__((swift_name("Swift4Name")))
+@interface Swift3RenamedAlsoDUMP
+@end
+
 
 enum __attribute__((flag_enum)) FlagEnum {
   FlagEnumA = 1,
