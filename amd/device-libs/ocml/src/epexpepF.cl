@@ -14,7 +14,7 @@ INLINEATTR CONSTATTR float2
 MATH_PRIVATE(epexpep)(float2 x)
 {
     float fn = BUILTIN_RINT_F32(x.hi * 0x1.715476p+0f);
-    float2 t = fsub(fsub(sub(x, fn*0x1.62e400p-1f), fn*0x1.7f7800p-20f), fn*0x1.473de6p-34f);
+    float2 t = fsub(fsub(fadd(MATH_MAD(fn, -0x1.62e400p-1f, x.hi), x.lo), fn*0x1.7f7800p-20f), fn*0x1.473de6p-34f);
 
     float th = t.hi;
     float p = MATH_MAD(th, MATH_MAD(th, MATH_MAD(th, MATH_MAD(th, 
