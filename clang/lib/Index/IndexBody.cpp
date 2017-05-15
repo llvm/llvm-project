@@ -165,6 +165,9 @@ public:
     if (!TD)
       return true;
     CXXRecordDecl *RD = TD->getTemplatedDecl();
+    if (!RD->hasDefinition())
+      return true;
+    RD = RD->getDefinition();
     std::vector<const NamedDecl *> Symbols =
         RD->lookupDependentName(NameInfo.getName(), Filter);
     // FIXME: Improve overload handling.

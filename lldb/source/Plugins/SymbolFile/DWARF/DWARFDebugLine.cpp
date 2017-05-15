@@ -484,9 +484,9 @@ bool DWARFDebugLine::ParseStatementTable(
 
   const dw_offset_t debug_line_offset = *offset_ptr;
 
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(
-      LLVM_PRETTY_FUNCTION,
-      "DWARFDebugLine::ParseStatementTable (.debug_line[0x%8.8x])",
+      func_cat, "DWARFDebugLine::ParseStatementTable (.debug_line[0x%8.8x])",
       debug_line_offset);
 
   if (!ParsePrologue(debug_line_data, offset_ptr, prologue.get())) {

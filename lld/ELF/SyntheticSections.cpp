@@ -1701,13 +1701,14 @@ readCuList(DWARFContext &Dwarf, InputSection *Sec) {
   return Ret;
 }
 
-static InputSectionBase *findSection(ArrayRef<InputSectionBase *> Arr,
-                                     uint64_t Offset) {
+static InputSection *findSection(ArrayRef<InputSectionBase *> Arr,
+                                 uint64_t Offset) {
   for (InputSectionBase *S : Arr)
-    if (S && S != &InputSection::Discarded)
-      if (Offset >= S->getOffsetInFile() &&
-          Offset < S->getOffsetInFile() + S->getSize())
-        return S;
+    if (auto *IS = dyn_cast_or_null<InputSection>(S))
+      if (IS != &InputSection::Discarded && IS->Live &&
+          Offset >= IS->getOffsetInFile() &&
+          Offset < IS->getOffsetInFile() + IS->getSize())
+        return IS;
   return nullptr;
 }
 
@@ -1721,7 +1722,7 @@ readAddressArea(DWARFContext &Dwarf, InputSection *Sec, size_t CurrentCU) {
 
     ArrayRef<InputSectionBase *> Sections = Sec->File->getSections();
     for (std::pair<uint64_t, uint64_t> &R : Ranges)
-      if (InputSectionBase *S = findSection(Sections, R.first))
+      if (InputSection *S = findSection(Sections, R.first))
         Ret.push_back({S, R.first - S->getOffsetInFile(),
                        R.second - S->getOffsetInFile(), CurrentCU});
     ++CurrentCU;

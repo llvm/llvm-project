@@ -80,21 +80,21 @@ kernel void kernel1(
   // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(4)** {{.*}}, metadata ![[FUNCVAR4]], metadata ![[PRIVATE]]), !dbg !{{[0-9]+}}
   int *FuncVar4 = Tmp1;
 
-  // CHECK-DAG: ![[FUNCVAR5:[0-9]+]] = !DILocalVariable(name: "FuncVar5", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(1)** {{.*}}, metadata ![[FUNCVAR5]], metadata ![[NONE:[0-9]+]]), !dbg !{{[0-9]+}}
-  global int *constant FuncVar5 = KernelArg0;
-  // CHECK-DAG: ![[FUNCVAR6:[0-9]+]] = !DILocalVariable(name: "FuncVar6", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(2)** {{.*}}, metadata ![[FUNCVAR6]], metadata ![[NONE]]), !dbg !{{[0-9]+}}
-  constant int *constant FuncVar6 = KernelArg1;
-  // CHECK-DAG: ![[FUNCVAR7:[0-9]+]] = !DILocalVariable(name: "FuncVar7", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(3)** {{.*}}, metadata ![[FUNCVAR7]], metadata ![[NONE]]), !dbg !{{[0-9]+}}
-  local int *constant FuncVar7 = KernelArg2;
-  // CHECK-DAG: ![[FUNCVAR8:[0-9]+]] = !DILocalVariable(name: "FuncVar8", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: call void @llvm.dbg.declare(metadata i32** {{.*}}, metadata ![[FUNCVAR8]], metadata ![[NONE]]), !dbg !{{[0-9]+}}
-  private int *constant FuncVar8 = Tmp0;
-  // CHECK-DAG: ![[FUNCVAR9:[0-9]+]] = !DILocalVariable(name: "FuncVar9", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: call void @llvm.dbg.declare(metadata i32 addrspace(4)** {{.*}}, metadata ![[FUNCVAR9]], metadata ![[NONE]]), !dbg !{{[0-9]+}}
-  int *constant FuncVar9 = Tmp1;
+  // CHECK-DAG: ![[FUNCVAR5:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar5", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR5]])
+  global int *constant FuncVar5 = 0;
+  // CHECK-DAG: ![[FUNCVAR6:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar6", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR6]])
+  constant int *constant FuncVar6 = 0;
+  // CHECK-DAG: ![[FUNCVAR7:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar7", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR7]])
+  local int *constant FuncVar7 = 0;
+  // CHECK-DAG: ![[FUNCVAR8:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar8", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR8]])
+  private int *constant FuncVar8 = 0;
+  // CHECK-DAG: ![[FUNCVAR9:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar9", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR9]])
+  int *constant FuncVar9 = 0;
 
   // CHECK-DAG: ![[FUNCVAR10:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar10", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
   // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR10]], expr: ![[LOCAL]])

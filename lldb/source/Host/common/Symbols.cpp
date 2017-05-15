@@ -151,8 +151,9 @@ FileSpec LocateExecutableSymbolFileDsym(const ModuleSpec &module_spec) {
   const ArchSpec *arch = module_spec.GetArchitecturePtr();
   const UUID *uuid = module_spec.GetUUIDPtr();
 
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(
-      LLVM_PRETTY_FUNCTION,
+      func_cat,
       "LocateExecutableSymbolFileDsym (file = %s, arch = %s, uuid = %p)",
       exec_fspec ? exec_fspec->GetFilename().AsCString("<NULL>") : "<NULL>",
       arch ? arch->GetArchitectureName() : "<NULL>", (const void *)uuid);
@@ -175,9 +176,9 @@ ModuleSpec Symbols::LocateExecutableObjectFile(const ModuleSpec &module_spec) {
   const FileSpec *exec_fspec = module_spec.GetFileSpecPtr();
   const ArchSpec *arch = module_spec.GetArchitecturePtr();
   const UUID *uuid = module_spec.GetUUIDPtr();
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(
-      LLVM_PRETTY_FUNCTION,
-      "LocateExecutableObjectFile (file = %s, arch = %s, uuid = %p)",
+      func_cat, "LocateExecutableObjectFile (file = %s, arch = %s, uuid = %p)",
       exec_fspec ? exec_fspec->GetFilename().AsCString("<NULL>") : "<NULL>",
       arch ? arch->GetArchitectureName() : "<NULL>", (const void *)uuid);
 

@@ -59,7 +59,8 @@ using namespace lldb_private;
 DisassemblerSP Disassembler::FindPlugin(const ArchSpec &arch,
                                         const char *flavor,
                                         const char *plugin_name) {
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat,
                      "Disassembler::FindPlugin (arch = %s, plugin_name = %s)",
                      arch.GetArchitectureName(), plugin_name);
 
@@ -1460,4 +1461,3 @@ std::function<bool(const Instruction::Operand &)>
 lldb_private::OperandMatchers::MatchOpType(Instruction::Operand::Type type) {
   return [type](const Instruction::Operand &op) { return op.m_type == type; };
 }
-

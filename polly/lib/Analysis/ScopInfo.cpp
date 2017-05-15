@@ -3279,7 +3279,7 @@ static Loop *getLoopSurroundingScop(Scop &S, LoopInfo &LI) {
 
 Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
            ScopDetection::DetectionContext &DC)
-    : SE(&ScalarEvolution), R(R), IsOptimized(false),
+    : SE(&ScalarEvolution), R(R), name(R.getNameStr()), IsOptimized(false),
       HasSingleExitEdge(R.getExitingBlock()), HasErrorBlock(false),
       MaxLoopDepth(0), CopyStmtsNum(0), DC(DC),
       IslCtx(isl_ctx_alloc(), isl_ctx_free), Context(nullptr),
@@ -4810,6 +4810,52 @@ INITIALIZE_PASS_END(ScopInfoRegionPass, "polly-scops",
                     false)
 
 //===----------------------------------------------------------------------===//
+ScopInfo::ScopInfo(const DataLayout &DL, ScopDetection &SD, ScalarEvolution &SE,
+                   LoopInfo &LI, AliasAnalysis &AA, DominatorTree &DT,
+                   AssumptionCache &AC) {
+  /// Create polyhedral descripton of scops for all the valid regions of a
+  /// function.
+  for (auto &It : SD) {
+    Region *R = const_cast<Region *>(It);
+    if (!SD.isMaxRegionInScop(*R))
+      continue;
+
+    ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE);
+    std::unique_ptr<Scop> S = SB.getScop();
+    if (!S)
+      continue;
+    bool Inserted = RegionToScopMap.insert({R, std::move(S)}).second;
+    assert(Inserted && "Building Scop for the same region twice!");
+    (void)Inserted;
+  }
+}
+
+AnalysisKey ScopInfoAnalysis::Key;
+
+ScopInfoAnalysis::Result ScopInfoAnalysis::run(Function &F,
+                                               FunctionAnalysisManager &FAM) {
+  auto &SD = FAM.getResult<ScopAnalysis>(F);
+  auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
+  auto &LI = FAM.getResult<LoopAnalysis>(F);
+  auto &AA = FAM.getResult<AAManager>(F);
+  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  auto &AC = FAM.getResult<AssumptionAnalysis>(F);
+  auto &DL = F.getParent()->getDataLayout();
+  return {DL, SD, SE, LI, AA, DT, AC};
+}
+
+PreservedAnalyses ScopInfoPrinterPass::run(Function &F,
+                                           FunctionAnalysisManager &FAM) {
+  auto &SI = FAM.getResult<ScopInfoAnalysis>(F);
+  for (auto &It : SI) {
+    if (It.second)
+      It.second->print(Stream);
+    else
+      Stream << "Invalid Scop!\n";
+  }
+  return PreservedAnalyses::all();
+}
+
 void ScopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();
   AU.addRequired<RegionInfoPass>();
@@ -4823,7 +4869,6 @@ void ScopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool ScopInfoWrapperPass::runOnFunction(Function &F) {
   auto &SD = getAnalysis<ScopDetectionWrapperPass>().getSD();
-
   auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
@@ -4831,27 +4876,12 @@ bool ScopInfoWrapperPass::runOnFunction(Function &F) {
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
 
-  /// Create polyhedral descripton of scops for all the valid regions of a
-  /// function.
-  for (auto &It : SD) {
-    Region *R = const_cast<Region *>(It);
-    if (!SD.isMaxRegionInScop(*R))
-      continue;
-
-    ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE);
-    std::unique_ptr<Scop> S = SB.getScop();
-    if (!S)
-      continue;
-    bool Inserted =
-        RegionToScopMap.insert(std::make_pair(R, std::move(S))).second;
-    assert(Inserted && "Building Scop for the same region twice!");
-    (void)Inserted;
-  }
+  Result.reset(new ScopInfo{DL, SD, SE, LI, AA, DT, AC});
   return false;
 }
 
 void ScopInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
-  for (auto &It : RegionToScopMap) {
+  for (auto &It : *Result) {
     if (It.second)
       It.second->print(OS);
     else

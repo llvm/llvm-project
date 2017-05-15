@@ -548,6 +548,39 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "  // Comment.\n"
                "  return async.then();\n"
                "}\n");
+  verifyFormat("for async (const x of y) {\n"
+               "  console.log(x);\n"
+               "}\n");
+  verifyFormat("function asyncLoop() {\n"
+               "  for async (const x of y) {\n"
+               "    console.log(x);\n"
+               "  }\n"
+               "}\n");
+
+}
+
+TEST_F(FormatTestJS, FunctionParametersTrailingComma) {
+  verifyFormat("function trailingComma(\n"
+               "    p1,\n"
+               "    p2,\n"
+               "    p3,\n"
+               ") {\n"
+               "  a;  //\n"
+               "}\n",
+               "function trailingComma(p1, p2, p3,) {\n"
+               "  a;  //\n"
+               "}\n");
+  verifyFormat("trailingComma(\n"
+               "    p1,\n"
+               "    p2,\n"
+               "    p3,\n"
+               ");\n",
+               "trailingComma(p1, p2, p3,);\n");
+  verifyFormat("trailingComma(\n"
+               "    p1  // hello\n"
+               ");\n",
+               "trailingComma(p1 // hello\n"
+               ");\n");
 }
 
 TEST_F(FormatTestJS, ArrayLiterals) {
@@ -691,7 +724,7 @@ TEST_F(FormatTestJS, FunctionLiterals) {
                "})\n"
                "    .doSomethingElse(\n"
                "        // break\n"
-               "        );");
+               "    );");
 
   Style.ColumnLimit = 33;
   verifyFormat("f({a: function() { return 1; }});", Style);
@@ -858,7 +891,7 @@ TEST_F(FormatTestJS, ArrowFunctions) {
                "})\n"
                "    .doSomethingElse(\n"
                "        // break\n"
-               "        );");
+               "    );");
 }
 
 TEST_F(FormatTestJS, ReturnStatements) {

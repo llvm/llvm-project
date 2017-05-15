@@ -83,18 +83,20 @@ class ScopBuilder {
   Value *findFADGlobalAlloc(MemAccInst Inst);
 
   /// Try to match for the descriptor of a Fortran Array that has been declared
-  /// global, and is being accessed across modules.
+  /// global, has not been allocated, and is being allocated here.
   ///
   /// Pattern match for "@globaldescriptor":
-  ///  1. %mem = load double*, double** bitcast (%"struct.array1_real(kind=8)"*
-  ///    @globaldescriptor to double**), align 32
+  ///  1. %untypedmem = i8* @malloc(...)
   ///
-  ///  2. [%slot = getelementptr inbounds i8, i8* %mem, i64 <index>]
-  ///  2 is optional because if you are writing to the 0th index, you don't
+  ///  2. %typedmem = bitcast i8* %untypedmem to <memtype>*
+  ///
+  ///  3. [%slot = getelementptr inbounds
+  ///                  <memtype>, <memtype>* %typedmem, i64 <index>]
+  ///  3 is optional because if you are writing to the 0th index, you don't
   ///     need a GEP.
   ///
-  ///  3.1 store/load <memtype> <val>, <memtype>* %slot, align 8
-  ///  3.2 store/load <memtype> <val>, <memtype>* %mem, align 8
+  ///  4.1 store/load <memtype> <val>, <memtype>* %slot, align 8
+  ///  4.2 store/load <memtype> <val>, <memtype>* %mem, align 8
   ///
   /// @see polly::MemoryAccess, polly::ScopArrayInfo
   ///

@@ -928,7 +928,8 @@ protected:
 };
 
 void ScriptInterpreterPython::ExecuteInterpreterLoop() {
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
 
   Debugger &debugger = GetCommandInterpreter().GetDebugger();
 
@@ -1995,7 +1996,8 @@ bool ScriptInterpreterPython::GetScriptedSummary(
     StructuredData::ObjectSP &callee_wrapper_sp,
     const TypeSummaryOptions &options, std::string &retval) {
 
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
 
   if (!valobj.get()) {
     retval.assign("<no object>");
@@ -2019,8 +2021,8 @@ bool ScriptInterpreterPython::GetScriptedSummary(
       {
         TypeSummaryOptionsSP options_sp(new TypeSummaryOptions(options));
 
-        Timer scoped_timer("g_swig_typescript_callback",
-                           "g_swig_typescript_callback");
+        static Timer::Category func_cat("g_swig_typescript_callback");
+        Timer scoped_timer(func_cat, "g_swig_typescript_callback");
         ret_val = g_swig_typescript_callback(
             python_function_name, GetSessionDictionary().get(), valobj,
             &new_callee, options_sp, retval);
@@ -3102,7 +3104,8 @@ void ScriptInterpreterPython::InitializePrivate() {
 
   g_initialized = true;
 
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
 
   // RAII-based initialization which correctly handles multiple-initialization,
   // version-
