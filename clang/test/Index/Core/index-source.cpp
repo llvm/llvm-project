@@ -323,7 +323,14 @@ void func();
 
 }
 namespace innerAlias = inner;
+// CHECK: [[@LINE-1]]:11 | namespace-alias/C++ | innerAlias | c:@N@ns@NA@innerAlias | <no-cgname> | Decl,RelChild | rel: 1
+// CHECK: [[@LINE-2]]:24 | namespace/C++ | inner | c:@N@ns@N@inner | <no-cgname> | Ref,RelCont | rel: 1
 }
+
+namespace namespaceAlias = ::ns::innerAlias;
+// CHECK: [[@LINE-1]]:11 | namespace-alias/C++ | namespaceAlias | c:@NA@namespaceAlias | <no-cgname> | Decl | rel: 0
+// CHECK: [[@LINE-2]]:30 | namespace/C++ | ns | c:@N@ns | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-3]]:34 | namespace-alias/C++ | innerAlias | c:@N@ns@NA@innerAlias | <no-cgname> | Ref,RelCont | rel: 1
 
 void ::ns::inner::func() {
 // CHECK: [[@LINE-1]]:8 | namespace/C++ | ns | c:@N@ns | <no-cgname> | Ref,RelCont | rel: 1
