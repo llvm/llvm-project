@@ -30,6 +30,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Dwarf.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -388,10 +389,21 @@ private:
                                  bool DoTransform = true);
 
   Instruction *transformSExtICmp(ICmpInst *ICI, Instruction &CI);
-  bool WillNotOverflowSignedAdd(Value *LHS, Value *RHS, Instruction &CxtI);
+  bool WillNotOverflowSignedAdd(Value *LHS, Value *RHS, Instruction &CxtI) {
+    return computeOverflowForSignedAdd(LHS, RHS, &CxtI) ==
+           OverflowResult::NeverOverflows;
+  };
+  bool willNotOverflowUnsignedAdd(Value *LHS, Value *RHS, Instruction &CxtI) {
+    return computeOverflowForUnsignedAdd(LHS, RHS, &CxtI) ==
+           OverflowResult::NeverOverflows;
+  };
   bool WillNotOverflowSignedSub(Value *LHS, Value *RHS, Instruction &CxtI);
   bool WillNotOverflowUnsignedSub(Value *LHS, Value *RHS, Instruction &CxtI);
   bool WillNotOverflowSignedMul(Value *LHS, Value *RHS, Instruction &CxtI);
+  bool willNotOverflowUnsignedMul(Value *LHS, Value *RHS, Instruction &CxtI) {
+    return computeOverflowForUnsignedMul(LHS, RHS, &CxtI) ==
+           OverflowResult::NeverOverflows;
+  };
   Value *EmitGEPOffset(User *GEP);
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
   Value *EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask);
@@ -492,7 +504,11 @@ public:
 
   void computeKnownBits(Value *V, KnownBits &Known,
                         unsigned Depth, Instruction *CxtI) const {
-    return llvm::computeKnownBits(V, Known, DL, Depth, &AC, CxtI, &DT);
+    llvm::computeKnownBits(V, Known, DL, Depth, &AC, CxtI, &DT);
+  }
+  KnownBits computeKnownBits(Value *V, unsigned Depth,
+                             Instruction *CxtI) const {
+    return llvm::computeKnownBits(V, DL, Depth, &AC, CxtI, &DT);
   }
 
   bool MaskedValueIsZero(Value *V, const APInt &Mask, unsigned Depth = 0,
@@ -503,11 +519,6 @@ public:
                               Instruction *CxtI = nullptr) const {
     return llvm::ComputeNumSignBits(Op, DL, Depth, &AC, CxtI, &DT);
   }
-  void ComputeSignBit(Value *V, bool &KnownZero, bool &KnownOne,
-                      unsigned Depth = 0, Instruction *CxtI = nullptr) const {
-    return llvm::ComputeSignBit(V, KnownZero, KnownOne, DL, Depth, &AC, CxtI,
-                                &DT);
-  }
   OverflowResult computeOverflowForUnsignedMul(Value *LHS, Value *RHS,
                                                const Instruction *CxtI) {
     return llvm::computeOverflowForUnsignedMul(LHS, RHS, DL, &AC, CxtI, &DT);
@@ -515,6 +526,11 @@ public:
   OverflowResult computeOverflowForUnsignedAdd(Value *LHS, Value *RHS,
                                                const Instruction *CxtI) {
     return llvm::computeOverflowForUnsignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
+  }
+  OverflowResult computeOverflowForSignedAdd(const Value *LHS,
+                                             const Value *RHS,
+                                             const Instruction *CxtI) const {
+    return llvm::computeOverflowForSignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
   }
 
   /// Maximum size of array considered when transforming.

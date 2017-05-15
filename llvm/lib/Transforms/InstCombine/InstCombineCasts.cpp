@@ -1188,9 +1188,8 @@ Instruction *InstCombiner::visitSExt(SExtInst &CI) {
 
   // If we know that the value being extended is positive, we can use a zext
   // instead.
-  bool KnownZero, KnownOne;
-  ComputeSignBit(Src, KnownZero, KnownOne, 0, &CI);
-  if (KnownZero) {
+  KnownBits Known = computeKnownBits(Src, 0, &CI);
+  if (Known.isNonNegative()) {
     Value *ZExt = Builder->CreateZExt(Src, DestTy);
     return replaceInstUsesWith(CI, ZExt);
   }

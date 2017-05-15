@@ -1,5 +1,4 @@
 ; RUN: opt < %s -constprop -S | FileCheck %s
-; RUN: opt < %s -constprop -disable-simplify-libcalls -S | FileCheck %s --check-prefix=FNOBUILTIN
 ; REQUIRES: x86
 
 define i1 @test_sse_cvts_exact() nounwind readnone {

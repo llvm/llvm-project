@@ -176,16 +176,9 @@ define <2 x double> @signbits_ashr_concat_ashr_extract_sitofp(<2 x i64> %a0, <4 
 ; X32-NEXT:    vpsrad $16, %xmm0, %xmm1
 ; X32-NEXT:    vpsrlq $16, %xmm0, %xmm0
 ; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
-; X32-NEXT:    vmovaps {{.*#+}} ymm1 = [16,0,16,0,16,0,16,0]
-; X32-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,2147483648,0,2147483648]
-; X32-NEXT:    vpsrlq %xmm1, %xmm2, %xmm2
-; X32-NEXT:    vpsrlq %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; X32-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
+; X32-NEXT:    vpsrlq $16, %xmm0, %xmm0
 ; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X32-NEXT:    vcvtdq2pd %xmm0, %xmm0
-; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: signbits_ashr_concat_ashr_extract_sitofp:

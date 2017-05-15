@@ -1034,21 +1034,7 @@ raw_ostream &polly::operator<<(raw_ostream &OS,
   return OS;
 }
 
-void MemoryAccess::setFortranArrayDescriptor(GlobalValue *FAD) {
-  this->FAD = FAD;
-
-// TODO: write checks to make sure it looks _exactly_ like a Fortran array
-// descriptor
-#ifndef NDEBUG
-  StructType *ty = dyn_cast<StructType>(FAD->getValueType());
-  assert(ty && "expected value of type Fortran array descriptor");
-  assert(ty->hasName() && ty->getName().startswith("struct.array") &&
-         "expected global to follow Fortran array descriptor type naming "
-         "convention");
-  assert(ty->getNumElements() == 4 &&
-         "expected layout to be like Fortran array descriptor type");
-#endif
-}
+void MemoryAccess::setFortranArrayDescriptor(Value *FAD) { this->FAD = FAD; }
 
 void MemoryAccess::print(raw_ostream &OS) const {
   switch (AccType) {

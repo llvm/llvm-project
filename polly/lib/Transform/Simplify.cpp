@@ -48,7 +48,7 @@ static bool isImplicitWrite(MemoryAccess *MA) {
   return MA->isWrite() && MA->isOriginalScalarKind();
 }
 
-/// Return an iterator range that iterates over MemoryAccesses in the order in
+/// Return a vector that contains MemoryAccesses in the order in
 /// which they are executed.
 ///
 /// The order is:
@@ -62,15 +62,23 @@ static bool isImplicitWrite(MemoryAccess *MA) {
 /// - Implicit writes (BlockGenerator::generateScalarStores)
 ///   The order in which implicit writes are executed relative to each other is
 ///   undefined.
-static auto accessesInOrder(ScopStmt *Stmt) -> decltype(concat<MemoryAccess *>(
-    make_filter_range(make_range(Stmt->begin(), Stmt->end()), isImplicitRead),
-    make_filter_range(make_range(Stmt->begin(), Stmt->end()), isExplicitAccess),
-    make_filter_range(make_range(Stmt->begin(), Stmt->end()),
-                      isImplicitWrite))) {
-  auto AllRange = make_range(Stmt->begin(), Stmt->end());
-  return concat<MemoryAccess *>(make_filter_range(AllRange, isImplicitRead),
-                                make_filter_range(AllRange, isExplicitAccess),
-                                make_filter_range(AllRange, isImplicitWrite));
+static SmallVector<MemoryAccess *, 32> getAccessesInOrder(ScopStmt &Stmt) {
+
+  SmallVector<MemoryAccess *, 32> Accesses;
+
+  for (MemoryAccess *MemAcc : Stmt)
+    if (isImplicitRead(MemAcc))
+      Accesses.push_back(MemAcc);
+
+  for (MemoryAccess *MemAcc : Stmt)
+    if (isExplicitAccess(MemAcc))
+      Accesses.push_back(MemAcc);
+
+  for (MemoryAccess *MemAcc : Stmt)
+    if (isImplicitWrite(MemAcc))
+      Accesses.push_back(MemAcc);
+
+  return Accesses;
 }
 
 class Simplify : public ScopPass {
@@ -175,9 +183,7 @@ private:
       isl::union_map WillBeOverwritten =
           isl::union_map::empty(give(S->getParamSpace()));
 
-      auto AccRange = accessesInOrder(&Stmt);
-      SmallVector<MemoryAccess *, 32> Accesses{AccRange.begin(),
-                                               AccRange.end()};
+      SmallVector<MemoryAccess *, 32> Accesses(getAccessesInOrder(Stmt));
 
       // Iterate in reverse order, so the overwrite comes before the write that
       // is to be removed.

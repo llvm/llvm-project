@@ -1,5 +1,14 @@
 // RUN: not llvm-mc -triple aarch64-elf -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
 
+  .data
+b:
+  .fill 300
+e:
+  .byte e - b
+  // CHECK: error: value evaluated as 300 is out of range.
+  // CHECK-NEXT: .byte e - b
+  // CHECK-NEXT:       ^
+
   .section sec_x
 start:
   .space 5000

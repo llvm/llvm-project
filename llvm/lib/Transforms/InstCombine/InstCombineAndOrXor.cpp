@@ -698,9 +698,8 @@ Value *InstCombiner::simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
   }
 
   // This simplification is only valid if the upper range is not negative.
-  bool IsNegative, IsNotNegative;
-  ComputeSignBit(RangeEnd, IsNotNegative, IsNegative, /*Depth=*/0, Cmp1);
-  if (!IsNotNegative)
+  KnownBits Known = computeKnownBits(RangeEnd, /*Depth=*/0, Cmp1);
+  if (!Known.isNonNegative())
     return nullptr;
 
   if (Inverted)

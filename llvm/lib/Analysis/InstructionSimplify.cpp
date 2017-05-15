@@ -2304,7 +2304,6 @@ static Value *simplifyICmpWithZero(CmpInst::Predicate Pred, Value *LHS,
     return nullptr;
 
   Type *ITy = GetCompareTy(LHS); // The return type.
-  bool LHSKnownNonNegative, LHSKnownNegative;
   switch (Pred) {
   default:
     llvm_unreachable("Unknown ICmp predicate!");
@@ -2322,38 +2321,40 @@ static Value *simplifyICmpWithZero(CmpInst::Predicate Pred, Value *LHS,
     if (isKnownNonZero(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
       return getTrue(ITy);
     break;
-  case ICmpInst::ICMP_SLT:
-    ComputeSignBit(LHS, LHSKnownNonNegative, LHSKnownNegative, Q.DL, 0, Q.AC,
-                   Q.CxtI, Q.DT);
-    if (LHSKnownNegative)
+  case ICmpInst::ICMP_SLT: {
+    KnownBits LHSKnown = computeKnownBits(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    if (LHSKnown.isNegative())
       return getTrue(ITy);
-    if (LHSKnownNonNegative)
+    if (LHSKnown.isNonNegative())
       return getFalse(ITy);
     break;
-  case ICmpInst::ICMP_SLE:
-    ComputeSignBit(LHS, LHSKnownNonNegative, LHSKnownNegative, Q.DL, 0, Q.AC,
-                   Q.CxtI, Q.DT);
-    if (LHSKnownNegative)
+  }
+  case ICmpInst::ICMP_SLE: {
+    KnownBits LHSKnown = computeKnownBits(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    if (LHSKnown.isNegative())
       return getTrue(ITy);
-    if (LHSKnownNonNegative && isKnownNonZero(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+    if (LHSKnown.isNonNegative() &&
+        isKnownNonZero(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
       return getFalse(ITy);
     break;
-  case ICmpInst::ICMP_SGE:
-    ComputeSignBit(LHS, LHSKnownNonNegative, LHSKnownNegative, Q.DL, 0, Q.AC,
-                   Q.CxtI, Q.DT);
-    if (LHSKnownNegative)
+  }
+  case ICmpInst::ICMP_SGE: {
+    KnownBits LHSKnown = computeKnownBits(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    if (LHSKnown.isNegative())
       return getFalse(ITy);
-    if (LHSKnownNonNegative)
+    if (LHSKnown.isNonNegative())
       return getTrue(ITy);
     break;
-  case ICmpInst::ICMP_SGT:
-    ComputeSignBit(LHS, LHSKnownNonNegative, LHSKnownNegative, Q.DL, 0, Q.AC,
-                   Q.CxtI, Q.DT);
-    if (LHSKnownNegative)
+  }
+  case ICmpInst::ICMP_SGT: {
+    KnownBits LHSKnown = computeKnownBits(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    if (LHSKnown.isNegative())
       return getFalse(ITy);
-    if (LHSKnownNonNegative && isKnownNonZero(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+    if (LHSKnown.isNonNegative() &&
+        isKnownNonZero(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
       return getTrue(ITy);
     break;
+  }
   }
 
   return nullptr;
@@ -2637,15 +2638,11 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
         return getTrue(ITy);
 
       if (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGE) {
-        bool RHSKnownNonNegative, RHSKnownNegative;
-        bool YKnownNonNegative, YKnownNegative;
-        ComputeSignBit(RHS, RHSKnownNonNegative, RHSKnownNegative, Q.DL, 0,
-                       Q.AC, Q.CxtI, Q.DT);
-        ComputeSignBit(Y, YKnownNonNegative, YKnownNegative, Q.DL, 0, Q.AC,
-                       Q.CxtI, Q.DT);
-        if (RHSKnownNonNegative && YKnownNegative)
+        KnownBits RHSKnown = computeKnownBits(RHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+        KnownBits YKnown = computeKnownBits(Y, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+        if (RHSKnown.isNonNegative() && YKnown.isNegative())
           return Pred == ICmpInst::ICMP_SLT ? getTrue(ITy) : getFalse(ITy);
-        if (RHSKnownNegative || YKnownNonNegative)
+        if (RHSKnown.isNegative() || YKnown.isNonNegative())
           return Pred == ICmpInst::ICMP_SLT ? getFalse(ITy) : getTrue(ITy);
       }
     }
@@ -2657,15 +2654,11 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
         return getFalse(ITy);
 
       if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLE) {
-        bool LHSKnownNonNegative, LHSKnownNegative;
-        bool YKnownNonNegative, YKnownNegative;
-        ComputeSignBit(LHS, LHSKnownNonNegative, LHSKnownNegative, Q.DL, 0,
-                       Q.AC, Q.CxtI, Q.DT);
-        ComputeSignBit(Y, YKnownNonNegative, YKnownNegative, Q.DL, 0, Q.AC,
-                       Q.CxtI, Q.DT);
-        if (LHSKnownNonNegative && YKnownNegative)
+        KnownBits LHSKnown = computeKnownBits(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+        KnownBits YKnown = computeKnownBits(Y, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+        if (LHSKnown.isNonNegative() && YKnown.isNegative())
           return Pred == ICmpInst::ICMP_SGT ? getTrue(ITy) : getFalse(ITy);
-        if (LHSKnownNegative || YKnownNonNegative)
+        if (LHSKnown.isNegative() || YKnown.isNonNegative())
           return Pred == ICmpInst::ICMP_SGT ? getFalse(ITy) : getTrue(ITy);
       }
     }
@@ -2712,28 +2705,27 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
 
   // icmp pred (urem X, Y), Y
   if (LBO && match(LBO, m_URem(m_Value(), m_Specific(RHS)))) {
-    bool KnownNonNegative, KnownNegative;
     switch (Pred) {
     default:
       break;
     case ICmpInst::ICMP_SGT:
-    case ICmpInst::ICMP_SGE:
-      ComputeSignBit(RHS, KnownNonNegative, KnownNegative, Q.DL, 0, Q.AC,
-                     Q.CxtI, Q.DT);
-      if (!KnownNonNegative)
+    case ICmpInst::ICMP_SGE: {
+      KnownBits Known = computeKnownBits(RHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+      if (!Known.isNonNegative())
         break;
       LLVM_FALLTHROUGH;
+    }
     case ICmpInst::ICMP_EQ:
     case ICmpInst::ICMP_UGT:
     case ICmpInst::ICMP_UGE:
       return getFalse(ITy);
     case ICmpInst::ICMP_SLT:
-    case ICmpInst::ICMP_SLE:
-      ComputeSignBit(RHS, KnownNonNegative, KnownNegative, Q.DL, 0, Q.AC,
-                     Q.CxtI, Q.DT);
-      if (!KnownNonNegative)
+    case ICmpInst::ICMP_SLE: {
+      KnownBits Known = computeKnownBits(RHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+      if (!Known.isNonNegative())
         break;
       LLVM_FALLTHROUGH;
+    }
     case ICmpInst::ICMP_NE:
     case ICmpInst::ICMP_ULT:
     case ICmpInst::ICMP_ULE:
@@ -2743,28 +2735,27 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
 
   // icmp pred X, (urem Y, X)
   if (RBO && match(RBO, m_URem(m_Value(), m_Specific(LHS)))) {
-    bool KnownNonNegative, KnownNegative;
     switch (Pred) {
     default:
       break;
     case ICmpInst::ICMP_SGT:
-    case ICmpInst::ICMP_SGE:
-      ComputeSignBit(LHS, KnownNonNegative, KnownNegative, Q.DL, 0, Q.AC,
-                     Q.CxtI, Q.DT);
-      if (!KnownNonNegative)
+    case ICmpInst::ICMP_SGE: {
+      KnownBits Known = computeKnownBits(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+      if (!Known.isNonNegative())
         break;
       LLVM_FALLTHROUGH;
+    }
     case ICmpInst::ICMP_NE:
     case ICmpInst::ICMP_UGT:
     case ICmpInst::ICMP_UGE:
       return getTrue(ITy);
     case ICmpInst::ICMP_SLT:
-    case ICmpInst::ICMP_SLE:
-      ComputeSignBit(LHS, KnownNonNegative, KnownNegative, Q.DL, 0, Q.AC,
-                     Q.CxtI, Q.DT);
-      if (!KnownNonNegative)
+    case ICmpInst::ICMP_SLE: {
+      KnownBits Known = computeKnownBits(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+      if (!Known.isNonNegative())
         break;
       LLVM_FALLTHROUGH;
+    }
     case ICmpInst::ICMP_EQ:
     case ICmpInst::ICMP_ULT:
     case ICmpInst::ICMP_ULE:
