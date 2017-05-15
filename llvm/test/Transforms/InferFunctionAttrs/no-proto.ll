@@ -3,11 +3,137 @@
 
 ; Check that we don't modify libc functions with invalid prototypes.
 
+; CHECK: declare void @__acos_finite(...)
+declare void @__acos_finite(...)
+
+; CHECK: declare void @__acosf_finite(...)
+declare void @__acosf_finite(...)
+
+; CHECK: declare void @__acosh_finite(...)
+declare void @__acosh_finite(...)
+
+; CHECK: declare void @__acoshf_finite(...)
+declare void @__acoshf_finite(...)
+
+; CHECK: declare void @__acoshl_finite(...)
+declare void @__acoshl_finite(...)
+
+; CHECK: declare void @__acosl_finite(...)
+declare void @__acosl_finite(...)
+
+; CHECK: declare void @__asin_finite(...)
+declare void @__asin_finite(...)
+
+; CHECK: declare void @__asinf_finite(...)
+declare void @__asinf_finite(...)
+
+; CHECK: declare void @__asinl_finite(...)
+declare void @__asinl_finite(...)
+
+; CHECK: declare void @__atan2_finite(...)
+declare void @__atan2_finite(...)
+
+; CHECK: declare void @__atan2f_finite(...)
+declare void @__atan2f_finite(...)
+
+; CHECK: declare void @__atan2l_finite(...)
+declare void @__atan2l_finite(...)
+
+; CHECK: declare void @__atanh_finite(...)
+declare void @__atanh_finite(...)
+
+; CHECK: declare void @__atanhf_finite(...)
+declare void @__atanhf_finite(...)
+
+; CHECK: declare void @__atanhl_finite(...)
+declare void @__atanhl_finite(...)
+
+; CHECK: declare void @__cosh_finite(...)
+declare void @__cosh_finite(...)
+
+; CHECK: declare void @__coshf_finite(...)
+declare void @__coshf_finite(...)
+
+; CHECK: declare void @__coshl_finite(...)
+declare void @__coshl_finite(...)
+
 ; CHECK: declare void @__cospi(...)
 declare void @__cospi(...)
 
 ; CHECK: declare void @__cospif(...)
 declare void @__cospif(...)
+
+; CHECK: declare void @__exp10_finite(...)
+declare void @__exp10_finite(...)
+
+; CHECK: declare void @__exp10f_finite(...)
+declare void @__exp10f_finite(...)
+
+; CHECK: declare void @__exp10l_finite(...)
+declare void @__exp10l_finite(...)
+
+; CHECK: declare void @__exp2_finite(...)
+declare void @__exp2_finite(...)
+
+; CHECK: declare void @__exp2f_finite(...)
+declare void @__exp2f_finite(...)
+
+; CHECK: declare void @__exp2l_finite(...)
+declare void @__exp2l_finite(...)
+
+; CHECK: declare void @__exp_finite(...)
+declare void @__exp_finite(...)
+
+; CHECK: declare void @__expf_finite(...)
+declare void @__expf_finite(...)
+
+; CHECK: declare void @__expl_finite(...)
+declare void @__expl_finite(...)
+
+; CHECK: declare void @__log10_finite(...)
+declare void @__log10_finite(...)
+
+; CHECK: declare void @__log10f_finite(...)
+declare void @__log10f_finite(...)
+
+; CHECK: declare void @__log10l_finite(...)
+declare void @__log10l_finite(...)
+
+; CHECK: declare void @__log2_finite(...)
+declare void @__log2_finite(...)
+
+; CHECK: declare void @__log2f_finite(...)
+declare void @__log2f_finite(...)
+
+; CHECK: declare void @__log2l_finite(...)
+declare void @__log2l_finite(...)
+
+; CHECK: declare void @__log_finite(...)
+declare void @__log_finite(...)
+
+; CHECK: declare void @__logf_finite(...)
+declare void @__logf_finite(...)
+
+; CHECK: declare void @__logl_finite(...)
+declare void @__logl_finite(...)
+
+; CHECK: declare void @__pow_finite(...)
+declare void @__pow_finite(...)
+
+; CHECK: declare void @__powf_finite(...)
+declare void @__powf_finite(...)
+
+; CHECK: declare void @__powl_finite(...)
+declare void @__powl_finite(...)
+
+; CHECK: declare void @__sinh_finite(...)
+declare void @__sinh_finite(...)
+
+; CHECK: declare void @__sinhf_finite(...)
+declare void @__sinhf_finite(...)
+
+; CHECK: declare void @__sinhl_finite(...)
+declare void @__sinhl_finite(...)
 
 ; CHECK: declare void @__sinpi(...)
 declare void @__sinpi(...)

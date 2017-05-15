@@ -1,4 +1,4 @@
-//===-- llvm/IR/Statepoint.h - gc.statepoint utilities ----------*- C++ -*-===//
+//===- llvm/IR/Statepoint.h - gc.statepoint utilities -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -24,10 +24,12 @@
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -87,7 +89,7 @@ protected:
   }
 
 public:
-  typedef typename CallSiteTy::arg_iterator arg_iterator;
+  using arg_iterator = typename CallSiteTy::arg_iterator;
 
   enum {
     IDPos = 0,
@@ -300,8 +302,9 @@ public:
 class ImmutableStatepoint
     : public StatepointBase<const Function, const Instruction, const Value,
                             ImmutableCallSite> {
-  typedef StatepointBase<const Function, const Instruction, const Value,
-                         ImmutableCallSite> Base;
+  using Base =
+      StatepointBase<const Function, const Instruction, const Value,
+                     ImmutableCallSite>;
 
 public:
   explicit ImmutableStatepoint(const Instruction *I) : Base(I) {}
@@ -312,7 +315,7 @@ public:
 /// to a gc.statepoint.
 class Statepoint
     : public StatepointBase<Function, Instruction, Value, CallSite> {
-  typedef StatepointBase<Function, Instruction, Value, CallSite> Base;
+  using Base = StatepointBase<Function, Instruction, Value, CallSite>;
 
 public:
   explicit Statepoint(Instruction *I) : Base(I) {}
@@ -327,6 +330,7 @@ public:
     return I->getIntrinsicID() == Intrinsic::experimental_gc_relocate ||
       I->getIntrinsicID() == Intrinsic::experimental_gc_result;
   }
+
   static inline bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
@@ -369,6 +373,7 @@ public:
   static inline bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::experimental_gc_relocate;
   }
+
   static inline bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
@@ -403,6 +408,7 @@ public:
   static inline bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::experimental_gc_result;
   }
+
   static inline bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }

@@ -905,16 +905,23 @@ static Error createError(const Twine &Reason, llvm::Error E) {
 /// Returns the address of symbol relocation used against. Used for futher
 /// relocations computation. Symbol's section load address is taken in account if
 /// LoadedObjectInfo interface is provided.
-static Expected<uint64_t> getSymbolAddress(const object::ObjectFile &Obj,
-                                           const RelocationRef &Reloc,
-                                           const LoadedObjectInfo *L) {
+static Expected<uint64_t>
+getSymbolAddress(const object::ObjectFile &Obj, const RelocationRef &Reloc,
+                 const LoadedObjectInfo *L,
+                 std::map<SymbolRef, uint64_t> &Cache) {
   uint64_t Ret = 0;
   object::section_iterator RSec = Obj.section_end();
   object::symbol_iterator Sym = Reloc.getSymbol();
 
+  std::map<SymbolRef, uint64_t>::iterator CacheIt = Cache.end();
   // First calculate the address of the symbol or section as it appears
   // in the object file
   if (Sym != Obj.symbol_end()) {
+    bool New;
+    std::tie(CacheIt, New) = Cache.insert({*Sym, 0});
+    if (!New)
+      return CacheIt->second;
+
     Expected<uint64_t> SymAddrOrErr = Sym->getAddress();
     if (!SymAddrOrErr)
       return createError("error: failed to compute symbol address: ",
@@ -943,6 +950,10 @@ static Expected<uint64_t> getSymbolAddress(const object::ObjectFile &Obj,
   if (L && RSec != Obj.section_end())
     if (uint64_t SectionLoadAddress = L->getSectionLoadAddress(*RSec))
       Ret += SectionLoadAddress - RSec->getAddress();
+
+  if (CacheIt != Cache.end())
+    CacheIt->second = Ret;
+
   return Ret;
 }
 
@@ -1075,6 +1086,7 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
         continue;
     }
 
+    std::map<SymbolRef, uint64_t> AddrCache;
     if (Section.relocation_begin() != Section.relocation_end()) {
       uint64_t SectionSize = RelocatedSection->getSize();
       for (const RelocationRef &Reloc : Section.relocations()) {
@@ -1083,7 +1095,8 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
         if (isRelocScattered(Obj, Reloc))
           continue;
 
-        Expected<uint64_t> SymAddrOrErr = getSymbolAddress(Obj, Reloc, L);
+        Expected<uint64_t> SymAddrOrErr =
+            getSymbolAddress(Obj, Reloc, L, AddrCache);
         if (!SymAddrOrErr) {
           errs() << toString(SymAddrOrErr.takeError()) << '\n';
           continue;

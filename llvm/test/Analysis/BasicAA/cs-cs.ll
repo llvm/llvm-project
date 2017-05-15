@@ -2,40 +2,11 @@
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:64-v128:32:128-a0:0:32-n32"
 target triple = "arm-apple-ios"
 
-declare <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8*, i32) nounwind readonly
-declare void @llvm.arm.neon.vst1.p0i8.v8i16(i8*, <8 x i16>, i32) nounwind
-
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
 
 declare void @a_readonly_func(i8 *) noinline nounwind readonly
 declare void @a_writeonly_func(i8 *) noinline nounwind writeonly
-
-define <8 x i16> @test1(i8* %p, <8 x i16> %y) {
-entry:
-  %q = getelementptr i8, i8* %p, i64 16
-  %a = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16) nounwind
-  call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %q, <8 x i16> %y, i32 16)
-  %b = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16) nounwind
-  %c = add <8 x i16> %a, %b
-  ret <8 x i16> %c
-
-; CHECK-LABEL: Function: test1:
-
-; CHECK: NoAlias:      i8* %p, i8* %q
-; CHECK: Just Ref:  Ptr: i8* %p        <->  %a = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)
-; CHECK: NoModRef:  Ptr: i8* %q        <->  %a = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)
-; CHECK: NoModRef:  Ptr: i8* %p        <->  call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %q, <8 x i16> %y, i32 16)
-; CHECK: Both ModRef:  Ptr: i8* %q     <->  call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %q, <8 x i16> %y, i32 16)
-; CHECK: Just Ref:  Ptr: i8* %p        <->  %b = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)
-; CHECK: NoModRef:  Ptr: i8* %q        <->  %b = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)
-; CHECK: NoModRef:   %a = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16) #{{[0-9]+}} <->   call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %q, <8 x i16> %y, i32 16)
-; CHECK: NoModRef:   %a = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16) #{{[0-9]+}} <->   %b = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)
-; CHECK: NoModRef:   call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %q, <8 x i16> %y, i32 16) <->   %a = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)
-; CHECK: NoModRef:   call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %q, <8 x i16> %y, i32 16) <->   %b = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)
-; CHECK: NoModRef:   %b = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16) #{{[0-9]+}} <->   %a = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16)
-; CHECK: NoModRef:   %b = call <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8* %p, i32 16) #{{[0-9]+}} <->   call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %q, <8 x i16> %y, i32 16)
-}
 
 define void @test2(i8* %P, i8* %Q) nounwind ssp {
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
@@ -247,9 +218,9 @@ define void @test7(i8* %P) nounwind ssp {
 ; CHECK: Just Ref:   call void @a_readonly_func(i8* %P) <->   call void @a_writeonly_func(i8* %P)
 }
 
-declare void @an_inaccessiblememonly_func() nounwind inaccessiblememonly 
-declare void @an_inaccessibleorargmemonly_func(i8 *) nounwind inaccessiblemem_or_argmemonly 
-declare void @an_argmemonly_func(i8 *) nounwind argmemonly 
+declare void @an_inaccessiblememonly_func() nounwind inaccessiblememonly
+declare void @an_inaccessibleorargmemonly_func(i8 *) nounwind inaccessiblemem_or_argmemonly
+declare void @an_argmemonly_func(i8 *) nounwind argmemonly
 
 define void @test8(i8* %p) {
 entry:
@@ -260,7 +231,7 @@ entry:
   call void @an_inaccessiblememonly_func()
   call void @an_inaccessibleorargmemonly_func(i8* %q)
   call void @an_argmemonly_func(i8* %q)
-  ret void 
+  ret void
 
 ; CHECK-LABEL: Function: test8
 ; CHECK: NoModRef:  Ptr: i8* %p <->  call void @an_inaccessiblememonly_func()

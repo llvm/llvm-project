@@ -16,8 +16,6 @@ using namespace llvm;
 using namespace llvm::codeview;
 
 Error TypeDatabaseVisitor::visitTypeBegin(CVType &Record) {
-  assert(TypeDB.is<TypeDatabase *>());
-
   assert(!IsInFieldList);
   // Reset Name to the empty string. If the visitor sets it, we know it.
   Name = "";
@@ -30,32 +28,20 @@ Error TypeDatabaseVisitor::visitTypeBegin(CVType &Record) {
   return Error::success();
 }
 
-StringRef TypeDatabaseVisitor::getTypeName(TypeIndex Index) const {
-  if (auto DB = TypeDB.get<TypeDatabase *>())
-    return DB->getTypeName(Index);
-  else if (auto DB = TypeDB.get<RandomAccessTypeDatabase *>())
-    return DB->getTypeName(Index);
-
-  llvm_unreachable("Invalid TypeDB Kind!");
-}
-
-StringRef TypeDatabaseVisitor::saveTypeName(StringRef Name) {
-  if (auto DB = TypeDB.get<TypeDatabase *>())
-    return DB->saveTypeName(Name);
-  else if (auto DB = TypeDB.get<RandomAccessTypeDatabase *>())
-    return DB->saveTypeName(Name);
-
-  llvm_unreachable("Invalid TypeDB Kind!");
-}
-
 Error TypeDatabaseVisitor::visitTypeBegin(CVType &Record, TypeIndex Index) {
-  assert(TypeDB.is<RandomAccessTypeDatabase *>());
-
   if (auto EC = visitTypeBegin(Record))
     return EC;
 
   CurrentTypeIndex = Index;
   return Error::success();
+}
+
+StringRef TypeDatabaseVisitor::getTypeName(TypeIndex Index) const {
+  return TypeDB->getTypeName(Index);
+}
+
+StringRef TypeDatabaseVisitor::saveTypeName(StringRef Name) {
+  return TypeDB->saveTypeName(Name);
 }
 
 Error TypeDatabaseVisitor::visitTypeEnd(CVType &CVR) {
@@ -69,11 +55,12 @@ Error TypeDatabaseVisitor::visitTypeEnd(CVType &CVR) {
   // CVUDTNames is indexed by type index, and must have one entry for every
   // type.  Field list members are not recorded, and are only referenced by
   // their containing field list record.
-  if (auto DB = TypeDB.get<TypeDatabase *>())
-    DB->recordType(Name, CVR);
-  else if (auto DB = TypeDB.get<RandomAccessTypeDatabase *>())
-    DB->recordType(Name, CurrentTypeIndex, CVR);
+  if (CurrentTypeIndex)
+    TypeDB->recordType(Name, *CurrentTypeIndex, CVR);
+  else
+    TypeDB->appendType(Name, CVR);
 
+  CurrentTypeIndex.reset();
   return Error::success();
 }
 

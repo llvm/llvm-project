@@ -27,7 +27,7 @@ class Loop;
 namespace polly {
 
 class Scop;
-class ScopInfoWrapperPass;
+class ScopInfo;
 class DependenceInfoWrapperPass;
 
 class PolyhedralInfo : public llvm::FunctionPass {
@@ -87,7 +87,7 @@ private:
   bool checkParallel(llvm::Loop *L,
                      __isl_give isl_pw_aff **MinDepDistPtr = nullptr) const;
 
-  ScopInfoWrapperPass *SI;
+  ScopInfo *SI;
   DependenceInfoWrapperPass *DI;
 };
 

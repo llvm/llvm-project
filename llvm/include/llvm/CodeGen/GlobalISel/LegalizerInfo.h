@@ -145,7 +145,7 @@ public:
 
   /// Iterate the given function (typically something like doubling the width)
   /// on Ty until we find a legal type for this operation.
-  LLT findLegalType(const InstrAspect &Aspect,
+  Optional<LLT> findLegalType(const InstrAspect &Aspect,
                     function_ref<LLT(LLT)> NextType) const {
     LegalizeAction Action;
     const TypeMap &Map = Actions[Aspect.Opcode - FirstOp][Aspect.Idx];
@@ -153,8 +153,12 @@ public:
     do {
       Ty = NextType(Ty);
       auto ActionIt = Map.find(Ty);
-      if (ActionIt == Map.end())
-        Action = DefaultActions.find(Aspect.Opcode)->second;
+      if (ActionIt == Map.end()) {
+        auto DefaultIt = DefaultActions.find(Aspect.Opcode);
+        if (DefaultIt == DefaultActions.end())
+          return None;
+        Action = DefaultIt->second;
+      }
       else
         Action = ActionIt->second;
     } while(Action != Legal);
@@ -163,11 +167,14 @@ public:
 
   /// Find what type it's actually OK to perform the given operation on, given
   /// the general approach we've decided to take.
-  LLT findLegalType(const InstrAspect &Aspect, LegalizeAction Action) const;
+  Optional<LLT> findLegalType(const InstrAspect &Aspect, LegalizeAction Action) const;
 
   std::pair<LegalizeAction, LLT> findLegalAction(const InstrAspect &Aspect,
                                                  LegalizeAction Action) const {
-    return std::make_pair(Action, findLegalType(Aspect, Action));
+    auto LegalType = findLegalType(Aspect, Action);
+    if (!LegalType)
+      return std::make_pair(LegalizeAction::Unsupported, LLT());
+    return std::make_pair(Action, *LegalType);
   }
 
   /// Find the specified \p Aspect in the primary (explicitly set) Actions

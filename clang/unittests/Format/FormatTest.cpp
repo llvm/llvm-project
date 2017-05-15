@@ -2106,7 +2106,7 @@ TEST_F(FormatTest, LayoutStatementsAroundPreprocessorDirectives) {
 
   verifyIncompleteFormat("void f(\n"
                          "#if A\n"
-                         "    );\n"
+                         ");\n"
                          "#else\n"
                          "#endif");
 }
@@ -4475,7 +4475,7 @@ TEST_F(FormatTest, WrapsTemplateDeclarations) {
   EXPECT_EQ("static_cast<A< //\n"
             "    B> *>(\n"
             "\n"
-            "    );",
+            ");",
             format("static_cast<A<//\n"
                    "    B>*>(\n"
                    "\n"
@@ -6567,7 +6567,7 @@ TEST_F(FormatTest, BreaksStringLiteralsWithin_TMacro) {
             "#if !TEST\n"
             "    _T(\"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXn\")\n"
             "#endif\n"
-            "    );",
+            ");",
             format("f(\n"
                    "#if !TEST\n"
                    "_T(\"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXn\")\n"
@@ -9639,7 +9639,7 @@ TEST_F(FormatTest, FormatsLambdas) {
   // Other corner cases.
   verifyFormat("void f() {\n"
                "  bar([]() {} // Did not respect SpacesBeforeTrailingComments\n"
-               "      );\n"
+               "  );\n"
                "}");
 
   // Lambdas created through weird macros.

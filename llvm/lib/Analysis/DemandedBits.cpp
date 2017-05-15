@@ -86,13 +86,11 @@ void DemandedBits::determineLiveOperandBits(
       [&](unsigned BitWidth, const Value *V1, const Value *V2) {
         const DataLayout &DL = I->getModule()->getDataLayout();
         Known = KnownBits(BitWidth);
-        computeKnownBits(const_cast<Value *>(V1), Known, DL, 0,
-                         &AC, UserI, &DT);
+        computeKnownBits(V1, Known, DL, 0, &AC, UserI, &DT);
 
         if (V2) {
           Known2 = KnownBits(BitWidth);
-          computeKnownBits(const_cast<Value *>(V2), Known2, DL,
-                           0, &AC, UserI, &DT);
+          computeKnownBits(V2, Known2, DL, 0, &AC, UserI, &DT);
         }
       };
 
@@ -118,7 +116,7 @@ void DemandedBits::determineLiveOperandBits(
           // known to be one.
           ComputeKnownBits(BitWidth, I, nullptr);
           AB = APInt::getHighBitsSet(BitWidth,
-                 std::min(BitWidth, Known.One.countLeadingZeros()+1));
+                 std::min(BitWidth, Known.countMaxLeadingZeros()+1));
         }
         break;
       case Intrinsic::cttz:
@@ -128,7 +126,7 @@ void DemandedBits::determineLiveOperandBits(
           // known to be one.
           ComputeKnownBits(BitWidth, I, nullptr);
           AB = APInt::getLowBitsSet(BitWidth,
-                 std::min(BitWidth, Known.One.countTrailingZeros()+1));
+                 std::min(BitWidth, Known.countMaxTrailingZeros()+1));
         }
         break;
       }

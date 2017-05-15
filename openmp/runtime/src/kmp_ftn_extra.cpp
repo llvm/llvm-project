@@ -17,18 +17,19 @@
 #include "kmp_affinity.h"
 
 #if KMP_OS_WINDOWS
-#   define KMP_FTN_ENTRIES KMP_FTN_PLAIN
+#define KMP_FTN_ENTRIES KMP_FTN_PLAIN
 #elif KMP_OS_UNIX
-#   define KMP_FTN_ENTRIES KMP_FTN_APPEND
+#define KMP_FTN_ENTRIES KMP_FTN_APPEND
 #endif
 
 // Note: This string is not printed when KMP_VERSION=1.
-char const __kmp_version_ftnextra[] = KMP_VERSION_PREFIX "Fortran \"extra\" OMP support: "
+char const __kmp_version_ftnextra[] =
+    KMP_VERSION_PREFIX "Fortran \"extra\" OMP support: "
 #ifdef KMP_FTN_ENTRIES
-    "yes";
-#   define FTN_STDCALL /* nothing to do */
-#   include "kmp_ftn_os.h"
-#   include "kmp_ftn_entry.h"
+                       "yes";
+#define FTN_STDCALL /* nothing to do */
+#include "kmp_ftn_os.h"
+#include "kmp_ftn_entry.h"
 #else
-    "no";
+                       "no";
 #endif /* KMP_FTN_ENTRIES */

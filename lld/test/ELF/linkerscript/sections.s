@@ -45,8 +45,9 @@
 # SEC-ORDER: 3 .shstrtab     0000003b {{[0-9a-f]*}}
 # SEC-ORDER: 4 .symtab       00000030 {{[0-9a-f]*}}
 # SEC-ORDER: 5 .strtab       00000008 {{[0-9a-f]*}}
-# SEC-ORDER: 6 .data         00000020 {{[0-9a-f]*}} DATA
-# SEC-ORDER: 7 .text         0000000e {{[0-9a-f]*}} TEXT DATA
+# SEC-ORDER: 6 .comment      00000008 {{[0-9a-f]*}}
+# SEC-ORDER: 7 .data         00000020 {{[0-9a-f]*}} DATA
+# SEC-ORDER: 8 .text         0000000e {{[0-9a-f]*}} TEXT DATA
 
 # .text and .data have swapped names but proper sizes and types.
 # RUN: echo "SECTIONS { \

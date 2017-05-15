@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 if (MSVC)
+  set_source_files_properties(SemaDeclAttr.cpp PROPERTIES COMPILE_FLAGS /bigobj)
   set_source_files_properties(SemaExpr.cpp PROPERTIES COMPILE_FLAGS /bigobj)
 endif()
 

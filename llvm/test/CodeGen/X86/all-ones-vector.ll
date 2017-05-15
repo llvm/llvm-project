@@ -157,8 +157,8 @@ define <32 x i8> @allones_v32i8() nounwind {
 ;
 ; X32-AVX1-LABEL: allones_v32i8:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    retl
 ;
 ; X32-AVX256-LABEL: allones_v32i8:
@@ -174,8 +174,8 @@ define <32 x i8> @allones_v32i8() nounwind {
 ;
 ; X64-AVX1-LABEL: allones_v32i8:
 ; X64-AVX1:       # BB#0:
-; X64-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX256-LABEL: allones_v32i8:
@@ -194,8 +194,8 @@ define <16 x i16> @allones_v16i16() nounwind {
 ;
 ; X32-AVX1-LABEL: allones_v16i16:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    retl
 ;
 ; X32-AVX256-LABEL: allones_v16i16:
@@ -211,8 +211,8 @@ define <16 x i16> @allones_v16i16() nounwind {
 ;
 ; X64-AVX1-LABEL: allones_v16i16:
 ; X64-AVX1:       # BB#0:
-; X64-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX256-LABEL: allones_v16i16:
@@ -231,8 +231,8 @@ define <8 x i32> @allones_v8i32() nounwind {
 ;
 ; X32-AVX1-LABEL: allones_v8i32:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    retl
 ;
 ; X32-AVX256-LABEL: allones_v8i32:
@@ -248,8 +248,8 @@ define <8 x i32> @allones_v8i32() nounwind {
 ;
 ; X64-AVX1-LABEL: allones_v8i32:
 ; X64-AVX1:       # BB#0:
-; X64-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX256-LABEL: allones_v8i32:
@@ -268,8 +268,8 @@ define <4 x i64> @allones_v4i64() nounwind {
 ;
 ; X32-AVX1-LABEL: allones_v4i64:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    retl
 ;
 ; X32-AVX256-LABEL: allones_v4i64:
@@ -285,8 +285,8 @@ define <4 x i64> @allones_v4i64() nounwind {
 ;
 ; X64-AVX1-LABEL: allones_v4i64:
 ; X64-AVX1:       # BB#0:
-; X64-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX256-LABEL: allones_v4i64:
@@ -305,8 +305,8 @@ define <4 x double> @allones_v4f64() nounwind {
 ;
 ; X32-AVX1-LABEL: allones_v4f64:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    retl
 ;
 ; X32-AVX256-LABEL: allones_v4f64:
@@ -322,8 +322,8 @@ define <4 x double> @allones_v4f64() nounwind {
 ;
 ; X64-AVX1-LABEL: allones_v4f64:
 ; X64-AVX1:       # BB#0:
-; X64-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX256-LABEL: allones_v4f64:
@@ -342,8 +342,8 @@ define <4 x double> @allones_v4f64_optsize() nounwind optsize {
 ;
 ; X32-AVX1-LABEL: allones_v4f64_optsize:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    retl
 ;
 ; X32-AVX256-LABEL: allones_v4f64_optsize:
@@ -359,8 +359,8 @@ define <4 x double> @allones_v4f64_optsize() nounwind optsize {
 ;
 ; X64-AVX1-LABEL: allones_v4f64_optsize:
 ; X64-AVX1:       # BB#0:
-; X64-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX256-LABEL: allones_v4f64_optsize:
@@ -379,8 +379,8 @@ define <8 x float> @allones_v8f32() nounwind {
 ;
 ; X32-AVX1-LABEL: allones_v8f32:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    retl
 ;
 ; X32-AVX256-LABEL: allones_v8f32:
@@ -396,8 +396,8 @@ define <8 x float> @allones_v8f32() nounwind {
 ;
 ; X64-AVX1-LABEL: allones_v8f32:
 ; X64-AVX1:       # BB#0:
-; X64-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX256-LABEL: allones_v8f32:
@@ -416,8 +416,8 @@ define <8 x float> @allones_v8f32_optsize() nounwind optsize {
 ;
 ; X32-AVX1-LABEL: allones_v8f32_optsize:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    retl
 ;
 ; X32-AVX256-LABEL: allones_v8f32_optsize:
@@ -433,8 +433,8 @@ define <8 x float> @allones_v8f32_optsize() nounwind optsize {
 ;
 ; X64-AVX1-LABEL: allones_v8f32_optsize:
 ; X64-AVX1:       # BB#0:
-; X64-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX256-LABEL: allones_v8f32_optsize:
@@ -455,8 +455,8 @@ define <64 x i8> @allones_v64i8() nounwind {
 ;
 ; X32-AVX1-LABEL: allones_v64i8:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; X32-AVX1-NEXT:    retl
 ;
@@ -487,8 +487,8 @@ define <64 x i8> @allones_v64i8() nounwind {
 ;
 ; X64-AVX1-LABEL: allones_v64i8:
 ; X64-AVX1:       # BB#0:
-; X64-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; X64-AVX1-NEXT:    retq
 ;
@@ -522,8 +522,8 @@ define <32 x i16> @allones_v32i16() nounwind {
 ;
 ; X32-AVX1-LABEL: allones_v32i16:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; X32-AVX1-NEXT:    retl
 ;
@@ -554,8 +554,8 @@ define <32 x i16> @allones_v32i16() nounwind {
 ;
 ; X64-AVX1-LABEL: allones_v32i16:
 ; X64-AVX1:       # BB#0:
-; X64-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; X64-AVX1-NEXT:    retq
 ;
@@ -589,8 +589,8 @@ define <16 x i32> @allones_v16i32() nounwind {
 ;
 ; X32-AVX1-LABEL: allones_v16i32:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; X32-AVX1-NEXT:    retl
 ;
@@ -615,8 +615,8 @@ define <16 x i32> @allones_v16i32() nounwind {
 ;
 ; X64-AVX1-LABEL: allones_v16i32:
 ; X64-AVX1:       # BB#0:
-; X64-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; X64-AVX1-NEXT:    retq
 ;
@@ -644,8 +644,8 @@ define <8 x i64> @allones_v8i64() nounwind {
 ;
 ; X32-AVX1-LABEL: allones_v8i64:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; X32-AVX1-NEXT:    retl
 ;
@@ -670,8 +670,8 @@ define <8 x i64> @allones_v8i64() nounwind {
 ;
 ; X64-AVX1-LABEL: allones_v8i64:
 ; X64-AVX1:       # BB#0:
-; X64-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; X64-AVX1-NEXT:    retq
 ;
@@ -699,8 +699,8 @@ define <8 x double> @allones_v8f64() nounwind {
 ;
 ; X32-AVX1-LABEL: allones_v8f64:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; X32-AVX1-NEXT:    retl
 ;
@@ -725,8 +725,8 @@ define <8 x double> @allones_v8f64() nounwind {
 ;
 ; X64-AVX1-LABEL: allones_v8f64:
 ; X64-AVX1:       # BB#0:
-; X64-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; X64-AVX1-NEXT:    retq
 ;
@@ -754,8 +754,8 @@ define <16 x float> @allones_v16f32() nounwind {
 ;
 ; X32-AVX1-LABEL: allones_v16f32:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; X32-AVX1-NEXT:    retl
 ;
@@ -780,8 +780,8 @@ define <16 x float> @allones_v16f32() nounwind {
 ;
 ; X64-AVX1-LABEL: allones_v16f32:
 ; X64-AVX1:       # BB#0:
-; X64-AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; X64-AVX1-NEXT:    retq
 ;

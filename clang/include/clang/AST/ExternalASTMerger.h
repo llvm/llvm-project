@@ -44,6 +44,8 @@ public:
   FindExternalLexicalDecls(const DeclContext *DC,
                            llvm::function_ref<bool(Decl::Kind)> IsKindWeWant,
                            SmallVectorImpl<Decl *> &Result) override;
+
+   void CompleteType(TagDecl *Tag) override;
 };
 
 } // end namespace clang

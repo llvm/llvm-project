@@ -204,12 +204,8 @@ uint64_t RegBankSelect::getRepairCost(
     // TODO: use a dedicated constant for ImpossibleCost.
     if (Cost != UINT_MAX)
       return Cost;
-    assert(!TPC->isGlobalISelAbortEnabled() &&
-           "Legalization not available yet");
     // Return the legalization cost of that repairing.
   }
-  assert(!TPC->isGlobalISelAbortEnabled() &&
-         "Complex repairing not implemented yet");
   return UINT_MAX;
 }
 
@@ -452,6 +448,11 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
 
     // Sums up the repairing cost of MO at each insertion point.
     uint64_t RepairCost = getRepairCost(MO, ValMapping);
+
+    // This is an impossible to repair cost.
+    if (RepairCost == UINT_MAX)
+      continue;
+
     // Bias used for splitting: 5%.
     const uint64_t PercentageForBias = 5;
     uint64_t Bias = (RepairCost * PercentageForBias + 99) / 100;

@@ -708,13 +708,13 @@ TEST(ConstantRange, MakeGuaranteedNoWrapRegion) {
       Instruction::Add, ConstantRange(32, /* isFullSet = */ true),
       OBO::NoUnsignedWrap);
   EXPECT_TRUE(NUWForAllValues.isSingleElement() &&
-              NSWForAllValues.getSingleElement()->isMinValue());
+              NUWForAllValues.getSingleElement()->isMinValue());
 
   auto NUWAndNSWForAllValues = ConstantRange::makeGuaranteedNoWrapRegion(
       Instruction::Add, ConstantRange(32, /* isFullSet = */ true),
       OBO::NoUnsignedWrap | OBO::NoSignedWrap);
   EXPECT_TRUE(NUWAndNSWForAllValues.isSingleElement() &&
-              NSWForAllValues.getSingleElement()->isMinValue());
+              NUWAndNSWForAllValues.getSingleElement()->isMinValue());
 
   ConstantRange OneToFive(APInt(32, 1), APInt(32, 6));
   EXPECT_EQ(ConstantRange::makeGuaranteedNoWrapRegion(

@@ -24,7 +24,6 @@ subdirectories =
  DebugInfo
  Demangle
  ExecutionEngine
- LibDriver
  LineEditor
  Linker
  IR
@@ -39,6 +38,7 @@ subdirectories =
  Support
  TableGen
  Target
+ ToolDrivers
  Transforms
 
 [component_0]

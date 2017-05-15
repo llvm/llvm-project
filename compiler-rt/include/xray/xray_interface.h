@@ -1,4 +1,4 @@
-//===-- xray_interface.h ----------------------------------------*- C++ -*-===//
+//===- xray_interface.h -----------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,11 +11,12 @@
 //
 // APIs for controlling XRay functionality explicitly.
 //===----------------------------------------------------------------------===//
+
 #ifndef XRAY_XRAY_INTERFACE_H
 #define XRAY_XRAY_INTERFACE_H
 
+#include <cstddef>
 #include <cstdint>
-#include <stddef.h>
 
 extern "C" {
 
@@ -100,6 +101,6 @@ extern uintptr_t __xray_function_address(int32_t FuncId);
 /// encounter errors (when there are no instrumented functions, etc.).
 extern size_t __xray_max_function_id();
 
-}
+} // end extern "C"
 
-#endif
+#endif // XRAY_XRAY_INTERFACE_H

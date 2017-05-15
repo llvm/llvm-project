@@ -133,6 +133,11 @@ void MCObjectStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
   // Avoid fixups when possible.
   int64_t AbsValue;
   if (Value->evaluateAsAbsolute(AbsValue, getAssembler())) {
+    if (!isUIntN(8 * Size, AbsValue) && !isIntN(8 * Size, AbsValue)) {
+      getContext().reportError(
+          Loc, "value evaluated as " + Twine(AbsValue) + " is out of range.");
+      return;
+    }
     EmitIntValue(AbsValue, Size);
     return;
   }

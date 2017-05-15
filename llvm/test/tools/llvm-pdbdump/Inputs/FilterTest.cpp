@@ -10,6 +10,8 @@ public:
 
   void MemberFunc() {}
 
+  int foo() const { return IntMemberVar; }
+
 private:
   int IntMemberVar;
   double DoubleMemberVar;
@@ -18,9 +20,25 @@ private:
 int IntGlobalVar;
 double DoubleGlobalVar;
 typedef int GlobalTypedef;
+char OneByte;
+char TwoBytes[2];
+char ThreeBytes[3];
+
 enum GlobalEnum {
   GlobalEnumVal1
 } GlobalEnumVar;
+
+int CFunc() {
+  return (int)OneByte * 2;
+}
+int BFunc() {
+  return 42;
+}
+int AFunc() {
+  static FilterTestClass FC;
+
+  return (CFunc() + BFunc()) * IntGlobalVar + FC.foo();
+}
 
 int main(int argc, char **argv) {
   FilterTestClass TestClass;

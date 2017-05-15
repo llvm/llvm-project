@@ -110,3 +110,11 @@ Optional<int64_t> llvm::getConstantVRegVal(unsigned VReg,
 
   return None;
 }
+
+const llvm::ConstantFP* llvm::getConstantFPVRegVal(unsigned VReg,
+                                       const MachineRegisterInfo &MRI) {
+  MachineInstr *MI = MRI.getVRegDef(VReg);
+  if (TargetOpcode::G_FCONSTANT != MI->getOpcode())
+    return nullptr;
+  return MI->getOperand(1).getFPImm();
+}

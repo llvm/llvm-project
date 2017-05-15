@@ -1,5 +1,5 @@
-; RUN: opt < %s -partial-inliner -S  | FileCheck %s
-; RUN: opt < %s -passes=partial-inliner -S  | FileCheck %s
+; RUN: opt < %s -skip-partial-inlining-cost-analysis -partial-inliner -S  | FileCheck %s
+; RUN: opt < %s -skip-partial-inlining-cost-analysis -passes=partial-inliner -S  | FileCheck %s
 
 define internal i32 @inlinedFunc(i1 %cond, i32* align 4 %align.val) {
 entry:

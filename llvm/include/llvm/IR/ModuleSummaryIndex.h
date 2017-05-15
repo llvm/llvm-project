@@ -1,4 +1,4 @@
-//===-- llvm/ModuleSummaryIndex.h - Module Summary Index --------*- C++ -*-===//
+//===- llvm/ModuleSummaryIndex.h - Module Summary Index ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,21 +16,33 @@
 #ifndef LLVM_IR_MODULESUMMARYINDEX_H
 #define LLVM_IR_MODULESUMMARYINDEX_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
-
+#include "llvm/IR/GlobalValue.h"
+#include <algorithm>
 #include <array>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 
 namespace yaml {
+
 template <typename T> struct MappingTraits;
-}
+
+} // end namespace yaml
 
 /// \brief Class to accumulate and hold information about a callee.
 struct CalleeInfo {
@@ -47,7 +59,7 @@ struct CalleeInfo {
 
 class GlobalValueSummary;
 
-typedef std::vector<std::unique_ptr<GlobalValueSummary>> GlobalValueSummaryList;
+using GlobalValueSummaryList = std::vector<std::unique_ptr<GlobalValueSummary>>;
 
 struct GlobalValueSummaryInfo {
   /// The GlobalValue corresponding to this summary. This is only used in
@@ -66,19 +78,22 @@ struct GlobalValueSummaryInfo {
 /// likely incur less overhead, as the value type is not very small and the size
 /// of the map is unknown, resulting in inefficiencies due to repeated
 /// insertions and resizing.
-typedef std::map<GlobalValue::GUID, GlobalValueSummaryInfo>
-    GlobalValueSummaryMapTy;
+using GlobalValueSummaryMapTy =
+    std::map<GlobalValue::GUID, GlobalValueSummaryInfo>;
 
 /// Struct that holds a reference to a particular GUID in a global value
 /// summary.
 struct ValueInfo {
   const GlobalValueSummaryMapTy::value_type *Ref = nullptr;
+
   ValueInfo() = default;
   ValueInfo(const GlobalValueSummaryMapTy::value_type *Ref) : Ref(Ref) {}
+
   operator bool() const { return Ref; }
 
   GlobalValue::GUID getGUID() const { return Ref->first; }
   const GlobalValue *getValue() const { return Ref->second.GV; }
+
   ArrayRef<std::unique_ptr<GlobalValueSummary>> getSummaryList() const {
     return Ref->second.SummaryList;
   }
@@ -88,9 +103,11 @@ template <> struct DenseMapInfo<ValueInfo> {
   static inline ValueInfo getEmptyKey() {
     return ValueInfo((GlobalValueSummaryMapTy::value_type *)-1);
   }
+
   static inline ValueInfo getTombstoneKey() {
     return ValueInfo((GlobalValueSummaryMapTy::value_type *)-2);
   }
+
   static bool isEqual(ValueInfo L, ValueInfo R) { return L.Ref == R.Ref; }
   static unsigned getHashValue(ValueInfo I) { return (uintptr_t)I.Ref; }
 };
@@ -138,7 +155,7 @@ private:
   /// This is the hash of the name of the symbol in the original file. It is
   /// identical to the GUID for global symbols, but differs for local since the
   /// GUID includes the module level id in the hash.
-  GlobalValue::GUID OriginalName;
+  GlobalValue::GUID OriginalName = 0;
 
   /// \brief Path of module IR containing value's definition, used to locate
   /// module during importing.
@@ -157,7 +174,7 @@ private:
 
 protected:
   GlobalValueSummary(SummaryKind K, GVFlags Flags, std::vector<ValueInfo> Refs)
-      : Kind(K), Flags(Flags), OriginalName(0), RefEdgeList(std::move(Refs)) {}
+      : Kind(K), Flags(Flags), RefEdgeList(std::move(Refs)) {}
 
 public:
   virtual ~GlobalValueSummary() = default;
@@ -242,7 +259,7 @@ public:
 class FunctionSummary : public GlobalValueSummary {
 public:
   /// <CalleeValueInfo, CalleeInfo> call edge pair.
-  typedef std::pair<ValueInfo, CalleeInfo> EdgeTy;
+  using EdgeTy = std::pair<ValueInfo, CalleeInfo>;
 
   /// An "identifier" for a virtual function. This contains the type identifier
   /// represented as a GUID and the offset from the address point to the virtual
@@ -376,12 +393,15 @@ public:
 
 template <> struct DenseMapInfo<FunctionSummary::VFuncId> {
   static FunctionSummary::VFuncId getEmptyKey() { return {0, uint64_t(-1)}; }
+
   static FunctionSummary::VFuncId getTombstoneKey() {
     return {0, uint64_t(-2)};
   }
+
   static bool isEqual(FunctionSummary::VFuncId L, FunctionSummary::VFuncId R) {
     return L.GUID == R.GUID && L.Offset == R.Offset;
   }
+
   static unsigned getHashValue(FunctionSummary::VFuncId I) { return I.GUID; }
 };
 
@@ -389,14 +409,17 @@ template <> struct DenseMapInfo<FunctionSummary::ConstVCall> {
   static FunctionSummary::ConstVCall getEmptyKey() {
     return {{0, uint64_t(-1)}, {}};
   }
+
   static FunctionSummary::ConstVCall getTombstoneKey() {
     return {{0, uint64_t(-2)}, {}};
   }
+
   static bool isEqual(FunctionSummary::ConstVCall L,
                       FunctionSummary::ConstVCall R) {
     return DenseMapInfo<FunctionSummary::VFuncId>::isEqual(L.VFunc, R.VFunc) &&
            L.Args == R.Args;
   }
+
   static unsigned getHashValue(FunctionSummary::ConstVCall I) {
     return I.VFunc.GUID;
   }
@@ -477,20 +500,20 @@ struct TypeIdSummary {
 };
 
 /// 160 bits SHA1
-typedef std::array<uint32_t, 5> ModuleHash;
+using ModuleHash = std::array<uint32_t, 5>;
 
 /// Type used for iterating through the global value summary map.
-typedef GlobalValueSummaryMapTy::const_iterator const_gvsummary_iterator;
-typedef GlobalValueSummaryMapTy::iterator gvsummary_iterator;
+using const_gvsummary_iterator = GlobalValueSummaryMapTy::const_iterator;
+using gvsummary_iterator = GlobalValueSummaryMapTy::iterator;
 
 /// String table to hold/own module path strings, which additionally holds the
 /// module ID assigned to each module during the plugin step, as well as a hash
 /// of the module. The StringMap makes a copy of and owns inserted strings.
-typedef StringMap<std::pair<uint64_t, ModuleHash>> ModulePathStringTableTy;
+using ModulePathStringTableTy = StringMap<std::pair<uint64_t, ModuleHash>>;
 
 /// Map of global value GUID to its summary, used to identify values defined in
 /// a particular module, and provide efficient access to their summary.
-typedef std::map<GlobalValue::GUID, GlobalValueSummary *> GVSummaryMapTy;
+using GVSummaryMapTy = std::map<GlobalValue::GUID, GlobalValueSummary *>;
 
 /// Class to hold module path string table and global value map,
 /// and encapsulate methods for operating on them.
@@ -697,6 +720,6 @@ public:
       StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries) const;
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_MODULESUMMARYINDEX_H

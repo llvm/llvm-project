@@ -20,9 +20,9 @@ define void @mul_2xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 
 ; CHECK-NEXT:    movzbl 1(%edx,%ecx), %edi
 ; CHECK-NEXT:    movzbl (%edx,%ecx), %edx
 ; CHECK-NEXT:    movzbl 1(%eax,%ecx), %ebx
+; CHECK-NEXT:    imull %edi, %ebx
 ; CHECK-NEXT:    movzbl (%eax,%ecx), %eax
 ; CHECK-NEXT:    imull %edx, %eax
-; CHECK-NEXT:    imull %edi, %ebx
 ; CHECK-NEXT:    movl %ebx, 4(%esi,%ecx,4)
 ; CHECK-NEXT:    movl %eax, (%esi,%ecx,4)
 ; CHECK-NEXT:    popl %esi

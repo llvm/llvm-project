@@ -29,11 +29,19 @@
 #ifndef LLVM_IR_PATTERNMATCH_H
 #define LLVM_IR_PATTERNMATCH_H
 
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include <cstdint>
 
 namespace llvm {
 namespace PatternMatch {
@@ -172,7 +180,9 @@ inline match_nan m_NaN() { return match_nan(); }
 
 struct apint_match {
   const APInt *&Res;
+
   apint_match(const APInt *&R) : Res(R) {}
+
   template <typename ITy> bool match(ITy *V) {
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
       Res = &CI->getValue();
@@ -230,7 +240,9 @@ template <typename Predicate> struct cst_pred_ty : public Predicate {
 /// satisfy a specified predicate, and bind them to an APInt.
 template <typename Predicate> struct api_pred_ty : public Predicate {
   const APInt *&Res;
+
   api_pred_ty(const APInt *&R) : Res(R) {}
+
   template <typename ITy> bool match(ITy *V) {
     if (const auto *CI = dyn_cast<ConstantInt>(V))
       if (this->isValue(CI->getValue())) {
@@ -294,6 +306,7 @@ inline api_pred_ty<is_maxsignedvalue> m_MaxSignedValue(const APInt *&V) { return
 
 template <typename Class> struct bind_ty {
   Class *&VR;
+
   bind_ty(Class *&V) : VR(V) {}
 
   template <typename ITy> bool match(ITy *V) {
@@ -326,6 +339,7 @@ inline bind_ty<ConstantFP> m_ConstantFP(ConstantFP *&C) { return C; }
 /// \brief Match a specified Value*.
 struct specificval_ty {
   const Value *Val;
+
   specificval_ty(const Value *V) : Val(V) {}
 
   template <typename ITy> bool match(ITy *V) { return V == Val; }
@@ -338,6 +352,7 @@ inline specificval_ty m_Specific(const Value *V) { return V; }
 /// that value.
 struct specific_fpval {
   double Val;
+
   specific_fpval(double V) : Val(V) {}
 
   template <typename ITy> bool match(ITy *V) {
@@ -360,6 +375,7 @@ inline specific_fpval m_FPOne() { return m_SpecificFP(1.0); }
 
 struct bind_const_intval_ty {
   uint64_t &VR;
+
   bind_const_intval_ty(uint64_t &V) : VR(V) {}
 
   template <typename ITy> bool match(ITy *V) {
@@ -376,6 +392,7 @@ struct bind_const_intval_ty {
 // value.
 struct specific_intval {
   uint64_t Val;
+
   specific_intval(uint64_t V) : Val(V) {}
 
   template <typename ITy> bool match(ITy *V) {
@@ -939,6 +956,7 @@ template <typename LHS> inline fneg_match<LHS> m_FNeg(const LHS &L) {
 
 struct br_match {
   BasicBlock *&Succ;
+
   br_match(BasicBlock *&Succ) : Succ(Succ) {}
 
   template <typename OpTy> bool match(OpTy *V) {
@@ -956,6 +974,7 @@ inline br_match m_UnconditionalBr(BasicBlock *&Succ) { return br_match(Succ); }
 template <typename Cond_t> struct brc_match {
   Cond_t Cond;
   BasicBlock *&T, *&F;
+
   brc_match(const Cond_t &C, BasicBlock *&t, BasicBlock *&f)
       : Cond(C), T(t), F(f) {}
 
@@ -1202,6 +1221,7 @@ m_UnordFMin(const LHS &L, const RHS &R) {
 template <typename Opnd_t> struct Argument_match {
   unsigned OpI;
   Opnd_t Val;
+
   Argument_match(unsigned OpIdx, const Opnd_t &V) : OpI(OpIdx), Val(V) {}
 
   template <typename OpTy> bool match(OpTy *V) {
@@ -1219,6 +1239,7 @@ inline Argument_match<Opnd_t> m_Argument(const Opnd_t &Op) {
 /// \brief Intrinsic matchers.
 struct IntrinsicID_match {
   unsigned ID;
+
   IntrinsicID_match(Intrinsic::ID IntrID) : ID(IntrID) {}
 
   template <typename OpTy> bool match(OpTy *V) {
@@ -1239,21 +1260,23 @@ template <typename T0 = void, typename T1 = void, typename T2 = void,
           typename T9 = void, typename T10 = void>
 struct m_Intrinsic_Ty;
 template <typename T0> struct m_Intrinsic_Ty<T0> {
-  typedef match_combine_and<IntrinsicID_match, Argument_match<T0>> Ty;
+  using Ty = match_combine_and<IntrinsicID_match, Argument_match<T0>>;
 };
 template <typename T0, typename T1> struct m_Intrinsic_Ty<T0, T1> {
-  typedef match_combine_and<typename m_Intrinsic_Ty<T0>::Ty, Argument_match<T1>>
-      Ty;
+  using Ty =
+      match_combine_and<typename m_Intrinsic_Ty<T0>::Ty, Argument_match<T1>>;
 };
 template <typename T0, typename T1, typename T2>
 struct m_Intrinsic_Ty<T0, T1, T2> {
-  typedef match_combine_and<typename m_Intrinsic_Ty<T0, T1>::Ty,
-                            Argument_match<T2>> Ty;
+  using Ty =
+      match_combine_and<typename m_Intrinsic_Ty<T0, T1>::Ty,
+                        Argument_match<T2>>;
 };
 template <typename T0, typename T1, typename T2, typename T3>
 struct m_Intrinsic_Ty<T0, T1, T2, T3> {
-  typedef match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2>::Ty,
-                            Argument_match<T3>> Ty;
+  using Ty =
+      match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2>::Ty,
+                        Argument_match<T3>>;
 };
 
 /// \brief Match intrinsic calls like this:
@@ -1437,4 +1460,4 @@ m_c_UMax(const LHS &L, const RHS &R) {
 } // end namespace PatternMatch
 } // end namespace llvm
 
-#endif
+#endif // LLVM_IR_PATTERNMATCH_H
