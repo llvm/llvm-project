@@ -157,6 +157,9 @@ public:
     if (!TD)
       return true;
     CXXRecordDecl *RD = TD->getTemplatedDecl();
+    if (!RD->hasDefinition())
+      return true;
+    RD = RD->getDefinition();
     DeclarationName Name(DNT->getIdentifier());
     std::vector<const NamedDecl *> Symbols = RD->lookupDependentName(
         Name, [](const NamedDecl *ND) { return isa<TypeDecl>(ND); });
