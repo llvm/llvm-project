@@ -72,7 +72,8 @@ void SystemInitializerCommon::Initialize() {
   llvm::EnablePrettyStackTrace();
   InitializeLog();
   HostInfo::Initialize();
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
 
   process_gdb_remote::ProcessGDBRemoteLog::Initialize();
 
@@ -102,7 +103,8 @@ void SystemInitializerCommon::Initialize() {
 }
 
 void SystemInitializerCommon::Terminate() {
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
   ObjectContainerBSDArchive::Terminate();
   ObjectFileELF::Terminate();
   ObjectFilePECOFF::Terminate();

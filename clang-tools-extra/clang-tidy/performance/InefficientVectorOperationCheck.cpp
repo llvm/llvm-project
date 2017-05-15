@@ -55,7 +55,7 @@ static const char RangeLoopName[] = "for_range_loop";
 ast_matchers::internal::Matcher<Expr> supportedContainerTypesMatcher() {
   return hasType(cxxRecordDecl(hasAnyName(
       "::std::vector", "::std::set", "::std::unordered_set", "::std::map",
-      "::std::unordered_map", "::std::array", "::std::dequeue")));
+      "::std::unordered_map", "::std::array", "::std::deque")));
 }
 
 } // namespace

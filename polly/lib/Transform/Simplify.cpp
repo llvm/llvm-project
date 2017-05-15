@@ -31,36 +31,54 @@ STATISTIC(PairUnequalAccRels, "Number of Load-Store pairs NOT removed because "
                               "of different access relations");
 STATISTIC(InBetweenStore, "Number of Load-Store pairs NOT removed because "
                           "there is another store between them");
-STATISTIC(TotalIdenticalWritesRemoved,
-          "Number of double writes removed in any SCoP");
+STATISTIC(TotalOverwritesRemoved, "Number of removed overwritten writes");
 STATISTIC(TotalRedundantWritesRemoved,
           "Number of writes of same value removed in any SCoP");
 STATISTIC(TotalStmtsRemoved, "Number of statements removed in any SCoP");
 
-/// Find the llvm::Value that is written by a MemoryAccess. Return nullptr if
-/// there is no such unique value.
-static Value *getWrittenScalar(MemoryAccess *WA) {
-  assert(WA->isWrite());
+static bool isImplicitRead(MemoryAccess *MA) {
+  return MA->isRead() && MA->isOriginalScalarKind();
+}
 
-  if (WA->isOriginalAnyPHIKind()) {
-    Value *Result = nullptr;
-    for (auto Incoming : WA->getIncoming()) {
-      assert(Incoming.second);
+static bool isExplicitAccess(MemoryAccess *MA) {
+  return MA->isOriginalArrayKind();
+}
 
-      if (!Result) {
-        Result = Incoming.second;
-        continue;
-      }
+static bool isImplicitWrite(MemoryAccess *MA) {
+  return MA->isWrite() && MA->isOriginalScalarKind();
+}
 
-      if (Result == Incoming.second)
-        continue;
+/// Return a vector that contains MemoryAccesses in the order in
+/// which they are executed.
+///
+/// The order is:
+/// - Implicit reads (BlockGenerator::generateScalarLoads)
+/// - Explicit reads and writes (BlockGenerator::generateArrayLoad,
+///   BlockGenerator::generateArrayStore)
+///   - In block statements, the accesses are in order in which their
+///     instructions are executed.
+///   - In region statements, that order of execution is not predictable at
+///     compile-time.
+/// - Implicit writes (BlockGenerator::generateScalarStores)
+///   The order in which implicit writes are executed relative to each other is
+///   undefined.
+static SmallVector<MemoryAccess *, 32> getAccessesInOrder(ScopStmt &Stmt) {
 
-      return nullptr;
-    }
-    return Result;
-  }
+  SmallVector<MemoryAccess *, 32> Accesses;
 
-  return WA->getAccessInstruction();
+  for (MemoryAccess *MemAcc : Stmt)
+    if (isImplicitRead(MemAcc))
+      Accesses.push_back(MemAcc);
+
+  for (MemoryAccess *MemAcc : Stmt)
+    if (isExplicitAccess(MemAcc))
+      Accesses.push_back(MemAcc);
+
+  for (MemoryAccess *MemAcc : Stmt)
+    if (isImplicitWrite(MemAcc))
+      Accesses.push_back(MemAcc);
+
+  return Accesses;
 }
 
 class Simplify : public ScopPass {
@@ -68,8 +86,8 @@ private:
   /// The last/current SCoP that is/has been processed.
   Scop *S;
 
-  /// Number of double writes removed from this SCoP.
-  int IdenticalWritesRemoved = 0;
+  /// Number of writes that are overwritten anyway.
+  int OverwritesRemoved = 0;
 
   /// Number of redundant writes removed from this SCoP.
   int RedundantWritesRemoved = 0;
@@ -79,7 +97,7 @@ private:
 
   /// Return whether at least one simplification has been applied.
   bool isModified() const {
-    return IdenticalWritesRemoved > 0 || RedundantWritesRemoved > 0 ||
+    return OverwritesRemoved > 0 || RedundantWritesRemoved > 0 ||
            StmtsRemoved > 0;
   }
 
@@ -154,71 +172,55 @@ private:
     return nullptr;
   }
 
-  /// If there are two writes in the same statement that write the same value to
-  /// the same location, remove one of them.
+  /// Remove writes that are overwritten unconditionally later in the same
+  /// statement.
   ///
-  /// This currently handles only implicit writes (writes which logically occur
-  /// at the end of a statement when all StoreInst and LoadInst have been
-  /// executed), to avoid interference with other memory accesses.
-  ///
-  /// Two implicit writes have no defined order. It can be produced by DeLICM
-  /// when it determined that both write the same value.
-  void removeIdenticalWrites() {
+  /// There must be no read of the same value between the write (that is to be
+  /// removed) and the overwrite.
+  void removeOverwrites() {
     for (auto &Stmt : *S) {
-      // Delay actual removal to not invalidate iterators.
-      SmallPtrSet<MemoryAccess *, 4> StoresToRemove;
-
       auto Domain = give(Stmt.getDomain());
+      isl::union_map WillBeOverwritten =
+          isl::union_map::empty(give(S->getParamSpace()));
 
-      // TODO: This has quadratic runtime. Accesses could be grouped by
-      // getAccessValue() to avoid.
-      for (auto *WA1 : Stmt) {
-        if (!WA1->isMustWrite())
+      SmallVector<MemoryAccess *, 32> Accesses(getAccessesInOrder(Stmt));
+
+      // Iterate in reverse order, so the overwrite comes before the write that
+      // is to be removed.
+      for (auto *MA : reverse(Accesses)) {
+
+        // In region statements, the explicit accesses can be in blocks that are
+        // can be executed in any order. We therefore process only the implicit
+        // writes and stop after that.
+        if (Stmt.isRegionStmt() && isExplicitAccess(MA))
+          break;
+
+        auto AccRel = give(MA->getAccessRelation());
+        AccRel = AccRel.intersect_domain(Domain);
+        AccRel = AccRel.intersect_params(give(S->getContext()));
+
+        // If a value is read in-between, do not consider it as overwritten.
+        if (MA->isRead()) {
+          WillBeOverwritten = WillBeOverwritten.subtract(AccRel);
           continue;
-        if (!WA1->isOriginalScalarKind())
-          continue;
-        if (StoresToRemove.count(WA1))
-          continue;
-
-        auto *WrittenScalar1 = getWrittenScalar(WA1);
-        if (!WrittenScalar1)
-          continue;
-
-        for (auto *WA2 : Stmt) {
-          if (WA1 == WA2)
-            continue;
-          if (!WA2->isMustWrite())
-            continue;
-          if (!WA2->isOriginalScalarKind())
-            continue;
-          if (StoresToRemove.count(WA2))
-            continue;
-
-          auto *WrittenScalar2 = getWrittenScalar(WA2);
-          if (WrittenScalar1 != WrittenScalar2)
-            continue;
-
-          auto AccRel1 = give(isl_map_intersect_domain(WA1->getAccessRelation(),
-                                                       Domain.copy()));
-          auto AccRel2 = give(isl_map_intersect_domain(WA2->getAccessRelation(),
-                                                       Domain.copy()));
-          if (isl_map_is_equal(AccRel1.keep(), AccRel2.keep()) != isl_bool_true)
-            continue;
-
-          DEBUG(dbgs() << "Remove identical writes:\n");
-          DEBUG(dbgs() << "  First write  (kept)   : " << WA1 << '\n');
-          DEBUG(dbgs() << "  Second write (removed): " << WA2 << '\n');
-          StoresToRemove.insert(WA2);
         }
-      }
 
-      for (auto *WA : StoresToRemove) {
-        auto *Stmt = WA->getStatement();
+        // If all of a write's elements are overwritten, remove it.
+        isl::union_map AccRelUnion = AccRel;
+        if (isl_union_map_is_subset(AccRelUnion.keep(),
+                                    WillBeOverwritten.keep()) ==
+            isl_bool_true) {
+          DEBUG(dbgs() << "Removing " << MA
+                       << " which will be overwritten anyway\n");
 
-        Stmt->removeSingleMemoryAccess(WA);
+          Stmt.removeSingleMemoryAccess(MA);
+          OverwritesRemoved++;
+          TotalOverwritesRemoved++;
+        }
 
-        IdenticalWritesRemoved++;
-        TotalIdenticalWritesRemoved++;
+        // Unconditional writes overwrite other values.
+        if (MA->isMustWrite())
+          WillBeOverwritten = WillBeOverwritten.add_map(AccRel);
       }
     }
   }
@@ -312,8 +314,8 @@ private:
   /// Print simplification statistics to @p OS.
   void printStatistics(llvm::raw_ostream &OS, int Indent = 0) const {
     OS.indent(Indent) << "Statistics {\n";
-    OS.indent(Indent + 4) << "Identical writes removed: "
-                          << IdenticalWritesRemoved << '\n';
+    OS.indent(Indent + 4) << "Overwrites removed: " << OverwritesRemoved
+                          << '\n';
     OS.indent(Indent + 4) << "Redundant writes removed: "
                           << RedundantWritesRemoved << "\n";
     OS.indent(Indent + 4) << "Stmts removed: " << StmtsRemoved << "\n";
@@ -348,8 +350,8 @@ public:
     this->S = &S;
     ScopsProcessed++;
 
-    DEBUG(dbgs() << "Removing identical writes...\n");
-    removeIdenticalWrites();
+    DEBUG(dbgs() << "Removing overwrites...\n");
+    removeOverwrites();
 
     DEBUG(dbgs() << "Removing redundant writes...\n");
     removeRedundantWrites();
@@ -380,7 +382,7 @@ public:
   virtual void releaseMemory() override {
     S = nullptr;
 
-    IdenticalWritesRemoved = 0;
+    OverwritesRemoved = 0;
     RedundantWritesRemoved = 0;
     StmtsRemoved = 0;
   }

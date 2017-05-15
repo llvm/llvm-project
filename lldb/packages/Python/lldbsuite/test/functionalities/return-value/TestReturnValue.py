@@ -18,6 +18,10 @@ class ReturnValueTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    def affected_by_pr33042(self):
+        return ("clang" in self.getCompiler() and self.getArchitecture() ==
+            "aarch64" and self.getPlatform() == "linux")
+
     @expectedFailureAll(oslist=["freebsd"], archs=["i386"])
     @expectedFailureAll(oslist=["macosx"], archs=["i386"], bugnumber="<rdar://problem/28719652>")
     @expectedFailureAll(
@@ -148,7 +152,8 @@ class ReturnValueTestCase(TestBase):
         self.return_and_test_struct_value("return_two_int")
         self.return_and_test_struct_value("return_three_int")
         self.return_and_test_struct_value("return_four_int")
-        self.return_and_test_struct_value("return_five_int")
+        if not self.affected_by_pr33042():
+            self.return_and_test_struct_value("return_five_int")
 
         self.return_and_test_struct_value("return_two_double")
         self.return_and_test_struct_value("return_one_double_two_float")

@@ -991,7 +991,8 @@ uint32_t SymbolFileDWARFDebugMap::FindFunctions(
     const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
     uint32_t name_type_mask, bool include_inlines, bool append,
     SymbolContextList &sc_list) {
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat,
                      "SymbolFileDWARFDebugMap::FindFunctions (name = %s)",
                      name.GetCString());
 
@@ -1018,7 +1019,8 @@ uint32_t SymbolFileDWARFDebugMap::FindFunctions(const RegularExpression &regex,
                                                 bool include_inlines,
                                                 bool append,
                                                 SymbolContextList &sc_list) {
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat,
                      "SymbolFileDWARFDebugMap::FindFunctions (regex = '%s')",
                      regex.GetText().str().c_str());
 
@@ -1044,7 +1046,8 @@ uint32_t SymbolFileDWARFDebugMap::FindFunctions(const RegularExpression &regex,
 size_t SymbolFileDWARFDebugMap::GetTypes(SymbolContextScope *sc_scope,
                                          uint32_t type_mask,
                                          TypeList &type_list) {
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat,
                      "SymbolFileDWARFDebugMap::GetTypes (type_mask = 0x%8.8x)",
                      type_mask);
 
