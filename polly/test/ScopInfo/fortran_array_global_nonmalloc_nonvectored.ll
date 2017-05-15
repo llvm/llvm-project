@@ -1,9 +1,6 @@
-; RUN: opt -S -polly-detect-fortran-arrays -analyze -polly-process-unprofitable \
-; RUN: -polly-remarks-minimal -polly-canonicalize -polly-scops \
-; RUN: -polly-dependences -polly-canonicalize \
-; RUN: -polly-allow-nonaffine -polly-ignore-aliasing \
-; RUN: -polly-invariant-load-hoisting < %s| FileCheck %s
-;
+; RUN: opt -analyze -S -polly-detect-fortran-arrays \
+; RUN: -polly-process-unprofitable -polly-scops  < %s | FileCheck %s
+
 ; MODULE src_soil
 ; USE data_parameters, ONLY :   &
 ;     wp,        & ! KIND-type parameter for real variables
@@ -38,35 +35,40 @@ module asm "\09.ident\09\22GCC: (GNU) 4.6.4 LLVM: 3.3.1\22"
 ; Function Attrs: nounwind uwtable
 define void @__src_soil_MOD_terra1(i32* noalias nocapture %n) unnamed_addr #0 {
 entry:
-  %0 = load i32, i32* %n, align 4, !tbaa !0
-  %1 = icmp sgt i32 %0, 21
-  br i1 %1, label %"3.preheader", label %return
+  br label %entry.split
 
-"3.preheader":                                    ; preds = %entry
-  %2 = load i64, i64* getelementptr inbounds (%"struct.array1_real(kind=8)", %"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs, i64 0, i32 1), align 8, !tbaa !3
-  %3 = load i8*, i8** getelementptr inbounds (%"struct.array1_real(kind=8)", %"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs, i64 0, i32 0), align 32, !tbaa !5
-  %4 = bitcast i8* %3 to double*
-  %5 = add i32 %0, 1
+entry.split:                                      ; preds = %entry
+  %tmp = load i32, i32* %n, align 4, !tbaa !0
+  %tmp1 = icmp sgt i32 %tmp, 21
+  br i1 %tmp1, label %"3.preheader", label %return
+
+"3.preheader":                                    ; preds = %entry.split
+  %tmp2 = load i64, i64* getelementptr inbounds (%"struct.array1_real(kind=8)", %"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs, i64 0, i32 1), align 8, !tbaa !3
+  %tmp3 = load double*, double** bitcast (%"struct.array1_real(kind=8)"* @__src_soil_MOD_xdzs to double**), align 32, !tbaa !5
+  %tmp4 = add i32 %tmp, 1
   br label %"3"
 
 "3":                                              ; preds = %"3", %"3.preheader"
   %indvars.iv = phi i64 [ 22, %"3.preheader" ], [ %indvars.iv.next, %"3" ]
-  %6 = add nsw i64 %indvars.iv, %2
-  %7 = getelementptr inbounds double, double* %4, i64 %6
-  %8 = load double, double* %7, align 8, !tbaa !7
-  %9 = fmul double %8, %8
-  %10 = add nsw i64 %indvars.iv, -1
-  %11 = add nsw i64 %10, %2
-  %12 = getelementptr inbounds double, double* %4, i64 %11
-  %13 = load double, double* %12, align 8, !tbaa !7
-  %14 = fadd double %9, %13
-  store double %14, double* %7, align 8, !tbaa !7
-  %indvars.iv.next = add i64 %indvars.iv, 1
-  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
-  %exitcond = icmp eq i32 %lftr.wideiv, %5
-  br i1 %exitcond, label %return, label %"3"
+  %tmp5 = add nsw i64 %indvars.iv, %tmp2
+  %tmp6 = getelementptr inbounds double, double* %tmp3, i64 %tmp5
+  %tmp7 = load double, double* %tmp6, align 8, !tbaa !7
+  %tmp8 = fmul double %tmp7, %tmp7
+  %tmp9 = add i64 %tmp2, -1
+  %tmp10 = add i64 %tmp9, %indvars.iv
+  %tmp11 = getelementptr inbounds double, double* %tmp3, i64 %tmp10
+  %tmp12 = load double, double* %tmp11, align 8, !tbaa !7
+  %tmp13 = fadd double %tmp8, %tmp12
+  store double %tmp13, double* %tmp6, align 8, !tbaa !7
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv1 = trunc i64 %indvars.iv.next to i32
+  %exitcond2 = icmp eq i32 %lftr.wideiv1, %tmp4
+  br i1 %exitcond2, label %return.loopexit, label %"3"
 
-return:                                           ; preds = %"3", %entry
+return.loopexit:                                  ; preds = %"3"
+  br label %return
+
+return:                                           ; preds = %return.loopexit, %entry.split
   ret void
 }
 

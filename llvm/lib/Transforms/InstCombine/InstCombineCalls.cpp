@@ -1384,10 +1384,10 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {
 
   // Create a mask for bits above (ctlz) or below (cttz) the first known one.
   bool IsTZ = II.getIntrinsicID() == Intrinsic::cttz;
-  unsigned PossibleZeros = IsTZ ? Known.One.countTrailingZeros()
-                                : Known.One.countLeadingZeros();
-  unsigned DefiniteZeros = IsTZ ? Known.Zero.countTrailingOnes()
-                                : Known.Zero.countLeadingOnes();
+  unsigned PossibleZeros = IsTZ ? Known.countMaxTrailingZeros()
+                                : Known.countMaxLeadingZeros();
+  unsigned DefiniteZeros = IsTZ ? Known.countMinTrailingZeros()
+                                : Known.countMinLeadingZeros();
 
   // If all bits above (ctlz) or below (cttz) the first known one are known
   // zero, this value is constant.

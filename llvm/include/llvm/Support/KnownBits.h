@@ -133,6 +133,66 @@ public:
   KnownBits zextOrTrunc(unsigned BitWidth) {
     return KnownBits(Zero.zextOrTrunc(BitWidth), One.zextOrTrunc(BitWidth));
   }
+
+  /// Returns the minimum number of trailing zero bits.
+  unsigned countMinTrailingZeros() const {
+    return Zero.countTrailingOnes();
+  }
+
+  /// Returns the minimum number of trailing one bits.
+  unsigned countMinTrailingOnes() const {
+    return One.countTrailingOnes();
+  }
+
+  /// Returns the minimum number of leading zero bits.
+  unsigned countMinLeadingZeros() const {
+    return Zero.countLeadingOnes();
+  }
+
+  /// Returns the minimum number of leading one bits.
+  unsigned countMinLeadingOnes() const {
+    return One.countLeadingOnes();
+  }
+
+  /// Returns the number of times the sign bit is replicated into the other
+  /// bits.
+  unsigned countMinSignBits() const {
+    if (isNonNegative())
+      return countMinLeadingZeros();
+    if (isNegative())
+      return countMinLeadingOnes();
+    return 0;
+  }
+
+  /// Returns the maximum number of trailing zero bits possible.
+  unsigned countMaxTrailingZeros() const {
+    return One.countTrailingZeros();
+  }
+
+  /// Returns the maximum number of trailing one bits possible.
+  unsigned countMaxTrailingOnes() const {
+    return Zero.countTrailingZeros();
+  }
+
+  /// Returns the maximum number of leading zero bits possible.
+  unsigned countMaxLeadingZeros() const {
+    return One.countLeadingZeros();
+  }
+
+  /// Returns the maximum number of leading one bits possible.
+  unsigned countMaxLeadingOnes() const {
+    return Zero.countLeadingZeros();
+  }
+
+  /// Returns the number of bits known to be one.
+  unsigned countMinPopulation() const {
+    return One.countPopulation();
+  }
+
+  /// Returns the maximum number of bits that could be one.
+  unsigned countMaxPopulation() const {
+    return getBitWidth() - Zero.countPopulation();
+  }
 };
 
 } // end namespace llvm

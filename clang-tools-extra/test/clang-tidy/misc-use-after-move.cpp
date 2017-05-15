@@ -1137,3 +1137,23 @@ void ifStmtSequencesDeclAndCondition() {
     }
   }
 }
+
+namespace PR33020 {
+class D {
+  ~D();
+};
+struct A {
+  D d;
+};
+class B {
+  A a;
+};
+template <typename T>
+class C : T, B {
+  void m_fn1() {
+    int a;
+    std::move(a);
+    C c;
+  }
+};
+}

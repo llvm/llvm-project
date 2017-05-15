@@ -1046,9 +1046,8 @@ Value *NewGVN::lookupOperandLeader(Value *V) const {
 const MemoryAccess *NewGVN::lookupMemoryLeader(const MemoryAccess *MA) const {
   auto *CC = getMemoryClass(MA);
   assert(CC->getMemoryLeader() &&
-         "Every MemoryAccess should be mapped to a "
-         "congruence class with a represenative memory "
-         "access");
+         "Every MemoryAccess should be mapped to a congruence class with a "
+         "representative memory access");
   return CC->getMemoryLeader();
 }
 
@@ -1313,7 +1312,7 @@ NewGVN::performSymbolicPredicateInfoEvaluation(Instruction *I) const {
     return nullptr;
 
   if (CopyOf != Cmp->getOperand(0) && CopyOf != Cmp->getOperand(1)) {
-    DEBUG(dbgs() << "Copy is not of any condition operands!");
+    DEBUG(dbgs() << "Copy is not of any condition operands!\n");
     return nullptr;
   }
   Value *FirstOp = lookupOperandLeader(Cmp->getOperand(0));
@@ -1409,7 +1408,7 @@ bool NewGVN::setMemoryClass(const MemoryAccess *From,
         NewClass->memory_insert(MP);
         // This may have killed the class if it had no non-memory members
         if (OldClass->getMemoryLeader() == From) {
-          if (OldClass->memory_empty()) {
+          if (OldClass->definesNoMemory()) {
             OldClass->setMemoryLeader(nullptr);
           } else {
             OldClass->setMemoryLeader(getNextMemoryLeader(OldClass));

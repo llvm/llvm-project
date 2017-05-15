@@ -33,6 +33,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo() {
   const LLT P1 = LLT::pointer(1, 64);
   const LLT P2 = LLT::pointer(2, 64);
 
+  setAction({G_CONSTANT, S32}, Legal);
   setAction({G_CONSTANT, S64}, Legal);
 
   setAction({G_GEP, P1}, Legal);

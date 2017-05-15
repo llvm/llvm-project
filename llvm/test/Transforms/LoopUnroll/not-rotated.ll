@@ -4,7 +4,7 @@
 ; properly handled by LoopUnroll, currently.
 
 ; RUN: opt -loop-unroll -verify-dom-info %s
-; REQUIRE: asserts
+; REQUIRES: asserts
 
 define void @tinkywinky(i1 %patatino) {
 entry:

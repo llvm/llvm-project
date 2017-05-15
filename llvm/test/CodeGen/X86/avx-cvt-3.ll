@@ -48,16 +48,16 @@ define <8 x float> @sitofp_shuffle_zero_v8i32(<8 x i32> %a0) {
 define <8 x float> @sitofp_insert_allbits_v8i32(<8 x i32> %a0) {
 ; X86-LABEL: sitofp_insert_allbits_v8i32:
 ; X86:       # BB#0:
-; X86-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; X86-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X86-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; X86-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4,5],ymm0[6,7]
 ; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sitofp_insert_allbits_v8i32:
 ; X64:       # BB#0:
-; X64-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; X64-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4,5],ymm0[6,7]
 ; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; X64-NEXT:    retq
@@ -72,16 +72,16 @@ define <8 x float> @sitofp_insert_allbits_v8i32(<8 x i32> %a0) {
 define <8 x float> @sitofp_shuffle_allbits_v8i32(<8 x i32> %a0) {
 ; X86-LABEL: sitofp_shuffle_allbits_v8i32:
 ; X86:       # BB#0:
-; X86-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; X86-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X86-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; X86-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
 ; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sitofp_shuffle_allbits_v8i32:
 ; X64:       # BB#0:
-; X64-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; X64-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
 ; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; X64-NEXT:    retq
@@ -95,8 +95,7 @@ define <8 x float> @sitofp_insert_constants_v8i32(<8 x i32> %a0) {
 ; X86:       # BB#0:
 ; X86-NEXT:    vxorps %ymm1, %ymm1, %ymm1
 ; X86-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3,4,5,6,7]
-; X86-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; X86-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; X86-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3,4,5,6,7]
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-NEXT:    movl $2, %eax
@@ -111,8 +110,7 @@ define <8 x float> @sitofp_insert_constants_v8i32(<8 x i32> %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vxorps %ymm1, %ymm1, %ymm1
 ; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3,4,5,6,7]
-; X64-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; X64-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3,4,5,6,7]
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-NEXT:    movl $2, %eax

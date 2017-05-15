@@ -70,6 +70,7 @@ class MemoryMappingLayout {
   bool NextSegmentLoad(uptr *start, uptr *end, uptr *offset, char filename[],
                        uptr filename_size, ModuleArch *arch, u8 *uuid,
                        uptr *protection);
+  void GetSegmentAddrRange(uptr *start, uptr *end, uptr vmaddr, uptr vmsize);
   int current_image_;
   u32 current_magic_;
   u32 current_filetype_;

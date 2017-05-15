@@ -28,8 +28,8 @@
 ; LEON3_4_ITIN-LABEL: f32_ops:
 ; LEON3_4_ITIN:       ld 
 ; LEON3_4_ITIN-NEXT:  ld 
-; LEON3_4_ITIN-NEXT:  ld 
 ; LEON3_4_ITIN-NEXT:  fadds 
+; LEON3_4_ITIN-NEXT:  ld 
 ; LEON3_4_ITIN-NEXT:  ld 
 ; LEON3_4_ITIN-NEXT:  fsubs 
 ; LEON3_4_ITIN-NEXT:  fmuls 

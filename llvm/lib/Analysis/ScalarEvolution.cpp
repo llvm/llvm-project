@@ -4636,7 +4636,7 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
     KnownBits Known(BitWidth);
     computeKnownBits(U->getValue(), Known, getDataLayout(), 0, &AC,
                      nullptr, &DT);
-    return Known.Zero.countTrailingOnes();
+    return Known.countMinTrailingZeros();
   }
 
   // SCEVUDivExpr

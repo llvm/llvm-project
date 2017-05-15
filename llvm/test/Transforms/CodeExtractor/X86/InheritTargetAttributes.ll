@@ -1,5 +1,5 @@
-; RUN: opt < %s -partial-inliner | llc -filetype=null
-; RUN: opt < %s -partial-inliner -S | FileCheck %s
+; RUN: opt < %s -partial-inliner -skip-partial-inlining-cost-analysis | llc -filetype=null
+; RUN: opt < %s -partial-inliner -skip-partial-inlining-cost-analysis -S | FileCheck %s
 ; This testcase checks to see if CodeExtractor properly inherits
 ;   target specific attributes for the extracted function. This can
 ;   cause certain instructions that depend on the attributes to not

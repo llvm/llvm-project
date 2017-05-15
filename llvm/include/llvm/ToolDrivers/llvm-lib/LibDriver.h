@@ -1,4 +1,4 @@
-//===- llvm/LibDriver/LibDriver.h - lib.exe-compatible driver ---*- C++ -*-===//
+//===- llvm-lib/LibDriver.h - lib.exe-compatible driver ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBDRIVER_LIBDRIVER_H
-#define LLVM_LIBDRIVER_LIBDRIVER_H
+#ifndef LLVM_TOOLDRIVERS_LLVM_LIB_LIBDRIVER_H
+#define LLVM_TOOLDRIVERS_LLVM_LIB_LIBDRIVER_H
 
 namespace llvm {
 template <typename T> class ArrayRef;

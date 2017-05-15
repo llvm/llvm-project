@@ -16752,7 +16752,7 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
       if (BitWidth > AndBitWidth) {
         KnownBits Known;
         DAG.computeKnownBits(Op0, Known);
-        if (Known.Zero.countLeadingOnes() < BitWidth - AndBitWidth)
+        if (Known.countMinLeadingZeros() < BitWidth - AndBitWidth)
           return SDValue();
       }
       LHS = Op1;

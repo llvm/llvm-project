@@ -39,7 +39,7 @@
 ; ...
 ; IR: call void @polly_freeKernel
 ; IR-NEXT:   %polly.indvar_next = add nsw i64 %polly.indvar, 1
-; IR-NEXT:   %polly.loop_cond = icmp sle i64 %polly.indvar, 98
+; IR-NEXT:   %polly.loop_cond = icmp sle i64 %polly.indvar_next, 99
 ; IR-NEXT:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit
 
 ; KERNEL-IR: define ptx_kernel void @kernel_0(i8 addrspace(1)* %MemRef_A, i64 %c0)

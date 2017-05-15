@@ -50,6 +50,7 @@ public:
   template <typename ELFT> void writeHeaderTo(typename ELFT::Shdr *SHdr);
 
   unsigned SectionIndex;
+  unsigned SortRank;
 
   uint32_t getPhdrFlags() const;
 

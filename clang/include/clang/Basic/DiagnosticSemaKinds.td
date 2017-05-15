@@ -2465,6 +2465,9 @@ def err_attribute_invalid_size : Error<
   "vector size not an integral multiple of component size">;
 def err_attribute_zero_size : Error<"zero vector size">;
 def err_attribute_size_too_large : Error<"vector size too large">;
+def err_typecheck_vector_not_convertable_implict_truncation : Error<
+   "cannot convert between %select{scalar|vector}0 type %1 and vector type"
+   " %2 as implicit conversion would cause truncation">;
 def err_typecheck_vector_not_convertable : Error<
   "cannot convert between vector values of different size (%0 and %1)">;
 def err_typecheck_vector_not_convertable_non_scalar : Error<
@@ -5779,6 +5782,9 @@ def err_objc_object_assignment : Error<
   "cannot assign to class object (%0 invalid)">;
 def err_typecheck_invalid_operands : Error<
   "invalid operands to binary expression (%0 and %1)">;
+def err_typecheck_logical_vector_expr_gnu_cpp_restrict : Error<
+  "logical expression with vector %select{type %1 and non-vector type %2|types"
+  " %1 and %2}0 is only supported in C++">;
 def err_typecheck_sub_ptr_compatible : Error<
   "%diff{$ and $ are not pointers to compatible types|"
   "pointers to incompatible types}0,1">;

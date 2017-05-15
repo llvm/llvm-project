@@ -75,7 +75,7 @@ private:
   Optional<PdbRaw_TpiVer> VerHeader;
   std::vector<ArrayRef<uint8_t>> TypeRecords;
   std::vector<uint32_t> TypeHashes;
-  std::vector<TypeIndexOffset> TypeIndexOffsets;
+  std::vector<codeview::TypeIndexOffset> TypeIndexOffsets;
   uint32_t HashStreamIndex = kInvalidStreamIndex;
   std::unique_ptr<BinaryByteStream> HashValueStream;
 

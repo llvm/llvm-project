@@ -1047,7 +1047,7 @@ TEST_F(FileSystemTest, MD5) {
   SmallString<64> TempPath;
   ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "temp", FD, TempPath));
   StringRef Data("abcdefghijklmnopqrstuvwxyz");
-  write(FD, Data.data(), Data.size());
+  ASSERT_EQ(write(FD, Data.data(), Data.size()), static_cast<ssize_t>(Data.size()));
   lseek(FD, 0, SEEK_SET);
   auto Hash = fs::md5_contents(FD);
   ::close(FD);

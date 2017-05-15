@@ -42,11 +42,11 @@ def : InstRW<[FalkorWr_1VXVY_4cyc],   (instregex "^FCVT(N|M|P|Z|A)(S|U)(v1i32|v1
 def : InstRW<[FalkorWr_1VXVY_4cyc],   (instrs FCVTXNv1i64)>;
 def : InstRW<[FalkorWr_1VXVY_4cyc],   (instregex "^FCVTZ(S|U)(v2i32|v4i16)(_shift)?$")>;
 
-def : InstRW<[FalkorWr_1VXVY_5cyc],   (instregex "^(FMUL|FMULX)(v2f32|v4f16|(v1i16_indexed|v4i16_indexed|v1i32_indexed|v2i32_indexed))$")>;
-def : InstRW<[FalkorWr_1VXVY_5cyc],   (instrs FMULX16, FMULX32)>;
+def : InstRW<[FalkorWr_FMUL32_1VXVY_5cyc], (instregex "^(FMUL|FMULX)(v2f32|v4f16|(v1i16_indexed|v4i16_indexed|v1i32_indexed|v2i32_indexed))$")>;
+def : InstRW<[FalkorWr_FMUL32_1VXVY_5cyc], (instrs FMULX16, FMULX32)>;
 
-def : InstRW<[FalkorWr_1VXVY_6cyc],   (instregex "^(FMUL|FMULX)v1i64_indexed$")>;
-def : InstRW<[FalkorWr_1VXVY_6cyc],   (instrs FMULX64)>;
+def : InstRW<[FalkorWr_FMUL64_1VXVY_6cyc], (instregex "^(FMUL|FMULX)v1i64_indexed$")>;
+def : InstRW<[FalkorWr_FMUL64_1VXVY_6cyc], (instrs FMULX64)>;
 
 def : InstRW<[FalkorWr_2VXVY_1cyc],   (instregex "^(FABS|FNEG)(v2f64|v4f32|v8f16)$")>;
 
@@ -62,9 +62,9 @@ def : InstRW<[FalkorWr_2VXVY_4cyc],   (instregex "^FCVT(N|M|P|Z|A)(S|U)(v2f64|v4
 def : InstRW<[FalkorWr_2VXVY_4cyc],   (instregex "^(FCVTL|FCVTL2)(v2i32|v4i16|v4i32|v8i16)$")>;
 def : InstRW<[FalkorWr_2VXVY_4cyc],   (instregex "^FCVTZ(S|U)(v2i64|v4i32|v8i16)(_shift)?$")>;
 
-def : InstRW<[FalkorWr_2VXVY_5cyc],   (instregex "^(FMUL|FMULX)(v2f64|v4f32|v8f16|v8i16_indexed|v4i32_indexed)$")>;
+def : InstRW<[FalkorWr_FMUL32_2VXVY_5cyc], (instregex "^(FMUL|FMULX)(v2f64|v4f32|v8f16|v8i16_indexed|v4i32_indexed)$")>;
 
-def : InstRW<[FalkorWr_2VXVY_6cyc],   (instregex "^(FMUL|FMULX)v2i64_indexed$")>;
+def : InstRW<[FalkorWr_FMUL64_2VXVY_6cyc], (instregex "^(FMUL|FMULX)v2i64_indexed$")>;
 
 def : InstRW<[FalkorWr_3VXVY_4cyc],   (instregex "^(FCVTX?N|FCVTX?N2)(v1i32|v1i64|v1f16|v2f32|v4f16)$")>;
 
@@ -72,13 +72,14 @@ def : InstRW<[FalkorWr_3VXVY_5cyc],   (instregex "^(FCVTX?N|FCVTX?N2)(v2i32|v4i1
 
 def : InstRW<[FalkorWr_2VX_2VY_2cyc], (instregex "^(FDIV|FSQRT)(v2f64|v4f32|v8f16)$")>;
 
-def : InstRW<[FalkorWr_1VXVY_4cyc, FalkorReadVMA],(instregex "^ML(A|S)(v8i8|v4i16|v2i32)(_indexed)?$")>;
-def : InstRW<[FalkorWr_2VXVY_4cyc, FalkorReadVMA],(instregex "^ML(A|S)(v16i8|v8i16|v4i32|v2i64)(_indexed)?$")>;
+def : InstRW<[FalkorWr_VMUL32_1VXVY_4cyc, FalkorReadVMA], (instregex "^ML(A|S)(v8i8|v4i16|v2i32)(_indexed)?$")>;
+def : InstRW<[FalkorWr_VMUL32_2VXVY_4cyc, FalkorReadVMA], (instregex "^ML(A|S)(v16i8|v8i16|v4i32|v2i64)(_indexed)?$")>;
 
-def : InstRW<[FalkorWr_1VXVY_5cyc, FalkorReadFMA],(instregex "^FML(A|S)(v2f32|v4f16|(v1i16_indexed|v4i16_indexed|v1i32_indexed|v2i32_indexed))$")>;
-def : InstRW<[FalkorWr_1VXVY_6cyc, FalkorReadFMA],(instregex "^FML(A|S)v1i64_indexed$")>;
-def : InstRW<[FalkorWr_2VXVY_5cyc, FalkorReadFMA],(instregex "^FML(A|S)(v2f64|v4f32|v8f16|v8i16_indexed|v4i32_indexed)$")>;
-def : InstRW<[FalkorWr_2VXVY_6cyc, FalkorReadFMA],(instregex "^FML(A|S)v2i64_indexed$")>;
+def : InstRW<[FalkorWr_FMUL32_1VXVY_5cyc, FalkorReadFMA32], (instregex "^FML(A|S)(v2f32|v4f16|(v1i16_indexed|v4i16_indexed|v1i32_indexed|v2i32_indexed))$")>;
+def : InstRW<[FalkorWr_FMUL64_1VXVY_6cyc, FalkorReadFMA64], (instregex "^FML(A|S)v1i64_indexed$")>;
+def : InstRW<[FalkorWr_FMUL32_2VXVY_5cyc, FalkorReadFMA32], (instregex "^FML(A|S)(v4f32|v8f16|v8i16_indexed|v4i32_indexed)$")>;
+def : InstRW<[FalkorWr_FMUL64_2VXVY_6cyc, FalkorReadFMA64], (instregex "^FML(A|S)(v2f64|v2i64_indexed)$")>;
+
 // SIMD Integer Instructions
 // -----------------------------------------------------------------------------
 def : InstRW<[FalkorWr_1VXVY_1cyc],   (instregex "^ADD(v1i64|v2i32|v4i16|v8i8)$")>;
@@ -119,10 +120,10 @@ def : InstRW<[FalkorWr_1VXVY_3cyc],   (instregex "^SQNEG(v1i8|v1i16|v1i32|v1i64)
 def : InstRW<[FalkorWr_1VXVY_4cyc],   (instregex "^(S|U)ADDLVv8i8v$")>;
 def : InstRW<[FalkorWr_1VXVY_4cyc],   (instregex "^(S|U)?(MAX|MIN)V(v8i8v|v8i16v)$")>;
 def : InstRW<[FalkorWr_1VXVY_4cyc],   (instrs ADDVv8i8v)>;
-def : InstRW<[FalkorWr_1VXVY_4cyc],   (instregex "^MUL(v2i32|v4i16|v8i8)(_indexed)?$")>;
-def : InstRW<[FalkorWr_1VXVY_4cyc],   (instregex "^SQR?DMULH(v8i8|v4i16|v1i32|v2i32|v1i16)(_indexed)?$")>;
-def : InstRW<[FalkorWr_1VXVY_4cyc],   (instregex "^SQDMULL(i16|i32)$")>;
-def : InstRW<[FalkorWr_1VXVY_4cyc],   (instregex "^SQRDML(A|S)?H(v8i8|v4i16|v1i32|v2i32|v1i16)(_indexed)?$")>;
+def : InstRW<[FalkorWr_VMUL32_1VXVY_4cyc], (instregex "^MUL(v2i32|v4i16|v8i8)(_indexed)?$")>;
+def : InstRW<[FalkorWr_VMUL32_1VXVY_4cyc], (instregex "^SQR?DMULH(v8i8|v4i16|v1i32|v2i32|v1i16)(_indexed)?$")>;
+def : InstRW<[FalkorWr_VMUL32_1VXVY_4cyc], (instregex "^SQDMULL(i16|i32)$")>;
+def : InstRW<[FalkorWr_VMUL32_1VXVY_4cyc, FalkorReadVMA], (instregex "^SQRDML(A|S)H(i16|i32|v8i8|v4i16|v1i32|v2i32|v1i16)(_indexed)?$")>;
 
 def : InstRW<[FalkorWr_1VXVY_5cyc],   (instregex "^(S|U)?(MAX|MIN)Vv16i8v$")>;
 
@@ -169,9 +170,9 @@ def : InstRW<[FalkorWr_2VXVY_3cyc],   (instregex "^PMULL2?(v1i64|v2i64)$")>;
 def : InstRW<[FalkorWr_2VXVY_3cyc],   (instregex "^S(L|R)I(v16i8|v8i16|v4i32|v2i64)_shift$")>;
 def : InstRW<[FalkorWr_2VXVY_3cyc],   (instregex "^SQ(ABS|NEG)(v16i8|v8i16|v4i32|v2i64)$")>;
 
-def : InstRW<[FalkorWr_2VXVY_4cyc],   (instregex "^(MUL|SQR?DMULH)(v16i8|v8i16|v4i32)(_indexed)?$")>;
-def : InstRW<[FalkorWr_2VXVY_4cyc],   (instregex "^SQDMULLv.*$")>;
-def : InstRW<[FalkorWr_2VXVY_4cyc],   (instregex "^SQRDML(A|S)H(v16i8|v8i16|v4i32)(_indexed)?$")>;
+def : InstRW<[FalkorWr_VMUL32_2VXVY_4cyc], (instregex "^(MUL|SQR?DMULH)(v16i8|v8i16|v4i32)(_indexed)?$")>;
+def : InstRW<[FalkorWr_VMUL32_2VXVY_4cyc], (instregex "^SQDMULLv.*$")>;
+def : InstRW<[FalkorWr_VMUL32_2VXVY_4cyc, FalkorReadVMA], (instregex "^SQRDML(A|S)H(v16i8|v8i16|v4i32)(_indexed)?$")>;
 
 def : InstRW<[FalkorWr_3VXVY_3cyc],   (instregex "^(S|U)ADDLVv4i32v$")>;
 
@@ -185,8 +186,9 @@ def : InstRW<[FalkorWr_4VXVY_3cyc],   (instregex "^(S|U)ABALv.*$")>;
 
 def : InstRW<[FalkorWr_4VXVY_4cyc],   (instregex "^(S|U)ABA(v16i8|v8i16|v4i32)$")>;
 
-def : InstRW<[FalkorWr_1VXVY_4cyc, FalkorReadVMA],(instregex "^SQD(MLAL|MLSL)(i16|i32)$")>;
-def : InstRW<[FalkorWr_2VXVY_4cyc, FalkorReadVMA],(instregex "^SQD(MLAL|MLSL)v.*$")>;
+def : InstRW<[FalkorWr_VMUL32_1VXVY_4cyc, FalkorReadVMA], (instregex "^SQD(MLAL|MLSL)(i16|i32|v1i32_indexed|v1i64_indexed)$")>;
+def : InstRW<[FalkorWr_VMUL32_2VXVY_4cyc, FalkorReadVMA], (instregex "^SQD(MLAL|MLSL)v[248].*$")>;
+
 // SIMD Load Instructions
 // -----------------------------------------------------------------------------
 def : InstRW<[WriteVLD],                               (instregex "^LD1(i64|Onev(8b|4h|2s|1d|16b|8h|4s|2d))$")>;
@@ -294,9 +296,9 @@ def : InstRW<[FalkorWr_1VXVY_3cyc],   (instrs FRECPEv1i32, FRECPEv1i64, FRSQRTEv
 def : InstRW<[FalkorWr_1VXVY_3cyc],   (instrs FRECPXv1i32, FRECPXv1i64)>;
 def : InstRW<[FalkorWr_1VXVY_3cyc],   (instrs URECPEv2i32, URSQRTEv2i32)>;
 
-def : InstRW<[FalkorWr_1VXVY_5cyc],   (instrs FRECPS32, FRSQRTS32, FRECPSv2f32, FRSQRTSv2f32)>;
+def : InstRW<[FalkorWr_FMUL32_1VXVY_5cyc], (instrs FRECPS32, FRSQRTS32, FRECPSv2f32, FRSQRTSv2f32)>;
 
-def : InstRW<[FalkorWr_1VXVY_6cyc],   (instrs FRECPS64, FRSQRTS64)>;
+def : InstRW<[FalkorWr_FMUL64_1VXVY_6cyc], (instrs FRECPS64, FRSQRTS64)>;
 
 def : InstRW<[FalkorWr_1GTOV_1VXVY_2cyc],(instregex "^INSv(i32|i64)(gpr|lane)$")>;
 def : InstRW<[FalkorWr_2GTOV_1cyc],   (instregex "^DUP(v4i32|v2i64)(gpr|lane)$")>;
@@ -311,9 +313,9 @@ def : InstRW<[FalkorWr_2VXVY_3cyc],   (instrs URECPEv4i32, URSQRTEv4i32)>;
 def : InstRW<[FalkorWr_2VXVY_4cyc],   (instrs TBLv8i8Two)>;
 def : InstRW<[FalkorWr_2VXVY_4cyc],   (instregex "^TBX(v8|v16)i8One$")>;
 
-def : InstRW<[FalkorWr_2VXVY_5cyc],   (instrs FRECPSv4f32, FRSQRTSv4f32)>;
+def : InstRW<[FalkorWr_FMUL32_2VXVY_5cyc], (instrs FRECPSv4f32, FRSQRTSv4f32)>;
 
-def : InstRW<[FalkorWr_2VXVY_6cyc],   (instrs FRECPSv2f64, FRSQRTSv2f64)>;
+def : InstRW<[FalkorWr_FMUL64_2VXVY_6cyc], (instrs FRECPSv2f64, FRSQRTSv2f64)>;
 
 def : InstRW<[FalkorWr_3VXVY_5cyc],   (instregex "^TBL(v8i8Three|v16i8Two)$")>;
 def : InstRW<[FalkorWr_3VXVY_5cyc],   (instregex "^TBX(v8i8Two|v16i8Two)$")>;
@@ -416,15 +418,15 @@ def : InstRW<[FalkorWr_1VXVY_3cyc],   (instrs FCVTSHr, FCVTDHr)>;
 
 def : InstRW<[FalkorWr_1VXVY_4cyc],   (instrs FCVTSDr, FCVTDSr)>;
 
-def : InstRW<[FalkorWr_1VXVY_5cyc],   (instregex "^F(N)?MUL(H|S)rr$")>;
+def : InstRW<[FalkorWr_FMUL32_1VXVY_5cyc], (instregex "^F(N)?MUL(H|S)rr$")>;
 
-def : InstRW<[FalkorWr_1VXVY_6cyc],   (instregex "^F(N)?MULDrr$")>;
+def : InstRW<[FalkorWr_FMUL64_1VXVY_6cyc], (instregex "^F(N)?MULDrr$")>;
 
 def : InstRW<[FalkorWr_1VX_1VY_10cyc],(instregex "^FDIV(H|S|D)rr$")>;
 def : InstRW<[FalkorWr_1VX_1VY_2cyc], (instregex "^FSQRT(H|S|D)r$")>;
 
-def : InstRW<[FalkorWr_1VXVY_5cyc, FalkorReadFMA],(instregex "^F(N)?M(ADD|SUB)(H|S)rrr$")>;
-def : InstRW<[FalkorWr_1VXVY_6cyc, FalkorReadFMA],(instregex "^F(N)?M(ADD|SUB)Drrr$")>;
+def : InstRW<[FalkorWr_FMUL32_1VXVY_5cyc, ReadDefault, ReadDefault, FalkorReadFMA32], (instregex "^F(N)?M(ADD|SUB)(H|S)rrr$")>;
+def : InstRW<[FalkorWr_FMUL64_1VXVY_6cyc, ReadDefault, ReadDefault, FalkorReadFMA64], (instregex "^F(N)?M(ADD|SUB)Drrr$")>;
 
 // FP Miscellaneous Instructions
 // -----------------------------------------------------------------------------
@@ -475,16 +477,17 @@ def : InstRW<[FalkorWr_2XYZ_2cyc],    (instregex "^EXTR(W|X)rri$")>;
 
 // Divide and Multiply Instructions
 // -----------------------------------------------------------------------------
-def : InstRW<[FalkorWr_1X_4cyc],      (instregex "^(S|U)M(ADD|SUB)Lrrr$")>;
-def : InstRW<[FalkorWr_1X_4cyc],      (instregex "^M(ADD|SUB)Wrrr$")>;
+def : InstRW<[FalkorWr_IMUL64_1X_4cyc, ReadDefault, ReadDefault, FalkorReadIMA64], (instregex "^(S|U)M(ADD|SUB)Lrrr$")>;
+def : InstRW<[FalkorWr_IMUL32_1X_2cyc, ReadDefault, ReadDefault, FalkorReadIMA32], (instregex "^M(ADD|SUB)Wrrr$")>;
 
-def : InstRW<[FalkorWr_1X_5cyc],      (instregex "^(S|U)MULHrr$")>;
-def : InstRW<[FalkorWr_1X_5cyc],      (instregex "^M(ADD|SUB)Xrrr$")>;
+def : InstRW<[FalkorWr_IMUL64_1X_5cyc],                                            (instregex "^(S|U)MULHrr$")>;
+def : InstRW<[FalkorWr_IMUL64_1X_5cyc, ReadDefault, ReadDefault, FalkorReadIMA64], (instregex "^M(ADD|SUB)Xrrr$")>;
 
 def : InstRW<[FalkorWr_1X_1Z_8cyc],   (instregex "^(S|U)DIVWr$")>;
 def : InstRW<[FalkorWr_1X_1Z_16cyc],  (instregex "^(S|U)DIVXr$")>;
 
-def : InstRW<[FalkorWr_2VXVY_4cyc],   (instregex "^(S|U)(MLAL|MLSL|MULL)v.*$")>;
+def : InstRW<[FalkorWr_VMUL32_2VXVY_4cyc],                (instregex "^(S|U)MULLv.*$")>;
+def : InstRW<[FalkorWr_VMUL32_2VXVY_4cyc, FalkorReadVMA], (instregex "^(S|U)(MLAL|MLSL)v.*$")>;
 
 // Move and Shift Instructions
 // -----------------------------------------------------------------------------

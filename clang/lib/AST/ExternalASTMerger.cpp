@@ -178,3 +178,9 @@ void ExternalASTMerger::FindExternalLexicalDecls(
         }
       });
 }
+
+void ExternalASTMerger::CompleteType(TagDecl *Tag) {
+  SmallVector<Decl *, 0> Result;
+  FindExternalLexicalDecls(Tag, [](Decl::Kind) { return true; }, Result);
+  Tag->setHasExternalLexicalStorage(false);
+}

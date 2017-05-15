@@ -40,8 +40,8 @@ define <8 x float>@test_int_x86_avx512_mask_vextractf32x8(<16 x float> %x0, <8 x
 ; CHECK-NEXT:    vextractf32x8 $1, %zmm0, %ymm2
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vextractf32x8 $1, %zmm0, %ymm1 {%k1}
-; CHECK-NEXT:    vextractf32x8 $1, %zmm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    vaddps %ymm2, %ymm1, %ymm1
+; CHECK-NEXT:    vextractf32x8 $1, %zmm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %res  = call <8 x float> @llvm.x86.avx512.mask.vextractf32x8.512(<16 x float> %x0,i32 1, <8 x float> %x2, i8 %x3)

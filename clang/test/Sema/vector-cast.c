@@ -53,9 +53,8 @@ void f4() {
   float2 f2;
   double d, a, b, c;
   float64x2_t v = {0.0, 1.0};
-  // FIXME: These diagnostics are inaccurate: should complain that 'double' to vector 'float2' involves truncation
-  f2 += d; // expected-error {{cannot convert between vector values of different size ('float2' (vector of 2 'float' values) and 'double')}}
-  d += f2; // expected-error {{cannot convert between vector values of different size}}
+  f2 += d; // expected-error {{cannot convert between scalar type 'double' and vector type 'float2' (vector of 2 'float' values) as implicit conversion would cause truncation}}
+  d += f2; // expected-error {{assigning to 'double' from incompatible type 'float2' (vector of 2 'float' values)}}
   a = 3.0 + vget_low_f64(v);
   b = vget_low_f64(v) + 3.0;
   c = vget_low_f64(v);

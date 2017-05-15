@@ -855,6 +855,11 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   if (CXXRecordDecl *D1CXX = dyn_cast<CXXRecordDecl>(D1)) {
     if (CXXRecordDecl *D2CXX = dyn_cast<CXXRecordDecl>(D2)) {
+      if (D1CXX->hasExternalLexicalStorage() &&
+          !D1CXX->isCompleteDefinition()) {
+        D1CXX->getASTContext().getExternalSource()->CompleteType(D1CXX);
+      }
+
       if (D1CXX->getNumBases() != D2CXX->getNumBases()) {
         if (Context.Complain) {
           Context.Diag2(D2->getLocation(), diag::warn_odr_tag_type_inconsistent)

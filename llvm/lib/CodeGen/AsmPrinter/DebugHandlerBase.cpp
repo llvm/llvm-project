@@ -129,10 +129,9 @@ bool hasDebugInfo(const MachineModuleInfo *MMI, const MachineFunction *MF) {
 }
 
 void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
-  assert(Asm);
   PrevInstBB = nullptr;
 
-  if (!hasDebugInfo(MMI, MF)) {
+  if (!Asm || !hasDebugInfo(MMI, MF)) {
     skippedNonDebugFunction();
     return;
   }

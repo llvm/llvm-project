@@ -150,12 +150,12 @@ define <2 x half> @ir_fadd_v2f16(<2 x half> %arg0, <2 x half> %arg1) nounwind {
 ; F16C-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; F16C-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
+; F16C-NEXT:    vaddss %xmm3, %xmm1, %xmm1
 ; F16C-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
 ; F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; F16C-NEXT:    vaddss %xmm3, %xmm1, %xmm1
 ; F16C-NEXT:    retq
   %retval = fadd <2 x half> %arg0, %arg1
   ret <2 x half> %retval

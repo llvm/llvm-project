@@ -1284,8 +1284,7 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
         const Value *V = DecompGEP1.VarIndices[i].V;
 
         bool SignKnownZero, SignKnownOne;
-        ComputeSignBit(const_cast<Value *>(V), SignKnownZero, SignKnownOne, DL,
-                       0, &AC, nullptr, DT);
+        ComputeSignBit(V, SignKnownZero, SignKnownOne, DL, 0, &AC, nullptr, DT);
 
         // Zero-extension widens the variable, and so forces the sign
         // bit to zero.

@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/RegionPass.h"
+#include "llvm/IR/PassManager.h"
 #include "isl/aff.h"
 #include "isl/ctx.h"
 #include "isl/set.h"

@@ -2578,7 +2578,9 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       EVT TheStoreType = ExtendIntegerRetVal ? MVT::i32 : VTs[i];
       Chain = DAG.getMemIntrinsicNode(Op, dl, DAG.getVTList(MVT::Other),
                                       StoreOperands, TheStoreType,
-                                      MachinePointerInfo(), 1);
+                                      MachinePointerInfo(), /* Align */ 1,
+                                      /* Volatile */ false, /* ReadMem */ false,
+                                      /* WriteMem */ true, /* Size */ 0);
       // Cleanup vector state.
       StoreOperands.clear();
     }

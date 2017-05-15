@@ -326,14 +326,14 @@ void foo(void)
   bc = bc + sc2; // expected-error {{incompatible type}}
   bc = sc + bc2; // expected-error {{incompatible type}}
 
-  sc = sc + sc_scalar; // expected-error {{cannot convert}}
-  sc = sc + uc_scalar; // expected-error {{cannot convert}}
-  sc = sc_scalar + sc; // expected-error {{cannot convert}}
-  sc = uc_scalar + sc; // expected-error {{cannot convert}}
-  uc = uc + sc_scalar; // expected-error {{cannot convert}}
-  uc = uc + uc_scalar; // expected-error {{cannot convert}}
-  uc = sc_scalar + uc; // expected-error {{cannot convert}}
-  uc = uc_scalar + uc; // expected-error {{cannot convert}}
+  sc = sc + sc_scalar;
+  sc = sc + uc_scalar; // expected-error {{cannot convert between scalar type 'unsigned char' and vector type '__vector signed char' (vector of 16 'signed char' values) as implicit conversion would cause truncation}}
+  sc = sc_scalar + sc;
+  sc = uc_scalar + sc; // expected-error {{cannot convert between scalar type 'unsigned char' and vector type '__vector signed char' (vector of 16 'signed char' values) as implicit conversion would cause truncation}}
+  uc = uc + sc_scalar; // expected-error {{implicit conversion changes signedness: 'signed char' to '__vector unsigned char' (vector of 16 'unsigned char' values)}}
+  uc = uc + uc_scalar;
+  uc = sc_scalar + uc; // expected-error {{implicit conversion changes signedness: 'signed char' to '__vector unsigned char' (vector of 16 'unsigned char' values)}}
+  uc = uc_scalar + uc;
 
   ss = ss + ss2;
   us = us + us2;
@@ -368,10 +368,10 @@ void foo(void)
   sc += sl2; // expected-error {{cannot convert}}
   sc += fd2; // expected-error {{cannot convert}}
 
-  sc += sc_scalar; // expected-error {{cannot convert}}
-  sc += uc_scalar; // expected-error {{cannot convert}}
-  uc += sc_scalar; // expected-error {{cannot convert}}
-  uc += uc_scalar; // expected-error {{cannot convert}}
+  sc += sc_scalar;
+  sc += uc_scalar; // expected-error {{cannot convert between scalar type 'unsigned char' and vector type '__vector signed char' (vector of 16 'signed char' values) as implicit conversion would cause truncation}}
+  uc += sc_scalar; // expected-error {{implicit conversion changes signedness: 'signed char' to '__vector unsigned char' (vector of 16 'unsigned char' values)}}
+  uc += uc_scalar;
 
   ss += ss2;
   us += us2;

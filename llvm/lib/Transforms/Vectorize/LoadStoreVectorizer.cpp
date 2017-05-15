@@ -346,7 +346,7 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
   if (!Safe) {
     KnownBits Known(BitWidth);
     computeKnownBits(OpA, Known, DL, 0, nullptr, OpA, &DT);
-    if (Known.Zero.countTrailingZeros() < (BitWidth - 1))
+    if (Known.countMaxTrailingOnes() < (BitWidth - 1))
       Safe = true;
   }
 

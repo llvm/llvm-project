@@ -161,6 +161,60 @@ TLI_DEFINE_STRING_INTERNAL("_Znwm")
 /// void *new(unsigned long, nothrow);
 TLI_DEFINE_ENUM_INTERNAL(ZnwmRKSt9nothrow_t)
 TLI_DEFINE_STRING_INTERNAL("_ZnwmRKSt9nothrow_t")
+/// double __acos_finite(double x);
+TLI_DEFINE_ENUM_INTERNAL(acos_finite)
+TLI_DEFINE_STRING_INTERNAL("__acos_finite")
+/// float __acosf_finite(float x);
+TLI_DEFINE_ENUM_INTERNAL(acosf_finite)
+TLI_DEFINE_STRING_INTERNAL("__acosf_finite")
+/// double __acosh_finite(double x);
+TLI_DEFINE_ENUM_INTERNAL(acosh_finite)
+TLI_DEFINE_STRING_INTERNAL("__acosh_finite")
+/// float __acoshf_finite(float x);
+TLI_DEFINE_ENUM_INTERNAL(acoshf_finite)
+TLI_DEFINE_STRING_INTERNAL("__acoshf_finite")
+/// long double __acoshl_finite(long double x);
+TLI_DEFINE_ENUM_INTERNAL(acoshl_finite)
+TLI_DEFINE_STRING_INTERNAL("__acoshl_finite")
+/// long double __acosl_finite(long double x);
+TLI_DEFINE_ENUM_INTERNAL(acosl_finite)
+TLI_DEFINE_STRING_INTERNAL("__acosl_finite")
+/// double __asin_finite(double x);
+TLI_DEFINE_ENUM_INTERNAL(asin_finite)
+TLI_DEFINE_STRING_INTERNAL("__asin_finite")
+/// float __asinf_finite(float x);
+TLI_DEFINE_ENUM_INTERNAL(asinf_finite)
+TLI_DEFINE_STRING_INTERNAL("__asinf_finite")
+/// long double __asinl_finite(long double x);
+TLI_DEFINE_ENUM_INTERNAL(asinl_finite)
+TLI_DEFINE_STRING_INTERNAL("__asinl_finite")
+/// double atan2_finite(double y, double x);
+TLI_DEFINE_ENUM_INTERNAL(atan2_finite)
+TLI_DEFINE_STRING_INTERNAL("__atan2_finite")
+/// float atan2f_finite(float y, float x);
+TLI_DEFINE_ENUM_INTERNAL(atan2f_finite)
+TLI_DEFINE_STRING_INTERNAL("__atan2f_finite")
+/// long double atan2l_finite(long double y, long double x);
+TLI_DEFINE_ENUM_INTERNAL(atan2l_finite)
+TLI_DEFINE_STRING_INTERNAL("__atan2l_finite")
+/// double __atanh_finite(double x);
+TLI_DEFINE_ENUM_INTERNAL(atanh_finite)
+TLI_DEFINE_STRING_INTERNAL("__atanh_finite")
+/// float __atanhf_finite(float x);
+TLI_DEFINE_ENUM_INTERNAL(atanhf_finite)
+TLI_DEFINE_STRING_INTERNAL("__atanhf_finite")
+/// long double __atanhl_finite(long double x);
+TLI_DEFINE_ENUM_INTERNAL(atanhl_finite)
+TLI_DEFINE_STRING_INTERNAL("__atanhl_finite")
+/// double __cosh_finite(double x);
+TLI_DEFINE_ENUM_INTERNAL(cosh_finite)
+TLI_DEFINE_STRING_INTERNAL("__cosh_finite")
+/// float __coshf_finite(float x);
+TLI_DEFINE_ENUM_INTERNAL(coshf_finite)
+TLI_DEFINE_STRING_INTERNAL("__coshf_finite")
+/// long double __coshl_finite(long double x);
+TLI_DEFINE_ENUM_INTERNAL(coshl_finite)
+TLI_DEFINE_STRING_INTERNAL("__coshl_finite")
 /// double __cospi(double x);
 TLI_DEFINE_ENUM_INTERNAL(cospi)
 TLI_DEFINE_STRING_INTERNAL("__cospi")
@@ -180,12 +234,66 @@ TLI_DEFINE_STRING_INTERNAL("__cxa_guard_acquire")
 /// void __cxa_guard_release(guard_t *guard);
 TLI_DEFINE_ENUM_INTERNAL(cxa_guard_release)
 TLI_DEFINE_STRING_INTERNAL("__cxa_guard_release")
+/// double __exp10_finite(double x);
+TLI_DEFINE_ENUM_INTERNAL(exp10_finite)
+TLI_DEFINE_STRING_INTERNAL("__exp10_finite")
+/// float __exp10f_finite(float x);
+TLI_DEFINE_ENUM_INTERNAL(exp10f_finite)
+TLI_DEFINE_STRING_INTERNAL("__exp10f_finite")
+/// long double __exp10l_finite(long double x);
+TLI_DEFINE_ENUM_INTERNAL(exp10l_finite)
+TLI_DEFINE_STRING_INTERNAL("__exp10l_finite")
+/// double __exp2_finite(double x);
+TLI_DEFINE_ENUM_INTERNAL(exp2_finite)
+TLI_DEFINE_STRING_INTERNAL("__exp2_finite")
+/// float __exp2f_finite(float x);
+TLI_DEFINE_ENUM_INTERNAL(exp2f_finite)
+TLI_DEFINE_STRING_INTERNAL("__exp2f_finite")
+/// long double __exp2l_finite(long double x);
+TLI_DEFINE_ENUM_INTERNAL(exp2l_finite)
+TLI_DEFINE_STRING_INTERNAL("__exp2l_finite")
+/// double __exp_finite(double x);
+TLI_DEFINE_ENUM_INTERNAL(exp_finite)
+TLI_DEFINE_STRING_INTERNAL("__exp_finite")
+/// float __expf_finite(float x);
+TLI_DEFINE_ENUM_INTERNAL(expf_finite)
+TLI_DEFINE_STRING_INTERNAL("__expf_finite")
+/// long double __expl_finite(long double x);
+TLI_DEFINE_ENUM_INTERNAL(expl_finite)
+TLI_DEFINE_STRING_INTERNAL("__expl_finite")
 /// int __isoc99_scanf (const char *format, ...)
 TLI_DEFINE_ENUM_INTERNAL(dunder_isoc99_scanf)
 TLI_DEFINE_STRING_INTERNAL("__isoc99_scanf")
 /// int __isoc99_sscanf(const char *s, const char *format, ...)
 TLI_DEFINE_ENUM_INTERNAL(dunder_isoc99_sscanf)
 TLI_DEFINE_STRING_INTERNAL("__isoc99_sscanf")
+/// double __log10_finite(double x);
+TLI_DEFINE_ENUM_INTERNAL(log10_finite)
+TLI_DEFINE_STRING_INTERNAL("__log10_finite")
+/// float __log10f_finite(float x);
+TLI_DEFINE_ENUM_INTERNAL(log10f_finite)
+TLI_DEFINE_STRING_INTERNAL("__log10f_finite")
+/// long double __log10l_finite(long double x);
+TLI_DEFINE_ENUM_INTERNAL(log10l_finite)
+TLI_DEFINE_STRING_INTERNAL("__log10l_finite")
+/// double __log2_finite(double x);
+TLI_DEFINE_ENUM_INTERNAL(log2_finite)
+TLI_DEFINE_STRING_INTERNAL("__log2_finite")
+/// float __log2f_finite(float x);
+TLI_DEFINE_ENUM_INTERNAL(log2f_finite)
+TLI_DEFINE_STRING_INTERNAL("__log2f_finite")
+/// long double __log2l_finite(long double x);
+TLI_DEFINE_ENUM_INTERNAL(log2l_finite)
+TLI_DEFINE_STRING_INTERNAL("__log2l_finite")
+/// double __log_finite(double x);
+TLI_DEFINE_ENUM_INTERNAL(log_finite)
+TLI_DEFINE_STRING_INTERNAL("__log_finite")
+/// float __logf_finite(float x);
+TLI_DEFINE_ENUM_INTERNAL(logf_finite)
+TLI_DEFINE_STRING_INTERNAL("__logf_finite")
+/// long double __logl_finite(long double x);
+TLI_DEFINE_ENUM_INTERNAL(logl_finite)
+TLI_DEFINE_STRING_INTERNAL("__logl_finite")
 /// void *__memcpy_chk(void *s1, const void *s2, size_t n, size_t s1size);
 TLI_DEFINE_ENUM_INTERNAL(memcpy_chk)
 TLI_DEFINE_STRING_INTERNAL("__memcpy_chk")
@@ -199,13 +307,30 @@ TLI_DEFINE_STRING_INTERNAL("__memset_chk")
 // int __nvvm_reflect(const char *)
 TLI_DEFINE_ENUM_INTERNAL(nvvm_reflect)
 TLI_DEFINE_STRING_INTERNAL("__nvvm_reflect")
-
+/// double __pow_finite(double x, double y);
+TLI_DEFINE_ENUM_INTERNAL(pow_finite)
+TLI_DEFINE_STRING_INTERNAL("__pow_finite")
+/// float _powf_finite(float x, float y);
+TLI_DEFINE_ENUM_INTERNAL(powf_finite)
+TLI_DEFINE_STRING_INTERNAL("__powf_finite")
+/// long double __powl_finite(long double x, long double y);
+TLI_DEFINE_ENUM_INTERNAL(powl_finite)
+TLI_DEFINE_STRING_INTERNAL("__powl_finite")
 /// double __sincospi_stret(double x);
 TLI_DEFINE_ENUM_INTERNAL(sincospi_stret)
 TLI_DEFINE_STRING_INTERNAL("__sincospi_stret")
 /// float __sincospif_stret(float x);
 TLI_DEFINE_ENUM_INTERNAL(sincospif_stret)
 TLI_DEFINE_STRING_INTERNAL("__sincospif_stret")
+/// double __sinh_finite(double x);
+TLI_DEFINE_ENUM_INTERNAL(sinh_finite)
+TLI_DEFINE_STRING_INTERNAL("__sinh_finite")
+/// float _sinhf_finite(float x);
+TLI_DEFINE_ENUM_INTERNAL(sinhf_finite)
+TLI_DEFINE_STRING_INTERNAL("__sinhf_finite")
+/// long double __sinhl_finite(long double x);
+TLI_DEFINE_ENUM_INTERNAL(sinhl_finite)
+TLI_DEFINE_STRING_INTERNAL("__sinhl_finite")
 /// double __sinpi(double x);
 TLI_DEFINE_ENUM_INTERNAL(sinpi)
 TLI_DEFINE_STRING_INTERNAL("__sinpi")

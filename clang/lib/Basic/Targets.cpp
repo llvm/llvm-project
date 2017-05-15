@@ -6862,6 +6862,11 @@ public:
     case 'N': // Same as 'K' but zext (required for SIMode)
     case 'O': // The constant 4096
       return true;
+
+    case 'f':
+    case 'e':
+      info.setAllowsRegister();
+      return true;
     }
     return false;
   }
