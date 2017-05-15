@@ -282,8 +282,14 @@ void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB,
 
   if (!Restore)
     Restore = &MBB;
-  else
+  else if (MPDT->getNode(&MBB)) // If the block is not in the post dom tree, it
+                                // means the block never returns. If that's the
+                                // case, we don't want to call
+                                // `findNearestCommonDominator`, which will
+                                // return `Restore`.
     Restore = MPDT->findNearestCommonDominator(Restore, &MBB);
+  else
+    Restore = nullptr; // Abort, we can't find a restore point in this case.
 
   // Make sure we would be able to insert the restore code before the
   // terminator.
@@ -293,7 +299,7 @@ void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB,
         continue;
       // One of the terminator needs to happen before the restore point.
       if (MBB.succ_empty()) {
-        Restore = nullptr;
+        Restore = nullptr; // Abort, we can't find a restore point in this case.
         break;
       }
       // Look for a restore point that post-dominates all the successors.
