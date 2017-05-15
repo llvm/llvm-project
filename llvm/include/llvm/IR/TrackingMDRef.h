@@ -139,31 +139,35 @@ public:
   bool hasTrivialDestructor() const { return Ref.hasTrivialDestructor(); }
 };
 
-typedef TypedTrackingMDRef<MDNode> TrackingMDNodeRef;
-typedef TypedTrackingMDRef<ValueAsMetadata> TrackingValueAsMetadataRef;
+using TrackingMDNodeRef = TypedTrackingMDRef<MDNode>;
+using TrackingValueAsMetadataRef = TypedTrackingMDRef<ValueAsMetadata>;
 
 // Expose the underlying metadata to casting.
 template <> struct simplify_type<TrackingMDRef> {
-  typedef Metadata *SimpleType;
+  using SimpleType = Metadata *;
+
   static SimpleType getSimplifiedValue(TrackingMDRef &MD) { return MD.get(); }
 };
 
 template <> struct simplify_type<const TrackingMDRef> {
-  typedef Metadata *SimpleType;
+  using SimpleType = Metadata *;
+
   static SimpleType getSimplifiedValue(const TrackingMDRef &MD) {
     return MD.get();
   }
 };
 
 template <class T> struct simplify_type<TypedTrackingMDRef<T>> {
-  typedef T *SimpleType;
+  using SimpleType = T *;
+
   static SimpleType getSimplifiedValue(TypedTrackingMDRef<T> &MD) {
     return MD.get();
   }
 };
 
 template <class T> struct simplify_type<const TypedTrackingMDRef<T>> {
-  typedef T *SimpleType;
+  using SimpleType = T *;
+
   static SimpleType getSimplifiedValue(const TypedTrackingMDRef<T> &MD) {
     return MD.get();
   }

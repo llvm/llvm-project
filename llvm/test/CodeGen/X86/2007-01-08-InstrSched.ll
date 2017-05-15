@@ -13,10 +13,10 @@ define float @foo(float %x) nounwind {
 
 ; CHECK: mulss
 ; CHECK: mulss
-; CHECK: mulss
+; CHECK: addss
 ; CHECK: mulss
 ; CHECK: addss
-; CHECK: addss
+; CHECK: mulss
 ; CHECK: addss
 ; CHECK: ret
 }

@@ -162,11 +162,9 @@ bool InstCombiner::WillNotOverflowSignedMul(Value *LHS, Value *RHS,
     // product is exactly the minimum negative number.
     // E.g. mul i16 with 17 sign bits: 0xff00 * 0xff80 = 0x8000
     // For simplicity we just check if at least one side is not negative.
-    bool LHSNonNegative, LHSNegative;
-    bool RHSNonNegative, RHSNegative;
-    ComputeSignBit(LHS, LHSNonNegative, LHSNegative, /*Depth=*/0, &CxtI);
-    ComputeSignBit(RHS, RHSNonNegative, RHSNegative, /*Depth=*/0, &CxtI);
-    if (LHSNonNegative || RHSNonNegative)
+    KnownBits LHSKnown = computeKnownBits(LHS, /*Depth=*/0, &CxtI);
+    KnownBits RHSKnown = computeKnownBits(RHS, /*Depth=*/0, &CxtI);
+    if (LHSKnown.isNonNegative() || RHSKnown.isNonNegative())
       return true;
   }
   return false;
@@ -422,8 +420,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
         Constant *CI =
             ConstantExpr::getTrunc(Op1C, Op0Conv->getOperand(0)->getType());
         if (ConstantExpr::getZExt(CI, I.getType()) == Op1C &&
-            computeOverflowForUnsignedMul(Op0Conv->getOperand(0), CI, &I) ==
-                OverflowResult::NeverOverflows) {
+            willNotOverflowUnsignedMul(Op0Conv->getOperand(0), CI, I)) {
           // Insert the new, smaller mul.
           Value *NewMul =
               Builder->CreateNUWMul(Op0Conv->getOperand(0), CI, "mulconv");
@@ -440,9 +437,8 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
       if (Op0Conv->getOperand(0)->getType() ==
               Op1Conv->getOperand(0)->getType() &&
           (Op0Conv->hasOneUse() || Op1Conv->hasOneUse()) &&
-          computeOverflowForUnsignedMul(Op0Conv->getOperand(0),
-                                        Op1Conv->getOperand(0),
-                                        &I) == OverflowResult::NeverOverflows) {
+          willNotOverflowUnsignedMul(Op0Conv->getOperand(0),
+                                     Op1Conv->getOperand(0), I)) {
         // Insert the new integer mul.
         Value *NewMul = Builder->CreateNUWMul(
             Op0Conv->getOperand(0), Op1Conv->getOperand(0), "mulconv");
@@ -456,9 +452,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
     I.setHasNoSignedWrap(true);
   }
 
-  if (!I.hasNoUnsignedWrap() &&
-      computeOverflowForUnsignedMul(Op0, Op1, &I) ==
-          OverflowResult::NeverOverflows) {
+  if (!I.hasNoUnsignedWrap() && willNotOverflowUnsignedMul(Op0, Op1, I)) {
     Changed = true;
     I.setHasNoUnsignedWrap(true);
   }

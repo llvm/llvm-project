@@ -26,6 +26,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -119,14 +120,19 @@ void FunctionDumper::start(const PDBSymbolFunc &Symbol, PointerType Pointer) {
   WithColor(Printer, PDB_ColorItem::Address).get() << format_hex(FuncStart, 10);
   if (auto DebugStart = Symbol.findOneChild<PDBSymbolFuncDebugStart>()) {
     uint64_t Prologue = DebugStart->getVirtualAddress() - FuncStart;
-    WithColor(Printer, PDB_ColorItem::Offset).get() << "+" << Prologue;
+    WithColor(Printer, PDB_ColorItem::Offset).get()
+        << formatv("+{0,2}", Prologue);
   }
   Printer << " - ";
   WithColor(Printer, PDB_ColorItem::Address).get() << format_hex(FuncEnd, 10);
   if (auto DebugEnd = Symbol.findOneChild<PDBSymbolFuncDebugEnd>()) {
     uint64_t Epilogue = FuncEnd - DebugEnd->getVirtualAddress();
-    WithColor(Printer, PDB_ColorItem::Offset).get() << "-" << Epilogue;
+    WithColor(Printer, PDB_ColorItem::Offset).get()
+        << formatv("-{0,2}", Epilogue);
   }
+
+  WithColor(Printer, PDB_ColorItem::Comment).get()
+      << formatv(" | sizeof={0,3}", Symbol.getLength());
   Printer << "] (";
 
   if (Symbol.hasFramePointer()) {

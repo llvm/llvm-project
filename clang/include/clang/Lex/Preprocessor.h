@@ -644,14 +644,6 @@ class Preprocessor {
   /// of that list.
   MacroInfoChain *MIChainHead;
 
-  struct DeserializedMacroInfoChain {
-    MacroInfo MI;
-    unsigned OwningModuleID; // MUST be immediately after the MacroInfo object
-                     // so it can be accessed by MacroInfo::getOwningModuleID().
-    DeserializedMacroInfoChain *Next;
-  };
-  DeserializedMacroInfoChain *DeserialMIChainHead;
-
   void updateOutOfDateIdentifier(IdentifierInfo &II) const;
 
 public:
@@ -1669,10 +1661,6 @@ public:
   /// \brief Allocate a new MacroInfo object with the provided SourceLocation.
   MacroInfo *AllocateMacroInfo(SourceLocation L);
 
-  /// \brief Allocate a new MacroInfo object loaded from an AST file.
-  MacroInfo *AllocateDeserializedMacroInfo(SourceLocation L,
-                                           unsigned SubModuleID);
-
   /// \brief Turn the specified lexer token into a fully checked and spelled
   /// filename, e.g. as an operand of \#include. 
   ///
@@ -1763,9 +1751,6 @@ private:
   /// Update the set of active module macros and ambiguity flag for a module
   /// macro name.
   void updateModuleMacroInfo(const IdentifierInfo *II, ModuleMacroInfo &Info);
-
-  /// \brief Allocate a new MacroInfo object.
-  MacroInfo *AllocateMacroInfo();
 
   DefMacroDirective *AllocateDefMacroDirective(MacroInfo *MI,
                                                SourceLocation Loc);

@@ -47,6 +47,20 @@ struct GraphTraits<ScopDetection *> : public GraphTraits<RegionInfo *> {
   }
 };
 
+template <>
+struct GraphTraits<ScopDetectionWrapperPass *>
+    : public GraphTraits<ScopDetection *> {
+  static NodeRef getEntryNode(ScopDetectionWrapperPass *P) {
+    return GraphTraits<ScopDetection *>::getEntryNode(&P->getSD());
+  }
+  static nodes_iterator nodes_begin(ScopDetectionWrapperPass *P) {
+    return nodes_iterator::begin(getEntryNode(P));
+  }
+  static nodes_iterator nodes_end(ScopDetectionWrapperPass *P) {
+    return nodes_iterator::end(getEntryNode(P));
+  }
+};
+
 template <> struct DOTGraphTraits<RegionNode *> : public DefaultDOTGraphTraits {
   DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
@@ -67,15 +81,19 @@ template <> struct DOTGraphTraits<RegionNode *> : public DefaultDOTGraphTraits {
 };
 
 template <>
-struct DOTGraphTraits<ScopDetection *> : public DOTGraphTraits<RegionNode *> {
+struct DOTGraphTraits<ScopDetectionWrapperPass *>
+    : public DOTGraphTraits<RegionNode *> {
   DOTGraphTraits(bool isSimple = false)
       : DOTGraphTraits<RegionNode *>(isSimple) {}
-  static std::string getGraphName(ScopDetection *SD) { return "Scop Graph"; }
+  static std::string getGraphName(ScopDetectionWrapperPass *SD) {
+    return "Scop Graph";
+  }
 
   std::string getEdgeAttributes(RegionNode *srcNode,
                                 GraphTraits<RegionInfo *>::ChildIteratorType CI,
-                                ScopDetection *SD) {
+                                ScopDetectionWrapperPass *P) {
     RegionNode *destNode = *CI;
+    auto *SD = &P->getSD();
 
     if (srcNode->isSubRegion() || destNode->isSubRegion())
       return "";
@@ -99,9 +117,10 @@ struct DOTGraphTraits<ScopDetection *> : public DOTGraphTraits<RegionNode *> {
     return "";
   }
 
-  std::string getNodeLabel(RegionNode *Node, ScopDetection *SD) {
+  std::string getNodeLabel(RegionNode *Node, ScopDetectionWrapperPass *P) {
     return DOTGraphTraits<RegionNode *>::getNodeLabel(
-        Node, reinterpret_cast<RegionNode *>(SD->getRI()->getTopLevelRegion()));
+        Node, reinterpret_cast<RegionNode *>(
+                  P->getSD().getRI()->getTopLevelRegion()));
   }
 
   static std::string escapeString(std::string String) {
@@ -169,20 +188,24 @@ struct DOTGraphTraits<ScopDetection *> : public DOTGraphTraits<RegionNode *> {
 
     O.indent(2 * depth) << "}\n";
   }
-  static void addCustomGraphFeatures(const ScopDetection *SD,
-                                     GraphWriter<ScopDetection *> &GW) {
+  static void
+  addCustomGraphFeatures(const ScopDetectionWrapperPass *SD,
+                         GraphWriter<ScopDetectionWrapperPass *> &GW) {
     raw_ostream &O = GW.getOStream();
     O << "\tcolorscheme = \"paired12\"\n";
-    printRegionCluster(SD, SD->getRI()->getTopLevelRegion(), O, 4);
+    printRegionCluster(&SD->getSD(), SD->getSD().getRI()->getTopLevelRegion(),
+                       O, 4);
   }
 };
 
 } // end namespace llvm
 
-struct ScopViewer : public DOTGraphTraitsViewer<ScopDetection, false> {
+struct ScopViewer
+    : public DOTGraphTraitsViewer<ScopDetectionWrapperPass, false> {
   static char ID;
-  ScopViewer() : DOTGraphTraitsViewer<ScopDetection, false>("scops", ID) {}
-  bool processFunction(Function &F, ScopDetection &SD) override {
+  ScopViewer()
+      : DOTGraphTraitsViewer<ScopDetectionWrapperPass, false>("scops", ID) {}
+  bool processFunction(Function &F, ScopDetectionWrapperPass &SD) override {
     if (ViewFilter != "" && !F.getName().count(ViewFilter))
       return false;
 
@@ -190,28 +213,33 @@ struct ScopViewer : public DOTGraphTraitsViewer<ScopDetection, false> {
       return true;
 
     // Check that at least one scop was detected.
-    return std::distance(SD.begin(), SD.end()) > 0;
+    return std::distance(SD.getSD().begin(), SD.getSD().end()) > 0;
   }
 };
 char ScopViewer::ID = 0;
 
-struct ScopOnlyViewer : public DOTGraphTraitsViewer<ScopDetection, true> {
+struct ScopOnlyViewer
+    : public DOTGraphTraitsViewer<ScopDetectionWrapperPass, true> {
   static char ID;
   ScopOnlyViewer()
-      : DOTGraphTraitsViewer<ScopDetection, true>("scopsonly", ID) {}
+      : DOTGraphTraitsViewer<ScopDetectionWrapperPass, true>("scopsonly", ID) {}
 };
 char ScopOnlyViewer::ID = 0;
 
-struct ScopPrinter : public DOTGraphTraitsPrinter<ScopDetection, false> {
+struct ScopPrinter
+    : public DOTGraphTraitsPrinter<ScopDetectionWrapperPass, false> {
   static char ID;
-  ScopPrinter() : DOTGraphTraitsPrinter<ScopDetection, false>("scops", ID) {}
+  ScopPrinter()
+      : DOTGraphTraitsPrinter<ScopDetectionWrapperPass, false>("scops", ID) {}
 };
 char ScopPrinter::ID = 0;
 
-struct ScopOnlyPrinter : public DOTGraphTraitsPrinter<ScopDetection, true> {
+struct ScopOnlyPrinter
+    : public DOTGraphTraitsPrinter<ScopDetectionWrapperPass, true> {
   static char ID;
   ScopOnlyPrinter()
-      : DOTGraphTraitsPrinter<ScopDetection, true>("scopsonly", ID) {}
+      : DOTGraphTraitsPrinter<ScopDetectionWrapperPass, true>("scopsonly", ID) {
+  }
 };
 char ScopOnlyPrinter::ID = 0;
 

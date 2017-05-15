@@ -109,7 +109,7 @@ uint32_t TpiStreamBuilder::calculateHashBufferSize() const {
 }
 
 uint32_t TpiStreamBuilder::calculateIndexOffsetSize() const {
-  return TypeIndexOffsets.size() * sizeof(TypeIndexOffset);
+  return TypeIndexOffsets.size() * sizeof(codeview::TypeIndexOffset);
 }
 
 Error TpiStreamBuilder::finalizeMsfLayout() {

@@ -2305,7 +2305,7 @@ static bool isU24(SDValue Op, SelectionDAG &DAG) {
   EVT VT = Op.getValueType();
   DAG.computeKnownBits(Op, Known);
 
-  return (VT.getSizeInBits() - Known.Zero.countLeadingOnes()) <= 24;
+  return (VT.getSizeInBits() - Known.countMinLeadingZeros()) <= 24;
 }
 
 static bool isI24(SDValue Op, SelectionDAG &DAG) {

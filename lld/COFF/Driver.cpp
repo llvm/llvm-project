@@ -18,7 +18,6 @@
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/LibDriver/LibDriver.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -29,6 +28,7 @@
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/ToolDrivers/llvm-lib/LibDriver.h"
 #include <algorithm>
 #include <memory>
 

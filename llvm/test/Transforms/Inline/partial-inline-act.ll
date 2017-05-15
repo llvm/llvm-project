@@ -1,4 +1,4 @@
-; RUN: opt < %s -partial-inliner -disable-output
+; RUN: opt < %s -partial-inliner -skip-partial-inlining-cost-analysis -disable-output
 ; This testcase tests the assumption cache
 
 define internal i32 @inlinedFunc(i1 %cond, i32* align 4 %align.val) {

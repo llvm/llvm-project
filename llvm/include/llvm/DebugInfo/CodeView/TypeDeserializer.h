@@ -46,6 +46,10 @@ public:
     return Mapping->Mapping.visitTypeBegin(Record);
   }
 
+  Error visitTypeBegin(CVType &Record, TypeIndex Index) override {
+    return visitTypeBegin(Record);
+  }
+
   Error visitTypeEnd(CVType &Record) override {
     assert(Mapping && "Not in a type mapping!");
     auto EC = Mapping->Mapping.visitTypeEnd(Record);

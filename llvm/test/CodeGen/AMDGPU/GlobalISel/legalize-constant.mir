@@ -1,0 +1,20 @@
+# RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -O0 -run-pass=legalizer -global-isel %s -o - | FileCheck %s
+
+--- |
+  define void @test_constant() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_constant
+registers:
+  - { id: 0, class: _ }
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_constant
+    ; CHECK: %0(s32) = G_CONSTANT i32 5
+
+    %0(s32) = G_CONSTANT i32 5
+...

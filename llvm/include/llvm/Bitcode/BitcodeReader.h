@@ -152,10 +152,11 @@ namespace llvm {
 
   /// Parse the module summary index out of an IR file and return the module
   /// summary index object if found, or an empty summary if not. If Path refers
-  /// to an empty file and the -ignore-empty-index-file cl::opt flag is passed
+  /// to an empty file and IgnoreEmptyThinLTOIndexFile is true, then
   /// this function will return nullptr.
   Expected<std::unique_ptr<ModuleSummaryIndex>>
-  getModuleSummaryIndexForFile(StringRef Path);
+  getModuleSummaryIndexForFile(StringRef Path,
+                               bool IgnoreEmptyThinLTOIndexFile = false);
 
   /// isBitcodeWrapper - Return true if the given bytes are the magic bytes
   /// for an LLVM IR bitcode wrapper.

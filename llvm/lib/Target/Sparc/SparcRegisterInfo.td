@@ -346,10 +346,12 @@ def I64Regs : RegisterClass<"SP", [i64], 64, (add IntRegs)>;
 
 // Floating point register classes.
 def FPRegs : RegisterClass<"SP", [f32], 32, (sequence "F%u", 0, 31)>;
-
 def DFPRegs : RegisterClass<"SP", [f64], 64, (sequence "D%u", 0, 31)>;
-
 def QFPRegs : RegisterClass<"SP", [f128], 128, (sequence "Q%u", 0, 15)>;
+
+// The Low?FPRegs classes are used only for inline-asm constraints.
+def LowDFPRegs : RegisterClass<"SP", [f64], 64, (sequence "D%u", 0, 15)>;
+def LowQFPRegs : RegisterClass<"SP", [f128], 128, (sequence "Q%u", 0, 7)>;
 
 // Floating point control register classes.
 def FCCRegs : RegisterClass<"SP", [i1], 1, (sequence "FCC%u", 0, 3)>;

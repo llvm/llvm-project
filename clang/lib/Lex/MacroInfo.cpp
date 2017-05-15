@@ -29,7 +29,6 @@ MacroInfo::MacroInfo(SourceLocation DefLoc)
     IsUsed(false),
     IsAllowRedefinitionsWithoutWarning(false),
     IsWarnIfUnused(false),
-    FromASTFile(false),
     UsedForHeaderGuard(false) {
 }
 
@@ -137,7 +136,6 @@ LLVM_DUMP_METHOD void MacroInfo::dump() const {
   if (IsAllowRedefinitionsWithoutWarning)
     Out << " allow_redefinitions_without_warning";
   if (IsWarnIfUnused) Out << " warn_if_unused";
-  if (FromASTFile) Out << " imported";
   if (UsedForHeaderGuard) Out << " header_guard";
 
   Out << "\n    #define <macro>";

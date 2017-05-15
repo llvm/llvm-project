@@ -414,8 +414,8 @@ define <16 x float>@test_int_x86_avx512_mask_broadcastf32x2_512(<4 x float> %x0,
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} zmm1 {%k1} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} zmm2 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
-; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} zmm0 = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vaddps %zmm2, %zmm1, %zmm1
+; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} zmm0 = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vaddps %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <16 x float> @llvm.x86.avx512.mask.broadcastf32x2.512(<4 x float>  %x0, <16 x float> %x2, i16 %x3)
@@ -434,8 +434,8 @@ define <16 x i32>@test_int_x86_avx512_mask_broadcasti32x2_512(<4 x i32> %x0, <16
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} zmm1 {%k1} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} zmm2 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
-; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} zmm0 = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vpaddd %zmm2, %zmm1, %zmm1
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} zmm0 = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <16 x i32> @llvm.x86.avx512.mask.broadcasti32x2.512(<4 x i32>  %x0, <16 x i32> %x2, i16 %x3)

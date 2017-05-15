@@ -409,7 +409,7 @@ static bool isWordAligned(SDValue Value, SelectionDAG &DAG)
 {
   KnownBits Known;
   DAG.computeKnownBits(Value, Known);
-  return Known.Zero.countTrailingOnes() >= 2;
+  return Known.countMinTrailingZeros() >= 2;
 }
 
 SDValue XCoreTargetLowering::

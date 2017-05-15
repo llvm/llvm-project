@@ -139,6 +139,7 @@ public:
   }
 
   uint32_t offset() const { return AbsOffset; }
+  uint32_t getRecordLength() const { return ThisLen; }
 
 private:
   void moveToEnd() {
@@ -294,6 +295,8 @@ template <typename T> class FixedStreamArray {
   friend class FixedStreamArrayIterator<T>;
 
 public:
+  typedef FixedStreamArrayIterator<T> Iterator;
+
   FixedStreamArray() = default;
   explicit FixedStreamArray(BinaryStreamRef Stream) : Stream(Stream) {
     assert(Stream.getLength() % sizeof(T) == 0);
@@ -371,7 +374,7 @@ public:
   }
 
   FixedStreamArrayIterator<T> &operator-=(std::ptrdiff_t N) {
-    assert(Index >= N);
+    assert(std::ptrdiff_t(Index) >= N);
     Index -= N;
     return *this;
   }

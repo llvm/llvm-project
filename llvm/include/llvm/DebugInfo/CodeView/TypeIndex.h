@@ -242,6 +242,13 @@ private:
   support::ulittle32_t Index;
 };
 
+// Used for pseudo-indexing an array of type records.  An array of such records
+// sorted by TypeIndex can allow log(N) lookups even though such a type record
+// stream does not provide random access.
+struct TypeIndexOffset {
+  TypeIndex Type;
+  support::ulittle32_t Offset;
+};
 }
 }
 

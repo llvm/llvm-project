@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/RegionPass.h"
+#include "llvm/IR/PassManager.h"
 #include "isl/aff.h"
 #include "isl/ctx.h"
 #include "isl/set.h"
@@ -615,12 +616,12 @@ private:
   /// Updated access relation read from JSCOP file.
   isl_map *NewAccessRelation;
 
-  /// Fortran arrays that are created using "Allocate" are stored in terms
+  /// Fortran arrays whose sizes are not statically known are stored in terms
   /// of a descriptor struct. This maintains a raw pointer to the memory,
   /// along with auxiliary fields with information such as dimensions.
   /// We hold a reference to the descriptor corresponding to a MemoryAccess
   /// into a Fortran array. FAD for "Fortran Array Descriptor"
-  AssertingVH<GlobalValue> FAD;
+  AssertingVH<Value> FAD;
   // @}
 
   __isl_give isl_basic_map *createBasicAccessMap(ScopStmt *Statement);
@@ -1019,7 +1020,7 @@ public:
 
   /// Set the array descriptor corresponding to the Array on which the
   /// memory access is performed.
-  void setFortranArrayDescriptor(GlobalValue *FAD);
+  void setFortranArrayDescriptor(Value *FAD);
 
   /// Update the original access relation.
   ///

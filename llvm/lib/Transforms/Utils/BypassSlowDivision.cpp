@@ -261,10 +261,10 @@ ValueRange FastDivInsertionTask::getValueRange(Value *V,
 
   computeKnownBits(V, Known, DL);
 
-  if (Known.Zero.countLeadingOnes() >= HiBits)
+  if (Known.countMinLeadingZeros() >= HiBits)
     return VALRNG_KNOWN_SHORT;
 
-  if (Known.One.countLeadingZeros() < HiBits)
+  if (Known.countMaxLeadingZeros() < HiBits)
     return VALRNG_LIKELY_LONG;
 
   // Long integer divisions are often used in hashtable implementations. It's

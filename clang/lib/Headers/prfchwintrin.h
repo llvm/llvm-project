@@ -50,8 +50,10 @@ _m_prefetch(void *__P)
 ///    the L1 data cache and sets the cache-coherency to modified. This
 ///    provides a hint to the processor that the cache line will be modified.
 ///    It is intended for use when the cache line will be written to shortly
-///    after the prefetch is performed. Note that the effect of this intrinsic
-///    is dependent on the processor implementation.
+///    after the prefetch is performed.
+///
+///    Note that the effect of this intrinsic is dependent on the processor
+///    implementation.
 ///
 /// \headerfile <x86intrin.h>
 ///

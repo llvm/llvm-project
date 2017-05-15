@@ -1548,7 +1548,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
           Chain = DAG.getMemIntrinsicNode(
               Op, dl, DAG.getVTList(MVT::Other, MVT::Glue), StoreOperands,
-              TheStoreType, MachinePointerInfo(), EltAlign);
+              TheStoreType, MachinePointerInfo(), EltAlign,
+              /* Volatile */ false, /* ReadMem */ true,
+              /* WriteMem */ true, /* Size */ 0);
           InFlag = Chain.getValue(1);
 
           // Cleanup.
@@ -1608,7 +1610,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                  theVal, InFlag };
       Chain = DAG.getMemIntrinsicNode(NVPTXISD::StoreParam, dl, CopyParamVTs,
                                       CopyParamOps, elemtype,
-                                      MachinePointerInfo());
+                                      MachinePointerInfo(), /* Align */ 0,
+                                      /* Volatile */ false, /* ReadMem */ true,
+                                      /* WriteMem */ true, /* Size */ 0);
 
       InFlag = Chain.getValue(1);
     }
@@ -1794,7 +1798,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
             DAG.getConstant(Offsets[VecIdx], dl, MVT::i32), InFlag};
         SDValue RetVal = DAG.getMemIntrinsicNode(
             Op, dl, DAG.getVTList(LoadVTs), LoadOperands, TheLoadType,
-            MachinePointerInfo(), EltAlign);
+            MachinePointerInfo(), EltAlign, /* Volatile */ false,
+            /* ReadMem */ true, /* WriteMem */ true, /* Size */ 0);
 
         for (unsigned j = 0; j < NumElts; ++j) {
           SDValue Ret = RetVal.getValue(j);
@@ -2578,7 +2583,9 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       EVT TheStoreType = ExtendIntegerRetVal ? MVT::i32 : VTs[i];
       Chain = DAG.getMemIntrinsicNode(Op, dl, DAG.getVTList(MVT::Other),
                                       StoreOperands, TheStoreType,
-                                      MachinePointerInfo(), 1);
+                                      MachinePointerInfo(), /* Align */ 1,
+                                      /* Volatile */ false, /* ReadMem */ false,
+                                      /* WriteMem */ true, /* Size */ 0);
       // Cleanup vector state.
       StoreOperands.clear();
     }

@@ -3,9 +3,17 @@ set(ASAN_LIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(ASAN_TESTSUITES)
 set(ASAN_DYNAMIC_TESTSUITES)
 
-# FIXME: Shadow memory for 64-bit asan easily exhausts swap on most machines.
-# Find a way to make these tests pass reliably, and re-enable them.
-if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+# Before Windows 8 (CMAKE_SYSTEM_VERSION 6.2), reserving large regions of shadow
+# memory allocated physical memory for page tables, which made it very
+# unreliable. Remove the asan tests from check-all in this configuration.
+set(SHADOW_MAPPING_UNRELIABLE FALSE)
+if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND
+    ${CMAKE_SYSTEM_VERSION} LESS 6.2)
+  set(SHADOW_MAPPING_UNRELIABLE TRUE)
+  message(WARNING "Disabling ASan tests because they are unreliable on Windows 7 and earlier")
+endif()
+
+if (SHADOW_MAPPING_UNRELIABLE)
   set(EXCLUDE_FROM_ALL TRUE)
 endif()
 
@@ -165,7 +173,6 @@ if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
 endif()
 
 # Reset EXCLUDE_FROM_ALL to its initial value.
-# FIXME: Remove when we run Win64 asan tests.
-if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+if (SHADOW_MAPPING_UNRELIABLE)
   set(EXCLUDE_FROM_ALL FALSE)
 endif()

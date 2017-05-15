@@ -11,13 +11,13 @@ define <4 x double> @load_factorf64_4(<16 x double>* %ptr) {
 ; AVX-NEXT:    vmovupd 96(%rdi), %ymm3
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm4
 ; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm5
+; AVX-NEXT:    vhaddpd %ymm5, %ymm4, %ymm4
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3],ymm3[2,3]
 ; AVX-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; AVX-NEXT:    vaddpd %ymm2, %ymm4, %ymm2
 ; AVX-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; AVX-NEXT:    vhaddpd %ymm5, %ymm4, %ymm1
-; AVX-NEXT:    vaddpd %ymm2, %ymm1, %ymm1
-; AVX-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; AVX-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
 ; AVX-NEXT:    retq
   %wide.vec = load <16 x double>, <16 x double>* %ptr, align 16
   %strided.v0 = shufflevector <16 x double> %wide.vec, <16 x double> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
@@ -39,11 +39,11 @@ define <4 x double> @load_factorf64_2(<16 x double>* %ptr) {
 ; AVX-NEXT:    vmovupd 96(%rdi), %ymm3
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm4
 ; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm5
+; AVX-NEXT:    vunpcklpd {{.*#+}} ymm4 = ymm4[0],ymm5[0],ymm4[2],ymm5[2]
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3],ymm3[2,3]
-; AVX-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm4[0],ymm5[0],ymm4[2],ymm5[2]
 ; AVX-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; AVX-NEXT:    vmulpd %ymm0, %ymm2, %ymm0
+; AVX-NEXT:    vmulpd %ymm0, %ymm4, %ymm0
 ; AVX-NEXT:    retq
   %wide.vec = load <16 x double>, <16 x double>* %ptr, align 16
   %strided.v0 = shufflevector <16 x double> %wide.vec, <16 x double> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
@@ -124,9 +124,9 @@ define <4 x i64> @load_factori64_4(<16 x i64>* %ptr) {
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} ymm2 = ymm4[0],ymm5[0],ymm4[2],ymm5[2]
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} ymm3 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; AVX2-NEXT:    vpunpckhqdq {{.*#+}} ymm4 = ymm4[1],ymm5[1],ymm4[3],ymm5[3]
+; AVX2-NEXT:    vpaddq %ymm3, %ymm4, %ymm3
 ; AVX2-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; AVX2-NEXT:    vpaddq %ymm3, %ymm4, %ymm1
-; AVX2-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpaddq %ymm0, %ymm3, %ymm0
 ; AVX2-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    retq
   %wide.vec = load <16 x i64>, <16 x i64>* %ptr, align 16

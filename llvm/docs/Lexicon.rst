@@ -249,6 +249,14 @@ S
     Superword-Level Parallelism, same as :ref:`Basic-Block Vectorization
     <lexicon-bb-vectorization>`.
 
+**Splat**
+    Splat refers to a vector of identical scalar elements.
+
+    The term is based on the PowerPC Altivec instructions that provided
+    this functionality in hardware. For example, "vsplth" and the corresponding
+    software intrinsic "vec_splat()". Examples of other hardware names for this
+    action include "duplicate" (ARM) and "broadcast" (x86).
+
 **SRoA**
     Scalar Replacement of Aggregates
 

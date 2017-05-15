@@ -661,7 +661,7 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
 
       unsigned RegSize = RegisterVT.getSizeInBits();
       unsigned NumSignBits = LOI->NumSignBits;
-      unsigned NumZeroBits = LOI->Known.Zero.countLeadingOnes();
+      unsigned NumZeroBits = LOI->Known.countMinLeadingZeros();
 
       if (NumZeroBits == RegSize) {
         // The current value is a zero.

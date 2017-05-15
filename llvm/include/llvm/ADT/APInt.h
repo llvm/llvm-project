@@ -1657,12 +1657,7 @@ public:
   /// re-interprets the bits as a double. Note that it is valid to do this on
   /// any bit width. Exactly 64 bits will be translated.
   double bitsToDouble() const {
-    union {
-      uint64_t I;
-      double D;
-    } T;
-    T.I = (isSingleWord() ? U.VAL : U.pVal[0]);
-    return T.D;
+    return BitsToDouble(getWord(0));
   }
 
   /// \brief Converts APInt bits to a double
@@ -1671,12 +1666,7 @@ public:
   /// re-interprets the bits as a float. Note that it is valid to do this on
   /// any bit width. Exactly 32 bits will be translated.
   float bitsToFloat() const {
-    union {
-      unsigned I;
-      float F;
-    } T;
-    T.I = unsigned((isSingleWord() ? U.VAL : U.pVal[0]));
-    return T.F;
+    return BitsToFloat(getWord(0));
   }
 
   /// \brief Converts a double to APInt bits.
@@ -1684,12 +1674,7 @@ public:
   /// The conversion does not do a translation from double to integer, it just
   /// re-interprets the bits of the double.
   static APInt doubleToBits(double V) {
-    union {
-      uint64_t I;
-      double D;
-    } T;
-    T.D = V;
-    return APInt(sizeof T * CHAR_BIT, T.I);
+    return APInt(sizeof(double) * CHAR_BIT, DoubleToBits(V));
   }
 
   /// \brief Converts a float to APInt bits.
@@ -1697,12 +1682,7 @@ public:
   /// The conversion does not do a translation from float to integer, it just
   /// re-interprets the bits of the float.
   static APInt floatToBits(float V) {
-    union {
-      unsigned I;
-      float F;
-    } T;
-    T.F = V;
-    return APInt(sizeof T * CHAR_BIT, T.I);
+    return APInt(sizeof(float) * CHAR_BIT, FloatToBits(V));
   }
 
   /// @}

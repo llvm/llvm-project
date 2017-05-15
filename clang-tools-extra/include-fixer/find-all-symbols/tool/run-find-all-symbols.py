@@ -75,7 +75,7 @@ def main():
                       help='path used to read a compilation database.')
   parser.add_argument('-saving-path', default='./find_all_symbols_db.yaml',
                       help='result saving path')
-  args = parser.parse_args()
+  args, _ = parser.parse_known_args()
 
   db_path = 'compile_commands.json'
 

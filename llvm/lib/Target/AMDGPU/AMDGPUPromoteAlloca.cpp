@@ -397,14 +397,17 @@ static Value* GEPToVectorIndex(GetElementPtrInst *GEP) {
 // instructions.
 static bool canVectorizeInst(Instruction *Inst, User *User) {
   switch (Inst->getOpcode()) {
-  case Instruction::Load:
+  case Instruction::Load: {
+    LoadInst *LI = cast<LoadInst>(Inst);
+    return !LI->isVolatile();
+  }
   case Instruction::BitCast:
   case Instruction::AddrSpaceCast:
     return true;
   case Instruction::Store: {
     // Must be the stored pointer operand, not a stored value.
     StoreInst *SI = cast<StoreInst>(Inst);
-    return SI->getPointerOperand() == User;
+    return (SI->getPointerOperand() == User) && !SI->isVolatile();
   }
   default:
     return false;

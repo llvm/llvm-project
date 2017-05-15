@@ -610,6 +610,9 @@ void TargetPassConfig::addMachinePasses() {
     addPass(&LocalStackSlotAllocationID, false);
   }
 
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(&LiveRangeShrinkID);
+
   // Run pre-ra passes.
   addPreRegAlloc();
 

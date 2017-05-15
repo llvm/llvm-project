@@ -18,6 +18,7 @@
 
 #include <mach-o/dyld.h>
 #include <mach-o/loader.h>
+#include <mach/mach.h>
 
 // These are not available in older macOS SDKs.
 #ifndef CPU_SUBTYPE_X86_64_H
@@ -71,6 +72,13 @@ void MemoryMappingLayout::Reset() {
   internal_memset(current_uuid_, 0, kModuleUUIDSize);
 }
 
+// The dyld load address should be unchanged throughout process execution,
+// and it is expensive to compute once many libraries have been loaded,
+// so cache it here and do not reset.
+static mach_header *dyld_hdr = 0;
+static const char kDyldPath[] = "/usr/lib/dyld";
+static const int kDyldImageIdx = -1;
+
 // static
 void MemoryMappingLayout::CacheMemoryMappings() {
   // No-op on Mac for now.
@@ -95,14 +103,12 @@ bool MemoryMappingLayout::NextSegmentLoad(uptr *start, uptr *end, uptr *offset,
   const char *lc = current_load_cmd_addr_;
   current_load_cmd_addr_ += ((const load_command *)lc)->cmdsize;
   if (((const load_command *)lc)->cmd == kLCSegment) {
-    const sptr dlloff = _dyld_get_image_vmaddr_slide(current_image_);
     const SegmentCommand* sc = (const SegmentCommand *)lc;
-    if (start) *start = sc->vmaddr + dlloff;
+    GetSegmentAddrRange(start, end, sc->vmaddr, sc->vmsize);
     if (protection) {
       // Return the initial protection.
       *protection = sc->initprot;
     }
-    if (end) *end = sc->vmaddr + sc->vmsize + dlloff;
     if (offset) {
       if (current_filetype_ == /*MH_EXECUTE*/ 0x2) {
         *offset = sc->vmaddr;
@@ -111,8 +117,12 @@ bool MemoryMappingLayout::NextSegmentLoad(uptr *start, uptr *end, uptr *offset,
       }
     }
     if (filename) {
-      internal_strncpy(filename, _dyld_get_image_name(current_image_),
-                       filename_size);
+      if (current_image_ == kDyldImageIdx) {
+        internal_strncpy(filename, kDyldPath, filename_size);
+      } else {
+        internal_strncpy(filename, _dyld_get_image_name(current_image_),
+                         filename_size);
+      }
     }
     if (arch) {
       *arch = current_arch_;
@@ -180,11 +190,74 @@ static bool IsModuleInstrumented(const load_command *first_lc) {
   return false;
 }
 
+// _dyld_get_image_header() and related APIs don't report dyld itself.
+// We work around this by manually recursing through the memory map
+// until we hit a Mach header matching dyld instead. These recurse
+// calls are expensive, but the first memory map generation occurs
+// early in the process, when dyld is one of the only images loaded,
+// so it will be hit after only a few iterations.
+static mach_header *get_dyld_image_header() {
+  mach_port_name_t port;
+  if (task_for_pid(mach_task_self(), internal_getpid(), &port) !=
+      KERN_SUCCESS) {
+    return nullptr;
+  }
+
+  unsigned depth = 1;
+  vm_size_t size = 0;
+  vm_address_t address = 0;
+  kern_return_t err = KERN_SUCCESS;
+  mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
+
+  while (true) {
+    struct vm_region_submap_info_64 info;
+    err = vm_region_recurse_64(port, &address, &size, &depth,
+                               (vm_region_info_t)&info, &count);
+    if (err != KERN_SUCCESS) return nullptr;
+
+    if (size >= sizeof(mach_header) &&
+        info.protection & MemoryMappingLayout::kProtectionRead) {
+      mach_header *hdr = (mach_header *)address;
+      if ((hdr->magic == MH_MAGIC || hdr->magic == MH_MAGIC_64) &&
+          hdr->filetype == MH_DYLINKER) {
+        return hdr;
+      }
+    }
+    address += size;
+  }
+}
+
+const mach_header *get_dyld_hdr() {
+  if (!dyld_hdr) dyld_hdr = get_dyld_image_header();
+
+  return dyld_hdr;
+}
+
+void MemoryMappingLayout::GetSegmentAddrRange(uptr *start, uptr *end,
+                                              uptr vmaddr, uptr vmsize) {
+  if (current_image_ == kDyldImageIdx) {
+    // vmaddr is masked with 0xfffff because on macOS versions < 10.12,
+    // it contains an absolute address rather than an offset for dyld.
+    // To make matters even more complicated, this absolute address
+    // isn't actually the absolute segment address, but the offset portion
+    // of the address is accurate when combined with the dyld base address,
+    // and the mask will give just this offset.
+    if (start) *start = (vmaddr & 0xfffff) + (uptr)get_dyld_hdr();
+    if (end) *end = (vmaddr & 0xfffff) + vmsize + (uptr)get_dyld_hdr();
+  } else {
+    const sptr dlloff = _dyld_get_image_vmaddr_slide(current_image_);
+    if (start) *start = vmaddr + dlloff;
+    if (end) *end = vmaddr + vmsize + dlloff;
+  }
+}
+
 bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
                                char filename[], uptr filename_size,
                                uptr *protection, ModuleArch *arch, u8 *uuid) {
-  for (; current_image_ >= 0; current_image_--) {
-    const mach_header* hdr = _dyld_get_image_header(current_image_);
+  for (; current_image_ >= kDyldImageIdx; current_image_--) {
+    const mach_header *hdr = (current_image_ == kDyldImageIdx)
+                                 ? get_dyld_hdr()
+                                 : _dyld_get_image_header(current_image_);
     if (!hdr) continue;
     if (current_load_cmd_count_ < 0) {
       // Set up for this image;

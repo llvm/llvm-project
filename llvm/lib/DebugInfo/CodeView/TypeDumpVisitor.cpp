@@ -173,10 +173,13 @@ void TypeDumpVisitor::printItemIndex(StringRef FieldName, TypeIndex TI) const {
 }
 
 Error TypeDumpVisitor::visitTypeBegin(CVType &Record) {
+  TypeIndex TI = getSourceDB().getAppendIndex();
+  return visitTypeBegin(Record, TI);
+}
+
+Error TypeDumpVisitor::visitTypeBegin(CVType &Record, TypeIndex Index) {
   W->startLine() << getLeafTypeName(Record.Type);
-  W->getOStream() << " ("
-                  << HexNumber(getSourceDB().getNextTypeIndex().getIndex())
-                  << ")";
+  W->getOStream() << " (" << HexNumber(Index.getIndex()) << ")";
   W->getOStream() << " {\n";
   W->indent();
   W->printEnum("TypeLeafKind", unsigned(Record.Type),

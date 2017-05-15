@@ -7627,6 +7627,13 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return Expand2AddrUndef(MIB, get(HasAVX ? X86::VPCMPEQDrr : X86::PCMPEQDrr));
   case X86::AVX2_SETALLONES:
     return Expand2AddrUndef(MIB, get(X86::VPCMPEQDYrr));
+  case X86::AVX1_SETALLONES: {
+    unsigned Reg = MIB->getOperand(0).getReg();
+    // VCMPPSYrri with an immediate 0xf should produce VCMPTRUEPS.
+    MIB->setDesc(get(X86::VCMPPSYrri));
+    MIB.addReg(Reg, RegState::Undef).addReg(Reg, RegState::Undef).addImm(0xf);
+    return true;
+  }
   case X86::AVX512_512_SETALLONES: {
     unsigned Reg = MIB->getOperand(0).getReg();
     MIB->setDesc(get(X86::VPTERNLOGDZrri));
@@ -8515,6 +8522,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       Alignment = 64;
       break;
     case X86::AVX2_SETALLONES:
+    case X86::AVX1_SETALLONES:
     case X86::AVX_SET0:
     case X86::AVX512_256_SET0:
       Alignment = 32;
@@ -8560,6 +8568,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   case X86::V_SET0:
   case X86::V_SETALLONES:
   case X86::AVX2_SETALLONES:
+  case X86::AVX1_SETALLONES:
   case X86::AVX_SET0:
   case X86::AVX512_128_SET0:
   case X86::AVX512_256_SET0:
@@ -8601,13 +8610,14 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     else if (Opc == X86::AVX512_512_SET0 || Opc == X86::AVX512_512_SETALLONES)
       Ty = VectorType::get(Type::getInt32Ty(MF.getFunction()->getContext()),16);
     else if (Opc == X86::AVX2_SETALLONES || Opc == X86::AVX_SET0 ||
-             Opc == X86::AVX512_256_SET0)
+             Opc == X86::AVX512_256_SET0 || Opc == X86::AVX1_SETALLONES)
       Ty = VectorType::get(Type::getInt32Ty(MF.getFunction()->getContext()), 8);
     else
       Ty = VectorType::get(Type::getInt32Ty(MF.getFunction()->getContext()), 4);
 
     bool IsAllOnes = (Opc == X86::V_SETALLONES || Opc == X86::AVX2_SETALLONES ||
-                      Opc == X86::AVX512_512_SETALLONES);
+                      Opc == X86::AVX512_512_SETALLONES ||
+                      Opc == X86::AVX1_SETALLONES);
     const Constant *C = IsAllOnes ? Constant::getAllOnesValue(Ty) :
                                     Constant::getNullValue(Ty);
     unsigned CPI = MCP.getConstantPoolIndex(C, Alignment);

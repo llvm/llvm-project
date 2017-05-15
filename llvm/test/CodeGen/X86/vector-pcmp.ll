@@ -148,8 +148,8 @@ define <32 x i8> @test_pcmpgtb_256(<32 x i8> %x) {
 ; AVX1-NEXT:    vpcmpgtb %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; AVX1-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; AVX1-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -177,8 +177,8 @@ define <16 x i16> @test_pcmpgtw_256(<16 x i16> %x) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; AVX1-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; AVX1-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -206,8 +206,8 @@ define <8 x i32> @test_pcmpgtd_256(<8 x i32> %x) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; AVX1-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; AVX1-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -247,8 +247,8 @@ define <4 x i64> @test_pcmpgtq_256(<4 x i64> %x) {
 ; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; AVX1-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; AVX1-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;

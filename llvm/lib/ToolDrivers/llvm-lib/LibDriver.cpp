@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/LibDriver/LibDriver.h"
+#include "llvm/ToolDrivers/llvm-lib/LibDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Option/Arg.h"

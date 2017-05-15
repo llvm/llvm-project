@@ -115,6 +115,8 @@ void CompilandDumper::start(const PDBSymbolCompiland &Symbol,
 }
 
 void CompilandDumper::dump(const PDBSymbolData &Symbol) {
+  if (!shouldDumpSymLevel(opts::pretty::SymLevel::Data))
+    return;
   if (Printer.IsSymbolExcluded(Symbol.getName()))
     return;
 
@@ -125,11 +127,17 @@ void CompilandDumper::dump(const PDBSymbolData &Symbol) {
     Printer << "data: ";
     WithColor(Printer, PDB_ColorItem::Address).get()
         << "[" << format_hex(Symbol.getVirtualAddress(), 10) << "]";
+
+    WithColor(Printer, PDB_ColorItem::Comment).get()
+        << " [sizeof = " << getTypeLength(Symbol) << "]";
+
     break;
   case PDB_LocType::Constant:
     Printer << "constant: ";
     WithColor(Printer, PDB_ColorItem::LiteralValue).get()
         << "[" << Symbol.getValue() << "]";
+    WithColor(Printer, PDB_ColorItem::Comment).get()
+        << " [sizeof = " << getTypeLength(Symbol) << "]";
     break;
   default:
     Printer << "data(unexpected type=" << LocType << ")";
@@ -140,6 +148,8 @@ void CompilandDumper::dump(const PDBSymbolData &Symbol) {
 }
 
 void CompilandDumper::dump(const PDBSymbolFunc &Symbol) {
+  if (!shouldDumpSymLevel(opts::pretty::SymLevel::Functions))
+    return;
   if (Symbol.getLength() == 0)
     return;
   if (Printer.IsSymbolExcluded(Symbol.getName()))
@@ -162,6 +172,8 @@ void CompilandDumper::dump(const PDBSymbolLabel &Symbol) {
 }
 
 void CompilandDumper::dump(const PDBSymbolThunk &Symbol) {
+  if (!shouldDumpSymLevel(opts::pretty::SymLevel::Thunks))
+    return;
   if (Printer.IsSymbolExcluded(Symbol.getName()))
     return;
 

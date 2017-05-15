@@ -170,6 +170,10 @@ PtraceRegistersStatus SuspendedThreadsListMac::GetRegistersAndSP(
   internal_memcpy(buffer, &regs, sizeof(regs));
   *sp = regs.SP_REG;
 
+  // On x86_64 and aarch64, we must account for the stack redzone, which is 128
+  // bytes.
+  if (SANITIZER_WORDSIZE == 64) *sp -= 128;
+
   return REGISTERS_AVAILABLE;
 }
 

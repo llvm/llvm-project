@@ -24,8 +24,8 @@
 # NO1-NEXT: 0               00000000
 # NO1:  .writable     00000004
 # NO1:  .foo.2        00000004
-# NO1:  .readable     00000004
 # NO1:  .foo.1        00000004
+# NO1:  .readable     00000004
 
 .global _start
 _start:
