@@ -133,6 +133,14 @@ static cl::opt<unsigned> TailDupPlacementThreshold(
              "that won't conflict."), cl::init(2),
     cl::Hidden);
 
+// Heuristic for aggressive tail duplication.
+static cl::opt<unsigned> TailDupPlacementAggressiveThreshold(
+    "tail-dup-placement-aggressive-threshold",
+    cl::desc("Instruction cutoff for aggressive tail duplication during "
+             "layout. Used at -O3. Tail merging during layout is forced to "
+             "have a threshold that won't conflict."), cl::init(3),
+    cl::Hidden);
+
 // Heuristic for tail duplication.
 static cl::opt<unsigned> TailDupPlacementPenalty(
     "tail-dup-placement-penalty",
@@ -2646,9 +2654,26 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   assert(BlockToChain.empty());
   assert(ComputedEdges.empty());
 
+  unsigned TailDupSize = TailDupPlacementThreshold;
+  // If only the aggressive threshold is explicitly set, use it.
+  if (TailDupPlacementAggressiveThreshold.getNumOccurrences() != 0 &&
+      TailDupPlacementThreshold.getNumOccurrences() == 0)
+    TailDupSize = TailDupPlacementAggressiveThreshold;
+
+  TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
+  // For agressive optimization, we can adjust some thresholds to be less
+  // conservative.
+  if (PassConfig->getOptLevel() >= CodeGenOpt::Aggressive) {
+    // At O3 we should be more willing to copy blocks for tail duplication. This
+    // increases size pressure, so we only do it at O3
+    // Do this unless only the regular threshold is explicitly set.
+    if (TailDupPlacementThreshold.getNumOccurrences() == 0 ||
+        TailDupPlacementAggressiveThreshold.getNumOccurrences() != 0)
+      TailDupSize = TailDupPlacementAggressiveThreshold;
+  }
+
   if (TailDupPlacement) {
     MPDT = &getAnalysis<MachinePostDominatorTree>();
-    unsigned TailDupSize = TailDupPlacementThreshold;
     if (MF.getFunction()->optForSize())
       TailDupSize = 1;
     TailDup.initMF(MF, MBPI, /* LayoutMode */ true, TailDupSize);
@@ -2658,7 +2683,6 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   buildCFGChains();
 
   // Changing the layout can create new tail merging opportunities.
-  TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
   // TailMerge can create jump into if branches that make CFG irreducible for
   // HW that requires structured CFG.
   bool EnableTailMerge = !MF.getTarget().requiresStructuredCFG() &&
@@ -2666,7 +2690,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
                          BranchFoldPlacement;
   // No tail merging opportunities if the block number is less than four.
   if (MF.size() > 3 && EnableTailMerge) {
-    unsigned TailMergeSize = TailDupPlacementThreshold + 1;
+    unsigned TailMergeSize = TailDupSize + 1;
     BranchFolder BF(/*EnableTailMerge=*/true, /*CommonHoist=*/false, *MBFI,
                     *MBPI, TailMergeSize);
 

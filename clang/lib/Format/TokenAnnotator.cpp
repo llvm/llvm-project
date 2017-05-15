@@ -576,9 +576,12 @@ private:
       }
       break;
     case tok::kw_for:
-      if (Style.Language == FormatStyle::LK_JavaScript && Tok->Previous &&
-          Tok->Previous->is(tok::period))
-        break;
+      if (Style.Language == FormatStyle::LK_JavaScript)
+        if (Tok->Previous && Tok->Previous->is(tok::period))
+          break;
+        // JS' for async ( ...
+        if (CurrentToken->is(Keywords.kw_async))
+          next();
       Contexts.back().ColonIsForRangeExpr = true;
       next();
       if (!parseParens())
@@ -2248,6 +2251,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return true;
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
+      return true;
+    // for async ( ...
+    if (Right.is(tok::l_paren) && Left.is(Keywords.kw_async) &&
+        Left.Previous && Left.Previous->is(tok::kw_for))
       return true;
     if (Left.is(Keywords.kw_async) && Right.is(tok::l_paren) &&
         Right.MatchingParen) {

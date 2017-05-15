@@ -26,9 +26,9 @@ define amdgpu_kernel void @s_ctpop_i64(i32 addrspace(1)* noalias %out, i64 %val)
 
 ; FUNC-LABEL: {{^}}v_ctpop_i64:
 ; GCN: buffer_load_dwordx2 v{{\[}}[[LOVAL:[0-9]+]]:[[HIVAL:[0-9]+]]{{\]}},
-; GCN: v_bcnt_u32_b32_e64 [[MIDRESULT:v[0-9]+]], v[[LOVAL]], 0
+; GCN: v_bcnt_u32_b32{{(_e64)*}} [[MIDRESULT:v[0-9]+]], v[[LOVAL]], 0
 ; SI-NEXT: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], v[[HIVAL]], [[MIDRESULT]]
-; VI-NEXT: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], v[[HIVAL]], [[MIDRESULT]]
+; VI-NEXT: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], v[[HIVAL]], [[MIDRESULT]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 define amdgpu_kernel void @v_ctpop_i64(i32 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) nounwind {
@@ -41,9 +41,9 @@ define amdgpu_kernel void @v_ctpop_i64(i32 addrspace(1)* noalias %out, i64 addrs
 
 ; FUNC-LABEL: {{^}}v_ctpop_i64_user:
 ; GCN: buffer_load_dwordx2 v{{\[}}[[LOVAL:[0-9]+]]:[[HIVAL:[0-9]+]]{{\]}},
-; GCN: v_bcnt_u32_b32_e64 [[MIDRESULT:v[0-9]+]], v[[LOVAL]], 0
+; GCN: v_bcnt_u32_b32{{(_e64)*}} [[MIDRESULT:v[0-9]+]], v[[LOVAL]], 0
 ; SI-NEXT: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], v[[HIVAL]], [[MIDRESULT]]
-; VI-NEXT: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], v[[HIVAL]], [[MIDRESULT]]
+; VI-NEXT: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], v[[HIVAL]], [[MIDRESULT]]
 ; GCN-DAG: v_or_b32_e32 v[[RESULT_LO:[0-9]+]], s{{[0-9]+}}, [[RESULT]]
 ; GCN-DAG: v_mov_b32_e32 v[[RESULT_HI:[0-9]+]], s{{[0-9]+}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
@@ -171,11 +171,11 @@ define amdgpu_kernel void @s_ctpop_i65(i32 addrspace(1)* noalias %out, i65 %val)
 ; FUNC-LABEL: {{^}}v_ctpop_i128:
 ; GCN: buffer_load_dwordx4 v{{\[}}[[VAL0:[0-9]+]]:[[VAL3:[0-9]+]]{{\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
 
-; GCN-DAG: v_bcnt_u32_b32_e64 [[MIDRESULT0:v[0-9]+]], v{{[0-9]+}}, 0
-; GCN-DAG: v_bcnt_u32_b32{{_e32|_e64}} [[MIDRESULT1:v[0-9]+]], v[[VAL3]], [[MIDRESULT0]]
+; GCN-DAG: v_bcnt_u32_b32{{(_e64)*}} [[MIDRESULT0:v[0-9]+]], v{{[0-9]+}}, 0
+; GCN-DAG: v_bcnt_u32_b32{{(_e32)*(_e64)*}} [[MIDRESULT1:v[0-9]+]], v[[VAL3]], [[MIDRESULT0]]
 
-; GCN-DAG: v_bcnt_u32_b32_e64 [[MIDRESULT2:v[0-9]+]], v[[VAL0]], 0
-; GCN-DAG: v_bcnt_u32_b32{{_e32|_e64}} [[MIDRESULT3:v[0-9]+]], v{{[0-9]+}}, [[MIDRESULT2]]
+; GCN-DAG: v_bcnt_u32_b32{{(_e64)*}} [[MIDRESULT2:v[0-9]+]], v[[VAL0]], 0
+; GCN-DAG: v_bcnt_u32_b32{{(_e32)*(_e64)*}} [[MIDRESULT3:v[0-9]+]], v{{[0-9]+}}, [[MIDRESULT2]]
 
 ; GCN: v_add_i32_e32 [[RESULT:v[0-9]+]], vcc, [[MIDRESULT1]], [[MIDRESULT2]]
 

@@ -30,17 +30,10 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void matchBoolBinOpExpr(ast_matchers::MatchFinder *Finder, bool Value,
-                          StringRef OperatorName, StringRef BooleanId);
+  class Visitor;
 
-  void matchExprBinOpBool(ast_matchers::MatchFinder *Finder, bool Value,
-                          StringRef OperatorName, StringRef BooleanId);
-
-  void matchBoolCompOpExpr(ast_matchers::MatchFinder *Finder, bool Value,
-                           StringRef OperatorName, StringRef BooleanId);
-
-  void matchExprCompOpBool(ast_matchers::MatchFinder *Finder, bool Value,
-                           StringRef OperatorName, StringRef BooleanId);
+  void reportBinOp(const ast_matchers::MatchFinder::MatchResult &Result,
+                   const BinaryOperator *Op);
 
   void matchBoolCondition(ast_matchers::MatchFinder *Finder, bool Value,
                           StringRef BooleanId);
@@ -56,11 +49,6 @@ private:
 
   void matchCompoundIfReturnsBool(ast_matchers::MatchFinder *Finder, bool Value,
                                   StringRef Id);
-
-  void
-  replaceWithExpression(const ast_matchers::MatchFinder::MatchResult &Result,
-                        const CXXBoolLiteralExpr *BoolLiteral, bool UseLHS,
-                        bool Negated = false);
 
   void
   replaceWithThenStatement(const ast_matchers::MatchFinder::MatchResult &Result,

@@ -83,6 +83,9 @@ protected:
   // NegativeImmediates - transform instructions with negative immediates
   bool NegativeImmediates = true;
 
+  // Enable 64-bit vectorization in SLP.
+  unsigned MinVectorRegisterBitWidth = 64;
+
   bool UseAA = false;
   bool PredictableSelectIsExpensive = false;
   bool BalanceFPOps = false;
@@ -190,6 +193,10 @@ public:
   bool requiresStrictAlign() const { return StrictAlign; }
 
   bool isXRaySupported() const override { return true; }
+
+  unsigned getMinVectorRegisterBitWidth() const {
+    return MinVectorRegisterBitWidth;
+  }
 
   bool isX18Reserved() const { return ReserveX18; }
   bool hasFPARMv8() const { return HasFPARMv8; }

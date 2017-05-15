@@ -283,7 +283,6 @@ public:
 
   // Forward propagation info
   const Expression *getDefiningExpr() const { return DefiningExpr; }
-  void setDefiningExpr(const Expression *E) { DefiningExpr = E; }
 
   // Value member set
   bool empty() const { return Members.empty(); }
@@ -2549,6 +2548,19 @@ void NewGVN::verifyMemoryCongruency() const {
           return false;
         if (auto *MemDef = dyn_cast<MemoryDef>(Pair.first))
           return !isInstructionTriviallyDead(MemDef->getMemoryInst());
+
+        // We could have phi nodes which operands are all trivially dead,
+        // so we don't process them.
+        if (auto *MemPHI = dyn_cast<MemoryPhi>(Pair.first)) {
+          for (auto &U : MemPHI->incoming_values()) {
+            if (Instruction *I = dyn_cast<Instruction>(U.get())) {
+              if (!isInstructionTriviallyDead(I))
+                return true;
+            }
+          }
+          return false;
+        }
+
         return true;
       };
 

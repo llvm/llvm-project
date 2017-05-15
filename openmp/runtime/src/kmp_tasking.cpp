@@ -1468,12 +1468,8 @@ kmp_int32 __kmpc_omp_taskwait(ident_t *loc_ref, kmp_int32 gtid) {
   KA_TRACE(10, ("__kmpc_omp_taskwait(enter): T#%d loc=%p\n", gtid, loc_ref));
 
   if (__kmp_tasking_mode != tskm_immediate_exec) {
-    // GEH TODO: shouldn't we have some sort of OMPRAP API calls here to mark
-    // begin wait?
-
     thread = __kmp_threads[gtid];
     taskdata = thread->th.th_current_task;
-
 #if OMPT_SUPPORT && OMPT_TRACE
     ompt_task_id_t my_task_id;
     ompt_parallel_id_t my_parallel_id;
@@ -1527,8 +1523,6 @@ kmp_int32 __kmpc_omp_taskwait(ident_t *loc_ref, kmp_int32 gtid) {
       __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
 #endif /* USE_ITT_BUILD */
 
-    // GEH TODO: shouldn't we have some sort of OMPRAP API calls here to mark
-    // end of wait?
     // Debugger:  The taskwait is completed. Location remains, but thread is
     // negated.
     taskdata->td_taskwait_thread = -taskdata->td_taskwait_thread;
@@ -1565,9 +1559,6 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
                 gtid, loc_ref, end_part));
 
   if (__kmp_tasking_mode != tskm_immediate_exec && __kmp_init_parallel) {
-    // GEH TODO: shouldn't we have some sort of OMPRAP API calls here to mark
-    // begin wait?
-
     thread = __kmp_threads[gtid];
     taskdata = thread->th.th_current_task;
 // Should we model this as a task wait or not?
@@ -1601,8 +1592,6 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
       __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
 #endif /* USE_ITT_BUILD */
 
-    // GEH TODO: shouldn't we have some sort of OMPRAP API calls here to mark
-    // end of wait?
     // Debugger:  The taskwait is completed. Location remains, but thread is
     // negated.
     taskdata->td_taskwait_thread = -taskdata->td_taskwait_thread;

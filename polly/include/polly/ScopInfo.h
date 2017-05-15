@@ -1572,6 +1572,9 @@ private:
   /// The underlying Region.
   Region &R;
 
+  /// The name of the SCoP (identical to the regions name)
+  std::string name;
+
   // Access functions of the SCoP.
   //
   // This owns all the MemoryAccess objects of the Scop created in this pass.
@@ -2201,6 +2204,8 @@ public:
   /// could be executed.
   bool isEmpty() const { return Stmts.empty(); }
 
+  const StringRef getName() const { return name; }
+
   typedef ArrayInfoSetTy::iterator array_iterator;
   typedef ArrayInfoSetTy::const_iterator const_array_iterator;
   typedef iterator_range<ArrayInfoSetTy::iterator> array_range;
@@ -2795,6 +2800,7 @@ public:
   iterator end() { return RegionToScopMap.end(); }
   const_iterator begin() const { return RegionToScopMap.begin(); }
   const_iterator end() const { return RegionToScopMap.end(); }
+  bool empty() const { return RegionToScopMap.empty(); }
 };
 
 struct ScopInfoAnalysis : public AnalysisInfoMixin<ScopInfoAnalysis> {

@@ -11,12 +11,14 @@
 // CHECK-NEXT: Section: dm (0xFF00)
 
 
-// RUN: ld.lld %t -o %t2
+// FIXME: threads are disable because the test is too slow with them (PR32942).
+// RUN: ld.lld %t -o %t2 --no-threads
 // RUN: llvm-readobj -t %t2 | FileCheck --check-prefix=LINKED %s
 
 // Test also with a linker script.
 // RUN: echo "SECTIONS { . = SIZEOF_HEADERS; .text : { *(.text) } }" > %t.script
-// RUN: ld.lld -T %t.script %t -o %t2
+// FIXME: threads are disable because the test is too slow with them (PR32942).
+// RUN: ld.lld -T %t.script %t -o %t2 --no-threads
 // RUN: llvm-readobj -t %t2 | FileCheck --check-prefix=LINKED %s
 
 // Test that _start is in the correct section.

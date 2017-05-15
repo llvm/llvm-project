@@ -613,7 +613,15 @@ public:
                                   bool UseGlobalsGC = true)
       : ModulePass(ID), CompileKernel(CompileKernel || ClEnableKasan),
         Recover(Recover || ClRecover),
-        UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC) {}
+        UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC),
+        // Not a typo: ClWithComdat is almost completely pointless without
+        // ClUseGlobalsGC (because then it only works on modules without
+        // globals, which are rare); it is a prerequisite for ClUseGlobalsGC;
+        // and both suffer from gold PR19002 for which UseGlobalsGC constructor
+        // argument is designed as workaround. Therefore, disable both
+        // ClWithComdat and ClUseGlobalsGC unless the frontend says it's ok to
+        // do globals-gc.
+        UseCtorComdat(UseGlobalsGC && ClWithComdat) {}
   bool runOnModule(Module &M) override;
   static char ID; // Pass identification, replacement for typeid
   StringRef getPassName() const override { return "AddressSanitizerModule"; }
@@ -656,6 +664,7 @@ private:
   bool CompileKernel;
   bool Recover;
   bool UseGlobalsGC;
+  bool UseCtorComdat;
   Type *IntptrTy;
   LLVMContext *C;
   Triple TargetTriple;
@@ -2072,7 +2081,7 @@ bool AddressSanitizerModule::runOnModule(Module &M) {
   // Put the constructor and destructor in comdat if both
   // (1) global instrumentation is not TU-specific
   // (2) target is ELF.
-  if (ClWithComdat && TargetTriple.isOSBinFormatELF() && CtorComdat) {
+  if (UseCtorComdat && TargetTriple.isOSBinFormatELF() && CtorComdat) {
     AsanCtorFunction->setComdat(M.getOrInsertComdat(kAsanModuleCtorName));
     appendToGlobalCtors(M, AsanCtorFunction, kAsanCtorAndDtorPriority,
                         AsanCtorFunction);

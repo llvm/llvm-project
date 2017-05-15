@@ -1,6 +1,7 @@
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o %t.o
 // RUN: echo "SECTIONS { . = SIZEOF_HEADERS; .text : { *(.text) } }" > %t.script
-// RUN: ld.lld -T %t.script %t.o -o %t
+// FIXME: threads are disable because the test is too slow with them (PR32942).
+// RUN: ld.lld -T %t.script %t.o -o %t --no-threads
 // RUN: llvm-readobj -t %t | FileCheck %s
 
 // Test that _start is in the correct section.
