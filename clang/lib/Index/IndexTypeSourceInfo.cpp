@@ -212,7 +212,7 @@ void IndexingContext::indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
 
   if (!DC)
     DC = Parent->getLexicalDeclContext();
-  SourceLocation Loc = NNS.getSourceRange().getBegin();
+  SourceLocation Loc = NNS.getLocalBeginLoc();
 
   switch (NNS.getNestedNameSpecifier()->getKind()) {
   case NestedNameSpecifier::Identifier:
