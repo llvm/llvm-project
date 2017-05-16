@@ -28,7 +28,7 @@ MATH_MANGLE(exp)(double x)
                          dn*0x1.62e42fefa3000p-1), dn*0x1.3de6af278ece6p-42);
 #else
     double dn = BUILTIN_RINT_F64(x * 0x1.71547652b82fep+0);
-    double2 t = fsub(sub(x, dn*0x1.62e42fefa3000p-1), dn*0x1.3de6af278ece6p-42);
+    double2 t = fsub(MATH_MAD(dn, -0x1.62e42fefa3000p-1, x), dn*0x1.3de6af278ece6p-42);
 #endif
 
     double th = t.hi;

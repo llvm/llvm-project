@@ -14,7 +14,7 @@ INLINEATTR CONSTATTR double2
 MATH_PRIVATE(epexpep)(double2 x)
 {
     double dn = BUILTIN_RINT_F64(x.hi * 0x1.71547652b82fep+0);
-    double2 t = fsub(fsub(sub(x, dn*0x1.62e42fefa3000p-1), dn*0x1.3de6af278e000p-42), dn*0x1.9cc01f97b57a0p-83);
+    double2 t = fsub(fsub(fadd(MATH_MAD(dn, -0x1.62e42fefa3000p-1, x.hi), x.lo), dn*0x1.3de6af278e000p-42), dn*0x1.9cc01f97b57a0p-83);
 
     double th = t.hi;
     double p = MATH_MAD(th, MATH_MAD(th, MATH_MAD(th, MATH_MAD(th, 
