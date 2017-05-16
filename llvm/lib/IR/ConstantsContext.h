@@ -22,6 +22,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InlineAsm.h"
@@ -387,31 +388,34 @@ struct ConstantExprKeyType;
 
 template <class ConstantClass> struct ConstantInfo;
 template <> struct ConstantInfo<ConstantExpr> {
-  typedef ConstantExprKeyType ValType;
-  typedef Type TypeClass;
+  using ValType = ConstantExprKeyType;
+  using TypeClass = Type;
 };
 template <> struct ConstantInfo<InlineAsm> {
-  typedef InlineAsmKeyType ValType;
-  typedef PointerType TypeClass;
+  using ValType = InlineAsmKeyType;
+  using TypeClass = PointerType;
 };
 template <> struct ConstantInfo<ConstantArray> {
-  typedef ConstantAggrKeyType<ConstantArray> ValType;
-  typedef ArrayType TypeClass;
+  using ValType = ConstantAggrKeyType<ConstantArray>;
+  using TypeClass = ArrayType;
 };
 template <> struct ConstantInfo<ConstantStruct> {
-  typedef ConstantAggrKeyType<ConstantStruct> ValType;
-  typedef StructType TypeClass;
+  using ValType = ConstantAggrKeyType<ConstantStruct>;
+  using TypeClass = StructType;
 };
 template <> struct ConstantInfo<ConstantVector> {
-  typedef ConstantAggrKeyType<ConstantVector> ValType;
-  typedef VectorType TypeClass;
+  using ValType = ConstantAggrKeyType<ConstantVector>;
+  using TypeClass = VectorType;
 };
 
 template <class ConstantClass> struct ConstantAggrKeyType {
   ArrayRef<Constant *> Operands;
+
   ConstantAggrKeyType(ArrayRef<Constant *> Operands) : Operands(Operands) {}
+
   ConstantAggrKeyType(ArrayRef<Constant *> Operands, const ConstantClass *)
       : Operands(Operands) {}
+
   ConstantAggrKeyType(const ConstantClass *C,
                       SmallVectorImpl<Constant *> &Storage) {
     assert(Storage.empty() && "Expected empty storage");
@@ -437,7 +441,8 @@ template <class ConstantClass> struct ConstantAggrKeyType {
     return hash_combine_range(Operands.begin(), Operands.end());
   }
 
-  typedef typename ConstantInfo<ConstantClass>::TypeClass TypeClass;
+  using TypeClass = typename ConstantInfo<ConstantClass>::TypeClass;
+
   ConstantClass *create(TypeClass *Ty) const {
     return new (Operands.size()) ConstantClass(Ty, Operands);
   }
@@ -457,6 +462,7 @@ struct InlineAsmKeyType {
       : AsmString(AsmString), Constraints(Constraints), FTy(FTy),
         HasSideEffects(HasSideEffects), IsAlignStack(IsAlignStack),
         AsmDialect(AsmDialect) {}
+
   InlineAsmKeyType(const InlineAsm *Asm, SmallVectorImpl<Constant *> &)
       : AsmString(Asm->getAsmString()), Constraints(Asm->getConstraintString()),
         FTy(Asm->getFunctionType()), HasSideEffects(Asm->hasSideEffects()),
@@ -483,7 +489,8 @@ struct InlineAsmKeyType {
                         AsmDialect, FTy);
   }
 
-  typedef ConstantInfo<InlineAsm>::TypeClass TypeClass;
+  using TypeClass = ConstantInfo<InlineAsm>::TypeClass;
+
   InlineAsm *create(TypeClass *Ty) const {
     assert(PointerType::getUnqual(FTy) == Ty);
     return new InlineAsm(FTy, AsmString, Constraints, HasSideEffects,
@@ -507,11 +514,13 @@ struct ConstantExprKeyType {
       : Opcode(Opcode), SubclassOptionalData(SubclassOptionalData),
         SubclassData(SubclassData), Ops(Ops), Indexes(Indexes),
         ExplicitTy(ExplicitTy) {}
+
   ConstantExprKeyType(ArrayRef<Constant *> Operands, const ConstantExpr *CE)
       : Opcode(CE->getOpcode()),
         SubclassOptionalData(CE->getRawSubclassOptionalData()),
         SubclassData(CE->isCompare() ? CE->getPredicate() : 0), Ops(Operands),
         Indexes(CE->hasIndices() ? CE->getIndices() : ArrayRef<unsigned>()) {}
+
   ConstantExprKeyType(const ConstantExpr *CE,
                       SmallVectorImpl<Constant *> &Storage)
       : Opcode(CE->getOpcode()),
@@ -553,7 +562,8 @@ struct ConstantExprKeyType {
                         hash_combine_range(Indexes.begin(), Indexes.end()));
   }
 
-  typedef ConstantInfo<ConstantExpr>::TypeClass TypeClass;
+  using TypeClass = ConstantInfo<ConstantExpr>::TypeClass;
+
   ConstantExpr *create(TypeClass *Ty) const {
     switch (Opcode) {
     default:
@@ -594,16 +604,17 @@ struct ConstantExprKeyType {
 
 template <class ConstantClass> class ConstantUniqueMap {
 public:
-  typedef typename ConstantInfo<ConstantClass>::ValType ValType;
-  typedef typename ConstantInfo<ConstantClass>::TypeClass TypeClass;
-  typedef std::pair<TypeClass *, ValType> LookupKey;
+  using ValType = typename ConstantInfo<ConstantClass>::ValType;
+  using TypeClass = typename ConstantInfo<ConstantClass>::TypeClass;
+  using LookupKey = std::pair<TypeClass *, ValType>;
 
   /// Key and hash together, so that we compute the hash only once and reuse it.
-  typedef std::pair<unsigned, LookupKey> LookupKeyHashed;
+  using LookupKeyHashed = std::pair<unsigned, LookupKey>;
 
 private:
   struct MapInfo {
-    typedef DenseMapInfo<ConstantClass *> ConstantClassInfo;
+    using ConstantClassInfo = DenseMapInfo<ConstantClass *>;
+
     static inline ConstantClass *getEmptyKey() {
       return ConstantClassInfo::getEmptyKey();
     }
@@ -643,7 +654,7 @@ private:
   };
 
 public:
-  typedef DenseSet<ConstantClass *, MapInfo> MapTy;
+  using MapTy = DenseSet<ConstantClass *, MapInfo>;
 
 private:
   MapTy Map;

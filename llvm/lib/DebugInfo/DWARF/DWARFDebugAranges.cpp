@@ -54,9 +54,8 @@ void DWARFDebugAranges::generate(DWARFContext *CTX) {
     if (ParsedCUOffsets.insert(CUOffset).second) {
       DWARFAddressRangesVector CURanges;
       CU->collectAddressRanges(CURanges);
-      for (const auto &R : CURanges) {
-        appendRange(CUOffset, R.first, R.second);
-      }
+      for (const auto &R : CURanges)
+        appendRange(CUOffset, R.LowPC, R.HighPC);
     }
   }
 

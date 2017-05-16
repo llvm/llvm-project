@@ -639,7 +639,7 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 // We are compatible with ld.gold because it's easier to implement.
 uint32_t ScriptParser::parseFill(StringRef Tok) {
   uint32_t V = 0;
-  if (Tok.getAsInteger(0, V))
+  if (!to_integer(Tok, V))
     setError("invalid filler expression: " + Tok);
 
   uint32_t Buf;
@@ -778,23 +778,23 @@ static Optional<uint64_t> parseInt(StringRef Tok) {
 
   // Hexadecimal
   uint64_t Val;
-  if (Tok.startswith_lower("0x") && !Tok.substr(2).getAsInteger(16, Val))
+  if (Tok.startswith_lower("0x") && to_integer(Tok.substr(2), Val, 16))
     return Val;
-  if (Tok.endswith_lower("H") && !Tok.drop_back().getAsInteger(16, Val))
+  if (Tok.endswith_lower("H") && to_integer(Tok.drop_back(), Val, 16))
     return Val;
 
   // Decimal
   if (Tok.endswith_lower("K")) {
-    if (Tok.drop_back().getAsInteger(10, Val))
+    if (!to_integer(Tok.drop_back(), Val, 10))
       return None;
     return Val * 1024;
   }
   if (Tok.endswith_lower("M")) {
-    if (Tok.drop_back().getAsInteger(10, Val))
+    if (!to_integer(Tok.drop_back(), Val, 10))
       return None;
     return Val * 1024 * 1024;
   }
-  if (Tok.getAsInteger(10, Val))
+  if (!to_integer(Tok, Val, 10))
     return None;
   return Val;
 }

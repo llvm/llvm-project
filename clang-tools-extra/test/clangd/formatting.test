@@ -1,4 +1,4 @@
-# RUN: clangd < %s | FileCheck %s
+# RUN: clangd -run-synchronously < %s | FileCheck %s
 # It is absolutely vital that this file has CRLF line endings.
 #
 Content-Length: 125

@@ -734,3 +734,70 @@ define i32 @test54(i32 %a, i32 %b) {
   %or = or i32 %and, %xor
   ret i32 %or
 }
+
+define i8 @lshr_perfect_mask(i8 %x) {
+; CHECK-LABEL: @lshr_perfect_mask(
+; CHECK-NEXT:    [[SH:%.*]] = lshr i8 %x, 5
+; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[SH]], 7
+; CHECK-NEXT:    ret i8 [[MASK]]
+;
+  %sh = lshr i8 %x, 5
+  %mask = and i8 %sh, 7  ; 0x07
+  ret i8 %mask
+}
+
+define <2 x i8> @lshr_oversized_mask_splat(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_oversized_mask_splat(
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> %x, <i8 5, i8 5>
+; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i8> [[SH]], <i8 -121, i8 -121>
+; CHECK-NEXT:    ret <2 x i8> [[MASK]]
+;
+  %sh = lshr <2 x i8> %x, <i8 5, i8 5>
+  %mask = and <2 x i8> %sh, <i8 135, i8 135>  ; 0x87
+  ret <2 x i8> %mask
+}
+
+define i8 @lshr_undersized_mask(i8 %x) {
+; CHECK-LABEL: @lshr_undersized_mask(
+; CHECK-NEXT:    [[SH:%.*]] = lshr i8 %x, 5
+; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[SH]], -2
+; CHECK-NEXT:    ret i8 [[MASK]]
+;
+  %sh = lshr i8 %x, 5
+  %mask = and i8 %sh, -2  ; 0xFE
+  ret i8 %mask
+}
+
+define <2 x i8> @shl_perfect_mask_splat(<2 x i8> %x) {
+; CHECK-LABEL: @shl_perfect_mask_splat(
+; CHECK-NEXT:    [[SH:%.*]] = shl <2 x i8> %x, <i8 6, i8 6>
+; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i8> [[SH]], <i8 -64, i8 -64>
+; CHECK-NEXT:    ret <2 x i8> [[MASK]]
+;
+  %sh = shl <2 x i8> %x, <i8 6, i8 6>
+  %mask = and <2 x i8> %sh, <i8 192, i8 192>  ; 0xC0
+  ret <2 x i8> %mask
+}
+
+define i8 @shl_oversized_mask(i8 %x) {
+; CHECK-LABEL: @shl_oversized_mask(
+; CHECK-NEXT:    [[SH:%.*]] = shl i8 %x, 6
+; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[SH]], -61
+; CHECK-NEXT:    ret i8 [[MASK]]
+;
+  %sh = shl i8 %x, 6
+  %mask = and i8 %sh, 195  ; 0xC3
+  ret i8 %mask
+}
+
+define <2 x i8> @shl_undersized_mask_splat(<2 x i8> %x) {
+; CHECK-LABEL: @shl_undersized_mask_splat(
+; CHECK-NEXT:    [[SH:%.*]] = shl <2 x i8> [[X:%.*]], <i8 6, i8 6>
+; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i8> [[SH]], <i8 -120, i8 -120>
+; CHECK-NEXT:    ret <2 x i8> [[MASK]]
+;
+  %sh = shl <2 x i8> %x, <i8 6, i8 6>
+  %mask = and <2 x i8> %sh, <i8 136, i8 136>  ; 0x88
+  ret <2 x i8> %mask
+}
+

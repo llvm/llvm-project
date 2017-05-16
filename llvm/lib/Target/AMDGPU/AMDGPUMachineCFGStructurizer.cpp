@@ -58,7 +58,6 @@ private:
 
   static unsigned phiInfoElementGetDest(PHIInfoElementT *Info);
   static void phiInfoElementSetDef(PHIInfoElementT *Info, unsigned NewDef);
-  static DebugLoc phiInfoElementGetDebugLoc(PHIInfoElementT *Info);
   static PHISourcesT &phiInfoElementGetSources(PHIInfoElementT *Info);
   static void phiInfoElementAddSource(PHIInfoElementT *Info, unsigned SourceReg,
                                       MachineBasicBlock *SourceMBB);
@@ -125,10 +124,6 @@ void PHILinearize::phiInfoElementSetDef(PHIInfoElementT *Info,
   Info->DestReg = NewDef;
 }
 
-DebugLoc PHILinearize::phiInfoElementGetDebugLoc(PHIInfoElementT *Info) {
-  return Info->DL;
-}
-
 PHILinearize::PHISourcesT &
 PHILinearize::phiInfoElementGetSources(PHIInfoElementT *Info) {
   return Info->Sources;
@@ -141,9 +136,11 @@ void PHILinearize::phiInfoElementAddSource(PHIInfoElementT *Info,
   // sources, because we cannot have different registers with
   // identical predecessors, but we can have the same register for
   // multiple predecessors.
+#if !defined(NDEBUG)
   for (auto SI : phiInfoElementGetSources(Info)) {
     assert((SI.second != SourceMBB || SourceReg == SI.first));
   }
+#endif
 
   phiInfoElementGetSources(Info).insert(PHISourceT(SourceReg, SourceMBB));
 }

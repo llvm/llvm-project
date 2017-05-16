@@ -1074,6 +1074,10 @@ public:
   /// correctly named definition after the renamed definition.
   llvm::SmallPtrSet<const NamedDecl *, 4> TypoCorrectedFunctionDefinitions;
 
+  /// Stack of types that correspond to the parameter entities that are
+  /// currently being copy-initialized. Can be empty.
+  llvm::SmallVector<QualType, 4> CurrentParameterCopyTypes;
+
   void ReadMethodPool(Selector Sel);
   void updateOutOfDateSelector(Selector Sel);
 

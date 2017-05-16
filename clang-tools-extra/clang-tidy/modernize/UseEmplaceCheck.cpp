@@ -24,6 +24,8 @@ const auto DefaultContainersWithPushBack =
     "::std::vector; ::std::list; ::std::deque";
 const auto DefaultSmartPointers =
     "::std::shared_ptr; ::std::unique_ptr; ::std::auto_ptr; ::std::weak_ptr";
+const auto DefaultTupleTypes = "::std::pair; ::std::tuple";
+const auto DefaultTupleMakeFunctions = "::std::make_pair; ::std::make_tuple";
 } // namespace
 
 UseEmplaceCheck::UseEmplaceCheck(StringRef Name, ClangTidyContext *Context)
@@ -31,7 +33,11 @@ UseEmplaceCheck::UseEmplaceCheck(StringRef Name, ClangTidyContext *Context)
       ContainersWithPushBack(utils::options::parseStringList(Options.get(
           "ContainersWithPushBack", DefaultContainersWithPushBack))),
       SmartPointers(utils::options::parseStringList(
-          Options.get("SmartPointers", DefaultSmartPointers))) {}
+          Options.get("SmartPointers", DefaultSmartPointers))),
+      TupleTypes(utils::options::parseStringList(
+          Options.get("TupleTypes", DefaultTupleTypes))),
+      TupleMakeFunctions(utils::options::parseStringList(
+          Options.get("TupleMakeFunctions", DefaultTupleMakeFunctions))) {}
 
 void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus11)
@@ -87,20 +93,23 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
           .bind("ctor");
   auto HasConstructExpr = has(ignoringImplicit(SoughtConstructExpr));
 
-  auto MakePair = ignoringImplicit(
-      callExpr(callee(expr(ignoringImplicit(
-          declRefExpr(unless(hasExplicitTemplateArgs()),
-                      to(functionDecl(hasName("::std::make_pair"))))
-      )))).bind("make_pair"));
+  auto MakeTuple = ignoringImplicit(
+      callExpr(
+          callee(expr(ignoringImplicit(declRefExpr(
+              unless(hasExplicitTemplateArgs()),
+              to(functionDecl(hasAnyName(SmallVector<StringRef, 2>(
+                  TupleMakeFunctions.begin(), TupleMakeFunctions.end())))))))))
+          .bind("make"));
 
-  // make_pair can return type convertible to container's element type.
+  // make_something can return type convertible to container's element type.
   // Allow the conversion only on containers of pairs.
-  auto MakePairCtor = ignoringImplicit(cxxConstructExpr(
-      has(materializeTemporaryExpr(MakePair)),
-      hasDeclaration(cxxConstructorDecl(ofClass(hasName("::std::pair"))))));
+  auto MakeTupleCtor = ignoringImplicit(cxxConstructExpr(
+      has(materializeTemporaryExpr(MakeTuple)),
+      hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(
+          SmallVector<StringRef, 2>(TupleTypes.begin(), TupleTypes.end())))))));
 
   auto SoughtParam = materializeTemporaryExpr(
-      anyOf(has(MakePair), has(MakePairCtor),
+      anyOf(has(MakeTuple), has(MakeTupleCtor),
             HasConstructExpr, has(cxxFunctionalCastExpr(HasConstructExpr))));
 
   Finder->addMatcher(cxxMemberCallExpr(CallPushBack, has(SoughtParam),
@@ -112,8 +121,8 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
 void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CXXMemberCallExpr>("call");
   const auto *InnerCtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
-  const auto *MakePairCall = Result.Nodes.getNodeAs<CallExpr>("make_pair");
-  assert((InnerCtorCall || MakePairCall) && "No push_back parameter matched");
+  const auto *MakeCall = Result.Nodes.getNodeAs<CallExpr>("make");
+  assert((InnerCtorCall || MakeCall) && "No push_back parameter matched");
 
   const auto FunctionNameSourceRange = CharSourceRange::getCharRange(
       Call->getExprLoc(), Call->getArg(0)->getExprLoc());
@@ -123,20 +132,20 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   if (FunctionNameSourceRange.getBegin().isMacroID())
     return;
 
-  const auto *EmplacePrefix = MakePairCall ? "emplace_back" : "emplace_back(";
+  const auto *EmplacePrefix = MakeCall ? "emplace_back" : "emplace_back(";
   Diag << FixItHint::CreateReplacement(FunctionNameSourceRange, EmplacePrefix);
 
   const SourceRange CallParensRange =
-      MakePairCall ? SourceRange(MakePairCall->getCallee()->getLocEnd(),
-                                 MakePairCall->getRParenLoc())
-                   : InnerCtorCall->getParenOrBraceRange();
+      MakeCall ? SourceRange(MakeCall->getCallee()->getLocEnd(),
+                             MakeCall->getRParenLoc())
+               : InnerCtorCall->getParenOrBraceRange();
 
   // Finish if there is no explicit constructor call.
   if (CallParensRange.getBegin().isInvalid())
     return;
 
   const SourceLocation ExprBegin =
-      MakePairCall ? MakePairCall->getExprLoc() : InnerCtorCall->getExprLoc();
+      MakeCall ? MakeCall->getExprLoc() : InnerCtorCall->getExprLoc();
 
   // Range for constructor name and opening brace.
   const auto ParamCallSourceRange =
@@ -152,6 +161,10 @@ void UseEmplaceCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 utils::options::serializeStringList(ContainersWithPushBack));
   Options.store(Opts, "SmartPointers",
                 utils::options::serializeStringList(SmartPointers));
+  Options.store(Opts, "TupleTypes",
+                utils::options::serializeStringList(TupleTypes));
+  Options.store(Opts, "TupleMakeFunctions",
+                utils::options::serializeStringList(TupleMakeFunctions));
 }
 
 } // namespace modernize

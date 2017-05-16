@@ -19119,7 +19119,7 @@ static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
   // registration, or the .set_setframe offset.
   MCSymbol *OffsetSym =
       MF.getMMI().getContext().getOrCreateParentFrameOffsetSymbol(
-          GlobalValue::getRealLinkageName(Fn->getName()));
+          GlobalValue::dropLLVMManglingEscape(Fn->getName()));
   SDValue OffsetSymVal = DAG.getMCSymbol(OffsetSym, PtrVT);
   SDValue ParentFrameOffset =
       DAG.getNode(ISD::LOCAL_RECOVER, dl, PtrVT, OffsetSymVal);
@@ -19964,7 +19964,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
     SDValue Op1 = Op.getOperand(1);
     auto *Fn = cast<Function>(cast<GlobalAddressSDNode>(Op1)->getGlobal());
     MCSymbol *LSDASym = MF.getMMI().getContext().getOrCreateLSDASymbol(
-        GlobalValue::getRealLinkageName(Fn->getName()));
+        GlobalValue::dropLLVMManglingEscape(Fn->getName()));
 
     // Generate a simple absolute symbol reference. This intrinsic is only
     // supported on 32-bit Windows, which isn't PIC.
