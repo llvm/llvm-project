@@ -80,7 +80,7 @@ const uptr AllocatorSize = 0x10000000000ULL;  // 1T.
 const uptr AllocatorSize = 0x40000000000ULL;  // 4T.
 # endif
 typedef DefaultSizeClassMap SizeClassMap;
-struct AP {
+struct AP64 {
   static const uptr kSpaceBeg = AllocatorSpace;
   static const uptr kSpaceSize = AllocatorSize;
   static const uptr kMetadataSize = 0;
@@ -89,7 +89,7 @@ struct AP {
   static const uptr kFlags =
       SizeClassAllocator64FlagMasks::kRandomShuffleChunks;
 };
-typedef SizeClassAllocator64<AP> PrimaryAllocator;
+typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 #else
 // Currently, the 32-bit Sanitizer allocator has not yet benefited from all the
 // security improvements brought to the 64-bit one. This makes the 32-bit
@@ -102,8 +102,18 @@ typedef FlatByteMap<NumRegions> ByteMap;
 typedef TwoLevelByteMap<(NumRegions >> 12), 1 << 12> ByteMap;
 # endif  // SANITIZER_WORDSIZE
 typedef DefaultSizeClassMap SizeClassMap;
-typedef SizeClassAllocator32<0, SANITIZER_MMAP_RANGE_SIZE, 0, SizeClassMap,
-    RegionSizeLog, ByteMap> PrimaryAllocator;
+struct AP32 {
+  static const uptr kSpaceBeg = 0;
+  static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
+  static const uptr kMetadataSize = 0;
+  typedef __scudo::SizeClassMap SizeClassMap;
+  static const uptr kRegionSizeLog = RegionSizeLog;
+  typedef __scudo::ByteMap ByteMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags =
+      SizeClassAllocator32FlagMasks::kRandomShuffleChunks;
+};
+typedef SizeClassAllocator32<AP32> PrimaryAllocator;
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
 #include "scudo_allocator_secondary.h"
