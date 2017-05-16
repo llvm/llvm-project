@@ -136,6 +136,9 @@ public:
   lldb::ExpressionVariableSP
   GetResultAfterDematerialization(ExecutionContextScope *exe_scope) override;
 
+  void WillStartExecuting() override;
+  void DidFinishExecuting() override;
+
 private:
   //------------------------------------------------------------------
   /// Populate m_in_cplusplus_method and m_in_objectivec_method based on the
