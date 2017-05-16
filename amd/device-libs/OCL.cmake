@@ -50,6 +50,11 @@ macro(opencl_bc_lib name)
     LANGUAGE "OCL" LINKER_LANGUAGE "OCL")
   set(output_name "${name}.amdgcn${BC_EXT}")
 
+  if(NOT ROCM_DEVICELIB_INCLUDE_TESTS)
+    set_target_properties(${lib_tgt} PROPERTIES
+      ARCHIVE_OUTPUT_NAME "${name}")
+  endif(NOT ROCM_DEVICELIB_INCLUDE_TESTS)
+
   if (TARGET prepare-builtins)
     add_dependencies(${lib_tgt} prepare-builtins)
   endif()
