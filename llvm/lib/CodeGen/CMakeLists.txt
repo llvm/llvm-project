@@ -120,6 +120,7 @@ add_llvm_library(LLVMCodeGen
   SafeStack.cpp
   SafeStackColoring.cpp
   SafeStackLayout.cpp
+  ScalarizeMaskedMemIntrin.cpp
   ScheduleDAG.cpp
   ScheduleDAGInstrs.cpp
   ScheduleDAGPrinter.cpp

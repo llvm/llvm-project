@@ -15,7 +15,6 @@
 #ifndef LLVM_IR_DIAGNOSTICINFO_H
 #define LLVM_IR_DIAGNOSTICINFO_H
 
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -120,18 +119,18 @@ public:
   virtual void print(DiagnosticPrinter &DP) const = 0;
 };
 
-typedef std::function<void(const DiagnosticInfo &)> DiagnosticHandlerFunction;
+using DiagnosticHandlerFunction = std::function<void(const DiagnosticInfo &)>;
 
 /// Diagnostic information for inline asm reporting.
 /// This is basically a message and an optional location.
 class DiagnosticInfoInlineAsm : public DiagnosticInfo {
 private:
   /// Optional line information. 0 if not set.
-  unsigned LocCookie;
+  unsigned LocCookie = 0;
   /// Message to be reported.
   const Twine &MsgStr;
   /// Optional origin of the problem.
-  const Instruction *Instr;
+  const Instruction *Instr = nullptr;
 
 public:
   /// \p MsgStr is the message to be reported to the frontend.
@@ -139,8 +138,7 @@ public:
   /// for the whole life time of the Diagnostic.
   DiagnosticInfoInlineAsm(const Twine &MsgStr,
                           DiagnosticSeverity Severity = DS_Error)
-      : DiagnosticInfo(DK_InlineAsm, Severity), LocCookie(0), MsgStr(MsgStr),
-        Instr(nullptr) {}
+      : DiagnosticInfo(DK_InlineAsm, Severity), MsgStr(MsgStr) {}
 
   /// \p LocCookie if non-zero gives the line number for this report.
   /// \p MsgStr gives the message.
@@ -149,7 +147,7 @@ public:
   DiagnosticInfoInlineAsm(unsigned LocCookie, const Twine &MsgStr,
                           DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_InlineAsm, Severity), LocCookie(LocCookie),
-        MsgStr(MsgStr), Instr(nullptr) {}
+        MsgStr(MsgStr) {}
 
   /// \p Instr gives the original instruction that triggered the diagnostic.
   /// \p MsgStr gives the message.
@@ -294,10 +292,10 @@ public:
   DiagnosticInfoSampleProfile(StringRef FileName, const Twine &Msg,
                               DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_SampleProfile, Severity), FileName(FileName),
-        LineNum(0), Msg(Msg) {}
+        Msg(Msg) {}
   DiagnosticInfoSampleProfile(const Twine &Msg,
                               DiagnosticSeverity Severity = DS_Error)
-      : DiagnosticInfo(DK_SampleProfile, Severity), LineNum(0), Msg(Msg) {}
+      : DiagnosticInfo(DK_SampleProfile, Severity), Msg(Msg) {}
 
   /// \see DiagnosticInfo::print.
   void print(DiagnosticPrinter &DP) const override;
@@ -316,7 +314,7 @@ private:
 
   /// Line number where the diagnostic occurred. If 0, no line number will
   /// be emitted in the message.
-  unsigned LineNum;
+  unsigned LineNum = 0;
 
   /// Message to report.
   const Twine &Msg;
@@ -351,8 +349,9 @@ class DiagnosticLocation {
   StringRef Filename;
   unsigned Line = 0;
   unsigned Column = 0;
+
 public:
-  DiagnosticLocation() {}
+  DiagnosticLocation() = default;
   DiagnosticLocation(const DebugLoc &DL);
   DiagnosticLocation(const DISubprogram *SP);
 
@@ -796,6 +795,7 @@ private:
                                       const Twine &Msg)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisFPCommute,
                                    PassName, Fn, Loc, Msg) {}
+
   friend void emitOptimizationRemarkAnalysisFPCommute(
       LLVMContext &Ctx, const char *PassName, const Function &Fn,
       const DiagnosticLocation &Loc, const Twine &Msg);
@@ -1012,6 +1012,7 @@ public:
 
   void print(DiagnosticPrinter &DP) const override;
 };
+
 } // end namespace llvm
 
 #endif // LLVM_IR_DIAGNOSTICINFO_H

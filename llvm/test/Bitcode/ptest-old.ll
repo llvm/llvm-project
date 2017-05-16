@@ -1,5 +1,6 @@
 ; RUN: llvm-as < %s | llvm-dis | FileCheck %s
 ; RUN: verify-uselistorder < %s
+; REQUIRES: x86
 
 define i32 @foo(<4 x float> %bar) nounwind {
 entry:

@@ -59,6 +59,11 @@ statistics from the file. If that fails then the process will quit.
 #include <signal.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+
+#include <iostream>
+#include <fstream>
+#include <vector>
+
 // Platform detection. Copied from FuzzerInternal.h
 #ifdef __linux__
 #define LIBFUZZER_LINUX 1
@@ -245,17 +250,39 @@ extern "C" size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize) {
   return 0;
 }
 
+// Execute any files provided as parameters.
+int ExecuteFilesOnyByOne(int argc, char **argv) {
+  for (int i = 1; i < argc; i++) {
+    std::ifstream in(argv[i]);
+    in.seekg(0, in.end);
+    size_t length = in.tellg();
+    in.seekg (0, in.beg);
+    std::cout << "Reading " << length << " bytes from " << argv[i] << std::endl;
+    // Allocate exactly length bytes so that we reliably catch buffer overflows.
+    std::vector<char> bytes(length);
+    in.read(bytes.data(), bytes.size());
+    assert(in);
+    LLVMFuzzerTestOneInput(reinterpret_cast<const uint8_t *>(bytes.data()),
+                           bytes.size());
+    std::cout << "Execution successfull" << std::endl;
+  }
+  return 0;
+}
+
 int main(int argc, char **argv) {
-  fprintf(stderr, "======================= INFO =========================\n"
-                  "This binary is built for AFL-fuzz.\n"
-                  "To run the target function on a single input execute this:\n"
-                  "  %s < INPUT_FILE\n"
-                  "To run the fuzzing execute this:\n"
-                  "  afl-fuzz [afl-flags] %s [N] "
-                  "-- run N fuzzing iterations before "
-                  "re-spawning the process (default: 1000)\n"
-                  "======================================================\n",
-          argv[0], argv[0]);
+  fprintf(stderr,
+      "======================= INFO =========================\n"
+      "This binary is built for AFL-fuzz.\n"
+      "To run the target function on individual input(s) execute this:\n"
+      "  %s < INPUT_FILE\n"
+      "or\n"
+      "  %s INPUT_FILE1 [INPUT_FILE2 ... ]\n"
+      "To fuzz with afl-fuzz execute this:\n"
+      "  afl-fuzz [afl-flags] %s [-N]\n"
+      "afl-fuzz will run N iterations before "
+      "re-spawning the process (default: 1000)\n"
+      "======================================================\n",
+          argv[0], argv[0], argv[0]);
   if (LLVMFuzzerInitialize)
     LLVMFuzzerInitialize(&argc, &argv);
   // Do any other expensive one-time initialization here.
@@ -266,8 +293,14 @@ int main(int argc, char **argv) {
   __afl_manual_init();
 
   int N = 1000;
-  if (argc >= 2)
-    N = atoi(argv[1]);
+  if (argc == 2 && argv[1][0] == '-')
+      N = atoi(argv[1] + 1);
+  else if(argc == 2 && (N = atoi(argv[1])) > 0)
+      fprintf(stderr, "WARNING: using the deprecated call style `%s %d`\n",
+              argv[0], N);
+  else if (argc > 1)
+    return ExecuteFilesOnyByOne(argc, argv);
+
   assert(N > 0);
   time_t unit_time_secs;
   int num_runs = 0;

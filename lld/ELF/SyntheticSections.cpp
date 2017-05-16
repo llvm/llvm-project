@@ -1261,15 +1261,12 @@ template <class ELFT> void RelocationSection<ELFT>::finalizeContents() {
   this->OutSec->Link = this->Link;
 }
 
-template <class ELFT>
-SymbolTableSection<ELFT>::SymbolTableSection(StringTableSection &StrTabSec)
+SymbolTableBaseSection::SymbolTableBaseSection(StringTableSection &StrTabSec)
     : SyntheticSection(StrTabSec.isDynamic() ? (uint64_t)SHF_ALLOC : 0,
                        StrTabSec.isDynamic() ? SHT_DYNSYM : SHT_SYMTAB,
                        Config->Wordsize,
                        StrTabSec.isDynamic() ? ".dynsym" : ".symtab"),
-      StrTabSec(StrTabSec) {
-  this->Entsize = sizeof(Elf_Sym);
-}
+      StrTabSec(StrTabSec) {}
 
 // Orders symbols according to their positions in the GOT,
 // in compliance with MIPS ABI rules.
@@ -1291,7 +1288,7 @@ static bool sortMipsSymbols(const SymbolTableEntry &L,
 // symbols precede global symbols, so we sort symbol entries in this
 // function. (For .dynsym, we don't do that because symbols for
 // dynamic linking are inherently all globals.)
-template <class ELFT> void SymbolTableSection<ELFT>::finalizeContents() {
+void SymbolTableBaseSection::finalizeContents() {
   this->OutSec->Link = StrTabSec.OutSec->SectionIndex;
 
   // If it is a .dynsym, there should be no local symbols, but we need
@@ -1301,9 +1298,9 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalizeContents() {
     // Because the first symbol entry is a null entry, 1 is the first.
     this->OutSec->Info = 1;
 
-    if (In<ELFT>::GnuHashTab) {
+    if (InX::GnuHashTab) {
       // NB: It also sorts Symbols to meet the GNU hash table requirements.
-      In<ELFT>::GnuHashTab->addSymbols(Symbols);
+      InX::GnuHashTab->addSymbols(Symbols);
     } else if (Config->EMachine == EM_MIPS) {
       std::stable_sort(Symbols.begin(), Symbols.end(), sortMipsSymbols);
     }
@@ -1315,7 +1312,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalizeContents() {
   }
 }
 
-template <class ELFT> void SymbolTableSection<ELFT>::postThunkContents() {
+void SymbolTableBaseSection::postThunkContents() {
   if (this->Type == SHT_DYNSYM)
     return;
   // move all local symbols before global symbols.
@@ -1328,7 +1325,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::postThunkContents() {
   this->OutSec->Info = NumLocals + 1;
 }
 
-template <class ELFT> void SymbolTableSection<ELFT>::addSymbol(SymbolBody *B) {
+void SymbolTableBaseSection::addSymbol(SymbolBody *B) {
   // Adding a local symbol to a .dynsym is a bug.
   assert(this->Type != SHT_DYNSYM || !B->isLocal());
 
@@ -1336,8 +1333,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::addSymbol(SymbolBody *B) {
   Symbols.push_back({B, StrTabSec.addString(B->getName(), HashIt)});
 }
 
-template <class ELFT>
-size_t SymbolTableSection<ELFT>::getSymbolIndex(SymbolBody *Body) {
+size_t SymbolTableBaseSection::getSymbolIndex(SymbolBody *Body) {
   auto I = llvm::find_if(Symbols, [&](const SymbolTableEntry &E) {
     if (E.Symbol == Body)
       return true;
@@ -1351,6 +1347,12 @@ size_t SymbolTableSection<ELFT>::getSymbolIndex(SymbolBody *Body) {
   if (I == Symbols.end())
     return 0;
   return I - Symbols.begin() + 1;
+}
+
+template <class ELFT>
+SymbolTableSection<ELFT>::SymbolTableSection(StringTableSection &StrTabSec)
+    : SymbolTableBaseSection(StrTabSec) {
+  this->Entsize = sizeof(Elf_Sym);
 }
 
 // Write the internal symbol table contents to the output symbol table.
@@ -1445,13 +1447,12 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
 // DSOs very quickly. If you are sure that your dynamic linker knows
 // about .gnu.hash, you want to specify -hash-style=gnu. Otherwise, a
 // safe bet is to specify -hash-style=both for backward compatibilty.
-template <class ELFT>
-GnuHashTableSection<ELFT>::GnuHashTableSection()
+GnuHashTableSection::GnuHashTableSection()
     : SyntheticSection(SHF_ALLOC, SHT_GNU_HASH, Config->Wordsize, ".gnu.hash") {
 }
 
-template <class ELFT> void GnuHashTableSection<ELFT>::finalizeContents() {
-  this->OutSec->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
+void GnuHashTableSection::finalizeContents() {
+  this->OutSec->Link = InX::DynSymTab->OutSec->SectionIndex;
 
   // Computes bloom filter size in word size. We want to allocate 8
   // bits for each symbol. It must be a power of two.
@@ -1466,11 +1467,10 @@ template <class ELFT> void GnuHashTableSection<ELFT>::finalizeContents() {
   Size += Symbols.size() * 4;           // Hash values
 }
 
-template <class ELFT>
-void GnuHashTableSection<ELFT>::writeTo(uint8_t *Buf) {
+void GnuHashTableSection::writeTo(uint8_t *Buf) {
   // Write a header.
   write32(Buf, NBuckets, Config->Endianness);
-  write32(Buf + 4, In<ELFT>::DynSymTab->getNumSymbols() - Symbols.size(),
+  write32(Buf + 4, InX::DynSymTab->getNumSymbols() - Symbols.size(),
           Config->Endianness);
   write32(Buf + 8, MaskWords, Config->Endianness);
   write32(Buf + 12, getShift2(), Config->Endianness);
@@ -1489,8 +1489,7 @@ void GnuHashTableSection<ELFT>::writeTo(uint8_t *Buf) {
 //
 // [1] Ulrich Drepper (2011), "How To Write Shared Libraries" (Ver. 4.1.2),
 //     p.9, https://www.akkadia.org/drepper/dsohowto.pdf
-template <class ELFT>
-void GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *Buf) {
+void GnuHashTableSection::writeBloomFilter(uint8_t *Buf) {
   const unsigned C = Config->Wordsize * 8;
   for (const Entry &Sym : Symbols) {
     size_t I = (Sym.Hash / C) & (MaskWords - 1);
@@ -1501,8 +1500,7 @@ void GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *Buf) {
   }
 }
 
-template <class ELFT>
-void GnuHashTableSection<ELFT>::writeHashTable(uint8_t *Buf) {
+void GnuHashTableSection::writeHashTable(uint8_t *Buf) {
   // Group symbols by hash value.
   std::vector<std::vector<Entry>> Syms(NBuckets);
   for (const Entry &Ent : Symbols)
@@ -1555,8 +1553,7 @@ static size_t getBucketSize(size_t NumSymbols) {
 // Add symbols to this symbol hash table. Note that this function
 // destructively sort a given vector -- which is needed because
 // GNU-style hash table places some sorting requirements.
-template <class ELFT>
-void GnuHashTableSection<ELFT>::addSymbols(std::vector<SymbolTableEntry> &V) {
+void GnuHashTableSection::addSymbols(std::vector<SymbolTableEntry> &V) {
   // We cannot use 'auto' for Mid because GCC 6.1 cannot deduce
   // its type correctly.
   std::vector<SymbolTableEntry>::iterator Mid =
@@ -2243,10 +2240,12 @@ BuildIdSection *InX::BuildId;
 InputSection *InX::Common;
 SyntheticSection *InX::Dynamic;
 StringTableSection *InX::DynStrTab;
+SymbolTableBaseSection *InX::DynSymTab;
 InputSection *InX::Interp;
 GdbIndexSection *InX::GdbIndex;
 GotBaseSection *InX::Got;
 GotPltSection *InX::GotPlt;
+GnuHashTableSection *InX::GnuHashTab;
 IgotPltSection *InX::IgotPlt;
 MipsGotSection *InX::MipsGot;
 MipsRldMapSection *InX::MipsRldMap;
@@ -2254,6 +2253,7 @@ PltSection *InX::Plt;
 PltSection *InX::Iplt;
 StringTableSection *InX::ShStrTab;
 StringTableSection *InX::StrTab;
+SymbolTableBaseSection *InX::SymTab;
 
 template void PltSection::addEntry<ELF32LE>(SymbolBody &Sym);
 template void PltSection::addEntry<ELF32BE>(SymbolBody &Sym);
@@ -2317,11 +2317,6 @@ template class elf::SymbolTableSection<ELF32LE>;
 template class elf::SymbolTableSection<ELF32BE>;
 template class elf::SymbolTableSection<ELF64LE>;
 template class elf::SymbolTableSection<ELF64BE>;
-
-template class elf::GnuHashTableSection<ELF32LE>;
-template class elf::GnuHashTableSection<ELF32BE>;
-template class elf::GnuHashTableSection<ELF64LE>;
-template class elf::GnuHashTableSection<ELF64BE>;
 
 template class elf::HashTableSection<ELF32LE>;
 template class elf::HashTableSection<ELF32BE>;

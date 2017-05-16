@@ -1,4 +1,5 @@
-; RUN: llc -O2 < %s | FileCheck %s
+; RUN: llc -O2 -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-O2 %s
+; RUN: llc -O3 -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-O3 %s
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-grtev4-linux-gnu"
 
@@ -99,11 +100,9 @@ exit:
 ; test1
 ; test2
 ; test3
-; test4
 ; optional1
 ; optional2
 ; optional3
-; optional4
 ; exit
 ; even for 50/50 branches.
 ; Tail duplication puts test n+1 at the end of optional n
@@ -154,6 +153,98 @@ optional2:
 test3:
   %tagbit3 = and i32 %tag, 4
   %tagbit3eq0 = icmp eq i32 %tagbit3, 0
+  br i1 %tagbit3eq0, label %exit, label %optional3, !prof !1
+optional3:
+  call void @c()
+  br label %exit
+exit:
+  ret void
+}
+
+; Intended layout:
+; The chain-of-triangles based duplicating produces the layout when 3
+; instructions are allowed for tail-duplication.
+; test1
+; test2
+; test3
+; optional1
+; optional2
+; optional3
+; exit
+;
+; Otherwise it produces the layout:
+; test1
+; optional1
+; test2
+; optional2
+; test3
+; optional3
+; exit
+
+;CHECK-LABEL: straight_test_3_instr_test:
+; test1 may have been merged with entry
+;CHECK: mr [[TAGREG:[0-9]+]], 3
+;CHECK: clrlwi {{[0-9]+}}, [[TAGREG]], 30
+;CHECK-NEXT: cmplwi {{[0-9]+}}, 2
+
+;CHECK-O3-NEXT: bne 0, .[[OPT1LABEL:[_0-9A-Za-z]+]]
+;CHECK-O3-NEXT: # %test2
+;CHECK-O3-NEXT: rlwinm {{[0-9]+}}, [[TAGREG]], 0, 28, 29
+;CHECK-O3-NEXT: cmplwi {{[0-9]+}}, 8
+;CHECK-O3-NEXT: bne 0, .[[OPT2LABEL:[_0-9A-Za-z]+]]
+;CHECK-O3-NEXT: .[[TEST3LABEL:[_0-9A-Za-z]+]]: # %test3
+;CHECK-O3-NEXT: rlwinm {{[0-9]+}}, [[TAGREG]], 0, 26, 27
+;CHECK-O3-NEXT: cmplwi {{[0-9]+}}, 32
+;CHECK-O3-NEXT: bne 0, .[[OPT3LABEL:[_0-9A-Za-z]+]]
+;CHECK-O3-NEXT: .[[EXITLABEL:[_0-9A-Za-z]+]]: # %exit
+;CHECK-O3: blr
+;CHECK-O3-NEXT: .[[OPT1LABEL]]:
+;CHECK-O3: rlwinm {{[0-9]+}}, [[TAGREG]], 0, 28, 29
+;CHECK-O3-NEXT: cmplwi {{[0-9]+}}, 8
+;CHECK-O3-NEXT: beq 0, .[[TEST3LABEL]]
+;CHECK-O3-NEXT: .[[OPT2LABEL]]:
+;CHECK-O3: rlwinm {{[0-9]+}}, [[TAGREG]], 0, 26, 27
+;CHECK-O3-NEXT: cmplwi {{[0-9]+}}, 32
+;CHECK-O3-NEXT: beq 0, .[[EXITLABEL]]
+;CHECK-O3-NEXT: .[[OPT3LABEL]]:
+;CHECK-O3: b .[[EXITLABEL]]
+
+;CHECK-O2-NEXT: beq 0, .[[TEST2LABEL:[_0-9A-Za-z]+]]
+;CHECK-O2-NEXT: # %optional1
+;CHECK-O2: .[[TEST2LABEL]]: # %test2
+;CHECK-O2-NEXT: rlwinm {{[0-9]+}}, [[TAGREG]], 0, 28, 29
+;CHECK-O2-NEXT: cmplwi {{[0-9]+}}, 8
+;CHECK-O2-NEXT: beq 0, .[[TEST3LABEL:[_0-9A-Za-z]+]]
+;CHECK-O2-NEXT: # %optional2
+;CHECK-O2: .[[TEST3LABEL]]: # %test3
+;CHECK-O2-NEXT: rlwinm {{[0-9]+}}, [[TAGREG]], 0, 26, 27
+;CHECK-O2-NEXT: cmplwi {{[0-9]+}}, 32
+;CHECK-O2-NEXT: beq 0, .[[EXITLABEL:[_0-9A-Za-z]+]]
+;CHECK-O2-NEXT: # %optional3
+;CHECK-O2: .[[EXITLABEL:[_0-9A-Za-z]+]]: # %exit
+;CHECK-O2: blr
+
+
+define void @straight_test_3_instr_test(i32 %tag) {
+entry:
+  br label %test1
+test1:
+  %tagbit1 = and i32 %tag, 3
+  %tagbit1eq0 = icmp eq i32 %tagbit1, 2
+  br i1 %tagbit1eq0, label %test2, label %optional1, !prof !2
+optional1:
+  call void @a()
+  br label %test2
+test2:
+  %tagbit2 = and i32 %tag, 12
+  %tagbit2eq0 = icmp eq i32 %tagbit2, 8
+  br i1 %tagbit2eq0, label %test3, label %optional2, !prof !2
+optional2:
+  call void @b()
+  br label %test3
+test3:
+  %tagbit3 = and i32 %tag, 48
+  %tagbit3eq0 = icmp eq i32 %tagbit3, 32
   br i1 %tagbit3eq0, label %exit, label %optional3, !prof !1
 optional3:
   call void @c()

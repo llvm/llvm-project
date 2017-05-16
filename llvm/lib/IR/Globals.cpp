@@ -255,7 +255,7 @@ bool GlobalValue::canIncreaseAlignment() const {
 const GlobalObject *GlobalValue::getBaseObject() const {
   if (auto *GO = dyn_cast<GlobalObject>(this))
     return GO;
-  if (auto *GA = dyn_cast<GlobalAlias>(this))
+  if (auto *GA = dyn_cast<GlobalIndirectSymbol>(this))
     return GA->getBaseObject();
   return nullptr;
 }

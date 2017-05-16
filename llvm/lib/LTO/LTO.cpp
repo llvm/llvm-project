@@ -973,7 +973,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
           // this value. If not, no need to preserve any ThinLTO copies.
           !Res.second.IRName.empty())
         GUIDPreservedSymbols.insert(GlobalValue::getGUID(
-            GlobalValue::getRealLinkageName(Res.second.IRName)));
+            GlobalValue::dropLLVMManglingEscape(Res.second.IRName)));
     }
 
     auto DeadSymbols =
@@ -993,7 +993,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
       if (Res.second.IRName.empty())
         continue;
       auto GUID = GlobalValue::getGUID(
-          GlobalValue::getRealLinkageName(Res.second.IRName));
+          GlobalValue::dropLLVMManglingEscape(Res.second.IRName));
       // Mark exported unless index-based analysis determined it to be dead.
       if (!DeadSymbols.count(GUID))
         ExportedGUIDs.insert(GUID);

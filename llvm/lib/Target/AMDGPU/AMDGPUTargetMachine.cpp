@@ -118,6 +118,13 @@ static cl::opt<bool> EnableSIInsertWaitcntsPass(
   cl::desc("Use new waitcnt insertion pass"),
   cl::init(false));
 
+// Option to run late CFG structurizer
+static cl::opt<bool> LateCFGStructurize(
+  "amdgpu-late-structurize",
+  cl::desc("Enable late CFG structurization"),
+  cl::init(false),
+  cl::Hidden);
+
 extern "C" void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -702,11 +709,15 @@ bool GCNPassConfig::addPreISel() {
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.
   addPass(&AMDGPUUnifyDivergentExitNodesID);
-  addPass(createStructurizeCFGPass(true)); // true -> SkipUniformRegions
+  if (!LateCFGStructurize) {
+    addPass(createStructurizeCFGPass(true)); // true -> SkipUniformRegions
+  }
   addPass(createSinkingPass());
   addPass(createSITypeRewriter());
   addPass(createAMDGPUAnnotateUniformValues());
-  addPass(createSIAnnotateControlFlowPass());
+  if (!LateCFGStructurize) {
+    addPass(createSIAnnotateControlFlowPass());
+  }
 
   return false;
 }
@@ -770,6 +781,9 @@ bool GCNPassConfig::addGlobalInstructionSelect() {
 #endif
 
 void GCNPassConfig::addPreRegAlloc() {
+  if (LateCFGStructurize) {
+    addPass(createAMDGPUMachineCFGStructurizerPass());
+  }
   addPass(createSIWholeQuadModePass());
 }
 

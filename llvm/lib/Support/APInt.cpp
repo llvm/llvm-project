@@ -1476,7 +1476,7 @@ void APInt::divide(const APInt &LHS, unsigned lhsWords, const APInt &RHS,
   if (n == 1) {
     uint32_t divisor = V[0];
     uint32_t remainder = 0;
-    for (int i = m+n-1; i >= 0; i--) {
+    for (int i = m; i >= 0; i--) {
       uint64_t partial_dividend = Make_64(remainder, U[i]);
       if (partial_dividend == 0) {
         Q[i] = 0;

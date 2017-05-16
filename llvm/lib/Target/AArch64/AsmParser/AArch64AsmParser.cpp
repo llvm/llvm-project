@@ -3904,10 +3904,14 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   return false;
 }
 
+static SMLoc incrementLoc(SMLoc L, int Offset) {
+  return SMLoc::getFromPointer(L.getPointer() + Offset);
+}
+
 /// parseDirectiveCPU
 ///   ::= .cpu id
 bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
-  SMLoc CPULoc = getLoc();
+  SMLoc CurLoc = getLoc();
 
   StringRef CPU, ExtensionString;
   std::tie(CPU, ExtensionString) =
@@ -3923,15 +3927,19 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
   // FIXME This is using tablegen data, but should be moved to ARMTargetParser
   // once that is tablegen'ed
   if (!getSTI().isCPUStringValid(CPU)) {
-    Error(CPULoc, "unknown CPU name");
+    Error(CurLoc, "unknown CPU name");
     return false;
   }
 
   MCSubtargetInfo &STI = copySTI();
   STI.setDefaultFeatures(CPU, "");
+  CurLoc = incrementLoc(CurLoc, CPU.size());
 
   FeatureBitset Features = STI.getFeatureBits();
   for (auto Name : RequestedExtensions) {
+    // Advance source location past '+'.
+    CurLoc = incrementLoc(CurLoc, 1);
+
     bool EnableFeature = true;
 
     if (Name.startswith_lower("no")) {
@@ -3939,6 +3947,7 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
       Name = Name.substr(2);
     }
 
+    bool FoundExtension = false;
     for (const auto &Extension : ExtensionMap) {
       if (Extension.Name != Name)
         continue;
@@ -3952,9 +3961,15 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
       uint64_t Features =
           ComputeAvailableFeatures(STI.ToggleFeature(ToggleFeatures));
       setAvailableFeatures(Features);
+      FoundExtension = true;
 
       break;
     }
+
+    if (!FoundExtension)
+      Error(CurLoc, "unsupported architectural extension");
+
+    CurLoc = incrementLoc(CurLoc, Name.size());
   }
   return false;
 }

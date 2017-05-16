@@ -62,6 +62,76 @@ define i32 @poo(i32 %a, i32 %b, i32 %c, i32 %d) {
   ret i32 %t3
 }
 
+; PR32791 - https://bugs.llvm.org//show_bug.cgi?id=32791
+; Fold two selects with inverted predicates and zero operands.
+define i32 @fold_inverted_icmp_preds(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: @fold_inverted_icmp_preds(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 %a, %b
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 %c, i32 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 %a, %b
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i32 %d, i32 0
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %cmp1 = icmp slt i32 %a, %b
+  %sel1 = select i1 %cmp1, i32 %c, i32 0
+  %cmp2 = icmp sge i32 %a, %b
+  %sel2 = select i1 %cmp2, i32 %d, i32 0
+  %or = or i32 %sel1, %sel2
+  ret i32 %or
+}
+
+define i32 @fold_inverted_icmp_preds_reverse(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: @fold_inverted_icmp_preds_reverse(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 %a, %b
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 0, i32 %c
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 %a, %b
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i32 0, i32 %d
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %cmp1 = icmp slt i32 %a, %b
+  %sel1 = select i1 %cmp1, i32 0, i32 %c
+  %cmp2 = icmp sge i32 %a, %b
+  %sel2 = select i1 %cmp2, i32 0, i32 %d
+  %or = or i32 %sel1, %sel2
+  ret i32 %or
+}
+
+define i32 @fold_inverted_fcmp_preds(float %a, float %b, i32 %c, i32 %d) {
+; CHECK-LABEL: @fold_inverted_fcmp_preds(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float %a, %b
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 %c, i32 0
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uge float %a, %b
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i32 %d, i32 0
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %cmp1 = fcmp olt float %a, %b
+  %sel1 = select i1 %cmp1, i32 %c, i32 0
+  %cmp2 = fcmp uge float %a, %b
+  %sel2 = select i1 %cmp2, i32 %d, i32 0
+  %or = or i32 %sel1, %sel2
+  ret i32 %or
+}
+
+define <2 x i32> @fold_inverted_icmp_vector_preds(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
+; CHECK-LABEL: @fold_inverted_icmp_vector_preds(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> %a, %b
+; CHECK-NEXT:    [[SEL1:%.*]] = select <2 x i1> [[CMP1]], <2 x i32> %c, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i32> %a, %b
+; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[CMP2]], <2 x i32> %d, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    ret <2 x i32> [[OR]]
+;
+  %cmp1 = icmp ne <2 x i32> %a, %b
+  %sel1 = select <2 x i1> %cmp1, <2 x i32> %c, <2 x i32> <i32 0, i32 0>
+  %cmp2 = icmp eq <2 x i32> %a, %b
+  %sel2 = select <2 x i1> %cmp2, <2 x i32> %d, <2 x i32> <i32 0, i32 0>
+  %or = or <2 x i32> %sel1, %sel2
+  ret <2 x i32> %or
+}
+
 define i32 @par(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @par(
 ; CHECK-NEXT:    [[T0:%.*]] = icmp slt i32 %a, %b

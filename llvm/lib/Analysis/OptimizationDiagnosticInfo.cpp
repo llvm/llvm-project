@@ -101,7 +101,7 @@ void MappingTraits<DiagnosticInfoOptimizationBase *>::mapping(
   // These are read-only for now.
   DiagnosticLocation DL = OptDiag->getLocation();
   StringRef FN =
-      GlobalValue::getRealLinkageName(OptDiag->getFunction().getName());
+      GlobalValue::dropLLVMManglingEscape(OptDiag->getFunction().getName());
 
   StringRef PassName(OptDiag->PassName);
   io.mapRequired("Pass", PassName);

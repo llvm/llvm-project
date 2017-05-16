@@ -334,7 +334,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 
   if (Config->Strip != StripPolicy::All) {
     InX::StrTab = make<StringTableSection>(".strtab", false);
-    In<ELFT>::SymTab = make<SymbolTableSection<ELFT>>(*InX::StrTab);
+    InX::SymTab = make<SymbolTableSection<ELFT>>(*InX::StrTab);
   }
 
   if (Config->BuildId != BuildIdKind::None) {
@@ -383,7 +383,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Add(In<ELFT>::VerNeed);
 
     if (Config->GnuHash) {
-      In<ELFT>::GnuHashTab = make<GnuHashTableSection<ELFT>>();
+      In<ELFT>::GnuHashTab = make<GnuHashTableSection>();
       Add(In<ELFT>::GnuHashTab);
     }
 
@@ -1590,7 +1590,7 @@ template <class ELFT> uint64_t Writer<ELFT>::getEntryAddr() {
   if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Entry))
     return B->getVA();
   uint64_t Addr;
-  if (!Config->Entry.getAsInteger(0, Addr))
+  if (to_integer(Config->Entry, Addr))
     return Addr;
 
   // Case 4
