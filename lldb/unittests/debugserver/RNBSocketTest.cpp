@@ -30,7 +30,7 @@ static void ServerCallbackv4(const void *baton, in_port_t port) {
     Socket *client_socket;
     char addr_buffer[256];
     sprintf(addr_buffer, "%s:%d", baton, port);
-    Error err = Socket::TcpConnect(addr_buffer, false, client_socket);
+    Status err = Socket::TcpConnect(addr_buffer, false, client_socket);
     if (err.Fail())
       abort();
     char buffer[32];
@@ -101,7 +101,7 @@ void TestSocketConnect(const char *addr) {
   Socket *server_socket;
   Predicate<uint16_t> port_predicate;
   port_predicate.SetValue(0, eBroadcastNever);
-  Error err =
+  Status err =
       Socket::TcpListen(addr_wrap, false, server_socket, &port_predicate);
   ASSERT_FALSE(err.Fail());
 

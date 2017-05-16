@@ -92,7 +92,8 @@ ExceptionSearchFilter::DoCopyForBreakpoint(Breakpoint &breakpoint) {
 }
 
 SearchFilter *ExceptionSearchFilter::CreateFromStructuredData(
-    Target &target, const StructuredData::Dictionary &data_dict, Error &error) {
+    Target &target, const StructuredData::Dictionary &data_dict,
+    Status &error) {
   SearchFilter *result = nullptr;
   return result;
 }

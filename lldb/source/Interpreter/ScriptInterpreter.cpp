@@ -15,7 +15,7 @@
 
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 
@@ -75,10 +75,10 @@ ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
     return eScriptLanguageUnknown;
 }
 
-Error ScriptInterpreter::SetBreakpointCommandCallback(
+Status ScriptInterpreter::SetBreakpointCommandCallback(
     std::vector<BreakpointOptions *> &bp_options_vec,
     const char *callback_text) {
-  Error return_error;
+  Status return_error;
   for (BreakpointOptions *bp_options : bp_options_vec) {
     return_error = SetBreakpointCommandCallback(bp_options, callback_text);
     if (return_error.Success())

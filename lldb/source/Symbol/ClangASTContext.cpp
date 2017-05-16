@@ -4535,7 +4535,7 @@ ClangASTContext::GetNumMemberFunctions(lldb::opaque_compiler_type_t type) {
 
     case clang::Type::ObjCObjectPointer: {
       const clang::ObjCObjectPointerType *objc_class_type =
-          qual_type->getAsObjCInterfacePointerType();
+          qual_type->getAs<clang::ObjCObjectPointerType>();
       const clang::ObjCInterfaceType *objc_interface_type =
           objc_class_type->getInterfaceType();
       if (objc_interface_type &&
@@ -4644,7 +4644,7 @@ ClangASTContext::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
 
     case clang::Type::ObjCObjectPointer: {
       const clang::ObjCObjectPointerType *objc_class_type =
-          qual_type->getAsObjCInterfacePointerType();
+          qual_type->getAs<clang::ObjCObjectPointerType>();
       const clang::ObjCInterfaceType *objc_interface_type =
           objc_class_type->getInterfaceType();
       if (objc_interface_type &&
@@ -5753,7 +5753,7 @@ uint32_t ClangASTContext::GetNumFields(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::ObjCObjectPointer: {
     const clang::ObjCObjectPointerType *objc_class_type =
-        qual_type->getAsObjCInterfacePointerType();
+        qual_type->getAs<clang::ObjCObjectPointerType>();
     const clang::ObjCInterfaceType *objc_interface_type =
         objc_class_type->getInterfaceType();
     if (objc_interface_type &&
@@ -5901,7 +5901,7 @@ CompilerType ClangASTContext::GetFieldAtIndex(lldb::opaque_compiler_type_t type,
 
   case clang::Type::ObjCObjectPointer: {
     const clang::ObjCObjectPointerType *objc_class_type =
-        qual_type->getAsObjCInterfacePointerType();
+        qual_type->getAs<clang::ObjCObjectPointerType>();
     const clang::ObjCInterfaceType *objc_interface_type =
         objc_class_type->getInterfaceType();
     if (objc_interface_type &&
@@ -6515,7 +6515,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
             if (base_class->isVirtual()) {
               bool handled = false;
               if (valobj) {
-                Error err;
+                Status err;
                 AddressType addr_type = eAddressTypeInvalid;
                 lldb::addr_t vtable_ptr_addr =
                     valobj->GetCPPVTableAddress(addr_type);
@@ -8910,7 +8910,7 @@ ClangASTContext::ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
       if (dst_size >= byte_size) {
         Scalar scalar = ap_float.bitcastToAPInt().zextOrTrunc(
             llvm::NextPowerOf2(byte_size) * 8);
-        lldb_private::Error get_data_error;
+        lldb_private::Status get_data_error;
         if (scalar.GetAsMemoryData(dst, byte_size,
                                    lldb_private::endian::InlHostByteOrder(),
                                    get_data_error))
@@ -9480,7 +9480,7 @@ void ClangASTContext::DumpSummary(lldb::opaque_compiler_type_t type,
         buf.back() = '\0';
         size_t bytes_read;
         size_t total_cstr_len = 0;
-        Error error;
+        Status error;
         while ((bytes_read = process->ReadMemory(pointer_address, &buf.front(),
                                                  buf.size(), error)) > 0) {
           const size_t len = strlen((const char *)&buf.front());

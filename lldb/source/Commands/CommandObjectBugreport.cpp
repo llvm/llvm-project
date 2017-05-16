@@ -84,7 +84,7 @@ protected:
         open_options |= File::eOpenOptionTruncate;
 
       StreamFileSP outfile_stream = std::make_shared<StreamFile>();
-      Error error = outfile_stream->GetFile().Open(path, open_options);
+      Status error = outfile_stream->GetFile().Open(path, open_options);
       if (error.Fail()) {
         result.AppendErrorWithFormat("Failed to open file '%s' for %s: %s\n",
                                      path, append ? "append" : "write",

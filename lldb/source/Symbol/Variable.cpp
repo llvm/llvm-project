@@ -330,11 +330,11 @@ bool Variable::IsInScope(StackFrame *frame) {
   return false;
 }
 
-Error Variable::GetValuesForVariableExpressionPath(
+Status Variable::GetValuesForVariableExpressionPath(
     llvm::StringRef variable_expr_path, ExecutionContextScope *scope,
     GetVariableCallback callback, void *baton, VariableList &variable_list,
     ValueObjectList &valobj_list) {
-  Error error;
+  Status error;
   if (!callback || variable_expr_path.empty()) {
     error.SetErrorString("unknown error");
     return error;
@@ -350,7 +350,7 @@ Error Variable::GetValuesForVariableExpressionPath(
       return error;
     }
     for (uint32_t i = 0; i < valobj_list.GetSize();) {
-      Error tmp_error;
+      Status tmp_error;
       ValueObjectSP valobj_sp(
           valobj_list.GetValueObjectAtIndex(i)->Dereference(tmp_error));
       if (tmp_error.Fail()) {
@@ -368,7 +368,7 @@ Error Variable::GetValuesForVariableExpressionPath(
         valobj_list);
     if (error.Success()) {
       for (uint32_t i = 0; i < valobj_list.GetSize();) {
-        Error tmp_error;
+        Status tmp_error;
         ValueObjectSP valobj_sp(
             valobj_list.GetValueObjectAtIndex(i)->AddressOf(tmp_error));
         if (tmp_error.Fail()) {

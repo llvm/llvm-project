@@ -156,7 +156,8 @@ protected:
   void SetSP(const lldb::PlatformSP &platform_sp);
 
   SBError ExecuteConnected(
-      const std::function<lldb_private::Error(const lldb::PlatformSP &)> &func);
+      const std::function<lldb_private::Status(const lldb::PlatformSP &)>
+          &func);
 
   lldb::PlatformSP m_opaque_sp;
 };

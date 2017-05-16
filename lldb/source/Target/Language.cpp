@@ -387,7 +387,7 @@ DumpValueObjectOptions::DeclPrintingHelper Language::GetDeclPrintingHelper() {
   return nullptr;
 }
 
-LazyBool Language::IsLogicalTrue(ValueObject &valobj, Error &error) {
+LazyBool Language::IsLogicalTrue(ValueObject &valobj, Status &error) {
   return eLazyBoolCalculate;
 }
 

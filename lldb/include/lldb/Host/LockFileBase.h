@@ -10,7 +10,7 @@
 #ifndef liblldb_Host_LockFileBase_h_
 #define liblldb_Host_LockFileBase_h_
 
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 #include <functional>
 
@@ -22,30 +22,30 @@ public:
 
   bool IsLocked() const;
 
-  Error WriteLock(const uint64_t start, const uint64_t len);
-  Error TryWriteLock(const uint64_t start, const uint64_t len);
+  Status WriteLock(const uint64_t start, const uint64_t len);
+  Status TryWriteLock(const uint64_t start, const uint64_t len);
 
-  Error ReadLock(const uint64_t start, const uint64_t len);
-  Error TryReadLock(const uint64_t start, const uint64_t len);
+  Status ReadLock(const uint64_t start, const uint64_t len);
+  Status TryReadLock(const uint64_t start, const uint64_t len);
 
-  Error Unlock();
+  Status Unlock();
 
 protected:
-  using Locker = std::function<Error(const uint64_t, const uint64_t)>;
+  using Locker = std::function<Status(const uint64_t, const uint64_t)>;
 
   LockFileBase(int fd);
 
   virtual bool IsValidFile() const;
 
-  virtual Error DoWriteLock(const uint64_t start, const uint64_t len) = 0;
-  virtual Error DoTryWriteLock(const uint64_t start, const uint64_t len) = 0;
+  virtual Status DoWriteLock(const uint64_t start, const uint64_t len) = 0;
+  virtual Status DoTryWriteLock(const uint64_t start, const uint64_t len) = 0;
 
-  virtual Error DoReadLock(const uint64_t start, const uint64_t len) = 0;
-  virtual Error DoTryReadLock(const uint64_t start, const uint64_t len) = 0;
+  virtual Status DoReadLock(const uint64_t start, const uint64_t len) = 0;
+  virtual Status DoTryReadLock(const uint64_t start, const uint64_t len) = 0;
 
-  virtual Error DoUnlock() = 0;
+  virtual Status DoUnlock() = 0;
 
-  Error DoLock(const Locker &locker, const uint64_t start, const uint64_t len);
+  Status DoLock(const Locker &locker, const uint64_t start, const uint64_t len);
 
   int m_fd; // not owned.
   bool m_locked;

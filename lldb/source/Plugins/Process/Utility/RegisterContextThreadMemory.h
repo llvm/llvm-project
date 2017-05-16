@@ -80,13 +80,13 @@ public:
 
   bool HardwareSingleStep(bool enable) override;
 
-  Error ReadRegisterValueFromMemory(const lldb_private::RegisterInfo *reg_info,
-                                    lldb::addr_t src_addr, uint32_t src_len,
-                                    RegisterValue &reg_value) override;
+  Status ReadRegisterValueFromMemory(const lldb_private::RegisterInfo *reg_info,
+                                     lldb::addr_t src_addr, uint32_t src_len,
+                                     RegisterValue &reg_value) override;
 
-  Error WriteRegisterValueToMemory(const lldb_private::RegisterInfo *reg_info,
-                                   lldb::addr_t dst_addr, uint32_t dst_len,
-                                   const RegisterValue &reg_value) override;
+  Status WriteRegisterValueToMemory(const lldb_private::RegisterInfo *reg_info,
+                                    lldb::addr_t dst_addr, uint32_t dst_len,
+                                    const RegisterValue &reg_value) override;
 
 protected:
   void UpdateRegisterContext();

@@ -129,7 +129,8 @@ bool MemoryCache::RemoveInvalidRange(lldb::addr_t base_addr,
   return false;
 }
 
-size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len, Error &error) {
+size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
+                         Status &error) {
   size_t bytes_left = dst_len;
 
   // Check the L1 cache for a range that contain the entire memory read.
@@ -344,7 +345,7 @@ void AllocatedMemoryCache::Clear() {
 
 AllocatedMemoryCache::AllocatedBlockSP
 AllocatedMemoryCache::AllocatePage(uint32_t byte_size, uint32_t permissions,
-                                   uint32_t chunk_size, Error &error) {
+                                   uint32_t chunk_size, Status &error) {
   AllocatedBlockSP block_sp;
   const size_t page_size = 4096;
   const size_t num_pages = (byte_size + page_size - 1) / page_size;
@@ -370,7 +371,7 @@ AllocatedMemoryCache::AllocatePage(uint32_t byte_size, uint32_t permissions,
 
 lldb::addr_t AllocatedMemoryCache::AllocateMemory(size_t byte_size,
                                                   uint32_t permissions,
-                                                  Error &error) {
+                                                  Status &error) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   addr_t addr = LLDB_INVALID_ADDRESS;

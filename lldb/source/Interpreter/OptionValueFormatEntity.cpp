@@ -25,7 +25,7 @@ OptionValueFormatEntity::OptionValueFormatEntity(const char *default_format)
       m_default_entry() {
   if (default_format && default_format[0]) {
     llvm::StringRef default_format_str(default_format);
-    Error error = FormatEntity::Parse(default_format_str, m_default_entry);
+    Status error = FormatEntity::Parse(default_format_str, m_default_entry);
     if (error.Success()) {
       m_default_format = default_format;
       m_current_format = default_format;
@@ -52,9 +52,9 @@ void OptionValueFormatEntity::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
-Error OptionValueFormatEntity::SetValueFromString(llvm::StringRef value_str,
-                                                  VarSetOperationType op) {
-  Error error;
+Status OptionValueFormatEntity::SetValueFromString(llvm::StringRef value_str,
+                                                   VarSetOperationType op) {
+  Status error;
   switch (op) {
   case eVarSetOperationClear:
     Clear();

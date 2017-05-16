@@ -134,7 +134,7 @@ StructuredData::ObjectSP AddressSanitizerRuntime::RetrieveReportData() {
 
   ValueObjectSP return_value_sp;
   ExecutionContext exe_ctx;
-  Error eval_error;
+  Status eval_error;
   frame_sp->CalculateExecutionContext(exe_ctx);
   ExpressionResults result = UserExpression::Evaluate(
       exe_ctx, options, address_sanitizer_retrieve_report_data_command, "",
@@ -171,7 +171,7 @@ StructuredData::ObjectSP AddressSanitizerRuntime::RetrieveReportData() {
       return_value_sp->GetValueForExpressionPath(".description")
           ->GetValueAsUnsigned(0);
   std::string description;
-  Error error;
+  Status error;
   process_sp->ReadCStringFromMemory(description_ptr, description, error);
 
   StructuredData::Dictionary *dict = new StructuredData::Dictionary();

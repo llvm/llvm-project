@@ -43,8 +43,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -191,7 +191,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
     return false;
 
   if (m_parser_vars->m_materializer && is_result) {
-    Error err;
+    Status err;
 
     ExecutionContext &exe_ctx = m_parser_vars->m_exe_ctx;
     Target *target = exe_ctx.GetTargetPtr();
@@ -364,7 +364,7 @@ bool ClangExpressionDeclMap::AddValueToStruct(const NamedDecl *decl,
   if (m_parser_vars->m_materializer) {
     uint32_t offset = 0;
 
-    Error err;
+    Status err;
 
     if (is_persistent_variable) {
       ExpressionVariableSP var_sp(var->shared_from_this());
@@ -1652,7 +1652,7 @@ bool ClangExpressionDeclMap::GetVariableValue(VariableSP &var,
   DWARFExpression &var_location_expr = var->LocationExpression();
 
   Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
-  Error err;
+  Status err;
 
   if (var->GetLocationIsConstantValueData()) {
     DataExtractor const_value_extractor;

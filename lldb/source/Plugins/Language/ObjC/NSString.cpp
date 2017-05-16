@@ -20,7 +20,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -103,7 +103,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
   if (process_sp->GetByteOrder() != lldb::eByteOrderLittle)
     info_bits_location += 3;
 
-  Error error;
+  Status error;
 
   uint8_t info_bits = process_sp->ReadUnsignedIntegerFromMemory(
       info_bits_location, 1, 0, error);
@@ -258,7 +258,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       // in this kind of string, the byte before the string content is a length
       // byte
       // so let's try and use it to handle the embedded NUL case
-      Error error;
+      Status error;
       explicit_length =
           process_sp->ReadUnsignedIntegerFromMemory(location, 1, 0, error);
       if (error.Fail() || explicit_length == 0)
@@ -319,7 +319,7 @@ bool lldb_private::formatters::NSAttributedStringSummaryProvider(
   if (!child_ptr_sp)
     return false;
   DataExtractor data;
-  Error error;
+  Status error;
   child_ptr_sp->GetData(data, error);
   if (error.Fail())
     return false;

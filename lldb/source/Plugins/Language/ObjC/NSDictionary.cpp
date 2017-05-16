@@ -27,7 +27,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 #include "clang/AST/DeclCXX.h"
@@ -262,14 +262,14 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
     return false;
 
   if (class_name == g_DictionaryI) {
-    Error error;
+    Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
     if (error.Fail())
       return false;
     value &= (is_64bit ? ~0xFC00000000000000UL : ~0xFC000000U);
   } else if (class_name == g_DictionaryM) {
-    Error error;
+    Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
     if (error.Fail())
@@ -280,7 +280,7 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
   }
   /*else if (!strcmp(class_name,"__NSCFDictionary"))
    {
-   Error error;
+   Status error;
    value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + (is_64bit ?
    20 : 12), 4, 0, error);
    if (error.Fail())
@@ -327,7 +327,7 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
   Flags flags(valobj_type.GetTypeInfo());
 
   if (flags.IsClear(eTypeIsPointer) && flags.IsClear(eTypeIsSwift)) {
-    Error error;
+    Status error;
     valobj_sp = valobj_sp->AddressOf(error);
     if (error.Fail() || !valobj_sp)
       return nullptr;
@@ -406,7 +406,7 @@ bool lldb_private::formatters::NSDictionaryISyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return false;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  Error error;
+  Status error;
   error.Clear();
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
@@ -455,7 +455,7 @@ lldb_private::formatters::NSDictionaryISyntheticFrontEnd::GetChildAtIndex(
       ProcessSP process_sp = m_exe_ctx_ref.GetProcessSP();
       if (!process_sp)
         return lldb::ValueObjectSP();
-      Error error;
+      Status error;
       key_at_idx = process_sp->ReadPointerFromMemory(key_at_idx, error);
       if (error.Fail())
         return lldb::ValueObjectSP();
@@ -559,7 +559,7 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::GetChildAtIndex(
       m_backend.GetValueAsUnsigned(LLDB_INVALID_ADDRESS) + ptr_size;
   lldb::addr_t value_ptr = key_ptr + ptr_size;
 
-  Error error;
+  Status error;
 
   lldb::addr_t value_at_idx = process_sp->ReadPointerFromMemory(key_ptr, error);
   if (error.Fail())
@@ -631,7 +631,7 @@ bool lldb_private::formatters::NSDictionaryMSyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return false;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  Error error;
+  Status error;
   error.Clear();
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
@@ -685,7 +685,7 @@ lldb_private::formatters::NSDictionaryMSyntheticFrontEnd::GetChildAtIndex(
       ProcessSP process_sp = m_exe_ctx_ref.GetProcessSP();
       if (!process_sp)
         return lldb::ValueObjectSP();
-      Error error;
+      Status error;
       key_at_idx = process_sp->ReadPointerFromMemory(key_at_idx, error);
       if (error.Fail())
         return lldb::ValueObjectSP();

@@ -26,8 +26,8 @@ public:
 
   void SetOwnsHandle(bool owns);
 
-  virtual Error Join(lldb::thread_result_t *result);
-  virtual Error Cancel();
+  virtual Status Join(lldb::thread_result_t *result);
+  virtual Status Cancel();
   virtual void Reset();
 
   lldb::tid_t GetThreadId() const;

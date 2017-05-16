@@ -14,7 +14,7 @@
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Target/StructuredDataPlugin.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -62,7 +62,7 @@ SBError SBStructuredData::GetAsJSON(lldb::SBStream &stream) const {
 }
 
 lldb::SBError SBStructuredData::GetDescription(lldb::SBStream &stream) const {
-  Error error = m_impl_up->GetDescription(stream.ref());
+  Status error = m_impl_up->GetDescription(stream.ref());
   SBError sb_error;
   sb_error.SetError(error);
   return sb_error;

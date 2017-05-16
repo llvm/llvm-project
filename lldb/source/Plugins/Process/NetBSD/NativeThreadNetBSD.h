@@ -38,14 +38,14 @@ public:
 
   NativeRegisterContextSP GetRegisterContext() override;
 
-  Error SetWatchpoint(lldb::addr_t addr, size_t size, uint32_t watch_flags,
-                      bool hardware) override;
+  Status SetWatchpoint(lldb::addr_t addr, size_t size, uint32_t watch_flags,
+                       bool hardware) override;
 
-  Error RemoveWatchpoint(lldb::addr_t addr) override;
+  Status RemoveWatchpoint(lldb::addr_t addr) override;
 
-  Error SetHardwareBreakpoint(lldb::addr_t addr, size_t size) override;
+  Status SetHardwareBreakpoint(lldb::addr_t addr, size_t size) override;
 
-  Error RemoveHardwareBreakpoint(lldb::addr_t addr) override;
+  Status RemoveHardwareBreakpoint(lldb::addr_t addr) override;
 
 private:
   // ---------------------------------------------------------------------

@@ -239,7 +239,7 @@ DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints(Process *process) {
   if (GetGlobalProperties()->GetScanType() == eKASLRScanNone)
     return LLDB_INVALID_ADDRESS;
 
-  Error read_err;
+  Status read_err;
   addr_t kernel_addresses_64[] = {
       0xfffffff000004010ULL, // newest arm64 devices
       0xffffff8000004010ULL, // 2014-2015-ish arm64 devices
@@ -395,7 +395,7 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
   // valid Mach-O magic field there
   // (the first field of the mach_header/mach_header_64 struct).
 
-  Error read_error;
+  Status read_error;
   uint8_t magicbuf[4];
   if (process->ReadMemoryFromInferior (addr, magicbuf, sizeof (magicbuf), read_error) != sizeof (magicbuf))
       return UUID();
@@ -483,7 +483,7 @@ DynamicLoaderDarwinKernel::DynamicLoaderDarwinKernel(Process *process,
       m_kext_summary_header_ptr_addr(), m_kext_summary_header_addr(),
       m_kext_summary_header(), m_known_kexts(), m_mutex(),
       m_break_id(LLDB_INVALID_BREAK_ID) {
-  Error error;
+  Status error;
   PlatformSP platform_sp(
       Platform::Create(PlatformDarwinKernel::GetPluginNameStatic(), error));
   // Only select the darwin-kernel Platform if we've been asked to load kexts.
@@ -1086,7 +1086,7 @@ bool DynamicLoaderDarwinKernel::ReadKextSummaryHeader() {
   if (m_kext_summary_header_ptr_addr.IsValid()) {
     const uint32_t addr_size = m_kernel.GetAddressByteSize();
     const ByteOrder byte_order = m_kernel.GetByteOrder();
-    Error error;
+    Status error;
     // Read enough bytes for a "OSKextLoadedKextSummaryHeader" structure
     // which is currently 4 uint32_t and a pointer.
     uint8_t buf[24];
@@ -1338,7 +1338,7 @@ uint32_t DynamicLoaderDarwinKernel::ReadKextSummaries(
   image_infos.resize(image_infos_count);
   const size_t count = image_infos.size() * m_kext_summary_header.entry_size;
   DataBufferHeap data(count, 0);
-  Error error;
+  Status error;
 
   const bool prefer_file_cache = false;
   const size_t bytes_read = m_process->GetTarget().ReadMemory(
@@ -1517,8 +1517,8 @@ DynamicLoaderDarwinKernel::GetStepThroughTrampolinePlan(Thread &thread,
   return thread_plan_sp;
 }
 
-Error DynamicLoaderDarwinKernel::CanLoadImage() {
-  Error error;
+Status DynamicLoaderDarwinKernel::CanLoadImage() {
+  Status error;
   error.SetErrorString(
       "always unsafe to load or unload shared libraries in the darwin kernel");
   return error;

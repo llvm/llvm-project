@@ -92,7 +92,7 @@ public:
 
   uint32_t GetPluginVersion() override;
 
-  lldb_private::Error
+  lldb_private::Status
   SetReturnValueObject(lldb::StackFrameSP &frame_sp,
                        lldb::ValueObjectSP &new_value) override;
 

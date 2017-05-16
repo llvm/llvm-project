@@ -12,7 +12,7 @@
 
 // Other libraries and framework includes
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
 
 #include "llvm/Support/Mutex.h"
@@ -48,25 +48,25 @@ public:
 
   ~ProcessWindows();
 
-  size_t GetSTDOUT(char *buf, size_t buf_size, Error &error) override;
-  size_t GetSTDERR(char *buf, size_t buf_size, Error &error) override;
-  size_t PutSTDIN(const char *buf, size_t buf_size, Error &error) override;
+  size_t GetSTDOUT(char *buf, size_t buf_size, Status &error) override;
+  size_t GetSTDERR(char *buf, size_t buf_size, Status &error) override;
+  size_t PutSTDIN(const char *buf, size_t buf_size, Status &error) override;
 
   // lldb_private::Process overrides
   ConstString GetPluginName() override;
   uint32_t GetPluginVersion() override;
 
-  Error EnableBreakpointSite(BreakpointSite *bp_site) override;
-  Error DisableBreakpointSite(BreakpointSite *bp_site) override;
+  Status EnableBreakpointSite(BreakpointSite *bp_site) override;
+  Status DisableBreakpointSite(BreakpointSite *bp_site) override;
 
-  Error DoDetach(bool keep_stopped) override;
-  Error DoLaunch(Module *exe_module, ProcessLaunchInfo &launch_info) override;
-  Error DoAttachToProcessWithID(
+  Status DoDetach(bool keep_stopped) override;
+  Status DoLaunch(Module *exe_module, ProcessLaunchInfo &launch_info) override;
+  Status DoAttachToProcessWithID(
       lldb::pid_t pid,
       const lldb_private::ProcessAttachInfo &attach_info) override;
-  Error DoResume() override;
-  Error DoDestroy() override;
-  Error DoHalt(bool &caused_stop) override;
+  Status DoResume() override;
+  Status DoDestroy() override;
+  Status DoHalt(bool &caused_stop) override;
 
   void DidLaunch() override;
   void DidAttach(lldb_private::ArchSpec &arch_spec) override;
@@ -81,11 +81,11 @@ public:
   bool IsAlive() override;
 
   size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                      Error &error) override;
+                      Status &error) override;
   size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
-                       Error &error) override;
-  Error GetMemoryRegionInfo(lldb::addr_t vm_addr,
-                            MemoryRegionInfo &info) override;
+                       Status &error) override;
+  Status GetMemoryRegionInfo(lldb::addr_t vm_addr,
+                             MemoryRegionInfo &info) override;
 
   lldb::addr_t GetImageInfoAddress() override;
 
@@ -100,11 +100,11 @@ public:
                  lldb::addr_t module_addr) override;
   void OnUnloadDll(lldb::addr_t module_addr) override;
   void OnDebugString(const std::string &string) override;
-  void OnDebuggerError(const Error &error, uint32_t type) override;
+  void OnDebuggerError(const Status &error, uint32_t type) override;
 
 private:
-  Error WaitForDebuggerConnection(DebuggerThreadSP debugger,
-                                  HostProcess &process);
+  Status WaitForDebuggerConnection(DebuggerThreadSP debugger,
+                                   HostProcess &process);
 
   // These decode the page protection bits.
   static bool IsPageReadable(uint32_t protect);

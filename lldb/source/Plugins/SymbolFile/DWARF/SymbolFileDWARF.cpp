@@ -689,8 +689,9 @@ const DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() const {
 
 DWARFDebugInfo *SymbolFileDWARF::DebugInfo() {
   if (m_info.get() == NULL) {
-    Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s this = %p",
-                       LLVM_PRETTY_FUNCTION, static_cast<void *>(this));
+    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+    Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
+                       static_cast<void *>(this));
     if (get_debug_info_data().GetByteSize() > 0) {
       m_info.reset(new DWARFDebugInfo());
       if (m_info.get()) {
@@ -726,8 +727,9 @@ SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
 
 DWARFDebugRanges *SymbolFileDWARF::DebugRanges() {
   if (m_ranges.get() == NULL) {
-    Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s this = %p",
-                       LLVM_PRETTY_FUNCTION, static_cast<void *>(this));
+    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+    Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
+                       static_cast<void *>(this));
     if (get_debug_ranges_data().GetByteSize() > 0) {
       m_ranges.reset(new DWARFDebugRanges());
       if (m_ranges.get())
@@ -1693,7 +1695,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
             dwo_module_spec.GetArchitecture() =
                 m_obj_file->GetModule()->GetArchitecture();
             // printf ("Loading dwo = '%s'\n", dwo_path);
-            Error error = ModuleList::GetSharedModule(
+            Status error = ModuleList::GetSharedModule(
                 dwo_module_spec, module_sp, NULL, NULL, NULL);
             if (!module_sp) {
               GetObjectFile()->GetModule()->ReportWarning(
@@ -1731,7 +1733,7 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
               if (var_sp && !var_sp->GetLocationIsConstantValueData()) {
                 const DWARFExpression &location = var_sp->LocationExpression();
                 Value location_result;
-                Error error;
+                Status error;
                 if (location.Evaluate(nullptr, nullptr, nullptr,
                                       LLDB_INVALID_ADDRESS, nullptr, nullptr,
                                       location_result, &error)) {
@@ -1760,10 +1762,12 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
 uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
                                                uint32_t resolve_scope,
                                                SymbolContext &sc) {
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION, "SymbolFileDWARF::"
-                                           "ResolveSymbolContext (so_addr = { "
-                                           "section = %p, offset = 0x%" PRIx64
-                                           " }, resolve_scope = 0x%8.8x)",
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat,
+                     "SymbolFileDWARF::"
+                     "ResolveSymbolContext (so_addr = { "
+                     "section = %p, offset = 0x%" PRIx64
+                     " }, resolve_scope = 0x%8.8x)",
                      static_cast<void *>(so_addr.GetSection().get()),
                      so_addr.GetOffset(), resolve_scope);
   uint32_t resolved = 0;
@@ -2051,8 +2055,9 @@ void SymbolFileDWARF::Index() {
   if (m_indexed)
     return;
   m_indexed = true;
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(
-      LLVM_PRETTY_FUNCTION, "SymbolFileDWARF::Index (%s)",
+      func_cat, "SymbolFileDWARF::Index (%s)",
       GetObjectFile()->GetFileSpec().GetFilename().AsCString("<Unknown>"));
 
   DWARFDebugInfo *debug_info = DebugInfo();
@@ -2521,8 +2526,8 @@ SymbolFileDWARF::FindFunctions(const ConstString &name,
                                const CompilerDeclContext *parent_decl_ctx,
                                uint32_t name_type_mask, bool include_inlines,
                                bool append, SymbolContextList &sc_list) {
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
-                     "SymbolFileDWARF::FindFunctions (name = '%s')",
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "SymbolFileDWARF::FindFunctions (name = '%s')",
                      name.AsCString());
 
   // eFunctionNameTypeAuto should be pre-resolved by a call to
@@ -2801,8 +2806,8 @@ SymbolFileDWARF::FindFunctions(const ConstString &name,
 uint32_t SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
                                         bool include_inlines, bool append,
                                         SymbolContextList &sc_list) {
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
-                     "SymbolFileDWARF::FindFunctions (regex = '%s')",
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "SymbolFileDWARF::FindFunctions (regex = '%s')",
                      regex.GetText().str().c_str());
 
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));

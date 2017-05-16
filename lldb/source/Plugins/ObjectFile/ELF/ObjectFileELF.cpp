@@ -26,8 +26,8 @@
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferLLVM.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/PointerUnion.h"
@@ -728,8 +728,9 @@ size_t ObjectFileELF::GetModuleSpecifications(
             uint32_t core_notes_crc = 0;
 
             if (!gnu_debuglink_crc) {
+              static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
               lldb_private::Timer scoped_timer(
-                  LLVM_PRETTY_FUNCTION,
+                  func_cat,
                   "Calculating module crc32 %s with size %" PRIu64 " KiB",
                   file.GetLastPathComponent().AsCString(),
                   (file.GetByteSize() - file_offset) / 1024);
@@ -1080,7 +1081,7 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
       if (dyn_base == LLDB_INVALID_ADDRESS)
         return Address();
 
-      Error error;
+      Status error;
       if (symbol.d_tag == DT_MIPS_RLD_MAP) {
         // DT_MIPS_RLD_MAP tag stores an absolute address of the debug pointer.
         Address addr;
@@ -1233,12 +1234,12 @@ size_t ObjectFileELF::ParseProgramHeaders() {
       m_header);
 }
 
-lldb_private::Error
+lldb_private::Status
 ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
                                            lldb_private::ArchSpec &arch_spec,
                                            lldb_private::UUID &uuid) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES));
-  Error error;
+  Status error;
 
   lldb::offset_t offset = 0;
 
@@ -1764,7 +1765,7 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
           DataExtractor data;
           if (section_size && (set_data(data, sheader.sh_offset,
                                         section_size) == section_size)) {
-            Error error = RefineModuleDetailsFromNote(data, arch_spec, uuid);
+            Status error = RefineModuleDetailsFromNote(data, arch_spec, uuid);
             if (error.Fail()) {
               if (log)
                 log->Printf("ObjectFileELF::%s ELF note processing failed: %s",

@@ -138,7 +138,7 @@ NativeRegisterContext::GetPCfromBreakpointLocation(lldb::addr_t fail_value) {
   return GetPC(fail_value);
 }
 
-Error NativeRegisterContext::SetPC(lldb::addr_t pc) {
+Status NativeRegisterContext::SetPC(lldb::addr_t pc) {
   uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
                                                      LLDB_REGNUM_GENERIC_PC);
   return WriteRegisterFromUnsigned(reg, pc);
@@ -150,7 +150,7 @@ lldb::addr_t NativeRegisterContext::GetSP(lldb::addr_t fail_value) {
   return ReadRegisterAsUnsigned(reg, fail_value);
 }
 
-Error NativeRegisterContext::SetSP(lldb::addr_t sp) {
+Status NativeRegisterContext::SetSP(lldb::addr_t sp) {
   uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
                                                      LLDB_REGNUM_GENERIC_SP);
   return WriteRegisterFromUnsigned(reg, sp);
@@ -162,7 +162,7 @@ lldb::addr_t NativeRegisterContext::GetFP(lldb::addr_t fail_value) {
   return ReadRegisterAsUnsigned(reg, fail_value);
 }
 
-Error NativeRegisterContext::SetFP(lldb::addr_t fp) {
+Status NativeRegisterContext::SetFP(lldb::addr_t fp) {
   uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
                                                      LLDB_REGNUM_GENERIC_FP);
   return WriteRegisterFromUnsigned(reg, fp);
@@ -195,7 +195,7 @@ NativeRegisterContext::ReadRegisterAsUnsigned(const RegisterInfo *reg_info,
 
   if (reg_info) {
     RegisterValue value;
-    Error error = ReadRegister(reg_info, value);
+    Status error = ReadRegister(reg_info, value);
     if (error.Success()) {
       if (log)
         log->Printf("NativeRegisterContext::%s ReadRegister() succeeded, value "
@@ -215,22 +215,23 @@ NativeRegisterContext::ReadRegisterAsUnsigned(const RegisterInfo *reg_info,
   return fail_value;
 }
 
-Error NativeRegisterContext::WriteRegisterFromUnsigned(uint32_t reg,
-                                                       uint64_t uval) {
+Status NativeRegisterContext::WriteRegisterFromUnsigned(uint32_t reg,
+                                                        uint64_t uval) {
   if (reg == LLDB_INVALID_REGNUM)
-    return Error("NativeRegisterContext::%s (): reg is invalid", __FUNCTION__);
+    return Status("NativeRegisterContext::%s (): reg is invalid", __FUNCTION__);
   return WriteRegisterFromUnsigned(GetRegisterInfoAtIndex(reg), uval);
 }
 
-Error NativeRegisterContext::WriteRegisterFromUnsigned(
-    const RegisterInfo *reg_info, uint64_t uval) {
+Status
+NativeRegisterContext::WriteRegisterFromUnsigned(const RegisterInfo *reg_info,
+                                                 uint64_t uval) {
   assert(reg_info);
   if (!reg_info)
-    return Error("reg_info is nullptr");
+    return Status("reg_info is nullptr");
 
   RegisterValue value;
   if (!value.SetUInt(uval, reg_info->byte_size))
-    return Error("RegisterValue::SetUInt () failed");
+    return Status("RegisterValue::SetUInt () failed");
 
   return WriteRegister(reg_info, value);
 }
@@ -246,18 +247,18 @@ uint32_t NativeRegisterContext::SetHardwareBreakpoint(lldb::addr_t addr,
   return LLDB_INVALID_INDEX32;
 }
 
-Error NativeRegisterContext::ClearAllHardwareBreakpoints() {
-  return Error("not implemented");
+Status NativeRegisterContext::ClearAllHardwareBreakpoints() {
+  return Status("not implemented");
 }
 
 bool NativeRegisterContext::ClearHardwareBreakpoint(uint32_t hw_idx) {
   return false;
 }
 
-Error NativeRegisterContext::GetHardwareBreakHitIndex(uint32_t &bp_index,
-                                                      lldb::addr_t trap_addr) {
+Status NativeRegisterContext::GetHardwareBreakHitIndex(uint32_t &bp_index,
+                                                       lldb::addr_t trap_addr) {
   bp_index = LLDB_INVALID_INDEX32;
-  return Error("not implemented");
+  return Status("not implemented");
 }
 
 uint32_t NativeRegisterContext::NumSupportedHardwareWatchpoints() { return 0; }
@@ -272,25 +273,25 @@ bool NativeRegisterContext::ClearHardwareWatchpoint(uint32_t hw_index) {
   return false;
 }
 
-Error NativeRegisterContext::ClearAllHardwareWatchpoints() {
-  return Error("not implemented");
+Status NativeRegisterContext::ClearAllHardwareWatchpoints() {
+  return Status("not implemented");
 }
 
-Error NativeRegisterContext::IsWatchpointHit(uint32_t wp_index, bool &is_hit) {
+Status NativeRegisterContext::IsWatchpointHit(uint32_t wp_index, bool &is_hit) {
   is_hit = false;
-  return Error("not implemented");
+  return Status("not implemented");
 }
 
-Error NativeRegisterContext::GetWatchpointHitIndex(uint32_t &wp_index,
-                                                   lldb::addr_t trap_addr) {
+Status NativeRegisterContext::GetWatchpointHitIndex(uint32_t &wp_index,
+                                                    lldb::addr_t trap_addr) {
   wp_index = LLDB_INVALID_INDEX32;
-  return Error("not implemented");
+  return Status("not implemented");
 }
 
-Error NativeRegisterContext::IsWatchpointVacant(uint32_t wp_index,
-                                                bool &is_vacant) {
+Status NativeRegisterContext::IsWatchpointVacant(uint32_t wp_index,
+                                                 bool &is_vacant) {
   is_vacant = false;
-  return Error("not implemented");
+  return Status("not implemented");
 }
 
 lldb::addr_t NativeRegisterContext::GetWatchpointAddress(uint32_t wp_index) {
@@ -303,10 +304,10 @@ lldb::addr_t NativeRegisterContext::GetWatchpointHitAddress(uint32_t wp_index) {
 
 bool NativeRegisterContext::HardwareSingleStep(bool enable) { return false; }
 
-Error NativeRegisterContext::ReadRegisterValueFromMemory(
+Status NativeRegisterContext::ReadRegisterValueFromMemory(
     const RegisterInfo *reg_info, lldb::addr_t src_addr, size_t src_len,
     RegisterValue &reg_value) {
-  Error error;
+  Status error;
   if (reg_info == nullptr) {
     error.SetErrorString("invalid register info argument.");
     return error;
@@ -321,7 +322,7 @@ Error NativeRegisterContext::ReadRegisterValueFromMemory(
   //
   // Case 2: src_len > dst_len
   //
-  //   Error!  (The register should always be big enough to hold the data)
+  //   Status!  (The register should always be big enough to hold the data)
   //
   // Case 3: src_len < dst_len
   //
@@ -383,13 +384,13 @@ Error NativeRegisterContext::ReadRegisterValueFromMemory(
   return error;
 }
 
-Error NativeRegisterContext::WriteRegisterValueToMemory(
+Status NativeRegisterContext::WriteRegisterValueToMemory(
     const RegisterInfo *reg_info, lldb::addr_t dst_addr, size_t dst_len,
     const RegisterValue &reg_value) {
 
   uint8_t dst[RegisterValue::kMaxRegisterByteSize];
 
-  Error error;
+  Status error;
 
   NativeProcessProtocolSP process_sp(m_thread.GetProcess());
   if (process_sp) {
@@ -400,7 +401,7 @@ Error NativeRegisterContext::WriteRegisterValueToMemory(
     // they are the same.
     lldb::ByteOrder byte_order;
     if (!process_sp->GetByteOrder(byte_order))
-      return Error("NativeProcessProtocol::GetByteOrder () failed");
+      return Status("NativeProcessProtocol::GetByteOrder () failed");
 
     const size_t bytes_copied =
         reg_value.GetAsMemoryData(reg_info, dst, dst_len, byte_order, error);

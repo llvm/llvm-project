@@ -209,7 +209,7 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::GetChildAtIndex(
     return ValueObjectSP();
   uint8_t byte = 0;
   uint8_t mask = 0;
-  Error err;
+  Status err;
   size_t bytes_read = process_sp->ReadMemory(byte_location, &byte, 1, err);
   if (err.Fail() || bytes_read == 0)
     return ValueObjectSP();

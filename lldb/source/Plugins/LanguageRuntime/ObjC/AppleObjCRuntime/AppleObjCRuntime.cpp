@@ -31,8 +31,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
 #include <vector>
@@ -145,7 +145,7 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   lldb::addr_t wrapper_struct_addr = LLDB_INVALID_ADDRESS;
 
   if (!m_print_object_caller_up) {
-    Error error;
+    Status error;
     m_print_object_caller_up.reset(
         exe_scope->CalculateTarget()->GetFunctionCallerForLanguage(
             eLanguageTypeObjC, return_compiler_type, *function_address,
@@ -185,7 +185,7 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   size_t full_buffer_len = sizeof(buf) - 1;
   size_t curr_len = full_buffer_len;
   while (curr_len == full_buffer_len) {
-    Error error;
+    Status error;
     curr_len = process->ReadCStringFromMemory(result_ptr + cstr_len, buf,
                                               sizeof(buf), error);
     strm.Write(buf, curr_len);

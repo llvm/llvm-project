@@ -29,7 +29,7 @@ namespace lldb_private {
 class Declaration;
 }
 namespace lldb_private {
-class Error;
+class Status;
 }
 namespace lldb_private {
 class ExecutionContextScope;
@@ -73,9 +73,9 @@ public:
 
   const char *GetLocationAsCString() override;
 
-  bool SetValueFromCString(const char *value_str, Error &error) override;
+  bool SetValueFromCString(const char *value_str, Status &error) override;
 
-  bool SetData(DataExtractor &data, Error &error) override;
+  bool SetData(DataExtractor &data, Status &error) override;
 
   virtual lldb::VariableSP GetVariable() override { return m_variable_sp; }
 

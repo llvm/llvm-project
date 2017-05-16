@@ -35,8 +35,8 @@
 #include "lldb/Target/Thread.h" // for Thread
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"            // for Stream
 #include "lldb/Utility/StreamString.h"      // for StreamString
 #include "lldb/lldb-private-enumerations.h" // for InstructionType:...
@@ -59,7 +59,8 @@ using namespace lldb_private;
 DisassemblerSP Disassembler::FindPlugin(const ArchSpec &arch,
                                         const char *flavor,
                                         const char *plugin_name) {
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat,
                      "Disassembler::FindPlugin (arch = %s, plugin_name = %s)",
                      arch.GetArchitectureName(), plugin_name);
 
@@ -340,7 +341,7 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
   } else {
     TargetSP target_sp = exe_ctx.GetTargetSP();
     if (target_sp) {
-      Error error;
+      Status error;
       OptionValueSP value_sp = target_sp->GetDebugger().GetPropertyValue(
           &exe_ctx, "target.process.thread.step-avoid-regexp", false, error);
       if (value_sp && value_sp->GetType() == OptionValue::eTypeRegex) {
@@ -1118,7 +1119,7 @@ InstructionList::GetIndexOfNextBranchInstruction(uint32_t start,
     while (i > start) {
       --i;
 
-      Error error;
+      Status error;
       uint32_t inst_bytes;
       bool prefer_file_cache = false; // Read from process if process is running
       lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
@@ -1179,7 +1180,7 @@ size_t Disassembler::ParseInstructions(const ExecutionContext *exe_ctx,
 
     auto data_sp = std::make_shared<DataBufferHeap>(byte_size, '\0');
 
-    Error error;
+    Status error;
     lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
     const size_t bytes_read = target->ReadMemory(
         range.GetBaseAddress(), prefer_file_cache, data_sp->GetBytes(),
@@ -1224,7 +1225,7 @@ size_t Disassembler::ParseInstructions(const ExecutionContext *exe_ctx,
   DataBufferHeap *heap_buffer = new DataBufferHeap(byte_size, '\0');
   DataBufferSP data_sp(heap_buffer);
 
-  Error error;
+  Status error;
   lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
   const size_t bytes_read =
       target->ReadMemory(start, prefer_file_cache, heap_buffer->GetBytes(),
@@ -1460,4 +1461,3 @@ std::function<bool(const Instruction::Operand &)>
 lldb_private::OperandMatchers::MatchOpType(Instruction::Operand::Type type) {
   return [type](const Instruction::Operand &op) { return op.m_type == type; };
 }
-

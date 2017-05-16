@@ -103,7 +103,7 @@ bool ReadJITEntry(const addr_t from_addr, Process *process,
   const size_t data_byte_size =
       llvm::alignTo(sizeof(ptr_t) * 3, uint64_align_bytes) + sizeof(uint64_t);
 
-  Error error;
+  Status error;
   DataBufferHeap data(data_byte_size, 0);
   size_t bytes_read = process->ReadMemory(from_addr, data.GetBytes(),
                                           data.GetByteSize(), error);
@@ -277,7 +277,7 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
 
   jit_descriptor<ptr_t> jit_desc;
   const size_t jit_desc_size = sizeof(jit_desc);
-  Error error;
+  Status error;
   size_t bytes_read = m_process->DoReadMemory(m_jit_descriptor_addr, &jit_desc,
                                               jit_desc_size, error);
   if (bytes_read != jit_desc_size || !error.Success()) {

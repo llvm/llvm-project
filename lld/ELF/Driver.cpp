@@ -284,7 +284,7 @@ static int getInteger(opt::InputArgList &Args, unsigned Key, int Default) {
   int V = Default;
   if (auto *Arg = Args.getLastArg(Key)) {
     StringRef S = Arg->getValue();
-    if (S.getAsInteger(10, V))
+    if (!to_integer(S, V, 10))
       error(Arg->getSpelling() + ": number expected, but got " + S);
   }
   return V;
@@ -311,7 +311,7 @@ static uint64_t getZOptionValue(opt::InputArgList &Args, StringRef Key,
     if (Pos != StringRef::npos && Key == Value.substr(0, Pos)) {
       Value = Value.substr(Pos + 1);
       uint64_t Result;
-      if (Value.getAsInteger(0, Result))
+      if (!to_integer(Value, Result))
         error("invalid " + Key + ": " + Value);
       return Result;
     }
@@ -522,7 +522,7 @@ static uint64_t parseSectionAddress(StringRef S, opt::Arg *Arg) {
   uint64_t VA = 0;
   if (S.startswith("0x"))
     S = S.drop_front(2);
-  if (S.getAsInteger(16, VA))
+  if (!to_integer(S, VA, 16))
     error("invalid argument: " + toString(Arg));
   return VA;
 }
@@ -886,7 +886,7 @@ static uint64_t getImageBase(opt::InputArgList &Args) {
 
   StringRef S = Arg->getValue();
   uint64_t V;
-  if (S.getAsInteger(0, V)) {
+  if (!to_integer(S, V)) {
     error("-image-base: number expected, but got " + S);
     return 0;
   }

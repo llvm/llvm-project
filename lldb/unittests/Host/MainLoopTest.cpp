@@ -32,7 +32,7 @@ public:
 
   void SetUp() override {
     bool child_processes_inherit = false;
-    Error error;
+    Status error;
     std::unique_ptr<TCPSocket> listen_socket_up(
         new TCPSocket(true, child_processes_inherit));
     ASSERT_TRUE(error.Success());
@@ -40,7 +40,7 @@ public:
     ASSERT_TRUE(error.Success());
 
     Socket *accept_socket;
-    std::future<Error> accept_error = std::async(std::launch::async, [&] {
+    std::future<Status> accept_error = std::async(std::launch::async, [&] {
       return listen_socket_up->Accept(accept_socket);
     });
 
@@ -81,7 +81,7 @@ TEST_F(MainLoopTest, ReadObject) {
 
   MainLoop loop;
 
-  Error error;
+  Status error;
   auto handle = loop.RegisterReadObject(socketpair[1], make_callback(), error);
   ASSERT_TRUE(error.Success());
   ASSERT_TRUE(handle);
@@ -96,7 +96,7 @@ TEST_F(MainLoopTest, TerminatesImmediately) {
   ASSERT_TRUE(socketpair[1]->Write(&X, len).Success());
 
   MainLoop loop;
-  Error error;
+  Status error;
   auto handle0 = loop.RegisterReadObject(socketpair[0], make_callback(), error);
   ASSERT_TRUE(error.Success());
   auto handle1 = loop.RegisterReadObject(socketpair[1], make_callback(), error);
@@ -109,7 +109,7 @@ TEST_F(MainLoopTest, TerminatesImmediately) {
 #ifdef LLVM_ON_UNIX
 TEST_F(MainLoopTest, Signal) {
   MainLoop loop;
-  Error error;
+  Status error;
 
   auto handle = loop.RegisterSignal(SIGUSR1, make_callback(), error);
   ASSERT_TRUE(error.Success());

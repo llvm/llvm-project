@@ -210,7 +210,7 @@ public:
   // with this type system. For such cases, languages can check and return
   // an error.
   //----------------------------------------------------------------------
-  virtual Error IsCompatible();
+  virtual Status IsCompatible();
 
   //----------------------------------------------------------------------
   // Type Completion

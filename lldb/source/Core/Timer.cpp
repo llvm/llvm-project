@@ -27,8 +27,8 @@ using namespace lldb_private;
 #define TIMER_INDENT_AMOUNT 2
 
 namespace {
-typedef std::map<const char *, std::chrono::nanoseconds> TimerCategoryMap;
 typedef std::vector<Timer *> TimerStack;
+static std::atomic<Timer::Category *> g_categories;
 } // end of anonymous namespace
 
 std::atomic<bool> Timer::g_quiet(true);
@@ -36,16 +36,6 @@ std::atomic<unsigned> Timer::g_display_depth(0);
 static std::mutex &GetFileMutex() {
   static std::mutex *g_file_mutex_ptr = new std::mutex();
   return *g_file_mutex_ptr;
-}
-
-static std::mutex &GetCategoryMutex() {
-  static std::mutex g_category_mutex;
-  return g_category_mutex;
-}
-
-static TimerCategoryMap &GetCategoryMap() {
-  static TimerCategoryMap g_category_map;
-  return g_category_map;
 }
 
 static void ThreadSpecificCleanup(void *p) {
@@ -64,9 +54,17 @@ static TimerStack *GetTimerStackForCurrentThread() {
   return (TimerStack *)timer_stack;
 }
 
+Timer::Category::Category(const char *cat) : m_name(cat) {
+  m_nanos.store(0, std::memory_order_release);
+  Category *expected = g_categories;
+  do {
+    m_next = expected;
+  } while (!g_categories.compare_exchange_weak(expected, this));
+}
+
 void Timer::SetQuiet(bool value) { g_quiet = value; }
 
-Timer::Timer(const char *category, const char *format, ...)
+Timer::Timer(Timer::Category &category, const char *format, ...)
     : m_category(category), m_total_start(std::chrono::steady_clock::now()) {
   TimerStack *stack = GetTimerStackForCurrentThread();
   if (!stack)
@@ -114,11 +112,7 @@ Timer::~Timer() {
     stack->back()->ChildDuration(total_dur);
 
   // Keep total results for each category so we can dump results.
-  {
-    std::lock_guard<std::mutex> guard(GetCategoryMutex());
-    TimerCategoryMap &category_map = GetCategoryMap();
-    category_map[m_category] += timer_dur;
-  }
+  m_category.m_nanos += std::chrono::nanoseconds(timer_dur).count();
 }
 
 void Timer::SetDisplayDepth(uint32_t depth) { g_display_depth = depth; }
@@ -126,33 +120,32 @@ void Timer::SetDisplayDepth(uint32_t depth) { g_display_depth = depth; }
 /* binary function predicate:
  * - returns whether a person is less than another person
  */
-static bool
-CategoryMapIteratorSortCriterion(const TimerCategoryMap::const_iterator &lhs,
-                                 const TimerCategoryMap::const_iterator &rhs) {
-  return lhs->second > rhs->second;
+
+typedef std::pair<const char *, uint64_t> TimerEntry;
+
+static bool CategoryMapIteratorSortCriterion(const TimerEntry &lhs,
+                                             const TimerEntry &rhs) {
+  return lhs.second > rhs.second;
 }
 
 void Timer::ResetCategoryTimes() {
-  std::lock_guard<std::mutex> guard(GetCategoryMutex());
-  TimerCategoryMap &category_map = GetCategoryMap();
-  category_map.clear();
+  for (Category *i = g_categories; i; i = i->m_next)
+    i->m_nanos.store(0, std::memory_order_release);
 }
 
 void Timer::DumpCategoryTimes(Stream *s) {
-  std::lock_guard<std::mutex> guard(GetCategoryMutex());
-  TimerCategoryMap &category_map = GetCategoryMap();
-  std::vector<TimerCategoryMap::const_iterator> sorted_iterators;
-  TimerCategoryMap::const_iterator pos, end = category_map.end();
-  for (pos = category_map.begin(); pos != end; ++pos) {
-    sorted_iterators.push_back(pos);
+  std::vector<TimerEntry> sorted;
+  for (Category *i = g_categories; i; i = i->m_next) {
+    uint64_t nanos = i->m_nanos.load(std::memory_order_acquire);
+    if (nanos)
+      sorted.push_back(std::make_pair(i->m_name, nanos));
   }
-  std::sort(sorted_iterators.begin(), sorted_iterators.end(),
-            CategoryMapIteratorSortCriterion);
+  if (sorted.empty())
+    return; // Later code will break without any elements.
 
-  const size_t count = sorted_iterators.size();
-  for (size_t i = 0; i < count; ++i) {
-    const auto timer = sorted_iterators[i]->second;
-    s->Printf("%.9f sec for %s\n", std::chrono::duration<double>(timer).count(),
-              sorted_iterators[i]->first);
-  }
+  // Sort by time
+  std::sort(sorted.begin(), sorted.end(), CategoryMapIteratorSortCriterion);
+
+  for (const auto &timer : sorted)
+    s->Printf("%.9f sec for %s\n", timer.second / 1000000000., timer.first);
 }

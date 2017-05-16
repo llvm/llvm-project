@@ -29,7 +29,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -746,7 +746,7 @@ bool ABIMacOSX_i386::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   // Make room for the argument(s) on the stack
 
-  Error error;
+  Status error;
   RegisterValue reg_value;
 
   // Write any arguments onto the stack
@@ -793,7 +793,7 @@ static bool ReadIntegerArgument(Scalar &scalar, unsigned int bit_width,
                                 addr_t &current_stack_argument) {
 
   uint32_t byte_size = (bit_width + (8 - 1)) / 8;
-  Error error;
+  Status error;
   if (process->ReadScalarIntegerFromMemory(current_stack_argument, byte_size,
                                            is_signed, scalar, error)) {
     current_stack_argument += byte_size;
@@ -849,9 +849,9 @@ bool ABIMacOSX_i386::GetArgumentValues(Thread &thread,
   return true;
 }
 
-Error ABIMacOSX_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
-                                           lldb::ValueObjectSP &new_value_sp) {
-  Error error;
+Status ABIMacOSX_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
+                                            lldb::ValueObjectSP &new_value_sp) {
+  Status error;
   if (!new_value_sp) {
     error.SetErrorString("Empty value object for return value.");
     return error;
@@ -875,7 +875,7 @@ Error ABIMacOSX_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
       compiler_type.IsPointerType()) {
     DataExtractor data;
-    Error data_error;
+    Status data_error;
     size_t num_bytes = new_value_sp->GetData(data, data_error);
     if (data_error.Fail()) {
       error.SetErrorStringWithFormat(

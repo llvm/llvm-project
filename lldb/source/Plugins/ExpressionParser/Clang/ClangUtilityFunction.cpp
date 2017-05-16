@@ -118,7 +118,7 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
 
   bool can_interpret = false; // should stay that way
 
-  Error jit_error = parser.PrepareForExecution(
+  Status jit_error = parser.PrepareForExecution(
       m_jit_start_addr, m_jit_end_addr, m_execution_unit_sp, exe_ctx,
       can_interpret, eExecutionPolicyAlways);
 

@@ -20,8 +20,8 @@
 #include <sys/sysctl.h>
 
 // LLDB includes
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
 
@@ -343,7 +343,7 @@ uint32_t NativeThreadListDarwin::UpdateThreadList(NativeProcessDarwin &process,
     mach_msg_type_number_t thread_list_count = 0;
     task_t task = process.GetTask();
 
-    Error error;
+    Status error;
     auto mach_err = ::task_threads(task, &thread_list, &thread_list_count);
     error.SetError(mach_err, eErrorTypeMachKernel);
     if (error.Fail()) {

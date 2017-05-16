@@ -38,7 +38,7 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  Error
+  Status
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
@@ -66,10 +66,10 @@ public:
 
   lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
                                   llvm::StringRef name, bool will_modify,
-                                  Error &error) const override;
+                                  Status &error) const override;
 
-  Error SetSubValue(const ExecutionContext *exe_ctx, VarSetOperationType op,
-    llvm::StringRef name, llvm::StringRef value) override;
+  Status SetSubValue(const ExecutionContext *exe_ctx, VarSetOperationType op,
+                     llvm::StringRef name, llvm::StringRef value) override;
 
   bool SetValueForKey(const ConstString &key,
                       const lldb::OptionValueSP &value_sp,
@@ -79,7 +79,7 @@ public:
 
   size_t GetArgs(Args &args) const;
 
-  Error SetArgs(const Args &args, VarSetOperationType op);
+  Status SetArgs(const Args &args, VarSetOperationType op);
 
 protected:
   typedef std::map<ConstString, lldb::OptionValueSP> collection;

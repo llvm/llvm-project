@@ -274,8 +274,8 @@ size_t ELFLinuxPrStatus::GetSize(lldb_private::ArchSpec &arch) {
   }
 }
 
-Error ELFLinuxPrStatus::Parse(DataExtractor &data, ArchSpec &arch) {
-  Error error;
+Status ELFLinuxPrStatus::Parse(DataExtractor &data, ArchSpec &arch) {
+  Status error;
   if (GetSize(arch) > data.GetByteSize()) {
     error.SetErrorStringWithFormat(
         "NT_PRSTATUS size should be %zu, but the remaining bytes are: %" PRIu64,
@@ -344,8 +344,8 @@ size_t ELFLinuxPrPsInfo::GetSize(lldb_private::ArchSpec &arch) {
   }
 }
 
-Error ELFLinuxPrPsInfo::Parse(DataExtractor &data, ArchSpec &arch) {
-  Error error;
+Status ELFLinuxPrPsInfo::Parse(DataExtractor &data, ArchSpec &arch) {
+  Status error;
   ByteOrder byteorder = data.GetByteOrder();
   if (GetSize(arch) > data.GetByteSize()) {
     error.SetErrorStringWithFormat(
@@ -413,8 +413,8 @@ size_t ELFLinuxSigInfo::GetSize(const lldb_private::ArchSpec &arch) {
   }
 }
 
-Error ELFLinuxSigInfo::Parse(DataExtractor &data, const ArchSpec &arch) {
-  Error error;
+Status ELFLinuxSigInfo::Parse(DataExtractor &data, const ArchSpec &arch) {
+  Status error;
   if (GetSize(arch) > data.GetByteSize()) {
     error.SetErrorStringWithFormat(
         "NT_SIGINFO size should be %zu, but the remaining bytes are: %" PRIu64,

@@ -410,7 +410,7 @@ bool Type::ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
       if (exe_ctx) {
         Process *process = exe_ctx->GetProcessPtr();
         if (process) {
-          Error error;
+          Status error;
           return exe_ctx->GetProcessPtr()->ReadMemory(addr, dst, byte_size,
                                                       error) == byte_size;
         }

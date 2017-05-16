@@ -735,7 +735,7 @@ LineEntry SymbolContext::GetFunctionStartLineEntry() const {
 
 bool SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
                                                      AddressRange &range,
-                                                     Error &error) {
+                                                     Status &error) {
   if (!line_entry.IsValid()) {
     error.SetErrorString("Symbol context has no line table.");
     return false;

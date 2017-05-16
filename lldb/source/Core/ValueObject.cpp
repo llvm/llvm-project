@@ -400,7 +400,7 @@ DataExtractor &ValueObject::GetDataExtractor() {
   return m_data;
 }
 
-const Error &ValueObject::GetError() {
+const Status &ValueObject::GetError() {
   UpdateValueIfNeeded(false);
   return m_error;
 }
@@ -487,7 +487,7 @@ bool ValueObject::ResolveValue(Scalar &scalar) {
   return false;
 }
 
-bool ValueObject::IsLogicalTrue(Error &error) {
+bool ValueObject::IsLogicalTrue(Status &error) {
   if (Language *language = Language::FindPlugin(GetObjectRuntimeLanguage())) {
     LazyBool is_logical_true = language->IsLogicalTrue(*this, error);
     switch (is_logical_true) {
@@ -839,7 +839,7 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
   if (item_idx == 0 && item_count == 1) // simply a deref
   {
     if (is_pointer_type) {
-      Error error;
+      Status error;
       ValueObjectSP pointee_sp = Dereference(error);
       if (error.Fail() || pointee_sp.get() == NULL)
         return 0;
@@ -848,13 +848,13 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
       ValueObjectSP child_sp = GetChildAtIndex(0, true);
       if (child_sp.get() == NULL)
         return 0;
-      Error error;
+      Status error;
       return child_sp->GetData(data, error);
     }
     return true;
   } else /* (items > 1) */
   {
-    Error error;
+    Status error;
     lldb_private::DataBufferHeap *heap_buf_ptr = NULL;
     lldb::DataBufferSP data_sp(heap_buf_ptr =
                                    new lldb_private::DataBufferHeap());
@@ -916,7 +916,7 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
   return 0;
 }
 
-uint64_t ValueObject::GetData(DataExtractor &data, Error &error) {
+uint64_t ValueObject::GetData(DataExtractor &data, Status &error) {
   UpdateValueIfNeeded(false);
   ExecutionContext exe_ctx(GetExecutionContextRef());
   error = m_value.GetValueAsData(&exe_ctx, data, 0, GetModule().get());
@@ -934,7 +934,7 @@ uint64_t ValueObject::GetData(DataExtractor &data, Error &error) {
   return data.GetByteSize();
 }
 
-bool ValueObject::SetData(DataExtractor &data, Error &error) {
+bool ValueObject::SetData(DataExtractor &data, Status &error) {
   error.Clear();
   // Make sure our value is up to date first so that our location and location
   // type is valid.
@@ -952,7 +952,7 @@ bool ValueObject::SetData(DataExtractor &data, Error &error) {
 
   switch (value_type) {
   case Value::eValueTypeScalar: {
-    Error set_error =
+    Status set_error =
         m_value.GetScalar().SetValueFromData(data, encoding, byte_size);
 
     if (!set_error.Success()) {
@@ -1006,7 +1006,7 @@ static bool CopyStringDataToBufferSP(const StreamString &source,
 }
 
 std::pair<size_t, bool>
-ValueObject::ReadPointedString(lldb::DataBufferSP &buffer_sp, Error &error,
+ValueObject::ReadPointedString(lldb::DataBufferSP &buffer_sp, Status &error,
                                uint32_t max_length, bool honor_array,
                                Format item_format) {
   bool was_capped = false;
@@ -1353,7 +1353,7 @@ bool ValueObject::DumpPrintableRepresentation(
            custom_format ==
                eFormatVectorOfChar)) // print char[] & char* directly
       {
-        Error error;
+        Status error;
         lldb::DataBufferSP buffer_sp;
         std::pair<size_t, bool> read_string = ReadPointedString(
             buffer_sp, error, 0, (custom_format == eFormatVectorOfChar) ||
@@ -1629,7 +1629,7 @@ addr_t ValueObject::GetPointerValue(AddressType *address_type) {
   return address;
 }
 
-bool ValueObject::SetValueFromCString(const char *value_str, Error &error) {
+bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   error.Clear();
   // Make sure our value is up to date first so that our location and location
   // type is valid.
@@ -2271,7 +2271,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath(
     if ((final_task_on_target ? *final_task_on_target
                               : dummy_final_task_on_target) ==
         ValueObject::eExpressionPathAftermathDereference) {
-      Error error;
+      Status error;
       ValueObjectSP final_value = ret_val->Dereference(error);
       if (error.Fail() || !final_value.get()) {
         if (reason_to_stop)
@@ -2288,7 +2288,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath(
     }
     if (*final_task_on_target ==
         ValueObject::eExpressionPathAftermathTakeAddress) {
-      Error error;
+      Status error;
       ValueObjectSP final_value = ret_val->AddressOf(error);
       if (error.Fail() || !final_value.get()) {
         if (reason_to_stop)
@@ -2638,7 +2638,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
                                                              // and use this as
                                                              // a bitfield
               pointee_compiler_type_info.Test(eTypeIsScalar)) {
-            Error error;
+            Status error;
             root = root->Dereference(error);
             if (error.Fail() || !root) {
               *reason_to_stop =
@@ -2783,7 +2783,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
                    *what_next ==
                        ValueObject::eExpressionPathAftermathDereference &&
                    pointee_compiler_type_info.Test(eTypeIsScalar)) {
-          Error error;
+          Status error;
           root = root->Dereference(error);
           if (error.Fail() || !root) {
             *reason_to_stop =
@@ -2925,7 +2925,7 @@ lldb::addr_t ValueObject::GetCPPVTableAddress(AddressType &address_type) {
   return LLDB_INVALID_ADDRESS;
 }
 
-ValueObjectSP ValueObject::Dereference(Error &error) {
+ValueObjectSP ValueObject::Dereference(Status &error) {
   if (m_deref_valobj)
     return m_deref_valobj->GetSP();
 
@@ -2990,7 +2990,7 @@ ValueObjectSP ValueObject::Dereference(Error &error) {
   }
 }
 
-ValueObjectSP ValueObject::AddressOf(Error &error) {
+ValueObjectSP ValueObject::AddressOf(Status &error) {
   if (m_addr_of_valobj_sp)
     return m_addr_of_valobj_sp;
 
@@ -3277,7 +3277,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
       if (ptr_result_valobj_sp) {
         ptr_result_valobj_sp->GetValue().SetValueType(
             Value::eValueTypeLoadAddress);
-        Error err;
+        Status err;
         ptr_result_valobj_sp = ptr_result_valobj_sp->Dereference(err);
         if (ptr_result_valobj_sp && !name.empty())
           ptr_result_valobj_sp->SetName(ConstString(name));

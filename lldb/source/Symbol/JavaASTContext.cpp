@@ -137,7 +137,7 @@ public:
     if (m_dynamic_type_id.Evaluate(exe_ctx->GetBestExecutionContextScope(),
                                    nullptr, nullptr, 0, &obj_load_address,
                                    nullptr, result, nullptr)) {
-      Error error;
+      Status error;
 
       lldb::addr_t type_id_addr = result.GetScalar().UInt();
       lldb::ProcessSP process_sp = exe_ctx->GetProcessSP();
@@ -303,7 +303,7 @@ public:
     if (!m_length_expression.IsValid())
       return UINT32_MAX;
 
-    Error error;
+    Status error;
     ValueObjectSP address_obj = value_obj->AddressOf(error);
     if (error.Fail())
       return UINT32_MAX;

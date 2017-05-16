@@ -103,7 +103,6 @@ namespace std {
       constexpr const_pointer data() const noexcept;
 
       // 7.7, basic_string_view modifiers
-      constexpr void clear() noexcept;
       constexpr void remove_prefix(size_type n);
       constexpr void remove_suffix(size_type n);
       constexpr void swap(basic_string_view& s) noexcept;
@@ -292,13 +291,6 @@ public:
 	const_pointer data() const _NOEXCEPT { return __data; }
 
 	// [string.view.modifiers], modifiers:
-	_LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-	void clear() _NOEXCEPT
-	{
-		__data = nullptr;
-		__size = 0;
-	}
-
 	_LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 	void remove_prefix(size_type __n) _NOEXCEPT
 	{

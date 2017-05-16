@@ -14,8 +14,8 @@
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/Utility/RegisterContextNetBSD_x86_64.h"
 
@@ -251,9 +251,10 @@ int NativeRegisterContextNetBSD_x86_64::WriteRegisterSet(uint32_t set) {
   return -1;
 }
 
-Error NativeRegisterContextNetBSD_x86_64::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &reg_value) {
-  Error error;
+Status
+NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
+                                                 RegisterValue &reg_value) {
+  Status error;
 
   if (!reg_info) {
     error.SetErrorString("reg_info NULL");
@@ -446,10 +447,10 @@ Error NativeRegisterContextNetBSD_x86_64::ReadRegister(
   return error;
 }
 
-Error NativeRegisterContextNetBSD_x86_64::WriteRegister(
+Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &reg_value) {
 
-  Error error;
+  Status error;
 
   if (!reg_info) {
     error.SetErrorString("reg_info NULL");
@@ -645,9 +646,9 @@ Error NativeRegisterContextNetBSD_x86_64::WriteRegister(
   return error;
 }
 
-Error NativeRegisterContextNetBSD_x86_64::ReadAllRegisterValues(
+Status NativeRegisterContextNetBSD_x86_64::ReadAllRegisterValues(
     lldb::DataBufferSP &data_sp) {
-  Error error;
+  Status error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
   if (!data_sp) {
@@ -680,9 +681,9 @@ Error NativeRegisterContextNetBSD_x86_64::ReadAllRegisterValues(
   return error;
 }
 
-Error NativeRegisterContextNetBSD_x86_64::WriteAllRegisterValues(
+Status NativeRegisterContextNetBSD_x86_64::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
-  Error error;
+  Status error;
 
   if (!data_sp) {
     error.SetErrorStringWithFormat(
@@ -717,14 +718,14 @@ Error NativeRegisterContextNetBSD_x86_64::WriteAllRegisterValues(
   return error;
 }
 
-Error NativeRegisterContextNetBSD_x86_64::IsWatchpointHit(uint32_t wp_index,
-                                                          bool &is_hit) {
+Status NativeRegisterContextNetBSD_x86_64::IsWatchpointHit(uint32_t wp_index,
+                                                           bool &is_hit) {
   if (wp_index >= NumSupportedHardwareWatchpoints())
-    return Error("Watchpoint index out of range");
+    return Status("Watchpoint index out of range");
 
   RegisterValue reg_value;
   const RegisterInfo *const reg_info = GetRegisterInfoAtIndex(lldb_dr6_x86_64);
-  Error error = ReadRegister(reg_info, reg_value);
+  Status error = ReadRegister(reg_info, reg_value);
   if (error.Fail()) {
     is_hit = false;
     return error;
@@ -737,12 +738,12 @@ Error NativeRegisterContextNetBSD_x86_64::IsWatchpointHit(uint32_t wp_index,
   return error;
 }
 
-Error NativeRegisterContextNetBSD_x86_64::GetWatchpointHitIndex(
+Status NativeRegisterContextNetBSD_x86_64::GetWatchpointHitIndex(
     uint32_t &wp_index, lldb::addr_t trap_addr) {
   uint32_t num_hw_wps = NumSupportedHardwareWatchpoints();
   for (wp_index = 0; wp_index < num_hw_wps; ++wp_index) {
     bool is_hit;
-    Error error = IsWatchpointHit(wp_index, is_hit);
+    Status error = IsWatchpointHit(wp_index, is_hit);
     if (error.Fail()) {
       wp_index = LLDB_INVALID_INDEX32;
       return error;
@@ -751,17 +752,17 @@ Error NativeRegisterContextNetBSD_x86_64::GetWatchpointHitIndex(
     }
   }
   wp_index = LLDB_INVALID_INDEX32;
-  return Error();
+  return Status();
 }
 
-Error NativeRegisterContextNetBSD_x86_64::IsWatchpointVacant(uint32_t wp_index,
-                                                             bool &is_vacant) {
+Status NativeRegisterContextNetBSD_x86_64::IsWatchpointVacant(uint32_t wp_index,
+                                                              bool &is_vacant) {
   if (wp_index >= NumSupportedHardwareWatchpoints())
-    return Error("Watchpoint index out of range");
+    return Status("Watchpoint index out of range");
 
   RegisterValue reg_value;
   const RegisterInfo *const reg_info = GetRegisterInfoAtIndex(lldb_dr7_x86_64);
-  Error error = ReadRegister(reg_info, reg_value);
+  Status error = ReadRegister(reg_info, reg_value);
   if (error.Fail()) {
     is_vacant = false;
     return error;
@@ -774,11 +775,11 @@ Error NativeRegisterContextNetBSD_x86_64::IsWatchpointVacant(uint32_t wp_index,
   return error;
 }
 
-Error NativeRegisterContextNetBSD_x86_64::SetHardwareWatchpointWithIndex(
+Status NativeRegisterContextNetBSD_x86_64::SetHardwareWatchpointWithIndex(
     lldb::addr_t addr, size_t size, uint32_t watch_flags, uint32_t wp_index) {
 
   if (wp_index >= NumSupportedHardwareWatchpoints())
-    return Error("Watchpoint index out of range");
+    return Status("Watchpoint index out of range");
 
   // Read only watchpoints aren't supported on x86_64. Fall back to read/write
   // waitchpoints instead.
@@ -788,17 +789,17 @@ Error NativeRegisterContextNetBSD_x86_64::SetHardwareWatchpointWithIndex(
     watch_flags = 0x3;
 
   if (watch_flags != 0x1 && watch_flags != 0x3)
-    return Error("Invalid read/write bits for watchpoint");
+    return Status("Invalid read/write bits for watchpoint");
 
   if (size != 1 && size != 2 && size != 4 && size != 8)
-    return Error("Invalid size for watchpoint");
+    return Status("Invalid size for watchpoint");
 
   bool is_vacant;
-  Error error = IsWatchpointVacant(wp_index, is_vacant);
+  Status error = IsWatchpointVacant(wp_index, is_vacant);
   if (error.Fail())
     return error;
   if (!is_vacant)
-    return Error("Watchpoint index not vacant");
+    return Status("Watchpoint index not vacant");
 
   RegisterValue reg_value;
   const RegisterInfo *const reg_info_dr7 =
@@ -851,7 +852,7 @@ bool NativeRegisterContextNetBSD_x86_64::ClearHardwareWatchpoint(
   // clear bits 0, 1, 2, or 3 of the debug status register (DR6)
   const RegisterInfo *const reg_info_dr6 =
       GetRegisterInfoAtIndex(lldb_dr6_x86_64);
-  Error error = ReadRegister(reg_info_dr6, reg_value);
+  Status error = ReadRegister(reg_info_dr6, reg_value);
   if (error.Fail())
     return false;
   uint64_t bit_mask = 1 << wp_index;
@@ -873,13 +874,13 @@ bool NativeRegisterContextNetBSD_x86_64::ClearHardwareWatchpoint(
   return WriteRegister(reg_info_dr7, RegisterValue(control_bits)).Success();
 }
 
-Error NativeRegisterContextNetBSD_x86_64::ClearAllHardwareWatchpoints() {
+Status NativeRegisterContextNetBSD_x86_64::ClearAllHardwareWatchpoints() {
   RegisterValue reg_value;
 
   // clear bits {0-4} of the debug status register (DR6)
   const RegisterInfo *const reg_info_dr6 =
       GetRegisterInfoAtIndex(lldb_dr6_x86_64);
-  Error error = ReadRegister(reg_info_dr6, reg_value);
+  Status error = ReadRegister(reg_info_dr6, reg_value);
   if (error.Fail())
     return error;
   uint64_t bit_mask = 0xF;
@@ -905,7 +906,7 @@ uint32_t NativeRegisterContextNetBSD_x86_64::SetHardwareWatchpoint(
   const uint32_t num_hw_watchpoints = NumSupportedHardwareWatchpoints();
   for (uint32_t wp_index = 0; wp_index < num_hw_watchpoints; ++wp_index) {
     bool is_vacant;
-    Error error = IsWatchpointVacant(wp_index, is_vacant);
+    Status error = IsWatchpointVacant(wp_index, is_vacant);
     if (is_vacant) {
       error = SetHardwareWatchpointWithIndex(addr, size, watch_flags, wp_index);
       if (error.Success())

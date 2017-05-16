@@ -17,9 +17,9 @@ class DomainSocket : public Socket {
 public:
   DomainSocket(bool should_close, bool child_processes_inherit);
 
-  Error Connect(llvm::StringRef name) override;
-  Error Listen(llvm::StringRef name, int backlog) override;
-  Error Accept(Socket *&socket) override;
+  Status Connect(llvm::StringRef name) override;
+  Status Listen(llvm::StringRef name, int backlog) override;
+  Status Accept(Socket *&socket) override;
 
 protected:
   DomainSocket(SocketProtocol protocol, bool child_processes_inherit);

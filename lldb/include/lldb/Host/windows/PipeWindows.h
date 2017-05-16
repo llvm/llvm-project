@@ -27,12 +27,14 @@ public:
   PipeWindows();
   ~PipeWindows() override;
 
-  Error CreateNew(bool child_process_inherit) override;
-  Error CreateNew(llvm::StringRef name, bool child_process_inherit) override;
-  Error CreateWithUniqueName(llvm::StringRef prefix, bool child_process_inherit,
-                             llvm::SmallVectorImpl<char> &name) override;
-  Error OpenAsReader(llvm::StringRef name, bool child_process_inherit) override;
-  Error
+  Status CreateNew(bool child_process_inherit) override;
+  Status CreateNew(llvm::StringRef name, bool child_process_inherit) override;
+  Status CreateWithUniqueName(llvm::StringRef prefix,
+                              bool child_process_inherit,
+                              llvm::SmallVectorImpl<char> &name) override;
+  Status OpenAsReader(llvm::StringRef name,
+                      bool child_process_inherit) override;
+  Status
   OpenAsWriterWithTimeout(llvm::StringRef name, bool child_process_inherit,
                           const std::chrono::microseconds &timeout) override;
 
@@ -48,12 +50,12 @@ public:
 
   void Close() override;
 
-  Error Delete(llvm::StringRef name) override;
+  Status Delete(llvm::StringRef name) override;
 
-  Error Write(const void *buf, size_t size, size_t &bytes_written) override;
-  Error ReadWithTimeout(void *buf, size_t size,
-                        const std::chrono::microseconds &timeout,
-                        size_t &bytes_read) override;
+  Status Write(const void *buf, size_t size, size_t &bytes_written) override;
+  Status ReadWithTimeout(void *buf, size_t size,
+                         const std::chrono::microseconds &timeout,
+                         size_t &bytes_read) override;
 
   // PipeWindows specific methods.  These allow access to the underlying OS
   // handle.
@@ -61,8 +63,8 @@ public:
   HANDLE GetWriteNativeHandle();
 
 private:
-  Error OpenNamedPipe(llvm::StringRef name, bool child_process_inherit,
-                      bool is_read);
+  Status OpenNamedPipe(llvm::StringRef name, bool child_process_inherit,
+                       bool is_read);
 
   HANDLE m_read;
   HANDLE m_write;

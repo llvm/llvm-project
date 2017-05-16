@@ -17,7 +17,7 @@ namespace lldb_private {
 class ProcessLauncherPosixFork : public ProcessLauncher {
 public:
   HostProcess LaunchProcess(const ProcessLaunchInfo &launch_info,
-                            Error &error) override;
+                            Status &error) override;
 };
 
 } // end of namespace lldb_private

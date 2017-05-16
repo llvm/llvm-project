@@ -6,7 +6,6 @@ add_lldb_library(lldbUtility
   DataBufferLLVM.cpp
   DataEncoder.cpp
   DataExtractor.cpp
-  Error.cpp
   FastDemangle.cpp
   FileSpec.cpp
   History.cpp
@@ -19,6 +18,7 @@ add_lldb_library(lldbUtility
   RegularExpression.cpp
   SelectHelper.cpp
   SharingPtr.cpp
+  Status.cpp
   Stream.cpp
   StreamCallback.cpp
   StreamGDBRemote.cpp

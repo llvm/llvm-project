@@ -145,7 +145,7 @@ void ThreadPlanAssemblyTracer::Log() {
 
   Disassembler *disassembler = GetDisassembler();
   if (disassembler) {
-    Error err;
+    Status err;
     process_sp->ReadMemory(pc, buffer, sizeof(buffer), err);
 
     if (err.Success()) {

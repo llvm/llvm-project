@@ -10,8 +10,8 @@
 #ifndef liblldb_Host_FileSystem_h
 #define liblldb_Host_FileSystem_h
 
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Status.h"
 #include "llvm/Support/Chrono.h"
 
 #include "lldb/lldb-types.h"
@@ -26,10 +26,10 @@ public:
   static const char *DEV_NULL;
   static const char *PATH_CONVERSION_ERROR;
 
-  static Error Symlink(const FileSpec &src, const FileSpec &dst);
-  static Error Readlink(const FileSpec &src, FileSpec &dst);
+  static Status Symlink(const FileSpec &src, const FileSpec &dst);
+  static Status Readlink(const FileSpec &src, FileSpec &dst);
 
-  static Error ResolveSymbolicLink(const FileSpec &src, FileSpec &dst);
+  static Status ResolveSymbolicLink(const FileSpec &src, FileSpec &dst);
 
   /// Wraps ::fopen in a platform-independent way. Once opened, FILEs can be
   /// manipulated and closed with the normal ::fread, ::fclose, etc. functions.

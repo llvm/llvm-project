@@ -13,7 +13,7 @@
 #include "lldb/Core/Scalar.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-defines.h"       // for LLDB_INVALID_ADDRESS
@@ -102,7 +102,7 @@ bool RegisterValue::GetData(DataExtractor &data) const {
 uint32_t RegisterValue::GetAsMemoryData(const RegisterInfo *reg_info, void *dst,
                                         uint32_t dst_len,
                                         lldb::ByteOrder dst_byte_order,
-                                        Error &error) const {
+                                        Status &error) const {
   if (reg_info == nullptr) {
     error.SetErrorString("invalid register info argument.");
     return 0;
@@ -148,7 +148,7 @@ uint32_t RegisterValue::GetAsMemoryData(const RegisterInfo *reg_info, void *dst,
 uint32_t RegisterValue::SetFromMemoryData(const RegisterInfo *reg_info,
                                           const void *src, uint32_t src_len,
                                           lldb::ByteOrder src_byte_order,
-                                          Error &error) {
+                                          Status &error) {
   if (reg_info == nullptr) {
     error.SetErrorString("invalid register info argument.");
     return 0;
@@ -163,7 +163,7 @@ uint32_t RegisterValue::SetFromMemoryData(const RegisterInfo *reg_info,
   //
   // Case 2: src_len > dst_len
   //
-  //   Error!  (The register should always be big enough to hold the data)
+  //   Status!  (The register should always be big enough to hold the data)
   //
   // Case 3: src_len < dst_len
   //
@@ -257,11 +257,11 @@ RegisterValue::Type RegisterValue::SetType(const RegisterInfo *reg_info) {
   return m_type;
 }
 
-Error RegisterValue::SetValueFromData(const RegisterInfo *reg_info,
-                                      DataExtractor &src,
-                                      lldb::offset_t src_offset,
-                                      bool partial_data_ok) {
-  Error error;
+Status RegisterValue::SetValueFromData(const RegisterInfo *reg_info,
+                                       DataExtractor &src,
+                                       lldb::offset_t src_offset,
+                                       bool partial_data_ok) {
+  Status error;
 
   if (src.GetByteSize() == 0) {
     error.SetErrorString("empty data.");
@@ -391,9 +391,9 @@ static bool ParseVectorEncoding(const RegisterInfo *reg_info,
   return true;
 }
 
-Error RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
-                                        llvm::StringRef value_str) {
-  Error error;
+Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
+                                         llvm::StringRef value_str) {
+  Status error;
   if (reg_info == nullptr) {
     error.SetErrorString("Invalid register info argument.");
     return error;

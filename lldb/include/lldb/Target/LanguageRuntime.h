@@ -48,7 +48,7 @@ public:
   static SearchFilter *
   CreateFromStructuredData(Target &target,
                            const StructuredData::Dictionary &data_dict,
-                           Error &error);
+                           Status &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;
 

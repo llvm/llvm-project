@@ -982,7 +982,7 @@ const Dependences &DependenceInfoWrapperPass::recomputeDependences(
 }
 
 bool DependenceInfoWrapperPass::runOnFunction(Function &F) {
-  auto &SI = getAnalysis<ScopInfoWrapperPass>();
+  auto &SI = *getAnalysis<ScopInfoWrapperPass>().getSI();
   for (auto &It : SI) {
     assert(It.second && "Invalid SCoP object!");
     recomputeDependences(It.second.get(), Dependences::AL_Access);

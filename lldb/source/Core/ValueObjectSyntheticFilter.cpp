@@ -13,10 +13,10 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Target/ExecutionContext.h" // for ExecutionContext
-#include "lldb/Utility/Error.h"           // for Error
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"    // for GetLogIfAllCategoriesSet
 #include "lldb/Utility/SharingPtr.h" // for SharingPtr
+#include "lldb/Utility/Status.h"     // for Status
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -324,7 +324,7 @@ bool ValueObjectSynthetic::CanProvideValue() {
 }
 
 bool ValueObjectSynthetic::SetValueFromCString(const char *value_str,
-                                               Error &error) {
+                                               Status &error) {
   return m_parent->SetValueFromCString(value_str, error);
 }
 

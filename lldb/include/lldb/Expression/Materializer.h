@@ -20,7 +20,7 @@
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/StackFrame.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-types.h"
 
 namespace lldb_private {
@@ -46,7 +46,7 @@ public:
 
     ~Dematerializer() { Wipe(); }
 
-    void Dematerialize(Error &err, lldb::addr_t frame_top,
+    void Dematerialize(Status &err, lldb::addr_t frame_top,
                        lldb::addr_t frame_bottom);
 
     void Wipe();
@@ -77,7 +77,7 @@ public:
   typedef std::weak_ptr<Dematerializer> DematerializerWP;
 
   DematerializerSP Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
-                               lldb::addr_t process_address, Error &err);
+                               lldb::addr_t process_address, Status &err);
 
   class PersistentVariableDelegate {
   public:
@@ -88,14 +88,13 @@ public:
 
   virtual uint32_t
   AddPersistentVariable(lldb::ExpressionVariableSP &persistent_variable_sp,
-                        PersistentVariableDelegate *delegate, Error &err);
-  virtual uint32_t AddVariable(lldb::VariableSP &variable_sp, Error &err);
-  virtual uint32_t AddResultVariable(const CompilerType &type, bool is_lvalue,
-                                     bool keep_in_memory,
-                                     PersistentVariableDelegate *delegate,
-                                     Error &err);
-  virtual uint32_t AddSymbol(const Symbol &symbol_sp, Error &err);
-  virtual uint32_t AddRegister(const RegisterInfo &register_info, Error &err);
+                        PersistentVariableDelegate *delegate, Status &err);
+  uint32_t AddVariable(lldb::VariableSP &variable_sp, Status &err);
+  uint32_t AddResultVariable(const CompilerType &type, bool is_lvalue,
+                             bool keep_in_memory,
+                             PersistentVariableDelegate *delegate, Status &err);
+  uint32_t AddSymbol(const Symbol &symbol_sp, Status &err);
+  uint32_t AddRegister(const RegisterInfo &register_info, Status &err);
 
   uint32_t GetStructAlignment() { return m_struct_alignment; }
 
@@ -108,11 +107,11 @@ public:
     virtual ~Entity() = default;
 
     virtual void Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
-                             lldb::addr_t process_address, Error &err) = 0;
+                             lldb::addr_t process_address, Status &err) = 0;
     virtual void Dematerialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
                                lldb::addr_t process_address,
                                lldb::addr_t frame_top,
-                               lldb::addr_t frame_bottom, Error &err) = 0;
+                               lldb::addr_t frame_bottom, Status &err) = 0;
     virtual void DumpToLog(IRMemoryMap &map, lldb::addr_t process_address,
                            Log *log) = 0;
     virtual void Wipe(IRMemoryMap &map, lldb::addr_t process_address) = 0;

@@ -15,8 +15,8 @@
 #endif
 
 #include "lldb/Utility/SelectHelper.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h" // for ErrorType::eErrorTypePOSIX
 #include "lldb/lldb-types.h"        // for socket_t
 
@@ -90,14 +90,14 @@ static void updateMaxFd(llvm::Optional<lldb::socket_t> &vold,
     vold = std::max(*vold, vnew);
 }
 
-lldb_private::Error SelectHelper::Select() {
-  lldb_private::Error error;
+lldb_private::Status SelectHelper::Select() {
+  lldb_private::Status error;
 #ifdef _MSC_VER
   // On windows FD_SETSIZE limits the number of file descriptors, not their
   // numeric value.
   lldbassert(m_fd_map.size() <= FD_SETSIZE);
   if (m_fd_map.size() > FD_SETSIZE)
-    return lldb_private::Error("Too many file descriptors for select()");
+    return lldb_private::Status("Too many file descriptors for select()");
 #endif
 
   llvm::Optional<lldb::socket_t> max_read_fd;

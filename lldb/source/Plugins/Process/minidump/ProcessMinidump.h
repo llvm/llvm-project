@@ -19,7 +19,7 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -53,7 +53,7 @@ public:
   bool CanDebug(lldb::TargetSP target_sp,
                 bool plugin_specified_by_name) override;
 
-  Error DoLoadCore() override;
+  Status DoLoadCore() override;
 
   DynamicLoader *GetDynamicLoader() override;
 
@@ -61,7 +61,7 @@ public:
 
   uint32_t GetPluginVersion() override;
 
-  Error DoDestroy() override;
+  Status DoDestroy() override;
 
   void RefreshStateAfterStop() override;
 
@@ -70,15 +70,15 @@ public:
   bool WarnBeforeDetach() const override;
 
   size_t ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                    Error &error) override;
+                    Status &error) override;
 
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      Error &error) override;
+                      Status &error) override;
 
   ArchSpec GetArchitecture();
 
-  Error GetMemoryRegionInfo(lldb::addr_t load_addr,
-                            MemoryRegionInfo &range_info) override;
+  Status GetMemoryRegionInfo(lldb::addr_t load_addr,
+                             MemoryRegionInfo &range_info) override;
 
   bool GetProcessInfo(ProcessInstanceInfo &info) override;
 

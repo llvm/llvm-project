@@ -35,14 +35,14 @@ public:
                                         uint32_t concrete_frame_idx);
 
 protected:
-  virtual Error ReadGPR();
-  virtual Error WriteGPR();
+  virtual Status ReadGPR();
+  virtual Status WriteGPR();
 
-  virtual Error ReadFPR();
-  virtual Error WriteFPR();
+  virtual Status ReadFPR();
+  virtual Status WriteFPR();
 
-  virtual Error ReadDBR();
-  virtual Error WriteDBR();
+  virtual Status ReadDBR();
+  virtual Status WriteDBR();
 
   virtual void *GetGPRBuffer() { return nullptr; }
   virtual size_t GetGPRSize() {
@@ -55,14 +55,14 @@ protected:
   virtual void *GetDBRBuffer() { return nullptr; }
   virtual size_t GetDBRSize() { return 0; }
 
-  virtual Error DoReadGPR(void *buf);
-  virtual Error DoWriteGPR(void *buf);
+  virtual Status DoReadGPR(void *buf);
+  virtual Status DoWriteGPR(void *buf);
 
-  virtual Error DoReadFPR(void *buf);
-  virtual Error DoWriteFPR(void *buf);
+  virtual Status DoReadFPR(void *buf);
+  virtual Status DoWriteFPR(void *buf);
 
-  virtual Error DoReadDBR(void *buf);
-  virtual Error DoWriteDBR(void *buf);
+  virtual Status DoReadDBR(void *buf);
+  virtual Status DoWriteDBR(void *buf);
 
   virtual NativeProcessNetBSD &GetProcess();
   virtual ::pid_t GetProcessPid();

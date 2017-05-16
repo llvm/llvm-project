@@ -416,10 +416,10 @@ void ProcessInstanceInfo::DumpAsTableRow(Stream &s, Platform *platform,
   }
 }
 
-Error ProcessLaunchCommandOptions::SetOptionValue(
+Status ProcessLaunchCommandOptions::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
-  Error error;
+  Status error;
   const int short_option = m_getopt_table[option_idx].val;
 
   switch (short_option) {
@@ -1712,13 +1712,13 @@ void Process::SetPublicState(StateType new_state, bool restarted) {
   }
 }
 
-Error Process::Resume() {
+Status Process::Resume() {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STATE |
                                                   LIBLLDB_LOG_PROCESS));
   if (log)
     log->Printf("Process::Resume -- locking run lock");
   if (!m_public_run_lock.TrySetRunning()) {
-    Error error("Resume request failed - process still running.");
+    Status error("Resume request failed - process still running.");
     if (log)
       log->Printf("Process::Resume: -- TrySetRunning failed, not resuming.");
     return error;
@@ -1726,13 +1726,13 @@ Error Process::Resume() {
   return PrivateResume();
 }
 
-Error Process::ResumeSynchronous(Stream *stream) {
+Status Process::ResumeSynchronous(Stream *stream) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STATE |
                                                   LIBLLDB_LOG_PROCESS));
   if (log)
     log->Printf("Process::ResumeSynchronous -- locking run lock");
   if (!m_public_run_lock.TrySetRunning()) {
-    Error error("Resume request failed - process still running.");
+    Status error("Resume request failed - process still running.");
     if (log)
       log->Printf("Process::Resume: -- TrySetRunning failed, not resuming.");
     return error;
@@ -1742,7 +1742,7 @@ Error Process::ResumeSynchronous(Stream *stream) {
       Listener::MakeListener("lldb.Process.ResumeSynchronous.hijack"));
   HijackProcessEvents(listener_sp);
 
-  Error error = PrivateResume();
+  Status error = PrivateResume();
   if (error.Success()) {
     StateType state =
         WaitForProcessToStop(llvm::None, NULL, true, listener_sp, stream);
@@ -1943,8 +1943,8 @@ void Process::DisableAllBreakpointSites() {
   });
 }
 
-Error Process::ClearBreakpointSiteByID(lldb::user_id_t break_id) {
-  Error error(DisableBreakpointSiteByID(break_id));
+Status Process::ClearBreakpointSiteByID(lldb::user_id_t break_id) {
+  Status error(DisableBreakpointSiteByID(break_id));
 
   if (error.Success())
     m_breakpoint_site_list.Remove(break_id);
@@ -1952,8 +1952,8 @@ Error Process::ClearBreakpointSiteByID(lldb::user_id_t break_id) {
   return error;
 }
 
-Error Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
-  Error error;
+Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
+  Status error;
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (bp_site_sp->IsEnabled())
@@ -1966,8 +1966,8 @@ Error Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
   return error;
 }
 
-Error Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
-  Error error;
+Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
+  Status error;
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (!bp_site_sp->IsEnabled())
@@ -2012,7 +2012,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
   if (owner->ShouldResolveIndirectFunctions()) {
     Symbol *symbol = owner->GetAddress().CalculateSymbolContextSymbol();
     if (symbol && symbol->IsIndirect()) {
-      Error error;
+      Status error;
       Address symbol_address = symbol->GetAddress();
       load_addr = ResolveIndirectFunction(&symbol_address, error);
       if (!error.Success() && show_error) {
@@ -2049,7 +2049,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
       bp_site_sp.reset(new BreakpointSite(&m_breakpoint_site_list, owner,
                                           load_addr, use_hardware));
       if (bp_site_sp) {
-        Error error = EnableBreakpointSite(bp_site_sp.get());
+        Status error = EnableBreakpointSite(bp_site_sp.get());
         if (error.Success()) {
           owner->SetBreakpointSite(bp_site_sp);
           return m_breakpoint_site_list.Add(bp_site_sp);
@@ -2119,8 +2119,8 @@ size_t Process::GetSoftwareBreakpointTrapOpcode(BreakpointSite *bp_site) {
   return 0;
 }
 
-Error Process::EnableSoftwareBreakpoint(BreakpointSite *bp_site) {
-  Error error;
+Status Process::EnableSoftwareBreakpoint(BreakpointSite *bp_site) {
+  Status error;
   assert(bp_site != nullptr);
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
   const addr_t bp_addr = bp_site->GetLoadAddress();
@@ -2195,8 +2195,8 @@ Error Process::EnableSoftwareBreakpoint(BreakpointSite *bp_site) {
   return error;
 }
 
-Error Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
-  Error error;
+Status Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
+  Status error;
   assert(bp_site != nullptr);
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
   addr_t bp_addr = bp_site->GetLoadAddress();
@@ -2288,7 +2288,7 @@ Error Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
 // Uncomment to verify memory caching works after making changes to caching code
 //#define VERIFY_MEMORY_READS
 
-size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Error &error) {
+size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
   error.Clear();
   if (!GetDisableMemoryCache()) {
 #if defined(VERIFY_MEMORY_READS)
@@ -2307,7 +2307,7 @@ size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Error &error) {
       assert(verify_buf.size() == size);
       const size_t cache_bytes_read =
           m_memory_cache.Read(this, addr, buf, size, error);
-      Error verify_error;
+      Status verify_error;
       const size_t verify_bytes_read =
           ReadMemoryFromInferior(addr, const_cast<char *>(verify_buf.data()),
                                  verify_buf.size(), verify_error);
@@ -2330,7 +2330,7 @@ size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Error &error) {
 }
 
 size_t Process::ReadCStringFromMemory(addr_t addr, std::string &out_str,
-                                      Error &error) {
+                                      Status &error) {
   char buf[256];
   out_str.clear();
   addr_t curr_addr = addr;
@@ -2350,7 +2350,7 @@ size_t Process::ReadCStringFromMemory(addr_t addr, std::string &out_str,
 }
 
 size_t Process::ReadStringFromMemory(addr_t addr, char *dst, size_t max_bytes,
-                                     Error &error, size_t type_width) {
+                                     Status &error, size_t type_width) {
   size_t total_bytes_read = 0;
   if (dst && max_bytes && type_width && max_bytes >= type_width) {
     // Ensure a null terminator independent of the number of bytes that is read.
@@ -2403,13 +2403,14 @@ size_t Process::ReadStringFromMemory(addr_t addr, char *dst, size_t max_bytes,
 // correct code to find
 // null terminators.
 size_t Process::ReadCStringFromMemory(addr_t addr, char *dst,
-                                      size_t dst_max_len, Error &result_error) {
+                                      size_t dst_max_len,
+                                      Status &result_error) {
   size_t total_cstr_len = 0;
   if (dst && dst_max_len) {
     result_error.Clear();
     // NULL out everything just to be safe
     memset(dst, 0, dst_max_len);
-    Error error;
+    Status error;
     addr_t curr_addr = addr;
     const size_t cache_line_size = m_memory_cache.GetMemoryCacheLineSize();
     size_t bytes_left = dst_max_len - 1;
@@ -2448,7 +2449,7 @@ size_t Process::ReadCStringFromMemory(addr_t addr, char *dst,
 }
 
 size_t Process::ReadMemoryFromInferior(addr_t addr, void *buf, size_t size,
-                                       Error &error) {
+                                       Status &error) {
   if (buf == nullptr || size == 0)
     return 0;
 
@@ -2474,7 +2475,7 @@ size_t Process::ReadMemoryFromInferior(addr_t addr, void *buf, size_t size,
 uint64_t Process::ReadUnsignedIntegerFromMemory(lldb::addr_t vm_addr,
                                                 size_t integer_byte_size,
                                                 uint64_t fail_value,
-                                                Error &error) {
+                                                Status &error) {
   Scalar scalar;
   if (ReadScalarIntegerFromMemory(vm_addr, integer_byte_size, false, scalar,
                                   error))
@@ -2484,7 +2485,8 @@ uint64_t Process::ReadUnsignedIntegerFromMemory(lldb::addr_t vm_addr,
 
 int64_t Process::ReadSignedIntegerFromMemory(lldb::addr_t vm_addr,
                                              size_t integer_byte_size,
-                                             int64_t fail_value, Error &error) {
+                                             int64_t fail_value,
+                                             Status &error) {
   Scalar scalar;
   if (ReadScalarIntegerFromMemory(vm_addr, integer_byte_size, true, scalar,
                                   error))
@@ -2492,7 +2494,7 @@ int64_t Process::ReadSignedIntegerFromMemory(lldb::addr_t vm_addr,
   return fail_value;
 }
 
-addr_t Process::ReadPointerFromMemory(lldb::addr_t vm_addr, Error &error) {
+addr_t Process::ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error) {
   Scalar scalar;
   if (ReadScalarIntegerFromMemory(vm_addr, GetAddressByteSize(), false, scalar,
                                   error))
@@ -2501,7 +2503,7 @@ addr_t Process::ReadPointerFromMemory(lldb::addr_t vm_addr, Error &error) {
 }
 
 bool Process::WritePointerToMemory(lldb::addr_t vm_addr, lldb::addr_t ptr_value,
-                                   Error &error) {
+                                   Status &error) {
   Scalar scalar;
   const uint32_t addr_byte_size = GetAddressByteSize();
   if (addr_byte_size <= 4)
@@ -2513,7 +2515,7 @@ bool Process::WritePointerToMemory(lldb::addr_t vm_addr, lldb::addr_t ptr_value,
 }
 
 size_t Process::WriteMemoryPrivate(addr_t addr, const void *buf, size_t size,
-                                   Error &error) {
+                                   Status &error) {
   size_t bytes_written = 0;
   const uint8_t *bytes = (const uint8_t *)buf;
 
@@ -2529,7 +2531,7 @@ size_t Process::WriteMemoryPrivate(addr_t addr, const void *buf, size_t size,
 }
 
 size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
-                            Error &error) {
+                            Status &error) {
 #if defined(ENABLE_MEMORY_CACHING)
   m_memory_cache.Flush(addr, size);
 #endif
@@ -2608,7 +2610,7 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
 }
 
 size_t Process::WriteScalarToMemory(addr_t addr, const Scalar &scalar,
-                                    size_t byte_size, Error &error) {
+                                    size_t byte_size, Status &error) {
   if (byte_size == UINT32_MAX)
     byte_size = scalar.GetByteSize();
   if (byte_size > 0) {
@@ -2627,7 +2629,7 @@ size_t Process::WriteScalarToMemory(addr_t addr, const Scalar &scalar,
 
 size_t Process::ReadScalarIntegerFromMemory(addr_t addr, uint32_t byte_size,
                                             bool is_signed, Scalar &scalar,
-                                            Error &error) {
+                                            Status &error) {
   uint64_t uval = 0;
   if (byte_size == 0) {
     error.SetErrorString("byte size is zero");
@@ -2657,7 +2659,7 @@ size_t Process::ReadScalarIntegerFromMemory(addr_t addr, uint32_t byte_size,
 
 #define USE_ALLOCATE_MEMORY_CACHE 1
 addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
-                               Error &error) {
+                               Status &error) {
   if (GetPrivateState() != eStateStopped)
     return LLDB_INVALID_ADDRESS;
 
@@ -2678,7 +2680,7 @@ addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
 }
 
 addr_t Process::CallocateMemory(size_t size, uint32_t permissions,
-                                Error &error) {
+                                Status &error) {
   addr_t return_addr = AllocateMemory(size, permissions, error);
   if (error.Success()) {
     std::string buffer(size, 0);
@@ -2690,7 +2692,7 @@ addr_t Process::CallocateMemory(size_t size, uint32_t permissions,
 bool Process::CanJIT() {
   if (m_can_jit == eCanJITDontKnow) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-    Error err;
+    Status err;
 
     uint64_t allocated_memory = AllocateMemory(
         8, ePermissionsReadable | ePermissionsWritable | ePermissionsExecutable,
@@ -2725,8 +2727,8 @@ void Process::SetCanRunCode(bool can_run_code) {
   m_can_interpret_function_calls = can_run_code;
 }
 
-Error Process::DeallocateMemory(addr_t ptr) {
-  Error error;
+Status Process::DeallocateMemory(addr_t ptr) {
+  Status error;
 #if defined(USE_ALLOCATE_MEMORY_CACHE)
   if (!m_allocated_memory_cache.DeallocateMemory(ptr)) {
     error.SetErrorStringWithFormat(
@@ -2755,7 +2757,7 @@ ModuleSP Process::ReadModuleFromMemory(const FileSpec &file_spec,
   }
   ModuleSP module_sp(new Module(file_spec, ArchSpec()));
   if (module_sp) {
-    Error error;
+    Status error;
     ObjectFile *objfile = module_sp->GetMemoryObjectFile(
         shared_from_this(), header_addr, error, size_to_read);
     if (objfile)
@@ -2768,7 +2770,7 @@ bool Process::GetLoadAddressPermissions(lldb::addr_t load_addr,
                                         uint32_t &permissions) {
   MemoryRegionInfo range_info;
   permissions = 0;
-  Error error(GetMemoryRegionInfo(load_addr, range_info));
+  Status error(GetMemoryRegionInfo(load_addr, range_info));
   if (!error.Success())
     return false;
   if (range_info.GetReadable() == MemoryRegionInfo::eDontKnow ||
@@ -2789,14 +2791,14 @@ bool Process::GetLoadAddressPermissions(lldb::addr_t load_addr,
   return true;
 }
 
-Error Process::EnableWatchpoint(Watchpoint *watchpoint, bool notify) {
-  Error error;
+Status Process::EnableWatchpoint(Watchpoint *watchpoint, bool notify) {
+  Status error;
   error.SetErrorString("watchpoints are not supported");
   return error;
 }
 
-Error Process::DisableWatchpoint(Watchpoint *watchpoint, bool notify) {
-  Error error;
+Status Process::DisableWatchpoint(Watchpoint *watchpoint, bool notify) {
+  Status error;
   error.SetErrorString("watchpoints are not supported");
   return error;
 }
@@ -2832,8 +2834,8 @@ void Process::LoadOperatingSystemPlugin(bool flush) {
     Flush();
 }
 
-Error Process::Launch(ProcessLaunchInfo &launch_info) {
-  Error error;
+Status Process::Launch(ProcessLaunchInfo &launch_info) {
+  Status error;
   m_abi_sp.reset();
   m_dyld_ap.reset();
   m_jit_loaders_ap.reset();
@@ -2953,8 +2955,8 @@ Error Process::Launch(ProcessLaunchInfo &launch_info) {
   return error;
 }
 
-Error Process::LoadCore() {
-  Error error = DoLoadCore();
+Status Process::LoadCore() {
+  Status error = DoLoadCore();
   if (error.Success()) {
     ListenerSP listener_sp(
         Listener::MakeListener("lldb.process.load_core_listener"));
@@ -3107,7 +3109,7 @@ ListenerSP ProcessAttachInfo::GetListenerForProcess(Debugger &debugger) {
     return debugger.GetListener();
 }
 
-Error Process::Attach(ProcessAttachInfo &attach_info) {
+Status Process::Attach(ProcessAttachInfo &attach_info) {
   m_abi_sp.reset();
   m_process_input_reader.reset();
   m_dyld_ap.reset();
@@ -3117,7 +3119,7 @@ Error Process::Attach(ProcessAttachInfo &attach_info) {
   m_stop_info_override_callback = nullptr;
 
   lldb::pid_t attach_pid = attach_info.GetProcessID();
-  Error error;
+  Status error;
   if (attach_pid == LLDB_INVALID_PROCESS_ID) {
     char process_name[PATH_MAX];
 
@@ -3351,14 +3353,14 @@ void Process::CompleteAttach() {
   m_stop_info_override_callback = process_arch.GetStopInfoOverrideCallback();
 }
 
-Error Process::ConnectRemote(Stream *strm, llvm::StringRef remote_url) {
+Status Process::ConnectRemote(Stream *strm, llvm::StringRef remote_url) {
   m_abi_sp.reset();
   m_process_input_reader.reset();
 
   // Find the process and its architecture.  Make sure it matches the
   // architecture of the current Target, and if not adjust it.
 
-  Error error(DoConnectRemote(strm, remote_url));
+  Status error(DoConnectRemote(strm, remote_url));
   if (error.Success()) {
     if (GetID() != LLDB_INVALID_PROCESS_ID) {
       EventSP event_sp;
@@ -3383,7 +3385,7 @@ Error Process::ConnectRemote(Stream *strm, llvm::StringRef remote_url) {
   return error;
 }
 
-Error Process::PrivateResume() {
+Status Process::PrivateResume() {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS |
                                                   LIBLLDB_LOG_STEP));
   if (log)
@@ -3396,7 +3398,7 @@ Error Process::PrivateResume() {
   // our signal filters before resuming.
   UpdateAutomaticSignalFiltering();
 
-  Error error(WillResume());
+  Status error(WillResume());
   // Tell the process it is about to resume before the thread list
   if (error.Success()) {
     // Now let the thread list know we are about to resume so it
@@ -3441,9 +3443,9 @@ Error Process::PrivateResume() {
   return error;
 }
 
-Error Process::Halt(bool clear_thread_plans, bool use_run_lock) {
+Status Process::Halt(bool clear_thread_plans, bool use_run_lock) {
   if (!StateIsRunningState(m_public_state.GetValue()))
-    return Error("Process is not running.");
+    return Status("Process is not running.");
 
   // Don't clear the m_clear_thread_plans_on_stop, only set it to true if
   // in case it was already set and some thread plan logic calls halt on its
@@ -3464,7 +3466,7 @@ Error Process::Halt(bool clear_thread_plans, bool use_run_lock) {
     RestoreProcessEvents();
     SetExitStatus(SIGKILL, "Cancelled async attach.");
     Destroy(false);
-    return Error();
+    return Status();
   }
 
   // Wait for 10 second for the process to stop.
@@ -3474,16 +3476,16 @@ Error Process::Halt(bool clear_thread_plans, bool use_run_lock) {
 
   if (state == eStateInvalid || !event_sp) {
     // We timed out and didn't get a stop event...
-    return Error("Halt timed out. State = %s", StateAsCString(GetState()));
+    return Status("Halt timed out. State = %s", StateAsCString(GetState()));
   }
 
   BroadcastEvent(event_sp);
 
-  return Error();
+  return Status();
 }
 
-Error Process::StopForDestroyOrDetach(lldb::EventSP &exit_event_sp) {
-  Error error;
+Status Process::StopForDestroyOrDetach(lldb::EventSP &exit_event_sp) {
+  Status error;
 
   // Check both the public & private states here.  If we're hung evaluating an
   // expression, for instance, then
@@ -3530,18 +3532,19 @@ Error Process::StopForDestroyOrDetach(lldb::EventSP &exit_event_sp) {
       // then continue on.
       StateType private_state = m_private_state.GetValue();
       if (private_state != eStateStopped) {
-        return Error("Attempt to stop the target in order to detach timed out. "
-                     "State = %s",
-                     StateAsCString(GetState()));
+        return Status(
+            "Attempt to stop the target in order to detach timed out. "
+            "State = %s",
+            StateAsCString(GetState()));
       }
     }
   }
   return error;
 }
 
-Error Process::Detach(bool keep_stopped) {
+Status Process::Detach(bool keep_stopped) {
   EventSP exit_event_sp;
-  Error error;
+  Status error;
   m_destroy_in_process = true;
 
   error = WillDetach();
@@ -3593,7 +3596,7 @@ Error Process::Detach(bool keep_stopped) {
   return error;
 }
 
-Error Process::Destroy(bool force_kill) {
+Status Process::Destroy(bool force_kill) {
 
   // Tell ourselves we are in the process of destroying the process, so that we
   // don't do any unnecessary work
@@ -3613,7 +3616,7 @@ Error Process::Destroy(bool force_kill) {
 
   m_destroy_in_process = true;
 
-  Error error(WillDestroy());
+  Status error(WillDestroy());
   if (error.Success()) {
     EventSP exit_event_sp;
     if (DestroyRequiresHalt()) {
@@ -3669,8 +3672,8 @@ Error Process::Destroy(bool force_kill) {
   return error;
 }
 
-Error Process::Signal(int signal) {
-  Error error(WillSignal());
+Status Process::Signal(int signal) {
+  Status error(WillSignal());
   if (error.Success()) {
     error = DoSignal(signal);
     if (error.Success())
@@ -4098,9 +4101,9 @@ void Process::HandlePrivateEvent(EventSP &event_sp) {
   }
 }
 
-Error Process::HaltPrivate() {
+Status Process::HaltPrivate() {
   EventSP event_sp;
-  Error error(WillHalt());
+  Status error(WillHalt());
   if (error.Fail())
     return error;
 
@@ -4168,7 +4171,7 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
           log->Printf("Process::%s (arg = %p, pid = %" PRIu64
                       ") woke up with an interrupt - Halting.",
                       __FUNCTION__, static_cast<void *>(this), GetID());
-        Error error = HaltPrivate();
+        Status error = HaltPrivate();
         if (error.Fail() && log)
           log->Printf("Process::%s (arg = %p, pid = %" PRIu64
                       ") failed to halt the process: %s",
@@ -4608,7 +4611,7 @@ Process::GetStructuredDataPlugin(const ConstString &type_name) const {
     return StructuredDataPluginSP();
 }
 
-size_t Process::GetAsyncProfileData(char *buf, size_t buf_size, Error &error) {
+size_t Process::GetAsyncProfileData(char *buf, size_t buf_size, Status &error) {
   std::lock_guard<std::recursive_mutex> guard(m_profile_data_comm_mutex);
   if (m_profile_data.empty())
     return 0;
@@ -4636,7 +4639,7 @@ size_t Process::GetAsyncProfileData(char *buf, size_t buf_size, Error &error) {
 // Process STDIO
 //------------------------------------------------------------------
 
-size_t Process::GetSTDOUT(char *buf, size_t buf_size, Error &error) {
+size_t Process::GetSTDOUT(char *buf, size_t buf_size, Status &error) {
   std::lock_guard<std::recursive_mutex> guard(m_stdio_communication_mutex);
   size_t bytes_available = m_stdout_data.size();
   if (bytes_available > 0) {
@@ -4656,7 +4659,7 @@ size_t Process::GetSTDOUT(char *buf, size_t buf_size, Error &error) {
   return bytes_available;
 }
 
-size_t Process::GetSTDERR(char *buf, size_t buf_size, Error &error) {
+size_t Process::GetSTDERR(char *buf, size_t buf_size, Status &error) {
   std::lock_guard<std::recursive_mutex> gaurd(m_stdio_communication_mutex);
   size_t bytes_available = m_stderr_data.size();
   if (bytes_available > 0) {
@@ -4719,7 +4722,7 @@ public:
       SelectHelper select_helper;
       select_helper.FDSetRead(read_fd);
       select_helper.FDSetRead(pipe_read_fd);
-      Error error = select_helper.Select();
+      Status error = select_helper.Select();
 
       if (error.Fail()) {
         SetIsDone(true);
@@ -4737,7 +4740,7 @@ public:
         if (select_helper.FDIsSetRead(pipe_read_fd)) {
           size_t bytes_read;
           // Consume the interrupt byte
-          Error error = m_pipe.Read(&ch, 1, bytes_read);
+          Status error = m_pipe.Read(&ch, 1, bytes_read);
           if (error.Success()) {
             switch (ch) {
             case 'q':
@@ -4788,7 +4791,7 @@ public:
     if (m_active) {
       char ch = 'i'; // Send 'i' for interrupt
       size_t bytes_written = 0;
-      Error result = m_pipe.Write(&ch, 1, bytes_written);
+      Status result = m_pipe.Write(&ch, 1, bytes_written);
       return result.Success();
     } else {
       // This IOHandler might be pushed on the stack, but not being run
@@ -5232,7 +5235,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
         if (do_resume) {
           num_resumes++;
-          Error resume_error = PrivateResume();
+          Status resume_error = PrivateResume();
           if (!resume_error.Success()) {
             diagnostic_manager.Printf(
                 eDiagnosticSeverityError,
@@ -5511,7 +5514,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
         bool do_halt = true;
         const uint32_t num_retries = 5;
         while (try_halt_again < num_retries) {
-          Error halt_error;
+          Status halt_error;
           if (do_halt) {
             if (log)
               log->Printf("Process::RunThreadPlan(): Running Halt.");
@@ -5623,7 +5626,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // plan, shut it down now.
     if (backup_private_state_thread.IsJoinable()) {
       StopPrivateStateThread();
-      Error error;
+      Status error;
       m_private_state_thread = backup_private_state_thread;
       if (stopper_base_plan_sp) {
         thread->DiscardThreadPlansUpToPlan(stopper_base_plan_sp);
@@ -6012,7 +6015,7 @@ void Process::DidExec() {
   target.DidExec();
 }
 
-addr_t Process::ResolveIndirectFunction(const Address *address, Error &error) {
+addr_t Process::ResolveIndirectFunction(const Address *address, Status &error) {
   if (address == nullptr) {
     error.SetErrorString("Invalid address argument");
     return LLDB_INVALID_ADDRESS;
@@ -6247,10 +6250,10 @@ Process::AdvanceAddressToNextBranchInstruction(Address default_stop_addr,
   return retval;
 }
 
-Error Process::GetMemoryRegions(
-    std::vector<lldb::MemoryRegionInfoSP> &region_list) {
+Status
+Process::GetMemoryRegions(std::vector<lldb::MemoryRegionInfoSP> &region_list) {
 
-  Error error;
+  Status error;
 
   lldb::addr_t range_end = 0;
 
@@ -6273,12 +6276,13 @@ Error Process::GetMemoryRegions(
   return error;
 }
 
-Error Process::ConfigureStructuredData(
-    const ConstString &type_name, const StructuredData::ObjectSP &config_sp) {
+Status
+Process::ConfigureStructuredData(const ConstString &type_name,
+                                 const StructuredData::ObjectSP &config_sp) {
   // If you get this, the Process-derived class needs to implement a method
   // to enable an already-reported asynchronous structured data feature.
   // See ProcessGDBRemote for an example implementation over gdb-remote.
-  return Error("unimplemented");
+  return Status("unimplemented");
 }
 
 void Process::MapSupportedStructuredDataPlugins(
@@ -6315,8 +6319,7 @@ void Process::MapSupportedStructuredDataPlugins(
         }
 
         const_type_names.insert(ConstString(type_name->GetValue()));
-        if (log)
-          log->Printf("- %s", type_name->GetValue().c_str());
+        LLDB_LOG(log, "- {0}", type_name->GetValue());
         return true;
       });
 
@@ -6386,8 +6389,8 @@ bool Process::RouteAsyncStructuredData(
   return true;
 }
 
-Error Process::UpdateAutomaticSignalFiltering() {
+Status Process::UpdateAutomaticSignalFiltering() {
   // Default implementation does nothign.
   // No automatic signal filtering to speak of.
-  return Error();
+  return Status();
 }

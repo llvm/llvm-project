@@ -197,7 +197,7 @@ const char *BreakpointLocation::GetConditionText(size_t *hash) const {
 }
 
 bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
-                                           Error &error) {
+                                           Status &error) {
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS);
 
   std::lock_guard<std::mutex> guard(m_condition_mutex);
@@ -260,7 +260,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
   options.SetResultIsInternal(
       true); // Don't generate a user variable for condition expressions.
 
-  Error expr_error;
+  Status expr_error;
 
   diagnostics.Clear();
 

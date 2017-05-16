@@ -29,9 +29,9 @@ HostProcessPosix::HostProcessPosix(lldb::process_t process)
 
 HostProcessPosix::~HostProcessPosix() {}
 
-Error HostProcessPosix::Signal(int signo) const {
+Status HostProcessPosix::Signal(int signo) const {
   if (m_process == kInvalidPosixProcess) {
-    Error error;
+    Status error;
     error.SetErrorString("HostProcessPosix refers to an invalid process");
     return error;
   }
@@ -39,8 +39,8 @@ Error HostProcessPosix::Signal(int signo) const {
   return HostProcessPosix::Signal(m_process, signo);
 }
 
-Error HostProcessPosix::Signal(lldb::process_t process, int signo) {
-  Error error;
+Status HostProcessPosix::Signal(lldb::process_t process, int signo) {
+  Status error;
 
   if (-1 == ::kill(process, signo))
     error.SetErrorToErrno();
@@ -48,10 +48,10 @@ Error HostProcessPosix::Signal(lldb::process_t process, int signo) {
   return error;
 }
 
-Error HostProcessPosix::Terminate() { return Signal(SIGKILL); }
+Status HostProcessPosix::Terminate() { return Signal(SIGKILL); }
 
-Error HostProcessPosix::GetMainModule(FileSpec &file_spec) const {
-  Error error;
+Status HostProcessPosix::GetMainModule(FileSpec &file_spec) const {
+  Status error;
 
   // Use special code here because proc/[pid]/exe is a symbolic link.
   char link_path[PATH_MAX];
@@ -82,7 +82,7 @@ bool HostProcessPosix::IsRunning() const {
     return false;
 
   // Send this process the null signal.  If it succeeds the process is running.
-  Error error = Signal(0);
+  Status error = Signal(0);
   return error.Success();
 }
 

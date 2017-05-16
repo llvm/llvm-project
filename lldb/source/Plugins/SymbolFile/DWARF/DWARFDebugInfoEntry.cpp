@@ -202,7 +202,7 @@ bool DWARFDebugInfoEntry::Extract(SymbolFileDWARF *dwarf2Data,
   const uint32_t cu_end_offset = cu->GetNextCompileUnitOffset();
   lldb::offset_t offset = *offset_ptr;
   //  if (offset >= cu_end_offset)
-  //      Log::Error("DIE at offset 0x%8.8x is beyond the end of the current
+  //      Log::Status("DIE at offset 0x%8.8x is beyond the end of the current
   //      compile unit (0x%8.8x)", m_offset, cu_end_offset);
   if ((offset < cu_end_offset) && debug_info_data.ValidOffset(offset)) {
     m_offset = offset;

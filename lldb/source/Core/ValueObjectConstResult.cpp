@@ -163,12 +163,12 @@ ValueObjectConstResult::ValueObjectConstResult(
 }
 
 ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
-                                             const Error &error) {
+                                             const Status &error) {
   return (new ValueObjectConstResult(exe_scope, error))->GetSP();
 }
 
 ValueObjectConstResult::ValueObjectConstResult(ExecutionContextScope *exe_scope,
-                                               const Error &error)
+                                               const Status &error)
     : ValueObject(exe_scope), m_type_name(), m_byte_size(0), m_impl(this) {
   m_error = error;
   SetIsConstant();
@@ -234,7 +234,7 @@ bool ValueObjectConstResult::IsInScope() {
   return true;
 }
 
-lldb::ValueObjectSP ValueObjectConstResult::Dereference(Error &error) {
+lldb::ValueObjectSP ValueObjectConstResult::Dereference(Status &error) {
   return m_impl.Dereference(error);
 }
 
@@ -245,7 +245,7 @@ lldb::ValueObjectSP ValueObjectConstResult::GetSyntheticChildAtOffset(
                                           name_const_str);
 }
 
-lldb::ValueObjectSP ValueObjectConstResult::AddressOf(Error &error) {
+lldb::ValueObjectSP ValueObjectConstResult::AddressOf(Status &error) {
   return m_impl.AddressOf(error);
 }
 

@@ -113,8 +113,8 @@ void ProcessMinidump::Terminate() {
   PluginManager::UnregisterPlugin(ProcessMinidump::CreateInstance);
 }
 
-Error ProcessMinidump::DoLoadCore() {
-  Error error;
+Status ProcessMinidump::DoLoadCore() {
+  Status error;
 
   m_thread_list = m_minidump_parser.GetThreads();
   m_active_exception = m_minidump_parser.GetExceptionStream();
@@ -141,7 +141,7 @@ ConstString ProcessMinidump::GetPluginName() { return GetPluginNameStatic(); }
 
 uint32_t ProcessMinidump::GetPluginVersion() { return 1; }
 
-Error ProcessMinidump::DoDestroy() { return Error(); }
+Status ProcessMinidump::DoDestroy() { return Status(); }
 
 void ProcessMinidump::RefreshStateAfterStop() {
   if (!m_active_exception)
@@ -184,14 +184,14 @@ bool ProcessMinidump::IsAlive() { return true; }
 bool ProcessMinidump::WarnBeforeDetach() const { return false; }
 
 size_t ProcessMinidump::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                   Error &error) {
+                                   Status &error) {
   // Don't allow the caching that lldb_private::Process::ReadMemory does
   // since we have it all cached in our dump file anyway.
   return DoReadMemory(addr, buf, size, error);
 }
 
 size_t ProcessMinidump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                     Error &error) {
+                                     Status &error) {
 
   llvm::ArrayRef<uint8_t> mem = m_minidump_parser.GetMemory(addr, size);
   if (mem.empty()) {
@@ -215,9 +215,9 @@ ArchSpec ProcessMinidump::GetArchitecture() {
   return ArchSpec(triple);
 }
 
-Error ProcessMinidump::GetMemoryRegionInfo(lldb::addr_t load_addr,
-                                           MemoryRegionInfo &range_info) {
-  Error error;
+Status ProcessMinidump::GetMemoryRegionInfo(lldb::addr_t load_addr,
+                                            MemoryRegionInfo &range_info) {
+  Status error;
   auto info = m_minidump_parser.GetMemoryRegionInfo(load_addr);
   if (!info) {
     error.SetErrorString("No valid MemoryRegionInfo found!");
@@ -278,7 +278,7 @@ void ProcessMinidump::ReadModuleList() {
 
     const auto file_spec = FileSpec(name.getValue(), true);
     ModuleSpec module_spec = file_spec;
-    Error error;
+    Status error;
     lldb::ModuleSP module_sp = GetTarget().GetSharedModule(module_spec, &error);
     if (!module_sp || error.Fail()) {
       continue;

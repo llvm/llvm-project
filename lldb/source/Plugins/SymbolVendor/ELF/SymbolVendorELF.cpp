@@ -92,8 +92,8 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (file_spec_list.IsEmpty())
     return NULL;
 
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
-                     "SymbolVendorELF::CreateInstance (module = %s)",
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "SymbolVendorELF::CreateInstance (module = %s)",
                      module_sp->GetFileSpec().GetPath().c_str());
 
   for (size_t idx = 0; idx < file_spec_list.GetSize(); ++idx) {

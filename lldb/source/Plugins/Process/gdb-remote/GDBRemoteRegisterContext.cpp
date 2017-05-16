@@ -95,8 +95,8 @@ bool GDBRemoteRegisterContext::ReadRegister(const RegisterInfo *reg_info,
   // Read the register
   if (ReadRegisterBytes(reg_info, m_reg_data)) {
     const bool partial_data_ok = false;
-    Error error(value.SetValueFromData(reg_info, m_reg_data,
-                                       reg_info->byte_offset, partial_data_ok));
+    Status error(value.SetValueFromData(
+        reg_info, m_reg_data, reg_info->byte_offset, partial_data_ok));
     return error.Success();
   }
   return false;

@@ -31,8 +31,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 #include <vector>
 
@@ -218,7 +218,7 @@ bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
     if (process == nullptr)
       return false;
 
-    Error error;
+    Status error;
     const lldb::addr_t vtable_address_point =
         process->ReadPointerFromMemory(original_ptr, error);
 

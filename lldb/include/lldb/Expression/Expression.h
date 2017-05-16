@@ -131,16 +131,6 @@ public:
 
   const SwiftGenericInfo &GetSwiftGenericInfo() { return m_swift_generic_info; }
 
-  //------------------------------------------------------------------
-  /// Called to notify the expression that it is about to be executed.
-  //------------------------------------------------------------------
-  virtual void WillStartExecuting() {}
-
-  //------------------------------------------------------------------
-  /// Called to notify the expression that its execution has finished.
-  //------------------------------------------------------------------
-  virtual void DidFinishExecuting() {}
-
   virtual ExpressionTypeSystemHelper *GetTypeSystemHelper() { return nullptr; }
 
 protected:

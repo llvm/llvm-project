@@ -101,7 +101,7 @@ bool UserExpression::MatchesContext(ExecutionContext &exe_ctx) {
 
 lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
                                               ConstString &object_name,
-                                              Error &err) {
+                                              Status &err) {
   err.Clear();
 
   if (!frame_sp) {
@@ -140,7 +140,7 @@ lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
 lldb::ExpressionResults UserExpression::Evaluate(
     ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
     llvm::StringRef expr, llvm::StringRef prefix,
-    lldb::ValueObjectSP &result_valobj_sp, Error &error, uint32_t line_offset,
+    lldb::ValueObjectSP &result_valobj_sp, Status &error, uint32_t line_offset,
     std::string *fixed_expression, lldb::ModuleSP *jit_module_sp_ptr) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS |
                                                   LIBLLDB_LOG_STEP));

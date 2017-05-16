@@ -1212,7 +1212,7 @@ bool MachProcess::Kill(const struct timespec *timeout_abstime) {
   err.SetErrorToErrno();
   DNBLogThreadedIf(LOG_PROCESS, "MachProcess::Kill() DoSIGSTOP() ::ptrace "
                                 "(PT_KILL, pid=%u, 0, 0) => 0x%8.8x (%s)",
-                   m_pid, err.Error(), err.AsString());
+                   m_pid, err.Status(), err.AsString());
   m_thread_actions = DNBThreadResumeActions(eStateRunning, 0);
   PrivateResume();
 
@@ -2967,7 +2967,8 @@ pid_t MachProcess::LaunchForDebug(
         DNBError ptrace_err(errno, DNBError::POSIX);
         DNBLogThreadedIf(LOG_PROCESS, "error: failed to attach to spawned pid "
                                       "%d (err = %i, errno = %i (%s))",
-                         m_pid, err, ptrace_err.Error(), ptrace_err.AsString());
+                         m_pid, err, ptrace_err.Status(),
+                         ptrace_err.AsString());
         launch_err.SetError(NUB_GENERIC_ERROR, DNBError::Generic);
       }
     } else {
@@ -3178,7 +3179,7 @@ pid_t MachProcess::ForkChildForPTraceDebugging(const char *path,
                                                char const *envp[],
                                                MachProcess *process,
                                                DNBError &launch_err) {
-  PseudoTerminal::Error pty_error = PseudoTerminal::success;
+  PseudoTerminal::Status pty_error = PseudoTerminal::success;
 
   // Use a fork that ties the child process's stdin/out/err to a pseudo
   // terminal so we can read it in our MachProcess::STDIOThread
@@ -3188,7 +3189,7 @@ pid_t MachProcess::ForkChildForPTraceDebugging(const char *path,
 
   if (pid < 0) {
     //--------------------------------------------------------------
-    // Error during fork.
+    // Status during fork.
     //--------------------------------------------------------------
     return pid;
   } else if (pid == 0) {
@@ -3403,7 +3404,7 @@ pid_t MachProcess::SBForkChildForPTraceDebugging(
 
   PseudoTerminal pty;
   if (!no_stdio) {
-    PseudoTerminal::Error pty_err =
+    PseudoTerminal::Status pty_err =
         pty.OpenFirstAvailableMaster(O_RDWR | O_NOCTTY);
     if (pty_err == PseudoTerminal::success) {
       const char *slave_name = pty.SlaveName();
@@ -3604,7 +3605,7 @@ pid_t MachProcess::BoardServiceForkChildForPTraceDebugging(
 
   PseudoTerminal pty;
   if (!no_stdio) {
-    PseudoTerminal::Error pty_err =
+    PseudoTerminal::Status pty_err =
         pty.OpenFirstAvailableMaster(O_RDWR | O_NOCTTY);
     if (pty_err == PseudoTerminal::success) {
       const char *slave_name = pty.SlaveName();

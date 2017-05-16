@@ -544,7 +544,7 @@ public:
   ///     into this call
   ///
   /// @param[out] error
-  ///     Error information is written here if the memory read fails.
+  ///     Status information is written here if the memory read fails.
   ///
   /// @return
   ///     The amount of data read in host bytes.

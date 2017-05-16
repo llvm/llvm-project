@@ -55,33 +55,33 @@ TargetList::~TargetList() {
   m_target_list.clear();
 }
 
-Error TargetList::CreateTarget(Debugger &debugger,
-                               llvm::StringRef user_exe_path,
-                               llvm::StringRef triple_str,
-                               bool get_dependent_files,
-                               const OptionGroupPlatform *platform_options,
-                               TargetSP &target_sp) {
+Status TargetList::CreateTarget(Debugger &debugger,
+                                llvm::StringRef user_exe_path,
+                                llvm::StringRef triple_str,
+                                bool get_dependent_files,
+                                const OptionGroupPlatform *platform_options,
+                                TargetSP &target_sp) {
   return CreateTargetInternal(debugger, user_exe_path, triple_str,
                               get_dependent_files, platform_options, target_sp,
                               false);
 }
 
-Error TargetList::CreateTarget(Debugger &debugger,
-                               llvm::StringRef user_exe_path,
-                               const ArchSpec &specified_arch,
-                               bool get_dependent_files,
-                               PlatformSP &platform_sp, TargetSP &target_sp) {
+Status TargetList::CreateTarget(Debugger &debugger,
+                                llvm::StringRef user_exe_path,
+                                const ArchSpec &specified_arch,
+                                bool get_dependent_files,
+                                PlatformSP &platform_sp, TargetSP &target_sp) {
   return CreateTargetInternal(debugger, user_exe_path, specified_arch,
                               get_dependent_files, platform_sp, target_sp,
                               false);
 }
 
-Error TargetList::CreateTargetInternal(
+Status TargetList::CreateTargetInternal(
     Debugger &debugger, llvm::StringRef user_exe_path,
     llvm::StringRef triple_str, bool get_dependent_files,
     const OptionGroupPlatform *platform_options, TargetSP &target_sp,
     bool is_dummy_target) {
-  Error error;
+  Status error;
   PlatformSP platform_sp;
 
   // This is purposely left empty unless it is specified by triple_cstr.
@@ -302,34 +302,34 @@ lldb::TargetSP TargetList::GetDummyTarget(lldb_private::Debugger &debugger) {
     ArchSpec arch(Target::GetDefaultArchitecture());
     if (!arch.IsValid())
       arch = HostInfo::GetArchitecture();
-    Error err = CreateDummyTarget(
+    Status err = CreateDummyTarget(
         debugger, arch.GetTriple().getTriple().c_str(), m_dummy_target_sp);
   }
 
   return m_dummy_target_sp;
 }
 
-Error TargetList::CreateDummyTarget(Debugger &debugger,
-                                    llvm::StringRef specified_arch_name,
-                                    lldb::TargetSP &target_sp) {
+Status TargetList::CreateDummyTarget(Debugger &debugger,
+                                     llvm::StringRef specified_arch_name,
+                                     lldb::TargetSP &target_sp) {
   PlatformSP host_platform_sp(Platform::GetHostPlatform());
   return CreateTargetInternal(
       debugger, (const char *)nullptr, specified_arch_name, false,
       (const OptionGroupPlatform *)nullptr, target_sp, true);
 }
 
-Error TargetList::CreateTargetInternal(Debugger &debugger,
-                                       llvm::StringRef user_exe_path,
-                                       const ArchSpec &specified_arch,
-                                       bool get_dependent_files,
-                                       lldb::PlatformSP &platform_sp,
-                                       lldb::TargetSP &target_sp,
-                                       bool is_dummy_target) {
-  Timer scoped_timer(LLVM_PRETTY_FUNCTION,
-                     "TargetList::CreateTarget (file = '%s', arch = '%s')",
-                     user_exe_path.str().c_str(),
-                     specified_arch.GetArchitectureName());
-  Error error;
+Status TargetList::CreateTargetInternal(Debugger &debugger,
+                                        llvm::StringRef user_exe_path,
+                                        const ArchSpec &specified_arch,
+                                        bool get_dependent_files,
+                                        lldb::PlatformSP &platform_sp,
+                                        lldb::TargetSP &target_sp,
+                                        bool is_dummy_target) {
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(
+      func_cat, "TargetList::CreateTarget (file = '%s', arch = '%s')",
+      user_exe_path.str().c_str(), specified_arch.GetArchitectureName());
+  Status error;
 
   ArchSpec arch(specified_arch);
 

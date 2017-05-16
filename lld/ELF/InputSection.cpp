@@ -324,7 +324,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     // section, but for --emit-relocs it is an virtual address.
     P->r_offset = RelocatedSection->OutSec->Addr +
                   RelocatedSection->getOffset(Rel.r_offset);
-    P->setSymbolAndType(In<ELFT>::SymTab->getSymbolIndex(&Body), Type,
+    P->setSymbolAndType(InX::SymTab->getSymbolIndex(&Body), Type,
                         Config->IsMips64EL);
 
     if (Body.Type == STT_SECTION) {

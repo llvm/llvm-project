@@ -32,9 +32,9 @@ void OptionValueRegex::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-Error OptionValueRegex::SetValueFromString(llvm::StringRef value,
-                                           VarSetOperationType op) {
-  Error error;
+Status OptionValueRegex::SetValueFromString(llvm::StringRef value,
+                                            VarSetOperationType op) {
+  Status error;
   switch (op) {
   case eVarSetOperationInvalid:
   case eVarSetOperationInsertBefore:

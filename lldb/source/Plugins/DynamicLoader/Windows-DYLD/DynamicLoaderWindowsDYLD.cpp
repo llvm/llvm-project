@@ -61,7 +61,7 @@ void DynamicLoaderWindowsDYLD::DidAttach() {}
 
 void DynamicLoaderWindowsDYLD::DidLaunch() {}
 
-Error DynamicLoaderWindowsDYLD::CanLoadImage() { return Error(); }
+Status DynamicLoaderWindowsDYLD::CanLoadImage() { return Status(); }
 
 ConstString DynamicLoaderWindowsDYLD::GetPluginName() {
   return GetPluginNameStatic();

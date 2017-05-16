@@ -71,10 +71,10 @@ CommandObjectDisassemble::CommandOptions::CommandOptions()
 
 CommandObjectDisassemble::CommandOptions::~CommandOptions() = default;
 
-Error CommandObjectDisassemble::CommandOptions::SetOptionValue(
+Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
-  Error error;
+  Status error;
 
   const int short_option = m_getopt_table[option_idx].val;
 
@@ -224,11 +224,11 @@ void CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
   some_location_specified = false;
 }
 
-Error CommandObjectDisassemble::CommandOptions::OptionParsingFinished(
+Status CommandObjectDisassemble::CommandOptions::OptionParsingFinished(
     ExecutionContext *execution_context) {
   if (!some_location_specified)
     current_function = true;
-  return Error();
+  return Status();
 }
 
 llvm::ArrayRef<OptionDefinition>

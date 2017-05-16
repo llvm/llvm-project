@@ -39,11 +39,11 @@ const ThreadSpec &ThreadSpec::operator=(const ThreadSpec &rhs) {
 }
 
 std::unique_ptr<ThreadSpec> ThreadSpec::CreateFromStructuredData(
-    const StructuredData::Dictionary &spec_dict, Error &error) {
+    const StructuredData::Dictionary &spec_dict, Status &error) {
   uint32_t index = UINT32_MAX;
   lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
-  std::string name;
-  std::string queue_name;
+  llvm::StringRef name;
+  llvm::StringRef queue_name;
 
   std::unique_ptr<ThreadSpec> thread_spec_up(new ThreadSpec());
   bool success = spec_dict.GetValueForKeyAsInteger(
@@ -59,12 +59,12 @@ std::unique_ptr<ThreadSpec> ThreadSpec::CreateFromStructuredData(
   success =
       spec_dict.GetValueForKeyAsString(GetKey(OptionNames::ThreadName), name);
   if (success)
-    thread_spec_up->SetName(name.c_str());
+    thread_spec_up->SetName(name);
 
   success = spec_dict.GetValueForKeyAsString(GetKey(OptionNames::ThreadName),
                                              queue_name);
   if (success)
-    thread_spec_up->SetQueueName(queue_name.c_str());
+    thread_spec_up->SetQueueName(queue_name);
 
   return thread_spec_up;
 }

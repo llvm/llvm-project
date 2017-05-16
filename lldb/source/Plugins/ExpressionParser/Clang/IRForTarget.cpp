@@ -1263,7 +1263,7 @@ bool IRForTarget::MaterializeInitializer(uint8_t *data, Constant *initializer) {
     lldb_private::Scalar scalar = int_initializer->getValue().zextOrTrunc(
         llvm::NextPowerOf2(constant_size) * 8);
 
-    lldb_private::Error get_data_error;
+    lldb_private::Status get_data_error;
     if (!scalar.GetAsMemoryData(data, constant_size,
                                 lldb_private::endian::InlHostByteOrder(),
                                 get_data_error))

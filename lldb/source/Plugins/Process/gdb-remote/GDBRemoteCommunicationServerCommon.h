@@ -38,7 +38,7 @@ public:
 
 protected:
   ProcessLaunchInfo m_process_launch_info;
-  Error m_process_launch_error;
+  Status m_process_launch_error;
   ProcessInstanceInfoList m_proc_infos;
   uint32_t m_proc_infos_index;
   bool m_thread_suffix_supported;
@@ -130,7 +130,7 @@ protected:
       PacketResult (T::*handler)(StringExtractorGDBRemote &packet)) {
     RegisterPacketHandler(packet_type,
                           [this, handler](StringExtractorGDBRemote packet,
-                                          Error &error, bool &interrupt,
+                                          Status &error, bool &interrupt,
                                           bool &quit) {
                             return (static_cast<T *>(this)->*handler)(packet);
                           });
@@ -144,17 +144,16 @@ protected:
   /// with all the information for a child process to be launched.
   ///
   /// @return
-  ///     An Error object indicating the success or failure of the
+  ///     An Status object indicating the success or failure of the
   ///     launch.
   //------------------------------------------------------------------
-  virtual Error LaunchProcess() = 0;
+  virtual Status LaunchProcess() = 0;
 
   virtual FileSpec FindModuleFile(const std::string &module_path,
                                   const ArchSpec &arch);
 
 private:
-  ModuleSpec GetModuleInfo(const std::string &module_path,
-                           const std::string &triple);
+  ModuleSpec GetModuleInfo(llvm::StringRef module_path, llvm::StringRef triple);
 };
 
 } // namespace process_gdb_remote
