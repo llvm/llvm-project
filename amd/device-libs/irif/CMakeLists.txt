@@ -9,4 +9,4 @@ file(GLOB sources
   ${CMAKE_CURRENT_SOURCE_DIR}/src/*.ll
 )
 
-clang_opencl_bc_builtins_lib(irif ${CMAKE_CURRENT_SOURCE_DIR} ${sources})
+opencl_bc_lib(irif ${sources})
