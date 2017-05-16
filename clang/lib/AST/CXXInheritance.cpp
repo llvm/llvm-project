@@ -278,6 +278,8 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
                   dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl()))
             BaseRecord = TD->getTemplatedDecl();
         }
+        if (BaseRecord && !BaseRecord->hasDefinition())
+          BaseRecord = nullptr;
       } else {
         BaseRecord = cast<CXXRecordDecl>(
             BaseSpec.getType()->castAs<RecordType>()->getDecl());
