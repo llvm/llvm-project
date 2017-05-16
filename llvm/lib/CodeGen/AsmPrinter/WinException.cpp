@@ -101,7 +101,7 @@ void WinException::beginFunction(const MachineFunction *MF) {
       // functions may still refer to it.
       const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
       StringRef FLinkageName =
-          GlobalValue::getRealLinkageName(MF->getFunction()->getName());
+          GlobalValue::dropLLVMManglingEscape(MF->getFunction()->getName());
       emitEHRegistrationOffsetLabel(FuncInfo, FLinkageName);
     }
     shouldEmitLSDA = hasEHFunclets;
@@ -174,7 +174,7 @@ static MCSymbol *getMCSymbolForMBB(AsmPrinter *Asm,
   // their funclet entry block's number.
   const MachineFunction *MF = MBB->getParent();
   const Function *F = MF->getFunction();
-  StringRef FuncLinkageName = GlobalValue::getRealLinkageName(F->getName());
+  StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F->getName());
   MCContext &Ctx = MF->getContext();
   StringRef HandlerPrefix = MBB->isCleanupFuncletEntry() ? "dtor" : "catch";
   return Ctx.getOrCreateSymbol("?" + HandlerPrefix + "$" +
@@ -252,7 +252,7 @@ void WinException::endFunclet() {
         !CurrentFuncletEntry->isCleanupFuncletEntry()) {
       // If this is a C++ catch funclet (or the parent function),
       // emit a reference to the LSDA for the parent function.
-      StringRef FuncLinkageName = GlobalValue::getRealLinkageName(F->getName());
+      StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F->getName());
       MCSymbol *FuncInfoXData = Asm->OutContext.getOrCreateSymbol(
           Twine("$cppxdata$", FuncLinkageName));
       Asm->OutStreamer->EmitValue(create32bitRef(FuncInfoXData), 4);
@@ -536,7 +536,7 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
   // Emit a label assignment with the SEH frame offset so we can use it for
   // llvm.x86.seh.recoverfp.
   StringRef FLinkageName =
-      GlobalValue::getRealLinkageName(MF->getFunction()->getName());
+      GlobalValue::dropLLVMManglingEscape(MF->getFunction()->getName());
   MCSymbol *ParentFrameOffset =
       Ctx.getOrCreateParentFrameOffsetSymbol(FLinkageName);
   const MCExpr *MCOffset =
@@ -635,7 +635,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   auto &OS = *Asm->OutStreamer;
   const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
 
-  StringRef FuncLinkageName = GlobalValue::getRealLinkageName(F->getName());
+  StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F->getName());
 
   SmallVector<std::pair<const MCExpr *, int>, 4> IPToStateTable;
   MCSymbol *FuncInfoXData = nullptr;
@@ -942,7 +942,7 @@ void WinException::emitEHRegistrationOffsetLabel(const WinEHFuncInfo &FuncInfo,
 void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
   MCStreamer &OS = *Asm->OutStreamer;
   const Function *F = MF->getFunction();
-  StringRef FLinkageName = GlobalValue::getRealLinkageName(F->getName());
+  StringRef FLinkageName = GlobalValue::dropLLVMManglingEscape(F->getName());
 
   bool VerboseAsm = OS.isVerboseAsm();
   auto AddComment = [&](const Twine &Comment) {

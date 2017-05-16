@@ -598,11 +598,14 @@ define i1 @sdiv_exact_equality(i32 %Z) {
   ret i1 %C
 }
 
-; FIXME: But not other preds: PR32949 - https://bugs.llvm.org/show_bug.cgi?id=32949
+; But not other preds: PR32949 - https://bugs.llvm.org/show_bug.cgi?id=32949
 
 define i1 @sdiv_exact_not_equality(i32 %Z) {
 ; CHECK-LABEL: @sdiv_exact_not_equality(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[A:%.*]] = sdiv exact i32 10, %Z
+; CHECK-NEXT:    [[B:%.*]] = sdiv exact i32 20, %Z
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = sdiv exact i32 10, %Z
   %B = sdiv exact i32 20, %Z

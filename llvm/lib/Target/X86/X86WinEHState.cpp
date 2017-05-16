@@ -398,7 +398,7 @@ Function *WinEHStatePass::generateLSDAInEAXThunk(Function *ParentFunc) {
                         /*isVarArg=*/false);
   Function *Trampoline =
       Function::Create(TrampolineTy, GlobalValue::InternalLinkage,
-                       Twine("__ehhandler$") + GlobalValue::getRealLinkageName(
+                       Twine("__ehhandler$") + GlobalValue::dropLLVMManglingEscape(
                                                    ParentFunc->getName()),
                        TheModule);
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", Trampoline);

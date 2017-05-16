@@ -695,11 +695,13 @@ define i1 @test48(i32 %X, i32 %Y, i32 %Z) {
   ret i1 %C
 }
 
-; FIXME: The above transform only works for equality predicates.
+; The above transform only works for equality predicates.
 
 define i1 @PR32949(i32 %X, i32 %Y, i32 %Z) {
 ; CHECK-LABEL: @PR32949(
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 %X, %Y
+; CHECK-NEXT:    [[A:%.*]] = sdiv exact i32 %X, %Z
+; CHECK-NEXT:    [[B:%.*]] = sdiv exact i32 %Y, %Z
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = sdiv exact i32 %X, %Z

@@ -540,7 +540,7 @@ static StringRef sanitizeFunctionName(StringRef funcName) {
 
   // Check for \01 prefix that is used to mangle __asm declarations and
   // strip it if present.
-  return GlobalValue::getRealLinkageName(funcName);
+  return GlobalValue::dropLLVMManglingEscape(funcName);
 }
 
 bool TargetLibraryInfoImpl::getLibFunc(StringRef funcName,

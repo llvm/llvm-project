@@ -22,8 +22,8 @@
 
 namespace clang {
 namespace clangd {
-class ASTManager;
-class DocumentStore;
+class ClangdLSPServer;
+class ClangdLSPServer;
 
 struct InitializeHandler : Handler {
   InitializeHandler(JSONOutput &Output) : Handler(Output) {}
@@ -56,83 +56,83 @@ private:
 };
 
 struct TextDocumentDidOpenHandler : Handler {
-  TextDocumentDidOpenHandler(JSONOutput &Output, DocumentStore &Store)
-      : Handler(Output), Store(Store) {}
+  TextDocumentDidOpenHandler(JSONOutput &Output, ClangdLSPServer &AST)
+      : Handler(Output), AST(AST) {}
 
   void handleNotification(llvm::yaml::MappingNode *Params) override;
 
 private:
-  DocumentStore &Store;
+  ClangdLSPServer &AST;
 };
 
 struct TextDocumentDidChangeHandler : Handler {
-  TextDocumentDidChangeHandler(JSONOutput &Output, DocumentStore &Store)
-      : Handler(Output), Store(Store) {}
+  TextDocumentDidChangeHandler(JSONOutput &Output, ClangdLSPServer &AST)
+      : Handler(Output), AST(AST) {}
 
   void handleNotification(llvm::yaml::MappingNode *Params) override;
 
 private:
-  DocumentStore &Store;
+  ClangdLSPServer &AST;
 };
 
 struct TextDocumentDidCloseHandler : Handler {
-  TextDocumentDidCloseHandler(JSONOutput &Output, DocumentStore &Store)
-      : Handler(Output), Store(Store) {}
+  TextDocumentDidCloseHandler(JSONOutput &Output, ClangdLSPServer &AST)
+      : Handler(Output), AST(AST) {}
 
   void handleNotification(llvm::yaml::MappingNode *Params) override;
 
 private:
-  DocumentStore &Store;
+  ClangdLSPServer &AST;
 };
 
 struct TextDocumentOnTypeFormattingHandler : Handler {
-  TextDocumentOnTypeFormattingHandler(JSONOutput &Output, DocumentStore &Store)
-      : Handler(Output), Store(Store) {}
-
-  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
-
-private:
-  DocumentStore &Store;
-};
-
-struct TextDocumentRangeFormattingHandler : Handler {
-  TextDocumentRangeFormattingHandler(JSONOutput &Output, DocumentStore &Store)
-      : Handler(Output), Store(Store) {}
-
-  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
-
-private:
-  DocumentStore &Store;
-};
-
-struct TextDocumentFormattingHandler : Handler {
-  TextDocumentFormattingHandler(JSONOutput &Output, DocumentStore &Store)
-      : Handler(Output), Store(Store) {}
-
-  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
-
-private:
-  DocumentStore &Store;
-};
-
-struct CodeActionHandler : Handler {
-  CodeActionHandler(JSONOutput &Output, ASTManager &AST)
+  TextDocumentOnTypeFormattingHandler(JSONOutput &Output, ClangdLSPServer &AST)
       : Handler(Output), AST(AST) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
 
 private:
-  ASTManager &AST;
+  ClangdLSPServer &AST;
+};
+
+struct TextDocumentRangeFormattingHandler : Handler {
+  TextDocumentRangeFormattingHandler(JSONOutput &Output, ClangdLSPServer &AST)
+      : Handler(Output), AST(AST) {}
+
+  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
+
+private:
+  ClangdLSPServer &AST;
+};
+
+struct TextDocumentFormattingHandler : Handler {
+  TextDocumentFormattingHandler(JSONOutput &Output, ClangdLSPServer &AST)
+      : Handler(Output), AST(AST) {}
+
+  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
+
+private:
+  ClangdLSPServer &AST;
+};
+
+struct CodeActionHandler : Handler {
+  CodeActionHandler(JSONOutput &Output, ClangdLSPServer &AST)
+      : Handler(Output), AST(AST) {}
+
+  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
+
+private:
+  ClangdLSPServer &AST;
 };
 
 struct CompletionHandler : Handler {
-  CompletionHandler(JSONOutput &Output, ASTManager &AST)
+  CompletionHandler(JSONOutput &Output, ClangdLSPServer &AST)
       : Handler(Output), AST(AST) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
 
  private:
-  ASTManager &AST;
+  ClangdLSPServer &AST;
 };
 
 } // namespace clangd

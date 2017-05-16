@@ -2827,10 +2827,19 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
       break;
     case Instruction::UDiv:
     case Instruction::LShr:
-      if (ICmpInst::isSigned(Pred))
+      if (ICmpInst::isSigned(Pred) || !LBO->isExact() || !RBO->isExact())
         break;
-      LLVM_FALLTHROUGH;
+      if (Value *V = SimplifyICmpInst(Pred, LBO->getOperand(0),
+                                      RBO->getOperand(0), Q, MaxRecurse - 1))
+          return V;
+      break;
     case Instruction::SDiv:
+      if (!ICmpInst::isEquality(Pred) || !LBO->isExact() || !RBO->isExact())
+        break;
+      if (Value *V = SimplifyICmpInst(Pred, LBO->getOperand(0),
+                                      RBO->getOperand(0), Q, MaxRecurse - 1))
+        return V;
+      break;
     case Instruction::AShr:
       if (!LBO->isExact() || !RBO->isExact())
         break;

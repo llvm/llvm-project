@@ -35,7 +35,7 @@
 # ifdef COMPILER_RT_ARMHF_TARGET
 #   define COMPILER_RT_ABI
 # else
-#   define COMPILER_RT_ABI __attribute__((pcs("aapcs")))
+#   define COMPILER_RT_ABI __attribute__((__pcs__("aapcs")))
 # endif
 #else
 # define ARM_EABI_FNALIAS(aeabi_name, name)

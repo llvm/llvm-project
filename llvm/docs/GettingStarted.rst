@@ -706,7 +706,7 @@ To set up a clone of all the llvm projects using a unified repository:
 .. code-block:: console
 
   % export TOP_LEVEL_DIR=`pwd`
-  % git clone https://github.com/llvm-project/llvm-project-20170507/
+  % git clone https://github.com/llvm-project/llvm-project-20170507/ llvm-project
   % cd llvm-project
   % git config branch.master.rebase true
 

@@ -91,8 +91,10 @@ Improvements to clang-tidy
 - Improved `modernize-use-emplace
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html>`_ check
 
-  Removes unnecessary std::make_pair calls in push_back(std::make_pair(a, b)) calls and turns them
-  into emplace_back(a, b).
+  Removes unnecessary ``std::make_pair`` and ``std::make_tuple`` calls in
+  push_back calls and turns them into emplace_back. The check now also is able
+  to remove user-defined make functions from ``push_back`` calls on containers
+  of custom tuple-like types by providing `TupleTypes` and `TupleMakeFunctions`.
 
 - New `performance-inefficient-vector-operation
   <http://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html>`_ check

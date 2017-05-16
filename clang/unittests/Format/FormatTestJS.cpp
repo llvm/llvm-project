@@ -548,6 +548,15 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "  // Comment.\n"
                "  return async.then();\n"
                "}\n");
+  verifyFormat("for async (const x of y) {\n"
+               "  console.log(x);\n"
+               "}\n");
+  verifyFormat("function asyncLoop() {\n"
+               "  for async (const x of y) {\n"
+               "    console.log(x);\n"
+               "  }\n"
+               "}\n");
+
 }
 
 TEST_F(FormatTestJS, FunctionParametersTrailingComma) {

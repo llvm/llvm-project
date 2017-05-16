@@ -1,4 +1,4 @@
-//===-- AttributeImpl.h - Attribute Internals -------------------*- C++ -*-===//
+//===- AttributeImpl.h - Attribute Internals --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -21,9 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/Support/TrailingObjects.h"
-#include <algorithm>
 #include <cassert>
-#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -80,11 +78,13 @@ public:
     else
       Profile(ID, getKindAsString(), getValueAsString());
   }
+
   static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
                       uint64_t Val) {
     ID.AddInteger(Kind);
     if (Val) ID.AddInteger(Val);
   }
+
   static void Profile(FoldingSetNodeID &ID, StringRef Kind, StringRef Values) {
     ID.AddString(Kind);
     if (!Values.empty()) ID.AddString(Values);
@@ -114,8 +114,9 @@ public:
 };
 
 class IntAttributeImpl : public EnumAttributeImpl {
-  void anchor() override;
   uint64_t Val;
+
+  void anchor() override;
 
 public:
   IntAttributeImpl(Attribute::AttrKind Kind, uint64_t Val)
@@ -188,20 +189,22 @@ public:
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
   std::string getAsString(bool InAttrGrp) const;
 
-  typedef const Attribute *iterator;
+  using iterator = const Attribute *;
+
   iterator begin() const { return getTrailingObjects<Attribute>(); }
   iterator end() const { return begin() + NumAttrs; }
 
   void Profile(FoldingSetNodeID &ID) const {
     Profile(ID, makeArrayRef(begin(), end()));
   }
+
   static void Profile(FoldingSetNodeID &ID, ArrayRef<Attribute> AttrList) {
     for (const auto &Attr : AttrList)
       Attr.Profile(ID);
   }
 };
 
-typedef std::pair<unsigned, AttributeSet> IndexAttrPair;
+using IndexAttrPair = std::pair<unsigned, AttributeSet>;
 
 //===----------------------------------------------------------------------===//
 /// \class
@@ -265,7 +268,8 @@ public:
     return AvailableFunctionAttrs & ((uint64_t)1) << Kind;
   }
 
-  typedef AttributeSet::iterator iterator;
+  using iterator = AttributeSet::iterator;
+
   iterator begin(unsigned Slot) const {
     return getSlotAttributes(Slot).begin();
   }

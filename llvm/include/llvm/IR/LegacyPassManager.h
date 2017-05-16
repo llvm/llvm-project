@@ -98,6 +98,9 @@ private:
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_STDCXX_CONVERSION_FUNCTIONS(legacy::PassManagerBase, LLVMPassManagerRef)
 
+/// If -time-passes has been specified, report the timings immediately and then
+/// reset the timers to zero.
+void reportAndResetTimings();
 } // End llvm namespace
 
 #endif

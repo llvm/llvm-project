@@ -375,7 +375,7 @@ def FalkorReadFMA64  : SchedReadAdvance<2, [FalkorWr_FMUL64_1VXVY_6cyc, FalkorWr
 
 // SchedPredicates and WriteVariants for Immediate Zero and LSLFast
 // -----------------------------------------------------------------------------
-def FalkorImmZPred    : SchedPredicate<[{TII->isGPRZero(*MI)}]>;
+def FalkorImmZPred    : SchedPredicate<[{MI->getOperand(1).getImm() == 0}]>;
 def FalkorLSLFastPred : SchedPredicate<[{TII->isFalkorLSLFast(*MI)}]>; 
 
 def FalkorWr_FMOV  : SchedWriteVariant<[
@@ -392,7 +392,6 @@ def FalkorWr_LDR   : SchedWriteVariant<[
 
 def FalkorWr_ADD   : SchedWriteVariant<[
                        SchedVar<FalkorLSLFastPred, [FalkorWr_1XYZ_1cyc]>,
-                       SchedVar<FalkorImmZPred,    [FalkorWr_1XYZ_1cyc]>,
                        SchedVar<NoSchedPred,       [FalkorWr_2XYZ_2cyc]>]>;
 
 def FalkorWr_PRFM  : SchedWriteVariant<[

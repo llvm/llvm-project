@@ -591,6 +591,10 @@ void PartialInlinerImpl::computeCallsiteToProfCountMap(
     else
       CallSiteToProfCountMap[User] = 0;
   }
+  if (!GetBFI) {
+    if (CurrentCallerBFI)
+      delete CurrentCallerBFI;
+  }
 }
 
 Function *PartialInlinerImpl::unswitchFunction(Function *F) {
