@@ -8,9 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProtocolHandlers.h"
-#include "ASTManager.h"
-#include "DocumentStore.h"
+#include "ClangdServer.h"
+#include "DraftStore.h"
 #include "clang/Format/Format.h"
+#include "ClangdLSPServer.h"
 using namespace clang;
 using namespace clangd;
 
@@ -21,7 +22,7 @@ void TextDocumentDidOpenHandler::handleNotification(
     Output.log("Failed to decode DidOpenTextDocumentParams!\n");
     return;
   }
-  Store.addDocument(DOTDP->textDocument.uri.file, DOTDP->textDocument.text);
+  AST.openDocument(DOTDP->textDocument.uri.file, DOTDP->textDocument.text);
 }
 
 void TextDocumentDidCloseHandler::handleNotification(
@@ -32,7 +33,7 @@ void TextDocumentDidCloseHandler::handleNotification(
     return;
   }
 
-  Store.removeDocument(DCTDP->textDocument.uri.file);
+  AST.closeDocument(DCTDP->textDocument.uri.file);
 }
 
 void TextDocumentDidChangeHandler::handleNotification(
@@ -43,7 +44,7 @@ void TextDocumentDidChangeHandler::handleNotification(
     return;
   }
   // We only support full syncing right now.
-  Store.addDocument(DCTDP->textDocument.uri.file, DCTDP->contentChanges[0].text);
+  AST.openDocument(DCTDP->textDocument.uri.file, DCTDP->contentChanges[0].text);
 }
 
 /// Turn a [line, column] pair into an offset in Code.
@@ -110,7 +111,7 @@ void TextDocumentRangeFormattingHandler::handleMethod(
     return;
   }
 
-  std::string Code = Store.getDocument(DRFP->textDocument.uri.file);
+  std::string Code = AST.getDocument(DRFP->textDocument.uri.file);
 
   size_t Begin = positionToOffset(Code, DRFP->range.start);
   size_t Len = positionToOffset(Code, DRFP->range.end) - Begin;
@@ -129,7 +130,7 @@ void TextDocumentOnTypeFormattingHandler::handleMethod(
 
   // Look for the previous opening brace from the character position and format
   // starting from there.
-  std::string Code = Store.getDocument(DOTFP->textDocument.uri.file);
+  std::string Code = AST.getDocument(DOTFP->textDocument.uri.file);
   size_t CursorPos = positionToOffset(Code, DOTFP->position);
   size_t PreviousLBracePos = StringRef(Code).find_last_of('{', CursorPos);
   if (PreviousLBracePos == StringRef::npos)
@@ -149,7 +150,7 @@ void TextDocumentFormattingHandler::handleMethod(
   }
 
   // Format everything.
-  std::string Code = Store.getDocument(DFP->textDocument.uri.file);
+  std::string Code = AST.getDocument(DFP->textDocument.uri.file);
   writeMessage(formatCode(Code, DFP->textDocument.uri.file,
                           {clang::tooling::Range(0, Code.size())}, ID));
 }
@@ -164,7 +165,7 @@ void CodeActionHandler::handleMethod(llvm::yaml::MappingNode *Params,
 
   // We provide a code action for each diagnostic at the requested location
   // which has FixIts available.
-  std::string Code = AST.getStore().getDocument(CAP->textDocument.uri.file);
+  std::string Code = AST.getDocument(CAP->textDocument.uri.file);
   std::string Commands;
   for (Diagnostic &D : CAP->context.diagnostics) {
     std::vector<clang::tooling::Replacement> Fixes = AST.getFixIts(CAP->textDocument.uri.file, D);
@@ -195,8 +196,8 @@ void CompletionHandler::handleMethod(llvm::yaml::MappingNode *Params,
     return;
   }
 
-  auto Items = AST.codeComplete(TDPP->textDocument.uri.file, TDPP->position.line,
-                                TDPP->position.character);
+  auto Items = AST.codeComplete(TDPP->textDocument.uri.file, Position{TDPP->position.line,
+          TDPP->position.character});
   std::string Completions;
   for (const auto &Item : Items) {
     Completions += CompletionItem::unparse(Item);

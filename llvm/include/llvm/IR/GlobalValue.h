@@ -441,10 +441,14 @@ protected:
   void copyAttributesFrom(const GlobalValue *Src);
 
 public:
-  /// If special LLVM prefix that is used to inform the asm printer to not emit
-  /// usual symbol prefix before the symbol name is used then return linkage
-  /// name after skipping this special LLVM prefix.
-  static StringRef getRealLinkageName(StringRef Name) {
+  /// If the given string begins with the GlobalValue name mangling escape
+  /// character '\1', drop it.
+  ///
+  /// This function applies a specific mangling that is used in PGO profiles,
+  /// among other things. If you're trying to get a symbol name for an
+  /// arbitrary GlobalValue, this is not the function you're looking for; see
+  /// Mangler.h.
+  static StringRef dropLLVMManglingEscape(StringRef Name) {
     if (!Name.empty() && Name[0] == '\1')
       return Name.substr(1);
     return Name;

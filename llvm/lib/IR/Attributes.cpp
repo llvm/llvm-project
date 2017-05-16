@@ -34,6 +34,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
+#include <climits>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <map>
@@ -567,11 +569,11 @@ unsigned AttributeSet::getNumAttributes() const {
 }
 
 bool AttributeSet::hasAttribute(Attribute::AttrKind Kind) const {
-  return SetNode ? SetNode->hasAttribute(Kind) : 0;
+  return SetNode ? SetNode->hasAttribute(Kind) : false;
 }
 
 bool AttributeSet::hasAttribute(StringRef Kind) const {
-  return SetNode ? SetNode->hasAttribute(Kind) : 0;
+  return SetNode ? SetNode->hasAttribute(Kind) : false;
 }
 
 Attribute AttributeSet::getAttribute(Attribute::AttrKind Kind) const {

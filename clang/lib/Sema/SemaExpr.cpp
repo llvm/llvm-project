@@ -8204,7 +8204,7 @@ static bool tryGCCVectorConvertAndSplat(Sema &S, ExprResult *Scalar,
 
   // The conversion to apply to the scalar before splatting it,
   // if necessary.
-  CastKind ScalarCast = CK_Invalid;
+  CastKind ScalarCast = CK_NoOp;
 
   // Accept cases where the vector elements are integers and the scalar is
   // an integer.
@@ -8254,7 +8254,7 @@ static bool tryGCCVectorConvertAndSplat(Sema &S, ExprResult *Scalar,
 
   // Adjust scalar if desired.
   if (Scalar) {
-    if (ScalarCast != CK_Invalid)
+    if (ScalarCast != CK_NoOp)
       *Scalar = S.ImpCastExprToType(Scalar->get(), VectorEltTy, ScalarCast);
     *Scalar = S.ImpCastExprToType(Scalar->get(), VectorTy, CK_VectorSplat);
   }

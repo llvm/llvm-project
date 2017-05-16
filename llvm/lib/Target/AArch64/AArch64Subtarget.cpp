@@ -91,6 +91,8 @@ void AArch64Subtarget::initializeProperties() {
   case Falkor:
     MaxInterleaveFactor = 4;
     VectorInsertExtractBaseCost = 2;
+    // FIXME: remove this to enable 64-bit SLP if performance looks good.
+    MinVectorRegisterBitWidth = 128;
     break;
   case Kryo:
     MaxInterleaveFactor = 4;
@@ -99,6 +101,8 @@ void AArch64Subtarget::initializeProperties() {
     PrefetchDistance = 740;
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 11;
+    // FIXME: remove this to enable 64-bit SLP if performance looks good.
+    MinVectorRegisterBitWidth = 128;
     break;
   case ThunderX2T99:
     CacheLineSize = 64;
@@ -108,6 +112,8 @@ void AArch64Subtarget::initializeProperties() {
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 4;
+    // FIXME: remove this to enable 64-bit SLP if performance looks good.
+    MinVectorRegisterBitWidth = 128;
     break;
   case ThunderX:
   case ThunderXT88:
@@ -116,6 +122,8 @@ void AArch64Subtarget::initializeProperties() {
     CacheLineSize = 128;
     PrefFunctionAlignment = 3;
     PrefLoopAlignment = 2;
+    // FIXME: remove this to enable 64-bit SLP if performance looks good.
+    MinVectorRegisterBitWidth = 128;
     break;
   case CortexA35: break;
   case CortexA53: break;

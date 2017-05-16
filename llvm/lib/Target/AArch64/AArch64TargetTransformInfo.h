@@ -87,6 +87,10 @@ public:
     return 64;
   }
 
+  unsigned getMinVectorRegisterBitWidth() {
+    return ST->getMinVectorRegisterBitWidth();
+  }
+
   unsigned getMaxInterleaveFactor(unsigned VF);
 
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
@@ -141,9 +145,6 @@ public:
   bool shouldExpandReduction(const IntrinsicInst *II) const {
     return false;
   }
-
-  bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
-                             TTI::ReductionFlags Flags) const;
   /// @}
 };
 

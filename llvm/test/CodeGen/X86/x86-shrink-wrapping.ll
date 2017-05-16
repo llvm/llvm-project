@@ -270,8 +270,6 @@ if.end:                                           ; preds = %if.else, %for.end
   ret i32 %sum.1
 }
 
-declare void @somethingElse(...)
-
 ; Check with a more complex case that we do not have restore within the loop and
 ; save outside.
 ; CHECK-LABEL: loopInfoRestoreOutsideLoop:
@@ -982,3 +980,54 @@ for.inc:
 }
 
 attributes #4 = { "no-frame-pointer-elim"="true" }
+
+@x = external global i32, align 4
+@y = external global i32, align 4
+
+; The post-dominator tree does not include the branch containing the infinite
+; loop, which can occur into a misplacement of the restore block, if we're
+; looking for the nearest common post-dominator of an "unreachable" block.
+
+; CHECK-LABEL: infiniteLoopNoSuccessor:
+; CHECK: ## BB#0:
+; Make sure the prologue happens in the entry block.
+; CHECK-NEXT: pushq %rbp
+; ...
+; Make sure we don't shrink-wrap.
+; CHECK: ## BB#1
+; CHECK-NOT: pushq %rbp
+; ...
+; Make sure the epilogue happens in the exit block.
+; CHECK: ## BB#5
+; CHECK: popq %rbp
+; CHECK-NEXT: retq
+define void @infiniteLoopNoSuccessor() #5 {
+  %1 = load i32, i32* @x, align 4
+  %2 = icmp ne i32 %1, 0
+  br i1 %2, label %3, label %4
+
+; <label>:3:
+  store i32 0, i32* @x, align 4
+  br label %4
+
+; <label>:4:
+  call void (...) @somethingElse()
+  %5 = load i32, i32* @y, align 4
+  %6 = icmp ne i32 %5, 0
+  br i1 %6, label %10, label %7
+
+; <label>:7:
+  %8 = call i32 (...) @something()
+  br label %9
+
+; <label>:9:
+  call void (...) @somethingElse()
+  br label %9
+
+; <label>:10:
+  ret void
+}
+
+declare void @somethingElse(...)
+
+attributes #5 = { nounwind  "no-frame-pointer-elim-non-leaf" }

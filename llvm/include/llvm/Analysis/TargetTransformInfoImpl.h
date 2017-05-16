@@ -311,6 +311,8 @@ public:
 
   unsigned getRegisterBitWidth(bool Vector) { return 32; }
 
+  unsigned getMinVectorRegisterBitWidth() { return 128; }
+
   bool
   shouldConsiderAddressTypePromotion(const Instruction &I,
                                      bool &AllowPromotionWithoutCommonHeader) {

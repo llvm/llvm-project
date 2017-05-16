@@ -1686,7 +1686,7 @@ AddressSanitizerModule::CreateMetadataGlobal(Module &M, Constant *Initializer,
                      : GlobalVariable::PrivateLinkage;
   GlobalVariable *Metadata = new GlobalVariable(
       M, Initializer->getType(), false, Linkage, Initializer,
-      Twine("__asan_global_") + GlobalValue::getRealLinkageName(OriginalName));
+      Twine("__asan_global_") + GlobalValue::dropLLVMManglingEscape(OriginalName));
   Metadata->setSection(getGlobalMetadataSection());
   return Metadata;
 }

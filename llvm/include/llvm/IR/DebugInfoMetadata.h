@@ -16,8 +16,11 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
@@ -56,10 +59,6 @@
 
 namespace llvm {
 
-class DIBuilder;
-
-template <typename T> class Optional;
-
 /// Holds a subclass of DINode.
 ///
 /// FIXME: This class doesn't currently make much sense.  Previously it was a
@@ -94,9 +93,9 @@ public:
   bool operator!=(const TypedDINodeRef<T> &X) const { return MD != X.MD; }
 };
 
-typedef TypedDINodeRef<DINode> DINodeRef;
-typedef TypedDINodeRef<DIScope> DIScopeRef;
-typedef TypedDINodeRef<DIType> DITypeRef;
+using DINodeRef = TypedDINodeRef<DINode>;
+using DIScopeRef = TypedDINodeRef<DIScope>;
+using DITypeRef = TypedDINodeRef<DIType>;
 
 class DITypeRefArray {
   const MDTuple *N = nullptr;
@@ -240,7 +239,8 @@ public:
 };
 
 template <class T> struct simplify_type<const TypedDINodeRef<T>> {
-  typedef Metadata *SimpleType;
+  using SimpleType = Metadata *;
+
   static SimpleType getSimplifiedValue(const TypedDINodeRef<T> &MD) {
     return MD;
   }
@@ -799,15 +799,18 @@ public:
     assert(getTag() == dwarf::DW_TAG_ptr_to_member_type);
     return DITypeRef(getExtraData());
   }
+
   DIObjCProperty *getObjCProperty() const {
     return dyn_cast_or_null<DIObjCProperty>(getExtraData());
   }
+
   Constant *getStorageOffsetInBits() const {
     assert(getTag() == dwarf::DW_TAG_member && isBitField());
     if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
       return C->getValue();
     return nullptr;
   }
+
   Constant *getConstant() const {
     assert(getTag() == dwarf::DW_TAG_member && isStaticMember());
     if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
@@ -970,9 +973,11 @@ public:
 #endif
     replaceOperandWith(4, Elements.get());
   }
+
   void replaceVTableHolder(DITypeRef VTableHolder) {
     replaceOperandWith(5, VTableHolder);
   }
+
   void replaceTemplateParams(DITemplateParameterArray TemplateParams) {
     replaceOperandWith(6, TemplateParams.get());
   }
@@ -1031,6 +1036,7 @@ public:
   DITypeRefArray getTypeArray() const {
     return cast_or_null<MDTuple>(getRawTypeArray());
   }
+
   Metadata *getRawTypeArray() const { return getOperand(3); }
 
   static bool classof(const Metadata *MD) {
@@ -1319,6 +1325,7 @@ public:
   unsigned getLine() const { return SubclassData32; }
   unsigned getColumn() const { return SubclassData16; }
   DILocalScope *getScope() const { return cast<DILocalScope>(getRawScope()); }
+
   DILocation *getInlinedAt() const {
     return cast_or_null<DILocation>(getRawInlinedAt());
   }
@@ -1452,7 +1459,6 @@ public:
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DILocationKind;
   }
-
 };
 
 /// Subprogram description.
@@ -2087,6 +2093,7 @@ public:
       return F->getFilename();
     return "";
   }
+
   StringRef getDirectory() const {
     if (auto *F = getFile())
       return F->getDirectory();
@@ -2143,6 +2150,7 @@ public:
   ArrayRef<uint64_t> getElements() const { return Elements; }
 
   unsigned getNumElements() const { return Elements.size(); }
+
   uint64_t getElement(unsigned I) const {
     assert(I < Elements.size() && "Index out of range");
     return Elements[I];
@@ -2151,7 +2159,8 @@ public:
   /// Determine whether this represents a standalone constant value.
   bool isConstant() const;
 
-  typedef ArrayRef<uint64_t>::iterator element_iterator;
+  using element_iterator = ArrayRef<uint64_t>::iterator;
+
   element_iterator elements_begin() const { return getElements().begin(); }
   element_iterator elements_end() const { return getElements().end(); }
 
@@ -2513,6 +2522,7 @@ public:
       return F->getFilename();
     return "";
   }
+
   StringRef getDirectory() const {
     if (auto *F = getFile())
       return F->getDirectory();
@@ -2613,10 +2623,13 @@ public:
   TempDIGlobalVariableExpression clone() const { return cloneImpl(); }
 
   Metadata *getRawVariable() const { return getOperand(0); }
+
   DIGlobalVariable *getVariable() const {
     return cast_or_null<DIGlobalVariable>(getRawVariable());
   }
+
   Metadata *getRawExpression() const { return getOperand(1); }
+
   DIExpression *getExpression() const {
     return cast_or_null<DIExpression>(getRawExpression());
   }

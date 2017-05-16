@@ -584,7 +584,7 @@ CompareValueComplexity(SmallSet<std::pair<Value *, Value *>, 8> &EqCache,
 static int CompareSCEVComplexity(
     SmallSet<std::pair<const SCEV *, const SCEV *>, 8> &EqCacheSCEV,
     const LoopInfo *const LI, const SCEV *LHS, const SCEV *RHS,
-    unsigned Depth = 0) {
+    DominatorTree &DT, unsigned Depth = 0) {
   // Fast-path: SCEVs are uniqued so we can do a quick equality check.
   if (LHS == RHS)
     return 0;
@@ -629,9 +629,16 @@ static int CompareSCEVComplexity(
     const SCEVAddRecExpr *LA = cast<SCEVAddRecExpr>(LHS);
     const SCEVAddRecExpr *RA = cast<SCEVAddRecExpr>(RHS);
 
-    // Compare addrec loop depths.
+    // If there is a dominance relationship between the loops, sort by the
+    // dominance. Otherwise, sort by depth. We require such order in getAddExpr.
     const Loop *LLoop = LA->getLoop(), *RLoop = RA->getLoop();
     if (LLoop != RLoop) {
+      const BasicBlock *LHead = LLoop->getHeader(), *RHead = RLoop->getHeader();
+      assert(LHead != RHead && "Two loops share the same header?");
+      if (DT.dominates(LHead, RHead))
+        return 1;
+      else if (DT.dominates(RHead, LHead))
+        return -1;
       unsigned LDepth = LLoop->getLoopDepth(), RDepth = RLoop->getLoopDepth();
       if (LDepth != RDepth)
         return (int)LDepth - (int)RDepth;
@@ -645,7 +652,7 @@ static int CompareSCEVComplexity(
     // Lexicographically compare.
     for (unsigned i = 0; i != LNumOps; ++i) {
       int X = CompareSCEVComplexity(EqCacheSCEV, LI, LA->getOperand(i),
-                                    RA->getOperand(i), Depth + 1);
+                                    RA->getOperand(i), DT,  Depth + 1);
       if (X != 0)
         return X;
     }
@@ -669,7 +676,7 @@ static int CompareSCEVComplexity(
       if (i >= RNumOps)
         return 1;
       int X = CompareSCEVComplexity(EqCacheSCEV, LI, LC->getOperand(i),
-                                    RC->getOperand(i), Depth + 1);
+                                    RC->getOperand(i), DT, Depth + 1);
       if (X != 0)
         return X;
     }
@@ -683,10 +690,10 @@ static int CompareSCEVComplexity(
 
     // Lexicographically compare udiv expressions.
     int X = CompareSCEVComplexity(EqCacheSCEV, LI, LC->getLHS(), RC->getLHS(),
-                                  Depth + 1);
+                                  DT, Depth + 1);
     if (X != 0)
       return X;
-    X = CompareSCEVComplexity(EqCacheSCEV, LI, LC->getRHS(), RC->getRHS(),
+    X = CompareSCEVComplexity(EqCacheSCEV, LI, LC->getRHS(), RC->getRHS(), DT,
                               Depth + 1);
     if (X == 0)
       EqCacheSCEV.insert({LHS, RHS});
@@ -701,7 +708,7 @@ static int CompareSCEVComplexity(
 
     // Compare cast expressions by operand.
     int X = CompareSCEVComplexity(EqCacheSCEV, LI, LC->getOperand(),
-                                  RC->getOperand(), Depth + 1);
+                                  RC->getOperand(), DT, Depth + 1);
     if (X == 0)
       EqCacheSCEV.insert({LHS, RHS});
     return X;
@@ -724,7 +731,7 @@ static int CompareSCEVComplexity(
 /// land in memory.
 ///
 static void GroupByComplexity(SmallVectorImpl<const SCEV *> &Ops,
-                              LoopInfo *LI) {
+                              LoopInfo *LI, DominatorTree &DT) {
   if (Ops.size() < 2) return;  // Noop
 
   SmallSet<std::pair<const SCEV *, const SCEV *>, 8> EqCache;
@@ -732,15 +739,16 @@ static void GroupByComplexity(SmallVectorImpl<const SCEV *> &Ops,
     // This is the common case, which also happens to be trivially simple.
     // Special case it.
     const SCEV *&LHS = Ops[0], *&RHS = Ops[1];
-    if (CompareSCEVComplexity(EqCache, LI, RHS, LHS) < 0)
+    if (CompareSCEVComplexity(EqCache, LI, RHS, LHS, DT) < 0)
       std::swap(LHS, RHS);
     return;
   }
 
   // Do the rough sort by complexity.
   std::stable_sort(Ops.begin(), Ops.end(),
-                   [&EqCache, LI](const SCEV *LHS, const SCEV *RHS) {
-                     return CompareSCEVComplexity(EqCache, LI, LHS, RHS) < 0;
+                   [&EqCache, LI, &DT](const SCEV *LHS, const SCEV *RHS) {
+                     return
+                         CompareSCEVComplexity(EqCache, LI, LHS, RHS, DT) < 0;
                    });
 
   // Now that we are sorted by complexity, group elements of the same
@@ -2186,7 +2194,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
 #endif
 
   // Sort by complexity, this groups all similar expression types together.
-  GroupByComplexity(Ops, &LI);
+  GroupByComplexity(Ops, &LI, DT);
 
   Flags = StrengthenNoWrapFlags(this, scAddExpr, Ops, Flags);
 
@@ -2492,7 +2500,13 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
     // added together.  If so, we can fold them.
     for (unsigned OtherIdx = Idx+1;
          OtherIdx < Ops.size() && isa<SCEVAddRecExpr>(Ops[OtherIdx]);
-         ++OtherIdx)
+         ++OtherIdx) {
+      // We expect the AddRecExpr's to be sorted in reverse dominance order,
+      // so that the 1st found AddRecExpr is dominated by all others.
+      assert(DT.dominates(
+           cast<SCEVAddRecExpr>(Ops[OtherIdx])->getLoop()->getHeader(),
+           AddRec->getLoop()->getHeader()) &&
+        "AddRecExprs are not sorted in reverse dominance order?");
       if (AddRecLoop == cast<SCEVAddRecExpr>(Ops[OtherIdx])->getLoop()) {
         // Other + {A,+,B}<L> + {C,+,D}<L>  -->  Other + {A+C,+,B+D}<L>
         SmallVector<const SCEV *, 4> AddRecOps(AddRec->op_begin(),
@@ -2518,6 +2532,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
         Ops[Idx] = getAddRecExpr(AddRecOps, AddRecLoop, SCEV::FlagAnyWrap);
         return getAddExpr(Ops, SCEV::FlagAnyWrap, Depth + 1);
       }
+    }
 
     // Otherwise couldn't fold anything into this recurrence.  Move onto the
     // next one.
@@ -2614,7 +2629,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
 #endif
 
   // Sort by complexity, this groups all similar expression types together.
-  GroupByComplexity(Ops, &LI);
+  GroupByComplexity(Ops, &LI, DT);
 
   Flags = StrengthenNoWrapFlags(this, scMulExpr, Ops, Flags);
 
@@ -3211,7 +3226,7 @@ ScalarEvolution::getSMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
 #endif
 
   // Sort by complexity, this groups all similar expression types together.
-  GroupByComplexity(Ops, &LI);
+  GroupByComplexity(Ops, &LI, DT);
 
   // If there are any constants, fold them together.
   unsigned Idx = 0;
@@ -3312,7 +3327,7 @@ ScalarEvolution::getUMaxExpr(SmallVectorImpl<const SCEV *> &Ops) {
 #endif
 
   // Sort by complexity, this groups all similar expression types together.
-  GroupByComplexity(Ops, &LI);
+  GroupByComplexity(Ops, &LI, DT);
 
   // If there are any constants, fold them together.
   unsigned Idx = 0;

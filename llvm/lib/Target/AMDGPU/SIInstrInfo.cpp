@@ -564,8 +564,8 @@ void SIInstrInfo::insertVectorSelect(MachineBasicBlock &MBB,
                                      unsigned TrueReg,
                                      unsigned FalseReg) const {
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  const TargetRegisterClass *RegClass = MRI.getRegClass(DstReg);
-  assert(RegClass == &AMDGPU::VGPR_32RegClass && "Not a VGPR32 reg");
+  assert(MRI.getRegClass(DstReg) == &AMDGPU::VGPR_32RegClass &&
+         "Not a VGPR32 reg");
 
   if (Cond.size() == 1) {
     BuildMI(MBB, I, DL, get(AMDGPU::V_CNDMASK_B32_e64), DstReg)

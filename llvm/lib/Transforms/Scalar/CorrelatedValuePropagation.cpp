@@ -442,9 +442,8 @@ static bool processAdd(BinaryOperator *AddOp, LazyValueInfo *LVI) {
 
   bool Changed = false;
   if (!NUW) {
-    ConstantRange NUWRange =
-            LRange.makeGuaranteedNoWrapRegion(BinaryOperator::Add, LRange,
-                                              OBO::NoUnsignedWrap);
+    ConstantRange NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
+        BinaryOperator::Add, LRange, OBO::NoUnsignedWrap);
     if (!NUWRange.isEmptySet()) {
       bool NewNUW = NUWRange.contains(LazyRRange());
       AddOp->setHasNoUnsignedWrap(NewNUW);
@@ -452,9 +451,8 @@ static bool processAdd(BinaryOperator *AddOp, LazyValueInfo *LVI) {
     }
   }
   if (!NSW) {
-    ConstantRange NSWRange =
-            LRange.makeGuaranteedNoWrapRegion(BinaryOperator::Add, LRange,
-                                              OBO::NoSignedWrap);
+    ConstantRange NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(
+        BinaryOperator::Add, LRange, OBO::NoSignedWrap);
     if (!NSWRange.isEmptySet()) {
       bool NewNSW = NSWRange.contains(LazyRRange());
       AddOp->setHasNoSignedWrap(NewNSW);
