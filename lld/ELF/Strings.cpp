@@ -46,7 +46,7 @@ int elf::getPriority(StringRef S) {
   if (Pos == StringRef::npos)
     return 65536;
   int V;
-  if (S.substr(Pos + 1).getAsInteger(10, V))
+  if (!to_integer(S.substr(Pos + 1), V, 10))
     return 65536;
   return V;
 }
@@ -68,7 +68,7 @@ std::vector<uint8_t> elf::parseHex(StringRef S) {
     StringRef B = S.substr(0, 2);
     S = S.substr(2);
     uint8_t H;
-    if (B.getAsInteger(16, H)) {
+    if (!to_integer(B, H, 16)) {
       error("not a hexadecimal value: " + B);
       return {};
     }

@@ -1,7 +1,12 @@
 // RUN: %check_clang_tidy %s modernize-use-emplace %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             [{key: modernize-use-emplace.ContainersWithPushBack, \
-// RUN:               value: '::std::vector; ::std::list; ::std::deque; llvm::LikeASmallVector'}]}" -- -std=c++11
+// RUN:               value: '::std::vector; ::std::list; ::std::deque; llvm::LikeASmallVector'}, \
+// RUN:              {key: modernize-use-emplace.TupleTypes, \
+// RUN:               value: '::std::pair; std::tuple; ::test::Single'}, \
+// RUN:              {key: modernize-use-emplace.TupleMakeFunctions, \
+// RUN:               value: '::std::make_pair; ::std::make_tuple; ::test::MakeSingle'}] \
+// RUN:             }" -- -std=c++11
 
 namespace std {
 template <typename>
@@ -46,8 +51,11 @@ public:
   ~deque();
 };
 
-template <typename T1, typename T2>
-class pair {
+template <typename T> struct remove_reference { using type = T; };
+template <typename T> struct remove_reference<T &> { using type = T; };
+template <typename T> struct remove_reference<T &&> { using type = T; };
+
+template <typename T1, typename T2> class pair {
 public:
   pair() = default;
   pair(const pair &) = default;
@@ -56,16 +64,40 @@ public:
   pair(const T1 &, const T2 &) {}
   pair(T1 &&, T2 &&) {}
 
-  template <class U1, class U2>
-  pair(const pair<U1, U2> &p){};
-  template <class U1, class U2>
-  pair(pair<U1, U2> &&p){};
+  template <typename U1, typename U2> pair(const pair<U1, U2> &){};
+  template <typename U1, typename U2> pair(pair<U1, U2> &&){};
 };
 
 template <typename T1, typename T2>
-pair<T1, T2> make_pair(T1&&, T2&&) {
+pair<typename remove_reference<T1>::type, typename remove_reference<T2>::type>
+make_pair(T1 &&, T2 &&) {
   return {};
 };
+
+template <typename... Ts> class tuple {
+public:
+  tuple() = default;
+  tuple(const tuple &) = default;
+  tuple(tuple &&) = default;
+
+  tuple(const Ts &...) {}
+  tuple(Ts &&...) {}
+
+  template <typename... Us> tuple(const tuple<Us...> &){};
+  template <typename... Us> tuple(tuple<Us...> &&) {}
+
+  template <typename U1, typename U2> tuple(const pair<U1, U2> &) {
+    static_assert(sizeof...(Ts) == 2, "Wrong tuple size");
+  };
+  template <typename U1, typename U2> tuple(pair<U1, U2> &&) {
+    static_assert(sizeof...(Ts) == 2, "Wrong tuple size");
+  };
+};
+
+template <typename... Ts>
+tuple<typename remove_reference<Ts>::type...> make_tuple(Ts &&...) {
+  return {};
+}
 
 template <typename T>
 class unique_ptr {
@@ -207,6 +239,30 @@ void testPair() {
   // CHECK-FIXES: v2.emplace_back(Something(42, 42), Zoz(Something(21, 37)));
 }
 
+void testTuple() {
+  std::vector<std::tuple<bool, char, int>> v;
+  v.push_back(std::tuple<bool, char, int>(false, 'x', 1));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(false, 'x', 1);
+
+  v.push_back(std::tuple<bool, char, int>{false, 'y', 2});
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(false, 'y', 2);
+
+  v.push_back({true, 'z', 3});
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(true, 'z', 3);
+
+  std::vector<std::tuple<int, bool>> x;
+  x.push_back(std::make_pair(1, false));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: x.emplace_back(1, false);
+
+  x.push_back(std::make_pair(2LL, 1));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: x.emplace_back(2LL, 1);
+}
+
 struct Base {
   Base(int, int *, int = 42);
 };
@@ -328,6 +384,77 @@ void testMakePair() {
   // make_pair cannot be removed here, as Y is not constructible with two ints.
 }
 
+void testMakeTuple() {
+  std::vector<std::tuple<int, bool, char>> v;
+  v.push_back(std::make_tuple(1, true, 'v'));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(1, true, 'v');
+
+  v.push_back(std::make_tuple(2ULL, 1, 0));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(2ULL, 1, 0);
+
+  v.push_back(std::make_tuple<long long, int, int>(3LL, 1, 0));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(std::make_tuple<long long, int, int>(3LL, 1, 0));
+  // make_tuple is not removed when there are explicit template
+  // arguments provided.
+}
+
+namespace test {
+template <typename T> struct Single {
+  Single() = default;
+  Single(const Single &) = default;
+  Single(Single &&) = default;
+
+  Single(const T &) {}
+  Single(T &&) {}
+
+  template <typename U> Single(const Single<U> &) {}
+  template <typename U> Single(Single<U> &&) {}
+
+  template <typename U> Single(const std::tuple<U> &) {}
+  template <typename U> Single(std::tuple<U> &&) {}
+};
+
+template <typename T>
+Single<typename std::remove_reference<T>::type> MakeSingle(T &&) {
+  return {};
+}
+} // namespace test
+
+void testOtherTuples() {
+  std::vector<test::Single<int>> v;
+  v.push_back(test::Single<int>(1));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(1);
+
+  v.push_back({2});
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(2);
+
+  v.push_back(test::MakeSingle(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(3);
+
+  v.push_back(test::MakeSingle<long long>(4));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(test::MakeSingle<long long>(4));
+  // We don't remove make functions with explicit template parameters.
+
+  v.push_back(test::MakeSingle(5LL));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(5LL);
+
+  v.push_back(std::make_tuple(6));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(6);
+
+  v.push_back(std::make_tuple(7LL));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(7LL);
+}
+
 void testOtherContainers() {
   std::list<Something> l;
   l.push_back(Something(42, 41));
@@ -447,7 +574,7 @@ public:
   void doStuff() {
     std::vector<PrivateCtor> v;
     // This should not change it because emplace back doesn't have permission.
-    // Check currently doesn't support friend delcarations because pretty much
+    // Check currently doesn't support friend declarations because pretty much
     // nobody would want to be friend with std::vector :(.
     v.push_back(PrivateCtor(42));
   }

@@ -1762,8 +1762,8 @@ void ARMTargetInfo::writePltHeader(uint8_t *Buf) const {
 
 void ARMTargetInfo::addPltHeaderSymbols(InputSectionBase *ISD) const {
   auto *IS = cast<InputSection>(ISD);
-  addSyntheticLocal<ELF32LE>("$a", STT_NOTYPE, 0, 0, IS);
-  addSyntheticLocal<ELF32LE>("$d", STT_NOTYPE, 16, 0, IS);
+  addSyntheticLocal("$a", STT_NOTYPE, 0, 0, IS);
+  addSyntheticLocal("$d", STT_NOTYPE, 16, 0, IS);
 }
 
 void ARMTargetInfo::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
@@ -1785,8 +1785,8 @@ void ARMTargetInfo::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
 
 void ARMTargetInfo::addPltSymbols(InputSectionBase *ISD, uint64_t Off) const {
   auto *IS = cast<InputSection>(ISD);
-  addSyntheticLocal<ELF32LE>("$a", STT_NOTYPE, Off, 0, IS);
-  addSyntheticLocal<ELF32LE>("$d", STT_NOTYPE, Off + 12, 0, IS);
+  addSyntheticLocal("$a", STT_NOTYPE, Off, 0, IS);
+  addSyntheticLocal("$d", STT_NOTYPE, Off + 12, 0, IS);
 }
 
 bool ARMTargetInfo::needsThunk(RelExpr Expr, uint32_t RelocType,

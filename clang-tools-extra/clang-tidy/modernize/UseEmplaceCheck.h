@@ -35,6 +35,8 @@ public:
 private:
   std::vector<std::string> ContainersWithPushBack;
   std::vector<std::string> SmartPointers;
+  std::vector<std::string> TupleTypes;
+  std::vector<std::string> TupleMakeFunctions;
 };
 
 } // namespace modernize

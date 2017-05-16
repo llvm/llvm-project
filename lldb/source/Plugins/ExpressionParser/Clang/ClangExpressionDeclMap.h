@@ -448,24 +448,6 @@ private:
   uint64_t GetParserID() { return (uint64_t) this; }
 
   //------------------------------------------------------------------
-  /// Given a target, find a data symbol that has the given name.
-  ///
-  /// @param[in] target
-  ///     The target to use as the basis for the search.
-  ///
-  /// @param[in] name
-  ///     The name as a plain C string.
-  ///
-  /// @param[in] module
-  ///     The module to limit the search to. This can be NULL
-  ///
-  /// @return
-  ///     The LLDB Symbol found, or NULL if none was found.
-  //------------------------------------------------------------------
-  const Symbol *FindGlobalDataSymbol(Target &target, const ConstString &name,
-                                     Module *module = NULL);
-
-  //------------------------------------------------------------------
   /// Given a target, find a variable that matches the given name and
   /// type.
   ///

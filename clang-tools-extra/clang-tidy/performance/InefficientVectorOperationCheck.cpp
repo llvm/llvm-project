@@ -39,14 +39,14 @@ namespace {
 //   - VectorVarDeclName: 'v' in  (as VarDecl).
 //   - VectorVarDeclStmatName: The entire 'std::vector<T> v;' statement (as
 //     DeclStmt).
-//   - PushBackCallName: 'v.push_back(i)' (as cxxMemberCallExpr).
+//   - PushBackOrEmplaceBackCallName: 'v.push_back(i)' (as cxxMemberCallExpr).
 //   - LoopInitVarName: 'i' (as VarDecl).
 //   - LoopEndExpr: '10+1' (as Expr).
 static const char LoopCounterName[] = "for_loop_counter";
 static const char LoopParentName[] = "loop_parent";
 static const char VectorVarDeclName[] = "vector_var_decl";
 static const char VectorVarDeclStmtName[] = "vector_var_decl_stmt";
-static const char PushBackCallName[] = "push_back_call";
+static const char PushBackOrEmplaceBackCallName[] = "append_call";
 static const char LoopInitVarName[] = "loop_init_var";
 static const char LoopEndExprName[] = "loop_end_expr";
 
@@ -81,13 +81,13 @@ void InefficientVectorOperationCheck::registerMatchers(MatchFinder *Finder) {
   const auto VectorVarDecl =
       varDecl(hasInitializer(VectorDefaultConstructorCall))
           .bind(VectorVarDeclName);
-  const auto PushBackCallExpr =
+  const auto VectorAppendCallExpr =
       cxxMemberCallExpr(
-          callee(cxxMethodDecl(hasName("push_back"))), on(hasType(VectorDecl)),
+          callee(cxxMethodDecl(hasAnyName("push_back", "emplace_back"))),
+          on(hasType(VectorDecl)),
           onImplicitObjectArgument(declRefExpr(to(VectorVarDecl))))
-          .bind(PushBackCallName);
-  const auto PushBackCall =
-      expr(anyOf(PushBackCallExpr, exprWithCleanups(has(PushBackCallExpr))));
+          .bind(PushBackOrEmplaceBackCallName);
+  const auto VectorAppendCall = expr(ignoringImplicit(VectorAppendCallExpr));
   const auto VectorVarDefStmt =
       declStmt(hasSingleDecl(equalsBoundNode(VectorVarDeclName)))
           .bind(VectorVarDeclStmtName);
@@ -98,9 +98,11 @@ void InefficientVectorOperationCheck::registerMatchers(MatchFinder *Finder) {
   const auto RefersToLoopVar = ignoringParenImpCasts(
       declRefExpr(to(varDecl(equalsBoundNode(LoopInitVarName)))));
 
-  // Matchers for the loop whose body has only 1 push_back calling statement.
-  const auto HasInterestingLoopBody = hasBody(anyOf(
-      compoundStmt(statementCountIs(1), has(PushBackCall)), PushBackCall));
+  // Matchers for the loop whose body has only 1 push_back/emplace_back calling
+  // statement.
+  const auto HasInterestingLoopBody =
+      hasBody(anyOf(compoundStmt(statementCountIs(1), has(VectorAppendCall)),
+                    VectorAppendCall));
   const auto InInterestingCompoundStmt =
       hasParent(compoundStmt(has(VectorVarDefStmt)).bind(LoopParentName));
 
@@ -145,8 +147,8 @@ void InefficientVectorOperationCheck::check(
   const auto *ForLoop = Result.Nodes.getNodeAs<ForStmt>(LoopCounterName);
   const auto *RangeLoop =
       Result.Nodes.getNodeAs<CXXForRangeStmt>(RangeLoopName);
-  const auto *PushBackCall =
-      Result.Nodes.getNodeAs<CXXMemberCallExpr>(PushBackCallName);
+  const auto *VectorAppendCall =
+      Result.Nodes.getNodeAs<CXXMemberCallExpr>(PushBackOrEmplaceBackCallName);
   const auto *LoopEndExpr = Result.Nodes.getNodeAs<Expr>(LoopEndExprName);
   const auto *LoopParent = Result.Nodes.getNodeAs<CompoundStmt>(LoopParentName);
 
@@ -173,7 +175,7 @@ void InefficientVectorOperationCheck::check(
 
   llvm::StringRef VectorVarName = Lexer::getSourceText(
       CharSourceRange::getTokenRange(
-          PushBackCall->getImplicitObjectArgument()->getSourceRange()),
+          VectorAppendCall->getImplicitObjectArgument()->getSourceRange()),
       SM, Context->getLangOpts());
 
   std::string ReserveStmt;
@@ -197,9 +199,11 @@ void InefficientVectorOperationCheck::check(
     ReserveStmt = (VectorVarName + ".reserve(" + LoopEndSource + ");\n").str();
   }
 
-  auto Diag = diag(PushBackCall->getLocStart(),
-       "'push_back' is called inside a loop; "
-       "consider pre-allocating the vector capacity before the loop");
+  auto Diag =
+      diag(VectorAppendCall->getLocStart(),
+           "%0 is called inside a loop; "
+           "consider pre-allocating the vector capacity before the loop")
+      << VectorAppendCall->getMethodDecl()->getDeclName();
 
   if (!ReserveStmt.empty())
     Diag << FixItHint::CreateInsertion(LoopStmt->getLocStart(), ReserveStmt);
