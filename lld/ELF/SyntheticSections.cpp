@@ -293,13 +293,12 @@ InputSection *elf::createInterpSection() {
   return Sec;
 }
 
-template <class ELFT>
 SymbolBody *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                                    uint64_t Size, InputSectionBase *Section) {
   auto *S = make<DefinedRegular>(Name, /*IsLocal*/ true, STV_DEFAULT, Type,
                                  Value, Size, Section, nullptr);
-  if (In<ELFT>::SymTab)
-    In<ELFT>::SymTab->addSymbol(S);
+  if (InX::SymTab)
+    InX::SymTab->addSymbol(S);
   return S;
 }
 
@@ -1092,14 +1091,14 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     add({DT_PLTREL, uint64_t(Config->IsRela ? DT_RELA : DT_REL)});
   }
 
-  add({DT_SYMTAB, In<ELFT>::DynSymTab});
+  add({DT_SYMTAB, InX::DynSymTab});
   add({DT_SYMENT, sizeof(Elf_Sym)});
   add({DT_STRTAB, InX::DynStrTab});
   add({DT_STRSZ, InX::DynStrTab->getSize()});
   if (!Config->ZText)
     add({DT_TEXTREL, (uint64_t)0});
-  if (In<ELFT>::GnuHashTab)
-    add({DT_GNU_HASH, In<ELFT>::GnuHashTab});
+  if (InX::GnuHashTab)
+    add({DT_GNU_HASH, InX::GnuHashTab});
   if (In<ELFT>::HashTab)
     add({DT_HASH, In<ELFT>::HashTab});
 
@@ -1137,12 +1136,12 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     add({DT_MIPS_RLD_VERSION, 1});
     add({DT_MIPS_FLAGS, RHF_NOTPOT});
     add({DT_MIPS_BASE_ADDRESS, Config->ImageBase});
-    add({DT_MIPS_SYMTABNO, In<ELFT>::DynSymTab->getNumSymbols()});
+    add({DT_MIPS_SYMTABNO, InX::DynSymTab->getNumSymbols()});
     add({DT_MIPS_LOCAL_GOTNO, InX::MipsGot->getLocalEntriesNum()});
     if (const SymbolBody *B = InX::MipsGot->getFirstGlobalEntry())
       add({DT_MIPS_GOTSYM, B->DynsymIndex});
     else
-      add({DT_MIPS_GOTSYM, In<ELFT>::DynSymTab->getNumSymbols()});
+      add({DT_MIPS_GOTSYM, InX::DynSymTab->getNumSymbols()});
     add({DT_PLTGOT, InX::MipsGot});
     if (InX::MipsRldMap)
       add({DT_MIPS_RLD_MAP, InX::MipsRldMap});
@@ -1254,8 +1253,8 @@ template <class ELFT> unsigned RelocationSection<ELFT>::getRelocOffset() {
 }
 
 template <class ELFT> void RelocationSection<ELFT>::finalizeContents() {
-  this->Link = In<ELFT>::DynSymTab ? In<ELFT>::DynSymTab->OutSec->SectionIndex
-                                   : In<ELFT>::SymTab->OutSec->SectionIndex;
+  this->Link = InX::DynSymTab ? InX::DynSymTab->OutSec->SectionIndex
+                              : InX::SymTab->OutSec->SectionIndex;
 
   // Set required output section properties.
   this->OutSec->Link = this->Link;
@@ -1586,15 +1585,15 @@ HashTableSection<ELFT>::HashTableSection()
 }
 
 template <class ELFT> void HashTableSection<ELFT>::finalizeContents() {
-  this->OutSec->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
+  this->OutSec->Link = InX::DynSymTab->OutSec->SectionIndex;
 
   unsigned NumEntries = 2;                            // nbucket and nchain.
-  NumEntries += In<ELFT>::DynSymTab->getNumSymbols(); // The chain entries.
+  NumEntries += InX::DynSymTab->getNumSymbols(); // The chain entries.
 
   // Create as many buckets as there are symbols.
   // FIXME: This is simplistic. We can try to optimize it, but implementing
   // support for SHT_GNU_HASH is probably even more profitable.
-  NumEntries += In<ELFT>::DynSymTab->getNumSymbols();
+  NumEntries += InX::DynSymTab->getNumSymbols();
   this->Size = NumEntries * 4;
 }
 
@@ -1602,7 +1601,7 @@ template <class ELFT> void HashTableSection<ELFT>::writeTo(uint8_t *Buf) {
   // A 32-bit integer type in the target endianness.
   typedef typename ELFT::Word Elf_Word;
 
-  unsigned NumSymbols = In<ELFT>::DynSymTab->getNumSymbols();
+  unsigned NumSymbols = InX::DynSymTab->getNumSymbols();
 
   auto *P = reinterpret_cast<Elf_Word *>(Buf);
   *P++ = NumSymbols; // nbucket
@@ -1611,7 +1610,7 @@ template <class ELFT> void HashTableSection<ELFT>::writeTo(uint8_t *Buf) {
   Elf_Word *Buckets = P;
   Elf_Word *Chains = P + NumSymbols;
 
-  for (const SymbolTableEntry &S : In<ELFT>::DynSymTab->getSymbols()) {
+  for (const SymbolTableEntry &S : InX::DynSymTab->getSymbols()) {
     SymbolBody *Body = S.Symbol;
     StringRef Name = Body->getName();
     unsigned I = Body->DynsymIndex;
@@ -1718,10 +1717,10 @@ readAddressArea(DWARFContext &Dwarf, InputSection *Sec, size_t CurrentCU) {
     CU->collectAddressRanges(Ranges);
 
     ArrayRef<InputSectionBase *> Sections = Sec->File->getSections();
-    for (std::pair<uint64_t, uint64_t> &R : Ranges)
-      if (InputSection *S = findSection(Sections, R.first))
-        Ret.push_back({S, R.first - S->getOffsetInFile(),
-                       R.second - S->getOffsetInFile(), CurrentCU});
+    for (DWARFAddressRange &R : Ranges)
+      if (InputSection *S = findSection(Sections, R.LowPC))
+        Ret.push_back({S, R.LowPC - S->getOffsetInFile(),
+                       R.HighPC - S->getOffsetInFile(), CurrentCU});
     ++CurrentCU;
   }
   return Ret;
@@ -2001,16 +2000,16 @@ VersionTableSection<ELFT>::VersionTableSection()
 template <class ELFT> void VersionTableSection<ELFT>::finalizeContents() {
   // At the moment of june 2016 GNU docs does not mention that sh_link field
   // should be set, but Sun docs do. Also readelf relies on this field.
-  this->OutSec->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
+  this->OutSec->Link = InX::DynSymTab->OutSec->SectionIndex;
 }
 
 template <class ELFT> size_t VersionTableSection<ELFT>::getSize() const {
-  return sizeof(Elf_Versym) * (In<ELFT>::DynSymTab->getSymbols().size() + 1);
+  return sizeof(Elf_Versym) * (InX::DynSymTab->getSymbols().size() + 1);
 }
 
 template <class ELFT> void VersionTableSection<ELFT>::writeTo(uint8_t *Buf) {
   auto *OutVersym = reinterpret_cast<Elf_Versym *>(Buf) + 1;
-  for (const SymbolTableEntry &S : In<ELFT>::DynSymTab->getSymbols()) {
+  for (const SymbolTableEntry &S : InX::DynSymTab->getSymbols()) {
     OutVersym->vs_index = S.Symbol->symbol()->VersionId;
     ++OutVersym;
   }
@@ -2269,19 +2268,6 @@ template MergeInputSection *elf::createCommentSection<ELF32LE>();
 template MergeInputSection *elf::createCommentSection<ELF32BE>();
 template MergeInputSection *elf::createCommentSection<ELF64LE>();
 template MergeInputSection *elf::createCommentSection<ELF64BE>();
-
-template SymbolBody *elf::addSyntheticLocal<ELF32LE>(StringRef, uint8_t,
-                                                     uint64_t, uint64_t,
-                                                     InputSectionBase *);
-template SymbolBody *elf::addSyntheticLocal<ELF32BE>(StringRef, uint8_t,
-                                                     uint64_t, uint64_t,
-                                                     InputSectionBase *);
-template SymbolBody *elf::addSyntheticLocal<ELF64LE>(StringRef, uint8_t,
-                                                     uint64_t, uint64_t,
-                                                     InputSectionBase *);
-template SymbolBody *elf::addSyntheticLocal<ELF64BE>(StringRef, uint8_t,
-                                                     uint64_t, uint64_t,
-                                                     InputSectionBase *);
 
 template class elf::MipsAbiFlagsSection<ELF32LE>;
 template class elf::MipsAbiFlagsSection<ELF32BE>;

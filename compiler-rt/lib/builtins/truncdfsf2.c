@@ -11,8 +11,13 @@
 #define DST_SINGLE
 #include "fp_trunc_impl.inc"
 
-ARM_EABI_FNALIAS(d2f, truncdfsf2)
-
 COMPILER_RT_ABI float __truncdfsf2(double a) {
     return __truncXfYf2__(a);
 }
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI float __aeabi_d2f(double a) {
+  return __truncdfsf2(a);
+}
+#endif
+

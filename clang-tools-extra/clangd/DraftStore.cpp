@@ -9,6 +9,7 @@
 
 #include "DraftStore.h"
 
+using namespace clang;
 using namespace clang::clangd;
 
 VersionedDraft DraftStore::getDraft(PathRef File) const {

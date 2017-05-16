@@ -747,7 +747,7 @@ private:
 template <class ELFT> InputSection *createCommonSection();
 InputSection *createInterpSection();
 template <class ELFT> MergeInputSection *createCommentSection();
-template <class ELFT>
+
 SymbolBody *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                               uint64_t Size, InputSectionBase *Section);
 

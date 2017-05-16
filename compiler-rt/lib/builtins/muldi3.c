@@ -40,8 +40,6 @@ __muldsi3(su_int a, su_int b)
 
 /* Returns: a * b */
 
-ARM_EABI_FNALIAS(lmul, muldi3)
-
 COMPILER_RT_ABI di_int
 __muldi3(di_int a, di_int b)
 {
@@ -54,3 +52,10 @@ __muldi3(di_int a, di_int b)
     r.s.high += x.s.high * y.s.low + x.s.low * y.s.high;
     return r.all;
 }
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI di_int __aeabi_lmul(di_int a, di_int b) {
+  return __muldi3(a, b);
+}
+#endif
+

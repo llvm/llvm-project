@@ -368,8 +368,8 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   }
 
   if (HasDynSymTab) {
-    In<ELFT>::DynSymTab = make<SymbolTableSection<ELFT>>(*InX::DynStrTab);
-    Add(In<ELFT>::DynSymTab);
+    InX::DynSymTab = make<SymbolTableSection<ELFT>>(*InX::DynStrTab);
+    Add(InX::DynSymTab);
 
     In<ELFT>::VerSym = make<VersionTableSection<ELFT>>();
     Add(In<ELFT>::VerSym);
@@ -383,8 +383,8 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Add(In<ELFT>::VerNeed);
 
     if (Config->GnuHash) {
-      In<ELFT>::GnuHashTab = make<GnuHashTableSection>();
-      Add(In<ELFT>::GnuHashTab);
+      InX::GnuHashTab = make<GnuHashTableSection>();
+      Add(InX::GnuHashTab);
     }
 
     if (Config->SysvHash) {
@@ -444,8 +444,8 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Add(In<ELFT>::EhFrame);
   }
 
-  if (In<ELFT>::SymTab)
-    Add(In<ELFT>::SymTab);
+  if (InX::SymTab)
+    Add(InX::SymTab);
   Add(InX::ShStrTab);
   if (InX::StrTab)
     Add(InX::StrTab);
@@ -503,7 +503,7 @@ static bool includeInSymtab(const SymbolBody &B) {
 // Local symbols are not in the linker's symbol table. This function scans
 // each object file's symbol table to copy local symbols to the output.
 template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
-  if (!In<ELFT>::SymTab)
+  if (!InX::SymTab)
     return;
   for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
     for (SymbolBody *B : F->getLocalSymbols()) {
@@ -521,7 +521,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       SectionBase *Sec = DR->Section;
       if (!shouldKeepInSymtab(Sec, B->getName(), *B))
         continue;
-      In<ELFT>::SymTab->addSymbol(B);
+      InX::SymTab->addSymbol(B);
     }
   }
 }
@@ -541,7 +541,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
     auto *Sym =
         make<DefinedRegular>("", /*IsLocal=*/true, /*StOther=*/0, STT_SECTION,
                              /*Value=*/0, /*Size=*/0, IS, nullptr);
-    In<ELFT>::SymTab->addSymbol(Sym);
+    InX::SymTab->addSymbol(Sym);
   }
 }
 
@@ -819,7 +819,7 @@ addOptionalRegular(StringRef Name, SectionBase *Sec, uint64_t Val,
 // need these symbols, since IRELATIVE relocs are resolved through GOT
 // and PLT. For details, see http://www.airs.com/blog/archives/403.
 template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
-  if (In<ELFT>::DynSymTab)
+  if (InX::DynSymTab)
     return;
   StringRef S = Config->IsRela ? "__rela_iplt_start" : "__rel_iplt_start";
   addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, 0, STV_HIDDEN, STB_WEAK);
@@ -872,7 +872,7 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   // static linking the linker is required to optimize away any references to
   // __tls_get_addr, so it's not defined anywhere. Create a hidden definition
   // to avoid the undefined symbol error.
-  if (!In<ELFT>::DynSymTab)
+  if (!InX::DynSymTab)
     Symtab<ELFT>::X->addIgnored("__tls_get_addr");
 
   // __ehdr_start is the location of ELF file headers. Note that we define
@@ -1131,7 +1131,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // It should be okay as no one seems to care about the type.
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
-  if (In<ELFT>::DynSymTab)
+  if (InX::DynSymTab)
     addRegular<ELFT>("_DYNAMIC", InX::Dynamic, 0);
 
   // Define __rel[a]_iplt_{start,end} symbols if needed.
@@ -1159,11 +1159,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
     if (!includeInSymtab(*Body))
       continue;
-    if (In<ELFT>::SymTab)
-      In<ELFT>::SymTab->addSymbol(Body);
+    if (InX::SymTab)
+      InX::SymTab->addSymbol(Body);
 
-    if (In<ELFT>::DynSymTab && S->includeInDynsym()) {
-      In<ELFT>::DynSymTab->addSymbol(Body);
+    if (InX::DynSymTab && S->includeInDynsym()) {
+      InX::DynSymTab->addSymbol(Body);
       if (auto *SS = dyn_cast<SharedSymbol>(Body))
         if (cast<SharedFile<ELFT>>(SS->File)->isNeeded())
           In<ELFT>::VerNeed->addSymbol(SS);
@@ -1203,30 +1203,14 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
-  applySynthetic({In<ELFT>::DynSymTab,
-                  InX::Bss,
-                  InX::BssRelRo,
-                  In<ELFT>::GnuHashTab,
-                  In<ELFT>::HashTab,
-                  In<ELFT>::SymTab,
-                  InX::ShStrTab,
-                  InX::StrTab,
-                  In<ELFT>::VerDef,
-                  InX::DynStrTab,
-                  InX::GdbIndex,
-                  InX::Got,
-                  InX::MipsGot,
-                  InX::IgotPlt,
-                  InX::GotPlt,
-                  In<ELFT>::RelaDyn,
-                  In<ELFT>::RelaIplt,
-                  In<ELFT>::RelaPlt,
-                  InX::Plt,
-                  InX::Iplt,
-                  In<ELFT>::EhFrameHdr,
-                  In<ELFT>::VerSym,
-                  In<ELFT>::VerNeed,
-                  InX::Dynamic},
+  applySynthetic({InX::DynSymTab,    InX::Bss,           InX::BssRelRo,
+                  InX::GnuHashTab,   In<ELFT>::HashTab,  InX::SymTab,
+                  InX::ShStrTab,     InX::StrTab,        In<ELFT>::VerDef,
+                  InX::DynStrTab,    InX::GdbIndex,      InX::Got,
+                  InX::MipsGot,      InX::IgotPlt,       InX::GotPlt,
+                  In<ELFT>::RelaDyn, In<ELFT>::RelaIplt, In<ELFT>::RelaPlt,
+                  InX::Plt,          InX::Iplt,          In<ELFT>::EhFrameHdr,
+                  In<ELFT>::VerSym,  In<ELFT>::VerNeed,  InX::Dynamic},
                  [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   // Some architectures use small displacements for jump instructions.
@@ -1257,7 +1241,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
                   [](OutputSection *S) { S->maybeCompress<ELFT>(); });
 
   // createThunks may have added local symbols to the static symbol table
-  applySynthetic({In<ELFT>::SymTab, InX::ShStrTab, InX::StrTab},
+  applySynthetic({InX::SymTab, InX::ShStrTab, InX::StrTab},
                  [](SyntheticSection *SS) { SS->postThunkContents(); });
 }
 
@@ -1392,7 +1376,7 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
     Ret.push_back(std::move(TlsHdr));
 
   // Add an entry for .dynamic.
-  if (In<ELFT>::DynSymTab)
+  if (InX::DynSymTab)
     AddHdr(PT_DYNAMIC, InX::Dynamic->OutSec->getPhdrFlags())
         ->add(InX::Dynamic->OutSec);
 

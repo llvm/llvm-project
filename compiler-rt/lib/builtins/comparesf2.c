@@ -113,8 +113,6 @@ __gesf2(fp_t a, fp_t b) {
     }
 }
 
-ARM_EABI_FNALIAS(fcmpun, unordsf2)
-
 COMPILER_RT_ABI int
 __unordsf2(fp_t a, fp_t b) {
     const rep_t aAbs = toRep(a) & absMask;
@@ -143,3 +141,10 @@ COMPILER_RT_ABI enum GE_RESULT
 __gtsf2(fp_t a, fp_t b) {
     return __gesf2(a, b);
 }
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI int __aeabi_fcmpun(fp_t a, fp_t b) {
+  return __unordsf2(a, b);
+}
+#endif
+

@@ -10,7 +10,6 @@
 
 #define DOUBLE_PRECISION
 #include "fp_lib.h"
-ARM_EABI_FNALIAS(d2lz, fixdfdi)
 
 #ifndef __SOFT_FP__
 /* Support for systems that have hardware floating-point; can set the invalid
@@ -44,3 +43,15 @@ __fixdfdi(fp_t a) {
 }
 
 #endif
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI di_int
+#if defined(__SOFT_FP__)
+__aeabi_d2lz(fp_t a) {
+#else
+__aeabi_d2lz(double a) {
+#endif
+  return __fixdfdi(a);
+}
+#endif
+

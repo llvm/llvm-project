@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringMap.h"
 #include <memory>
 #include <mutex>
+#include <vector>
 
 namespace clang {
 

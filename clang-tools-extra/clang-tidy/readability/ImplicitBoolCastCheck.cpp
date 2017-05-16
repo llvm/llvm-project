@@ -267,38 +267,38 @@ void ImplicitBoolCastCheck::registerMatchers(MatchFinder *Finder) {
     return;
   }
 
-  auto exceptionCases = expr(
-      anyOf(hasParent(explicitCastExpr()),
-            allOf(isMacroExpansion(), unless(isNULLMacroExpansion())),
-            isInTemplateInstantiation(), hasAncestor(functionTemplateDecl())));
+  auto exceptionCases =
+      expr(anyOf(allOf(isMacroExpansion(), unless(isNULLMacroExpansion())),
+                 hasParent(explicitCastExpr())));
   auto implicitCastFromBool = implicitCastExpr(
-      unless(exceptionCases),
       anyOf(hasCastKind(CK_IntegralCast), hasCastKind(CK_IntegralToFloating),
             // Prior to C++11 cast from bool literal to pointer was allowed.
             allOf(anyOf(hasCastKind(CK_NullToPointer),
                         hasCastKind(CK_NullToMemberPointer)),
                   hasSourceExpression(cxxBoolLiteral()))),
-      hasSourceExpression(expr(hasType(booleanType()))));
+      hasSourceExpression(expr(hasType(booleanType()))),
+      unless(exceptionCases));
   auto boolXor =
       binaryOperator(hasOperatorName("^"), hasLHS(implicitCastFromBool),
                      hasRHS(implicitCastFromBool));
   Finder->addMatcher(
       implicitCastExpr(
-          // Exclude cases common to implicit cast to and from bool.
-          unless(exceptionCases),
-          unless(has(boolXor)),
+          anyOf(hasCastKind(CK_IntegralToBoolean),
+                hasCastKind(CK_FloatingToBoolean),
+                hasCastKind(CK_PointerToBoolean),
+                hasCastKind(CK_MemberPointerToBoolean)),
           // Exclude case of using if or while statements with variable
           // declaration, e.g.:
           //   if (int var = functionCall()) {}
           unless(
               hasParent(stmt(anyOf(ifStmt(), whileStmt()), has(declStmt())))),
-          anyOf(hasCastKind(CK_IntegralToBoolean),
-                hasCastKind(CK_FloatingToBoolean),
-                hasCastKind(CK_PointerToBoolean),
-                hasCastKind(CK_MemberPointerToBoolean)),
+          // Exclude cases common to implicit cast to and from bool.
+          unless(exceptionCases), unless(has(boolXor)),
           // Retrive also parent statement, to check if we need additional
           // parens in replacement.
-          anyOf(hasParent(stmt().bind("parentStmt")), anything()))
+          anyOf(hasParent(stmt().bind("parentStmt")), anything()),
+          unless(isInTemplateInstantiation()),
+          unless(hasAncestor(functionTemplateDecl())))
           .bind("implicitCastToBool"),
       this);
 
@@ -319,7 +319,9 @@ void ImplicitBoolCastCheck::registerMatchers(MatchFinder *Finder) {
               anyOf(boolComparison, boolXor, boolOpAssignment)))),
           // Check also for nested casts, for example: bool -> int -> float.
           anyOf(hasParent(implicitCastExpr().bind("furtherImplicitCast")),
-                anything()))
+                anything()),
+          unless(isInTemplateInstantiation()),
+          unless(hasAncestor(functionTemplateDecl())))
           .bind("implicitCastFromBool"),
       this);
 }

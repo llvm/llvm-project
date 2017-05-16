@@ -3,8 +3,8 @@
 performance-inefficient-vector-operation
 ========================================
 
-Finds possible inefficient ``std::vector`` operations (e.g. ``push_back``) that
-may cause unnecessary memory reallocations.
+Finds possible inefficient ``std::vector`` operations (e.g. ``push_back``,
+``emplace_back``) that may cause unnecessary memory reallocations.
 
 Currently, the check only detects following kinds of loops with a single
 statement body:
@@ -24,7 +24,7 @@ statement body:
 
 * For-range loops like ``for (range-declaration : range_expression)``, the type
   of ``range_expression`` can be ``std::vector``, ``std::array``,
-  ``std::dequeue``, ``std::set``, ``std::unordered_set``, ``std::map``,
+  ``std::deque``, ``std::set``, ``std::unordered_set``, ``std::map``,
   ``std::unordered_set``:
 
 .. code-block:: c++

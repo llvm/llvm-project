@@ -19,8 +19,6 @@
 #define SINGLE_PRECISION
 #include "fp_lib.h"
 
-ARM_EABI_FNALIAS(fdiv, divsf3)
-
 COMPILER_RT_ABI fp_t
 __divsf3(fp_t a, fp_t b) {
     
@@ -167,3 +165,10 @@ __divsf3(fp_t a, fp_t b) {
         return fromRep(absResult | quotientSign);
     }
 }
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI fp_t __aeabi_fdiv(fp_t a, fp_t b) {
+  return __divsf3(a, b);
+}
+#endif
+
