@@ -235,6 +235,29 @@ public:
 
   bool GetAddressRangeFromHereToEndLine(uint32_t end_line, AddressRange &range,
                                         Status &error);
+  
+  //------------------------------------------------------------------
+  /// Find the best global data symbol visible from this context.
+  ///
+  /// Symbol priority is:
+  ///     - extern symbol in the current module if there is one
+  ///     - non-extern symbol in the current module if there is one
+  ///     - extern symbol in the target
+  ///     - non-extern symbol in the target
+  /// It is an error if the highest-priority result is ambiguous.
+  ///
+  /// @param[in] name
+  ///     The name of the symbol to search for.
+  ///
+  /// @param[out] error
+  ///     An error that will be populated with a message if there was an
+  ///     ambiguous result.  The error will not be populated if no result
+  ///     was found.
+  ///
+  /// @return
+  ///     The symbol that was found, or \b nullptr if none was found.
+  //------------------------------------------------------------------
+  const Symbol *FindBestGlobalDataSymbol(const ConstString &name, Status &error);
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level,
                       Target *target) const;

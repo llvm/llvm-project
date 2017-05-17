@@ -34,6 +34,12 @@ class PCHContainerOperations;
 
 namespace clangd {
 
+/// Turn a [line, column] pair into an offset in Code.
+size_t positionToOffset(StringRef Code, Position P);
+
+/// Turn an offset in Code into a [line, column] pair.
+Position offsetToPosition(StringRef Code, size_t Offset);
+
 class DiagnosticsConsumer {
 public:
   virtual ~DiagnosticsConsumer() = default;
@@ -100,7 +106,6 @@ public:
   /// separate thread. When the parsing is complete, DiagConsumer passed in
   /// constructor will receive onDiagnosticsReady callback.
   void addDocument(PathRef File, StringRef Contents);
-
   /// Remove \p File from list of tracked files, schedule a request to free
   /// resources associated with it.
   void removeDocument(PathRef File);
@@ -108,11 +113,17 @@ public:
   /// Run code completion for \p File at \p Pos.
   std::vector<CompletionItem> codeComplete(PathRef File, Position Pos);
 
+  /// Run formatting for \p Rng inside \p File.
+  std::vector<tooling::Replacement> formatRange(PathRef File, Range Rng);
+  /// Run formatting for the whole \p File.
+  std::vector<tooling::Replacement> formatFile(PathRef File);
+  /// Run formatting after a character was typed at \p Pos in \p File.
+  std::vector<tooling::Replacement> formatOnType(PathRef File, Position Pos);
+
   /// Gets current document contents for \p File. \p File must point to a
   /// currently tracked file.
-  /// FIXME(ibiryukov): This function is here to allow implementation of
-  /// formatCode from ProtocolHandlers.cpp. We should move formatCode to this
-  /// class and remove this function from public interface.
+  /// FIXME(ibiryukov): This function is here to allow offset-to-Position
+  /// conversions in outside code, maybe there's a way to get rid of it.
   std::string getDocument(PathRef File);
 
 private:

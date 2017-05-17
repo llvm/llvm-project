@@ -8,14 +8,53 @@
 //===-------------------------------------------------------------------===//
 
 #include "ClangdServer.h"
+#include "clang/Format/Format.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FileSystem.h"
 
 using namespace clang;
 using namespace clang::clangd;
+
+namespace {
+
+std::vector<tooling::Replacement> formatCode(StringRef Code, StringRef Filename,
+                                             ArrayRef<tooling::Range> Ranges) {
+  // Call clang-format.
+  // FIXME: Don't ignore style.
+  format::FormatStyle Style = format::getLLVMStyle();
+  auto Result = format::reformat(Style, Code, Ranges, Filename);
+
+  return std::vector<tooling::Replacement>(Result.begin(), Result.end());
+}
+
+} // namespace
+
+size_t clangd::positionToOffset(StringRef Code, Position P) {
+  size_t Offset = 0;
+  for (int I = 0; I != P.line; ++I) {
+    // FIXME: \r\n
+    // FIXME: UTF-8
+    size_t F = Code.find('\n', Offset);
+    if (F == StringRef::npos)
+      return 0; // FIXME: Is this reasonable?
+    Offset = F + 1;
+  }
+  return (Offset == 0 ? 0 : (Offset - 1)) + P.character;
+}
+
+/// Turn an offset in Code into a [line, column] pair.
+Position clangd::offsetToPosition(StringRef Code, size_t Offset) {
+  StringRef JustBefore = Code.substr(0, Offset);
+  // FIXME: \r\n
+  // FIXME: UTF-8
+  int Lines = JustBefore.count('\n');
+  int Cols = JustBefore.size() - JustBefore.rfind('\n') - 1;
+  return {Lines, Cols};
+}
 
 WorkerRequest::WorkerRequest(WorkerRequestKind Kind, Path File,
                              DocVersion Version)
@@ -116,6 +155,34 @@ std::vector<CompletionItem> ClangdServer::codeComplete(PathRef File,
         Result = Unit.codeComplete(*FileContents.Draft, Pos);
       });
   return Result;
+}
+std::vector<tooling::Replacement> ClangdServer::formatRange(PathRef File,
+                                                            Range Rng) {
+  std::string Code = getDocument(File);
+
+  size_t Begin = positionToOffset(Code, Rng.start);
+  size_t Len = positionToOffset(Code, Rng.end) - Begin;
+  return formatCode(Code, File, {tooling::Range(Begin, Len)});
+}
+
+std::vector<tooling::Replacement> ClangdServer::formatFile(PathRef File) {
+  // Format everything.
+  std::string Code = getDocument(File);
+  return formatCode(Code, File, {tooling::Range(0, Code.size())});
+}
+
+std::vector<tooling::Replacement> ClangdServer::formatOnType(PathRef File,
+                                                             Position Pos) {
+  // Look for the previous opening brace from the character position and
+  // format starting from there.
+  std::string Code = getDocument(File);
+  size_t CursorPos = positionToOffset(Code, Pos);
+  size_t PreviousLBracePos = StringRef(Code).find_last_of('{', CursorPos);
+  if (PreviousLBracePos == StringRef::npos)
+    PreviousLBracePos = CursorPos;
+  size_t Len = 1 + CursorPos - PreviousLBracePos;
+
+  return formatCode(Code, File, {tooling::Range(PreviousLBracePos, Len)});
 }
 
 std::string ClangdServer::getDocument(PathRef File) {
