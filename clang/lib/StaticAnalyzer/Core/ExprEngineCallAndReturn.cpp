@@ -447,6 +447,7 @@ bool ExprEngine::inlineCall(const CallEvent &Call, const Decl *D,
   Bldr.takeNodes(Pred);
 
   NumInlinedCalls++;
+  Engine.FunctionSummaries->bumpNumTimesInlined(D);
 
   // Mark the decl as visited.
   if (VisitedCallees)
@@ -867,8 +868,6 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
       (CalleeCFG->getNumBlockIDs() > Opts.getAlwaysInlineSize()
       || IsRecursive))
     return false;
-
-  Engine.FunctionSummaries->bumpNumTimesInlined(D);
 
   return true;
 }

@@ -302,3 +302,22 @@ namespace PR14073 {
   struct S2 { union { union { int n; }; char c; }; S2() : n(n) {} };  // expected-warning {{field 'n' is uninitialized when used here}}
   struct S3 { struct { int n; }; S3() : n(n) {} };  // expected-warning {{field 'n' is uninitialized when used here}}
 }
+
+namespace PR10758 {
+struct A;
+struct B {
+  B (A const &); // expected-note 2 {{candidate constructor not viable: no known conversion from 'const PR10758::B' to 'const PR10758::A &' for 1st argument}}
+  B (B &); // expected-note 2 {{candidate constructor not viable: 1st argument ('const PR10758::B') would lose const qualifier}}
+};
+struct A {
+  A (B); // expected-note 2 {{passing argument to parameter here}}
+};
+
+B f(B const &b) {
+  return b; // expected-error {{no matching constructor for initialization of 'PR10758::B'}}
+}
+
+A f2(const B &b) {
+  return b; // expected-error {{no matching constructor for initialization of 'PR10758::B'}}
+}
+}

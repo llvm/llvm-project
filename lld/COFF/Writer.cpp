@@ -376,18 +376,24 @@ void Writer::createImportTables() {
   OutputSection *Text = createSection(".text");
   for (ImportFile *File : Symtab->ImportFiles) {
     if (DefinedImportThunk *Thunk = File->ThunkSym)
-      Text->addChunk(Thunk->getChunk());
+      if (Thunk->Live)
+        Text->addChunk(Thunk->getChunk());
+
     if (Config->DelayLoads.count(StringRef(File->DLLName).lower())) {
-      DelayIdata.add(File->ImpSym);
+      if (File->ImpSym->Live)
+        DelayIdata.add(File->ImpSym);
     } else {
-      Idata.add(File->ImpSym);
+      if (File->ImpSym->Live)
+        Idata.add(File->ImpSym);
     }
   }
+
   if (!Idata.empty()) {
     OutputSection *Sec = createSection(".idata");
     for (Chunk *C : Idata.getChunks())
       Sec->addChunk(C);
   }
+
   if (!DelayIdata.empty()) {
     Defined *Helper = cast<Defined>(Config->DelayLoadHelper);
     DelayIdata.create(Helper);

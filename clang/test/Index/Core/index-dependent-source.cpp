@@ -131,3 +131,13 @@ void undefinedTemplateLookup(UndefinedTemplateClass<T> &x) {
   x.lookup;
   typename UndefinedTemplateClass<T>::Type y;
 }
+
+template<typename T>
+struct UserOfUndefinedTemplateClass: UndefinedTemplateClass<T> { };
+
+template<typename T>
+void undefinedTemplateLookup2(UserOfUndefinedTemplateClass<T> &x) {
+// Shouldn't crash!
+  x.lookup;
+  typename UserOfUndefinedTemplateClass<T>::Type y;
+}

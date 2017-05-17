@@ -60,6 +60,10 @@ void B::func_fwd() {
   anonymous = 0;
 }
 
+namespace C {
+  void c();
+}
+void C::c() {}
 
 // This should work even if 'i' and 'func' were declarations & not definitions,
 // but it doesn't yet.
@@ -114,6 +118,8 @@ void B::func_fwd() {
 // CHECK: [[M16]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[FUNC_FWD:![0-9]+]]
 // CHECK: [[FUNC_FWD]] = distinct !DISubprogram(name: "func_fwd",{{.*}} line: 53,{{.*}} isDefinition: true
 // CHECK: [[M17]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[CTXT]], entity: [[I]]
+// CHECK: distinct !DISubprogram(name: "c",{{.*}}, scope: ![[C:[0-9]+]],{{.*}}, line: 60,{{.*}} isDefinition: true
+// CHECK: ![[C]] = !DINamespace(name: "C",
 
 // CHECK-GMLT: [[CU:![0-9]+]] = distinct !DICompileUnit(
 // CHECK-GMLT-SAME:                            emissionKind: LineTablesOnly,
