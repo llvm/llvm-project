@@ -214,14 +214,14 @@ ClangTidyOptions ClangTidyContext::getOptionsForFile(StringRef File) const {
 
 void ClangTidyContext::setCheckProfileData(ProfileData *P) { Profile = P; }
 
-GlobList &ClangTidyContext::getChecksFilter() {
+bool ClangTidyContext::isCheckEnabled(StringRef CheckName) const {
   assert(CheckFilter != nullptr);
-  return *CheckFilter;
+  return CheckFilter->contains(CheckName);
 }
 
-GlobList &ClangTidyContext::getWarningAsErrorFilter() {
+bool ClangTidyContext::treatAsError(StringRef CheckName) const {
   assert(WarningAsErrorFilter != nullptr);
-  return *WarningAsErrorFilter;
+  return WarningAsErrorFilter->contains(CheckName);
 }
 
 /// \brief Store a \c ClangTidyError.
@@ -252,7 +252,7 @@ ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(
 void ClangTidyDiagnosticConsumer::finalizeLastError() {
   if (!Errors.empty()) {
     ClangTidyError &Error = Errors.back();
-    if (!Context.getChecksFilter().contains(Error.DiagnosticName) &&
+    if (!Context.isCheckEnabled(Error.DiagnosticName) &&
         Error.DiagLevel != ClangTidyError::Error) {
       ++Context.Stats.ErrorsIgnoredCheckFilter;
       Errors.pop_back();
@@ -384,9 +384,8 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
       LastErrorRelatesToUserCode = true;
       LastErrorPassesLineFilter = true;
     }
-    bool IsWarningAsError =
-        DiagLevel == DiagnosticsEngine::Warning &&
-        Context.getWarningAsErrorFilter().contains(CheckName);
+    bool IsWarningAsError = DiagLevel == DiagnosticsEngine::Warning &&
+                            Context.treatAsError(CheckName);
     Errors.emplace_back(CheckName, Level, Context.getCurrentBuildDirectory(),
                         IsWarningAsError);
   }
