@@ -1,4 +1,4 @@
-//===--- StringMap.h - String Hash table map interface ----------*- C++ -*-===//
+//===- StringMap.h - String Hash table map interface ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,25 +16,23 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <initializer_list>
-#include <new>
+#include <iterator>
 #include <utility>
 
 namespace llvm {
 
-  template<typename ValueT>
-  class StringMapConstIterator;
-  template<typename ValueT>
-  class StringMapIterator;
-  template <typename ValueT> class StringMapKeyIterator;
-  template<typename ValueTy>
-  class StringMapEntry;
+template<typename ValueTy> class StringMapConstIterator;
+template<typename ValueTy> class StringMapIterator;
+template<typename ValueTy> class StringMapKeyIterator;
 
 /// StringMapEntryBase - Shared base class of StringMapEntry instances.
 class StringMapEntryBase {
@@ -53,17 +51,15 @@ protected:
   // Array of NumBuckets pointers to entries, null pointers are holes.
   // TheTable[NumBuckets] contains a sentinel value for easy iteration. Followed
   // by an array of the actual hash values as unsigned integers.
-  StringMapEntryBase **TheTable;
-  unsigned NumBuckets;
-  unsigned NumItems;
-  unsigned NumTombstones;
+  StringMapEntryBase **TheTable = nullptr;
+  unsigned NumBuckets = 0;
+  unsigned NumItems = 0;
+  unsigned NumTombstones = 0;
   unsigned ItemSize;
 
 protected:
   explicit StringMapImpl(unsigned itemSize)
-      : TheTable(nullptr),
-        // Initialize the map with zero buckets to allocation.
-        NumBuckets(0), NumItems(0), NumTombstones(0), ItemSize(itemSize) {}
+      : ItemSize(itemSize) {}
   StringMapImpl(StringMapImpl &&RHS)
       : TheTable(RHS.TheTable), NumBuckets(RHS.NumBuckets),
         NumItems(RHS.NumItems), NumTombstones(RHS.NumTombstones),
@@ -225,9 +221,10 @@ class StringMap : public StringMapImpl {
   AllocatorTy Allocator;
 
 public:
-  typedef StringMapEntry<ValueTy> MapEntryTy;
+  using MapEntryTy = StringMapEntry<ValueTy>;
 
   StringMap() : StringMapImpl(static_cast<unsigned>(sizeof(MapEntryTy))) {}
+
   explicit StringMap(unsigned InitialSize)
     : StringMapImpl(InitialSize, static_cast<unsigned>(sizeof(MapEntryTy))) {}
 
@@ -247,12 +244,6 @@ public:
 
   StringMap(StringMap &&RHS)
       : StringMapImpl(std::move(RHS)), Allocator(std::move(RHS.Allocator)) {}
-
-  StringMap &operator=(StringMap RHS) {
-    StringMapImpl::swap(RHS);
-    std::swap(Allocator, RHS.Allocator);
-    return *this;
-  }
 
   StringMap(const StringMap &RHS) :
     StringMapImpl(static_cast<unsigned>(sizeof(MapEntryTy))),
@@ -289,16 +280,37 @@ public:
     // not worthwhile.
   }
 
+  StringMap &operator=(StringMap RHS) {
+    StringMapImpl::swap(RHS);
+    std::swap(Allocator, RHS.Allocator);
+    return *this;
+  }
+
+  ~StringMap() {
+    // Delete all the elements in the map, but don't reset the elements
+    // to default values.  This is a copy of clear(), but avoids unnecessary
+    // work not required in the destructor.
+    if (!empty()) {
+      for (unsigned I = 0, E = NumBuckets; I != E; ++I) {
+        StringMapEntryBase *Bucket = TheTable[I];
+        if (Bucket && Bucket != getTombstoneVal()) {
+          static_cast<MapEntryTy*>(Bucket)->Destroy(Allocator);
+        }
+      }
+    }
+    free(TheTable);
+  }
+
   AllocatorTy &getAllocator() { return Allocator; }
   const AllocatorTy &getAllocator() const { return Allocator; }
 
-  typedef const char* key_type;
-  typedef ValueTy mapped_type;
-  typedef StringMapEntry<ValueTy> value_type;
-  typedef size_t size_type;
+  using key_type = const char*;
+  using mapped_type = ValueTy;
+  using value_type = StringMapEntry<ValueTy>;
+  using size_type = size_t;
 
-  typedef StringMapConstIterator<ValueTy> const_iterator;
-  typedef StringMapIterator<ValueTy> iterator;
+  using const_iterator = StringMapConstIterator<ValueTy>;
+  using iterator = StringMapIterator<ValueTy>;
 
   iterator begin() {
     return iterator(TheTable, NumBuckets == 0);
@@ -313,7 +325,7 @@ public:
     return const_iterator(TheTable+NumBuckets, true);
   }
 
-  llvm::iterator_range<StringMapKeyIterator<ValueTy>> keys() const {
+  iterator_range<StringMapKeyIterator<ValueTy>> keys() const {
     return make_range(StringMapKeyIterator<ValueTy>(begin()),
                       StringMapKeyIterator<ValueTy>(end()));
   }
@@ -433,21 +445,6 @@ public:
     erase(I);
     return true;
   }
-
-  ~StringMap() {
-    // Delete all the elements in the map, but don't reset the elements
-    // to default values.  This is a copy of clear(), but avoids unnecessary
-    // work not required in the destructor.
-    if (!empty()) {
-      for (unsigned I = 0, E = NumBuckets; I != E; ++I) {
-        StringMapEntryBase *Bucket = TheTable[I];
-        if (Bucket && Bucket != getTombstoneVal()) {
-          static_cast<MapEntryTy*>(Bucket)->Destroy(Allocator);
-        }
-      }
-    }
-    free(TheTable);
-  }
 };
 
 template <typename DerivedTy, typename ValueTy>
@@ -542,7 +539,6 @@ class StringMapKeyIterator
 
 public:
   StringMapKeyIterator() = default;
-
   explicit StringMapKeyIterator(StringMapConstIterator<ValueTy> Iter)
       : base(std::move(Iter)) {}
 

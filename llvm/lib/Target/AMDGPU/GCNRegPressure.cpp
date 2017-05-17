@@ -27,7 +27,7 @@ void llvm::printLivesAt(SlotIndex SI,
   unsigned Num = 0;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     const unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
-    if (MRI.reg_nodbg_empty(Reg))
+    if (!LIS.hasInterval(Reg))
       continue;
     const auto &LI = LIS.getInterval(Reg);
     if (LI.hasSubRanges()) {
@@ -192,7 +192,6 @@ LaneBitmask llvm::getLiveLaneMask(unsigned Reg,
                                   SlotIndex SI,
                                   const LiveIntervals &LIS,
                                   const MachineRegisterInfo &MRI) {
-  assert(!MRI.reg_nodbg_empty(Reg));
   LaneBitmask LiveMask;
   const auto &LI = LIS.getInterval(Reg);
   if (LI.hasSubRanges()) {
@@ -214,7 +213,7 @@ GCNRPTracker::LiveRegSet llvm::getLiveRegs(SlotIndex SI,
   GCNRPTracker::LiveRegSet LiveRegs;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     auto Reg = TargetRegisterInfo::index2VirtReg(I);
-    if (MRI.reg_nodbg_empty(Reg))
+    if (!LIS.hasInterval(Reg))
       continue;
     auto LiveMask = getLiveLaneMask(Reg, SI, LIS, MRI);
     if (LiveMask.any())
@@ -223,13 +222,7 @@ GCNRPTracker::LiveRegSet llvm::getLiveRegs(SlotIndex SI,
   return LiveRegs;
 }
 
-void GCNUpwardRPTracker::reset(const MachineInstr &MI) {
-  MRI = &MI.getParent()->getParent()->getRegInfo();
-  LiveRegs = getLiveRegsAfter(MI, LIS);
-  MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs);
-}
-
-LaneBitmask GCNUpwardRPTracker::getDefRegMask(const MachineOperand &MO) const {
+LaneBitmask GCNRPTracker::getDefRegMask(const MachineOperand &MO) const {
   assert(MO.isDef() && MO.isReg() &&
     TargetRegisterInfo::isVirtualRegister(MO.getReg()));
 
@@ -241,7 +234,7 @@ LaneBitmask GCNUpwardRPTracker::getDefRegMask(const MachineOperand &MO) const {
     MRI->getTargetRegisterInfo()->getSubRegIndexLaneMask(MO.getSubReg());
 }
 
-LaneBitmask GCNUpwardRPTracker::getUsedRegMask(const MachineOperand &MO) const {
+LaneBitmask GCNRPTracker::getUsedRegMask(const MachineOperand &MO) const {
   assert(MO.isUse() && MO.isReg() &&
          TargetRegisterInfo::isVirtualRegister(MO.getReg()));
 
@@ -257,6 +250,18 @@ LaneBitmask GCNUpwardRPTracker::getUsedRegMask(const MachineOperand &MO) const {
   // dominate uses anyway.
   auto SI = LIS.getInstructionIndex(*MO.getParent()).getBaseIndex();
   return getLiveLaneMask(MO.getReg(), SI, LIS, *MRI);
+}
+
+void GCNUpwardRPTracker::reset(const MachineInstr &MI,
+                               const LiveRegSet *LiveRegsCopy) {
+  MRI = &MI.getParent()->getParent()->getRegInfo();
+  if (LiveRegsCopy) {
+    if (&LiveRegs != LiveRegsCopy)
+      LiveRegs = *LiveRegsCopy;
+  } else {
+    LiveRegs = getLiveRegsAfter(MI, LIS);
+  }
+  MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs);
 }
 
 void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
@@ -295,6 +300,100 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   }
 
   MaxPressure = max(MaxPressure, CurPressure);
+}
+
+bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
+                                 const LiveRegSet *LiveRegsCopy) {
+  MRI = &MI.getParent()->getParent()->getRegInfo();
+  LastTrackedMI = nullptr;
+  MBBEnd = MI.getParent()->end();
+  NextMI = &MI;
+  NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
+  if (NextMI == MBBEnd)
+    return false;
+  if (LiveRegsCopy) {
+    if (&LiveRegs != LiveRegsCopy)
+      LiveRegs = *LiveRegsCopy;
+  } else {
+    LiveRegs = getLiveRegsBefore(*NextMI, LIS);
+  }
+  MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs);
+  return true;
+}
+
+bool GCNDownwardRPTracker::advanceBeforeNext() {
+  assert(MRI && "call reset first");
+
+  NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
+  if (NextMI == MBBEnd)
+    return false;
+
+  SlotIndex SI = LIS.getInstructionIndex(*NextMI).getBaseIndex();
+  assert(SI.isValid());
+
+  // Remove dead registers or mask bits.
+  for (auto &It : LiveRegs) {
+    const LiveInterval &LI = LIS.getInterval(It.first);
+    if (LI.hasSubRanges()) {
+      for (const auto &S : LI.subranges()) {
+        if (!S.liveAt(SI)) {
+          auto PrevMask = It.second;
+          It.second &= ~S.LaneMask;
+          CurPressure.inc(It.first, PrevMask, It.second, *MRI);
+        }
+      }
+    } else if (!LI.liveAt(SI)) {
+      auto PrevMask = It.second;
+      It.second = LaneBitmask::getNone();
+      CurPressure.inc(It.first, PrevMask, It.second, *MRI);
+    }
+    if (It.second.none())
+      LiveRegs.erase(It.first);
+  }
+
+  MaxPressure = max(MaxPressure, CurPressure);
+
+  return true;
+}
+
+void GCNDownwardRPTracker::advanceToNext() {
+  LastTrackedMI = &*NextMI++;
+
+  // Add new registers or mask bits.
+  for (const auto &MO : LastTrackedMI->defs()) {
+    if (!MO.isReg())
+      continue;
+    unsigned Reg = MO.getReg();
+    if (!TargetRegisterInfo::isVirtualRegister(Reg))
+      continue;
+    auto &LiveMask = LiveRegs[Reg];
+    auto PrevMask = LiveMask;
+    LiveMask |= getDefRegMask(MO);
+    CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
+  }
+
+  MaxPressure = max(MaxPressure, CurPressure);
+}
+
+bool GCNDownwardRPTracker::advance() {
+  // If we have just called reset live set is actual.
+  if ((NextMI == MBBEnd) || (LastTrackedMI && !advanceBeforeNext()))
+    return false;
+  advanceToNext();
+  return true;
+}
+
+bool GCNDownwardRPTracker::advance(MachineBasicBlock::const_iterator End) {
+  while (NextMI != End)
+    if (!advance()) return false;
+  return true;
+}
+
+bool GCNDownwardRPTracker::advance(MachineBasicBlock::const_iterator Begin,
+                                   MachineBasicBlock::const_iterator End,
+                                   const LiveRegSet *LiveRegsCopy) {
+  reset(*Begin, LiveRegsCopy);
+  return advance(End);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -352,4 +451,16 @@ bool GCNUpwardRPTracker::isValid() const {
   return true;
 }
 
+void GCNRPTracker::printLiveRegs(raw_ostream &OS, const LiveRegSet& LiveRegs,
+                                 const MachineRegisterInfo &MRI) {
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+    unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
+    auto It = LiveRegs.find(Reg);
+    if (It != LiveRegs.end() && It->second.any())
+      OS << ' ' << PrintVRegOrUnit(Reg, TRI) << ':'
+         << PrintLaneMask(It->second);
+  }
+  OS << '\n';
+}
 #endif

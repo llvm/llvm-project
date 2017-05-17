@@ -1,4 +1,4 @@
-//===-- llvm/ADT/StringExtras.h - Useful string functions -------*- C++ -*-===//
+//===- llvm/ADT/StringExtras.h - Useful string functions --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,12 +15,18 @@
 #define LLVM_ADT_STRINGEXTRAS_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DataTypes.h"
 #include <iterator>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <string>
+#include <utility>
 
 namespace llvm {
-class raw_ostream;
+
 template<typename T> class SmallVectorImpl;
+class raw_ostream;
 
 /// hexdigit - Return the hexadecimal character for the
 /// given number \p X (which should be less than 16).
@@ -127,7 +133,6 @@ static inline std::string utostr(uint64_t X, bool isNeg = false) {
   if (isNeg) *--BufPtr = '-';   // Add negative sign...
   return std::string(BufPtr, std::end(Buffer));
 }
-
 
 static inline std::string itostr(int64_t X) {
   if (X < 0)
@@ -261,13 +266,14 @@ template <typename A1, typename... Args>
 inline size_t join_items_size(const A1 &A, Args &&... Items) {
   return join_one_item_size(A) + join_items_size(std::forward<Args>(Items)...);
 }
-}
+
+} // end namespace detail
 
 /// Joins the strings in the range [Begin, End), adding Separator between
 /// the elements.
 template <typename IteratorT>
 inline std::string join(IteratorT Begin, IteratorT End, StringRef Separator) {
-  typedef typename std::iterator_traits<IteratorT>::iterator_category tag;
+  using tag = typename std::iterator_traits<IteratorT>::iterator_category;
   return detail::join_impl(Begin, End, Separator, tag());
 }
 
@@ -295,6 +301,6 @@ inline std::string join_items(Sep Separator, Args &&... Items) {
   return Result;
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_STRINGEXTRAS_H

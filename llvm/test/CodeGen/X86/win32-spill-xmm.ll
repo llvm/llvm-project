@@ -20,7 +20,7 @@ declare void @bar(<16 x float> %a, i32 %b)
 ; Check that proper alignment of spilled vector does not affect vargs
 
 ; CHECK-LABEL: vargs_not_affected
-; CHECK: leal    28(%ebp), %eax
+; CHECK: movl 28(%ebp), %eax
 define i32 @vargs_not_affected(<4 x float> %v, i8* %f, ...) {
 entry:
   %ap = alloca i8*, align 4

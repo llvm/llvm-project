@@ -94,9 +94,7 @@ entry:
 
 ; CHECK-LABEL: arg4:
 ; CHECK: pushq
-; va_start:
-; CHECK: leaq 48(%rsp), [[REG_arg4_1:%[a-z]+]]
-; CHECK: movq [[REG_arg4_1]], (%rsp)
+; va_start (optimized away as overwritten by va_arg)
 ; va_arg:
 ; CHECK: leaq 52(%rsp), [[REG_arg4_2:%[a-z]+]]
 ; CHECK: movq [[REG_arg4_2]], (%rsp)

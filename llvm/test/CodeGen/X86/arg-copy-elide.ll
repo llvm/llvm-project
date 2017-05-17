@@ -253,9 +253,7 @@ entry:
 ; CHECK: calll _addrof_i32
 ; CHECK: retl
 
-
 ; Don't elide the copy when the alloca is escaped with a store.
-
 define void @escape_with_store(i32 %x) {
   %x1 = alloca i32
   %x2 = alloca i32*
@@ -268,9 +266,8 @@ define void @escape_with_store(i32 %x) {
 }
 
 ; CHECK-LABEL: _escape_with_store:
-; CHECK-DAG: movl {{.*}}(%esp), %[[reg:[^ ]*]]
-; CHECK-DAG: movl $0, [[offs:[0-9]*]](%esp)
-; CHECK: movl %[[reg]], [[offs]](%esp)
+; CHECK: movl {{.*}}(%esp), %[[reg:[^ ]*]]
+; CHECK: movl %[[reg]], [[offs:[0-9]*]](%esp)
 ; CHECK: calll _addrof_i32
 
 

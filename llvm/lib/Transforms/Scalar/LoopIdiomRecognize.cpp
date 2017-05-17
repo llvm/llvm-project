@@ -1292,13 +1292,15 @@ bool LoopIdiomRecognize::recognizeAndInsertCTLZ() {
   BasicBlock *PH = CurLoop->getLoopPreheader();
   Value *InitX = PhiX->getIncomingValueForBlock(PH);
   // If we check X != 0 before entering the loop we don't need a zero
-  // check in CTLZ intrinsic.
-  if (BasicBlock *PreCondBB = PH->getSinglePredecessor())
-    if (BranchInst *PreCondBr =
-        dyn_cast<BranchInst>(PreCondBB->getTerminator())) {
-      if (matchCondition(PreCondBr, PH) == InitX)
-        ZeroCheck = true;
-    }
+  // check in CTLZ intrinsic, but only if Cnt Phi is not used outside of the
+  // loop (if it is used we count CTLZ(X >> 1)).
+  if (!IsCntPhiUsedOutsideLoop)
+    if (BasicBlock *PreCondBB = PH->getSinglePredecessor())
+      if (BranchInst *PreCondBr =
+          dyn_cast<BranchInst>(PreCondBB->getTerminator())) {
+        if (matchCondition(PreCondBr, PH) == InitX)
+          ZeroCheck = true;
+      }
 
   // Check if CTLZ intrinsic is profitable. Assume it is always profitable
   // if we delete the loop (the loop has only 6 instructions):

@@ -145,6 +145,9 @@ public:
   bool shouldExpandReduction(const IntrinsicInst *II) const {
     return false;
   }
+
+  bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
+                             TTI::ReductionFlags Flags) const;
   /// @}
 };
 

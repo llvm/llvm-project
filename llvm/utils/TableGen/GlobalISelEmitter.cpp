@@ -1242,6 +1242,8 @@ private:
   Error importExplicitUseRenderer(BuildMIAction &DstMIBuilder,
                                   TreePatternNode *DstChild,
                                   const InstructionMatcher &InsnMatcher) const;
+  Error importDefaultOperandRenderers(BuildMIAction &DstMIBuilder,
+                                      DagInit *DefaultOps) const;
   Error
   importImplicitDefRenderers(BuildMIAction &DstMIBuilder,
                              const std::vector<Record *> &ImplicitDefs) const;
@@ -1509,59 +1511,23 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     DstMIBuilder.addRenderer<CopyRenderer>(InsnMatcher, DstIOperand.Name);
   }
 
-  // Figure out which operands need defaults inserted. Operands that subclass
-  // OperandWithDefaultOps are considered from left to right until we have
-  // enough operands to render the instruction.
-  SmallSet<unsigned, 2> DefaultOperands;
-  unsigned DstINumUses = DstI.Operands.size() - DstI.Operands.NumDefs;
-  unsigned NumDefaultOperands = 0;
-  for (unsigned I = 0; I < DstINumUses &&
-                       DstINumUses > Dst->getNumChildren() + NumDefaultOperands;
-       ++I) {
-    const auto &DstIOperand = DstI.Operands[DstI.Operands.NumDefs + I];
-    if (DstIOperand.Rec->isSubClassOf("OperandWithDefaultOps")) {
-      DefaultOperands.insert(I);
-      NumDefaultOperands +=
-          DstIOperand.Rec->getValueAsDag("DefaultOps")->getNumArgs();
-    }
-  }
-  if (DstINumUses > Dst->getNumChildren() + DefaultOperands.size())
-    return failedImport("Insufficient operands supplied and default ops "
-                        "couldn't make up the shortfall");
-  if (DstINumUses < Dst->getNumChildren() + DefaultOperands.size())
-    return failedImport("Too many operands supplied");
-
   // Render the explicit uses.
   unsigned Child = 0;
+  unsigned DstINumUses = DstI.Operands.size() - DstI.Operands.NumDefs;
+  unsigned NumDefaultOps = 0;
   for (unsigned I = 0; I != DstINumUses; ++I) {
-    // If we need to insert default ops here, then do so.
-    if (DefaultOperands.count(I)) {
-      const auto &DstIOperand = DstI.Operands[DstI.Operands.NumDefs + I];
+    const auto &DstIOperand = DstI.Operands[DstI.Operands.NumDefs + I];
 
+    // If the operand has default values, introduce them now.
+    // FIXME: Until we have a decent test case that dictates we should do
+    // otherwise, we're going to assume that operands with default values cannot
+    // be specified in the patterns. Therefore, adding them will not cause us to
+    // end up with too many rendered operands.
+    if (DstIOperand.Rec->isSubClassOf("OperandWithDefaultOps")) {
       DagInit *DefaultOps = DstIOperand.Rec->getValueAsDag("DefaultOps");
-      for (const auto *DefaultOp : DefaultOps->args()) {
-        // Look through ValueType operators.
-        if (const DagInit *DefaultDagOp = dyn_cast<DagInit>(DefaultOp)) {
-          if (const DefInit *DefaultDagOperator =
-                  dyn_cast<DefInit>(DefaultDagOp->getOperator())) {
-            if (DefaultDagOperator->getDef()->isSubClassOf("ValueType"))
-              DefaultOp = DefaultDagOp->getArg(0);
-          }
-        }
-
-        if (const DefInit *DefaultDefOp = dyn_cast<DefInit>(DefaultOp)) {
-          DstMIBuilder.addRenderer<AddRegisterRenderer>(DefaultDefOp->getDef());
-          continue;
-        }
-
-        if (const IntInit *DefaultIntOp = dyn_cast<IntInit>(DefaultOp)) {
-          DstMIBuilder.addRenderer<ImmRenderer>(DefaultIntOp->getValue());
-          continue;
-        }
-
-        return failedImport("Could not add default op");
-      }
-
+      if (auto Error = importDefaultOperandRenderers(DstMIBuilder, DefaultOps))
+        return std::move(Error);
+      ++NumDefaultOps;
       continue;
     }
 
@@ -1571,7 +1537,42 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     ++Child;
   }
 
+  if (NumDefaultOps + Dst->getNumChildren() != DstINumUses)
+    return failedImport("Expected " + llvm::to_string(DstINumUses) +
+                        " used operands but found " +
+                        llvm::to_string(Dst->getNumChildren()) +
+                        " explicit ones and " + llvm::to_string(NumDefaultOps) +
+                        " default ones");
+
   return DstMIBuilder;
+}
+
+Error GlobalISelEmitter::importDefaultOperandRenderers(
+    BuildMIAction &DstMIBuilder, DagInit *DefaultOps) const {
+  for (const auto *DefaultOp : DefaultOps->args()) {
+    // Look through ValueType operators.
+    if (const DagInit *DefaultDagOp = dyn_cast<DagInit>(DefaultOp)) {
+      if (const DefInit *DefaultDagOperator =
+              dyn_cast<DefInit>(DefaultDagOp->getOperator())) {
+        if (DefaultDagOperator->getDef()->isSubClassOf("ValueType"))
+          DefaultOp = DefaultDagOp->getArg(0);
+      }
+    }
+
+    if (const DefInit *DefaultDefOp = dyn_cast<DefInit>(DefaultOp)) {
+      DstMIBuilder.addRenderer<AddRegisterRenderer>(DefaultDefOp->getDef());
+      continue;
+    }
+
+    if (const IntInit *DefaultIntOp = dyn_cast<IntInit>(DefaultOp)) {
+      DstMIBuilder.addRenderer<ImmRenderer>(DefaultIntOp->getValue());
+      continue;
+    }
+
+    return failedImport("Could not add default op");
+  }
+
+  return Error::success();
 }
 
 Error GlobalISelEmitter::importImplicitDefRenderers(

@@ -8,7 +8,7 @@
 ; CHECK-LABEL:   {{^}}main
 ; CHECK:         mov [[TMP:r[0-9]+]], #0
 ; CHECK-NEXT:    str [[TMP]], [sp, #4]
-; CHECK-NEXT:    str [[TMP]], [sp]
+; CHECK_O0:      str [[TMP]], [sp]
 ; CHECK_O0:      ldr [[TMP:r[0-9]+]], [sp]
 ; CHECK_O0-NEXT: add [[TMP]], [[TMP]], #2
 ; CHECK_O1-NOT:  ldr [[TMP:r[0-9]+]], [sp]

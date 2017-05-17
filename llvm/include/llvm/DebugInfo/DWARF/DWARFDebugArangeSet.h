@@ -22,19 +22,19 @@ class raw_ostream;
 class DWARFDebugArangeSet {
 public:
   struct Header {
-    // The total length of the entries for that set, not including the length
-    // field itself.
+    /// The total length of the entries for that set, not including the length
+    /// field itself.
     uint32_t Length;
-    // The offset from the beginning of the .debug_info section of the
-    // compilation unit entry referenced by the table.
+    /// The offset from the beginning of the .debug_info section of the
+    /// compilation unit entry referenced by the table.
     uint32_t CuOffset;
-    // The DWARF version number.
+    /// The DWARF version number.
     uint16_t Version;
-    // The size in bytes of an address on the target architecture. For segmented
-    // addressing, this is the size of the offset portion of the address.
+    /// The size in bytes of an address on the target architecture. For segmented
+    /// addressing, this is the size of the offset portion of the address.
     uint8_t AddrSize;
-    // The size in bytes of a segment descriptor on the target architecture.
-    // If the target system uses a flat address space, this value is 0.
+    /// The size in bytes of a segment descriptor on the target architecture.
+    /// If the target system uses a flat address space, this value is 0.
     uint8_t SegSize;
   };
 

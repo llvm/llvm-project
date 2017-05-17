@@ -75,7 +75,7 @@ ProfileSummaryInfo::getProfileCount(const Instruction *Inst,
     return None;
   assert((isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) &&
          "We can only get profile count for call/invoke instruction.");
-  if (computeSummary() && Summary->getKind() == ProfileSummary::PSK_Sample) {
+  if (hasSampleProfile()) {
     // In sample PGO mode, check if there is a profile metadata on the
     // instruction. If it is present, determine hotness solely based on that,
     // since the sampled entry count may not be accurate.

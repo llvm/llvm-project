@@ -1,10 +1,6 @@
 ; RUN: llc -mtriple=thumbv7 -o - %s | FileCheck %s
 
-; p5 will have been pushed to the stack. Check that it's correctly aligned by
-; looking at the offset of the instruction that loads it. Note that this is
-; very fragile and this test may need to be updated if we happen to spill more
-; or less to the stack.
-; CHECK: ldr{{(.w)?}} r{{[0-9]+}}, [sp, #2104]
+; CHECK: [sp, #2120]
 
 %struct.struct_2 = type { [172 x %struct.struct_1] }
 %struct.struct_1 = type { i32, i32, i32 }

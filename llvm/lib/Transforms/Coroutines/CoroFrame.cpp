@@ -177,7 +177,7 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
   // consume. Note, that crossing coro.save also requires a spill, as any code
   // between coro.save and coro.suspend may resume the coroutine and all of the
   // state needs to be saved by that time.
-  auto markSuspendBlock = [&](IntrinsicInst* BarrierInst) {
+  auto markSuspendBlock = [&](IntrinsicInst *BarrierInst) {
     BasicBlock *SuspendBlock = BarrierInst->getParent();
     auto &B = getBlockData(SuspendBlock);
     B.Suspend = true;
@@ -347,6 +347,27 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   return FrameTy;
 }
 
+// We need to make room to insert a spill after initial PHIs, but before
+// catchswitch instruction. Placing it before violates the requirement that
+// catchswitch, like all other EHPads must be the first nonPHI in a block.
+//
+// Split away catchswitch into a separate block and insert in its place:
+//
+//   cleanuppad <InsertPt> cleanupret.
+//
+// cleanupret instruction will act as an insert point for the spill.
+static Instruction *splitBeforeCatchSwitch(CatchSwitchInst *CatchSwitch) {
+  BasicBlock *CurrentBlock = CatchSwitch->getParent();
+  BasicBlock *NewBlock = CurrentBlock->splitBasicBlock(CatchSwitch);
+  CurrentBlock->getTerminator()->eraseFromParent();
+
+  auto *CleanupPad =
+      CleanupPadInst::Create(CatchSwitch->getParentPad(), {}, "", CurrentBlock);
+  auto *CleanupRet =
+      CleanupReturnInst::Create(CleanupPad, NewBlock, CurrentBlock);
+  return CleanupRet;
+}
+
 // Replace all alloca and SSA values that are accessed across suspend points
 // with GetElementPointer from coroutine frame + loads and stores. Create an
 // AllocaSpillBB that will become the new entry block for the resume parts of
@@ -437,8 +458,11 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
           InsertPt = NewBB->getTerminator();
         } else if (dyn_cast<PHINode>(CurrentValue)) {
           // Skip the PHINodes and EH pads instructions.
-          InsertPt =
-              &*cast<Instruction>(E.def())->getParent()->getFirstInsertionPt();
+          BasicBlock *DefBlock = cast<Instruction>(E.def())->getParent();
+          if (auto *CSI = dyn_cast<CatchSwitchInst>(DefBlock->getTerminator()))
+            InsertPt = splitBeforeCatchSwitch(CSI);
+          else
+            InsertPt = &*DefBlock->getFirstInsertionPt();
         } else {
           // For all other values, the spill is placed immediately after
           // the definition.
@@ -495,6 +519,78 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
   return FramePtr;
 }
 
+// Sets the unwind edge of an instruction to a particular successor.
+static void setUnwindEdgeTo(TerminatorInst *TI, BasicBlock *Succ) {
+  if (auto *II = dyn_cast<InvokeInst>(TI))
+    II->setUnwindDest(Succ);
+  else if (auto *CS = dyn_cast<CatchSwitchInst>(TI))
+    CS->setUnwindDest(Succ);
+  else if (auto *CR = dyn_cast<CleanupReturnInst>(TI))
+    CR->setUnwindDest(Succ);
+  else
+    llvm_unreachable("unexpected terminator instruction");
+}
+
+// Replaces all uses of OldPred with the NewPred block in all PHINodes in a
+// block.
+static void updatePhiNodes(BasicBlock *DestBB, BasicBlock *OldPred,
+                           BasicBlock *NewPred,
+                           PHINode *LandingPadReplacement) {
+  unsigned BBIdx = 0;
+  for (BasicBlock::iterator I = DestBB->begin(); isa<PHINode>(I); ++I) {
+    PHINode *PN = cast<PHINode>(I);
+
+    // We manually update the LandingPadReplacement PHINode and it is the last
+    // PHI Node. So, if we find it, we are done.
+    if (LandingPadReplacement == PN)
+      break;
+
+    // Reuse the previous value of BBIdx if it lines up.  In cases where we
+    // have multiple phi nodes with *lots* of predecessors, this is a speed
+    // win because we don't have to scan the PHI looking for TIBB.  This
+    // happens because the BB list of PHI nodes are usually in the same
+    // order.
+    if (PN->getIncomingBlock(BBIdx) != OldPred)
+      BBIdx = PN->getBasicBlockIndex(OldPred);
+
+    assert(BBIdx != (unsigned)-1 && "Invalid PHI Index!");
+    PN->setIncomingBlock(BBIdx, NewPred);
+  }
+}
+
+// Uses SplitEdge unless the successor block is an EHPad, in which case do EH
+// specific handling.
+static BasicBlock *ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
+                                    LandingPadInst *OriginalPad,
+                                    PHINode *LandingPadReplacement) {
+  auto *PadInst = Succ->getFirstNonPHI();
+  if (!LandingPadReplacement && !PadInst->isEHPad())
+    return SplitEdge(BB, Succ);
+
+  auto *NewBB = BasicBlock::Create(BB->getContext(), "", BB->getParent(), Succ);
+  setUnwindEdgeTo(BB->getTerminator(), NewBB);
+  updatePhiNodes(Succ, BB, NewBB, LandingPadReplacement);
+
+  if (LandingPadReplacement) {
+    auto *NewLP = OriginalPad->clone();
+    auto *Terminator = BranchInst::Create(Succ, NewBB);
+    NewLP->insertBefore(Terminator);
+    LandingPadReplacement->addIncoming(NewLP, NewBB);
+    return NewBB;
+  }
+  Value *ParentPad = nullptr;
+  if (auto *FuncletPad = dyn_cast<FuncletPadInst>(PadInst))
+    ParentPad = FuncletPad->getParentPad();
+  else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(PadInst))
+    ParentPad = CatchSwitch->getParentPad();
+  else
+    llvm_unreachable("handling for other EHPads not implemented yet");
+
+  auto *NewCleanupPad = CleanupPadInst::Create(ParentPad, {}, "", NewBB);
+  CleanupReturnInst::Create(NewCleanupPad, Succ, NewBB);
+  return NewBB;
+}
+
 static void rewritePHIs(BasicBlock &BB) {
   // For every incoming edge we will create a block holding all
   // incoming values in a single PHI nodes.
@@ -502,7 +598,7 @@ static void rewritePHIs(BasicBlock &BB) {
   // loop:
   //    %n.val = phi i32[%n, %entry], [%inc, %loop]
   //
-  // It will create:  
+  // It will create:
   //
   // loop.from.entry:
   //    %n.loop.pre = phi i32 [%n, %entry]
@@ -517,9 +613,22 @@ static void rewritePHIs(BasicBlock &BB) {
   // TODO: Simplify PHINodes in the basic block to remove duplicate
   // predecessors.
 
+  LandingPadInst *LandingPad = nullptr;
+  PHINode *ReplPHI = nullptr;
+  if ((LandingPad = dyn_cast_or_null<LandingPadInst>(BB.getFirstNonPHI()))) {
+    // ehAwareSplitEdge will clone the LandingPad in all the edge blocks.
+    // We replace the original landing pad with a PHINode that will collect the
+    // results from all of them.
+    ReplPHI = PHINode::Create(LandingPad->getType(), 1, "", LandingPad);
+    ReplPHI->takeName(LandingPad);
+    LandingPad->replaceAllUsesWith(ReplPHI);
+    // We will erase the original landing pad at the end of this function after
+    // ehAwareSplitEdge cloned it in the transition blocks.
+  }
+
   SmallVector<BasicBlock *, 8> Preds(pred_begin(&BB), pred_end(&BB));
   for (BasicBlock *Pred : Preds) {
-    auto *IncomingBB = SplitEdge(Pred, &BB);
+    auto *IncomingBB = ehAwareSplitEdge(Pred, &BB, LandingPad, ReplPHI);
     IncomingBB->setName(BB.getName() + Twine(".from.") + Pred->getName());
     auto *PN = cast<PHINode>(&BB.front());
     do {
@@ -531,7 +640,14 @@ static void rewritePHIs(BasicBlock &BB) {
       InputV->addIncoming(V, Pred);
       PN->setIncomingValue(Index, InputV);
       PN = dyn_cast<PHINode>(PN->getNextNode());
-    } while (PN);
+    } while (PN != ReplPHI); // ReplPHI is either null or the PHI that replaced
+                             // the landing pad.
+  }
+
+  if (LandingPad) {
+    // Calls to ehAwareSplitEdge function cloned the original lading pad.
+    // No longer need it.
+    LandingPad->eraseFromParent();
   }
 }
 

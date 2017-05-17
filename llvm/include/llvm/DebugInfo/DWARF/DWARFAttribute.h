@@ -31,10 +31,10 @@ struct DWARFAttribute {
   dwarf::Attribute Attr;
   /// The form and value for this attribute.
   DWARFFormValue Value;
-  
+
   DWARFAttribute(uint32_t O, dwarf::Attribute A = dwarf::Attribute(0),
                  dwarf::Form F = dwarf::Form(0)) : Attr(A), Value(F) {}
-  
+
   bool isValid() const {
     return Offset != 0 && Attr != dwarf::Attribute(0);
   }

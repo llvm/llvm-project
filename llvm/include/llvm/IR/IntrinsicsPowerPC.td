@@ -1132,4 +1132,6 @@ def int_ppc_tsuspend : GCCBuiltin<"__builtin_tsuspend">,
 
 def int_ppc_ttest : GCCBuiltin<"__builtin_ttest">,
       Intrinsic<[llvm_i64_ty], [], []>;
+
+def int_ppc_cfence : Intrinsic<[], [llvm_anyint_ty], []>;
 }

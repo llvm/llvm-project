@@ -571,8 +571,7 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   GPRsNoLRSP.reset(ARM::LR);
   GPRsNoLRSP.reset(ARM::SP);
   GPRsNoLRSP.reset(ARM::PC);
-  for (int Register = GPRsNoLRSP.find_first(); Register != -1;
-       Register = GPRsNoLRSP.find_next(Register)) {
+  for (unsigned Register : GPRsNoLRSP.set_bits()) {
     if (!UsedRegs.contains(Register)) {
       // Remember the first pop-friendly register and exit.
       if (PopFriendly.test(Register)) {

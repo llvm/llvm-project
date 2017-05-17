@@ -963,9 +963,8 @@ template <class ELFT> void elf::scanRelocations(InputSectionBase &S) {
 // in the Sections vector, and recalculate the InputSection output section
 // offsets.
 // This may invalidate any output section offsets stored outside of InputSection
-template <class ELFT>
-void ThunkCreator<ELFT>::mergeThunks(OutputSection *OS,
-                                     std::vector<ThunkSection *> &Thunks) {
+void ThunkCreator::mergeThunks(OutputSection *OS,
+                               std::vector<ThunkSection *> &Thunks) {
   // Order Thunks in ascending OutSecOff
   auto ThunkCmp = [](const ThunkSection *A, const ThunkSection *B) {
     return A->OutSecOff < B->OutSecOff;
@@ -993,9 +992,8 @@ void ThunkCreator<ELFT>::mergeThunks(OutputSection *OS,
   OS->assignOffsets();
 }
 
-template <class ELFT>
-ThunkSection *ThunkCreator<ELFT>::getOSThunkSec(ThunkSection *&TS,
-                                                OutputSection *OS) {
+ThunkSection *ThunkCreator::getOSThunkSec(ThunkSection *&TS,
+                                          OutputSection *OS) {
   if (TS == nullptr) {
     uint32_t Off = 0;
     for (auto *IS : OS->Sections) {
@@ -1009,9 +1007,7 @@ ThunkSection *ThunkCreator<ELFT>::getOSThunkSec(ThunkSection *&TS,
   return TS;
 }
 
-template <class ELFT>
-ThunkSection *ThunkCreator<ELFT>::getISThunkSec(InputSection *IS,
-                                                OutputSection *OS) {
+ThunkSection *ThunkCreator::getISThunkSec(InputSection *IS, OutputSection *OS) {
   ThunkSection *TS = ThunkedSections.lookup(IS);
   if (TS)
     return TS;
@@ -1022,12 +1018,11 @@ ThunkSection *ThunkCreator<ELFT>::getISThunkSec(InputSection *IS,
   return TS;
 }
 
-template <class ELFT>
-std::pair<Thunk *, bool> ThunkCreator<ELFT>::getThunk(SymbolBody &Body,
-                                                      uint32_t Type) {
+std::pair<Thunk *, bool> ThunkCreator::getThunk(SymbolBody &Body,
+                                                uint32_t Type) {
   auto res = ThunkedSymbols.insert({&Body, nullptr});
   if (res.second)
-    res.first->second = addThunk<ELFT>(Type, Body);
+    res.first->second = addThunk(Type, Body);
   return std::make_pair(res.first->second, res.second);
 }
 
@@ -1041,9 +1036,7 @@ std::pair<Thunk *, bool> ThunkCreator<ELFT>::getThunk(SymbolBody &Body,
 //
 // FIXME: All Thunks are assumed to be in range of the relocation. Range
 // extension Thunks are not yet supported.
-template <class ELFT>
-bool ThunkCreator<ELFT>::createThunks(
-    ArrayRef<OutputSection *> OutputSections) {
+bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
   // Create all the Thunks and insert them into synthetic ThunkSections. The
   // ThunkSections are later inserted back into the OutputSection.
 
@@ -1086,8 +1079,3 @@ template void elf::scanRelocations<ELF32LE>(InputSectionBase &);
 template void elf::scanRelocations<ELF32BE>(InputSectionBase &);
 template void elf::scanRelocations<ELF64LE>(InputSectionBase &);
 template void elf::scanRelocations<ELF64BE>(InputSectionBase &);
-
-template class elf::ThunkCreator<ELF32LE>;
-template class elf::ThunkCreator<ELF32BE>;
-template class elf::ThunkCreator<ELF64LE>;
-template class elf::ThunkCreator<ELF64BE>;

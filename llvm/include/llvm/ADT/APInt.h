@@ -1067,9 +1067,7 @@ public:
   /// \returns the bit value at bitPosition
   bool operator[](unsigned bitPosition) const {
     assert(bitPosition < getBitWidth() && "Bit position out of bounds!");
-    return (maskBit(bitPosition) &
-            (isSingleWord() ? U.VAL : U.pVal[whichWord(bitPosition)])) !=
-           0;
+    return (maskBit(bitPosition) & getWord(bitPosition)) != 0;
   }
 
   /// @}

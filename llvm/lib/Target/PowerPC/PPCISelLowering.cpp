@@ -410,6 +410,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // To handle counter-based loop conditions.
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i1, Custom);
 
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::i8, Custom);
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::i16, Custom);
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::i32, Custom);
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
+
   // Comparisons that require checking two conditions.
   setCondCodeAction(ISD::SETULT, MVT::f32, Expand);
   setCondCodeAction(ISD::SETULT, MVT::f64, Expand);
@@ -8184,6 +8189,26 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   return Flags;
 }
 
+SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  // SelectionDAGBuilder::visitTargetIntrinsic may insert one extra chain to
+  // the beginning of the argument list.
+  int ArgStart = isa<ConstantSDNode>(Op.getOperand(0)) ? 0 : 1;
+  SDLoc DL(Op);
+  switch (cast<ConstantSDNode>(Op.getOperand(ArgStart))->getZExtValue()) {
+  case Intrinsic::ppc_cfence: {
+    assert(Subtarget.isPPC64() && "Only 64-bit is supported for now.");
+    return SDValue(DAG.getMachineNode(PPC::CFENCE8, DL, MVT::Other,
+                                      DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64,
+                                                  Op.getOperand(ArgStart + 1))),
+                   0);
+  }
+  default:
+    break;
+  }
+  return SDValue();
+}
+
 SDValue PPCTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
                                                   SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -8649,6 +8674,9 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   // Frame & Return address.
   case ISD::RETURNADDR:         return LowerRETURNADDR(Op, DAG);
   case ISD::FRAMEADDR:          return LowerFRAMEADDR(Op, DAG);
+
+  case ISD::INTRINSIC_VOID:
+    return LowerINTRINSIC_VOID(Op, DAG);
   }
 }
 
@@ -8753,12 +8781,19 @@ Instruction *PPCTargetLowering::emitLeadingFence(IRBuilder<> &Builder,
 Instruction *PPCTargetLowering::emitTrailingFence(IRBuilder<> &Builder,
                                                   Instruction *Inst,
                                                   AtomicOrdering Ord) const {
-  if (Inst->hasAtomicLoad() && isAcquireOrStronger(Ord))
+  if (Inst->hasAtomicLoad() && isAcquireOrStronger(Ord)) {
+    // See http://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html and
+    // http://www.rdrop.com/users/paulmck/scalability/paper/N2745r.2011.03.04a.html
+    // and http://www.cl.cam.ac.uk/~pes20/cppppc/ for justification.
+    if (isa<LoadInst>(Inst) && Subtarget.isPPC64())
+      return Builder.CreateCall(
+          Intrinsic::getDeclaration(
+              Builder.GetInsertBlock()->getParent()->getParent(),
+              Intrinsic::ppc_cfence, {Inst->getType()}),
+          {Inst});
+    // FIXME: Can use isync for rmw operation.
     return callIntrinsic(Builder, Intrinsic::ppc_lwsync);
-  // FIXME: this is too conservative, a dependent branch + isync is enough.
-  // See http://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html and
-  // http://www.rdrop.com/users/paulmck/scalability/paper/N2745r.2011.03.04a.html
-  // and http://www.cl.cam.ac.uk/~pes20/cppppc/ for justification.
+  }
   return nullptr;
 }
 

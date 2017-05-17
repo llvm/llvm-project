@@ -546,7 +546,7 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
     // If there are escaping uses of invariant.start instruction, the load maybe
     // non-invariant.
     if (!II || II->getIntrinsicID() != Intrinsic::invariant_start ||
-        II->hasNUsesOrMore(1))
+        !II->use_empty())
       continue;
     unsigned InvariantSizeInBits =
         cast<ConstantInt>(II->getArgOperand(0))->getSExtValue() * 8;

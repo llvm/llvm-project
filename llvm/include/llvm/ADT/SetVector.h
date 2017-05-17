@@ -40,17 +40,17 @@ template <typename T, typename Vector = std::vector<T>,
           typename Set = DenseSet<T>>
 class SetVector {
 public:
-  typedef T value_type;
-  typedef T key_type;
-  typedef T& reference;
-  typedef const T& const_reference;
-  typedef Set set_type;
-  typedef Vector vector_type;
-  typedef typename vector_type::const_iterator iterator;
-  typedef typename vector_type::const_iterator const_iterator;
-  typedef typename vector_type::const_reverse_iterator reverse_iterator;
-  typedef typename vector_type::const_reverse_iterator const_reverse_iterator;
-  typedef typename vector_type::size_type size_type;
+  using value_type = T;
+  using key_type = T;
+  using reference = T&;
+  using const_reference = const T&;
+  using set_type = Set;
+  using vector_type = Vector;
+  using iterator = typename vector_type::const_iterator;
+  using const_iterator = typename vector_type::const_iterator;
+  using reverse_iterator = typename vector_type::const_reverse_iterator;
+  using const_reverse_iterator = typename vector_type::const_reverse_iterator;
+  using size_type = typename vector_type::size_type;
 
   /// \brief Construct an empty SetVector
   SetVector() = default;

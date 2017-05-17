@@ -705,7 +705,7 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
   unsigned Alignment = (unsigned)Alignment64 & 0xffffffffL;
   unsigned PaddingSize = 0;
   unsigned StubBufSize = 0;
-  bool IsRequired = isRequiredForExecution(Section) || ProcessAllSections;
+  bool IsRequired = isRequiredForExecution(Section);
   bool IsVirtual = Section.isVirtual();
   bool IsZeroInit = isZeroInit(Section);
   bool IsReadOnly = isReadOnlyData(Section);
@@ -745,8 +745,8 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
     Alignment = std::max(Alignment, getStubAlignment());
 
   // Some sections, such as debug info, don't need to be loaded for execution.
-  // Leave those where they are.
-  if (IsRequired) {
+  // Process those only if explicitly requested.
+  if (IsRequired || ProcessAllSections) {
     Allocate = DataSize + PaddingSize + StubBufSize;
     if (!Allocate)
       Allocate = 1;
@@ -789,6 +789,10 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
 
   Sections.push_back(
       SectionEntry(Name, Addr, DataSize, Allocate, (uintptr_t)pData));
+
+  // Debug info sections are linked as if their load address was zero
+  if (!IsRequired)
+    Sections.back().setLoadAddress(0);
 
   if (Checker)
     Checker->registerSection(Obj.getFileName(), SectionID);

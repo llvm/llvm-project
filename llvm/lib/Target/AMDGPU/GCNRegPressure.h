@@ -92,15 +92,20 @@ public:
   typedef DenseMap<unsigned, LaneBitmask> LiveRegSet;
 
 protected:
+  const LiveIntervals &LIS;
   LiveRegSet LiveRegs;
   GCNRegPressure CurPressure, MaxPressure;
   const MachineInstr *LastTrackedMI = nullptr;
   mutable const MachineRegisterInfo *MRI = nullptr;
-  GCNRPTracker() {}
+  GCNRPTracker(const LiveIntervals &LIS_) : LIS(LIS_) {}
+  LaneBitmask getDefRegMask(const MachineOperand &MO) const;
+  LaneBitmask getUsedRegMask(const MachineOperand &MO) const;
 public:
   // live regs for the current state
   const decltype(LiveRegs) &getLiveRegs() const { return LiveRegs; }
   const MachineInstr *getLastTrackedMI() const { return LastTrackedMI; }
+
+  void clearMaxPressure() { MaxPressure.clear(); }
 
   // returns MaxPressure, resetting it
   decltype(MaxPressure) moveMaxPressure() {
@@ -111,17 +116,16 @@ public:
   decltype(LiveRegs) moveLiveRegs() {
     return std::move(LiveRegs);
   }
+  static void printLiveRegs(raw_ostream &OS, const LiveRegSet& LiveRegs,
+                            const MachineRegisterInfo &MRI);
 };
 
 class GCNUpwardRPTracker : public GCNRPTracker {
-  const LiveIntervals &LIS;
-  LaneBitmask getDefRegMask(const MachineOperand &MO) const;
-  LaneBitmask getUsedRegMask(const MachineOperand &MO) const;
 public:
-  GCNUpwardRPTracker(const LiveIntervals &LIS_) : LIS(LIS_) {}
+  GCNUpwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
   // reset tracker to the point just below MI
   // filling live regs upon this point using LIS
-  void reset(const MachineInstr &MI);
+  void reset(const MachineInstr &MI, const LiveRegSet *LiveRegs = nullptr);
 
   // move to the state just above the MI
   void recede(const MachineInstr &MI);
@@ -129,6 +133,41 @@ public:
   // checks whether the tracker's state after receding MI corresponds
   // to reported by LIS
   bool isValid() const;
+};
+
+class GCNDownwardRPTracker : public GCNRPTracker {
+  // Last position of reset or advanceBeforeNext
+  MachineBasicBlock::const_iterator NextMI;
+
+  MachineBasicBlock::const_iterator MBBEnd;
+
+public:
+  GCNDownwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
+
+  const MachineBasicBlock::const_iterator getNext() const { return NextMI; }
+
+  // Reset tracker to the point before the MI
+  // filling live regs upon this point using LIS.
+  // Returns false if block is empty except debug values.
+  bool reset(const MachineInstr &MI, const LiveRegSet *LiveRegs = nullptr);
+
+  // Move to the state right before the next MI. Returns false if reached
+  // end of the block.
+  bool advanceBeforeNext();
+
+  // Move to the state at the MI, advanceBeforeNext has to be called first.
+  void advanceToNext();
+
+  // Move to the state at the next MI. Returns false if reached end of block.
+  bool advance();
+
+  // Advance instructions until before End.
+  bool advance(MachineBasicBlock::const_iterator End);
+
+  // Reset to Begin and advance to End.
+  bool advance(MachineBasicBlock::const_iterator Begin,
+               MachineBasicBlock::const_iterator End,
+               const LiveRegSet *LiveRegsCopy = nullptr);
 };
 
 LaneBitmask getLiveLaneMask(unsigned Reg,
