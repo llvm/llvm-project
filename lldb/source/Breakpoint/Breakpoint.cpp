@@ -837,8 +837,8 @@ bool Breakpoint::AddName(llvm::StringRef new_name, Status &error) {
   if (new_name.empty())
     return false;
   if (!BreakpointID::StringIsBreakpointName(new_name, error)) {
-    error.SetErrorStringWithFormat("input name \"%s\" not a breakpoint name.",
-                                   new_name);
+    error.SetErrorStringWithFormatv("input name \"{0}\" not a breakpoint name.",
+                                    new_name);
     return false;
   }
   if (!error.Success())

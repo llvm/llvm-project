@@ -136,14 +136,14 @@ public:
   /// diagnostic ID.
   StringRef getCheckName(unsigned DiagnosticID) const;
 
-  /// \brief Returns check filter for the \c CurrentFile.
+  /// \brief Returns \c true if the check is enabled for the \c CurrentFile.
   ///
   /// The \c CurrentFile can be changed using \c setCurrentFile.
-  GlobList &getChecksFilter();
+  bool isCheckEnabled(StringRef CheckName) const;
 
-  /// \brief Returns check filter for the \c CurrentFile which
-  /// selects checks for upgrade to error.
-  GlobList &getWarningAsErrorFilter();
+  /// \brief Returns \c true if the check should be upgraded to error for the
+  /// \c CurrentFile.
+  bool treatAsError(StringRef CheckName) const;
 
   /// \brief Returns global options.
   const ClangTidyGlobalOptions &getGlobalOptions() const;

@@ -51,7 +51,7 @@ public:
 
 // For a Relocation to symbol S create a Thunk to be added to a synthetic
 // ThunkSection. At present there are implementations for ARM and Mips Thunks.
-template <class ELFT> Thunk *addThunk(uint32_t RelocType, SymbolBody &S);
+Thunk *addThunk(uint32_t RelocType, SymbolBody &S);
 
 } // namespace elf
 } // namespace lld

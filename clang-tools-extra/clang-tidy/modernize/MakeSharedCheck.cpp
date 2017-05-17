@@ -21,7 +21,7 @@ MakeSharedCheck::MakeSharedCheck(StringRef Name, ClangTidyContext *Context)
 MakeSharedCheck::SmartPtrTypeMatcher
 MakeSharedCheck::getSmartPointerTypeMatcher() const {
   return qualType(hasDeclaration(classTemplateSpecializationDecl(
-      matchesName("::std::shared_ptr"), templateArgumentCountIs(1),
+      hasName("::std::shared_ptr"), templateArgumentCountIs(1),
       hasTemplateArgument(
           0, templateArgument(refersToType(qualType().bind(PointerType)))))));
 }

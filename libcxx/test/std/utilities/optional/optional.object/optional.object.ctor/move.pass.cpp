@@ -18,7 +18,7 @@
 
 // <optional>
 
-// optional(optional<T>&& rhs);
+// constexpr optional(optional<T>&& rhs);
 
 #include <optional>
 #include <type_traits>
@@ -205,5 +205,10 @@ int main()
     }
     {
         test_reference_extension();
+    }
+    {
+    constexpr std::optional<int> o1{4};
+    constexpr std::optional<int> o2 = std::move(o1);
+    static_assert( *o2 == 4, "" );
     }
 }

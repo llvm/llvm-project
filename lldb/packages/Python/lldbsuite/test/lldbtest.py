@@ -1934,7 +1934,7 @@ class TestBase(Base):
             # "libFoo.dylib" or "libFoo.so", or "Foo.so" for "Foo.so" or "libFoo.so", or just a
             # basename like "libFoo.so". So figure out which one it is and resolve the local copy
             # of the shared library accordingly
-            if os.path.exists(name):
+            if os.path.isfile(name):
                 local_shlib_path = name  # name is the full path to the local shared library
             else:
                 # Check relative names
