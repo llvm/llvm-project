@@ -387,6 +387,42 @@ def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
 def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
                 [(set GPR32:$dst, (xor GPR32:$src1, -4))]>;
 
+//===- Test a simple pattern with multiple operands with defaults. --------===//
+//
+
+// CHECK-LABEL: if ([&]() {
+// CHECK-NEXT:    MachineInstr &MI0 = I;
+// CHECK-NEXT:    if (MI0.getNumOperands() < 3)
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    if ((MI0.getOpcode() == TargetOpcode::G_XOR) &&
+// CHECK-NEXT:        ((/* dst */ (MRI.getType(MI0.getOperand(0).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:         ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(0).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* src1 */ (MRI.getType(MI0.getOperand(1).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:         ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(1).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* Operand 2 */ (MRI.getType(MI0.getOperand(2).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:        (isOperandImmEqual(MI0.getOperand(2), -5, MRI))))) {
+// CHECK-NEXT:      // (xor:i32 GPR32:i32:$src1, -5:i32) => (XORManyDefaults:i32 GPR32:i32:$src1)
+// CHECK-NEXT:      MachineInstrBuilder MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(MyTarget::XORManyDefaults));
+// CHECK-NEXT:      MIB.add(MI0.getOperand(0)/*dst*/);
+// CHECK-NEXT:      MIB.addImm(-1);
+// CHECK-NEXT:      MIB.addReg(MyTarget::R0);
+// CHECK-NEXT:      MIB.addReg(MyTarget::R0);
+// CHECK-NEXT:      MIB.add(MI0.getOperand(1)/*src1*/);
+// CHECK-NEXT:      for (const auto *FromMI : {&MI0, })
+// CHECK-NEXT:        for (const auto &MMO : FromMI->memoperands())
+// CHECK-NEXT:          MIB.addMemOperand(MMO);
+// CHECK-NEXT:      I.eraseFromParent();
+// CHECK-NEXT:      MachineInstr &NewI = *MIB;
+// CHECK-NEXT:      constrainSelectedInstRegOperands(NewI, TII, TRI, RBI);
+// CHECK-NEXT:      return true;
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return false;
+// CHECK-NEXT:  }()) { return true; }
+
+// The -5 is just to distinguish it from the other cases.
+def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1),
+                        [(set GPR32:$dst, (xor GPR32:$src1, -5))]>;
+
 //===- Test a simple pattern with constant immediate operands. ------------===//
 //
 // This must precede the 3-register variants because constant immediates have

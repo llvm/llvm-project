@@ -111,7 +111,7 @@ private:
 
 class DWARFUnit {
   DWARFContext &Context;
-  // Section containing this DWARFUnit.
+  /// Section containing this DWARFUnit.
   const DWARFSection &InfoSection;
 
   const DWARFDebugAbbrev *Abbrev;
@@ -133,12 +133,12 @@ class DWARFUnit {
   uint8_t UnitType;
   uint8_t AddrSize;
   uint64_t BaseAddr;
-  // The compile unit debug information entry items.
+  /// The compile unit debug information entry items.
   std::vector<DWARFDebugInfoEntry> DieArray;
 
-  // Map from range's start address to end address and corresponding DIE.
-  // IntervalMap does not support range removal, as a result, we use the
-  // std::map::upper_bound for address range lookup.
+  /// Map from range's start address to end address and corresponding DIE.
+  /// IntervalMap does not support range removal, as a result, we use the
+  /// std::map::upper_bound for address range lookup.
   std::map<uint64_t, std::pair<uint64_t, DWARFDie>> AddrDieMap;
   typedef iterator_range<std::vector<DWARFDebugInfoEntry>::iterator>
       die_iterator_range;
@@ -189,7 +189,7 @@ public:
     AddrOffsetSectionBase = Base;
   }
 
-  // Recursively update address to Die map.
+  /// Recursively update address to Die map.
   void updateAddressDieMap(DWARFDie Die);
 
   void setRangesSection(const DWARFSection *RS, uint32_t Base) {

@@ -28,7 +28,7 @@ private:
   void clear();
   void extract(DataExtractor DebugArangesData);
 
-  // Call appendRange multiple times and then call construct.
+  /// Call appendRange multiple times and then call construct.
   void appendRange(uint32_t CUOffset, uint64_t LowPC, uint64_t HighPC);
   void construct();
 
@@ -58,9 +58,9 @@ private:
       return LowPC < other.LowPC;
     }
 
-    uint64_t LowPC; // Start of address range.
-    uint32_t Length; // End of address range (not including this address).
-    uint32_t CUOffset; // Offset of the compile unit or die.
+    uint64_t LowPC; /// Start of address range.
+    uint32_t Length; /// End of address range (not including this address).
+    uint32_t CUOffset; /// Offset of the compile unit or die.
   };
 
   struct RangeEndpoint {

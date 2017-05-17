@@ -441,3 +441,7 @@ module DebugNestedB {
   header "DebugNestedB.h"
   export *
 }
+
+module objcAtKeywordMissingEnd {
+  header "objcAtKeywordMissingEnd.h"
+}
