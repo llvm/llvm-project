@@ -2860,7 +2860,7 @@ void CGDebugInfo::collectFunctionDeclProps(GlobalDecl GD, llvm::DIFile *Unit,
 
   if (DebugKind >= codegenoptions::LimitedDebugInfo) {
     if (const NamespaceDecl *NSDecl =
-        dyn_cast_or_null<NamespaceDecl>(FD->getLexicalDeclContext()))
+        dyn_cast_or_null<NamespaceDecl>(FD->getDeclContext()))
       FDContext = getOrCreateNamespace(NSDecl);
     else if (const RecordDecl *RDecl =
              dyn_cast_or_null<RecordDecl>(FD->getDeclContext())) {

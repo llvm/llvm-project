@@ -22,8 +22,6 @@
 
 #include "int_lib.h"
 
-ARM_EABI_FNALIAS(l2f, floatdisf)
-
 COMPILER_RT_ABI float
 __floatdisf(di_int a)
 {
@@ -78,3 +76,10 @@ __floatdisf(di_int a)
            ((su_int)a & 0x007FFFFF);   /* mantissa */
     return fb.f;
 }
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI float __aeabi_l2f(di_int a) {
+  return __floatdisf(a);
+}
+#endif
+

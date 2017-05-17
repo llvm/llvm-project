@@ -11,8 +11,13 @@
 #define DST_HALF
 #include "fp_trunc_impl.inc"
 
-ARM_EABI_FNALIAS(d2h, truncdfhf2)
-
 COMPILER_RT_ABI uint16_t __truncdfhf2(double a) {
     return __truncXfYf2__(a);
 }
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI uint16_t __aeabi_d2h(double a) {
+  return __truncdfhf2(a);
+}
+#endif
+

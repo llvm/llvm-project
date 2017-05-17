@@ -16,8 +16,6 @@
 
 /* Returns: a / b */
 
-ARM_EABI_FNALIAS(idiv, divsi3)
-
 COMPILER_RT_ABI si_int
 __divsi3(si_int a, si_int b)
 {
@@ -35,3 +33,10 @@ __divsi3(si_int a, si_int b)
      */
     return ((su_int)a/(su_int)b ^ s_a) - s_a;    /* negate if s_a == -1 */
 }
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI si_int __aeabi_idiv(si_int a, si_int b) {
+  return __divsi3(a, b);
+}
+#endif
+

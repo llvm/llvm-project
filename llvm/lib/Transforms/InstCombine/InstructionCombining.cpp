@@ -3053,7 +3053,10 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
         }
       }
 
-      InstrsForInstCombineWorklist.push_back(Inst);
+      // Skip processing debug intrinsics in InstCombine. Processing these call instructions
+      // consumes non-trivial amount of time and provides no value for the optimization.
+      if (!isa<DbgInfoIntrinsic>(Inst))
+        InstrsForInstCombineWorklist.push_back(Inst);
     }
 
     // Recursively visit successors.  If this is a branch or switch on a

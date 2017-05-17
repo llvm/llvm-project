@@ -763,7 +763,8 @@ public:
 
 } // end anonymous namespace
 
-void MatchableInfo::dump() const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void MatchableInfo::dump() const {
   errs() << TheDef->getName() << " -- " << "flattened:\"" << AsmString <<"\"\n";
 
   for (unsigned i = 0, e = AsmOperands.size(); i != e; ++i) {
@@ -772,6 +773,7 @@ void MatchableInfo::dump() const {
     errs() << '\"' << Op.Token << "\"\n";
   }
 }
+#endif
 
 static std::pair<StringRef, StringRef>
 parseTwoOperandConstraint(StringRef S, ArrayRef<SMLoc> Loc) {

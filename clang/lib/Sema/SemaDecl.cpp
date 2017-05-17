@@ -16047,6 +16047,14 @@ void Sema::ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod) {
     ModuleScopes.back().OuterVisibleModules = std::move(VisibleModules);
 
   VisibleModules.setVisible(Mod, DirectiveLoc);
+
+  // The enclosing context is now part of this module.
+  // FIXME: Consider creating a child DeclContext to hold the entities
+  // lexically within the module.
+  if (getLangOpts().trackLocalOwningModule()) {
+    cast<Decl>(CurContext)->setHidden(true);
+    cast<Decl>(CurContext)->setLocalOwningModule(Mod);
+  }
 }
 
 void Sema::ActOnModuleEnd(SourceLocation EomLoc, Module *Mod) {
@@ -16075,6 +16083,13 @@ void Sema::ActOnModuleEnd(SourceLocation EomLoc, Module *Mod) {
     DirectiveLoc = EomLoc;
   }
   BuildModuleInclude(DirectiveLoc, Mod);
+
+  // Any further declarations are in whatever module we returned to.
+  if (getLangOpts().trackLocalOwningModule()) {
+    cast<Decl>(CurContext)->setLocalOwningModule(getCurrentModule());
+    if (!getCurrentModule())
+      cast<Decl>(CurContext)->setHidden(false);
+  }
 }
 
 void Sema::createImplicitModuleImportForErrorRecovery(SourceLocation Loc,

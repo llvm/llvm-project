@@ -1,4 +1,4 @@
-//===--- StringRef.h - Constant String Reference Wrapper --------*- C++ -*-===//
+//===- StringRef.h - Constant String Reference Wrapper ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,16 +15,18 @@
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstring>
 #include <limits>
+#include <type_traits>
 #include <string>
 #include <utility>
 
 namespace llvm {
-  template <typename T>
-  class SmallVectorImpl;
+
   class APInt;
   class hash_code;
+  template <typename T> class SmallVectorImpl;
   class StringRef;
 
   /// Helper functions for StringRef::getAsInteger.
@@ -46,10 +48,11 @@ namespace llvm {
   /// general safe to store a StringRef.
   class StringRef {
   public:
-    typedef const char *iterator;
-    typedef const char *const_iterator;
     static const size_t npos = ~size_t(0);
-    typedef size_t size_type;
+
+    using iterator = const char *;
+    using const_iterator = const char *;
+    using size_type = size_t;
 
   private:
     /// The start of the string, in an external buffer.
@@ -906,6 +909,7 @@ namespace llvm {
   // StringRefs can be treated like a POD type.
   template <typename T> struct isPodLike;
   template <> struct isPodLike<StringRef> { static const bool value = true; };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_ADT_STRINGREF_H

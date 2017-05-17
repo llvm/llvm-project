@@ -63,7 +63,8 @@ COFFSymbolRef DefinedCOFF::getCOFFSymbol() {
 
 DefinedImportThunk::DefinedImportThunk(StringRef Name, DefinedImportData *S,
                                        uint16_t Machine)
-    : Defined(DefinedImportThunkKind, Name) {
+    : Defined(DefinedImportThunkKind, Name), Live(!Config->DoGC),
+      WrappedSym(S) {
   switch (Machine) {
   case AMD64: Data = make<ImportThunkChunkX64>(S); return;
   case I386:  Data = make<ImportThunkChunkX86>(S); return;

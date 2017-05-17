@@ -55,6 +55,21 @@ public:
   ProfileSummaryInfo(ProfileSummaryInfo &&Arg)
       : M(Arg.M), Summary(std::move(Arg.Summary)) {}
 
+  /// \brief Returns true if profile summary is available.
+  bool hasProfileSummary() { return computeSummary(); }
+
+  /// \brief Returns true if module \c M has sample profile.
+  bool hasSampleProfile() {
+    return hasProfileSummary() &&
+           Summary->getKind() == ProfileSummary::PSK_Sample;
+  }
+
+  /// \brief Returns true if module \c M has instrumentation profile.
+  bool hasInstrumentationProfile() {
+    return hasProfileSummary() &&
+           Summary->getKind() == ProfileSummary::PSK_Instr;
+  }
+
   /// Handle the invalidation of this information.
   ///
   /// When used as a result of \c ProfileSummaryAnalysis this method will be

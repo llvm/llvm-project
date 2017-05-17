@@ -2133,7 +2133,7 @@ void _mm_sfence(void);
 /// \headerfile <x86intrin.h>
 ///
 /// \code
-/// void _mm_extract_pi(__m64 a, int n);
+/// int _mm_extract_pi16(__m64 a, int n);
 /// \endcode
 ///
 /// This intrinsic corresponds to the <c> VPEXTRW / PEXTRW </c> instruction.
@@ -2157,7 +2157,7 @@ void _mm_sfence(void);
 /// \headerfile <x86intrin.h>
 ///
 /// \code
-/// void _mm_insert_pi(__m64 a, int d, int n);
+/// __m64 _mm_insert_pi16(__m64 a, int d, int n);
 /// \endcode
 ///
 /// This intrinsic corresponds to the <c> VPINSRW / PINSRW </c> instruction.
@@ -2680,8 +2680,7 @@ _mm_movelh_ps(__m128 __a, __m128 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> CVTPI2PS + \c COMPOSITE </c>
-///   instruction.
+/// This intrinsic corresponds to the <c> CVTPI2PS + COMPOSITE </c> instruction.
 ///
 /// \param __a
 ///    A 64-bit vector of [4 x i16]. The elements of the destination are copied
@@ -2711,8 +2710,7 @@ _mm_cvtpi16_ps(__m64 __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> CVTPI2PS + \c COMPOSITE </c>
-///   instruction.
+/// This intrinsic corresponds to the <c> CVTPI2PS + COMPOSITE </c> instruction.
 ///
 /// \param __a
 ///    A 64-bit vector of 16-bit unsigned integer values. The elements of the
@@ -2741,8 +2739,7 @@ _mm_cvtpu16_ps(__m64 __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> CVTPI2PS + \c COMPOSITE </c>
-///   instruction.
+/// This intrinsic corresponds to the <c> CVTPI2PS + COMPOSITE </c> instruction.
 ///
 /// \param __a
 ///    A 64-bit vector of [8 x i8]. The elements of the destination are copied
@@ -2766,8 +2763,7 @@ _mm_cvtpi8_ps(__m64 __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> CVTPI2PS + \c COMPOSITE </c>
-///   instruction.
+/// This intrinsic corresponds to the <c> CVTPI2PS + COMPOSITE </c> instruction.
 ///
 /// \param __a
 ///    A 64-bit vector of unsigned 8-bit integer values. The elements of the
@@ -2791,8 +2787,7 @@ _mm_cvtpu8_ps(__m64 __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> CVTPI2PS + \c COMPOSITE </c>
-///   instruction.
+/// This intrinsic corresponds to the <c> CVTPI2PS + COMPOSITE </c> instruction.
 ///
 /// \param __a
 ///    A 64-bit vector of [2 x i32]. The lower elements of the destination are
@@ -2826,8 +2821,7 @@ _mm_cvtpi32x2_ps(__m64 __a, __m64 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> CVTPS2PI + \c COMPOSITE </c>
-///   instruction.
+/// This intrinsic corresponds to the <c> CVTPS2PI + COMPOSITE </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit floating-point vector of [4 x float].
@@ -2857,8 +2851,7 @@ _mm_cvtps_pi16(__m128 __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> CVTPS2PI + \c COMPOSITE </c>
-///   instruction.
+/// This intrinsic corresponds to the <c> CVTPS2PI + COMPOSITE </c> instruction.
 ///
 /// \param __a
 ///    128-bit floating-point vector of [4 x float].

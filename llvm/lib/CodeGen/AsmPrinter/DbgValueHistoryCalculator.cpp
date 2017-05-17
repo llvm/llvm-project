@@ -209,8 +209,7 @@ void llvm::calculateDbgValueHistory(const MachineFunction *MF,
           } else if (MO.isRegMask()) {
             // If this is a register mask operand, clobber all debug values in
             // non-CSRs.
-            for (int I = ChangingRegs.find_first(); I != -1;
-                 I = ChangingRegs.find_next(I)) {
+            for (unsigned I : ChangingRegs.set_bits()) {
               // Don't consider SP to be clobbered by register masks.
               if (unsigned(I) != SP && TRI->isPhysicalRegister(I) &&
                   MO.clobbersPhysReg(I)) {

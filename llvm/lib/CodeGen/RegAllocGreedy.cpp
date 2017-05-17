@@ -285,8 +285,7 @@ class RAGreedy : public MachineFunctionPass,
     // Set B[i] = C for every live bundle where B[i] was NoCand.
     unsigned getBundles(SmallVectorImpl<unsigned> &B, unsigned C) {
       unsigned Count = 0;
-      for (int i = LiveBundles.find_first(); i >= 0;
-           i = LiveBundles.find_next(i))
+      for (unsigned i : LiveBundles.set_bits())
         if (B[i] == NoCand) {
           B[i] = C;
           Count++;
@@ -1162,9 +1161,8 @@ bool RAGreedy::calcCompactRegion(GlobalSplitCandidate &Cand) {
   }
 
   DEBUG({
-    for (int i = Cand.LiveBundles.find_first(); i>=0;
-         i = Cand.LiveBundles.find_next(i))
-    dbgs() << " EB#" << i;
+    for (int i : Cand.LiveBundles.set_bits())
+      dbgs() << " EB#" << i;
     dbgs() << ".\n";
   });
   return true;
@@ -1482,8 +1480,7 @@ unsigned RAGreedy::calculateRegionSplitCost(LiveInterval &VirtReg,
     DEBUG({
       dbgs() << ", total = "; MBFI->printBlockFreq(dbgs(), Cost)
                                 << " with bundles";
-      for (int i = Cand.LiveBundles.find_first(); i>=0;
-           i = Cand.LiveBundles.find_next(i))
+      for (int i : Cand.LiveBundles.set_bits())
         dbgs() << " EB#" << i;
       dbgs() << ".\n";
     });

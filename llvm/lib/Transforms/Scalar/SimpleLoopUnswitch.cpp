@@ -1,4 +1,4 @@
-//===-- SimpleLoopUnswitch.cpp - Hoist loop-invariant control flow --------===//
+//===- SimpleLoopUnswitch.cpp - Hoist loop-invariant control flow ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,25 +7,41 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <utility>
 
 #define DEBUG_TYPE "simple-loop-unswitch"
 
@@ -174,7 +190,7 @@ static void rewritePHINodesForUnswitchedExitBlock(BasicBlock &UnswitchedBB,
     // When the loop exit is directly unswitched we just need to update the
     // incoming basic block. We loop to handle weird cases with repeated
     // incoming blocks, but expect to typically only have one operand here.
-    for (auto i : llvm::seq<int>(0, PN->getNumOperands())) {
+    for (auto i : seq<int>(0, PN->getNumOperands())) {
       assert(PN->getIncomingBlock(i) == &OldExitingBB &&
              "Found incoming block different from unique predecessor!");
       PN->setIncomingBlock(i, &OldPH);
@@ -688,9 +704,11 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
 }
 
 namespace {
+
 class SimpleLoopUnswitchLegacyPass : public LoopPass {
 public:
   static char ID; // Pass ID, replacement for typeid
+
   explicit SimpleLoopUnswitchLegacyPass() : LoopPass(ID) {
     initializeSimpleLoopUnswitchLegacyPassPass(
         *PassRegistry::getPassRegistry());
@@ -703,7 +721,8 @@ public:
     getLoopAnalysisUsage(AU);
   }
 };
-} // namespace
+
+} // end anonymous namespace
 
 bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
   if (skipLoop(L))

@@ -15,8 +15,13 @@
 #define DOUBLE_PRECISION
 #include "fp_add_impl.inc"
 
-ARM_EABI_FNALIAS(dadd, adddf3)
-
 COMPILER_RT_ABI double __adddf3(double a, double b){
     return __addXf3__(a, b);
 }
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI double __aeabi_dadd(double a, double b) {
+  return __adddf3(a, b);
+}
+#endif
+

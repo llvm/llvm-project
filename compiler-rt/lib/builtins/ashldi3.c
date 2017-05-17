@@ -18,8 +18,6 @@
 
 /* Precondition:  0 <= b < bits_in_dword */
 
-ARM_EABI_FNALIAS(llsl, ashldi3)
-
 COMPILER_RT_ABI di_int
 __ashldi3(di_int a, si_int b)
 {
@@ -41,3 +39,10 @@ __ashldi3(di_int a, si_int b)
     }
     return result.all;
 }
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI di_int __aeabi_llsl(di_int a, si_int b) {
+  return __ashldi3(a, b);
+}
+#endif
+

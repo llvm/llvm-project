@@ -1,20 +1,18 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=aarch64 -mcpu=cyclone -mattr=+use-aa -enable-misched -verify-misched -debug-only=misched -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 -mcpu=cyclone -mattr=+use-aa -enable-misched -verify-misched -o - | FileCheck %s
 
 ; Tests to check that the scheduler dependencies derived from alias analysis are
 ; correct when we have loads that have been split up so that they can later be
 ; merged into STP.
 
-; CHECK: ********** MI Scheduling **********
-; CHECK: test_splat:BB#0 entry
-; CHECK: SU({{[0-9]+}}):   STRWui %vreg{{[0-9]+}}, %vreg{{[0-9]+}}, 3; mem:ST4[%3+8]
-; CHECK: Successors:
-; CHECK-NEXT: ord  [[SU1:SU\([0-9]+\)]]
-; CHECK: SU({{[0-9]+}}):   STRWui %vreg{{[0-9]+}}, %vreg{{[0-9]+}}, 2; mem:ST4[%3+4]
-; CHECK: Successors:
-; CHECK-NEXT: ord  [[SU2:SU\([0-9]+\)]]
-; CHECK: [[SU1]]:   STRWui %vreg{{[0-9]+}}, %vreg{{[0-9]+}}, 3; mem:ST4[%2]
-; CHECK: [[SU2]]:   STRWui %vreg{{[0-9]+}}, %vreg{{[0-9]+}}, 2; mem:ST4[%1]
+; Now that overwritten stores are elided in SelectionDAG, dependencies
+; are resolved and removed before MISCHED. Check that we have
+; equivalent pair of stp calls as a baseline.
+
+; CHECK-LABEL: test_splat
+; CHECK:     ldr [[REG:w[0-9]+]], [x2]
+; CHECK-DAG: stp w0, [[REG]], [x2, #12]
+; CHECK-DAG: stp [[REG]], w1, [x2, #4]
 define void @test_splat(i32 %x, i32 %y, i32* %p) {
 entry:
   %val = load i32, i32* %p, align 4
@@ -35,16 +33,11 @@ entry:
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
 %struct.tree_common = type { i8*, i8*, i32 }
 
-; CHECK: ********** MI Scheduling **********
-; CHECK: test_zero:BB#0 entry
-; CHECK: SU({{[0-9]+}}):   STRXui %XZR, %vreg{{[0-9]+}}, 2; mem:ST8[%0+16]
-; CHECK: Successors:
-; CHECK-NEXT: ord  [[SU3:SU\([0-9]+\)]]
-; CHECK: SU({{[0-9]+}}):   STRXui %XZR, %vreg{{[0-9]+}}, 1; mem:ST8[%0+8]
-; CHECK: Successors:
-; CHECK-NEXT: ord  [[SU4:SU\([0-9]+\)]]
-; CHECK: [[SU3]]:   STRWui %vreg{{[0-9]+}}, %vreg{{[0-9]+}}, 4; mem:ST4[%code1]
-; CHECK: [[SU4]]:   STRXui %vreg{{[0-9]+}}, %vreg{{[0-9]+}}, 1; mem:ST8[%type2]
+; CHECK-LABEL: test_zero
+; CHECK-DAG: stp x2, xzr, [x0, #8]
+; CHECK-DAG: str w1, [x0, #16]
+; CHECK-DAG: str xzr, [x0]
+
 define void @test_zero(%struct.tree_common* %t, i32 %code, i8* %type) {
 entry:
   %0 = bitcast %struct.tree_common* %t to i8*

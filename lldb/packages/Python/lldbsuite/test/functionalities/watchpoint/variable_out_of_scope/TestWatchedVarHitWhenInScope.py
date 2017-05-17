@@ -11,6 +11,7 @@ import time
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 
 
 class WatchedVariableHitWhenInScopeTestCase(TestBase):
@@ -33,6 +34,8 @@ class WatchedVariableHitWhenInScopeTestCase(TestBase):
         self.exe_name = self.testMethodName
         self.d = {'C_SOURCES': self.source, 'EXE': self.exe_name}
 
+    # Test hangs due to a kernel bug, see fdfeff0f in the linux kernel for details
+    @skipIfTargetAndroid(api_levels=list(range(25+1)), archs=["aarch64", "arm"])
     @unittest2.expectedFailure("rdar://problem/18685649")
     def test_watched_var_should_only_hit_when_in_scope(self):
         """Test that a variable watchpoint should only hit when in scope."""

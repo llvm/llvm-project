@@ -17,13 +17,14 @@
 #define LLVM_ADT_PRIORITYWORKLIST_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <iterator>
+#include <type_traits>
 #include <vector>
 
 namespace llvm {
@@ -55,11 +56,11 @@ template <typename T, typename VectorT = std::vector<T>,
           typename MapT = DenseMap<T, ptrdiff_t>>
 class PriorityWorklist {
 public:
-  typedef T value_type;
-  typedef T key_type;
-  typedef T& reference;
-  typedef const T& const_reference;
-  typedef typename MapT::size_type size_type;
+  using value_type = T;
+  using key_type = T;
+  using reference = T&;
+  using const_reference = const T&;
+  using size_type = typename MapT::size_type;
 
   /// Construct an empty PriorityWorklist
   PriorityWorklist() = default;

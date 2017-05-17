@@ -68,15 +68,14 @@ UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   const auto ExpensiveValueParamDecl =
-      parmVarDecl(hasType(hasCanonicalType(allOf(matchers::isExpensiveToCopy(),
-                                                 unless(referenceType())))),
+      parmVarDecl(hasType(hasCanonicalType(allOf(
+                      unless(referenceType()), matchers::isExpensiveToCopy()))),
                   decl().bind("param"));
   Finder->addMatcher(
-      functionDecl(hasBody(stmt()), isDefinition(),
+      functionDecl(hasBody(stmt()), isDefinition(), unless(isImplicit()),
                    unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
-                   unless(anyOf(isInstantiated(), isImplicit())),
                    has(typeLoc(forEach(ExpensiveValueParamDecl))),
-                   decl().bind("functionDecl")),
+                   unless(isInstantiated()), decl().bind("functionDecl")),
       this);
 }
 

@@ -46,7 +46,7 @@ using namespace std::chrono;
 
 namespace {
 
-const seconds kReadTimeout(8);
+const seconds kReadTimeout(12);
 const char *kOKAY = "OKAY";
 const char *kFAIL = "FAIL";
 const char *kDATA = "DATA";

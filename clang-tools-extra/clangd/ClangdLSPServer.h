@@ -20,42 +20,24 @@ namespace clangd {
 
 class JSONOutput;
 
-/// This class serves as an intermediate layer of LSP server implementation,
-/// glueing the JSON LSP protocol layer and ClangdServer together. It doesn't
-/// directly handle input from LSP client.
-/// Most methods are synchronous and return their result directly, but
-/// diagnostics are provided asynchronously when ready via
-/// JSONOutput::writeMessage.
+/// This class provides implementation of an LSP server, glueing the JSON
+/// dispatch and ClangdServer together.
 class ClangdLSPServer {
 public:
   ClangdLSPServer(JSONOutput &Out, bool RunSynchronously);
 
-  /// Update the document text for \p File with \p Contents, schedule update of
-  /// diagnostics. Out.writeMessage will called to push diagnostics to LSP
-  /// client asynchronously when they are ready.
-  void openDocument(PathRef File, StringRef Contents);
-  /// Stop tracking the document for \p File.
-  void closeDocument(PathRef File);
-
-  /// Run code completion synchronously.
-  std::vector<CompletionItem> codeComplete(PathRef File, Position Pos);
-
-  /// Get the fixes associated with a certain diagnostic in a specified file as
-  /// replacements.
-  ///
-  /// This function is thread-safe. It returns a copy to avoid handing out
-  /// references to unguarded data.
-  std::vector<clang::tooling::Replacement>
-  getFixIts(StringRef File, const clangd::Diagnostic &D);
-
-  /// Get the current document contents stored for \p File.
-  /// FIXME(ibiryukov): This function is here to allow implementation of
-  /// formatCode from ProtocolHandlers.cpp. We should move formatCode to
-  /// ClangdServer class and remove this function from public interface.
-  std::string getDocument(PathRef File);
+  /// Run LSP server loop, receiving input for it from \p In. \p In must be
+  /// opened in binary mode. Output will be written using Out variable passed to
+  /// class constructor. This method must not be executed more than once for
+  /// each instance of ClangdLSPServer.
+  void run(std::istream &In);
 
 private:
+  class LSPProtocolCallbacks;
   class LSPDiagnosticsConsumer;
+
+  std::vector<clang::tooling::Replacement>
+  getFixIts(StringRef File, const clangd::Diagnostic &D);
 
   /// Function that will be called on a separate thread when diagnostics are
   /// ready. Sends the Dianostics to LSP client via Out.writeMessage and caches
@@ -64,6 +46,10 @@ private:
                           std::vector<DiagWithFixIts> Diagnostics);
 
   JSONOutput &Out;
+  /// Used to indicate that the 'shutdown' request was received from the
+  /// Language Server client.
+  /// It's used to break out of the LSP parsing loop.
+  bool IsDone = false;
 
   std::mutex FixItsMutex;
   typedef std::map<clangd::Diagnostic, std::vector<clang::tooling::Replacement>>

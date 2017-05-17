@@ -1717,10 +1717,10 @@ readAddressArea(DWARFContext &Dwarf, InputSection *Sec, size_t CurrentCU) {
     CU->collectAddressRanges(Ranges);
 
     ArrayRef<InputSectionBase *> Sections = Sec->File->getSections();
-    for (std::pair<uint64_t, uint64_t> &R : Ranges)
-      if (InputSection *S = findSection(Sections, R.first))
-        Ret.push_back({S, R.first - S->getOffsetInFile(),
-                       R.second - S->getOffsetInFile(), CurrentCU});
+    for (DWARFAddressRange &R : Ranges)
+      if (InputSection *S = findSection(Sections, R.LowPC))
+        Ret.push_back({S, R.LowPC - S->getOffsetInFile(),
+                       R.HighPC - S->getOffsetInFile(), CurrentCU});
     ++CurrentCU;
   }
   return Ret;

@@ -25,7 +25,6 @@ define i16 @va_arg(i8* %vl) nounwind {
 entry:
 ; CHECK-LABEL: va_arg:
   %vl.addr = alloca i8*, align 2
-; CHECK: mov.w r12, 0(r1)
   store i8* %vl, i8** %vl.addr, align 2
 ; CHECK: mov.w r12, [[REG:r[0-9]+]]
 ; CHECK-NEXT: add.w #2, [[REG]]

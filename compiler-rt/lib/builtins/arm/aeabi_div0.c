@@ -26,16 +26,18 @@
  * line.
  */
 
+#include "../int_lib.h"
+
 /* provide an unused declaration to pacify pendantic compilation */
 extern unsigned char declaration;
 
 #if defined(__ARM_EABI__)
-int __attribute__((weak)) __attribute__((visibility("hidden")))
+AEABI_RTABI int __attribute__((weak)) __attribute__((visibility("hidden")))
 __aeabi_idiv0(int return_value) {
   return return_value;
 }
 
-long long __attribute__((weak)) __attribute__((visibility("hidden")))
+AEABI_RTABI long long __attribute__((weak)) __attribute__((visibility("hidden")))
 __aeabi_ldiv0(long long return_value) {
   return return_value;
 }

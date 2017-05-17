@@ -50,8 +50,7 @@ bool TargetRegisterInfo::checkAllSuperRegsMarked(const BitVector &RegisterSet,
     ArrayRef<MCPhysReg> Exceptions) const {
   // Check that all super registers of reserved regs are reserved as well.
   BitVector Checked(getNumRegs());
-  for (int Reg = RegisterSet.find_first(); Reg>=0;
-       Reg = RegisterSet.find_next(Reg)) {
+  for (unsigned Reg : RegisterSet.set_bits()) {
     if (Checked[Reg])
       continue;
     for (MCSuperRegIterator SR(Reg, this); SR.isValid(); ++SR) {

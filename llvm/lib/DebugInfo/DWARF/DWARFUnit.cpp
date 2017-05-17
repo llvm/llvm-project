@@ -349,18 +349,18 @@ void DWARFUnit::updateAddressDieMap(DWARFDie Die) {
   if (Die.isSubroutineDIE()) {
     for (const auto &R : Die.getAddressRanges()) {
       // Ignore 0-sized ranges.
-      if (R.first == R.second)
+      if (R.LowPC == R.HighPC)
         continue;
-      auto B = AddrDieMap.upper_bound(R.first);
-      if (B != AddrDieMap.begin() && R.first < (--B)->second.first) {
+      auto B = AddrDieMap.upper_bound(R.LowPC);
+      if (B != AddrDieMap.begin() && R.LowPC < (--B)->second.first) {
         // The range is a sub-range of existing ranges, we need to split the
         // existing range.
-        if (R.second < B->second.first)
-          AddrDieMap[R.second] = B->second;
-        if (R.first > B->first)
-          AddrDieMap[B->first].first = R.first;
+        if (R.HighPC < B->second.first)
+          AddrDieMap[R.HighPC] = B->second;
+        if (R.LowPC > B->first)
+          AddrDieMap[B->first].first = R.LowPC;
       }
-      AddrDieMap[R.first] = std::make_pair(R.second, Die);
+      AddrDieMap[R.LowPC] = std::make_pair(R.HighPC, Die);
     }
   }
   // Parent DIEs are added to the AddrDieMap prior to the Children DIEs to

@@ -1,4 +1,4 @@
-//===--- llvm/ADT/SparseMultiSet.h - Sparse multiset ------------*- C++ -*-===//
+//===- llvm/ADT/SparseMultiSet.h - Sparse multiset --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -101,7 +101,7 @@ class SparseMultiSet {
     unsigned Prev;
     unsigned Next;
 
-    SMSNode(ValueT D, unsigned P, unsigned N) : Data(D), Prev(P), Next(N) { }
+    SMSNode(ValueT D, unsigned P, unsigned N) : Data(D), Prev(P), Next(N) {}
 
     /// List tails have invalid Nexts.
     bool isTail() const {
@@ -118,8 +118,8 @@ class SparseMultiSet {
     bool isValid() const { return Prev != INVALID; }
   };
 
-  typedef typename KeyFunctorT::argument_type KeyT;
-  typedef SmallVector<SMSNode, 8> DenseT;
+  using KeyT = typename KeyFunctorT::argument_type;
+  using DenseT = SmallVector<SMSNode, 8>;
   DenseT Dense;
   SparseT *Sparse = nullptr;
   unsigned Universe = 0;
@@ -183,12 +183,12 @@ class SparseMultiSet {
   }
 
 public:
-  typedef ValueT value_type;
-  typedef ValueT &reference;
-  typedef const ValueT &const_reference;
-  typedef ValueT *pointer;
-  typedef const ValueT *const_pointer;
-  typedef unsigned size_type;
+  using value_type = ValueT;
+  using reference = ValueT &;
+  using const_reference = const ValueT &;
+  using pointer = ValueT *;
+  using const_pointer = const ValueT *;
+  using size_type = unsigned;
 
   SparseMultiSet() = default;
   SparseMultiSet(const SparseMultiSet &) = delete;
@@ -227,7 +227,7 @@ public:
     unsigned SparseIdx;
 
     iterator_base(SMSPtrTy P, unsigned I, unsigned SI)
-      : SMS(P), Idx(I), SparseIdx(SI) { }
+      : SMS(P), Idx(I), SparseIdx(SI) {}
 
     /// Whether our iterator has fallen outside our dense vector.
     bool isEnd() const {
@@ -248,11 +248,11 @@ public:
     void setNext(unsigned N) { SMS->Dense[Idx].Next = N; }
 
   public:
-    typedef std::iterator<std::bidirectional_iterator_tag, ValueT> super;
-    typedef typename super::value_type value_type;
-    typedef typename super::difference_type difference_type;
-    typedef typename super::pointer pointer;
-    typedef typename super::reference reference;
+    using super = std::iterator<std::bidirectional_iterator_tag, ValueT>;
+    using value_type = typename super::value_type;
+    using difference_type = typename super::difference_type;
+    using pointer = typename super::pointer;
+    using reference = typename super::reference;
 
     reference operator*() const {
       assert(isKeyed() && SMS->sparseIndex(SMS->Dense[Idx].Data) == SparseIdx &&
@@ -308,11 +308,12 @@ public:
       return I;
     }
   };
-  typedef iterator_base<SparseMultiSet *> iterator;
-  typedef iterator_base<const SparseMultiSet *> const_iterator;
+
+  using iterator = iterator_base<SparseMultiSet *>;
+  using const_iterator = iterator_base<const SparseMultiSet *>;
 
   // Convenience types
-  typedef std::pair<iterator, iterator> RangePair;
+  using RangePair = std::pair<iterator, iterator>;
 
   /// Returns an iterator past this container. Note that such an iterator cannot
   /// be decremented, but will compare equal to other end iterators.

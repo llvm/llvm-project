@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_GCNSCHEDSTRATEGY_H
 #define LLVM_LIB_TARGET_AMDGPU_GCNSCHEDSTRATEGY_H
 
+#include "GCNRegPressure.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 
 namespace llvm {
@@ -74,21 +75,28 @@ class GCNScheduleDAGMILive : public ScheduleDAGMILive {
   // Scheduling stage number.
   unsigned Stage;
 
+  // Current region index.
+  size_t RegionIdx;
+
   // Vecor of regions recorder for later rescheduling
   SmallVector<std::pair<MachineBasicBlock::iterator,
                         MachineBasicBlock::iterator>, 32> Regions;
 
-  // Region live-ins.
-  DenseMap<unsigned, LaneBitmask> LiveIns;
+  // Region live-in cache.
+  SmallVector<GCNRPTracker::LiveRegSet, 32> LiveIns;
 
-  // Number of live-ins to the current region, first SGPR then VGPR.
-  std::pair<unsigned, unsigned> LiveInPressure;
+  // Region pressure cache.
+  SmallVector<GCNRegPressure, 32> Pressure;
 
-  // Collect current region live-ins.
-  void discoverLiveIns();
+  // Temporary basic block live-in cache.
+  DenseMap<const MachineBasicBlock*, GCNRPTracker::LiveRegSet> MBBLiveIns;
 
-  // Return current region pressure. First value is SGPR number, second is VGPR.
-  std::pair<unsigned, unsigned> getRealRegPressure() const;
+  // Return current region pressure.
+  GCNRegPressure getRealRegPressure() const;
+
+  // Compute and cache live-ins and pressure for all regions in block.
+  void computeBlockPressure(const MachineBasicBlock *MBB);
+
 
 public:
   GCNScheduleDAGMILive(MachineSchedContext *C,

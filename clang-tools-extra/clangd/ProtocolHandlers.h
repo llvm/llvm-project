@@ -22,118 +22,34 @@
 
 namespace clang {
 namespace clangd {
-class ClangdLSPServer;
-class ClangdLSPServer;
 
-struct InitializeHandler : Handler {
-  InitializeHandler(JSONOutput &Output) : Handler(Output) {}
+class ProtocolCallbacks {
+public:
+  virtual ~ProtocolCallbacks() = default;
 
-  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
-    writeMessage(
-        R"({"jsonrpc":"2.0","id":)" + ID +
-        R"(,"result":{"capabilities":{
-          "textDocumentSync": 1,
-          "documentFormattingProvider": true,
-          "documentRangeFormattingProvider": true,
-          "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]},
-          "codeActionProvider": true,
-          "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">"]}
-        }}})");
-  }
+  virtual void onInitialize(StringRef ID, JSONOutput &Out) = 0;
+  virtual void onShutdown(JSONOutput &Out) = 0;
+  virtual void onDocumentDidOpen(DidOpenTextDocumentParams Params,
+                                 JSONOutput &Out) = 0;
+  virtual void onDocumentDidChange(DidChangeTextDocumentParams Params,
+                                   JSONOutput &Out) = 0;
+
+  virtual void onDocumentDidClose(DidCloseTextDocumentParams Params,
+                                  JSONOutput &Out) = 0;
+  virtual void onDocumentFormatting(DocumentFormattingParams Params,
+                                    StringRef ID, JSONOutput &Out) = 0;
+  virtual void onDocumentOnTypeFormatting(DocumentOnTypeFormattingParams Params,
+                                          StringRef ID, JSONOutput &Out) = 0;
+  virtual void onDocumentRangeFormatting(DocumentRangeFormattingParams Params,
+                                         StringRef ID, JSONOutput &Out) = 0;
+  virtual void onCodeAction(CodeActionParams Params, StringRef ID,
+                            JSONOutput &Out) = 0;
+  virtual void onCompletion(TextDocumentPositionParams Params, StringRef ID,
+                            JSONOutput &Out) = 0;
 };
 
-struct ShutdownHandler : Handler {
-  ShutdownHandler(JSONOutput &Output) : Handler(Output) {}
-
-  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
-    IsDone = true;
-  }
-
-  bool isDone() const { return IsDone; }
-
-private:
-  bool IsDone = false;
-};
-
-struct TextDocumentDidOpenHandler : Handler {
-  TextDocumentDidOpenHandler(JSONOutput &Output, ClangdLSPServer &AST)
-      : Handler(Output), AST(AST) {}
-
-  void handleNotification(llvm::yaml::MappingNode *Params) override;
-
-private:
-  ClangdLSPServer &AST;
-};
-
-struct TextDocumentDidChangeHandler : Handler {
-  TextDocumentDidChangeHandler(JSONOutput &Output, ClangdLSPServer &AST)
-      : Handler(Output), AST(AST) {}
-
-  void handleNotification(llvm::yaml::MappingNode *Params) override;
-
-private:
-  ClangdLSPServer &AST;
-};
-
-struct TextDocumentDidCloseHandler : Handler {
-  TextDocumentDidCloseHandler(JSONOutput &Output, ClangdLSPServer &AST)
-      : Handler(Output), AST(AST) {}
-
-  void handleNotification(llvm::yaml::MappingNode *Params) override;
-
-private:
-  ClangdLSPServer &AST;
-};
-
-struct TextDocumentOnTypeFormattingHandler : Handler {
-  TextDocumentOnTypeFormattingHandler(JSONOutput &Output, ClangdLSPServer &AST)
-      : Handler(Output), AST(AST) {}
-
-  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
-
-private:
-  ClangdLSPServer &AST;
-};
-
-struct TextDocumentRangeFormattingHandler : Handler {
-  TextDocumentRangeFormattingHandler(JSONOutput &Output, ClangdLSPServer &AST)
-      : Handler(Output), AST(AST) {}
-
-  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
-
-private:
-  ClangdLSPServer &AST;
-};
-
-struct TextDocumentFormattingHandler : Handler {
-  TextDocumentFormattingHandler(JSONOutput &Output, ClangdLSPServer &AST)
-      : Handler(Output), AST(AST) {}
-
-  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
-
-private:
-  ClangdLSPServer &AST;
-};
-
-struct CodeActionHandler : Handler {
-  CodeActionHandler(JSONOutput &Output, ClangdLSPServer &AST)
-      : Handler(Output), AST(AST) {}
-
-  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
-
-private:
-  ClangdLSPServer &AST;
-};
-
-struct CompletionHandler : Handler {
-  CompletionHandler(JSONOutput &Output, ClangdLSPServer &AST)
-      : Handler(Output), AST(AST) {}
-
-  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
-
- private:
-  ClangdLSPServer &AST;
-};
+void regiterCallbackHandlers(JSONRPCDispatcher &Dispatcher, JSONOutput &Out,
+                             ProtocolCallbacks &Callbacks);
 
 } // namespace clangd
 } // namespace clang

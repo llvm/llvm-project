@@ -660,5 +660,34 @@ TYPED_TEST(BitVectorTest, EmptyVector) {
   testEmpty(E);
 }
 
+TYPED_TEST(BitVectorTest, Iterators) {
+  TypeParam Filled(10, true);
+  EXPECT_NE(Filled.set_bits_begin(), Filled.set_bits_end());
+  unsigned Counter = 0;
+  for (unsigned Bit : Filled.set_bits())
+    EXPECT_EQ(Bit, Counter++);
+
+  TypeParam Empty;
+  EXPECT_EQ(Empty.set_bits_begin(), Empty.set_bits_end());
+  for (unsigned Bit : Empty.set_bits()) {
+    (void)Bit;
+    EXPECT_TRUE(false);
+  }
+
+  TypeParam ToFill(100, false);
+  ToFill.set(0);
+  EXPECT_NE(ToFill.set_bits_begin(), ToFill.set_bits_end());
+  EXPECT_EQ(++ToFill.set_bits_begin(), ToFill.set_bits_end());
+  EXPECT_EQ(*ToFill.set_bits_begin(), 0U);
+  ToFill.reset(0);
+  EXPECT_EQ(ToFill.set_bits_begin(), ToFill.set_bits_end());
+
+  const unsigned List[] = {1, 10, 25, 99};
+  for (unsigned Num : List)
+    ToFill.set(Num);
+  unsigned i = 0;
+  for (unsigned Bit : ToFill.set_bits())
+    EXPECT_EQ(List[i++], Bit);
+}
 }
 #endif

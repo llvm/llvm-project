@@ -69,8 +69,8 @@ DWARFDebugRangeList::getAbsoluteRanges(uint64_t BaseAddress) const {
     if (RLE.isBaseAddressSelectionEntry(AddressSize)) {
       BaseAddress = RLE.EndAddress;
     } else {
-      Res.push_back(std::make_pair(BaseAddress + RLE.StartAddress,
-                                   BaseAddress + RLE.EndAddress));
+      Res.push_back(
+          {BaseAddress + RLE.StartAddress, BaseAddress + RLE.EndAddress});
     }
   }
   return Res;
