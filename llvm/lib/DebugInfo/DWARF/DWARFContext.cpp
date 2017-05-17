@@ -1086,49 +1086,32 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
         continue;
     }
 
+    if (Section.relocation_begin() == Section.relocation_end())
+      continue;
+
     std::map<SymbolRef, uint64_t> AddrCache;
-    if (Section.relocation_begin() != Section.relocation_end()) {
-      uint64_t SectionSize = RelocatedSection->getSize();
-      for (const RelocationRef &Reloc : Section.relocations()) {
-        // FIXME: it's not clear how to correctly handle scattered
-        // relocations.
-        if (isRelocScattered(Obj, Reloc))
-          continue;
+    for (const RelocationRef &Reloc : Section.relocations()) {
+      // FIXME: it's not clear how to correctly handle scattered
+      // relocations.
+      if (isRelocScattered(Obj, Reloc))
+        continue;
 
-        Expected<uint64_t> SymAddrOrErr =
-            getSymbolAddress(Obj, Reloc, L, AddrCache);
-        if (!SymAddrOrErr) {
-          errs() << toString(SymAddrOrErr.takeError()) << '\n';
-          continue;
-        }
-
-        object::RelocVisitor V(Obj);
-        object::RelocToApply R(V.visit(Reloc.getType(), Reloc, *SymAddrOrErr));
-        if (V.error()) {
-          SmallString<32> Name;
-          Reloc.getTypeName(Name);
-          errs() << "error: failed to compute relocation: "
-                 << Name << "\n";
-          continue;
-        }
-        uint64_t Address = Reloc.getOffset();
-        if (Address + R.Width > SectionSize) {
-          errs() << "error: " << R.Width << "-byte relocation starting "
-                 << Address << " bytes into section " << name << " which is "
-                 << SectionSize << " bytes long.\n";
-          continue;
-        }
-        if (R.Width > 8) {
-          errs() << "error: can't handle a relocation of more than 8 bytes at "
-                    "a time.\n";
-          continue;
-        }
-        DEBUG(dbgs() << "Writing " << format("%p", R.Value)
-                     << " at " << format("%p", Address)
-                     << " with width " << format("%d", R.Width)
-                     << "\n");
-        Map->insert({Address, {(uint8_t)R.Width, R.Value}});
+      Expected<uint64_t> SymAddrOrErr =
+          getSymbolAddress(Obj, Reloc, L, AddrCache);
+      if (!SymAddrOrErr) {
+        errs() << toString(SymAddrOrErr.takeError()) << '\n';
+        continue;
       }
+
+      object::RelocVisitor V(Obj);
+      object::RelocToApply R(V.visit(Reloc.getType(), Reloc, *SymAddrOrErr));
+      if (V.error()) {
+        SmallString<32> Name;
+        Reloc.getTypeName(Name);
+        errs() << "error: failed to compute relocation: " << Name << "\n";
+        continue;
+      }
+      Map->insert({Reloc.getOffset(), {R.Value}});
     }
   }
 }

@@ -16,10 +16,16 @@ class TestConflictingSymbols(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
     def test_conflicting_symbols(self):
         self.build()
-        self.common_setup()
+        exe = os.path.join(os.getcwd(), "a.out")
+        target = self.dbg.CreateTarget("a.out")
+        self.assertTrue(target, VALID_TARGET)
+
+        # Register our shared libraries for remote targets so they get
+        # automatically uploaded
+        environment = self.registerSharedLibrariesWithTarget(
+            target, ['One', 'Two'])
 
         One_line = line_number('One/One.c', '// break here')
         Two_line = line_number('Two/Two.c', '// break here')
@@ -31,7 +37,9 @@ class TestConflictingSymbols(TestBase):
         lldbutil.run_break_set_by_file_and_line(
             self, 'main.c', main_line, num_expected_locations=1, loc_exact=True)
 
-        self.runCmd("run", RUN_SUCCEEDED)
+        process = target.LaunchSimple(
+            None, environment, self.get_process_working_directory())
+        self.assertTrue(process, PROCESS_IS_VALID)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
@@ -80,7 +88,3 @@ class TestConflictingSymbols(TestBase):
             error=True,
             substrs=[
                 "Multiple internal symbols"])
-
-    def common_setup(self):
-        exe = os.path.join(os.getcwd(), "a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)

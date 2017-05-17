@@ -119,7 +119,7 @@ template <class ELFT> void scanRelocations(InputSectionBase &);
 class ThunkSection;
 class Thunk;
 
-template <class ELFT> class ThunkCreator {
+class ThunkCreator {
 public:
   // Return true if Thunks have been added to OutputSections
   bool createThunks(ArrayRef<OutputSection *> OutputSections);

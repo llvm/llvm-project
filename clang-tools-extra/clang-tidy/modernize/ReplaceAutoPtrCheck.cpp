@@ -69,123 +69,6 @@ AST_MATCHER(Decl, isFromStdNamespace) {
   return (Info && Info->isStr("std"));
 }
 
-/// \brief Matcher that finds auto_ptr declarations.
-static DeclarationMatcher AutoPtrDecl =
-    recordDecl(hasName("auto_ptr"), isFromStdNamespace());
-
-/// \brief Matches types declared as auto_ptr.
-static TypeMatcher AutoPtrType = qualType(hasDeclaration(AutoPtrDecl));
-
-/// \brief Matcher that finds expressions that are candidates to be wrapped with
-/// 'std::move'.
-///
-/// Binds the id \c AutoPtrOwnershipTransferId to the expression.
-static StatementMatcher MovableArgumentMatcher =
-    expr(allOf(isLValue(), hasType(AutoPtrType)))
-        .bind(AutoPtrOwnershipTransferId);
-
-/// \brief Creates a matcher that finds the locations of types referring to the
-/// \c std::auto_ptr() type.
-///
-/// \code
-///   std::auto_ptr<int> a;
-///        ^~~~~~~~~~~~~
-///
-///   typedef std::auto_ptr<int> int_ptr_t;
-///                ^~~~~~~~~~~~~
-///
-///   std::auto_ptr<int> fn(std::auto_ptr<int>);
-///        ^~~~~~~~~~~~~         ^~~~~~~~~~~~~
-///
-///   <etc...>
-/// \endcode
-TypeLocMatcher makeAutoPtrTypeLocMatcher() {
-  // Skip elaboratedType() as the named type will match soon thereafter.
-  return typeLoc(loc(qualType(AutoPtrType, unless(elaboratedType()))))
-      .bind(AutoPtrTokenId);
-}
-
-/// \brief Creates a matcher that finds the using declarations referring to
-/// \c std::auto_ptr.
-///
-/// \code
-///   using std::auto_ptr;
-///   ^~~~~~~~~~~~~~~~~~~
-/// \endcode
-DeclarationMatcher makeAutoPtrUsingDeclMatcher() {
-  return usingDecl(hasAnyUsingShadowDecl(hasTargetDecl(
-                       allOf(hasName("auto_ptr"), isFromStdNamespace()))))
-      .bind(AutoPtrTokenId);
-}
-
-/// \brief Creates a matcher that finds the \c std::auto_ptr copy-ctor and
-/// assign-operator expressions.
-///
-/// \c AutoPtrOwnershipTransferId is assigned to the argument of the expression,
-/// this is the part that has to be wrapped by \c std::move().
-///
-/// \code
-///   std::auto_ptr<int> i, j;
-///   i = j;
-///   ~~~~^
-/// \endcode
-StatementMatcher makeTransferOwnershipExprMatcher() {
-  return anyOf(
-      cxxOperatorCallExpr(allOf(hasOverloadedOperatorName("="),
-                                callee(cxxMethodDecl(ofClass(AutoPtrDecl))),
-                                hasArgument(1, MovableArgumentMatcher))),
-      cxxConstructExpr(allOf(hasType(AutoPtrType), argumentCountIs(1),
-                             hasArgument(0, MovableArgumentMatcher))));
-}
-
-/// \brief Locates the \c auto_ptr token when it is referred by a \c TypeLoc.
-///
-/// \code
-///   std::auto_ptr<int> i;
-///        ^~~~~~~~~~~~~
-/// \endcode
-///
-/// The caret represents the location returned and the tildes cover the
-/// parameter \p AutoPtrTypeLoc.
-///
-/// \return An invalid \c SourceLocation if not found, otherwise the location
-/// of the beginning of the \c auto_ptr token.
-static SourceLocation locateFromTypeLoc(const TypeLoc *AutoPtrTypeLoc,
-                                        const SourceManager &SM) {
-  auto TL = AutoPtrTypeLoc->getAs<TemplateSpecializationTypeLoc>();
-  if (TL.isNull())
-    return SourceLocation();
-
-  return TL.getTemplateNameLoc();
-}
-
-/// \brief Locates the \c auto_ptr token in using declarations.
-///
-/// \code
-///   using std::auto_ptr;
-///              ^
-/// \endcode
-///
-/// The caret represents the location returned.
-///
-/// \return An invalid \c SourceLocation if not found, otherwise the location
-/// of the beginning of the \c auto_ptr token.
-static SourceLocation locateFromUsingDecl(const UsingDecl *UsingAutoPtrDecl,
-                                          const SourceManager &SM) {
-  return UsingAutoPtrDecl->getNameInfo().getBeginLoc();
-}
-
-/// \brief Verifies that the token at \p TokenStart is 'auto_ptr'.
-static bool checkTokenIsAutoPtr(SourceLocation TokenStart,
-                                const SourceManager &SM,
-                                const LangOptions &LO) {
-  SmallVector<char, 8> Buffer;
-  bool Invalid = false;
-  StringRef Res = Lexer::getSpelling(TokenStart, Buffer, SM, LO, &Invalid);
-
-  return (!Invalid && Res == "auto_ptr");
-}
-
 ReplaceAutoPtrCheck::ReplaceAutoPtrCheck(StringRef Name,
                                          ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -200,22 +83,62 @@ void ReplaceAutoPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matchers for C++; the functionality currently does not
   // provide any benefit to other languages, despite being benign.
-  if (getLangOpts().CPlusPlus) {
-    Finder->addMatcher(makeAutoPtrTypeLocMatcher(), this);
-    Finder->addMatcher(makeAutoPtrUsingDeclMatcher(), this);
-    Finder->addMatcher(makeTransferOwnershipExprMatcher(), this);
-  }
+  if (!getLangOpts().CPlusPlus)
+    return;
+
+  auto AutoPtrDecl = recordDecl(hasName("auto_ptr"), isFromStdNamespace());
+  auto AutoPtrType = qualType(hasDeclaration(AutoPtrDecl));
+
+  //   std::auto_ptr<int> a;
+  //        ^~~~~~~~~~~~~
+  //
+  //   typedef std::auto_ptr<int> int_ptr_t;
+  //                ^~~~~~~~~~~~~
+  //
+  //   std::auto_ptr<int> fn(std::auto_ptr<int>);
+  //        ^~~~~~~~~~~~~         ^~~~~~~~~~~~~
+  Finder->addMatcher(typeLoc(loc(qualType(AutoPtrType,
+                                          // Skip elaboratedType() as the named
+                                          // type will match soon thereafter.
+                                          unless(elaboratedType()))))
+                         .bind(AutoPtrTokenId),
+                     this);
+
+  //   using std::auto_ptr;
+  //   ^~~~~~~~~~~~~~~~~~~
+  Finder->addMatcher(usingDecl(hasAnyUsingShadowDecl(hasTargetDecl(allOf(
+                                   hasName("auto_ptr"), isFromStdNamespace()))))
+                         .bind(AutoPtrTokenId),
+                     this);
+
+  // Find ownership transfers via copy construction and assignment.
+  // AutoPtrOwnershipTransferId is bound to the the part that has to be wrapped
+  // into std::move().
+  //   std::auto_ptr<int> i, j;
+  //   i = j;
+  //   ~~~~^
+  auto MovableArgumentMatcher =
+      expr(isLValue(), hasType(AutoPtrType)).bind(AutoPtrOwnershipTransferId);
+
+  Finder->addMatcher(
+      cxxOperatorCallExpr(hasOverloadedOperatorName("="),
+                          callee(cxxMethodDecl(ofClass(AutoPtrDecl))),
+                          hasArgument(1, MovableArgumentMatcher)),
+      this);
+  Finder->addMatcher(cxxConstructExpr(hasType(AutoPtrType), argumentCountIs(1),
+                                      hasArgument(0, MovableArgumentMatcher)),
+                     this);
 }
 
 void ReplaceAutoPtrCheck::registerPPCallbacks(CompilerInstance &Compiler) {
   // Only register the preprocessor callbacks for C++; the functionality
   // currently does not provide any benefit to other languages, despite being
   // benign.
-  if (getLangOpts().CPlusPlus) {
-    Inserter.reset(new utils::IncludeInserter(
-        Compiler.getSourceManager(), Compiler.getLangOpts(), IncludeStyle));
-    Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
-  }
+  if (!getLangOpts().CPlusPlus)
+    return;
+  Inserter.reset(new utils::IncludeInserter(
+      Compiler.getSourceManager(), Compiler.getLangOpts(), IncludeStyle));
+  Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
 }
 
 void ReplaceAutoPtrCheck::check(const MatchFinder::MatchResult &Result) {
@@ -232,37 +155,42 @@ void ReplaceAutoPtrCheck::check(const MatchFinder::MatchResult &Result) {
                 << FixItHint::CreateInsertion(Range.getBegin(), "std::move(")
                 << FixItHint::CreateInsertion(Range.getEnd(), ")");
 
-    auto Insertion =
-        Inserter->CreateIncludeInsertion(SM.getMainFileID(), "utility",
-                                         /*IsAngled=*/true);
-    if (Insertion.hasValue())
-      Diag << Insertion.getValue();
+    if (auto Fix =
+            Inserter->CreateIncludeInsertion(SM.getMainFileID(), "utility",
+                                             /*IsAngled=*/true))
+      Diag << *Fix;
 
     return;
   }
 
-  SourceLocation IdentifierLoc;
+  SourceLocation AutoPtrLoc;
   if (const auto *TL = Result.Nodes.getNodeAs<TypeLoc>(AutoPtrTokenId)) {
-    IdentifierLoc = locateFromTypeLoc(TL, SM);
+    //   std::auto_ptr<int> i;
+    //        ^
+    if (auto Loc = TL->getAs<TemplateSpecializationTypeLoc>())
+      AutoPtrLoc = Loc.getTemplateNameLoc();
   } else if (const auto *D =
                  Result.Nodes.getNodeAs<UsingDecl>(AutoPtrTokenId)) {
-    IdentifierLoc = locateFromUsingDecl(D, SM);
+    // using std::auto_ptr;
+    //            ^
+    AutoPtrLoc = D->getNameInfo().getBeginLoc();
   } else {
     llvm_unreachable("Bad Callback. No node provided.");
   }
 
-  if (IdentifierLoc.isMacroID())
-    IdentifierLoc = SM.getSpellingLoc(IdentifierLoc);
+  if (AutoPtrLoc.isMacroID())
+    AutoPtrLoc = SM.getSpellingLoc(AutoPtrLoc);
 
   // Ensure that only the 'auto_ptr' token is replaced and not the template
   // aliases.
-  if (!checkTokenIsAutoPtr(IdentifierLoc, SM, LangOptions()))
+  if (StringRef(SM.getCharacterData(AutoPtrLoc), strlen("auto_ptr")) !=
+      "auto_ptr")
     return;
 
   SourceLocation EndLoc =
-      IdentifierLoc.getLocWithOffset(strlen("auto_ptr") - 1);
-  diag(IdentifierLoc, "auto_ptr is deprecated, use unique_ptr instead")
-      << FixItHint::CreateReplacement(SourceRange(IdentifierLoc, EndLoc),
+      AutoPtrLoc.getLocWithOffset(strlen("auto_ptr") - 1);
+  diag(AutoPtrLoc, "auto_ptr is deprecated, use unique_ptr instead")
+      << FixItHint::CreateReplacement(SourceRange(AutoPtrLoc, EndLoc),
                                       "unique_ptr");
 }
 
