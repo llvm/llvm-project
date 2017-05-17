@@ -800,7 +800,7 @@ bool SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
 }
 
 const Symbol *
-SymbolContext::FindBestGlobalDataSymbol(const ConstString &name, Status &error) {
+SymbolContext::FindBestGlobalDataSymbol(const ConstString &name, Error &error) {
   error.Clear();
   
   if (!target_sp) {
@@ -811,7 +811,7 @@ SymbolContext::FindBestGlobalDataSymbol(const ConstString &name, Status &error) 
   Module *module = module_sp.get();
   
   auto ProcessMatches = [this, &name, &target, module]
-  (SymbolContextList &sc_list, Status &error) -> const Symbol* {
+  (SymbolContextList &sc_list, Error &error) -> const Symbol* {
     llvm::SmallVector<const Symbol *, 1> external_symbols;
     llvm::SmallVector<const Symbol *, 1> internal_symbols;
     const uint32_t matches = sc_list.GetSize();

@@ -1432,7 +1432,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
       // We couldn't find a non-symbol variable for this.  Now we'll hunt for
       // a generic
       // data symbol, and -- if it is found -- treat it as a variable.
-      Status error;
+      Error error;
       
       const Symbol *data_symbol =
           m_parser_vars->m_sym_ctx.FindBestGlobalDataSymbol(name, error);
