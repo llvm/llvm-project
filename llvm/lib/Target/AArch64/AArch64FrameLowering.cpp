@@ -1158,8 +1158,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 
   DEBUG(dbgs() << "*** determineCalleeSaves\nUsed CSRs:";
-        for (int Reg = SavedRegs.find_first(); Reg != -1;
-             Reg = SavedRegs.find_next(Reg))
+        for (unsigned Reg : SavedRegs.set_bits())
           dbgs() << ' ' << PrintReg(Reg, RegInfo);
         dbgs() << "\n";);
 

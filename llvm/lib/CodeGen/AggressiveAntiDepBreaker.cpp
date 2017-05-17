@@ -128,8 +128,7 @@ AggressiveAntiDepBreaker::AggressiveAntiDepBreaker(
    }
 
   DEBUG(dbgs() << "AntiDep Critical-Path Registers:");
-  DEBUG(for (int r = CriticalPathSet.find_first(); r != -1;
-             r = CriticalPathSet.find_next(r))
+  DEBUG(for (unsigned r : CriticalPathSet.set_bits())
           dbgs() << " " << TRI->getName(r));
   DEBUG(dbgs() << '\n');
 }
@@ -571,7 +570,7 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
 
       DEBUG({
         dbgs() << " ::";
-        for (int r = BV.find_first(); r != -1; r = BV.find_next(r))
+        for (unsigned r : BV.set_bits())
           dbgs() << " " << TRI->getName(r);
         dbgs() << "\n";
       });
