@@ -13,7 +13,7 @@ entry:
 ; CHECK: sub       sp, sp, #12
 ; CHECK: sub       sp, sp, #4
 ; CHECK: add       r0, sp, #4
-; CHECK: stm       sp, {r0, r1, r2, r3}
+; CHECK: stmib     sp, {r1, r2, r3}
   %g = alloca i8*
   %g1 = bitcast i8** %g to i8*
   call void @llvm.va_start(i8* %g1)

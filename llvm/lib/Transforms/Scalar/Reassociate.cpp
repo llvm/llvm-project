@@ -1922,7 +1922,7 @@ Instruction *ReassociatePass::canonicalizeNegConstExpr(Instruction *I) {
 
   // User must be a binary operator with one or more uses.
   Instruction *User = I->user_back();
-  if (!isa<BinaryOperator>(User) || !User->hasNUsesOrMore(1))
+  if (!isa<BinaryOperator>(User) || User->use_empty())
     return nullptr;
 
   unsigned UserOpcode = User->getOpcode();

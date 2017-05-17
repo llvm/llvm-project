@@ -62,6 +62,11 @@ define i32 @poo(i32 %a, i32 %b, i32 %c, i32 %d) {
   ret i32 %t3
 }
 
+; TODO: For the next 4 tests, are there potential canonicalizations and/or folds for these
+; in InstCombine? Independent of that, tests like this that may not show any transforms 
+; still have value because they can help identify conflicting canonicalization rules that 
+; lead to infinite looping. 
+
 ; PR32791 - https://bugs.llvm.org//show_bug.cgi?id=32791
 ; Fold two selects with inverted predicates and zero operands.
 define i32 @fold_inverted_icmp_preds(i32 %a, i32 %b, i32 %c, i32 %d) {

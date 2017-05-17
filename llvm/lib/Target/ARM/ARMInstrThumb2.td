@@ -1227,7 +1227,7 @@ def t2ADR : T2PCOneRegImm<(outs rGPR:$Rd),
   let DecoderMethod = "DecodeT2Adr";
 }
 
-let hasSideEffects = 0, isReMaterializable = 1, isAsCheapAsAMove = 1 in
+let hasSideEffects = 0, isReMaterializable = 1 in
 def t2LEApcrel   : t2PseudoInst<(outs rGPR:$Rd), (ins i32imm:$label, pred:$p),
                                 4, IIC_iALUi, []>, Sched<[WriteALU, ReadALU]>;
 let hasSideEffects = 1 in

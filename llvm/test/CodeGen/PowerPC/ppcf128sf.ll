@@ -14,19 +14,19 @@ entry:
   %0 = load ppc_fp128, ppc_fp128* @ld, align 16
   %1 = load ppc_fp128, ppc_fp128* @ld2, align 16
   %add = fadd ppc_fp128 %0, %1
-  store ppc_fp128 %add, ppc_fp128* %c, align 16
+  store volatile ppc_fp128 %add, ppc_fp128* %c, align 16
   %2 = load ppc_fp128, ppc_fp128* @ld, align 16
   %3 = load ppc_fp128, ppc_fp128* @ld2, align 16
   %sub = fsub ppc_fp128 %2, %3
-  store ppc_fp128 %sub, ppc_fp128* %c, align 16
+  store volatile ppc_fp128 %sub, ppc_fp128* %c, align 16
   %4 = load ppc_fp128, ppc_fp128* @ld, align 16
   %5 = load ppc_fp128, ppc_fp128* @ld2, align 16
   %mul = fmul ppc_fp128 %4, %5
-  store ppc_fp128 %mul, ppc_fp128* %c, align 16
+  store volatile ppc_fp128 %mul, ppc_fp128* %c, align 16
   %6 = load ppc_fp128, ppc_fp128* @ld, align 16
   %7 = load ppc_fp128, ppc_fp128* @ld2, align 16
   %div = fdiv ppc_fp128 %6, %7
-  store ppc_fp128 %div, ppc_fp128* %c, align 16
+  store volatile ppc_fp128 %div, ppc_fp128* %c, align 16
   ret void
 
   ; CHECK-LABEL:    __gcc_qadd

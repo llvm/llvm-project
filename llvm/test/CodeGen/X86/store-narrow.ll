@@ -134,10 +134,7 @@ entry:
 @g_16 = internal global i32 -1
 
 ; X64-LABEL: test8:
-; X64-NEXT: movl _g_16(%rip), %eax
-; X64-NEXT: movl $0, _g_16(%rip)
-; X64-NEXT: orl  $1, %eax
-; X64-NEXT: movl %eax, _g_16(%rip)
+; X64-NEXT: orb  $1, _g_16(%rip)
 ; X64-NEXT: ret
 define void @test8() nounwind {
   %tmp = load i32, i32* @g_16

@@ -25,17 +25,17 @@ define void @intarg(i8  %a0,   ; %i0
                     i32 %a5,   ; %i5
                     i32 signext %a6,   ; [%fp+92]
                     i8* %a7) { ; [%fp+96]
-  store i8 %a0, i8* %a4
-  store i8 %a1, i8* %a4
+  store volatile i8 %a0, i8* %a4
+  store volatile i8 %a1, i8* %a4
   %p16 = bitcast i8* %a4 to i16*
-  store i16 %a2, i16* %p16
+  store volatile i16 %a2, i16* %p16
   %p32 = bitcast i8* %a4 to i32*
-  store i32 %a3, i32* %p32
+  store volatile i32 %a3, i32* %p32
   %pp = bitcast i8* %a4 to i8**
-  store i8* %a4, i8** %pp
-  store i32 %a5, i32* %p32
-  store i32 %a6, i32* %p32
-  store i8* %a7, i8** %pp
+  store volatile i8* %a4, i8** %pp
+  store volatile i32 %a5, i32* %p32
+  store volatile i32 %a6, i32* %p32
+  store volatile i8* %a7, i8** %pp
   ret void
 }
 

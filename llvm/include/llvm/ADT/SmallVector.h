@@ -71,7 +71,7 @@ private:
   // Allocate raw space for N elements of type T.  If T has a ctor or dtor, we
   // don't want it to be automatically run, so we need to represent the space as
   // something else.  Use an array of char of sufficient alignment.
-  typedef AlignedCharArrayUnion<T> U;
+  using U = AlignedCharArrayUnion<T>;
   U FirstEl;
   // Space after 'FirstEl' is clobbered, do not add any instance vars after it.
 
@@ -96,19 +96,19 @@ protected:
   void setEnd(T *P) { this->EndX = P; }
 
 public:
-  typedef size_t size_type;
-  typedef ptrdiff_t difference_type;
-  typedef T value_type;
-  typedef T *iterator;
-  typedef const T *const_iterator;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using value_type = T;
+  using iterator = T *;
+  using const_iterator = const T *;
 
-  typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
-  typedef std::reverse_iterator<iterator> reverse_iterator;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+  using reverse_iterator = std::reverse_iterator<iterator>;
 
-  typedef T &reference;
-  typedef const T &const_reference;
-  typedef T *pointer;
-  typedef const T *const_pointer;
+  using reference = T &;
+  using const_reference = const T &;
+  using pointer = T *;
+  using const_pointer = const T *;
 
   // forward iterator creation methods.
   LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -319,12 +319,12 @@ public:
 /// reduce code duplication based on the SmallVector 'N' template parameter.
 template <typename T>
 class SmallVectorImpl : public SmallVectorTemplateBase<T, isPodLike<T>::value> {
-  typedef SmallVectorTemplateBase<T, isPodLike<T>::value > SuperClass;
+  using SuperClass = SmallVectorTemplateBase<T, isPodLike<T>::value>;
 
 public:
-  typedef typename SuperClass::iterator iterator;
-  typedef typename SuperClass::const_iterator const_iterator;
-  typedef typename SuperClass::size_type size_type;
+  using iterator = typename SuperClass::iterator;
+  using const_iterator = typename SuperClass::const_iterator;
+  using size_type = typename SuperClass::size_type;
 
 protected:
   // Default ctor - Initialize to empty.
@@ -845,8 +845,7 @@ class SmallVector : public SmallVectorImpl<T> {
   SmallVectorStorage<T, N> Storage;
 
 public:
-  SmallVector() : SmallVectorImpl<T>(N) {
-  }
+  SmallVector() : SmallVectorImpl<T>(N) {}
 
   explicit SmallVector(size_t Size, const T &Value = T())
     : SmallVectorImpl<T>(N) {
@@ -883,14 +882,14 @@ public:
       SmallVectorImpl<T>::operator=(::std::move(RHS));
   }
 
-  const SmallVector &operator=(SmallVector &&RHS) {
-    SmallVectorImpl<T>::operator=(::std::move(RHS));
-    return *this;
-  }
-
   SmallVector(SmallVectorImpl<T> &&RHS) : SmallVectorImpl<T>(N) {
     if (!RHS.empty())
       SmallVectorImpl<T>::operator=(::std::move(RHS));
+  }
+
+  const SmallVector &operator=(SmallVector &&RHS) {
+    SmallVectorImpl<T>::operator=(::std::move(RHS));
+    return *this;
   }
 
   const SmallVector &operator=(SmallVectorImpl<T> &&RHS) {

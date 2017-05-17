@@ -12,6 +12,8 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
+#include <istream>
+
 using namespace clang;
 using namespace clangd;
 
@@ -128,4 +130,62 @@ bool JSONRPCDispatcher::call(StringRef Content) const {
   callHandler(Handlers, Method, Id, nullptr, UnknownHandler.get());
 
   return true;
+}
+
+void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
+                                   JSONRPCDispatcher &Dispatcher,
+                                   bool &IsDone) {
+  while (In.good()) {
+    // A Language Server Protocol message starts with a HTTP header, delimited
+    // by \r\n.
+    std::string Line;
+    std::getline(In, Line);
+    if (!In.good() && errno == EINTR) {
+      In.clear();
+      continue;
+    }
+
+    // Skip empty lines.
+    llvm::StringRef LineRef(Line);
+    if (LineRef.trim().empty())
+      continue;
+
+    // We allow YAML-style comments. Technically this isn't part of the
+    // LSP specification, but makes writing tests easier.
+    if (LineRef.startswith("#"))
+      continue;
+
+    unsigned long long Len = 0;
+    // FIXME: Content-Type is a specified header, but does nothing.
+    // Content-Length is a mandatory header. It specifies the length of the
+    // following JSON.
+    if (LineRef.consume_front("Content-Length: "))
+      llvm::getAsUnsignedInteger(LineRef.trim(), 0, Len);
+
+    // Check if the next line only contains \r\n. If not this is another header,
+    // which we ignore.
+    char NewlineBuf[2];
+    In.read(NewlineBuf, 2);
+    if (std::memcmp(NewlineBuf, "\r\n", 2) != 0)
+      continue;
+
+    // Now read the JSON. Insert a trailing null byte as required by the YAML
+    // parser.
+    std::vector<char> JSON(Len + 1, '\0');
+    In.read(JSON.data(), Len);
+
+    if (Len > 0) {
+      llvm::StringRef JSONRef(JSON.data(), Len);
+      // Log the message.
+      Out.log("<-- " + JSONRef + "\n");
+
+      // Finally, execute the action for this JSON message.
+      if (!Dispatcher.call(JSONRef))
+        Out.log("JSON dispatch failed!\n");
+
+      // If we're done, exit the loop.
+      if (IsDone)
+        break;
+    }
+  }
 }

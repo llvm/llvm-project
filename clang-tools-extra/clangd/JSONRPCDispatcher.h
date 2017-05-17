@@ -13,6 +13,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/YAMLParser.h"
+#include <iosfwd>
 #include <mutex>
 
 namespace clang {
@@ -78,6 +79,15 @@ private:
   llvm::StringMap<std::unique_ptr<Handler>> Handlers;
   std::unique_ptr<Handler> UnknownHandler;
 };
+
+/// Parses input queries from LSP client (coming from \p In) and runs call
+/// method of \p Dispatcher for each query.
+/// After handling each query checks if \p IsDone is set true and exits the loop
+/// if it is.
+/// Input stream(\p In) must be opened in binary mode to avoid preliminary
+/// replacements of \r\n with \n.
+void runLanguageServerLoop(std::istream &In, JSONOutput &Out,
+                           JSONRPCDispatcher &Dispatcher, bool &IsDone);
 
 } // namespace clangd
 } // namespace clang
