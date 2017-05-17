@@ -25,9 +25,12 @@ define i16 @load_i16_monotonic(i16* %mem) {
 }
 define i32 @load_i32_acquire(i32* %mem) {
 ; CHECK-LABEL: load_i32_acquire
-; CHECK: lwz
+; CHECK: lwz [[VAL:r[0-9]+]]
   %val = load atomic i32, i32* %mem acquire, align 4
-; CHECK: lwsync
+; CHECK-PPC32: lwsync
+; CHECK-PPC64: cmpw [[CR:cr[0-9]+]], [[VAL]], [[VAL]]
+; CHECK-PPC64: bne- [[CR]], .+4
+; CHECK-PPC64: isync
   ret i32 %val
 }
 define i64 @load_i64_seq_cst(i64* %mem) {
@@ -35,9 +38,12 @@ define i64 @load_i64_seq_cst(i64* %mem) {
 ; CHECK: sync
 ; PPC32: __sync_
 ; PPC64-NOT: __sync_
-; PPC64: ld
+; PPC64: ld [[VAL:r[0-9]+]]
   %val = load atomic i64, i64* %mem seq_cst, align 8
-; CHECK: lwsync
+; CHECK-PPC32: lwsync
+; CHECK-PPC64: cmpw [[CR:cr[0-9]+]], [[VAL]], [[VAL]]
+; CHECK-PPC64: bne- [[CR]], .+4
+; CHECK-PPC64: isync
   ret i64 %val
 }
 

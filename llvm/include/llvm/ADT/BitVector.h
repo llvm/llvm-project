@@ -15,6 +15,7 @@
 #define LLVM_ADT_BITVECTOR_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cassert>
@@ -25,6 +26,50 @@
 #include <utility>
 
 namespace llvm {
+
+/// ForwardIterator for the bits that are set.
+/// Iterators get invalidated when resize / reserve is called.
+template <typename BitVectorT> class const_set_bits_iterator_impl {
+  const BitVectorT &Parent;
+  int Current = 0;
+
+  void advance() {
+    assert(Current != -1 && "Trying to advance past end.");
+    Current = Parent.find_next(Current);
+  }
+
+public:
+  const_set_bits_iterator_impl(const BitVectorT &Parent, int Current)
+      : Parent(Parent), Current(Current) {}
+  explicit const_set_bits_iterator_impl(const BitVectorT &Parent)
+      : const_set_bits_iterator_impl(Parent, Parent.find_first()) {}
+  const_set_bits_iterator_impl(const const_set_bits_iterator_impl &) = default;
+
+  const_set_bits_iterator_impl operator++(int) {
+    auto Prev = *this;
+    advance();
+    return Prev;
+  }
+
+  const_set_bits_iterator_impl &operator++() {
+    advance();
+    return *this;
+  }
+
+  unsigned operator*() const { return Current; }
+
+  bool operator==(const const_set_bits_iterator_impl &Other) const {
+    assert(&Parent == &Other.Parent &&
+           "Comparing iterators from different BitVectors");
+    return Current == Other.Current;
+  }
+
+  bool operator!=(const const_set_bits_iterator_impl &Other) const {
+    assert(&Parent == &Other.Parent &&
+           "Comparing iterators from different BitVectors");
+    return Current != Other.Current;
+  }
+};
 
 class BitVector {
   typedef unsigned long BitWord;
@@ -73,6 +118,18 @@ public:
     }
   };
 
+  typedef const_set_bits_iterator_impl<BitVector> const_set_bits_iterator;
+  typedef const_set_bits_iterator set_iterator;
+
+  const_set_bits_iterator set_bits_begin() const {
+    return const_set_bits_iterator(*this);
+  }
+  const_set_bits_iterator set_bits_end() const {
+    return const_set_bits_iterator(*this, -1);
+  }
+  iterator_range<const_set_bits_iterator> set_bits() const {
+    return make_range(set_bits_begin(), set_bits_end());
+  }
 
   /// BitVector default ctor - Creates an empty bitvector.
   BitVector() : Size(0) {}

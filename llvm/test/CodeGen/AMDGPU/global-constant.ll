@@ -29,10 +29,10 @@
 define amdgpu_kernel void @private_test(i32 %index, float addrspace(1)* %out) {
   %ptr = getelementptr [4 x float], [4 x float] addrspace(2) * @private1, i32 0, i32 %index
   %val = load float, float addrspace(2)* %ptr
-  store float %val, float addrspace(1)* %out
+  store volatile float %val, float addrspace(1)* %out
   %ptr2 = getelementptr [4 x float], [4 x float] addrspace(2) * @private2, i32 0, i32 %index
   %val2 = load float, float addrspace(2)* %ptr2
-  store float %val2, float addrspace(1)* %out
+  store volatile float %val2, float addrspace(1)* %out
   ret void
 }
 

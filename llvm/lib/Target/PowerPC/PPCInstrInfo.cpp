@@ -1873,6 +1873,8 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
 }
 
 bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+  auto &MBB = *MI.getParent();
+  auto DL = MI.getDebugLoc();
   switch (MI.getOpcode()) {
   case TargetOpcode::LOAD_STACK_GUARD: {
     assert(Subtarget.isTargetLinux() &&
@@ -1918,6 +1920,17 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     else
       Opcode = UpperOpcode;
     MI.setDesc(get(Opcode));
+    return true;
+  }
+  case PPC::CFENCE8: {
+    auto Val = MI.getOperand(0).getReg();
+    BuildMI(MBB, MI, DL, get(PPC::CMPW), PPC::CR7).addReg(Val).addReg(Val);
+    BuildMI(MBB, MI, DL, get(PPC::CTRL_DEP))
+        .addImm(PPC::PRED_NE_MINUS)
+        .addReg(PPC::CR7)
+        .addImm(1);
+    MI.setDesc(get(PPC::ISYNC));
+    MI.RemoveOperand(0);
     return true;
   }
   }

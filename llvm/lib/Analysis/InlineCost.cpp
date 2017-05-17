@@ -669,21 +669,33 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
       Threshold = MaxIfValid(Threshold, Params.HintThreshold);
     if (PSI) {
       BlockFrequencyInfo *CallerBFI = GetBFI ? &((*GetBFI)(*Caller)) : nullptr;
-      if (PSI->isHotCallSite(CS, CallerBFI)) {
-        DEBUG(dbgs() << "Hot callsite.\n");
-        Threshold = Params.HotCallSiteThreshold.getValue();
-      } else if (PSI->isFunctionEntryHot(&Callee)) {
-        DEBUG(dbgs() << "Hot callee.\n");
-        // If callsite hotness can not be determined, we may still know
-        // that the callee is hot and treat it as a weaker hint for threshold
-        // increase.
-        Threshold = MaxIfValid(Threshold, Params.HintThreshold);
-      } else if (PSI->isColdCallSite(CS, CallerBFI)) {
-        DEBUG(dbgs() << "Cold callsite.\n");
-        Threshold = MinIfValid(Threshold, Params.ColdCallSiteThreshold);
-      } else if (PSI->isFunctionEntryCold(&Callee)) {
-        DEBUG(dbgs() << "Cold callee.\n");
-        Threshold = MinIfValid(Threshold, Params.ColdThreshold);
+      // FIXME: After switching to the new passmanager, simplify the logic below
+      // by checking only the callsite hotness/coldness. The check for CallerBFI
+      // exists only because we do not have BFI available with the old PM.
+      //
+      // Use callee's hotness information only if we have no way of determining
+      // callsite's hotness information. Callsite hotness can be determined if
+      // sample profile is used (which adds hotness metadata to calls) or if
+      // caller's BlockFrequencyInfo is available.
+      if (CallerBFI || PSI->hasSampleProfile()) {
+        if (PSI->isHotCallSite(CS, CallerBFI)) {
+          DEBUG(dbgs() << "Hot callsite.\n");
+          Threshold = Params.HotCallSiteThreshold.getValue();
+        } else if (PSI->isColdCallSite(CS, CallerBFI)) {
+          DEBUG(dbgs() << "Cold callsite.\n");
+          Threshold = MinIfValid(Threshold, Params.ColdCallSiteThreshold);
+        }
+      } else {
+        if (PSI->isFunctionEntryHot(&Callee)) {
+          DEBUG(dbgs() << "Hot callee.\n");
+          // If callsite hotness can not be determined, we may still know
+          // that the callee is hot and treat it as a weaker hint for threshold
+          // increase.
+          Threshold = MaxIfValid(Threshold, Params.HintThreshold);
+        } else if (PSI->isFunctionEntryCold(&Callee)) {
+          DEBUG(dbgs() << "Cold callee.\n");
+          Threshold = MinIfValid(Threshold, Params.ColdThreshold);
+        }
       }
     }
   }

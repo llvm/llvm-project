@@ -72,11 +72,14 @@ public:
   const DWARFUnit *getUnit() const { return U; }
   void dump(raw_ostream &OS) const;
 
-  /// \brief extracts a value in data at offset *offset_ptr.
+  /// Extracts a value in \p Data at offset \p *OffsetPtr.
   ///
   /// The passed DWARFUnit is allowed to be nullptr, in which
   /// case no relocation processing will be performed and some
   /// kind of forms that depend on Unit information are disallowed.
+  /// \param Data The DataExtractor to use.
+  /// \param OffsetPtr The offset within DataExtractor where the data starts.
+  /// \param U The optional DWARFUnit supplying information for some forms.
   /// \returns whether the extraction succeeded.
   bool extractValue(const DataExtractor &Data, uint32_t *OffsetPtr,
                     const DWARFUnit *U);

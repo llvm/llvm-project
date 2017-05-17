@@ -22,8 +22,6 @@
 
 #include "int_lib.h"
 
-ARM_EABI_FNALIAS(ul2d, floatundidf)
-
 #ifndef __SOFT_FP__
 /* Support for systems that have hardware floating-point; we'll set the inexact flag
  * as a side-effect of this computation.
@@ -104,3 +102,10 @@ __floatundidf(du_int a)
     return fb.f;
 }
 #endif
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI double __aeabi_ul2d(du_int a) {
+  return __floatundidf(a);
+}
+#endif
+

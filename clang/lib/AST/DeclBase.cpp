@@ -75,7 +75,7 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Ctx,
   assert(!Parent || &Parent->getParentASTContext() == &Ctx);
   // With local visibility enabled, we track the owning module even for local
   // declarations.
-  if (Ctx.getLangOpts().ModulesLocalVisibility) {
+  if (Ctx.getLangOpts().trackLocalOwningModule()) {
     // Ensure required alignment of the resulting object by adding extra
     // padding at the start if required.
     size_t ExtraAlign =
@@ -83,7 +83,9 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Ctx,
     char *Buffer = reinterpret_cast<char *>(
         ::operator new(ExtraAlign + sizeof(Module *) + Size + Extra, Ctx));
     Buffer += ExtraAlign;
-    return new (Buffer) Module*(nullptr) + 1;
+    auto *ParentModule =
+        Parent ? cast<Decl>(Parent)->getOwningModule() : nullptr;
+    return new (Buffer) Module*(ParentModule) + 1;
   }
   return ::operator new(Size + Extra, Ctx);
 }
@@ -94,7 +96,7 @@ Module *Decl::getOwningModuleSlow() const {
 }
 
 bool Decl::hasLocalOwningModuleStorage() const {
-  return getASTContext().getLangOpts().ModulesLocalVisibility;
+  return getASTContext().getLangOpts().trackLocalOwningModule();
 }
 
 const char *Decl::getDeclKindName() const {
@@ -273,6 +275,8 @@ void Decl::setLexicalDeclContext(DeclContext *DC) {
     getMultipleDC()->LexicalDC = DC;
   }
   Hidden = cast<Decl>(DC)->Hidden;
+  if (Hidden && !isFromASTFile() && hasLocalOwningModuleStorage())
+    setLocalOwningModule(cast<Decl>(DC)->getOwningModule());
 }
 
 void Decl::setDeclContextsImpl(DeclContext *SemaDC, DeclContext *LexicalDC,

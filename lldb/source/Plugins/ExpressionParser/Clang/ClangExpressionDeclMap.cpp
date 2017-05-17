@@ -591,103 +591,6 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(const ConstString &name,
                           symbol_type);
 }
 
-const Symbol *ClangExpressionDeclMap::FindGlobalDataSymbol(
-    Target &target, const ConstString &name, lldb_private::Module *module) {
-  SymbolContextList sc_list;
-
-  if (module)
-    module->FindSymbolsWithNameAndType(name, eSymbolTypeAny, sc_list);
-  else
-    target.GetImages().FindSymbolsWithNameAndType(name, eSymbolTypeAny,
-                                                  sc_list);
-
-  const uint32_t matches = sc_list.GetSize();
-  for (uint32_t i = 0; i < matches; ++i) {
-    SymbolContext sym_ctx;
-    sc_list.GetContextAtIndex(i, sym_ctx);
-    if (sym_ctx.symbol) {
-      const Symbol *symbol = sym_ctx.symbol;
-      const Address sym_address = symbol->GetAddress();
-
-      if (sym_address.IsValid()) {
-        switch (symbol->GetType()) {
-        case eSymbolTypeData:
-        case eSymbolTypeRuntime:
-        case eSymbolTypeAbsolute:
-        case eSymbolTypeObjCClass:
-        case eSymbolTypeObjCMetaClass:
-        case eSymbolTypeObjCIVar:
-          if (symbol->GetDemangledNameIsSynthesized()) {
-            // If the demangled name was synthesized, then don't use it
-            // for expressions. Only let the symbol match if the mangled
-            // named matches for these symbols.
-            if (symbol->GetMangled().GetMangledName() != name)
-              break;
-          }
-          return symbol;
-
-        case eSymbolTypeReExported: {
-          ConstString reexport_name = symbol->GetReExportedSymbolName();
-          if (reexport_name) {
-            ModuleSP reexport_module_sp;
-            ModuleSpec reexport_module_spec;
-            reexport_module_spec.GetPlatformFileSpec() =
-                symbol->GetReExportedSymbolSharedLibrary();
-            if (reexport_module_spec.GetPlatformFileSpec()) {
-              reexport_module_sp =
-                  target.GetImages().FindFirstModule(reexport_module_spec);
-              if (!reexport_module_sp) {
-                reexport_module_spec.GetPlatformFileSpec()
-                    .GetDirectory()
-                    .Clear();
-                reexport_module_sp =
-                    target.GetImages().FindFirstModule(reexport_module_spec);
-              }
-            }
-            // Don't allow us to try and resolve a re-exported symbol if it is
-            // the same
-            // as the current symbol
-            if (name == symbol->GetReExportedSymbolName() &&
-                module == reexport_module_sp.get())
-              return NULL;
-
-            return FindGlobalDataSymbol(target,
-                                        symbol->GetReExportedSymbolName(),
-                                        reexport_module_sp.get());
-          }
-        } break;
-
-        case eSymbolTypeCode: // We already lookup functions elsewhere
-        case eSymbolTypeVariable:
-        case eSymbolTypeLocal:
-        case eSymbolTypeParam:
-        case eSymbolTypeTrampoline:
-        case eSymbolTypeInvalid:
-        case eSymbolTypeException:
-        case eSymbolTypeSourceFile:
-        case eSymbolTypeHeaderFile:
-        case eSymbolTypeObjectFile:
-        case eSymbolTypeCommonBlock:
-        case eSymbolTypeBlock:
-        case eSymbolTypeVariableType:
-        case eSymbolTypeLineEntry:
-        case eSymbolTypeLineHeader:
-        case eSymbolTypeScopeBegin:
-        case eSymbolTypeScopeEnd:
-        case eSymbolTypeAdditional:
-        case eSymbolTypeCompiler:
-        case eSymbolTypeInstrumentation:
-        case eSymbolTypeUndefined:
-        case eSymbolTypeResolver:
-          break;
-        }
-      }
-    }
-  }
-
-  return NULL;
-}
-
 lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
     Target &target, ModuleSP &module, const ConstString &name,
     CompilerDeclContext *namespace_decl, TypeFromUser *type) {
@@ -1526,9 +1429,18 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
       // We couldn't find a non-symbol variable for this.  Now we'll hunt for
       // a generic
       // data symbol, and -- if it is found -- treat it as a variable.
-
-      const Symbol *data_symbol = FindGlobalDataSymbol(*target, name);
-
+      Status error;
+      
+      const Symbol *data_symbol =
+          m_parser_vars->m_sym_ctx.FindBestGlobalDataSymbol(name, error);
+      
+      if (!error.Success()) {
+        const unsigned diag_id =
+            m_ast_context->getDiagnostics().getCustomDiagID(
+                clang::DiagnosticsEngine::Level::Error, "%0");
+        m_ast_context->getDiagnostics().Report(diag_id) << error.AsCString();
+      }
+                                          
       if (data_symbol) {
         std::string warning("got name from symbols: ");
         warning.append(name.AsCString());

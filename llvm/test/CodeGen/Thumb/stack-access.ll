@@ -7,13 +7,13 @@ define void @test1(i8** %p) {
   %z = alloca i8, align 1
 ; CHECK: add r1, sp, #8
 ; CHECK: str r1, [r0]
-  store i8* %x, i8** %p, align 4
+  store volatile i8* %x, i8** %p, align 4
 ; CHECK: add r1, sp, #4
 ; CHECK: str r1, [r0]
-  store i8* %y, i8** %p, align 4
+  store volatile i8* %y, i8** %p, align 4
 ; CHECK: mov r1, sp
 ; CHECK: str r1, [r0]
-  store i8* %z, i8** %p, align 4
+  store volatile i8* %z, i8** %p, align 4
   ret void
 }
 
@@ -24,10 +24,10 @@ define void @test2([1024 x i8]** %p) {
 ; CHECK: add r1, sp, #1020
 ; CHECK: adds r1, #4
 ; CHECK: str r1, [r0]
-  store [1024 x i8]* %arr1, [1024 x i8]** %p, align 4
+  store volatile [1024 x i8]* %arr1, [1024 x i8]** %p, align 4
 ; CHECK: mov r1, sp
 ; CHECK: str r1, [r0]
-  store [1024 x i8]* %arr2, [1024 x i8]** %p, align 4
+  store volatile [1024 x i8]* %arr2, [1024 x i8]** %p, align 4
   ret void
 }
 

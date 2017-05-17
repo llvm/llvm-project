@@ -1752,6 +1752,24 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       (A == Op0 || B == Op0))
     return Op0;
 
+  // A mask that only clears known zeros of a shifted value is a no-op.
+  Value *X;
+  const APInt *Mask;
+  const APInt *ShAmt;
+  if (match(Op1, m_APInt(Mask))) {
+    // If all bits in the inverted and shifted mask are clear:
+    // and (shl X, ShAmt), Mask --> shl X, ShAmt
+    if (match(Op0, m_Shl(m_Value(X), m_APInt(ShAmt))) &&
+        (~(*Mask)).lshr(*ShAmt).isNullValue())
+      return Op0;
+
+    // If all bits in the inverted and shifted mask are clear:
+    // and (lshr X, ShAmt), Mask --> lshr X, ShAmt
+    if (match(Op0, m_LShr(m_Value(X), m_APInt(ShAmt))) &&
+        (~(*Mask)).shl(*ShAmt).isNullValue())
+      return Op0;
+  }
+
   // A & (-A) = A if A is a power of two or zero.
   if (match(Op0, m_Neg(m_Specific(Op1))) ||
       match(Op1, m_Neg(m_Specific(Op0)))) {

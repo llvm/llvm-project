@@ -500,7 +500,7 @@ class MetadataLoader::MetadataLoaderImpl {
 
     // Upgrade variables attached to globals.
     for (auto &GV : TheModule.globals()) {
-      SmallVector<MDNode *, 1> MDs, NewMDs;
+      SmallVector<MDNode *, 1> MDs;
       GV.getMetadata(LLVMContext::MD_dbg, MDs);
       GV.eraseMetadata(LLVMContext::MD_dbg);
       for (auto *MD : MDs)

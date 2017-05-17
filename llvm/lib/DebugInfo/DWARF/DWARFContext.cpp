@@ -66,7 +66,7 @@ uint64_t llvm::getRelocatedValue(const DataExtractor &Data, uint32_t Size,
   RelocAddrMap::const_iterator AI = Relocs->find(*Off);
   if (AI == Relocs->end())
     return Data.getUnsigned(Off, Size);
-  return Data.getUnsigned(Off, Size) + AI->second.second;
+  return Data.getUnsigned(Off, Size) + AI->second.Value;
 }
 
 static void dumpAccelSection(raw_ostream &OS, StringRef Name,
@@ -1127,7 +1127,7 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
                      << " at " << format("%p", Address)
                      << " with width " << format("%d", R.Width)
                      << "\n");
-        Map->insert(std::make_pair(Address, std::make_pair(R.Width, R.Value)));
+        Map->insert({Address, {(uint8_t)R.Width, R.Value}});
       }
     }
   }

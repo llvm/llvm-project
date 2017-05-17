@@ -534,9 +534,6 @@ private:
   /// instruction defining the value.
   AssertingVH<Value> BaseAddr;
 
-  /// An unique name of the accessed array.
-  std::string BaseName;
-
   /// Type a single array element wrt. this access.
   Type *ElementType;
 
@@ -858,8 +855,6 @@ public:
 
   /// Return a string representation of the reduction type @p RT.
   static const std::string getReductionOperatorStr(ReductionType RT);
-
-  const std::string &getBaseName() const { return BaseName; }
 
   /// Return the element type of the accessed array wrt. this access.
   Type *getElementType() const { return ElementType; }

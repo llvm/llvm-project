@@ -425,7 +425,7 @@ static bool isIrreducibleCFG(const MachineFunction &MF,
 }
 
 bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.empty() || !isShrinkWrapEnabled(MF))
+  if (skipFunction(*MF.getFunction()) || MF.empty() || !isShrinkWrapEnabled(MF))
     return false;
 
   DEBUG(dbgs() << "**** Analysing " << MF.getName() << '\n');

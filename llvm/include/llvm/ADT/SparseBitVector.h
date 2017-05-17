@@ -1,4 +1,4 @@
-//===- llvm/ADT/SparseBitVector.h - Efficient Sparse BitVector -*- C++ -*- ===//
+//===- llvm/ADT/SparseBitVector.h - Efficient Sparse BitVector --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -41,8 +41,8 @@ namespace llvm {
 
 template <unsigned ElementSize = 128> struct SparseBitVectorElement {
 public:
-  typedef unsigned long BitWord;
-  typedef unsigned size_type;
+  using BitWord = unsigned long;
+  using size_type = unsigned;
   enum {
     BITWORD_SIZE = sizeof(BitWord) * CHAR_BIT,
     BITWORDS_PER_ELEMENT = (ElementSize + BITWORD_SIZE - 1) / BITWORD_SIZE,
@@ -100,7 +100,7 @@ public:
     Bits[Idx / BITWORD_SIZE] |= 1L << (Idx % BITWORD_SIZE);
   }
 
-  bool test_and_set (unsigned Idx) {
+  bool test_and_set(unsigned Idx) {
     bool old = test(Idx);
     if (!old) {
       set(Idx);
@@ -254,9 +254,9 @@ public:
 
 template <unsigned ElementSize = 128>
 class SparseBitVector {
-  typedef std::list<SparseBitVectorElement<ElementSize>> ElementList;
-  typedef typename ElementList::iterator ElementListIter;
-  typedef typename ElementList::const_iterator ElementListConstIter;
+  using ElementList = std::list<SparseBitVectorElement<ElementSize>>;
+  using ElementListIter = typename ElementList::iterator;
+  using ElementListConstIter = typename ElementList::const_iterator;
   enum {
     BITWORD_SIZE = SparseBitVectorElement<ElementSize>::BITWORD_SIZE
   };
@@ -421,13 +421,11 @@ class SparseBitVector {
   };
 
 public:
-  typedef SparseBitVectorIterator iterator;
+  using iterator = SparseBitVectorIterator;
 
   SparseBitVector() {
     CurrElementIter = Elements.begin();
   }
-
-  ~SparseBitVector() = default;
 
   // SparseBitVector copy ctor.
   SparseBitVector(const SparseBitVector &RHS) {
@@ -439,6 +437,8 @@ public:
 
     CurrElementIter = Elements.begin ();
   }
+
+  ~SparseBitVector() = default;
 
   // Clear.
   void clear() {

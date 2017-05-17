@@ -81,7 +81,35 @@ void ODRHash::AddDeclarationName(DeclarationName Name) {
   }
 }
 
-void ODRHash::AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {}
+void ODRHash::AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
+  assert(NNS && "Expecting non-null pointer.");
+  const auto *Prefix = NNS->getPrefix();
+  AddBoolean(Prefix);
+  if (Prefix) {
+    AddNestedNameSpecifier(Prefix);
+  }
+  auto Kind = NNS->getKind();
+  ID.AddInteger(Kind);
+  switch (Kind) {
+  case NestedNameSpecifier::Identifier:
+    AddIdentifierInfo(NNS->getAsIdentifier());
+    break;
+  case NestedNameSpecifier::Namespace:
+    AddDecl(NNS->getAsNamespace());
+    break;
+  case NestedNameSpecifier::NamespaceAlias:
+    AddDecl(NNS->getAsNamespaceAlias());
+    break;
+  case NestedNameSpecifier::TypeSpec:
+  case NestedNameSpecifier::TypeSpecWithTemplate:
+    AddType(NNS->getAsType());
+    break;
+  case NestedNameSpecifier::Global:
+  case NestedNameSpecifier::Super:
+    break;
+  }
+}
+
 void ODRHash::AddTemplateName(TemplateName Name) {}
 void ODRHash::AddTemplateArgument(TemplateArgument TA) {}
 void ODRHash::AddTemplateParameterList(const TemplateParameterList *TPL) {}
@@ -335,6 +363,20 @@ public:
     Hash.AddQualType(T);
   }
 
+  void AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
+    Hash.AddBoolean(NNS);
+    if (NNS) {
+      Hash.AddNestedNameSpecifier(NNS);
+    }
+  }
+
+  void AddIdentifierInfo(const IdentifierInfo *II) {
+    Hash.AddBoolean(II);
+    if (II) {
+      Hash.AddIdentifierInfo(II);
+    }
+  }
+
   void VisitQualifiers(Qualifiers Quals) {
     ID.AddInteger(Quals.getAsOpaqueValue());
   }
@@ -413,6 +455,42 @@ public:
     AddDecl(T->getDecl());
     AddQualType(T->getDecl()->getUnderlyingType().getCanonicalType());
     VisitType(T);
+  }
+
+  void VisitTagType(const TagType *T) {
+    AddDecl(T->getDecl());
+    VisitType(T);
+  }
+
+  void VisitRecordType(const RecordType *T) { VisitTagType(T); }
+  void VisitEnumType(const EnumType *T) { VisitTagType(T); }
+
+  void VisitTypeWithKeyword(const TypeWithKeyword *T) {
+    ID.AddInteger(T->getKeyword());
+    VisitType(T);
+  };
+
+  void VisitDependentNameType(const DependentNameType *T) {
+    AddNestedNameSpecifier(T->getQualifier());
+    AddIdentifierInfo(T->getIdentifier());
+    VisitTypeWithKeyword(T);
+  }
+
+  void VisitDependentTemplateSpecializationType(
+      const DependentTemplateSpecializationType *T) {
+    AddIdentifierInfo(T->getIdentifier());
+    AddNestedNameSpecifier(T->getQualifier());
+    ID.AddInteger(T->getNumArgs());
+    for (const auto &TA : T->template_arguments()) {
+      Hash.AddTemplateArgument(TA);
+    }
+    VisitTypeWithKeyword(T);
+  }
+
+  void VisitElaboratedType(const ElaboratedType *T) {
+    AddNestedNameSpecifier(T->getQualifier());
+    AddQualType(T->getNamedType());
+    VisitTypeWithKeyword(T);
   }
 };
 
