@@ -287,18 +287,28 @@ public:
 class DefinedImportData : public Defined {
 public:
   DefinedImportData(StringRef N, ImportFile *F)
-      : Defined(DefinedImportDataKind, N), File(F) {
-  }
+      : Defined(DefinedImportDataKind, N), Live(!Config->DoGC), File(F) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == DefinedImportDataKind;
   }
 
   uint64_t getRVA() { return File->Location->getRVA(); }
+
   StringRef getDLLName() { return File->DLLName; }
   StringRef getExternalName() { return File->ExternalName; }
   void setLocation(Chunk *AddressTable) { File->Location = AddressTable; }
   uint16_t getOrdinal() { return File->Hdr->OrdinalHint; }
+
+  // If all sections referring a dllimported symbol become dead by gc,
+  // we want to kill the symbol as well, so that a resulting binary has
+  // fewer number of dependencies to DLLs. "Live" bit manages reachability.
+  bool Live;
+
+  // For a dllimported data symbol, we create two symbols.
+  // They should be considered as a unit by gc. This pointer points
+  // to the other symbol.
+  DefinedImportData *Sibling = nullptr;
 
 private:
   ImportFile *File;
@@ -320,6 +330,10 @@ public:
   uint64_t getRVA() { return Data->getRVA(); }
   Chunk *getChunk() { return Data; }
 
+  // For GC.
+  bool Live;
+  DefinedImportData *WrappedSym;
+
 private:
   Chunk *Data;
 };
@@ -332,7 +346,8 @@ private:
 class DefinedLocalImport : public Defined {
 public:
   DefinedLocalImport(StringRef N, Defined *S)
-      : Defined(DefinedLocalImportKind, N), Data(make<LocalImportChunk>(S)) {}
+      : Defined(DefinedLocalImportKind, N), WrappedSym(S),
+        Data(make<LocalImportChunk>(S)) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == DefinedLocalImportKind;
@@ -340,6 +355,9 @@ public:
 
   uint64_t getRVA() { return Data->getRVA(); }
   Chunk *getChunk() { return Data; }
+
+  // For GC.
+  Defined *WrappedSym;
 
 private:
   LocalImportChunk *Data;
