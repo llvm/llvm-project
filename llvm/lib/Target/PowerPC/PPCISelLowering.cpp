@@ -689,6 +689,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
         setOperationAction(ISD::SRA, MVT::v2i64, Legal);
         setOperationAction(ISD::SRL, MVT::v2i64, Legal);
 
+        // 128 bit shifts can be accomplished via 3 instructions for SHL and
+        // SRL, but not for SRA because of the instructions available:
+        // VS{RL} and VS{RL}O. However due to direct move costs, it's not worth
+        // doing
+        setOperationAction(ISD::SHL, MVT::v1i128, Expand);
+        setOperationAction(ISD::SRL, MVT::v1i128, Expand);
+        setOperationAction(ISD::SRA, MVT::v1i128, Expand);
+
         setOperationAction(ISD::SETCC, MVT::v2i64, Legal);
       }
       else {
@@ -742,6 +750,13 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     if (Subtarget.hasP9Vector()) {
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i32, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4f32, Custom);
+
+      // 128 bit shifts can be accomplished via 3 instructions for SHL and
+      // SRL, but not for SRA because of the instructions available:
+      // VS{RL} and VS{RL}O.
+      setOperationAction(ISD::SHL, MVT::v1i128, Legal);
+      setOperationAction(ISD::SRL, MVT::v1i128, Legal);
+      setOperationAction(ISD::SRA, MVT::v1i128, Expand);
     }
   }
 

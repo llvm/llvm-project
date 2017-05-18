@@ -17,6 +17,7 @@
 
 #include "AMDGPURegisterInfo.h"
 #include "SIDefines.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 namespace llvm {
@@ -57,7 +58,15 @@ public:
   unsigned reservedPrivateSegmentWaveByteOffsetReg(
     const MachineFunction &MF) const;
 
+  unsigned reservedStackPtrOffsetReg(const MachineFunction &MF) const;
+
   BitVector getReservedRegs(const MachineFunction &MF) const override;
+
+  const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
+  const uint32_t *getCallPreservedMask(const MachineFunction &MF,
+                                       CallingConv::ID) const override;
+
+  unsigned getFrameRegister(const MachineFunction &MF) const override;
 
   bool requiresRegisterScavenging(const MachineFunction &Fn) const override;
 
@@ -227,6 +236,11 @@ public:
                                   unsigned Idx) const override;
 
   const int *getRegUnitPressureSets(unsigned RegUnit) const override;
+
+  unsigned getReturnAddressReg(const MachineFunction &MF) const {
+    // Not a callee saved register.
+    return AMDGPU::SGPR30_SGPR31;
+  }
 
 private:
   void buildSpillLoadStore(MachineBasicBlock::iterator MI,

@@ -606,7 +606,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         if (unsigned Count = replaceDominatedUsesWith(
                 CondInst, TorF, DT, BasicBlockEdge(Pred, BB))) {
           Changed = true;
-          NumCSECVP = NumCSECVP + Count;
+          NumCSECVP += Count;
         }
       }
     }

@@ -373,7 +373,7 @@ handleCompressedSection(std::deque<SmallString<32>> &UncompressedSections,
     return createError(Name, Dec.takeError());
 
   UncompressedSections.emplace_back();
-  if (Error E = Dec->decompress(UncompressedSections.back()))
+  if (Error E = Dec->resizeAndDecompress(UncompressedSections.back()))
     return createError(Name, std::move(E));
 
   Name = Name.substr(2); // Drop ".z"

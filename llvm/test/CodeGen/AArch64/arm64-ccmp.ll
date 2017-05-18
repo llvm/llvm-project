@@ -378,11 +378,11 @@ define i64 @select_noccmp1(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 ; CHECK-NEXT: cmp x0, #13
 ; CHECK-NOT: ccmp
 ; CHECK-NEXT: cset [[REG1:w[0-9]+]], gt
-; CHECK-NEXT: and [[REG4:w[0-9]+]], [[REG0]], [[REG1]]
 ; CHECK-NEXT: cmp x2, #2
 ; CHECK-NEXT: cset [[REG2:w[0-9]+]], lt
 ; CHECK-NEXT: cmp x2, #4
 ; CHECK-NEXT: cset [[REG3:w[0-9]+]], gt
+; CHECK-NEXT: and [[REG4:w[0-9]+]], [[REG0]], [[REG1]]
 ; CHECK-NEXT: and [[REG5:w[0-9]+]], [[REG2]], [[REG3]]
 ; CHECK-NEXT: orr [[REG6:w[0-9]+]], [[REG4]], [[REG5]]
 ; CHECK-NEXT: cmp [[REG6]], #0

@@ -10511,9 +10511,7 @@ void X86InstrInfo::insertOutlinerEpilogue(MachineBasicBlock &MBB,
 
 void X86InstrInfo::insertOutlinerPrologue(MachineBasicBlock &MBB,
                                           MachineFunction &MF,
-                                          bool IsTailCall) const {
-  return;
-}
+                                          bool IsTailCall) const {}
 
 MachineBasicBlock::iterator
 X86InstrInfo::insertOutlinedCall(Module &M, MachineBasicBlock &MBB,

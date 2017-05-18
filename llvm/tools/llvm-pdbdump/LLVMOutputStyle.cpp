@@ -178,11 +178,10 @@ public:
 private:
   Error dumpTypeRecord(StringRef Label, TypeDatabase &DB, TypeIndex Index) {
     CompactTypeDumpVisitor CTDV(DB, Index, &P);
-    CVTypeVisitor Visitor(CTDV);
     DictScope D(P, Label);
     if (DB.contains(Index)) {
       CVType &Type = DB.getTypeRecord(Index);
-      if (auto EC = Visitor.visitTypeRecord(Type))
+      if (auto EC = codeview::visitTypeRecord(Type, CTDV))
         return EC;
     } else {
       P.printString(
@@ -629,7 +628,6 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
   std::vector<std::unique_ptr<TypeVisitorCallbacks>> Visitors;
 
-  Visitors.push_back(make_unique<TypeDeserializer>());
   if (!StreamDB.hasValue()) {
     StreamDB.emplace(Tpi->getNumTypeRecords());
     Visitors.push_back(make_unique<TypeDatabaseVisitor>(*StreamDB));
@@ -659,8 +657,6 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   for (const auto &V : Visitors)
     Pipeline.addCallbackToPipeline(*V);
 
-  CVTypeVisitor Visitor(Pipeline);
-
   if (DumpRecords || DumpRecordBytes)
     RecordScope = llvm::make_unique<ListScope>(P, "Records");
 
@@ -673,9 +669,10 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
     if ((DumpRecords || DumpRecordBytes) && !opts::raw::CompactRecords)
       OneRecordScope = llvm::make_unique<DictScope>(P, "");
 
-    if (auto EC = Visitor.visitTypeRecord(Type))
+    if (auto EC = codeview::visitTypeRecord(Type, Pipeline))
       return EC;
-    T.setIndex(T.getIndex() + 1);
+
+    ++T;
   }
   if (HadError)
     return make_error<RawError>(raw_error_code::corrupt_file,
@@ -730,22 +727,19 @@ Error LLVMOutputStyle::buildTypeDatabase(uint32_t SN) {
 
   DB.emplace(Tpi->getNumTypeRecords());
 
-  TypeVisitorCallbackPipeline Pipeline;
-  TypeDeserializer Deserializer;
   TypeDatabaseVisitor DBV(*DB);
-  Pipeline.addCallbackToPipeline(Deserializer);
-  Pipeline.addCallbackToPipeline(DBV);
 
   auto HashValues = Tpi->getHashValues();
-  std::unique_ptr<TpiHashVerifier> HashVerifier;
-  if (!HashValues.empty()) {
-    HashVerifier =
-        make_unique<TpiHashVerifier>(HashValues, Tpi->getNumHashBuckets());
-    Pipeline.addCallbackToPipeline(*HashVerifier);
-  }
+  if (HashValues.empty())
+    return codeview::visitTypeStream(Tpi->typeArray(), DBV);
 
-  CVTypeVisitor Visitor(Pipeline);
-  return Visitor.visitTypeStream(Tpi->types(nullptr));
+  TypeVisitorCallbackPipeline Pipeline;
+  Pipeline.addCallbackToPipeline(DBV);
+
+  TpiHashVerifier HashVerifier(HashValues, Tpi->getNumHashBuckets());
+  Pipeline.addCallbackToPipeline(HashVerifier);
+
+  return codeview::visitTypeStream(Tpi->typeArray(), Pipeline);
 }
 
 Error LLVMOutputStyle::dumpDbiStream() {

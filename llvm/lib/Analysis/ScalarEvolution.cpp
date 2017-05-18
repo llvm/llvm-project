@@ -3885,7 +3885,7 @@ public:
       : SCEVRewriteVisitor(SE), L(L), Valid(true) {}
 
   const SCEV *visitUnknown(const SCEVUnknown *Expr) {
-    if (!(SE.getLoopDisposition(Expr, L) == ScalarEvolution::LoopInvariant))
+    if (!SE.isLoopInvariant(Expr, L))
       Valid = false;
     return Expr;
   }
@@ -3919,7 +3919,7 @@ public:
 
   const SCEV *visitUnknown(const SCEVUnknown *Expr) {
     // Only allow AddRecExprs for this loop.
-    if (!(SE.getLoopDisposition(Expr, L) == ScalarEvolution::LoopInvariant))
+    if (!SE.isLoopInvariant(Expr, L))
       Valid = false;
     return Expr;
   }

@@ -67,6 +67,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Regex.h"
@@ -365,9 +366,9 @@ cl::opt<std::string>
     YamlPdbOutputFile("pdb", cl::desc("the name of the PDB file to write"),
                       cl::sub(YamlToPdbSubcommand));
 
-cl::list<std::string> InputFilename(cl::Positional,
-                                    cl::desc("<input YAML file>"), cl::Required,
-                                    cl::sub(YamlToPdbSubcommand));
+cl::opt<std::string> InputFilename(cl::Positional,
+                                   cl::desc("<input YAML file>"), cl::Required,
+                                   cl::sub(YamlToPdbSubcommand));
 }
 
 namespace pdb2yaml {
@@ -894,7 +895,12 @@ int main(int argc_, const char *argv_[]) {
   if (opts::PdbToYamlSubcommand) {
     pdb2Yaml(opts::pdb2yaml::InputFilename.front());
   } else if (opts::YamlToPdbSubcommand) {
-    yamlToPdb(opts::yaml2pdb::InputFilename.front());
+    if (opts::yaml2pdb::YamlPdbOutputFile.empty()) {
+      SmallString<16> OutputFilename(opts::yaml2pdb::InputFilename.getValue());
+      sys::path::replace_extension(OutputFilename, ".pdb");
+      opts::yaml2pdb::YamlPdbOutputFile = OutputFilename.str();
+    }
+    yamlToPdb(opts::yaml2pdb::InputFilename);
   } else if (opts::AnalyzeSubcommand) {
     dumpAnalysis(opts::analyze::InputFilename.front());
   } else if (opts::PrettySubcommand) {

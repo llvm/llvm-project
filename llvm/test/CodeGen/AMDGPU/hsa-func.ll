@@ -27,7 +27,7 @@
 
 ; ELF: Symbol {
 ; ELF: Name: simple
-; ELF: Size: 44
+; ELF: Size: 48
 ; ELF: Type: Function (0x2)
 ; ELF: }
 
@@ -41,14 +41,12 @@
 ; HSA: .p2align 2
 ; HSA: {{^}}simple:
 ; HSA-NOT: amd_kernel_code_t
-
-; FIXME: Check this isn't a kernarg load when calling convention implemented.
-; XHSA-NOT: s_load_dwordx2 s[{{[0-9]+:[0-9]+}}], s[4:5], 0x0
+; HSA-NOT: s_load_dwordx2 s[{{[0-9]+:[0-9]+}}], s[4:5], 0x0
 
 ; Make sure we are setting the ATC bit:
-; HSA-CI: s_mov_b32 s[[HI:[0-9]]], 0x100f000
+; HSA-CI: s_mov_b32 s[[HI:[0-9]+]], 0x100f000
 ; On VI+ we also need to set MTYPE = 2
-; HSA-VI: s_mov_b32 s[[HI:[0-9]]], 0x1100f000
+; HSA-VI: s_mov_b32 s[[HI:[0-9]+]], 0x1100f000
 ; Make sure we generate flat store for HSA
 ; HSA: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
 
@@ -56,8 +54,9 @@
 ; HSA: .size   simple, .Lfunc_end0-simple
 ; HSA: ; Function info:
 ; HSA-NOT: COMPUTE_PGM_RSRC2
-define void @simple(i32 addrspace(1)* %out) {
+define void @simple(i32 addrspace(1)* addrspace(2)* %ptr.out) {
 entry:
+  %out = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(2)* %ptr.out
   store i32 0, i32 addrspace(1)* %out
   ret void
 }

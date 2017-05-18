@@ -59,13 +59,8 @@ static Expected<TypeServer2Record> deserializeTypeServerRecord(CVType &Record) {
   };
 
   TypeServer2Record R(TypeRecordKind::TypeServer2);
-  TypeDeserializer Deserializer;
   StealTypeServerVisitor Thief(R);
-  TypeVisitorCallbackPipeline Pipeline;
-  Pipeline.addCallbackToPipeline(Deserializer);
-  Pipeline.addCallbackToPipeline(Thief);
-  CVTypeVisitor Visitor(Pipeline);
-  if (auto EC = Visitor.visitTypeRecord(Record))
+  if (auto EC = visitTypeRecord(Record, Thief))
     return std::move(EC);
 
   return R;
@@ -178,7 +173,7 @@ static Error visitMemberRecord(CVMemberRecord &Record,
   return Error::success();
 }
 
-Error CVTypeVisitor::visitMemberRecord(CVMemberRecord &Record) {
+Error CVTypeVisitor::visitMemberRecord(CVMemberRecord Record) {
   return ::visitMemberRecord(Record, Callbacks);
 }
 
@@ -223,4 +218,94 @@ Error CVTypeVisitor::visitFieldListMemberStream(ArrayRef<uint8_t> Data) {
   BinaryByteStream S(Data, llvm::support::little);
   BinaryStreamReader SR(S);
   return visitFieldListMemberStream(SR);
+}
+
+namespace {
+struct FieldListVisitHelper {
+  FieldListVisitHelper(TypeVisitorCallbacks &Callbacks, ArrayRef<uint8_t> Data,
+                       VisitorDataSource Source)
+      : Stream(Data, llvm::support::little), Reader(Stream),
+        Deserializer(Reader),
+        Visitor((Source == VDS_BytesPresent) ? Pipeline : Callbacks) {
+    if (Source == VDS_BytesPresent) {
+      Pipeline.addCallbackToPipeline(Deserializer);
+      Pipeline.addCallbackToPipeline(Callbacks);
+    }
+  }
+
+  BinaryByteStream Stream;
+  BinaryStreamReader Reader;
+  FieldListDeserializer Deserializer;
+  TypeVisitorCallbackPipeline Pipeline;
+  CVTypeVisitor Visitor;
+};
+
+struct VisitHelper {
+  VisitHelper(TypeVisitorCallbacks &Callbacks, VisitorDataSource Source,
+              TypeServerHandler *TS)
+      : Visitor((Source == VDS_BytesPresent) ? Pipeline : Callbacks) {
+    if (TS)
+      Visitor.addTypeServerHandler(*TS);
+    if (Source == VDS_BytesPresent) {
+      Pipeline.addCallbackToPipeline(Deserializer);
+      Pipeline.addCallbackToPipeline(Callbacks);
+    }
+  }
+
+  TypeDeserializer Deserializer;
+  TypeVisitorCallbackPipeline Pipeline;
+  CVTypeVisitor Visitor;
+};
+}
+
+Error llvm::codeview::visitTypeRecord(CVType &Record, TypeIndex Index,
+                                      TypeVisitorCallbacks &Callbacks,
+                                      VisitorDataSource Source,
+                                      TypeServerHandler *TS) {
+  VisitHelper Helper(Callbacks, Source, TS);
+  return Helper.Visitor.visitTypeRecord(Record, Index);
+}
+
+Error llvm::codeview::visitTypeRecord(CVType &Record,
+                                      TypeVisitorCallbacks &Callbacks,
+                                      VisitorDataSource Source,
+                                      TypeServerHandler *TS) {
+  VisitHelper Helper(Callbacks, Source, TS);
+  return Helper.Visitor.visitTypeRecord(Record);
+}
+
+Error llvm::codeview::visitMemberRecordStream(ArrayRef<uint8_t> FieldList,
+                                              TypeVisitorCallbacks &Callbacks) {
+  CVTypeVisitor Visitor(Callbacks);
+  return Visitor.visitFieldListMemberStream(FieldList);
+}
+
+Error llvm::codeview::visitMemberRecord(CVMemberRecord Record,
+                                        TypeVisitorCallbacks &Callbacks,
+                                        VisitorDataSource Source) {
+  FieldListVisitHelper Helper(Callbacks, Record.Data, Source);
+  return Helper.Visitor.visitMemberRecord(Record);
+}
+
+Error llvm::codeview::visitMemberRecord(TypeLeafKind Kind,
+                                        ArrayRef<uint8_t> Record,
+                                        TypeVisitorCallbacks &Callbacks) {
+  CVMemberRecord R;
+  R.Data = Record;
+  R.Kind = Kind;
+  return visitMemberRecord(R, Callbacks, VDS_BytesPresent);
+}
+
+Error llvm::codeview::visitTypeStream(const CVTypeArray &Types,
+                                      TypeVisitorCallbacks &Callbacks,
+                                      TypeServerHandler *TS) {
+  VisitHelper Helper(Callbacks, VDS_BytesPresent, TS);
+  return Helper.Visitor.visitTypeStream(Types);
+}
+
+Error llvm::codeview::visitTypeStream(CVTypeRange Types,
+                                      TypeVisitorCallbacks &Callbacks,
+                                      TypeServerHandler *TS) {
+  VisitHelper Helper(Callbacks, VDS_BytesPresent, TS);
+  return Helper.Visitor.visitTypeStream(Types);
 }

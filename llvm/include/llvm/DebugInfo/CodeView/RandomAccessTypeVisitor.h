@@ -11,13 +11,10 @@
 #define LLVM_DEBUGINFO_CODEVIEW_RANDOMACCESSTYPEVISITOR_H
 
 #include "llvm/ADT/TinyPtrVector.h"
-#include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabase.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabaseVisitor.h"
-#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -72,18 +69,6 @@ private:
 
   /// The database visitor which adds new records to the database.
   TypeDatabaseVisitor DatabaseVisitor;
-
-  /// The deserializer which deserializes new records.
-  TypeDeserializer Deserializer;
-
-  /// The visitation callback pipeline to use.  By default this contains a
-  /// deserializer and a type database visitor.  But the callback specified
-  /// in the constructor is also added.
-  TypeVisitorCallbackPipeline Pipeline;
-
-  /// The visitor used to visit the internal pipeline for deserialization and
-  /// database maintenance.
-  CVTypeVisitor InternalVisitor;
 
   /// A vector mapping type indices to type offset.  For every record that has
   /// been visited, contains the absolute offset of that record in the record

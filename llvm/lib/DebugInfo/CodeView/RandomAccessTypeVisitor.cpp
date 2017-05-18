@@ -9,6 +9,7 @@
 
 #include "llvm/DebugInfo/CodeView/RandomAccessTypeVisitor.h"
 
+#include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabase.h"
 #include "llvm/DebugInfo/CodeView/TypeServerHandler.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
@@ -20,9 +21,7 @@ RandomAccessTypeVisitor::RandomAccessTypeVisitor(
     const CVTypeArray &Types, uint32_t NumRecords,
     PartialOffsetArray PartialOffsets)
     : Database(NumRecords), Types(Types), DatabaseVisitor(Database),
-      InternalVisitor(Pipeline), PartialOffsets(PartialOffsets) {
-  Pipeline.addCallbackToPipeline(Deserializer);
-  Pipeline.addCallbackToPipeline(DatabaseVisitor);
+      PartialOffsets(PartialOffsets) {
 
   KnownOffsets.resize(Database.capacity());
 }
@@ -38,8 +37,7 @@ Error RandomAccessTypeVisitor::visitTypeIndex(TypeIndex TI,
 
   assert(Database.contains(TI));
   auto &Record = Database.getTypeRecord(TI);
-  CVTypeVisitor V(Callbacks);
-  return V.visitTypeRecord(Record, TI);
+  return codeview::visitTypeRecord(Record, TI, Callbacks);
 }
 
 Error RandomAccessTypeVisitor::visitRangeForType(TypeIndex TI) {
@@ -78,7 +76,7 @@ Error RandomAccessTypeVisitor::visitRange(TypeIndex Begin, uint32_t BeginOffset,
 
   while (Begin != End) {
     assert(!Database.contains(Begin));
-    if (auto EC = InternalVisitor.visitTypeRecord(*RI, Begin))
+    if (auto EC = codeview::visitTypeRecord(*RI, Begin, DatabaseVisitor))
       return EC;
     KnownOffsets[Begin.toArrayIndex()] = BeginOffset;
 

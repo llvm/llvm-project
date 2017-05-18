@@ -35,6 +35,30 @@ v_xad_u32 v1, v2, v3, v4
 // GFX9: v_xad_u32 v1, v2, v3, v4 ; encoding: [0x01,0x00,0xf3,0xd1,0x02,0x07,0x12,0x04]
 // NOVI: :1: error: instruction not supported on this GPU
 
+v_min3_f16 v1, v2, v3, v4
+// GFX9: v_min3_f16 v1, v2, v3, v4 ; encoding: [0x01,0x00,0xf4,0xd1,0x02,0x07,0x12,0x04]
+// NOVI: :1: error: instruction not supported on this GPU
+
+v_min3_i16 v1, v2, v3, v4
+// GFX9: v_min3_i16 v1, v2, v3, v4 ; encoding: [0x01,0x00,0xf5,0xd1,0x02,0x07,0x12,0x04]
+// NOVI: :1: error: instruction not supported on this GPU
+
+v_min3_u16 v1, v2, v3, v4
+// GFX9: v_min3_u16 v1, v2, v3, v4 ; encoding: [0x01,0x00,0xf6,0xd1,0x02,0x07,0x12,0x04]
+// NOVI: :1: error: instruction not supported on this GPU
+
+v_max3_f16 v1, v2, v3, v4
+// GFX9: v_max3_f16 v1, v2, v3, v4 ; encoding: [0x01,0x00,0xf7,0xd1,0x02,0x07,0x12,0x04]
+// NOVI: :1: error: instruction not supported on this GPU
+
+v_max3_i16 v1, v2, v3, v4
+// GFX9: v_max3_i16 v1, v2, v3, v4 ; encoding: [0x01,0x00,0xf8,0xd1,0x02,0x07,0x12,0x04]
+// NOVI: :1: error: instruction not supported on this GPU
+
+v_max3_u16 v1, v2, v3, v4
+// GFX9: v_max3_u16 v1, v2, v3, v4 ; encoding: [0x01,0x00,0xf9,0xd1,0x02,0x07,0x12,0x04]
+// NOVI: :1: error: instruction not supported on this GPU
+
 v_med3_f16 v1, v2, v3, v4
 // GFX9: v_med3_f16 v1, v2, v3, v4 ; encoding: [0x01,0x00,0xfa,0xd1,0x02,0x07,0x12,0x04]
 // NOVI: :1: error: instruction not supported on this GPU

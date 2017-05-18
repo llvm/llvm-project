@@ -14,6 +14,7 @@
 
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUTargetMachine.h"
+#include "SIRegisterInfo.h"
 
 using namespace llvm;
 
@@ -23,18 +24,6 @@ AMDGPURegisterInfo::AMDGPURegisterInfo() : AMDGPUGenRegisterInfo(0) {}
 // Function handling callbacks - Functions are a seldom used feature of GPUS, so
 // they are not supported at this time.
 //===----------------------------------------------------------------------===//
-
-// Dummy to not crash RegisterClassInfo.
-static const MCPhysReg CalleeSavedReg = AMDGPU::NoRegister;
-
-const MCPhysReg *AMDGPURegisterInfo::getCalleeSavedRegs(
-  const MachineFunction *) const {
-  return &CalleeSavedReg;
-}
-
-unsigned AMDGPURegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  return AMDGPU::NoRegister;
-}
 
 unsigned AMDGPURegisterInfo::getSubRegFromChannel(unsigned Channel) const {
   static const unsigned SubRegs[] = {
@@ -50,3 +39,35 @@ unsigned AMDGPURegisterInfo::getSubRegFromChannel(unsigned Channel) const {
 
 #define GET_REGINFO_TARGET_DESC
 #include "AMDGPUGenRegisterInfo.inc"
+
+
+// Forced to be here by one .inc
+const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
+  const MachineFunction *MF) const {
+  CallingConv::ID CC = MF->getFunction()->getCallingConv();
+  switch (CC) {
+  case CallingConv::C:
+  case CallingConv::Fast:
+    return CSR_AMDGPU_HighRegs_SaveList;
+  default: {
+    // Dummy to not crash RegisterClassInfo.
+    static const MCPhysReg NoCalleeSavedReg = AMDGPU::NoRegister;
+    return &NoCalleeSavedReg;
+  }
+  }
+}
+
+const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                                     CallingConv::ID CC) const {
+  switch (CC) {
+  case CallingConv::C:
+  case CallingConv::Fast:
+    return CSR_AMDGPU_HighRegs_RegMask;
+  default:
+    return nullptr;
+  }
+}
+
+unsigned SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+  return AMDGPU::NoRegister;
+}

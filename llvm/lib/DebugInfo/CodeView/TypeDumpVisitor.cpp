@@ -216,8 +216,7 @@ Error TypeDumpVisitor::visitMemberEnd(CVMemberRecord &Record) {
 
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR,
                                         FieldListRecord &FieldList) {
-  CVTypeVisitor Visitor(*this);
-  if (auto EC = Visitor.visitFieldListMemberStream(FieldList.Data))
+  if (auto EC = codeview::visitMemberRecordStream(FieldList.Data, *this))
     return EC;
 
   return Error::success();

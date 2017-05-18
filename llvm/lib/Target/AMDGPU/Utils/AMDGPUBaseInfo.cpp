@@ -518,7 +518,18 @@ bool isCompute(CallingConv::ID cc) {
 }
 
 bool isEntryFunctionCC(CallingConv::ID CC) {
-  return true;
+  switch (CC) {
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_HS:
+    return true;
+  default:
+    return false;
+  }
 }
 
 bool isSI(const MCSubtargetInfo &STI) {

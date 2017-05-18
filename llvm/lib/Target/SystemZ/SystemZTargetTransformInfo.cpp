@@ -325,6 +325,30 @@ int SystemZTTIImpl::getArithmeticInstrCost(
 
   unsigned ScalarBits = Ty->getScalarSizeInBits();
 
+  // Div with a constant which is a power of 2 will be converted by
+  // DAGCombiner to use shifts. With vector shift-element instructions, a
+  // vector sdiv costs about as much as a scalar one.
+  const unsigned SDivCostEstimate = 4;
+  bool SDivPow2 = false;
+  bool UDivPow2 = false;
+  if ((Opcode == Instruction::SDiv || Opcode == Instruction::UDiv) &&
+      Args.size() == 2) {
+    const ConstantInt *CI = nullptr;
+    if (const Constant *C = dyn_cast<Constant>(Args[1])) {
+      if (C->getType()->isVectorTy())
+        CI = dyn_cast_or_null<const ConstantInt>(C->getSplatValue());
+      else
+        CI = dyn_cast<const ConstantInt>(C);
+    }
+    if (CI != nullptr &&
+        (CI->getValue().isPowerOf2() || (-CI->getValue()).isPowerOf2())) {
+      if (Opcode == Instruction::SDiv)
+        SDivPow2 = true;
+      else
+        UDivPow2 = true;
+    }
+  }
+
   if (Ty->isVectorTy()) {
     assert (ST->hasVector() && "getArithmeticInstrCost() called with vector type.");
     unsigned VF = Ty->getVectorNumElements();
@@ -333,9 +357,12 @@ int SystemZTTIImpl::getArithmeticInstrCost(
     // These vector operations are custom handled, but are still supported
     // with one instruction per vector, regardless of element size.
     if (Opcode == Instruction::Shl || Opcode == Instruction::LShr ||
-        Opcode == Instruction::AShr) {
+        Opcode == Instruction::AShr || UDivPow2) {
       return NumVectors;
     }
+
+    if (SDivPow2)
+      return (NumVectors * SDivCostEstimate);
 
     // These FP operations are supported with a single vector instruction for
     // double (base implementation assumes float generally costs 2). For
@@ -394,6 +421,11 @@ int SystemZTTIImpl::getArithmeticInstrCost(
     if (Opcode == Instruction::Xor && ScalarBits == 1)
       // 2 * ipm sequences ; xor ; shift ; compare
       return 7;
+
+    if (UDivPow2)
+      return 1;
+    if (SDivPow2)
+      return SDivCostEstimate;
 
     // An extra extension for narrow types is needed.
     if ((Opcode == Instruction::SDiv || Opcode == Instruction::SRem))

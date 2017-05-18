@@ -300,10 +300,19 @@ def V_AND_OR_B32 : VOP3Inst <"v_and_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
 def V_OR3_B32 : VOP3Inst <"v_or3_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
 
 def V_XAD_U32 : VOP3Inst <"v_xad_u32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
+
 def V_MED3_F16 : VOP3Inst <"v_med3_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUfmed3>;
 def V_MED3_I16 : VOP3Inst <"v_med3_i16", VOP3_Profile<VOP_I16_I16_I16_I16>, AMDGPUsmed3>;
 def V_MED3_U16 : VOP3Inst <"v_med3_u16", VOP3_Profile<VOP_I16_I16_I16_I16>, AMDGPUumed3>;
-}
+
+def V_MIN3_F16 : VOP3Inst <"v_min3_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUfmin3>;
+def V_MIN3_I16 : VOP3Inst <"v_min3_i16", VOP3_Profile<VOP_I16_I16_I16_I16>, AMDGPUsmin3>;
+def V_MIN3_U16 : VOP3Inst <"v_min3_u16", VOP3_Profile<VOP_I16_I16_I16_I16>, AMDGPUumin3>;
+
+def V_MAX3_F16 : VOP3Inst <"v_max3_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUfmax3>;
+def V_MAX3_I16 : VOP3Inst <"v_max3_i16", VOP3_Profile<VOP_I16_I16_I16_I16>, AMDGPUsmax3>;
+def V_MAX3_U16 : VOP3Inst <"v_max3_u16", VOP3_Profile<VOP_I16_I16_I16_I16>, AMDGPUumax3>;
+} // End SubtargetPredicate = isGFX9
 
 
 //===----------------------------------------------------------------------===//
@@ -509,6 +518,15 @@ defm V_OR3_B32 : VOP3_Real_vi <0x202>;
 defm V_PACK_B32_F16 : VOP3_Real_vi <0x2a0>;
 
 defm V_XAD_U32 : VOP3_Real_vi <0x1f3>;
+
+defm V_MIN3_F16 : VOP3_Real_vi <0x1f4>;
+defm V_MIN3_I16 : VOP3_Real_vi <0x1f5>;
+defm V_MIN3_U16 : VOP3_Real_vi <0x1f6>;
+
+defm V_MAX3_F16 : VOP3_Real_vi <0x1f7>;
+defm V_MAX3_I16 : VOP3_Real_vi <0x1f8>;
+defm V_MAX3_U16 : VOP3_Real_vi <0x1f9>;
+
 defm V_MED3_F16 : VOP3_Real_vi <0x1fa>;
 defm V_MED3_I16 : VOP3_Real_vi <0x1fb>;
 defm V_MED3_U16 : VOP3_Real_vi <0x1fc>;

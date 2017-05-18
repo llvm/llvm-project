@@ -775,6 +775,8 @@ public:
   void emitCxxCaptureStmts(raw_ostream &OS, RuleMatcher &Rule,
                            StringRef OperandExpr) const override {
     OS << "if (!" << OperandExpr + ".isReg())\n"
+       << "  return false;\n"
+       << "if (TRI.isPhysicalRegister(" << OperandExpr + ".getReg()))\n"
        << "  return false;\n";
     std::string InsnVarName = Rule.defineInsnVar(
         OS, *InsnMatcher,

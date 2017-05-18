@@ -41,7 +41,6 @@
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/COFF.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -155,10 +154,8 @@ private:
   bool RelocCached = false;
   RelocMapTy RelocMap;
 
-  BinaryByteStream ChecksumContents;
   VarStreamArray<FileChecksumEntry> CVFileChecksumTable;
 
-  BinaryByteStream StringTableContents;
   StringTableRef CVStringTable;
 
   ScopedPrinter &Writer;
@@ -775,14 +772,13 @@ void COFFDumper::initializeFileAndStringTables(BinaryStreamReader &Reader) {
 
     switch (ModuleDebugFragmentKind(SubType)) {
     case ModuleDebugFragmentKind::FileChecksums: {
-      ChecksumContents = BinaryByteStream(Contents, support::little);
-      BinaryStreamReader CSR(ChecksumContents);
+      BinaryStreamReader CSR(Contents, support::little);
       error(CSR.readArray(CVFileChecksumTable, CSR.getLength()));
       break;
     }
     case ModuleDebugFragmentKind::StringTable: {
-      StringTableContents = BinaryByteStream(Contents, support::little);
-      error(CVStringTable.initialize(StringTableContents));
+      BinaryStreamRef ST(Contents, support::little);
+      error(CVStringTable.initialize(ST));
     } break;
     default:
       break;
@@ -812,8 +808,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
   if (Magic != COFF::DEBUG_SECTION_MAGIC)
     return error(object_error::parse_failed);
 
-  BinaryByteStream FileAndStrings(Data, support::little);
-  BinaryStreamReader FSReader(FileAndStrings);
+  BinaryStreamReader FSReader(Data, support::little);
   initializeFileAndStringTables(FSReader);
 
   // TODO: Convert this over to using ModuleSubstreamVisitor.
@@ -889,8 +884,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     }
     case ModuleDebugFragmentKind::FrameData: {
       // First four bytes is a relocation against the function.
-      BinaryByteStream S(Contents, llvm::support::little);
-      BinaryStreamReader SR(S);
+      BinaryStreamReader SR(Contents, llvm::support::little);
       const uint32_t *CodePtr;
       error(SR.readObject(CodePtr));
       StringRef LinkageName;
@@ -934,8 +928,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     ListScope S(W, "FunctionLineTable");
     W.printString("LinkageName", Name);
 
-    BinaryByteStream LineTableInfo(FunctionLineTables[Name], support::little);
-    BinaryStreamReader Reader(LineTableInfo);
+    BinaryStreamReader Reader(FunctionLineTables[Name], support::little);
 
     ModuleDebugLineFragmentRef LineInfo;
     error(LineInfo.initialize(Reader));
@@ -985,9 +978,8 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
 
   CVSymbolDumper CVSD(W, TypeDB, std::move(CODD),
                       opts::CodeViewSubsectionBytes);
-  BinaryByteStream Stream(BinaryData, llvm::support::little);
   CVSymbolArray Symbols;
-  BinaryStreamReader Reader(Stream);
+  BinaryStreamReader Reader(BinaryData, llvm::support::little);
   if (auto EC = Reader.readArray(Symbols, Reader.getLength())) {
     consumeError(std::move(EC));
     W.flush();
@@ -1002,8 +994,7 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
 }
 
 void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
-  BinaryByteStream S(Subsection, llvm::support::little);
-  BinaryStreamReader SR(S);
+  BinaryStreamReader SR(Subsection, llvm::support::little);
   ModuleDebugFileChecksumFragmentRef Checksums;
   error(Checksums.initialize(SR));
 
@@ -1021,8 +1012,7 @@ void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
 }
 
 void COFFDumper::printCodeViewInlineeLines(StringRef Subsection) {
-  BinaryByteStream S(Subsection, llvm::support::little);
-  BinaryStreamReader SR(S);
+  BinaryStreamReader SR(Subsection, llvm::support::little);
   ModuleDebugInlineeLineFragmentRef Lines;
   error(Lines.initialize(SR));
 
@@ -1072,11 +1062,9 @@ void COFFDumper::mergeCodeViewTypes(TypeTableBuilder &CVIDs,
       error(consume(Data, Magic));
       if (Magic != 4)
         error(object_error::parse_failed);
-      ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(Data.data()),
-                              Data.size());
-      BinaryByteStream Stream(Bytes, llvm::support::little);
+
       CVTypeArray Types;
-      BinaryStreamReader Reader(Stream);
+      BinaryStreamReader Reader(Data, llvm::support::little);
       if (auto EC = Reader.readArray(Types, Reader.getLength())) {
         consumeError(std::move(EC));
         W.flush();

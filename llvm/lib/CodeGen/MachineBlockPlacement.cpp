@@ -245,25 +245,26 @@ public:
   /// updating the block -> chain mapping. It does not free or tear down the
   /// old chain, but the old chain's block list is no longer valid.
   void merge(MachineBasicBlock *BB, BlockChain *Chain) {
-    assert(BB);
-    assert(!Blocks.empty());
+    assert(BB && "Can't merge a null block.");
+    assert(!Blocks.empty() && "Can't merge into an empty chain.");
 
     // Fast path in case we don't have a chain already.
     if (!Chain) {
-      assert(!BlockToChain[BB]);
+      assert(!BlockToChain[BB] &&
+             "Passed chain is null, but BB has entry in BlockToChain.");
       Blocks.push_back(BB);
       BlockToChain[BB] = this;
       return;
     }
 
-    assert(BB == *Chain->begin());
+    assert(BB == *Chain->begin() && "Passed BB is not head of Chain.");
     assert(Chain->begin() != Chain->end());
 
     // Update the incoming blocks to point to this chain, and add them to the
     // chain structure.
     for (MachineBasicBlock *ChainBB : *Chain) {
       Blocks.push_back(ChainBB);
-      assert(BlockToChain[ChainBB] == Chain && "Incoming blocks not in chain");
+      assert(BlockToChain[ChainBB] == Chain && "Incoming blocks not in chain.");
       BlockToChain[ChainBB] = this;
     }
   }
@@ -1547,13 +1548,15 @@ MachineBasicBlock *MachineBlockPlacement::selectBestCandidateBlock(
   MachineBasicBlock *BestBlock = nullptr;
   BlockFrequency BestFreq;
   for (MachineBasicBlock *MBB : WorkList) {
-    assert(MBB->isEHPad() == IsEHPad);
+    assert(MBB->isEHPad() == IsEHPad &&
+           "EHPad mismatch between block and work list.");
 
     BlockChain &SuccChain = *BlockToChain[MBB];
     if (&SuccChain == &Chain)
       continue;
 
-    assert(SuccChain.UnscheduledPredecessors == 0 && "Found CFG-violating block");
+    assert(SuccChain.UnscheduledPredecessors == 0 &&
+           "Found CFG-violating block");
 
     BlockFrequency CandidateFreq = MBFI->getBlockFreq(MBB);
     DEBUG(dbgs() << "    " << getBlockName(MBB) << " -> ";
@@ -1621,9 +1624,12 @@ void MachineBlockPlacement::fillWorkLists(
   if (!UpdatedPreds.insert(&Chain).second)
     return;
 
-  assert(Chain.UnscheduledPredecessors == 0);
+  assert(
+      Chain.UnscheduledPredecessors == 0 &&
+      "Attempting to place block with unscheduled predecessors in worklist.");
   for (MachineBasicBlock *ChainBB : Chain) {
-    assert(BlockToChain[ChainBB] == &Chain);
+    assert(BlockToChain[ChainBB] == &Chain &&
+           "Block in chain doesn't match BlockToChain map.");
     for (MachineBasicBlock *Pred : ChainBB->predecessors()) {
       if (BlockFilter && !BlockFilter->count(Pred))
         continue;
@@ -2136,8 +2142,10 @@ void MachineBlockPlacement::buildLoopChains(const MachineLoop &L) {
   for (const MachineLoop *InnerLoop : L)
     buildLoopChains(*InnerLoop);
 
-  assert(BlockWorkList.empty());
-  assert(EHPadWorkList.empty());
+  assert(BlockWorkList.empty() &&
+         "BlockWorkList not empty when starting to build loop chains.");
+  assert(EHPadWorkList.empty() &&
+         "EHPadWorkList not empty when starting to build loop chains.");
   BlockFilterSet LoopBlockSet = collectLoopBlockSet(L);
 
   // Check if we have profile data for this function. If yes, we will rotate
@@ -2167,7 +2175,8 @@ void MachineBlockPlacement::buildLoopChains(const MachineLoop &L) {
   // walk the blocks, and use a set to prevent visiting a particular chain
   // twice.
   SmallPtrSet<BlockChain *, 4> UpdatedPreds;
-  assert(LoopChain.UnscheduledPredecessors == 0);
+  assert(LoopChain.UnscheduledPredecessors == 0 &&
+         "LoopChain should not have unscheduled predecessors.");
   UpdatedPreds.insert(&LoopChain);
 
   for (const MachineBasicBlock *LoopBB : LoopBlockSet)
@@ -2256,8 +2265,10 @@ void MachineBlockPlacement::buildCFGChains() {
   for (MachineLoop *L : *MLI)
     buildLoopChains(*L);
 
-  assert(BlockWorkList.empty());
-  assert(EHPadWorkList.empty());
+  assert(BlockWorkList.empty() &&
+         "BlockWorkList should be empty before building final chain.");
+  assert(EHPadWorkList.empty() &&
+         "EHPadWorkList should be empty before building final chain.");
 
   SmallPtrSet<BlockChain *, 4> UpdatedPreds;
   for (MachineBasicBlock &MBB : *F)
@@ -2651,8 +2662,10 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   // there are no MachineLoops.
   PreferredLoopExit = nullptr;
 
-  assert(BlockToChain.empty());
-  assert(ComputedEdges.empty());
+  assert(BlockToChain.empty() &&
+         "BlockToChain map should be empty before starting placement.");
+  assert(ComputedEdges.empty() &&
+         "Computed Edge map should be empty before starting placement.");
 
   unsigned TailDupSize = TailDupPlacementThreshold;
   // If only the aggressive threshold is explicitly set, use it.

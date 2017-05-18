@@ -17,8 +17,7 @@
 namespace llvm {
 
 struct RelocAddrEntry {
-  uint8_t Width;
-  int64_t Value;
+  uint64_t Value;
 };
 
 /// In place of applying the relocations to the data we've read from disk we use

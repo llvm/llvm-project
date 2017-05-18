@@ -138,6 +138,8 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // CHECK-NEXT:      return false;
 // CHECK-NEXT:    if (!MI0.getOperand(1).isReg())
 // CHECK-NEXT:      return false;
+// CHECK-NEXT:    if (TRI.isPhysicalRegister(MI0.getOperand(1).getReg()))
+// CHECK-NEXT:      return false;
 // CHECK-NEXT:    MachineInstr &MI1 = *MRI.getVRegDef(MI0.getOperand(1).getReg());
 // CHECK-NEXT:    if (MI1.getNumOperands() < 3)
 // CHECK-NEXT:      return false;
@@ -179,6 +181,8 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // CHECK-NEXT:    if (MI0.getNumOperands() < 3)
 // CHECK-NEXT:      return false;
 // CHECK-NEXT:    if (!MI0.getOperand(2).isReg())
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    if (TRI.isPhysicalRegister(MI0.getOperand(2).getReg()))
 // CHECK-NEXT:      return false;
 // CHECK-NEXT:    MachineInstr &MI1 = *MRI.getVRegDef(MI0.getOperand(2).getReg());
 // CHECK-NEXT:    if (MI1.getNumOperands() < 3)

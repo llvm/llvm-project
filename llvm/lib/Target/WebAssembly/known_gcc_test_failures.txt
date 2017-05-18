@@ -33,9 +33,6 @@ built-in-setjmp.c
 pr60003.c
 
 # Error in the program / unsupported by Clang.
-scal-to-vec1.c
-scal-to-vec2.c
-scal-to-vec3.c
 20000822-1.c
 20010209-1.c
 20010605-1.c
