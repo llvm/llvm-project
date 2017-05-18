@@ -104,12 +104,13 @@ private:
   llvm::DenseMap<std::pair<ArrayRef<uint8_t>, SymbolBody *>, CieRecord> CieMap;
 };
 
-class GotBaseSection : public SyntheticSection {
+class GotSection : public SyntheticSection {
 public:
-  GotBaseSection();
+  GotSection();
   size_t getSize() const override { return Size; }
   void finalizeContents() override;
   bool empty() const override;
+  void writeTo(uint8_t *Buf) override;
 
   void addEntry(SymbolBody &Sym);
   bool addDynTlsEntry(SymbolBody &Sym);
@@ -128,11 +129,6 @@ protected:
   size_t NumEntries = 0;
   uint32_t TlsIndexOff = -1;
   uint64_t Size = 0;
-};
-
-template <class ELFT> class GotSection final : public GotBaseSection {
-public:
-  void writeTo(uint8_t *Buf) override;
 };
 
 // .note.gnu.build-id section.
@@ -764,7 +760,7 @@ struct InX {
   static GnuHashTableSection *GnuHashTab;
   static InputSection *Interp;
   static GdbIndexSection *GdbIndex;
-  static GotBaseSection *Got;
+  static GotSection *Got;
   static GotPltSection *GotPlt;
   static IgotPltSection *IgotPlt;
   static MipsGotSection *MipsGot;

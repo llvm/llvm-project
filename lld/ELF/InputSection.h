@@ -167,6 +167,8 @@ public:
   template <class ELFT> std::string getObjMsg(uint64_t Offset);
 
   template <class ELFT> void relocate(uint8_t *Buf, uint8_t *BufEnd);
+  void relocateAlloc(uint8_t *Buf, uint8_t *BufEnd);
+  template <class ELFT> void relocateNonAlloc(uint8_t *Buf, uint8_t *BufEnd);
 
   std::vector<Relocation> Relocations;
 

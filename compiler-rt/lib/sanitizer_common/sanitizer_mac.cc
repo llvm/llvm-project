@@ -394,18 +394,22 @@ void ListOfModules::init() {
 }
 
 bool IsHandledDeadlySignal(int signum) {
+  // Handling fatal signals on watchOS and tvOS devices is disallowed.
   if ((SANITIZER_WATCHOS || SANITIZER_TVOS) && !(SANITIZER_IOSSIM))
-    // Handling fatal signals on watchOS and tvOS devices is disallowed.
     return false;
-  if (common_flags()->handle_abort && signum == SIGABRT)
-    return true;
-  if (common_flags()->handle_sigill && signum == SIGILL)
-    return true;
-  if (common_flags()->handle_sigfpe && signum == SIGFPE)
-    return true;
-  if (common_flags()->handle_segv && signum == SIGSEGV)
-    return true;
-  return common_flags()->handle_sigbus && signum == SIGBUS;
+  switch (signum) {
+    case SIGABRT:
+      return common_flags()->handle_abort;
+    case SIGILL:
+      return common_flags()->handle_sigill;
+    case SIGFPE:
+      return common_flags()->handle_sigfpe;
+    case SIGSEGV:
+      return common_flags()->handle_segv;
+    case SIGBUS:
+      return common_flags()->handle_sigbus;
+  }
+  return false;
 }
 
 MacosVersion cached_macos_version = MACOS_VERSION_UNINITIALIZED;

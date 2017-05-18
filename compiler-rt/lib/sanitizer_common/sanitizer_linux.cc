@@ -1395,15 +1395,19 @@ AndroidApiLevel AndroidGetApiLevel() {
 #endif
 
 bool IsHandledDeadlySignal(int signum) {
-  if (common_flags()->handle_abort && signum == SIGABRT)
-    return true;
-  if (common_flags()->handle_sigill && signum == SIGILL)
-    return true;
-  if (common_flags()->handle_sigfpe && signum == SIGFPE)
-    return true;
-  if (common_flags()->handle_segv && signum == SIGSEGV)
-    return true;
-  return common_flags()->handle_sigbus && signum == SIGBUS;
+  switch (signum) {
+    case SIGABRT:
+      return common_flags()->handle_abort;
+    case SIGILL:
+      return common_flags()->handle_sigill;
+    case SIGFPE:
+      return common_flags()->handle_sigfpe;
+    case SIGSEGV:
+      return common_flags()->handle_segv;
+    case SIGBUS:
+      return common_flags()->handle_sigbus;
+  }
+  return false;
 }
 
 #if !SANITIZER_GO

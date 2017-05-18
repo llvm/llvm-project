@@ -35,11 +35,10 @@ private:
   void create();
 
   std::vector<DefinedImportData *> Imports;
-  std::vector<std::unique_ptr<Chunk>> Dirs;
-  std::vector<std::unique_ptr<Chunk>> Lookups;
-  std::vector<std::unique_ptr<Chunk>> Addresses;
-  std::vector<std::unique_ptr<Chunk>> Hints;
-  std::map<StringRef, std::unique_ptr<Chunk>> DLLNames;
+  std::vector<Chunk *> Dirs;
+  std::vector<Chunk *> Addresses;
+  std::vector<Chunk *> Hints;
+  std::vector<Chunk *> DLLNames;
 };
 
 // Windows-specific.
@@ -51,7 +50,7 @@ public:
   void create(Defined *Helper);
   std::vector<Chunk *> getChunks();
   std::vector<Chunk *> getDataChunks();
-  std::vector<std::unique_ptr<Chunk>> &getCodeChunks() { return Thunks; }
+  ArrayRef<Chunk *> getCodeChunks() { return Thunks; }
 
   uint64_t getDirRVA() { return Dirs[0]->getRVA(); }
   uint64_t getDirSize();
@@ -61,13 +60,13 @@ private:
 
   Defined *Helper;
   std::vector<DefinedImportData *> Imports;
-  std::vector<std::unique_ptr<Chunk>> Dirs;
-  std::vector<std::unique_ptr<Chunk>> ModuleHandles;
-  std::vector<std::unique_ptr<Chunk>> Addresses;
-  std::vector<std::unique_ptr<Chunk>> Names;
-  std::vector<std::unique_ptr<Chunk>> HintNames;
-  std::vector<std::unique_ptr<Chunk>> Thunks;
-  std::map<StringRef, std::unique_ptr<Chunk>> DLLNames;
+  std::vector<Chunk *> Dirs;
+  std::vector<Chunk *> ModuleHandles;
+  std::vector<Chunk *> Addresses;
+  std::vector<Chunk *> Names;
+  std::vector<Chunk *> HintNames;
+  std::vector<Chunk *> Thunks;
+  std::vector<Chunk *> DLLNames;
 };
 
 // Windows-specific.
@@ -75,7 +74,7 @@ private:
 class EdataContents {
 public:
   EdataContents();
-  std::vector<std::unique_ptr<Chunk>> Chunks;
+  std::vector<Chunk *> Chunks;
 };
 
 } // namespace coff
