@@ -56,6 +56,37 @@ Status::Status(const char *format, ...)
   va_end(args);
 }
 
+Status::Status(llvm::Error error)
+    : m_code(0), m_type(ErrorType::eErrorTypeGeneric) {
+  if (!error)
+    return;
+
+  // if the error happens to be a errno error, preserve the error code
+  error = llvm::handleErrors(
+      std::move(error), [&](std::unique_ptr<llvm::ECError> e) -> llvm::Error {
+        std::error_code ec = e->convertToErrorCode();
+        if (ec.category() == std::generic_category()) {
+          m_code = ec.value();
+          m_type = ErrorType::eErrorTypePOSIX;
+          return llvm::Error::success();
+        }
+        return llvm::Error(std::move(e));
+      });
+
+  // Otherwise, just preserve the message
+  if (error)
+    SetErrorString(llvm::toString(std::move(error)));
+}
+
+llvm::Error Status::ToError() const {
+  if (Success())
+    return llvm::Error::success();
+  if (m_type == ErrorType::eErrorTypePOSIX)
+    return llvm::errorCodeToError(std::error_code(m_code, std::generic_category()));
+  return llvm::make_error<llvm::StringError>(AsCString(),
+                                             llvm::inconvertibleErrorCode());
+}
+
 //----------------------------------------------------------------------
 // Assignment operator
 //----------------------------------------------------------------------

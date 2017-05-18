@@ -106,6 +106,8 @@ public:
   /// \brief Initializes \c ClangTidyContext instance.
   ClangTidyContext(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider);
 
+  ~ClangTidyContext();
+
   /// \brief Report any errors detected using this method.
   ///
   /// This is still under heavy development and will likely change towards using
@@ -202,8 +204,9 @@ private:
 
   std::string CurrentFile;
   ClangTidyOptions CurrentOptions;
-  std::unique_ptr<GlobList> CheckFilter;
-  std::unique_ptr<GlobList> WarningAsErrorFilter;
+  class CachedGlobList;
+  std::unique_ptr<CachedGlobList> CheckFilter;
+  std::unique_ptr<CachedGlobList> WarningAsErrorFilter;
 
   LangOptions LangOpts;
 

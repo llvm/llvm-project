@@ -1,5 +1,4 @@
-//===-- Status.h -------------------------------------------------*- C++
-//-*-===//
+//===-- Status.h ------------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,21 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __DCError_h__
-#define __DCError_h__
-#if defined(__cplusplus)
+#ifndef LLDB_UTILITY_STATUS_H
+#define LLDB_UTILITY_STATUS_H
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h" // for ErrorType, ErrorType...
 #include "llvm/ADT/StringRef.h"     // for StringRef
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
-
 #include <cstdarg>
+#include <stdint.h> // for uint32_t
 #include <string>
 #include <system_error> // for error_code
 #include <type_traits>  // for forward
-
-#include <stdint.h> // for uint32_t
 
 namespace llvm {
 class raw_ostream;
@@ -105,6 +102,10 @@ public:
   const Status &operator=(uint32_t err);
 
   ~Status();
+
+  // llvm::Error support
+  explicit Status(llvm::Error error);
+  llvm::Error ToError() const;
 
   //------------------------------------------------------------------
   /// Get the error string associated with the current error.
@@ -274,5 +275,4 @@ template <> struct format_provider<lldb_private::Status> {
 };
 }
 
-#endif // #if defined(__cplusplus)
-#endif // #ifndef __DCError_h__
+#endif // #ifndef LLDB_UTILITY_STATUS_H
