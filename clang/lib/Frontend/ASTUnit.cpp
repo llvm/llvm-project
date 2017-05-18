@@ -84,13 +84,6 @@ namespace {
     /// \brief The file in which the precompiled preamble is stored.
     std::string PreambleFile;
 
-    /// \brief Temporary files that should be removed when the ASTUnit is
-    /// destroyed.
-    SmallVector<std::string, 4> TemporaryFiles;
-
-    /// \brief Erase temporary files.
-    void CleanTemporaryFiles();
-
     /// \brief Erase the preamble file.
     void CleanPreambleFile();
 
@@ -163,12 +156,6 @@ static const std::string &getPreambleFile(const ASTUnit *AU) {
   return getOnDiskData(AU).PreambleFile;  
 }
 
-void OnDiskData::CleanTemporaryFiles() {
-  for (StringRef File : TemporaryFiles)
-    llvm::sys::fs::remove(File);
-  TemporaryFiles.clear();
-}
-
 void OnDiskData::CleanPreambleFile() {
   if (!PreambleFile.empty()) {
     llvm::sys::fs::remove(PreambleFile);
@@ -177,7 +164,6 @@ void OnDiskData::CleanPreambleFile() {
 }
 
 void OnDiskData::Cleanup() {
-  CleanTemporaryFiles();
   CleanPreambleFile();
 }
 
@@ -192,14 +178,6 @@ struct ASTUnit::ASTWriterData {
 
 void ASTUnit::clearFileLevelDecls() {
   llvm::DeleteContainerSeconds(FileDecls);
-}
-
-void ASTUnit::CleanTemporaryFiles() {
-  getOnDiskData(this).CleanTemporaryFiles();
-}
-
-void ASTUnit::addTemporaryFile(StringRef TempFile) {
-  getOnDiskData(this).TemporaryFiles.push_back(TempFile);
 }
 
 /// \brief After failing to build a precompiled preamble (due to
@@ -1100,7 +1078,6 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   // Clear out old caches and data.
   TopLevelDecls.clear();
   clearFileLevelDecls();
-  CleanTemporaryFiles();
 
   if (!OverrideMainBuffer) {
     checkAndRemoveNonDriverDiags(StoredDiagnostics);

@@ -500,14 +500,24 @@ void Writer::createSymbolAndStringTable() {
     Sec->setStringTableOff(addEntryToStringTable(Name));
   }
 
-  for (lld::coff::ObjectFile *File : Symtab->ObjectFiles)
-    for (SymbolBody *B : File->getSymbols())
-      if (auto *D = dyn_cast<Defined>(B))
-        if (!D->WrittenToSymtab) {
-          D->WrittenToSymtab = true;
-          if (Optional<coff_symbol16> Sym = createSymbol(D))
-            OutputSymtab.push_back(*Sym);
-        }
+  for (lld::coff::ObjectFile *File : Symtab->ObjectFiles) {
+    for (SymbolBody *B : File->getSymbols()) {
+      auto *D = dyn_cast<Defined>(B);
+      if (!D || D->WrittenToSymtab)
+        continue;
+
+      if (auto *S = dyn_cast<DefinedImportData>(D))
+        if (!S->Live)
+          continue;
+      if (auto *S = dyn_cast<DefinedImportThunk>(D))
+        if (!S->Live)
+          continue;
+
+      D->WrittenToSymtab = true;
+      if (Optional<coff_symbol16> Sym = createSymbol(D))
+        OutputSymtab.push_back(*Sym);
+    }
+  }
 
   OutputSection *LastSection = OutputSections.back();
   // We position the symbol table to be adjacent to the end of the last section.

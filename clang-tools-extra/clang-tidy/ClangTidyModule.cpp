@@ -24,9 +24,8 @@ void ClangTidyCheckFactories::registerCheckFactory(StringRef Name,
 void ClangTidyCheckFactories::createChecks(
     ClangTidyContext *Context,
     std::vector<std::unique_ptr<ClangTidyCheck>> &Checks) {
-  GlobList &Filter = Context->getChecksFilter();
   for (const auto &Factory : Factories) {
-    if (Filter.contains(Factory.first))
+    if (Context->isCheckEnabled(Factory.first))
       Checks.emplace_back(Factory.second(Factory.first, Context));
   }
 }

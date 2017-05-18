@@ -18,7 +18,8 @@ int n;
 #if TEST >= 2
 // expected-error@-2 {{redefinition of '}}
 // expected-note@-3 {{unguarded header; consider using #ifdef guards or #pragma once}}
-// expected-note-re@modules-ts.cppm:1 {{'{{.*}}modules-ts.cppm' included multiple times, additional include site here}}
+// FIXME: We should drop the "header from" in this diagnostic.
+// expected-note-re@modules-ts.cppm:1 {{'{{.*}}modules-ts.cppm' included multiple times, additional include site in header from module 'foo'}}
 #endif
 
 #if TEST == 0

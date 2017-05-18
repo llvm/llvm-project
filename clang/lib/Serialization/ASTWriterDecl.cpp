@@ -299,7 +299,7 @@ void ASTDeclWriter::VisitDecl(Decl *D) {
   Record.push_back(D->isTopLevelDeclInObjCContainer());
   Record.push_back(D->getAccess());
   Record.push_back(D->isModulePrivate());
-  Record.push_back(Writer.inferSubmoduleIDFromLocation(D->getLocation()));
+  Record.push_back(Writer.getSubmoduleID(D->getOwningModule()));
 
   // If this declaration injected a name into a context different from its
   // lexical context, and that context is an imported namespace, we need to

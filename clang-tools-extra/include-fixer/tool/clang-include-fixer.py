@@ -136,7 +136,12 @@ def main():
                       help='clang-include-fixer input format.')
   parser.add_argument('-input', default='',
                       help='String to initialize the database.')
-  args = parser.parse_args()
+  # Don't throw exception when parsing unknown arguements to make the script
+  # work in neovim.
+  # Neovim (at least v0.2.1) somehow mangles the sys.argv in a weird way: it
+  # will pass additional arguments (e.g. "-c script_host.py") to sys.argv,
+  # which makes the script fail.
+  args, _ = parser.parse_known_args()
 
   # Get the current text.
   buf = vim.current.buffer

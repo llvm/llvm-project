@@ -125,8 +125,15 @@ static bool findVCToolChainViaEnvironment(std::string &Path,
         continue;
 
       // whatever/VC/bin --> old toolchain, VC dir is toolchain dir.
-      if (llvm::sys::path::filename(PathEntry) == "bin") {
-        llvm::StringRef ParentPath = llvm::sys::path::parent_path(PathEntry);
+      llvm::StringRef TestPath = PathEntry;
+      bool IsBin = llvm::sys::path::filename(TestPath).equals_lower("bin");
+      if (!IsBin) {
+        // Strip any architecture subdir like "amd64".
+        TestPath = llvm::sys::path::parent_path(TestPath);
+        IsBin = llvm::sys::path::filename(TestPath).equals_lower("bin");
+      }
+      if (IsBin) {
+        llvm::StringRef ParentPath = llvm::sys::path::parent_path(TestPath);
         if (llvm::sys::path::filename(ParentPath) == "VC") {
           Path = ParentPath;
           IsVS2017OrNewer = false;
