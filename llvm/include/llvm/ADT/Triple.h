@@ -250,6 +250,10 @@ public:
            ObjectFormat == Other.ObjectFormat;
   }
 
+  bool operator!=(const Triple &Other) const {
+    return !(*this == Other);
+  }
+
   /// @}
   /// @name Normalization
   /// @{
@@ -705,6 +709,12 @@ public:
   ///
   /// \returns true if the triple is little endian, false otherwise.
   bool isLittleEndian() const;
+
+  /// Test whether target triples are compatible.
+  bool isCompatibleWith(const Triple &Other) const;
+
+  /// Merge target triples.
+  std::string merge(const Triple &Other) const;
 
   /// @}
   /// @name Static helpers for IDs.
