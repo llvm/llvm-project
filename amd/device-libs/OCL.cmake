@@ -25,6 +25,8 @@ set (CMAKE_EXECUTABLE_SUFFIX_OCL ".co")
 
 macro(opencl_bc_lib name)
   set(lib_tgt ${name}_lib)
+  list(APPEND AMDGCN_LIB_LIST ${lib_tgt})
+  set(AMDGCN_LIB_LIST ${AMDGCN_LIB_LIST} PARENT_SCOPE)
   foreach(file ${ARGN})
     get_filename_component(fext ${file} EXT)
     #mark files as OCL source
