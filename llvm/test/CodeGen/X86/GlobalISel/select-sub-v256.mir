@@ -1,0 +1,185 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx2                        -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX2
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl           -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512VL
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl,+avx512bw -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512BWVL
+
+--- |
+  define <32 x i8> @test_sub_v32i8(<32 x i8> %arg1, <32 x i8> %arg2) {
+    %ret = sub <32 x i8> %arg1, %arg2
+    ret <32 x i8> %ret
+  }
+
+  define <16 x i16> @test_sub_v16i16(<16 x i16> %arg1, <16 x i16> %arg2) {
+    %ret = sub <16 x i16> %arg1, %arg2
+    ret <16 x i16> %ret
+  }
+
+  define <8 x i32> @test_sub_v8i32(<8 x i32> %arg1, <8 x i32> %arg2) {
+    %ret = sub <8 x i32> %arg1, %arg2
+    ret <8 x i32> %ret
+  }
+
+  define <4 x i64> @test_sub_v4i64(<4 x i64> %arg1, <4 x i64> %arg2) {
+    %ret = sub <4 x i64> %arg1, %arg2
+    ret <4 x i64> %ret
+  }
+...
+---
+name:            test_sub_v32i8
+# ALL-LABEL: name:  test_sub_v32i8
+alignment:       4
+legalized:       true
+regBankSelected: true
+# AVX2:            registers:
+# AVX2-NEXT:         - { id: 0, class: vr256 }
+# AVX2-NEXT:         - { id: 1, class: vr256 }
+# AVX2-NEXT:         - { id: 2, class: vr256 }
+#
+# AVX512VL:        registers:
+# AVX512VL-NEXT:     - { id: 0, class: vr256 }
+# AVX512VL-NEXT:     - { id: 1, class: vr256 }
+# AVX512VL-NEXT:     - { id: 2, class: vr256 }
+#
+# AVX512BWVL:      registers:
+# AVX512BWVL-NEXT:   - { id: 0, class: vr256x }
+# AVX512BWVL-NEXT:   - { id: 1, class: vr256x }
+# AVX512BWVL-NEXT:   - { id: 2, class: vr256x }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# AVX2:                %2 = VPSUBBYrr %0, %1
+#
+# AVX512VL:            %2 = VPSUBBYrr %0, %1
+#
+# AVX512BWVL:          %2 = VPSUBBZ256rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<32 x s8>) = COPY %ymm0
+    %1(<32 x s8>) = COPY %ymm1
+    %2(<32 x s8>) = G_SUB %0, %1
+    %ymm0 = COPY %2(<32 x s8>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_sub_v16i16
+# ALL-LABEL: name:  test_sub_v16i16
+alignment:       4
+legalized:       true
+regBankSelected: true
+# AVX2:            registers:
+# AVX2-NEXT:         - { id: 0, class: vr256 }
+# AVX2-NEXT:         - { id: 1, class: vr256 }
+# AVX2-NEXT:         - { id: 2, class: vr256 }
+#
+# AVX512VL:        registers:
+# AVX512VL-NEXT:     - { id: 0, class: vr256 }
+# AVX512VL-NEXT:     - { id: 1, class: vr256 }
+# AVX512VL-NEXT:     - { id: 2, class: vr256 }
+#
+# AVX512BWVL:      registers:
+# AVX512BWVL-NEXT:   - { id: 0, class: vr256x }
+# AVX512BWVL-NEXT:   - { id: 1, class: vr256x }
+# AVX512BWVL-NEXT:   - { id: 2, class: vr256x }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# AVX2:                %2 = VPSUBWYrr %0, %1
+#
+# AVX512VL:            %2 = VPSUBWYrr %0, %1
+#
+# AVX512BWVL:          %2 = VPSUBWZ256rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<16 x s16>) = COPY %ymm0
+    %1(<16 x s16>) = COPY %ymm1
+    %2(<16 x s16>) = G_SUB %0, %1
+    %ymm0 = COPY %2(<16 x s16>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_sub_v8i32
+# ALL-LABEL: name:  test_sub_v8i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# AVX2:            registers:
+# AVX2-NEXT:         - { id: 0, class: vr256 }
+# AVX2-NEXT:         - { id: 1, class: vr256 }
+# AVX2-NEXT:         - { id: 2, class: vr256 }
+#
+# AVX512VL:        registers:
+# AVX512VL-NEXT:     - { id: 0, class: vr256x }
+# AVX512VL-NEXT:     - { id: 1, class: vr256x }
+# AVX512VL-NEXT:     - { id: 2, class: vr256x }
+#
+# AVX512BWVL:      registers:
+# AVX512BWVL-NEXT:   - { id: 0, class: vr256x }
+# AVX512BWVL-NEXT:   - { id: 1, class: vr256x }
+# AVX512BWVL-NEXT:   - { id: 2, class: vr256x }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# AVX2:                %2 = VPSUBDYrr %0, %1
+#
+# AVX512VL:            %2 = VPSUBDZ256rr %0, %1
+#
+# AVX512BWVL:          %2 = VPSUBDZ256rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<8 x s32>) = COPY %ymm0
+    %1(<8 x s32>) = COPY %ymm1
+    %2(<8 x s32>) = G_SUB %0, %1
+    %ymm0 = COPY %2(<8 x s32>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_sub_v4i64
+# ALL-LABEL: name:  test_sub_v4i64
+alignment:       4
+legalized:       true
+regBankSelected: true
+# AVX2:            registers:
+# AVX2-NEXT:         - { id: 0, class: vr256 }
+# AVX2-NEXT:         - { id: 1, class: vr256 }
+# AVX2-NEXT:         - { id: 2, class: vr256 }
+#
+# AVX512VL:        registers:
+# AVX512VL-NEXT:     - { id: 0, class: vr256x }
+# AVX512VL-NEXT:     - { id: 1, class: vr256x }
+# AVX512VL-NEXT:     - { id: 2, class: vr256x }
+#
+# AVX512BWVL:      registers:
+# AVX512BWVL-NEXT:   - { id: 0, class: vr256x }
+# AVX512BWVL-NEXT:   - { id: 1, class: vr256x }
+# AVX512BWVL-NEXT:   - { id: 2, class: vr256x }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# AVX2:                %2 = VPSUBQYrr %0, %1
+#
+# AVX512VL:            %2 = VPSUBQZ256rr %0, %1
+#
+# AVX512BWVL:          %2 = VPSUBQZ256rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<4 x s64>) = COPY %ymm0
+    %1(<4 x s64>) = COPY %ymm1
+    %2(<4 x s64>) = G_SUB %0, %1
+    %ymm0 = COPY %2(<4 x s64>)
+    RET 0, implicit %ymm0
+
+...

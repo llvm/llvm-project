@@ -24,6 +24,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
@@ -767,13 +768,12 @@ class SafeStackLegacyPass : public FunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid..
-  SafeStackLegacyPass(const TargetMachine *TM) : FunctionPass(ID), TM(TM) {
+  SafeStackLegacyPass() : FunctionPass(ID), TM(nullptr) {
     initializeSafeStackLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
-  SafeStackLegacyPass() : SafeStackLegacyPass(nullptr) {}
-
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetPassConfig>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<AssumptionCacheTracker>();
   }
@@ -793,8 +793,7 @@ public:
       return false;
     }
 
-    if (!TM)
-      report_fatal_error("Target machine is required");
+    TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
     auto *TL = TM->getSubtargetImpl(F)->getTargetLowering();
     if (!TL)
       report_fatal_error("TargetLowering instance is required");
@@ -821,11 +820,10 @@ public:
 } // anonymous namespace
 
 char SafeStackLegacyPass::ID = 0;
-INITIALIZE_TM_PASS_BEGIN(SafeStackLegacyPass, "safe-stack",
-                         "Safe Stack instrumentation pass", false, false)
-INITIALIZE_TM_PASS_END(SafeStackLegacyPass, "safe-stack",
-                       "Safe Stack instrumentation pass", false, false)
+INITIALIZE_PASS_BEGIN(SafeStackLegacyPass, "safe-stack",
+                      "Safe Stack instrumentation pass", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(SafeStackLegacyPass, "safe-stack",
+                    "Safe Stack instrumentation pass", false, false)
 
-FunctionPass *llvm::createSafeStackPass(const llvm::TargetMachine *TM) {
-  return new SafeStackLegacyPass(TM);
-}
+FunctionPass *llvm::createSafeStackPass() { return new SafeStackLegacyPass(); }

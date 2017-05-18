@@ -91,9 +91,6 @@ Error TpiStream::reload() {
     HSR.setOffset(Header->HashValueBuffer.Off);
     if (auto EC = HSR.readArray(HashValues, NumHashValues))
       return EC;
-    std::vector<ulittle32_t> HashValueList;
-    for (auto I : HashValues)
-      HashValueList.push_back(I);
 
     HSR.setOffset(Header->IndexOffsetBuffer.Off);
     uint32_t NumTypeIndexOffsets =

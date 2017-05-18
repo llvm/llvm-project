@@ -1,0 +1,139 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f           -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512F
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512bw -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512BW
+
+--- |
+  define void @test_add_v64i8() {
+    %ret = add <64 x i8> undef, undef
+    ret void
+  }
+
+  define void @test_add_v32i16() {
+    %ret = add <32 x i16> undef, undef
+    ret void
+  }
+
+  define void @test_add_v16i32() {
+    %ret = add <16 x i32> undef, undef
+    ret void
+  }
+
+  define void @test_add_v8i64() {
+    %ret = add <8 x i64> undef, undef
+    ret void
+  }
+
+...
+---
+name:            test_add_v64i8
+# ALL-LABEL: name:  test_add_v64i8
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# AVX512F:          %0(<64 x s8>) = IMPLICIT_DEF
+# AVX512F-NEXT:     %1(<64 x s8>) = IMPLICIT_DEF
+# AVX512F-NEXT:     %3(<32 x s8>), %4(<32 x s8>) = G_UNMERGE_VALUES %0(<64 x s8>)
+# AVX512F-NEXT:     %5(<32 x s8>), %6(<32 x s8>) = G_UNMERGE_VALUES %1(<64 x s8>)
+# AVX512F-NEXT:     %7(<32 x s8>) = G_ADD %3, %5
+# AVX512F-NEXT:     %8(<32 x s8>) = G_ADD %4, %6
+# AVX512F-NEXT:     %2(<64 x s8>) = G_MERGE_VALUES %7(<32 x s8>), %8(<32 x s8>)
+# AVX512F-NEXT:     RET 0
+#
+# AVX512BW:          %0(<64 x s8>) = IMPLICIT_DEF
+# AVX512BW-NEXT:     %1(<64 x s8>) = IMPLICIT_DEF
+# AVX512BW-NEXT:     %2(<64 x s8>) = G_ADD %0, %1
+# AVX512BW-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %zmm1
+
+    %0(<64 x s8>) = IMPLICIT_DEF
+    %1(<64 x s8>) = IMPLICIT_DEF
+    %2(<64 x s8>) = G_ADD %0, %1
+    RET 0
+
+...
+---
+name:            test_add_v32i16
+# ALL-LABEL: name:  test_add_v32i16
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# AVX512F:          %0(<32 x s16>) = IMPLICIT_DEF
+# AVX512F-NEXT:     %1(<32 x s16>) = IMPLICIT_DEF
+# AVX512F-NEXT:     %3(<16 x s16>), %4(<16 x s16>) = G_UNMERGE_VALUES %0(<32 x s16>)
+# AVX512F-NEXT:     %5(<16 x s16>), %6(<16 x s16>) = G_UNMERGE_VALUES %1(<32 x s16>)
+# AVX512F-NEXT:     %7(<16 x s16>) = G_ADD %3, %5
+# AVX512F-NEXT:     %8(<16 x s16>) = G_ADD %4, %6
+# AVX512F-NEXT:     %2(<32 x s16>) = G_MERGE_VALUES %7(<16 x s16>), %8(<16 x s16>)
+# AVX512F-NEXT:     RET 0
+#
+# AVX512BW:          %0(<32 x s16>) = IMPLICIT_DEF
+# AVX512BW-NEXT:     %1(<32 x s16>) = IMPLICIT_DEF
+# AVX512BW-NEXT:     %2(<32 x s16>) = G_ADD %0, %1
+# AVX512BW-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %zmm1
+
+    %0(<32 x s16>) = IMPLICIT_DEF
+    %1(<32 x s16>) = IMPLICIT_DEF
+    %2(<32 x s16>) = G_ADD %0, %1
+    RET 0
+
+...
+---
+name:            test_add_v16i32
+# ALL-LABEL: name:  test_add_v16i32
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0(<16 x s32>) = IMPLICIT_DEF
+# ALL-NEXT:     %1(<16 x s32>) = IMPLICIT_DEF
+# ALL-NEXT:     %2(<16 x s32>) = G_ADD %0, %1
+# ALL-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %zmm1
+
+    %0(<16 x s32>) = IMPLICIT_DEF
+    %1(<16 x s32>) = IMPLICIT_DEF
+    %2(<16 x s32>) = G_ADD %0, %1
+    RET 0
+
+...
+---
+name:            test_add_v8i64
+# ALL-LABEL: name:  test_add_v8i64
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0(<8 x s64>) = IMPLICIT_DEF
+# ALL-NEXT:     %1(<8 x s64>) = IMPLICIT_DEF
+# ALL-NEXT:     %2(<8 x s64>) = G_ADD %0, %1
+# ALL-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %zmm1
+
+    %0(<8 x s64>) = IMPLICIT_DEF
+    %1(<8 x s64>) = IMPLICIT_DEF
+    %2(<8 x s64>) = G_ADD %0, %1
+    RET 0
+
+...

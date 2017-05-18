@@ -19,6 +19,12 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <iterator>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -27,20 +33,20 @@ namespace llvm {
 /// in a deterministic order. The values are kept in a std::vector and the
 /// mapping is done with DenseMap from Keys to indexes in that vector.
 template<typename KeyT, typename ValueT,
-         typename MapType = llvm::DenseMap<KeyT, unsigned>,
-         typename VectorType = std::vector<std::pair<KeyT, ValueT> > >
+         typename MapType = DenseMap<KeyT, unsigned>,
+         typename VectorType = std::vector<std::pair<KeyT, ValueT>>>
 class MapVector {
-  typedef typename VectorType::value_type value_type;
-  typedef typename VectorType::size_type size_type;
+  using value_type = typename VectorType::value_type;
+  using size_type = typename VectorType::size_type;
 
   MapType Map;
   VectorType Vector;
 
 public:
-  typedef typename VectorType::iterator iterator;
-  typedef typename VectorType::const_iterator const_iterator;
-  typedef typename VectorType::reverse_iterator reverse_iterator;
-  typedef typename VectorType::const_reverse_iterator const_reverse_iterator;
+  using iterator = typename VectorType::iterator;
+  using const_iterator = typename VectorType::const_iterator;
+  using reverse_iterator = typename VectorType::reverse_iterator;
+  using const_reverse_iterator = typename VectorType::const_reverse_iterator;
 
   /// Clear the MapVector and return the underlying vector.
   VectorType takeVector() {
@@ -220,4 +226,4 @@ struct SmallMapVector
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_MAPVECTOR_H

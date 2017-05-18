@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -197,10 +198,11 @@ class TypePromotionTransaction;
 
   public:
     static char ID; // Pass identification, replacement for typeid
-    explicit CodeGenPrepare(const TargetMachine *TM = nullptr)
-        : FunctionPass(ID), TM(TM), TLI(nullptr), TTI(nullptr), DL(nullptr) {
-        initializeCodeGenPreparePass(*PassRegistry::getPassRegistry());
-      }
+    CodeGenPrepare()
+        : FunctionPass(ID), TM(nullptr), TLI(nullptr), TTI(nullptr),
+          DL(nullptr) {
+      initializeCodeGenPreparePass(*PassRegistry::getPassRegistry());
+    }
     bool runOnFunction(Function &F) override;
 
     StringRef getPassName() const override { return "CodeGen Prepare"; }
@@ -255,15 +257,13 @@ class TypePromotionTransaction;
 }
 
 char CodeGenPrepare::ID = 0;
-INITIALIZE_TM_PASS_BEGIN(CodeGenPrepare, "codegenprepare",
-                         "Optimize for code generation", false, false)
+INITIALIZE_PASS_BEGIN(CodeGenPrepare, "codegenprepare",
+                      "Optimize for code generation", false, false)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
-INITIALIZE_TM_PASS_END(CodeGenPrepare, "codegenprepare",
-                       "Optimize for code generation", false, false)
+INITIALIZE_PASS_END(CodeGenPrepare, "codegenprepare",
+                    "Optimize for code generation", false, false)
 
-FunctionPass *llvm::createCodeGenPreparePass(const TargetMachine *TM) {
-  return new CodeGenPrepare(TM);
-}
+FunctionPass *llvm::createCodeGenPreparePass() { return new CodeGenPrepare(); }
 
 bool CodeGenPrepare::runOnFunction(Function &F) {
   if (skipFunction(F))
@@ -279,7 +279,8 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   BPI.reset();
 
   ModifiedDT = false;
-  if (TM) {
+  if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>()) {
+    TM = &TPC->getTM<TargetMachine>();
     SubtargetInfo = TM->getSubtargetImpl(F);
     TLI = SubtargetInfo->getTargetLowering();
     TRI = SubtargetInfo->getRegisterInfo();
@@ -349,7 +350,7 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
 
     // Really free removed instructions during promotion.
     for (Instruction *I : RemovedInsts)
-      delete I;
+      I->deleteValue();
 
     EverMadeChange |= MadeChange;
   }

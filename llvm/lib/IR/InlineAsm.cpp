@@ -40,10 +40,6 @@ InlineAsm::InlineAsm(FunctionType *FTy, const std::string &asmString,
          "Function type not legal for constraints!");
 }
 
-// Implement the first virtual method in this class in this file so the
-// InlineAsm vtable is emitted here.
-InlineAsm::~InlineAsm() = default;
-
 InlineAsm *InlineAsm::get(FunctionType *FTy, StringRef AsmString,
                           StringRef Constraints, bool hasSideEffects,
                           bool isAlignStack, AsmDialect asmDialect) {

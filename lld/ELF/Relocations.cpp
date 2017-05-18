@@ -935,6 +935,10 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     bool IsConstant =
         isStaticLinkTimeConstant<ELFT>(Expr, Type, Body, Sec, Rel.r_offset);
 
+    // The size is not going to change, so we fold it in here.
+    if (Expr == R_SIZE)
+      Addend += Body.getSize<ELFT>();
+
     // If the output being produced is position independent, the final value
     // is still not known. In that case we still need some help from the
     // dynamic linker. We can however do better than just copying the incoming

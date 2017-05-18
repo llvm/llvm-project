@@ -215,27 +215,6 @@ uint32_t LLVMContextImpl::getOperandBundleTagID(StringRef Tag) const {
   return I->second;
 }
 
-// ConstantsContext anchors
-void UnaryConstantExpr::anchor() { }
-
-void BinaryConstantExpr::anchor() { }
-
-void SelectConstantExpr::anchor() { }
-
-void ExtractElementConstantExpr::anchor() { }
-
-void InsertElementConstantExpr::anchor() { }
-
-void ShuffleVectorConstantExpr::anchor() { }
-
-void ExtractValueConstantExpr::anchor() { }
-
-void InsertValueConstantExpr::anchor() { }
-
-void GetElementPtrConstantExpr::anchor() { }
-
-void CompareConstantExpr::anchor() { }
-
 /// Singleton instance of the OptBisect class.
 ///
 /// This singleton is accessed via the LLVMContext::getOptBisect() function.  It

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsTargetMachine.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
@@ -28,14 +29,16 @@ namespace {
   public:
     static char ID;
 
-    Mips16HardFloat(MipsTargetMachine &TM_) : ModulePass(ID), TM(TM_) {}
+    Mips16HardFloat() : ModulePass(ID) {}
 
     StringRef getPassName() const override { return "MIPS16 Hard Float Pass"; }
 
-    bool runOnModule(Module &M) override;
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addRequired<TargetPassConfig>();
+      ModulePass::getAnalysisUsage(AU);
+    }
 
-  protected:
-    const MipsTargetMachine &TM;
+    bool runOnModule(Module &M) override;
   };
 
   static void EmitInlineAsm(LLVMContext &C, BasicBlock *BB, StringRef AsmText) {
@@ -520,6 +523,8 @@ static void removeUseSoftFloat(Function &F) {
 //       during call lowering but it should be moved here in the future.
 //
 bool Mips16HardFloat::runOnModule(Module &M) {
+  auto &TM = static_cast<const MipsTargetMachine &>(
+      getAnalysis<TargetPassConfig>().getTM<TargetMachine>());
   DEBUG(errs() << "Run on Module Mips16HardFloat\n");
   bool Modified = false;
   for (Module::iterator F = M.begin(), E = M.end(); F != E; ++F) {
@@ -541,6 +546,6 @@ bool Mips16HardFloat::runOnModule(Module &M) {
 }
 
 
-ModulePass *llvm::createMips16HardFloatPass(MipsTargetMachine &TM) {
-  return new Mips16HardFloat(TM);
+ModulePass *llvm::createMips16HardFloatPass() {
+  return new Mips16HardFloat();
 }

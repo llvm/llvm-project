@@ -933,14 +933,14 @@ define <4 x float> @not_a_hsub_2(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    vsubss %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; AVX-NEXT:    vsubss %xmm3, %xmm0, %xmm0
+; AVX-NEXT:    vpermilps {{.*#+}} xmm3 = xmm1[3,1,2,3]
+; AVX-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm1[1,0]
+; AVX-NEXT:    vsubss %xmm4, %xmm3, %xmm3
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,1,2,3]
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm1[1,0]
-; AVX-NEXT:    vsubss %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; AVX-NEXT:    vsubss %xmm3, %xmm1, %xmm1
+; AVX-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX-NEXT:    vsubss %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm2[0]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; AVX-NEXT:    retq
   %vecext = extractelement <4 x float> %A, i32 2
   %vecext1 = extractelement <4 x float> %A, i32 3

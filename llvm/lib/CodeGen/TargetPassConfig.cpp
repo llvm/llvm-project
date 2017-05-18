@@ -315,7 +315,9 @@ TargetPassConfig *LLVMTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 TargetPassConfig::TargetPassConfig()
   : ImmutablePass(ID), PM(nullptr) {
-  llvm_unreachable("TargetPassConfig should not be constructed on-the-fly");
+  report_fatal_error("Trying to construct TargetPassConfig without a target "
+                     "machine. Scheduling a CodeGen pass without a target "
+                     "triple set?");
 }
 
 // Helper to verify the analysis is really immutable.
@@ -514,14 +516,14 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     LLVM_FALLTHROUGH;
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
-    addPass(createDwarfEHPass(TM));
+    addPass(createDwarfEHPass());
     break;
   case ExceptionHandling::WinEH:
     // We support using both GCC-style and MSVC-style exceptions on Windows, so
     // add both preparation passes. Each pass will only actually run if it
     // recognizes the personality function.
-    addPass(createWinEHPass(TM));
-    addPass(createDwarfEHPass(TM));
+    addPass(createWinEHPass());
+    addPass(createDwarfEHPass());
     break;
   case ExceptionHandling::None:
     addPass(createLowerInvokePass());
@@ -536,7 +538,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
 /// before exception handling preparation passes.
 void TargetPassConfig::addCodeGenPrepare() {
   if (getOptLevel() != CodeGenOpt::None && !DisableCGP)
-    addPass(createCodeGenPreparePass(TM));
+    addPass(createCodeGenPreparePass());
   addPass(createRewriteSymbolsPass());
 }
 
@@ -551,8 +553,8 @@ void TargetPassConfig::addISelPrepare() {
 
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
-  addPass(createSafeStackPass(TM));
-  addPass(createStackProtectorPass(TM));
+  addPass(createSafeStackPass());
+  addPass(createStackProtectorPass());
 
   if (PrintISelInput)
     addPass(createPrintFunctionPass(
@@ -647,7 +649,7 @@ void TargetPassConfig::addMachinePasses() {
   // Prolog/Epilog inserter needs a TargetMachine to instantiate. But only
   // do so if it hasn't been disabled, substituted, or overridden.
   if (!isPassSubstitutedOrOverridden(&PrologEpilogCodeInserterID))
-      addPass(createPrologEpilogInserterPass(TM));
+      addPass(createPrologEpilogInserterPass());
 
   /// Add passes that optimize machine instructions after register allocation.
   if (getOptLevel() != CodeGenOpt::None)

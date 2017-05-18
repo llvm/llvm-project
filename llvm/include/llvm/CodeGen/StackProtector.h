@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Pass.h"
@@ -55,7 +56,7 @@ private:
   /// TLI - Keep a pointer of a TargetLowering to consult for determining
   /// target type sizes.
   const TargetLoweringBase *TLI = nullptr;
-  const Triple Trip;
+  Triple Trip;
 
   Function *F;
   Module *M;
@@ -114,17 +115,12 @@ private:
 public:
   static char ID; // Pass identification, replacement for typeid.
 
-  StackProtector() : FunctionPass(ID) {
-    initializeStackProtectorPass(*PassRegistry::getPassRegistry());
-  }
-
-  StackProtector(const TargetMachine *TM)
-      : FunctionPass(ID), TM(TM), Trip(TM->getTargetTriple()),
-        SSPBufferSize(8) {
+  StackProtector() : FunctionPass(ID), SSPBufferSize(8) {
     initializeStackProtectorPass(*PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetPassConfig>();
     AU.addPreserved<DominatorTreeWrapperPass>();
   }
 

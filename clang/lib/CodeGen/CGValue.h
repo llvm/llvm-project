@@ -146,6 +146,25 @@ static inline AlignmentSource getFieldAlignmentSource(AlignmentSource Source) {
   return AlignmentSource::Decl;
 }
 
+class LValueBaseInfo {
+  AlignmentSource AlignSource;
+  bool MayAlias;
+
+public:
+  explicit LValueBaseInfo(AlignmentSource Source = AlignmentSource::Type,
+                 bool Alias = false)
+    : AlignSource(Source), MayAlias(Alias) {}
+  AlignmentSource getAlignmentSource() const { return AlignSource; }
+  void setAlignmentSource(AlignmentSource Source) { AlignSource = Source; }
+  bool getMayAlias() const { return MayAlias; }
+  void setMayAlias(bool Alias) { MayAlias = Alias; }
+
+  void mergeForCast(const LValueBaseInfo &Info) {
+    setAlignmentSource(Info.getAlignmentSource());
+    setMayAlias(getMayAlias() || Info.getMayAlias());
+  }
+};
+
 /// LValue - This represents an lvalue references.  Because C/C++ allow
 /// bitfields, this is not a simple LLVM pointer, it may be a pointer plus a
 /// bitrange.
@@ -200,7 +219,7 @@ class LValue {
   // to make the default bitfield pattern all-zeroes.
   bool ImpreciseLifetime : 1;
 
-  unsigned AlignSource : 2;
+  LValueBaseInfo BaseInfo;
 
   // This flag shows if a nontemporal load/stores should be used when accessing
   // this lvalue.
@@ -218,7 +237,7 @@ class LValue {
 
 private:
   void Initialize(QualType Type, Qualifiers Quals,
-                  CharUnits Alignment, AlignmentSource AlignSource,
+                  CharUnits Alignment, LValueBaseInfo BaseInfo,
                   llvm::MDNode *TBAAInfo = nullptr) {
     assert((!Alignment.isZero() || Type->isIncompleteType()) &&
            "initializing l-value with zero alignment!");
@@ -227,7 +246,7 @@ private:
     this->Alignment = Alignment.getQuantity();
     assert(this->Alignment == Alignment.getQuantity() &&
            "Alignment exceeds allowed max!");
-    this->AlignSource = unsigned(AlignSource);
+    this->BaseInfo = BaseInfo;
 
     // Initialize Objective-C flags.
     this->Ivar = this->ObjIsArray = this->NonGC = this->GlobalObjCRef = false;
@@ -316,12 +335,8 @@ public:
   CharUnits getAlignment() const { return CharUnits::fromQuantity(Alignment); }
   void setAlignment(CharUnits A) { Alignment = A.getQuantity(); }
 
-  AlignmentSource getAlignmentSource() const {
-    return AlignmentSource(AlignSource);
-  }
-  void setAlignmentSource(AlignmentSource Source) {
-    AlignSource = unsigned(Source);
-  }
+  LValueBaseInfo getBaseInfo() const { return BaseInfo; }
+  void setBaseInfo(LValueBaseInfo Info) { BaseInfo = Info; }
 
   // simple lvalue
   llvm::Value *getPointer() const {
@@ -370,7 +385,7 @@ public:
 
   static LValue MakeAddr(Address address, QualType type,
                          ASTContext &Context,
-                         AlignmentSource alignSource,
+                         LValueBaseInfo BaseInfo,
                          llvm::MDNode *TBAAInfo = nullptr) {
     Qualifiers qs = type.getQualifiers();
     qs.setObjCGCAttr(Context.getObjCGCAttrKind(type));
@@ -379,29 +394,29 @@ public:
     R.LVType = Simple;
     assert(address.getPointer()->getType()->isPointerTy());
     R.V = address.getPointer();
-    R.Initialize(type, qs, address.getAlignment(), alignSource, TBAAInfo);
+    R.Initialize(type, qs, address.getAlignment(), BaseInfo, TBAAInfo);
     return R;
   }
 
   static LValue MakeVectorElt(Address vecAddress, llvm::Value *Idx,
-                              QualType type, AlignmentSource alignSource) {
+                              QualType type, LValueBaseInfo BaseInfo) {
     LValue R;
     R.LVType = VectorElt;
     R.V = vecAddress.getPointer();
     R.VectorIdx = Idx;
     R.Initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
-                 alignSource);
+                 BaseInfo);
     return R;
   }
 
   static LValue MakeExtVectorElt(Address vecAddress, llvm::Constant *Elts,
-                                 QualType type, AlignmentSource alignSource) {
+                                 QualType type, LValueBaseInfo BaseInfo) {
     LValue R;
     R.LVType = ExtVectorElt;
     R.V = vecAddress.getPointer();
     R.VectorElts = Elts;
     R.Initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
-                 alignSource);
+                 BaseInfo);
     return R;
   }
 
@@ -414,12 +429,12 @@ public:
   static LValue MakeBitfield(Address Addr,
                              const CGBitFieldInfo &Info,
                              QualType type,
-                             AlignmentSource alignSource) {
+                             LValueBaseInfo BaseInfo) {
     LValue R;
     R.LVType = BitField;
     R.V = Addr.getPointer();
     R.BitFieldInfo = &Info;
-    R.Initialize(type, type.getQualifiers(), Addr.getAlignment(), alignSource);
+    R.Initialize(type, type.getQualifiers(), Addr.getAlignment(), BaseInfo);
     return R;
   }
 
@@ -428,7 +443,7 @@ public:
     R.LVType = GlobalReg;
     R.V = Reg.getPointer();
     R.Initialize(type, type.getQualifiers(), Reg.getAlignment(),
-                 AlignmentSource::Decl);
+                 LValueBaseInfo(AlignmentSource::Decl, false));
     return R;
   }
 

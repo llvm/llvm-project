@@ -124,7 +124,7 @@ private:
 public:
   static char ID;
 
-  R600VectorRegMerger(TargetMachine &tm) : MachineFunctionPass(ID),
+  R600VectorRegMerger() : MachineFunctionPass(ID),
   TII(nullptr) { }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -396,6 +396,6 @@ bool R600VectorRegMerger::runOnMachineFunction(MachineFunction &Fn) {
   return false;
 }
 
-llvm::FunctionPass *llvm::createR600VectorRegMerger(TargetMachine &tm) {
-  return new R600VectorRegMerger(tm);
+llvm::FunctionPass *llvm::createR600VectorRegMerger() {
+  return new R600VectorRegMerger();
 }

@@ -499,7 +499,7 @@ private:
   }
 
 public:
-  R600ControlFlowFinalizer(TargetMachine &tm) : MachineFunctionPass(ID) {}
+  R600ControlFlowFinalizer() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     ST = &MF.getSubtarget<R600Subtarget>();
@@ -706,6 +706,6 @@ char R600ControlFlowFinalizer::ID = 0;
 
 } // end anonymous namespace
 
-FunctionPass *llvm::createR600ControlFlowFinalizer(TargetMachine &TM) {
-  return new R600ControlFlowFinalizer(TM);
+FunctionPass *llvm::createR600ControlFlowFinalizer() {
+  return new R600ControlFlowFinalizer();
 }

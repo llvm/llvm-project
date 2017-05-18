@@ -181,3 +181,97 @@ Exit:
 ; CHECK-NEXT:    ret void
   ret void
 }
+
+declare void @never_called()
+
+; Assume the guard is always taken and we deoptimize, so we never reach the
+; branch below that guard. We should *never* change the behaviour of a guard from
+; `must deoptimize` to `may deoptimize`, since this affects the program
+; semantics.
+define void @dont_fold_guard(i8* %addr, i32 %i, i32 %length) {
+; CHECK-LABEL: dont_fold_guard
+; CHECK: experimental.guard(i1 %wide.chk)
+
+entry:
+  br label %BBPred
+
+BBPred:
+ %cond = icmp eq i8* %addr, null
+ br i1 %cond, label %zero, label %not_zero
+
+zero:
+  unreachable
+
+not_zero:
+  %c1 = icmp ult i32 %i, %length
+  %c2 = icmp eq i32 %i, 0
+  %wide.chk = and i1 %c1, %c2
+  call void(i1, ...) @llvm.experimental.guard(i1 %wide.chk) [ "deopt"() ]
+  br i1 %c2, label %unreachedBB2, label %unreachedBB1
+
+unreachedBB2:
+  call void @never_called()
+  ret void
+
+unreachedBB1:
+  ret void
+}
+
+
+; same as dont_fold_guard1 but condition %cmp is not an instruction.
+; We cannot fold the guard under any circumstance.
+; FIXME: We can merge unreachableBB2 into not_zero.
+define void @dont_fold_guard2(i8* %addr, i1 %cmp, i32 %i, i32 %length) {
+; CHECK-LABEL: dont_fold_guard2
+; CHECK: guard(i1 %cmp)
+
+entry:
+  br label %BBPred
+
+BBPred:
+ %cond = icmp eq i8* %addr, null
+ br i1 %cond, label %zero, label %not_zero
+
+zero:
+  unreachable
+
+not_zero:
+  call void(i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  br i1 %cmp, label %unreachedBB2, label %unreachedBB1
+
+unreachedBB2:
+  call void @never_called()
+  ret void
+
+unreachedBB1:
+  ret void
+}
+
+; Same as dont_fold_guard1 but use switch instead of branch.
+; triggers source code `ProcessThreadableEdges`.
+declare void @f(i1)
+define void @dont_fold_guard3(i1 %cmp1, i32 %i) nounwind {
+; CHECK-LABEL: dont_fold_guard3 
+; CHECK-LABEL: L2:
+; CHECK-NEXT: %cmp = icmp eq i32 %i, 0 
+; CHECK-NEXT: guard(i1 %cmp)
+; CHECK-NEXT: @f(i1 %cmp)
+; CHECK-NEXT: ret void
+entry:
+  br i1 %cmp1, label %L0, label %L3 
+L0:
+  %cmp = icmp eq i32 %i, 0
+  call void(i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
+  switch i1 %cmp, label %L3 [
+    i1 false, label %L1
+    i1 true, label %L2
+    ]
+
+L1:
+  ret void
+L2:
+  call void @f(i1 %cmp)
+  ret void
+L3:
+  ret void
+}

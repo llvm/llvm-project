@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace llvm;
 
@@ -44,19 +45,21 @@ namespace {
 class SDWAOperand;
 
 class SIPeepholeSDWA : public MachineFunctionPass {
+public:
+  typedef SmallVector<SDWAOperand *, 4> SDWAOperandsVector;
+
 private:
   MachineRegisterInfo *MRI;
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
 
   std::unordered_map<MachineInstr *, std::unique_ptr<SDWAOperand>> SDWAOperands;
+  std::unordered_map<MachineInstr *, SDWAOperandsVector> PotentialMatches;
 
   Optional<int64_t> foldToImm(const MachineOperand &Op) const;
 
 public:
   static char ID;
-
-  typedef SmallVector<std::unique_ptr<SDWAOperand>, 4> SDWAOperandsVector;
 
   SIPeepholeSDWA() : MachineFunctionPass(ID) {
     initializeSIPeepholeSDWAPass(*PassRegistry::getPassRegistry());
@@ -64,6 +67,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void matchSDWAOperands(MachineFunction &MF);
+  bool isConvertibleToSDWA(const MachineInstr &MI) const;
   bool convertToSDWA(MachineInstr &MI, const SDWAOperandsVector &SDWAOperands);
 
   StringRef getPassName() const override { return "SI Peephole SDWA"; }
@@ -468,7 +472,7 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineFunction &MF) {
 
         if (Opcode == AMDGPU::V_LSHLREV_B16_e32) {
           auto SDWADst =
-              make_unique<SDWADstOperand>(Dst, Src1, BYTE_1, UNUSED_PAD);
+            make_unique<SDWADstOperand>(Dst, Src1, BYTE_1, UNUSED_PAD);
           DEBUG(dbgs() << "Match: " << MI << "To: " << *SDWADst << '\n');
           SDWAOperands[&MI] = std::move(SDWADst);
           ++NumSDWAPatternsFound;
@@ -575,8 +579,7 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineFunction &MF) {
   }
 }
 
-bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
-                                   const SDWAOperandsVector &SDWAOperands) {
+bool SIPeepholeSDWA::isConvertibleToSDWA(const MachineInstr &MI) const {
   // Check if this instruction can be converted to SDWA:
   // 1. Does this opcode support SDWA
   if (AMDGPU::getSDWAOp(MI.getOpcode()) == -1)
@@ -588,6 +591,11 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
       return false;
   }
 
+  return true;
+}
+
+bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
+                                   const SDWAOperandsVector &SDWAOperands) {
   // Convert to sdwa
   int SDWAOpcode = AMDGPU::getSDWAOp(MI.getOpcode());
   assert(SDWAOpcode != -1);
@@ -664,7 +672,18 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
   // Apply all sdwa operand pattenrs
   bool Converted = false;
   for (auto &Operand : SDWAOperands) {
-    Converted |= Operand->convertToSDWA(*SDWAInst, TII);
+    // There should be no intesection between SDWA operands and potential MIs
+    // e.g.:
+    // v_and_b32 v0, 0xff, v1 -> src:v1 sel:BYTE_0
+    // v_and_b32 v2, 0xff, v0 -> src:v0 sel:BYTE_0
+    // v_add_u32 v3, v4, v2
+    //
+    // In that example it is possible that we would fold 2nd instruction into 3rd
+    // (v_add_u32_sdwa) and then try to fold 1st instruction into 2nd (that was
+    // already destroyed). So if SDWAOperand is also a potential MI then do not
+    // apply it.
+    if (PotentialMatches.count(Operand->getParentInst()) == 0)
+      Converted |= Operand->convertToSDWA(*SDWAInst, TII);
   }
   if (!Converted) {
     SDWAInst->eraseFromParent();
@@ -690,16 +709,15 @@ bool SIPeepholeSDWA::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
   TII = ST.getInstrInfo();
-
-  std::unordered_map<MachineInstr *, SDWAOperandsVector> PotentialMatches;
-
+  
+  // Find all SDWA operands in MF.
   matchSDWAOperands(MF);
 
-  for (auto &OperandPair : SDWAOperands) {
-    auto &Operand = OperandPair.second;
+  for (const auto &OperandPair : SDWAOperands) {
+    const auto &Operand = OperandPair.second;
     MachineInstr *PotentialMI = Operand->potentialToConvert(TII);
-    if (PotentialMI) {
-      PotentialMatches[PotentialMI].push_back(std::move(Operand));
+    if (PotentialMI && isConvertibleToSDWA(*PotentialMI)) {
+      PotentialMatches[PotentialMI].push_back(Operand.get());
     }
   }
 
@@ -708,6 +726,7 @@ bool SIPeepholeSDWA::runOnMachineFunction(MachineFunction &MF) {
     convertToSDWA(PotentialMI, PotentialPair.second);
   }
 
+  PotentialMatches.clear();
   SDWAOperands.clear();
   return false;
 }

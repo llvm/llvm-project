@@ -59,7 +59,7 @@ private:
 
 class OptimizePICCall : public MachineFunctionPass {
 public:
-  OptimizePICCall(TargetMachine &tm) : MachineFunctionPass(ID) {}
+  OptimizePICCall() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Mips OptimizePICCall"; }
 
@@ -297,6 +297,6 @@ void OptimizePICCall::incCntAndSetReg(ValueType Entry, unsigned Reg) {
 }
 
 /// Return an OptimizeCall object.
-FunctionPass *llvm::createMipsOptimizePICCallPass(MipsTargetMachine &TM) {
-  return new OptimizePICCall(TM);
+FunctionPass *llvm::createMipsOptimizePICCallPass() {
+  return new OptimizePICCall();
 }

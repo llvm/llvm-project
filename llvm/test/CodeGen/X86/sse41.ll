@@ -273,8 +273,8 @@ define <2 x float> @buildvector(<2 x float> %A, <2 x float> %B) nounwind  {
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; X32-NEXT:    movshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; X32-NEXT:    addss %xmm2, %xmm3
 ; X32-NEXT:    addss %xmm1, %xmm0
+; X32-NEXT:    addss %xmm2, %xmm3
 ; X32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[2,3]
 ; X32-NEXT:    retl
 ;
@@ -282,8 +282,8 @@ define <2 x float> @buildvector(<2 x float> %A, <2 x float> %B) nounwind  {
 ; X64:       ## BB#0: ## %entry
 ; X64-NEXT:    movshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; X64-NEXT:    movshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; X64-NEXT:    addss %xmm2, %xmm3
 ; X64-NEXT:    addss %xmm1, %xmm0
+; X64-NEXT:    addss %xmm2, %xmm3
 ; X64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[2,3]
 ; X64-NEXT:    retq
 entry:
@@ -896,9 +896,9 @@ define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x fl
 ; X32-NEXT:    movss {{.*#+}} xmm4 = mem[0],zero,zero,zero
 ; X32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[0]
 ; X32-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[0]
-; X32-NEXT:    addps %xmm1, %xmm0
 ; X32-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm4[0]
 ; X32-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1,2],xmm4[0]
+; X32-NEXT:    addps %xmm1, %xmm0
 ; X32-NEXT:    addps %xmm2, %xmm3
 ; X32-NEXT:    addps %xmm3, %xmm0
 ; X32-NEXT:    retl
@@ -908,9 +908,9 @@ define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x fl
 ; X64-NEXT:    movss {{.*#+}} xmm4 = mem[0],zero,zero,zero
 ; X64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[0]
 ; X64-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[0]
-; X64-NEXT:    addps %xmm1, %xmm0
 ; X64-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm4[0]
 ; X64-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1,2],xmm4[0]
+; X64-NEXT:    addps %xmm1, %xmm0
 ; X64-NEXT:    addps %xmm2, %xmm3
 ; X64-NEXT:    addps %xmm3, %xmm0
 ; X64-NEXT:    retq

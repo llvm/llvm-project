@@ -327,14 +327,15 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
       continue;
     }
 
+    LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
     LValue ArgLVal =
         MakeAddrLValue(GetAddrOfLocalVar(Args[Cnt]), Args[Cnt]->getType(),
-                       AlignmentSource::Decl);
+                       BaseInfo);
     if (FD->hasCapturedVLAType()) {
       LValue CastedArgLVal =
           MakeAddrLValue(castValueFromUintptr(*this, FD->getType(),
                                               Args[Cnt]->getName(), ArgLVal),
-                         FD->getType(), AlignmentSource::Decl);
+                         FD->getType(), BaseInfo);
       auto *ExprArg =
           EmitLoadOfLValue(CastedArgLVal, SourceLocation()).getScalarVal();
       auto VAT = FD->getCapturedVLAType();
@@ -991,7 +992,7 @@ static LValue loadToBegin(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
           CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
               BaseLV.getPointer(), CGF.ConvertTypeForMem(ElTy)->getPointerTo()),
           BaseLV.getAlignment()),
-      BaseLV.getType(), BaseLV.getAlignmentSource());
+      BaseLV.getType(), BaseLV.getBaseInfo());
 }
 
 void CodeGenFunction::EmitOMPReductionClauseInit(

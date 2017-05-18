@@ -48,8 +48,7 @@ namespace {
 
 class DebugDirectoryChunk : public Chunk {
 public:
-  DebugDirectoryChunk(const std::vector<std::unique_ptr<Chunk>> &R)
-      : Records(R) {}
+  DebugDirectoryChunk(const std::vector<Chunk *> &R) : Records(R) {}
 
   size_t getSize() const override {
     return Records.size() * sizeof(debug_directory);
@@ -58,7 +57,7 @@ public:
   void writeTo(uint8_t *B) const override {
     auto *D = reinterpret_cast<debug_directory *>(B + OutputSectionOff);
 
-    for (const std::unique_ptr<Chunk> &Record : Records) {
+    for (const Chunk *Record : Records) {
       D->Characteristics = 0;
       D->TimeDateStamp = 0;
       D->MajorVersion = 0;
@@ -74,7 +73,7 @@ public:
   }
 
 private:
-  const std::vector<std::unique_ptr<Chunk>> &Records;
+  const std::vector<Chunk *> &Records;
 };
 
 class CVDebugRecordChunk : public Chunk {
@@ -142,10 +141,10 @@ private:
   IdataContents Idata;
   DelayLoadContents DelayIdata;
   EdataContents Edata;
-  std::unique_ptr<SEHTableChunk> SEHTable;
+  SEHTableChunk *SEHTable = nullptr;
 
-  std::unique_ptr<Chunk> DebugDirectory;
-  std::vector<std::unique_ptr<Chunk>> DebugRecords;
+  Chunk *DebugDirectory = nullptr;
+  std::vector<Chunk *> DebugRecords;
   CVDebugRecordChunk *BuildId = nullptr;
   ArrayRef<uint8_t> SectionTable;
 
@@ -153,8 +152,6 @@ private:
   uint32_t PointerToSymbolTable = 0;
   uint64_t SizeOfImage;
   uint64_t SizeOfHeaders;
-
-  std::vector<std::unique_ptr<Chunk>> Chunks;
 };
 } // anonymous namespace
 
@@ -258,7 +255,7 @@ void Writer::run() {
   sortExceptionTable();
   writeBuildId();
 
-  if (!Config->PDBPath.empty()) {
+  if (!Config->PDBPath.empty() && Config->Debug) {
     const llvm::codeview::DebugInfo *DI = nullptr;
     if (Config->DebugTypes & static_cast<unsigned>(coff::DebugType::CV))
       DI = BuildId->DI;
@@ -324,19 +321,19 @@ void Writer::createMiscChunks() {
 
   // Create Debug Information Chunks
   if (Config->Debug) {
-    DebugDirectory = llvm::make_unique<DebugDirectoryChunk>(DebugRecords);
+    DebugDirectory = make<DebugDirectoryChunk>(DebugRecords);
 
     // TODO(compnerd) create a coffgrp entry if DebugType::CV is not enabled
     if (Config->DebugTypes & static_cast<unsigned>(coff::DebugType::CV)) {
-      auto Chunk = llvm::make_unique<CVDebugRecordChunk>();
+      auto *Chunk = make<CVDebugRecordChunk>();
 
-      BuildId = Chunk.get();
-      DebugRecords.push_back(std::move(Chunk));
+      BuildId = Chunk;
+      DebugRecords.push_back(Chunk);
     }
 
-    RData->addChunk(DebugDirectory.get());
-    for (const std::unique_ptr<Chunk> &C : DebugRecords)
-      RData->addChunk(C.get());
+    RData->addChunk(DebugDirectory);
+    for (Chunk *C : DebugRecords)
+      RData->addChunk(C);
   }
 
   // Create SEH table. x86-only.
@@ -352,8 +349,8 @@ void Writer::createMiscChunks() {
       Handlers.insert(cast<Defined>(B));
   }
 
-  SEHTable.reset(new SEHTableChunk(Handlers));
-  RData->addChunk(SEHTable.get());
+  SEHTable = make<SEHTableChunk>(Handlers);
+  RData->addChunk(SEHTable);
 }
 
 // Create .idata section for the DLL-imported symbol table.
@@ -404,8 +401,8 @@ void Writer::createImportTables() {
     for (Chunk *C : DelayIdata.getDataChunks())
       Sec->addChunk(C);
     Sec = createSection(".text");
-    for (std::unique_ptr<Chunk> &C : DelayIdata.getCodeChunks())
-      Sec->addChunk(C.get());
+    for (Chunk *C : DelayIdata.getCodeChunks())
+      Sec->addChunk(C);
   }
 }
 
@@ -413,8 +410,8 @@ void Writer::createExportTable() {
   if (Config->Exports.empty())
     return;
   OutputSection *Sec = createSection(".edata");
-  for (std::unique_ptr<Chunk> &C : Edata.Chunks)
-    Sec->addChunk(C.get());
+  for (Chunk *C : Edata.Chunks)
+    Sec->addChunk(C);
 }
 
 // The Windows loader doesn't seem to like empty sections,
@@ -618,14 +615,19 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   PE->SizeOfStackCommit = Config->StackCommit;
   PE->SizeOfHeapReserve = Config->HeapReserve;
   PE->SizeOfHeapCommit = Config->HeapCommit;
+
+  // Import Descriptor Tables and Import Address Tables are merged
+  // in our output. That's not compatible with the Binding feature
+  // that is sort of prelinking. Setting this flag to make it clear
+  // that our outputs are not for the Binding.
+  PE->DLLCharacteristics = IMAGE_DLL_CHARACTERISTICS_NO_BIND;
+
   if (Config->AppContainer)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_APPCONTAINER;
   if (Config->DynamicBase)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE;
   if (Config->HighEntropyVA)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA;
-  if (!Config->AllowBind)
-    PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NO_BIND;
   if (Config->NxCompat)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NX_COMPAT;
   if (!Config->AllowIsolation)

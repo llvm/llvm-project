@@ -73,7 +73,7 @@ void BitcodeReaderValueList::assignValue(Value *V, unsigned Idx) {
     // If there was a forward reference to this value, replace it.
     Value *PrevVal = OldV;
     OldV->replaceAllUsesWith(V);
-    delete PrevVal;
+    PrevVal->deleteValue();
   }
 }
 
@@ -194,6 +194,6 @@ void BitcodeReaderValueList::resolveConstantForwardRefs() {
 
     // Update all ValueHandles, they should be the only users at this point.
     Placeholder->replaceAllUsesWith(RealVal);
-    delete Placeholder;
+    Placeholder->deleteValue();
   }
 }

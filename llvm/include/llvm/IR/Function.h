@@ -123,7 +123,7 @@ private:
 public:
   Function(const Function&) = delete;
   void operator=(const Function&) = delete;
-  ~Function() override;
+  ~Function();
 
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           const Twine &N = "", Module *M = nullptr) {

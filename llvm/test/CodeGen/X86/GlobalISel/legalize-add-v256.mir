@@ -1,0 +1,157 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX1
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx2 -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX2
+
+--- |
+  define void @test_add_v32i8() {
+    %ret = add <32 x i8> undef, undef
+    ret void
+  }
+
+  define void @test_add_v16i16() {
+    %ret = add <16 x i16> undef, undef
+    ret void
+  }
+
+  define void @test_add_v8i32() {
+    %ret = add <8 x i32> undef, undef
+    ret void
+  }
+
+  define void @test_add_v4i64() {
+    %ret = add <4 x i64> undef, undef
+    ret void
+  }
+
+...
+---
+name:            test_add_v32i8
+# ALL-LABEL: name:  test_add_v32i8
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# AVX1:          %0(<32 x s8>) = IMPLICIT_DEF
+# AVX1-NEXT:     %1(<32 x s8>) = IMPLICIT_DEF
+# AVX1-NEXT:     %3(<16 x s8>), %4(<16 x s8>) = G_UNMERGE_VALUES %0(<32 x s8>)
+# AVX1-NEXT:     %5(<16 x s8>), %6(<16 x s8>) = G_UNMERGE_VALUES %1(<32 x s8>)
+# AVX1-NEXT:     %7(<16 x s8>) = G_ADD %3, %5
+# AVX1-NEXT:     %8(<16 x s8>) = G_ADD %4, %6
+# AVX1-NEXT:     %2(<32 x s8>) = G_MERGE_VALUES %7(<16 x s8>), %8(<16 x s8>)
+# AVX1-NEXT:     RET 0
+#
+# AVX2:          %0(<32 x s8>) = IMPLICIT_DEF
+# AVX2-NEXT:     %1(<32 x s8>) = IMPLICIT_DEF
+# AVX2-NEXT:     %2(<32 x s8>) = G_ADD %0, %1
+# AVX2-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<32 x s8>) = IMPLICIT_DEF
+    %1(<32 x s8>) = IMPLICIT_DEF
+    %2(<32 x s8>) = G_ADD %0, %1
+    RET 0
+
+...
+---
+name:            test_add_v16i16
+# ALL-LABEL: name:  test_add_v16i16
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# AVX1:          %0(<16 x s16>) = IMPLICIT_DEF
+# AVX1-NEXT:     %1(<16 x s16>) = IMPLICIT_DEF
+# AVX1-NEXT:     %3(<8 x s16>), %4(<8 x s16>) = G_UNMERGE_VALUES %0(<16 x s16>)
+# AVX1-NEXT:     %5(<8 x s16>), %6(<8 x s16>) = G_UNMERGE_VALUES %1(<16 x s16>)
+# AVX1-NEXT:     %7(<8 x s16>) = G_ADD %3, %5
+# AVX1-NEXT:     %8(<8 x s16>) = G_ADD %4, %6
+# AVX1-NEXT:     %2(<16 x s16>) = G_MERGE_VALUES %7(<8 x s16>), %8(<8 x s16>)
+# AVX1-NEXT:     RET 0
+#
+# AVX2:          %0(<16 x s16>) = IMPLICIT_DEF
+# AVX2-NEXT:     %1(<16 x s16>) = IMPLICIT_DEF
+# AVX2-NEXT:     %2(<16 x s16>) = G_ADD %0, %1
+# AVX2-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<16 x s16>) = IMPLICIT_DEF
+    %1(<16 x s16>) = IMPLICIT_DEF
+    %2(<16 x s16>) = G_ADD %0, %1
+    RET 0
+
+...
+---
+name:            test_add_v8i32
+# ALL-LABEL: name:  test_add_v8i32
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# AVX1:          %0(<8 x s32>) = IMPLICIT_DEF
+# AVX1-NEXT:     %1(<8 x s32>) = IMPLICIT_DEF
+# AVX1-NEXT:     %3(<4 x s32>), %4(<4 x s32>) = G_UNMERGE_VALUES %0(<8 x s32>)
+# AVX1-NEXT:     %5(<4 x s32>), %6(<4 x s32>) = G_UNMERGE_VALUES %1(<8 x s32>)
+# AVX1-NEXT:     %7(<4 x s32>) = G_ADD %3, %5
+# AVX1-NEXT:     %8(<4 x s32>) = G_ADD %4, %6
+# AVX1-NEXT:     %2(<8 x s32>) = G_MERGE_VALUES %7(<4 x s32>), %8(<4 x s32>)
+# AVX1-NEXT:     RET 0
+#
+# AVX2:          %0(<8 x s32>) = IMPLICIT_DEF
+# AVX2-NEXT:     %1(<8 x s32>) = IMPLICIT_DEF
+# AVX2-NEXT:     %2(<8 x s32>) = G_ADD %0, %1
+# AVX2-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<8 x s32>) = IMPLICIT_DEF
+    %1(<8 x s32>) = IMPLICIT_DEF
+    %2(<8 x s32>) = G_ADD %0, %1
+    RET 0
+
+...
+---
+name:            test_add_v4i64
+# ALL-LABEL: name:  test_add_v4i64
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# AVX1:          %0(<4 x s64>) = IMPLICIT_DEF
+# AVX1-NEXT:     %1(<4 x s64>) = IMPLICIT_DEF
+# AVX1-NEXT:     %3(<2 x s64>), %4(<2 x s64>) = G_UNMERGE_VALUES %0(<4 x s64>)
+# AVX1-NEXT:     %5(<2 x s64>), %6(<2 x s64>) = G_UNMERGE_VALUES %1(<4 x s64>)
+# AVX1-NEXT:     %7(<2 x s64>) = G_ADD %3, %5
+# AVX1-NEXT:     %8(<2 x s64>) = G_ADD %4, %6
+# AVX1-NEXT:     %2(<4 x s64>) = G_MERGE_VALUES %7(<2 x s64>), %8(<2 x s64>)
+# AVX1-NEXT:     RET 0
+#
+# AVX2:          %0(<4 x s64>) = IMPLICIT_DEF
+# AVX2-NEXT:     %1(<4 x s64>) = IMPLICIT_DEF
+# AVX2-NEXT:     %2(<4 x s64>) = G_ADD %0, %1
+# AVX2-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<4 x s64>) = IMPLICIT_DEF
+    %1(<4 x s64>) = IMPLICIT_DEF
+    %2(<4 x s64>) = G_ADD %0, %1
+    RET 0
+
+...

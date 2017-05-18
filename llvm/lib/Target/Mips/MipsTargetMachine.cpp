@@ -223,23 +223,23 @@ TargetPassConfig *MipsTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void MipsPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
-  addPass(createAtomicExpandPass(&getMipsTargetMachine()));
+  addPass(createAtomicExpandPass());
   if (getMipsSubtarget().os16())
-    addPass(createMipsOs16Pass(getMipsTargetMachine()));
+    addPass(createMipsOs16Pass());
   if (getMipsSubtarget().inMips16HardFloat())
-    addPass(createMips16HardFloatPass(getMipsTargetMachine()));
+    addPass(createMips16HardFloatPass());
 }
 // Install an instruction selector pass using
 // the ISelDag to gen Mips code.
 bool MipsPassConfig::addInstSelector() {
-  addPass(createMipsModuleISelDagPass(getMipsTargetMachine()));
+  addPass(createMipsModuleISelDagPass());
   addPass(createMips16ISelDag(getMipsTargetMachine(), getOptLevel()));
   addPass(createMipsSEISelDag(getMipsTargetMachine(), getOptLevel()));
   return false;
 }
 
 void MipsPassConfig::addPreRegAlloc() {
-  addPass(createMipsOptimizePICCallPass(getMipsTargetMachine()));
+  addPass(createMipsOptimizePICCallPass());
 }
 
 TargetIRAnalysis MipsTargetMachine::getTargetIRAnalysis() {
@@ -259,15 +259,14 @@ TargetIRAnalysis MipsTargetMachine::getTargetIRAnalysis() {
 // machine code is emitted. return true if -print-machineinstrs should
 // print out the code after the passes.
 void MipsPassConfig::addPreEmitPass() {
-  MipsTargetMachine &TM = getMipsTargetMachine();
   addPass(createMicroMipsSizeReductionPass());
 
   // The delay slot filler pass can potientially create forbidden slot (FS)
   // hazards for MIPSR6 which the hazard schedule pass (HSP) will fix. Any
   // (new) pass that creates compact branches after the HSP must handle FS
   // hazards itself or be pipelined before the HSP.
-  addPass(createMipsDelaySlotFillerPass(TM));
+  addPass(createMipsDelaySlotFillerPass());
   addPass(createMipsHazardSchedule());
-  addPass(createMipsLongBranchPass(TM));
+  addPass(createMipsLongBranchPass());
   addPass(createMipsConstantIslandPass());
 }

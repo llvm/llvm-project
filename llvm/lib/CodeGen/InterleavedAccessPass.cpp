@@ -45,6 +45,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Support/Debug.h"
@@ -68,8 +69,7 @@ class InterleavedAccess : public FunctionPass {
 
 public:
   static char ID;
-  InterleavedAccess(const TargetMachine *TM = nullptr)
-      : FunctionPass(ID), DT(nullptr), TM(TM), TLI(nullptr) {
+  InterleavedAccess() : FunctionPass(ID), DT(nullptr), TLI(nullptr) {
     initializeInterleavedAccessPass(*PassRegistry::getPassRegistry());
   }
 
@@ -84,7 +84,6 @@ public:
 
 private:
   DominatorTree *DT;
-  const TargetMachine *TM;
   const TargetLowering *TLI;
 
   /// The maximum supported interleave factor.
@@ -108,18 +107,18 @@ private:
 } // end anonymous namespace.
 
 char InterleavedAccess::ID = 0;
-INITIALIZE_TM_PASS_BEGIN(
+INITIALIZE_PASS_BEGIN(
     InterleavedAccess, "interleaved-access",
     "Lower interleaved memory accesses to target specific intrinsics", false,
     false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_TM_PASS_END(
+INITIALIZE_PASS_END(
     InterleavedAccess, "interleaved-access",
     "Lower interleaved memory accesses to target specific intrinsics", false,
     false)
 
-FunctionPass *llvm::createInterleavedAccessPass(const TargetMachine *TM) {
-  return new InterleavedAccess(TM);
+FunctionPass *llvm::createInterleavedAccessPass() {
+  return new InterleavedAccess();
 }
 
 /// \brief Check if the mask is a DE-interleave mask of the given factor
@@ -426,13 +425,15 @@ bool InterleavedAccess::lowerInterleavedStore(
 }
 
 bool InterleavedAccess::runOnFunction(Function &F) {
-  if (!TM || !LowerInterleavedAccesses)
+  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+  if (!TPC || !LowerInterleavedAccesses)
     return false;
 
   DEBUG(dbgs() << "*** " << getPassName() << ": " << F.getName() << "\n");
 
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  TLI = TM->getSubtargetImpl(F)->getTargetLowering();
+  auto &TM = TPC->getTM<TargetMachine>();
+  TLI = TM.getSubtargetImpl(F)->getTargetLowering();
   MaxFactor = TLI->getMaxSupportedInterleaveFactor();
 
   // Holds dead instructions that will be erased later.

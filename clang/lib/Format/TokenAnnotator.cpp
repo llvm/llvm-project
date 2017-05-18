@@ -579,8 +579,8 @@ private:
       if (Style.Language == FormatStyle::LK_JavaScript)
         if (Tok->Previous && Tok->Previous->is(tok::period))
           break;
-        // JS' for async ( ...
-        if (CurrentToken->is(Keywords.kw_async))
+        // JS' for await ( ...
+        if (CurrentToken && CurrentToken->is(Keywords.kw_await))
           next();
       Contexts.back().ColonIsForRangeExpr = true;
       next();
@@ -2252,8 +2252,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
       return true;
-    // for async ( ...
-    if (Right.is(tok::l_paren) && Left.is(Keywords.kw_async) &&
+    // for await ( ...
+    if (Right.is(tok::l_paren) && Left.is(Keywords.kw_await) &&
         Left.Previous && Left.Previous->is(tok::kw_for))
       return true;
     if (Left.is(Keywords.kw_async) && Right.is(tok::l_paren) &&

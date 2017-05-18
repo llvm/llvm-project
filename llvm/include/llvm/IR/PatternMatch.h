@@ -886,17 +886,21 @@ template <typename LHS_t> struct not_match {
 
   template <typename OpTy> bool match(OpTy *V) {
     if (auto *O = dyn_cast<Operator>(V))
-      if (O->getOpcode() == Instruction::Xor)
-        return matchIfNot(O->getOperand(0), O->getOperand(1));
+      if (O->getOpcode() == Instruction::Xor) {
+        if (isAllOnes(O->getOperand(1)))
+          return L.match(O->getOperand(0));
+        if (isAllOnes(O->getOperand(0)))
+          return L.match(O->getOperand(1));
+      }
     return false;
   }
 
 private:
-  bool matchIfNot(Value *LHS, Value *RHS) {
-    return (isa<ConstantInt>(RHS) || isa<ConstantDataVector>(RHS) ||
+  bool isAllOnes(Value *V) {
+    return (isa<ConstantInt>(V) || isa<ConstantDataVector>(V) ||
             // FIXME: Remove CV.
-            isa<ConstantVector>(RHS)) &&
-           cast<Constant>(RHS)->isAllOnesValue() && L.match(LHS);
+            isa<ConstantVector>(V)) &&
+           cast<Constant>(V)->isAllOnesValue();
   }
 };
 

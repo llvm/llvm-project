@@ -155,6 +155,4 @@ bool MipsOs16::runOnModule(Module &M) {
   return modified;
 }
 
-ModulePass *llvm::createMipsOs16Pass(MipsTargetMachine &TM) {
-  return new MipsOs16;
-}
+ModulePass *llvm::createMipsOs16Pass() { return new MipsOs16(); }

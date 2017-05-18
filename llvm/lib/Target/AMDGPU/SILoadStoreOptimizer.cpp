@@ -97,9 +97,7 @@ private:
 public:
   static char ID;
 
-  SILoadStoreOptimizer() : MachineFunctionPass(ID) {}
-
-  SILoadStoreOptimizer(const TargetMachine &TM_) : MachineFunctionPass(ID) {
+  SILoadStoreOptimizer() : MachineFunctionPass(ID) {
     initializeSILoadStoreOptimizerPass(*PassRegistry::getPassRegistry());
   }
 
@@ -129,8 +127,8 @@ char SILoadStoreOptimizer::ID = 0;
 
 char &llvm::SILoadStoreOptimizerID = SILoadStoreOptimizer::ID;
 
-FunctionPass *llvm::createSILoadStoreOptimizerPass(TargetMachine &TM) {
-  return new SILoadStoreOptimizer(TM);
+FunctionPass *llvm::createSILoadStoreOptimizerPass() {
+  return new SILoadStoreOptimizer();
 }
 
 static void moveInstsAfter(MachineBasicBlock::iterator I,

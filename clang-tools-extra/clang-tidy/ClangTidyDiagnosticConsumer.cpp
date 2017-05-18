@@ -170,6 +170,7 @@ public:
         Result = Globs.contains(S) ? Yes : No;
         return Result == Yes;
     }
+    llvm_unreachable("invalid enum");
   }
 
 private:
