@@ -75,9 +75,8 @@ namespace {
   public:
     static char ID;
 
-    MipsLongBranch(TargetMachine &tm)
-        : MachineFunctionPass(ID), TM(tm), IsPIC(TM.isPositionIndependent()),
-          ABI(static_cast<const MipsTargetMachine &>(TM).getABI()) {}
+    MipsLongBranch()
+        : MachineFunctionPass(ID), ABI(MipsABIInfo::Unknown()) {}
 
     StringRef getPassName() const override { return "Mips Long Branch"; }
 
@@ -96,7 +95,6 @@ namespace {
                        MachineBasicBlock *MBBOpnd);
     void expandToLongBranch(MBBInfo &Info);
 
-    const TargetMachine &TM;
     MachineFunction *MF;
     SmallVector<MBBInfo, 16> MBBInfos;
     bool IsPIC;
@@ -469,6 +467,12 @@ bool MipsLongBranch::runOnMachineFunction(MachineFunction &F) {
       static_cast<const MipsSubtarget &>(F.getSubtarget());
   const MipsInstrInfo *TII =
       static_cast<const MipsInstrInfo *>(STI.getInstrInfo());
+
+
+  const TargetMachine& TM = F.getTarget();
+  IsPIC = TM.isPositionIndependent();
+  ABI = static_cast<const MipsTargetMachine &>(TM).getABI();
+
   LongBranchSeqSize =
       !IsPIC ? 2 : (ABI.IsN64() ? 10 : (!STI.isTargetNaCl() ? 9 : 10));
 
@@ -541,6 +545,4 @@ bool MipsLongBranch::runOnMachineFunction(MachineFunction &F) {
 
 /// createMipsLongBranchPass - Returns a pass that converts branches to long
 /// branches.
-FunctionPass *llvm::createMipsLongBranchPass(MipsTargetMachine &tm) {
-  return new MipsLongBranch(tm);
-}
+FunctionPass *llvm::createMipsLongBranchPass() { return new MipsLongBranch(); }

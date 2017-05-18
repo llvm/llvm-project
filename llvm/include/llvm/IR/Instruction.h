@@ -36,6 +36,10 @@ class FastMathFlags;
 class MDNode;
 struct AAMDNodes;
 
+template <> struct ilist_alloc_traits<Instruction> {
+  static inline void deleteNode(Instruction *V);
+};
+
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock> {
   BasicBlock *Parent;
@@ -47,12 +51,12 @@ class Instruction : public User,
     HasMetadataBit = 1 << 15
   };
 
+protected:
+  ~Instruction(); // Use deleteValue() to delete a generic Instruction.
+
 public:
   Instruction(const Instruction &) = delete;
   Instruction &operator=(const Instruction &) = delete;
-
-  // Out of line virtual method, so the vtable, etc has a home.
-  ~Instruction() override;
 
   /// Specialize the methods defined in Value, as we know that an instruction
   /// can only be used by other instructions.
@@ -639,6 +643,10 @@ private:
   /// Create a copy of this instruction.
   Instruction *cloneImpl() const;
 };
+
+inline void ilist_alloc_traits<Instruction>::deleteNode(Instruction *V) {
+  V->deleteValue();
+}
 
 } // end namespace llvm
 

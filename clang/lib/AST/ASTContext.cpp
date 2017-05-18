@@ -8730,8 +8730,8 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       char *End;
       unsigned AddrSpace = strtoul(Str, &End, 10);
       if (End != Str && AddrSpace != 0) {
-        Type = Context.getAddrSpaceQualType(Type, AddrSpace +
-            LangAS::Count);
+        Type = Context.getAddrSpaceQualType(
+            Type, AddrSpace + LangAS::FirstTargetAddressSpace);
         Str = End;
       }
       if (c == '*')
@@ -9546,13 +9546,8 @@ uint64_t ASTContext::getTargetNullPointerValue(QualType QT) const {
 }
 
 unsigned ASTContext::getTargetAddressSpace(unsigned AS) const {
-  // For OpenCL, only function local variables are not explicitly marked with
-  // an address space in the AST, and these need to be the address space of
-  // alloca.
-  if (!AS && LangOpts.OpenCL)
-    return getTargetInfo().getDataLayout().getAllocaAddrSpace();
-  if (AS >= LangAS::Count)
-    return AS - LangAS::Count;
+  if (AS >= LangAS::FirstTargetAddressSpace)
+    return AS - LangAS::FirstTargetAddressSpace;
   else
     return (*AddrSpaceMap)[AS];
 }

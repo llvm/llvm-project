@@ -208,17 +208,20 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
         TryAnnotateCXXScopeToken())
       return TPResult::Error;
     if (Tok.is(tok::annot_cxxscope))
+      ConsumeAnnotationToken();
+    if (Tok.is(tok::identifier))
       ConsumeToken();
-    if (Tok.isNot(tok::identifier) && Tok.isNot(tok::annot_template_id))
+    else if (Tok.is(tok::annot_template_id))
+      ConsumeAnnotationToken();
+    else
       return TPResult::Error;
-    ConsumeToken();
     break;
 
   case tok::annot_cxxscope:
-    ConsumeToken();
+    ConsumeAnnotationToken();
     // Fall through.
   default:
-    ConsumeToken();
+    ConsumeAnyToken();
 
     if (getLangOpts().ObjC1 && Tok.is(tok::less))
       return TryParseProtocolQualifiers();
@@ -706,7 +709,7 @@ Parser::TPResult Parser::TryParsePtrOperatorSeq() {
     if (Tok.isOneOf(tok::star, tok::amp, tok::caret, tok::ampamp) ||
         (Tok.is(tok::annot_cxxscope) && NextToken().is(tok::star))) {
       // ptr-operator
-      ConsumeToken();
+      ConsumeAnyToken();
       while (Tok.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw_restrict,
                          tok::kw__Nonnull, tok::kw__Nullable,
                          tok::kw__Null_unspecified))
@@ -883,7 +886,7 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
       mayHaveIdentifier) {
     // declarator-id
     if (Tok.is(tok::annot_cxxscope))
-      ConsumeToken();
+      ConsumeAnnotationToken();
     else if (Tok.is(tok::identifier))
       TentativelyDeclaredIdentifiers.push_back(Tok.getIdentifierInfo());
     if (Tok.is(tok::kw_operator)) {
@@ -1399,7 +1402,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
                                                      SS);
         if (SS.getScopeRep() && SS.getScopeRep()->isDependent()) {
           RevertingTentativeParsingAction PA(*this);
-          ConsumeToken();
+          ConsumeAnnotationToken();
           ConsumeToken();
           bool isIdentifier = Tok.is(tok::identifier);
           TPResult TPR = TPResult::False;
@@ -1471,7 +1474,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
     if (getLangOpts().ObjC1 && NextToken().is(tok::less)) {
       // Tentatively parse the protocol qualifiers.
       RevertingTentativeParsingAction PA(*this);
-      ConsumeToken(); // The type token
+      ConsumeAnyToken(); // The type token
       
       TPResult TPR = TryParseProtocolQualifiers();
       bool isFollowedByParen = Tok.is(tok::l_paren);

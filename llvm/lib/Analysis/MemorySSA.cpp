@@ -1799,6 +1799,15 @@ bool MemorySSA::dominates(const MemoryAccess *Dominator,
 
 const static char LiveOnEntryStr[] = "liveOnEntry";
 
+void MemoryAccess::print(raw_ostream &OS) const {
+  switch (getValueID()) {
+  case MemoryPhiVal: return static_cast<const MemoryPhi *>(this)->print(OS);
+  case MemoryDefVal: return static_cast<const MemoryDef *>(this)->print(OS);
+  case MemoryUseVal: return static_cast<const MemoryUse *>(this)->print(OS);
+  }
+  llvm_unreachable("invalid value id");
+}
+
 void MemoryDef::print(raw_ostream &OS) const {
   MemoryAccess *UO = getDefiningAccess();
 
@@ -1835,8 +1844,6 @@ void MemoryPhi::print(raw_ostream &OS) const {
   }
   OS << ')';
 }
-
-MemoryAccess::~MemoryAccess() {}
 
 void MemoryUse::print(raw_ostream &OS) const {
   MemoryAccess *UO = getDefiningAccess();
@@ -2054,3 +2061,15 @@ MemoryAccess *DoNothingMemorySSAWalker::getClobberingMemoryAccess(
   return StartingAccess;
 }
 } // namespace llvm
+
+void MemoryPhi::deleteMe(DerivedUser *Self) {
+  delete static_cast<MemoryPhi *>(Self);
+}
+
+void MemoryDef::deleteMe(DerivedUser *Self) {
+  delete static_cast<MemoryDef *>(Self);
+}
+
+void MemoryUse::deleteMe(DerivedUser *Self) {
+  delete static_cast<MemoryUse *>(Self);
+}

@@ -28,7 +28,7 @@ class FunctionType;
 class PointerType;
 template <class ConstantClass> class ConstantUniqueMap;
 
-class InlineAsm : public Value {
+class InlineAsm final : public Value {
 public:
   enum AsmDialect {
     AD_ATT,
@@ -48,7 +48,6 @@ private:
   InlineAsm(FunctionType *Ty, const std::string &AsmString,
             const std::string &Constraints, bool hasSideEffects,
             bool isAlignStack, AsmDialect asmDialect);
-  ~InlineAsm() override;
 
   /// When the ConstantUniqueMap merges two types and makes two InlineAsms
   /// identical, it destroys one of them with this method.

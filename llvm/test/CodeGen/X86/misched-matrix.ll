@@ -17,9 +17,9 @@
 ;
 ; TOPDOWN-LABEL: %for.body
 ; TOPDOWN: movl %{{.*}}, (
-; TOPDOWN-NOT: imull {{[0-9]*}}(
+; TOPDOWN: imull {{[0-9]*}}(
 ; TOPDOWN: movl %{{.*}}, 4(
-; TOPDOWN-NOT: imull {{[0-9]*}}(
+; TOPDOWN: imull {{[0-9]*}}(
 ; TOPDOWN: movl %{{.*}}, 8(
 ; TOPDOWN: movl %{{.*}}, 12(
 ; TOPDOWN-LABEL: %for.end

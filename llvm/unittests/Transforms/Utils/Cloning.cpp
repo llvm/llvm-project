@@ -41,13 +41,18 @@ protected:
   }
 
   void eraseClones() {
-    DeleteContainerPointers(Clones);
+    for (Value *V : Clones)
+      V->deleteValue();
+    Clones.clear();
   }
 
   void TearDown() override {
     eraseClones();
-    DeleteContainerPointers(Orig);
-    delete V;
+    for (Value *V : Orig)
+      V->deleteValue();
+    Orig.clear();
+    if (V)
+      V->deleteValue();
   }
 
   SmallPtrSet<Value *, 4> Orig;   // Erase on exit

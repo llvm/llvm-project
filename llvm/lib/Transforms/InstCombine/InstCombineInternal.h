@@ -275,11 +275,7 @@ public:
   Instruction *visitSDiv(BinaryOperator &I);
   Instruction *visitFDiv(BinaryOperator &I);
   Value *simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1, bool Inverted);
-  Value *FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS);
-  Value *FoldAndOfFCmps(FCmpInst *LHS, FCmpInst *RHS);
   Instruction *visitAnd(BinaryOperator &I);
-  Value *FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS, Instruction *CxtI);
-  Value *FoldOrOfFCmps(FCmpInst *LHS, FCmpInst *RHS);
   Instruction *FoldOrWithConstants(BinaryOperator &I, Value *Op, Value *A,
                                    Value *B, Value *C);
   Instruction *FoldXorWithConstants(BinaryOperator &I, Value *Op, Value *A,
@@ -444,6 +440,12 @@ private:
   /// \see CastInst::isEliminableCastPair
   Instruction::CastOps isEliminableCastPair(const CastInst *CI1,
                                             const CastInst *CI2);
+
+  Value *foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS);
+  Value *foldAndOfFCmps(FCmpInst *LHS, FCmpInst *RHS);
+  Value *foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS, Instruction *CxtI);
+  Value *foldOrOfFCmps(FCmpInst *LHS, FCmpInst *RHS);
+  Value *foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS);
 
 public:
   /// \brief Inserts an instruction \p New before instruction \p Old

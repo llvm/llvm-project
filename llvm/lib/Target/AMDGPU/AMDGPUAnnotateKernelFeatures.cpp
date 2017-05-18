@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -27,7 +28,6 @@ namespace {
 
 class AMDGPUAnnotateKernelFeatures : public ModulePass {
 private:
-  const TargetMachine *TM;
   AMDGPUAS AS;
   static bool hasAddrSpaceCast(const Function &F, AMDGPUAS AS);
 
@@ -37,8 +37,7 @@ private:
 public:
   static char ID;
 
-  AMDGPUAnnotateKernelFeatures(const TargetMachine *TM_ = nullptr) :
-                               ModulePass(ID), TM(TM_) {}
+  AMDGPUAnnotateKernelFeatures() : ModulePass(ID) {}
   bool runOnModule(Module &M) override;
   StringRef getPassName() const override {
     return "AMDGPU Annotate Kernel Features";
@@ -221,8 +220,10 @@ bool AMDGPUAnnotateKernelFeatures::runOnModule(Module &M) {
       if (F.hasFnAttribute("amdgpu-queue-ptr"))
         continue;
 
-      bool HasApertureRegs =
-        TM && TM->getSubtarget<AMDGPUSubtarget>(F).hasApertureRegs();
+      auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+      bool HasApertureRegs = TPC && TPC->getTM<TargetMachine>()
+                                        .getSubtarget<AMDGPUSubtarget>(F)
+                                        .hasApertureRegs();
       if (!HasApertureRegs && hasAddrSpaceCast(F, AS))
         F.addFnAttr("amdgpu-queue-ptr");
     }
@@ -231,6 +232,6 @@ bool AMDGPUAnnotateKernelFeatures::runOnModule(Module &M) {
   return Changed;
 }
 
-ModulePass *llvm::createAMDGPUAnnotateKernelFeaturesPass(const TargetMachine *TM) {
-  return new AMDGPUAnnotateKernelFeatures(TM);
+ModulePass *llvm::createAMDGPUAnnotateKernelFeaturesPass() {
+  return new AMDGPUAnnotateKernelFeatures();
 }

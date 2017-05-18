@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/DivergenceAnalysis.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -48,7 +49,6 @@ namespace {
 
 class AMDGPUCodeGenPrepare : public FunctionPass,
                              public InstVisitor<AMDGPUCodeGenPrepare, bool> {
-  const GCNTargetMachine *TM;
   const SISubtarget *ST = nullptr;
   DivergenceAnalysis *DA = nullptr;
   Module *Mod = nullptr;
@@ -127,8 +127,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
 public:
   static char ID;
 
-  AMDGPUCodeGenPrepare(const TargetMachine *TM = nullptr) :
-    FunctionPass(ID), TM(static_cast<const GCNTargetMachine *>(TM)) {}
+  AMDGPUCodeGenPrepare() : FunctionPass(ID) {}
 
   bool visitFDiv(BinaryOperator &I);
 
@@ -487,10 +486,15 @@ bool AMDGPUCodeGenPrepare::doInitialization(Module &M) {
 }
 
 bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
-  if (!TM || skipFunction(F))
+  if (skipFunction(F))
     return false;
 
-  ST = &TM->getSubtarget<SISubtarget>(F);
+  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+  if (!TPC)
+    return false;
+
+  const TargetMachine &TM = TPC->getTM<TargetMachine>();
+  ST = &TM.getSubtarget<SISubtarget>(F);
   DA = &getAnalysis<DivergenceAnalysis>();
   HasUnsafeFPMath = hasUnsafeFPMath(F);
 
@@ -507,14 +511,14 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   return MadeChange;
 }
 
-INITIALIZE_TM_PASS_BEGIN(AMDGPUCodeGenPrepare, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(AMDGPUCodeGenPrepare, DEBUG_TYPE,
                       "AMDGPU IR optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(DivergenceAnalysis)
-INITIALIZE_TM_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE,
-                       "AMDGPU IR optimizations", false, false)
+INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
+                    false, false)
 
 char AMDGPUCodeGenPrepare::ID = 0;
 
-FunctionPass *llvm::createAMDGPUCodeGenPreparePass(const GCNTargetMachine *TM) {
-  return new AMDGPUCodeGenPrepare(TM);
+FunctionPass *llvm::createAMDGPUCodeGenPreparePass() {
+  return new AMDGPUCodeGenPrepare();
 }

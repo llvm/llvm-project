@@ -31,8 +31,6 @@
 
 namespace llvm {
 
-class TargetMachine;
-
 #define INITIALIZE_PASS(passName, arg, name, cfg, analysis)                    \
   static void *initialize##passName##PassOnce(PassRegistry &Registry) {        \
     PassInfo *PI = new PassInfo(                                               \
@@ -77,10 +75,6 @@ class TargetMachine;
   PassName::registerOptions();
 
 template <typename PassName> Pass *callDefaultCtor() { return new PassName(); }
-
-template <typename PassName> Pass *callTargetMachineCtor(TargetMachine *TM) {
-  return new PassName(TM);
-}
 
 //===---------------------------------------------------------------------------
 /// RegisterPass<t> template - This template class is used to notify the system

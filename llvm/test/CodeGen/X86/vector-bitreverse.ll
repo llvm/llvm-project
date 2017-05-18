@@ -2372,10 +2372,10 @@ define <8 x i64> @test_bitreverse_v8i64(<8 x i64> %a) nounwind {
 ; AVX512F-NEXT:    vporq %zmm1, %zmm2, %zmm1
 ; AVX512F-NEXT:    vpsrlq $24, %zmm0, %zmm2
 ; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm2, %zmm2
+; AVX512F-NEXT:    vpsrlq $8, %zmm0, %zmm3
+; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm3, %zmm3
 ; AVX512F-NEXT:    vporq %zmm1, %zmm2, %zmm1
-; AVX512F-NEXT:    vpsrlq $8, %zmm0, %zmm2
-; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm2, %zmm2
-; AVX512F-NEXT:    vporq %zmm1, %zmm2, %zmm1
+; AVX512F-NEXT:    vporq %zmm1, %zmm3, %zmm1
 ; AVX512F-NEXT:    vpsllq $8, %zmm0, %zmm2
 ; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm2, %zmm2
 ; AVX512F-NEXT:    vpsllq $24, %zmm0, %zmm3

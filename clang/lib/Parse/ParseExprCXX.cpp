@@ -160,7 +160,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
     Actions.RestoreNestedNameSpecifierAnnotation(Tok.getAnnotationValue(),
                                                  Tok.getAnnotationRange(),
                                                  SS);
-    ConsumeToken();
+    ConsumeAnnotationToken();
     return false;
   }
 
@@ -346,7 +346,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
         *LastII = TemplateId->Name;
 
       // Consume the template-id token.
-      ConsumeToken();
+      ConsumeAnnotationToken();
 
       assert(Tok.is(tok::coloncolon) && "NextToken() not working properly!");
       SourceLocation CCLoc = ConsumeToken();
@@ -920,7 +920,7 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
             PP.AnnotateCachedTokens(Tok);
 
             // Consume the annotated initializer.
-            ConsumeToken();
+            ConsumeAnnotationToken();
           }
         }
       } else
@@ -1528,7 +1528,7 @@ Parser::ParseCXXPseudoDestructor(Expr *Base, SourceLocation OpLoc,
     // store it in the pseudo-dtor node (to be used when instantiating it).
     FirstTypeName.setTemplateId(
                               (TemplateIdAnnotation *)Tok.getAnnotationValue());
-    ConsumeToken();
+    ConsumeAnnotationToken();
     assert(Tok.is(tok::coloncolon) &&"ParseOptionalCXXScopeSpecifier fail");
     CCLoc = ConsumeToken();
   } else {
@@ -1882,7 +1882,7 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
       DS.SetTypeSpecError();
     
     DS.SetRangeEnd(Tok.getAnnotationEndLoc());
-    ConsumeToken();
+    ConsumeAnnotationToken();
     
     DS.Finish(Actions, Policy);
     return;
@@ -1951,11 +1951,8 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
     DS.Finish(Actions, Policy);
     return;
   }
-  if (Tok.is(tok::annot_typename))
-    DS.SetRangeEnd(Tok.getAnnotationEndLoc());
-  else
-    DS.SetRangeEnd(Tok.getLocation());
-  ConsumeToken();
+  ConsumeAnyToken();
+  DS.SetRangeEnd(PrevTokLocation);
   DS.Finish(Actions, Policy);
 }
 
@@ -2529,12 +2526,12 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
                                 /*NontrivialTypeSourceInfo=*/true);
         Result.setConstructorName(Ty, TemplateId->TemplateNameLoc,
                                   TemplateId->RAngleLoc);
-        ConsumeToken();
+        ConsumeAnnotationToken();
         return false;
       }
 
       Result.setConstructorTemplateId(TemplateId);
-      ConsumeToken();
+      ConsumeAnnotationToken();
       return false;
     }
 
@@ -2542,7 +2539,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
     // our unqualified-id.
     Result.setTemplateId(TemplateId);
     TemplateKWLoc = TemplateId->TemplateKWLoc;
-    ConsumeToken();
+    ConsumeAnnotationToken();
     return false;
   }
   

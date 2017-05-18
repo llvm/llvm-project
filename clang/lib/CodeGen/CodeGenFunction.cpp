@@ -117,25 +117,27 @@ CodeGenFunction::~CodeGenFunction() {
 }
 
 CharUnits CodeGenFunction::getNaturalPointeeTypeAlignment(QualType T,
-                                                     AlignmentSource *Source) {
-  return getNaturalTypeAlignment(T->getPointeeType(), Source,
+                                                    LValueBaseInfo *BaseInfo) {
+  return getNaturalTypeAlignment(T->getPointeeType(), BaseInfo,
                                  /*forPointee*/ true);
 }
 
 CharUnits CodeGenFunction::getNaturalTypeAlignment(QualType T,
-                                                   AlignmentSource *Source,
+                                                   LValueBaseInfo *BaseInfo,
                                                    bool forPointeeType) {
   // Honor alignment typedef attributes even on incomplete types.
   // We also honor them straight for C++ class types, even as pointees;
   // there's an expressivity gap here.
   if (auto TT = T->getAs<TypedefType>()) {
     if (auto Align = TT->getDecl()->getMaxAlignment()) {
-      if (Source) *Source = AlignmentSource::AttributedType;
+      if (BaseInfo)
+        *BaseInfo = LValueBaseInfo(AlignmentSource::AttributedType, false);
       return getContext().toCharUnitsFromBits(Align);
     }
   }
 
-  if (Source) *Source = AlignmentSource::Type;
+  if (BaseInfo)
+    *BaseInfo = LValueBaseInfo(AlignmentSource::Type, false);
 
   CharUnits Alignment;
   if (T->isIncompleteType()) {
@@ -165,9 +167,9 @@ CharUnits CodeGenFunction::getNaturalTypeAlignment(QualType T,
 }
 
 LValue CodeGenFunction::MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T) {
-  AlignmentSource AlignSource;
-  CharUnits Alignment = getNaturalTypeAlignment(T, &AlignSource);
-  return LValue::MakeAddr(Address(V, Alignment), T, getContext(), AlignSource,
+  LValueBaseInfo BaseInfo;
+  CharUnits Alignment = getNaturalTypeAlignment(T, &BaseInfo);
+  return LValue::MakeAddr(Address(V, Alignment), T, getContext(), BaseInfo,
                           CGM.getTBAAInfo(T));
 }
 
@@ -175,9 +177,9 @@ LValue CodeGenFunction::MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T) {
 /// construct an l-value with the natural pointee alignment of T.
 LValue
 CodeGenFunction::MakeNaturalAlignPointeeAddrLValue(llvm::Value *V, QualType T) {
-  AlignmentSource AlignSource;
-  CharUnits Align = getNaturalTypeAlignment(T, &AlignSource, /*pointee*/ true);
-  return MakeAddrLValue(Address(V, Align), T, AlignSource);
+  LValueBaseInfo BaseInfo;
+  CharUnits Align = getNaturalTypeAlignment(T, &BaseInfo, /*pointee*/ true);
+  return MakeAddrLValue(Address(V, Align), T, BaseInfo);
 }
 
 

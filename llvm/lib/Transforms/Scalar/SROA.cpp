@@ -2443,7 +2443,7 @@ private:
                         "insert");
       LI.replaceAllUsesWith(V);
       Placeholder->replaceAllUsesWith(&LI);
-      delete Placeholder;
+      Placeholder->deleteValue();
     } else {
       LI.replaceAllUsesWith(V);
     }

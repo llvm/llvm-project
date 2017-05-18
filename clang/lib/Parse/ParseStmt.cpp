@@ -338,13 +338,13 @@ Retry:
   case tok::annot_pragma_fp_contract:
     ProhibitAttributes(Attrs);
     Diag(Tok, diag::err_pragma_fp_contract_scope);
-    ConsumeToken();
+    ConsumeAnnotationToken();
     return StmtError();
 
   case tok::annot_pragma_fp:
     ProhibitAttributes(Attrs);
     Diag(Tok, diag::err_pragma_fp_scope);
-    ConsumeToken();
+    ConsumeAnnotationToken();
     return StmtError();
 
   case tok::annot_pragma_opencl_extension:

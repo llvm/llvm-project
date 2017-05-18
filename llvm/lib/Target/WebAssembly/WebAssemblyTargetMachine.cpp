@@ -173,7 +173,7 @@ void WebAssemblyPassConfig::addIRPasses() {
   else
     // Expand some atomic operations. WebAssemblyTargetLowering has hooks which
     // control specifically what gets lowered.
-    addPass(createAtomicExpandPass(TM));
+    addPass(createAtomicExpandPass());
 
   // Fix function bitcasts, as WebAssembly requires caller and callee signatures
   // to match.

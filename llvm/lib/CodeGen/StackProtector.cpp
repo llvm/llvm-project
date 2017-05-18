@@ -58,12 +58,13 @@ static cl::opt<bool> EnableSelectionDAGSP("enable-selectiondag-sp",
                                           cl::init(true), cl::Hidden);
 
 char StackProtector::ID = 0;
-INITIALIZE_TM_PASS(StackProtector, "stack-protector", "Insert stack protectors",
-                   false, true)
+INITIALIZE_PASS_BEGIN(StackProtector, "stack-protector",
+                      "Insert stack protectors", false, true)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(StackProtector, "stack-protector",
+                    "Insert stack protectors", false, true)
 
-FunctionPass *llvm::createStackProtectorPass(const TargetMachine *TM) {
-  return new StackProtector(TM);
-}
+FunctionPass *llvm::createStackProtectorPass() { return new StackProtector(); }
 
 StackProtector::SSPLayoutKind
 StackProtector::getSSPLayout(const AllocaInst *AI) const {
@@ -97,6 +98,8 @@ bool StackProtector::runOnFunction(Function &Fn) {
   DominatorTreeWrapperPass *DTWP =
       getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  Trip = TM->getTargetTriple();
   TLI = TM->getSubtargetImpl(Fn)->getTargetLowering();
   HasPrologue = false;
   HasIRCheck = false;

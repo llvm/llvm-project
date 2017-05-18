@@ -211,12 +211,12 @@ namespace {
 
   class Filler : public MachineFunctionPass {
   public:
-    Filler(TargetMachine &tm)
-      : MachineFunctionPass(ID), TM(tm) { }
+    Filler() : MachineFunctionPass(ID), TM(nullptr) {}
 
     StringRef getPassName() const override { return "Mips Delay Slot Filler"; }
 
     bool runOnMachineFunction(MachineFunction &F) override {
+      TM = &F.getTarget();
       bool Changed = false;
       for (MachineFunction::iterator FI = F.begin(), FE = F.end();
            FI != FE; ++FI)
@@ -290,7 +290,7 @@ namespace {
 
     bool terminateSearch(const MachineInstr &Candidate) const;
 
-    TargetMachine &TM;
+    const TargetMachine *TM;
 
     static char ID;
   };
@@ -610,7 +610,7 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
     Changed = true;
 
     // Delay slot filling is disabled at -O0.
-    if (!DisableDelaySlotFiller && (TM.getOptLevel() != CodeGenOpt::None)) {
+    if (!DisableDelaySlotFiller && (TM->getOptLevel() != CodeGenOpt::None)) {
       bool Filled = false;
 
       if (MipsCompactBranchPolicy.getValue() != CB_Always ||
@@ -910,6 +910,4 @@ bool Filler::terminateSearch(const MachineInstr &Candidate) const {
 
 /// createMipsDelaySlotFillerPass - Returns a pass that fills in delay
 /// slots in Mips MachineFunctions
-FunctionPass *llvm::createMipsDelaySlotFillerPass(MipsTargetMachine &tm) {
-  return new Filler(tm);
-}
+FunctionPass *llvm::createMipsDelaySlotFillerPass() { return new Filler(); }

@@ -33,8 +33,8 @@ define i64 @rotl64(i64 %A, i8 %Amt) nounwind {
 ; 32-NEXT:    movl %ebx, %esi
 ; 32-NEXT:    xorl %ebx, %ebx
 ; 32-NEXT:  .LBB0_4:
-; 32-NEXT:    orl %ebx, %edx
 ; 32-NEXT:    orl %esi, %eax
+; 32-NEXT:    orl %ebx, %edx
 ; 32-NEXT:    popl %esi
 ; 32-NEXT:    popl %edi
 ; 32-NEXT:    popl %ebx
@@ -86,8 +86,8 @@ define i64 @rotr64(i64 %A, i8 %Amt) nounwind {
 ; 32-NEXT:    movl %ebx, %esi
 ; 32-NEXT:    xorl %ebx, %ebx
 ; 32-NEXT:  .LBB1_4:
-; 32-NEXT:    orl %esi, %edx
 ; 32-NEXT:    orl %ebx, %eax
+; 32-NEXT:    orl %esi, %edx
 ; 32-NEXT:    popl %esi
 ; 32-NEXT:    popl %edi
 ; 32-NEXT:    popl %ebx
@@ -546,7 +546,7 @@ define void @rotr1_64_mem(i64* %Aptr) nounwind {
 ; 32-LABEL: rotr1_64_mem:
 ; 32:       # BB#0:
 ; 32-NEXT:    pushl %esi
-; 32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; 32-NEXT:    movl 8(%esp), %eax
 ; 32-NEXT:    movl (%eax), %ecx
 ; 32-NEXT:    movl 4(%eax), %edx
 ; 32-NEXT:    movl %edx, %esi
@@ -555,13 +555,11 @@ define void @rotr1_64_mem(i64* %Aptr) nounwind {
 ; 32-NEXT:    movl %ecx, 4(%eax)
 ; 32-NEXT:    movl %esi, (%eax)
 ; 32-NEXT:    popl %esi
-; 32-NEXT:    retl
-;
+
 ; 64-LABEL: rotr1_64_mem:
 ; 64:       # BB#0:
 ; 64-NEXT:    rorq (%rdi)
 ; 64-NEXT:    retq
-
   %A = load i64, i64 *%Aptr
   %B = shl i64 %A, 63
   %C = lshr i64 %A, 1
@@ -573,7 +571,7 @@ define void @rotr1_64_mem(i64* %Aptr) nounwind {
 define void @rotr1_32_mem(i32* %Aptr) nounwind {
 ; 32-LABEL: rotr1_32_mem:
 ; 32:       # BB#0:
-; 32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; 32-NEXT:    movl 4(%esp), %eax
 ; 32-NEXT:    rorl (%eax)
 ; 32-NEXT:    retl
 ;
@@ -592,7 +590,7 @@ define void @rotr1_32_mem(i32* %Aptr) nounwind {
 define void @rotr1_16_mem(i16* %Aptr) nounwind {
 ; 32-LABEL: rotr1_16_mem:
 ; 32:       # BB#0:
-; 32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; 32-NEXT:    movl 4(%esp), %eax
 ; 32-NEXT:    rorw (%eax)
 ; 32-NEXT:    retl
 ;
@@ -611,7 +609,7 @@ define void @rotr1_16_mem(i16* %Aptr) nounwind {
 define void @rotr1_8_mem(i8* %Aptr) nounwind {
 ; 32-LABEL: rotr1_8_mem:
 ; 32:       # BB#0:
-; 32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; 32-NEXT:    movl 4(%esp), %eax
 ; 32-NEXT:    rorb (%eax)
 ; 32-NEXT:    retl
 ;

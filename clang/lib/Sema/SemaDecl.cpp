@@ -7191,7 +7191,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   // ISO/IEC TR 18037 S5.1.2
   if (!getLangOpts().OpenCL
       && NewVD->hasLocalStorage() && T.getAddressSpace() != 0) {
-    Diag(NewVD->getLocation(), diag::err_as_qualified_auto_decl);
+    Diag(NewVD->getLocation(), diag::err_as_qualified_auto_decl) << 0;
     NewVD->setInvalidDecl();
     return;
   }
@@ -7271,6 +7271,11 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
           NewVD->setInvalidDecl();
           return;
         }
+      } else if (T.getAddressSpace() != LangAS::Default) {
+        // Do not allow other address spaces on automatic variable.
+        Diag(NewVD->getLocation(), diag::err_as_qualified_auto_decl) << 1;
+        NewVD->setInvalidDecl();
+        return;
       }
     }
   }
@@ -16043,8 +16048,10 @@ void Sema::ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod) {
   // FIXME: Consider creating a child DeclContext to hold the entities
   // lexically within the module.
   if (getLangOpts().trackLocalOwningModule()) {
-    cast<Decl>(CurContext)->setHidden(true);
-    cast<Decl>(CurContext)->setLocalOwningModule(Mod);
+    for (auto *DC = CurContext; DC; DC = DC->getLexicalParent()) {
+      cast<Decl>(DC)->setHidden(true);
+      cast<Decl>(DC)->setLocalOwningModule(Mod);
+    }
   }
 }
 
@@ -16077,9 +16084,13 @@ void Sema::ActOnModuleEnd(SourceLocation EomLoc, Module *Mod) {
 
   // Any further declarations are in whatever module we returned to.
   if (getLangOpts().trackLocalOwningModule()) {
-    cast<Decl>(CurContext)->setLocalOwningModule(getCurrentModule());
-    if (!getCurrentModule())
-      cast<Decl>(CurContext)->setHidden(false);
+    // The parser guarantees that this is the same context that we entered
+    // the module within.
+    for (auto *DC = CurContext; DC; DC = DC->getLexicalParent()) {
+      cast<Decl>(DC)->setLocalOwningModule(getCurrentModule());
+      if (!getCurrentModule())
+        cast<Decl>(DC)->setHidden(false);
+    }
   }
 }
 

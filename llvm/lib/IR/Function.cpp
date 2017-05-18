@@ -66,8 +66,6 @@ template class llvm::SymbolTableListTraits<BasicBlock>;
 // Argument Implementation
 //===----------------------------------------------------------------------===//
 
-void Argument::anchor() {}
-
 Argument::Argument(Type *Ty, const Twine &Name, Function *Par, unsigned ArgNo)
     : Value(Ty, Value::ArgumentVal), Parent(Par), ArgNo(ArgNo) {
   setName(Name);

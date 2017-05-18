@@ -96,9 +96,6 @@ public:
   AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize, unsigned Align,
              const Twine &Name, BasicBlock *InsertAtEnd);
 
-  // Out of line virtual method, so the vtable, etc. has a home.
-  ~AllocaInst() override;
-
   /// Return true if there is an allocation size parameter to the allocation
   /// instruction that is not 1.
   bool isArrayAllocation() const;
@@ -883,7 +880,6 @@ class GetElementPtrInst : public Instruction {
                            ArrayRef<Value *> IdxList, unsigned Values,
                            const Twine &NameStr, BasicBlock *InsertAtEnd);
 
-  void anchor() override;
   void init(Value *Ptr, ArrayRef<Value *> IdxList, const Twine &NameStr);
 
 protected:
@@ -1139,8 +1135,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GetElementPtrInst, Value)
 /// must be identical types.
 /// Represent an integer comparison operator.
 class ICmpInst: public CmpInst {
-  void anchor() override;
-
   void AssertOK() {
     assert(getPredicate() >= CmpInst::FIRST_ICMP_PREDICATE &&
            getPredicate() <= CmpInst::LAST_ICMP_PREDICATE &&
@@ -1453,8 +1447,6 @@ protected:
   CallInst *cloneImpl() const;
 
 public:
-  ~CallInst() override;
-
   static CallInst *Create(Value *Func, ArrayRef<Value *> Args,
                           ArrayRef<OperandBundleDef> Bundles = None,
                           const Twine &NameStr = "",
@@ -2619,8 +2611,6 @@ class PHINode : public Instruction {
     return User::operator new(s);
   }
 
-  void anchor() override;
-
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -2954,8 +2944,6 @@ protected:
   ReturnInst *cloneImpl() const;
 
 public:
-  ~ReturnInst() override;
-
   static ReturnInst* Create(LLVMContext &C, Value *retVal = nullptr,
                             Instruction *InsertBefore = nullptr) {
     return new(!!retVal) ReturnInst(C, retVal, InsertBefore);

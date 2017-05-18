@@ -406,8 +406,8 @@ TEST(InstructionsTest, FPMathOperator) {
   EXPECT_TRUE(isa<FPMathOperator>(V1));
   FPMathOperator *O1 = cast<FPMathOperator>(V1);
   EXPECT_EQ(O1->getFPAccuracy(), 1.0);
-  delete V1;
-  delete I;
+  V1->deleteValue();
+  I->deleteValue();
 }
 
 

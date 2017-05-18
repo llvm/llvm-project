@@ -130,7 +130,6 @@ private:
   SymbolBody *createUndefined(COFFSymbolRef Sym);
 
   std::unique_ptr<COFFObjectFile> COFFObj;
-  llvm::BumpPtrAllocator Alloc;
   const coff_section *SXData = nullptr;
 
   // List of all chunks defined by this file. This includes both section
@@ -162,8 +161,7 @@ private:
 // for details about the format.
 class ImportFile : public InputFile {
 public:
-  explicit ImportFile(MemoryBufferRef M)
-      : InputFile(ImportKind, M), StringAlloc(StringAllocAux) {}
+  explicit ImportFile(MemoryBufferRef M) : InputFile(ImportKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == ImportKind; }
 
   DefinedImportData *ImpSym = nullptr;
@@ -173,9 +171,6 @@ public:
 
 private:
   void parse() override;
-
-  llvm::BumpPtrAllocator StringAllocAux;
-  llvm::StringSaver StringAlloc;
 
 public:
   StringRef ExternalName;
