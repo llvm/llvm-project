@@ -61,6 +61,7 @@ static cl::opt<bool> EnableMachineCombinerPass("x86-machine-combiner",
 namespace llvm {
 
 void initializeWinEHStatePassPass(PassRegistry &);
+void initializeFixupLEAPassPass(PassRegistry &);
 void initializeX86ExecutionDepsFixPass(PassRegistry &);
 
 } // end namespace llvm
@@ -75,6 +76,7 @@ extern "C" void LLVMInitializeX86Target() {
   initializeWinEHStatePassPass(PR);
   initializeFixupBWInstPassPass(PR);
   initializeEvexToVexInstPassPass(PR);
+  initializeFixupLEAPassPass(PR);
   initializeX86ExecutionDepsFixPass(PR);
 }
 
@@ -438,6 +440,7 @@ bool X86PassConfig::addPreISel() {
 
 void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOpt::None) {
+    addPass(&LiveRangeShrinkID);
     addPass(createX86FixupSetCC());
     addPass(createX86OptimizeLEAs());
     addPass(createX86CallFrameOptimization());

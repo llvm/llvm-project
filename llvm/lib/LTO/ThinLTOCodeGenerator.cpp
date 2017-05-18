@@ -505,29 +505,25 @@ static void initTMBuilder(TargetMachineBuilder &TMBuilder,
 
 void ThinLTOCodeGenerator::addModule(StringRef Identifier, StringRef Data) {
   ThinLTOBuffer Buffer(Data, Identifier);
-  if (Modules.empty()) {
-    // First module added, so initialize the triple and some options
-    LLVMContext Context;
-    StringRef TripleStr;
-    ErrorOr<std::string> TripleOrErr = expectedToErrorOrAndEmitErrors(
-        Context, getBitcodeTargetTriple(Buffer.getMemBuffer()));
-    if (TripleOrErr)
-      TripleStr = *TripleOrErr;
-    Triple TheTriple(TripleStr);
+  LLVMContext Context;
+  StringRef TripleStr;
+  ErrorOr<std::string> TripleOrErr = expectedToErrorOrAndEmitErrors(
+      Context, getBitcodeTargetTriple(Buffer.getMemBuffer()));
+
+  if (TripleOrErr)
+    TripleStr = *TripleOrErr;
+
+  Triple TheTriple(TripleStr);
+
+  if (Modules.empty())
     initTMBuilder(TMBuilder, Triple(TheTriple));
+  else if (TMBuilder.TheTriple != TheTriple) {
+    if (!TMBuilder.TheTriple.isCompatibleWith(TheTriple))
+      report_fatal_error("ThinLTO modules with incompatible triples not "
+                         "supported");
+    initTMBuilder(TMBuilder, Triple(TMBuilder.TheTriple.merge(TheTriple)));
   }
-#ifndef NDEBUG
-  else {
-    LLVMContext Context;
-    StringRef TripleStr;
-    ErrorOr<std::string> TripleOrErr = expectedToErrorOrAndEmitErrors(
-        Context, getBitcodeTargetTriple(Buffer.getMemBuffer()));
-    if (TripleOrErr)
-      TripleStr = *TripleOrErr;
-    assert(TMBuilder.TheTriple.str() == TripleStr &&
-           "ThinLTO modules with different triple not supported");
-  }
-#endif
+
   Modules.push_back(Buffer);
 }
 

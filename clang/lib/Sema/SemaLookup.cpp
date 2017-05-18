@@ -1420,11 +1420,46 @@ bool Sema::hasVisibleDefaultArgument(const NamedDecl *D,
                                      Modules);
 }
 
+template<typename Filter>
+static bool hasVisibleDeclarationImpl(Sema &S, const NamedDecl *D,
+                                      llvm::SmallVectorImpl<Module *> *Modules,
+                                      Filter F) {
+  for (auto *Redecl : D->redecls()) {
+    auto *R = cast<NamedDecl>(Redecl);
+    if (!F(R))
+      continue;
+
+    if (S.isVisible(R))
+      return true;
+
+    if (Modules) {
+      Modules->push_back(R->getOwningModule());
+      const auto &Merged = S.Context.getModulesWithMergedDefinition(R);
+      Modules->insert(Modules->end(), Merged.begin(), Merged.end());
+    }
+  }
+
+  return false;
+}
+
+bool Sema::hasVisibleExplicitSpecialization(
+    const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules) {
+  return hasVisibleDeclarationImpl(*this, D, Modules, [](const NamedDecl *D) {
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+      return RD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization;
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      return FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization;
+    if (auto *VD = dyn_cast<VarDecl>(D))
+      return VD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization;
+    llvm_unreachable("unknown explicit specialization kind");
+  });
+}
+
 bool Sema::hasVisibleMemberSpecialization(
     const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules) {
   assert(isa<CXXRecordDecl>(D->getDeclContext()) &&
          "not a member specialization");
-  for (auto *Redecl : D->redecls()) {
+  return hasVisibleDeclarationImpl(*this, D, Modules, [](const NamedDecl *D) {
     // If the specialization is declared at namespace scope, then it's a member
     // specialization declaration. If it's lexically inside the class
     // definition then it was instantiated.
@@ -1432,19 +1467,8 @@ bool Sema::hasVisibleMemberSpecialization(
     // FIXME: This is a hack. There should be a better way to determine this.
     // FIXME: What about MS-style explicit specializations declared within a
     //        class definition?
-    if (Redecl->getLexicalDeclContext()->isFileContext()) {
-      auto *NonConstR = const_cast<NamedDecl*>(cast<NamedDecl>(Redecl));
-
-      if (isVisible(NonConstR))
-        return true;
-
-      if (Modules) {
-        Modules->push_back(getOwningModule(NonConstR));
-        const auto &Merged = Context.getModulesWithMergedDefinition(NonConstR);
-        Modules->insert(Modules->end(), Merged.begin(), Merged.end());
-      }
-    }
-  }
+    return D->getLexicalDeclContext()->isFileContext();
+  });
 
   return false;
 }
@@ -1459,23 +1483,19 @@ bool Sema::hasVisibleMemberSpecialization(
 /// your module can see, including those later on in your module).
 bool LookupResult::isVisibleSlow(Sema &SemaRef, NamedDecl *D) {
   assert(D->isHidden() && "should not call this: not in slow case");
-  Module *DeclModule = nullptr;
-  
-  if (SemaRef.getLangOpts().ModulesLocalVisibility) {
-    DeclModule = SemaRef.getOwningModule(D);
-    if (!DeclModule) {
-      assert(!D->isHidden() && "hidden decl not from a module");
-      return true;
-    }
 
-    // If the owning module is visible, and the decl is not module private,
-    // then the decl is visible too. (Module private is ignored within the same
-    // top-level module.)
-    if ((!D->isFromASTFile() || !D->isModulePrivate()) &&
-        (SemaRef.isModuleVisible(DeclModule) ||
-         SemaRef.hasVisibleMergedDefinition(D)))
-      return true;
-  }
+  Module *DeclModule = SemaRef.getOwningModule(D);
+  assert(DeclModule && "hidden decl not from a module");
+
+  // If the owning module is visible, and the decl is not module private,
+  // then the decl is visible too. (Module private is ignored within the same
+  // top-level module.)
+  // FIXME: Check the owning module for module-private declarations rather than
+  // assuming "same AST file" is the same thing as "same module".
+  if ((!D->isFromASTFile() || !D->isModulePrivate()) &&
+      (SemaRef.isModuleVisible(DeclModule) ||
+       SemaRef.hasVisibleMergedDefinition(D)))
+    return true;
 
   // If this declaration is not at namespace scope nor module-private,
   // then it is visible if its lexical parent has a visible definition.
@@ -1571,20 +1591,8 @@ static NamedDecl *findAcceptableDecl(Sema &SemaRef, NamedDecl *D) {
 bool Sema::hasVisibleDeclarationSlow(const NamedDecl *D,
                                      llvm::SmallVectorImpl<Module *> *Modules) {
   assert(!isVisible(D) && "not in slow case");
-
-  for (auto *Redecl : D->redecls()) {
-    auto *NonConstR = const_cast<NamedDecl*>(cast<NamedDecl>(Redecl));
-    if (isVisible(NonConstR))
-      return true;
-
-    if (Modules) {
-      Modules->push_back(getOwningModule(NonConstR));
-      const auto &Merged = Context.getModulesWithMergedDefinition(NonConstR);
-      Modules->insert(Modules->end(), Merged.begin(), Merged.end());
-    }
-  }
-
-  return false;
+  return hasVisibleDeclarationImpl(*this, D, Modules,
+                                   [](const NamedDecl *) { return true; });
 }
 
 NamedDecl *LookupResult::getAcceptableDeclSlow(NamedDecl *D) const {
@@ -4956,6 +4964,14 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, NamedDecl *Decl,
                                  ArrayRef<Module *> Modules,
                                  MissingImportKind MIK, bool Recover) {
   assert(!Modules.empty());
+
+  // Weed out duplicates from module list.
+  llvm::SmallVector<Module*, 8> UniqueModules;
+  llvm::SmallDenseSet<Module*, 8> UniqueModuleSet;
+  for (auto *M : Modules)
+    if (UniqueModuleSet.insert(M).second)
+      UniqueModules.push_back(M);
+  Modules = UniqueModules;
 
   if (Modules.size() > 1) {
     std::string ModuleList;

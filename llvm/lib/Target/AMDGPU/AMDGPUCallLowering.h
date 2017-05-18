@@ -38,7 +38,8 @@ class AMDGPUCallLowering: public CallLowering {
                    unsigned VReg) const override;
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
                             ArrayRef<unsigned> VRegs) const override;
-  CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg) const;
+  static CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg);
+  static CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool IsVarArg);
 };
 } // End of namespace llvm;
 #endif

@@ -282,15 +282,9 @@ def main_with_tmp(builtinParameters):
     debug_group.add_argument("--show-tests", dest="showTests",
                       help="Show all discovered tests",
                       action="store_true", default=False)
-    debug_group.add_argument("--use-process-pool", dest="executionStrategy",
-                      help="Run tests in parallel with a process pool",
-                      action="store_const", const="PROCESS_POOL")
     debug_group.add_argument("--use-processes", dest="executionStrategy",
                       help="Run tests in parallel with processes (not threads)",
                       action="store_const", const="PROCESSES")
-    debug_group.add_argument("--use-threads", dest="executionStrategy",
-                      help="Run tests in parallel with threads (not processes)",
-                      action="store_const", const="THREADS")
 
     opts = parser.parse_args()
     args = opts.test_paths
@@ -304,9 +298,6 @@ def main_with_tmp(builtinParameters):
 
     if opts.numThreads is None:
         opts.numThreads = lit.util.detectCPUs()
-
-    if opts.executionStrategy is None:
-        opts.executionStrategy = 'PROCESS_POOL'
 
     if opts.maxFailures == 0:
         parser.error("Setting --max-failures to 0 does not have any effect.")
@@ -490,8 +481,7 @@ def main_with_tmp(builtinParameters):
     startTime = time.time()
     display = TestingProgressDisplay(opts, len(run.tests), progressBar)
     try:
-        run.execute_tests(display, opts.numThreads, opts.maxTime,
-                          opts.executionStrategy)
+        run.execute_tests(display, opts.numThreads, opts.maxTime)
     except KeyboardInterrupt:
         sys.exit(2)
     display.finish()

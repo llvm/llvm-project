@@ -6,7 +6,8 @@
 ; Tests for add.
 ; CHECK: name: addi32
 ; CHECK: {{%[0-9]+}}(s32) = G_ADD
-define i32 @addi32(i32 %arg1, i32 %arg2) {
+define amdgpu_kernel void @addi32(i32 %arg1, i32 %arg2) {
   %res = add i32 %arg1, %arg2
-  ret i32 %res
+  store i32 %res, i32 addrspace(1)* undef
+  ret void
 }

@@ -1472,6 +1472,24 @@ bool Triple::isLittleEndian() const {
   }
 }
 
+bool Triple::isCompatibleWith(const Triple &Other) const {
+  // If vendor is apple, ignore the version number.
+  if (getVendor() == Triple::Apple)
+    return getArch() == Other.getArch() && getSubArch() == Other.getSubArch() &&
+           getVendor() == Other.getVendor() && getOS() == Other.getOS();
+
+  return *this == Other;
+}
+
+std::string Triple::merge(const Triple &Other) const {
+  // If vendor is apple, pick the triple with the larger version number.
+  if (getVendor() == Triple::Apple)
+    if (Other.isOSVersionLT(*this))
+      return str();
+
+  return Other.str();
+}
+
 StringRef Triple::getARMCPUForArch(StringRef MArch) const {
   if (MArch.empty())
     MArch = getArchName();

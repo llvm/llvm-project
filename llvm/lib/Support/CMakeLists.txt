@@ -39,6 +39,7 @@ add_llvm_library(LLVMSupport
   Allocator.cpp
   BinaryStreamError.cpp
   BinaryStreamReader.cpp
+  BinaryStreamRef.cpp
   BinaryStreamWriter.cpp
   BlockFrequency.cpp
   BranchProbability.cpp

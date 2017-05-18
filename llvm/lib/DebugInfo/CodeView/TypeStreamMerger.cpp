@@ -361,8 +361,7 @@ Error TypeStreamMerger::visitKnownRecord(CVType &, FieldListRecord &R) {
   // Visit the members inside the field list.
   HadUntranslatedMember = false;
   FieldListBuilder.begin();
-  CVTypeVisitor Visitor(*this);
-  if (auto EC = Visitor.visitFieldListMemberStream(R.Data))
+  if (auto EC = codeview::visitMemberRecordStream(R.Data, *this))
     return EC;
 
   // Write the record if we translated all field list members.
@@ -440,18 +439,9 @@ Error TypeStreamMerger::visitUnknownType(CVType &Rec) {
 
 Error TypeStreamMerger::mergeStream(const CVTypeArray &Types) {
   assert(IndexMap.empty());
-  TypeVisitorCallbackPipeline Pipeline;
   LastError = Error::success();
 
-  TypeDeserializer Deserializer;
-  Pipeline.addCallbackToPipeline(Deserializer);
-  Pipeline.addCallbackToPipeline(*this);
-
-  CVTypeVisitor Visitor(Pipeline);
-  if (Handler)
-    Visitor.addTypeServerHandler(*Handler);
-
-  if (auto EC = Visitor.visitTypeStream(Types))
+  if (auto EC = codeview::visitTypeStream(Types, *this, Handler))
     return EC;
 
   // If we found bad indices but no other errors, try doing another pass and see
@@ -466,7 +456,8 @@ Error TypeStreamMerger::mergeStream(const CVTypeArray &Types) {
     IsSecondPass = true;
     NumBadIndices = 0;
     CurIndex = TypeIndex(TypeIndex::FirstNonSimpleIndex);
-    if (auto EC = Visitor.visitTypeStream(Types))
+
+    if (auto EC = codeview::visitTypeStream(Types, *this, Handler))
       return EC;
 
     assert(NumBadIndices <= BadIndicesRemaining &&

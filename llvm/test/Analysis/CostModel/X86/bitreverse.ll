@@ -2,10 +2,14 @@
 ; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mcpu=corei7 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=SSE42
 ; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mcpu=corei7-avx -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=AVX
 ; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mcpu=core-avx2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=AVX2
+; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mcpu=knl -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=AVX512 -check-prefix=AVX512F
+; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mcpu=skx -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=AVX512 -check-prefix=AVX512BW
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=pentium4 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=SSE2
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=SSE42
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7-avx -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=AVX
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=core-avx2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=AVX2
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=knl -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=AVX512 -check-prefix=AVX512F
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=skx -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=AVX512 -check-prefix=AVX512BW
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=bdver2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=XOP -check-prefix=XOPAVX
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=bdver4 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=XOP -check-prefix=XOPAVX2
 
@@ -64,12 +68,18 @@ declare <8 x i32> @llvm.bitreverse.v8i32(<8 x i32>)
 declare <16 x i16> @llvm.bitreverse.v16i16(<16 x i16>)
 declare <32 x i8> @llvm.bitreverse.v32i8(<32 x i8>)
 
+declare <8 x i64> @llvm.bitreverse.v8i64(<8 x i64>)
+declare <16 x i32> @llvm.bitreverse.v16i32(<16 x i32>)
+declare <32 x i16> @llvm.bitreverse.v32i16(<32 x i16>)
+declare <64 x i8> @llvm.bitreverse.v64i8(<64 x i8>)
+
 define <2 x i64> @var_bitreverse_v2i64(<2 x i64> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'var_bitreverse_v2i64':
 ; SSE2: Found an estimated cost of 29 for instruction:   %bitreverse
 ; SSE42: Found an estimated cost of 5 for instruction:   %bitreverse
 ; AVX: Found an estimated cost of 5 for instruction:   %bitreverse
 ; AVX2: Found an estimated cost of 5 for instruction:   %bitreverse
+; AVX512: Found an estimated cost of 5 for instruction:   %bitreverse
 ; XOP: Found an estimated cost of 1 for instruction:   %bitreverse
   %bitreverse = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> %a)
   ret <2 x i64> %bitreverse
@@ -81,9 +91,23 @@ define <4 x i64> @var_bitreverse_v4i64(<4 x i64> %a) {
 ; SSE42: Found an estimated cost of 10 for instruction:   %bitreverse
 ; AVX: Found an estimated cost of 12 for instruction:   %bitreverse
 ; AVX2: Found an estimated cost of 5 for instruction:   %bitreverse
+; AVX512: Found an estimated cost of 5 for instruction:   %bitreverse
 ; XOP: Found an estimated cost of 4 for instruction:   %bitreverse
   %bitreverse = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
   ret <4 x i64> %bitreverse
+}
+
+define <8 x i64> @var_bitreverse_v8i64(<8 x i64> %a) {
+; CHECK: 'Cost Model Analysis' for function 'var_bitreverse_v8i64':
+; SSE2: Found an estimated cost of 116 for instruction:   %bitreverse
+; SSE42: Found an estimated cost of 20 for instruction:   %bitreverse
+; AVX: Found an estimated cost of 24 for instruction:   %bitreverse
+; AVX2: Found an estimated cost of 10 for instruction:   %bitreverse
+; AVX512F: Found an estimated cost of 36 for instruction:   %bitreverse
+; AVX512BW: Found an estimated cost of 5 for instruction:   %bitreverse
+; XOP: Found an estimated cost of 8 for instruction:   %bitreverse
+  %bitreverse = call <8 x i64> @llvm.bitreverse.v8i64(<8 x i64> %a)
+  ret <8 x i64> %bitreverse
 }
 
 define <4 x i32> @var_bitreverse_v4i32(<4 x i32> %a) {
@@ -92,6 +116,7 @@ define <4 x i32> @var_bitreverse_v4i32(<4 x i32> %a) {
 ; SSE42: Found an estimated cost of 5 for instruction:   %bitreverse
 ; AVX: Found an estimated cost of 5 for instruction:   %bitreverse
 ; AVX2: Found an estimated cost of 5 for instruction:   %bitreverse
+; AVX512: Found an estimated cost of 5 for instruction:   %bitreverse
 ; XOP: Found an estimated cost of 1 for instruction:   %bitreverse
   %bitreverse = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %a)
   ret <4 x i32> %bitreverse
@@ -103,9 +128,23 @@ define <8 x i32> @var_bitreverse_v8i32(<8 x i32> %a) {
 ; SSE42: Found an estimated cost of 10 for instruction:   %bitreverse
 ; AVX: Found an estimated cost of 12 for instruction:   %bitreverse
 ; AVX2: Found an estimated cost of 5 for instruction:   %bitreverse
+; AVX512: Found an estimated cost of 5 for instruction:   %bitreverse
 ; XOP: Found an estimated cost of 4 for instruction:   %bitreverse
   %bitreverse = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
   ret <8 x i32> %bitreverse
+}
+
+define <16 x i32> @var_bitreverse_v16i32(<16 x i32> %a) {
+; CHECK: 'Cost Model Analysis' for function 'var_bitreverse_v16i32':
+; SSE2: Found an estimated cost of 108 for instruction:   %bitreverse
+; SSE42: Found an estimated cost of 20 for instruction:   %bitreverse
+; AVX: Found an estimated cost of 24 for instruction:   %bitreverse
+; AVX2: Found an estimated cost of 10 for instruction:   %bitreverse
+; AVX512F: Found an estimated cost of 24 for instruction:   %bitreverse
+; AVX512BW: Found an estimated cost of 5 for instruction:   %bitreverse
+; XOP: Found an estimated cost of 8 for instruction:   %bitreverse
+  %bitreverse = call <16 x i32> @llvm.bitreverse.v16i32(<16 x i32> %a)
+  ret <16 x i32> %bitreverse
 }
 
 define <8 x i16> @var_bitreverse_v8i16(<8 x i16> %a) {
@@ -114,6 +153,7 @@ define <8 x i16> @var_bitreverse_v8i16(<8 x i16> %a) {
 ; SSE42: Found an estimated cost of 5 for instruction:   %bitreverse
 ; AVX: Found an estimated cost of 5 for instruction:   %bitreverse
 ; AVX2: Found an estimated cost of 5 for instruction:   %bitreverse
+; AVX512: Found an estimated cost of 5 for instruction:   %bitreverse
 ; XOP: Found an estimated cost of 1 for instruction:   %bitreverse
   %bitreverse = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %a)
   ret <8 x i16> %bitreverse
@@ -125,9 +165,23 @@ define <16 x i16> @var_bitreverse_v16i16(<16 x i16> %a) {
 ; SSE42: Found an estimated cost of 10 for instruction:   %bitreverse
 ; AVX: Found an estimated cost of 12 for instruction:   %bitreverse
 ; AVX2: Found an estimated cost of 5 for instruction:   %bitreverse
+; AVX512: Found an estimated cost of 5 for instruction:   %bitreverse
 ; XOP: Found an estimated cost of 4 for instruction:   %bitreverse
   %bitreverse = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
   ret <16 x i16> %bitreverse
+}
+
+define <32 x i16> @var_bitreverse_v32i16(<32 x i16> %a) {
+; CHECK: 'Cost Model Analysis' for function 'var_bitreverse_v32i16':
+; SSE2: Found an estimated cost of 108 for instruction:   %bitreverse
+; SSE42: Found an estimated cost of 20 for instruction:   %bitreverse
+; AVX: Found an estimated cost of 24 for instruction:   %bitreverse
+; AVX2: Found an estimated cost of 10 for instruction:   %bitreverse
+; AVX512F: Found an estimated cost of 10 for instruction:   %bitreverse
+; AVX512BW: Found an estimated cost of 5 for instruction:   %bitreverse
+; XOP: Found an estimated cost of 8 for instruction:   %bitreverse
+  %bitreverse = call <32 x i16> @llvm.bitreverse.v32i16(<32 x i16> %a)
+  ret <32 x i16> %bitreverse
 }
 
 define <16 x i8> @var_bitreverse_v16i8(<16 x i8> %a) {
@@ -136,6 +190,7 @@ define <16 x i8> @var_bitreverse_v16i8(<16 x i8> %a) {
 ; SSE42: Found an estimated cost of 5 for instruction:   %bitreverse
 ; AVX: Found an estimated cost of 5 for instruction:   %bitreverse
 ; AVX2: Found an estimated cost of 5 for instruction:   %bitreverse
+; AVX512: Found an estimated cost of 5 for instruction:   %bitreverse
 ; XOP: Found an estimated cost of 1 for instruction:   %bitreverse
   %bitreverse = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> %a)
   ret <16 x i8> %bitreverse
@@ -147,7 +202,21 @@ define <32 x i8> @var_bitreverse_v32i8(<32 x i8> %a) {
 ; SSE42: Found an estimated cost of 10 for instruction:   %bitreverse
 ; AVX: Found an estimated cost of 12 for instruction:   %bitreverse
 ; AVX2: Found an estimated cost of 5 for instruction:   %bitreverse
+; AVX512: Found an estimated cost of 5 for instruction:   %bitreverse
 ; XOP: Found an estimated cost of 4 for instruction:   %bitreverse
   %bitreverse = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> %a)
   ret <32 x i8> %bitreverse
+}
+
+define <64 x i8> @var_bitreverse_v64i8(<64 x i8> %a) {
+; CHECK: 'Cost Model Analysis' for function 'var_bitreverse_v64i8':
+; SSE2: Found an estimated cost of 80 for instruction:   %bitreverse
+; SSE42: Found an estimated cost of 20 for instruction:   %bitreverse
+; AVX: Found an estimated cost of 24 for instruction:   %bitreverse
+; AVX2: Found an estimated cost of 10 for instruction:   %bitreverse
+; AVX512F: Found an estimated cost of 10 for instruction:   %bitreverse
+; AVX512BW: Found an estimated cost of 5 for instruction:   %bitreverse
+; XOP: Found an estimated cost of 8 for instruction:   %bitreverse
+  %bitreverse = call <64 x i8> @llvm.bitreverse.v64i8(<64 x i8> %a)
+  ret <64 x i8> %bitreverse
 }

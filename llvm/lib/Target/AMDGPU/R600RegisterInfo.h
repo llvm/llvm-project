@@ -27,6 +27,8 @@ struct R600RegisterInfo final : public AMDGPURegisterInfo {
   R600RegisterInfo();
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
+  const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
+  unsigned getFrameRegister(const MachineFunction &MF) const override;
 
   /// \brief get the HW encoding for a register's channel.
   unsigned getHWRegChan(unsigned reg) const;

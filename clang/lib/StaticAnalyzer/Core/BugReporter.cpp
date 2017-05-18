@@ -3448,14 +3448,12 @@ void BugReporter::FlushReport(BugReport *exampleReport,
     // the BugReporterVisitors may mark this bug as a false positive.
     assert(!bugReports.empty());
 
-    MaxBugClassSize =
-        std::max(bugReports.size(), static_cast<size_t>(MaxBugClassSize));
+    MaxBugClassSize.updateMax(bugReports.size());
 
     if (!generatePathDiagnostic(*D.get(), PD, bugReports))
       return;
 
-    MaxValidBugClassSize =
-        std::max(bugReports.size(), static_cast<size_t>(MaxValidBugClassSize));
+    MaxValidBugClassSize.updateMax(bugReports.size());
 
     // Examine the report and see if the last piece is in a header. Reset the
     // report location to the last piece in the main source file.

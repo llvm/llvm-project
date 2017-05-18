@@ -23,7 +23,7 @@ class Intrinsic<string name, list<LLVMType> param_types = []> {
 }
 
 // isVoid needs to match the definition in ValueTypes.td
-def isVoid : ValueType<0, 108>;   // Produces no value
+def isVoid : ValueType<0, 110>;   // Produces no value
 def llvm_vararg_ty : LLVMType<isVoid>;   // this means vararg here
 
 // CHECK: /* 0 */ 0, 29, 0,

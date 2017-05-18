@@ -8,7 +8,7 @@
 ; VI:  s_waitcnt vmcnt(0){{$}}
 ; VI-NEXT:  buffer_wbinvl1_vol{{$}}
 ; GCN: s_endpgm
-define void @system_acquire() {
+define amdgpu_kernel void @system_acquire() {
   fence acquire
   ret void
 }
@@ -17,7 +17,7 @@ define void @system_acquire() {
 ; GCN: BB#0
 ; GCN: s_waitcnt vmcnt(0){{$}}
 ; GCN: s_endpgm
-define void @system_release() {
+define amdgpu_kernel void @system_release() {
   fence release
   ret void
 }
@@ -28,7 +28,7 @@ define void @system_release() {
 ; SI:  buffer_wbinvl1{{$}}
 ; VI:  buffer_wbinvl1_vol{{$}}
 ; GCN: s_endpgm
-define void @system_acq_rel() {
+define amdgpu_kernel void @system_acq_rel() {
   fence acq_rel
   ret void
 }
@@ -39,7 +39,7 @@ define void @system_acq_rel() {
 ; SI:  buffer_wbinvl1{{$}}
 ; VI:  buffer_wbinvl1_vol{{$}}
 ; GCN: s_endpgm
-define void @system_seq_cst() {
+define amdgpu_kernel void @system_seq_cst() {
   fence seq_cst
   ret void
 }
@@ -51,7 +51,7 @@ define void @system_seq_cst() {
 ; VI:  s_waitcnt vmcnt(0){{$}}
 ; VI-NEXT:  buffer_wbinvl1_vol{{$}}
 ; GCN: s_endpgm
-define void @agent_acquire() {
+define amdgpu_kernel void @agent_acquire() {
   fence syncscope(2) acquire
   ret void
 }
@@ -60,7 +60,7 @@ define void @agent_acquire() {
 ; GCN: BB#0
 ; GCN: s_waitcnt vmcnt(0){{$}}
 ; GCN: s_endpgm
-define void @agent_release() {
+define amdgpu_kernel void @agent_release() {
   fence syncscope(2) release
   ret void
 }
@@ -71,7 +71,7 @@ define void @agent_release() {
 ; SI:  buffer_wbinvl1{{$}}
 ; VI:  buffer_wbinvl1_vol{{$}}
 ; GCN: s_endpgm
-define void @agent_acq_rel() {
+define amdgpu_kernel void @agent_acq_rel() {
   fence syncscope(2) acq_rel
   ret void
 }
@@ -82,7 +82,7 @@ define void @agent_acq_rel() {
 ; SI:  buffer_wbinvl1{{$}}
 ; VI:  buffer_wbinvl1_vol{{$}}
 ; GCN: s_endpgm
-define void @agent_seq_cst() {
+define amdgpu_kernel void @agent_seq_cst() {
   fence syncscope(2) seq_cst
   ret void
 }
@@ -90,7 +90,7 @@ define void @agent_seq_cst() {
 ; FUNC-LABEL: {{^}}work_group_acquire
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @work_group_acquire() {
+define amdgpu_kernel void @work_group_acquire() {
   fence syncscope(3) acquire
   ret void
 }
@@ -98,7 +98,7 @@ define void @work_group_acquire() {
 ; FUNC-LABEL: {{^}}work_group_release
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @work_group_release() {
+define amdgpu_kernel void @work_group_release() {
   fence syncscope(3) release
   ret void
 }
@@ -106,7 +106,7 @@ define void @work_group_release() {
 ; FUNC-LABEL: {{^}}work_group_acq_rel
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @work_group_acq_rel() {
+define amdgpu_kernel void @work_group_acq_rel() {
   fence syncscope(3) acq_rel
   ret void
 }
@@ -114,7 +114,7 @@ define void @work_group_acq_rel() {
 ; FUNC-LABEL: {{^}}work_group_seq_cst
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @work_group_seq_cst() {
+define amdgpu_kernel void @work_group_seq_cst() {
   fence syncscope(3) seq_cst
   ret void
 }
@@ -122,7 +122,7 @@ define void @work_group_seq_cst() {
 ; FUNC-LABEL: {{^}}wavefront_acquire
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @wavefront_acquire() {
+define amdgpu_kernel void @wavefront_acquire() {
   fence syncscope(4) acquire
   ret void
 }
@@ -130,7 +130,7 @@ define void @wavefront_acquire() {
 ; FUNC-LABEL: {{^}}wavefront_release
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @wavefront_release() {
+define amdgpu_kernel void @wavefront_release() {
   fence syncscope(4) release
   ret void
 }
@@ -138,7 +138,7 @@ define void @wavefront_release() {
 ; FUNC-LABEL: {{^}}wavefront_acq_rel
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @wavefront_acq_rel() {
+define amdgpu_kernel void @wavefront_acq_rel() {
   fence syncscope(4) acq_rel
   ret void
 }
@@ -146,7 +146,7 @@ define void @wavefront_acq_rel() {
 ; FUNC-LABEL: {{^}}wavefront_seq_cst
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @wavefront_seq_cst() {
+define amdgpu_kernel void @wavefront_seq_cst() {
   fence syncscope(4) seq_cst
   ret void
 }
@@ -154,7 +154,7 @@ define void @wavefront_seq_cst() {
 ; FUNC-LABEL: {{^}}image_acquire
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @image_acquire() {
+define amdgpu_kernel void @image_acquire() {
   fence syncscope(5) acquire
   ret void
 }
@@ -162,7 +162,7 @@ define void @image_acquire() {
 ; FUNC-LABEL: {{^}}image_release
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @image_release() {
+define amdgpu_kernel void @image_release() {
   fence syncscope(5) release
   ret void
 }
@@ -170,7 +170,7 @@ define void @image_release() {
 ; FUNC-LABEL: {{^}}image_acq_rel
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @image_acq_rel() {
+define amdgpu_kernel void @image_acq_rel() {
   fence syncscope(5) acq_rel
   ret void
 }
@@ -178,7 +178,7 @@ define void @image_acq_rel() {
 ; FUNC-LABEL: {{^}}image_seq_cst
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @image_seq_cst() {
+define amdgpu_kernel void @image_seq_cst() {
   fence syncscope(5) seq_cst
   ret void
 }
@@ -186,7 +186,7 @@ define void @image_seq_cst() {
 ; FUNC-LABEL: {{^}}signal_handler_acquire
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @signal_handler_acquire() {
+define amdgpu_kernel void @signal_handler_acquire() {
   fence singlethread acquire
   ret void
 }
@@ -194,7 +194,7 @@ define void @signal_handler_acquire() {
 ; FUNC-LABEL: {{^}}signal_handler_release
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @signal_handler_release() {
+define amdgpu_kernel void @signal_handler_release() {
   fence singlethread release
   ret void
 }
@@ -202,7 +202,7 @@ define void @signal_handler_release() {
 ; FUNC-LABEL: {{^}}signal_handler_acq_rel
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @signal_handler_acq_rel() {
+define amdgpu_kernel void @signal_handler_acq_rel() {
   fence singlethread acq_rel
   ret void
 }
@@ -210,7 +210,7 @@ define void @signal_handler_acq_rel() {
 ; FUNC-LABEL: {{^}}signal_handler_seq_cst
 ; GCN: BB#0
 ; GCN: s_endpgm
-define void @signal_handler_seq_cst() {
+define amdgpu_kernel void @signal_handler_seq_cst() {
   fence singlethread seq_cst
   ret void
 }

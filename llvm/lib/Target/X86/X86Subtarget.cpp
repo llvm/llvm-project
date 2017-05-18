@@ -320,6 +320,7 @@ void X86Subtarget::initializeEnvironment() {
   CallRegIndirect = false;
   LEAUsesAG = false;
   SlowLEA = false;
+  Slow3OpsLEA = false;
   SlowIncDec = false;
   stackAlignment = 4;
   // FIXME: this is a known good value for Yonah. How about others?

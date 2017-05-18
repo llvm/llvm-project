@@ -55,9 +55,8 @@ PDBTypeServerHandler::handleInternal(PDBFile &File,
   auto ExpectedTpi = File.getPDBTpiStream();
   if (!ExpectedTpi)
     return ExpectedTpi.takeError();
-  CVTypeVisitor Visitor(Callbacks);
 
-  if (auto EC = Visitor.visitTypeStream(ExpectedTpi->types(nullptr)))
+  if (auto EC = codeview::visitTypeStream(ExpectedTpi->typeArray(), Callbacks))
     return std::move(EC);
 
   return true;

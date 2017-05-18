@@ -24709,16 +24709,22 @@ static MachineBasicBlock *emitXBegin(MachineInstr &MI, MachineBasicBlock *MBB,
   //  xbegin sinkMBB
   //
   // mainMBB:
-  //  eax = -1
+  //  s0 = -1
+  //
+  // fallBB:
+  //  eax = # XABORT_DEF
+  //  s1 = eax
   //
   // sinkMBB:
-  //  v = eax
+  //  v = phi(s0/mainBB, s1/fallBB)
 
   MachineBasicBlock *thisMBB = MBB;
   MachineFunction *MF = MBB->getParent();
   MachineBasicBlock *mainMBB = MF->CreateMachineBasicBlock(BB);
+  MachineBasicBlock *fallMBB = MF->CreateMachineBasicBlock(BB);
   MachineBasicBlock *sinkMBB = MF->CreateMachineBasicBlock(BB);
   MF->insert(I, mainMBB);
+  MF->insert(I, fallMBB);
   MF->insert(I, sinkMBB);
 
   // Transfer the remainder of BB and its successor edges to sinkMBB.
@@ -24726,25 +24732,40 @@ static MachineBasicBlock *emitXBegin(MachineInstr &MI, MachineBasicBlock *MBB,
                   std::next(MachineBasicBlock::iterator(MI)), MBB->end());
   sinkMBB->transferSuccessorsAndUpdatePHIs(MBB);
 
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  unsigned DstReg = MI.getOperand(0).getReg();
+  const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
+  unsigned mainDstReg = MRI.createVirtualRegister(RC);
+  unsigned fallDstReg = MRI.createVirtualRegister(RC);
+
   // thisMBB:
-  //  xbegin sinkMBB
+  //  xbegin fallMBB
   //  # fallthrough to mainMBB
-  //  # abortion to sinkMBB
-  BuildMI(thisMBB, DL, TII->get(X86::XBEGIN_4)).addMBB(sinkMBB);
+  //  # abortion to fallMBB
+  BuildMI(thisMBB, DL, TII->get(X86::XBEGIN_4)).addMBB(fallMBB);
   thisMBB->addSuccessor(mainMBB);
-  thisMBB->addSuccessor(sinkMBB);
+  thisMBB->addSuccessor(fallMBB);
 
   // mainMBB:
-  //  EAX = -1
-  BuildMI(mainMBB, DL, TII->get(X86::MOV32ri), X86::EAX).addImm(-1);
+  //  mainDstReg := -1
+  BuildMI(mainMBB, DL, TII->get(X86::MOV32ri), mainDstReg).addImm(-1);
+  BuildMI(mainMBB, DL, TII->get(X86::JMP_1)).addMBB(sinkMBB);
   mainMBB->addSuccessor(sinkMBB);
 
-  // sinkMBB:
-  // EAX is live into the sinkMBB
-  sinkMBB->addLiveIn(X86::EAX);
-  BuildMI(*sinkMBB, sinkMBB->begin(), DL, TII->get(TargetOpcode::COPY),
-          MI.getOperand(0).getReg())
+  // fallMBB:
+  //  ; pseudo instruction to model hardware's definition from XABORT
+  //  EAX := XABORT_DEF
+  //  fallDstReg := EAX
+  BuildMI(fallMBB, DL, TII->get(X86::XABORT_DEF));
+  BuildMI(fallMBB, DL, TII->get(TargetOpcode::COPY), fallDstReg)
       .addReg(X86::EAX);
+  fallMBB->addSuccessor(sinkMBB);
+
+  // sinkMBB:
+  //  DstReg := phi(mainDstReg/mainBB, fallDstReg/fallBB)
+  BuildMI(*sinkMBB, sinkMBB->begin(), DL, TII->get(X86::PHI), DstReg)
+      .addReg(mainDstReg).addMBB(mainMBB)
+      .addReg(fallDstReg).addMBB(fallMBB);
 
   MI.eraseFromParent();
   return sinkMBB;

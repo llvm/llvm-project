@@ -979,7 +979,7 @@ Error DWARFContextInMemory::maybeDecompress(const SectionRef &Sec,
     return Decompressor.takeError();
 
   SmallString<32> Out;
-  if (auto Err = Decompressor->decompress(Out))
+  if (auto Err = Decompressor->resizeAndDecompress(Out))
     return Err;
 
   UncompressedSections.emplace_back(std::move(Out));
@@ -1104,14 +1104,14 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
       }
 
       object::RelocVisitor V(Obj);
-      object::RelocToApply R(V.visit(Reloc.getType(), Reloc, *SymAddrOrErr));
+      uint64_t Val = V.visit(Reloc.getType(), Reloc, *SymAddrOrErr);
       if (V.error()) {
         SmallString<32> Name;
         Reloc.getTypeName(Name);
         errs() << "error: failed to compute relocation: " << Name << "\n";
         continue;
       }
-      Map->insert({Reloc.getOffset(), {R.Value}});
+      Map->insert({Reloc.getOffset(), {Val}});
     }
   }
 }

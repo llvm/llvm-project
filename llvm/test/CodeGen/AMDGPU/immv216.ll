@@ -288,9 +288,9 @@ define amdgpu_kernel void @commute_add_inline_imm_0.5_v2f16(<2 x half> addrspace
 }
 
 ; GCN-LABEL: {{^}}commute_add_literal_v2f16:
-; GFX9: buffer_load_dword [[VAL:v[0-9]+]]
-; GFX9: s_mov_b32 [[K:s[0-9]+]], 0x64006400
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[K]], [[VAL]]
+; GFX9-DAG: buffer_load_dword [[VAL:v[0-9]+]]
+; GFX9-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x6400{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[K]], [[VAL]] op_sel_hi:[0,1]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x6400{{$}}

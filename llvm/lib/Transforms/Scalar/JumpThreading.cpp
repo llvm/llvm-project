@@ -833,15 +833,13 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
         CondBr->eraseFromParent();
         if (CondCmp->use_empty())
           CondCmp->eraseFromParent();
-        else if (CondCmp->getParent() == BB) {
-          // If the fact we just learned is true for all uses of the
-          // condition, replace it with a constant value
-          auto *CI = Ret == LazyValueInfo::True ?
-            ConstantInt::getTrue(CondCmp->getType()) :
-            ConstantInt::getFalse(CondCmp->getType());
-          CondCmp->replaceAllUsesWith(CI);
-          CondCmp->eraseFromParent();
-        }
+        // TODO: We can safely replace *some* uses of the CondInst if it has
+        // exactly one value as returned by LVI. RAUW is incorrect in the
+        // presence of guards and assumes, that have the `Cond` as the use. This
+        // is because we use the guards/assume to reason about the `Cond` value
+        // at the end of block, but RAUW unconditionally replaces all uses
+        // including the guards/assumes themselves and the uses before the
+        // guard/assume.
         return true;
       }
 
@@ -1327,14 +1325,13 @@ bool JumpThreadingPass::ProcessThreadableEdges(Value *Cond, BasicBlock *BB,
       if (auto *CondInst = dyn_cast<Instruction>(Cond)) {
         if (CondInst->use_empty() && !CondInst->mayHaveSideEffects())
           CondInst->eraseFromParent();
-        else if (OnlyVal && OnlyVal != MultipleVal &&
-                 CondInst->getParent() == BB) {
-          // If we just learned Cond is the same value for all uses of the
-          // condition, replace it with a constant value
-          CondInst->replaceAllUsesWith(OnlyVal);
-          if (!CondInst->mayHaveSideEffects())
-            CondInst->eraseFromParent();
-        }
+        // TODO: We can safely replace *some* uses of the CondInst if it has
+        // exactly one value as returned by LVI. RAUW is incorrect in the
+        // presence of guards and assumes, that have the `Cond` as the use. This
+        // is because we use the guards/assume to reason about the `Cond` value
+        // at the end of block, but RAUW unconditionally replaces all uses
+        // including the guards/assumes themselves and the uses before the
+        // guard/assume.
       }
       return true;
     }

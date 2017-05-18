@@ -189,8 +189,6 @@ SIFrameLowering::getReservedPrivateSegmentWaveByteOffsetReg(
   // ----
   //  13 (+1)
   unsigned ReservedRegCount = 13;
-  if (SPReg != AMDGPU::NoRegister)
-    ++ReservedRegCount;
 
   if (AllSGPRs.size() < ReservedRegCount)
     return std::make_pair(ScratchWaveOffsetReg, SPReg);
@@ -208,13 +206,6 @@ SIFrameLowering::getReservedPrivateSegmentWaveByteOffsetReg(
         MRI.replaceRegWith(ScratchWaveOffsetReg, Reg);
         MFI->setScratchWaveOffsetReg(Reg);
         ScratchWaveOffsetReg = Reg;
-      } else {
-        if (SPReg == AMDGPU::NoRegister)
-          break;
-
-        MRI.replaceRegWith(SPReg, Reg);
-        MFI->setStackPtrOffsetReg(Reg);
-        SPReg = Reg;
         break;
       }
     }
@@ -223,8 +214,8 @@ SIFrameLowering::getReservedPrivateSegmentWaveByteOffsetReg(
   return std::make_pair(ScratchWaveOffsetReg, SPReg);
 }
 
-void SIFrameLowering::emitPrologue(MachineFunction &MF,
-                                   MachineBasicBlock &MBB) const {
+void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
+                                                MachineBasicBlock &MBB) const {
   // Emit debugger prologue if "amdgpu-debugger-emit-prologue" attribute was
   // specified.
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
@@ -422,6 +413,13 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       .addImm(Rsrc23 >> 32)
       .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
   }
+}
+
+void SIFrameLowering::emitPrologue(MachineFunction &MF,
+                                   MachineBasicBlock &MBB) const {
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  if (MFI->isEntryFunction())
+    emitEntryFunctionPrologue(MF, MBB);
 }
 
 void SIFrameLowering::emitEpilogue(MachineFunction &MF,

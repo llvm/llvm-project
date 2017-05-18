@@ -62,6 +62,7 @@ def : GINodeEquiv<G_FMUL, fmul>;
 def : GINodeEquiv<G_FDIV, fdiv>;
 def : GINodeEquiv<G_FREM, frem>;
 def : GINodeEquiv<G_FPOW, fpow>;
+def : GINodeEquiv<G_INTRINSIC, intrinsic_wo_chain>;
 def : GINodeEquiv<G_BR, br>;
 
 // Specifies the GlobalISel equivalents for SelectionDAG's ComplexPattern.

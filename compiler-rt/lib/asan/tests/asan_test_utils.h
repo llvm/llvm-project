@@ -30,11 +30,11 @@
 #include <stdint.h>
 #include <assert.h>
 #include <algorithm>
+#include <setjmp.h>
 
 #if !defined(_WIN32)
 # include <strings.h>
 # include <sys/mman.h>
-# include <setjmp.h>
 #endif
 
 #ifdef __linux__

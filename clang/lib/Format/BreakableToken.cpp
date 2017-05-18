@@ -41,7 +41,8 @@ static bool IsBlank(char C) {
 }
 
 static StringRef getLineCommentIndentPrefix(StringRef Comment) {
-  static const char *const KnownPrefixes[] = {"///", "//", "//!"};
+  static const char *const KnownPrefixes[] = {
+      "///<", "//!<", "///", "//", "//!"};
   StringRef LongestPrefix;
   for (StringRef KnownPrefix : KnownPrefixes) {
     if (Comment.startswith(KnownPrefix)) {
@@ -692,6 +693,10 @@ BreakableLineCommentSection::BreakableLineCommentSection(
           Prefix[i] = "/// ";
         else if (Prefix[i] == "//!")
           Prefix[i] = "//! ";
+        else if (Prefix[i] == "///<")
+          Prefix[i] = "///< ";
+        else if (Prefix[i] == "//!<")
+          Prefix[i] = "//!< ";
       }
 
       Tokens[i] = LineTok;

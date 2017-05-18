@@ -7,14 +7,13 @@
 ; GFX9: flat_store_dword
 ; GFX9-NOT: s_waitcnt
 ; GCN: s_barrier
-define amdgpu_kernel void @test_barrier(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_barrier(i32 addrspace(1)* %out, i32 %size) #0 {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
   store i32 %tmp, i32 addrspace(1)* %tmp1
   call void @llvm.amdgcn.s.barrier()
-  %tmp2 = call i32 @llvm.r600.read.local.size.x()
-  %tmp3 = sub i32 %tmp2, 1
+  %tmp3 = sub i32 %size, 1
   %tmp4 = sub i32 %tmp3, %tmp
   %tmp5 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp4
   %tmp6 = load i32, i32 addrspace(1)* %tmp5
@@ -24,7 +23,6 @@ entry:
 
 declare void @llvm.amdgcn.s.barrier() #1
 declare i32 @llvm.amdgcn.workitem.id.x() #2
-declare i32 @llvm.r600.read.local.size.x() #2
 
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }

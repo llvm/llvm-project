@@ -186,11 +186,23 @@ def S_BITSET1_B32 : SOP1_32    <"s_bitset1_b32">;
 def S_BITSET1_B64 : SOP1_64_32 <"s_bitset1_b64">;
 def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64">;
 
-let isTerminator = 1, isBarrier = 1,
-    isBranch = 1, isIndirectBranch = 1 in {
+let isTerminator = 1, isBarrier = 1, SchedRW = [WriteBranch] in {
+
+let isBranch = 1, isIndirectBranch = 1 in {
 def S_SETPC_B64 : SOP1_1  <"s_setpc_b64">;
+} // End isBranch = 1, isIndirectBranch = 1
+
+let isReturn = 1 in {
+// Define variant marked as return rather than branch.
+def S_SETPC_B64_return : SOP1_1<"", [(AMDGPUret_flag i64:$src0)]>;
 }
-def S_SWAPPC_B64 : SOP1_64 <"s_swappc_b64">;
+} // End isTerminator = 1, isBarrier = 1
+
+let isCall = 1 in {
+def S_SWAPPC_B64 : SOP1_64 <"s_swappc_b64"
+>;
+}
+
 def S_RFE_B64 : SOP1_1  <"s_rfe_b64">;
 
 let hasSideEffects = 1, Uses = [EXEC], Defs = [EXEC, SCC] in {

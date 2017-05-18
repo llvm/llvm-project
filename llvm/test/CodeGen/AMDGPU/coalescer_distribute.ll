@@ -5,7 +5,7 @@ target triple = "amdgcn--"
 
 define spir_kernel void @hoge() {
 bb:
-  %tmp = tail call i32 @llvm.r600.read.tidig.x()
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   br i1 undef, label %bb2, label %bb23
 
 bb2:
@@ -50,4 +50,4 @@ bb34:
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x()
+declare i32 @llvm.amdgcn.workitem.id.x()

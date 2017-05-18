@@ -674,10 +674,8 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
 
   DisplayFunction(D, Mode, IMode);
   CFG *DeclCFG = Mgr->getCFG(D);
-  if (DeclCFG) {
-    unsigned CFGSize = DeclCFG->size();
-    MaxCFGSize = MaxCFGSize < CFGSize ? CFGSize : MaxCFGSize;
-  }
+  if (DeclCFG)
+    MaxCFGSize.updateMax(DeclCFG->size());
 
   BugReporter BR(*Mgr);
 

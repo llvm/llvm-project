@@ -194,10 +194,6 @@ void InitializeFlags() {
     Report("WARNING: strchr* interceptors are enabled even though "
            "replace_str=0. Use intercept_strchr=0 to disable them.");
   }
-  if (!f->replace_str && common_flags()->intercept_strndup) {
-    Report("WARNING: strndup* interceptors are enabled even though "
-           "replace_str=0. Use intercept_strndup=0 to disable them.");
-  }
 }
 
 }  // namespace __asan

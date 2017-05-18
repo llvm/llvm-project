@@ -4260,6 +4260,80 @@ static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I) {
   return new ICmpInst(NewPred, Op0, ConstantExpr::getAdd(Op1C, OneOrNegOne));
 }
 
+/// Integer compare with boolean values can always be turned into bitwise ops.
+static Instruction *canonicalizeICmpBool(ICmpInst &I,
+                                         InstCombiner::BuilderTy &Builder) {
+  Value *A = I.getOperand(0), *B = I.getOperand(1);
+  assert(A->getType()->getScalarType()->isIntegerTy(1) && "Bools only");
+
+  // A boolean compared to true/false can be simplified to Op0/true/false in
+  // 14 out of the 20 (10 predicates * 2 constants) possible combinations.
+  // Cases not handled by InstSimplify are always 'not' of Op0.
+  if (match(B, m_Zero())) {
+    switch (I.getPredicate()) {
+      case CmpInst::ICMP_EQ:  // A ==   0 -> !A
+      case CmpInst::ICMP_ULE: // A <=u  0 -> !A
+      case CmpInst::ICMP_SGE: // A >=s  0 -> !A
+        return BinaryOperator::CreateNot(A);
+      default:
+        llvm_unreachable("ICmp i1 X, C not simplified as expected.");
+    }
+  } else if (match(B, m_One())) {
+    switch (I.getPredicate()) {
+      case CmpInst::ICMP_NE:  // A !=  1 -> !A
+      case CmpInst::ICMP_ULT: // A <u  1 -> !A
+      case CmpInst::ICMP_SGT: // A >s -1 -> !A
+        return BinaryOperator::CreateNot(A);
+      default:
+        llvm_unreachable("ICmp i1 X, C not simplified as expected.");
+    }
+  }
+
+  switch (I.getPredicate()) {
+  default:
+    llvm_unreachable("Invalid icmp instruction!");
+  case ICmpInst::ICMP_EQ:
+    // icmp eq i1 A, B -> ~(A ^ B)
+    return BinaryOperator::CreateNot(Builder.CreateXor(A, B));
+
+  case ICmpInst::ICMP_NE:
+    // icmp ne i1 A, B -> A ^ B
+    return BinaryOperator::CreateXor(A, B);
+
+  case ICmpInst::ICMP_UGT:
+    // icmp ugt -> icmp ult
+    std::swap(A, B);
+    LLVM_FALLTHROUGH;
+  case ICmpInst::ICMP_ULT:
+    // icmp ult i1 A, B -> ~A & B
+    return BinaryOperator::CreateAnd(Builder.CreateNot(A), B);
+
+  case ICmpInst::ICMP_SGT:
+    // icmp sgt -> icmp slt
+    std::swap(A, B);
+    LLVM_FALLTHROUGH;
+  case ICmpInst::ICMP_SLT:
+    // icmp slt i1 A, B -> A & ~B
+    return BinaryOperator::CreateAnd(Builder.CreateNot(B), A);
+
+  case ICmpInst::ICMP_UGE:
+    // icmp uge -> icmp ule
+    std::swap(A, B);
+    LLVM_FALLTHROUGH;
+  case ICmpInst::ICMP_ULE:
+    // icmp ule i1 A, B -> ~A | B
+    return BinaryOperator::CreateOr(Builder.CreateNot(A), B);
+
+  case ICmpInst::ICMP_SGE:
+    // icmp sge -> icmp sle
+    std::swap(A, B);
+    LLVM_FALLTHROUGH;
+  case ICmpInst::ICMP_SLE:
+    // icmp sle i1 A, B -> A | ~B
+    return BinaryOperator::CreateOr(Builder.CreateNot(B), A);
+  }
+}
+
 Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   bool Changed = false;
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
@@ -4297,49 +4371,9 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     }
   }
 
-  Type *Ty = Op0->getType();
-
-  // icmp's with boolean values can always be turned into bitwise operations
-  if (Ty->getScalarType()->isIntegerTy(1)) {
-    switch (I.getPredicate()) {
-    default: llvm_unreachable("Invalid icmp instruction!");
-    case ICmpInst::ICMP_EQ: {                // icmp eq i1 A, B -> ~(A^B)
-      Value *Xor = Builder->CreateXor(Op0, Op1, I.getName() + "tmp");
-      return BinaryOperator::CreateNot(Xor);
-    }
-    case ICmpInst::ICMP_NE:                  // icmp ne i1 A, B -> A^B
-      return BinaryOperator::CreateXor(Op0, Op1);
-
-    case ICmpInst::ICMP_UGT:
-      std::swap(Op0, Op1);                   // Change icmp ugt -> icmp ult
-      LLVM_FALLTHROUGH;
-    case ICmpInst::ICMP_ULT:{                // icmp ult i1 A, B -> ~A & B
-      Value *Not = Builder->CreateNot(Op0, I.getName() + "tmp");
-      return BinaryOperator::CreateAnd(Not, Op1);
-    }
-    case ICmpInst::ICMP_SGT:
-      std::swap(Op0, Op1);                   // Change icmp sgt -> icmp slt
-      LLVM_FALLTHROUGH;
-    case ICmpInst::ICMP_SLT: {               // icmp slt i1 A, B -> A & ~B
-      Value *Not = Builder->CreateNot(Op1, I.getName() + "tmp");
-      return BinaryOperator::CreateAnd(Not, Op0);
-    }
-    case ICmpInst::ICMP_UGE:
-      std::swap(Op0, Op1);                   // Change icmp uge -> icmp ule
-      LLVM_FALLTHROUGH;
-    case ICmpInst::ICMP_ULE: {               // icmp ule i1 A, B -> ~A | B
-      Value *Not = Builder->CreateNot(Op0, I.getName() + "tmp");
-      return BinaryOperator::CreateOr(Not, Op1);
-    }
-    case ICmpInst::ICMP_SGE:
-      std::swap(Op0, Op1);                   // Change icmp sge -> icmp sle
-      LLVM_FALLTHROUGH;
-    case ICmpInst::ICMP_SLE: {               // icmp sle i1 A, B -> A | ~B
-      Value *Not = Builder->CreateNot(Op1, I.getName() + "tmp");
-      return BinaryOperator::CreateOr(Not, Op0);
-    }
-    }
-  }
+  if (Op0->getType()->getScalarType()->isIntegerTy(1))
+    if (Instruction *Res = canonicalizeICmpBool(I, *Builder))
+      return Res;
 
   if (ICmpInst *NewICmp = canonicalizeCmpWithConstant(I))
     return NewICmp;

@@ -477,10 +477,8 @@ bool CGPassManager::runOnModule(Module &M) {
     if (DevirtualizedCall)
       DEBUG(dbgs() << "  CGSCCPASSMGR: Stopped iteration after " << Iteration
                    << " times, due to -max-cg-scc-iterations\n");
-    
-    if (Iteration > MaxSCCIterations)
-      MaxSCCIterations = Iteration;
-    
+
+    MaxSCCIterations.updateMax(Iteration);
   }
   Changed |= doFinalization(CG);
   return Changed;

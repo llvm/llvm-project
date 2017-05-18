@@ -393,3 +393,53 @@ store_label:
   store <2 x i16> %add, <2 x i16> addrspace(1)* %out, align 4
   ret void
 }
+
+
+; Check that "pulling out" SDWA operands works correctly.
+; GCN-LABEL: {{^}}pulled_out_test:
+; NOSDWA-DAG: v_and_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; NOSDWA-DAG: v_lshlrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
+; NOSDWA-DAG: v_and_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; NOSDWA-DAG: v_lshlrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
+; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; NOSDWA-NOT: v_and_b32_sdwa
+; NOSDWA-NOT: v_or_b32_sdwa
+
+; SDWA-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; SDWA-DAG: v_lshlrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
+; SDWA-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; SDWA-DAG: v_lshlrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
+; SDWA: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+
+define amdgpu_kernel void @pulled_out_test(<8 x i8> addrspace(1)* %sourceA, <8 x i8> addrspace(1)* %destValues) {
+entry:
+  %idxprom = ashr exact i64 15, 32
+  %arrayidx = getelementptr inbounds <8 x i8>, <8 x i8> addrspace(1)* %sourceA, i64 %idxprom
+  %tmp = load <8 x i8>, <8 x i8> addrspace(1)* %arrayidx, align 8
+
+  %tmp1 = extractelement <8 x i8> %tmp, i32 0
+  %tmp2 = extractelement <8 x i8> %tmp, i32 1
+  %tmp3 = extractelement <8 x i8> %tmp, i32 2
+  %tmp4 = extractelement <8 x i8> %tmp, i32 3
+  %tmp5 = extractelement <8 x i8> %tmp, i32 4
+  %tmp6 = extractelement <8 x i8> %tmp, i32 5
+  %tmp7 = extractelement <8 x i8> %tmp, i32 6
+  %tmp8 = extractelement <8 x i8> %tmp, i32 7
+
+  %tmp9 = insertelement <2 x i8> undef, i8 %tmp1, i32 0
+  %tmp10 = insertelement <2 x i8> %tmp9, i8 %tmp2, i32 1
+  %tmp11 = insertelement <2 x i8> undef, i8 %tmp3, i32 0
+  %tmp12 = insertelement <2 x i8> %tmp11, i8 %tmp4, i32 1
+  %tmp13 = insertelement <2 x i8> undef, i8 %tmp5, i32 0
+  %tmp14 = insertelement <2 x i8> %tmp13, i8 %tmp6, i32 1
+  %tmp15 = insertelement <2 x i8> undef, i8 %tmp7, i32 0
+  %tmp16 = insertelement <2 x i8> %tmp15, i8 %tmp8, i32 1
+
+  %tmp17 = shufflevector <2 x i8> %tmp10, <2 x i8> %tmp12, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %tmp18 = shufflevector <2 x i8> %tmp14, <2 x i8> %tmp16, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %tmp19 = shufflevector <4 x i8> %tmp17, <4 x i8> %tmp18, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  
+  %arrayidx5 = getelementptr inbounds <8 x i8>, <8 x i8> addrspace(1)* %destValues, i64 %idxprom
+  store <8 x i8> %tmp19, <8 x i8> addrspace(1)* %arrayidx5, align 8
+  ret void
+}
