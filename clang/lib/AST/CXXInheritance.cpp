@@ -57,6 +57,7 @@ bool CXXBasePaths::isAmbiguous(CanQualType BaseType) {
 void CXXBasePaths::clear() {
   Paths.clear();
   ClassSubobjects.clear();
+  VisitedDependentRecords.clear();
   ScratchPath.clear();
   DetectedVirtual = nullptr;
 }
@@ -67,6 +68,7 @@ void CXXBasePaths::swap(CXXBasePaths &Other) {
   std::swap(Origin, Other.Origin);
   Paths.swap(Other.Paths);
   ClassSubobjects.swap(Other.ClassSubobjects);
+  VisitedDependentRecords.swap(Other.VisitedDependentRecords);
   std::swap(FindAmbiguities, Other.FindAmbiguities);
   std::swap(RecordPaths, Other.RecordPaths);
   std::swap(DetectVirtual, Other.DetectVirtual);
@@ -278,8 +280,14 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
                   dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl()))
             BaseRecord = TD->getTemplatedDecl();
         }
-        if (BaseRecord && !BaseRecord->hasDefinition())
-          BaseRecord = nullptr;
+        if (BaseRecord) {
+          if (!BaseRecord->hasDefinition() ||
+              VisitedDependentRecords.count(BaseRecord)) {
+            BaseRecord = nullptr;
+          } else {
+            VisitedDependentRecords.insert(BaseRecord);
+          }
+        }
       } else {
         BaseRecord = cast<CXXRecordDecl>(
             BaseSpec.getType()->castAs<RecordType>()->getDecl());
