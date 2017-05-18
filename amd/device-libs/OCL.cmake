@@ -44,16 +44,12 @@ macro(opencl_bc_lib name)
   endif(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
 
   set_target_properties(${lib_tgt} PROPERTIES
-    ARCHIVE_OUTPUT_NAME "${CMAKE_CURRENT_BINARY_DIR}/${name}"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    ARCHIVE_OUTPUT_NAME "${name}"
     PREFIX "" SUFFIX ${LIB_SUFFIX}
     COMPILE_FLAGS "${CLANG_OCL_FLAGS} -emit-llvm"
     LANGUAGE "OCL" LINKER_LANGUAGE "OCL")
   set(output_name "${name}.amdgcn${BC_EXT}")
-
-  if(NOT ROCM_DEVICELIB_INCLUDE_TESTS)
-    set_target_properties(${lib_tgt} PROPERTIES
-      ARCHIVE_OUTPUT_NAME "${name}")
-  endif(NOT ROCM_DEVICELIB_INCLUDE_TESTS)
 
   if (TARGET prepare-builtins)
     add_dependencies(${lib_tgt} prepare-builtins)
@@ -75,8 +71,9 @@ macro(clang_opencl_code name dir)
   set(mlink_flags)
   foreach (lib ${ARGN})
     add_dependencies(${tgt_name} ${lib}_lib)
-    get_target_property(lib_path ${lib}_lib ARCHIVE_OUTPUT_NAME)
-    set(mlink_flags "${mlink_flags} -Xclang -mlink-bitcode-file -Xclang ${lib_path}.amdgcn${BC_EXT}")
+    get_target_property(lib_file ${lib}_lib ARCHIVE_OUTPUT_NAME)
+    get_target_property(lib_path ${lib}_lib ARCHIVE_OUTPUT_DIRECTORY)
+    set(mlink_flags "${mlink_flags} -Xclang -mlink-bitcode-file -Xclang ${lib_path}/${lib_file}.amdgcn${BC_EXT}")
   endforeach()
   set(CMAKE_OCL_FLAGS "${CMAKE_OCL_FLAGS} -mcpu=fiji ${mlink_flags}")
   #dummy link since clang already generated CodeObject file
