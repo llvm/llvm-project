@@ -1693,6 +1693,8 @@ RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S,
   case R_ARM_TLS_IE32:
     // GOT(S) + A - P
     return R_GOT_PC;
+  case R_ARM_SBREL32:
+    return R_ARM_SBREL;
   case R_ARM_TARGET1:
     return Config->Target1Rel ? R_PC : R_ABS;
   case R_ARM_TARGET2:
@@ -1832,6 +1834,7 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_ARM_GOT_PREL:
   case R_ARM_REL32:
   case R_ARM_RELATIVE:
+  case R_ARM_SBREL32:
   case R_ARM_TARGET1:
   case R_ARM_TARGET2:
   case R_ARM_TLS_GD32:

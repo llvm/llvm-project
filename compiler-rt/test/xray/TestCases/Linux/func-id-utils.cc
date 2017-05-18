@@ -31,18 +31,10 @@
          "each function id must be assigned to a unique function");
 
   std::set<void *> not_instrumented;
-  const auto comp = [](void *lhs, void *rhs) {
-#ifdef __PPC__
-    return reinterpret_cast<uintptr_t>(lhs) + 8 <
-           reinterpret_cast<uintptr_t>(rhs);
-#else
-    return lhs < rhs;
-#endif
-  };
-  std::set_difference(must_be_instrumented.begin(), must_be_instrumented.end(),
-                      all_instrumented.begin(), all_instrumented.end(),
-                      std::inserter(not_instrumented, not_instrumented.begin()),
-                      comp);
+  std::set_difference(
+      must_be_instrumented.begin(), must_be_instrumented.end(),
+      all_instrumented.begin(), all_instrumented.end(),
+      std::inserter(not_instrumented, not_instrumented.begin()));
   assert(
       not_instrumented.empty() &&
       "we should see all explicitly instrumented functions with function ids");
