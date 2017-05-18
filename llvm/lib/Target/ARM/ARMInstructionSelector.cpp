@@ -345,23 +345,8 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     I.setDesc(TII.get(COPY));
     return selectCopy(I, TII, MRI, TRI, RBI);
   }
-  case G_ADD:
   case G_GEP:
     I.setDesc(TII.get(ARM::ADDrr));
-    MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
-    break;
-  case G_SUB:
-    I.setDesc(TII.get(ARM::SUBrr));
-    MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
-    break;
-  case G_MUL:
-    if (TII.getSubtarget().hasV6Ops()) {
-      I.setDesc(TII.get(ARM::MUL));
-    } else {
-      assert(TII.getSubtarget().useMulOps() && "Unsupported target");
-      I.setDesc(TII.get(ARM::MULv5));
-      MIB->getOperand(0).setIsEarlyClobber(true);
-    }
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
     break;
   case G_FRAME_INDEX:

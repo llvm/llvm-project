@@ -865,7 +865,7 @@ public:
                             const FileEntry *NewFile);
 
   /// \brief Returns true if the file contents have been overridden.
-  bool isFileOverridden(const FileEntry *File) {
+  bool isFileOverridden(const FileEntry *File) const {
     if (OverriddenFilesInfo) {
       if (OverriddenFilesInfo->OverriddenFilesWithBuffer.count(File))
         return true;

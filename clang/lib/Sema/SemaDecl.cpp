@@ -2021,7 +2021,7 @@ bool Sema::isIncompatibleTypedef(TypeDecl *Old, TypedefNameDecl *New) {
     Diag(New->getLocation(), diag::err_redefinition_variably_modified_typedef)
       << Kind << NewType;
     if (Old->getLocation().isValid())
-      notePreviousDefinition(Old->getLocation(), New->getLocation());
+      notePreviousDefinition(Old, New->getLocation());
     New->setInvalidDecl();
     return true;
   }
@@ -2034,7 +2034,7 @@ bool Sema::isIncompatibleTypedef(TypeDecl *Old, TypedefNameDecl *New) {
     Diag(New->getLocation(), diag::err_redefinition_different_typedef)
       << Kind << NewType << OldType;
     if (Old->getLocation().isValid())
-      notePreviousDefinition(Old->getLocation(), New->getLocation());
+      notePreviousDefinition(Old, New->getLocation());
     New->setInvalidDecl();
     return true;
   }
@@ -2101,7 +2101,7 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
 
     NamedDecl *OldD = OldDecls.getRepresentativeDecl();
     if (OldD->getLocation().isValid())
-      notePreviousDefinition(OldD->getLocation(), New->getLocation());
+      notePreviousDefinition(OldD, New->getLocation());
 
     return New->setInvalidDecl();
   }
@@ -2193,7 +2193,7 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
 
     Diag(New->getLocation(), diag::err_redefinition)
       << New->getDeclName();
-    notePreviousDefinition(Old->getLocation(), New->getLocation());
+    notePreviousDefinition(Old, New->getLocation());
     return New->setInvalidDecl();
   }
 
@@ -2214,7 +2214,7 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
 
   Diag(New->getLocation(), diag::ext_redefinition_of_typedef)
     << New->getDeclName();
-  notePreviousDefinition(Old->getLocation(), New->getLocation());
+  notePreviousDefinition(Old, New->getLocation());
 }
 
 /// DeclhasAttr - returns true if decl Declaration already has the target
@@ -2448,7 +2448,7 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   return false;
 }
 
-static const Decl *getDefinition(const Decl *D) {
+static const NamedDecl *getDefinition(const Decl *D) {
   if (const TagDecl *TD = dyn_cast<TagDecl>(D))
     return TD->getDefinition();
   if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
@@ -2475,7 +2475,7 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
   if (!New->hasAttrs())
     return;
 
-  const Decl *Def = getDefinition(Old);
+  const NamedDecl *Def = getDefinition(Old);
   if (!Def || Def == New)
     return;
 
@@ -2502,7 +2502,7 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
                             : diag::err_redefinition;
         S.Diag(VD->getLocation(), Diag) << VD->getDeclName();
         if (Diag == diag::err_redefinition)
-          S.notePreviousDefinition(Def->getLocation(), VD->getLocation());
+          S.notePreviousDefinition(Def, VD->getLocation());
         else
           S.Diag(Def->getLocation(), diag::note_previous_definition);
         VD->setInvalidDecl();
@@ -2891,7 +2891,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     } else {
       Diag(New->getLocation(), diag::err_redefinition_different_kind)
         << New->getDeclName();
-      notePreviousDefinition(OldD->getLocation(), New->getLocation());
+      notePreviousDefinition(OldD, New->getLocation());
       return true;
     }
   }
@@ -2928,7 +2928,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
       !Old->hasAttr<InternalLinkageAttr>()) {
     Diag(New->getLocation(), diag::err_internal_linkage_redeclaration)
         << New->getDeclName();
-    notePreviousDefinition(Old->getLocation(), New->getLocation());
+    notePreviousDefinition(Old, New->getLocation());
     New->dropAttr<InternalLinkageAttr>();
   }
 
@@ -3657,7 +3657,7 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   if (!Old) {
     Diag(New->getLocation(), diag::err_redefinition_different_kind)
         << New->getDeclName();
-    notePreviousDefinition(Previous.getRepresentativeDecl()->getLocation(),
+    notePreviousDefinition(Previous.getRepresentativeDecl(),
                            New->getLocation());
     return New->setInvalidDecl();
   }
@@ -3687,7 +3687,7 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
       Old->getStorageClass() == SC_None &&
       !Old->hasAttr<WeakImportAttr>()) {
     Diag(New->getLocation(), diag::warn_weak_import) << New->getDeclName();
-    notePreviousDefinition(Old->getLocation(), New->getLocation());
+    notePreviousDefinition(Old, New->getLocation());
     // Remove weak_import attribute on new declaration.
     New->dropAttr<WeakImportAttr>();
   }
@@ -3696,7 +3696,7 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
       !Old->hasAttr<InternalLinkageAttr>()) {
     Diag(New->getLocation(), diag::err_internal_linkage_redeclaration)
         << New->getDeclName();
-    notePreviousDefinition(Old->getLocation(), New->getLocation());
+    notePreviousDefinition(Old, New->getLocation());
     New->dropAttr<InternalLinkageAttr>();
   }
 
@@ -3853,29 +3853,22 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     New->setImplicitlyInline();
 }
 
-void Sema::notePreviousDefinition(SourceLocation Old, SourceLocation New) {
+void Sema::notePreviousDefinition(const NamedDecl *Old, SourceLocation New) {
   SourceManager &SrcMgr = getSourceManager();
   auto FNewDecLoc = SrcMgr.getDecomposedLoc(New);
-  auto FOldDecLoc = SrcMgr.getDecomposedLoc(Old);
+  auto FOldDecLoc = SrcMgr.getDecomposedLoc(Old->getLocation());
   auto *FNew = SrcMgr.getFileEntryForID(FNewDecLoc.first);
   auto *FOld = SrcMgr.getFileEntryForID(FOldDecLoc.first);
   auto &HSI = PP.getHeaderSearchInfo();
-  StringRef HdrFilename = SrcMgr.getFilename(SrcMgr.getSpellingLoc(Old));
+  StringRef HdrFilename =
+      SrcMgr.getFilename(SrcMgr.getSpellingLoc(Old->getLocation()));
 
-  auto noteFromModuleOrInclude = [&](SourceLocation &Loc,
-                                     SourceLocation &IncLoc) -> bool {
-    Module *Mod = nullptr;
+  auto noteFromModuleOrInclude = [&](Module *Mod,
+                                     SourceLocation IncLoc) -> bool {
     // Redefinition errors with modules are common with non modular mapped
     // headers, example: a non-modular header H in module A that also gets
     // included directly in a TU. Pointing twice to the same header/definition
     // is confusing, try to get better diagnostics when modules is on.
-    if (getLangOpts().Modules) {
-      auto ModLoc = SrcMgr.getModuleImportLoc(Old);
-      if (!ModLoc.first.isInvalid())
-        Mod = HSI.getModuleMap().inferModuleFromLocation(
-            FullSourceLoc(Loc, SrcMgr));
-    }
-
     if (IncLoc.isValid()) {
       if (Mod) {
         Diag(IncLoc, diag::note_redefinition_modules_same_file)
@@ -3899,19 +3892,19 @@ void Sema::notePreviousDefinition(SourceLocation Old, SourceLocation New) {
   if (FNew == FOld && FNewDecLoc.second == FOldDecLoc.second) {
     SourceLocation OldIncLoc = SrcMgr.getIncludeLoc(FOldDecLoc.first);
     SourceLocation NewIncLoc = SrcMgr.getIncludeLoc(FNewDecLoc.first);
-    EmittedDiag = noteFromModuleOrInclude(Old, OldIncLoc);
-    EmittedDiag |= noteFromModuleOrInclude(New, NewIncLoc);
+    EmittedDiag = noteFromModuleOrInclude(Old->getOwningModule(), OldIncLoc);
+    EmittedDiag |= noteFromModuleOrInclude(getCurrentModule(), NewIncLoc);
 
     // If the header has no guards, emit a note suggesting one.
     if (FOld && !HSI.isFileMultipleIncludeGuarded(FOld))
-      Diag(Old, diag::note_use_ifdef_guards);
+      Diag(Old->getLocation(), diag::note_use_ifdef_guards);
 
     if (EmittedDiag)
       return;
   }
 
   // Redefinition coming from different files or couldn't do better above.
-  Diag(Old, diag::note_previous_definition);
+  Diag(Old->getLocation(), diag::note_previous_definition);
 }
 
 /// We've just determined that \p Old and \p New both appear to be definitions
@@ -3934,7 +3927,7 @@ bool Sema::checkVarDeclRedefinition(VarDecl *Old, VarDecl *New) {
     return false;
   } else {
     Diag(New->getLocation(), diag::err_redefinition) << New;
-    notePreviousDefinition(Old->getLocation(), New->getLocation());
+    notePreviousDefinition(Old, New->getLocation());
     New->setInvalidDecl();
     return true;
   }
@@ -6942,7 +6935,7 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
         }
     }
 
-  DeclContext *OldDC = ShadowedDecl->getDeclContext();
+  DeclContext *OldDC = ShadowedDecl->getDeclContext()->getRedeclContext();
 
   unsigned WarningDiag = diag::warn_decl_shadow;
   SourceLocation CaptureLoc;
@@ -13503,9 +13496,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
             } else if (TUK == TUK_Reference &&
                        (PrevTagDecl->getFriendObjectKind() ==
                             Decl::FOK_Undeclared ||
-                        PP.getModuleContainingLocation(
-                            PrevDecl->getLocation()) !=
-                            PP.getModuleContainingLocation(KWLoc)) &&
+                        PrevDecl->getOwningModule() != getCurrentModule()) &&
                        SS.isEmpty()) {
               // This declaration is a reference to an existing entity, but
               // has different visibility from that entity: it either makes
@@ -13561,7 +13552,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
                   Diag(NameLoc, diag::warn_redefinition_in_param_list) << Name;
                 else
                   Diag(NameLoc, diag::err_redefinition) << Name;
-                notePreviousDefinition(Def->getLocation(),
+                notePreviousDefinition(Def,
                                        NameLoc.isValid() ? NameLoc : KWLoc);
                 // If this is a redefinition, recover by making this
                 // struct be anonymous, which will make any later
@@ -13652,7 +13643,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
         // The tag name clashes with something else in the target scope,
         // issue an error and recover by making this tag be anonymous.
         Diag(NameLoc, diag::err_redefinition_different_kind) << Name;
-        notePreviousDefinition(PrevDecl->getLocation(), NameLoc);
+        notePreviousDefinition(PrevDecl, NameLoc);
         Name = nullptr;
         Invalid = true;
       }
@@ -15356,7 +15347,7 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
         Diag(IdLoc, diag::err_redefinition_of_enumerator) << Id;
       else
         Diag(IdLoc, diag::err_redefinition) << Id;
-      notePreviousDefinition(PrevDecl->getLocation(), IdLoc);
+      notePreviousDefinition(PrevDecl, IdLoc);
       return nullptr;
     }
   }

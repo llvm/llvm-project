@@ -12,7 +12,7 @@
 ; CHECK: Successors:
 ; CHECK-NOT: ch SU(4)
 ; CHECK: SU(3)
-; CHECK: SU(5):   STRWui %WZR, %X{{[0-9]+}}
+; CHECK: SU(4):   STRWui %WZR, %X{{[0-9]+}}
 define i32 @foo() {
 entry:
   %0 = load i32, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @G2, i64 0, i64 0), align 4

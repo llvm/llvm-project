@@ -49,9 +49,9 @@ private:
     const uint8_t *data = nullptr;
   };
 
-  dwarf::Form Form;             // Form for this value.
-  ValueType Value;              // Contains all data for the form.
-  const DWARFUnit *U = nullptr; // Remember the DWARFUnit at extract time.
+  dwarf::Form Form;             /// Form for this value.
+  ValueType Value;              /// Contains all data for the form.
+  const DWARFUnit *U = nullptr; /// Remember the DWARFUnit at extract time.
 
 public:
   DWARFFormValue(dwarf::Form F = dwarf::Form(0)) : Form(F) {}

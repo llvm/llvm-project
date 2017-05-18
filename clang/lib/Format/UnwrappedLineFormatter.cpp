@@ -611,7 +611,8 @@ public:
     LineState State = Indenter->getInitialState(FirstIndent, &Line, DryRun);
     while (State.NextToken) {
       formatChildren(State, /*Newline=*/false, DryRun, Penalty);
-      Indenter->addTokenToState(State, /*Newline=*/false, DryRun);
+      Indenter->addTokenToState(
+          State, /*Newline=*/State.NextToken->MustBreakBefore, DryRun);
     }
     return Penalty;
   }

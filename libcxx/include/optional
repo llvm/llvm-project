@@ -599,8 +599,8 @@ private:
 public:
 
     _LIBCPP_INLINE_VISIBILITY constexpr optional() noexcept {}
-    _LIBCPP_INLINE_VISIBILITY optional(const optional&) = default;
-    _LIBCPP_INLINE_VISIBILITY optional(optional&&) = default;
+    _LIBCPP_INLINE_VISIBILITY constexpr optional(const optional&) = default;
+    _LIBCPP_INLINE_VISIBILITY constexpr optional(optional&&) = default;
     _LIBCPP_INLINE_VISIBILITY constexpr optional(nullopt_t) noexcept {}
 
     template <class... _Args, class = enable_if_t<

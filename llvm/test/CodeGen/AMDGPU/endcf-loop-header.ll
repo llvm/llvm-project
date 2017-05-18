@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck %s
 
 ; This tests that the llvm.SI.end.cf intrinsic is not inserted into the
 ; loop block.  This intrinsic will be lowered to s_or_b64 by the code
@@ -14,7 +14,7 @@
 ; CHECK: s_cbranch_execnz [[LOOP_LABEL]]
 define amdgpu_kernel void @test(i32 addrspace(1)* %out) {
 entry:
-  %cond = call i32 @llvm.r600.read.tidig.x() #0
+  %cond = call i32 @llvm.amdgcn.workitem.id.x() #0
   %tmp0 = icmp eq i32 %cond, 0
   br i1 %tmp0, label %if, label %loop
 
@@ -34,6 +34,6 @@ done:
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() #0
 
-attributes #0 = { readnone }
+attributes #0 = { nounwind readnone }

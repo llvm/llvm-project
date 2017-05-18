@@ -51,6 +51,7 @@ public:
   HashTable &getHashAdjusters();
 
   codeview::CVTypeRange types(bool *HadError) const;
+  const codeview::CVTypeArray &typeArray() const { return TypeRecords; }
 
   Error commit();
 

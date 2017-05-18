@@ -32,7 +32,20 @@ namespace llvm {
 class BinaryStreamWriter {
 public:
   BinaryStreamWriter() = default;
-  explicit BinaryStreamWriter(WritableBinaryStreamRef Stream);
+  explicit BinaryStreamWriter(WritableBinaryStreamRef Ref);
+  explicit BinaryStreamWriter(WritableBinaryStream &Stream);
+  explicit BinaryStreamWriter(MutableArrayRef<uint8_t> Data,
+                              llvm::support::endianness Endian);
+
+  BinaryStreamWriter(const BinaryStreamWriter &Other)
+      : Stream(Other.Stream), Offset(Other.Offset) {}
+
+  BinaryStreamWriter &operator=(const BinaryStreamWriter &Other) {
+    Stream = Other.Stream;
+    Offset = Other.Offset;
+    return *this;
+  }
+
   virtual ~BinaryStreamWriter() {}
 
   /// Write the bytes specified in \p Buffer to the underlying stream.

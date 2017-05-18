@@ -10,7 +10,7 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // <optional>
 
-// optional(const optional<T>& rhs);
+// constexpr optional(const optional<T>& rhs);
 
 #include <optional>
 #include <type_traits>
@@ -151,5 +151,10 @@ int main()
     }
     {
         test_reference_extension();
+    }
+    {
+    constexpr std::optional<int> o1{4};
+    constexpr std::optional<int> o2 = o1;
+    static_assert( *o2 == 4, "" );
     }
 }

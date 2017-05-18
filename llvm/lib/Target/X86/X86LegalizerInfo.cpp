@@ -59,6 +59,11 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
     for (auto Ty : {s8, s16, s32})
       setAction({BinOp, Ty}, Legal);
 
+  for (unsigned Op : {G_UADDE}) {
+    setAction({Op, s32}, Legal);
+    setAction({Op, 1, s1}, Legal);
+  }
+
   for (unsigned MemOp : {G_LOAD, G_STORE}) {
     for (auto Ty : {s8, s16, s32, p0})
       setAction({MemOp, Ty}, Legal);

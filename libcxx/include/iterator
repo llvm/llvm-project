@@ -64,14 +64,23 @@ struct forward_iterator_tag       : public input_iterator_tag         {};
 struct bidirectional_iterator_tag : public forward_iterator_tag       {};
 struct random_access_iterator_tag : public bidirectional_iterator_tag {};
 
+// 27.4.3, iterator operations
 // extension: second argument not conforming to C++03
-template <class InputIterator>
-void advance(InputIterator& i,
+template <class InputIterator>  // constexpr in C++17
+  constexpr void advance(InputIterator& i,
              typename iterator_traits<InputIterator>::difference_type n);
 
-template <class InputIterator>
-typename iterator_traits<InputIterator>::difference_type
-distance(InputIterator first, InputIterator last);
+template <class InputIterator>  // constexpr in C++17
+  constexpr typename iterator_traits<InputIterator>::difference_type
+    distance(InputIterator first, InputIterator last);
+
+template <class InputIterator>  // constexpr in C++17
+  constexpr InputIterator next(InputIterator x,
+typename iterator_traits<InputIterator>::difference_type n = 1);
+
+template <class BidirectionalIterator>  // constexpr in C++17
+  constexpr BidirectionalIterator prev(BidirectionalIterator x,
+    typename iterator_traits<BidirectionalIterator>::difference_type n = 1);    
 
 template <class Iterator>
 class reverse_iterator
@@ -529,7 +538,7 @@ struct _LIBCPP_TEMPLATE_VIS iterator
 };
 
 template <class _InputIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 void __advance(_InputIter& __i,
              typename iterator_traits<_InputIter>::difference_type __n, input_iterator_tag)
 {
@@ -538,7 +547,7 @@ void __advance(_InputIter& __i,
 }
 
 template <class _BiDirIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 void __advance(_BiDirIter& __i,
              typename iterator_traits<_BiDirIter>::difference_type __n, bidirectional_iterator_tag)
 {
@@ -551,7 +560,7 @@ void __advance(_BiDirIter& __i,
 }
 
 template <class _RandIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 void __advance(_RandIter& __i,
              typename iterator_traits<_RandIter>::difference_type __n, random_access_iterator_tag)
 {
@@ -559,7 +568,7 @@ void __advance(_RandIter& __i,
 }
 
 template <class _InputIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 void advance(_InputIter& __i,
              typename iterator_traits<_InputIter>::difference_type __n)
 {
@@ -567,7 +576,7 @@ void advance(_InputIter& __i,
 }
 
 template <class _InputIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 typename iterator_traits<_InputIter>::difference_type
 __distance(_InputIter __first, _InputIter __last, input_iterator_tag)
 {
@@ -578,7 +587,7 @@ __distance(_InputIter __first, _InputIter __last, input_iterator_tag)
 }
 
 template <class _RandIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 typename iterator_traits<_RandIter>::difference_type
 __distance(_RandIter __first, _RandIter __last, random_access_iterator_tag)
 {
@@ -586,7 +595,7 @@ __distance(_RandIter __first, _RandIter __last, random_access_iterator_tag)
 }
 
 template <class _InputIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 typename iterator_traits<_InputIter>::difference_type
 distance(_InputIter __first, _InputIter __last)
 {
@@ -594,7 +603,7 @@ distance(_InputIter __first, _InputIter __last)
 }
 
 template <class _InputIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 _InputIter
 next(_InputIter __x,
      typename iterator_traits<_InputIter>::difference_type __n = 1,
@@ -605,7 +614,7 @@ next(_InputIter __x,
 }
 
 template <class _BidiretionalIter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 _BidiretionalIter
 prev(_BidiretionalIter __x,
      typename iterator_traits<_BidiretionalIter>::difference_type __n = 1,

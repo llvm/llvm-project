@@ -987,12 +987,16 @@ def : Pat<(v8i16 (shl v8i16:$vA, v8i16:$vB)),
           (v8i16 (VSLH $vA, $vB))>;
 def : Pat<(v4i32 (shl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VSLW $vA, $vB))>;
+def : Pat<(v1i128 (shl v1i128:$vA, v1i128:$vB)),
+          (v1i128 (VSL (VSLO $vA, $vB), (VSPLTB 15, $vB)))>;
 def : Pat<(v16i8 (PPCshl v16i8:$vA, v16i8:$vB)),
           (v16i8 (VSLB $vA, $vB))>;
 def : Pat<(v8i16 (PPCshl v8i16:$vA, v8i16:$vB)),
           (v8i16 (VSLH $vA, $vB))>;
 def : Pat<(v4i32 (PPCshl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VSLW $vA, $vB))>;
+def : Pat<(v1i128 (PPCshl v1i128:$vA, v1i128:$vB)),
+          (v1i128 (VSL (VSLO $vA, $vB), (VSPLTB 15, $vB)))>;
 
 def : Pat<(v16i8 (srl v16i8:$vA, v16i8:$vB)),
           (v16i8 (VSRB $vA, $vB))>;
@@ -1000,12 +1004,16 @@ def : Pat<(v8i16 (srl v8i16:$vA, v8i16:$vB)),
           (v8i16 (VSRH $vA, $vB))>;
 def : Pat<(v4i32 (srl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VSRW $vA, $vB))>;
+def : Pat<(v1i128 (srl v1i128:$vA, v1i128:$vB)),
+          (v1i128 (VSR (VSRO $vA, $vB), (VSPLTB 15, $vB)))>;
 def : Pat<(v16i8 (PPCsrl v16i8:$vA, v16i8:$vB)),
           (v16i8 (VSRB $vA, $vB))>;
 def : Pat<(v8i16 (PPCsrl v8i16:$vA, v8i16:$vB)),
           (v8i16 (VSRH $vA, $vB))>;
 def : Pat<(v4i32 (PPCsrl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VSRW $vA, $vB))>;
+def : Pat<(v1i128 (PPCsrl v1i128:$vA, v1i128:$vB)),
+          (v1i128 (VSR (VSRO $vA, $vB), (VSPLTB 15, $vB)))>;
 
 def : Pat<(v16i8 (sra v16i8:$vA, v16i8:$vB)),
           (v16i8 (VSRAB $vA, $vB))>;

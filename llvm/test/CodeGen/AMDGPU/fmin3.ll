@@ -1,40 +1,90 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
-declare float @llvm.minnum.f32(float, float) nounwind readnone
-
-; SI-LABEL: {{^}}test_fmin3_olt_0:
-; SI: buffer_load_dword [[REGC:v[0-9]+]]
-; SI: buffer_load_dword [[REGB:v[0-9]+]]
-; SI: buffer_load_dword [[REGA:v[0-9]+]]
-; SI: v_min3_f32 [[RESULT:v[0-9]+]], [[REGC]], [[REGB]], [[REGA]]
-; SI: buffer_store_dword [[RESULT]],
-; SI: s_endpgm
-define amdgpu_kernel void @test_fmin3_olt_0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) nounwind {
+; GCN-LABEL: {{^}}test_fmin3_olt_0_f32:
+; GCN: buffer_load_dword [[REGC:v[0-9]+]]
+; GCN: buffer_load_dword [[REGB:v[0-9]+]]
+; GCN: buffer_load_dword [[REGA:v[0-9]+]]
+; GCN: v_min3_f32 [[RESULT:v[0-9]+]], [[REGC]], [[REGB]], [[REGA]]
+; GCN: buffer_store_dword [[RESULT]],
+define amdgpu_kernel void @test_fmin3_olt_0_f32(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #0 {
   %a = load volatile float, float addrspace(1)* %aptr, align 4
   %b = load volatile float, float addrspace(1)* %bptr, align 4
   %c = load volatile float, float addrspace(1)* %cptr, align 4
-  %f0 = call float @llvm.minnum.f32(float %a, float %b) nounwind readnone
-  %f1 = call float @llvm.minnum.f32(float %f0, float %c) nounwind readnone
+  %f0 = call float @llvm.minnum.f32(float %a, float %b)
+  %f1 = call float @llvm.minnum.f32(float %f0, float %c)
   store float %f1, float addrspace(1)* %out, align 4
   ret void
 }
 
 ; Commute operand of second fmin
-; SI-LABEL: {{^}}test_fmin3_olt_1:
-; SI: buffer_load_dword [[REGB:v[0-9]+]]
-; SI: buffer_load_dword [[REGA:v[0-9]+]]
-; SI: buffer_load_dword [[REGC:v[0-9]+]]
-; SI: v_min3_f32 [[RESULT:v[0-9]+]], [[REGC]], [[REGB]], [[REGA]]
-; SI: buffer_store_dword [[RESULT]],
-; SI: s_endpgm
-define amdgpu_kernel void @test_fmin3_olt_1(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) nounwind {
+; GCN-LABEL: {{^}}test_fmin3_olt_1_f32:
+; GCN: buffer_load_dword [[REGB:v[0-9]+]]
+; GCN: buffer_load_dword [[REGA:v[0-9]+]]
+; GCN: buffer_load_dword [[REGC:v[0-9]+]]
+; GCN: v_min3_f32 [[RESULT:v[0-9]+]], [[REGC]], [[REGB]], [[REGA]]
+; GCN: buffer_store_dword [[RESULT]],
+define amdgpu_kernel void @test_fmin3_olt_1_f32(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #0 {
   %a = load volatile float, float addrspace(1)* %aptr, align 4
   %b = load volatile float, float addrspace(1)* %bptr, align 4
   %c = load volatile float, float addrspace(1)* %cptr, align 4
-  %f0 = call float @llvm.minnum.f32(float %a, float %b) nounwind readnone
-  %f1 = call float @llvm.minnum.f32(float %c, float %f0) nounwind readnone
+  %f0 = call float @llvm.minnum.f32(float %a, float %b)
+  %f1 = call float @llvm.minnum.f32(float %c, float %f0)
   store float %f1, float addrspace(1)* %out, align 4
   ret void
 }
+
+; GCN-LABEL: {{^}}test_fmin3_olt_0_f16:
+; GCN: buffer_load_ushort [[REGC:v[0-9]+]]
+; GCN: buffer_load_ushort [[REGB:v[0-9]+]]
+; GCN: buffer_load_ushort [[REGA:v[0-9]+]]
+
+; SI: v_min3_f32 [[RESULT_F32:v[0-9]+]],
+; SI: v_cvt_f16_f32_e32 [[RESULT:v[0-9]+]], [[RESULT]]
+
+; VI: v_min_f16_e32
+; VI: v_min_f16_e32 [[RESULT:v[0-9]+]],
+
+; GFX9: v_min3_f16 [[RESULT:v[0-9]+]], [[REGC]], [[REGB]], [[REGA]]
+; GCN: buffer_store_short [[RESULT]],
+define amdgpu_kernel void @test_fmin3_olt_0_f16(half addrspace(1)* %out, half addrspace(1)* %aptr, half addrspace(1)* %bptr, half addrspace(1)* %cptr) #0 {
+  %a = load volatile half, half addrspace(1)* %aptr, align 2
+  %b = load volatile half, half addrspace(1)* %bptr, align 2
+  %c = load volatile half, half addrspace(1)* %cptr, align 2
+  %f0 = call half @llvm.minnum.f16(half %a, half %b)
+  %f1 = call half @llvm.minnum.f16(half %f0, half %c)
+  store half %f1, half addrspace(1)* %out, align 2
+  ret void
+}
+
+; Commute operand of second fmin
+; GCN-LABEL: {{^}}test_fmin3_olt_1_f16:
+; GCN: buffer_load_ushort [[REGB:v[0-9]+]]
+; GCN: buffer_load_ushort [[REGA:v[0-9]+]]
+; GCN: buffer_load_ushort [[REGC:v[0-9]+]]
+
+; SI: v_min3_f32 [[RESULT_F32:v[0-9]+]],
+; SI: v_cvt_f16_f32_e32 [[RESULT:v[0-9]+]], [[RESULT]]
+
+; VI: v_min_f16_e32
+; VI: v_min_f16_e32 [[RESULT:v[0-9]+]],
+
+; GFX9: v_min3_f16 [[RESULT:v[0-9]+]], [[REGC]], [[REGB]], [[REGA]]
+; GCN: buffer_store_short [[RESULT]],
+define amdgpu_kernel void @test_fmin3_olt_1_f16(half addrspace(1)* %out, half addrspace(1)* %aptr, half addrspace(1)* %bptr, half addrspace(1)* %cptr) #0 {
+  %a = load volatile half, half addrspace(1)* %aptr, align 2
+  %b = load volatile half, half addrspace(1)* %bptr, align 2
+  %c = load volatile half, half addrspace(1)* %cptr, align 2
+  %f0 = call half @llvm.minnum.f16(half %a, half %b)
+  %f1 = call half @llvm.minnum.f16(half %c, half %f0)
+  store half %f1, half addrspace(1)* %out, align 2
+  ret void
+}
+
+declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare float @llvm.minnum.f32(float, float) #1
+declare half @llvm.minnum.f16(half, half) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone speculatable }

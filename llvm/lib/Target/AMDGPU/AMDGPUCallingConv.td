@@ -13,6 +13,8 @@
 
 // Inversion of CCIfInReg
 class CCIfNotInReg<CCAction A> : CCIf<"!ArgFlags.isInReg()", A> {}
+class CCIfExtend<CCAction A>
+  : CCIf<"ArgFlags.isSExt() || ArgFlags.isZExt()", A>;
 
 // Calling convention for SI
 def CC_SI : CallingConv<[
@@ -52,7 +54,7 @@ def CC_SI : CallingConv<[
   ]>>>
 ]>;
 
-def RetCC_SI : CallingConv<[
+def RetCC_SI_Shader : CallingConv<[
   CCIfType<[i32] , CCAssignToReg<[
     SGPR0, SGPR1, SGPR2, SGPR3, SGPR4, SGPR5, SGPR6, SGPR7,
     SGPR8, SGPR9, SGPR10, SGPR11, SGPR12, SGPR13, SGPR14, SGPR15,
@@ -97,6 +99,52 @@ def CC_R600 : CallingConv<[
 // Calling convention for compute kernels
 def CC_AMDGPU_Kernel : CallingConv<[
   CCCustom<"allocateKernArg">
+]>;
+
+def CSR_AMDGPU_VGPRs_24_255 : CalleeSavedRegs<
+  (sequence "VGPR%u", 24, 255)
+>;
+
+def CSR_AMDGPU_VGPRs_32_255 : CalleeSavedRegs<
+  (sequence "VGPR%u", 32, 255)
+>;
+
+def CSR_AMDGPU_SGPRs_32_103 : CalleeSavedRegs<
+  (sequence "SGPR%u", 32, 103)
+>;
+
+def CSR_AMDGPU_HighRegs : CalleeSavedRegs<
+  (add CSR_AMDGPU_VGPRs_32_255, CSR_AMDGPU_SGPRs_32_103)
+>;
+
+// Calling convention for leaf functions
+def CC_AMDGPU_Func : CallingConv<[
+  CCIfByVal<CCPassByVal<4, 4>>,
+  CCIfType<[i1], CCPromoteToType<i32>>,
+  CCIfType<[i1, i8, i16], CCIfExtend<CCPromoteToType<i32>>>,
+  CCIfType<[i32, f32, i16, f16, v2i16, v2f16, i1], CCAssignToReg<[
+    VGPR0, VGPR1, VGPR2, VGPR3, VGPR4, VGPR5, VGPR6, VGPR7,
+    VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,
+    VGPR16, VGPR17, VGPR18, VGPR19, VGPR20, VGPR21, VGPR22, VGPR23,
+    VGPR24, VGPR25, VGPR26, VGPR27, VGPR28, VGPR29, VGPR30, VGPR31]>>,
+  CCIfType<[i64, f64, v2i32, v2f32, v4i32, v4f32, v8i32, v8f32, v16i32, v16f32, v2i64, v2f64], CCCustom<"allocateVGPRTuple">>,
+  CCIfType<[i32, f32, v2i16, v2f16, i16, f16, i1], CCAssignToStack<4, 4>>,
+  CCIfType<[i64, f64, v2i32, v2f32], CCAssignToStack<8, 4>>,
+  CCIfType<[v4i32, v4f32, v2i64, v2f64], CCAssignToStack<16, 4>>,
+  CCIfType<[v8i32, v8f32], CCAssignToStack<32, 4>>,
+  CCIfType<[v16i32, v16f32], CCAssignToStack<64, 4>>
+]>;
+
+// Calling convention for leaf functions
+def RetCC_AMDGPU_Func : CallingConv<[
+  CCIfType<[i1], CCPromoteToType<i32>>,
+  CCIfType<[i1, i16], CCIfExtend<CCPromoteToType<i32>>>,
+  CCIfType<[i32, f32, i16, f16, v2i16, v2f16], CCAssignToReg<[
+    VGPR0, VGPR1, VGPR2, VGPR3, VGPR4, VGPR5, VGPR6, VGPR7,
+    VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,
+    VGPR16, VGPR17, VGPR18, VGPR19, VGPR20, VGPR21, VGPR22, VGPR23,
+    VGPR24, VGPR25, VGPR26, VGPR27, VGPR28, VGPR29, VGPR30, VGPR31]>>,
+  CCIfType<[i64, f64, v2i32, v2f32, v4i32, v4f32, v8i32, v8f32, v16i32, v16f32, v2i64, v2f64], CCCustom<"allocateVGPRTuple">>
 ]>;
 
 def CC_AMDGPU : CallingConv<[

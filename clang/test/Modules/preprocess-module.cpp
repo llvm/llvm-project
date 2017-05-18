@@ -25,8 +25,8 @@
 // RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -fmodule-map-file=%S/Inputs/preprocess/module.modulemap -x c++-module-map-cpp-output %t/rewrite.ii -emit-module -o /dev/null
 
 // Check the module we built works.
-// RUN: %clang_cc1 -fmodules -fmodule-file=%t/no-rewrite.pcm %s -verify
-// RUN: %clang_cc1 -fmodules -fmodule-file=%t/rewrite.pcm %s -verify
+// RUN: %clang_cc1 -fmodules -fmodule-file=%t/no-rewrite.pcm %s -I%t -verify -fno-modules-error-recovery
+// RUN: %clang_cc1 -fmodules -fmodule-file=%t/rewrite.pcm %s -I%t -verify -fno-modules-error-recovery -DREWRITE
 
 
 // == module map
@@ -95,10 +95,12 @@
 // NO-REWRITE: #pragma clang module end
 
 
-// expected-no-diagnostics
-
-// FIXME: This should be rejected: we have not imported the submodule defining it yet.
-__FILE *a;
+__FILE *a; // expected-error {{declaration of '__FILE' must be imported}}
+#ifdef REWRITE
+// expected-note@rewrite.ii:1 {{here}}
+#else
+// expected-note@no-rewrite.ii:1 {{here}}
+#endif
 
 #pragma clang module import file
 

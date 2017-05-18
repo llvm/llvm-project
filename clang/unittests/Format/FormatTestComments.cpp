@@ -1198,6 +1198,16 @@ TEST_F(FormatTestComments, ReflowsComments) {
             format("/* long long long long\n"
                    " * long */",
                    getLLVMStyleWithColumns(20)));
+  EXPECT_EQ("///< long long long\n"
+            "///< long long\n",
+            format("///< long long long long\n"
+                   "///< long\n",
+                   getLLVMStyleWithColumns(20)));
+  EXPECT_EQ("//!< long long long\n"
+            "//!< long long\n",
+            format("//!< long long long long\n"
+                   "//!< long\n",
+                   getLLVMStyleWithColumns(20)));
 
   // Don't bring leading whitespace up while reflowing.
   EXPECT_EQ("/*  long long long\n"

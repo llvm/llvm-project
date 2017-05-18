@@ -1,4 +1,12 @@
 # RUN: llc -o - %s -mtriple=amdgcn--amdhsa -verify-machineinstrs -run-pass=greedy,virtregrewriter | FileCheck %s
+--- |
+
+  define amdgpu_kernel void @func0() {
+    ret void
+  }
+
+...
+
 ---
 # We should not detect any interference between v0/v1 here and only allocate
 # sgpr0-sgpr3.

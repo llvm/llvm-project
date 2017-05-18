@@ -262,7 +262,6 @@ bool isEntryFunctionCC(CallingConv::ID CC);
 LLVM_READNONE
 inline bool isKernel(CallingConv::ID CC) {
   switch (CC) {
-  case CallingConv::C:
   case CallingConv::AMDGPU_KERNEL:
   case CallingConv::SPIR_KERNEL:
     return true;

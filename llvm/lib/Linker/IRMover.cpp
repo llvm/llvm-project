@@ -1243,27 +1243,6 @@ Error IRLinker::linkModuleFlagsMetadata() {
   return Error::success();
 }
 
-// This function returns true if the triples match.
-static bool triplesMatch(const Triple &T0, const Triple &T1) {
-  // If vendor is apple, ignore the version number.
-  if (T0.getVendor() == Triple::Apple)
-    return T0.getArch() == T1.getArch() && T0.getSubArch() == T1.getSubArch() &&
-           T0.getVendor() == T1.getVendor() && T0.getOS() == T1.getOS();
-
-  return T0 == T1;
-}
-
-// This function returns the merged triple.
-static std::string mergeTriples(const Triple &SrcTriple,
-                                const Triple &DstTriple) {
-  // If vendor is apple, pick the triple with the larger version number.
-  if (SrcTriple.getVendor() == Triple::Apple)
-    if (DstTriple.isOSVersionLT(SrcTriple))
-      return SrcTriple.str();
-
-  return DstTriple.str();
-}
-
 Error IRLinker::run() {
   // Ensure metadata materialized before value mapping.
   if (SrcM->getMaterializer())
@@ -1289,14 +1268,15 @@ Error IRLinker::run() {
 
   Triple SrcTriple(SrcM->getTargetTriple()), DstTriple(DstM.getTargetTriple());
 
-  if (!SrcM->getTargetTriple().empty() && !triplesMatch(SrcTriple, DstTriple))
+  if (!SrcM->getTargetTriple().empty()&&
+      !SrcTriple.isCompatibleWith(DstTriple))
     emitWarning("Linking two modules of different target triples: " +
                 SrcM->getModuleIdentifier() + "' is '" +
                 SrcM->getTargetTriple() + "' whereas '" +
                 DstM.getModuleIdentifier() + "' is '" + DstM.getTargetTriple() +
                 "'\n");
 
-  DstM.setTargetTriple(mergeTriples(SrcTriple, DstTriple));
+  DstM.setTargetTriple(SrcTriple.merge(DstTriple));
 
   // Append the module inline asm string.
   if (!IsPerformingImport && !SrcM->getModuleInlineAsm().empty()) {

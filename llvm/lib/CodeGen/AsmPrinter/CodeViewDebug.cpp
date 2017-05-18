@@ -501,7 +501,7 @@ void CodeViewDebug::emitTypeInformation() {
       Error E = Reader.readArray(Types, Reader.getLength());
       if (!E) {
         TypeVisitorCallbacks C;
-        E = CVTypeVisitor(C).visitTypeStream(Types);
+        E = codeview::visitTypeStream(Types, C);
       }
       if (E) {
         logAllUnhandledErrors(std::move(E), errs(), "error: ");

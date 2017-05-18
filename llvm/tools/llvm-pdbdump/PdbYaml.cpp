@@ -371,16 +371,14 @@ void MappingContextTraits<PdbInlineeInfo, SerializationContext>::mapping(
 void MappingContextTraits<PdbTpiRecord, pdb::yaml::SerializationContext>::
     mapping(IO &IO, pdb::yaml::PdbTpiRecord &Obj,
             pdb::yaml::SerializationContext &Context) {
-  codeview::TypeVisitorCallbackPipeline Pipeline;
-  codeview::TypeDeserializer Deserializer;
-  codeview::TypeSerializer Serializer(Context.Allocator);
-  pdb::TpiHashUpdater Hasher;
 
   if (IO.outputting()) {
     // For PDB to Yaml, deserialize into a high level record type, then dump it.
-    Pipeline.addCallbackToPipeline(Deserializer);
-    Pipeline.addCallbackToPipeline(Context.Dumper);
+    consumeError(codeview::visitTypeRecord(Obj.Record, Context.Dumper));
   } else {
+    codeview::TypeVisitorCallbackPipeline Pipeline;
+    codeview::TypeSerializer Serializer(Context.Allocator);
+    pdb::TpiHashUpdater Hasher;
     // For Yaml to PDB, extract from the high level record type, then write it
     // to bytes.
 
@@ -391,9 +389,9 @@ void MappingContextTraits<PdbTpiRecord, pdb::yaml::SerializationContext>::
     Pipeline.addCallbackToPipeline(Context.Dumper);
     Pipeline.addCallbackToPipeline(Serializer);
     Pipeline.addCallbackToPipeline(Hasher);
+    consumeError(codeview::visitTypeRecord(Obj.Record, Pipeline,
+                                           codeview::VDS_BytesExternal));
   }
 
-  codeview::CVTypeVisitor Visitor(Pipeline);
-  consumeError(Visitor.visitTypeRecord(Obj.Record));
   Context.ActiveSerializer = nullptr;
 }
