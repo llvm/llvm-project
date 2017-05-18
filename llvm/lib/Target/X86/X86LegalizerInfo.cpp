@@ -184,6 +184,7 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
     return;
 
   const LLT s64 = LLT::scalar(64);
+  const LLT v16s8 = LLT::vector(16, 8);
   const LLT v8s16 = LLT::vector(8, 16);
   const LLT v4s32 = LLT::vector(4, 32);
   const LLT v2s64 = LLT::vector(2, 64);
@@ -193,7 +194,7 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
       setAction({BinOp, Ty}, Legal);
 
   for (unsigned BinOp : {G_ADD, G_SUB})
-    for (auto Ty : {v4s32})
+    for (auto Ty : {v16s8, v8s16, v4s32, v2s64})
       setAction({BinOp, Ty}, Legal);
 
   setAction({G_MUL, v8s16}, Legal);
@@ -212,8 +213,14 @@ void X86LegalizerInfo::setLegalizerInfoAVX2() {
   if (!Subtarget.hasAVX2())
     return;
 
+  const LLT v32s8 = LLT::vector(32, 8);
   const LLT v16s16 = LLT::vector(16, 16);
   const LLT v8s32 = LLT::vector(8, 32);
+  const LLT v4s64 = LLT::vector(4, 64);
+
+  for (unsigned BinOp : {G_ADD, G_SUB})
+    for (auto Ty : {v32s8, v16s16, v8s32, v4s64})
+      setAction({BinOp, Ty}, Legal);
 
   for (auto Ty : {v16s16, v8s32})
     setAction({G_MUL, Ty}, Legal);
@@ -224,6 +231,11 @@ void X86LegalizerInfo::setLegalizerInfoAVX512() {
     return;
 
   const LLT v16s32 = LLT::vector(16, 32);
+  const LLT v8s64 = LLT::vector(8, 64);
+
+  for (unsigned BinOp : {G_ADD, G_SUB})
+    for (auto Ty : {v16s32, v8s64})
+      setAction({BinOp, Ty}, Legal);
 
   setAction({G_MUL, v16s32}, Legal);
 
@@ -261,7 +273,12 @@ void X86LegalizerInfo::setLegalizerInfoAVX512BW() {
   if (!(Subtarget.hasAVX512() && Subtarget.hasBWI()))
     return;
 
+  const LLT v64s8 = LLT::vector(64, 8);
   const LLT v32s16 = LLT::vector(32, 16);
+
+  for (unsigned BinOp : {G_ADD, G_SUB})
+    for (auto Ty : {v64s8, v32s16})
+      setAction({BinOp, Ty}, Legal);
 
   setAction({G_MUL, v32s16}, Legal);
 

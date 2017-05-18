@@ -21,6 +21,7 @@
 
 #include "MapFile.h"
 #include "InputFiles.h"
+#include "OutputSections.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Threads.h"

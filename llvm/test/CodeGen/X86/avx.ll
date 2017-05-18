@@ -113,9 +113,9 @@ define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x fl
 ; CHECK-NOT: mov
 ; CHECK: insertps    $48
 ; CHECK: insertps    $48
+; CHECK: insertps    $48
+; CHECK: insertps    $48
 ; CHECK: vaddps
-; CHECK: insertps    $48
-; CHECK: insertps    $48
 ; CHECK: vaddps
 ; CHECK: vaddps
 ; CHECK-NEXT: ret

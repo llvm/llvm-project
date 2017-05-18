@@ -532,7 +532,7 @@ Parser::ParseOMPDeclareSimdClauses(Parser::DeclGroupPtrTy Ptr,
       ConsumeAnyToken();
   }
   // Skip the last annot_pragma_openmp_end.
-  SourceLocation EndLoc = ConsumeToken();
+  SourceLocation EndLoc = ConsumeAnnotationToken();
   if (!IsError) {
     return Actions.ActOnOpenMPDeclareSimdDirective(
         Ptr, BS, Simdlen.get(), Uniforms, Aligneds, Alignments, Linears,
@@ -562,7 +562,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   assert(Tok.is(tok::annot_pragma_openmp) && "Not an OpenMP directive!");
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
-  SourceLocation Loc = ConsumeToken();
+  SourceLocation Loc = ConsumeAnnotationToken();
   auto DKind = ParseOpenMPDirectiveKind(*this);
 
   switch (DKind) {
@@ -578,7 +578,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
         SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
       }
       // Skip the last annot_pragma_openmp_end.
-      ConsumeToken();
+      ConsumeAnnotationToken();
       return Actions.ActOnOpenMPThreadprivateDirective(Loc,
                                                        Helper.getIdentifiers());
     }
@@ -596,7 +596,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
           ConsumeAnyToken();
       }
       // Skip the last annot_pragma_openmp_end.
-      ConsumeToken();
+      ConsumeAnnotationToken();
       return Res;
     }
     break;
@@ -686,7 +686,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       ParseExternalDeclaration(attrs);
       if (Tok.isAnnotation() && Tok.is(tok::annot_pragma_openmp)) {
         TentativeParsingAction TPA(*this);
-        ConsumeToken();
+        ConsumeAnnotationToken();
         DKind = ParseOpenMPDirectiveKind(*this);
         if (DKind != OMPD_end_declare_target)
           TPA.Revert();
@@ -814,7 +814,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   FirstClauses(OMPC_unknown + 1);
   unsigned ScopeFlags =
       Scope::FnScope | Scope::DeclScope | Scope::OpenMPDirectiveScope;
-  SourceLocation Loc = ConsumeToken(), EndLoc;
+  SourceLocation Loc = ConsumeAnnotationToken(), EndLoc;
   auto DKind = ParseOpenMPDirectiveKind(*this);
   OpenMPDirectiveKind CancelRegion = OMPD_unknown;
   // Name of critical directive.
@@ -973,7 +973,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     // End location of the directive.
     EndLoc = Tok.getLocation();
     // Consume final annot_pragma_openmp_end.
-    ConsumeToken();
+    ConsumeAnnotationToken();
 
     // OpenMP [2.13.8, ordered Construct, Syntax]
     // If the depend clause is specified, the ordered construct is a stand-alone

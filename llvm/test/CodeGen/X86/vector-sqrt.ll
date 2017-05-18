@@ -29,11 +29,11 @@ define <4 x float> @sqrtf4(float* nocapture readonly %v) local_unnamed_addr #0 {
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    vsqrtss (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    vsqrtss 4(%rdi), %xmm1, %xmm1
+; CHECK-NEXT:    vsqrtss 8(%rdi), %xmm2, %xmm2
+; CHECK-NEXT:    vsqrtss 12(%rdi), %xmm3, %xmm3
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; CHECK-NEXT:    vsqrtss 8(%rdi), %xmm2, %xmm1
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
-; CHECK-NEXT:    vsqrtss 12(%rdi), %xmm2, %xmm1
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; CHECK-NEXT:    retq
 entry:
   %0 = load float, float* %v, align 4

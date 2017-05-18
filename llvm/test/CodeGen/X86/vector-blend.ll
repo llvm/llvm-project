@@ -848,10 +848,10 @@ define <8 x i32> @blend_logic_v8i32(<8 x i32> %b, <8 x i32> %a, <8 x i32> %c) {
 ; SSE2-NEXT:    psrad $31, %xmm1
 ; SSE2-NEXT:    pand %xmm1, %xmm3
 ; SSE2-NEXT:    pandn %xmm5, %xmm1
-; SSE2-NEXT:    por %xmm3, %xmm1
 ; SSE2-NEXT:    pand %xmm0, %xmm2
 ; SSE2-NEXT:    pandn %xmm4, %xmm0
 ; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm3, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: blend_logic_v8i32:
@@ -860,10 +860,10 @@ define <8 x i32> @blend_logic_v8i32(<8 x i32> %b, <8 x i32> %a, <8 x i32> %c) {
 ; SSSE3-NEXT:    psrad $31, %xmm1
 ; SSSE3-NEXT:    pand %xmm1, %xmm3
 ; SSSE3-NEXT:    pandn %xmm5, %xmm1
-; SSSE3-NEXT:    por %xmm3, %xmm1
 ; SSSE3-NEXT:    pand %xmm0, %xmm2
 ; SSSE3-NEXT:    pandn %xmm4, %xmm0
 ; SSSE3-NEXT:    por %xmm2, %xmm0
+; SSSE3-NEXT:    por %xmm3, %xmm1
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: blend_logic_v8i32:

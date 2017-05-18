@@ -218,7 +218,7 @@ TEST_F(MDNodeTest, Delete) {
 
   EXPECT_EQ(n, wvh);
 
-  delete I;
+  I->deleteValue();
 }
 
 TEST_F(MDNodeTest, SelfReference) {

@@ -7,6 +7,14 @@
     ret void
   }
 
+  define void @test_add_vec512() {
+    ret void
+  }
+
+  define void @test_sub_vec512() {
+    ret void
+  }
+
 ...
 ---
 name:            test_mul_vec512
@@ -28,6 +36,52 @@ body:             |
 
     %0(<16 x s32>) = IMPLICIT_DEF
     %1(<16 x s32>) = G_MUL %0, %0
+    RET 0
+
+...
+---
+name:            test_add_vec512
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_add_vec512
+# CHECK: registers:
+# CHECK:  - { id: 0, class: vecr }
+# CHECK:  - { id: 1, class: vecr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+
+    %0(<16 x s32>) = IMPLICIT_DEF
+    %1(<16 x s32>) = G_ADD %0, %0
+    RET 0
+
+...
+---
+name:            test_sub_vec512
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_sub_vec512
+# CHECK: registers:
+# CHECK:  - { id: 0, class: vecr }
+# CHECK:  - { id: 1, class: vecr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+
+    %0(<16 x s32>) = IMPLICIT_DEF
+    %1(<16 x s32>) = G_SUB %0, %0
     RET 0
 
 ...

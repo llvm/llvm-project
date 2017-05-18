@@ -43,8 +43,6 @@ Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
   InsertAtEnd->getInstList().push_back(this);
 }
 
-
-// Out of line virtual method, so the vtable, etc has a home.
 Instruction::~Instruction() {
   assert(!Parent && "Instruction still linked in the program!");
   if (hasMetadataHashEntry())

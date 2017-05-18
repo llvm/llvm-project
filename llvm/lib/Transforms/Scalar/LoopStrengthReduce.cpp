@@ -3805,6 +3805,7 @@ void LSRInstance::GenerateTruncates(LSRUse &LU, unsigned LUIdx, Formula Base) {
       if (!F.hasRegsUsedByUsesOtherThan(LUIdx, RegUses))
         continue;
 
+      F.canonicalize(*L);
       (void)InsertFormula(LU, LUIdx, F);
     }
   }

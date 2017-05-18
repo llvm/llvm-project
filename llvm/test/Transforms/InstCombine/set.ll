@@ -175,6 +175,23 @@ define i1 @xor_of_icmps(i64 %a) {
   ret i1 %xor
 }
 
+; https://bugs.llvm.org/show_bug.cgi?id=2844
+
+define i32 @PR2844(i32 %x) {
+; CHECK-LABEL: @PR2844(
+; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 %x, 0
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt i32 %x, -638208502
+; CHECK-NEXT:    [[NOT_OR:%.*]] = xor i1 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = zext i1 [[NOT_OR]] to i32
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %A = icmp eq i32 %x, 0
+  %B = icmp slt i32 %x, -638208501
+  %or = or i1 %A, %B
+  %sel = select i1 %or, i32 0, i32 1
+  ret i32 %sel
+}
+
 define i1 @test16(i32 %A) {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:    ret i1 false

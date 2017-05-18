@@ -570,7 +570,7 @@ void AMDGPUPassConfig::addIRPasses() {
   disablePass(&FuncletLayoutID);
   disablePass(&PatchableFunctionID);
 
-  addPass(createAMDGPULowerIntrinsicsPass(&TM));
+  addPass(createAMDGPULowerIntrinsicsPass());
 
   // Function calls are not supported, so make sure we inline everything.
   addPass(createAMDGPUAlwaysInlinePass());
@@ -585,8 +585,7 @@ void AMDGPUPassConfig::addIRPasses() {
   if (TM.getTargetTriple().getArch() == Triple::amdgcn) {
     // TODO: May want to move later or split into an early and late one.
 
-    addPass(createAMDGPUCodeGenPreparePass(
-              static_cast<const GCNTargetMachine *>(&TM)));
+    addPass(createAMDGPUCodeGenPreparePass());
   }
 
   // Handle uses of OpenCL image2d_t, image3d_t and sampler_t arguments.
@@ -594,7 +593,7 @@ void AMDGPUPassConfig::addIRPasses() {
 
   if (TM.getOptLevel() > CodeGenOpt::None) {
     addPass(createInferAddressSpacesPass());
-    addPass(createAMDGPUPromoteAlloca(&TM));
+    addPass(createAMDGPUPromoteAlloca());
 
     if (EnableSROA)
       addPass(createSROAPass());
@@ -664,22 +663,22 @@ bool R600PassConfig::addPreISel() {
 }
 
 void R600PassConfig::addPreRegAlloc() {
-  addPass(createR600VectorRegMerger(*TM));
+  addPass(createR600VectorRegMerger());
 }
 
 void R600PassConfig::addPreSched2() {
   addPass(createR600EmitClauseMarkers(), false);
   if (EnableR600IfConvert)
     addPass(&IfConverterID, false);
-  addPass(createR600ClauseMergePass(*TM), false);
+  addPass(createR600ClauseMergePass(), false);
 }
 
 void R600PassConfig::addPreEmitPass() {
   addPass(createAMDGPUCFGStructurizerPass(), false);
-  addPass(createR600ExpandSpecialInstrsPass(*TM), false);
+  addPass(createR600ExpandSpecialInstrsPass(), false);
   addPass(&FinalizeMachineBundlesID, false);
-  addPass(createR600Packetizer(*TM), false);
-  addPass(createR600ControlFlowFinalizer(*TM), false);
+  addPass(createR600Packetizer(), false);
+  addPass(createR600ControlFlowFinalizer(), false);
 }
 
 TargetPassConfig *R600TargetMachine::createPassConfig(PassManagerBase &PM) {
@@ -703,8 +702,7 @@ bool GCNPassConfig::addPreISel() {
 
   // FIXME: We need to run a pass to propagate the attributes when calls are
   // supported.
-  const AMDGPUTargetMachine &TM = getAMDGPUTargetMachine();
-  addPass(createAMDGPUAnnotateKernelFeaturesPass(&TM));
+  addPass(createAMDGPUAnnotateKernelFeaturesPass());
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.

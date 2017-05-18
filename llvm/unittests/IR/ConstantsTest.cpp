@@ -178,14 +178,15 @@ TEST(ConstantsTest, PointerCast) {
             ConstantExpr::getAddrSpaceCast(NullInt32Ptr1, Int32PtrTy));
 }
 
-#define CHECK(x, y) {                                         		\
-    std::string __s;                                            	\
-    raw_string_ostream __o(__s);                                	\
-    Instruction *__I = cast<ConstantExpr>(x)->getAsInstruction();	\
-    __I->print(__o);      						\
-    delete __I; 							\
-    __o.flush();                                                	\
-    EXPECT_EQ(std::string("  <badref> = " y), __s);             	\
+#define CHECK(x, y)                                                            \
+  {                                                                            \
+    std::string __s;                                                           \
+    raw_string_ostream __o(__s);                                               \
+    Instruction *__I = cast<ConstantExpr>(x)->getAsInstruction();              \
+    __I->print(__o);                                                           \
+    __I->deleteValue();                                                        \
+    __o.flush();                                                               \
+    EXPECT_EQ(std::string("  <badref> = " y), __s);                            \
   }
 
 TEST(ConstantsTest, AsInstructionsTest) {

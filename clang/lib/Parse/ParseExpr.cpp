@@ -804,7 +804,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
   case tok::annot_primary_expr:
     assert(Res.get() == nullptr && "Stray primary-expression annotation?");
     Res = getExprAnnotation(Tok);
-    ConsumeToken();
+    ConsumeAnnotationToken();
     break;
 
   case tok::kw___super:
@@ -1199,7 +1199,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
       if (Ty.isInvalid())
         break;
 
-      ConsumeToken();
+      ConsumeAnnotationToken();
       Res = ParseObjCMessageExpressionBody(SourceLocation(), SourceLocation(),
                                            Ty.get(), nullptr);
       break;

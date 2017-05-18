@@ -20,6 +20,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DerivedUser.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -59,7 +60,7 @@ Value::Value(Type *ty, unsigned scid)
            (SubclassID < ConstantFirstVal || SubclassID > ConstantLastVal))
     assert((VTy->isFirstClassType() || VTy->isVoidTy()) &&
            "Cannot create non-first-class values except for constants!");
-  static_assert(sizeof(Value) == 3 * sizeof(void *) + 2 * sizeof(unsigned),
+  static_assert(sizeof(Value) == 2 * sizeof(void *) + 2 * sizeof(unsigned),
                 "Value too big");
 }
 
@@ -87,6 +88,32 @@ Value::~Value() {
   // If this value is named, destroy the name.  This should not be in a symtab
   // at this point.
   destroyValueName();
+}
+
+void Value::deleteValue() {
+  switch (getValueID()) {
+#define HANDLE_VALUE(Name)                                                     \
+  case Value::Name##Val:                                                       \
+    delete static_cast<Name *>(this);                                          \
+    break;
+#define HANDLE_MEMORY_VALUE(Name)                                              \
+  case Value::Name##Val:                                                       \
+    static_cast<DerivedUser *>(this)->DeleteValue(                             \
+        static_cast<DerivedUser *>(this));                                     \
+    break;
+#define HANDLE_INSTRUCTION(Name)  /* nothing */
+#include "llvm/IR/Value.def"
+
+#define HANDLE_INST(N, OPC, CLASS)                                             \
+  case Value::InstructionVal + Instruction::OPC:                               \
+    delete static_cast<CLASS *>(this);                                         \
+    break;
+#define HANDLE_USER_INST(N, OPC, CLASS)
+#include "llvm/IR/Instruction.def"
+
+  default:
+    llvm_unreachable("attempting to delete unknown value kind");
+  }
 }
 
 void Value::destroyValueName() {

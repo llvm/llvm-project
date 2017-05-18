@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - -triple amdgcn %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - -triple amdgcn---opencl %s | FileCheck %s
 // RUN: %clang_cc1 -emit-llvm -o - -triple amdgcn---amdgizcl %s | FileCheck %s -check-prefix=AMDGIZ
 
 struct A {

@@ -37,7 +37,7 @@ private:
       unsigned Op);
 
 public:
-  R600ExpandSpecialInstrsPass(TargetMachine &tm) : MachineFunctionPass(ID),
+  R600ExpandSpecialInstrsPass() : MachineFunctionPass(ID),
     TII(nullptr) { }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -51,8 +51,8 @@ public:
 
 char R600ExpandSpecialInstrsPass::ID = 0;
 
-FunctionPass *llvm::createR600ExpandSpecialInstrsPass(TargetMachine &TM) {
-  return new R600ExpandSpecialInstrsPass(TM);
+FunctionPass *llvm::createR600ExpandSpecialInstrsPass() {
+  return new R600ExpandSpecialInstrsPass();
 }
 
 void R600ExpandSpecialInstrsPass::SetFlagInNewMI(MachineInstr *NewMI,

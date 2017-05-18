@@ -304,8 +304,9 @@ public:
   }
 
   /// ConsumeToken - Consume the current 'peek token' and lex the next one.
-  /// This does not work with special tokens: string literals, code completion
-  /// and balanced tokens must be handled using the specific consume methods.
+  /// This does not work with special tokens: string literals, code completion,
+  /// annotation tokens and balanced tokens must be handled using the specific
+  /// consume methods.
   /// Returns the location of the consumed token.
   SourceLocation ConsumeToken() {
     assert(!isTokenSpecial() &&
@@ -366,7 +367,7 @@ private:
   /// isTokenSpecial - True if this token requires special consumption methods.
   bool isTokenSpecial() const {
     return isTokenStringLiteral() || isTokenParen() || isTokenBracket() ||
-           isTokenBrace() || Tok.is(tok::code_completion);
+           isTokenBrace() || Tok.is(tok::code_completion) || Tok.isAnnotation();
   }
 
   /// \brief Returns true if the current token is '=' or is a type of '='.
@@ -397,7 +398,17 @@ private:
     if (Tok.is(tok::code_completion))
       return ConsumeCodeCompletionTok ? ConsumeCodeCompletionToken()
                                       : handleUnexpectedCodeCompletionToken();
+    if (Tok.isAnnotation())
+      return ConsumeAnnotationToken();
     return ConsumeToken();
+  }
+
+  SourceLocation ConsumeAnnotationToken() {
+    assert(Tok.isAnnotation() && "wrong consume method");
+    SourceLocation Loc = Tok.getLocation();
+    PrevTokLocation = Tok.getAnnotationEndLoc();
+    PP.Lex(Tok);
+    return Loc;
   }
 
   /// ConsumeParen - This consume method keeps the paren count up-to-date.

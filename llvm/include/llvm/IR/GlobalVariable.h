@@ -66,7 +66,7 @@ public:
   GlobalVariable(const GlobalVariable &) = delete;
   GlobalVariable &operator=(const GlobalVariable &) = delete;
 
-  ~GlobalVariable() override {
+  ~GlobalVariable() {
     dropAllReferences();
 
     // FIXME: needed by operator delete

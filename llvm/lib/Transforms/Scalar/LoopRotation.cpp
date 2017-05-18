@@ -347,7 +347,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // in the map.
       ValueMap[Inst] = V;
       if (!C->mayHaveSideEffects()) {
-        delete C;
+        C->deleteValue();
         C = nullptr;
       }
     } else {

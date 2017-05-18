@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
@@ -28,14 +29,12 @@ using namespace llvm;
 namespace {
 
 class LowerEmuTLS : public ModulePass {
-  const TargetMachine *TM;
 public:
   static char ID; // Pass identification, replacement for typeid
-  explicit LowerEmuTLS() : ModulePass(ID), TM(nullptr) { }
-  explicit LowerEmuTLS(const TargetMachine *TM)
-      : ModulePass(ID), TM(TM) {
+  LowerEmuTLS() : ModulePass(ID) {
     initializeLowerEmuTLSPass(*PassRegistry::getPassRegistry());
   }
+
   bool runOnModule(Module &M) override;
 private:
   bool addEmuTlsVar(Module &M, const GlobalVariable *GV);
@@ -55,18 +54,21 @@ private:
 char LowerEmuTLS::ID = 0;
 
 INITIALIZE_PASS(LowerEmuTLS, "loweremutls",
-                "Add __emutls_[vt]. variables for emultated TLS model",
-                false, false)
+                "Add __emutls_[vt]. variables for emultated TLS model", false,
+                false)
 
-ModulePass *llvm::createLowerEmuTLSPass(const TargetMachine *TM) {
-  return new LowerEmuTLS(TM);
-}
+ModulePass *llvm::createLowerEmuTLSPass() { return new LowerEmuTLS(); }
 
 bool LowerEmuTLS::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
 
-  if (!TM || !TM->Options.EmulatedTLS)
+  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+  if (!TPC)
+    return false;
+
+  auto &TM = TPC->getTM<TargetMachine>();
+  if (!TM.Options.EmulatedTLS)
     return false;
 
   bool Changed = false;

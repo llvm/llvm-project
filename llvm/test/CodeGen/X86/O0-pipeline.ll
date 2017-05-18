@@ -4,8 +4,8 @@
 
 ; CHECK-LABEL: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
-; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: Target Pass Configuration
+; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: Type-Based Alias Analysis
 ; CHECK-NEXT: Scoped NoAlias Alias Analysis
 ; CHECK-NEXT: Assumption Cache Tracker

@@ -36,7 +36,7 @@ class R600Packetizer : public MachineFunctionPass {
 
 public:
   static char ID;
-  R600Packetizer(const TargetMachine &TM) : MachineFunctionPass(ID) {}
+  R600Packetizer() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -404,6 +404,6 @@ bool R600Packetizer::runOnMachineFunction(MachineFunction &Fn) {
 
 } // end anonymous namespace
 
-llvm::FunctionPass *llvm::createR600Packetizer(TargetMachine &tm) {
-  return new R600Packetizer(tm);
+llvm::FunctionPass *llvm::createR600Packetizer() {
+  return new R600Packetizer();
 }

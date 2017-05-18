@@ -13,29 +13,37 @@ void kernel foo(int x) {
   constant int L1 = 0;
   local int L2;
 
-  auto int L3 = 7; // expected-error{{OpenCL version 1.2 does not support the 'auto' storage class specifier}}
-  global int L4;   // expected-error{{function scope variable cannot be declared in global address space}}
+  auto int L3 = 7;                            // expected-error{{OpenCL version 1.2 does not support the 'auto' storage class specifier}}
+  global int L4;                              // expected-error{{function scope variable cannot be declared in global address space}}
+  __attribute__((address_space(100))) int L5; // expected-error{{automatic variable qualified with an invalid address space}}
 
-  constant int L5 = x; // expected-error {{initializer element is not a compile-time constant}}
-  global int *constant L6 = &G4;
-  private int *constant L7 = &x; // expected-error {{initializer element is not a compile-time constant}}
-  constant int *constant L8 = &L1;
-  local int *constant L9 = &L2; // expected-error {{initializer element is not a compile-time constant}}
+  constant int L6 = x;                        // expected-error {{initializer element is not a compile-time constant}}
+  global int *constant L7 = &G4;
+  private int *constant L8 = &x;              // expected-error {{initializer element is not a compile-time constant}}
+  constant int *constant L9 = &L1;
+  local int *constant L10 = &L2;              // expected-error {{initializer element is not a compile-time constant}}
 }
 
 static void kernel bar() { // expected-error{{kernel functions cannot be declared static}}
 }
 
 void f() {
-  constant int L1 = 0; // expected-error{{non-kernel function variable cannot be declared in constant address space}}
-  local int L2;        // expected-error{{non-kernel function variable cannot be declared in local address space}}
+  constant int L1 = 0;                        // expected-error{{non-kernel function variable cannot be declared in constant address space}}
+  local int L2;                               // expected-error{{non-kernel function variable cannot be declared in local address space}}
+  global int L3;                              // expected-error{{function scope variable cannot be declared in global address space}}
+  __attribute__((address_space(100))) int L4; // expected-error{{automatic variable qualified with an invalid address space}}
+
   {
-    constant int L1 = 0; // expected-error{{non-kernel function variable cannot be declared in constant address space}}
-    local int L2;        // expected-error{{non-kernel function variable cannot be declared in local address space}}
+    constant int L1 = 0;                        // expected-error{{non-kernel function variable cannot be declared in constant address space}}
+    local int L2;                               // expected-error{{non-kernel function variable cannot be declared in local address space}}
+    global int L3;                              // expected-error{{function scope variable cannot be declared in global address space}}
+    __attribute__((address_space(100))) int L4; // expected-error{{automatic variable qualified with an invalid address space}}
   }
-  global int L3; // expected-error{{function scope variable cannot be declared in global address space}}
-  extern constant float L4;
-  extern local float L5; // expected-error{{extern variable must reside in constant address space}}
-  static int L6 = 0;     // expected-error{{variables in function scope cannot be declared static}}
-  static int L7;         // expected-error{{variables in function scope cannot be declared static}}
+
+
+  extern constant float L5;
+  extern local float L6; // expected-error{{extern variable must reside in constant address space}}
+
+  static int L7 = 0;     // expected-error{{variables in function scope cannot be declared static}}
+  static int L8;         // expected-error{{variables in function scope cannot be declared static}}
 }

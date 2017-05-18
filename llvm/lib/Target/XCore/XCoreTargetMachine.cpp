@@ -74,7 +74,7 @@ TargetPassConfig *XCoreTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void XCorePassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass(&getXCoreTargetMachine()));
+  addPass(createAtomicExpandPass());
 
   TargetPassConfig::addIRPasses();
 }

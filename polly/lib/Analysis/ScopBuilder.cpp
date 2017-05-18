@@ -201,7 +201,7 @@ bool isFortranArrayDescriptor(Value *V) {
   return true;
 }
 
-Value *ScopBuilder::findFADGlobalNonAlloc(MemAccInst Inst) {
+Value *ScopBuilder::findFADAllocationVisible(MemAccInst Inst) {
   // match: 4.1 & 4.2 store/load
   if (!isa<LoadInst>(Inst) && !isa<StoreInst>(Inst))
     return nullptr;
@@ -272,13 +272,9 @@ Value *ScopBuilder::findFADGlobalNonAlloc(MemAccInst Inst) {
   return nullptr;
 }
 
-Value *ScopBuilder::findFADGlobalAlloc(MemAccInst Inst) {
+Value *ScopBuilder::findFADAllocationInvisible(MemAccInst Inst) {
   // match: 3
   if (!isa<LoadInst>(Inst) && !isa<StoreInst>(Inst))
-    return nullptr;
-
-  // match: 3
-  if (Inst.getAlignment() != 8)
     return nullptr;
 
   Value *Slot = Inst.getPointerOperand();
@@ -302,40 +298,6 @@ Value *ScopBuilder::findFADGlobalAlloc(MemAccInst Inst) {
     return nullptr;
 
   Value *Descriptor = dyn_cast<Value>(BitcastOperator->getOperand(0));
-  if (!Descriptor)
-    return nullptr;
-
-  if (!isFortranArrayDescriptor(Descriptor))
-    return nullptr;
-
-  return Descriptor;
-}
-
-Value *ScopBuilder::findFADLocalNonAlloc(MemAccInst Inst) {
-  // match: 3
-  if (!isa<LoadInst>(Inst) && !isa<StoreInst>(Inst))
-    return nullptr;
-
-  // match: 3
-  if (Inst.getAlignment() != 8)
-    return nullptr;
-
-  Value *Slot = Inst.getPointerOperand();
-
-  BitCastOperator *MemBitcast = nullptr;
-  // [match: 2]
-  if (auto *SlotGEP = dyn_cast<GetElementPtrInst>(Slot)) {
-    // match: 1
-    MemBitcast = dyn_cast<BitCastOperator>(SlotGEP->getPointerOperand());
-  } else {
-    // match: 1
-    MemBitcast = dyn_cast<BitCastOperator>(Slot);
-  }
-
-  if (!MemBitcast)
-    return nullptr;
-
-  Value *Descriptor = dyn_cast<Value>(MemBitcast->getOperand(0));
   if (!Descriptor)
     return nullptr;
 
@@ -771,11 +733,9 @@ void ScopBuilder::addArrayAccess(
   if (!DetectFortranArrays)
     return;
 
-  if (Value *FAD = findFADGlobalNonAlloc(MemAccInst))
+  if (Value *FAD = findFADAllocationInvisible(MemAccInst))
     MemAccess->setFortranArrayDescriptor(FAD);
-  else if (Value *FAD = findFADGlobalAlloc(MemAccInst))
-    MemAccess->setFortranArrayDescriptor(FAD);
-  else if (Value *FAD = findFADLocalNonAlloc(MemAccInst))
+  else if (Value *FAD = findFADAllocationVisible(MemAccInst))
     MemAccess->setFortranArrayDescriptor(FAD);
 }
 
