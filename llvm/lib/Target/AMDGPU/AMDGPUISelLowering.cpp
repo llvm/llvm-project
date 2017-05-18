@@ -76,6 +76,45 @@ static bool allocateSGPRTuple(unsigned ValNo, MVT ValVT, MVT LocVT,
   }
 }
 
+// Allocate up to VGPR31.
+//
+// TODO: Since there are no VGPR alignent requirements would it be better to
+// split into individual scalar registers?
+static bool allocateVGPRTuple(unsigned ValNo, MVT ValVT, MVT LocVT,
+                              CCValAssign::LocInfo LocInfo,
+                              ISD::ArgFlagsTy ArgFlags, CCState &State) {
+  switch (LocVT.SimpleTy) {
+  case MVT::i64:
+  case MVT::f64:
+  case MVT::v2i32:
+  case MVT::v2f32: {
+    return allocateCCRegs(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State,
+                          &AMDGPU::VReg_64RegClass, 31);
+  }
+  case MVT::v4i32:
+  case MVT::v4f32:
+  case MVT::v2i64:
+  case MVT::v2f64: {
+    return allocateCCRegs(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State,
+                          &AMDGPU::VReg_128RegClass, 29);
+  }
+  case MVT::v8i32:
+  case MVT::v8f32: {
+    return allocateCCRegs(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State,
+                          &AMDGPU::VReg_256RegClass, 25);
+
+  }
+  case MVT::v16i32:
+  case MVT::v16f32: {
+    return allocateCCRegs(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State,
+                          &AMDGPU::VReg_512RegClass, 17);
+
+  }
+  default:
+    return false;
+  }
+}
+
 #include "AMDGPUGenCallingConv.inc"
 
 // Find a larger type to do a load / store of a vector with.
@@ -773,8 +812,43 @@ bool AMDGPUTargetLowering::isNarrowingProfitable(EVT SrcVT, EVT DestVT) const {
 //===---------------------------------------------------------------------===//
 
 CCAssignFn *AMDGPUCallLowering::CCAssignFnForCall(CallingConv::ID CC,
-                                                  bool IsVarArg) const {
-  return CC_AMDGPU;
+                                                  bool IsVarArg) {
+  switch (CC) {
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
+    return CC_AMDGPU_Kernel;
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_HS:
+    return CC_AMDGPU;
+  case CallingConv::C:
+  case CallingConv::Fast:
+    return CC_AMDGPU_Func;
+  default:
+    report_fatal_error("Unsupported calling convention.");
+  }
+}
+
+CCAssignFn *AMDGPUCallLowering::CCAssignFnForReturn(CallingConv::ID CC,
+                                                    bool IsVarArg) {
+  switch (CC) {
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
+    return CC_AMDGPU_Kernel;
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_HS:
+    return RetCC_SI_Shader;
+  case CallingConv::C:
+  case CallingConv::Fast:
+    return RetCC_AMDGPU_Func;
+  default:
+    report_fatal_error("Unsupported calling convention.");
+  }
 }
 
 /// The SelectionDAGBuilder will automatically promote function arguments
@@ -874,18 +948,15 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(CCState &State,
   }
 }
 
-void AMDGPUTargetLowering::AnalyzeReturn(CCState &State,
-                           const SmallVectorImpl<ISD::OutputArg> &Outs) const {
-
-  State.AnalyzeReturn(Outs, RetCC_SI);
-}
-
-SDValue
-AMDGPUTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
-                                  bool isVarArg,
-                                  const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                  const SmallVectorImpl<SDValue> &OutVals,
-                                  const SDLoc &DL, SelectionDAG &DAG) const {
+SDValue AMDGPUTargetLowering::LowerReturn(
+  SDValue Chain, CallingConv::ID CallConv,
+  bool isVarArg,
+  const SmallVectorImpl<ISD::OutputArg> &Outs,
+  const SmallVectorImpl<SDValue> &OutVals,
+  const SDLoc &DL, SelectionDAG &DAG) const {
+  // FIXME: Fails for r600 tests
+  //assert(!isVarArg && Outs.empty() && OutVals.empty() &&
+  // "wave terminate should not have return values");
   return DAG.getNode(AMDGPUISD::ENDPGM, DL, MVT::Other, Chain);
 }
 
@@ -896,20 +967,12 @@ AMDGPUTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 /// Selects the correct CCAssignFn for a given CallingConvention value.
 CCAssignFn *AMDGPUTargetLowering::CCAssignFnForCall(CallingConv::ID CC,
                                                     bool IsVarArg) {
-  switch (CC) {
-  case CallingConv::C:
-  case CallingConv::AMDGPU_KERNEL:
-  case CallingConv::SPIR_KERNEL:
-    return CC_AMDGPU_Kernel;
-  case CallingConv::AMDGPU_VS:
-  case CallingConv::AMDGPU_HS:
-  case CallingConv::AMDGPU_GS:
-  case CallingConv::AMDGPU_PS:
-  case CallingConv::AMDGPU_CS:
-    return CC_AMDGPU;
-  default:
-    report_fatal_error("Unsupported calling convention.");
-  }
+  return AMDGPUCallLowering::CCAssignFnForCall(CC, IsVarArg);
+}
+
+CCAssignFn *AMDGPUTargetLowering::CCAssignFnForReturn(CallingConv::ID CC,
+                                                      bool IsVarArg) {
+  return AMDGPUCallLowering::CCAssignFnForReturn(CC, IsVarArg);
 }
 
 SDValue AMDGPUTargetLowering::LowerCall(CallLoweringInfo &CLI,

@@ -30,7 +30,10 @@ public:
 
   /// @brief Resize the buffer and uncompress section data into it.
   /// @param Out         Destination buffer.
-  Error decompress(SmallString<32> &Out);
+  template <class T> Error resizeAndDecompress(T &Out) {
+    Out.resize(DecompressedSize);
+    return decompress({Out.data(), (size_t)DecompressedSize});
+  }
 
   /// @brief Uncompress section data to raw buffer provided.
   /// @param Buffer      Destination buffer.

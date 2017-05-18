@@ -30,6 +30,11 @@ def XBEGIN_4 : Ii32PCRel<0xc7, MRM_F8, (outs), (ins brtarget32:$dst),
                          "xbegin\t$dst", []>, OpSize32;
 }
 
+// Psuedo instruction to fake the definition of EAX on the fallback code path.
+let isPseudo = 1, Defs = [EAX] in {
+def XABORT_DEF : I<0, Pseudo, (outs), (ins), "# XABORT DEF", []>;
+}
+
 def XEND : I<0x01, MRM_D5, (outs), (ins),
              "xend", [(int_x86_xend)]>, TB, Requires<[HasRTM]>;
 

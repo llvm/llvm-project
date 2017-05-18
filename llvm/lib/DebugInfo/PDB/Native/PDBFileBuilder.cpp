@@ -117,6 +117,7 @@ Expected<uint32_t> PDBFileBuilder::getNamedStreamIndex(StringRef Name) const {
 }
 
 Error PDBFileBuilder::commit(StringRef Filename) {
+  assert(!Filename.empty());
   auto ExpectedLayout = finalizeMsfLayout();
   if (!ExpectedLayout)
     return ExpectedLayout.takeError();

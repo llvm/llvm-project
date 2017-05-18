@@ -28,6 +28,10 @@ class SITargetLowering final : public AMDGPUTargetLowering {
                                    uint64_t Offset, bool Signed,
                                    const ISD::InputArg *Arg = nullptr) const;
 
+  SDValue lowerStackParameter(SelectionDAG &DAG, CCValAssign &VA,
+                              const SDLoc &SL, SDValue Chain,
+                              const ISD::InputArg &Arg) const;
+
   SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
   SDValue lowerImplicitZextParam(SelectionDAG &DAG, SDValue Op,
@@ -177,7 +181,12 @@ public:
                                const SDLoc &DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
 
-  SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
+  bool CanLowerReturn(CallingConv::ID CallConv,
+                      MachineFunction &MF, bool isVarArg,
+                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      LLVMContext &Context) const override;
+
+  SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;

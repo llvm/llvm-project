@@ -110,8 +110,8 @@ define i1 @test12(i1 %A) {
 
 define i1 @test13(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[CTMP:%.*]] = xor i1 %B, true
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[CTMP]], %A
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 %B, true
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[TMP1]], %A
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %C = icmp uge i1 %A, %B
@@ -120,8 +120,8 @@ define i1 @test13(i1 %A, i1 %B) {
 
 define <2 x i1> @test13vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test13vec(
-; CHECK-NEXT:    [[CTMP:%.*]] = xor <2 x i1> %B, <i1 true, i1 true>
-; CHECK-NEXT:    [[C:%.*]] = or <2 x i1> [[CTMP]], %A
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> %B, <i1 true, i1 true>
+; CHECK-NEXT:    [[C:%.*]] = or <2 x i1> [[TMP1]], %A
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %C = icmp uge <2 x i1> %A, %B
@@ -130,8 +130,8 @@ define <2 x i1> @test13vec(<2 x i1> %A, <2 x i1> %B) {
 
 define i1 @test14(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test14(
-; CHECK-NEXT:    [[CTMP:%.*]] = xor i1 %A, %B
-; CHECK-NEXT:    [[C:%.*]] = xor i1 [[CTMP]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 %A, %B
+; CHECK-NEXT:    [[C:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %C = icmp eq i1 %A, %B
@@ -140,12 +140,39 @@ define i1 @test14(i1 %A, i1 %B) {
 
 define <3 x i1> @test14vec(<3 x i1> %A, <3 x i1> %B) {
 ; CHECK-LABEL: @test14vec(
-; CHECK-NEXT:    [[CTMP:%.*]] = xor <3 x i1> %A, %B
-; CHECK-NEXT:    [[C:%.*]] = xor <3 x i1> [[CTMP]], <i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i1> %A, %B
+; CHECK-NEXT:    [[C:%.*]] = xor <3 x i1> [[TMP1]], <i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    ret <3 x i1> [[C]]
 ;
   %C = icmp eq <3 x i1> %A, %B
   ret <3 x i1> %C
+}
+
+define i1 @bool_eq0(i64 %a) {
+; CHECK-LABEL: @bool_eq0(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 %a, 1
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %b = icmp sgt i64 %a, 0
+  %c = icmp eq i64 %a, 1
+  %notc = icmp eq i1 %c, false
+  %and = and i1 %b, %notc
+  ret i1 %and
+}
+
+; FIXME: This is equivalent to the previous test.
+
+define i1 @xor_of_icmps(i64 %a) {
+; CHECK-LABEL: @xor_of_icmps(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt i64 %a, 0
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 %a, 1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[C]], [[B]]
+; CHECK-NEXT:    ret i1 [[XOR]]
+;
+  %b = icmp sgt i64 %a, 0
+  %c = icmp eq i64 %a, 1
+  %xor = xor i1 %c, %b
+  ret i1 %xor
 }
 
 define i1 @test16(i32 %A) {
@@ -191,8 +218,8 @@ endif:
 
 define i1 @test19(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test19(
-; CHECK-NEXT:    [[CTMP:%.*]] = xor i1 %A, %B
-; CHECK-NEXT:    [[C:%.*]] = xor i1 [[CTMP]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 %A, %B
+; CHECK-NEXT:    [[C:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %a = zext i1 %A to i32

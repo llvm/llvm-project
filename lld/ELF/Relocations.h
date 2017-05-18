@@ -27,6 +27,7 @@ class OutputSection;
 // doesn't have to know about architecture-specific details.
 enum RelExpr {
   R_ABS,
+  R_ARM_SBREL,
   R_GOT,
   R_GOTONLY_PC,
   R_GOTONLY_PC_FROM_END,

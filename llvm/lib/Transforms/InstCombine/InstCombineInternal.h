@@ -74,6 +74,27 @@ static inline unsigned getComplexity(Value *V) {
   return isa<Constant>(V) ? (isa<UndefValue>(V) ? 0 : 1) : 2;
 }
 
+/// Predicate canonicalization reduces the number of patterns that need to be
+/// matched by other transforms. For example, we may swap the operands of a
+/// conditional branch or select to create a compare with a canonical (inverted)
+/// predicate which is then more likely to be matched with other values.
+static inline bool isCanonicalPredicate(CmpInst::Predicate Pred) {
+  switch (Pred) {
+  case CmpInst::ICMP_NE:
+  case CmpInst::ICMP_ULE:
+  case CmpInst::ICMP_SLE:
+  case CmpInst::ICMP_UGE:
+  case CmpInst::ICMP_SGE:
+  // TODO: There are 16 FCMP predicates. Should others be (not) canonical?
+  case CmpInst::FCMP_ONE:
+  case CmpInst::FCMP_OLE:
+  case CmpInst::FCMP_OGE:
+    return false;
+  default:
+    return true;
+  }
+}
+
 /// \brief Add one to a Constant
 static inline Constant *AddOne(Constant *C) {
   return ConstantExpr::getAdd(C, ConstantInt::get(C->getType(), 1));

@@ -182,15 +182,13 @@ TYPED_TEST(BitVectorTest, TrivialOperation) {
   EXPECT_TRUE(Vec.empty());
 }
 
-TYPED_TEST(BitVectorTest, FindOperations) {
+TYPED_TEST(BitVectorTest, SimpleFindOps) {
   // Test finding in an empty BitVector.
   TypeParam A;
   EXPECT_EQ(-1, A.find_first());
   EXPECT_EQ(-1, A.find_last());
   EXPECT_EQ(-1, A.find_first_unset());
   EXPECT_EQ(-1, A.find_last_unset());
-  EXPECT_EQ(-1, A.find_next(0));
-  EXPECT_EQ(-1, A.find_next_unset(0));
 
   // Test finding next set and unset bits in a BitVector with multiple words
   A.resize(100);
@@ -222,9 +220,10 @@ TYPED_TEST(BitVectorTest, FindOperations) {
   A.set(0, 100);
   EXPECT_EQ(100U, A.count());
   EXPECT_EQ(0, A.find_first());
-  EXPECT_EQ(99, A.find_last());
   EXPECT_EQ(-1, A.find_first_unset());
   EXPECT_EQ(-1, A.find_last_unset());
+  EXPECT_EQ(99, A.find_last());
+  EXPECT_EQ(99, A.find_next(98));
 
   A.reset(0, 100);
   EXPECT_EQ(0U, A.count());
@@ -232,6 +231,7 @@ TYPED_TEST(BitVectorTest, FindOperations) {
   EXPECT_EQ(-1, A.find_last());
   EXPECT_EQ(0, A.find_first_unset());
   EXPECT_EQ(99, A.find_last_unset());
+  EXPECT_EQ(99, A.find_next_unset(98));
 
   // Also test with a vector that is small enough to fit in 1 word.
   A.resize(20);
@@ -256,6 +256,153 @@ TYPED_TEST(BitVectorTest, FindOperations) {
   EXPECT_EQ(5, A.find_next_unset(4));
   EXPECT_EQ(13, A.find_next_unset(12));
   EXPECT_EQ(17, A.find_next_unset(15));
+}
+
+TEST(BitVectorTest, FindInRangeMultiWord) {
+  BitVector Vec;
+
+  Vec.resize(200);
+  Vec.set(3, 7);
+  Vec.set(24, 35);
+  Vec.set(50, 70);
+  Vec.set(150);
+  Vec.set(152);
+  Vec.set(154);
+
+  // find first
+  EXPECT_EQ(-1, Vec.find_first_in(0, 0));
+  EXPECT_EQ(-1, Vec.find_first_in(24, 24));
+  EXPECT_EQ(-1, Vec.find_first_in(7, 24));
+
+  EXPECT_EQ(3, Vec.find_first_in(0, 10));
+  EXPECT_EQ(4, Vec.find_first_in(4, 10));
+  EXPECT_EQ(150, Vec.find_first_in(100, 200));
+  EXPECT_EQ(152, Vec.find_first_in(151, 200));
+  EXPECT_EQ(154, Vec.find_first_in(153, 200));
+
+  EXPECT_EQ(-1, Vec.find_first_in(155, 200));
+  Vec.set(199);
+  EXPECT_EQ(199, Vec.find_first_in(199, 200));
+  Vec.reset(199);
+
+  // find last
+  EXPECT_EQ(-1, Vec.find_last_in(0, 0));
+  EXPECT_EQ(-1, Vec.find_last_in(24, 24));
+  EXPECT_EQ(-1, Vec.find_last_in(7, 24));
+
+  EXPECT_EQ(6, Vec.find_last_in(0, 10));
+  EXPECT_EQ(5, Vec.find_last_in(0, 6));
+  EXPECT_EQ(154, Vec.find_last_in(100, 155));
+  EXPECT_EQ(152, Vec.find_last_in(100, 154));
+  EXPECT_EQ(150, Vec.find_last_in(100, 152));
+  EXPECT_EQ(-1, Vec.find_last_in(100, 150));
+  Vec.set(199);
+  EXPECT_EQ(199, Vec.find_last_in(199, 200));
+  Vec.reset(199);
+
+  // find first unset
+  EXPECT_EQ(-1, Vec.find_first_unset_in(0, 0));
+  EXPECT_EQ(-1, Vec.find_first_unset_in(23, 23));
+  EXPECT_EQ(-1, Vec.find_first_unset_in(24, 35));
+
+  EXPECT_EQ(0, Vec.find_first_unset_in(0, 10));
+  EXPECT_EQ(1, Vec.find_first_unset_in(1, 10));
+  EXPECT_EQ(7, Vec.find_first_unset_in(5, 25));
+  EXPECT_EQ(151, Vec.find_first_unset_in(150, 200));
+  EXPECT_EQ(151, Vec.find_first_unset_in(151, 200));
+  EXPECT_EQ(153, Vec.find_first_unset_in(152, 200));
+  EXPECT_EQ(153, Vec.find_first_unset_in(153, 200));
+  EXPECT_EQ(155, Vec.find_first_unset_in(154, 200));
+  EXPECT_EQ(155, Vec.find_first_unset_in(155, 200));
+  EXPECT_EQ(199, Vec.find_first_unset_in(199, 200));
+
+  // find last unset
+  EXPECT_EQ(-1, Vec.find_last_unset_in(0, 0));
+  EXPECT_EQ(-1, Vec.find_last_unset_in(23, 23));
+  EXPECT_EQ(-1, Vec.find_last_unset_in(24, 35));
+
+  EXPECT_EQ(9, Vec.find_last_unset_in(0, 10));
+  EXPECT_EQ(8, Vec.find_last_unset_in(0, 9));
+  EXPECT_EQ(2, Vec.find_last_unset_in(0, 7));
+  EXPECT_EQ(149, Vec.find_last_unset_in(100, 151));
+  EXPECT_EQ(151, Vec.find_last_unset_in(100, 152));
+  EXPECT_EQ(151, Vec.find_last_unset_in(100, 153));
+  EXPECT_EQ(153, Vec.find_last_unset_in(100, 154));
+  EXPECT_EQ(153, Vec.find_last_unset_in(100, 155));
+  EXPECT_EQ(155, Vec.find_last_unset_in(100, 156));
+  EXPECT_EQ(199, Vec.find_last_unset_in(199, 200));
+}
+
+TEST(BitVectorTest, FindInRangeSingleWord) {
+  // When the bit vector contains only a single word, this is slightly different
+  // than when the bit vector contains multiple words, because masks are applied
+  // to the front and back of the same word.  So make sure this works.
+  BitVector Vec;
+
+  Vec.resize(25);
+  Vec.set(2, 4);
+  Vec.set(6, 9);
+  Vec.set(12, 15);
+  Vec.set(19);
+  Vec.set(21);
+  Vec.set(23);
+
+  // find first
+  EXPECT_EQ(-1, Vec.find_first_in(0, 0));
+  EXPECT_EQ(-1, Vec.find_first_in(24, 24));
+  EXPECT_EQ(-1, Vec.find_first_in(9, 12));
+
+  EXPECT_EQ(2, Vec.find_first_in(0, 10));
+  EXPECT_EQ(6, Vec.find_first_in(4, 10));
+  EXPECT_EQ(19, Vec.find_first_in(18, 25));
+  EXPECT_EQ(21, Vec.find_first_in(20, 25));
+  EXPECT_EQ(23, Vec.find_first_in(22, 25));
+  EXPECT_EQ(-1, Vec.find_first_in(24, 25));
+
+  // find last
+  EXPECT_EQ(-1, Vec.find_last_in(0, 0));
+  EXPECT_EQ(-1, Vec.find_last_in(24, 24));
+  EXPECT_EQ(-1, Vec.find_last_in(9, 12));
+
+  EXPECT_EQ(8, Vec.find_last_in(0, 10));
+  EXPECT_EQ(3, Vec.find_last_in(0, 6));
+  EXPECT_EQ(23, Vec.find_last_in(18, 25));
+  EXPECT_EQ(21, Vec.find_last_in(18, 23));
+  EXPECT_EQ(19, Vec.find_last_in(18, 21));
+  EXPECT_EQ(-1, Vec.find_last_in(18, 19));
+
+  // find first unset
+  EXPECT_EQ(-1, Vec.find_first_unset_in(0, 0));
+  EXPECT_EQ(-1, Vec.find_first_unset_in(23, 23));
+  EXPECT_EQ(-1, Vec.find_first_unset_in(6, 9));
+
+  EXPECT_EQ(0, Vec.find_first_unset_in(0, 6));
+  EXPECT_EQ(1, Vec.find_first_unset_in(1, 6));
+  EXPECT_EQ(9, Vec.find_first_unset_in(7, 13));
+  EXPECT_EQ(18, Vec.find_first_unset_in(18, 25));
+  EXPECT_EQ(20, Vec.find_first_unset_in(19, 25));
+  EXPECT_EQ(20, Vec.find_first_unset_in(20, 25));
+  EXPECT_EQ(22, Vec.find_first_unset_in(21, 25));
+  EXPECT_EQ(22, Vec.find_first_unset_in(22, 25));
+  EXPECT_EQ(24, Vec.find_first_unset_in(23, 25));
+  EXPECT_EQ(24, Vec.find_first_unset_in(24, 25));
+
+  // find last unset
+  EXPECT_EQ(-1, Vec.find_last_unset_in(0, 0));
+  EXPECT_EQ(-1, Vec.find_last_unset_in(23, 23));
+  EXPECT_EQ(-1, Vec.find_last_unset_in(6, 9));
+
+  EXPECT_EQ(5, Vec.find_last_unset_in(0, 6));
+  EXPECT_EQ(4, Vec.find_last_unset_in(0, 5));
+  EXPECT_EQ(1, Vec.find_last_unset_in(0, 4));
+  EXPECT_EQ(11, Vec.find_last_unset_in(7, 13));
+  EXPECT_EQ(24, Vec.find_last_unset_in(18, 25));
+  EXPECT_EQ(22, Vec.find_last_unset_in(18, 24));
+  EXPECT_EQ(22, Vec.find_last_unset_in(18, 23));
+  EXPECT_EQ(20, Vec.find_last_unset_in(18, 22));
+  EXPECT_EQ(20, Vec.find_last_unset_in(18, 21));
+  EXPECT_EQ(18, Vec.find_last_unset_in(18, 20));
+  EXPECT_EQ(18, Vec.find_last_unset_in(18, 19));
 }
 
 TYPED_TEST(BitVectorTest, CompoundAssignment) {

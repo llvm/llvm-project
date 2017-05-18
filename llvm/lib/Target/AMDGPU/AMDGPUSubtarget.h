@@ -289,6 +289,10 @@ public:
     return getGeneration() >= GFX9;
   }
 
+  bool hasMin3Max3_16() const {
+    return getGeneration() >= GFX9;
+  }
+
   bool hasCARRY() const {
     return (getGeneration() >= EVERGREEN);
   }

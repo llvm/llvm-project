@@ -228,7 +228,7 @@ bool LoadCombine::combineLoads(SmallVectorImpl<LoadPOPPair> &Loads) {
     L.Load->replaceAllUsesWith(V);
   }
 
-  NumLoadsCombined = NumLoadsCombined + Loads.size();
+  NumLoadsCombined += Loads.size();
   return true;
 }
 

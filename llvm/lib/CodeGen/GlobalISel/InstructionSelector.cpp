@@ -73,7 +73,7 @@ bool InstructionSelector::isOperandImmEqual(
     const MachineOperand &MO, int64_t Value,
     const MachineRegisterInfo &MRI) const {
 
-  if (MO.getReg())
+  if (MO.isReg() && MO.getReg())
     if (auto VRegVal = getConstantVRegVal(MO.getReg(), MRI))
       return *VRegVal == Value;
   return false;

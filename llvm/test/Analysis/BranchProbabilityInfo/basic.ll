@@ -378,8 +378,8 @@ entry:
   %cond = icmp eq i32 %a, 42
   br i1 %cond, label %exit, label %unr, !prof !4
 
-; CHECK:  edge entry -> exit probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
-; CHECK:  edge entry -> unr probability is 0x00000800 / 0x80000000 = 0.00%
+; CHECK:  edge entry -> exit probability is 0x7fffffff / 0x80000000 = 100.00% [HOT edge]
+; CHECK:  edge entry -> unr probability is 0x00000001 / 0x80000000 = 0.00%
 
 unr:
   unreachable
@@ -396,8 +396,8 @@ entry:
   %cond = icmp eq i32 %a, 42
   br i1 %cond, label %exit, label %unr, !prof !5
 
-; CHECK:  edge entry -> exit probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
-; CHECK:  edge entry -> unr probability is 0x00000800 / 0x80000000 = 0.00%
+; CHECK:  edge entry -> exit probability is 0x7fffffff / 0x80000000 = 100.00% [HOT edge]
+; CHECK:  edge entry -> unr probability is 0x00000001 / 0x80000000 = 0.00%
 
 unr:
   unreachable
@@ -406,7 +406,7 @@ exit:
   ret i32 %b
 }
 
-!5 = !{!"branch_weights", i32 1048575, i32 1}
+!5 = !{!"branch_weights", i32 2147483647, i32 1}
 
 define i32 @test_unreachable_with_prof_zero(i32 %a, i32 %b) {
 ; CHECK: Printing analysis {{.*}} for function 'test_unreachable_with_prof_zero'
@@ -414,8 +414,8 @@ entry:
   %cond = icmp eq i32 %a, 42
   br i1 %cond, label %exit, label %unr, !prof !6
 
-; CHECK:  edge entry -> exit probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
-; CHECK:  edge entry -> unr probability is 0x00000800 / 0x80000000 = 0.00%
+; CHECK:  edge entry -> exit probability is 0x7fffffff / 0x80000000 = 100.00% [HOT edge]
+; CHECK:  edge entry -> unr probability is 0x00000001 / 0x80000000 = 0.00%
 
 unr:
   unreachable
@@ -451,11 +451,11 @@ entry:
                                  i32 2, label %case_c
                                  i32 3, label %case_d
                                  i32 4, label %case_e ], !prof !8
-; CHECK: edge entry -> case_a probability is 0x00000800 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_b probability is 0x07fffdff / 0x80000000 = 6.25%
-; CHECK: edge entry -> case_c probability is 0x67fffdff / 0x80000000 = 81.25% [HOT edge]
-; CHECK: edge entry -> case_d probability is 0x07fffdff / 0x80000000 = 6.25%
-; CHECK: edge entry -> case_e probability is 0x07fffdff / 0x80000000 = 6.25%
+; CHECK: edge entry -> case_a probability is 0x00000001 / 0x80000000 = 0.00%
+; CHECK: edge entry -> case_b probability is 0x07ffffff / 0x80000000 = 6.25%
+; CHECK: edge entry -> case_c probability is 0x67ffffff / 0x80000000 = 81.25% [HOT edge]
+; CHECK: edge entry -> case_d probability is 0x07ffffff / 0x80000000 = 6.25%
+; CHECK: edge entry -> case_e probability is 0x07ffffff / 0x80000000 = 6.25%
 
 case_a:
   unreachable
@@ -493,11 +493,11 @@ entry:
                                  i32 2, label %case_c
                                  i32 3, label %case_d
                                  i32 4, label %case_e ], !prof !9
-; CHECK: edge entry -> case_a probability is 0x00000400 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_b probability is 0x00000400 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_c probability is 0x6aaaa7ff / 0x80000000 = 83.33% [HOT edge]
-; CHECK: edge entry -> case_d probability is 0x0aaaa7ff / 0x80000000 = 8.33%
-; CHECK: edge entry -> case_e probability is 0x0aaaa7ff / 0x80000000 = 8.33%
+; CHECK: edge entry -> case_a probability is 0x00000001 / 0x80000000 = 0.00%
+; CHECK: edge entry -> case_b probability is 0x00000001 / 0x80000000 = 0.00%
+; CHECK: edge entry -> case_c probability is 0x6aaaaaa9 / 0x80000000 = 83.33% [HOT edge]
+; CHECK: edge entry -> case_d probability is 0x0aaaaaa9 / 0x80000000 = 8.33%
+; CHECK: edge entry -> case_e probability is 0x0aaaaaa9 / 0x80000000 = 8.33%
 
 case_a:
   unreachable
@@ -534,10 +534,10 @@ entry:
                                  i32 3, label %case_d
                                  i32 4, label %case_e ], !prof !10
 ; CHECK: edge entry -> case_a probability is 0x00000000 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_b probability is 0x00000400 / 0x80000000 = 0.00%
-; CHECK: edge entry -> case_c probability is 0x6e08fa2d / 0x80000000 = 85.96% [HOT edge]
-; CHECK: edge entry -> case_d probability is 0x08fb80e9 / 0x80000000 = 7.02%
-; CHECK: edge entry -> case_e probability is 0x08fb80e9 / 0x80000000 = 7.02%
+; CHECK: edge entry -> case_b probability is 0x00000001 / 0x80000000 = 0.00%
+; CHECK: edge entry -> case_c probability is 0x6e08fb82 / 0x80000000 = 85.96% [HOT edge]
+; CHECK: edge entry -> case_d probability is 0x08fb823e / 0x80000000 = 7.02%
+; CHECK: edge entry -> case_e probability is 0x08fb823e / 0x80000000 = 7.02%
 
 case_a:
   unreachable

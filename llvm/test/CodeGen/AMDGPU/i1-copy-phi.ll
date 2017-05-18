@@ -12,7 +12,7 @@
 ; SI: s_endpgm
 define amdgpu_kernel void @br_i1_phi(i32 %arg) {
 bb:
-  %tidig = call i32 @llvm.r600.read.tidig.x() #0
+  %tidig = call i32 @llvm.amdgcn.workitem.id.x()
   %cmp = trunc i32 %tidig to i1
   br i1 %cmp, label %bb2, label %bb3
 
@@ -32,6 +32,6 @@ bb6:                                              ; preds = %bb4, %bb3
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() #0
 
-attributes #0 = { readnone }
+attributes #0 = { nounwind readnone }

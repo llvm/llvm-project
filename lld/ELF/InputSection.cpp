@@ -390,6 +390,20 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t Type, uint64_t A,
   }
 }
 
+// ARM SBREL relocations are of the form S + A - B where B is the static base
+// The ARM ABI defines base to be "addressing origin of the output segment
+// defining the symbol S". We defined the "addressing origin"/static base to be
+// the base of the PT_LOAD segment containing the Body.
+// The procedure call standard only defines a Read Write Position Independent
+// RWPI variant so in practice we should expect the static base to be the base
+// of the RW segment.
+static uint64_t getARMStaticBase(const SymbolBody &Body) {
+  OutputSection *OS = Body.getOutputSection();
+  if (!OS || !OS->FirstInPtLoad)
+    fatal("SBREL relocation to " + Body.getName() + " without static base\n");
+  return OS->FirstInPtLoad->Addr;
+}
+
 template <class ELFT>
 static typename ELFT::uint
 getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
@@ -398,6 +412,8 @@ getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
   case R_ABS:
   case R_RELAX_GOT_PC_NOPIC:
     return Body.getVA(A);
+  case R_ARM_SBREL:
+    return Body.getVA(A) - getARMStaticBase(Body);
   case R_GOT:
   case R_RELAX_TLS_GD_TO_IE_ABS:
     return Body.getGotVA() + A;

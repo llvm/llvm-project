@@ -13,11 +13,7 @@ try:
 except ImportError:
     win32api = None
 
-try:
-    import multiprocessing
-except ImportError:
-    multiprocessing = None
-
+import multiprocessing
 import lit.Test
 
 def abort_now():
@@ -227,8 +223,7 @@ class Run(object):
     def execute_test(self, test):
         return execute_test(test, self.lit_config, self.parallelism_semaphores)
 
-    def execute_tests(self, display, jobs, max_time=None,
-                      execution_strategy=None):
+    def execute_tests(self, display, jobs, max_time=None):
         """
         execute_tests(display, jobs, [max_time])
 
@@ -249,100 +244,6 @@ class Run(object):
         computed. Tests which were not actually executed (for any reason) will
         be given an UNRESOLVED result.
         """
-
-        if execution_strategy == 'PROCESS_POOL':
-            self.execute_tests_with_mp_pool(display, jobs, max_time)
-            return
-        # FIXME: Standardize on the PROCESS_POOL execution strategy and remove
-        # the other two strategies.
-
-        use_processes = execution_strategy == 'PROCESSES'
-
-        # Choose the appropriate parallel execution implementation.
-        consumer = None
-        if jobs != 1 and use_processes and multiprocessing:
-            try:
-                task_impl = multiprocessing.Process
-                queue_impl = multiprocessing.Queue
-                sem_impl = multiprocessing.Semaphore
-                canceled_flag =  multiprocessing.Value('i', 0)
-                consumer = MultiprocessResultsConsumer(self, display, jobs)
-            except:
-                # multiprocessing fails to initialize with certain OpenBSD and
-                # FreeBSD Python versions: http://bugs.python.org/issue3770
-                # Unfortunately the error raised also varies by platform.
-                self.lit_config.note('failed to initialize multiprocessing')
-                consumer = None
-        if not consumer:
-            task_impl = threading.Thread
-            queue_impl = queue.Queue
-            sem_impl = threading.Semaphore
-            canceled_flag = LockedValue(0)
-            consumer = ThreadResultsConsumer(display)
-
-        self.parallelism_semaphores = {k: sem_impl(v)
-            for k, v in self.lit_config.parallelism_groups.items()}
-
-        # Create the test provider.
-        provider = TestProvider(queue_impl, canceled_flag)
-        handleFailures(provider, consumer, self.lit_config.maxFailures)
-
-        # Putting tasks into the threading or multiprocessing Queue may block,
-        # so do it in a separate thread.
-        # https://docs.python.org/2/library/multiprocessing.html
-        # e.g: On Mac OS X, we will hang if we put 2^15 elements in the queue
-        # without taking any out.
-        queuer = task_impl(target=provider.queue_tests, args=(self.tests, jobs))
-        queuer.start()
-
-        # Install a console-control signal handler on Windows.
-        if win32api is not None:
-            def console_ctrl_handler(type):
-                provider.cancel()
-                return True
-            win32api.SetConsoleCtrlHandler(console_ctrl_handler, True)
-
-        # Install a timeout handler, if requested.
-        if max_time is not None:
-            def timeout_handler():
-                provider.cancel()
-            timeout_timer = threading.Timer(max_time, timeout_handler)
-            timeout_timer.start()
-
-        # If not using multiple tasks, just run the tests directly.
-        if jobs == 1:
-            run_one_tester(self, provider, consumer)
-        else:
-            # Otherwise, execute the tests in parallel
-            self._execute_tests_in_parallel(task_impl, provider, consumer, jobs)
-
-        queuer.join()
-
-        # Cancel the timeout handler.
-        if max_time is not None:
-            timeout_timer.cancel()
-
-        # Update results for any tests which weren't run.
-        for test in self.tests:
-            if test.result is None:
-                test.setResult(lit.Test.Result(lit.Test.UNRESOLVED, '', 0.0))
-
-    def _execute_tests_in_parallel(self, task_impl, provider, consumer, jobs):
-        # Start all of the tasks.
-        tasks = [task_impl(target=run_one_tester,
-                           args=(self, provider, consumer))
-                 for i in range(jobs)]
-        for t in tasks:
-            t.start()
-
-        # Allow the consumer to handle results, if necessary.
-        consumer.handle_results()
-
-        # Wait for all the tasks to complete.
-        for t in tasks:
-            t.join()
-
-    def execute_tests_with_mp_pool(self, display, jobs, max_time=None):
         # Don't do anything if we aren't going to run any tests.
         if not self.tests or jobs == 0:
             return

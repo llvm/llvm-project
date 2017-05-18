@@ -126,9 +126,15 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
 }
 
 void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
+  unsigned Opcode = MI->getOpcode();
 
-  int MCOpcode = ST.getInstrInfo()->pseudoToMCOpcode(MI->getOpcode());
+  // FIXME: Should be able to handle this with emitPseudoExpansionLowering. We
+  // need to select it to the subtarget specific version, and there's no way to
+  // do that with a single pseudo source operation.
+  if (Opcode == AMDGPU::S_SETPC_B64_return)
+    Opcode = AMDGPU::S_SETPC_B64;
 
+  int MCOpcode = ST.getInstrInfo()->pseudoToMCOpcode(Opcode);
   if (MCOpcode == -1) {
     LLVMContext &C = MI->getParent()->getParent()->getFunction()->getContext();
     C.emitError("AMDGPUMCInstLower::lower - Pseudo instruction doesn't have "

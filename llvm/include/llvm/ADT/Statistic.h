@@ -101,6 +101,16 @@ public:
     return init();
   }
 
+  void updateMax(unsigned V) {
+    unsigned PrevMax = Value.load(std::memory_order_relaxed);
+    // Keep trying to update max until we succeed or another thread produces
+    // a bigger max than us.
+    while (V > PrevMax && !Value.compare_exchange_weak(
+                              PrevMax, V, std::memory_order_relaxed)) {
+    }
+    init();
+  }
+
 #else  // Statistics are disabled in release builds.
 
   const Statistic &operator=(unsigned Val) {
@@ -130,6 +140,8 @@ public:
   const Statistic &operator-=(const unsigned &V) {
     return *this;
   }
+
+  void updateMax(unsigned V) {}
 
 #endif  // !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
 

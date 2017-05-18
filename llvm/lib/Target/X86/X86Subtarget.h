@@ -253,6 +253,11 @@ protected:
   /// True if the LEA instruction with certain arguments is slow
   bool SlowLEA;
 
+  /// True if the LEA instruction has all three source operands: base, index,
+  /// and offset or if the LEA instruction uses base and index registers where
+  /// the base is EBP, RBP,or R13
+  bool Slow3OpsLEA;
+
   /// True if INC and DEC instructions are slow when writing to flags
   bool SlowIncDec;
 
@@ -490,6 +495,7 @@ public:
   bool callRegIndirect() const { return CallRegIndirect; }
   bool LEAusesAG() const { return LEAUsesAG; }
   bool slowLEA() const { return SlowLEA; }
+  bool slow3OpsLEA() const { return Slow3OpsLEA; }
   bool slowIncDec() const { return SlowIncDec; }
   bool hasCDI() const { return HasCDI; }
   bool hasPFI() const { return HasPFI; }

@@ -110,8 +110,8 @@ StatepointLoweringState::allocateStackSlot(EVT ValueType,
          Builder.FuncInfo.StatepointStackSlots.size() &&
          "Broken invariant");
 
-  StatepointMaxSlotsRequired = std::max<unsigned long>(
-      StatepointMaxSlotsRequired, Builder.FuncInfo.StatepointStackSlots.size());
+  StatepointMaxSlotsRequired.updateMax(
+      Builder.FuncInfo.StatepointStackSlots.size());
 
   return SpillSlot;
 }

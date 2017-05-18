@@ -11,7 +11,6 @@
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabase.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabaseVisitor.h"
-#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/Support/BinaryByteStream.h"
@@ -21,38 +20,23 @@ using namespace llvm::codeview;
 
 Error CVTypeDumper::dump(const CVType &Record, TypeVisitorCallbacks &Dumper) {
   TypeDatabaseVisitor DBV(TypeDB);
-  TypeDeserializer Deserializer;
   TypeVisitorCallbackPipeline Pipeline;
-  Pipeline.addCallbackToPipeline(Deserializer);
   Pipeline.addCallbackToPipeline(DBV);
   Pipeline.addCallbackToPipeline(Dumper);
 
-  CVTypeVisitor Visitor(Pipeline);
-  if (Handler)
-    Visitor.addTypeServerHandler(*Handler);
-
   CVType RecordCopy = Record;
-  if (auto EC = Visitor.visitTypeRecord(RecordCopy))
-    return EC;
-  return Error::success();
+  return codeview::visitTypeRecord(RecordCopy, Pipeline, VDS_BytesPresent,
+                                   Handler);
 }
 
 Error CVTypeDumper::dump(const CVTypeArray &Types,
                          TypeVisitorCallbacks &Dumper) {
   TypeDatabaseVisitor DBV(TypeDB);
-  TypeDeserializer Deserializer;
   TypeVisitorCallbackPipeline Pipeline;
-  Pipeline.addCallbackToPipeline(Deserializer);
   Pipeline.addCallbackToPipeline(DBV);
   Pipeline.addCallbackToPipeline(Dumper);
 
-  CVTypeVisitor Visitor(Pipeline);
-  if (Handler)
-    Visitor.addTypeServerHandler(*Handler);
-
-  if (auto EC = Visitor.visitTypeStream(Types))
-    return EC;
-  return Error::success();
+  return codeview::visitTypeStream(Types, Pipeline, Handler);
 }
 
 Error CVTypeDumper::dump(ArrayRef<uint8_t> Data, TypeVisitorCallbacks &Dumper) {

@@ -1,0 +1,1041 @@
+# RUN: llc -run-pass x86-fixup-LEAs -mtriple=x86_64-gnu-unknown -verify-machineinstrs -mcpu=corei7-avx -o - %s | FileCheck %s
+--- |
+  ; ModuleID = 'lea-2.ll'
+  source_filename = "lea-2.ll"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  ;generated using: llc -stop-after x86-pad-short-functions lea-2.ll > leaFinxup64.mir
+
+  ;testleaadd_64_32_1: 3 operands LEA64_32r cannot be replaced with 2 add instructions
+  ; but can be replaced with 1 lea + 1 add
+  define i32 @testleaadd_64_32_1() {
+    ret i32 0
+  }
+
+  ;testleaadd_rbp_64_32_1: 3 operands LEA64_32r cannot be replaced with 2 add instructions
+  ; where the base is rbp/r13/ebp register but it can be replaced with 1 lea + 1 add
+  define i32 @testleaadd_rbp_64_32_1() {
+    ret i32 0
+  }
+
+  ;test1lea_rbp_64_32_1: 2 operands LEA64_32r where base register is rbp/r13/ebp and can not
+  ; be replaced with an add instruction but can be replaced with 1 lea instruction
+  define i32 @test1lea_rbp_64_32_1() {
+    ret i32 0
+  }
+
+  ;test2add_64: 3 operands LEA64r that can be replaced with 2 add instructions
+  define i32 @test2add_64() {
+    ret i32 0
+  }
+
+  ;test2add_rbp_64: 3 operands LEA64r that can be replaced with 2 add instructions
+  ; where the base is rbp/r13/ebp register
+  define i32 @test2add_rbp_64() {
+    ret i32 0
+  }
+
+  ;test1add_rbp_64: 2 operands LEA64r where base register is rbp/r13/ebp and can be replaced
+  ; with an add instruction
+  define i32 @test1add_rbp_64() {
+    ret i32 0
+  }
+
+  ;testleaadd_64_32: 3 operands LEA64_32r that can be replaced with 1 lea 1 add instructions
+  define i32 @testleaadd_64_32() {
+    ret i32 0
+  }
+
+  ;testleaadd_rbp_64_32: 3 operands LEA64_32r that can be replaced with 1 lea 1 add instructions
+  ; where the base is rbp/r13/ebp register
+  define i32 @testleaadd_rbp_64_32() {
+    ret i32 0
+  }
+
+  ;test1lea_rbp_64_32: 2 operands LEA64_32r where base register is rbp/r13/ebp and can be replaced
+  ; with a lea instruction
+  define i32 @test1lea_rbp_64_32() {
+    ret i32 0
+  }
+
+  ;testleaadd_64: 3 operands LEA64r that can be replaced with 1 lea 1 add instructions
+  define i32 @testleaadd_64() {
+    ret i32 0
+  }
+
+  ;testleaadd_rbp_64: 3 operands LEA64r that can be replaced with 1 lea 1 add instructions
+  ; where the base is rbp/r13/ebp register
+  define i32 @testleaadd_rbp_64() {
+    ret i32 0
+  }
+
+  ;test1lea_rbp_64: 2 operands LEA64r wher base register is rbp/r13/ebp and can be replaced
+  ; with a lea instruction
+  define i32 @test1lea_rbp_64() {
+    ret i32 0
+  }
+
+  ;test8: dst = base & scale!=1, can't optimize
+  define i32 @test8() {
+      ret i32 0
+  }
+ 
+  ;testleaaddi32_64_32: 3 operands LEA64_32r that can be replaced with 1 lea + 1 add instructions where
+  ; ADD64ri32 is chosen
+  define i32 @testleaaddi32_64_32() {
+    ret i32 0
+  }
+ 
+  ;test1mov1add_rbp_64_32: 2 operands LEA64_32r cannot be replaced with 1 add 1 mov instructions
+  ; where the base is rbp/r13/ebp register
+  define i32 @test1mov1add_rbp_64_32() {
+    ret i32 0
+  }
+
+  ;testleaadd_rbp_index_64_32: 3 operands LEA64_32r that cannot replaced with 1 lea 1 add instructions
+  ; where the base and the index are ebp register and there is offset
+  define i32 @testleaadd_rbp_index_64_32() {
+    ret i32 0
+  }
+
+  ;testleaadd_rbp_index2_64_32: 3 operands LEA64_32r that cannot replaced with 1 lea 1 add instructions
+  ; where the base and the index are ebp register and there is scale
+  define i32 @testleaadd_rbp_index2_64_32() {
+    ret i32 0
+  }
+ 
+  ;test2addi32_64: 3 operands LEA64r that can be replaced with 2 add instructions where ADD64ri32
+  ; is chosen
+  define i32 @test2addi32_64() {
+    ret i32 0
+  }
+ 
+  ;test1mov1add_rbp_64: 2 operands LEA64r that can be replaced with 1 add 1 mov instructions
+  ; where the base is rbp/r13/ebp register
+  define i32 @test1mov1add_rbp_64() {
+    ret i32 0
+  }
+
+  ;testleaadd_rbp_index_64: 3 operands LEA64r that can be replaced with 1 lea 1 add instructions
+  ; where the base and the index are ebp register and there is offset
+  define i32 @testleaadd_rbp_index_64() {
+    ret i32 0
+  }
+
+  ;testleaadd_rbp_index2_64: 3 operands LEA64r that can be replaced with 1 lea 1 add instructions
+  ; where the base and the index are ebp register and there is scale
+  define i32 @testleaadd_rbp_index2_64() {
+    ret i32 0
+  }
+
+  ;test_skip_opt_64: 3 operands LEA64r that can not be replaced with 2 instructions
+  define i32 @test_skip_opt_64() {
+    ret i32 0
+  }
+
+  ;test_skip_eflags_64: LEA64r that cannot be replaced since its not safe to clobber eflags
+  define i32 @test_skip_eflags_64() {
+    ret i32 0
+  }
+
+  ;test_skip_opt_64_32: 3 operands LEA64_32r that can not be replaced with 2 instructions
+  define i32 @test_skip_opt_64_32() {
+    ret i32 0
+  }
+
+  ;test_skip_eflags_64_32: LEA64_32r that cannot be replaced since its not safe to clobber eflags
+  define i32 @test_skip_eflags_64_32() {
+    ret i32 0
+  }
+
+
+...
+---
+name:            testleaadd_64_32_1
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp
+    ; CHECK: %eax = LEA64_32r killed %rax, 1, killed %rbp, 0
+    ; CHECK: %eax = ADD32ri8 %eax, -5
+ 
+    %eax = LEA64_32r killed %rax, 1, killed %rbp, -5, _
+    RETQ %eax
+
+...
+---
+name:            testleaadd_rbp_64_32_1
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp
+    ; CHECK: %ebp = LEA64_32r killed %rax, 1,  killed %rbp, 0
+    ; CHECK: %ebp = ADD32ri8 %ebp, -5
+ 
+    %ebp = LEA64_32r killed %rbp, 1, killed %rax, -5, _
+    RETQ %ebp
+
+...
+---
+name:            test1lea_rbp_64_32_1
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp
+    ; CHECK: %ebp = LEA64_32r killed %rax, 1, killed %rbp, 0
+ 
+    %ebp = LEA64_32r killed %rbp, 1, killed %rax, 0, _
+    RETQ %ebp
+
+...
+---
+name:            test2add_64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp
+    ; CHECK: %rax = ADD64rr %rax, killed %rbp
+    ; CHECK: %rax = ADD64ri8 %rax, -5
+ 
+    %rax = LEA64r killed %rax, 1, killed %rbp, -5, _
+    RETQ %eax
+
+...
+---
+name:            test2add_rbp_64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp
+    ; CHECK: %rbp = ADD64rr %rbp, killed %rax
+    ; CHECK: %rbp = ADD64ri8 %rbp, -5
+ 
+    %rbp = LEA64r killed %rbp, 1, killed %rax, -5, _
+    RETQ %ebp
+
+...
+---
+name:            test1add_rbp_64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp
+    ; CHECK: %rbp = ADD64rr %rbp, killed %rax
+ 
+    %rbp = LEA64r killed %rbp, 1, killed %rax, 0, _
+    RETQ %ebp
+
+...
+---
+name:            testleaadd_64_32
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+  - { reg: '%rbx' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp
+    ; CHECK: %ebx = LEA64_32r killed %rax, 1, killed %rbp, 0, _
+    ; CHECK: %ebx = ADD32ri8 %ebx, -5
+ 
+    %ebx = LEA64_32r killed %rax, 1, killed %rbp, -5, _
+    RETQ %ebx
+
+...
+---
+name:            testleaadd_rbp_64_32
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+  - { reg: '%rbx' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp
+    ; CHECK: %ebx = LEA64_32r killed %rax, 1, killed %rbp, 0, _
+    ; CHECK: %ebx = ADD32ri8 %ebx, -5
+ 
+    %ebx = LEA64_32r killed %rbp, 1, killed %rax, -5, _
+    RETQ %ebx
+
+...
+---
+name:            test1lea_rbp_64_32
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+  - { reg: '%rbx' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp
+    ; CHECK: %ebx = LEA64_32r killed %rax, 1, killed %rbp, 0, _
+ 
+    %ebx = LEA64_32r killed %rbp, 1, killed %rax, 0, _
+    RETQ %ebx
+
+...
+---
+name:            testleaadd_64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+  - { reg: '%rbx' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp
+    ; CHECK: %rbx = LEA64r killed %rax, 1, killed %rbp, 0, _
+    ; CHECK: %rbx = ADD64ri8 %rbx, -5
+ 
+    %rbx = LEA64r killed %rax, 1, killed %rbp, -5, _
+    RETQ %ebx
+
+...
+---
+name:            testleaadd_rbp_64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+  - { reg: '%rbx' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp
+    ; CHECK: %rbx = LEA64r killed %rax, 1, killed %rbp, 0, _
+    ; CHECK: %rbx = ADD64ri8 %rbx, -5
+ 
+    %rbx = LEA64r killed %rbp, 1, killed %rax, -5, _
+    RETQ %ebx
+
+...
+---
+name:            test1lea_rbp_64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+  - { reg: '%rbx' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp
+    ; CHECK: %rbx = LEA64r killed %rax, 1, killed %rbp, 0, _
+ 
+    %rbx = LEA64r killed %rbp, 1, killed %rax, 0, _
+    RETQ %ebx
+
+...
+---
+name:            test8
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rdi' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rdi, %rbp
+    ; CHECK:  %r12 = LEA64r _, 2, killed %r13, 5, _
+    ; CHECK:  %r12 = ADD64rr %r12, killed %rbp
+    %rbp = KILL %rbp, implicit-def %rbp
+    %r13 = KILL %rdi, implicit-def %r13
+    %r12 = LEA64r killed %rbp, 2, killed %r13, 5, _
+    RETQ %r12
+
+...
+---
+name:            testleaaddi32_64_32
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp
+    ; CHECK: %eax = LEA64_32r killed %rax, 1, killed %rbp, 0
+    ; CHECK: %eax = ADD32ri %eax, 129
+ 
+    %eax = LEA64_32r killed %rax, 1, killed %rbp, 129, _
+    RETQ %eax
+
+...
+---
+name:            test1mov1add_rbp_64_32
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp, %rbx
+    ; CHECK: %ebx = LEA64_32r killed %rbp, 1, killed %rbp, 0, _
+
+    %ebx = LEA64_32r killed %rbp, 1, killed %rbp, 0, _
+    RETQ %ebx
+
+...
+---
+name:            testleaadd_rbp_index_64_32
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rbx' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp, %rbx
+    ; CHECK: %ebx = LEA64_32r killed %rbp, 1, killed %rbp, 5, _
+ 
+    %ebx = LEA64_32r killed %rbp, 1, killed %rbp, 5, _
+    RETQ %ebx
+
+...
+---
+name:            testleaadd_rbp_index2_64_32
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rbx' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %eax, %ebp, %ebx
+    ; CHECK: %ebx = LEA64_32r killed %rbp, 4, killed %rbp, 5, _
+ 
+    %ebx = LEA64_32r killed %rbp, 4, killed %rbp, 5, _
+    RETQ %ebx
+
+...
+---
+name:            test2addi32_64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp
+    ; CHECK: %rax = ADD64rr %rax, killed %rbp
+    ; CHECK: %rax = ADD64ri32 %rax, 129
+ 
+    %rax = LEA64r killed %rax, 1, killed %rbp, 129, _
+    RETQ %eax
+
+...
+---
+name:            test1mov1add_rbp_64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rax' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp, %rbx
+    ; CHECK: %rbx = MOV64rr %rbp
+    ; CHECK: %rbx = ADD64rr %rbx, %rbp
+ 
+    %rbx = LEA64r %rbp, 1, %rbp, 0, _
+    RETQ %ebx
+
+...
+---
+name:            testleaadd_rbp_index_64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rbx' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp, %rbx
+    ; CHECK: %rbx = LEA64r _, 1,  %rbp, 5, _
+    ; CHECK: %rbx = ADD64rr %rbx, %rbp
+ 
+    %rbx = LEA64r %rbp, 1, %rbp, 5, _
+    RETQ %ebx
+
+...
+---
+name:            testleaadd_rbp_index2_64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rbx' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp, %rbx
+    ; CHECK: %rbx = LEA64r _, 4, %rbp, 5, _
+    ; CHECK: %rbx = ADD64rr %rbx,  %rbp
+ 
+    %rbx = LEA64r %rbp, 4,  %rbp, 5, _
+    RETQ %ebx
+
+...
+---
+name:            test_skip_opt_64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rbx' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp, %rbx
+    ; CHECK: %rbp = LEA64r killed %rbp, 4, killed %rbp, 0, _
+ 
+    %rbp = LEA64r killed %rbp, 4, killed %rbp, 0, _
+    RETQ %ebp
+
+...
+---
+name:            test_skip_eflags_64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rbp' }
+  - { reg: '%rax' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp, %rbx
+    ; CHECK: %rbx = LEA64r killed %rax, 4, killed %rax, 5, _
+    ; CHECK: %rbp = LEA64r killed %rbx, 4, killed %rbx, 0, _
+    ; CHECK: %rbp = ADD64ri8 %rbp, 5
+   
+    CMP64rr   %rax, killed %rbx, implicit-def %eflags
+    %rbx = LEA64r killed %rax, 4, killed %rax, 5, _
+    JE_1 %bb.1, implicit %eflags
+    RETQ %ebx
+  bb.1:
+    liveins: %rax, %rbp, %rbx
+    %rbp = LEA64r killed %rbx, 4, killed %rbx, 5, _
+    RETQ %ebp
+
+...
+---
+name:            test_skip_opt_64_32
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rbx' }
+  - { reg: '%rbp' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp, %rbx
+    ; CHECK: %ebp = LEA64_32r killed %rbp, 4, killed %rbp, 0, _
+ 
+    %ebp = LEA64_32r killed %rbp, 4, killed %rbp, 0, _
+    RETQ %ebp
+
+...
+---
+name:            test_skip_eflags_64_32
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%rbp' }
+  - { reg: '%rax' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %rax, %rbp, %rbx
+    ; CHECK: %ebx = LEA64_32r killed %rax, 4, killed %rax, 5, _
+    ; CHECK: %ebp = LEA64_32r killed %rbx, 4, killed %rbx, 0, _
+    ; CHECK: %ebp = ADD32ri8 %ebp, 5
+   
+    CMP64rr   %rax, killed %rbx, implicit-def %eflags
+    %ebx = LEA64_32r killed %rax, 4, killed %rax, 5, _
+    JE_1 %bb.1, implicit %eflags
+    RETQ %ebx
+  bb.1:
+    liveins: %rax, %rbp, %rbx
+    %ebp = LEA64_32r killed %rbx, 4, killed %rbx, 5, _
+    RETQ %ebp
+
+...
+
+
+

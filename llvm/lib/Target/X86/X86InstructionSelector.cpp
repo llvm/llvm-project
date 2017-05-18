@@ -19,6 +19,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -71,6 +72,9 @@ private:
                   MachineFunction &MF) const;
   bool selectCmp(MachineInstr &I, MachineRegisterInfo &MRI,
                  MachineFunction &MF) const;
+
+  bool selectUadde(MachineInstr &I, MachineRegisterInfo &MRI,
+                   MachineFunction &MF) const;
 
   const X86TargetMachine &TM;
   const X86Subtarget &STI;
@@ -242,6 +246,8 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   if (selectZext(I, MRI, MF))
     return true;
   if (selectCmp(I, MRI, MF))
+    return true;
+  if (selectUadde(I, MRI, MF))
     return true;
 
   return false;
@@ -559,6 +565,66 @@ bool X86InstructionSelector::selectCmp(MachineInstr &I,
 
   constrainSelectedInstRegOperands(CmpInst, TII, TRI, RBI);
   constrainSelectedInstRegOperands(SetInst, TII, TRI, RBI);
+
+  I.eraseFromParent();
+  return true;
+}
+
+bool X86InstructionSelector::selectUadde(MachineInstr &I,
+                                         MachineRegisterInfo &MRI,
+                                         MachineFunction &MF) const {
+  if (I.getOpcode() != TargetOpcode::G_UADDE)
+    return false;
+
+  const unsigned DstReg = I.getOperand(0).getReg();
+  const unsigned CarryOutReg = I.getOperand(1).getReg();
+  const unsigned Op0Reg = I.getOperand(2).getReg();
+  const unsigned Op1Reg = I.getOperand(3).getReg();
+  unsigned CarryInReg = I.getOperand(4).getReg();
+
+  const LLT DstTy = MRI.getType(DstReg);
+
+  if (DstTy != LLT::scalar(32))
+    return false;
+
+  // find CarryIn def instruction.
+  MachineInstr *Def = MRI.getVRegDef(CarryInReg);
+  while (Def->getOpcode() == TargetOpcode::G_TRUNC) {
+    CarryInReg = Def->getOperand(1).getReg();
+    Def = MRI.getVRegDef(CarryInReg);
+  }
+
+  unsigned Opcode;
+  if (Def->getOpcode() == TargetOpcode::G_UADDE) {
+    // carry set by prev ADD.
+
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::COPY), X86::EFLAGS)
+        .addReg(CarryInReg);
+
+    if (!RBI.constrainGenericRegister(CarryInReg, X86::GR32RegClass, MRI))
+      return false;
+
+    Opcode = X86::ADC32rr;
+  } else if (auto val = getConstantVRegVal(CarryInReg, MRI)) {
+    // carry is constant, support only 0.
+    if (*val != 0)
+      return false;
+
+    Opcode = X86::ADD32rr;
+  } else
+    return false;
+
+  MachineInstr &AddInst =
+      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode), DstReg)
+           .addReg(Op0Reg)
+           .addReg(Op1Reg);
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::COPY), CarryOutReg)
+      .addReg(X86::EFLAGS);
+
+  if (!constrainSelectedInstRegOperands(AddInst, TII, TRI, RBI) ||
+      !RBI.constrainGenericRegister(CarryOutReg, X86::GR32RegClass, MRI))
+    return false;
 
   I.eraseFromParent();
   return true;

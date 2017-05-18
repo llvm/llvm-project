@@ -4,12 +4,12 @@ define void @foo(<2 x i32>* %a) {
 ; CHECK: .func foo
 ; CHECK: ld.v2.u32
 ; CHECK-NEXT: ld.v2.u32
-; CHECK-NEXT: add.s32
-; CHECK-NEXT: add.s32
+; CHECK-NEXT: ld.v2.u32
 ; CHECK-NEXT: ld.v2.u32
 ; CHECK-NEXT: add.s32
 ; CHECK-NEXT: add.s32
-; CHECK-NEXT: ld.v2.u32
+; CHECK-NEXT: add.s32
+; CHECK-NEXT: add.s32
 ; CHECK-NEXT: add.s32
 ; CHECK-NEXT: add.s32
   %ptr0 = getelementptr <2 x i32>, <2 x i32>* %a, i32 0

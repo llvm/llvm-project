@@ -151,6 +151,14 @@ uint64_t check_integer_overflows(int i) {
   uint64_t *b;
   uint64_t b2 = b[4608 * 1024 * 1024] + 1;
 
+// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}} 
+  f0(4608 * 1024 * 1024);
+  f0(4608ul * 1024 * 1024);
+// expected-warning@+1 2{{overflow in expression; result is 536870912 with type 'int'}} 
+  f1(4608 * 1024 * 1024, 4608 * 1024 * 1024);
+// expected-warning@+1 2{{overflow in expression; result is 536870912 with type 'int'}} 
+  f2(4608 * 1024 * 1024, 4608 * 1024 * 1024);
+
 // expected-warning@+1 2{{overflow in expression; result is 536870912 with type 'int'}}
   int j1 = i ? (4608 * 1024 * 1024) : (4608 * 1024 * 1024);
 

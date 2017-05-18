@@ -58,45 +58,12 @@ char BranchProbabilityInfoWrapperPass::ID = 0;
 static const uint32_t LBH_TAKEN_WEIGHT = 124;
 static const uint32_t LBH_NONTAKEN_WEIGHT = 4;
 
-/// \brief Unreachable-terminating branch taken weight.
+/// \brief Unreachable-terminating branch taken probability.
 ///
-/// This is the weight for a branch being taken to a block that terminates
+/// This is the probability for a branch being taken to a block that terminates
 /// (eventually) in unreachable. These are predicted as unlikely as possible.
-static const uint32_t UR_TAKEN_WEIGHT = 1;
-
-/// \brief Unreachable-terminating branch not-taken weight.
-///
-/// This is the weight for a branch not being taken toward a block that
-/// terminates (eventually) in unreachable. Such a branch is essentially never
-/// taken. Set the weight to an absurdly high value so that nested loops don't
-/// easily subsume it.
-static const uint32_t UR_NONTAKEN_WEIGHT = 1024*1024 - 1;
-
-/// \brief Returns the branch probability for unreachable edge according to
-/// heuristic.
-///
-/// This is the branch probability being taken to a block that terminates
-/// (eventually) in unreachable. These are predicted as unlikely as possible.
-static BranchProbability getUnreachableProbability(uint64_t UnreachableCount) {
-  assert(UnreachableCount > 0 && "UnreachableCount must be > 0");
-  return BranchProbability::getBranchProbability(
-      UR_TAKEN_WEIGHT,
-      (UR_TAKEN_WEIGHT + UR_NONTAKEN_WEIGHT) * UnreachableCount);
-}
-
-/// \brief Returns the branch probability for reachable edge according to
-/// heuristic.
-///
-/// This is the branch probability not being taken toward a block that
-/// terminates (eventually) in unreachable. Such a branch is essentially never
-/// taken. Set the weight to an absurdly high value so that nested loops don't
-/// easily subsume it.
-static BranchProbability getReachableProbability(uint64_t ReachableCount) {
-  assert(ReachableCount > 0 && "ReachableCount must be > 0");
-  return BranchProbability::getBranchProbability(
-      UR_NONTAKEN_WEIGHT,
-      (UR_TAKEN_WEIGHT + UR_NONTAKEN_WEIGHT) * ReachableCount);
-}
+/// All reachable probability will equally share the remaining part.
+static const BranchProbability UR_TAKEN_PROB = BranchProbability::getRaw(1);
 
 /// \brief Weight for a branch taken going into a cold block.
 ///
@@ -232,8 +199,10 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
     return true;
   }
 
-  auto UnreachableProb = getUnreachableProbability(UnreachableEdges.size());
-  auto ReachableProb = getReachableProbability(ReachableEdges.size());
+  auto UnreachableProb = UR_TAKEN_PROB;
+  auto ReachableProb =
+      (BranchProbability::getOne() - UR_TAKEN_PROB * UnreachableEdges.size()) /
+      ReachableEdges.size();
 
   for (unsigned SuccIdx : UnreachableEdges)
     setEdgeProbability(BB, SuccIdx, UnreachableProb);
@@ -319,7 +288,7 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   // If the unreachable heuristic is more strong then we use it for this edge.
   if (UnreachableIdxs.size() > 0 && ReachableIdxs.size() > 0) {
     auto ToDistribute = BranchProbability::getZero();
-    auto UnreachableProb = getUnreachableProbability(UnreachableIdxs.size());
+    auto UnreachableProb = UR_TAKEN_PROB;
     for (auto i : UnreachableIdxs)
       if (UnreachableProb < BP[i]) {
         ToDistribute += BP[i] - UnreachableProb;

@@ -302,7 +302,7 @@ static void setStaticAnalyzerCheckerOpts(const ClangTidyOptions &Opts,
 
 typedef std::vector<std::pair<std::string, bool>> CheckersList;
 
-static CheckersList getCheckersControlList(GlobList &Filter) {
+static CheckersList getCheckersControlList(ClangTidyContext &Context) {
   CheckersList List;
 
   const auto &RegisteredCheckers =
@@ -310,7 +310,7 @@ static CheckersList getCheckersControlList(GlobList &Filter) {
   bool AnalyzerChecksEnabled = false;
   for (StringRef CheckName : RegisteredCheckers) {
     std::string ClangTidyCheckName((AnalyzerCheckNamePrefix + CheckName).str());
-    AnalyzerChecksEnabled |= Filter.contains(ClangTidyCheckName);
+    AnalyzerChecksEnabled |= Context.isCheckEnabled(ClangTidyCheckName);
   }
 
   if (!AnalyzerChecksEnabled)
@@ -324,8 +324,10 @@ static CheckersList getCheckersControlList(GlobList &Filter) {
   for (StringRef CheckName : RegisteredCheckers) {
     std::string ClangTidyCheckName((AnalyzerCheckNamePrefix + CheckName).str());
 
-    if (CheckName.startswith("core") || Filter.contains(ClangTidyCheckName))
+    if (CheckName.startswith("core") ||
+        Context.isCheckEnabled(ClangTidyCheckName)) {
       List.emplace_back(CheckName, true);
+    }
   }
   return List;
 }
@@ -371,8 +373,7 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
   AnalyzerOptions->Config["cfg-temporary-dtors"] =
       Context.getOptions().AnalyzeTemporaryDtors ? "true" : "false";
 
-  GlobList &Filter = Context.getChecksFilter();
-  AnalyzerOptions->CheckersControlList = getCheckersControlList(Filter);
+  AnalyzerOptions->CheckersControlList = getCheckersControlList(Context);
   if (!AnalyzerOptions->CheckersControlList.empty()) {
     setStaticAnalyzerCheckerOpts(Context.getOptions(), AnalyzerOptions);
     AnalyzerOptions->AnalysisStoreOpt = RegionStoreModel;
@@ -391,13 +392,12 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
 
 std::vector<std::string> ClangTidyASTConsumerFactory::getCheckNames() {
   std::vector<std::string> CheckNames;
-  GlobList &Filter = Context.getChecksFilter();
   for (const auto &CheckFactory : *CheckFactories) {
-    if (Filter.contains(CheckFactory.first))
+    if (Context.isCheckEnabled(CheckFactory.first))
       CheckNames.push_back(CheckFactory.first);
   }
 
-  for (const auto &AnalyzerCheck : getCheckersControlList(Filter))
+  for (const auto &AnalyzerCheck : getCheckersControlList(Context))
     CheckNames.push_back(AnalyzerCheckNamePrefix + AnalyzerCheck.first);
 
   std::sort(CheckNames.begin(), CheckNames.end());

@@ -2841,25 +2841,6 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
          "non-imported submodule?");
 }
 
-serialization::SubmoduleID 
-ASTWriter::inferSubmoduleIDFromLocation(SourceLocation Loc) {
-  if (Loc.isInvalid() || !WritingModule)
-    return 0; // No submodule
-    
-  // Find the module that owns this location.
-  ModuleMap &ModMap = PP->getHeaderSearchInfo().getModuleMap();
-  Module *OwningMod 
-    = ModMap.inferModuleFromLocation(FullSourceLoc(Loc,PP->getSourceManager()));
-  if (!OwningMod)
-    return 0;
-  
-  // Check whether this submodule is part of our own module.
-  if (WritingModule != OwningMod && !OwningMod->isSubModuleOf(WritingModule))
-    return 0;
-  
-  return getSubmoduleID(OwningMod);
-}
-
 void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
                                               bool isModule) {
   llvm::SmallDenseMap<const DiagnosticsEngine::DiagState *, unsigned, 64>

@@ -289,6 +289,39 @@ TEST_F(BinaryStreamTest, StreamRefBounds) {
   }
 }
 
+TEST_F(BinaryStreamTest, DropOperations) {
+  std::vector<uint8_t> InputData = {1, 2, 3, 4, 5, 4, 3, 2, 1};
+  auto RefData = makeArrayRef(InputData);
+  initializeInput(InputData, 1);
+
+  ArrayRef<uint8_t> Result;
+  BinaryStreamRef Original(InputData, support::little);
+  ASSERT_EQ(InputData.size(), Original.getLength());
+
+  EXPECT_NO_ERROR(Original.readBytes(0, InputData.size(), Result));
+  EXPECT_EQ(RefData, Result);
+
+  auto Dropped = Original.drop_front(2);
+  EXPECT_NO_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result));
+  EXPECT_EQ(RefData.drop_front(2), Result);
+
+  Dropped = Original.drop_back(2);
+  EXPECT_NO_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result));
+  EXPECT_EQ(RefData.drop_back(2), Result);
+
+  Dropped = Original.keep_front(2);
+  EXPECT_NO_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result));
+  EXPECT_EQ(RefData.take_front(2), Result);
+
+  Dropped = Original.keep_back(2);
+  EXPECT_NO_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result));
+  EXPECT_EQ(RefData.take_back(2), Result);
+
+  Dropped = Original.drop_symmetric(2);
+  EXPECT_NO_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result));
+  EXPECT_EQ(RefData.drop_front(2).drop_back(2), Result);
+}
+
 // Test that we can write to a BinaryStream without a StreamWriter.
 TEST_F(BinaryStreamTest, MutableBinaryByteStreamBounds) {
   std::vector<uint8_t> InputData = {'T', 'e', 's', 't', '\0'};
