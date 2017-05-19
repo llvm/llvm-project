@@ -43,6 +43,8 @@ using namespace clang;
 
 /// isObjCAtKeyword - Return true if we have an ObjC keyword identifier.
 bool Token::isObjCAtKeyword(tok::ObjCKeywordKind objcKey) const {
+  if (isAnnotation())
+    return false;
   if (IdentifierInfo *II = getIdentifierInfo())
     return II->getObjCKeywordID() == objcKey;
   return false;
@@ -50,6 +52,8 @@ bool Token::isObjCAtKeyword(tok::ObjCKeywordKind objcKey) const {
 
 /// getObjCKeywordID - Return the ObjC keyword kind.
 tok::ObjCKeywordKind Token::getObjCKeywordID() const {
+  if (isAnnotation())
+    return tok::objc_not_keyword;
   IdentifierInfo *specId = getIdentifierInfo();
   return specId ? specId->getObjCKeywordID() : tok::objc_not_keyword;
 }
