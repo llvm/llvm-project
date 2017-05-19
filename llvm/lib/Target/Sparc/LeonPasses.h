@@ -32,7 +32,6 @@ protected:
   std::vector<int> UsedRegisters;
 
 protected:
-  LEONMachineFunctionPass(TargetMachine &tm, char &ID);
   LEONMachineFunctionPass(char &ID);
 
   int GetRegIndexForOperand(MachineInstr &MI, int OperandIndex);
@@ -48,7 +47,7 @@ class LLVM_LIBRARY_VISIBILITY InsertNOPLoad : public LEONMachineFunctionPass {
 public:
   static char ID;
 
-  InsertNOPLoad(TargetMachine &tm);
+  InsertNOPLoad();
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -62,7 +61,7 @@ class LLVM_LIBRARY_VISIBILITY FixFSMULD : public LEONMachineFunctionPass {
 public:
   static char ID;
 
-  FixFSMULD(TargetMachine &tm);
+  FixFSMULD();
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -74,7 +73,7 @@ class LLVM_LIBRARY_VISIBILITY ReplaceFMULS : public LEONMachineFunctionPass {
 public:
   static char ID;
 
-  ReplaceFMULS(TargetMachine &tm);
+  ReplaceFMULS();
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -89,7 +88,7 @@ class LLVM_LIBRARY_VISIBILITY DetectRoundChange
 public:
   static char ID;
 
-  DetectRoundChange(TargetMachine &tm);
+  DetectRoundChange();
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -102,7 +101,7 @@ class LLVM_LIBRARY_VISIBILITY FixAllFDIVSQRT : public LEONMachineFunctionPass {
 public:
   static char ID;
 
-  FixAllFDIVSQRT(TargetMachine &tm);
+  FixAllFDIVSQRT();
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {

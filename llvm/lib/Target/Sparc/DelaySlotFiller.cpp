@@ -96,7 +96,7 @@ namespace {
 /// createSparcDelaySlotFillerPass - Returns a pass that fills in delay
 /// slots in Sparc MachineFunctions
 ///
-FunctionPass *llvm::createSparcDelaySlotFillerPass(TargetMachine &tm) {
+FunctionPass *llvm::createSparcDelaySlotFillerPass() {
   return new Filler;
 }
 

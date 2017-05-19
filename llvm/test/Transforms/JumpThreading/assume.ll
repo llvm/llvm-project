@@ -56,6 +56,50 @@ return:                                           ; preds = %entry, %if.then
   ret i32 %retval.0
 }
 
+@g = external global i32
+
+; Check that we do prove a fact using an assume within the block.
+; FIXME: We can fold the assume based on the semantics of assume.
+; CHECK-LABEL: @can_fold_assume
+; CHECK: %notnull = icmp ne i32* %array, null
+; CHECK-NEXT: call void @llvm.assume(i1 %notnull)
+; CHECK-NEXT: ret void
+define void @can_fold_assume(i32* %array) {
+  %notnull = icmp ne i32* %array, null
+  call void @llvm.assume(i1 %notnull)
+  br i1 %notnull, label %normal, label %error
+
+normal:
+  ret void
+
+error:
+  store atomic i32 0, i32* @g unordered, align 4
+  ret void
+}
+
+declare void @f(i1)
+declare void @exit()
+; We can fold the assume but not the uses before the assume.
+define void @dont_fold_incorrectly(i32* %array) {
+; CHECK-LABEL:@dont_fold_incorrectly
+; CHECK: @f(i1 %notnull)
+; CHECK-NEXT: exit()
+; CHECK-NEXT: assume(i1 %notnull)
+; CHECK-NEXT: ret void
+  %notnull = icmp ne i32* %array, null
+  call void @f(i1 %notnull)
+  call void @exit()
+  call void @llvm.assume(i1 %notnull)
+  br i1 %notnull, label %normal, label %error
+
+normal:
+  ret void
+
+error:
+  store atomic i32 0, i32* @g unordered, align 4
+  ret void
+}
+
 ; Function Attrs: nounwind
 declare void @llvm.assume(i1) #1
 

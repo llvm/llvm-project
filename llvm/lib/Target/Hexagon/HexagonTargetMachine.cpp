@@ -252,7 +252,7 @@ void HexagonPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
   bool NoOpt = (getOptLevel() == CodeGenOpt::None);
 
-  addPass(createAtomicExpandPass(TM));
+  addPass(createAtomicExpandPass());
   if (!NoOpt) {
     if (EnableLoopPrefetch)
       addPass(createLoopDataPrefetchPass());

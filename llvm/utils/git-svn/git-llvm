@@ -202,6 +202,8 @@ def fix_eol_style_native(rev, sr, svn_sr_path):
     files = git('diff-tree', '--no-commit-id', '--name-only', '-r', rev, '--',
                 sr).split('\n')
     files = [f.split('/', 1)[1] for f in files]
+    # Skip files that don't exist in SVN yet.
+    files = [f for f in files if os.path.exists(os.path.join(svn_sr_path, f))]
     # Use ignore_errors because 'svn propget' prints errors if the file doesn't
     # have the named property. There doesn't seem to be a way to suppress that.
     eol_props = svn(svn_sr_path, 'propget', 'svn:eol-style', *files,

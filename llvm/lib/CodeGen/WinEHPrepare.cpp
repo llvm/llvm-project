@@ -54,7 +54,7 @@ namespace {
 class WinEHPrepare : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.
-  WinEHPrepare(const TargetMachine *TM = nullptr) : FunctionPass(ID) {}
+  WinEHPrepare() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &Fn) override;
 
@@ -94,12 +94,10 @@ private:
 } // end anonymous namespace
 
 char WinEHPrepare::ID = 0;
-INITIALIZE_TM_PASS(WinEHPrepare, "winehprepare", "Prepare Windows exceptions",
-                   false, false)
+INITIALIZE_PASS(WinEHPrepare, "winehprepare", "Prepare Windows exceptions",
+                false, false)
 
-FunctionPass *llvm::createWinEHPass(const TargetMachine *TM) {
-  return new WinEHPrepare(TM);
-}
+FunctionPass *llvm::createWinEHPass() { return new WinEHPrepare(); }
 
 bool WinEHPrepare::runOnFunction(Function &Fn) {
   if (!Fn.hasPersonalityFn())

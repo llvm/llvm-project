@@ -13,8 +13,8 @@ define <8 x i64>@test_int_x86_avx512_mask_vpmadd52h_uq_512(<8 x i64> %x0, <8 x i
 ; CHECK-NEXT:    vpmadd52huq %zmm2, %zmm1, %zmm4 {%k1}
 ; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; CHECK-NEXT:    vpmadd52huq %zmm2, %zmm1, %zmm0 {%k1}
-; CHECK-NEXT:    vpaddq %zmm0, %zmm4, %zmm0
 ; CHECK-NEXT:    vpmadd52huq %zmm2, %zmm1, %zmm2 {%k1} {z}
+; CHECK-NEXT:    vpaddq %zmm0, %zmm4, %zmm0
 ; CHECK-NEXT:    vpaddq %zmm2, %zmm3, %zmm1
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
@@ -41,8 +41,8 @@ define <8 x i64>@test_int_x86_avx512_maskz_vpmadd52h_uq_512(<8 x i64> %x0, <8 x 
 ; CHECK-NEXT:    vpmadd52huq %zmm2, %zmm1, %zmm4 {%k1} {z}
 ; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; CHECK-NEXT:    vpmadd52huq %zmm2, %zmm1, %zmm0 {%k1} {z}
-; CHECK-NEXT:    vpaddq %zmm0, %zmm4, %zmm0
 ; CHECK-NEXT:    vpmadd52huq %zmm2, %zmm1, %zmm2 {%k1} {z}
+; CHECK-NEXT:    vpaddq %zmm0, %zmm4, %zmm0
 ; CHECK-NEXT:    vpaddq %zmm2, %zmm3, %zmm1
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
@@ -69,8 +69,8 @@ define <8 x i64>@test_int_x86_avx512_mask_vpmadd52l_uq_512(<8 x i64> %x0, <8 x i
 ; CHECK-NEXT:    vpmadd52luq %zmm2, %zmm1, %zmm4 {%k1}
 ; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; CHECK-NEXT:    vpmadd52luq %zmm2, %zmm1, %zmm0 {%k1}
-; CHECK-NEXT:    vpaddq %zmm0, %zmm4, %zmm0
 ; CHECK-NEXT:    vpmadd52luq %zmm2, %zmm1, %zmm2 {%k1} {z}
+; CHECK-NEXT:    vpaddq %zmm0, %zmm4, %zmm0
 ; CHECK-NEXT:    vpaddq %zmm2, %zmm3, %zmm1
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
@@ -97,8 +97,8 @@ define <8 x i64>@test_int_x86_avx512_maskz_vpmadd52l_uq_512(<8 x i64> %x0, <8 x 
 ; CHECK-NEXT:    vpmadd52luq %zmm2, %zmm1, %zmm4 {%k1} {z}
 ; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; CHECK-NEXT:    vpmadd52luq %zmm2, %zmm1, %zmm0 {%k1} {z}
-; CHECK-NEXT:    vpaddq %zmm0, %zmm4, %zmm0
 ; CHECK-NEXT:    vpmadd52luq %zmm2, %zmm1, %zmm2 {%k1} {z}
+; CHECK-NEXT:    vpaddq %zmm0, %zmm4, %zmm0
 ; CHECK-NEXT:    vpaddq %zmm2, %zmm3, %zmm1
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq

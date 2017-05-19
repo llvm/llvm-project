@@ -299,21 +299,20 @@ define void @test8(i1 %c, <6 x i32>* %dst.addr, <6 x i32> %src1,<6 x i32> %src2)
 ; GENERIC-NEXT:    testb %dil, %dil
 ; GENERIC-NEXT:    jne LBB7_4
 ; GENERIC-NEXT:  ## BB#5:
-; GENERIC-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; GENERIC-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; GENERIC-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; GENERIC-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; GENERIC-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
 ; GENERIC-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; GENERIC-NEXT:    jmp LBB7_6
 ; GENERIC-NEXT:  LBB7_4:
-; GENERIC-NEXT:    movd %r9d, %xmm1
-; GENERIC-NEXT:    movd %ecx, %xmm2
-; GENERIC-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; GENERIC-NEXT:    movd %r8d, %xmm3
+; GENERIC-NEXT:    movd %r9d, %xmm2
+; GENERIC-NEXT:    movd %ecx, %xmm3
+; GENERIC-NEXT:    movd %r8d, %xmm4
 ; GENERIC-NEXT:    movd %edx, %xmm1
 ; GENERIC-NEXT:  LBB7_6:
+; GENERIC-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; GENERIC-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
 ; GENERIC-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; GENERIC-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; GENERIC-NEXT:    psubd {{.*}}(%rip), %xmm1
 ; GENERIC-NEXT:    psubd {{.*}}(%rip), %xmm0
 ; GENERIC-NEXT:    movq %xmm0, 16(%rsi)
@@ -340,19 +339,16 @@ define void @test8(i1 %c, <6 x i32>* %dst.addr, <6 x i32> %src1,<6 x i32> %src2)
 ; ATOM-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; ATOM-NEXT:    jmp LBB7_6
+; ATOM-NEXT:  LBB7_4:
+; ATOM-NEXT:    movd %r9d, %xmm2
+; ATOM-NEXT:    movd %ecx, %xmm3
+; ATOM-NEXT:    movd %r8d, %xmm4
+; ATOM-NEXT:    movd %edx, %xmm1
+; ATOM-NEXT:  LBB7_6:
 ; ATOM-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
 ; ATOM-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
 ; ATOM-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; ATOM-NEXT:    jmp LBB7_6
-; ATOM-NEXT:  LBB7_4:
-; ATOM-NEXT:    movd %r9d, %xmm1
-; ATOM-NEXT:    movd %ecx, %xmm2
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; ATOM-NEXT:    movd %r8d, %xmm3
-; ATOM-NEXT:    movd %edx, %xmm1
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; ATOM-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; ATOM-NEXT:  LBB7_6:
 ; ATOM-NEXT:    psubd {{.*}}(%rip), %xmm0
 ; ATOM-NEXT:    psubd {{.*}}(%rip), %xmm1
 ; ATOM-NEXT:    movq %xmm0, 16(%rsi)

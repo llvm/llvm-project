@@ -746,9 +746,9 @@ define void @interleave_24i8_in(<24 x i8>* %p, <8 x i8>* %q1, <8 x i8>* %q2, <8 
 ; SSE2-LABEL: interleave_24i8_in:
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    movdqa %xmm1, %xmm3
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
@@ -791,17 +791,17 @@ define void @interleave_24i8_in(<24 x i8>* %p, <8 x i8>* %q1, <8 x i8>* %q2, <8 
 ; SSE42:       # BB#0:
 ; SSE42-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE42-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE42-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
 ; SSE42-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE42-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; SSE42-NEXT:    movdqa %xmm0, %xmm2
-; SSE42-NEXT:    pshufb {{.*#+}} xmm2 = xmm2[0,8],zero,xmm2[1,9],zero,xmm2[2,10],zero,xmm2[3,11],zero,xmm2[4,12],zero,xmm2[5]
-; SSE42-NEXT:    movdqa %xmm1, %xmm3
+; SSE42-NEXT:    movdqa %xmm0, %xmm1
+; SSE42-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,8],zero,xmm1[1,9],zero,xmm1[2,10],zero,xmm1[3,11],zero,xmm1[4,12],zero,xmm1[5]
+; SSE42-NEXT:    movdqa %xmm2, %xmm3
 ; SSE42-NEXT:    pshufb {{.*#+}} xmm3 = zero,zero,xmm3[0],zero,zero,xmm3[1],zero,zero,xmm3[2],zero,zero,xmm3[3],zero,zero,xmm3[4],zero
-; SSE42-NEXT:    por %xmm2, %xmm3
+; SSE42-NEXT:    por %xmm1, %xmm3
 ; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[13],zero,xmm0[6,14],zero,xmm0[7,15],zero,xmm0[u,u,u,u,u,u,u,u]
-; SSE42-NEXT:    pshufb {{.*#+}} xmm1 = zero,xmm1[5],zero,zero,xmm1[6],zero,zero,xmm1[7,u,u,u,u,u,u,u,u]
-; SSE42-NEXT:    por %xmm0, %xmm1
-; SSE42-NEXT:    movq %xmm1, 16(%rdi)
+; SSE42-NEXT:    pshufb {{.*#+}} xmm2 = zero,xmm2[5],zero,zero,xmm2[6],zero,zero,xmm2[7,u,u,u,u,u,u,u,u]
+; SSE42-NEXT:    por %xmm0, %xmm2
+; SSE42-NEXT:    movq %xmm2, 16(%rdi)
 ; SSE42-NEXT:    movdqu %xmm3, (%rdi)
 ; SSE42-NEXT:    retq
 ;
@@ -809,16 +809,16 @@ define void @interleave_24i8_in(<24 x i8>* %p, <8 x i8>* %q1, <8 x i8>* %q2, <8 
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[0,8],zero,xmm0[1,9],zero,xmm0[2,10],zero,xmm0[3,11],zero,xmm0[4,12],zero,xmm0[5]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm3 = zero,zero,xmm1[0],zero,zero,xmm1[1],zero,zero,xmm1[2],zero,zero,xmm1[3],zero,zero,xmm1[4],zero
-; AVX-NEXT:    vpor %xmm3, %xmm2, %xmm2
+; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[0,8],zero,xmm0[1,9],zero,xmm0[2,10],zero,xmm0[3,11],zero,xmm0[4,12],zero,xmm0[5]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm3 = zero,zero,xmm2[0],zero,zero,xmm2[1],zero,zero,xmm2[2],zero,zero,xmm2[3],zero,zero,xmm2[4],zero
+; AVX-NEXT:    vpor %xmm3, %xmm1, %xmm1
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[13],zero,xmm0[6,14],zero,xmm0[7,15],zero,xmm0[u,u,u,u,u,u,u,u]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = zero,xmm1[5],zero,zero,xmm1[6],zero,zero,xmm1[7,u,u,u,u,u,u,u,u]
-; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufb {{.*#+}} xmm2 = zero,xmm2[5],zero,zero,xmm2[6],zero,zero,xmm2[7,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, 16(%rdi)
-; AVX-NEXT:    vmovdqu %xmm2, (%rdi)
+; AVX-NEXT:    vmovdqu %xmm1, (%rdi)
 ; AVX-NEXT:    retq
   %s1 = load <8 x i8>, <8 x i8>* %q1, align 4
   %s2 = load <8 x i8>, <8 x i8>* %q2, align 4

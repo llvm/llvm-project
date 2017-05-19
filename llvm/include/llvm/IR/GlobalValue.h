@@ -161,6 +161,10 @@ protected:
     Parent = parent;
   }
 
+  ~GlobalValue() {
+    removeDeadConstantUsers();   // remove any dead constants using this.
+  }
+
 public:
   enum ThreadLocalMode {
     NotThreadLocal = 0,
@@ -171,10 +175,6 @@ public:
   };
 
   GlobalValue(const GlobalValue &) = delete;
-
-  ~GlobalValue() override {
-    removeDeadConstantUsers();   // remove any dead constants using this.
-  }
 
   unsigned getAlignment() const;
 

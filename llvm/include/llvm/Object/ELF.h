@@ -235,10 +235,7 @@ ELFFile<ELFT>::getSection(const Elf_Sym *Sym, Elf_Sym_Range Symbols,
   uint32_t Index = *IndexOrErr;
   if (Index == 0)
     return nullptr;
-  auto SectionsOrErr = sections();
-  if (!SectionsOrErr)
-    return SectionsOrErr.takeError();
-  return object::getSection<ELFT>(*SectionsOrErr, Index);
+  return getSection(Index);
 }
 
 template <class ELFT>

@@ -70,6 +70,8 @@ class TypeSerializer : public TypeVisitorCallbacks {
   MutableArrayRef<uint8_t> getCurrentRecordData();
   Error writeRecordPrefix(TypeLeafKind Kind);
   TypeIndex insertRecordBytesPrivate(MutableArrayRef<uint8_t> Record);
+  TypeIndex insertRecordBytesWithCopy(CVType &Record,
+                                      MutableArrayRef<uint8_t> Data);
 
   Expected<MutableArrayRef<uint8_t>>
   addPadding(MutableArrayRef<uint8_t> Record);

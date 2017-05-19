@@ -17,6 +17,7 @@
 
 #include "llvm/CodeGen/AtomicExpandUtils.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -35,12 +36,10 @@ using namespace llvm;
 
 namespace {
   class AtomicExpand: public FunctionPass {
-    const TargetMachine *TM;
     const TargetLowering *TLI;
   public:
     static char ID; // Pass identification, replacement for typeid
-    explicit AtomicExpand(const TargetMachine *TM = nullptr)
-      : FunctionPass(ID), TM(TM), TLI(nullptr) {
+    AtomicExpand() : FunctionPass(ID), TLI(nullptr) {
       initializeAtomicExpandPass(*PassRegistry::getPassRegistry());
     }
 
@@ -97,12 +96,10 @@ namespace {
 
 char AtomicExpand::ID = 0;
 char &llvm::AtomicExpandID = AtomicExpand::ID;
-INITIALIZE_TM_PASS(AtomicExpand, "atomic-expand", "Expand Atomic instructions",
-                   false, false)
+INITIALIZE_PASS(AtomicExpand, "atomic-expand", "Expand Atomic instructions",
+                false, false)
 
-FunctionPass *llvm::createAtomicExpandPass(const TargetMachine *TM) {
-  return new AtomicExpand(TM);
-}
+FunctionPass *llvm::createAtomicExpandPass() { return new AtomicExpand(); }
 
 namespace {
 // Helper functions to retrieve the size of atomic instructions.
@@ -172,9 +169,14 @@ bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
 } // end anonymous namespace
 
 bool AtomicExpand::runOnFunction(Function &F) {
-  if (!TM || !TM->getSubtargetImpl(F)->enableAtomicExpand())
+  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+  if (!TPC)
     return false;
-  TLI = TM->getSubtargetImpl(F)->getTargetLowering();
+
+  auto &TM = TPC->getTM<TargetMachine>();
+  if (!TM.getSubtargetImpl(F)->enableAtomicExpand())
+    return false;
+  TLI = TM.getSubtargetImpl(F)->getTargetLowering();
 
   SmallVector<Instruction *, 1> AtomicInsts;
 

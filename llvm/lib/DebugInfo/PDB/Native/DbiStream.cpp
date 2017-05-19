@@ -72,14 +72,6 @@ Error DbiStream::reload() {
     return make_error<RawError>(raw_error_code::feature_unsupported,
                                 "Unsupported DBI version.");
 
-  auto IS = Pdb.getPDBInfoStream();
-  if (!IS)
-    return IS.takeError();
-
-  if (Header->Age != IS->getAge())
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "DBI Age does not match PDB Age.");
-
   if (Stream->getLength() !=
       sizeof(DbiStreamHeader) + Header->ModiSubstreamSize +
           Header->SecContrSubstreamSize + Header->SectionMapSize +
