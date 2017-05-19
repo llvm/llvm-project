@@ -67,7 +67,8 @@ private:
   StackID m_immediate_step_from_id;
   lldb::break_id_t m_return_bp_id;
   lldb::addr_t m_return_addr;
-  lldb::addr_t m_swift_error_return_addr;
+  llvm::Optional<Value> m_swift_error_return;
+  bool m_swift_error_check_after_return;
   bool m_stop_others;
   lldb::ThreadPlanSP m_step_out_to_inline_plan_sp; // This plan implements step
                                                    // out to the real function

@@ -3235,10 +3235,11 @@ void SwiftLanguageRuntime::SwiftExceptionPrecondition::AddEnumSpec(
 SwiftLanguageRuntime::SwiftExceptionPrecondition::SwiftExceptionPrecondition() {
 }
 
-ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueObjectAtAddress(
-    lldb::addr_t addr, ConstString name, bool persistent) {
+ValueObjectSP
+SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
+    Value &value, ConstString name, bool persistent)
+{
   ValueObjectSP error_valobj_sp;
-
   Error error;
   SwiftASTContext *ast_context =
       m_process->GetTarget().GetScratchSwiftASTContext(error);
@@ -3246,12 +3247,11 @@ ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueObjectAtAddress(
     return error_valobj_sp;
 
   CompilerType swift_error_proto_type = ast_context->GetErrorType();
-  Value addr_value;
-
+  value.SetCompilerType(swift_error_proto_type);
+  
   error_valobj_sp = ValueObjectConstResult::Create(
-      m_process, swift_error_proto_type, name, addr, eAddressTypeLoad,
-      m_process->GetAddressByteSize());
-
+      m_process, value, name);
+  
   if (error_valobj_sp && error_valobj_sp->GetError().Success()) {
     error_valobj_sp = error_valobj_sp->GetQualifiedRepresentationIfAvailable(
         lldb::eDynamicCanRunTarget, true);
@@ -3991,25 +3991,113 @@ void SwiftLanguageRuntime::DidFinishExecutingUserExpression() {
   }
 }
 
-lldb::addr_t SwiftLanguageRuntime::GetErrorReturnLocationForFrame(
-    lldb::StackFrameSP frame_sp) {
-  lldb::addr_t return_addr = LLDB_INVALID_ADDRESS;
+llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
+    lldb::StackFrameSP frame_sp)
+{
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  llvm::Optional<Value> error_val;
 
+  llvm::StringRef error_reg_name;
+  ArchSpec arch_spec(GetTargetRef().GetArchitecture());
+  switch (arch_spec.GetMachine()) {
+    case llvm::Triple::ArchType::arm:
+      error_reg_name = "r6";
+      break;
+    case llvm::Triple::ArchType::aarch64:
+      error_reg_name = "x19";
+      break;
+    case llvm::Triple::ArchType::x86_64:
+      error_reg_name = "r12";
+      break;
+    default:
+      break;
+  }
+  
+  
+  if (error_reg_name.empty())
+      return error_val;
+      
+  RegisterContextSP reg_ctx = frame_sp->GetRegisterContext();
+  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(error_reg_name);
+  lldbassert(reg_info && "didn't get the right register name for swift error register");
+  if (!reg_info)
+    return error_val;
+  
+  RegisterValue reg_value;
+  if (!reg_ctx->ReadRegister(reg_info, reg_value))
+  {
+    // Do some logging here.
+    return error_val;
+  }
+  
+  DataExtractor reg_data;
+  if (!reg_value.GetData(reg_data))
+    return error_val;
+    
+  lldb::addr_t error_addr = reg_data.GetPointer(0);
+  if (error_addr == 0)
+    return error_val;
+
+  Value val;
+  if (reg_value.GetScalarValue(val.GetScalar())) {
+    val.SetValueType(Value::eValueTypeScalar);
+    val.SetContext(Value::eContextTypeRegisterInfo,
+                     const_cast<RegisterInfo *>(reg_info));
+    error_val = val;
+  }
+//  if (log)
+//    log->Printf("Found return address: 0x%" PRIu64 " from register %s.",
+//                return_addr,
+//                error_reg_name.str().c_str());
+  
+  return error_val;
+}
+
+llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationBeforeReturn(
+    lldb::StackFrameSP frame_sp, bool &need_to_check_after_return) {
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  llvm::Optional<Value> error_val;
+  
   if (!frame_sp)
-    return return_addr;
-
+  {
+    need_to_check_after_return = false;
+    return error_val;
+  }
+  
+  // For Architectures where the error isn't returned in a register,
+  // there's a magic variable that points to the value.  Check that first:
+  
   ConstString error_location_name("$error");
   VariableListSP variables_sp = frame_sp->GetInScopeVariableList(false);
   VariableSP error_loc_var_sp = variables_sp->FindVariable(
       error_location_name, eValueTypeVariableArgument);
   if (error_loc_var_sp) {
+    need_to_check_after_return = false;
+    
     ValueObjectSP error_loc_val_sp = frame_sp->GetValueObjectForFrameVariable(
         error_loc_var_sp, eNoDynamicValues);
     if (error_loc_val_sp && error_loc_val_sp->GetError().Success())
-      return_addr = error_loc_val_sp->GetAddressOf();
-  }
+      error_val = error_loc_val_sp->GetValue();
 
-  return return_addr;
+//    if (log)
+//      log->Printf("Found return address: 0x%" PRIu64 " from error variable.", return_addr);
+    return error_val;
+  }
+  
+  // Otherwise, see if we know which register it lives in from the calling convention.
+  // This should probably go in the ABI plugin not here, but the Swift ABI can change with
+  // swiftlang versions and that would make it awkward in the ABI.
+  
+  Function *func = frame_sp->GetSymbolContext(eSymbolContextFunction).function;
+  if (!func)
+  {
+    need_to_check_after_return = false;
+    return error_val;
+  }
+  
+  need_to_check_after_return = func->CanThrow();
+  return error_val;
+
 }
 
 //------------------------------------------------------------------

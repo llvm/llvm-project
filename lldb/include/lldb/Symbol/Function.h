@@ -346,10 +346,14 @@ public:
   ///
   /// @param[in] range
   ///     The section offset based address for this function.
+  ///
+  /// @param[in] can_throw
+  ///     Pass in true if this is a function know to throw
   //------------------------------------------------------------------
   Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
            lldb::user_id_t func_type_uid, const Mangled &mangled,
-           Type *func_type, const AddressRange &range);
+           Type *func_type, const AddressRange &range,
+           bool can_throw = false);
 
   //------------------------------------------------------------------
   /// Construct with a compile unit, function UID, function type UID,
@@ -381,11 +385,14 @@ public:
   ///
   /// @param[in] range
   ///     The section offset based address for this function.
+  ///
+  /// @param[in] can_throw
+  ///     Pass in true if this is a function know to throw
   //------------------------------------------------------------------
   Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
            lldb::user_id_t func_type_uid, const char *mangled, Type *func_type,
-           const AddressRange &range);
-
+           const AddressRange &range, bool can_throw = false);
+           
   //------------------------------------------------------------------
   /// Destructor.
   //------------------------------------------------------------------
@@ -595,6 +602,8 @@ public:
   ///     'false' otherwise.
   //------------------------------------------------------------------
   bool IsTopLevelFunction();
+  
+  bool CanThrow() const { return m_flags.Test(flagsFunctionCanThrow); }
 
   lldb::DisassemblerSP GetInstructions(const ExecutionContext &exe_ctx,
                                        const char *flavor,
@@ -606,7 +615,9 @@ public:
 protected:
   enum {
     flagsCalculatedPrologueSize =
-        (1 << 0) ///< Have we already tried to calculate the prologue size?
+        (1 << 0), ///< Have we already tried to calculate the prologue size?
+    flagsFunctionCanThrow =
+        (1 << 1) ///< Do we know whether this function throws?
   };
 
   //------------------------------------------------------------------
