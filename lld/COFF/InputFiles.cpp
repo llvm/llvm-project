@@ -137,13 +137,13 @@ void ObjectFile::initializeChunks() {
     // CodeView sections are stored to a different vector because they are
     // not linked in the regular manner.
     if (Name == ".debug" || Name.startswith(".debug$")) {
-      DebugChunks.push_back(new (Alloc) SectionChunk(this, Sec));
+      DebugChunks.push_back(make<SectionChunk>(this, Sec));
       continue;
     }
 
     if (Sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_REMOVE)
       continue;
-    auto *C = new (Alloc) SectionChunk(this, Sec);
+    auto *C = make<SectionChunk>(this, Sec);
     Chunks.push_back(C);
     SparseChunks[I] = C;
   }
@@ -200,7 +200,7 @@ SymbolBody *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
                                       bool IsFirst) {
   StringRef Name;
   if (Sym.isCommon()) {
-    auto *C = new (Alloc) CommonChunk(Sym);
+    auto *C = make<CommonChunk>(Sym);
     Chunks.push_back(C);
     COFFObj->getSymbolName(Sym, Name);
     Symbol *S =
@@ -221,7 +221,7 @@ SymbolBody *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
     if (Sym.isExternal())
       return Symtab->addAbsolute(Name, Sym)->body();
     else
-      return new (Alloc) DefinedAbsolute(Name, Sym);
+      return make<DefinedAbsolute>(Name, Sym);
   }
   int32_t SectionNumber = Sym.getSectionNumber();
   if (SectionNumber == llvm::COFF::IMAGE_SYM_DEBUG)
@@ -258,8 +258,8 @@ SymbolBody *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
         Symtab->addRegular(this, Name, SC->isCOMDAT(), Sym.getGeneric(), SC);
     B = cast<DefinedRegular>(S->body());
   } else
-    B = new (Alloc) DefinedRegular(this, /*Name*/ "", SC->isCOMDAT(),
-                                   /*IsExternal*/ false, Sym.getGeneric(), SC);
+    B = make<DefinedRegular>(this, /*Name*/ "", SC->isCOMDAT(),
+                             /*IsExternal*/ false, Sym.getGeneric(), SC);
   if (SC->isCOMDAT() && Sym.getValue() == 0 && !AuxP)
     SC->setSymbol(B);
 
@@ -301,8 +301,8 @@ void ImportFile::parse() {
     fatal("broken import library");
 
   // Read names and create an __imp_ symbol.
-  StringRef Name = StringAlloc.save(StringRef(Buf + sizeof(*Hdr)));
-  StringRef ImpName = StringAlloc.save("__imp_" + Name);
+  StringRef Name = Saver.save(StringRef(Buf + sizeof(*Hdr)));
+  StringRef ImpName = Saver.save("__imp_" + Name);
   const char *NameStart = Buf + sizeof(coff_import_header) + Name.size() + 1;
   DLLName = StringRef(NameStart);
   StringRef ExtName;

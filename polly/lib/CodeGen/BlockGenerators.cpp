@@ -227,7 +227,7 @@ void BlockGenerator::copyInstScalar(ScopStmt &Stmt, Instruction *Inst,
     if (!NewOperand) {
       assert(!isa<StoreInst>(NewInst) &&
              "Store instructions are always needed!");
-      delete NewInst;
+      NewInst->deleteValue();
       return;
     }
 

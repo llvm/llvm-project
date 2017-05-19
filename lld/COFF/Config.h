@@ -155,7 +155,6 @@ struct Configuration {
   uint32_t MajorOSVersion = 6;
   uint32_t MinorOSVersion = 0;
   bool DynamicBase = true;
-  bool AllowBind = true;
   bool NxCompat = true;
   bool AllowIsolation = true;
   bool TerminalServerAware = true;
@@ -164,7 +163,6 @@ struct Configuration {
   bool AppContainer = false;
 
   // This is for debugging.
-  bool DebugPdb = false;
   bool DumpPdb = false;
 };
 
