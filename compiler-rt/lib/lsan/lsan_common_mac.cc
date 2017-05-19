@@ -110,7 +110,8 @@ void ProcessGlobalRegions(Frontier *frontier) {
 
     for (const __sanitizer::LoadedModule::AddressRange &range :
          modules[i].ranges()) {
-      if (range.executable || !range.readable) continue;
+      // Sections storing global variables are writable and non-executable
+      if (range.executable || !range.writable) continue;
 
       ScanGlobalRange(range.beg, range.end, frontier);
     }

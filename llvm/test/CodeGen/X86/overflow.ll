@@ -27,16 +27,14 @@ define i128 @mulhioverflow(i64 %a, i64 %b, i64 %c) nounwind {
 ; X32-NEXT:    addl $32, %esp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andl $1, %edi
-; X32-NEXT:    xorl %ecx, %ecx
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    adcl $0, %eax
-; X32-NEXT:    adcl $0, %ecx
-; X32-NEXT:    sbbl %edx, %edx
-; X32-NEXT:    andl $1, %edx
+; X32-NEXT:    setb %cl
+; X32-NEXT:    movzbl %cl, %ecx
 ; X32-NEXT:    movl %edi, (%esi)
 ; X32-NEXT:    movl %eax, 4(%esi)
 ; X32-NEXT:    movl %ecx, 8(%esi)
-; X32-NEXT:    movl %edx, 12(%esi)
+; X32-NEXT:    movl $0, 12(%esi)
 ; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    leal -8(%ebp), %esp
 ; X32-NEXT:    popl %esi

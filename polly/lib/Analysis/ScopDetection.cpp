@@ -96,6 +96,11 @@ static cl::opt<std::string> OnlyFunction(
     cl::value_desc("string"), cl::ValueRequired, cl::init(""),
     cl::cat(PollyCategory));
 
+static cl::opt<bool>
+    AllowFullFunction("polly-detect-full-functions",
+                      cl::desc("Allow the detection of full functions"),
+                      cl::init(false), cl::cat(PollyCategory));
+
 static cl::opt<std::string> OnlyRegion(
     "polly-only-region",
     cl::desc("Only run on certain regions (The provided identifier must "
@@ -1502,8 +1507,9 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
 
   // SCoP cannot contain the entry block of the function, because we need
   // to insert alloca instruction there when translate scalar to array.
-  if (CurRegion.getEntry() ==
-      &(CurRegion.getEntry()->getParent()->getEntryBlock()))
+  if (!AllowFullFunction &&
+      CurRegion.getEntry() ==
+          &(CurRegion.getEntry()->getParent()->getEntryBlock()))
     return invalid<ReportEntry>(Context, /*Assert=*/true, CurRegion.getEntry());
 
   if (!allBlocksValid(Context))

@@ -39,6 +39,8 @@ class Twine;
 class AMDGPUDisassembler : public MCDisassembler {
 private:
   mutable ArrayRef<uint8_t> Bytes;
+  mutable uint32_t Literal;
+  mutable bool HasLiteral;
 
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx) :

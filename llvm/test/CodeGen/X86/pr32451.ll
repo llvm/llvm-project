@@ -25,12 +25,6 @@ define i8** @japi1_convert_690(i8**, i8***, i32) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
 ; CHECK-NEXT:    movl 4(%ecx), %edx
 ; CHECK-NEXT:    movb (%edx), %bl
-; CHECK-NEXT:    # implicit-def: %EDX
-; CHECK-NEXT:    movb %bl, %dl
-; CHECK-NEXT:    andl $1, %edx
-; CHECK-NEXT:    kmovw %edx, %k0
-; CHECK-NEXT:    kmovw %k0, %edx
-; CHECK-NEXT:    movb %dl, %bl
 ; CHECK-NEXT:    andb $1, %bl
 ; CHECK-NEXT:    movzbl %bl, %edx
 ; CHECK-NEXT:    movl %edx, (%esp)

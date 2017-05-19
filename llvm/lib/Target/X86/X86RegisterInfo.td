@@ -511,7 +511,7 @@ def VR256X : RegisterClass<"X86", [v8f32, v4f64, v32i8, v16i16, v8i32, v4i64],
                            256, (sequence "YMM%u", 0, 31)>;
 
 // Mask registers
-def VK1     : RegisterClass<"X86", [i1],    16,  (sequence "K%u", 0, 7)> {let Size = 16;}
+def VK1     : RegisterClass<"X86", [v1i1],  16,  (sequence "K%u", 0, 7)> {let Size = 16;}
 def VK2     : RegisterClass<"X86", [v2i1],  16,  (add VK1)> {let Size = 16;}
 def VK4     : RegisterClass<"X86", [v4i1],  16,  (add VK2)> {let Size = 16;}
 def VK8     : RegisterClass<"X86", [v8i1],  16,  (add VK4)> {let Size = 16;}
@@ -519,7 +519,7 @@ def VK16    : RegisterClass<"X86", [v16i1], 16, (add VK8)> {let Size = 16;}
 def VK32    : RegisterClass<"X86", [v32i1], 32, (add VK16)> {let Size = 32;}
 def VK64    : RegisterClass<"X86", [v64i1], 64, (add VK32)> {let Size = 64;}
 
-def VK1WM   : RegisterClass<"X86", [i1],    16,  (sub VK1, K0)> {let Size = 16;}
+def VK1WM   : RegisterClass<"X86", [v1i1],  16,  (sub VK1, K0)> {let Size = 16;}
 def VK2WM   : RegisterClass<"X86", [v2i1],  16,  (sub VK2, K0)> {let Size = 16;}
 def VK4WM   : RegisterClass<"X86", [v4i1],  16,  (sub VK4, K0)> {let Size = 16;}
 def VK8WM   : RegisterClass<"X86", [v8i1],  16,  (sub VK8, K0)> {let Size = 16;}

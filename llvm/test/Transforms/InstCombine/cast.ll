@@ -1470,3 +1470,42 @@ define i32 @test93(i32 %A) {
   %D = trunc i96 %C to i32
   ret i32 %D
 }
+
+; The following three tests show a miscompile of sext + lshr + trunc patterns.
+; PR33078
+
+define i8 @pr33078_1(i8 %A) {
+; CHECK-LABEL: @pr33078_1(
+; CHECK-NEXT:    [[C:%.*]] = ashr i8 [[A:%.*]], 7
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %B = sext i8 %A to i16
+  %C = lshr i16 %B, 8
+  %D = trunc i16 %C to i8
+  ret i8 %D
+}
+
+define i12 @pr33078_2(i8 %A) {
+; CHECK-LABEL: @pr33078_2(
+; CHECK-NEXT:    [[C:%.*]] = ashr i8 [[A:%.*]], 4
+; CHECK-NEXT:    [[D:%.*]] = sext i8 [[C]] to i12
+; CHECK-NEXT:    ret i12 [[D]]
+;
+  %B = sext i8 %A to i16
+  %C = lshr i16 %B, 4
+  %D = trunc i16 %C to i12
+  ret i12 %D
+}
+
+define i4 @pr33078_3(i8 %A) {
+; CHECK-LABEL: @pr33078_3(
+; CHECK-NEXT:    [[B:%.*]] = sext i8 [[A:%.*]] to i16
+; CHECK-NEXT:    [[C:%.*]] = lshr i16 [[B]], 12
+; CHECK-NEXT:    [[D:%.*]] = trunc i16 [[C]] to i4
+; CHECK-NEXT:    ret i4 [[D]]
+;
+  %B = sext i8 %A to i16
+  %C = lshr i16 %B, 12
+  %D = trunc i16 %C to i4
+  ret i4 %D
+}

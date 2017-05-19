@@ -88,6 +88,6 @@ return:                                           ; preds = %return.loopexit, %e
 }
 
 ; CHECK:      ReadAccess :=	[Reduction Type: NONE] [Fortran array descriptor: xs] [Scalar: 0]
-; CHECK-NEXT:     [p_0_loaded_from_n] -> { Stmt_9[i0] -> MemRef0[o0] };
+; CHECK-NEXT:     [p_0_loaded_from_n, MemRef0_fortranarr_size, MemRef1_fortranarr_size] -> { Stmt_9[i0] -> MemRef0[o0] };
 ; CHECK-NEXT: MayWriteAccess :=	[Reduction Type: NONE] [Fortran array descriptor: ys] [Scalar: 0]
-; CHECK-NEXT:     [p_0_loaded_from_n] -> { Stmt_9[i0] -> MemRef1[o0] };
+; CHECK-NEXT:     [p_0_loaded_from_n, MemRef0_fortranarr_size, MemRef1_fortranarr_size] -> { Stmt_9[i0] -> MemRef1[o0] };

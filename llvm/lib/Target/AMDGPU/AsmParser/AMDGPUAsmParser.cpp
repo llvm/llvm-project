@@ -2796,6 +2796,7 @@ void AMDGPUAsmParser::cvtDSImpl(MCInst &Inst, const OperandVector &Operands,
 void AMDGPUAsmParser::cvtExp(MCInst &Inst, const OperandVector &Operands) {
   OptionalImmIndexMap OptionalIdx;
 
+  unsigned OperandIdx[4];
   unsigned EnMask = 0;
   int SrcIdx = 0;
 
@@ -2804,15 +2805,18 @@ void AMDGPUAsmParser::cvtExp(MCInst &Inst, const OperandVector &Operands) {
 
     // Add the register arguments
     if (Op.isReg()) {
-      EnMask |= (1 << SrcIdx);
+      assert(SrcIdx < 4);
+      OperandIdx[SrcIdx] = Inst.size();
       Op.addRegOperands(Inst, 1);
       ++SrcIdx;
       continue;
     }
 
     if (Op.isOff()) {
-      ++SrcIdx;
+      assert(SrcIdx < 4);
+      OperandIdx[SrcIdx] = Inst.size();
       Inst.addOperand(MCOperand::createReg(AMDGPU::NoRegister));
+      ++SrcIdx;
       continue;
     }
 
@@ -2826,6 +2830,22 @@ void AMDGPUAsmParser::cvtExp(MCInst &Inst, const OperandVector &Operands) {
 
     // Handle optional arguments
     OptionalIdx[Op.getImmTy()] = i;
+  }
+
+  assert(SrcIdx == 4);
+
+  bool Compr = false;
+  if (OptionalIdx.find(AMDGPUOperand::ImmTyExpCompr) != OptionalIdx.end()) {
+    Compr = true;
+    Inst.getOperand(OperandIdx[1]) = Inst.getOperand(OperandIdx[2]);
+    Inst.getOperand(OperandIdx[2]).setReg(AMDGPU::NoRegister);
+    Inst.getOperand(OperandIdx[3]).setReg(AMDGPU::NoRegister);
+  }
+
+  for (auto i = 0; i < SrcIdx; ++i) {
+    if (Inst.getOperand(OperandIdx[i]).getReg() != AMDGPU::NoRegister) {
+      EnMask |= Compr? (0x3 << i * 2) : (0x1 << i);
+    }
   }
 
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyExpVM);
@@ -3642,6 +3662,7 @@ static const OptionalOperand AMDGPUOptionalOperandTable[] = {
   {"src0_sel",   AMDGPUOperand::ImmTySdwaSrc0Sel, false, nullptr},
   {"src1_sel",   AMDGPUOperand::ImmTySdwaSrc1Sel, false, nullptr},
   {"dst_unused", AMDGPUOperand::ImmTySdwaDstUnused, false, nullptr},
+  {"compr", AMDGPUOperand::ImmTyExpCompr, true, nullptr },
   {"vm", AMDGPUOperand::ImmTyExpVM, true, nullptr},
   {"op_sel", AMDGPUOperand::ImmTyOpSel, false, nullptr},
   {"op_sel_hi", AMDGPUOperand::ImmTyOpSelHi, false, nullptr},

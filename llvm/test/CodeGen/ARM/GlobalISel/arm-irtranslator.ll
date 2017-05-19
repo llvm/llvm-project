@@ -699,3 +699,33 @@ define i32 @test_shufflevector_v4s32_v2s32(i32 %arg1, i32 %arg2, i32 %arg3, i32 
   %res = extractelement <2 x i32> %shuffle, i32 0
   ret i32 %res
 }
+
+%struct.v2s32 = type { <2 x i32> }
+
+define i32 @test_constantstruct_v2s32() {
+; CHECK-LABEL: name: test_constantstruct_v2s32
+; CHECK: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
+; CHECK: [[C2:%[0-9]+]](s32) = G_CONSTANT i32 2
+; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[C1]](s32), [[C2]](s32)
+; CHECK: G_EXTRACT_VECTOR_ELT [[VEC]](<2 x s32>)
+  %vec = extractvalue %struct.v2s32 {<2 x i32><i32 1, i32 2>}, 0
+  %elt = extractelement <2 x i32> %vec, i32 0
+  ret i32 %elt
+}
+
+%struct.v2s32.s32.s32 = type { <2 x i32>, i32, i32 }
+
+define i32 @test_constantstruct_v2s32_s32_s32() {
+; CHECK-LABEL: name: test_constantstruct_v2s32_s32_s32
+; CHECK: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
+; CHECK: [[C2:%[0-9]+]](s32) = G_CONSTANT i32 2
+; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[C1]](s32), [[C2]](s32)
+; CHECK: [[C3:%[0-9]+]](s32) = G_CONSTANT i32 3
+; CHECK: [[C4:%[0-9]+]](s32) = G_CONSTANT i32 4
+; CHECK: [[CS:%[0-9]+]](s128) = G_SEQUENCE [[VEC]](<2 x s32>), 0, [[C3]](s32), 64, [[C4]](s32), 96
+; CHECK: [[EXT:%[0-9]+]](<2 x s32>) = G_EXTRACT [[CS]](s128), 0
+; CHECK: G_EXTRACT_VECTOR_ELT [[EXT]](<2 x s32>)
+  %vec = extractvalue %struct.v2s32.s32.s32 {<2 x i32><i32 1, i32 2>, i32 3, i32 4}, 0
+  %elt = extractelement <2 x i32> %vec, i32 0
+  ret i32 %elt
+}

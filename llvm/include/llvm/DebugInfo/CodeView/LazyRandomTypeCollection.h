@@ -1,4 +1,4 @@
-//===- RandomAccessTypeVisitor.h ------------------------------ *- C++ --*-===//
+//===- LazyRandomTypeCollection.h ---------------------------- *- C++ --*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_RANDOMACCESSTYPEVISITOR_H
-#define LLVM_DEBUGINFO_CODEVIEW_RANDOMACCESSTYPEVISITOR_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_LAZYRANDOMTYPECOLLECTION_H
+#define LLVM_DEBUGINFO_CODEVIEW_LAZYRANDOMTYPECOLLECTION_H
 
-#include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/DebugInfo/CodeView/TypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabase.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabaseVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
@@ -21,7 +21,6 @@ namespace llvm {
 namespace codeview {
 
 class TypeDatabase;
-class TypeServerHandler;
 class TypeVisitorCallbacks;
 
 /// \brief Provides amortized O(1) random access to a CodeView type stream.
@@ -40,32 +39,48 @@ class TypeVisitorCallbacks;
 /// consumer much better access time, because the consumer can find the nearest
 /// index in this array, and do a linear scan forward only from there.
 ///
-/// RandomAccessTypeVisitor implements this algorithm, but additionally goes one
-/// step further by caching offsets of every record that has been visited at
+/// LazyRandomTypeCollection implements this algorithm, but additionally goes
+/// one step further by caching offsets of every record that has been visited at
 /// least once.  This way, even repeated visits of the same record will never
 /// require more than one linear scan.  For a type stream of N elements divided
 /// into M chunks of roughly equal size, this yields a worst case lookup time
 /// of O(N/M) and an amortized time of O(1).
-class RandomAccessTypeVisitor {
+class LazyRandomTypeCollection : public TypeCollection {
   typedef FixedStreamArray<TypeIndexOffset> PartialOffsetArray;
 
 public:
-  RandomAccessTypeVisitor(const CVTypeArray &Types, uint32_t NumRecords,
-                          PartialOffsetArray PartialOffsets);
+  explicit LazyRandomTypeCollection(uint32_t RecordCountHint);
+  LazyRandomTypeCollection(StringRef Data, uint32_t RecordCountHint);
+  LazyRandomTypeCollection(ArrayRef<uint8_t> Data, uint32_t RecordCountHint);
+  LazyRandomTypeCollection(const CVTypeArray &Types, uint32_t RecordCountHint,
+                           PartialOffsetArray PartialOffsets);
+  LazyRandomTypeCollection(const CVTypeArray &Types, uint32_t RecordCountHint);
 
-  Error visitTypeIndex(TypeIndex Index, TypeVisitorCallbacks &Callbacks);
+  void reset(ArrayRef<uint8_t> Data);
+  void reset(StringRef Data);
 
-  const TypeDatabase &database() const { return Database; }
+  CVType getType(TypeIndex Index) override;
+  StringRef getTypeName(TypeIndex Index) override;
+  bool contains(TypeIndex Index) override;
+  uint32_t size() override;
+  uint32_t capacity() override;
+  Optional<TypeIndex> getFirst() override;
+  Optional<TypeIndex> getNext(TypeIndex Prev) override;
 
 private:
+  const TypeDatabase &database() const { return Database; }
+  Error ensureTypeExists(TypeIndex Index);
+
   Error visitRangeForType(TypeIndex TI);
+  Error fullScanForType(TypeIndex TI);
   Error visitRange(TypeIndex Begin, uint32_t BeginOffset, TypeIndex End);
+  Error visitOneRecord(TypeIndex TI, uint32_t Offset, CVType &Record);
 
   /// Visited records get automatically added to the type database.
   TypeDatabase Database;
 
   /// The type array to allow random access visitation of.
-  const CVTypeArray &Types;
+  CVTypeArray Types;
 
   /// The database visitor which adds new records to the database.
   TypeDatabaseVisitor DatabaseVisitor;
@@ -85,4 +100,4 @@ private:
 } // end namespace codeview
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_CODEVIEW_RANDOMACCESSTYPEVISITOR_H
+#endif // LLVM_DEBUGINFO_CODEVIEW_LAZYRANDOMTYPECOLLECTION_H

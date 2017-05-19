@@ -141,7 +141,6 @@ define <4 x float> @test11(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 ze
 ; SKX-LABEL: test11:
 ; SKX:       # BB#0: # %entry
 ; SKX-NEXT:    vxorps {{.*}}(%rip){1to4}, %xmm2, %xmm0
-; SKX-NEXT:    andl $1, %edi
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vfmadd231ss %xmm1, %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
@@ -150,7 +149,6 @@ define <4 x float> @test11(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 ze
 ; KNL:       # BB#0: # %entry
 ; KNL-NEXT:    vbroadcastss {{.*}}(%rip), %xmm0
 ; KNL-NEXT:    vxorps %xmm0, %xmm2, %xmm0
-; KNL-NEXT:    andl $1, %edi
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vfmadd231ss %xmm1, %xmm1, %xmm0 {%k1}
 ; KNL-NEXT:    retq
@@ -186,7 +184,6 @@ define <2 x double> @test13(<2 x double> %a, <2 x double> %b, <2 x double> %c, i
 ; SKX-LABEL: test13:
 ; SKX:       # BB#0: # %entry
 ; SKX-NEXT:    vxorpd {{.*}}(%rip), %xmm0, %xmm0
-; SKX-NEXT:    andl $1, %edi
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
@@ -194,10 +191,10 @@ define <2 x double> @test13(<2 x double> %a, <2 x double> %b, <2 x double> %c, i
 ; KNL-LABEL: test13:
 ; KNL:       # BB#0: # %entry
 ; KNL-NEXT:    vxorpd {{.*}}(%rip), %xmm0, %xmm0
-; KNL-NEXT:    andl $1, %edi
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 {%k1}
 ; KNL-NEXT:    retq
+
 entry:
   %sub.i = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %a
   %0 = tail call <2 x double> @llvm.x86.avx512.mask.vfmadd.sd(<2 x double> %sub.i, <2 x double> %b, <2 x double> %c, i8 %mask, i32 4)

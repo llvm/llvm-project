@@ -47,16 +47,20 @@ l2:
   ret float %c1
 }
 
-; FIXME: Can use vcmpeqss and extract from the mask here in AVX512.
 define i32 @test3(float %a, float %b) {
-; ALL-LABEL: test3:
-; ALL:       ## BB#0:
-; ALL-NEXT:    vucomiss %xmm1, %xmm0
-; ALL-NEXT:    setnp %al
-; ALL-NEXT:    sete %cl
-; ALL-NEXT:    andb %al, %cl
-; ALL-NEXT:    movzbl %cl, %eax
-; ALL-NEXT:    retq
+; KNL-LABEL: test3:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    movzbl %al, %eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test3:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    movzbl %al, %eax
+; SKX-NEXT:    retq
 
   %cmp10.i = fcmp oeq float %a, %b
   %conv11.i = zext i1 %cmp10.i to i32
@@ -69,7 +73,7 @@ define float @test5(float %p) #0 {
 ; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vucomiss %xmm1, %xmm0
 ; ALL-NEXT:    jne LBB3_1
-; ALL-NEXT:    jp  LBB3_1
+; ALL-NEXT:    jp LBB3_1
 ; ALL-NEXT:  ## BB#2: ## %return
 ; ALL-NEXT:    retq
 ; ALL-NEXT:  LBB3_1: ## %if.end
@@ -158,47 +162,22 @@ B:
 }
 
 define i32 @test10(i64 %b, i64 %c, i1 %d) {
-; KNL-LABEL: test10:
-; KNL:       ## BB#0:
-; KNL-NEXT:    andl $1, %edx
-; KNL-NEXT:    kmovw %edx, %k0
-; KNL-NEXT:    cmpq %rsi, %rdi
-; KNL-NEXT:    sete %al
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    kmovw %eax, %k1
-; KNL-NEXT:    korw %k1, %k0, %k1
-; KNL-NEXT:    kxorw %k1, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    testb %al, %al
-; KNL-NEXT:    je LBB8_1
-; KNL-NEXT:  ## BB#2: ## %if.end.i
-; KNL-NEXT:    movl $6, %eax
-; KNL-NEXT:    retq
-; KNL-NEXT:  LBB8_1: ## %if.then.i
-; KNL-NEXT:    movl $5, %eax
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: test10:
-; SKX:       ## BB#0:
-; SKX-NEXT:    andl $1, %edx
-; SKX-NEXT:    kmovd %edx, %k0
-; SKX-NEXT:    cmpq %rsi, %rdi
-; SKX-NEXT:    sete %al
-; SKX-NEXT:    andl $1, %eax
-; SKX-NEXT:    kmovd %eax, %k1
-; SKX-NEXT:    korw %k1, %k0, %k1
-; SKX-NEXT:    kxorw %k1, %k0, %k0
-; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    andl $1, %eax
-; SKX-NEXT:    testb %al, %al
-; SKX-NEXT:    je LBB8_1
-; SKX-NEXT:  ## BB#2: ## %if.end.i
-; SKX-NEXT:    movl $6, %eax
-; SKX-NEXT:    retq
-; SKX-NEXT:  LBB8_1: ## %if.then.i
-; SKX-NEXT:    movl $5, %eax
-; SKX-NEXT:    retq
+; ALL-LABEL: test10:
+; ALL:       ## BB#0:
+; ALL-NEXT:    movl %edx, %eax
+; ALL-NEXT:    andb $1, %al
+; ALL-NEXT:    cmpq %rsi, %rdi
+; ALL-NEXT:    sete %cl
+; ALL-NEXT:    orb %dl, %cl
+; ALL-NEXT:    andb $1, %cl
+; ALL-NEXT:    cmpb %cl, %al
+; ALL-NEXT:    je LBB8_1
+; ALL-NEXT:  ## BB#2: ## %if.end.i
+; ALL-NEXT:    movl $6, %eax
+; ALL-NEXT:    retq
+; ALL-NEXT:  LBB8_1: ## %if.then.i
+; ALL-NEXT:    movl $5, %eax
+; ALL-NEXT:    retq
 
   %cmp8.i = icmp eq i64 %b, %c
   %or1 = or i1 %d, %cmp8.i
