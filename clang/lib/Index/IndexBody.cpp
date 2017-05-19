@@ -246,6 +246,9 @@ public:
   }
 
   bool VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *E) {
+    if (E->isClassReceiver())
+      IndexCtx.handleReference(E->getClassReceiver(), E->getReceiverLocation(),
+                               Parent, ParentDC);
     if (E->isExplicitProperty()) {
       SmallVector<SymbolRelation, 2> Relations;
       SymbolRoleSet Roles = getRolesForRef(E, Relations);
