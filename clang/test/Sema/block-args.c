@@ -37,7 +37,7 @@ void f0() {
 
 // rdar://problem/8962770
 void test4() {
-  int (^f)() = ^((x)) { }; // expected-error {{expected ')'}} expected-warning {{type specifier missing}} expected-note {{to match this}}
+  int (^f)() = ^((x)) { }; // expected-warning {{type specifier missing}} expected-error {{type-id cannot have a name}}
 }
 
 // rdar://problem/9170609

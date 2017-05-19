@@ -1,0 +1,24 @@
+; RUN: llvm-pdbdump yaml2pdb -pdb=%t.1.pdb %p/Inputs/merge1.yaml
+; RUN: llvm-pdbdump yaml2pdb -pdb=%t.2.pdb %p/Inputs/merge2.yaml
+; RUN: llvm-pdbdump merge -pdb=%t.3.pdb %t.1.pdb %t.2.pdb
+; RUN: llvm-pdbdump raw -tpi-records %t.3.pdb | FileCheck -check-prefix=MERGED %s
+; RUN: llvm-pdbdump raw -tpi-records %t.3.pdb | FileCheck -check-prefix=ARGLIST %s
+
+
+MERGED: Type Info Stream (TPI)
+MERGED: Record count: 9
+MERGED-DAG: PointeeType: unsigned
+MERGED-DAG: PointeeType: unsigned*
+MERGED-DAG: PointeeType: unsigned**
+MERGED-DAG: PointeeType: __int64
+MERGED-DAG: PointeeType: __int64*
+MERGED-DAG: Name: OnlyInMerge1
+MERGED-DAG: Name: OnlyInMerge2
+MERGED-DAG: TypeLeafKind: LF_ARGLIST
+
+ARGLIST: TypeLeafKind: LF_ARGLIST
+ARGLIST-NEXT: NumArgs: 3
+ARGLIST-NEXT: Arguments [
+ARGLIST-NEXT: ArgType: unsigned
+ARGLIST-NEXT: ArgType: unsigned*
+ARGLIST-NEXT: ArgType: unsigned**

@@ -13,10 +13,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
-#include <cassert>
 #include <climits>
-#include <cstdint>
-#include <type_traits>
 
 namespace llvm {
 
@@ -32,7 +29,7 @@ namespace llvm {
 /// Also, the default constructed value zero initializes the integer.
 template <typename IntT, int Bits = sizeof(IntT) * CHAR_BIT>
 class PointerEmbeddedInt {
-  uintptr_t Value = 0;
+  uintptr_t Value;
 
   // Note: This '<' is correct; using '<=' would result in some shifts
   // overflowing their storage types.
@@ -57,12 +54,15 @@ class PointerEmbeddedInt {
   explicit PointerEmbeddedInt(uintptr_t Value, RawValueTag) : Value(Value) {}
 
 public:
-  PointerEmbeddedInt() = default;
+  PointerEmbeddedInt() : Value(0) {}
 
-  PointerEmbeddedInt(IntT I) { *this = I; }
+  PointerEmbeddedInt(IntT I) {
+    *this = I;
+  }
 
   PointerEmbeddedInt &operator=(IntT I) {
-    assert((std::is_signed<IntT>::value ? isInt<Bits>(I) : isUInt<Bits>(I)) &&
+    assert((std::is_signed<IntT>::value ? llvm::isInt<Bits>(I)
+                                        : llvm::isUInt<Bits>(I)) &&
            "Integer has bits outside those preserved!");
     Value = static_cast<uintptr_t>(I) << Shift;
     return *this;
@@ -81,17 +81,15 @@ public:
 // types.
 template <typename IntT, int Bits>
 class PointerLikeTypeTraits<PointerEmbeddedInt<IntT, Bits>> {
-  using T = PointerEmbeddedInt<IntT, Bits>;
+  typedef PointerEmbeddedInt<IntT, Bits> T;
 
 public:
   static inline void *getAsVoidPointer(const T &P) {
     return reinterpret_cast<void *>(P.Value);
   }
-
   static inline T getFromVoidPointer(void *P) {
     return T(reinterpret_cast<uintptr_t>(P), typename T::RawValueTag());
   }
-
   static inline T getFromVoidPointer(const void *P) {
     return T(reinterpret_cast<uintptr_t>(P), typename T::RawValueTag());
   }
@@ -103,19 +101,17 @@ public:
 // itself can be a key.
 template <typename IntT, int Bits>
 struct DenseMapInfo<PointerEmbeddedInt<IntT, Bits>> {
-  using T = PointerEmbeddedInt<IntT, Bits>;
-  using IntInfo = DenseMapInfo<IntT>;
+  typedef PointerEmbeddedInt<IntT, Bits> T;
+
+  typedef DenseMapInfo<IntT> IntInfo;
 
   static inline T getEmptyKey() { return IntInfo::getEmptyKey(); }
   static inline T getTombstoneKey() { return IntInfo::getTombstoneKey(); }
-
   static unsigned getHashValue(const T &Arg) {
     return IntInfo::getHashValue(Arg);
   }
-
   static bool isEqual(const T &LHS, const T &RHS) { return LHS == RHS; }
 };
+}
 
-} // end namespace llvm
-
-#endif // LLVM_ADT_POINTEREMBEDDEDINT_H
+#endif

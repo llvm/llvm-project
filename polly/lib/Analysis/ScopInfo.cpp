@@ -94,6 +94,13 @@ static int const MaxDisjunctsInDomain = 20;
 // number of disjunct when adding non-convex sets to the context.
 static int const MaxDisjunctsInContext = 4;
 
+static cl::opt<int>
+    OptComputeOut("polly-analysis-computeout",
+                  cl::desc("Bound the scop analysis by a maximal amount of "
+                           "computational steps (0 means no bound)"),
+                  cl::Hidden, cl::init(1000000), cl::ZeroOrMore,
+                  cl::cat(PollyCategory));
+
 static cl::opt<bool> PollyRemarksMinimal(
     "polly-remarks-minimal",
     cl::desc("Do not emit remarks about assumptions that are known"),
@@ -799,7 +806,7 @@ void MemoryAccess::computeBoundsOnAccessRelation(unsigned ElementSize) {
   if (Range.isFullSet())
     return;
 
-  if (Range.isWrappedSet() | Range.isSignWrappedSet())
+  if (Range.isWrappedSet() || Range.isSignWrappedSet())
     return;
 
   bool isWrapping = Range.isSignWrappedSet();
@@ -2246,13 +2253,20 @@ void Scop::simplifyContexts() {
   InvalidContext = isl_set_align_params(InvalidContext, getParamSpace());
 }
 
+struct MinMaxData {
+  Scop::MinMaxVectorTy &MinMaxAccesses;
+  Scop &S;
+};
+
 /// Add the minimal/maximal access in @p Set to @p User.
 static isl_stat buildMinMaxAccess(__isl_take isl_set *Set, void *User) {
-  Scop::MinMaxVectorTy *MinMaxAccesses = (Scop::MinMaxVectorTy *)User;
+  auto Data = (struct MinMaxData *)User;
+  Scop::MinMaxVectorTy *MinMaxAccesses = &Data->MinMaxAccesses;
   isl_pw_multi_aff *MinPMA, *MaxPMA;
   isl_pw_aff *LastDimAff;
   isl_aff *OneAff;
   unsigned Pos;
+  isl_ctx *Ctx = isl_set_get_ctx(Set);
 
   Set = isl_set_remove_divs(Set);
 
@@ -2287,8 +2301,19 @@ static isl_stat buildMinMaxAccess(__isl_take isl_set *Set, void *User) {
     }
   }
 
-  MinPMA = isl_set_lexmin_pw_multi_aff(isl_set_copy(Set));
-  MaxPMA = isl_set_lexmax_pw_multi_aff(isl_set_copy(Set));
+  {
+    IslMaxOperationsGuard MaxOpGuard(isl_set_get_ctx(Set), OptComputeOut);
+    MinPMA = isl_set_lexmin_pw_multi_aff(isl_set_copy(Set));
+    MaxPMA = isl_set_lexmax_pw_multi_aff(isl_set_copy(Set));
+  }
+
+  if (isl_ctx_last_error(Ctx) == isl_error_quota) {
+    MinPMA = isl_pw_multi_aff_free(MinPMA);
+    MaxPMA = isl_pw_multi_aff_free(MaxPMA);
+    Set = isl_set_free(Set);
+    Data->S.invalidate(COMPLEXITY, DebugLoc());
+    return isl_stat_error;
+  }
 
   MinPMA = isl_pw_multi_aff_coalesce(MinPMA);
   MaxPMA = isl_pw_multi_aff_coalesce(MaxPMA);
@@ -2323,7 +2348,8 @@ static __isl_give isl_set *getAccessDomain(MemoryAccess *MA) {
 static bool calculateMinMaxAccess(Scop::AliasGroupTy AliasGroup, Scop &S,
                                   Scop::MinMaxVectorTy &MinMaxAccesses) {
 
-  MinMaxAccesses.reserve(AliasGroup.size());
+  struct MinMaxData Data = {MinMaxAccesses, S};
+  Data.MinMaxAccesses.reserve(AliasGroup.size());
 
   isl_union_set *Domains = S.getDomains();
   isl_union_map *Accesses = isl_union_map_empty(S.getParamSpace());
@@ -2335,8 +2361,8 @@ static bool calculateMinMaxAccess(Scop::AliasGroupTy AliasGroup, Scop &S,
   isl_union_set *Locations = isl_union_map_range(Accesses);
   Locations = isl_union_set_coalesce(Locations);
   Locations = isl_union_set_detect_equalities(Locations);
-  bool Valid = (0 == isl_union_set_foreach_set(Locations, buildMinMaxAccess,
-                                               &MinMaxAccesses));
+  bool Valid =
+      (0 == isl_union_set_foreach_set(Locations, buildMinMaxAccess, &Data));
   isl_union_set_free(Locations);
   return Valid;
 }

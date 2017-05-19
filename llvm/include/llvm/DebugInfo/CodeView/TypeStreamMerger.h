@@ -12,17 +12,20 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace codeview {
 
+class TypeIndex;
 class TypeServerHandler;
+class TypeTableBuilder;
 
 /// Merges one type stream into another. Returns true on success.
 Error mergeTypeStreams(TypeTableBuilder &DestIdStream,
                        TypeTableBuilder &DestTypeStream,
+                       SmallVectorImpl<TypeIndex> &SourceToDest,
                        TypeServerHandler *Handler, const CVTypeArray &Types);
 
 } // end namespace codeview

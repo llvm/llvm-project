@@ -69,7 +69,7 @@ Error TpiStreamBuilder::finalize() {
 
   uint32_t Count = TypeRecords.size();
 
-  H->Version = *VerHeader;
+  H->Version = VerHeader;
   H->HeaderSize = sizeof(TpiStreamHeader);
   H->TypeIndexBegin = codeview::TypeIndex::FirstNonSimpleIndex;
   H->TypeIndexEnd = H->TypeIndexBegin + Count;
