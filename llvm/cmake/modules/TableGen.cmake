@@ -99,7 +99,7 @@ macro(add_tablegen target project)
     set(LLVM_ENABLE_OBJLIB ON)
   endif()
 
-  add_llvm_utility(${target} ${ARGN})
+  add_llvm_executable(${target} DISABLE_LLVM_LINK_LLVM_DYLIB ${ARGN})
   set(LLVM_LINK_COMPONENTS ${${target}_OLD_LLVM_LINK_COMPONENTS})
 
   set(${project}_TABLEGEN "${target}" CACHE
