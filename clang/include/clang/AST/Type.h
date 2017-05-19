@@ -333,15 +333,18 @@ public:
 
   bool hasAddressSpace() const { return Mask & AddressSpaceMask; }
   unsigned getAddressSpace() const { return Mask >> AddressSpaceShift; }
+  bool hasTargetSpecificAddressSpace() const {
+    return getAddressSpace() >= LangAS::FirstTargetAddressSpace;
+  }
   /// Get the address space attribute value to be printed by diagnostics.
   unsigned getAddressSpaceAttributePrintValue() const {
     auto Addr = getAddressSpace();
     // This function is not supposed to be used with language specific
     // address spaces. If that happens, the diagnostic message should consider
     // printing the QualType instead of the address space value.
-    assert(Addr == 0 || Addr >= LangAS::Count);
+    assert(Addr == 0 || hasTargetSpecificAddressSpace());
     if (Addr)
-      return Addr - LangAS::Count;
+      return Addr - LangAS::FirstTargetAddressSpace;
     // TODO: The diagnostic messages where Addr may be 0 should be fixed
     // since it cannot differentiate the situation where 0 denotes the default
     // address space or user specified __attribute__((address_space(0))).

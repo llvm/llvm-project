@@ -385,3 +385,22 @@ Separate separateT;
 // CHECK: [[@LINE-1]]:1 | type-alias/C | Separate | {{.*}} | {{.*}} | Ref,RelCont | rel: 1
 struct Separate separateE;
 // CHECK: [[@LINE-1]]:8 | struct/C | Separate | {{.*}} | {{.*}} | Ref,RelCont | rel: 1
+
+@interface ClassReceivers
+
+@property(class) int p1;
++ (int)implicit;
++ (void)setImplicit:(int)x;
+
+@end
+
+void classReceivers() {
+  ClassReceivers.p1 = 0;
+// CHECK: [[@LINE-1]]:3 | class/ObjC | ClassReceivers | c:objc(cs)ClassReceivers | _OBJC_CLASS_$_ClassReceivers | Ref,RelCont | rel: 1
+  (void)ClassReceivers.p1;
+// CHECK: [[@LINE-1]]:9 | class/ObjC | ClassReceivers | c:objc(cs)ClassReceivers | _OBJC_CLASS_$_ClassReceivers | Ref,RelCont | rel: 1
+  ClassReceivers.implicit = 0;
+// CHECK: [[@LINE-1]]:3 | class/ObjC | ClassReceivers | c:objc(cs)ClassReceivers | _OBJC_CLASS_$_ClassReceivers | Ref,RelCont | rel: 1
+  (void)ClassReceivers.implicit;
+// CHECK: [[@LINE-1]]:9 | class/ObjC | ClassReceivers | c:objc(cs)ClassReceivers | _OBJC_CLASS_$_ClassReceivers | Ref,RelCont | rel: 1
+}

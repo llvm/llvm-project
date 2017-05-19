@@ -2490,7 +2490,7 @@ def err_attribute_address_multiple_qualifiers : Error<
 def err_attribute_address_function_type : Error<
   "function type may not be qualified with an address space">;
 def err_as_qualified_auto_decl : Error<
-  "automatic variable qualified with an address space">;
+  "automatic variable qualified with an%select{| invalid}0 address space">;
 def err_arg_with_address_space : Error<
   "parameter may not be qualified with an address space">;
 def err_field_with_address_space : Error<

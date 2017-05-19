@@ -8842,9 +8842,8 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
                                              const CallExpr *E) {
   auto MakeLdg = [&](unsigned IntrinsicID) {
     Value *Ptr = EmitScalarExpr(E->getArg(0));
-    AlignmentSource AlignSource;
     clang::CharUnits Align =
-        getNaturalPointeeTypeAlignment(E->getArg(0)->getType(), &AlignSource);
+        getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
     return Builder.CreateCall(
         CGM.getIntrinsic(IntrinsicID, {Ptr->getType()->getPointerElementType(),
                                        Ptr->getType()}),

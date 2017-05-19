@@ -1999,41 +1999,6 @@ public:
     llvm_unreachable("unknown context kind!");
   }
 
-  /// diagnoseIdentifier - Return true if the identifier is prohibited and
-  /// should be diagnosed (because it cannot be anything else).
-  bool diagnoseIdentifier() const {
-    switch (Context) {
-    case FileContext:
-    case KNRTypeListContext:
-    case MemberContext:
-    case BlockContext:
-    case ForContext:
-    case InitStmtContext:
-    case ConditionContext:
-    case PrototypeContext:
-    case LambdaExprParameterContext:
-    case TemplateParamContext:
-    case CXXCatchContext:
-    case ObjCCatchContext:
-    case TypeNameContext:
-    case FunctionalCastContext:
-    case ConversionIdContext:
-    case ObjCParameterContext:
-    case ObjCResultContext:
-    case BlockLiteralContext:
-    case CXXNewContext:
-    case LambdaExprContext:
-      return false;
-
-    case AliasDeclContext:
-    case AliasTemplateContext:
-    case TemplateTypeArgContext:
-    case TrailingReturnContext:
-      return true;
-    }
-    llvm_unreachable("unknown context kind!");
-  }
-
   /// Return true if the context permits a C++17 decomposition declarator.
   bool mayHaveDecompositionDeclarator() const {
     switch (Context) {

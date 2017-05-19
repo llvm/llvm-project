@@ -129,14 +129,14 @@ Address
 CodeGenFunction::EmitCXXMemberDataPointerAddress(const Expr *E, Address base,
                                                  llvm::Value *memberPtr,
                                       const MemberPointerType *memberPtrType,
-                                                 AlignmentSource *alignSource) {
+                                                 LValueBaseInfo *BaseInfo) {
   // Ask the ABI to compute the actual address.
   llvm::Value *ptr =
     CGM.getCXXABI().EmitMemberDataPointerAddress(*this, E, base,
                                                  memberPtr, memberPtrType);
 
   QualType memberType = memberPtrType->getPointeeType();
-  CharUnits memberAlign = getNaturalTypeAlignment(memberType, alignSource);
+  CharUnits memberAlign = getNaturalTypeAlignment(memberType, BaseInfo);
   memberAlign =
     CGM.getDynamicOffsetAlignment(base.getAlignment(),
                             memberPtrType->getClass()->getAsCXXRecordDecl(),

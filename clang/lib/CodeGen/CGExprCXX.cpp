@@ -1531,13 +1531,13 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     assert(E->getNumPlacementArgs() == 1);
     const Expr *arg = *E->placement_arguments().begin();
 
-    AlignmentSource alignSource;
-    allocation = EmitPointerWithAlignment(arg, &alignSource);
+    LValueBaseInfo BaseInfo;
+    allocation = EmitPointerWithAlignment(arg, &BaseInfo);
 
     // The pointer expression will, in many cases, be an opaque void*.
     // In these cases, discard the computed alignment and use the
     // formal alignment of the allocated type.
-    if (alignSource != AlignmentSource::Decl)
+    if (BaseInfo.getAlignmentSource() != AlignmentSource::Decl)
       allocation = Address(allocation.getPointer(), allocAlign);
 
     // Set up allocatorArgs for the call to operator delete if it's not

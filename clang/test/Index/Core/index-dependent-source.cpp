@@ -141,3 +141,20 @@ void undefinedTemplateLookup2(UserOfUndefinedTemplateClass<T> &x) {
   x.lookup;
   typename UserOfUndefinedTemplateClass<T>::Type y;
 }
+
+template<typename T> struct Dropper;
+
+template<typename T> struct Trait;
+
+template<typename T>
+struct Recurse : Trait<typename Dropper<T>::Type> { };
+
+template<typename T>
+struct Trait : Recurse<T> {
+};
+
+template<typename T>
+void infiniteTraitRecursion(Trait<T> &t) {
+// Shouldn't crash!
+  t.lookup;
+}
