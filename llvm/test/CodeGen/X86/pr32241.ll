@@ -4,49 +4,57 @@
 define i32 @_Z3foov() {
 ; CHECK-LABEL: _Z3foov:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    subl $20, %esp
+; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:  .Lcfi0:
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    subl $24, %esp
+; CHECK-NEXT:  .Lcfi1:
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:  .Lcfi2:
+; CHECK-NEXT:    .cfi_offset %esi, -8
+; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    movw $10959, {{[0-9]+}}(%esp) # imm = 0x2ACF
 ; CHECK-NEXT:    movw $-15498, {{[0-9]+}}(%esp) # imm = 0xC376
 ; CHECK-NEXT:    movw $19417, {{[0-9]+}}(%esp) # imm = 0x4BD9
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movw {{[0-9]+}}(%esp), %cx
-; CHECK-NEXT:    kxnorw %k0, %k0, %k0
-; CHECK-NEXT:    kshiftrw $15, %k0, %k0
-; CHECK-NEXT:    testw %cx, %cx
-; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; CHECK-NEXT:    kmovw %k0, {{[0-9]+}}(%esp) # 2-byte Spill
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    cmpw $0, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; CHECK-NEXT:    movb %al, {{[0-9]+}}(%esp) # 1-byte Spill
 ; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:    jmp .LBB0_1
-; CHECK-NEXT:  .LBB0_1: # %lor.rhs
+; CHECK-NEXT:  # BB#1: # %lor.rhs
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    kmovd %eax, %k0
-; CHECK-NEXT:    kmovw %k0, {{[0-9]+}}(%esp) # 2-byte Spill
+; CHECK-NEXT:    movb %al, %cl
+; CHECK-NEXT:    movb %cl, {{[0-9]+}}(%esp) # 1-byte Spill
 ; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:  .LBB0_2: # %lor.end
-; CHECK-NEXT:    kmovw {{[0-9]+}}(%esp), %k0 # 2-byte Reload
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    kshiftrw $15, %k1, %k1
-; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    kmovw %k0, {{[0-9]+}}(%esp) # 2-byte Spill
-; CHECK-NEXT:    kmovw %k1, {{[0-9]+}}(%esp) # 2-byte Spill
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al # 1-byte Reload
+; CHECK-NEXT:    movb $1, %cl
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movzbl %al, %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; CHECK-NEXT:    subl %edx, %esi
+; CHECK-NEXT:    setl %al
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movzbl %al, %edx
+; CHECK-NEXT:    xorl $-1, %edx
+; CHECK-NEXT:    cmpl $0, %edx
+; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; CHECK-NEXT:    movb %cl, {{[0-9]+}}(%esp) # 1-byte Spill
 ; CHECK-NEXT:    jne .LBB0_4
-; CHECK-NEXT:    jmp .LBB0_3
-; CHECK-NEXT:  .LBB0_3: # %lor.rhs4
+; CHECK-NEXT:  # BB#3: # %lor.rhs4
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    kmovd %eax, %k0
-; CHECK-NEXT:    kmovw %k0, {{[0-9]+}}(%esp) # 2-byte Spill
+; CHECK-NEXT:    movb %al, %cl
+; CHECK-NEXT:    movb %cl, {{[0-9]+}}(%esp) # 1-byte Spill
 ; CHECK-NEXT:    jmp .LBB0_4
 ; CHECK-NEXT:  .LBB0_4: # %lor.end5
-; CHECK-NEXT:    kmovw {{[0-9]+}}(%esp), %k0 # 2-byte Reload
-; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    movw %ax, %cx
-; CHECK-NEXT:    movw %cx, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al # 1-byte Reload
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movzbl %al, %ecx
+; CHECK-NEXT:    movw %cx, %dx
+; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    addl $20, %esp
+; CHECK-NEXT:    addl $24, %esp
+; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
 entry:
   %aa = alloca i16, align 2

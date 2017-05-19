@@ -336,7 +336,7 @@ void MemoryMappingLayout::DumpListOfModules(
                       current_instrumented_);
     }
     cur_module->addAddressRange(cur_beg, cur_end, prot & kProtectionExecute,
-                                prot & kProtectionRead);
+                                prot & kProtectionWrite);
   }
 }
 

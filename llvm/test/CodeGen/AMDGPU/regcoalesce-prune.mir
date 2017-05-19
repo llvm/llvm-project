@@ -5,7 +5,7 @@
 #
 # CHECK-LABEL: name: func
 # IMPLICIT_DEF should be gone without llc hitting assertion failures.
-# CHECK-NOT: IMPLCITI_DEF
+# CHECK-NOT: IMPLICIT_DEF
 name: func
 tracksRegLiveness: true
 body: |

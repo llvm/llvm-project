@@ -274,7 +274,7 @@ def X86select  : SDNode<"X86ISD::SELECT",
                                              SDTCisSameNumEltsAs<0, 1>]>>;
 
 def X86selects : SDNode<"X86ISD::SELECTS",
-                        SDTypeProfile<1, 3, [SDTCisVT<1, i1>,
+                        SDTypeProfile<1, 3, [SDTCisVT<1, v1i1>,
                                              SDTCisSameAs<0, 2>,
                                              SDTCisSameAs<2, 3>]>>;
 
@@ -441,7 +441,7 @@ def X86Vfpclass    : SDNode<"X86ISD::VFPCLASS",
                                             SDTCisSameNumEltsAs<0,1>,
                                             SDTCisVT<2, i32>]>, []>;
 def X86Vfpclasss   : SDNode<"X86ISD::VFPCLASSS",
-                       SDTypeProfile<1, 2, [SDTCisVT<0, i1>,
+                       SDTypeProfile<1, 2, [SDTCisVT<0, v1i1>,
                                             SDTCisFP<1>, SDTCisVT<2, i32>]>,[]>;
 
 def X86SubVBroadcast : SDNode<"X86ISD::SUBV_BROADCAST",
@@ -451,7 +451,7 @@ def X86SubVBroadcast : SDNode<"X86ISD::SUBV_BROADCAST",
 def X86VBroadcast : SDNode<"X86ISD::VBROADCAST", SDTVBroadcast>;
 def X86VBroadcastm : SDNode<"X86ISD::VBROADCASTM", SDTVBroadcastm>;
 def X86Vextract   : SDNode<"X86ISD::VEXTRACT",  SDTypeProfile<1, 2,
-                              [SDTCisEltOfVec<0, 1>, SDTCisVec<1>,
+                              [SDTCisVec<1>,
                                SDTCisPtrTy<2>]>, []>;
 
 def X86Blendi    : SDNode<"X86ISD::BLENDI",   SDTBlend>;

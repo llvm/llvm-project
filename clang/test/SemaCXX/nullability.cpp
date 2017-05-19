@@ -1,9 +1,11 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -Wno-nullability-declspec %s -verify -Wnullable-to-nonnull-conversion
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -Wno-nullability-declspec %s -verify -Wnullable-to-nonnull-conversion -I%S/Inputs
 
 #if __has_feature(nullability)
 #else
 #  error nullability feature should be defined
 #endif
+
+#include "nullability-completeness.h"
 
 typedef decltype(nullptr) nullptr_t;
 
@@ -129,4 +131,8 @@ void arraysInLambdas() {
   auto withTypedef = [](INTS _Nonnull) {};
   withTypedef(nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
   auto withTypedefBad = [](INTS _Nonnull[2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int [4]')}}
+}
+
+void testNullabilityCompletenessWithTemplate() {
+  Template<int*> tip;
 }

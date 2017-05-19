@@ -646,7 +646,8 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
 // index.
 //
 Expected<bool> FunctionImporter::importFunctions(
-    Module &DestModule, const FunctionImporter::ImportMapTy &ImportList) {
+    Module &DestModule, const FunctionImporter::ImportMapTy &ImportList,
+    Optional<std::function<void(Module &)>> PostBitcodeLoading) {
   DEBUG(dbgs() << "Starting import for Module "
                << DestModule.getModuleIdentifier() << "\n");
   unsigned ImportedCount = 0;
@@ -754,6 +755,8 @@ Expected<bool> FunctionImporter::importFunctions(
     // Upgrade debug info after we're done materializing all the globals and we
     // have loaded all the required metadata!
     UpgradeDebugInfo(*SrcModule);
+    if (PostBitcodeLoading)
+      (*PostBitcodeLoading)(*SrcModule);
 
     // Link in the specified functions.
     if (renameModuleForThinLTO(*SrcModule, Index, &GlobalsToImport))

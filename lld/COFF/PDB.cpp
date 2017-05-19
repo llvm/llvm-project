@@ -14,7 +14,8 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
-#include "llvm/DebugInfo/CodeView/CVTypeDumper.h"
+#include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabase.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
@@ -134,12 +135,11 @@ static void dumpDebugT(ScopedPrinter &W, ObjectFile *File) {
   if (Data.empty())
     return;
 
-  TypeDatabase TDB(0);
-  TypeDumpVisitor TDV(TDB, &W, false);
+  LazyRandomTypeCollection Types(Data, 100);
+  TypeDumpVisitor TDV(Types, &W, false);
   // Use a default implementation that does not follow type servers and instead
   // just dumps the contents of the TypeServer2 record.
-  CVTypeDumper TypeDumper(TDB);
-  if (auto EC = TypeDumper.dump(Data, TDV))
+  if (auto EC = codeview::visitTypeStream(Types, TDV))
     fatal(EC, "CVTypeDumper::dump failed");
 }
 

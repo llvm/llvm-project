@@ -53,8 +53,9 @@ public:
       : Index(Index), ModuleLoader(std::move(ModuleLoader)) {}
 
   /// Import functions in Module \p M based on the supplied import list.
-  Expected<bool>
-  importFunctions(Module &M, const ImportMapTy &ImportList);
+  Expected<bool> importFunctions(
+      Module &M, const ImportMapTy &ImportList,
+      Optional<std::function<void(Module &)>> PostBitcodeLoading = None);
 
 private:
   /// The summaries index used to trigger importing.

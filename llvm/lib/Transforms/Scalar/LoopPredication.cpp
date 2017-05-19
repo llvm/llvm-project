@@ -64,6 +64,22 @@ class LoopPredication {
   const DataLayout *DL;
   BasicBlock *Preheader;
 
+  /// Represents an induction variable check:
+  ///   icmp Pred, <induction variable>, <loop invariant limit>
+  struct LoopICmp {
+    ICmpInst::Predicate Pred;
+    const SCEVAddRecExpr *IV;
+    const SCEV *Limit;
+    LoopICmp(ICmpInst::Predicate Pred, const SCEVAddRecExpr *IV, const SCEV *Limit)
+        : Pred(Pred), IV(IV), Limit(Limit) {}
+    LoopICmp() {}
+  };
+  Optional<LoopICmp> parseLoopICmp(ICmpInst *ICI);
+
+  Value *expandCheck(SCEVExpander &Expander, IRBuilder<> &Builder,
+                     ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS,
+                     Instruction *InsertAt);
+
   Optional<Value *> widenICmpRangeCheck(ICmpInst *ICI, SCEVExpander &Expander,
                                         IRBuilder<> &Builder);
   bool widenGuardConditions(IntrinsicInst *II, SCEVExpander &Expander);
@@ -116,16 +132,10 @@ PreservedAnalyses LoopPredicationPass::run(Loop &L, LoopAnalysisManager &AM,
   return getLoopPassPreservedAnalyses();
 }
 
-/// If ICI can be widened to a loop invariant condition emits the loop
-/// invariant condition in the loop preheader and return it, otherwise
-/// returns None.
-Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
-                                                       SCEVExpander &Expander,
-                                                       IRBuilder<> &Builder) {
-  DEBUG(dbgs() << "Analyzing ICmpInst condition:\n");
-  DEBUG(ICI->dump());
-
+Optional<LoopPredication::LoopICmp>
+LoopPredication::parseLoopICmp(ICmpInst *ICI) {
   ICmpInst::Predicate Pred = ICI->getPredicate();
+
   Value *LHS = ICI->getOperand(0);
   Value *RHS = ICI->getOperand(1);
   const SCEV *LHSS = SE->getSCEV(LHS);
@@ -135,17 +145,52 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
   if (isa<SCEVCouldNotCompute>(RHSS))
     return None;
 
-  // Canonicalize RHS to be loop invariant bound, LHS - a loop computable index
+  // Canonicalize RHS to be loop invariant bound, LHS - a loop computable IV
   if (SE->isLoopInvariant(LHSS, L)) {
     std::swap(LHS, RHS);
     std::swap(LHSS, RHSS);
     Pred = ICmpInst::getSwappedPredicate(Pred);
   }
-  if (!SE->isLoopInvariant(RHSS, L) || !isSafeToExpand(RHSS, *SE))
+
+  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(LHSS);
+  if (!AR || AR->getLoop() != L)
     return None;
 
-  const SCEVAddRecExpr *IndexAR = dyn_cast<SCEVAddRecExpr>(LHSS);
-  if (!IndexAR || IndexAR->getLoop() != L)
+  return LoopICmp(Pred, AR, RHSS);
+}
+
+Value *LoopPredication::expandCheck(SCEVExpander &Expander,
+                                    IRBuilder<> &Builder,
+                                    ICmpInst::Predicate Pred, const SCEV *LHS,
+                                    const SCEV *RHS, Instruction *InsertAt) {
+  Type *Ty = LHS->getType();
+  assert(Ty == RHS->getType() && "expandCheck operands have different types?");
+  Value *LHSV = Expander.expandCodeFor(LHS, Ty, InsertAt);
+  Value *RHSV = Expander.expandCodeFor(RHS, Ty, InsertAt);
+  return Builder.CreateICmp(Pred, LHSV, RHSV);
+}
+
+/// If ICI can be widened to a loop invariant condition emits the loop
+/// invariant condition in the loop preheader and return it, otherwise
+/// returns None.
+Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
+                                                       SCEVExpander &Expander,
+                                                       IRBuilder<> &Builder) {
+  DEBUG(dbgs() << "Analyzing ICmpInst condition:\n");
+  DEBUG(ICI->dump());
+
+  auto RangeCheck = parseLoopICmp(ICI);
+  if (!RangeCheck)
+    return None;
+
+  ICmpInst::Predicate Pred = RangeCheck->Pred;
+  const SCEVAddRecExpr *IndexAR = RangeCheck->IV;
+  const SCEV *RHSS = RangeCheck->Limit;
+
+  auto CanExpand = [this](const SCEV *S) {
+    return SE->isLoopInvariant(S, L) && isSafeToExpand(S, *SE);
+  };
+  if (!CanExpand(RHSS))
     return None;
 
   DEBUG(dbgs() << "IndexAR: ");
@@ -170,17 +215,13 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
   DEBUG(dbgs() << "NewLHSS: ");
   DEBUG(NewLHSS->dump());
 
-  if (!SE->isLoopInvariant(NewLHSS, L) || !isSafeToExpand(NewLHSS, *SE))
+  if (!CanExpand(NewLHSS))
     return None;
 
   DEBUG(dbgs() << "NewLHSS is loop invariant and safe to expand. Expand!\n");
 
-  Type *Ty = LHS->getType();
   Instruction *InsertAt = Preheader->getTerminator();
-  assert(Ty == RHS->getType() && "icmp operands have different types?");
-  Value *NewLHS = Expander.expandCodeFor(NewLHSS, Ty, InsertAt);
-  Value *NewRHS = Expander.expandCodeFor(RHSS, Ty, InsertAt);
-  return Builder.CreateICmp(Pred, NewLHS, NewRHS);
+  return expandCheck(Expander, Builder, Pred, NewLHSS, RHSS, InsertAt);
 }
 
 bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
@@ -271,6 +312,9 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
       if (auto *II = dyn_cast<IntrinsicInst>(&I))
         if (II->getIntrinsicID() == Intrinsic::experimental_guard)
           Guards.push_back(II);
+
+  if (Guards.empty())
+    return false;
 
   SCEVExpander Expander(*SE, *DL, "loop-predication");
 

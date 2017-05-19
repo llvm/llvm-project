@@ -262,7 +262,6 @@ declare <4 x float> @llvm.x86.avx512.mask.reduce.ss(<4 x float>, <4 x float>,<4 
 define <4 x float>@test_int_x86_avx512_mask_reduce_ss(<4 x float> %x0, <4 x float> %x1, <4 x float> %x3, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_reduce_ss:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vreducess $4, %xmm1, %xmm0, %xmm2 {%k1}
 ; CHECK-NEXT:    vreducess $4, {sae}, %xmm1, %xmm0, %xmm0
@@ -279,7 +278,6 @@ declare <4 x float> @llvm.x86.avx512.mask.range.ss(<4 x float>, <4 x float>,<4 x
 define <4 x float>@test_int_x86_avx512_mask_range_ss(<4 x float> %x0, <4 x float> %x1, <4 x float> %x3, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_range_ss:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vrangess $4, {sae}, %xmm1, %xmm0, %xmm2 {%k1}
 ; CHECK-NEXT:    vrangess $4, {sae}, %xmm1, %xmm0, %xmm0
@@ -296,7 +294,6 @@ declare <2 x double> @llvm.x86.avx512.mask.reduce.sd(<2 x double>, <2 x double>,
 define <2 x double>@test_int_x86_avx512_mask_reduce_sd(<2 x double> %x0, <2 x double> %x1, <2 x double> %x3, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_reduce_sd:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vreducesd $4, %xmm1, %xmm0, %xmm2 {%k1}
 ; CHECK-NEXT:    vreducesd $4, {sae}, %xmm1, %xmm0, %xmm0
@@ -313,7 +310,6 @@ declare <2 x double> @llvm.x86.avx512.mask.range.sd(<2 x double>, <2 x double>,<
 define <2 x double>@test_int_x86_avx512_mask_range_sd(<2 x double> %x0, <2 x double> %x1, <2 x double> %x3, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_range_sd:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm2 {%k1}
 ; CHECK-NEXT:    vrangesd $4, {sae}, %xmm1, %xmm0, %xmm0
@@ -367,14 +363,11 @@ declare i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double>, i32, i8)
 define i8 @test_int_x86_avx512_mask_fpclass_sd(<2 x double> %x0, i8 %x1) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_sd:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfpclasssd $2, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %ecx
-; CHECK-NEXT:    andl $1, %ecx
 ; CHECK-NEXT:    vfpclasssd $4, %xmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    addb %cl, %al
 ; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
@@ -389,14 +382,11 @@ declare i8 @llvm.x86.avx512.mask.fpclass.ss(<4 x float>, i32, i8)
 define i8 @test_int_x86_avx512_mask_fpclass_ss(<4 x float> %x0, i8 %x1) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_ss:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfpclassss $4, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %ecx
-; CHECK-NEXT:    andl $1, %ecx
 ; CHECK-NEXT:    vfpclassss $4, %xmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    addb %cl, %al
 ; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq

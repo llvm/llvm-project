@@ -142,7 +142,7 @@ void MemoryMappingLayout::DumpListOfModules(
     LoadedModule cur_module;
     cur_module.set(cur_name, base_address);
     cur_module.addAddressRange(cur_beg, cur_end, prot & kProtectionExecute,
-                               prot & kProtectionRead);
+                               prot & kProtectionWrite);
     modules->push_back(cur_module);
   }
 }

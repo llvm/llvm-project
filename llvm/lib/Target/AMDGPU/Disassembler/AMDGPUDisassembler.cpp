@@ -126,6 +126,7 @@ DecodeStatus AMDGPUDisassembler::tryDecodeInst(const uint8_t* Table,
   assert(MI.getOpcode() == 0);
   assert(MI.getNumOperands() == 0);
   MCInst TmpInst;
+  HasLiteral = false;
   const auto SavedBytes = Bytes;
   if (decodeInstruction(Table, TmpInst, Inst, Address, this, STI)) {
     MI = TmpInst;
@@ -343,10 +344,15 @@ MCOperand AMDGPUDisassembler::decodeLiteralConstant() const {
   // For now all literal constants are supposed to be unsigned integer
   // ToDo: deal with signed/unsigned 64-bit integer constants
   // ToDo: deal with float/double constants
-  if (Bytes.size() < 4)
-    return errOperand(0, "cannot read literal, inst bytes left " +
-                         Twine(Bytes.size()));
-  return MCOperand::createImm(eatBytes<uint32_t>(Bytes));
+  if (!HasLiteral) {
+    if (Bytes.size() < 4) {
+      return errOperand(0, "cannot read literal, inst bytes left " +
+                        Twine(Bytes.size()));
+    }
+    HasLiteral = true;
+    Literal = eatBytes<uint32_t>(Bytes);
+  }
+  return MCOperand::createImm(Literal);
 }
 
 MCOperand AMDGPUDisassembler::decodeIntImmed(unsigned Imm) {

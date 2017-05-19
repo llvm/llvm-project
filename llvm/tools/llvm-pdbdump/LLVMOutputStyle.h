@@ -21,6 +21,11 @@
 
 namespace llvm {
 class BitVector;
+
+namespace codeview {
+class LazyRandomTypeCollection;
+}
+
 namespace pdb {
 class LLVMOutputStyle : public OutputStyle {
 public:
@@ -29,7 +34,8 @@ public:
   Error dump() override;
 
 private:
-  Error buildTypeDatabase(uint32_t SN);
+  Expected<codeview::LazyRandomTypeCollection &>
+  initializeTypeDatabase(uint32_t SN);
 
   Error dumpFileHeaders();
   Error dumpStreamSummary();
@@ -54,8 +60,8 @@ private:
 
   PDBFile &File;
   ScopedPrinter P;
-  Optional<codeview::TypeDatabase> TypeDB;
-  Optional<codeview::TypeDatabase> ItemDB;
+  std::unique_ptr<codeview::LazyRandomTypeCollection> TpiTypes;
+  std::unique_ptr<codeview::LazyRandomTypeCollection> IpiTypes;
   SmallVector<std::string, 32> StreamPurposes;
 };
 }

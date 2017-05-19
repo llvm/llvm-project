@@ -1552,10 +1552,10 @@ define <2 x float> @uitofp_2i1_float(<2 x i32> %a) {
 ; NOVL-NEXT:    vmovdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
 ; NOVL-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; NOVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
-; NOVL-NEXT:    vpextrq $1, %xmm0, %rax
+; NOVL-NEXT:    vpextrb $8, %xmm0, %eax
 ; NOVL-NEXT:    andl $1, %eax
 ; NOVL-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm1
-; NOVL-NEXT:    vmovq %xmm0, %rax
+; NOVL-NEXT:    vpextrb $0, %xmm0, %eax
 ; NOVL-NEXT:    andl $1, %eax
 ; NOVL-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
 ; NOVL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
