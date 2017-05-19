@@ -643,7 +643,8 @@ private:
   void verifyMemoryCongruency() const;
   void verifyIterationSettled(Function &F);
   void verifyStoreExpressions() const;
-  bool singleReachablePHIPath(const MemoryAccess *, const MemoryAccess *) const;
+  bool singleReachablePHIPath(SmallPtrSet<const MemoryAccess *, 8> &,
+                              const MemoryAccess *, const MemoryAccess *) const;
   BasicBlock *getBlockForValue(Value *V) const;
   void deleteExpression(const Expression *E) const;
   unsigned InstrToDFSNum(const Value *V) const {
@@ -2110,11 +2111,11 @@ void NewGVN::performCongruenceFinding(Instruction *I, const Expression *E) {
   // old store expression.  In particular, loads do not compare against stored
   // value, so they will find old store expressions (and associated class
   // mappings) if we leave them in the table.
-  if (ClassChanged && isa<StoreExpression>(E)) {
+  if (ClassChanged && isa<StoreInst>(I)) {
     auto *OldE = ValueToExpression.lookup(I);
     // It could just be that the old class died. We don't want to erase it if we
     // just moved classes.
-    if (OldE && isa<StoreExpression>(OldE) && !OldE->equals(*E))
+    if (OldE && isa<StoreExpression>(OldE) && *E != *OldE)
       ExpressionToClass.erase(OldE);
   }
   ValueToExpression[I] = E;
@@ -2460,12 +2461,22 @@ void NewGVN::valueNumberInstruction(Instruction *I) {
 
 // Check if there is a path, using single or equal argument phi nodes, from
 // First to Second.
-bool NewGVN::singleReachablePHIPath(const MemoryAccess *First,
-                                    const MemoryAccess *Second) const {
+bool NewGVN::singleReachablePHIPath(
+    SmallPtrSet<const MemoryAccess *, 8> &Visited, const MemoryAccess *First,
+    const MemoryAccess *Second) const {
   if (First == Second)
     return true;
   if (MSSA->isLiveOnEntryDef(First))
     return false;
+
+  // This is not perfect, but as we're just verifying here, we can live with
+  // the loss of precision. The real solution would be that of doing strongly
+  // connected component finding in this routine, and it's probably not worth
+  // the complexity for the time being. So, we just keep a set of visited
+  // MemoryAccess and return true when we hit a cycle.
+  if (Visited.count(First))
+    return true;
+  Visited.insert(First);
 
   const auto *EndDef = First;
   for (auto *ChainDef : optimized_def_chain(First)) {
@@ -2489,7 +2500,8 @@ bool NewGVN::singleReachablePHIPath(const MemoryAccess *First,
     Okay =
         std::equal(OperandList.begin(), OperandList.end(), OperandList.begin());
   if (Okay)
-    return singleReachablePHIPath(cast<MemoryAccess>(OperandList[0]), Second);
+    return singleReachablePHIPath(Visited, cast<MemoryAccess>(OperandList[0]),
+                                  Second);
   return false;
 }
 
@@ -2556,13 +2568,15 @@ void NewGVN::verifyMemoryCongruency() const {
            "Memory not unreachable but ended up in TOP");
     if (auto *FirstMUD = dyn_cast<MemoryUseOrDef>(KV.first)) {
       auto *SecondMUD = dyn_cast<MemoryUseOrDef>(KV.second->getMemoryLeader());
-      if (FirstMUD && SecondMUD)
-        assert((singleReachablePHIPath(FirstMUD, SecondMUD) ||
+      if (FirstMUD && SecondMUD) {
+        SmallPtrSet<const MemoryAccess *, 8> VisitedMAS;
+        assert((singleReachablePHIPath(VisitedMAS, FirstMUD, SecondMUD) ||
                 ValueToClass.lookup(FirstMUD->getMemoryInst()) ==
                     ValueToClass.lookup(SecondMUD->getMemoryInst())) &&
                "The instructions for these memory operations should have "
                "been in the same congruence class or reachable through"
                "a single argument phi");
+      }
     } else if (auto *FirstMP = dyn_cast<MemoryPhi>(KV.first)) {
       // We can only sanely verify that MemoryDefs in the operand list all have
       // the same class.
@@ -3301,6 +3315,10 @@ bool NewGVN::eliminateInstructions(Function &F) {
 
           Value *DominatingLeader = EliminationStack.back();
 
+          auto *II = dyn_cast<IntrinsicInst>(DominatingLeader);
+          if (II && II->getIntrinsicID() == Intrinsic::ssa_copy)
+            DominatingLeader = II->getOperand(0);
+
           // Don't replace our existing users with ourselves.
           if (U->get() == DominatingLeader)
             continue;
@@ -3321,6 +3339,8 @@ bool NewGVN::eliminateInstructions(Function &F) {
           // It's about to be alive again.
           if (LeaderUseCount == 0 && isa<Instruction>(DominatingLeader))
             ProbablyDead.erase(cast<Instruction>(DominatingLeader));
+          if (LeaderUseCount == 0 && II)
+            ProbablyDead.insert(II);
           ++LeaderUseCount;
           AnythingReplaced = true;
         }

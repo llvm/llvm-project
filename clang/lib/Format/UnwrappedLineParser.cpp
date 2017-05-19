@@ -55,13 +55,18 @@ private:
   std::vector<bool> &Stack;
 };
 
+static bool isLineComment(const FormatToken &FormatTok) {
+  return FormatTok.is(tok::comment) &&
+         FormatTok.TokenText.startswith("//");
+}
+
 class ScopedMacroState : public FormatTokenSource {
 public:
   ScopedMacroState(UnwrappedLine &Line, FormatTokenSource *&TokenSource,
                    FormatToken *&ResetToken)
       : Line(Line), TokenSource(TokenSource), ResetToken(ResetToken),
         PreviousLineLevel(Line.Level), PreviousTokenSource(TokenSource),
-        Token(nullptr) {
+        Token(nullptr), PreviousToken(nullptr) {
     TokenSource = this;
     Line.Level = 0;
     Line.InPPDirective = true;
@@ -78,6 +83,7 @@ public:
     // The \c UnwrappedLineParser guards against this by never calling
     // \c getNextToken() after it has encountered the first eof token.
     assert(!eof());
+    PreviousToken = Token;
     Token = PreviousTokenSource->getNextToken();
     if (eof())
       return getFakeEOF();
@@ -87,12 +93,17 @@ public:
   unsigned getPosition() override { return PreviousTokenSource->getPosition(); }
 
   FormatToken *setPosition(unsigned Position) override {
+    PreviousToken = nullptr;
     Token = PreviousTokenSource->setPosition(Position);
     return Token;
   }
 
 private:
-  bool eof() { return Token && Token->HasUnescapedNewline; }
+  bool eof() {
+    return Token && Token->HasUnescapedNewline &&
+           !(PreviousToken && isLineComment(*PreviousToken) &&
+             isLineComment(*Token) && Token->NewlinesBefore == 1);
+  }
 
   FormatToken *getFakeEOF() {
     static bool EOFInitialized = false;
@@ -112,6 +123,7 @@ private:
   FormatTokenSource *PreviousTokenSource;
 
   FormatToken *Token;
+  FormatToken *PreviousToken;
 };
 
 } // end anonymous namespace
@@ -2090,11 +2102,6 @@ bool UnwrappedLineParser::eof() const { return FormatTok->Tok.is(tok::eof); }
 bool UnwrappedLineParser::isOnNewLine(const FormatToken &FormatTok) {
   return (Line->InPPDirective || FormatTok.HasUnescapedNewline) &&
          FormatTok.NewlinesBefore > 0;
-}
-
-static bool isLineComment(const FormatToken &FormatTok) {
-  return FormatTok.is(tok::comment) &&
-         FormatTok.TokenText.startswith("//");
 }
 
 // Checks if \p FormatTok is a line comment that continues the line comment

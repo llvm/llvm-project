@@ -189,7 +189,7 @@ extern cl::opt<bool> UseSegmentSetForPhysRegs;
     void pruneValue(LiveRange &LR, SlotIndex Kill,
                     SmallVectorImpl<SlotIndex> *EndPoints);
 
-    /// This function should be used. Its intend is to tell you that
+    /// This function should not be used. Its intend is to tell you that
     /// you are doing something wrong if you call pruveValue directly on a
     /// LiveInterval. Indeed, you are supposed to call pruneValue on the main
     /// LiveRange and all the LiveRange of the subranges if any.

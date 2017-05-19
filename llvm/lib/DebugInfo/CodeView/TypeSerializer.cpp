@@ -66,6 +66,31 @@ TypeSerializer::insertRecordBytesPrivate(MutableArrayRef<uint8_t> Record) {
   return Result.first->getValue();
 }
 
+TypeIndex
+TypeSerializer::insertRecordBytesWithCopy(CVType &Record,
+                                          MutableArrayRef<uint8_t> Data) {
+  assert(Data.size() % 4 == 0 && "Record is not aligned to 4 bytes!");
+
+  StringRef S(reinterpret_cast<const char *>(Data.data()), Data.size());
+
+  // Do a two state lookup / insert so that we don't have to allocate unless
+  // we're going
+  // to do an insert.  This is a big memory savings.
+  auto Iter = HashedRecords.find(S);
+  if (Iter != HashedRecords.end())
+    return Iter->second;
+
+  LastTypeIndex = calcNextTypeIndex();
+  uint8_t *Copy = RecordStorage.Allocate<uint8_t>(Data.size());
+  ::memcpy(Copy, Data.data(), Data.size());
+  Data = MutableArrayRef<uint8_t>(Copy, Data.size());
+  S = StringRef(reinterpret_cast<const char *>(Data.data()), Data.size());
+  HashedRecords.insert(std::make_pair(S, LastTypeIndex));
+  SeenRecords.push_back(Data);
+  Record.RecordData = Data;
+  return LastTypeIndex;
+}
+
 Expected<MutableArrayRef<uint8_t>>
 TypeSerializer::addPadding(MutableArrayRef<uint8_t> Record) {
   uint32_t Align = Record.size() % 4;
@@ -137,11 +162,9 @@ Expected<TypeIndex> TypeSerializer::visitTypeEndGetIndex(CVType &Record) {
       reinterpret_cast<RecordPrefix *>(ThisRecordData.data());
   Prefix->RecordLen = ThisRecordData.size() - sizeof(uint16_t);
 
-  uint8_t *Copy = RecordStorage.Allocate<uint8_t>(ThisRecordData.size());
-  ::memcpy(Copy, ThisRecordData.data(), ThisRecordData.size());
-  ThisRecordData = MutableArrayRef<uint8_t>(Copy, ThisRecordData.size());
-  Record = CVType(*TypeKind, ThisRecordData);
-  TypeIndex InsertedTypeIndex = insertRecordBytesPrivate(ThisRecordData);
+  Record.Type = *TypeKind;
+  TypeIndex InsertedTypeIndex =
+      insertRecordBytesWithCopy(Record, ThisRecordData);
 
   // Write out each additional segment in reverse order, and update each
   // record's continuation index to point to the previous one.

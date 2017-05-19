@@ -107,6 +107,7 @@ static void mergeDebugT(SymbolTable *Symtab, pdb::PDBFileBuilder &Builder,
     BinaryByteStream Stream(Data, support::little);
     codeview::CVTypeArray Types;
     BinaryStreamReader Reader(Stream);
+    SmallVector<TypeIndex, 128> SourceToDest;
     // Follow type servers.  If the same type server is encountered more than
     // once for this instance of `PDBTypeServerHandler` (for example if many
     // object files reference the same TypeServer), the types from the
@@ -115,8 +116,8 @@ static void mergeDebugT(SymbolTable *Symtab, pdb::PDBFileBuilder &Builder,
     Handler.addSearchPath(llvm::sys::path::parent_path(File->getName()));
     if (auto EC = Reader.readArray(Types, Reader.getLength()))
       fatal(EC, "Reader::readArray failed");
-    if (auto Err =
-            codeview::mergeTypeStreams(IDTable, TypeTable, &Handler, Types))
+    if (auto Err = codeview::mergeTypeStreams(IDTable, TypeTable, SourceToDest,
+                                              &Handler, Types))
       fatal(Err, "codeview::mergeTypeStreams failed");
   }
 

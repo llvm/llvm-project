@@ -137,6 +137,9 @@ namespace AliasDeclEndLocation {
     >\
 > // expected-error {{expected ';' after alias declaration}}
     ;
+  using D = AliasDeclEndLocation::A<int
+    > // expected-error {{expected ';' after alias declaration}}
+  B something_else;
 }
 
 struct Base { virtual void f() = 0; virtual void g() = 0; virtual void h() = 0; };

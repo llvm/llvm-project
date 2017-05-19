@@ -381,8 +381,11 @@ CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, unsigned Align,
     Mask = Constant::getAllOnesValue(VectorType::get(Type::getInt1Ty(Context),
                                      NumElts));
 
+  if (!PassThru)
+    PassThru = UndefValue::get(DataTy);
+
   Type *OverloadedTypes[] = {DataTy, PtrsTy};
-  Value * Ops[] = {Ptrs, getInt32(Align), Mask, UndefValue::get(DataTy)};
+  Value * Ops[] = {Ptrs, getInt32(Align), Mask, PassThru};
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
