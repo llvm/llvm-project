@@ -4,11 +4,9 @@
 define i8 @test_int_x86_avx512_mask_cmp_ss(<4 x float> %a, float* %b, i8 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_cmp_ss:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vcmpunordss (%rdi), %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %b.val = load float, float* %b
@@ -24,7 +22,6 @@ declare i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float>, <4 x float>, i32, i8, i32)
 define <4 x float> @test_mask_max_ss(<4 x float> %a, float* %b, i8 %mask) {
 ; CHECK-LABEL: test_mask_max_ss:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vmaxss (%rdi), %xmm0, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -41,7 +38,6 @@ declare <4 x float> @llvm.x86.avx512.mask.max.ss.round(<4 x float>, <4 x float>,
 define <4 x float> @test_maskz_add_ss(<4 x float> %a, float* %b, i8 %mask) {
 ; CHECK-LABEL: test_maskz_add_ss:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vaddss (%rdi), %xmm0, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -61,7 +57,6 @@ declare <2 x double> @llvm.x86.avx512.mask.vfmadd.sd(<2 x double>, <2 x double>,
 define <2 x double> @test_int_x86_avx512_mask_vfmadd_sd(<2 x double> %a, <2 x double> %b, double* %c, i8 %mask){
 ; CHECK-LABEL: test_int_x86_avx512_mask_vfmadd_sd:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vfmadd213sd (%rdi), %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq

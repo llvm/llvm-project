@@ -175,6 +175,36 @@ define i1 @xor_of_icmps(i64 %a) {
   ret i1 %xor
 }
 
+; FIXME: This is also equivalent to the previous test.
+
+define i1 @xor_of_icmps_commute(i64 %a) {
+; CHECK-LABEL: @xor_of_icmps_commute(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt i64 %a, 0
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 %a, 1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[B]], [[C]]
+; CHECK-NEXT:    ret i1 [[XOR]]
+;
+  %b = icmp sgt i64 %a, 0
+  %c = icmp eq i64 %a, 1
+  %xor = xor i1 %b, %c
+  ret i1 %xor
+}
+
+; FIXME: This is (a != 5).
+
+define i1 @xor_of_icmps_folds_more(i64 %a) {
+; CHECK-LABEL: @xor_of_icmps_folds_more(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt i64 %a, 4
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 %a, 6
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[B]], [[C]]
+; CHECK-NEXT:    ret i1 [[XOR]]
+;
+  %b = icmp sgt i64 %a, 4
+  %c = icmp slt i64 %a, 6
+  %xor = xor i1 %b, %c
+  ret i1 %xor
+}
+
 ; https://bugs.llvm.org/show_bug.cgi?id=2844
 
 define i32 @PR2844(i32 %x) {

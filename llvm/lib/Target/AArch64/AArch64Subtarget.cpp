@@ -164,12 +164,11 @@ struct AArch64GISelActualAccessor : public GISelAccessor {
 
 AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
                                    const std::string &FS,
-                                   const TargetMachine &TM, bool LittleEndian,
-                                   bool ForCodeSize)
+                                   const TargetMachine &TM, bool LittleEndian)
     : AArch64GenSubtargetInfo(TT, CPU, FS), ReserveX18(TT.isOSDarwin()),
       IsLittle(LittleEndian), TargetTriple(TT), FrameLowering(),
       InstrInfo(initializeSubtargetDependencies(FS, CPU)), TSInfo(),
-      TLInfo(TM, *this), GISel(), ForCodeSize(ForCodeSize) {
+      TLInfo(TM, *this), GISel() {
 #ifndef LLVM_BUILD_GLOBAL_ISEL
   GISelAccessor *AArch64GISel = new GISelAccessor();
 #else

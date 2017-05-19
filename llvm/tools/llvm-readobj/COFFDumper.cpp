@@ -43,9 +43,9 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/COFF.h"
-#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
@@ -1070,8 +1070,9 @@ void COFFDumper::mergeCodeViewTypes(TypeTableBuilder &CVIDs,
         W.flush();
         error(object_error::parse_failed);
       }
-
-      if (auto EC = mergeTypeStreams(CVIDs, CVTypes, nullptr, Types))
+      SmallVector<TypeIndex, 128> SourceToDest;
+      if (auto EC =
+              mergeTypeStreams(CVIDs, CVTypes, SourceToDest, nullptr, Types))
         return error(std::move(EC));
     }
   }

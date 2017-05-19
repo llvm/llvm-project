@@ -2015,7 +2015,7 @@ inline APInt operator-(APInt a, const APInt &b) {
 }
 
 inline APInt operator-(const APInt &a, APInt &&b) {
-  b = -std::move(b);
+  b.negate();
   b += a;
   return std::move(b);
 }
@@ -2026,7 +2026,7 @@ inline APInt operator-(APInt a, uint64_t RHS) {
 }
 
 inline APInt operator-(uint64_t LHS, APInt b) {
-  b = -std::move(b);
+  b.negate();
   b += LHS;
   return b;
 }

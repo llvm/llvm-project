@@ -1,16 +1,10 @@
-; RUN: llc < %s -mtriple=i386-pc-win32       -mattr=+avx512f -mattr=+avx512vl -mattr=+avx512bw -mattr=+avx512dq  | FileCheck --check-prefix=X32 %s
-; RUN: llc < %s -mtriple=x86_64-win32        -mattr=+avx512f -mattr=+avx512vl -mattr=+avx512bw -mattr=+avx512dq  | FileCheck --check-prefix=WIN64 %s
+; RUN: llc < %s -mtriple=i386-pc-win32       -mattr=+avx512f -mattr=+avx512vl -mattr=+avx512bw -mattr=+avx512dq  | FileCheck --check-prefix=ALL --check-prefix=X32 %s
+; RUN: llc < %s -mtriple=x86_64-win32        -mattr=+avx512f -mattr=+avx512vl -mattr=+avx512bw -mattr=+avx512dq  | FileCheck --check-prefix=ALL --check-prefix=WIN64 %s
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu    -mattr=+avx512f -mattr=+avx512vl -mattr=+avx512bw -mattr=+avx512dq  | FileCheck --check-prefix=LINUXOSX64 %s 
 
-; X32-LABEL:  test_argReti1:
-; X32:        kmov{{.*}}  %eax, %k{{[0-7]}}
-; X32:        kmov{{.*}}  %k{{[0-7]}}, %eax
-; X32:        ret{{.*}}
-
-; WIN64-LABEL:  test_argReti1:
-; WIN64:        kmov{{.*}}  %eax, %k{{[0-7]}}
-; WIN64:        kmov{{.*}}  %k{{[0-7]}}, %eax
-; WIN64:        ret{{.*}}
+; ALL-LABEL:  test_argReti1:
+; ALL:        incb %al
+; ALL:        ret{{.*}}
 
 ; Test regcall when receiving/returning i1
 define x86_regcallcc i1 @test_argReti1(i1 %a)  {
@@ -18,17 +12,11 @@ define x86_regcallcc i1 @test_argReti1(i1 %a)  {
   ret i1 %add
 }
 
-; X32-LABEL:  test_CallargReti1:
-; X32:        kmov{{.*}}  %k{{[0-7]}}, %eax
-; X32:        call{{.*}}   {{.*}}test_argReti1
-; X32:        kmov{{.*}}  %eax, %k{{[0-7]}}
-; X32:        ret{{.*}}
-
-; WIN64-LABEL:  test_CallargReti1:
-; WIN64:        kmov{{.*}}  %k{{[0-7]}}, %eax
-; WIN64:        call{{.*}}   {{.*}}test_argReti1
-; WIN64:        kmov{{.*}}  %eax, %k{{[0-7]}}
-; WIN64:        ret{{.*}}
+; ALL-LABEL:  test_CallargReti1:
+; ALL:        movzbl      %al, %eax
+; ALL:        call{{.*}}test_argReti1
+; ALL:        incb        %al
+; ALL:        ret{{.*}}
 
 ; Test regcall when passing/retrieving i1
 define x86_regcallcc i1 @test_CallargReti1(i1 %a)  {

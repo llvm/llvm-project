@@ -288,8 +288,13 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
+  // Clear the OutputSections to make sure it is not used anymore. Any
+  // code from this point on should be using the linker script
+  // commands.
+  OutputSections.clear();
+
   // Handle -Map option.
-  writeMapFile<ELFT>(OutputSections);
+  writeMapFile<ELFT>(Script->Opt.Commands);
   if (ErrorCount)
     return;
 

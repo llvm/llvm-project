@@ -39,12 +39,6 @@ define void @foo() {
 ; X86-O0-NEXT:    movzbl %al, %edx
 ; X86-O0-NEXT:    subl %ecx, %edx
 ; X86-O0-NEXT:    setle %al
-; X86-O0-NEXT:    # implicit-def: %ECX
-; X86-O0-NEXT:    movb %al, %cl
-; X86-O0-NEXT:    andl $1, %ecx
-; X86-O0-NEXT:    kmovd %ecx, %k0
-; X86-O0-NEXT:    kmovd %k0, %ecx
-; X86-O0-NEXT:    movb %cl, %al
 ; X86-O0-NEXT:    andb $1, %al
 ; X86-O0-NEXT:    movzbl %al, %ecx
 ; X86-O0-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
@@ -77,12 +71,6 @@ define void @foo() {
 ; X64-O0-NEXT:    movzbl %al, %edx
 ; X64-O0-NEXT:    subl %ecx, %edx
 ; X64-O0-NEXT:    setle %al
-; X64-O0-NEXT:    # implicit-def: %ECX
-; X64-O0-NEXT:    movb %al, %cl
-; X64-O0-NEXT:    andl $1, %ecx
-; X64-O0-NEXT:    kmovd %ecx, %k0
-; X64-O0-NEXT:    kmovd %k0, %ecx
-; X64-O0-NEXT:    movb %cl, %al
 ; X64-O0-NEXT:    andb $1, %al
 ; X64-O0-NEXT:    movzbl %al, %ecx
 ; X64-O0-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)

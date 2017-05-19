@@ -530,6 +530,14 @@ TEST_F(FormatTestSelective, SelectivelyRequoteJavaScript) {
              20, 0));
 }
 
+TEST_F(FormatTestSelective, KeepsIndentAfterCommentSectionImport) {
+  std::string Code = "#include <a> // line 1\n" // 23 chars long
+                     "             // line 2\n" // 23 chars long
+                     "\n"                       // this newline is char 47
+                     "int i;";                  // this line is not indented
+  EXPECT_EQ(Code, format(Code, 47, 1));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

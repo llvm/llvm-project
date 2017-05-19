@@ -315,8 +315,14 @@ def AArch64umaxv    : SDNode<"AArch64ISD::UMAXV", SDT_AArch64UnaryVec>;
 // AArch64 Instruction Predicate Definitions.
 def IsDarwin  : Predicate<"Subtarget->isTargetDarwin()">;
 def IsNotDarwin: Predicate<"!Subtarget->isTargetDarwin()">;
-def ForCodeSize   : Predicate<"Subtarget->getForCodeSize()">;
-def NotForCodeSize   : Predicate<"!Subtarget->getForCodeSize()">;
+
+// We could compute these on a per-module basis but doing so requires accessing
+// the Function object through the <Target>Subtarget and objections were raised
+// to that (see post-commit review comments for r301750).
+let RecomputePerFunction = 1 in {
+  def ForCodeSize   : Predicate<"MF->getFunction()->optForSize()">;
+  def NotForCodeSize   : Predicate<"!MF->getFunction()->optForSize()">;
+}
 
 include "AArch64InstrFormats.td"
 

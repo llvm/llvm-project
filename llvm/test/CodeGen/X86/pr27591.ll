@@ -9,12 +9,6 @@ define void @test1(i32 %x) #0 {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    # implicit-def: %EDI
-; CHECK-NEXT:    movb %al, %dil
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    kmovd %edi, %k0
-; CHECK-NEXT:    kmovd %k0, %edi
-; CHECK-NEXT:    movb %dil, %al
 ; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    movzbl %al, %edi
 ; CHECK-NEXT:    callq callee1
@@ -32,17 +26,9 @@ define void @test2(i32 %x) #0 {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    # implicit-def: %EDI
-; CHECK-NEXT:    movb %al, %dil
+; CHECK-NEXT:    movzbl %al, %edi
 ; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    kmovd %edi, %k0
-; CHECK-NEXT:    kmovd %k0, %edi
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    movb %dil, %al
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    movl $-1, %ecx
-; CHECK-NEXT:    cmovnel %ecx, %edi
+; CHECK-NEXT:    negl %edi
 ; CHECK-NEXT:    callq callee2
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq

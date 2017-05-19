@@ -14,9 +14,8 @@
 
 namespace lld {
 namespace elf {
-class OutputSection;
-template <class ELFT>
-void writeMapFile(llvm::ArrayRef<OutputSection *> OutputSections);
+struct BaseCommand;
+template <class ELFT> void writeMapFile(llvm::ArrayRef<BaseCommand *> Script);
 }
 }
 

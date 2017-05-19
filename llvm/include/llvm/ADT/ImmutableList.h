@@ -63,8 +63,8 @@ public:
 template <typename T>
 class ImmutableList {
 public:
-  using value_type = T;
-  using Factory = ImmutableListFactory<T>;
+  typedef T value_type;
+  typedef ImmutableListFactory<T> Factory;
 
 private:
   const ImmutableListImpl<T>* X;
@@ -141,8 +141,8 @@ public:
 
 template <typename T>
 class ImmutableListFactory {
-  using ListTy = ImmutableListImpl<T>;
-  using CacheTy = FoldingSet<ListTy>;
+  typedef ImmutableListImpl<T> ListTy;
+  typedef FoldingSet<ListTy>   CacheTy;
 
   CacheTy Cache;
   uintptr_t Allocator;

@@ -214,7 +214,6 @@ const AArch64Subtarget *
 AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
-  bool ForCodeSize = F.optForSize();
 
   std::string CPU = !CPUAttr.hasAttribute(Attribute::None)
                         ? CPUAttr.getValueAsString().str()
@@ -222,17 +221,15 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   std::string FS = !FSAttr.hasAttribute(Attribute::None)
                        ? FSAttr.getValueAsString().str()
                        : TargetFS;
-  std::string ForCodeSizeStr =
-      std::string(ForCodeSize ? "+" : "-") + "forcodesize";
 
-  auto &I = SubtargetMap[CPU + FS + ForCodeSizeStr];
+  auto &I = SubtargetMap[CPU + FS];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = llvm::make_unique<AArch64Subtarget>(TargetTriple, CPU, FS, *this,
-                                            isLittle, ForCodeSize);
+                                            isLittle);
   }
   return I.get();
 }

@@ -270,12 +270,6 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
 
   FS = Key.substr(CPU.size());
 
-  bool OptForSize = F.optForSize();
-  bool OptForMinSize = F.optForMinSize();
-
-  Key += std::string(OptForSize ? "+" : "-") + "optforsize";
-  Key += std::string(OptForMinSize ? "+" : "-") + "optforminsize";
-
   auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
@@ -283,8 +277,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = llvm::make_unique<X86Subtarget>(TargetTriple, CPU, FS, *this,
-                                        Options.StackAlignmentOverride,
-                                        OptForSize, OptForMinSize);
+                                        Options.StackAlignmentOverride);
 #ifndef LLVM_BUILD_GLOBAL_ISEL
     GISelAccessor *GISel = new GISelAccessor();
 #else

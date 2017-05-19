@@ -72,7 +72,7 @@ private:
 
   size_t TypeRecordBytes = 0;
 
-  Optional<PdbRaw_TpiVer> VerHeader;
+  PdbRaw_TpiVer VerHeader = PdbRaw_TpiVer::PdbTpiV80;
   std::vector<ArrayRef<uint8_t>> TypeRecords;
   std::vector<uint32_t> TypeHashes;
   std::vector<codeview::TypeIndexOffset> TypeIndexOffsets;
