@@ -45,6 +45,7 @@ endif()
 
 include(OCL.cmake)
 
+set(AMDGCN_LIB_LIST)
 add_subdirectory(irif)
 add_subdirectory(oclc)
 add_subdirectory(ocml)
@@ -54,6 +55,10 @@ add_subdirectory(opencl)
 if(BUILD_HC_LIB)
   add_subdirectory(hc)
 endif(BUILD_HC_LIB)
+
+if(AMDGCN_TARGETS_LIB_LIST)
+  set(${AMDGCN_TARGETS_LIB_LIST} ${AMDGCN_LIB_LIST} PARENT_SCOPE)
+endif(AMDGCN_TARGETS_LIB_LIST)
 
 if(ROCM_DEVICELIB_INCLUDE_TESTS)
   if (NOT AMDHSACOD)
