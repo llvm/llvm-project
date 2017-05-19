@@ -15,7 +15,6 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {

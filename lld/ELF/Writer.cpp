@@ -288,8 +288,13 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
+  // Clear the OutputSections to make sure it is not used anymore. Any
+  // code from this point on should be using the linker script
+  // commands.
+  OutputSections.clear();
+
   // Handle -Map option.
-  writeMapFile<ELFT>(OutputSections);
+  writeMapFile<ELFT>(Script->Opt.Commands);
   if (ErrorCount)
     return;
 
@@ -403,7 +408,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     InX::MipsGot = make<MipsGotSection>();
     Add(InX::MipsGot);
   } else {
-    InX::Got = make<GotSection<ELFT>>();
+    InX::Got = make<GotSection>();
     Add(InX::Got);
   }
 
@@ -626,22 +631,22 @@ bool elf::isRelroSection(const OutputSection *Sec) {
 // * It is easy to check if a give branch was taken.
 // * It is easy two see how similar two ranks are (see getRankProximity).
 enum RankFlags {
-  RF_NOT_ADDR_SET = 1 << 16,
-  RF_NOT_INTERP = 1 << 15,
-  RF_NOT_ALLOC = 1 << 14,
-  RF_WRITE = 1 << 13,
-  RF_EXEC = 1 << 12,
-  RF_NON_TLS_BSS = 1 << 11,
-  RF_NON_TLS_BSS_RO = 1 << 10,
-  RF_NOT_TLS = 1 << 9,
-  RF_BSS = 1 << 8,
-  RF_PPC_NOT_TOCBSS = 1 << 7,
-  RF_PPC_OPD = 1 << 6,
-  RF_PPC_TOCL = 1 << 5,
-  RF_PPC_TOC = 1 << 4,
-  RF_PPC_BRANCH_LT = 1 << 3,
-  RF_MIPS_GPREL = 1 << 2,
-  RF_MIPS_NOT_GOT = 1 << 1
+  RF_NOT_ADDR_SET = 1 << 15,
+  RF_NOT_INTERP = 1 << 14,
+  RF_NOT_ALLOC = 1 << 13,
+  RF_WRITE = 1 << 12,
+  RF_EXEC = 1 << 11,
+  RF_NON_TLS_BSS = 1 << 10,
+  RF_NON_TLS_BSS_RO = 1 << 9,
+  RF_NOT_TLS = 1 << 8,
+  RF_BSS = 1 << 7,
+  RF_PPC_NOT_TOCBSS = 1 << 6,
+  RF_PPC_OPD = 1 << 5,
+  RF_PPC_TOCL = 1 << 4,
+  RF_PPC_TOC = 1 << 3,
+  RF_PPC_BRANCH_LT = 1 << 2,
+  RF_MIPS_GPREL = 1 << 1,
+  RF_MIPS_NOT_GOT = 1 << 0
 };
 
 static unsigned getSectionRank(const OutputSection *Sec) {

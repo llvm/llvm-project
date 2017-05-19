@@ -600,7 +600,7 @@ template <class ELFT> void EhFrameSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 
   for (EhInputSection *S : Sections)
-    S->template relocate<ELFT>(Buf, nullptr);
+    S->relocateAlloc(Buf, nullptr);
 
   // Construct .eh_frame_hdr. .eh_frame_hdr is a binary search table
   // to get a FDE from an address to which FDE is applied. So here
@@ -617,16 +617,16 @@ template <class ELFT> void EhFrameSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
-GotBaseSection::GotBaseSection()
+GotSection::GotSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
                        Target->GotEntrySize, ".got") {}
 
-void GotBaseSection::addEntry(SymbolBody &Sym) {
+void GotSection::addEntry(SymbolBody &Sym) {
   Sym.GotIndex = NumEntries;
   ++NumEntries;
 }
 
-bool GotBaseSection::addDynTlsEntry(SymbolBody &Sym) {
+bool GotSection::addDynTlsEntry(SymbolBody &Sym) {
   if (Sym.GlobalDynIndex != -1U)
     return false;
   Sym.GlobalDynIndex = NumEntries;
@@ -637,7 +637,7 @@ bool GotBaseSection::addDynTlsEntry(SymbolBody &Sym) {
 
 // Reserves TLS entries for a TLS module ID and a TLS block offset.
 // In total it takes two GOT slots.
-bool GotBaseSection::addTlsIndex() {
+bool GotSection::addTlsIndex() {
   if (TlsIndexOff != uint32_t(-1))
     return false;
   TlsIndexOff = NumEntries * Config->Wordsize;
@@ -645,27 +645,23 @@ bool GotBaseSection::addTlsIndex() {
   return true;
 }
 
-uint64_t GotBaseSection::getGlobalDynAddr(const SymbolBody &B) const {
+uint64_t GotSection::getGlobalDynAddr(const SymbolBody &B) const {
   return this->getVA() + B.GlobalDynIndex * Config->Wordsize;
 }
 
-uint64_t GotBaseSection::getGlobalDynOffset(const SymbolBody &B) const {
+uint64_t GotSection::getGlobalDynOffset(const SymbolBody &B) const {
   return B.GlobalDynIndex * Config->Wordsize;
 }
 
-void GotBaseSection::finalizeContents() {
-  Size = NumEntries * Config->Wordsize;
-}
+void GotSection::finalizeContents() { Size = NumEntries * Config->Wordsize; }
 
-bool GotBaseSection::empty() const {
+bool GotSection::empty() const {
   // If we have a relocation that is relative to GOT (such as GOTOFFREL),
   // we need to emit a GOT even if it's empty.
   return NumEntries == 0 && !HasGotOffRel;
 }
 
-template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
-  this->template relocate<ELFT>(Buf, Buf + Size);
-}
+void GotSection::writeTo(uint8_t *Buf) { relocateAlloc(Buf, Buf + Size); }
 
 MipsGotSection::MipsGotSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL, SHT_PROGBITS, 16,
@@ -2242,7 +2238,7 @@ StringTableSection *InX::DynStrTab;
 SymbolTableBaseSection *InX::DynSymTab;
 InputSection *InX::Interp;
 GdbIndexSection *InX::GdbIndex;
-GotBaseSection *InX::Got;
+GotSection *InX::Got;
 GotPltSection *InX::GotPlt;
 GnuHashTableSection *InX::GnuHashTab;
 IgotPltSection *InX::IgotPlt;
@@ -2283,11 +2279,6 @@ template class elf::MipsReginfoSection<ELF32LE>;
 template class elf::MipsReginfoSection<ELF32BE>;
 template class elf::MipsReginfoSection<ELF64LE>;
 template class elf::MipsReginfoSection<ELF64BE>;
-
-template class elf::GotSection<ELF32LE>;
-template class elf::GotSection<ELF32BE>;
-template class elf::GotSection<ELF64LE>;
-template class elf::GotSection<ELF64BE>;
 
 template class elf::DynamicSection<ELF32LE>;
 template class elf::DynamicSection<ELF32BE>;

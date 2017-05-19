@@ -21,6 +21,8 @@
 
 #include "MapFile.h"
 #include "InputFiles.h"
+#include "LinkerScript.h"
+#include "OutputSections.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Threads.h"
@@ -98,7 +100,7 @@ getSymbolStrings(ArrayRef<DefinedRegular *> Syms) {
 }
 
 template <class ELFT>
-void elf::writeMapFile(ArrayRef<OutputSection *> OutputSections) {
+void elf::writeMapFile(llvm::ArrayRef<BaseCommand *> Script) {
   if (Config->MapFile.empty())
     return;
 
@@ -121,7 +123,11 @@ void elf::writeMapFile(ArrayRef<OutputSection *> OutputSections) {
      << " Align Out     In      Symbol\n";
 
   // Print out file contents.
-  for (OutputSection *OSec : OutputSections) {
+  for (BaseCommand *Base : Script) {
+    auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
+    if (!Cmd)
+      continue;
+    OutputSection *OSec = Cmd->Sec;
     writeHeader<ELFT>(OS, OSec->Addr, OSec->Size, OSec->Alignment);
     OS << OSec->Name << '\n';
 
@@ -136,7 +142,7 @@ void elf::writeMapFile(ArrayRef<OutputSection *> OutputSections) {
   }
 }
 
-template void elf::writeMapFile<ELF32LE>(ArrayRef<OutputSection *>);
-template void elf::writeMapFile<ELF32BE>(ArrayRef<OutputSection *>);
-template void elf::writeMapFile<ELF64LE>(ArrayRef<OutputSection *>);
-template void elf::writeMapFile<ELF64BE>(ArrayRef<OutputSection *>);
+template void elf::writeMapFile<ELF32LE>(ArrayRef<BaseCommand *>);
+template void elf::writeMapFile<ELF32BE>(ArrayRef<BaseCommand *>);
+template void elf::writeMapFile<ELF64LE>(ArrayRef<BaseCommand *>);
+template void elf::writeMapFile<ELF64BE>(ArrayRef<BaseCommand *>);

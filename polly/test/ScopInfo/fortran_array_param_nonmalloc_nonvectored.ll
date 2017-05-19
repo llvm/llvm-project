@@ -52,6 +52,7 @@ entry.split:                                      ; preds = %entry
   %tmp10 = mul i64 %tmp3, %tmp9
   %tmp11 = sub i64 %tmp10, %tmp3
   %tmp12 = getelementptr i32, i32* %tmp5, i64 %tmp11
+  ; store
   store i32 1, i32* %tmp12, align 4
   %tmp13 = icmp eq i32 %tmp8, %tmp6
   %tmp14 = add i32 %tmp8, 1
@@ -64,4 +65,4 @@ return:                                           ; preds = %return.loopexit, %e
   ret void
 }
 
-; CHECK: ReadAccess :=  [Reduction Type: NONE] [Fortran array descriptor: xs] [Scalar: 0]
+; CHECK: MayWriteAccess := [Reduction Type: NONE] [Fortran array descriptor: xs] [Scalar: 0]

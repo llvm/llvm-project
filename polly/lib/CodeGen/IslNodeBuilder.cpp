@@ -995,6 +995,92 @@ bool IslNodeBuilder::materializeParameters() {
   return true;
 }
 
+/// Generate the computation of the size of the outermost dimension from the
+/// Fortran array descriptor (in this case, `@g_arr`). The final `%size`
+/// contains the size of the array.
+///
+/// %arrty = type { i8*, i64, i64, [3 x %desc.dimensionty] }
+/// %desc.dimensionty = type { i64, i64, i64 }
+/// @g_arr = global %arrty zeroinitializer, align 32
+/// ...
+/// %0 = load i64, i64* getelementptr inbounds
+///                       (%arrty, %arrty* @g_arr, i64 0, i32 3, i64 0, i32 2)
+/// %1 = load i64, i64* getelementptr inbounds
+///                      (%arrty, %arrty* @g_arr, i64 0, i32 3, i64 0, i32 1)
+/// %2 = sub nsw i64 %0, %1
+/// %size = add nsw i64 %2, 1
+static Value *buildFADOutermostDimensionLoad(Value *GlobalDescriptor,
+                                             PollyIRBuilder &Builder,
+                                             std::string ArrayName) {
+  assert(GlobalDescriptor && "invalid global descriptor given");
+
+  Value *endIdx[4] = {Builder.getInt64(0), Builder.getInt32(3),
+                      Builder.getInt64(0), Builder.getInt32(2)};
+  Value *endPtr = Builder.CreateInBoundsGEP(GlobalDescriptor, endIdx,
+                                            ArrayName + "_end_ptr");
+  Value *end = Builder.CreateLoad(endPtr, ArrayName + "_end");
+
+  Value *beginIdx[4] = {Builder.getInt64(0), Builder.getInt32(3),
+                        Builder.getInt64(0), Builder.getInt32(1)};
+  Value *beginPtr = Builder.CreateInBoundsGEP(GlobalDescriptor, beginIdx,
+                                              ArrayName + "_begin_ptr");
+  Value *begin = Builder.CreateLoad(beginPtr, ArrayName + "_begin");
+
+  Value *size =
+      Builder.CreateNSWSub(end, begin, ArrayName + "_end_begin_delta");
+  Type *endType = dyn_cast<IntegerType>(end->getType());
+  assert(endType && "expected type of end to be integral");
+
+  size = Builder.CreateNSWAdd(end,
+                              ConstantInt::get(endType, 1, /* signed = */ true),
+                              ArrayName + "_size");
+
+  return size;
+}
+
+bool IslNodeBuilder::materializeFortranArrayOutermostDimension() {
+  for (const ScopStmt &Stmt : S) {
+    for (const MemoryAccess *Access : Stmt) {
+      if (!Access->isArrayKind())
+        continue;
+
+      const ScopArrayInfo *Array = Access->getScopArrayInfo();
+      if (!Array)
+        continue;
+
+      if (Array->getNumberOfDimensions() == 0)
+        continue;
+
+      Value *FAD = Access->getFortranArrayDescriptor();
+      if (!FAD)
+        continue;
+
+      isl_pw_aff *ParametricPwAff = Array->getDimensionSizePw(0);
+      assert(ParametricPwAff && "parameteric pw_aff corresponding "
+                                "to outermost dimension does not "
+                                "exist");
+
+      isl_id *Id = isl_pw_aff_get_dim_id(ParametricPwAff, isl_dim_param, 0);
+      isl_pw_aff_free(ParametricPwAff);
+
+      assert(Id && "pw_aff is not parametric");
+
+      if (IDToValue.count(Id)) {
+        isl_id_free(Id);
+        continue;
+      }
+
+      Value *FinalValue =
+          buildFADOutermostDimensionLoad(FAD, Builder, Array->getName());
+      assert(FinalValue && "unable to build Fortran array "
+                           "descriptor load of outermost dimension");
+      IDToValue[Id] = FinalValue;
+      isl_id_free(Id);
+    }
+  }
+  return true;
+}
+
 /// Add the number of dimensions in @p BS to @p U.
 static isl_stat countTotalDims(__isl_take isl_basic_set *BS, void *U) {
   unsigned *NumTotalDim = static_cast<unsigned *>(U);
@@ -1312,6 +1398,12 @@ bool IslNodeBuilder::preloadInvariantLoads() {
 void IslNodeBuilder::addParameters(__isl_take isl_set *Context) {
   // Materialize values for the parameters of the SCoP.
   materializeParameters();
+
+  // materialize the outermost dimension parameters for a Fortran array.
+  // NOTE: materializeParameters() does not work since it looks through
+  // the SCEVs. We don't have a corresponding SCEV for the array size
+  // parameter
+  materializeFortranArrayOutermostDimension();
 
   // Generate values for the current loop iteration for all surrounding loops.
   //

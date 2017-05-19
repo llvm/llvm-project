@@ -43,7 +43,7 @@ namespace {
 
 class Executor {
 public:
-  explicit Executor(StringRef S) : Saver(Alloc), Prog(Saver.save(S)) {}
+  explicit Executor(StringRef S) : Prog(Saver.save(S)) {}
   void add(StringRef S) { Args.push_back(Saver.save(S)); }
   void add(std::string &S) { Args.push_back(Saver.save(S)); }
   void add(Twine S) { Args.push_back(Saver.save(S)); }
@@ -67,8 +67,6 @@ public:
   }
 
 private:
-  BumpPtrAllocator Alloc;
-  StringSaver Saver;
   StringRef Prog;
   std::vector<StringRef> Args;
 };

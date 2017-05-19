@@ -440,9 +440,6 @@ void LinkerScript::fabricateDefaultCommands() {
   // For each OutputSection that needs a VA fabricate an OutputSectionCommand
   // with an InputSectionDescription describing the InputSections
   for (OutputSection *Sec : *OutputSections) {
-    if (!(Sec->Flags & SHF_ALLOC))
-      continue;
-
     auto *OSCmd = make<OutputSectionCommand>(Sec->Name);
     OSCmd->Sec = Sec;
     SecToCommand[Sec] = OSCmd;
