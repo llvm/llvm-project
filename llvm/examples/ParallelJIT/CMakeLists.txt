@@ -11,4 +11,4 @@ add_llvm_example(ParallelJIT
   ParallelJIT.cpp
   )
 
-target_link_libraries(ParallelJIT ${PTHREAD_LIB})
+target_link_libraries(ParallelJIT ${LLVM_PTHREAD_LIB})
