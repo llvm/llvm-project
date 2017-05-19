@@ -49,7 +49,8 @@ ThreadPlanStepOut::ThreadPlanStepOut(
       ThreadPlanShouldStopHere(this), m_step_from_insn(LLDB_INVALID_ADDRESS),
       m_return_bp_id(LLDB_INVALID_BREAK_ID),
       m_return_addr(LLDB_INVALID_ADDRESS),
-      m_swift_error_return_addr(LLDB_INVALID_ADDRESS),
+      m_swift_error_return(),
+      m_swift_error_check_after_return(false),
       m_stop_others(stop_others), m_immediate_step_from_function(nullptr),
       m_is_swift_error_value(false),
       m_calculate_return_value(gather_return_value) {
@@ -166,8 +167,9 @@ ThreadPlanStepOut::ThreadPlanStepOut(
       SwiftLanguageRuntime *swift_runtime =
           m_thread.GetProcess()->GetSwiftLanguageRuntime();
       if (swift_runtime) {
-        m_swift_error_return_addr =
-            swift_runtime->GetErrorReturnLocationForFrame(frame_sp);
+        m_swift_error_return =
+            swift_runtime->GetErrorReturnLocationBeforeReturn(frame_sp,
+                                                              m_swift_error_check_after_return);
       }
     }
   }
@@ -503,20 +505,38 @@ void ThreadPlanStepOut::CalculateReturnValue() {
     return;
   // First check if we have an error return address, and if that pointer
   // contains a valid error return, grab it:
-  if (m_swift_error_return_addr != LLDB_INVALID_ADDRESS) {
-    SwiftLanguageRuntime *swift_runtime =
+  SwiftLanguageRuntime *swift_runtime =
         m_thread.GetProcess()->GetSwiftLanguageRuntime();
-    if (swift_runtime) {
+
+  if (swift_runtime) {
+    // In some ABI's the error is in a memory location in the caller's frame
+    // and we need to fetch that location from the frame before we leave the
+    // throwing frame.  In others, the actual error address is in a register,
+    // so we need to fetch the value of the address AFTER leaving the frame.
+    if (m_swift_error_check_after_return)
+    {
+      StackFrameSP frame_sp = m_thread.GetStackFrameAtIndex(0);
+      if (!frame_sp)
+          return;
+      
+      m_swift_error_return =
+            swift_runtime->GetErrorReturnLocationAfterReturn(frame_sp);
+    }
+    if (m_swift_error_return) {
       ConstString name("swift_thrown_error");
-      m_return_valobj_sp = swift_runtime->CalculateErrorValueObjectAtAddress(
-          m_swift_error_return_addr, name, true);
-      if (m_return_valobj_sp && m_return_valobj_sp->GetError().Success())
-        m_is_swift_error_value = true;
+
+      m_return_valobj_sp = swift_runtime->CalculateErrorValueObjectForValue(
+          m_swift_error_return.getValue(), name, true);
+      // Even if we couldn't figure out what the error return was, we
+      // were told there was an error, so don't show the user a false return value
+      // instead.
+      m_is_swift_error_value = true;
+      return;
     }
   }
 
-  if ((!m_return_valobj_sp || m_return_valobj_sp->GetError().Fail()) &&
-      m_immediate_step_from_function != nullptr) {
+  // We don't have a swift error, so let's compute the actual return:
+  if (m_immediate_step_from_function != nullptr) {
     CompilerType return_compiler_type =
         m_immediate_step_from_function->GetCompilerType()
             .GetFunctionReturnType();
