@@ -683,8 +683,11 @@ static bool isIntrinsicCall(ImmutableCallSite CS, Intrinsic::ID IID) {
 
 #ifndef NDEBUG
 static const Function *getParent(const Value *V) {
-  if (const Instruction *inst = dyn_cast<Instruction>(V))
+  if (const Instruction *inst = dyn_cast<Instruction>(V)) {
+    if (!inst->getParent())
+      return nullptr;
     return inst->getParent()->getParent();
+  }
 
   if (const Argument *arg = dyn_cast<Argument>(V))
     return arg->getParent();

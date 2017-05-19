@@ -478,10 +478,18 @@ private:
   /// in the chain.
   DeclUpdateOffsetsMap DeclUpdateOffsets;
 
+  struct PendingUpdateRecord {
+    Decl *D;
+    serialization::GlobalDeclID ID;
+    // Whether the declaration was just deserialized.
+    bool JustLoaded;
+    PendingUpdateRecord(serialization::GlobalDeclID ID, Decl *D,
+                        bool JustLoaded)
+        : D(D), ID(ID), JustLoaded(JustLoaded) {}
+  };
   /// \brief Declaration updates for already-loaded declarations that we need
   /// to apply once we finish processing an import.
-  llvm::SmallVector<std::pair<serialization::GlobalDeclID, Decl*>, 16>
-      PendingUpdateRecords;
+  llvm::SmallVector<PendingUpdateRecord, 16> PendingUpdateRecords;
 
   enum class PendingFakeDefinitionKind { NotFake, Fake, FakeLoaded };
 
@@ -1279,7 +1287,7 @@ private:
 
   RecordLocation DeclCursorForID(serialization::DeclID ID,
                                  SourceLocation &Location);
-  void loadDeclUpdateRecords(serialization::DeclID ID, Decl *D);
+  void loadDeclUpdateRecords(PendingUpdateRecord &Record);
   void loadPendingDeclChain(Decl *D, uint64_t LocalOffset);
   void loadObjCCategories(serialization::GlobalDeclID ID, ObjCInterfaceDecl *D,
                           unsigned PreviousGeneration = 0);

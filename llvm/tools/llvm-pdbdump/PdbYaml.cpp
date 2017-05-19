@@ -19,7 +19,6 @@
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbackPipeline.h"
-#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
@@ -371,7 +370,6 @@ void MappingContextTraits<PdbInlineeInfo, SerializationContext>::mapping(
 void MappingContextTraits<PdbTpiRecord, pdb::yaml::SerializationContext>::
     mapping(IO &IO, pdb::yaml::PdbTpiRecord &Obj,
             pdb::yaml::SerializationContext &Context) {
-
   if (IO.outputting()) {
     // For PDB to Yaml, deserialize into a high level record type, then dump it.
     consumeError(codeview::visitTypeRecord(Obj.Record, Context.Dumper));

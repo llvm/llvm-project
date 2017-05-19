@@ -14,9 +14,9 @@
 #include "StreamUtil.h"
 #include "llvm-pdbdump.h"
 
-#include "llvm/DebugInfo/CodeView/CVTypeDumper.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
+#include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
 #include "llvm/DebugInfo/CodeView/ModuleDebugFragmentVisitor.h"
@@ -25,7 +25,6 @@
 #include "llvm/DebugInfo/CodeView/ModuleDebugUnknownFragment.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabaseVisitor.h"
-#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
@@ -84,7 +83,7 @@ struct PageStats {
 
 class C13RawVisitor : public C13DebugFragmentVisitor {
 public:
-  C13RawVisitor(ScopedPrinter &P, PDBFile &F, TypeDatabase &IPI)
+  C13RawVisitor(ScopedPrinter &P, PDBFile &F, LazyRandomTypeCollection &IPI)
       : C13DebugFragmentVisitor(F), P(P), IPI(IPI) {}
 
   Error handleLines() override {
@@ -160,7 +159,7 @@ public:
         if (auto EC = printFileName("FileName", L.Header->FileID))
           return EC;
 
-        if (auto EC = dumpTypeRecord("Function", IPI, L.Header->Inlinee))
+        if (auto EC = dumpTypeRecord("Function", L.Header->Inlinee))
           return EC;
         P.printNumber("SourceLine", L.Header->SourceLineNum);
         if (IL.hasExtraFiles()) {
@@ -176,11 +175,11 @@ public:
   }
 
 private:
-  Error dumpTypeRecord(StringRef Label, TypeDatabase &DB, TypeIndex Index) {
-    CompactTypeDumpVisitor CTDV(DB, Index, &P);
+  Error dumpTypeRecord(StringRef Label, TypeIndex Index) {
+    CompactTypeDumpVisitor CTDV(IPI, Index, &P);
     DictScope D(P, Label);
-    if (DB.contains(Index)) {
-      CVType &Type = DB.getTypeRecord(Index);
+    if (IPI.contains(Index)) {
+      CVType Type = IPI.getType(Index);
       if (auto EC = codeview::visitTypeRecord(Type, CTDV))
         return EC;
     } else {
@@ -199,7 +198,7 @@ private:
   }
 
   ScopedPrinter &P;
-  TypeDatabase &IPI;
+  LazyRandomTypeCollection &IPI;
 };
 }
 
@@ -609,13 +608,18 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
     VerLabel = "IPI Version";
   }
 
-  if (!DumpRecordBytes && !DumpRecords && !DumpTpiHash)
-    return Error::success();
-
   auto Tpi = (StreamIdx == StreamTPI) ? File.getPDBTpiStream()
                                       : File.getPDBIpiStream();
   if (!Tpi)
     return Tpi.takeError();
+
+  auto ExpectedTypes = initializeTypeDatabase(StreamIdx);
+  if (!ExpectedTypes)
+    return ExpectedTypes.takeError();
+  auto &Types = *ExpectedTypes;
+
+  if (!DumpRecordBytes && !DumpRecords && !DumpTpiHash)
+    return Error::success();
 
   std::unique_ptr<DictScope> StreamScope;
   std::unique_ptr<ListScope> RecordScope;
@@ -624,25 +628,19 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   P.printNumber(VerLabel, Tpi->getTpiVersion());
   P.printNumber("Record count", Tpi->getNumTypeRecords());
 
-  Optional<TypeDatabase> &StreamDB = (StreamIdx == StreamTPI) ? TypeDB : ItemDB;
-
   std::vector<std::unique_ptr<TypeVisitorCallbacks>> Visitors;
 
-  if (!StreamDB.hasValue()) {
-    StreamDB.emplace(Tpi->getNumTypeRecords());
-    Visitors.push_back(make_unique<TypeDatabaseVisitor>(*StreamDB));
-  }
   // If we're in dump mode, add a dumper with the appropriate detail level.
   if (DumpRecords) {
     std::unique_ptr<TypeVisitorCallbacks> Dumper;
     if (opts::raw::CompactRecords)
-      Dumper = make_unique<CompactTypeDumpVisitor>(*StreamDB, &P);
+      Dumper = make_unique<CompactTypeDumpVisitor>(Types, &P);
     else {
-      assert(TypeDB.hasValue());
+      assert(TpiTypes);
 
-      auto X = make_unique<TypeDumpVisitor>(*TypeDB, &P, false);
+      auto X = make_unique<TypeDumpVisitor>(*TpiTypes, &P, false);
       if (StreamIdx == StreamIPI)
-        X->setItemDB(*ItemDB);
+        X->setIpiTypes(*IpiTypes);
       Dumper = std::move(X);
     }
     Visitors.push_back(std::move(Dumper));
@@ -660,23 +658,18 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   if (DumpRecords || DumpRecordBytes)
     RecordScope = llvm::make_unique<ListScope>(P, "Records");
 
-  bool HadError = false;
-
-  TypeIndex T(TypeIndex::FirstNonSimpleIndex);
-  for (auto Type : Tpi->types(&HadError)) {
+  Optional<TypeIndex> I = Types.getFirst();
+  while (I) {
     std::unique_ptr<DictScope> OneRecordScope;
 
     if ((DumpRecords || DumpRecordBytes) && !opts::raw::CompactRecords)
       OneRecordScope = llvm::make_unique<DictScope>(P, "");
 
-    if (auto EC = codeview::visitTypeRecord(Type, Pipeline))
+    auto T = Types.getType(*I);
+    if (auto EC = codeview::visitTypeRecord(T, *I, Pipeline))
       return EC;
-
-    ++T;
+    I = Types.getNext(*I);
   }
-  if (HadError)
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "TPI stream contained corrupt record");
 
   if (DumpTpiHash) {
     DictScope DD(P, "Hash");
@@ -711,35 +704,26 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   return Error::success();
 }
 
-Error LLVMOutputStyle::buildTypeDatabase(uint32_t SN) {
-  assert(SN == StreamIPI || SN == StreamTPI);
-
-  auto &DB = (SN == StreamIPI) ? ItemDB : TypeDB;
-
-  if (DB.hasValue())
-    return Error::success();
-
+Expected<codeview::LazyRandomTypeCollection &>
+LLVMOutputStyle::initializeTypeDatabase(uint32_t SN) {
+  auto &TypeCollection = (SN == StreamTPI) ? TpiTypes : IpiTypes;
   auto Tpi =
       (SN == StreamTPI) ? File.getPDBTpiStream() : File.getPDBIpiStream();
-
   if (!Tpi)
     return Tpi.takeError();
 
-  DB.emplace(Tpi->getNumTypeRecords());
+  if (!TypeCollection) {
+    // Initialize the type collection, even if we're not going to dump it.  This
+    // way if some other part of the dumper decides it wants to use some or all
+    // of the records for whatever purposes, it can still access them lazily.
+    auto &Types = Tpi->typeArray();
+    uint32_t Count = Tpi->getNumTypeRecords();
+    auto Offsets = Tpi->getTypeIndexOffsets();
+    TypeCollection =
+        llvm::make_unique<LazyRandomTypeCollection>(Types, Count, Offsets);
+  }
 
-  TypeDatabaseVisitor DBV(*DB);
-
-  auto HashValues = Tpi->getHashValues();
-  if (HashValues.empty())
-    return codeview::visitTypeStream(Tpi->typeArray(), DBV);
-
-  TypeVisitorCallbackPipeline Pipeline;
-  Pipeline.addCallbackToPipeline(DBV);
-
-  TpiHashVerifier HashVerifier(HashValues, Tpi->getNumHashBuckets());
-  Pipeline.addCallbackToPipeline(HashVerifier);
-
-  return codeview::visitTypeStream(Tpi->typeArray(), Pipeline);
+  return *TypeCollection;
 }
 
 Error LLVMOutputStyle::dumpDbiStream() {
@@ -814,11 +798,13 @@ Error LLVMOutputStyle::dumpDbiStream() {
           return EC;
 
         if (ShouldDumpSymbols) {
-          if (auto EC = buildTypeDatabase(StreamTPI))
-            return EC;
+          auto ExpectedTypes = initializeTypeDatabase(StreamTPI);
+          if (!ExpectedTypes)
+            return ExpectedTypes.takeError();
+          auto &Types = *ExpectedTypes;
 
           ListScope SS(P, "Symbols");
-          codeview::CVSymbolDumper SD(P, *TypeDB, nullptr, false);
+          codeview::CVSymbolDumper SD(P, Types, nullptr, false);
           bool HadError = false;
           for (auto S : ModS.symbols(&HadError)) {
             DictScope LL(P, "");
@@ -839,10 +825,11 @@ Error LLVMOutputStyle::dumpDbiStream() {
         }
         if (opts::raw::DumpLineInfo) {
           ListScope SS(P, "LineInfo");
-          if (auto EC = buildTypeDatabase(StreamIPI))
-            return EC;
-
-          C13RawVisitor V(P, File, *ItemDB);
+          auto ExpectedTypes = initializeTypeDatabase(StreamIPI);
+          if (!ExpectedTypes)
+            return ExpectedTypes.takeError();
+          auto &IpiItems = *ExpectedTypes;
+          C13RawVisitor V(P, File, IpiItems);
           if (auto EC = codeview::visitModuleDebugFragments(
                   ModS.linesAndChecksums(), V))
             return EC;
@@ -960,10 +947,12 @@ Error LLVMOutputStyle::dumpPublicsStream() {
   P.printList("Section Offsets", Publics->getSectionOffsets(),
               printSectionOffset);
   ListScope L(P, "Symbols");
-  if (auto EC = buildTypeDatabase(StreamTPI))
-    return EC;
+  auto ExpectedTypes = initializeTypeDatabase(StreamTPI);
+  if (!ExpectedTypes)
+    return ExpectedTypes.takeError();
+  auto &Tpi = *ExpectedTypes;
 
-  codeview::CVSymbolDumper SD(P, *TypeDB, nullptr, false);
+  codeview::CVSymbolDumper SD(P, Tpi, nullptr, false);
   bool HadError = false;
   for (auto S : Publics->getSymbols(&HadError)) {
     DictScope DD(P, "");

@@ -247,7 +247,8 @@ ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *Ctx,
                              ArrayRef<const SCEV *> Sizes, MemoryKind Kind,
                              const DataLayout &DL, Scop *S,
                              const char *BaseName)
-    : BasePtr(BasePtr), ElementType(ElementType), Kind(Kind), DL(DL), S(*S) {
+    : BasePtr(BasePtr), ElementType(ElementType), Kind(Kind), DL(DL), S(*S),
+      FAD(nullptr) {
   std::string BasePtrName =
       BaseName ? BaseName
                : getIslCompatibleName("MemRef", BasePtr, S->getNextArrayIdx(),
@@ -318,6 +319,37 @@ void ScopArrayInfo::updateElementType(Type *NewElementType) {
   }
 }
 
+/// Make the ScopArrayInfo model a Fortran Array
+void ScopArrayInfo::applyAndSetFAD(Value *FAD) {
+  assert(FAD && "got invalid Fortran array descriptor");
+  if (this->FAD) {
+    assert(this->FAD == FAD &&
+           "receiving different array descriptors for same array");
+    return;
+  }
+
+  assert(DimensionSizesPw.size() > 0 && !DimensionSizesPw[0]);
+  assert(!this->FAD);
+  this->FAD = FAD;
+
+  isl_space *Space = isl_space_set_alloc(S.getIslCtx(), 1, 0);
+
+  std::string param_name = getName();
+  param_name += "_fortranarr_size";
+  // TODO: see if we need to add `this` as the id user pointer
+  isl_id *IdPwAff = isl_id_alloc(S.getIslCtx(), param_name.c_str(), nullptr);
+
+  Space = isl_space_set_dim_id(Space, isl_dim_param, 0, IdPwAff);
+  isl_basic_set *Identity = isl_basic_set_universe(Space);
+  isl_local_space *LocalSpace = isl_basic_set_get_local_space(Identity);
+  isl_basic_set_free(Identity);
+
+  isl_pw_aff *PwAff =
+      isl_pw_aff_from_aff(isl_aff_var_on_domain(LocalSpace, isl_dim_param, 0));
+
+  DimensionSizesPw[0] = PwAff;
+}
+
 bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes,
                                 bool CheckConsistency) {
   int SharedDims = std::min(NewSizes.size(), DimensionSizes.size());
@@ -374,7 +406,12 @@ void ScopArrayInfo::dump() const { print(errs()); }
 void ScopArrayInfo::print(raw_ostream &OS, bool SizeAsPwAff) const {
   OS.indent(8) << *getElementType() << " " << getName();
   unsigned u = 0;
-  if (getNumberOfDimensions() > 0 && !getDimensionSize(0)) {
+  // If this is a Fortran array, then we can print the outermost dimension
+  // as a isl_pw_aff even though there is no SCEV information.
+  bool IsOutermostSizeKnown = SizeAsPwAff && FAD;
+
+  if (!IsOutermostSizeKnown && getNumberOfDimensions() > 0 &&
+      !getDimensionSize(0)) {
     OS << "[*]";
     u++;
   }
@@ -2175,6 +2212,46 @@ void Scop::addParameterBounds() {
   }
 }
 
+// We use the outermost dimension to generate GPU transfers for Fortran arrays
+// even when the array bounds are not known statically. To do so, we need the
+// outermost dimension information. We add this into the context so that the
+// outermost dimension is available during codegen.
+// We currently do not care about dimensions other than the outermost
+// dimension since it doesn't affect transfers.
+static isl_set *addFortranArrayOutermostDimParams(__isl_give isl_set *Context,
+                                                  Scop::array_range Arrays) {
+
+  std::vector<isl_id *> OutermostSizeIds;
+  for (auto Array : Arrays) {
+    // To check if an array is a Fortran array, we check if it has a isl_pw_aff
+    // for its outermost dimension. Fortran arrays will have this since the
+    // outermost dimension size can be picked up from their runtime description.
+    // TODO: actually need to check if it has a FAD, but for now this works.
+    if (Array->getNumberOfDimensions() > 0) {
+      isl_pw_aff *PwAff = Array->getDimensionSizePw(0);
+      if (!PwAff)
+        continue;
+
+      isl_id *Id = isl_pw_aff_get_dim_id(PwAff, isl_dim_param, 0);
+      isl_pw_aff_free(PwAff);
+      assert(Id && "Invalid Id for PwAff expression in Fortran array");
+      OutermostSizeIds.push_back(Id);
+    }
+  }
+
+  const int NumTrueParams = isl_set_dim(Context, isl_dim_param);
+  Context = isl_set_add_dims(Context, isl_dim_param, OutermostSizeIds.size());
+
+  for (size_t i = 0; i < OutermostSizeIds.size(); i++) {
+    Context = isl_set_set_dim_id(Context, isl_dim_param, NumTrueParams + i,
+                                 OutermostSizeIds[i]);
+    Context =
+        isl_set_lower_bound_si(Context, isl_dim_param, NumTrueParams + i, 0);
+  }
+
+  return Context;
+}
+
 void Scop::realignParams() {
   if (PollyIgnoreParamBounds)
     return;
@@ -2191,12 +2268,15 @@ void Scop::realignParams() {
   // Align the parameters of all data structures to the model.
   Context = isl_set_align_params(Context, Space);
 
+  // Add the outermost dimension of the Fortran arrays into the Context.
+  // See the description of the function for more information.
+  Context = addFortranArrayOutermostDimParams(Context, arrays());
+
   // As all parameters are known add bounds to them.
   addParameterBounds();
 
   for (ScopStmt &Stmt : *this)
     Stmt.realignParams();
-
   // Simplify the schedule according to the context too.
   Schedule = isl_schedule_gist_domain_params(Schedule, getContext());
 }
@@ -3442,11 +3522,29 @@ void Scop::foldSizeConstantsToRight() {
   return;
 }
 
+void Scop::markFortranArrays() {
+  for (ScopStmt &Stmt : Stmts) {
+    for (MemoryAccess *MemAcc : Stmt) {
+      Value *FAD = MemAcc->getFortranArrayDescriptor();
+      if (!FAD)
+        continue;
+
+      // TODO: const_cast-ing to edit
+      ScopArrayInfo *SAI =
+          const_cast<ScopArrayInfo *>(MemAcc->getLatestScopArrayInfo());
+      assert(SAI && "memory access into a Fortran array does not "
+                    "have an associated ScopArrayInfo");
+      SAI->applyAndSetFAD(FAD);
+    }
+  }
+}
+
 void Scop::finalizeAccesses() {
   updateAccessDimensionality();
   foldSizeConstantsToRight();
   foldAccessRelations();
   assumeNoOutOfBounds();
+  markFortranArrays();
 }
 
 Scop::~Scop() {

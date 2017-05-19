@@ -11,14 +11,12 @@
 
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
-#include "llvm/DebugInfo/CodeView/RandomAccessTypeVisitor.h"
-#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/TypeSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeServerHandler.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
-#include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/Allocator.h"
@@ -130,20 +128,16 @@ public:
 
   void SetUp() override {
     TestState = llvm::make_unique<PerTestState>();
-
-    TestState->Pipeline.addCallbackToPipeline(TestState->Deserializer);
-    TestState->Pipeline.addCallbackToPipeline(TestState->Callbacks);
   }
 
   void TearDown() override { TestState.reset(); }
 
 protected:
-  bool ValidateDatabaseRecord(const RandomAccessTypeVisitor &Visitor,
-                              uint32_t Index) {
+  bool ValidateDatabaseRecord(LazyRandomTypeCollection &Types, uint32_t Index) {
     TypeIndex TI = TypeIndex::fromArrayIndex(Index);
-    if (!Visitor.database().contains(TI))
+    if (!Types.contains(TI))
       return false;
-    if (GlobalState->TypeVector[Index] != Visitor.database().getTypeRecord(TI))
+    if (GlobalState->TypeVector[Index] != Types.getType(TI))
       return false;
     return true;
   }
@@ -184,8 +178,6 @@ protected:
   struct PerTestState {
     FixedStreamArray<TypeIndexOffset> Offsets;
 
-    TypeVisitorCallbackPipeline Pipeline;
-    TypeDeserializer Deserializer;
     MockCallbacks Callbacks;
   };
 
@@ -218,21 +210,22 @@ std::unique_ptr<RandomAccessVisitorTest::GlobalTestState>
 
 TEST_F(RandomAccessVisitorTest, MultipleVisits) {
   TestState->Offsets = createPartialOffsets(GlobalState->Stream, {0, 8});
-  RandomAccessTypeVisitor Visitor(GlobalState->TypeArray,
-                                  GlobalState->TypeVector.size(),
-                                  TestState->Offsets);
+  LazyRandomTypeCollection Types(GlobalState->TypeArray,
+                                 GlobalState->TypeVector.size(),
+                                 TestState->Offsets);
 
   std::vector<uint32_t> IndicesToVisit = {5, 5, 5};
 
   for (uint32_t I : IndicesToVisit) {
     TypeIndex TI = TypeIndex::fromArrayIndex(I);
-    EXPECT_NO_ERROR(Visitor.visitTypeIndex(TI, TestState->Pipeline));
+    CVType T = Types.getType(TI);
+    EXPECT_NO_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks));
   }
 
   // [0,8) should be present
-  EXPECT_EQ(8u, Visitor.database().size());
+  EXPECT_EQ(8u, Types.size());
   for (uint32_t I = 0; I < 8; ++I)
-    EXPECT_TRUE(ValidateDatabaseRecord(Visitor, I));
+    EXPECT_TRUE(ValidateDatabaseRecord(Types, I));
 
   // 5, 5, 5
   EXPECT_EQ(3u, TestState->Callbacks.count());
@@ -248,19 +241,19 @@ TEST_F(RandomAccessVisitorTest, DescendingWithinChunk) {
 
   std::vector<uint32_t> IndicesToVisit = {7, 4, 2};
 
-  RandomAccessTypeVisitor Visitor(GlobalState->TypeArray,
-                                  GlobalState->TypeVector.size(),
-                                  TestState->Offsets);
-
+  LazyRandomTypeCollection Types(GlobalState->TypeArray,
+                                 GlobalState->TypeVector.size(),
+                                 TestState->Offsets);
   for (uint32_t I : IndicesToVisit) {
     TypeIndex TI = TypeIndex::fromArrayIndex(I);
-    EXPECT_NO_ERROR(Visitor.visitTypeIndex(TI, TestState->Pipeline));
+    CVType T = Types.getType(TI);
+    EXPECT_NO_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks));
   }
 
   // [0, 7]
-  EXPECT_EQ(8u, Visitor.database().size());
+  EXPECT_EQ(8u, Types.size());
   for (uint32_t I = 0; I < 8; ++I)
-    EXPECT_TRUE(ValidateDatabaseRecord(Visitor, I));
+    EXPECT_TRUE(ValidateDatabaseRecord(Types, I));
 
   // 2, 4, 7
   EXPECT_EQ(3u, TestState->Callbacks.count());
@@ -276,19 +269,19 @@ TEST_F(RandomAccessVisitorTest, AscendingWithinChunk) {
 
   std::vector<uint32_t> IndicesToVisit = {2, 4, 7};
 
-  RandomAccessTypeVisitor Visitor(GlobalState->TypeArray,
-                                  GlobalState->TypeVector.size(),
-                                  TestState->Offsets);
-
+  LazyRandomTypeCollection Types(GlobalState->TypeArray,
+                                 GlobalState->TypeVector.size(),
+                                 TestState->Offsets);
   for (uint32_t I : IndicesToVisit) {
     TypeIndex TI = TypeIndex::fromArrayIndex(I);
-    EXPECT_NO_ERROR(Visitor.visitTypeIndex(TI, TestState->Pipeline));
+    CVType T = Types.getType(TI);
+    EXPECT_NO_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks));
   }
 
   // [0, 7]
-  EXPECT_EQ(8u, Visitor.database().size());
+  EXPECT_EQ(8u, Types.size());
   for (uint32_t I = 0; I < 8; ++I)
-    EXPECT_TRUE(ValidateDatabaseRecord(Visitor, I));
+    EXPECT_TRUE(ValidateDatabaseRecord(Types, I));
 
   // 2, 4, 7
   EXPECT_EQ(3u, TestState->Callbacks.count());
@@ -305,19 +298,20 @@ TEST_F(RandomAccessVisitorTest, StopPrematurelyInChunk) {
 
   std::vector<uint32_t> IndicesToVisit = {0, 1, 2};
 
-  RandomAccessTypeVisitor Visitor(GlobalState->TypeArray,
-                                  GlobalState->TypeVector.size(),
-                                  TestState->Offsets);
+  LazyRandomTypeCollection Types(GlobalState->TypeArray,
+                                 GlobalState->TypeVector.size(),
+                                 TestState->Offsets);
 
   for (uint32_t I : IndicesToVisit) {
     TypeIndex TI = TypeIndex::fromArrayIndex(I);
-    EXPECT_NO_ERROR(Visitor.visitTypeIndex(TI, TestState->Pipeline));
+    CVType T = Types.getType(TI);
+    EXPECT_NO_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks));
   }
 
   // [0, 8) should be visited.
-  EXPECT_EQ(8u, Visitor.database().size());
+  EXPECT_EQ(8u, Types.size());
   for (uint32_t I = 0; I < 8; ++I)
-    EXPECT_TRUE(ValidateDatabaseRecord(Visitor, I));
+    EXPECT_TRUE(ValidateDatabaseRecord(Types, I));
 
   // [0, 2]
   EXPECT_EQ(3u, TestState->Callbacks.count());
@@ -333,19 +327,20 @@ TEST_F(RandomAccessVisitorTest, InnerChunk) {
 
   std::vector<uint32_t> IndicesToVisit = {5, 7};
 
-  RandomAccessTypeVisitor Visitor(GlobalState->TypeArray,
-                                  GlobalState->TypeVector.size(),
-                                  TestState->Offsets);
+  LazyRandomTypeCollection Types(GlobalState->TypeArray,
+                                 GlobalState->TypeVector.size(),
+                                 TestState->Offsets);
 
   for (uint32_t I : IndicesToVisit) {
     TypeIndex TI = TypeIndex::fromArrayIndex(I);
-    EXPECT_NO_ERROR(Visitor.visitTypeIndex(TI, TestState->Pipeline));
+    CVType T = Types.getType(TI);
+    EXPECT_NO_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks));
   }
 
   // [4, 9)
-  EXPECT_EQ(5u, Visitor.database().size());
+  EXPECT_EQ(5u, Types.size());
   for (uint32_t I = 4; I < 9; ++I)
-    EXPECT_TRUE(ValidateDatabaseRecord(Visitor, I));
+    EXPECT_TRUE(ValidateDatabaseRecord(Types, I));
 
   // 5, 7
   EXPECT_EQ(2u, TestState->Callbacks.count());

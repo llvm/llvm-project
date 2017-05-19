@@ -717,7 +717,7 @@ class LoadedModule {
   void set(const char *module_name, uptr base_address, ModuleArch arch,
            u8 uuid[kModuleUUIDSize], bool instrumented);
   void clear();
-  void addAddressRange(uptr beg, uptr end, bool executable, bool readable);
+  void addAddressRange(uptr beg, uptr end, bool executable, bool writable);
   bool containsAddress(uptr address) const;
 
   const char *full_name() const { return full_name_; }
@@ -732,14 +732,14 @@ class LoadedModule {
     uptr beg;
     uptr end;
     bool executable;
-    bool readable;
+    bool writable;
 
-    AddressRange(uptr beg, uptr end, bool executable, bool readable)
+    AddressRange(uptr beg, uptr end, bool executable, bool writable)
         : next(nullptr),
           beg(beg),
           end(end),
           executable(executable),
-          readable(readable) {}
+          writable(writable) {}
   };
 
   const IntrusiveList<AddressRange> &ranges() const { return ranges_; }

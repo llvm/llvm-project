@@ -326,7 +326,7 @@
 ; EMPTY-NEXT:           TypeLeafKind: LF_SUBSTR_LIST (0x1604)
 ; EMPTY-NEXT:           NumStrings: 1
 ; EMPTY-NEXT:           Strings [
-; EMPTY-NEXT:             String: __vc_attributes::threadingAttribute (0x100B)
+; EMPTY-NEXT:             String: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows
 ; EMPTY-NEXT:           ]
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         Bytes (
@@ -1253,7 +1253,7 @@
 ; ALL:         TypeLeafKind: LF_SUBSTR_LIST (0x1604)
 ; ALL:         NumStrings: 1
 ; ALL:         Strings [
-; ALL:           String: __vc_attributes::threadingAttribute (0x100B)
+; ALL:           String: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows (0x100B)
 ; ALL:         ]
 ; ALL:       }
 ; ALL:     }

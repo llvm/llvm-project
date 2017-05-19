@@ -110,8 +110,88 @@ void ODRHash::AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
   }
 }
 
-void ODRHash::AddTemplateName(TemplateName Name) {}
-void ODRHash::AddTemplateArgument(TemplateArgument TA) {}
+void ODRHash::AddTemplateName(TemplateName Name) {
+  const auto Kind = Name.getKind();
+  ID.AddInteger(Kind);
+  AddBoolean(Name.isDependent());
+  AddBoolean(Name.isInstantiationDependent());
+  switch (Kind) {
+  case TemplateName::Template:
+    AddDecl(Name.getAsTemplateDecl());
+    break;
+  case TemplateName::OverloadedTemplate: {
+    const auto *Storage = Name.getAsOverloadedTemplate();
+    ID.AddInteger(Storage->size());
+    for (const auto *ND : *Storage) {
+      AddDecl(ND);
+    }
+    break;
+  }
+  case TemplateName::QualifiedTemplate: {
+    const auto *QTN = Name.getAsQualifiedTemplateName();
+    AddNestedNameSpecifier(QTN->getQualifier());
+    AddBoolean(QTN->hasTemplateKeyword());
+    AddDecl(QTN->getDecl());
+    break;
+  }
+  case TemplateName::DependentTemplate: {
+    const auto *DTN = Name.getAsDependentTemplateName();
+    AddBoolean(DTN->isIdentifier());
+    if (DTN->isIdentifier()) {
+      AddIdentifierInfo(DTN->getIdentifier());
+    } else {
+      ID.AddInteger(DTN->getOperator());
+    }
+    break;
+  }
+  case TemplateName::SubstTemplateTemplateParm: {
+    const auto *Storage = Name.getAsSubstTemplateTemplateParm();
+    AddDecl(Storage->getParameter());
+    AddTemplateName(Storage->getReplacement());
+    break;
+  }
+  case TemplateName::SubstTemplateTemplateParmPack: {
+    const auto *Storage = Name.getAsSubstTemplateTemplateParmPack();
+    AddDecl(Storage->getParameterPack());
+    AddTemplateArgument(Storage->getArgumentPack());
+    break;
+  }
+  }
+}
+
+void ODRHash::AddTemplateArgument(TemplateArgument TA) {
+  const auto Kind = TA.getKind();
+  ID.AddInteger(Kind);
+  switch (Kind) {
+  case TemplateArgument::Null:
+    llvm_unreachable("Require valid TemplateArgument");
+  case TemplateArgument::Type:
+    AddQualType(TA.getAsType());
+    break;
+  case TemplateArgument::Declaration:
+    AddDecl(TA.getAsDecl());
+    break;
+  case TemplateArgument::NullPtr:
+    AddQualType(TA.getNullPtrType());
+    break;
+  case TemplateArgument::Integral:
+    TA.getAsIntegral().Profile(ID);
+    AddQualType(TA.getIntegralType());
+    break;
+  case TemplateArgument::Template:
+  case TemplateArgument::TemplateExpansion:
+    AddTemplateName(TA.getAsTemplateOrTemplatePattern());
+    break;
+  case TemplateArgument::Expression:
+    AddStmt(TA.getAsExpr());
+    break;
+  case TemplateArgument::Pack:
+    ID.AddInteger(TA.pack_size());
+    for (auto SubTA : TA.pack_elements())
+      AddTemplateArgument(SubTA);
+    break;
+  }
+}
 void ODRHash::AddTemplateParameterList(const TemplateParameterList *TPL) {}
 
 void ODRHash::clear() {
@@ -491,6 +571,14 @@ public:
     AddNestedNameSpecifier(T->getQualifier());
     AddQualType(T->getNamedType());
     VisitTypeWithKeyword(T);
+  }
+
+  void VisitTemplateSpecializationType(const TemplateSpecializationType *T) {
+    ID.AddInteger(T->getNumArgs());
+    for (const auto &TA : T->template_arguments()) {
+      Hash.AddTemplateArgument(TA);
+    }
+    Hash.AddTemplateName(T->getTemplateName());
   }
 };
 

@@ -110,6 +110,15 @@ private:
   bool HasMemset;
   bool HasMemsetPattern;
   bool HasMemcpy;
+  /// Return code for isLegalStore()
+  enum LegalStoreKind {
+    None = 0,
+    Memset,
+    MemsetPattern,
+    Memcpy,
+    DontUse // Dummy retval never to be used. Allows catching errors in retval
+            // handling.
+  };
 
   /// \name Countable Loop Idiom Handling
   /// @{
@@ -119,8 +128,7 @@ private:
                       SmallVectorImpl<BasicBlock *> &ExitBlocks);
 
   void collectStores(BasicBlock *BB);
-  bool isLegalStore(StoreInst *SI, bool &ForMemset, bool &ForMemsetPattern,
-                    bool &ForMemcpy);
+  LegalStoreKind isLegalStore(StoreInst *SI);
   bool processLoopStores(SmallVectorImpl<StoreInst *> &SL, const SCEV *BECount,
                          bool ForMemset);
   bool processLoopMemSet(MemSetInst *MSI, const SCEV *BECount);
@@ -343,20 +351,20 @@ static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
   return ConstantArray::get(AT, std::vector<Constant *>(ArraySize, C));
 }
 
-bool LoopIdiomRecognize::isLegalStore(StoreInst *SI, bool &ForMemset,
-                                      bool &ForMemsetPattern, bool &ForMemcpy) {
+LoopIdiomRecognize::LegalStoreKind
+LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   // Don't touch volatile stores.
   if (!SI->isSimple())
-    return false;
+    return LegalStoreKind::None;
 
   // Don't convert stores of non-integral pointer types to memsets (which stores
   // integers).
   if (DL->isNonIntegralPointerType(SI->getValueOperand()->getType()))
-    return false;
+    return LegalStoreKind::None;
 
   // Avoid merging nontemporal stores.
   if (SI->getMetadata(LLVMContext::MD_nontemporal))
-    return false;
+    return LegalStoreKind::None;
 
   Value *StoredVal = SI->getValueOperand();
   Value *StorePtr = SI->getPointerOperand();
@@ -364,7 +372,7 @@ bool LoopIdiomRecognize::isLegalStore(StoreInst *SI, bool &ForMemset,
   // Reject stores that are so large that they overflow an unsigned.
   uint64_t SizeInBits = DL->getTypeSizeInBits(StoredVal->getType());
   if ((SizeInBits & 7) || (SizeInBits >> 32) != 0)
-    return false;
+    return LegalStoreKind::None;
 
   // See if the pointer expression is an AddRec like {base,+,1} on the current
   // loop, which indicates a strided store.  If we have something else, it's a
@@ -372,11 +380,11 @@ bool LoopIdiomRecognize::isLegalStore(StoreInst *SI, bool &ForMemset,
   const SCEVAddRecExpr *StoreEv =
       dyn_cast<SCEVAddRecExpr>(SE->getSCEV(StorePtr));
   if (!StoreEv || StoreEv->getLoop() != CurLoop || !StoreEv->isAffine())
-    return false;
+    return LegalStoreKind::None;
 
   // Check to see if we have a constant stride.
   if (!isa<SCEVConstant>(StoreEv->getOperand(1)))
-    return false;
+    return LegalStoreKind::None;
 
   // See if the store can be turned into a memset.
 
@@ -394,15 +402,13 @@ bool LoopIdiomRecognize::isLegalStore(StoreInst *SI, bool &ForMemset,
       // promote the memset.
       CurLoop->isLoopInvariant(SplatValue)) {
     // It looks like we can use SplatValue.
-    ForMemset = true;
-    return true;
+    return LegalStoreKind::Memset;
   } else if (HasMemsetPattern &&
              // Don't create memset_pattern16s with address spaces.
              StorePtr->getType()->getPointerAddressSpace() == 0 &&
              (PatternValue = getMemSetPatternValue(StoredVal, DL))) {
     // It looks like we can use PatternValue!
-    ForMemsetPattern = true;
-    return true;
+    return LegalStoreKind::MemsetPattern;
   }
 
   // Otherwise, see if the store can be turned into a memcpy.
@@ -412,12 +418,12 @@ bool LoopIdiomRecognize::isLegalStore(StoreInst *SI, bool &ForMemset,
     APInt Stride = getStoreStride(StoreEv);
     unsigned StoreSize = getStoreSizeInBytes(SI, DL);
     if (StoreSize != Stride && StoreSize != -Stride)
-      return false;
+      return LegalStoreKind::None;
 
     // The store must be feeding a non-volatile load.
     LoadInst *LI = dyn_cast<LoadInst>(SI->getValueOperand());
     if (!LI || !LI->isSimple())
-      return false;
+      return LegalStoreKind::None;
 
     // See if the pointer expression is an AddRec like {base,+,1} on the current
     // loop, which indicates a strided load.  If we have something else, it's a
@@ -425,18 +431,17 @@ bool LoopIdiomRecognize::isLegalStore(StoreInst *SI, bool &ForMemset,
     const SCEVAddRecExpr *LoadEv =
         dyn_cast<SCEVAddRecExpr>(SE->getSCEV(LI->getPointerOperand()));
     if (!LoadEv || LoadEv->getLoop() != CurLoop || !LoadEv->isAffine())
-      return false;
+      return LegalStoreKind::None;
 
     // The store and load must share the same stride.
     if (StoreEv->getOperand(1) != LoadEv->getOperand(1))
-      return false;
+      return LegalStoreKind::None;
 
     // Success.  This store can be converted into a memcpy.
-    ForMemcpy = true;
-    return true;
+    return LegalStoreKind::Memcpy;
   }
   // This store can't be transformed into a memset/memcpy.
-  return false;
+  return LegalStoreKind::None;
 }
 
 void LoopIdiomRecognize::collectStores(BasicBlock *BB) {
@@ -448,24 +453,28 @@ void LoopIdiomRecognize::collectStores(BasicBlock *BB) {
     if (!SI)
       continue;
 
-    bool ForMemset = false;
-    bool ForMemsetPattern = false;
-    bool ForMemcpy = false;
     // Make sure this is a strided store with a constant stride.
-    if (!isLegalStore(SI, ForMemset, ForMemsetPattern, ForMemcpy))
-      continue;
-
-    // Save the store locations.
-    if (ForMemset) {
+    switch (isLegalStore(SI)) {
+    case LegalStoreKind::None:
+      // Nothing to do
+      break;
+    case LegalStoreKind::Memset: {
       // Find the base pointer.
       Value *Ptr = GetUnderlyingObject(SI->getPointerOperand(), *DL);
       StoreRefsForMemset[Ptr].push_back(SI);
-    } else if (ForMemsetPattern) {
+    } break;
+    case LegalStoreKind::MemsetPattern: {
       // Find the base pointer.
       Value *Ptr = GetUnderlyingObject(SI->getPointerOperand(), *DL);
       StoreRefsForMemsetPattern[Ptr].push_back(SI);
-    } else if (ForMemcpy)
+    } break;
+    case LegalStoreKind::Memcpy:
       StoreRefsForMemcpy.push_back(SI);
+      break;
+    default:
+      assert(false && "unhandled return value");
+      break;
+    }
   }
 }
 

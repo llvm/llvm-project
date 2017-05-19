@@ -264,6 +264,12 @@ public:
   ///                          with old sizes
   bool updateSizes(ArrayRef<const SCEV *> Sizes, bool CheckConsistency = true);
 
+  /// Make the ScopArrayInfo model a Fortran array.
+  /// It receives the Fortran array descriptor and stores this.
+  /// It also adds a piecewise expression for the outermost dimension
+  /// since this information is available for Fortran arrays at runtime.
+  void applyAndSetFAD(Value *FAD);
+
   /// Destructor to free the isl id of the base pointer.
   ~ScopArrayInfo();
 
@@ -420,6 +426,10 @@ private:
 
   /// The scop this SAI object belongs to.
   Scop &S;
+
+  /// If this array models a Fortran array, then this points
+  /// to the Fortran array descriptor.
+  Value *FAD;
 };
 
 /// Represent memory accesses in statements.
@@ -890,6 +900,10 @@ public:
   /// is a map from the statement to a schedule where the innermost dimension is
   /// the dimension of the innermost loop containing the statement.
   __isl_give isl_set *getStride(__isl_take const isl_map *Schedule) const;
+
+  /// Get the FortranArrayDescriptor corresponding to this memory access if
+  /// it exists, and nullptr otherwise.
+  Value *getFortranArrayDescriptor() const { return this->FAD; };
 
   /// Is the stride of the access equal to a certain width? Schedule is a map
   /// from the statement to a schedule where the innermost dimension is the
@@ -2062,6 +2076,9 @@ private:
   /// accesses always remain within bounds. We do this as last step, after
   /// all memory accesses have been modeled and canonicalized.
   void assumeNoOutOfBounds();
+
+  /// Mark arrays that have memory accesses with FortranArrayDescriptor.
+  void markFortranArrays();
 
   /// Finalize all access relations.
   ///
