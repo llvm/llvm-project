@@ -6,8 +6,8 @@
 ; CHECK-NEXT:	stp	x29, x30, [sp, #16]
 ; CHECK-NEXT:	add	x29, sp, #16
 ; CHECK-NEXT:	stur	wzr, [x29, #-4]
-; CHECK:	adrp	x0, L_.str@PAGE
-; CHECK:	add	x0, x0, L_.str@PAGEOFF
+; CHECK:	adrp	x0, l_.str@PAGE
+; CHECK:	add	x0, x0, l_.str@PAGEOFF
 ; CHECK-NEXT:	bl	_puts
 ; CHECK-NEXT:	ldp	x29, x30, [sp, #16]
 ; CHECK-NEXT:	add	sp, sp, #32
