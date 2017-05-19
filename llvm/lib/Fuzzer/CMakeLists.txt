@@ -32,12 +32,12 @@ if( LLVM_USE_SANITIZE_COVERAGE )
   add_library(LLVMFuzzerNoMain STATIC
     $<TARGET_OBJECTS:LLVMFuzzerNoMainObjects>
     )
-  target_link_libraries(LLVMFuzzerNoMain ${PTHREAD_LIB})
+  target_link_libraries(LLVMFuzzerNoMain ${LLVM_PTHREAD_LIB})
   add_library(LLVMFuzzer STATIC
     FuzzerMain.cpp
     $<TARGET_OBJECTS:LLVMFuzzerNoMainObjects>
     )
-  target_link_libraries(LLVMFuzzer ${PTHREAD_LIB})
+  target_link_libraries(LLVMFuzzer ${LLVM_PTHREAD_LIB})
 
   if( LLVM_INCLUDE_TESTS )
     add_subdirectory(test)
