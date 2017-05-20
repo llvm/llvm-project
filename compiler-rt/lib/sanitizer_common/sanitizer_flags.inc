@@ -78,16 +78,20 @@ COMMON_FLAG(int, print_module_map, 0,
             "OS X only. 0 = don't print, 1 = print only once before process "
             "exits, 2 = print after each report.")
 COMMON_FLAG(bool, check_printf, true, "Check printf arguments.")
-COMMON_FLAG(bool, handle_segv, true,
-            "If set, registers the tool's custom SIGSEGV handler.")
-COMMON_FLAG(bool, handle_sigbus, true,
-            "If set, registers the tool's custom SIGBUS handler.")
-COMMON_FLAG(bool, handle_abort, false,
-            "If set, registers the tool's custom SIGABRT handler.")
-COMMON_FLAG(bool, handle_sigill, false,
-            "If set, registers the tool's custom SIGILL handler.")
-COMMON_FLAG(bool, handle_sigfpe, true,
-            "If set, registers the tool's custom SIGFPE handler.")
+#define COMMON_FLAG_HANDLE_SIGNAL_HELP(signal) \
+    "Controls custom tool's " #signal " handler (0 - do not registers the " \
+    "handler, 1 - register the handler). "
+COMMON_FLAG(HandleSignalMode, handle_segv, kHandleSignalYes,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGSEGV))
+COMMON_FLAG(HandleSignalMode, handle_sigbus, kHandleSignalYes,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGBUS))
+COMMON_FLAG(HandleSignalMode, handle_abort, kHandleSignalNo,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGABRT))
+COMMON_FLAG(HandleSignalMode, handle_sigill, kHandleSignalNo,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGILL))
+COMMON_FLAG(HandleSignalMode, handle_sigfpe, kHandleSignalYes,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGFPE))
+#undef COMMON_FLAG_HANDLE_SIGNAL_HELP
 COMMON_FLAG(bool, allow_user_segv_handler, false,
             "If set, allows user to register a SEGV handler even if the tool "
             "registers one.")

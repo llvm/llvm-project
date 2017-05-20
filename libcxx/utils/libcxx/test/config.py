@@ -466,6 +466,12 @@ class Configuration(object):
             self.config.available_features.add('glibc-%s' % maj_v)
             self.config.available_features.add('glibc-%s.%s' % (maj_v, min_v))
 
+        # Support Objective-C++ only on MacOS and if the compiler supports it.
+        if self.target_info.platform() == "darwin" and \
+           self.target_info.is_host_macosx() and \
+           self.cxx.hasCompileFlag(["-x", "objective-c++", "-fobjc-arc"]):
+            self.config.available_features.add("objective-c++")
+
     def configure_compile_flags(self):
         no_default_flags = self.get_lit_bool('no_default_flags', False)
         if not no_default_flags:

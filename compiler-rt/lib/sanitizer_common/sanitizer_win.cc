@@ -554,7 +554,7 @@ void ListOfModules::init() {
     cur_module.set(module_name, adjusted_base);
     // We add the whole module as one single address range.
     cur_module.addAddressRange(base_address, end_address, /*executable*/ true,
-                               /*readable*/ true);
+                               /*writable*/ true);
     modules_.push_back(cur_module);
   }
   UnmapOrDie(hmodules, modules_buffer_size);
