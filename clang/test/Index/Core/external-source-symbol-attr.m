@@ -4,6 +4,10 @@
 #define GEN_DECL(mod_name) __attribute__((external_source_symbol(language="Swift", defined_in=mod_name, generated_declaration)))
 #define PUSH_GEN_DECL(mod_name) push(GEN_DECL(mod_name), apply_to=any(enum, objc_interface, objc_category, objc_protocol))
 
+// Forward declarations should not affect module namespacing below
+@class I1;
+@class I2;
+
 // This should not be indexed.
 GEN_DECL("some_module")
 @interface I1
