@@ -34,6 +34,7 @@ class DeclarationName;
 class DependentDiagnostic;
 class EnumDecl;
 class ExportDecl;
+class ExternalSourceSymbolAttr;
 class FunctionDecl;
 class FunctionType;
 enum Linkage : unsigned char;
@@ -561,6 +562,10 @@ public:
       Bits &= ~TopLevelDeclInObjCContainerFlag;
     NextInContextAndBits.setInt(Bits);
   }
+
+  /// \brief Looks on this and related declarations for an applicable
+  /// external source symbol attribute.
+  ExternalSourceSymbolAttr *getExternalSourceSymbolAttr() const;
 
   /// \brief Whether this declaration was marked as being private to the
   /// module in which it was defined.
