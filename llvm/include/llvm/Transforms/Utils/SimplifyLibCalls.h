@@ -121,6 +121,7 @@ private:
   Value *optimizeMemCpy(CallInst *CI, IRBuilder<> &B);
   Value *optimizeMemMove(CallInst *CI, IRBuilder<> &B);
   Value *optimizeMemSet(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeWcslen(CallInst *CI, IRBuilder<> &B);
   // Wrapper for all String/Memory Library Call Optimizations
   Value *optimizeStringMemoryLibCall(CallInst *CI, IRBuilder<> &B);
 
@@ -165,6 +166,9 @@ private:
   /// hasFloatVersion - Checks if there is a float version of the specified
   /// function by checking for an existing function with name FuncName + f
   bool hasFloatVersion(StringRef FuncName);
+
+  /// Shared code to optimize strlen+wcslen.
+  Value *optimizeStringLength(CallInst *CI, IRBuilder<> &B, unsigned CharSize);
 };
 } // End llvm namespace
 

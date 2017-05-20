@@ -896,9 +896,16 @@ def KernelCode   : Predicate<"TM.getCodeModel() == CodeModel::Kernel">;
 def NearData     : Predicate<"TM.getCodeModel() == CodeModel::Small ||"
                              "TM.getCodeModel() == CodeModel::Kernel">;
 def IsNotPIC     : Predicate<"!TM.isPositionIndependent()">;
-def OptForSize   : Predicate<"Subtarget->getOptForSize()">;
-def OptForMinSize : Predicate<"Subtarget->getOptForMinSize()">;
-def OptForSpeed  : Predicate<"!Subtarget->getOptForSize()">;
+
+// We could compute these on a per-module basis but doing so requires accessing
+// the Function object through the <Target>Subtarget and objections were raised
+// to that (see post-commit review comments for r301750).
+let RecomputePerFunction = 1 in {
+  def OptForSize   : Predicate<"MF->getFunction()->optForSize()">;
+  def OptForMinSize : Predicate<"MF->getFunction()->optForMinSize()">;
+  def OptForSpeed  : Predicate<"!MF->getFunction()->optForSize()">;
+}
+
 def FastBTMem    : Predicate<"!Subtarget->isBTMemSlow()">;
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;
 def FavorMemIndirectCall  : Predicate<"!Subtarget->callRegIndirect()">;

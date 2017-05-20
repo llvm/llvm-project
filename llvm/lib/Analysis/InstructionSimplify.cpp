@@ -126,8 +126,8 @@ static bool ValueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
 /// Also performs the transform "(A op' B) op C" -> "(A op C) op' (B op C)".
 /// Returns the simplified value, or null if no simplification was performed.
 static Value *ExpandBinOp(Instruction::BinaryOps Opcode, Value *LHS, Value *RHS,
-                          Instruction::BinaryOps OpcodeToExpand, const SimplifyQuery &Q,
-                          unsigned MaxRecurse) {
+                          Instruction::BinaryOps OpcodeToExpand,
+                          const SimplifyQuery &Q, unsigned MaxRecurse) {
   // Recursion is always used, so bail out at once if we already hit the limit.
   if (!MaxRecurse--)
     return nullptr;
@@ -184,7 +184,8 @@ static Value *ExpandBinOp(Instruction::BinaryOps Opcode, Value *LHS, Value *RHS,
 /// Generic simplifications for associative binary operations.
 /// Returns the simpler value, or null if none was found.
 static Value *SimplifyAssociativeBinOp(Instruction::BinaryOps Opcode,
-                                       Value *LHS, Value *RHS, const SimplifyQuery &Q,
+                                       Value *LHS, Value *RHS,
+                                       const SimplifyQuery &Q,
                                        unsigned MaxRecurse) {
   assert(Instruction::isAssociative(Opcode) && "Not an associative operation!");
 

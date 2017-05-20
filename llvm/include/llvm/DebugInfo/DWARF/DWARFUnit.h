@@ -149,7 +149,7 @@ class DWARFUnit {
     DWARFUnit *DWOU = nullptr;
 
   public:
-    DWOHolder(StringRef DWOPath);
+    DWOHolder(StringRef DWOPath, uint64_t DWOId);
 
     DWARFUnit *getUnit() const { return DWOU; }
   };

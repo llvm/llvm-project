@@ -1058,7 +1058,7 @@ AttributeList AttributeList::addAttributes(LLVMContext &C, unsigned Index,
 #ifndef NDEBUG
   // FIXME it is not obvious how this should work for alignment. For now, say
   // we can't change a known alignment.
-  unsigned OldAlign = getParamAlignment(Index);
+  unsigned OldAlign = getAttributes(Index).getAlignment();
   unsigned NewAlign = B.getAlignment();
   assert((!OldAlign || !NewAlign || OldAlign == NewAlign) &&
          "Attempt to change alignment!");

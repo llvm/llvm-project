@@ -335,10 +335,12 @@ TEST(ScaledNumberHelpersTest, matchScales) {
     EXPECT_EQ(SOut, matchScales(LDx, LSx, RDx, RSx));                          \
     EXPECT_EQ(LDy, LDx);                                                       \
     EXPECT_EQ(RDy, RDx);                                                       \
-    if (LDy)                                                                   \
+    if (LDy) {                                                                 \
       EXPECT_EQ(Sy, LSx);                                                      \
-    if (RDy)                                                                   \
+    }                                                                          \
+    if (RDy) {                                                                 \
       EXPECT_EQ(Sy, RSx);                                                      \
+    }                                                                          \
   } while (false)
 
   MATCH_SCALES(uint32_t, 0, 0, 0, 0, 0, 0, 0);

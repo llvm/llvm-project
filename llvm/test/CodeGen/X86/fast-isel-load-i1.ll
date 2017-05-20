@@ -4,9 +4,7 @@
 define i1 @test_i1(i1* %b) {
 ; CHECK-LABEL: test_i1:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    movzbl (%rdi), %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    testb $1, (%rdi)
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # BB#1: # %in
 ; CHECK-NEXT:    xorl %eax, %eax

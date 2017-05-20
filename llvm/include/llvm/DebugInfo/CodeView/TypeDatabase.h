@@ -13,6 +13,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/TypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/Allocator.h"
@@ -20,7 +21,7 @@
 
 namespace llvm {
 namespace codeview {
-class TypeDatabase {
+class TypeDatabase : public TypeCollection {
   friend class RandomAccessTypeVisitor;
 
 public:
@@ -41,19 +42,31 @@ public:
   CVType &getTypeRecord(TypeIndex Index);
 
   bool contains(TypeIndex Index) const;
-
   uint32_t size() const;
   uint32_t capacity() const;
   bool empty() const;
 
-  TypeIndex getAppendIndex() const;
+  CVType getType(TypeIndex Index) override;
+  StringRef getTypeName(TypeIndex Index) override;
+  bool contains(TypeIndex Index) override;
+  uint32_t size() override;
+  uint32_t capacity() override;
+
+  Optional<TypeIndex> getFirst() override;
+  Optional<TypeIndex> getNext(TypeIndex Prev) override;
+
+  Optional<TypeIndex> largestTypeIndexLessThan(TypeIndex TI) const;
 
 private:
+  TypeIndex getAppendIndex() const;
+
   void grow();
+  void grow(TypeIndex Index);
 
   BumpPtrAllocator Allocator;
 
   uint32_t Count = 0;
+  TypeIndex LargestTypeIndex;
 
   /// All user defined type records in .debug$T live in here. Type indices
   /// greater than 0x1000 are user defined. Subtract 0x1000 from the index to

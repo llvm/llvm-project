@@ -1002,6 +1002,64 @@ TEST(APIntTest, divrem_big7) {
           {224, "80000000800000010000000f", 16});
 }
 
+void testDiv(APInt a, uint64_t b, APInt c) {
+  auto p = a * b + c;
+
+  APInt q;
+  uint64_t r;
+  // Unsigned division will only work if our original number wasn't negative.
+  if (!a.isNegative()) {
+    q = p.udiv(b);
+    r = p.urem(b);
+    EXPECT_EQ(a, q);
+    EXPECT_EQ(c, r);
+    APInt::udivrem(p, b, q, r);
+    EXPECT_EQ(a, q);
+    EXPECT_EQ(c, r);
+  }
+  q = p.sdiv(b);
+  r = p.srem(b);
+  EXPECT_EQ(a, q);
+  if (c.isNegative())
+    EXPECT_EQ(-c, -r); // Need to negate so the uint64_t compare will work.
+  else
+    EXPECT_EQ(c, r);
+  int64_t sr;
+  APInt::sdivrem(p, b, q, sr);
+  EXPECT_EQ(a, q);
+  if (c.isNegative())
+    EXPECT_EQ(-c, -sr); // Need to negate so the uint64_t compare will work.
+  else
+    EXPECT_EQ(c, sr);
+}
+
+TEST(APIntTest, divremuint) {
+  // Single word APInt
+  testDiv(APInt{64, 9},
+          2,
+          APInt{64, 1});
+
+  // Single word negative APInt
+  testDiv(-APInt{64, 9},
+          2,
+          -APInt{64, 1});
+
+  // Multiword dividend with only one significant word.
+  testDiv(APInt{256, 9},
+          2,
+          APInt{256, 1});
+
+  // Negative dividend.
+  testDiv(-APInt{256, 9},
+          2,
+          -APInt{256, 1});
+
+  // Multiword dividend
+  testDiv(APInt{1024, 19}.shl(811),
+          4356013, // one word
+          APInt{1024, 1});
+}
+
 TEST(APIntTest, fromString) {
   EXPECT_EQ(APInt(32, 0), APInt(32,   "0", 2));
   EXPECT_EQ(APInt(32, 1), APInt(32,   "1", 2));

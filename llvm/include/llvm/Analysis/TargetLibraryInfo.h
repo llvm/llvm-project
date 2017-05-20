@@ -191,6 +191,14 @@ public:
   void setShouldSignExtI32Param(bool Val) {
     ShouldSignExtI32Param = Val;
   }
+
+  /// Returns the size of the wchar_t type in bytes.
+  unsigned getWCharSize(const Module &M) const;
+
+  /// Returns size of the default wchar_t type on target \p T. This is mostly
+  /// intended to verify that the size in the frontend matches LLVM. All other
+  /// queries should use getWCharSize() instead.
+  static unsigned getTargetWCharSize(const Triple &T);
 };
 
 /// Provides information about what library functions are available for
@@ -305,6 +313,11 @@ public:
     if (Impl->ShouldExtI32Return)
       return Signed ? Attribute::SExt : Attribute::ZExt;
     return Attribute::None;
+  }
+
+  /// \copydoc TargetLibraryInfoImpl::getWCharSize()
+  unsigned getWCharSize(const Module &M) const {
+    return Impl->getWCharSize(M);
   }
 
   /// Handle invalidation from the pass manager.

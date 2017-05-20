@@ -186,8 +186,8 @@ CMake manual, or execute ``cmake --help-variable VARIABLE_NAME``.
   Sets the build type for ``make``-based generators. Possible values are
   Release, Debug, RelWithDebInfo and MinSizeRel. If you are using an IDE such as
   Visual Studio, you should use the IDE settings to set the build type.
-  Be aware that Release and RelWithDebInfo are not using the same optimization
-  level on most platform.
+  Be aware that Release and RelWithDebInfo use different optimization levels on
+  most platforms.
 
 **CMAKE_INSTALL_PREFIX**:PATH
   Path where LLVM will be installed if "make install" is invoked or the

@@ -40,6 +40,7 @@ enum ExpressionType {
   ET_Base,
   ET_Constant,
   ET_Variable,
+  ET_Dead,
   ET_Unknown,
   ET_BasicStart,
   ET_Basic,
@@ -380,7 +381,9 @@ public:
       OS << "ExpressionTypeStore, ";
     this->BasicExpression::printInternal(OS, false);
     OS << " represents Store  " << *Store;
-    OS << " with MemoryLeader " << *getMemoryLeader();
+    OS << " with StoredValue ";
+    StoredValue->printAsOperand(OS);
+    OS << " and MemoryLeader " << *getMemoryLeader();
   }
 };
 
@@ -510,6 +513,17 @@ public:
       OS << "ExpressionTypePhi, ";
     this->BasicExpression::printInternal(OS, false);
     OS << "bb = " << BB;
+  }
+};
+
+class DeadExpression final : public Expression {
+public:
+  DeadExpression() : Expression(ET_Dead) {}
+  DeadExpression(const DeadExpression &) = delete;
+  DeadExpression &operator=(const DeadExpression &) = delete;
+
+  static bool classof(const Expression *E) {
+    return E->getExpressionType() == ET_Dead;
   }
 };
 

@@ -13,6 +13,7 @@
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/Support/CommandLine.h"
 using namespace llvm;
 
@@ -1518,6 +1519,21 @@ TargetLibraryInfoImpl &TargetLibraryAnalysis::lookupInfoImpl(const Triple &T) {
   return *Impl;
 }
 
+unsigned TargetLibraryInfoImpl::getTargetWCharSize(const Triple &T) {
+  // See also clang/lib/Basic/Targets.cpp.
+  if (T.isPS4() || T.isOSWindows() || T.isArch16Bit())
+    return 2;
+  if (T.getArch() == Triple::xcore)
+    return 1;
+  return 4;
+}
+
+unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
+  if (auto *ShortWChar = cast_or_null<ConstantAsMetadata>(
+      M.getModuleFlag("wchar_size")))
+    return cast<ConstantInt>(ShortWChar->getValue())->getZExtValue();
+  return getTargetWCharSize(Triple(M.getTargetTriple()));
+}
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()
     : ImmutablePass(ID), TLIImpl(), TLI(TLIImpl) {

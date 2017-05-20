@@ -21,6 +21,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/PDBTypeServerHandler.h"
 
+#include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"

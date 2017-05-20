@@ -4685,9 +4685,10 @@ static SDValue getMemsetValue(SDValue Value, EVT VT, SelectionDAG &DAG,
 /// used when a memcpy is turned into a memset when the source is a constant
 /// string ptr.
 static SDValue getMemsetStringVal(EVT VT, const SDLoc &dl, SelectionDAG &DAG,
-                                  const TargetLowering &TLI, StringRef Str) {
+                                  const TargetLowering &TLI,
+                                  const ConstantDataArraySlice &Slice) {
   // Handle vector with all elements zero.
-  if (Str.empty()) {
+  if (Slice.Array == nullptr) {
     if (VT.isInteger())
       return DAG.getConstant(0, dl, VT);
     else if (VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f128)
@@ -4706,15 +4707,15 @@ static SDValue getMemsetStringVal(EVT VT, const SDLoc &dl, SelectionDAG &DAG,
   assert(!VT.isVector() && "Can't handle vector type here!");
   unsigned NumVTBits = VT.getSizeInBits();
   unsigned NumVTBytes = NumVTBits / 8;
-  unsigned NumBytes = std::min(NumVTBytes, unsigned(Str.size()));
+  unsigned NumBytes = std::min(NumVTBytes, unsigned(Slice.Length));
 
   APInt Val(NumVTBits, 0);
   if (DAG.getDataLayout().isLittleEndian()) {
     for (unsigned i = 0; i != NumBytes; ++i)
-      Val |= (uint64_t)(unsigned char)Str[i] << i*8;
+      Val |= (uint64_t)(unsigned char)Slice[i] << i*8;
   } else {
     for (unsigned i = 0; i != NumBytes; ++i)
-      Val |= (uint64_t)(unsigned char)Str[i] << (NumVTBytes-i-1)*8;
+      Val |= (uint64_t)(unsigned char)Slice[i] << (NumVTBytes-i-1)*8;
   }
 
   // If the "cost" of materializing the integer immediate is less than the cost
@@ -4731,9 +4732,8 @@ SDValue SelectionDAG::getMemBasePlusOffset(SDValue Base, unsigned Offset,
   return getNode(ISD::ADD, DL, VT, Base, getConstant(Offset, DL, VT));
 }
 
-/// isMemSrcFromString - Returns true if memcpy source is a string constant.
-///
-static bool isMemSrcFromString(SDValue Src, StringRef &Str) {
+/// Returns true if memcpy source is constant data.
+static bool isMemSrcFromConstant(SDValue Src, ConstantDataArraySlice &Slice) {
   uint64_t SrcDelta = 0;
   GlobalAddressSDNode *G = nullptr;
   if (Src.getOpcode() == ISD::GlobalAddress)
@@ -4747,8 +4747,8 @@ static bool isMemSrcFromString(SDValue Src, StringRef &Str) {
   if (!G)
     return false;
 
-  return getConstantStringInfo(G->getGlobal(), Str,
-                               SrcDelta + G->getOffset(), false);
+  return getConstantDataArrayInfo(G->getGlobal(), Slice, 8,
+                                  SrcDelta + G->getOffset());
 }
 
 /// Determines the optimal series of memory ops to replace the memset / memcpy.
@@ -4891,15 +4891,15 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   unsigned SrcAlign = DAG.InferPtrAlignment(Src);
   if (Align > SrcAlign)
     SrcAlign = Align;
-  StringRef Str;
-  bool CopyFromStr = isMemSrcFromString(Src, Str);
-  bool isZeroStr = CopyFromStr && Str.empty();
+  ConstantDataArraySlice Slice;
+  bool CopyFromConstant = isMemSrcFromConstant(Src, Slice);
+  bool isZeroConstant = CopyFromConstant && Slice.Array == nullptr;
   unsigned Limit = AlwaysInline ? ~0U : TLI.getMaxStoresPerMemcpy(OptSize);
 
   if (!FindOptimalMemOpLowering(MemOps, Limit, Size,
                                 (DstAlignCanChange ? 0 : Align),
-                                (isZeroStr ? 0 : SrcAlign),
-                                false, false, CopyFromStr, true,
+                                (isZeroConstant ? 0 : SrcAlign),
+                                false, false, CopyFromConstant, true,
                                 DstPtrInfo.getAddrSpace(),
                                 SrcPtrInfo.getAddrSpace(),
                                 DAG, TLI))
@@ -4943,18 +4943,29 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
       DstOff -= VTSize - Size;
     }
 
-    if (CopyFromStr &&
-        (isZeroStr || (VT.isInteger() && !VT.isVector()))) {
+    if (CopyFromConstant &&
+        (isZeroConstant || (VT.isInteger() && !VT.isVector()))) {
       // It's unlikely a store of a vector immediate can be done in a single
       // instruction. It would require a load from a constantpool first.
       // We only handle zero vectors here.
       // FIXME: Handle other cases where store of vector immediate is done in
       // a single instruction.
-      Value = getMemsetStringVal(VT, dl, DAG, TLI, Str.substr(SrcOff));
+      ConstantDataArraySlice SubSlice;
+      if (SrcOff < Slice.Length) {
+        SubSlice = Slice;
+        SubSlice.move(SrcOff);
+      } else {
+        // This is an out-of-bounds access and hence UB. Pretend we read zero.
+        SubSlice.Array = nullptr;
+        SubSlice.Offset = 0;
+        SubSlice.Length = VTSize;
+      }
+      Value = getMemsetStringVal(VT, dl, DAG, TLI, SubSlice);
       if (Value.getNode())
         Store = DAG.getStore(Chain, dl, Value,
                              DAG.getMemBasePlusOffset(Dst, DstOff, dl),
-                             DstPtrInfo.getWithOffset(DstOff), Align, MMOFlags);
+                             DstPtrInfo.getWithOffset(DstOff), Align,
+                             MMOFlags);
     }
 
     if (!Store.getNode()) {

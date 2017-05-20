@@ -218,9 +218,38 @@ template <typename T> class ArrayRef;
                                             DL);
   }
 
-  /// Returns true if the GEP is based on a pointer to a string (array of i8), 
-  /// and is indexing into this string.
-  bool isGEPBasedOnPointerToString(const GEPOperator *GEP);
+  /// Returns true if the GEP is based on a pointer to a string (array of
+  // \p CharSize integers) and is indexing into this string.
+  bool isGEPBasedOnPointerToString(const GEPOperator *GEP,
+                                   unsigned CharSize = 8);
+
+  /// Represents offset+length into a ConstantDataArray.
+  struct ConstantDataArraySlice {
+    /// ConstantDataArray pointer. nullptr indicates a zeroinitializer (a valid
+    /// initializer, it just doesn't fit the ConstantDataArray interface).
+    const ConstantDataArray *Array;
+    /// Slice starts at this Offset.
+    uint64_t Offset;
+    /// Length of the slice.
+    uint64_t Length;
+
+    /// Moves the Offset and adjusts Length accordingly.
+    void move(uint64_t Delta) {
+      assert(Delta < Length);
+      Offset += Delta;
+      Length -= Delta;
+    }
+    /// Convenience accessor for elements in the slice.
+    uint64_t operator[](unsigned I) const {
+      return Array==nullptr ? 0 : Array->getElementAsInteger(I + Offset);
+    }
+  };
+
+  /// Returns true if the value \p V is a pointer into a ContantDataArray.
+  /// If successfull \p Index will point to a ConstantDataArray info object
+  /// with an apropriate offset.
+  bool getConstantDataArrayInfo(const Value *V, ConstantDataArraySlice &Slice,
+                                unsigned ElementSize, uint64_t Offset = 0);
 
   /// This function computes the length of a null-terminated C string pointed to
   /// by V. If successful, it returns true and returns the string in Str. If
@@ -233,7 +262,7 @@ template <typename T> class ArrayRef;
 
   /// If we can compute the length of the string pointed to by the specified
   /// pointer, return 'len+1'.  If we can't, return 0.
-  uint64_t GetStringLength(const Value *V);
+  uint64_t GetStringLength(const Value *V, unsigned CharSize = 8);
 
   /// This method strips off any GEP address adjustments and pointer casts from
   /// the specified value, returning the original object being addressed. Note

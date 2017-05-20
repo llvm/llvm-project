@@ -3047,7 +3047,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
     if (CreateGatherScatter) {
       Value *MaskPart = Legal->isMaskRequired(LI) ? Mask[Part] : nullptr;
       NewLI = Builder.CreateMaskedGather(VectorGep[Part], Alignment, MaskPart,
-                                         0, "wide.masked.gather");
+                                         nullptr, "wide.masked.gather");
       Entry[Part] = NewLI;
     } else {
       // Calculate the pointer for the specific unroll-part.

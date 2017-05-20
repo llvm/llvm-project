@@ -66,14 +66,13 @@ L_30:                                             ; preds = %bb51, %L_10
 define i64 @func2(i1 zeroext %i, i32 %j) {
 ; CHECK-LABEL: func2:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    je .LBB1_1
 ; CHECK-NEXT:  # BB#2: # %if.then
 ; CHECK-NEXT:    jmp bar # TAILCALL
 ; CHECK-NEXT:  .LBB1_1: # %return
-; CHECK-NEXT:    orq $-2, %rdi
-; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    orq $-2, %rax
 ; CHECK-NEXT:    retq
 entry:
   %tobool = icmp eq i32 %j, 0

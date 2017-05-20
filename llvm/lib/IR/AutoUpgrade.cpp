@@ -521,6 +521,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         return true;
       }
     }
+    break;
   }
   case 'o':
     // We only need to change the name to match the mangling including the
