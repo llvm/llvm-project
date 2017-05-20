@@ -29,9 +29,11 @@
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/ExecutionEngine/ObjectMemoryBuffer.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Linker/Linker.h"
@@ -66,6 +68,7 @@ namespace llvm {
 extern cl::opt<bool> LTODiscardValueNames;
 extern cl::opt<std::string> LTORemarksFilename;
 extern cl::opt<bool> LTOPassRemarksWithHotness;
+extern cl::opt<bool> LTOStripInvalidDebugInfo;
 }
 
 namespace {
@@ -166,6 +169,30 @@ static void promoteModule(Module &TheModule, const ModuleSummaryIndex &Index) {
     report_fatal_error("renameModuleForThinLTO failed");
 }
 
+namespace {
+class ThinLTODiagnosticInfo : public DiagnosticInfo {
+  const Twine &Msg;
+public:
+  ThinLTODiagnosticInfo(const Twine &DiagMsg,
+                        DiagnosticSeverity Severity = DS_Error)
+      : DiagnosticInfo(DK_Linker, Severity), Msg(DiagMsg) {}
+  void print(DiagnosticPrinter &DP) const override { DP << Msg; }
+};
+}
+
+/// Verify the module and strip broken debug info.
+static void verifyLoadedModule(Module &TheModule) {
+  bool BrokenDebugInfo = false;
+  if (verifyModule(TheModule, &dbgs(),
+                   LTOStripInvalidDebugInfo ? &BrokenDebugInfo : nullptr))
+    report_fatal_error("Broken module found, compilation aborted!");
+  if (BrokenDebugInfo) {
+    TheModule.getContext().diagnose(ThinLTODiagnosticInfo(
+        "Invalid debug info found, debug info will be stripped", DS_Warning));
+    StripDebugInfo(TheModule);
+  }
+}
+
 static std::unique_ptr<Module>
 loadModuleFromBuffer(const MemoryBufferRef &Buffer, LLVMContext &Context,
                      bool Lazy, bool IsImporting) {
@@ -183,6 +210,8 @@ loadModuleFromBuffer(const MemoryBufferRef &Buffer, LLVMContext &Context,
     });
     report_fatal_error("Can't load module, abort.");
   }
+  if (!Lazy)
+    verifyLoadedModule(*ModuleOrErr.get());
   return std::move(ModuleOrErr.get());
 }
 
@@ -205,6 +234,8 @@ crossImportIntoModule(Module &TheModule, const ModuleSummaryIndex &Index,
     });
     report_fatal_error("importFunctions failed");
   }
+  // Verify again after cross-importing.
+  verifyLoadedModule(TheModule);
 }
 
 static void optimizeModule(Module &TheModule, TargetMachine &TM,
@@ -219,7 +250,8 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
   PMB.OptLevel = OptLevel;
   PMB.LoopVectorize = true;
   PMB.SLPVectorize = true;
-  PMB.VerifyInput = true;
+  // Already did this in verifyLoadedModule().
+  PMB.VerifyInput = false;
   PMB.VerifyOutput = false;
 
   legacy::PassManager PM;
