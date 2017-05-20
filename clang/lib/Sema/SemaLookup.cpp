@@ -4987,8 +4987,8 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, NamedDecl *Decl,
 
     Diag(UseLoc, diag::err_module_unimported_use_multiple)
       << (int)MIK << Decl << ModuleList;
-  } else if (const FileEntry *E =
-                 PP.getModuleHeaderToIncludeForDiagnostics(UseLoc, DeclLoc)) {
+  } else if (const FileEntry *E = PP.getModuleHeaderToIncludeForDiagnostics(
+                 UseLoc, Modules[0], DeclLoc)) {
     // The right way to make the declaration visible is to include a header;
     // suggest doing so.
     //

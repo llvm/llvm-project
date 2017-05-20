@@ -731,7 +731,7 @@ Module *Preprocessor::LeaveSubmodule(bool ForPragma) {
   Module *LeavingMod = Info.M;
   SourceLocation ImportLoc = Info.ImportLoc;
 
-  if (!needModuleMacros() || 
+  if (!needModuleMacros() ||
       (!getLangOpts().ModulesLocalVisibility &&
        LeavingMod->getTopLevelModuleName() != getLangOpts().CurrentModule)) {
     // If we don't need module macros, or this is not a module for which we
@@ -777,17 +777,6 @@ Module *Preprocessor::LeaveSubmodule(bool ForPragma) {
     for (auto *MD = Macro.getLatest(); MD != OldMD; MD = MD->getPrevious()) {
       assert(MD && "broken macro directive chain");
 
-      // Stop on macros defined in other submodules of this module that we
-      // #included along the way. There's no point doing this if we're
-      // tracking local submodule visibility, since there can be no such
-      // directives in our list.
-      if (!getLangOpts().ModulesLocalVisibility) {
-        Module *Mod = getModuleContainingLocation(MD->getLocation());
-        if (Mod != LeavingMod &&
-            Mod->getTopLevelModule() == LeavingMod->getTopLevelModule())
-          break;
-      }
-
       if (auto *VisMD = dyn_cast<VisibilityMacroDirective>(MD)) {
         // The latest visibility directive for a name in a submodule affects
         // all the directives that come before it.
@@ -809,6 +798,13 @@ Module *Preprocessor::LeaveSubmodule(bool ForPragma) {
         if (Def || !Macro.getOverriddenMacros().empty())
           addModuleMacro(LeavingMod, II, Def,
                          Macro.getOverriddenMacros(), IsNew);
+
+        if (!getLangOpts().ModulesLocalVisibility) {
+          // This macro is exposed to the rest of this compilation as a
+          // ModuleMacro; we don't need to track its MacroDirective any more.
+          Macro.setLatest(nullptr);
+          Macro.setOverriddenMacros(*this, {});
+        }
         break;
       }
     }

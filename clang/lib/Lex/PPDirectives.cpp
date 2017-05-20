@@ -667,22 +667,15 @@ Module *Preprocessor::getModuleForLocation(SourceLocation Loc) {
              : HeaderInfo.lookupModule(getLangOpts().CurrentModule);
 }
 
-Module *Preprocessor::getModuleContainingLocation(SourceLocation Loc) {
-  return HeaderInfo.getModuleMap().inferModuleFromLocation(
-      FullSourceLoc(Loc, SourceMgr));
-}
-
 const FileEntry *
 Preprocessor::getModuleHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
+                                                     Module *M,
                                                      SourceLocation Loc) {
+  assert(M && "no module to include");
+
   // If we have a module import syntax, we shouldn't include a header to
   // make a particular module visible.
   if (getLangOpts().ObjC2)
-    return nullptr;
-
-  // Figure out which module we'd want to import.
-  Module *M = getModuleContainingLocation(Loc);
-  if (!M)
     return nullptr;
 
   Module *TopM = M->getTopLevelModule();
