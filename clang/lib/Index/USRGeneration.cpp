@@ -49,7 +49,7 @@ static bool printLoc(llvm::raw_ostream &OS, SourceLocation Loc,
 static StringRef GetExternalSourceContainer(const NamedDecl *D) {
   if (!D)
     return StringRef();
-  if (auto *attr = D->getAttr<ExternalSourceSymbolAttr>()) {
+  if (auto *attr = D->getExternalSourceSymbolAttr()) {
     return attr->getDefinedIn();
   }
   return StringRef();
