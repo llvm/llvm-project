@@ -16,7 +16,6 @@
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/type_traits.h"
 
 #include <string>

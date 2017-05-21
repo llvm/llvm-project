@@ -19,6 +19,8 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Object/ArchiveWriter.h"
+#include "llvm/Object/COFFImportFile.h"
+#include "llvm/Object/COFFModuleDefinition.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -35,6 +37,7 @@
 #include <future>
 
 using namespace llvm;
+using namespace llvm::object;
 using namespace llvm::COFF;
 using llvm::sys::Process;
 using llvm::sys::fs::file_magic;
@@ -417,6 +420,84 @@ static std::string getMapFile(const opt::InputArgList &Args) {
   assert(Arg->getOption().getID() == OPT_lldmap);
   StringRef OutFile = Config->OutputFile;
   return (OutFile.substr(0, OutFile.rfind('.')) + ".map").str();
+}
+
+static std::string getImplibPath() {
+  if (!Config->Implib.empty())
+    return Config->Implib;
+  SmallString<128> Out = StringRef(Config->OutputFile);
+  sys::path::replace_extension(Out, ".lib");
+  return Out.str();
+}
+
+std::vector<COFFShortExport> createCOFFShortExportFromConfig() {
+  std::vector<COFFShortExport> Exports;
+  for (Export &E1 : Config->Exports) {
+    COFFShortExport E2;
+    E2.Name = E1.Name;
+    E2.ExtName = E1.ExtName;
+    E2.Ordinal = E1.Ordinal;
+    E2.Noname = E1.Noname;
+    E2.Data = E1.Data;
+    E2.Private = E1.Private;
+    E2.Constant = E1.Constant;
+    Exports.push_back(E2);
+  }
+  return Exports;
+}
+
+static void createImportLibrary() {
+  std::vector<COFFShortExport> Exports = createCOFFShortExportFromConfig();
+  std::string DLLName = sys::path::filename(Config->OutputFile);
+  std::string Path = getImplibPath();
+  writeImportLibrary(DLLName, Path, Exports, Config->Machine);
+}
+
+static void parseModuleDefs(StringRef Path) {
+  std::unique_ptr<MemoryBuffer> MB = check(
+    MemoryBuffer::getFile(Path, -1, false, true), "could not open " + Path);
+  MemoryBufferRef MBRef = MB->getMemBufferRef();
+
+  Expected<COFFModuleDefinition> Def =
+      parseCOFFModuleDefinition(MBRef, Config->Machine);
+  if (!Def)
+    fatal(errorToErrorCode(Def.takeError()).message());
+
+  COFFModuleDefinition &M = *Def;
+  if (Config->OutputFile.empty())
+    Config->OutputFile = Saver.save(M.OutputFile);
+
+  if (M.ImageBase)
+    Config->ImageBase = M.ImageBase;
+  if (M.StackReserve)
+    Config->StackReserve = M.StackReserve;
+  if (M.StackCommit)
+    Config->StackCommit = M.StackCommit;
+  if (M.HeapReserve)
+    Config->HeapReserve = M.HeapReserve;
+  if (M.HeapCommit)
+    Config->HeapCommit = M.HeapCommit;
+  if (M.MajorImageVersion)
+    Config->MajorImageVersion = M.MajorImageVersion;
+  if (M.MinorImageVersion)
+    Config->MinorImageVersion = M.MinorImageVersion;
+  if (M.MajorOSVersion)
+    Config->MajorOSVersion = M.MajorOSVersion;
+  if (M.MinorOSVersion)
+    Config->MinorOSVersion = M.MinorOSVersion;
+
+  for (COFFShortExport E1 : M.Exports) {
+    Export E2;
+    E2.Name = Saver.save(E1.Name);
+    if (E1.isWeak())
+      E2.ExtName = Saver.save(E1.ExtName);
+    E2.Ordinal = E1.Ordinal;
+    E2.Noname = E1.Noname;
+    E2.Data = E1.Data;
+    E2.Private = E1.Private;
+    E2.Constant = E1.Constant;
+    Config->Exports.push_back(E2);
+  }
 }
 
 std::vector<MemoryBufferRef> getArchiveMembers(Archive *File) {
@@ -912,9 +993,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Handle /def
   if (auto *Arg = Args.getLastArg(OPT_deffile)) {
     // parseModuleDefs mutates Config object.
-    parseModuleDefs(
-        takeBuffer(check(MemoryBuffer::getFile(Arg->getValue()),
-                         Twine("could not open ") + Arg->getValue())));
+    parseModuleDefs(Arg->getValue());
   }
 
   // Handle /delayload
@@ -1034,7 +1113,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // need to create a .lib file.
   if (!Config->Exports.empty() || Config->DLL) {
     fixupExports();
-    writeImportLibrary();
+    createImportLibrary();
     assignExportOrdinals();
   }
 

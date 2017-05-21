@@ -249,7 +249,7 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
   return DieArray.size();
 }
 
-DWARFUnit::DWOHolder::DWOHolder(StringRef DWOPath) {
+DWARFUnit::DWOHolder::DWOHolder(StringRef DWOPath, uint64_t DWOId) {
   auto Obj = object::ObjectFile::createObjectFile(DWOPath);
   if (!Obj) {
     // TODO: Actually report errors helpfully.
@@ -259,8 +259,11 @@ DWARFUnit::DWOHolder::DWOHolder(StringRef DWOPath) {
   DWOFile = std::move(Obj.get());
   DWOContext.reset(
       cast<DWARFContext>(new DWARFContextInMemory(*DWOFile.getBinary())));
-  if (DWOContext->getNumDWOCompileUnits() > 0)
-    DWOU = DWOContext->getDWOCompileUnitAtIndex(0);
+  for (const auto &DWOCU : DWOContext->dwo_compile_units())
+    if (DWOCU->getDWOId() == DWOId) {
+      DWOU = DWOCU.get();
+      return;
+    }
 }
 
 bool DWARFUnit::parseDWO() {
@@ -281,10 +284,12 @@ bool DWARFUnit::parseDWO() {
     sys::path::append(AbsolutePath, *CompilationDir);
   }
   sys::path::append(AbsolutePath, *DWOFileName);
-  DWO = llvm::make_unique<DWOHolder>(AbsolutePath);
+  auto DWOId = getDWOId();
+  if (!DWOId)
+    return false;
+  DWO = llvm::make_unique<DWOHolder>(AbsolutePath, *DWOId);
   DWARFUnit *DWOCU = DWO->getUnit();
-  // Verify that compile unit in .dwo file is valid.
-  if (!DWOCU || DWOCU->getDWOId() != getDWOId()) {
+  if (!DWOCU) {
     DWO.reset();
     return false;
   }

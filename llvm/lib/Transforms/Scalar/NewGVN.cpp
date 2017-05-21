@@ -1251,7 +1251,7 @@ const Expression *NewGVN::performSymbolicStoreEvaluation(Instruction *I) const {
            lookupOperandLeader(SI->getPointerOperand())) &&
           (lookupMemoryLeader(getMemoryAccess(LI)->getDefiningAccess()) ==
            StoreRHS))
-        return createVariableExpression(LI);
+        return createStoreExpression(SI, StoreRHS);
     }
   }
 
@@ -2109,7 +2109,6 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I, const Expression *E,
       // If it's a store expression we are using, it means we are not equivalent
       // to something earlier.
       if (auto *SE = dyn_cast<StoreExpression>(E)) {
-        assert(SE->getStoredValue() != NewClass->getLeader());
         NewClass->setStoredValue(SE->getStoredValue());
         markValueLeaderChangeTouched(NewClass);
         // Shift the new class leader to be the store

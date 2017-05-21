@@ -1,28 +1,23 @@
 ; Check that the runtime size computation is generated for Fortran arrays.
 
-; PPCG code generation backend:
-; RUN: opt %loadPolly -S -polly-detect-fortran-arrays \
-; RUN: -polly-target=gpu  -polly-acc-mincompute=0 \
-; RUN: -polly-codegen-ppcg < %s | FileCheck %s 
-
 ; Regular code generation backend:
 ; RUN: opt %loadPolly -S -polly-detect-fortran-arrays \
 ; RUN: -polly-codegen < %s | FileCheck %s
 
 ; What the input fortran code should look like. NOTE: this is fake, the
 ; .ll file was hand-written.
-; 
+;
 ; MODULE testmod
 ; USE data_parameters, ONLY : &
 ; IMPLICIT NONE
-; 
+;
 ; INTEGER (KIND=iintegers), ALLOCATABLE, PRIVATE  :: &
 ;   arrin(:), arrout(:)
 ; CONTAINS
 ;
 ; SUBROUTINE test()
 ;   INTEGER (KIND=iintegers) :: i
-; 
+;
 ;   DO i = 1, 100
 ;       arrout(i) = arrin(i) * arrin(i)
 ;   END DO

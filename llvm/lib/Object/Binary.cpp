@@ -17,6 +17,7 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/WindowsResource.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
@@ -71,9 +72,10 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
       return ObjectFile::createSymbolicFile(Buffer, Type, Context);
     case sys::fs::file_magic::macho_universal_binary:
       return MachOUniversalBinary::create(Buffer);
+    case sys::fs::file_magic::windows_resource:
+      return WindowsResource::createWindowsResource(Buffer);
     case sys::fs::file_magic::unknown:
     case sys::fs::file_magic::coff_cl_gl_object:
-    case sys::fs::file_magic::windows_resource:
       // Unrecognized object file format.
       return errorCodeToError(object_error::invalid_file_type);
   }

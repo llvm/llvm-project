@@ -201,8 +201,7 @@ crossImportIntoModule(Module &TheModule, const ModuleSummaryIndex &Index,
   };
 
   FunctionImporter Importer(Index, Loader);
-  Expected<bool> Result =
-      Importer.importFunctions(TheModule, ImportList, {verifyLoadedModule});
+  Expected<bool> Result = Importer.importFunctions(TheModule, ImportList);
   if (!Result) {
     handleAllErrors(Result.takeError(), [&](ErrorInfoBase &EIB) {
       SMDiagnostic Err = SMDiagnostic(TheModule.getModuleIdentifier(),
@@ -211,6 +210,8 @@ crossImportIntoModule(Module &TheModule, const ModuleSummaryIndex &Index,
     });
     report_fatal_error("importFunctions failed");
   }
+  // Verify again after cross-importing.
+  verifyLoadedModule(TheModule);
 }
 
 static void optimizeModule(Module &TheModule, TargetMachine &TM,

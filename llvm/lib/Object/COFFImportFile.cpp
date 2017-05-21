@@ -1,36 +1,39 @@
-//===- Librarian.cpp ------------------------------------------------------===//
+//===- COFFImportFile.cpp - COFF short import file implementation ---------===//
 //
-//                             The LLVM Linker
+//                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains functions for the Librarian.  The librarian creates and
-// manages libraries of the Common Object File Format (COFF) object files.  It
-// primarily is used for creating static libraries and import libraries.
+// This file defines the writeImportLibrary function.
 //
 //===----------------------------------------------------------------------===//
 
-#include "Config.h"
-#include "Driver.h"
-#include "Error.h"
-#include "Symbols.h"
+#include "llvm/Object/COFFImportFile.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
+#include <cstdint>
+#include <map>
+#include <set>
+#include <string>
 #include <vector>
 
-using namespace lld::coff;
 using namespace llvm::COFF;
 using namespace llvm::object;
 using namespace llvm;
 
-static bool is32bit() {
-  switch (Config->Machine) {
+namespace llvm {
+namespace object {
+
+static bool is32bit(MachineTypes Machine) {
+  switch (Machine) {
   default:
     llvm_unreachable("unsupported machine");
   case IMAGE_FILE_MACHINE_AMD64:
@@ -41,8 +44,8 @@ static bool is32bit() {
   }
 }
 
-static uint16_t getImgRelRelocation() {
-  switch (Config->Machine) {
+static uint16_t getImgRelRelocation(MachineTypes Machine) {
+  switch (Machine) {
   default:
     llvm_unreachable("unsupported machine");
   case IMAGE_FILE_MACHINE_AMD64:
@@ -68,8 +71,8 @@ static void writeStringTable(std::vector<uint8_t> &B,
   // strings.  The termination is important as they are referenced to by offset
   // by the symbol entity in the file format.
 
-  std::vector<uint8_t>::size_type Pos = B.size();
-  std::vector<uint8_t>::size_type Offset = B.size();
+  size_t Pos = B.size();
+  size_t Offset = B.size();
 
   // Skip over the length field, we will fill it in later as we will have
   // computed the length while emitting the string content itself.
@@ -83,26 +86,20 @@ static void writeStringTable(std::vector<uint8_t> &B,
 
   // Backfill the length of the table now that it has been computed.
   support::ulittle32_t Length(B.size() - Offset);
-  memcpy(&B[Offset], &Length, sizeof(Length));
+  support::endian::write32le(&B[Offset], Length);
 }
 
-static std::string getImplibPath() {
-  if (!Config->Implib.empty())
-    return Config->Implib;
-  SmallString<128> Out = StringRef(Config->OutputFile);
-  sys::path::replace_extension(Out, ".lib");
-  return Out.str();
-}
-
-static ImportNameType getNameType(StringRef Sym, StringRef ExtName) {
+static ImportNameType getNameType(StringRef Sym, StringRef ExtName,
+                                  MachineTypes Machine) {
   if (Sym != ExtName)
     return IMPORT_NAME_UNDECORATE;
-  if (Config->Machine == I386 && Sym.startswith("_"))
+  if (Machine == IMAGE_FILE_MACHINE_I386 && Sym.startswith("_"))
     return IMPORT_NAME_NOPREFIX;
   return IMPORT_NAME;
 }
 
-static std::string replace(StringRef S, StringRef From, StringRef To) {
+static Expected<std::string> replace(StringRef S, StringRef From,
+                                     StringRef To) {
   size_t Pos = S.find(From);
 
   // From and To may be mangled, but substrings in S may not.
@@ -113,9 +110,11 @@ static std::string replace(StringRef S, StringRef From, StringRef To) {
   }
 
   if (Pos == StringRef::npos) {
-    error(S + ": replacing '" + From + "' with '" + To + "' failed");
-    return "";
+    return make_error<StringError>(
+      StringRef(Twine(S + ": replacing '" + From +
+        "' with '" + To + "' failed").str()), object_error::parse_failed);
   }
+
   return (Twine(S.substr(0, Pos)) + To + S.substr(Pos + From.size())).str();
 }
 
@@ -130,7 +129,7 @@ namespace {
 class ObjectFactory {
   using u16 = support::ulittle16_t;
   using u32 = support::ulittle32_t;
-
+  MachineTypes Machine;
   BumpPtrAllocator Alloc;
   StringRef DLLName;
   StringRef Library;
@@ -138,8 +137,8 @@ class ObjectFactory {
   std::string NullThunkSymbolName;
 
 public:
-  ObjectFactory(StringRef S)
-      : DLLName(S), Library(S.drop_back(4)),
+  ObjectFactory(StringRef S, MachineTypes M)
+      : Machine(M), DLLName(S), Library(S.drop_back(4)),
         ImportDescriptorSymbolName(("__IMPORT_DESCRIPTOR_" + Library).str()),
         NullThunkSymbolName(("\x7f" + Library + "_NULL_THUNK_DATA").str()) {}
 
@@ -164,7 +163,7 @@ public:
   NewArchiveMember createShortImport(StringRef Sym, uint16_t Ordinal,
                                      ImportType Type, ImportNameType NameType);
 };
-}
+} // namespace
 
 NewArchiveMember
 ObjectFactory::createImportDescriptor(std::vector<uint8_t> &Buffer) {
@@ -174,15 +173,18 @@ ObjectFactory::createImportDescriptor(std::vector<uint8_t> &Buffer) {
 
   // COFF Header
   coff_file_header Header{
-      u16(Config->Machine), u16(NumberOfSections), u32(0),
+      u16(Machine),
+      u16(NumberOfSections),
+      u32(0),
       u32(sizeof(Header) + (NumberOfSections * sizeof(coff_section)) +
           // .idata$2
           sizeof(coff_import_directory_table_entry) +
           NumberOfRelocations * sizeof(coff_relocation) +
           // .idata$4
           (DLLName.size() + 1)),
-      u32(NumberOfSymbols), u16(0),
-      u16(is32bit() ? IMAGE_FILE_32BIT_MACHINE : 0),
+      u32(NumberOfSymbols),
+      u16(0),
+      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : 0),
   };
   append(Buffer, Header);
 
@@ -224,11 +226,11 @@ ObjectFactory::createImportDescriptor(std::vector<uint8_t> &Buffer) {
 
   static const coff_relocation RelocationTable[NumberOfRelocations] = {
       {u32(offsetof(coff_import_directory_table_entry, NameRVA)), u32(2),
-       u16(getImgRelRelocation())},
+       u16(getImgRelRelocation(Machine))},
       {u32(offsetof(coff_import_directory_table_entry, ImportLookupTableRVA)),
-       u32(3), u16(getImgRelRelocation())},
+       u32(3), u16(getImgRelRelocation(Machine))},
       {u32(offsetof(coff_import_directory_table_entry, ImportAddressTableRVA)),
-       u32(4), u16(getImgRelRelocation())},
+       u32(4), u16(getImgRelRelocation(Machine))},
   };
   append(Buffer, RelocationTable);
 
@@ -308,12 +310,15 @@ ObjectFactory::createNullImportDescriptor(std::vector<uint8_t> &Buffer) {
 
   // COFF Header
   coff_file_header Header{
-      u16(Config->Machine), u16(NumberOfSections), u32(0),
+      u16(Machine),
+      u16(NumberOfSections),
+      u32(0),
       u32(sizeof(Header) + (NumberOfSections * sizeof(coff_section)) +
           // .idata$3
           sizeof(coff_import_directory_table_entry)),
-      u32(NumberOfSymbols), u16(0),
-      u16(is32bit() ? IMAGE_FILE_32BIT_MACHINE : 0),
+      u32(NumberOfSymbols),
+      u16(0),
+      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : 0),
   };
   append(Buffer, Header);
 
@@ -363,18 +368,21 @@ ObjectFactory::createNullImportDescriptor(std::vector<uint8_t> &Buffer) {
 NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
   static const uint32_t NumberOfSections = 2;
   static const uint32_t NumberOfSymbols = 1;
-  uint32_t VASize = is32bit() ? 4 : 8;
+  uint32_t VASize = is32bit(Machine) ? 4 : 8;
 
   // COFF Header
   coff_file_header Header{
-      u16(Config->Machine), u16(NumberOfSections), u32(0),
+      u16(Machine),
+      u16(NumberOfSections),
+      u32(0),
       u32(sizeof(Header) + (NumberOfSections * sizeof(coff_section)) +
           // .idata$5
           VASize +
           // .idata$4
           VASize),
-      u32(NumberOfSymbols), u16(0),
-      u16(is32bit() ? IMAGE_FILE_32BIT_MACHINE : 0),
+      u32(NumberOfSymbols),
+      u16(0),
+      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : 0),
   };
   append(Buffer, Header);
 
@@ -389,7 +397,8 @@ NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
        u32(0),
        u16(0),
        u16(0),
-       u32((is32bit() ? IMAGE_SCN_ALIGN_4BYTES : IMAGE_SCN_ALIGN_8BYTES) |
+       u32((is32bit(Machine) ? IMAGE_SCN_ALIGN_4BYTES
+                             : IMAGE_SCN_ALIGN_8BYTES) |
            IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ |
            IMAGE_SCN_MEM_WRITE)},
       {{'.', 'i', 'd', 'a', 't', 'a', '$', '4'},
@@ -402,7 +411,8 @@ NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
        u32(0),
        u16(0),
        u16(0),
-       u32((is32bit() ? IMAGE_SCN_ALIGN_4BYTES : IMAGE_SCN_ALIGN_8BYTES) |
+       u32((is32bit(Machine) ? IMAGE_SCN_ALIGN_4BYTES
+                             : IMAGE_SCN_ALIGN_8BYTES) |
            IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ |
            IMAGE_SCN_MEM_WRITE)},
   };
@@ -410,12 +420,12 @@ NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
 
   // .idata$5, ILT
   append(Buffer, u32(0));
-  if (!is32bit())
+  if (!is32bit(Machine))
     append(Buffer, u32(0));
 
   // .idata$4, IAT
   append(Buffer, u32(0));
-  if (!is32bit())
+  if (!is32bit(Machine))
     append(Buffer, u32(0));
 
   // Symbol Table
@@ -452,7 +462,7 @@ NewArchiveMember ObjectFactory::createShortImport(StringRef Sym,
   auto *Imp = reinterpret_cast<coff_import_header *>(P);
   P += sizeof(*Imp);
   Imp->Sig2 = 0xFFFF;
-  Imp->Machine = Config->Machine;
+  Imp->Machine = Machine;
   Imp->SizeOfData = ImpSize;
   if (Ordinal > 0)
     Imp->OrdinalHint = Ordinal;
@@ -466,15 +476,12 @@ NewArchiveMember ObjectFactory::createShortImport(StringRef Sym,
   return {MemoryBufferRef(StringRef(Buf, Size), DLLName)};
 }
 
-// Creates an import library for a DLL. In this function, we first
-// create an empty import library using lib.exe and then adds short
-// import files to that file.
-void lld::coff::writeImportLibrary() {
-  std::vector<NewArchiveMember> Members;
+std::error_code writeImportLibrary(StringRef DLLName, StringRef Path,
+                                   ArrayRef<COFFShortExport> Exports,
+                                   MachineTypes Machine) {
 
-  std::string Path = getImplibPath();
-  std::string DLLName = sys::path::filename(Config->OutputFile);
-  ObjectFactory OF(DLLName);
+  std::vector<NewArchiveMember> Members;
+  ObjectFactory OF(llvm::sys::path::filename(DLLName), Machine);
 
   std::vector<uint8_t> ImportDescriptor;
   Members.push_back(OF.createImportDescriptor(ImportDescriptor));
@@ -485,7 +492,7 @@ void lld::coff::writeImportLibrary() {
   std::vector<uint8_t> NullThunk;
   Members.push_back(OF.createNullThunk(NullThunk));
 
-  for (Export &E : Config->Exports) {
+  for (COFFShortExport E : Exports) {
     if (E.Private)
       continue;
 
@@ -495,17 +502,26 @@ void lld::coff::writeImportLibrary() {
     if (E.Constant)
       ImportType = IMPORT_CONST;
 
-    ImportNameType NameType = getNameType(E.SymbolName, E.Name);
-    std::string Name = E.ExtName.empty()
-                           ? std::string(E.SymbolName)
-                           : replace(E.SymbolName, E.Name, E.ExtName);
-    Members.push_back(OF.createShortImport(Name, E.Ordinal, ImportType,
-                                           NameType));
+    StringRef SymbolName = E.isWeak() ? E.ExtName : E.Name;
+    ImportNameType NameType = getNameType(SymbolName, E.Name, Machine);
+    Expected<std::string> Name = E.ExtName.empty()
+                                     ? SymbolName
+                                     : replace(SymbolName, E.Name, E.ExtName);
+
+    if (!Name) {
+      return errorToErrorCode(Name.takeError());
+    }
+
+    Members.push_back(
+        OF.createShortImport(*Name, E.Ordinal, ImportType, NameType));
   }
 
   std::pair<StringRef, std::error_code> Result =
       writeArchive(Path, Members, /*WriteSymtab*/ true, object::Archive::K_GNU,
                    /*Deterministic*/ true, /*Thin*/ false);
-  if (auto EC = Result.second)
-    fatal(EC, "failed to write " + Path);
+
+  return Result.second;
 }
+
+} // namespace object
+} // namespace llvm

@@ -2616,8 +2616,8 @@ Constant *ConstantDataSequential::getElementAsConstant(unsigned Elt) const {
   return ConstantInt::get(getElementType(), getElementAsInteger(Elt));
 }
 
-bool ConstantDataSequential::isString() const {
-  return isa<ArrayType>(getType()) && getElementType()->isIntegerTy(8);
+bool ConstantDataSequential::isString(unsigned CharSize) const {
+  return isa<ArrayType>(getType()) && getElementType()->isIntegerTy(CharSize);
 }
 
 bool ConstantDataSequential::isCString() const {

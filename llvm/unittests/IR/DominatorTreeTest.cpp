@@ -226,7 +226,7 @@ namespace llvm {
     char DPass::ID = 0;
 
     std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context, DPass *P) {
-      const char *ModuleStrig =
+      const char *ModuleString =
         "declare i32 @g()\n" \
         "define void @f(i32 %x) personality i32 ()* @g {\n" \
         "bb0:\n" \
@@ -250,7 +250,7 @@ namespace llvm {
         "  ret void\n" \
         "}\n";
       SMDiagnostic Err;
-      return parseAssemblyString(ModuleStrig, Err, Context);
+      return parseAssemblyString(ModuleString, Err, Context);
     }
 
     TEST(DominatorTree, Unreachable) {

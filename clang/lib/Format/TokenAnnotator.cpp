@@ -576,12 +576,13 @@ private:
       }
       break;
     case tok::kw_for:
-      if (Style.Language == FormatStyle::LK_JavaScript)
+      if (Style.Language == FormatStyle::LK_JavaScript) {
         if (Tok->Previous && Tok->Previous->is(tok::period))
           break;
         // JS' for await ( ...
         if (CurrentToken && CurrentToken->is(Keywords.kw_await))
           next();
+      }
       Contexts.back().ColonIsForRangeExpr = true;
       next();
       if (!parseParens())

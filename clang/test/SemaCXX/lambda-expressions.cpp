@@ -525,9 +525,9 @@ template <int N>
 class S {};
 
 void foo() {
-  const int num = 18;  // expected-note {{'num' declared here}}
+  const int num = 18; 
   auto outer = []() {
-    auto inner = [](S<num> &X) {};  // expected-error {{variable 'num' cannot be implicitly captured in a lambda with no capture-default specified}}
+    auto inner = [](S<num> &X) {};  
   };
 }
 }
@@ -572,4 +572,14 @@ void foo1() {
   auto s0 = S1{[name=]() {}}; // expected-error 2 {{expected expression}}
   auto s1 = S1{[name=name]() {}}; // expected-error {{use of undeclared identifier 'name'; did you mean 'name1'?}}
 }
+}
+
+namespace PR25627_dont_odr_use_local_consts {
+  
+  template<int> struct X {};
+  
+  void foo() {
+    const int N = 10;
+    (void) [] { X<N> x; };
+  }
 }

@@ -18,8 +18,8 @@ extern "C" __device__ void foo() {}
 // FTZ: attributes #0 = {{.*}} "nvptx-f32ftz"="true"
 // NOFTZ-NOT: attributes #0 = {{.*}} "nvptx-f32ftz"
 
-// FTZ:!llvm.module.flags = !{[[MODFLAG:![0-9]+]]}
+// FTZ:!llvm.module.flags = !{{{.*}}[[MODFLAG:![0-9]+]]}
 // FTZ:[[MODFLAG]] = !{i32 4, !"nvvm-reflect-ftz", i32 1}
 
-// NOFTZ:!llvm.module.flags = !{[[MODFLAG:![0-9]+]]}
+// NOFTZ:!llvm.module.flags = !{{{.*}}[[MODFLAG:![0-9]+]]}
 // NOFTZ:[[MODFLAG]] = !{i32 4, !"nvvm-reflect-ftz", i32 0}

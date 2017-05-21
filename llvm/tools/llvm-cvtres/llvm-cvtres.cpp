@@ -14,17 +14,23 @@
 
 #include "llvm-cvtres.h"
 
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/Object/Binary.h"
+#include "llvm/Object/WindowsResource.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+using namespace object;
 
 namespace {
 
@@ -61,6 +67,28 @@ public:
 static ExitOnError ExitOnErr;
 }
 
+LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg) {
+  errs() << Msg;
+  exit(1);
+}
+
+static void reportError(StringRef Input, std::error_code EC) {
+  reportError(Twine(Input) + ": " + EC.message() + ".\n");
+}
+
+void error(std::error_code EC) {
+  if (!EC)
+    return;
+  reportError(EC.message() + ".\n");
+}
+
+void error(Error EC) {
+  if (!EC)
+    return;
+  handleAllErrors(std::move(EC),
+                  [&](const ErrorInfoBase &EI) { reportError(EI.message()); });
+}
+
 int main(int argc_, const char *argv_[]) {
   sys::PrintStackTraceOnErrorSignal(argv_[0]);
   PrettyStackTraceProgram X(argc_, argv_);
@@ -76,11 +104,79 @@ int main(int argc_, const char *argv_[]) {
 
   CvtResOptTable T;
   unsigned MAI, MAC;
-  ArrayRef<const char *> ArgsArr = makeArrayRef(argv_, argc_);
+  ArrayRef<const char *> ArgsArr = makeArrayRef(argv_ + 1, argc_);
   opt::InputArgList InputArgs = T.ParseArgs(ArgsArr, MAI, MAC);
 
-  if (InputArgs.hasArg(OPT_HELP))
+  if (InputArgs.hasArg(OPT_HELP)) {
     T.PrintHelp(outs(), "cvtres", "Resource Converter", false);
+    return 0;
+  }
 
+  machine Machine;
+
+  if (InputArgs.hasArg(OPT_MACHINE)) {
+    std::string MachineString = InputArgs.getLastArgValue(OPT_MACHINE).upper();
+    Machine = StringSwitch<machine>(MachineString)
+                  .Case("ARM", machine::ARM)
+                  .Case("X64", machine::X64)
+                  .Case("X86", machine::X86)
+                  .Default(machine::UNKNOWN);
+    if (Machine == machine::UNKNOWN)
+      reportError("Unsupported machine architecture");
+  } else {
+    outs() << "Machine architecture not specified; assumed X64.\n";
+    Machine = machine::X64;
+  }
+
+  std::vector<std::string> InputFiles = InputArgs.getAllArgValues(OPT_INPUT);
+
+  if (InputFiles.size() == 0) {
+    reportError("No input file specified");
+  }
+
+  SmallString<128> OutputFile;
+
+  if (InputArgs.hasArg(OPT_OUT)) {
+    OutputFile = InputArgs.getLastArgValue(OPT_OUT);
+  } else {
+    OutputFile = StringRef(InputFiles[0]);
+    llvm::sys::path::replace_extension(OutputFile, ".obj");
+  }
+
+  for (const auto &File : InputFiles) {
+    Expected<object::OwningBinary<object::Binary>> BinaryOrErr =
+        object::createBinary(File);
+    if (!BinaryOrErr)
+      reportError(File, errorToErrorCode(BinaryOrErr.takeError()));
+
+    Binary &Binary = *BinaryOrErr.get().getBinary();
+
+    WindowsResource *RF = dyn_cast<WindowsResource>(&Binary);
+    if (!RF)
+      reportError(File + ": unrecognized file format.\n");
+
+    int EntryNumber = 0;
+    Expected<ResourceEntryRef> EntryOrErr = RF->getHeadEntry();
+    if (!EntryOrErr)
+      error(EntryOrErr.takeError());
+    ResourceEntryRef Entry = EntryOrErr.get();
+    bool End = false;
+    while (!End) {
+      error(Entry.moveNext(End));
+      EntryNumber++;
+    }
+    outs() << "Number of resources: " << EntryNumber << "\n";
+  }
+  outs() << "Machine: ";
+  switch (Machine) {
+  case machine::ARM:
+    outs() << "ARM\n";
+    break;
+  case machine::X86:
+    outs() << "X86\n";
+    break;
+  default:
+    outs() << "X64\n";
+  }
   return 0;
 }

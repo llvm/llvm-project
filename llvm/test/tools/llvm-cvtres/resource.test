@@ -1,0 +1,7 @@
+// The input was generated with the following command, using the original Windows
+// rc.exe:
+// > rc /fo test_resource.res /nologo test_resource.rc
+
+RUN: llvm-cvtres %p/Inputs/test_resource.res | FileCheck %s
+
+CHECK: Number of resources: 7

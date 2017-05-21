@@ -23,6 +23,8 @@ RUN: cp %p/Inputs/split-dwarf-test.dwo %T
 RUN: echo "%p/Inputs/split-dwarf-test 0x4005d4" >> %t.input
 RUN: echo "%p/Inputs/split-dwarf-test 0x4005c4" >> %t.input
 RUN: echo "%p/Inputs/cross-cu-inlining.x86_64-macho.o 0x17" >> %t.input
+RUN: cp %p/Inputs/split-dwarf-multiple-cu.dwo %T
+RUN: echo "%p/Inputs/split-dwarf-multiple-cu.o 0x4" >> %t.input
 
 RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
 RUN:    --default-arch=i386 < %t.input | FileCheck --check-prefix=CHECK --check-prefix=SPLIT --check-prefix=DWO %s
@@ -132,6 +134,11 @@ CHECK: func
 CHECK-NEXT: /tmp{{[/\\]}}cross-cu-inlining.c:16:3
 CHECK-NEXT: main
 CHECK-NEXT: /tmp{{[/\\]}}cross-cu-inlining.c:11:0
+
+CHECK:      f2
+CHECK-NEXT: b.cpp:3:3
+CHECK-NEXT: f3
+CHECK-NEXT: b.cpp:6:0
 
 RUN: echo "unexisting-file 0x1234" > %t.input2
 RUN: llvm-symbolizer < %t.input2 2>&1 | FileCheck %s --check-prefix=MISSING-FILE

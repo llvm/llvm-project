@@ -40,3 +40,15 @@ namespace Templates {
     };
   }
 }
+
+namespace PR25627_dont_odr_use_local_consts {
+  template<int> struct X { X(); X(int); };
+  
+  void foo() {
+    const int N = 10;
+  
+    struct Local {
+      void f(X<N> = X<N>()) {} // OK
+    }; 
+  }
+}

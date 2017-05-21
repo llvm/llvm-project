@@ -950,39 +950,6 @@ bool ModuleMap::resolveConflicts(Module *Mod, bool Complain) {
   return !Mod->UnresolvedConflicts.empty();
 }
 
-Module *ModuleMap::inferModuleFromLocation(FullSourceLoc Loc) {
-  if (Loc.isInvalid())
-    return nullptr;
-
-  if (UmbrellaDirs.empty() && Headers.empty())
-    return nullptr;
-
-  // Use the expansion location to determine which module we're in.
-  FullSourceLoc ExpansionLoc = Loc.getExpansionLoc();
-  if (!ExpansionLoc.isFileID())
-    return nullptr;
-
-  const SourceManager &SrcMgr = Loc.getManager();
-  FileID ExpansionFileID = ExpansionLoc.getFileID();
-  
-  while (const FileEntry *ExpansionFile
-           = SrcMgr.getFileEntryForID(ExpansionFileID)) {
-    // Find the module that owns this header (if any).
-    if (Module *Mod = findModuleForHeader(ExpansionFile).getModule())
-      return Mod;
-    
-    // No module owns this header, so look up the inclusion chain to see if
-    // any included header has an associated module.
-    SourceLocation IncludeLoc = SrcMgr.getIncludeLoc(ExpansionFileID);
-    if (IncludeLoc.isInvalid())
-      return nullptr;
-
-    ExpansionFileID = SrcMgr.getFileID(IncludeLoc);
-  }
-
-  return nullptr;
-}
-
 //----------------------------------------------------------------------------//
 // Module map file parser
 //----------------------------------------------------------------------------//
