@@ -1658,8 +1658,9 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
 
   // Passing pointer through invariant.group.barrier to avoid propagation of
   // vptrs information which may be included in previous type.
+  // To not break LTO with different optimizations levels, we do it regardless
+  // of optimization level.
   if (CGM.getCodeGenOpts().StrictVTablePointers &&
-      CGM.getCodeGenOpts().OptimizationLevel > 0 &&
       allocator->isReservedGlobalPlacementOperator())
     result = Address(Builder.CreateInvariantGroupBarrier(result.getPointer()),
                      result.getAlignment());

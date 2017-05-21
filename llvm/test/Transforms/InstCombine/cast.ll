@@ -1471,7 +1471,7 @@ define i32 @test93(i32 %A) {
   ret i32 %D
 }
 
-; The following three tests show a miscompile of sext + lshr + trunc patterns.
+; The following four tests sext + lshr + trunc patterns.
 ; PR33078
 
 define i8 @pr33078_1(i8 %A) {
@@ -1508,4 +1508,16 @@ define i4 @pr33078_3(i8 %A) {
   %C = lshr i16 %B, 12
   %D = trunc i16 %C to i4
   ret i4 %D
+}
+
+define i8 @pr33078_4(i3 %x) {
+; Don't turn this in an `ashr`. This was getting miscompiled
+; CHECK-LABEL: @pr33078_4(
+; CHECK-NEXT:    [[C:%.*]] = ashr i3 %x, 2
+; CHECK-NEXT:    [[B:%.*]] = sext i3 [[C]] to i8
+; CHECK-NEXT:    ret i8 [[D]]
+  %B = sext i3 %x to i16
+  %C = lshr i16 %B, 13
+  %D = trunc i16 %C to i8
+  ret i8 %D
 }

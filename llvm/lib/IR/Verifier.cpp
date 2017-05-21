@@ -1317,6 +1317,12 @@ Verifier::visitModuleFlag(const MDNode *Op,
     Assert(Inserted,
            "module flag identifiers must be unique (or of 'require' type)", ID);
   }
+
+  if (ID->getString() == "wchar_size") {
+    ConstantInt *Value
+      = mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
+    Assert(Value, "wchar_size metadata requires constant integer argument");
+  }
 }
 
 /// Return true if this attribute kind only applies to functions.

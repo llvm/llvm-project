@@ -211,7 +211,7 @@ struct DynamicFromStatic;
 // CHECK-DTORS-LABEL: {{^}}}
 
 
-// CHECK-LINK-REQ: !llvm.module.flags = !{![[FIRST:.*]], ![[SEC:.*]]{{.*}}}
+// CHECK-LINK-REQ: !llvm.module.flags = !{![[FIRST:[0-9]+]], ![[SEC:[0-9]+]]{{.*}}}
 
 // CHECK-LINK-REQ: ![[FIRST]] = !{i32 1, !"StrictVTablePointers", i32 1}
 // CHECK-LINK-REQ: ![[SEC]] = !{i32 3, !"StrictVTablePointersRequirement", ![[META:.*]]}

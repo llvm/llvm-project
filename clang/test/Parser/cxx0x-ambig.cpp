@@ -132,6 +132,32 @@ namespace ellipsis {
     void l(int(*...)(T)); // expected-warning {{ISO C++11 requires a parenthesized pack declaration to have a name}}
     void l(int(S<int>::*...)(T)); // expected-warning {{ISO C++11 requires a parenthesized pack declaration to have a name}}
   };
+
+  struct CtorSink {
+    template <typename ...T> constexpr CtorSink(T &&...t) { }
+    constexpr operator int() const { return 42; }
+  };
+
+  template <unsigned ...N> struct UnsignedTmplArgSink;
+
+  template <typename ...T>
+  void foo(int x, T ...t) {
+    // Have a variety of cases where the syntax is technically unambiguous, but hinges on careful treatment of ellipses.
+    CtorSink(t ...), x; // ok, expression; expected-warning 2{{expression result unused}}
+
+    int x0(CtorSink(t ...)); // ok, declares object x0
+    int *p0 = &x0;
+    (void)p0;
+
+    CtorSink x1(int(t) ..., int(x)); // ok, declares object x1
+    CtorSink *p1 = &x1;
+    (void)p1;
+
+    UnsignedTmplArgSink<T(CtorSink(t ...)) ...> *t0; // ok
+    UnsignedTmplArgSink<((T *)0, 42u) ...> **t0p = &t0;
+  }
+
+  template void foo(int, int, int); // expected-note {{in instantiation of function template specialization 'ellipsis::foo<int, int>' requested here}}
 }
 
 namespace braced_init_list {

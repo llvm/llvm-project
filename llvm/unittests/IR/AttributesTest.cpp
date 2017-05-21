@@ -63,4 +63,23 @@ TEST(Attributes, AddAttributes) {
   EXPECT_TRUE(AL.hasFnAttribute(Attribute::NoReturn));
 }
 
+TEST(Attributes, AddMatchingAlignAttr) {
+  LLVMContext C;
+  AttributeList AL;
+  AL = AL.addAttribute(C, AttributeList::FirstArgIndex,
+                       Attribute::getWithAlignment(C, 8));
+  AL = AL.addAttribute(C, AttributeList::FirstArgIndex + 1,
+                       Attribute::getWithAlignment(C, 32));
+  EXPECT_EQ(8U, AL.getParamAlignment(0));
+  EXPECT_EQ(32U, AL.getParamAlignment(1));
+
+  AttrBuilder B;
+  B.addAttribute(Attribute::NonNull);
+  B.addAlignmentAttr(8);
+  AL = AL.addAttributes(C, AttributeList::FirstArgIndex, B);
+  EXPECT_EQ(8U, AL.getParamAlignment(0));
+  EXPECT_EQ(32U, AL.getParamAlignment(1));
+  EXPECT_TRUE(AL.hasParamAttribute(0, Attribute::NonNull));
+}
+
 } // end anonymous namespace

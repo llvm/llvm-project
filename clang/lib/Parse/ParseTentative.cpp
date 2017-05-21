@@ -481,10 +481,10 @@ Parser::isCXXConditionDeclarationOrInitStatement(bool CanBeInitStatement) {
   /// the corresponding ')'. If the context is
   /// TypeIdAsTemplateArgument, we've already parsed the '<' or ','
   /// before this template argument, and will cease lookahead when we
-  /// hit a '>', '>>' (in C++0x), or ','. Returns true for a type-id
-  /// and false for an expression.  If during the disambiguation
-  /// process a parsing error is encountered, the function returns
-  /// true to let the declaration parsing code handle it.
+  /// hit a '>', '>>' (in C++0x), or ','; or, in C++0x, an ellipsis immediately
+  /// preceding such. Returns true for a type-id and false for an expression.
+  /// If during the disambiguation process a parsing error is encountered,
+  /// the function returns true to let the declaration parsing code handle it.
   ///
   /// type-id:
   ///   type-specifier-seq abstract-declarator[opt]
@@ -533,10 +533,15 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
 
     // We are supposed to be inside a template argument, so if after
     // the abstract declarator we encounter a '>', '>>' (in C++0x), or
-    // ',', this is a type-id. Otherwise, it's an expression.
+    // ','; or, in C++0x, an ellipsis immediately preceding such, this
+    // is a type-id. Otherwise, it's an expression.
     } else if (Context == TypeIdAsTemplateArgument &&
                (Tok.isOneOf(tok::greater, tok::comma) ||
-                (getLangOpts().CPlusPlus11 && Tok.is(tok::greatergreater)))) {
+                (getLangOpts().CPlusPlus11 &&
+                 (Tok.is(tok::greatergreater) ||
+                  (Tok.is(tok::ellipsis) &&
+                   NextToken().isOneOf(tok::greater, tok::greatergreater,
+                                       tok::comma)))))) {
       TPR = TPResult::True;
       isAmbiguous = true;
 
@@ -829,14 +834,14 @@ Parser::TPResult Parser::TryParseOperatorId() {
 ///         abstract-declarator:
 ///           ptr-operator abstract-declarator[opt]
 ///           direct-abstract-declarator
-///           ...
 ///
 ///         direct-abstract-declarator:
 ///           direct-abstract-declarator[opt]
-///           '(' parameter-declaration-clause ')' cv-qualifier-seq[opt]
+///                 '(' parameter-declaration-clause ')' cv-qualifier-seq[opt]
 ///                 exception-specification[opt]
 ///           direct-abstract-declarator[opt] '[' constant-expression[opt] ']'
 ///           '(' abstract-declarator ')'
+/// [C++0x]   ...
 ///
 ///         ptr-operator:
 ///           '*' cv-qualifier-seq[opt]
@@ -927,10 +932,6 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
 
   while (1) {
     TPResult TPR(TPResult::Ambiguous);
-
-    // abstract-declarator: ...
-    if (Tok.is(tok::ellipsis))
-      ConsumeToken();
 
     if (Tok.is(tok::l_paren)) {
       // Check whether we have a function declarator or a possible ctor-style

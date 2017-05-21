@@ -1917,14 +1917,11 @@ public:
   /// into a module, or is outside any module, returns nullptr.
   Module *getModuleForLocation(SourceLocation Loc);
 
-  /// \brief Find the module that contains the specified location, either
-  /// directly or indirectly.
-  Module *getModuleContainingLocation(SourceLocation Loc);
-
   /// \brief We want to produce a diagnostic at location IncLoc concerning a
   /// missing module import.
   ///
   /// \param IncLoc The location at which the missing import was detected.
+  /// \param M The desired module.
   /// \param MLoc A location within the desired module at which some desired
   ///        effect occurred (eg, where a desired entity was declared).
   ///
@@ -1932,6 +1929,7 @@ public:
   ///         Null if no such file could be determined or if a #include is not
   ///         appropriate.
   const FileEntry *getModuleHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
+                                                          Module *M,
                                                           SourceLocation MLoc);
 
 private:

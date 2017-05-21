@@ -9,13 +9,15 @@
 //
 // COFF short import file is a special kind of file which contains
 // only symbol names for DLL-exported symbols. This class implements
-// SymbolicFile interface for the file.
+// exporting of Symbols to create libraries and a SymbolicFile
+// interface for the file type.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_OBJECT_COFF_IMPORT_FILE_H
 #define LLVM_OBJECT_COFF_IMPORT_FILE_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
@@ -67,6 +69,36 @@ private:
     return getCOFFImportHeader()->getType() == COFF::IMPORT_DATA;
   }
 };
+
+struct COFFShortExport {
+  std::string Name;
+  std::string ExtName;
+
+  uint16_t Ordinal = 0;
+  bool Noname = false;
+  bool Data = false;
+  bool Private = false;
+  bool Constant = false;
+
+  bool isWeak() {
+    return ExtName.size() && ExtName != Name;
+  }
+
+  friend bool operator==(const COFFShortExport &L, const COFFShortExport &R) {
+    return L.Name == R.Name && L.ExtName == R.ExtName &&
+            L.Ordinal == R.Ordinal && L.Noname == R.Noname &&
+            L.Data == R.Data && L.Private == R.Private;
+  }
+
+  friend bool operator!=(const COFFShortExport &L, const COFFShortExport &R) {
+    return !(L == R);
+  }
+};
+
+std::error_code writeImportLibrary(StringRef DLLName,
+                                   StringRef Path,
+                                   ArrayRef<COFFShortExport> Exports,
+                                   COFF::MachineTypes Machine);
 
 } // namespace object
 } // namespace llvm

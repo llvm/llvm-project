@@ -3735,16 +3735,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     // inner pointers.
     complainAboutMissingNullability = CAMN_InnerPointers;
 
-    auto isDependentNonPointerType = [](QualType T) -> bool {
-      // Note: This is intended to be the same check as Type::canHaveNullability
-      // except with all of the ambiguous cases being treated as 'false' rather
-      // than 'true'.
-      return T->isDependentType() && !T->isAnyPointerType() &&
-        !T->isBlockPointerType() && !T->isMemberPointerType();
-    };
-
-    if (T->canHaveNullability() && !T->getNullability(S.Context) &&
-        !isDependentNonPointerType(T)) {
+    if (T->canHaveNullability(/*ResultIfUnknown*/false) &&
+        !T->getNullability(S.Context)) {
       // Note that we allow but don't require nullability on dependent types.
       ++NumPointersRemaining;
     }
@@ -3962,7 +3954,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   // If the type itself could have nullability but does not, infer pointer
   // nullability and perform consistency checking.
   if (S.CodeSynthesisContexts.empty()) {
-    if (T->canHaveNullability() && !T->getNullability(S.Context)) {
+    if (T->canHaveNullability(/*ResultIfUnknown*/false) &&
+        !T->getNullability(S.Context)) {
       if (isVaList(T)) {
         // Record that we've seen a pointer, but do nothing else.
         if (NumPointersRemaining > 0)

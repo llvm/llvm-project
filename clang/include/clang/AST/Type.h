@@ -2011,10 +2011,11 @@ public:
   Optional<NullabilityKind> getNullability(const ASTContext &context) const;
 
   /// Determine whether the given type can have a nullability
-  /// specifier applied to it, i.e., if it is any kind of pointer type
-  /// or a dependent type that could instantiate to any kind of
-  /// pointer type.
-  bool canHaveNullability() const;
+  /// specifier applied to it, i.e., if it is any kind of pointer type.
+  ///
+  /// \param ResultIfUnknown The value to return if we don't yet know whether
+  ///        this type can have nullability because it is dependent.
+  bool canHaveNullability(bool ResultIfUnknown = true) const;
 
   /// Retrieve the set of substitutions required when accessing a member
   /// of the Objective-C receiver type that is declared in the given context.
