@@ -2,6 +2,8 @@ add_llvm_library(LLVMObject
   Archive.cpp
   ArchiveWriter.cpp
   Binary.cpp
+  COFFImportFile.cpp
+  COFFModuleDefinition.cpp
   COFFObjectFile.cpp
   Decompressor.cpp
   ELF.cpp
