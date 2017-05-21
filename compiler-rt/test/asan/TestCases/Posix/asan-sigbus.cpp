@@ -2,7 +2,7 @@
 // Defaults to true
 // RUN: %clangxx_asan -std=c++11 %s -o %t
 // RUN: not %run %t %T/file 2>&1 | FileCheck %s -check-prefix=CHECK-BUS
-// RUN: %env_asan_opts=handle_sigbus=false not --crash %run %t %T/file 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=handle_sigbus=0 not --crash %run %t %T/file 2>&1 | FileCheck %s
 
 // UNSUPPORTED: ios
 

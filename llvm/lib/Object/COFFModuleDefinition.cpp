@@ -1,6 +1,6 @@
-//===- COFF/ModuleDef.cpp -------------------------------------------------===//
+//===--- COFFModuleDefinition.cpp - Simple DEF parser ---------------------===//
 //
-//                             The LLVM Linker
+//                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
@@ -9,27 +9,26 @@
 //
 // Windows-specific.
 // A parser for the module-definition file (.def file).
-// Parsed results are directly written to Config global variable.
 //
 // The format of module-definition files are described in this document:
 // https://msdn.microsoft.com/en-us/library/28d6s79h.aspx
 //
 //===----------------------------------------------------------------------===//
 
-#include "Config.h"
-#include "Error.h"
-#include "Memory.h"
+#include "llvm/Object/COFFModuleDefinition.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/StringSaver.h"
+#include "llvm/Object/COFF.h"
+#include "llvm/Object/COFFImportFile.h"
+#include "llvm/Object/Error.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
-#include <system_error>
 
+using namespace llvm::COFF;
 using namespace llvm;
 
-namespace lld {
-namespace coff {
-namespace {
+namespace llvm {
+namespace object {
 
 enum Kind {
   Unknown,
@@ -60,9 +59,14 @@ static bool isDecorated(StringRef Sym) {
   return Sym.startswith("_") || Sym.startswith("@") || Sym.startswith("?");
 }
 
+static Error createError(const Twine &Err) {
+  return make_error<StringError>(StringRef(Err.str()),
+                                 object_error::parse_failed);
+}
+
 class Lexer {
 public:
-  explicit Lexer(StringRef S) : Buf(S) {}
+  Lexer(StringRef S) : Buf(S) {}
 
   Token lex() {
     Buf = Buf.trim();
@@ -116,12 +120,14 @@ private:
 
 class Parser {
 public:
-  explicit Parser(StringRef S) : Lex(S) {}
+  explicit Parser(StringRef S, MachineTypes M) : Lex(S), Machine(M) {}
 
-  void parse() {
+  Expected<COFFModuleDefinition> parse() {
     do {
-      parseOne();
+      if (Error Err = parseOne())
+        return std::move(Err);
     } while (Tok.K != Eof);
+    return Info;
   }
 
 private:
@@ -134,83 +140,83 @@ private:
     Stack.pop_back();
   }
 
-  void readAsInt(uint64_t *I) {
+  Error readAsInt(uint64_t *I) {
     read();
     if (Tok.K != Identifier || Tok.Value.getAsInteger(10, *I))
-      fatal("integer expected");
+      return createError("integer expected");
+    return Error::success();
   }
 
-  void expect(Kind Expected, StringRef Msg) {
+  Error expect(Kind Expected, StringRef Msg) {
     read();
     if (Tok.K != Expected)
-      fatal(Msg);
+      return createError(Msg);
+    return Error::success();
   }
 
   void unget() { Stack.push_back(Tok); }
 
-  void parseOne() {
+  Error parseOne() {
     read();
     switch (Tok.K) {
     case Eof:
-      return;
+      return Error::success();
     case KwExports:
       for (;;) {
         read();
         if (Tok.K != Identifier) {
           unget();
-          return;
+          return Error::success();
         }
-        parseExport();
+        if (Error Err = parseExport())
+          return Err;
       }
     case KwHeapsize:
-      parseNumbers(&Config->HeapReserve, &Config->HeapCommit);
-      return;
+      return parseNumbers(&Info.HeapReserve, &Info.HeapCommit);
     case KwStacksize:
-      parseNumbers(&Config->StackReserve, &Config->StackCommit);
-      return;
+      return parseNumbers(&Info.StackReserve, &Info.StackCommit);
     case KwLibrary:
     case KwName: {
       bool IsDll = Tok.K == KwLibrary; // Check before parseName.
       std::string Name;
-      parseName(&Name, &Config->ImageBase);
-
+      if (Error Err = parseName(&Name, &Info.ImageBase))
+        return Err;
       // Append the appropriate file extension if not already present.
       StringRef Ext = IsDll ? ".dll" : ".exe";
       if (!StringRef(Name).endswith_lower(Ext))
         Name += Ext;
 
       // Set the output file, but don't override /out if it was already passed.
-      if (Config->OutputFile.empty())
-        Config->OutputFile = Name;
-      return;
+      if (Info.OutputFile.empty())
+        Info.OutputFile = Name;
+      return Error::success();
     }
     case KwVersion:
-      parseVersion(&Config->MajorImageVersion, &Config->MinorImageVersion);
-      return;
+      return parseVersion(&Info.MajorImageVersion, &Info.MinorImageVersion);
     default:
-      fatal("unknown directive: " + Tok.Value);
+      return createError("unknown directive: " + Tok.Value);
     }
   }
 
-  void parseExport() {
-    Export E;
+  Error parseExport() {
+    COFFShortExport E;
     E.Name = Tok.Value;
     read();
     if (Tok.K == Equal) {
       read();
       if (Tok.K != Identifier)
-        fatal("identifier expected, but got " + Tok.Value);
+        return createError("identifier expected, but got " + Tok.Value);
       E.ExtName = E.Name;
       E.Name = Tok.Value;
     } else {
       unget();
     }
 
-    if (Config->Machine == I386) {
+    if (Machine == IMAGE_FILE_MACHINE_I386) {
       if (!isDecorated(E.Name))
-        E.Name = Saver.save("_" + E.Name);
+        E.Name = (std::string("_").append(E.Name));
       if (!E.ExtName.empty() && !isDecorated(E.ExtName))
-        E.ExtName = Saver.save("_" + E.ExtName);
+        E.ExtName = (std::string("_").append(E.ExtName));
     }
 
     for (;;) {
@@ -230,7 +236,6 @@ private:
         continue;
       }
       if (Tok.K == KwConstant) {
-        warn("CONSTANT keyword is obsolete; use DATA");
         E.Constant = true;
         continue;
       }
@@ -239,66 +244,76 @@ private:
         continue;
       }
       unget();
-      Config->Exports.push_back(E);
-      return;
+      Info.Exports.push_back(E);
+      return Error::success();
     }
   }
 
   // HEAPSIZE/STACKSIZE reserve[,commit]
-  void parseNumbers(uint64_t *Reserve, uint64_t *Commit) {
-    readAsInt(Reserve);
+  Error parseNumbers(uint64_t *Reserve, uint64_t *Commit) {
+    if (Error Err = readAsInt(Reserve))
+      return Err;
     read();
     if (Tok.K != Comma) {
       unget();
       Commit = nullptr;
-      return;
+      return Error::success();
     }
-    readAsInt(Commit);
+    if (Error Err = readAsInt(Commit))
+      return Err;
+    return Error::success();
   }
 
   // NAME outputPath [BASE=address]
-  void parseName(std::string *Out, uint64_t *Baseaddr) {
+  Error parseName(std::string *Out, uint64_t *Baseaddr) {
     read();
     if (Tok.K == Identifier) {
       *Out = Tok.Value;
     } else {
       *Out = "";
       unget();
-      return;
+      return Error::success();
     }
     read();
     if (Tok.K == KwBase) {
-      expect(Equal, "'=' expected");
-      readAsInt(Baseaddr);
+      if (Error Err = expect(Equal, "'=' expected"))
+        return Err;
+      if (Error Err = readAsInt(Baseaddr))
+        return Err;
     } else {
       unget();
       *Baseaddr = 0;
     }
+    return Error::success();
   }
 
   // VERSION major[.minor]
-  void parseVersion(uint32_t *Major, uint32_t *Minor) {
+  Error parseVersion(uint32_t *Major, uint32_t *Minor) {
     read();
     if (Tok.K != Identifier)
-      fatal("identifier expected, but got " + Tok.Value);
+      return createError("identifier expected, but got " + Tok.Value);
     StringRef V1, V2;
     std::tie(V1, V2) = Tok.Value.split('.');
     if (V1.getAsInteger(10, *Major))
-      fatal("integer expected, but got " + Tok.Value);
+      return createError("integer expected, but got " + Tok.Value);
     if (V2.empty())
       *Minor = 0;
     else if (V2.getAsInteger(10, *Minor))
-      fatal("integer expected, but got " + Tok.Value);
+      return createError("integer expected, but got " + Tok.Value);
+    return Error::success();
   }
 
   Lexer Lex;
   Token Tok;
   std::vector<Token> Stack;
+  MachineTypes Machine;
+  COFFModuleDefinition Info;
 };
 
-} // anonymous namespace
+Expected<COFFModuleDefinition> parseCOFFModuleDefinition(MemoryBufferRef MB,
+                                                         MachineTypes Machine) {
+  return Parser(MB.getBuffer(), Machine).parse();
+}
 
-void parseModuleDefs(MemoryBufferRef MB) { Parser(MB.getBuffer()).parse(); }
-
-} // namespace coff
-} // namespace lld
+} // namespace object
+} // namespace llvm

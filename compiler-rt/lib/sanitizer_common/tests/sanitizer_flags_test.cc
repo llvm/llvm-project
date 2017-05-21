@@ -59,6 +59,36 @@ TEST(SanitizerCommon, BooleanFlags) {
   TestFlag(true, "flag_name=0", false);
   TestFlag(true, "flag_name=no", false);
   TestFlag(true, "flag_name=false", false);
+
+  EXPECT_DEATH(TestFlag(false, "flag_name", true), "expected '='");
+  EXPECT_DEATH(TestFlag(false, "flag_name=", true),
+               "Invalid value for bool option: ''");
+  EXPECT_DEATH(TestFlag(false, "flag_name=2", true),
+               "Invalid value for bool option: '2'");
+  EXPECT_DEATH(TestFlag(false, "flag_name=-1", true),
+               "Invalid value for bool option: '-1'");
+  EXPECT_DEATH(TestFlag(false, "flag_name=on", true),
+               "Invalid value for bool option: 'on'");
+}
+
+TEST(SanitizerCommon, HandleSignalMode) {
+  TestFlag(kHandleSignalNo, "flag_name=1", kHandleSignalYes);
+  TestFlag(kHandleSignalNo, "flag_name=yes", kHandleSignalYes);
+  TestFlag(kHandleSignalNo, "flag_name=true", kHandleSignalYes);
+  TestFlag(kHandleSignalYes, "flag_name=0", kHandleSignalNo);
+  TestFlag(kHandleSignalYes, "flag_name=no", kHandleSignalNo);
+  TestFlag(kHandleSignalYes, "flag_name=false", kHandleSignalNo);
+
+  EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name", kHandleSignalNo),
+               "expected '='");
+  EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name=", kHandleSignalNo),
+               "Invalid value for signal handler option: ''");
+  EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name=2", kHandleSignalNo),
+               "Invalid value for signal handler option: '2'");
+  EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name=-1", kHandleSignalNo),
+               "Invalid value for signal handler option: '-1'");
+  EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name=on", kHandleSignalNo),
+               "Invalid value for signal handler option: 'on'");
 }
 
 TEST(SanitizerCommon, IntFlags) {

@@ -529,6 +529,13 @@ class NewGVN {
   using ExpressionClassMap = DenseMap<const Expression *, CongruenceClass *>;
   ExpressionClassMap ExpressionToClass;
 
+  // We have a single expression that represents currently DeadExpressions.
+  // For dead expressions we can prove will stay dead, we mark them with
+  // DFS number zero.  However, it's possible in the case of phi nodes
+  // for us to assume/prove all arguments are dead during fixpointing.
+  // We use DeadExpression for that case.
+  DeadExpression *SingletonDeadExpression = nullptr;
+
   // Which values have changed as a result of leader changes.
   SmallPtrSet<Value *, 8> LeaderChanges;
 
@@ -583,6 +590,7 @@ private:
                                            Value *) const;
   PHIExpression *createPHIExpression(Instruction *, bool &HasBackEdge,
                                      bool &OriginalOpsConstant) const;
+  const DeadExpression *createDeadExpression() const;
   const VariableExpression *createVariableExpression(Value *) const;
   const ConstantExpression *createConstantExpression(Constant *) const;
   const Expression *createVariableOrConstant(Value *V) const;
@@ -855,10 +863,14 @@ PHIExpression *NewGVN::createPHIExpression(Instruction *I, bool &HasBackedge,
                    HasBackedge = HasBackedge || isBackedge(BB, PHIBlock);
                    OriginalOpsConstant =
                        OriginalOpsConstant && isa<Constant>(*U);
-
-                   // Don't try to transform self-defined phis.
+                   // Use nullptr to distinguish between things that were
+                   // originally self-defined and those that have an operand
+                   // leader that is self-defined.
                    if (*U == PN)
-                     return PN;
+                     return nullptr;
+                   // Things in TOPClass are equivalent to everything.
+                   if (ValueToClass.lookup(*U) == TOPClass)
+                     return nullptr;
                    return lookupOperandLeader(*U);
                  });
   return E;
@@ -1055,6 +1067,12 @@ NewGVN::createAggregateValueExpression(Instruction *I) const {
   llvm_unreachable("Unhandled type of aggregate value operation");
 }
 
+const DeadExpression *NewGVN::createDeadExpression() const {
+  // DeadExpression has no arguments and all DeadExpression's are the same,
+  // so we only need one of them.
+  return SingletonDeadExpression;
+}
+
 const VariableExpression *NewGVN::createVariableExpression(Value *V) const {
   auto *E = new (ExpressionAllocator) VariableExpression(V);
   E->setOpcode(V->getValueID());
@@ -1126,7 +1144,7 @@ bool NewGVN::someEquivalentDominates(const Instruction *Inst,
 Value *NewGVN::lookupOperandLeader(Value *V) const {
   CongruenceClass *CC = ValueToClass.lookup(V);
   if (CC) {
-    // Everything in TOP is represneted by undef, as it can be any value.
+    // Everything in TOP is represented by undef, as it can be any value.
     // We do have to make sure we get the type right though, so we can't set the
     // RepLeader to undef.
     if (CC == TOPClass)
@@ -1233,7 +1251,7 @@ const Expression *NewGVN::performSymbolicStoreEvaluation(Instruction *I) const {
            lookupOperandLeader(SI->getPointerOperand())) &&
           (lookupMemoryLeader(getMemoryAccess(LI)->getDefiningAccess()) ==
            StoreRHS))
-        return createVariableExpression(LI);
+        return createStoreExpression(SI, StoreRHS);
     }
   }
 
@@ -1564,10 +1582,9 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) const {
   // True if one of the incoming phi edges is a backedge.
   bool HasBackedge = false;
   // All constant tracks the state of whether all the *original* phi operands
-  // were constant. This is really shorthand for "this phi cannot cycle due
-  // to forward propagation", as any change in value of the phi is guaranteed
-  // not to later change the value of the phi.
-  // IE it can't be v = phi(undef, v+1)
+  // This is really shorthand for "this phi cannot cycle due to forward
+  // change in value of the phi is guaranteed not to later change the value of
+  // the phi. IE it can't be v = phi(undef, v+1)
   bool AllConstant = true;
   auto *E =
       cast<PHIExpression>(createPHIExpression(I, HasBackedge, AllConstant));
@@ -1575,8 +1592,16 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) const {
   // See if all arguments are the same.
   // We track if any were undef because they need special handling.
   bool HasUndef = false;
-  auto Filtered = make_filter_range(E->operands(), [&](const Value *Arg) {
-    if (Arg == I)
+  bool CycleFree = isCycleFree(cast<PHINode>(I));
+  auto Filtered = make_filter_range(E->operands(), [&](Value *Arg) {
+    if (Arg == nullptr)
+      return false;
+    // Original self-operands are already eliminated during expression creation.
+    // We can only eliminate value-wise self-operands if it's cycle
+    // free. Otherwise, eliminating the operand can cause our value to change,
+    // which can cause us to not eliminate the operand, which changes the value
+    // back to what it was before, cycling forever.
+    if (CycleFree && Arg == I)
       return false;
     if (isa<UndefValue>(Arg)) {
       HasUndef = true;
@@ -1584,20 +1609,19 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) const {
     }
     return true;
   });
-  // If we are left with no operands, it's undef
+  // If we are left with no operands, it's dead.
   if (Filtered.begin() == Filtered.end()) {
-    DEBUG(dbgs() << "Simplified PHI node " << *I << " to undef"
-                 << "\n");
+    DEBUG(dbgs() << "No arguments of PHI node " << *I << " are live\n");
     deleteExpression(E);
-    return createConstantExpression(UndefValue::get(I->getType()));
+    return createDeadExpression();
   }
   unsigned NumOps = 0;
   Value *AllSameValue = *(Filtered.begin());
   ++Filtered.begin();
   // Can't use std::equal here, sadly, because filter.begin moves.
-  if (llvm::all_of(Filtered, [AllSameValue, &NumOps](const Value *V) {
+  if (llvm::all_of(Filtered, [&](Value *Arg) {
         ++NumOps;
-        return V == AllSameValue;
+        return Arg == AllSameValue;
       })) {
     // In LLVM's non-standard representation of phi nodes, it's possible to have
     // phi nodes with cycles (IE dependent on other phis that are .... dependent
@@ -1616,7 +1640,7 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) const {
       // constants, or all operands are ignored but the undef, it also must be
       // cycle free.
       if (!AllConstant && HasBackedge && NumOps > 0 &&
-          !isa<UndefValue>(AllSameValue) && !isCycleFree(I))
+          !isa<UndefValue>(AllSameValue) && !CycleFree)
         return E;
 
       // Only have to check for instructions
@@ -2085,7 +2109,6 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I, const Expression *E,
       // If it's a store expression we are using, it means we are not equivalent
       // to something earlier.
       if (auto *SE = dyn_cast<StoreExpression>(E)) {
-        assert(SE->getStoredValue() != NewClass->getLeader());
         NewClass->setStoredValue(SE->getStoredValue());
         markValueLeaderChangeTouched(NewClass);
         // Shift the new class leader to be the store
@@ -2150,7 +2173,8 @@ void NewGVN::markPhiOfOpsChanged(const HashedExpression &HE) {
 void NewGVN::performCongruenceFinding(Instruction *I, const Expression *E) {
   // This is guaranteed to return something, since it will at least find
   // TOP.
-  CongruenceClass *IClass = ValueToClass[I];
+
+  CongruenceClass *IClass = ValueToClass.lookup(I);
   assert(IClass && "Should have found a IClass");
   // Dead classes should have been eliminated from the mapping.
   assert(!IClass->isDead() && "Found a dead class");
@@ -2159,7 +2183,10 @@ void NewGVN::performCongruenceFinding(Instruction *I, const Expression *E) {
   HashedExpression HE(E);
   if (const auto *VE = dyn_cast<VariableExpression>(E)) {
     EClass = ValueToClass.lookup(VE->getVariableValue());
-  } else {
+  } else if (isa<DeadExpression>(E)) {
+    EClass = TOPClass;
+  }
+  if (!EClass) {
     auto lookupResult = ExpressionToClass.insert_as({E, nullptr}, HE);
 
     // If it's not in the value table, create a new congruence class.
@@ -3053,6 +3080,7 @@ bool NewGVN::runGVN() {
   bool Changed = false;
   NumFuncArgs = F.arg_size();
   MSSAWalker = MSSA->getWalker();
+  SingletonDeadExpression = new (ExpressionAllocator) DeadExpression();
 
   // Count number of instructions for sizing of hash tables, and come
   // up with a global dfs numbering for instructions.
@@ -3537,13 +3565,15 @@ bool NewGVN::eliminateInstructions(Function &F) {
       continue;
     // Everything still in the TOP class is unreachable or dead.
     if (CC == TOPClass) {
-#ifndef NDEBUG
-      for (auto M : *CC)
+      for (auto M : *CC) {
+        auto *VTE = ValueToExpression.lookup(M);
+        if (VTE && isa<DeadExpression>(VTE))
+          markInstructionForDeletion(cast<Instruction>(M));
         assert((!ReachableBlocks.count(cast<Instruction>(M)->getParent()) ||
                 InstructionsToErase.count(cast<Instruction>(M))) &&
                "Everything in TOP should be unreachable or dead at this "
                "point");
-#endif
+      }
       continue;
     }
 

@@ -20,9 +20,10 @@ using namespace llvm::safestack;
 
 #define DEBUG_TYPE "safestackcoloring"
 
+// Disabled by default due to PR32143.
 static cl::opt<bool> ClColoring("safe-stack-coloring",
                                 cl::desc("enable safe stack coloring"),
-                                cl::Hidden, cl::init(true));
+                                cl::Hidden, cl::init(false));
 
 const StackColoring::LiveRange &StackColoring::getLiveRange(AllocaInst *AI) {
   const auto IT = AllocaNumbering.find(AI);

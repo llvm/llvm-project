@@ -161,7 +161,7 @@ symbol table entries. Here is an example of the "hello world" module:
 
     ; Definition of main function
     define i32 @main() {   ; i32()*
-      ; Convert [13 x i8]* to i8  *...
+      ; Convert [13 x i8]* to i8*...
       %cast210 = getelementptr [13 x i8], [13 x i8]* @.str, i64 0, i64 0
 
       ; Call puts function to write out the string to stdout.
@@ -9548,7 +9548,7 @@ Syntax:
 
 ::
 
-      declare i8  *@llvm.returnaddress(i32 <level>)
+      declare i8* @llvm.returnaddress(i32 <level>)
 
 Overview:
 """""""""
@@ -9586,7 +9586,7 @@ Syntax:
 
 ::
 
-      declare i8  *@llvm.addressofreturnaddress()
+      declare i8* @llvm.addressofreturnaddress()
 
 Overview:
 """""""""
