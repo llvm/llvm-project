@@ -19,11 +19,12 @@ namespace tidy {
 namespace readability {
 
 void RedundantDeclarationCheck::registerMatchers(MatchFinder *Finder) {
-  auto UnlessDefinition = unless(isDefinition());
-  Finder->addMatcher(namedDecl(anyOf(varDecl(UnlessDefinition),
-                                     functionDecl(UnlessDefinition)))
-                         .bind("Decl"),
-                     this);
+  Finder->addMatcher(
+      namedDecl(
+          anyOf(varDecl(unless(isDefinition())),
+                functionDecl(unless(anyOf(isDefinition(), isDefaulted())))))
+          .bind("Decl"),
+      this);
 }
 
 void RedundantDeclarationCheck::check(const MatchFinder::MatchResult &Result) {

@@ -1823,6 +1823,11 @@ TEST_F(FormatTestJS, NonNullAssertionOperator) {
   verifyFormat("let x = !foo;\n");
   verifyFormat("let x = foo[0]!;\n");
   verifyFormat("let x = (foo)!;\n");
+  verifyFormat("let x = x(foo!);\n");
+  verifyFormat(
+      "a.aaaaaa(a.a!).then(\n"
+      "    x => x(x));\n",
+      getGoogleJSStyleWithColumns(20));
   verifyFormat("let x = foo! - 1;\n");
   verifyFormat("let x = {foo: 1}!;\n");
   verifyFormat(

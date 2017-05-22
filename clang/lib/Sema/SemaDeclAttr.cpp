@@ -6434,11 +6434,17 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleDLLAttr(S, D, Attr);
     break;
   case AttributeList::AT_Mips16:
-    handleSimpleAttributeWithExclusions<Mips16Attr, MipsInterruptAttr>(S, D,
-                                                                       Attr);
+    handleSimpleAttributeWithExclusions<Mips16Attr, MicroMipsAttr,
+                                        MipsInterruptAttr>(S, D, Attr);
     break;
   case AttributeList::AT_NoMips16:
     handleSimpleAttribute<NoMips16Attr>(S, D, Attr);
+    break;
+  case AttributeList::AT_MicroMips:
+    handleSimpleAttributeWithExclusions<MicroMipsAttr, Mips16Attr>(S, D, Attr);
+    break;
+  case AttributeList::AT_NoMicroMips:
+    handleSimpleAttribute<NoMicroMipsAttr>(S, D, Attr);
     break;
   case AttributeList::AT_AMDGPUFlatWorkGroupSize:
     handleAMDGPUFlatWorkGroupSizeAttr(S, D, Attr);
