@@ -63,6 +63,17 @@ public:
     case TemplateArgument::Type:
       IndexCtx.indexTypeSourceInfo(LocInfo.getAsTypeSourceInfo(), Parent, DC);
       break;
+    case TemplateArgument::Template:
+    case TemplateArgument::TemplateExpansion:
+      IndexCtx.indexNestedNameSpecifierLoc(TALoc.getTemplateQualifierLoc(),
+                                           Parent, DC);
+      if (const TemplateDecl *TD = TALoc.getArgument()
+                                       .getAsTemplateOrTemplatePattern()
+                                       .getAsTemplateDecl()) {
+        if (const NamedDecl *TTD = TD->getTemplatedDecl())
+          IndexCtx.handleReference(TTD, TALoc.getTemplateNameLoc(), Parent, DC);
+      }
+      break;
     default:
       break;
     }
@@ -610,8 +621,43 @@ public:
     return true;
   }
 
+  static bool shouldIndexTemplateParameterDefaultValue(const NamedDecl *D) {
+    if (!D)
+      return false;
+    // We want to index the template parameters only once when indexing the
+    // canonical declaration.
+    if (const auto *FD = dyn_cast<FunctionDecl>(D))
+      return FD->getCanonicalDecl() == FD;
+    else if (const auto *TD = dyn_cast<TagDecl>(D))
+      return TD->getCanonicalDecl() == TD;
+    else if (const auto *VD = dyn_cast<VarDecl>(D))
+      return VD->getCanonicalDecl() == VD;
+    return true;
+  }
+
   bool VisitTemplateDecl(const TemplateDecl *D) {
     // FIXME: Template parameters.
+
+    // Index the default values for the template parameters.
+    const NamedDecl *Parent = D->getTemplatedDecl();
+    if (D->getTemplateParameters() &&
+        shouldIndexTemplateParameterDefaultValue(Parent)) {
+      const TemplateParameterList *Params = D->getTemplateParameters();
+      for (const NamedDecl *TP : *Params) {
+        if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(TP)) {
+          if (TTP->hasDefaultArgument())
+            IndexCtx.indexTypeSourceInfo(TTP->getDefaultArgumentInfo(), Parent);
+        } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TP)) {
+          if (NTTP->hasDefaultArgument())
+            IndexCtx.indexBody(NTTP->getDefaultArgument(), Parent);
+        } else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(TP)) {
+          if (TTPD->hasDefaultArgument())
+            handleTemplateArgumentLoc(TTPD->getDefaultArgument(), Parent,
+                                      /*DC=*/nullptr);
+        }
+      }
+    }
+
     return Visit(D->getTemplatedDecl());
   }
 
