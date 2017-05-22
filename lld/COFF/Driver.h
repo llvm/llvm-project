@@ -124,9 +124,6 @@ private:
   std::vector<MemoryBufferRef> Resources;
 };
 
-void parseModuleDefs(MemoryBufferRef MB);
-void writeImportLibrary();
-
 // Functions below this line are defined in DriverUtils.cpp.
 
 void printHelp(const char *Argv0);

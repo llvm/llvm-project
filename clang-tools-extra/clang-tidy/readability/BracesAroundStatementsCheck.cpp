@@ -54,14 +54,15 @@ SourceLocation forwardSkipWhitespaceAndComments(SourceLocation Loc,
 SourceLocation findEndLocation(SourceLocation LastTokenLoc,
                                const SourceManager &SM,
                                const ASTContext *Context) {
-  SourceLocation Loc = LastTokenLoc;
+  SourceLocation Loc =
+      Lexer::GetBeginningOfToken(LastTokenLoc, SM, Context->getLangOpts());
   // Loc points to the beginning of the last (non-comment non-ws) token
   // before end or ';'.
   assert(Loc.isValid());
   bool SkipEndWhitespaceAndComments = true;
   tok::TokenKind TokKind = getTokenKind(Loc, SM, Context);
   if (TokKind == tok::NUM_TOKENS || TokKind == tok::semi ||
-      TokKind == tok::r_brace || isStringLiteral(TokKind)) {
+      TokKind == tok::r_brace) {
     // If we are at ";" or "}", we found the last token. We could use as well
     // `if (isa<NullStmt>(S))`, but it wouldn't work for nested statements.
     SkipEndWhitespaceAndComments = false;
