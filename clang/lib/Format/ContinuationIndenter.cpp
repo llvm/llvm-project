@@ -693,7 +693,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     // does not help.
     bool HasTwoOperands =
         P->OperatorIndex == 0 && !P->NextOperator && !P->is(TT_ConditionalExpr);
-    if ((!BreakBeforeOperator && !(HasTwoOperands && Style.AlignOperands)) ||
+    if ((!BreakBeforeOperator &&
+         !(HasTwoOperands &&
+           Style.AlignOperands != FormatStyle::OAS_DontAlign)) ||
         (!State.Stack.back().LastOperatorWrapped && BreakBeforeOperator))
       State.Stack.back().NoLineBreakInOperand = true;
   }
@@ -1041,6 +1043,9 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       //    BreakBeforeTernaryOperators=true
       unsigned Indent =
           State.Stack.back().Indent - Style.ContinuationIndentWidth;
+      if (Style.BreakBeforeTernaryOperators &&
+          State.Stack.back().UnindentOperator)
+        Indent -= 2;
       return Indent;
     }
     return State.Stack.back().QuestionColumn;
@@ -1120,6 +1125,13 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return ContinuationIndent;
   if (Current.is(TT_ProtoExtensionLSquare))
     return State.Stack.back().Indent;
+  if (Current.isBinaryOperator() && State.Stack.back().UnindentOperator)
+    return State.Stack.back().Indent - Current.Tok.getLength() -
+           Current.SpacesRequiredBefore;
+  if (Current.isOneOf(tok::comment, TT_BlockComment, TT_LineComment) &&
+      NextNonComment->isBinaryOperator() && State.Stack.back().UnindentOperator)
+    return State.Stack.back().Indent - NextNonComment->Tok.getLength() -
+           NextNonComment->SpacesRequiredBefore;
   if (State.Stack.back().Indent == State.FirstIndent && PreviousNonComment &&
       !PreviousNonComment->isOneOf(tok::r_brace, TT_CtorInitializerComma))
     // Ensure that we fall back to the continuation indent width instead of
@@ -1300,7 +1312,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
       (Previous && (Previous->opensScope() ||
                     Previous->isOneOf(tok::semi, tok::kw_return) ||
                     (Previous->getPrecedence() == prec::Assignment &&
-                     Style.AlignOperands) ||
+                     Style.AlignOperands != FormatStyle::OAS_DontAlign) ||
                     Previous->is(TT_ObjCMethodExpr)));
   for (SmallVectorImpl<prec::Level>::const_reverse_iterator
            I = Current.FakeLParens.rbegin(),
@@ -1312,6 +1324,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     NewParenState.LastOperatorWrapped = true;
     NewParenState.IsChainedConditional = false;
     NewParenState.IsWrappedConditional = false;
+    NewParenState.UnindentOperator = false;
     NewParenState.NoLineBreak =
         NewParenState.NoLineBreak || State.Stack.back().NoLineBreakInOperand;
 
@@ -1323,14 +1336,27 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     // a builder type call after 'return' or, if the alignment after opening
     // brackets is disabled.
     if (!Current.isTrailingComment() &&
-        (Style.AlignOperands || *I < prec::Assignment) &&
+        (Style.AlignOperands != FormatStyle::OAS_DontAlign ||
+         *I < prec::Assignment) &&
         (!Previous || Previous->isNot(tok::kw_return) ||
          (Style.Language != FormatStyle::LK_Java && *I > 0)) &&
         (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign ||
-         *I != prec::Comma || Current.NestingLevel == 0))
+         *I != prec::Comma || Current.NestingLevel == 0)) {
       NewParenState.Indent =
           std::max(std::max(State.Column, NewParenState.Indent),
                    State.Stack.back().LastSpace);
+    }
+
+    // If BreakBeforeBinaryOperators is set, un-indent a bit to account for
+    // the operator and keep the operands aligned
+    if (Style.AlignOperands == FormatStyle::OAS_AlignAfterOperator &&
+        Previous &&
+        (Previous->getPrecedence() == prec::Assignment ||
+         Previous->is(tok::kw_return) ||
+         (*I == prec::Conditional && Previous->is(tok::question) &&
+          Previous->is(TT_ConditionalExpr))) &&
+        !Newline)
+      NewParenState.UnindentOperator = true;
 
     // Do not indent relative to the fake parentheses inserted for "." or "->".
     // This is a special case to make the following to statements consistent:
@@ -1353,6 +1379,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         Previous->is(TT_ConditionalExpr) && I == Current.FakeLParens.rbegin() &&
         !State.Stack.back().IsWrappedConditional) {
       NewParenState.IsChainedConditional = true;
+      NewParenState.UnindentOperator = State.Stack.back().UnindentOperator;
     } else if (*I == prec::Conditional ||
                (!SkipFirstExtraIndent && *I > prec::Assignment &&
                 !Current.isTrailingComment())) {
