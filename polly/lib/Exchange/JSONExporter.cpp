@@ -446,8 +446,9 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
       CurrentAccessDomain =
           isl_set_intersect_params(CurrentAccessDomain, S.getContext());
 
-      if (isl_set_is_subset(CurrentAccessDomain, NewAccessDomain) ==
-          isl_bool_false) {
+      if (MA->isRead() &&
+          isl_set_is_subset(CurrentAccessDomain, NewAccessDomain) ==
+              isl_bool_false) {
         errs() << "Mapping not defined for all iteration domain elements\n";
         isl_set_free(CurrentAccessDomain);
         isl_set_free(NewAccessDomain);
