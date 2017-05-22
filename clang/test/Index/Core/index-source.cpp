@@ -1,7 +1,7 @@
 // RUN: c-index-test core -print-source-symbols -- %s -std=c++14 -target x86_64-apple-macosx10.7 | FileCheck %s
 
 // CHECK: [[@LINE+1]]:7 | class/C++ | Cls | [[Cls_USR:.*]] | <no-cgname> | Def | rel: 0
-class Cls {
+class Cls { public:
   // CHECK: [[@LINE+3]]:3 | constructor/C++ | Cls | c:@S@Cls@F@Cls#I# | __ZN3ClsC1Ei | Decl,RelChild | rel: 1
   // CHECK-NEXT: RelChild | Cls | c:@S@Cls
   // CHECK: [[@LINE+1]]:3 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
@@ -350,3 +350,19 @@ void innerUsingNamespace() {
 // CHECK-NOT: [[@LINE-3]]:21
   }
 }
+
+void indexDefaultValueInDefn(Cls cls = Cls(gvi), Record param = Record()) {
+// CHECK: [[@LINE-1]]:40 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-2]]:44 | variable/C | gvi | c:@gvi | _gvi | Ref,Read,RelCont | rel: 1
+// CHECK-NOT: [[@LINE-3]]:44
+// CHECK: [[@LINE-4]]:65 | struct/C++ | Record | c:@S@Record | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NOT: [[@LINE-5]]:65
+}
+
+template<template <typename> class T>
+struct IndexDefaultValue {
+   IndexDefaultValue(int k = Record::C) {
+// CHECK: [[@LINE-1]]:38 | static-property/C++ | C | c:@S@Record@C | __ZN6Record1CE | Ref,Read,RelCont | rel: 1
+// CHECK: [[@LINE-2]]:30 | struct/C++ | Record | c:@S@Record | <no-cgname> | Ref,RelCont | rel: 1
+   }
+};
