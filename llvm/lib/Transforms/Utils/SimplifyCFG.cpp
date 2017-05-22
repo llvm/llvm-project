@@ -4380,7 +4380,7 @@ static bool EliminateDeadSwitchCases(SwitchInst *SI, AssumptionCache *AC,
   // Gather dead cases.
   SmallVector<ConstantInt *, 8> DeadCases;
   for (auto &Case : SI->cases()) {
-    APInt CaseVal = Case.getCaseValue()->getValue();
+    const APInt &CaseVal = Case.getCaseValue()->getValue();
     if (Known.Zero.intersects(CaseVal) || !Known.One.isSubsetOf(CaseVal) ||
         (CaseVal.getMinSignedBits() > MaxSignificantBitsInCond)) {
       DeadCases.push_back(Case.getCaseValue());
@@ -4946,7 +4946,7 @@ SwitchLookupTable::SwitchLookupTable(
         LinearMappingPossible = false;
         break;
       }
-      APInt Val = ConstVal->getValue();
+      const APInt &Val = ConstVal->getValue();
       if (I != 0) {
         APInt Dist = Val - PrevVal;
         if (I == 1) {

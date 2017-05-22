@@ -449,23 +449,29 @@ bool X86InstructionSelector::selectTrunc(MachineInstr &I,
   if (!SrcRC)
     return false;
 
+  unsigned SubIdx;
+  if (DstRC == SrcRC) {
+    // Nothing to be done
+    SubIdx = X86::NoSubRegister;
+  } else if (DstRC == &X86::GR32RegClass) {
+    SubIdx = X86::sub_32bit;
+  } else if (DstRC == &X86::GR16RegClass) {
+    SubIdx = X86::sub_16bit;
+  } else if (DstRC == &X86::GR8RegClass) {
+    SubIdx = X86::sub_8bit;
+  } else {
+    return false;
+  }
+
+  SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubIdx);
+
   if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
       !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
     DEBUG(dbgs() << "Failed to constrain G_TRUNC\n");
     return false;
   }
 
-  if (DstRC == SrcRC) {
-    // Nothing to be done
-  } else if (DstRC == &X86::GR32RegClass) {
-    I.getOperand(1).setSubReg(X86::sub_32bit);
-  } else if (DstRC == &X86::GR16RegClass) {
-    I.getOperand(1).setSubReg(X86::sub_16bit);
-  } else if (DstRC == &X86::GR8RegClass) {
-    I.getOperand(1).setSubReg(X86::sub_8bit);
-  } else {
-    return false;
-  }
+  I.getOperand(1).setSubReg(SubIdx);
 
   I.setDesc(TII.get(X86::COPY));
   return true;

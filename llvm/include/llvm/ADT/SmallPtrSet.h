@@ -365,6 +365,8 @@ protected:
 public:
   using iterator = SmallPtrSetIterator<PtrType>;
   using const_iterator = SmallPtrSetIterator<PtrType>;
+  using key_type = ConstPtrType;
+  using value_type = PtrType;
 
   SmallPtrSetImpl(const SmallPtrSetImpl &) = delete;
 

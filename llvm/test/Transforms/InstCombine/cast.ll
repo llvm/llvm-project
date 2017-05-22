@@ -1513,8 +1513,9 @@ define i4 @pr33078_3(i8 %A) {
 define i8 @pr33078_4(i3 %x) {
 ; Don't turn this in an `ashr`. This was getting miscompiled
 ; CHECK-LABEL: @pr33078_4(
-; CHECK-NEXT:    [[C:%.*]] = ashr i3 %x, 2
-; CHECK-NEXT:    [[B:%.*]] = sext i3 [[C]] to i8
+; CHECK-NEXT:    [[B:%.*]] = sext i3 %x to i16
+; CHECK-NEXT:    [[C:%.*]] = lshr i16 [[B]], 13
+; CHECK-NEXT:    [[D:%.*]] = trunc i16 [[C]] to i8
 ; CHECK-NEXT:    ret i8 [[D]]
   %B = sext i3 %x to i16
   %C = lshr i16 %B, 13

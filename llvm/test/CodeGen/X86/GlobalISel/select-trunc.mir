@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select %s -o - | FileCheck %s --check-prefix=CHECK
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK
 --- |
   define i1 @trunc_i32toi1(i32 %a) {
     %r = trunc i32 %a to i1
@@ -33,19 +33,20 @@
 ...
 ---
 name:            trunc_i32toi1
+# CHECK-LABEL: name:  trunc_i32toi1
 alignment:       4
 legalized:       true
 regBankSelected: true
-selected:        false
-# CHECK-LABEL: name:            trunc_i32toi1
-# CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gr32 }
-# CHECK-NEXT:  - { id: 1, class: gr8 }
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32 }
+# CHECK-NEXT:   - { id: 1, class: gr8 }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# CHECK:  body:
-# CHECK:    %1 = COPY %0.sub_8
+# CHECK:          %0 = COPY %edi
+# CHECK-NEXT:     %1 = COPY %0.sub_8bit
+# CHECK-NEXT:     %al = COPY %1
+# CHECK-NEXT:     RET 0, implicit %al
 body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
@@ -58,19 +59,20 @@ body:             |
 ...
 ---
 name:            trunc_i32toi8
+# CHECK-LABEL: name:  trunc_i32toi8
 alignment:       4
 legalized:       true
 regBankSelected: true
-selected:        false
-# CHECK-LABEL: name:            trunc_i32toi8
-# CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gr32 }
-# CHECK-NEXT:  - { id: 1, class: gr8 }
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32 }
+# CHECK-NEXT:   - { id: 1, class: gr8 }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# CHECK:  body:
-# CHECK:    %1 = COPY %0.sub_8
+# CHECK:          %0 = COPY %edi
+# CHECK-NEXT:     %1 = COPY %0.sub_8bit
+# CHECK-NEXT:     %al = COPY %1
+# CHECK-NEXT:     RET 0, implicit %al
 body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
@@ -83,19 +85,20 @@ body:             |
 ...
 ---
 name:            trunc_i32toi16
+# CHECK-LABEL: name:  trunc_i32toi16
 alignment:       4
 legalized:       true
 regBankSelected: true
-selected:        false
-# CHECK-LABEL: name:            trunc_i32toi16
-# CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gr32 }
-# CHECK-NEXT:  - { id: 1, class: gr16 }
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32 }
+# CHECK-NEXT:   - { id: 1, class: gr16 }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# CHECK:  body:
-# CHECK:    %1 = COPY %0.sub_16
+# CHECK:          %0 = COPY %edi
+# CHECK-NEXT:     %1 = COPY %0.sub_16bit
+# CHECK-NEXT:     %ax = COPY %1
+# CHECK-NEXT:     RET 0, implicit %ax
 body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
@@ -108,19 +111,20 @@ body:             |
 ...
 ---
 name:            trunc_i64toi8
+# CHECK-LABEL: name:  trunc_i64toi8
 alignment:       4
 legalized:       true
 regBankSelected: true
-selected:        false
-# CHECK-LABEL: name:            trunc_i64toi8
-# CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gr64 }
-# CHECK-NEXT:  - { id: 1, class: gr8 }
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr64_with_sub_8bit }
+# CHECK-NEXT:   - { id: 1, class: gr8 }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# CHECK:  body:
-# CHECK:    %1 = COPY %0.sub_8
+# CHECK:          %0 = COPY %rdi
+# CHECK-NEXT:     %1 = COPY %0.sub_8bit
+# CHECK-NEXT:     %al = COPY %1
+# CHECK-NEXT:     RET 0, implicit %al
 body:             |
   bb.1 (%ir-block.0):
     liveins: %rdi
@@ -133,19 +137,20 @@ body:             |
 ...
 ---
 name:            trunc_i64toi16
+# CHECK-LABEL: name:  trunc_i64toi16
 alignment:       4
 legalized:       true
 regBankSelected: true
-selected:        false
-# CHECK-LABEL: name:            trunc_i64toi16
-# CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gr64 }
-# CHECK-NEXT:  - { id: 1, class: gr16 }
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr64 }
+# CHECK-NEXT:   - { id: 1, class: gr16 }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# CHECK:  body:
-# CHECK:    %1 = COPY %0.sub_16
+# CHECK:          %0 = COPY %rdi
+# CHECK-NEXT:     %1 = COPY %0.sub_16bit
+# CHECK-NEXT:     %ax = COPY %1
+# CHECK-NEXT:     RET 0, implicit %ax
 body:             |
   bb.1 (%ir-block.0):
     liveins: %rdi
@@ -158,19 +163,20 @@ body:             |
 ...
 ---
 name:            trunc_i64toi32
+# CHECK-LABEL: name:  trunc_i64toi32
 alignment:       4
 legalized:       true
 regBankSelected: true
-selected:        false
-# CHECK-LABEL: name:            trunc_i64toi32
-# CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gr64 }
-# CHECK-NEXT:  - { id: 1, class: gr32 }
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr64 }
+# CHECK-NEXT:   - { id: 1, class: gr32 }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# CHECK:  body:
-# CHECK:    %1 = COPY %0.sub_32
+# CHECK:          %0 = COPY %rdi
+# CHECK-NEXT:     %1 = COPY %0.sub_32bit
+# CHECK-NEXT:     %eax = COPY %1
+# CHECK-NEXT:     RET 0, implicit %eax
 body:             |
   bb.1 (%ir-block.0):
     liveins: %rdi

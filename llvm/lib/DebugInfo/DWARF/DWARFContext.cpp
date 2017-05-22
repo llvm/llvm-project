@@ -1063,18 +1063,20 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
 
     // TODO: Add support for relocations in other sections as needed.
     // Record relocations for the debug_info and debug_line sections.
-    RelocAddrMap *Map = StringSwitch<RelocAddrMap*>(RelSecName)
-        .Case("debug_info", &InfoSection.Relocs)
-        .Case("debug_loc", &LocSection.Relocs)
-        .Case("debug_info.dwo", &InfoDWOSection.Relocs)
-        .Case("debug_line", &LineSection.Relocs)
-        .Case("debug_ranges", &RangeSection.Relocs)
-        .Case("apple_names", &AppleNamesSection.Relocs)
-        .Case("apple_types", &AppleTypesSection.Relocs)
-        .Case("apple_namespaces", &AppleNamespacesSection.Relocs)
-        .Case("apple_namespac", &AppleNamespacesSection.Relocs)
-        .Case("apple_objc", &AppleObjCSection.Relocs)
-        .Default(nullptr);
+    RelocAddrMap *Map =
+        StringSwitch<RelocAddrMap *>(RelSecName)
+            .Case("debug_info", &InfoSection.Relocs)
+            .Case("debug_loc", &LocSection.Relocs)
+            .Case("debug_info.dwo", &InfoDWOSection.Relocs)
+            .Case("debug_line", &LineSection.Relocs)
+            .Case("debug_ranges", &RangeSection.Relocs)
+            .Case("debug_addr", &AddrSection.Relocs)
+            .Case("apple_names", &AppleNamesSection.Relocs)
+            .Case("apple_types", &AppleTypesSection.Relocs)
+            .Case("apple_namespaces", &AppleNamespacesSection.Relocs)
+            .Case("apple_namespac", &AppleNamespacesSection.Relocs)
+            .Case("apple_objc", &AppleObjCSection.Relocs)
+            .Default(nullptr);
     if (!Map) {
       // Find debug_types relocs by section rather than name as there are
       // multiple, comdat grouped, debug_types sections.
@@ -1148,7 +1150,7 @@ StringRef *DWARFContextInMemory::MapSectionToMember(StringRef Name) {
       .Case("debug_line.dwo", &LineDWOSection.Data)
       .Case("debug_str.dwo", &StringDWOSection)
       .Case("debug_str_offsets.dwo", &StringOffsetDWOSection)
-      .Case("debug_addr", &AddrSection)
+      .Case("debug_addr", &AddrSection.Data)
       .Case("apple_names", &AppleNamesSection.Data)
       .Case("apple_types", &AppleTypesSection.Data)
       .Case("apple_namespaces", &AppleNamespacesSection.Data)
