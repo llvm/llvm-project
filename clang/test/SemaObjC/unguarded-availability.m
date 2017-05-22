@@ -8,7 +8,7 @@
 int func_10_11() AVAILABLE_10_11; // expected-note 4 {{'func_10_11' has been explicitly marked partial here}}
 
 #ifdef OBJCPP
-// expected-note@+2 2 {{marked partial here}}
+// expected-note@+2 6 {{marked partial here}}
 #endif
 int func_10_12() AVAILABLE_10_12; // expected-note 6 {{'func_10_12' has been explicitly marked partial here}}
 
@@ -187,5 +187,20 @@ auto topLevelLambda = [] () {
   if (@available(macos 10.12, *))
     func_10_12();
 };
+
+void functionInFunction() {
+  func_10_12(); // expected-warning{{'func_10_12' is only available on macOS 10.12 or newer}} expected-note{{@available}}
+  struct DontWarnTwice {
+    void f() {
+      func_10_12(); // expected-warning{{'func_10_12' is only available on macOS 10.12 or newer}} expected-note{{@available}}
+    }
+  };
+  void([] () {
+    func_10_12(); // expected-warning{{'func_10_12' is only available on macOS 10.12 or newer}} expected-note{{@available}}
+  });
+  (void)(^ {
+    func_10_12(); // expected-warning{{'func_10_12' is only available on macOS 10.12 or newer}} expected-note{{@available}}
+  });
+}
 
 #endif
