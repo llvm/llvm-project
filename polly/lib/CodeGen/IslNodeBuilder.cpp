@@ -667,13 +667,40 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   isl_id_free(IteratorID);
 }
 
+/// Return whether any of @p Node's statements contain partial accesses.
+///
+/// Partial accesses are not supported by Polly's vector code generator.
+static bool hasPartialAccesses(__isl_take isl_ast_node *Node) {
+  return isl_ast_node_foreach_descendant_top_down(
+             Node,
+             [](isl_ast_node *Node, void *User) -> isl_bool {
+               if (isl_ast_node_get_type(Node) != isl_ast_node_user)
+                 return isl_bool_true;
+
+               isl::ast_expr Expr = give(isl_ast_node_user_get_expr(Node));
+               isl::ast_expr StmtExpr =
+                   give(isl_ast_expr_get_op_arg(Expr.keep(), 0));
+               isl::id Id = give(isl_ast_expr_get_id(StmtExpr.keep()));
+
+               ScopStmt *Stmt =
+                   static_cast<ScopStmt *>(isl_id_get_user(Id.keep()));
+               isl::set StmtDom = give(Stmt->getDomain());
+               for (auto *MA : *Stmt) {
+                 if (MA->isLatestPartialAccess())
+                   return isl_bool_error;
+               }
+               return isl_bool_true;
+             },
+             nullptr) == isl_stat_error;
+}
+
 void IslNodeBuilder::createFor(__isl_take isl_ast_node *For) {
   bool Vector = PollyVectorizerChoice == VECTORIZER_POLLY;
 
   if (Vector && IslAstInfo::isInnermostParallel(For) &&
       !IslAstInfo::isReductionParallel(For)) {
     int VectorWidth = getNumberOfIterations(For);
-    if (1 < VectorWidth && VectorWidth <= 16) {
+    if (1 < VectorWidth && VectorWidth <= 16 && !hasPartialAccesses(For)) {
       createForVector(For, VectorWidth);
       return;
     }
@@ -765,23 +792,33 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
     auto Schedule = isl_ast_build_get_schedule(Build);
 
 #ifndef NDEBUG
-    auto Dom = Stmt->getDomain();
-    auto SchedDom = isl_set_from_union_set(
-        isl_union_map_domain(isl_union_map_copy(Schedule)));
-    auto AccDom = isl_map_domain(MA->getAccessRelation());
-    Dom = isl_set_intersect_params(Dom, Stmt->getParent()->getContext());
-    SchedDom =
-        isl_set_intersect_params(SchedDom, Stmt->getParent()->getContext());
-    assert(isl_set_is_subset(SchedDom, AccDom) &&
-           "Access relation not defined on full schedule domain");
-    assert(isl_set_is_subset(Dom, AccDom) &&
-           "Access relation not defined on full domain");
-    isl_set_free(AccDom);
-    isl_set_free(SchedDom);
-    isl_set_free(Dom);
+    if (MA->isRead()) {
+      auto Dom = Stmt->getDomain();
+      auto SchedDom = isl_set_from_union_set(
+          isl_union_map_domain(isl_union_map_copy(Schedule)));
+      auto AccDom = isl_map_domain(MA->getAccessRelation());
+      Dom = isl_set_intersect_params(Dom, Stmt->getParent()->getContext());
+      SchedDom =
+          isl_set_intersect_params(SchedDom, Stmt->getParent()->getContext());
+      assert(isl_set_is_subset(SchedDom, AccDom) &&
+             "Access relation not defined on full schedule domain");
+      assert(isl_set_is_subset(Dom, AccDom) &&
+             "Access relation not defined on full domain");
+      isl_set_free(AccDom);
+      isl_set_free(SchedDom);
+      isl_set_free(Dom);
+    }
 #endif
 
     auto PWAccRel = MA->applyScheduleToAccessRelation(Schedule);
+
+    // isl cannot generate an index expression for access-nothing accesses.
+    isl::set AccDomain =
+        give(isl_pw_multi_aff_domain(isl_pw_multi_aff_copy(PWAccRel)));
+    if (isl_set_is_empty(AccDomain.keep()) == isl_bool_true) {
+      isl_pw_multi_aff_free(PWAccRel);
+      continue;
+    }
 
     auto AccessExpr = isl_ast_build_access_from_pw_multi_aff(Build, PWAccRel);
     NewAccesses = isl_id_to_ast_expr_set(NewAccesses, MA->getId(), AccessExpr);

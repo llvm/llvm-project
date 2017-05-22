@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/FlattenAlgo.h"
+#include "polly/Support/ISLOStream.h"
 #include "llvm/Support/Debug.h"
 #define DEBUG_TYPE "polly-flatten-algo"
 
@@ -85,7 +86,7 @@ isl::val getConstant(isl::pw_aff PwAff, bool Max, bool Min) {
       return isl::stat::error;
     }
 
-    auto ThisVal = Aff.get_constant();
+    auto ThisVal = Aff.get_constant_val();
     if (!Result) {
       Result = ThisVal;
       return isl::stat::ok;

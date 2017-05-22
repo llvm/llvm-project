@@ -17,6 +17,7 @@
 #define POLLY_BLOCK_GENERATORS_H
 
 #include "polly/CodeGen/IRBuilder.h"
+#include "polly/Support/GICHelper.h"
 #include "polly/Support/ScopHelper.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -327,6 +328,33 @@ protected:
   void generateScalarLoads(ScopStmt &Stmt, LoopToScevMapT &LTS,
                            ValueMapT &BBMap,
                            __isl_keep isl_id_to_ast_expr *NewAccesses);
+
+  /// Generate instructions that compute whether one instance of @p Set is
+  /// executed.
+  ///
+  /// @param Stmt      The statement we generate code for.
+  /// @param Subdomain A set in the space of @p Stmt's domain. Elements not in
+  ///                  @p Stmt's domain are ignored.
+  ///
+  /// @return An expression of type i1, generated into the current builder
+  ///         position, that evaluates to 1 if the executed instance is part of
+  ///         @p Set.
+  Value *buildContainsCondition(ScopStmt &Stmt, const isl::set &Subdomain);
+
+  /// Generate code that executes in a subset of @p Stmt's domain.
+  ///
+  /// @param Stmt        The statement we generate code for.
+  /// @param Subdomain   The condition for some code to be executed.
+  /// @param Subject     A name for the code that is executed
+  ///                    conditionally. Used to name new basic blocks and
+  ///                    instructions.
+  /// @param GenThenFunc Callback which generates the code to be executed
+  ///                    when the current executed instance is in @p Set. The
+  ///                    IRBuilder's position is moved to within the block that
+  ///                    executes conditionally for this callback.
+  void generateConditionalExecution(ScopStmt &Stmt, const isl::set &Subdomain,
+                                    StringRef Subject,
+                                    const std::function<void()> &GenThenFunc);
 
   /// Generate the scalar stores for the given statement.
   ///

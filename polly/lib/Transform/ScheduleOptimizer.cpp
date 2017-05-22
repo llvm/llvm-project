@@ -53,6 +53,7 @@
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
+#include "polly/Support/ISLOStream.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/Debug.h"
 #include "isl/aff.h"
@@ -1481,13 +1482,13 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
         Dependences::TYPE_RAW | Dependences::TYPE_WAR | Dependences::TYPE_WAW;
   }
 
-  isl_union_set *Domain = S.getDomains();
+  isl::union_set Domain = give(S.getDomains());
 
   if (!Domain)
     return false;
 
-  isl_union_map *Validity = D.getDependences(ValidityKinds);
-  isl_union_map *Proximity = D.getDependences(ProximityKinds);
+  isl::union_map Validity = give(D.getDependences(ValidityKinds));
+  isl::union_map Proximity = give(D.getDependences(ProximityKinds));
 
   // Simplify the dependences by removing the constraints introduced by the
   // domains. This can speed up the scheduling time significantly, as large
@@ -1497,20 +1498,19 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
   // interesting anyway. In some cases this option may stop the scheduler to
   // find any schedule.
   if (SimplifyDeps == "yes") {
-    Validity = isl_union_map_gist_domain(Validity, isl_union_set_copy(Domain));
-    Validity = isl_union_map_gist_range(Validity, isl_union_set_copy(Domain));
-    Proximity =
-        isl_union_map_gist_domain(Proximity, isl_union_set_copy(Domain));
-    Proximity = isl_union_map_gist_range(Proximity, isl_union_set_copy(Domain));
+    Validity = Validity.gist_domain(Domain);
+    Validity = Validity.gist_range(Domain);
+    Proximity = Proximity.gist_domain(Domain);
+    Proximity = Proximity.gist_range(Domain);
   } else if (SimplifyDeps != "no") {
     errs() << "warning: Option -polly-opt-simplify-deps should either be 'yes' "
               "or 'no'. Falling back to default: 'yes'\n";
   }
 
   DEBUG(dbgs() << "\n\nCompute schedule from: ");
-  DEBUG(dbgs() << "Domain := " << stringFromIslObj(Domain) << ";\n");
-  DEBUG(dbgs() << "Proximity := " << stringFromIslObj(Proximity) << ";\n");
-  DEBUG(dbgs() << "Validity := " << stringFromIslObj(Validity) << ";\n");
+  DEBUG(dbgs() << "Domain := " << Domain << ";\n");
+  DEBUG(dbgs() << "Proximity := " << Proximity << ";\n");
+  DEBUG(dbgs() << "Validity := " << Validity << ";\n");
 
   unsigned IslSerializeSCCs;
 
@@ -1560,16 +1560,12 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
   auto OnErrorStatus = isl_options_get_on_error(Ctx);
   isl_options_set_on_error(Ctx, ISL_ON_ERROR_CONTINUE);
 
-  isl_schedule_constraints *ScheduleConstraints;
-  ScheduleConstraints = isl_schedule_constraints_on_domain(Domain);
-  ScheduleConstraints =
-      isl_schedule_constraints_set_proximity(ScheduleConstraints, Proximity);
-  ScheduleConstraints = isl_schedule_constraints_set_validity(
-      ScheduleConstraints, isl_union_map_copy(Validity));
-  ScheduleConstraints =
-      isl_schedule_constraints_set_coincidence(ScheduleConstraints, Validity);
+  auto SC = isl::schedule_constraints::on_domain(Domain);
+  SC = SC.set_proximity(Proximity);
+  SC = SC.set_validity(Validity);
+  SC = SC.set_coincidence(Validity);
   isl_schedule *Schedule;
-  Schedule = isl_schedule_constraints_compute_schedule(ScheduleConstraints);
+  Schedule = SC.compute_schedule().release();
   isl_options_set_on_error(Ctx, OnErrorStatus);
 
   // In cases the scheduler is not able to optimize the code, we just do not
