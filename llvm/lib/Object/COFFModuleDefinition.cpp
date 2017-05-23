@@ -60,7 +60,7 @@ static bool isDecorated(StringRef Sym) {
 }
 
 static Error createError(const Twine &Err) {
-  return make_error<StringError>(Err.getSingleStringRef(),
+  return make_error<StringError>(StringRef(Err.str()),
                                  object_error::parse_failed);
 }
 

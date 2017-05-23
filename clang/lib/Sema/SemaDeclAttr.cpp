@@ -5935,11 +5935,17 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleDLLAttr(S, D, Attr);
     break;
   case AttributeList::AT_Mips16:
-    handleSimpleAttributeWithExclusions<Mips16Attr, MipsInterruptAttr>(S, D,
-                                                                       Attr);
+    handleSimpleAttributeWithExclusions<Mips16Attr, MicroMipsAttr,
+                                        MipsInterruptAttr>(S, D, Attr);
     break;
   case AttributeList::AT_NoMips16:
     handleSimpleAttribute<NoMips16Attr>(S, D, Attr);
+    break;
+  case AttributeList::AT_MicroMips:
+    handleSimpleAttributeWithExclusions<MicroMipsAttr, Mips16Attr>(S, D, Attr);
+    break;
+  case AttributeList::AT_NoMicroMips:
+    handleSimpleAttribute<NoMicroMipsAttr>(S, D, Attr);
     break;
   case AttributeList::AT_AMDGPUFlatWorkGroupSize:
     handleAMDGPUFlatWorkGroupSizeAttr(S, D, Attr);
@@ -7252,6 +7258,12 @@ public:
 
   bool TraverseLambdaExpr(LambdaExpr *E) { return true; }
 
+  bool VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *PRE) {
+    if (PRE->isClassReceiver())
+      DiagnoseDeclAvailability(PRE->getClassReceiver(), PRE->getReceiverLocation());
+    return true;
+  }
+
   bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) {
     if (ObjCMethodDecl *D = Msg->getMethodDecl())
       DiagnoseDeclAvailability(
@@ -7380,6 +7392,9 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
 bool DiagnoseUnguardedAvailability::VisitTypeLoc(TypeLoc Ty) {
   const Type *TyPtr = Ty.getTypePtr();
   SourceRange Range{Ty.getBeginLoc(), Ty.getEndLoc()};
+
+  if (Range.isInvalid())
+    return true;
 
   if (const TagType *TT = dyn_cast<TagType>(TyPtr)) {
     TagDecl *TD = TT->getDecl();

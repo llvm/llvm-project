@@ -98,8 +98,6 @@ protected:
   const MachineInstr *LastTrackedMI = nullptr;
   mutable const MachineRegisterInfo *MRI = nullptr;
   GCNRPTracker(const LiveIntervals &LIS_) : LIS(LIS_) {}
-  LaneBitmask getDefRegMask(const MachineOperand &MO) const;
-  LaneBitmask getUsedRegMask(const MachineOperand &MO) const;
 public:
   // live regs for the current state
   const decltype(LiveRegs) &getLiveRegs() const { return LiveRegs; }

@@ -14,7 +14,7 @@ exit:
 
 ; CHECK-LABEL: @test1
 ; CHECK: Loop %loop: backedge-taken count is ((-32 + (96 * %n)) /u 32)
-; CHECK: Loop %loop: max backedge-taken count is ((-32 + (96 * %n)) /u 32)
+; CHECK: Loop %loop: max backedge-taken count is 134217727
 }
 
 ; PR19183
@@ -32,7 +32,7 @@ exit:
 
 ; CHECK-LABEL: @test2
 ; CHECK: Loop %loop: backedge-taken count is ((-32 + (32 * (%n /u 32))) /u 32)
-; CHECK: Loop %loop: max backedge-taken count is ((-32 + (32 * (%n /u 32))) /u 32)
+; CHECK: Loop %loop: max backedge-taken count is 134217727
 }
 
 define void @test3(i32 %n) {
@@ -49,7 +49,7 @@ exit:
 
 ; CHECK-LABEL: @test3
 ; CHECK: Loop %loop: backedge-taken count is ((-32 + (32 * %n)) /u 32)
-; CHECK: Loop %loop: max backedge-taken count is ((-32 + (32 * %n)) /u 32)
+; CHECK: Loop %loop: max backedge-taken count is 134217727
 }
 
 define void @test4(i32 %n) {
@@ -66,7 +66,7 @@ exit:
 
 ; CHECK-LABEL: @test4
 ; CHECK: Loop %loop: backedge-taken count is ((-4 + (-1431655764 * %n)) /u 4)
-; CHECK: Loop %loop: max backedge-taken count is ((-4 + (-1431655764 * %n)) /u 4)
+; CHECK: Loop %loop: max backedge-taken count is 1073741823
 }
 
 define void @test5(i32 %n) {
@@ -83,5 +83,5 @@ exit:
 
 ; CHECK-LABEL: @test5
 ; CHECK: Loop %loop: backedge-taken count is ((-4 + (4 * %n)) /u 4)
-; CHECK: Loop %loop: max backedge-taken count is ((-4 + (4 * %n)) /u 4)
+; CHECK: Loop %loop: max backedge-taken count is 1073741823
 }

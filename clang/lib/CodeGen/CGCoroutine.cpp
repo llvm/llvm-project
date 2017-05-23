@@ -309,6 +309,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     EHStack.pushCleanup<CallCoroDelete>(NormalAndEHCleanup, S.getDeallocate());
 
     EmitStmt(S.getPromiseDeclStmt());
+    EmitStmt(S.getResultDecl()); // FIXME: Gro lifetime is wrong.
 
     EHStack.pushCleanup<CallCoroEnd>(EHCleanup);
 
@@ -329,10 +330,13 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   }
 
   EmitBlock(RetBB);
+  // Emit coro.end before getReturnStmt (and parameter destructors), since
+  // resume and destroy parts of the coroutine should not include them.
   llvm::Function *CoroEnd = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
   Builder.CreateCall(CoroEnd, {NullPtr, Builder.getFalse()});
 
-  // FIXME: Emit return for the coroutine return object.
+  if (Stmt *Ret = S.getReturnStmt())
+    EmitStmt(Ret);
 }
 
 // Emit coroutine intrinsic and patch up arguments of the token type.

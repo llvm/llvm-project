@@ -119,8 +119,13 @@ int __xray_set_customevent_handler(void (*entry)(void *, size_t))
   return 0;
 }
 
+
 int __xray_remove_handler() XRAY_NEVER_INSTRUMENT {
   return __xray_set_handler(nullptr);
+}
+
+int __xray_remove_customevent_handler() XRAY_NEVER_INSTRUMENT {
+  return __xray_set_customevent_handler(nullptr);
 }
 
 __sanitizer::atomic_uint8_t XRayPatching{0};

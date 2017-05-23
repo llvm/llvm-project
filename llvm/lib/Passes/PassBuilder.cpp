@@ -150,6 +150,10 @@ using namespace llvm;
 
 static cl::opt<unsigned> MaxDevirtIterations("pm-max-devirt-iterations",
                                              cl::ReallyHidden, cl::init(4));
+static cl::opt<bool>
+    RunPartialInlining("enable-npm-partial-inlining", cl::init(false),
+                       cl::Hidden, cl::ZeroOrMore,
+                       cl::desc("Run Partial inlinining pass"));
 
 static cl::opt<bool> EnableGVNHoist(
     "enable-npm-gvn-hoist", cl::init(false), cl::Hidden,
@@ -551,6 +555,11 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // This ends the canonicalization and simplification phase of the pipeline.
   // At this point, we expect to have canonical and simple IR which we begin
   // *optimizing* for efficient execution going forward.
+
+  // Run partial inlining pass to partially inline functions that have
+  // large bodies.
+  if (RunPartialInlining)
+    MPM.addPass(PartialInlinerPass());
 
   // Eliminate externally available functions now that inlining is over -- we
   // won't emit these anyways.

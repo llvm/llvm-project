@@ -235,7 +235,7 @@ public:
   virtual StringRef getStringDWOSection() = 0;
   virtual StringRef getStringOffsetDWOSection() = 0;
   virtual const DWARFSection &getRangeDWOSection() = 0;
-  virtual StringRef getAddrSection() = 0;
+  virtual const DWARFSection &getAddrSection() = 0;
   virtual const DWARFSection& getAppleNamesSection() = 0;
   virtual const DWARFSection& getAppleTypesSection() = 0;
   virtual const DWARFSection& getAppleNamespacesSection() = 0;
@@ -290,7 +290,7 @@ class DWARFContextInMemory : public DWARFContext {
   StringRef StringDWOSection;
   StringRef StringOffsetDWOSection;
   DWARFSection RangeDWOSection;
-  StringRef AddrSection;
+  DWARFSection AddrSection;
   DWARFSection AppleNamesSection;
   DWARFSection AppleTypesSection;
   DWARFSection AppleNamespacesSection;
@@ -356,9 +356,7 @@ public:
 
   const DWARFSection &getRangeDWOSection() override { return RangeDWOSection; }
 
-  StringRef getAddrSection() override {
-    return AddrSection;
-  }
+  const DWARFSection &getAddrSection() override { return AddrSection; }
 
   StringRef getCUIndexSection() override { return CUIndexSection; }
   StringRef getGdbIndexSection() override { return GdbIndexSection; }

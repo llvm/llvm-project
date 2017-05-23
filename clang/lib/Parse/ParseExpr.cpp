@@ -192,6 +192,16 @@ Parser::ParseAssignmentExprWithObjCMessageExprStart(SourceLocation LBracLoc,
   return ParseRHSOfBinaryExpression(R, prec::Assignment);
 }
 
+ExprResult
+Parser::ParseConstantExpressionInExprEvalContext(TypeCastState isTypeCast) {
+  assert(Actions.ExprEvalContexts.back().Context ==
+             Sema::ExpressionEvaluationContext::ConstantEvaluated &&
+         "Call this function only if your ExpressionEvaluationContext is "
+         "already ConstantEvaluated");
+  ExprResult LHS(ParseCastExpression(false, false, isTypeCast));
+  ExprResult Res(ParseRHSOfBinaryExpression(LHS, prec::Conditional));
+  return Actions.ActOnConstantExpression(Res);
+}
 
 ExprResult Parser::ParseConstantExpression(TypeCastState isTypeCast) {
   // C++03 [basic.def.odr]p2:
@@ -200,10 +210,7 @@ ExprResult Parser::ParseConstantExpression(TypeCastState isTypeCast) {
   // C++98 and C++11 have no such rule, but this is only a defect in C++98.
   EnterExpressionEvaluationContext ConstantEvaluated(
       Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-
-  ExprResult LHS(ParseCastExpression(false, false, isTypeCast));
-  ExprResult Res(ParseRHSOfBinaryExpression(LHS, prec::Conditional));
-  return Actions.ActOnConstantExpression(Res);
+  return ParseConstantExpressionInExprEvalContext(isTypeCast);
 }
 
 /// \brief Parse a constraint-expression.

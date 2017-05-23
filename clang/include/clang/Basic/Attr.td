@@ -1179,6 +1179,12 @@ def MipsInterrupt : InheritableAttr, TargetSpecificAttr<TargetMips> {
   let Documentation = [MipsInterruptDocs];
 }
 
+def MicroMips : InheritableAttr, TargetSpecificAttr<TargetMips> {
+  let Spellings = [GCC<"micromips">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [MicroMipsDocs];
+}
+
 def Mode : Attr {
   let Spellings = [GCC<"mode">];
   let Subjects = SubjectList<[Var, Enum, TypedefName, Field], ErrorDiag,
@@ -1259,6 +1265,12 @@ def NoMips16 : InheritableAttr, TargetSpecificAttr<TargetMips> {
   let Spellings = [GCC<"nomips16">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [Undocumented];
+}
+
+def NoMicroMips : InheritableAttr, TargetSpecificAttr<TargetMips> {
+  let Spellings = [GCC<"nomicromips">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [MicroMipsDocs];
 }
 
 // This is not a TargetSpecificAttr so that is silently accepted and

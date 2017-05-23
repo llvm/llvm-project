@@ -111,8 +111,8 @@ static Expected<std::string> replace(StringRef S, StringRef From,
 
   if (Pos == StringRef::npos) {
     return make_error<StringError>(
-      Twine(S + ": replacing '" + From + "' with '" + To + "' failed")
-      .getSingleStringRef(), object_error::parse_failed);
+      StringRef(Twine(S + ": replacing '" + From +
+        "' with '" + To + "' failed").str()), object_error::parse_failed);
   }
 
   return (Twine(S.substr(0, Pos)) + To + S.substr(Pos + From.size())).str();

@@ -1133,6 +1133,9 @@ struct FormatStyle {
   /// ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
   bool ObjCSpaceBeforeProtocolList;
 
+  /// \brief The penalty for breaking around an assignment operator.
+  unsigned PenaltyBreakAssignment;
+
   /// \brief The penalty for breaking a function call after ``call(``.
   unsigned PenaltyBreakBeforeFirstCallParameter;
 
@@ -1420,6 +1423,8 @@ struct FormatStyle {
            ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
+           PenaltyBreakAssignment ==
+               R.PenaltyBreakAssignment &&
            PenaltyBreakBeforeFirstCallParameter ==
                R.PenaltyBreakBeforeFirstCallParameter &&
            PenaltyBreakComment == R.PenaltyBreakComment &&

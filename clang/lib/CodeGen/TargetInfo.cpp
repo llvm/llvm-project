@@ -6557,6 +6557,11 @@ public:
       Fn->addFnAttr("nomips16");
     }
 
+    if (FD->hasAttr<MicroMipsAttr>())
+      Fn->addFnAttr("micromips");
+    else if (FD->hasAttr<NoMicroMipsAttr>())
+      Fn->addFnAttr("nomicromips");
+
     const MipsInterruptAttr *Attr = FD->getAttr<MipsInterruptAttr>();
     if (!Attr)
       return;

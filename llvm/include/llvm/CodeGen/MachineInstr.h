@@ -826,26 +826,35 @@ public:
       getOperand(0).getSubReg() == getOperand(1).getSubReg();
   }
 
-  /// Return true if this is a transient instruction that is
-  /// either very likely to be eliminated during register allocation (such as
-  /// copy-like instructions), or if this instruction doesn't have an
-  /// execution-time cost.
-  bool isTransient() const {
-    switch(getOpcode()) {
-    default: return false;
-    // Copy-like instructions are usually eliminated during register allocation.
-    case TargetOpcode::PHI:
-    case TargetOpcode::COPY:
-    case TargetOpcode::INSERT_SUBREG:
-    case TargetOpcode::SUBREG_TO_REG:
-    case TargetOpcode::REG_SEQUENCE:
-    // Pseudo-instructions that don't produce any real output.
+  /// Return true if this instruction doesn't produce any output in the form of
+  /// executable instructions.
+  bool isMetaInstruction() const {
+    switch (getOpcode()) {
+    default:
+      return false;
     case TargetOpcode::IMPLICIT_DEF:
     case TargetOpcode::KILL:
     case TargetOpcode::CFI_INSTRUCTION:
     case TargetOpcode::EH_LABEL:
     case TargetOpcode::GC_LABEL:
     case TargetOpcode::DBG_VALUE:
+      return true;
+    }
+  }
+
+  /// Return true if this is a transient instruction that is either very likely
+  /// to be eliminated during register allocation (such as copy-like
+  /// instructions), or if this instruction doesn't have an execution-time cost.
+  bool isTransient() const {
+    switch (getOpcode()) {
+    default:
+      return isMetaInstruction();
+    // Copy-like instructions are usually eliminated during register allocation.
+    case TargetOpcode::PHI:
+    case TargetOpcode::COPY:
+    case TargetOpcode::INSERT_SUBREG:
+    case TargetOpcode::SUBREG_TO_REG:
+    case TargetOpcode::REG_SEQUENCE:
       return true;
     }
   }

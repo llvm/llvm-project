@@ -102,7 +102,7 @@ for.body.i.i:                                     ; preds = %entry, %for.body.i.
   %cmp.i.i = icmp eq i32* %ptrincdec.i.i, %end
   br i1 %cmp.i.i, label %_ZSt4fillIPiiEvT_S1_RKT0_.exit, label %for.body.i.i
 ; CHECK: Loop %for.body.i.i: backedge-taken count is ((-4 + (-1 * %begin) + %end) /u 4)
-; CHECK: Loop %for.body.i.i: max backedge-taken count is ((-4 + (-1 * %begin) + %end) /u 4)
+; CHECK: Loop %for.body.i.i: max backedge-taken count is 4611686018427387903
 _ZSt4fillIPiiEvT_S1_RKT0_.exit:                   ; preds = %for.body.i.i, %entry
   ret void
 }

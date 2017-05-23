@@ -117,15 +117,22 @@ Error Config::addSaveTemps(std::string OutputFileName,
 namespace {
 
 std::unique_ptr<TargetMachine>
-createTargetMachine(Config &Conf, StringRef TheTriple,
-                    const Target *TheTarget) {
+createTargetMachine(Config &Conf, const Target *TheTarget, Module &M) {
+  StringRef TheTriple = M.getTargetTriple();
   SubtargetFeatures Features;
   Features.getDefaultSubtargetFeatures(Triple(TheTriple));
   for (const std::string &A : Conf.MAttrs)
     Features.AddFeature(A);
 
+  Reloc::Model RelocModel;
+  if (Conf.RelocModel)
+    RelocModel = *Conf.RelocModel;
+  else
+    RelocModel =
+        M.getPICLevel() == PICLevel::NotPIC ? Reloc::Static : Reloc::PIC_;
+
   return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-      TheTriple, Conf.CPU, Features.getString(), Conf.Options, Conf.RelocModel,
+      TheTriple, Conf.CPU, Features.getString(), Conf.Options, RelocModel,
       Conf.CodeModel, Conf.CGOptLevel));
 }
 
@@ -311,7 +318,7 @@ void splitCodeGen(Config &C, TargetMachine *TM, AddStreamFn AddStream,
               std::unique_ptr<Module> MPartInCtx = std::move(MOrErr.get());
 
               std::unique_ptr<TargetMachine> TM =
-                  createTargetMachine(C, MPartInCtx->getTargetTriple(), T);
+                  createTargetMachine(C, T, *MPartInCtx);
 
               codegen(C, TM.get(), AddStream, ThreadId, *MPartInCtx);
             },
@@ -360,8 +367,7 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
   if (!TOrErr)
     return TOrErr.takeError();
 
-  std::unique_ptr<TargetMachine> TM =
-      createTargetMachine(C, Mod->getTargetTriple(), *TOrErr);
+  std::unique_ptr<TargetMachine> TM = createTargetMachine(C, *TOrErr, *Mod);
 
   // Setup optimization remarks.
   auto DiagFileOrErr = lto::setupOptimizationRemarks(
@@ -397,8 +403,7 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
   if (!TOrErr)
     return TOrErr.takeError();
 
-  std::unique_ptr<TargetMachine> TM =
-      createTargetMachine(Conf, Mod.getTargetTriple(), *TOrErr);
+  std::unique_ptr<TargetMachine> TM = createTargetMachine(Conf, *TOrErr, Mod);
 
   if (Conf.CodeGenOnly) {
     codegen(Conf, TM.get(), AddStream, Task, Mod);

@@ -9,10 +9,11 @@ Introduction
 ============
 
 This document seeks to dispel the mystery and confusion surrounding LLVM's
-`GetElementPtr <LangRef.html#i_getelementptr>`_ (GEP) instruction.  Questions
-about the wily GEP instruction are probably the most frequently occurring
-questions once a developer gets down to coding with LLVM. Here we lay out the
-sources of confusion and show that the GEP instruction is really quite simple.
+`GetElementPtr <LangRef.html#getelementptr-instruction>`_ (GEP) instruction.
+Questions about the wily GEP instruction are probably the most frequently
+occurring questions once a developer gets down to coding with LLVM. Here we lay
+out the sources of confusion and show that the GEP instruction is really quite
+simple.
 
 Address Computation
 ===================
@@ -429,7 +430,8 @@ because LLVM has no restrictions on mixing types in addressing, loads or stores.
 
 LLVM's type-based alias analysis pass uses metadata to describe a different type
 system (such as the C type system), and performs type-based aliasing on top of
-that.  Further details are in the `language reference <LangRef.html#tbaa>`_.
+that.  Further details are in the
+`language reference <LangRef.html#tbaa-metadata>`_.
 
 What happens if a GEP computation overflows?
 --------------------------------------------

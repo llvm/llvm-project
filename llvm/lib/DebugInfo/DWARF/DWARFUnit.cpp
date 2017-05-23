@@ -33,7 +33,7 @@ using namespace dwarf;
 
 void DWARFUnitSectionBase::parse(DWARFContext &C, const DWARFSection &Section) {
   parseImpl(C, Section, C.getDebugAbbrev(), &C.getRangeSection(),
-            C.getStringSection(), StringRef(), C.getAddrSection(),
+            C.getStringSection(), StringRef(), &C.getAddrSection(),
             C.getLineSection().Data, C.isLittleEndian(), false);
 }
 
@@ -42,14 +42,14 @@ void DWARFUnitSectionBase::parseDWO(DWARFContext &C,
                                     DWARFUnitIndex *Index) {
   parseImpl(C, DWOSection, C.getDebugAbbrevDWO(), &C.getRangeDWOSection(),
             C.getStringDWOSection(), C.getStringOffsetDWOSection(),
-            C.getAddrSection(), C.getLineDWOSection().Data, C.isLittleEndian(),
+            &C.getAddrSection(), C.getLineDWOSection().Data, C.isLittleEndian(),
             true);
 }
 
 DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
                      const DWARFDebugAbbrev *DA, const DWARFSection *RS,
-                     StringRef SS, StringRef SOS, StringRef AOS, StringRef LS,
-                     bool LE, bool IsDWO,
+                     StringRef SS, StringRef SOS, const DWARFSection *AOS,
+                     StringRef LS, bool LE, bool IsDWO,
                      const DWARFUnitSectionBase &UnitSection,
                      const DWARFUnitIndex::Entry *IndexEntry)
     : Context(DC), InfoSection(Section), Abbrev(DA), RangeSection(RS),
@@ -69,10 +69,10 @@ DWARFUnit::~DWARFUnit() = default;
 bool DWARFUnit::getAddrOffsetSectionItem(uint32_t Index,
                                                 uint64_t &Result) const {
   uint32_t Offset = AddrOffsetSectionBase + Index * AddrSize;
-  if (AddrOffsetSection.size() < Offset + AddrSize)
+  if (AddrOffsetSection->Data.size() < Offset + AddrSize)
     return false;
-  DataExtractor DA(AddrOffsetSection, isLittleEndian, AddrSize);
-  Result = DA.getAddress(&Offset);
+  DataExtractor DA(AddrOffsetSection->Data, isLittleEndian, AddrSize);
+  Result = getRelocatedValue(DA, AddrSize, &Offset, &AddrOffsetSection->Relocs);
   return true;
 }
 
