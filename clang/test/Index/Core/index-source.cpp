@@ -339,3 +339,14 @@ void ::ns::inner::func() {
 // CHECK: [[@LINE-1]]:3 | namespace/C++ | ns | c:@N@ns | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK: [[@LINE-2]]:7 | namespace-alias/C++ | innerAlias | c:@N@ns@NA@innerAlias | <no-cgname> | Ref,RelCont | rel: 1
 }
+
+void innerUsingNamespace() {
+  using namespace ns;
+// CHECK: [[@LINE-1]]:19 | namespace/C++ | ns | c:@N@ns | <no-cgname> | Ref,RelCont | rel: 1
+  {
+    using namespace ns::innerAlias;
+// CHECK: [[@LINE-1]]:25 | namespace-alias/C++ | innerAlias | c:@N@ns@NA@innerAlias | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-2]]:21 | namespace/C++ | ns | c:@N@ns | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NOT: [[@LINE-3]]:21
+  }
+}

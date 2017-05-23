@@ -568,8 +568,12 @@ public:
     const DeclContext *DC = D->getDeclContext()->getRedeclContext();
     const NamedDecl *Parent = dyn_cast<NamedDecl>(DC);
 
-    IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), Parent,
-                                         D->getLexicalDeclContext());
+    // NNS for the local 'using namespace' directives is visited by the body
+    // visitor.
+    if (!D->getParentFunctionOrMethod())
+      IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), Parent,
+                                           D->getLexicalDeclContext());
+
     return IndexCtx.handleReference(D->getNominatedNamespaceAsWritten(),
                                     D->getLocation(), Parent,
                                     D->getLexicalDeclContext(),
