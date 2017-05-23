@@ -289,11 +289,14 @@ public:
   CalculateErrorValueFromFirstArgument(lldb::StackFrameSP frame_sp,
                                        ConstString name);
 
-  lldb::ValueObjectSP CalculateErrorValueObjectAtAddress(lldb::addr_t addr,
+  lldb::ValueObjectSP CalculateErrorValueObjectFromValue(Value &value,
                                                          ConstString name,
                                                          bool persistent);
 
-  lldb::addr_t GetErrorReturnLocationForFrame(lldb::StackFrameSP frame_sp);
+  llvm::Optional<Value> GetErrorReturnLocationAfterReturn(lldb::StackFrameSP frame_sp);
+  
+  llvm::Optional<Value> GetErrorReturnLocationBeforeReturn(lldb::StackFrameSP frame_sp,
+                                              bool &need_to_check_after_return);
 
   static void RegisterGlobalError(Target &target, ConstString name,
                                   lldb::addr_t addr);

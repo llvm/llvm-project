@@ -215,6 +215,25 @@ Function *DWARFASTParserSwift::ParseFunctionFromDWARF(const SymbolContext &sc,
         func_name.SetValue(ConstString(mangled), true);
       else
         func_name.SetValue(ConstString(name), false);
+      
+      // See if this function can throw.  We can't get that from the
+      // mangled name (even though the information is often there)
+      // because Swift reserves the right to omit it from the name
+      // if it doesn't need it.  So instead we look for the
+      // DW_TAG_thrown_error:
+      
+      bool can_throw = false;
+      
+      DWARFDebugInfoEntry *child(die.GetFirstChild().GetDIE());
+      while (child)
+      {
+        if (child->Tag() == DW_TAG_thrown_type)
+        {
+          can_throw = true;
+          break;
+        }
+        child = child->GetSibling();
+      }
 
       FunctionSP func_sp;
       std::unique_ptr<Declaration> decl_ap;
@@ -227,7 +246,7 @@ Function *DWARFASTParserSwift::ParseFunctionFromDWARF(const SymbolContext &sc,
         const user_id_t func_user_id = die.GetID();
         func_sp.reset(new Function(sc.comp_unit, func_user_id, func_user_id,
                                    func_name, nullptr,
-                                   func_range)); // first address range
+                                   func_range, can_throw)); // first address range
 
         if (func_sp.get() != NULL) {
           if (frame_base.IsValid())
