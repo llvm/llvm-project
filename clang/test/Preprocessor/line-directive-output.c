@@ -76,3 +76,10 @@ extern int z;
 
 // CHECK: # 50 "a\n.c"
 # 50 "a\012.c"
+
+# 1 "system.h" 3
+# 2
+void sys_foo(void);
+// CHECK: # 1 "system.h" 3
+// CHECK-NEXT: # 2 "system.h" 3
+// CHECK-NEXT: void sys_foo(void);

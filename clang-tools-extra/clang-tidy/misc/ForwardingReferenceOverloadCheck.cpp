@@ -40,6 +40,8 @@ AST_MATCHER(QualType, isEnableIf) {
   if (const auto *Dependent = BaseType->getAs<DependentNameType>()) {
     BaseType = Dependent->getQualifier()->getAsType();
   }
+  if (!BaseType)
+    return false;
   if (CheckTemplate(BaseType->getAs<TemplateSpecializationType>())) {
     return true; // Case: enable_if_t< >.
   } else if (const auto *Elaborated = BaseType->getAs<ElaboratedType>()) {

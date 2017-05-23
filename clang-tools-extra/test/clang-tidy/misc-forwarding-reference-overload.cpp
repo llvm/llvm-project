@@ -121,3 +121,25 @@ public:
 private:
   Test6(const Test6 &rhs);
 };
+
+// Do not dereference a null BaseType.
+template <class _Callable> class result_of;
+template <class _Fp, class ..._Args> class result_of<_Fp(_Args...)> { };
+template <class _Tp> using result_of_t = typename result_of<_Tp>::type;
+
+template <class... _Types> struct __overload;
+template <class _Tp, class... _Types>
+struct __overload<_Tp, _Types...> : __overload<_Types...> {
+  using __overload<_Types...>::operator();
+};
+
+template <class _Tp, class... _Types>
+using __best_match_t = typename result_of_t<__overload<_Types...>(_Tp&&)>::type;
+
+template <class... _Types>
+class variant {
+public:
+  template <class _Arg, class _Tp = __best_match_t<_Arg, _Types...> >
+  constexpr variant(_Arg&& __arg) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: constructor accepting a forwarding reference can hide the copy and move constructors
+};

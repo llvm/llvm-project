@@ -127,6 +127,29 @@ EVT AMDGPUTargetLowering::getEquivalentMemType(LLVMContext &Ctx, EVT VT) {
   return EVT::getVectorVT(Ctx, MVT::i32, StoreSize / 32);
 }
 
+bool AMDGPUTargetLowering::isOrEquivalentToAdd(SelectionDAG &DAG, SDValue Op)
+{
+  assert(Op.getOpcode() == ISD::OR);
+
+  SDValue N0 = Op->getOperand(0);
+  SDValue N1 = Op->getOperand(1);
+  EVT VT = N0.getValueType();
+
+  if (VT.isInteger() && !VT.isVector()) {
+    KnownBits LHSKnown, RHSKnown;
+    DAG.computeKnownBits(N0, LHSKnown);
+
+    if (LHSKnown.Zero.getBoolValue()) {
+      DAG.computeKnownBits(N1, RHSKnown);
+
+      if (!(~RHSKnown.Zero & ~LHSKnown.Zero))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                                            const AMDGPUSubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
@@ -2596,8 +2619,6 @@ SDValue AMDGPUTargetLowering::splitBinaryBitConstantOpImpl(
 SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   EVT VT = N->getValueType(0);
-  if (VT != MVT::i64)
-    return SDValue();
 
   ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (!RHS)
@@ -2618,6 +2639,8 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   case ISD::SIGN_EXTEND:
   case ISD::ANY_EXTEND: {
     // shl (ext x) => zext (shl x), if shift does not overflow int
+    if (VT != MVT::i64)
+      break;
     KnownBits Known;
     SDValue X = LHS->getOperand(0);
     DAG.computeKnownBits(X, Known);
@@ -2628,7 +2651,22 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
     SDValue Shl = DAG.getNode(ISD::SHL, SL, XVT, X, SDValue(RHS, 0));
     return DAG.getZExtOrTrunc(Shl, SL, VT);
   }
+  case ISD::OR:  if (!isOrEquivalentToAdd(DAG, LHS)) break;
+  case ISD::ADD: { // Fall through from above
+    // shl (or|add x, c2), c1 => or|add (shl x, c1), (c2 << c1)
+    if (ConstantSDNode *C2 = dyn_cast<ConstantSDNode>(LHS->getOperand(1))) {
+      SDValue Shl = DAG.getNode(ISD::SHL, SL, VT, LHS->getOperand(0),
+                                SDValue(RHS, 0));
+      SDValue C2V = DAG.getConstant(C2->getAPIntValue() << RHSVal,
+                                    SDLoc(C2), VT);
+      return DAG.getNode(LHS->getOpcode(), SL, VT, Shl, C2V);
+    }
+    break;
   }
+  }
+
+  if (VT != MVT::i64)
+    return SDValue();
 
   // i64 (shl x, C) -> (build_pair 0, (shl x, C -32))
 

@@ -25,7 +25,7 @@ static void error(Error &&EC) {
 }
 
 TypeTableCollection::TypeTableCollection(
-  ArrayRef<ArrayRef<uint8_t>> Records)
+    ArrayRef<MutableArrayRef<uint8_t>> Records)
     : Records(Records), Database(Records.size()) {}
 
 Optional<TypeIndex> TypeTableCollection::getFirst() {

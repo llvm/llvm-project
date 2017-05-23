@@ -59,9 +59,8 @@ static cl::opt<bool>
 
 void MipsSubtarget::anchor() { }
 
-MipsSubtarget::MipsSubtarget(const Triple &TT, const std::string &CPU,
-                             const std::string &FS, bool little,
-                             const MipsTargetMachine &TM)
+MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
+                             bool little, const MipsTargetMachine &TM)
     : MipsGenSubtargetInfo(TT, CPU, FS), MipsArchVersion(MipsDefault),
       IsLittle(little), IsSoftFloat(false), IsSingleFloat(false), IsFPXX(false),
       NoABICalls(false), IsFP64bit(false), UseOddSPReg(true),
@@ -76,8 +75,6 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, const std::string &CPU,
           MipsInstrInfo::create(initializeSubtargetDependencies(CPU, FS, TM))),
       FrameLowering(MipsFrameLowering::create(*this)),
       TLInfo(MipsTargetLowering::create(TM, *this)) {
-
-  PreviousInMips16Mode = InMips16Mode;
 
   if (MipsArchVersion == MipsDefault)
     MipsArchVersion = Mips32;
