@@ -1399,10 +1399,9 @@ public:
   /// specified by Loc.
   ///
   /// If FilenameID is -1, it is considered to be unspecified.
-  void AddLineNote(SourceLocation Loc, unsigned LineNo, int FilenameID);
   void AddLineNote(SourceLocation Loc, unsigned LineNo, int FilenameID,
                    bool IsFileEntry, bool IsFileExit,
-                   bool IsSystemHeader, bool IsExternCHeader);
+                   SrcMgr::CharacteristicKind FileKind);
 
   /// \brief Determine if the source manager has a line table.
   bool hasLineTable() const { return LineTable != nullptr; }

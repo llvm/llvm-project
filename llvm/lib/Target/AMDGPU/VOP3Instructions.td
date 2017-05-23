@@ -243,7 +243,7 @@ def V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
 } // End SubtargetPredicate = isCIVI
 
 
-let SubtargetPredicate = isVI in {
+let SubtargetPredicate = Has16BitInsts in {
 
 let isCommutable = 1 in {
 
@@ -258,12 +258,13 @@ def V_MAD_U16 : VOP3Inst <"v_mad_u16", VOP3_Profile<VOP_I16_I16_I16_I16>>;
 def V_MAD_I16 : VOP3Inst <"v_mad_i16", VOP3_Profile<VOP_I16_I16_I16_I16>>;
 
 }  // End isCommutable = 1
+} // End SubtargetPredicate = Has16BitInsts
 
+let SubtargetPredicate = isVI in {
 def V_PERM_B32 : VOP3Inst <"v_perm_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
-
 } // End SubtargetPredicate = isVI
 
-let Predicates = [isVI] in {
+let Predicates = [Has16BitInsts] in {
 
 multiclass Ternary_i16_Pats <SDPatternOperator op1, SDPatternOperator op2,
                              Instruction inst, SDPatternOperator op3> {
@@ -288,7 +289,7 @@ def : Pat<
 defm: Ternary_i16_Pats<mul, add, V_MAD_U16, zext>;
 defm: Ternary_i16_Pats<mul, add, V_MAD_I16, sext>;
 
-} // End Predicates = [isVI]
+} // End Predicates = [Has16BitInsts]
 
 let SubtargetPredicate = isGFX9 in {
 def V_PACK_B32_F16 : VOP3Inst <"v_pack_b32_f16", VOP3_Profile<VOP_B32_F16_F16>>;

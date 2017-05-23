@@ -252,7 +252,8 @@ static SourceLocation ReadOriginalFileName(CompilerInstance &CI,
 
   if (AddLineNote)
     CI.getSourceManager().AddLineNote(
-        LineNoLoc, LineNo, SourceMgr.getLineTableFilenameID(InputFile));
+        LineNoLoc, LineNo, SourceMgr.getLineTableFilenameID(InputFile), false,
+        false, SrcMgr::C_User);
 
   return T.getLocation();
 }

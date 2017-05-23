@@ -1,0 +1,31 @@
+; RUN: llvm-pdbdump yaml2pdb -pdb=%t.1.pdb %p/Inputs/merge-ids-1.yaml
+; RUN: llvm-pdbdump yaml2pdb -pdb=%t.2.pdb %p/Inputs/merge-ids-2.yaml
+; RUN: llvm-pdbdump merge -pdb=%t.3.pdb %t.1.pdb %t.2.pdb
+; RUN: llvm-pdbdump raw -ipi-records %t.3.pdb | FileCheck -check-prefix=MERGED %s
+; RUN: llvm-pdbdump raw -ipi-records %t.3.pdb | FileCheck -check-prefix=SUBSTRS %s
+; RUN: llvm-pdbdump raw -tpi-records %t.3.pdb | FileCheck -check-prefix=TPI-EMPTY %s
+
+
+MERGED: Type Info Stream (IPI)
+MERGED: Record count: 8
+MERGED-DAG: StringData: One
+MERGED-DAG: StringData: Two
+MERGED-DAG: StringData: SubOne
+MERGED-DAG: StringData: SubTwo
+MERGED-DAG: StringData: Main
+MERGED-DAG: TypeLeafKind: LF_SUBSTR_LIST
+MERGED-DAG: StringData: OnlyInFirst
+MERGED-DAG: StringData: OnlyInSecond
+
+SUBSTRS:      StringList
+SUBSTRS:        TypeLeafKind: LF_SUBSTR_LIST
+SUBSTRS-NEXT:   NumStrings: 2
+SUBSTRS-NEXT:   Strings [
+SUBSTRS-NEXT:     SubOne
+SUBSTRS-NEXT:     SubTwo
+SUBSTRS:      StringId
+SUBSTRS-NEXT:   TypeLeafKind: LF_STRING_ID
+SUBSTRS-NEXT:   Id: "SubOne" "SubTwo"
+SUBSTRS-NEXT:   StringData: Main
+
+TPI-EMPTY: Record count: 0

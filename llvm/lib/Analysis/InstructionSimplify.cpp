@@ -3539,6 +3539,10 @@ static const Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   if (V == Op)
     return RepOp;
 
+  // We cannot replace a constant, and shouldn't even try.
+  if (isa<Constant>(Op))
+    return nullptr;
+
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return nullptr;

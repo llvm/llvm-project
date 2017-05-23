@@ -45,7 +45,7 @@ ClangdUnit::ClangdUnit(PathRef FileName, StringRef Contents,
       ArgP, ArgP + ArgStrs.size(), PCHs, Diags, ResourceDir,
       /*OnlyLocalDecls=*/false, /*CaptureDiagnostics=*/true, RemappedSource,
       /*RemappedFilesKeepOriginalName=*/true,
-      /*PrecompilePreambleAfterNParses=*/1, /*TUKind=*/TU_Complete,
+      /*PrecompilePreambleAfterNParses=*/1, /*TUKind=*/TU_Prefix,
       /*CacheCodeCompletionResults=*/true,
       /*IncludeBriefCommentsInCodeCompletion=*/true,
       /*AllowPCHWithCompilerErrors=*/true));

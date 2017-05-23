@@ -277,7 +277,7 @@ public:
   ScheduleDAGInstrs *
   createPostMachineScheduler(MachineSchedContext *C) const override {
     const AArch64Subtarget &ST = C->MF->getSubtarget<AArch64Subtarget>();
-    if (ST.hasFuseLiterals()) {
+    if (ST.hasFuseAES() || ST.hasFuseLiterals()) {
       // Run the Macro Fusion after RA again since literals are expanded from
       // pseudos then (v. addPreSched2()).
       ScheduleDAGMI *DAG = createGenericSchedPostRA(C);

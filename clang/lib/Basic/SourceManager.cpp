@@ -183,47 +183,21 @@ unsigned LineTableInfo::getLineTableFilenameID(StringRef Name) {
   return IterBool.first->second;
 }
 
-/// AddLineNote - Add a line note to the line table that indicates that there
-/// is a \#line at the specified FID/Offset location which changes the presumed
-/// location to LineNo/FilenameID.
-void LineTableInfo::AddLineNote(FileID FID, unsigned Offset,
-                                unsigned LineNo, int FilenameID) {
-  std::vector<LineEntry> &Entries = LineEntries[FID];
-
-  assert((Entries.empty() || Entries.back().FileOffset < Offset) &&
-         "Adding line entries out of order!");
-
-  SrcMgr::CharacteristicKind Kind = SrcMgr::C_User;
-  unsigned IncludeOffset = 0;
-
-  if (!Entries.empty()) {
-    // If this is a '#line 4' after '#line 42 "foo.h"', make sure to remember
-    // that we are still in "foo.h".
-    if (FilenameID == -1)
-      FilenameID = Entries.back().FilenameID;
-
-    // If we are after a line marker that switched us to system header mode, or
-    // that set #include information, preserve it.
-    Kind = Entries.back().FileKind;
-    IncludeOffset = Entries.back().IncludeOffset;
-  }
-
-  Entries.push_back(LineEntry::get(Offset, LineNo, FilenameID, Kind,
-                                   IncludeOffset));
-}
-
-/// AddLineNote This is the same as the previous version of AddLineNote, but is
-/// used for GNU line markers.  If EntryExit is 0, then this doesn't change the
-/// presumed \#include stack.  If it is 1, this is a file entry, if it is 2 then
-/// this is a file exit.  FileKind specifies whether this is a system header or
-/// extern C system header.
-void LineTableInfo::AddLineNote(FileID FID, unsigned Offset,
-                                unsigned LineNo, int FilenameID,
-                                unsigned EntryExit,
+/// Add a line note to the line table that indicates that there is a \#line or
+/// GNU line marker at the specified FID/Offset location which changes the
+/// presumed location to LineNo/FilenameID. If EntryExit is 0, then this doesn't
+/// change the presumed \#include stack.  If it is 1, this is a file entry, if
+/// it is 2 then this is a file exit. FileKind specifies whether this is a
+/// system header or extern C system header.
+void LineTableInfo::AddLineNote(FileID FID, unsigned Offset, unsigned LineNo,
+                                int FilenameID, unsigned EntryExit,
                                 SrcMgr::CharacteristicKind FileKind) {
-  assert(FilenameID != -1 && "Unspecified filename should use other accessor");
-
   std::vector<LineEntry> &Entries = LineEntries[FID];
+
+  // An unspecified FilenameID means use the last filename if available, or the
+  // main source file otherwise.
+  if (FilenameID == -1 && !Entries.empty())
+    FilenameID = Entries.back().FilenameID;
 
   assert((Entries.empty() || Entries.back().FileOffset < Offset) &&
          "Adding line entries out of order!");
@@ -281,61 +255,26 @@ unsigned SourceManager::getLineTableFilenameID(StringRef Name) {
   return getLineTable().getLineTableFilenameID(Name);
 }
 
-
 /// AddLineNote - Add a line note to the line table for the FileID and offset
 /// specified by Loc.  If FilenameID is -1, it is considered to be
 /// unspecified.
 void SourceManager::AddLineNote(SourceLocation Loc, unsigned LineNo,
-                                int FilenameID) {
-  std::pair<FileID, unsigned> LocInfo = getDecomposedExpansionLoc(Loc);
-
-  bool Invalid = false;
-  const SLocEntry &Entry = getSLocEntry(LocInfo.first, &Invalid);
-  if (!Entry.isFile() || Invalid)
-    return;
-  
-  const SrcMgr::FileInfo &FileInfo = Entry.getFile();
-
-  // Remember that this file has #line directives now if it doesn't already.
-  const_cast<SrcMgr::FileInfo&>(FileInfo).setHasLineDirectives();
-
-  getLineTable().AddLineNote(LocInfo.first, LocInfo.second, LineNo, FilenameID);
-}
-
-/// AddLineNote - Add a GNU line marker to the line table.
-void SourceManager::AddLineNote(SourceLocation Loc, unsigned LineNo,
                                 int FilenameID, bool IsFileEntry,
-                                bool IsFileExit, bool IsSystemHeader,
-                                bool IsExternCHeader) {
-  // If there is no filename and no flags, this is treated just like a #line,
-  // which does not change the flags of the previous line marker.
-  if (FilenameID == -1) {
-    assert(!IsFileEntry && !IsFileExit && !IsSystemHeader && !IsExternCHeader &&
-           "Can't set flags without setting the filename!");
-    return AddLineNote(Loc, LineNo, FilenameID);
-  }
-
+                                bool IsFileExit,
+                                SrcMgr::CharacteristicKind FileKind) {
   std::pair<FileID, unsigned> LocInfo = getDecomposedExpansionLoc(Loc);
 
   bool Invalid = false;
   const SLocEntry &Entry = getSLocEntry(LocInfo.first, &Invalid);
   if (!Entry.isFile() || Invalid)
     return;
-  
+
   const SrcMgr::FileInfo &FileInfo = Entry.getFile();
 
   // Remember that this file has #line directives now if it doesn't already.
   const_cast<SrcMgr::FileInfo&>(FileInfo).setHasLineDirectives();
 
   (void) getLineTable();
-
-  SrcMgr::CharacteristicKind FileKind;
-  if (IsExternCHeader)
-    FileKind = SrcMgr::C_ExternCSystem;
-  else if (IsSystemHeader)
-    FileKind = SrcMgr::C_System;
-  else
-    FileKind = SrcMgr::C_User;
 
   unsigned EntryExit = 0;
   if (IsFileEntry)

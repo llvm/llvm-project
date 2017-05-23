@@ -61,7 +61,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -486,7 +485,7 @@ class NewGVN {
   DenseMap<const Expression *, SmallPtrSet<Instruction *, 2>>
       ExpressionToPhiOfOps;
   // Map from basic block to the temporary operations we created
-  DenseMap<const BasicBlock *, SmallVector<Instruction *, 8>> PHIOfOpsPHIs;
+  DenseMap<const BasicBlock *, SmallVector<PHINode *, 8>> PHIOfOpsPHIs;
   // Map from temporary operation to MemoryAccess.
   DenseMap<const Instruction *, MemoryUseOrDef *> TempToMemory;
   // Set of all temporary instructions we created.
@@ -698,6 +697,10 @@ private:
   void handleNewInstruction(Instruction *){};
 
   // Various instruction touch utilities
+  template <typename Map, typename KeyType, typename Func>
+  void for_each_found(Map &, const KeyType &, Func);
+  template <typename Map, typename KeyType>
+  void touchAndErase(Map &, const KeyType &);
   void markUsersTouched(Value *);
   void markMemoryUsersTouched(const MemoryAccess *);
   void markMemoryDefTouched(const MemoryAccess *);
@@ -954,7 +957,7 @@ const Expression *NewGVN::checkSimplificationResults(Expression *E,
   if (CC && CC->getDefiningExpr()) {
     if (I)
       DEBUG(dbgs() << "Simplified " << *I << " to "
-                   << " expression " << *V << "\n");
+                   << " expression " << *CC->getDefiningExpr() << "\n");
     NumGVNOpsSimplified++;
     deleteExpression(E);
     return CC->getDefiningExpr();
@@ -1220,7 +1223,6 @@ const Expression *NewGVN::performSymbolicStoreEvaluation(Instruction *I) const {
   // If we bypassed the use-def chains, make sure we add a use.
   if (StoreRHS != StoreAccess->getDefiningAccess())
     addMemoryUsers(StoreRHS, StoreAccess);
-
   StoreRHS = lookupMemoryLeader(StoreRHS);
   // If we are defined by ourselves, use the live on entry def.
   if (StoreRHS == StoreAccess)
@@ -1592,7 +1594,7 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) const {
   // See if all arguments are the same.
   // We track if any were undef because they need special handling.
   bool HasUndef = false;
-  bool CycleFree = isCycleFree(cast<PHINode>(I));
+  bool CycleFree = isCycleFree(I);
   auto Filtered = make_filter_range(E->operands(), [&](Value *Arg) {
     if (Arg == nullptr)
       return false;
@@ -1900,6 +1902,28 @@ NewGVN::performSymbolicEvaluation(Value *V,
   return E;
 }
 
+// Look up a container in a map, and then call a function for each thing in the
+// found container.
+template <typename Map, typename KeyType, typename Func>
+void NewGVN::for_each_found(Map &M, const KeyType &Key, Func F) {
+  const auto Result = M.find_as(Key);
+  if (Result != M.end())
+    for (typename Map::mapped_type::value_type Mapped : Result->second)
+      F(Mapped);
+}
+
+// Look up a container of values/instructions in a map, and touch all the
+// instructions in the container.  Then erase value from the map.
+template <typename Map, typename KeyType>
+void NewGVN::touchAndErase(Map &M, const KeyType &Key) {
+  const auto Result = M.find_as(Key);
+  if (Result != M.end()) {
+    for (const typename Map::mapped_type::value_type Mapped : Result->second)
+      TouchedInstructions.set(InstrToDFSNum(Mapped));
+    M.erase(Result);
+  }
+}
+
 void NewGVN::addAdditionalUsers(Value *To, Value *User) const {
   AdditionalUsers[To].insert(User);
 }
@@ -1910,12 +1934,7 @@ void NewGVN::markUsersTouched(Value *V) {
     assert(isa<Instruction>(User) && "Use of value not within an instruction?");
     TouchedInstructions.set(InstrToDFSNum(User));
   }
-  const auto Result = AdditionalUsers.find(V);
-  if (Result != AdditionalUsers.end()) {
-    for (auto *User : Result->second)
-      TouchedInstructions.set(InstrToDFSNum(User));
-    AdditionalUsers.erase(Result);
-  }
+  touchAndErase(AdditionalUsers, V);
 }
 
 void NewGVN::addMemoryUsers(const MemoryAccess *To, MemoryAccess *U) const {
@@ -1932,12 +1951,7 @@ void NewGVN::markMemoryUsersTouched(const MemoryAccess *MA) {
     return;
   for (auto U : MA->users())
     TouchedInstructions.set(MemoryToDFSNum(U));
-  const auto Result = MemoryToUsers.find(MA);
-  if (Result != MemoryToUsers.end()) {
-    for (auto *User : Result->second)
-      TouchedInstructions.set(MemoryToDFSNum(User));
-    MemoryToUsers.erase(Result);
-  }
+  touchAndErase(MemoryToUsers, MA);
 }
 
 // Add I to the set of users of a given predicate.
@@ -1954,12 +1968,7 @@ void NewGVN::addPredicateUsers(const PredicateBase *PB, Instruction *I) const {
 
 // Touch all the predicates that depend on this instruction.
 void NewGVN::markPredicateUsersTouched(Instruction *I) {
-  const auto Result = PredicateToUsers.find(I);
-  if (Result != PredicateToUsers.end()) {
-    for (auto *User : Result->second)
-      TouchedInstructions.set(InstrToDFSNum(User));
-    PredicateToUsers.erase(Result);
-  }
+  touchAndErase(PredicateToUsers, I);
 }
 
 // Mark users affected by a memory leader change.
@@ -2162,13 +2171,9 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I, const Expression *E,
 // For a given expression, mark the phi of ops instructions that could have
 // changed as a result.
 void NewGVN::markPhiOfOpsChanged(const HashedExpression &HE) {
-  auto PhiOfOpsSet = ExpressionToPhiOfOps.find_as(HE);
-  if (PhiOfOpsSet != ExpressionToPhiOfOps.end()) {
-    for (auto I : PhiOfOpsSet->second)
-      TouchedInstructions.set(InstrToDFSNum(I));
-    ExpressionToPhiOfOps.erase(PhiOfOpsSet);
-  }
+  touchAndErase(ExpressionToPhiOfOps, HE);
 }
+
 // Perform congruence finding on a given value numbering expression.
 void NewGVN::performCongruenceFinding(Instruction *I, const Expression *E) {
   // This is guaranteed to return something, since it will at least find
@@ -2288,12 +2293,9 @@ void NewGVN::updateReachableEdge(BasicBlock *From, BasicBlock *To) {
         TouchedInstructions.set(InstrToDFSNum(&*BI));
         ++BI;
       }
-      const auto PHIResult = PHIOfOpsPHIs.find(To);
-      if (PHIResult != PHIOfOpsPHIs.end()) {
-        const auto &PHIs = PHIResult->second;
-        for (auto I : PHIs)
-          TouchedInstructions.set(InstrToDFSNum(I));
-      }
+      for_each_found(PHIOfOpsPHIs, To, [&](const PHINode *I) {
+        TouchedInstructions.set(InstrToDFSNum(I));
+      });
     }
   }
 }
@@ -2705,11 +2707,12 @@ void NewGVN::updateProcessedCount(const Value *V) {
 // Evaluate MemoryPhi nodes symbolically, just like PHI nodes
 void NewGVN::valueNumberMemoryPhi(MemoryPhi *MP) {
   // If all the arguments are the same, the MemoryPhi has the same value as the
-  // argument.
-  // Filter out unreachable blocks and self phis from our operands.
+  // argument.  Filter out unreachable blocks and self phis from our operands.
+  // TODO: We could do cycle-checking on the memory phis to allow valueizing for
+  // self-phi checking.
   const BasicBlock *PHIBlock = MP->getBlock();
   auto Filtered = make_filter_range(MP->operands(), [&](const Use &U) {
-    return lookupMemoryLeader(cast<MemoryAccess>(U)) != MP &&
+    return cast<MemoryAccess>(U) != MP &&
            !isMemoryAccessTOP(cast<MemoryAccess>(U)) &&
            ReachableEdges.count({MP->getIncomingBlock(U), PHIBlock});
   });
@@ -3517,7 +3520,8 @@ bool NewGVN::eliminateInstructions(Function &F) {
   // DFS numbers are updated, we compute some ourselves.
   DT->updateDFSNumbers();
 
-  // Go through all of our phi nodes, and kill the arguments associated with unreachable edges.
+  // Go through all of our phi nodes, and kill the arguments associated with
+  // unreachable edges.
   auto ReplaceUnreachablePHIArgs = [&](PHINode &PHI, BasicBlock *BB) {
     for (auto &Operand : PHI.incoming_values())
       if (!ReachableEdges.count({PHI.getIncomingBlock(Operand), BB})) {
@@ -3544,14 +3548,9 @@ bool NewGVN::eliminateInstructions(Function &F) {
         auto &PHI = cast<PHINode>(*II);
         ReplaceUnreachablePHIArgs(PHI, BB);
       }
-      auto PHIResult = PHIOfOpsPHIs.find(BB);
-      if (PHIResult != PHIOfOpsPHIs.end()) {
-        auto &PHIs = PHIResult->second;
-        for (auto I : PHIs) {
-          auto *PHI = dyn_cast<PHINode>(I);
-          ReplaceUnreachablePHIArgs(*PHI, BB);
-        }
-      }
+      for_each_found(PHIOfOpsPHIs, BB, [&](PHINode *PHI) {
+        ReplaceUnreachablePHIArgs(*PHI, BB);
+      });
     }
 
   // Map to store the use counts

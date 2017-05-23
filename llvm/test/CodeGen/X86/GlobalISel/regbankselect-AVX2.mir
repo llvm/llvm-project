@@ -14,7 +14,16 @@
     ret void
   }
 
-...
+  define <8 x i32> @test_load_v8i32_noalign(<8 x i32>* %p1) {
+    %r = load <8 x i32>, <8 x i32>* %p1, align 1
+    ret <8 x i32> %r
+  }
+
+  define void @test_store_v8i32_noalign(<8 x i32> %val, <8 x i32>* %p1) {
+    store <8 x i32> %val, <8 x i32>* %p1, align 1
+    ret void
+  }
+
 ---
 name:            test_mul_vec256
 alignment:       4
@@ -81,6 +90,50 @@ body:             |
 
     %0(<8 x s32>) = IMPLICIT_DEF
     %1(<8 x s32>) = G_SUB %0, %0
+    RET 0
+
+...
+---
+name:            test_load_v8i32_noalign
+# CHECK-LABEL: name:  test_load_v8i32_noalign
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr }
+# CHECK-NEXT:    - { id: 1, class: vecr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(<8 x s32>) = G_LOAD %0(p0) :: (load 32 from %ir.p1, align 1)
+    %ymm0 = COPY %1(<8 x s32>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_store_v8i32_noalign
+# CHECK-LABEL: name:  test_store_v8i32_noalign
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: vecr }
+# CHECK-NEXT:    - { id: 1, class: gpr }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %ymm0
+
+    %0(<8 x s32>) = COPY %ymm0
+    %1(p0) = COPY %rdi
+    G_STORE %0(<8 x s32>), %1(p0) :: (store 32 into %ir.p1, align 1)
     RET 0
 
 ...

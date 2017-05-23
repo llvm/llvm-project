@@ -154,6 +154,11 @@ MipsTargetMachine::getSubtargetImpl(const Function &F) const {
   bool hasNoMips16Attr =
       !F.getFnAttribute("nomips16").hasAttribute(Attribute::None);
 
+  bool HasMicroMipsAttr =
+      !F.getFnAttribute("micromips").hasAttribute(Attribute::None);
+  bool HasNoMicroMipsAttr =
+      !F.getFnAttribute("nomicromips").hasAttribute(Attribute::None);
+
   // FIXME: This is related to the code below to reset the target options,
   // we need to know whether or not the soft float flag is set on the
   // function, so we can enable it as a subtarget feature.
@@ -165,6 +170,10 @@ MipsTargetMachine::getSubtargetImpl(const Function &F) const {
     FS += FS.empty() ? "+mips16" : ",+mips16";
   else if (hasNoMips16Attr)
     FS += FS.empty() ? "-mips16" : ",-mips16";
+  if (HasMicroMipsAttr)
+    FS += FS.empty() ? "+micromips" : ",+micromips";
+  else if (HasNoMicroMipsAttr)
+    FS += FS.empty() ? "-micromips" : ",-micromips";
   if (softFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
 

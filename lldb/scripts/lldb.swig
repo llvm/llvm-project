@@ -31,8 +31,24 @@ o SBLineEntry: Specifies an association with a contiguous range of instructions
       and a source file location. SBCompileUnit contains SBLineEntry(s)."
 %enddef
 
+/*
+Since version 3.0.9, swig's logic for importing the native module has changed in
+a way that is incompatible with our usage of the python module as __init__.py
+(See swig bug #769).  Fortunately, since version 3.0.11, swig provides a way for
+us to override the module import logic to suit our needs. This does that.
+
+Older swig versions will simply ignore this setting.
+*/
+%define MODULEIMPORT
+"from . import $module"
+%enddef
+// These versions will not generate working python modules, so error out early.
+#if SWIG_VERSION >= 0x030009 && SWIG_VERSION < 0x030011
+#error Swig versions 3.0.9 and 3.0.10 are incompatible with lldb.
+#endif
+
 // The name of the module to be created.
-%module(docstring=DOCSTRING) lldb
+%module(docstring=DOCSTRING, moduleimport=MODULEIMPORT) lldb
 
 // Parameter types will be used in the autodoc string.
 %feature("autodoc", "1");

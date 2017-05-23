@@ -52,43 +52,24 @@ Error TypeSerializer::writeRecordPrefix(TypeLeafKind Kind) {
 }
 
 TypeIndex
-TypeSerializer::insertRecordBytesPrivate(MutableArrayRef<uint8_t> Record) {
+TypeSerializer::insertRecordBytesPrivate(ArrayRef<uint8_t> &Record) {
   assert(Record.size() % 4 == 0 && "Record is not aligned to 4 bytes!");
 
   StringRef S(reinterpret_cast<const char *>(Record.data()), Record.size());
 
   TypeIndex NextTypeIndex = calcNextTypeIndex();
   auto Result = HashedRecords.try_emplace(S, NextTypeIndex);
+
+  StringRef NewData = Result.first->getKey();
+  Record = ArrayRef<uint8_t>(NewData.bytes_begin(), NewData.bytes_end());
+
   if (Result.second) {
+    // If this triggered an insert into the map, store the bytes.
     LastTypeIndex = NextTypeIndex;
     SeenRecords.push_back(Record);
   }
+
   return Result.first->getValue();
-}
-
-TypeIndex
-TypeSerializer::insertRecordBytesWithCopy(CVType &Record,
-                                          MutableArrayRef<uint8_t> Data) {
-  assert(Data.size() % 4 == 0 && "Record is not aligned to 4 bytes!");
-
-  StringRef S(reinterpret_cast<const char *>(Data.data()), Data.size());
-
-  // Do a two state lookup / insert so that we don't have to allocate unless
-  // we're going
-  // to do an insert.  This is a big memory savings.
-  auto Iter = HashedRecords.find(S);
-  if (Iter != HashedRecords.end())
-    return Iter->second;
-
-  LastTypeIndex = calcNextTypeIndex();
-  uint8_t *Copy = RecordStorage.Allocate<uint8_t>(Data.size());
-  ::memcpy(Copy, Data.data(), Data.size());
-  Data = MutableArrayRef<uint8_t>(Copy, Data.size());
-  S = StringRef(reinterpret_cast<const char *>(Data.data()), Data.size());
-  HashedRecords.insert(std::make_pair(S, LastTypeIndex));
-  SeenRecords.push_back(Data);
-  Record.RecordData = Data;
-  return LastTypeIndex;
 }
 
 Expected<MutableArrayRef<uint8_t>>
@@ -112,19 +93,19 @@ TypeSerializer::TypeSerializer(BumpPtrAllocator &Storage)
     : RecordStorage(Storage), LastTypeIndex(),
       RecordBuffer(MaxRecordLength * 2),
       Stream(RecordBuffer, llvm::support::little), Writer(Stream),
-      Mapping(Writer) {
+      Mapping(Writer), HashedRecords(Storage) {
   // RecordBuffer needs to be able to hold enough data so that if we are 1
   // byte short of MaxRecordLen, and then we try to write MaxRecordLen bytes,
   // we won't overflow.
 }
 
-ArrayRef<MutableArrayRef<uint8_t>> TypeSerializer::records() const {
+ArrayRef<ArrayRef<uint8_t>> TypeSerializer::records() const {
   return SeenRecords;
 }
 
 TypeIndex TypeSerializer::getLastTypeIndex() const { return LastTypeIndex; }
 
-TypeIndex TypeSerializer::insertRecordBytes(MutableArrayRef<uint8_t> Record) {
+TypeIndex TypeSerializer::insertRecordBytes(ArrayRef<uint8_t> Record) {
   assert(!TypeKind.hasValue() && "Already in a type mapping!");
   assert(Writer.getOffset() == 0 && "Stream has data already!");
 
@@ -163,8 +144,8 @@ Expected<TypeIndex> TypeSerializer::visitTypeEndGetIndex(CVType &Record) {
   Prefix->RecordLen = ThisRecordData.size() - sizeof(uint16_t);
 
   Record.Type = *TypeKind;
-  TypeIndex InsertedTypeIndex =
-      insertRecordBytesWithCopy(Record, ThisRecordData);
+  Record.RecordData = ThisRecordData;
+  TypeIndex InsertedTypeIndex = insertRecordBytesPrivate(Record.RecordData);
 
   // Write out each additional segment in reverse order, and update each
   // record's continuation index to point to the previous one.

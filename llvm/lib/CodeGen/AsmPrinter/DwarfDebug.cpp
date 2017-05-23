@@ -1029,7 +1029,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   assert(CurMI);
 
   // Check if source location changes, but ignore DBG_VALUE and CFI locations.
-  if (MI->isDebugValue() || MI->isCFIInstruction())
+  if (MI->isMetaInstruction())
     return;
   const DebugLoc &DL = MI->getDebugLoc();
   // When we emit a line-0 record, we don't update PrevInstLoc; so look at
@@ -1111,7 +1111,7 @@ static DebugLoc findPrologueEndLoc(const MachineFunction *MF) {
   // the beginning of the function body.
   for (const auto &MBB : *MF)
     for (const auto &MI : MBB)
-      if (!MI.isDebugValue() && !MI.getFlag(MachineInstr::FrameSetup) &&
+      if (!MI.isMetaInstruction() && !MI.getFlag(MachineInstr::FrameSetup) &&
           MI.getDebugLoc())
         return MI.getDebugLoc();
   return DebugLoc();

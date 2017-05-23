@@ -148,6 +148,8 @@ struct Dependences {
   ///
   /// To restrict access to the internal state, only the DependenceInfo class
   /// is able to call or modify a Dependences struct.
+  friend struct DependenceAnalysis;
+  friend struct DependenceInfoPrinterPass;
   friend class DependenceInfo;
   friend class DependenceInfoWrapperPass;
 
@@ -194,6 +196,37 @@ private:
 
   /// Granularity of this dependence analysis.
   const AnalysisLevel Level;
+};
+
+struct DependenceAnalysis : public AnalysisInfoMixin<DependenceAnalysis> {
+  static AnalysisKey Key;
+  struct Result {
+    Scop &S;
+    std::unique_ptr<Dependences> D[Dependences::NumAnalysisLevels];
+
+    /// Return the dependence information for the current SCoP.
+    ///
+    /// @param Level The granularity of dependence analysis result.
+    ///
+    /// @return The dependence analysis result
+    ///
+    const Dependences &getDependences(Dependences::AnalysisLevel Level);
+
+    /// Recompute dependences from schedule and memory accesses.
+    const Dependences &recomputeDependences(Dependences::AnalysisLevel Level);
+  };
+  Result run(Scop &S, ScopAnalysisManager &SAM,
+             ScopStandardAnalysisResults &SAR);
+};
+
+struct DependenceInfoPrinterPass
+    : public PassInfoMixin<DependenceInfoPrinterPass> {
+  DependenceInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Scop &S, ScopAnalysisManager &,
+                        ScopStandardAnalysisResults &, SPMUpdater &);
+
+  raw_ostream &OS;
 };
 
 class DependenceInfo : public ScopPass {

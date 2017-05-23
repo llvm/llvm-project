@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 39
+#define CINDEX_VERSION_MINOR 40
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -3076,7 +3076,52 @@ enum CXTypeKind {
    *
    * E.g., struct S, or via a qualified name, e.g., N::M::type, or both.
    */
-  CXType_Elaborated = 119
+  CXType_Elaborated = 119,
+
+  /* OpenCL PipeType. */
+  CXType_Pipe = 120,
+
+  /* OpenCL builtin types. */
+  CXType_OCLImage1dRO = 121,
+  CXType_OCLImage1dArrayRO = 122,
+  CXType_OCLImage1dBufferRO = 123,
+  CXType_OCLImage2dRO = 124,
+  CXType_OCLImage2dArrayRO = 125,
+  CXType_OCLImage2dDepthRO = 126,
+  CXType_OCLImage2dArrayDepthRO = 127,
+  CXType_OCLImage2dMSAARO = 128,
+  CXType_OCLImage2dArrayMSAARO = 129,
+  CXType_OCLImage2dMSAADepthRO = 130,
+  CXType_OCLImage2dArrayMSAADepthRO = 131,
+  CXType_OCLImage3dRO = 132,
+  CXType_OCLImage1dWO = 133,
+  CXType_OCLImage1dArrayWO = 134,
+  CXType_OCLImage1dBufferWO = 135,
+  CXType_OCLImage2dWO = 136,
+  CXType_OCLImage2dArrayWO = 137,
+  CXType_OCLImage2dDepthWO = 138,
+  CXType_OCLImage2dArrayDepthWO = 139,
+  CXType_OCLImage2dMSAAWO = 140,
+  CXType_OCLImage2dArrayMSAAWO = 141,
+  CXType_OCLImage2dMSAADepthWO = 142,
+  CXType_OCLImage2dArrayMSAADepthWO = 143,
+  CXType_OCLImage3dWO = 144,
+  CXType_OCLImage1dRW = 145,
+  CXType_OCLImage1dArrayRW = 146,
+  CXType_OCLImage1dBufferRW = 147,
+  CXType_OCLImage2dRW = 148,
+  CXType_OCLImage2dArrayRW = 149,
+  CXType_OCLImage2dDepthRW = 150,
+  CXType_OCLImage2dArrayDepthRW = 151,
+  CXType_OCLImage2dMSAARW = 152,
+  CXType_OCLImage2dArrayMSAARW = 153,
+  CXType_OCLImage2dMSAADepthRW = 154,
+  CXType_OCLImage2dArrayMSAADepthRW = 155,
+  CXType_OCLImage3dRW = 156,
+  CXType_OCLSampler = 157,
+  CXType_OCLEvent = 158,
+  CXType_OCLQueue = 159,
+  CXType_OCLReserveID = 160
 };
 
 /**

@@ -266,8 +266,8 @@ define amdgpu_kernel void @write2_ptr_subreg_arg_two_val_f32(float addrspace(1)*
 }
 
 ; SI-LABEL: @simple_write2_one_val_f64
-; SI: buffer_load_dwordx2 [[VAL:v\[[0-9]+:[0-9]+\]]],
-; SI: v_lshlrev_b32_e32 [[VPTR:v[0-9]+]], 3, v{{[0-9]+}}
+; SI-DAG: buffer_load_dwordx2 [[VAL:v\[[0-9]+:[0-9]+\]]],
+; SI-DAG: v_lshlrev_b32_e32 [[VPTR:v[0-9]+]], 3, v{{[0-9]+}}
 ; SI: ds_write2_b64 [[VPTR]], [[VAL]], [[VAL]] offset1:8
 ; SI: s_endpgm
 define amdgpu_kernel void @simple_write2_one_val_f64(double addrspace(1)* %C, double addrspace(1)* %in) #0 {

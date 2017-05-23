@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
 
 --- |
   define i64 @test_zext_i1(i8 %a) {

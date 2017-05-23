@@ -100,3 +100,75 @@ define <2 x i8> @lshr_exact_splat_vec(<2 x i8> %x) {
   ret <2 x i8> %lshr
 }
 
+; FIXME: The bool bit got smeared across a wide val, but then we zero'd out those bits. This is just a zext.
+
+define i16 @bool_zext(i1 %x) {
+; CHECK-LABEL: @bool_zext(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 %x to i16
+; CHECK-NEXT:    [[HIBIT:%.*]] = lshr i16 [[SEXT]], 15
+; CHECK-NEXT:    ret i16 [[HIBIT]]
+;
+  %sext = sext i1 %x to i16
+  %hibit = lshr i16 %sext, 15
+  ret i16 %hibit
+}
+
+define <2 x i8> @bool_zext_splat(<2 x i1> %x) {
+; CHECK-LABEL: @bool_zext_splat(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i1> %x to <2 x i8>
+; CHECK-NEXT:    [[HIBIT:%.*]] = lshr <2 x i8> [[SEXT]], <i8 7, i8 7>
+; CHECK-NEXT:    ret <2 x i8> [[HIBIT]]
+;
+  %sext = sext <2 x i1> %x to <2 x i8>
+  %hibit = lshr <2 x i8> %sext, <i8 7, i8 7>
+  ret <2 x i8> %hibit
+}
+
+; FIXME: The replicated sign bits are all that's left. This could be ashr+zext.
+
+define i16 @smear_sign_and_widen(i4 %x) {
+; CHECK-LABEL: @smear_sign_and_widen(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i4 %x to i16
+; CHECK-NEXT:    [[HIBIT:%.*]] = lshr i16 [[SEXT]], 12
+; CHECK-NEXT:    ret i16 [[HIBIT]]
+;
+  %sext = sext i4 %x to i16
+  %hibit = lshr i16 %sext, 12
+  ret i16 %hibit
+}
+
+define <2 x i8> @smear_sign_and_widen_splat(<2 x i6> %x) {
+; CHECK-LABEL: @smear_sign_and_widen_splat(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i6> %x to <2 x i8>
+; CHECK-NEXT:    [[HIBIT:%.*]] = lshr <2 x i8> [[SEXT]], <i8 2, i8 2>
+; CHECK-NEXT:    ret <2 x i8> [[HIBIT]]
+;
+  %sext = sext <2 x i6> %x to <2 x i8>
+  %hibit = lshr <2 x i8> %sext, <i8 2, i8 2>
+  ret <2 x i8> %hibit
+}
+
+; FIXME: All of the replicated sign bits are wiped out by the lshr. This could be lshr+zext.
+
+define i16 @fake_sext(i3 %x) {
+; CHECK-LABEL: @fake_sext(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i3 %x to i16
+; CHECK-NEXT:    [[SH:%.*]] = lshr i16 [[SEXT]], 15
+; CHECK-NEXT:    ret i16 [[SH]]
+;
+  %sext = sext i3 %x to i16
+  %sh = lshr i16 %sext, 15
+  ret i16 %sh
+}
+
+define <2 x i8> @fake_sext_splat(<2 x i3> %x) {
+; CHECK-LABEL: @fake_sext_splat(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i3> %x to <2 x i8>
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[SEXT]], <i8 7, i8 7>
+; CHECK-NEXT:    ret <2 x i8> [[SH]]
+;
+  %sext = sext <2 x i3> %x to <2 x i8>
+  %sh = lshr <2 x i8> %sext, <i8 7, i8 7>
+  ret <2 x i8> %sh
+}
+

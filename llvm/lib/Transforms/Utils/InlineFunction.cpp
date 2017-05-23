@@ -1397,11 +1397,12 @@ static void updateCallerBFI(BasicBlock *CallSiteBlock,
 static void updateCallProfile(Function *Callee, const ValueToValueMapTy &VMap,
                               const Optional<uint64_t> &CalleeEntryCount,
                               const Instruction *TheCall,
-                              ProfileSummaryInfo *PSI) {
+                              ProfileSummaryInfo *PSI,
+                              BlockFrequencyInfo *CallerBFI) {
   if (!CalleeEntryCount.hasValue() || CalleeEntryCount.getValue() < 1)
     return;
   Optional<uint64_t> CallSiteCount =
-      PSI ? PSI->getProfileCount(TheCall, nullptr) : None;
+      PSI ? PSI->getProfileCount(TheCall, CallerBFI) : None;
   uint64_t CallCount =
       std::min(CallSiteCount.hasValue() ? CallSiteCount.getValue() : 0,
                CalleeEntryCount.getValue());
@@ -1637,7 +1638,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
                       CalledFunc->front());
 
     updateCallProfile(CalledFunc, VMap, CalledFunc->getEntryCount(), TheCall,
-                      IFI.PSI);
+                      IFI.PSI, IFI.CallerBFI);
     // Update the profile count of callee.
     updateCalleeCount(IFI.CallerBFI, OrigBB, TheCall, CalledFunc, IFI.PSI);
 

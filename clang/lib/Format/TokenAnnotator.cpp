@@ -2093,9 +2093,10 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   if (Left.is(TT_ConditionalExpr))
     return prec::Conditional;
   prec::Level Level = Left.getPrecedence();
-  if (Level != prec::Unknown)
-    return Level;
-  Level = Right.getPrecedence();
+  if (Level == prec::Unknown)
+    Level = Right.getPrecedence();
+  if (Level == prec::Assignment)
+    return Style.PenaltyBreakAssignment;
   if (Level != prec::Unknown)
     return Level;
 
@@ -2569,7 +2570,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
             Keywords.kw_interface, Keywords.kw_type, tok::kw_static,
             tok::kw_public, tok::kw_private, tok::kw_protected,
             Keywords.kw_abstract, Keywords.kw_get, Keywords.kw_set))
-      return false; // Otherwise a semicolon is inserted.
+      return false; // Otherwise automatic semicolon insertion would trigger.
     if (Left.is(TT_JsFatArrow) && Right.is(tok::l_brace))
       return false;
     if (Left.is(TT_JsTypeColon))

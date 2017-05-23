@@ -99,7 +99,9 @@ Optimization remarks are enabled using:
 indicates if vectorization was specified.
 
 ``-Rpass-analysis=loop-vectorize`` identifies the statements that caused
-vectorization to fail.
+vectorization to fail. If in addition ``-fsave-optimization-record`` is
+provided, multiple causes of vectorization failure may be listed (this behavior
+might change in the future).
 
 Consider the following loop:
 

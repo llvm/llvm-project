@@ -102,7 +102,7 @@ static ld_plugin_add_input_file add_input_file = nullptr;
 static ld_plugin_set_extra_library_path set_extra_library_path = nullptr;
 static ld_plugin_get_view get_view = nullptr;
 static bool IsExecutable = false;
-static Optional<Reloc::Model> RelocationModel;
+static Optional<Reloc::Model> RelocationModel = None;
 static std::string output_name = "";
 static std::list<claimed_file> Modules;
 static DenseMap<int, void *> FDToLeaderHandle;
@@ -282,6 +282,8 @@ ld_plugin_status onload(ld_plugin_tv *tv) {
     case LDPT_LINKER_OUTPUT:
       switch (tv->tv_u.tv_val) {
       case LDPO_REL: // .o
+        IsExecutable = false;
+        break;
       case LDPO_DYN: // .so
         IsExecutable = false;
         RelocationModel = Reloc::PIC_;
@@ -726,7 +728,7 @@ static std::unique_ptr<LTO> createLTO() {
   Conf.Options.RelaxELFRelocations = false;
 
   Conf.MAttrs = MAttrs;
-  Conf.RelocModel = *RelocationModel;
+  Conf.RelocModel = RelocationModel;
   Conf.CGOptLevel = getCGOptLevel();
   Conf.DisableVerify = options::DisableVerify;
   Conf.OptLevel = options::OptLevel;

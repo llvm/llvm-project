@@ -34,3 +34,11 @@ struct C {
   static int I;
 };
 int C::I;
+
+template <class T>
+struct C2 {
+  C2();
+};
+
+template <class T>
+C2<T>::C2() = default;

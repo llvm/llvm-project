@@ -307,7 +307,7 @@ void DataLayout::parseSpecifier(StringRef Desc) {
     case 'a': {
       AlignTypeEnum AlignType;
       switch (Specifier) {
-      default:
+      default: llvm_unreachable("Unexpected specifier!");
       case 'i': AlignType = INTEGER_ALIGN; break;
       case 'v': AlignType = VECTOR_ALIGN; break;
       case 'f': AlignType = FLOAT_ALIGN; break;
