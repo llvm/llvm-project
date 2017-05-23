@@ -59,7 +59,7 @@ Error mergeTypeRecords(TypeTableBuilder &Dest,
 /// id stream, that contains the index of the corresponding id record
 /// in the destination stream.
 ///
-/// \param Types The collection of id records to merge in.
+/// \param Ids The collection of id records to merge in.
 ///
 /// \returns Error::success() if the operation succeeded, otherwise an
 /// appropriate error code.

@@ -15,6 +15,8 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
+#include <future>
 
 using namespace clang;
 using namespace clang::clangd;
@@ -56,11 +58,7 @@ Position clangd::offsetToPosition(StringRef Code, size_t Offset) {
   return {Lines, Cols};
 }
 
-WorkerRequest::WorkerRequest(WorkerRequestKind Kind, Path File,
-                             DocVersion Version)
-    : Kind(Kind), File(File), Version(Version) {}
-
-ClangdScheduler::ClangdScheduler(ClangdServer &Server, bool RunSynchronously)
+ClangdScheduler::ClangdScheduler(bool RunSynchronously)
     : RunSynchronously(RunSynchronously) {
   if (RunSynchronously) {
     // Don't start the worker thread if we're running synchronously
@@ -69,9 +67,9 @@ ClangdScheduler::ClangdScheduler(ClangdServer &Server, bool RunSynchronously)
 
   // Initialize Worker in ctor body, rather than init list to avoid potentially
   // using not-yet-initialized members
-  Worker = std::thread([&Server, this]() {
+  Worker = std::thread([this]() {
     while (true) {
-      WorkerRequest Request;
+      std::function<void()> Request;
 
       // Pick request from the queue
       {
@@ -83,19 +81,15 @@ ClangdScheduler::ClangdScheduler(ClangdServer &Server, bool RunSynchronously)
 
         assert(!RequestQueue.empty() && "RequestQueue was empty");
 
-        Request = std::move(RequestQueue.back());
-        RequestQueue.pop_back();
-
-        // Skip outdated requests
-        if (Request.Version != Server.DraftMgr.getVersion(Request.File)) {
-          // FIXME(ibiryukov): Logging
-          // Output.log("Version for " + Twine(Request.File) +
-          //            " in request is outdated, skipping request\n");
-          continue;
-        }
+        // We process requests starting from the front of the queue. Users of
+        // ClangdScheduler have a way to prioritise their requests by putting
+        // them to the either side of the queue (using either addToEnd or
+        // addToFront).
+        Request = std::move(RequestQueue.front());
+        RequestQueue.pop_front();
       } // unlock Mutex
 
-      Server.handleRequest(std::move(Request));
+      Request();
     }
   });
 }
@@ -108,19 +102,34 @@ ClangdScheduler::~ClangdScheduler() {
     std::lock_guard<std::mutex> Lock(Mutex);
     // Wake up the worker thread
     Done = true;
-    RequestCV.notify_one();
   } // unlock Mutex
+  RequestCV.notify_one();
   Worker.join();
 }
 
-void ClangdScheduler::enqueue(ClangdServer &Server, WorkerRequest Request) {
+void ClangdScheduler::addToFront(std::function<void()> Request) {
   if (RunSynchronously) {
-    Server.handleRequest(Request);
+    Request();
     return;
   }
 
-  std::lock_guard<std::mutex> Lock(Mutex);
-  RequestQueue.push_back(Request);
+  {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    RequestQueue.push_front(Request);
+  }
+  RequestCV.notify_one();
+}
+
+void ClangdScheduler::addToEnd(std::function<void()> Request) {
+  if (RunSynchronously) {
+    Request();
+    return;
+  }
+
+  {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    RequestQueue.push_back(Request);
+  }
   RequestCV.notify_one();
 }
 
@@ -129,19 +138,34 @@ ClangdServer::ClangdServer(std::unique_ptr<GlobalCompilationDatabase> CDB,
                            bool RunSynchronously)
     : CDB(std::move(CDB)), DiagConsumer(std::move(DiagConsumer)),
       PCHs(std::make_shared<PCHContainerOperations>()),
-      WorkScheduler(*this, RunSynchronously) {}
+      WorkScheduler(RunSynchronously) {}
 
 void ClangdServer::addDocument(PathRef File, StringRef Contents) {
-  DocVersion NewVersion = DraftMgr.updateDraft(File, Contents);
-  WorkScheduler.enqueue(
-      *this, WorkerRequest(WorkerRequestKind::ParseAndPublishDiagnostics, File,
-                           NewVersion));
+  DocVersion Version = DraftMgr.updateDraft(File, Contents);
+  Path FileStr = File;
+  WorkScheduler.addToFront([this, FileStr, Version]() {
+    auto FileContents = DraftMgr.getDraft(FileStr);
+    if (FileContents.Version != Version)
+      return; // This request is outdated, do nothing
+
+    assert(FileContents.Draft &&
+           "No contents inside a file that was scheduled for reparse");
+    Units.runOnUnit(
+        FileStr, *FileContents.Draft, *CDB, PCHs, [&](ClangdUnit const &Unit) {
+          DiagConsumer->onDiagnosticsReady(FileStr, Unit.getLocalDiagnostics());
+        });
+  });
 }
 
 void ClangdServer::removeDocument(PathRef File) {
-  auto NewVersion = DraftMgr.removeDraft(File);
-  WorkScheduler.enqueue(
-      *this, WorkerRequest(WorkerRequestKind::RemoveDocData, File, NewVersion));
+  auto Version = DraftMgr.removeDraft(File);
+  Path FileStr = File;
+  WorkScheduler.addToFront([this, FileStr, Version]() {
+    if (Version != DraftMgr.getVersion(FileStr))
+      return; // This request is outdated, do nothing
+
+    Units.removeUnitIfPresent(FileStr);
+  });
 }
 
 std::vector<CompletionItem> ClangdServer::codeComplete(PathRef File,
@@ -156,6 +180,7 @@ std::vector<CompletionItem> ClangdServer::codeComplete(PathRef File,
       });
   return Result;
 }
+
 std::vector<tooling::Replacement> ClangdServer::formatRange(PathRef File,
                                                             Range Rng) {
   std::string Code = getDocument(File);
@@ -191,27 +216,23 @@ std::string ClangdServer::getDocument(PathRef File) {
   return *draft.Draft;
 }
 
-void ClangdServer::handleRequest(WorkerRequest Request) {
-  switch (Request.Kind) {
-  case WorkerRequestKind::ParseAndPublishDiagnostics: {
-    auto FileContents = DraftMgr.getDraft(Request.File);
-    if (FileContents.Version != Request.Version)
-      return; // This request is outdated, do nothing
+std::string ClangdServer::dumpAST(PathRef File) {
+  std::promise<std::string> DumpPromise;
+  auto DumpFuture = DumpPromise.get_future();
+  auto Version = DraftMgr.getVersion(File);
 
-    assert(FileContents.Draft &&
-           "No contents inside a file that was scheduled for reparse");
-    Units.runOnUnit(Request.File, *FileContents.Draft, *CDB, PCHs,
-                    [&](ClangdUnit const &Unit) {
-                      DiagConsumer->onDiagnosticsReady(
-                          Request.File, Unit.getLocalDiagnostics());
-                    });
-    break;
-  }
-  case WorkerRequestKind::RemoveDocData:
-    if (Request.Version != DraftMgr.getVersion(Request.File))
-      return; // This request is outdated, do nothing
+  WorkScheduler.addToEnd([this, &DumpPromise, File, Version]() {
+    assert(DraftMgr.getVersion(File) == Version && "Version has changed");
 
-    Units.removeUnitIfPresent(Request.File);
-    break;
-  }
+    Units.runOnExistingUnit(File, [&DumpPromise](ClangdUnit &Unit) {
+      std::string Result;
+
+      llvm::raw_string_ostream ResultOS(Result);
+      Unit.dumpAST(ResultOS);
+      ResultOS.flush();
+
+      DumpPromise.set_value(std::move(Result));
+    });
+  });
+  return DumpFuture.get();
 }

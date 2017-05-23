@@ -544,6 +544,17 @@ bool isVI(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureVolcanicIslands];
 }
 
+bool isGFX9(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX9];
+}
+
+bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
+  const MCRegisterClass SGPRClass = TRI->getRegClass(AMDGPU::SReg_32RegClassID);
+  const unsigned FirstSubReg = TRI->getSubReg(Reg, 1);
+  return SGPRClass.contains(FirstSubReg != 0 ? FirstSubReg : Reg) ||
+    Reg == AMDGPU::SCC;
+}
+
 unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
 
   switch(Reg) {
@@ -752,7 +763,7 @@ int64_t getSMRDEncodedOffset(const MCSubtargetInfo &ST, int64_t ByteOffset) {
 
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset) {
   int64_t EncodedOffset = getSMRDEncodedOffset(ST, ByteOffset);
-  return isSI(ST) || isCI(ST) ? isUInt<8>(EncodedOffset) :
+  return isSI(ST) || isCI(ST) ? ByteOffset % 4 == 0 && isUInt<8>(EncodedOffset) :
                                 isUInt<20>(EncodedOffset);
 }
 } // end namespace AMDGPU

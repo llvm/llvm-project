@@ -475,9 +475,9 @@ void Preprocessor::HandlePragmaSystemHeader(Token &SysHeaderTok) {
   // Emit a line marker.  This will change any source locations from this point
   // forward to realize they are in a system header.
   // Create a line note with this information.
-  SourceMgr.AddLineNote(SysHeaderTok.getLocation(), PLoc.getLine()+1,
+  SourceMgr.AddLineNote(SysHeaderTok.getLocation(), PLoc.getLine() + 1,
                         FilenameID, /*IsEntry=*/false, /*IsExit=*/false,
-                        /*IsSystem=*/true, /*IsExternC=*/false);
+                        SrcMgr::C_System);
 }
 
 /// HandlePragmaDependency - Handle \#pragma GCC dependency "foo" blah.

@@ -155,6 +155,11 @@ static cl::opt<bool>
                        cl::Hidden, cl::ZeroOrMore,
                        cl::desc("Run Partial inlinining pass"));
 
+static cl::opt<bool>
+    RunNewGVN("enable-npm-newgvn", cl::init(false),
+              cl::Hidden, cl::ZeroOrMore,
+              cl::desc("Run NewGVN instead of GVN"));
+
 static cl::opt<bool> EnableGVNHoist(
     "enable-npm-gvn-hoist", cl::init(false), cl::Hidden,
     cl::desc("Enable the GVN hoisting pass for the new PM (default = off)"));
@@ -357,7 +362,10 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   if (Level != O1) {
     // These passes add substantial compile time so skip them at O1.
     FPM.addPass(MergedLoadStoreMotionPass());
-    FPM.addPass(GVN());
+    if (RunNewGVN)
+      FPM.addPass(NewGVNPass());
+    else
+      FPM.addPass(GVN());
   }
 
   // Specially optimize memory movement as it doesn't look like dataflow in SSA.
@@ -774,7 +782,10 @@ ModulePassManager PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // FIXME: once we fix LoopPass Manager, add LICM here.
   // FIXME: once we provide support for enabling MLSM, add it here.
   // FIXME: once we provide support for enabling NewGVN, add it here.
-  MainFPM.addPass(GVN());
+  if (RunNewGVN)
+    MainFPM.addPass(NewGVNPass());
+  else
+    MainFPM.addPass(GVN());
 
   // Remove dead memcpy()'s.
   MainFPM.addPass(MemCpyOptPass());

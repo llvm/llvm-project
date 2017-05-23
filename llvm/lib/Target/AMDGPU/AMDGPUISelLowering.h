@@ -34,6 +34,9 @@ private:
   /// compare.
   SDValue getFFBH_U32(SelectionDAG &DAG, SDValue Op, const SDLoc &DL) const;
 
+public:
+  static bool isOrEquivalentToAdd(SelectionDAG &DAG, SDValue Op);
+
 protected:
   const AMDGPUSubtarget *Subtarget;
   AMDGPUAS AMDGPUASI;

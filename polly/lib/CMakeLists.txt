@@ -114,6 +114,7 @@ if (DEFINED LLVM_MAIN_SRC_DIR)
       LLVMAnalysis
       LLVMipo
       LLVMMC
+      LLVMPasses
       ${nvptx_libs}
 # The libraries below are required for darwin: http://PR26392
       LLVMBitReader

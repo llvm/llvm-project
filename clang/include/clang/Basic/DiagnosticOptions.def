@@ -87,6 +87,8 @@ VALUE_DIAGOPT(TemplateBacktraceLimit, 32, DefaultTemplateBacktraceLimit)
 VALUE_DIAGOPT(ConstexprBacktraceLimit, 32, DefaultConstexprBacktraceLimit)
 /// Limit number of times to perform spell checking.
 VALUE_DIAGOPT(SpellCheckingLimit, 32, DefaultSpellCheckingLimit)
+/// Limit number of lines shown in a snippet.
+VALUE_DIAGOPT(SnippetLineLimit, 32, DefaultSnippetLineLimit)
 
 VALUE_DIAGOPT(TabStop, 32, DefaultTabStop) /// The distance between tab stops.
 /// Column limit for formatting message diagnostics, or 0 if unused.

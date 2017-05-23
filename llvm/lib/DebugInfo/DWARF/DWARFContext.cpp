@@ -287,6 +287,15 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH,
                      getStringSection(), isLittleEndian());
 }
 
+DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
+  // FIXME: Improve this for the case where this DWO file is really a DWP file
+  // with an index - use the index for lookup instead of a linear search.
+  for (const auto &DWOCU : dwo_compile_units())
+    if (DWOCU->getDWOId() == Hash)
+      return DWOCU.get();
+  return nullptr;
+}
+
 DWARFDie DWARFContext::getDIEForOffset(uint32_t Offset) {
   parseCompileUnits();
   if (auto *CU = CUs.getUnitForOffset(Offset))
@@ -897,6 +906,53 @@ DWARFContext::getInliningInfoForAddress(uint64_t Address,
   return InliningInfo;
 }
 
+std::shared_ptr<DWARFContext>
+DWARFContext::getDWOContext(StringRef AbsolutePath) {
+  if (auto S = DWP.lock()) {
+    DWARFContext *Ctxt = S->Context.get();
+    return std::shared_ptr<DWARFContext>(std::move(S), Ctxt);
+  }
+
+  std::weak_ptr<DWOFile> *Entry = &DWOFiles[AbsolutePath];
+
+  if (auto S = Entry->lock()) {
+    DWARFContext *Ctxt = S->Context.get();
+    return std::shared_ptr<DWARFContext>(std::move(S), Ctxt);
+  }
+
+  SmallString<128> DWPName;
+  Expected<OwningBinary<ObjectFile>> Obj = [&] {
+    if (!CheckedForDWP) {
+      (getFileName() + ".dwp").toVector(DWPName);
+      auto Obj = object::ObjectFile::createObjectFile(DWPName);
+      if (Obj) {
+        Entry = &DWP;
+        return Obj;
+      } else {
+        CheckedForDWP = true;
+        // TODO: Should this error be handled (maybe in a high verbosity mode)
+        // before falling back to .dwo files?
+        consumeError(Obj.takeError());
+      }
+    }
+
+    return object::ObjectFile::createObjectFile(AbsolutePath);
+  }();
+
+  if (!Obj) {
+    // TODO: Actually report errors helpfully.
+    consumeError(Obj.takeError());
+    return nullptr;
+  }
+
+  auto S = std::make_shared<DWOFile>();
+  S->File = std::move(Obj.get());
+  S->Context = llvm::make_unique<DWARFContextInMemory>(*S->File.getBinary());
+  *Entry = S;
+  auto *Ctxt = S->Context.get();
+  return std::shared_ptr<DWARFContext>(std::move(S), Ctxt);
+}
+
 static Error createError(const Twine &Reason, llvm::Error E) {
   return make_error<StringError>(Reason + toString(std::move(E)),
                                  inconvertibleErrorCode());
@@ -989,8 +1045,8 @@ Error DWARFContextInMemory::maybeDecompress(const SectionRef &Sec,
 }
 
 DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
-    const LoadedObjectInfo *L)
-    : IsLittleEndian(Obj.isLittleEndian()),
+                                           const LoadedObjectInfo *L)
+    : FileName(Obj.getFileName()), IsLittleEndian(Obj.isLittleEndian()),
       AddressSize(Obj.getBytesInAddress()) {
   for (const SectionRef &Section : Obj.sections()) {
     StringRef name;

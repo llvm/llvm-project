@@ -8960,6 +8960,8 @@ def warn_coroutine_promise_unhandled_exception_required_with_exceptions : Warnin
   InGroup<CoroutineMissingUnhandledException>;
 def err_coroutine_promise_get_return_object_on_allocation_failure : Error<
   "%0: 'get_return_object_on_allocation_failure()' must be a static member function">;
+def err_seh_in_a_coroutine_with_cxx_exceptions : Error<
+  "cannot use SEH '__try' in a coroutine when C++ exceptions are enabled">;
 def err_coroutine_promise_new_requires_nothrow : Error<
   "%0 is required to have a non-throwing noexcept specification when the promise "
    "type declares 'get_return_object_on_allocation_failure()'">;

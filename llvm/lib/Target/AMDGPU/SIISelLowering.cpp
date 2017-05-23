@@ -4229,12 +4229,40 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
   SDValue RHS = N->getOperand(1);
 
 
-  if (VT == MVT::i64) {
-    const ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS);
-    if (CRHS) {
-      if (SDValue Split
-          = splitBinaryBitConstantOp(DCI, SDLoc(N), ISD::AND, LHS, CRHS))
-        return Split;
+  const ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS);
+  if (VT == MVT::i64 && CRHS) {
+    if (SDValue Split
+        = splitBinaryBitConstantOp(DCI, SDLoc(N), ISD::AND, LHS, CRHS))
+      return Split;
+  }
+
+  if (CRHS && VT == MVT::i32) {
+    // and (srl x, c), mask => shl (bfe x, nb + c, mask >> nb), nb
+    // nb = number of trailing zeroes in mask
+    // It can be optimized out using SDWA for GFX8+ in the SDWA peephole pass,
+    // given that we are selecting 8 or 16 bit fields starting at byte boundary.
+    uint64_t Mask = CRHS->getZExtValue();
+    unsigned Bits = countPopulation(Mask);
+    if (getSubtarget()->hasSDWA() && LHS->getOpcode() == ISD::SRL &&
+        (Bits == 8 || Bits == 16) && isShiftedMask_64(Mask) && !(Mask & 1)) {
+      if (auto *CShift = dyn_cast<ConstantSDNode>(LHS->getOperand(1))) {
+        unsigned Shift = CShift->getZExtValue();
+        unsigned NB = CRHS->getAPIntValue().countTrailingZeros();
+        unsigned Offset = NB + Shift;
+        if ((Offset & (Bits - 1)) == 0) { // Starts at a byte or word boundary.
+          SDLoc SL(N);
+          SDValue BFE = DAG.getNode(AMDGPUISD::BFE_U32, SL, MVT::i32,
+                                    LHS->getOperand(0),
+                                    DAG.getConstant(Offset, SL, MVT::i32),
+                                    DAG.getConstant(Bits, SL, MVT::i32));
+          EVT NarrowVT = EVT::getIntegerVT(*DAG.getContext(), Bits);
+          SDValue Ext = DAG.getNode(ISD::AssertZext, SL, VT, BFE,
+                                    DAG.getValueType(NarrowVT));
+          SDValue Shl = DAG.getNode(ISD::SHL, SDLoc(LHS), VT, Ext,
+                                    DAG.getConstant(NB, SDLoc(CRHS), MVT::i32));
+          return Shl;
+        }
+      }
     }
   }
 

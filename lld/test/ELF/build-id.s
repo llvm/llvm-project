@@ -33,6 +33,10 @@
 
 # RUN: ld.lld --build-id=md5 --build-id=none %t -o %t2
 # RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=NONE %s
+# RUN: ld.lld --build-id --build-id=none %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=NONE %s
+# RUN: ld.lld --build-id=none --build-id %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=DEFAULT %s
 
 .globl _start
 _start:

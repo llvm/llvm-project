@@ -322,7 +322,7 @@ template <> struct DenseMapInfo<AttributeSet> {
 /// the AttributeList object. The function attributes are at index
 /// `AttributeList::FunctionIndex', the return value is at index
 /// `AttributeList::ReturnIndex', and the attributes for the parameters start at
-/// index `1'.
+/// index `AttributeList::FirstArgIndex'.
 class AttributeList {
 public:
   enum AttrIndex : unsigned {
@@ -347,8 +347,8 @@ public:
   /// \brief Create an AttributeList with the specified parameters in it.
   static AttributeList get(LLVMContext &C,
                            ArrayRef<std::pair<unsigned, Attribute>> Attrs);
-  static AttributeList
-  get(LLVMContext &C, ArrayRef<std::pair<unsigned, AttributeSet>> Attrs);
+  static AttributeList get(LLVMContext &C,
+                           ArrayRef<std::pair<unsigned, AttributeSet>> Attrs);
 
   /// \brief Create an AttributeList from attribute sets for a function, its
   /// return value, and all of its arguments.
@@ -356,12 +356,10 @@ public:
                            AttributeSet RetAttrs,
                            ArrayRef<AttributeSet> ArgAttrs);
 
-  static AttributeList
-  getImpl(LLVMContext &C,
-          ArrayRef<std::pair<unsigned, AttributeSet>> Attrs);
-
 private:
   explicit AttributeList(AttributeListImpl *LI) : pImpl(LI) {}
+
+  static AttributeList getImpl(LLVMContext &C, ArrayRef<AttributeSet> AttrSets);
 
 public:
   AttributeList() = default;
@@ -521,18 +519,23 @@ public:
   /// \brief Return the attributes at the index as a string.
   std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
 
-  using iterator = ArrayRef<Attribute>::iterator;
+  //===--------------------------------------------------------------------===//
+  // AttributeList Introspection
+  //===--------------------------------------------------------------------===//
 
-  iterator begin(unsigned Slot) const;
-  iterator end(unsigned Slot) const;
+  typedef const AttributeSet *iterator;
+  iterator begin() const;
+  iterator end() const;
+
+  unsigned getNumAttrSets() const;
+
+  /// Use these to iterate over the valid attribute indices.
+  unsigned index_begin() const { return AttributeList::FunctionIndex; }
+  unsigned index_end() const { return getNumAttrSets() - 1; }
 
   /// operator==/!= - Provide equality predicates.
   bool operator==(const AttributeList &RHS) const { return pImpl == RHS.pImpl; }
   bool operator!=(const AttributeList &RHS) const { return pImpl != RHS.pImpl; }
-
-  //===--------------------------------------------------------------------===//
-  // AttributeList Introspection
-  //===--------------------------------------------------------------------===//
 
   /// \brief Return a raw pointer that uniquely identifies this attribute list.
   void *getRawPointer() const {
@@ -540,20 +543,7 @@ public:
   }
 
   /// \brief Return true if there are no attributes.
-  bool isEmpty() const {
-    return getNumSlots() == 0;
-  }
-
-  /// \brief Return the number of slots used in this attribute list.  This is
-  /// the number of arguments that have an attribute set on them (including the
-  /// function itself).
-  unsigned getNumSlots() const;
-
-  /// \brief Return the index for the given slot.
-  unsigned getSlotIndex(unsigned Slot) const;
-
-  /// \brief Return the attributes at the given slot.
-  AttributeSet getSlotAttributes(unsigned Slot) const;
+  bool isEmpty() const { return pImpl == nullptr; }
 
   void dump() const;
 };

@@ -143,17 +143,7 @@ class DWARFUnit {
   typedef iterator_range<std::vector<DWARFDebugInfoEntry>::iterator>
       die_iterator_range;
 
-  class DWOHolder {
-    object::OwningBinary<object::ObjectFile> DWOFile;
-    std::unique_ptr<DWARFContext> DWOContext;
-    DWARFUnit *DWOU = nullptr;
-
-  public:
-    DWOHolder(StringRef DWOPath, uint64_t DWOId);
-
-    DWARFUnit *getUnit() const { return DWOU; }
-  };
-  std::unique_ptr<DWOHolder> DWO;
+  std::shared_ptr<DWARFUnit> DWO;
 
   const DWARFUnitIndex::Entry *IndexEntry;
 

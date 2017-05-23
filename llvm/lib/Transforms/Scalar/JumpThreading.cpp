@@ -253,6 +253,35 @@ bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
   return EverChanged;
 }
 
+// Replace uses of Cond with ToVal when safe to do so. If all uses are
+// replaced, we can remove Cond. We cannot blindly replace all uses of Cond
+// because we may incorrectly replace uses when guards/assumes are uses of
+// of `Cond` and we used the guards/assume to reason about the `Cond` value
+// at the end of block. RAUW unconditionally replaces all uses
+// including the guards/assumes themselves and the uses before the
+// guard/assume.
+static void ReplaceFoldableUses(Instruction *Cond, Value *ToVal) {
+  assert(Cond->getType() == ToVal->getType());
+  auto *BB = Cond->getParent();
+  // We can unconditionally replace all uses in non-local blocks (i.e. uses
+  // strictly dominated by BB), since LVI information is true from the
+  // terminator of BB.
+  replaceNonLocalUsesWith(Cond, ToVal);
+  for (Instruction &I : reverse(*BB)) {
+    // Reached the Cond whose uses we are trying to replace, so there are no
+    // more uses.
+    if (&I == Cond)
+      break;
+    // We only replace uses in instructions that are guaranteed to reach the end
+    // of BB, where we know Cond is ToVal.
+    if (!isGuaranteedToTransferExecutionToSuccessor(&I))
+      break;
+    I.replaceUsesOfWith(Cond, ToVal);
+  }
+  if (Cond->use_empty() && !Cond->mayHaveSideEffects())
+    Cond->eraseFromParent();
+}
+
 /// Return the cost of duplicating a piece of this block from first non-phi
 /// and before StopAt instruction to thread across it. Stop scanning the block
 /// when exceeding the threshold. If duplication is impossible, returns ~0U.
@@ -833,13 +862,19 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
         CondBr->eraseFromParent();
         if (CondCmp->use_empty())
           CondCmp->eraseFromParent();
-        // TODO: We can safely replace *some* uses of the CondInst if it has
+        // We can safely replace *some* uses of the CondInst if it has
         // exactly one value as returned by LVI. RAUW is incorrect in the
         // presence of guards and assumes, that have the `Cond` as the use. This
         // is because we use the guards/assume to reason about the `Cond` value
         // at the end of block, but RAUW unconditionally replaces all uses
         // including the guards/assumes themselves and the uses before the
         // guard/assume.
+        else if (CondCmp->getParent() == BB) {
+          auto *CI = Ret == LazyValueInfo::True ?
+            ConstantInt::getTrue(CondCmp->getType()) :
+            ConstantInt::getFalse(CondCmp->getType());
+          ReplaceFoldableUses(CondCmp, CI);
+        }
         return true;
       }
 
@@ -1325,13 +1360,16 @@ bool JumpThreadingPass::ProcessThreadableEdges(Value *Cond, BasicBlock *BB,
       if (auto *CondInst = dyn_cast<Instruction>(Cond)) {
         if (CondInst->use_empty() && !CondInst->mayHaveSideEffects())
           CondInst->eraseFromParent();
-        // TODO: We can safely replace *some* uses of the CondInst if it has
+        // We can safely replace *some* uses of the CondInst if it has
         // exactly one value as returned by LVI. RAUW is incorrect in the
         // presence of guards and assumes, that have the `Cond` as the use. This
         // is because we use the guards/assume to reason about the `Cond` value
         // at the end of block, but RAUW unconditionally replaces all uses
         // including the guards/assumes themselves and the uses before the
         // guard/assume.
+        else if (OnlyVal && OnlyVal != MultipleVal &&
+                 CondInst->getParent() == BB)
+          ReplaceFoldableUses(CondInst, OnlyVal);
       }
       return true;
     }

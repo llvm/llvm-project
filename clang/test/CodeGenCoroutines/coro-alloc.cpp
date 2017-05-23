@@ -56,12 +56,28 @@ struct std::experimental::coroutine_traits<void, global_new_delete_tag> {
 // CHECK-LABEL: f0(
 extern "C" void f0(global_new_delete_tag) {
   // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
-  // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK: call i8* @_Znwm(i64 %[[SIZE]])
+  // CHECK: %[[NeedAlloc:.+]] = call i1 @llvm.coro.alloc(token %[[ID]])
+  // CHECK: br i1 %[[NeedAlloc]], label %[[AllocBB:.+]], label %[[InitBB:.+]]
 
-  // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.frame()
+  // CHECK: [[AllocBB]]:
+  // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
+  // CHECK: %[[MEM:.+]] = call i8* @_Znwm(i64 %[[SIZE]])
+  // CHECK: br label %[[InitBB]]
+
+  // CHECK: [[InitBB]]:
+  // CHECK: %[[PHI:.+]] = phi i8* [ null, %{{.+}} ], [ %call, %[[AllocBB]] ]
+  // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(token %[[ID]], i8* %[[PHI]])
+
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
+  // CHECK: %[[NeedDealloc:.+]] = icmp ne i8* %[[MEM]], null
+  // CHECK: br i1 %[[NeedDealloc]], label %[[FreeBB:.+]], label %[[Afterwards:.+]]
+
+  // CHECK: [[FreeBB]]:
   // CHECK: call void @_ZdlPv(i8* %[[MEM]])
+  // CHECK: br label %[[Afterwards]]
+
+  // CHECK: [[Afterwards]]:
+  // CHECK: ret void
   co_return;
 }
 
@@ -84,7 +100,7 @@ extern "C" void f1(promise_new_tag ) {
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
   // CHECK: call i8* @_ZNSt12experimental16coroutine_traitsIJv15promise_new_tagEE12promise_typenwEm(i64 %[[SIZE]])
 
-  // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.frame()
+  // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
   // CHECK: call void @_ZdlPv(i8* %[[MEM]])
   co_return;
@@ -109,7 +125,7 @@ extern "C" void f2(promise_delete_tag) {
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
   // CHECK: call i8* @_Znwm(i64 %[[SIZE]])
 
-  // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.frame()
+  // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
   // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJv18promise_delete_tagEE12promise_typedlEPv(i8* %[[MEM]])
   co_return;
@@ -134,7 +150,7 @@ extern "C" void f3(promise_sized_delete_tag) {
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
   // CHECK: call i8* @_Znwm(i64 %[[SIZE]])
 
-  // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.frame()
+  // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
   // CHECK: %[[SIZE2:.+]] = call i64 @llvm.coro.size.i64()
   // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJv24promise_sized_delete_tagEE12promise_typedlEPvm(i8* %[[MEM]], i64 %[[SIZE2]])

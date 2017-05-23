@@ -481,7 +481,7 @@ PICLevel::Level Module::getPICLevel() const {
 }
 
 void Module::setPICLevel(PICLevel::Level PL) {
-  addModuleFlag(ModFlagBehavior::Error, "PIC Level", PL);
+  addModuleFlag(ModFlagBehavior::Max, "PIC Level", PL);
 }
 
 PIELevel::Level Module::getPIELevel() const {
@@ -495,7 +495,7 @@ PIELevel::Level Module::getPIELevel() const {
 }
 
 void Module::setPIELevel(PIELevel::Level PL) {
-  addModuleFlag(ModFlagBehavior::Error, "PIE Level", PL);
+  addModuleFlag(ModFlagBehavior::Max, "PIE Level", PL);
 }
 
 void Module::setProfileSummary(Metadata *M) {

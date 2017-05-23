@@ -71,6 +71,14 @@ class DWARFContext : public DIContext {
   std::unique_ptr<DWARFDebugAbbrev> AbbrevDWO;
   std::unique_ptr<DWARFDebugLocDWO> LocDWO;
 
+  struct DWOFile {
+    object::OwningBinary<object::ObjectFile> File;
+    std::unique_ptr<DWARFContext> Context;
+  };
+  StringMap<std::weak_ptr<DWOFile>> DWOFiles;
+  std::weak_ptr<DWOFile> DWP;
+  bool CheckedForDWP = false;
+
   /// Read compile units from the debug_info section (if necessary)
   /// and store them in CUs.
   void parseCompileUnits();
@@ -165,6 +173,8 @@ public:
     return DWOCUs[index].get();
   }
 
+  DWARFCompileUnit *getDWOCompileUnitForHash(uint64_t Hash);
+
   /// Get a DIE given an exact offset.
   DWARFDie getDIEForOffset(uint32_t Offset);
 
@@ -206,6 +216,7 @@ public:
   DIInliningInfo getInliningInfoForAddress(uint64_t Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
 
+  virtual StringRef getFileName() const = 0;
   virtual bool isLittleEndian() const = 0;
   virtual uint8_t getAddressSize() const = 0;
   virtual const DWARFSection &getInfoSection() = 0;
@@ -248,6 +259,8 @@ public:
     return version == 2 || version == 3 || version == 4 || version == 5;
   }
 
+  std::shared_ptr<DWARFContext> getDWOContext(StringRef AbsolutePath);
+
 private:
   /// Return the compile unit that includes an offset (relative to .debug_info).
   DWARFCompileUnit *getCompileUnitForOffset(uint32_t Offset);
@@ -263,6 +276,7 @@ private:
 class DWARFContextInMemory : public DWARFContext {
   virtual void anchor();
 
+  StringRef FileName;
   bool IsLittleEndian;
   uint8_t AddressSize;
   DWARFSection InfoSection;
@@ -316,6 +330,7 @@ public:
                        uint8_t AddrSize,
                        bool isLittleEndian = sys::IsLittleEndianHost);
 
+  StringRef getFileName() const override { return FileName; }
   bool isLittleEndian() const override { return IsLittleEndian; }
   uint8_t getAddressSize() const override { return AddressSize; }
   const DWARFSection &getInfoSection() override { return InfoSection; }

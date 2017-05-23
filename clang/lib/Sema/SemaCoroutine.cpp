@@ -1043,6 +1043,15 @@ bool CoroutineStmtBuilder::makeOnException() {
   if (UnhandledException.isInvalid())
     return false;
 
+  // Since the body of the coroutine will be wrapped in try-catch, it will
+  // be incompatible with SEH __try if present in a function.
+  if (!S.getLangOpts().Borland && Fn.FirstSEHTryLoc.isValid()) {
+    S.Diag(Fn.FirstSEHTryLoc, diag::err_seh_in_a_coroutine_with_cxx_exceptions);
+    S.Diag(Fn.FirstCoroutineStmtLoc, diag::note_declared_coroutine_here)
+        << Fn.getFirstCoroutineStmtKeyword();
+    return false;
+  }
+
   this->OnException = UnhandledException.get();
   return true;
 }

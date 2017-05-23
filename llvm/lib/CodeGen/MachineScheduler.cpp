@@ -3233,6 +3233,12 @@ void PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
               Top.getLatencyStallCycles(Cand.SU), TryCand, Cand, Stall))
     return;
 
+  // Keep clustered nodes together.
+  if (tryGreater(TryCand.SU == DAG->getNextClusterSucc(),
+                 Cand.SU == DAG->getNextClusterSucc(),
+                 TryCand, Cand, Cluster))
+    return;
+
   // Avoid critical resource consumption and balance the schedule.
   if (tryLess(TryCand.ResDelta.CritResources, Cand.ResDelta.CritResources,
               TryCand, Cand, ResourceReduce))

@@ -135,6 +135,9 @@ static Error isTrivialOperatorNode(const TreePatternNode *N) {
   std::string Explanation = "";
   std::string Separator = "";
   if (N->isLeaf()) {
+    if (isa<IntInit>(N->getLeafValue()))
+      return Error::success();
+
     Explanation = "Is a leaf";
     Separator = ", ";
   }
@@ -272,6 +275,7 @@ public:
     OPM_ComplexPattern,
     OPM_Instruction,
     OPM_Int,
+    OPM_LiteralInt,
     OPM_LLT,
     OPM_RegBank,
     OPM_MBB,
@@ -406,13 +410,14 @@ public:
   }
 };
 
-/// Generates code to check that an operand is a particular int.
-class IntOperandMatcher : public OperandPredicateMatcher {
+/// Generates code to check that an operand is a G_CONSTANT with a particular
+/// int.
+class ConstantIntOperandMatcher : public OperandPredicateMatcher {
 protected:
   int64_t Value;
 
 public:
-  IntOperandMatcher(int64_t Value)
+  ConstantIntOperandMatcher(int64_t Value)
       : OperandPredicateMatcher(OPM_Int), Value(Value) {}
 
   static bool classof(const OperandPredicateMatcher *P) {
@@ -422,6 +427,27 @@ public:
   void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
                             StringRef OperandExpr) const override {
     OS << "isOperandImmEqual(" << OperandExpr << ", " << Value << ", MRI)";
+  }
+};
+
+/// Generates code to check that an operand is a raw int (where MO.isImm() or
+/// MO.isCImm() is true).
+class LiteralIntOperandMatcher : public OperandPredicateMatcher {
+protected:
+  int64_t Value;
+
+public:
+  LiteralIntOperandMatcher(int64_t Value)
+      : OperandPredicateMatcher(OPM_LiteralInt), Value(Value) {}
+
+  static bool classof(const OperandPredicateMatcher *P) {
+    return P->getKind() == OPM_LiteralInt;
+  }
+
+  void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
+                            StringRef OperandExpr) const override {
+    OS << OperandExpr << ".isCImm() && " << OperandExpr
+       << ".getCImm()->equalsInt(" << Value << ")";
   }
 };
 
@@ -1236,7 +1262,7 @@ private:
   createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
                                const TreePatternNode *Src) const;
   Error importChildMatcher(InstructionMatcher &InsnMatcher,
-                           TreePatternNode *SrcChild, unsigned OpIdx,
+                           const TreePatternNode *SrcChild, unsigned OpIdx,
                            unsigned &TempOpIdx) const;
   Expected<BuildMIAction &> createAndImportInstructionRenderer(
       RuleMatcher &M, const TreePatternNode *Dst,
@@ -1299,14 +1325,23 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
   if (Src->getExtTypes().size() > 1)
     return failedImport("Src pattern has multiple results");
 
-  auto SrcGIOrNull = findNodeEquiv(Src->getOperator());
-  if (!SrcGIOrNull)
-    return failedImport("Pattern operator lacks an equivalent Instruction" +
-                        explainOperator(Src->getOperator()));
-  auto &SrcGI = *SrcGIOrNull;
+  if (Src->isLeaf()) {
+    Init *SrcInit = Src->getLeafValue();
+    if (isa<IntInit>(SrcInit)) {
+      InsnMatcher.addPredicate<InstructionOpcodeMatcher>(
+          &Target.getInstruction(RK.getDef("G_CONSTANT")));
+    } else
+      return failedImport("Unable to deduce gMIR opcode to handle Src (which is a leaf)");
+  } else {
+    auto SrcGIOrNull = findNodeEquiv(Src->getOperator());
+    if (!SrcGIOrNull)
+      return failedImport("Pattern operator lacks an equivalent Instruction" +
+                          explainOperator(Src->getOperator()));
+    auto &SrcGI = *SrcGIOrNull;
 
-  // The operators look good: match the opcode and mutate it to the new one.
-  InsnMatcher.addPredicate<InstructionOpcodeMatcher>(&SrcGI);
+    // The operators look good: match the opcode
+    InsnMatcher.addPredicate<InstructionOpcodeMatcher>(&SrcGI);
+  }
 
   unsigned OpIdx = 0;
   unsigned TempOpIdx = 0;
@@ -1323,18 +1358,27 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     OM.addPredicate<LLTOperandMatcher>(*OpTyOrNone);
   }
 
-  // Match the used operands (i.e. the children of the operator).
-  for (unsigned i = 0, e = Src->getNumChildren(); i != e; ++i) {
-    if (auto Error = importChildMatcher(InsnMatcher, Src->getChild(i), OpIdx++,
-                                        TempOpIdx))
-      return std::move(Error);
+  if (Src->isLeaf()) {
+    Init *SrcInit = Src->getLeafValue();
+    if (IntInit *SrcIntInit = dyn_cast<IntInit>(SrcInit)) {
+      OperandMatcher &OM = InsnMatcher.addOperand(OpIdx++, "", TempOpIdx);
+      OM.addPredicate<LiteralIntOperandMatcher>(SrcIntInit->getValue());
+    } else
+      return failedImport("Unable to deduce gMIR opcode to handle Src (which is a leaf)");
+  } else {
+    // Match the used operands (i.e. the children of the operator).
+    for (unsigned i = 0, e = Src->getNumChildren(); i != e; ++i) {
+      if (auto Error = importChildMatcher(InsnMatcher, Src->getChild(i),
+                                          OpIdx++, TempOpIdx))
+        return std::move(Error);
+    }
   }
 
   return InsnMatcher;
 }
 
 Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
-                                            TreePatternNode *SrcChild,
+                                            const TreePatternNode *SrcChild,
                                             unsigned OpIdx,
                                             unsigned &TempOpIdx) const {
   OperandMatcher &OM =
@@ -1379,7 +1423,7 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
 
   // Check for constant immediates.
   if (auto *ChildInt = dyn_cast<IntInit>(SrcChild->getLeafValue())) {
-    OM.addPredicate<IntOperandMatcher>(ChildInt->getValue());
+    OM.addPredicate<ConstantIntOperandMatcher>(ChildInt->getValue());
     return Error::success();
   }
 
@@ -1604,6 +1648,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   if (auto Err = isTrivialOperatorNode(Src))
     return failedImport("Src pattern root isn't a trivial operator (" +
                         toString(std::move(Err)) + ")");
+
+  if (Dst->isLeaf())
+    return failedImport("Dst pattern root isn't a known leaf");
 
   // Start with the defined operands (i.e., the results of the root operator).
   Record *DstOp = Dst->getOperator();

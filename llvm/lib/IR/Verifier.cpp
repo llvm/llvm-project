@@ -1282,6 +1282,13 @@ Verifier::visitModuleFlag(const MDNode *Op,
     // These behavior types accept any value.
     break;
 
+  case Module::Max: {
+    Assert(mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2)),
+           "invalid value for 'max' module flag (expected constant integer)",
+           Op->getOperand(2));
+    break;
+  }
+
   case Module::Require: {
     // The value should itself be an MDNode with two operands, a flag ID (an
     // MDString), and a value.
@@ -1729,17 +1736,9 @@ void Verifier::visitConstantExpr(const ConstantExpr *CE) {
 }
 
 bool Verifier::verifyAttributeCount(AttributeList Attrs, unsigned Params) {
-  if (Attrs.getNumSlots() == 0)
-    return true;
-
-  unsigned LastSlot = Attrs.getNumSlots() - 1;
-  unsigned LastIndex = Attrs.getSlotIndex(LastSlot);
-  if (LastIndex <= Params ||
-      (LastIndex == AttributeList::FunctionIndex &&
-       (LastSlot == 0 || Attrs.getSlotIndex(LastSlot - 1) <= Params)))
-    return true;
-
-  return false;
+  // There shouldn't be more attribute sets than there are parameters plus the
+  // function and return value.
+  return Attrs.getNumAttrSets() <= Params + 2;
 }
 
 /// Verify that statepoint intrinsic is well formed.

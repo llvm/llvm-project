@@ -102,8 +102,6 @@ public:
   unsigned getNumFilenames() const { return FilenamesByID.size(); }
 
   void AddLineNote(FileID FID, unsigned Offset,
-                   unsigned LineNo, int FilenameID);
-  void AddLineNote(FileID FID, unsigned Offset,
                    unsigned LineNo, int FilenameID,
                    unsigned EntryExit, SrcMgr::CharacteristicKind FileKind);
 

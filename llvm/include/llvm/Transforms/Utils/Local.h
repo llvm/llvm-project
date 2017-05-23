@@ -356,6 +356,10 @@ void combineMetadata(Instruction *K, const Instruction *J, ArrayRef<unsigned> Kn
 /// Unknown metadata is removed.
 void combineMetadataForCSE(Instruction *K, const Instruction *J);
 
+// Replace each use of 'From' with 'To', if that use does not belong to basic
+// block where 'From' is defined. Returns the number of replacements made.
+unsigned replaceNonLocalUsesWith(Instruction *From, Value *To);
+
 /// Replace each use of 'From' with 'To' if that use is dominated by
 /// the given edge.  Returns the number of replacements made.
 unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,

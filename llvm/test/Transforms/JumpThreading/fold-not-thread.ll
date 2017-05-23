@@ -133,10 +133,10 @@ L3:
   ret void
 }
 
-; FIXME: Make sure we can do the RAUW for %add...
+; Make sure we can do the RAUW for %add...
 ;
 ; CHECK-LABEL: @rauw_if_possible(
-; CHECK: call void @f4(i32 %add)
+; CHECK: call void @f4(i32 96)
 define void @rauw_if_possible(i32 %value) nounwind {
 entry:
   %cmp = icmp eq i32 %value, 32

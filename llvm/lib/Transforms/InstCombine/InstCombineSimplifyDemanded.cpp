@@ -158,8 +158,8 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         SimplifyDemandedBits(I, 0, DemandedMask & ~RHSKnown.Zero, LHSKnown,
                              Depth + 1))
       return I;
-    assert(!(RHSKnown.Zero & RHSKnown.One) && "Bits known to be one AND zero?");
-    assert(!(LHSKnown.Zero & LHSKnown.One) && "Bits known to be one AND zero?");
+    assert(!RHSKnown.hasConflict() && "Bits known to be one AND zero?");
+    assert(!LHSKnown.hasConflict() && "Bits known to be one AND zero?");
 
     // Output known-0 are known to be clear if zero in either the LHS | RHS.
     APInt IKnownZero = RHSKnown.Zero | LHSKnown.Zero;
@@ -192,8 +192,8 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         SimplifyDemandedBits(I, 0, DemandedMask & ~RHSKnown.One, LHSKnown,
                              Depth + 1))
       return I;
-    assert(!(RHSKnown.Zero & RHSKnown.One) && "Bits known to be one AND zero?");
-    assert(!(LHSKnown.Zero & LHSKnown.One) && "Bits known to be one AND zero?");
+    assert(!RHSKnown.hasConflict() && "Bits known to be one AND zero?");
+    assert(!LHSKnown.hasConflict() && "Bits known to be one AND zero?");
 
     // Output known-0 bits are only known if clear in both the LHS & RHS.
     APInt IKnownZero = RHSKnown.Zero & LHSKnown.Zero;
@@ -224,8 +224,8 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (SimplifyDemandedBits(I, 1, DemandedMask, RHSKnown, Depth + 1) ||
         SimplifyDemandedBits(I, 0, DemandedMask, LHSKnown, Depth + 1))
       return I;
-    assert(!(RHSKnown.Zero & RHSKnown.One) && "Bits known to be one AND zero?");
-    assert(!(LHSKnown.Zero & LHSKnown.One) && "Bits known to be one AND zero?");
+    assert(!RHSKnown.hasConflict() && "Bits known to be one AND zero?");
+    assert(!LHSKnown.hasConflict() && "Bits known to be one AND zero?");
 
     // Output known-0 bits are known if clear or set in both the LHS & RHS.
     APInt IKnownZero = (RHSKnown.Zero & LHSKnown.Zero) |
@@ -313,8 +313,8 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (SimplifyDemandedBits(I, 2, DemandedMask, RHSKnown, Depth + 1) ||
         SimplifyDemandedBits(I, 1, DemandedMask, LHSKnown, Depth + 1))
       return I;
-    assert(!(RHSKnown.Zero & RHSKnown.One) && "Bits known to be one AND zero?");
-    assert(!(LHSKnown.Zero & LHSKnown.One) && "Bits known to be one AND zero?");
+    assert(!RHSKnown.hasConflict() && "Bits known to be one AND zero?");
+    assert(!LHSKnown.hasConflict() && "Bits known to be one AND zero?");
 
     // If the operands are constants, see if we can simplify them.
     if (ShrinkDemandedConstant(I, 1, DemandedMask) ||
@@ -333,7 +333,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return I;
     DemandedMask = DemandedMask.trunc(BitWidth);
     Known = Known.trunc(BitWidth);
-    assert(!(Known.Zero & Known.One) && "Bits known to be one AND zero?");
+    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     break;
   }
   case Instruction::BitCast:
@@ -355,7 +355,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
     if (SimplifyDemandedBits(I, 0, DemandedMask, Known, Depth + 1))
       return I;
-    assert(!(Known.Zero & Known.One) && "Bits known to be one AND zero?");
+    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     break;
   case Instruction::ZExt: {
     // Compute the bits in the result that are not present in the input.
@@ -367,7 +367,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return I;
     DemandedMask = DemandedMask.zext(BitWidth);
     Known = Known.zext(BitWidth);
-    assert(!(Known.Zero & Known.One) && "Bits known to be one AND zero?");
+    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     // The top bits are known to be zero.
     Known.Zero.setBitsFrom(SrcBitWidth);
     break;
@@ -391,7 +391,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return I;
     InputDemandedBits = InputDemandedBits.zext(BitWidth);
     Known = Known.zext(BitWidth);
-    assert(!(Known.Zero & Known.One) && "Bits known to be one AND zero?");
+    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
 
     // If the sign bit of the input is known set or clear, then we know the
     // top bits of the result.
@@ -467,7 +467,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
       if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Depth + 1))
         return I;
-      assert(!(Known.Zero & Known.One) && "Bits known to be one AND zero?");
+      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       Known.Zero <<= ShiftAmt;
       Known.One  <<= ShiftAmt;
       // low bits known zero.
@@ -491,7 +491,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
       if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Depth + 1))
         return I;
-      assert(!(Known.Zero & Known.One) && "Bits known to be one AND zero?");
+      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       Known.Zero.lshrInPlace(ShiftAmt);
       Known.One.lshrInPlace(ShiftAmt);
       if (ShiftAmt)
@@ -535,7 +535,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Depth + 1))
         return I;
 
-      assert(!(Known.Zero & Known.One) && "Bits known to be one AND zero?");
+      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       // Compute the new bits that are at the top now.
       APInt HighBits(APInt::getHighBitsSet(BitWidth, ShiftAmt));
       Known.Zero.lshrInPlace(ShiftAmt);
@@ -590,7 +590,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         if (LHSKnown.isNegative() && LowBits.intersects(LHSKnown.One))
           Known.One |= ~LowBits;
 
-        assert(!(Known.Zero & Known.One) && "Bits known to be one AND zero?");
+        assert(!Known.hasConflict() && "Bits known to be one AND zero?");
         break;
       }
     }
