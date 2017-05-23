@@ -127,6 +127,9 @@ bool IndexingContext::isTemplateImplicitInstantiation(const Decl *D) {
   } else if (const auto *RD = dyn_cast<CXXRecordDecl>(D)) {
     if (RD->getInstantiatedFromMemberClass())
       TKind = RD->getTemplateSpecializationKind();
+  } else if (const auto *ED = dyn_cast<EnumDecl>(D)) {
+    if (ED->getInstantiatedFromMemberEnum())
+      TKind = ED->getTemplateSpecializationKind();
   } else if (isa<FieldDecl>(D) || isa<TypedefNameDecl>(D)) {
     if (const auto *Parent = dyn_cast<Decl>(D->getDeclContext()))
       return isTemplateImplicitInstantiation(Parent);
@@ -177,6 +180,8 @@ static const Decl *adjustTemplateImplicitInstantiation(const Decl *D) {
     return VD->getTemplateInstantiationPattern();
   } else if (const auto *RD = dyn_cast<CXXRecordDecl>(D)) {
     return RD->getInstantiatedFromMemberClass();
+  } else if (const auto *ED = dyn_cast<EnumDecl>(D)) {
+    return ED->getInstantiatedFromMemberEnum();
   } else if (isa<FieldDecl>(D) || isa<TypedefNameDecl>(D)) {
     const auto *ND = cast<NamedDecl>(D);
     if (const CXXRecordDecl *Pattern =
