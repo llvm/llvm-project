@@ -816,6 +816,8 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
     DtFlags |= DF_SYMBOLIC;
   if (Config->ZNodelete)
     DtFlags1 |= DF_1_NODELETE;
+  if (Config->ZNodlopen)
+    DtFlags1 |= DF_1_NOOPEN;
   if (Config->ZNow) {
     DtFlags |= DF_BIND_NOW;
     DtFlags1 |= DF_1_NOW;

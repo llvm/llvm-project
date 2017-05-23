@@ -20,6 +20,14 @@ static const auto DefaultContainersWithPushBack =
 static const auto DefaultSmartPointers =
     "::std::shared_ptr; ::std::unique_ptr; ::std::auto_ptr; ::std::weak_ptr";
 
+namespace {
+namespace impl {
+// FIXME: This matcher should be replaced by a matcher from ASTMatcher.h
+const ast_matchers::internal::VariadicDynCastAllOfMatcher<Stmt,
+    CXXStdInitializerListExpr> cxxStdInitializerListExpr;
+} // namespace impl
+} // namespace
+
 UseEmplaceCheck::UseEmplaceCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       ContainersWithPushBack(utils::options::parseStringList(Options.get(
@@ -69,7 +77,11 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   // emplace_back can't access private constructor.
   auto isPrivateCtor = hasDeclaration(cxxConstructorDecl(isPrivate()));
 
-  auto hasInitList = has(ignoringImplicit(initListExpr()));
+  auto hasInitList = anyOf(has(ignoringImplicit(initListExpr())),
+                           has(impl::cxxStdInitializerListExpr()));
+  // FIXME: Replace internal C++ initializer list matcher with one from
+  // ASTMatchers.h
+
   // FIXME: Discard 0/NULL (as nullptr), static inline const data members,
   // overloaded functions and template names.
   auto soughtConstructExpr =
