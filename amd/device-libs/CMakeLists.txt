@@ -21,7 +21,9 @@ include(AddLLVM)
  set(ROCM_DEVICELIB_STANDALONE_BUILD ON)
 endif(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
-set(AMDGPU_TARGET_TRIPLE "amdgcn--amdhsa")
+if (NOT DEFINED AMDGPU_TARGET_TRIPLE)
+  set(AMDGPU_TARGET_TRIPLE "amdgcn--amdhsa")
+endif (NOT DEFINED AMDGPU_TARGET_TRIPLE)
 
 # Introduce GENERIC_IS_ZERO CMake option
 option(GENERIC_IS_ZERO "Teach LLVM/Clang that generic address space IS address space 0 for AMDGPU target" OFF)
