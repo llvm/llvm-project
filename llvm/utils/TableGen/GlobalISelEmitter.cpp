@@ -1325,27 +1325,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
 
   // Match the used operands (i.e. the children of the operator).
   for (unsigned i = 0, e = Src->getNumChildren(); i != e; ++i) {
-    TreePatternNode *SrcChild = Src->getChild(i);
-
-    // For G_INTRINSIC, the operand immediately following the defs is an
-    // intrinsic ID.
-    if (SrcGI.TheDef->getName() == "G_INTRINSIC" && i == 0) {
-      if (!SrcChild->isLeaf())
-        return failedImport("Expected IntInit containing intrinsic ID");
-
-      if (IntInit *SrcChildIntInit =
-              dyn_cast<IntInit>(SrcChild->getLeafValue())) {
-        OperandMatcher &OM =
-            InsnMatcher.addOperand(OpIdx++, SrcChild->getName(), TempOpIdx);
-        OM.addPredicate<IntOperandMatcher>(SrcChildIntInit->getValue());
-        continue;
-      }
-
-      return failedImport("Expected IntInit containing instrinsic ID)");
-    }
-
-    if (auto Error =
-            importChildMatcher(InsnMatcher, SrcChild, OpIdx++, TempOpIdx))
+    if (auto Error = importChildMatcher(InsnMatcher, Src->getChild(i), OpIdx++,
+                                        TempOpIdx))
       return std::move(Error);
   }
 
@@ -1380,7 +1361,7 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
 
   auto OpTyOrNone = MVTToLLT(ChildTypes.front().getConcrete());
   if (!OpTyOrNone)
-    return failedImport("Src operand has an unsupported type (" + to_string(*SrcChild) + ")");
+    return failedImport("Src operand has an unsupported type");
   OM.addPredicate<LLTOperandMatcher>(*OpTyOrNone);
 
   // Check for nested instructions.

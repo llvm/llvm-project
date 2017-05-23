@@ -1072,9 +1072,10 @@ void COFFDumper::mergeCodeViewTypes(TypeTableBuilder &CVIDs,
         W.flush();
         error(object_error::parse_failed);
       }
+      LazyRandomTypeCollection TypesAndIds(Types, 100);
       SmallVector<TypeIndex, 128> SourceToDest;
-      if (auto EC =
-              mergeTypeStreams(CVIDs, CVTypes, SourceToDest, nullptr, Types))
+      if (auto EC = mergeTypeAndIdRecords(CVIDs, CVTypes, SourceToDest, nullptr,
+                                          TypesAndIds))
         return error(std::move(EC));
     }
   }

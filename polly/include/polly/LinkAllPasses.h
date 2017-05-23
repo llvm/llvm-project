@@ -46,7 +46,7 @@ llvm::Pass *createPolyhedralInfoPass();
 llvm::Pass *createScopDetectionWrapperPassPass();
 llvm::Pass *createScopInfoRegionPassPass();
 llvm::Pass *createScopInfoWrapperPassPass();
-llvm::Pass *createIslAstInfoPass();
+llvm::Pass *createIslAstInfoWrapperPassPass();
 llvm::Pass *createCodeGenerationPass();
 #ifdef GPU_CODEGEN
 llvm::Pass *createPPCGCodeGenerationPass(GPUArch Arch = GPUArch::NVPTX64,
@@ -82,7 +82,7 @@ struct PollyForcePassLinking {
     polly::createScopInfoRegionPassPass();
     polly::createPollyCanonicalizePass();
     polly::createPolyhedralInfoPass();
-    polly::createIslAstInfoPass();
+    polly::createIslAstInfoWrapperPassPass();
     polly::createCodeGenerationPass();
 #ifdef GPU_CODEGEN
     polly::createPPCGCodeGenerationPass();
@@ -103,7 +103,7 @@ void initializeCodePreparationPass(llvm::PassRegistry &);
 void initializeDeadCodeElimPass(llvm::PassRegistry &);
 void initializeJSONExporterPass(llvm::PassRegistry &);
 void initializeJSONImporterPass(llvm::PassRegistry &);
-void initializeIslAstInfoPass(llvm::PassRegistry &);
+void initializeIslAstInfoWrapperPassPass(llvm::PassRegistry &);
 void initializeCodeGenerationPass(llvm::PassRegistry &);
 #ifdef GPU_CODEGEN
 void initializePPCGCodeGenerationPass(llvm::PassRegistry &);

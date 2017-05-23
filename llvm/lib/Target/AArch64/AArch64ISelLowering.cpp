@@ -886,18 +886,21 @@ static bool optimizeLogicalImm(SDValue Op, unsigned Size, uint64_t Imm,
   // Create the new constant immediate node.
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
+  SDValue New;
 
   // If the new constant immediate is all-zeros or all-ones, let the target
   // independent DAG combine optimize this node.
-  if (NewImm == 0 || NewImm == OrigMask)
-    return TLO.CombineTo(Op.getOperand(1), TLO.DAG.getConstant(NewImm, DL, VT));
-
+  if (NewImm == 0 || NewImm == OrigMask) {
+    New = TLO.DAG.getNode(Op.getOpcode(), DL, VT, Op.getOperand(0),
+                          TLO.DAG.getConstant(NewImm, DL, VT));
   // Otherwise, create a machine node so that target independent DAG combine
   // doesn't undo this optimization.
-  Enc = AArch64_AM::encodeLogicalImmediate(NewImm, Size);
-  SDValue EncConst = TLO.DAG.getTargetConstant(Enc, DL, VT);
-  SDValue New(
-      TLO.DAG.getMachineNode(NewOpc, DL, VT, Op.getOperand(0), EncConst), 0);
+  } else {
+    Enc = AArch64_AM::encodeLogicalImmediate(NewImm, Size);
+    SDValue EncConst = TLO.DAG.getTargetConstant(Enc, DL, VT);
+    New = SDValue(
+        TLO.DAG.getMachineNode(NewOpc, DL, VT, Op.getOperand(0), EncConst), 0);
+  }
 
   return TLO.CombineTo(Op, New);
 }

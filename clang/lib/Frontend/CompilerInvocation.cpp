@@ -1087,6 +1087,9 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   Opts.SpellCheckingLimit = getLastArgIntValue(
       Args, OPT_fspell_checking_limit,
       DiagnosticOptions::DefaultSpellCheckingLimit, Diags);
+  Opts.SnippetLineLimit = getLastArgIntValue(
+      Args, OPT_fcaret_diagnostics_max_lines,
+      DiagnosticOptions::DefaultSnippetLineLimit, Diags);
   Opts.TabStop = getLastArgIntValue(Args, OPT_ftabstop,
                                     DiagnosticOptions::DefaultTabStop, Diags);
   if (Opts.TabStop == 0 || Opts.TabStop > DiagnosticOptions::MaxTabStop) {
@@ -2747,15 +2750,22 @@ void BuryPointer(const void *Ptr) {
 IntrusiveRefCntPtr<vfs::FileSystem>
 createVFSFromCompilerInvocation(const CompilerInvocation &CI,
                                 DiagnosticsEngine &Diags) {
-  if (CI.getHeaderSearchOpts().VFSOverlayFiles.empty())
-    return vfs::getRealFileSystem();
+  return createVFSFromCompilerInvocation(CI, Diags, vfs::getRealFileSystem());
+}
 
-  IntrusiveRefCntPtr<vfs::OverlayFileSystem>
-    Overlay(new vfs::OverlayFileSystem(vfs::getRealFileSystem()));
+IntrusiveRefCntPtr<vfs::FileSystem>
+createVFSFromCompilerInvocation(const CompilerInvocation &CI,
+                                DiagnosticsEngine &Diags,
+                                IntrusiveRefCntPtr<vfs::FileSystem> BaseFS) {
+  if (CI.getHeaderSearchOpts().VFSOverlayFiles.empty())
+    return BaseFS;
+
+  IntrusiveRefCntPtr<vfs::OverlayFileSystem> Overlay(
+      new vfs::OverlayFileSystem(BaseFS));
   // earlier vfs files are on the bottom
   for (const std::string &File : CI.getHeaderSearchOpts().VFSOverlayFiles) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
-        llvm::MemoryBuffer::getFile(File);
+        BaseFS->getBufferForFile(File);
     if (!Buffer) {
       Diags.Report(diag::err_missing_vfs_overlay_file) << File;
       return IntrusiveRefCntPtr<vfs::FileSystem>();

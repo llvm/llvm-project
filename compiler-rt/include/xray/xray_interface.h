@@ -69,6 +69,10 @@ extern int __xray_remove_handler_arg1();
 /// Provide a function to invoke when XRay encounters a custom event.
 extern int __xray_set_customevent_handler(void (*entry)(void*, std::size_t));
 
+/// This removes whatever the currently provided custom event handler is.
+/// Returns 1 on success, 0 on error.
+extern int __xray_remove_customevent_handler();
+
 enum XRayPatchingStatus {
   NOT_INITIALIZED = 0,
   SUCCESS = 1,

@@ -69,6 +69,14 @@ public:
   unsigned getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const override;
+
+  unsigned getSDWA9SrcEncoding(const MCInst &MI, unsigned OpNo,
+                               SmallVectorImpl<MCFixup> &Fixups,
+                               const MCSubtargetInfo &STI) const override;
+
+  unsigned getSDWA9VopcDstEncoding(const MCInst &MI, unsigned OpNo,
+                                   SmallVectorImpl<MCFixup> &Fixups,
+                                   const MCSubtargetInfo &STI) const override;
 };
 
 } // end anonymous namespace
@@ -317,6 +325,40 @@ unsigned SIMCCodeEmitter::getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,
   }
 
   return getMachineOpValue(MI, MO, Fixups, STI);
+}
+
+unsigned
+SIMCCodeEmitter::getSDWA9SrcEncoding(const MCInst &MI, unsigned OpNo,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
+  uint64_t RegEnc = 0;
+
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  unsigned Reg = MO.getReg();
+  RegEnc |= MRI.getEncodingValue(Reg);
+  RegEnc &= SDWA9_SRC_REG_MASK;
+  if (AMDGPU::isSGPR(Reg, &MRI)) {
+    RegEnc |= SDWA9_SRC_SGPR_MASK;
+  }
+  return RegEnc;
+}
+
+unsigned
+SIMCCodeEmitter::getSDWA9VopcDstEncoding(const MCInst &MI, unsigned OpNo,
+                                         SmallVectorImpl<MCFixup> &Fixups,
+                                         const MCSubtargetInfo &STI) const {
+  uint64_t RegEnc = 0;
+
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  unsigned Reg = MO.getReg();
+  if (Reg != AMDGPU::VCC) {
+    RegEnc |= MRI.getEncodingValue(Reg);
+    RegEnc &= SDWA9_VOPC_DST_REG_MASK;
+    RegEnc |= SDWA9_VOPC_DST_VCC_MASK;
+  }
+  return RegEnc;
 }
 
 uint64_t SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,

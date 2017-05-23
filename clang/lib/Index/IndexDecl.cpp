@@ -63,6 +63,17 @@ public:
     case TemplateArgument::Type:
       IndexCtx.indexTypeSourceInfo(LocInfo.getAsTypeSourceInfo(), Parent, DC);
       break;
+    case TemplateArgument::Template:
+    case TemplateArgument::TemplateExpansion:
+      IndexCtx.indexNestedNameSpecifierLoc(TALoc.getTemplateQualifierLoc(),
+                                           Parent, DC);
+      if (const TemplateDecl *TD = TALoc.getArgument()
+                                       .getAsTemplateOrTemplatePattern()
+                                       .getAsTemplateDecl()) {
+        if (const NamedDecl *TTD = TD->getTemplatedDecl())
+          IndexCtx.handleReference(TTD, TALoc.getTemplateNameLoc(), Parent, DC);
+      }
+      break;
     default:
       break;
     }
@@ -95,6 +106,17 @@ public:
         if (FD->isThisDeclarationADefinition()) {
           for (auto PI : FD->parameters()) {
             IndexCtx.handleDecl(PI);
+          }
+        }
+      }
+    } else {
+      // Index the default parameter value for function definitions.
+      if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+        if (FD->isThisDeclarationADefinition()) {
+          for (const auto *PV : FD->parameters()) {
+            if (PV->hasDefaultArg() && !PV->hasUninstantiatedDefaultArg() &&
+                !PV->hasUnparsedDefaultArg())
+              IndexCtx.indexBody(PV->getDefaultArg(), D);
           }
         }
       }
@@ -206,9 +228,6 @@ public:
   }
 
   bool VisitFunctionDecl(const FunctionDecl *D) {
-    if (D->isDeleted())
-      return true;
-
     SymbolRoleSet Roles{};
     SmallVector<SymbolRelation, 4> Relations;
     if (auto *CXXMD = dyn_cast<CXXMethodDecl>(D)) {
@@ -568,8 +587,12 @@ public:
     const DeclContext *DC = D->getDeclContext()->getRedeclContext();
     const NamedDecl *Parent = dyn_cast<NamedDecl>(DC);
 
-    IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), Parent,
-                                         D->getLexicalDeclContext());
+    // NNS for the local 'using namespace' directives is visited by the body
+    // visitor.
+    if (!D->getParentFunctionOrMethod())
+      IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), Parent,
+                                           D->getLexicalDeclContext());
+
     return IndexCtx.handleReference(D->getNominatedNamespaceAsWritten(),
                                     D->getLocation(), Parent,
                                     D->getLexicalDeclContext(),
@@ -598,8 +621,43 @@ public:
     return true;
   }
 
+  static bool shouldIndexTemplateParameterDefaultValue(const NamedDecl *D) {
+    if (!D)
+      return false;
+    // We want to index the template parameters only once when indexing the
+    // canonical declaration.
+    if (const auto *FD = dyn_cast<FunctionDecl>(D))
+      return FD->getCanonicalDecl() == FD;
+    else if (const auto *TD = dyn_cast<TagDecl>(D))
+      return TD->getCanonicalDecl() == TD;
+    else if (const auto *VD = dyn_cast<VarDecl>(D))
+      return VD->getCanonicalDecl() == VD;
+    return true;
+  }
+
   bool VisitTemplateDecl(const TemplateDecl *D) {
     // FIXME: Template parameters.
+
+    // Index the default values for the template parameters.
+    const NamedDecl *Parent = D->getTemplatedDecl();
+    if (D->getTemplateParameters() &&
+        shouldIndexTemplateParameterDefaultValue(Parent)) {
+      const TemplateParameterList *Params = D->getTemplateParameters();
+      for (const NamedDecl *TP : *Params) {
+        if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(TP)) {
+          if (TTP->hasDefaultArgument())
+            IndexCtx.indexTypeSourceInfo(TTP->getDefaultArgumentInfo(), Parent);
+        } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TP)) {
+          if (NTTP->hasDefaultArgument())
+            IndexCtx.indexBody(NTTP->getDefaultArgument(), Parent);
+        } else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(TP)) {
+          if (TTPD->hasDefaultArgument())
+            handleTemplateArgumentLoc(TTPD->getDefaultArgument(), Parent,
+                                      /*DC=*/nullptr);
+        }
+      }
+    }
+
     return Visit(D->getTemplatedDecl());
   }
 

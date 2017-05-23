@@ -3,7 +3,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown | FileCheck %s --check-prefix=X64
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X32-LABEL: test:
@@ -279,4 +278,4 @@ entry:
   ret void
 }
 
-attributes #0 = { norecurse nounwind uwtable "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" }
+attributes #0 = { norecurse nounwind uwtable }

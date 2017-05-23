@@ -1043,6 +1043,10 @@ public:
   /// Set the updated access relation read from JSCOP file.
   void setNewAccessRelation(__isl_take isl_map *NewAccessRelation);
 
+  /// Return whether the MemoryyAccess is a partial access. That is, the access
+  /// is not executed in some instances of the parent statement's domain.
+  bool isLatestPartialAccess() const;
+
   /// Mark this a reduction like access
   void markAsReductionLike(ReductionType RT) { RedType = RT; }
 

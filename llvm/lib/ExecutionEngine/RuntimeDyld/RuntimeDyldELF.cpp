@@ -737,23 +737,23 @@ void RuntimeDyldELF::resolvePPC64Relocation(const SectionEntry &Section,
     writeInt16BE(LocalAddress, applyPPCha(Delta));
   } break;
   case ELF::R_PPC64_ADDR32: {
-    int32_t Result = static_cast<int32_t>(Value + Addend);
-    if (SignExtend32<32>(Result) != Result)
+    int64_t Result = static_cast<int64_t>(Value + Addend);
+    if (SignExtend64<32>(Result) != Result)
       llvm_unreachable("Relocation R_PPC64_ADDR32 overflow");
     writeInt32BE(LocalAddress, Result);
   } break;
   case ELF::R_PPC64_REL24: {
     uint64_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
-    int32_t delta = static_cast<int32_t>(Value - FinalAddress + Addend);
-    if (SignExtend32<26>(delta) != delta)
+    int64_t delta = static_cast<int64_t>(Value - FinalAddress + Addend);
+    if (SignExtend64<26>(delta) != delta)
       llvm_unreachable("Relocation R_PPC64_REL24 overflow");
     // Generates a 'bl <address>' instruction
     writeInt32BE(LocalAddress, 0x48000001 | (delta & 0x03FFFFFC));
   } break;
   case ELF::R_PPC64_REL32: {
     uint64_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
-    int32_t delta = static_cast<int32_t>(Value - FinalAddress + Addend);
-    if (SignExtend32<32>(delta) != delta)
+    int64_t delta = static_cast<int64_t>(Value - FinalAddress + Addend);
+    if (SignExtend64<32>(delta) != delta)
       llvm_unreachable("Relocation R_PPC64_REL32 overflow");
     writeInt32BE(LocalAddress, delta);
   } break;
@@ -1344,9 +1344,9 @@ RuntimeDyldELF::processRelocationRef(
         }
         uint8_t *RelocTarget =
             Sections[Value.SectionID].getAddressWithOffset(Value.Addend);
-        int32_t delta = static_cast<int32_t>(Target - RelocTarget);
+        int64_t delta = static_cast<int64_t>(Target - RelocTarget);
         // If it is within 26-bits branch range, just set the branch target
-        if (SignExtend32<26>(delta) == delta) {
+        if (SignExtend64<26>(delta) == delta) {
           RelocationEntry RE(SectionID, Offset, RelType, Value.Addend);
           if (Value.SymbolName)
             addRelocationForSymbol(RE, Value.SymbolName);

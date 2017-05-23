@@ -135,7 +135,6 @@ define amdgpu_kernel void @s_ctlz_i64_trunc(i32 addrspace(1)* noalias %out, i64 
 }
 
 ; FUNC-LABEL: {{^}}v_ctlz_i64:
-; GCN-DAG: v_mov_b32_e32 v[[CTLZ_HI:[0-9]+]], 0{{$}}
 ; GCN-DAG: {{buffer|flat}}_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
 ; GCN-DAG: v_cmp_eq_u32_e64 [[CMPHI:s\[[0-9]+:[0-9]+\]]], 0, v[[HI]]
 ; GCN-DAG: v_ffbh_u32_e32 [[FFBH_LO:v[0-9]+]], v[[LO]]
@@ -145,7 +144,7 @@ define amdgpu_kernel void @s_ctlz_i64_trunc(i32 addrspace(1)* noalias %out, i64 
 ; GCN-DAG: v_or_b32_e32 [[OR:v[0-9]+]], v[[HI]], v[[LO]]
 ; GCN-DAG: v_cmp_ne_u32_e32 vcc, 0, [[OR]]
 ; GCN-DAG: v_cndmask_b32_e32 v[[CLTZ_LO:[0-9]+]], 64, v[[CTLZ:[0-9]+]], vcc
-; GCN: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[CLTZ_LO]]:[[CTLZ_HI]]{{\]}}
+; GCN: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[CLTZ_LO]]:[[CTLZ_HI:[0-9]+]]{{\]}}
 define amdgpu_kernel void @v_ctlz_i64(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) nounwind {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid

@@ -28,7 +28,6 @@ class CoroutineStmtBuilder : public CoroutineBodyStmt::CtorArgs {
   sema::FunctionScopeInfo &Fn;
   bool IsValid = true;
   SourceLocation Loc;
-  QualType RetType;
   SmallVector<Stmt *, 4> ParamMovesVector;
   const bool IsPromiseDependentType;
   CXXRecordDecl *PromiseRecordDecl = nullptr;
@@ -61,6 +60,7 @@ private:
   bool makeOnFallthrough();
   bool makeOnException();
   bool makeReturnObject();
+  bool makeGroDeclAndReturnStmt();
   bool makeReturnOnAllocFailure();
   bool makeParamMoves();
 };

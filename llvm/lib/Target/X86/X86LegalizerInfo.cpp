@@ -35,6 +35,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   setLegalizerInfoSSE1();
   setLegalizerInfoSSE2();
   setLegalizerInfoSSE41();
+  setLegalizerInfoAVX();
   setLegalizerInfoAVX2();
   setLegalizerInfoAVX512();
   setLegalizerInfoAVX512DQ();
@@ -209,6 +210,18 @@ void X86LegalizerInfo::setLegalizerInfoSSE41() {
   setAction({G_MUL, v4s32}, Legal);
 }
 
+void X86LegalizerInfo::setLegalizerInfoAVX() {
+  if (!Subtarget.hasAVX())
+    return;
+
+  const LLT v8s32 = LLT::vector(8, 32);
+  const LLT v4s64 = LLT::vector(4, 64);
+
+  for (unsigned MemOp : {G_LOAD, G_STORE})
+    for (auto Ty : {v8s32, v4s64})
+      setAction({MemOp, Ty}, Legal);
+}
+
 void X86LegalizerInfo::setLegalizerInfoAVX2() {
   if (!Subtarget.hasAVX2())
     return;
@@ -238,6 +251,10 @@ void X86LegalizerInfo::setLegalizerInfoAVX512() {
       setAction({BinOp, Ty}, Legal);
 
   setAction({G_MUL, v16s32}, Legal);
+
+  for (unsigned MemOp : {G_LOAD, G_STORE})
+    for (auto Ty : {v16s32, v8s64})
+      setAction({MemOp, Ty}, Legal);
 
   /************ VLX *******************/
   if (!Subtarget.hasVLX())

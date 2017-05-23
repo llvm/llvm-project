@@ -1157,6 +1157,11 @@ Error IRLinker::linkModuleFlagsMetadata() {
         mdconst::extract<ConstantInt>(DstOp->getOperand(0));
     unsigned DstBehaviorValue = DstBehavior->getZExtValue();
 
+    auto overrideDstValue = [&]() {
+      DstModFlags->setOperand(DstIndex, SrcOp);
+      Flags[ID].first = SrcOp;
+    };
+
     // If either flag has override behavior, handle it first.
     if (DstBehaviorValue == Module::Override) {
       // Diagnose inconsistent flags which both have override behavior.
@@ -1167,8 +1172,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
       continue;
     } else if (SrcBehaviorValue == Module::Override) {
       // Update the destination flag to that of the source.
-      DstModFlags->setOperand(DstIndex, SrcOp);
-      Flags[ID].first = SrcOp;
+      overrideDstValue();
       continue;
     }
 
@@ -1203,6 +1207,15 @@ Error IRLinker::linkModuleFlagsMetadata() {
                     "': IDs have conflicting values");
       }
       continue;
+    }
+    case Module::Max: {
+      ConstantInt *DstValue =
+          mdconst::extract<ConstantInt>(DstOp->getOperand(2));
+      ConstantInt *SrcValue =
+          mdconst::extract<ConstantInt>(SrcOp->getOperand(2));
+      if (SrcValue->getZExtValue() > DstValue->getZExtValue())
+        overrideDstValue();
+      break;
     }
     case Module::Append: {
       MDNode *DstValue = cast<MDNode>(DstOp->getOperand(2));

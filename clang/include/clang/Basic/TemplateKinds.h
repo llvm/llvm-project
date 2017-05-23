@@ -26,13 +26,21 @@ enum TemplateNameKind {
   TNK_Function_template,
   /// The name refers to a template whose specialization produces a
   /// type. The template itself could be a class template, template
-  /// template parameter, or C++0x template alias.
+  /// template parameter, or template alias.
   TNK_Type_template,
   /// The name refers to a variable template whose specialization produces a
   /// variable.
   TNK_Var_template,
-  /// The name refers to a dependent template name. Whether the
-  /// template name is assumed to refer to a type template or a
+  /// The name refers to a dependent template name: 
+  /// \code
+  /// template<typename MetaFun, typename T1, typename T2> struct apply2 {
+  ///   typedef typename MetaFun::template apply<T1, T2>::type type;
+  /// };
+  /// \endcode
+  ///
+  /// Here, "apply" is a dependent template name within the typename
+  /// specifier in the typedef. "apply" is a nested template, and 
+  /// whether the template name is assumed to refer to a type template or a
   /// function template depends on the context in which the template
   /// name occurs.
   TNK_Dependent_template_name

@@ -59,6 +59,13 @@ static CXTypeKind GetBuiltinTypeKind(const BuiltinType *BT) {
     BTCASE(ObjCId);
     BTCASE(ObjCClass);
     BTCASE(ObjCSel);
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) BTCASE(Id);
+#include "clang/Basic/OpenCLImageTypes.def"
+#undef IMAGE_TYPE
+    BTCASE(OCLSampler);
+    BTCASE(OCLEvent);
+    BTCASE(OCLQueue);
+    BTCASE(OCLReserveID);
   default:
     return CXType_Unexposed;
   }
@@ -94,6 +101,7 @@ static CXTypeKind GetTypeKind(QualType T) {
     TKCASE(MemberPointer);
     TKCASE(Auto);
     TKCASE(Elaborated);
+    TKCASE(Pipe);
     default:
       return CXType_Unexposed;
   }
@@ -535,6 +543,14 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(MemberPointer);
     TKIND(Auto);
     TKIND(Elaborated);
+    TKIND(Pipe);
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) TKIND(Id);
+#include "clang/Basic/OpenCLImageTypes.def"
+#undef IMAGE_TYPE
+    TKIND(OCLSampler);
+    TKIND(OCLEvent);
+    TKIND(OCLQueue);
+    TKIND(OCLReserveID);
   }
 #undef TKIND
   return cxstring::createRef(s);

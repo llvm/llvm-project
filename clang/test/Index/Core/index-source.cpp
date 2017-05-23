@@ -1,7 +1,7 @@
 // RUN: c-index-test core -print-source-symbols -- %s -std=c++14 -target x86_64-apple-macosx10.7 | FileCheck %s
 
 // CHECK: [[@LINE+1]]:7 | class/C++ | Cls | [[Cls_USR:.*]] | <no-cgname> | Def | rel: 0
-class Cls {
+class Cls { public:
   // CHECK: [[@LINE+3]]:3 | constructor/C++ | Cls | c:@S@Cls@F@Cls#I# | __ZN3ClsC1Ei | Decl,RelChild | rel: 1
   // CHECK-NEXT: RelChild | Cls | c:@S@Cls
   // CHECK: [[@LINE+1]]:3 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
@@ -339,3 +339,97 @@ void ::ns::inner::func() {
 // CHECK: [[@LINE-1]]:3 | namespace/C++ | ns | c:@N@ns | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK: [[@LINE-2]]:7 | namespace-alias/C++ | innerAlias | c:@N@ns@NA@innerAlias | <no-cgname> | Ref,RelCont | rel: 1
 }
+
+void innerUsingNamespace() {
+  using namespace ns;
+// CHECK: [[@LINE-1]]:19 | namespace/C++ | ns | c:@N@ns | <no-cgname> | Ref,RelCont | rel: 1
+  {
+    using namespace ns::innerAlias;
+// CHECK: [[@LINE-1]]:25 | namespace-alias/C++ | innerAlias | c:@N@ns@NA@innerAlias | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-2]]:21 | namespace/C++ | ns | c:@N@ns | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NOT: [[@LINE-3]]:21
+  }
+}
+
+void indexDefaultValueInDefn(Cls cls = Cls(gvi), Record param = Record()) {
+// CHECK: [[@LINE-1]]:40 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-2]]:44 | variable/C | gvi | c:@gvi | _gvi | Ref,Read,RelCont | rel: 1
+// CHECK-NOT: [[@LINE-3]]:44
+// CHECK: [[@LINE-4]]:65 | struct/C++ | Record | c:@S@Record | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NOT: [[@LINE-5]]:65
+}
+
+template<template <typename> class T>
+struct IndexDefaultValue {
+   IndexDefaultValue(int k = Record::C) {
+// CHECK: [[@LINE-1]]:38 | static-property/C++ | C | c:@S@Record@C | __ZN6Record1CE | Ref,Read,RelCont | rel: 1
+// CHECK: [[@LINE-2]]:30 | struct/C++ | Record | c:@S@Record | <no-cgname> | Ref,RelCont | rel: 1
+   }
+};
+
+struct DeletedMethods {
+  DeletedMethods(const DeletedMethods &) = delete;
+// CHECK: [[@LINE-1]]:3 | constructor/cxx-copy-ctor/C++ | DeletedMethods | c:@S@DeletedMethods@F@DeletedMethods#&1$@S@DeletedMethods# | __ZN14DeletedMethodsC1ERKS_ | Def,RelChild | rel: 1
+// CHECK: RelChild | DeletedMethods | c:@S@DeletedMethods
+// CHECK: [[@LINE-3]]:24 | struct/C++ | DeletedMethods | c:@S@DeletedMethods | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-4]]:3 | struct/C++ | DeletedMethods | c:@S@DeletedMethods | <no-cgname> | Ref,RelCont | rel: 1
+};
+
+namespace ns2 {
+template<typename T> struct ACollectionDecl { };
+}
+
+template<typename T = Cls,
+// CHECK: [[@LINE-1]]:23 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | TemplateDefaultValues | c:@ST>3#T#NI#t>1#T@TemplateDefaultValues
+         int x = Record::C,
+// CHECK: [[@LINE-1]]:26 | static-property/C++ | C | c:@S@Record@C | __ZN6Record1CE | Ref,Read,RelCont | rel: 1
+// CHECK-NEXT: RelCont | TemplateDefaultValues | c:@ST>3#T#NI#t>1#T@TemplateDefaultValues
+// CHECK: [[@LINE-3]]:18 | struct/C++ | Record | c:@S@Record | <no-cgname> | Ref,RelCont | rel: 1
+         template <typename> class Collection = ns2::ACollectionDecl>
+// CHECK: [[@LINE-1]]:49 | namespace/C++ | ns2 | c:@N@ns2 | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | TemplateDefaultValues | c:@ST>3#T#NI#t>1#T@TemplateDefaultValues
+// CHECK: [[@LINE-3]]:54 | struct(Gen)/C++ | ACollectionDecl | c:@N@ns2@ST>1#T@ACollectionDecl | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | TemplateDefaultValues | c:@ST>3#T#NI#t>1#T@TemplateDefaultValues
+struct TemplateDefaultValues { };
+
+template<typename T = Record,
+// CHECK: [[@LINE-1]]:23 | struct/C++ | Record | c:@S@Record | <no-cgname> | Ref,RelCont | rel: 1
+         int x = sizeof(Cls)>
+// CHECK: [[@LINE-1]]:25 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+void functionTemplateDefaultValues() { }
+
+namespace ensureDefaultTemplateParamsAreRecordedOnce {
+
+template<typename T = Cls>
+// CHECK: [[@LINE-1]]:23 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NOT: [[@LINE-2]]:23
+void functionDecl();
+
+template<typename T>
+void functionDecl() { }
+
+template<typename T = Cls>
+// CHECK: [[@LINE-1]]:23 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NOT: [[@LINE-2]]:23
+class TagDecl;
+
+template<typename T>
+class TagDecl;
+
+template<typename T>
+class TagDecl { };
+
+template<typename T = Cls>
+// CHECK: [[@LINE-1]]:23 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+using TypeAlias = TagDecl<T>;
+
+template<typename T = Cls>
+// CHECK: [[@LINE-1]]:23 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NOT: [[@LINE-2]]:23
+extern T varDecl;
+
+template<typename T>
+T varDecl = T();
+
+} // end namespace ensureDefaultTemplateParamsAreRecordedOnce

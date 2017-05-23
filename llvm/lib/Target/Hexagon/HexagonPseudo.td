@@ -412,6 +412,15 @@ def PS_vstorerwu_ai: STrivv_template<VecDblRegs, V6_vS32Ub_ai>,
 def PS_vstorerwu_ai_128B: STrivv_template<VecDblRegs128B, V6_vS32Ub_ai_128B>,
       Requires<[HasV60T,UseHVXDbl]>;
 
+let isPseudo = 1, isCodeGenOnly = 1, mayStore = 1, hasSideEffects = 0 in {
+  def PS_vstorerq_ai: Pseudo<(outs),
+        (ins IntRegs:$Rs, s32_0Imm:$Off, VecPredRegs:$Qt), "", []>,
+        Requires<[HasV60T,UseHVXSgl]>;
+  def PS_vstorerq_ai_128B: Pseudo<(outs),
+        (ins IntRegs:$Rs, s32_0Imm:$Off, VecPredRegs128B:$Qt), "", []>,
+        Requires<[HasV60T,UseHVXDbl]>;
+}
+
 // Vector load pseudos
 let Predicates = [HasV60T, UseHVX], isPseudo = 1, isCodeGenOnly = 1,
     mayLoad = 1, hasSideEffects = 0 in
@@ -429,29 +438,15 @@ def PS_vloadrwu_ai: LDrivv_template<VecDblRegs, V6_vL32Ub_ai>,
 def PS_vloadrwu_ai_128B: LDrivv_template<VecDblRegs128B, V6_vL32Ub_ai_128B>,
       Requires<[HasV60T,UseHVXDbl]>;
 
-// Store vector predicate pseudo.
-let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
-    isCodeGenOnly = 1, isPseudo = 1, mayStore = 1, hasSideEffects = 0 in {
-  def PS_vstorerq_ai : STInst<(outs),
-              (ins IntRegs:$base, s32_0Imm:$offset, VecPredRegs:$src1),
-              ".error \"should not emit\" ", []>,
-              Requires<[HasV60T,UseHVXSgl]>;
-
-  def PS_vstorerq_ai_128B : STInst<(outs),
-              (ins IntRegs:$base, s32_0Imm:$offset, VectorRegs:$src1),
-              ".error \"should not emit\" ", []>,
-            Requires<[HasV60T,UseHVXSgl]>;
-
-  def PS_vloadrq_ai : STInst<(outs),
-              (ins IntRegs:$base, s32_0Imm:$offset, VecPredRegs128B:$src1),
-              ".error \"should not emit\" ", []>,
-            Requires<[HasV60T,UseHVXDbl]>;
-
-  def PS_vloadrq_ai_128B : STInst<(outs),
-              (ins IntRegs:$base, s32_0Imm:$offset, VecPredRegs128B:$src1),
-              ".error \"should not emit\" ", []>,
-            Requires<[HasV60T,UseHVXDbl]>;
+let isPseudo = 1, isCodeGenOnly = 1, mayLoad = 1, hasSideEffects = 0 in {
+  def PS_vloadrq_ai: Pseudo<(outs VecPredRegs:$Qd),
+        (ins IntRegs:$Rs, s32_0Imm:$Off), "", []>,
+        Requires<[HasV60T,UseHVXSgl]>;
+  def PS_vloadrq_ai_128B: Pseudo<(outs VecPredRegs128B:$Qd),
+        (ins IntRegs:$Rs, s32_0Imm:$Off), "", []>,
+        Requires<[HasV60T,UseHVXDbl]>;
 }
+
 
 let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
 class VSELInst<dag outs, dag ins, InstHexagon rootInst>

@@ -74,6 +74,12 @@ void MoveConstantArgumentCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (IsConstArg || IsTriviallyCopyable) {
     if (const CXXRecordDecl *R = Arg->getType()->getAsCXXRecordDecl()) {
+      // According to [expr.prim.lambda]p3, "whether the closure type is
+      // trivially copyable" property can be changed by the implementation of
+      // the language, so we shouldn't rely on it when issuing diagnostics.
+      if (R->isLambda())
+        return;
+      // Don't warn when the type is not copyable.
       for (const auto *Ctor : R->ctors()) {
         if (Ctor->isCopyConstructor() && Ctor->isDeleted())
           return;

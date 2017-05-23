@@ -749,7 +749,7 @@ bool TailDuplicator::canTailDuplicate(MachineBasicBlock *TailBB,
   if (PredBB->succ_size() > 1)
     return false;
 
-  MachineBasicBlock *PredTBB, *PredFBB;
+  MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
   SmallVector<MachineOperand, 4> PredCond;
   if (TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond))
     return false;
@@ -832,7 +832,7 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
     appendCopies(PredBB, CopyInfos, Copies);
 
     // Simplify
-    MachineBasicBlock *PredTBB, *PredFBB;
+    MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
     SmallVector<MachineOperand, 4> PredCond;
     TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond);
 

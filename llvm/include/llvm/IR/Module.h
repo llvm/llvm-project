@@ -139,9 +139,12 @@ public:
     /// during the append operation.
     AppendUnique = 6,
 
+    /// Takes the max of the two values, which are required to be integers.
+    Max = 7,
+
     // Markers:
     ModFlagBehaviorFirstVal = Error,
-    ModFlagBehaviorLastVal = AppendUnique
+    ModFlagBehaviorLastVal = Max
   };
 
   /// Checks if Metadata represents a valid ModFlagBehavior, and stores the

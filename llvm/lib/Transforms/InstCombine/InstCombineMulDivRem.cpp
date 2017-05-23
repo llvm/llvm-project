@@ -132,8 +132,9 @@ static Constant *getLogBase2Vector(ConstantDataVector *CV) {
 
 /// \brief Return true if we can prove that:
 ///    (mul LHS, RHS)  === (mul nsw LHS, RHS)
-bool InstCombiner::WillNotOverflowSignedMul(Value *LHS, Value *RHS,
-                                            Instruction &CxtI) {
+bool InstCombiner::willNotOverflowSignedMul(const Value *LHS,
+                                            const Value *RHS,
+                                            const Instruction &CxtI) const {
   // Multiplying n * m significant bits yields a result of n + m significant
   // bits. If the total number of significant bits does not exceed the
   // result bit width (minus 1), there is no overflow.
@@ -384,7 +385,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
         Constant *CI =
             ConstantExpr::getTrunc(Op1C, Op0Conv->getOperand(0)->getType());
         if (ConstantExpr::getSExt(CI, I.getType()) == Op1C &&
-            WillNotOverflowSignedMul(Op0Conv->getOperand(0), CI, I)) {
+            willNotOverflowSignedMul(Op0Conv->getOperand(0), CI, I)) {
           // Insert the new, smaller mul.
           Value *NewMul =
               Builder->CreateNSWMul(Op0Conv->getOperand(0), CI, "mulconv");
@@ -401,7 +402,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
       if (Op0Conv->getOperand(0)->getType() ==
               Op1Conv->getOperand(0)->getType() &&
           (Op0Conv->hasOneUse() || Op1Conv->hasOneUse()) &&
-          WillNotOverflowSignedMul(Op0Conv->getOperand(0),
+          willNotOverflowSignedMul(Op0Conv->getOperand(0),
                                    Op1Conv->getOperand(0), I)) {
         // Insert the new integer mul.
         Value *NewMul = Builder->CreateNSWMul(
@@ -447,7 +448,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
     }
   }
 
-  if (!I.hasNoSignedWrap() && WillNotOverflowSignedMul(Op0, Op1, I)) {
+  if (!I.hasNoSignedWrap() && willNotOverflowSignedMul(Op0, Op1, I)) {
     Changed = true;
     I.setHasNoSignedWrap(true);
   }

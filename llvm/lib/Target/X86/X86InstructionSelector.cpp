@@ -302,6 +302,26 @@ unsigned X86InstructionSelector::getLoadStoreOp(LLT &Ty, const RegisterBank &RB,
                               : HasAVX512
                                     ? X86::VMOVUPSZ128mr_NOVLX
                                     : HasAVX ? X86::VMOVUPSmr : X86::MOVUPSmr);
+  } else if (Ty.isVector() && Ty.getSizeInBits() == 256) {
+    if (Alignment >= 32)
+      return Isload ? (HasVLX ? X86::VMOVAPSZ256rm
+                              : HasAVX512 ? X86::VMOVAPSZ256rm_NOVLX
+                                          : X86::VMOVAPSYrm)
+                    : (HasVLX ? X86::VMOVAPSZ256mr
+                              : HasAVX512 ? X86::VMOVAPSZ256mr_NOVLX
+                                          : X86::VMOVAPSYmr);
+    else
+      return Isload ? (HasVLX ? X86::VMOVUPSZ256rm
+                              : HasAVX512 ? X86::VMOVUPSZ256rm_NOVLX
+                                          : X86::VMOVUPSYrm)
+                    : (HasVLX ? X86::VMOVUPSZ256mr
+                              : HasAVX512 ? X86::VMOVUPSZ256mr_NOVLX
+                                          : X86::VMOVUPSYmr);
+  } else if (Ty.isVector() && Ty.getSizeInBits() == 512) {
+    if (Alignment >= 64)
+      return Isload ? X86::VMOVAPSZrm : X86::VMOVAPSZmr;
+    else
+      return Isload ? X86::VMOVUPSZrm : X86::VMOVUPSZmr;
   }
   return Opc;
 }

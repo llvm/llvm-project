@@ -3457,6 +3457,18 @@ TEST_F(FormatTest, BreaksAfterAssignments) {
                "    1;");
 }
 
+TEST_F(FormatTest, ConfigurableBreakAssignmentPenalty) {
+  FormatStyle Style = getLLVMStyle();
+  verifyFormat("int aaaaaaaaaaaaaaaaaaaaaaaaaa =\n"
+               "    bbbbbbbbbbbbbbbbbbbbbbbbbb + cccccccccccccccccccccccccc;",
+               Style);
+
+  Style.PenaltyBreakAssignment = 20;
+  verifyFormat("int aaaaaaaaaaaaaaaaaaaaaaaaaa = bbbbbbbbbbbbbbbbbbbbbbbbbb +\n"
+               "                                 cccccccccccccccccccccccccc;",
+               Style);
+}
+
 TEST_F(FormatTest, AlignsAfterAssignments) {
   verifyFormat(
       "int Result = aaaaaaaaaaaaaaaaaaaaaaaaa + aaaaaaaaaaaaaaaaaaaaaaaaa +\n"
@@ -8802,6 +8814,8 @@ TEST_F(FormatTest, ParsesConfiguration) {
   CHECK_PARSE("ObjCBlockIndentWidth: 1234", ObjCBlockIndentWidth, 1234u);
   CHECK_PARSE("ColumnLimit: 1234", ColumnLimit, 1234u);
   CHECK_PARSE("MaxEmptyLinesToKeep: 1234", MaxEmptyLinesToKeep, 1234u);
+  CHECK_PARSE("PenaltyBreakAssignment: 1234",
+              PenaltyBreakAssignment, 1234u);
   CHECK_PARSE("PenaltyBreakBeforeFirstCallParameter: 1234",
               PenaltyBreakBeforeFirstCallParameter, 1234u);
   CHECK_PARSE("PenaltyExcessCharacter: 1234", PenaltyExcessCharacter, 1234u);

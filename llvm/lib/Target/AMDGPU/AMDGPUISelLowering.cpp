@@ -2595,26 +2595,48 @@ SDValue AMDGPUTargetLowering::splitBinaryBitConstantOpImpl(
 
 SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
-  if (N->getValueType(0) != MVT::i64)
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i64)
     return SDValue();
+
+  ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!RHS)
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  unsigned RHSVal = RHS->getZExtValue();
+  if (!RHSVal)
+    return LHS;
+
+  SDLoc SL(N);
+  SelectionDAG &DAG = DCI.DAG;
+
+  switch (LHS->getOpcode()) {
+  default:
+    break;
+  case ISD::ZERO_EXTEND:
+  case ISD::SIGN_EXTEND:
+  case ISD::ANY_EXTEND: {
+    // shl (ext x) => zext (shl x), if shift does not overflow int
+    KnownBits Known;
+    SDValue X = LHS->getOperand(0);
+    DAG.computeKnownBits(X, Known);
+    unsigned LZ = Known.countMinLeadingZeros();
+    if (LZ < RHSVal)
+      break;
+    EVT XVT = X.getValueType();
+    SDValue Shl = DAG.getNode(ISD::SHL, SL, XVT, X, SDValue(RHS, 0));
+    return DAG.getZExtOrTrunc(Shl, SL, VT);
+  }
+  }
 
   // i64 (shl x, C) -> (build_pair 0, (shl x, C -32))
 
   // On some subtargets, 64-bit shift is a quarter rate instruction. In the
   // common case, splitting this into a move and a 32-bit shift is faster and
   // the same code size.
-  const ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!RHS)
-    return SDValue();
-
-  unsigned RHSVal = RHS->getZExtValue();
   if (RHSVal < 32)
     return SDValue();
-
-  SDValue LHS = N->getOperand(0);
-
-  SDLoc SL(N);
-  SelectionDAG &DAG = DCI.DAG;
 
   SDValue ShiftAmt = DAG.getConstant(RHSVal - 32, SL, MVT::i32);
 

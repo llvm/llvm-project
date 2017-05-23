@@ -39,7 +39,7 @@ struct Config {
   std::string CPU;
   TargetOptions Options;
   std::vector<std::string> MAttrs;
-  Reloc::Model RelocModel = Reloc::PIC_;
+  Optional<Reloc::Model> RelocModel = Reloc::PIC_;
   CodeModel::Model CodeModel = CodeModel::Default;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
   TargetMachine::CodeGenFileType CGFileType = TargetMachine::CGFT_ObjectFile;

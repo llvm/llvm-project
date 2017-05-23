@@ -656,10 +656,12 @@ private:
     /// Test whether this BackedgeTakenInfo contains complete information.
     bool hasFullInfo() const { return isComplete(); }
 
-    /// Return an expression indicating the exact backedge-taken count of the
-    /// loop if it is known or SCEVCouldNotCompute otherwise. This is the
-    /// number of times the loop header can be guaranteed to execute, minus
-    /// one.
+    /// Return an expression indicating the exact *backedge-taken*
+    /// count of the loop if it is known or SCEVCouldNotCompute
+    /// otherwise.  If execution makes it to the backedge on every
+    /// iteration (i.e. there are no abnormal exists like exception
+    /// throws and thread exits) then this is the number of times the
+    /// loop header will execute minus one.
     ///
     /// If the SCEV predicate associated with the answer can be different
     /// from AlwaysTrue, we must add a (non null) Predicates argument.
@@ -1398,11 +1400,11 @@ public:
   const SCEV *getExitCount(const Loop *L, BasicBlock *ExitingBlock);
 
   /// If the specified loop has a predictable backedge-taken count, return it,
-  /// otherwise return a SCEVCouldNotCompute object. The backedge-taken count
-  /// is the number of times the loop header will be branched to from within
-  /// the loop. This is one less than the trip count of the loop, since it
-  /// doesn't count the first iteration, when the header is branched to from
-  /// outside the loop.
+  /// otherwise return a SCEVCouldNotCompute object. The backedge-taken count is
+  /// the number of times the loop header will be branched to from within the
+  /// loop, assuming there are no abnormal exists like exception throws. This is
+  /// one less than the trip count of the loop, since it doesn't count the first
+  /// iteration, when the header is branched to from outside the loop.
   ///
   /// Note that it is not valid to call this method on a loop without a
   /// loop-invariant backedge-taken count (see
@@ -1417,8 +1419,10 @@ public:
   const SCEV *getPredicatedBackedgeTakenCount(const Loop *L,
                                               SCEVUnionPredicate &Predicates);
 
-  /// Similar to getBackedgeTakenCount, except return the least SCEV value
-  /// that is known never to be less than the actual backedge taken count.
+  /// When successful, this returns a SCEVConstant that is greater than or equal
+  /// to (i.e. a "conservative over-approximation") of the value returend by
+  /// getBackedgeTakenCount.  If such a value cannot be computed, it returns the
+  /// SCEVCouldNotCompute object.
   const SCEV *getMaxBackedgeTakenCount(const Loop *L);
 
   /// Return true if the backedge taken count is either the value returned by

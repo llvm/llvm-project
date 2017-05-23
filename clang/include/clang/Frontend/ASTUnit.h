@@ -59,6 +59,10 @@ class TargetInfo;
 class FrontendAction;
 class ASTDeserializationListener;
 
+namespace vfs {
+class FileSystem;
+}
+
 /// \brief Utility class for loading a ASTContext from an AST file.
 ///
 class ASTUnit : public ModuleLoader {
@@ -420,7 +424,8 @@ private:
   explicit ASTUnit(bool MainFileIsAST);
 
   bool Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-             std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer);
+             std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer,
+             IntrusiveRefCntPtr<vfs::FileSystem> VFS);
 
   struct ComputedPreamble {
     llvm::MemoryBuffer *Buffer;
@@ -434,11 +439,13 @@ private:
           PreambleEndsAtStartOfLine(PreambleEndsAtStartOfLine) {}
   };
   ComputedPreamble ComputePreamble(CompilerInvocation &Invocation,
-                                   unsigned MaxLines);
+                                   unsigned MaxLines,
+                                   IntrusiveRefCntPtr<vfs::FileSystem> VFS);
 
   std::unique_ptr<llvm::MemoryBuffer> getMainBufferWithPrecompiledPreamble(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-      const CompilerInvocation &PreambleInvocationIn, bool AllowRebuild = true,
+      const CompilerInvocation &PreambleInvocationIn,
+      IntrusiveRefCntPtr<vfs::FileSystem> VFS, bool AllowRebuild = true,
       unsigned MaxLines = 0);
   void RealizeTopLevelDeclsFromPreamble();
 
@@ -731,11 +738,17 @@ private:
   /// of this translation unit should be precompiled, to improve the performance
   /// of reparsing. Set to zero to disable preambles.
   ///
+  /// \param VFS - A vfs::FileSystem to be used for all file accesses. Note that
+  /// preamble is saved to a temporary directory on a RealFileSystem, so in order
+  /// for it to be loaded correctly, VFS should have access to it(i.e., be an
+  /// overlay over RealFileSystem).
+  ///
   /// \returns \c true if a catastrophic failure occurred (which means that the
   /// \c ASTUnit itself is invalid), or \c false otherwise.
   bool LoadFromCompilerInvocation(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-      unsigned PrecompilePreambleAfterNParses);
+      unsigned PrecompilePreambleAfterNParses,
+      IntrusiveRefCntPtr<vfs::FileSystem> VFS);
 
 public:
   
@@ -826,6 +839,11 @@ public:
   /// (e.g. because the PCH could not be loaded), this accepts the ASTUnit
   /// mainly to allow the caller to see the diagnostics.
   ///
+  /// \param VFS - A vfs::FileSystem to be used for all file accesses. Note that
+  /// preamble is saved to a temporary directory on a RealFileSystem, so in order
+  /// for it to be loaded correctly, VFS should have access to it(i.e., be an
+  /// overlay over RealFileSystem). RealFileSystem will be used if \p VFS is nullptr.
+  ///
   // FIXME: Move OnlyLocalDecls, UseBumpAllocator to setters on the ASTUnit, we
   // shouldn't need to specify them at construction time.
   static ASTUnit *LoadFromCommandLine(
@@ -842,15 +860,23 @@ public:
       bool AllowPCHWithCompilerErrors = false, bool SkipFunctionBodies = false,
       bool UserFilesAreVolatile = false, bool ForSerialization = false,
       llvm::Optional<StringRef> ModuleFormat = llvm::None,
-      std::unique_ptr<ASTUnit> *ErrAST = nullptr);
+      std::unique_ptr<ASTUnit> *ErrAST = nullptr,
+      IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr);
 
   /// \brief Reparse the source files using the same command-line options that
   /// were originally used to produce this translation unit.
   ///
+  /// \param VFS - A vfs::FileSystem to be used for all file accesses. Note that
+  /// preamble is saved to a temporary directory on a RealFileSystem, so in order
+  /// for it to be loaded correctly, VFS should give an access to this(i.e. be an
+  /// overlay over RealFileSystem). FileMgr->getVirtualFileSystem() will be used if
+  /// \p VFS is nullptr.
+  ///
   /// \returns True if a failure occurred that causes the ASTUnit not to
   /// contain any translation-unit information, false otherwise.
   bool Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-               ArrayRef<RemappedFile> RemappedFiles = None);
+               ArrayRef<RemappedFile> RemappedFiles = None,
+               IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr);
 
   /// \brief Perform code completion at the given file, line, and
   /// column within this translation unit.
