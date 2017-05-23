@@ -19,6 +19,45 @@ class Foo {
     }
 }
 
+struct SmallStruct
+{
+    var _a : Int
+    var _b : Int
+    var _c : Int
+    var _d : Int
+    init ()
+    {
+      _a = 22
+      _b = 33
+      _c = 44
+      _d = 55
+    }
+}
+
+struct StructOfClasses
+{
+  var _a : Foo
+  var _b : Foo
+  var _c : Foo
+  init()
+  {
+    _a = Foo()
+    _b = Foo()
+    _c = Foo()
+  }
+}
+
+struct BigStruct
+{
+   var _a : SmallStruct
+   var _b : SmallStruct
+   init ()
+   {
+       _a = SmallStruct()
+       _b = SmallStruct()
+   }
+}
+
 enum MyError : Error
 {
     case TrivialError
@@ -41,6 +80,22 @@ func returnDouble() -> Double {
 func returnClass () -> Foo {
     return Foo() // Set breakpoint here
 }
+
+func returnSmallStruct() -> SmallStruct
+{
+    return SmallStruct() // Set breakpoint here
+}
+
+func returnBigStruct() -> BigStruct
+{
+    return BigStruct() // Set another breakpoint here
+}
+
+func returnStructOfClasses() -> StructOfClasses
+{
+    return StructOfClasses() // Set breakpoint here
+}
+
 func returnString() -> String {
     return "Hello World" // Set breakpoint here
 }
@@ -68,6 +123,8 @@ func main() -> Int {
     let u = returnUInt64()
     let i = returnInt()
     let c = returnClass()
+    let ss = returnSmallStruct()
+    let cs = returnStructOfClasses()
     let s = returnString()
     let dict = getDict()
     let opt_str = getOptionalString()
@@ -83,6 +140,8 @@ func main() -> Int {
     {
         print (err)
     }
+
+    let bs = returnBigStruct()
 
     // TODO: remove the line below when it is no longer needed. Currently extra
     // line table entries will be added after "returnDouble()" and will stop the

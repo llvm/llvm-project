@@ -302,8 +302,8 @@ bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
         }
 
         if (done) {
+          CalculateReturnValue();
           if (InvokeShouldStopHereCallback(eFrameCompareOlder)) {
-            CalculateReturnValue();
             SetPlanComplete();
           }
         }
@@ -366,8 +366,8 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
   // and we are done.
 
   if (done) {
+    CalculateReturnValue();
     if (InvokeShouldStopHereCallback(eFrameCompareOlder)) {
-      CalculateReturnValue();
       SetPlanComplete();
     } else {
       m_step_out_further_plan_sp =
@@ -525,7 +525,7 @@ void ThreadPlanStepOut::CalculateReturnValue() {
     if (m_swift_error_return) {
       ConstString name("swift_thrown_error");
 
-      m_return_valobj_sp = swift_runtime->CalculateErrorValueObjectForValue(
+      m_return_valobj_sp = swift_runtime->CalculateErrorValueObjectFromValue(
           m_swift_error_return.getValue(), name, true);
       // Even if we couldn't figure out what the error return was, we
       // were told there was an error, so don't show the user a false return value

@@ -4030,11 +4030,7 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
     return error_val;
   }
   
-  DataExtractor reg_data;
-  if (!reg_value.GetData(reg_data))
-    return error_val;
-    
-  lldb::addr_t error_addr = reg_data.GetPointer(0);
+  lldb::addr_t error_addr = reg_value.GetAsUInt64();
   if (error_addr == 0)
     return error_val;
 
