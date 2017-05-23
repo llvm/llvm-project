@@ -98,6 +98,17 @@ public:
           }
         }
       }
+    } else {
+      // Index the default parameter value for function definitions.
+      if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+        if (FD->isThisDeclarationADefinition()) {
+          for (const auto *PV : FD->parameters()) {
+            if (PV->hasDefaultArg() && !PV->hasUninstantiatedDefaultArg() &&
+                !PV->hasUnparsedDefaultArg())
+              IndexCtx.indexBody(PV->getDefaultArg(), D);
+          }
+        }
+      }
     }
   }
 
