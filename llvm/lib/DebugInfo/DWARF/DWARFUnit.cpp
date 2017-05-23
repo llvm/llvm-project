@@ -249,23 +249,6 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
   return DieArray.size();
 }
 
-DWARFUnit::DWOHolder::DWOHolder(StringRef DWOPath, uint64_t DWOId) {
-  auto Obj = object::ObjectFile::createObjectFile(DWOPath);
-  if (!Obj) {
-    // TODO: Actually report errors helpfully.
-    consumeError(Obj.takeError());
-    return;
-  }
-  DWOFile = std::move(Obj.get());
-  DWOContext.reset(
-      cast<DWARFContext>(new DWARFContextInMemory(*DWOFile.getBinary())));
-  for (const auto &DWOCU : DWOContext->dwo_compile_units())
-    if (DWOCU->getDWOId() == DWOId) {
-      DWOU = DWOCU.get();
-      return;
-    }
-}
-
 bool DWARFUnit::parseDWO() {
   if (isDWO)
     return false;
@@ -287,16 +270,18 @@ bool DWARFUnit::parseDWO() {
   auto DWOId = getDWOId();
   if (!DWOId)
     return false;
-  DWO = llvm::make_unique<DWOHolder>(AbsolutePath, *DWOId);
-  DWARFUnit *DWOCU = DWO->getUnit();
-  if (!DWOCU) {
-    DWO.reset();
+  auto DWOContext = Context.getDWOContext(AbsolutePath);
+  if (!DWOContext)
     return false;
-  }
+
+  DWARFCompileUnit *DWOCU = DWOContext->getDWOCompileUnitForHash(*DWOId);
+  if (!DWOCU)
+    return false;
+  DWO = std::shared_ptr<DWARFCompileUnit>(std::move(DWOContext), DWOCU);
   // Share .debug_addr and .debug_ranges section with compile unit in .dwo
-  DWOCU->setAddrOffsetSection(AddrOffsetSection, AddrOffsetSectionBase);
+  DWO->setAddrOffsetSection(AddrOffsetSection, AddrOffsetSectionBase);
   auto DWORangesBase = UnitDie.getRangesBaseAttribute();
-  DWOCU->setRangesSection(RangeSection, DWORangesBase ? *DWORangesBase : 0);
+  DWO->setRangesSection(RangeSection, DWORangesBase ? *DWORangesBase : 0);
   return true;
 }
 
@@ -339,8 +324,8 @@ void DWARFUnit::collectAddressRanges(DWARFAddressRangesVector &CURanges) {
 
   // Collect address ranges from DIEs in .dwo if necessary.
   bool DWOCreated = parseDWO();
-  if (DWO.get())
-    DWO->getUnit()->collectAddressRanges(CURanges);
+  if (DWO)
+    DWO->collectAddressRanges(CURanges);
   if (DWOCreated)
     DWO.reset();
 
@@ -400,7 +385,7 @@ DWARFUnit::getInlinedChainForAddress(uint64_t Address,
   // First, find the subroutine that contains the given address (the leaf
   // of inlined chain).
   DWARFDie SubroutineDIE =
-      (DWO ? DWO->getUnit() : this)->getSubroutineForAddress(Address);
+      (DWO ? DWO.get() : this)->getSubroutineForAddress(Address);
 
   while (SubroutineDIE) {
     if (SubroutineDIE.isSubroutineDIE())

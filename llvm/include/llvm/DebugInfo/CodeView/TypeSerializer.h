@@ -45,12 +45,13 @@ class TypeSerializer : public TypeVisitorCallbacks {
     }
   };
 
-  typedef SmallVector<MutableArrayRef<uint8_t>, 2> RecordList;
+  typedef SmallVector<MutableArrayRef<uint8_t>, 2> MutableRecordList;
+  typedef SmallVector<ArrayRef<uint8_t>, 2> RecordList;
 
   static constexpr uint8_t ContinuationLength = 8;
   BumpPtrAllocator &RecordStorage;
   RecordSegment CurrentSegment;
-  RecordList FieldListSegments;
+  MutableRecordList FieldListSegments;
 
   TypeIndex LastTypeIndex;
   Optional<TypeLeafKind> TypeKind;
@@ -61,7 +62,7 @@ class TypeSerializer : public TypeVisitorCallbacks {
   TypeRecordMapping Mapping;
 
   RecordList SeenRecords;
-  StringMap<TypeIndex> HashedRecords;
+  StringMap<TypeIndex, BumpPtrAllocator&> HashedRecords;
 
   bool isInFieldList() const;
   TypeIndex calcNextTypeIndex() const;
@@ -69,9 +70,7 @@ class TypeSerializer : public TypeVisitorCallbacks {
   MutableArrayRef<uint8_t> getCurrentSubRecordData();
   MutableArrayRef<uint8_t> getCurrentRecordData();
   Error writeRecordPrefix(TypeLeafKind Kind);
-  TypeIndex insertRecordBytesPrivate(MutableArrayRef<uint8_t> Record);
-  TypeIndex insertRecordBytesWithCopy(CVType &Record,
-                                      MutableArrayRef<uint8_t> Data);
+  TypeIndex insertRecordBytesPrivate(ArrayRef<uint8_t> &Record);
 
   Expected<MutableArrayRef<uint8_t>>
   addPadding(MutableArrayRef<uint8_t> Record);
@@ -79,9 +78,9 @@ class TypeSerializer : public TypeVisitorCallbacks {
 public:
   explicit TypeSerializer(BumpPtrAllocator &Storage);
 
-  ArrayRef<MutableArrayRef<uint8_t>> records() const;
+  ArrayRef<ArrayRef<uint8_t>> records() const;
   TypeIndex getLastTypeIndex() const;
-  TypeIndex insertRecordBytes(MutableArrayRef<uint8_t> Record);
+  TypeIndex insertRecordBytes(ArrayRef<uint8_t> Record);
   Expected<TypeIndex> visitTypeEndGetIndex(CVType &Record);
 
   Error visitTypeBegin(CVType &Record) override;

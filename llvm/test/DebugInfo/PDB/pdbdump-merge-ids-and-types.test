@@ -1,0 +1,65 @@
+; RUN: llvm-pdbdump yaml2pdb -pdb=%t.1.pdb %p/Inputs/merge-ids-and-types-1.yaml
+; RUN: llvm-pdbdump yaml2pdb -pdb=%t.2.pdb %p/Inputs/merge-ids-and-types-2.yaml
+; RUN: llvm-pdbdump merge -pdb=%t.3.pdb %t.1.pdb %t.2.pdb
+; RUN: llvm-pdbdump raw -tpi-records %t.3.pdb | FileCheck -check-prefix=TPI-TYPES %s
+; RUN: llvm-pdbdump raw -tpi-records %t.3.pdb | FileCheck -check-prefix=INTMAIN %s
+; RUN: llvm-pdbdump raw -tpi-records %t.3.pdb | FileCheck -check-prefix=VOIDMAIN %s
+; RUN: llvm-pdbdump raw -ipi-records %t.3.pdb | FileCheck -check-prefix=IPI-TYPES %s
+; RUN: llvm-pdbdump raw -ipi-records %t.3.pdb | FileCheck -check-prefix=IPI-NAMES %s
+; RUN: llvm-pdbdump raw -ipi-records %t.3.pdb | FileCheck -check-prefix=IPI-UDT %s
+
+TPI-TYPES:     Type Info Stream (TPI)
+TPI-TYPES:     Record count: 9
+TPI-TYPES-DAG: TypeLeafKind: LF_POINTER
+TPI-TYPES-DAG: TypeLeafKind: LF_FIELDLIST
+TPI-TYPES-DAG: TypeLeafKind: LF_ARGLIST
+TPI-TYPES-DAG: TypeLeafKind: LF_STRUCTURE
+TPI-TYPES-DAG: TypeLeafKind: LF_MEMBER
+TPI-TYPES-DAG: TypeLeafKind: LF_POINTER
+TPI-TYPES-DAG: TypeLeafKind: LF_ARGLIST
+TPI-TYPES-DAG: TypeLeafKind: LF_MFUNCTION
+TPI-TYPES-DAG: TypeLeafKind: LF_PROCEDURE
+TPI-TYPES-DAG: TypeLeafKind: LF_PROCEDURE
+TPI-TYPES-DAG: TypeLeafKind: LF_ARGLIST
+
+; Both procedures should use the same arglist even though they have a different
+; return type.
+INTMAIN:      ArgList ([[ID:.*]])
+INTMAIN-NEXT:   TypeLeafKind: LF_ARGLIST
+INTMAIN-NEXT:   NumArgs: 2
+INTMAIN-NEXT:   Arguments [
+INTMAIN-NEXT:     ArgType: int
+INTMAIN-NEXT:     ArgType: char**
+INTMAIN:        TypeLeafKind: LF_PROCEDURE
+INTMAIN:          ReturnType: int
+INTMAIN:          NumParameters: 2
+INTMAIN-NEXT:     ArgListType: (int, char**) ([[ID]])
+
+VOIDMAIN:      ArgList ([[ID:.*]])
+VOIDMAIN-NEXT:   TypeLeafKind: LF_ARGLIST
+VOIDMAIN-NEXT:   NumArgs: 2
+VOIDMAIN-NEXT:   Arguments [
+VOIDMAIN-NEXT:     ArgType: int
+VOIDMAIN-NEXT:     ArgType: char**
+VOIDMAIN:        TypeLeafKind: LF_PROCEDURE
+VOIDMAIN:          ReturnType: void
+VOIDMAIN:          NumParameters: 2
+VOIDMAIN-NEXT:     ArgListType: (int, char**) ([[ID]])
+
+IPI-TYPES:     Type Info Stream (IPI)
+IPI-TYPES:     Record count: 6
+IPI-TYPES-DAG: TypeLeafKind: LF_FUNC_ID
+IPI-TYPES-DAG: TypeLeafKind: LF_MFUNC_ID
+IPI-TYPES-DAG: TypeLeafKind: LF_UDT_MOD_SRC_LINE
+IPI-TYPES-DAG: TypeLeafKind: LF_FUNC_ID
+IPI-TYPES-DAG: TypeLeafKind: LF_FUNC_ID
+IPI-TYPES-DAG: TypeLeafKind: LF_MFUNC_ID
+
+IPI-NAMES-DAG: Name: main
+IPI-NAMES-DAG: Name: FooMethod
+IPI-NAMES-DAG: Name: main2
+IPI-NAMES-DAG: Name: foo
+IPI-NAMES-DAG: Name: FooMethod2
+
+IPI-UDT:      TypeLeafKind: LF_UDT_MOD_SRC_LINE
+IPI-UDT-NEXT: UDT: FooBar

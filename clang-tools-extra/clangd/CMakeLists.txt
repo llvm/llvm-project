@@ -1,6 +1,5 @@
-add_clang_executable(clangd
+add_clang_library(clangDaemon
   ClangdLSPServer.cpp
-  ClangdMain.cpp
   ClangdServer.cpp
   ClangdUnit.cpp
   ClangdUnitStore.cpp
@@ -11,9 +10,7 @@ add_clang_executable(clangd
   ProtocolHandlers.cpp
   )
 
-install(TARGETS clangd RUNTIME DESTINATION bin)
-
-target_link_libraries(clangd
+target_link_libraries(clangDaemon
   clangBasic
   clangFormat
   clangFrontend
@@ -22,3 +19,5 @@ target_link_libraries(clangd
   clangToolingCore
   LLVMSupport
   )
+
+add_subdirectory(tool)

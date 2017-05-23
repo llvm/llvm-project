@@ -232,6 +232,19 @@ static bool scheduleAdjacentImpl(ScheduleDAGMI *DAG, SUnit &AnchorSU) {
           dbgs() << DAG->TII->getName(FirstMI->getOpcode()) << " - " <<
                     DAG->TII->getName(SecondMI->getOpcode()) << '\n'; );
 
+    if (&SecondSU != &DAG->ExitSU)
+      // Make instructions dependent on FirstSU also dependent on SecondSU to
+      // prevent them from being scheduled between FirstSU and and SecondSU.
+      for (SUnit::const_succ_iterator
+             SI = FirstSU.Succs.begin(), SE = FirstSU.Succs.end();
+           SI != SE; ++SI) {
+        if (!SI->getSUnit() || SI->getSUnit() == &SecondSU)
+          continue;
+        DEBUG(dbgs() << "  Copy Succ ";
+              SI->getSUnit()->print(dbgs(), DAG); dbgs() << '\n';);
+        DAG->addEdge(SI->getSUnit(), SDep(&SecondSU, SDep::Artificial));
+      }
+
     ++NumFused;
     return true;
   }

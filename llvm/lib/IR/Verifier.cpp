@@ -1282,6 +1282,13 @@ Verifier::visitModuleFlag(const MDNode *Op,
     // These behavior types accept any value.
     break;
 
+  case Module::Max: {
+    Assert(mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2)),
+           "invalid value for 'max' module flag (expected constant integer)",
+           Op->getOperand(2));
+    break;
+  }
+
   case Module::Require: {
     // The value should itself be an MDNode with two operands, a flag ID (an
     // MDString), and a value.

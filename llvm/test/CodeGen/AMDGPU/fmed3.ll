@@ -845,10 +845,10 @@ define amdgpu_kernel void @v_nnan_inputs_missing2_med3_f32_pat0(float addrspace(
 ; GCN: {{buffer_|flat_}}load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer_|flat_}}load_dword [[C:v[0-9]+]]
-; GCN: v_min_f32
-; GCN: v_max_f32
-; GCN: v_min_f32
-; GCN: v_max_f32
+; GCN-DAG: v_min_f32
+; GCN-DAG: v_max_f32
+; GCN-DAG: v_min_f32
+; GCN-DAG: v_max_f32
 define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0_mismatch(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid

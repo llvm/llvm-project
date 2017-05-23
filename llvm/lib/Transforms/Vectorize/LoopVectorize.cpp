@@ -5086,12 +5086,18 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 }
 
 bool LoopVectorizationLegality::canVectorize() {
+  // Store the result and return it at the end instead of exiting early, in case
+  // allowExtraAnalysis is used to report multiple reasons for not vectorizing.
+  bool Result = true;
   // We must have a loop in canonical form. Loops with indirectbr in them cannot
   // be canonicalized.
   if (!TheLoop->getLoopPreheader()) {
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
-    return false;
+    if (ORE->allowExtraAnalysis())
+      Result = false;
+    else
+      return false;
   }
 
   // FIXME: The code is currently dead, since the loop gets sent to
@@ -5101,21 +5107,30 @@ bool LoopVectorizationLegality::canVectorize() {
   if (!TheLoop->empty()) {
     ORE->emit(createMissedAnalysis("NotInnermostLoop")
               << "loop is not the innermost loop");
-    return false;
+    if (ORE->allowExtraAnalysis())
+      Result = false;
+    else
+      return false;
   }
 
   // We must have a single backedge.
   if (TheLoop->getNumBackEdges() != 1) {
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
-    return false;
+    if (ORE->allowExtraAnalysis())
+      Result = false;
+    else
+      return false;
   }
 
   // We must have a single exiting block.
   if (!TheLoop->getExitingBlock()) {
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
-    return false;
+    if (ORE->allowExtraAnalysis())
+      Result = false;
+    else
+      return false;
   }
 
   // We only handle bottom-tested loops, i.e. loop in which the condition is
@@ -5124,7 +5139,10 @@ bool LoopVectorizationLegality::canVectorize() {
   if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
-    return false;
+    if (ORE->allowExtraAnalysis())
+      Result = false;
+    else
+      return false;
   }
 
   // We need to have a loop header.
@@ -5135,28 +5153,28 @@ bool LoopVectorizationLegality::canVectorize() {
   unsigned NumBlocks = TheLoop->getNumBlocks();
   if (NumBlocks != 1 && !canVectorizeWithIfConvert()) {
     DEBUG(dbgs() << "LV: Can't if-convert the loop.\n");
-    return false;
-  }
-
-  // ScalarEvolution needs to be able to find the exit count.
-  const SCEV *ExitCount = PSE.getBackedgeTakenCount();
-  if (ExitCount == PSE.getSE()->getCouldNotCompute()) {
-    ORE->emit(createMissedAnalysis("CantComputeNumberOfIterations")
-              << "could not determine number of loop iterations");
-    DEBUG(dbgs() << "LV: SCEV could not compute the loop exit count.\n");
-    return false;
+    if (ORE->allowExtraAnalysis())
+      Result = false;
+    else
+      return false;
   }
 
   // Check if we can vectorize the instructions and CFG in this loop.
   if (!canVectorizeInstrs()) {
     DEBUG(dbgs() << "LV: Can't vectorize the instructions or CFG\n");
-    return false;
+    if (ORE->allowExtraAnalysis())
+      Result = false;
+    else
+      return false;
   }
 
   // Go over each instruction and look at memory deps.
   if (!canVectorizeMemory()) {
     DEBUG(dbgs() << "LV: Can't vectorize due to memory conflicts\n");
-    return false;
+    if (ORE->allowExtraAnalysis())
+      Result = false;
+    else
+      return false;
   }
 
   DEBUG(dbgs() << "LV: We can vectorize this loop"
@@ -5184,13 +5202,17 @@ bool LoopVectorizationLegality::canVectorize() {
               << "Too many SCEV assumptions need to be made and checked "
               << "at runtime");
     DEBUG(dbgs() << "LV: Too many SCEV checks needed.\n");
-    return false;
+    if (ORE->allowExtraAnalysis())
+      Result = false;
+    else
+      return false;
   }
 
-  // Okay! We can vectorize. At this point we don't have any other mem analysis
+  // Okay! We've done all the tests. If any have failed, return false. Otherwise
+  // we can vectorize, and at this point we don't have any other mem analysis
   // which may limit our maximum vectorization factor, so just return true with
   // no restrictions.
-  return true;
+  return Result;
 }
 
 static Type *convertPointerToIntegerType(const DataLayout &DL, Type *Ty) {

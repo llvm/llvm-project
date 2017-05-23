@@ -114,7 +114,10 @@ static void computeCacheKey(
   AddUnsigned((unsigned)Conf.Options.DebuggerTuning);
   for (auto &A : Conf.MAttrs)
     AddString(A);
-  AddUnsigned(Conf.RelocModel);
+  if (Conf.RelocModel)
+    AddUnsigned(*Conf.RelocModel);
+  else
+    AddUnsigned(-1);
   AddUnsigned(Conf.CodeModel);
   AddUnsigned(Conf.CGOptLevel);
   AddUnsigned(Conf.CGFileType);

@@ -500,6 +500,7 @@ static void yamlToPdb(StringRef Path) {
   pdb::yaml::PdbInfoStream DefaultInfoStream;
   pdb::yaml::PdbDbiStream DefaultDbiStream;
   pdb::yaml::PdbTpiStream DefaultTpiStream;
+  pdb::yaml::PdbTpiStream DefaultIpiStream;
 
   const auto &Info = YamlObj.PdbStream.getValueOr(DefaultInfoStream);
 
@@ -601,11 +602,11 @@ static void yamlToPdb(StringRef Path) {
   for (const auto &R : Tpi.Records)
     TpiBuilder.addTypeRecord(R.Record.data(), R.Record.Hash);
 
-  const auto &Ipi = YamlObj.IpiStream.getValueOr(DefaultTpiStream);
+  const auto &Ipi = YamlObj.IpiStream.getValueOr(DefaultIpiStream);
   auto &IpiBuilder = Builder.getIpiBuilder();
   IpiBuilder.setVersionHeader(Ipi.Version);
   for (const auto &R : Ipi.Records)
-    TpiBuilder.addTypeRecord(R.Record.data(), R.Record.Hash);
+    IpiBuilder.addTypeRecord(R.Record.data(), R.Record.Hash);
 
   ExitOnErr(Builder.commit(opts::yaml2pdb::YamlPdbOutputFile));
 }
@@ -852,18 +853,17 @@ static void mergePdbs() {
   for (const auto &Path : opts::merge::InputFilenames) {
     std::unique_ptr<IPDBSession> Session;
     auto &File = loadPDB(Path, Session);
-    SmallVector<TypeIndex, 128> SourceToDest;
+    SmallVector<TypeIndex, 128> TypeMap;
+    SmallVector<TypeIndex, 128> IdMap;
     if (File.hasPDBTpiStream()) {
-      SourceToDest.clear();
       auto &Tpi = ExitOnErr(File.getPDBTpiStream());
-      ExitOnErr(codeview::mergeTypeStreams(MergedIpi, MergedTpi, SourceToDest,
-                                           nullptr, Tpi.typeArray()));
+      ExitOnErr(codeview::mergeTypeRecords(MergedTpi, TypeMap, nullptr,
+                                           Tpi.typeCollection()));
     }
     if (File.hasPDBIpiStream()) {
-      SourceToDest.clear();
       auto &Ipi = ExitOnErr(File.getPDBIpiStream());
-      ExitOnErr(codeview::mergeTypeStreams(MergedIpi, MergedTpi, SourceToDest,
-                                           nullptr, Ipi.typeArray()));
+      ExitOnErr(codeview::mergeIdRecords(MergedIpi, TypeMap, IdMap,
+                                         Ipi.typeCollection()));
     }
   }
 
@@ -878,11 +878,11 @@ static void mergePdbs() {
   auto &DestTpi = Builder.getTpiBuilder();
   auto &DestIpi = Builder.getIpiBuilder();
   MergedTpi.ForEachRecord(
-      [&DestTpi](TypeIndex TI, MutableArrayRef<uint8_t> Data) {
+      [&DestTpi](TypeIndex TI, ArrayRef<uint8_t> Data) {
         DestTpi.addTypeRecord(Data, None);
       });
   MergedIpi.ForEachRecord(
-      [&DestIpi](TypeIndex TI, MutableArrayRef<uint8_t> Data) {
+      [&DestIpi](TypeIndex TI, ArrayRef<uint8_t> Data) {
         DestIpi.addTypeRecord(Data, None);
       });
 

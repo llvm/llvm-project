@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GCNRegPressure.h"
+#include "llvm/CodeGen/RegisterPressure.h"
 
 using namespace llvm;
 
@@ -63,15 +64,6 @@ static bool isEqual(const GCNRPTracker::LiveRegSet &S1,
   return true;
 }
 
-static GCNRPTracker::LiveRegSet
-stripEmpty(const GCNRPTracker::LiveRegSet &LR) {
-  GCNRPTracker::LiveRegSet Res;
-  for (const auto &P : LR) {
-    if (P.second.any())
-      Res.insert(P);
-  }
-  return Res;
-}
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -185,6 +177,64 @@ void GCNRegPressure::print(raw_ostream &OS, const SISubtarget *ST) const {
 }
 #endif
 
+
+static LaneBitmask getDefRegMask(const MachineOperand &MO,
+                                 const MachineRegisterInfo &MRI) {
+  assert(MO.isDef() && MO.isReg() &&
+    TargetRegisterInfo::isVirtualRegister(MO.getReg()));
+
+  // We don't rely on read-undef flag because in case of tentative schedule
+  // tracking it isn't set correctly yet. This works correctly however since
+  // use mask has been tracked before using LIS.
+  return MO.getSubReg() == 0 ?
+    MRI.getMaxLaneMaskForVReg(MO.getReg()) :
+    MRI.getTargetRegisterInfo()->getSubRegIndexLaneMask(MO.getSubReg());
+}
+
+static LaneBitmask getUsedRegMask(const MachineOperand &MO,
+                                  const MachineRegisterInfo &MRI,
+                                  const LiveIntervals &LIS) {
+  assert(MO.isUse() && MO.isReg() &&
+         TargetRegisterInfo::isVirtualRegister(MO.getReg()));
+
+  if (auto SubReg = MO.getSubReg())
+    return MRI.getTargetRegisterInfo()->getSubRegIndexLaneMask(SubReg);
+
+  auto MaxMask = MRI.getMaxLaneMaskForVReg(MO.getReg());
+  if (MaxMask.getAsInteger() == 1) // cannot have subregs
+    return MaxMask;
+
+  // For a tentative schedule LIS isn't updated yet but livemask should remain
+  // the same on any schedule. Subreg defs can be reordered but they all must
+  // dominate uses anyway.
+  auto SI = LIS.getInstructionIndex(*MO.getParent()).getBaseIndex();
+  return getLiveLaneMask(MO.getReg(), SI, LIS, MRI);
+}
+
+SmallVector<RegisterMaskPair, 8> collectVirtualRegUses(const MachineInstr &MI,
+                                              const LiveIntervals &LIS,
+                                              const MachineRegisterInfo &MRI) {
+  SmallVector<RegisterMaskPair, 8> Res;
+  for (const auto &MO : MI.operands()) {
+    if (!MO.isReg() || !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+      continue;
+    if (!MO.isUse() || !MO.readsReg())
+      continue;
+
+    auto const UsedMask = getUsedRegMask(MO, MRI, LIS);
+
+    auto Reg = MO.getReg();
+    auto I = std::find_if(Res.begin(), Res.end(), [Reg](const RegisterMaskPair &RM) {
+      return RM.RegUnit == Reg;
+    });
+    if (I != Res.end())
+      I->LaneMask |= UsedMask;
+    else
+      Res.push_back(RegisterMaskPair(Reg, UsedMask));
+  }
+  return Res;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // GCNRPTracker
 
@@ -222,36 +272,6 @@ GCNRPTracker::LiveRegSet llvm::getLiveRegs(SlotIndex SI,
   return LiveRegs;
 }
 
-LaneBitmask GCNRPTracker::getDefRegMask(const MachineOperand &MO) const {
-  assert(MO.isDef() && MO.isReg() &&
-    TargetRegisterInfo::isVirtualRegister(MO.getReg()));
-
-  // We don't rely on read-undef flag because in case of tentative schedule
-  // tracking it isn't set correctly yet. This works correctly however since
-  // use mask has been tracked before using LIS.
-  return MO.getSubReg() == 0 ?
-    MRI->getMaxLaneMaskForVReg(MO.getReg()) :
-    MRI->getTargetRegisterInfo()->getSubRegIndexLaneMask(MO.getSubReg());
-}
-
-LaneBitmask GCNRPTracker::getUsedRegMask(const MachineOperand &MO) const {
-  assert(MO.isUse() && MO.isReg() &&
-         TargetRegisterInfo::isVirtualRegister(MO.getReg()));
-
-  if (auto SubReg = MO.getSubReg())
-    return MRI->getTargetRegisterInfo()->getSubRegIndexLaneMask(SubReg);
-
-  auto MaxMask = MRI->getMaxLaneMaskForVReg(MO.getReg());
-  if (MaxMask.getAsInteger() == 1) // cannot have subregs
-    return MaxMask;
-
-  // For a tentative schedule LIS isn't updated yet but livemask should remain
-  // the same on any schedule. Subreg defs can be reordered but they all must
-  // dominate uses anyway.
-  auto SI = LIS.getInstructionIndex(*MO.getParent()).getBaseIndex();
-  return getLiveLaneMask(MO.getReg(), SI, LIS, *MRI);
-}
-
 void GCNUpwardRPTracker::reset(const MachineInstr &MI,
                                const LiveRegSet *LiveRegsCopy) {
   MRI = &MI.getParent()->getParent()->getRegInfo();
@@ -272,34 +292,40 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   if (MI.isDebugValue())
     return;
 
-  // process all defs first to ensure early clobbers are handled correctly
-  // iterating over operands() to catch implicit defs
-  for (const auto &MO : MI.operands()) {
-    if (!MO.isReg() || !MO.isDef() ||
-      !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+  auto const RegUses = collectVirtualRegUses(MI, LIS, *MRI);
+
+  // calc pressure at the MI (defs + uses)
+  auto AtMIPressure = CurPressure;
+  for (const auto &U : RegUses) {
+    auto LiveMask = LiveRegs[U.RegUnit];
+    AtMIPressure.inc(U.RegUnit, LiveMask, LiveMask | U.LaneMask, *MRI);
+  }
+  // update max pressure
+  MaxPressure = max(AtMIPressure, MaxPressure);
+
+  for (const auto &MO : MI.defs()) {
+    if (!MO.isReg() || !TargetRegisterInfo::isVirtualRegister(MO.getReg()) ||
+         MO.isDead())
       continue;
 
     auto Reg = MO.getReg();
-    auto &LiveMask = LiveRegs[Reg];
-    auto PrevMask = LiveMask;
-    LiveMask &= ~getDefRegMask(MO);
-    CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
-  }
-
-  // then all uses
-  for (const auto &MO : MI.uses()) {
-    if (!MO.isReg() || !MO.readsReg() ||
-      !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+    auto I = LiveRegs.find(Reg);
+    if (I == LiveRegs.end())
       continue;
-
-    auto Reg = MO.getReg();
-    auto &LiveMask = LiveRegs[Reg];
+    auto &LiveMask = I->second;
     auto PrevMask = LiveMask;
-    LiveMask |= getUsedRegMask(MO);
+    LiveMask &= ~getDefRegMask(MO, *MRI);
     CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
+    if (LiveMask.none())
+      LiveRegs.erase(I);
   }
-
-  MaxPressure = max(MaxPressure, CurPressure);
+  for (const auto &U : RegUses) {
+    auto &LiveMask = LiveRegs[U.RegUnit];
+    auto PrevMask = LiveMask;
+    LiveMask |= U.LaneMask;
+    CurPressure.inc(U.RegUnit, PrevMask, LiveMask, *MRI);
+  }
+  assert(CurPressure == getRegPressure(*MRI, LiveRegs));
 }
 
 bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
@@ -368,7 +394,7 @@ void GCNDownwardRPTracker::advanceToNext() {
       continue;
     auto &LiveMask = LiveRegs[Reg];
     auto PrevMask = LiveMask;
-    LiveMask |= getDefRegMask(MO);
+    LiveMask |= getDefRegMask(MO, *MRI);
     CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
   }
 
@@ -430,7 +456,7 @@ static void reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
 bool GCNUpwardRPTracker::isValid() const {
   const auto &SI = LIS.getInstructionIndex(*LastTrackedMI).getBaseIndex();
   const auto LISLR = llvm::getLiveRegs(SI, LIS, *MRI);
-  const auto TrackedLR = stripEmpty(LiveRegs);
+  const auto &TrackedLR = LiveRegs;
 
   if (!isEqual(LISLR, TrackedLR)) {
     dbgs() << "\nGCNUpwardRPTracker error: Tracked and"

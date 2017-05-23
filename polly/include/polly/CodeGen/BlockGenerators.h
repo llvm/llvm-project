@@ -580,8 +580,9 @@ protected:
   /// Invalidate the scalar evolution expressions for a scop.
   ///
   /// This function invalidates the scalar evolution results for all
-  /// instructions that are part of a given scop. This is necessary to ensure
-  /// that later scops do not obtain scalar evolution expressions that reference
+  /// instructions that are part of a given scop, and the loops
+  /// surrounding the users of merge blocks. This is necessary to ensure that
+  /// later scops do not obtain scalar evolution expressions that reference
   /// values that earlier dominated the later scop, but have been moved in the
   /// conditional part of an earlier scop and consequently do not any more
   /// dominate the later scop.

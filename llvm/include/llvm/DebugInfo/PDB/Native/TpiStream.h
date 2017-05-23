@@ -21,6 +21,9 @@
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+namespace codeview {
+class LazyRandomTypeCollection;
+}
 namespace msf {
 class MappedBlockStream;
 }
@@ -53,11 +56,15 @@ public:
   codeview::CVTypeRange types(bool *HadError) const;
   const codeview::CVTypeArray &typeArray() const { return TypeRecords; }
 
+  codeview::LazyRandomTypeCollection &typeCollection() { return *Types; }
+
   Error commit();
 
 private:
   const PDBFile &Pdb;
   std::unique_ptr<msf::MappedBlockStream> Stream;
+
+  std::unique_ptr<codeview::LazyRandomTypeCollection> Types;
 
   codeview::CVTypeArray TypeRecords;
 
