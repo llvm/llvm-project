@@ -399,6 +399,10 @@ public:
     return FlatScratchInsts;
   }
 
+  bool has32BitLiteralSMRDOffset() const {
+    return getGeneration() == SEA_ISLANDS;
+  }
+
   bool isMesaKernel(const MachineFunction &MF) const {
     return isMesa3DOS() && !AMDGPU::isShader(MF.getFunction()->getCallingConv());
   }
@@ -414,6 +418,10 @@ public:
 
   bool hasFminFmaxLegacy() const {
     return getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
+  }
+
+  bool hasSDWA() const {
+    return HasSDWA;
   }
 
   /// \brief Returns the offset in bytes from the start of the input buffer
@@ -668,10 +676,6 @@ public:
 
   bool hasInv2PiInlineImm() const {
     return HasInv2PiInlineImm;
-  }
-
-  bool hasSDWA() const {
-    return HasSDWA;
   }
 
   bool hasDPP() const {

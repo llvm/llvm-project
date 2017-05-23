@@ -186,6 +186,11 @@ def FalkorWr_1SD_1ST_0cyc: SchedWriteRes<[FalkorUnitSD, FalkorUnitST]> {
   let NumMicroOps = 2;
 }
 
+def FalkorWr_1VSD_1ST_0cyc: SchedWriteRes<[FalkorUnitVSD, FalkorUnitST]> {
+  let Latency = 0;
+  let NumMicroOps = 2;
+}
+
 //===----------------------------------------------------------------------===//
 // Define 3 micro-op types
 
@@ -243,6 +248,14 @@ def FalkorWr_2LD_1Z_3cyc     : SchedWriteRes<[FalkorUnitLD, FalkorUnitLD,
   let NumMicroOps = 3;
 }
 
+def FalkorWr_1XYZ_1SD_1ST_0cyc: SchedWriteRes<[FalkorUnitXYZ, FalkorUnitSD, FalkorUnitST]> {
+  let Latency = 0;
+  let NumMicroOps = 3;
+}
+def FalkorWr_1XYZ_1VSD_1ST_0cyc: SchedWriteRes<[FalkorUnitXYZ, FalkorUnitVSD, FalkorUnitST]> {
+  let Latency = 0;
+  let NumMicroOps = 3;
+}
 //===----------------------------------------------------------------------===//
 // Define 4 micro-op types
 
@@ -316,6 +329,12 @@ def FalkorWr_5VXVY_7cyc    : SchedWriteRes<[FalkorUnitVXVY, FalkorUnitVXVY,
   let Latency = 7;
   let NumMicroOps = 5;
 }
+def FalkorWr_1XYZ_2ST_2VSD_0cyc: SchedWriteRes<[FalkorUnitXYZ, FalkorUnitST,
+                                                FalkorUnitVSD, FalkorUnitST,
+                                                FalkorUnitVSD]> {
+  let Latency = 0;
+  let NumMicroOps = 5;
+}
 
 //===----------------------------------------------------------------------===//
 // Define 6 micro-op types
@@ -373,31 +392,46 @@ def FalkorReadVMA    : SchedReadAdvance<3, [FalkorWr_VMUL32_1VXVY_4cyc, FalkorWr
 def FalkorReadFMA32  : SchedReadAdvance<1, [FalkorWr_FMUL32_1VXVY_5cyc, FalkorWr_FMUL32_2VXVY_5cyc]>;
 def FalkorReadFMA64  : SchedReadAdvance<2, [FalkorWr_FMUL64_1VXVY_6cyc, FalkorWr_FMUL64_2VXVY_6cyc]>;
 
-// SchedPredicates and WriteVariants for Immediate Zero and LSLFast
+// SchedPredicates and WriteVariants for Immediate Zero and LSLFast/ASRFast
 // -----------------------------------------------------------------------------
 def FalkorImmZPred    : SchedPredicate<[{MI->getOperand(1).getImm() == 0}]>;
-def FalkorLSLFastPred : SchedPredicate<[{TII->isFalkorLSLFast(*MI)}]>; 
+def FalkorFMOVZrReg   : SchedPredicate<[{MI->getOperand(1).getReg() == AArch64::WZR ||
+                                         MI->getOperand(1).getReg() == AArch64::XZR}]>;
+def FalkorShiftExtFastPred : SchedPredicate<[{TII->isFalkorShiftExtFast(*MI)}]>;
 
 def FalkorWr_FMOV  : SchedWriteVariant<[
-                       SchedVar<FalkorImmZPred, [FalkorWr_1none_0cyc]>,
-                       SchedVar<NoSchedPred,    [FalkorWr_1GTOV_1cyc]>]>;
+                       SchedVar<FalkorFMOVZrReg, [FalkorWr_1none_0cyc]>,
+                       SchedVar<NoSchedPred,     [FalkorWr_1GTOV_1cyc]>]>;
 
 def FalkorWr_MOVZ  : SchedWriteVariant<[
                        SchedVar<FalkorImmZPred, [FalkorWr_1none_0cyc]>,
                        SchedVar<NoSchedPred,    [FalkorWr_1XYZB_1cyc]>]>;
 
-def FalkorWr_LDR   : SchedWriteVariant<[
-                       SchedVar<FalkorLSLFastPred, [FalkorWr_1LD_3cyc]>,
-                       SchedVar<NoSchedPred,       [FalkorWr_1XYZ_1LD_4cyc]>]>;
+def FalkorWr_ADDSUBsx : SchedWriteVariant<[
+                          SchedVar<FalkorShiftExtFastPred, [FalkorWr_1XYZ_1cyc]>,
+                          SchedVar<NoSchedPred,            [FalkorWr_2XYZ_2cyc]>]>;
 
-def FalkorWr_ADD   : SchedWriteVariant<[
-                       SchedVar<FalkorLSLFastPred, [FalkorWr_1XYZ_1cyc]>,
-                       SchedVar<NoSchedPred,       [FalkorWr_2XYZ_2cyc]>]>;
+def FalkorWr_LDRro : SchedWriteVariant<[
+                       SchedVar<FalkorShiftExtFastPred, [FalkorWr_1LD_3cyc]>,
+                       SchedVar<NoSchedPred,            [FalkorWr_1XYZ_1LD_4cyc]>]>;
 
-def FalkorWr_PRFM  : SchedWriteVariant<[
-                       SchedVar<FalkorLSLFastPred, [FalkorWr_1ST_3cyc]>,
-                       SchedVar<NoSchedPred,       [FalkorWr_1XYZ_1ST_4cyc]>]>;
+def FalkorWr_LDRSro : SchedWriteVariant<[
+                        SchedVar<FalkorShiftExtFastPred, [FalkorWr_1LD_4cyc]>,
+                        SchedVar<NoSchedPred,            [FalkorWr_1XYZ_1LD_5cyc]>]>;
 
-def FalkorWr_LDRS  : SchedWriteVariant<[
-                       SchedVar<FalkorLSLFastPred, [FalkorWr_1LD_4cyc]>,
-                       SchedVar<NoSchedPred,       [FalkorWr_1XYZ_1LD_5cyc]>]>;
+def FalkorWr_PRFMro : SchedWriteVariant<[
+                        SchedVar<FalkorShiftExtFastPred, [FalkorWr_1ST_3cyc]>,
+                        SchedVar<NoSchedPred,            [FalkorWr_1XYZ_1ST_4cyc]>]>;
+
+def FalkorWr_STRVro : SchedWriteVariant<[
+                        SchedVar<FalkorShiftExtFastPred, [FalkorWr_1VSD_1ST_0cyc]>,
+                        SchedVar<NoSchedPred,            [FalkorWr_1XYZ_1VSD_1ST_0cyc]>]>;
+
+def FalkorWr_STRQro : SchedWriteVariant<[
+                        SchedVar<FalkorShiftExtFastPred, [FalkorWr_1XYZ_2ST_2VSD_0cyc]>,
+                        SchedVar<NoSchedPred,            [FalkorWr_2XYZ_2ST_2VSD_0cyc]>]>;
+
+def FalkorWr_STRro : SchedWriteVariant<[
+                       SchedVar<FalkorShiftExtFastPred, [FalkorWr_1SD_1ST_0cyc]>,
+                       SchedVar<NoSchedPred,            [FalkorWr_1XYZ_1SD_1ST_0cyc]>]>;
+

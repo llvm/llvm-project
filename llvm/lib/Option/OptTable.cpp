@@ -186,6 +186,20 @@ static unsigned matchOption(const OptTable::Info *I, StringRef Str,
   return 0;
 }
 
+std::vector<std::string> OptTable::findByPrefix(StringRef Cur) const {
+  std::vector<std::string> Ret;
+  for (const Info &In : OptionInfos.slice(FirstSearchableIndex)) {
+    if (!In.Prefixes)
+      continue;
+    for (int I = 0; In.Prefixes[I]; I++) {
+      std::string S = std::string(In.Prefixes[I]) + std::string(In.Name);
+      if (StringRef(S).startswith(Cur))
+        Ret.push_back(S);
+    }
+  }
+  return Ret;
+}
+
 Arg *OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
                            unsigned FlagsToInclude,
                            unsigned FlagsToExclude) const {

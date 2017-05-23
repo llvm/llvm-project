@@ -234,10 +234,8 @@ def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{
 }]>;
 
 def SMRDImm         : ComplexPattern<i64, 2, "SelectSMRDImm">;
-def SMRDImm32       : ComplexPattern<i64, 2, "SelectSMRDImm32">;
 def SMRDSgpr        : ComplexPattern<i64, 2, "SelectSMRDSgpr">;
 def SMRDBufferImm   : ComplexPattern<i32, 1, "SelectSMRDBufferImm">;
-def SMRDBufferImm32 : ComplexPattern<i32, 1, "SelectSMRDBufferImm32">;
 def SMRDBufferSgpr  : ComplexPattern<i32, 1, "SelectSMRDBufferSgpr">;
 
 let Predicates = [isGCN] in {
@@ -276,7 +274,7 @@ defm : SMRD_Pattern <"S_LOAD_DWORDX8",  v8i32>;
 defm : SMRD_Pattern <"S_LOAD_DWORDX16", v16i32>;
 
 // 1. Offset as an immediate
-def SM_LOAD_PATTERN : Pat <  // name this pattern to reuse AddedComplexity on CI
+def : Pat <
   (SIload_constant v4i32:$sbase, (SMRDBufferImm i32:$offset)),
   (S_BUFFER_LOAD_DWORD_IMM $sbase, $offset, 0)
 >;
@@ -504,26 +502,3 @@ class SMRD_Real_ci <bits<5> op, SM_Pseudo ps>
 }
 
 def S_DCACHE_INV_VOL_ci : SMRD_Real_ci <0x1d, S_DCACHE_INV_VOL>;
-
-let AddedComplexity = SM_LOAD_PATTERN.AddedComplexity in {
-
-class SMRD_Pattern_ci <string Instr, ValueType vt> : Pat <
-  (smrd_load (SMRDImm32 i64:$sbase, i32:$offset)),
-  (vt (!cast<SM_Pseudo>(Instr#"_IMM_ci") $sbase, $offset, 0))> {
-  let Predicates = [isCIOnly];
-}
-
-def : SMRD_Pattern_ci <"S_LOAD_DWORD",    i32>;
-def : SMRD_Pattern_ci <"S_LOAD_DWORDX2",  v2i32>;
-def : SMRD_Pattern_ci <"S_LOAD_DWORDX4",  v4i32>;
-def : SMRD_Pattern_ci <"S_LOAD_DWORDX8",  v8i32>;
-def : SMRD_Pattern_ci <"S_LOAD_DWORDX16", v16i32>;
-
-def : Pat <
-  (SIload_constant v4i32:$sbase, (SMRDBufferImm32 i32:$offset)),
-  (S_BUFFER_LOAD_DWORD_IMM_ci $sbase, $offset, 0)> {
-  let Predicates = [isCI]; // should this be isCIOnly?
-}
-
-} // End let AddedComplexity = SM_LOAD_PATTERN.AddedComplexity
-

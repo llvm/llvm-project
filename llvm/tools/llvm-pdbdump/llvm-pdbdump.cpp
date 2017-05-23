@@ -877,14 +877,12 @@ static void mergePdbs() {
 
   auto &DestTpi = Builder.getTpiBuilder();
   auto &DestIpi = Builder.getIpiBuilder();
-  MergedTpi.ForEachRecord(
-      [&DestTpi](TypeIndex TI, MutableArrayRef<uint8_t> Data) {
-        DestTpi.addTypeRecord(Data, None);
-      });
-  MergedIpi.ForEachRecord(
-      [&DestIpi](TypeIndex TI, MutableArrayRef<uint8_t> Data) {
-        DestIpi.addTypeRecord(Data, None);
-      });
+  MergedTpi.ForEachRecord([&DestTpi](TypeIndex TI, ArrayRef<uint8_t> Data) {
+    DestTpi.addTypeRecord(Data, None);
+  });
+  MergedIpi.ForEachRecord([&DestIpi](TypeIndex TI, ArrayRef<uint8_t> Data) {
+    DestIpi.addTypeRecord(Data, None);
+  });
 
   SmallString<64> OutFile(opts::merge::PdbOutputFile);
   if (OutFile.empty()) {

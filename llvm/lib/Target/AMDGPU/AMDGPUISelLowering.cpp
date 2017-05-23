@@ -3478,7 +3478,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
                                        DL);
     }
 
-    if ((OffsetVal + WidthVal) >= 32) {
+    if ((OffsetVal + WidthVal) >= 32 &&
+        !(Subtarget->hasSDWA() && OffsetVal == 16 && WidthVal == 16)) {
       SDValue ShiftVal = DAG.getConstant(OffsetVal, DL, MVT::i32);
       return DAG.getNode(Signed ? ISD::SRA : ISD::SRL, DL, MVT::i32,
                          BitsFrom, ShiftVal);

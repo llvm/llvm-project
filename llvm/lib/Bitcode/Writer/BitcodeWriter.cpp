@@ -660,10 +660,12 @@ void ModuleBitcodeWriter::writeAttributeTable() {
 
   SmallVector<uint64_t, 64> Record;
   for (unsigned i = 0, e = Attrs.size(); i != e; ++i) {
-    const AttributeList &A = Attrs[i];
-    for (unsigned i = 0, e = A.getNumSlots(); i != e; ++i)
-      Record.push_back(
-          VE.getAttributeGroupID({A.getSlotIndex(i), A.getSlotAttributes(i)}));
+    AttributeList AL = Attrs[i];
+    for (unsigned i = AL.index_begin(), e = AL.index_end(); i != e; ++i) {
+      AttributeSet AS = AL.getAttributes(i);
+      if (AS.hasAttributes())
+        Record.push_back(VE.getAttributeGroupID({i, AS}));
+    }
 
     Stream.EmitRecord(bitc::PARAMATTR_CODE_ENTRY, Record);
     Record.clear();

@@ -416,6 +416,8 @@ Error TypeStreamMerger::visitKnownRecord(CVType &, FieldListRecord &R) {
   assert(DestTypeStream);
   // Visit the members inside the field list.
   HadUntranslatedMember = false;
+  FieldListBuilder = llvm::make_unique<FieldListRecordBuilder>(*DestTypeStream);
+
   FieldListBuilder->begin();
   if (auto EC = codeview::visitMemberRecordStream(R.Data, *this))
     return EC;
@@ -428,6 +430,7 @@ Error TypeStreamMerger::visitKnownRecord(CVType &, FieldListRecord &R) {
     FieldListBuilder->reset();
   addMapping(DestIdx);
 
+  FieldListBuilder.reset();
   return Error::success();
 }
 
@@ -496,7 +499,6 @@ Error TypeStreamMerger::visitUnknownType(CVType &Rec) {
 Error TypeStreamMerger::mergeTypeRecords(TypeTableBuilder &Dest,
                                          TypeCollection &Types) {
   DestTypeStream = &Dest;
-  FieldListBuilder = llvm::make_unique<FieldListRecordBuilder>(Dest);
 
   return doit(Types);
 }
@@ -515,7 +517,6 @@ Error TypeStreamMerger::mergeTypesAndIds(TypeTableBuilder &DestIds,
                                          TypeCollection &IdsAndTypes) {
   DestIdStream = &DestIds;
   DestTypeStream = &DestTypes;
-  FieldListBuilder = llvm::make_unique<FieldListRecordBuilder>(DestTypes);
 
   return doit(IdsAndTypes);
 }

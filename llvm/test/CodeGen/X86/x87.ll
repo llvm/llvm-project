@@ -1,13 +1,16 @@
 ; RUN: llc < %s -march=x86 | FileCheck %s -check-prefix=X87
 ; RUN: llc < %s -march=x86-64 -mattr=-sse | FileCheck %s -check-prefix=X87
-; RUN: llc < %s -march=x86 -mattr=-x87 | FileCheck %s -check-prefix=NOX87 --implicit-check-not "{{ }}f{{.*}}"
-; RUN: llc < %s -march=x86-64 -mattr=-x87,-sse | FileCheck %s -check-prefix=NOX87 --implicit-check-not "{{ }}f{{.*}}"
-; RUN: llc < %s -march=x86 -mattr=-x87,+sse | FileCheck %s -check-prefix=NOX87 --implicit-check-not "{{ }}f{{.*}}"
-; RUN: llc < %s -march=x86-64 -mattr=-x87,-sse2 | FileCheck %s -check-prefix=NOX87 --implicit-check-not "{{ }}f{{.*}}"
+; RUN: llc < %s -march=x86 -mattr=-x87 | FileCheck %s -check-prefix=NOX87
+; RUN: llc < %s -march=x86-64 -mattr=-x87,-sse | FileCheck %s -check-prefix=NOX87
+; RUN: llc < %s -march=x86 -mattr=-x87,+sse | FileCheck %s -check-prefix=NOX87
+; RUN: llc < %s -march=x86-64 -mattr=-x87,-sse2 | FileCheck %s -check-prefix=NOX87
 
 define void @test(i32 %i, i64 %l, float* %pf, double* %pd, fp128* %pld) nounwind readnone {
 ; X87-LABEL: test:
 ; NOX87-LABEL: test:
+
+; NOX87-NOT: {{ }}f{{.*}}
+
 ; X87: fild
 ; NOX87: __floatunsisf
   %tmp = uitofp i32 %i to float

@@ -127,7 +127,7 @@ static cl::opt<bool> EnableConstpoolPromotion(
     "arm-promote-constant", cl::Hidden,
     cl::desc("Enable / disable promotion of unnamed_addr constants into "
              "constant pools"),
-    cl::init(true));
+    cl::init(false)); // FIXME: set to true by default once PR32780 is fixed
 static cl::opt<unsigned> ConstpoolPromotionMaxSize(
     "arm-promote-constant-max-size", cl::Hidden,
     cl::desc("Maximum size of constant to promote into a constant pool"),

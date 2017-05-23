@@ -510,7 +510,7 @@ class InstrItineraryData;
     bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                    unsigned &Cost) const override;
 
-    bool canMergeStoresTo(EVT MemVT) const override {
+    bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT) const override {
       // Do not merge to larger than i32.
       return (MemVT.getSizeInBits() <= 32);
     }

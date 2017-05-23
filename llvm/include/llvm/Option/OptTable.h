@@ -113,6 +113,14 @@ public:
     return getInfo(id).MetaVar;
   }
 
+  /// Find flags from OptTable which starts with Cur.
+  ///
+  /// \param [in] Cur - String prefix that all returned flags need
+  //  to start with.
+  ///
+  /// \return The vector of flags which start with Cur.
+  std::vector<std::string> findByPrefix(StringRef Cur) const;
+
   /// \brief Parse a single argument; returning the new argument and
   /// updating Index.
   ///
