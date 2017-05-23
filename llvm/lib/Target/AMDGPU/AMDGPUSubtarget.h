@@ -420,6 +420,10 @@ public:
     return getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   }
 
+  bool hasSDWA() const {
+    return HasSDWA;
+  }
+
   /// \brief Returns the offset in bytes from the start of the input buffer
   ///        of the first explicit kernel argument.
   unsigned getExplicitKernelArgOffset(const MachineFunction &MF) const {
@@ -672,10 +676,6 @@ public:
 
   bool hasInv2PiInlineImm() const {
     return HasInv2PiInlineImm;
-  }
-
-  bool hasSDWA() const {
-    return HasSDWA;
   }
 
   bool hasDPP() const {

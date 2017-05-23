@@ -793,7 +793,9 @@ std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
 ///   ReturnIndex:    0  -> 1
 ///   FirstArgIndex: 1.. -> 2..
 static constexpr unsigned attrIdxToArrayIdx(unsigned Index) {
-  return Index + 1;
+  // MSVC warns about '~0U + 1' wrapping around when this is called on
+  // FunctionIndex, so cast to int first.
+  return static_cast<int>(Index) + 1;
 }
 
 AttributeListImpl::AttributeListImpl(LLVMContext &C,

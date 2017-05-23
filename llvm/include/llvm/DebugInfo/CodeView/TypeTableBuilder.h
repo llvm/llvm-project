@@ -64,7 +64,7 @@ public:
     return *ExpectedIndex;
   }
 
-  TypeIndex writeSerializedRecord(MutableArrayRef<uint8_t> Record) {
+  TypeIndex writeSerializedRecord(ArrayRef<uint8_t> Record) {
     return Serializer.insertRecordBytes(Record);
   }
 
@@ -77,19 +77,18 @@ public:
     }
   }
 
-  ArrayRef<MutableArrayRef<uint8_t>> records() const {
-    return Serializer.records();
-  }
+  ArrayRef<ArrayRef<uint8_t>> records() const { return Serializer.records(); }
 };
 
 class FieldListRecordBuilder {
   TypeTableBuilder &TypeTable;
+  BumpPtrAllocator Allocator;
   TypeSerializer TempSerializer;
   CVType Type;
 
 public:
   explicit FieldListRecordBuilder(TypeTableBuilder &TypeTable)
-      : TypeTable(TypeTable), TempSerializer(TypeTable.getAllocator()) {
+      : TypeTable(TypeTable), TempSerializer(Allocator) {
     Type.Type = TypeLeafKind::LF_FIELDLIST;
   }
 

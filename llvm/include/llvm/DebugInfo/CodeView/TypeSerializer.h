@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
@@ -25,6 +24,8 @@
 namespace llvm {
 
 namespace codeview {
+
+class TypeHasher;
 
 class TypeSerializer : public TypeVisitorCallbacks {
   struct SubRecord {
@@ -45,14 +46,13 @@ class TypeSerializer : public TypeVisitorCallbacks {
     }
   };
 
-  typedef SmallVector<MutableArrayRef<uint8_t>, 2> RecordList;
+  typedef SmallVector<MutableArrayRef<uint8_t>, 2> MutableRecordList;
 
   static constexpr uint8_t ContinuationLength = 8;
   BumpPtrAllocator &RecordStorage;
   RecordSegment CurrentSegment;
-  RecordList FieldListSegments;
+  MutableRecordList FieldListSegments;
 
-  TypeIndex LastTypeIndex;
   Optional<TypeLeafKind> TypeKind;
   Optional<TypeLeafKind> MemberKind;
   std::vector<uint8_t> RecordBuffer;
@@ -60,28 +60,23 @@ class TypeSerializer : public TypeVisitorCallbacks {
   BinaryStreamWriter Writer;
   TypeRecordMapping Mapping;
 
-  RecordList SeenRecords;
-  StringMap<TypeIndex> HashedRecords;
+  /// Private type record hashing implementation details are handled here.
+  std::unique_ptr<TypeHasher> Hasher;
 
   bool isInFieldList() const;
-  TypeIndex calcNextTypeIndex() const;
-  TypeIndex incrementTypeIndex();
   MutableArrayRef<uint8_t> getCurrentSubRecordData();
   MutableArrayRef<uint8_t> getCurrentRecordData();
   Error writeRecordPrefix(TypeLeafKind Kind);
-  TypeIndex insertRecordBytesPrivate(MutableArrayRef<uint8_t> Record);
-  TypeIndex insertRecordBytesWithCopy(CVType &Record,
-                                      MutableArrayRef<uint8_t> Data);
 
   Expected<MutableArrayRef<uint8_t>>
   addPadding(MutableArrayRef<uint8_t> Record);
 
 public:
   explicit TypeSerializer(BumpPtrAllocator &Storage);
+  ~TypeSerializer();
 
-  ArrayRef<MutableArrayRef<uint8_t>> records() const;
-  TypeIndex getLastTypeIndex() const;
-  TypeIndex insertRecordBytes(MutableArrayRef<uint8_t> Record);
+  ArrayRef<ArrayRef<uint8_t>> records() const;
+  TypeIndex insertRecordBytes(ArrayRef<uint8_t> Record);
   Expected<TypeIndex> visitTypeEndGetIndex(CVType &Record);
 
   Error visitTypeBegin(CVType &Record) override;

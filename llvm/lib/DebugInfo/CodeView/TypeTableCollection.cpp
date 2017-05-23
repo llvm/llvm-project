@@ -24,8 +24,7 @@ static void error(Error &&EC) {
     consumeError(std::move(EC));
 }
 
-TypeTableCollection::TypeTableCollection(
-    ArrayRef<MutableArrayRef<uint8_t>> Records)
+TypeTableCollection::TypeTableCollection(ArrayRef<ArrayRef<uint8_t>> Records)
     : Records(Records), Database(Records.size()) {}
 
 Optional<TypeIndex> TypeTableCollection::getFirst() {

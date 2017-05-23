@@ -11,10 +11,10 @@
 # in each step replacing one of them with a file from the "bad" directory.
 #
 # Additionally you can perform the same steps with a single .s file. In this
-# mode functions are identified by "# -- Begin FunctionName" and
-# "# -- End FunctionName" markers. The abtest.py then takes all functions from
-# the file in the "before" directory and replaces one function with the
-# corresponding function from the "bad" file in each step.
+# mode functions are identified by " -- Begin function FunctionName" and
+# " -- End function" markers. The abtest.py then takes all
+# function from the file in the "before" directory and replaces one function
+# with the corresponding function from the "bad" file in each step.
 #
 # Example usage to identify miscompiled files:
 #    1. Create a link_test script, make it executable. Simple Example:
@@ -26,12 +26,7 @@
 #       anotherfile.s: failed: './link_test' exitcode != 0
 #       ...
 # Example usage to identify miscompiled functions inside a file:
-#    3. First you have to mark begin and end of the functions.
-#       The script comes with some examples called mark_xxx.py.
-#       Unfortunately this is very specific to your environment and it is likely
-#       that you have to write a custom version for your environment.
-#       > for i in before/*.s after/*.s; do mark_xxx.py $i; done
-#    4. Run the tests on a single file (assuming before/file.s and
+#    3. Run the tests on a single file (assuming before/file.s and
 #       after/file.s exist)
 #       > ./abtest.py file.s
 #       funcname1 [0/XX]: ok
@@ -70,21 +65,23 @@ def extract_functions(file):
     functions = []
     in_function = None
     for line in open(file):
-        if line.startswith("# -- Begin  "):
+        marker = line.find(" -- Begin function ")
+        if marker != -1:
             if in_function != None:
                 warn("Missing end of function %s" % (in_function,))
-            funcname = line[12:-1]
+            funcname = line[marker + 19:-1]
             in_function = funcname
             text = line
-        elif line.startswith("# -- End  "):
-            function_name = line[10:-1]
-            if in_function != function_name:
-                warn("End %s does not match begin %s" % (function_name, in_function))
-            else:
-                text += line
-                functions.append( (in_function, text) )
+            continue
+
+        marker = line.find(" -- End function")
+        if marker != -1:
+            text += line
+            functions.append( (in_function, text) )
             in_function = None
-        elif in_function != None:
+            continue
+
+        if in_function != None:
             text += line
     return functions
 
@@ -94,22 +91,23 @@ def replace_function(file, function, replacement, dest):
     found = False
     in_function = None
     for line in open(file):
-        if line.startswith("# -- Begin  "):
+        marker = line.find(" -- Begin function ")
+        if marker != -1:
             if in_function != None:
                 warn("Missing end of function %s" % (in_function,))
-            funcname = line[12:-1]
+            funcname = line[marker + 19:-1]
             in_function = funcname
             if in_function == function:
                 out.write(replacement)
                 skip = True
-        elif line.startswith("# -- End  "):
-            function_name = line[10:-1]
-            if in_function != function_name:
-                warn("End %s does not match begin %s" % (function_name, in_function))
-            in_function = None
-            if skip:
-                skip = False
-                continue
+        else:
+            marker = line.find(" -- End function")
+            if marker != -1:
+                in_function = None
+                if skip:
+                    skip = False
+                    continue
+
         if not skip:
             out.write(line)
 
