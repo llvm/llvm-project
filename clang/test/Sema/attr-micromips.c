@@ -13,3 +13,5 @@ __attribute__((mips16,micromips)) void foo6();  // expected-error {{'mips16' and
 
 __attribute((micromips)) void foo7();
 __attribute((nomicromips)) void foo8();
+__attribute__((mips16)) void foo9(void) __attribute__((micromips)); // expected-error {{'micromips' and 'mips16' attributes are not compatible}} \
+                                                                    // expected-note {{conflicting attribute is here}}

@@ -2120,31 +2120,18 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
       Id.getKind() == UnqualifiedId::IK_LiteralOperatorId) {
     // Form a parsed representation of the template-id to be stored in the
     // UnqualifiedId.
-    TemplateIdAnnotation *TemplateId
-      = TemplateIdAnnotation::Allocate(TemplateArgs.size(), TemplateIds);
 
     // FIXME: Store name for literal operator too.
-    if (Id.getKind() == UnqualifiedId::IK_Identifier) {
-      TemplateId->Name = Id.Identifier;
-      TemplateId->Operator = OO_None;
-      TemplateId->TemplateNameLoc = Id.StartLocation;
-    } else {
-      TemplateId->Name = nullptr;
-      TemplateId->Operator = Id.OperatorFunctionId.Operator;
-      TemplateId->TemplateNameLoc = Id.StartLocation;
-    }
+    IdentifierInfo *TemplateII =
+        Id.getKind() == UnqualifiedId::IK_Identifier ? Id.Identifier : nullptr;
+    OverloadedOperatorKind OpKind = Id.getKind() == UnqualifiedId::IK_Identifier
+                                        ? OO_None
+                                        : Id.OperatorFunctionId.Operator;
 
-    TemplateId->SS = SS;
-    TemplateId->TemplateKWLoc = TemplateKWLoc;
-    TemplateId->Template = Template;
-    TemplateId->Kind = TNK;
-    TemplateId->LAngleLoc = LAngleLoc;
-    TemplateId->RAngleLoc = RAngleLoc;
-    ParsedTemplateArgument *Args = TemplateId->getTemplateArgs();
-    for (unsigned Arg = 0, ArgEnd = TemplateArgs.size(); 
-         Arg != ArgEnd; ++Arg)
-      Args[Arg] = TemplateArgs[Arg];
-    
+    TemplateIdAnnotation *TemplateId = TemplateIdAnnotation::Create(
+        SS, TemplateKWLoc, Id.StartLocation, TemplateII, OpKind, Template, TNK,
+        LAngleLoc, RAngleLoc, TemplateArgs, TemplateIds);
+
     Id.setTemplateId(TemplateId);
     return false;
   }

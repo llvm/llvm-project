@@ -1277,7 +1277,7 @@ Clang supports the GNU style ``__attribute__((micromips))`` and
 may be attached to a function definition and instructs the backend to generate
 or not to generate microMIPS code for that function.
 
-These attributes override the -mmicromips and -mno-micromips options
+These attributes override the `-mmicromips` and `-mno-micromips` options
 on the command line.
   }];
 }

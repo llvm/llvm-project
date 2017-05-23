@@ -334,6 +334,10 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
   bool HasPlainEdge = false;
   bool HasAbnormalEdge = false;
 
+  // In a coroutine, only co_return statements count as normal returns. Remember
+  // if we are processing a coroutine or not.
+  const bool IsCoroutine = isa<CoroutineBodyStmt>(AC.getBody());
+
   // Ignore default cases that aren't likely to be reachable because all
   // enums in a switch(X) have explicit case statements.
   CFGBlock::FilterOptions FO;
@@ -375,7 +379,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
 
     CFGStmt CS = ri->castAs<CFGStmt>();
     const Stmt *S = CS.getStmt();
-    if (isa<ReturnStmt>(S) || isa<CoreturnStmt>(S)) {
+    if ((isa<ReturnStmt>(S) && !IsCoroutine) || isa<CoreturnStmt>(S)) {
       HasLiveReturn = true;
       continue;
     }

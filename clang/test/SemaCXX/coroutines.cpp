@@ -746,3 +746,75 @@ coro<T> dependent_uses_nothrow_new(T) {
    co_return;
 }
 template coro<good_promise_13> dependent_uses_nothrow_new(good_promise_13);
+
+struct mismatch_gro_type_tag1 {};
+template<>
+struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag1> {
+  struct promise_type {
+    void get_return_object() {} //expected-note {{'get_return_object' is declared here}}
+    suspend_always initial_suspend() { return {}; }
+    suspend_always final_suspend() { return {}; }
+    void return_void() {}
+    void unhandled_exception();
+  };
+};
+
+extern "C" int f(mismatch_gro_type_tag1) { 
+  // expected-error@-1 {{cannot initialize return object of type 'int' with an rvalue of type 'void'}}
+  co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
+}
+
+struct mismatch_gro_type_tag2 {};
+template<>
+struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag2> {
+  struct promise_type {
+    void* get_return_object() {} //expected-note {{'get_return_object' is declared here}}
+    suspend_always initial_suspend() { return {}; }
+    suspend_always final_suspend() { return {}; }
+    void return_void() {}
+    void unhandled_exception();
+  };
+};
+
+extern "C" int f(mismatch_gro_type_tag2) { 
+  // expected-error@-1 {{cannot initialize return object of type 'int' with an lvalue of type 'void *'}}
+  co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
+}
+
+struct mismatch_gro_type_tag3 {};
+template<>
+struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag3> {
+  struct promise_type {
+    int get_return_object() {}
+    static void get_return_object_on_allocation_failure() {} //expected-note {{'get_return_object_on_allocation_failure' is declared here}}
+    suspend_always initial_suspend() { return {}; }
+    suspend_always final_suspend() { return {}; }
+    void return_void() {}
+    void unhandled_exception();
+  };
+};
+
+extern "C" int f(mismatch_gro_type_tag3) { 
+  // expected-error@-1 {{cannot initialize return object of type 'int' with an rvalue of type 'void'}}
+  co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
+}
+
+
+struct mismatch_gro_type_tag4 {};
+template<>
+struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag4> {
+  struct promise_type {
+    int get_return_object() {}
+    static char* get_return_object_on_allocation_failure() {} //expected-note {{'get_return_object_on_allocation_failure' is declared here}}
+    suspend_always initial_suspend() { return {}; }
+    suspend_always final_suspend() { return {}; }
+    void return_void() {}
+    void unhandled_exception();
+  };
+};
+
+extern "C" int f(mismatch_gro_type_tag4) { 
+  // expected-error@-1 {{cannot initialize return object of type 'int' with an rvalue of type 'char *'}}
+  co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
+}
+
