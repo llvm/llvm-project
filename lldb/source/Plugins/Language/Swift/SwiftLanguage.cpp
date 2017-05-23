@@ -577,6 +577,10 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                 "Swift.UnicodeScalar summary provider",
                 ConstString("Swift.UnicodeScalar"), summary_flags);
   AddCXXSummary(swift_category_sp,
+                lldb_private::formatters::swift::UnicodeScalar_SummaryProvider,
+                "Swift.Unicode.Scalar summary provider",
+                ConstString("Swift.Unicode.Scalar"), summary_flags);
+  AddCXXSummary(swift_category_sp,
                 lldb_private::formatters::swift::Character_SummaryProvider,
                 "Swift.Character summary provider",
                 ConstString("Swift.Character"), summary_flags);
