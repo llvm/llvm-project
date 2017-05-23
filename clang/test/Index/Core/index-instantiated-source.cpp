@@ -37,6 +37,11 @@ public:
     public:
       SubNestedType(int);
     };
+    using TypeAlias = T;
+// CHECK: [[@LINE-1]]:11 | type-alias/C++ | TypeAlias | c:@ST>2#T#T@TemplateClass@S@NestedType@TypeAlias |
+
+    typedef int Typedef;
+// CHECK: [[@LINE-1]]:17 | type-alias/C | Typedef | c:{{.*}}index-instantiated-source.cpp@ST>2#T#T@TemplateClass@S@NestedType@T@Typedef |
   };
 };
 
@@ -64,4 +69,9 @@ void canonicalizeInstaniationReferences(TemplateClass<int, float> &object) {
   TT::NestedType::SubNestedType subNestedType(0);
 // CHECK: [[@LINE-1]]:7 | struct/C++ | NestedType | c:@ST>2#T#T@TemplateClass@S@NestedType |
 // CHECK: [[@LINE-2]]:19 | class/C++ | SubNestedType | c:@ST>2#T#T@TemplateClass@S@NestedType@S@SubNestedType |
+
+  TT::NestedType::TypeAlias nestedTypeAlias;
+// CHECK: [[@LINE-1]]:19 | type-alias/C++ | TypeAlias | c:@ST>2#T#T@TemplateClass@S@NestedType@TypeAlias |
+  TT::NestedType::Typedef nestedTypedef;
+// CHECK: [[@LINE-1]]:19 | type-alias/C | Typedef | c:{{.*}}index-instantiated-source.cpp@ST>2#T#T@TemplateClass@S@NestedType@T@Typedef |
 }
