@@ -28,6 +28,10 @@ public:
 
   struct NestedType {
 // CHECK: [[@LINE-1]]:10 | struct/C++ | NestedType | c:@ST>2#T#T@TemplateClass@S@NestedType |
+
+    T nestedField;
+// CHECK: [[@LINE-1]]:7 | field/C++ | nestedField | c:@ST>2#T#T@TemplateClass@S@NestedType@FI@nestedField |
+
     class SubNestedType {
 // CHECK: [[@LINE-1]]:11 | class/C++ | SubNestedType | c:@ST>2#T#T@TemplateClass@S@NestedType@S@SubNestedType |
     public:
@@ -53,6 +57,9 @@ void canonicalizeInstaniationReferences(TemplateClass<int, float> &object) {
 // CHECK: [[@LINE-1]]:30 | struct/C | NestedBaseType | c:@ST>1#T@BaseTemplate@S@NestedBaseType |
   TemplateClass<int, float>::NestedType nestedSubType;
 // CHECK: [[@LINE-1]]:30 | struct/C++ | NestedType | c:@ST>2#T#T@TemplateClass@S@NestedType |
+  (void)nestedSubType.nestedField;
+// CHECK: [[@LINE-1]]:23 | field/C++ | nestedField | c:@ST>2#T#T@TemplateClass@S@NestedType@FI@nestedField |
+
   typedef TemplateClass<int, float> TT;
   TT::NestedType::SubNestedType subNestedType(0);
 // CHECK: [[@LINE-1]]:7 | struct/C++ | NestedType | c:@ST>2#T#T@TemplateClass@S@NestedType |
