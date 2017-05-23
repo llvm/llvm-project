@@ -912,6 +912,48 @@ void Dependences::setReductionDependences(MemoryAccess *MA, isl_map *D) {
 }
 
 const Dependences &
+DependenceAnalysis::Result::getDependences(Dependences::AnalysisLevel Level) {
+  if (Dependences *d = D[Level].get())
+    return *d;
+
+  return recomputeDependences(Level);
+}
+
+const Dependences &DependenceAnalysis::Result::recomputeDependences(
+    Dependences::AnalysisLevel Level) {
+  D[Level].reset(new Dependences(S.getSharedIslCtx(), Level));
+  D[Level]->calculateDependences(S);
+  return *D[Level];
+}
+
+DependenceAnalysis::Result
+DependenceAnalysis::run(Scop &S, ScopAnalysisManager &SAM,
+                        ScopStandardAnalysisResults &SAR) {
+  return {S, {}};
+}
+
+AnalysisKey DependenceAnalysis::Key;
+
+PreservedAnalyses
+DependenceInfoPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
+                               ScopStandardAnalysisResults &SAR,
+                               SPMUpdater &U) {
+  auto &DI = SAM.getResult<DependenceAnalysis>(S, SAR);
+
+  if (auto d = DI.D[OptAnalysisLevel].get()) {
+    d->print(OS);
+    return PreservedAnalyses::all();
+  }
+
+  // Otherwise create the dependences on-the-fly and print it
+  Dependences D(S.getSharedIslCtx(), OptAnalysisLevel);
+  D.calculateDependences(S);
+  D.print(OS);
+
+  return PreservedAnalyses::all();
+}
+
+const Dependences &
 DependenceInfo::getDependences(Dependences::AnalysisLevel Level) {
   if (Dependences *d = D[Level].get())
     return *d;

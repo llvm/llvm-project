@@ -274,15 +274,11 @@ __isl_give isl_space *ScopArrayInfo::getSpace() const {
 }
 
 bool ScopArrayInfo::isReadOnly() {
-  isl_union_set *WriteSet = isl_union_map_range(S.getWrites());
-  isl_space *Space = getSpace();
-  WriteSet = isl_union_set_intersect(
-      WriteSet, isl_union_set_from_set(isl_set_universe(Space)));
+  isl::union_set WriteSet = give(S.getWrites()).range();
+  isl::space Space = give(getSpace());
+  WriteSet = WriteSet.extract_set(Space);
 
-  bool IsReadOnly = isl_union_set_is_empty(WriteSet);
-  isl_union_set_free(WriteSet);
-
-  return IsReadOnly;
+  return bool(WriteSet.is_empty());
 }
 
 bool ScopArrayInfo::isCompatibleWith(const ScopArrayInfo *Array) const {
@@ -330,22 +326,18 @@ void ScopArrayInfo::applyAndSetFAD(Value *FAD) {
   assert(!this->FAD);
   this->FAD = FAD;
 
-  isl_space *Space = isl_space_set_alloc(S.getIslCtx(), 1, 0);
+  isl::space Space(S.getIslCtx(), 1, 0);
 
   std::string param_name = getName();
   param_name += "_fortranarr_size";
   // TODO: see if we need to add `this` as the id user pointer
-  isl_id *IdPwAff = isl_id_alloc(S.getIslCtx(), param_name.c_str(), nullptr);
+  isl::id IdPwAff = isl::id::alloc(S.getIslCtx(), param_name.c_str(), nullptr);
 
-  Space = isl_space_set_dim_id(Space, isl_dim_param, 0, IdPwAff);
-  isl_basic_set *Identity = isl_basic_set_universe(Space);
-  isl_local_space *LocalSpace = isl_basic_set_get_local_space(Identity);
-  isl_basic_set_free(Identity);
+  Space = Space.set_dim_id(isl::dim::param, 0, IdPwAff);
+  isl::pw_aff PwAff =
+      isl::aff::var_on_domain(isl::local_space(Space), isl::dim::param, 0);
 
-  isl_pw_aff *PwAff =
-      isl_pw_aff_from_aff(isl_aff_var_on_domain(LocalSpace, isl_dim_param, 0));
-
-  DimensionSizesPw[0] = PwAff;
+  DimensionSizesPw[0] = PwAff.release();
 }
 
 bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes,
@@ -743,71 +735,64 @@ void MemoryAccess::assumeNoOutOfBound() {
   if (PollyIgnoreInbounds)
     return;
   auto *SAI = getScopArrayInfo();
-  isl_space *Space = isl_space_range(getOriginalAccessRelationSpace());
-  isl_set *Outside = isl_set_empty(isl_space_copy(Space));
-  for (int i = 1, Size = isl_space_dim(Space, isl_dim_set); i < Size; ++i) {
-    isl_local_space *LS = isl_local_space_from_space(isl_space_copy(Space));
-    isl_pw_aff *Var =
-        isl_pw_aff_var_on_domain(isl_local_space_copy(LS), isl_dim_set, i);
-    isl_pw_aff *Zero = isl_pw_aff_zero_on_domain(LS);
+  isl::space Space = give(getOriginalAccessRelationSpace()).range();
+  isl::set Outside = isl::set::empty(Space);
+  for (int i = 1, Size = Space.dim(isl::dim::set); i < Size; ++i) {
+    isl::local_space LS(Space);
+    isl::pw_aff Var = isl::pw_aff::var_on_domain(LS, isl::dim::set, i);
+    isl::pw_aff Zero = isl::pw_aff(LS);
 
-    isl_set *DimOutside;
+    isl::set DimOutside = Var.lt_set(Zero);
+    isl::pw_aff SizeE = give(SAI->getDimensionSizePw(i));
+    SizeE = SizeE.add_dims(isl::dim::in, Space.dim(isl::dim::set));
+    SizeE = SizeE.set_tuple_id(isl::dim::in, Space.get_tuple_id(isl::dim::set));
+    DimOutside = DimOutside.unite(SizeE.le_set(Var));
 
-    DimOutside = isl_pw_aff_lt_set(isl_pw_aff_copy(Var), Zero);
-    isl_pw_aff *SizeE = SAI->getDimensionSizePw(i);
-    SizeE = isl_pw_aff_add_dims(SizeE, isl_dim_in,
-                                isl_space_dim(Space, isl_dim_set));
-    SizeE = isl_pw_aff_set_tuple_id(SizeE, isl_dim_in,
-                                    isl_space_get_tuple_id(Space, isl_dim_set));
-
-    DimOutside = isl_set_union(DimOutside, isl_pw_aff_le_set(SizeE, Var));
-
-    Outside = isl_set_union(Outside, DimOutside);
+    Outside = Outside.unite(DimOutside);
   }
 
-  Outside = isl_set_apply(Outside, isl_map_reverse(getAccessRelation()));
-  Outside = isl_set_intersect(Outside, Statement->getDomain());
-  Outside = isl_set_params(Outside);
+  Outside = Outside.apply(give(getAccessRelation()).reverse());
+  Outside = Outside.intersect(give(Statement->getDomain()));
+  Outside = Outside.params();
 
   // Remove divs to avoid the construction of overly complicated assumptions.
   // Doing so increases the set of parameter combinations that are assumed to
   // not appear. This is always save, but may make the resulting run-time check
   // bail out more often than strictly necessary.
-  Outside = isl_set_remove_divs(Outside);
-  Outside = isl_set_complement(Outside);
+  Outside = Outside.remove_divs();
+  Outside = Outside.complement();
   const auto &Loc = getAccessInstruction()
                         ? getAccessInstruction()->getDebugLoc()
                         : DebugLoc();
   if (!PollyPreciseInbounds)
-    Outside = isl_set_gist(Outside, isl_set_params(Statement->getDomain()));
-  Statement->getParent()->recordAssumption(INBOUNDS, Outside, Loc,
+    Outside = Outside.gist_params(give(Statement->getDomain()).params());
+  Statement->getParent()->recordAssumption(INBOUNDS, Outside.release(), Loc,
                                            AS_ASSUMPTION);
-  isl_space_free(Space);
 }
 
 void MemoryAccess::buildMemIntrinsicAccessRelation() {
   assert(isMemoryIntrinsic());
   assert(Subscripts.size() == 2 && Sizes.size() == 1);
 
-  auto *SubscriptPWA = getPwAff(Subscripts[0]);
-  auto *SubscriptMap = isl_map_from_pw_aff(SubscriptPWA);
+  isl::pw_aff SubscriptPWA = give(getPwAff(Subscripts[0]));
+  isl::map SubscriptMap = isl::map::from_pw_aff(SubscriptPWA);
 
-  isl_map *LengthMap;
+  isl::map LengthMap;
   if (Subscripts[1] == nullptr) {
-    LengthMap = isl_map_universe(isl_map_get_space(SubscriptMap));
+    LengthMap = isl::map::universe(SubscriptMap.get_space());
   } else {
-    auto *LengthPWA = getPwAff(Subscripts[1]);
-    LengthMap = isl_map_from_pw_aff(LengthPWA);
-    auto *RangeSpace = isl_space_range(isl_map_get_space(LengthMap));
-    LengthMap = isl_map_apply_range(LengthMap, isl_map_lex_gt(RangeSpace));
+    isl::pw_aff LengthPWA = give(getPwAff(Subscripts[1]));
+    LengthMap = isl::map::from_pw_aff(LengthPWA);
+    isl::space RangeSpace = LengthMap.get_space().range();
+    LengthMap = LengthMap.apply_range(isl::map::lex_gt(RangeSpace));
   }
-  LengthMap = isl_map_lower_bound_si(LengthMap, isl_dim_out, 0, 0);
-  LengthMap = isl_map_align_params(LengthMap, isl_map_get_space(SubscriptMap));
-  SubscriptMap =
-      isl_map_align_params(SubscriptMap, isl_map_get_space(LengthMap));
-  LengthMap = isl_map_sum(LengthMap, SubscriptMap);
-  AccessRelation = isl_map_set_tuple_id(LengthMap, isl_dim_in,
-                                        getStatement()->getDomainId());
+  LengthMap = LengthMap.lower_bound_si(isl::dim::out, 0, 0);
+  LengthMap = LengthMap.align_params(SubscriptMap.get_space());
+  SubscriptMap = SubscriptMap.align_params(LengthMap.get_space());
+  LengthMap = LengthMap.sum(SubscriptMap);
+  AccessRelation =
+      LengthMap.set_tuple_id(isl::dim::in, give(getStatement()->getDomainId()))
+          .release();
 }
 
 void MemoryAccess::computeBoundsOnAccessRelation(unsigned ElementSize) {
@@ -861,72 +846,69 @@ void MemoryAccess::foldAccessRelation() {
 
   int Size = Subscripts.size();
 
-  isl_map *OldAccessRelation = isl_map_copy(AccessRelation);
+  isl::map NewAccessRelation = give(isl_map_copy(AccessRelation));
 
   for (int i = Size - 2; i >= 0; --i) {
-    isl_space *Space;
-    isl_map *MapOne, *MapTwo;
-    isl_pw_aff *DimSize = getPwAff(Sizes[i + 1]);
+    isl::space Space;
+    isl::map MapOne, MapTwo;
+    isl::pw_aff DimSize = give(getPwAff(Sizes[i + 1]));
 
-    isl_space *SpaceSize = isl_pw_aff_get_space(DimSize);
-    isl_pw_aff_free(DimSize);
-    isl_id *ParamId = isl_space_get_dim_id(SpaceSize, isl_dim_param, 0);
+    isl::space SpaceSize = DimSize.get_space();
+    isl::id ParamId =
+        give(isl_space_get_dim_id(SpaceSize.get(), isl_dim_param, 0));
 
-    Space = isl_map_get_space(AccessRelation);
-    Space = isl_space_map_from_set(isl_space_range(Space));
-    Space = isl_space_align_params(Space, SpaceSize);
+    Space = give(isl_map_copy(AccessRelation)).get_space();
+    Space = Space.range().map_from_set();
+    Space = Space.align_params(SpaceSize);
 
-    int ParamLocation = isl_space_find_dim_by_id(Space, isl_dim_param, ParamId);
-    isl_id_free(ParamId);
+    int ParamLocation = Space.find_dim_by_id(isl::dim::param, ParamId);
 
-    MapOne = isl_map_universe(isl_space_copy(Space));
+    MapOne = isl::map::universe(Space);
     for (int j = 0; j < Size; ++j)
-      MapOne = isl_map_equate(MapOne, isl_dim_in, j, isl_dim_out, j);
-    MapOne = isl_map_lower_bound_si(MapOne, isl_dim_in, i + 1, 0);
+      MapOne = MapOne.equate(isl::dim::in, j, isl::dim::out, j);
+    MapOne = MapOne.lower_bound_si(isl::dim::in, i + 1, 0);
 
-    MapTwo = isl_map_universe(isl_space_copy(Space));
+    MapTwo = isl::map::universe(Space);
     for (int j = 0; j < Size; ++j)
       if (j < i || j > i + 1)
-        MapTwo = isl_map_equate(MapTwo, isl_dim_in, j, isl_dim_out, j);
+        MapTwo = MapTwo.equate(isl::dim::in, j, isl::dim::out, j);
 
-    isl_local_space *LS = isl_local_space_from_space(Space);
-    isl_constraint *C;
-    C = isl_equality_alloc(isl_local_space_copy(LS));
-    C = isl_constraint_set_constant_si(C, -1);
-    C = isl_constraint_set_coefficient_si(C, isl_dim_in, i, 1);
-    C = isl_constraint_set_coefficient_si(C, isl_dim_out, i, -1);
-    MapTwo = isl_map_add_constraint(MapTwo, C);
-    C = isl_equality_alloc(LS);
-    C = isl_constraint_set_coefficient_si(C, isl_dim_in, i + 1, 1);
-    C = isl_constraint_set_coefficient_si(C, isl_dim_out, i + 1, -1);
-    C = isl_constraint_set_coefficient_si(C, isl_dim_param, ParamLocation, 1);
-    MapTwo = isl_map_add_constraint(MapTwo, C);
-    MapTwo = isl_map_upper_bound_si(MapTwo, isl_dim_in, i + 1, -1);
+    isl::local_space LS(Space);
+    isl::constraint C;
+    C = isl::constraint::alloc_equality(LS);
+    C = C.set_constant_si(-1);
+    C = C.set_coefficient_si(isl::dim::in, i, 1);
+    C = C.set_coefficient_si(isl::dim::out, i, -1);
+    MapTwo = MapTwo.add_constraint(C);
+    C = isl::constraint::alloc_equality(LS);
+    C = C.set_coefficient_si(isl::dim::in, i + 1, 1);
+    C = C.set_coefficient_si(isl::dim::out, i + 1, -1);
+    C = C.set_coefficient_si(isl::dim::param, ParamLocation, 1);
+    MapTwo = MapTwo.add_constraint(C);
+    MapTwo = MapTwo.upper_bound_si(isl::dim::in, i + 1, -1);
 
-    MapOne = isl_map_union(MapOne, MapTwo);
-    AccessRelation = isl_map_apply_range(AccessRelation, MapOne);
+    MapOne = MapOne.unite(MapTwo);
+    NewAccessRelation = NewAccessRelation.apply_range(MapOne);
   }
 
-  isl_id *BaseAddrId = getScopArrayInfo()->getBasePtrId();
-  auto Space = Statement->getDomainSpace();
-  AccessRelation = isl_map_set_tuple_id(
-      AccessRelation, isl_dim_in, isl_space_get_tuple_id(Space, isl_dim_set));
-  AccessRelation =
-      isl_map_set_tuple_id(AccessRelation, isl_dim_out, BaseAddrId);
-  AccessRelation = isl_map_gist_domain(AccessRelation, Statement->getDomain());
+  isl::id BaseAddrId = give(getScopArrayInfo()->getBasePtrId());
+  isl::space Space = give(Statement->getDomainSpace());
+  NewAccessRelation = NewAccessRelation.set_tuple_id(
+      isl::dim::in, Space.get_tuple_id(isl::dim::set));
+  NewAccessRelation = NewAccessRelation.set_tuple_id(isl::dim::out, BaseAddrId);
+  NewAccessRelation =
+      NewAccessRelation.gist_domain(give(Statement->getDomain()));
 
   // Access dimension folding might in certain cases increase the number of
   // disjuncts in the memory access, which can possibly complicate the generated
   // run-time checks and can lead to costly compilation.
-  if (!PollyPreciseFoldAccesses && isl_map_n_basic_map(AccessRelation) >
-                                       isl_map_n_basic_map(OldAccessRelation)) {
-    isl_map_free(AccessRelation);
-    AccessRelation = OldAccessRelation;
+  if (!PollyPreciseFoldAccesses &&
+      isl_map_n_basic_map(NewAccessRelation.get()) >
+          isl_map_n_basic_map(AccessRelation)) {
   } else {
-    isl_map_free(OldAccessRelation);
+    isl_map_free(AccessRelation);
+    AccessRelation = NewAccessRelation.release();
   }
-
-  isl_space_free(Space);
 }
 
 /// Check if @p Expr is divisible by @p Size.
@@ -2911,6 +2893,8 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, DominatorTree &DT,
         SuccStmt->setInvalidDomain(isl_set_empty(isl_set_get_space(CondSet)));
         SuccDomain = CondSet;
       }
+
+      SuccDomain = isl_set_detect_equalities(SuccDomain);
 
       // Check if the maximal number of domain disjunctions was reached.
       // In case this happens we will clean up and bail.
