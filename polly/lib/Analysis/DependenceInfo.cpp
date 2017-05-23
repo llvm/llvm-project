@@ -945,7 +945,7 @@ DependenceInfoPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
     return PreservedAnalyses::all();
   }
 
-  // Otherwise create the dependences on-the-fly and print it
+  // Otherwise create the dependences on-the-fly and print them
   Dependences D(S.getSharedIslCtx(), OptAnalysisLevel);
   D.calculateDependences(S);
   D.print(OS);

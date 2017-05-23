@@ -10,7 +10,8 @@
 /// This file contains the declaration of the PolyhedralInfo class, which will
 /// provide an interface to expose polyhedral analysis information of Polly.
 ///
-/// This is work in progress. We will add more API's as an when deemed required.
+/// This is work in progress. We will add more API's as and when deemed
+/// required.
 //===----------------------------------------------------------------------===///
 
 #ifndef POLLY_POLYHEDRAL_INFO_H
