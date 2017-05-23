@@ -217,9 +217,6 @@ public:
   }
 
   bool VisitFunctionDecl(const FunctionDecl *D) {
-    if (D->isDeleted())
-      return true;
-
     SymbolRoleSet Roles{};
     SmallVector<SymbolRelation, 4> Relations;
     if (auto *CXXMD = dyn_cast<CXXMethodDecl>(D)) {
