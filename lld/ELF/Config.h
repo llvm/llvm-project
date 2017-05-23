@@ -135,6 +135,7 @@ struct Configuration {
   bool ZCombreloc;
   bool ZExecstack;
   bool ZNodelete;
+  bool ZNodlopen;
   bool ZNow;
   bool ZOrigin;
   bool ZRelro;

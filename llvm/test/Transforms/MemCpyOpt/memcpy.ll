@@ -76,8 +76,21 @@ define void @test4(i8 *%P) {
 ; CHECK-NEXT: call void @test4a(
 }
 
+; Make sure we don't remove the memcpy if the source address space doesn't match the byval argument
+define void @test4_addrspace(i8 addrspace(1)* %P) {
+  %A = alloca %1
+  %a = bitcast %1* %A to i8*
+  call void @llvm.memcpy.p0i8.p1i8.i64(i8* %a, i8 addrspace(1)* %P, i64 8, i32 4, i1 false)
+  call void @test4a(i8* align 1 byval %a)
+  ret void
+; CHECK-LABEL: @test4_addrspace(
+; CHECK: call void @llvm.memcpy.p0i8.p1i8.i64(
+; CHECK-NEXT: call void @test4a(
+}
+
 declare void @test4a(i8* align 1 byval)
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p1i8.i64(i8* nocapture, i8 addrspace(1)* nocapture, i64, i32, i1) nounwind
 declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture, i64, i32, i1) nounwind
 
 %struct.S = type { i128, [4 x i8]}
