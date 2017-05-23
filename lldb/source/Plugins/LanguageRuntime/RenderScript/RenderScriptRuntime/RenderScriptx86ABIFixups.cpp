@@ -257,9 +257,9 @@ bool fixupRSAllocationStructByValCalls(llvm::Module &module) {
     for (unsigned I = call_attribs.index_begin(); I != call_attribs.index_end();
          I++) {
       // if this argument is passed by val
-      if (call_attribs.hasAttribute(i, llvm::Attribute::ByVal)) {
+      if (call_attribs.hasAttribute(I, llvm::Attribute::ByVal)) {
         // strip away the byval attribute
-        call_inst->removeAttribute(i, llvm::Attribute::ByVal);
+        call_inst->removeAttribute(I, llvm::Attribute::ByVal);
         changed = true;
       }
     }
