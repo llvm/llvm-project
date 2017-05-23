@@ -62,3 +62,22 @@ entry:
   %and = xor i32 %xor, 56
   ret i32 %and
 }
+
+; Check that, when (and %t1, 129) is transformed to (and %t0, 0),
+; (xor %arg, 129) doesn't get transformed to (xor %arg, 0).
+;
+; CHECK-LABEL: PR33100:
+; CHECK: mov w[[R0:[0-9]+]], #129
+; CHECK: eor {{x[0-9]+}}, {{x[0-9]+}}, x[[R0]]
+
+define i64 @PR33100(i64 %arg) {
+entry:
+  %alloca0 = alloca i64
+  store i64 8, i64* %alloca0, align 4
+  %t0 = load i64, i64* %alloca0, align 4
+  %t1 = shl i64 %arg, %t0
+  %and0 = and i64 %t1, 129
+  %xor0 = xor i64 %arg, 129
+  %t2 = add i64 %and0, %xor0
+  ret i64 %t2
+}
