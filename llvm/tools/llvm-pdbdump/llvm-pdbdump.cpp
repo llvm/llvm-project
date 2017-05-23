@@ -878,11 +878,11 @@ static void mergePdbs() {
   auto &DestTpi = Builder.getTpiBuilder();
   auto &DestIpi = Builder.getIpiBuilder();
   MergedTpi.ForEachRecord(
-      [&DestTpi](TypeIndex TI, ArrayRef<uint8_t> Data) {
+      [&DestTpi](TypeIndex TI, MutableArrayRef<uint8_t> Data) {
         DestTpi.addTypeRecord(Data, None);
       });
   MergedIpi.ForEachRecord(
-      [&DestIpi](TypeIndex TI, ArrayRef<uint8_t> Data) {
+      [&DestIpi](TypeIndex TI, MutableArrayRef<uint8_t> Data) {
         DestIpi.addTypeRecord(Data, None);
       });
 

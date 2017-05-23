@@ -222,3 +222,7 @@ std::vector<DiagWithFixIts> ClangdUnit::getLocalDiagnostics() const {
   }
   return Result;
 }
+
+void ClangdUnit::dumpAST(llvm::raw_ostream &OS) const {
+  Unit->getASTContext().getTranslationUnitDecl()->dump(OS, true);
+}

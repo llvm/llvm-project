@@ -124,10 +124,16 @@ bool IndexingContext::isTemplateImplicitInstantiation(const Decl *D) {
     TKind = FD->getTemplateSpecializationKind();
   } else if (auto *VD = dyn_cast<VarDecl>(D)) {
     TKind = VD->getTemplateSpecializationKind();
-  } else if (isa<FieldDecl>(D)) {
-    if (const auto *Parent =
-            dyn_cast<ClassTemplateSpecializationDecl>(D->getDeclContext()))
-      TKind = Parent->getSpecializationKind();
+  } else if (const auto *RD = dyn_cast<CXXRecordDecl>(D)) {
+    if (RD->getInstantiatedFromMemberClass())
+      TKind = RD->getTemplateSpecializationKind();
+  } else if (const auto *ED = dyn_cast<EnumDecl>(D)) {
+    if (ED->getInstantiatedFromMemberEnum())
+      TKind = ED->getTemplateSpecializationKind();
+  } else if (isa<FieldDecl>(D) || isa<TypedefNameDecl>(D) ||
+             isa<EnumConstantDecl>(D)) {
+    if (const auto *Parent = dyn_cast<Decl>(D->getDeclContext()))
+      return isTemplateImplicitInstantiation(Parent);
   }
   switch (TKind) {
     case TSK_Undeclared:
@@ -155,6 +161,16 @@ bool IndexingContext::shouldIgnoreIfImplicit(const Decl *D) {
   return true;
 }
 
+static const CXXRecordDecl *
+getDeclContextForTemplateInstationPattern(const Decl *D) {
+  if (const auto *CTSD =
+          dyn_cast<ClassTemplateSpecializationDecl>(D->getDeclContext()))
+    return CTSD->getTemplateInstantiationPattern();
+  else if (const auto *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext()))
+    return RD->getInstantiatedFromMemberClass();
+  return nullptr;
+}
+
 static const Decl *adjustTemplateImplicitInstantiation(const Decl *D) {
   if (const ClassTemplateSpecializationDecl *
       SD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
@@ -163,15 +179,26 @@ static const Decl *adjustTemplateImplicitInstantiation(const Decl *D) {
     return FD->getTemplateInstantiationPattern();
   } else if (auto *VD = dyn_cast<VarDecl>(D)) {
     return VD->getTemplateInstantiationPattern();
-  } else if (const auto *FD = dyn_cast<FieldDecl>(D)) {
-    if (const auto *Parent =
-            dyn_cast<ClassTemplateSpecializationDecl>(D->getDeclContext())) {
-      const CXXRecordDecl *Pattern = Parent->getTemplateInstantiationPattern();
-      for (const NamedDecl *ND : Pattern->lookup(FD->getDeclName())) {
-        if (ND->isImplicit())
+  } else if (const auto *RD = dyn_cast<CXXRecordDecl>(D)) {
+    return RD->getInstantiatedFromMemberClass();
+  } else if (const auto *ED = dyn_cast<EnumDecl>(D)) {
+    return ED->getInstantiatedFromMemberEnum();
+  } else if (isa<FieldDecl>(D) || isa<TypedefNameDecl>(D)) {
+    const auto *ND = cast<NamedDecl>(D);
+    if (const CXXRecordDecl *Pattern =
+            getDeclContextForTemplateInstationPattern(ND)) {
+      for (const NamedDecl *BaseND : Pattern->lookup(ND->getDeclName())) {
+        if (BaseND->isImplicit())
           continue;
-        if (isa<FieldDecl>(ND))
-          return ND;
+        if (BaseND->getKind() == ND->getKind())
+          return BaseND;
+      }
+    }
+  } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(D)) {
+    if (const auto *ED = dyn_cast<EnumDecl>(ECD->getDeclContext())) {
+      if (const EnumDecl *Pattern = ED->getInstantiatedFromMemberEnum()) {
+        for (const NamedDecl *BaseECD : Pattern->lookup(ECD->getDeclName()))
+          return BaseECD;
       }
     }
   }

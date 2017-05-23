@@ -18,7 +18,7 @@ namespace codeview {
 
 class TypeTableCollection : public TypeCollection {
 public:
-  explicit TypeTableCollection(ArrayRef<ArrayRef<uint8_t>> Records);
+  explicit TypeTableCollection(ArrayRef<MutableArrayRef<uint8_t>> Records);
 
   Optional<TypeIndex> getFirst() override;
   Optional<TypeIndex> getNext(TypeIndex Prev) override;
@@ -33,7 +33,7 @@ private:
   bool hasCapacityFor(TypeIndex Index) const;
   void ensureTypeExists(TypeIndex Index);
 
-  ArrayRef<ArrayRef<uint8_t>> Records;
+  ArrayRef<MutableArrayRef<uint8_t>> Records;
   TypeDatabase Database;
 };
 }

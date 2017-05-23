@@ -60,16 +60,6 @@ struct CompileCommand {
 
   /// The output file associated with the command.
   std::string Output;
-
-  /// \brief An optional mapping from each file's path to its content for all
-  /// files needed for the compilation that are not available via the file
-  /// system.
-  ///
-  /// Note that a tool implementation is required to fall back to the file
-  /// system if a source file is not provided in the mapped sources, as
-  /// compilation databases will usually not provide all files in mapped sources
-  /// for performance reasons.
-  std::vector<std::pair<std::string, std::string> > MappedSources;
 };
 
 /// \brief Interface for compilation databases.

@@ -399,6 +399,10 @@ public:
     return FlatScratchInsts;
   }
 
+  bool has32BitLiteralSMRDOffset() const {
+    return getGeneration() == SEA_ISLANDS;
+  }
+
   bool isMesaKernel(const MachineFunction &MF) const {
     return isMesa3DOS() && !AMDGPU::isShader(MF.getFunction()->getCallingConv());
   }

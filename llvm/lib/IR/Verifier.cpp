@@ -1736,17 +1736,9 @@ void Verifier::visitConstantExpr(const ConstantExpr *CE) {
 }
 
 bool Verifier::verifyAttributeCount(AttributeList Attrs, unsigned Params) {
-  if (Attrs.getNumSlots() == 0)
-    return true;
-
-  unsigned LastSlot = Attrs.getNumSlots() - 1;
-  unsigned LastIndex = Attrs.getSlotIndex(LastSlot);
-  if (LastIndex <= Params ||
-      (LastIndex == AttributeList::FunctionIndex &&
-       (LastSlot == 0 || Attrs.getSlotIndex(LastSlot - 1) <= Params)))
-    return true;
-
-  return false;
+  // There shouldn't be more attribute sets than there are parameters plus the
+  // function and return value.
+  return Attrs.getNumAttrSets() <= Params + 2;
 }
 
 /// Verify that statepoint intrinsic is well formed.
