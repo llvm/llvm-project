@@ -858,6 +858,18 @@ void BlockGenerator::invalidateScalarEvolution(Scop &S) {
           SE.forgetValue(&Inst);
     else
       llvm_unreachable("Unexpected statement type found");
+
+  // Invalidate SCEV of loops surrounding the EscapeUsers.
+  for (const auto &EscapeMapping : EscapeMap) {
+    const EscapeUserVectorTy &EscapeUsers = EscapeMapping.second.second;
+    for (Instruction *EUser : EscapeUsers) {
+      if (Loop *L = LI.getLoopFor(EUser->getParent()))
+        while (L) {
+          SE.forgetLoop(L);
+          L = L->getParentLoop();
+        }
+    }
+  }
 }
 
 void BlockGenerator::finalizeSCoP(Scop &S) {

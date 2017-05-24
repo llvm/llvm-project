@@ -332,18 +332,18 @@ buildCondition(__isl_keep isl_ast_build *Build, const Scop::MinMaxAccessTy *It0,
 }
 
 __isl_give isl_ast_expr *
-IslAst::buildRunCondition(Scop *S, __isl_keep isl_ast_build *Build) {
+IslAst::buildRunCondition(Scop &S, __isl_keep isl_ast_build *Build) {
   isl_ast_expr *RunCondition;
 
   // The conditions that need to be checked at run-time for this scop are
   // available as an isl_set in the runtime check context from which we can
   // directly derive a run-time condition.
-  auto *PosCond = isl_ast_build_expr_from_set(Build, S->getAssumedContext());
-  if (S->hasTrivialInvalidContext()) {
+  auto *PosCond = isl_ast_build_expr_from_set(Build, S.getAssumedContext());
+  if (S.hasTrivialInvalidContext()) {
     RunCondition = PosCond;
   } else {
     auto *ZeroV = isl_val_zero(isl_ast_build_get_ctx(Build));
-    auto *NegCond = isl_ast_build_expr_from_set(Build, S->getInvalidContext());
+    auto *NegCond = isl_ast_build_expr_from_set(Build, S.getInvalidContext());
     auto *NotNegCond = isl_ast_expr_eq(isl_ast_expr_from_val(ZeroV), NegCond);
     RunCondition = isl_ast_expr_and(PosCond, NotNegCond);
   }
@@ -352,7 +352,7 @@ IslAst::buildRunCondition(Scop *S, __isl_keep isl_ast_build *Build) {
   // group which consists of read only and non read only (read write) accesses.
   // This operation is by construction quadratic in the read-write pointers and
   // linear in the read only pointers in each alias group.
-  for (const Scop::MinMaxVectorPairTy &MinMaxAccessPair : S->getAliasGroups()) {
+  for (const Scop::MinMaxVectorPairTy &MinMaxAccessPair : S.getAliasGroups()) {
     auto &MinMaxReadWrite = MinMaxAccessPair.first;
     auto &MinMaxReadOnly = MinMaxAccessPair.second;
     auto RWAccEnd = MinMaxReadWrite.end();
@@ -378,23 +378,23 @@ IslAst::buildRunCondition(Scop *S, __isl_keep isl_ast_build *Build) {
 ///       In order to improve the cost model we could either keep track of
 ///       performed optimizations (e.g., tiling) or compute properties on the
 ///       original as well as optimized SCoP (e.g., #stride-one-accesses).
-static bool benefitsFromPolly(Scop *Scop, bool PerformParallelTest) {
+static bool benefitsFromPolly(Scop &Scop, bool PerformParallelTest) {
 
   if (PollyProcessUnprofitable)
     return true;
 
   // Check if nothing interesting happened.
-  if (!PerformParallelTest && !Scop->isOptimized() &&
-      Scop->getAliasGroups().empty())
+  if (!PerformParallelTest && !Scop.isOptimized() &&
+      Scop.getAliasGroups().empty())
     return false;
 
   // The default assumption is that Polly improves the code.
   return true;
 }
 
-IslAst::IslAst(Scop *Scop)
+IslAst::IslAst(Scop &Scop)
     : S(Scop), Root(nullptr), RunCondition(nullptr),
-      Ctx(Scop->getSharedIslCtx()) {}
+      Ctx(Scop.getSharedIslCtx()) {}
 
 void IslAst::init(const Dependences &D) {
   bool PerformParallelTest = PollyParallel || DetectParallel ||
@@ -403,25 +403,25 @@ void IslAst::init(const Dependences &D) {
   // We can not perform the dependence analysis and, consequently,
   // the parallel code generation in case the schedule tree contains
   // extension nodes.
-  auto *ScheduleTree = S->getScheduleTree();
+  auto *ScheduleTree = S.getScheduleTree();
   PerformParallelTest =
-      PerformParallelTest && !S->containsExtensionNode(ScheduleTree);
+      PerformParallelTest && !S.containsExtensionNode(ScheduleTree);
   isl_schedule_free(ScheduleTree);
 
   // Skip AST and code generation if there was no benefit achieved.
   if (!benefitsFromPolly(S, PerformParallelTest))
     return;
 
-  isl_ctx *Ctx = S->getIslCtx();
+  isl_ctx *Ctx = S.getIslCtx();
   isl_options_set_ast_build_atomic_upper_bound(Ctx, true);
   isl_options_set_ast_build_detect_min_max(Ctx, true);
   isl_ast_build *Build;
   AstBuildUserInfo BuildInfo;
 
   if (UseContext)
-    Build = isl_ast_build_from_context(S->getContext());
+    Build = isl_ast_build_from_context(S.getContext());
   else
-    Build = isl_ast_build_from_context(isl_set_universe(S->getParamSpace()));
+    Build = isl_ast_build_from_context(isl_set_universe(S.getParamSpace()));
 
   Build = isl_ast_build_set_at_each_domain(Build, AtEachDomain, nullptr);
 
@@ -443,15 +443,21 @@ void IslAst::init(const Dependences &D) {
 
   RunCondition = buildRunCondition(S, Build);
 
-  Root = isl_ast_build_node_from_schedule(Build, S->getScheduleTree());
+  Root = isl_ast_build_node_from_schedule(Build, S.getScheduleTree());
 
   isl_ast_build_free(Build);
 }
 
-IslAst *IslAst::create(Scop *Scop, const Dependences &D) {
-  auto Ast = new IslAst(Scop);
-  Ast->init(D);
+IslAst IslAst::create(Scop &Scop, const Dependences &D) {
+  IslAst Ast{Scop};
+  Ast.init(D);
   return Ast;
+}
+
+IslAst::IslAst(IslAst &&O)
+    : S(O.S), Root(O.Root), RunCondition(O.RunCondition), Ctx(O.Ctx) {
+  O.Root = nullptr;
+  O.RunCondition = nullptr;
 }
 
 IslAst::~IslAst() {
@@ -464,31 +470,9 @@ __isl_give isl_ast_expr *IslAst::getRunCondition() {
   return isl_ast_expr_copy(RunCondition);
 }
 
-void IslAstInfo::releaseMemory() {
-  if (Ast) {
-    delete Ast;
-    Ast = nullptr;
-  }
-}
-
-bool IslAstInfo::runOnScop(Scop &Scop) {
-  if (Ast)
-    delete Ast;
-
-  S = &Scop;
-
-  const Dependences &D =
-      getAnalysis<DependenceInfo>().getDependences(Dependences::AL_Statement);
-
-  Ast = IslAst::create(&Scop, D);
-
-  DEBUG(printScop(dbgs(), Scop));
-  return false;
-}
-
-__isl_give isl_ast_node *IslAstInfo::getAst() const { return Ast->getAst(); }
-__isl_give isl_ast_expr *IslAstInfo::getRunCondition() const {
-  return Ast->getRunCondition();
+__isl_give isl_ast_node *IslAstInfo::getAst() { return Ast.getAst(); }
+__isl_give isl_ast_expr *IslAstInfo::getRunCondition() {
+  return Ast.getRunCondition();
 }
 
 IslAstUserPayload *IslAstInfo::getNodePayload(__isl_keep isl_ast_node *Node) {
@@ -569,9 +553,15 @@ isl_ast_build *IslAstInfo::getBuild(__isl_keep isl_ast_node *Node) {
   return Payload ? Payload->Build : nullptr;
 }
 
-void IslAstInfo::printScop(raw_ostream &OS, Scop &S) const {
+IslAstInfo IslAstAnalysis::run(Scop &S, ScopAnalysisManager &SAM,
+                               ScopStandardAnalysisResults &SAR) {
+  return {S, SAM.getResult<DependenceAnalysis>(S, SAR).getDependences(
+                 Dependences::AL_Statement)};
+}
+
+void IslAstInfo::print(raw_ostream &OS) {
   isl_ast_print_options *Options;
-  isl_ast_node *RootNode = getAst();
+  isl_ast_node *RootNode = Ast.getAst();
   Function &F = S.getFunction();
 
   OS << ":: isl ast :: " << F.getName() << " :: " << S.getNameStr() << "\n";
@@ -586,7 +576,7 @@ void IslAstInfo::printScop(raw_ostream &OS, Scop &S) const {
     return;
   }
 
-  isl_ast_expr *RunCondition = getRunCondition();
+  isl_ast_expr *RunCondition = Ast.getRunCondition();
   char *RtCStr, *AstStr;
 
   Options = isl_ast_print_options_alloc(S.getIslCtx());
@@ -621,21 +611,49 @@ void IslAstInfo::printScop(raw_ostream &OS, Scop &S) const {
   isl_printer_free(P);
 }
 
-void IslAstInfo::getAnalysisUsage(AnalysisUsage &AU) const {
+AnalysisKey IslAstAnalysis::Key;
+PreservedAnalyses IslAstPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
+                                         ScopStandardAnalysisResults &SAR,
+                                         SPMUpdater &U) {
+
+  auto &Ast = SAM.getResult<IslAstAnalysis>(S, SAR);
+  Ast.print(Stream);
+  return PreservedAnalyses::all();
+}
+
+void IslAstInfoWrapperPass::releaseMemory() { Ast.reset(); }
+
+bool IslAstInfoWrapperPass::runOnScop(Scop &Scop) {
+  const Dependences &D =
+      getAnalysis<DependenceInfo>().getDependences(Dependences::AL_Statement);
+
+  Ast.reset(new IslAstInfo(Scop, D));
+
+  DEBUG(printScop(dbgs(), Scop));
+  return false;
+}
+void IslAstInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   // Get the Common analysis usage of ScopPasses.
   ScopPass::getAnalysisUsage(AU);
   AU.addRequired<ScopInfoRegionPass>();
   AU.addRequired<DependenceInfo>();
 }
 
-char IslAstInfo::ID = 0;
+void IslAstInfoWrapperPass::printScop(raw_ostream &OS, Scop &S) const {
+  if (Ast)
+    Ast->print(OS);
+}
 
-Pass *polly::createIslAstInfoPass() { return new IslAstInfo(); }
+char IslAstInfoWrapperPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(IslAstInfo, "polly-ast",
+Pass *polly::createIslAstInfoWrapperPassPass() {
+  return new IslAstInfoWrapperPass();
+}
+
+INITIALIZE_PASS_BEGIN(IslAstInfoWrapperPass, "polly-ast",
                       "Polly - Generate an AST of the SCoP (isl)", false,
                       false);
 INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass);
 INITIALIZE_PASS_DEPENDENCY(DependenceInfo);
-INITIALIZE_PASS_END(IslAstInfo, "polly-ast",
+INITIALIZE_PASS_END(IslAstInfoWrapperPass, "polly-ast",
                     "Polly - Generate an AST from the SCoP (isl)", false, false)

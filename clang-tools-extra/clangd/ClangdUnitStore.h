@@ -50,6 +50,18 @@ public:
                   std::forward<Func>(Action));
   }
 
+  /// Run the specified \p Action on the ClangdUnit for \p File.
+  /// Unit for \p File should exist in the store.
+  template <class Func>
+  void runOnExistingUnit(PathRef File, Func Action) {
+    std::lock_guard<std::mutex> Lock(Mutex);
+
+    auto It = OpenedFiles.find(File);
+    assert(It != OpenedFiles.end() && "File is not in OpenedFiles");
+
+    Action(It->second);
+  }
+
   /// Remove ClangdUnit for \p File, if any
   void removeUnitIfPresent(PathRef File);
 

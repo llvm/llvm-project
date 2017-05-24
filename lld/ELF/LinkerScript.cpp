@@ -263,16 +263,16 @@ static bool matchConstraints(ArrayRef<InputSectionBase *> Sections,
          (!IsRW && Kind == ConstraintKind::ReadOnly);
 }
 
-static void sortSections(InputSectionBase **Begin, InputSectionBase **End,
+static void sortSections(InputSection **Begin, InputSection **End,
                          SortSectionPolicy K) {
   if (K != SortSectionPolicy::Default && K != SortSectionPolicy::None)
     std::stable_sort(Begin, End, getComparator(K));
 }
 
 // Compute and remember which sections the InputSectionDescription matches.
-std::vector<InputSectionBase *>
+std::vector<InputSection *>
 LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
-  std::vector<InputSectionBase *> Ret;
+  std::vector<InputSection *> Ret;
 
   // Collects all sections that satisfy constraints of Cmd.
   for (const SectionPattern &Pat : Cmd->SectionPatterns) {
@@ -294,7 +294,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
           !Pat.SectionPat.match(Sec->Name))
         continue;
 
-      Ret.push_back(Sec);
+      Ret.push_back(cast<InputSection>(Sec));
       Sec->Assigned = true;
     }
 
@@ -309,8 +309,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
     //    --sort-section is handled as an inner SORT command.
     // 3. If one SORT command is given, and if it is SORT_NONE, don't sort.
     // 4. If no SORT command is given, sort according to --sort-section.
-    InputSectionBase **Begin = Ret.data() + SizeBefore;
-    InputSectionBase **End = Ret.data() + Ret.size();
+    InputSection **Begin = Ret.data() + SizeBefore;
+    InputSection **End = Ret.data() + Ret.size();
     if (Pat.SortOuter != SortSectionPolicy::None) {
       if (Pat.SortInner == SortSectionPolicy::Default)
         sortSections(Begin, End, Config->SortSection);
@@ -493,7 +493,7 @@ void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
         Sec->SectionIndex = Index;
       }
       auto *ISD = make<InputSectionDescription>("");
-      ISD->Sections.push_back(S);
+      ISD->Sections.push_back(cast<InputSection>(S));
       Cmd->Commands.push_back(ISD);
     }
   }
@@ -875,20 +875,20 @@ void LinkerScript::synchronize() {
     if (!Cmd)
       continue;
     ArrayRef<InputSection *> Sections = Cmd->Sec->Sections;
-    std::vector<InputSectionBase **> ScriptSections;
-    DenseSet<InputSectionBase *> ScriptSectionsSet;
+    std::vector<InputSection **> ScriptSections;
+    DenseSet<InputSection *> ScriptSectionsSet;
     for (BaseCommand *Base : Cmd->Commands) {
       auto *ISD = dyn_cast<InputSectionDescription>(Base);
       if (!ISD)
         continue;
-      for (InputSectionBase *&IS : ISD->Sections) {
+      for (InputSection *&IS : ISD->Sections) {
         if (IS->Live) {
           ScriptSections.push_back(&IS);
           ScriptSectionsSet.insert(IS);
         }
       }
     }
-    std::vector<InputSectionBase *> Missing;
+    std::vector<InputSection *> Missing;
     for (InputSection *IS : Sections)
       if (!ScriptSectionsSet.count(IS))
         Missing.push_back(IS);
@@ -896,7 +896,7 @@ void LinkerScript::synchronize() {
       auto ISD = make<InputSectionDescription>("");
       ISD->Sections = Missing;
       Cmd->Commands.push_back(ISD);
-      for (InputSectionBase *&IS : ISD->Sections)
+      for (InputSection *&IS : ISD->Sections)
         if (IS->Live)
           ScriptSections.push_back(&IS);
     }

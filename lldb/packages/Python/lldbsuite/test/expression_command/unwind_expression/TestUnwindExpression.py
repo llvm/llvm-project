@@ -57,19 +57,27 @@ class UnwindFromExpressionTest(TestBase):
         self.assertIsNotNone(
             thread, "Expected one thread to be stopped at the breakpoint")
 
-        #
-        # Use Python API to evaluate expressions while stopped in a stack frame.
-        #
-        main_frame = thread.GetFrameAtIndex(0)
-
         # Next set a breakpoint in this function, set up Expression options to stop on
         # breakpoint hits, and call the function.
         fun_bkpt = target.BreakpointCreateBySourceRegex(
             "// Stop inside the function here.", main_spec)
         self.assertTrue(fun_bkpt, VALID_BREAKPOINT)
+
+        # Run test with varying one thread timeouts to also test the halting
+        # logic in the IgnoreBreakpoints = False case
+        self.do_test(thread, fun_bkpt, 1000)
+        self.do_test(thread, fun_bkpt, 100000)
+
+    def do_test(self, thread, bkpt, timeout):
+        #
+        # Use Python API to evaluate expressions while stopped in a stack frame.
+        #
+        main_frame = thread.GetFrameAtIndex(0)
+
         options = lldb.SBExpressionOptions()
         options.SetIgnoreBreakpoints(False)
         options.SetUnwindOnError(False)
+        options.SetOneThreadTimeoutInMicroSeconds(timeout)
 
         val = main_frame.EvaluateExpression("a_function_to_call()", options)
 
@@ -82,7 +90,7 @@ class UnwindFromExpressionTest(TestBase):
             "And the reason was right.")
 
         thread = lldbutil.get_one_thread_stopped_at_breakpoint(
-            process, fun_bkpt)
+            self.process(), bkpt)
         self.assertTrue(
             thread.IsValid(),
             "We are indeed stopped at our breakpoint")
