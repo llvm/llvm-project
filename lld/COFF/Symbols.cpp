@@ -61,16 +61,19 @@ COFFSymbolRef DefinedCOFF::getCOFFSymbol() {
   return COFFSymbolRef(reinterpret_cast<const coff_symbol32 *>(Sym));
 }
 
+static Chunk *makeImportThunk(DefinedImportData *S, uint16_t Machine) {
+  if (Machine == AMD64)
+    return make<ImportThunkChunkX64>(S);
+  if (Machine == I386)
+    return make<ImportThunkChunkX86>(S);
+  assert(Machine == ARMNT);
+  return make<ImportThunkChunkARM>(S);
+}
+
 DefinedImportThunk::DefinedImportThunk(StringRef Name, DefinedImportData *S,
                                        uint16_t Machine)
-    : Defined(DefinedImportThunkKind, Name) {
-  switch (Machine) {
-  case AMD64: Data = make<ImportThunkChunkX64>(S); return;
-  case I386:  Data = make<ImportThunkChunkX86>(S); return;
-  case ARMNT: Data = make<ImportThunkChunkARM>(S); return;
-  default:    llvm_unreachable("unknown machine type");
-  }
-}
+    : Defined(DefinedImportThunkKind, Name),
+      Data(makeImportThunk(S, Machine)) {}
 
 Defined *Undefined::getWeakAlias() {
   // A weak alias may be a weak alias to another symbol, so check recursively.

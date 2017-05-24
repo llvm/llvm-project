@@ -598,6 +598,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   bool CCCPrintPhases;
 
   InputArgList Args = ParseArgStrings(ArgList.slice(1));
+  if (Diags.hasErrorOccurred())
+    return nullptr;
 
   // Silence driver warnings if requested
   Diags.setIgnoreAllWarnings(Args.hasArg(options::OPT_w));

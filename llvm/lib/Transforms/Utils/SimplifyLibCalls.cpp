@@ -466,9 +466,7 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilder<> &B,
       }
 
       Value *Offset = GEP->getOperand(2);
-      unsigned BitWidth = Offset->getType()->getIntegerBitWidth();
-      KnownBits Known(BitWidth);
-      computeKnownBits(Offset, Known, DL, 0, nullptr, CI, nullptr);
+      KnownBits Known = computeKnownBits(Offset, DL, 0, nullptr, CI, nullptr);
       Known.Zero.flipAllBits();
       uint64_t ArrSize =
              cast<ArrayType>(GEP->getSourceElementType())->getNumElements();

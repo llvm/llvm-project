@@ -60,6 +60,7 @@ TEST(ToolChainTest, VFSGCCInstallation) {
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
       {"-fsyntax-only", "--gcc-toolchain=", "foo.cpp"}));
+  EXPECT_TRUE(C);
 
   std::string S;
   {
@@ -99,6 +100,7 @@ TEST(ToolChainTest, VFSGCCInstallationRelativeDir) {
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
       {"-fsyntax-only", "--gcc-toolchain=", "foo.cpp"}));
+  EXPECT_TRUE(C);
 
   std::string S;
   {
@@ -128,15 +130,24 @@ TEST(ToolChainTest, DefaultDriverMode) {
 
   Driver CCDriver("/home/test/bin/clang", "arm-linux-gnueabi", Diags,
                   InMemoryFileSystem);
+  CCDriver.setCheckInputsExist(false);
   Driver CXXDriver("/home/test/bin/clang++", "arm-linux-gnueabi", Diags,
                    InMemoryFileSystem);
+  CXXDriver.setCheckInputsExist(false);
   Driver CLDriver("/home/test/bin/clang-cl", "arm-linux-gnueabi", Diags,
                   InMemoryFileSystem);
+  CLDriver.setCheckInputsExist(false);
 
-  std::unique_ptr<Compilation> CC(CCDriver.BuildCompilation({"foo.cpp"}));
-  std::unique_ptr<Compilation> CXX(CXXDriver.BuildCompilation({"foo.cpp"}));
-  std::unique_ptr<Compilation> CL(CLDriver.BuildCompilation({"foo.cpp"}));
+  std::unique_ptr<Compilation> CC(CCDriver.BuildCompilation(
+      { "/home/test/bin/clang", "foo.cpp"}));
+  std::unique_ptr<Compilation> CXX(CXXDriver.BuildCompilation(
+      { "/home/test/bin/clang++", "foo.cpp"}));
+  std::unique_ptr<Compilation> CL(CLDriver.BuildCompilation(
+      { "/home/test/bin/clang-cl", "foo.cpp"}));
 
+  EXPECT_TRUE(CC);
+  EXPECT_TRUE(CXX);
+  EXPECT_TRUE(CL);
   EXPECT_TRUE(CCDriver.CCCIsCC());
   EXPECT_TRUE(CXXDriver.CCCIsCXX());
   EXPECT_TRUE(CLDriver.IsCLMode());

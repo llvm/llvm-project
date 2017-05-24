@@ -2379,8 +2379,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
 
   // Load Vector Indexed
   def LXVX    : X_XT6_RA5_RB5<31, 268, "lxvx"   , vsrc,
-                [(set v2f64:$XT, (load xoaddr:$src))]>;
-
+                [(set v2f64:$XT, (load xaddr:$src))]>;
   // Load Vector (Left-justified) with Length
   def LXVL : XX1Form<31, 269, (outs vsrc:$XT), (ins memr:$src, g8rc:$rB),
                    "lxvl $XT, $src, $rB", IIC_LdStLoad,
@@ -2430,7 +2429,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
 
   // Store Vector Indexed
   def STXVX    : X_XS6_RA5_RB5<31,  396, "stxvx"   , vsrc,
-                 [(store v2f64:$XT, xoaddr:$dst)]>;
+                 [(store v2f64:$XT, xaddr:$dst)]>;
 
   // Store Vector (Left-justified) with Length
   def STXVL : XX1Form<31, 397, (outs), (ins vsrc:$XT, memr:$dst, g8rc:$rB),
@@ -2498,21 +2497,38 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
             (v4f32 (XXINSERTW v4f32:$A, AlignValues.F32_TO_BE_WORD1, 12))>;
   } // IsLittleEndian, HasP9Vector
 
-  def : Pat<(v2f64 (load xoaddr:$src)), (LXVX xoaddr:$src)>;
-  def : Pat<(v2i64 (load xoaddr:$src)), (LXVX xoaddr:$src)>;
-  def : Pat<(v4f32 (load xoaddr:$src)), (LXVX xoaddr:$src)>;
-  def : Pat<(v4i32 (load xoaddr:$src)), (LXVX xoaddr:$src)>;
-  def : Pat<(v4i32 (int_ppc_vsx_lxvw4x xoaddr:$src)), (LXVX xoaddr:$src)>;
-  def : Pat<(v2f64 (int_ppc_vsx_lxvd2x xoaddr:$src)), (LXVX xoaddr:$src)>;
-  def : Pat<(store v2f64:$rS, xoaddr:$dst), (STXVX $rS, xoaddr:$dst)>;
-  def : Pat<(store v2i64:$rS, xoaddr:$dst), (STXVX $rS, xoaddr:$dst)>;
-  def : Pat<(store v4f32:$rS, xoaddr:$dst), (STXVX $rS, xoaddr:$dst)>;
-  def : Pat<(store v4i32:$rS, xoaddr:$dst), (STXVX $rS, xoaddr:$dst)>;
-  def : Pat<(int_ppc_vsx_stxvw4x v4i32:$rS, xoaddr:$dst),
-            (STXVX $rS, xoaddr:$dst)>;
-  def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, xoaddr:$dst),
-            (STXVX $rS, xoaddr:$dst)>;
+  // D-Form Load/Store
+  def : Pat<(v4i32 (load iaddr:$src)), (LXV memrix16:$src)>;
+  def : Pat<(v4f32 (load iaddr:$src)), (LXV memrix16:$src)>;
+  def : Pat<(v2i64 (load iaddr:$src)), (LXV memrix16:$src)>;
+  def : Pat<(v2f64 (load iaddr:$src)), (LXV memrix16:$src)>;
+  def : Pat<(v4i32 (int_ppc_vsx_lxvw4x iaddr:$src)), (LXV memrix16:$src)>;
+  def : Pat<(v2f64 (int_ppc_vsx_lxvd2x iaddr:$src)), (LXV memrix16:$src)>;
 
+  def : Pat<(store v4f32:$rS, iaddr:$dst), (STXV $rS, memrix16:$dst)>;
+  def : Pat<(store v4i32:$rS, iaddr:$dst), (STXV $rS, memrix16:$dst)>;
+  def : Pat<(store v2f64:$rS, iaddr:$dst), (STXV $rS, memrix16:$dst)>;
+  def : Pat<(store v2i64:$rS, iaddr:$dst), (STXV $rS, memrix16:$dst)>;
+  def : Pat<(int_ppc_vsx_stxvw4x v4i32:$rS, iaddr:$dst),
+            (STXV $rS, memrix16:$dst)>;
+  def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, iaddr:$dst),
+            (STXV $rS, memrix16:$dst)>;
+
+
+  def : Pat<(v2f64 (load xaddr:$src)), (LXVX xaddr:$src)>;
+  def : Pat<(v2i64 (load xaddr:$src)), (LXVX xaddr:$src)>;
+  def : Pat<(v4f32 (load xaddr:$src)), (LXVX xaddr:$src)>;
+  def : Pat<(v4i32 (load xaddr:$src)), (LXVX xaddr:$src)>;
+  def : Pat<(v4i32 (int_ppc_vsx_lxvw4x xaddr:$src)), (LXVX xaddr:$src)>;
+  def : Pat<(v2f64 (int_ppc_vsx_lxvd2x xaddr:$src)), (LXVX xaddr:$src)>;
+  def : Pat<(store v2f64:$rS, xaddr:$dst), (STXVX $rS, xaddr:$dst)>;
+  def : Pat<(store v2i64:$rS, xaddr:$dst), (STXVX $rS, xaddr:$dst)>;
+  def : Pat<(store v4f32:$rS, xaddr:$dst), (STXVX $rS, xaddr:$dst)>;
+  def : Pat<(store v4i32:$rS, xaddr:$dst), (STXVX $rS, xaddr:$dst)>;
+  def : Pat<(int_ppc_vsx_stxvw4x v4i32:$rS, xaddr:$dst),
+            (STXVX $rS, xaddr:$dst)>;
+  def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, xaddr:$dst),
+            (STXVX $rS, xaddr:$dst)>;
   def : Pat<(v4i32 (scalar_to_vector (i32 (load xoaddr:$src)))),
             (v4i32 (LXVWSX xoaddr:$src))>;
   def : Pat<(v4f32 (scalar_to_vector (f32 (load xoaddr:$src)))),

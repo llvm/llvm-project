@@ -688,9 +688,7 @@ static Value *SimplifySubInst(Value *Op0, Value *Op1, bool isNSW, bool isNUW,
     if (isNUW)
       return Op0;
 
-    unsigned BitWidth = Op1->getType()->getScalarSizeInBits();
-    KnownBits Known(BitWidth);
-    computeKnownBits(Op1, Known, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    KnownBits Known = computeKnownBits(Op1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
     if (Known.Zero.isMaxSignedValue()) {
       // Op1 is either 0 or the minimum signed value. If the sub is NSW, then
       // Op1 must be 0 because negating the minimum signed value is undefined.
@@ -1309,15 +1307,13 @@ static Value *SimplifyShift(Instruction::BinaryOps Opcode, Value *Op0,
 
   // If any bits in the shift amount make that value greater than or equal to
   // the number of bits in the type, the shift is undefined.
-  unsigned BitWidth = Op1->getType()->getScalarSizeInBits();
-  KnownBits Known(BitWidth);
-  computeKnownBits(Op1, Known, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
-  if (Known.One.getLimitedValue() >= BitWidth)
+  KnownBits Known = computeKnownBits(Op1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+  if (Known.One.getLimitedValue() >= Known.getBitWidth())
     return UndefValue::get(Op0->getType());
 
   // If all valid bits in the shift amount are known zero, the first operand is
   // unchanged.
-  unsigned NumValidShiftBits = Log2_32_Ceil(BitWidth);
+  unsigned NumValidShiftBits = Log2_32_Ceil(Known.getBitWidth());
   if (Known.countMinTrailingZeros() >= NumValidShiftBits)
     return Op0;
 
@@ -1343,9 +1339,7 @@ static Value *SimplifyRightShift(Instruction::BinaryOps Opcode, Value *Op0,
 
   // The low bit cannot be shifted out of an exact shift if it is set.
   if (isExact) {
-    unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
-    KnownBits Op0Known(BitWidth);
-    computeKnownBits(Op0, Op0Known, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
+    KnownBits Op0Known = computeKnownBits(Op0, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
     if (Op0Known.One[0])
       return Op0;
   }
@@ -3372,9 +3366,7 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   if (ICmpInst::isEquality(Pred)) {
     const APInt *RHSVal;
     if (match(RHS, m_APInt(RHSVal))) {
-      unsigned BitWidth = RHSVal->getBitWidth();
-      KnownBits LHSKnown(BitWidth);
-      computeKnownBits(LHS, LHSKnown, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
+      KnownBits LHSKnown = computeKnownBits(LHS, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
       if (LHSKnown.Zero.intersects(*RHSVal) ||
           !LHSKnown.One.isSubsetOf(*RHSVal))
         return Pred == ICmpInst::ICMP_EQ ? ConstantInt::getFalse(ITy)
@@ -4448,19 +4440,21 @@ static Value *SimplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
     case Intrinsic::uadd_with_overflow:
     case Intrinsic::sadd_with_overflow: {
       // X + undef -> undef
-      if (isa<UndefValue>(RHS))
+      if (isa<UndefValue>(LHS) || isa<UndefValue>(RHS))
         return UndefValue::get(ReturnType);
 
       return nullptr;
     }
     case Intrinsic::umul_with_overflow:
     case Intrinsic::smul_with_overflow: {
+      // 0 * X -> { 0, false }
       // X * 0 -> { 0, false }
-      if (match(RHS, m_Zero()))
+      if (match(LHS, m_Zero()) || match(RHS, m_Zero()))
         return Constant::getNullValue(ReturnType);
 
+      // undef * X -> { 0, false }
       // X * undef -> { 0, false }
-      if (match(RHS, m_Undef()))
+      if (match(LHS, m_Undef()) || match(RHS, m_Undef()))
         return Constant::getNullValue(ReturnType);
 
       return nullptr;
@@ -4684,9 +4678,7 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
   // In general, it is possible for computeKnownBits to determine all bits in a
   // value even when the operands are not all constants.
   if (!Result && I->getType()->isIntOrIntVectorTy()) {
-    unsigned BitWidth = I->getType()->getScalarSizeInBits();
-    KnownBits Known(BitWidth);
-    computeKnownBits(I, Known, Q.DL, /*Depth*/ 0, Q.AC, I, Q.DT, ORE);
+    KnownBits Known = computeKnownBits(I, Q.DL, /*Depth*/ 0, Q.AC, I, Q.DT, ORE);
     if (Known.isConstant())
       Result = ConstantInt::get(I->getType(), Known.getConstant());
   }

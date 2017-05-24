@@ -27,6 +27,7 @@ DEFINE_COMPILERRT_FUNCTION(__nedf2vfp)
 	vcmp.f64 d6, d7		
 #endif
 	vmrs	apsr_nzcv, fpscr
+	ITE(ne)
 	movne	r0, #1		// set result register to 0 if unequal
 	moveq	r0, #0
 	bx	lr

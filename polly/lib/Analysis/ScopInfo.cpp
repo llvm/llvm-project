@@ -4824,11 +4824,17 @@ ScopStmt *Scop::getStmtFor(Region *R) const {
 }
 
 int Scop::getRelativeLoopDepth(const Loop *L) const {
-  Loop *OuterLoop =
-      L ? R.outermostLoopInRegion(const_cast<Loop *>(L)) : nullptr;
-  if (!OuterLoop)
+  if (!L || !R.contains(L))
     return -1;
-  return L->getLoopDepth() - OuterLoop->getLoopDepth();
+  // outermostLoopInRegion always returns nullptr for top level regions
+  if (R.isTopLevelRegion()) {
+    // LoopInfo's depths start at 1, we start at 0
+    return L->getLoopDepth() - 1;
+  } else {
+    Loop *OuterLoop = R.outermostLoopInRegion(const_cast<Loop *>(L));
+    assert(OuterLoop);
+    return L->getLoopDepth() - OuterLoop->getLoopDepth();
+  }
 }
 
 ScopArrayInfo *Scop::getArrayInfoByName(const std::string BaseName) {

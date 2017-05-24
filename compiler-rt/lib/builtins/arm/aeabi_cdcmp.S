@@ -48,7 +48,12 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmpeq)
         // NaN has been ruled out, so __aeabi_cdcmple can't trap
         bne __aeabi_cdcmple
 
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+        mov ip, #APSR_C
+        msr APSR_nzcvq, ip
+#else
         msr CPSR_f, #APSR_C
+#endif
         JMP(lr)
 #endif
 END_COMPILERRT_FUNCTION(__aeabi_cdcmpeq)
@@ -95,17 +100,23 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmple)
         lsls r0, r0, #31
         pop {r0-r3, pc}
 #else
+        ITT(eq)
         moveq ip, #0
         beq 1f
 
         ldm sp, {r0-r3}
         bl __aeabi_dcmpeq
         cmp r0, #1
+        ITE(eq)
         moveq ip, #(APSR_C | APSR_Z)
         movne ip, #(APSR_C)
 
 1:
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+        msr APSR_nzcvq, ip
+#else
         msr CPSR_f, ip
+#endif
         pop {r0-r3}
         POP_PC()
 #endif

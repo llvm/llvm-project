@@ -37,6 +37,7 @@ public:
     NONE,
     ALWAYS,
     NEVER,
+    ALWAYS_ARG1,
   };
 
   ImbueAttribute shouldImbueFunction(StringRef FunctionName) const;

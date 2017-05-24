@@ -103,7 +103,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
   // Write section contents to a temporary buffer and compress it.
   std::vector<uint8_t> Buf(Size);
-  writeTo<ELFT>(Buf.data());
+  Script->getCmd(this)->writeTo<ELFT>(Buf.data());
   if (Error E = zlib::compress(toStringRef(Buf), CompressedData))
     fatal("compress failed: " + llvm::toString(std::move(E)));
 
@@ -257,65 +257,6 @@ static bool compCtors(const InputSection *A, const InputSection *B) {
 // Read the comment above.
 void OutputSection::sortCtorsDtors() {
   std::stable_sort(Sections.begin(), Sections.end(), compCtors);
-}
-
-// Fill [Buf, Buf + Size) with Filler.
-// This is used for linker script "=fillexp" command.
-static void fill(uint8_t *Buf, size_t Size, uint32_t Filler) {
-  size_t I = 0;
-  for (; I + 4 < Size; I += 4)
-    memcpy(Buf + I, &Filler, 4);
-  memcpy(Buf + I, &Filler, Size - I);
-}
-
-uint32_t OutputSection::getFiller() {
-  // Determine what to fill gaps between InputSections with, as specified by the
-  // linker script. If nothing is specified and this is an executable section,
-  // fall back to trap instructions to prevent bad diassembly and detect invalid
-  // jumps to padding.
-  if (Optional<uint32_t> Filler = Script->getFiller(this))
-    return *Filler;
-  if (Flags & SHF_EXECINSTR)
-    return Target->TrapInstr;
-  return 0;
-}
-
-template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
-  Loc = Buf;
-
-  // We may have already rendered compressed content when using
-  // -compress-debug-sections option. Write it together with header.
-  if (!CompressedData.empty()) {
-    memcpy(Buf, ZDebugHeader.data(), ZDebugHeader.size());
-    memcpy(Buf + ZDebugHeader.size(), CompressedData.data(),
-           CompressedData.size());
-    return;
-  }
-
-  // Write leading padding.
-  uint32_t Filler = getFiller();
-  if (Filler)
-    fill(Buf, Sections.empty() ? Size : Sections[0]->OutSecOff, Filler);
-
-  parallelForEachN(0, Sections.size(), [=](size_t I) {
-    InputSection *Sec = Sections[I];
-    Sec->writeTo<ELFT>(Buf);
-
-    // Fill gaps between sections.
-    if (Filler) {
-      uint8_t *Start = Buf + Sec->OutSecOff + Sec->getSize();
-      uint8_t *End;
-      if (I + 1 == Sections.size())
-        End = Buf + Size;
-      else
-        End = Buf + Sections[I + 1]->OutSecOff;
-      fill(Start, End - Start, Filler);
-    }
-  });
-
-  // Linker scripts may have BYTE()-family commands with which you
-  // can write arbitrary bytes to the output. Process them if any.
-  Script->writeDataBytes(this, Buf);
 }
 
 static uint64_t getOutFlags(InputSectionBase *S) {
@@ -484,8 +425,3 @@ template void OutputSection::maybeCompress<ELF32LE>();
 template void OutputSection::maybeCompress<ELF32BE>();
 template void OutputSection::maybeCompress<ELF64LE>();
 template void OutputSection::maybeCompress<ELF64BE>();
-
-template void OutputSection::writeTo<ELF32LE>(uint8_t *Buf);
-template void OutputSection::writeTo<ELF32BE>(uint8_t *Buf);
-template void OutputSection::writeTo<ELF64LE>(uint8_t *Buf);
-template void OutputSection::writeTo<ELF64BE>(uint8_t *Buf);

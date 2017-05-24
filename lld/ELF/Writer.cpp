@@ -81,6 +81,7 @@ private:
   void addStartStopSymbols(OutputSection *Sec);
   uint64_t getEntryAddr();
   OutputSection *findSection(StringRef Name);
+  OutputSectionCommand *findSectionInScript(StringRef Name);
 
   std::vector<PhdrEntry> Phdrs;
 
@@ -254,13 +255,21 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
+  if (!Script->Opt.HasSections) {
+    if (!Config->Relocatable)
+      fixSectionAlignments();
+    Script->fabricateDefaultCommands();
+  }
+
+  // If -compressed-debug-sections is specified, we need to compress
+  // .debug_* sections. Do it right now because it changes the size of
+  // output sections.
+  parallelForEach(OutputSections.begin(), OutputSections.end(),
+                  [](OutputSection *S) { S->maybeCompress<ELFT>(); });
+
   if (Config->Relocatable) {
     assignFileOffsets();
   } else {
-    if (!Script->Opt.HasSections) {
-      fixSectionAlignments();
-      Script->fabricateDefaultCommands();
-    }
     Script->synchronize();
     Script->assignAddresses(Phdrs);
 
@@ -291,6 +300,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   } else {
     writeSectionsBinary();
   }
+  clearOutputSections();
 
   // Backfill .note.gnu.build-id section content. This is done at last
   // because the content is usually a hash value of the entire output file.
@@ -298,7 +308,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
-  clearOutputSections();
 
   // Handle -Map option.
   writeMapFile<ELFT>(Script->Opt.Commands);
@@ -1246,12 +1255,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   for (OutputSection *Sec : OutputSections)
     Sec->finalize<ELFT>();
 
-  // If -compressed-debug-sections is specified, we need to compress
-  // .debug_* sections. Do it right now because it changes the size of
-  // output sections.
-  parallelForEach(OutputSections.begin(), OutputSections.end(),
-                  [](OutputSection *S) { S->maybeCompress<ELFT>(); });
-
   // createThunks may have added local symbols to the static symbol table
   applySynthetic({InX::SymTab, InX::ShStrTab, InX::StrTab},
                  [](SyntheticSection *SS) { SS->postThunkContents(); });
@@ -1302,6 +1305,15 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection *Sec) {
     return;
   addOptionalRegular<ELFT>(Saver.save("__start_" + S), Sec, 0, STV_DEFAULT);
   addOptionalRegular<ELFT>(Saver.save("__stop_" + S), Sec, -1, STV_DEFAULT);
+}
+
+template <class ELFT>
+OutputSectionCommand *Writer<ELFT>::findSectionInScript(StringRef Name) {
+  for (BaseCommand *Base : Script->Opt.Commands)
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
+      if (Cmd->Name == Name)
+        return Cmd;
+  return nullptr;
 }
 
 template <class ELFT> OutputSection *Writer<ELFT>::findSection(StringRef Name) {
@@ -1743,9 +1755,14 @@ template <class ELFT> void Writer<ELFT>::openFile() {
 
 template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
   uint8_t *Buf = Buffer->getBufferStart();
-  for (OutputSection *Sec : OutputSections)
+  for (BaseCommand *Base : Script->Opt.Commands) {
+    auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
+    if (!Cmd)
+      continue;
+    OutputSection *Sec = Cmd->Sec;
     if (Sec->Flags & SHF_ALLOC)
-      Sec->writeTo<ELFT>(Buf + Sec->Offset);
+      Cmd->writeTo<ELFT>(Buf + Sec->Offset);
+  }
 }
 
 // Write section contents to a mmap'ed file.
@@ -1754,10 +1771,10 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
 
   // PPC64 needs to process relocations in the .opd section
   // before processing relocations in code-containing sections.
-  Out::Opd = findSection(".opd");
-  if (Out::Opd) {
+  if (auto *OpdCmd = findSectionInScript(".opd")) {
+    Out::Opd = OpdCmd->Sec;
     Out::OpdBuf = Buf + Out::Opd->Offset;
-    Out::Opd->template writeTo<ELFT>(Buf + Out::Opd->Offset);
+    OpdCmd->template writeTo<ELFT>(Buf + Out::Opd->Offset);
   }
 
   OutputSection *EhFrameHdr =
@@ -1766,19 +1783,31 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   // In -r or -emit-relocs mode, write the relocation sections first as in
   // ELf_Rel targets we might find out that we need to modify the relocated
   // section while doing it.
-  for (OutputSection *Sec : OutputSections)
+  for (BaseCommand *Base : Script->Opt.Commands) {
+    auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
+    if (!Cmd)
+      continue;
+    OutputSection *Sec = Cmd->Sec;
     if (Sec->Type == SHT_REL || Sec->Type == SHT_RELA)
-      Sec->writeTo<ELFT>(Buf + Sec->Offset);
+      Cmd->writeTo<ELFT>(Buf + Sec->Offset);
+  }
 
-  for (OutputSection *Sec : OutputSections)
+  for (BaseCommand *Base : Script->Opt.Commands) {
+    auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
+    if (!Cmd)
+      continue;
+    OutputSection *Sec = Cmd->Sec;
     if (Sec != Out::Opd && Sec != EhFrameHdr && Sec->Type != SHT_REL &&
         Sec->Type != SHT_RELA)
-      Sec->writeTo<ELFT>(Buf + Sec->Offset);
+      Cmd->writeTo<ELFT>(Buf + Sec->Offset);
+  }
 
   // The .eh_frame_hdr depends on .eh_frame section contents, therefore
   // it should be written after .eh_frame is written.
-  if (EhFrameHdr && !EhFrameHdr->Sections.empty())
-    EhFrameHdr->writeTo<ELFT>(Buf + EhFrameHdr->Offset);
+  if (EhFrameHdr && !EhFrameHdr->Sections.empty()) {
+    OutputSectionCommand *Cmd = Script->getCmd(EhFrameHdr);
+    Cmd->writeTo<ELFT>(Buf + EhFrameHdr->Offset);
+  }
 }
 
 template <class ELFT> void Writer<ELFT>::writeBuildId() {

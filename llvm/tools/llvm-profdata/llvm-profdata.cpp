@@ -572,7 +572,7 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
       }
 
       if (ShowMemOPSizes && NumMemOPCalls > 0) {
-        OS << "    Memory Instrinsic Size Results:\n";
+        OS << "    Memory Intrinsic Size Results:\n";
         traverseAllValueSites(Func, IPVK_MemOPSize, VPStats[IPVK_MemOPSize], OS,
                               nullptr);
       }

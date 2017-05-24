@@ -763,7 +763,7 @@ int64_t getSMRDEncodedOffset(const MCSubtargetInfo &ST, int64_t ByteOffset) {
 
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset) {
   int64_t EncodedOffset = getSMRDEncodedOffset(ST, ByteOffset);
-  return isSI(ST) || isCI(ST) ? ByteOffset % 4 == 0 && isUInt<8>(EncodedOffset) :
+  return isSI(ST) || isCI(ST) ? isUInt<8>(EncodedOffset) :
                                 isUInt<20>(EncodedOffset);
 }
 } // end namespace AMDGPU

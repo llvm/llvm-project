@@ -62,23 +62,9 @@ public:
   }
 };
 
-/// ARM target machine.
+/// ARM/Thumb little endian target machine.
 ///
-class ARMTargetMachine : public ARMBaseTargetMachine {
-  virtual void anchor();
-
-public:
-   ARMTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                    StringRef FS, const TargetOptions &Options,
-                    Optional<Reloc::Model> RM, CodeModel::Model CM,
-                    CodeGenOpt::Level OL, bool isLittle);
-};
-
-/// ARM little endian target machine.
-///
-class ARMLETargetMachine : public ARMTargetMachine {
-  void anchor() override;
-
+class ARMLETargetMachine : public ARMBaseTargetMachine {
 public:
   ARMLETargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
@@ -86,54 +72,14 @@ public:
                      CodeGenOpt::Level OL);
 };
 
-/// ARM big endian target machine.
+/// ARM/Thumb big endian target machine.
 ///
-class ARMBETargetMachine : public ARMTargetMachine {
-  void anchor() override;
-
+class ARMBETargetMachine : public ARMBaseTargetMachine {
 public:
   ARMBETargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
                      Optional<Reloc::Model> RM, CodeModel::Model CM,
                      CodeGenOpt::Level OL);
-};
-
-/// Thumb target machine.
-/// Due to the way architectures are handled, this represents both
-///   Thumb-1 and Thumb-2.
-///
-class ThumbTargetMachine : public ARMBaseTargetMachine {
-  virtual void anchor();
-
-public:
-  ThumbTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                     StringRef FS, const TargetOptions &Options,
-                     Optional<Reloc::Model> RM, CodeModel::Model CM,
-                     CodeGenOpt::Level OL, bool isLittle);
-};
-
-/// Thumb little endian target machine.
-///
-class ThumbLETargetMachine : public ThumbTargetMachine {
-  void anchor() override;
-
-public:
-  ThumbLETargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                       StringRef FS, const TargetOptions &Options,
-                       Optional<Reloc::Model> RM, CodeModel::Model CM,
-                       CodeGenOpt::Level OL);
-};
-
-/// Thumb big endian target machine.
-///
-class ThumbBETargetMachine : public ThumbTargetMachine {
-  void anchor() override;
-
-public:
-  ThumbBETargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                       StringRef FS, const TargetOptions &Options,
-                       Optional<Reloc::Model> RM, CodeModel::Model CM,
-                       CodeGenOpt::Level OL);
 };
 
 } // end namespace llvm

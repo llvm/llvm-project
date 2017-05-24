@@ -52,6 +52,8 @@ std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
   TheDriver.setCheckInputsExist(false);
 
   std::unique_ptr<driver::Compilation> C(TheDriver.BuildCompilation(Args));
+  if (!C)
+    return nullptr;
 
   // Just print the cc1 options if -### was present.
   if (C->getArgs().hasArg(driver::options::OPT__HASH_HASH_HASH)) {

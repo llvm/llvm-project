@@ -237,6 +237,8 @@ public:
 
   bool isLegalMaskedGather(Type *DataType) { return false; }
 
+  bool prefersVectorizedAddressing() { return true; }
+
   int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                            bool HasBaseReg, int64_t Scale, unsigned AddrSpace) {
     // Guess that all legal addressing mode are free.

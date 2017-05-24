@@ -8374,7 +8374,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
   unsigned Opc = LoadMI.getOpcode();
   unsigned UserOpc = UserMI.getOpcode();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-  const TargetRegisterClass *RC = 
+  const TargetRegisterClass *RC =
       MF.getRegInfo().getRegClass(LoadMI.getOperand(0).getReg());
   unsigned RegSize = TRI.getRegSizeInBits(*RC);
 
@@ -10473,7 +10473,7 @@ X86InstrInfo::getOutliningType(MachineInstr &MI) const {
   // catch it.
   if (MI.modifiesRegister(X86::RSP, &RI) || MI.readsRegister(X86::RSP, &RI) ||
       MI.getDesc().hasImplicitUseOfPhysReg(X86::RSP) ||
-      MI.getDesc().hasImplicitDefOfPhysReg(X86::RSP)) 
+      MI.getDesc().hasImplicitDefOfPhysReg(X86::RSP))
     return MachineOutlinerInstrType::Illegal;
 
   // Outlined calls change the instruction pointer, so don't read from it.

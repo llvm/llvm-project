@@ -534,9 +534,7 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 
   VectorType *VecTy = dyn_cast<VectorType>(V->getType());
   if (!VecTy) {
-    unsigned BitWidth = V->getType()->getIntegerBitWidth();
-    KnownBits Known(BitWidth);
-    computeKnownBits(V, Known, DL, 0, AC, dyn_cast<Instruction>(V), DT);
+    KnownBits Known = computeKnownBits(V, DL, 0, AC, dyn_cast<Instruction>(V), DT);
     return Known.isZero();
   }
 
@@ -550,14 +548,12 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 
   // For a vector, KnownZero will only be true if all values are zero, so check
   // this per component
-  unsigned BitWidth = VecTy->getElementType()->getIntegerBitWidth();
   for (unsigned I = 0, N = VecTy->getNumElements(); I != N; ++I) {
     Constant *Elem = C->getAggregateElement(I);
     if (isa<UndefValue>(Elem))
       return true;
 
-    KnownBits Known(BitWidth);
-    computeKnownBits(Elem, Known, DL);
+    KnownBits Known = computeKnownBits(Elem, DL);
     if (Known.isZero())
       return true;
   }
