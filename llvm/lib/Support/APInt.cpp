@@ -2045,7 +2045,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
 
   if (isSingleWord()) {
     char Buffer[65];
-    char *BufPtr = Buffer+65;
+    char *BufPtr = std::end(Buffer);
 
     uint64_t N;
     if (!Signed) {
@@ -2069,7 +2069,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
       *--BufPtr = Digits[N % Radix];
       N /= Radix;
     }
-    Str.append(BufPtr, Buffer+65);
+    Str.append(BufPtr, std::end(Buffer));
     return;
   }
 

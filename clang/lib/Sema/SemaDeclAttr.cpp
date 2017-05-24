@@ -1038,7 +1038,7 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   }
 
   bool ArgDependent = false;
-  if (auto *FD = dyn_cast<FunctionDecl>(D))
+  if (const auto *FD = dyn_cast<FunctionDecl>(D))
     ArgDependent = ArgumentDependenceChecker(FD).referencesArgs(Cond);
   D->addAttr(::new (S.Context) DiagnoseIfAttr(
       Attr.getRange(), S.Context, Cond, Msg, DiagType, ArgDependent, cast<NamedDecl>(D),
@@ -7281,6 +7281,12 @@ public:
   bool VisitMemberExpr(MemberExpr *ME) {
     DiagnoseDeclAvailability(ME->getMemberDecl(),
                              SourceRange(ME->getLocStart(), ME->getLocEnd()));
+    return true;
+  }
+
+  bool VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) {
+    SemaRef.Diag(E->getLocStart(), diag::warn_at_available_unchecked_use)
+        << (!SemaRef.getLangOpts().ObjC1);
     return true;
   }
 

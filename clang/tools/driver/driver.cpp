@@ -454,40 +454,41 @@ int main(int argc_, const char **argv_) {
   SetBackdoorDriverOutputsFromEnvVars(TheDriver);
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(argv));
-  int Res = 0;
-  SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
-  if (C.get())
+  int Res = 1;
+  if (C.get()) {
+    SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
     Res = TheDriver.ExecuteCompilation(*C, FailingCommands);
 
-  // Force a crash to test the diagnostics.
-  if (TheDriver.GenReproducer) {
-    Diags.Report(diag::err_drv_force_crash)
+    // Force a crash to test the diagnostics.
+    if (TheDriver.GenReproducer) {
+      Diags.Report(diag::err_drv_force_crash)
         << !::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH");
 
-    // Pretend that every command failed.
-    FailingCommands.clear();
-    for (const auto &J : C->getJobs())
-      if (const Command *C = dyn_cast<Command>(&J))
-        FailingCommands.push_back(std::make_pair(-1, C));
-  }
+      // Pretend that every command failed.
+      FailingCommands.clear();
+      for (const auto &J : C->getJobs())
+        if (const Command *C = dyn_cast<Command>(&J))
+          FailingCommands.push_back(std::make_pair(-1, C));
+    }
 
-  for (const auto &P : FailingCommands) {
-    int CommandRes = P.first;
-    const Command *FailingCommand = P.second;
-    if (!Res)
-      Res = CommandRes;
+    for (const auto &P : FailingCommands) {
+      int CommandRes = P.first;
+      const Command *FailingCommand = P.second;
+      if (!Res)
+        Res = CommandRes;
 
-    // If result status is < 0, then the driver command signalled an error.
-    // If result status is 70, then the driver command reported a fatal error.
-    // On Windows, abort will return an exit code of 3.  In these cases,
-    // generate additional diagnostic information if possible.
-    bool DiagnoseCrash = CommandRes < 0 || CommandRes == 70;
+      // If result status is < 0, then the driver command signalled an error.
+      // If result status is 70, then the driver command reported a fatal error.
+      // On Windows, abort will return an exit code of 3.  In these cases,
+      // generate additional diagnostic information if possible.
+      bool DiagnoseCrash = CommandRes < 0 || CommandRes == 70;
 #ifdef LLVM_ON_WIN32
-    DiagnoseCrash |= CommandRes == 3;
+      DiagnoseCrash |= CommandRes == 3;
 #endif
-    if (DiagnoseCrash) {
-      TheDriver.generateCompilationDiagnostics(*C, *FailingCommand);
-      break;
+      if (DiagnoseCrash) {
+        TheDriver.generateCompilationDiagnostics(*C, *FailingCommand);
+        break;
+      }
     }
   }
 

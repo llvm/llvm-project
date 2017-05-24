@@ -48,13 +48,11 @@ namespace coff {
 /// alias to Target.
 static void checkAndSetWeakAlias(SymbolTable *Symtab, InputFile *F,
                                  SymbolBody *Source, SymbolBody *Target) {
-  auto *U = dyn_cast<Undefined>(Source);
-  if (!U)
-    return;
-  else if (!U->WeakAlias)
+  if (auto *U = dyn_cast<Undefined>(Source)) {
+    if (U->WeakAlias && U->WeakAlias != Target)
+      Symtab->reportDuplicate(Source->symbol(), F);
     U->WeakAlias = Target;
-  else if (U->WeakAlias != Target)
-    Symtab->reportDuplicate(Source->symbol(), F);
+  }
 }
 
 ArchiveFile::ArchiveFile(MemoryBufferRef M) : InputFile(ArchiveKind, M) {}
@@ -153,8 +151,10 @@ void ObjectFile::initializeSymbols() {
   uint32_t NumSymbols = COFFObj->getNumberOfSymbols();
   SymbolBodies.reserve(NumSymbols);
   SparseSymbolBodies.resize(NumSymbols);
+
   SmallVector<std::pair<SymbolBody *, uint32_t>, 8> WeakAliases;
   int32_t LastSectionNumber = 0;
+
   for (uint32_t I = 0; I < NumSymbols; ++I) {
     // Get a COFFSymbolRef object.
     ErrorOr<COFFSymbolRef> SymOrErr = COFFObj->getSymbol(I);
@@ -185,9 +185,12 @@ void ObjectFile::initializeSymbols() {
     I += Sym.getNumberOfAuxSymbols();
     LastSectionNumber = Sym.getSectionNumber();
   }
-  for (auto WeakAlias : WeakAliases)
-    checkAndSetWeakAlias(Symtab, this, WeakAlias.first,
-                         SparseSymbolBodies[WeakAlias.second]);
+
+  for (auto &KV : WeakAliases) {
+    SymbolBody *Sym = KV.first;
+    uint32_t Idx = KV.second;
+    checkAndSetWeakAlias(Symtab, this, Sym, SparseSymbolBodies[Idx]);
+  }
 }
 
 SymbolBody *ObjectFile::createUndefined(COFFSymbolRef Sym) {

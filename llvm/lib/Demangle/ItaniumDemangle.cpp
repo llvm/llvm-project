@@ -4030,6 +4030,8 @@ static const char *parse_encoding(const char *first, const char *last, C &db) {
     save_value<decltype(db.tag_templates)> sb(db.tag_templates);
     if (db.encoding_depth > 1)
       db.tag_templates = true;
+    save_value<decltype(db.parsed_ctor_dtor_cv)> sp(db.parsed_ctor_dtor_cv);
+    db.parsed_ctor_dtor_cv = false;
     switch (*first) {
     case 'G':
     case 'T':

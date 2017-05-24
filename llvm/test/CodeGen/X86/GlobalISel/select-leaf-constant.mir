@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=i586-linux-gnu -global-isel -run-pass=instruction-select %s -o - | FileCheck %s --check-prefix=CHECK
+# RUN: llc -mtriple=i586-linux-gnu -mcpu=haswell -mattr=-slow-incdec -global-isel -run-pass=instruction-select %s -o - | FileCheck %s --check-prefix=CHECK
 #
 # This is necessary to test that attribute-based rule predicates work and that
 # they properly reset between functions.

@@ -12349,9 +12349,9 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
       SDValue Val = St->getValue();
       StoreInt <<= ElementSizeBytes * 8;
       if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Val)) {
-        StoreInt |= C->getAPIntValue().zext(SizeInBits);
+        StoreInt |= C->getAPIntValue().zextOrTrunc(SizeInBits);
       } else if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Val)) {
-        StoreInt |= C->getValueAPF().bitcastToAPInt().zext(SizeInBits);
+        StoreInt |= C->getValueAPF().bitcastToAPInt().zextOrTrunc(SizeInBits);
       } else {
         llvm_unreachable("Invalid constant element type");
       }

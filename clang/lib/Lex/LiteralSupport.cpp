@@ -563,7 +563,6 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   // Parse the suffix.  At this point we can classify whether we have an FP or
   // integer constant.
   bool isFPConstant = isFloatingLiteral();
-  const char *ImaginarySuffixLoc = nullptr;
 
   // Loop over all of the characters of the suffix.  If we see something bad,
   // we break out of the loop.
@@ -657,7 +656,6 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
     case 'J':
       if (isImaginary) break;   // Cannot be repeated.
       isImaginary = true;
-      ImaginarySuffixLoc = s;
       continue;  // Success.
     }
     // If we reached here, there was an error or a ud-suffix.

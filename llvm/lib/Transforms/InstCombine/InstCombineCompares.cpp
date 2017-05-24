@@ -1478,8 +1478,7 @@ Instruction *InstCombiner::foldICmpTruncConstant(ICmpInst &Cmp,
     // of the high bits truncated out of x are known.
     unsigned DstBits = Trunc->getType()->getScalarSizeInBits(),
              SrcBits = X->getType()->getScalarSizeInBits();
-    KnownBits Known(SrcBits);
-    computeKnownBits(X, Known, 0, &Cmp);
+    KnownBits Known = computeKnownBits(X, 0, &Cmp);
 
     // If all the high bits are known, we can do this xform.
     if ((Known.Zero | Known.One).countLeadingOnes() >= SrcBits - DstBits) {

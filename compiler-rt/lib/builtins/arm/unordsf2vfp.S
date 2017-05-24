@@ -27,6 +27,7 @@ DEFINE_COMPILERRT_FUNCTION(__unordsf2vfp)
 	vcmp.f32 s14, s15
 #endif
 	vmrs	apsr_nzcv, fpscr
+	ITE(vs)
 	movvs	r0, #1      // set result register to 1 if "overflow" (any NaNs)
 	movvc	r0, #0
 	bx	lr

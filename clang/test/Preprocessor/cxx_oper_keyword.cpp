@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -E -verify -DOPERATOR_NAMES
 // RUN: %clang_cc1 %s -E -verify -fno-operator-names
+// RUN: %clang_cc1 %s    -verify -DTESTWIN -fms-compatibility
 
 #ifndef OPERATOR_NAMES
 //expected-error@+3 {{token is not a valid binary operator in a preprocessor subexpression}}
@@ -28,4 +29,15 @@
 //expected-warning@+2 {{and is defined}}
 #ifdef and
 #warning and is defined
+#endif
+
+#ifdef TESTWIN
+// For cl compatibility, fno-operator-names is enabled by default.
+int and;
+int bitand;
+int bitor;
+int compl;
+int not;
+int or;
+int xor;
 #endif

@@ -1981,6 +1981,15 @@ def A9WriteV7 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 7; }
 def A9WriteV9 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 9; }
 def A9WriteV10 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 10; }
 
+def : WriteRes<WriteVLD1, []>;
+def : WriteRes<WriteVLD2, []>;
+def : WriteRes<WriteVLD3, []>;
+def : WriteRes<WriteVLD4, []>;
+def : WriteRes<WriteVST1, []>;
+def : WriteRes<WriteVST2, []>;
+def : WriteRes<WriteVST3, []>;
+def : WriteRes<WriteVST4, []>;
+
 // Reserve A9UnitFP for 2 consecutive cycles.
 def A9Write2V4 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> {
   let Latency = 4;

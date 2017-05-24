@@ -540,7 +540,7 @@ coro<T> bad_implicit_return_dependent(T) { // expected-error {{'bad_promise_6' d
 }
 template coro<bad_promise_6> bad_implicit_return_dependent(bad_promise_6); // expected-note {{in instantiation}}
 
-struct bad_promise_7 {
+struct bad_promise_7 { // expected-note 2 {{defined here}}
   coro<bad_promise_7> get_return_object();
   suspend_always initial_suspend();
   suspend_always final_suspend();

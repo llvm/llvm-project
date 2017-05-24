@@ -1696,6 +1696,9 @@ bool Sema::CheckPPCBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case PPC::BI__builtin_tabortdci:
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 31) ||
            SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+  case PPC::BI__builtin_vsx_xxpermdi:
+  case PPC::BI__builtin_vsx_xxsldwi:
+    return SemaBuiltinVSX(TheCall);
   }
   return SemaBuiltinConstantArgRange(TheCall, i, l, u);
 }
@@ -3892,6 +3895,65 @@ bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs) {
   return false;
 }
 
+// Customized Sema Checking for VSX builtins that have the following signature:
+// vector [...] builtinName(vector [...], vector [...], const int);
+// Which takes the same type of vectors (any legal vector type) for the first
+// two arguments and takes compile time constant for the third argument.
+// Example builtins are :
+// vector double vec_xxpermdi(vector double, vector double, int);
+// vector short vec_xxsldwi(vector short, vector short, int);
+bool Sema::SemaBuiltinVSX(CallExpr *TheCall) {
+  unsigned ExpectedNumArgs = 3;
+  if (TheCall->getNumArgs() < ExpectedNumArgs)
+    return Diag(TheCall->getLocEnd(),
+                diag::err_typecheck_call_too_few_args_at_least)
+           << 0 /*function call*/ <<  ExpectedNumArgs << TheCall->getNumArgs()
+           << TheCall->getSourceRange();
+
+  if (TheCall->getNumArgs() > ExpectedNumArgs)
+    return Diag(TheCall->getLocEnd(),
+                diag::err_typecheck_call_too_many_args_at_most)
+           << 0 /*function call*/ << ExpectedNumArgs << TheCall->getNumArgs()
+           << TheCall->getSourceRange();
+
+  // Check the third argument is a compile time constant
+  llvm::APSInt Value;
+  if(!TheCall->getArg(2)->isIntegerConstantExpr(Value, Context))
+    return Diag(TheCall->getLocStart(),
+                diag::err_vsx_builtin_nonconstant_argument)
+           << 3 /* argument index */ << TheCall->getDirectCallee()
+           << SourceRange(TheCall->getArg(2)->getLocStart(),
+                          TheCall->getArg(2)->getLocEnd());
+
+  QualType Arg1Ty = TheCall->getArg(0)->getType();
+  QualType Arg2Ty = TheCall->getArg(1)->getType();
+
+  // Check the type of argument 1 and argument 2 are vectors.
+  SourceLocation BuiltinLoc = TheCall->getLocStart();
+  if ((!Arg1Ty->isVectorType() && !Arg1Ty->isDependentType()) ||
+      (!Arg2Ty->isVectorType() && !Arg2Ty->isDependentType())) {
+    return Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
+           << TheCall->getDirectCallee()
+           << SourceRange(TheCall->getArg(0)->getLocStart(),
+                          TheCall->getArg(1)->getLocEnd());
+  }
+
+  // Check the first two arguments are the same type.
+  if (!Context.hasSameUnqualifiedType(Arg1Ty, Arg2Ty)) {
+    return Diag(BuiltinLoc, diag::err_vec_builtin_incompatible_vector)
+           << TheCall->getDirectCallee()
+           << SourceRange(TheCall->getArg(0)->getLocStart(),
+                          TheCall->getArg(1)->getLocEnd());
+  }
+
+  // When default clang type checking is turned off and the customized type
+  // checking is used, the returning type of the function must be explicitly
+  // set. Otherwise it is _Bool by default.
+  TheCall->setType(Arg1Ty);
+
+  return false;
+}
+
 /// SemaBuiltinShuffleVector - Handle __builtin_shufflevector.
 // This is declared to take (...), so we have to check everything.
 ExprResult Sema::SemaBuiltinShuffleVector(CallExpr *TheCall) {
@@ -3914,7 +3976,8 @@ ExprResult Sema::SemaBuiltinShuffleVector(CallExpr *TheCall) {
 
     if (!LHSType->isVectorType() || !RHSType->isVectorType())
       return ExprError(Diag(TheCall->getLocStart(),
-                            diag::err_shufflevector_non_vector)
+                            diag::err_vec_builtin_non_vector)
+                       << TheCall->getDirectCallee()
                        << SourceRange(TheCall->getArg(0)->getLocStart(),
                                       TheCall->getArg(1)->getLocEnd()));
 
@@ -3928,12 +3991,14 @@ ExprResult Sema::SemaBuiltinShuffleVector(CallExpr *TheCall) {
       if (!RHSType->hasIntegerRepresentation() ||
           RHSType->getAs<VectorType>()->getNumElements() != numElements)
         return ExprError(Diag(TheCall->getLocStart(),
-                              diag::err_shufflevector_incompatible_vector)
+                              diag::err_vec_builtin_incompatible_vector)
+                         << TheCall->getDirectCallee()
                          << SourceRange(TheCall->getArg(1)->getLocStart(),
                                         TheCall->getArg(1)->getLocEnd()));
     } else if (!Context.hasSameUnqualifiedType(LHSType, RHSType)) {
       return ExprError(Diag(TheCall->getLocStart(),
-                            diag::err_shufflevector_incompatible_vector)
+                            diag::err_vec_builtin_incompatible_vector)
+                       << TheCall->getDirectCallee()
                        << SourceRange(TheCall->getArg(0)->getLocStart(),
                                       TheCall->getArg(1)->getLocEnd()));
     } else if (numElements != numResElements) {

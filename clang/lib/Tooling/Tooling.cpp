@@ -260,6 +260,8 @@ bool ToolInvocation::run() {
   Driver->setCheckInputsExist(false);
   const std::unique_ptr<clang::driver::Compilation> Compilation(
       Driver->BuildCompilation(llvm::makeArrayRef(Argv)));
+  if (!Compilation)
+    return false;
   const llvm::opt::ArgStringList *const CC1Args = getCC1Arguments(
       &Diagnostics, Compilation.get());
   if (!CC1Args) {

@@ -3,6 +3,7 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s \
 ; RUN: | FileCheck %s -check-prefix=WITHOUT-FULL
 
+; FULL:      Region: %bb---FunctionExit
 ; FULL:      Statements {
 ; FULL-NEXT: 	Stmt_loop_1
 ; FULL-NEXT:         Domain :=
@@ -20,6 +21,7 @@
 ; FULL-NEXT:             [p] -> { Stmt_loop_2[i0] -> MemRef_A[0] };
 ; FULL-NEXT: }
 
+; WITHOUT-FULL:        Region: %loop.2---%merge
 ; WITHOUT-FULL:        Statements {
 ; WITHOUT-FULL-NEXT:    	Stmt_loop_2
 ; WITHOUT-FULL-NEXT:            Domain :=
@@ -30,6 +32,7 @@
 ; WITHOUT-FULL-NEXT:                { Stmt_loop_2[i0] -> MemRef_A[0] };
 ; WITHOUT-FULL-NEXT:    }
 
+; WITHOUT-FULL:         Region: %loop.1---%merge
 ; WITHOUT-FULL:         Statements {
 ; WITHOUT-FULL-NEXT:    	Stmt_loop_1
 ; WITHOUT-FULL-NEXT:            Domain :=

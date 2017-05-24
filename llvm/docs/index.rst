@@ -90,6 +90,7 @@ representation.
    CodeOfConduct
    CompileCudaWithLLVM
    ReportingGuide
+   Benchmarking
 
 :doc:`GettingStarted`
    Discusses how to get up and running quickly with the LLVM infrastructure.
