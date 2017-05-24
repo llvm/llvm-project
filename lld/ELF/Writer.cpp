@@ -46,6 +46,7 @@ public:
   void run();
 
 private:
+  void clearOutputSections();
   void createSyntheticSections();
   void copyLocalSymbols();
   void addSectionSymbols();
@@ -198,6 +199,15 @@ template <class ELFT> static void combineEhFrameSections() {
   V.erase(std::remove(V.begin(), V.end(), nullptr), V.end());
 }
 
+template <class ELFT> void Writer<ELFT>::clearOutputSections() {
+  // Clear the OutputSections to make sure it is not used anymore. Any
+  // code from this point on should be using the linker script
+  // commands.
+  for (OutputSection *Sec : OutputSections)
+    Sec->Sections.clear();
+  OutputSections.clear();
+}
+
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
   // Create linker-synthesized sections such as .got or .plt.
@@ -288,10 +298,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
-  // Clear the OutputSections to make sure it is not used anymore. Any
-  // code from this point on should be using the linker script
-  // commands.
-  OutputSections.clear();
+  clearOutputSections();
 
   // Handle -Map option.
   writeMapFile<ELFT>(Script->Opt.Commands);
