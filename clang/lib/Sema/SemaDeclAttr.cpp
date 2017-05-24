@@ -7563,6 +7563,12 @@ public:
     return true;
   }
 
+  bool VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) {
+    SemaRef.Diag(E->getLocStart(), diag::warn_at_available_unchecked_use)
+        << (!SemaRef.getLangOpts().ObjC1);
+    return true;
+  }
+
   bool VisitTypeLoc(TypeLoc Ty);
 };
 
