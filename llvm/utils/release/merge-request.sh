@@ -23,7 +23,7 @@ bugzilla_component="new bugs"
 bugzilla_assigned_to=""
 bugzilla_user=""
 bugzilla_version=""
-bugzilla_url="http://bugs.llvm.org/xmlrpc.cgi"
+bugzilla_url="https://bugs.llvm.org/xmlrpc.cgi"
 
 function usage() {
   echo "usage: `basename $0` -user EMAIL -stable-version X.Y -r NUM"

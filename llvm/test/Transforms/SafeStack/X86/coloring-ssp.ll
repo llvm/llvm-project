@@ -1,4 +1,4 @@
-; RUN: opt -safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -safe-stack -safe-stack-coloring=1 -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
 
 ; %x and %y share a stack slot between them, but not with the stack guard.
 define void @f() safestack sspreq {
