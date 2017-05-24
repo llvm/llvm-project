@@ -42,6 +42,11 @@ public:
 
     typedef int Typedef;
 // CHECK: [[@LINE-1]]:17 | type-alias/C | Typedef | c:{{.*}}index-instantiated-source.cpp@ST>2#T#T@TemplateClass@S@NestedType@T@Typedef |
+
+    enum Enum {
+// CHECK: [[@LINE-1]]:10 | enum/C | Enum | c:@ST>2#T#T@TemplateClass@S@NestedType@E@Enum |
+      EnumCase
+    };
   };
 };
 
@@ -74,4 +79,7 @@ void canonicalizeInstaniationReferences(TemplateClass<int, float> &object) {
 // CHECK: [[@LINE-1]]:19 | type-alias/C++ | TypeAlias | c:@ST>2#T#T@TemplateClass@S@NestedType@TypeAlias |
   TT::NestedType::Typedef nestedTypedef;
 // CHECK: [[@LINE-1]]:19 | type-alias/C | Typedef | c:{{.*}}index-instantiated-source.cpp@ST>2#T#T@TemplateClass@S@NestedType@T@Typedef |
+
+  TT::NestedType::Enum nestedEnum;
+// CHECK: [[@LINE-1]]:19 | enum/C | Enum | c:@ST>2#T#T@TemplateClass@S@NestedType@E@Enum |
 }
