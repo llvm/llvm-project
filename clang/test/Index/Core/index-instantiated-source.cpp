@@ -9,6 +9,9 @@ public:
 
   T baseTemplateField;
 // CHECK: [[@LINE-1]]:5 | field/C++ | baseTemplateField | c:@ST>1#T@BaseTemplate@FI@baseTemplateField
+
+  struct NestedBaseType { };
+// CHECK: [[@LINE-1]]:10 | struct/C | NestedBaseType | c:@ST>1#T@BaseTemplate@S@NestedBaseType |
 };
 
 template<typename T, typename S>
@@ -22,6 +25,15 @@ public:
 
   T field;
 // CHECK: [[@LINE-1]]:5 | field/C++ | field | c:@ST>2#T#T@TemplateClass@FI@field
+
+  struct NestedType {
+// CHECK: [[@LINE-1]]:10 | struct/C++ | NestedType | c:@ST>2#T#T@TemplateClass@S@NestedType |
+    class SubNestedType {
+// CHECK: [[@LINE-1]]:11 | class/C++ | SubNestedType | c:@ST>2#T#T@TemplateClass@S@NestedType@S@SubNestedType |
+    public:
+      SubNestedType(int);
+    };
+  };
 };
 
 void canonicalizeInstaniationReferences(TemplateClass<int, float> &object) {
@@ -36,4 +48,13 @@ void canonicalizeInstaniationReferences(TemplateClass<int, float> &object) {
 
   TemplateClass<int, float>::staticFunction();
 // CHECK: [[@LINE-1]]:30 | static-method/C++ | staticFunction | c:@ST>2#T#T@TemplateClass@F@staticFunction#S | <no-cgname
+
+  TemplateClass<int, float>::NestedBaseType nestedBaseType;
+// CHECK: [[@LINE-1]]:30 | struct/C | NestedBaseType | c:@ST>1#T@BaseTemplate@S@NestedBaseType |
+  TemplateClass<int, float>::NestedType nestedSubType;
+// CHECK: [[@LINE-1]]:30 | struct/C++ | NestedType | c:@ST>2#T#T@TemplateClass@S@NestedType |
+  typedef TemplateClass<int, float> TT;
+  TT::NestedType::SubNestedType subNestedType(0);
+// CHECK: [[@LINE-1]]:7 | struct/C++ | NestedType | c:@ST>2#T#T@TemplateClass@S@NestedType |
+// CHECK: [[@LINE-2]]:19 | class/C++ | SubNestedType | c:@ST>2#T#T@TemplateClass@S@NestedType@S@SubNestedType |
 }
