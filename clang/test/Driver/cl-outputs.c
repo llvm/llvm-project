@@ -73,7 +73,7 @@
 // RUN: %clang_cl /c /o .. -### -- %s 2>&1 | FileCheck -check-prefix=oCRAZY2 %s
 // oCRAZY2:  "-o" "..obj"
 
-// RUN: %clang_cl /c %s -### /o 2>&1 | FileCheck -check-prefix=oMISSINGARG %s
+// RUN: not %clang_cl /c %s -### /o 2>&1 | FileCheck -check-prefix=oMISSINGARG %s
 // oMISSINGARG: error: argument to '/o' is missing (expected 1 value)
 
 // RUN: %clang_cl /c /omydir/ -### -- %s %s 2>&1 | FileCheck -check-prefix=CHECK-oMULTIPLESOURCEOK1 %s
@@ -208,7 +208,7 @@
 // FeoDIRNAMEEXTDLL: "-out:foo.dir{{[/\\]+}}a.ext"
 // FeoDIRNAMEEXTDLL: "-implib:foo.dir{{[/\\]+}}a.lib"
 
-// RUN: %clang_cl -### /o 2>&1 | FileCheck -check-prefix=FeoMISSINGARG %s
+// RUN: not %clang_cl -### /o 2>&1 | FileCheck -check-prefix=FeoMISSINGARG %s
 // FeoMISSINGARG: error: argument to '/o' is missing (expected 1 value)
 
 // RUN: %clang_cl /ofoo /o bar -### -- %s 2>&1 | FileCheck -check-prefix=FeoOVERRIDE %s

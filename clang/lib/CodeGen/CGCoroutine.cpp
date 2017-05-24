@@ -11,9 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CGCleanup.h"
 #include "CodeGenFunction.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "clang/AST/StmtCXX.h"
+#include "clang/AST/StmtVisitor.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -238,7 +240,67 @@ void CodeGenFunction::EmitCoreturnStmt(CoreturnStmt const &S) {
   EmitBranchThroughCleanup(CurCoro.Data->FinalJD);
 }
 
-// For WinEH exception representation backend need to know what funclet coro.end
+// Hunts for the parameter reference in the parameter copy/move declaration.
+namespace {
+struct GetParamRef : public StmtVisitor<GetParamRef> {
+public:
+  DeclRefExpr *Expr = nullptr;
+  GetParamRef() {}
+  void VisitDeclRefExpr(DeclRefExpr *E) {
+    assert(Expr == nullptr && "multilple declref in param move");
+    Expr = E;
+  }
+  void VisitStmt(Stmt *S) {
+    for (auto *C : S->children()) {
+      if (C)
+        Visit(C);
+    }
+  }
+};
+}
+
+// This class replaces references to parameters to their copies by changing
+// the addresses in CGF.LocalDeclMap and restoring back the original values in
+// its destructor.
+
+namespace {
+  struct ParamReferenceReplacerRAII {
+    CodeGenFunction::DeclMapTy SavedLocals;
+    CodeGenFunction::DeclMapTy& LocalDeclMap;
+
+    ParamReferenceReplacerRAII(CodeGenFunction::DeclMapTy &LocalDeclMap)
+        : LocalDeclMap(LocalDeclMap) {}
+
+    void addCopy(DeclStmt const *PM) {
+      // Figure out what param it refers to.
+
+      assert(PM->isSingleDecl());
+      VarDecl const*VD = static_cast<VarDecl const*>(PM->getSingleDecl());
+      Expr const *InitExpr = VD->getInit();
+      GetParamRef Visitor;
+      Visitor.Visit(const_cast<Expr*>(InitExpr));
+      assert(Visitor.Expr);
+      auto *DREOrig = cast<DeclRefExpr>(Visitor.Expr);
+      auto *PD = DREOrig->getDecl();
+
+      auto it = LocalDeclMap.find(PD);
+      assert(it != LocalDeclMap.end() && "parameter is not found");
+      SavedLocals.insert({ PD, it->second });
+
+      auto copyIt = LocalDeclMap.find(VD);
+      assert(copyIt != LocalDeclMap.end() && "parameter copy is not found");
+      it->second = copyIt->getSecond();
+    }
+
+    ~ParamReferenceReplacerRAII() {
+      for (auto&& SavedLocal : SavedLocals) {
+        LocalDeclMap.insert({SavedLocal.first, SavedLocal.second});
+      }
+    }
+  };
+}
+
+// For WinEH exception representation backend needs to know what funclet coro.end
 // belongs to. That information is passed in a funclet bundle.
 static SmallVector<llvm::OperandBundleDef, 1>
 getBundlesForCoroEnd(CodeGenFunction &CGF) {
@@ -326,6 +388,72 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
 };
 }
 
+namespace {
+struct GetReturnObjectManager {
+  CodeGenFunction &CGF;
+  CGBuilderTy &Builder;
+  const CoroutineBodyStmt &S;
+
+  Address GroActiveFlag;
+  CodeGenFunction::AutoVarEmission GroEmission;
+
+  GetReturnObjectManager(CodeGenFunction &CGF, const CoroutineBodyStmt &S)
+      : CGF(CGF), Builder(CGF.Builder), S(S), GroActiveFlag(Address::invalid()),
+        GroEmission(CodeGenFunction::AutoVarEmission::invalid()) {}
+
+  // The gro variable has to outlive coroutine frame and coroutine promise, but,
+  // it can only be initialized after coroutine promise was created, thus, we
+  // split its emission in two parts. EmitGroAlloca emits an alloca and sets up
+  // cleanups. Later when coroutine promise is available we initialize the gro
+  // and sets the flag that the cleanup is now active.
+
+  void EmitGroAlloca() {
+    auto *GroDeclStmt = dyn_cast<DeclStmt>(S.getResultDecl());
+    if (!GroDeclStmt) {
+      // If get_return_object returns void, no need to do an alloca.
+      return;
+    }
+
+    auto *GroVarDecl = cast<VarDecl>(GroDeclStmt->getSingleDecl());
+
+    // Set GRO flag that it is not initialized yet
+    GroActiveFlag =
+      CGF.CreateTempAlloca(Builder.getInt1Ty(), CharUnits::One(), "gro.active");
+    Builder.CreateStore(Builder.getFalse(), GroActiveFlag);
+
+    GroEmission = CGF.EmitAutoVarAlloca(*GroVarDecl);
+
+    // Remember the top of EHStack before emitting the cleanup.
+    auto old_top = CGF.EHStack.stable_begin();
+    CGF.EmitAutoVarCleanups(GroEmission);
+    auto top = CGF.EHStack.stable_begin();
+
+    // Make the cleanup conditional on gro.active
+    for (auto b = CGF.EHStack.find(top), e = CGF.EHStack.find(old_top);
+      b != e; b++) {
+      if (auto *Cleanup = dyn_cast<EHCleanupScope>(&*b)) {
+        assert(!Cleanup->hasActiveFlag() && "cleanup already has active flag?");
+        Cleanup->setActiveFlag(GroActiveFlag);
+        Cleanup->setTestFlagInEHCleanup();
+        Cleanup->setTestFlagInNormalCleanup();
+      }
+    }
+  }
+
+  void EmitGroInit() {
+    if (!GroActiveFlag.isValid()) {
+      // No Gro variable was allocated. Simply emit the call to
+      // get_return_object.
+      CGF.EmitStmt(S.getResultDecl());
+      return;
+    }
+
+    CGF.EmitAutoVarInit(GroEmission);
+    Builder.CreateStore(Builder.getTrue(), GroActiveFlag);
+  }
+};
+}
+
 static void emitBodyAndFallthrough(CodeGenFunction &CGF,
                                    const CoroutineBodyStmt &S, Stmt *Body) {
   CGF.EmitStmt(Body);
@@ -390,22 +518,43 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
       CGM.getIntrinsic(llvm::Intrinsic::coro_begin), {CoroId, Phi});
   CurCoro.Data->CoroBegin = CoroBegin;
 
+  GetReturnObjectManager GroManager(*this, S);
+  GroManager.EmitGroAlloca();
+
   CurCoro.Data->CleanupJD = getJumpDestInCurrentScope(RetBB);
   {
+    ParamReferenceReplacerRAII ParamReplacer(LocalDeclMap);
     CodeGenFunction::RunCleanupsScope ResumeScope(*this);
     EHStack.pushCleanup<CallCoroDelete>(NormalAndEHCleanup, S.getDeallocate());
 
+    // Create parameter copies. We do it before creating a promise, since an
+    // evolution of coroutine TS may allow promise constructor to observe
+    // parameter copies.
+    for (auto *PM : S.getParamMoves()) {
+      EmitStmt(PM);
+      ParamReplacer.addCopy(cast<DeclStmt>(PM));
+      // TODO: if(CoroParam(...)) need to surround ctor and dtor
+      // for the copy, so that llvm can elide it if the copy is
+      // not needed.
+    }
+
     EmitStmt(S.getPromiseDeclStmt());
-    EmitStmt(S.getResultDecl()); // FIXME: Gro lifetime is wrong.
+
+    Address PromiseAddr = GetAddrOfLocalVar(S.getPromiseDecl());
+    auto *PromiseAddrVoidPtr =
+        new llvm::BitCastInst(PromiseAddr.getPointer(), VoidPtrTy, "", CoroId);
+    // Update CoroId to refer to the promise. We could not do it earlier because
+    // promise local variable was not emitted yet.
+    CoroId->setArgOperand(1, PromiseAddrVoidPtr);
+
+    // Now we have the promise, initialize the GRO
+    GroManager.EmitGroInit();
 
     EHStack.pushCleanup<CallCoroEnd>(EHCleanup);
 
-    CurCoro.Data->FinalJD = getJumpDestInCurrentScope(FinalBB);
-
-    // FIXME: Emit param moves.
-
     CurCoro.Data->CurrentAwaitKind = AwaitKind::Init;
     EmitStmt(S.getInitSuspendStmt());
+    CurCoro.Data->FinalJD = getJumpDestInCurrentScope(FinalBB);
 
     CurCoro.Data->CurrentAwaitKind = AwaitKind::Normal;
 
@@ -429,6 +578,10 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
       EmitBlock(FinalBB);
       CurCoro.Data->CurrentAwaitKind = AwaitKind::Final;
       EmitStmt(S.getFinalSuspendStmt());
+    }
+    else {
+      // We don't need FinalBB. Emit it to make sure the block is deleted.
+      EmitBlock(FinalBB, /*IsFinished=*/true);
     }
   }
 
@@ -502,5 +655,6 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
     // deletion of the coroutine frame.
     if (CurCoro.Data)
       CurCoro.Data->LastCoroFree = Call;
-  }  return RValue::get(Call);
+  }
+  return RValue::get(Call);
 }

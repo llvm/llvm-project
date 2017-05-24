@@ -20,7 +20,6 @@
 #define DEBUG_TYPE "format-test"
 
 using clang::tooling::ReplacementTest;
-using clang::tooling::toReplacements;
 
 namespace clang {
 namespace format {

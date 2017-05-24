@@ -2180,8 +2180,7 @@ Instruction *InstCombiner::visitReturnInst(ReturnInst &RI) {
 
   // There might be assume intrinsics dominating this return that completely
   // determine the value. If so, constant fold it.
-  KnownBits Known(VTy->getPrimitiveSizeInBits());
-  computeKnownBits(ResultOp, Known, 0, &RI);
+  KnownBits Known = computeKnownBits(ResultOp, 0, &RI);
   if (Known.isConstant())
     RI.setOperand(0, Constant::getIntegerValue(VTy, Known.getConstant()));
 
@@ -2242,9 +2241,7 @@ Instruction *InstCombiner::visitSwitchInst(SwitchInst &SI) {
     return &SI;
   }
 
-  unsigned BitWidth = cast<IntegerType>(Cond->getType())->getBitWidth();
-  KnownBits Known(BitWidth);
-  computeKnownBits(Cond, Known, 0, &SI);
+  KnownBits Known = computeKnownBits(Cond, 0, &SI);
   unsigned LeadingKnownZeros = Known.countMinLeadingZeros();
   unsigned LeadingKnownOnes = Known.countMinLeadingOnes();
 
@@ -2257,12 +2254,12 @@ Instruction *InstCombiner::visitSwitchInst(SwitchInst &SI) {
         LeadingKnownOnes, C.getCaseValue()->getValue().countLeadingOnes());
   }
 
-  unsigned NewWidth = BitWidth - std::max(LeadingKnownZeros, LeadingKnownOnes);
+  unsigned NewWidth = Known.getBitWidth() - std::max(LeadingKnownZeros, LeadingKnownOnes);
 
   // Shrink the condition operand if the new type is smaller than the old type.
   // This may produce a non-standard type for the switch, but that's ok because
   // the backend should extend back to a legal type for the target.
-  if (NewWidth > 0 && NewWidth < BitWidth) {
+  if (NewWidth > 0 && NewWidth < Known.getBitWidth()) {
     IntegerType *Ty = IntegerType::get(SI.getContext(), NewWidth);
     Builder->SetInsertPoint(&SI);
     Value *NewCond = Builder->CreateTrunc(Cond, Ty, "trunc");
@@ -2841,9 +2838,7 @@ bool InstCombiner::run() {
     // a value even when the operands are not all constants.
     Type *Ty = I->getType();
     if (ExpensiveCombines && !I->use_empty() && Ty->isIntOrIntVectorTy()) {
-      unsigned BitWidth = Ty->getScalarSizeInBits();
-      KnownBits Known(BitWidth);
-      computeKnownBits(I, Known, /*Depth*/0, I);
+      KnownBits Known = computeKnownBits(I, /*Depth*/0, I);
       if (Known.isConstant()) {
         Constant *C = ConstantInt::get(Ty, Known.getConstant());
         DEBUG(dbgs() << "IC: ConstFold (all bits known) to: " << *C <<

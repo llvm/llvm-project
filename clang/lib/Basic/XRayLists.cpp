@@ -26,6 +26,8 @@ XRayFunctionFilter::ImbueAttribute
 XRayFunctionFilter::shouldImbueFunction(StringRef FunctionName) const {
   // First apply the always instrument list, than if it isn't an "always" see
   // whether it's treated as a "never" instrument function.
+  if (AlwaysInstrument->inSection("fun", FunctionName, "arg1"))
+    return ImbueAttribute::ALWAYS_ARG1;
   if (AlwaysInstrument->inSection("fun", FunctionName))
     return ImbueAttribute::ALWAYS;
   if (NeverInstrument->inSection("fun", FunctionName))

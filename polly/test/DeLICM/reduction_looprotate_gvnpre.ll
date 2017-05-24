@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-overapproximate-writes=true -polly-delicm-compute-known=true -polly-delicm -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-flatten-schedule -polly-delicm-partial-writes=true -polly-delicm-compute-known=true -polly-delicm -analyze < %s | FileCheck -check-prefix=PARTIAL %s
 ;
 ;    void func(double *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */
@@ -92,3 +93,34 @@ return:
 ; CHECK-NEXT:                 { Stmt_reduction_inc[i0, i1] -> MemRef_phi__phi[] };
 ; CHECK-NEXT:            new: { Stmt_reduction_inc[i0, i1] -> MemRef_A[i0] : 0 <= i0 <= 1 and 0 <= i1 <= 3 };
 ; CHECK-NEXT: }
+
+
+; PARTIAL:      After accesses {
+; PARTIAL-NEXT:     Stmt_reduction_preheader
+; PARTIAL-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
+; PARTIAL-NEXT:                 { Stmt_reduction_preheader[i0] -> MemRef_phi__phi[] };
+; PARTIAL-NEXT:            new: { Stmt_reduction_preheader[i0] -> MemRef_A[i0] : 0 <= i0 <= 1 };
+; PARTIAL-NEXT:     Stmt_reduction_for
+; PARTIAL-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
+; PARTIAL-NEXT:                 { Stmt_reduction_for[i0, i1] -> MemRef_phi__phi[] };
+; PARTIAL-NEXT:            new: { Stmt_reduction_for[i0, i1] -> MemRef_A[i0] : 0 <= i0 <= 1 and 0 <= i1 <= 3 };
+; PARTIAL-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
+; PARTIAL-NEXT:                 { Stmt_reduction_for[i0, i1] -> MemRef_phi[] };
+; PARTIAL-NEXT:            new: { Stmt_reduction_for[i0, i1] -> MemRef_A[i0] : 0 <= i0 <= 1 and 0 <= i1 <= 3 };
+; PARTIAL-NEXT:     Stmt_body
+; PARTIAL-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
+; PARTIAL-NEXT:                 { Stmt_body[i0, i1] -> MemRef_add[] };
+; PARTIAL-NEXT:            new: { Stmt_body[i0, i1] -> MemRef_A[i0] : 0 <= i0 <= 1 and 0 <= i1 <= 3 and 3i1 <= 22 - 13i0 };
+; PARTIAL-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
+; PARTIAL-NEXT:                 { Stmt_body[i0, i1] -> MemRef_phi[] };
+; PARTIAL-NEXT:            new: { Stmt_body[i0, i1] -> MemRef_A[i0] : i0 >= 0 and 0 <= i1 <= 3 and 3i1 <= 21 - 13i0; Stmt_body[1, 3] -> MemRef_A[1] };
+; PARTIAL-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
+; PARTIAL-NEXT:                 { Stmt_body[i0, i1] -> MemRef_A[i0] };
+; PARTIAL-NEXT:     Stmt_reduction_inc
+; PARTIAL-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
+; PARTIAL-NEXT:                 { Stmt_reduction_inc[i0, i1] -> MemRef_add[] };
+; PARTIAL-NEXT:            new: { Stmt_reduction_inc[i0, i1] -> MemRef_A[i0] : i0 >= 0 and 0 <= i1 <= 3 and 3i1 <= 21 - 13i0; Stmt_reduction_inc[1, 3] -> MemRef_A[1] };
+; PARTIAL-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
+; PARTIAL-NEXT:                 { Stmt_reduction_inc[i0, i1] -> MemRef_phi__phi[] };
+; PARTIAL-NEXT:            new: { Stmt_reduction_inc[i0, i1] -> MemRef_A[i0] : 0 <= i0 <= 1 and 0 <= i1 <= 2 and 3i1 >= -13i0 };
+; PARTIAL-NEXT: }

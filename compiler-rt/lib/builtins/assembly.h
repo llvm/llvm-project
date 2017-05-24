@@ -96,9 +96,11 @@
 #if __ARM_ARCH_ISA_THUMB == 2
 #define IT(cond)  it cond
 #define ITT(cond) itt cond
+#define ITE(cond) ite cond
 #else
 #define IT(cond)
 #define ITT(cond)
+#define ITE(cond)
 #endif
 
 #if __ARM_ARCH_ISA_THUMB == 2

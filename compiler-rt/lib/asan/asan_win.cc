@@ -80,7 +80,7 @@ static long WINAPI SEHHandler(EXCEPTION_POINTERS *info) {
 INTERCEPTOR_WINAPI(LPTOP_LEVEL_EXCEPTION_FILTER, SetUnhandledExceptionFilter,
     LPTOP_LEVEL_EXCEPTION_FILTER ExceptionFilter) {
   CHECK(REAL(SetUnhandledExceptionFilter));
-  if (ExceptionFilter == &SEHHandler || common_flags()->allow_user_segv_handler)
+  if (ExceptionFilter == &SEHHandler)
     return REAL(SetUnhandledExceptionFilter)(ExceptionFilter);
   // We record the user provided exception handler to be called for all the
   // exceptions unhandled by asan.

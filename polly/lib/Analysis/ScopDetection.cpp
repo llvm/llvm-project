@@ -578,7 +578,7 @@ bool ScopDetection::isValidCFG(BasicBlock &BB, bool IsLoopBranch,
     return true;
 
   // Return instructions are only valid if the region is the top level region.
-  if (isa<ReturnInst>(TI) && !CurRegion.getExit() && TI->getNumOperands() == 0)
+  if (isa<ReturnInst>(TI) && CurRegion.isTopLevelRegion())
     return true;
 
   Value *Condition = getConditionFromTerminator(TI);
@@ -1485,13 +1485,14 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
 
   DEBUG(dbgs() << "Checking region: " << CurRegion.getNameStr() << "\n\t");
 
-  if (CurRegion.isTopLevelRegion()) {
+  if (!AllowFullFunction && CurRegion.isTopLevelRegion()) {
     DEBUG(dbgs() << "Top level region is invalid\n");
     return false;
   }
 
   DebugLoc DbgLoc;
-  if (isa<UnreachableInst>(CurRegion.getExit()->getTerminator())) {
+  if (CurRegion.getExit() &&
+      isa<UnreachableInst>(CurRegion.getExit()->getTerminator())) {
     DEBUG(dbgs() << "Unreachable in exit\n");
     return invalid<ReportUnreachableInExit>(Context, /*Assert=*/true,
                                             CurRegion.getExit(), DbgLoc);

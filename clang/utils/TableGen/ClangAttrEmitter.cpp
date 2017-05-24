@@ -312,7 +312,7 @@ namespace {
     }
 
     void writeDump(raw_ostream &OS) const override {
-      if (type == "FunctionDecl *") {
+      if (type == "FunctionDecl *" || type == "NamedDecl *") {
         OS << "    OS << \" \";\n";
         OS << "    dumpBareDeclRef(SA->get" << getUpperName() << "());\n"; 
       } else if (type == "IdentifierInfo *") {
@@ -1181,6 +1181,8 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = llvm::make_unique<ExprArgument>(Arg, Attr);
   else if (ArgName == "FunctionArgument")
     Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "FunctionDecl *");
+  else if (ArgName == "NamedArgument")
+    Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "NamedDecl *");
   else if (ArgName == "IdentifierArgument")
     Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "IdentifierInfo *");
   else if (ArgName == "DefaultBoolArgument")
@@ -3103,6 +3105,8 @@ static std::string CalculateDiagnostic(const Record &S) {
              "            : ExpectedVariableOrFunction))";
 
     case ObjCMethod | ObjCProp: return "ExpectedMethodOrProperty";
+    case Func | ObjCMethod | ObjCProp:
+      return "ExpectedFunctionOrMethodOrProperty";
     case ObjCProtocol | ObjCInterface:
       return "ExpectedObjectiveCInterfaceOrProtocol";
     case Field | Var: return "ExpectedFieldOrGlobalVar";

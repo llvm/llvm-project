@@ -1125,6 +1125,7 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
       .Case("attribute_overloadable", true)
       .Case("attribute_unavailable_with_message", true)
       .Case("attribute_unused_on_fields", true)
+      .Case("attribute_diagnose_if_objc", true)
       .Case("blocks", LangOpts.Blocks)
       .Case("c_thread_safety_attributes", true)
       .Case("cxx_exceptions", LangOpts.CXXExceptions)

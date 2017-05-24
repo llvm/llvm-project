@@ -380,9 +380,15 @@ bool polly::isErrorBlock(BasicBlock &BB, const Region &R, LoopInfo &LI,
   // Basic blocks that are always executed are not considered error blocks,
   // as their execution can not be a rare event.
   bool DominatesAllPredecessors = true;
-  for (auto Pred : predecessors(R.getExit()))
-    if (R.contains(Pred) && !DT.dominates(&BB, Pred))
-      DominatesAllPredecessors = false;
+  if (R.isTopLevelRegion()) {
+    for (BasicBlock &I : *R.getEntry()->getParent())
+      if (isa<ReturnInst>(I.getTerminator()) && !DT.dominates(&BB, &I))
+        DominatesAllPredecessors = false;
+  } else {
+    for (auto Pred : predecessors(R.getExit()))
+      if (R.contains(Pred) && !DT.dominates(&BB, Pred))
+        DominatesAllPredecessors = false;
+  }
 
   if (DominatesAllPredecessors)
     return false;

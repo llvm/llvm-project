@@ -27,6 +27,7 @@ DEFINE_COMPILERRT_FUNCTION(__gtdf2vfp)
 	vcmp.f64 d6, d7
 #endif
 	vmrs	apsr_nzcv, fpscr
+	ITE(gt)
 	movgt	r0, #1		// set result register to 1 if equal
 	movle	r0, #0
 	bx	lr

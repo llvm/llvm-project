@@ -180,7 +180,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     PGOInstrMemOP("pgo-instr-memop", cl::init(true), cl::Hidden,
                   cl::desc("Use this option to turn on/off "
-                           "memory instrinsic size profiling."));
+                           "memory intrinsic size profiling."));
 
 // Command line option to turn on CFG dot dump after profile annotation.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts

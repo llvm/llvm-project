@@ -698,6 +698,18 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
   }
 }
 
+bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT) const {
+  if (AS == AMDGPUASI.GLOBAL_ADDRESS || AS == AMDGPUASI.FLAT_ADDRESS) {
+    return (MemVT.getSizeInBits() <= 4 * 32);
+  } else if (AS == AMDGPUASI.PRIVATE_ADDRESS) {
+    unsigned MaxPrivateBits = 8 * getSubtarget()->getMaxPrivateElementSize();
+    return (MemVT.getSizeInBits() <= MaxPrivateBits);
+  } else if (AS == AMDGPUASI.LOCAL_ADDRESS) {
+    return (MemVT.getSizeInBits() <= 2 * 32);
+  }
+  return true;
+}
+
 bool SITargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
                                                       unsigned AddrSpace,
                                                       unsigned Align,

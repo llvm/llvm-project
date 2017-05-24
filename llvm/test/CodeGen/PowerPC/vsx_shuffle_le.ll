@@ -19,7 +19,7 @@ define <2 x double> @test00(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: xxspltd 34, 0, 0
 
 ; CHECK-P9-LABEL: test00
-; CHECK-P9: lxvx 0, 0, 3
+; CHECK-P9: lxv 0, 0(3)
 ; CHECK-P9: xxspltd 34, 0, 1
 }
 
@@ -34,7 +34,7 @@ define <2 x double> @test01(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: xxswapd 34, 0
 
 ; CHECK-P9-LABEL: test01
-; CHECK-P9: lxvx 34, 0, 3
+; CHECK-P9: lxv 34, 0(3)
 }
 
 define <2 x double> @test02(<2 x double>* %p1, <2 x double>* %p2) {
@@ -51,8 +51,8 @@ define <2 x double> @test02(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: xxmrgld 34, 1, 0
 
 ; CHECK-P9-LABEL: @test02
-; CHECK-P9: lxvx 0, 0, 3
-; CHECK-P9: lxvx 1, 0, 4
+; CHECK-P9: lxv 0, 0(3)
+; CHECK-P9: lxv 1, 0(4)
 ; CHECK-P9: xxmrgld 34, 1, 0
 }
 
@@ -70,8 +70,8 @@ define <2 x double> @test03(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: xxpermdi 34, 1, 0, 1
 
 ; CHECK-P9-LABEL: @test03
-; CHECK-P9: lxvx 0, 0, 3
-; CHECK-P9: lxvx 1, 0, 4
+; CHECK-P9: lxv 0, 0(3)
+; CHECK-P9: lxv 1, 0(4)
 ; CHECK-P9: xxpermdi 34, 1, 0, 1
 }
 
@@ -85,7 +85,7 @@ define <2 x double> @test10(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: lxvd2x 34, 0, 3
 
 ; CHECK-P9-LABEL: @test10
-; CHECK-P9: lxvx 0, 0, 3
+; CHECK-P9: lxv 0, 0(3)
 ; CHECK-P9: xxswapd 34, 0
 }
 
@@ -100,7 +100,7 @@ define <2 x double> @test11(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: xxspltd 34, 0, 1
 
 ; CHECK-P9-LABEL: @test11
-; CHECK-P9: lxvx 0, 0, 3
+; CHECK-P9: lxv 0, 0(3)
 ; CHECK-P9: xxspltd 34, 0, 0
 }
 
@@ -118,8 +118,8 @@ define <2 x double> @test12(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: xxpermdi 34, 1, 0, 2
 
 ; CHECK-P9-LABEL: @test12
-; CHECK-P9: lxvx 0, 0, 3
-; CHECK-P9: lxvx 1, 0, 4
+; CHECK-P9: lxv 0, 0(3)
+; CHECK-P9: lxv 1, 0(4)
 ; CHECK-P9: xxpermdi 34, 1, 0, 2
 }
 
@@ -137,8 +137,8 @@ define <2 x double> @test13(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: xxmrghd 34, 1, 0
 
 ; CHECK-P9-LABEL: @test13
-; CHECK-P9: lxvx 0, 0, 3
-; CHECK-P9: lxvx 1, 0, 4
+; CHECK-P9: lxv 0, 0(3)
+; CHECK-P9: lxv 1, 0(4)
 ; CHECK-P9: xxmrghd 34, 1, 0
 }
 
@@ -156,8 +156,8 @@ define <2 x double> @test20(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: xxmrgld 34, 0, 1
 
 ; CHECK-P9-LABEL: @test20
-; CHECK-P9: lxvx 0, 0, 3
-; CHECK-P9: lxvx 1, 0, 4
+; CHECK-P9: lxv 0, 0(3)
+; CHECK-P9: lxv 1, 0(4)
 ; CHECK-P9: xxmrgld 34, 0, 1
 }
 
@@ -175,8 +175,8 @@ define <2 x double> @test21(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: xxpermdi 34, 0, 1, 1
 
 ; CHECK-P9-LABEL: @test21
-; CHECK-P9: lxvx 0, 0, 3
-; CHECK-P9: lxvx 1, 0, 4
+; CHECK-P9: lxv 0, 0(3)
+; CHECK-P9: lxv 1, 0(4)
 ; CHECK-P9: xxpermdi 34, 0, 1, 1
 }
 
@@ -191,7 +191,7 @@ define <2 x double> @test22(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: xxspltd 34, 0, 0
 
 ; CHECK-P9-LABEL: @test22
-; CHECK-P9: lxvx 0, 0, 4
+; CHECK-P9: lxv 0, 0(4)
 ; CHECK-P9: xxspltd 34, 0, 1
 }
 
@@ -206,7 +206,7 @@ define <2 x double> @test23(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: xxswapd 34, 0
 
 ; CHECK-P9-LABEL: @test23
-; CHECK-P9: lxvx 34, 0, 4
+; CHECK-P9: lxv 34, 0(4)
 }
 
 define <2 x double> @test30(<2 x double>* %p1, <2 x double>* %p2) {
@@ -223,8 +223,8 @@ define <2 x double> @test30(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: xxpermdi 34, 0, 1, 2
 
 ; CHECK-P9-LABEL: @test30
-; CHECK-P9: lxvx 0, 0, 3
-; CHECK-P9: lxvx 1, 0, 4
+; CHECK-P9: lxv 0, 0(3)
+; CHECK-P9: lxv 1, 0(4)
 ; CHECK-P9: xxpermdi 34, 0, 1, 2
 }
 
@@ -242,8 +242,8 @@ define <2 x double> @test31(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: xxmrghd 34, 0, 1
 
 ; CHECK-P9-LABEL: @test31
-; CHECK-P9: lxvx 0, 0, 3
-; CHECK-P9: lxvx 1, 0, 4
+; CHECK-P9: lxv 0, 0(3)
+; CHECK-P9: lxv 1, 0(4)
 ; CHECK-P9: xxmrghd 34, 0, 1
 }
 
@@ -257,7 +257,7 @@ define <2 x double> @test32(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: lxvd2x 34, 0, 4
 
 ; CHECK-P9-LABEL: @test32
-; CHECK-P9: lxvx 0, 0, 4
+; CHECK-P9: lxv 0, 0(4)
 ; CHECK-P9: xxswapd 34, 0
 }
 
@@ -272,6 +272,6 @@ define <2 x double> @test33(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK: xxspltd 34, 0, 1
 
 ; CHECK-P9-LABEL: @test33
-; CHECK-P9: lxvx 0, 0, 4
+; CHECK-P9: lxv 0, 0(4)
 ; CHECK-P9: xxspltd 34, 0, 0
 }

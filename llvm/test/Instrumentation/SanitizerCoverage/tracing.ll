@@ -22,7 +22,6 @@ entry:
 ; CHECK_PC: call void @__sanitizer_cov_trace_pc
 ; CHECK_PC: call void @__sanitizer_cov_trace_pc
 ; CHECK_PC: call void @__sanitizer_cov_trace_pc
-; CHECK_PC: call void @__sanitizer_cov_trace_pc
 ; CHECK_PC-NOT: call void @__sanitizer_cov_trace_pc
 ; CHECK_PC: ret void
 ; CHECK_PC-NOT: call void @__sanitizer_cov_module_init
@@ -31,13 +30,11 @@ entry:
 ; CHECK_PC_GUARD: call void @__sanitizer_cov_trace_pc_guard
 ; CHECK_PC_GUARD: call void @__sanitizer_cov_trace_pc_guard
 ; CHECK_PC_GUARD: call void @__sanitizer_cov_trace_pc_guard
-; CHECK_PC_GUARD: call void @__sanitizer_cov_trace_pc_guard
 ; CHECK_PC_GUARD-NOT: call void @__sanitizer_cov_trace_pc
 ; CHECK_PC_GUARD: ret void
 ; CHECK_PC_GUARD: call void @__sanitizer_cov_trace_pc_guard_init(i32* bitcast (i32** @__start___sancov_guards to i32*), i32* bitcast (i32** @__stop___sancov_guards to i32*))
 
 ; CHECK_PC_GUARD_DARWIN-LABEL: define void @foo
-; CHECK_PC_GUARD_DARWIN: call void @__sanitizer_cov_trace_pc_guard
 ; CHECK_PC_GUARD_DARWIN: call void @__sanitizer_cov_trace_pc_guard
 ; CHECK_PC_GUARD_DARWIN: call void @__sanitizer_cov_trace_pc_guard
 ; CHECK_PC_GUARD_DARWIN: call void @__sanitizer_cov_trace_pc_guard

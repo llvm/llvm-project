@@ -1037,17 +1037,15 @@ unsigned llvm::getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
                                           const DominatorTree *DT) {
   assert(V->getType()->isPointerTy() &&
          "getOrEnforceKnownAlignment expects a pointer!");
-  unsigned BitWidth = DL.getPointerTypeSizeInBits(V->getType());
 
-  KnownBits Known(BitWidth);
-  computeKnownBits(V, Known, DL, 0, AC, CxtI, DT);
+  KnownBits Known = computeKnownBits(V, DL, 0, AC, CxtI, DT);
   unsigned TrailZ = Known.countMinTrailingZeros();
 
   // Avoid trouble with ridiculously large TrailZ values, such as
   // those computed from a null pointer.
   TrailZ = std::min(TrailZ, unsigned(sizeof(unsigned) * CHAR_BIT - 1));
 
-  unsigned Align = 1u << std::min(BitWidth - 1, TrailZ);
+  unsigned Align = 1u << std::min(Known.getBitWidth() - 1, TrailZ);
 
   // LLVM doesn't support alignments larger than this currently.
   Align = std::min(Align, +Value::MaximumAlignment);

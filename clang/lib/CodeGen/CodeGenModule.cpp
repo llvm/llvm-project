@@ -1508,6 +1508,10 @@ bool CodeGenModule::imbueXRayAttrs(llvm::Function *Fn, SourceLocation Loc,
   case ImbueAttr::ALWAYS:
     Fn->addFnAttr("function-instrument", "xray-always");
     break;
+  case ImbueAttr::ALWAYS_ARG1:
+    Fn->addFnAttr("function-instrument", "xray-always");
+    Fn->addFnAttr("xray-log-args", "1");
+    break;
   case ImbueAttr::NEVER:
     Fn->addFnAttr("function-instrument", "xray-never");
     break;

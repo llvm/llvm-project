@@ -692,8 +692,7 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, ZExtInst &CI,
         // This only works for EQ and NE
         ICI->isEquality()) {
       // If Op1C some other power of two, convert:
-      KnownBits Known(Op1C->getType()->getBitWidth());
-      computeKnownBits(ICI->getOperand(0), Known, 0, &CI);
+      KnownBits Known = computeKnownBits(ICI->getOperand(0), 0, &CI);
 
       APInt KnownZeroMask(~Known.Zero);
       if (KnownZeroMask.isPowerOf2()) { // Exactly 1 possible 1?
@@ -737,14 +736,11 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, ZExtInst &CI,
   // may lead to additional simplifications.
   if (ICI->isEquality() && CI.getType() == ICI->getOperand(0)->getType()) {
     if (IntegerType *ITy = dyn_cast<IntegerType>(CI.getType())) {
-      uint32_t BitWidth = ITy->getBitWidth();
       Value *LHS = ICI->getOperand(0);
       Value *RHS = ICI->getOperand(1);
 
-      KnownBits KnownLHS(BitWidth);
-      KnownBits KnownRHS(BitWidth);
-      computeKnownBits(LHS, KnownLHS, 0, &CI);
-      computeKnownBits(RHS, KnownRHS, 0, &CI);
+      KnownBits KnownLHS = computeKnownBits(LHS, 0, &CI);
+      KnownBits KnownRHS = computeKnownBits(RHS, 0, &CI);
 
       if (KnownLHS.Zero == KnownRHS.Zero && KnownLHS.One == KnownRHS.One) {
         APInt KnownBits = KnownLHS.Zero | KnownLHS.One;
@@ -1063,9 +1059,7 @@ Instruction *InstCombiner::transformSExtICmp(ICmpInst *ICI, Instruction &CI) {
     // the icmp and sext into bitwise/integer operations.
     if (ICI->hasOneUse() &&
         ICI->isEquality() && (Op1C->isZero() || Op1C->getValue().isPowerOf2())){
-      unsigned BitWidth = Op1C->getType()->getBitWidth();
-      KnownBits Known(BitWidth);
-      computeKnownBits(Op0, Known, 0, &CI);
+      KnownBits Known = computeKnownBits(Op0, 0, &CI);
 
       APInt KnownZeroMask(~Known.Zero);
       if (KnownZeroMask.isPowerOf2()) {
@@ -1104,7 +1098,7 @@ Instruction *InstCombiner::transformSExtICmp(ICmpInst *ICI, Instruction &CI) {
 
           // Distribute the bit over the whole bit width.
           In = Builder->CreateAShr(In, ConstantInt::get(In->getType(),
-                                                        BitWidth - 1), "sext");
+                                      KnownZeroMask.getBitWidth() - 1), "sext");
         }
 
         if (CI.getType() == In->getType())

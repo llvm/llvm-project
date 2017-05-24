@@ -176,10 +176,11 @@ public:
   /// the number of arguments before "--", if "--" was found in the argument
   /// list.
   /// \param Argv Points to the command line arguments.
+  /// \param ErrorMsg Contains error text if the function returns null pointer.
   /// \param Directory The base directory used in the FixedCompilationDatabase.
-  static FixedCompilationDatabase *loadFromCommandLine(int &Argc,
-                                                       const char *const *Argv,
-                                                       Twine Directory = ".");
+  static std::unique_ptr<FixedCompilationDatabase> loadFromCommandLine(
+      int &Argc, const char *const *Argv, std::string &ErrorMsg,
+      Twine Directory = ".");
 
   /// \brief Constructs a compilation data base from a specified directory
   /// and command line.

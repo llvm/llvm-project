@@ -1882,7 +1882,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.GNUKeywords = Args.hasFlag(OPT_fgnu_keywords, OPT_fno_gnu_keywords,
                                   Opts.GNUKeywords);
 
-  if (Args.hasArg(OPT_fno_operator_names))
+  if (Args.hasArg(OPT_fno_operator_names) || Args.hasArg(OPT_fms_compatibility))
     Opts.CXXOperatorNames = 0;
 
   if (Args.hasArg(OPT_fcuda_is_device))

@@ -861,12 +861,9 @@ bool InstCombiner::willNotOverflowSignedSub(const Value *LHS,
       ComputeNumSignBits(RHS, 0, &CxtI) > 1)
     return true;
 
-  unsigned BitWidth = LHS->getType()->getScalarSizeInBits();
-  KnownBits LHSKnown(BitWidth);
-  computeKnownBits(LHS, LHSKnown, 0, &CxtI);
+  KnownBits LHSKnown = computeKnownBits(LHS, 0, &CxtI);
 
-  KnownBits RHSKnown(BitWidth);
-  computeKnownBits(RHS, RHSKnown, 0, &CxtI);
+  KnownBits RHSKnown = computeKnownBits(RHS, 0, &CxtI);
 
   // Subtraction of two 2's complement numbers having identical signs will
   // never overflow.
@@ -1059,9 +1056,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
       // If this is a xor that was canonicalized from a sub, turn it back into
       // a sub and fuse this add with it.
       if (LHS->hasOneUse() && (XorRHS->getValue()+1).isPowerOf2()) {
-        IntegerType *IT = cast<IntegerType>(I.getType());
-        KnownBits LHSKnown(IT->getBitWidth());
-        computeKnownBits(XorLHS, LHSKnown, 0, &I);
+        KnownBits LHSKnown = computeKnownBits(XorLHS, 0, &I);
         if ((XorRHS->getValue() | LHSKnown.Zero).isAllOnesValue())
           return BinaryOperator::CreateSub(ConstantExpr::getAdd(XorRHS, CI),
                                            XorLHS);
@@ -1577,8 +1572,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     // Turn this into a xor if LHS is 2^n-1 and the remaining bits are known
     // zero.
     if (Op0C->isMask()) {
-      KnownBits RHSKnown(BitWidth);
-      computeKnownBits(Op1, RHSKnown, 0, &I);
+      KnownBits RHSKnown = computeKnownBits(Op1, 0, &I);
       if ((*Op0C | RHSKnown.Zero).isAllOnesValue())
         return BinaryOperator::CreateXor(Op1, Op0);
     }

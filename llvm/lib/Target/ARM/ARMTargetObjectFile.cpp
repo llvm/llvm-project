@@ -30,8 +30,8 @@ using namespace dwarf;
 
 void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
                                         const TargetMachine &TM) {
-  const ARMTargetMachine &ARM_TM = static_cast<const ARMTargetMachine &>(TM);
-  bool isAAPCS_ABI = ARM_TM.TargetABI == ARMTargetMachine::ARMABI::ARM_ABI_AAPCS;
+  const ARMBaseTargetMachine &ARM_TM = static_cast<const ARMBaseTargetMachine &>(TM);
+  bool isAAPCS_ABI = ARM_TM.TargetABI == ARMBaseTargetMachine::ARMABI::ARM_ABI_AAPCS;
   genExecuteOnly = ARM_TM.getSubtargetImpl()->genExecuteOnly();
 
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);

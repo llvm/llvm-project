@@ -134,6 +134,8 @@ def svn(cwd, *cmd, **kwargs):
                  ignore_errors=kwargs.get('ignore_errors', None))
 
 def program_exists(cmd):
+    if sys.platform == 'win32' and not cmd.endswith('.exe'):
+        cmd += '.exe'
     for path in os.environ["PATH"].split(os.pathsep):
         if os.access(os.path.join(path, cmd), os.X_OK):
             return True

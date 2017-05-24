@@ -116,7 +116,11 @@ CommonOptionsParser::CommonOptionsParser(
 
   cl::HideUnrelatedOptions(Category);
 
-  Compilations.reset(FixedCompilationDatabase::loadFromCommandLine(argc, argv));
+  std::string ErrorMessage;
+  Compilations =
+      FixedCompilationDatabase::loadFromCommandLine(argc, argv, ErrorMessage);
+  if (!Compilations && !ErrorMessage.empty())
+    llvm::errs() << ErrorMessage;
   cl::ParseCommandLineOptions(argc, argv, Overview);
   cl::PrintOptionValues();
 
@@ -125,7 +129,6 @@ CommonOptionsParser::CommonOptionsParser(
       SourcePathList.empty())
     return;
   if (!Compilations) {
-    std::string ErrorMessage;
     if (!BuildPath.empty()) {
       Compilations =
           CompilationDatabase::autoDetectFromDirectory(BuildPath, ErrorMessage);

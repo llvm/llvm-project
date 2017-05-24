@@ -31,6 +31,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
@@ -168,6 +169,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<PostDominatorTreeWrapperPass>();
   }
 
 private:
@@ -365,8 +367,23 @@ static bool isFullDominator(const BasicBlock *BB, const DominatorTree *DT) {
   return true;
 }
 
+// True if block has predecessors and it postdominates all of them.
+static bool isFullPostDominator(const BasicBlock *BB,
+                                const PostDominatorTree *PDT) {
+  if (pred_begin(BB) == pred_end(BB))
+    return false;
+
+  for (const BasicBlock *PRED : make_range(pred_begin(BB), pred_end(BB))) {
+    if (!PDT->dominates(BB, PRED))
+      return false;
+  }
+
+  return true;
+}
+
 static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
                                   const DominatorTree *DT,
+                                  const PostDominatorTree *PDT,
                                   const SanitizerCoverageOptions &Options) {
   // Don't insert coverage for unreachable blocks: we will never call
   // __sanitizer_cov() for them, so counting them in
@@ -384,7 +401,7 @@ static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
   if (Options.NoPrune || &F.getEntryBlock() == BB)
     return true;
 
-  return !isFullDominator(BB, DT);
+  return !(isFullDominator(BB, DT) || isFullPostDominator(BB, PDT));
 }
 
 bool SanitizerCoverageModule::runOnFunction(Function &F) {
@@ -416,9 +433,11 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
 
   const DominatorTree *DT =
       &getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+  const PostDominatorTree *PDT =
+      &getAnalysis<PostDominatorTreeWrapperPass>(F).getPostDomTree();
 
   for (auto &BB : F) {
-    if (shouldInstrumentBlock(F, &BB, DT, Options))
+    if (shouldInstrumentBlock(F, &BB, DT, PDT, Options))
       BlocksToInstrument.push_back(&BB);
     for (auto &Inst : BB) {
       if (Options.IndirectCalls) {
@@ -700,6 +719,7 @@ INITIALIZE_PASS_BEGIN(SanitizerCoverageModule, "sancov",
                       "ModulePass",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SanitizerCoverageModule, "sancov",
                     "SanitizerCoverage: TODO."
                     "ModulePass",
