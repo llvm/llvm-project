@@ -1168,6 +1168,7 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
       .Case("objc_generics", LangOpts.ObjC2)
       .Case("objc_generics_variance", LangOpts.ObjC2)
       .Case("objc_class_property", LangOpts.ObjC2)
+      .Case("objc_diagnose_if_attr", LangOpts.ObjC2)
       // C11 features
       .Case("c_alignas", LangOpts.C11)
       .Case("c_alignof", LangOpts.C11)
