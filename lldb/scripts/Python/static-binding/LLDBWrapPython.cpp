@@ -26361,6 +26361,32 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBFrame_IsSwiftThunk(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBFrame *arg1 = (lldb::SBFrame *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBFrame_IsSwiftThunk",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBFrame_IsSwiftThunk" "', argument " "1"" of type '" "lldb::SBFrame const *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBFrame * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)((lldb::SBFrame const *)arg1)->IsSwiftThunk();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBFrame_IsInlined__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBFrame *arg1 = (lldb::SBFrame *) 0 ;
@@ -28283,6 +28309,32 @@ SWIGINTERN PyObject *_wrap_SBFunction_GetIsOptimized(PyObject *SWIGUNUSEDPARM(se
   {
     SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (bool)(arg1)->GetIsOptimized();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBFunction_GetCanThrow(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBFunction *arg1 = (lldb::SBFunction *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBFunction_GetCanThrow",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBFunction, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBFunction_GetCanThrow" "', argument " "1"" of type '" "lldb::SBFunction *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBFunction * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)(arg1)->GetCanThrow();
     SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
@@ -71273,6 +71325,7 @@ static PyMethodDef SwigMethods[] = {
 		"/// .\n"
 		"\n"
 		""},
+	 { (char *)"SBFrame_IsSwiftThunk", _wrap_SBFrame_IsSwiftThunk, METH_VARARGS, (char *)"SBFrame_IsSwiftThunk(SBFrame self) -> bool"},
 	 { (char *)"SBFrame_IsInlined", _wrap_SBFrame_IsInlined, METH_VARARGS, (char *)"\n"
 		"IsInlined() -> bool\n"
 		"SBFrame_IsInlined(SBFrame self) -> bool\n"
@@ -71403,6 +71456,7 @@ static PyMethodDef SwigMethods[] = {
 		"provide some guidance to the user about this.\n"
 		"Returns false if unoptimized, or unknown.\n"
 		""},
+	 { (char *)"SBFunction_GetCanThrow", _wrap_SBFunction_GetCanThrow, METH_VARARGS, (char *)"SBFunction_GetCanThrow(SBFunction self) -> bool"},
 	 { (char *)"SBFunction_GetDescription", _wrap_SBFunction_GetDescription, METH_VARARGS, (char *)"SBFunction_GetDescription(SBFunction self, SBStream description) -> bool"},
 	 { (char *)"SBFunction___eq__", _wrap_SBFunction___eq__, METH_VARARGS, (char *)"SBFunction___eq__(SBFunction self, SBFunction rhs) -> bool"},
 	 { (char *)"SBFunction___ne__", _wrap_SBFunction___ne__, METH_VARARGS, (char *)"SBFunction___ne__(SBFunction self, SBFunction rhs) -> bool"},
