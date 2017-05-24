@@ -117,9 +117,8 @@ static void mergeDebugT(SymbolTable *Symtab, pdb::PDBFileBuilder &Builder,
     Handler.addSearchPath(llvm::sys::path::parent_path(File->getName()));
     if (auto EC = Reader.readArray(Types, Reader.getLength()))
       fatal(EC, "Reader::readArray failed");
-    codeview::LazyRandomTypeCollection TypesAndIds(Types, 100);
     if (auto Err = codeview::mergeTypeAndIdRecords(
-            IDTable, TypeTable, SourceToDest, &Handler, TypesAndIds))
+            IDTable, TypeTable, SourceToDest, &Handler, Types))
       fatal(Err, "codeview::mergeTypeStreams failed");
   }
 

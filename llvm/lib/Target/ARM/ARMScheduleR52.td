@@ -120,6 +120,12 @@ def : WriteRes<WriteFPDIV64, [R52UnitDiv]> {
 def : WriteRes<WriteFPSQRT32, [R52UnitDiv]> { let Latency = 7; }
 def : WriteRes<WriteFPSQRT64, [R52UnitDiv]> { let Latency = 17; }
 
+// Overriden via InstRW for this processor.
+def : WriteRes<WriteVST1, []>;
+def : WriteRes<WriteVST2, []>;
+def : WriteRes<WriteVST3, []>;
+def : WriteRes<WriteVST4, []>;
+
 def : ReadAdvance<ReadFPMUL, 1>; // mul operand read in F1
 def : ReadAdvance<ReadFPMAC, 1>; // fp-mac operand read in F1
 
@@ -712,20 +718,20 @@ def R52WriteSTM : SchedWriteVariant<[
 
 // Vector Load/Stores. Can issue only in slot-0. Can dual-issue with
 // another instruction in slot-1, but only in the last issue.
-def R52WriteVLD1Mem  : SchedWriteRes<[R52UnitLd]> { let Latency = 5;}
-def R52WriteVLD2Mem  : SchedWriteRes<[R52UnitLd]> {
+def : WriteRes<WriteVLD1, [R52UnitLd]> { let Latency = 5;}
+def : WriteRes<WriteVLD2, [R52UnitLd]> {
   let Latency = 6;
   let NumMicroOps = 3;
   let ResourceCycles = [2];
   let SingleIssue = 1;
 }
-def R52WriteVLD3Mem  : SchedWriteRes<[R52UnitLd]> {
+def : WriteRes<WriteVLD3, [R52UnitLd]> {
   let Latency = 7;
   let NumMicroOps = 5;
   let ResourceCycles = [3];
   let SingleIssue = 1;
 }
-def R52WriteVLD4Mem  : SchedWriteRes<[R52UnitLd]> {
+def : WriteRes<WriteVLD4, [R52UnitLd]> {
   let Latency = 8;
   let NumMicroOps = 7;
   let ResourceCycles = [4];
@@ -827,95 +833,6 @@ def : InstRW<[R52WriteFPALU_F5, R52Read_F1, R52Read_F1],
                  (instregex "VQMOVN", "VQNEG", "VQSHL", "VQSHRN")>;
 def : InstRW<[R52WriteFPALU_F4, R52Read_F1, R52Read_F1], (instregex "VRSHL", "VRSHR", "VRSHRN", "VTB")>;
 def : InstRW<[R52WriteFPALU_F3, R52Read_F1, R52Read_F1], (instregex "VSWP", "VTRN", "VUZP", "VZIP")>;
-
-//---
-// VLDx. Vector Loads
-//---
-// 1-element structure load
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD1d(8|16|32|64)$")>;
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD1q(8|16|32|64)$")>;
-def : InstRW<[R52WriteVLD3Mem, R52Read_ISS], (instregex "VLD1d(8|16|32|64)T$")>;
-def : InstRW<[R52WriteVLD4Mem, R52Read_ISS], (instregex "VLD1d(8|16|32|64)Q$")>;
-def : InstRW<[R52WriteVLD3Mem, R52Read_ISS], (instregex "VLD1d64TPseudo$")>;
-def : InstRW<[R52WriteVLD4Mem, R52Read_ISS], (instregex "VLD1d64QPseudo$")>;
-
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD1(LN|DUP)d(8|16|32)$")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD1LNdAsm_(8|16|32)")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD1(LN|DUP)q(8|16|32)Pseudo$")>;
-
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1d(8|16|32|64)wb")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1q(8|16|32|64)wb")>;
-def : InstRW<[R52WriteVLD3Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1d(8|16|32|64)Twb")>;
-def : InstRW<[R52WriteVLD4Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1d(8|16|32|64)Qwb")>;
-def : InstRW<[R52WriteVLD3Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1d64TPseudoWB")>;
-def : InstRW<[R52WriteVLD4Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1d64QPseudoWB")>;
-
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1LNd(8|16|32)_UPD")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1LNdWB_(fixed|register)_Asm_(8|16|32)")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1DUP(d|q)(8|16|32)wb")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD1(LN|DUP)q(8|16|32)Pseudo_UPD")>;
-
-// 2-element structure load
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD2(d|b)(8|16|32)$")>;
-def : InstRW<[R52WriteVLD4Mem, R52Read_ISS], (instregex "VLD2q(8|16|32)$")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2(d|b)(8|16|32)wb")>;
-def : InstRW<[R52WriteVLD4Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2q(8|16|32)wb")>;
-def : InstRW<[R52WriteVLD4Mem, R52Read_ISS], (instregex "VLD2q(8|16|32)Pseudo$")>;
-def : InstRW<[R52WriteVLD4Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2q(8|16|32)PseudoWB")>;
-
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2LNd(8|16|32)$")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2LNdAsm_(8|16|32)$")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2LNq(16|32)$")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2LNqAsm_(16|32)$")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2DUPd(8|16|32)$")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2DUPd(8|16|32)x2$")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2LNd(8|16|32)Pseudo")>;
-def : InstRW<[R52WriteVLD1Mem, R52Read_ISS], (instregex "VLD2LNq(16|32)Pseudo")>;
-
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2LNd(8|16|32)_UPD")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2LNdWB_(fixed|register)_Asm_(8|16|32)")>;
-
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2LNq(16|32)_UPD")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2LNqWB_(fixed|register)_Asm_(16|32)")>;
-
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2DUPd(8|16|32)wb")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2DUPd(8|16|32)x2wb")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2LNd(8|16|32)Pseudo_UPD")>;
-def : InstRW<[R52WriteVLD1Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD2LNq(16|32)Pseudo_UPD")>;
-
-// 3-element structure load
-def : InstRW<[R52WriteVLD3Mem, R52Read_ISS], (instregex "VLD3(d|q)(8|16|32)$")>;
-def : InstRW<[R52WriteVLD3Mem, R52Read_ISS], (instregex "VLD3(d|q)Asm_(8|16|32)$")>;
-def : InstRW<[R52WriteVLD3Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD3(d|q)(8|16|32)_UPD")>;
-def : InstRW<[R52WriteVLD3Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD3(d|q)WB_(fixed|register)_Asm_(8|16|32)")>;
-def : InstRW<[R52WriteVLD3Mem, R52Read_ISS], (instregex "VLD3(d|q)(8|16|32)(oddP|P)seudo")>;
-def : InstRW<[R52WriteVLD3Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD3(d|q)(8|16|32)(oddP|P)seudo_UPD")>;
-
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD3(LN|DUP)(d|q)(8|16|32)$")>;
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD3(LN|DUP)(d|q)Asm_(8|16|32)$")>;
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD3(LN|DUP)(d|q)(8|16|32)Pseudo$")>;
-
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD3(LN|DUP)(d|q)(8|16|32)_UPD")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD3(LN|DUP)(d|q)WB_(fixed|register)_Asm_(8|16|32)")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD3(LN|DUP)(d|q)WB_(fixed|register)_Asm_(8|16|32)")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD3(LN|DUP)(d|q)(8|16|32)Pseudo_UPD")>;
-
-// 4-element structure load
-def : InstRW<[R52WriteVLD4Mem, R52Read_ISS], (instregex "VLD4(d|q)(8|16|32)$")>;
-def : InstRW<[R52WriteVLD4Mem, R52Read_ISS], (instregex "VLD4(d|q)Asm_(8|16|32)$")>;
-def : InstRW<[R52WriteVLD4Mem, R52Read_ISS], (instregex "VLD4(d|q)(8|16|32)(oddP|P)seudo")>;
-def : InstRW<[R52WriteVLD4Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD4(d|q)(8|16|32)_UPD")>;
-def : InstRW<[R52WriteVLD4Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD4(d|q)WB_(fixed|register)_Asm_(8|16|32)")>;
-def : InstRW<[R52WriteVLD4Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD4(d|q)(8|16|32)(oddP|P)seudo_UPD")>;
-
-
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD4(LN|DUP)(d|q)(8|16|32)$")>;
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD4(LN|DUP)(d|q)Asm_(8|16|32)$")>;
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD4LN(d|q)(8|16|32)Pseudo$")>;
-def : InstRW<[R52WriteVLD2Mem, R52Read_ISS], (instregex "VLD4DUPd(8|16|32)Pseudo$")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD4(LN|DUP)(d|q)(8|16|32)_UPD")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD4(LN|DUP)(d|q)WB_(fixed|register)_Asm_(8|16|32)")>;
-def : InstRW<[R52WriteVLD2Mem, R52WriteAdr, R52Read_ISS], (instregex "VLD4(LN|DUP)(d|q)(8|16|32)Pseudo_UPD")>;
 
 //---
 // VSTx. Vector Stores
