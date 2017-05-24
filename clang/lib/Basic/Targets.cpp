@@ -1,4 +1,4 @@
-//===--- Targets.cpp - Implement target feature support -------------------===//
+ //===--- Targets.cpp - Implement target feature support -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -2169,13 +2169,18 @@ public:
                     : DataLayoutStringR600);
     assert(DataLayout->getAllocaAddrSpace() == AS.Private);
 
-    AddrSpaceMap =
-        llvm::StringSwitch<const LangAS::Map *>(Triple.getEnvironmentName())
-            .Case("opencl", &AMDGPUOpenCLPrivateIsZeroMap)
-            .Case("amdgiz", &AMDGPUNonOpenCLGenericIsZeroMap)
-            .Case("amdgizcl", &AMDGPUOpenCLGenericIsZeroMap)
-            .Default(&AMDGPUNonOpenCLPrivateIsZeroMap);
     UseAddrSpaceMapMangling = true;
+  }
+
+  void adjust(LangOptions &Opts) override {
+    TargetInfo::adjust(Opts);
+    if (isGenericZero(getTriple())) {
+      AddrSpaceMap = Opts.OpenCL ? &AMDGPUOpenCLGenericIsZeroMap
+                                 : &AMDGPUNonOpenCLGenericIsZeroMap;
+    } else {
+      AddrSpaceMap = Opts.OpenCL ? &AMDGPUOpenCLPrivateIsZeroMap
+                                 : &AMDGPUNonOpenCLPrivateIsZeroMap;
+    }
   }
 
   uint64_t getPointerWidthV(unsigned AddrSpace) const override {
@@ -3435,23 +3440,32 @@ void X86TargetInfo::setSSELevel(llvm::StringMap<bool> &Features,
     switch (Level) {
     case AVX512F:
       Features["avx512f"] = true;
+      LLVM_FALLTHROUGH;
     case AVX2:
       Features["avx2"] = true;
+      LLVM_FALLTHROUGH;
     case AVX:
       Features["avx"] = true;
       Features["xsave"] = true;
+      LLVM_FALLTHROUGH;
     case SSE42:
       Features["sse4.2"] = true;
+      LLVM_FALLTHROUGH;
     case SSE41:
       Features["sse4.1"] = true;
+      LLVM_FALLTHROUGH;
     case SSSE3:
       Features["ssse3"] = true;
+      LLVM_FALLTHROUGH;
     case SSE3:
       Features["sse3"] = true;
+      LLVM_FALLTHROUGH;
     case SSE2:
       Features["sse2"] = true;
+      LLVM_FALLTHROUGH;
     case SSE1:
       Features["sse"] = true;
+      LLVM_FALLTHROUGH;
     case NoSSE:
       break;
     }
@@ -3462,24 +3476,32 @@ void X86TargetInfo::setSSELevel(llvm::StringMap<bool> &Features,
   case NoSSE:
   case SSE1:
     Features["sse"] = false;
+    LLVM_FALLTHROUGH;
   case SSE2:
     Features["sse2"] = Features["pclmul"] = Features["aes"] =
       Features["sha"] = false;
+    LLVM_FALLTHROUGH;
   case SSE3:
     Features["sse3"] = false;
     setXOPLevel(Features, NoXOP, false);
+    LLVM_FALLTHROUGH;
   case SSSE3:
     Features["ssse3"] = false;
+    LLVM_FALLTHROUGH;
   case SSE41:
     Features["sse4.1"] = false;
+    LLVM_FALLTHROUGH;
   case SSE42:
     Features["sse4.2"] = false;
+    LLVM_FALLTHROUGH;
   case AVX:
     Features["fma"] = Features["avx"] = Features["f16c"] = Features["xsave"] =
       Features["xsaveopt"] = false;
     setXOPLevel(Features, FMA4, false);
+    LLVM_FALLTHROUGH;
   case AVX2:
     Features["avx2"] = false;
+    LLVM_FALLTHROUGH;
   case AVX512F:
     Features["avx512f"] = Features["avx512cd"] = Features["avx512er"] =
       Features["avx512pf"] = Features["avx512dq"] = Features["avx512bw"] =
@@ -3494,10 +3516,13 @@ void X86TargetInfo::setMMXLevel(llvm::StringMap<bool> &Features,
     switch (Level) {
     case AMD3DNowAthlon:
       Features["3dnowa"] = true;
+      LLVM_FALLTHROUGH;
     case AMD3DNow:
       Features["3dnow"] = true;
+      LLVM_FALLTHROUGH;
     case MMX:
       Features["mmx"] = true;
+      LLVM_FALLTHROUGH;
     case NoMMX3DNow:
       break;
     }
@@ -3508,8 +3533,10 @@ void X86TargetInfo::setMMXLevel(llvm::StringMap<bool> &Features,
   case NoMMX3DNow:
   case MMX:
     Features["mmx"] = false;
+    LLVM_FALLTHROUGH;
   case AMD3DNow:
     Features["3dnow"] = false;
+    LLVM_FALLTHROUGH;
   case AMD3DNowAthlon:
     Features["3dnowa"] = false;
   }
@@ -3521,12 +3548,15 @@ void X86TargetInfo::setXOPLevel(llvm::StringMap<bool> &Features, XOPEnum Level,
     switch (Level) {
     case XOP:
       Features["xop"] = true;
+      LLVM_FALLTHROUGH;
     case FMA4:
       Features["fma4"] = true;
       setSSELevel(Features, AVX, true);
+      LLVM_FALLTHROUGH;
     case SSE4A:
       Features["sse4a"] = true;
       setSSELevel(Features, SSE3, true);
+      LLVM_FALLTHROUGH;
     case NoXOP:
       break;
     }
@@ -3537,8 +3567,10 @@ void X86TargetInfo::setXOPLevel(llvm::StringMap<bool> &Features, XOPEnum Level,
   case NoXOP:
   case SSE4A:
     Features["sse4a"] = false;
+    LLVM_FALLTHROUGH;
   case FMA4:
     Features["fma4"] = false;
+    LLVM_FALLTHROUGH;
   case XOP:
     Features["xop"] = false;
   }
@@ -3986,10 +4018,13 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   switch (XOPLevel) {
   case XOP:
     Builder.defineMacro("__XOP__");
+    LLVM_FALLTHROUGH;
   case FMA4:
     Builder.defineMacro("__FMA4__");
+    LLVM_FALLTHROUGH;
   case SSE4A:
     Builder.defineMacro("__SSE4A__");
+    LLVM_FALLTHROUGH;
   case NoXOP:
     break;
   }
@@ -4051,24 +4086,33 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   switch (SSELevel) {
   case AVX512F:
     Builder.defineMacro("__AVX512F__");
+    LLVM_FALLTHROUGH;
   case AVX2:
     Builder.defineMacro("__AVX2__");
+    LLVM_FALLTHROUGH;
   case AVX:
     Builder.defineMacro("__AVX__");
+    LLVM_FALLTHROUGH;
   case SSE42:
     Builder.defineMacro("__SSE4_2__");
+    LLVM_FALLTHROUGH;
   case SSE41:
     Builder.defineMacro("__SSE4_1__");
+    LLVM_FALLTHROUGH;
   case SSSE3:
     Builder.defineMacro("__SSSE3__");
+    LLVM_FALLTHROUGH;
   case SSE3:
     Builder.defineMacro("__SSE3__");
+    LLVM_FALLTHROUGH;
   case SSE2:
     Builder.defineMacro("__SSE2__");
     Builder.defineMacro("__SSE2_MATH__");  // -mfp-math=sse always implied.
+    LLVM_FALLTHROUGH;
   case SSE1:
     Builder.defineMacro("__SSE__");
     Builder.defineMacro("__SSE_MATH__");   // -mfp-math=sse always implied.
+    LLVM_FALLTHROUGH;
   case NoSSE:
     break;
   }
@@ -4097,10 +4141,13 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   switch (MMX3DNowLevel) {
   case AMD3DNowAthlon:
     Builder.defineMacro("__3dNOW_A__");
+    LLVM_FALLTHROUGH;
   case AMD3DNow:
     Builder.defineMacro("__3dNOW__");
+    LLVM_FALLTHROUGH;
   case MMX:
     Builder.defineMacro("__MMX__");
+    LLVM_FALLTHROUGH;
   case NoMMX3DNow:
     break;
   }

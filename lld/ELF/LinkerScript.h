@@ -157,7 +157,7 @@ struct InputSectionDescription : BaseCommand {
   // will be associated with this InputSectionDescription.
   std::vector<SectionPattern> SectionPatterns;
 
-  std::vector<InputSectionBase *> Sections;
+  std::vector<InputSection *> Sections;
 };
 
 // Represents an ASSERT().
@@ -217,7 +217,7 @@ class LinkerScript final {
   void assignSymbol(SymbolAssignment *Cmd, bool InSec);
   void setDot(Expr E, const Twine &Loc, bool InSec);
 
-  std::vector<InputSectionBase *>
+  std::vector<InputSection *>
   computeInputSections(const InputSectionDescription *);
 
   std::vector<InputSectionBase *>

@@ -1,3 +1,7 @@
+set(LLVM_LINK_COMPONENTS
+  Support
+  )
+
 add_clang_library(clangDaemon
   ClangdLSPServer.cpp
   ClangdServer.cpp
@@ -8,16 +12,16 @@ add_clang_library(clangDaemon
   JSONRPCDispatcher.cpp
   Protocol.cpp
   ProtocolHandlers.cpp
-  )
 
-target_link_libraries(clangDaemon
+  LINK_LIBS
+  clangAST
   clangBasic
   clangFormat
   clangFrontend
   clangSema
   clangTooling
   clangToolingCore
-  LLVMSupport
+  ${LLVM_PTHREAD_LIB}
   )
 
 add_subdirectory(tool)

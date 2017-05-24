@@ -949,7 +949,7 @@ static bool checkFunctionConditionAttr(Sema &S, Decl *D,
     Msg = "<no message provided>";
 
   SmallVector<PartialDiagnosticAt, 8> Diags;
-  if (!Cond->isValueDependent() &&
+  if (isa<FunctionDecl>(D) && !Cond->isValueDependent() &&
       !Expr::isPotentialConstantExprUnevaluated(Cond, cast<FunctionDecl>(D),
                                                 Diags)) {
     S.Diag(Attr.getLoc(), diag::err_attr_cond_never_constant_expr)
@@ -1037,10 +1037,11 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const AttributeList &Attr) {
     return;
   }
 
-  auto *FD = cast<FunctionDecl>(D);
-  bool ArgDependent = ArgumentDependenceChecker(FD).referencesArgs(Cond);
+  bool ArgDependent = false;
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
+    ArgDependent = ArgumentDependenceChecker(FD).referencesArgs(Cond);
   D->addAttr(::new (S.Context) DiagnoseIfAttr(
-      Attr.getRange(), S.Context, Cond, Msg, DiagType, ArgDependent, FD,
+      Attr.getRange(), S.Context, Cond, Msg, DiagType, ArgDependent, cast<NamedDecl>(D),
       Attr.getAttributeSpellingListIndex()));
 }
 

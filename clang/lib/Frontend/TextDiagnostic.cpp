@@ -1252,7 +1252,7 @@ void TextDiagnostic::emitSnippetAndCaret(
     }
 
     // Finally, remove any blank spaces from the end of CaretLine.
-    while (CaretLine[CaretLine.size() - 1] == ' ')
+    while (!CaretLine.empty() && CaretLine[CaretLine.size() - 1] == ' ')
       CaretLine.erase(CaretLine.end() - 1);
 
     // Emit what we have computed.

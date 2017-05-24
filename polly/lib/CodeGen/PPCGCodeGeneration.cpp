@@ -2645,7 +2645,7 @@ public:
     NodeBuilder.addParameters(S->getContext());
 
     isl_ast_build *Build = isl_ast_build_alloc(S->getIslCtx());
-    isl_ast_expr *Condition = IslAst::buildRunCondition(S, Build);
+    isl_ast_expr *Condition = IslAst::buildRunCondition(*S, Build);
     isl_ast_expr *SufficientCompute = createSufficientComputeCheck(*S, Build);
     Condition = isl_ast_expr_and(Condition, SufficientCompute);
     isl_ast_build_free(Build);

@@ -24,6 +24,7 @@
 #include "Protocol.h"
 
 #include <condition_variable>
+#include <functional>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -49,30 +50,25 @@ public:
                                   std::vector<DiagWithFixIts> Diagnostics) = 0;
 };
 
-enum class WorkerRequestKind { ParseAndPublishDiagnostics, RemoveDocData };
-
-/// A request to the worker thread
-class WorkerRequest {
-public:
-  WorkerRequest() = default;
-  WorkerRequest(WorkerRequestKind Kind, Path File, DocVersion Version);
-
-  WorkerRequestKind Kind;
-  Path File;
-  DocVersion Version;
-};
-
 class ClangdServer;
 
 /// Handles running WorkerRequests of ClangdServer on a separate threads.
 /// Currently runs only one worker thread.
 class ClangdScheduler {
 public:
-  ClangdScheduler(ClangdServer &Server, bool RunSynchronously);
+  ClangdScheduler(bool RunSynchronously);
   ~ClangdScheduler();
 
-  /// Enqueue WorkerRequest to be run on a worker thread
-  void enqueue(ClangdServer &Server, WorkerRequest Request);
+  /// Add \p Request to the start of the queue. \p Request will be run on a
+  /// separate worker thread.
+  /// \p Request is scheduled to be executed before all currently added
+  /// requests.
+  void addToFront(std::function<void()> Request);
+  /// Add \p Request to the end of the queue. \p Request will be run on a
+  /// separate worker thread.
+  /// \p Request is scheduled to be executed after all currently added
+  /// requests.
+  void addToEnd(std::function<void()> Request);
 
 private:
   bool RunSynchronously;
@@ -83,11 +79,10 @@ private:
   std::thread Worker;
   /// Setting Done to true will make the worker thread terminate.
   bool Done = false;
-  /// A LIFO queue of requests. Note that requests are discarded if the
-  /// `version` field is not equal to the one stored inside DraftStore.
+  /// A queue of requests.
   /// FIXME(krasimir): code completion should always have priority over parsing
   /// for diagnostics.
-  std::deque<WorkerRequest> RequestQueue;
+  std::deque<std::function<void()>> RequestQueue;
   /// Condition variable to wake up the worker thread.
   std::condition_variable RequestCV;
 };
@@ -126,12 +121,12 @@ public:
   /// conversions in outside code, maybe there's a way to get rid of it.
   std::string getDocument(PathRef File);
 
+  /// Only for testing purposes.
+  /// Waits until all requests to worker thread are finished and dumps AST for
+  /// \p File. \p File must be in the list of added documents.
+  std::string dumpAST(PathRef File);
+
 private:
-  friend class ClangdScheduler;
-
-  /// This function is called on a worker thread.
-  void handleRequest(WorkerRequest Request);
-
   std::unique_ptr<GlobalCompilationDatabase> CDB;
   std::unique_ptr<DiagnosticsConsumer> DiagConsumer;
   DraftStore DraftMgr;

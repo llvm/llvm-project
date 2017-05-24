@@ -16,6 +16,10 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include <memory>
 
+namespace llvm {
+class raw_ostream;
+}
+
 namespace clang {
 class ASTUnit;
 class PCHContainerOperations;
@@ -51,6 +55,10 @@ public:
   /// Returns diagnostics and corresponding FixIts for each diagnostic that are
   /// located in the current file.
   std::vector<DiagWithFixIts> getLocalDiagnostics() const;
+
+  /// For testing/debugging purposes. Note that this method deserializes all
+  /// unserialized Decls, so use with care.
+  void dumpAST(llvm::raw_ostream &OS) const;
 
 private:
   Path FileName;

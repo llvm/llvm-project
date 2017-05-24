@@ -1,4 +1,5 @@
 // REQUIRES: amdgpu-registered-target
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown-opencl -S -emit-llvm -o - %s | FileCheck %s
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable

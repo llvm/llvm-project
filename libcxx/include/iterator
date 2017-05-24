@@ -990,7 +990,6 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY char_type  operator*() const
         {return static_cast<char_type>(__sbuf_->sgetc());}
-    _LIBCPP_INLINE_VISIBILITY char_type* operator->() const {return nullptr;}
     _LIBCPP_INLINE_VISIBILITY istreambuf_iterator& operator++()
         {
             __sbuf_->sbumpc();
