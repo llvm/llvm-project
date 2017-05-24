@@ -2771,6 +2771,7 @@ def warn_attribute_wrong_decl_type : Warning<
   "|types and namespaces"
   "|Objective-C interfaces"
   "|methods and properties"
+  "|functions, methods and properties"
   "|struct or union"
   "|struct, union or class"
   "|types"

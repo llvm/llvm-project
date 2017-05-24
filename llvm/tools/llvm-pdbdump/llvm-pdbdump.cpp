@@ -858,12 +858,12 @@ static void mergePdbs() {
     if (File.hasPDBTpiStream()) {
       auto &Tpi = ExitOnErr(File.getPDBTpiStream());
       ExitOnErr(codeview::mergeTypeRecords(MergedTpi, TypeMap, nullptr,
-                                           Tpi.typeCollection()));
+                                           Tpi.typeArray()));
     }
     if (File.hasPDBIpiStream()) {
       auto &Ipi = ExitOnErr(File.getPDBIpiStream());
       ExitOnErr(codeview::mergeIdRecords(MergedIpi, TypeMap, IdMap,
-                                         Ipi.typeCollection()));
+                                         Ipi.typeArray()));
     }
   }
 
