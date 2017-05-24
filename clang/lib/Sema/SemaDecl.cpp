@@ -15820,7 +15820,8 @@ void Sema::ActOnModuleEnd(SourceLocation EofLoc, Module *Mod) {
 void Sema::createImplicitModuleImportForErrorRecovery(SourceLocation Loc,
                                                       Module *Mod) {
   // Bail if we're not allowed to implicitly import a module here.
-  if (isSFINAEContext() || !getLangOpts().ModulesErrorRecovery)
+  if (isSFINAEContext() || !getLangOpts().ModulesErrorRecovery ||
+      VisibleModules.isVisible(Mod))
     return;
 
   // Create the implicit import declaration.
