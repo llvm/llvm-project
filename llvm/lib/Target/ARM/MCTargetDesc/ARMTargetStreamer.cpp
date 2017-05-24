@@ -33,6 +33,7 @@ const MCExpr *ARMTargetStreamer::addConstantPoolEntry(const MCExpr *Expr, SMLoc 
 
 void ARMTargetStreamer::emitCurrentConstantPool() {
   ConstantPools->emitForCurrentSection(Streamer);
+  ConstantPools->clearCacheForCurrentSection(Streamer);
 }
 
 // finish() - write out any non-empty assembler constant pools.
