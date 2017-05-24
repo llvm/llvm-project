@@ -128,9 +128,8 @@ bool IndexingContext::isTemplateImplicitInstantiation(const Decl *D) {
     if (RD->getInstantiatedFromMemberClass())
       TKind = RD->getTemplateSpecializationKind();
   } else if (isa<FieldDecl>(D)) {
-    if (const auto *Parent =
-            dyn_cast<ClassTemplateSpecializationDecl>(D->getDeclContext()))
-      TKind = Parent->getSpecializationKind();
+    if (const auto *Parent = dyn_cast<Decl>(D->getDeclContext()))
+      return isTemplateImplicitInstantiation(Parent);
   }
   switch (TKind) {
     case TSK_Undeclared:
@@ -158,6 +157,16 @@ bool IndexingContext::shouldIgnoreIfImplicit(const Decl *D) {
   return true;
 }
 
+static const CXXRecordDecl *
+getDeclContextForTemplateInstationPattern(const Decl *D) {
+  if (const auto *CTSD =
+          dyn_cast<ClassTemplateSpecializationDecl>(D->getDeclContext()))
+    return CTSD->getTemplateInstantiationPattern();
+  else if (const auto *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext()))
+    return RD->getInstantiatedFromMemberClass();
+  return nullptr;
+}
+
 static const Decl *adjustTemplateImplicitInstantiation(const Decl *D) {
   if (const ClassTemplateSpecializationDecl *
       SD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
@@ -169,9 +178,8 @@ static const Decl *adjustTemplateImplicitInstantiation(const Decl *D) {
   } else if (const auto *RD = dyn_cast<CXXRecordDecl>(D)) {
     return RD->getInstantiatedFromMemberClass();
   } else if (const auto *FD = dyn_cast<FieldDecl>(D)) {
-    if (const auto *Parent =
-            dyn_cast<ClassTemplateSpecializationDecl>(D->getDeclContext())) {
-      const CXXRecordDecl *Pattern = Parent->getTemplateInstantiationPattern();
+    if (const CXXRecordDecl *Pattern =
+            getDeclContextForTemplateInstationPattern(FD)) {
       for (const NamedDecl *ND : Pattern->lookup(FD->getDeclName())) {
         if (ND->isImplicit())
           continue;
