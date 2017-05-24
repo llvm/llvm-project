@@ -46,6 +46,7 @@ public:
     enum Enum {
 // CHECK: [[@LINE-1]]:10 | enum/C | Enum | c:@ST>2#T#T@TemplateClass@S@NestedType@E@Enum |
       EnumCase
+// CHECK: [[@LINE-1]]:7 | enumerator/C | EnumCase | c:@ST>2#T#T@TemplateClass@S@NestedType@E@Enum@EnumCase |
     };
   };
 };
@@ -82,4 +83,6 @@ void canonicalizeInstaniationReferences(TemplateClass<int, float> &object) {
 
   TT::NestedType::Enum nestedEnum;
 // CHECK: [[@LINE-1]]:19 | enum/C | Enum | c:@ST>2#T#T@TemplateClass@S@NestedType@E@Enum |
+  (void)TT::NestedType::Enum::EnumCase;
+// CHECK: [[@LINE-1]]:31 | enumerator/C | EnumCase | c:@ST>2#T#T@TemplateClass@S@NestedType@E@Enum@EnumCase |
 }
