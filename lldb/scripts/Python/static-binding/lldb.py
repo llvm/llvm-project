@@ -4604,6 +4604,10 @@ class SBFrame(_object):
         """
         return _lldb.SBFrame_GuessLanguage(self)
 
+    def IsSwiftThunk(self):
+        """IsSwiftThunk(self) -> bool"""
+        return _lldb.SBFrame_IsSwiftThunk(self)
+
     def IsInlined(self, *args):
         """
         IsInlined(self) -> bool
@@ -4981,6 +4985,10 @@ class SBFunction(_object):
         Returns false if unoptimized, or unknown.
         """
         return _lldb.SBFunction_GetIsOptimized(self)
+
+    def GetCanThrow(self):
+        """GetCanThrow(self) -> bool"""
+        return _lldb.SBFunction_GetCanThrow(self)
 
     def GetDescription(self, *args):
         """GetDescription(self, SBStream description) -> bool"""
