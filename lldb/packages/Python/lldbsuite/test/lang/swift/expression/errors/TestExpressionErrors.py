@@ -24,6 +24,27 @@ class TestExpressionErrors(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    def test_CanThrowError(self):
+        """Tests that swift expressions resolve scoped variables correctly"""
+        self.build()
+        exe_name = "a.out"
+        exe = os.path.join(os.getcwd(), exe_name)
+
+        # Create the target
+        target = self.dbg.CreateTarget(exe)
+        self.target = target
+        self.assertTrue(target, VALID_TARGET)
+
+        self.checkCanThrow("IThrowObjectOver10", True)
+        self.checkCanThrow("ClassError.SomeMethod", False)
+ 
+    def checkCanThrow(self, name, expected):
+        sc_list = self.target.FindFunctions(name)
+        self.assertEqual(sc_list.GetSize(), 1, "Error looking for %s"%(name))
+        func = sc_list[0].function
+        self.assertTrue(func.IsValid(), "Couldn't find the function for %s"%(name))
+        self.assertEqual(func.GetCanThrow(), expected,  "GetCanThrow was wrong for %s"%name)
+
     @decorators.swiftTest
     def test_swift_expression_errors(self):
         """Tests that swift expressions that throw report the errors correctly"""

@@ -23,9 +23,10 @@ class TestSwiftReturns(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    NO_DEBUG_INFO_TESTCASE = True
+
     @decorators.swiftTest
     @decorators.skipIfLinux  # bugs.swift.org/SR-841
-    @decorators.expectedFailureAll(bugnumber="rdar://problem/25471028")
     @decorators.expectedFailureAll(
         oslist=["ios"],
         archs=["arm64"],
@@ -140,7 +141,7 @@ class TestSwiftReturns(TestBase):
         # Get a "Swift.Double" return class value
         # Test that the local variable equals return value.
         # Test that none of the later let-bound values are available.
-        variables = ["u", "i", "c", "s", "dict", "opt_str", "f", "d"]
+        variables = ["u", "i", "c", "ss", "cs", "s", "dict", "opt_str", "f", "d"]
         # FIXME: Enable opt_str below:
         invisibles = ["i", "c", "s", "dict", "f", "f", "d"]
         for var in variables:
@@ -172,6 +173,24 @@ class TestSwiftReturns(TestBase):
         if line_before_fin == self.thread.frame[0].line_entry.line:
             self.thread.StepOver()
         self.verify_return_value_against_local_variable(error_value, "err")
+
+        # Now run the returnBigStruct and step out.  We don't know how
+        # to return structs that are passed on the stack for swift right
+        # now, so just make sure that we don't lie about that fact.
+        # When we get this working, move the returnBigStruct to after
+        # returnSmallStruct and put "bs" in the var's array after "ss".
+
+        # Set the breakpoints
+
+        another_bkpt = target.BreakpointCreateBySourceRegex(
+            'Set another breakpoint here', self.main_source_spec)
+        self.assertTrue(another_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
+        threads = lldbutil.continue_to_breakpoint(self.process, another_bkpt)
+        self.assertTrue(len(threads) == 1, "Didn't hit another breakpoint")
+        self.thread = threads[0]
+        self.thread.StepOut()
+        return_value = self.thread.GetStopReturnValue()
+        self.assertTrue(not return_value.IsValid())
 
 if __name__ == '__main__':
     import atexit
