@@ -133,6 +133,11 @@ def svn(cwd, *cmd, **kwargs):
     return shell(['svn'] + list(cmd), cwd=cwd, stdin=kwargs.get('stdin', None),
                  ignore_errors=kwargs.get('ignore_errors', None))
 
+def program_exists(cmd):
+    for path in os.environ["PATH"].split(os.pathsep):
+        if os.access(os.path.join(path, cmd), os.X_OK):
+            return True
+    return False
 
 def get_default_rev_range():
     # Get the branch tracked by the current branch, as set by
@@ -309,6 +314,9 @@ def cmd_push(args):
 
 
 if __name__ == '__main__':
+    if not program_exists('svn'):
+        die('error: git-llvm needs svn command, but svn is not installed.')
+
     argv = sys.argv[1:]
     p = argparse.ArgumentParser(
         prog='git llvm', formatter_class=argparse.RawDescriptionHelpFormatter,

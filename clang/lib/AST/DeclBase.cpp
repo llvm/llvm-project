@@ -274,9 +274,17 @@ void Decl::setLexicalDeclContext(DeclContext *DC) {
   } else {
     getMultipleDC()->LexicalDC = DC;
   }
-  Hidden = cast<Decl>(DC)->Hidden;
-  if (Hidden && !isFromASTFile() && hasLocalOwningModuleStorage())
-    setLocalOwningModule(cast<Decl>(DC)->getOwningModule());
+
+  // FIXME: We shouldn't be changing the lexical context of declarations
+  // imported from AST files.
+  if (!isFromASTFile()) {
+    Hidden = cast<Decl>(DC)->Hidden && hasLocalOwningModuleStorage();
+    if (Hidden)
+      setLocalOwningModule(cast<Decl>(DC)->getOwningModule());
+  }
+
+  assert((!Hidden || getOwningModule()) &&
+         "hidden declaration has no owning module");
 }
 
 void Decl::setDeclContextsImpl(DeclContext *SemaDC, DeclContext *LexicalDC,

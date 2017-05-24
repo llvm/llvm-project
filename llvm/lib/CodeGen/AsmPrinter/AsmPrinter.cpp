@@ -628,12 +628,15 @@ void AsmPrinter::EmitDebugThreadLocal(const MCExpr *Value,
 /// EmitFunctionHeader - This method emits the header for the current
 /// function.
 void AsmPrinter::EmitFunctionHeader() {
+  const Function *F = MF->getFunction();
+
+  if (isVerbose())
+    OutStreamer->GetCommentOS() << "-- Begin function " << F->getName() << '\n';
+
   // Print out constants referenced by the function
   EmitConstantPool();
 
   // Print the 'header' of function.
-  const Function *F = MF->getFunction();
-
   OutStreamer->SwitchSection(getObjFileLowering().SectionForGlobal(F, TM));
   EmitVisibility(CurrentFnSym, F->getVisibility());
 
@@ -1106,6 +1109,9 @@ void AsmPrinter::EmitFunctionBody() {
                        HI.TimerGroupDescription, TimePassesIsEnabled);
     HI.Handler->endFunction(MF);
   }
+
+  if (isVerbose())
+    OutStreamer->GetCommentOS() << "-- End function\n";
 
   OutStreamer->AddBlankLine();
 }

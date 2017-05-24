@@ -38,27 +38,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "msp430-lower"
 
-typedef enum {
-  NoHWMult,
-  HWMult16,
-  HWMult32,
-  HWMultF5
-} HWMultUseMode;
-
-static cl::opt<HWMultUseMode>
-HWMultMode("mhwmult", cl::Hidden,
-           cl::desc("Hardware multiplier use mode"),
-           cl::init(NoHWMult),
-           cl::values(
-             clEnumValN(NoHWMult, "none",
-                "Do not use hardware multiplier"),
-             clEnumValN(HWMult16, "16bit",
-                "Use 16-bit hardware multiplier"),
-             clEnumValN(HWMult32, "32bit",
-                "Use 32-bit hardware multiplier"),
-             clEnumValN(HWMultF5, "f5series",
-                "Use F5 series hardware multiplier")));
-
 MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
                                            const MSP430Subtarget &STI)
     : TargetLowering(TM) {
@@ -262,7 +241,7 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
       setCmpLibcallCC(LC.Op, LC.Cond);
   }
 
-  if (HWMultMode == HWMult16) {
+  if (STI.hasHWMult16()) {
     const struct {
       const RTLIB::Libcall Op;
       const char * const Name;
@@ -277,7 +256,7 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
     for (const auto &LC : LibraryCalls) {
       setLibcallName(LC.Op, LC.Name);
     }
-  } else if (HWMultMode == HWMult32) {
+  } else if (STI.hasHWMult32()) {
     const struct {
       const RTLIB::Libcall Op;
       const char * const Name;
@@ -292,7 +271,7 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
     for (const auto &LC : LibraryCalls) {
       setLibcallName(LC.Op, LC.Name);
     }
-  } else if (HWMultMode == HWMultF5) {
+  } else if (STI.hasHWMultF5()) {
     const struct {
       const RTLIB::Libcall Op;
       const char * const Name;
