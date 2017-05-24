@@ -9,6 +9,7 @@
 
 #include "llvm/DebugInfo/CodeView/TypeSerializer.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 
 #include <string.h>
@@ -16,21 +17,118 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
+namespace {
+struct HashedType {
+  uint64_t Hash;
+  const uint8_t *Data;
+  unsigned Size; // FIXME: Go to uint16_t?
+  TypeIndex Index;
+};
+
+/// Wrapper around a poitner to a HashedType. Hash and equality operations are
+/// based on data in the pointee.
+struct HashedTypePtr {
+  HashedTypePtr() = default;
+  HashedTypePtr(HashedType *Ptr) : Ptr(Ptr) {}
+  HashedType *Ptr = nullptr;
+};
+} // namespace
+
+namespace llvm {
+template <> struct DenseMapInfo<HashedTypePtr> {
+  static inline HashedTypePtr getEmptyKey() { return HashedTypePtr(nullptr); }
+  static inline HashedTypePtr getTombstoneKey() {
+    return HashedTypePtr(reinterpret_cast<HashedType *>(1));
+  }
+  static unsigned getHashValue(HashedTypePtr Val) {
+    assert(Val.Ptr != getEmptyKey().Ptr && Val.Ptr != getTombstoneKey().Ptr);
+    return Val.Ptr->Hash;
+  }
+  static bool isEqual(HashedTypePtr LHSP, HashedTypePtr RHSP) {
+    HashedType *LHS = LHSP.Ptr;
+    HashedType *RHS = RHSP.Ptr;
+    if (RHS == getEmptyKey().Ptr || RHS == getTombstoneKey().Ptr)
+      return LHS == RHS;
+    if (LHS->Hash != RHS->Hash || LHS->Size != RHS->Size)
+      return false;
+    return ::memcmp(LHS->Data, RHS->Data, LHS->Size) == 0;
+  }
+};
+}
+
+/// Private implementation so that we don't leak our DenseMap instantiations to
+/// users.
+class llvm::codeview::TypeHasher {
+private:
+  /// Storage for type record provided by the caller. Records will outlive the
+  /// hasher object, so they should be allocated here.
+  BumpPtrAllocator &RecordStorage;
+
+  /// Storage for hash keys. These only need to live as long as the hashing
+  /// operation.
+  BumpPtrAllocator KeyStorage;
+
+  /// Hash table. We really want a DenseMap<ArrayRef<uint8_t>, TypeIndex> here,
+  /// but DenseMap is inefficient when the keys are long (like type records)
+  /// because it recomputes the hash value of every key when it grows. This
+  /// value type stores the hash out of line in KeyStorage, so that table
+  /// entries are small and easy to rehash.
+  DenseSet<HashedTypePtr> HashedRecords;
+
+  SmallVector<ArrayRef<uint8_t>, 2> SeenRecords;
+
+  TypeIndex NextTypeIndex = TypeIndex(TypeIndex::FirstNonSimpleIndex);
+
+public:
+  TypeHasher(BumpPtrAllocator &RecordStorage) : RecordStorage(RecordStorage) {}
+
+  ArrayRef<ArrayRef<uint8_t>> records() const { return SeenRecords; }
+
+  /// Takes the bytes of type record, inserts them into the hash table, saves
+  /// them, and returns a pointer to an identical stable type record along with
+  /// its type index in the destination stream.
+  TypeIndex getOrCreateRecord(ArrayRef<uint8_t> &Record);
+};
+
+TypeIndex TypeHasher::getOrCreateRecord(ArrayRef<uint8_t> &Record) {
+  assert(Record.size() < UINT32_MAX && "Record too big");
+  assert(Record.size() % 4 == 0 && "Record is not aligned to 4 bytes!");
+
+  // Compute the hash up front so we can store it in the key.
+  HashedType TempHashedType = {hash_value(Record), Record.data(),
+                               unsigned(Record.size()), NextTypeIndex};
+
+  auto Result = HashedRecords.insert(HashedTypePtr(&TempHashedType));
+  HashedType *&Hashed = Result.first->Ptr;
+
+  if (Result.second) {
+    // This was a new type record. We need stable storage for both the key and
+    // the record. The record should outlive the hashing operation.
+    Hashed = KeyStorage.Allocate<HashedType>();
+    *Hashed = TempHashedType;
+
+    uint8_t *Stable = RecordStorage.Allocate<uint8_t>(Record.size());
+    memcpy(Stable, Record.data(), Record.size());
+    Hashed->Data = Stable;
+    assert(Hashed->Size == Record.size());
+
+    // This was a new record, so increment our next type index.
+    ++NextTypeIndex;
+  }
+
+  // Update the caller's copy of Record to point a stable copy.
+  Record = ArrayRef<uint8_t>(Hashed->Data, Hashed->Size);
+
+  if (Result.second) {
+    // FIXME: Can we record these in a more efficient way?
+    SeenRecords.push_back(Record);
+  }
+
+  return TypeIndex(Hashed->Index);
+}
+
 bool TypeSerializer::isInFieldList() const {
   return TypeKind.hasValue() && *TypeKind == TypeLeafKind::LF_FIELDLIST;
-}
-
-TypeIndex TypeSerializer::calcNextTypeIndex() const {
-  if (LastTypeIndex.isNoneType())
-    return TypeIndex(TypeIndex::FirstNonSimpleIndex);
-  else
-    return TypeIndex(LastTypeIndex.getIndex() + 1);
-}
-
-TypeIndex TypeSerializer::incrementTypeIndex() {
-  TypeIndex Previous = LastTypeIndex;
-  LastTypeIndex = calcNextTypeIndex();
-  return Previous;
 }
 
 MutableArrayRef<uint8_t> TypeSerializer::getCurrentSubRecordData() {
@@ -51,27 +149,6 @@ Error TypeSerializer::writeRecordPrefix(TypeLeafKind Kind) {
   return Error::success();
 }
 
-TypeIndex
-TypeSerializer::insertRecordBytesPrivate(ArrayRef<uint8_t> &Record) {
-  assert(Record.size() % 4 == 0 && "Record is not aligned to 4 bytes!");
-
-  StringRef S(reinterpret_cast<const char *>(Record.data()), Record.size());
-
-  TypeIndex NextTypeIndex = calcNextTypeIndex();
-  auto Result = HashedRecords.try_emplace(S, NextTypeIndex);
-
-  StringRef NewData = Result.first->getKey();
-  Record = ArrayRef<uint8_t>(NewData.bytes_begin(), NewData.bytes_end());
-
-  if (Result.second) {
-    // If this triggered an insert into the map, store the bytes.
-    LastTypeIndex = NextTypeIndex;
-    SeenRecords.push_back(Record);
-  }
-
-  return Result.first->getValue();
-}
-
 Expected<MutableArrayRef<uint8_t>>
 TypeSerializer::addPadding(MutableArrayRef<uint8_t> Record) {
   uint32_t Align = Record.size() % 4;
@@ -90,26 +167,25 @@ TypeSerializer::addPadding(MutableArrayRef<uint8_t> Record) {
 }
 
 TypeSerializer::TypeSerializer(BumpPtrAllocator &Storage)
-    : RecordStorage(Storage), LastTypeIndex(),
-      RecordBuffer(MaxRecordLength * 2),
+    : RecordStorage(Storage), RecordBuffer(MaxRecordLength * 2),
       Stream(RecordBuffer, llvm::support::little), Writer(Stream),
-      Mapping(Writer), HashedRecords(Storage) {
+      Mapping(Writer), Hasher(make_unique<TypeHasher>(Storage)) {
   // RecordBuffer needs to be able to hold enough data so that if we are 1
   // byte short of MaxRecordLen, and then we try to write MaxRecordLen bytes,
   // we won't overflow.
 }
 
-ArrayRef<ArrayRef<uint8_t>> TypeSerializer::records() const {
-  return SeenRecords;
-}
+TypeSerializer::~TypeSerializer() = default;
 
-TypeIndex TypeSerializer::getLastTypeIndex() const { return LastTypeIndex; }
+ArrayRef<ArrayRef<uint8_t>> TypeSerializer::records() const {
+  return Hasher->records();
+}
 
 TypeIndex TypeSerializer::insertRecordBytes(ArrayRef<uint8_t> Record) {
   assert(!TypeKind.hasValue() && "Already in a type mapping!");
   assert(Writer.getOffset() == 0 && "Stream has data already!");
 
-  return insertRecordBytesPrivate(Record);
+  return Hasher->getOrCreateRecord(Record);
 }
 
 Error TypeSerializer::visitTypeBegin(CVType &Record) {
@@ -145,7 +221,7 @@ Expected<TypeIndex> TypeSerializer::visitTypeEndGetIndex(CVType &Record) {
 
   Record.Type = *TypeKind;
   Record.RecordData = ThisRecordData;
-  TypeIndex InsertedTypeIndex = insertRecordBytesPrivate(Record.RecordData);
+  TypeIndex InsertedTypeIndex = Hasher->getOrCreateRecord(Record.RecordData);
 
   // Write out each additional segment in reverse order, and update each
   // record's continuation index to point to the previous one.
@@ -155,7 +231,7 @@ Expected<TypeIndex> TypeSerializer::visitTypeEndGetIndex(CVType &Record) {
         reinterpret_cast<support::ulittle32_t *>(CIBytes.data());
     assert(*CI == 0xB0C0B0C0 && "Invalid TypeIndex placeholder");
     *CI = InsertedTypeIndex.getIndex();
-    InsertedTypeIndex = insertRecordBytesPrivate(X);
+    InsertedTypeIndex = Hasher->getOrCreateRecord(X);
   }
 
   TypeKind.reset();

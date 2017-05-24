@@ -1,15 +1,15 @@
-; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=static < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
-; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=pic < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
-; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=ropi < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
-; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=rwpi < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
-; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=static < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
-; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=pic < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
-; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=ropi < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
-; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=rwpi < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
-; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=static < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
-; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=pic < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
-; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=ropi < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
-; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=rwpi < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
+; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=static -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
+; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=pic -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
+; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=ropi -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
+; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=rwpi -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
+; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=static -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
+; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=pic -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
+; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=ropi -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
+; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=rwpi -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
+; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=static -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
+; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=pic -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
+; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=ropi -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
+; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=rwpi -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
 
 @.str = private unnamed_addr constant [2 x i8] c"s\00", align 1
 @.str1 = private unnamed_addr constant [69 x i8] c"this string is far too long to fit in a literal pool by far and away\00", align 1

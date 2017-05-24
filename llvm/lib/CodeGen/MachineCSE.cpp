@@ -180,8 +180,8 @@ MachineCSE::isPhysDefTriviallyDead(unsigned Reg,
     I = skipDebugInstructionsForward(I, E);
 
     if (I == E)
-      // Reached end of block, register is obviously dead.
-      return true;
+      // Reached end of block, we don't know if register is dead or not.
+      return false;
 
     bool SeenDef = false;
     for (const MachineOperand &MO : I->operands()) {

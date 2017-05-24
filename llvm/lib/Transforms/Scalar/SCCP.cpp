@@ -1779,8 +1779,9 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
     // arguments and return value aggressively, and can assume it is not called
     // unless we see evidence to the contrary.
     if (F.hasLocalLinkage()) {
-      if (AddressIsTaken(&F))
+      if (F.hasAddressTaken()) {
         AddressTakenFunctions.insert(&F);
+      }
       else {
         Solver.AddArgumentTrackedFunction(&F);
         continue;

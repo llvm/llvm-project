@@ -77,19 +77,18 @@ public:
     }
   }
 
-  ArrayRef<ArrayRef<uint8_t>> records() const {
-    return Serializer.records();
-  }
+  ArrayRef<ArrayRef<uint8_t>> records() const { return Serializer.records(); }
 };
 
 class FieldListRecordBuilder {
   TypeTableBuilder &TypeTable;
+  BumpPtrAllocator Allocator;
   TypeSerializer TempSerializer;
   CVType Type;
 
 public:
   explicit FieldListRecordBuilder(TypeTableBuilder &TypeTable)
-      : TypeTable(TypeTable), TempSerializer(TypeTable.getAllocator()) {
+      : TypeTable(TypeTable), TempSerializer(Allocator) {
     Type.Type = TypeLeafKind::LF_FIELDLIST;
   }
 

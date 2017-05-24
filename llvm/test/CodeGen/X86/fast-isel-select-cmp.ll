@@ -4,9 +4,9 @@
 ; different basic blocks.
 
 define i32 @select_cmp_cmov_i32(i32 %a, i32 %b) {
-; CHECK-LABEL: select_cmp_cmov_i32
+; CHECK-LABEL: select_cmp_cmov_i32:
 ; CHECK-LABEL: continue
-; CHECK-NOT:   cmp
+; CHECK-NOT:   cmp{{[^_]}}
   %1 = icmp ult i32 %a, %b
   br i1 %1, label %continue, label %exit
 
@@ -19,9 +19,9 @@ exit:
 }
 
 define float @select_fcmp_oeq_f32(float %a, float %b, float %c, float %d) {
-; CHECK-LABEL: select_fcmp_oeq_f32
+; CHECK-LABEL: select_fcmp_oeq_f32:
 ; CHECK-LABEL: continue
-; CHECK-NOT:   cmp
+; CHECK-NOT:   cmp{{[^_]}}
   %1 = fcmp oeq float %a, %b
   br i1 %1, label %continue, label %exit
 
@@ -34,7 +34,7 @@ exit:
 }
 
 define float @select_fcmp_one_f32(float %a, float %b, float %c, float %d) {
-; CHECK-LABEL: select_fcmp_one_f32
+; CHECK-LABEL: select_fcmp_one_f32:
 ; CHECK-LABEL: continue
 ; CHECK-NOT:   ucomi
   %1 = fcmp one float %a, %b

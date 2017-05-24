@@ -212,27 +212,21 @@ using IndexAttrPair = std::pair<unsigned, AttributeSet>;
 /// return type, and parameters.
 class AttributeListImpl final
     : public FoldingSetNode,
-      private TrailingObjects<AttributeListImpl, IndexAttrPair> {
+      private TrailingObjects<AttributeListImpl, AttributeSet> {
   friend class AttributeList;
   friend TrailingObjects;
 
 private:
-  LLVMContext &Context;
-  unsigned NumSlots; ///< Number of entries in this set.
   /// Bitset with a bit for each available attribute Attribute::AttrKind.
   uint64_t AvailableFunctionAttrs;
+  LLVMContext &Context;
+  unsigned NumAttrSets; ///< Number of entries in this set.
 
   // Helper fn for TrailingObjects class.
-  size_t numTrailingObjects(OverloadToken<IndexAttrPair>) { return NumSlots; }
-
-  /// \brief Return a pointer to the IndexAttrPair for the specified slot.
-  const IndexAttrPair *getSlotPair(unsigned Slot) const {
-    return getTrailingObjects<IndexAttrPair>() + Slot;
-  }
+  size_t numTrailingObjects(OverloadToken<AttributeSet>) { return NumAttrSets; }
 
 public:
-  AttributeListImpl(LLVMContext &C,
-                    ArrayRef<std::pair<unsigned, AttributeSet>> Slots);
+  AttributeListImpl(LLVMContext &C, ArrayRef<AttributeSet> Sets);
 
   // AttributesSetImpt is uniqued, these should not be available.
   AttributeListImpl(const AttributeListImpl &) = delete;
@@ -243,41 +237,18 @@ public:
   /// \brief Get the context that created this AttributeListImpl.
   LLVMContext &getContext() { return Context; }
 
-  /// \brief Return the number of slots used in this attribute list. This is
-  /// the number of arguments that have an attribute set on them (including the
-  /// function itself).
-  unsigned getNumSlots() const { return NumSlots; }
-
-  /// \brief Get the index of the given "slot" in the AttrNodes list. This index
-  /// is the index of the return, parameter, or function object that the
-  /// attributes are applied to, not the index into the AttrNodes list where the
-  /// attributes reside.
-  unsigned getSlotIndex(unsigned Slot) const {
-    return getSlotPair(Slot)->first;
-  }
-
-  /// \brief Retrieve the attribute set node for the given "slot" in the
-  /// AttrNode list.
-  AttributeSet getSlotAttributes(unsigned Slot) const {
-    return getSlotPair(Slot)->second;
-  }
-
   /// \brief Return true if the AttributeSet or the FunctionIndex has an
   /// enum attribute of the given kind.
   bool hasFnAttribute(Attribute::AttrKind Kind) const {
     return AvailableFunctionAttrs & ((uint64_t)1) << Kind;
   }
 
-  using iterator = AttributeSet::iterator;
-
-  iterator begin(unsigned Slot) const {
-    return getSlotAttributes(Slot).begin();
-  }
-  iterator end(unsigned Slot) const { return getSlotAttributes(Slot).end(); }
+  typedef const AttributeSet *iterator;
+  iterator begin() const { return getTrailingObjects<AttributeSet>(); }
+  iterator end() const { return begin() + NumAttrSets; }
 
   void Profile(FoldingSetNodeID &ID) const;
-  static void Profile(FoldingSetNodeID &ID,
-                      ArrayRef<std::pair<unsigned, AttributeSet>> Nodes);
+  static void Profile(FoldingSetNodeID &ID, ArrayRef<AttributeSet> Nodes);
 
   void dump() const;
 };

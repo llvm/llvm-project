@@ -81,14 +81,14 @@ public:
   Error visitMemberEnd(CVMemberRecord &Record) override;
 
   Error mergeTypesAndIds(TypeTableBuilder &DestIds, TypeTableBuilder &DestTypes,
-                         TypeCollection &IdsAndTypes);
+    const CVTypeArray &IdsAndTypes);
   Error mergeIdRecords(TypeTableBuilder &Dest,
                        ArrayRef<TypeIndex> TypeSourceToDest,
-                       TypeCollection &Ids);
-  Error mergeTypeRecords(TypeTableBuilder &Dest, TypeCollection &Types);
+    const CVTypeArray &Ids);
+  Error mergeTypeRecords(TypeTableBuilder &Dest, const CVTypeArray &Types);
 
 private:
-  Error doit(TypeCollection &Types);
+  Error doit(const CVTypeArray &Types);
 
   void addMapping(TypeIndex Idx);
 
@@ -416,6 +416,8 @@ Error TypeStreamMerger::visitKnownRecord(CVType &, FieldListRecord &R) {
   assert(DestTypeStream);
   // Visit the members inside the field list.
   HadUntranslatedMember = false;
+  FieldListBuilder = llvm::make_unique<FieldListRecordBuilder>(*DestTypeStream);
+
   FieldListBuilder->begin();
   if (auto EC = codeview::visitMemberRecordStream(R.Data, *this))
     return EC;
@@ -428,6 +430,7 @@ Error TypeStreamMerger::visitKnownRecord(CVType &, FieldListRecord &R) {
     FieldListBuilder->reset();
   addMapping(DestIdx);
 
+  FieldListBuilder.reset();
   return Error::success();
 }
 
@@ -494,16 +497,15 @@ Error TypeStreamMerger::visitUnknownType(CVType &Rec) {
 }
 
 Error TypeStreamMerger::mergeTypeRecords(TypeTableBuilder &Dest,
-                                         TypeCollection &Types) {
+  const CVTypeArray &Types) {
   DestTypeStream = &Dest;
-  FieldListBuilder = llvm::make_unique<FieldListRecordBuilder>(Dest);
 
   return doit(Types);
 }
 
 Error TypeStreamMerger::mergeIdRecords(TypeTableBuilder &Dest,
                                        ArrayRef<TypeIndex> TypeSourceToDest,
-                                       TypeCollection &Ids) {
+  const CVTypeArray &Ids) {
   DestIdStream = &Dest;
   TypeLookup = TypeSourceToDest;
 
@@ -512,15 +514,14 @@ Error TypeStreamMerger::mergeIdRecords(TypeTableBuilder &Dest,
 
 Error TypeStreamMerger::mergeTypesAndIds(TypeTableBuilder &DestIds,
                                          TypeTableBuilder &DestTypes,
-                                         TypeCollection &IdsAndTypes) {
+  const CVTypeArray &IdsAndTypes) {
   DestIdStream = &DestIds;
   DestTypeStream = &DestTypes;
-  FieldListBuilder = llvm::make_unique<FieldListRecordBuilder>(DestTypes);
 
   return doit(IdsAndTypes);
 }
 
-Error TypeStreamMerger::doit(TypeCollection &Types) {
+Error TypeStreamMerger::doit(const CVTypeArray &Types) {
   LastError = Error::success();
 
   if (auto EC = codeview::visitTypeStream(Types, *this, Handler))
@@ -558,7 +559,7 @@ Error TypeStreamMerger::doit(TypeCollection &Types) {
 Error llvm::codeview::mergeTypeRecords(TypeTableBuilder &Dest,
                                        SmallVectorImpl<TypeIndex> &SourceToDest,
                                        TypeServerHandler *Handler,
-                                       TypeCollection &Types) {
+  const CVTypeArray &Types) {
   TypeStreamMerger M(SourceToDest, Handler);
   return M.mergeTypeRecords(Dest, Types);
 }
@@ -566,7 +567,7 @@ Error llvm::codeview::mergeTypeRecords(TypeTableBuilder &Dest,
 Error llvm::codeview::mergeIdRecords(TypeTableBuilder &Dest,
                                      ArrayRef<TypeIndex> TypeSourceToDest,
                                      SmallVectorImpl<TypeIndex> &SourceToDest,
-                                     TypeCollection &Ids) {
+  const CVTypeArray &Ids) {
   TypeStreamMerger M(SourceToDest, nullptr);
   return M.mergeIdRecords(Dest, TypeSourceToDest, Ids);
 }
@@ -574,7 +575,7 @@ Error llvm::codeview::mergeIdRecords(TypeTableBuilder &Dest,
 Error llvm::codeview::mergeTypeAndIdRecords(
     TypeTableBuilder &DestIds, TypeTableBuilder &DestTypes,
     SmallVectorImpl<TypeIndex> &SourceToDest, TypeServerHandler *Handler,
-    TypeCollection &IdsAndTypes) {
+  const CVTypeArray &IdsAndTypes) {
 
   TypeStreamMerger M(SourceToDest, Handler);
   return M.mergeTypesAndIds(DestIds, DestTypes, IdsAndTypes);

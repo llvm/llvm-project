@@ -28,57 +28,8 @@ class CompileUnit;
 class DIEHash {
   // Collection of all attributes used in hashing a particular DIE.
   struct DIEAttrs {
-    DIEValue DW_AT_name;
-    DIEValue DW_AT_accessibility;
-    DIEValue DW_AT_address_class;
-    DIEValue DW_AT_allocated;
-    DIEValue DW_AT_artificial;
-    DIEValue DW_AT_associated;
-    DIEValue DW_AT_binary_scale;
-    DIEValue DW_AT_bit_offset;
-    DIEValue DW_AT_bit_size;
-    DIEValue DW_AT_bit_stride;
-    DIEValue DW_AT_byte_size;
-    DIEValue DW_AT_byte_stride;
-    DIEValue DW_AT_const_expr;
-    DIEValue DW_AT_const_value;
-    DIEValue DW_AT_containing_type;
-    DIEValue DW_AT_count;
-    DIEValue DW_AT_data_bit_offset;
-    DIEValue DW_AT_data_location;
-    DIEValue DW_AT_data_member_location;
-    DIEValue DW_AT_decimal_scale;
-    DIEValue DW_AT_decimal_sign;
-    DIEValue DW_AT_default_value;
-    DIEValue DW_AT_digit_count;
-    DIEValue DW_AT_discr;
-    DIEValue DW_AT_discr_list;
-    DIEValue DW_AT_discr_value;
-    DIEValue DW_AT_encoding;
-    DIEValue DW_AT_enum_class;
-    DIEValue DW_AT_endianity;
-    DIEValue DW_AT_explicit;
-    DIEValue DW_AT_is_optional;
-    DIEValue DW_AT_location;
-    DIEValue DW_AT_lower_bound;
-    DIEValue DW_AT_mutable;
-    DIEValue DW_AT_ordering;
-    DIEValue DW_AT_picture_string;
-    DIEValue DW_AT_prototyped;
-    DIEValue DW_AT_small;
-    DIEValue DW_AT_segment;
-    DIEValue DW_AT_string_length;
-    DIEValue DW_AT_threads_scaled;
-    DIEValue DW_AT_upper_bound;
-    DIEValue DW_AT_use_location;
-    DIEValue DW_AT_use_UTF8;
-    DIEValue DW_AT_variable_parameter;
-    DIEValue DW_AT_virtuality;
-    DIEValue DW_AT_visibility;
-    DIEValue DW_AT_vtable_elem_location;
-    DIEValue DW_AT_type;
-
-    // Insert any additional ones here...
+#define HANDLE_DIE_HASH_ATTR(NAME) DIEValue NAME;
+#include "DIEHashAttributes.def"
   };
 
 public:
