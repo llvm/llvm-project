@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -verify -fno-builtin
 
-_Static_assert(__has_feature(objc_diagnose_if_attr), "feature check failed?");
+_Static_assert(__has_feature(attribute_diagnose_if_objc), "feature check failed?");
 
 #define _diagnose_if(...) __attribute__((diagnose_if(__VA_ARGS__)))
 
