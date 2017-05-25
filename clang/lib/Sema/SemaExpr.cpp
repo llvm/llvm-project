@@ -372,15 +372,14 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, SourceLocation Loc,
 
   auto getReferencedObjCProp = [](const NamedDecl *D) ->
                                       const ObjCPropertyDecl * {
-    if (auto *MD = dyn_cast<ObjCMethodDecl>(D))
+    if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
       return MD->findPropertyDecl();
     return nullptr;
   };
-  if (auto *ObjCPDecl = getReferencedObjCProp(D)) {
+  if (const ObjCPropertyDecl *ObjCPDecl = getReferencedObjCProp(D)) {
     if (diagnoseArgIndependentDiagnoseIfAttrs(ObjCPDecl, Loc))
       return true;
-  } else {
-    if (diagnoseArgIndependentDiagnoseIfAttrs(D, Loc))
+  } else if (diagnoseArgIndependentDiagnoseIfAttrs(D, Loc)) {
       return true;
   }
 
