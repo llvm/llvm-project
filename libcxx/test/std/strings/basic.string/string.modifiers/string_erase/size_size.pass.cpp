@@ -29,6 +29,7 @@ test(S s, typename S::size_type pos, typename S::size_type n, S expected)
     {
         s.erase(pos, n);
         LIBCPP_ASSERT(s.__invariants());
+        assert(s[s.size()] == typename S::value_type());
         assert(s == expected);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -58,6 +59,7 @@ test(S s, typename S::size_type pos, S expected)
     {
         s.erase(pos);
         LIBCPP_ASSERT(s.__invariants());
+        assert(s[s.size()] == typename S::value_type());
         assert(s == expected);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -83,6 +85,7 @@ test(S s, S expected)
 {
     s.erase();
     LIBCPP_ASSERT(s.__invariants());
+    assert(s[s.size()] == typename S::value_type());
     assert(s == expected);
 }
 

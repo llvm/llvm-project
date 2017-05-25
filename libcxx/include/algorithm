@@ -964,6 +964,7 @@ for_each(_InputIterator __first, _InputIterator __last, _Function __f)
     return __f;
 }
 
+#if _LIBCPP_STD_VER > 14
 // for_each_n
 
 template <class _InputIterator, class _Size, class _Function>
@@ -981,6 +982,7 @@ for_each_n(_InputIterator __first, _Size __orig_n, _Function __f)
     }
     return __first;
 }
+#endif
 
 // find
 

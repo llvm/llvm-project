@@ -63,7 +63,7 @@
 ## Check that directory path is stripped from -o <file-path>
 # RUN: mkdir -p %t.dir/build3/a/b/c
 # RUN: cd %t.dir
-# RUN: ld.lld build1/foo.o -o build3/a/b/c/bar -shared --as-needed --reproduce repro3.tar
+# RUN: ld.lld build1/foo.o -o build3/a/b/c/bar -shared --as-needed --reproduce=repro3.tar
 # RUN: tar xf repro3.tar
 # RUN: FileCheck %s --check-prefix=RSP3 < repro3/response.txt
 # RSP3: -o bar
