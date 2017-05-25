@@ -117,7 +117,7 @@ private:
   // Comdat groups define "link once" sections. If two comdat groups have the
   // same name, only one of them is linked, and the other is ignored. This set
   // is used to uniquify them.
-  llvm::DenseSet<llvm::CachedHashStringRef> ComdatGroups;
+  llvm::DenseSet<StringRef> ComdatGroups;
 
   std::vector<ObjectFile<ELFT> *> ObjectFiles;
   std::vector<SharedFile<ELFT> *> SharedFiles;

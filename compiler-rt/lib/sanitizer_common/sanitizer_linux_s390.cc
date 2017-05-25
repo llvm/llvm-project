@@ -178,6 +178,13 @@ static bool FixedCVE_2016_2143() {
     // 4.4.6+ is OK.
     if (minor == 4 && patch >= 6)
       return true;
+    if (minor == 4 && patch == 0 && ptr[0] == '-' &&
+        internal_strstr(buf.version, "Ubuntu")) {
+      // Check Ubuntu 16.04
+      int r1 = internal_simple_strtoll(ptr+1, &ptr, 10);
+      if (r1 >= 13) // 4.4.0-13 or later
+        return true;
+    }
     // Otherwise, OK if 4.5+.
     return minor >= 5;
   } else {

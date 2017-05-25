@@ -130,6 +130,9 @@ struct OutputSectionCommand : BaseCommand {
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
   std::string Location;
   std::string MemoryRegionName;
+
+  template <class ELFT> void writeTo(uint8_t *Buf);
+  uint32_t getFiller();
 };
 
 // This struct represents one section match pattern in SECTIONS() command.
@@ -213,7 +216,6 @@ struct ScriptConfiguration {
 
 class LinkerScript final {
   llvm::DenseMap<OutputSection *, OutputSectionCommand *> SecToCommand;
-  OutputSectionCommand *getCmd(OutputSection *Sec) const;
   void assignSymbol(SymbolAssignment *Cmd, bool InSec);
   void setDot(Expr E, const Twine &Loc, bool InSec);
 
@@ -244,6 +246,7 @@ class LinkerScript final {
   MemoryRegion *CurMemRegion = nullptr;
 
 public:
+  OutputSectionCommand *getCmd(OutputSection *Sec) const;
   bool hasPhdrsCommands() { return !Opt.PhdrsCommands.empty(); }
   uint64_t getDot() { return Dot; }
   OutputSection *getOutputSection(const Twine &Loc, StringRef S);
@@ -263,7 +266,6 @@ public:
   std::vector<PhdrEntry> createPhdrs();
   bool ignoreInterpSection();
 
-  llvm::Optional<uint32_t> getFiller(OutputSection *Sec);
   bool hasLMA(OutputSection *Sec);
   bool shouldKeep(InputSectionBase *S);
   void assignOffsets(OutputSectionCommand *Cmd);
@@ -272,7 +274,6 @@ public:
   void synchronize();
   void assignAddresses(std::vector<PhdrEntry> &Phdrs);
 
-  void writeDataBytes(OutputSection *Sec, uint8_t *Buf);
   void addSymbol(SymbolAssignment *Cmd);
   void processCommands(OutputSectionFactory &Factory);
 

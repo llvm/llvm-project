@@ -2173,17 +2173,6 @@ MipsRldMapSection::MipsRldMapSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, Config->Wordsize,
                        ".rld_map") {}
 
-void MipsRldMapSection::writeTo(uint8_t *Buf) {
-  // Apply filler from linker script.
-  Optional<uint32_t> Fill = Script->getFiller(this->OutSec);
-  if (!Fill || *Fill == 0)
-    return;
-
-  uint64_t Filler = *Fill;
-  Filler = (Filler << 32) | Filler;
-  memcpy(Buf, &Filler, getSize());
-}
-
 ARMExidxSentinelSection::ARMExidxSentinelSection()
     : SyntheticSection(SHF_ALLOC | SHF_LINK_ORDER, SHT_ARM_EXIDX,
                        Config->Wordsize, ".ARM.exidx") {}
