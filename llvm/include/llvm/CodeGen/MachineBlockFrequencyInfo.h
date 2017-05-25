@@ -1,4 +1,4 @@
-//===- MachineBlockFrequencyInfo.h - MBB Frequency Analysis -*- C++ -*-----===//
+//===- MachineBlockFrequencyInfo.h - MBB Frequency Analysis -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,26 +17,28 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/BlockFrequency.h"
-#include <climits>
+#include <cstdint>
+#include <memory>
 
 namespace llvm {
 
+template <class BlockT> class BlockFrequencyInfoImpl;
 class MachineBasicBlock;
 class MachineBranchProbabilityInfo;
+class MachineFunction;
 class MachineLoopInfo;
-template <class BlockT> class BlockFrequencyInfoImpl;
+class raw_ostream;
 
 /// MachineBlockFrequencyInfo pass uses BlockFrequencyInfoImpl implementation
 /// to estimate machine basic block frequencies.
 class MachineBlockFrequencyInfo : public MachineFunctionPass {
-  typedef BlockFrequencyInfoImpl<MachineBasicBlock> ImplType;
+  using ImplType = BlockFrequencyInfoImpl<MachineBasicBlock>;
   std::unique_ptr<ImplType> MBFI;
 
 public:
   static char ID;
 
   MachineBlockFrequencyInfo();
-
   ~MachineBlockFrequencyInfo() override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -74,9 +76,8 @@ public:
                               const MachineBasicBlock *MBB) const;
 
   uint64_t getEntryFreq() const;
-
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINEBLOCKFREQUENCYINFO_H

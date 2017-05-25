@@ -204,10 +204,15 @@ void ICF::forEachClass(std::function<void(size_t, size_t)> Fn) {
 // contents and relocations are all the same.
 void ICF::run(const std::vector<Chunk *> &Vec) {
   // Collect only mergeable sections and group by hash value.
-  for (Chunk *C : Vec)
-    if (auto *SC = dyn_cast<SectionChunk>(C))
+  uint32_t NextId = 1;
+  for (Chunk *C : Vec) {
+    if (auto *SC = dyn_cast<SectionChunk>(C)) {
       if (isEligible(SC))
         Chunks.push_back(SC);
+      else
+        SC->Class[0] = NextId++;
+    }
+  }
 
   // Initially, we use hash values to partition sections.
   for (SectionChunk *SC : Chunks)

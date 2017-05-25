@@ -799,9 +799,9 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
     splitAround(CSI, "CoroSuspend");
   }
 
-  // Put fallthrough CoroEnd into its own block. Note: Shape::buildFrom places
-  // the fallthrough coro.end as the first element of CoroEnds array.
-  splitAround(Shape.CoroEnds.front(), "CoroEnd");
+  // Put CoroEnds into their own blocks.
+  for (CoroEndInst *CE : Shape.CoroEnds)
+    splitAround(CE, "CoroEnd");
 
   // Transforms multi-edge PHI Nodes, so that any value feeding into a PHI will
   // never has its definition separated from the PHI by the suspend point.
@@ -813,19 +813,24 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   IRBuilder<> Builder(F.getContext());
   SpillInfo Spills;
 
-  // See if there are materializable instructions across suspend points.
-  for (Instruction &I : instructions(F))
-    if (materializable(I))
-      for (User *U : I.users())
-        if (Checker.isDefinitionAcrossSuspend(I, U))
-          Spills.emplace_back(&I, U);
+  for (int Repeat = 0; Repeat < 4; ++Repeat) {
+    // See if there are materializable instructions across suspend points.
+    for (Instruction &I : instructions(F))
+      if (materializable(I))
+        for (User *U : I.users())
+          if (Checker.isDefinitionAcrossSuspend(I, U))
+            Spills.emplace_back(&I, U);
 
-  // Rewrite materializable instructions to be materialized at the use point.
-  DEBUG(dump("Materializations", Spills));
-  rewriteMaterializableInstructions(Builder, Spills);
+    if (Spills.empty())
+      break;
+
+    // Rewrite materializable instructions to be materialized at the use point.
+    DEBUG(dump("Materializations", Spills));
+    rewriteMaterializableInstructions(Builder, Spills);
+    Spills.clear();
+  }
 
   // Collect the spills for arguments and other not-materializable values.
-  Spills.clear();
   for (Argument &A : F.args())
     for (User *U : A.users())
       if (Checker.isDefinitionAcrossSuspend(A, U))
@@ -847,8 +852,6 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
         if (I.getType()->isTokenTy())
           report_fatal_error(
               "token definition is separated from the use by a suspend point");
-        assert(!materializable(I) &&
-               "rewriteMaterializable did not do its job");
         Spills.emplace_back(&I, U);
       }
   }

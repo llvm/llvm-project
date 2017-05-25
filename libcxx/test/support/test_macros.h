@@ -154,6 +154,12 @@
 #define TEST_NORETURN [[noreturn]]
 #endif
 
+#if defined(_LIBCPP_SAFE_STATIC)
+#define TEST_SAFE_STATIC _LIBCPP_SAFE_STATIC
+#else
+#define TEST_SAFE_STATIC
+#endif
+
 #if TEST_STD_VER < 11
 #define ASSERT_NOEXCEPT(...)
 #define ASSERT_NOT_NOEXCEPT(...)

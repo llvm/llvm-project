@@ -21,7 +21,7 @@ entry:
   ret <16 x i8> %strided.vec
 
 ; CHECK-LABEL: @test2
-; CHECK: vsldoi 2, 2, 2, 12
+; CHECK: xxsldwi 34, 34, 34, 3
 ; CHECK: blr
 }
 

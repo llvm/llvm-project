@@ -1,4 +1,4 @@
-//===--- lib/CodeGen/DIE.h - DWARF Info Entries -----------------*- C++ -*-===//
+//===- lib/CodeGen/DIE.h - DWARF Info Entries -------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -31,6 +31,7 @@
 #include <iterator>
 #include <new>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -53,11 +54,11 @@ class DIEAbbrevData {
   dwarf::Form Form;
 
   /// Dwarf attribute value for DW_FORM_implicit_const
-  int64_t Value;
+  int64_t Value = 0;
 
 public:
   DIEAbbrevData(dwarf::Attribute A, dwarf::Form F)
-      : Attribute(A), Form(F), Value(0) {}
+      : Attribute(A), Form(F) {}
   DIEAbbrevData(dwarf::Attribute A, int64_t V)
       : Attribute(A), Form(dwarf::DW_FORM_implicit_const), Value(V) {}
 
@@ -136,13 +137,14 @@ class DIEAbbrevSet {
   /// storage container.
   BumpPtrAllocator &Alloc;
   /// \brief FoldingSet that uniques the abbreviations.
-  llvm::FoldingSet<DIEAbbrev> AbbreviationsSet;
+  FoldingSet<DIEAbbrev> AbbreviationsSet;
   /// A list of all the unique abbreviations in use.
   std::vector<DIEAbbrev *> Abbreviations;
 
 public:
   DIEAbbrevSet(BumpPtrAllocator &A) : Alloc(A) {}
   ~DIEAbbrevSet();
+
   /// Generate the abbreviation declaration for a DIE and return a pointer to
   /// the generated abbreviation.
   ///
@@ -289,13 +291,11 @@ public:
 /// A pointer to another debug information entry.  An instance of this class can
 /// also be used as a proxy for a debug information entry not yet defined
 /// (ie. types.)
-class DIE;
 class DIEEntry {
   DIE *Entry;
 
-  DIEEntry() = delete;
-
 public:
+  DIEEntry() = delete;
   explicit DIEEntry(DIE &E) : Entry(&E) {}
 
   DIE &getEntry() const { return *Entry; }
@@ -348,10 +348,10 @@ private:
   ///
   /// All values that aren't standard layout (or are larger than 8 bytes)
   /// should be stored by reference instead of by value.
-  typedef AlignedCharArrayUnion<DIEInteger, DIEString, DIEExpr, DIELabel,
-                                DIEDelta *, DIEEntry, DIEBlock *, DIELoc *,
-                                DIELocList>
-      ValTy;
+  using ValTy = AlignedCharArrayUnion<DIEInteger, DIEString, DIEExpr, DIELabel,
+                                      DIEDelta *, DIEEntry, DIEBlock *,
+                                      DIELoc *, DIELocList>;
+
   static_assert(sizeof(ValTy) <= sizeof(uint64_t) ||
                     sizeof(ValTy) <= sizeof(void *),
                 "Expected all large types to be stored via pointer");
@@ -486,10 +486,12 @@ struct IntrusiveBackListNode {
 };
 
 struct IntrusiveBackListBase {
-  typedef IntrusiveBackListNode Node;
+  using Node = IntrusiveBackListNode;
+
   Node *Last = nullptr;
 
   bool empty() const { return !Last; }
+
   void push_back(Node &N) {
     assert(N.Next.getPointer() == &N && "Expected unlinked node");
     assert(N.Next.getInt() == true && "Expected unlinked node");
@@ -505,6 +507,7 @@ struct IntrusiveBackListBase {
 template <class T> class IntrusiveBackList : IntrusiveBackListBase {
 public:
   using IntrusiveBackListBase::empty;
+
   void push_back(T &N) { IntrusiveBackListBase::push_back(N); }
   T &back() { return *static_cast<T *>(Last); }
   const T &back() const { return *static_cast<T *>(Last); }
@@ -513,6 +516,7 @@ public:
   class iterator
       : public iterator_facade_base<iterator, std::forward_iterator_tag, T> {
     friend class const_iterator;
+
     Node *N = nullptr;
 
   public:
@@ -585,10 +589,12 @@ public:
 class DIEValueList {
   struct Node : IntrusiveBackListNode {
     DIEValue V;
+
     explicit Node(DIEValue V) : V(V) {}
   };
 
-  typedef IntrusiveBackList<Node> ListTy;
+  using ListTy = IntrusiveBackList<Node>;
+
   ListTy List;
 
 public:
@@ -597,9 +603,10 @@ public:
       : public iterator_adaptor_base<value_iterator, ListTy::iterator,
                                      std::forward_iterator_tag, DIEValue> {
     friend class const_value_iterator;
-    typedef iterator_adaptor_base<value_iterator, ListTy::iterator,
-                                  std::forward_iterator_tag,
-                                  DIEValue> iterator_adaptor;
+
+    using iterator_adaptor =
+        iterator_adaptor_base<value_iterator, ListTy::iterator,
+                              std::forward_iterator_tag, DIEValue>;
 
   public:
     value_iterator() = default;
@@ -612,9 +619,9 @@ public:
   class const_value_iterator : public iterator_adaptor_base<
                                    const_value_iterator, ListTy::const_iterator,
                                    std::forward_iterator_tag, const DIEValue> {
-    typedef iterator_adaptor_base<const_value_iterator, ListTy::const_iterator,
-                                  std::forward_iterator_tag,
-                                  const DIEValue> iterator_adaptor;
+    using iterator_adaptor =
+        iterator_adaptor_base<const_value_iterator, ListTy::const_iterator,
+                              std::forward_iterator_tag, const DIEValue>;
 
   public:
     const_value_iterator() = default;
@@ -627,8 +634,8 @@ public:
     const DIEValue &operator*() const { return wrapped()->V; }
   };
 
-  typedef iterator_range<value_iterator> value_range;
-  typedef iterator_range<const_value_iterator> const_value_range;
+  using value_range = iterator_range<value_iterator>;
+  using const_value_range = iterator_range<const_value_iterator>;
 
   value_iterator addValue(BumpPtrAllocator &Alloc, const DIEValue &V) {
     List.push_back(*new (Alloc) Node(V));
@@ -657,15 +664,15 @@ class DIE : IntrusiveBackListNode, public DIEValueList {
   friend class DIEUnit;
 
   /// Dwarf unit relative offset.
-  unsigned Offset;
+  unsigned Offset = 0;
   /// Size of instance + children.
-  unsigned Size;
+  unsigned Size = 0;
   unsigned AbbrevNumber = ~0u;
   /// Dwarf tag code.
   dwarf::Tag Tag = (dwarf::Tag)0;
   /// Set to true to force a DIE to emit an abbreviation that says it has
   /// children even when it doesn't. This is used for unit testing purposes.
-  bool ForceChildren;
+  bool ForceChildren = false;
   /// Children DIEs.
   IntrusiveBackList<DIE> Children;
 
@@ -673,19 +680,18 @@ class DIE : IntrusiveBackListNode, public DIEValueList {
   /// DIEUnit which contains this DIE as its unit DIE.
   PointerUnion<DIE *, DIEUnit *> Owner;
 
-  DIE() = delete;
-  explicit DIE(dwarf::Tag Tag) : Offset(0), Size(0), Tag(Tag),
-      ForceChildren(false) {}
+  explicit DIE(dwarf::Tag Tag) : Tag(Tag) {}
 
 public:
+  DIE() = delete;
+  DIE(const DIE &RHS) = delete;
+  DIE(DIE &&RHS) = delete;
+  DIE &operator=(const DIE &RHS) = delete;
+  DIE &operator=(const DIE &&RHS) = delete;
+
   static DIE *get(BumpPtrAllocator &Alloc, dwarf::Tag Tag) {
     return new (Alloc) DIE(Tag);
   }
-
-  DIE(const DIE &RHS) = delete;
-  DIE(DIE &&RHS) = delete;
-  void operator=(const DIE &RHS) = delete;
-  void operator=(const DIE &&RHS) = delete;
 
   // Accessors.
   unsigned getAbbrevNumber() const { return AbbrevNumber; }
@@ -696,10 +702,10 @@ public:
   bool hasChildren() const { return ForceChildren || !Children.empty(); }
   void setForceChildren(bool B) { ForceChildren = B; }
 
-  typedef IntrusiveBackList<DIE>::iterator child_iterator;
-  typedef IntrusiveBackList<DIE>::const_iterator const_child_iterator;
-  typedef iterator_range<child_iterator> child_range;
-  typedef iterator_range<const_child_iterator> const_child_range;
+  using child_iterator = IntrusiveBackList<DIE>::iterator;
+  using const_child_iterator = IntrusiveBackList<DIE>::const_iterator;
+  using child_range = iterator_range<child_iterator>;
+  using const_child_range = iterator_range<const_child_iterator>;
 
   child_range children() {
     return make_range(Children.begin(), Children.end());
@@ -838,10 +844,10 @@ struct BasicDIEUnit final : DIEUnit {
 /// DIELoc - Represents an expression location.
 //
 class DIELoc : public DIEValueList {
-  mutable unsigned Size; // Size in bytes excluding size header.
+  mutable unsigned Size = 0; // Size in bytes excluding size header.
 
 public:
-  DIELoc() : Size(0) {}
+  DIELoc() = default;
 
   /// ComputeSize - Calculate the size of the location expression.
   ///
@@ -872,10 +878,10 @@ public:
 /// DIEBlock - Represents a block of values.
 //
 class DIEBlock : public DIEValueList {
-  mutable unsigned Size; // Size in bytes excluding size header.
+  mutable unsigned Size = 0; // Size in bytes excluding size header.
 
 public:
-  DIEBlock() : Size(0) {}
+  DIEBlock() = default;
 
   /// ComputeSize - Calculate the size of the location expression.
   ///

@@ -300,7 +300,6 @@ public:
   void setLocation(Chunk *AddressTable) { File->Location = AddressTable; }
   uint16_t getOrdinal() { return File->Hdr->OrdinalHint; }
 
-private:
   ImportFile *File;
 };
 
@@ -319,6 +318,8 @@ public:
 
   uint64_t getRVA() { return Data->getRVA(); }
   Chunk *getChunk() { return Data; }
+
+  DefinedImportData *WrappedSym;
 
 private:
   Chunk *Data;

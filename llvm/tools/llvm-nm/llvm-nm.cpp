@@ -24,6 +24,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
@@ -269,7 +270,7 @@ static bool compareSymbolName(const NMSymbol &A, const NMSymbol &B) {
 static char isSymbolList64Bit(SymbolicFile &Obj) {
   if (auto *IRObj = dyn_cast<IRObjectFile>(&Obj))
     return Triple(IRObj->getTargetTriple()).isArch64Bit();
-  if (isa<COFFObjectFile>(Obj))
+  if (isa<COFFObjectFile>(Obj) || isa<COFFImportFile>(Obj))
     return false;
   if (isa<WasmObjectFile>(Obj))
     return false;
@@ -849,6 +850,18 @@ static char getSymbolNMTypeChar(COFFObjectFile &Obj, symbol_iterator I) {
   return '?';
 }
 
+static char getSymbolNMTypeChar(COFFImportFile &Obj) {
+  switch (Obj.getCOFFImportHeader()->getType()) {
+  case COFF::IMPORT_CODE:
+    return 't';
+  case COFF::IMPORT_DATA:
+    return 'd';
+  case COFF::IMPORT_CONST:
+    return 'r';
+  }
+  return '?';
+}
+
 static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
   DataRefImpl Symb = I->getRawDataRefImpl();
   uint8_t NType = Obj.is64Bit() ? Obj.getSymbol64TableEntry(Symb).n_type
@@ -932,6 +945,8 @@ static char getNMTypeChar(SymbolicFile &Obj, basic_symbol_iterator I) {
     Ret = getSymbolNMTypeChar(*IR, I);
   else if (COFFObjectFile *COFF = dyn_cast<COFFObjectFile>(&Obj))
     Ret = getSymbolNMTypeChar(*COFF, I);
+  else if (COFFImportFile *COFFImport = dyn_cast<COFFImportFile>(&Obj))
+    Ret = getSymbolNMTypeChar(*COFFImport);
   else if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj))
     Ret = getSymbolNMTypeChar(*MachO, I);
   else if (WasmObjectFile *Wasm = dyn_cast<WasmObjectFile>(&Obj))

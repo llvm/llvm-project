@@ -1,4 +1,4 @@
-//===-- LiveIntervalAnalysis.h - Live Interval Analysis ---------*- C++ -*-===//
+//===- LiveIntervalAnalysis.h - Live Interval Analysis ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,6 +20,7 @@
 #ifndef LLVM_CODEGEN_LIVEINTERVALANALYSIS_H
 #define LLVM_CODEGEN_LIVEINTERVALANALYSIS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -27,27 +28,29 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/SlotIndexes.h"
-#include "llvm/Support/Allocator.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetRegisterInfo.h"
-#include <cmath>
+#include <cassert>
+#include <cstdint>
+#include <utility>
 
 namespace llvm {
 
 extern cl::opt<bool> UseSegmentSetForPhysRegs;
 
-  class BitVector;
-  class BlockFrequency;
-  class LiveRangeCalc;
-  class LiveVariables;
-  class MachineDominatorTree;
-  class MachineLoopInfo;
-  class TargetRegisterInfo;
-  class MachineRegisterInfo;
-  class TargetInstrInfo;
-  class TargetRegisterClass;
-  class VirtRegMap;
-  class MachineBlockFrequencyInfo;
+class BitVector;
+class LiveRangeCalc;
+class MachineBlockFrequencyInfo;
+class MachineDominatorTree;
+class MachineFunction;
+class MachineInstr;
+class MachineRegisterInfo;
+class raw_ostream;
+class TargetInstrInfo;
+class VirtRegMap;
 
   class LiveIntervals : public MachineFunctionPass {
     MachineFunction* MF;
@@ -56,8 +59,8 @@ extern cl::opt<bool> UseSegmentSetForPhysRegs;
     const TargetInstrInfo* TII;
     AliasAnalysis *AA;
     SlotIndexes* Indexes;
-    MachineDominatorTree *DomTree;
-    LiveRangeCalc *LRCalc;
+    MachineDominatorTree *DomTree = nullptr;
+    LiveRangeCalc *LRCalc = nullptr;
 
     /// Special pool allocator for VNInfo's (LiveInterval val#).
     VNInfo::Allocator VNInfoAllocator;
@@ -95,6 +98,7 @@ extern cl::opt<bool> UseSegmentSetForPhysRegs;
 
   public:
     static char ID;
+
     LiveIntervals();
     ~LiveIntervals() override;
 
@@ -466,6 +470,7 @@ extern cl::opt<bool> UseSegmentSetForPhysRegs;
 
     class HMEditor;
   };
-} // End llvm namespace
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_CODEGEN_LIVEINTERVALANALYSIS_H
