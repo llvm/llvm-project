@@ -651,6 +651,9 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
           break;
         }
       }
+      // "i", "if", and "il" are user-defined suffixes in C++1y.
+      if (*s == 'i' && PP.getLangOpts().CPlusPlus14)
+        break;
       // fall through.
     case 'j':
     case 'J':
@@ -662,34 +665,35 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
     break;
   }
 
-  // "i", "if", and "il" are user-defined suffixes in C++1y.
-  if (s != ThisTokEnd || isImaginary) {
+  if (s != ThisTokEnd) {
     // FIXME: Don't bother expanding UCNs if !tok.hasUCN().
     expandUCNs(UDSuffixBuf, StringRef(SuffixBegin, ThisTokEnd - SuffixBegin));
     if (isValidUDSuffix(PP.getLangOpts(), UDSuffixBuf)) {
-      if (!isImaginary) {
-        // Any suffix pieces we might have parsed are actually part of the
-        // ud-suffix.
-        isLong = false;
-        isUnsigned = false;
-        isLongLong = false;
-        isFloat = false;
-        isHalf = false;
-        isImaginary = false;
-        MicrosoftInteger = 0;
-      }
+      // Any suffix pieces we might have parsed are actually part of the
+      // ud-suffix.
+      isLong = false;
+      isUnsigned = false;
+      isLongLong = false;
+      isFloat = false;
+      isHalf = false;
+      isImaginary = false;
+      MicrosoftInteger = 0;
 
       saw_ud_suffix = true;
       return;
     }
 
-    if (s != ThisTokEnd) {
-      // Report an error if there are any.
-      PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, SuffixBegin - ThisTokBegin),
-              diag::err_invalid_suffix_constant)
-          << StringRef(SuffixBegin, ThisTokEnd - SuffixBegin) << isFPConstant;
-      hadError = true;
-    }
+    // Report an error if there are any.
+    PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, SuffixBegin - ThisTokBegin),
+            diag::err_invalid_suffix_constant)
+      << StringRef(SuffixBegin, ThisTokEnd-SuffixBegin) << isFPConstant;
+    hadError = true;
+    return;
+  }
+
+  if (isImaginary) {
+    PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, SuffixBegin - ThisTokBegin),
+            diag::ext_imaginary_constant);
   }
 }
 

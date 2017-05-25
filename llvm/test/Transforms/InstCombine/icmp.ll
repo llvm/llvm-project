@@ -2895,3 +2895,26 @@ define i1 @cmp_ult_rhs_dec(float %x, i32 %y) {
   %cmp = icmp ult i32 %conv, %dec
   ret i1 %cmp
 }
+
+define i1 @eq_add_constants(i32 %x, i32 %y) {
+; CHECK-LABEL: @eq_add_constants(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 %x, %y
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = add i32 %x, 5
+  %B = add i32 %y, 5
+  %C = icmp eq i32 %A, %B
+  ret i1 %C
+}
+
+define i1 @eq_mul_constants(i32 %x, i32 %y) {
+; CHECK-LABEL: @eq_mul_constants(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 %x, %y
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = mul i32 %x, 5
+  %B = mul i32 %y, 5
+  %C = icmp eq i32 %A, %B
+  ret i1 %C
+}
+

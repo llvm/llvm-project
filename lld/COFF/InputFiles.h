@@ -10,6 +10,7 @@
 #ifndef LLD_COFF_INPUT_FILES_H
 #define LLD_COFF_INPUT_FILES_H
 
+#include "Config.h"
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
@@ -161,7 +162,9 @@ private:
 // for details about the format.
 class ImportFile : public InputFile {
 public:
-  explicit ImportFile(MemoryBufferRef M) : InputFile(ImportKind, M) {}
+  explicit ImportFile(MemoryBufferRef M)
+      : InputFile(ImportKind, M), Live(!Config->DoGC) {}
+
   static bool classof(const InputFile *F) { return F->kind() == ImportKind; }
 
   DefinedImportData *ImpSym = nullptr;
@@ -176,6 +179,14 @@ public:
   StringRef ExternalName;
   const coff_import_header *Hdr;
   Chunk *Location = nullptr;
+
+  // We want to eliminate dllimported symbols if no one actually refers them.
+  // This "Live" bit is used to keep track of which import library members
+  // are actually in use.
+  //
+  // If the Live bit is turned off by MarkLive, Writer will ignore dllimported
+  // symbols provided by this import library member.
+  bool Live;
 };
 
 // Used for LTO.
