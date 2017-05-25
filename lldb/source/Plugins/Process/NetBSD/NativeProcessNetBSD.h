@@ -115,6 +115,8 @@ private:
   // ---------------------------------------------------------------------
   NativeProcessNetBSD();
 
+  bool HasThreadNoLock(lldb::tid_t thread_id);
+
   NativeThreadNetBSDSP AddThread(lldb::tid_t thread_id);
 
   Status LaunchInferior(MainLoop &mainloop, ProcessLaunchInfo &launch_info);

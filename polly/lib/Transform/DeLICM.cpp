@@ -180,6 +180,11 @@ cl::opt<bool> DelicmOverapproximateWrites(
         "Do more PHI writes than necessary in order to avoid partial accesses"),
     cl::init(false), cl::Hidden, cl::cat(PollyCategory));
 
+cl::opt<bool> DelicmPartialWrites("polly-delicm-partial-writes",
+                                  cl::desc("Allow partial writes"),
+                                  cl::init(false), cl::Hidden,
+                                  cl::cat(PollyCategory));
+
 cl::opt<bool>
     DelicmComputeKnown("polly-delicm-compute-known",
                        cl::desc("Compute known content of array elements"),
@@ -1793,7 +1798,8 @@ private:
       WritesTarget = expandMapping(WritesTarget, UniverseWritesDom);
 
     auto ExpandedWritesDom = give(isl_union_map_domain(WritesTarget.copy()));
-    if (!isl_union_set_is_subset(UniverseWritesDom.keep(),
+    if (!DelicmPartialWrites &&
+        !isl_union_set_is_subset(UniverseWritesDom.keep(),
                                  ExpandedWritesDom.keep())) {
       DEBUG(dbgs() << "    Reject because did not find PHI write mapping for "
                       "all instances\n");

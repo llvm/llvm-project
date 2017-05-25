@@ -56,7 +56,6 @@ private:
 
   std::vector<SectionChunk *> Chunks;
   int Cnt = 0;
-  std::atomic<uint32_t> NextId = {1};
   std::atomic<bool> Repeat = {false};
 };
 
@@ -98,10 +97,10 @@ void ICF::segregate(size_t Begin, size_t End, bool Constant) {
         });
     size_t Mid = Bound - Chunks.begin();
 
-    // Split [Begin, End) into [Begin, Mid) and [Mid, End).
-    uint32_t Id = NextId++;
+    // Split [Begin, End) into [Begin, Mid) and [Mid, End). We use Mid as an
+    // equivalence class ID because every group ends with a unique index.
     for (size_t I = Begin; I < Mid; ++I)
-      Chunks[I]->Class[(Cnt + 1) % 2] = Id;
+      Chunks[I]->Class[(Cnt + 1) % 2] = Mid;
 
     // If we created a group, we need to iterate the main loop again.
     if (Mid != End)
@@ -186,6 +185,7 @@ void ICF::forEachClass(std::function<void(size_t, size_t)> Fn) {
   // call Fn sequentially.
   if (Chunks.size() < 1024) {
     forEachClassRange(0, Chunks.size(), Fn);
+    ++Cnt;
     return;
   }
 
@@ -193,9 +193,10 @@ void ICF::forEachClass(std::function<void(size_t, size_t)> Fn) {
   size_t NumShards = 256;
   size_t Step = Chunks.size() / NumShards;
   for_each_n(parallel::par, size_t(0), NumShards, [&](size_t I) {
-    forEachClassRange(I * Step, (I + 1) * Step, Fn);
+    size_t End = (I == NumShards - 1) ? Chunks.size() : (I + 1) * Step;
+    forEachClassRange(I * Step, End, Fn);
   });
-  forEachClassRange(Step * NumShards, Chunks.size(), Fn);
+  ++Cnt;
 }
 
 // Merge identical COMDAT sections.
@@ -203,22 +204,20 @@ void ICF::forEachClass(std::function<void(size_t, size_t)> Fn) {
 // contents and relocations are all the same.
 void ICF::run(const std::vector<Chunk *> &Vec) {
   // Collect only mergeable sections and group by hash value.
+  uint32_t NextId = 1;
   for (Chunk *C : Vec) {
-    auto *SC = dyn_cast<SectionChunk>(C);
-    if (!SC)
-      continue;
-
-    if (isEligible(SC)) {
-      // Set MSB to 1 to avoid collisions with non-hash classs.
-      SC->Class[0] = getHash(SC) | (1 << 31);
-      Chunks.push_back(SC);
-    } else {
-      SC->Class[0] = NextId++;
+    if (auto *SC = dyn_cast<SectionChunk>(C)) {
+      if (isEligible(SC))
+        Chunks.push_back(SC);
+      else
+        SC->Class[0] = NextId++;
     }
   }
 
-  if (Chunks.empty())
-    return;
+  // Initially, we use hash values to partition sections.
+  for (SectionChunk *SC : Chunks)
+    // Set MSB to 1 to avoid collisions with non-hash classs.
+    SC->Class[0] = getHash(SC) | (1 << 31);
 
   // From now on, sections in Chunks are ordered so that sections in
   // the same group are consecutive in the vector.
@@ -229,14 +228,12 @@ void ICF::run(const std::vector<Chunk *> &Vec) {
 
   // Compare static contents and assign unique IDs for each static content.
   forEachClass([&](size_t Begin, size_t End) { segregate(Begin, End, true); });
-  ++Cnt;
 
   // Split groups by comparing relocations until convergence is obtained.
   do {
     Repeat = false;
     forEachClass(
         [&](size_t Begin, size_t End) { segregate(Begin, End, false); });
-    ++Cnt;
   } while (Repeat);
 
   log("ICF needed " + Twine(Cnt) + " iterations");

@@ -17,7 +17,6 @@
 
 #include "lld/Core/LLVM.h"
 #include "lld/Core/Reproduce.h"
-#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Comdat.h"
@@ -157,7 +156,7 @@ public:
   ArrayRef<SymbolBody *> getLocalSymbols();
 
   ObjectFile(MemoryBufferRef M, StringRef ArchiveName);
-  void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
+  void parse(llvm::DenseSet<StringRef> &ComdatGroups);
 
   InputSectionBase *getSection(const Elf_Sym &Sym) const;
 
@@ -189,8 +188,7 @@ public:
   StringRef SourceFile;
 
 private:
-  void
-  initializeSections(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
+  void initializeSections(llvm::DenseSet<StringRef> &ComdatGroups);
   void initializeSymbols();
   void initializeDwarfLine();
   InputSectionBase *getRelocTarget(const Elf_Shdr &Sec);
@@ -265,8 +263,7 @@ public:
   BitcodeFile(MemoryBufferRef M, StringRef ArchiveName,
               uint64_t OffsetInArchive);
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
-  template <class ELFT>
-  void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
+  template <class ELFT> void parse(llvm::DenseSet<StringRef> &ComdatGroups);
   ArrayRef<Symbol *> getSymbols() { return Symbols; }
   std::unique_ptr<llvm::lto::InputFile> Obj;
 

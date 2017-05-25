@@ -4823,47 +4823,6 @@ GetExpressionTimeout(const EvaluateExpressionOptions &options,
     return *options.GetTimeout() - GetOneThreadExpressionTimeout(options);
 }
 
-static llvm::Optional<ExpressionResults>
-HandleStoppedEvent(Thread &thread, const ThreadPlanSP &thread_plan_sp,
-                   RestorePlanState &restorer, const EventSP &event_sp,
-                   EventSP &event_to_broadcast_sp,
-                   const EvaluateExpressionOptions &options, bool handle_interrupts) {
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STEP | LIBLLDB_LOG_PROCESS);
-
-  ThreadPlanSP plan = thread.GetCompletedPlan();
-  if (plan == thread_plan_sp && plan->PlanSucceeded()) {
-    LLDB_LOG(log, "execution completed successfully");
-
-    // Restore the plan state so it will get reported as intended when we are
-    // done.
-    restorer.Clean();
-    return eExpressionCompleted;
-  }
-
-  StopInfoSP stop_info_sp = thread.GetStopInfo();
-  if (stop_info_sp && stop_info_sp->GetStopReason() == eStopReasonBreakpoint) {
-    LLDB_LOG(log, "stopped for breakpoint: {0}.", stop_info_sp->GetDescription());
-    if (!options.DoesIgnoreBreakpoints()) {
-      // Restore the plan state and then force Private to false.  We are going
-      // to stop because of this plan so we need it to become a public plan or
-      // it won't report correctly when we continue to its termination later on.
-      restorer.Clean();
-      thread_plan_sp->SetPrivate(false);
-      event_to_broadcast_sp = event_sp;
-    }
-    return eExpressionHitBreakpoint;
-  }
-
-  if (!handle_interrupts &&
-      Process::ProcessEventData::GetInterruptedFromEvent(event_sp.get()))
-    return llvm::None;
-
-  LLDB_LOG(log, "thread plan did not successfully complete");
-  if (!options.DoesUnwindOnError())
-    event_to_broadcast_sp = event_sp;
-  return eExpressionInterrupted;
-}
-
 ExpressionResults
 Process::RunThreadPlan(ExecutionContext &exe_ctx,
                        lldb::ThreadPlanSP &thread_plan_sp,
@@ -5269,22 +5228,65 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                               "but our thread (index-id=%u) has vanished.",
                               thread_idx_id);
                 return_value = eExpressionInterrupted;
-              } else if (Process::ProcessEventData::GetRestartedFromEvent(
-                             event_sp.get())) {
+              } else {
                 // If we were restarted, we just need to go back up to fetch
                 // another event.
-                if (log) {
-                  log->Printf("Process::RunThreadPlan(): Got a stop and "
-                              "restart, so we'll continue waiting.");
+                if (Process::ProcessEventData::GetRestartedFromEvent(
+                        event_sp.get())) {
+                  if (log) {
+                    log->Printf("Process::RunThreadPlan(): Got a stop and "
+                                "restart, so we'll continue waiting.");
+                  }
+                  keep_going = true;
+                  do_resume = false;
+                  handle_running_event = true;
+                } else {
+                  ThreadPlanSP plan = thread->GetCompletedPlan();
+                  if (plan == thread_plan_sp && plan->PlanSucceeded()) {
+
+                    if (log)
+                      log->PutCString("Process::RunThreadPlan(): execution "
+                                      "completed successfully.");
+
+                    // Restore the plan state so it will get reported as
+                    // intended when we are done.
+                    thread_plan_restorer.Clean();
+
+                    return_value = eExpressionCompleted;
+                  } else {
+                    StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
+                    // Something restarted the target, so just wait for it to
+                    // stop for real.
+                    if (stop_info_sp &&
+                        stop_info_sp->GetStopReason() == eStopReasonBreakpoint) {
+                      if (log)
+                        log->Printf("Process::RunThreadPlan() stopped for "
+                                    "breakpoint: %s.",
+                                    stop_info_sp->GetDescription());
+                      return_value = eExpressionHitBreakpoint;
+                      if (!options.DoesIgnoreBreakpoints()) {
+                        // Restore the plan state and then force Private to
+                        // false.  We are
+                        // going to stop because of this plan so we need it to
+                        // become a public
+                        // plan or it won't report correctly when we continue to
+                        // its termination
+                        // later on.
+                        thread_plan_restorer.Clean();
+                        if (thread_plan_sp)
+                          thread_plan_sp->SetPrivate(false);
+                        event_to_broadcast_sp = event_sp;
+                      }
+                    } else {
+                      if (log)
+                        log->PutCString("Process::RunThreadPlan(): thread plan "
+                                        "didn't successfully complete.");
+                      if (!options.DoesUnwindOnError())
+                        event_to_broadcast_sp = event_sp;
+                      return_value = eExpressionInterrupted;
+                    }
+                  }
                 }
-                keep_going = true;
-                do_resume = false;
-                handle_running_event = true;
-              } else {
-                const bool handle_interrupts = true;
-                return_value = *HandleStoppedEvent(
-                    *thread, thread_plan_sp, thread_plan_restorer, event_sp,
-                    event_to_broadcast_sp, options, handle_interrupts);
               }
             } break;
 
@@ -5390,6 +5392,20 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
               }
 
               if (stop_state == lldb::eStateStopped) {
+                // Between the time we initiated the Halt and the time we
+                // delivered it, the process could have
+                // already finished its job.  Check that here:
+
+                if (thread->IsThreadPlanDone(thread_plan_sp.get())) {
+                  if (log)
+                    log->PutCString("Process::RunThreadPlan(): Even though we "
+                                    "timed out, the call plan was done.  "
+                                    "Exiting wait loop.");
+                  return_value = eExpressionCompleted;
+                  back_to_top = false;
+                  break;
+                }
+
                 if (Process::ProcessEventData::GetRestartedFromEvent(
                         event_sp.get())) {
                   if (log)
@@ -5401,18 +5417,6 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                   try_halt_again++;
                   do_halt = false;
                   continue;
-                }
-
-                // Between the time we initiated the Halt and the time we
-                // delivered it, the process could have
-                // already finished its job.  Check that here:
-                const bool handle_interrupts = false;
-                if (auto result = HandleStoppedEvent(
-                        *thread, thread_plan_sp, thread_plan_restorer, event_sp,
-                        event_to_broadcast_sp, options, handle_interrupts)) {
-                  return_value = *result;
-                  back_to_top = false;
-                  break;
                 }
 
                 if (!options.GetTryAllThreads()) {
