@@ -709,7 +709,7 @@ class MipsRldMapSection : public SyntheticSection {
 public:
   MipsRldMapSection();
   size_t getSize() const override { return Config->Wordsize; }
-  void writeTo(uint8_t *Buf) override;
+  void writeTo(uint8_t *Buf) override {}
 };
 
 class ARMExidxSentinelSection : public SyntheticSection {

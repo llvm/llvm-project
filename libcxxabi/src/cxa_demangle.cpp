@@ -15,7 +15,6 @@
 #include <algorithm>
 #include <string>
 #include <numeric>
-#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <cctype>
@@ -3034,8 +3033,7 @@ parse_unnamed_type_name(const char* first, const char* last, C& db)
                     long k1 = static_cast<long>(db.names.size());
                     if (t1 == t0)
                         break;
-                    assert(k0 <= k1 && "parse_type() mutated the name stack");
-                    if (k1 == k0)
+                    if (k0 >= k1)
                         return first;
                     // If the call to parse_type above found a pack expansion
                     // substitution, then multiple names could have been

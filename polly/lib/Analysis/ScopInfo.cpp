@@ -98,7 +98,7 @@ static cl::opt<int>
     OptComputeOut("polly-analysis-computeout",
                   cl::desc("Bound the scop analysis by a maximal amount of "
                            "computational steps (0 means no bound)"),
-                  cl::Hidden, cl::init(1000000), cl::ZeroOrMore,
+                  cl::Hidden, cl::init(600000), cl::ZeroOrMore,
                   cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyRemarksMinimal(

@@ -3066,7 +3066,7 @@ Sema::LiteralOperatorLookupResult
 Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
                             ArrayRef<QualType> ArgTys,
                             bool AllowRaw, bool AllowTemplate,
-                            bool AllowStringTemplate, bool DiagnoseMissing) {
+                            bool AllowStringTemplate) {
   LookupName(R, S);
   assert(R.getResultKind() != LookupResult::Ambiguous &&
          "literal operator lookup can't be ambiguous");
@@ -3167,15 +3167,11 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
     return LOLR_StringTemplate;
 
   // Didn't find anything we could use.
-  if (DiagnoseMissing) {
-    Diag(R.getNameLoc(), diag::err_ovl_no_viable_literal_operator)
-        << R.getLookupName() << (int)ArgTys.size() << ArgTys[0]
-        << (ArgTys.size() == 2 ? ArgTys[1] : QualType()) << AllowRaw
-        << (AllowTemplate || AllowStringTemplate);
-    return LOLR_Error;
-  }
-
-  return LOLR_ErrorNoDiagnostic;
+  Diag(R.getNameLoc(), diag::err_ovl_no_viable_literal_operator)
+    << R.getLookupName() << (int)ArgTys.size() << ArgTys[0]
+    << (ArgTys.size() == 2 ? ArgTys[1] : QualType()) << AllowRaw
+    << (AllowTemplate || AllowStringTemplate);
+  return LOLR_Error;
 }
 
 void ADLResult::insert(NamedDecl *New) {

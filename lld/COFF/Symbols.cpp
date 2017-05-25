@@ -72,7 +72,7 @@ static Chunk *makeImportThunk(DefinedImportData *S, uint16_t Machine) {
 
 DefinedImportThunk::DefinedImportThunk(StringRef Name, DefinedImportData *S,
                                        uint16_t Machine)
-    : Defined(DefinedImportThunkKind, Name),
+    : Defined(DefinedImportThunkKind, Name), WrappedSym(S),
       Data(makeImportThunk(S, Machine)) {}
 
 Defined *Undefined::getWeakAlias() {

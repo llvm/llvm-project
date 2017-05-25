@@ -719,13 +719,16 @@ static FunctionDecl *findDeleteForPromise(Sema &S, SourceLocation Loc,
 
 void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   FunctionScopeInfo *Fn = getCurFunction();
-  assert(Fn && Fn->CoroutinePromise && "not a coroutine");
-
+  assert(Fn && Fn->isCoroutine() && "not a coroutine");
   if (!Body) {
     assert(FD->isInvalidDecl() &&
            "a null body is only allowed for invalid declarations");
     return;
   }
+  // We have a function that uses coroutine keywords, but we failed to build
+  // the promise type.
+  if (!Fn->CoroutinePromise)
+    return FD->setInvalidDecl();
 
   if (isa<CoroutineBodyStmt>(Body)) {
     // Nothing todo. the body is already a transformed coroutine body statement.

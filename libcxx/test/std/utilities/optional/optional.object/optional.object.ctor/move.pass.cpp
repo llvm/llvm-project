@@ -41,6 +41,17 @@ void test(InitArgs&&... args)
         assert(*lhs == *orig);
 }
 
+template <class T, class ...InitArgs>
+constexpr bool constexpr_test(InitArgs&&... args)
+{
+    static_assert( std::is_trivially_copy_constructible_v<T>, ""); // requirement
+    const optional<T> orig(std::forward<InitArgs>(args)...);
+    optional<T> rhs(orig);
+    optional<T> lhs = std::move(rhs);
+    return (lhs.has_value() == orig.has_value()) &&
+           (lhs.has_value() ? *lhs == *orig : true);
+}
+
 void test_throwing_ctor() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     struct Z {
@@ -144,6 +155,9 @@ int main()
 {
     test<int>();
     test<int>(3);
+    static_assert(constexpr_test<int>(), "" );
+    static_assert(constexpr_test<int>(3), "" );
+	
     {
         optional<const int> o(42);
         optional<const int> o2(std::move(o));
