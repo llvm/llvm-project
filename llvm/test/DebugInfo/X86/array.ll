@@ -17,9 +17,9 @@
 ; rdar://problem/14874886
 ;
 ; CHECK-NOT: ##DEBUG_VALUE: main:array <- %R{{.*}}
-; CHECK: movq    %rsp, %rdi
+; CHECK: movq    %rsp, %r14
 ; CHECK-NOT: ##DEBUG_VALUE: main:array <- %R{{.*}}
-; CHECK:     ##DEBUG_VALUE: main:array <- [%RDI+0]
+; CHECK:     ##DEBUG_VALUE: main:array <- [%R14+0]
 ; CHECK-NOT: ##DEBUG_VALUE: main:array <- %R{{.*}}
 ; ModuleID = '/tmp/array.c'
 source_filename = "/tmp/array.c"
@@ -36,7 +36,7 @@ entry:
   ret void, !dbg !22
 }
 
-; Function Attrs: nounwind readnone speculatable
+; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind ssp uwtable
@@ -65,16 +65,16 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture r
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
 
-; Function Attrs: nounwind readnone speculatable
+; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 attributes #0 = { nounwind ssp uwtable }
-attributes #1 = { nounwind readnone speculatable }
+attributes #1 = { nounwind readnone }
 attributes #2 = { argmemonly nounwind }
 attributes #3 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5, !6}
+!llvm.module.flags = !{!3, !4, !5}
 !llvm.ident = !{!7}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 5.0.0 (trunk 303873) (llvm/trunk 303875)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
@@ -83,7 +83,6 @@ attributes #3 = { nounwind }
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
-!6 = !{i32 7, !"PIC Level", i32 2}
 !7 = !{!"clang version 5.0.0 (trunk 303873) (llvm/trunk 303875)"}
 !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !13)
 !9 = !DISubroutineType(types: !10)
