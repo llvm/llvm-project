@@ -8649,6 +8649,41 @@ let Predicates = [HasCDI, NoVLX] in {
 }
 
 //===---------------------------------------------------------------------===//
+// Counts number of ones - VPOPCNTD and VPOPCNTQ
+//===---------------------------------------------------------------------===//
+
+multiclass avx512_unary_rmb_popcnt<bits<8> opc, string OpcodeStr, X86VectorVTInfo VTInfo> {
+  let Predicates = [HasVPOPCNTDQ] in
+    defm Z : avx512_unary_rmb<opc, OpcodeStr, ctpop, VTInfo>, EVEX_V512;
+}
+
+// Use 512bit version to implement 128/256 bit.
+multiclass avx512_unary_lowering<SDNode OpNode, AVX512VLVectorVTInfo _, Predicate prd> {
+  let Predicates = [prd] in {
+    def Z256_Alt : Pat<(_.info256.VT(OpNode _.info256.RC:$src1)),
+                       (EXTRACT_SUBREG
+                         (!cast<Instruction>(NAME # "Zrr")
+                           (INSERT_SUBREG(_.info512.VT(IMPLICIT_DEF)),
+                                          _.info256.RC:$src1,
+                                          _.info256.SubRegIdx)),
+                       _.info256.SubRegIdx)>;
+
+    def Z128_Alt : Pat<(_.info128.VT(OpNode _.info128.RC:$src1)),
+                       (EXTRACT_SUBREG
+                         (!cast<Instruction>(NAME # "Zrr")
+                           (INSERT_SUBREG(_.info512.VT(IMPLICIT_DEF)),
+                                          _.info128.RC:$src1,
+                                          _.info128.SubRegIdx)),
+                       _.info128.SubRegIdx)>;
+  }
+}
+
+defm VPOPCNTD : avx512_unary_rmb_popcnt<0x55, "vpopcntd", v16i32_info>,
+                avx512_unary_lowering<ctpop, avx512vl_i32_info, HasVPOPCNTDQ>;
+defm VPOPCNTQ : avx512_unary_rmb_popcnt<0x55, "vpopcntq", v8i64_info>,
+                avx512_unary_lowering<ctpop, avx512vl_i64_info, HasVPOPCNTDQ>, VEX_W;
+
+//===---------------------------------------------------------------------===//
 // Replicate Single FP - MOVSHDUP and MOVSLDUP
 //===---------------------------------------------------------------------===//
 multiclass avx512_replicate<bits<8> opc, string OpcodeStr, SDNode OpNode>{

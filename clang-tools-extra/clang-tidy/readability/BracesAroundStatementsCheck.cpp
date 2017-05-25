@@ -167,7 +167,7 @@ void BracesAroundStatementsCheck::check(
   }
 }
 
-/// Find location of right parenthesis closing condition
+/// Find location of right parenthesis closing condition.
 template <typename IfOrWhileStmt>
 SourceLocation
 BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,

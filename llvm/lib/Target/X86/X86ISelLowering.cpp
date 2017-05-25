@@ -1364,6 +1364,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::MUL,             MVT::v8i64, Legal);
     }
 
+    if (Subtarget.hasVPOPCNTDQ()) {
+      // VPOPCNTDQ sub-targets extend 128/256 vectors to use the avx512
+      // version of popcntd/q.
+      for (auto VT : {MVT::v16i32, MVT::v8i64, MVT::v8i32, MVT::v4i64,
+                      MVT::v4i32, MVT::v2i64})
+        setOperationAction(ISD::CTPOP, VT, Legal);
+    }
+
     // Custom lower several nodes.
     for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64,
                      MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64 }) {

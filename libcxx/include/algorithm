@@ -964,6 +964,7 @@ for_each(_InputIterator __first, _InputIterator __last, _Function __f)
     return __f;
 }
 
+#if _LIBCPP_STD_VER > 14
 // for_each_n
 
 template <class _InputIterator, class _Size, class _Function>
@@ -981,6 +982,7 @@ for_each_n(_InputIterator __first, _Size __orig_n, _Function __f)
     }
     return __first;
 }
+#endif
 
 // find
 
@@ -1758,7 +1760,7 @@ __unwrap_iter(_Iter __i)
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 typename enable_if
 <
     is_trivially_copy_assignable<_Tp>::value,
@@ -1772,7 +1774,7 @@ __unwrap_iter(move_iterator<_Tp*> __i)
 #if _LIBCPP_DEBUG_LEVEL < 2
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 typename enable_if
 <
     is_trivially_copy_assignable<_Tp>::value,
@@ -1786,7 +1788,7 @@ __unwrap_iter(__wrap_iter<_Tp*> __i)
 #else
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 typename enable_if
 <
     is_trivially_copy_assignable<_Tp>::value,

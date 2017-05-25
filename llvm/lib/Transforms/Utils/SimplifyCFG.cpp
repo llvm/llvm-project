@@ -1376,53 +1376,6 @@ HoistTerminator:
   return true;
 }
 
-// Is it legal to place a variable in operand \c OpIdx of \c I?
-// FIXME: This should be promoted to Instruction.
-static bool canReplaceOperandWithVariable(const Instruction *I,
-                                          unsigned OpIdx) {
-  // We can't have a PHI with a metadata type.
-  if (I->getOperand(OpIdx)->getType()->isMetadataTy())
-    return false;
-
-  // Early exit.
-  if (!isa<Constant>(I->getOperand(OpIdx)))
-    return true;
-
-  switch (I->getOpcode()) {
-  default:
-    return true;
-  case Instruction::Call:
-  case Instruction::Invoke:
-    // FIXME: many arithmetic intrinsics have no issue taking a
-    // variable, however it's hard to distingish these from
-    // specials such as @llvm.frameaddress that require a constant.
-    if (isa<IntrinsicInst>(I))
-      return false;
-
-    // Constant bundle operands may need to retain their constant-ness for
-    // correctness.
-    if (ImmutableCallSite(I).isBundleOperand(OpIdx))
-      return false;
-
-    return true;
-
-  case Instruction::ShuffleVector:
-    // Shufflevector masks are constant.
-    return OpIdx != 2;
-  case Instruction::ExtractValue:
-  case Instruction::InsertValue:
-    // All operands apart from the first are constant.
-    return OpIdx == 0;
-  case Instruction::Alloca:
-    return false;
-  case Instruction::GetElementPtr:
-    if (OpIdx == 0)
-      return true;
-    gep_type_iterator It = std::next(gep_type_begin(I), OpIdx - 1);
-    return It.isSequential();
-  }
-}
-
 // All instructions in Insts belong to different blocks that all unconditionally
 // branch to a common successor. Analyze each instruction and return true if it
 // would be possible to sink them into their successor, creating one common

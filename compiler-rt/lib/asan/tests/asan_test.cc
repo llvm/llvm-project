@@ -251,7 +251,8 @@ TEST(AddressSanitizer, BitFieldNegativeTest) {
 namespace {
 
 const char kSEGVCrash[] = "AddressSanitizer: SEGV on unknown address";
-const char kOverriddenHandler[] = "ASan signal handler has been overridden\n";
+const char kOverriddenSigactionHandler[] = "Test sigaction handler\n";
+const char kOverriddenSignalHandler[] = "Test signal handler\n";
 
 TEST(AddressSanitizer, WildAddressTest) {
   char *c = (char*)0x123;
@@ -259,12 +260,12 @@ TEST(AddressSanitizer, WildAddressTest) {
 }
 
 void my_sigaction_sighandler(int, siginfo_t*, void*) {
-  fprintf(stderr, kOverriddenHandler);
+  fprintf(stderr, kOverriddenSigactionHandler);
   exit(1);
 }
 
 void my_signal_sighandler(int signum) {
-  fprintf(stderr, kOverriddenHandler);
+  fprintf(stderr, kOverriddenSignalHandler);
   exit(1);
 }
 
@@ -273,16 +274,20 @@ TEST(AddressSanitizer, SignalTest) {
   memset(&sigact, 0, sizeof(sigact));
   sigact.sa_sigaction = my_sigaction_sighandler;
   sigact.sa_flags = SA_SIGINFO;
-  // ASan should silently ignore sigaction()...
+  char *c = (char *)0x123;
+
+  EXPECT_DEATH(*c = 0, kSEGVCrash);
+
+  // ASan should allow to set sigaction()...
   EXPECT_EQ(0, sigaction(SIGSEGV, &sigact, 0));
 #ifdef __APPLE__
   EXPECT_EQ(0, sigaction(SIGBUS, &sigact, 0));
 #endif
-  char *c = (char*)0x123;
-  EXPECT_DEATH(*c = 0, kSEGVCrash);
+  EXPECT_DEATH(*c = 0, kOverriddenSigactionHandler);
+
   // ... and signal().
-  EXPECT_EQ(0, signal(SIGSEGV, my_signal_sighandler));
-  EXPECT_DEATH(*c = 0, kSEGVCrash);
+  EXPECT_NE(SIG_ERR, signal(SIGSEGV, my_signal_sighandler));
+  EXPECT_DEATH(*c = 0, kOverriddenSignalHandler);
 }
 }  // namespace
 #endif

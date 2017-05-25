@@ -238,7 +238,12 @@ struct GVNHoistPass : PassInfoMixin<GVNHoistPass> {
   /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
-
+/// \brief Uses an "inverted" value numbering to decide the similarity of
+/// expressions and sinks similar expressions into successors.
+struct GVNSinkPass : PassInfoMixin<GVNSinkPass> {
+  /// \brief Run the pass over the function.
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 }
 
 #endif

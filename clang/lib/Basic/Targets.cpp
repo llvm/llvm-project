@@ -2624,6 +2624,7 @@ class X86TargetInfo : public TargetInfo {
   bool HasFMA = false;
   bool HasF16C = false;
   bool HasAVX512CD = false;
+  bool HasAVX512VPOPCNTDQ = false;
   bool HasAVX512ER = false;
   bool HasAVX512PF = false;
   bool HasAVX512DQ = false;
@@ -3504,9 +3505,9 @@ void X86TargetInfo::setSSELevel(llvm::StringMap<bool> &Features,
     LLVM_FALLTHROUGH;
   case AVX512F:
     Features["avx512f"] = Features["avx512cd"] = Features["avx512er"] =
-      Features["avx512pf"] = Features["avx512dq"] = Features["avx512bw"] =
-      Features["avx512vl"] = Features["avx512vbmi"] =
-      Features["avx512ifma"] = false;
+        Features["avx512pf"] = Features["avx512dq"] = Features["avx512bw"] =
+            Features["avx512vl"] = Features["avx512vbmi"] =
+                Features["avx512ifma"] = Features["avx512vpopcntdq"] = false;
   }
 }
 
@@ -3616,7 +3617,8 @@ void X86TargetInfo::setFeatureEnabledImpl(llvm::StringMap<bool> &Features,
     setSSELevel(Features, AVX512F, Enabled);
   } else if (Name == "avx512cd" || Name == "avx512er" || Name == "avx512pf" ||
              Name == "avx512dq" || Name == "avx512bw" || Name == "avx512vl" ||
-             Name == "avx512vbmi" || Name == "avx512ifma") {
+             Name == "avx512vbmi" || Name == "avx512ifma" ||
+             Name == "avx512vpopcntdq") {
     if (Enabled)
       setSSELevel(Features, AVX512F, Enabled);
     // Enable BWI instruction if VBMI is being enabled.
@@ -3700,6 +3702,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasF16C = true;
     } else if (Feature == "+avx512cd") {
       HasAVX512CD = true;
+    } else if (Feature == "+avx512vpopcntdq") {
+      HasAVX512VPOPCNTDQ = true;
     } else if (Feature == "+avx512er") {
       HasAVX512ER = true;
     } else if (Feature == "+avx512pf") {
@@ -4037,6 +4041,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasAVX512CD)
     Builder.defineMacro("__AVX512CD__");
+  if (HasAVX512VPOPCNTDQ)
+    Builder.defineMacro("__AVX512VPOPCNTDQ__");
   if (HasAVX512ER)
     Builder.defineMacro("__AVX512ER__");
   if (HasAVX512PF)
@@ -4168,6 +4174,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx2", SSELevel >= AVX2)
       .Case("avx512f", SSELevel >= AVX512F)
       .Case("avx512cd", HasAVX512CD)
+      .Case("avx512vpopcntdq", HasAVX512VPOPCNTDQ)
       .Case("avx512er", HasAVX512ER)
       .Case("avx512pf", HasAVX512PF)
       .Case("avx512dq", HasAVX512DQ)
@@ -4253,6 +4260,7 @@ bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
       .Case("avx512bw", true)
       .Case("avx512dq", true)
       .Case("avx512cd", true)
+      .Case("avx512vpopcntdq", true)
       .Case("avx512er", true)
       .Case("avx512pf", true)
       .Case("avx512vbmi", true)
