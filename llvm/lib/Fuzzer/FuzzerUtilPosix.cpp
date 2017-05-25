@@ -47,8 +47,21 @@ static void FileSizeExceedHandler(int, siginfo_t *, void *) {
 
 static void SetSigaction(int signum,
                          void (*callback)(int, siginfo_t *, void *)) {
-  struct sigaction sigact;
-  memset(&sigact, 0, sizeof(sigact));
+  struct sigaction sigact = {};
+  if (sigaction(signum, nullptr, &sigact)) {
+    Printf("libFuzzer: sigaction failed with %d\n", errno);
+    exit(1);
+  }
+  if (sigact.sa_flags & SA_SIGINFO) {
+    if (sigact.sa_sigaction)
+      return;
+  } else {
+    if (sigact.sa_handler != SIG_DFL && sigact.sa_handler != SIG_IGN &&
+        sigact.sa_handler != SIG_ERR)
+      return;
+  }
+
+  sigact = {};
   sigact.sa_sigaction = callback;
   if (sigaction(signum, &sigact, 0)) {
     Printf("libFuzzer: sigaction failed with %d\n", errno);

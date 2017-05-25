@@ -1,4 +1,4 @@
-//===-- LiveStackAnalysis.h - Live Stack Slot Analysis ----------*- C++ -*-===//
+//===- LiveStackAnalysis.h - Live Stack Slot Analysis -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,12 +18,15 @@
 
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/Support/Allocator.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Pass.h"
+#include <cassert>
 #include <map>
 #include <unordered_map>
 
 namespace llvm {
+
+class TargetRegisterClass;
+class TargetRegisterInfo;
 
 class LiveStacks : public MachineFunctionPass {
   const TargetRegisterInfo *TRI;
@@ -33,8 +36,7 @@ class LiveStacks : public MachineFunctionPass {
   VNInfo::Allocator VNInfoAllocator;
 
   /// S2IMap - Stack slot indices to live interval mapping.
-  ///
-  typedef std::unordered_map<int, LiveInterval> SS2IntervalMap;
+  using SS2IntervalMap = std::unordered_map<int, LiveInterval>;
   SS2IntervalMap S2IMap;
 
   /// S2RCMap - Stack slot indices to register class mapping.
@@ -42,12 +44,14 @@ class LiveStacks : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
+
   LiveStacks() : MachineFunctionPass(ID) {
     initializeLiveStacksPass(*PassRegistry::getPassRegistry());
   }
 
-  typedef SS2IntervalMap::iterator iterator;
-  typedef SS2IntervalMap::const_iterator const_iterator;
+  using iterator = SS2IntervalMap::iterator;
+  using const_iterator = SS2IntervalMap::const_iterator;
+
   const_iterator begin() const { return S2IMap.begin(); }
   const_iterator end() const { return S2IMap.end(); }
   iterator begin() { return S2IMap.begin(); }
@@ -93,6 +97,7 @@ public:
   /// print - Implement the dump method.
   void print(raw_ostream &O, const Module * = nullptr) const override;
 };
-}
 
-#endif /* LLVM_CODEGEN_LIVESTACK_ANALYSIS_H */
+} // end namespace llvm
+
+#endif // LLVM_CODEGEN_LIVESTACK_ANALYSIS_H

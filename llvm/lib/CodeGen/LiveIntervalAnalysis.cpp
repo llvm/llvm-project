@@ -1,4 +1,4 @@
-//===-- LiveIntervalAnalysis.cpp - Live Interval Analysis -----------------===//
+//===- LiveIntervalAnalysis.cpp - Live Interval Analysis ------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,28 +14,45 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "LiveRangeCalc.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
-#include "llvm/IR/Value.h"
+#include "llvm/MC/LaneBitmask.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
-#include <cmath>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <tuple>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
@@ -59,11 +76,13 @@ static bool EnablePrecomputePhysRegs = false;
 #endif // NDEBUG
 
 namespace llvm {
+
 cl::opt<bool> UseSegmentSetForPhysRegs(
     "use-segment-set-for-physregs", cl::Hidden, cl::init(true),
     cl::desc(
         "Use segment set for the computation of the live ranges of physregs."));
-}
+
+} // end namespace llvm
 
 void LiveIntervals::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
@@ -78,8 +97,7 @@ void LiveIntervals::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-LiveIntervals::LiveIntervals() : MachineFunctionPass(ID),
-  DomTree(nullptr), LRCalc(nullptr) {
+LiveIntervals::LiveIntervals() : MachineFunctionPass(ID) {
   initializeLiveIntervalsPass(*PassRegistry::getPassRegistry());
 }
 
@@ -168,11 +186,9 @@ LLVM_DUMP_METHOD void LiveIntervals::dumpInstrs() const {
 #endif
 
 LiveInterval* LiveIntervals::createInterval(unsigned reg) {
-  float Weight = TargetRegisterInfo::isPhysicalRegister(reg) ?
-                  llvm::huge_valf : 0.0F;
+  float Weight = TargetRegisterInfo::isPhysicalRegister(reg) ? huge_valf : 0.0F;
   return new LiveInterval(reg, Weight);
 }
-
 
 /// Compute the live interval of a virtual register, based on defs and uses.
 void LiveIntervals::computeVirtRegInterval(LiveInterval &LI) {
@@ -337,7 +353,7 @@ static void createSegmentsForValues(LiveRange &LR,
   }
 }
 
-typedef SmallVector<std::pair<SlotIndex, VNInfo*>, 16> ShrinkToUsesWorkList;
+using ShrinkToUsesWorkList = SmallVector<std::pair<SlotIndex, VNInfo*>, 16>;
 
 static void extendSegmentsToUses(LiveRange &LR, const SlotIndexes &Indexes,
                                  ShrinkToUsesWorkList &WorkList,
@@ -593,7 +609,7 @@ void LiveIntervals::pruneValue(LiveRange &LR, SlotIndex Kill,
   // Find all blocks that are reachable from KillMBB without leaving VNI's live
   // range. It is possible that KillMBB itself is reachable, so start a DFS
   // from each successor.
-  typedef df_iterator_default_set<MachineBasicBlock*,9> VisitedTy;
+  using VisitedTy = df_iterator_default_set<MachineBasicBlock*,9>;
   VisitedTy Visited;
   for (MachineBasicBlock *Succ : KillMBB->successors()) {
     for (df_ext_iterator<MachineBasicBlock*, VisitedTy>
@@ -822,7 +838,6 @@ LiveIntervals::addSegmentToEndOfBlock(unsigned reg, MachineInstr &startInst) {
   return S;
 }
 
-
 //===----------------------------------------------------------------------===//
 //                          Register mask functions
 //===----------------------------------------------------------------------===//
@@ -855,7 +870,7 @@ bool LiveIntervals::checkRegMaskInterference(LiveInterval &LI,
     return false;
 
   bool Found = false;
-  for (;;) {
+  while (true) {
     assert(*SlotI >= LiveI->start);
     // Loop over all slots overlapping this segment.
     while (*SlotI < LiveI->end) {

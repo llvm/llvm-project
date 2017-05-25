@@ -1596,9 +1596,8 @@ bool PPC::isSplatShuffleMask(ShuffleVectorSDNode *N, unsigned EltSize) {
   return true;
 }
 
-bool PPC::isXXINSERTWMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
-                          unsigned &InsertAtByte, bool &Swap, bool IsLE) {
   // Check that the mask is shuffling words
+static bool isWordShuffleMask(ShuffleVectorSDNode *N) {
   for (unsigned i = 0; i < 4; ++i) {
     unsigned B0 = N->getMaskElt(i*4);
     unsigned B1 = N->getMaskElt(i*4+1);
@@ -1609,6 +1608,14 @@ bool PPC::isXXINSERTWMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
     if (B1 != B0+1 || B2 != B1+1 || B3 != B2+1)
       return false;
   }
+
+  return true;
+}
+
+bool PPC::isXXINSERTWMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
+                          unsigned &InsertAtByte, bool &Swap, bool IsLE) {
+  if (!isWordShuffleMask(N))
+    return false;
 
   // Now we look at mask elements 0,4,8,12
   unsigned M0 = N->getMaskElt(0) / 4;
@@ -1679,6 +1686,69 @@ bool PPC::isXXINSERTWMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
 
   return false;
 }
+
+bool PPC::isXXSLDWIShuffleMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
+                               bool &Swap, bool IsLE) {
+  assert(N->getValueType(0) == MVT::v16i8 && "Shuffle vector expects v16i8");
+  // Ensure each byte index of the word is consecutive.
+  if (!isWordShuffleMask(N))
+    return false;
+
+  // Now we look at mask elements 0,4,8,12, which are the beginning of words.
+  unsigned M0 = N->getMaskElt(0) / 4;
+  unsigned M1 = N->getMaskElt(4) / 4;
+  unsigned M2 = N->getMaskElt(8) / 4;
+  unsigned M3 = N->getMaskElt(12) / 4;
+
+  // If both vector operands for the shuffle are the same vector, the mask will
+  // contain only elements from the first one and the second one will be undef.
+  if (N->getOperand(1).isUndef()) {
+    assert(M0 < 4 && "Indexing into an undef vector?");
+    if (M1 != (M0 + 1) % 4 || M2 != (M1 + 1) % 4 || M3 != (M2 + 1) % 4)
+      return false;
+
+    ShiftElts = IsLE ? (4 - M0) % 4 : M0;
+    Swap = false;
+    return true;
+  }
+
+  // Ensure each word index of the ShuffleVector Mask is consecutive.
+  if (M1 != (M0 + 1) % 8 || M2 != (M1 + 1) % 8 || M3 != (M2 + 1) % 8)
+    return false;
+
+  if (IsLE) {
+    if (M0 == 0 || M0 == 7 || M0 == 6 || M0 == 5) {
+      // Input vectors don't need to be swapped if the leading element
+      // of the result is one of the 3 left elements of the second vector
+      // (or if there is no shift to be done at all).
+      Swap = false;
+      ShiftElts = (8 - M0) % 8;
+    } else if (M0 == 4 || M0 == 3 || M0 == 2 || M0 == 1) {
+      // Input vectors need to be swapped if the leading element
+      // of the result is one of the 3 left elements of the first vector
+      // (or if we're shifting by 4 - thereby simply swapping the vectors).
+      Swap = true;
+      ShiftElts = (4 - M0) % 4;
+    }
+
+    return true;
+  } else {                                          // BE
+    if (M0 == 0 || M0 == 1 || M0 == 2 || M0 == 3) {
+      // Input vectors don't need to be swapped if the leading element
+      // of the result is one of the 4 elements of the first vector.
+      Swap = false;
+      ShiftElts = M0;
+    } else if (M0 == 4 || M0 == 5 || M0 == 6 || M0 == 7) {
+      // Input vectors need to be swapped if the leading element
+      // of the result is one of the 4 elements of the right vector.
+      Swap = true;
+      ShiftElts = M0 - 4;
+    }
+
+    return true;
+  }
+}
+
 
 /// getVSPLTImmediate - Return the appropriate VSPLT* immediate to splat the
 /// specified isSplatShuffleMask VECTOR_SHUFFLE mask.
@@ -7677,6 +7747,20 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     SDValue Ins = DAG.getNode(PPCISD::XXINSERT, dl, MVT::v4i32, Conv1, Conv2,
                               DAG.getConstant(InsertAtByte, dl, MVT::i32));
     return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Ins);
+  }
+
+
+  if (Subtarget.hasVSX() &&
+      PPC::isXXSLDWIShuffleMask(SVOp, ShiftElts, Swap, isLittleEndian)) {
+    if (Swap)
+      std::swap(V1, V2);
+    SDValue Conv1 = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, V1);
+    SDValue Conv2 =
+        DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, V2.isUndef() ? V1 : V2);
+
+    SDValue Shl = DAG.getNode(PPCISD::VECSHL, dl, MVT::v4i32, Conv1, Conv2,
+                              DAG.getConstant(ShiftElts, dl, MVT::i32));
+    return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Shl);
   }
 
   if (Subtarget.hasVSX()) {

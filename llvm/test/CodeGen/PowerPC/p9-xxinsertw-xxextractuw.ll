@@ -6,7 +6,7 @@
 define <4 x float> @_Z7testInsILj0ELj0EDv4_fET1_S1_S1_(<4 x float> %a, <4 x float> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj0ELj0EDv4_fET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 12
 ; CHECK-BE-LABEL: _Z7testInsILj0ELj0EDv4_fET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -45,7 +45,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 12
 ; CHECK-BE-LABEL: _Z7testInsILj0ELj3EDv4_fET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 0
   %vecins = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 7, i32 1, i32 2, i32 3>
   ret <4 x float> %vecins
@@ -54,7 +54,7 @@ entry:
 define <4 x float> @_Z7testInsILj1ELj0EDv4_fET1_S1_S1_(<4 x float> %a, <4 x float> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj1ELj0EDv4_fET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 8
 ; CHECK-BE-LABEL: _Z7testInsILj1ELj0EDv4_fET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -93,7 +93,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 8
 ; CHECK-BE-LABEL: _Z7testInsILj1ELj3EDv4_fET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 4
   %vecins = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 7, i32 2, i32 3>
   ret <4 x float> %vecins
@@ -102,7 +102,7 @@ entry:
 define <4 x float> @_Z7testInsILj2ELj0EDv4_fET1_S1_S1_(<4 x float> %a, <4 x float> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj2ELj0EDv4_fET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 4
 ; CHECK-BE-LABEL: _Z7testInsILj2ELj0EDv4_fET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -141,7 +141,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 4
 ; CHECK-BE-LABEL: _Z7testInsILj2ELj3EDv4_fET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 8
   %vecins = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 1, i32 7, i32 3>
   ret <4 x float> %vecins
@@ -150,7 +150,7 @@ entry:
 define <4 x float> @_Z7testInsILj3ELj0EDv4_fET1_S1_S1_(<4 x float> %a, <4 x float> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj3ELj0EDv4_fET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 0
 ; CHECK-BE-LABEL: _Z7testInsILj3ELj0EDv4_fET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -189,7 +189,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 0
 ; CHECK-BE-LABEL: _Z7testInsILj3ELj3EDv4_fET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 12
   %vecins = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
   ret <4 x float> %vecins
@@ -198,7 +198,7 @@ entry:
 define <4 x i32> @_Z7testInsILj0ELj0EDv4_jET1_S1_S1_(<4 x i32> %a, <4 x i32> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj0ELj0EDv4_jET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 12
 ; CHECK-BE-LABEL: _Z7testInsILj0ELj0EDv4_jET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -237,7 +237,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 12
 ; CHECK-BE-LABEL: _Z7testInsILj0ELj3EDv4_jET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 0
   %vecins = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 7, i32 1, i32 2, i32 3>
   ret <4 x i32> %vecins
@@ -246,7 +246,7 @@ entry:
 define <4 x i32> @_Z7testInsILj1ELj0EDv4_jET1_S1_S1_(<4 x i32> %a, <4 x i32> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj1ELj0EDv4_jET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 8
 ; CHECK-BE-LABEL: _Z7testInsILj1ELj0EDv4_jET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -285,7 +285,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 8
 ; CHECK-BE-LABEL: _Z7testInsILj1ELj3EDv4_jET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 4
   %vecins = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 7, i32 2, i32 3>
   ret <4 x i32> %vecins
@@ -294,7 +294,7 @@ entry:
 define <4 x i32> @_Z7testInsILj2ELj0EDv4_jET1_S1_S1_(<4 x i32> %a, <4 x i32> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj2ELj0EDv4_jET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 4
 ; CHECK-BE-LABEL: _Z7testInsILj2ELj0EDv4_jET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -333,7 +333,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 4
 ; CHECK-BE-LABEL: _Z7testInsILj2ELj3EDv4_jET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 8
   %vecins = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 1, i32 7, i32 3>
   ret <4 x i32> %vecins
@@ -342,7 +342,7 @@ entry:
 define <4 x i32> @_Z7testInsILj3ELj0EDv4_jET1_S1_S1_(<4 x i32> %a, <4 x i32> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj3ELj0EDv4_jET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 0
 ; CHECK-BE-LABEL: _Z7testInsILj3ELj0EDv4_jET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -381,7 +381,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 0
 ; CHECK-BE-LABEL: _Z7testInsILj3ELj3EDv4_jET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 12
   %vecins = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
   ret <4 x i32> %vecins
@@ -546,7 +546,7 @@ entry:
 define <4 x float> @_Z7testInsILj0ELj0EDv4_fET1_S1_S1_r(<4 x float> %a, <4 x float> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj0ELj0EDv4_fET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 12
 ; CHECK-BE-LABEL: _Z7testInsILj0ELj0EDv4_fET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -585,7 +585,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 12
 ; CHECK-BE-LABEL: _Z7testInsILj0ELj3EDv4_fET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 0
   %vecins = shufflevector <4 x float> %b, <4 x float> %a, <4 x i32> <i32 3, i32 5, i32 6, i32 7>
   ret <4 x float> %vecins
@@ -594,7 +594,7 @@ entry:
 define <4 x float> @_Z7testInsILj1ELj0EDv4_fET1_S1_S1_r(<4 x float> %a, <4 x float> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj1ELj0EDv4_fET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 8
 ; CHECK-BE-LABEL: _Z7testInsILj1ELj0EDv4_fET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -633,7 +633,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 8
 ; CHECK-BE-LABEL: _Z7testInsILj1ELj3EDv4_fET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 4
   %vecins = shufflevector <4 x float> %b, <4 x float> %a, <4 x i32> <i32 4, i32 3, i32 6, i32 7>
   ret <4 x float> %vecins
@@ -642,7 +642,7 @@ entry:
 define <4 x float> @_Z7testInsILj2ELj0EDv4_fET1_S1_S1_r(<4 x float> %a, <4 x float> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj2ELj0EDv4_fET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 4
 ; CHECK-BE-LABEL: _Z7testInsILj2ELj0EDv4_fET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -681,7 +681,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 4
 ; CHECK-BE-LABEL: _Z7testInsILj2ELj3EDv4_fET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 8
   %vecins = shufflevector <4 x float> %b, <4 x float> %a, <4 x i32> <i32 4, i32 5, i32 3, i32 7>
   ret <4 x float> %vecins
@@ -690,7 +690,7 @@ entry:
 define <4 x float> @_Z7testInsILj3ELj0EDv4_fET1_S1_S1_r(<4 x float> %a, <4 x float> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj3ELj0EDv4_fET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 0
 ; CHECK-BE-LABEL: _Z7testInsILj3ELj0EDv4_fET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -729,7 +729,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 0
 ; CHECK-BE-LABEL: _Z7testInsILj3ELj3EDv4_fET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 12
   %vecins = shufflevector <4 x float> %b, <4 x float> %a, <4 x i32> <i32 4, i32 5, i32 6, i32 3>
   ret <4 x float> %vecins
@@ -738,7 +738,7 @@ entry:
 define <4 x i32> @_Z7testInsILj0ELj0EDv4_jET1_S1_S1_r(<4 x i32> %a, <4 x i32> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj0ELj0EDv4_jET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 12
 ; CHECK-BE-LABEL: _Z7testInsILj0ELj0EDv4_jET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -777,7 +777,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 12
 ; CHECK-BE-LABEL: _Z7testInsILj0ELj3EDv4_jET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 0
   %vecins = shufflevector <4 x i32> %b, <4 x i32> %a, <4 x i32> <i32 3, i32 5, i32 6, i32 7>
   ret <4 x i32> %vecins
@@ -786,7 +786,7 @@ entry:
 define <4 x i32> @_Z7testInsILj1ELj0EDv4_jET1_S1_S1_r(<4 x i32> %a, <4 x i32> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj1ELj0EDv4_jET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 8
 ; CHECK-BE-LABEL: _Z7testInsILj1ELj0EDv4_jET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -825,7 +825,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 8
 ; CHECK-BE-LABEL: _Z7testInsILj1ELj3EDv4_jET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 4
   %vecins = shufflevector <4 x i32> %b, <4 x i32> %a, <4 x i32> <i32 4, i32 3, i32 6, i32 7>
   ret <4 x i32> %vecins
@@ -834,7 +834,7 @@ entry:
 define <4 x i32> @_Z7testInsILj2ELj0EDv4_jET1_S1_S1_r(<4 x i32> %a, <4 x i32> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj2ELj0EDv4_jET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 4
 ; CHECK-BE-LABEL: _Z7testInsILj2ELj0EDv4_jET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -873,7 +873,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 4
 ; CHECK-BE-LABEL: _Z7testInsILj2ELj3EDv4_jET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 8
   %vecins = shufflevector <4 x i32> %b, <4 x i32> %a, <4 x i32> <i32 4, i32 5, i32 3, i32 7>
   ret <4 x i32> %vecins
@@ -882,7 +882,7 @@ entry:
 define <4 x i32> @_Z7testInsILj3ELj0EDv4_jET1_S1_S1_r(<4 x i32> %a, <4 x i32> %b) {
 entry:
 ; CHECK-LABEL: _Z7testInsILj3ELj0EDv4_jET1_S1_S1_
-; CHECK: xxsldwi 0, 35, 35, 2
+; CHECK: xxswapd 0, 35
 ; CHECK: xxinsertw 34, 0, 0
 ; CHECK-BE-LABEL: _Z7testInsILj3ELj0EDv4_jET1_S1_S1_
 ; CHECK-BE: xxsldwi 0, 35, 35, 3
@@ -921,7 +921,7 @@ entry:
 ; CHECK: xxsldwi 0, 35, 35, 3
 ; CHECK: xxinsertw 34, 0, 0
 ; CHECK-BE-LABEL: _Z7testInsILj3ELj3EDv4_jET1_S1_S1_
-; CHECK-BE: xxsldwi 0, 35, 35, 2
+; CHECK-BE: xxswapd 0, 35
 ; CHECK-BE: xxinsertw 34, 0, 12
   %vecins = shufflevector <4 x i32> %b, <4 x i32> %a, <4 x i32> <i32 4, i32 5, i32 6, i32 3>
   ret <4 x i32> %vecins

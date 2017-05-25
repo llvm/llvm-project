@@ -75,8 +75,8 @@ COMMON_FLAG(bool, print_summary, true,
             "If false, disable printing error summaries in addition to error "
             "reports.")
 COMMON_FLAG(int, print_module_map, 0,
-            "OS X only. 0 = don't print, 1 = print only once before process "
-            "exits, 2 = print after each report.")
+            "OS X only (0 - don't print, 1 - print only once before process "
+            "exits, 2 - print after each report).")
 COMMON_FLAG(bool, check_printf, true, "Check printf arguments.")
 #define COMMON_FLAG_HANDLE_SIGNAL_HELP(signal) \
     "Controls custom tool's " #signal " handler (0 - do not registers the " \
@@ -92,7 +92,7 @@ COMMON_FLAG(HandleSignalMode, handle_sigill, kHandleSignalNo,
 COMMON_FLAG(HandleSignalMode, handle_sigfpe, kHandleSignalYes,
             COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGFPE))
 #undef COMMON_FLAG_HANDLE_SIGNAL_HELP
-COMMON_FLAG(bool, allow_user_segv_handler, false,
+COMMON_FLAG(bool, allow_user_segv_handler, true,
             "If set, allows user to register a SEGV handler even if the tool "
             "registers one.")
 COMMON_FLAG(bool, use_sigaltstack, true,

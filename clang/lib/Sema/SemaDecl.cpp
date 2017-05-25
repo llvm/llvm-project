@@ -7920,10 +7920,7 @@ static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
   if (PT->isImageType())
     return PtrKernelParam;
 
-  if (PT->isBooleanType())
-    return InvalidKernelParam;
-
-  if (PT->isEventT())
+  if (PT->isBooleanType() || PT->isEventT() || PT->isReserveIDT())
     return InvalidKernelParam;
 
   // OpenCL extension spec v1.2 s9.5:
@@ -12179,7 +12176,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   sema::AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
 
-  if (getLangOpts().CoroutinesTS && getCurFunction()->CoroutinePromise)
+  if (getLangOpts().CoroutinesTS && getCurFunction()->isCoroutine())
     CheckCompletedCoroutineBody(FD, Body);
 
   if (FD) {

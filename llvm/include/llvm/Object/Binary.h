@@ -95,9 +95,7 @@ public:
     return TypeID > ID_StartObjects && TypeID < ID_EndObjects;
   }
 
-  bool isSymbolic() const {
-    return isIR() || isObject();
-  }
+  bool isSymbolic() const { return isIR() || isObject() || isCOFFImportFile(); }
 
   bool isArchive() const {
     return TypeID == ID_Archive;

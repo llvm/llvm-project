@@ -35,6 +35,7 @@ using support::ulittle16_t;
 using support::ulittle32_t;
 
 typedef CVRecord<TypeLeafKind> CVType;
+typedef RemappedRecord<TypeLeafKind> RemappedType;
 
 struct CVMemberRecord {
   TypeLeafKind Kind;

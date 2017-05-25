@@ -270,6 +270,9 @@ protected:
   /// Processor has AVX-512 Conflict Detection Instructions
   bool HasCDI;
 
+  /// Processor has AVX-512 population count Instructions
+  bool HasVPOPCNTDQ;
+
   /// Processor has AVX-512 Doubleword and Quadword instructions
   bool HasDQI;
 
@@ -494,6 +497,7 @@ public:
   bool slow3OpsLEA() const { return Slow3OpsLEA; }
   bool slowIncDec() const { return SlowIncDec; }
   bool hasCDI() const { return HasCDI; }
+  bool hasVPOPCNTDQ() const { return HasVPOPCNTDQ; }
   bool hasPFI() const { return HasPFI; }
   bool hasERI() const { return HasERI; }
   bool hasDQI() const { return HasDQI; }

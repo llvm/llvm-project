@@ -11,23 +11,28 @@
 #define LLVM_CODEGEN_MACHINEDOMINANCEFRONTIER_H
 
 #include "llvm/Analysis/DominanceFrontier.h"
+#include "llvm/Analysis/DominanceFrontierImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-
+#include "llvm/Support/GenericDomTree.h"
+#include <vector>
 
 namespace llvm {
 
 class MachineDominanceFrontier : public MachineFunctionPass {
   ForwardDominanceFrontierBase<MachineBasicBlock> Base;
-public:
-  typedef DominatorTreeBase<MachineBasicBlock> DomTreeT;
-  typedef DomTreeNodeBase<MachineBasicBlock> DomTreeNodeT;
-  typedef DominanceFrontierBase<MachineBasicBlock>::DomSetType DomSetType;
-  typedef DominanceFrontierBase<MachineBasicBlock>::iterator iterator;
-  typedef DominanceFrontierBase<MachineBasicBlock>::const_iterator const_iterator;
 
-  void operator=(const MachineDominanceFrontier &) = delete;
+public:
+  using DomTreeT = DominatorTreeBase<MachineBasicBlock>;
+  using DomTreeNodeT = DomTreeNodeBase<MachineBasicBlock>;
+  using DomSetType = DominanceFrontierBase<MachineBasicBlock>::DomSetType;
+  using iterator = DominanceFrontierBase<MachineBasicBlock>::iterator;
+  using const_iterator =
+      DominanceFrontierBase<MachineBasicBlock>::const_iterator;
+
   MachineDominanceFrontier(const MachineDominanceFrontier &) = delete;
+  MachineDominanceFrontier &
+  operator=(const MachineDominanceFrontier &) = delete;
 
   static char ID;
 
@@ -104,6 +109,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINEDOMINANCEFRONTIER_H

@@ -14,6 +14,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
@@ -48,6 +49,13 @@ public:
   Kind Type;
   ArrayRef<uint8_t> RecordData;
   Optional<uint32_t> Hash;
+};
+
+template <typename Kind> struct RemappedRecord {
+  explicit RemappedRecord(const CVRecord<Kind> &R) : OriginalRecord(R) {}
+
+  CVRecord<Kind> OriginalRecord;
+  SmallVector<std::pair<uint32_t, TypeIndex>, 8> Mappings;
 };
 
 } // end namespace codeview

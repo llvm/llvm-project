@@ -382,3 +382,64 @@ loop_exit2:
 ; CHECK-NEXT:    %[[R:.*]] = add i32 %[[R1]], %[[R2]]
 ; CHECK-NEXT:    ret i32 %[[R]]
 }
+
+; This test, extracted from the LLVM test suite, has an interesting dominator
+; tree to update as there are edges to sibling domtree nodes within child
+; domtree nodes of the unswitched node.
+define void @xgets(i1 %cond1, i1* %cond2.ptr) {
+; CHECK-LABEL: @xgets(
+entry:
+  br label %for.cond.preheader
+; CHECK:       entry:
+; CHECK-NEXT:    br label %for.cond.preheader
+
+for.cond.preheader:
+  br label %for.cond
+; CHECK:       for.cond.preheader:
+; CHECK-NEXT:    br i1 %cond1, label %for.cond.preheader.split, label %if.end17.thread.loopexit
+;
+; CHECK:       for.cond.preheader.split:
+; CHECK-NEXT:    br label %for.cond
+
+for.cond:
+  br i1 %cond1, label %land.lhs.true, label %if.end17.thread.loopexit
+; CHECK:       for.cond:
+; CHECK-NEXT:    br label %land.lhs.true
+
+land.lhs.true:
+  br label %if.then20
+; CHECK:       land.lhs.true:
+; CHECK-NEXT:    br label %if.then20
+
+if.then20:
+  %cond2 = load volatile i1, i1* %cond2.ptr
+  br i1 %cond2, label %if.then23, label %if.else
+; CHECK:       if.then20:
+; CHECK-NEXT:    %[[COND2:.*]] = load volatile i1, i1* %cond2.ptr
+; CHECK-NEXT:    br i1 %[[COND2]], label %if.then23, label %if.else
+
+if.else:
+  br label %for.cond
+; CHECK:       if.else:
+; CHECK-NEXT:    br label %for.cond
+
+if.end17.thread.loopexit:
+  br label %if.end17.thread
+; CHECK:       if.end17.thread.loopexit:
+; CHECK-NEXT:    br label %if.end17.thread
+
+if.end17.thread:
+  br label %cleanup
+; CHECK:       if.end17.thread:
+; CHECK-NEXT:    br label %cleanup
+
+if.then23:
+  br label %cleanup
+; CHECK:       if.then23:
+; CHECK-NEXT:    br label %cleanup
+
+cleanup:
+  ret void
+; CHECK:       cleanup:
+; CHECK-NEXT:    ret void
+}

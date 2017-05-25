@@ -252,12 +252,6 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   // Handle split DWARF.
   HasSplitDwarf = !Asm->TM.Options.MCOptions.SplitDwarfFile.empty();
 
-  // Pubnames/pubtypes on by default for GDB.
-  if (DwarfPubSections == Default)
-    HasDwarfPubSections = tuneForGDB();
-  else
-    HasDwarfPubSections = DwarfPubSections == Enable;
-
   // SCE defaults to linkage names only for abstract subprograms.
   if (DwarfLinkageNames == DefaultLinkageNames)
     UseAllLinkageNames = !tuneForSCE();
@@ -391,8 +385,20 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
   }
 }
 
-void DwarfDebug::addGnuPubAttributes(DwarfUnit &U, DIE &D) const {
-  if (!GenerateGnuPubSections)
+bool DwarfDebug::hasDwarfPubSections(bool includeMinimalInlineScopes) const {
+  // Opting in to GNU Pubnames/types overrides the default to ensure these are
+  // generated for things like Gold's gdb_index generation.
+  if (GenerateGnuPubSections)
+    return true;
+
+  if (DwarfPubSections == Default)
+    return tuneForGDB() && !includeMinimalInlineScopes;
+
+  return DwarfPubSections == Enable;
+}
+
+void DwarfDebug::addGnuPubAttributes(DwarfCompileUnit &U, DIE &D) const {
+  if (!hasDwarfPubSections(U.includeMinimalInlineScopes()))
     return;
 
   U.addFlag(D, dwarf::DW_AT_GNU_pubnames);
@@ -718,7 +724,9 @@ void DwarfDebug::endModule() {
   }
 
   // Emit the pubnames and pubtypes sections if requested.
-  if (HasDwarfPubSections) {
+  // The condition is optimistically correct - any CU not using GMLT (&
+  // implicit/default pubnames state) might still have pubnames.
+  if (hasDwarfPubSections(/* gmlt */ false)) {
     emitDebugPubNames(GenerateGnuPubSections);
     emitDebugPubTypes(GenerateGnuPubSections);
   }
@@ -1395,7 +1403,7 @@ void DwarfDebug::emitDebugPubSection(
 
     const auto &Globals = (TheU->*Accessor)();
 
-    if (Globals.empty())
+    if (!hasDwarfPubSections(TheU->includeMinimalInlineScopes()))
       continue;
 
     if (auto *Skeleton = TheU->getSkeleton())

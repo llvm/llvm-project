@@ -10,7 +10,6 @@ In Polly 5 the following important changes have been incorporated.
   the new features that have recently been committed to our development
   branch.
 
-
 - Change ...
 
 --------

@@ -738,7 +738,7 @@ public:
     if (VT.isExtended()) return Expand;
     // If a target-specific SDNode requires legalization, require the target
     // to provide custom legalization for it.
-    if (Op > array_lengthof(OpActions[0])) return Custom;
+    if (Op >= array_lengthof(OpActions[0])) return Custom;
     return OpActions[(unsigned)VT.getSimpleVT().SimpleTy][Op];
   }
 

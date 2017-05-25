@@ -1,6 +1,8 @@
 // RUN: %clangxx_asan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
+// UNSUPPORTED: darwin
+
 #include <assert.h>
 #include <sys/wait.h>
 #include <unistd.h>

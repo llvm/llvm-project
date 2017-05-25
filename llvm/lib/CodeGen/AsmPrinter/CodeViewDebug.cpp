@@ -1562,7 +1562,7 @@ TypeIndex CodeViewDebug::lowerTypeEnum(const DICompositeType *Ty) {
         EnumeratorCount++;
       }
     }
-    FTI = FLRB.end();
+    FTI = FLRB.end(true);
   }
 
   std::string FullName = getFullyQualifiedName(Ty);
@@ -1869,7 +1869,7 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
     MemberCount++;
   }
 
-  TypeIndex FieldTI = FLBR.end();
+  TypeIndex FieldTI = FLBR.end(true);
   return std::make_tuple(FieldTI, Info.VShapeTI, MemberCount,
                          !Info.NestedClasses.empty());
 }

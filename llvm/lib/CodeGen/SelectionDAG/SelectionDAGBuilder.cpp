@@ -4736,24 +4736,15 @@ SDDbgValue *SelectionDAGBuilder::getDbgValue(SDValue N,
                                              DIExpression *Expr, int64_t Offset,
                                              const DebugLoc &dl,
                                              unsigned DbgSDNodeOrder) {
-  SDDbgValue *SDV;
-  auto *FISDN = dyn_cast<FrameIndexSDNode>(N.getNode());
-  if (FISDN && Expr->startsWithDeref()) {
+  if (auto *FISDN = dyn_cast<FrameIndexSDNode>(N.getNode())) {
     // Construct a FrameIndexDbgValue for FrameIndexSDNodes so we can describe
     // stack slot locations as such instead of as indirectly addressed
     // locations.
-    ArrayRef<uint64_t> TrailingElements(Expr->elements_begin() + 1,
-                                        Expr->elements_end());
-    DIExpression *DerefedDIExpr =
-        DIExpression::get(*DAG.getContext(), TrailingElements);
-    int FI = FISDN->getIndex();
-    SDV = DAG.getFrameIndexDbgValue(Variable, DerefedDIExpr, FI, 0, dl,
-                                    DbgSDNodeOrder);
-  } else {
-    SDV = DAG.getDbgValue(Variable, Expr, N.getNode(), N.getResNo(), false,
-                          Offset, dl, DbgSDNodeOrder);
+    return DAG.getFrameIndexDbgValue(Variable, Expr, FISDN->getIndex(), 0, dl,
+                                     DbgSDNodeOrder);
   }
-  return SDV;
+  return DAG.getDbgValue(Variable, Expr, N.getNode(), N.getResNo(), false,
+                         Offset, dl, DbgSDNodeOrder);
 }
 
 // VisualStudio defines setjmp as _setjmp

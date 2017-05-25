@@ -57,8 +57,8 @@ si_int __popcountsi2(si_int a);  // bit population
 si_int __popcountdi2(di_int a);  // bit population
 si_int __popcountti2(ti_int a);  // bit population
 
-uint32_t __bswapsi2(uint32_t a);   // a byteswapped, arm only
-uint64_t __bswapdi2(uint64_t a);   // a byteswapped, arm only
+uint32_t __bswapsi2(uint32_t a);   // a byteswapped
+uint64_t __bswapdi2(uint64_t a);   // a byteswapped
 
 // Integral arithmetic
 

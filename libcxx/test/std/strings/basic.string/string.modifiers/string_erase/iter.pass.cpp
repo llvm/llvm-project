@@ -24,6 +24,7 @@ test(S s, typename S::difference_type pos, S expected)
     typename S::const_iterator p = s.begin() + pos;
     typename S::iterator i = s.erase(p);
     LIBCPP_ASSERT(s.__invariants());
+    assert(s[s.size()] == typename S::value_type());
     assert(s == expected);
     assert(i - s.begin() == pos);
 }

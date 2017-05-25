@@ -1001,7 +1001,9 @@ def ADDItlsgdL : Pseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
                  isPPC64;
 // LR8 is a true define, while the rest of the Defs are clobbers.  X3 is
 // explicitly defined when this op is created, so not mentioned here.
-let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
+// This is lowered to BL8_NOP_TLS by the assembly printer, so the size must be
+// correct because the branch select pass is relying on it.
+let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1, Size = 8,
     Defs = [X0,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7] in
 def GETtlsADDR : Pseudo<(outs g8rc:$rD), (ins g8rc:$reg, tlsgd:$sym),
                         "#GETtlsADDR",

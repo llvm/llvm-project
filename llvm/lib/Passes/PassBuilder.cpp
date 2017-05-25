@@ -437,6 +437,11 @@ static void addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
     MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPipeline)));
   }
 
+  // Delete anything that is now dead to make sure that we don't instrument
+  // dead code. Instrumentation can end up keeping dead code around and
+  // dramatically increase code size.
+  MPM.addPass(GlobalDCEPass());
+
   if (RunProfileGen) {
     MPM.addPass(PGOInstrumentationGen());
 

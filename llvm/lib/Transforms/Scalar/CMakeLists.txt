@@ -13,6 +13,7 @@ add_llvm_library(LLVMScalarOpts
   GuardWidening.cpp
   GVN.cpp
   GVNHoist.cpp
+  GVNSink.cpp
   IVUsersPrinter.cpp
   InductiveRangeCheckElimination.cpp
   IndVarSimplify.cpp

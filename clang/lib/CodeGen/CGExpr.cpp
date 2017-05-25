@@ -1432,11 +1432,12 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
     Load->setMetadata(CGM.getModule().getMDKindID("nontemporal"), Node);
   }
   if (TBAAInfo) {
-    llvm::MDNode *TBAAPath = CGM.getTBAAStructTagInfo(TBAABaseType, TBAAInfo,
-                                                      TBAAOffset);
-    if (TBAAPath)
-      CGM.DecorateInstructionWithTBAA(Load, TBAAPath,
-                                      false /*ConvertTypeToTag*/);
+    bool MayAlias = BaseInfo.getMayAlias();
+    llvm::MDNode *TBAA = MayAlias
+        ? CGM.getTBAAInfo(getContext().CharTy)
+        : CGM.getTBAAStructTagInfo(TBAABaseType, TBAAInfo, TBAAOffset);
+    if (TBAA)
+      CGM.DecorateInstructionWithTBAA(Load, TBAA, MayAlias);
   }
 
   if (EmitScalarRangeCheck(Load, Ty, Loc)) {
@@ -1522,11 +1523,12 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
     Store->setMetadata(CGM.getModule().getMDKindID("nontemporal"), Node);
   }
   if (TBAAInfo) {
-    llvm::MDNode *TBAAPath = CGM.getTBAAStructTagInfo(TBAABaseType, TBAAInfo,
-                                                      TBAAOffset);
-    if (TBAAPath)
-      CGM.DecorateInstructionWithTBAA(Store, TBAAPath,
-                                      false /*ConvertTypeToTag*/);
+    bool MayAlias = BaseInfo.getMayAlias();
+    llvm::MDNode *TBAA = MayAlias
+        ? CGM.getTBAAInfo(getContext().CharTy)
+        : CGM.getTBAAStructTagInfo(TBAABaseType, TBAAInfo, TBAAOffset);
+    if (TBAA)
+      CGM.DecorateInstructionWithTBAA(Store, TBAA, MayAlias);
   }
 }
 
@@ -3535,6 +3537,11 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     getFieldAlignmentSource(BaseInfo.getAlignmentSource());
   LValueBaseInfo FieldBaseInfo(fieldAlignSource, BaseInfo.getMayAlias());
 
+  const RecordDecl *rec = field->getParent();
+  if (rec->isUnion() || rec->hasAttr<MayAliasAttr>())
+    FieldBaseInfo.setMayAlias(true);
+  bool mayAlias = FieldBaseInfo.getMayAlias();
+
   if (field->isBitField()) {
     const CGRecordLayout &RL =
       CGM.getTypes().getCGRecordLayout(field->getParent());
@@ -3556,11 +3563,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     return LValue::MakeBitfield(Addr, Info, fieldType, FieldBaseInfo);
   }
 
-  const RecordDecl *rec = field->getParent();
   QualType type = field->getType();
-
-  bool mayAlias = rec->hasAttr<MayAliasAttr>();
-
   Address addr = base.getAddress();
   unsigned cvr = base.getVRQualifiers();
   bool TBAAPath = CGM.getCodeGenOpts().StructPathTBAA;

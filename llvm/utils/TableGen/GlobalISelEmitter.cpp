@@ -1147,14 +1147,21 @@ void RuleMatcher::emit(raw_ostream &OS,
 
   // We must also check if it's safe to fold the matched instructions.
   if (InsnVariableNames.size() >= 2) {
+    // Invert the map to create stable ordering (by var names)
+    SmallVector<StringRef, 2> Names;
     for (const auto &Pair : InsnVariableNames) {
       // Skip the root node since it isn't moving anywhere. Everything else is
       // sinking to meet it.
       if (Pair.first == Matchers.front().get())
         continue;
 
+      Names.push_back(Pair.second);
+    }
+    std::sort(Names.begin(), Names.end());
+
+    for (const auto &Name : Names) {
       // Reject the difficult cases until we have a more accurate check.
-      OS << "      if (!isObviouslySafeToFold(" << Pair.second
+      OS << "      if (!isObviouslySafeToFold(" << Name
          << ")) return false;\n";
 
       // FIXME: Emit checks to determine it's _actually_ safe to fold and/or

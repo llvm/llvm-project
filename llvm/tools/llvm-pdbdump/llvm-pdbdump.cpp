@@ -525,12 +525,12 @@ static void yamlToPdb(StringRef Path) {
   DbiBuilder.setVersionHeader(Dbi.VerHeader);
   for (const auto &MI : Dbi.ModInfos) {
     auto &ModiBuilder = ExitOnErr(DbiBuilder.addModuleInfo(MI.Mod));
+    ModiBuilder.setObjFileName(MI.Obj);
 
     for (auto S : MI.SourceFiles)
       ExitOnErr(DbiBuilder.addModuleSourceFile(MI.Mod, S));
     if (MI.Modi.hasValue()) {
       const auto &ModiStream = *MI.Modi;
-      ModiBuilder.setObjFileName(MI.Obj);
       for (auto Symbol : ModiStream.Symbols)
         ModiBuilder.addSymbol(Symbol.Record);
     }

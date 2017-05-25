@@ -50,10 +50,8 @@ namespace PoisonedHashDetail {
 // specializations of hash for nullptr t and all cv-unqualified
 // arithmetic, enumeration, and pointer types.
 using LibraryHashTypes = TypeList<
-#if !defined(TEST_WORKAROUND_C1XX_BROKEN_NULLPTR_CONVERSION_OPERATOR)
 #if TEST_STD_VER > 14
       decltype(nullptr),
-#endif
 #endif
       bool,
       char,

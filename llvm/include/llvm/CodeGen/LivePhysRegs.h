@@ -39,15 +39,15 @@
 namespace llvm {
 
 class MachineInstr;
+class MachineOperand;
+class MachineRegisterInfo;
+class raw_ostream;
 
 /// \brief A set of live physical registers with functions to track liveness
 /// when walking backward/forward through a basic block.
 class LivePhysRegs {
   const TargetRegisterInfo *TRI = nullptr;
   SparseSet<unsigned> LiveRegs;
-
-  LivePhysRegs(const LivePhysRegs&) = delete;
-  LivePhysRegs &operator=(const LivePhysRegs&) = delete;
 
 public:
   /// \brief Constructs a new empty LivePhysRegs set.
@@ -58,6 +58,9 @@ public:
     assert(TRI && "Invalid TargetRegisterInfo pointer.");
     LiveRegs.setUniverse(TRI->getNumRegs());
   }
+
+  LivePhysRegs(const LivePhysRegs&) = delete;
+  LivePhysRegs &operator=(const LivePhysRegs&) = delete;
 
   /// \brief Clear and initialize the LivePhysRegs set.
   void init(const TargetRegisterInfo &TRI) {
@@ -134,7 +137,8 @@ public:
   /// registers.
   void addLiveOutsNoPristines(const MachineBasicBlock &MBB);
 
-  typedef SparseSet<unsigned>::const_iterator const_iterator;
+  using const_iterator = SparseSet<unsigned>::const_iterator;
+
   const_iterator begin() const { return LiveRegs.begin(); }
   const_iterator end() const { return LiveRegs.end(); }
 

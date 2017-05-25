@@ -265,19 +265,21 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
     }
 
     if (flags()->use_tls) {
-      LOG_THREADS("TLS at %p-%p.\n", tls_begin, tls_end);
-      if (cache_begin == cache_end) {
-        ScanRangeForPointers(tls_begin, tls_end, frontier, "TLS", kReachable);
-      } else {
-        // Because LSan should not be loaded with dlopen(), we can assume
-        // that allocator cache will be part of static TLS image.
-        CHECK_LE(tls_begin, cache_begin);
-        CHECK_GE(tls_end, cache_end);
-        if (tls_begin < cache_begin)
-          ScanRangeForPointers(tls_begin, cache_begin, frontier, "TLS",
-                               kReachable);
-        if (tls_end > cache_end)
-          ScanRangeForPointers(cache_end, tls_end, frontier, "TLS", kReachable);
+      if (tls_begin) {
+        LOG_THREADS("TLS at %p-%p.\n", tls_begin, tls_end);
+        // If the tls and cache ranges don't overlap, scan full tls range,
+        // otherwise, only scan the non-overlapping portions
+        if (cache_begin == cache_end || tls_end < cache_begin ||
+            tls_begin > cache_end) {
+          ScanRangeForPointers(tls_begin, tls_end, frontier, "TLS", kReachable);
+        } else {
+          if (tls_begin < cache_begin)
+            ScanRangeForPointers(tls_begin, cache_begin, frontier, "TLS",
+                                 kReachable);
+          if (tls_end > cache_end)
+            ScanRangeForPointers(cache_end, tls_end, frontier, "TLS",
+                                 kReachable);
+        }
       }
       if (dtls && !DTLSInDestruction(dtls)) {
         for (uptr j = 0; j < dtls->dtv_size; ++j) {

@@ -319,5 +319,3 @@ class SizeClassAllocator32 {
   ByteMap possible_regions;
   SizeClassInfo size_class_info_array[kNumClasses];
 };
-
-

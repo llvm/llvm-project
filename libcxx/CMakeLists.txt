@@ -452,6 +452,11 @@ add_compile_flags_if_supported(-nostdinc++)
 # the dylib when get ODR used by another function.
 add_compile_flags_if_supported(-fvisibility-inlines-hidden)
 
+if (LIBCXX_CONFIGURE_IDE)
+  # This simply allows IDE to process <experimental/coroutine>
+  add_compile_flags_if_supported(-fcoroutines-ts)
+endif()
+
 # Let the library headers know they are currently being used to build the
 # library.
 add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
