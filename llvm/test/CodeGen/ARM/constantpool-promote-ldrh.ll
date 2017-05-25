@@ -1,5 +1,5 @@
-; RUN: llc < %s -O0 -fast-isel=false | FileCheck %s
-; RUN: llc < %s -O0 -fast-isel=false -filetype=obj
+; RUN: llc < %s -O0 -fast-isel=false -arm-promote-constant | FileCheck %s
+; RUN: llc < %s -O0 -fast-isel=false -filetype=obj -arm-promote-constant
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv6m-arm-linux-gnueabi"
 

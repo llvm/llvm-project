@@ -1,7 +1,7 @@
-; RUN: llc -relocation-model=static < %s | FileCheck %s
-; RUN: llc -relocation-model=pic < %s | FileCheck %s
-; RUN: llc -relocation-model=ropi < %s | FileCheck %s
-; RUN: llc -relocation-model=rwpi < %s | FileCheck %s
+; RUN: llc -relocation-model=static -arm-promote-constant < %s | FileCheck %s
+; RUN: llc -relocation-model=pic -arm-promote-constant < %s | FileCheck %s
+; RUN: llc -relocation-model=ropi -arm-promote-constant < %s | FileCheck %s
+; RUN: llc -relocation-model=rwpi -arm-promote-constant < %s | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 target triple = "armv7--linux-gnueabihf"
