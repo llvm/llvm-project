@@ -192,7 +192,7 @@ ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getSymbols() {
 }
 
 template <class ELFT>
-void elf::ObjectFile<ELFT>::parse(DenseSet<StringRef> &ComdatGroups) {
+void elf::ObjectFile<ELFT>::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
   // Read section and symbol tables.
   initializeSections(ComdatGroups);
   initializeSymbols();
@@ -280,7 +280,7 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
 
 template <class ELFT>
 void elf::ObjectFile<ELFT>::initializeSections(
-    DenseSet<StringRef> &ComdatGroups) {
+    DenseSet<CachedHashStringRef> &ComdatGroups) {
   ArrayRef<Elf_Shdr> ObjSections =
       check(this->getObj().sections(), toString(this));
   const ELFFile<ELFT> &Obj = this->getObj();
@@ -305,7 +305,10 @@ void elf::ObjectFile<ELFT>::initializeSections(
     switch (Sec.sh_type) {
     case SHT_GROUP:
       this->Sections[I] = &InputSection::Discarded;
-      if (ComdatGroups.insert(getShtGroupSignature(ObjSections, Sec)).second)
+      if (ComdatGroups
+              .insert(
+                  CachedHashStringRef(getShtGroupSignature(ObjSections, Sec)))
+              .second)
         continue;
       for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
         if (SecIndex >= Size)
@@ -873,10 +876,10 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
 }
 
 template <class ELFT>
-void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
+void BitcodeFile::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
   std::vector<bool> KeptComdats;
   for (StringRef S : Obj->getComdatTable())
-    KeptComdats.push_back(ComdatGroups.insert(StringRef(S)).second);
+    KeptComdats.push_back(ComdatGroups.insert(CachedHashStringRef(S)).second);
 
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols())
     Symbols.push_back(createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, this));
@@ -1045,10 +1048,10 @@ template void ArchiveFile::parse<ELF32BE>();
 template void ArchiveFile::parse<ELF64LE>();
 template void ArchiveFile::parse<ELF64BE>();
 
-template void BitcodeFile::parse<ELF32LE>(DenseSet<StringRef> &);
-template void BitcodeFile::parse<ELF32BE>(DenseSet<StringRef> &);
-template void BitcodeFile::parse<ELF64LE>(DenseSet<StringRef> &);
-template void BitcodeFile::parse<ELF64BE>(DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF32LE>(DenseSet<CachedHashStringRef> &);
+template void BitcodeFile::parse<ELF32BE>(DenseSet<CachedHashStringRef> &);
+template void BitcodeFile::parse<ELF64LE>(DenseSet<CachedHashStringRef> &);
+template void BitcodeFile::parse<ELF64BE>(DenseSet<CachedHashStringRef> &);
 
 template void LazyObjectFile::parse<ELF32LE>();
 template void LazyObjectFile::parse<ELF32BE>();

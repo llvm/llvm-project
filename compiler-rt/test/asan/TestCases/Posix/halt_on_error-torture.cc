@@ -18,6 +18,10 @@
 // RUN: %env_asan_opts=halt_on_error=false %run %t 10 20 >>20.txt 2>&1 || true
 // RUN: FileCheck --check-prefix=CHECK-COLLISION %s < 20.txt || FileCheck --check-prefix=CHECK-NO-COLLISION %s < 20.txt
 
+// UNSUPPORTED: powerpc64-unknown-linux-gnu
+// FIXME: This test regularly fails on powerpc64 BE.  Re-enable the test once
+// the problem(s) have been fixed.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>

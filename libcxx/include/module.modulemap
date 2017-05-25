@@ -501,12 +501,10 @@ module std [system] {
       header "experimental/chrono"
       export *
     }
-    // FIXME: This module only works when -fcoroutines-ts is enabled and it
-    // breaks the modules build otherwise.
-    // module coroutine {
-    //  header "experimental/coroutine"
-    //  export *
-    // }
+     module coroutine {
+      header "experimental/coroutine"
+      export *
+    }
     module deque {
       header "experimental/deque"
       export *

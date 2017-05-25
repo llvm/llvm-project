@@ -64,6 +64,11 @@ inline bool FlagHandler<HandleSignalMode>::Parse(const char *value) {
     *t_ = b ? kHandleSignalYes : kHandleSignalNo;
     return true;
   }
+  if (internal_strcmp(value, "2") == 0 ||
+      internal_strcmp(value, "exclusive") == 0) {
+    *t_ = kHandleSignalExclusive;
+    return true;
+  }
   Printf("ERROR: Invalid value for signal handler option: '%s'\n", value);
   return false;
 }

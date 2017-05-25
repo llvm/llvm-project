@@ -18,15 +18,9 @@ from lldbsuite.test import lldbutil
 class UnwindFromExpressionTest(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    main_spec = lldb.SBFileSpec("main.cpp", False)
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-
-    @add_test_categories(['pyapi'])
-    @expectedFailureAll(oslist=["windows"])
-    def test_unwind_expression(self):
-        """Test unwinding from an expression."""
+    def build_and_run_to_bkpt(self):
         self.build()
 
         exe = os.path.join(os.getcwd(), "a.out")
@@ -35,9 +29,8 @@ class UnwindFromExpressionTest(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Create the breakpoint.
-        main_spec = lldb.SBFileSpec("main.cpp", False)
         breakpoint = target.BreakpointCreateBySourceRegex(
-            "// Set a breakpoint here to get started", main_spec)
+            "// Set a breakpoint here to get started", self.main_spec)
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -52,24 +45,60 @@ class UnwindFromExpressionTest(TestBase):
                       "instead the actual state is: '%s'" %
                       lldbutil.state_type_to_str(process.GetState()))
 
-        thread = lldbutil.get_one_thread_stopped_at_breakpoint(
+        self.thread = lldbutil.get_one_thread_stopped_at_breakpoint(
             process, breakpoint)
         self.assertIsNotNone(
-            thread, "Expected one thread to be stopped at the breakpoint")
+            self.thread, "Expected one thread to be stopped at the breakpoint")
 
+        # Next set a breakpoint in this function, set up Expression options to stop on
+        # breakpoint hits, and call the function.
+        self.fun_bkpt = self.target().BreakpointCreateBySourceRegex(
+            "// Stop inside the function here.", self.main_spec)
+        self.assertTrue(self.fun_bkpt, VALID_BREAKPOINT)
+
+
+    @no_debug_info_test
+    @expectedFailureAll(bugnumber="llvm.org/pr33164")
+    def test_conditional_bktp(self):
+        """
+        Test conditional breakpoint handling in the IgnoreBreakpoints = False case
+        """
+        self.build_and_run_to_bkpt()
+
+        self.fun_bkpt.SetCondition("0") # Should not get hit
+        options = lldb.SBExpressionOptions()
+        options.SetIgnoreBreakpoints(False)
+        options.SetUnwindOnError(False)
+
+        main_frame = self.thread.GetFrameAtIndex(0)
+        val = main_frame.EvaluateExpression("second_function(47)", options)
+        self.assertTrue(
+            val.GetError().Success(),
+            "We did complete the execution.")
+        self.assertEquals(47, val.GetValueAsSigned())
+
+
+    @add_test_categories(['pyapi'])
+    @expectedFailureAll(oslist=["windows"])
+    def test_unwind_expression(self):
+        """Test unwinding from an expression."""
+        self.build_and_run_to_bkpt()
+
+        # Run test with varying one thread timeouts to also test the halting
+        # logic in the IgnoreBreakpoints = False case
+        self.do_unwind_test(self.thread, self.fun_bkpt, 1000)
+        self.do_unwind_test(self.thread, self.fun_bkpt, 100000)
+
+    def do_unwind_test(self, thread, bkpt, timeout):
         #
         # Use Python API to evaluate expressions while stopped in a stack frame.
         #
         main_frame = thread.GetFrameAtIndex(0)
 
-        # Next set a breakpoint in this function, set up Expression options to stop on
-        # breakpoint hits, and call the function.
-        fun_bkpt = target.BreakpointCreateBySourceRegex(
-            "// Stop inside the function here.", main_spec)
-        self.assertTrue(fun_bkpt, VALID_BREAKPOINT)
         options = lldb.SBExpressionOptions()
         options.SetIgnoreBreakpoints(False)
         options.SetUnwindOnError(False)
+        options.SetOneThreadTimeoutInMicroSeconds(timeout)
 
         val = main_frame.EvaluateExpression("a_function_to_call()", options)
 
@@ -82,7 +111,7 @@ class UnwindFromExpressionTest(TestBase):
             "And the reason was right.")
 
         thread = lldbutil.get_one_thread_stopped_at_breakpoint(
-            process, fun_bkpt)
+            self.process(), bkpt)
         self.assertTrue(
             thread.IsValid(),
             "We are indeed stopped at our breakpoint")

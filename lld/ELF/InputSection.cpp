@@ -173,7 +173,8 @@ void InputSectionBase::uncompress() {
   if (Error E = Dec.decompress({OutputBuf, Size}))
     fatal(toString(this) +
           ": decompress failed: " + llvm::toString(std::move(E)));
-  Data = ArrayRef<uint8_t>((uint8_t *)OutputBuf, Size);
+  this->Data = ArrayRef<uint8_t>((uint8_t *)OutputBuf, Size);
+  this->Flags &= ~(uint64_t)SHF_COMPRESSED;
 }
 
 uint64_t SectionBase::getOffset(const DefinedRegular &Sym) const {

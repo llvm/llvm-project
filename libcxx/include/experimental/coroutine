@@ -85,7 +85,7 @@ struct _LIBCPP_TEMPLATE_VIS coroutine_traits
 {
 };
 
-template <typename Promise = void>
+template <typename _Promise = void>
 class _LIBCPP_TEMPLATE_VIS coroutine_handle;
 
 #if defined(__cpp_coroutines)
@@ -112,10 +112,10 @@ public:
     constexpr explicit operator bool() const noexcept { return __handle_; }
 
     _LIBCPP_ALWAYS_INLINE
-    void operator()() const { resume(); }
+    void operator()() { resume(); }
 
     _LIBCPP_ALWAYS_INLINE
-    void resume() const {
+    void resume() {
       _LIBCPP_ASSERT(__is_suspended(),
                      "resume() can only be called on suspended coroutines");
       _LIBCPP_ASSERT(!done(),
@@ -124,7 +124,7 @@ public:
     }
 
     _LIBCPP_ALWAYS_INLINE
-    void destroy() const {
+    void destroy() {
       _LIBCPP_ASSERT(__is_suspended(),
                      "destroy() can only be called on suspended coroutines");
       __builtin_coro_destroy(__handle_);
@@ -194,15 +194,9 @@ public:
         return *this;
     }
 
-  _LIBCPP_INLINE_VISIBILITY
-    _Promise& promise() {
-        return *reinterpret_cast<_Promise*>(
-            __builtin_coro_promise(this->__handle_, alignof(_Promise), false));
-    }
-
     _LIBCPP_INLINE_VISIBILITY
-    _Promise const& promise() const {
-        return *reinterpret_cast<_Promise const*>(
+    _Promise& promise() const {
+        return *reinterpret_cast<_Promise*>(
             __builtin_coro_promise(this->__handle_, alignof(_Promise), false));
     }
 
@@ -223,8 +217,6 @@ public:
     }
 };
 
-#endif // defined(__cpp_coroutines)
-
 struct _LIBCPP_TYPE_VIS suspend_never {
   _LIBCPP_ALWAYS_INLINE
   bool await_ready() const noexcept { return true; }
@@ -242,6 +234,8 @@ struct _LIBCPP_TYPE_VIS suspend_always {
   _LIBCPP_ALWAYS_INLINE
   void await_resume() const noexcept {}
 };
+
+#endif // defined(__cpp_coroutines)
 
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL_COROUTINES
 

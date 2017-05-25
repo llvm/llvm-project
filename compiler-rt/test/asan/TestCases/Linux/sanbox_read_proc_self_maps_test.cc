@@ -14,17 +14,15 @@ int main() {
 
   if (unshare(CLONE_NEWUSER)) {
     printf("unshare failed\n");
-    abort();
+    return 1;
   }
 
   // remove access to /proc/self/maps
   if (chroot("/tmp")) {
     printf("chroot failed\n");
-    abort();
+    return 2;
   }
 
   *(volatile int*)0x42 = 0;
-// CHECK: AddressSanitizer: SEGV on unknown address 0x000000000042
-// CHECK-NOT: AddressSanitizer CHECK failed
-// CHECK: SUMMARY: AddressSanitizer: SEGV
+// CHECK-NOT: CHECK failed
 }
