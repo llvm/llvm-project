@@ -461,30 +461,22 @@ void DWARFCallFrameInfo::GetFDEIndex() {
       m_fde_index_initialized = true;
       return;
     }
-
-    // An FDE entry contains CIE_pointer in debug_frame in same place as cie_id
-    // in eh_frame. CIE_pointer is an offset into the .debug_frame section.
-    // So, variable cie_offset should be equal cie_id for debug_frame.
-    // FDE entries with cie_id == 0 shouldn't be ignored for it.
-    if ((cie_id == 0 && m_is_eh_frame) || cie_id == UINT32_MAX || len == 0) {
-      m_cie_map[current_entry] = ParseCIE(current_entry);
-      offset = next_entry;
-      continue;
-    }
-
-    if (!m_is_eh_frame)
-      cie_offset = cie_id;
-
     if (cie_offset > m_cfi_data.GetByteSize()) {
-      Host::SystemLog(Host::eSystemLogError,
-                      "error: Invalid cie offset of 0x%x "
-                      "found in cie/fde at 0x%x\n",
-                      cie_offset, current_entry);
+      Host::SystemLog(
+          Host::eSystemLogError,
+          "error: Invalid cie offset of 0x%x found in cie/fde at 0x%x\n",
+          cie_offset, current_entry);
       // Don't trust anything in this eh_frame section if we find blatantly
       // invalid data.
       m_fde_index.Clear();
       m_fde_index_initialized = true;
       return;
+    }
+
+    if (cie_id == 0 || cie_id == UINT32_MAX || len == 0) {
+      m_cie_map[current_entry] = ParseCIE(current_entry);
+      offset = next_entry;
+      continue;
     }
 
     const CIE *cie = GetCIE(cie_offset);
@@ -539,8 +531,7 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
     cie_offset = m_cfi_data.GetU32(&offset);
   }
 
-  // FDE entries with zero cie_offset may occur for debug_frame.
-  assert(!(m_is_eh_frame && 0 == cie_offset) && cie_offset != UINT32_MAX);
+  assert(cie_offset != 0 && cie_offset != UINT32_MAX);
 
   // Translate the CIE_id from the eh_frame format, which
   // is relative to the FDE offset, into a __eh_frame section

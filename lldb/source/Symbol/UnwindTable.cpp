@@ -51,13 +51,6 @@ void UnwindTable::Initialize() {
     if (sect.get()) {
       m_eh_frame_up.reset(new DWARFCallFrameInfo(m_object_file, sect,
                                                  eRegisterKindEHFrame, true));
-    } else {
-      // Try to find .debug_frame section if .eh_frame doesn't exist.
-      sect = sl->FindSectionByType(eSectionTypeDWARFDebugFrame, true);
-      if (sect.get()) {
-        m_eh_frame_up.reset(new DWARFCallFrameInfo(m_object_file, sect,
-                                                   eRegisterKindDWARF, false));
-      }
     }
     sect = sl->FindSectionByType(eSectionTypeCompactUnwind, true);
     if (sect.get()) {
