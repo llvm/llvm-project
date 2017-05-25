@@ -214,12 +214,12 @@ bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
   for (auto &MB : MF) {
     auto Begin = MB.begin(), End = MB.end();
     while (Begin != End) {
-      // First the first non-boundary starting from the end of the last
+      // Find the first non-boundary starting from the end of the last
       // scheduling region.
       MachineBasicBlock::iterator RB = Begin;
       while (RB != End && HII->isSchedulingBoundary(*RB, &MB, MF))
         ++RB;
-      // First the first boundary starting from the beginning of the new
+      // Find the first boundary starting from the beginning of the new
       // region.
       MachineBasicBlock::iterator RE = RB;
       while (RE != End && !HII->isSchedulingBoundary(*RE, &MB, MF))

@@ -63,7 +63,7 @@ define <1 x i128> @v1i128_increment_by_one(<1 x i128> %a) nounwind {
 ; FIXME: li [[R1:r[0-9]+]], 1
 ; FIXME: li [[R2:r[0-9]+]], 0
 ; FIXME: mtvsrdd [[V1:v[0-9]+]], [[R2]], [[R1]]
-; CHECK-P9: lxvx [[V1:v[0-9]+]]
+; CHECK-P9: lxv [[V1:v[0-9]+]]
 ; CHECK-P9: vadduqm v2, v2, [[V1]]
 ; CHECK-P9: blr
 
@@ -207,7 +207,7 @@ define <1 x i128> @call_v1i128_increment_by_one() nounwind {
 ; CHECK-LE: blr
 
 ; CHECK-P9-LABEL: @call_v1i128_increment_by_one
-; CHECK-P9: lxvx
+; CHECK-P9: lxv
 ; CHECK-P9: bl v1i128_increment_by_one
 ; CHECK-P9: blr
 
@@ -237,8 +237,8 @@ define <1 x i128> @call_v1i128_increment_by_val() nounwind {
 ; CHECK-LE: blr
 
 ; CHECK-P9-LABEL: @call_v1i128_increment_by_val
-; CHECK-P9-DAG: lxvx v2
-; CHECK-P9-DAG: lxvx v3
+; CHECK-P9-DAG: lxv v2
+; CHECK-P9-DAG: lxv v3
 ; CHECK-P9: bl v1i128_increment_by_val
 ; CHECK-P9: blr
 

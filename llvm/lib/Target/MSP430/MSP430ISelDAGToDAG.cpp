@@ -403,12 +403,12 @@ void MSP430DAGToDAGISel::Select(SDNode *Node) {
     int FI = cast<FrameIndexSDNode>(Node)->getIndex();
     SDValue TFI = CurDAG->getTargetFrameIndex(FI, MVT::i16);
     if (Node->hasOneUse()) {
-      CurDAG->SelectNodeTo(Node, MSP430::ADD16ri, MVT::i16, TFI,
+      CurDAG->SelectNodeTo(Node, MSP430::ADDframe, MVT::i16, TFI,
                            CurDAG->getTargetConstant(0, dl, MVT::i16));
       return;
     }
     ReplaceNode(Node, CurDAG->getMachineNode(
-                          MSP430::ADD16ri, dl, MVT::i16, TFI,
+                          MSP430::ADDframe, dl, MVT::i16, TFI,
                           CurDAG->getTargetConstant(0, dl, MVT::i16)));
     return;
   }

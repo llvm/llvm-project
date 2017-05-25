@@ -2178,63 +2178,6 @@ StrengthenNoWrapFlags(ScalarEvolution *SE, SCEVTypes Type,
   return Flags;
 }
 
-bool ScalarEvolution::isAvailableAtLoopEntry(const SCEV *S, const Loop *L,
-                                             DominatorTree &DT, LoopInfo &LI) {
-  if (!isLoopInvariant(S, L))
-    return false;
-  // If a value depends on a SCEVUnknown which is defined after the loop, we
-  // conservatively assume that we cannot calculate it at the loop's entry.
-  struct FindDominatedSCEVUnknown {
-    bool Found = false;
-    const Loop *L;
-    DominatorTree &DT;
-    LoopInfo &LI;
-
-    FindDominatedSCEVUnknown(const Loop *L, DominatorTree &DT, LoopInfo &LI)
-        : L(L), DT(DT), LI(LI) {}
-
-    bool checkSCEVUnknown(const SCEVUnknown *SU) {
-      if (auto *I = dyn_cast<Instruction>(SU->getValue())) {
-        if (DT.dominates(L->getHeader(), I->getParent()))
-          Found = true;
-        else
-          assert(DT.dominates(I->getParent(), L->getHeader()) &&
-                 "No dominance relationship between SCEV and loop?");
-      }
-      return false;
-    }
-
-    bool follow(const SCEV *S) {
-      switch (static_cast<SCEVTypes>(S->getSCEVType())) {
-      case scConstant:
-        return false;
-      case scAddRecExpr:
-      case scTruncate:
-      case scZeroExtend:
-      case scSignExtend:
-      case scAddExpr:
-      case scMulExpr:
-      case scUMaxExpr:
-      case scSMaxExpr:
-      case scUDivExpr:
-        return true;
-      case scUnknown:
-        return checkSCEVUnknown(cast<SCEVUnknown>(S));
-      case scCouldNotCompute:
-        llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
-      }
-      return false;
-    }
-
-    bool isDone() { return Found; }
-  };
-
-  FindDominatedSCEVUnknown FSU(L, DT, LI);
-  SCEVTraversal<FindDominatedSCEVUnknown> ST(FSU);
-  ST.visitAll(S);
-  return !FSU.Found;
-}
-
 /// Get a canonical add expression, or something simpler if possible.
 const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
                                         SCEV::NoWrapFlags Flags,
@@ -2516,7 +2459,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
     const SCEVAddRecExpr *AddRec = cast<SCEVAddRecExpr>(Ops[Idx]);
     const Loop *AddRecLoop = AddRec->getLoop();
     for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-      if (isAvailableAtLoopEntry(Ops[i], AddRecLoop, DT, LI)) {
+      if (isLoopInvariant(Ops[i], AddRecLoop)) {
         LIOps.push_back(Ops[i]);
         Ops.erase(Ops.begin()+i);
         --i; --e;
@@ -2791,7 +2734,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
     const SCEVAddRecExpr *AddRec = cast<SCEVAddRecExpr>(Ops[Idx]);
     const Loop *AddRecLoop = AddRec->getLoop();
     for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-      if (isAvailableAtLoopEntry(Ops[i], AddRecLoop, DT, LI)) {
+      if (isLoopInvariant(Ops[i], AddRecLoop)) {
         LIOps.push_back(Ops[i]);
         Ops.erase(Ops.begin()+i);
         --i; --e;
@@ -4705,10 +4648,7 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
 
   if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S)) {
     // For a SCEVUnknown, ask ValueTracking.
-    unsigned BitWidth = getTypeSizeInBits(U->getType());
-    KnownBits Known(BitWidth);
-    computeKnownBits(U->getValue(), Known, getDataLayout(), 0, &AC,
-                     nullptr, &DT);
+    KnownBits Known = computeKnownBits(U->getValue(), getDataLayout(), 0, &AC, nullptr, &DT);
     return Known.countMinTrailingZeros();
   }
 
@@ -4888,8 +4828,7 @@ ScalarEvolution::getRange(const SCEV *S,
     const DataLayout &DL = getDataLayout();
     if (SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED) {
       // For a SCEVUnknown, ask ValueTracking.
-      KnownBits Known(BitWidth);
-      computeKnownBits(U->getValue(), Known, DL, 0, &AC, nullptr, &DT);
+      KnownBits Known = computeKnownBits(U->getValue(), DL, 0, &AC, nullptr, &DT);
       if (Known.One != ~Known.Zero + 1)
         ConservativeResult =
             ConservativeResult.intersectWith(ConstantRange(Known.One,

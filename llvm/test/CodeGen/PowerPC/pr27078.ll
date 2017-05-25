@@ -9,11 +9,11 @@ define <4 x float> @bar(float* %p, float* %q) {
   %6 = shufflevector <12 x float> %5, <12 x float> undef, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
   ret <4 x float>  %6
 
-; CHECK: vsldoi
+; CHECK: xxsldwi
 ; CHECK-NEXT: vmrghw
 ; CHECK-NEXT: vmrglw
-; CHECK-NEXT: vsldoi
-; CHECK-NEXT: vsldoi
-; CHECK-NEXT: vsldoi
+; CHECK-NEXT: xxsldwi
+; CHECK-NEXT: xxsldwi
+; CHECK-NEXT: xxsldwi
 ; CHECK-NEXT: blr
 }

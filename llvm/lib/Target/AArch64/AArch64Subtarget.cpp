@@ -90,7 +90,6 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case Falkor:
     MaxInterleaveFactor = 4;
-    VectorInsertExtractBaseCost = 2;
     // FIXME: remove this to enable 64-bit SLP if performance looks good.
     MinVectorRegisterBitWidth = 128;
     break;

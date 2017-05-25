@@ -1228,7 +1228,12 @@ void LoopConstrainer::addToParentLoopIfNeeded(ArrayRef<BasicBlock *> BBs) {
 
 Loop *LoopConstrainer::createClonedLoopStructure(Loop *Original, Loop *Parent,
                                                  ValueToValueMapTy &VM) {
-  Loop &New = LPM.addLoop(Parent);
+  Loop &New = *new Loop();
+  if (Parent)
+    Parent->addChildLoop(&New);
+  else
+    LI.addTopLevelLoop(&New);
+  LPM.addLoop(New);
 
   // Add all of the blocks in Original to the new loop.
   for (auto *BB : Original->blocks())

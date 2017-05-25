@@ -1478,8 +1478,7 @@ Instruction *InstCombiner::foldICmpTruncConstant(ICmpInst &Cmp,
     // of the high bits truncated out of x are known.
     unsigned DstBits = Trunc->getType()->getScalarSizeInBits(),
              SrcBits = X->getType()->getScalarSizeInBits();
-    KnownBits Known(SrcBits);
-    computeKnownBits(X, Known, 0, &Cmp);
+    KnownBits Known = computeKnownBits(X, 0, &Cmp);
 
     // If all the high bits are known, we can do this xform.
     if ((Known.Zero | Known.One).countLeadingOnes() >= SrcBits - DstBits) {
@@ -3053,26 +3052,27 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
       }
       break;
     }
-    case Instruction::Mul:
+    case Instruction::Mul: {
       if (!I.isEquality())
         break;
 
-      if (ConstantInt *CI = dyn_cast<ConstantInt>(BO0->getOperand(1))) {
-        // a * Cst icmp eq/ne b * Cst --> a & Mask icmp b & Mask
-        // Mask = -1 >> count-trailing-zeros(Cst).
-        if (!CI->isZero() && !CI->isOne()) {
-          const APInt &AP = CI->getValue();
-          ConstantInt *Mask = ConstantInt::get(
-              I.getContext(),
-              APInt::getLowBitsSet(AP.getBitWidth(),
-                                   AP.getBitWidth() - AP.countTrailingZeros()));
+      const APInt *C;
+      if (match(BO0->getOperand(1), m_APInt(C))) {
+        // icmp eq/ne (X * C), (Y * C) --> icmp (X & Mask), (Y & Mask)
+        // Mask = -1 >> count-trailing-zeros(C).
+        if (*C != 0 && *C != 1) {
+          // FIXME: If trailing zeros is 0, don't bother creating Mask.
+          Constant *Mask = ConstantInt::get(
+              BO0->getType(),
+              APInt::getLowBitsSet(C->getBitWidth(),
+                                   C->getBitWidth() - C->countTrailingZeros()));
           Value *And1 = Builder->CreateAnd(BO0->getOperand(0), Mask);
           Value *And2 = Builder->CreateAnd(BO1->getOperand(0), Mask);
           return new ICmpInst(Pred, And1, And2);
         }
       }
       break;
-
+    }
     case Instruction::UDiv:
     case Instruction::LShr:
       if (I.isSigned() || !BO0->isExact() || !BO1->isExact())

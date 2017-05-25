@@ -34,6 +34,7 @@
 namespace llvm {
 
 class AsmPrinterHandler;
+class BasicBlock;
 class BlockAddress;
 class Constant;
 class ConstantArray;
@@ -43,6 +44,7 @@ class DIEAbbrev;
 class DwarfDebug;
 class GCMetadataPrinter;
 class GlobalIndirectSymbol;
+class GlobalObject;
 class GlobalValue;
 class GlobalVariable;
 class GCStrategy;
@@ -65,6 +67,8 @@ class MCSubtargetInfo;
 class MCSymbol;
 class MCTargetOptions;
 class MDNode;
+class Module;
+class raw_ostream;
 class TargetLoweringObjectFile;
 class TargetMachine;
 
@@ -109,7 +113,7 @@ public:
 
   /// Map global GOT equivalent MCSymbols to GlobalVariables and keep track of
   /// its number of uses by other globals.
-  typedef std::pair<const GlobalVariable *, unsigned> GOTEquivUsePair;
+  using GOTEquivUsePair = std::pair<const GlobalVariable *, unsigned>;
   MapVector<const MCSymbol *, GOTEquivUsePair> GlobalGOTEquivs;
 
   /// Enable print [latency:throughput] in output

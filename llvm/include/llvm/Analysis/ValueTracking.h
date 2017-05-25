@@ -60,7 +60,8 @@ template <typename T> class ArrayRef;
   KnownBits computeKnownBits(const Value *V, const DataLayout &DL,
                              unsigned Depth = 0, AssumptionCache *AC = nullptr,
                              const Instruction *CxtI = nullptr,
-                             const DominatorTree *DT = nullptr);
+                             const DominatorTree *DT = nullptr,
+                             OptimizationRemarkEmitter *ORE = nullptr);
   /// Compute known bits from the range metadata.
   /// \p KnownZero the set of bits that are known to be zero
   /// \p KnownOne the set of bits that are known to be one

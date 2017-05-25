@@ -35,6 +35,14 @@ define {i8, i1} @test_uadd3(i8 %v) {
   ret {i8, i1} %result
 }
 
+define {i8, i1} @test_uadd4(i8 %v) {
+; CHECK-LABEL: @test_uadd4(
+; CHECK-NEXT:    ret { i8, i1 } undef
+;
+  %result = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 undef, i8 %v)
+  ret {i8, i1} %result
+}
+
 define i1 @test_sadd1() {
 ; CHECK-LABEL: @test_sadd1(
 ; CHECK-NEXT:    ret i1 true
@@ -58,6 +66,14 @@ define {i8, i1} @test_sadd3(i8 %v) {
 ; CHECK-NEXT:    ret { i8, i1 } undef
 ;
   %result = call {i8, i1} @llvm.sadd.with.overflow.i8(i8 %v, i8 undef)
+  ret {i8, i1} %result
+}
+
+define {i8, i1} @test_sadd4(i8 %v) {
+; CHECK-LABEL: @test_sadd4(
+; CHECK-NEXT:    ret { i8, i1 } undef
+;
+  %result = call {i8, i1} @llvm.sadd.with.overflow.i8(i8 undef, i8 %v)
   ret {i8, i1} %result
 }
 
@@ -125,6 +141,22 @@ define {i8, i1} @test_umul2(i8 %V) {
   ret {i8, i1} %x
 }
 
+define {i8, i1} @test_umul3(i8 %V) {
+; CHECK-LABEL: @test_umul3(
+; CHECK-NEXT:    ret { i8, i1 } zeroinitializer
+;
+  %x = call {i8, i1} @llvm.umul.with.overflow.i8(i8 0, i8 %V)
+  ret {i8, i1} %x
+}
+
+define {i8, i1} @test_umul4(i8 %V) {
+; CHECK-LABEL: @test_umul4(
+; CHECK-NEXT:    ret { i8, i1 } zeroinitializer
+;
+  %x = call {i8, i1} @llvm.umul.with.overflow.i8(i8 undef, i8 %V)
+  ret {i8, i1} %x
+}
+
 define {i8, i1} @test_smul1(i8 %V) {
 ; CHECK-LABEL: @test_smul1(
 ; CHECK-NEXT:    ret { i8, i1 } zeroinitializer
@@ -138,6 +170,22 @@ define {i8, i1} @test_smul2(i8 %V) {
 ; CHECK-NEXT:    ret { i8, i1 } zeroinitializer
 ;
   %x = call {i8, i1} @llvm.smul.with.overflow.i8(i8 %V, i8 undef)
+  ret {i8, i1} %x
+}
+
+define {i8, i1} @test_smul3(i8 %V) {
+; CHECK-LABEL: @test_smul3(
+; CHECK-NEXT:    ret { i8, i1 } zeroinitializer
+;
+  %x = call {i8, i1} @llvm.smul.with.overflow.i8(i8 0, i8 %V)
+  ret {i8, i1} %x
+}
+
+define {i8, i1} @test_smul4(i8 %V) {
+; CHECK-LABEL: @test_smul4(
+; CHECK-NEXT:    ret { i8, i1 } zeroinitializer
+;
+  %x = call {i8, i1} @llvm.smul.with.overflow.i8(i8 undef, i8 %V)
   ret {i8, i1} %x
 }
 

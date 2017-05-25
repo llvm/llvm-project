@@ -46,7 +46,7 @@ def SDT_PPCVecSplat : SDTypeProfile<1, 2, [ SDTCisVec<0>,
 ]>;
 
 def SDT_PPCVecShift : SDTypeProfile<1, 3, [ SDTCisVec<0>,
-  SDTCisVec<1>, SDTCisVec<2>, SDTCisInt<3>
+  SDTCisVec<1>, SDTCisVec<2>, SDTCisPtrTy<3>
 ]>;
 
 def SDT_PPCVecInsert : SDTypeProfile<1, 3, [ SDTCisVec<0>,

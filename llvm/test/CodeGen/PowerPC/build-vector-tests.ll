@@ -869,9 +869,9 @@ entry:
 ; P9LE-LABEL: fromDiffConstsi
 ; P8BE-LABEL: fromDiffConstsi
 ; P8LE-LABEL: fromDiffConstsi
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvw4x
 ; P8BE: blr
@@ -899,9 +899,9 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsAi
 ; P8BE-LABEL: fromDiffMemConsAi
 ; P8LE-LABEL: fromDiffMemConsAi
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvw4x
 ; P8BE: blr
@@ -929,12 +929,12 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsDi
 ; P8BE-LABEL: fromDiffMemConsDi
 ; P8LE-LABEL: fromDiffMemConsDi
-; P9BE: lxvx
-; P9BE: lxvx
+; P9BE: lxv
+; P9BE: lxv
 ; P9BE: vperm
 ; P9BE: blr
-; P9LE: lxvx
-; P9LE: lxvx
+; P9LE: lxv
+; P9LE: lxv
 ; P9LE: vperm
 ; P9LE: blr
 ; P8BE: lxvw4x
@@ -1018,13 +1018,13 @@ entry:
 ; P8BE-LABEL: fromDiffMemVarDi
 ; P8LE-LABEL: fromDiffMemVarDi
 ; P9BE: sldi {{r[0-9]+}}, r4, 2
-; P9BE-DAG: lxvx {{v[0-9]+}}, r3,
-; P9BE-DAG: lxvx
+; P9BE-DAG: lxv {{v[0-9]+}}
+; P9BE-DAG: lxv
 ; P9BE: vperm
 ; P9BE: blr
 ; P9LE: sldi {{r[0-9]+}}, r4, 2
-; P9LE-DAG: lxvx {{v[0-9]+}}, r3,
-; P9LE-DAG: lxvx
+; P9LE-DAG: lxv {{v[0-9]+}}
+; P9LE-DAG: lxv
 ; P9LE: vperm
 ; P9LE: blr
 ; P8BE: sldi {{r[0-9]+}}, r4, 2
@@ -1281,9 +1281,9 @@ entry:
 ; P9LE-LABEL: fromDiffConstsConvftoi
 ; P8BE-LABEL: fromDiffConstsConvftoi
 ; P8LE-LABEL: fromDiffConstsConvftoi
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvw4x
 ; P8BE: blr
@@ -1303,10 +1303,10 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsAConvftoi
 ; P8BE-LABEL: fromDiffMemConsAConvftoi
 ; P8LE-LABEL: fromDiffMemConsAConvftoi
-; P9BE: lxvx [[REG1:[vs0-9]+]], 0, r3
+; P9BE: lxv [[REG1:[vs0-9]+]], 0(r3)
 ; P9BE: xvcvspsxws v2, [[REG1]]
 ; P9BE: blr
-; P9LE: lxvx [[REG1:[vs0-9]+]], 0, r3
+; P9LE: lxv [[REG1:[vs0-9]+]], 0(r3)
 ; P9LE: xvcvspsxws v2, [[REG1]]
 ; P9LE: blr
 ; P8BE: lxvw4x [[REG1:[vs0-9]+]], 0, r3
@@ -1341,13 +1341,13 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsDConvftoi
 ; P8BE-LABEL: fromDiffMemConsDConvftoi
 ; P8LE-LABEL: fromDiffMemConsDConvftoi
-; P9BE: lxvx
-; P9BE: lxvx
+; P9BE: lxv
+; P9BE: lxv
 ; P9BE: vperm
 ; P9BE: xvcvspsxws
 ; P9BE: blr
-; P9LE: lxvx
-; P9LE: lxvx
+; P9LE: lxv
+; P9LE: lxv
 ; P9LE: vperm
 ; P9LE: xvcvspsxws
 ; P9LE: blr
@@ -1557,9 +1557,9 @@ entry:
 ; P9LE-LABEL: fromDiffConstsConvdtoi
 ; P8BE-LABEL: fromDiffConstsConvdtoi
 ; P8LE-LABEL: fromDiffConstsConvdtoi
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvw4x
 ; P8BE: blr
@@ -1584,16 +1584,16 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsAConvdtoi
 ; P8BE-LABEL: fromDiffMemConsAConvdtoi
 ; P8LE-LABEL: fromDiffMemConsAConvdtoi
-; P9BE: lxvx [[REG1:[vs0-9]+]], 0, r3
-; P9BE: lxvx [[REG2:[vs0-9]+]], r3, r4
+; P9BE: lxv [[REG1:[vs0-9]+]], 0(r3)
+; P9BE: lxv [[REG2:[vs0-9]+]], 16(r3)
 ; P9BE-DAG: xxmrgld [[REG3:[vs0-9]+]], [[REG1]], [[REG2]]
 ; P9BE-DAG: xxmrghd [[REG4:[vs0-9]+]], [[REG1]], [[REG2]]
 ; P9BE-DAG: xvcvdpsp [[REG5:[vs0-9]+]], [[REG3]]
 ; P9BE-DAG: xvcvdpsp [[REG6:[vs0-9]+]], [[REG4]]
 ; P9BE: vmrgew v2, [[REG6]], [[REG5]]
 ; P9BE: xvcvspsxws v2, v2
-; P9LE: lxvx [[REG1:[vs0-9]+]], 0, r3
-; P9LE: lxvx [[REG2:[vs0-9]+]], r3, r4
+; P9LE: lxv [[REG1:[vs0-9]+]], 0(r3)
+; P9LE: lxv [[REG2:[vs0-9]+]], 16(r3)
 ; P9LE-DAG: xxmrgld [[REG3:[vs0-9]+]], [[REG2]], [[REG1]]
 ; P9LE-DAG: xxmrghd [[REG4:[vs0-9]+]], [[REG2]], [[REG1]]
 ; P9LE-DAG: xvcvdpsp [[REG5:[vs0-9]+]], [[REG3]]
@@ -2027,9 +2027,9 @@ entry:
 ; P9LE-LABEL: fromDiffConstsui
 ; P8BE-LABEL: fromDiffConstsui
 ; P8LE-LABEL: fromDiffConstsui
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvw4x
 ; P8BE: blr
@@ -2057,9 +2057,9 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsAui
 ; P8BE-LABEL: fromDiffMemConsAui
 ; P8LE-LABEL: fromDiffMemConsAui
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvw4x
 ; P8BE: blr
@@ -2087,12 +2087,12 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsDui
 ; P8BE-LABEL: fromDiffMemConsDui
 ; P8LE-LABEL: fromDiffMemConsDui
-; P9BE: lxvx
-; P9BE: lxvx
+; P9BE: lxv
+; P9BE: lxv
 ; P9BE: vperm
 ; P9BE: blr
-; P9LE: lxvx
-; P9LE: lxvx
+; P9LE: lxv
+; P9LE: lxv
 ; P9LE: vperm
 ; P9LE: blr
 ; P8BE: lxvw4x
@@ -2177,13 +2177,13 @@ entry:
 ; P8BE-LABEL: fromDiffMemVarDui
 ; P8LE-LABEL: fromDiffMemVarDui
 ; P9BE-DAG: sldi {{r[0-9]+}}, r4, 2
-; P9BE-DAG: lxvx {{v[0-9]+}}, r3
-; P9BE-DAG: lxvx
+; P9BE-DAG: lxv {{v[0-9]+}}, -12(r3)
+; P9BE-DAG: lxv
 ; P9BE: vperm
 ; P9BE: blr
 ; P9LE-DAG: sldi {{r[0-9]+}}, r4, 2
-; P9LE-DAG: lxvx {{v[0-9]+}}, r3
-; P9LE-DAG: lxvx
+; P9LE-DAG: lxv {{v[0-9]+}}, -12(r3)
+; P9LE-DAG: lxv
 ; P9LE: vperm
 ; P9LE: blr
 ; P8BE-DAG: sldi {{r[0-9]+}}, r4, 2
@@ -2439,9 +2439,9 @@ entry:
 ; P9LE-LABEL: fromDiffConstsConvftoui
 ; P8BE-LABEL: fromDiffConstsConvftoui
 ; P8LE-LABEL: fromDiffConstsConvftoui
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvw4x
 ; P8BE: blr
@@ -2461,10 +2461,10 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsAConvftoui
 ; P8BE-LABEL: fromDiffMemConsAConvftoui
 ; P8LE-LABEL: fromDiffMemConsAConvftoui
-; P9BE: lxvx [[REG1:[vs0-9]+]], 0, r3
+; P9BE: lxv [[REG1:[vs0-9]+]], 0(r3)
 ; P9BE: xvcvspuxws v2, [[REG1]]
 ; P9BE: blr
-; P9LE: lxvx [[REG1:[vs0-9]+]], 0, r3
+; P9LE: lxv [[REG1:[vs0-9]+]], 0(r3)
 ; P9LE: xvcvspuxws v2, [[REG1]]
 ; P9LE: blr
 ; P8BE: lxvw4x [[REG1:[vs0-9]+]], 0, r3
@@ -2499,13 +2499,13 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsDConvftoui
 ; P8BE-LABEL: fromDiffMemConsDConvftoui
 ; P8LE-LABEL: fromDiffMemConsDConvftoui
-; P9BE: lxvx
-; P9BE: lxvx
+; P9BE: lxv
+; P9BE: lxv
 ; P9BE: vperm
 ; P9BE: xvcvspuxws
 ; P9BE: blr
-; P9LE: lxvx
-; P9LE: lxvx
+; P9LE: lxv
+; P9LE: lxv
 ; P9LE: vperm
 ; P9LE: xvcvspuxws
 ; P9LE: blr
@@ -2715,9 +2715,9 @@ entry:
 ; P9LE-LABEL: fromDiffConstsConvdtoui
 ; P8BE-LABEL: fromDiffConstsConvdtoui
 ; P8LE-LABEL: fromDiffConstsConvdtoui
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvw4x
 ; P8BE: blr
@@ -2742,16 +2742,16 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsAConvdtoui
 ; P8BE-LABEL: fromDiffMemConsAConvdtoui
 ; P8LE-LABEL: fromDiffMemConsAConvdtoui
-; P9BE: lxvx [[REG1:[vs0-9]+]], 0, r3
-; P9BE: lxvx [[REG2:[vs0-9]+]], r3, r4
+; P9BE: lxv [[REG1:[vs0-9]+]], 0(r3)
+; P9BE: lxv [[REG2:[vs0-9]+]], 16(r3)
 ; P9BE-DAG: xxmrgld [[REG3:[vs0-9]+]], [[REG1]], [[REG2]]
 ; P9BE-DAG: xxmrghd [[REG4:[vs0-9]+]], [[REG1]], [[REG2]]
 ; P9BE-DAG: xvcvdpsp [[REG5:[vs0-9]+]], [[REG3]]
 ; P9BE-DAG: xvcvdpsp [[REG6:[vs0-9]+]], [[REG4]]
 ; P9BE: vmrgew v2, [[REG6]], [[REG5]]
 ; P9BE: xvcvspuxws v2, v2
-; P9LE: lxvx [[REG1:[vs0-9]+]], 0, r3
-; P9LE: lxvx [[REG2:[vs0-9]+]], r3, r4
+; P9LE: lxv [[REG1:[vs0-9]+]], 0(r3)
+; P9LE: lxv [[REG2:[vs0-9]+]], 16(r3)
 ; P9LE-DAG: xxmrgld [[REG3:[vs0-9]+]], [[REG2]], [[REG1]]
 ; P9LE-DAG: xxmrghd [[REG4:[vs0-9]+]], [[REG2]], [[REG1]]
 ; P9LE-DAG: xvcvdpsp [[REG5:[vs0-9]+]], [[REG3]]
@@ -3087,9 +3087,9 @@ entry:
 ; P9LE-LABEL: spltConst1ll
 ; P8BE-LABEL: spltConst1ll
 ; P8LE-LABEL: spltConst1ll
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvd2x
 ; P8BE: blr
@@ -3105,9 +3105,9 @@ entry:
 ; P9LE-LABEL: spltConst16kll
 ; P8BE-LABEL: spltConst16kll
 ; P8LE-LABEL: spltConst16kll
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvd2x
 ; P8BE: blr
@@ -3123,9 +3123,9 @@ entry:
 ; P9LE-LABEL: spltConst32kll
 ; P8BE-LABEL: spltConst32kll
 ; P8LE-LABEL: spltConst32kll
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvd2x
 ; P8BE: blr
@@ -3165,9 +3165,9 @@ entry:
 ; P9LE-LABEL: fromDiffConstsll
 ; P8BE-LABEL: fromDiffConstsll
 ; P8LE-LABEL: fromDiffConstsll
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvd2x
 ; P8BE: blr
@@ -3188,9 +3188,9 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsAll
 ; P8BE-LABEL: fromDiffMemConsAll
 ; P8LE-LABEL: fromDiffMemConsAll
-; P9BE: lxvx v2
+; P9BE: lxv v2
 ; P9BE: blr
-; P9LE: lxvx v2
+; P9LE: lxv v2
 ; P9LE: blr
 ; P8BE: lxvd2x v2
 ; P8BE: blr
@@ -3213,9 +3213,9 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsDll
 ; P8BE-LABEL: fromDiffMemConsDll
 ; P8LE-LABEL: fromDiffMemConsDll
-; P9BE: lxvx v2
+; P9BE: lxv v2
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: xxswapd v2
 ; P9LE: blr
 ; P8BE: lxvd2x
@@ -3275,11 +3275,11 @@ entry:
 ; P8BE-LABEL: fromDiffMemVarDll
 ; P8LE-LABEL: fromDiffMemVarDll
 ; P9BE: sldi
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: xxswapd v2
 ; P9BE-NEXT: blr
 ; P9LE: sldi
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: xxswapd v2
 ; P9LE-NEXT: blr
 ; P8BE: sldi
@@ -3422,9 +3422,9 @@ entry:
 ; P9LE-LABEL: spltCnstConvftoll
 ; P8BE-LABEL: spltCnstConvftoll
 ; P8LE-LABEL: spltCnstConvftoll
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvd2x
 ; P8BE: blr
@@ -3466,9 +3466,9 @@ entry:
 ; P9LE-LABEL: fromDiffConstsConvftoll
 ; P8BE-LABEL: fromDiffConstsConvftoll
 ; P8LE-LABEL: fromDiffConstsConvftoll
-; P9BE: lxvx v2
+; P9BE: lxv v2
 ; P9BE: blr
-; P9LE: lxvx v2
+; P9LE: lxv v2
 ; P9LE: blr
 ; P8BE: lxvd2x v2
 ; P8BE: blr
@@ -3705,9 +3705,9 @@ entry:
 ; P9LE-LABEL: spltCnstConvdtoll
 ; P8BE-LABEL: spltCnstConvdtoll
 ; P8LE-LABEL: spltCnstConvdtoll
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvd2x
 ; P8BE: blr
@@ -3749,9 +3749,9 @@ entry:
 ; P9LE-LABEL: fromDiffConstsConvdtoll
 ; P8BE-LABEL: fromDiffConstsConvdtoll
 ; P8LE-LABEL: fromDiffConstsConvdtoll
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvd2x
 ; P8BE: blr
@@ -3770,10 +3770,10 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsAConvdtoll
 ; P8BE-LABEL: fromDiffMemConsAConvdtoll
 ; P8LE-LABEL: fromDiffMemConsAConvdtoll
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE-NEXT: xvcvdpsxds v2
 ; P9BE-NEXT: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE-NEXT: xvcvdpsxds v2
 ; P9LE-NEXT: blr
 ; P8BE: lxvd2x
@@ -3801,11 +3801,11 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsDConvdtoll
 ; P8BE-LABEL: fromDiffMemConsDConvdtoll
 ; P8LE-LABEL: fromDiffMemConsDConvdtoll
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE-NEXT: xxswapd
 ; P9BE-NEXT: xvcvdpsxds v2
 ; P9BE-NEXT: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE-NEXT: xxswapd
 ; P9LE-NEXT: xvcvdpsxds v2
 ; P9LE-NEXT: blr
@@ -3876,12 +3876,12 @@ entry:
 ; P8BE-LABEL: fromDiffMemVarDConvdtoll
 ; P8LE-LABEL: fromDiffMemVarDConvdtoll
 ; P9BE: sldi
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE-NEXT: xxswapd
 ; P9BE-NEXT: xvcvdpsxds v2
 ; P9BE-NEXT: blr
 ; P9LE: sldi
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE-NEXT: xxswapd
 ; P9LE-NEXT: xvcvdpsxds v2
 ; P9LE-NEXT: blr
@@ -3991,9 +3991,9 @@ entry:
 ; P9LE-LABEL: spltConst1ull
 ; P8BE-LABEL: spltConst1ull
 ; P8LE-LABEL: spltConst1ull
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvd2x
 ; P8BE: blr
@@ -4009,9 +4009,9 @@ entry:
 ; P9LE-LABEL: spltConst16kull
 ; P8BE-LABEL: spltConst16kull
 ; P8LE-LABEL: spltConst16kull
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvd2x
 ; P8BE: blr
@@ -4027,9 +4027,9 @@ entry:
 ; P9LE-LABEL: spltConst32kull
 ; P8BE-LABEL: spltConst32kull
 ; P8LE-LABEL: spltConst32kull
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvd2x
 ; P8BE: blr
@@ -4069,9 +4069,9 @@ entry:
 ; P9LE-LABEL: fromDiffConstsull
 ; P8BE-LABEL: fromDiffConstsull
 ; P8LE-LABEL: fromDiffConstsull
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvd2x
 ; P8BE: blr
@@ -4092,9 +4092,9 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsAull
 ; P8BE-LABEL: fromDiffMemConsAull
 ; P8LE-LABEL: fromDiffMemConsAull
-; P9BE: lxvx v2
+; P9BE: lxv v2
 ; P9BE: blr
-; P9LE: lxvx v2
+; P9LE: lxv v2
 ; P9LE: blr
 ; P8BE: lxvd2x v2
 ; P8BE: blr
@@ -4117,9 +4117,9 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsDull
 ; P8BE-LABEL: fromDiffMemConsDull
 ; P8LE-LABEL: fromDiffMemConsDull
-; P9BE: lxvx v2
+; P9BE: lxv v2
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: xxswapd v2
 ; P9LE: blr
 ; P8BE: lxvd2x
@@ -4179,11 +4179,11 @@ entry:
 ; P8BE-LABEL: fromDiffMemVarDull
 ; P8LE-LABEL: fromDiffMemVarDull
 ; P9BE: sldi
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: xxswapd v2
 ; P9BE-NEXT: blr
 ; P9LE: sldi
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: xxswapd v2
 ; P9LE-NEXT: blr
 ; P8BE: sldi
@@ -4326,9 +4326,9 @@ entry:
 ; P9LE-LABEL: spltCnstConvftoull
 ; P8BE-LABEL: spltCnstConvftoull
 ; P8LE-LABEL: spltCnstConvftoull
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvd2x
 ; P8BE: blr
@@ -4370,9 +4370,9 @@ entry:
 ; P9LE-LABEL: fromDiffConstsConvftoull
 ; P8BE-LABEL: fromDiffConstsConvftoull
 ; P8LE-LABEL: fromDiffConstsConvftoull
-; P9BE: lxvx v2
+; P9BE: lxv v2
 ; P9BE: blr
-; P9LE: lxvx v2
+; P9LE: lxv v2
 ; P9LE: blr
 ; P8BE: lxvd2x v2
 ; P8BE: blr
@@ -4609,9 +4609,9 @@ entry:
 ; P9LE-LABEL: spltCnstConvdtoull
 ; P8BE-LABEL: spltCnstConvdtoull
 ; P8LE-LABEL: spltCnstConvdtoull
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvd2x
 ; P8BE: blr
@@ -4653,9 +4653,9 @@ entry:
 ; P9LE-LABEL: fromDiffConstsConvdtoull
 ; P8BE-LABEL: fromDiffConstsConvdtoull
 ; P8LE-LABEL: fromDiffConstsConvdtoull
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE: blr
 ; P8BE: lxvd2x
 ; P8BE: blr
@@ -4674,10 +4674,10 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsAConvdtoull
 ; P8BE-LABEL: fromDiffMemConsAConvdtoull
 ; P8LE-LABEL: fromDiffMemConsAConvdtoull
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE-NEXT: xvcvdpuxds v2
 ; P9BE-NEXT: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE-NEXT: xvcvdpuxds v2
 ; P9LE-NEXT: blr
 ; P8BE: lxvd2x
@@ -4705,11 +4705,11 @@ entry:
 ; P9LE-LABEL: fromDiffMemConsDConvdtoull
 ; P8BE-LABEL: fromDiffMemConsDConvdtoull
 ; P8LE-LABEL: fromDiffMemConsDConvdtoull
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE-NEXT: xxswapd
 ; P9BE-NEXT: xvcvdpuxds v2
 ; P9BE-NEXT: blr
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE-NEXT: xxswapd
 ; P9LE-NEXT: xvcvdpuxds v2
 ; P9LE-NEXT: blr
@@ -4780,12 +4780,12 @@ entry:
 ; P8BE-LABEL: fromDiffMemVarDConvdtoull
 ; P8LE-LABEL: fromDiffMemVarDConvdtoull
 ; P9BE: sldi
-; P9BE: lxvx
+; P9BE: lxv
 ; P9BE-NEXT: xxswapd
 ; P9BE-NEXT: xvcvdpuxds v2
 ; P9BE-NEXT: blr
 ; P9LE: sldi
-; P9LE: lxvx
+; P9LE: lxv
 ; P9LE-NEXT: xxswapd
 ; P9LE-NEXT: xvcvdpuxds v2
 ; P9LE-NEXT: blr

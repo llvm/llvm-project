@@ -396,6 +396,9 @@ public:
   bool isLegalMaskedScatter(Type *DataType) const;
   bool isLegalMaskedGather(Type *DataType) const;
 
+  /// Return true if target doesn't mind addresses in vectors.
+  bool prefersVectorizedAddressing() const;
+
   /// \brief Return the cost of the scaling factor used in the addressing
   /// mode represented by AM for this target, for a load/store
   /// of the specified type.
@@ -807,6 +810,7 @@ public:
   virtual bool isLegalMaskedLoad(Type *DataType) = 0;
   virtual bool isLegalMaskedScatter(Type *DataType) = 0;
   virtual bool isLegalMaskedGather(Type *DataType) = 0;
+  virtual bool prefersVectorizedAddressing() = 0;
   virtual int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                    int64_t BaseOffset, bool HasBaseReg,
                                    int64_t Scale, unsigned AddrSpace) = 0;
@@ -999,6 +1003,9 @@ public:
   }
   bool isLegalMaskedGather(Type *DataType) override {
     return Impl.isLegalMaskedGather(DataType);
+  }
+  bool prefersVectorizedAddressing() override {
+    return Impl.prefersVectorizedAddressing();
   }
   int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                            bool HasBaseReg, int64_t Scale,

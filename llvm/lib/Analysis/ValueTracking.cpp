@@ -149,8 +149,10 @@ static KnownBits computeKnownBits(const Value *V, unsigned Depth,
 KnownBits llvm::computeKnownBits(const Value *V, const DataLayout &DL,
                                  unsigned Depth, AssumptionCache *AC,
                                  const Instruction *CxtI,
-                                 const DominatorTree *DT) {
-  return ::computeKnownBits(V, Depth, Query(DL, AC, safeCxtI(V, CxtI), DT));
+                                 const DominatorTree *DT,
+                                 OptimizationRemarkEmitter *ORE) {
+  return ::computeKnownBits(V, Depth,
+                            Query(DL, AC, safeCxtI(V, CxtI), DT, ORE));
 }
 
 bool llvm::haveNoCommonBitsSet(const Value *LHS, const Value *RHS,

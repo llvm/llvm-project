@@ -21,8 +21,8 @@
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr9 -O2 \
 ; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s > %t
-; RUN: grep lxvx < %t | count 6
-; RUN: grep stxvx < %t | count 6
+; RUN: grep lxv < %t | count 6
+; RUN: grep stxv < %t | count 6
 
 
 @vsi = global <4 x i32> <i32 -1, i32 2, i32 -3, i32 4>, align 16

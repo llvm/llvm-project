@@ -1,4 +1,4 @@
-//=- llvm/CodeGen/MachineDominators.h - Machine Dom Calculation --*- C++ -*-==//
+//==- llvm/CodeGen/MachineDominators.h - Machine Dom Calculation -*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,12 +16,15 @@
 #define LLVM_CODEGEN_MACHINEDOMINATORS_H
 
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
+#include <cassert>
 #include <memory>
+#include <vector>
 
 namespace llvm {
 
@@ -33,7 +36,7 @@ inline void DominatorTreeBase<MachineBasicBlock>::addRoot(MachineBasicBlock* MBB
 extern template class DomTreeNodeBase<MachineBasicBlock>;
 extern template class DominatorTreeBase<MachineBasicBlock>;
 
-typedef DomTreeNodeBase<MachineBasicBlock> MachineDomTreeNode;
+using MachineDomTreeNode = DomTreeNodeBase<MachineBasicBlock>;
 
 //===-------------------------------------
 /// DominatorTree Class - Concrete subclass of DominatorTreeBase that is used to
@@ -52,6 +55,7 @@ class MachineDominatorTree : public MachineFunctionPass {
   /// The splitting of a critical edge is local and thus, it is possible
   /// to apply several of those changes at the same time.
   mutable SmallVector<CriticalEdge, 32> CriticalEdgesToSplit;
+
   /// \brief Remember all the basic blocks that are inserted during
   /// edge splitting.
   /// Invariant: NewBBs == all the basic blocks contained in the NewBB
@@ -259,8 +263,8 @@ public:
 
 template <class Node, class ChildIterator>
 struct MachineDomTreeGraphTraitsBase {
-  typedef Node *NodeRef;
-  typedef ChildIterator ChildIteratorType;
+  using NodeRef = Node *;
+  using ChildIteratorType = ChildIterator;
 
   static NodeRef getEntryNode(NodeRef N) { return N; }
   static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
@@ -287,6 +291,6 @@ template <> struct GraphTraits<MachineDominatorTree*>
   }
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINEDOMINATORS_H

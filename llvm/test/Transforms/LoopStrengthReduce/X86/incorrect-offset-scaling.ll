@@ -25,7 +25,7 @@ L2:                                               ; preds = %idxend.8
 if6:                                              ; preds = %idxend.8
   %r2 = add i64 %0, -1
   %r3 = load i64, i64* %1, align 8
-; CHECK:  %r2 = add i64 %0, -1
+; CHECK-NOT:  %r2
 ; CHECK:  %r3 = load i64
   br label %ib
 
@@ -36,11 +36,13 @@ ib:                                               ; preds = %if6
   %r4 = mul i64 %r3, %r0
   %r5 = add i64 %r2, %r4
   %r6 = icmp ult i64 %r5, undef
-; CHECK:  %r4 = mul i64 %r3, %lsr.iv
-; CHECK:  %r5 = add i64 %r2, %r4
-; CHECK:  %r6 = icmp ult i64 %r5, undef
-; CHECK:  %r7 = getelementptr i64, i64* undef, i64 %r5
+; CHECK:  [[MUL1:%[0-9]+]] = mul i64 %lsr.iv, %r3
+; CHECK:  [[ADD1:%[0-9]+]] = add i64 [[MUL1]], -1
+; CHECK:  add i64 %{{.}}, [[ADD1]]
+; CHECK:  %r6
   %r7 = getelementptr i64, i64* undef, i64 %r5
   store i64 1, i64* %r7, align 8
+; CHECK:  [[MUL2:%[0-9]+]] = mul i64 %lsr.iv, %r3
+; CHECK:  [[ADD2:%[0-9]+]] = add i64 [[MUL2]], -1
   br label %L
 }

@@ -30,47 +30,13 @@ exit:
   ret i64 %r
 }
 
-; PR15470: LSR miscompile. The test1 function should return '1'.
-; It is valid to fold SCEVUnknown into the recurrence because it
-; was defined before the loop.
-;
-; SCEV does not know how to denormalize chained recurrences, so make
-; sure they aren't marked as post-inc users.
-;
-; CHECK-LABEL: IV Users for loop %test1.loop
-; CHECK-NO-LCSSA: %sext.us = {0,+,(16777216 + (-16777216 * %sub.us))<nuw><nsw>,+,33554432}<%test1.loop> (post-inc with loop %test1.loop) in    %f = ashr i32 %sext.us, 24
-define i32 @test1(i1 %cond) {
-entry:
-  %sub.us = select i1 %cond, i32 0, i32 0
-  br label %test1.loop
-
-test1.loop:
-  %inc1115.us = phi i32 [ 0, %entry ], [ %inc11.us, %test1.loop ]
-  %inc11.us = add nsw i32 %inc1115.us, 1
-  %cmp.us = icmp slt i32 %inc11.us, 2
-  br i1 %cmp.us, label %test1.loop, label %for.end
-
-for.end:
-  %tobool.us = icmp eq i32 %inc1115.us, 0
-  %mul.us = shl i32 %inc1115.us, 24
-  %sub.cond.us = sub nsw i32 %inc1115.us, %sub.us
-  %sext.us = mul i32 %mul.us, %sub.cond.us
-  %f = ashr i32 %sext.us, 24
-  br label %exit
-
-exit:
-  ret i32 %f
-}
-
 ; PR15470: LSR miscompile. The test2 function should return '1'.
-; It is illegal to fold SCEVUnknown (sext.us) into the recurrence
-; because it is defined after the loop where this recurrence belongs.
 ;
 ; SCEV does not know how to denormalize chained recurrences, so make
 ; sure they aren't marked as post-inc users.
 ;
 ; CHECK-LABEL: IV Users for loop %test2.loop
-; CHECK-NO-LCSSA: %sub.cond.us = ((-1 * %sub.us)<nsw> + {0,+,1}<nuw><nsw><%test2.loop>) (post-inc with loop %test2.loop) in    %sext.us = mul i32 %mul.us, %sub.cond.us
+; CHECK-NO-LCSSA: %sext.us = {0,+,(16777216 + (-16777216 * %sub.us))<nuw><nsw>,+,33554432}<%test2.loop> (post-inc with loop %test2.loop) in    %f = ashr i32 %sext.us, 24
 define i32 @test2() {
 entry:
   br label %test2.loop

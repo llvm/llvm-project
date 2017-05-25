@@ -7,23 +7,16 @@ target triple = "x86_64-apple-macosx"
 ;
 ; SCEV expander cannot expand quadratic recurrences outside of the
 ; loop. This recurrence depends on %sub.us, so can't be expanded.
-; We cannot fold SCEVUnknown (sub.us) with recurrences since it is
-; declared after the loop.
 ;
 ; CHECK-LABEL: @test2
 ; CHECK-LABEL: test2.loop:
-; CHECK:  %lsr.iv1 = phi i32 [ %lsr.iv.next2, %test2.loop ], [ -16777216, %entry ]
-; CHECK:  %lsr.iv = phi i32 [ %lsr.iv.next, %test2.loop ], [ -1, %entry ]
-; CHECK:  %lsr.iv.next = add nsw i32 %lsr.iv, 1
-; CHECK:  %lsr.iv.next2 = add nsw i32 %lsr.iv1, 16777216
+; CHECK: %lsr.iv = phi i32 [ %lsr.iv.next, %test2.loop ], [ -16777216, %entry ]
+; CHECK: %lsr.iv.next = add nsw i32 %lsr.iv, 16777216
 ;
 ; CHECK-LABEL: for.end:
-; CHECK:  %tobool.us = icmp eq i32 %lsr.iv.next2, 0
-; CHECK:  %sub.us = select i1 %tobool.us, i32 0, i32 0
-; CHECK:  %1 = sub i32 0, %sub.us
-; CHECK:  %2 = add i32 %1, %lsr.iv.next
-; CHECK:  %sext.us = mul i32 %lsr.iv.next2, %2
-; CHECK:  %f = ashr i32 %sext.us, 24
+; CHECK: %sub.cond.us = sub nsw i32 %inc1115.us, %sub.us
+; CHECK: %sext.us = mul i32 %lsr.iv.next, %sub.cond.us
+; CHECK: %f = ashr i32 %sext.us, 24
 ; CHECK: ret i32 %f
 define i32 @test2() {
 entry:
