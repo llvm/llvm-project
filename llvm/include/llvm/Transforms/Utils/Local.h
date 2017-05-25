@@ -410,6 +410,14 @@ bool recognizeBSwapOrBitReverseIdiom(
 void maybeMarkSanitizerLibraryCallNoBuiltin(CallInst *CI,
                                             const TargetLibraryInfo *TLI);
 
+//===----------------------------------------------------------------------===//
+//  Transform predicates
+//
+
+/// Given an instruction, is it legal to set operand OpIdx to a non-constant
+/// value?
+bool canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx);
+
 } // End llvm namespace
 
 #endif

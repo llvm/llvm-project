@@ -356,6 +356,13 @@ FunctionPass *createGVNHoistPass();
 
 //===----------------------------------------------------------------------===//
 //
+// GVNSink - This pass uses an "inverted" value numbering to decide the
+// similarity of expressions and sinks similar expressions into successors.
+//
+FunctionPass *createGVNSinkPass();
+
+//===----------------------------------------------------------------------===//
+//
 // MergedLoadStoreMotion - This pass merges loads and stores in diamonds. Loads
 // are hoisted into the header, while stores sink into the footer.
 //

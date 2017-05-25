@@ -36,7 +36,7 @@ int __attribute__((target("arch=lakemont"))) lake(int a) { return 4; }
 // CHECK: lake{{.*}} #6
 // CHECK: #0 = {{.*}}"target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87"
 // CHECK: #1 = {{.*}}"target-cpu"="ivybridge" "target-features"="+aes,+avx,+cx16,+f16c,+fsgsbase,+fxsr,+mmx,+pclmul,+popcnt,+rdrnd,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"
-// CHECK: #2 = {{.*}}"target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+x87,-aes,-avx,-avx2,-avx512bw,-avx512cd,-avx512dq,-avx512er,-avx512f,-avx512ifma,-avx512pf,-avx512vbmi,-avx512vl,-f16c,-fma,-fma4,-pclmul,-sha,-sse2,-sse3,-sse4.1,-sse4.2,-sse4a,-ssse3,-xop,-xsave,-xsaveopt"
+// CHECK: #2 = {{.*}}"target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+x87,-aes,-avx,-avx2,-avx512bw,-avx512cd,-avx512dq,-avx512er,-avx512f,-avx512ifma,-avx512pf,-avx512vbmi,-avx512vl,-avx512vpopcntdq,-f16c,-fma,-fma4,-pclmul,-sha,-sse2,-sse3,-sse4.1,-sse4.2,-sse4a,-ssse3,-xop,-xsave,-xsaveopt"
 // CHECK: #3 = {{.*}}"target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87"
 // CHECK: #4 = {{.*}}"target-cpu"="ivybridge" "target-features"="+avx,+cx16,+f16c,+fsgsbase,+fxsr,+mmx,+pclmul,+popcnt,+rdrnd,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt,-aes"
 // CHECK: #5 = {{.*}}"target-cpu"="x86-64" "target-features"="+fxsr,+sse,+sse2,+x87,-3dnow,-3dnowa,-mmx"

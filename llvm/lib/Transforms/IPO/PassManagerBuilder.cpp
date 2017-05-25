@@ -155,6 +155,10 @@ static cl::opt<bool>
                              cl::Hidden,
                              cl::desc("Enable the simple loop unswitch pass."));
 
+static cl::opt<bool> EnableGVNSink(
+    "enable-gvn-sink", cl::init(false), cl::Hidden,
+    cl::desc("Enable the GVN sinking pass (default = on)"));
+
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
     SizeLevel = 0;
@@ -307,6 +311,11 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   MPM.add(createEarlyCSEPass());              // Catch trivial redundancies
   if (EnableGVNHoist)
     MPM.add(createGVNHoistPass());
+  if (EnableGVNSink) {
+    MPM.add(createGVNSinkPass());
+    MPM.add(createCFGSimplificationPass());
+  }
+
   // Speculative execution if the target has divergent branches; otherwise nop.
   MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
   MPM.add(createJumpThreadingPass());         // Thread jumps.

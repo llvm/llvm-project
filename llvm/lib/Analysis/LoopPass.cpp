@@ -73,30 +73,23 @@ LPPassManager::LPPassManager()
   CurrentLoop = nullptr;
 }
 
-// Inset loop into loop nest (LoopInfo) and loop queue (LQ).
-Loop &LPPassManager::addLoop(Loop *ParentLoop) {
-  // Create a new loop. LI will take ownership.
-  Loop *L = new Loop();
-
-  // Insert into the loop nest and the loop queue.
-  if (!ParentLoop) {
+// Insert loop into loop nest (LoopInfo) and loop queue (LQ).
+void LPPassManager::addLoop(Loop &L) {
+  if (!L.getParentLoop()) {
     // This is the top level loop.
-    LI->addTopLevelLoop(L);
-    LQ.push_front(L);
-    return *L;
+    LQ.push_front(&L);
+    return;
   }
 
-  ParentLoop->addChildLoop(L);
   // Insert L into the loop queue after the parent loop.
   for (auto I = LQ.begin(), E = LQ.end(); I != E; ++I) {
-    if (*I == L->getParentLoop()) {
+    if (*I == L.getParentLoop()) {
       // deque does not support insert after.
       ++I;
-      LQ.insert(I, 1, L);
-      break;
+      LQ.insert(I, 1, &L);
+      return;
     }
   }
-  return *L;
 }
 
 /// cloneBasicBlockSimpleAnalysis - Invoke cloneBasicBlockAnalysis hook for

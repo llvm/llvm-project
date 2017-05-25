@@ -92,7 +92,7 @@ COMMON_FLAG(HandleSignalMode, handle_sigill, kHandleSignalNo,
 COMMON_FLAG(HandleSignalMode, handle_sigfpe, kHandleSignalYes,
             COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGFPE))
 #undef COMMON_FLAG_HANDLE_SIGNAL_HELP
-COMMON_FLAG(bool, allow_user_segv_handler, false,
+COMMON_FLAG(bool, allow_user_segv_handler, true,
             "If set, allows user to register a SEGV handler even if the tool "
             "registers one.")
 COMMON_FLAG(bool, use_sigaltstack, true,
