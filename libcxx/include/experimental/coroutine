@@ -112,10 +112,10 @@ public:
     constexpr explicit operator bool() const noexcept { return __handle_; }
 
     _LIBCPP_ALWAYS_INLINE
-    void operator()() const { resume(); }
+    void operator()() { resume(); }
 
     _LIBCPP_ALWAYS_INLINE
-    void resume() const {
+    void resume() {
       _LIBCPP_ASSERT(__is_suspended(),
                      "resume() can only be called on suspended coroutines");
       _LIBCPP_ASSERT(!done(),
@@ -124,7 +124,7 @@ public:
     }
 
     _LIBCPP_ALWAYS_INLINE
-    void destroy() const {
+    void destroy() {
       _LIBCPP_ASSERT(__is_suspended(),
                      "destroy() can only be called on suspended coroutines");
       __builtin_coro_destroy(__handle_);
@@ -194,15 +194,9 @@ public:
         return *this;
     }
 
-  _LIBCPP_INLINE_VISIBILITY
-    _Promise& promise() {
-        return *reinterpret_cast<_Promise*>(
-            __builtin_coro_promise(this->__handle_, alignof(_Promise), false));
-    }
-
     _LIBCPP_INLINE_VISIBILITY
-    _Promise const& promise() const {
-        return *reinterpret_cast<_Promise const*>(
+    _Promise& promise() const {
+        return *reinterpret_cast<_Promise*>(
             __builtin_coro_promise(this->__handle_, alignof(_Promise), false));
     }
 

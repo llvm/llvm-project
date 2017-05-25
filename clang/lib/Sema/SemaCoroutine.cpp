@@ -23,14 +23,22 @@
 using namespace clang;
 using namespace sema;
 
-static bool lookupMember(Sema &S, const char *Name, CXXRecordDecl *RD,
-                         SourceLocation Loc) {
+static LookupResult lookupMember(Sema &S, const char *Name, CXXRecordDecl *RD,
+                                 SourceLocation Loc, bool &Res) {
   DeclarationName DN = S.PP.getIdentifierInfo(Name);
   LookupResult LR(S, DN, Loc, Sema::LookupMemberName);
   // Suppress diagnostics when a private member is selected. The same warnings
   // will be produced again when building the call.
   LR.suppressDiagnostics();
-  return S.LookupQualifiedName(LR, RD);
+  Res = S.LookupQualifiedName(LR, RD);
+  return LR;
+}
+
+static bool lookupMember(Sema &S, const char *Name, CXXRecordDecl *RD,
+                         SourceLocation Loc) {
+  bool Res;
+  lookupMember(S, Name, RD, Loc, Res);
+  return Res;
 }
 
 /// Look up the std::coroutine_traits<...>::promise_type for the given
@@ -861,9 +869,8 @@ bool CoroutineStmtBuilder::makeReturnOnAllocFailure() {
   StmtResult ReturnStmt =
       S.BuildReturnStmt(Loc, ReturnObjectOnAllocationFailure.get());
   if (ReturnStmt.isInvalid()) {
-    S.Diag(Found.getFoundDecl()->getLocation(),
-           diag::note_promise_member_declared_here)
-        << DN.getAsString();
+    S.Diag(Found.getFoundDecl()->getLocation(), diag::note_member_declared_here)
+        << DN;
     S.Diag(Fn.FirstCoroutineStmtLoc, diag::note_declared_coroutine_here)
         << Fn.getFirstCoroutineStmtKeyword();
     return false;
@@ -993,13 +1000,32 @@ bool CoroutineStmtBuilder::makeOnFallthrough() {
   // [dcl.fct.def.coroutine]/4
   // The unqualified-ids 'return_void' and 'return_value' are looked up in
   // the scope of class P. If both are found, the program is ill-formed.
-  const bool HasRVoid = lookupMember(S, "return_void", PromiseRecordDecl, Loc);
-  const bool HasRValue = lookupMember(S, "return_value", PromiseRecordDecl, Loc);
+  bool HasRVoid, HasRValue;
+  LookupResult LRVoid =
+      lookupMember(S, "return_void", PromiseRecordDecl, Loc, HasRVoid);
+  LookupResult LRValue =
+      lookupMember(S, "return_value", PromiseRecordDecl, Loc, HasRValue);
 
   StmtResult Fallthrough;
   if (HasRVoid && HasRValue) {
     // FIXME Improve this diagnostic
-    S.Diag(FD.getLocation(), diag::err_coroutine_promise_return_ill_formed)
+    S.Diag(FD.getLocation(),
+           diag::err_coroutine_promise_incompatible_return_functions)
+        << PromiseRecordDecl;
+    S.Diag(LRVoid.getRepresentativeDecl()->getLocation(),
+           diag::note_member_first_declared_here)
+        << LRVoid.getLookupName();
+    S.Diag(LRValue.getRepresentativeDecl()->getLocation(),
+           diag::note_member_first_declared_here)
+        << LRValue.getLookupName();
+    return false;
+  } else if (!HasRVoid && !HasRValue) {
+    // FIXME: The PDTS currently specifies this case as UB, not ill-formed.
+    // However we still diagnose this as an error since until the PDTS is fixed.
+    S.Diag(FD.getLocation(),
+           diag::err_coroutine_promise_requires_return_function)
+        << PromiseRecordDecl;
+    S.Diag(PromiseRecordDecl->getLocation(), diag::note_defined_here)
         << PromiseRecordDecl;
     return false;
   } else if (HasRVoid) {
@@ -1074,8 +1100,8 @@ bool CoroutineStmtBuilder::makeReturnObject() {
 static void noteMemberDeclaredHere(Sema &S, Expr *E, FunctionScopeInfo &Fn) {
   if (auto *MbrRef = dyn_cast<CXXMemberCallExpr>(E)) {
     auto *MethodDecl = MbrRef->getMethodDecl();
-    S.Diag(MethodDecl->getLocation(), diag::note_promise_member_declared_here)
-        << MethodDecl->getName();
+    S.Diag(MethodDecl->getLocation(), diag::note_member_declared_here)
+        << MethodDecl;
   }
   S.Diag(Fn.FirstCoroutineStmtLoc, diag::note_declared_coroutine_here)
       << Fn.getFirstCoroutineStmtKeyword();

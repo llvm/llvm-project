@@ -9,6 +9,11 @@
 ; CHECK: DW_AT_GNU_pubnames [DW_FORM_flag_present]   (true)
 ; CHECK-NOT: DW_AT_GNU_pubtypes [
 
+; CHECK: .debug_gnu_pubnames contents:
+; CHECK-NEXT: length = 0x0000000e
+; CHECK-NEXT: Offset
+; CHECK-NEXT: {{^$}}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 

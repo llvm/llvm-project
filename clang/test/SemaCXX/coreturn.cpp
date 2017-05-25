@@ -138,16 +138,3 @@ VoidTagReturnValue test11(bool b) {
   if (b)
     co_return 42;
 } // expected-warning {{control may reach end of coroutine}}
-
-// FIXME: Promise types that declare neither return_value nor return_void
-// should be ill-formed. This test should be removed when that is fixed.
-VoidTagNoReturn test12() {
-  co_await a;
-} // expected-warning {{control reaches end of coroutine}}
-
-// FIXME: Promise types that declare neither return_value nor return_void
-// should be ill-formed. This test should be removed when that is fixed.
-VoidTagNoReturn test13(bool b) {
-  if (b)
-    co_await a;
-} // expected-warning {{control reaches end of coroutine}}

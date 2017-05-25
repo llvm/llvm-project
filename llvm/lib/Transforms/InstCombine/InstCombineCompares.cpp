@@ -3057,19 +3057,21 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
         break;
 
       const APInt *C;
-      if (match(BO0->getOperand(1), m_APInt(C))) {
+      if (match(BO0->getOperand(1), m_APInt(C)) && *C != 0 && *C != 1) {
         // icmp eq/ne (X * C), (Y * C) --> icmp (X & Mask), (Y & Mask)
         // Mask = -1 >> count-trailing-zeros(C).
-        if (*C != 0 && *C != 1) {
-          // FIXME: If trailing zeros is 0, don't bother creating Mask.
+        if (unsigned TZs = C->countTrailingZeros()) {
           Constant *Mask = ConstantInt::get(
               BO0->getType(),
-              APInt::getLowBitsSet(C->getBitWidth(),
-                                   C->getBitWidth() - C->countTrailingZeros()));
+              APInt::getLowBitsSet(C->getBitWidth(), C->getBitWidth() - TZs));
           Value *And1 = Builder->CreateAnd(BO0->getOperand(0), Mask);
           Value *And2 = Builder->CreateAnd(BO1->getOperand(0), Mask);
           return new ICmpInst(Pred, And1, And2);
         }
+        // If there are no trailing zeros in the multiplier, just eliminate
+        // the multiplies (no masking is needed):
+        // icmp eq/ne (X * C), (Y * C) --> icmp eq/ne X, Y
+        return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
       }
       break;
     }

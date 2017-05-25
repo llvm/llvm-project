@@ -20,7 +20,7 @@ clang-format on the changes in current files or a specific commit.
 For further details, run:                                                        
 git clang-format -h                                                              
                                                                                  
-Requires Python 2.7                                                              
+Requires Python 2.7 or Python 3                                                  
 """               
 
 from __future__ import print_function
@@ -258,7 +258,7 @@ def get_object_type(value):
   stdout, stderr = p.communicate()
   if p.returncode != 0:
     return None
-  return stdout.strip()
+  return convert_string(stdout.strip())
 
 
 def compute_diff_and_extract_lines(commits, files):
@@ -301,6 +301,7 @@ def extract_lines(patch_file):
   list of line `Range`s."""
   matches = {}
   for line in patch_file:
+    line = convert_string(line)
     match = re.search(r'^\+\+\+\ [^/]+/(.*)', line)
     if match:
       filename = match.group(1).rstrip('\r\n')
@@ -385,7 +386,7 @@ def create_tree(input_lines, mode):
   with temporary_index_file():
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     for line in input_lines:
-      p.stdin.write('%s\0' % line)
+      p.stdin.write(to_bytes('%s\0' % line))
     p.stdin.close()
     if p.wait() != 0:
       die('`%s` failed' % ' '.join(cmd))
@@ -440,7 +441,7 @@ def clang_format_to_blob(filename, line_ranges, revision=None,
     die('`%s` failed' % ' '.join(clang_format_cmd))
   if git_show and git_show.wait() != 0:
     die('`%s` failed' % ' '.join(git_show_cmd))
-  return stdout.rstrip('\r\n')
+  return convert_string(stdout).rstrip('\r\n')
 
 
 @contextlib.contextmanager
@@ -527,6 +528,10 @@ def run(*args, **kwargs):
   p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        stdin=subprocess.PIPE)
   stdout, stderr = p.communicate(input=stdin)
+
+  stdout = convert_string(stdout)
+  stderr = convert_string(stderr)
+
   if p.returncode == 0:
     if stderr:
       if verbose:
@@ -546,6 +551,27 @@ def die(message):
   print('error:', message, file=sys.stderr)
   sys.exit(2)
 
+
+def to_bytes(str_input):
+    # Encode to UTF-8 to get binary data.
+    if isinstance(str_input, bytes):
+        return str_input
+    return str_input.encode('utf-8')
+
+
+def to_string(bytes_input):
+    if isinstance(bytes_input, str):
+        return bytes_input
+    return bytes_input.encode('utf-8')
+
+
+def convert_string(bytes_input):
+    try:
+        return to_string(bytes_input.decode('utf-8'))
+    except AttributeError: # 'str' object has no attribute 'decode'.
+        return str(bytes_input)
+    except UnicodeError:
+        return str(bytes_input)
 
 if __name__ == '__main__':
   main()

@@ -2251,6 +2251,8 @@ void swap(__compressed_pair<_T1, _T2>& __x, __compressed_pair<_T1, _T2>& __y)
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS default_delete {
+    static_assert(!is_function<_Tp>::value,
+                  "default_delete cannot be instantiated for function types");
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_INLINE_VISIBILITY constexpr default_delete() noexcept = default;
 #else
@@ -3653,6 +3655,18 @@ __shared_ptr_emplace<_Tp, _Alloc>::__on_zero_shared_weak() _NOEXCEPT
     __a.deallocate(_PTraits::pointer_to(*this), 1);
 }
 
+struct __shared_ptr_dummy_rebind_allocator_type;
+template <>
+class _LIBCPP_TEMPLATE_VIS allocator<__shared_ptr_dummy_rebind_allocator_type>
+{
+public:
+    template <class _Other>
+    struct rebind
+    {
+        typedef allocator<_Other> other;
+    };
+};
+
 template<class _Tp> class _LIBCPP_TEMPLATE_VIS enable_shared_from_this;
 
 template<class _Tp>
@@ -3921,6 +3935,17 @@ public:
 #endif  // _LIBCPP_HAS_NO_VARIADICS
 
 private:
+    template <class _Yp, bool = is_function<_Yp>::value>
+        struct __shared_ptr_default_allocator
+        {
+            typedef allocator<_Yp> type;
+        };
+
+    template <class _Yp>
+        struct __shared_ptr_default_allocator<_Yp, true>
+        {
+            typedef allocator<__shared_ptr_dummy_rebind_allocator_type> type;
+        };
 
     template <class _Yp, class _OrigPtr>
         _LIBCPP_INLINE_VISIBILITY
@@ -3939,8 +3964,7 @@ private:
             }
         }
 
-    _LIBCPP_INLINE_VISIBILITY
-    void __enable_weak_this(const volatile void*, const volatile void*) _NOEXCEPT {}
+    _LIBCPP_INLINE_VISIBILITY void __enable_weak_this(...) _NOEXCEPT {}
 
     template <class _Up> friend class _LIBCPP_TEMPLATE_VIS shared_ptr;
     template <class _Up> friend class _LIBCPP_TEMPLATE_VIS weak_ptr;
@@ -3972,8 +3996,9 @@ shared_ptr<_Tp>::shared_ptr(_Yp* __p,
     : __ptr_(__p)
 {
     unique_ptr<_Yp> __hold(__p);
-    typedef __shared_ptr_pointer<_Yp*, default_delete<_Yp>, allocator<_Yp> > _CntrlBlk;
-    __cntrl_ = new _CntrlBlk(__p, default_delete<_Yp>(), allocator<_Yp>());
+    typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
+    typedef __shared_ptr_pointer<_Yp*, default_delete<_Yp>, _AllocT > _CntrlBlk;
+    __cntrl_ = new _CntrlBlk(__p, default_delete<_Yp>(), _AllocT());
     __hold.release();
     __enable_weak_this(__p, __p);
 }
@@ -3988,8 +4013,9 @@ shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d,
     try
     {
 #endif  // _LIBCPP_NO_EXCEPTIONS
-        typedef __shared_ptr_pointer<_Yp*, _Dp, allocator<_Yp> > _CntrlBlk;
-        __cntrl_ = new _CntrlBlk(__p, __d, allocator<_Yp>());
+        typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
+        typedef __shared_ptr_pointer<_Yp*, _Dp, _AllocT > _CntrlBlk;
+        __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
         __enable_weak_this(__p, __p);
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
@@ -4010,8 +4036,9 @@ shared_ptr<_Tp>::shared_ptr(nullptr_t __p, _Dp __d)
     try
     {
 #endif  // _LIBCPP_NO_EXCEPTIONS
-        typedef __shared_ptr_pointer<nullptr_t, _Dp, allocator<_Tp> > _CntrlBlk;
-        __cntrl_ = new _CntrlBlk(__p, __d, allocator<_Tp>());
+        typedef typename __shared_ptr_default_allocator<_Tp>::type _AllocT;
+        typedef __shared_ptr_pointer<nullptr_t, _Dp, _AllocT > _CntrlBlk;
+        __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
     catch (...)
@@ -4179,8 +4206,9 @@ shared_ptr<_Tp>::shared_ptr(unique_ptr<_Yp, _Dp> __r,
     else
 #endif
     {
-        typedef __shared_ptr_pointer<_Yp*, _Dp, allocator<_Yp> > _CntrlBlk;
-        __cntrl_ = new _CntrlBlk(__r.get(), __r.get_deleter(), allocator<_Yp>());
+        typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
+        typedef __shared_ptr_pointer<_Yp*, _Dp, _AllocT > _CntrlBlk;
+        __cntrl_ = new _CntrlBlk(__r.get(), __r.get_deleter(), _AllocT());
         __enable_weak_this(__r.get(), __r.get());
     }
     __r.release();
@@ -4208,10 +4236,11 @@ shared_ptr<_Tp>::shared_ptr(unique_ptr<_Yp, _Dp> __r,
     else
 #endif
     {
+        typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
         typedef __shared_ptr_pointer<_Yp*,
                                      reference_wrapper<typename remove_reference<_Dp>::type>,
-                                     allocator<_Yp> > _CntrlBlk;
-        __cntrl_ = new _CntrlBlk(__r.get(), ref(__r.get_deleter()), allocator<_Yp>());
+                                     _AllocT > _CntrlBlk;
+        __cntrl_ = new _CntrlBlk(__r.get(), ref(__r.get_deleter()), _AllocT());
         __enable_weak_this(__r.get(), __r.get());
     }
     __r.release();

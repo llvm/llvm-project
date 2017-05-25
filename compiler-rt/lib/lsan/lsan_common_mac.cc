@@ -91,12 +91,7 @@ LoadedModule *GetLinker() { return nullptr; }
 
 // Required on Linux for initialization of TLS behavior, but should not be
 // required on Darwin.
-void InitializePlatformSpecificModules() {
-  if (flags()->use_tls) {
-    Report("use_tls=1 is not supported on Darwin.\n");
-    Die();
-  }
-}
+void InitializePlatformSpecificModules() {}
 
 // Scans global variables for heap pointers.
 void ProcessGlobalRegions(Frontier *frontier) {

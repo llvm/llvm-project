@@ -320,6 +320,9 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     switch (ExtraCode[0]) {
     default:
       return true; // Unknown modifier.
+    case 'a':      // Print 'a' modifier
+      PrintAsmMemoryOperand(MI, OpNum, AsmVariant, ExtraCode, O);
+      return false;
     case 'w':      // Print W register
     case 'x':      // Print X register
       if (MO.isReg())
@@ -388,7 +391,7 @@ bool AArch64AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                               unsigned AsmVariant,
                                               const char *ExtraCode,
                                               raw_ostream &O) {
-  if (ExtraCode && ExtraCode[0])
+  if (ExtraCode && ExtraCode[0] && ExtraCode[0] != 'a')
     return true; // Unknown modifier.
 
   const MachineOperand &MO = MI->getOperand(OpNum);

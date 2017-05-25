@@ -4415,12 +4415,6 @@ The current supported vocabulary is limited:
   address space identifier.
 - ``DW_OP_stack_value`` marks a constant value.
 
-DIExpression nodes that contain a ``DW_OP_stack_value`` operator are standalone
-location descriptions that describe constant values. This form is used to
-describe global constants that have been optimized away. All other expressions
-are modifiers to another location: A debug intrinsic ties a location and a
-DIExpression together.
-
 DWARF specifies three kinds of simple location descriptions: Register, memory,
 and implicit location descriptions. Register and memory location descriptions
 describe the *location* of a source variable (in the sense that a debugger might

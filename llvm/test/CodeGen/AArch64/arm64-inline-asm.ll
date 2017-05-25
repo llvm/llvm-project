@@ -254,3 +254,10 @@ define void @test_constraint_w(i32 %a) {
   tail call void asm sideeffect "sqxtn h0, ${0:s}\0A", "w"(i32 %a)
   ret void
 }
+
+define void @test_inline_modifier_a(i8* %ptr) nounwind {
+  ; CHECK-LABEL: test_inline_modifier_a:
+  tail call void asm sideeffect "prfm pldl1keep, ${0:a}\0A", "r"(i8* %ptr)
+  ; CHECK: prfm pldl1keep, [x0]
+  ret void
+}
