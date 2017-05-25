@@ -38,7 +38,7 @@
 #include "llvm/Target/TargetSubtargetInfo.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "machine-licm"
+#define DEBUG_TYPE "machinelicm"
 
 static cl::opt<bool>
 AvoidSpeculation("avoid-speculation",
@@ -237,13 +237,13 @@ namespace {
 
 char MachineLICM::ID = 0;
 char &llvm::MachineLICMID = MachineLICM::ID;
-INITIALIZE_PASS_BEGIN(MachineLICM, "machinelicm",
-                "Machine Loop Invariant Code Motion", false, false)
+INITIALIZE_PASS_BEGIN(MachineLICM, DEBUG_TYPE,
+                      "Machine Loop Invariant Code Motion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(MachineLICM, "machinelicm",
-                "Machine Loop Invariant Code Motion", false, false)
+INITIALIZE_PASS_END(MachineLICM, DEBUG_TYPE,
+                    "Machine Loop Invariant Code Motion", false, false)
 
 /// Test if the given loop is the outer-most loop that has a unique predecessor.
 static bool LoopIsOuterMostWithPredecessor(MachineLoop *CurLoop) {

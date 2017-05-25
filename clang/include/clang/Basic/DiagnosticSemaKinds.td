@@ -6303,6 +6303,8 @@ def warn_ambiguous_suitable_delete_function_found : Warning<
   InGroup<DiagGroup<"ambiguous-delete">>;
 def note_member_declared_here : Note<
   "member %0 declared here">;
+def note_member_first_declared_here : Note<
+  "member %0 first declared here">;
 def err_decrement_bool : Error<"cannot decrement expression of type bool">;
 def warn_increment_bool : Warning<
   "incrementing expression of type bool is deprecated and "
@@ -8918,8 +8920,6 @@ def err_return_in_coroutine : Error<
   "return statement not allowed in coroutine; did you mean 'co_return'?">;
 def note_declared_coroutine_here : Note<
   "function is a coroutine due to use of '%0' here">;
-def note_promise_member_declared_here : Note<
-  "'%0' is declared here">;
 def err_coroutine_objc_method : Error<
   "Objective-C methods as coroutines are not yet supported">;
 def err_coroutine_unevaluated_context : Error<
@@ -8954,8 +8954,10 @@ def err_coroutine_promise_type_incomplete : Error<
 def err_coroutine_type_missing_specialization : Error<
   "this function cannot be a coroutine: missing definition of "
   "specialization %q0">;
-def err_coroutine_promise_return_ill_formed : Error<
-  "%0 declares both 'return_value' and 'return_void'">;
+def err_coroutine_promise_incompatible_return_functions : Error<
+  "the coroutine promise type %0 declares both 'return_value' and 'return_void'">;
+def err_coroutine_promise_requires_return_function : Error<
+  "the coroutine promise type %0 must declare either 'return_value' or 'return_void'">;
 def note_coroutine_promise_implicit_await_transform_required_here : Note<
   "call to 'await_transform' implicitly required by 'co_await' here">;
 def note_coroutine_promise_suspend_implicitly_required : Note<

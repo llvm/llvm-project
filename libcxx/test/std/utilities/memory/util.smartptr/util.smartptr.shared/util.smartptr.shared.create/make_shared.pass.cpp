@@ -45,6 +45,13 @@ struct Foo
     virtual ~Foo() = default;
 };
 
+struct Result {};
+static Result theFunction() { return Result(); }
+static int resultDeletorCount;
+static void resultDeletor(Result (*pf)()) {
+  assert(pf == theFunction);
+  ++resultDeletorCount;
+}
 
 int main()
 {
@@ -65,7 +72,11 @@ int main()
     std::shared_ptr<const Foo> p2 = std::make_shared<const Foo>();
     assert(p2.get());
     }
-
+    { // https://bugs.llvm.org/show_bug.cgi?id=27566
+      std::shared_ptr<Result()> x(&theFunction, &resultDeletor);
+      std::shared_ptr<Result()> y(theFunction, resultDeletor);
+    }
+    assert(resultDeletorCount == 2);
 #if TEST_STD_VER >= 11
     nc = globalMemCounter.outstanding_new;
     {

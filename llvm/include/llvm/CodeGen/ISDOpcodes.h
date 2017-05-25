@@ -264,6 +264,14 @@ namespace ISD {
     /// optimized.
     STRICT_FADD, STRICT_FSUB, STRICT_FMUL, STRICT_FDIV, STRICT_FREM,
 
+    /// Constrained versions of libm-equivalent floating point intrinsics.
+    /// These will be lowered to the equivalent non-constrained pseudo-op
+    /// (or expanded to the equivalent library call) before final selection.
+    /// They are used to limit optimizations while the DAG is being optimized.
+    STRICT_FSQRT, STRICT_FPOW, STRICT_FPOWI, STRICT_FSIN, STRICT_FCOS,
+    STRICT_FEXP, STRICT_FEXP2, STRICT_FLOG, STRICT_FLOG10, STRICT_FLOG2,
+    STRICT_FRINT, STRICT_FNEARBYINT,
+
     /// FMA - Perform a * b + c with no intermediate rounding step.
     FMA,
 

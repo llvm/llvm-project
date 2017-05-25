@@ -1,9 +1,9 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=arm-eabi -mcpu=cortex-a9 -enable-misched -verify-misched -debug-only=misched -o - 2>&1 > \
+; RUN: llc < %s -mtriple=arm-eabi -mcpu=cortex-a9 -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > \
 ; RUN:   /dev/null | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK_A9
-; RUN: llc < %s -mtriple=arm-eabi -mcpu=swift -enable-misched -verify-misched -debug-only=misched -o - 2>&1 > \
+; RUN: llc < %s -mtriple=arm-eabi -mcpu=swift -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > \
 ; RUN:   /dev/null | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK_SWIFT
-; RUN: llc < %s -mtriple=arm-eabi -mcpu=cortex-r52 -enable-misched -verify-misched -debug-only=misched -o - 2>&1 > \
+; RUN: llc < %s -mtriple=arm-eabi -mcpu=cortex-r52 -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > \
 ; RUN:   /dev/null | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK_R52
 ;
 ; Check the latency of instructions for processors with sched-models

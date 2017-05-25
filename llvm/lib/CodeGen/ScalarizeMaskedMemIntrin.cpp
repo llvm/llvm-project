@@ -49,12 +49,8 @@ private:
 } // namespace
 
 char ScalarizeMaskedMemIntrin::ID = 0;
-INITIALIZE_PASS_BEGIN(ScalarizeMaskedMemIntrin, "scalarize-masked-mem-intrin",
-                      "Scalarize unsupported masked memory intrinsics", false,
-                      false)
-INITIALIZE_PASS_END(ScalarizeMaskedMemIntrin, "scalarize-masked-mem-intrin",
-                    "Scalarize unsupported masked memory intrinsics", false,
-                    false)
+INITIALIZE_PASS(ScalarizeMaskedMemIntrin, DEBUG_TYPE,
+                "Scalarize unsupported masked memory intrinsics", false, false)
 
 FunctionPass *llvm::createScalarizeMaskedMemIntrinPass() {
   return new ScalarizeMaskedMemIntrin();

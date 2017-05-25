@@ -261,8 +261,9 @@ int __identifier(else} = __identifier(for); // expected-error {{missing ')' afte
 #define identifier_weird(x) __identifier(x
 int k = identifier_weird(if)); // expected-error {{use of undeclared identifier 'if'}}
 
-// 'and' is not an operator name with Microsoft compatibility.
-extern int __identifier(and) r; // expected-error {{expected ';' after top level declarator}}
+// This is a bit weird, but the alternative tokens aren't keywords, and this
+// behavior matches MSVC. FIXME: Consider supporting this anyway.
+extern int __identifier(and) r; // expected-error {{cannot convert '&&' token to an identifier}}
 
 void f() {
   __identifier(() // expected-error {{cannot convert '(' token to an identifier}}
@@ -354,6 +355,7 @@ void TestProperty() {
   ++sp.V11;
 }
 
+//expected-warning@+1 {{C++ operator 'and' (aka '&&') used as a macro name}}
 #define and foo
 
 struct __declspec(uuid("00000000-0000-0000-C000-000000000046")) __declspec(novtable) IUnknown {};

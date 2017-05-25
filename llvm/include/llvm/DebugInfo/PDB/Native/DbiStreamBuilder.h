@@ -82,6 +82,7 @@ private:
 
   Error finalize();
   uint32_t calculateModiSubstreamSize() const;
+  uint32_t calculateNamesOffset() const;
   uint32_t calculateSectionContribsStreamSize() const;
   uint32_t calculateSectionMapStreamSize() const;
   uint32_t calculateFileInfoSubstreamSize() const;

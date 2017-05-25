@@ -45,18 +45,17 @@ static Interval intersect(const Interval &I1, const Interval &I2) {
                         std::min(I1.second, I2.second));
 }
 
-MappedBlockStream::MappedBlockStream(uint32_t BlockSize, uint32_t NumBlocks,
+MappedBlockStream::MappedBlockStream(uint32_t BlockSize,
                                      const MSFStreamLayout &Layout,
                                      BinaryStreamRef MsfData)
-    : BlockSize(BlockSize), NumBlocks(NumBlocks), StreamLayout(Layout),
-      MsfData(MsfData) {}
+    : BlockSize(BlockSize), StreamLayout(Layout), MsfData(MsfData) {}
 
 std::unique_ptr<MappedBlockStream>
-MappedBlockStream::createStream(uint32_t BlockSize, uint32_t NumBlocks,
+MappedBlockStream::createStream(uint32_t BlockSize,
                                 const MSFStreamLayout &Layout,
                                 BinaryStreamRef MsfData) {
   return llvm::make_unique<MappedBlockStreamImpl<MappedBlockStream>>(
-      BlockSize, NumBlocks, Layout, MsfData);
+      BlockSize, Layout, MsfData);
 }
 
 std::unique_ptr<MappedBlockStream> MappedBlockStream::createIndexedStream(
@@ -66,7 +65,7 @@ std::unique_ptr<MappedBlockStream> MappedBlockStream::createIndexedStream(
   SL.Blocks = Layout.StreamMap[StreamIndex];
   SL.Length = Layout.StreamSizes[StreamIndex];
   return llvm::make_unique<MappedBlockStreamImpl<MappedBlockStream>>(
-      Layout.SB->BlockSize, Layout.SB->NumBlocks, SL, MsfData);
+      Layout.SB->BlockSize, SL, MsfData);
 }
 
 std::unique_ptr<MappedBlockStream>
@@ -75,7 +74,7 @@ MappedBlockStream::createDirectoryStream(const MSFLayout &Layout,
   MSFStreamLayout SL;
   SL.Blocks = Layout.DirectoryBlocks;
   SL.Length = Layout.SB->NumDirectoryBytes;
-  return createStream(Layout.SB->BlockSize, Layout.SB->NumBlocks, SL, MsfData);
+  return createStream(Layout.SB->BlockSize, SL, MsfData);
 }
 
 std::unique_ptr<MappedBlockStream>
@@ -83,7 +82,7 @@ MappedBlockStream::createFpmStream(const MSFLayout &Layout,
                                    BinaryStreamRef MsfData) {
   MSFStreamLayout SL;
   initializeFpmStreamLayout(Layout, SL);
-  return createStream(Layout.SB->BlockSize, Layout.SB->NumBlocks, SL, MsfData);
+  return createStream(Layout.SB->BlockSize, SL, MsfData);
 }
 
 Error MappedBlockStream::readBytes(uint32_t Offset, uint32_t Size,
@@ -173,7 +172,7 @@ Error MappedBlockStream::readLongestContiguousChunk(uint32_t Offset,
   uint32_t First = Offset / BlockSize;
   uint32_t Last = First;
 
-  while (Last < NumBlocks - 1) {
+  while (Last < getNumBlocks() - 1) {
     if (StreamLayout.Blocks[Last] != StreamLayout.Blocks[Last + 1] - 1)
       break;
     ++Last;
@@ -313,17 +312,16 @@ void MappedBlockStream::fixCacheAfterWrite(uint32_t Offset,
 }
 
 WritableMappedBlockStream::WritableMappedBlockStream(
-    uint32_t BlockSize, uint32_t NumBlocks, const MSFStreamLayout &Layout,
+    uint32_t BlockSize, const MSFStreamLayout &Layout,
     WritableBinaryStreamRef MsfData)
-    : ReadInterface(BlockSize, NumBlocks, Layout, MsfData),
-      WriteInterface(MsfData) {}
+    : ReadInterface(BlockSize, Layout, MsfData), WriteInterface(MsfData) {}
 
 std::unique_ptr<WritableMappedBlockStream>
-WritableMappedBlockStream::createStream(uint32_t BlockSize, uint32_t NumBlocks,
+WritableMappedBlockStream::createStream(uint32_t BlockSize,
                                         const MSFStreamLayout &Layout,
                                         WritableBinaryStreamRef MsfData) {
   return llvm::make_unique<MappedBlockStreamImpl<WritableMappedBlockStream>>(
-      BlockSize, NumBlocks, Layout, MsfData);
+      BlockSize, Layout, MsfData);
 }
 
 std::unique_ptr<WritableMappedBlockStream>
@@ -334,7 +332,7 @@ WritableMappedBlockStream::createIndexedStream(const MSFLayout &Layout,
   MSFStreamLayout SL;
   SL.Blocks = Layout.StreamMap[StreamIndex];
   SL.Length = Layout.StreamSizes[StreamIndex];
-  return createStream(Layout.SB->BlockSize, Layout.SB->NumBlocks, SL, MsfData);
+  return createStream(Layout.SB->BlockSize, SL, MsfData);
 }
 
 std::unique_ptr<WritableMappedBlockStream>
@@ -343,7 +341,7 @@ WritableMappedBlockStream::createDirectoryStream(
   MSFStreamLayout SL;
   SL.Blocks = Layout.DirectoryBlocks;
   SL.Length = Layout.SB->NumDirectoryBytes;
-  return createStream(Layout.SB->BlockSize, Layout.SB->NumBlocks, SL, MsfData);
+  return createStream(Layout.SB->BlockSize, SL, MsfData);
 }
 
 std::unique_ptr<WritableMappedBlockStream>
@@ -351,7 +349,7 @@ WritableMappedBlockStream::createFpmStream(const MSFLayout &Layout,
                                            WritableBinaryStreamRef MsfData) {
   MSFStreamLayout SL;
   initializeFpmStreamLayout(Layout, SL);
-  return createStream(Layout.SB->BlockSize, Layout.SB->NumBlocks, SL, MsfData);
+  return createStream(Layout.SB->BlockSize, SL, MsfData);
 }
 
 Error WritableMappedBlockStream::readBytes(uint32_t Offset, uint32_t Size,

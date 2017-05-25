@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -verify-machineinstrs -march=x86 -mcpu=core2 -pre-RA-sched=source -enable-misched -verify-misched -debug-only=misched -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -march=x86 -mcpu=core2 -pre-RA-sched=source -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 ;
 ; Test scheduling of copy instructions.
 ;

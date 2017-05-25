@@ -46,6 +46,7 @@ Error visitMemberRecordStream(ArrayRef<uint8_t> FieldList,
                               TypeVisitorCallbacks &Callbacks);
 
 Error visitTypeStream(const CVTypeArray &Types, TypeVisitorCallbacks &Callbacks,
+                      VisitorDataSource Source = VDS_BytesPresent,
                       TypeServerHandler *TS = nullptr);
 Error visitTypeStream(CVTypeRange Types, TypeVisitorCallbacks &Callbacks,
                       TypeServerHandler *TS = nullptr);

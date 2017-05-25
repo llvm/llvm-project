@@ -612,6 +612,32 @@ public:
            SDNodeBits.IsMemIntrinsic;
   }
 
+  /// Test if this node is a strict floating point pseudo-op.
+  bool isStrictFPOpcode() {
+    switch (NodeType) {
+      default: 
+        return false;
+      case ISD::STRICT_FADD:
+      case ISD::STRICT_FSUB:
+      case ISD::STRICT_FMUL:
+      case ISD::STRICT_FDIV:
+      case ISD::STRICT_FREM:
+      case ISD::STRICT_FSQRT:
+      case ISD::STRICT_FPOW:
+      case ISD::STRICT_FPOWI:
+      case ISD::STRICT_FSIN:
+      case ISD::STRICT_FCOS:
+      case ISD::STRICT_FEXP:
+      case ISD::STRICT_FEXP2:
+      case ISD::STRICT_FLOG:
+      case ISD::STRICT_FLOG10:
+      case ISD::STRICT_FLOG2:
+      case ISD::STRICT_FRINT:
+      case ISD::STRICT_FNEARBYINT:
+        return true;
+    }
+  }
+
   /// Test if this node has a post-isel opcode, directly
   /// corresponding to a MachineInstr opcode.
   bool isMachineOpcode() const { return NodeType < 0; }

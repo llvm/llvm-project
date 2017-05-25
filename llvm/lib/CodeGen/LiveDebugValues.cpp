@@ -43,7 +43,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "live-debug-values"
+#define DEBUG_TYPE "livedebugvalues"
 
 STATISTIC(NumInserted, "Number of DBG_VALUE instructions inserted");
 
@@ -283,7 +283,7 @@ public:
 
 char LiveDebugValues::ID = 0;
 char &llvm::LiveDebugValuesID = LiveDebugValues::ID;
-INITIALIZE_PASS(LiveDebugValues, "livedebugvalues", "Live DEBUG_VALUE analysis",
+INITIALIZE_PASS(LiveDebugValues, DEBUG_TYPE, "Live DEBUG_VALUE analysis",
                 false, false)
 
 /// Default construct and initialize the pass.

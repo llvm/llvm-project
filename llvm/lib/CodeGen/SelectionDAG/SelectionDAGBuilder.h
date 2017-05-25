@@ -895,7 +895,7 @@ private:
   void visitInlineAsm(ImmutableCallSite CS);
   const char *visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
-  void visitConstrainedFPIntrinsic(const CallInst &I, unsigned Intrinsic);
+  void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
 
   void visitVAStart(const CallInst &I);
   void visitVAArg(const VAArgInst &I);

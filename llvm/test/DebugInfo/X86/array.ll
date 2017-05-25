@@ -16,85 +16,109 @@
 ; Test that we only emit register-indirect locations for the array array.
 ; rdar://problem/14874886
 ;
-; CHECK:     ##DEBUG_VALUE: main:array <- [%RSP+0]
 ; CHECK-NOT: ##DEBUG_VALUE: main:array <- %R{{.*}}
+; CHECK: movq    %rsp, %rdi
+; CHECK-NOT: ##DEBUG_VALUE: main:array <- %R{{.*}}
+; CHECK:     ##DEBUG_VALUE: main:array <- [%RDI+0]
+; CHECK-NOT: ##DEBUG_VALUE: main:array <- %R{{.*}}
+; ModuleID = '/tmp/array.c'
+source_filename = "/tmp/array.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.9.0"
+target triple = "x86_64-apple-macosx10.12.0"
 
 @main.array = private unnamed_addr constant [4 x i32] [i32 0, i32 1, i32 2, i32 3], align 16
 
 ; Function Attrs: nounwind ssp uwtable
-define void @f(i32* nocapture %p) #0 !dbg !4 {
-  tail call void @llvm.dbg.value(metadata i32* %p, i64 0, metadata !11, metadata !DIExpression()), !dbg !28
-  store i32 42, i32* %p, align 4, !dbg !29, !tbaa !30
-  ret void, !dbg !34
+define void @f(i32* nocapture %p) local_unnamed_addr #0 !dbg !8 {
+entry:
+  tail call void @llvm.dbg.value(metadata i32* %p, i64 0, metadata !14, metadata !15), !dbg !16
+  store i32 42, i32* %p, align 4, !dbg !17, !tbaa !18
+  ret void, !dbg !22
 }
+
+; Function Attrs: nounwind readnone speculatable
+declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @main(i32 %argc, i8** nocapture readnone %argv) #0 !dbg !12 {
+define i32 @main(i32 %argc, i8** nocapture readnone %argv) local_unnamed_addr #0 !dbg !23 {
+entry:
   %array = alloca [4 x i32], align 16
-  tail call void @llvm.dbg.value(metadata i32 %argc, i64 0, metadata !19, metadata !DIExpression()), !dbg !35
-  tail call void @llvm.dbg.value(metadata i8** %argv, i64 0, metadata !20, metadata !DIExpression()), !dbg !35
-  tail call void @llvm.dbg.value(metadata [4 x i32]* %array, i64 0, metadata !21, metadata !DIExpression(DW_OP_deref)), !dbg !36
-  %1 = bitcast [4 x i32]* %array to i8*, !dbg !36
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* bitcast ([4 x i32]* @main.array to i8*), i64 16, i32 16, i1 false), !dbg !36
-  tail call void @llvm.dbg.value(metadata [4 x i32]* %array, i64 0, metadata !21, metadata !DIExpression(DW_OP_deref)), !dbg !36
-  %2 = getelementptr inbounds [4 x i32], [4 x i32]* %array, i64 0, i64 0, !dbg !37
-  call void @f(i32* %2), !dbg !37
-  tail call void @llvm.dbg.value(metadata [4 x i32]* %array, i64 0, metadata !21, metadata !DIExpression(DW_OP_deref)), !dbg !36
-  %3 = load i32, i32* %2, align 16, !dbg !38, !tbaa !30
-  ret i32 %3, !dbg !38
+  tail call void @llvm.dbg.value(metadata i32 %argc, i64 0, metadata !30, metadata !15), !dbg !36
+  tail call void @llvm.dbg.value(metadata i8** %argv, i64 0, metadata !31, metadata !15), !dbg !37
+  %0 = bitcast [4 x i32]* %array to i8*, !dbg !38
+  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %0) #3, !dbg !38
+  tail call void @llvm.dbg.declare(metadata [4 x i32]* %array, metadata !32, metadata !15), !dbg !39
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %0, i8* bitcast ([4 x i32]* @main.array to i8*), i64 16, i32 16, i1 false), !dbg !39
+  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %array, i64 0, i64 0, !dbg !40
+  call void @f(i32* nonnull %arraydecay), !dbg !41
+  %1 = load i32, i32* %arraydecay, align 16, !dbg !42, !tbaa !18
+  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %0) #3, !dbg !43
+  ret i32 %1, !dbg !44
 }
 
-; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #1
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
 
-; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+; Function Attrs: argmemonly nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #2
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
+
+; Function Attrs: nounwind readnone speculatable
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
 attributes #0 = { nounwind ssp uwtable }
-attributes #1 = { nounwind }
-attributes #2 = { nounwind readnone }
+attributes #1 = { nounwind readnone speculatable }
+attributes #2 = { argmemonly nounwind }
+attributes #3 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!25, !26}
-!llvm.ident = !{!27}
+!llvm.module.flags = !{!3, !4, !5, !6}
+!llvm.ident = !{!7}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
-!1 = !DIFile(filename: "array.c", directory: "")
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 5.0.0 (trunk 303873) (llvm/trunk 303875)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!1 = !DIFile(filename: "/tmp/array.c", directory: "/")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "f", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !10)
-!5 = !DIFile(filename: "array.c", directory: "")
-!6 = !DISubroutineType(types: !7)
-!7 = !{null, !8}
-!8 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !9)
-!9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!10 = !{!11}
-!11 = !DILocalVariable(name: "p", line: 1, arg: 1, scope: !4, file: !5, type: !8)
-!12 = distinct !DISubprogram(name: "main", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 5, file: !1, scope: !5, type: !13, variables: !18)
-!13 = !DISubroutineType(types: !14)
-!14 = !{!9, !9, !15}
-!15 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !16)
-!16 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !17)
-!17 = !DIBasicType(tag: DW_TAG_base_type, name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
-!18 = !{!19, !20, !21}
-!19 = !DILocalVariable(name: "argc", line: 5, arg: 1, scope: !12, file: !5, type: !9)
-!20 = !DILocalVariable(name: "argv", line: 5, arg: 2, scope: !12, file: !5, type: !15)
-!21 = !DILocalVariable(name: "array", line: 6, scope: !12, file: !5, type: !22)
-!22 = !DICompositeType(tag: DW_TAG_array_type, size: 128, align: 32, baseType: !9, elements: !23)
-!23 = !{!24}
-!24 = !DISubrange(count: 4)
-!25 = !{i32 2, !"Dwarf Version", i32 2}
-!26 = !{i32 1, !"Debug Info Version", i32 3}
-!27 = !{!"clang version 3.5.0 "}
-!28 = !DILocation(line: 1, scope: !4)
-!29 = !DILocation(line: 2, scope: !4)
-!30 = !{!31, !31, i64 0}
-!31 = !{!"int", !32, i64 0}
-!32 = !{!"omnipotent char", !33, i64 0}
-!33 = !{!"Simple C/C++ TBAA"}
-!34 = !DILocation(line: 3, scope: !4)
-!35 = !DILocation(line: 5, scope: !12)
-!36 = !DILocation(line: 6, scope: !12)
-!37 = !DILocation(line: 7, scope: !12)
-!38 = !DILocation(line: 8, scope: !12)
+!3 = !{i32 2, !"Dwarf Version", i32 4}
+!4 = !{i32 2, !"Debug Info Version", i32 3}
+!5 = !{i32 1, !"wchar_size", i32 4}
+!6 = !{i32 7, !"PIC Level", i32 2}
+!7 = !{!"clang version 5.0.0 (trunk 303873) (llvm/trunk 303875)"}
+!8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !13)
+!9 = !DISubroutineType(types: !10)
+!10 = !{null, !11}
+!11 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !12, size: 64)
+!12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!13 = !{!14}
+!14 = !DILocalVariable(name: "p", arg: 1, scope: !8, file: !1, line: 1, type: !11)
+!15 = !DIExpression()
+!16 = !DILocation(line: 1, column: 13, scope: !8)
+!17 = !DILocation(line: 2, column: 8, scope: !8)
+!18 = !{!19, !19, i64 0}
+!19 = !{!"int", !20, i64 0}
+!20 = !{!"omnipotent char", !21, i64 0}
+!21 = !{!"Simple C/C++ TBAA"}
+!22 = !DILocation(line: 3, column: 1, scope: !8)
+!23 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 5, type: !24, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !29)
+!24 = !DISubroutineType(types: !25)
+!25 = !{!12, !12, !26}
+!26 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !27, size: 64)
+!27 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !28, size: 64)
+!28 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
+!29 = !{!30, !31, !32}
+!30 = !DILocalVariable(name: "argc", arg: 1, scope: !23, file: !1, line: 5, type: !12)
+!31 = !DILocalVariable(name: "argv", arg: 2, scope: !23, file: !1, line: 5, type: !26)
+!32 = !DILocalVariable(name: "array", scope: !23, file: !1, line: 6, type: !33)
+!33 = !DICompositeType(tag: DW_TAG_array_type, baseType: !12, size: 128, elements: !34)
+!34 = !{!35}
+!35 = !DISubrange(count: 4)
+!36 = !DILocation(line: 5, column: 14, scope: !23)
+!37 = !DILocation(line: 5, column: 27, scope: !23)
+!38 = !DILocation(line: 6, column: 3, scope: !23)
+!39 = !DILocation(line: 6, column: 7, scope: !23)
+!40 = !DILocation(line: 7, column: 5, scope: !23)
+!41 = !DILocation(line: 7, column: 3, scope: !23)
+!42 = !DILocation(line: 8, column: 10, scope: !23)
+!43 = !DILocation(line: 9, column: 1, scope: !23)
+!44 = !DILocation(line: 8, column: 3, scope: !23)

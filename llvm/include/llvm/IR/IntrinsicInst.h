@@ -171,6 +171,7 @@ namespace llvm {
       ebStrict
     };
 
+    bool isUnaryOp() const;
     RoundingMode getRoundingMode() const;
     ExceptionBehavior getExceptionBehavior() const;
 
@@ -182,6 +183,18 @@ namespace llvm {
       case Intrinsic::experimental_constrained_fmul:
       case Intrinsic::experimental_constrained_fdiv:
       case Intrinsic::experimental_constrained_frem:
+      case Intrinsic::experimental_constrained_sqrt:
+      case Intrinsic::experimental_constrained_pow:
+      case Intrinsic::experimental_constrained_powi:
+      case Intrinsic::experimental_constrained_sin:
+      case Intrinsic::experimental_constrained_cos:
+      case Intrinsic::experimental_constrained_exp:
+      case Intrinsic::experimental_constrained_exp2:
+      case Intrinsic::experimental_constrained_log:
+      case Intrinsic::experimental_constrained_log10:
+      case Intrinsic::experimental_constrained_log2:
+      case Intrinsic::experimental_constrained_rint:
+      case Intrinsic::experimental_constrained_nearbyint:
         return true;
       default: return false;
       }

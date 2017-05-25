@@ -248,19 +248,7 @@ void ThreadStart(ThreadState *thr, int tid, tid_t os_id, bool workerthread) {
     if (stk_addr && stk_size)
       MemoryRangeImitateWrite(thr, /*pc=*/ 1, stk_addr, stk_size);
 
-    if (tls_addr && tls_size) {
-      // Check that the thr object is in tls;
-      const uptr thr_beg = (uptr)thr;
-      const uptr thr_end = (uptr)thr + sizeof(*thr);
-      CHECK_GE(thr_beg, tls_addr);
-      CHECK_LE(thr_beg, tls_addr + tls_size);
-      CHECK_GE(thr_end, tls_addr);
-      CHECK_LE(thr_end, tls_addr + tls_size);
-      // Since the thr object is huge, skip it.
-      MemoryRangeImitateWrite(thr, /*pc=*/ 2, tls_addr, thr_beg - tls_addr);
-      MemoryRangeImitateWrite(thr, /*pc=*/ 2,
-          thr_end, tls_addr + tls_size - thr_end);
-    }
+    if (tls_addr && tls_size) ImitateTlsWrite(thr, tls_addr, tls_size);
   }
 #endif
 

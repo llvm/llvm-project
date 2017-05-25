@@ -313,6 +313,7 @@ def alias_o_output2 : Separate<["--"], "output">, Alias<o>;
 def alias_pie_pic_executable: F<"pic-executable">, Alias<pie>;
 def alias_print_map_M: Flag<["-"], "M">, Alias<print_map>;
 def alias_relocatable_r: Flag<["-"], "r">, Alias<relocatable>;
+def alias_reproduce_eq: J<"reproduce=">, Alias<reproduce>;
 def alias_retain_symbols_file: S<"retain-symbols-file">, Alias<retain_symbols_file>;
 def alias_rpath_R: JoinedOrSeparate<["-"], "R">, Alias<rpath>;
 def alias_rpath_rpath: J<"rpath=">, Alias<rpath>;

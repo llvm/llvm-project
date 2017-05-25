@@ -44,7 +44,7 @@
 #include <algorithm>
 using namespace llvm;
 
-#define DEBUG_TYPE "branchfolding"
+#define DEBUG_TYPE "branch-folder"
 
 STATISTIC(NumDeadBlocks, "Number of dead blocks removed");
 STATISTIC(NumBranchOpts, "Number of branches optimized");
@@ -89,7 +89,7 @@ namespace {
 char BranchFolderPass::ID = 0;
 char &llvm::BranchFolderPassID = BranchFolderPass::ID;
 
-INITIALIZE_PASS(BranchFolderPass, "branch-folder",
+INITIALIZE_PASS(BranchFolderPass, DEBUG_TYPE,
                 "Control Flow Optimizer", false, false)
 
 bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {

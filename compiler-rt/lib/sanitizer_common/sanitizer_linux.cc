@@ -549,7 +549,7 @@ void BlockingMutex::Lock() {
 
 void BlockingMutex::Unlock() {
   atomic_uint32_t *m = reinterpret_cast<atomic_uint32_t *>(&opaque_storage_);
-  u32 v = atomic_exchange(m, MtxUnlocked, memory_order_relaxed);
+  u32 v = atomic_exchange(m, MtxUnlocked, memory_order_release);
   CHECK_NE(v, MtxUnlocked);
   if (v == MtxSleeping) {
 #if SANITIZER_FREEBSD

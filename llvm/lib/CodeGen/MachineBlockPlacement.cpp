@@ -499,13 +499,13 @@ public:
 
 char MachineBlockPlacement::ID = 0;
 char &llvm::MachineBlockPlacementID = MachineBlockPlacement::ID;
-INITIALIZE_PASS_BEGIN(MachineBlockPlacement, "block-placement",
+INITIALIZE_PASS_BEGIN(MachineBlockPlacement, DEBUG_TYPE,
                       "Branch Probability Basic Block Placement", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_END(MachineBlockPlacement, "block-placement",
+INITIALIZE_PASS_END(MachineBlockPlacement, DEBUG_TYPE,
                     "Branch Probability Basic Block Placement", false, false)
 
 #ifndef NDEBUG

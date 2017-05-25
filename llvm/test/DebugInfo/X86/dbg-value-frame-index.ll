@@ -32,7 +32,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = distinct !DISubprogram(name: "test", type: !10, unit: !0)
 !5 = !DILocalVariable(name: "w", scope: !4, type: !9)
-!6 = !DIExpression(DW_OP_deref)
+!6 = !DIExpression()
 !7 = !DILocation(line: 210, column: 12, scope: !4)
 !8 = !{!9}
 !9 = !DIBasicType(name: "bool", size: 8, encoding: DW_ATE_boolean)

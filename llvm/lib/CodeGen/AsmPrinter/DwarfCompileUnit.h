@@ -77,8 +77,6 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   bool isDwoUnit() const override;
 
-  bool includeMinimalInlineScopes() const;
-
   DenseMap<const MDNode *, DIE *> &getAbstractSPDies() {
     if (isDwoUnit() && !DD->shareAcrossDWOCUs())
       return AbstractSPDies;
@@ -100,6 +98,8 @@ public:
   DwarfCompileUnit *getSkeleton() const {
     return Skeleton;
   }
+
+  bool includeMinimalInlineScopes() const;
 
   void initStmtList();
 

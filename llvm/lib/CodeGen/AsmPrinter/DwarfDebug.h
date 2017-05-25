@@ -246,9 +246,6 @@ class DwarfDebug : public DebugHandlerBase {
       std::pair<std::unique_ptr<DwarfTypeUnit>, const DICompositeType *>, 1>
       TypeUnitsUnderConstruction;
 
-  /// Whether to emit the pubnames/pubtypes sections.
-  bool HasDwarfPubSections;
-
   /// Whether to use the GNU TLS opcode (instead of the standard opcode).
   bool UseGNUTLSOpcode;
 
@@ -415,7 +412,7 @@ class DwarfDebug : public DebugHandlerBase {
 
   /// Flags to let the linker know we have emitted new style pubnames. Only
   /// emit it here if we don't have a skeleton CU for split dwarf.
-  void addGnuPubAttributes(DwarfUnit &U, DIE &D) const;
+  void addGnuPubAttributes(DwarfCompileUnit &U, DIE &D) const;
 
   /// Create new DwarfCompileUnit for the given metadata node with tag
   /// DW_TAG_compile_unit.
@@ -556,6 +553,8 @@ public:
   /// A helper function to check whether the DIE for a given Scope is
   /// going to be null.
   bool isLexicalScopeDIENull(LexicalScope *Scope);
+
+  bool hasDwarfPubSections(bool includeMinimalInlineScopes) const;
 };
 } // End of namespace llvm
 

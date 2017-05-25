@@ -71,12 +71,12 @@ namespace {
 } // end anonymous namespace
 
 char DwarfEHPrepare::ID = 0;
-INITIALIZE_PASS_BEGIN(DwarfEHPrepare, "dwarfehprepare",
+INITIALIZE_PASS_BEGIN(DwarfEHPrepare, DEBUG_TYPE,
                       "Prepare DWARF exceptions", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(DwarfEHPrepare, "dwarfehprepare",
+INITIALIZE_PASS_END(DwarfEHPrepare, DEBUG_TYPE,
                     "Prepare DWARF exceptions", false, false)
 
 FunctionPass *llvm::createDwarfEHPass() { return new DwarfEHPrepare(); }

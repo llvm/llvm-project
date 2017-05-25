@@ -2920,7 +2920,7 @@ define i1 @eq_mul_constants(i32 %x, i32 %y) {
 
 define <2 x i1> @eq_mul_constants_splat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @eq_mul_constants_splat(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> %y, %x
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> %x, %y
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = mul <2 x i32> %x, <i32 5, i32 5>

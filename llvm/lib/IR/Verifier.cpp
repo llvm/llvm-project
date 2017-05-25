@@ -3966,6 +3966,18 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
   case Intrinsic::experimental_constrained_fmul:
   case Intrinsic::experimental_constrained_fdiv:
   case Intrinsic::experimental_constrained_frem:
+  case Intrinsic::experimental_constrained_sqrt:
+  case Intrinsic::experimental_constrained_pow:
+  case Intrinsic::experimental_constrained_powi:
+  case Intrinsic::experimental_constrained_sin:
+  case Intrinsic::experimental_constrained_cos:
+  case Intrinsic::experimental_constrained_exp:
+  case Intrinsic::experimental_constrained_exp2:
+  case Intrinsic::experimental_constrained_log:
+  case Intrinsic::experimental_constrained_log10:
+  case Intrinsic::experimental_constrained_log2:
+  case Intrinsic::experimental_constrained_rint:
+  case Intrinsic::experimental_constrained_nearbyint:
     visitConstrainedFPIntrinsic(
         cast<ConstrainedFPIntrinsic>(*CS.getInstruction()));
     break;
@@ -4335,7 +4347,12 @@ static DISubprogram *getSubprogram(Metadata *LocalScope) {
 }
 
 void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
-  Assert(isa<MetadataAsValue>(FPI.getOperand(2)),
+  unsigned NumOperands = FPI.getNumArgOperands();
+  Assert(((NumOperands == 3 && FPI.isUnaryOp()) || (NumOperands == 4)),
+         "invalid arguments for constrained FP intrinsic", &FPI);
+  Assert(isa<MetadataAsValue>(FPI.getArgOperand(NumOperands-1)),
+         "invalid exception behavior argument", &FPI);
+  Assert(isa<MetadataAsValue>(FPI.getArgOperand(NumOperands-2)),
          "invalid rounding mode argument", &FPI);
   Assert(FPI.getRoundingMode() != ConstrainedFPIntrinsic::rmInvalid,
          "invalid rounding mode argument", &FPI);
