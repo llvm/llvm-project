@@ -194,8 +194,6 @@ def warn_duplicate_declspec : Warning<"duplicate '%0' declaration specifier">,
   InGroup<DuplicateDeclSpecifier>;
 def ext_plain_complex : ExtWarn<
   "plain '_Complex' requires a type specifier; assuming '_Complex double'">;
-def ext_imaginary_constant : Extension<
-  "imaginary constants are a GNU extension">, InGroup<GNUImaginaryConstant>;
 def ext_integer_complex : Extension<
   "complex integer types are a GNU extension">, InGroup<GNUComplexInteger>;
 
@@ -539,10 +537,10 @@ def err_maybe_falloff_nonvoid_block : Error<
 def err_falloff_nonvoid_block : Error<
   "control reaches end of non-void block">;
 def warn_maybe_falloff_nonvoid_coroutine : Warning<
-  "control may reach end of non-void coroutine">,
+  "control may reach end of coroutine; which is undefined behavior because the promise type %0 does not declare 'return_void()'">,
   InGroup<ReturnType>;
 def warn_falloff_nonvoid_coroutine : Warning<
-  "control reaches end of non-void coroutine">,
+  "control reaches end of coroutine; which is undefined behavior because the promise type %0 does not declare 'return_void()'">,
   InGroup<ReturnType>;
 def warn_suggest_noreturn_function : Warning<
   "%select{function|method}0 %1 could be declared with attribute 'noreturn'">,
@@ -2771,7 +2769,7 @@ def warn_attribute_wrong_decl_type : Warning<
   "|types and namespaces"
   "|Objective-C interfaces"
   "|methods and properties"
-  "|functions, methods and properties"
+  "|functions, methods, and properties"
   "|struct or union"
   "|struct, union or class"
   "|types"
@@ -2889,6 +2887,10 @@ def warn_partial_message : Warning<"%0 is partial: %1">,
 def warn_partial_fwdclass_message : Warning<
     "%0 may be partial because the receiver type is unknown">,
     InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_at_available_unchecked_use : Warning<
+  "%select{@available|__builtin_available}0 does not guard availability here; "
+  "use if (%select{@available|__builtin_available}0) instead">,
+  InGroup<DiagGroup<"unsupported-availability-guard">>;
 
 // Thread Safety Attributes
 def warn_invalid_capability_name : Warning<
@@ -8080,10 +8082,13 @@ def err_block_on_nonlocal : Error<
 def err_block_on_vm : Error<
   "__block attribute not allowed on declaration with a variably modified type">;
 
-def err_shufflevector_non_vector : Error<
-  "first two arguments to __builtin_shufflevector must be vectors">;
-def err_shufflevector_incompatible_vector : Error<
-  "first two arguments to __builtin_shufflevector must have the same type">;
+def err_vec_builtin_non_vector : Error<
+ "first two arguments to %0 must be vectors">;
+def err_vec_builtin_incompatible_vector : Error<
+  "first two arguments to %0 must have the same type">;
+def err_vsx_builtin_nonconstant_argument : Error<
+  "argument %0 to %1 must be a 2-bit unsigned literal (i.e. 0, 1, 2 or 3)">;
+
 def err_shufflevector_nonconstant_argument : Error<
   "index for __builtin_shufflevector must be a constant integer">;
 def err_shufflevector_argument_too_large : Error<

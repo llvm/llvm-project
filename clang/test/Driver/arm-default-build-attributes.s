@@ -10,9 +10,9 @@
 
 // Option ignored C/C++ (since we always emit hardware and ABI build attributes
 // during codegen).
-// RUN: %clang -target armv7--none-eabi -### -x c %s -mdefault-build-attributes -verify 2>&1 \
+// RUN: %clang -target armv7--none-eabi -### -x c %s -mdefault-build-attributes 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-DISABLED
-// RUN: %clang -target armv7--none-eabi -### -x c++ %s -mdefault-build-attributes -verify 2>&1 \
+// RUN: %clang -target armv7--none-eabi -### -x c++ %s -mdefault-build-attributes 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-DISABLED
 
 // CHECK-DISABLED-NOT: "-arm-add-build-attributes"

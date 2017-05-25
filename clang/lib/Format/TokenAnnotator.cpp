@@ -1996,7 +1996,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   if (Left.is(tok::comment))
     return 1000;
 
-  if (Left.isOneOf(TT_RangeBasedForLoopColon, TT_InheritanceColon))
+  if (Left.isOneOf(TT_RangeBasedForLoopColon, TT_InheritanceColon, TT_CtorInitializerColon))
     return 2;
 
   if (Right.isMemberAccess()) {
@@ -2514,8 +2514,12 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       Right.Previous->MatchingParen->NestingLevel == 0 &&
       Style.AlwaysBreakTemplateDeclarations)
     return true;
-  if ((Right.isOneOf(TT_CtorInitializerComma, TT_CtorInitializerColon)) &&
-      Style.BreakConstructorInitializersBeforeComma &&
+  if (Right.is(TT_CtorInitializerComma) &&
+      Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma &&
+      !Style.ConstructorInitializerAllOnOneLineOrOnePerLine)
+    return true;
+  if (Right.is(TT_CtorInitializerColon) &&
+      Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma &&
       !Style.ConstructorInitializerAllOnOneLineOrOnePerLine)
     return true;
   // Break only if we have multiple inheritance.
@@ -2625,7 +2629,10 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     // The first comment in a braced lists is always interpreted as belonging to
     // the first list element. Otherwise, it should be placed outside of the
     // list.
-    return Left.BlockKind == BK_BracedInit;
+    return Left.BlockKind == BK_BracedInit ||
+           (Left.is(TT_CtorInitializerColon) &&
+            Style.BreakConstructorInitializers ==
+                FormatStyle::BCIS_AfterColon);
   if (Left.is(tok::question) && Right.is(tok::colon))
     return false;
   if (Right.is(TT_ConditionalExpr) || Right.is(tok::question))
@@ -2698,11 +2705,15 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Right.is(tok::identifier) && Right.Next && Right.Next->is(TT_DictLiteral))
     return true;
 
+  if (Left.is(TT_CtorInitializerColon))
+    return Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon;
+  if (Right.is(TT_CtorInitializerColon))
+    return Style.BreakConstructorInitializers != FormatStyle::BCIS_AfterColon;
   if (Left.is(TT_CtorInitializerComma) &&
-      Style.BreakConstructorInitializersBeforeComma)
+      Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma)
     return false;
   if (Right.is(TT_CtorInitializerComma) &&
-      Style.BreakConstructorInitializersBeforeComma)
+      Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma)
     return true;
   if (Left.is(TT_InheritanceComma) && Style.BreakBeforeInheritanceComma)
     return false;

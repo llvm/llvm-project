@@ -334,10 +334,6 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
   bool HasPlainEdge = false;
   bool HasAbnormalEdge = false;
 
-  // In a coroutine, only co_return statements count as normal returns. Remember
-  // if we are processing a coroutine or not.
-  const bool IsCoroutine = isa<CoroutineBodyStmt>(AC.getBody());
-
   // Ignore default cases that aren't likely to be reachable because all
   // enums in a switch(X) have explicit case statements.
   CFGBlock::FilterOptions FO;
@@ -379,7 +375,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
 
     CFGStmt CS = ri->castAs<CFGStmt>();
     const Stmt *S = CS.getStmt();
-    if ((isa<ReturnStmt>(S) && !IsCoroutine) || isa<CoreturnStmt>(S)) {
+    if (isa<ReturnStmt>(S) || isa<CoreturnStmt>(S)) {
       HasLiveReturn = true;
       continue;
     }
@@ -546,6 +542,7 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
 
   bool ReturnsVoid = false;
   bool HasNoReturn = false;
+  bool IsCoroutine = S.getCurFunction() && S.getCurFunction()->isCoroutine();
 
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (const auto *CBody = dyn_cast<CoroutineBodyStmt>(Body))
@@ -574,8 +571,13 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
   // Short circuit for compilation speed.
   if (CD.checkDiagnostics(Diags, ReturnsVoid, HasNoReturn))
       return;
-
   SourceLocation LBrace = Body->getLocStart(), RBrace = Body->getLocEnd();
+  auto EmitDiag = [&](SourceLocation Loc, unsigned DiagID) {
+    if (IsCoroutine)
+      S.Diag(Loc, DiagID) << S.getCurFunction()->CoroutinePromise->getType();
+    else
+      S.Diag(Loc, DiagID);
+  };
   // Either in a function body compound statement, or a function-try-block.
   switch (CheckFallThrough(AC)) {
     case UnknownFallThrough:
@@ -583,15 +585,15 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
 
     case MaybeFallThrough:
       if (HasNoReturn)
-        S.Diag(RBrace, CD.diag_MaybeFallThrough_HasNoReturn);
+        EmitDiag(RBrace, CD.diag_MaybeFallThrough_HasNoReturn);
       else if (!ReturnsVoid)
-        S.Diag(RBrace, CD.diag_MaybeFallThrough_ReturnsNonVoid);
+        EmitDiag(RBrace, CD.diag_MaybeFallThrough_ReturnsNonVoid);
       break;
     case AlwaysFallThrough:
       if (HasNoReturn)
-        S.Diag(RBrace, CD.diag_AlwaysFallThrough_HasNoReturn);
+        EmitDiag(RBrace, CD.diag_AlwaysFallThrough_HasNoReturn);
       else if (!ReturnsVoid)
-        S.Diag(RBrace, CD.diag_AlwaysFallThrough_ReturnsNonVoid);
+        EmitDiag(RBrace, CD.diag_AlwaysFallThrough_ReturnsNonVoid);
       break;
     case NeverFallThroughOrReturn:
       if (ReturnsVoid && !HasNoReturn && CD.diag_NeverFallThroughOrReturn) {
@@ -2031,12 +2033,6 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
   
   // Warning: check missing 'return'
   if (P.enableCheckFallThrough) {
-    auto IsCoro = [&]() {
-      if (auto *FD = dyn_cast<FunctionDecl>(D))
-        if (FD->getBody() && isa<CoroutineBodyStmt>(FD->getBody()))
-          return true;
-      return false;
-    };
     const CheckFallThroughDiagnostics &CD =
         (isa<BlockDecl>(D)
              ? CheckFallThroughDiagnostics::MakeForBlock()
@@ -2044,7 +2040,7 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
                 cast<CXXMethodDecl>(D)->getOverloadedOperator() == OO_Call &&
                 cast<CXXMethodDecl>(D)->getParent()->isLambda())
                    ? CheckFallThroughDiagnostics::MakeForLambda()
-                   : (IsCoro()
+                   : (fscope->isCoroutine()
                           ? CheckFallThroughDiagnostics::MakeForCoroutine(D)
                           : CheckFallThroughDiagnostics::MakeForFunction(D)));
     CheckFallThroughForBody(S, D, Body, blkExpr, CD, AC);

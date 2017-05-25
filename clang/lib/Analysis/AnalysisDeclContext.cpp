@@ -92,6 +92,8 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
   IsAutosynthesized = false;
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     Stmt *Body = FD->getBody();
+    if (auto *CoroBody = dyn_cast_or_null<CoroutineBodyStmt>(Body))
+      Body = CoroBody->getBody();
     if (Manager && Manager->synthesizeBodies()) {
       Stmt *SynthesizedBody =
           getBodyFarm(getASTContext(), Manager->Injector.get()).getBody(FD);

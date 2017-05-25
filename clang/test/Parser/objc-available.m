@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wunguarded-availability -triple x86_64-apple-macosx10.10.0 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wunguarded-availability -Wno-unsupported-availability-guard -triple x86_64-apple-macosx10.10.0 -verify %s
 
 void f() {
 

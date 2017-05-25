@@ -540,7 +540,7 @@ coro<T> bad_implicit_return_dependent(T) { // expected-error {{'bad_promise_6' d
 }
 template coro<bad_promise_6> bad_implicit_return_dependent(bad_promise_6); // expected-note {{in instantiation}}
 
-struct bad_promise_7 {
+struct bad_promise_7 { // expected-note 2 {{defined here}}
   coro<bad_promise_7> get_return_object();
   suspend_always initial_suspend();
   suspend_always final_suspend();
@@ -818,3 +818,14 @@ extern "C" int f(mismatch_gro_type_tag4) {
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
 
+struct bad_promise_no_return_func {
+  coro<bad_promise_no_return_func> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void unhandled_exception();
+};
+// FIXME: Make this ill-formed because the promise type declares
+// neither return_value(...) or return_void().
+coro<bad_promise_no_return_func> no_return_value_or_return_void() {
+  co_await a;
+}
