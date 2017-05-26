@@ -2805,7 +2805,7 @@ public:
   /// GetTraceConfig should supply the actual used trace
   /// configuration.
   //------------------------------------------------------------------
-  virtual lldb::user_id_t StartTrace(lldb::TraceOptionsSP &options,
+  virtual lldb::user_id_t StartTrace(const TraceOptions &options,
                                      Status &error) {
     error.SetErrorString("Not implemented");
     return LLDB_INVALID_UID;
@@ -2820,9 +2820,8 @@ public:
   /// In the other case that tracing on an individual thread needs
   /// to be stopped a thread_id can be supplied.
   //------------------------------------------------------------------
-  virtual void StopTrace(lldb::user_id_t uid, lldb::tid_t thread_id,
-                         Status &error) {
-    error.SetErrorString("Not implemented");
+  virtual Status StopTrace(lldb::user_id_t uid, lldb::tid_t thread_id) {
+    return Status("Not implemented");
   }
 
   //------------------------------------------------------------------
@@ -2833,21 +2832,19 @@ public:
   /// may not. The thread_id should be used to select a particular
   /// thread for trace extraction.
   //------------------------------------------------------------------
-  virtual size_t GetData(lldb::user_id_t uid, lldb::tid_t thread_id,
-                         Status &error, void *buf, size_t size,
+  virtual Status GetData(lldb::user_id_t uid, lldb::tid_t thread_id,
+                         llvm::MutableArrayRef<uint8_t> &buffer,
                          size_t offset = 0) {
-    error.SetErrorString("Not implemented");
-    return 0;
+    return Status("Not implemented");
   }
 
   //------------------------------------------------------------------
   /// Similar API as above except for obtaining meta data
   //------------------------------------------------------------------
-  virtual size_t GetMetaData(lldb::user_id_t uid, lldb::tid_t thread_id,
-                             Status &error, void *buf, size_t size,
+  virtual Status GetMetaData(lldb::user_id_t uid, lldb::tid_t thread_id,
+                             llvm::MutableArrayRef<uint8_t> &buffer,
                              size_t offset = 0) {
-    error.SetErrorString("Not implemented");
-    return 0;
+    return Status("Not implemented");
   }
 
   //------------------------------------------------------------------
@@ -2859,10 +2856,8 @@ public:
   /// configuration used by a specific thread. The thread_id specified
   /// should also match the uid otherwise an error will be returned.
   //------------------------------------------------------------------
-  virtual void GetTraceConfig(lldb::user_id_t uid, Status &error,
-                              lldb::TraceOptionsSP &options) {
-    error.SetErrorString("Not implemented");
-    return;
+  virtual Status GetTraceConfig(lldb::user_id_t uid, TraceOptions &options) {
+    return Status("Not implemented");
   }
 
 protected:

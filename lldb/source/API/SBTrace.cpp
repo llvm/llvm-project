@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/Log.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/Log.h"
 
 #include "lldb/API/SBTrace.h"
 #include "lldb/API/SBTraceOptions.h"
@@ -25,37 +25,37 @@ lldb::ProcessSP SBTrace::GetSP() const { return m_opaque_wp.lock(); }
 
 size_t SBTrace::GetTraceData(SBError &error, void *buf, size_t size,
                              size_t offset, lldb::tid_t thread_id) {
-  size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+  llvm::MutableArrayRef<uint8_t> buffer(static_cast<uint8_t *>(buf), size);
   error.Clear();
 
   if (!process_sp) {
     error.SetErrorString("invalid process");
   } else {
-    bytes_read = process_sp->GetData(GetTraceUID(), thread_id, error.ref(), buf,
-                                     size, offset);
-    LLDB_LOG(log, "SBTrace::bytes_read - %" PRIx64, bytes_read);
+    error.SetError(
+        process_sp->GetData(GetTraceUID(), thread_id, buffer, offset));
+    LLDB_LOG(log, "SBTrace::bytes_read - {0}", buffer.size());
   }
-  return bytes_read;
+  return buffer.size();
 }
 
 size_t SBTrace::GetMetaData(SBError &error, void *buf, size_t size,
                             size_t offset, lldb::tid_t thread_id) {
-  size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+  llvm::MutableArrayRef<uint8_t> buffer(static_cast<uint8_t *>(buf), size);
   error.Clear();
 
   if (!process_sp) {
     error.SetErrorString("invalid process");
   } else {
 
-    bytes_read = process_sp->GetMetaData(GetTraceUID(), thread_id, error.ref(),
-                                         buf, size, offset);
-    LLDB_LOG(log, "SBTrace::bytes_read - %" PRIx64, bytes_read);
+    error.SetError(
+        process_sp->GetMetaData(GetTraceUID(), thread_id, buffer, offset));
+    LLDB_LOG(log, "SBTrace::bytes_read - {0}", buffer.size());
   }
-  return bytes_read;
+  return buffer.size();
 }
 
 void SBTrace::StopTrace(SBError &error, lldb::tid_t thread_id) {
@@ -66,7 +66,7 @@ void SBTrace::StopTrace(SBError &error, lldb::tid_t thread_id) {
     error.SetErrorString("invalid process");
     return;
   }
-  process_sp->StopTrace(GetTraceUID(), thread_id, error.ref());
+  error.SetError(process_sp->StopTrace(GetTraceUID(), thread_id));
 }
 
 void SBTrace::GetTraceConfig(SBTraceOptions &options, SBError &error) {
@@ -76,8 +76,8 @@ void SBTrace::GetTraceConfig(SBTraceOptions &options, SBError &error) {
   if (!process_sp) {
     error.SetErrorString("invalid process");
   } else {
-    process_sp->GetTraceConfig(GetTraceUID(), error.ref(),
-                               options.m_traceoptions_sp);
+    error.SetError(process_sp->GetTraceConfig(GetTraceUID(),
+                                              *(options.m_traceoptions_sp)));
   }
 }
 

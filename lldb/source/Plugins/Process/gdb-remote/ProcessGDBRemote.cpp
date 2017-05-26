@@ -1236,6 +1236,32 @@ Status ProcessGDBRemote::DoAttachToProcessWithName(
   return error;
 }
 
+lldb::user_id_t ProcessGDBRemote::StartTrace(const TraceOptions &options,
+                                             Status &error) {
+  return m_gdb_comm.SendStartTracePacket(options, error);
+}
+
+Status ProcessGDBRemote::StopTrace(lldb::user_id_t uid, lldb::tid_t thread_id) {
+  return m_gdb_comm.SendStopTracePacket(uid, thread_id);
+}
+
+Status ProcessGDBRemote::GetData(lldb::user_id_t uid, lldb::tid_t thread_id,
+                                 llvm::MutableArrayRef<uint8_t> &buffer,
+                                 size_t offset) {
+  return m_gdb_comm.SendGetDataPacket(uid, thread_id, buffer, offset);
+}
+
+Status ProcessGDBRemote::GetMetaData(lldb::user_id_t uid, lldb::tid_t thread_id,
+                                     llvm::MutableArrayRef<uint8_t> &buffer,
+                                     size_t offset) {
+  return m_gdb_comm.SendGetMetaDataPacket(uid, thread_id, buffer, offset);
+}
+
+Status ProcessGDBRemote::GetTraceConfig(lldb::user_id_t uid,
+                                        TraceOptions &options) {
+  return m_gdb_comm.SendGetTraceConfigPacket(uid, options);
+}
+
 void ProcessGDBRemote::DidExit() {
   // When we exit, disconnect from the GDB server communications
   m_gdb_comm.Disconnect();
