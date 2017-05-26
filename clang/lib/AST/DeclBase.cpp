@@ -448,8 +448,8 @@ const Attr *Decl::getDefiningAttr() const {
   return nullptr;
 }
 
-StringRef getRealizedPlatform(const AvailabilityAttr *A,
-                              const ASTContext &Context) {
+static StringRef getRealizedPlatform(const AvailabilityAttr *A,
+                                     const ASTContext &Context) {
   // Check if this is an App Extension "platform", and if so chop off
   // the suffix for matching with the actual platform.
   StringRef RealizedPlatform = A->getPlatform()->getName();

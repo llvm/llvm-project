@@ -191,6 +191,7 @@ public:
   }
 };
 
+namespace {
 // just a stub to make base class happy
 class SchedStrategyStub : public MachineSchedStrategy {
 public:
@@ -202,6 +203,7 @@ public:
   void releaseTopNode(SUnit *SU) override {}
   void releaseBottomNode(SUnit *SU) override {}
 };
+} // namespace
 
 GCNIterativeScheduler::GCNIterativeScheduler(MachineSchedContext *C,
                                              StrategyKind S)

@@ -4576,38 +4576,6 @@ bool Scop::restrictDomains(__isl_take isl_union_set *Domain) {
 
 ScalarEvolution *Scop::getSE() const { return SE; }
 
-struct MapToDimensionDataTy {
-  int N;
-  isl_union_pw_multi_aff *Res;
-};
-
-// Create a function that maps the elements of 'Set' to its N-th dimension and
-// add it to User->Res.
-//
-// @param Set        The input set.
-// @param User->N    The dimension to map to.
-// @param User->Res  The isl_union_pw_multi_aff to which to add the result.
-//
-// @returns   isl_stat_ok if no error occured, othewise isl_stat_error.
-static isl_stat mapToDimension_AddSet(__isl_take isl_set *Set, void *User) {
-  struct MapToDimensionDataTy *Data = (struct MapToDimensionDataTy *)User;
-  int Dim;
-  isl_space *Space;
-  isl_pw_multi_aff *PMA;
-
-  Dim = isl_set_dim(Set, isl_dim_set);
-  Space = isl_set_get_space(Set);
-  PMA = isl_pw_multi_aff_project_out_map(Space, isl_dim_set, Data->N,
-                                         Dim - Data->N);
-  if (Data->N > 1)
-    PMA = isl_pw_multi_aff_drop_dims(PMA, isl_dim_out, 0, Data->N - 1);
-  Data->Res = isl_union_pw_multi_aff_add_pw_multi_aff(Data->Res, PMA);
-
-  isl_set_free(Set);
-
-  return isl_stat_ok;
-}
-
 // Create an isl_multi_union_aff that defines an identity mapping from the
 // elements of USet to their N-th dimension.
 //
@@ -4622,26 +4590,30 @@ static isl_stat mapToDimension_AddSet(__isl_take isl_set *Set, void *User) {
 //               mapping.
 // @param N      The dimension to map to.
 // @returns      A mapping from USet to its N-th dimension.
-static __isl_give isl_multi_union_pw_aff *
-mapToDimension(__isl_take isl_union_set *USet, int N) {
+static isl::multi_union_pw_aff mapToDimension(isl::union_set USet, int N) {
   assert(N >= 0);
   assert(USet);
-  assert(!isl_union_set_is_empty(USet));
+  assert(!USet.is_empty());
 
-  struct MapToDimensionDataTy Data;
+  auto Result = isl::union_pw_multi_aff::empty(USet.get_space());
 
-  auto *Space = isl_union_set_get_space(USet);
-  auto *PwAff = isl_union_pw_multi_aff_empty(Space);
+  auto Lambda = [&Result, N](isl::set S) -> isl::stat {
+    int Dim = S.dim(isl::dim::set);
+    auto PMA = isl::pw_multi_aff::project_out_map(S.get_space(), isl::dim::set,
+                                                  N, Dim - N);
+    if (N > 1)
+      PMA = PMA.drop_dims(isl::dim::out, 0, N - 1);
 
-  Data = {N, PwAff};
+    Result = Result.add_pw_multi_aff(PMA);
+    return isl::stat::ok;
+  };
 
-  auto Res = isl_union_set_foreach_set(USet, &mapToDimension_AddSet, &Data);
+  isl::stat Res = USet.foreach_set(Lambda);
   (void)Res;
 
-  assert(Res == isl_stat_ok);
+  assert(Res == isl::stat::ok);
 
-  isl_union_set_free(USet);
-  return isl_multi_union_pw_aff_from_union_pw_multi_aff(Data.Res);
+  return isl::multi_union_pw_aff(isl::union_pw_multi_aff(Result));
 }
 
 void Scop::addScopStmt(BasicBlock *BB, Loop *SurroundingLoop) {
@@ -4792,9 +4764,9 @@ void Scop::buildSchedule(RegionNode *RN, LoopStackTy &LoopStack, LoopInfo &LI) {
     auto &NextLoopData = LoopStack.back();
 
     if (Schedule) {
-      auto *Domain = isl_schedule_get_domain(Schedule);
-      auto *MUPA = mapToDimension(Domain, LoopStack.size());
-      Schedule = isl_schedule_insert_partial_schedule(Schedule, MUPA);
+      isl::union_set Domain = give(isl_schedule_get_domain(Schedule));
+      isl::multi_union_pw_aff MUPA = mapToDimension(Domain, LoopStack.size());
+      Schedule = isl_schedule_insert_partial_schedule(Schedule, MUPA.release());
       NextLoopData.Schedule =
           combineInSequence(NextLoopData.Schedule, Schedule);
     }

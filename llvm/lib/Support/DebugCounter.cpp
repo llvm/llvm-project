@@ -6,6 +6,7 @@
 
 using namespace llvm;
 
+namespace {
 // This class overrides the default list implementation of printing so we
 // can pretty print the list of debug counter options.  This type of
 // dynamic option is pretty rare (basically this and pass lists).
@@ -40,6 +41,7 @@ private:
     }
   }
 };
+} // namespace
 
 // Create our command line option.
 static DebugCounterList DebugCounterOption(

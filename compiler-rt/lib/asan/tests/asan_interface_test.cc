@@ -102,9 +102,6 @@ TEST(AddressSanitizerInterface, GetHeapSizeTest) {
   }
 }
 
-#ifndef __powerpc64__
-// FIXME: This has not reliably worked on powerpc since r279664.  Re-enable
-// this once the problem is tracked down and fixed.
 static const size_t kManyThreadsMallocSizes[] = {5, 1UL<<10, 1UL<<14, 357};
 static const size_t kManyThreadsIterations = 250;
 static const size_t kManyThreadsNumThreads =
@@ -138,7 +135,6 @@ TEST(AddressSanitizerInterface, ManyThreadsWithStatsStressTest) {
   // so we can't check for equality here.
   EXPECT_LT(after_test, before_test + (1UL<<20));
 }
-#endif
 
 static void DoDoubleFree() {
   int *x = Ident(new int);

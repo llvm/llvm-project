@@ -1223,6 +1223,7 @@ public:
 
   // FIXME: Fix callers and remove condition on N.
   unsigned size() const { return N ? N->getNumOperands() : 0u; }
+  bool empty() const { return N ? N->getNumOperands() == 0 : true; }
   T *operator[](unsigned I) const { return cast_or_null<T>(N->getOperand(I)); }
 
   // FIXME: Fix callers and remove condition on N.

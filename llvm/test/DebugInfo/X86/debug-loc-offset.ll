@@ -35,10 +35,6 @@
 ; CHECK: DW_AT_low_pc
 ; CHECK: DW_AT_high_pc
 
-; CHECK: DW_TAG_compile_unit
-; CHECK: DW_AT_low_pc
-; CHECK: DW_AT_high_pc
-
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_linkage_name [DW_FORM_strp]{{.*}}"_Z3baz1A"
@@ -52,6 +48,10 @@
 ; CHECK: DW_TAG_variable
 ; CHECK: DW_AT_location [DW_FORM_exprloc]
 ; CHECK-NOT: DW_AT_location
+
+; CHECK: DW_TAG_compile_unit
+; CHECK: DW_AT_low_pc
+; CHECK: DW_AT_high_pc
 
 ; CHECK: .debug_loc contents:
 ; CHECK: 0x00000000: Beginning address offset: 0x0000000000000000

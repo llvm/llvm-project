@@ -692,6 +692,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZNow = hasZOption(Args, "now");
   Config->ZOrigin = hasZOption(Args, "origin");
   Config->ZRelro = !hasZOption(Args, "norelro");
+  Config->ZRodynamic = hasZOption(Args, "rodynamic");
   Config->ZStackSize = getZOptionValue(Args, "stack-size", 0);
   Config->ZText = !hasZOption(Args, "notext");
   Config->ZWxneeded = hasZOption(Args, "wxneeded");

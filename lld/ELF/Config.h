@@ -145,6 +145,7 @@ struct Configuration {
   bool ZNow;
   bool ZOrigin;
   bool ZRelro;
+  bool ZRodynamic;
   bool ZText;
   bool ExitEarly;
   bool ZWxneeded;

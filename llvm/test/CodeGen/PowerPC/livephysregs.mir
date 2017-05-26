@@ -1,0 +1,52 @@
+# RUN: llc -o - %s -mtriple=powerpc64le--linux-gnu -run-pass=branch-folder | FileCheck %s
+# The branch-folder should merge bb.1 and bb.5 below and therefore recalculate
+# the liveins list of the merged block. This test is checking whether this
+# recalculated list if okay and contains all the non-saved and saved CSRs.
+# CHECK-LABEL: name: func
+# CHECK: bb.3:
+# CHECK-NEXT: liveins: %x30, %x29, %x3, %x6
+# CHECK: %x4 = RLDICR killed %x6, 16, 47
+# CHECK: %x3 = OR8 killed %x4, killed %x3
+# CHECK: BLR8 implicit %lr8, implicit %rm, implicit %x3
+---
+name: func
+tracksRegLiveness: true
+fixedStack:      
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '%x30' }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '%x29' }
+  - { id: 2, offset: -8, size: 8, alignment: 8, isImmutable: true, isAliased: false }
+body: |
+  bb.0:
+    liveins: %x3, %x5, %x29, %x30
+  
+    %x6 = RLWINM8 %x3, 16, 16, 31
+    %x3 = RLDICL killed %x3, 0, 48
+    BC undef %cr5lt, %bb.3
+  
+  bb.1:
+    liveins: %x3, %x6, %x29, %x30
+  
+    %x4 = RLDICR killed %x6, 16, 47
+    %x3 = OR8 killed %x4, killed %x3
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
+  
+  bb.3:
+    liveins: %x3, %x5, %x6, %x29, %x30
+
+    dead %x5 = ADD8 %x5, %x6
+    BC undef %cr5lt, %bb.1
+
+  bb.6:
+    liveins: %x3, %x6, %x29, %x30
+    STD killed %x29, -24, %x1 :: (store 8 into %fixed-stack.1)
+    STD killed %x30, -16, %x1 :: (store 8 into %fixed-stack.0, align 16)
+    NOP implicit-def dead %x29
+    NOP implicit-def dead %x30
+
+    %x30 = LD -16, %x1 :: (load 8 from %fixed-stack.0, align 16)
+    %x29 = LD -24, %x1 :: (load 8 from %fixed-stack.1)
+  
+    %x4 = RLDICR killed %x6, 16, 47
+    %x3 = OR8 killed %x4, killed %x3
+    BLR8 implicit %lr8, implicit %rm, implicit %x3 
+...

@@ -238,7 +238,7 @@ static typename std::enable_if<std::is_base_of<clang::Attr, AttrInfo>::value,
 getAttrName(const AttrInfo &Attr) {
   return &Attr;
 }
-const IdentifierInfo *getAttrName(const clang::AttributeList &Attr) {
+static const IdentifierInfo *getAttrName(const clang::AttributeList &Attr) {
   return Attr.getName();
 }
 

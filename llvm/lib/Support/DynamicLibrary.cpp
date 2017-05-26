@@ -127,10 +127,15 @@ void DynamicLibrary::AddSymbol(StringRef SymbolName, void *SymbolValue) {
 
 DynamicLibrary DynamicLibrary::getPermanentLibrary(const char *FileName,
                                                    std::string *Err) {
-  SmartScopedLock<true> Lock(*SymbolsMutex);
+  // Force OpenedHandles to be added into the ManagedStatic list before any
+  // ManagedStatic can be added from static constructors in HandleSet::DLOpen.
+  HandleSet& HS = *OpenedHandles;
+
   void *Handle = HandleSet::DLOpen(FileName, Err);
-  if (Handle != &Invalid)
-    OpenedHandles->AddLibrary(Handle, /*IsProcess*/ FileName == nullptr);
+  if (Handle != &Invalid) {
+    SmartScopedLock<true> Lock(*SymbolsMutex);
+    HS.AddLibrary(Handle, /*IsProcess*/ FileName == nullptr);
+  }
 
   return DynamicLibrary(Handle);
 }
