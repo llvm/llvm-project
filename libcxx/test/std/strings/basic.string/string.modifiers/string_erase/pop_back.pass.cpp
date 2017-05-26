@@ -23,6 +23,7 @@ test(S s, S expected)
 {
     s.pop_back();
     LIBCPP_ASSERT(s.__invariants());
+    assert(s[s.size()] == typename S::value_type());
     assert(s == expected);
 }
 

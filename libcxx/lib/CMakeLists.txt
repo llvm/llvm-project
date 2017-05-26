@@ -242,14 +242,11 @@ endif()
 if (LIBCXX_ENABLE_STATIC)
   add_library(cxx_static STATIC $<TARGET_OBJECTS:cxx_objects>)
   target_link_libraries(cxx_static ${LIBCXX_LIBRARIES})
-  set(STATIC_OUTPUT_NAME "c++")
-  if (WIN32)
-    set(STATIC_OUTPUT_NAME "libc++")
-  endif()
+  set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
   set_target_properties(cxx_static
     PROPERTIES
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
-      OUTPUT_NAME   "${STATIC_OUTPUT_NAME}"
+      OUTPUT_NAME   "c++"
   )
 
   list(APPEND LIBCXX_TARGETS "cxx_static")

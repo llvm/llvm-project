@@ -59,7 +59,8 @@ Name prefix            Description
 ``cert-``              Checks related to CERT Secure Coding Guidelines.
 ``cppcoreguidelines-`` Checks related to C++ Core Guidelines.
 ``clang-analyzer-``    Clang Static Analyzer checks.
-``google-``            Checks related to the Google coding conventions.
+``google-``            Checks related to Google coding conventions.
+``hicpp-``             Checks related to High Integrity C++ Coding Standard.
 ``llvm-``              Checks related to the LLVM coding conventions.
 ``misc-``              Checks that we didn't have a better category for.
 ``modernize-``         Checks that advocate usage of modern (currently "modern"
@@ -652,7 +653,7 @@ The script provides multiple configuration flags.
 * To restrict the files examined you can provide one or more regex arguments
   that the file names are matched against.
   ``run-clang-tidy.py clang-tidy/.*Check\.cpp`` will only analyze clang-tidy
-  checkers. It may also be necessary to restrict the header files warnings are
+  checks. It may also be necessary to restrict the header files warnings are
   displayed from using the ``-header-filter`` flag. It has the same behavior
   as the corresponding :program:`clang-tidy` flag.
 
