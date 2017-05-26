@@ -18,8 +18,7 @@
 namespace lldb_private {
 class TraceOptions {
 public:
-  TraceOptions()
-      : m_trace_params(new StructuredData::Dictionary()) {}
+  TraceOptions() : m_trace_params(new StructuredData::Dictionary()) {}
 
   const StructuredData::DictionarySP &getTraceParams() const {
     return m_trace_params;
@@ -43,7 +42,7 @@ public:
 
   void setThreadID(lldb::tid_t thread_id) { m_thread_id = thread_id; }
 
-  lldb::tid_t getThreadID() { return m_thread_id; }
+  lldb::tid_t getThreadID() const { return m_thread_id; }
 
 private:
   lldb::TraceType m_type;

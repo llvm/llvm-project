@@ -97,9 +97,6 @@ TEST(AddressSanitizer, NoInstMallocTest) {
   MallocStress(ASAN_LOW_MEMORY ? 300000 : 1000000);
 }
 
-#ifndef __powerpc64__
-// FIXME: This has not reliably worked on powerpc since r279664.  Re-enable
-// this once the problem is tracked down and fixed.
 TEST(AddressSanitizer, ThreadedMallocStressTest) {
   const int kNumThreads = 4;
   const int kNumIterations = (ASAN_LOW_MEMORY) ? 10000 : 100000;
@@ -112,7 +109,6 @@ TEST(AddressSanitizer, ThreadedMallocStressTest) {
     PTHREAD_JOIN(t[i], 0);
   }
 }
-#endif
 
 static void PrintShadow(const char *tag, uptr ptr, size_t size) {
   fprintf(stderr, "%s shadow: %lx size % 3ld: ", tag, (long)ptr, (long)size);
@@ -210,10 +206,6 @@ void *ThreadedOneSizeMallocStress(void *unused) {
   return NULL;
 }
 
-#ifndef __powerpc64__
-// FIXME: This has not reliably worked on powerpc since r279664.  Re-enable
-// this once the problem is tracked down and fixed.
-
 TEST(AddressSanitizer, ThreadedOneSizeMallocStressTest) {
   const int kNumThreads = 4;
   pthread_t t[kNumThreads];
@@ -224,7 +216,6 @@ TEST(AddressSanitizer, ThreadedOneSizeMallocStressTest) {
     PTHREAD_JOIN(t[i], 0);
   }
 }
-#endif
 
 TEST(AddressSanitizer, ShadowRegionIsPoisonedTest) {
   using __asan::kHighMemEnd;

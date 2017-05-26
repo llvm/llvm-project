@@ -111,6 +111,8 @@ public:
 
   size_t GetHexByteStringTerminatedBy(std::string &str, char terminator);
 
+  bool ConsumeFront(const llvm::StringRef &str);
+
   const char *Peek() {
     if (m_index < m_packet.size())
       return m_packet.c_str() + m_index;

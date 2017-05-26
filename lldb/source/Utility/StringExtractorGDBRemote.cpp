@@ -286,6 +286,16 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       return eServerPacketType_jSignalsInfo;
     if (PACKET_MATCHES("jThreadsInfo"))
       return eServerPacketType_jThreadsInfo;
+    if (PACKET_STARTS_WITH("jTraceBufferRead:"))
+      return eServerPacketType_jTraceBufferRead;
+    if (PACKET_STARTS_WITH("jTraceConfigRead:"))
+      return eServerPacketType_jTraceConfigRead;
+    if (PACKET_STARTS_WITH("jTraceMetaRead:"))
+      return eServerPacketType_jTraceMetaRead;
+    if (PACKET_STARTS_WITH("jTraceStart:"))
+      return eServerPacketType_jTraceStart;
+    if (PACKET_STARTS_WITH("jTraceStop:"))
+      return eServerPacketType_jTraceStop;
     break;
 
   case 'v':

@@ -41,6 +41,19 @@ program_global_readonly:
 	.long	0                       ; 0x0
 
 # CHECK: Section {
+# CHECK: Name: .hsatext
+# CHECK: Type: SHT_PROGBITS
+# CHECK: Flags [ (0xC00007)
+# CHECK: SHF_ALLOC (0x2)
+# CHECK: SHF_AMDGPU_HSA_AGENT (0x800000)
+# CHECK: SHF_AMDGPU_HSA_CODE (0x400000)
+# CHECK: SHF_EXECINSTR (0x4)
+# CHECK: SHF_WRITE (0x1)
+# CHECK: ]
+# CHECK: Address: [[HSATEXT_ADDR:[0-9xa-f]+]]
+# CHECK: }
+
+# CHECK: Section {
 # CHECK: Name: .hsadata_global_program
 # CHECK: Type: SHT_PROGBITS (0x1)
 # CHECK: Flags [ (0x100003)
@@ -60,19 +73,6 @@ program_global_readonly:
 # CHECK: SHF_AMDGPU_HSA_GLOBAL (0x100000)
 # CHECK: SHF_WRITE (0x1)
 # CHECK: ]
-# CHECK: }
-
-# CHECK: Section {
-# CHECK: Name: .hsatext
-# CHECK: Type: SHT_PROGBITS
-# CHECK: Flags [ (0xC00007)
-# CHECK: SHF_ALLOC (0x2)
-# CHECK: SHF_AMDGPU_HSA_AGENT (0x800000)
-# CHECK: SHF_AMDGPU_HSA_CODE (0x400000)
-# CHECK: SHF_EXECINSTR (0x4)
-# CHECK: SHF_WRITE (0x1)
-# CHECK: ]
-# CHECK: Address: [[HSATEXT_ADDR:[0-9xa-f]+]]
 # CHECK: }
 
 # CHECK: Symbol {

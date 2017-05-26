@@ -34,6 +34,11 @@ _start:
 // CHECK: Name: c
 // CHECK: Name: d
 
+// Sections that are both writable and executable appear before
+// sections that are only writable.
+// CHECK: Name: k
+// CHECK: Name: l
+
 // Writable sections appear before TLS and other relro sections.
 // CHECK: Name: i
 
@@ -42,8 +47,6 @@ _start:
 // CHECK: Name: g
 
 // CHECK: Name: j
-// CHECK: Name: k
-// CHECK: Name: l
 
 // Non allocated sections are in input order.
 // CHECK: Name: t
