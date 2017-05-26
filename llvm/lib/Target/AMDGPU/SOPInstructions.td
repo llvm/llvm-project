@@ -184,7 +184,9 @@ def S_BITSET0_B32 : SOP1_32    <"s_bitset0_b32">;
 def S_BITSET0_B64 : SOP1_64_32 <"s_bitset0_b64">;
 def S_BITSET1_B32 : SOP1_32    <"s_bitset1_b32">;
 def S_BITSET1_B64 : SOP1_64_32 <"s_bitset1_b64">;
-def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64">;
+def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64",
+  [(set i64:$sdst, (int_amdgcn_s_getpc))]
+>;
 
 let isTerminator = 1, isBarrier = 1, SchedRW = [WriteBranch] in {
 

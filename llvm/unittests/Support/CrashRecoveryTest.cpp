@@ -17,10 +17,6 @@
 #include <windows.h>
 #endif
 
-extern "C" const char *__asan_default_options() {
-  return "allow_user_segv_handler=1";
-}
-
 using namespace llvm;
 using namespace llvm::sys;
 

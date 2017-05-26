@@ -1402,9 +1402,9 @@ Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &Cmp) {
   if (*C == 0 && Pred == ICmpInst::ICMP_SGT) {
     SelectPatternResult SPR = matchSelectPattern(X, A, B);
     if (SPR.Flavor == SPF_SMIN) {
-      if (isKnownPositive(A, DL))
+      if (isKnownPositive(A, DL, 0, &AC, &Cmp, &DT))
         return new ICmpInst(Pred, B, Cmp.getOperand(1));
-      if (isKnownPositive(B, DL))
+      if (isKnownPositive(B, DL, 0, &AC, &Cmp, &DT))
         return new ICmpInst(Pred, A, Cmp.getOperand(1));
     }
   }

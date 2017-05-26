@@ -566,6 +566,16 @@ def int_amdgcn_s_getreg :
   [IntrReadMem, IntrSpeculatable]
 >;
 
+// int_amdgcn_s_getpc is provided to allow a specific style of position
+// independent code to determine the high part of its address when it is
+// known (through convention) that the code and any data of interest does
+// not cross a 4Gb address boundary. Use for any other purpose may not
+// produce the desired results as optimizations may cause code movement,
+// especially as we explicitly use IntrNoMem to allow optimizations.
+def int_amdgcn_s_getpc :
+  GCCBuiltin<"__builtin_amdgcn_s_getpc">,
+  Intrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrSpeculatable]>;
+
 // __builtin_amdgcn_interp_mov <param>, <attr_chan>, <attr>, <m0>
 // param values: 0 = P10, 1 = P20, 2 = P0
 def int_amdgcn_interp_mov :

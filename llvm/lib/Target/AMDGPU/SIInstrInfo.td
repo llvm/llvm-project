@@ -439,16 +439,25 @@ def ExpSrc3 : RegisterOperand<VGPR_32> {
   let ParserMatchClass = VReg32OrOffClass;
 }
 
-def SDWA9Src : RegisterOperand<VS_32> {
+class SDWA9Src : RegisterOperand<VS_32> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_SDWA9_SRC";
   let EncoderMethod = "getSDWA9SrcEncoding";
+}
+
+def SDWA9Src32 : SDWA9Src {
+  let DecoderMethod = "decodeSDWA9Src32";
+}
+
+def SDWA9Src16 : SDWA9Src {
+  let DecoderMethod = "decodeSDWA9Src16";
 }
 
 def SDWA9VopcDst : VOPDstOperand<SReg_64> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_SDWA9_VOPC_DST";
   let EncoderMethod = "getSDWA9VopcDstEncoding";
+  let DecoderMethod = "decodeSDWA9VopcDst";
 }
 
 class NamedMatchClass<string CName, bit Optional = 1> : AsmOperandClass {
@@ -862,6 +871,10 @@ class getVOPSrc0ForVT<ValueType VT> {
 class getVregSrcForVT<ValueType VT> {
   RegisterClass ret = !if(!eq(VT.Size, 128), VReg_128,
                         !if(!eq(VT.Size, 64), VReg_64, VGPR_32));
+}
+
+class getSDWA9SrcForVT <ValueType VT> {
+  RegisterOperand ret = !if(!eq(VT.Size, 16), SDWA9Src16, SDWA9Src32);
 }
 
 // Returns the register class to use for sources of VOP3 instructions for the
@@ -1360,8 +1373,8 @@ class VOPProfile <list<ValueType> _ArgVT> {
   field RegisterClass Src1DPP = getVregSrcForVT<Src1VT>.ret;
   field RegisterClass Src0SDWA = getVregSrcForVT<Src0VT>.ret;
   field RegisterClass Src1SDWA = getVregSrcForVT<Src1VT>.ret;
-  field RegisterOperand Src0SDWA9 = SDWA9Src;
-  field RegisterOperand Src1SDWA9 = SDWA9Src;
+  field RegisterOperand Src0SDWA9 = getSDWA9SrcForVT<Src0VT>.ret;
+  field RegisterOperand Src1SDWA9 = getSDWA9SrcForVT<Src0VT>.ret;
   field Operand Src0Mod = getSrcMod<Src0VT>.ret;
   field Operand Src1Mod = getSrcMod<Src1VT>.ret;
   field Operand Src2Mod = getSrcMod<Src2VT>.ret;

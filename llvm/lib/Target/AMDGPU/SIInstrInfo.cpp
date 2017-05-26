@@ -2331,6 +2331,10 @@ static bool isSubRegOf(const SIRegisterInfo &TRI,
 bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
                                     StringRef &ErrInfo) const {
   uint16_t Opcode = MI.getOpcode();
+
+  if (SIInstrInfo::isGenericOpcode(MI.getOpcode()))
+    return true;
+
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
   int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);

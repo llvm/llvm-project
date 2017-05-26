@@ -686,6 +686,10 @@ v_cmp_eq_f32_sdwa vcc, v1, s22 src0_sel:WORD_1 src1_sel:BYTE_2
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
 v_cmp_eq_f32_sdwa vcc, exec, vcc src0_sel:WORD_1 src1_sel:BYTE_2
 
+// NOSICI: error:
+// NOVI: error:
+// GFX9: v_ceil_f16_sdwa v5, flat_scratch_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD ; encoding: [0xf9,0x8a,0x0a,0x7e,0x66,0x06,0x86,0x06]
+v_ceil_f16_sdwa v5, flat_scratch_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD
 
 //===----------------------------------------------------------------------===//
 // VOPC with arbitrary SGPR destination

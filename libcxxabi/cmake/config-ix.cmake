@@ -36,7 +36,7 @@ if (LIBCXXABI_HAS_NODEFAULTLIBS_FLAG)
       set(MINGW_RUNTIME gcc_s gcc)
     endif()
     set(MINGW_LIBRARIES mingw32 ${MINGW_RUNTIME} moldname mingwex msvcrt advapi32
-                        shell32 user32 kernel32 iconv mingw32 ${MINGW_RUNTIME}
+                        shell32 user32 kernel32 mingw32 ${MINGW_RUNTIME}
                         moldname mingwex msvcrt)
     list(APPEND CMAKE_REQUIRED_LIBRARIES ${MINGW_LIBRARIES})
   endif()

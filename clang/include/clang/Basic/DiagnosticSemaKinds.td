@@ -1557,8 +1557,6 @@ def note_member_synthesized_at : Note<
   "in implicit %select{default constructor|copy constructor|move constructor|"
   "copy assignment operator|move assignment operator|destructor}0 for %1 "
   "first required here">;
-def note_inhctor_synthesized_at : Note<
-  "inherited constructor for %0 first required here">;
 def err_missing_default_ctor : Error<
   "%select{constructor for %1 must explicitly initialize the|"
   "implicit default constructor for %1 must explicitly initialize the|"
@@ -8909,8 +8907,6 @@ def note_equivalent_internal_linkage_decl : Note<
 
 def note_redefinition_modules_same_file : Note<
 	"'%0' included multiple times, additional include site in header from module '%1'">;
-def note_redefinition_modules_same_file_modulemap : Note<
-	"consider adding '%0' as part of '%1' definition">;
 def note_redefinition_include_same_file : Note<
 	"'%0' included multiple times, additional include site here">;
 }

@@ -50,11 +50,6 @@ bool HexagonRegisterInfo::isEHReturnCalleeSaveReg(unsigned R) const {
          R == Hexagon::R3 || R == Hexagon::D0 || R == Hexagon::D1;
 }
 
-bool HexagonRegisterInfo::isCalleeSaveReg(unsigned Reg) const {
-  return Hexagon::R16 <= Reg && Reg <= Hexagon::R27;
-}
-
-
 const MCPhysReg *
 HexagonRegisterInfo::getCallerSavedRegs(const MachineFunction *MF,
       const TargetRegisterClass *RC) const {

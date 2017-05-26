@@ -1567,7 +1567,6 @@ static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
     return X;
 
   // (icmp (add V, C0), C1) & (icmp V, C0)
-  Type *ITy = Op0->getType();
   ICmpInst::Predicate Pred0, Pred1;
   const APInt *C0, *C1;
   Value *V;
@@ -1581,6 +1580,7 @@ static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
   if (AddInst->getOperand(1) != Op1->getOperand(1))
     return nullptr;
 
+  Type *ITy = Op0->getType();
   bool isNSW = AddInst->hasNoSignedWrap();
   bool isNUW = AddInst->hasNoUnsignedWrap();
 
@@ -1922,34 +1922,26 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       return V;
 
   // (A & C1)|(B & C2)
-  ConstantInt *C1, *C2;
-  if (match(Op0, m_And(m_Value(A), m_ConstantInt(C1))) &&
-      match(Op1, m_And(m_Value(B), m_ConstantInt(C2)))) {
-    if (C1->getValue() == ~C2->getValue()) {
+  const APInt *C1, *C2;
+  if (match(Op0, m_And(m_Value(A), m_APInt(C1))) &&
+      match(Op1, m_And(m_Value(B), m_APInt(C2)))) {
+    if (*C1 == ~*C2) {
       // (A & C1)|(B & C2)
       // If we have: ((V + N) & C1) | (V & C2)
       // .. and C2 = ~C1 and C2 is 0+1+ and (N & C2) == 0
       // replace with V+N.
-      Value *V1, *V2;
-      if (C2->getValue().isMask() && // C2 == 0+1+
-          match(A, m_Add(m_Value(V1), m_Value(V2)))) {
+      Value *N;
+      if (C2->isMask() && // C2 == 0+1+
+          match(A, m_c_Add(m_Specific(B), m_Value(N)))) {
         // Add commutes, try both ways.
-        if (V1 == B &&
-            MaskedValueIsZero(V2, C2->getValue(), Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
-          return A;
-        if (V2 == B &&
-            MaskedValueIsZero(V1, C2->getValue(), Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+        if (MaskedValueIsZero(N, *C2, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
           return A;
       }
       // Or commutes, try both ways.
-      if (C1->getValue().isMask() &&
-          match(B, m_Add(m_Value(V1), m_Value(V2)))) {
+      if (C1->isMask() &&
+          match(B, m_c_Add(m_Specific(A), m_Value(N)))) {
         // Add commutes, try both ways.
-        if (V1 == A &&
-            MaskedValueIsZero(V2, C1->getValue(), Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
-          return B;
-        if (V2 == A &&
-            MaskedValueIsZero(V1, C1->getValue(), Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+        if (MaskedValueIsZero(N, *C1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
           return B;
       }
     }

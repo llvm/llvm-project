@@ -9,6 +9,9 @@
 // RUN: %env_lsan_opts=$LSAN_BASE:"use_tls=1" %run %t-pthread 2>&1
 // RUN: %env_lsan_opts="" %run %t-pthread 2>&1
 
+// Patch r303906 did not fix all the problems.
+// UNSUPPORTED: arm-linux,armhf-linux
+
 #include <assert.h>
 #include <limits.h>
 #include <pthread.h>

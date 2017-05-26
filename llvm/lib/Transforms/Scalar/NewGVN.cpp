@@ -3870,6 +3870,7 @@ bool NewGVN::shouldSwapOperands(const Value *A, const Value *B) const {
   return std::make_pair(getRank(A), A) > std::make_pair(getRank(B), B);
 }
 
+namespace {
 class NewGVNLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.
@@ -3889,6 +3890,7 @@ private:
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
+} // namespace
 
 bool NewGVNLegacyPass::runOnFunction(Function &F) {
   if (skipFunction(F))
