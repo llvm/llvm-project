@@ -107,13 +107,11 @@ private:
 } // end anonymous namespace.
 
 char InterleavedAccess::ID = 0;
-INITIALIZE_PASS_BEGIN(
-    InterleavedAccess, "interleaved-access",
+INITIALIZE_PASS_BEGIN(InterleavedAccess, DEBUG_TYPE,
     "Lower interleaved memory accesses to target specific intrinsics", false,
     false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(
-    InterleavedAccess, "interleaved-access",
+INITIALIZE_PASS_END(InterleavedAccess, DEBUG_TYPE,
     "Lower interleaved memory accesses to target specific intrinsics", false,
     false)
 

@@ -186,7 +186,7 @@ constexpr bool test_constexpr_ctor_extension_imp(
 }
 
 void test_constexpr_move_ctor_extension() {
-#if defined(_LIBCPP_VER) || defined(_MSVC_STL_VER)
+  // NOTE: This test is for not yet standardized behavior.
   using V = std::variant<long, void*, const int>;
 #ifdef TEST_WORKAROUND_C1XX_BROKEN_IS_TRIVIALLY_COPYABLE
   static_assert(std::is_trivially_destructible<V>::value, "");
@@ -201,7 +201,6 @@ void test_constexpr_move_ctor_extension() {
   static_assert(test_constexpr_ctor_extension_imp<0>(V(42l)), "");
   static_assert(test_constexpr_ctor_extension_imp<1>(V(nullptr)), "");
   static_assert(test_constexpr_ctor_extension_imp<2>(V(101)), "");
-#endif
 }
 
 int main() {

@@ -47,7 +47,7 @@ void PDBTypeServerHandler::addSearchPath(StringRef Path) {
   if (Path.empty() || !sys::fs::is_directory(Path))
     return;
 
-  SearchPaths.push_back(Path);
+  SearchPaths.insert(Path);
 }
 
 Expected<bool>
@@ -57,7 +57,13 @@ PDBTypeServerHandler::handleInternal(PDBFile &File,
   if (!ExpectedTpi)
     return ExpectedTpi.takeError();
 
-  if (auto EC = codeview::visitTypeStream(ExpectedTpi->typeArray(), Callbacks))
+  // For handling a type server, we should be using whatever the callback array
+  // was
+  // that is being used for the original file.  We shouldn't allow the visitor
+  // to
+  // arbitrarily stick a deserializer in there.
+  if (auto EC = codeview::visitTypeStream(ExpectedTpi->typeArray(), Callbacks,
+                                          VDS_BytesExternal))
     return std::move(EC);
 
   return true;
@@ -80,13 +86,14 @@ Expected<bool> PDBTypeServerHandler::handle(TypeServer2Record &TS,
         cv_error_code::corrupt_record,
         "TypeServer2Record does not contain filename!");
 
-  for (auto Path : SearchPaths) {
-    sys::path::append(Path, File);
-    if (!sys::fs::exists(Path))
+  for (auto &Path : SearchPaths) {
+    SmallString<64> PathStr = Path.getKey();
+    sys::path::append(PathStr, File);
+    if (!sys::fs::exists(PathStr))
       continue;
 
     std::unique_ptr<IPDBSession> ThisSession;
-    if (auto EC = loadDataForPDB(PDB_ReaderType::Native, Path, ThisSession)) {
+    if (auto EC = loadDataForPDB(PDB_ReaderType::Native, PathStr, ThisSession)) {
       // It is not an error if this PDB fails to load, it just means that it
       // doesn't match and we should continue searching.
       ignoreErrors(std::move(EC));

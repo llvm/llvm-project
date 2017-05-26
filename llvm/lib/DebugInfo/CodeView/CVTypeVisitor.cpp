@@ -45,24 +45,9 @@ static Error visitKnownMember(CVMemberRecord &Record,
 }
 
 static Expected<TypeServer2Record> deserializeTypeServerRecord(CVType &Record) {
-  class StealTypeServerVisitor : public TypeVisitorCallbacks {
-  public:
-    explicit StealTypeServerVisitor(TypeServer2Record &TR) : TR(TR) {}
-
-    Error visitKnownRecord(CVType &CVR, TypeServer2Record &Record) override {
-      TR = Record;
-      return Error::success();
-    }
-
-  private:
-    TypeServer2Record &TR;
-  };
-
   TypeServer2Record R(TypeRecordKind::TypeServer2);
-  StealTypeServerVisitor Thief(R);
-  if (auto EC = visitTypeRecord(Record, Thief))
+  if (auto EC = TypeDeserializer::deserializeAs(Record, R))
     return std::move(EC);
-
   return R;
 }
 
@@ -308,8 +293,9 @@ Error llvm::codeview::visitTypeRecord(CVType &Record,
 
 Error llvm::codeview::visitTypeStream(const CVTypeArray &Types,
                                       TypeVisitorCallbacks &Callbacks,
+                                      VisitorDataSource Source,
                                       TypeServerHandler *TS) {
-  VisitHelper V(Callbacks, VDS_BytesPresent);
+  VisitHelper V(Callbacks, Source);
   if (TS)
     V.Visitor.addTypeServerHandler(*TS);
   return V.Visitor.visitTypeStream(Types);

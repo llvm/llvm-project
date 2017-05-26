@@ -11,8 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_PDBTYPESERVERHANDLER_H
 
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeServerHandler.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
@@ -39,7 +38,7 @@ private:
 
   bool RevisitAlways;
   std::unique_ptr<NativeSession> Session;
-  SmallVector<SmallString<64>, 4> SearchPaths;
+  StringSet<> SearchPaths;
 };
 }
 }

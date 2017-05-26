@@ -2183,7 +2183,7 @@ ARMExidxSentinelSection::ARMExidxSentinelSection()
 // | PREL31 upper bound of code that has exception tables | EXIDX_CANTUNWIND |
 void ARMExidxSentinelSection::writeTo(uint8_t *Buf) {
   // Get the InputSection before us, we are by definition last
-  auto RI = cast<OutputSection>(this->OutSec)->Sections.rbegin();
+  auto RI = this->OutSec->Sections.rbegin();
   InputSection *LE = *(++RI);
   InputSection *LC = cast<InputSection>(LE->getLinkOrderDep());
   uint64_t S = LC->OutSec->Addr + LC->getOffset(LC->getSize());

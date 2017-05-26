@@ -40,14 +40,14 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "spillplacement"
+#define DEBUG_TYPE "spill-code-placement"
 
 char SpillPlacement::ID = 0;
-INITIALIZE_PASS_BEGIN(SpillPlacement, "spill-code-placement",
+INITIALIZE_PASS_BEGIN(SpillPlacement, DEBUG_TYPE,
                       "Spill Code Placement Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundles)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_END(SpillPlacement, "spill-code-placement",
+INITIALIZE_PASS_END(SpillPlacement, DEBUG_TYPE,
                     "Spill Code Placement Analysis", true, true)
 
 char &llvm::SpillPlacementID = SpillPlacement::ID;

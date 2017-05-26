@@ -42,29 +42,30 @@ Error BinaryStreamReader::readBytes(ArrayRef<uint8_t> &Buffer, uint32_t Size) {
 }
 
 Error BinaryStreamReader::readCString(StringRef &Dest) {
-  // TODO: This could be made more efficient by using readLongestContiguousChunk
-  // and searching for null terminators in the resulting buffer.
-
-  uint32_t Length = 0;
-  // First compute the length of the string by reading 1 byte at a time.
   uint32_t OriginalOffset = getOffset();
-  const char *C;
+  uint32_t FoundOffset = 0;
   while (true) {
-    if (auto EC = readObject(C))
+    uint32_t ThisOffset = getOffset();
+    ArrayRef<uint8_t> Buffer;
+    if (auto EC = readLongestContiguousChunk(Buffer))
       return EC;
-    if (*C == '\0')
+    StringRef S(reinterpret_cast<const char *>(Buffer.begin()), Buffer.size());
+    size_t Pos = S.find_first_of('\0');
+    if (LLVM_LIKELY(Pos != StringRef::npos)) {
+      FoundOffset = Pos + ThisOffset;
       break;
-    ++Length;
+    }
   }
-  // Now go back and request a reference for that many bytes.
-  uint32_t NewOffset = getOffset();
+  assert(FoundOffset >= OriginalOffset);
+
   setOffset(OriginalOffset);
+  size_t Length = FoundOffset - OriginalOffset;
 
   if (auto EC = readFixedString(Dest, Length))
     return EC;
 
-  // Now set the offset back to where it was after we calculated the length.
-  setOffset(NewOffset);
+  // Now set the offset back to after the null terminator.
+  setOffset(FoundOffset + 1);
   return Error::success();
 }
 

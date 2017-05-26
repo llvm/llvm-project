@@ -94,7 +94,7 @@ private:
 } // end anonymous namespace
 
 char WinEHPrepare::ID = 0;
-INITIALIZE_PASS(WinEHPrepare, "winehprepare", "Prepare Windows exceptions",
+INITIALIZE_PASS(WinEHPrepare, DEBUG_TYPE, "Prepare Windows exceptions",
                 false, false)
 
 FunctionPass *llvm::createWinEHPass() { return new WinEHPrepare(); }

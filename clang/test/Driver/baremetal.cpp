@@ -4,7 +4,7 @@
 // RUN:     -L some/directory/user/asked/for \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm \
 // RUN:   | FileCheck --check-prefix=CHECK-V6M-C %s
-// CHECK-V6M-C: "[[PREFIX_DIR:.*]]{{[/\\]+}}bin{{[/\\]+}}clang{{.*}}" "-cc1" "-triple" "thumbv6m-none--eabi"
+// CHECK-V6M-C: "[[PREFIX_DIR:.*]]{{[/\\]+}}{{[^/^\\]+}}{{[/\\]+}}clang{{.*}}" "-cc1" "-triple" "thumbv6m-none--eabi"
 // CHECK-V6M-C-SAME: "-resource-dir" "[[PREFIX_DIR]]{{[/\\]+}}lib{{[/\\]+}}clang{{[/\\]+}}[[VERSION:[^"]*]]"
 // CHECK-V6M-C-SAME: "-isysroot" "[[SYSROOT:[^"]*]]"
 // CHECK-V6M-C-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"

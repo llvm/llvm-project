@@ -1554,9 +1554,9 @@ def note_ivar_decl : Note<"instance variable is declared here">;
 def note_bitfield_decl : Note<"bit-field is declared here">;
 def note_implicit_param_decl : Note<"%0 is an implicit parameter">;
 def note_member_synthesized_at : Note<
-  "implicit %select{default constructor|copy constructor|move constructor|copy "
-  "assignment operator|move assignment operator|destructor}0 for %1 first "
-  "required here">;
+  "in implicit %select{default constructor|copy constructor|move constructor|"
+  "copy assignment operator|move assignment operator|destructor}0 for %1 "
+  "first required here">;
 def note_inhctor_synthesized_at : Note<
   "inherited constructor for %0 first required here">;
 def err_missing_default_ctor : Error<

@@ -257,6 +257,23 @@ private:
   /// resolved.
   Module *resolveModuleId(const ModuleId &Id, Module *Mod, bool Complain) const;
 
+  /// Resolve the given header directive to an actual header file.
+  ///
+  /// \param M The module in which we're resolving the header directive.
+  /// \param Header The header directive to resolve.
+  /// \param RelativePathName Filled in with the relative path name from the
+  ///        module to the resolved header.
+  /// \return The resolved file, if any.
+  const FileEntry *resolveHeader(Module *M,
+                                 Module::UnresolvedHeaderDirective Header,
+                                 SmallVectorImpl<char> &RelativePathName);
+
+  /// Attempt to resolve the specified header directive as naming a builtin
+  /// header.
+  const FileEntry *
+  resolveAsBuiltinHeader(Module *M, Module::UnresolvedHeaderDirective Header,
+                         SmallVectorImpl<char> &BuiltinPathName);
+
   /// \brief Looks up the modules that \p File corresponds to.
   ///
   /// If \p File represents a builtin header within Clang's builtin include

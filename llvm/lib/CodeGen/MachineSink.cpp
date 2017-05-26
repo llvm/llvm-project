@@ -173,14 +173,14 @@ namespace {
 
 char MachineSinking::ID = 0;
 char &llvm::MachineSinkingID = MachineSinking::ID;
-INITIALIZE_PASS_BEGIN(MachineSinking, "machine-sink",
-                "Machine code sinking", false, false)
+INITIALIZE_PASS_BEGIN(MachineSinking, DEBUG_TYPE,
+                      "Machine code sinking", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(MachineSinking, "machine-sink",
-                "Machine code sinking", false, false)
+INITIALIZE_PASS_END(MachineSinking, DEBUG_TYPE,
+                    "Machine code sinking", false, false)
 
 bool MachineSinking::PerformTrivialForwardCoalescing(MachineInstr &MI,
                                                      MachineBasicBlock *MBB) {

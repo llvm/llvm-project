@@ -1610,17 +1610,13 @@ Value *InstCombiner::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       Value *Mask = nullptr;
       Value *Masked = nullptr;
       if (LAnd->getOperand(0) == RAnd->getOperand(0) &&
-          isKnownToBeAPowerOfTwo(LAnd->getOperand(1), DL, false, 0, &AC, CxtI,
-                                 &DT) &&
-          isKnownToBeAPowerOfTwo(RAnd->getOperand(1), DL, false, 0, &AC, CxtI,
-                                 &DT)) {
+          isKnownToBeAPowerOfTwo(LAnd->getOperand(1), false, 0, CxtI) &&
+          isKnownToBeAPowerOfTwo(RAnd->getOperand(1), false, 0, CxtI)) {
         Mask = Builder->CreateOr(LAnd->getOperand(1), RAnd->getOperand(1));
         Masked = Builder->CreateAnd(LAnd->getOperand(0), Mask);
       } else if (LAnd->getOperand(1) == RAnd->getOperand(1) &&
-                 isKnownToBeAPowerOfTwo(LAnd->getOperand(0), DL, false, 0, &AC,
-                                        CxtI, &DT) &&
-                 isKnownToBeAPowerOfTwo(RAnd->getOperand(0), DL, false, 0, &AC,
-                                        CxtI, &DT)) {
+                 isKnownToBeAPowerOfTwo(LAnd->getOperand(0), false, 0, CxtI) &&
+                 isKnownToBeAPowerOfTwo(RAnd->getOperand(0), false, 0, CxtI)) {
         Mask = Builder->CreateOr(LAnd->getOperand(0), RAnd->getOperand(0));
         Masked = Builder->CreateAnd(LAnd->getOperand(1), Mask);
       }

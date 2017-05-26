@@ -48,7 +48,7 @@ Z z2;
 void f(X x, const X cx) {
   x = cx;
 #if __cplusplus <= 199711L
-  // expected-note@-2 {{assignment operator for 'X' first required here}}
+  // expected-note@-2 2{{assignment operator for 'X' first required here}}
 #else
   // expected-error@-4 {{object of type 'X' cannot be assigned because its copy assignment operator is implicitly deleted}}
 #endif

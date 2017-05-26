@@ -103,10 +103,10 @@ namespace {
 
 char LocalStackSlotPass::ID = 0;
 char &llvm::LocalStackSlotAllocationID = LocalStackSlotPass::ID;
-INITIALIZE_PASS_BEGIN(LocalStackSlotPass, "localstackalloc",
+INITIALIZE_PASS_BEGIN(LocalStackSlotPass, DEBUG_TYPE,
                       "Local Stack Slot Allocation", false, false)
 INITIALIZE_PASS_DEPENDENCY(StackProtector)
-INITIALIZE_PASS_END(LocalStackSlotPass, "localstackalloc",
+INITIALIZE_PASS_END(LocalStackSlotPass, DEBUG_TYPE,
                     "Local Stack Slot Allocation", false, false)
 
 

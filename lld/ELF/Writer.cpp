@@ -163,7 +163,7 @@ static void combineMergableSections() {
       continue;
 
     StringRef OutsecName = getOutputSectionName(MS->Name);
-    uint64_t Flags = MS->Flags & ~(uint64_t)(SHF_GROUP | SHF_COMPRESSED);
+    uint64_t Flags = MS->Flags & ~(uint64_t)SHF_GROUP;
     uint32_t Alignment = std::max<uint32_t>(MS->Alignment, MS->Entsize);
 
     auto I = llvm::find_if(MergeSections, [=](MergeSyntheticSection *Sec) {
@@ -792,12 +792,6 @@ static bool compareSections(const OutputSection *A, const OutputSection *B) {
     return AIndex < BIndex;
 
   return compareSectionsNonScript(A, B);
-}
-
-// Program header entry
-PhdrEntry::PhdrEntry(unsigned Type, unsigned Flags) {
-  p_type = Type;
-  p_flags = Flags;
 }
 
 void PhdrEntry::add(OutputSection *Sec) {
@@ -1628,18 +1622,6 @@ static uint16_t getELFType() {
 // to each section. This function fixes some predefined
 // symbol values that depend on section address and size.
 template <class ELFT> void Writer<ELFT>::fixPredefinedSymbols() {
-  auto Set = [](DefinedRegular *S1, DefinedRegular *S2, OutputSection *Sec,
-                uint64_t Value) {
-    if (S1) {
-      S1->Section = Sec;
-      S1->Value = Value;
-    }
-    if (S2) {
-      S2->Section = Sec;
-      S2->Value = Value;
-    }
-  };
-
   // _etext is the first location after the last read-only loadable segment.
   // _edata is the first location after the last read-write loadable segment.
   // _end is the first location after the uninitialized data region.
@@ -1655,12 +1637,26 @@ template <class ELFT> void Writer<ELFT>::fixPredefinedSymbols() {
     else
       LastRO = &P;
   }
-  if (Last)
-    Set(ElfSym::End1, ElfSym::End2, Last->First, Last->p_memsz);
-  if (LastRO)
-    Set(ElfSym::Etext1, ElfSym::Etext2, LastRO->First, LastRO->p_filesz);
-  if (LastRW)
-    Set(ElfSym::Edata1, ElfSym::Edata2, LastRW->First, LastRW->p_filesz);
+
+  auto Set = [](DefinedRegular *S, OutputSection *Sec, uint64_t Value) {
+    if (S) {
+      S->Section = Sec;
+      S->Value = Value;
+    }
+  };
+
+  if (Last) {
+    Set(ElfSym::End1, Last->First, Last->p_memsz);
+    Set(ElfSym::End2, Last->First, Last->p_memsz);
+  }
+  if (LastRO) {
+    Set(ElfSym::Etext1, LastRO->First, LastRO->p_filesz);
+    Set(ElfSym::Etext2, LastRO->First, LastRO->p_filesz);
+  }
+  if (LastRW) {
+    Set(ElfSym::Edata1, LastRW->First, LastRW->p_filesz);
+    Set(ElfSym::Edata2, LastRW->First, LastRW->p_filesz);
+  }
 
   if (ElfSym::Bss)
     ElfSym::Bss->Section = findSection(".bss");

@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=cyclone -debug-only=misched < %s 2>&1 | FileCheck %s
+; RUN: llc -mcpu=cyclone -debug-only=machine-scheduler < %s 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 

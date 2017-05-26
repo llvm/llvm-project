@@ -1,4 +1,4 @@
-; RUN: llc -debug-only=misched -march=amdgcn -verify-machineinstrs %s -o - 2>&1| FileCheck -check-prefix=SI-NOHSA -check-prefix=FUNC -check-prefix=DEBUG %s
+; RUN: llc -debug-only=machine-scheduler -march=amdgcn -verify-machineinstrs %s -o - 2>&1| FileCheck -check-prefix=SI-NOHSA -check-prefix=FUNC -check-prefix=DEBUG %s
 ; REQUIRES: asserts
 
 ; Verify that the extload generated from %eval has the default

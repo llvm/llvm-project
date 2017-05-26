@@ -63,6 +63,15 @@ class TypeSerializer : public TypeVisitorCallbacks {
   /// Private type record hashing implementation details are handled here.
   std::unique_ptr<TypeHasher> Hasher;
 
+  /// Contains a list of all records indexed by TypeIndex.toArrayIndex().
+  SmallVector<ArrayRef<uint8_t>, 2> SeenRecords;
+
+  /// Temporary storage that we use to copy a record's data while re-writing
+  /// its type indices.
+  SmallVector<uint8_t, 256> RemapStorage;
+
+  TypeIndex nextTypeIndex() const;
+
   bool isInFieldList() const;
   MutableArrayRef<uint8_t> getCurrentSubRecordData();
   MutableArrayRef<uint8_t> getCurrentRecordData();
@@ -72,11 +81,14 @@ class TypeSerializer : public TypeVisitorCallbacks {
   addPadding(MutableArrayRef<uint8_t> Record);
 
 public:
-  explicit TypeSerializer(BumpPtrAllocator &Storage);
+  explicit TypeSerializer(BumpPtrAllocator &Storage, bool Hash = true);
   ~TypeSerializer();
 
+  void reset();
+
   ArrayRef<ArrayRef<uint8_t>> records() const;
-  TypeIndex insertRecordBytes(ArrayRef<uint8_t> Record);
+  TypeIndex insertRecordBytes(ArrayRef<uint8_t> &Record);
+  TypeIndex insertRecord(const RemappedType &Record);
   Expected<TypeIndex> visitTypeEndGetIndex(CVType &Record);
 
   Error visitTypeBegin(CVType &Record) override;

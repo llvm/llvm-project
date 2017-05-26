@@ -1,4 +1,4 @@
-//===----- KaleidoscopeJIT.h - A simple JIT for Kaleidoscope ----*- C++ -*-===//
+//===- KaleidoscopeJIT.h - A simple JIT for Kaleidoscope --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,10 +17,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
@@ -76,8 +76,8 @@ private:
   RTDyldObjectLinkingLayer<> ObjectLayer;
   IRCompileLayer<decltype(ObjectLayer)> CompileLayer;
 
-  typedef std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>
-    OptimizeFunction;
+  using OptimizeFunction =
+      std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>;
 
   IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
 
@@ -85,7 +85,7 @@ private:
   std::unique_ptr<IndirectStubsManager> IndirectStubsMgr;
 
 public:
-  typedef decltype(OptimizeLayer)::ModuleSetHandleT ModuleHandle;
+  using ModuleHandle = decltype(OptimizeLayer)::ModuleSetHandleT;
 
   KaleidoscopeJIT()
       : TM(EngineBuilder().selectTarget()),
@@ -106,7 +106,6 @@ public:
   TargetMachine &getTargetMachine() { return *TM; }
 
   ModuleHandle addModule(std::unique_ptr<Module> M) {
-
     // Build our symbol resolver:
     // Lambda 1: Look back into the JIT itself to find symbols that are part of
     //           the same "logical dylib".

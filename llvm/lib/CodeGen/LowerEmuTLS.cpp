@@ -53,7 +53,7 @@ private:
 
 char LowerEmuTLS::ID = 0;
 
-INITIALIZE_PASS(LowerEmuTLS, "loweremutls",
+INITIALIZE_PASS(LowerEmuTLS, DEBUG_TYPE,
                 "Add __emutls_[vt]. variables for emultated TLS model", false,
                 false)
 

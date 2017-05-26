@@ -45,7 +45,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "livedebug"
+#define DEBUG_TYPE "livedebugvars"
 
 static cl::opt<bool>
 EnableLDV("live-debug-variables", cl::init(true),
@@ -54,11 +54,11 @@ EnableLDV("live-debug-variables", cl::init(true),
 STATISTIC(NumInsertedDebugValues, "Number of DBG_VALUEs inserted");
 char LiveDebugVariables::ID = 0;
 
-INITIALIZE_PASS_BEGIN(LiveDebugVariables, "livedebugvars",
+INITIALIZE_PASS_BEGIN(LiveDebugVariables, DEBUG_TYPE,
                 "Debug Variable Analysis", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_END(LiveDebugVariables, "livedebugvars",
+INITIALIZE_PASS_END(LiveDebugVariables, DEBUG_TYPE,
                 "Debug Variable Analysis", false, false)
 
 void LiveDebugVariables::getAnalysisUsage(AnalysisUsage &AU) const {

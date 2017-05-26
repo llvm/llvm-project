@@ -53,7 +53,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "stackcoloring"
+#define DEBUG_TYPE "stack-coloring"
 
 static cl::opt<bool>
 DisableColoring("no-stack-coloring",
@@ -371,12 +371,12 @@ private:
 char StackColoring::ID = 0;
 char &llvm::StackColoringID = StackColoring::ID;
 
-INITIALIZE_PASS_BEGIN(StackColoring,
-                   "stack-coloring", "Merge disjoint stack slots", false, false)
+INITIALIZE_PASS_BEGIN(StackColoring, DEBUG_TYPE,
+                      "Merge disjoint stack slots", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
 INITIALIZE_PASS_DEPENDENCY(StackProtector)
-INITIALIZE_PASS_END(StackColoring,
-                   "stack-coloring", "Merge disjoint stack slots", false, false)
+INITIALIZE_PASS_END(StackColoring, DEBUG_TYPE,
+                    "Merge disjoint stack slots", false, false)
 
 void StackColoring::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<SlotIndexes>();

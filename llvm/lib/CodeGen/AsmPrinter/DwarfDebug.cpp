@@ -1130,28 +1130,18 @@ static DebugLoc findPrologueEndLoc(const MachineFunction *MF) {
 void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   CurFn = MF;
 
-  if (LScopes.empty())
-    return;
-
-  // Set DwarfDwarfCompileUnitID in MCContext to the Compile Unit this function
-  // belongs to so that we add to the correct per-cu line table in the
-  // non-asm case.
-  LexicalScope *FnScope = LScopes.getCurrentFunctionScope();
-  // FnScope->getScopeNode() and DI->second should represent the same function,
-  // though they may not be the same MDNode due to inline functions merged in
-  // LTO where the debug info metadata still differs (either due to distinct
-  // written differences - two versions of a linkonce_odr function
-  // written/copied into two separate files, or some sub-optimal metadata that
-  // isn't structurally identical (see: file path/name info from clang, which
-  // includes the directory of the cpp file being built, even when the file name
-  // is absolute (such as an <> lookup header)))
-  auto *SP = cast<DISubprogram>(FnScope->getScopeNode());
+  auto *SP = MF->getFunction()->getSubprogram();
+  assert(LScopes.empty() || SP == LScopes.getCurrentFunctionScope()->getScopeNode());
   DwarfCompileUnit *TheCU = CUMap.lookup(SP->getUnit());
   if (!TheCU) {
     assert(SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug &&
            "DICompileUnit missing from llvm.dbg.cu?");
     return;
   }
+
+  // Set DwarfDwarfCompileUnitID in MCContext to the Compile Unit this function
+  // belongs to so that we add to the correct per-cu line table in the
+  // non-asm case.
   if (Asm->OutStreamer->hasRawTextSupport())
     // Use a single line table if we are generating assembly.
     Asm->OutStreamer->getContext().setDwarfCompileUnitID(0);
@@ -1160,10 +1150,10 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
 
   // Record beginning of function.
   PrologEndLoc = findPrologueEndLoc(MF);
-  if (DILocation *L = PrologEndLoc) {
+  if (PrologEndLoc) {
     // We'd like to list the prologue as "not statements" but GDB behaves
     // poorly if we do that. Revisit this with caution/GDB (7.5+) testing.
-    auto *SP = L->getInlinedAtScope()->getSubprogram();
+    auto *SP = PrologEndLoc->getInlinedAtScope()->getSubprogram();
     recordSourceLine(SP->getScopeLine(), 0, SP, DWARF2_FLAG_IS_STMT);
   }
 }

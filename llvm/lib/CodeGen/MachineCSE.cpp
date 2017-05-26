@@ -108,12 +108,12 @@ namespace {
 
 char MachineCSE::ID = 0;
 char &llvm::MachineCSEID = MachineCSE::ID;
-INITIALIZE_PASS_BEGIN(MachineCSE, "machine-cse",
-                "Machine Common Subexpression Elimination", false, false)
+INITIALIZE_PASS_BEGIN(MachineCSE, DEBUG_TYPE,
+                      "Machine Common Subexpression Elimination", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(MachineCSE, "machine-cse",
-                "Machine Common Subexpression Elimination", false, false)
+INITIALIZE_PASS_END(MachineCSE, DEBUG_TYPE,
+                    "Machine Common Subexpression Elimination", false, false)
 
 /// The source register of a COPY machine instruction can be propagated to all
 /// its users, and this propagation could increase the probability of finding

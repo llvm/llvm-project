@@ -80,7 +80,8 @@ COMMON_FLAG(int, print_module_map, 0,
 COMMON_FLAG(bool, check_printf, true, "Check printf arguments.")
 #define COMMON_FLAG_HANDLE_SIGNAL_HELP(signal) \
     "Controls custom tool's " #signal " handler (0 - do not registers the " \
-    "handler, 1 - register the handler). "
+    "handler, 1 - register the handler and allow user to set own, " \
+    "2 - registers the handler and block user from changing it). "
 COMMON_FLAG(HandleSignalMode, handle_segv, kHandleSignalYes,
             COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGSEGV))
 COMMON_FLAG(HandleSignalMode, handle_sigbus, kHandleSignalYes,
@@ -92,9 +93,6 @@ COMMON_FLAG(HandleSignalMode, handle_sigill, kHandleSignalNo,
 COMMON_FLAG(HandleSignalMode, handle_sigfpe, kHandleSignalYes,
             COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGFPE))
 #undef COMMON_FLAG_HANDLE_SIGNAL_HELP
-COMMON_FLAG(bool, allow_user_segv_handler, true,
-            "If set, allows user to register a SEGV handler even if the tool "
-            "registers one.")
 COMMON_FLAG(bool, use_sigaltstack, true,
             "If set, uses alternate stack for signal handling.")
 COMMON_FLAG(bool, detect_deadlocks, false,

@@ -47,9 +47,7 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombiner &IC,
   // inexact.  Similarly for <<.
   BinaryOperator *I = dyn_cast<BinaryOperator>(V);
   if (I && I->isLogicalShift() &&
-      isKnownToBeAPowerOfTwo(I->getOperand(0), IC.getDataLayout(), false, 0,
-                             &IC.getAssumptionCache(), &CxtI,
-                             &IC.getDominatorTree())) {
+      IC.isKnownToBeAPowerOfTwo(I->getOperand(0), false, 0, &CxtI)) {
     // We know that this is an exact/nuw shift and that the input is a
     // non-zero context as well.
     if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CxtI)) {
@@ -1240,7 +1238,7 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
       return BO;
     }
 
-    if (isKnownToBeAPowerOfTwo(Op1, DL, /*OrZero*/ true, 0, &AC, &I, &DT)) {
+    if (isKnownToBeAPowerOfTwo(Op1, /*OrZero*/ true, 0, &I)) {
       // X sdiv (1 << Y) -> X udiv (1 << Y) ( -> X u>> Y)
       // Safe because the only negative value (1 << Y) can take on is
       // INT_MIN, and X sdiv INT_MIN == X udiv INT_MIN == 0 if X doesn't have
@@ -1487,7 +1485,7 @@ Instruction *InstCombiner::visitURem(BinaryOperator &I) {
                           I.getType());
 
   // X urem Y -> X and Y-1, where Y is a power of 2,
-  if (isKnownToBeAPowerOfTwo(Op1, DL, /*OrZero*/ true, 0, &AC, &I, &DT)) {
+  if (isKnownToBeAPowerOfTwo(Op1, /*OrZero*/ true, 0, &I)) {
     Constant *N1 = Constant::getAllOnesValue(I.getType());
     Value *Add = Builder->CreateAdd(Op1, N1);
     return BinaryOperator::CreateAnd(Op0, Add);

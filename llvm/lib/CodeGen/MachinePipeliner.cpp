@@ -715,13 +715,13 @@ char MachinePipeliner::ID = 0;
 int MachinePipeliner::NumTries = 0;
 #endif
 char &llvm::MachinePipelinerID = MachinePipeliner::ID;
-INITIALIZE_PASS_BEGIN(MachinePipeliner, "pipeliner",
+INITIALIZE_PASS_BEGIN(MachinePipeliner, DEBUG_TYPE,
                       "Modulo Software Pipelining", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_END(MachinePipeliner, "pipeliner",
+INITIALIZE_PASS_END(MachinePipeliner, DEBUG_TYPE,
                     "Modulo Software Pipelining", false, false)
 
 /// The "main" function for implementing Swing Modulo Scheduling.
