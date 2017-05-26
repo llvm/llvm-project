@@ -813,6 +813,8 @@ def UseAVX2      : Predicate<"Subtarget->hasAVX2() && !Subtarget->hasAVX512()">;
 def NoAVX512     : Predicate<"!Subtarget->hasAVX512()">;
 def HasCDI       : Predicate<"Subtarget->hasCDI()">,
                      AssemblerPredicate<"FeatureCDI", "AVX-512 CD ISA">;
+def HasVPOPCNTDQ : Predicate<"Subtarget->hasVPOPCNTDQ()">,
+                   AssemblerPredicate<"FeatureVPOPCNTDQ", "AVX-512 VPOPCNTDQ ISA">;
 def HasPFI       : Predicate<"Subtarget->hasPFI()">,
                      AssemblerPredicate<"FeaturePFI", "AVX-512 PF ISA">;
 def HasERI       : Predicate<"Subtarget->hasERI()">,

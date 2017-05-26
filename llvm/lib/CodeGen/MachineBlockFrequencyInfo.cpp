@@ -26,7 +26,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "block-freq"
+#define DEBUG_TYPE "machine-block-freq"
 
 
 static cl::opt<GVDAGType> ViewMachineBlockFreqPropagationDAG(
@@ -149,11 +149,11 @@ struct DOTGraphTraits<MachineBlockFrequencyInfo *>
 
 } // end namespace llvm
 
-INITIALIZE_PASS_BEGIN(MachineBlockFrequencyInfo, "machine-block-freq",
+INITIALIZE_PASS_BEGIN(MachineBlockFrequencyInfo, DEBUG_TYPE,
                       "Machine Block Frequency Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_END(MachineBlockFrequencyInfo, "machine-block-freq",
+INITIALIZE_PASS_END(MachineBlockFrequencyInfo, DEBUG_TYPE,
                     "Machine Block Frequency Analysis", true, true)
 
 char MachineBlockFrequencyInfo::ID = 0;

@@ -112,11 +112,11 @@ char RenameIndependentSubregs::ID;
 
 char &llvm::RenameIndependentSubregsID = RenameIndependentSubregs::ID;
 
-INITIALIZE_PASS_BEGIN(RenameIndependentSubregs, "rename-independent-subregs",
+INITIALIZE_PASS_BEGIN(RenameIndependentSubregs, DEBUG_TYPE,
                       "Rename Independent Subregisters", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_END(RenameIndependentSubregs, "rename-independent-subregs",
+INITIALIZE_PASS_END(RenameIndependentSubregs, DEBUG_TYPE,
                     "Rename Independent Subregisters", false, false)
 
 bool RenameIndependentSubregs::renameComponents(LiveInterval &LI) const {

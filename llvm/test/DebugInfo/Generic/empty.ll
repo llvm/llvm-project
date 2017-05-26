@@ -13,10 +13,12 @@
 ; CHECK-NOT: file_names[
 
 ; CHECK: .debug_pubnames contents:
-; CHECK-NOT: Offset
+; CHECK-NOT: {{^}}0x
 
 ; CHECK: .debug_pubtypes contents:
-; CHECK-NOT: Offset
+; CHECK-NOT: {{^}}0x
+
+; CHECK: contents:
 
 ; Don't emit DW_AT_addr_base when there are no addresses.
 ; FISSION-NOT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]

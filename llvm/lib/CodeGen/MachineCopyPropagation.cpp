@@ -27,7 +27,7 @@
 #include "llvm/Target/TargetSubtargetInfo.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "codegen-cp"
+#define DEBUG_TYPE "machine-cp"
 
 STATISTIC(NumDeletes, "Number of dead copies deleted");
 
@@ -79,7 +79,7 @@ namespace {
 char MachineCopyPropagation::ID = 0;
 char &llvm::MachineCopyPropagationID = MachineCopyPropagation::ID;
 
-INITIALIZE_PASS(MachineCopyPropagation, "machine-cp",
+INITIALIZE_PASS(MachineCopyPropagation, DEBUG_TYPE,
                 "Machine Copy Propagation Pass", false, false)
 
 /// Remove any entry in \p Map where the register is a subregister or equal to

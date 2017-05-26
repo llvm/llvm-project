@@ -40,8 +40,7 @@ char TailDuplicatePass::ID = 0;
 
 char &llvm::TailDuplicateID = TailDuplicatePass::ID;
 
-INITIALIZE_PASS(TailDuplicatePass, "tailduplication", "Tail Duplication", false,
-                false)
+INITIALIZE_PASS(TailDuplicatePass, DEBUG_TYPE, "Tail Duplication", false, false)
 
 bool TailDuplicatePass::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(*MF.getFunction()))

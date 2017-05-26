@@ -2109,3 +2109,48 @@ void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(
       !F->doesNotAccessMemory())
     CI->addAttribute(AttributeList::FunctionIndex, Attribute::NoBuiltin);
 }
+
+bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
+  // We can't have a PHI with a metadata type.
+  if (I->getOperand(OpIdx)->getType()->isMetadataTy())
+    return false;
+
+  // Early exit.
+  if (!isa<Constant>(I->getOperand(OpIdx)))
+    return true;
+
+  switch (I->getOpcode()) {
+  default:
+    return true;
+  case Instruction::Call:
+  case Instruction::Invoke:
+    // Many arithmetic intrinsics have no issue taking a
+    // variable, however it's hard to distingish these from
+    // specials such as @llvm.frameaddress that require a constant.
+    if (isa<IntrinsicInst>(I))
+      return false;
+
+    // Constant bundle operands may need to retain their constant-ness for
+    // correctness.
+    if (ImmutableCallSite(I).isBundleOperand(OpIdx))
+      return false;
+    return true;
+  case Instruction::ShuffleVector:
+    // Shufflevector masks are constant.
+    return OpIdx != 2;
+  case Instruction::ExtractValue:
+  case Instruction::InsertValue:
+    // All operands apart from the first are constant.
+    return OpIdx == 0;
+  case Instruction::Alloca:
+    return false;
+  case Instruction::GetElementPtr:
+    if (OpIdx == 0)
+      return true;
+    gep_type_iterator It = gep_type_begin(I);
+    for (auto E = std::next(It, OpIdx); It != E; ++It)
+      if (It.isStruct())
+        return false;
+    return true;
+  }
+}

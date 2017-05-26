@@ -1070,6 +1070,11 @@ public:
   SDNode *MorphNodeTo(SDNode *N, unsigned Opc, SDVTList VTs,
                       ArrayRef<SDValue> Ops);
 
+  /// Mutate the specified strict FP node to its non-strict equivalent,
+  /// unlinking the node from its chain and dropping the metadata arguments.
+  /// The node must be a strict FP node.
+  SDNode *mutateStrictFPToFP(SDNode *Node);
+
   /// These are used for target selectors to create a new node
   /// with specified return type(s), MachineInstr opcode, and operands.
   ///

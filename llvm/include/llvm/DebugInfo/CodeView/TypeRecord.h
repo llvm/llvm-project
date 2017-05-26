@@ -35,6 +35,7 @@ using support::ulittle16_t;
 using support::ulittle32_t;
 
 typedef CVRecord<TypeLeafKind> CVType;
+typedef RemappedRecord<TypeLeafKind> RemappedType;
 
 struct CVMemberRecord {
   TypeLeafKind Kind;
@@ -278,15 +279,9 @@ public:
         Attrs(calcAttrs(PK, PM, PO, Size)) {}
 
   PointerRecord(TypeIndex ReferentType, PointerKind PK, PointerMode PM,
-                PointerOptions PO, uint8_t Size,
-                const MemberPointerInfo &Member)
+                PointerOptions PO, uint8_t Size, const MemberPointerInfo &MPI)
       : TypeRecord(TypeRecordKind::Pointer), ReferentType(ReferentType),
-        Attrs(calcAttrs(PK, PM, PO, Size)), MemberInfo(Member) {}
-
-  PointerRecord(TypeIndex ReferentType, uint32_t Attrs,
-                const MemberPointerInfo &Member)
-      : TypeRecord(TypeRecordKind::Pointer), ReferentType(ReferentType),
-        Attrs(Attrs), MemberInfo(Member) {}
+        Attrs(calcAttrs(PK, PM, PO, Size)), MemberInfo(MPI) {}
 
   TypeIndex getReferentType() const { return ReferentType; }
 

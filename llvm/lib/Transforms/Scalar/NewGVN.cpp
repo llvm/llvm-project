@@ -858,7 +858,14 @@ PHIExpression *NewGVN::createPHIExpression(Instruction *I, bool &HasBackedge,
 
   // Filter out unreachable phi operands.
   auto Filtered = make_filter_range(PHIOperands, [&](const Use *U) {
-    return ReachableEdges.count({PN->getIncomingBlock(*U), PHIBlock});
+    if (*U == PN)
+      return false;
+    if (!ReachableEdges.count({PN->getIncomingBlock(*U), PHIBlock}))
+      return false;
+    // Things in TOPClass are equivalent to everything.
+    if (ValueToClass.lookup(*U) == TOPClass)
+      return false;
+    return true;
   });
   std::transform(Filtered.begin(), Filtered.end(), op_inserter(E),
                  [&](const Use *U) -> Value * {
@@ -866,14 +873,6 @@ PHIExpression *NewGVN::createPHIExpression(Instruction *I, bool &HasBackedge,
                    HasBackedge = HasBackedge || isBackedge(BB, PHIBlock);
                    OriginalOpsConstant =
                        OriginalOpsConstant && isa<Constant>(*U);
-                   // Use nullptr to distinguish between things that were
-                   // originally self-defined and those that have an operand
-                   // leader that is self-defined.
-                   if (*U == PN)
-                     return nullptr;
-                   // Things in TOPClass are equivalent to everything.
-                   if (ValueToClass.lookup(*U) == TOPClass)
-                     return nullptr;
                    return lookupOperandLeader(*U);
                  });
   return E;
@@ -1585,6 +1584,30 @@ bool NewGVN::isCycleFree(const Instruction *I) const {
 
 // Evaluate PHI nodes symbolically, and create an expression result.
 const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) const {
+  // Resolve irreducible and reducible phi cycles.
+  // FIXME: This is hopefully a temporary solution while we resolve the issues
+  // with fixpointing self-cycles.  It currently should be "guaranteed" to be
+  // correct, but non-optimal.  The SCCFinder does not, for example, take
+  // reachability of arguments into account, etc.
+  SCCFinder.Start(I);
+  bool CanOptimize = true;
+  SmallPtrSet<Value *, 8> OuterOps;
+
+  auto &Component = SCCFinder.getComponentFor(I);
+  for (auto *Member : Component) {
+    if (!isa<PHINode>(Member)) {
+      CanOptimize = false;
+      break;
+    }
+    for (auto &PHIOp : cast<PHINode>(Member)->operands())
+      if (!isa<PHINode>(PHIOp) || !Component.count(cast<PHINode>(PHIOp)))
+        OuterOps.insert(PHIOp);
+  }
+  if (CanOptimize && OuterOps.size() == 1) {
+    DEBUG(dbgs() << "Resolving cyclic phi to value " << *(*OuterOps.begin())
+                 << "\n");
+    return createVariableOrConstant(*OuterOps.begin());
+  }
   // True if one of the incoming phi edges is a backedge.
   bool HasBackedge = false;
   // All constant tracks the state of whether all the *original* phi operands
@@ -1598,17 +1621,7 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) const {
   // See if all arguments are the same.
   // We track if any were undef because they need special handling.
   bool HasUndef = false;
-  bool CycleFree = isCycleFree(I);
   auto Filtered = make_filter_range(E->operands(), [&](Value *Arg) {
-    if (Arg == nullptr)
-      return false;
-    // Original self-operands are already eliminated during expression creation.
-    // We can only eliminate value-wise self-operands if it's cycle
-    // free. Otherwise, eliminating the operand can cause our value to change,
-    // which can cause us to not eliminate the operand, which changes the value
-    // back to what it was before, cycling forever.
-    if (CycleFree && Arg == I)
-      return false;
     if (isa<UndefValue>(Arg)) {
       HasUndef = true;
       return false;
@@ -1617,6 +1630,14 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) const {
   });
   // If we are left with no operands, it's dead.
   if (Filtered.begin() == Filtered.end()) {
+    // If it has undef at this point, it means there are no-non-undef arguments,
+    // and thus, the value of the phi node must be undef.
+    if (HasUndef) {
+      DEBUG(dbgs() << "PHI Node " << *I
+                   << " has no non-undef arguments, valuing it as undef\n");
+      return createConstantExpression(UndefValue::get(I->getType()));
+    }
+
     DEBUG(dbgs() << "No arguments of PHI node " << *I << " are live\n");
     deleteExpression(E);
     return createDeadExpression();
@@ -1646,7 +1667,7 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) const {
       // constants, or all operands are ignored but the undef, it also must be
       // cycle free.
       if (!AllConstant && HasBackedge && NumOps > 0 &&
-          !isa<UndefValue>(AllSameValue) && !CycleFree)
+          !isa<UndefValue>(AllSameValue) && !isCycleFree(I))
         return E;
 
       // Only have to check for instructions
@@ -3560,6 +3581,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
   // Map to store the use counts
   DenseMap<const Value *, unsigned int> UseCounts;
   for (auto *CC : reverse(CongruenceClasses)) {
+    DEBUG(dbgs() << "Eliminating in congruence class " << CC->getID() << "\n");
     // Track the equivalent store info so we can decide whether to try
     // dead store elimination.
     SmallVector<ValueDFS, 8> PossibleDeadStores;
@@ -3606,8 +3628,6 @@ bool NewGVN::eliminateInstructions(Function &F) {
       }
       CC->swap(MembersLeft);
     } else {
-      DEBUG(dbgs() << "Eliminating in congruence class " << CC->getID()
-                   << "\n");
       // If this is a singleton, we can skip it.
       if (CC->size() != 1 || RealToTemp.lookup(Leader)) {
         // This is a stack because equality replacement/etc may place

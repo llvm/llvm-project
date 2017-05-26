@@ -43,8 +43,8 @@ class MappedBlockStream : public BinaryStream {
   friend class WritableMappedBlockStream;
 public:
   static std::unique_ptr<MappedBlockStream>
-  createStream(uint32_t BlockSize, uint32_t NumBlocks,
-               const MSFStreamLayout &Layout, BinaryStreamRef MsfData);
+  createStream(uint32_t BlockSize, const MSFStreamLayout &Layout,
+               BinaryStreamRef MsfData);
 
   static std::unique_ptr<MappedBlockStream>
   createIndexedStream(const MSFLayout &Layout, BinaryStreamRef MsfData,
@@ -74,12 +74,11 @@ public:
   void invalidateCache();
 
   uint32_t getBlockSize() const { return BlockSize; }
-  uint32_t getNumBlocks() const { return NumBlocks; }
+  uint32_t getNumBlocks() const { return StreamLayout.Blocks.size(); }
   uint32_t getStreamLength() const { return StreamLayout.Length; }
 
 protected:
-  MappedBlockStream(uint32_t BlockSize, uint32_t NumBlocks,
-                    const MSFStreamLayout &StreamLayout,
+  MappedBlockStream(uint32_t BlockSize, const MSFStreamLayout &StreamLayout,
                     BinaryStreamRef MsfData);
 
 private:
@@ -91,7 +90,6 @@ private:
                            ArrayRef<uint8_t> &Buffer);
 
   const uint32_t BlockSize;
-  const uint32_t NumBlocks;
   const MSFStreamLayout StreamLayout;
   BinaryStreamRef MsfData;
 
@@ -103,8 +101,8 @@ private:
 class WritableMappedBlockStream : public WritableBinaryStream {
 public:
   static std::unique_ptr<WritableMappedBlockStream>
-  createStream(uint32_t BlockSize, uint32_t NumBlocks,
-               const MSFStreamLayout &Layout, WritableBinaryStreamRef MsfData);
+  createStream(uint32_t BlockSize, const MSFStreamLayout &Layout,
+               WritableBinaryStreamRef MsfData);
 
   static std::unique_ptr<WritableMappedBlockStream>
   createIndexedStream(const MSFLayout &Layout, WritableBinaryStreamRef MsfData,
@@ -139,7 +137,7 @@ public:
   uint32_t getStreamLength() const { return ReadInterface.getStreamLength(); }
 
 protected:
-  WritableMappedBlockStream(uint32_t BlockSize, uint32_t NumBlocks,
+  WritableMappedBlockStream(uint32_t BlockSize,
                             const MSFStreamLayout &StreamLayout,
                             WritableBinaryStreamRef MsfData);
 

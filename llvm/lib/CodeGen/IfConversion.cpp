@@ -39,7 +39,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "ifcvt"
+#define DEBUG_TYPE "if-converter"
 
 // Hidden options for help debugging.
 static cl::opt<int> IfCvtFnStart("ifcvt-fn-start", cl::init(-1), cl::Hidden);
@@ -316,9 +316,9 @@ namespace {
 
 char &llvm::IfConverterID = IfConverter::ID;
 
-INITIALIZE_PASS_BEGIN(IfConverter, "if-converter", "If Converter", false, false)
+INITIALIZE_PASS_BEGIN(IfConverter, DEBUG_TYPE, "If Converter", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
-INITIALIZE_PASS_END(IfConverter, "if-converter", "If Converter", false, false)
+INITIALIZE_PASS_END(IfConverter, DEBUG_TYPE, "If Converter", false, false)
 
 bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(*MF.getFunction()) || (PredicateFtor && !PredicateFtor(MF)))

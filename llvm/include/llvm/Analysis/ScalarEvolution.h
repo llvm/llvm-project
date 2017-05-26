@@ -1533,6 +1533,12 @@ public:
   /// specified loop.
   bool isLoopInvariant(const SCEV *S, const Loop *L);
 
+  /// Determine if the SCEV can be evaluated at loop's entry. It is true if it
+  /// doesn't depend on a SCEVUnknown of an instruction which is dominated by
+  /// the header of loop L.
+  bool isAvailableAtLoopEntry(const SCEV *S, const Loop *L, DominatorTree &DT,
+                              LoopInfo &LI);
+
   /// Return true if the given SCEV changes value in a known way in the
   /// specified loop.  This property being true implies that the value is
   /// variant in the loop AND that we can emit an expression to compute the

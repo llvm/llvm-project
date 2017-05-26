@@ -52,7 +52,7 @@
 using namespace llvm;
 using namespace llvm::safestack;
 
-#define DEBUG_TYPE "safestack"
+#define DEBUG_TYPE "safe-stack"
 
 namespace llvm {
 
@@ -820,10 +820,10 @@ public:
 } // anonymous namespace
 
 char SafeStackLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(SafeStackLegacyPass, "safe-stack",
+INITIALIZE_PASS_BEGIN(SafeStackLegacyPass, DEBUG_TYPE,
                       "Safe Stack instrumentation pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(SafeStackLegacyPass, "safe-stack",
+INITIALIZE_PASS_END(SafeStackLegacyPass, DEBUG_TYPE,
                     "Safe Stack instrumentation pass", false, false)
 
 FunctionPass *llvm::createSafeStackPass() { return new SafeStackLegacyPass(); }

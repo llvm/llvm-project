@@ -45,7 +45,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "pei"
+#define DEBUG_TYPE "prologepilog"
 
 typedef SmallVector<MachineBasicBlock *, 4> MBBVector;
 static void doSpillCalleeSavedRegs(MachineFunction &MF, RegScavenger *RS,
@@ -129,12 +129,12 @@ WarnStackSize("warn-stack-size", cl::Hidden, cl::init((unsigned)-1),
               cl::desc("Warn for stack size bigger than the given"
                        " number"));
 
-INITIALIZE_PASS_BEGIN(PEI, "prologepilog", "Prologue/Epilogue Insertion", false,
+INITIALIZE_PASS_BEGIN(PEI, DEBUG_TYPE, "Prologue/Epilogue Insertion", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(StackProtector)
-INITIALIZE_PASS_END(PEI, "prologepilog",
+INITIALIZE_PASS_END(PEI, DEBUG_TYPE,
                     "Prologue/Epilogue Insertion & Frame Finalization", false,
                     false)
 

@@ -760,7 +760,7 @@ void DwarfCompileUnit::emitHeader(bool UseOffsets) {
 /// addGlobalName - Add a new global name to the compile unit.
 void DwarfCompileUnit::addGlobalName(StringRef Name, const DIE &Die,
                                      const DIScope *Context) {
-  if (includeMinimalInlineScopes())
+  if (!DD->hasDwarfPubSections(includeMinimalInlineScopes()))
     return;
   std::string FullName = getParentContextString(Context) + Name.str();
   GlobalNames[FullName] = &Die;
@@ -768,7 +768,7 @@ void DwarfCompileUnit::addGlobalName(StringRef Name, const DIE &Die,
 
 void DwarfCompileUnit::addGlobalNameForTypeUnit(StringRef Name,
                                                 const DIScope *Context) {
-  if (includeMinimalInlineScopes())
+  if (!DD->hasDwarfPubSections(includeMinimalInlineScopes()))
     return;
   std::string FullName = getParentContextString(Context) + Name.str();
   // Insert, allowing the entry to remain as-is if it's already present
@@ -781,7 +781,7 @@ void DwarfCompileUnit::addGlobalNameForTypeUnit(StringRef Name,
 /// Add a new global type to the unit.
 void DwarfCompileUnit::addGlobalType(const DIType *Ty, const DIE &Die,
                                      const DIScope *Context) {
-  if (includeMinimalInlineScopes())
+  if (!DD->hasDwarfPubSections(includeMinimalInlineScopes()))
     return;
   std::string FullName = getParentContextString(Context) + Ty->getName().str();
   GlobalTypes[FullName] = &Die;
@@ -789,7 +789,7 @@ void DwarfCompileUnit::addGlobalType(const DIType *Ty, const DIE &Die,
 
 void DwarfCompileUnit::addGlobalTypeUnitType(const DIType *Ty,
                                              const DIScope *Context) {
-  if (includeMinimalInlineScopes())
+  if (!DD->hasDwarfPubSections(includeMinimalInlineScopes()))
     return;
   std::string FullName = getParentContextString(Context) + Ty->getName().str();
   // Insert, allowing the entry to remain as-is if it's already present

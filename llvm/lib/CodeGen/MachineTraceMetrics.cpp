@@ -44,12 +44,12 @@ using namespace llvm;
 char MachineTraceMetrics::ID = 0;
 char &llvm::MachineTraceMetricsID = MachineTraceMetrics::ID;
 
-INITIALIZE_PASS_BEGIN(MachineTraceMetrics,
-                  "machine-trace-metrics", "Machine Trace Metrics", false, true)
+INITIALIZE_PASS_BEGIN(MachineTraceMetrics, DEBUG_TYPE,
+                      "Machine Trace Metrics", false, true)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_END(MachineTraceMetrics,
-                  "machine-trace-metrics", "Machine Trace Metrics", false, true)
+INITIALIZE_PASS_END(MachineTraceMetrics, DEBUG_TYPE,
+                    "Machine Trace Metrics", false, true)
 
 MachineTraceMetrics::MachineTraceMetrics() : MachineFunctionPass(ID) {
   std::fill(std::begin(Ensembles), std::end(Ensembles), nullptr);

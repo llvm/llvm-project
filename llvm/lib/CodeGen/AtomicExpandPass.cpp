@@ -96,7 +96,7 @@ namespace {
 
 char AtomicExpand::ID = 0;
 char &llvm::AtomicExpandID = AtomicExpand::ID;
-INITIALIZE_PASS(AtomicExpand, "atomic-expand", "Expand Atomic instructions",
+INITIALIZE_PASS(AtomicExpand, DEBUG_TYPE, "Expand Atomic instructions",
                 false, false)
 
 FunctionPass *llvm::createAtomicExpandPass() { return new AtomicExpand(); }

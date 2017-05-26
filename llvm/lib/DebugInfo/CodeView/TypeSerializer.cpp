@@ -75,29 +75,25 @@ private:
   /// entries are small and easy to rehash.
   DenseSet<HashedTypePtr> HashedRecords;
 
-  SmallVector<ArrayRef<uint8_t>, 2> SeenRecords;
-
-  TypeIndex NextTypeIndex = TypeIndex(TypeIndex::FirstNonSimpleIndex);
-
 public:
   TypeHasher(BumpPtrAllocator &RecordStorage) : RecordStorage(RecordStorage) {}
 
-  ArrayRef<ArrayRef<uint8_t>> records() const { return SeenRecords; }
+  void reset() { HashedRecords.clear(); }
 
   /// Takes the bytes of type record, inserts them into the hash table, saves
   /// them, and returns a pointer to an identical stable type record along with
   /// its type index in the destination stream.
-  TypeIndex getOrCreateRecord(ArrayRef<uint8_t> &Record);
+  TypeIndex getOrCreateRecord(ArrayRef<uint8_t> &Record, TypeIndex TI);
 };
 
-TypeIndex TypeHasher::getOrCreateRecord(ArrayRef<uint8_t> &Record) {
+TypeIndex TypeHasher::getOrCreateRecord(ArrayRef<uint8_t> &Record,
+                                        TypeIndex TI) {
   assert(Record.size() < UINT32_MAX && "Record too big");
   assert(Record.size() % 4 == 0 && "Record is not aligned to 4 bytes!");
 
   // Compute the hash up front so we can store it in the key.
   HashedType TempHashedType = {hash_value(Record), Record.data(),
-                               unsigned(Record.size()), NextTypeIndex};
-
+                               unsigned(Record.size()), TI};
   auto Result = HashedRecords.insert(HashedTypePtr(&TempHashedType));
   HashedType *&Hashed = Result.first->Ptr;
 
@@ -111,20 +107,15 @@ TypeIndex TypeHasher::getOrCreateRecord(ArrayRef<uint8_t> &Record) {
     memcpy(Stable, Record.data(), Record.size());
     Hashed->Data = Stable;
     assert(Hashed->Size == Record.size());
-
-    // This was a new record, so increment our next type index.
-    ++NextTypeIndex;
   }
 
   // Update the caller's copy of Record to point a stable copy.
   Record = ArrayRef<uint8_t>(Hashed->Data, Hashed->Size);
+  return Hashed->Index;
+}
 
-  if (Result.second) {
-    // FIXME: Can we record these in a more efficient way?
-    SeenRecords.push_back(Record);
-  }
-
-  return TypeIndex(Hashed->Index);
+TypeIndex TypeSerializer::nextTypeIndex() const {
+  return TypeIndex::fromArrayIndex(SeenRecords.size());
 }
 
 bool TypeSerializer::isInFieldList() const {
@@ -166,26 +157,79 @@ TypeSerializer::addPadding(MutableArrayRef<uint8_t> Record) {
   return MutableArrayRef<uint8_t>(Record.data(), Record.size() + N);
 }
 
-TypeSerializer::TypeSerializer(BumpPtrAllocator &Storage)
+TypeSerializer::TypeSerializer(BumpPtrAllocator &Storage, bool Hash)
     : RecordStorage(Storage), RecordBuffer(MaxRecordLength * 2),
       Stream(RecordBuffer, llvm::support::little), Writer(Stream),
-      Mapping(Writer), Hasher(make_unique<TypeHasher>(Storage)) {
+      Mapping(Writer) {
   // RecordBuffer needs to be able to hold enough data so that if we are 1
   // byte short of MaxRecordLen, and then we try to write MaxRecordLen bytes,
   // we won't overflow.
+  if (Hash)
+    Hasher = make_unique<TypeHasher>(Storage);
 }
 
 TypeSerializer::~TypeSerializer() = default;
 
 ArrayRef<ArrayRef<uint8_t>> TypeSerializer::records() const {
-  return Hasher->records();
+  return SeenRecords;
 }
 
-TypeIndex TypeSerializer::insertRecordBytes(ArrayRef<uint8_t> Record) {
+void TypeSerializer::reset() {
+  if (Hasher)
+    Hasher->reset();
+  Writer.setOffset(0);
+  CurrentSegment = RecordSegment();
+  FieldListSegments.clear();
+  TypeKind.reset();
+  MemberKind.reset();
+  SeenRecords.clear();
+}
+
+TypeIndex TypeSerializer::insertRecordBytes(ArrayRef<uint8_t> &Record) {
   assert(!TypeKind.hasValue() && "Already in a type mapping!");
   assert(Writer.getOffset() == 0 && "Stream has data already!");
 
-  return Hasher->getOrCreateRecord(Record);
+  if (Hasher) {
+    TypeIndex ActualTI = Hasher->getOrCreateRecord(Record, nextTypeIndex());
+    if (nextTypeIndex() == ActualTI)
+      SeenRecords.push_back(Record);
+    return ActualTI;
+  }
+
+  TypeIndex NewTI = nextTypeIndex();
+  uint8_t *Stable = RecordStorage.Allocate<uint8_t>(Record.size());
+  memcpy(Stable, Record.data(), Record.size());
+  Record = ArrayRef<uint8_t>(Stable, Record.size());
+  SeenRecords.push_back(Record);
+  return NewTI;
+}
+
+TypeIndex TypeSerializer::insertRecord(const RemappedType &Record) {
+  assert(!TypeKind.hasValue() && "Already in a type mapping!");
+  assert(Writer.getOffset() == 0 && "Stream has data already!");
+
+  TypeIndex TI;
+  ArrayRef<uint8_t> OriginalData = Record.OriginalRecord.RecordData;
+  if (Record.Mappings.empty()) {
+    // This record did not remap any type indices.  Just write it.
+    return insertRecordBytes(OriginalData);
+  }
+
+  // At least one type index was remapped.  Before we can hash it we have to
+  // copy the full record bytes, re-write each type index, then hash the copy.
+  // We do this in temporary storage since only the DenseMap can decide whether
+  // this record already exists, and if it does we don't want the memory to
+  // stick around.
+  RemapStorage.resize(OriginalData.size());
+  ::memcpy(&RemapStorage[0], OriginalData.data(), OriginalData.size());
+  uint8_t *ContentBegin = RemapStorage.data() + sizeof(RecordPrefix);
+  for (const auto &M : Record.Mappings) {
+    // First 4 bytes of every record are the record prefix, but the mapping
+    // offset is relative to the content which starts after.
+    *(TypeIndex *)(ContentBegin + M.first) = M.second;
+  }
+  auto RemapRef = makeArrayRef(RemapStorage);
+  return insertRecordBytes(RemapRef);
 }
 
 Error TypeSerializer::visitTypeBegin(CVType &Record) {
@@ -221,7 +265,12 @@ Expected<TypeIndex> TypeSerializer::visitTypeEndGetIndex(CVType &Record) {
 
   Record.Type = *TypeKind;
   Record.RecordData = ThisRecordData;
-  TypeIndex InsertedTypeIndex = Hasher->getOrCreateRecord(Record.RecordData);
+
+  // insertRecordBytes assumes we're not in a mapping, so do this first.
+  TypeKind.reset();
+  Writer.setOffset(0);
+
+  TypeIndex InsertedTypeIndex = insertRecordBytes(Record.RecordData);
 
   // Write out each additional segment in reverse order, and update each
   // record's continuation index to point to the previous one.
@@ -231,11 +280,9 @@ Expected<TypeIndex> TypeSerializer::visitTypeEndGetIndex(CVType &Record) {
         reinterpret_cast<support::ulittle32_t *>(CIBytes.data());
     assert(*CI == 0xB0C0B0C0 && "Invalid TypeIndex placeholder");
     *CI = InsertedTypeIndex.getIndex();
-    InsertedTypeIndex = Hasher->getOrCreateRecord(X);
+    InsertedTypeIndex = insertRecordBytes(X);
   }
 
-  TypeKind.reset();
-  Writer.setOffset(0);
   FieldListSegments.clear();
   CurrentSegment.SubRecords.clear();
 

@@ -899,6 +899,39 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
   }
 }
 
+static TargetLowering::LegalizeAction
+getStrictFPOpcodeAction(const TargetLowering &TLI, unsigned Opcode, EVT VT) {
+  unsigned EqOpc;
+  switch (Opcode) {
+    default: llvm_unreachable("Unexpected FP pseudo-opcode");
+    case ISD::STRICT_FSQRT: EqOpc = ISD::FSQRT; break;
+    case ISD::STRICT_FPOW: EqOpc = ISD::FPOW; break;
+    case ISD::STRICT_FPOWI: EqOpc = ISD::FPOWI; break;
+    case ISD::STRICT_FSIN: EqOpc = ISD::FSIN; break;
+    case ISD::STRICT_FCOS: EqOpc = ISD::FCOS; break;
+    case ISD::STRICT_FEXP: EqOpc = ISD::FEXP; break;
+    case ISD::STRICT_FEXP2: EqOpc = ISD::FEXP2; break;
+    case ISD::STRICT_FLOG: EqOpc = ISD::FLOG; break;
+    case ISD::STRICT_FLOG10: EqOpc = ISD::FLOG10; break;
+    case ISD::STRICT_FLOG2: EqOpc = ISD::FLOG2; break;
+    case ISD::STRICT_FRINT: EqOpc = ISD::FRINT; break;
+    case ISD::STRICT_FNEARBYINT: EqOpc = ISD::FNEARBYINT; break;
+  }
+
+  auto Action = TLI.getOperationAction(EqOpc, VT);
+
+  // We don't currently handle Custom or Promote for strict FP pseudo-ops.
+  // For now, we just expand for those cases.
+  if (Action != TargetLowering::Legal)
+    Action = TargetLowering::Expand;
+
+  // ISD::FPOWI returns 'Legal' even though it should be expanded.
+  if (Opcode == ISD::STRICT_FPOWI && Action == TargetLowering::Legal)
+    Action = TargetLowering::Expand;
+
+  return Action;
+}
+
 /// Return a legal replacement for the given operation, with all legal operands.
 void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   DEBUG(dbgs() << "\nLegalizing: "; Node->dump(&DAG));
@@ -1042,6 +1075,25 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
       LegalizeOp(NewVal.getNode());
       return;
     }
+    break;
+  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FPOW:
+  case ISD::STRICT_FPOWI:
+  case ISD::STRICT_FSIN:
+  case ISD::STRICT_FCOS:
+  case ISD::STRICT_FEXP:
+  case ISD::STRICT_FEXP2:
+  case ISD::STRICT_FLOG:
+  case ISD::STRICT_FLOG10:
+  case ISD::STRICT_FLOG2:
+  case ISD::STRICT_FRINT:
+  case ISD::STRICT_FNEARBYINT:
+    // These pseudo-ops get legalized as if they were their non-strict
+    // equivalent.  For instance, if ISD::FSQRT is legal then ISD::STRICT_FSQRT
+    // is also legal, but if ISD::FSQRT requires expansion then so does
+    // ISD::STRICT_FSQRT.
+    Action = getStrictFPOpcodeAction(TLI, Node->getOpcode(),
+                                     Node->getValueType(0));
     break;
 
   default:
@@ -2032,6 +2084,9 @@ SDValue SelectionDAGLegalize::ExpandFPLibCall(SDNode* Node,
                                               RTLIB::Libcall Call_F80,
                                               RTLIB::Libcall Call_F128,
                                               RTLIB::Libcall Call_PPCF128) {
+  if (Node->isStrictFPOpcode())
+    Node = DAG.mutateStrictFPToFP(Node);
+
   RTLIB::Libcall LC;
   switch (Node->getSimpleValueType(0).SimpleTy) {
   default: llvm_unreachable("Unexpected request for libcall!");
@@ -3907,16 +3962,19 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                                       RTLIB::FMAX_PPCF128));
     break;
   case ISD::FSQRT:
+  case ISD::STRICT_FSQRT:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::SQRT_F32, RTLIB::SQRT_F64,
                                       RTLIB::SQRT_F80, RTLIB::SQRT_F128,
                                       RTLIB::SQRT_PPCF128));
     break;
   case ISD::FSIN:
+  case ISD::STRICT_FSIN:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::SIN_F32, RTLIB::SIN_F64,
                                       RTLIB::SIN_F80, RTLIB::SIN_F128,
                                       RTLIB::SIN_PPCF128));
     break;
   case ISD::FCOS:
+  case ISD::STRICT_FCOS:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::COS_F32, RTLIB::COS_F64,
                                       RTLIB::COS_F80, RTLIB::COS_F128,
                                       RTLIB::COS_PPCF128));
@@ -3926,26 +3984,31 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     ExpandSinCosLibCall(Node, Results);
     break;
   case ISD::FLOG:
+  case ISD::STRICT_FLOG:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::LOG_F32, RTLIB::LOG_F64,
                                       RTLIB::LOG_F80, RTLIB::LOG_F128,
                                       RTLIB::LOG_PPCF128));
     break;
   case ISD::FLOG2:
+  case ISD::STRICT_FLOG2:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::LOG2_F32, RTLIB::LOG2_F64,
                                       RTLIB::LOG2_F80, RTLIB::LOG2_F128,
                                       RTLIB::LOG2_PPCF128));
     break;
   case ISD::FLOG10:
+  case ISD::STRICT_FLOG10:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::LOG10_F32, RTLIB::LOG10_F64,
                                       RTLIB::LOG10_F80, RTLIB::LOG10_F128,
                                       RTLIB::LOG10_PPCF128));
     break;
   case ISD::FEXP:
+  case ISD::STRICT_FEXP:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::EXP_F32, RTLIB::EXP_F64,
                                       RTLIB::EXP_F80, RTLIB::EXP_F128,
                                       RTLIB::EXP_PPCF128));
     break;
   case ISD::FEXP2:
+  case ISD::STRICT_FEXP2:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::EXP2_F32, RTLIB::EXP2_F64,
                                       RTLIB::EXP2_F80, RTLIB::EXP2_F128,
                                       RTLIB::EXP2_PPCF128));
@@ -3966,11 +4029,13 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                                       RTLIB::CEIL_PPCF128));
     break;
   case ISD::FRINT:
+  case ISD::STRICT_FRINT:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::RINT_F32, RTLIB::RINT_F64,
                                       RTLIB::RINT_F80, RTLIB::RINT_F128,
                                       RTLIB::RINT_PPCF128));
     break;
   case ISD::FNEARBYINT:
+  case ISD::STRICT_FNEARBYINT:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::NEARBYINT_F32,
                                       RTLIB::NEARBYINT_F64,
                                       RTLIB::NEARBYINT_F80,
@@ -3985,11 +4050,13 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                                       RTLIB::ROUND_PPCF128));
     break;
   case ISD::FPOWI:
+  case ISD::STRICT_FPOWI:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::POWI_F32, RTLIB::POWI_F64,
                                       RTLIB::POWI_F80, RTLIB::POWI_F128,
                                       RTLIB::POWI_PPCF128));
     break;
   case ISD::FPOW:
+  case ISD::STRICT_FPOW:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::POW_F32, RTLIB::POW_F64,
                                       RTLIB::POW_F80, RTLIB::POW_F128,
                                       RTLIB::POW_PPCF128));

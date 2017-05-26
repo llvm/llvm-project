@@ -901,7 +901,7 @@ namespace llvm {
 ModulePass *createMachineOutlinerPass() { return new MachineOutliner(); }
 }
 
-INITIALIZE_PASS(MachineOutliner, "machine-outliner",
+INITIALIZE_PASS(MachineOutliner, DEBUG_TYPE,
                 "Machine Function Outliner", false, false)
 
 void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,

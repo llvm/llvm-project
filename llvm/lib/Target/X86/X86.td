@@ -127,6 +127,9 @@ def FeatureERI      : SubtargetFeature<"avx512er", "HasERI", "true",
 def FeatureCDI      : SubtargetFeature<"avx512cd", "HasCDI", "true",
                       "Enable AVX-512 Conflict Detection Instructions",
                                       [FeatureAVX512]>;
+def FeatureVPOPCNTDQ : SubtargetFeature<"avx512vpopcntdq", "HasVPOPCNTDQ",
+                       "true", "Enable AVX-512 Population Count Instructions",
+                                      [FeatureAVX512]>;
 def FeaturePFI      : SubtargetFeature<"avx512pf", "HasPFI", "true",
                       "Enable AVX-512 PreFetch Instructions",
                                       [FeatureAVX512]>;

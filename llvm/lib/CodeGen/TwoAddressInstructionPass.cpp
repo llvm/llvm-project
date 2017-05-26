@@ -52,7 +52,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "twoaddrinstr"
+#define DEBUG_TYPE "twoaddressinstruction"
 
 STATISTIC(NumTwoAddressInstrs, "Number of two-address instructions");
 STATISTIC(NumCommuted        , "Number of instructions commuted to coalesce");
@@ -171,10 +171,10 @@ public:
 } // end anonymous namespace
 
 char TwoAddressInstructionPass::ID = 0;
-INITIALIZE_PASS_BEGIN(TwoAddressInstructionPass, "twoaddressinstruction",
+INITIALIZE_PASS_BEGIN(TwoAddressInstructionPass, DEBUG_TYPE,
                 "Two-Address instruction pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(TwoAddressInstructionPass, "twoaddressinstruction",
+INITIALIZE_PASS_END(TwoAddressInstructionPass, DEBUG_TYPE,
                 "Two-Address instruction pass", false, false)
 
 char &llvm::TwoAddressInstructionPassID = TwoAddressInstructionPass::ID;

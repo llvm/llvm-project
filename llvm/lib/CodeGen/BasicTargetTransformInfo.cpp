@@ -24,8 +24,6 @@
 #include <utility>
 using namespace llvm;
 
-#define DEBUG_TYPE "basictti"
-
 // This flag is used by the template base class for BasicTTIImpl, and here to
 // provide a definition.
 cl::opt<unsigned>

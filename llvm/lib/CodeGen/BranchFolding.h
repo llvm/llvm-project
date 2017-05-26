@@ -108,6 +108,7 @@ namespace llvm {
     bool UpdateLiveIns;
     unsigned MinCommonTailLength;
     const TargetInstrInfo *TII;
+    const MachineRegisterInfo *MRI;
     const TargetRegisterInfo *TRI;
     MachineModuleInfo *MMI;
     MachineLoopInfo *MLI;

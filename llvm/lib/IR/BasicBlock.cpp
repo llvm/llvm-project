@@ -263,6 +263,10 @@ const BasicBlock *BasicBlock::getUniqueSuccessor() const {
   return SuccBB;
 }
 
+iterator_range<BasicBlock::phi_iterator> BasicBlock::phis() {
+  return make_range<phi_iterator>(dyn_cast<PHINode>(&front()), nullptr);
+}
+
 /// This method is used to notify a BasicBlock that the
 /// specified Predecessor of the block is no longer able to reach it.  This is
 /// actually not used to update the Predecessor list, but is actually used to
@@ -389,13 +393,11 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
     // Loop over any phi nodes in the basic block, updating the BB field of
     // incoming values...
     BasicBlock *Successor = *I;
-    PHINode *PN;
-    for (BasicBlock::iterator II = Successor->begin();
-         (PN = dyn_cast<PHINode>(II)); ++II) {
-      int IDX = PN->getBasicBlockIndex(this);
-      while (IDX != -1) {
-        PN->setIncomingBlock((unsigned)IDX, New);
-        IDX = PN->getBasicBlockIndex(this);
+    for (auto &PN : Successor->phis()) {
+      int Idx = PN.getBasicBlockIndex(this);
+      while (Idx != -1) {
+        PN.setIncomingBlock((unsigned)Idx, New);
+        Idx = PN.getBasicBlockIndex(this);
       }
     }
   }

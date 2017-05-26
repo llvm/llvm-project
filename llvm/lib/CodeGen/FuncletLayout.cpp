@@ -37,7 +37,7 @@ public:
 
 char FuncletLayout::ID = 0;
 char &llvm::FuncletLayoutID = FuncletLayout::ID;
-INITIALIZE_PASS(FuncletLayout, "funclet-layout",
+INITIALIZE_PASS(FuncletLayout, DEBUG_TYPE,
                 "Contiguously Lay Out Funclets", false, false)
 
 bool FuncletLayout::runOnMachineFunction(MachineFunction &F) {
