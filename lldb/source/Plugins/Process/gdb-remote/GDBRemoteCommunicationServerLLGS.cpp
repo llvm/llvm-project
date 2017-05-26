@@ -1125,17 +1125,16 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceStart(
 
   auto json_dict = json_object->GetAsDictionary();
 
-  json_dict->GetValueForKeyAsInteger<uint64_t>("metabuffersize",
-                                               metabuffersize);
+  json_dict->GetValueForKeyAsInteger("metabuffersize", metabuffersize);
   options.setMetaDataBufferSize(metabuffersize);
 
-  json_dict->GetValueForKeyAsInteger<uint64_t>("buffersize", buffersize);
+  json_dict->GetValueForKeyAsInteger("buffersize", buffersize);
   options.setTraceBufferSize(buffersize);
 
-  json_dict->GetValueForKeyAsInteger<uint64_t>("type", type);
+  json_dict->GetValueForKeyAsInteger("type", type);
   options.setType(static_cast<lldb::TraceType>(type));
 
-  json_dict->GetValueForKeyAsInteger<uint64_t>("threadid", tid);
+  json_dict->GetValueForKeyAsInteger("threadid", tid);
   options.setThreadID(tid);
 
   StructuredData::ObjectSP custom_params_sp =
@@ -1188,10 +1187,10 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceStop(
 
   auto json_dict = json_object->GetAsDictionary();
 
-  if (!json_dict->GetValueForKeyAsInteger<lldb::user_id_t>("traceid", uid))
+  if (!json_dict->GetValueForKeyAsInteger("traceid", uid))
     return SendIllFormedResponse(packet, "jTraceStop: Ill formed packet ");
 
-  json_dict->GetValueForKeyAsInteger<lldb::tid_t>("threadid", tid);
+  json_dict->GetValueForKeyAsInteger("threadid", tid);
 
   Status error = m_debugged_process_sp->StopTrace(uid, tid);
 
@@ -1226,11 +1225,11 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceConfigRead(
 
   auto json_dict = json_object->GetAsDictionary();
 
-  if (!json_dict->GetValueForKeyAsInteger<lldb::user_id_t>("traceid", uid))
+  if (!json_dict->GetValueForKeyAsInteger("traceid", uid))
     return SendIllFormedResponse(packet,
                                  "jTraceConfigRead: Ill formed packet ");
 
-  json_dict->GetValueForKeyAsInteger<lldb::tid_t>("threadid", threadid);
+  json_dict->GetValueForKeyAsInteger("threadid", threadid);
 
   TraceOptions options;
   StreamGDBRemote response;
@@ -1293,12 +1292,12 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceRead(
 
   auto json_dict = json_object->GetAsDictionary();
 
-  if (!json_dict->GetValueForKeyAsInteger<lldb::user_id_t>("traceid", uid) ||
-      !json_dict->GetValueForKeyAsInteger<uint64_t>("offset", offset) ||
-      !json_dict->GetValueForKeyAsInteger<uint64_t>("buffersize", byte_count))
+  if (!json_dict->GetValueForKeyAsInteger("traceid", uid) ||
+      !json_dict->GetValueForKeyAsInteger("offset", offset) ||
+      !json_dict->GetValueForKeyAsInteger("buffersize", byte_count))
     return SendIllFormedResponse(packet, "jTrace: Ill formed packet ");
 
-  json_dict->GetValueForKeyAsInteger<lldb::tid_t>("threadid", tid);
+  json_dict->GetValueForKeyAsInteger("threadid", tid);
 
   // Allocate the response buffer.
   uint8_t *buffer = new (std::nothrow) uint8_t[byte_count];
