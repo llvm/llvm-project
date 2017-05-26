@@ -257,10 +257,10 @@ class TypePromotionTransaction;
 }
 
 char CodeGenPrepare::ID = 0;
-INITIALIZE_PASS_BEGIN(CodeGenPrepare, "codegenprepare",
+INITIALIZE_PASS_BEGIN(CodeGenPrepare, DEBUG_TYPE,
                       "Optimize for code generation", false, false)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
-INITIALIZE_PASS_END(CodeGenPrepare, "codegenprepare",
+INITIALIZE_PASS_END(CodeGenPrepare, DEBUG_TYPE,
                     "Optimize for code generation", false, false)
 
 FunctionPass *llvm::createCodeGenPreparePass() { return new CodeGenPrepare(); }

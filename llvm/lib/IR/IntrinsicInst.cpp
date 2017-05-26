@@ -97,7 +97,9 @@ Value *InstrProfIncrementInst::getStep() const {
 
 ConstrainedFPIntrinsic::RoundingMode
 ConstrainedFPIntrinsic::getRoundingMode() const {
-  Metadata *MD = dyn_cast<MetadataAsValue>(getOperand(2))->getMetadata();
+  unsigned NumOperands = getNumArgOperands();
+  Metadata *MD = 
+      dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 2))->getMetadata();
   if (!MD || !isa<MDString>(MD))
     return rmInvalid;
   StringRef RoundingArg = cast<MDString>(MD)->getString();
@@ -115,7 +117,9 @@ ConstrainedFPIntrinsic::getRoundingMode() const {
 
 ConstrainedFPIntrinsic::ExceptionBehavior
 ConstrainedFPIntrinsic::getExceptionBehavior() const {
-  Metadata *MD = dyn_cast<MetadataAsValue>(getOperand(3))->getMetadata();
+  unsigned NumOperands = getNumArgOperands();
+  Metadata *MD = 
+      dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 1))->getMetadata();
   if (!MD || !isa<MDString>(MD))
     return ebInvalid;
   StringRef ExceptionArg = cast<MDString>(MD)->getString();
@@ -124,4 +128,22 @@ ConstrainedFPIntrinsic::getExceptionBehavior() const {
     .Case("fpexcept.maytrap", ebMayTrap)
     .Case("fpexcept.strict",  ebStrict)
     .Default(ebInvalid);
+}
+
+bool ConstrainedFPIntrinsic::isUnaryOp() const {
+  switch (getIntrinsicID()) {
+    default: 
+      return false;
+    case Intrinsic::experimental_constrained_sqrt:
+    case Intrinsic::experimental_constrained_sin:
+    case Intrinsic::experimental_constrained_cos:
+    case Intrinsic::experimental_constrained_exp:
+    case Intrinsic::experimental_constrained_exp2:
+    case Intrinsic::experimental_constrained_log:
+    case Intrinsic::experimental_constrained_log10:
+    case Intrinsic::experimental_constrained_log2:
+    case Intrinsic::experimental_constrained_rint:
+    case Intrinsic::experimental_constrained_nearbyint:
+      return true;
+  }
 }

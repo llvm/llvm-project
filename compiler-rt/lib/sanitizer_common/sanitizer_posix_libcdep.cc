@@ -134,7 +134,8 @@ void SleepForMillis(int millis) {
 void Abort() {
 #if !SANITIZER_GO
   // If we are handling SIGABRT, unhandle it first.
-  if (IsHandledDeadlySignal(SIGABRT)) {
+  // TODO(vitalybuka): Check if handler belongs to sanitizer.
+  if (GetHandleSignalMode(SIGABRT) != kHandleSignalNo) {
     struct sigaction sigact;
     internal_memset(&sigact, 0, sizeof(sigact));
     sigact.sa_sigaction = (sa_sigaction_t)SIG_DFL;
@@ -188,8 +189,8 @@ void UnsetAlternateSignalStack() {
 
 static void MaybeInstallSigaction(int signum,
                                   SignalHandlerType handler) {
-  if (!IsHandledDeadlySignal(signum))
-    return;
+  if (GetHandleSignalMode(signum) == kHandleSignalNo) return;
+
   struct sigaction sigact;
   internal_memset(&sigact, 0, sizeof(sigact));
   sigact.sa_sigaction = (sa_sigaction_t)handler;

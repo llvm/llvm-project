@@ -27,7 +27,7 @@
 # include <pthread.h>
 # include <sched.h>
 #elif defined(_LIBCPP_HAS_THREAD_API_WIN32)
-#include <Windows.h>
+#include <windows.h>
 #include <process.h>
 #include <fibersapi.h>
 #include <__undef_min_max>

@@ -32,7 +32,7 @@
 #include <vector>
 using namespace llvm;
 
-#define DEBUG_TYPE "stackslotcoloring"
+#define DEBUG_TYPE "stack-slot-coloring"
 
 static cl::opt<bool>
 DisableSharing("no-stack-slot-sharing",
@@ -116,12 +116,12 @@ namespace {
 char StackSlotColoring::ID = 0;
 char &llvm::StackSlotColoringID = StackSlotColoring::ID;
 
-INITIALIZE_PASS_BEGIN(StackSlotColoring, "stack-slot-coloring",
+INITIALIZE_PASS_BEGIN(StackSlotColoring, DEBUG_TYPE,
                 "Stack Slot Coloring", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
 INITIALIZE_PASS_DEPENDENCY(LiveStacks)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_END(StackSlotColoring, "stack-slot-coloring",
+INITIALIZE_PASS_END(StackSlotColoring, DEBUG_TYPE,
                 "Stack Slot Coloring", false, false)
 
 namespace {

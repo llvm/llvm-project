@@ -1,4 +1,4 @@
-//===----- KaleidoscopeJIT.h - A simple JIT for Kaleidoscope ----*- C++ -*-===//
+//===- KaleidoscopeJIT.h - A simple JIT for Kaleidoscope --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,7 +19,6 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
-#include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
@@ -40,9 +39,9 @@ namespace orc {
 
 class KaleidoscopeJIT {
 public:
-  typedef RTDyldObjectLinkingLayer<> ObjLayerT;
-  typedef IRCompileLayer<ObjLayerT> CompileLayerT;
-  typedef CompileLayerT::ModuleSetHandleT ModuleHandleT;
+  using ObjLayerT = RTDyldObjectLinkingLayer<>;
+  using CompileLayerT = IRCompileLayer<ObjLayerT>;
+  using ModuleHandleT = CompileLayerT::ModuleSetHandleT;
 
   KaleidoscopeJIT()
       : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),

@@ -192,10 +192,7 @@ namespace {
 } // end anonymous namespace
 
 char GlobalMerge::ID = 0;
-INITIALIZE_PASS_BEGIN(GlobalMerge, "global-merge", "Merge global variables",
-                      false, false)
-INITIALIZE_PASS_END(GlobalMerge, "global-merge", "Merge global variables",
-                    false, false)
+INITIALIZE_PASS(GlobalMerge, DEBUG_TYPE, "Merge global variables", false, false)
 
 bool GlobalMerge::doMerge(SmallVectorImpl<GlobalVariable*> &Globals,
                           Module &M, bool isConst, unsigned AddrSpace) const {

@@ -955,7 +955,7 @@ namespace record_fields {
     A a13 = rref(std::move(a13));  // expected-warning {{uninitialized}}
     A a14 = std::move(x ? a13 : (22, a14));  // expected-warning {{uninitialized}}
   };
-  D d;
+  D d; // expected-note {{in implicit default constructor for 'record_fields::D' first required here}}
   struct E {
     A a1 = a1;
     A a2 = a2.get();

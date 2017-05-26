@@ -540,6 +540,12 @@ public:
     return llvm::computeKnownBits(V, DL, Depth, &AC, CxtI, &DT);
   }
 
+  bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,
+                              unsigned Depth = 0,
+                              const Instruction *CxtI = nullptr) {
+    return llvm::isKnownToBeAPowerOfTwo(V, DL, OrZero, Depth, &AC, CxtI, &DT);
+  }
+
   bool MaskedValueIsZero(const Value *V, const APInt &Mask, unsigned Depth = 0,
                          const Instruction *CxtI = nullptr) const {
     return llvm::MaskedValueIsZero(V, Mask, DL, Depth, &AC, CxtI, &DT);

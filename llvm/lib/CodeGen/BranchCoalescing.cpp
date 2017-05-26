@@ -27,7 +27,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "coal-branch"
+#define DEBUG_TYPE "branch-coalescing"
 
 static cl::opt<cl::boolOrDefault>
     EnableBranchCoalescing("enable-branch-coalesce", cl::Hidden,
@@ -193,11 +193,11 @@ public:
 char BranchCoalescing::ID = 0;
 char &llvm::BranchCoalescingID = BranchCoalescing::ID;
 
-INITIALIZE_PASS_BEGIN(BranchCoalescing, "branch-coalescing",
+INITIALIZE_PASS_BEGIN(BranchCoalescing, DEBUG_TYPE,
                       "Branch Coalescing", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
-INITIALIZE_PASS_END(BranchCoalescing, "branch-coalescing", "Branch Coalescing",
+INITIALIZE_PASS_END(BranchCoalescing, DEBUG_TYPE, "Branch Coalescing",
                     false, false)
 
 BranchCoalescing::CoalescingCandidateInfo::CoalescingCandidateInfo()

@@ -341,10 +341,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // Rotate Loop - disable header duplication at -Oz
   LPM1.addPass(LoopRotatePass(Level != Oz));
   LPM1.addPass(LICMPass());
-#if 0
-  // The LoopUnswitch pass isn't yet ported to the new pass manager.
-  LPM1.addPass(LoopUnswitchPass(/* OptimizeForSize */ Level != O3));
-#endif
+  LPM1.addPass(SimpleLoopUnswitchPass());
   LPM2.addPass(IndVarSimplifyPass());
   LPM2.addPass(LoopIdiomRecognizePass());
   LPM2.addPass(LoopDeletionPass());

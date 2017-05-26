@@ -1394,7 +1394,7 @@ AndroidApiLevel AndroidGetApiLevel() {
 
 #endif
 
-bool IsHandledDeadlySignal(int signum) {
+HandleSignalMode GetHandleSignalMode(int signum) {
   switch (signum) {
     case SIGABRT:
       return common_flags()->handle_abort;
@@ -1407,7 +1407,7 @@ bool IsHandledDeadlySignal(int signum) {
     case SIGBUS:
       return common_flags()->handle_sigbus;
   }
-  return false;
+  return kHandleSignalNo;
 }
 
 #if !SANITIZER_GO

@@ -6542,6 +6542,63 @@ SDNode *SelectionDAG::MorphNodeTo(SDNode *N, unsigned Opc,
   return N;
 }
 
+SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
+  unsigned OrigOpc = Node->getOpcode();
+  unsigned NewOpc;
+  bool IsUnary = false;
+  switch (OrigOpc) {
+  default: 
+    llvm_unreachable("mutateStrictFPToFP called with unexpected opcode!");
+  case ISD::STRICT_FADD: NewOpc = ISD::FADD; break;
+  case ISD::STRICT_FSUB: NewOpc = ISD::FSUB; break;
+  case ISD::STRICT_FMUL: NewOpc = ISD::FMUL; break;
+  case ISD::STRICT_FDIV: NewOpc = ISD::FDIV; break;
+  case ISD::STRICT_FREM: NewOpc = ISD::FREM; break;
+  case ISD::STRICT_FSQRT: NewOpc = ISD::FSQRT; IsUnary = true; break;
+  case ISD::STRICT_FPOW: NewOpc = ISD::FPOW; break;
+  case ISD::STRICT_FPOWI: NewOpc = ISD::FPOWI; break;
+  case ISD::STRICT_FSIN: NewOpc = ISD::FSIN; IsUnary = true; break;
+  case ISD::STRICT_FCOS: NewOpc = ISD::FCOS; IsUnary = true; break;
+  case ISD::STRICT_FEXP: NewOpc = ISD::FEXP; IsUnary = true; break;
+  case ISD::STRICT_FEXP2: NewOpc = ISD::FEXP2; IsUnary = true; break;
+  case ISD::STRICT_FLOG: NewOpc = ISD::FLOG; IsUnary = true; break;
+  case ISD::STRICT_FLOG10: NewOpc = ISD::FLOG10; IsUnary = true; break;
+  case ISD::STRICT_FLOG2: NewOpc = ISD::FLOG2; IsUnary = true; break;
+  case ISD::STRICT_FRINT: NewOpc = ISD::FRINT; IsUnary = true; break;
+  case ISD::STRICT_FNEARBYINT:
+    NewOpc = ISD::FNEARBYINT;
+    IsUnary = true;
+    break;
+  }
+
+  // We're taking this node out of the chain, so we need to re-link things.
+  SDValue InputChain = Node->getOperand(0);
+  SDValue OutputChain = SDValue(Node, 1);
+  ReplaceAllUsesOfValueWith(OutputChain, InputChain);
+
+  SDVTList VTs = getVTList(Node->getOperand(1).getValueType());
+  SDNode *Res = nullptr;
+  if (IsUnary)
+    Res = MorphNodeTo(Node, NewOpc, VTs, { Node->getOperand(1) });
+  else
+    Res = MorphNodeTo(Node, NewOpc, VTs, { Node->getOperand(1),
+                                           Node->getOperand(2) });
+  
+  // MorphNodeTo can operate in two ways: if an existing node with the
+  // specified operands exists, it can just return it.  Otherwise, it
+  // updates the node in place to have the requested operands.
+  if (Res == Node) {
+    // If we updated the node in place, reset the node ID.  To the isel,
+    // this should be just like a newly allocated machine node.
+    Res->setNodeId(-1);
+  } else {
+    ReplaceAllUsesWith(Node, Res);
+    RemoveDeadNode(Node);
+  }
+
+  return Res; 
+}
+
 
 /// getMachineNode - These are used for target selectors to create a new node
 /// with specified return type(s), MachineInstr opcode, and operands.

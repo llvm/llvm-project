@@ -1230,8 +1230,7 @@ namespace {
       IsNullPtr = V.isNullPointer();
     }
 
-    void set(APValue::LValueBase B, unsigned I = 0, bool BInvalid = false,
-             bool IsNullPtr_ = false, uint64_t Offset_ = 0) {
+    void set(APValue::LValueBase B, unsigned I = 0, bool BInvalid = false) {
 #ifndef NDEBUG
       // We only allow a few types of invalid bases. Enforce that here.
       if (BInvalid) {
@@ -1242,11 +1241,20 @@ namespace {
 #endif
 
       Base = B;
-      Offset = CharUnits::fromQuantity(Offset_);
+      Offset = CharUnits::fromQuantity(0);
       InvalidBase = BInvalid;
       CallIndex = I;
       Designator = SubobjectDesignator(getType(B));
-      IsNullPtr = IsNullPtr_;
+      IsNullPtr = false;
+    }
+
+    void setNull(QualType PointerTy, uint64_t TargetVal) {
+      Base = (Expr *)nullptr;
+      Offset = CharUnits::fromQuantity(TargetVal);
+      InvalidBase = false;
+      CallIndex = 0;
+      Designator = SubobjectDesignator(PointerTy->getPointeeType());
+      IsNullPtr = true;
     }
 
     void setInvalid(APValue::LValueBase B, unsigned I = 0) {
@@ -5494,8 +5502,8 @@ public:
     return true;
   }
   bool ZeroInitialization(const Expr *E) {
-    auto Offset = Info.Ctx.getTargetNullPointerValue(E->getType());
-    Result.set((Expr*)nullptr, 0, false, true, Offset);
+    auto TargetVal = Info.Ctx.getTargetNullPointerValue(E->getType());
+    Result.setNull(E->getType(), TargetVal);
     return true;
   }
 

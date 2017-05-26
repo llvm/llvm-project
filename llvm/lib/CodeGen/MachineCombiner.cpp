@@ -86,11 +86,11 @@ private:
 char MachineCombiner::ID = 0;
 char &llvm::MachineCombinerID = MachineCombiner::ID;
 
-INITIALIZE_PASS_BEGIN(MachineCombiner, "machine-combiner",
+INITIALIZE_PASS_BEGIN(MachineCombiner, DEBUG_TYPE,
                       "Machine InstCombiner", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
-INITIALIZE_PASS_END(MachineCombiner, "machine-combiner", "Machine InstCombiner",
+INITIALIZE_PASS_END(MachineCombiner, DEBUG_TYPE, "Machine InstCombiner",
                     false, false)
 
 void MachineCombiner::getAnalysisUsage(AnalysisUsage &AU) const {

@@ -674,8 +674,8 @@ void ImplicitNullChecks::rewriteNullChecks(
 
 char ImplicitNullChecks::ID = 0;
 char &llvm::ImplicitNullChecksID = ImplicitNullChecks::ID;
-INITIALIZE_PASS_BEGIN(ImplicitNullChecks, "implicit-null-checks",
+INITIALIZE_PASS_BEGIN(ImplicitNullChecks, DEBUG_TYPE,
                       "Implicit null checks", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(ImplicitNullChecks, "implicit-null-checks",
+INITIALIZE_PASS_END(ImplicitNullChecks, DEBUG_TYPE,
                     "Implicit null checks", false, false)

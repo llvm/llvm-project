@@ -80,7 +80,8 @@ bool PrettyClassLayoutGraphicalDumper::start(const UDTLayoutBase &Layout) {
 
     if (Item->getLayoutSize() > 0) {
       uint32_t Prev = RelativeOffset + Item->getLayoutSize() - 1;
-      NextPaddingByte = UseMap.find_next_unset(Prev);
+      if (Prev < UseMap.size())
+        NextPaddingByte = UseMap.find_next_unset(Prev);
     }
   }
 
