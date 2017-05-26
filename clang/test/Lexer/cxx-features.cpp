@@ -235,6 +235,6 @@
 #error "wrong value for __cpp_experimental_concepts"
 #endif
 
-#if (COROUTINES && !__cpp_coroutines) || (!COROUTINES && __cpp_coroutines)
+#if defined(COROUTINES) ? check(coroutines, 201703L, 201703L, 201703L, 201703L) : check(coroutines, 0, 0, 0, 0)
 #error "wrong value for __cpp_coroutines"
 #endif

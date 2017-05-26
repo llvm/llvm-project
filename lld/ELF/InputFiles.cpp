@@ -281,18 +281,20 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
 template <class ELFT>
 void elf::ObjectFile<ELFT>::initializeSections(
     DenseSet<CachedHashStringRef> &ComdatGroups) {
+  const ELFFile<ELFT> &Obj = this->getObj();
+
   ArrayRef<Elf_Shdr> ObjSections =
       check(this->getObj().sections(), toString(this));
-  const ELFFile<ELFT> &Obj = this->getObj();
   uint64_t Size = ObjSections.size();
   this->Sections.resize(Size);
-  unsigned I = -1;
+
   StringRef SectionStringTable =
       check(Obj.getSectionStringTable(ObjSections), toString(this));
-  for (const Elf_Shdr &Sec : ObjSections) {
-    ++I;
+
+  for (size_t I = 0, E = ObjSections.size(); I < E; I++) {
     if (this->Sections[I] == &InputSection::Discarded)
       continue;
+    const Elf_Shdr &Sec = ObjSections[I];
 
     // SHF_EXCLUDE'ed sections are discarded by the linker. However,
     // if -r is given, we'll let the final link discard such sections.

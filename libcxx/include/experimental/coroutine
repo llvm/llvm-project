@@ -59,13 +59,15 @@ template <class P> struct hash<coroutine_handle<P>>;
 #pragma GCC system_header
 #endif
 
-#ifndef __cpp_coroutines
+#ifdef _LIBCPP_HAS_NO_COROUTINES
 # if defined(_LIBCPP_WARNING)
     _LIBCPP_WARNING("<experimental/coroutine> cannot be used with this compiler")
 # else
 #   warning <experimental/coroutine> cannot be used with this compiler
 # endif
 #endif
+
+#ifndef _LIBCPP_HAS_NO_COROUTINES
 
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL_COROUTINES
 
@@ -87,8 +89,6 @@ struct _LIBCPP_TEMPLATE_VIS coroutine_traits
 
 template <typename _Promise = void>
 class _LIBCPP_TEMPLATE_VIS coroutine_handle;
-
-#if defined(__cpp_coroutines)
 
 template <>
 class _LIBCPP_TEMPLATE_VIS coroutine_handle<void> {
@@ -235,8 +235,6 @@ struct _LIBCPP_TYPE_VIS suspend_always {
   void await_resume() const noexcept {}
 };
 
-#endif // defined(__cpp_coroutines)
-
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL_COROUTINES
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -250,5 +248,7 @@ struct hash<_VSTD_CORO::coroutine_handle<_Tp> > {
 };
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // !defined(_LIBCPP_HAS_NO_COROUTINES)
 
 #endif /* _LIBCPP_EXPERIMENTAL_COROUTINE */

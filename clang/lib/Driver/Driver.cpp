@@ -22,6 +22,7 @@
 #include "ToolChains/FreeBSD.h"
 #include "ToolChains/Fuchsia.h"
 #include "ToolChains/Gnu.h"
+#include "ToolChains/BareMetal.h"
 #include "ToolChains/Haiku.h"
 #include "ToolChains/Hexagon.h"
 #include "ToolChains/Lanai.h"
@@ -3828,6 +3829,8 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         if (Target.getVendor() == llvm::Triple::Myriad)
           TC = llvm::make_unique<toolchains::MyriadToolChain>(*this, Target,
                                                               Args);
+        else if (toolchains::BareMetal::handlesTarget(Target))
+          TC = llvm::make_unique<toolchains::BareMetal>(*this, Target, Args);
         else if (Target.isOSBinFormatELF())
           TC = llvm::make_unique<toolchains::Generic_ELF>(*this, Target, Args);
         else if (Target.isOSBinFormatMachO())

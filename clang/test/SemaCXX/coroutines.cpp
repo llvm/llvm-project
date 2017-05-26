@@ -347,6 +347,7 @@ namespace dependent_operator_co_await_lookup {
     ::adl_ns::coawait_arg_type final_suspend();
     transformed await_transform(transform_awaitable);
     void unhandled_exception();
+    void return_void();
   };
   template <class AwaitArg>
   struct basic_promise {
@@ -355,6 +356,7 @@ namespace dependent_operator_co_await_lookup {
     awaitable initial_suspend();
     awaitable final_suspend();
     void unhandled_exception();
+    void return_void();
   };
 
   awaitable operator co_await(await_arg_1);
@@ -473,6 +475,7 @@ struct bad_promise_1 {
   suspend_always initial_suspend();
   suspend_always final_suspend();
   void unhandled_exception();
+  void return_void();
 };
 coro<bad_promise_1> missing_get_return_object() { // expected-error {{no member named 'get_return_object' in 'bad_promise_1'}}
   co_await a;
@@ -483,6 +486,7 @@ struct bad_promise_2 {
   // FIXME: We shouldn't offer a typo-correction here!
   suspend_always final_suspend(); // expected-note {{here}}
   void unhandled_exception();
+  void return_void();
 };
 // FIXME: This shouldn't happen twice
 coro<bad_promise_2> missing_initial_suspend() { // expected-error {{no member named 'initial_suspend' in 'bad_promise_2'}}
@@ -494,6 +498,7 @@ struct bad_promise_3 {
   // FIXME: We shouldn't offer a typo-correction here!
   suspend_always initial_suspend(); // expected-note {{here}}
   void unhandled_exception();
+  void return_void();
 };
 coro<bad_promise_3> missing_final_suspend() { // expected-error {{no member named 'final_suspend' in 'bad_promise_3'}}
   co_await a;
@@ -503,6 +508,7 @@ struct bad_promise_4 {
   coro<bad_promise_4> get_return_object();
   not_awaitable initial_suspend();
   suspend_always final_suspend();
+  void return_void();
 };
 // FIXME: This diagnostic is terrible.
 coro<bad_promise_4> bad_initial_suspend() { // expected-error {{no member named 'await_ready' in 'not_awaitable'}}
@@ -514,6 +520,7 @@ struct bad_promise_5 {
   coro<bad_promise_5> get_return_object();
   suspend_always initial_suspend();
   not_awaitable final_suspend();
+  void return_void();
 };
 // FIXME: This diagnostic is terrible.
 coro<bad_promise_5> bad_final_suspend() { // expected-error {{no member named 'await_ready' in 'not_awaitable'}}
@@ -526,8 +533,8 @@ struct bad_promise_6 {
   suspend_always initial_suspend();
   suspend_always final_suspend();
   void unhandled_exception();
-  void return_void();
-  void return_value(int) const;
+  void return_void();           // expected-note 2 {{member 'return_void' first declared here}}
+  void return_value(int) const; // expected-note 2 {{member 'return_value' first declared here}}
   void return_value(int);
 };
 coro<bad_promise_6> bad_implicit_return() { // expected-error {{'bad_promise_6' declares both 'return_value' and 'return_void'}}
@@ -751,7 +758,7 @@ struct mismatch_gro_type_tag1 {};
 template<>
 struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag1> {
   struct promise_type {
-    void get_return_object() {} //expected-note {{'get_return_object' is declared here}}
+    void get_return_object() {} //expected-note {{member 'get_return_object' declared here}}
     suspend_always initial_suspend() { return {}; }
     suspend_always final_suspend() { return {}; }
     void return_void() {}
@@ -768,7 +775,7 @@ struct mismatch_gro_type_tag2 {};
 template<>
 struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag2> {
   struct promise_type {
-    void* get_return_object() {} //expected-note {{'get_return_object' is declared here}}
+    void *get_return_object() {} //expected-note {{member 'get_return_object' declared here}}
     suspend_always initial_suspend() { return {}; }
     suspend_always final_suspend() { return {}; }
     void return_void() {}
@@ -786,7 +793,7 @@ template<>
 struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag3> {
   struct promise_type {
     int get_return_object() {}
-    static void get_return_object_on_allocation_failure() {} //expected-note {{'get_return_object_on_allocation_failure' is declared here}}
+    static void get_return_object_on_allocation_failure() {} //expected-note {{member 'get_return_object_on_allocation_failure' declared here}}
     suspend_always initial_suspend() { return {}; }
     suspend_always final_suspend() { return {}; }
     void return_void() {}
@@ -805,7 +812,7 @@ template<>
 struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag4> {
   struct promise_type {
     int get_return_object() {}
-    static char* get_return_object_on_allocation_failure() {} //expected-note {{'get_return_object_on_allocation_failure' is declared here}}
+    static char *get_return_object_on_allocation_failure() {} //expected-note {{member 'get_return_object_on_allocation_failure' declared}}
     suspend_always initial_suspend() { return {}; }
     suspend_always final_suspend() { return {}; }
     void return_void() {}
@@ -818,14 +825,15 @@ extern "C" int f(mismatch_gro_type_tag4) {
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
 
-struct bad_promise_no_return_func {
+struct bad_promise_no_return_func { // expected-note {{'bad_promise_no_return_func' defined here}}
   coro<bad_promise_no_return_func> get_return_object();
   suspend_always initial_suspend();
   suspend_always final_suspend();
   void unhandled_exception();
 };
-// FIXME: Make this ill-formed because the promise type declares
-// neither return_value(...) or return_void().
+// FIXME: The PDTS currently specifies this as UB, technically forbidding a
+// diagnostic.
 coro<bad_promise_no_return_func> no_return_value_or_return_void() {
+  // expected-error@-1 {{'bad_promise_no_return_func' must declare either 'return_value' or 'return_void'}}
   co_await a;
 }
