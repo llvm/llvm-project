@@ -40,7 +40,7 @@ public:
   ///
   /// @param[in] thread_id
   ///     Tracing could be started for the complete process or a
-  ///     single thread, in the first case the uid obtained would
+  ///     single thread, in the first case the traceid obtained would
   ///     map to all the threads existing within the process and the
   ///     ones spawning later. The thread_id parameter can be used in
   ///     such a scenario to select the trace data for a specific
@@ -68,16 +68,17 @@ public:
   ///     An error explaining what went wrong.
   ///
   /// @param[in] thread_id
-  ///     The user id could map to a tracing instance for a thread
+  ///     The trace id could map to a tracing instance for a thread
   ///     or could also map to a group of threads being traced with
   ///     the same trace options. A thread_id is normally optional
   ///     except in the case of tracing a complete process and tracing
   ///     needs to switched off on a particular thread.
   ///     A situation could occur where initially a thread (lets say
-  ///     thread A) is being individually traced with a particular uid
-  ///     and then tracing is started on the complete process, in this
-  ///     case thread A will continue without any change. All newly
-  ///     spawned threads would be traced with the uid of the process.
+  ///     thread A) is being individually traced with a particular
+  ///     trace id and then tracing is started on the complete
+  ///     process, in this case thread A will continue without any
+  ///     change. All newly spawned threads would be traced with the
+  ///     trace id of the process.
   ///     Now if the StopTrace API is called for the whole process,
   ///     thread A will not be stopped and must be stopped separately.
   //------------------------------------------------------------------

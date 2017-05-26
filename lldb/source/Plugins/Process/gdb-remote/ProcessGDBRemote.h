@@ -31,6 +31,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StreamGDBRemote.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "lldb/Utility/StringList.h"
@@ -176,6 +177,21 @@ public:
   Status DisableWatchpoint(Watchpoint *wp, bool notify = true) override;
 
   Status GetWatchpointSupportInfo(uint32_t &num) override;
+
+  lldb::user_id_t StartTrace(const TraceOptions &options,
+                             Status &error) override;
+
+  Status StopTrace(lldb::user_id_t uid, lldb::tid_t thread_id) override;
+
+  Status GetData(lldb::user_id_t uid, lldb::tid_t thread_id,
+                 llvm::MutableArrayRef<uint8_t> &buffer,
+                 size_t offset = 0) override;
+
+  Status GetMetaData(lldb::user_id_t uid, lldb::tid_t thread_id,
+                     llvm::MutableArrayRef<uint8_t> &buffer,
+                     size_t offset = 0) override;
+
+  Status GetTraceConfig(lldb::user_id_t uid, TraceOptions &options) override;
 
   Status GetWatchpointSupportInfo(uint32_t &num, bool &after) override;
 

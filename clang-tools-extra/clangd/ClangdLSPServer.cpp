@@ -199,6 +199,7 @@ ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, bool RunSynchronously)
     : Out(Out),
       Server(llvm::make_unique<DirectoryBasedGlobalCompilationDatabase>(),
              llvm::make_unique<LSPDiagnosticsConsumer>(*this),
+             llvm::make_unique<RealFileSystemProvider>(),
              RunSynchronously) {}
 
 void ClangdLSPServer::run(std::istream &In) {
