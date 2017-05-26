@@ -1921,19 +1921,17 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                                          MaxRecurse))
       return V;
 
-  // (A & C)|(B & D)
-  Value *C = nullptr, *D = nullptr;
-  if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
-      match(Op1, m_And(m_Value(B), m_Value(D)))) {
-    ConstantInt *C1 = dyn_cast<ConstantInt>(C);
-    ConstantInt *C2 = dyn_cast<ConstantInt>(D);
-    if (C1 && C2 && (C1->getValue() == ~C2->getValue())) {
+  // (A & C1)|(B & C2)
+  ConstantInt *C1, *C2;
+  if (match(Op0, m_And(m_Value(A), m_ConstantInt(C1))) &&
+      match(Op1, m_And(m_Value(B), m_ConstantInt(C2)))) {
+    if (C1->getValue() == ~C2->getValue()) {
       // (A & C1)|(B & C2)
       // If we have: ((V + N) & C1) | (V & C2)
       // .. and C2 = ~C1 and C2 is 0+1+ and (N & C2) == 0
       // replace with V+N.
       Value *V1, *V2;
-      if ((C2->getValue() & (C2->getValue() + 1)) == 0 && // C2 == 0+1+
+      if (C2->getValue().isMask() && // C2 == 0+1+
           match(A, m_Add(m_Value(V1), m_Value(V2)))) {
         // Add commutes, try both ways.
         if (V1 == B &&
@@ -1944,7 +1942,7 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
           return A;
       }
       // Or commutes, try both ways.
-      if ((C1->getValue() & (C1->getValue() + 1)) == 0 &&
+      if (C1->getValue().isMask() &&
           match(B, m_Add(m_Value(V1), m_Value(V2)))) {
         // Add commutes, try both ways.
         if (V1 == A &&

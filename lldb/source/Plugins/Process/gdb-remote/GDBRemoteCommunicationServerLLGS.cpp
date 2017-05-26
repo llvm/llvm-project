@@ -183,6 +183,22 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       StringExtractorGDBRemote::eServerPacketType_QPassSignals,
       &GDBRemoteCommunicationServerLLGS::Handle_QPassSignals);
 
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jTraceStart,
+      &GDBRemoteCommunicationServerLLGS::Handle_jTraceStart);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jTraceBufferRead,
+      &GDBRemoteCommunicationServerLLGS::Handle_jTraceRead);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jTraceMetaRead,
+      &GDBRemoteCommunicationServerLLGS::Handle_jTraceRead);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jTraceStop,
+      &GDBRemoteCommunicationServerLLGS::Handle_jTraceStop);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jTraceConfigRead,
+      &GDBRemoteCommunicationServerLLGS::Handle_jTraceConfigRead);
+
   RegisterPacketHandler(StringExtractorGDBRemote::eServerPacketType_k,
                         [this](StringExtractorGDBRemote packet, Status &error,
                                bool &interrupt, bool &quit) {
@@ -1081,6 +1097,232 @@ void GDBRemoteCommunicationServerLLGS::SendProcessOutput() {
       return;
     }
   }
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jTraceStart(
+    StringExtractorGDBRemote &packet) {
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
+  // Fail if we don't have a current process.
+  if (!m_debugged_process_sp ||
+      (m_debugged_process_sp->GetID() == LLDB_INVALID_PROCESS_ID))
+    return SendErrorResponse(68);
+
+  if (!packet.ConsumeFront("jTraceStart:"))
+    return SendIllFormedResponse(packet, "jTraceStart: Ill formed packet ");
+
+  TraceOptions options;
+  uint64_t type = std::numeric_limits<uint64_t>::max();
+  uint64_t buffersize = std::numeric_limits<uint64_t>::max();
+  lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
+  uint64_t metabuffersize = std::numeric_limits<uint64_t>::max();
+
+  auto json_object = StructuredData::ParseJSON(packet.Peek());
+
+  if (!json_object ||
+      json_object->GetType() != StructuredData::Type::eTypeDictionary)
+    return SendIllFormedResponse(packet, "jTraceStart: Ill formed packet ");
+
+  auto json_dict = json_object->GetAsDictionary();
+
+  json_dict->GetValueForKeyAsInteger<uint64_t>("metabuffersize",
+                                               metabuffersize);
+  options.setMetaDataBufferSize(metabuffersize);
+
+  json_dict->GetValueForKeyAsInteger<uint64_t>("buffersize", buffersize);
+  options.setTraceBufferSize(buffersize);
+
+  json_dict->GetValueForKeyAsInteger<uint64_t>("type", type);
+  options.setType(static_cast<lldb::TraceType>(type));
+
+  json_dict->GetValueForKeyAsInteger<uint64_t>("threadid", tid);
+  options.setThreadID(tid);
+
+  StructuredData::ObjectSP custom_params_sp =
+      json_dict->GetValueForKey("params");
+  if (custom_params_sp &&
+      custom_params_sp->GetType() != StructuredData::Type::eTypeDictionary)
+    return SendIllFormedResponse(packet, "jTraceStart: Ill formed packet ");
+
+  options.setTraceParams(
+      static_pointer_cast<StructuredData::Dictionary>(custom_params_sp));
+
+  if (buffersize == std::numeric_limits<uint64_t>::max() ||
+      type != lldb::TraceType::eTraceTypeProcessorTrace) {
+    LLDB_LOG(log, "Ill formed packet buffersize = {0} type = {1}", buffersize,
+             type);
+    return SendIllFormedResponse(packet, "JTrace:start: Ill formed packet ");
+  }
+
+  Status error;
+  lldb::user_id_t uid = LLDB_INVALID_UID;
+  uid = m_debugged_process_sp->StartTrace(options, error);
+  LLDB_LOG(log, "uid is {0} , error is {1}", uid, error.GetError());
+  if (error.Fail())
+    return SendErrorResponse(error.GetError());
+
+  StreamGDBRemote response;
+  response.Printf("%" PRIx64, uid);
+  return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jTraceStop(
+    StringExtractorGDBRemote &packet) {
+  // Fail if we don't have a current process.
+  if (!m_debugged_process_sp ||
+      (m_debugged_process_sp->GetID() == LLDB_INVALID_PROCESS_ID))
+    return SendErrorResponse(68);
+
+  if (!packet.ConsumeFront("jTraceStop:"))
+    return SendIllFormedResponse(packet, "jTraceStop: Ill formed packet ");
+
+  lldb::user_id_t uid = LLDB_INVALID_UID;
+  lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
+
+  auto json_object = StructuredData::ParseJSON(packet.Peek());
+
+  if (!json_object ||
+      json_object->GetType() != StructuredData::Type::eTypeDictionary)
+    return SendIllFormedResponse(packet, "jTraceStop: Ill formed packet ");
+
+  auto json_dict = json_object->GetAsDictionary();
+
+  if (!json_dict->GetValueForKeyAsInteger<lldb::user_id_t>("traceid", uid))
+    return SendIllFormedResponse(packet, "jTraceStop: Ill formed packet ");
+
+  json_dict->GetValueForKeyAsInteger<lldb::tid_t>("threadid", tid);
+
+  Status error = m_debugged_process_sp->StopTrace(uid, tid);
+
+  if (error.Fail())
+    return SendErrorResponse(error.GetError());
+
+  return SendOKResponse();
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jTraceConfigRead(
+    StringExtractorGDBRemote &packet) {
+
+  // Fail if we don't have a current process.
+  if (!m_debugged_process_sp ||
+      (m_debugged_process_sp->GetID() == LLDB_INVALID_PROCESS_ID))
+    return SendErrorResponse(68);
+
+  if (!packet.ConsumeFront("jTraceConfigRead:"))
+    return SendIllFormedResponse(packet,
+                                 "jTraceConfigRead: Ill formed packet ");
+
+  lldb::user_id_t uid = LLDB_INVALID_UID;
+  lldb::tid_t threadid = LLDB_INVALID_THREAD_ID;
+
+  auto json_object = StructuredData::ParseJSON(packet.Peek());
+
+  if (!json_object ||
+      json_object->GetType() != StructuredData::Type::eTypeDictionary)
+    return SendIllFormedResponse(packet,
+                                 "jTraceConfigRead: Ill formed packet ");
+
+  auto json_dict = json_object->GetAsDictionary();
+
+  if (!json_dict->GetValueForKeyAsInteger<lldb::user_id_t>("traceid", uid))
+    return SendIllFormedResponse(packet,
+                                 "jTraceConfigRead: Ill formed packet ");
+
+  json_dict->GetValueForKeyAsInteger<lldb::tid_t>("threadid", threadid);
+
+  TraceOptions options;
+  StreamGDBRemote response;
+
+  options.setThreadID(threadid);
+  Status error = m_debugged_process_sp->GetTraceConfig(uid, options);
+
+  if (error.Fail())
+    return SendErrorResponse(error.GetError());
+
+  StreamGDBRemote escaped_response;
+  StructuredData::Dictionary json_packet;
+
+  json_packet.AddIntegerItem("type", options.getType());
+  json_packet.AddIntegerItem("buffersize", options.getTraceBufferSize());
+  json_packet.AddIntegerItem("metabuffersize", options.getMetaDataBufferSize());
+
+  StructuredData::DictionarySP custom_params = options.getTraceParams();
+  if (custom_params)
+    json_packet.AddItem("params", custom_params);
+
+  StreamString json_string;
+  json_packet.Dump(json_string, false);
+  escaped_response.PutEscapedBytes(json_string.GetData(),
+                                   json_string.GetSize());
+  return SendPacketNoLock(escaped_response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jTraceRead(
+    StringExtractorGDBRemote &packet) {
+
+  // Fail if we don't have a current process.
+  if (!m_debugged_process_sp ||
+      (m_debugged_process_sp->GetID() == LLDB_INVALID_PROCESS_ID))
+    return SendErrorResponse(68);
+
+  enum PacketType { MetaData, BufferData };
+  PacketType tracetype = MetaData;
+
+  if (packet.ConsumeFront("jTraceBufferRead:"))
+    tracetype = BufferData;
+  else if (packet.ConsumeFront("jTraceMetaRead:"))
+    tracetype = MetaData;
+  else {
+    return SendIllFormedResponse(packet, "jTrace: Ill formed packet ");
+  }
+
+  lldb::user_id_t uid = LLDB_INVALID_UID;
+
+  size_t byte_count = std::numeric_limits<size_t>::max();
+  lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
+  size_t offset = std::numeric_limits<size_t>::max();
+
+  auto json_object = StructuredData::ParseJSON(packet.Peek());
+
+  if (!json_object ||
+      json_object->GetType() != StructuredData::Type::eTypeDictionary)
+    return SendIllFormedResponse(packet, "jTrace: Ill formed packet ");
+
+  auto json_dict = json_object->GetAsDictionary();
+
+  if (!json_dict->GetValueForKeyAsInteger<lldb::user_id_t>("traceid", uid) ||
+      !json_dict->GetValueForKeyAsInteger<uint64_t>("offset", offset) ||
+      !json_dict->GetValueForKeyAsInteger<uint64_t>("buffersize", byte_count))
+    return SendIllFormedResponse(packet, "jTrace: Ill formed packet ");
+
+  json_dict->GetValueForKeyAsInteger<lldb::tid_t>("threadid", tid);
+
+  // Allocate the response buffer.
+  uint8_t *buffer = new (std::nothrow) uint8_t[byte_count];
+  if (buffer == nullptr)
+    return SendErrorResponse(0x78);
+
+  StreamGDBRemote response;
+  Status error;
+  llvm::MutableArrayRef<uint8_t> buf(buffer, byte_count);
+
+  if (tracetype == BufferData)
+    error = m_debugged_process_sp->GetData(uid, tid, buf, offset);
+  else if (tracetype == MetaData)
+    error = m_debugged_process_sp->GetMetaData(uid, tid, buf, offset);
+
+  if (error.Fail())
+    return SendErrorResponse(error.GetError());
+
+  for (size_t i = 0; i < buf.size(); ++i)
+    response.PutHex8(buf[i]);
+
+  StreamGDBRemote escaped_response;
+  escaped_response.PutEscapedBytes(response.GetData(), response.GetSize());
+  return SendPacketNoLock(escaped_response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult

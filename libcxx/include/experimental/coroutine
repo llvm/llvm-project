@@ -27,12 +27,12 @@ class coroutine_traits;
 template <typename Promise = void>
 class coroutine_handle;
 // 18.11.2.7 comparison operators:
-bool operator==(coroutine_handle<> x, coroutine_handle<> y) noexcept;
-bool operator!=(coroutine_handle<> x, coroutine_handle<> y) noexcept;
-bool operator<(coroutine_handle<> x, coroutine_handle<> y) noexcept;
-bool operator<=(coroutine_handle<> x, coroutine_handle<> y) noexcept;
-bool operator>=(coroutine_handle<> x, coroutine_handle<> y) noexcept;
-bool operator>(coroutine_handle<> x, coroutine_handle<> y) noexcept;
+bool operator==(coroutine_handle<> x, coroutine_handle<> y) _NOEXCEPT;
+bool operator!=(coroutine_handle<> x, coroutine_handle<> y) _NOEXCEPT;
+bool operator<(coroutine_handle<> x, coroutine_handle<> y) _NOEXCEPT;
+bool operator<=(coroutine_handle<> x, coroutine_handle<> y) _NOEXCEPT;
+bool operator>=(coroutine_handle<> x, coroutine_handle<> y) _NOEXCEPT;
+bool operator>(coroutine_handle<> x, coroutine_handle<> y) _NOEXCEPT;
 // 18.11.3 trivial awaitables
 struct suspend_never;
 struct suspend_always;
@@ -94,22 +94,22 @@ template <>
 class _LIBCPP_TEMPLATE_VIS coroutine_handle<void> {
 public:
     _LIBCPP_ALWAYS_INLINE
-    constexpr coroutine_handle() noexcept : __handle_(nullptr) {}
+    _LIBCPP_CONSTEXPR coroutine_handle() _NOEXCEPT : __handle_(nullptr) {}
 
     _LIBCPP_ALWAYS_INLINE
-    constexpr coroutine_handle(nullptr_t) noexcept : __handle_(nullptr) {}
+    _LIBCPP_CONSTEXPR coroutine_handle(nullptr_t) _NOEXCEPT : __handle_(nullptr) {}
 
     _LIBCPP_ALWAYS_INLINE
-    coroutine_handle& operator=(nullptr_t) noexcept {
+    coroutine_handle& operator=(nullptr_t) _NOEXCEPT {
         __handle_ = nullptr;
         return *this;
     }
 
     _LIBCPP_ALWAYS_INLINE
-    constexpr void* address() const noexcept { return __handle_; }
+    _LIBCPP_CONSTEXPR void* address() const _NOEXCEPT { return __handle_; }
 
     _LIBCPP_ALWAYS_INLINE
-    constexpr explicit operator bool() const noexcept { return __handle_; }
+    _LIBCPP_CONSTEXPR explicit operator bool() const _NOEXCEPT { return __handle_; }
 
     _LIBCPP_ALWAYS_INLINE
     void operator()() { resume(); }
@@ -139,14 +139,14 @@ public:
 
 public:
     _LIBCPP_ALWAYS_INLINE
-    static coroutine_handle from_address(void* __addr) noexcept {
+    static coroutine_handle from_address(void* __addr) _NOEXCEPT {
         coroutine_handle __tmp;
         __tmp.__handle_ = __addr;
         return __tmp;
     }
 
 private:
-  bool __is_suspended() const noexcept  {
+  bool __is_suspended() const _NOEXCEPT  {
     // FIXME actually implement a check for if the coro is suspended.
     return __handle_;
   }
@@ -157,27 +157,27 @@ private:
 
 // 18.11.2.7 comparison operators:
 inline _LIBCPP_ALWAYS_INLINE
-bool operator==(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
+bool operator==(coroutine_handle<> __x, coroutine_handle<> __y) _NOEXCEPT {
     return __x.address() == __y.address();
 }
 inline _LIBCPP_ALWAYS_INLINE
-bool operator!=(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
+bool operator!=(coroutine_handle<> __x, coroutine_handle<> __y) _NOEXCEPT {
     return !(__x == __y);
 }
 inline _LIBCPP_ALWAYS_INLINE
-bool operator<(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
+bool operator<(coroutine_handle<> __x, coroutine_handle<> __y) _NOEXCEPT {
     return less<void*>()(__x.address(), __y.address());
 }
 inline _LIBCPP_ALWAYS_INLINE
-bool operator>(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
+bool operator>(coroutine_handle<> __x, coroutine_handle<> __y) _NOEXCEPT {
     return __y < __x;
 }
 inline _LIBCPP_ALWAYS_INLINE
-bool operator<=(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
+bool operator<=(coroutine_handle<> __x, coroutine_handle<> __y) _NOEXCEPT {
     return !(__x > __y);
 }
 inline _LIBCPP_ALWAYS_INLINE
-bool operator>=(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
+bool operator>=(coroutine_handle<> __x, coroutine_handle<> __y) _NOEXCEPT {
     return !(__x < __y);
 }
 
@@ -185,11 +185,15 @@ template <typename _Promise>
 class _LIBCPP_TEMPLATE_VIS coroutine_handle : public coroutine_handle<> {
     using _Base = coroutine_handle<>;
 public:
+#ifndef _LIBCPP_CXX03_LANG
     // 18.11.2.1 construct/reset
     using coroutine_handle<>::coroutine_handle;
-
+#else
+    _LIBCPP_ALWAYS_INLINE coroutine_handle() _NOEXCEPT : _Base() {}
+    _LIBCPP_ALWAYS_INLINE coroutine_handle(nullptr_t) _NOEXCEPT : _Base(nullptr) {}
+#endif
     _LIBCPP_INLINE_VISIBILITY
-    coroutine_handle& operator=(nullptr_t) noexcept {
+    coroutine_handle& operator=(nullptr_t) _NOEXCEPT {
         _Base::operator=(nullptr);
         return *this;
     }
@@ -197,42 +201,42 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     _Promise& promise() const {
         return *reinterpret_cast<_Promise*>(
-            __builtin_coro_promise(this->__handle_, alignof(_Promise), false));
+            __builtin_coro_promise(this->__handle_, __alignof(_Promise), false));
     }
 
 public:
     _LIBCPP_ALWAYS_INLINE
-    static coroutine_handle from_address(void* __addr) noexcept {
+    static coroutine_handle from_address(void* __addr) _NOEXCEPT {
         coroutine_handle __tmp;
         __tmp.__handle_ = __addr;
         return __tmp;
     }
 
     _LIBCPP_ALWAYS_INLINE
-    static coroutine_handle from_promise(_Promise& __promise) noexcept {
+    static coroutine_handle from_promise(_Promise& __promise) _NOEXCEPT {
         coroutine_handle __tmp;
         __tmp.__handle_ = __builtin_coro_promise(_VSTD::addressof(__promise),
-                                                 alignof(_Promise), true);
+                                                 __alignof(_Promise), true);
         return __tmp;
     }
 };
 
 struct _LIBCPP_TYPE_VIS suspend_never {
   _LIBCPP_ALWAYS_INLINE
-  bool await_ready() const noexcept { return true; }
+  bool await_ready() const _NOEXCEPT { return true; }
   _LIBCPP_ALWAYS_INLINE
-  void await_suspend(coroutine_handle<>) const noexcept {}
+  void await_suspend(coroutine_handle<>) const _NOEXCEPT {}
   _LIBCPP_ALWAYS_INLINE
-  void await_resume() const noexcept {}
+  void await_resume() const _NOEXCEPT {}
 };
 
 struct _LIBCPP_TYPE_VIS suspend_always {
   _LIBCPP_ALWAYS_INLINE
-  bool await_ready() const noexcept { return false; }
+  bool await_ready() const _NOEXCEPT { return false; }
   _LIBCPP_ALWAYS_INLINE
-  void await_suspend(coroutine_handle<>) const noexcept {}
+  void await_suspend(coroutine_handle<>) const _NOEXCEPT {}
   _LIBCPP_ALWAYS_INLINE
-  void await_resume() const noexcept {}
+  void await_resume() const _NOEXCEPT {}
 };
 
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL_COROUTINES
@@ -243,8 +247,8 @@ template <class _Tp>
 struct hash<_VSTD_CORO::coroutine_handle<_Tp> > {
     using __arg_type = _VSTD_CORO::coroutine_handle<_Tp>;
     _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(__arg_type const& __v) const noexcept
-    {return hash<void*>{}(__v.address());}
+    size_t operator()(__arg_type const& __v) const _NOEXCEPT
+    {return hash<void*>()(__v.address());}
 };
 
 _LIBCPP_END_NAMESPACE_STD

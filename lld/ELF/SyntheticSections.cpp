@@ -1778,11 +1778,10 @@ void GdbIndexSection::readDwarf(InputSection *Sec) {
     std::tie(IsNew, Sym) = SymbolTable.add(Hash, Offset);
     if (IsNew) {
       Sym->CuVectorIndex = CuVectors.size();
-      CuVectors.push_back({{CuId, Pair.second}});
-      continue;
+      CuVectors.push_back({});
     }
 
-    CuVectors[Sym->CuVectorIndex].push_back({CuId, Pair.second});
+    CuVectors[Sym->CuVectorIndex].insert((Pair.second << 24) | (uint32_t)CuId);
   }
 }
 
@@ -1806,7 +1805,7 @@ void GdbIndexSection::finalizeContents() {
   ConstantPoolOffset =
       SymTabOffset + SymbolTable.getCapacity() * SymTabEntrySize;
 
-  for (std::vector<std::pair<uint32_t, uint8_t>> &CuVec : CuVectors) {
+  for (std::set<uint32_t> &CuVec : CuVectors) {
     CuVectorsOffset.push_back(CuVectorsSize);
     CuVectorsSize += OffsetTypeSize * (CuVec.size() + 1);
   }
@@ -1859,14 +1858,11 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
   }
 
   // Write the CU vectors into the constant pool.
-  for (std::vector<std::pair<uint32_t, uint8_t>> &CuVec : CuVectors) {
+  for (std::set<uint32_t> &CuVec : CuVectors) {
     write32le(Buf, CuVec.size());
     Buf += 4;
-    for (std::pair<uint32_t, uint8_t> &P : CuVec) {
-      uint32_t Index = P.first;
-      uint8_t Flags = P.second;
-      Index |= Flags << 24;
-      write32le(Buf, Index);
+    for (uint32_t Val : CuVec) {
+      write32le(Buf, Val);
       Buf += 4;
     }
   }
