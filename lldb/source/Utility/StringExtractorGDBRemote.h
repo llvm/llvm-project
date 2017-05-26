@@ -164,6 +164,12 @@ public:
     eServerPacketType__M,
     eServerPacketType__m,
     eServerPacketType_notify, // '%' notification
+
+    eServerPacketType_jTraceStart,
+    eServerPacketType_jTraceBufferRead,
+    eServerPacketType_jTraceMetaRead,
+    eServerPacketType_jTraceStop,
+    eServerPacketType_jTraceConfigRead,
   };
 
   ServerPacketType GetServerPacketType() const;

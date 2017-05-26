@@ -189,6 +189,14 @@ protected:
 
   PacketResult Handle_QSaveRegisterState(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_jTraceStart(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_jTraceRead(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_jTraceStop(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_jTraceConfigRead(StringExtractorGDBRemote &packet);
+
   PacketResult Handle_QRestoreRegisterState(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_vAttach(StringExtractorGDBRemote &packet);

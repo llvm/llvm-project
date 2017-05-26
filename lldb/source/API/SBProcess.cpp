@@ -363,10 +363,9 @@ lldb::SBTrace SBProcess::StartTrace(SBTraceOptions &options,
   if (!process_sp) {
     error.SetErrorString("invalid process");
   } else {
-
-    uid = process_sp->StartTrace(options.m_traceoptions_sp, error.ref());
+    uid = process_sp->StartTrace(*(options.m_traceoptions_sp), error.ref());
     trace_instance.SetTraceUID(uid);
-    LLDB_LOG(log, "SBProcess::returned uid - %" PRIx64, uid);
+    LLDB_LOG(log, "SBProcess::returned uid - {0}", uid);
   }
   return trace_instance;
 }

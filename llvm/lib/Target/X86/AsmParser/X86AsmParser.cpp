@@ -1316,16 +1316,17 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
   while (!Done) {
     bool UpdateLocLex = true;
 
+    AsmToken::TokenKind TK = getLexer().getKind();
     // The period in the dot operator (e.g., [ebx].foo.bar) is parsed as an
     // identifier.  Don't try an parse it as a register.
-    if (PrevTK != AsmToken::Error && Tok.getString().startswith("."))
+    if (PrevTK != AsmToken::Error && Tok.getString().startswith(".") &&
+        TK != AsmToken::Identifier)
       break;
 
     // If we're parsing an immediate expression, we don't expect a '['.
     if (SM.getStopOnLBrac() && getLexer().getKind() == AsmToken::LBrac)
       break;
 
-    AsmToken::TokenKind TK = getLexer().getKind();
     switch (TK) {
     default: {
       if (SM.isValidEndState()) {

@@ -1132,6 +1132,10 @@ ProcessMessage ProcessMonitor::MonitorSIGTRAP(ProcessMonitor *monitor,
 
   case 0:
   case TRAP_TRACE:
+#ifdef TRAP_CAP
+  // Map TRAP_CAP to a trace trap in the absense of a more specific handler.
+  case TRAP_CAP:
+#endif
     if (log)
       log->Printf("ProcessMonitor::%s() received trace event, tid = %" PRIu64
                   "  : si_code = %d",

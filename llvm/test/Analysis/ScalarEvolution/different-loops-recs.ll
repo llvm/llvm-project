@@ -220,7 +220,8 @@ exit:
 
 ; Mix of previous use cases that demonstrates %s3 can be incorrectly treated as
 ; a recurrence of loop1 because of operands order if we pick recurrencies in an
-; incorrect order.
+; incorrect order. It also shows that we cannot safely fold v1 (SCEVUnknown)
+; because we cannot prove for sure that it doesn't use Phis of loop 2.
 
 define void @test_03(i32 %a, i32 %b, i32 %c, i32* %p) {
 
@@ -228,9 +229,9 @@ define void @test_03(i32 %a, i32 %b, i32 %c, i32* %p) {
 ; CHECK:       %v1 = load i32, i32* %p
 ; CHECK-NEXT:  -->  %v1
 ; CHECK:       %s1 = add i32 %phi1, %v1
-; CHECK-NEXT:  -->  {(%a + %v1),+,1}<%loop1>
+; CHECK-NEXT:  -->  ({%a,+,1}<%loop1> + %v1)
 ; CHECK:       %s2 = add i32 %s1, %b
-; CHECK-NEXT:  -->  {(%a + %b + %v1),+,1}<%loop1>
+; CHECK-NEXT:  -->  ({(%a + %b),+,1}<%loop1> + %v1)
 ; CHECK:       %s3 = add i32 %s2, %phi2
 ; CHECK-NEXT:  -->  ({{{{}}((2 * %a) + %b),+,1}<%loop1>,+,2}<%loop2> + %v1)
 
@@ -450,5 +451,62 @@ exit:
   %s4 = add i32 %phi3, %phi1
   %s5 = add i32 %phi2, %phi3
   %s6 = add i32 %phi3, %phi2
+  ret void
+}
+
+; Make sure that a complicated Phi does not get folded with rec's start value
+; of a loop which is above.
+define void @test_08() {
+
+; CHECK-LABEL: Classifying expressions for: @test_08
+; CHECK:       %tmp11 = add i64 %iv.2.2, %iv.2.1
+; CHECK-NEXT:  -->  ({0,+,-1}<nsw><%loop_2> + %iv.2.1)
+; CHECK:       %tmp12 = trunc i64 %tmp11 to i32
+; CHECK-NEXT:  -->  (trunc i64 ({0,+,-1}<nsw><%loop_2> + %iv.2.1) to i32)
+; CHECK:       %tmp14 = mul i32 %tmp12, %tmp7
+; CHECK-NEXT:  -->  ((trunc i64 ({0,+,-1}<nsw><%loop_2> + %iv.2.1) to i32) * {-1,+,-1}<%loop_1>)
+; CHECK:       %tmp16 = mul i64 %iv.2.1, %iv.1.1
+; CHECK-NEXT:  -->  ({2,+,1}<nuw><nsw><%loop_1> * %iv.2.1)
+
+entry:
+  br label %loop_1
+
+loop_1:
+  %iv.1.1 = phi i64 [ 2, %entry ], [ %iv.1.1.next, %loop_1_back_branch ]
+  %iv.1.2 = phi i32 [ -1, %entry ], [ %iv.1.2.next, %loop_1_back_branch ]
+  br label %loop_1_exit
+
+dead:
+  br label %loop_1_exit
+
+loop_1_exit:
+  %tmp5 = icmp sgt i64 %iv.1.1, 2
+  br i1 %tmp5, label %loop_2_preheader, label %loop_1_back_branch
+
+loop_1_back_branch:
+  %iv.1.1.next = add nuw nsw i64 %iv.1.1, 1
+  %iv.1.2.next = add nsw i32 %iv.1.2, 1
+  br label %loop_1
+
+loop_2_preheader:
+  %tmp6 = sub i64 1, %iv.1.1
+  %tmp7 = trunc i64 %tmp6 to i32
+  br label %loop_2
+
+loop_2:
+  %iv.2.1 = phi i64 [ 0, %loop_2_preheader ], [ %tmp16, %loop_2 ]
+  %iv.2.2 = phi i64 [ 0, %loop_2_preheader ], [ %iv.2.2.next, %loop_2 ]
+  %iv.2.3 = phi i64 [ 2, %loop_2_preheader ], [ %iv.2.3.next, %loop_2 ]
+  %tmp11 = add i64 %iv.2.2, %iv.2.1
+  %tmp12 = trunc i64 %tmp11 to i32
+  %tmp14 = mul i32 %tmp12, %tmp7
+  %tmp16 = mul i64 %iv.2.1, %iv.1.1
+  %iv.2.3.next = add nuw nsw i64 %iv.2.3, 1
+  %iv.2.2.next = add nsw i64 %iv.2.2, -1
+  %tmp17 = icmp slt i64 %iv.2.3.next, %iv.1.1
+  br i1 %tmp17, label %loop_2, label %exit
+
+exit:
+  %tmp10 = add i32 %iv.1.2, 3
   ret void
 }

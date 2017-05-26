@@ -280,6 +280,15 @@ uint64_t StringExtractor::GetHexMaxU64(bool little_endian,
   return result;
 }
 
+bool StringExtractor::ConsumeFront(const llvm::StringRef &str) {
+  llvm::StringRef S = GetStringRef();
+  if (!S.startswith(str))
+    return false;
+  else
+    m_index += str.size();
+  return true;
+}
+
 size_t StringExtractor::GetHexBytes(llvm::MutableArrayRef<uint8_t> dest,
                                     uint8_t fail_fill_value) {
   size_t bytes_extracted = 0;

@@ -50,6 +50,17 @@ public:
                                   std::vector<DiagWithFixIts> Diagnostics) = 0;
 };
 
+class FileSystemProvider {
+public:
+  virtual ~FileSystemProvider() = default;
+  virtual IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() = 0;
+};
+
+class RealFileSystemProvider : public FileSystemProvider {
+public:
+  IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override;
+};
+
 class ClangdServer;
 
 /// Handles running WorkerRequests of ClangdServer on a separate threads.
@@ -94,6 +105,7 @@ class ClangdServer {
 public:
   ClangdServer(std::unique_ptr<GlobalCompilationDatabase> CDB,
                std::unique_ptr<DiagnosticsConsumer> DiagConsumer,
+               std::unique_ptr<FileSystemProvider> FSProvider,
                bool RunSynchronously);
 
   /// Add a \p File to the list of tracked C++ files or update the contents if
@@ -104,6 +116,8 @@ public:
   /// Remove \p File from list of tracked files, schedule a request to free
   /// resources associated with it.
   void removeDocument(PathRef File);
+  /// Force \p File to be reparsed using the latest contents.
+  void forceReparse(PathRef File);
 
   /// Run code completion for \p File at \p Pos.
   std::vector<CompletionItem> codeComplete(PathRef File, Position Pos);
@@ -129,6 +143,7 @@ public:
 private:
   std::unique_ptr<GlobalCompilationDatabase> CDB;
   std::unique_ptr<DiagnosticsConsumer> DiagConsumer;
+  std::unique_ptr<FileSystemProvider> FSProvider;
   DraftStore DraftMgr;
   ClangdUnitStore Units;
   std::shared_ptr<PCHContainerOperations> PCHs;

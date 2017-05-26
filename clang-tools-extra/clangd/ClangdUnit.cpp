@@ -11,6 +11,7 @@
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/Utils.h"
 #include "clang/Tooling/CompilationDatabase.h"
 
 using namespace clang::clangd;
@@ -18,7 +19,8 @@ using namespace clang;
 
 ClangdUnit::ClangdUnit(PathRef FileName, StringRef Contents,
                        std::shared_ptr<PCHContainerOperations> PCHs,
-                       std::vector<tooling::CompileCommand> Commands)
+                       std::vector<tooling::CompileCommand> Commands,
+                       IntrusiveRefCntPtr<vfs::FileSystem> VFS)
     : FileName(FileName), PCHs(PCHs) {
   assert(!Commands.empty() && "No compile commands provided");
 
@@ -48,10 +50,16 @@ ClangdUnit::ClangdUnit(PathRef FileName, StringRef Contents,
       /*PrecompilePreambleAfterNParses=*/1, /*TUKind=*/TU_Prefix,
       /*CacheCodeCompletionResults=*/true,
       /*IncludeBriefCommentsInCodeCompletion=*/true,
-      /*AllowPCHWithCompilerErrors=*/true));
+      /*AllowPCHWithCompilerErrors=*/true,
+      /*SkipFunctionBodies=*/false,
+      /*UserFilesAreVolatile=*/false, /*ForSerialization=*/false,
+      /*ModuleFormat=*/llvm::None,
+      /*ErrAST=*/nullptr, VFS));
+  assert(Unit && "Unit wasn't created");
 }
 
-void ClangdUnit::reparse(StringRef Contents) {
+void ClangdUnit::reparse(StringRef Contents,
+                         IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   // Do a reparse if this wasn't the first parse.
   // FIXME: This might have the wrong working directory if it changed in the
   // meantime.
@@ -59,7 +67,7 @@ void ClangdUnit::reparse(StringRef Contents) {
       FileName,
       llvm::MemoryBuffer::getMemBufferCopy(Contents, FileName).release());
 
-  Unit->Reparse(PCHs, RemappedSource);
+  Unit->Reparse(PCHs, RemappedSource, VFS);
 }
 
 namespace {
@@ -146,8 +154,9 @@ public:
 };
 } // namespace
 
-std::vector<CompletionItem> ClangdUnit::codeComplete(StringRef Contents,
-                                                     Position Pos) {
+std::vector<CompletionItem>
+ClangdUnit::codeComplete(StringRef Contents, Position Pos,
+                         IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   CodeCompleteOptions CCO;
   CCO.IncludeBriefComments = 1;
   // This is where code completion stores dirty buffers. Need to free after
@@ -163,8 +172,10 @@ std::vector<CompletionItem> ClangdUnit::codeComplete(StringRef Contents,
       FileName,
       llvm::MemoryBuffer::getMemBufferCopy(Contents, FileName).release());
 
+  IntrusiveRefCntPtr<FileManager> FileMgr(
+      new FileManager(Unit->getFileSystemOpts(), VFS));
   IntrusiveRefCntPtr<SourceManager> SourceMgr(
-      new SourceManager(*DiagEngine, Unit->getFileManager()));
+      new SourceManager(*DiagEngine, *FileMgr));
   // CodeComplete seems to require fresh LangOptions.
   LangOptions LangOpts = Unit->getLangOpts();
   // The language server protocol uses zero-based line and column numbers.
@@ -172,8 +183,8 @@ std::vector<CompletionItem> ClangdUnit::codeComplete(StringRef Contents,
   Unit->CodeComplete(FileName, Pos.line + 1, Pos.character + 1, RemappedSource,
                      CCO.IncludeMacros, CCO.IncludeCodePatterns,
                      CCO.IncludeBriefComments, Collector, PCHs, *DiagEngine,
-                     LangOpts, *SourceMgr, Unit->getFileManager(),
-                     StoredDiagnostics, OwnedBuffers);
+                     LangOpts, *SourceMgr, *FileMgr, StoredDiagnostics,
+                     OwnedBuffers);
   for (const llvm::MemoryBuffer *Buffer : OwnedBuffers)
     delete Buffer;
   return Items;
