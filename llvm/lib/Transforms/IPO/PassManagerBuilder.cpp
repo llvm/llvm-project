@@ -913,6 +913,12 @@ void PassManagerBuilder::populateLTOPassManager(legacy::PassManagerBase &PM) {
 
   if (OptLevel != 0)
     addLTOOptimizationPasses(PM);
+  else {
+    // The whole-program-devirt pass needs to run at -O0 because only it knows
+    // about the llvm.type.checked.load intrinsic: it needs to both lower the
+    // intrinsic itself and handle it in the summary.
+    PM.add(createWholeProgramDevirtPass(ExportSummary, nullptr));
+  }
 
   // Create a function that performs CFI checks for cross-DSO calls with targets
   // in the current module.

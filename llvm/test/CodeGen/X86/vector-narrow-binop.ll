@@ -22,17 +22,17 @@ define <8 x i32> @PR32790(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d
 ;
 ; AVX1-LABEL: PR32790:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
-; AVX1-NEXT:    vpaddd %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
-; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm2
-; AVX1-NEXT:    vpsubd %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm1
+; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm1
+; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm2, %xmm4, %xmm1
+; AVX1-NEXT:    vpsubd %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR32790:
@@ -60,46 +60,17 @@ define <8 x i32> @PR32790(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d
 define <4 x i32> @do_not_use_256bit_op(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; SSE-LABEL: do_not_use_256bit_op:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pand %xmm3, %xmm1
 ; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm3, %xmm1
 ; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: do_not_use_256bit_op:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    # kill: %XMM2<def> %XMM2<kill> %YMM2<def>
-; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm1
-; AVX1-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: do_not_use_256bit_op:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    # kill: %XMM2<def> %XMM2<kill> %YMM2<def>
-; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm1
-; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: do_not_use_256bit_op:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    # kill: %XMM2<def> %XMM2<kill> %YMM2<def>
-; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm1
-; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX-LABEL: do_not_use_256bit_op:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %concat1 = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %concat2 = shufflevector <4 x i32> %c, <4 x i32> %d, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %and = and <8 x i32> %concat1, %concat2

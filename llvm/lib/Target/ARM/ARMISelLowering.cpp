@@ -12147,12 +12147,6 @@ EVT ARMTargetLowering::getOptimalMemOpType(uint64_t Size,
     }
   }
 
-  // Lowering to i32/i16 if the size permits.
-  if (Size >= 4)
-    return MVT::i32;
-  else if (Size >= 2)
-    return MVT::i16;
-
   // Let the target-independent logic figure it out.
   return MVT::Other;
 }

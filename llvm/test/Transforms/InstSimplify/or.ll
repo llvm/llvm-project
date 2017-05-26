@@ -159,7 +159,7 @@ define i399 @test4_apint(i399 %V, i399 %M) {
     %A = add i399 %V, %N
     %B = and i399 %A, %C1
     %D = and i399 %V, 274877906943
-    %R = or i399 %B, %D
+    %R = or i399 %D, %B
     ret i399 %R
 }
 
@@ -179,3 +179,42 @@ define i117 @test6_apint(i117 %X) {
     ret i117 %Y
 }
 
+; Test the case where integer BitWidth <= 64 && BitWidth % 2 != 0.
+; Vector version of test1_apint with the add commuted
+define <2 x i39> @test7_apint(<2 x i39> %V, <2 x i39> %M) {
+; CHECK-LABEL: @test7_apint(
+; CHECK-NEXT:    [[N:%.*]] = and <2 x i39> [[M:%.*]], <i39 -274877906944, i39 -274877906944>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i39> [[N]], [[V:%.*]]
+; CHECK-NEXT:    ret <2 x i39> [[A]]
+;
+  ;; If we have: ((V + N) & C1) | (V & C2)
+  ;; .. and C2 = ~C1 and C2 is 0+1+ and (N & C2) == 0
+  ;; replace with V+N.
+  %C1 = xor <2 x i39> <i39 274877906943, i39 274877906943>, <i39 -1, i39 -1> ;; C2 = 274877906943
+  %N = and <2 x i39> %M, <i39 274877906944, i39 274877906944>
+  %A = add <2 x i39> %N, %V
+  %B = and <2 x i39> %A, %C1
+  %D = and <2 x i39> %V, <i39 274877906943, i39 274877906943>
+  %R = or <2 x i39> %B, %D
+  ret <2 x i39> %R
+}
+
+; Test the case where Integer BitWidth > 64 && BitWidth <= 1024.
+; Vector version of test4_apint with the add and the or commuted
+define <2 x i399> @test8_apint(<2 x i399> %V, <2 x i399> %M) {
+; CHECK-LABEL: @test8_apint(
+; CHECK-NEXT:    [[N:%.*]] = and <2 x i399> [[M:%.*]], <i399 18446742974197923840, i399 18446742974197923840>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i399> [[N]], [[V:%.*]]
+; CHECK-NEXT:    ret <2 x i399> [[A]]
+;
+  ;; If we have: ((V + N) & C1) | (V & C2)
+  ;; .. and C2 = ~C1 and C2 is 0+1+ and (N & C2) == 0
+  ;; replace with V+N.
+  %C1 = xor <2 x i399> <i399 274877906943, i399 274877906943>, <i399 -1, i399 -1> ;; C2 = 274877906943
+  %N = and <2 x i399> %M, <i399 18446742974197923840, i399 18446742974197923840>
+  %A = add <2 x i399> %N, %V
+  %B = and <2 x i399> %A, %C1
+  %D = and <2 x i399> %V, <i399 274877906943, i399 274877906943>
+  %R = or <2 x i399> %D, %B
+  ret <2 x i399> %R
+}

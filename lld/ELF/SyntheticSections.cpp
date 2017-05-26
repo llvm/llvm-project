@@ -1005,10 +1005,11 @@ DynamicSection<ELFT>::DynamicSection()
                        ".dynamic") {
   this->Entsize = ELFT::Is64Bits ? 16 : 8;
 
-  // .dynamic section is not writable on MIPS.
+  // .dynamic section is not writable on MIPS and on Fuchsia OS
+  // which passes -z rodynamic.
   // See "Special Section" in Chapter 4 in the following document:
   // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-  if (Config->EMachine == EM_MIPS)
+  if (Config->EMachine == EM_MIPS || Config->ZRodynamic)
     this->Flags = SHF_ALLOC;
 
   addEntries();
@@ -1053,7 +1054,15 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
   if (DtFlags1)
     add({DT_FLAGS_1, DtFlags1});
 
-  if (!Config->Shared && !Config->Relocatable)
+  // DT_DEBUG is a pointer to debug informaion used by debuggers at runtime. We
+  // need it for each process, so we don't write it for DSOs. The loader writes
+  // the pointer into this entry.
+  //
+  // DT_DEBUG is the only .dynamic entry that needs to be written to. Some
+  // systems (currently only Fuchsia OS) provide other means to give the
+  // debugger this information. Such systems may choose make .dynamic read-only.
+  // If the target is such a system (used -z rodynamic) don't write DT_DEBUG.
+  if (!Config->Shared && !Config->Relocatable && !Config->ZRodynamic)
     add({DT_DEBUG, (uint64_t)0});
 }
 
@@ -1778,7 +1787,7 @@ void GdbIndexSection::readDwarf(InputSection *Sec) {
     std::tie(IsNew, Sym) = SymbolTable.add(Hash, Offset);
     if (IsNew) {
       Sym->CuVectorIndex = CuVectors.size();
-      CuVectors.push_back({});
+      CuVectors.resize(CuVectors.size() + 1);
     }
 
     CuVectors[Sym->CuVectorIndex].insert((Pair.second << 24) | (uint32_t)CuId);

@@ -331,15 +331,17 @@ unsigned
 SIMCCodeEmitter::getSDWA9SrcEncoding(const MCInst &MI, unsigned OpNo,
                                      SmallVectorImpl<MCFixup> &Fixups,
                                      const MCSubtargetInfo &STI) const {
+  using namespace AMDGPU::SDWA;
+  
   uint64_t RegEnc = 0;
 
   const MCOperand &MO = MI.getOperand(OpNo);
 
   unsigned Reg = MO.getReg();
   RegEnc |= MRI.getEncodingValue(Reg);
-  RegEnc &= SDWA9_SRC_REG_MASK;
-  if (AMDGPU::isSGPR(Reg, &MRI)) {
-    RegEnc |= SDWA9_SRC_SGPR_MASK;
+  RegEnc &= SDWA9EncValues::SRC_VGPR_MASK;
+  if (AMDGPU::isSGPR(AMDGPU::mc2PseudoReg(Reg), &MRI)) {
+    RegEnc |= SDWA9EncValues::SRC_SGPR_MASK;
   }
   return RegEnc;
 }
@@ -348,6 +350,8 @@ unsigned
 SIMCCodeEmitter::getSDWA9VopcDstEncoding(const MCInst &MI, unsigned OpNo,
                                          SmallVectorImpl<MCFixup> &Fixups,
                                          const MCSubtargetInfo &STI) const {
+  using namespace AMDGPU::SDWA;
+
   uint64_t RegEnc = 0;
 
   const MCOperand &MO = MI.getOperand(OpNo);
@@ -355,8 +359,8 @@ SIMCCodeEmitter::getSDWA9VopcDstEncoding(const MCInst &MI, unsigned OpNo,
   unsigned Reg = MO.getReg();
   if (Reg != AMDGPU::VCC) {
     RegEnc |= MRI.getEncodingValue(Reg);
-    RegEnc &= SDWA9_VOPC_DST_REG_MASK;
-    RegEnc |= SDWA9_VOPC_DST_VCC_MASK;
+    RegEnc &= SDWA9EncValues::VOPC_DST_SGPR_MASK;
+    RegEnc |= SDWA9EncValues::VOPC_DST_VCC_MASK;
   }
   return RegEnc;
 }
