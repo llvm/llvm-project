@@ -65,7 +65,7 @@ struct D : public virtual B {
 #ifdef MSABI
 D d;
 #if __cplusplus <= 199711L
-// expected-note@-2 {{implicit default constructor for 'D' first required here}}
+// expected-note@-2 2{{implicit default constructor for 'D' first required here}}
 #else
 // expected-error@-4 {{call to implicitly-deleted default constructor of 'D'}}
 #endif
@@ -118,8 +118,9 @@ struct G : public virtual F {
 #ifdef MSABI
 #if __cplusplus <= 199711L
 // expected-note@-3 {{implicit default constructor for 'F' first required here}}
+// expected-note@-4 {{implicit destructor for 'F' first required here}}
 #else
-// expected-note@-5 {{default constructor of 'G' is implicitly deleted because base class 'F' has a deleted default constructor}}
+// expected-note@-6 {{default constructor of 'G' is implicitly deleted because base class 'F' has a deleted default constructor}}
 #endif
 #endif
 
@@ -133,7 +134,7 @@ struct G : public virtual F {
 #ifdef MSABI
 G g;
 #if __cplusplus <= 199711L
-// expected-note@-2 {{implicit default constructor for 'G' first required here}}
+// expected-note@-2 2{{implicit default constructor for 'G' first required here}}
 #else
 // expected-error@-4 {{call to implicitly-deleted default constructor of 'G'}}
 #endif
@@ -149,10 +150,6 @@ struct H : public virtual A {
 #if __cplusplus >= 201103L
 // expected-error@-2 {{deleted function '~H' cannot override a non-deleted function}}
 // expected-note@-3 {{overridden virtual function is here}}
-#else
-#ifdef MSABI
-// expected-note@-6 {{'H' declared here}}
-#endif
 #endif
 
   NoDestroy x;
@@ -171,11 +168,8 @@ struct H : public virtual A {
 
 struct I : public virtual H {
 #ifdef MSABI
-#if __cplusplus <= 199711L
-// expected-error@-3 {{implicit default constructor for 'I' must explicitly initialize the base class 'H' which does not have a default constructor}}
-// expected-note@-4 {{implicit destructor for 'H' first required here}}
-#else
-// expected-note@-6 {{default constructor of 'I' is implicitly deleted because base class 'H' has a deleted default constructor}}
+#if __cplusplus > 199711L
+// expected-note@-3 {{default constructor of 'I' is implicitly deleted because base class 'H' has a deleted default constructor}}
 #endif
 #endif
 
@@ -189,7 +183,7 @@ struct J : public I {
 #ifdef MSABI
 #if __cplusplus <= 199711L
 // expected-note@-3 {{implicit default constructor for 'H' first required here}}
-// expected-note@-4 {{implicit default constructor for 'I' first required here}}
+// expected-note@-4 {{implicit destructor for 'H' first required here}}
 #else
 // expected-note@-6 {{default constructor of 'J' is implicitly deleted because base class 'I' has a deleted default constructor}}
 #endif
@@ -202,7 +196,7 @@ struct J : public I {
 #ifdef MSABI
 J j;
 #if __cplusplus <= 199711L
-// expected-note@-2 {{implicit default constructor for 'J' first required here}}
+// expected-note@-2 2{{implicit default constructor for 'J' first required here}}
 #else
 // expected-error@-4 {{call to implicitly-deleted default constructor of 'J'}}
 #endif

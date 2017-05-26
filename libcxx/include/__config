@@ -1126,6 +1126,10 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 # define _LIBCPP_HAS_NO_IS_AGGREGATE
 #endif
 
+#if !defined(__cpp_coroutines) || __cpp_coroutines < 201703L
+# define _LIBCPP_HAS_NO_COROUTINES
+#endif
+
 #endif // __cplusplus
 
 // Decide whether to use availability macros.

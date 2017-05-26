@@ -26,6 +26,15 @@
       consumeError(std::move(E));                                              \
   }
 
+#define ASSERT_EXPECTED(Exp)                                                   \
+  {                                                                            \
+    auto E = Exp.takeError();                                                  \
+    bool Success = static_cast<bool>(E);                                       \
+    if (!Success)                                                              \
+      consumeError(std::move(E));                                              \
+    ASSERT_FALSE(Success);                                                     \
+  }
+
 #define EXPECT_EXPECTED(Exp)                                                   \
   {                                                                            \
     auto E = Exp.takeError();                                                  \

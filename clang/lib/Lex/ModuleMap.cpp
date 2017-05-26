@@ -84,6 +84,90 @@ Module *ModuleMap::resolveModuleId(const ModuleId &Id, Module *Mod,
   return Context;
 }
 
+/// \brief Append to \p Paths the set of paths needed to get to the 
+/// subframework in which the given module lives.
+static void appendSubframeworkPaths(Module *Mod,
+                                    SmallVectorImpl<char> &Path) {
+  // Collect the framework names from the given module to the top-level module.
+  SmallVector<StringRef, 2> Paths;
+  for (; Mod; Mod = Mod->Parent) {
+    if (Mod->IsFramework)
+      Paths.push_back(Mod->Name);
+  }
+  
+  if (Paths.empty())
+    return;
+  
+  // Add Frameworks/Name.framework for each subframework.
+  for (unsigned I = Paths.size() - 1; I != 0; --I)
+    llvm::sys::path::append(Path, "Frameworks", Paths[I-1] + ".framework");
+}
+
+const FileEntry *
+ModuleMap::resolveHeader(Module *M, Module::UnresolvedHeaderDirective Header,
+                         SmallVectorImpl<char> &RelativePathName) {
+  if (llvm::sys::path::is_absolute(Header.FileName)) {
+    RelativePathName.clear();
+    RelativePathName.append(Header.FileName.begin(), Header.FileName.end());
+    return SourceMgr.getFileManager().getFile(Header.FileName);
+  }
+
+  // Search for the header file within the module's home directory.
+  auto *Directory = M->Directory;
+  SmallString<128> FullPathName(Directory->getName());
+  unsigned FullPathLength = FullPathName.size();
+
+  if (M->isPartOfFramework()) {
+    appendSubframeworkPaths(M, RelativePathName);
+    unsigned RelativePathLength = RelativePathName.size();
+
+    // Check whether this file is in the public headers.
+    llvm::sys::path::append(RelativePathName, "Headers", Header.FileName);
+    llvm::sys::path::append(FullPathName, RelativePathName);
+    if (auto *File = SourceMgr.getFileManager().getFile(FullPathName))
+      return File;
+
+    // Check whether this file is in the private headers.
+    // Ideally, private modules in the form 'FrameworkName.Private' should
+    // be defined as 'module FrameworkName.Private', and not as
+    // 'framework module FrameworkName.Private', since a 'Private.Framework'
+    // does not usually exist. However, since both are currently widely used
+    // for private modules, make sure we find the right path in both cases.
+    if (M->IsFramework && M->Name == "Private")
+      RelativePathName.clear();
+    else
+      RelativePathName.resize(RelativePathLength);
+    FullPathName.resize(FullPathLength);
+    llvm::sys::path::append(RelativePathName, "PrivateHeaders",
+                            Header.FileName);
+    llvm::sys::path::append(FullPathName, RelativePathName);
+    return SourceMgr.getFileManager().getFile(FullPathName);
+  }
+
+  // Lookup for normal headers.
+  llvm::sys::path::append(RelativePathName, Header.FileName);
+  llvm::sys::path::append(FullPathName, RelativePathName);
+  return SourceMgr.getFileManager().getFile(FullPathName);
+}
+
+const FileEntry *
+ModuleMap::resolveAsBuiltinHeader(Module *M,
+                                  Module::UnresolvedHeaderDirective Header,
+                                  SmallVectorImpl<char> &BuiltinPathName) {
+  if (llvm::sys::path::is_absolute(Header.FileName) || M->isPartOfFramework() ||
+      !M->IsSystem || Header.IsUmbrella || !BuiltinIncludeDir ||
+      BuiltinIncludeDir == M->Directory || !isBuiltinHeader(Header.FileName))
+    return nullptr;
+
+  // This is a system module with a top-level header. This header
+  // may have a counterpart (or replacement) in the set of headers
+  // supplied by Clang. Find that builtin header.
+  llvm::sys::path::append(BuiltinPathName, BuiltinIncludeDir->getName(),
+                          Header.FileName);
+  return SourceMgr.getFileManager().getFile(
+      StringRef(BuiltinPathName.data(), BuiltinPathName.size()));
+}
+
 ModuleMap::ModuleMap(SourceManager &SourceMgr, DiagnosticsEngine &Diags,
                      const LangOptions &LangOpts, const TargetInfo *Target,
                      HeaderSearch &HeaderInfo)
@@ -1026,9 +1110,6 @@ namespace clang {
     /// be resolved relative to.
     const DirectoryEntry *Directory;
 
-    /// \brief The directory containing Clang-supplied headers.
-    const DirectoryEntry *BuiltinIncludeDir;
-
     /// \brief Whether this module map is in a system header directory.
     bool IsSystem;
     
@@ -1087,12 +1168,10 @@ namespace clang {
                              ModuleMap &Map,
                              const FileEntry *ModuleMapFile,
                              const DirectoryEntry *Directory,
-                             const DirectoryEntry *BuiltinIncludeDir,
                              bool IsSystem)
       : L(L), SourceMgr(SourceMgr), Target(Target), Diags(Diags), Map(Map), 
         ModuleMapFile(ModuleMapFile), Directory(Directory),
-        BuiltinIncludeDir(BuiltinIncludeDir), IsSystem(IsSystem),
-        HadError(false), ActiveModule(nullptr)
+        IsSystem(IsSystem), HadError(false), ActiveModule(nullptr)
     {
       Tok.clear();
       consumeToken();
@@ -1772,25 +1851,6 @@ void ModuleMapParser::parseRequiresDecl() {
   } while (true);
 }
 
-/// \brief Append to \p Paths the set of paths needed to get to the 
-/// subframework in which the given module lives.
-static void appendSubframeworkPaths(Module *Mod,
-                                    SmallVectorImpl<char> &Path) {
-  // Collect the framework names from the given module to the top-level module.
-  SmallVector<StringRef, 2> Paths;
-  for (; Mod; Mod = Mod->Parent) {
-    if (Mod->IsFramework)
-      Paths.push_back(Mod->Name);
-  }
-  
-  if (Paths.empty())
-    return;
-  
-  // Add Frameworks/Name.framework for each subframework.
-  for (unsigned I = Paths.size() - 1; I != 0; --I)
-    llvm::sys::path::append(Path, "Frameworks", Paths[I-1] + ".framework");
-}
-
 /// \brief Parse a header declaration.
 ///
 ///   header-declaration:
@@ -1843,85 +1903,36 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
   Module::UnresolvedHeaderDirective Header;
   Header.FileName = Tok.getString();
   Header.FileNameLoc = consumeToken();
+  Header.IsUmbrella = LeadingToken == MMToken::UmbrellaKeyword;
 
   // Check whether we already have an umbrella.
-  if (LeadingToken == MMToken::UmbrellaKeyword && ActiveModule->Umbrella) {
+  if (Header.IsUmbrella && ActiveModule->Umbrella) {
     Diags.Report(Header.FileNameLoc, diag::err_mmap_umbrella_clash)
       << ActiveModule->getFullModuleName();
     HadError = true;
     return;
   }
 
-  // Look for this file.
-  const FileEntry *File = nullptr;
-  const FileEntry *BuiltinFile = nullptr;
-  SmallString<128> RelativePathName;
-  if (llvm::sys::path::is_absolute(Header.FileName)) {
-    RelativePathName = Header.FileName;
-    File = SourceMgr.getFileManager().getFile(RelativePathName);
-  } else {
-    // Search for the header file within the search directory.
-    SmallString<128> FullPathName(Directory->getName());
-    unsigned FullPathLength = FullPathName.size();
+  // Look for this file by name if we don't have any stat information.
+  SmallString<128> RelativePathName, BuiltinPathName;
+  const FileEntry *File =
+      Map.resolveHeader(ActiveModule, Header, RelativePathName);
+  const FileEntry *BuiltinFile =
+      Map.resolveAsBuiltinHeader(ActiveModule, Header, BuiltinPathName);
 
-    if (ActiveModule->isPartOfFramework()) {
-      appendSubframeworkPaths(ActiveModule, RelativePathName);
-      unsigned RelativePathLength = RelativePathName.size();
-
-      // Check whether this file is in the public headers.
-      llvm::sys::path::append(RelativePathName, "Headers", Header.FileName);
-      llvm::sys::path::append(FullPathName, RelativePathName);
-      File = SourceMgr.getFileManager().getFile(FullPathName);
-
-      // Check whether this file is in the private headers.
-      if (!File) {
-        // Ideally, private modules in the form 'FrameworkName.Private' should
-        // be defined as 'module FrameworkName.Private', and not as
-        // 'framework module FrameworkName.Private', since a 'Private.Framework'
-        // does not usually exist. However, since both are currently widely used
-        // for private modules, make sure we find the right path in both cases.
-        if (ActiveModule->IsFramework && ActiveModule->Name == "Private")
-          RelativePathName.clear();
-        else
-          RelativePathName.resize(RelativePathLength);
-        FullPathName.resize(FullPathLength);
-        llvm::sys::path::append(RelativePathName, "PrivateHeaders",
-                                Header.FileName);
-        llvm::sys::path::append(FullPathName, RelativePathName);
-        File = SourceMgr.getFileManager().getFile(FullPathName);
-      }
-    } else {
-      // Lookup for normal headers.
-      llvm::sys::path::append(RelativePathName, Header.FileName);
-      llvm::sys::path::append(FullPathName, RelativePathName);
-      File = SourceMgr.getFileManager().getFile(FullPathName);
-
-      // If this is a system module with a top-level header, this header
-      // may have a counterpart (or replacement) in the set of headers
-      // supplied by Clang. Find that builtin header.
-      if (ActiveModule->IsSystem && LeadingToken != MMToken::UmbrellaKeyword &&
-          BuiltinIncludeDir && BuiltinIncludeDir != Directory &&
-          ModuleMap::isBuiltinHeader(Header.FileName)) {
-        SmallString<128> BuiltinPathName(BuiltinIncludeDir->getName());
-        llvm::sys::path::append(BuiltinPathName, Header.FileName);
-        BuiltinFile = SourceMgr.getFileManager().getFile(BuiltinPathName);
-
-        // If Clang supplies this header but the underlying system does not,
-        // just silently swap in our builtin version. Otherwise, we'll end
-        // up adding both (later).
-        if (BuiltinFile && !File) {
-          File = BuiltinFile;
-          RelativePathName = BuiltinPathName;
-          BuiltinFile = nullptr;
-        }
-      }
-    }
+  // If Clang supplies this header but the underlying system does not,
+  // just silently swap in our builtin version. Otherwise, we'll end
+  // up adding both (later).
+  if (BuiltinFile && !File) {
+    RelativePathName = BuiltinPathName;
+    File = BuiltinFile;
+    BuiltinFile = nullptr;
   }
 
   // FIXME: We shouldn't be eagerly stat'ing every file named in a module map.
   // Come up with a lazy way to do this.
   if (File) {
-    if (LeadingToken == MMToken::UmbrellaKeyword) {
+    if (Header.IsUmbrella) {
       const DirectoryEntry *UmbrellaDir = File->getDir();
       if (Module *UmbrellaModule = Map.UmbrellaDirs[UmbrellaDir]) {
         Diags.Report(LeadingLoc, diag::err_mmap_umbrella_clash)
@@ -1938,10 +1949,7 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
       // If there is a builtin counterpart to this file, add it now so it can
       // wrap the system header.
       if (BuiltinFile) {
-        // FIXME: Taking the name from the FileEntry is unstable and can give
-        // different results depending on how we've previously named that file
-        // in this build.
-        Module::Header H = { BuiltinFile->getName(), BuiltinFile };
+        Module::Header H = { BuiltinPathName.str(), BuiltinFile };
         Map.addHeader(ActiveModule, H, Role);
 
         // If we have both a builtin and system version of the file, the
@@ -1960,7 +1968,6 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
 
     // If we find a module that has a missing header, we mark this module as
     // unavailable and store the header directive for displaying diagnostics.
-    Header.IsUmbrella = LeadingToken == MMToken::UmbrellaKeyword;
     ActiveModule->markUnavailable();
     ActiveModule->MissingHeaders.push_back(Header);
   }
@@ -2555,7 +2562,7 @@ bool ModuleMap::parseModuleMapFile(const FileEntry *File, bool IsSystem,
           Buffer->getBufferEnd());
   SourceLocation Start = L.getSourceLocation();
   ModuleMapParser Parser(L, SourceMgr, Target, Diags, *this, File, Dir,
-                         BuiltinIncludeDir, IsSystem);
+                         IsSystem);
   bool Result = Parser.parseModuleMapFile();
   ParsedModuleMap[File] = Result;
 

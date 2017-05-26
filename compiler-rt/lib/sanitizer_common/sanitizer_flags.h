@@ -21,6 +21,7 @@ namespace __sanitizer {
 enum HandleSignalMode {
   kHandleSignalNo,
   kHandleSignalYes,
+  kHandleSignalExclusive,
 };
 
 struct CommonFlags {

@@ -167,7 +167,7 @@ namespace test3 {
     Base2, // expected-error 2 {{base class 'test3::Base2' has private destructor}}
     virtual Base3
   {}; 
-  Derived3 d3; // expected-note {{implicit default constructor}}\
+  Derived3 d3; // expected-note 3{{implicit default constructor}}\
                // expected-note{{implicit destructor}}}
 #else
   template <unsigned N> class Base { ~Base(); }; // expected-note 4{{declared private here}}

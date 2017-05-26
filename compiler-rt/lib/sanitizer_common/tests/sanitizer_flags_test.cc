@@ -78,13 +78,15 @@ TEST(SanitizerCommon, HandleSignalMode) {
   TestFlag(kHandleSignalYes, "flag_name=0", kHandleSignalNo);
   TestFlag(kHandleSignalYes, "flag_name=no", kHandleSignalNo);
   TestFlag(kHandleSignalYes, "flag_name=false", kHandleSignalNo);
+  TestFlag(kHandleSignalNo, "flag_name=2", kHandleSignalExclusive);
+  TestFlag(kHandleSignalYes, "flag_name=exclusive", kHandleSignalExclusive);
 
   EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name", kHandleSignalNo),
                "expected '='");
   EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name=", kHandleSignalNo),
                "Invalid value for signal handler option: ''");
-  EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name=2", kHandleSignalNo),
-               "Invalid value for signal handler option: '2'");
+  EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name=3", kHandleSignalNo),
+               "Invalid value for signal handler option: '3'");
   EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name=-1", kHandleSignalNo),
                "Invalid value for signal handler option: '-1'");
   EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name=on", kHandleSignalNo),

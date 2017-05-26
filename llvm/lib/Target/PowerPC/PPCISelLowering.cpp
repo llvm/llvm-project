@@ -8296,10 +8296,12 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   SDLoc DL(Op);
   switch (cast<ConstantSDNode>(Op.getOperand(ArgStart))->getZExtValue()) {
   case Intrinsic::ppc_cfence: {
+    assert(ArgStart == 1 && "llvm.ppc.cfence must carry a chain argument.");
     assert(Subtarget.isPPC64() && "Only 64-bit is supported for now.");
     return SDValue(DAG.getMachineNode(PPC::CFENCE8, DL, MVT::Other,
                                       DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64,
-                                                  Op.getOperand(ArgStart + 1))),
+                                                  Op.getOperand(ArgStart + 1)),
+                                      Op.getOperand(0)),
                    0);
   }
   default:
