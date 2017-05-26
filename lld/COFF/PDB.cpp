@@ -99,6 +99,12 @@ static void addTypeInfo(pdb::TpiStreamBuilder &TpiBuilder,
 static void mergeDebugT(SymbolTable *Symtab, pdb::PDBFileBuilder &Builder,
                         codeview::TypeTableBuilder &TypeTable,
                         codeview::TypeTableBuilder &IDTable) {
+  // Follow type servers.  If the same type server is encountered more than
+  // once for this instance of `PDBTypeServerHandler` (for example if many
+  // object files reference the same TypeServer), the types from the
+  // TypeServer will only be visited once.
+  pdb::PDBTypeServerHandler Handler;
+
   // Visit all .debug$T sections to add them to Builder.
   for (ObjectFile *File : Symtab->ObjectFiles) {
     ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
@@ -109,11 +115,6 @@ static void mergeDebugT(SymbolTable *Symtab, pdb::PDBFileBuilder &Builder,
     codeview::CVTypeArray Types;
     BinaryStreamReader Reader(Stream);
     SmallVector<TypeIndex, 128> SourceToDest;
-    // Follow type servers.  If the same type server is encountered more than
-    // once for this instance of `PDBTypeServerHandler` (for example if many
-    // object files reference the same TypeServer), the types from the
-    // TypeServer will only be visited once.
-    pdb::PDBTypeServerHandler Handler;
     Handler.addSearchPath(llvm::sys::path::parent_path(File->getName()));
     if (auto EC = Reader.readArray(Types, Reader.getLength()))
       fatal(EC, "Reader::readArray failed");

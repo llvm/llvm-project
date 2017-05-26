@@ -259,10 +259,6 @@ void OutputSection::sortCtorsDtors() {
   std::stable_sort(Sections.begin(), Sections.end(), compCtors);
 }
 
-static uint64_t getOutFlags(InputSectionBase *S) {
-  return S->Flags & ~SHF_GROUP & ~SHF_COMPRESSED;
-}
-
 static SectionKey createKey(InputSectionBase *C, StringRef OutsecName) {
   //  The ELF spec just says
   // ----------------------------------------------------------------
@@ -359,7 +355,7 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
     return;
   }
 
-  uint64_t Flags = getOutFlags(IS);
+  uint64_t Flags = IS->Flags & ~(uint64_t)SHF_GROUP;
   if (Sec) {
     if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(IS->Flags))
       error("incompatible section flags for " + Sec->Name +

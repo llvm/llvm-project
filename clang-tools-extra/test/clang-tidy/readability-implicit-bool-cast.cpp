@@ -264,7 +264,7 @@ void implicitCastInNegationExpressions() {
   // CHECK-FIXES: bool boolComingFromNegatedChar = (character == 0);
 
   int* pointer = nullptr;
-  bool boolComingFromNegatedPointer = not  pointer;
+  bool boolComingFromNegatedPointer = not pointer;
   // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: implicit cast 'int *' -> bool
   // CHECK-FIXES: bool boolComingFromNegatedPointer = pointer == nullptr;
 }
