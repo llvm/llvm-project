@@ -60,7 +60,7 @@ TEST(BasicBlockTest, PhiRange) {
   // Test that we can use const iterators and generally that the iterators
   // behave like iterators.
   BasicBlock::const_phi_iterator CI;
-  CI = CI = BB->phis().begin();
+  CI = BB->phis().begin();
   EXPECT_NE(CI, BB->phis().end());
 
   // And iterate a const range.

@@ -153,13 +153,14 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
 
   TriedMerging.clear();
 
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   AfterBlockPlacement = AfterPlacement;
   TII = tii;
   TRI = tri;
   MMI = mmi;
   MLI = mli;
+  this->MRI = &MRI;
 
-  MachineRegisterInfo &MRI = MF.getRegInfo();
   UpdateLiveIns = MRI.tracksLiveness() && TRI->trackLivenessAfterRegAlloc(MF);
   if (!UpdateLiveIns)
     MRI.invalidateLiveness();
@@ -351,7 +352,7 @@ void BranchFolder::ReplaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
 
   if (UpdateLiveIns) {
     NewDest->clearLiveIns();
-    computeLiveIns(LiveRegs, *TRI, *NewDest);
+    computeLiveIns(LiveRegs, *MRI, *NewDest);
   }
 
   ++NumTailMerge;
@@ -388,7 +389,7 @@ MachineBasicBlock *BranchFolder::SplitMBBAt(MachineBasicBlock &CurMBB,
   MBBFreqInfo.setBlockFreq(NewMBB, MBBFreqInfo.getBlockFreq(&CurMBB));
 
   if (UpdateLiveIns)
-    computeLiveIns(LiveRegs, *TRI, *NewMBB);
+    computeLiveIns(LiveRegs, *MRI, *NewMBB);
 
   // Add the new block to the funclet.
   const auto &FuncletI = FuncletMembership.find(&CurMBB);

@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS Support)
 
+set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/DynamicLibraryTests.exports)
 add_llvm_unittest(DynamicLibraryTests DynamicLibraryTest.cpp)
 
 export_executable_symbols(DynamicLibraryTests)

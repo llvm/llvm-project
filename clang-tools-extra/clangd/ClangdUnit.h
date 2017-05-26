@@ -10,8 +10,8 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDUNIT_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDUNIT_H
 
-#include "Protocol.h"
 #include "Path.h"
+#include "Protocol.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include <memory>
@@ -23,6 +23,10 @@ class raw_ostream;
 namespace clang {
 class ASTUnit;
 class PCHContainerOperations;
+
+namespace vfs {
+class FileSystem;
+}
 
 namespace tooling {
 struct CompileCommand;
@@ -42,16 +46,19 @@ class ClangdUnit {
 public:
   ClangdUnit(PathRef FileName, StringRef Contents,
              std::shared_ptr<PCHContainerOperations> PCHs,
-             std::vector<tooling::CompileCommand> Commands);
+             std::vector<tooling::CompileCommand> Commands,
+             IntrusiveRefCntPtr<vfs::FileSystem> VFS);
 
   /// Reparse with new contents.
-  void reparse(StringRef Contents);
+  void reparse(StringRef Contents, IntrusiveRefCntPtr<vfs::FileSystem> VFS);
 
   /// Get code completions at a specified \p Line and \p Column in \p File.
   ///
   /// This function is thread-safe and returns completion items that own the
   /// data they contain.
-  std::vector<CompletionItem> codeComplete(StringRef Contents, Position Pos);
+  std::vector<CompletionItem>
+  codeComplete(StringRef Contents, Position Pos,
+               IntrusiveRefCntPtr<vfs::FileSystem> VFS);
   /// Returns diagnostics and corresponding FixIts for each diagnostic that are
   /// located in the current file.
   std::vector<DiagWithFixIts> getLocalDiagnostics() const;

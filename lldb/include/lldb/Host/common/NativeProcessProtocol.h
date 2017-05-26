@@ -10,6 +10,7 @@
 #ifndef liblldb_NativeProcessProtocol_h_
 #define liblldb_NativeProcessProtocol_h_
 
+#include "lldb/Core/TraceOptions.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-forward.h"
@@ -308,6 +309,108 @@ public:
   static Status Attach(lldb::pid_t pid, NativeDelegate &native_delegate,
                        MainLoop &mainloop, NativeProcessProtocolSP &process_sp);
 
+  //------------------------------------------------------------------
+  /// StartTracing API for starting a tracing instance with the
+  /// TraceOptions on a specific thread or process.
+  ///
+  /// @param[in] config
+  ///     The configuration to use when starting tracing.
+  ///
+  /// @param[out] error
+  ///     Status indicates what went wrong.
+  ///
+  /// @return
+  ///     The API returns a user_id which can be used to get trace
+  ///     data, trace configuration or stopping the trace instance.
+  ///     The user_id is a key to identify and operate with a tracing
+  ///     instance. It may refer to the complete process or a single
+  ///     thread.
+  //------------------------------------------------------------------
+  virtual lldb::user_id_t StartTrace(const TraceOptions &config,
+                                     Status &error) {
+    error.SetErrorString("Not implemented");
+    return LLDB_INVALID_UID;
+  }
+
+  //------------------------------------------------------------------
+  /// StopTracing API as the name suggests stops a tracing instance.
+  ///
+  /// @param[in] uid
+  ///     The user id of the trace intended to be stopped. Now a
+  ///     user_id may map to multiple threads in which case this API
+  ///     could be used to stop the tracing for a specific thread by
+  ///     supplying its thread id.
+  ///
+  /// @param[in] thread
+  ///     Thread is needed when the complete process is being traced
+  ///     and the user wishes to stop tracing on a particular thread.
+  ///
+  /// @return
+  ///     Status indicating what went wrong.
+  //------------------------------------------------------------------
+  virtual Status StopTrace(lldb::user_id_t uid,
+                           lldb::tid_t thread = LLDB_INVALID_THREAD_ID) {
+    return Status("Not implemented");
+  }
+
+  //------------------------------------------------------------------
+  /// This API provides the trace data collected in the form of raw
+  /// data.
+  ///
+  /// @param[in] uid thread
+  ///     The uid and thread provide the context for the trace
+  ///     instance.
+  ///
+  /// @param[in] buffer
+  ///     The buffer provides the destination buffer where the trace
+  ///     data would be read to. The buffer should be truncated to the
+  ///     filled length by this function.
+  ///
+  /// @param[in] offset
+  ///     There is possibility to read partially the trace data from
+  ///     a specified offset where in such cases the buffer provided
+  ///     may be smaller than the internal trace collection container.
+  ///
+  /// @return
+  ///     The size of the data actually read.
+  //------------------------------------------------------------------
+  virtual Status GetData(lldb::user_id_t uid, lldb::tid_t thread,
+                         llvm::MutableArrayRef<uint8_t> &buffer,
+                         size_t offset = 0) {
+    return Status("Not implemented");
+  }
+
+  //------------------------------------------------------------------
+  /// Similar API as above except it aims to provide any extra data
+  /// useful for decoding the actual trace data.
+  //------------------------------------------------------------------
+  virtual Status GetMetaData(lldb::user_id_t uid, lldb::tid_t thread,
+                             llvm::MutableArrayRef<uint8_t> &buffer,
+                             size_t offset = 0) {
+    return Status("Not implemented");
+  }
+
+  //------------------------------------------------------------------
+  /// API to query the TraceOptions for a given user id
+  ///
+  /// @param[in] uid
+  ///     The user id of the tracing instance.
+  ///
+  /// @param[in] config
+  ///     The thread id of the tracing instance, in case configuration
+  ///     for a specific thread is needed should be specified in the
+  ///     config.
+  ///
+  /// @param[out] error
+  ///     Status indicates what went wrong.
+  ///
+  /// @param[out] config
+  ///     The actual configuration being used for tracing.
+  //------------------------------------------------------------------
+  virtual Status GetTraceConfig(lldb::user_id_t uid, TraceOptions &config) {
+    return Status("Not implemented");
+  }
+
 protected:
   lldb::pid_t m_pid;
 
@@ -381,6 +484,6 @@ protected:
 private:
   void SynchronouslyNotifyProcessStateChanged(lldb::StateType state);
 };
-}
+} // namespace lldb_private
 
 #endif // #ifndef liblldb_NativeProcessProtocol_h_

@@ -58,6 +58,10 @@ Position clangd::offsetToPosition(StringRef Code, size_t Offset) {
   return {Lines, Cols};
 }
 
+IntrusiveRefCntPtr<vfs::FileSystem> RealFileSystemProvider::getFileSystem() {
+  return vfs::getRealFileSystem();
+}
+
 ClangdScheduler::ClangdScheduler(bool RunSynchronously)
     : RunSynchronously(RunSynchronously) {
   if (RunSynchronously) {
@@ -135,8 +139,10 @@ void ClangdScheduler::addToEnd(std::function<void()> Request) {
 
 ClangdServer::ClangdServer(std::unique_ptr<GlobalCompilationDatabase> CDB,
                            std::unique_ptr<DiagnosticsConsumer> DiagConsumer,
+                           std::unique_ptr<FileSystemProvider> FSProvider,
                            bool RunSynchronously)
     : CDB(std::move(CDB)), DiagConsumer(std::move(DiagConsumer)),
+      FSProvider(std::move(FSProvider)),
       PCHs(std::make_shared<PCHContainerOperations>()),
       WorkScheduler(RunSynchronously) {}
 
@@ -150,10 +156,11 @@ void ClangdServer::addDocument(PathRef File, StringRef Contents) {
 
     assert(FileContents.Draft &&
            "No contents inside a file that was scheduled for reparse");
-    Units.runOnUnit(
-        FileStr, *FileContents.Draft, *CDB, PCHs, [&](ClangdUnit const &Unit) {
-          DiagConsumer->onDiagnosticsReady(FileStr, Unit.getLocalDiagnostics());
-        });
+    Units.runOnUnit(FileStr, *FileContents.Draft, *CDB, PCHs,
+                    FSProvider->getFileSystem(), [&](ClangdUnit const &Unit) {
+                      DiagConsumer->onDiagnosticsReady(
+                          FileStr, Unit.getLocalDiagnostics());
+                    });
   });
 }
 
@@ -168,15 +175,22 @@ void ClangdServer::removeDocument(PathRef File) {
   });
 }
 
+void ClangdServer::forceReparse(PathRef File) {
+  // The addDocument schedules the reparse even if the contents of the file
+  // never changed, so we just call it here.
+  addDocument(File, getDocument(File));
+}
+
 std::vector<CompletionItem> ClangdServer::codeComplete(PathRef File,
                                                        Position Pos) {
   auto FileContents = DraftMgr.getDraft(File);
   assert(FileContents.Draft && "codeComplete is called for non-added document");
 
   std::vector<CompletionItem> Result;
+  auto VFS = FSProvider->getFileSystem();
   Units.runOnUnitWithoutReparse(
-      File, *FileContents.Draft, *CDB, PCHs, [&](ClangdUnit &Unit) {
-        Result = Unit.codeComplete(*FileContents.Draft, Pos);
+      File, *FileContents.Draft, *CDB, PCHs, VFS, [&](ClangdUnit &Unit) {
+        Result = Unit.codeComplete(*FileContents.Draft, Pos, VFS);
       });
   return Result;
 }
