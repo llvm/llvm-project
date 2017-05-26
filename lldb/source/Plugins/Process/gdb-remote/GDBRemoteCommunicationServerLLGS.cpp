@@ -1300,13 +1300,13 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceRead(
   json_dict->GetValueForKeyAsInteger("threadid", tid);
 
   // Allocate the response buffer.
-  uint8_t *buffer = new (std::nothrow) uint8_t[byte_count];
-  if (buffer == nullptr)
+  std::unique_ptr<uint8_t[]> buffer (new (std::nothrow) uint8_t[byte_count]);
+  if (!buffer)
     return SendErrorResponse(0x78);
 
   StreamGDBRemote response;
   Status error;
-  llvm::MutableArrayRef<uint8_t> buf(buffer, byte_count);
+  llvm::MutableArrayRef<uint8_t> buf(buffer.get(), byte_count);
 
   if (tracetype == BufferData)
     error = m_debugged_process_sp->GetData(uid, tid, buf, offset);
