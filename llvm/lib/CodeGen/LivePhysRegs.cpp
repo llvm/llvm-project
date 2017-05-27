@@ -53,7 +53,7 @@ void LivePhysRegs::stepBackward(const MachineInstr &MI) {
         continue;
       removeReg(Reg);
     } else if (O->isRegMask())
-      removeRegsInMask(*O, nullptr);
+      removeRegsInMask(*O);
   }
 
   // Add uses to the set.

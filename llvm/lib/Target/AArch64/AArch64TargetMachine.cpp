@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64TargetMachine.h"
 #include "AArch64.h"
 #include "AArch64MacroFusion.h"
 #include "AArch64Subtarget.h"
-#include "AArch64TargetMachine.h"
 #include "AArch64TargetObjectFile.h"
 #include "AArch64TargetTransformInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
@@ -295,6 +296,7 @@ public:
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
+  void addPreGlobalInstructionSelect() override;
   bool addGlobalInstructionSelect() override;
 #endif
   bool addILPOpts() override;
@@ -402,6 +404,12 @@ bool AArch64PassConfig::addLegalizeMachineIR() {
 bool AArch64PassConfig::addRegBankSelect() {
   addPass(new RegBankSelect());
   return false;
+}
+
+void AArch64PassConfig::addPreGlobalInstructionSelect() {
+  // Workaround the deficiency of the fast register allocator.
+  if (TM->getOptLevel() == CodeGenOpt::None)
+    addPass(new Localizer());
 }
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {

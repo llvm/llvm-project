@@ -74,7 +74,7 @@ bool SystemZExpandPseudo::expandLOCRMux(MachineBasicBlock &MBB,
   unsigned CCValid = MI.getOperand(3).getImm();
   unsigned CCMask = MI.getOperand(4).getImm();
 
-  LivePhysRegs LiveRegs(&TII->getRegisterInfo());
+  LivePhysRegs LiveRegs(TII->getRegisterInfo());
   LiveRegs.addLiveOuts(MBB);
   for (auto I = std::prev(MBB.end()); I != MBBI; --I)
     LiveRegs.stepBackward(*I);

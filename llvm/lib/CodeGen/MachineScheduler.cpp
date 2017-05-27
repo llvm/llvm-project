@@ -532,7 +532,7 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
     // thumb2 size reduction is currently an exception, so the PostMIScheduler
     // needs to do this.
     if (FixKillFlags)
-        Scheduler.fixupKills(&*MBB);
+      Scheduler.fixupKills(*MBB);
   }
   Scheduler.finalizeSchedule();
 }

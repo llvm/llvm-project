@@ -1,10 +1,10 @@
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   -O0 -aarch64-enable-global-isel-at-O=0 \
-; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix NOFALLBACK
+; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix ENABLED-O0 --check-prefix NOFALLBACK
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   -O0 -aarch64-enable-global-isel-at-O=0 -global-isel-abort=2  \
-; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix FALLBACK
+; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix ENABLED-O0 --check-prefix FALLBACK
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   -global-isel \
@@ -32,6 +32,7 @@
 ; ENABLED:       IRTranslator
 ; ENABLED-NEXT:  Legalizer
 ; ENABLED-NEXT:  RegBankSelect
+; ENABLED-O0-NEXT:  Localizer
 ; ENABLED-NEXT:  InstructionSelect
 ; ENABLED-NEXT:  ResetMachineFunction
 

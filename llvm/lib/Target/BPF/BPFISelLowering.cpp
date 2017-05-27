@@ -132,6 +132,10 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = 128;
 }
 
+bool BPFTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
+  return false;
+}
+
 SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   case ISD::BR_CC:
@@ -496,8 +500,11 @@ const char *BPFTargetLowering::getTargetNodeName(unsigned Opcode) const {
 
 SDValue BPFTargetLowering::LowerGlobalAddress(SDValue Op,
                                               SelectionDAG &DAG) const {
+  auto N = cast<GlobalAddressSDNode>(Op);
+  assert(N->getOffset() == 0 && "Invalid offset for global address");
+
   SDLoc DL(Op);
-  const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
+  const GlobalValue *GV = N->getGlobal();
   SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i64);
 
   return DAG.getNode(BPFISD::Wrapper, DL, MVT::i64, GA);

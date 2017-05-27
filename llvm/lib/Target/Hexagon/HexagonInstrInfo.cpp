@@ -1254,7 +1254,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       const MachineOperand &Op1 = MI.getOperand(1);
       const MachineOperand &Op2 = MI.getOperand(2);
       const MachineOperand &Op3 = MI.getOperand(3);
-      LivePhysRegs LiveAtMI(&HRI);
+      LivePhysRegs LiveAtMI(HRI);
       getLiveRegsAt(LiveAtMI, MI);
       bool IsDestLive = !LiveAtMI.available(MRI, Op0.getReg());
       if (Op0.getReg() != Op2.getReg()) {
@@ -1283,7 +1283,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MachineOperand &Op1 = MI.getOperand(1);
       MachineOperand &Op2 = MI.getOperand(2);
       MachineOperand &Op3 = MI.getOperand(3);
-      LivePhysRegs LiveAtMI(&HRI);
+      LivePhysRegs LiveAtMI(HRI);
       getLiveRegsAt(LiveAtMI, MI);
       bool IsDestLive = !LiveAtMI.available(MRI, Op0.getReg());
 

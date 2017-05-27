@@ -2903,6 +2903,19 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
                              Desc);
         CGM.getCXXABI().registerGlobalDtor(CGF, RegUnregVar, UnRegFn, Desc);
       });
+  if (CGM.supportsCOMDAT()) {
+    // It is sufficient to call registration function only once, so create a
+    // COMDAT group for registration/unregistration functions and associated
+    // data. That would reduce startup time and code size. Registration
+    // function serves as a COMDAT group key.
+    auto ComdatKey = M.getOrInsertComdat(RegFn->getName());
+    RegFn->setLinkage(llvm::GlobalValue::LinkOnceAnyLinkage);
+    RegFn->setVisibility(llvm::GlobalValue::HiddenVisibility);
+    RegFn->setComdat(ComdatKey);
+    UnRegFn->setComdat(ComdatKey);
+    DeviceImages->setComdat(ComdatKey);
+    Desc->setComdat(ComdatKey);
+  }
   return RegFn;
 }
 

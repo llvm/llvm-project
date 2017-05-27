@@ -339,7 +339,7 @@ void PPCExpandISEL::reorganizeBlockLayout(BlockISELList &BIL,
     // Note: Cannot use stepBackward instead since we are using the Reg
     // liveness state at the end of MBB (liveOut of MBB) as the liveIn for
     // NewSuccessor. Otherwise, will cause cyclic dependence.
-    LivePhysRegs LPR(MF->getSubtarget<PPCSubtarget>().getRegisterInfo());
+    LivePhysRegs LPR(*MF->getSubtarget<PPCSubtarget>().getRegisterInfo());
     SmallVector<std::pair<unsigned, const MachineOperand *>, 2> Clobbers;
     for (MachineInstr &MI : *MBB)
       LPR.stepForward(MI, Clobbers);

@@ -2612,39 +2612,45 @@ static const char *parse_unnamed_type_name(const char *first, const char *last,
       first = t0 + 1;
     } break;
     case 'l': {
+      size_t lambda_pos = db.names.size();
       db.names.push_back(std::string("'lambda'("));
       const char *t0 = first + 2;
       if (first[2] == 'v') {
         db.names.back().first += ')';
         ++t0;
       } else {
-        const char *t1 = parse_type(t0, last, db);
-        if (t1 == t0) {
+        bool is_first_it = true;
+        while (true) {
+          long k0 = static_cast<long>(db.names.size());
+          const char *t1 = parse_type(t0, last, db);
+          long k1 = static_cast<long>(db.names.size());
+          if (t1 == t0)
+            break;
+          if (k0 >= k1)
+            return first;
+          // If the call to parse_type above found a pack expansion
+          // substitution, then multiple names could have been
+          // inserted into the name table. Walk through the names,
+          // appending each onto the lambda's parameter list.
+          std::for_each(db.names.begin() + k0, db.names.begin() + k1,
+                        [&](typename C::sub_type::value_type &pair) {
+                          if (pair.empty())
+                            return;
+                          auto &lambda = db.names[lambda_pos].first;
+                          if (!is_first_it)
+                            lambda.append(", ");
+                          is_first_it = false;
+                          lambda.append(pair.move_full());
+                        });
+          db.names.erase(db.names.begin() + k0, db.names.end());
+          t0 = t1;
+        }
+        if (is_first_it) {
           if (!db.names.empty())
             db.names.pop_back();
           return first;
         }
-        if (db.names.size() < 2)
-          return first;
-        auto tmp = db.names.back().move_full();
-        db.names.pop_back();
-        db.names.back().first.append(tmp);
-        t0 = t1;
-        while (true) {
-          t1 = parse_type(t0, last, db);
-          if (t1 == t0)
-            break;
-          if (db.names.size() < 2)
-            return first;
-          tmp = db.names.back().move_full();
-          db.names.pop_back();
-          if (!tmp.empty()) {
-            db.names.back().first.append(", ");
-            db.names.back().first.append(tmp);
-          }
-          t0 = t1;
-        }
-        if (db.names.empty())
+        if (db.names.empty() || db.names.size() - 1 != lambda_pos)
           return first;
         db.names.back().first.append(")");
       }
@@ -4231,6 +4237,7 @@ template <class StrT> struct string_pair {
   template <size_t N> string_pair(const char (&s)[N]) : first(s, N - 1) {}
 
   size_t size() const { return first.size() + second.size(); }
+  bool empty() const { return first.empty() && second.empty(); }
   StrT full() const { return first + second; }
   StrT move_full() { return std::move(first) + std::move(second); }
 };

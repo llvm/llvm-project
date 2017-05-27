@@ -39,6 +39,20 @@ YAMLOutputStyle::YAMLOutputStyle(PDBFile &File)
 }
 
 Error YAMLOutputStyle::dump() {
+  if (opts::pdb2yaml::All) {
+    opts::pdb2yaml::StreamMetadata = true;
+    opts::pdb2yaml::StreamDirectory = true;
+    opts::pdb2yaml::PdbStream = true;
+    opts::pdb2yaml::StringTable = true;
+    opts::pdb2yaml::DbiStream = true;
+    opts::pdb2yaml::DbiModuleInfo = true;
+    opts::pdb2yaml::DbiModuleSyms = true;
+    opts::pdb2yaml::DbiModuleSourceFileInfo = true;
+    opts::pdb2yaml::DbiModuleSourceLineInfo = true;
+    opts::pdb2yaml::TpiStream = true;
+    opts::pdb2yaml::IpiStream = true;
+  }
+
   if (opts::pdb2yaml::StreamDirectory)
     opts::pdb2yaml::StreamMetadata = true;
   if (opts::pdb2yaml::DbiModuleSyms)

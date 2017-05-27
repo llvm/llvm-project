@@ -542,16 +542,10 @@ Error LTO::addRegularLTO(BitcodeModule BM,
         if (Sym.isUndefined())
           continue;
         Keep.push_back(GV);
-        switch (GV->getLinkage()) {
-        default:
-          break;
-        case GlobalValue::LinkOnceAnyLinkage:
-          GV->setLinkage(GlobalValue::WeakAnyLinkage);
-          break;
-        case GlobalValue::LinkOnceODRLinkage:
-          GV->setLinkage(GlobalValue::WeakODRLinkage);
-          break;
-        }
+        GlobalValue::LinkageTypes OriginalLinkage = GV->getLinkage();
+        if (GlobalValue::isLinkOnceLinkage(OriginalLinkage))
+          GV->setLinkage(GlobalValue::getWeakLinkage(
+              GlobalValue::isLinkOnceODRLinkage(OriginalLinkage)));
       } else if (isa<GlobalObject>(GV) &&
                  (GV->hasLinkOnceODRLinkage() || GV->hasWeakODRLinkage() ||
                   GV->hasAvailableExternallyLinkage()) &&

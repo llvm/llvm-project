@@ -18,6 +18,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SparseMultiSet.h"
 #include "llvm/ADT/SparseSet.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/Compiler.h"
@@ -224,7 +225,7 @@ namespace llvm {
     MachineInstr *FirstDbgValue;
 
     /// Set of live physical registers for updating kill flags.
-    BitVector LiveRegs;
+    LivePhysRegs LiveRegs;
 
   public:
     explicit ScheduleDAGInstrs(MachineFunction &mf,
@@ -311,7 +312,7 @@ namespace llvm {
     std::string getDAGName() const override;
 
     /// Fixes register kill flags that scheduling has made invalid.
-    void fixupKills(MachineBasicBlock *MBB);
+    void fixupKills(MachineBasicBlock &MBB);
 
   protected:
     void initSUnits();

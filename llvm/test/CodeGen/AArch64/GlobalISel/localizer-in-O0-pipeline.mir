@@ -1,0 +1,96 @@
+# RUN: llc -O0 -mtriple aarch64-apple-ios %s -global-isel -start-after regbankselect \
+# RUN:    -stop-before instruction-select -o - | FileCheck --check-prefix=CHECK --check-prefix=OPTNONE %s
+# RUN: llc -mtriple aarch64-apple-ios %s -global-isel -start-after regbankselect \
+# RUN:   -stop-before instruction-select -o - | FileCheck --check-prefix=CHECK --check-prefix=OPT %s
+#
+# Check that we are only running the localizer at O0 and that it runs
+# between the regbankselect pass and the instruction-select.
+# Moreover, check that it does what we expect.
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-apple-ios"
+  
+  define float @foo(float %arg, i1 %cond) {
+    br i1 %cond, label %true, label %false
+  
+  true:                                             ; preds = %0
+    br label %end
+  
+  false:                                            ; preds = %0
+    br label %end
+  
+  end:                                              ; preds = %false, %true
+    %val = phi float [ 1.000000e+00, %true ], [ 2.000000e+00, %false ]
+    %res = fadd float %arg, %val
+    ret float %res
+  }
+
+...
+---
+# CHECK-LABEL: name: foo
+name:            foo
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+# CHECK: registers:
+# CHECK-NEXT: - { id: 0, class: fpr }
+# CHECK-NEXT: - { id: 1, class: gpr }
+# CHECK-NEXT: - { id: 2, class: fpr }
+# CHECK-NEXT: - { id: 3, class: fpr }
+# CHECK-NEXT: - { id: 4, class: fpr }
+# CHECK-NEXT: - { id: 5, class: fpr }
+# The localizer will create two new values to materialize the constants.
+# OPTNONE-NEXT:  - { id: 6, class: fpr }
+# OPTNONE-NEXT:  - { id: 7, class: fpr }
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: fpr }
+  - { id: 3, class: fpr }
+  - { id: 4, class: fpr }
+  - { id: 5, class: fpr }
+
+# First block remains untouched
+# CHECK: body
+# CHECK:   %4(s32) = G_FCONSTANT float 1.000000e+00
+# CHECK:   %5(s32) = G_FCONSTANT float 2.000000e+00
+
+# Second block will get the constant 1.0 when the localizer is enabled.
+# CHECK: bb.1.true:
+# OPT-NOT: G_FCONSTANT
+# OPTNONE: [[FONE:%[0-9]+]](s32) = G_FCONSTANT float 1.000000e+00
+# CHECK: G_BR %bb.3.end
+
+# Thrid block will get the constant 2.0 when the localizer is enabled.
+# CHECK: bb.2.false:
+# OPT-NOT: G_FCONSTANT
+# OPTNONE: [[FTWO:%[0-9]+]](s32) = G_FCONSTANT float 2.000000e+00
+
+# CHECK: bb.3.end
+# OPTNONE: %2(s32) = PHI [[FONE]](s32), %bb.1.true, [[FTWO]](s32), %bb.2.false
+# OPT: %2(s32) = PHI %4(s32), %bb.1.true, %5(s32), %bb.2.false
+# CHECK-NEXT: G_FADD %0, %2
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %s0, %w0
+
+    %0(s32) = COPY %s0
+    %1(s1) = COPY %w0
+    %4(s32) = G_FCONSTANT float 1.000000e+00
+    %5(s32) = G_FCONSTANT float 2.000000e+00
+    G_BRCOND %1(s1), %bb.1.true
+    G_BR %bb.2.false
+  
+  bb.1.true:
+    G_BR %bb.3.end
+  
+  bb.2.false:
+  
+  bb.3.end:
+    %2(s32) = PHI %4(s32), %bb.1.true, %5(s32), %bb.2.false
+    %3(s32) = G_FADD %0, %2
+    %s0 = COPY %3(s32)
+    RET_ReallyLR implicit %s0
+
+...

@@ -345,6 +345,10 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
     // Do it here since if there's no split, no update is needed.
     MBB->replaceSuccessor(FBB, &NewBB);
     NewBB.addSuccessor(FBB);
+
+    // Need to fix live-in lists if we track liveness.
+    if (TRI->trackLivenessAfterRegAlloc(*MF))
+      computeLiveIns(LiveRegs, MF->getRegInfo(), NewBB);
   }
 
   // We now have an appropriate fall-through block in place (either naturally or

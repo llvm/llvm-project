@@ -1,0 +1,312 @@
+# RUN: llc -O0 -mtriple=aarch64-apple-ios -run-pass=localizer -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefix=CHECK
+
+# Test the localizer.
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+
+  define void @local_use() { ret void }
+  define void @non_local_1use() { ret void }
+  define void @non_local_2uses() { ret void }
+  define void @non_local_phi_use() { ret void }
+  define void @non_local_phi_use_followed_by_use() { ret void }
+  define void @non_local_phi_use_followed_by_use_fi() { ret void }
+  define void @float_non_local_phi_use_followed_by_use_fi() { ret void }
+...
+
+---
+# CHECK-LABEL: name: local_use
+name:            local_use
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0(s32) = G_CONSTANT 1
+# CHECK-NEXT: %1(s32) = G_ADD %0, %0
+body:             |
+  bb.0:
+    %0(s32) = G_CONSTANT 1
+    %1(s32) = G_ADD %0, %0
+...
+
+---
+# CHECK-LABEL: name: non_local_1use
+name:            non_local_1use
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# Existing registers should be left untouched
+# CHECK:  - { id: 0, class: gpr }
+#CHECK-NEXT:  - { id: 1, class: gpr }
+#CHECK-NEXT:  - { id: 2, class: gpr }
+# The newly created reg should be on the same regbank/regclass as its origin.
+#CHECK-NEXT:  - { id: 3, class: gpr }
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0(s32) = G_CONSTANT 1
+# CHECK-NEXT: %1(s32) = G_ADD %0, %0
+
+# CHECK: bb.1:
+# CHECK: %3(s32) = G_CONSTANT 1
+# CHECK-NEXT: %2(s32) = G_ADD %3, %1
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    %0(s32) = G_CONSTANT 1
+    %1(s32) = G_ADD %0, %0
+
+  bb.1:
+    %2(s32) = G_ADD %0, %1
+...
+
+
+---
+# CHECK-LABEL: name: non_local_2uses
+name:            non_local_2uses
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# Existing registers should be left untouched
+# CHECK:  - { id: 0, class: gpr }
+#CHECK-NEXT:  - { id: 1, class: gpr }
+#CHECK-NEXT:  - { id: 2, class: gpr }
+# The newly created reg should be on the same regbank/regclass as its origin.
+#CHECK-NEXT:  - { id: 3, class: gpr }
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0(s32) = G_CONSTANT 1
+# CHECK-NEXT: %1(s32) = G_ADD %0, %0
+
+# CHECK: bb.1:
+# CHECK: %3(s32) = G_CONSTANT 1
+# CHECK-NEXT: %2(s32) = G_ADD %3, %3
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    %0(s32) = G_CONSTANT 1
+    %1(s32) = G_ADD %0, %0
+
+  bb.1:
+    %2(s32) = G_ADD %0, %0
+...
+
+---
+# CHECK-LABEL: name: non_local_phi_use
+name:            non_local_phi_use
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+
+# CHECK:      registers:
+# Existing registers should be left untouched
+# CHECK:  - { id: 0, class: gpr }
+#CHECK-NEXT:  - { id: 1, class: gpr }
+#CHECK-NEXT:  - { id: 2, class: gpr }
+#CHECK-NEXT:  - { id: 3, class: gpr }
+#CHECK-NEXT:  - { id: 4, class: gpr }
+# The newly created reg should be on the same regbank/regclass as its origin.
+#CHECK-NEXT:  - { id: 5, class: gpr }
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0(s32) = G_CONSTANT 1
+# CHECK-NEXT: %1(s32) = G_ADD %0, %0
+
+# CHECK: bb.1:
+# CHECK: %5(s32) = G_CONSTANT 1
+
+# CHECK: bb.2:
+# CHECK: %3(s32) = PHI %5(s32), %bb.1
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    %0(s32) = G_CONSTANT 1
+    %1(s32) = G_ADD %0, %0
+
+  bb.1:
+    successors: %bb.2
+
+  bb.2:
+    %3(s32) = PHI %0(s32), %bb.1
+    %2(s32) = G_ADD %3, %3
+...
+
+---
+# CHECK-LABEL: name: non_local_phi_use_followed_by_use
+name:            non_local_phi_use_followed_by_use
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+
+# CHECK:      registers:
+# Existing registers should be left untouched
+# CHECK:  - { id: 0, class: gpr }
+#CHECK-NEXT:  - { id: 1, class: gpr }
+#CHECK-NEXT:  - { id: 2, class: gpr }
+#CHECK-NEXT:  - { id: 3, class: gpr }
+#CHECK-NEXT:  - { id: 4, class: gpr }
+# The newly created regs should be on the same regbank/regclass as its origin.
+#CHECK-NEXT:  - { id: 5, class: gpr }
+#CHECK-NEXT:  - { id: 6, class: gpr }
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0(s32) = G_CONSTANT 1
+# CHECK-NEXT: %1(s32) = G_ADD %0, %0
+
+# CHECK: bb.1:
+# CHECK: %5(s32) = G_CONSTANT 1
+
+# CHECK: bb.2:
+# CHECK: %3(s32) = PHI %5(s32), %bb.1
+# CHECK-NEXT: %6(s32) = G_CONSTANT 1
+# CHECK-NEXT: %2(s32) = G_ADD %3, %6
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    %0(s32) = G_CONSTANT 1
+    %1(s32) = G_ADD %0, %0
+
+  bb.1:
+    successors: %bb.2
+
+  bb.2:
+    %3(s32) = PHI %0(s32), %bb.1
+    %2(s32) = G_ADD %3, %0
+...
+
+---
+# CHECK-LABEL: name: non_local_phi_use_followed_by_use_fi
+name:            non_local_phi_use_followed_by_use_fi
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+
+# CHECK:      registers:
+# Existing registers should be left untouched
+# CHECK:  - { id: 0, class: gpr }
+#CHECK-NEXT:  - { id: 1, class: gpr }
+#CHECK-NEXT:  - { id: 2, class: gpr }
+#CHECK-NEXT:  - { id: 3, class: gpr }
+#CHECK-NEXT:  - { id: 4, class: gpr }
+# The newly created reg should be on the same regbank/regclass as its origin.
+#CHECK-NEXT:  - { id: 5, class: gpr }
+#CHECK-NEXT:  - { id: 6, class: gpr }
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0(s32) = G_FRAME_INDEX 1
+# CHECK-NEXT: %1(s32) = G_ADD %0, %0
+
+# CHECK: bb.1:
+# CHECK: %5(s32) = G_FRAME_INDEX 1
+
+# CHECK: bb.2:
+# CHECK: %3(s32) = PHI %5(s32), %bb.1
+# CHECK-NEXT: %6(s32) = G_FRAME_INDEX 1
+# CHECK-NEXT: %2(s32) = G_ADD %3, %6
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    %0(s32) = G_FRAME_INDEX 1
+    %1(s32) = G_ADD %0, %0
+
+  bb.1:
+    successors: %bb.2
+
+  bb.2:
+    %3(s32) = PHI %0(s32), %bb.1
+    %2(s32) = G_ADD %3, %0
+...
+
+---
+# CHECK-LABEL: name: float_non_local_phi_use_followed_by_use_fi
+name:            float_non_local_phi_use_followed_by_use_fi
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+
+# CHECK:      registers:
+# Existing registers should be left untouched
+# CHECK:  - { id: 0, class: fpr }
+#CHECK-NEXT:  - { id: 1, class: fpr }
+#CHECK-NEXT:  - { id: 2, class: fpr }
+#CHECK-NEXT:  - { id: 3, class: fpr }
+#CHECK-NEXT:  - { id: 4, class: fpr }
+# The newly created reg should be on the same regbank/regclass as its origin.
+#CHECK-NEXT:  - { id: 5, class: fpr }
+#CHECK-NEXT:  - { id: 6, class: fpr }
+
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: fpr }
+  - { id: 3, class: fpr }
+  - { id: 4, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0(s32) = G_FCONSTANT float 1.0
+# CHECK-NEXT: %1(s32) = G_FADD %0, %0
+
+# CHECK: bb.1:
+# CHECK: %5(s32) = G_FCONSTANT float 1.0
+
+# CHECK: bb.2:
+# CHECK: %3(s32) = PHI %5(s32), %bb.1
+# CHECK-NEXT: %6(s32) = G_FCONSTANT float 1.0
+# CHECK-NEXT: %2(s32) = G_FADD %3, %6
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    %0(s32) = G_FCONSTANT float 1.0
+    %1(s32) = G_FADD %0, %0
+
+  bb.1:
+    successors: %bb.2
+
+  bb.2:
+    %3(s32) = PHI %0(s32), %bb.1
+    %2(s32) = G_FADD %3, %0
+...

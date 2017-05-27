@@ -632,8 +632,12 @@ void ScopBuilder::buildStmts(Region &SR) {
     if (I->isSubRegion())
       buildStmts(*I->getNodeAs<Region>());
     else {
+      std::vector<Instruction *> Instructions;
+      for (Instruction &Inst : *I->getNodeAs<BasicBlock>())
+        Instructions.push_back(&Inst);
       Loop *SurroundingLoop = LI.getLoopFor(I->getNodeAs<BasicBlock>());
-      scop->addScopStmt(I->getNodeAs<BasicBlock>(), SurroundingLoop);
+      scop->addScopStmt(I->getNodeAs<BasicBlock>(), SurroundingLoop,
+                        Instructions);
     }
 }
 

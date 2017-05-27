@@ -367,7 +367,7 @@ bool PostRAScheduler::runOnMachineFunction(MachineFunction &Fn) {
     Scheduler.finishBlock();
 
     // Update register kills
-    Scheduler.fixupKills(&MBB);
+    Scheduler.fixupKills(MBB);
   }
 
   return true;
