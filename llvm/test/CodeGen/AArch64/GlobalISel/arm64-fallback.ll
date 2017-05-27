@@ -43,7 +43,7 @@ define [1 x double] @constant() {
   ; The key problem here is that we may fail to create an MBB referenced by a
   ; PHI. If so, we cannot complete the G_PHI and mustn't try or bad things
   ; happen.
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: G_STORE %vreg4, %vreg2; mem:ST4[%addr] GPR:%vreg4,%vreg2 (in function: pending_phis)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: G_STORE %vreg5, %vreg2; mem:ST4[%addr] GPR:%vreg5,%vreg2 (in function: pending_phis)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for pending_phis
 ; FALLBACK-WITH-REPORT-OUT-LABEL: pending_phis:
 define i32 @pending_phis(i1 %tst, i32 %val, i32* %addr) {

@@ -378,6 +378,9 @@ cl::opt<std::string> InputFilename(cl::Positional,
 }
 
 namespace pdb2yaml {
+cl::opt<bool> All("all",
+                  cl::desc("Dump everything we know how to dump."),
+                  cl::sub(PdbToYamlSubcommand), cl::init(false));
 cl::opt<bool>
     NoFileHeaders("no-file-headers",
                   cl::desc("Do not dump MSF file headers (you will not be able "

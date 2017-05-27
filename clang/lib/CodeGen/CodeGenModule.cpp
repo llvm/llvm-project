@@ -400,8 +400,11 @@ void CodeGenModule::Release() {
   }
   if (OpenMPRuntime)
     if (llvm::Function *OpenMPRegistrationFunction =
-            OpenMPRuntime->emitRegistrationFunction())
-      AddGlobalCtor(OpenMPRegistrationFunction, 0);
+            OpenMPRuntime->emitRegistrationFunction()) {
+      auto ComdatKey = OpenMPRegistrationFunction->hasComdat() ?
+        OpenMPRegistrationFunction : nullptr;
+      AddGlobalCtor(OpenMPRegistrationFunction, 0, ComdatKey);
+    }
   if (PGOReader) {
     getModule().setProfileSummary(PGOReader->getSummary().getMD(VMContext));
     if (PGOStats.hasDiagnostics())

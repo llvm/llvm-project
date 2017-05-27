@@ -267,12 +267,12 @@ static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
     return AArch64::X9;
 
   const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
-  const AArch64RegisterInfo *TRI = Subtarget.getRegisterInfo();
+  const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
   LivePhysRegs LiveRegs(TRI);
   LiveRegs.addLiveIns(*MBB);
 
   // Mark callee saved registers as used so we will not choose them.
-  const MCPhysReg *CSRegs = TRI->getCalleeSavedRegs(MF);
+  const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(MF);
   for (unsigned i = 0; CSRegs[i]; ++i)
     LiveRegs.addReg(CSRegs[i]);
 

@@ -8,6 +8,7 @@ set(GLOBAL_ISEL_FILES
       LegalizerHelper.cpp
       Legalizer.cpp
       LegalizerInfo.cpp
+      Localizer.cpp
       RegBankSelect.cpp
       RegisterBank.cpp
       RegisterBankInfo.cpp
