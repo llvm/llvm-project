@@ -219,7 +219,6 @@ ProfileBitsInit(FoldingSetNodeID &ID, ArrayRef<Init *> Range) {
 
 BitsInit *BitsInit::get(ArrayRef<Init *> Range) {
   static FoldingSet<BitsInit> ThePool;
-  static std::vector<BitsInit*> TheActualPool;
 
   FoldingSetNodeID ID;
   ProfileBitsInit(ID, Range);
@@ -234,7 +233,6 @@ BitsInit *BitsInit::get(ArrayRef<Init *> Range) {
   std::uninitialized_copy(Range.begin(), Range.end(),
                           I->getTrailingObjects<Init *>());
   ThePool.InsertNode(I, IP);
-  TheActualPool.push_back(I);
   return I;
 }
 
@@ -456,7 +454,6 @@ static void ProfileListInit(FoldingSetNodeID &ID,
 
 ListInit *ListInit::get(ArrayRef<Init *> Range, RecTy *EltTy) {
   static FoldingSet<ListInit> ThePool;
-  static std::vector<ListInit*> TheActualPool;
 
   FoldingSetNodeID ID;
   ProfileListInit(ID, Range, EltTy);
@@ -471,7 +468,6 @@ ListInit *ListInit::get(ArrayRef<Init *> Range, RecTy *EltTy) {
   std::uninitialized_copy(Range.begin(), Range.end(),
                           I->getTrailingObjects<Init *>());
   ThePool.InsertNode(I, IP);
-  TheActualPool.push_back(I);
   return I;
 }
 
@@ -606,7 +602,6 @@ ProfileUnOpInit(FoldingSetNodeID &ID, unsigned Opcode, Init *Op, RecTy *Type) {
 
 UnOpInit *UnOpInit::get(UnaryOp Opc, Init *LHS, RecTy *Type) {
   static FoldingSet<UnOpInit> ThePool;
-  static std::vector<UnOpInit*> TheActualPool;
 
   FoldingSetNodeID ID;
   ProfileUnOpInit(ID, Opc, LHS, Type);
@@ -617,7 +612,6 @@ UnOpInit *UnOpInit::get(UnaryOp Opc, Init *LHS, RecTy *Type) {
 
   UnOpInit *I = new(Allocator) UnOpInit(Opc, LHS, Type);
   ThePool.InsertNode(I, IP);
-  TheActualPool.push_back(I);
   return I;
 }
 
@@ -752,7 +746,6 @@ ProfileBinOpInit(FoldingSetNodeID &ID, unsigned Opcode, Init *LHS, Init *RHS,
 BinOpInit *BinOpInit::get(BinaryOp Opc, Init *LHS,
                           Init *RHS, RecTy *Type) {
   static FoldingSet<BinOpInit> ThePool;
-  static std::vector<BinOpInit*> TheActualPool;
 
   FoldingSetNodeID ID;
   ProfileBinOpInit(ID, Opc, LHS, RHS, Type);
@@ -763,7 +756,6 @@ BinOpInit *BinOpInit::get(BinaryOp Opc, Init *LHS,
 
   BinOpInit *I = new(Allocator) BinOpInit(Opc, LHS, RHS, Type);
   ThePool.InsertNode(I, IP);
-  TheActualPool.push_back(I);
   return I;
 }
 
@@ -910,7 +902,6 @@ ProfileTernOpInit(FoldingSetNodeID &ID, unsigned Opcode, Init *LHS, Init *MHS,
 TernOpInit *TernOpInit::get(TernaryOp Opc, Init *LHS, Init *MHS, Init *RHS,
                             RecTy *Type) {
   static FoldingSet<TernOpInit> ThePool;
-  static std::vector<TernOpInit*> TheActualPool;
 
   FoldingSetNodeID ID;
   ProfileTernOpInit(ID, Opc, LHS, MHS, RHS, Type);
@@ -921,7 +912,6 @@ TernOpInit *TernOpInit::get(TernaryOp Opc, Init *LHS, Init *MHS, Init *RHS,
 
   TernOpInit *I = new(Allocator) TernOpInit(Opc, LHS, MHS, RHS, Type);
   ThePool.InsertNode(I, IP);
-  TheActualPool.push_back(I);
   return I;
 }
 
@@ -1503,7 +1493,6 @@ DagInit *
 DagInit::get(Init *V, StringInit *VN, ArrayRef<Init *> ArgRange,
              ArrayRef<StringInit *> NameRange) {
   static FoldingSet<DagInit> ThePool;
-  static std::vector<DagInit*> TheActualPool;
 
   FoldingSetNodeID ID;
   ProfileDagInit(ID, V, VN, ArgRange, NameRange);
@@ -1514,7 +1503,6 @@ DagInit::get(Init *V, StringInit *VN, ArrayRef<Init *> ArgRange,
 
   DagInit *I = new(Allocator) DagInit(V, VN, ArgRange, NameRange);
   ThePool.InsertNode(I, IP);
-  TheActualPool.push_back(I);
   return I;
 }
 

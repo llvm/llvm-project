@@ -301,6 +301,7 @@ struct CoroElide : FunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AAResultsWrapperPass>();
   }
+  StringRef getPassName() const override { return "Coroutine Elision"; }
 };
 }
 

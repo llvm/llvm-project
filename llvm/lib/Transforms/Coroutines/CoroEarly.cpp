@@ -208,6 +208,9 @@ struct CoroEarly : public FunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
   }
+  StringRef getPassName() const override {
+    return "Lower early coroutine intrinsics";
+  }
 };
 }
 
