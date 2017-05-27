@@ -1689,6 +1689,8 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
   //                 ::= _N # bool
   //                     _O # <array in parameter>
   //                 ::= _T # __float80 (Intel)
+  //                 ::= _S # char16_t
+  //                 ::= _U # char32_t
   //                 ::= _W # wchar_t
   //                 ::= _Z # __float80 (Digital Mars)
   switch (T->getKind()) {
