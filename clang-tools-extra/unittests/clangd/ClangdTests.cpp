@@ -120,7 +120,7 @@ IntrusiveRefCntPtr<vfs::FileSystem> getTempOnlyFS() {
 
   std::vector<std::string> TmpDirs;
   TmpDirs.push_back(TmpDir1.str());
-  if (TmpDir2 != TmpDir2)
+  if (TmpDir1 != TmpDir2)
     TmpDirs.push_back(TmpDir2.str());
   return new vfs::FilteredFileSystem(std::move(TmpDirs),
                                      vfs::getRealFileSystem());

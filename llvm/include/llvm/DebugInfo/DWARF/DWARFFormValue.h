@@ -47,6 +47,7 @@ private:
       const char *cstr;
     };
     const uint8_t *data = nullptr;
+    uint64_t SectionIndex;      /// Section index for reference forms.
   };
 
   dwarf::Form Form;             /// Form for this value.
@@ -58,6 +59,7 @@ public:
 
   dwarf::Form getForm() const { return Form; }
   uint64_t getRawUValue() const { return Value.uval; }
+  uint64_t getSectionIndex() const { return Value.SectionIndex; }
   void setForm(dwarf::Form F) { Form = F; }
   void setUValue(uint64_t V) { Value.uval = V; }
   void setSValue(int64_t V) { Value.sval = V; }

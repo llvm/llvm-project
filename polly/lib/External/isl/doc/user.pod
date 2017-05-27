@@ -3966,7 +3966,7 @@ To check whether a set is a parameter domain, use this function:
 =item * Wrapping
 
 The following functions check whether the space of the given
-(basic) set or relation range is a wrapped relation.
+(basic) set or relation domain and/or range is a wrapped relation.
 
 	#include <isl/space.h>
 	isl_bool isl_space_is_wrapping(
@@ -3974,6 +3974,8 @@ The following functions check whether the space of the given
 	isl_bool isl_space_domain_is_wrapping(
 		__isl_keep isl_space *space);
 	isl_bool isl_space_range_is_wrapping(
+		__isl_keep isl_space *space);
+	isl_bool isl_space_is_product(
 		__isl_keep isl_space *space);
 
 	#include <isl/set.h>
@@ -3986,6 +3988,7 @@ The following functions check whether the space of the given
 		__isl_keep isl_map *map);
 	isl_bool isl_map_range_is_wrapping(
 		__isl_keep isl_map *map);
+	isl_bool isl_map_is_product(__isl_keep isl_map *map);
 
 	#include <isl/val.h>
 	isl_bool isl_multi_val_range_is_wrapping(
@@ -4003,6 +4006,10 @@ The input to C<isl_space_is_wrapping> should
 be the space of a set, while that of
 C<isl_space_domain_is_wrapping> and
 C<isl_space_range_is_wrapping> should be the space of a relation.
+The input to C<isl_space_is_product> can be either the space
+of a set or that of a binary relation.
+In case the input is the space of a binary relation, it checks
+whether both domain and range are wrapping.
 
 =item * Internal Product
 
@@ -9343,7 +9350,7 @@ and C<ISL_SCHEDULE_ALGORITHM_FEAUTRIER>.
 
 If this option is set, then we try to construct schedules in which the
 constant term is split off from the linear part if the linear parts of
-the scheduling rows for all nodes in the graphs have a common non-trivial
+the scheduling rows for all nodes in the graph have a common non-trivial
 divisor.
 The constant term is then placed in a separate band and the linear
 part is reduced.

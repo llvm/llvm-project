@@ -1820,6 +1820,10 @@ uint64_t MachOObjectFile::getSectionAddress(DataRefImpl Sec) const {
   return getSection(Sec).addr;
 }
 
+uint64_t MachOObjectFile::getSectionIndex(DataRefImpl Sec) const {
+  return Sec.d.a;
+}
+
 uint64_t MachOObjectFile::getSectionSize(DataRefImpl Sec) const {
   // In the case if a malformed Mach-O file where the section offset is past
   // the end of the file or some part of the section size is past the end of

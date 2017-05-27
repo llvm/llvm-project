@@ -1501,7 +1501,12 @@ DagInit::get(Init *V, StringInit *VN, ArrayRef<Init *> ArgRange,
   if (DagInit *I = ThePool.FindNodeOrInsertPos(ID, IP))
     return I;
 
-  DagInit *I = new(Allocator) DagInit(V, VN, ArgRange, NameRange);
+  void *Mem = Allocator.Allocate(totalSizeToAlloc<Init *, StringInit *>(ArgRange.size(), NameRange.size()), alignof(BitsInit));
+  DagInit *I = new(Mem) DagInit(V, VN, ArgRange.size(), NameRange.size());
+  std::uninitialized_copy(ArgRange.begin(), ArgRange.end(),
+                          I->getTrailingObjects<Init *>());
+  std::uninitialized_copy(NameRange.begin(), NameRange.end(),
+                          I->getTrailingObjects<StringInit *>());
   ThePool.InsertNode(I, IP);
   return I;
 }
@@ -1521,7 +1526,7 @@ DagInit::get(Init *V, StringInit *VN,
 }
 
 void DagInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileDagInit(ID, Val, ValName, Args, ArgNames);
+  ProfileDagInit(ID, Val, ValName, makeArrayRef(getTrailingObjects<Init *>(), NumArgs), makeArrayRef(getTrailingObjects<StringInit *>(), NumArgNames));
 }
 
 Init *DagInit::convertInitializerTo(RecTy *Ty) const {
@@ -1533,9 +1538,9 @@ Init *DagInit::convertInitializerTo(RecTy *Ty) const {
 
 Init *DagInit::resolveReferences(Record &R, const RecordVal *RV) const {
   SmallVector<Init*, 8> NewArgs;
-  NewArgs.reserve(Args.size());
+  NewArgs.reserve(arg_size());
   bool ArgsChanged = false;
-  for (const Init *Arg : Args) {
+  for (const Init *Arg : args()) {
     Init *NewArg = Arg->resolveReferences(R, RV);
     NewArgs.push_back(NewArg);
     ArgsChanged |= NewArg != Arg;
@@ -1543,7 +1548,7 @@ Init *DagInit::resolveReferences(Record &R, const RecordVal *RV) const {
 
   Init *Op = Val->resolveReferences(R, RV);
   if (Op != Val || ArgsChanged)
-    return DagInit::get(Op, ValName, NewArgs, ArgNames);
+    return DagInit::get(Op, ValName, NewArgs, getArgNames());
 
   return const_cast<DagInit *>(this);
 }
@@ -1552,12 +1557,12 @@ std::string DagInit::getAsString() const {
   std::string Result = "(" + Val->getAsString();
   if (ValName)
     Result += ":" + ValName->getAsUnquotedString();
-  if (!Args.empty()) {
-    Result += " " + Args[0]->getAsString();
-    if (ArgNames[0]) Result += ":$" + ArgNames[0]->getAsUnquotedString();
-    for (unsigned i = 1, e = Args.size(); i != e; ++i) {
-      Result += ", " + Args[i]->getAsString();
-      if (ArgNames[i]) Result += ":$" + ArgNames[i]->getAsUnquotedString();
+  if (!arg_empty()) {
+    Result += " " + getArg(0)->getAsString();
+    if (getArgName(0)) Result += ":$" + getArgName(0)->getAsUnquotedString();
+    for (unsigned i = 1, e = getNumArgs(); i != e; ++i) {
+      Result += ", " + getArg(i)->getAsString();
+      if (getArgName(i)) Result += ":$" + getArgName(i)->getAsUnquotedString();
     }
   }
   return Result + ")";

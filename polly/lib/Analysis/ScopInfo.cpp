@@ -1998,16 +1998,50 @@ const SCEV *Scop::getRepresentingInvariantLoadSCEV(const SCEV *S) {
   return SCEVSensitiveParameterRewriter::rewrite(S, *SE, InvEquivClassVMap);
 }
 
+// This table of function names is used to translate parameter names in more
+// human-readable names. This makes it easier to interpret Polly analysis
+// results.
+StringMap<std::string> KnownNames = {
+    {"_Z13get_global_idj", "global_id"},
+    {"_Z12get_local_idj", "local_id"},
+    {"_Z15get_global_sizej", "global_size"},
+    {"_Z14get_local_sizej", "local_size"},
+    {"_Z12get_work_dimv", "work_dim"},
+    {"_Z17get_global_offsetj", "global_offset"},
+    {"_Z12get_group_idj", "group_id"},
+    {"_Z14get_num_groupsj", "num_groups"},
+};
+
+static std::string getCallParamName(CallInst *Call) {
+  std::string Result;
+  raw_string_ostream OS(Result);
+  std::string Name = Call->getCalledFunction()->getName();
+
+  auto Iterator = KnownNames.find(Name);
+  if (Iterator != KnownNames.end())
+    Name = "__" + KnownNames[Name];
+  OS << Name;
+  for (auto &Operand : Call->arg_operands()) {
+    ConstantInt *Op = cast<ConstantInt>(&Operand);
+    OS << "_" << Op->getValue();
+  }
+  OS.flush();
+  return Result;
+}
+
 void Scop::createParameterId(const SCEV *Parameter) {
   assert(Parameters.count(Parameter));
   assert(!ParameterIds.count(Parameter));
 
   std::string ParameterName = "p_" + std::to_string(getNumParams() - 1);
 
-  if (UseInstructionNames) {
-    if (const SCEVUnknown *ValueParameter = dyn_cast<SCEVUnknown>(Parameter)) {
-      Value *Val = ValueParameter->getValue();
+  if (const SCEVUnknown *ValueParameter = dyn_cast<SCEVUnknown>(Parameter)) {
+    Value *Val = ValueParameter->getValue();
+    CallInst *Call = dyn_cast<CallInst>(Val);
 
+    if (Call && isConstCall(Call)) {
+      ParameterName = getCallParamName(Call);
+    } else if (UseInstructionNames) {
       // If this parameter references a specific Value and this value has a name
       // we use this name as it is likely to be unique and more useful than just
       // a number.

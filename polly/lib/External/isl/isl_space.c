@@ -1931,10 +1931,9 @@ isl_bool isl_space_is_range(__isl_keep isl_space *space1,
 	return isl_space_is_range_internal(space1, space2);
 }
 
-/* Update "hash" by hashing in "space".
- * Changes in this function should be reflected in isl_hash_space_domain.
+/* Update "hash" by hashing in the parameters of "space".
  */
-static uint32_t isl_hash_space(uint32_t hash, __isl_keep isl_space *space)
+static uint32_t isl_hash_params(uint32_t hash, __isl_keep isl_space *space)
 {
 	int i;
 	isl_id *id;
@@ -1943,65 +1942,89 @@ static uint32_t isl_hash_space(uint32_t hash, __isl_keep isl_space *space)
 		return hash;
 
 	isl_hash_byte(hash, space->nparam % 256);
-	isl_hash_byte(hash, space->n_in % 256);
-	isl_hash_byte(hash, space->n_out % 256);
 
 	for (i = 0; i < space->nparam; ++i) {
 		id = get_id(space, isl_dim_param, i);
 		hash = isl_hash_id(hash, id);
 	}
+
+	return hash;
+}
+
+/* Update "hash" by hashing in the tuples of "space".
+ * Changes in this function should be reflected in isl_hash_tuples_domain.
+ */
+static uint32_t isl_hash_tuples(uint32_t hash, __isl_keep isl_space *space)
+{
+	isl_id *id;
+
+	if (!space)
+		return hash;
+
+	isl_hash_byte(hash, space->n_in % 256);
+	isl_hash_byte(hash, space->n_out % 256);
 
 	id = tuple_id(space, isl_dim_in);
 	hash = isl_hash_id(hash, id);
 	id = tuple_id(space, isl_dim_out);
 	hash = isl_hash_id(hash, id);
 
-	hash = isl_hash_space(hash, space->nested[0]);
-	hash = isl_hash_space(hash, space->nested[1]);
+	hash = isl_hash_tuples(hash, space->nested[0]);
+	hash = isl_hash_tuples(hash, space->nested[1]);
 
 	return hash;
 }
 
-/* Update "hash" by hashing in the domain of "space".
+/* Update "hash" by hashing in the domain tuple of "space".
  * The result of this function is equal to the result of applying
- * isl_hash_space to the domain of "space".
+ * isl_hash_tuples to the domain of "space".
  */
-static uint32_t isl_hash_space_domain(uint32_t hash,
+static uint32_t isl_hash_tuples_domain(uint32_t hash,
 	__isl_keep isl_space *space)
 {
-	int i;
 	isl_id *id;
 
 	if (!space)
 		return hash;
 
-	isl_hash_byte(hash, space->nparam % 256);
 	isl_hash_byte(hash, 0);
 	isl_hash_byte(hash, space->n_in % 256);
-
-	for (i = 0; i < space->nparam; ++i) {
-		id = get_id(space, isl_dim_param, i);
-		hash = isl_hash_id(hash, id);
-	}
 
 	hash = isl_hash_id(hash, &isl_id_none);
 	id = tuple_id(space, isl_dim_in);
 	hash = isl_hash_id(hash, id);
 
-	hash = isl_hash_space(hash, space->nested[0]);
+	hash = isl_hash_tuples(hash, space->nested[0]);
 
 	return hash;
 }
 
-uint32_t isl_space_get_hash(__isl_keep isl_space *dim)
+/* Return a hash value that digests the tuples of "space",
+ * i.e., that ignores the parameters.
+ */
+uint32_t isl_space_get_tuple_hash(__isl_keep isl_space *space)
 {
 	uint32_t hash;
 
-	if (!dim)
+	if (!space)
 		return 0;
 
 	hash = isl_hash_init();
-	hash = isl_hash_space(hash, dim);
+	hash = isl_hash_tuples(hash, space);
+
+	return hash;
+}
+
+uint32_t isl_space_get_hash(__isl_keep isl_space *space)
+{
+	uint32_t hash;
+
+	if (!space)
+		return 0;
+
+	hash = isl_hash_init();
+	hash = isl_hash_params(hash, space);
+	hash = isl_hash_tuples(hash, space);
 
 	return hash;
 }
@@ -2018,7 +2041,8 @@ uint32_t isl_space_get_domain_hash(__isl_keep isl_space *space)
 		return 0;
 
 	hash = isl_hash_init();
-	hash = isl_hash_space_domain(hash, space);
+	hash = isl_hash_params(hash, space);
+	hash = isl_hash_tuples_domain(hash, space);
 
 	return hash;
 }
@@ -2058,6 +2082,26 @@ isl_bool isl_space_range_is_wrapping(__isl_keep isl_space *space)
 		return isl_bool_false;
 
 	return space->nested[1] != NULL;
+}
+
+/* Is "space" a product of two spaces?
+ * That is, is it a wrapping set space or a map space
+ * with wrapping domain and range?
+ */
+isl_bool isl_space_is_product(__isl_keep isl_space *space)
+{
+	isl_bool is_set;
+	isl_bool is_product;
+
+	is_set = isl_space_is_set(space);
+	if (is_set < 0)
+		return isl_bool_error;
+	if (is_set)
+		return isl_space_is_wrapping(space);
+	is_product = isl_space_domain_is_wrapping(space);
+	if (is_product < 0 || !is_product)
+		return is_product;
+	return isl_space_range_is_wrapping(space);
 }
 
 __isl_give isl_space *isl_space_wrap(__isl_take isl_space *dim)
@@ -2244,12 +2288,16 @@ __isl_give isl_space *isl_space_lift(__isl_take isl_space *dim, unsigned n_local
 	return dim;
 }
 
-isl_bool isl_space_can_zip(__isl_keep isl_space *dim)
+isl_bool isl_space_can_zip(__isl_keep isl_space *space)
 {
-	if (!dim)
-		return isl_bool_error;
+	isl_bool is_set;
 
-	return dim->nested[0] && dim->nested[1];
+	is_set = isl_space_is_set(space);
+	if (is_set < 0)
+		return isl_bool_error;
+	if (is_set)
+		return isl_bool_false;
+	return isl_space_is_product(space);
 }
 
 __isl_give isl_space *isl_space_zip(__isl_take isl_space *dim)
