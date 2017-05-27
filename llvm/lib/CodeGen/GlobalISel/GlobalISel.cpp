@@ -26,6 +26,7 @@ void llvm::initializeGlobalISel(PassRegistry &Registry) {
 void llvm::initializeGlobalISel(PassRegistry &Registry) {
   initializeIRTranslatorPass(Registry);
   initializeLegalizerPass(Registry);
+  initializeLocalizerPass(Registry);
   initializeRegBankSelectPass(Registry);
   initializeInstructionSelectPass(Registry);
 }

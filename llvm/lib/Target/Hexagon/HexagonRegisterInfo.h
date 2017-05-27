@@ -77,7 +77,6 @@ public:
   unsigned getFirstCallerSavedNonParamReg() const;
 
   bool isEHReturnCalleeSaveReg(unsigned Reg) const;
-  bool isCalleeSaveReg(unsigned Reg) const;
 };
 
 } // end namespace llvm

@@ -62,32 +62,33 @@ static DecodeStatus decodeSoppBrTarget(MCInst &Inst, unsigned Imm,
   return addOperand(Inst, MCOperand::createImm(Imm));
 }
 
-#define DECODE_OPERAND2(RegClass, DecName) \
-static DecodeStatus Decode##RegClass##RegisterClass(MCInst &Inst, \
-                                                    unsigned Imm, \
-                                                    uint64_t /*Addr*/, \
-                                                    const void *Decoder) { \
+#define DECODE_OPERAND(StaticDecoderName, DecoderName) \
+static DecodeStatus StaticDecoderName(MCInst &Inst, \
+                                       unsigned Imm, \
+                                       uint64_t /*Addr*/, \
+                                       const void *Decoder) { \
   auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder); \
-  return addOperand(Inst, DAsm->decodeOperand_##DecName(Imm)); \
+  return addOperand(Inst, DAsm->DecoderName(Imm)); \
 }
 
-#define DECODE_OPERAND(RegClass) DECODE_OPERAND2(RegClass, RegClass)
+#define DECODE_OPERAND_REG(RegClass) \
+DECODE_OPERAND(Decode##RegClass##RegisterClass, decodeOperand_##RegClass)
 
-DECODE_OPERAND(VGPR_32)
-DECODE_OPERAND(VS_32)
-DECODE_OPERAND(VS_64)
+DECODE_OPERAND_REG(VGPR_32)
+DECODE_OPERAND_REG(VS_32)
+DECODE_OPERAND_REG(VS_64)
 
-DECODE_OPERAND(VReg_64)
-DECODE_OPERAND(VReg_96)
-DECODE_OPERAND(VReg_128)
+DECODE_OPERAND_REG(VReg_64)
+DECODE_OPERAND_REG(VReg_96)
+DECODE_OPERAND_REG(VReg_128)
 
-DECODE_OPERAND(SReg_32)
-DECODE_OPERAND(SReg_32_XM0_XEXEC)
-DECODE_OPERAND(SReg_64)
-DECODE_OPERAND(SReg_64_XEXEC)
-DECODE_OPERAND(SReg_128)
-DECODE_OPERAND(SReg_256)
-DECODE_OPERAND(SReg_512)
+DECODE_OPERAND_REG(SReg_32)
+DECODE_OPERAND_REG(SReg_32_XM0_XEXEC)
+DECODE_OPERAND_REG(SReg_64)
+DECODE_OPERAND_REG(SReg_64_XEXEC)
+DECODE_OPERAND_REG(SReg_128)
+DECODE_OPERAND_REG(SReg_256)
+DECODE_OPERAND_REG(SReg_512)
 
 
 static DecodeStatus decodeOperand_VSrc16(MCInst &Inst,
@@ -105,6 +106,13 @@ static DecodeStatus decodeOperand_VSrcV216(MCInst &Inst,
   auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
   return addOperand(Inst, DAsm->decodeOperand_VSrcV216(Imm));
 }
+
+#define DECODE_SDWA9(DecName) \
+DECODE_OPERAND(decodeSDWA9##DecName, decodeSDWA9##DecName)
+
+DECODE_SDWA9(Src32)
+DECODE_SDWA9(Src16)
+DECODE_SDWA9(VopcDst)
 
 #include "AMDGPUGenDisassemblerTables.inc"
 
@@ -163,6 +171,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (Res) break;
 
       Res = tryDecodeInst(DecoderTableSDWA64, MI, QW, Address);
+      if (Res) break;
+
+      Res = tryDecodeInst(DecoderTableSDWA964, MI, QW, Address);
       if (Res) break;
     }
 
@@ -580,6 +591,48 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
   default: break;
   }
   return errOperand(Val, "unknown operand encoding " + Twine(Val));
+}
+
+MCOperand AMDGPUDisassembler::decodeSDWA9Src(const OpWidthTy Width,
+                                             unsigned Val) const {
+  using namespace AMDGPU::SDWA;
+
+  if (SDWA9EncValues::SRC_VGPR_MIN <= Val &&
+      Val <= SDWA9EncValues::SRC_VGPR_MAX) {
+    return createRegOperand(getVgprClassId(Width),
+                            Val - SDWA9EncValues::SRC_VGPR_MIN);
+  } 
+  if (SDWA9EncValues::SRC_SGPR_MIN <= Val &&
+      Val <= SDWA9EncValues::SRC_SGPR_MAX) {
+    return createSRegOperand(getSgprClassId(Width),
+                             Val - SDWA9EncValues::SRC_SGPR_MIN);
+  }
+
+  return decodeSpecialReg32(Val - SDWA9EncValues::SRC_SGPR_MIN);
+}
+
+MCOperand AMDGPUDisassembler::decodeSDWA9Src16(unsigned Val) const {
+  return decodeSDWA9Src(OPW16, Val);
+}
+
+MCOperand AMDGPUDisassembler::decodeSDWA9Src32(unsigned Val) const {
+  return decodeSDWA9Src(OPW32, Val);
+}
+
+
+MCOperand AMDGPUDisassembler::decodeSDWA9VopcDst(unsigned Val) const {
+  using namespace AMDGPU::SDWA;
+
+  if (Val & SDWA9EncValues::VOPC_DST_VCC_MASK) {
+    Val &= SDWA9EncValues::VOPC_DST_SGPR_MASK;
+    if (Val > AMDGPU::EncValues::SGPR_MAX) {
+      return decodeSpecialReg64(Val);
+    } else {
+      return createSRegOperand(getSgprClassId(OPW64), Val);
+    }
+  } else {
+    return createRegOperand(AMDGPU::VCC);
+  }
 }
 
 //===----------------------------------------------------------------------===//

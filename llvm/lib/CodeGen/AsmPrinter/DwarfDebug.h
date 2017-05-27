@@ -416,7 +416,7 @@ class DwarfDebug : public DebugHandlerBase {
 
   /// Create new DwarfCompileUnit for the given metadata node with tag
   /// DW_TAG_compile_unit.
-  DwarfCompileUnit &constructDwarfCompileUnit(const DICompileUnit *DIUnit);
+  DwarfCompileUnit &getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit);
 
   /// Construct imported_module or imported_declaration DIE.
   void constructAndAddImportedEntityDIE(DwarfCompileUnit &TheCU,

@@ -1057,179 +1057,71 @@ void ScheduleDAGInstrs::reduceHugeMemNodeMaps(Value2SUsMap &stores,
         loads.dump());
 }
 
-void ScheduleDAGInstrs::startBlockForKills(MachineBasicBlock *BB) {
-  // Start with no live registers.
-  LiveRegs.reset();
+static void toggleKills(const MachineRegisterInfo &MRI, LivePhysRegs &LiveRegs,
+                        MachineInstr &MI, bool addToLiveRegs) {
+  for (MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg() || !MO.readsReg())
+      continue;
+    unsigned Reg = MO.getReg();
+    if (!Reg)
+      continue;
 
-  // Examine the live-in regs of all successors.
-  for (const MachineBasicBlock *Succ : BB->successors()) {
-    for (const auto &LI : Succ->liveins()) {
-      // Repeat, for reg and all subregs.
-      for (MCSubRegIterator SubRegs(LI.PhysReg, TRI, /*IncludeSelf=*/true);
-           SubRegs.isValid(); ++SubRegs)
-        LiveRegs.set(*SubRegs);
-    }
+    // Things that are available after the instruction are killed by it.
+    bool IsKill = LiveRegs.available(MRI, Reg);
+    MO.setIsKill(IsKill);
+    if (IsKill && addToLiveRegs)
+      LiveRegs.addReg(Reg);
   }
 }
 
-/// \brief If we change a kill flag on the bundle instruction implicit register
-/// operands, then we also need to propagate that to any instructions inside
-/// the bundle which had the same kill state.
-static void toggleBundleKillFlag(MachineInstr *MI, unsigned Reg,
-                                 bool NewKillState,
-                                 const TargetRegisterInfo *TRI) {
-  if (MI->getOpcode() != TargetOpcode::BUNDLE)
-    return;
+void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
+  DEBUG(dbgs() << "Fixup kills for BB#" << MBB.getNumber() << '\n');
 
-  // Walk backwards from the last instruction in the bundle to the first.
-  // Once we set a kill flag on an instruction, we bail out, as otherwise we
-  // might set it on too many operands.  We will clear as many flags as we
-  // can though.
-  MachineBasicBlock::instr_iterator Begin = MI->getIterator();
-  MachineBasicBlock::instr_iterator End = getBundleEnd(Begin);
-  while (Begin != End) {
-    if (NewKillState) {
-      if ((--End)->addRegisterKilled(Reg, TRI, /* addIfNotFound= */ false))
-         return;
-    } else
-      (--End)->clearRegisterKills(Reg, TRI);
-  }
-}
-
-void ScheduleDAGInstrs::toggleKillFlag(MachineInstr &MI, MachineOperand &MO) {
-  if (MO.isDebug())
-    return;
-
-  // Setting kill flag...
-  if (!MO.isKill()) {
-    MO.setIsKill(true);
-    toggleBundleKillFlag(&MI, MO.getReg(), true, TRI);
-    return;
-  }
-
-  // If MO itself is live, clear the kill flag...
-  if (LiveRegs.test(MO.getReg())) {
-    MO.setIsKill(false);
-    toggleBundleKillFlag(&MI, MO.getReg(), false, TRI);
-    return;
-  }
-
-  // If any subreg of MO is live, then create an imp-def for that
-  // subreg and keep MO marked as killed.
-  MO.setIsKill(false);
-  toggleBundleKillFlag(&MI, MO.getReg(), false, TRI);
-  bool AllDead = true;
-  const unsigned SuperReg = MO.getReg();
-  MachineInstrBuilder MIB(MF, &MI);
-  for (MCSubRegIterator SubRegs(SuperReg, TRI); SubRegs.isValid(); ++SubRegs) {
-    if (LiveRegs.test(*SubRegs)) {
-      MIB.addReg(*SubRegs, RegState::ImplicitDefine);
-      AllDead = false;
-    }
-  }
-
-  if(AllDead) {
-    MO.setIsKill(true);
-    toggleBundleKillFlag(&MI, MO.getReg(), true, TRI);
-  }
-}
-
-void ScheduleDAGInstrs::fixupKills(MachineBasicBlock *MBB) {
-  // FIXME: Reuse the LivePhysRegs utility for this.
-  DEBUG(dbgs() << "Fixup kills for BB#" << MBB->getNumber() << '\n');
-
-  LiveRegs.resize(TRI->getNumRegs());
-  BitVector killedRegs(TRI->getNumRegs());
-
-  startBlockForKills(MBB);
+  LiveRegs.init(*TRI);
+  LiveRegs.addLiveOuts(MBB);
 
   // Examine block from end to start...
-  unsigned Count = MBB->size();
-  for (MachineBasicBlock::iterator I = MBB->end(), E = MBB->begin();
-       I != E; --Count) {
-    MachineInstr &MI = *--I;
+  for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
     if (MI.isDebugValue())
       continue;
 
     // Update liveness.  Registers that are defed but not used in this
     // instruction are now dead. Mark register and all subregs as they
     // are completely defined.
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI.getOperand(i);
-      if (MO.isRegMask())
-        LiveRegs.clearBitsNotInMask(MO.getRegMask());
-      if (!MO.isReg()) continue;
-      unsigned Reg = MO.getReg();
-      if (Reg == 0) continue;
-      if (!MO.isDef()) continue;
-      // Ignore two-addr defs.
-      if (MI.isRegTiedToUseOperand(i)) continue;
-
-      // Repeat for reg and all subregs.
-      for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
-           SubRegs.isValid(); ++SubRegs)
-        LiveRegs.reset(*SubRegs);
+    for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
+      const MachineOperand &MO = *O;
+      if (MO.isReg()) {
+        if (!MO.isDef())
+          continue;
+        unsigned Reg = MO.getReg();
+        if (!Reg)
+          continue;
+        LiveRegs.removeReg(Reg);
+      } else if (MO.isRegMask()) {
+        LiveRegs.removeRegsInMask(MO);
+      }
     }
 
-    // Examine all used registers and set/clear kill flag. When a
-    // register is used multiple times we only set the kill flag on
-    // the first use. Don't set kill flags on undef operands.
-    killedRegs.reset();
-
-    // toggleKillFlag can append new operands (implicit defs), so using
-    // a range-based loop is not safe. The new operands will be appended
-    // at the end of the operand list and they don't need to be visited,
-    // so iterating until the currently last operand is ok.
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI.getOperand(i);
-      if (!MO.isReg() || !MO.isUse() || MO.isUndef()) continue;
-      unsigned Reg = MO.getReg();
-      if ((Reg == 0) || MRI.isReserved(Reg)) continue;
-
-      bool kill = false;
-      if (!killedRegs.test(Reg)) {
-        kill = true;
-        // A register is not killed if any subregs are live...
-        for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs) {
-          if (LiveRegs.test(*SubRegs)) {
-            kill = false;
-            break;
-          }
-        }
-
-        // If subreg is not live, then register is killed if it became
-        // live in this instruction
-        if (kill)
-          kill = !LiveRegs.test(Reg);
+    // If there is a bundle header fix it up first.
+    if (!MI.isBundled()) {
+      toggleKills(MRI, LiveRegs, MI, true);
+    } else {
+      MachineBasicBlock::instr_iterator First = MI.getIterator();
+      if (MI.isBundle()) {
+        toggleKills(MRI, LiveRegs, MI, false);
+        ++First;
       }
-
-      if (MO.isKill() != kill) {
-        DEBUG(dbgs() << "Fixing " << MO << " in ");
-        toggleKillFlag(MI, MO);
-        DEBUG(MI.dump());
-        DEBUG({
-          if (MI.getOpcode() == TargetOpcode::BUNDLE) {
-            MachineBasicBlock::instr_iterator Begin = MI.getIterator();
-            MachineBasicBlock::instr_iterator End = getBundleEnd(Begin);
-            while (++Begin != End)
-              DEBUG(Begin->dump());
-          }
-        });
-      }
-
-      killedRegs.set(Reg);
-    }
-
-    // Mark any used register (that is not using undef) and subregs as
-    // now live...
-    for (const MachineOperand &MO : MI.operands()) {
-      if (!MO.isReg() || !MO.isUse() || MO.isUndef()) continue;
-      unsigned Reg = MO.getReg();
-      if ((Reg == 0) || MRI.isReserved(Reg)) continue;
-
-      for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
-           SubRegs.isValid(); ++SubRegs)
-        LiveRegs.set(*SubRegs);
+      // Some targets make the (questionable) assumtion that the instructions
+      // inside the bundle are ordered and consequently only the last use of
+      // a register inside the bundle can kill it.
+      MachineBasicBlock::instr_iterator I = std::next(First);
+      while (I->isBundledWithSucc())
+        ++I;
+      do {
+        if (!I->isDebugValue())
+          toggleKills(MRI, LiveRegs, *I, true);
+        --I;
+      } while(I != First);
     }
   }
 }

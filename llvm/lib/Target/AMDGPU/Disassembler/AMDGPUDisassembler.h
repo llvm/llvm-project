@@ -104,6 +104,11 @@ public:
   MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
+
+  MCOperand decodeSDWA9Src(const OpWidthTy Width, unsigned Val) const;
+  MCOperand decodeSDWA9Src16(unsigned Val) const;
+  MCOperand decodeSDWA9Src32(unsigned Val) const;
+  MCOperand decodeSDWA9VopcDst(unsigned Val) const;
 };
 
 //===----------------------------------------------------------------------===//

@@ -1655,8 +1655,8 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
 }
 
 void FPS::setKillFlags(MachineBasicBlock &MBB) const {
-  const TargetRegisterInfo *TRI =
-      MBB.getParent()->getSubtarget().getRegisterInfo();
+  const TargetRegisterInfo &TRI =
+      *MBB.getParent()->getSubtarget().getRegisterInfo();
   LivePhysRegs LPR(TRI);
 
   LPR.addLiveOuts(MBB);

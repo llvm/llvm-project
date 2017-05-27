@@ -7,21 +7,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/ScalarEvolutionExpander.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolutionExpander.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
@@ -853,5 +854,82 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
   Type *I128Ty = Type::getInt128Ty(Context);
   SE.getZeroExtendExpr(S, I128Ty);
 }
+
+// Make sure that SCEV doesn't introduce illegal ptrtoint/inttoptr instructions
+TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExprNonIntegral) {
+  /*
+   * Create the following code:
+   * func(i64 addrspace(10)* %arg)
+   * top:
+   *  br label %L.ph
+   * L.ph:
+   *  br label %L
+   * L:
+   *  %phi = phi i64 [i64 0, %L.ph], [ %add, %L2 ]
+   *  %add = add i64 %phi2, 1
+   *  br i1 undef, label %post, label %L2
+   * post:
+   *  %gepbase = getelementptr i64 addrspace(10)* %arg, i64 1
+   *  #= %gep = getelementptr i64 addrspace(10)* %gepbase, i64 %add =#
+   *  ret void
+   *
+   * We will create the appropriate SCEV expression for %gep and expand it,
+   * then check that no inttoptr/ptrtoint instructions got inserted.
+   */
+
+  // Create a module with non-integral pointers in it's datalayout
+  Module NIM("nonintegral", Context);
+  std::string DataLayout = M.getDataLayoutStr();
+  if (!DataLayout.empty())
+    DataLayout += "-";
+  DataLayout += "ni:10";
+  NIM.setDataLayout(DataLayout);
+
+  Type *T_int1 = Type::getInt1Ty(Context);
+  Type *T_int64 = Type::getInt64Ty(Context);
+  Type *T_pint64 = T_int64->getPointerTo(10);
+
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);
+  Function *F = cast<Function>(NIM.getOrInsertFunction("foo", FTy));
+
+  Argument *Arg = &*F->arg_begin();
+
+  BasicBlock *Top = BasicBlock::Create(Context, "top", F);
+  BasicBlock *LPh = BasicBlock::Create(Context, "L.ph", F);
+  BasicBlock *L = BasicBlock::Create(Context, "L", F);
+  BasicBlock *Post = BasicBlock::Create(Context, "post", F);
+
+  IRBuilder<> Builder(Top);
+  Builder.CreateBr(LPh);
+
+  Builder.SetInsertPoint(LPh);
+  Builder.CreateBr(L);
+
+  Builder.SetInsertPoint(L);
+  PHINode *Phi = Builder.CreatePHI(T_int64, 2);
+  Value *Add = Builder.CreateAdd(Phi, ConstantInt::get(T_int64, 1), "add");
+  Builder.CreateCondBr(UndefValue::get(T_int1), L, Post);
+  Phi->addIncoming(ConstantInt::get(T_int64, 0), LPh);
+  Phi->addIncoming(Add, L);
+
+  Builder.SetInsertPoint(Post);
+  Value *GepBase = Builder.CreateGEP(Arg, ConstantInt::get(T_int64, 1));
+  Instruction *Ret = Builder.CreateRetVoid();
+
+  ScalarEvolution SE = buildSE(*F);
+  auto *AddRec =
+      SE.getAddRecExpr(SE.getUnknown(GepBase), SE.getConstant(T_int64, 1),
+                       LI->getLoopFor(L), SCEV::FlagNUW);
+
+  SCEVExpander Exp(SE, NIM.getDataLayout(), "expander");
+  Exp.disableCanonicalMode();
+  Exp.expandCodeFor(AddRec, T_pint64, Ret);
+
+  // Make sure none of the instructions inserted were inttoptr/ptrtoint.
+  // The verifier will check this.
+  EXPECT_FALSE(verifyFunction(*F, &errs()));
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm

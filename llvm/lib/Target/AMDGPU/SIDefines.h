@@ -299,10 +299,17 @@ enum DstUnused {
   UNUSED_PRESERVE = 2,
 };
 
-#define SDWA9_SRC_SGPR_MASK 0x100
-#define SDWA9_SRC_REG_MASK 0xFF
-#define SDWA9_VOPC_DST_VCC_MASK 0x80
-#define SDWA9_VOPC_DST_REG_MASK 0x7F
+enum SDWA9EncValues{
+  SRC_SGPR_MASK = 0x100,
+  SRC_VGPR_MASK = 0xFF,
+  VOPC_DST_VCC_MASK = 0x80,
+  VOPC_DST_SGPR_MASK = 0x7F,
+
+  SRC_VGPR_MIN = 0,
+  SRC_VGPR_MAX = 255,
+  SRC_SGPR_MIN = 256,
+  SRC_SGPR_MAX = 357,
+};
 
 } // namespace SDWA
 } // namespace AMDGPU

@@ -4779,23 +4779,23 @@ static bool FindOptimalMemOpLowering(std::vector<EVT> &MemOps,
                                    DAG.getMachineFunction());
 
   if (VT == MVT::Other) {
-    if (DstAlign >= DAG.getDataLayout().getPointerPrefAlignment(DstAS) ||
-        TLI.allowsMisalignedMemoryAccesses(VT, DstAS, DstAlign)) {
-      VT = TLI.getPointerTy(DAG.getDataLayout(), DstAS);
-    } else {
-      switch (DstAlign & 7) {
-      case 0:  VT = MVT::i64; break;
-      case 4:  VT = MVT::i32; break;
-      case 2:  VT = MVT::i16; break;
-      default: VT = MVT::i8;  break;
-      }
-    }
+    // Use the largest integer type whose alignment constraints are satisfied.
+    // We only need to check DstAlign here as SrcAlign is always greater or
+    // equal to DstAlign (or zero).
+    VT = MVT::i64;
+    while (DstAlign && DstAlign < VT.getSizeInBits() / 8 &&
+           !TLI.allowsMisalignedMemoryAccesses(VT, DstAS, DstAlign))
+      VT = (MVT::SimpleValueType)(VT.getSimpleVT().SimpleTy - 1);
+    assert(VT.isInteger());
 
+    // Find the largest legal integer type.
     MVT LVT = MVT::i64;
     while (!TLI.isTypeLegal(LVT))
       LVT = (MVT::SimpleValueType)(LVT.SimpleTy - 1);
     assert(LVT.isInteger());
 
+    // If the type we've chosen is larger than the largest legal integer type
+    // then use that instead.
     if (VT.bitsGT(LVT))
       VT = LVT;
   }

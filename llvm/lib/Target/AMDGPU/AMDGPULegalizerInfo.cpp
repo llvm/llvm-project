@@ -36,6 +36,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo() {
   setAction({G_CONSTANT, S32}, Legal);
   setAction({G_CONSTANT, S64}, Legal);
 
+  setAction({G_FCONSTANT, S32}, Legal);
+
   setAction({G_GEP, P1}, Legal);
   setAction({G_GEP, P2}, Legal);
   setAction({G_GEP, 1, S64}, Legal);

@@ -168,6 +168,10 @@ static cl::opt<bool, true> XUseInstructionNames(
     cl::location(UseInstructionNames), cl::Hidden, cl::init(false),
     cl::ZeroOrMore, cl::cat(PollyCategory));
 
+static cl::opt<bool> PollyPrintInstructions(
+    "polly-print-instructions", cl::desc("Output instructions per ScopStmt"),
+    cl::Hidden, cl::Optional, cl::init(false), cl::cat(PollyCategory));
+
 //===----------------------------------------------------------------------===//
 
 // Create a sequence of two schedules. Either argument may be null and is
@@ -1647,9 +1651,11 @@ ScopStmt::ScopStmt(Scop &parent, Region &R, Loop *SurroundingLoop)
       "Stmt", R.getNameStr(), parent.getNextStmtIdx(), "", UseInstructionNames);
 }
 
-ScopStmt::ScopStmt(Scop &parent, BasicBlock &bb, Loop *SurroundingLoop)
+ScopStmt::ScopStmt(Scop &parent, BasicBlock &bb, Loop *SurroundingLoop,
+                   std::vector<Instruction *> Instructions)
     : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), BB(&bb),
-      R(nullptr), Build(nullptr), SurroundingLoop(SurroundingLoop) {
+      R(nullptr), Build(nullptr), SurroundingLoop(SurroundingLoop),
+      Instructions(Instructions) {
 
   BaseName = getIslCompatibleName("Stmt", &bb, parent.getNextStmtIdx(), "",
                                   UseInstructionNames);
@@ -1863,6 +1869,15 @@ ScopStmt::~ScopStmt() {
   isl_set_free(InvalidDomain);
 }
 
+void ScopStmt::printInstructions(raw_ostream &OS) const {
+  OS << "Instructions {\n";
+
+  for (Instruction *Inst : Instructions)
+    OS.indent(16) << *Inst << "\n";
+
+  OS.indent(16) << "}\n";
+}
+
 void ScopStmt::print(raw_ostream &OS) const {
   OS << "\t" << getBaseName() << "\n";
   OS.indent(12) << "Domain :=\n";
@@ -1881,6 +1896,9 @@ void ScopStmt::print(raw_ostream &OS) const {
 
   for (MemoryAccess *Access : MemAccs)
     Access->print(OS);
+
+  if (PollyPrintInstructions)
+    printInstructions(OS.indent(12));
 }
 
 void ScopStmt::dump() const { print(dbgs()); }
@@ -4616,9 +4634,10 @@ static isl::multi_union_pw_aff mapToDimension(isl::union_set USet, int N) {
   return isl::multi_union_pw_aff(isl::union_pw_multi_aff(Result));
 }
 
-void Scop::addScopStmt(BasicBlock *BB, Loop *SurroundingLoop) {
+void Scop::addScopStmt(BasicBlock *BB, Loop *SurroundingLoop,
+                       std::vector<Instruction *> Instructions) {
   assert(BB && "Unexpected nullptr!");
-  Stmts.emplace_back(*this, *BB, SurroundingLoop);
+  Stmts.emplace_back(*this, *BB, SurroundingLoop, Instructions);
   auto *Stmt = &Stmts.back();
   StmtMap[BB] = Stmt;
 }

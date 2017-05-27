@@ -44,7 +44,8 @@ Instruction *InstCombiner::commonShiftTransforms(BinaryOperator &I) {
   Value *A;
   Constant *C;
   if (match(Op0, m_Constant()) && match(Op1, m_Add(m_Value(A), m_Constant(C))))
-    if (isKnownNonNegative(A, DL) && isKnownNonNegative(C, DL))
+    if (isKnownNonNegative(A, DL, 0, &AC, &I, &DT) &&
+        isKnownNonNegative(C, DL, 0, &AC, &I, &DT))
       return BinaryOperator::Create(
           I.getOpcode(), Builder->CreateBinOp(I.getOpcode(), Op0, C), A);
 
