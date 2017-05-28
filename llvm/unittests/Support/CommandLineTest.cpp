@@ -180,8 +180,9 @@ void testCommandLineTokenizer(ParserFunction *parse, StringRef Input,
   parse(Input, Saver, Actual, /*MarkEOLs=*/false);
   EXPECT_EQ(OutputSize, Actual.size());
   for (unsigned I = 0, E = Actual.size(); I != E; ++I) {
-    if (I < OutputSize)
+    if (I < OutputSize) {
       EXPECT_STREQ(Output[I], Actual[I]);
+    }
   }
 }
 
@@ -528,8 +529,9 @@ TEST(CommandLineTest, GetRegisteredSubcommands) {
   EXPECT_FALSE(Opt1);
   EXPECT_FALSE(Opt2);
   for (auto *S : cl::getRegisteredSubcommands()) {
-    if (*S)
+    if (*S) {
       EXPECT_EQ("sc1", S->getName());
+    }
   }
 
   cl::ResetAllOptionOccurrences();
@@ -538,8 +540,9 @@ TEST(CommandLineTest, GetRegisteredSubcommands) {
   EXPECT_FALSE(Opt1);
   EXPECT_FALSE(Opt2);
   for (auto *S : cl::getRegisteredSubcommands()) {
-    if (*S)
+    if (*S) {
       EXPECT_EQ("sc2", S->getName());
+    }
   }
 }
 
