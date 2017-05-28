@@ -1390,7 +1390,6 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["sha"] = HasLeaf7 && ((EBX >> 29) & 1);
 
   // AVX512 is only supported if the OS supports the context save for it.
-  Features["avx512vpopcntdq"] = HasLeaf7 && ((EBX >> 14) & 1) && HasAVX512Save;
   Features["avx512f"] = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
   Features["avx512dq"] = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
   Features["avx512ifma"] = HasLeaf7 && ((EBX >> 21) & 1) && HasAVX512Save;
@@ -1402,6 +1401,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
 
   Features["prefetchwt1"] = HasLeaf7 && (ECX & 1);
   Features["avx512vbmi"] = HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save;
+  Features["avx512vpopcntdq"] = HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save;  
   // Enable protection keys
   Features["pku"] = HasLeaf7 && ((ECX >> 4) & 1);
 

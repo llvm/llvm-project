@@ -9,9 +9,9 @@
 
 #include "ClangdServer.h"
 #include "clang/Basic/VirtualFileSystem.h"
+#include "clang/Config/config.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Config/config.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"

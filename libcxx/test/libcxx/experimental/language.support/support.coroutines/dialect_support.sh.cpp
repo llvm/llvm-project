@@ -10,10 +10,6 @@
 
 // REQUIRES: fcoroutines-ts
 
-// These configurations run the tests with '-g', which hits a bug in Clangs
-// coroutine implementation.
-// XFAIL: asan, msan, ubsan, tsan
-
 // RUN: %build -fcoroutines-ts
 // RUN: %run
 

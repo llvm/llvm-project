@@ -321,6 +321,7 @@ static ExprResult buildCoroutineHandle(Sema &S, QualType PromiseType,
 }
 
 struct ReadySuspendResumeResult {
+  enum AwaitCallType { ACT_Ready, ACT_Suspend, ACT_Resume };
   Expr *Results[3];
   OpaqueValueExpr *OpaqueValue;
   bool IsInvalid;
@@ -366,7 +367,41 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     Calls.Results[I] = Result.get();
   }
 
+  // Assume the calls are valid; all further checking should make them invalid.
   Calls.IsInvalid = false;
+
+  using ACT = ReadySuspendResumeResult::AwaitCallType;
+  CallExpr *AwaitReady = cast<CallExpr>(Calls.Results[ACT::ACT_Ready]);
+  if (!AwaitReady->getType()->isDependentType()) {
+    // [expr.await]p3 [...]
+    // — await-ready is the expression e.await_ready(), contextually converted
+    // to bool.
+    ExprResult Conv = S.PerformContextuallyConvertToBool(AwaitReady);
+    if (Conv.isInvalid()) {
+      S.Diag(AwaitReady->getDirectCallee()->getLocStart(),
+             diag::note_await_ready_no_bool_conversion);
+      S.Diag(Loc, diag::note_coroutine_promise_call_implicitly_required)
+          << AwaitReady->getDirectCallee() << E->getSourceRange();
+      Calls.IsInvalid = true;
+    }
+    Calls.Results[ACT::ACT_Ready] = Conv.get();
+  }
+  CallExpr *AwaitSuspend = cast<CallExpr>(Calls.Results[ACT::ACT_Suspend]);
+  if (!AwaitSuspend->getType()->isDependentType()) {
+    // [expr.await]p3 [...]
+    //   - await-suspend is the expression e.await_suspend(h), which shall be
+    //     a prvalue of type void or bool.
+    QualType RetType = AwaitSuspend->getType();
+    if (RetType != S.Context.BoolTy && RetType != S.Context.VoidTy) {
+      S.Diag(AwaitSuspend->getCalleeDecl()->getLocation(),
+             diag::err_await_suspend_invalid_return_type)
+          << RetType;
+      S.Diag(Loc, diag::note_coroutine_promise_call_implicitly_required)
+          << AwaitSuspend->getDirectCallee();
+      Calls.IsInvalid = true;
+    }
+  }
+
   return Calls;
 }
 
