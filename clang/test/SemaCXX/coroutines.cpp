@@ -837,3 +837,40 @@ coro<bad_promise_no_return_func> no_return_value_or_return_void() {
   // expected-error@-1 {{'bad_promise_no_return_func' must declare either 'return_value' or 'return_void'}}
   co_await a;
 }
+
+struct bad_await_suspend_return {
+  bool await_ready();
+  // expected-error@+1 {{the return type of 'await_suspend' is required to be 'void' or 'bool' (have 'char')}}
+  char await_suspend(std::experimental::coroutine_handle<>);
+  void await_resume();
+};
+struct bad_await_ready_return {
+  // expected-note@+1 {{the return type of 'await_ready' is required to be contextually convertible to 'bool'}}
+  void await_ready();
+  bool await_suspend(std::experimental::coroutine_handle<>);
+  void await_resume();
+};
+struct await_ready_explicit_bool {
+  struct BoolT {
+    explicit operator bool() const;
+  };
+  BoolT await_ready();
+  void await_suspend(std::experimental::coroutine_handle<>);
+  void await_resume();
+};
+void test_bad_suspend() {
+  {
+    // FIXME: The actual error emitted here is terrible, and no number of notes can save it.
+    bad_await_ready_return a;
+    // expected-error@+1 {{value of type 'void' is not contextually convertible to 'bool'}}
+    co_await a; // expected-note {{call to 'await_ready' implicitly required by coroutine function here}}
+  }
+  {
+    bad_await_suspend_return b;
+    co_await b; // expected-note {{call to 'await_suspend' implicitly required by coroutine function here}}
+  }
+  {
+    await_ready_explicit_bool c;
+    co_await c; // OK
+  }
+}

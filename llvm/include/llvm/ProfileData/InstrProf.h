@@ -212,12 +212,12 @@ StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName,
 ///  third field is the uncompressed strings; otherwise it is the
 /// compressed string. When the string compression is off, the
 /// second field will have value zero.
-Error collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
+Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
                                 bool doCompression, std::string &Result);
 
 /// Produce \c Result string with the same format described above. The input
 /// is vector of PGO function name variables that are referenced.
-Error collectPGOFuncNameStrings(const std::vector<GlobalVariable *> &NameVars,
+Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
                                 std::string &Result, bool doCompression = true);
 
 /// \c NameStrings is a string composed of one of more sub-strings encoded in
@@ -967,7 +967,7 @@ struct Header {
 } // end namespace RawInstrProf
 
 // Parse MemOP Size range option.
-void getMemOPSizeRangeFromOption(std::string Str, int64_t &RangeStart,
+void getMemOPSizeRangeFromOption(StringRef Str, int64_t &RangeStart,
                                  int64_t &RangeLast);
 
 } // end namespace llvm

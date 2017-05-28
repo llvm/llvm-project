@@ -8973,6 +8973,12 @@ def err_coroutine_promise_new_requires_nothrow : Error<
    "type declares 'get_return_object_on_allocation_failure()'">;
 def note_coroutine_promise_call_implicitly_required : Note<
   "call to %0 implicitly required by coroutine function here">;
+def err_await_suspend_invalid_return_type : Error<
+  "the return type of 'await_suspend' is required to be 'void' or 'bool' (have %0)"
+>;
+def note_await_ready_no_bool_conversion : Note<
+  "the return type of 'await_ready' is required to be contextually convertible to 'bool'"
+>;
 }
 
 let CategoryName = "Documentation Issue" in {
