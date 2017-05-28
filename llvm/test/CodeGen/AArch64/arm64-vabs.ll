@@ -33,7 +33,7 @@ define <2 x i64> @sabdl2d(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 
 define <8 x i16> @sabdl2_8h(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ;CHECK-LABEL: sabdl2_8h:
-;CHECK: sabdl2.8h
+;CHECK: sabdl.8h
         %load1 = load <16 x i8>, <16 x i8>* %A
         %load2 = load <16 x i8>, <16 x i8>* %B
         %tmp1 = shufflevector <16 x i8> %load1, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -45,7 +45,7 @@ define <8 x i16> @sabdl2_8h(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 
 define <4 x i32> @sabdl2_4s(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ;CHECK-LABEL: sabdl2_4s:
-;CHECK: sabdl2.4s
+;CHECK: sabdl.4s
         %load1 = load <8 x i16>, <8 x i16>* %A
         %load2 = load <8 x i16>, <8 x i16>* %B
         %tmp1 = shufflevector <8 x i16> %load1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -57,7 +57,7 @@ define <4 x i32> @sabdl2_4s(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 
 define <2 x i64> @sabdl2_2d(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 ;CHECK-LABEL: sabdl2_2d:
-;CHECK: sabdl2.2d
+;CHECK: sabdl.2d
         %load1 = load <4 x i32>, <4 x i32>* %A
         %load2 = load <4 x i32>, <4 x i32>* %B
         %tmp1 = shufflevector <4 x i32> %load1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -99,7 +99,7 @@ define <2 x i64> @uabdl2d(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 
 define <8 x i16> @uabdl2_8h(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ;CHECK-LABEL: uabdl2_8h:
-;CHECK: uabdl2.8h
+;CHECK: uabdl.8h
   %load1 = load <16 x i8>, <16 x i8>* %A
   %load2 = load <16 x i8>, <16 x i8>* %B
   %tmp1 = shufflevector <16 x i8> %load1, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -112,7 +112,7 @@ define <8 x i16> @uabdl2_8h(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 
 define <4 x i32> @uabdl2_4s(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ;CHECK-LABEL: uabdl2_4s:
-;CHECK: uabdl2.4s
+;CHECK: uabdl.4s
   %load1 = load <8 x i16>, <8 x i16>* %A
   %load2 = load <8 x i16>, <8 x i16>* %B
   %tmp1 = shufflevector <8 x i16> %load1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -124,7 +124,7 @@ define <4 x i32> @uabdl2_4s(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 
 define <2 x i64> @uabdl2_2d(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 ;CHECK-LABEL: uabdl2_2d:
-;CHECK: uabdl2.2d
+;CHECK: uabdl.2d
   %load1 = load <4 x i32>, <4 x i32>* %A
   %load2 = load <4 x i32>, <4 x i32>* %B
   %tmp1 = shufflevector <4 x i32> %load1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -561,7 +561,7 @@ define <2 x i64> @sabal2d(<2 x i32>* %A, <2 x i32>* %B, <2 x i64>* %C) nounwind 
 
 define <8 x i16> @sabal2_8h(<16 x i8>* %A, <16 x i8>* %B, <8 x i16>* %C) nounwind {
 ;CHECK-LABEL: sabal2_8h:
-;CHECK: sabal2.8h
+;CHECK: sabal.8h
         %load1 = load <16 x i8>, <16 x i8>* %A
         %load2 = load <16 x i8>, <16 x i8>* %B
         %tmp3 = load <8 x i16>, <8 x i16>* %C
@@ -575,7 +575,7 @@ define <8 x i16> @sabal2_8h(<16 x i8>* %A, <16 x i8>* %B, <8 x i16>* %C) nounwin
 
 define <4 x i32> @sabal2_4s(<8 x i16>* %A, <8 x i16>* %B, <4 x i32>* %C) nounwind {
 ;CHECK-LABEL: sabal2_4s:
-;CHECK: sabal2.4s
+;CHECK: sabal.4s
         %load1 = load <8 x i16>, <8 x i16>* %A
         %load2 = load <8 x i16>, <8 x i16>* %B
         %tmp3 = load <4 x i32>, <4 x i32>* %C
@@ -589,7 +589,7 @@ define <4 x i32> @sabal2_4s(<8 x i16>* %A, <8 x i16>* %B, <4 x i32>* %C) nounwin
 
 define <2 x i64> @sabal2_2d(<4 x i32>* %A, <4 x i32>* %B, <2 x i64>* %C) nounwind {
 ;CHECK-LABEL: sabal2_2d:
-;CHECK: sabal2.2d
+;CHECK: sabal.2d
         %load1 = load <4 x i32>, <4 x i32>* %A
         %load2 = load <4 x i32>, <4 x i32>* %B
         %tmp3 = load <2 x i64>, <2 x i64>* %C
@@ -639,7 +639,7 @@ define <2 x i64> @uabal2d(<2 x i32>* %A, <2 x i32>* %B, <2 x i64>* %C) nounwind 
 
 define <8 x i16> @uabal2_8h(<16 x i8>* %A, <16 x i8>* %B, <8 x i16>* %C) nounwind {
 ;CHECK-LABEL: uabal2_8h:
-;CHECK: uabal2.8h
+;CHECK: uabal.8h
         %load1 = load <16 x i8>, <16 x i8>* %A
         %load2 = load <16 x i8>, <16 x i8>* %B
         %tmp3 = load <8 x i16>, <8 x i16>* %C
@@ -653,7 +653,7 @@ define <8 x i16> @uabal2_8h(<16 x i8>* %A, <16 x i8>* %B, <8 x i16>* %C) nounwin
 
 define <4 x i32> @uabal2_4s(<8 x i16>* %A, <8 x i16>* %B, <4 x i32>* %C) nounwind {
 ;CHECK-LABEL: uabal2_4s:
-;CHECK: uabal2.4s
+;CHECK: uabal.4s
         %load1 = load <8 x i16>, <8 x i16>* %A
         %load2 = load <8 x i16>, <8 x i16>* %B
         %tmp3 = load <4 x i32>, <4 x i32>* %C
@@ -667,7 +667,7 @@ define <4 x i32> @uabal2_4s(<8 x i16>* %A, <8 x i16>* %B, <4 x i32>* %C) nounwin
 
 define <2 x i64> @uabal2_2d(<4 x i32>* %A, <4 x i32>* %B, <2 x i64>* %C) nounwind {
 ;CHECK-LABEL: uabal2_2d:
-;CHECK: uabal2.2d
+;CHECK: uabal.2d
         %load1 = load <4 x i32>, <4 x i32>* %A
         %load2 = load <4 x i32>, <4 x i32>* %B
         %tmp3 = load <2 x i64>, <2 x i64>* %C

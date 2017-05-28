@@ -743,6 +743,10 @@ std::error_code WasmObjectFile::getSectionName(DataRefImpl Sec,
 
 uint64_t WasmObjectFile::getSectionAddress(DataRefImpl Sec) const { return 0; }
 
+uint64_t WasmObjectFile::getSectionIndex(DataRefImpl Sec) const {
+  return Sec.d.a;
+}
+
 uint64_t WasmObjectFile::getSectionSize(DataRefImpl Sec) const {
   const WasmSection &S = Sections[Sec.d.a];
   return S.Content.size();

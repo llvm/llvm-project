@@ -5112,28 +5112,32 @@ static int is_optimal(__isl_keep isl_vec *sol, int n_op)
  * with all previous coefficients) to be zero.
  * If the solution is already optimal (all relevant coefficients are zero),
  * then just mark the table as empty.
+ * "n_zero" is the number of coefficients that have been forced zero
+ * by previous calls to this function at the same level.
+ * Return the updated number of forced zero coefficients or -1 on error.
  *
- * This function assumes that at least 2 * n_op more rows and at least
- * 2 * n_op more elements in the constraint array are available in the tableau.
+ * This function assumes that at least 2 * (n_op - n_zero) more rows and
+ * at least 2 * (n_op - n_zero) more elements in the constraint array
+ * are available in the tableau.
  */
 static int force_better_solution(struct isl_tab *tab,
-	__isl_keep isl_vec *sol, int n_op)
+	__isl_keep isl_vec *sol, int n_op, int n_zero)
 {
-	int i;
+	int i, n;
 	isl_ctx *ctx;
 	isl_vec *v = NULL;
 
 	if (!sol)
 		return -1;
 
-	for (i = 0; i < n_op; ++i)
+	for (i = n_zero; i < n_op; ++i)
 		if (!isl_int_is_zero(sol->el[1 + i]))
 			break;
 
 	if (i == n_op) {
 		if (isl_tab_mark_empty(tab) < 0)
 			return -1;
-		return 0;
+		return n_op;
 	}
 
 	ctx = isl_vec_get_ctx(sol);
@@ -5141,7 +5145,8 @@ static int force_better_solution(struct isl_tab *tab,
 	if (!v)
 		return -1;
 
-	for (; i >= 0; --i) {
+	n = i + 1;
+	for (; i >= n_zero; --i) {
 		v = isl_vec_clr(v);
 		isl_int_set_si(v->el[1 + i], -1);
 		if (add_lexmin_eq(tab, v->el) < 0)
@@ -5149,14 +5154,21 @@ static int force_better_solution(struct isl_tab *tab,
 	}
 
 	isl_vec_free(v);
-	return 0;
+	return n;
 error:
 	isl_vec_free(v);
 	return -1;
 }
 
+/* Local data at each level of the backtracking procedure of
+ * isl_tab_basic_set_non_trivial_lexmin.
+ *
+ * "n_zero" is the number of initial coordinates that have already
+ * been forced to be zero at this level.
+ */
 struct isl_trivial {
 	int update;
+	int n_zero;
 	int region;
 	int side;
 	struct isl_tab_undo *snap;
@@ -5169,7 +5181,7 @@ struct isl_trivial {
  *
  * n_op is the number of initial coordinates to optimize.
  * That is, once a solution has been found, we will only continue looking
- * for solution that result in significantly better values for those
+ * for solutions that result in significantly better values for those
  * initial coordinates.  That is, we only continue looking for solutions
  * that increase the number of initial zeros in this sequence.
  *
@@ -5183,8 +5195,8 @@ struct isl_trivial {
  * reported to the caller through a call to "conflict".
  *
  * We perform a simple branch-and-bound backtracking search.
- * Each level in the search represents initially trivial region that is forced
- * to be non-trivial.
+ * Each level in the search represents an initially trivial region
+ * that is forced to be non-trivial.
  * At each level we consider n cases, where n is the length of the region.
  * In terms of the n/2 variables of unrestricted signs being encoded by
  * the region, we consider the cases
@@ -5263,6 +5275,8 @@ __isl_give isl_vec *isl_tab_basic_set_non_trivial_lexmin(
 				goto error;
 			triv[level].region = r;
 			triv[level].side = 0;
+			triv[level].update = 0;
+			triv[level].n_zero = 0;
 		}
 
 		r = triv[level].region;
@@ -5280,7 +5294,9 @@ backtrack:
 		}
 
 		if (triv[level].update) {
-			if (force_better_solution(tab, sol, n_op) < 0)
+			triv[level].n_zero = force_better_solution(tab, sol,
+						    n_op, triv[level].n_zero);
+			if (triv[level].n_zero < 0)
 				goto error;
 			triv[level].update = 0;
 		}

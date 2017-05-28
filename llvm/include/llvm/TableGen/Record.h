@@ -671,7 +671,7 @@ public:
 /// [AL, AH, CL] - Represent a list of defs
 ///
 class ListInit final : public TypedInit, public FoldingSetNode,
-                       public TrailingObjects<BitsInit, Init *> {
+                       public TrailingObjects<ListInit, Init *> {
   unsigned NumValues;
 
 public:
@@ -1137,17 +1137,19 @@ public:
 /// to have at least one value then a (possibly empty) list of arguments.  Each
 /// argument can have a name associated with it.
 ///
-class DagInit : public TypedInit, public FoldingSetNode {
+class DagInit final : public TypedInit, public FoldingSetNode,
+                      public TrailingObjects<DagInit, Init *, StringInit *> {
   Init *Val;
   StringInit *ValName;
-  SmallVector<Init*, 4> Args;
-  SmallVector<StringInit*, 4> ArgNames;
+  unsigned NumArgs;
+  unsigned NumArgNames;
 
-  DagInit(Init *V, StringInit *VN, ArrayRef<Init *> ArgRange,
-          ArrayRef<StringInit *> NameRange)
+  DagInit(Init *V, StringInit *VN, unsigned NumArgs, unsigned NumArgNames)
       : TypedInit(IK_DagInit, DagRecTy::get()), Val(V), ValName(VN),
-          Args(ArgRange.begin(), ArgRange.end()),
-          ArgNames(NameRange.begin(), NameRange.end()) {}
+        NumArgs(NumArgs), NumArgNames(NumArgNames) {}
+
+  friend TrailingObjects;
+  size_t numTrailingObjects(OverloadToken<Init *>) const { return NumArgs; }
 
 public:
   DagInit(const DagInit &Other) = delete;
@@ -1173,18 +1175,22 @@ public:
     return ValName ? ValName->getValue() : StringRef();
   }
 
-  unsigned getNumArgs() const { return Args.size(); }
+  unsigned getNumArgs() const { return NumArgs; }
   Init *getArg(unsigned Num) const {
-    assert(Num < Args.size() && "Arg number out of range!");
-    return Args[Num];
+    assert(Num < NumArgs && "Arg number out of range!");
+    return getTrailingObjects<Init *>()[Num];
   }
   StringInit *getArgName(unsigned Num) const {
-    assert(Num < ArgNames.size() && "Arg number out of range!");
-    return ArgNames[Num];
+    assert(Num < NumArgNames && "Arg number out of range!");
+    return getTrailingObjects<StringInit *>()[Num];
   }
   StringRef getArgNameStr(unsigned Num) const {
     StringInit *Init = getArgName(Num);
     return Init ? Init->getValue() : StringRef();
+  }
+
+  ArrayRef<StringInit *> getArgNames() const {
+    return makeArrayRef(getTrailingObjects<StringInit *>(), NumArgNames);
   }
 
   Init *resolveReferences(Record &R, const RecordVal *RV) const override;
@@ -1194,20 +1200,20 @@ public:
   typedef SmallVectorImpl<Init*>::const_iterator       const_arg_iterator;
   typedef SmallVectorImpl<StringInit*>::const_iterator const_name_iterator;
 
-  inline const_arg_iterator  arg_begin() const { return Args.begin(); }
-  inline const_arg_iterator  arg_end  () const { return Args.end();   }
+  inline const_arg_iterator  arg_begin() const { return getTrailingObjects<Init *>(); }
+  inline const_arg_iterator  arg_end  () const { return arg_begin() + NumArgs;   }
   inline iterator_range<const_arg_iterator> args() const {
     return llvm::make_range(arg_begin(), arg_end());
   }
 
-  inline size_t              arg_size () const { return Args.size();  }
-  inline bool                arg_empty() const { return Args.empty(); }
+  inline size_t              arg_size () const { return NumArgs;  }
+  inline bool                arg_empty() const { return NumArgs == 0; }
 
-  inline const_name_iterator name_begin() const { return ArgNames.begin(); }
-  inline const_name_iterator name_end  () const { return ArgNames.end();   }
+  inline const_name_iterator name_begin() const { return getTrailingObjects<StringInit *>(); }
+  inline const_name_iterator name_end  () const { return name_begin() + NumArgNames;   }
 
-  inline size_t              name_size () const { return ArgNames.size();  }
-  inline bool                name_empty() const { return ArgNames.empty(); }
+  inline size_t              name_size () const { return NumArgNames;  }
+  inline bool                name_empty() const { return NumArgNames == 0; }
 
   Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off dag");

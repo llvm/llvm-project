@@ -2216,9 +2216,9 @@ define i32@test_int_x86_avx512_kunpck_wd(i32 %x0, i32 %x1) {
 ;
 ; AVX512F-32-LABEL: test_int_x86_avx512_kunpck_wd:
 ; AVX512F-32:       # BB#0:
-; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
-; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; AVX512F-32-NEXT:    kunpckwd %k1, %k0, %k0
+; AVX512F-32-NEXT:    kmovw {{[0-9]+}}(%esp), %k0
+; AVX512F-32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; AVX512F-32-NEXT:    kunpckwd %k0, %k1, %k0
 ; AVX512F-32-NEXT:    kmovd %k0, %eax
 ; AVX512F-32-NEXT:    retl
   %res = call i32 @llvm.x86.avx512.kunpck.wd(i32 %x0, i32 %x1)

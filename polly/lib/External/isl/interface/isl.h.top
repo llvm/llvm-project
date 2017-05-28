@@ -1,0 +1,95 @@
+/// These are automatically generated C++ bindings for isl.
+///
+/// isl is a library for computing with integer sets and maps described by
+/// Presburger formulas. On top of this, isl provides various tools for
+/// polyhedral compilation, ranging from dependence analysis over scheduling
+/// to AST generation.
+
+#ifndef ISL_CPP_NOEXCEPTIONS
+#define ISL_CPP_NOEXCEPTIONS
+
+#include <isl/aff.h>
+#include <isl/ast_build.h>
+#include <isl/flow.h>
+#include <isl/ilp.h>
+#include <isl/map.h>
+#include <isl/schedule.h>
+#include <isl/schedule_node.h>
+#include <isl/set.h>
+#include <isl/union_map.h>
+#include <isl/union_set.h>
+#include <isl/val.h>
+
+#include <functional>
+#include <string>
+
+namespace isl {
+inline namespace noexceptions {
+
+#define ISLPP_STRINGIZE_(X) #X
+#define ISLPP_STRINGIZE(X) ISLPP_STRINGIZE_(X)
+
+#define ISLPP_ASSERT(test, message)                          \
+  do {                                                       \
+    if (test)                                                \
+      break;                                                 \
+    fputs("Assertion \"" #test "\" failed at " __FILE__      \
+      ":" ISLPP_STRINGIZE(__LINE__) "\n  " message "\n",     \
+      stderr);                                               \
+  } while (0)
+
+class boolean {
+private:
+  isl_bool val;
+
+  friend isl::boolean manage(isl_bool val);
+  boolean(isl_bool val): val(val) {}
+public:
+  boolean()
+      : val(isl_bool_error) {}
+
+  /* implicit */ boolean(bool val)
+      : val(val ? isl_bool_true : isl_bool_false) {}
+
+  bool is_error() const { return val == isl_bool_error; }
+  bool is_false() const { return val == isl_bool_false; }
+  bool is_true() const { return val == isl_bool_true; }
+
+  explicit operator bool() const {
+    ISLPP_ASSERT(!is_error(), "IMPLEMENTATION ERROR: Unhandled error state");
+    return is_true();
+  }
+
+  boolean operator!() const {
+    if (is_error())
+      return *this;
+    return !is_true();
+  }
+};
+
+inline isl::boolean manage(isl_bool val) {
+  return isl::boolean(val);
+}
+
+class ctx {
+  isl_ctx *ptr;
+public:
+  /* implicit */ ctx(isl_ctx *ctx)
+      : ptr(ctx) {}
+  isl_ctx *release() {
+    auto tmp = ptr;
+    ptr = nullptr;
+    return tmp;
+  }
+  isl_ctx *get() {
+    return ptr;
+  }
+};
+
+enum class stat {
+  ok = isl_stat_ok,
+  error = isl_stat_error
+};
+
+}
+} // namespace isl

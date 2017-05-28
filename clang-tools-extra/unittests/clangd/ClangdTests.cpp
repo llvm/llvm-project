@@ -9,9 +9,9 @@
 
 #include "ClangdServer.h"
 #include "clang/Basic/VirtualFileSystem.h"
+#include "clang/Config/config.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Config/config.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
@@ -120,7 +120,7 @@ IntrusiveRefCntPtr<vfs::FileSystem> getTempOnlyFS() {
 
   std::vector<std::string> TmpDirs;
   TmpDirs.push_back(TmpDir1.str());
-  if (TmpDir2 != TmpDir2)
+  if (TmpDir1 != TmpDir2)
     TmpDirs.push_back(TmpDir2.str());
   return new vfs::FilteredFileSystem(std::move(TmpDirs),
                                      vfs::getRealFileSystem());

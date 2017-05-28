@@ -195,7 +195,8 @@ public:
 
   /// Retrieves DW_AT_low_pc and DW_AT_high_pc from CU.
   /// Returns true if both attributes are present.
-  bool getLowAndHighPC(uint64_t &LowPC, uint64_t &HighPC) const;
+  bool getLowAndHighPC(uint64_t &LowPC, uint64_t &HighPC,
+                       uint64_t &SectionIndex) const;
 
   /// Get the address ranges for this DIE.
   ///

@@ -35,8 +35,8 @@ bool DWARFDebugRangeList::extract(DataExtractor data, uint32_t *offset_ptr,
   while (true) {
     RangeListEntry entry;
     uint32_t prev_offset = *offset_ptr;
-    entry.StartAddress =
-        getRelocatedValue(data, AddressSize, offset_ptr, &Relocs);
+    entry.StartAddress = getRelocatedValue(data, AddressSize, offset_ptr,
+                                           &Relocs, &entry.SectionIndex);
     entry.EndAddress =
         getRelocatedValue(data, AddressSize, offset_ptr, &Relocs);
 
@@ -69,8 +69,8 @@ DWARFDebugRangeList::getAbsoluteRanges(uint64_t BaseAddress) const {
     if (RLE.isBaseAddressSelectionEntry(AddressSize)) {
       BaseAddress = RLE.EndAddress;
     } else {
-      Res.push_back(
-          {BaseAddress + RLE.StartAddress, BaseAddress + RLE.EndAddress});
+      Res.push_back({BaseAddress + RLE.StartAddress,
+                     BaseAddress + RLE.EndAddress, RLE.SectionIndex});
     }
   }
   return Res;

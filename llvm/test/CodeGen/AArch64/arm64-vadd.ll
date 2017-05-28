@@ -318,7 +318,7 @@ define <2 x i64> @uaddw2d(<2 x i64>* %A, <2 x i32>* %B) nounwind {
 
 define <8 x i16> @uaddw2_8h(<8 x i16>* %A, <16 x i8>* %B) nounwind {
 ;CHECK-LABEL: uaddw2_8h:
-;CHECK: uaddw2.8h
+;CHECK: uaddw.8h
         %tmp1 = load <8 x i16>, <8 x i16>* %A
 
         %tmp2 = load <16 x i8>, <16 x i8>* %B
@@ -331,7 +331,7 @@ define <8 x i16> @uaddw2_8h(<8 x i16>* %A, <16 x i8>* %B) nounwind {
 
 define <4 x i32> @uaddw2_4s(<4 x i32>* %A, <8 x i16>* %B) nounwind {
 ;CHECK-LABEL: uaddw2_4s:
-;CHECK: uaddw2.4s
+;CHECK: uaddw.4s
         %tmp1 = load <4 x i32>, <4 x i32>* %A
 
         %tmp2 = load <8 x i16>, <8 x i16>* %B
@@ -344,7 +344,7 @@ define <4 x i32> @uaddw2_4s(<4 x i32>* %A, <8 x i16>* %B) nounwind {
 
 define <2 x i64> @uaddw2_2d(<2 x i64>* %A, <4 x i32>* %B) nounwind {
 ;CHECK-LABEL: uaddw2_2d:
-;CHECK: uaddw2.2d
+;CHECK: uaddw.2d
         %tmp1 = load <2 x i64>, <2 x i64>* %A
 
         %tmp2 = load <4 x i32>, <4 x i32>* %B
@@ -387,7 +387,7 @@ define <2 x i64> @saddw2d(<2 x i64>* %A, <2 x i32>* %B) nounwind {
 
 define <8 x i16> @saddw2_8h(<8 x i16>* %A, <16 x i8>* %B) nounwind {
 ;CHECK-LABEL: saddw2_8h:
-;CHECK: saddw2.8h
+;CHECK: saddw.8h
         %tmp1 = load <8 x i16>, <8 x i16>* %A
 
         %tmp2 = load <16 x i8>, <16 x i8>* %B
@@ -400,7 +400,7 @@ define <8 x i16> @saddw2_8h(<8 x i16>* %A, <16 x i8>* %B) nounwind {
 
 define <4 x i32> @saddw2_4s(<4 x i32>* %A, <8 x i16>* %B) nounwind {
 ;CHECK-LABEL: saddw2_4s:
-;CHECK: saddw2.4s
+;CHECK: saddw.4s
         %tmp1 = load <4 x i32>, <4 x i32>* %A
 
         %tmp2 = load <8 x i16>, <8 x i16>* %B
@@ -413,7 +413,7 @@ define <4 x i32> @saddw2_4s(<4 x i32>* %A, <8 x i16>* %B) nounwind {
 
 define <2 x i64> @saddw2_2d(<2 x i64>* %A, <4 x i32>* %B) nounwind {
 ;CHECK-LABEL: saddw2_2d:
-;CHECK: saddw2.2d
+;CHECK: saddw.2d
         %tmp1 = load <2 x i64>, <2 x i64>* %A
 
         %tmp2 = load <4 x i32>, <4 x i32>* %B

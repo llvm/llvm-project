@@ -282,7 +282,7 @@ isl_stat FN(LIST(EL),foreach)(__isl_keep LIST(EL) *list,
 		return isl_stat_error;
 
 	for (i = 0; i < list->n; ++i) {
-		EL *el = FN(EL,copy(list->p[i]));
+		EL *el = FN(EL,copy)(list->p[i]);
 		if (!el)
 			return isl_stat_error;
 		if (fn(el, user) < 0)

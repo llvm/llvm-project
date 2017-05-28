@@ -9590,8 +9590,11 @@ struct SCEVCollectAddRecMultiplies {
       bool HasAddRec = false;
       SmallVector<const SCEV *, 0> Operands;
       for (auto Op : Mul->operands()) {
-        if (isa<SCEVUnknown>(Op)) {
+        const SCEVUnknown *Unknown = dyn_cast<SCEVUnknown>(Op);
+        if (Unknown && !isa<CallInst>(Unknown->getValue())) {
           Operands.push_back(Op);
+        } else if (Unknown) {
+          HasAddRec = true;
         } else {
           bool ContainsAddRec;
           SCEVHasAddRec ContiansAddRec(ContainsAddRec);

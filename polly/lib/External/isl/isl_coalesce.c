@@ -59,7 +59,7 @@ static int status_in(isl_int *ineq, struct isl_tab *tab)
 /* Compute the position of the equalities of basic map "bmap_i"
  * with respect to the basic map represented by "tab_j".
  * The resulting array has twice as many entries as the number
- * of equalities corresponding to the two inequalties to which
+ * of equalities corresponding to the two inequalities to which
  * each equality corresponds.
  */
 static int *eq_status_in(__isl_keep isl_basic_map *bmap_i,

@@ -407,6 +407,13 @@ bool ScopBuilder::buildAccessMultiDimParam(MemAccInst Inst, ScopStmt *Stmt) {
 
   Sizes.insert(Sizes.end(), AccItr->second.Shape->DelinearizedSizes.begin(),
                AccItr->second.Shape->DelinearizedSizes.end());
+
+  // In case only the element size is contained in the 'Sizes' array, the
+  // access does not access a real multi-dimensional array. Hence, we allow
+  // the normal single-dimensional access construction to handle this.
+  if (Sizes.size() == 1)
+    return false;
+
   // Remove the element size. This information is already provided by the
   // ElementSize parameter. In case the element size of this access and the
   // element size used for delinearization differs the delinearization is
