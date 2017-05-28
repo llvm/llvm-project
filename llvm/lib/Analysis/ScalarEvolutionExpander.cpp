@@ -1305,12 +1305,17 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
   // Expand the core addrec. If we need post-loop scaling, force it to
   // expand to an integer type to avoid the need for additional casting.
   Type *ExpandTy = PostLoopScale ? IntTy : STy;
+  // We can't use a pointer type for the addrec if the pointer type is
+  // non-integral.
+  Type *AddRecPHIExpandTy =
+      DL.isNonIntegralPointerType(STy) ? Normalized->getType() : ExpandTy;
+
   // In some cases, we decide to reuse an existing phi node but need to truncate
   // it and/or invert the step.
   Type *TruncTy = nullptr;
   bool InvertStep = false;
-  PHINode *PN = getAddRecExprPHILiterally(Normalized, L, ExpandTy, IntTy,
-                                          TruncTy, InvertStep);
+  PHINode *PN = getAddRecExprPHILiterally(Normalized, L, AddRecPHIExpandTy,
+                                          IntTy, TruncTy, InvertStep);
 
   // Accommodate post-inc mode, if necessary.
   Value *Result;
@@ -1383,8 +1388,15 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
   // Re-apply any non-loop-dominating offset.
   if (PostLoopOffset) {
     if (PointerType *PTy = dyn_cast<PointerType>(ExpandTy)) {
-      const SCEV *const OffsetArray[1] = { PostLoopOffset };
-      Result = expandAddToGEP(OffsetArray, OffsetArray+1, PTy, IntTy, Result);
+      if (Result->getType()->isIntegerTy()) {
+        Value *Base = expandCodeFor(PostLoopOffset, ExpandTy);
+        const SCEV *const OffsetArray[1] = {SE.getUnknown(Result)};
+        Result = expandAddToGEP(OffsetArray, OffsetArray + 1, PTy, IntTy, Base);
+      } else {
+        const SCEV *const OffsetArray[1] = {PostLoopOffset};
+        Result =
+            expandAddToGEP(OffsetArray, OffsetArray + 1, PTy, IntTy, Result);
+      }
     } else {
       Result = InsertNoopCastOfTo(Result, IntTy);
       Result = Builder.CreateAdd(Result,

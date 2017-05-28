@@ -16,7 +16,10 @@
 
 namespace llvm {
 
+/// RelocAddrEntry contains relocated value and section index.
+/// Section index is -1LL if relocation points to absolute symbol.
 struct RelocAddrEntry {
+  uint64_t SectionIndex;
   uint64_t Value;
 };
 

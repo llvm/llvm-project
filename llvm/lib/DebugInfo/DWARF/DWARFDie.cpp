@@ -211,13 +211,16 @@ Optional<uint64_t> DWARFDie::getHighPC(uint64_t LowPC) const {
   return None;
 }
 
-bool DWARFDie::getLowAndHighPC(uint64_t &LowPC, uint64_t &HighPC) const {
-  auto LowPcAddr = toAddress(find(DW_AT_low_pc));
+bool DWARFDie::getLowAndHighPC(uint64_t &LowPC, uint64_t &HighPC,
+                               uint64_t &SectionIndex) const {
+  auto F = find(DW_AT_low_pc);
+  auto LowPcAddr = toAddress(F);
   if (!LowPcAddr)
     return false;
   if (auto HighPcAddr = getHighPC(*LowPcAddr)) {
     LowPC = *LowPcAddr;
     HighPC = *HighPcAddr;
+    SectionIndex = F->getSectionIndex();
     return true;
   }
   return false;
@@ -228,9 +231,9 @@ DWARFDie::getAddressRanges() const {
   if (isNULL())
     return DWARFAddressRangesVector();
   // Single range specified by low/high PC.
-  uint64_t LowPC, HighPC;
-  if (getLowAndHighPC(LowPC, HighPC))
-    return {{LowPC, HighPC}};
+  uint64_t LowPC, HighPC, Index;
+  if (getLowAndHighPC(LowPC, HighPC, Index))
+    return {{LowPC, HighPC, Index}};
 
   // Multiple ranges from .debug_ranges section.
   auto RangesOffset = toSectionOffset(find(DW_AT_ranges));

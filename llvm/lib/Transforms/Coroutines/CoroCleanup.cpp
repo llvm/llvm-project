@@ -124,6 +124,7 @@ struct CoroCleanup : FunctionPass {
     if (!L)
       AU.setPreservesAll();
   }
+  StringRef getPassName() const override { return "Coroutine Cleanup"; }
 };
 }
 

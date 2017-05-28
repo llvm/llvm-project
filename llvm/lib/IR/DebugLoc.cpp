@@ -163,7 +163,7 @@ void DebugLoc::reparentDebugInfo(Instruction &I, DISubprogram *OrigSP,
 
   // Fix up debug variables to point to NewSP.
   auto reparentVar = [&](DILocalVariable *Var) {
-    return DILocalVariable::getDistinct(
+    return DILocalVariable::get(
         Ctx,
         cast<DILocalScope>(
             reparentScope(Ctx, Var->getScope(), OrigSP, NewSP, Cache)),

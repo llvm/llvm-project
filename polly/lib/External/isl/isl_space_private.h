@@ -27,7 +27,8 @@ __isl_give isl_space *isl_space_cow(__isl_take isl_space *dim);
 __isl_give isl_space *isl_space_underlying(__isl_take isl_space *dim,
 	unsigned n_div);
 
-uint32_t isl_space_get_hash(__isl_keep isl_space *dim);
+uint32_t isl_space_get_tuple_hash(__isl_keep isl_space *space);
+uint32_t isl_space_get_hash(__isl_keep isl_space *space);
 uint32_t isl_space_get_domain_hash(__isl_keep isl_space *space);
 
 isl_bool isl_space_is_domain_internal(__isl_keep isl_space *space1,

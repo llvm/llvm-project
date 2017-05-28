@@ -749,7 +749,7 @@ static __isl_give isl_map *all_sources(__isl_keep isl_access_info *acc,
 }
 
 /* For a given mapping between iterations of must source k and iterations
- * of the sink, compute the all iteration of may source j preceding
+ * of the sink, compute all iterations of may source j preceding
  * the sink at level before_level for any of the sink iterations,
  * but following the corresponding iteration of must source k at level
  * after_level.
@@ -2557,7 +2557,7 @@ error:
  * domain elements of access->sink.
  *
  * We check whether the schedule is available as a schedule tree
- * or a schedule map and call the correpsonding function to perform
+ * or a schedule map and call the corresponding function to perform
  * the analysis.
  */
 __isl_give isl_union_flow *isl_union_access_info_compute_flow(

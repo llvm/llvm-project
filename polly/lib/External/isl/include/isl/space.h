@@ -135,10 +135,11 @@ __isl_give isl_space *isl_space_align_params(__isl_take isl_space *dim1,
 isl_bool isl_space_is_wrapping(__isl_keep isl_space *dim);
 isl_bool isl_space_domain_is_wrapping(__isl_keep isl_space *space);
 isl_bool isl_space_range_is_wrapping(__isl_keep isl_space *space);
+isl_bool isl_space_is_product(__isl_keep isl_space *space);
 __isl_give isl_space *isl_space_wrap(__isl_take isl_space *dim);
 __isl_give isl_space *isl_space_unwrap(__isl_take isl_space *dim);
 
-isl_bool isl_space_can_zip(__isl_keep isl_space *dim);
+isl_bool isl_space_can_zip(__isl_keep isl_space *space);
 __isl_give isl_space *isl_space_zip(__isl_take isl_space *dim);
 
 isl_bool isl_space_can_curry(__isl_keep isl_space *space);
