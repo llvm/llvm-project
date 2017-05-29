@@ -35,6 +35,16 @@ template<> struct ProgramStateTrait<TaintMap>
   static void *GDMIndex() { static int index = 0; return &index; }
 };
 
+/// The GDM component mapping derived symbols' parent symbols to their
+/// underlying regions. This is used to efficiently check whether a symbol is
+/// tainted when it represents a sub-region of a tainted symbol.
+struct DerivedSymTaint {};
+typedef llvm::ImmutableMap<SymbolRef, TaintedSubRegions> DerivedSymTaintImpl;
+template<> struct ProgramStateTrait<DerivedSymTaint>
+    :  public ProgramStatePartialTrait<DerivedSymTaintImpl> {
+  static void *GDMIndex() { static int index; return &index; }
+};
+
 class TaintManager {
 
   TaintManager() {}

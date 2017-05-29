@@ -23,7 +23,7 @@ using namespace llvm;
 char Localizer::ID = 0;
 INITIALIZE_PASS(Localizer, DEBUG_TYPE,
                 "Move/duplicate certain instructions close to their use", false,
-                false);
+                false)
 
 Localizer::Localizer() : MachineFunctionPass(ID) {
   initializeLocalizerPass(*PassRegistry::getPassRegistry());

@@ -640,8 +640,11 @@ void ScopBuilder::buildStmts(Region &SR) {
       buildStmts(*I->getNodeAs<Region>());
     else {
       std::vector<Instruction *> Instructions;
-      for (Instruction &Inst : *I->getNodeAs<BasicBlock>())
-        Instructions.push_back(&Inst);
+      for (Instruction &Inst : *I->getNodeAs<BasicBlock>()) {
+        Loop *L = LI.getLoopFor(Inst.getParent());
+        if (!isa<TerminatorInst>(&Inst) && !canSynthesize(&Inst, *scop, &SE, L))
+          Instructions.push_back(&Inst);
+      }
       Loop *SurroundingLoop = LI.getLoopFor(I->getNodeAs<BasicBlock>());
       scop->addScopStmt(I->getNodeAs<BasicBlock>(), SurroundingLoop,
                         Instructions);

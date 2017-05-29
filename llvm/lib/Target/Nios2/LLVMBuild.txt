@@ -1,0 +1,61 @@
+;===- ./lib/Target/Nios2/LLVMBuild.txt -------------------------*- Conf -*--===;
+;
+;                     The LLVM Compiler Infrastructure
+;
+; This file is distributed under the University of Illinois Open Source
+; License. See LICENSE.TXT for details.
+;
+;===------------------------------------------------------------------------===;
+;
+; This is an LLVMBuild description file for the components in this subdirectory.
+;
+; For more information on the LLVMBuild system, please see:
+;
+;   http://llvm.org/docs/LLVMBuild.html
+;
+;===------------------------------------------------------------------------===;
+
+#Following comments extracted from http: // llvm.org/docs/LLVMBuild.html
+
+[common]
+subdirectories =
+    MCTargetDesc
+    TargetInfo
+
+[component_0]
+#TargetGroup components are an extension of LibraryGroups, specifically for
+#defining LLVM targets(which are handled specially in a few places).
+type = TargetGroup
+#The name of the component should always be the name of the target.(should
+#match "def Nios2 : Target" in Nios2.td)
+name = Nios2
+#Nios2 component is located in directory Target /
+parent = Target
+#Whether this target defines an assembly parser, assembly printer, disassembler
+#, and supports JIT compilation.They are optional.
+
+[component_1]
+#component_1 is a Library type and name is Nios2CodeGen.After build it will
+#in lib / libLLVMNios2CodeGen.a of your build command directory.
+type = Library
+name = Nios2CodeGen
+#Nios2CodeGen component(Library) is located in directory Nios2 /
+parent = Nios2
+#If given, a list of the names of Library or LibraryGroup components which
+#must also be linked in whenever this library is used.That is, the link time
+#dependencies for this component.When tools are built, the build system will
+#include the transitive closure of all required_libraries for the components
+#the tool needs.
+required_libraries = CodeGen
+                     Core
+                     GlobalISel
+                     MC
+                     Nios2Desc
+                     Nios2Info
+                     Support
+                     Target
+#end of required_libraries
+
+#All LLVMBuild.txt in Target / Nios2 and subdirectory use 'add_to_library_groups
+#= Nios2'
+add_to_library_groups = Nios2

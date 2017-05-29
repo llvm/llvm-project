@@ -336,6 +336,26 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
     return 1;
   }
 
+  /// Merge the values in \p SrcRegs into \p DstReg at offsets \p SrcOffsets.
+  /// Note that the source registers are not required to have homogeneous types,
+  /// so we use G_INSERT rather than G_MERGE_VALUES.
+  // FIXME: Use G_MERGE_VALUES if the types are homogeneous.
+  void mergeRegisters(unsigned DstReg, ArrayRef<unsigned> SrcRegs,
+                      ArrayRef<uint64_t> SrcOffsets) {
+    LLT Ty = MRI.getType(DstReg);
+
+    unsigned Dst = MRI.createGenericVirtualRegister(Ty);
+    MIRBuilder.buildUndef(Dst);
+
+    for (unsigned i = 0; i < SrcRegs.size(); ++i) {
+      unsigned Tmp = MRI.createGenericVirtualRegister(Ty);
+      MIRBuilder.buildInsert(Tmp, Dst, SrcRegs[i], SrcOffsets[i]);
+      Dst = Tmp;
+    }
+
+    MIRBuilder.buildCopy(DstReg, Dst);
+  }
+
   /// Marking a physical register as used is different between formal
   /// parameters, where it's a basic block live-in, and call returns, where it's
   /// an implicit-def of the call instruction.
@@ -367,7 +387,6 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   auto &MBB = MIRBuilder.getMBB();
   auto DL = MF.getDataLayout();
   auto &TLI = *getTLI<ARMTargetLowering>();
-  auto &MRI = MF.getRegInfo();
 
   auto Subtarget = TLI.getSubtarget();
 
@@ -381,29 +400,27 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   CCAssignFn *AssignFn =
       TLI.CCAssignFnForCall(F.getCallingConv(), F.isVarArg());
 
+  FormalArgHandler ArgHandler(MIRBuilder, MIRBuilder.getMF().getRegInfo(),
+                              AssignFn);
+
   SmallVector<ArgInfo, 8> ArgInfos;
+  SmallVector<unsigned, 4> SplitRegs;
+  SmallVector<uint64_t, 4> RegOffsets;
   unsigned Idx = 0;
   for (auto &Arg : F.args()) {
     ArgInfo AInfo(VRegs[Idx], Arg.getType());
     setArgFlags(AInfo, Idx + AttributeList::FirstArgIndex, DL, F);
 
-    LLT Ty = MRI.getType(VRegs[Idx]);
-    bool Split = false;
-    unsigned Dst = VRegs[Idx];
+    SplitRegs.clear();
+    RegOffsets.clear();
+
     splitToValueTypes(AInfo, ArgInfos, MF, [&](unsigned Reg, uint64_t Offset) {
-      if (!Split) {
-        Split = true;
-        Dst = MRI.createGenericVirtualRegister(Ty);
-        MIRBuilder.buildUndef(Dst);
-      }
-      unsigned Tmp = MRI.createGenericVirtualRegister(Ty);
-      MIRBuilder.buildInsert(Tmp, Dst, Reg, Offset);
-      Dst = Tmp;
+      SplitRegs.push_back(Reg);
+      RegOffsets.push_back(Offset);
     });
-    if (Dst != VRegs[Idx]) {
-      assert(Split && "Destination changed but no split occured?");
-      MIRBuilder.buildCopy(VRegs[Idx], Dst);
-    }
+
+    if (!SplitRegs.empty())
+      ArgHandler.mergeRegisters(VRegs[Idx], SplitRegs, RegOffsets);
 
     Idx++;
   }
@@ -411,8 +428,6 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (!MBB.empty())
     MIRBuilder.setInstr(*MBB.begin());
 
-  FormalArgHandler ArgHandler(MIRBuilder, MIRBuilder.getMF().getRegInfo(),
-                              AssignFn);
   return handleAssignments(MIRBuilder, ArgInfos, ArgHandler);
 }
 
@@ -493,17 +508,7 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     if (!RegOffsets.empty()) {
       // We have split the value and allocated each individual piece, now build
       // it up again.
-      LLT Ty = MRI.getType(OrigRet.Reg);
-      unsigned Dst = MRI.createGenericVirtualRegister(Ty);
-      MIRBuilder.buildUndef(Dst);
-
-      for (unsigned i = 0; i < SplitRegs.size(); ++i) {
-        unsigned Tmp = MRI.createGenericVirtualRegister(Ty);
-        MIRBuilder.buildInsert(Tmp, Dst, SplitRegs[i], RegOffsets[i]);
-        Dst = Tmp;
-      }
-
-      MIRBuilder.buildCopy(OrigRet.Reg, Dst);
+      RetHandler.mergeRegisters(OrigRet.Reg, SplitRegs, RegOffsets);
     }
   }
 

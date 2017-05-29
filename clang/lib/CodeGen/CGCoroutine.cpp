@@ -578,8 +578,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
       EmitBlock(FinalBB);
       CurCoro.Data->CurrentAwaitKind = AwaitKind::Final;
       EmitStmt(S.getFinalSuspendStmt());
-    }
-    else {
+    } else {
       // We don't need FinalBB. Emit it to make sure the block is deleted.
       EmitBlock(FinalBB, /*IsFinished=*/true);
     }

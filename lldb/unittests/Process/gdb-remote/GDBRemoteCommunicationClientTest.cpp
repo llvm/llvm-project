@@ -11,6 +11,7 @@
 #include "GDBRemoteTestUtils.h"
 
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Core/TraceOptions.h"
@@ -554,7 +555,7 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetTraceConfigPacket) {
   llvm::StringRef trace_tech_value;
 
   ASSERT_TRUE(custom_params);
-  ASSERT_EQ(custom_params->GetType(), StructuredData::Type::eTypeDictionary);
+  ASSERT_EQ(custom_params->GetType(), eStructuredDataTypeDictionary);
   ASSERT_TRUE(
       custom_params->GetValueForKeyAsInteger<uint64_t>("psb", psb_value));
   ASSERT_EQ(psb_value, 1);
