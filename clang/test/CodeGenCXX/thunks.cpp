@@ -401,5 +401,5 @@ D::~D() {}
 // CHECK-OPT-LABEL: define linkonce_odr void @_ZN6Test101C3fooEv
 // CHECK-OPT-LABEL: define linkonce_odr void @_ZThn8_N6Test101C3fooEv
 
-// CHECK-NONOPT: attributes [[NUW]] = { noinline nounwind uwtable{{.*}} }
+// CHECK-NONOPT: attributes [[NUW]] = { noinline nounwind optnone uwtable{{.*}} }
 // CHECK-OPT: attributes [[NUW]] = { nounwind uwtable{{.*}} }

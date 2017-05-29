@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple armv8-none-linux-gnueabi \
-// RUN:   -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN:  -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 
 int crc32b(int a, char b)
 {

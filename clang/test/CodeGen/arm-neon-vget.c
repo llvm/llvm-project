@@ -4,7 +4,7 @@
 // RUN:   -mfloat-abi soft \
 // RUN:   -target-feature +soft-float-abi \
 // RUN:   -ffreestanding \
-// RUN:   -emit-llvm -w -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN:   -disable-O0-optnone -emit-llvm -w -o - %s | opt -S -mem2reg | FileCheck %s
 
 #include <arm_neon.h>
 

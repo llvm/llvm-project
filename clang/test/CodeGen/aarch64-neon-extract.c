@@ -1,6 +1,6 @@
 // REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
-// RUN:   -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN:  -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 
 // Test new aarch64 intrinsics and types
 

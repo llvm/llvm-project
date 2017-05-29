@@ -2525,6 +2525,9 @@ static std::string base_name(std::string &s) {
       ++p0;
       break;
     }
+    if (!isalpha(*p0) && !isdigit(*p0) && *p0 != '_') {
+      return std::string();
+    }
   }
   return std::string(p0, pe);
 }
