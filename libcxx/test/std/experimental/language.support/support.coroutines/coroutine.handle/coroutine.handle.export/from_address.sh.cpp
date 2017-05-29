@@ -37,8 +37,8 @@ void do_test() {
     assert(c.address() == nullptr);
   }
   {
-    int dummy = 42;
-    C c = C::from_address(&dummy);
+    char dummy = 42;
+    C c = C::from_address((void*)&dummy);
     assert(c.address() == &dummy);
   }
 }

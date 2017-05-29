@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -fallow-half-arguments-and-returns -S -o - -emit-llvm %s | opt -S -mem2reg | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -fallow-half-arguments-and-returns -S -o - -disable-O0-optnone -emit-llvm %s | opt -S -mem2reg | FileCheck %s
 
 #include <arm_neon.h>
 

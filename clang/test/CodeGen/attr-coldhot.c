@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - | FileCheck %s -check-prefixes=CHECK,O0
+// RUN: %clang_cc1 -emit-llvm %s -o - -O1 -disable-llvm-passes | FileCheck %s -check-prefixes=CHECK,O1
 
 int test1() __attribute__((__cold__)) {
   return 42;
@@ -8,4 +9,5 @@ int test1() __attribute__((__cold__)) {
 // CHECK: ret
 }
 
-// CHECK: attributes [[ATTR]] = { {{.*}}cold{{.*}}optsize{{.*}} }
+// O0: attributes [[ATTR]] = { {{.*}}cold{{.*}}optnone{{.*}} }
+// O1: attributes [[ATTR]] = { {{.*}}cold{{.*}}optsize{{.*}} }

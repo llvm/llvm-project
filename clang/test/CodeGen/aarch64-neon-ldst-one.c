@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
-// RUN:   -fallow-half-arguments-and-returns -emit-llvm -o - %s \
+// RUN:  -disable-O0-optnone -fallow-half-arguments-and-returns -emit-llvm -o - %s \
 // RUN: | opt -S -mem2reg | FileCheck %s
 
 #include <arm_neon.h>

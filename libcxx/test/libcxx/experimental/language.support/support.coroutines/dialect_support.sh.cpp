@@ -10,10 +10,6 @@
 
 // REQUIRES: fcoroutines-ts
 
-// These configurations run the tests with '-g', which hits a bug in Clangs
-// coroutine implementation.
-// XFAIL: asan, msan, ubsan, tsan
-
 // RUN: %build -fcoroutines-ts
 // RUN: %run
 
@@ -31,11 +27,11 @@ coro::suspend_never sn;
 struct MyFuture {
   struct promise_type {
     typedef coro::coroutine_handle<promise_type> HandleT;
-    coro::suspend_always initial_suspend() { return sa; }
-    coro::suspend_never final_suspend() { return sn; }
+    coro::suspend_never initial_suspend() { return sn; }
+    coro::suspend_always final_suspend() { return sa; }
     coro::suspend_never yield_value(int) { return sn; }
     MyFuture get_return_object() {
-      MyFuture f(HandleT::from_address(this));
+      MyFuture f(HandleT::from_promise(*this));
       return f;
     }
     void return_void() {}
@@ -45,7 +41,6 @@ struct MyFuture {
   MyFuture() : p() {}
   MyFuture(HandleT h) : p(h) {}
 
-private:
   coro::coroutine_handle<promise_type> p;
 };
 
@@ -58,4 +53,7 @@ MyFuture test_coro() {
 int main()
 {
   MyFuture f = test_coro();
+  while (!f.p.done())
+    f.p.resume();
+  f.p.destroy();
 }

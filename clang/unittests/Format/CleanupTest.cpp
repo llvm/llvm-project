@@ -36,11 +36,12 @@ protected:
 
   // Returns code after cleanup around \p Offsets.
   std::string cleanupAroundOffsets(llvm::ArrayRef<unsigned> Offsets,
-                                   llvm::StringRef Code) {
+                                   llvm::StringRef Code,
+                                   const FormatStyle &Style = getLLVMStyle()) {
     std::vector<tooling::Range> Ranges;
     for (auto Offset : Offsets)
       Ranges.push_back(tooling::Range(Offset, 0));
-    return cleanup(Code, Ranges);
+    return cleanup(Code, Ranges, Style);
   }
 };
 
@@ -169,6 +170,14 @@ TEST_F(CleanupTest, ListRedundantComma) {
   Code = "int main() { f(1,,2,3,,4);}";
   Expected = "int main() { f(1,2,3,4);}";
   EXPECT_EQ(Expected, cleanupAroundOffsets({17, 22}, Code));
+}
+
+TEST_F(CleanupTest, NoCleanupsForJavaScript) {
+  std::string Code = "function f() { var x = [a, b, , c]; }";
+  std::string Expected = "function f() { var x = [a, b, , c]; }";
+  const FormatStyle &Style = getGoogleStyle(FormatStyle::LK_JavaScript);
+
+  EXPECT_EQ(Expected, cleanupAroundOffsets({30}, Code, Style));
 }
 
 TEST_F(CleanupTest, TrailingCommaInParens) {
