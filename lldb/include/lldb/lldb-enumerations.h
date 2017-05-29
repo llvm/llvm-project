@@ -732,6 +732,18 @@ enum TraceType {
   eTraceTypeProcessorTrace
 };
 
+enum StructuredDataType {
+  eStructuredDataTypeInvalid = -1,
+  eStructuredDataTypeNull = 0,
+  eStructuredDataTypeGeneric,
+  eStructuredDataTypeArray,
+  eStructuredDataTypeInteger,
+  eStructuredDataTypeFloat,
+  eStructuredDataTypeBoolean,
+  eStructuredDataTypeString,
+  eStructuredDataTypeDictionary
+};
+
 FLAGS_ENUM(TypeClass){
     eTypeClassInvalid = (0u), 
   eTypeClassArray = (1u << 0),

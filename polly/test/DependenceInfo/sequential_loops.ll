@@ -29,7 +29,7 @@
 ;
 ;VALUE_ACCESS-LABEL: Printing analysis 'Polly - Calculate dependences' for region: 'S1 => exit.3' in function 'read_after_writes':
 ;VALUE_ACCESS-NEXT:        RAW dependences:
-;VALUE_ACCESS-NEXT:                { Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9; [Stmt_S2[i0] -> Stmt_S2_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Read0[]] : 0 <= i0 <= 9; [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Read0[]] : 10 <= i0 <= 99 }
+;VALUE_ACCESS-NEXT:                { [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Read0[]] : 10 <= i0 <= 99; [Stmt_S2[i0] -> Stmt_S2_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Read0[]] : 0 <= i0 <= 9; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9; Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99 }
 
 ;VALUE_ACCESS-NEXT:        WAR dependences:
 ;VALUE_ACCESS-NEXT:                {  }

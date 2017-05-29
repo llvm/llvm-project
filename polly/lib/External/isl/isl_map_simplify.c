@@ -3847,7 +3847,7 @@ static int is_zero_or_one(isl_int v)
  * of this second div b and such that in any constraint that contains
  * a (except for the given lower and upper bound), also contains b
  * with a coefficient that is m times that of b.
- * That is, all constraints (execpt for the lower and upper bound)
+ * That is, all constraints (except for the lower and upper bound)
  * are of the form
  *
  *	e + f (a + m b) >= 0
@@ -4190,7 +4190,7 @@ error:
  * i.e., the coefficient of div is f.
  *
  * Otherwise, we first need to introduce div1 into the constraint.
- * Let the l be
+ * Let l be
  *
  *	div1 + f >=0
  *

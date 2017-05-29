@@ -12,15 +12,14 @@ In Polly 5 the following important changes have been incorporated.
 
 - Change ...
 
---------
-Internal
---------
+---------------------------------------------------------
+C++ bindings for isl math library improve maintainability
+---------------------------------------------------------
 
-C++ bindings
-------------
-
-Polly uses now C++ bindings when using isl which remove the need for manual
-memory management.
+In the context of `Polly Labs <pollylabs.org>`_, a new set of C++ bindings was
+developed for the isl math library. Thanks to the new isl C++ interface there
+is no need for manual memory management any more and programming with integer
+sets became easier in general.
 
 Today::
 

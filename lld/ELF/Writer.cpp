@@ -81,7 +81,8 @@ private:
   void addStartStopSymbols(OutputSection *Sec);
   uint64_t getEntryAddr();
   OutputSection *findSection(StringRef Name);
-  OutputSectionCommand *findSectionInScript(StringRef Name);
+  OutputSection *findSectionInScript(StringRef Name);
+  OutputSectionCommand *findSectionCommand(StringRef Name);
 
   std::vector<PhdrEntry> Phdrs;
 
@@ -647,10 +648,11 @@ bool elf::isRelroSection(const OutputSection *Sec) {
 // * It is easy to check if a give branch was taken.
 // * It is easy two see how similar two ranks are (see getRankProximity).
 enum RankFlags {
-  RF_NOT_ADDR_SET = 1 << 15,
-  RF_NOT_INTERP = 1 << 14,
-  RF_NOT_ALLOC = 1 << 13,
-  RF_WRITE = 1 << 12,
+  RF_NOT_ADDR_SET = 1 << 16,
+  RF_NOT_INTERP = 1 << 15,
+  RF_NOT_ALLOC = 1 << 14,
+  RF_WRITE = 1 << 13,
+  RF_EXEC_WRITE = 1 << 12,
   RF_EXEC = 1 << 11,
   RF_NON_TLS_BSS = 1 << 10,
   RF_NON_TLS_BSS_RO = 1 << 9,
@@ -685,19 +687,29 @@ static unsigned getSectionRank(const OutputSection *Sec) {
   if (!(Sec->Flags & SHF_ALLOC))
     return Rank | RF_NOT_ALLOC;
 
-  // We want the read only sections first so that they go in the PT_LOAD
-  // covering the program headers at the start of the file.
-  if (Sec->Flags & SHF_WRITE)
-    Rank |= RF_WRITE;
+  // Sort sections based on their access permission in the following
+  // order: R, RX, RWX, RW.  This order is based on the following
+  // considerations:
+  // * Read-only sections come first such that they go in the
+  //   PT_LOAD covering the program headers at the start of the file.
+  // * Read-only, executable sections come next, unless the
+  //   -no-rosegment option is used.
+  // * Writable, executable sections follow such that .plt on
+  //   architectures where it needs to be writable will be placed
+  //   between .text and .data.
+  // * Writable sections come last, such that .bss lands at the very
+  //   end of the last PT_LOAD.
+  bool IsExec = Sec->Flags & SHF_EXECINSTR;
+  bool IsWrite = Sec->Flags & SHF_WRITE;
 
-  if (Sec->Flags & SHF_EXECINSTR) {
-    // For a corresponding reason, put non exec sections first (the program
-    // header PT_LOAD is not executable).
-    // We only do that if we are not using linker scripts, since with linker
-    // scripts ro and rx sections are in the same PT_LOAD, so their relative
-    // order is not important. The same applies for -no-rosegment.
-    if ((Rank & RF_WRITE) || !Config->SingleRoRx)
+  if (IsExec) {
+    if (IsWrite)
+      Rank |= RF_EXEC_WRITE;
+    else if (!Config->SingleRoRx)
       Rank |= RF_EXEC;
+  } else {
+    if (IsWrite)
+      Rank |= RF_WRITE;
   }
 
   // If we got here we know that both A and B are in the same PT_LOAD.
@@ -1302,11 +1314,17 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection *Sec) {
 }
 
 template <class ELFT>
-OutputSectionCommand *Writer<ELFT>::findSectionInScript(StringRef Name) {
+OutputSectionCommand *Writer<ELFT>::findSectionCommand(StringRef Name) {
   for (BaseCommand *Base : Script->Opt.Commands)
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
       if (Cmd->Name == Name)
         return Cmd;
+  return nullptr;
+}
+
+template <class ELFT> OutputSection *Writer<ELFT>::findSectionInScript(StringRef Name) {
+  if (OutputSectionCommand *Cmd = findSectionCommand(Name))
+    return Cmd->Sec;
   return nullptr;
 }
 
@@ -1596,7 +1614,7 @@ template <class ELFT> uint64_t Writer<ELFT>::getEntryAddr() {
     return Addr;
 
   // Case 4
-  if (OutputSection *Sec = findSection(".text")) {
+  if (OutputSection *Sec = findSectionInScript(".text")) {
     if (Config->WarnMissingEntry)
       warn("cannot find entry symbol " + Config->Entry + "; defaulting to 0x" +
            utohexstr(Sec->Addr));
@@ -1659,7 +1677,7 @@ template <class ELFT> void Writer<ELFT>::fixPredefinedSymbols() {
   }
 
   if (ElfSym::Bss)
-    ElfSym::Bss->Section = findSection(".bss");
+    ElfSym::Bss->Section = findSectionInScript(".bss");
 
   // Setup MIPS _gp_disp/__gnu_local_gp symbols which should
   // be equal to the _gp symbol's value.
@@ -1767,14 +1785,16 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
 
   // PPC64 needs to process relocations in the .opd section
   // before processing relocations in code-containing sections.
-  if (auto *OpdCmd = findSectionInScript(".opd")) {
+  if (auto *OpdCmd = findSectionCommand(".opd")) {
     Out::Opd = OpdCmd->Sec;
     Out::OpdBuf = Buf + Out::Opd->Offset;
     OpdCmd->template writeTo<ELFT>(Buf + Out::Opd->Offset);
   }
 
   OutputSection *EhFrameHdr =
-      In<ELFT>::EhFrameHdr ? In<ELFT>::EhFrameHdr->OutSec : nullptr;
+      (In<ELFT>::EhFrameHdr && !In<ELFT>::EhFrameHdr->empty())
+          ? In<ELFT>::EhFrameHdr->OutSec
+          : nullptr;
 
   // In -r or -emit-relocs mode, write the relocation sections first as in
   // ELf_Rel targets we might find out that we need to modify the relocated
@@ -1800,7 +1820,7 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
 
   // The .eh_frame_hdr depends on .eh_frame section contents, therefore
   // it should be written after .eh_frame is written.
-  if (EhFrameHdr && !EhFrameHdr->Sections.empty()) {
+  if (EhFrameHdr) {
     OutputSectionCommand *Cmd = Script->getCmd(EhFrameHdr);
     Cmd->writeTo<ELFT>(Buf + EhFrameHdr->Offset);
   }

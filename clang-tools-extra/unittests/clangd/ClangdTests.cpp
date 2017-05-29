@@ -9,9 +9,9 @@
 
 #include "ClangdServer.h"
 #include "clang/Basic/VirtualFileSystem.h"
+#include "clang/Config/config.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Config/config.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
@@ -120,7 +120,7 @@ IntrusiveRefCntPtr<vfs::FileSystem> getTempOnlyFS() {
 
   std::vector<std::string> TmpDirs;
   TmpDirs.push_back(TmpDir1.str());
-  if (TmpDir2 != TmpDir2)
+  if (TmpDir1 != TmpDir2)
     TmpDirs.push_back(TmpDir2.str());
   return new vfs::FilteredFileSystem(std::move(TmpDirs),
                                      vfs::getRealFileSystem());
@@ -184,21 +184,27 @@ public:
 };
 
 /// Replaces all patterns of the form 0x123abc with spaces
-void replacePtrsInDump(std::string &Dump) {
+std::string replacePtrsInDump(std::string const &Dump) {
   llvm::Regex RE("0x[0-9a-fA-F]+");
   llvm::SmallVector<StringRef, 1> Matches;
-  while (RE.match(Dump, &Matches)) {
+  llvm::StringRef Pending = Dump;
+
+  std::string Result;
+  while (RE.match(Pending, &Matches)) {
     assert(Matches.size() == 1 && "Exactly one match expected");
-    auto MatchPos = Matches[0].data() - Dump.data();
-    std::fill(Dump.begin() + MatchPos,
-              Dump.begin() + MatchPos + Matches[0].size(), ' ');
+    auto MatchPos = Matches[0].data() - Pending.data();
+
+    Result += Pending.take_front(MatchPos);
+    Pending = Pending.drop_front(MatchPos + Matches[0].size());
   }
+  Result += Pending;
+
+  return Result;
 }
 
 std::string dumpASTWithoutMemoryLocs(ClangdServer &Server, PathRef File) {
-  auto Dump = Server.dumpAST(File);
-  replacePtrsInDump(Dump);
-  return Dump;
+  auto DumpWithMemLocs = Server.dumpAST(File);
+  return replacePtrsInDump(DumpWithMemLocs);
 }
 
 template <class T>

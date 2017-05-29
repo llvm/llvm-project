@@ -17,6 +17,7 @@
 #include <isl_mat_private.h>
 #include <isl_space_private.h>
 #include <isl_equalities.h>
+#include <isl_id_private.h>
 
 isl_ctx *isl_morph_get_ctx(__isl_keep isl_morph *morph)
 {
@@ -383,8 +384,9 @@ error:
 	return NULL;
 }
 
-/* Given a basic set, exploit the equalties in the basic set to construct
- * a morphishm that maps the basic set to a lower-dimensional space.
+/* Given a basic set, exploit the equalities in the basic set to construct
+ * a morphism that maps the basic set to a lower-dimensional space
+ * with identifier "id".
  * Specifically, the morphism reduces the number of dimensions of type "type".
  *
  * We first select the equalities of interest, that is those that involve
@@ -408,15 +410,16 @@ error:
  * Both matrices are extended to map the full original space to the full
  * compressed space.
  */
-__isl_give isl_morph *isl_basic_set_variable_compression(
-	__isl_keep isl_basic_set *bset, enum isl_dim_type type)
+__isl_give isl_morph *isl_basic_set_variable_compression_with_id(
+	__isl_keep isl_basic_set *bset, enum isl_dim_type type,
+	__isl_keep isl_id *id)
 {
 	unsigned otype;
 	unsigned ntype;
 	unsigned orest;
 	unsigned nrest;
 	int f_eq, n_eq;
-	isl_space *dim;
+	isl_space *space;
 	isl_mat *E, *Q, *C;
 	isl_basic_set *dom, *ran;
 
@@ -455,13 +458,25 @@ __isl_give isl_morph *isl_basic_set_variable_compression(
 	Q = isl_mat_diagonal(Q, isl_mat_identity(bset->ctx, nrest));
 	C = isl_mat_diagonal(C, isl_mat_identity(bset->ctx, nrest));
 
-	dim = isl_space_copy(bset->dim);
-	dim = isl_space_drop_dims(dim, type, 0, ntype);
-	dim = isl_space_add_dims(dim, type, ntype - n_eq);
-	ran = isl_basic_set_universe(dim);
+	space = isl_space_copy(bset->dim);
+	space = isl_space_drop_dims(space, type, 0, ntype);
+	space = isl_space_add_dims(space, type, ntype - n_eq);
+	space = isl_space_set_tuple_id(space, isl_dim_set, isl_id_copy(id));
+	ran = isl_basic_set_universe(space);
 	dom = copy_equalities(bset, f_eq, n_eq);
 
 	return isl_morph_alloc(dom, ran, Q, C);
+}
+
+/* Given a basic set, exploit the equalities in the basic set to construct
+ * a morphism that maps the basic set to a lower-dimensional space.
+ * Specifically, the morphism reduces the number of dimensions of type "type".
+ */
+__isl_give isl_morph *isl_basic_set_variable_compression(
+	__isl_keep isl_basic_set *bset, enum isl_dim_type type)
+{
+	return isl_basic_set_variable_compression_with_id(bset, type,
+							&isl_id_none);
 }
 
 /* Construct a parameter compression for "bset".
@@ -773,7 +788,7 @@ __isl_give isl_morph *isl_morph_inverse(__isl_take isl_morph *morph)
 	return morph;
 }
 
-/* We detect all the equalities first to avoid implicit equalties
+/* We detect all the equalities first to avoid implicit equalities
  * being discovered during the computations.  In particular,
  * the compression on the variables could expose additional stride
  * constraints on the parameters.  This would result in existentially
