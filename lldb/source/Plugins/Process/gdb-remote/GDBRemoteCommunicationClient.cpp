@@ -3278,7 +3278,7 @@ GDBRemoteCommunicationClient::SendGetTraceConfigPacket(lldb::user_id_t uid,
       auto json_object = StructuredData::ParseJSON(response.Peek());
 
       if (!json_object ||
-          json_object->GetType() != StructuredData::Type::eTypeDictionary) {
+          json_object->GetType() != lldb::eStructuredDataTypeDictionary) {
         error.SetErrorString("Invalid Configuration obtained");
         return error;
       }
@@ -3299,7 +3299,7 @@ GDBRemoteCommunicationClient::SendGetTraceConfigPacket(lldb::user_id_t uid,
           json_dict->GetValueForKey("params");
       if (custom_params_sp) {
         if (custom_params_sp->GetType() !=
-            StructuredData::Type::eTypeDictionary) {
+            lldb::eStructuredDataTypeDictionary) {
           error.SetErrorString("Invalid Configuration obtained");
           return error;
         } else

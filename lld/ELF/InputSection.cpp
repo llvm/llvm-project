@@ -295,6 +295,24 @@ bool InputSectionBase::classof(const SectionBase *S) {
   return S->kind() != Output;
 }
 
+void InputSection::copyShtGroup(uint8_t *Buf) {
+  assert(this->Type == SHT_GROUP);
+
+  ArrayRef<uint32_t> From = getDataAs<uint32_t>();
+  uint32_t *To = reinterpret_cast<uint32_t *>(Buf);
+
+  // First entry is a flag word, we leave it unchanged.
+  *To++ = From[0];
+
+  // Here we adjust indices of sections that belong to group as it
+  // might change during linking.
+  ArrayRef<InputSectionBase *> Sections = this->File->getSections();
+  for (uint32_t Val : From.slice(1)) {
+    uint32_t Index = read32(&Val, Config->Endianness);
+    write32(To++, Sections[Index]->OutSec->SectionIndex, Config->Endianness);
+  }
+}
+
 InputSectionBase *InputSection::getRelocatedSection() {
   assert(this->Type == SHT_RELA || this->Type == SHT_REL);
   ArrayRef<InputSectionBase *> Sections = this->File->getSections();
@@ -677,6 +695,13 @@ template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
   if (this->Type == SHT_REL) {
     copyRelocations<ELFT>(Buf + OutSecOff,
                           this->template getDataAs<typename ELFT::Rel>());
+    return;
+  }
+
+  // If -r is given, linker should keep SHT_GROUP sections. We should fixup
+  // them, see copyShtGroup().
+  if (this->Type == SHT_GROUP) {
+    copyShtGroup(Buf + OutSecOff);
     return;
   }
 

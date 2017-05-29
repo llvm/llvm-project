@@ -1120,7 +1120,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceStart(
   auto json_object = StructuredData::ParseJSON(packet.Peek());
 
   if (!json_object ||
-      json_object->GetType() != StructuredData::Type::eTypeDictionary)
+      json_object->GetType() != lldb::eStructuredDataTypeDictionary)
     return SendIllFormedResponse(packet, "jTraceStart: Ill formed packet ");
 
   auto json_dict = json_object->GetAsDictionary();
@@ -1140,7 +1140,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceStart(
   StructuredData::ObjectSP custom_params_sp =
       json_dict->GetValueForKey("params");
   if (custom_params_sp &&
-      custom_params_sp->GetType() != StructuredData::Type::eTypeDictionary)
+      custom_params_sp->GetType() != lldb::eStructuredDataTypeDictionary)
     return SendIllFormedResponse(packet, "jTraceStart: Ill formed packet ");
 
   options.setTraceParams(
@@ -1182,7 +1182,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceStop(
   auto json_object = StructuredData::ParseJSON(packet.Peek());
 
   if (!json_object ||
-      json_object->GetType() != StructuredData::Type::eTypeDictionary)
+      json_object->GetType() != lldb::eStructuredDataTypeDictionary)
     return SendIllFormedResponse(packet, "jTraceStop: Ill formed packet ");
 
   auto json_dict = json_object->GetAsDictionary();
@@ -1219,7 +1219,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceConfigRead(
   auto json_object = StructuredData::ParseJSON(packet.Peek());
 
   if (!json_object ||
-      json_object->GetType() != StructuredData::Type::eTypeDictionary)
+      json_object->GetType() != lldb::eStructuredDataTypeDictionary)
     return SendIllFormedResponse(packet,
                                  "jTraceConfigRead: Ill formed packet ");
 
@@ -1287,7 +1287,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceRead(
   auto json_object = StructuredData::ParseJSON(packet.Peek());
 
   if (!json_object ||
-      json_object->GetType() != StructuredData::Type::eTypeDictionary)
+      json_object->GetType() != lldb::eStructuredDataTypeDictionary)
     return SendIllFormedResponse(packet, "jTrace: Ill formed packet ");
 
   auto json_dict = json_object->GetAsDictionary();
