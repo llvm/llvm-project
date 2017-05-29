@@ -199,10 +199,10 @@ define <4 x i16> @test_interleaved(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 define <4 x i16> @test_undef(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; CHECK-LABEL: test_undef:
 ; CHECK:       @ BB#0:
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
-; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
-; CHECK-NEXT:    vzip.16 d19, d16
-; CHECK-NEXT:    vmov r0, r1, d19
+; CHECK-NEXT:    vldr  d16, [r1]
+; CHECK-NEXT:    vldr  d17, [r0, #8]
+; CHECK-NEXT:    vzip.16 d17, d16
+; CHECK-NEXT:    vmov  r0, r1, d17
 ; CHECK-NEXT:    mov pc, lr
         %tmp1 = load <8 x i16>, <8 x i16>* %A
         %tmp2 = load <8 x i16>, <8 x i16>* %B

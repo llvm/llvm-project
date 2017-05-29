@@ -80,9 +80,10 @@ MaxRecurseDepth("max-recurse-depth", cl::Hidden, cl::init(1000), cl::ZeroOrMore,
 struct llvm::GVN::Expression {
   uint32_t opcode;
   Type *type;
+  bool commutative;
   SmallVector<uint32_t, 4> varargs;
 
-  Expression(uint32_t o = ~2U) : opcode(o) {}
+  Expression(uint32_t o = ~2U) : opcode(o), commutative(false) {}
 
   bool operator==(const Expression &other) const {
     if (opcode != other.opcode)
@@ -246,6 +247,7 @@ GVN::Expression GVN::ValueTable::createExpr(Instruction *I) {
     assert(I->getNumOperands() == 2 && "Unsupported commutative instruction!");
     if (e.varargs[0] > e.varargs[1])
       std::swap(e.varargs[0], e.varargs[1]);
+    e.commutative = true;
   }
 
   if (CmpInst *C = dyn_cast<CmpInst>(I)) {
@@ -256,6 +258,7 @@ GVN::Expression GVN::ValueTable::createExpr(Instruction *I) {
       Predicate = CmpInst::getSwappedPredicate(Predicate);
     }
     e.opcode = (C->getOpcode() << 8) | Predicate;
+    e.commutative = true;
   } else if (InsertValueInst *E = dyn_cast<InsertValueInst>(I)) {
     for (InsertValueInst::idx_iterator II = E->idx_begin(), IE = E->idx_end();
          II != IE; ++II)
@@ -281,6 +284,7 @@ GVN::Expression GVN::ValueTable::createCmpExpr(unsigned Opcode,
     Predicate = CmpInst::getSwappedPredicate(Predicate);
   }
   e.opcode = (Opcode << 8) | Predicate;
+  e.commutative = true;
   return e;
 }
 
@@ -348,25 +352,25 @@ GVN::ValueTable::~ValueTable() = default;
 /// add - Insert a value into the table with a specified value number.
 void GVN::ValueTable::add(Value *V, uint32_t num) {
   valueNumbering.insert(std::make_pair(V, num));
+  if (PHINode *PN = dyn_cast<PHINode>(V))
+    NumberingPhi[num] = PN;
 }
 
 uint32_t GVN::ValueTable::lookupOrAddCall(CallInst *C) {
   if (AA->doesNotAccessMemory(C)) {
     Expression exp = createExpr(C);
-    uint32_t &e = expressionNumbering[exp];
-    if (!e) e = nextValueNumber++;
+    uint32_t e = assignExpNewValueNum(exp).first;
     valueNumbering[C] = e;
     return e;
   } else if (AA->onlyReadsMemory(C)) {
     Expression exp = createExpr(C);
-    uint32_t &e = expressionNumbering[exp];
-    if (!e) {
-      e = nextValueNumber++;
-      valueNumbering[C] = e;
-      return e;
+    auto ValNum = assignExpNewValueNum(exp);
+    if (ValNum.second) {
+      valueNumbering[C] = ValNum.first;
+      return ValNum.first;
     }
     if (!MD) {
-      e = nextValueNumber++;
+      uint32_t e = assignExpNewValueNum(exp).first;
       valueNumbering[C] = e;
       return e;
     }
@@ -522,23 +526,29 @@ uint32_t GVN::ValueTable::lookupOrAdd(Value *V) {
     case Instruction::ExtractValue:
       exp = createExtractvalueExpr(cast<ExtractValueInst>(I));
       break;
+    case Instruction::PHI:
+      valueNumbering[V] = nextValueNumber;
+      NumberingPhi[nextValueNumber] = cast<PHINode>(V);
+      return nextValueNumber++;
     default:
       valueNumbering[V] = nextValueNumber;
       return nextValueNumber++;
   }
 
-  uint32_t& e = expressionNumbering[exp];
-  if (!e) e = nextValueNumber++;
+  uint32_t e = assignExpNewValueNum(exp).first;
   valueNumbering[V] = e;
   return e;
 }
 
 /// Returns the value number of the specified value. Fails if
 /// the value has not yet been numbered.
-uint32_t GVN::ValueTable::lookup(Value *V) const {
+uint32_t GVN::ValueTable::lookup(Value *V, bool Verify) const {
   DenseMap<Value*, uint32_t>::const_iterator VI = valueNumbering.find(V);
-  assert(VI != valueNumbering.end() && "Value not numbered?");
-  return VI->second;
+  if (Verify) {
+    assert(VI != valueNumbering.end() && "Value not numbered?");
+    return VI->second;
+  }
+  return (VI != valueNumbering.end()) ? VI->second : 0;
 }
 
 /// Returns the value number of the given comparison,
@@ -549,21 +559,29 @@ uint32_t GVN::ValueTable::lookupOrAddCmp(unsigned Opcode,
                                          CmpInst::Predicate Predicate,
                                          Value *LHS, Value *RHS) {
   Expression exp = createCmpExpr(Opcode, Predicate, LHS, RHS);
-  uint32_t& e = expressionNumbering[exp];
-  if (!e) e = nextValueNumber++;
-  return e;
+  return assignExpNewValueNum(exp).first;
 }
 
 /// Remove all entries from the ValueTable.
 void GVN::ValueTable::clear() {
   valueNumbering.clear();
   expressionNumbering.clear();
+  NumberingPhi.clear();
+  PhiTranslateTable.clear();
+  BlockRPONumber.clear();
   nextValueNumber = 1;
+  Expressions.clear();
+  ExprIdx.clear();
+  nextExprNumber = 0;
 }
 
 /// Remove a value from the value numbering.
 void GVN::ValueTable::erase(Value *V) {
+  uint32_t Num = valueNumbering.lookup(V);
   valueNumbering.erase(V);
+  // If V is PHINode, V <--> value number is an one-to-one mapping.
+  if (isa<PHINode>(V))
+    NumberingPhi.erase(Num);
 }
 
 /// verifyRemoved - Verify that the value is removed from all internal data
@@ -1451,6 +1469,104 @@ bool GVN::processLoad(LoadInst *L) {
   return false;
 }
 
+/// Return a pair the first field showing the value number of \p Exp and the
+/// second field showing whether it is a value number newly created.
+std::pair<uint32_t, bool>
+GVN::ValueTable::assignExpNewValueNum(Expression &Exp) {
+  uint32_t &e = expressionNumbering[Exp];
+  bool CreateNewValNum = !e;
+  if (CreateNewValNum) {
+    Expressions.push_back(Exp);
+    if (ExprIdx.size() < nextValueNumber + 1)
+      ExprIdx.resize(nextValueNumber * 2);
+    e = nextValueNumber;
+    ExprIdx[nextValueNumber++] = nextExprNumber++;
+  }
+  return {e, CreateNewValNum};
+}
+
+void GVN::ValueTable::assignBlockRPONumber(Function &F) {
+  uint32_t NextBlockNumber = 1;
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  for (BasicBlock *BB : RPOT)
+    BlockRPONumber[BB] = NextBlockNumber++;
+}
+
+/// Return whether all the values related with the same \p num are
+/// defined in \p BB.
+bool GVN::ValueTable::areAllValsInBB(uint32_t Num, const BasicBlock *BB,
+                                     GVN &Gvn) {
+  LeaderTableEntry *Vals = &Gvn.LeaderTable[Num];
+  while (Vals && Vals->BB == BB)
+    Vals = Vals->Next;
+  return !Vals;
+}
+
+/// Wrap phiTranslateImpl to provide caching functionality.
+uint32_t GVN::ValueTable::phiTranslate(const BasicBlock *Pred,
+                                       const BasicBlock *PhiBlock, uint32_t Num,
+                                       GVN &Gvn) {
+  auto FindRes = PhiTranslateTable.find({Num, Pred});
+  if (FindRes != PhiTranslateTable.end())
+    return FindRes->second;
+  uint32_t NewNum = phiTranslateImpl(Pred, PhiBlock, Num, Gvn);
+  PhiTranslateTable.insert({{Num, Pred}, NewNum});
+  return NewNum;
+}
+
+/// Translate value number \p Num using phis, so that it has the values of
+/// the phis in BB.
+uint32_t GVN::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
+                                           const BasicBlock *PhiBlock,
+                                           uint32_t Num, GVN &Gvn) {
+  if (PHINode *PN = NumberingPhi[Num]) {
+    if (BlockRPONumber[Pred] >= BlockRPONumber[PhiBlock])
+      return Num;
+    for (unsigned i = 0; i != PN->getNumIncomingValues(); ++i) {
+      if (PN->getParent() == PhiBlock && PN->getIncomingBlock(i) == Pred)
+        if (uint32_t TransVal = lookup(PN->getIncomingValue(i), false))
+          return TransVal;
+    }
+    return Num;
+  }
+
+  // If there is any value related with Num is defined in a BB other than
+  // PhiBlock, it cannot depend on a phi in PhiBlock without going through
+  // a backedge. We can do an early exit in that case to save compile time.
+  if (!areAllValsInBB(Num, PhiBlock, Gvn))
+    return Num;
+
+  if (ExprIdx[Num] == 0 || Num >= ExprIdx.size())
+    return Num;
+  Expression Exp = Expressions[ExprIdx[Num]];
+
+  for (unsigned i = 0; i < Exp.varargs.size(); i++) {
+    // For InsertValue and ExtractValue, some varargs are index numbers
+    // instead of value numbers. Those index numbers should not be
+    // translated.
+    if ((i > 1 && Exp.opcode == Instruction::InsertValue) ||
+        (i > 0 && Exp.opcode == Instruction::ExtractValue))
+      continue;
+    Exp.varargs[i] = phiTranslate(Pred, PhiBlock, Exp.varargs[i], Gvn);
+  }
+
+  if (Exp.commutative) {
+    assert(Exp.varargs.size() == 2 && "Unsupported commutative expression!");
+    if (Exp.varargs[0] > Exp.varargs[1]) {
+      std::swap(Exp.varargs[0], Exp.varargs[1]);
+      uint32_t Opcode = Exp.opcode >> 8;
+      if (Opcode == Instruction::ICmp || Opcode == Instruction::FCmp)
+        Exp.opcode = (Opcode << 8) |
+                     CmpInst::getSwappedPredicate(
+                         static_cast<CmpInst::Predicate>(Exp.opcode & 255));
+    }
+  }
+
+  if (uint32_t NewNum = expressionNumbering[Exp])
+    return NewNum;
+  return Num;
+}
+
 // In order to find a leader for a given value number at a
 // specific basic block, we first obtain the list of all Values for that number,
 // and then scan the list to find one whose block dominates the block in
@@ -1856,6 +1972,7 @@ bool GVN::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
     // Fabricate val-num for dead-code in order to suppress assertion in
     // performPRE().
     assignValNumForDeadCode();
+    VN.assignBlockRPONumber(F);
     bool PREChanged = true;
     while (PREChanged) {
       PREChanged = performPRE(F);
@@ -1945,7 +2062,9 @@ bool GVN::performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
       success = false;
       break;
     }
-    if (Value *V = findLeader(Pred, VN.lookup(Op))) {
+    uint32_t TValNo =
+        VN.phiTranslate(Pred, Instr->getParent(), VN.lookup(Op), *this);
+    if (Value *V = findLeader(Pred, TValNo)) {
       Instr->setOperand(i, V);
     } else {
       success = false;
@@ -1962,10 +2081,12 @@ bool GVN::performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
   Instr->insertBefore(Pred->getTerminator());
   Instr->setName(Instr->getName() + ".pre");
   Instr->setDebugLoc(Instr->getDebugLoc());
-  VN.add(Instr, ValNo);
+
+  unsigned Num = VN.lookupOrAdd(Instr);
+  VN.add(Instr, Num);
 
   // Update the availability map to include the new instruction.
-  addToLeaderTable(ValNo, Instr, Pred);
+  addToLeaderTable(Num, Instr, Pred);
   return true;
 }
 
@@ -2014,7 +2135,8 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
       break;
     }
 
-    Value *predV = findLeader(P, ValNo);
+    uint32_t TValNo = VN.phiTranslate(P, CurrentBlock, ValNo, *this);
+    Value *predV = findLeader(P, TValNo);
     if (!predV) {
       predMap.push_back(std::make_pair(static_cast<Value *>(nullptr), P));
       PREPred = P;

@@ -25,6 +25,7 @@ class raw_ostream;
 struct DWARFAddressRange {
   uint64_t LowPC;
   uint64_t HighPC;
+  uint64_t SectionIndex;
 };
 
 /// DWARFAddressRangesVector - represents a set of absolute address ranges.
@@ -44,6 +45,8 @@ public:
     /// address past the end of the address range. The ending address must
     /// be greater than or equal to the beginning address.
     uint64_t EndAddress;
+    /// A section index this range belongs to.
+    uint64_t SectionIndex;
 
     /// The end of any given range list is marked by an end of list entry,
     /// which consists of a 0 for the beginning address offset

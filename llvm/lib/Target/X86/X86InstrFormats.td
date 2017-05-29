@@ -225,6 +225,12 @@ class Has3DNow0F0FOpcode  { bit has3DNow0F0FOpcode = 1; }
 class XOP { Encoding OpEnc = EncXOP; }
 class XOP_4V : XOP { bit hasVEX_4V = 1; }
 
+// Specify the alternative register form instruction to replace the current
+// instruction in case it was picked during generation of memory folding tables
+class FoldGenData<string _RegisterForm> {
+    string FoldGenRegForm = _RegisterForm;
+}
+
 class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
               string AsmStr,
               InstrItinClass itin,
@@ -303,6 +309,10 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
                                 !if (hasEVEX_B,
                                      CD8_EltSize,
                                      !srl(VectSize, CD8_Form{1-0}))), 0);
+
+  // Used in the memory folding generation (TableGen backend) to point to an alternative
+  // instruction to replace the current one in case it got picked during generation.
+  string FoldGenRegForm = ?;
 
   // TSFlags layout should be kept in sync with X86BaseInfo.h.
   let TSFlags{6-0}   = FormBits;

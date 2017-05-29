@@ -164,9 +164,9 @@ Instruction *ConstantHoistingPass::findMatInsertPt(Instruction *Inst,
 /// \brief Given \p BBs as input, find another set of BBs which collectively
 /// dominates \p BBs and have the minimal sum of frequencies. Return the BB
 /// set found in \p BBs.
-void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
-                          BasicBlock *Entry,
-                          SmallPtrSet<BasicBlock *, 8> &BBs) {
+static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
+                                 BasicBlock *Entry,
+                                 SmallPtrSet<BasicBlock *, 8> &BBs) {
   assert(!BBs.count(Entry) && "Assume Entry is not in BBs");
   // Nodes on the current path to the root.
   SmallPtrSet<BasicBlock *, 8> Path;

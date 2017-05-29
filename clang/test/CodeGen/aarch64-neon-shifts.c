@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
-// RUN:   -ffp-contract=fast -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN:  -disable-O0-optnone -ffp-contract=fast -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 
 #include <arm_neon.h>
 

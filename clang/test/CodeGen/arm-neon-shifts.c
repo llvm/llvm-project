@@ -1,5 +1,6 @@
 // REQUIRES: arm-registered-target
 // RUN: %clang_cc1 -triple thumbv7-apple-darwin \
+// RUN:   -disable-O0-optnone \
 // RUN:   -target-cpu cortex-a8 \
 // RUN:   -ffreestanding \
 // RUN:   -emit-llvm -w -o - %s | opt -S -mem2reg | FileCheck %s

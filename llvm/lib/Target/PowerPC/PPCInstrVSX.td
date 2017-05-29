@@ -2724,8 +2724,14 @@ def FltToUIntLoad {
 def FltToLongLoad {
   dag A = (i64 (PPCmfvsr (PPCfctidz (f64 (extloadf32 xoaddr:$A)))));
 }
+def FltToLongLoadP9 {
+  dag A = (i64 (PPCmfvsr (PPCfctidz (f64 (extloadf32 iaddr:$A)))));
+}
 def FltToULongLoad {
   dag A = (i64 (PPCmfvsr (PPCfctiduz (f64 (extloadf32 xoaddr:$A)))));
+}
+def FltToULongLoadP9 {
+  dag A = (i64 (PPCmfvsr (PPCfctiduz (f64 (extloadf32 iaddr:$A)))));
 }
 def FltToLong {
   dag A = (i64 (PPCmfvsr (PPCfctidz (fpextend f32:$A))));
@@ -2748,8 +2754,14 @@ def DblToULong {
 def DblToIntLoad {
   dag A = (i32 (PPCmfvsr (PPCfctiwz (f64 (load xoaddr:$A)))));
 }
+def DblToIntLoadP9 {
+  dag A = (i32 (PPCmfvsr (PPCfctiwz (f64 (load iaddr:$A)))));
+}
 def DblToUIntLoad {
   dag A = (i32 (PPCmfvsr (PPCfctiwuz (f64 (load xoaddr:$A)))));
+}
+def DblToUIntLoadP9 {
+  dag A = (i32 (PPCmfvsr (PPCfctiwuz (f64 (load iaddr:$A)))));
 }
 def DblToLongLoad {
   dag A = (i64 (PPCmfvsr (PPCfctidz (f64 (load xoaddr:$A)))));
@@ -2918,17 +2930,17 @@ let AddedComplexity = 400 in {
               (v4i32 (XVCVSPSXWS (LXVWSX xoaddr:$A)))>;
     def : Pat<(v4i32 (scalar_to_vector FltToUIntLoad.A)),
               (v4i32 (XVCVSPUXWS (LXVWSX xoaddr:$A)))>;
-    def : Pat<(v4i32 (scalar_to_vector DblToIntLoad.A)),
+    def : Pat<(v4i32 (scalar_to_vector DblToIntLoadP9.A)),
               (v4i32 (XXSPLTW (COPY_TO_REGCLASS
                                 (XSCVDPSXWS (DFLOADf64 iaddr:$A)), VSRC), 1))>;
-    def : Pat<(v4i32 (scalar_to_vector DblToUIntLoad.A)),
+    def : Pat<(v4i32 (scalar_to_vector DblToUIntLoadP9.A)),
               (v4i32 (XXSPLTW (COPY_TO_REGCLASS
                                 (XSCVDPUXWS (DFLOADf64 iaddr:$A)), VSRC), 1))>;
-    def : Pat<(v2i64 (scalar_to_vector FltToLongLoad.A)),
+    def : Pat<(v2i64 (scalar_to_vector FltToLongLoadP9.A)),
               (v2i64 (XXPERMDIs (XSCVDPSXDS (COPY_TO_REGCLASS
                                               (DFLOADf32 iaddr:$A),
                                               VSFRC)), 0))>;
-    def : Pat<(v2i64 (scalar_to_vector FltToULongLoad.A)),
+    def : Pat<(v2i64 (scalar_to_vector FltToULongLoadP9.A)),
               (v2i64 (XXPERMDIs (XSCVDPUXDS (COPY_TO_REGCLASS
                                               (DFLOADf32 iaddr:$A),
                                               VSFRC)), 0))>;

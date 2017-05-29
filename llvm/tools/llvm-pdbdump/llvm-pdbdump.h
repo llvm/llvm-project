@@ -115,6 +115,7 @@ extern llvm::cl::opt<bool> Pedantic;
 }
 
 namespace pdb2yaml {
+extern llvm::cl::opt<bool> All;
 extern llvm::cl::opt<bool> NoFileHeaders;
 extern llvm::cl::opt<bool> Minimal;
 extern llvm::cl::opt<bool> StreamMetadata;

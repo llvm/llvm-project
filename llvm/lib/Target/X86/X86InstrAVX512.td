@@ -2693,22 +2693,22 @@ multiclass avx512_load_vl<bits<8> opc, string OpcodeStr,
 }
 
 multiclass avx512_store<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
-                        PatFrag st_frag, PatFrag mstore> {
+                        PatFrag st_frag, PatFrag mstore, string Name> {
 
   let hasSideEffects = 0 in {
   def rr_REV  : AVX512PI<opc, MRMDestReg, (outs _.RC:$dst), (ins _.RC:$src),
                          OpcodeStr # ".s\t{$src, $dst|$dst, $src}",
-                         [], _.ExeDomain>, EVEX;
+                         [], _.ExeDomain>, EVEX, FoldGenData<Name#rr>;
   def rrk_REV : AVX512PI<opc, MRMDestReg, (outs  _.RC:$dst),
                          (ins _.KRCWM:$mask, _.RC:$src),
                          OpcodeStr # ".s\t{$src, ${dst} {${mask}}|"#
                          "${dst} {${mask}}, $src}",
-                         [], _.ExeDomain>,  EVEX, EVEX_K;
+                         [], _.ExeDomain>,  EVEX, EVEX_K, FoldGenData<Name#rrk>;
   def rrkz_REV : AVX512PI<opc, MRMDestReg, (outs  _.RC:$dst),
                           (ins _.KRCWM:$mask, _.RC:$src),
                           OpcodeStr # ".s\t{$src, ${dst} {${mask}} {z}|" #
                           "${dst} {${mask}} {z}, $src}",
-                          [], _.ExeDomain>, EVEX, EVEX_KZ;
+                          [], _.ExeDomain>, EVEX, EVEX_KZ, FoldGenData<Name#rrkz>;
   }
 
   def mr : AVX512PI<opc, MRMDestMem, (outs), (ins _.MemOp:$dst, _.RC:$src),
@@ -2726,80 +2726,92 @@ multiclass avx512_store<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
 
 
 multiclass avx512_store_vl< bits<8> opc, string OpcodeStr,
-                            AVX512VLVectorVTInfo _, Predicate prd> {
+                            AVX512VLVectorVTInfo _, Predicate prd,
+                            string Name> {
   let Predicates = [prd] in
   defm Z : avx512_store<opc, OpcodeStr, _.info512, store,
-                        masked_store_unaligned>, EVEX_V512;
+                        masked_store_unaligned, Name#Z>, EVEX_V512;
 
   let Predicates = [prd, HasVLX] in {
     defm Z256 : avx512_store<opc, OpcodeStr, _.info256, store,
-                             masked_store_unaligned>, EVEX_V256;
+                             masked_store_unaligned, Name#Z256>, EVEX_V256;
     defm Z128 : avx512_store<opc, OpcodeStr, _.info128, store,
-                             masked_store_unaligned>, EVEX_V128;
+                             masked_store_unaligned, Name#Z128>, EVEX_V128;
   }
 }
 
 multiclass avx512_alignedstore_vl<bits<8> opc, string OpcodeStr,
-                                  AVX512VLVectorVTInfo _,  Predicate prd> {
+                                  AVX512VLVectorVTInfo _,  Predicate prd,
+                                  string Name> {
   let Predicates = [prd] in
   defm Z : avx512_store<opc, OpcodeStr, _.info512, alignedstore512,
-                        masked_store_aligned512>, EVEX_V512;
+                        masked_store_aligned512, Name#Z>, EVEX_V512;
 
   let Predicates = [prd, HasVLX] in {
     defm Z256 : avx512_store<opc, OpcodeStr, _.info256, alignedstore256,
-                             masked_store_aligned256>, EVEX_V256;
+                             masked_store_aligned256, Name#Z256>, EVEX_V256;
     defm Z128 : avx512_store<opc, OpcodeStr, _.info128, alignedstore,
-                             masked_store_aligned128>, EVEX_V128;
+                             masked_store_aligned128, Name#Z128>, EVEX_V128;
   }
 }
 
 defm VMOVAPS : avx512_alignedload_vl<0x28, "vmovaps", avx512vl_f32_info,
                                      HasAVX512>,
                avx512_alignedstore_vl<0x29, "vmovaps", avx512vl_f32_info,
-                                      HasAVX512>,  PS, EVEX_CD8<32, CD8VF>;
+                                      HasAVX512, "VMOVAPS">,
+               PS, EVEX_CD8<32, CD8VF>;
 
 defm VMOVAPD : avx512_alignedload_vl<0x28, "vmovapd", avx512vl_f64_info,
                                      HasAVX512>,
                avx512_alignedstore_vl<0x29, "vmovapd", avx512vl_f64_info,
-                                     HasAVX512>, PD, VEX_W, EVEX_CD8<64, CD8VF>;
+                                     HasAVX512, "VMOVAPD">,
+               PD, VEX_W, EVEX_CD8<64, CD8VF>;
 
 defm VMOVUPS : avx512_load_vl<0x10, "vmovups", avx512vl_f32_info, HasAVX512,
                               null_frag>,
-               avx512_store_vl<0x11, "vmovups", avx512vl_f32_info, HasAVX512>,
+               avx512_store_vl<0x11, "vmovups", avx512vl_f32_info, HasAVX512,
+                               "VMOVUPS">,
                               PS, EVEX_CD8<32, CD8VF>;
 
 defm VMOVUPD : avx512_load_vl<0x10, "vmovupd", avx512vl_f64_info, HasAVX512,
                               null_frag>,
-               avx512_store_vl<0x11, "vmovupd", avx512vl_f64_info, HasAVX512>,
+               avx512_store_vl<0x11, "vmovupd", avx512vl_f64_info, HasAVX512,
+                               "VMOVUPD">,
                PD, VEX_W, EVEX_CD8<64, CD8VF>;
 
 defm VMOVDQA32 : avx512_alignedload_vl<0x6F, "vmovdqa32", avx512vl_i32_info,
                                        HasAVX512>,
                  avx512_alignedstore_vl<0x7F, "vmovdqa32", avx512vl_i32_info,
-                                       HasAVX512>, PD, EVEX_CD8<32, CD8VF>;
+                                       HasAVX512, "VMOVDQA32">, 
+                 PD, EVEX_CD8<32, CD8VF>;
 
 defm VMOVDQA64 : avx512_alignedload_vl<0x6F, "vmovdqa64", avx512vl_i64_info,
                                        HasAVX512>,
                  avx512_alignedstore_vl<0x7F, "vmovdqa64", avx512vl_i64_info,
-                                    HasAVX512>, PD, VEX_W, EVEX_CD8<64, CD8VF>;
+                                    HasAVX512, "VMOVDQA64">, 
+                 PD, VEX_W, EVEX_CD8<64, CD8VF>;
 
 defm VMOVDQU8 : avx512_load_vl<0x6F, "vmovdqu8", avx512vl_i8_info, HasBWI>,
-                 avx512_store_vl<0x7F, "vmovdqu8", avx512vl_i8_info,
-                                 HasBWI>, XD, EVEX_CD8<8, CD8VF>;
+                avx512_store_vl<0x7F, "vmovdqu8", avx512vl_i8_info,
+                                 HasBWI, "VMOVDQU8">, 
+                XD, EVEX_CD8<8, CD8VF>;
 
 defm VMOVDQU16 : avx512_load_vl<0x6F, "vmovdqu16", avx512vl_i16_info, HasBWI>,
                  avx512_store_vl<0x7F, "vmovdqu16", avx512vl_i16_info,
-                                 HasBWI>, XD, VEX_W, EVEX_CD8<16, CD8VF>;
+                                 HasBWI, "VMOVDQU16">, 
+                 XD, VEX_W, EVEX_CD8<16, CD8VF>;
 
 defm VMOVDQU32 : avx512_load_vl<0x6F, "vmovdqu32", avx512vl_i32_info, HasAVX512,
                                 null_frag>,
                  avx512_store_vl<0x7F, "vmovdqu32", avx512vl_i32_info,
-                                 HasAVX512>, XS, EVEX_CD8<32, CD8VF>;
+                                 HasAVX512, "VMOVDQU32">, 
+                 XS, EVEX_CD8<32, CD8VF>;
 
 defm VMOVDQU64 : avx512_load_vl<0x6F, "vmovdqu64", avx512vl_i64_info, HasAVX512,
                                 null_frag>,
                  avx512_store_vl<0x7F, "vmovdqu64", avx512vl_i64_info,
-                                 HasAVX512>, XS, VEX_W, EVEX_CD8<64, CD8VF>;
+                                 HasAVX512, "VMOVDQU64">, 
+                 XS, VEX_W, EVEX_CD8<64, CD8VF>;
 
 // Special instructions to help with spilling when we don't have VLX. We need
 // to load or store from a ZMM register instead. These are converted in
@@ -3354,17 +3366,52 @@ def : Pat<(int_x86_avx512_mask_store_ss addr:$dst, VR128X:$src, GR8:$mask),
           (VMOVSSZmrk addr:$dst, (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF), GR8:$mask, sub_8bit)), VK1WM),
            (COPY_TO_REGCLASS VR128X:$src, FR32X))>;
 
-let hasSideEffects = 0 in
-defm VMOVSSZrr_REV : AVX512_maskable_in_asm<0x11, MRMDestReg, f32x_info,
-                           (outs VR128X:$dst), (ins VR128X:$src1, FR32X:$src2),
-                           "vmovss.s", "$src2, $src1", "$src1, $src2", []>,
-                           XS, EVEX_4V, VEX_LIG;
+let hasSideEffects = 0 in {
+  def VMOVSSZrr_REV: AVX512<0x11, MRMDestReg, (outs VR128X:$dst), 
+                           (ins VR128X:$src1, FR32X:$src2),
+                           "vmovss.s\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                           [], NoItinerary>, XS, EVEX_4V, VEX_LIG,
+                           FoldGenData<"VMOVSSZrr">;
 
-let hasSideEffects = 0 in
-defm VMOVSDZrr_REV : AVX512_maskable_in_asm<0x11, MRMDestReg, f64x_info,
-                           (outs VR128X:$dst), (ins VR128X:$src1, FR64X:$src2),
-                           "vmovsd.s", "$src2, $src1", "$src1, $src2", []>,
-                           XD, EVEX_4V, VEX_LIG, VEX_W;
+let Constraints = "$src0 = $dst" in
+  def VMOVSSZrrk_REV: AVX512<0x11, MRMDestReg, (outs VR128X:$dst), 
+                             (ins f32x_info.RC:$src0, f32x_info.KRCWM:$mask, 
+                                                   VR128X:$src1, FR32X:$src2),
+                             "vmovss.s\t{$src2, $src1, $dst {${mask}}|"#
+                                        "$dst {${mask}}, $src1, $src2}",
+                             [], NoItinerary>, EVEX_K, XS, EVEX_4V, VEX_LIG,
+                             FoldGenData<"VMOVSSZrrk">;
+ 
+  def VMOVSSZrrkz_REV: AVX512<0x11, MRMDestReg, (outs VR128X:$dst), 
+                         (ins f32x_info.KRCWM:$mask, VR128X:$src1, FR32X:$src2),
+                         "vmovss.s\t{$src2, $src1, $dst {${mask}} {z}|"#
+                                    "$dst {${mask}} {z}, $src1, $src2}",
+                         [], NoItinerary>, EVEX_KZ, XS, EVEX_4V, VEX_LIG,
+                         FoldGenData<"VMOVSSZrrkz">;
+
+  def VMOVSDZrr_REV: AVX512<0x11, MRMDestReg, (outs VR128X:$dst), 
+                           (ins VR128X:$src1, FR64X:$src2),
+                           "vmovsd.s\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                           [], NoItinerary>, XD, EVEX_4V, VEX_LIG, VEX_W,
+                           FoldGenData<"VMOVSDZrr">;
+
+let Constraints = "$src0 = $dst" in
+  def VMOVSDZrrk_REV: AVX512<0x11, MRMDestReg, (outs VR128X:$dst), 
+                             (ins f64x_info.RC:$src0, f64x_info.KRCWM:$mask, 
+                                                   VR128X:$src1, FR64X:$src2),
+                             "vmovsd.s\t{$src2, $src1, $dst {${mask}}|"#
+                                        "$dst {${mask}}, $src1, $src2}",
+                             [], NoItinerary>, EVEX_K, XD, EVEX_4V, VEX_LIG,
+                             VEX_W, FoldGenData<"VMOVSDZrrk">; 
+
+  def VMOVSDZrrkz_REV: AVX512<0x11, MRMDestReg, (outs VR128X:$dst), 
+                              (ins f64x_info.KRCWM:$mask, VR128X:$src1, 
+                                                          FR64X:$src2),
+                              "vmovsd.s\t{$src2, $src1, $dst {${mask}} {z}|"#
+                                         "$dst {${mask}} {z}, $src1, $src2}",
+                              [], NoItinerary>, EVEX_KZ, XD, EVEX_4V, VEX_LIG, 
+                              VEX_W, FoldGenData<"VMOVSDZrrkz">;
+}
 
 let Predicates = [HasAVX512] in {
   let AddedComplexity = 15 in {
@@ -8830,7 +8877,7 @@ multiclass avx512_extract_elt_w<string OpcodeStr, X86VectorVTInfo _> {
     def rr_REV : AVX512Ii8<0x15, MRMDestReg, (outs GR32orGR64:$dst),
                    (ins _.RC:$src1, u8imm:$src2),
                    OpcodeStr#".s\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
-                   EVEX, TAPD;
+                   EVEX, TAPD, FoldGenData<NAME#rr>;
 
     defm NAME : avx512_extract_elt_bw_m<0x15, OpcodeStr, X86pextrw, _>, TAPD;
   }

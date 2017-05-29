@@ -17,6 +17,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "misched"
 
+namespace {
 class GCNMinRegScheduler {
   struct Candidate : ilist_node<Candidate> {
     const SUnit *SU;
@@ -71,6 +72,7 @@ public:
   std::vector<const SUnit*> schedule(ArrayRef<const SUnit*> TopRoots,
                                      const ScheduleDAG &DAG);
 };
+} // namespace
 
 void GCNMinRegScheduler::initNumPreds(const decltype(ScheduleDAG::SUnits) &SUnits) {
   NumPreds.resize(SUnits.size());

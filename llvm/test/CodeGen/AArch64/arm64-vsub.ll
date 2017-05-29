@@ -157,7 +157,7 @@ define <2 x i64> @ssubl2d(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 
 define <8 x i16> @ssubl2_8h(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ;CHECK-LABEL: ssubl2_8h:
-;CHECK: ssubl2.8h
+;CHECK: ssubl.8h
         %tmp1 = load <16 x i8>, <16 x i8>* %A
         %high1 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
         %ext1 = sext <8 x i8> %high1 to <8 x i16>
@@ -172,7 +172,7 @@ define <8 x i16> @ssubl2_8h(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 
 define <4 x i32> @ssubl2_4s(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ;CHECK-LABEL: ssubl2_4s:
-;CHECK: ssubl2.4s
+;CHECK: ssubl.4s
         %tmp1 = load <8 x i16>, <8 x i16>* %A
         %high1 = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
         %ext1 = sext <4 x i16> %high1 to <4 x i32>
@@ -187,7 +187,7 @@ define <4 x i32> @ssubl2_4s(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 
 define <2 x i64> @ssubl2_2d(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 ;CHECK-LABEL: ssubl2_2d:
-;CHECK: ssubl2.2d
+;CHECK: ssubl.2d
         %tmp1 = load <4 x i32>, <4 x i32>* %A
         %high1 = shufflevector <4 x i32> %tmp1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
         %ext1 = sext <2 x i32> %high1 to <2 x i64>
@@ -235,7 +235,7 @@ define <2 x i64> @usubl2d(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 
 define <8 x i16> @usubl2_8h(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ;CHECK-LABEL: usubl2_8h:
-;CHECK: usubl2.8h
+;CHECK: usubl.8h
   %tmp1 = load <16 x i8>, <16 x i8>* %A
   %high1 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %ext1 = zext <8 x i8> %high1 to <8 x i16>
@@ -250,7 +250,7 @@ define <8 x i16> @usubl2_8h(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 
 define <4 x i32> @usubl2_4s(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ;CHECK-LABEL: usubl2_4s:
-;CHECK: usubl2.4s
+;CHECK: usubl.4s
   %tmp1 = load <8 x i16>, <8 x i16>* %A
   %high1 = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %ext1 = zext <4 x i16> %high1 to <4 x i32>
@@ -265,7 +265,7 @@ define <4 x i32> @usubl2_4s(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 
 define <2 x i64> @usubl2_2d(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 ;CHECK-LABEL: usubl2_2d:
-;CHECK: usubl2.2d
+;CHECK: usubl.2d
   %tmp1 = load <4 x i32>, <4 x i32>* %A
   %high1 = shufflevector <4 x i32> %tmp1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
   %ext1 = zext <2 x i32> %high1 to <2 x i64>
@@ -310,7 +310,7 @@ define <2 x i64> @ssubw2d(<2 x i64>* %A, <2 x i32>* %B) nounwind {
 
 define <8 x i16> @ssubw2_8h(<8 x i16>* %A, <16 x i8>* %B) nounwind {
 ;CHECK-LABEL: ssubw2_8h:
-;CHECK: ssubw2.8h
+;CHECK: ssubw.8h
         %tmp1 = load <8 x i16>, <8 x i16>* %A
 
         %tmp2 = load <16 x i8>, <16 x i8>* %B
@@ -323,7 +323,7 @@ define <8 x i16> @ssubw2_8h(<8 x i16>* %A, <16 x i8>* %B) nounwind {
 
 define <4 x i32> @ssubw2_4s(<4 x i32>* %A, <8 x i16>* %B) nounwind {
 ;CHECK-LABEL: ssubw2_4s:
-;CHECK: ssubw2.4s
+;CHECK: ssubw.4s
         %tmp1 = load <4 x i32>, <4 x i32>* %A
 
         %tmp2 = load <8 x i16>, <8 x i16>* %B
@@ -336,7 +336,7 @@ define <4 x i32> @ssubw2_4s(<4 x i32>* %A, <8 x i16>* %B) nounwind {
 
 define <2 x i64> @ssubw2_2d(<2 x i64>* %A, <4 x i32>* %B) nounwind {
 ;CHECK-LABEL: ssubw2_2d:
-;CHECK: ssubw2.2d
+;CHECK: ssubw.2d
         %tmp1 = load <2 x i64>, <2 x i64>* %A
 
         %tmp2 = load <4 x i32>, <4 x i32>* %B
@@ -379,7 +379,7 @@ define <2 x i64> @usubw2d(<2 x i64>* %A, <2 x i32>* %B) nounwind {
 
 define <8 x i16> @usubw2_8h(<8 x i16>* %A, <16 x i8>* %B) nounwind {
 ;CHECK-LABEL: usubw2_8h:
-;CHECK: usubw2.8h
+;CHECK: usubw.8h
         %tmp1 = load <8 x i16>, <8 x i16>* %A
 
         %tmp2 = load <16 x i8>, <16 x i8>* %B
@@ -392,7 +392,7 @@ define <8 x i16> @usubw2_8h(<8 x i16>* %A, <16 x i8>* %B) nounwind {
 
 define <4 x i32> @usubw2_4s(<4 x i32>* %A, <8 x i16>* %B) nounwind {
 ;CHECK-LABEL: usubw2_4s:
-;CHECK: usubw2.4s
+;CHECK: usubw.4s
         %tmp1 = load <4 x i32>, <4 x i32>* %A
 
         %tmp2 = load <8 x i16>, <8 x i16>* %B
@@ -405,7 +405,7 @@ define <4 x i32> @usubw2_4s(<4 x i32>* %A, <8 x i16>* %B) nounwind {
 
 define <2 x i64> @usubw2_2d(<2 x i64>* %A, <4 x i32>* %B) nounwind {
 ;CHECK-LABEL: usubw2_2d:
-;CHECK: usubw2.2d
+;CHECK: usubw.2d
         %tmp1 = load <2 x i64>, <2 x i64>* %A
 
         %tmp2 = load <4 x i32>, <4 x i32>* %B

@@ -115,7 +115,8 @@ uint64_t DebugHandlerBase::getBaseTypeSize(const DITypeRef TyRef) {
   return getBaseTypeSize(BaseType);
 }
 
-bool hasDebugInfo(const MachineModuleInfo *MMI, const MachineFunction *MF) {
+static bool hasDebugInfo(const MachineModuleInfo *MMI,
+                         const MachineFunction *MF) {
   if (!MMI->hasDebugInfo())
     return false;
   auto *SP = MF->getFunction()->getSubprogram();

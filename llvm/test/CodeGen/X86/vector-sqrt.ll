@@ -5,8 +5,10 @@
 define <2 x double> @sqrtd2(double* nocapture readonly %v) local_unnamed_addr #0 {
 ; CHECK-LABEL: sqrtd2:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    vsqrtsd (%rdi), %xmm0, %xmm0
-; CHECK-NEXT:    vsqrtsd 8(%rdi), %xmm1, %xmm1
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vsqrtsd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retq
 entry:
@@ -27,10 +29,14 @@ declare double @sqrt(double) local_unnamed_addr #1
 define <4 x float> @sqrtf4(float* nocapture readonly %v) local_unnamed_addr #0 {
 ; CHECK-LABEL: sqrtf4:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    vsqrtss (%rdi), %xmm0, %xmm0
-; CHECK-NEXT:    vsqrtss 4(%rdi), %xmm1, %xmm1
-; CHECK-NEXT:    vsqrtss 8(%rdi), %xmm2, %xmm2
-; CHECK-NEXT:    vsqrtss 12(%rdi), %xmm3, %xmm3
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vsqrtss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vsqrtss %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vsqrtss %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]

@@ -133,7 +133,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
       auto *SP = cast<DISubprogram>(MD.second);
       NewMD = DISubprogram::getDistinct(
           NewFunc->getContext(), SP->getScope(), SP->getName(),
-          NewFunc->getName(), SP->getFile(), SP->getLine(), SP->getType(),
+          SP->getLinkageName(), SP->getFile(), SP->getLine(), SP->getType(),
           SP->isLocalToUnit(), SP->isDefinition(), SP->getScopeLine(),
           SP->getContainingType(), SP->getVirtuality(), SP->getVirtualIndex(),
           SP->getThisAdjustment(), SP->getFlags(), SP->isOptimized(),

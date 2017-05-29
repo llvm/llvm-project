@@ -46,7 +46,7 @@ lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
   StructuredData::ObjectSP json_obj = StructuredData::ParseJSON(json_str);
   m_impl_up->SetObjectSP(json_obj);
 
-  if (!json_obj || json_obj->GetType() != StructuredData::Type::eTypeDictionary)
+  if (!json_obj || json_obj->GetType() != eStructuredDataTypeDictionary)
     error.SetErrorString("Invalid Syntax");
   return error;
 }
@@ -66,4 +66,46 @@ lldb::SBError SBStructuredData::GetDescription(lldb::SBStream &stream) const {
   SBError sb_error;
   sb_error.SetError(error);
   return sb_error;
+}
+
+StructuredDataType SBStructuredData::GetType() const {
+  return (m_impl_up ? m_impl_up->GetType() : eStructuredDataTypeInvalid);
+}
+
+size_t SBStructuredData::GetSize() const {
+  return (m_impl_up ? m_impl_up->GetSize() : 0);
+}
+
+lldb::SBStructuredData SBStructuredData::GetValueForKey(const char *key) const {
+  if (!m_impl_up)
+    return SBStructuredData();
+
+  SBStructuredData result;
+  result.m_impl_up->SetObjectSP(m_impl_up->GetValueForKey(key));
+  return result;
+}
+
+lldb::SBStructuredData SBStructuredData::GetItemAtIndex(size_t idx) const {
+  if (!m_impl_up)
+    return SBStructuredData();
+
+  SBStructuredData result;
+  result.m_impl_up->SetObjectSP(m_impl_up->GetItemAtIndex(idx));
+  return result;
+}
+
+uint64_t SBStructuredData::GetIntegerValue(uint64_t fail_value) const {
+  return (m_impl_up ? m_impl_up->GetIntegerValue(fail_value) : fail_value);
+}
+
+double SBStructuredData::GetFloatValue(double fail_value) const {
+  return (m_impl_up ? m_impl_up->GetFloatValue(fail_value) : fail_value);
+}
+
+bool SBStructuredData::GetBooleanValue(bool fail_value) const {
+  return (m_impl_up ? m_impl_up->GetBooleanValue(fail_value) : fail_value);
+}
+
+size_t SBStructuredData::GetStringValue(char *dst, size_t dst_len) const {
+  return (m_impl_up ? m_impl_up->GetStringValue(dst, dst_len) : 0);
 }

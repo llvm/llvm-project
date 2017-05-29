@@ -813,28 +813,28 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
         !isShiftedMask(CN->getZExtValue(), SMPos1, SMSize1))
       return SDValue();
 
-      // The shift masks must have the same position and size.
-      if (SMPos0 != SMPos1 || SMSize0 != SMSize1)
-        return SDValue();
+    // The shift masks must have the same position and size.
+    if (SMPos0 != SMPos1 || SMSize0 != SMSize1)
+      return SDValue();
 
-      SDValue Shl = And1.getOperand(0);
+    SDValue Shl = And1.getOperand(0);
 
-      if (!(CN = dyn_cast<ConstantSDNode>(Shl.getOperand(1))))
-        return SDValue();
+    if (!(CN = dyn_cast<ConstantSDNode>(Shl.getOperand(1))))
+      return SDValue();
 
-      unsigned Shamt = CN->getZExtValue();
+    unsigned Shamt = CN->getZExtValue();
 
-      // Return if the shift amount and the first bit position of mask are not the
-      // same.
-      EVT ValTy = N->getValueType(0);
-      if ((Shamt != SMPos0) || (SMPos0 + SMSize0 > ValTy.getSizeInBits()))
-        return SDValue();
+    // Return if the shift amount and the first bit position of mask are not the
+    // same.
+    EVT ValTy = N->getValueType(0);
+    if ((Shamt != SMPos0) || (SMPos0 + SMSize0 > ValTy.getSizeInBits()))
+      return SDValue();
 
-      SDLoc DL(N);
-      return DAG.getNode(MipsISD::Ins, DL, ValTy, Shl.getOperand(0),
-                         DAG.getConstant(SMPos0, DL, MVT::i32),
-                         DAG.getConstant(SMSize0, DL, MVT::i32),
-                         And0.getOperand(0));
+    SDLoc DL(N);
+    return DAG.getNode(MipsISD::Ins, DL, ValTy, Shl.getOperand(0),
+                       DAG.getConstant(SMPos0, DL, MVT::i32),
+                       DAG.getConstant(SMSize0, DL, MVT::i32),
+                       And0.getOperand(0));
   } else {
     // Pattern match DINS.
     //  $dst = or (and $src, mask0), mask1

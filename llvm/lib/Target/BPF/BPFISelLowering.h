@@ -42,6 +42,10 @@ public:
   // This method returns the name of a target specific DAG node.
   const char *getTargetNodeName(unsigned Opcode) const override;
 
+  // This method decides whether folding a constant offset
+  // with the given GlobalAddress is legal.
+  bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
+
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;

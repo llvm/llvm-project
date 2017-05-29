@@ -656,6 +656,9 @@ declare double @llvm.pow.f64(double, double)
 ;
 ; DISABLE: pop
 ;
+; FIXME: This is flakey passing by finding 'bl' somewhere amongst the debug
+; info (like labels named 'line_table) not because it's found a bl instruction.
+;
 ; CHECK: bl
 define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %tmp) "no-frame-pointer-elim"="true" {
 bb:
@@ -681,7 +684,9 @@ bb13:                                             ; preds = %bb3, %bb
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "LLVM", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "LLVM", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !4, globals: !2, imports: !2)
 !1 = !DIFile(filename: "a.cpp", directory: "b")
 !2 = !{}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = !{!5}
+!5 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

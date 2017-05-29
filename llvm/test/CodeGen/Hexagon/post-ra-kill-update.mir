@@ -6,7 +6,7 @@
 
 # CHECK-LABEL: name: foo
 # Check for no-kill of r9 in the first instruction, after reordering:
-# CHECK: %d7 = S2_lsr_r_p_or %d7, killed %d1, %r9
+# CHECK: %d7 = S2_lsr_r_p_or killed %d7, killed %d1, %r9
 # CHECK: %d13 = S2_lsr_r_p killed %d0, killed %r9
 
 --- |

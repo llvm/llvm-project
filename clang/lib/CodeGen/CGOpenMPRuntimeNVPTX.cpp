@@ -861,6 +861,7 @@ llvm::Value *CGOpenMPRuntimeNVPTX::emitTeamsOutlinedFunction(
       D, ThreadIDVar, InnermostKind, CodeGen);
   llvm::Function *OutlinedFun = cast<llvm::Function>(OutlinedFunVal);
   OutlinedFun->removeFnAttr(llvm::Attribute::NoInline);
+  OutlinedFun->removeFnAttr(llvm::Attribute::OptimizeNone);
   OutlinedFun->addFnAttr(llvm::Attribute::AlwaysInline);
 
   return OutlinedFun;
@@ -1243,10 +1244,10 @@ static void emitReductionListCopy(
 ///    local = local @ remote
 ///  else
 ///    local = remote
-llvm::Value *emitReduceScratchpadFunction(CodeGenModule &CGM,
-                                          ArrayRef<const Expr *> Privates,
-                                          QualType ReductionArrayTy,
-                                          llvm::Value *ReduceFn) {
+static llvm::Value *
+emitReduceScratchpadFunction(CodeGenModule &CGM,
+                             ArrayRef<const Expr *> Privates,
+                             QualType ReductionArrayTy, llvm::Value *ReduceFn) {
   auto &C = CGM.getContext();
   auto Int32Ty = C.getIntTypeForBitwidth(32, /* Signed */ true);
 
@@ -1372,9 +1373,9 @@ llvm::Value *emitReduceScratchpadFunction(CodeGenModule &CGM,
 ///  for elem in Reduce List:
 ///    scratchpad[elem_id][index] = elem
 ///
-llvm::Value *emitCopyToScratchpad(CodeGenModule &CGM,
-                                  ArrayRef<const Expr *> Privates,
-                                  QualType ReductionArrayTy) {
+static llvm::Value *emitCopyToScratchpad(CodeGenModule &CGM,
+                                         ArrayRef<const Expr *> Privates,
+                                         QualType ReductionArrayTy) {
 
   auto &C = CGM.getContext();
   auto Int32Ty = C.getIntTypeForBitwidth(32, /* Signed */ true);

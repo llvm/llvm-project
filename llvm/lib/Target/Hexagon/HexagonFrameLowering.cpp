@@ -1657,7 +1657,7 @@ bool HexagonFrameLowering::expandStoreVec2(MachineBasicBlock &B,
   // defined. From the point of view of the liveness tracking, it is ok to
   // store it as a whole, but if we break it up we may end up storing a
   // register that is entirely undefined.
-  LivePhysRegs LPR(&HRI);
+  LivePhysRegs LPR(HRI);
   LPR.addLiveIns(B);
   SmallVector<std::pair<unsigned, const MachineOperand*>,2> Clobbers;
   for (auto R = B.begin(); R != It; ++R) {

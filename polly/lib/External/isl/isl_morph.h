@@ -67,6 +67,9 @@ void isl_morph_dump(__isl_take isl_morph *morph);
 
 __isl_give isl_morph *isl_basic_set_variable_compression(
 	__isl_keep isl_basic_set *bset, enum isl_dim_type type);
+__isl_give isl_morph *isl_basic_set_variable_compression_with_id(
+	__isl_keep isl_basic_set *bset, enum isl_dim_type type,
+	__isl_keep isl_id *id);
 __isl_give isl_morph *isl_basic_set_parameter_compression(
 	__isl_keep isl_basic_set *bset);
 __isl_give isl_morph *isl_basic_set_full_compression(

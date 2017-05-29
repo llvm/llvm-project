@@ -95,6 +95,7 @@ public:
 
   std::error_code getName(StringRef &Result) const;
   uint64_t getAddress() const;
+  uint64_t getIndex() const;
   uint64_t getSize() const;
   std::error_code getContents(StringRef &Result) const;
 
@@ -222,6 +223,7 @@ protected:
   virtual std::error_code getSectionName(DataRefImpl Sec,
                                          StringRef &Res) const = 0;
   virtual uint64_t getSectionAddress(DataRefImpl Sec) const = 0;
+  virtual uint64_t getSectionIndex(DataRefImpl Sec) const = 0;
   virtual uint64_t getSectionSize(DataRefImpl Sec) const = 0;
   virtual std::error_code getSectionContents(DataRefImpl Sec,
                                              StringRef &Res) const = 0;
@@ -391,6 +393,10 @@ inline std::error_code SectionRef::getName(StringRef &Result) const {
 
 inline uint64_t SectionRef::getAddress() const {
   return OwningObject->getSectionAddress(SectionPimpl);
+}
+
+inline uint64_t SectionRef::getIndex() const {
+  return OwningObject->getSectionIndex(SectionPimpl);
 }
 
 inline uint64_t SectionRef::getSize() const {

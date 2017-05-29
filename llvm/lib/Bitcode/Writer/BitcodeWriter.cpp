@@ -3415,30 +3415,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
 
   // Create value IDs for undefined references.
   forEachSummary([&](GVInfo I) {
-    if (auto *VS = dyn_cast<GlobalVarSummary>(I.second)) {
-      for (auto &RI : VS->refs())
-        assignValueId(RI.getGUID());
-      return;
-    }
-
-    auto *FS = dyn_cast<FunctionSummary>(I.second);
-    if (!FS)
-      return;
-    for (auto &RI : FS->refs())
+    for (auto &RI : I.second->refs())
       assignValueId(RI.getGUID());
-
-    for (auto &EI : FS->calls()) {
-      GlobalValue::GUID GUID = EI.first.getGUID();
-      if (!hasValueId(GUID)) {
-        // For SamplePGO, the indirect call targets for local functions will
-        // have its original name annotated in profile. We try to find the
-        // corresponding PGOFuncName as the GUID.
-        GUID = Index.getGUIDFromOriginalID(GUID);
-        if (GUID == 0 || !hasValueId(GUID))
-          continue;
-      }
-      assignValueId(GUID);
-    }
   });
 
   for (const auto &GVI : valueIds()) {

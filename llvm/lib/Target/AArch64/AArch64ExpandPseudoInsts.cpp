@@ -584,27 +584,21 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
   return true;
 }
 
-static void addPostLoopLiveIns(MachineBasicBlock *MBB, LivePhysRegs &LiveRegs) {
-  for (auto I = LiveRegs.begin(); I != LiveRegs.end(); ++I)
-    MBB->addLiveIn(*I);
-}
-
 bool AArch64ExpandPseudo::expandCMP_SWAP(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, unsigned LdarOp,
     unsigned StlrOp, unsigned CmpOp, unsigned ExtendImm, unsigned ZeroReg,
     MachineBasicBlock::iterator &NextMBBI) {
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
-  MachineOperand &Dest = MI.getOperand(0);
+  const MachineOperand &Dest = MI.getOperand(0);
   unsigned StatusReg = MI.getOperand(1).getReg();
-  MachineOperand &Addr = MI.getOperand(2);
-  MachineOperand &Desired = MI.getOperand(3);
-  MachineOperand &New = MI.getOperand(4);
-
-  LivePhysRegs LiveRegs(&TII->getRegisterInfo());
-  LiveRegs.addLiveOuts(MBB);
-  for (auto I = std::prev(MBB.end()); I != MBBI; --I)
-    LiveRegs.stepBackward(*I);
+  bool StatusDead = MI.getOperand(1).isDead();
+  // Duplicating undef operands into 2 instructions does not guarantee the same
+  // value on both; However undef should be replaced by xzr anyway.
+  assert(!MI.getOperand(2).isUndef() && "cannot handle undef");
+  unsigned AddrReg = MI.getOperand(2).getReg();
+  unsigned DesiredReg = MI.getOperand(3).getReg();
+  unsigned NewReg = MI.getOperand(4).getReg();
 
   MachineFunction *MF = MBB.getParent();
   auto LoadCmpBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
@@ -616,19 +610,18 @@ bool AArch64ExpandPseudo::expandCMP_SWAP(
   MF->insert(++StoreBB->getIterator(), DoneBB);
 
   // .Lloadcmp:
+  //     mov wStatus, 0
   //     ldaxr xDest, [xAddr]
   //     cmp xDest, xDesired
   //     b.ne .Ldone
-  LoadCmpBB->addLiveIn(Addr.getReg());
-  LoadCmpBB->addLiveIn(Dest.getReg());
-  LoadCmpBB->addLiveIn(Desired.getReg());
-  addPostLoopLiveIns(LoadCmpBB, LiveRegs);
-
+  if (!StatusDead)
+    BuildMI(LoadCmpBB, DL, TII->get(AArch64::MOVZWi), StatusReg)
+      .addImm(0).addImm(0);
   BuildMI(LoadCmpBB, DL, TII->get(LdarOp), Dest.getReg())
-      .addReg(Addr.getReg());
+      .addReg(AddrReg);
   BuildMI(LoadCmpBB, DL, TII->get(CmpOp), ZeroReg)
       .addReg(Dest.getReg(), getKillRegState(Dest.isDead()))
-      .add(Desired)
+      .addReg(DesiredReg)
       .addImm(ExtendImm);
   BuildMI(LoadCmpBB, DL, TII->get(AArch64::Bcc))
       .addImm(AArch64CC::NE)
@@ -640,25 +633,35 @@ bool AArch64ExpandPseudo::expandCMP_SWAP(
   // .Lstore:
   //     stlxr wStatus, xNew, [xAddr]
   //     cbnz wStatus, .Lloadcmp
-  StoreBB->addLiveIn(Addr.getReg());
-  StoreBB->addLiveIn(New.getReg());
-  addPostLoopLiveIns(StoreBB, LiveRegs);
-
-  BuildMI(StoreBB, DL, TII->get(StlrOp), StatusReg).add(New).add(Addr);
+  BuildMI(StoreBB, DL, TII->get(StlrOp), StatusReg)
+      .addReg(NewReg)
+      .addReg(AddrReg);
   BuildMI(StoreBB, DL, TII->get(AArch64::CBNZW))
-      .addReg(StatusReg, RegState::Kill)
+      .addReg(StatusReg, getKillRegState(StatusDead))
       .addMBB(LoadCmpBB);
   StoreBB->addSuccessor(LoadCmpBB);
   StoreBB->addSuccessor(DoneBB);
 
   DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
   DoneBB->transferSuccessors(&MBB);
-  addPostLoopLiveIns(DoneBB, LiveRegs);
 
   MBB.addSuccessor(LoadCmpBB);
 
   NextMBBI = MBB.end();
   MI.eraseFromParent();
+
+  // Recompute livein lists.
+  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  LivePhysRegs LiveRegs;
+  computeLiveIns(LiveRegs, MRI, *DoneBB);
+  computeLiveIns(LiveRegs, MRI, *StoreBB);
+  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+  // Do an extra pass around the loop to get loop carried registers right.
+  StoreBB->clearLiveIns();
+  computeLiveIns(LiveRegs, MRI, *StoreBB);
+  LoadCmpBB->clearLiveIns();
+  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+
   return true;
 }
 
@@ -671,16 +674,15 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
   MachineOperand &DestLo = MI.getOperand(0);
   MachineOperand &DestHi = MI.getOperand(1);
   unsigned StatusReg = MI.getOperand(2).getReg();
-  MachineOperand &Addr = MI.getOperand(3);
-  MachineOperand &DesiredLo = MI.getOperand(4);
-  MachineOperand &DesiredHi = MI.getOperand(5);
-  MachineOperand &NewLo = MI.getOperand(6);
-  MachineOperand &NewHi = MI.getOperand(7);
-
-  LivePhysRegs LiveRegs(&TII->getRegisterInfo());
-  LiveRegs.addLiveOuts(MBB);
-  for (auto I = std::prev(MBB.end()); I != MBBI; --I)
-    LiveRegs.stepBackward(*I);
+  bool StatusDead = MI.getOperand(2).isDead();
+  // Duplicating undef operands into 2 instructions does not guarantee the same
+  // value on both; However undef should be replaced by xzr anyway.
+  assert(!MI.getOperand(3).isUndef() && "cannot handle undef");
+  unsigned AddrReg = MI.getOperand(3).getReg();
+  unsigned DesiredLoReg = MI.getOperand(4).getReg();
+  unsigned DesiredHiReg = MI.getOperand(5).getReg();
+  unsigned NewLoReg = MI.getOperand(6).getReg();
+  unsigned NewHiReg = MI.getOperand(7).getReg();
 
   MachineFunction *MF = MBB.getParent();
   auto LoadCmpBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
@@ -696,20 +698,13 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
   //     cmp xDestLo, xDesiredLo
   //     sbcs xDestHi, xDesiredHi
   //     b.ne .Ldone
-  LoadCmpBB->addLiveIn(Addr.getReg());
-  LoadCmpBB->addLiveIn(DestLo.getReg());
-  LoadCmpBB->addLiveIn(DestHi.getReg());
-  LoadCmpBB->addLiveIn(DesiredLo.getReg());
-  LoadCmpBB->addLiveIn(DesiredHi.getReg());
-  addPostLoopLiveIns(LoadCmpBB, LiveRegs);
-
   BuildMI(LoadCmpBB, DL, TII->get(AArch64::LDAXPX))
       .addReg(DestLo.getReg(), RegState::Define)
       .addReg(DestHi.getReg(), RegState::Define)
-      .addReg(Addr.getReg());
+      .addReg(AddrReg);
   BuildMI(LoadCmpBB, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
       .addReg(DestLo.getReg(), getKillRegState(DestLo.isDead()))
-      .add(DesiredLo)
+      .addReg(DesiredLoReg)
       .addImm(0);
   BuildMI(LoadCmpBB, DL, TII->get(AArch64::CSINCWr), StatusReg)
     .addUse(AArch64::WZR)
@@ -717,14 +712,14 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
     .addImm(AArch64CC::EQ);
   BuildMI(LoadCmpBB, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
       .addReg(DestHi.getReg(), getKillRegState(DestHi.isDead()))
-      .add(DesiredHi)
+      .addReg(DesiredHiReg)
       .addImm(0);
   BuildMI(LoadCmpBB, DL, TII->get(AArch64::CSINCWr), StatusReg)
       .addUse(StatusReg, RegState::Kill)
       .addUse(StatusReg, RegState::Kill)
       .addImm(AArch64CC::EQ);
   BuildMI(LoadCmpBB, DL, TII->get(AArch64::CBNZW))
-      .addUse(StatusReg, RegState::Kill)
+      .addUse(StatusReg, getKillRegState(StatusDead))
       .addMBB(DoneBB);
   LoadCmpBB->addSuccessor(DoneBB);
   LoadCmpBB->addSuccessor(StoreBB);
@@ -732,28 +727,36 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
   // .Lstore:
   //     stlxp wStatus, xNewLo, xNewHi, [xAddr]
   //     cbnz wStatus, .Lloadcmp
-  StoreBB->addLiveIn(Addr.getReg());
-  StoreBB->addLiveIn(NewLo.getReg());
-  StoreBB->addLiveIn(NewHi.getReg());
-  addPostLoopLiveIns(StoreBB, LiveRegs);
   BuildMI(StoreBB, DL, TII->get(AArch64::STLXPX), StatusReg)
-      .add(NewLo)
-      .add(NewHi)
-      .add(Addr);
+      .addReg(NewLoReg)
+      .addReg(NewHiReg)
+      .addReg(AddrReg);
   BuildMI(StoreBB, DL, TII->get(AArch64::CBNZW))
-      .addReg(StatusReg, RegState::Kill)
+      .addReg(StatusReg, getKillRegState(StatusDead))
       .addMBB(LoadCmpBB);
   StoreBB->addSuccessor(LoadCmpBB);
   StoreBB->addSuccessor(DoneBB);
 
   DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
   DoneBB->transferSuccessors(&MBB);
-  addPostLoopLiveIns(DoneBB, LiveRegs);
 
   MBB.addSuccessor(LoadCmpBB);
 
   NextMBBI = MBB.end();
   MI.eraseFromParent();
+
+  // Recompute liveness bottom up.
+  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  LivePhysRegs LiveRegs;
+  computeLiveIns(LiveRegs, MRI, *DoneBB);
+  computeLiveIns(LiveRegs, MRI, *StoreBB);
+  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+  // Do an extra pass in the loop to get the loop carried dependencies right.
+  StoreBB->clearLiveIns();
+  computeLiveIns(LiveRegs, MRI, *StoreBB);
+  LoadCmpBB->clearLiveIns();
+  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+
   return true;
 }
 

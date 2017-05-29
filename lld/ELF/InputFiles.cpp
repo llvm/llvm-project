@@ -305,13 +305,22 @@ void elf::ObjectFile<ELFT>::initializeSections(
     }
 
     switch (Sec.sh_type) {
-    case SHT_GROUP:
-      this->Sections[I] = &InputSection::Discarded;
-      if (ComdatGroups
-              .insert(
-                  CachedHashStringRef(getShtGroupSignature(ObjSections, Sec)))
-              .second)
+    case SHT_GROUP: {
+      // We discard comdat sections usually. When -r we should not do that. We
+      // still do deduplication in this case to simplify implementation, because
+      // otherwise merging group sections together would requre additional
+      // regeneration of its contents.
+      bool New = ComdatGroups
+                     .insert(CachedHashStringRef(
+                         getShtGroupSignature(ObjSections, Sec)))
+                     .second;
+      if (New && Config->Relocatable)
+        this->Sections[I] = createInputSection(Sec, SectionStringTable);
+      else
+        this->Sections[I] = &InputSection::Discarded;
+      if (New)
         continue;
+
       for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
         if (SecIndex >= Size)
           fatal(toString(this) +
@@ -319,6 +328,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
         this->Sections[SecIndex] = &InputSection::Discarded;
       }
       break;
+    }
     case SHT_SYMTAB:
       this->initSymtab(ObjSections, &Sec);
       break;

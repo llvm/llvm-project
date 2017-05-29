@@ -293,6 +293,10 @@ uint64_t COFFObjectFile::getSectionAddress(DataRefImpl Ref) const {
   return Result;
 }
 
+uint64_t COFFObjectFile::getSectionIndex(DataRefImpl Sec) const {
+  return toSec(Sec) - SectionTable;
+}
+
 uint64_t COFFObjectFile::getSectionSize(DataRefImpl Ref) const {
   return getSectionSize(toSec(Ref));
 }

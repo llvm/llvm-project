@@ -717,6 +717,11 @@ TEST_F(FormatTestJS, FunctionLiterals) {
                "  bar();\n"
                "}.bind(this));");
 
+  verifyFormat("SomeFunction((function() {\n"
+               "               foo();\n"
+               "               bar();\n"
+               "             }).bind(this));");
+
   // FIXME: This is bad, we should be wrapping before "function() {".
   verifyFormat("someFunction(function() {\n"
                "  doSomething();  // break\n"

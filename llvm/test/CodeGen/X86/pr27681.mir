@@ -57,7 +57,7 @@ body:             |
     %cl = SETNEr implicit %eflags
     ; Verify that removal of the %bl antidependence does not use %ch
     ; as a replacement register.
-    ; CHECK: %cl = AND8rr %cl, killed %b
+    ; CHECK: %cl = AND8rr killed %cl, killed %b
     %cl = AND8rr killed %cl, killed %bl, implicit-def dead %eflags
     CMP32ri8 %ebp, -1, implicit-def %eflags
     %edx = MOV32ri 0

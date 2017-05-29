@@ -16,7 +16,7 @@ if test "$llvm_config_found" != yes; then
 	AC_MSG_ERROR([llvm-config not found])
 fi
 CLANG_CXXFLAGS=`$llvm_config --cxxflags | \
-	$SED -e 's/-Wcovered-switch-default//'`
+	$SED -e 's/-Wcovered-switch-default//;s/-gsplit-dwarf//'`
 CLANG_LDFLAGS=`$llvm_config --ldflags`
 targets=`$llvm_config --targets-built`
 components="$targets asmparser bitreader support mc"

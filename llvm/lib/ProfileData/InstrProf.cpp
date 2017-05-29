@@ -355,7 +355,7 @@ void InstrProfSymtab::create(Module &M, bool InLTO) {
   finalizeSymtab();
 }
 
-Error collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
+Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
                                 bool doCompression, std::string &Result) {
   assert(!NameStrs.empty() && "No name data to emit");
 
@@ -403,7 +403,7 @@ StringRef getPGOFuncNameVarInitializer(GlobalVariable *NameVar) {
   return NameStr;
 }
 
-Error collectPGOFuncNameStrings(const std::vector<GlobalVariable *> &NameVars,
+Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
                                 std::string &Result, bool doCompression) {
   std::vector<std::string> NameStrs;
   for (auto *NameVar : NameVars) {
@@ -978,22 +978,22 @@ bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken) {
 }
 
 // Parse the value profile options.
-void getMemOPSizeRangeFromOption(std::string MemOPSizeRange,
-                                 int64_t &RangeStart, int64_t &RangeLast) {
+void getMemOPSizeRangeFromOption(StringRef MemOPSizeRange, int64_t &RangeStart,
+                                 int64_t &RangeLast) {
   static const int64_t DefaultMemOPSizeRangeStart = 0;
   static const int64_t DefaultMemOPSizeRangeLast = 8;
   RangeStart = DefaultMemOPSizeRangeStart;
   RangeLast = DefaultMemOPSizeRangeLast;
 
   if (!MemOPSizeRange.empty()) {
-    auto Pos = MemOPSizeRange.find(":");
+    auto Pos = MemOPSizeRange.find(':');
     if (Pos != std::string::npos) {
       if (Pos > 0)
-        RangeStart = atoi(MemOPSizeRange.substr(0, Pos).c_str());
+        MemOPSizeRange.substr(0, Pos).getAsInteger(10, RangeStart);
       if (Pos < MemOPSizeRange.size() - 1)
-        RangeLast = atoi(MemOPSizeRange.substr(Pos + 1).c_str());
+        MemOPSizeRange.substr(Pos + 1).getAsInteger(10, RangeLast);
     } else
-      RangeLast = atoi(MemOPSizeRange.c_str());
+      MemOPSizeRange.getAsInteger(10, RangeLast);
   }
   assert(RangeLast >= RangeStart);
 }

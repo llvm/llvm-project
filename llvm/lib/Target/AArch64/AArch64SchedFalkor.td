@@ -61,56 +61,42 @@ let SchedModel = FalkorModel in {
 
 let SchedModel = FalkorModel in {
 
-def : WriteRes<WriteImm,   [FalkorUnitXYZ]> { let Latency = 1; }
-def : WriteRes<WriteI,     [FalkorUnitXYZ]> { let Latency = 1; }
-def : WriteRes<WriteISReg, [FalkorUnitVXVY, FalkorUnitVXVY]>
-      { let Latency = 1; let NumMicroOps = 2; }
-def : WriteRes<WriteIEReg, [FalkorUnitXYZ, FalkorUnitXYZ]>
-      { let Latency = 2; let NumMicroOps = 2; }
-def : WriteRes<WriteExtr,  [FalkorUnitXYZ, FalkorUnitXYZ]>
-      { let Latency = 2; let NumMicroOps = 2; }
-def : WriteRes<WriteIS,    [FalkorUnitXYZ]> { let Latency = 1; }
-def : WriteRes<WriteID32,  [FalkorUnitX, FalkorUnitZ]>
-      { let Latency = 8; let NumMicroOps = 2; }
-def : WriteRes<WriteID64,  [FalkorUnitX, FalkorUnitZ]>
-      { let Latency = 16; let NumMicroOps = 2; }
-def : WriteRes<WriteIM32,  [FalkorUnitX]> { let Latency = 4; }
-def : WriteRes<WriteIM64,  [FalkorUnitX]> { let Latency = 5; }
-def : WriteRes<WriteBr,    [FalkorUnitB]> { let Latency = 1; }
-def : WriteRes<WriteBrReg, [FalkorUnitB]> { let Latency = 1; }
-def : WriteRes<WriteLD,    [FalkorUnitLD]> { let Latency = 3; }
-def : WriteRes<WriteST,    [FalkorUnitST, FalkorUnitSD]>
-      { let Latency = 0; let NumMicroOps = 2; }
-def : WriteRes<WriteSTP,   [FalkorUnitST, FalkorUnitSD]>
-      { let Latency = 0; let NumMicroOps = 2; }
-def : WriteRes<WriteAdr,   [FalkorUnitXYZ]> { let Latency = 1; }
-def : WriteRes<WriteLDIdx, [FalkorUnitLD]> { let Latency = 5; }
-def : WriteRes<WriteSTIdx, [FalkorUnitST, FalkorUnitSD]>
-      { let Latency = 0; let NumMicroOps = 2; }
-def : WriteRes<WriteF,     [FalkorUnitVXVY, FalkorUnitVXVY]>
-      { let Latency = 3; let NumMicroOps = 2; }
-def : WriteRes<WriteFCmp,  [FalkorUnitVXVY]> { let Latency = 2; }
-def : WriteRes<WriteFCvt,  [FalkorUnitVXVY]> { let Latency = 4; }
-def : WriteRes<WriteFCopy, [FalkorUnitVXVY]> { let Latency = 4; }
-def : WriteRes<WriteFImm,  [FalkorUnitVXVY]> { let Latency = 4; }
-def : WriteRes<WriteFMul,  [FalkorUnitVXVY, FalkorUnitVXVY]>
-      { let Latency = 6; let NumMicroOps = 2; }
-def : WriteRes<WriteFDiv,  [FalkorUnitVXVY, FalkorUnitVXVY]>
-      { let Latency = 12; let NumMicroOps = 2; } // Fragent -1 / NoRSV +1
-def : WriteRes<WriteV,     [FalkorUnitVXVY]> { let Latency = 6; }
-def : WriteRes<WriteVLD,   [FalkorUnitLD]> { let Latency = 3; }
-def : WriteRes<WriteVST,   [FalkorUnitST, FalkorUnitVSD]>
-      { let Latency = 0; let NumMicroOps = 2; }
+// These WriteRes entries are not used in the Falkor sched model.
+def : WriteRes<WriteImm, []>     { let Unsupported = 1; }
+def : WriteRes<WriteI, []>       { let Unsupported = 1; }
+def : WriteRes<WriteISReg, []>   { let Unsupported = 1; }
+def : WriteRes<WriteIEReg, []>   { let Unsupported = 1; }
+def : WriteRes<WriteExtr, []>    { let Unsupported = 1; }
+def : WriteRes<WriteIS, []>      { let Unsupported = 1; }
+def : WriteRes<WriteID32, []>    { let Unsupported = 1; }
+def : WriteRes<WriteID64, []>    { let Unsupported = 1; }
+def : WriteRes<WriteIM32, []>    { let Unsupported = 1; }
+def : WriteRes<WriteIM64, []>    { let Unsupported = 1; }
+def : WriteRes<WriteBr, []>      { let Unsupported = 1; }
+def : WriteRes<WriteBrReg, []>   { let Unsupported = 1; }
+def : WriteRes<WriteLD, []>      { let Unsupported = 1; }
+def : WriteRes<WriteST, []>      { let Unsupported = 1; }
+def : WriteRes<WriteSTP, []>     { let Unsupported = 1; }
+def : WriteRes<WriteAdr, []>     { let Unsupported = 1; }
+def : WriteRes<WriteLDIdx, []>   { let Unsupported = 1; }
+def : WriteRes<WriteSTIdx, []>   { let Unsupported = 1; }
+def : WriteRes<WriteF, []>       { let Unsupported = 1; }
+def : WriteRes<WriteFCmp, []>    { let Unsupported = 1; }
+def : WriteRes<WriteFCvt, []>    { let Unsupported = 1; }
+def : WriteRes<WriteFCopy, []>   { let Unsupported = 1; }
+def : WriteRes<WriteFImm, []>    { let Unsupported = 1; }
+def : WriteRes<WriteFMul, []>    { let Unsupported = 1; }
+def : WriteRes<WriteFDiv, []>    { let Unsupported = 1; }
+def : WriteRes<WriteV, []>       { let Unsupported = 1; }
+def : WriteRes<WriteVLD, []>     { let Unsupported = 1; }
+def : WriteRes<WriteVST, []>     { let Unsupported = 1; }
+def : WriteRes<WriteSys, []>     { let Unsupported = 1; }
+def : WriteRes<WriteBarrier, []> { let Unsupported = 1; }
+def : WriteRes<WriteHint, []>    { let Unsupported = 1; }
+def : WriteRes<WriteLDHi, []>    { let Unsupported = 1; }
+def : WriteRes<WriteAtomic, []>  { let Unsupported = 1; }
 
-def : WriteRes<WriteSys,     []> { let Latency = 1; }
-def : WriteRes<WriteBarrier, []> { let Latency = 1; }
-def : WriteRes<WriteHint,    []> { let Latency = 1; }
-
-def : WriteRes<WriteLDHi,    []> { let Latency = 3; }
-
-def : WriteRes<WriteAtomic, []> { let Unsupported = 1; }
-
-// No forwarding logic is modelled yet.
+// These ReadAdvance entries are not used in the Falkor sched model.
 def : ReadAdvance<ReadI,       0>;
 def : ReadAdvance<ReadISReg,   0>;
 def : ReadAdvance<ReadIEReg,   0>;

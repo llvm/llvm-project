@@ -248,7 +248,8 @@ def MMX_MOVD64grr : MMXI<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR64:$src),
                          "movd\t{$src, $dst|$dst, $src}",
                          [(set GR32:$dst,
                           (MMX_X86movd2w (x86mmx VR64:$src)))],
-                          IIC_MMX_MOV_REG_MM>, Sched<[WriteMove]>;
+                          IIC_MMX_MOV_REG_MM>, Sched<[WriteMove]>,
+                          FoldGenData<"MMX_MOVD64rr">;
 
 let isBitcast = 1 in
 def MMX_MOVD64to64rr : MMXRI<0x6E, MRMSrcReg, (outs VR64:$dst), (ins GR64:$src),
@@ -277,7 +278,7 @@ def MMX_MOVQ64rr : MMXI<0x6F, MRMSrcReg, (outs VR64:$dst), (ins VR64:$src),
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in {
 def MMX_MOVQ64rr_REV : MMXI<0x7F, MRMDestReg, (outs VR64:$dst), (ins VR64:$src),
                         "movq\t{$src, $dst|$dst, $src}", [],
-                        IIC_MMX_MOVQ_RR>;
+                        IIC_MMX_MOVQ_RR>, FoldGenData<"MMX_MOVQ64rr">;
 }
 } // SchedRW
 
