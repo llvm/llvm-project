@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringMap.h" // for StringMap
 #include "llvm/ADT/StringRef.h" // for StringRef, StringLiteral
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/RWMutex.h"
 
 #include <atomic>
@@ -29,9 +30,6 @@
 
 namespace llvm {
 class raw_ostream;
-}
-namespace llvm {
-template <class C> class ManagedStatic;
 }
 //----------------------------------------------------------------------
 // Logging Options
