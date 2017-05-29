@@ -212,6 +212,15 @@ public:
         return __tmp;
     }
 
+    // NOTE: this overload isn't required by the standard but is needed so
+    // the deleted _Promise* overload doesn't make from_address(nullptr)
+    // ambiguous.
+    // FIXME: should from_address work with nullptr?
+    _LIBCPP_ALWAYS_INLINE
+    static coroutine_handle from_address(nullptr_t) _NOEXCEPT {
+      return {};
+    }
+
     // from_address cannot be used with the coroutines promise type.
     static coroutine_handle from_address(_Promise*) = delete;
 

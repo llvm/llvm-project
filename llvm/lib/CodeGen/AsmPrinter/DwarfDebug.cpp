@@ -374,14 +374,18 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
 
   // Find the subprogram's DwarfCompileUnit in the SPMap in case the subprogram
   // was inlined from another compile unit.
-  auto &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
-  if (auto *SkelCU = CU.getSkeleton()) {
-    (shareAcrossDWOCUs() ? CU : SrcCU)
-        .constructAbstractSubprogramScopeDIE(Scope);
-    if (CU.getCUNode()->getSplitDebugInlining())
-      SkelCU->constructAbstractSubprogramScopeDIE(Scope);
-  } else {
-    CU.constructAbstractSubprogramScopeDIE(Scope);
+  if (useSplitDwarf() && !shareAcrossDWOCUs() && !SP->getUnit()->getSplitDebugInlining())
+    // Avoid building the original CU if it won't be used
+    SrcCU.constructAbstractSubprogramScopeDIE(Scope);
+  else {
+    auto &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
+    if (auto *SkelCU = CU.getSkeleton()) {
+      (shareAcrossDWOCUs() ? CU : SrcCU)
+          .constructAbstractSubprogramScopeDIE(Scope);
+      if (CU.getCUNode()->getSplitDebugInlining())
+        SkelCU->constructAbstractSubprogramScopeDIE(Scope);
+    } else
+      CU.constructAbstractSubprogramScopeDIE(Scope);
   }
 }
 
@@ -609,6 +613,13 @@ void DwarfDebug::finalizeModuleInfo() {
 
   finishVariableDefinitions();
 
+  // Include the DWO file name in the hash if there's more than one CU.
+  // This handles ThinLTO's situation where imported CUs may very easily be
+  // duplicate with the same CU partially imported into another ThinLTO unit.
+  StringRef DWOName;
+  if (CUMap.size() > 1)
+    DWOName = Asm->TM.Options.MCOptions.SplitDwarfFile;
+
   // Handle anything that needs to be done on a per-unit basis after
   // all other generation.
   for (const auto &P : CUMap) {
@@ -623,7 +634,8 @@ void DwarfDebug::finalizeModuleInfo() {
     auto *SkCU = TheCU.getSkeleton();
     if (useSplitDwarf()) {
       // Emit a unique identifier for this CU.
-      uint64_t ID = DIEHash(Asm).computeCUSignature(TheCU.getUnitDie());
+      uint64_t ID =
+          DIEHash(Asm).computeCUSignature(DWOName, TheCU.getUnitDie());
       TheCU.addUInt(TheCU.getUnitDie(), dwarf::DW_AT_GNU_dwo_id,
                     dwarf::DW_FORM_data8, ID);
       SkCU->addUInt(SkCU->getUnitDie(), dwarf::DW_AT_GNU_dwo_id,

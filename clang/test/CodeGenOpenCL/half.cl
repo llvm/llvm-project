@@ -21,3 +21,20 @@ half test_inc(half x)
 {
   return ++x;
 }
+
+__attribute__((overloadable)) int min(int, int);
+__attribute__((overloadable)) half min(half, half);
+__attribute__((overloadable)) float min(float, float);
+
+__kernel void foo( __global half* buf, __global float* buf2 )
+{
+    buf[0] = min( buf[0], 1.5h );
+// CHECK: half 0xH3E00
+    buf[0] = min( buf2[0], 1.5f );
+// CHECK: float 1.500000e+00
+
+    const half one = 1.6666;
+    buf[1] = min( buf[1], one );
+// CHECK: half 0xH3EAB
+}
+

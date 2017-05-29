@@ -326,7 +326,7 @@ private:
   /// partition.
   uint64_t BeginOffset, EndOffset;
 
-  /// \brief The start end end iterators of this partition.
+  /// \brief The start and end iterators of this partition.
   iterator SI, SJ;
 
   /// \brief A collection of split slice tails overlapping the partition.

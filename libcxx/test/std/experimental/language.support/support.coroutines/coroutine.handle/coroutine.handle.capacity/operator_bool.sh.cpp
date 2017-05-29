@@ -48,8 +48,8 @@ void do_test() {
     assert(bool(c) == false);
   }
   { // non-null case
-    int dummy = 42;
-    C c = C::from_address(&dummy);
+    char dummy = 42;
+    C c = C::from_address((void*)&dummy);
     assert(c.address() == &dummy);
     assert(bool(c) == true);
   }

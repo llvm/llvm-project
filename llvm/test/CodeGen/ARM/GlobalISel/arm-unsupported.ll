@@ -45,11 +45,13 @@ define half @test_half(half %a, half %b) {
   ret half %res
 }
 
-; On ARM, clang lowers structs to arrays.
-define void @test_arrays([2 x i32] %this.could.come.from.a.struct) {
-; CHECK: remark: {{.*}} unable to lower arguments: void ([2 x i32])*
-; CHECK-LABEL: warning: Instruction selection used fallback path for test_arrays
-  ret void
+declare [16 x i32] @ret_demotion_target()
+
+define [16 x i32] @test_ret_demotion() {
+; CHECK: remark: {{.*}} unable to translate instruction: call{{.*}} @ret_demotion_target
+; CHECK-LABEL: warning: Instruction selection used fallback path for test_ret_demotion
+  %res = call [16 x i32] @ret_demotion_target()
+  ret [16 x i32] %res
 }
 
 define void @test_structs({i32, i32} %struct) {

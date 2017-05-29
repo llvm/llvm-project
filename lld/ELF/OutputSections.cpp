@@ -112,6 +112,19 @@ template <class ELFT> void OutputSection::maybeCompress() {
   Flags |= SHF_COMPRESSED;
 }
 
+template <class ELFT> static void finalizeShtGroup(OutputSection *Sec) {
+  // sh_link field for SHT_GROUP sections should contain the section index of
+  // the symbol table.
+  Sec->Link = InX::SymTab->OutSec->SectionIndex;
+
+  // sh_link then contain index of an entry in symbol table section which
+  // provides signature of the section group.
+  elf::ObjectFile<ELFT> *Obj = Sec->Sections[0]->getFile<ELFT>();
+  assert(Config->Relocatable && Sec->Sections.size() == 1);
+  ArrayRef<SymbolBody *> Symbols = Obj->getSymbols();
+  Sec->Info = InX::SymTab->getSymbolIndex(Symbols[Sec->Sections[0]->Info - 1]);
+}
+
 template <class ELFT> void OutputSection::finalize() {
   if ((this->Flags & SHF_LINK_ORDER) && !this->Sections.empty()) {
     std::sort(Sections.begin(), Sections.end(), compareByFilePosition);
@@ -126,6 +139,11 @@ template <class ELFT> void OutputSection::finalize() {
   }
 
   uint32_t Type = this->Type;
+  if (Type == SHT_GROUP) {
+    finalizeShtGroup<ELFT>(this);
+    return;
+  }
+
   if (!Config->CopyRelocs || (Type != SHT_RELA && Type != SHT_REL))
     return;
 
@@ -355,7 +373,10 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
     return;
   }
 
-  uint64_t Flags = IS->Flags & ~(uint64_t)SHF_GROUP;
+  uint64_t Flags = IS->Flags;
+  if (!Config->Relocatable)
+    Flags &= ~(uint64_t)SHF_GROUP;
+
   if (Sec) {
     if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(IS->Flags))
       error("incompatible section flags for " + Sec->Name +

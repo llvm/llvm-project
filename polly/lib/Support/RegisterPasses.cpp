@@ -99,7 +99,7 @@ static cl::opt<TargetChoice>
                           ,
                       clEnumValN(TARGET_GPU, "gpu", "generate GPU code")
 #endif
-           ),
+                          ),
            cl::init(TARGET_CPU), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 #ifdef GPU_CODEGEN
