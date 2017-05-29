@@ -1438,11 +1438,14 @@ def MOV64ri : RIi64<0xB8, AddRegFrm, (outs GR64:$dst), (ins i64imm:$src),
 // Longer forms that use a ModR/M byte. Needed for disassembler
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in {
 def MOV8ri_alt  : Ii8 <0xC6, MRM0r, (outs GR8 :$dst), (ins i8imm :$src),
-                   "mov{b}\t{$src, $dst|$dst, $src}", [], IIC_MOV>;
+                   "mov{b}\t{$src, $dst|$dst, $src}", [], IIC_MOV>,
+                   FoldGenData<"MOV8ri">;
 def MOV16ri_alt : Ii16<0xC7, MRM0r, (outs GR16:$dst), (ins i16imm:$src),
-                   "mov{w}\t{$src, $dst|$dst, $src}", [], IIC_MOV>, OpSize16;
+                   "mov{w}\t{$src, $dst|$dst, $src}", [], IIC_MOV>, OpSize16,
+                   FoldGenData<"MOV16ri">;
 def MOV32ri_alt : Ii32<0xC7, MRM0r, (outs GR32:$dst), (ins i32imm:$src),
-                   "mov{l}\t{$src, $dst|$dst, $src}", [], IIC_MOV>, OpSize32;
+                   "mov{l}\t{$src, $dst|$dst, $src}", [], IIC_MOV>, OpSize32,
+                   FoldGenData<"MOV32ri">;
 }
 } // SchedRW
 
@@ -1565,13 +1568,17 @@ def MOV64o64a : RIi64<0xA3, RawFrmMemOffs, (outs), (ins offset64_64:$dst),
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0,
     SchedRW = [WriteMove] in {
 def MOV8rr_REV : I<0x8A, MRMSrcReg, (outs GR8:$dst), (ins GR8:$src),
-                   "mov{b}\t{$src, $dst|$dst, $src}", [], IIC_MOV>;
+                   "mov{b}\t{$src, $dst|$dst, $src}", [], IIC_MOV>,
+                   FoldGenData<"MOV8rr">;
 def MOV16rr_REV : I<0x8B, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
-                    "mov{w}\t{$src, $dst|$dst, $src}", [], IIC_MOV>, OpSize16;
+                    "mov{w}\t{$src, $dst|$dst, $src}", [], IIC_MOV>, OpSize16,
+                    FoldGenData<"MOV16rr">;
 def MOV32rr_REV : I<0x8B, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
-                    "mov{l}\t{$src, $dst|$dst, $src}", [], IIC_MOV>, OpSize32;
+                    "mov{l}\t{$src, $dst|$dst, $src}", [], IIC_MOV>, OpSize32,
+                    FoldGenData<"MOV32rr">;
 def MOV64rr_REV : RI<0x8B, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
-                     "mov{q}\t{$src, $dst|$dst, $src}", [], IIC_MOV>;
+                     "mov{q}\t{$src, $dst|$dst, $src}", [], IIC_MOV>,
+                     FoldGenData<"MOV64rr">;
 }
 
 let canFoldAsLoad = 1, isReMaterializable = 1, SchedRW = [WriteLoad] in {

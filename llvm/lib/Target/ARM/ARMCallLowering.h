@@ -42,11 +42,14 @@ private:
   bool lowerReturnVal(MachineIRBuilder &MIRBuilder, const Value *Val,
                       unsigned VReg, MachineInstrBuilder &Ret) const;
 
+  typedef std::function<void(unsigned Reg, uint64_t Offset)> SplitArgTy;
+
   /// Split an argument into one or more arguments that the CC lowering can cope
   /// with (e.g. replace pointers with integers).
   void splitToValueTypes(const ArgInfo &OrigArg,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
-                         const DataLayout &DL, MachineRegisterInfo &MRI) const;
+                         MachineFunction &MF,
+                         const SplitArgTy &PerformArgSplit) const;
 };
 } // End of namespace llvm
 #endif

@@ -53,6 +53,35 @@
 #endif
 #include <assert.h>
 
+
+/*
+ * This code extensively uses fall-through switches.
+ * Keep the compiler from warning about that.
+ */
+#if defined(__clang__) && defined(__has_warning)
+# if __has_warning("-Wimplicit-fallthrough")
+#  define ConvertUTF_DISABLE_WARNINGS \
+    _Pragma("clang diagnostic push")  \
+    _Pragma("clang diagnostic ignored \"-Wimplicit-fallthrough\"")
+#  define ConvertUTF_RESTORE_WARNINGS \
+    _Pragma("clang diagnostic pop")
+# endif
+#elif defined(__GNUC__) && __GNUC__ > 6
+# define ConvertUTF_DISABLE_WARNINGS \
+   _Pragma("GCC diagnostic push")    \
+   _Pragma("GCC diagnostic ignored \"-Wimplicit-fallthrough\"")
+# define ConvertUTF_RESTORE_WARNINGS \
+   _Pragma("GCC diagnostic pop")
+#endif
+#ifndef ConvertUTF_DISABLE_WARNINGS
+# define ConvertUTF_DISABLE_WARNINGS
+#endif
+#ifndef ConvertUTF_RESTORE_WARNINGS
+# define ConvertUTF_RESTORE_WARNINGS
+#endif
+
+ConvertUTF_DISABLE_WARNINGS
+
 namespace llvm {
 
 static const int halfShift  = 10; /* used for shifting by 10 bits */
@@ -708,3 +737,5 @@ ConversionResult ConvertUTF8toUTF32(const UTF8 **sourceStart,
    --------------------------------------------------------------------- */
 
 } // namespace llvm
+
+ConvertUTF_RESTORE_WARNINGS
