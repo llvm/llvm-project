@@ -496,7 +496,10 @@ public: // Part of public interface to class.
 
   Optional<SVal> getDefaultBinding(Store S, const MemRegion *R) override {
     RegionBindingsRef B = getRegionBindings(S);
-    return B.getDefaultBinding(R);
+    // Default bindings are always applied over a base region so look up the
+    // base region's default binding, otherwise the lookup will fail when R
+    // is at an offset from R->getBaseRegion().
+    return B.getDefaultBinding(R->getBaseRegion());
   }
 
   SVal getBinding(RegionBindingsConstRef B, Loc L, QualType T = QualType());

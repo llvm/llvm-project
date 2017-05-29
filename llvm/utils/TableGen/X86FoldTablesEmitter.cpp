@@ -77,7 +77,14 @@ const char *const NoFoldSet[] = {
     "TCRETURNri64",
     "TCRETURNmi64", // Special dealing (in X86InstrCompiler.td under
     "TCRETURNri",   // "tailcall stuff" section).
-    "TCRETURNmi"
+    "TCRETURNmi",
+
+    // Never fold XCHG, the register and memory forms have different locking
+    // semantics.
+    "XCHG8rr",  "XCHG8rm",
+    "XCHG16rr", "XCHG16rm",
+    "XCHG32rr", "XCHG32rm",
+    "XCHG64rr", "XCHG64rm",
 
     // Different calculations of the folded operand between
     // memory and register forms (folding is illegal).
