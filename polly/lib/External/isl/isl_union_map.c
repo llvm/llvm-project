@@ -2,7 +2,7 @@
  * Copyright 2010-2011 INRIA Saclay
  * Copyright 2013-2014 Ecole Normale Superieure
  * Copyright 2014      INRIA Rocquencourt
- * Copyright 2016      Sven Verdoolaege
+ * Copyright 2016-2017 Sven Verdoolaege
  *
  * Use of this software is governed by the MIT license
  *
@@ -1520,41 +1520,122 @@ __isl_give isl_union_map *isl_union_map_flat_range_product(
 	return bin_op(umap1, umap2, &flat_range_product_entry);
 }
 
-static __isl_give isl_union_set *cond_un_op(__isl_take isl_union_map *umap,
-	isl_stat (*fn)(void **, void *))
+/* Data structure that specifies how un_op should modify
+ * the maps in the union map.
+ *
+ * If "inplace" is set, then the maps in the input union map
+ * are modified in place.  This means that "fn_map" should not
+ * change the meaning of the map or that the union map only
+ * has a single reference.
+ * If "total" is set, then all maps need to be modified and
+ * the results need to live in the same space.
+ * Otherwise, a new union map is constructed to store the results.
+ * If "filter" is not NULL, then only the input maps that satisfy "filter"
+ * are taken into account.  No filter can be set if "inplace" or
+ * "total" is set.
+ * "fn_map" specifies how the maps (selected by "filter")
+ * should be transformed.
+ */
+struct isl_un_op_control {
+	int inplace;
+	int total;
+	isl_bool (*filter)(__isl_keep isl_map *map);
+	__isl_give isl_map *(*fn_map)(__isl_take isl_map *map);
+};
+
+/* Internal data structure for "un_op".
+ * "control" specifies how the maps in the union map should be modified.
+ * "res" collects the results.
+ */
+struct isl_union_map_un_data {
+	struct isl_un_op_control *control;
+	isl_union_map *res;
+};
+
+/* isl_hash_table_foreach callback for un_op.
+ * Handle the map that "entry" points to.
+ *
+ * If control->filter is set, then check if this map satisfies the filter.
+ * If so (or if control->filter is not set), modify the map
+ * by calling control->fn_map and either add the result to data->res or
+ * replace the original entry by the result (if control->inplace is set).
+ */
+static isl_stat un_entry(void **entry, void *user)
 {
-	isl_union_set *res;
+	struct isl_union_map_un_data *data = user;
+	isl_map *map = *entry;
+
+	if (data->control->filter) {
+		isl_bool ok;
+
+		ok = data->control->filter(map);
+		if (ok < 0)
+			return isl_stat_error;
+		if (!ok)
+			return isl_stat_ok;
+	}
+
+	map = data->control->fn_map(isl_map_copy(map));
+	if (!map)
+		return isl_stat_error;
+	if (data->control->inplace) {
+		isl_map_free(*entry);
+		*entry = map;
+	} else {
+		data->res = isl_union_map_add_map(data->res, map);
+		if (!data->res)
+			return isl_stat_error;
+	}
+
+	return isl_stat_ok;
+}
+
+/* Modify the maps in "umap" based on "control".
+ * If control->inplace is set, then modify the maps in "umap" in-place.
+ * Otherwise, create a new union map to hold the results.
+ * If control->total is set, then perform an inplace computation
+ * if "umap" is only referenced once.  Otherwise, create a new union map
+ * to store the results.
+ */
+static __isl_give isl_union_map *un_op(__isl_take isl_union_map *umap,
+	struct isl_un_op_control *control)
+{
+	struct isl_union_map_un_data data = { control };
 
 	if (!umap)
 		return NULL;
+	if ((control->inplace || control->total) && control->filter)
+		isl_die(isl_union_map_get_ctx(umap), isl_error_invalid,
+			"inplace/total modification cannot be filtered",
+			return isl_union_map_free(umap));
 
-	res = isl_union_map_alloc(isl_space_copy(umap->dim), umap->table.n);
-	if (isl_hash_table_foreach(umap->dim->ctx, &umap->table, fn, &res) < 0)
-		goto error;
+	if (control->total && umap->ref == 1)
+		control->inplace = 1;
+	if (control->inplace) {
+		data.res = umap;
+	} else {
+		isl_space *space;
 
+		space = isl_union_map_get_space(umap);
+		data.res = isl_union_map_alloc(space, umap->table.n);
+	}
+	if (isl_hash_table_foreach(isl_union_map_get_ctx(umap),
+				    &umap->table, &un_entry, &data) < 0)
+		data.res = isl_union_map_free(data.res);
+
+	if (control->inplace)
+		return data.res;
 	isl_union_map_free(umap);
-	return res;
-error:
-	isl_union_map_free(umap);
-	isl_union_set_free(res);
-	return NULL;
-}
-
-static isl_stat from_range_entry(void **entry, void *user)
-{
-	isl_map *set = *entry;
-	isl_union_set **res = user;
-
-	*res = isl_union_map_add_map(*res,
-					isl_map_from_range(isl_set_copy(set)));
-
-	return isl_stat_ok;
+	return data.res;
 }
 
 __isl_give isl_union_map *isl_union_map_from_range(
 	__isl_take isl_union_set *uset)
 {
-	return cond_un_op(uset, &from_range_entry);
+	struct isl_un_op_control control = {
+		.fn_map = &isl_map_from_range,
+	};
+	return un_op(uset, &control);
 }
 
 __isl_give isl_union_map *isl_union_map_from_domain(
@@ -1570,35 +1651,31 @@ __isl_give isl_union_map *isl_union_map_from_domain_and_range(
 				         isl_union_map_from_range(range));
 }
 
-static __isl_give isl_union_map *un_op(__isl_take isl_union_map *umap,
-	isl_stat (*fn)(void **, void *))
+/* Modify the maps in "umap" by applying "fn" on them.
+ * "fn" should apply to all maps in "umap" and should not modify the space.
+ */
+static __isl_give isl_union_map *total(__isl_take isl_union_map *umap,
+	__isl_give isl_map *(*fn)(__isl_take isl_map *))
 {
-	umap = isl_union_map_cow(umap);
-	if (!umap)
-		return NULL;
+	struct isl_un_op_control control = {
+		.total = 1,
+		.fn_map = fn,
+	};
 
-	if (isl_hash_table_foreach(umap->dim->ctx, &umap->table, fn, NULL) < 0)
-		goto error;
-
-	return umap;
-error:
-	isl_union_map_free(umap);
-	return NULL;
+	return un_op(umap, &control);
 }
 
-static isl_stat affine_entry(void **entry, void *user)
+/* Compute the affine hull of "map" and return the result as an isl_map.
+ */
+static __isl_give isl_map *isl_map_affine_hull_map(__isl_take isl_map *map)
 {
-	isl_map **map = (isl_map **)entry;
-
-	*map = isl_map_from_basic_map(isl_map_affine_hull(*map));
-
-	return *map ? isl_stat_ok : isl_stat_error;
+	return isl_map_from_basic_map(isl_map_affine_hull(map));
 }
 
 __isl_give isl_union_map *isl_union_map_affine_hull(
 	__isl_take isl_union_map *umap)
 {
-	return un_op(umap, &affine_entry);
+	return total(umap, &isl_map_affine_hull_map);
 }
 
 __isl_give isl_union_set *isl_union_set_affine_hull(
@@ -1607,19 +1684,17 @@ __isl_give isl_union_set *isl_union_set_affine_hull(
 	return isl_union_map_affine_hull(uset);
 }
 
-static isl_stat polyhedral_entry(void **entry, void *user)
+/* Compute the polyhedral hull of "map" and return the result as an isl_map.
+ */
+static __isl_give isl_map *isl_map_polyhedral_hull_map(__isl_take isl_map *map)
 {
-	isl_map **map = (isl_map **)entry;
-
-	*map = isl_map_from_basic_map(isl_map_polyhedral_hull(*map));
-
-	return *map ? isl_stat_ok : isl_stat_error;
+	return isl_map_from_basic_map(isl_map_polyhedral_hull(map));
 }
 
 __isl_give isl_union_map *isl_union_map_polyhedral_hull(
 	__isl_take isl_union_map *umap)
 {
-	return un_op(umap, &polyhedral_entry);
+	return total(umap, &isl_map_polyhedral_hull_map);
 }
 
 __isl_give isl_union_set *isl_union_set_polyhedral_hull(
@@ -1628,19 +1703,19 @@ __isl_give isl_union_set *isl_union_set_polyhedral_hull(
 	return isl_union_map_polyhedral_hull(uset);
 }
 
-static isl_stat simple_entry(void **entry, void *user)
+/* Compute a superset of the convex hull of "map" that is described
+ * by only translates of the constraints in the constituents of "map" and
+ * return the result as an isl_map.
+ */
+static __isl_give isl_map *isl_map_simple_hull_map(__isl_take isl_map *map)
 {
-	isl_map **map = (isl_map **)entry;
-
-	*map = isl_map_from_basic_map(isl_map_simple_hull(*map));
-
-	return *map ? isl_stat_ok : isl_stat_error;
+	return isl_map_from_basic_map(isl_map_simple_hull(map));
 }
 
 __isl_give isl_union_map *isl_union_map_simple_hull(
 	__isl_take isl_union_map *umap)
 {
-	return un_op(umap, &simple_entry);
+	return total(umap, &isl_map_simple_hull_map);
 }
 
 __isl_give isl_union_set *isl_union_set_simple_hull(
@@ -1649,37 +1724,15 @@ __isl_give isl_union_set *isl_union_set_simple_hull(
 	return isl_union_map_simple_hull(uset);
 }
 
-static isl_stat inplace_entry(void **entry, void *user)
-{
-	__isl_give isl_map *(*fn)(__isl_take isl_map *);
-	isl_map **map = (isl_map **)entry;
-	isl_map *copy;
-
-	fn = *(__isl_give isl_map *(**)(__isl_take isl_map *)) user;
-	copy = fn(isl_map_copy(*map));
-	if (!copy)
-		return isl_stat_error;
-
-	isl_map_free(*map);
-	*map = copy;
-
-	return isl_stat_ok;
-}
-
 static __isl_give isl_union_map *inplace(__isl_take isl_union_map *umap,
 	__isl_give isl_map *(*fn)(__isl_take isl_map *))
 {
-	if (!umap)
-		return NULL;
+	struct isl_un_op_control control = {
+		.inplace = 1,
+		.fn_map = fn,
+	};
 
-	if (isl_hash_table_foreach(umap->dim->ctx, &umap->table,
-				    &inplace_entry, &fn) < 0)
-		goto error;
-
-	return umap;
-error:
-	isl_union_map_free(umap);
-	return NULL;
+	return un_op(umap, &control);
 }
 
 /* Remove redundant constraints in each of the basic maps of "umap".
@@ -1736,19 +1789,10 @@ __isl_give isl_union_set *isl_union_set_compute_divs(
 	return isl_union_map_compute_divs(uset);
 }
 
-static isl_stat lexmin_entry(void **entry, void *user)
-{
-	isl_map **map = (isl_map **)entry;
-
-	*map = isl_map_lexmin(*map);
-
-	return *map ? isl_stat_ok : isl_stat_error;
-}
-
 __isl_give isl_union_map *isl_union_map_lexmin(
 	__isl_take isl_union_map *umap)
 {
-	return un_op(umap, &lexmin_entry);
+	return total(umap, &isl_map_lexmin);
 }
 
 __isl_give isl_union_set *isl_union_set_lexmin(
@@ -1757,19 +1801,10 @@ __isl_give isl_union_set *isl_union_set_lexmin(
 	return isl_union_map_lexmin(uset);
 }
 
-static isl_stat lexmax_entry(void **entry, void *user)
-{
-	isl_map **map = (isl_map **)entry;
-
-	*map = isl_map_lexmax(*map);
-
-	return *map ? isl_stat_ok : isl_stat_error;
-}
-
 __isl_give isl_union_map *isl_union_map_lexmax(
 	__isl_take isl_union_map *umap)
 {
-	return un_op(umap, &lexmax_entry);
+	return total(umap, &isl_map_lexmax);
 }
 
 __isl_give isl_union_set *isl_union_set_lexmax(
@@ -1778,20 +1813,23 @@ __isl_give isl_union_set *isl_union_set_lexmax(
 	return isl_union_map_lexmax(uset);
 }
 
-static isl_stat universe_entry(void **entry, void *user)
+/* Return the universe in the space of "map".
+ */
+static __isl_give isl_map *universe(__isl_take isl_map *map)
 {
-	isl_map *map = *entry;
-	isl_union_map **res = user;
+	isl_space *space;
 
-	map = isl_map_universe(isl_map_get_space(map));
-	*res = isl_union_map_add_map(*res, map);
-
-	return isl_stat_ok;
+	space = isl_map_get_space(map);
+	isl_map_free(map);
+	return isl_map_universe(space);
 }
 
 __isl_give isl_union_map *isl_union_map_universe(__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &universe_entry);
+	struct isl_un_op_control control = {
+		.fn_map = &universe,
+	};
+	return un_op(umap, &control);
 }
 
 __isl_give isl_union_set *isl_union_set_universe(__isl_take isl_union_set *uset)
@@ -1799,35 +1837,21 @@ __isl_give isl_union_set *isl_union_set_universe(__isl_take isl_union_set *uset)
 	return isl_union_map_universe(uset);
 }
 
-static isl_stat reverse_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_map **res = user;
-
-	*res = isl_union_map_add_map(*res, isl_map_reverse(isl_map_copy(map)));
-
-	return isl_stat_ok;
-}
-
 __isl_give isl_union_map *isl_union_map_reverse(__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &reverse_entry);
-}
-
-static isl_stat params_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_set **res = user;
-
-	*res = isl_union_set_add_set(*res, isl_map_params(isl_map_copy(map)));
-
-	return isl_stat_ok;
+	struct isl_un_op_control control = {
+		.fn_map = &isl_map_reverse,
+	};
+	return un_op(umap, &control);
 }
 
 /* Compute the parameter domain of the given union map.
  */
 __isl_give isl_set *isl_union_map_params(__isl_take isl_union_map *umap)
 {
+	struct isl_un_op_control control = {
+		.fn_map = &isl_map_params,
+	};
 	int empty;
 
 	empty = isl_union_map_is_empty(umap);
@@ -1839,7 +1863,7 @@ __isl_give isl_set *isl_union_map_params(__isl_take isl_union_map *umap)
 		isl_union_map_free(umap);
 		return isl_set_empty(space);
 	}
-	return isl_set_from_union_set(cond_un_op(umap, &params_entry));
+	return isl_set_from_union_set(un_op(umap, &control));
 error:
 	isl_union_map_free(umap);
 	return NULL;
@@ -1852,51 +1876,29 @@ __isl_give isl_set *isl_union_set_params(__isl_take isl_union_set *uset)
 	return isl_union_map_params(uset);
 }
 
-static isl_stat domain_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_set **res = user;
-
-	*res = isl_union_set_add_set(*res, isl_map_domain(isl_map_copy(map)));
-
-	return isl_stat_ok;
-}
-
 __isl_give isl_union_set *isl_union_map_domain(__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &domain_entry);
-}
-
-static isl_stat range_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_set **res = user;
-
-	*res = isl_union_set_add_set(*res, isl_map_range(isl_map_copy(map)));
-
-	return isl_stat_ok;
+	struct isl_un_op_control control = {
+		.fn_map = &isl_map_domain,
+	};
+	return un_op(umap, &control);
 }
 
 __isl_give isl_union_set *isl_union_map_range(__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &range_entry);
-}
-
-static isl_stat domain_map_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_set **res = user;
-
-	*res = isl_union_map_add_map(*res,
-					isl_map_domain_map(isl_map_copy(map)));
-
-	return isl_stat_ok;
+	struct isl_un_op_control control = {
+		.fn_map = &isl_map_range,
+	};
+	return un_op(umap, &control);
 }
 
 __isl_give isl_union_map *isl_union_map_domain_map(
 	__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &domain_map_entry);
+	struct isl_un_op_control control = {
+		.fn_map = &isl_map_domain_map,
+	};
+	return un_op(umap, &control);
 }
 
 /* Construct an isl_pw_multi_aff that maps "map" to its domain and
@@ -1932,42 +1934,13 @@ __isl_give isl_union_pw_multi_aff *isl_union_map_domain_map_union_pw_multi_aff(
 	return res;
 }
 
-static isl_stat range_map_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_set **res = user;
-
-	*res = isl_union_map_add_map(*res,
-					isl_map_range_map(isl_map_copy(map)));
-
-	return isl_stat_ok;
-}
-
 __isl_give isl_union_map *isl_union_map_range_map(
 	__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &range_map_entry);
-}
-
-/* Check if "set" is of the form A[B -> C].
- * If so, add A[B -> C] -> B to "res".
- */
-static isl_stat wrapped_domain_map_entry(void **entry, void *user)
-{
-	isl_set *set = *entry;
-	isl_union_set **res = user;
-	int wrapping;
-
-	wrapping = isl_set_is_wrapping(set);
-	if (wrapping < 0)
-		return isl_stat_error;
-	if (!wrapping)
-		return isl_stat_ok;
-
-	*res = isl_union_map_add_map(*res,
-				isl_set_wrapped_domain_map(isl_set_copy(set)));
-
-	return isl_stat_ok;
+	struct isl_un_op_control control = {
+		.fn_map = &isl_map_range_map,
+	};
+	return un_op(umap, &control);
 }
 
 /* Given a collection of wrapped maps of the form A[B -> C],
@@ -1976,62 +1949,46 @@ static isl_stat wrapped_domain_map_entry(void **entry, void *user)
 __isl_give isl_union_map *isl_union_set_wrapped_domain_map(
 	__isl_take isl_union_set *uset)
 {
-	return cond_un_op(uset, &wrapped_domain_map_entry);
+	struct isl_un_op_control control = {
+		.filter = &isl_set_is_wrapping,
+		.fn_map = &isl_set_wrapped_domain_map,
+	};
+	return un_op(uset, &control);
 }
 
-static isl_stat deltas_entry(void **entry, void *user)
+/* Does "map" relate elements from the same space?
+ */
+static isl_bool equal_tuples(__isl_keep isl_map *map)
 {
-	isl_map *map = *entry;
-	isl_union_set **res = user;
-
-	if (!isl_space_tuple_is_equal(map->dim, isl_dim_in,
-					map->dim, isl_dim_out))
-		return isl_stat_ok;
-
-	*res = isl_union_set_add_set(*res, isl_map_deltas(isl_map_copy(map)));
-
-	return isl_stat_ok;
+	return isl_space_tuple_is_equal(map->dim, isl_dim_in,
+					map->dim, isl_dim_out);
 }
 
 __isl_give isl_union_set *isl_union_map_deltas(__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &deltas_entry);
-}
-
-static isl_stat deltas_map_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_map **res = user;
-
-	if (!isl_space_tuple_is_equal(map->dim, isl_dim_in,
-					map->dim, isl_dim_out))
-		return isl_stat_ok;
-
-	*res = isl_union_map_add_map(*res,
-				     isl_map_deltas_map(isl_map_copy(map)));
-
-	return isl_stat_ok;
+	struct isl_un_op_control control = {
+		.filter = &equal_tuples,
+		.fn_map = &isl_map_deltas,
+	};
+	return un_op(umap, &control);
 }
 
 __isl_give isl_union_map *isl_union_map_deltas_map(
 	__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &deltas_map_entry);
-}
-
-static isl_stat identity_entry(void **entry, void *user)
-{
-	isl_set *set = *entry;
-	isl_union_map **res = user;
-
-	*res = isl_union_map_add_map(*res, isl_set_identity(isl_set_copy(set)));
-
-	return isl_stat_ok;
+	struct isl_un_op_control control = {
+		.filter = &equal_tuples,
+		.fn_map = &isl_map_deltas_map,
+	};
+	return un_op(umap, &control);
 }
 
 __isl_give isl_union_map *isl_union_set_identity(__isl_take isl_union_set *uset)
 {
-	return cond_un_op(uset, &identity_entry);
+	struct isl_un_op_control control = {
+		.fn_map = &isl_set_identity,
+	};
+	return un_op(uset, &control);
 }
 
 /* Construct an identity isl_pw_multi_aff on "set" and add it to *res.
@@ -2066,45 +2023,17 @@ __isl_give isl_union_pw_multi_aff *isl_union_set_identity_union_pw_multi_aff(
 	return res;
 }
 
-/* If "map" is of the form [A -> B] -> C, then add A -> C to "res".
- */
-static isl_stat domain_factor_domain_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_map **res = user;
-
-	if (!isl_map_domain_is_wrapping(map))
-		return isl_stat_ok;
-
-	*res = isl_union_map_add_map(*res,
-			    isl_map_domain_factor_domain(isl_map_copy(map)));
-
-	return *res ? isl_stat_ok : isl_stat_error;
-}
-
 /* For each map in "umap" of the form [A -> B] -> C,
  * construct the map A -> C and collect the results.
  */
 __isl_give isl_union_map *isl_union_map_domain_factor_domain(
 	__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &domain_factor_domain_entry);
-}
-
-/* If "map" is of the form [A -> B] -> C, then add B -> C to "res".
- */
-static isl_stat domain_factor_range_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_map **res = user;
-
-	if (!isl_map_domain_is_wrapping(map))
-		return isl_stat_ok;
-
-	*res = isl_union_map_add_map(*res,
-				isl_map_domain_factor_range(isl_map_copy(map)));
-
-	return *res ? isl_stat_ok : isl_stat_error;
+	struct isl_un_op_control control = {
+		.filter = &isl_map_domain_is_wrapping,
+		.fn_map = &isl_map_domain_factor_domain,
+	};
+	return un_op(umap, &control);
 }
 
 /* For each map in "umap" of the form [A -> B] -> C,
@@ -2113,23 +2042,11 @@ static isl_stat domain_factor_range_entry(void **entry, void *user)
 __isl_give isl_union_map *isl_union_map_domain_factor_range(
 	__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &domain_factor_range_entry);
-}
-
-/* If "map" is of the form A -> [B -> C], then add A -> B to "res".
- */
-static isl_stat range_factor_domain_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_map **res = user;
-
-	if (!isl_map_range_is_wrapping(map))
-		return isl_stat_ok;
-
-	*res = isl_union_map_add_map(*res,
-				isl_map_range_factor_domain(isl_map_copy(map)));
-
-	return *res ? isl_stat_ok : isl_stat_error;
+	struct isl_un_op_control control = {
+		.filter = &isl_map_domain_is_wrapping,
+		.fn_map = &isl_map_domain_factor_range,
+	};
+	return un_op(umap, &control);
 }
 
 /* For each map in "umap" of the form A -> [B -> C],
@@ -2138,23 +2055,11 @@ static isl_stat range_factor_domain_entry(void **entry, void *user)
 __isl_give isl_union_map *isl_union_map_range_factor_domain(
 	__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &range_factor_domain_entry);
-}
-
-/* If "map" is of the form A -> [B -> C], then add A -> C to "res".
- */
-static isl_stat range_factor_range_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_map **res = user;
-
-	if (!isl_map_range_is_wrapping(map))
-		return isl_stat_ok;
-
-	*res = isl_union_map_add_map(*res,
-				isl_map_range_factor_range(isl_map_copy(map)));
-
-	return *res ? isl_stat_ok : isl_stat_error;
+	struct isl_un_op_control control = {
+		.filter = &isl_map_range_is_wrapping,
+		.fn_map = &isl_map_range_factor_domain,
+	};
+	return un_op(umap, &control);
 }
 
 /* For each map in "umap" of the form A -> [B -> C],
@@ -2163,23 +2068,11 @@ static isl_stat range_factor_range_entry(void **entry, void *user)
 __isl_give isl_union_map *isl_union_map_range_factor_range(
 	__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &range_factor_range_entry);
-}
-
-/* If "map" is of the form [A -> B] -> [C -> D], then add A -> C to "res".
- */
-static isl_stat factor_domain_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_map **res = user;
-
-	if (!isl_map_domain_is_wrapping(map) || !isl_map_range_is_wrapping(map))
-		return isl_stat_ok;
-
-	*res = isl_union_map_add_map(*res,
-				isl_map_factor_domain(isl_map_copy(map)));
-
-	return *res ? isl_stat_ok : isl_stat_error;
+	struct isl_un_op_control control = {
+		.filter = &isl_map_range_is_wrapping,
+		.fn_map = &isl_map_range_factor_range,
+	};
+	return un_op(umap, &control);
 }
 
 /* For each map in "umap" of the form [A -> B] -> [C -> D],
@@ -2188,23 +2081,11 @@ static isl_stat factor_domain_entry(void **entry, void *user)
 __isl_give isl_union_map *isl_union_map_factor_domain(
 	__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &factor_domain_entry);
-}
-
-/* If "map" is of the form [A -> B] -> [C -> D], then add B -> D to "res".
- */
-static isl_stat factor_range_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_map **res = user;
-
-	if (!isl_map_domain_is_wrapping(map) || !isl_map_range_is_wrapping(map))
-		return isl_stat_ok;
-
-	*res = isl_union_map_add_map(*res,
-				isl_map_factor_range(isl_map_copy(map)));
-
-	return *res ? isl_stat_ok : isl_stat_error;
+	struct isl_un_op_control control = {
+		.filter = &isl_map_is_product,
+		.fn_map = &isl_map_factor_domain,
+	};
+	return un_op(umap, &control);
 }
 
 /* For each map in "umap" of the form [A -> B] -> [C -> D],
@@ -2213,40 +2094,28 @@ static isl_stat factor_range_entry(void **entry, void *user)
 __isl_give isl_union_map *isl_union_map_factor_range(
 	__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &factor_range_entry);
-}
-
-static isl_stat unwrap_entry(void **entry, void *user)
-{
-	isl_set *set = *entry;
-	isl_union_set **res = user;
-
-	if (!isl_set_is_wrapping(set))
-		return isl_stat_ok;
-
-	*res = isl_union_map_add_map(*res, isl_set_unwrap(isl_set_copy(set)));
-
-	return isl_stat_ok;
+	struct isl_un_op_control control = {
+		.filter = &isl_map_is_product,
+		.fn_map = &isl_map_factor_range,
+	};
+	return un_op(umap, &control);
 }
 
 __isl_give isl_union_map *isl_union_set_unwrap(__isl_take isl_union_set *uset)
 {
-	return cond_un_op(uset, &unwrap_entry);
-}
-
-static isl_stat wrap_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_set **res = user;
-
-	*res = isl_union_set_add_set(*res, isl_map_wrap(isl_map_copy(map)));
-
-	return isl_stat_ok;
+	struct isl_un_op_control control = {
+		.filter = &isl_set_is_wrapping,
+		.fn_map = &isl_set_unwrap,
+	};
+	return un_op(uset, &control);
 }
 
 __isl_give isl_union_set *isl_union_map_wrap(__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &wrap_entry);
+	struct isl_un_op_control control = {
+		.fn_map = &isl_map_wrap,
+	};
+	return un_op(umap, &control);
 }
 
 struct isl_union_map_is_subset_data {
@@ -3027,35 +2896,13 @@ isl_bool isl_union_map_is_bijective(__isl_keep isl_union_map *umap)
 	return isl_union_map_is_injective(umap);
 }
 
-static isl_stat zip_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_map **res = user;
-
-	if (!isl_map_can_zip(map))
-		return isl_stat_ok;
-
-	*res = isl_union_map_add_map(*res, isl_map_zip(isl_map_copy(map)));
-
-	return isl_stat_ok;
-}
-
 __isl_give isl_union_map *isl_union_map_zip(__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &zip_entry);
-}
-
-static isl_stat uncurry_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_map **res = user;
-
-	if (!isl_map_can_uncurry(map))
-		return isl_stat_ok;
-
-	*res = isl_union_map_add_map(*res, isl_map_uncurry(isl_map_copy(map)));
-
-	return isl_stat_ok;
+	struct isl_un_op_control control = {
+		.filter = &isl_map_can_zip,
+		.fn_map = &isl_map_zip,
+	};
+	return un_op(umap, &control);
 }
 
 /* Given a union map, take the maps of the form A -> (B -> C) and
@@ -3063,20 +2910,11 @@ static isl_stat uncurry_entry(void **entry, void *user)
  */
 __isl_give isl_union_map *isl_union_map_uncurry(__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &uncurry_entry);
-}
-
-static isl_stat curry_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_map **res = user;
-
-	if (!isl_map_can_curry(map))
-		return isl_stat_ok;
-
-	*res = isl_union_map_add_map(*res, isl_map_curry(isl_map_copy(map)));
-
-	return isl_stat_ok;
+	struct isl_un_op_control control = {
+		.filter = &isl_map_can_uncurry,
+		.fn_map = &isl_map_uncurry,
+	};
+	return un_op(umap, &control);
 }
 
 /* Given a union map, take the maps of the form (A -> B) -> C and
@@ -3084,24 +2922,11 @@ static isl_stat curry_entry(void **entry, void *user)
  */
 __isl_give isl_union_map *isl_union_map_curry(__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &curry_entry);
-}
-
-/* If *entry is of the form A -> ((B -> C) -> D), then apply
- * isl_map_range_curry to it and add the result to *res.
- */
-static isl_stat range_curry_entry(void **entry, void *user)
-{
-	isl_map *map = *entry;
-	isl_union_map **res = user;
-
-	if (!isl_map_can_range_curry(map))
-		return isl_stat_ok;
-
-	map = isl_map_range_curry(isl_map_copy(map));
-	*res = isl_union_map_add_map(*res, map);
-
-	return isl_stat_ok;
+	struct isl_un_op_control control = {
+		.filter = &isl_map_can_curry,
+		.fn_map = &isl_map_curry,
+	};
+	return un_op(umap, &control);
 }
 
 /* Given a union map, take the maps of the form A -> ((B -> C) -> D) and
@@ -3110,22 +2935,19 @@ static isl_stat range_curry_entry(void **entry, void *user)
 __isl_give isl_union_map *isl_union_map_range_curry(
 	__isl_take isl_union_map *umap)
 {
-	return cond_un_op(umap, &range_curry_entry);
-}
-
-static isl_stat lift_entry(void **entry, void *user)
-{
-	isl_set *set = *entry;
-	isl_union_set **res = user;
-
-	*res = isl_union_set_add_set(*res, isl_set_lift(isl_set_copy(set)));
-
-	return isl_stat_ok;
+	struct isl_un_op_control control = {
+		.filter = &isl_map_can_range_curry,
+		.fn_map = &isl_map_range_curry,
+	};
+	return un_op(umap, &control);
 }
 
 __isl_give isl_union_set *isl_union_set_lift(__isl_take isl_union_set *uset)
 {
-	return cond_un_op(uset, &lift_entry);
+	struct isl_un_op_control control = {
+		.fn_map = &isl_set_lift,
+	};
+	return un_op(uset, &control);
 }
 
 static isl_stat coefficients_entry(void **entry, void *user)
@@ -3618,18 +3440,6 @@ __isl_give isl_union_set *isl_union_set_preimage_union_pw_multi_aff(
 }
 
 /* Reset the user pointer on all identifiers of parameters and tuples
- * of the space of *entry.
- */
-static isl_stat reset_user(void **entry, void *user)
-{
-	isl_map **map = (isl_map **)entry;
-
-	*map = isl_map_reset_user(*map);
-
-	return *map ? isl_stat_ok : isl_stat_error;
-}
-
-/* Reset the user pointer on all identifiers of parameters and tuples
  * of the spaces of "umap".
  */
 __isl_give isl_union_map *isl_union_map_reset_user(
@@ -3641,9 +3451,7 @@ __isl_give isl_union_map *isl_union_map_reset_user(
 	umap->dim = isl_space_reset_user(umap->dim);
 	if (!umap->dim)
 		return isl_union_map_free(umap);
-	umap = un_op(umap, &reset_user);
-
-	return umap;
+	return total(umap, &isl_map_reset_user);
 }
 
 /* Reset the user pointer on all identifiers of parameters and tuples

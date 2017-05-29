@@ -209,6 +209,42 @@ unsigned isl_map_n_param(__isl_keep const isl_map *map)
 	return map ? map->dim->nparam : 0;
 }
 
+/* Return the number of equality constraints in the description of "bmap".
+ * Return -1 on error.
+ */
+int isl_basic_map_n_equality(__isl_keep isl_basic_map *bmap)
+{
+	if (!bmap)
+		return -1;
+	return bmap->n_eq;
+}
+
+/* Return the number of equality constraints in the description of "bset".
+ * Return -1 on error.
+ */
+int isl_basic_set_n_equality(__isl_keep isl_basic_set *bset)
+{
+	return isl_basic_map_n_equality(bset_to_bmap(bset));
+}
+
+/* Return the number of inequality constraints in the description of "bmap".
+ * Return -1 on error.
+ */
+int isl_basic_map_n_inequality(__isl_keep isl_basic_map *bmap)
+{
+	if (!bmap)
+		return -1;
+	return bmap->n_ineq;
+}
+
+/* Return the number of inequality constraints in the description of "bset".
+ * Return -1 on error.
+ */
+int isl_basic_set_n_inequality(__isl_keep isl_basic_set *bset)
+{
+	return isl_basic_map_n_inequality(bset_to_bmap(bset));
+}
+
 /* Do "bmap1" and "bmap2" have the same parameters?
  */
 static isl_bool isl_basic_map_has_equal_params(__isl_keep isl_basic_map *bmap1,
@@ -11186,6 +11222,13 @@ isl_bool isl_map_domain_is_wrapping(__isl_keep isl_map *map)
 		return isl_bool_error;
 
 	return isl_space_domain_is_wrapping(map->dim);
+}
+
+/* Does "map" have a wrapped relation in both domain and range?
+ */
+isl_bool isl_map_is_product(__isl_keep isl_map *map)
+{
+	return isl_space_is_product(isl_map_peek_space(map));
 }
 
 /* Is the range of "map" a wrapped relation?

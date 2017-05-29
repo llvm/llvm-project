@@ -389,6 +389,7 @@ EXTRA_DIST = \
 	imath/imrat.c \
 	imath/imrat.h \
 	interface/all.h \
+	interface/isl.h.top \
 	interface/isl.py.top \
 	test_inputs
 

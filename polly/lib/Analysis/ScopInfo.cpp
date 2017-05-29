@@ -168,6 +168,10 @@ static cl::opt<bool, true> XUseInstructionNames(
     cl::location(UseInstructionNames), cl::Hidden, cl::init(false),
     cl::ZeroOrMore, cl::cat(PollyCategory));
 
+static cl::opt<bool> PollyPrintInstructions(
+    "polly-print-instructions", cl::desc("Output instructions per ScopStmt"),
+    cl::Hidden, cl::Optional, cl::init(false), cl::cat(PollyCategory));
+
 //===----------------------------------------------------------------------===//
 
 // Create a sequence of two schedules. Either argument may be null and is
@@ -1647,9 +1651,11 @@ ScopStmt::ScopStmt(Scop &parent, Region &R, Loop *SurroundingLoop)
       "Stmt", R.getNameStr(), parent.getNextStmtIdx(), "", UseInstructionNames);
 }
 
-ScopStmt::ScopStmt(Scop &parent, BasicBlock &bb, Loop *SurroundingLoop)
+ScopStmt::ScopStmt(Scop &parent, BasicBlock &bb, Loop *SurroundingLoop,
+                   std::vector<Instruction *> Instructions)
     : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), BB(&bb),
-      R(nullptr), Build(nullptr), SurroundingLoop(SurroundingLoop) {
+      R(nullptr), Build(nullptr), SurroundingLoop(SurroundingLoop),
+      Instructions(Instructions) {
 
   BaseName = getIslCompatibleName("Stmt", &bb, parent.getNextStmtIdx(), "",
                                   UseInstructionNames);
@@ -1863,6 +1869,15 @@ ScopStmt::~ScopStmt() {
   isl_set_free(InvalidDomain);
 }
 
+void ScopStmt::printInstructions(raw_ostream &OS) const {
+  OS << "Instructions {\n";
+
+  for (Instruction *Inst : Instructions)
+    OS.indent(16) << *Inst << "\n";
+
+  OS.indent(16) << "}\n";
+}
+
 void ScopStmt::print(raw_ostream &OS) const {
   OS << "\t" << getBaseName() << "\n";
   OS.indent(12) << "Domain :=\n";
@@ -1881,6 +1896,9 @@ void ScopStmt::print(raw_ostream &OS) const {
 
   for (MemoryAccess *Access : MemAccs)
     Access->print(OS);
+
+  if (PollyPrintInstructions)
+    printInstructions(OS.indent(12));
 }
 
 void ScopStmt::dump() const { print(dbgs()); }
@@ -1980,16 +1998,50 @@ const SCEV *Scop::getRepresentingInvariantLoadSCEV(const SCEV *S) {
   return SCEVSensitiveParameterRewriter::rewrite(S, *SE, InvEquivClassVMap);
 }
 
+// This table of function names is used to translate parameter names in more
+// human-readable names. This makes it easier to interpret Polly analysis
+// results.
+StringMap<std::string> KnownNames = {
+    {"_Z13get_global_idj", "global_id"},
+    {"_Z12get_local_idj", "local_id"},
+    {"_Z15get_global_sizej", "global_size"},
+    {"_Z14get_local_sizej", "local_size"},
+    {"_Z12get_work_dimv", "work_dim"},
+    {"_Z17get_global_offsetj", "global_offset"},
+    {"_Z12get_group_idj", "group_id"},
+    {"_Z14get_num_groupsj", "num_groups"},
+};
+
+static std::string getCallParamName(CallInst *Call) {
+  std::string Result;
+  raw_string_ostream OS(Result);
+  std::string Name = Call->getCalledFunction()->getName();
+
+  auto Iterator = KnownNames.find(Name);
+  if (Iterator != KnownNames.end())
+    Name = "__" + KnownNames[Name];
+  OS << Name;
+  for (auto &Operand : Call->arg_operands()) {
+    ConstantInt *Op = cast<ConstantInt>(&Operand);
+    OS << "_" << Op->getValue();
+  }
+  OS.flush();
+  return Result;
+}
+
 void Scop::createParameterId(const SCEV *Parameter) {
   assert(Parameters.count(Parameter));
   assert(!ParameterIds.count(Parameter));
 
   std::string ParameterName = "p_" + std::to_string(getNumParams() - 1);
 
-  if (UseInstructionNames) {
-    if (const SCEVUnknown *ValueParameter = dyn_cast<SCEVUnknown>(Parameter)) {
-      Value *Val = ValueParameter->getValue();
+  if (const SCEVUnknown *ValueParameter = dyn_cast<SCEVUnknown>(Parameter)) {
+    Value *Val = ValueParameter->getValue();
+    CallInst *Call = dyn_cast<CallInst>(Val);
 
+    if (Call && isConstCall(Call)) {
+      ParameterName = getCallParamName(Call);
+    } else if (UseInstructionNames) {
       // If this parameter references a specific Value and this value has a name
       // we use this name as it is likely to be unique and more useful than just
       // a number.
@@ -4576,38 +4628,6 @@ bool Scop::restrictDomains(__isl_take isl_union_set *Domain) {
 
 ScalarEvolution *Scop::getSE() const { return SE; }
 
-struct MapToDimensionDataTy {
-  int N;
-  isl_union_pw_multi_aff *Res;
-};
-
-// Create a function that maps the elements of 'Set' to its N-th dimension and
-// add it to User->Res.
-//
-// @param Set        The input set.
-// @param User->N    The dimension to map to.
-// @param User->Res  The isl_union_pw_multi_aff to which to add the result.
-//
-// @returns   isl_stat_ok if no error occured, othewise isl_stat_error.
-static isl_stat mapToDimension_AddSet(__isl_take isl_set *Set, void *User) {
-  struct MapToDimensionDataTy *Data = (struct MapToDimensionDataTy *)User;
-  int Dim;
-  isl_space *Space;
-  isl_pw_multi_aff *PMA;
-
-  Dim = isl_set_dim(Set, isl_dim_set);
-  Space = isl_set_get_space(Set);
-  PMA = isl_pw_multi_aff_project_out_map(Space, isl_dim_set, Data->N,
-                                         Dim - Data->N);
-  if (Data->N > 1)
-    PMA = isl_pw_multi_aff_drop_dims(PMA, isl_dim_out, 0, Data->N - 1);
-  Data->Res = isl_union_pw_multi_aff_add_pw_multi_aff(Data->Res, PMA);
-
-  isl_set_free(Set);
-
-  return isl_stat_ok;
-}
-
 // Create an isl_multi_union_aff that defines an identity mapping from the
 // elements of USet to their N-th dimension.
 //
@@ -4622,31 +4642,36 @@ static isl_stat mapToDimension_AddSet(__isl_take isl_set *Set, void *User) {
 //               mapping.
 // @param N      The dimension to map to.
 // @returns      A mapping from USet to its N-th dimension.
-static __isl_give isl_multi_union_pw_aff *
-mapToDimension(__isl_take isl_union_set *USet, int N) {
+static isl::multi_union_pw_aff mapToDimension(isl::union_set USet, int N) {
   assert(N >= 0);
   assert(USet);
-  assert(!isl_union_set_is_empty(USet));
+  assert(!USet.is_empty());
 
-  struct MapToDimensionDataTy Data;
+  auto Result = isl::union_pw_multi_aff::empty(USet.get_space());
 
-  auto *Space = isl_union_set_get_space(USet);
-  auto *PwAff = isl_union_pw_multi_aff_empty(Space);
+  auto Lambda = [&Result, N](isl::set S) -> isl::stat {
+    int Dim = S.dim(isl::dim::set);
+    auto PMA = isl::pw_multi_aff::project_out_map(S.get_space(), isl::dim::set,
+                                                  N, Dim - N);
+    if (N > 1)
+      PMA = PMA.drop_dims(isl::dim::out, 0, N - 1);
 
-  Data = {N, PwAff};
+    Result = Result.add_pw_multi_aff(PMA);
+    return isl::stat::ok;
+  };
 
-  auto Res = isl_union_set_foreach_set(USet, &mapToDimension_AddSet, &Data);
+  isl::stat Res = USet.foreach_set(Lambda);
   (void)Res;
 
-  assert(Res == isl_stat_ok);
+  assert(Res == isl::stat::ok);
 
-  isl_union_set_free(USet);
-  return isl_multi_union_pw_aff_from_union_pw_multi_aff(Data.Res);
+  return isl::multi_union_pw_aff(isl::union_pw_multi_aff(Result));
 }
 
-void Scop::addScopStmt(BasicBlock *BB, Loop *SurroundingLoop) {
+void Scop::addScopStmt(BasicBlock *BB, Loop *SurroundingLoop,
+                       std::vector<Instruction *> Instructions) {
   assert(BB && "Unexpected nullptr!");
-  Stmts.emplace_back(*this, *BB, SurroundingLoop);
+  Stmts.emplace_back(*this, *BB, SurroundingLoop, Instructions);
   auto *Stmt = &Stmts.back();
   StmtMap[BB] = Stmt;
 }
@@ -4792,9 +4817,9 @@ void Scop::buildSchedule(RegionNode *RN, LoopStackTy &LoopStack, LoopInfo &LI) {
     auto &NextLoopData = LoopStack.back();
 
     if (Schedule) {
-      auto *Domain = isl_schedule_get_domain(Schedule);
-      auto *MUPA = mapToDimension(Domain, LoopStack.size());
-      Schedule = isl_schedule_insert_partial_schedule(Schedule, MUPA);
+      isl::union_set Domain = give(isl_schedule_get_domain(Schedule));
+      isl::multi_union_pw_aff MUPA = mapToDimension(Domain, LoopStack.size());
+      Schedule = isl_schedule_insert_partial_schedule(Schedule, MUPA.release());
       NextLoopData.Schedule =
           combineInSequence(NextLoopData.Schedule, Schedule);
     }
