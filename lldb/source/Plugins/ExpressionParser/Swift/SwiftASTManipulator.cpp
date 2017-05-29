@@ -509,7 +509,7 @@ void SwiftASTManipulator::FindSpecialNames(
     virtual std::pair<bool, swift::Expr *> walkToExprPre(swift::Expr *expr) {
       if (swift::UnresolvedDeclRefExpr *decl_ref_expr =
               llvm::dyn_cast<swift::UnresolvedDeclRefExpr>(expr)) {
-        swift::Identifier name = decl_ref_expr->getName().getBaseName();
+        swift::Identifier name = decl_ref_expr->getName().getBaseIdentifier();
 
         if (m_prefix.empty() || name.str().startswith(m_prefix))
           m_names.push_back(name);
