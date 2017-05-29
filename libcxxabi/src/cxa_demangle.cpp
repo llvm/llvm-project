@@ -2915,6 +2915,10 @@ base_name(String& s)
             ++p0;
             break;
         }
+        if (!isalpha(*p0) && !isdigit(*p0) && *p0 != '_')
+        {
+            return String();
+        }
     }
     return String(p0, pe);
 }

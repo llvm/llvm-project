@@ -45,7 +45,7 @@ class IsMatch;
 
 // List of instructions requiring explicitly aligned memory.
 const char *const ExplicitAlign[] = {"MOVDQA",  "MOVAPS",  "MOVAPD",  "MOVNTPS",
-                               "MOVNTPD", "MOVNTDQ", "MOVNTDQA"};
+                                     "MOVNTPD", "MOVNTDQ", "MOVNTDQA"};
 
 // List of instructions NOT requiring explicit memory alignment.
 const char *const ExplicitUnalign[] = {"MOVDQU", "MOVUPS", "MOVUPD"};
@@ -285,7 +285,7 @@ getMemOperandSize(const Record *MemRec, const bool IntrinsicSensitive = false) {
         (MemRec->getName() == "sdmem" || MemRec->getName() == "ssmem"))
       return 128;
 
-    StringRef Name =
+    std::string Name =
         MemRec->getValueAsDef("ParserMatchClass")->getValueAsString("Name");
     if (Name == "Mem8")
       return 8;

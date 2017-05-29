@@ -212,6 +212,9 @@ public:
         return __tmp;
     }
 
+    // from_address cannot be used with the coroutines promise type.
+    static coroutine_handle from_address(_Promise*) = delete;
+
     _LIBCPP_ALWAYS_INLINE
     static coroutine_handle from_promise(_Promise& __promise) _NOEXCEPT {
         coroutine_handle __tmp;
