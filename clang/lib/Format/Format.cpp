@@ -1910,6 +1910,9 @@ tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
 tooling::Replacements cleanup(const FormatStyle &Style, StringRef Code,
                               ArrayRef<tooling::Range> Ranges,
                               StringRef FileName) {
+  // cleanups only apply to C++ (they mostly concern ctor commas etc.)
+  if (Style.Language != FormatStyle::LK_Cpp)
+    return tooling::Replacements();
   std::unique_ptr<Environment> Env =
       Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
   Cleaner Clean(*Env, Style);

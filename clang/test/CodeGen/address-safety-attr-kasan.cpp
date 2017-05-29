@@ -1,9 +1,9 @@
 // Make sure the sanitize_address attribute is emitted when using both ASan and KASan.
 // Also document that __attribute__((no_sanitize_address)) doesn't disable KASan instrumentation.
 
-/// RUN: %clang_cc1 -triple i386-unknown-linux -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-NOASAN %s
-/// RUN: %clang_cc1 -triple i386-unknown-linux -fsanitize=address -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-ASAN %s
-/// RUN: %clang_cc1 -triple i386-unknown-linux -fsanitize=kernel-address -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-KASAN %s
+/// RUN: %clang_cc1 -triple i386-unknown-linux -disable-O0-optnone -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-NOASAN %s
+/// RUN: %clang_cc1 -triple i386-unknown-linux -fsanitize=address -disable-O0-optnone -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-ASAN %s
+/// RUN: %clang_cc1 -triple i386-unknown-linux -fsanitize=kernel-address -disable-O0-optnone -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-KASAN %s
 
 int HasSanitizeAddress() {
   return 1;

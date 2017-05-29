@@ -36,7 +36,7 @@ public:
   DIEHash(AsmPrinter *A = nullptr) : AP(A) {}
 
   /// \brief Computes the CU signature.
-  uint64_t computeCUSignature(const DIE &Die);
+  uint64_t computeCUSignature(StringRef DWOName, const DIE &Die);
 
   /// \brief Computes the type signature.
   uint64_t computeTypeSignature(const DIE &Die);

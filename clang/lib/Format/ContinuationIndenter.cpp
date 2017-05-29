@@ -215,7 +215,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       //     ...
       //   }.bind(...));
       // FIXME: We should find a more generic solution to this problem.
-      !(State.Column <= NewLineColumn && Previous.isNot(tok::r_paren) &&
+      !(State.Column <= NewLineColumn &&
         Style.Language == FormatStyle::LK_JavaScript))
     return true;
 
@@ -689,7 +689,18 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       return State.Stack[State.Stack.size() - 2].LastSpace;
     return State.FirstIndent;
   }
-  if (Current.is(tok::r_paren) && State.Stack.size() > 1)
+  // Indent a closing parenthesis at the previous level if followed by a semi or
+  // opening brace. This allows indentations such as:
+  //     foo(
+  //       a,
+  //     );
+  //     function foo(
+  //       a,
+  //     ) {
+  //       code(); //
+  //     }
+  if (Current.is(tok::r_paren) && State.Stack.size() > 1 &&
+      (!Current.Next || Current.Next->isOneOf(tok::semi, tok::l_brace)))
     return State.Stack[State.Stack.size() - 2].LastSpace;
   if (NextNonComment->is(TT_TemplateString) && NextNonComment->closesScope())
     return State.Stack[State.Stack.size() - 2].LastSpace;

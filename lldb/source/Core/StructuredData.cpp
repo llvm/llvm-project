@@ -184,7 +184,7 @@ StructuredData::ObjectSP StructuredData::ParseJSON(std::string json_text) {
 
 StructuredData::ObjectSP
 StructuredData::Object::GetObjectForDotSeparatedPath(llvm::StringRef path) {
-  if (this->GetType() == Type::eTypeDictionary) {
+  if (this->GetType() == lldb::eStructuredDataTypeDictionary) {
     std::pair<llvm::StringRef, llvm::StringRef> match = path.split('.');
     std::string key = match.first.str();
     ObjectSP value = this->GetAsDictionary()->GetValueForKey(key);
@@ -200,7 +200,7 @@ StructuredData::Object::GetObjectForDotSeparatedPath(llvm::StringRef path) {
     return ObjectSP();
   }
 
-  if (this->GetType() == Type::eTypeArray) {
+  if (this->GetType() == lldb::eStructuredDataTypeArray) {
     std::pair<llvm::StringRef, llvm::StringRef> match = path.split('[');
     if (match.second.size() == 0) {
       return this->shared_from_this();

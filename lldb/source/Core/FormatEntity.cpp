@@ -1040,24 +1040,24 @@ static bool FormatThreadExtendedInfoRecurse(
       thread_info_dictionary->GetObjectForDotSeparatedPath(path);
 
   if (value) {
-    if (value->GetType() == StructuredData::Type::eTypeInteger) {
+    if (value->GetType() == eStructuredDataTypeInteger) {
       const char *token_format = "0x%4.4" PRIx64;
       if (!entry.printf_format.empty())
         token_format = entry.printf_format.c_str();
       s.Printf(token_format, value->GetAsInteger()->GetValue());
       return true;
-    } else if (value->GetType() == StructuredData::Type::eTypeFloat) {
+    } else if (value->GetType() == eStructuredDataTypeFloat) {
       s.Printf("%f", value->GetAsFloat()->GetValue());
       return true;
-    } else if (value->GetType() == StructuredData::Type::eTypeString) {
+    } else if (value->GetType() == eStructuredDataTypeString) {
       s.Format("{0}", value->GetAsString()->GetValue());
       return true;
-    } else if (value->GetType() == StructuredData::Type::eTypeArray) {
+    } else if (value->GetType() == eStructuredDataTypeArray) {
       if (value->GetAsArray()->GetSize() > 0) {
         s.Printf("%zu", value->GetAsArray()->GetSize());
         return true;
       }
-    } else if (value->GetType() == StructuredData::Type::eTypeDictionary) {
+    } else if (value->GetType() == eStructuredDataTypeDictionary) {
       s.Printf("%zu",
                value->GetAsDictionary()->GetKeys()->GetAsArray()->GetSize());
       return true;
@@ -1346,7 +1346,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       if (thread) {
         StructuredData::ObjectSP object_sp = thread->GetExtendedInfo();
         if (object_sp &&
-            object_sp->GetType() == StructuredData::Type::eTypeDictionary) {
+            object_sp->GetType() == eStructuredDataTypeDictionary) {
           if (FormatThreadExtendedInfoRecurse(entry, object_sp, sc, exe_ctx, s))
             return true;
         }

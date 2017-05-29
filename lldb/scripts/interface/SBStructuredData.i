@@ -18,20 +18,37 @@ namespace lldb {
     class SBStructuredData
     {
     public:
-        
         SBStructuredData();
-        
+
         SBStructuredData(const lldb::SBStructuredData &rhs);
 
         SBStructuredData(const lldb::EventSP &event_sp);
 
         ~SBStructuredData();
-                 
+
         bool
         IsValid() const;
-                 
+
         void
         Clear();
+
+        lldb::SBStructuredData &operator=(const lldb::SBStructuredData &rhs);
+
+        lldb::StructuredDataType GetType() const;
+
+        size_t GetSize() const;
+
+        lldb::SBStructuredData GetValueForKey(const char *key) const;
+
+        lldb::SBStructuredData GetItemAtIndex(size_t idx) const;
+
+        uint64_t GetIntegerValue(uint64_t fail_value = 0) const;
+
+        double GetFloatValue(double fail_value = 0.0) const;
+
+        bool GetBooleanValue(bool fail_value = false) const;
+
+        size_t GetStringValue(char *dst, size_t dst_len) const;
 
         lldb::SBError
         GetAsJSON(lldb::SBStream &stream) const;

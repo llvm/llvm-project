@@ -620,6 +620,360 @@ entry:
   ret float %r
 }
 
+declare arm_aapcscc [3 x i32] @tiny_int_arrays_target([2 x i32])
+
+define arm_aapcscc [3 x i32] @test_tiny_int_arrays([2 x i32] %arr) {
+; CHECK-LABEL: name: test_tiny_int_arrays
+; CHECK: liveins: %r0, %r1
+; CHECK: [[R0:%[0-9]+]](s32) = COPY %r0
+; CHECK: [[R1:%[0-9]+]](s32) = COPY %r1
+; CHECK: [[ARG_ARR0:%[0-9]+]](s64) = IMPLICIT_DEF
+; CHECK: [[ARG_ARR1:%[0-9]+]](s64) = G_INSERT [[ARG_ARR0]], [[R0]](s32), 0
+; CHECK: [[ARG_ARR2:%[0-9]+]](s64) = G_INSERT [[ARG_ARR1]], [[R1]](s32), 32
+; CHECK: [[ARG_ARR:%[0-9]+]](s64) = COPY [[ARG_ARR2]]
+; CHECK: ADJCALLSTACKDOWN 0, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: [[R0:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR]](s64), 0
+; CHECK: [[R1:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR]](s64), 32
+; CHECK: %r0 = COPY [[R0]]
+; CHECK: %r1 = COPY [[R1]]
+; CHECK: BLX @tiny_int_arrays_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit-def %r0, implicit-def %r1
+; CHECK: [[R0:%[0-9]+]](s32) = COPY %r0
+; CHECK: [[R1:%[0-9]+]](s32) = COPY %r1
+; CHECK: [[R2:%[0-9]+]](s32) = COPY %r2
+; CHECK: [[RES_ARR0:%[0-9]+]](s96) = IMPLICIT_DEF
+; CHECK: [[RES_ARR1:%[0-9]+]](s96) = G_INSERT [[RES_ARR0]], [[R0]](s32), 0
+; CHECK: [[RES_ARR2:%[0-9]+]](s96) = G_INSERT [[RES_ARR1]], [[R1]](s32), 32
+; CHECK: [[RES_ARR3:%[0-9]+]](s96) = G_INSERT [[RES_ARR2]], [[R2]](s32), 64
+; CHECK: [[RES_ARR:%[0-9]+]](s96) = COPY [[RES_ARR3]]
+; CHECK: ADJCALLSTACKUP 0, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: [[R0:%[0-9]+]](s32) = G_EXTRACT [[RES_ARR]](s96), 0
+; CHECK: [[R1:%[0-9]+]](s32) = G_EXTRACT [[RES_ARR]](s96), 32
+; CHECK: [[R2:%[0-9]+]](s32) = G_EXTRACT [[RES_ARR]](s96), 64
+; FIXME: This doesn't seem correct with regard to the AAPCS docs (which say
+; that composite types larger than 4 bytes should be passed through memory),
+; but it's what DAGISel does. We should fix it in the common code for both.
+; CHECK: %r0 = COPY [[R0]]
+; CHECK: %r1 = COPY [[R1]]
+; CHECK: %r2 = COPY [[R2]]
+; CHECK: BX_RET 14, _, implicit %r0, implicit %r1, implicit %r2
+entry:
+  %r = notail call arm_aapcscc [3 x i32] @tiny_int_arrays_target([2 x i32] %arr)
+  ret [3 x i32] %r
+}
+
+declare arm_aapcscc void @multiple_int_arrays_target([2 x i32], [2 x i32])
+
+define arm_aapcscc void @test_multiple_int_arrays([2 x i32] %arr0, [2 x i32] %arr1) {
+; CHECK-LABEL: name: test_multiple_int_arrays
+; CHECK: liveins: %r0, %r1
+; CHECK: [[R0:%[0-9]+]](s32) = COPY %r0
+; CHECK: [[R1:%[0-9]+]](s32) = COPY %r1
+; CHECK: [[R2:%[0-9]+]](s32) = COPY %r2
+; CHECK: [[R3:%[0-9]+]](s32) = COPY %r3
+; CHECK: [[ARG_ARR0_0:%[0-9]+]](s64) = IMPLICIT_DEF
+; CHECK: [[ARG_ARR0_1:%[0-9]+]](s64) = G_INSERT [[ARG_ARR0_0]], [[R0]](s32), 0
+; CHECK: [[ARG_ARR0_2:%[0-9]+]](s64) = G_INSERT [[ARG_ARR0_1]], [[R1]](s32), 32
+; CHECK: [[ARG_ARR0:%[0-9]+]](s64) = COPY [[ARG_ARR0_2]]
+; CHECK: [[ARG_ARR1_0:%[0-9]+]](s64) = IMPLICIT_DEF
+; CHECK: [[ARG_ARR1_1:%[0-9]+]](s64) = G_INSERT [[ARG_ARR1_0]], [[R2]](s32), 0
+; CHECK: [[ARG_ARR1_2:%[0-9]+]](s64) = G_INSERT [[ARG_ARR1_1]], [[R3]](s32), 32
+; CHECK: [[ARG_ARR1:%[0-9]+]](s64) = COPY [[ARG_ARR1_2]]
+; CHECK: ADJCALLSTACKDOWN 0, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: [[R0:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR0]](s64), 0
+; CHECK: [[R1:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR0]](s64), 32
+; CHECK: [[R2:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR1]](s64), 0
+; CHECK: [[R3:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR1]](s64), 32
+; CHECK: %r0 = COPY [[R0]]
+; CHECK: %r1 = COPY [[R1]]
+; CHECK: %r2 = COPY [[R2]]
+; CHECK: %r3 = COPY [[R3]]
+; CHECK: BLX @multiple_int_arrays_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3
+; CHECK: ADJCALLSTACKUP 0, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: BX_RET 14, _
+entry:
+  notail call arm_aapcscc void @multiple_int_arrays_target([2 x i32] %arr0, [2 x i32] %arr1)
+  ret void
+}
+
+declare arm_aapcscc void @large_int_arrays_target([20 x i32])
+
+define arm_aapcscc void @test_large_int_arrays([20 x i32] %arr) {
+; CHECK-LABEL: name: test_large_int_arrays
+; CHECK: fixedStack:
+; The parameters live in separate stack locations, one for each element that
+; doesn't fit in the registers.
+; CHECK-DAG: id: [[FIRST_STACK_ID:[0-9]+]], offset: 0, size: 4
+; CHECK-DAG: id: [[LAST_STACK_ID:[-0]+]], offset: 60, size: 4
+; CHECK: liveins: %r0, %r1, %r2, %r3
+; CHECK-DAG: [[R0:%[0-9]+]](s32) = COPY %r0
+; CHECK-DAG: [[R1:%[0-9]+]](s32) = COPY %r1
+; CHECK-DAG: [[R2:%[0-9]+]](s32) = COPY %r2
+; CHECK-DAG: [[R3:%[0-9]+]](s32) = COPY %r3
+; CHECK: [[FIRST_STACK_ELEMENT_FI:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[FIRST_STACK_ID]]
+; CHECK: [[FIRST_STACK_ELEMENT:%[0-9]+]](s32) = G_LOAD [[FIRST_STACK_ELEMENT_FI]]{{.*}}load 4 from %fixed-stack.[[FIRST_STACK_ID]]
+; CHECK: [[LAST_STACK_ELEMENT_FI:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[LAST_STACK_ID]]
+; CHECK: [[LAST_STACK_ELEMENT:%[0-9]+]](s32) = G_LOAD [[LAST_STACK_ELEMENT_FI]]{{.*}}load 4 from %fixed-stack.[[LAST_STACK_ID]]
+; CHECK: [[ARG_ARR0:%[0-9]+]](s640) = IMPLICIT_DEF
+; CHECK: [[ARG_ARR1:%[0-9]+]](s640) = G_INSERT [[ARG_ARR0]], [[R0]](s32), 0
+; CHECK: [[ARG_ARR2:%[0-9]+]](s640) = G_INSERT [[ARG_ARR1]], [[R1]](s32), 32
+; CHECK: [[ARG_ARR3:%[0-9]+]](s640) = G_INSERT [[ARG_ARR2]], [[R2]](s32), 64
+; CHECK: [[ARG_ARR4:%[0-9]+]](s640) = G_INSERT [[ARG_ARR3]], [[R3]](s32), 96
+; CHECK: [[ARG_ARR5:%[0-9]+]](s640) = G_INSERT [[ARG_ARR4]], [[FIRST_STACK_ELEMENT]](s32), 128
+; CHECK: [[ARG_ARR6:%[0-9]+]](s640) = G_INSERT {{%[0-9]+}}, [[LAST_STACK_ELEMENT]](s32), 608
+; CHECK: [[ARG_ARR:%[0-9]+]](s640) = COPY [[ARG_ARR6]]
+; CHECK: ADJCALLSTACKDOWN 64, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: [[R0:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR]](s640), 0
+; CHECK: [[R1:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR]](s640), 32
+; CHECK: [[R2:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR]](s640), 64
+; CHECK: [[R3:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR]](s640), 96
+; CHECK: [[FIRST_STACK_ELEMENT:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR]](s640), 128
+; CHECK: [[LAST_STACK_ELEMENT:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR]](s640), 608
+; CHECK: %r0 = COPY [[R0]]
+; CHECK: %r1 = COPY [[R1]]
+; CHECK: %r2 = COPY [[R2]]
+; CHECK: %r3 = COPY [[R3]]
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[OFF_FIRST_ELEMENT:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK: [[FIRST_STACK_ARG_ADDR:%[0-9]+]](p0) = G_GEP [[SP]], [[OFF_FIRST_ELEMENT]](s32)
+; CHECK: G_STORE [[FIRST_STACK_ELEMENT]](s32), [[FIRST_STACK_ARG_ADDR]]{{.*}}store 4
+; Match the second-to-last offset, so we can get the correct SP for the last element
+; CHECK: G_CONSTANT i32 56
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[OFF_LAST_ELEMENT:%[0-9]+]](s32) = G_CONSTANT i32 60
+; CHECK: [[LAST_STACK_ARG_ADDR:%[0-9]+]](p0) = G_GEP [[SP]], [[OFF_LAST_ELEMENT]](s32)
+; CHECK: G_STORE [[LAST_STACK_ELEMENT]](s32), [[LAST_STACK_ARG_ADDR]]{{.*}}store 4
+; CHECK: BLX @large_int_arrays_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3
+; CHECK: ADJCALLSTACKUP 64, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: BX_RET 14, _
+entry:
+  notail call arm_aapcscc void @large_int_arrays_target([20 x i32] %arr)
+  ret void
+}
+
+declare arm_aapcscc [2 x float] @fp_arrays_aapcs_target([3 x double])
+
+define arm_aapcscc [2 x float] @test_fp_arrays_aapcs([3 x double] %arr) {
+; CHECK-LABEL: name: test_fp_arrays_aapcs
+; CHECK: fixedStack:
+; CHECK: id: [[ARR2_ID:[0-9]+]], offset: 0, size: 8
+; CHECK: liveins: %r0, %r1, %r2, %r3
+; CHECK: [[ARR0_0:%[0-9]+]](s32) = COPY %r0
+; CHECK: [[ARR0_1:%[0-9]+]](s32) = COPY %r1
+; LITTLE: [[ARR0:%[0-9]+]](s64) = G_SEQUENCE [[ARR0_0]](s32), 0, [[ARR0_1]](s32), 32
+; BIG: [[ARR0:%[0-9]+]](s64) = G_SEQUENCE [[ARR0_1]](s32), 0, [[ARR0_0]](s32), 32
+; CHECK: [[ARR1_0:%[0-9]+]](s32) = COPY %r2
+; CHECK: [[ARR1_1:%[0-9]+]](s32) = COPY %r3
+; LITTLE: [[ARR1:%[0-9]+]](s64) = G_SEQUENCE [[ARR1_0]](s32), 0, [[ARR1_1]](s32), 32
+; BIG: [[ARR1:%[0-9]+]](s64) = G_SEQUENCE [[ARR1_1]](s32), 0, [[ARR1_0]](s32), 32
+; CHECK: [[ARR2_FI:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[ARR2_ID]]
+; CHECK: [[ARR2:%[0-9]+]](s64) = G_LOAD [[ARR2_FI]]{{.*}}load 8 from %fixed-stack.[[ARR2_ID]]
+; CHECK: [[ARR_MERGED_0:%[0-9]+]](s192) = IMPLICIT_DEF
+; CHECK: [[ARR_MERGED_1:%[0-9]+]](s192) = G_INSERT [[ARR_MERGED_0]], [[ARR0]](s64), 0
+; CHECK: [[ARR_MERGED_2:%[0-9]+]](s192) = G_INSERT [[ARR_MERGED_1]], [[ARR1]](s64), 64
+; CHECK: [[ARR_MERGED_3:%[0-9]+]](s192) = G_INSERT [[ARR_MERGED_2]], [[ARR2]](s64), 128
+; CHECK: [[ARR_MERGED:%[0-9]+]](s192) = COPY [[ARR_MERGED_3]]
+; CHECK: ADJCALLSTACKDOWN 8, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: [[ARR0:%[0-9]+]](s64) = G_EXTRACT [[ARR_MERGED]](s192), 0
+; CHECK: [[ARR1:%[0-9]+]](s64) = G_EXTRACT [[ARR_MERGED]](s192), 64
+; CHECK: [[ARR2:%[0-9]+]](s64) = G_EXTRACT [[ARR_MERGED]](s192), 128
+; CHECK: [[ARR0_0:%[0-9]+]](s32) = G_EXTRACT [[ARR0]](s64), 0
+; CHECK: [[ARR0_1:%[0-9]+]](s32) = G_EXTRACT [[ARR0]](s64), 32
+; LITTLE: %r0 = COPY [[ARR0_0]](s32)
+; LITTLE: %r1 = COPY [[ARR0_1]](s32)
+; BIG: %r0 = COPY [[ARR0_1]](s32)
+; BIG: %r1 = COPY [[ARR0_0]](s32)
+; CHECK: [[ARR1_0:%[0-9]+]](s32) = G_EXTRACT [[ARR1]](s64), 0
+; CHECK: [[ARR1_1:%[0-9]+]](s32) = G_EXTRACT [[ARR1]](s64), 32
+; LITTLE: %r2 = COPY [[ARR1_0]](s32)
+; LITTLE: %r3 = COPY [[ARR1_1]](s32)
+; BIG: %r2 = COPY [[ARR1_1]](s32)
+; BIG: %r3 = COPY [[ARR1_0]](s32)
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[ARR2_OFFSET:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK: [[ARR2_ADDR:%[0-9]+]](p0) = G_GEP [[SP]], [[ARR2_OFFSET]](s32)
+; CHECK: G_STORE [[ARR2]](s64), [[ARR2_ADDR]](p0){{.*}}store 8
+; CHECK: BLX @fp_arrays_aapcs_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
+; CHECK: [[R0:%[0-9]+]](s32) = COPY %r0
+; CHECK: [[R1:%[0-9]+]](s32) = COPY %r1
+; CHECK: [[R_MERGED_0:%[0-9]+]](s64) = IMPLICIT_DEF
+; CHECK: [[R_MERGED_1:%[0-9]+]](s64) = G_INSERT [[R_MERGED_0]], [[R0]](s32), 0
+; CHECK: [[R_MERGED_2:%[0-9]+]](s64) = G_INSERT [[R_MERGED_1]], [[R1]](s32), 32
+; CHECK: [[R_MERGED:%[0-9]+]](s64) = COPY [[R_MERGED_2]]
+; CHECK: ADJCALLSTACKUP 8, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: [[R0:%[0-9]+]](s32) = G_EXTRACT [[R_MERGED]](s64), 0
+; CHECK: [[R1:%[0-9]+]](s32) = G_EXTRACT [[R_MERGED]](s64), 32
+; CHECK: %r0 = COPY [[R0]]
+; CHECK: %r1 = COPY [[R1]]
+; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
+entry:
+  %r = notail call arm_aapcscc [2 x float] @fp_arrays_aapcs_target([3 x double] %arr)
+  ret [2 x float] %r
+}
+
+declare arm_aapcs_vfpcc [4 x float] @fp_arrays_aapcs_vfp_target([3 x double], [3 x float], [4 x double])
+
+define arm_aapcs_vfpcc [4 x float] @test_fp_arrays_aapcs_vfp([3 x double] %x, [3 x float] %y, [4 x double] %z) {
+; CHECK-LABEL: name: test_fp_arrays_aapcs_vfp
+; CHECK: fixedStack:
+; CHECK-DAG: id: [[Z0_ID:[0-9]+]], offset: 0, size: 8
+; CHECK-DAG: id: [[Z1_ID:[0-9]+]], offset: 8, size: 8
+; CHECK-DAG: id: [[Z2_ID:[0-9]+]], offset: 16, size: 8
+; CHECK-DAG: id: [[Z3_ID:[0-9]+]], offset: 24, size: 8
+; CHECK: liveins: %d0, %d1, %d2, %s6, %s7, %s8
+; CHECK: [[X0:%[0-9]+]](s64) = COPY %d0
+; CHECK: [[X1:%[0-9]+]](s64) = COPY %d1
+; CHECK: [[X2:%[0-9]+]](s64) = COPY %d2
+; CHECK: [[Y0:%[0-9]+]](s32) = COPY %s6
+; CHECK: [[Y1:%[0-9]+]](s32) = COPY %s7
+; CHECK: [[Y2:%[0-9]+]](s32) = COPY %s8
+; CHECK: [[Z0_FI:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[Z0_ID]]
+; CHECK: [[Z0:%[0-9]+]](s64) = G_LOAD [[Z0_FI]]{{.*}}load 8
+; CHECK: [[Z1_FI:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[Z1_ID]]
+; CHECK: [[Z1:%[0-9]+]](s64) = G_LOAD [[Z1_FI]]{{.*}}load 8
+; CHECK: [[Z2_FI:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[Z2_ID]]
+; CHECK: [[Z2:%[0-9]+]](s64) = G_LOAD [[Z2_FI]]{{.*}}load 8
+; CHECK: [[Z3_FI:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[Z3_ID]]
+; CHECK: [[Z3:%[0-9]+]](s64) = G_LOAD [[Z3_FI]]{{.*}}load 8
+; CHECK: [[X_ARR_0:%[0-9]+]](s192) = IMPLICIT_DEF
+; CHECK: [[X_ARR_1:%[0-9]+]](s192) = G_INSERT [[X_ARR_0]], [[X0]](s64), 0
+; CHECK: [[X_ARR_2:%[0-9]+]](s192) = G_INSERT [[X_ARR_1]], [[X1]](s64), 64
+; CHECK: [[X_ARR_3:%[0-9]+]](s192) = G_INSERT [[X_ARR_2]], [[X2]](s64), 128
+; CHECK: [[X_ARR:%[0-9]+]](s192) = COPY [[X_ARR_3]](s192)
+; CHECK: [[Y_ARR_0:%[0-9]+]](s96) = IMPLICIT_DEF
+; CHECK: [[Y_ARR_1:%[0-9]+]](s96) = G_INSERT [[Y_ARR_0]], [[Y0]](s32), 0
+; CHECK: [[Y_ARR_2:%[0-9]+]](s96) = G_INSERT [[Y_ARR_1]], [[Y1]](s32), 32
+; CHECK: [[Y_ARR_3:%[0-9]+]](s96) = G_INSERT [[Y_ARR_2]], [[Y2]](s32), 64
+; CHECK: [[Y_ARR:%[0-9]+]](s96) = COPY [[Y_ARR_3]](s96)
+; CHECK: [[Z_ARR_0:%[0-9]+]](s256) = IMPLICIT_DEF
+; CHECK: [[Z_ARR_1:%[0-9]+]](s256) = G_INSERT [[Z_ARR_0]], [[Z0]](s64), 0
+; CHECK: [[Z_ARR_2:%[0-9]+]](s256) = G_INSERT [[Z_ARR_1]], [[Z1]](s64), 64
+; CHECK: [[Z_ARR_3:%[0-9]+]](s256) = G_INSERT [[Z_ARR_2]], [[Z2]](s64), 128
+; CHECK: [[Z_ARR_4:%[0-9]+]](s256) = G_INSERT [[Z_ARR_3]], [[Z3]](s64), 192
+; CHECK: [[Z_ARR:%[0-9]+]](s256) = COPY [[Z_ARR_4]](s256)
+; CHECK: ADJCALLSTACKDOWN 32, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: [[X0:%[0-9]+]](s64) = G_EXTRACT [[X_ARR]](s192), 0
+; CHECK: [[X1:%[0-9]+]](s64) = G_EXTRACT [[X_ARR]](s192), 64
+; CHECK: [[X2:%[0-9]+]](s64) = G_EXTRACT [[X_ARR]](s192), 128
+; CHECK: [[Y0:%[0-9]+]](s32) = G_EXTRACT [[Y_ARR]](s96), 0
+; CHECK: [[Y1:%[0-9]+]](s32) = G_EXTRACT [[Y_ARR]](s96), 32
+; CHECK: [[Y2:%[0-9]+]](s32) = G_EXTRACT [[Y_ARR]](s96), 64
+; CHECK: [[Z0:%[0-9]+]](s64) = G_EXTRACT [[Z_ARR]](s256), 0
+; CHECK: [[Z1:%[0-9]+]](s64) = G_EXTRACT [[Z_ARR]](s256), 64
+; CHECK: [[Z2:%[0-9]+]](s64) = G_EXTRACT [[Z_ARR]](s256), 128
+; CHECK: [[Z3:%[0-9]+]](s64) = G_EXTRACT [[Z_ARR]](s256), 192
+; CHECK: %d0 = COPY [[X0]](s64)
+; CHECK: %d1 = COPY [[X1]](s64)
+; CHECK: %d2 = COPY [[X2]](s64)
+; CHECK: %s6 = COPY [[Y0]](s32)
+; CHECK: %s7 = COPY [[Y1]](s32)
+; CHECK: %s8 = COPY [[Y2]](s32)
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[Z0_OFFSET:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK: [[Z0_ADDR:%[0-9]+]](p0) = G_GEP [[SP]], [[Z0_OFFSET]](s32)
+; CHECK: G_STORE [[Z0]](s64), [[Z0_ADDR]](p0){{.*}}store 8
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[Z1_OFFSET:%[0-9]+]](s32) = G_CONSTANT i32 8
+; CHECK: [[Z1_ADDR:%[0-9]+]](p0) = G_GEP [[SP]], [[Z1_OFFSET]](s32)
+; CHECK: G_STORE [[Z1]](s64), [[Z1_ADDR]](p0){{.*}}store 8
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[Z2_OFFSET:%[0-9]+]](s32) = G_CONSTANT i32 16
+; CHECK: [[Z2_ADDR:%[0-9]+]](p0) = G_GEP [[SP]], [[Z2_OFFSET]](s32)
+; CHECK: G_STORE [[Z2]](s64), [[Z2_ADDR]](p0){{.*}}store 8
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[Z3_OFFSET:%[0-9]+]](s32) = G_CONSTANT i32 24
+; CHECK: [[Z3_ADDR:%[0-9]+]](p0) = G_GEP [[SP]], [[Z3_OFFSET]](s32)
+; CHECK: G_STORE [[Z3]](s64), [[Z3_ADDR]](p0){{.*}}store 8
+; CHECK: BLX @fp_arrays_aapcs_vfp_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %d0, implicit %d1, implicit %d2, implicit %s6, implicit %s7, implicit %s8, implicit-def %s0, implicit-def %s1, implicit-def %s2, implicit-def %s3
+; CHECK: [[R0:%[0-9]+]](s32) = COPY %s0
+; CHECK: [[R1:%[0-9]+]](s32) = COPY %s1
+; CHECK: [[R2:%[0-9]+]](s32) = COPY %s2
+; CHECK: [[R3:%[0-9]+]](s32) = COPY %s3
+; CHECK: [[R_MERGED_0:%[0-9]+]](s128) = IMPLICIT_DEF
+; CHECK: [[R_MERGED_1:%[0-9]+]](s128) = G_INSERT [[R_MERGED_0]], [[R0]](s32), 0
+; CHECK: [[R_MERGED_2:%[0-9]+]](s128) = G_INSERT [[R_MERGED_1]], [[R1]](s32), 32
+; CHECK: [[R_MERGED_3:%[0-9]+]](s128) = G_INSERT [[R_MERGED_2]], [[R2]](s32), 64
+; CHECK: [[R_MERGED_4:%[0-9]+]](s128) = G_INSERT [[R_MERGED_3]], [[R3]](s32), 96
+; CHECK: [[R_MERGED:%[0-9]+]](s128) = COPY [[R_MERGED_4]]
+; CHECK: ADJCALLSTACKUP 32, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: [[R0:%[0-9]+]](s32) = G_EXTRACT [[R_MERGED]](s128), 0
+; CHECK: [[R1:%[0-9]+]](s32) = G_EXTRACT [[R_MERGED]](s128), 32
+; CHECK: [[R2:%[0-9]+]](s32) = G_EXTRACT [[R_MERGED]](s128), 64
+; CHECK: [[R3:%[0-9]+]](s32) = G_EXTRACT [[R_MERGED]](s128), 96
+; CHECK: %s0 = COPY [[R0]]
+; CHECK: %s1 = COPY [[R1]]
+; CHECK: %s2 = COPY [[R2]]
+; CHECK: %s3 = COPY [[R3]]
+; CHECK: BX_RET 14, _, implicit %s0, implicit %s1, implicit %s2, implicit %s3
+entry:
+  %r = notail call arm_aapcs_vfpcc [4 x float] @fp_arrays_aapcs_vfp_target([3 x double] %x, [3 x float] %y, [4 x double] %z)
+  ret [4 x float] %r
+}
+
+declare arm_aapcscc [2 x i32*] @tough_arrays_target([6 x [4 x i32]] %arr)
+
+define arm_aapcscc [2 x i32*] @test_tough_arrays([6 x [4 x i32]] %arr) {
+; CHECK-LABEL: name: test_tough_arrays
+; CHECK: fixedStack:
+; The parameters live in separate stack locations, one for each element that
+; doesn't fit in the registers.
+; CHECK-DAG: id: [[FIRST_STACK_ID:[0-9]+]], offset: 0, size: 4
+; CHECK-DAG: id: [[LAST_STACK_ID:[-0]+]], offset: 76, size: 4
+; CHECK: liveins: %r0, %r1, %r2, %r3
+; CHECK-DAG: [[R0:%[0-9]+]](s32) = COPY %r0
+; CHECK-DAG: [[R1:%[0-9]+]](s32) = COPY %r1
+; CHECK-DAG: [[R2:%[0-9]+]](s32) = COPY %r2
+; CHECK-DAG: [[R3:%[0-9]+]](s32) = COPY %r3
+; CHECK: [[FIRST_STACK_ELEMENT_FI:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[FIRST_STACK_ID]]
+; CHECK: [[FIRST_STACK_ELEMENT:%[0-9]+]](s32) = G_LOAD [[FIRST_STACK_ELEMENT_FI]]{{.*}}load 4 from %fixed-stack.[[FIRST_STACK_ID]]
+; CHECK: [[LAST_STACK_ELEMENT_FI:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[LAST_STACK_ID]]
+; CHECK: [[LAST_STACK_ELEMENT:%[0-9]+]](s32) = G_LOAD [[LAST_STACK_ELEMENT_FI]]{{.*}}load 4 from %fixed-stack.[[LAST_STACK_ID]]
+; CHECK: [[ARG_ARR0:%[0-9]+]](s768) = IMPLICIT_DEF
+; CHECK: [[ARG_ARR1:%[0-9]+]](s768) = G_INSERT [[ARG_ARR0]], [[R0]](s32), 0
+; CHECK: [[ARG_ARR2:%[0-9]+]](s768) = G_INSERT [[ARG_ARR1]], [[R1]](s32), 32
+; CHECK: [[ARG_ARR3:%[0-9]+]](s768) = G_INSERT [[ARG_ARR2]], [[R2]](s32), 64
+; CHECK: [[ARG_ARR4:%[0-9]+]](s768) = G_INSERT [[ARG_ARR3]], [[R3]](s32), 96
+; CHECK: [[ARG_ARR5:%[0-9]+]](s768) = G_INSERT [[ARG_ARR4]], [[FIRST_STACK_ELEMENT]](s32), 128
+; CHECK: [[ARG_ARR6:%[0-9]+]](s768) = G_INSERT {{%[0-9]+}}, [[LAST_STACK_ELEMENT]](s32), 736
+; CHECK: [[ARG_ARR:%[0-9]+]](s768) = COPY [[ARG_ARR6]]
+; CHECK: ADJCALLSTACKDOWN 80, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: [[R0:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR]](s768), 0
+; CHECK: [[R1:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR]](s768), 32
+; CHECK: [[R2:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR]](s768), 64
+; CHECK: [[R3:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR]](s768), 96
+; CHECK: [[FIRST_STACK_ELEMENT:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR]](s768), 128
+; CHECK: [[LAST_STACK_ELEMENT:%[0-9]+]](s32) = G_EXTRACT [[ARG_ARR]](s768), 736
+; CHECK: %r0 = COPY [[R0]]
+; CHECK: %r1 = COPY [[R1]]
+; CHECK: %r2 = COPY [[R2]]
+; CHECK: %r3 = COPY [[R3]]
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[OFF_FIRST_ELEMENT:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK: [[FIRST_STACK_ARG_ADDR:%[0-9]+]](p0) = G_GEP [[SP]], [[OFF_FIRST_ELEMENT]](s32)
+; CHECK: G_STORE [[FIRST_STACK_ELEMENT]](s32), [[FIRST_STACK_ARG_ADDR]]{{.*}}store 4
+; Match the second-to-last offset, so we can get the correct SP for the last element
+; CHECK: G_CONSTANT i32 72
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[OFF_LAST_ELEMENT:%[0-9]+]](s32) = G_CONSTANT i32 76
+; CHECK: [[LAST_STACK_ARG_ADDR:%[0-9]+]](p0) = G_GEP [[SP]], [[OFF_LAST_ELEMENT]](s32)
+; CHECK: G_STORE [[LAST_STACK_ELEMENT]](s32), [[LAST_STACK_ARG_ADDR]]{{.*}}store 4
+; CHECK: BLX @tough_arrays_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
+; CHECK: [[R0:%[0-9]+]](s32) = COPY %r0
+; CHECK: [[R1:%[0-9]+]](s32) = COPY %r1
+; CHECK: [[RES_ARR0:%[0-9]+]](s64) = IMPLICIT_DEF
+; CHECK: [[RES_ARR1:%[0-9]+]](s64) = G_INSERT [[RES_ARR0]], [[R0]](s32), 0
+; CHECK: [[RES_ARR2:%[0-9]+]](s64) = G_INSERT [[RES_ARR1]], [[R1]](s32), 32
+; CHECK: [[RES_ARR:%[0-9]+]](s64) = COPY [[RES_ARR2]]
+; CHECK: ADJCALLSTACKUP 80, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: [[R0:%[0-9]+]](s32) = G_EXTRACT [[RES_ARR]](s64), 0
+; CHECK: [[R1:%[0-9]+]](s32) = G_EXTRACT [[RES_ARR]](s64), 32
+; CHECK: %r0 = COPY [[R0]]
+; CHECK: %r1 = COPY [[R1]]
+; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
+entry:
+  %r = notail call arm_aapcscc [2 x i32*] @tough_arrays_target([6 x [4 x i32]] %arr)
+  ret [2 x i32*] %r
+}
+
 define i32 @test_shufflevector_s32_v2s32(i32 %arg) {
 ; CHECK-LABEL: name: test_shufflevector_s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]](s32) = COPY %r0

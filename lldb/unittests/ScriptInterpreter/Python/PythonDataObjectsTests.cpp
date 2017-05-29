@@ -15,6 +15,7 @@
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/lldb-enumerations.h"
 
 #include "PythonTestSuite.h"
 
@@ -355,9 +356,9 @@ TEST_F(PythonDataObjectsTest, TestPythonListToStructuredList) {
   list.AppendItem(PythonString(string_value1));
 
   auto array_sp = list.CreateStructuredArray();
-  EXPECT_EQ(StructuredData::Type::eTypeInteger,
+  EXPECT_EQ(lldb::eStructuredDataTypeInteger,
             array_sp->GetItemAtIndex(0)->GetType());
-  EXPECT_EQ(StructuredData::Type::eTypeString,
+  EXPECT_EQ(lldb::eStructuredDataTypeString,
             array_sp->GetItemAtIndex(1)->GetType());
 
   auto int_sp = array_sp->GetItemAtIndex(0)->GetAsInteger();
@@ -424,9 +425,9 @@ TEST_F(PythonDataObjectsTest, TestPythonTupleToStructuredList) {
 
   auto array_sp = tuple.CreateStructuredArray();
   EXPECT_EQ(tuple.GetSize(), array_sp->GetSize());
-  EXPECT_EQ(StructuredData::Type::eTypeInteger,
+  EXPECT_EQ(lldb::eStructuredDataTypeInteger,
             array_sp->GetItemAtIndex(0)->GetType());
-  EXPECT_EQ(StructuredData::Type::eTypeString,
+  EXPECT_EQ(lldb::eStructuredDataTypeString,
             array_sp->GetItemAtIndex(1)->GetType());
 }
 
