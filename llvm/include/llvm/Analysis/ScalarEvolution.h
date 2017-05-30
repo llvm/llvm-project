@@ -1536,8 +1536,7 @@ public:
   /// Determine if the SCEV can be evaluated at loop's entry. It is true if it
   /// doesn't depend on a SCEVUnknown of an instruction which is dominated by
   /// the header of loop L.
-  bool isAvailableAtLoopEntry(const SCEV *S, const Loop *L, DominatorTree &DT,
-                              LoopInfo &LI);
+  bool isAvailableAtLoopEntry(const SCEV *S, const Loop *L);
 
   /// Return true if the given SCEV changes value in a known way in the
   /// specified loop.  This property being true implies that the value is

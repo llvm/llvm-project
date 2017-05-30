@@ -47,10 +47,12 @@ protected:
   bool HasLoadAndTrap;
   bool HasTransactionalExecution;
   bool HasProcessorAssist;
+  bool HasDFPZonedConversion;
   bool HasVector;
   bool HasLoadStoreOnCond2;
   bool HasLoadAndZeroRightmostByte;
   bool HasMessageSecurityAssist5;
+  bool HasDFPPackedConversion;
 
 private:
   Triple TargetTriple;
@@ -133,6 +135,9 @@ public:
   // Return true if the target has the processor-assist facility.
   bool hasProcessorAssist() const { return HasProcessorAssist; }
 
+  // Return true if the target has the DFP zoned-conversion facility.
+  bool hasDFPZonedConversion() const { return HasDFPZonedConversion; }
+
   // Return true if the target has the load-and-zero-rightmost-byte facility.
   bool hasLoadAndZeroRightmostByte() const {
     return HasLoadAndZeroRightmostByte;
@@ -141,6 +146,9 @@ public:
   // Return true if the target has the message-security-assist
   // extension facility 5.
   bool hasMessageSecurityAssist5() const { return HasMessageSecurityAssist5; }
+
+  // Return true if the target has the DFP packed-conversion facility.
+  bool hasDFPPackedConversion() const { return HasDFPPackedConversion; }
 
   // Return true if the target has the vector facility.
   bool hasVector() const { return HasVector; }

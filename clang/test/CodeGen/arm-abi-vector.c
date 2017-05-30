@@ -133,20 +133,20 @@ double test_5c(__char5 *in) {
 
 double varargs_vec_9c(int fixed, ...) {
 // CHECK: varargs_vec_9c
-// CHECK: [[VAR:%.*]] = alloca <9 x i8>, align 16
+// CHECK: [[VAR:%.*]] = alloca <9 x i8>, align 8
 // CHECK: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
 // CHECK: [[AP_ALIGN:%.*]] = inttoptr i32 [[ALIGN]] to i8*
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_ALIGN]], i32 16
 // CHECK: [[AP_CAST:%.*]] = bitcast i8* [[AP_ALIGN]] to <9 x i8>*
 // CHECK: [[T0:%.*]] = load <9 x i8>, <9 x i8>* [[AP_CAST]], align 8
-// CHECK: store <9 x i8> [[T0]], <9 x i8>* [[VAR]], align 16
+// CHECK: store <9 x i8> [[T0]], <9 x i8>* [[VAR]], align 8
 // APCS-GNU: varargs_vec_9c
-// APCS-GNU: [[VAR:%.*]] = alloca <9 x i8>, align 16
+// APCS-GNU: [[VAR:%.*]] = alloca <9 x i8>, align 8
 // APCS-GNU: [[AP:%.*]] = load i8*,
 // APCS-GNU: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP]], i32 16
 // APCS-GNU: [[AP_CAST:%.*]] = bitcast i8* [[AP]] to <9 x i8>*
 // APCS-GNU: [[VEC:%.*]] = load <9 x i8>, <9 x i8>* [[AP_CAST]], align 4
-// APCS-GNU: store <9 x i8> [[VEC]], <9 x i8>* [[VAR]], align 16
+// APCS-GNU: store <9 x i8> [[VEC]], <9 x i8>* [[VAR]], align 8
 // ANDROID: varargs_vec_9c
 // ANDROID: [[VAR:%.*]] = alloca <9 x i8>, align 16
 // ANDROID: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
@@ -246,15 +246,15 @@ double test_3s(__short3 *in) {
 
 double varargs_vec_5s(int fixed, ...) {
 // CHECK: varargs_vec_5s
-// CHECK: [[VAR_ALIGN:%.*]] = alloca <5 x i16>, align 16
+// CHECK: [[VAR_ALIGN:%.*]] = alloca <5 x i16>, align 8
 // CHECK: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
 // CHECK: [[AP_ALIGN:%.*]] = inttoptr i32 [[ALIGN]] to i8*
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_ALIGN]], i32 16
 // CHECK: [[AP_CAST:%.*]] = bitcast i8* [[AP_ALIGN]] to <5 x i16>*
 // CHECK: [[VEC:%.*]] = load <5 x i16>, <5 x i16>* [[AP_CAST]], align 8
-// CHECK: store <5 x i16> [[VEC]], <5 x i16>* [[VAR_ALIGN]], align 16
+// CHECK: store <5 x i16> [[VEC]], <5 x i16>* [[VAR_ALIGN]], align 8
 // APCS-GNU: varargs_vec_5s
-// APCS-GNU: [[VAR:%.*]] = alloca <5 x i16>, align 16
+// APCS-GNU: [[VAR:%.*]] = alloca <5 x i16>, align 8
 // APCS-GNU: [[AP:%.*]] = load i8*,
 // APCS-GNU: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP]], i32 16
 // APCS-GNU: [[AP_CAST:%.*]] = bitcast i8* [[AP]] to <5 x i16>*

@@ -5,6 +5,152 @@
 # RUN: FileCheck < %t %s
 
 #CHECK: error: invalid operand
+#CHECK: cdpt	%f0, 0(1), -1
+#CHECK: error: invalid operand
+#CHECK: cdpt	%f0, 0(1), 16
+#CHECK: error: missing length in address
+#CHECK: cdpt	%f0, 0, 0
+#CHECK: error: missing length in address
+#CHECK: cdpt	%f0, 0(%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cdpt	%f0, 0(0,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cdpt	%f0, 0(257,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cdpt	%f0, -1(1,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cdpt	%f0, 4096(1,%r1), 0
+#CHECK: error: %r0 used in an address
+#CHECK: cdpt	%f0, 0(1,%r0), 0
+#CHECK: error: invalid use of indexed addressing
+#CHECK: cdpt	%f0, 0(%r1,%r2), 0
+#CHECK: error: unknown token in expression
+#CHECK: cdpt	%f0, 0(-), 0
+
+	cdpt	%f0, 0(1), -1
+	cdpt	%f0, 0(1), 16
+	cdpt	%f0, 0, 0
+	cdpt	%f0, 0(%r1), 0
+	cdpt	%f0, 0(0,%r1), 0
+	cdpt	%f0, 0(257,%r1), 0
+	cdpt	%f0, -1(1,%r1), 0
+	cdpt	%f0, 4096(1,%r1), 0
+	cdpt	%f0, 0(1,%r0), 0
+	cdpt	%f0, 0(%r1,%r2), 0
+	cdpt	%f0, 0(-), 0
+
+#CHECK: error: invalid operand
+#CHECK: cpdt	%f0, 0(1), -1
+#CHECK: error: invalid operand
+#CHECK: cpdt	%f0, 0(1), 16
+#CHECK: error: missing length in address
+#CHECK: cpdt	%f0, 0, 0
+#CHECK: error: missing length in address
+#CHECK: cpdt	%f0, 0(%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cpdt	%f0, 0(0,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cpdt	%f0, 0(257,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cpdt	%f0, -1(1,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cpdt	%f0, 4096(1,%r1), 0
+#CHECK: error: %r0 used in an address
+#CHECK: cpdt	%f0, 0(1,%r0), 0
+#CHECK: error: invalid use of indexed addressing
+#CHECK: cpdt	%f0, 0(%r1,%r2), 0
+#CHECK: error: unknown token in expression
+#CHECK: cpdt	%f0, 0(-), 0
+
+	cpdt	%f0, 0(1), -1
+	cpdt	%f0, 0(1), 16
+	cpdt	%f0, 0, 0
+	cpdt	%f0, 0(%r1), 0
+	cpdt	%f0, 0(0,%r1), 0
+	cpdt	%f0, 0(257,%r1), 0
+	cpdt	%f0, -1(1,%r1), 0
+	cpdt	%f0, 4096(1,%r1), 0
+	cpdt	%f0, 0(1,%r0), 0
+	cpdt	%f0, 0(%r1,%r2), 0
+	cpdt	%f0, 0(-), 0
+
+#CHECK: error: invalid operand
+#CHECK: cpxt	%f0, 0(1), -1
+#CHECK: error: invalid operand
+#CHECK: cpxt	%f0, 0(1), 16
+#CHECK: error: missing length in address
+#CHECK: cpxt	%f0, 0, 0
+#CHECK: error: missing length in address
+#CHECK: cpxt	%f0, 0(%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cpxt	%f0, 0(0,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cpxt	%f0, 0(257,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cpxt	%f0, -1(1,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cpxt	%f0, 4096(1,%r1), 0
+#CHECK: error: %r0 used in an address
+#CHECK: cpxt	%f0, 0(1,%r0), 0
+#CHECK: error: invalid use of indexed addressing
+#CHECK: cpxt	%f0, 0(%r1,%r2), 0
+#CHECK: error: unknown token in expression
+#CHECK: cpxt	%f0, 0(-), 0
+#CHECK: error: invalid register pair
+#CHECK: cpxt	%f15, 0(1), 0
+
+	cpxt	%f0, 0(1), -1
+	cpxt	%f0, 0(1), 16
+	cpxt	%f0, 0, 0
+	cpxt	%f0, 0(%r1), 0
+	cpxt	%f0, 0(0,%r1), 0
+	cpxt	%f0, 0(257,%r1), 0
+	cpxt	%f0, -1(1,%r1), 0
+	cpxt	%f0, 4096(1,%r1), 0
+	cpxt	%f0, 0(1,%r0), 0
+	cpxt	%f0, 0(%r1,%r2), 0
+	cpxt	%f0, 0(-), 0
+	cpxt	%f15, 0(1), 0
+
+#CHECK: error: invalid operand
+#CHECK: cxpt	%f0, 0(1), -1
+#CHECK: error: invalid operand
+#CHECK: cxpt	%f0, 0(1), 16
+#CHECK: error: missing length in address
+#CHECK: cxpt	%f0, 0, 0
+#CHECK: error: missing length in address
+#CHECK: cxpt	%f0, 0(%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cxpt	%f0, 0(0,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cxpt	%f0, 0(257,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cxpt	%f0, -1(1,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cxpt	%f0, 4096(1,%r1), 0
+#CHECK: error: %r0 used in an address
+#CHECK: cxpt	%f0, 0(1,%r0), 0
+#CHECK: error: invalid use of indexed addressing
+#CHECK: cxpt	%f0, 0(%r1,%r2), 0
+#CHECK: error: unknown token in expression
+#CHECK: cxpt	%f0, 0(-), 0
+#CHECK: error: invalid register pair
+#CHECK: cxpt	%f15, 0(1), 0
+
+	cxpt	%f0, 0(1), -1
+	cxpt	%f0, 0(1), 16
+	cxpt	%f0, 0, 0
+	cxpt	%f0, 0(%r1), 0
+	cxpt	%f0, 0(0,%r1), 0
+	cxpt	%f0, 0(257,%r1), 0
+	cxpt	%f0, -1(1,%r1), 0
+	cxpt	%f0, 4096(1,%r1), 0
+	cxpt	%f0, 0(1,%r0), 0
+	cxpt	%f0, 0(%r1,%r2), 0
+	cxpt	%f0, 0(-), 0
+	cxpt	%f15, 0(1), 0
+
+#CHECK: error: invalid operand
 #CHECK: lcbb	%r0, 0, -1
 #CHECK: error: invalid operand
 #CHECK: lcbb	%r0, 0, 16
