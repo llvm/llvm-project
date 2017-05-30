@@ -427,12 +427,13 @@ public:
       // the source-file level to be legal.  But we don't want to register them
       // with
       // lldb unless they are of the kind lldb explicitly wants to globalize.
-      if (shouldGlobalize(value_decl->getName(), value_decl->getKind()))
+      if (shouldGlobalize(value_decl->getBaseName().getIdentifier(),
+                          value_decl->getKind()))
         m_staged_decls.AddDecl(value_decl, false, ConstString());
     }
   }
 
-  virtual bool lookupOverrides(swift::Identifier Name, swift::DeclContext *DC,
+  virtual bool lookupOverrides(swift::DeclBaseName Name, swift::DeclContext *DC,
                                swift::SourceLoc Loc, bool IsTypeLookup,
                                ResultVector &RV) {
     static unsigned counter = 0;
@@ -440,24 +441,26 @@ public:
 
     if (m_log) {
       m_log->Printf("[LLDBNameLookup::lookupOverrides(%u)] Searching for %s",
-                    count, Name.get());
+                    count, Name.getIdentifier().get());
     }
 
     return false;
   }
 
-  virtual bool lookupAdditions(swift::Identifier Name, swift::DeclContext *DC,
+  virtual bool lookupAdditions(swift::DeclBaseName Name, swift::DeclContext *DC,
                                swift::SourceLoc Loc, bool IsTypeLookup,
                                ResultVector &RV) {
     static unsigned counter = 0;
     unsigned count = counter++;
+    
+    StringRef NameStr = Name.getIdentifier().str();
 
     if (m_log) {
       m_log->Printf("[LLDBNameLookup::lookupAdditions (%u)] Searching for %s",
-                    count, Name.get());
+                    count, Name.getIdentifier().str().str().c_str());
     }
 
-    ConstString name_const_str(Name.str());
+    ConstString name_const_str(NameStr);
     std::vector<swift::ValueDecl *> results;
 
     // First look up the matching Decl's we've made in this compile, then pass
@@ -493,7 +496,7 @@ public:
     bool skip_results_with_matching_kind =
         !(m_parser.GetOptions().GetREPLEnabled() ||
           m_parser.GetOptions().GetPlaygroundTransformEnabled() ||
-          (!Name.str().empty() && Name.str().front() == '$'));
+          (!NameStr.empty() && NameStr.front() == '$'));
 
     size_t num_external_results = RV.size();
     if (skip_results_with_matching_kind && num_external_results > 0) {
