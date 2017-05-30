@@ -41,7 +41,12 @@ struct ExprValue {
   SectionBase *Sec;
   uint64_t Val;
   bool ForceAbsolute;
+  uint64_t Alignment = 1;
 
+  ExprValue(SectionBase *Sec, bool ForceAbsolute, uint64_t Val,
+            uint64_t Alignment)
+      : Sec(Sec), Val(Val), ForceAbsolute(ForceAbsolute), Alignment(Alignment) {
+  }
   ExprValue(SectionBase *Sec, bool ForceAbsolute, uint64_t Val)
       : Sec(Sec), Val(Val), ForceAbsolute(ForceAbsolute) {}
   ExprValue(SectionBase *Sec, uint64_t Val) : ExprValue(Sec, false, Val) {}

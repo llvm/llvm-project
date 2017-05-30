@@ -8312,6 +8312,9 @@ def err_opencl_bitfields : Error<
   "bit-fields are not supported in OpenCL">;
 def err_opencl_vla : Error<
   "variable length arrays are not supported in OpenCL">;
+def err_opencl_scalar_type_rank_greater_than_vector_type : Error<
+    "scalar operand type has greater rank than the type of the vector "
+    "element. (%0 and %1)">;
 def err_bad_kernel_param_type : Error<
   "%0 cannot be used as the type of a kernel parameter">;
 def err_record_with_pointers_kernel_param : Error<
