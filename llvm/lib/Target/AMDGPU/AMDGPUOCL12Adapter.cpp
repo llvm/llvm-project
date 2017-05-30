@@ -238,5 +238,9 @@ static bool findAndDefineBuiltinCalls(Module &M) {
 }
 
 bool AMDGPUOCL12Adapter::runOnModule(Module &M) {
+  // Do not translate modules from languages other than OpenCL.
+  const char *const OCLVersionMDName = "opencl.ocl.version";
+  if (!M.getNamedMetadata(OCLVersionMDName))
+    return false;
   return findAndDefineBuiltinCalls(M);
 }

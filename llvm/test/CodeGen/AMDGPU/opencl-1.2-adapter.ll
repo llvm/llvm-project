@@ -35,3 +35,6 @@ declare <2 x i32> @_Z6vload2mPU3AS1Ki(i64, i32 addrspace(1)*)
 declare <2 x i32> @_Z6vload2mPU3AS2Ki(i64, i32 addrspace(2)*)
 declare <2 x i32> @_Z6vload2mPU3AS3Ki(i64, i32 addrspace(3)*)
 declare <2 x i32> @_Z6vload2mPU3AS4Ki(i64, i32 addrspace(4)*)
+
+!opencl.ocl.version = !{!0}
+!0 = !{i32 1, i32 2}
