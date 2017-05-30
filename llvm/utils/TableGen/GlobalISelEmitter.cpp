@@ -1602,7 +1602,7 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
 
 Error GlobalISelEmitter::importDefaultOperandRenderers(
     BuildMIAction &DstMIBuilder, DagInit *DefaultOps) const {
-  for (const auto *DefaultOp : DefaultOps->args()) {
+  for (const auto *DefaultOp : DefaultOps->getArgs()) {
     // Look through ValueType operators.
     if (const DagInit *DefaultDagOp = dyn_cast<DagInit>(DefaultOp)) {
       if (const DefInit *DefaultDagOperator =

@@ -1906,6 +1906,25 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     }
   }
 
+  // The #included file will be considered to be a system header if either it is
+  // in a system include directory, or if the #includer is a system include
+  // header.
+  SrcMgr::CharacteristicKind FileCharacter =
+      SourceMgr.getFileCharacteristic(FilenameTok.getLocation());
+  if (File)
+    FileCharacter = std::max(HeaderInfo.getFileDirFlavor(File), FileCharacter);
+
+  // Ask HeaderInfo if we should enter this #include file.  If not, #including
+  // this file will have no effect.
+  bool SkipHeader = false;
+  if (ShouldEnter && File &&
+      !HeaderInfo.ShouldEnterIncludeFile(*this, File, isImport,
+                                         getLangOpts().Modules,
+                                         SuggestedModule.getModule())) {
+    ShouldEnter = false;
+    SkipHeader = true;
+  }
+
   if (Callbacks) {
     // Notify the callback object that we've seen an inclusion directive.
     Callbacks->InclusionDirective(
@@ -1913,17 +1932,12 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
         LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, isAngled,
         FilenameRange, File, SearchPath, RelativePath,
         ShouldEnter ? nullptr : SuggestedModule.getModule());
+    if (SkipHeader && !SuggestedModule.getModule())
+      Callbacks->FileSkipped(*File, FilenameTok, FileCharacter);
   }
 
   if (!File)
     return;
-
-  // The #included file will be considered to be a system header if either it is
-  // in a system include directory, or if the #includer is a system include
-  // header.
-  SrcMgr::CharacteristicKind FileCharacter =
-    std::max(HeaderInfo.getFileDirFlavor(File),
-             SourceMgr.getFileCharacteristic(FilenameTok.getLocation()));
 
   // FIXME: If we have a suggested module, and we've already visited this file,
   // don't bother entering it again. We know it has no further effect.
@@ -1962,19 +1976,6 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
       Diag(FilenameTok, DiagId) << Path <<
         FixItHint::CreateReplacement(Range, Path);
     }
-  }
-
-  // Ask HeaderInfo if we should enter this #include file.  If not, #including
-  // this file will have no effect.
-  bool SkipHeader = false;
-  if (ShouldEnter &&
-      !HeaderInfo.ShouldEnterIncludeFile(*this, File, isImport,
-                                         getLangOpts().Modules,
-                                         SuggestedModule.getModule())) {
-    ShouldEnter = false;
-    SkipHeader = true;
-    if (Callbacks)
-      Callbacks->FileSkipped(*File, FilenameTok, FileCharacter);
   }
 
   // If we don't need to enter the file, stop now.
