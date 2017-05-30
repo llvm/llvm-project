@@ -1,0 +1,52 @@
+# RUN: llc -run-pass=prologepilog -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-linux-gnu"
+  define void @ScavengeForFrameWithoutOffset() { ret void }
+...
+---
+name:            ScavengeForFrameWithoutOffset
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, offset: 0, size: 32, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: %d16_d17_d18_d19
+    %x0 = COPY %xzr
+    %x1 = COPY %xzr
+    %x2 = COPY %xzr
+    %x3 = COPY %xzr
+    %x4 = COPY %xzr
+    %x5 = COPY %xzr
+    %x6 = COPY %xzr
+    %x7 = COPY %xzr
+    %x8 = COPY %xzr
+    %x9 = COPY %xzr
+    %x10 = COPY %xzr
+    %x11 = COPY %xzr
+    %x12 = COPY %xzr
+    %x13 = COPY %xzr
+    %x14 = COPY %xzr
+    %x15 = COPY %xzr
+    %x16 = COPY %xzr
+    %x17 = COPY %xzr
+    %x18 = COPY %xzr
+    %x19 = COPY %xzr
+    %x20 = COPY %xzr
+    %x21 = COPY %xzr
+    %x22 = COPY %xzr
+    %x23 = COPY %xzr
+    %x24 = COPY %xzr
+    %x25 = COPY %xzr
+    %x26 = COPY %xzr
+    %x27 = COPY %xzr
+    %x28 = COPY %xzr
+    %fp = COPY %xzr
+    %lr = COPY %xzr
+    ST1Fourv1d killed %d16_d17_d18_d19, %stack.0 :: (store 32 into %stack.0, align 8)
+# CHECK:  STRXui killed %[[SCAVREG:x[0-9]+|fp|lr]], %sp, [[SPOFFSET:[0-9]+]] :: (store 8 into %stack.1)
+# CHECK-NEXT:  %[[SCAVREG]] = ADDXri %sp, {{[0-9]+}}, 0
+# CHECK-NEXT:  ST1Fourv1d killed %d16_d17_d18_d19, killed %[[SCAVREG]] :: (store 32 into %stack.0, align 8)
+# CHECK-NEXT:  %[[SCAVREG]] = LDRXui %sp, [[SPOFFSET]] :: (load 8 from %stack.1)
+...

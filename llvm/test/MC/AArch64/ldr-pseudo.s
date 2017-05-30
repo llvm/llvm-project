@@ -205,6 +205,13 @@ f18:
   ldr x1, =0x320064
 // CHECK: ldr x1, .Ltmp[[TMP26:[0-9]+]]
 
+// We previously used a DenseMap with constant values as keys, check that
+// sentinel values can be used.
+  ldr x0, =0x7ffffffffffffffe
+// CHECK: ldr x0, .Ltmp[[TMP27:[0-9]+]]
+  ldr x1, =0x7fffffffffffffff
+// CHECK: ldr x1, .Ltmp[[TMP28:[0-9]+]]
+
 //
 // Constant Pools
 //
@@ -311,3 +318,8 @@ f18:
 // CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP25]]
 // CHECK: .word 3276900
+
+// CHECK: .Ltmp[[TMP27]]
+// CHECK: .xword 9223372036854775806
+// CHECK: .Ltmp[[TMP28]]
+// CHECK: .xword 9223372036854775807

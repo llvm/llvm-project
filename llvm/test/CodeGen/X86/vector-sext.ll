@@ -1749,6 +1749,62 @@ entry:
  ret <4 x i64> %Y
 }
 
+define <2 x i64> @load_sext_4i8_to_4i64_extract(<4 x i8> *%ptr) {
+; SSE2-LABEL: load_sext_4i8_to_4i64_extract:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    movsbq 3(%rdi), %rax
+; SSE2-NEXT:    movq %rax, %xmm1
+; SSE2-NEXT:    movsbq 2(%rdi), %rax
+; SSE2-NEXT:    movq %rax, %xmm0
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: load_sext_4i8_to_4i64_extract:
+; SSSE3:       # BB#0:
+; SSSE3-NEXT:    movsbq 3(%rdi), %rax
+; SSSE3-NEXT:    movq %rax, %xmm1
+; SSSE3-NEXT:    movsbq 2(%rdi), %rax
+; SSSE3-NEXT:    movq %rax, %xmm0
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: load_sext_4i8_to_4i64_extract:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    pmovsxbq 2(%rdi), %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: load_sext_4i8_to_4i64_extract:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vpmovsxbd (%rdi), %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: load_sext_4i8_to_4i64_extract:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpmovsxbq (%rdi), %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: load_sext_4i8_to_4i64_extract:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vpmovsxbq (%rdi), %ymm0
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+;
+; X32-SSE41-LABEL: load_sext_4i8_to_4i64_extract:
+; X32-SSE41:       # BB#0:
+; X32-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-SSE41-NEXT:    pmovsxbq 2(%eax), %xmm0
+; X32-SSE41-NEXT:    retl
+ %ld = load <4 x i8>, <4 x i8>* %ptr
+ %sext = sext <4 x i8> %ld to <4 x i64>
+ %extract = shufflevector <4 x i64> %sext, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
+ ret <2 x i64> %extract
+}
+
 define <8 x i16> @load_sext_8i1_to_8i16(<8 x i1> *%ptr) {
 ; SSE2-LABEL: load_sext_8i1_to_8i16:
 ; SSE2:       # BB#0: # %entry

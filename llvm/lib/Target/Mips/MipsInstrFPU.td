@@ -681,6 +681,29 @@ def PseudoTRUNC_W_D : MipsAsmPseudoInst<(outs FGR32Opnd:$fd),
                                         "trunc.w.d\t$fd, $fs, $rs">,
                       FGR_64, HARDFLOAT;
 
+def LoadImmSingleGPR : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                                         (ins imm64:$fpimm),
+                                         "li.s\t$rd, $fpimm">;
+
+def LoadImmSingleFGR : MipsAsmPseudoInst<(outs StrictlyFGR32Opnd:$rd),
+                                         (ins imm64:$fpimm),
+                                         "li.s\t$rd, $fpimm">,
+                       HARDFLOAT;
+
+def LoadImmDoubleGPR : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                                         (ins imm64:$fpimm),
+                                         "li.d\t$rd, $fpimm">;
+
+def LoadImmDoubleFGR_32 : MipsAsmPseudoInst<(outs StrictlyAFGR64Opnd:$rd),
+                                            (ins imm64:$fpimm),
+                                            "li.d\t$rd, $fpimm">,
+                          FGR_32, HARDFLOAT;
+
+def LoadImmDoubleFGR : MipsAsmPseudoInst<(outs StrictlyFGR64Opnd:$rd),
+                                         (ins imm64:$fpimm),
+                                         "li.d\t$rd, $fpimm">,
+                       FGR_64, HARDFLOAT;
+
 //===----------------------------------------------------------------------===//
 // InstAliases.
 //===----------------------------------------------------------------------===//

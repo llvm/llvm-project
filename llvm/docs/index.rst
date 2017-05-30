@@ -528,6 +528,7 @@ can be better.
 
    CodeOfConduct
    Proposals/GitHubMove
+   Proposals/VectorizationPlan
 
 :doc:`CodeOfConduct`
    Proposal to adopt a code of conduct on the LLVM social spaces (lists, events,
@@ -536,6 +537,8 @@ can be better.
 :doc:`Proposals/GitHubMove`
    Proposal to move from SVN/Git to GitHub.
 
+:doc:`Proposals/VectorizationPlan`
+   Proposal to model the process and upgrade the infrastructure of LLVM's Loop Vectorizer.
 
 Indices and tables
 ==================
