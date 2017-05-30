@@ -607,6 +607,9 @@ namespace clang {
 
       /// \brief Record code for \#pragma pack options.
       PACK_PRAGMA_OPTIONS = 61,
+
+      /// \brief The stack of open #ifs/#ifdefs recorded in a preamble.
+      PP_CONDITIONAL_STACK = 62,
     };
 
     /// \brief Record types used within a source manager block.

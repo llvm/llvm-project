@@ -291,6 +291,9 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
     size_t SizeBefore = Ret.size();
 
     for (InputSectionBase *Sec : InputSections) {
+      if (!isa<InputSection>(Sec))
+        continue;
+
       if (Sec->Assigned)
         continue;
 
@@ -1076,6 +1079,9 @@ template <class ELFT> void OutputSectionCommand::writeTo(uint8_t *Buf) {
            Sec->CompressedData.size());
     return;
   }
+
+  if (Sec->Type == SHT_NOBITS)
+    return;
 
   // Write leading padding.
   ArrayRef<InputSection *> Sections = Sec->Sections;

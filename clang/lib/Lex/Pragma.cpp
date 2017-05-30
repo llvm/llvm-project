@@ -1407,6 +1407,24 @@ struct PragmaModuleBeginHandler : public PragmaHandler {
       M = NewM;
     }
 
+    // If the module isn't available, it doesn't make sense to enter it.
+    if (!M->isAvailable()) {
+      Module::Requirement Requirement;
+      Module::UnresolvedHeaderDirective MissingHeader;
+      (void)M->isAvailable(PP.getLangOpts(), PP.getTargetInfo(),
+                           Requirement, MissingHeader);
+      if (MissingHeader.FileNameLoc.isValid()) {
+        PP.Diag(MissingHeader.FileNameLoc, diag::err_module_header_missing)
+          << MissingHeader.IsUmbrella << MissingHeader.FileName;
+      } else {
+        PP.Diag(M->DefinitionLoc, diag::err_module_unavailable)
+          << M->getFullModuleName() << Requirement.second << Requirement.first;
+      }
+      PP.Diag(BeginLoc, diag::note_pp_module_begin_here)
+        << M->getTopLevelModuleName();
+      return;
+    }
+
     // Enter the scope of the submodule.
     PP.EnterSubmodule(M, BeginLoc, /*ForPragma*/true);
     PP.EnterAnnotationToken(SourceRange(BeginLoc, ModuleName.back().second),

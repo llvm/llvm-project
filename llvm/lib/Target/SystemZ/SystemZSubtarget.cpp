@@ -42,8 +42,10 @@ SystemZSubtarget::SystemZSubtarget(const Triple &TT, const std::string &CPU,
       HasMiscellaneousExtensions(false),
       HasExecutionHint(false), HasLoadAndTrap(false),
       HasTransactionalExecution(false), HasProcessorAssist(false),
+      HasDFPZonedConversion(false),
       HasVector(false), HasLoadStoreOnCond2(false),
       HasLoadAndZeroRightmostByte(false), HasMessageSecurityAssist5(false),
+      HasDFPPackedConversion(false),
       TargetTriple(TT), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
       TLInfo(TM, *this), TSInfo(), FrameLowering() {}
 

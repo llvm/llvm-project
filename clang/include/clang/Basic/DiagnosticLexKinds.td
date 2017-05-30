@@ -525,6 +525,8 @@ def err_pp_module_begin_without_module_end : Error<
 def err_pp_module_end_without_module_begin : Error<
   "no matching '#pragma clang module begin' for this "
   "'#pragma clang module end'">;
+def note_pp_module_begin_here : Note<
+  "entering module '%0' due to this pragma">;
 
 def err_defined_macro_name : Error<"'defined' cannot be used as a macro name">;
 def err_paste_at_start : Error<

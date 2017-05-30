@@ -80,7 +80,14 @@ public:
   /// The boolean indicates whether the preamble ends at the start of a new
   /// line.
   std::pair<unsigned, bool> PrecompiledPreambleBytes;
-  
+
+  /// \brief True indicates that a preamble is being generated.
+  ///
+  /// When the lexer is done, one of the things that need to be preserved is the
+  /// conditional #if stack, so the ASTWriter/ASTReader can save/restore it when
+  /// processing the rest of the file.
+  bool GeneratePreamble;
+
   /// The implicit PTH input included at the start of the translation unit, or
   /// empty.
   std::string ImplicitPTHInclude;
@@ -144,6 +151,7 @@ public:
                           AllowPCHWithCompilerErrors(false),
                           DumpDeserializedPCHDecls(false),
                           PrecompiledPreambleBytes(0, true),
+                          GeneratePreamble(false),
                           RemappedFilesKeepOriginalName(true),
                           RetainRemappedFileBuffers(false),
                           ObjCXXARCStandardLibrary(ARCXX_nolib) { }
