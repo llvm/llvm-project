@@ -726,6 +726,10 @@ public:
 /// @name Utility functions for querying Debug information.
 /// @{
 
+  /// \brief Returns the Number of Register ParametersDwarf Version by checking
+  /// module flags.
+  unsigned getNumberRegisterParameters() const;
+
   /// \brief Returns the Dwarf Version by checking module flags.
   unsigned getDwarfVersion() const;
 

@@ -57,6 +57,47 @@ public:
   };
   typedef std::vector<ArgListEntry> ArgListTy;
 
+  // This is a workaround to not move around the ArgListEntryTypes.
+  void markFastLibCallAttributes(const TargetLowering &TL, MachineFunction *MF,
+                                 unsigned CC, ArgListTy &Args) const {
+
+    TargetLowering::ArgListTy TLArgs;
+    // Convert to TargetLowering::ArgListTy
+    for (unsigned long i = 0; i < Args.size(); ++i) {
+      TargetLowering::ArgListEntry TArg;
+      TArg.Ty = Args[i].Ty;
+      TArg.isSExt = Args[i].IsSExt;
+      TArg.isZExt = Args[i].IsZExt;
+      TArg.isInReg = Args[i].IsInReg;
+      TArg.isSRet = Args[i].IsSRet;
+      TArg.isNest = Args[i].IsNest;
+      TArg.isByVal = Args[i].IsByVal;
+      TArg.isInAlloca = Args[i].IsInAlloca;
+      TArg.isReturned = Args[i].IsReturned;
+      TArg.isSwiftSelf = Args[i].IsSwiftSelf;
+      TArg.isSwiftError = Args[i].IsSwiftError;
+      TArg.Alignment = Args[i].Alignment;
+      TLArgs.push_back(TArg);
+    }
+    // Call convered
+    TL.markLibCallAttributes(MF, CC, TLArgs);
+    // Copy back.
+    for (unsigned long i = 0; i < Args.size(); ++i) {
+      Args[i].Ty = TLArgs[i].Ty;
+      Args[i].IsSExt = TLArgs[i].isSExt;
+      Args[i].IsZExt = TLArgs[i].isZExt;
+      Args[i].IsInReg = TLArgs[i].isInReg;
+      Args[i].IsSRet = TLArgs[i].isSRet;
+      Args[i].IsNest = TLArgs[i].isNest;
+      Args[i].IsByVal = TLArgs[i].isByVal;
+      Args[i].IsInAlloca = TLArgs[i].isInAlloca;
+      Args[i].IsReturned = TLArgs[i].isReturned;
+      Args[i].IsSwiftSelf = TLArgs[i].isSwiftSelf;
+      Args[i].IsSwiftError = TLArgs[i].isSwiftError;
+      Args[i].Alignment = TLArgs[i].Alignment;
+    }
+  }
+
   struct CallLoweringInfo {
     Type *RetTy;
     bool RetSExt : 1;

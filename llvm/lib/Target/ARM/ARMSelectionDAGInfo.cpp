@@ -114,11 +114,11 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(Chain)
-      .setCallee(
-           TLI->getLibcallCallingConv(LC), Type::getVoidTy(*DAG.getContext()),
-           DAG.getExternalSymbol(FunctionNames[AEABILibcall][AlignVariant],
-                                 TLI->getPointerTy(DAG.getDataLayout())),
-           std::move(Args))
+      .setLibCallee(
+          TLI->getLibcallCallingConv(LC), Type::getVoidTy(*DAG.getContext()),
+          DAG.getExternalSymbol(FunctionNames[AEABILibcall][AlignVariant],
+                                TLI->getPointerTy(DAG.getDataLayout())),
+          std::move(Args))
       .setDiscardResult();
   std::pair<SDValue,SDValue> CallResult = TLI->LowerCallTo(CLI);
   
