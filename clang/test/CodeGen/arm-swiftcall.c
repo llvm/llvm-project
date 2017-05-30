@@ -343,7 +343,7 @@ typedef union {
 } union_hom_fp_partial;
 TEST(union_hom_fp_partial)
 // CHECK-LABEL: define void @test_union_hom_fp_partial()
-// CHECK:   [[TMP:%.*]] = alloca [[REC:%.*]], align 16
+// CHECK:   [[TMP:%.*]] = alloca [[REC:%.*]], align 8
 // CHECK:   [[CALL:%.*]] = call [[SWIFTCC]] [[UAGG:{ float, float, float, float }]] @return_union_hom_fp_partial()
 // CHECK:   [[CAST_TMP:%.*]] = bitcast [[REC]]* [[TMP]] to [[AGG:{ float, float, float, float }]]*
 // CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 0
@@ -376,7 +376,7 @@ typedef union {
 } union_het_fpv_partial;
 TEST(union_het_fpv_partial)
 // CHECK-LABEL: define void @test_union_het_fpv_partial()
-// CHECK:   [[TMP:%.*]] = alloca [[REC:%.*]], align 16
+// CHECK:   [[TMP:%.*]] = alloca [[REC:%.*]], align 8
 // CHECK:   [[CALL:%.*]] = call [[SWIFTCC]] [[UAGG:{ i32, i32, float, float }]] @return_union_het_fpv_partial()
 // CHECK:   [[CAST_TMP:%.*]] = bitcast [[REC]]* [[TMP]] to [[AGG:{ i32, i32, float, float }]]*
 // CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 0
@@ -413,7 +413,7 @@ TEST(int4)
 
 TEST(int8)
 // CHECK-LABEL: define {{.*}} @return_int8()
-// CHECK:   [[RET:%.*]] = alloca [[REC:<8 x i32>]], align 32
+// CHECK:   [[RET:%.*]] = alloca [[REC:<8 x i32>]], align 8
 // CHECK:   [[VAR:%.*]] = alloca [[REC]], align
 // CHECK:   store
 // CHECK:   load
@@ -457,7 +457,7 @@ TEST(int8)
 
 TEST(int5)
 // CHECK-LABEL: define {{.*}} @return_int5()
-// CHECK:   [[RET:%.*]] = alloca [[REC:<5 x i32>]], align 32
+// CHECK:   [[RET:%.*]] = alloca [[REC:<5 x i32>]], align 8
 // CHECK:   [[VAR:%.*]] = alloca [[REC]], align
 // CHECK:   store
 // CHECK:   load

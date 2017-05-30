@@ -1080,6 +1080,9 @@ template <class ELFT> void OutputSectionCommand::writeTo(uint8_t *Buf) {
     return;
   }
 
+  if (Sec->Type == SHT_NOBITS)
+    return;
+
   // Write leading padding.
   ArrayRef<InputSection *> Sections = Sec->Sections;
   uint32_t Filler = getFiller();

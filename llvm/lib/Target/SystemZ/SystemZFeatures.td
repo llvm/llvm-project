@@ -115,12 +115,18 @@ def FeatureTransactionalExecution : SystemZFeature<
   "Assume that the transactional-execution facility is installed"
 >;
 
+def FeatureDFPZonedConversion : SystemZFeature<
+  "dfp-zoned-conversion", "DFPZonedConversion",
+  "Assume that the DFP zoned-conversion facility is installed"
+>;
+
 def Arch10NewFeatures : SystemZFeatureList<[
     FeatureExecutionHint,
     FeatureLoadAndTrap,
     FeatureMiscellaneousExtensions,
     FeatureProcessorAssist,
-    FeatureTransactionalExecution
+    FeatureTransactionalExecution,
+    FeatureDFPZonedConversion
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -144,6 +150,11 @@ def FeatureMessageSecurityAssist5 : SystemZFeature<
   "Assume that the message-security-assist extension facility 5 is installed"
 >;
 
+def FeatureDFPPackedConversion : SystemZFeature<
+  "dfp-packed-conversion", "DFPPackedConversion",
+  "Assume that the DFP packed-conversion facility is installed"
+>;
+
 def FeatureVector : SystemZFeature<
   "vector", "Vector",
   "Assume that the vectory facility is installed"
@@ -154,6 +165,7 @@ def Arch11NewFeatures : SystemZFeatureList<[
     FeatureLoadAndZeroRightmostByte,
     FeatureLoadStoreOnCond2,
     FeatureMessageSecurityAssist5,
+    FeatureDFPPackedConversion,
     FeatureVector
 ]>;
 

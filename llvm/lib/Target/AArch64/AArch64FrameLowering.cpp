@@ -137,6 +137,34 @@ static cl::opt<bool> EnableRedZone("aarch64-redzone",
 
 STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 
+/// Look at each instruction that references stack frames and return the stack
+/// size limit beyond which some of these instructions will require a scratch
+/// register during their expansion later.
+static unsigned estimateRSStackSizeLimit(MachineFunction &MF) {
+  // FIXME: For now, just conservatively guestimate based on unscaled indexing
+  // range. We'll end up allocating an unnecessary spill slot a lot, but
+  // realistically that's not a big deal at this stage of the game.
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (MI.isDebugValue() || MI.isPseudo() ||
+          MI.getOpcode() == AArch64::ADDXri ||
+          MI.getOpcode() == AArch64::ADDSXri)
+        continue;
+
+      for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+        if (!MI.getOperand(i).isFI())
+          continue;
+
+        int Offset = 0;
+        if (isAArch64FrameOffsetLegal(MI, Offset, nullptr, nullptr, nullptr) ==
+            AArch64FrameOffsetCannotUpdate)
+          return 0;
+      }
+    }
+  }
+  return 255;
+}
+
 bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
   if (!EnableRedZone)
     return false;
@@ -1169,16 +1197,13 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   unsigned NumRegsSpilled = SavedRegs.count();
   bool CanEliminateFrame = NumRegsSpilled == 0;
 
-  // FIXME: Set BigStack if any stack slot references may be out of range.
-  // For now, just conservatively guestimate based on unscaled indexing
-  // range. We'll end up allocating an unnecessary spill slot a lot, but
-  // realistically that's not a big deal at this stage of the game.
   // The CSR spill slots have not been allocated yet, so estimateStackSize
   // won't include them.
   MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned CFSize = MFI.estimateStackSize(MF) + 8 * NumRegsSpilled;
   DEBUG(dbgs() << "Estimated stack frame size: " << CFSize << " bytes.\n");
-  bool BigStack = (CFSize >= 256);
+  unsigned EstimatedStackSizeLimit = estimateRSStackSizeLimit(MF);
+  bool BigStack = (CFSize > EstimatedStackSizeLimit);
   if (BigStack || !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF))
     AFI->setHasStackFrame(true);
 

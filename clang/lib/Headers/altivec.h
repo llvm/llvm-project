@@ -2887,87 +2887,79 @@ static __inline__ vector double __ATTRS_o_ai vec_cpsgn(vector double __a,
 
 /* vec_ctf */
 
-static __inline__ vector float __ATTRS_o_ai vec_ctf(vector int __a, int __b) {
-  return __builtin_altivec_vcfsx(__a, __b);
-}
-
-static __inline__ vector float __ATTRS_o_ai vec_ctf(vector unsigned int __a,
-                                                    int __b) {
-  return __builtin_altivec_vcfux((vector int)__a, __b);
-}
-
 #ifdef __VSX__
-static __inline__ vector double __ATTRS_o_ai
-vec_ctf(vector unsigned long long __a, int __b) {
-  vector double __ret = __builtin_convertvector(__a, vector double);
-  __ret *= (vector double)(vector unsigned long long)((0x3ffULL - __b) << 52);
-  return __ret;
-}
-
-static __inline__ vector double __ATTRS_o_ai
-vec_ctf(vector signed long long __a, int __b) {
-  vector double __ret = __builtin_convertvector(__a, vector double);
-  __ret *= (vector double)(vector unsigned long long)((0x3ffULL - __b) << 52);
-  return __ret;
-}
+#define vec_ctf(__a, __b)                                                      \
+  _Generic((__a), vector int                                                   \
+           : (vector float)__builtin_altivec_vcfsx((__a), (__b)),              \
+             vector unsigned int                                               \
+           : (vector float)__builtin_altivec_vcfux((vector int)(__a), (__b)),  \
+             vector unsigned long long                                         \
+           : (__builtin_convertvector((vector unsigned long long)(__a),        \
+                                      vector double) *                         \
+              (vector double)(vector unsigned long long)((0x3ffULL - (__b))    \
+                                                         << 52)),              \
+             vector signed long long                                           \
+           : (__builtin_convertvector((vector signed long long)(__a),          \
+                                      vector double) *                         \
+              (vector double)(vector unsigned long long)((0x3ffULL - (__b))    \
+                                                         << 52)))
+#else
+#define vec_ctf(__a, __b)                                                      \
+  _Generic((__a), vector int                                                   \
+           : (vector float)__builtin_altivec_vcfsx((__a), (__b)),              \
+             vector unsigned int                                               \
+           : (vector float)__builtin_altivec_vcfux((vector int)(__a), (__b)))
 #endif
 
 /* vec_vcfsx */
 
-static __inline__ vector float __attribute__((__always_inline__))
-vec_vcfsx(vector int __a, int __b) {
-  return __builtin_altivec_vcfsx(__a, __b);
-}
+#define vec_vcfux __builtin_altivec_vcfux
 
 /* vec_vcfux */
 
-static __inline__ vector float __attribute__((__always_inline__))
-vec_vcfux(vector unsigned int __a, int __b) {
-  return __builtin_altivec_vcfux((vector int)__a, __b);
-}
+#define vec_vcfsx(__a, __b) __builtin_altivec_vcfsx((vector int)(__a), (__b))
 
 /* vec_cts */
 
-static __inline__ vector int __ATTRS_o_ai vec_cts(vector float __a, int __b) {
-  return __builtin_altivec_vctsxs(__a, __b);
-}
-
 #ifdef __VSX__
-static __inline__ vector signed long long __ATTRS_o_ai
-vec_cts(vector double __a, int __b) {
-  __a *= (vector double)(vector unsigned long long)((0x3ffULL + __b) << 52);
-  return __builtin_convertvector(__a, vector signed long long);
-}
+#define vec_cts(__a, __b)                                                      \
+  _Generic((__a), vector float                                                 \
+           : __builtin_altivec_vctsxs((__a), (__b)), vector double             \
+           : __extension__({                                                   \
+             vector double __ret =                                             \
+                 (__a) *                                                       \
+                 (vector double)(vector unsigned long long)((0x3ffULL + (__b)) \
+                                                            << 52);            \
+             __builtin_convertvector(__ret, vector signed long long);          \
+           }))
+#else
+#define vec_cts __builtin_altivec_vctsxs
 #endif
 
 /* vec_vctsxs */
 
-static __inline__ vector int __attribute__((__always_inline__))
-vec_vctsxs(vector float __a, int __b) {
-  return __builtin_altivec_vctsxs(__a, __b);
-}
+#define vec_vctsxs __builtin_altivec_vctsxs
 
 /* vec_ctu */
 
-static __inline__ vector unsigned int __ATTRS_o_ai vec_ctu(vector float __a,
-                                                           int __b) {
-  return __builtin_altivec_vctuxs(__a, __b);
-}
-
 #ifdef __VSX__
-static __inline__ vector unsigned long long __ATTRS_o_ai
-vec_ctu(vector double __a, int __b) {
-  __a *= (vector double)(vector unsigned long long)((0x3ffULL + __b) << 52);
-  return __builtin_convertvector(__a, vector unsigned long long);
-}
+#define vec_ctu(__a, __b)                                                      \
+  _Generic((__a), vector float                                                 \
+           : __builtin_altivec_vctuxs((__a), (__b)), vector double             \
+           : __extension__({                                                   \
+             vector double __ret =                                             \
+                 (__a) *                                                       \
+                 (vector double)(vector unsigned long long)((0x3ffULL + __b)   \
+                                                            << 52);            \
+             __builtin_convertvector(__ret, vector unsigned long long);        \
+           }))
+#else
+#define vec_ctu __builtin_altivec_vctuxs
 #endif
 
 /* vec_vctuxs */
 
-static __inline__ vector unsigned int __attribute__((__always_inline__))
-vec_vctuxs(vector float __a, int __b) {
-  return __builtin_altivec_vctuxs(__a, __b);
-}
+#define vec_vctuxs __builtin_altivec_vctuxs
 
 /* vec_signed */
 
