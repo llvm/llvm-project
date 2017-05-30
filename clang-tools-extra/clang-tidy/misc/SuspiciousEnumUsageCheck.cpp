@@ -108,7 +108,8 @@ static bool isPossiblyBitMask(const EnumDecl *EnumDec) {
 
 SuspiciousEnumUsageCheck::SuspiciousEnumUsageCheck(StringRef Name,
                                                    ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), StrictMode(Options.get("StrictMode", 0)) {}
+    : ClangTidyCheck(Name, Context),
+      StrictMode(Options.getLocalOrGlobal("StrictMode", 0)) {}
 
 void SuspiciousEnumUsageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);

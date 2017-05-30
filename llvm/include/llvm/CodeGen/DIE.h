@@ -383,11 +383,11 @@ private:
       return;
 #define HANDLE_DIEVALUE_SMALL(T)                                               \
   case is##T:                                                                  \
-    destruct<DIE##T>();
+    destruct<DIE##T>();                                                        \
     return;
 #define HANDLE_DIEVALUE_LARGE(T)                                               \
   case is##T:                                                                  \
-    destruct<const DIE##T *>();
+    destruct<const DIE##T *>();                                                \
     return;
 #include "llvm/CodeGen/DIEValue.def"
     }

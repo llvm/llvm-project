@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple thumbv7s-apple-darwin -target-abi apcs-gnu\
-// RUN:  -target-cpu swift -fallow-half-arguments-and-returns -ffreestanding -emit-llvm -o - %s \
+// RUN:  -target-cpu swift -fallow-half-arguments-and-returns -ffreestanding \
+// RUN:  -disable-O0-optnone -emit-llvm -o - %s \
 // RUN:  | opt -S -mem2reg | FileCheck %s
 
 // REQUIRES: long-tests

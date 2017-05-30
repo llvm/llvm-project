@@ -176,6 +176,42 @@ ok22(void) {
   pthread_mutex_unlock(pmtx);  // no-warning
 }
 
+void ok23(void) {
+  if (pthread_mutex_destroy(&mtx1) != 0) // no-warning
+    pthread_mutex_destroy(&mtx1);        // no-warning
+}
+
+void ok24(void) {
+  if (pthread_mutex_destroy(&mtx1) != 0) // no-warning
+    pthread_mutex_lock(&mtx1);           // no-warning
+}
+
+void ok25(void) {
+  if (pthread_mutex_destroy(&mtx1) != 0) // no-warning
+    pthread_mutex_unlock(&mtx1);         // no-warning
+}
+
+void ok26(void) {
+  pthread_mutex_unlock(&mtx1);           // no-warning
+  if (pthread_mutex_destroy(&mtx1) != 0) // no-warning
+    pthread_mutex_lock(&mtx1);           // no-warning
+}
+
+void ok27(void) {
+  pthread_mutex_unlock(&mtx1);           // no-warning
+  if (pthread_mutex_destroy(&mtx1) != 0) // no-warning
+    pthread_mutex_lock(&mtx1);           // no-warning
+  else
+    pthread_mutex_init(&mtx1, NULL); // no-warning
+}
+
+void ok28(void) {
+  if (pthread_mutex_destroy(&mtx1) != 0) { // no-warning
+    pthread_mutex_lock(&mtx1);             // no-warning
+    pthread_mutex_unlock(&mtx1);           // no-warning
+    pthread_mutex_destroy(&mtx1);          // no-warning
+  }
+}
 
 void
 bad1(void)
@@ -391,4 +427,47 @@ bad26(void)
 {
 	pthread_mutex_unlock(&mtx1);		// no-warning
 	pthread_mutex_init(&mtx1, NULL);	// expected-warning{{This lock has already been initialized}}
+}
+
+void bad27(void) {
+  pthread_mutex_unlock(&mtx1);            // no-warning
+  int ret = pthread_mutex_destroy(&mtx1); // no-warning
+  if (ret != 0)                           // no-warning
+    pthread_mutex_lock(&mtx1);            // no-warning
+  else
+    pthread_mutex_unlock(&mtx1); // expected-warning{{This lock has already been destroyed}}
+}
+
+void bad28(void) {
+  pthread_mutex_unlock(&mtx1);            // no-warning
+  int ret = pthread_mutex_destroy(&mtx1); // no-warning
+  if (ret != 0)                           // no-warning
+    pthread_mutex_lock(&mtx1);            // no-warning
+  else
+    pthread_mutex_lock(&mtx1); // expected-warning{{This lock has already been destroyed}}
+}
+
+void bad29(void) {
+  pthread_mutex_lock(&mtx1);             // no-warning
+  pthread_mutex_unlock(&mtx1);           // no-warning
+  if (pthread_mutex_destroy(&mtx1) != 0) // no-warning
+    pthread_mutex_init(&mtx1, NULL);     // expected-warning{{This lock has already been initialized}}
+  else
+    pthread_mutex_init(&mtx1, NULL); // no-warning
+}
+
+void bad30(void) {
+  pthread_mutex_lock(&mtx1);             // no-warning
+  pthread_mutex_unlock(&mtx1);           // no-warning
+  if (pthread_mutex_destroy(&mtx1) != 0) // no-warning
+    pthread_mutex_init(&mtx1, NULL);     // expected-warning{{This lock has already been initialized}}
+  else
+    pthread_mutex_destroy(&mtx1); // expected-warning{{This lock has already been destroyed}}
+}
+
+void bad31(void) {
+  int ret = pthread_mutex_destroy(&mtx1); // no-warning
+  pthread_mutex_lock(&mtx1);              // expected-warning{{This lock has already been destroyed}}
+  if (ret != 0)
+    pthread_mutex_lock(&mtx1);
 }

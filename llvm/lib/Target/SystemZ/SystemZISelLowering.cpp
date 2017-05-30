@@ -4189,12 +4189,20 @@ static SDValue buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
   if (Single.getNode() && (Count > 1 || Single.getOpcode() == ISD::LOAD))
     return DAG.getNode(SystemZISD::REPLICATE, DL, VT, Single);
 
+  // If all elements are loads, use VLREP/VLEs (below).
+  bool AllLoads = true;
+  for (auto Elem : Elems)
+    if (Elem.getOpcode() != ISD::LOAD || cast<LoadSDNode>(Elem)->isIndexed()) {
+      AllLoads = false;
+      break;
+    }
+
   // The best way of building a v2i64 from two i64s is to use VLVGP.
-  if (VT == MVT::v2i64)
+  if (VT == MVT::v2i64 && !AllLoads)
     return joinDwords(DAG, DL, Elems[0], Elems[1]);
 
   // Use a 64-bit merge high to combine two doubles.
-  if (VT == MVT::v2f64)
+  if (VT == MVT::v2f64 && !AllLoads)
     return buildMergeScalars(DAG, DL, VT, Elems[0], Elems[1]);
 
   // Build v4f32 values directly from the FPRs:
@@ -4204,7 +4212,7 @@ static SDValue buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
   //      <ABxx>         <CDxx>
   //                V                 VMRHG
   //              <ABCD>
-  if (VT == MVT::v4f32) {
+  if (VT == MVT::v4f32 && !AllLoads) {
     SDValue Op01 = buildMergeScalars(DAG, DL, VT, Elems[0], Elems[1]);
     SDValue Op23 = buildMergeScalars(DAG, DL, VT, Elems[2], Elems[3]);
     // Avoid unnecessary undefs by reusing the other operand.
@@ -4246,23 +4254,37 @@ static SDValue buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
         Constants[I] = DAG.getUNDEF(Elems[I].getValueType());
     Result = DAG.getBuildVector(VT, DL, Constants);
   } else {
-    // Otherwise try to use VLVGP to start the sequence in order to
+    // Otherwise try to use VLREP or VLVGP to start the sequence in order to
     // avoid a false dependency on any previous contents of the vector
-    // register.  This only makes sense if one of the associated elements
-    // is defined.
-    unsigned I1 = NumElements / 2 - 1;
-    unsigned I2 = NumElements - 1;
-    bool Def1 = !Elems[I1].isUndef();
-    bool Def2 = !Elems[I2].isUndef();
-    if (Def1 || Def2) {
-      SDValue Elem1 = Elems[Def1 ? I1 : I2];
-      SDValue Elem2 = Elems[Def2 ? I2 : I1];
-      Result = DAG.getNode(ISD::BITCAST, DL, VT,
-                           joinDwords(DAG, DL, Elem1, Elem2));
-      Done[I1] = true;
-      Done[I2] = true;
-    } else
-      Result = DAG.getUNDEF(VT);
+    // register.
+
+    // Use a VLREP if at least one element is a load.
+    unsigned LoadElIdx = UINT_MAX;
+    for (unsigned I = 0; I < NumElements; ++I)
+      if (Elems[I].getOpcode() == ISD::LOAD &&
+          cast<LoadSDNode>(Elems[I])->isUnindexed()) {
+        LoadElIdx = I;
+        break;
+      }
+    if (LoadElIdx != UINT_MAX) {
+      Result = DAG.getNode(SystemZISD::REPLICATE, DL, VT, Elems[LoadElIdx]);
+      Done[LoadElIdx] = true;
+    } else {
+      // Try to use VLVGP.
+      unsigned I1 = NumElements / 2 - 1;
+      unsigned I2 = NumElements - 1;
+      bool Def1 = !Elems[I1].isUndef();
+      bool Def2 = !Elems[I2].isUndef();
+      if (Def1 || Def2) {
+        SDValue Elem1 = Elems[Def1 ? I1 : I2];
+        SDValue Elem2 = Elems[Def2 ? I2 : I1];
+        Result = DAG.getNode(ISD::BITCAST, DL, VT,
+                             joinDwords(DAG, DL, Elem1, Elem2));
+        Done[I1] = true;
+        Done[I2] = true;
+      } else
+        Result = DAG.getUNDEF(VT);
+    }
   }
 
   // Use VLVGx to insert the other elements.

@@ -382,6 +382,17 @@ And Linpack-pc with the same configuration. Result is Mflops, higher is better.
 
 .. image:: linpack-pc.png
 
+Ongoing Development Directions
+------------------------------
+
+.. toctree::
+   :hidden:
+
+   Proposals/VectorizationPlan
+
+:doc:`Proposals/VectorizationPlan`
+   Modeling the process and upgrading the infrastructure of LLVM's Loop Vectorizer.
+
 .. _slp-vectorizer:
 
 The SLP Vectorizer
