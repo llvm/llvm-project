@@ -502,6 +502,7 @@ module std [system] {
       export *
     }
      module coroutine {
+      requires coroutines
       header "experimental/coroutine"
       export *
     }

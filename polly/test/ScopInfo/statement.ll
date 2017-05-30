@@ -9,13 +9,8 @@
 ;      }
 
 ; CHECK:       Instructions {
-; CHECK-NEXT:      %idxprom = sext i32 %i.0 to i64
-; CHECK-NEXT:      %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom
 ; CHECK-NEXT:      store i32 %i.0, i32* %arrayidx, align 4
-; CHECK-NEXT:      %idxprom1 = sext i32 %i.0 to i64
-; CHECK-NEXT:      %arrayidx2 = getelementptr inbounds i32, i32* %B, i64 %idxprom1
 ; CHECK-NEXT:      store i32 %i.0, i32* %arrayidx2, align 4
-; CHECK-NEXT:      br label %for.inc
 ; CHECK-NEXT:    }
 
 ; Function Attrs: noinline nounwind uwtable

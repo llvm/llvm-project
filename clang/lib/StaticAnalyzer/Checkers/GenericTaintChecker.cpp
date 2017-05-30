@@ -65,21 +65,8 @@ private:
   /// and thus, is tainted.
   static bool isStdin(const Expr *E, CheckerContext &C);
 
-  /// This is called from getPointedToSymbol() to resolve symbol references for
-  /// the region underlying a LazyCompoundVal. This is the default binding
-  /// for the LCV, which could be a conjured symbol from a function call that
-  /// initialized the region. It only returns the conjured symbol if the LCV
-  /// covers the entire region, e.g. we avoid false positives by not returning
-  /// a default bindingc for an entire struct if the symbol for only a single
-  /// field or element within it is requested.
-  // TODO: Return an appropriate symbol for sub-fields/elements of an LCV so
-  // that they are also appropriately tainted.
-  static SymbolRef getLCVSymbol(CheckerContext &C,
-                                nonloc::LazyCompoundVal &LCV);
-
-  /// \brief Given a pointer argument, get the symbol of the value it contains
-  /// (points to).
-  static SymbolRef getPointedToSymbol(CheckerContext &C, const Expr *Arg);
+  /// \brief Given a pointer argument, return the value it points to.
+  static Optional<SVal> getPointedToSVal(CheckerContext &C, const Expr *Arg);
 
   /// Functions defining the attack surface.
   typedef ProgramStateRef (GenericTaintChecker::*FnCheck)(const CallExpr *,
@@ -186,9 +173,14 @@ private:
     static inline bool isTaintedOrPointsToTainted(const Expr *E,
                                                   ProgramStateRef State,
                                                   CheckerContext &C) {
-      return (State->isTainted(E, C.getLocationContext()) || isStdin(E, C) ||
-              (E->getType().getTypePtr()->isPointerType() &&
-               State->isTainted(getPointedToSymbol(C, E))));
+      if (State->isTainted(E, C.getLocationContext()) || isStdin(E, C))
+        return true;
+
+      if (!E->getType().getTypePtr()->isPointerType())
+        return false;
+
+      Optional<SVal> V = getPointedToSVal(C, E);
+      return (V && State->isTainted(*V));
     }
 
     /// \brief Pre-process a function which propagates taint according to the
@@ -400,9 +392,9 @@ bool GenericTaintChecker::propagateFromPre(const CallExpr *CE,
     if (CE->getNumArgs() < (ArgNum + 1))
       return false;
     const Expr* Arg = CE->getArg(ArgNum);
-    SymbolRef Sym = getPointedToSymbol(C, Arg);
-    if (Sym)
-      State = State->addTaint(Sym);
+    Optional<SVal> V = getPointedToSVal(C, Arg);
+    if (V)
+      State = State->addTaint(*V);
   }
 
   // Clear up the taint info from the state.
@@ -473,47 +465,20 @@ bool GenericTaintChecker::checkPre(const CallExpr *CE, CheckerContext &C) const{
   return false;
 }
 
-SymbolRef GenericTaintChecker::getLCVSymbol(CheckerContext &C,
-                                            nonloc::LazyCompoundVal &LCV) {
-  StoreManager &StoreMgr = C.getStoreManager();
-
-  // getLCVSymbol() is reached in a PostStmt so we can always expect a default
-  // binding to exist if one is present.
-  if (Optional<SVal> binding = StoreMgr.getDefaultBinding(LCV)) {
-    SymbolRef Sym = binding->getAsSymbol();
-    if (!Sym)
-      return nullptr;
-
-    // If the LCV covers an entire base region return the default conjured symbol.
-    if (LCV.getRegion() == LCV.getRegion()->getBaseRegion())
-      return Sym;
-  }
-
-  // Otherwise, return a nullptr as there's not yet a functional way to taint
-  // sub-regions of LCVs.
-  return nullptr;
-}
-
-SymbolRef GenericTaintChecker::getPointedToSymbol(CheckerContext &C,
-                                                  const Expr* Arg) {
+Optional<SVal> GenericTaintChecker::getPointedToSVal(CheckerContext &C,
+                                            const Expr* Arg) {
   ProgramStateRef State = C.getState();
   SVal AddrVal = State->getSVal(Arg->IgnoreParens(), C.getLocationContext());
   if (AddrVal.isUnknownOrUndef())
-    return nullptr;
+    return None;
 
   Optional<Loc> AddrLoc = AddrVal.getAs<Loc>();
   if (!AddrLoc)
-    return nullptr;
+    return None;
 
   const PointerType *ArgTy =
     dyn_cast<PointerType>(Arg->getType().getCanonicalType().getTypePtr());
-  SVal Val = State->getSVal(*AddrLoc,
-                            ArgTy ? ArgTy->getPointeeType(): QualType());
-
-  if (auto LCV = Val.getAs<nonloc::LazyCompoundVal>())
-    return getLCVSymbol(C, *LCV);
-
-  return Val.getAsSymbol();
+  return State->getSVal(*AddrLoc, ArgTy ? ArgTy->getPointeeType(): QualType());
 }
 
 ProgramStateRef
@@ -633,9 +598,9 @@ ProgramStateRef GenericTaintChecker::postScanf(const CallExpr *CE,
     // The arguments are pointer arguments. The data they are pointing at is
     // tainted after the call.
     const Expr* Arg = CE->getArg(i);
-        SymbolRef Sym = getPointedToSymbol(C, Arg);
-    if (Sym)
-      State = State->addTaint(Sym);
+    Optional<SVal> V = getPointedToSVal(C, Arg);
+    if (V)
+      State = State->addTaint(*V);
   }
   return State;
 }
@@ -710,10 +675,10 @@ bool GenericTaintChecker::generateReportIfTainted(const Expr *E,
 
   // Check for taint.
   ProgramStateRef State = C.getState();
-  const SymbolRef PointedToSym = getPointedToSymbol(C, E);
+  Optional<SVal> PointedToSVal = getPointedToSVal(C, E);
   SVal TaintedSVal;
-  if (State->isTainted(PointedToSym))
-    TaintedSVal = nonloc::SymbolVal(PointedToSym);
+  if (PointedToSVal && State->isTainted(*PointedToSVal))
+    TaintedSVal = *PointedToSVal;
   else if (State->isTainted(E, C.getLocationContext()))
     TaintedSVal = C.getSVal(E);
   else

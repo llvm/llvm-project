@@ -52,11 +52,12 @@ LinkerScript *elf::Script;
 uint64_t ExprValue::getValue() const {
   if (Sec) {
     if (Sec->getOutputSection())
-      return Sec->getOffset(Val) + Sec->getOutputSection()->Addr;
+      return alignTo(Sec->getOffset(Val) + Sec->getOutputSection()->Addr,
+                     Alignment);
     error("unable to evaluate expression: input section " + Sec->Name +
           " has no output section assigned");
   }
-  return Val;
+  return alignTo(Val, Alignment);
 }
 
 uint64_t ExprValue::getSecAddr() const {
@@ -143,7 +144,7 @@ void LinkerScript::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
   } else {
     Sym->Section = V.Sec;
     if (Sym->Section->Flags & SHF_ALLOC)
-      Sym->Value = V.Val;
+      Sym->Value = alignTo(V.Val, V.Alignment);
     else
       Sym->Value = V.getValue();
   }
@@ -290,6 +291,9 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
     size_t SizeBefore = Ret.size();
 
     for (InputSectionBase *Sec : InputSections) {
+      if (!isa<InputSection>(Sec))
+        continue;
+
       if (Sec->Assigned)
         continue;
 
@@ -1075,6 +1079,9 @@ template <class ELFT> void OutputSectionCommand::writeTo(uint8_t *Buf) {
            Sec->CompressedData.size());
     return;
   }
+
+  if (Sec->Type == SHT_NOBITS)
+    return;
 
   // Write leading padding.
   ArrayRef<InputSection *> Sections = Sec->Sections;
