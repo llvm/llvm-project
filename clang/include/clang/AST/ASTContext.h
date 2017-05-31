@@ -114,7 +114,6 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<DependentTypeOfExprType> DependentTypeOfExprTypes;
   mutable llvm::FoldingSet<DependentDecltypeType> DependentDecltypeTypes;
   mutable llvm::FoldingSet<TemplateTypeParmType> TemplateTypeParmTypes;
-  mutable llvm::FoldingSet<ObjCTypeParamType> ObjCTypeParamTypes;
   mutable llvm::FoldingSet<SubstTemplateTypeParmType>
     SubstTemplateTypeParmTypes;
   mutable llvm::FoldingSet<SubstTemplateTypeParmPackType>
@@ -1031,14 +1030,6 @@ public:
   /// replaced.
   QualType getAddrSpaceQualType(QualType T, unsigned AddressSpace) const;
 
-  /// \brief Apply Objective-C protocol qualifiers to the given type.
-  /// \param allowOnPointerType specifies if we can apply protocol
-  /// qualifiers on ObjCObjectPointerType. It can be set to true when
-  /// contructing the canonical type of a Objective-C type parameter.
-  QualType applyObjCProtocolQualifiers(QualType type,
-      ArrayRef<ObjCProtocolDecl *> protocols, bool &hasError,
-      bool allowOnPointerType = false) const;
-
   /// \brief Return the uniqued reference to the type for an Objective-C
   /// gc-qualified type.
   ///
@@ -1329,10 +1320,6 @@ public:
                              ArrayRef<QualType> typeArgs,
                              ArrayRef<ObjCProtocolDecl *> protocols,
                              bool isKindOf) const;
-
-  QualType getObjCTypeParamType(const ObjCTypeParamDecl *Decl,
-                                ArrayRef<ObjCProtocolDecl *> protocols,
-                                QualType Canonical = QualType()) const;
   
   bool ObjCObjectAdoptsQTypeProtocols(QualType QT, ObjCInterfaceDecl *Decl);
   /// QIdProtocolsAdoptObjCObjectProtocols - Checks that protocols in

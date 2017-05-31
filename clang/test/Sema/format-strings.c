@@ -156,10 +156,10 @@ void check_writeback_specifier()
 
 void check_invalid_specifier(FILE* fp, char *buf)
 {
-  printf("%s%lb%d","unix",10,20); // expected-warning {{invalid conversion specifier 'b'}} expected-warning {{data argument not used by format string}}
+  printf("%s%lb%d","unix",10,20); // expected-warning {{invalid conversion specifier 'b'}}
   fprintf(fp,"%%%l"); // expected-warning {{incomplete format specifier}}
   sprintf(buf,"%%%%%ld%d%d", 1, 2, 3); // expected-warning{{format specifies type 'long' but the argument has type 'int'}}
-  snprintf(buf, 2, "%%%%%ld%;%d", 1, 2, 3); // expected-warning{{format specifies type 'long' but the argument has type 'int'}} expected-warning {{invalid conversion specifier ';'}} expected-warning {{data argument not used by format string}}
+  snprintf(buf, 2, "%%%%%ld%;%d", 1, 2, 3); // expected-warning{{format specifies type 'long' but the argument has type 'int'}} expected-warning {{invalid conversion specifier ';'}}
 }
 
 void check_null_char_string(char* b)
@@ -251,7 +251,7 @@ void test10(int x, float f, int i, long long lli) {
   printf("%**\n"); // expected-warning{{invalid conversion specifier '*'}}
   printf("%d%d\n", x); // expected-warning{{more '%' conversions than data arguments}}
   printf("%d\n", x, x); // expected-warning{{data argument not used by format string}}
-  printf("%W%d\n", x, x); // expected-warning{{invalid conversion specifier 'W'}}  expected-warning {{data argument not used by format string}}
+  printf("%W%d\n", x, x); // expected-warning{{invalid conversion specifier 'W'}}
   printf("%"); // expected-warning{{incomplete format specifier}}
   printf("%.d", x); // no-warning
   printf("%.", x);  // expected-warning{{incomplete format specifier}}
@@ -270,7 +270,7 @@ void test10(int x, float f, int i, long long lli) {
   printf("%.0Lf", (long double) 1.0); // no-warning
   printf("%c\n", "x"); // expected-warning{{format specifies type 'int' but the argument has type 'char *'}}
   printf("%c\n", 1.23); // expected-warning{{format specifies type 'int' but the argument has type 'double'}}
-  printf("Format %d, is %! %f", 1, 4.4); // expected-warning{{invalid conversion specifier '!'}}
+  printf("Format %d, is %! %f", 1, 2, 4.4); // expected-warning{{invalid conversion specifier '!'}}
 }
 
 typedef unsigned char uint8_t;
@@ -652,30 +652,3 @@ void test_format_security_pos(char* string) {
   // expected-note@-1{{treat the string as an argument to avoid this}}
 }
 #pragma GCC diagnostic warning "-Wformat-nonliteral"
-
-void test_os_log_format(char c, const char *pc, int i, int *pi, void *p, void *buf) {
-  __builtin_os_log_format(buf, "");
-  __builtin_os_log_format(buf, "%d"); // expected-warning {{more '%' conversions than data arguments}}
-  __builtin_os_log_format(buf, "%d", i);
-  __builtin_os_log_format(buf, "%P", p); // expected-warning {{using '%P' format specifier without precision}}
-  __builtin_os_log_format(buf, "%.10P", p);
-  __builtin_os_log_format(buf, "%.*P", p); // expected-warning {{field precision should have type 'int', but argument has type 'void *'}}
-  __builtin_os_log_format(buf, "%.*P", i, p);
-  __builtin_os_log_format(buf, "%.*P", i, i); // expected-warning {{format specifies type 'void *' but the argument has type 'int'}}
-  __builtin_os_log_format(buf, pc); // expected-error {{os_log() format argument is not a string constant}}
-
-  printf("%{private}s", pc); // expected-warning {{using 'private' format specifier annotation outside of os_log()/os_trace()}}
-  __builtin_os_log_format(buf, "%{private}s", pc);
-
-  // <rdar://problem/23835805>
-  __builtin_os_log_format_buffer_size("no-args");
-  __builtin_os_log_format(buf, "%s", "hi");
-
-  // <rdar://problem/24828090>
-  wchar_t wc = 'a';
-  __builtin_os_log_format(buf, "%C", wc);
-  printf("%C", wc);
-  wchar_t wcs[] = {'a', 0};
-  __builtin_os_log_format(buf, "%S", wcs);
-  printf("%S", wcs);
-}

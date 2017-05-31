@@ -4803,21 +4803,10 @@ bool LValueExprEvaluator::VisitDeclRefExpr(const DeclRefExpr *E) {
   return Error(E);
 }
 
-
 bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
   CallStackFrame *Frame = nullptr;
-  if (VD->hasLocalStorage() && Info.CurrentCall->Index > 1) {
-    // Only if a local variable was declared in the function currently being
-    // evaluated, do we expect to be able to find its value in the current
-    // frame. (Otherwise it was likely declared in an enclosing context and
-    // could either have a valid evaluatable value (for e.g. a constexpr
-    // variable) or be ill-formed (and trigger an appropriate evaluation
-    // diagnostic)).
-    if (Info.CurrentCall->Callee &&
-        Info.CurrentCall->Callee->Equals(VD->getDeclContext())) {
-      Frame = Info.CurrentCall;
-    }
-  }
+  if (VD->hasLocalStorage() && Info.CurrentCall->Index > 1)
+    Frame = Info.CurrentCall;
 
   if (!VD->getType()->isReferenceType()) {
     if (Frame) {

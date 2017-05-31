@@ -12,7 +12,6 @@
 // This file contains error reporting code.
 //===----------------------------------------------------------------------===//
 
-#include "asan_errors.h"
 #include "asan_flags.h"
 #include "asan_descriptions.h"
 #include "asan_internal.h"
@@ -37,6 +36,19 @@ static BlockingMutex error_message_buf_mutex(LINKER_INITIALIZED);
 static const unsigned kAsanBuggyPcPoolSize = 25;
 static __sanitizer::atomic_uintptr_t AsanBuggyPcPool[kAsanBuggyPcPoolSize];
 
+struct ReportData {
+  uptr pc;
+  uptr sp;
+  uptr bp;
+  uptr addr;
+  bool is_write;
+  uptr access_size;
+  const char *description;
+};
+
+static bool report_happened = false;
+static ReportData report_data = {};
+
 void AppendToErrorMessageBuffer(const char *buffer) {
   BlockingMutexLock l(&error_message_buf_mutex);
   if (!error_message_buffer) {
@@ -56,13 +68,106 @@ void AppendToErrorMessageBuffer(const char *buffer) {
 
 // ---------------------- Helper functions ----------------------- {{{1
 
-void PrintMemoryByte(InternalScopedString *str, const char *before, u8 byte,
-                     bool in_shadow, const char *after) {
+static void PrintMemoryByte(InternalScopedString *str, const char *before,
+    u8 byte, bool in_shadow, const char *after = "\n") {
   Decorator d;
   str->append("%s%s%x%x%s%s", before,
               in_shadow ? d.ShadowByte(byte) : d.MemoryByte(),
               byte >> 4, byte & 15,
               in_shadow ? d.EndShadowByte() : d.EndMemoryByte(), after);
+}
+
+static void PrintShadowByte(InternalScopedString *str, const char *before,
+    u8 byte, const char *after = "\n") {
+  PrintMemoryByte(str, before, byte, /*in_shadow*/true, after);
+}
+
+static void PrintShadowBytes(InternalScopedString *str, const char *before,
+                             u8 *bytes, u8 *guilty, uptr n) {
+  Decorator d;
+  if (before) str->append("%s%p:", before, bytes);
+  for (uptr i = 0; i < n; i++) {
+    u8 *p = bytes + i;
+    const char *before =
+        p == guilty ? "[" : (p - 1 == guilty && i != 0) ? "" : " ";
+    const char *after = p == guilty ? "]" : "";
+    PrintShadowByte(str, before, *p, after);
+  }
+  str->append("\n");
+}
+
+static void PrintLegend(InternalScopedString *str) {
+  str->append(
+      "Shadow byte legend (one shadow byte represents %d "
+      "application bytes):\n",
+      (int)SHADOW_GRANULARITY);
+  PrintShadowByte(str, "  Addressable:           ", 0);
+  str->append("  Partially addressable: ");
+  for (u8 i = 1; i < SHADOW_GRANULARITY; i++) PrintShadowByte(str, "", i, " ");
+  str->append("\n");
+  PrintShadowByte(str, "  Heap left redzone:       ",
+                  kAsanHeapLeftRedzoneMagic);
+  PrintShadowByte(str, "  Heap right redzone:      ",
+                  kAsanHeapRightRedzoneMagic);
+  PrintShadowByte(str, "  Freed heap region:       ", kAsanHeapFreeMagic);
+  PrintShadowByte(str, "  Stack left redzone:      ",
+                  kAsanStackLeftRedzoneMagic);
+  PrintShadowByte(str, "  Stack mid redzone:       ",
+                  kAsanStackMidRedzoneMagic);
+  PrintShadowByte(str, "  Stack right redzone:     ",
+                  kAsanStackRightRedzoneMagic);
+  PrintShadowByte(str, "  Stack partial redzone:   ",
+                  kAsanStackPartialRedzoneMagic);
+  PrintShadowByte(str, "  Stack after return:      ",
+                  kAsanStackAfterReturnMagic);
+  PrintShadowByte(str, "  Stack use after scope:   ",
+                  kAsanStackUseAfterScopeMagic);
+  PrintShadowByte(str, "  Global redzone:          ", kAsanGlobalRedzoneMagic);
+  PrintShadowByte(str, "  Global init order:       ",
+                  kAsanInitializationOrderMagic);
+  PrintShadowByte(str, "  Poisoned by user:        ",
+                  kAsanUserPoisonedMemoryMagic);
+  PrintShadowByte(str, "  Container overflow:      ",
+                  kAsanContiguousContainerOOBMagic);
+  PrintShadowByte(str, "  Array cookie:            ",
+                  kAsanArrayCookieMagic);
+  PrintShadowByte(str, "  Intra object redzone:    ",
+                  kAsanIntraObjectRedzone);
+  PrintShadowByte(str, "  ASan internal:           ", kAsanInternalHeapMagic);
+  PrintShadowByte(str, "  Left alloca redzone:     ", kAsanAllocaLeftMagic);
+  PrintShadowByte(str, "  Right alloca redzone:    ", kAsanAllocaRightMagic);
+}
+
+void MaybeDumpInstructionBytes(uptr pc) {
+  if (!flags()->dump_instruction_bytes || (pc < GetPageSizeCached()))
+    return;
+  InternalScopedString str(1024);
+  str.append("First 16 instruction bytes at pc: ");
+  if (IsAccessibleMemoryRange(pc, 16)) {
+    for (int i = 0; i < 16; ++i) {
+      PrintMemoryByte(&str, "", ((u8 *)pc)[i], /*in_shadow*/false, " ");
+    }
+    str.append("\n");
+  } else {
+    str.append("unaccessible\n");
+  }
+  Report("%s", str.data());
+}
+
+static void PrintShadowMemoryForAddress(uptr addr) {
+  if (!AddrIsInMem(addr)) return;
+  uptr shadow_addr = MemToShadow(addr);
+  const uptr n_bytes_per_row = 16;
+  uptr aligned_shadow = shadow_addr & ~(n_bytes_per_row - 1);
+  InternalScopedString str(4096 * 8);
+  str.append("Shadow bytes around the buggy address:\n");
+  for (int i = -5; i <= 5; i++) {
+    const char *prefix = (i == 0) ? "=>" : "  ";
+    PrintShadowBytes(&str, prefix, (u8 *)(aligned_shadow + i * n_bytes_per_row),
+                     (u8 *)shadow_addr, n_bytes_per_row);
+  }
+  if (flags()->print_legend) PrintLegend(&str);
+  Printf("%s", str.data());
 }
 
 static void PrintZoneForPointer(uptr ptr, uptr zone_ptr,
@@ -81,6 +186,144 @@ static void PrintZoneForPointer(uptr ptr, uptr zone_ptr,
 }
 
 // ---------------------- Address Descriptions ------------------- {{{1
+
+static bool IsASCII(unsigned char c) {
+  return /*0x00 <= c &&*/ c <= 0x7F;
+}
+
+static const char *MaybeDemangleGlobalName(const char *name) {
+  // We can spoil names of globals with C linkage, so use an heuristic
+  // approach to check if the name should be demangled.
+  bool should_demangle = false;
+  if (name[0] == '_' && name[1] == 'Z')
+    should_demangle = true;
+  else if (SANITIZER_WINDOWS && name[0] == '\01' && name[1] == '?')
+    should_demangle = true;
+
+  return should_demangle ? Symbolizer::GetOrInit()->Demangle(name) : name;
+}
+
+// Check if the global is a zero-terminated ASCII string. If so, print it.
+static void PrintGlobalNameIfASCII(InternalScopedString *str,
+                                   const __asan_global &g) {
+  for (uptr p = g.beg; p < g.beg + g.size - 1; p++) {
+    unsigned char c = *(unsigned char*)p;
+    if (c == '\0' || !IsASCII(c)) return;
+  }
+  if (*(char*)(g.beg + g.size - 1) != '\0') return;
+  str->append("  '%s' is ascii string '%s'\n", MaybeDemangleGlobalName(g.name),
+              (char *)g.beg);
+}
+
+static const char *GlobalFilename(const __asan_global &g) {
+  const char *res = g.module_name;
+  // Prefer the filename from source location, if is available.
+  if (g.location)
+    res = g.location->filename;
+  CHECK(res);
+  return res;
+}
+
+static void PrintGlobalLocation(InternalScopedString *str,
+                                const __asan_global &g) {
+  str->append("%s", GlobalFilename(g));
+  if (!g.location)
+    return;
+  if (g.location->line_no)
+    str->append(":%d", g.location->line_no);
+  if (g.location->column_no)
+    str->append(":%d", g.location->column_no);
+}
+
+static void DescribeAddressRelativeToGlobal(uptr addr, uptr size,
+                                            const __asan_global &g) {
+  InternalScopedString str(4096);
+  Decorator d;
+  str.append("%s", d.Location());
+  if (addr < g.beg) {
+    str.append("%p is located %zd bytes to the left", (void *)addr,
+               g.beg - addr);
+  } else if (addr + size > g.beg + g.size) {
+    if (addr < g.beg + g.size)
+      addr = g.beg + g.size;
+    str.append("%p is located %zd bytes to the right", (void *)addr,
+               addr - (g.beg + g.size));
+  } else {
+    // Can it happen?
+    str.append("%p is located %zd bytes inside", (void *)addr, addr - g.beg);
+  }
+  str.append(" of global variable '%s' defined in '",
+             MaybeDemangleGlobalName(g.name));
+  PrintGlobalLocation(&str, g);
+  str.append("' (0x%zx) of size %zu\n", g.beg, g.size);
+  str.append("%s", d.EndLocation());
+  PrintGlobalNameIfASCII(&str, g);
+  Printf("%s", str.data());
+}
+
+static bool DescribeAddressIfGlobal(uptr addr, uptr size,
+                                    const char *bug_type) {
+  // Assume address is close to at most four globals.
+  const int kMaxGlobalsInReport = 4;
+  __asan_global globals[kMaxGlobalsInReport];
+  u32 reg_sites[kMaxGlobalsInReport];
+  int globals_num =
+      GetGlobalsForAddress(addr, globals, reg_sites, ARRAY_SIZE(globals));
+  if (globals_num == 0)
+    return false;
+  for (int i = 0; i < globals_num; i++) {
+    DescribeAddressRelativeToGlobal(addr, size, globals[i]);
+    if (0 == internal_strcmp(bug_type, "initialization-order-fiasco") &&
+        reg_sites[i]) {
+      Printf("  registered at:\n");
+      StackDepotGet(reg_sites[i]).Print();
+    }
+  }
+  return true;
+}
+
+static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
+                                          uptr access_size, uptr prev_var_end,
+                                          uptr next_var_beg) {
+  uptr var_end = var.beg + var.size;
+  uptr addr_end = addr + access_size;
+  const char *pos_descr = nullptr;
+  // If the variable [var.beg, var_end) is the nearest variable to the
+  // current memory access, indicate it in the log.
+  if (addr >= var.beg) {
+    if (addr_end <= var_end)
+      pos_descr = "is inside";  // May happen if this is a use-after-return.
+    else if (addr < var_end)
+      pos_descr = "partially overflows";
+    else if (addr_end <= next_var_beg &&
+             next_var_beg - addr_end >= addr - var_end)
+      pos_descr = "overflows";
+  } else {
+    if (addr_end > var.beg)
+      pos_descr = "partially underflows";
+    else if (addr >= prev_var_end &&
+             addr - prev_var_end >= var.beg - addr_end)
+      pos_descr = "underflows";
+  }
+  InternalScopedString str(1024);
+  str.append("    [%zd, %zd)", var.beg, var_end);
+  // Render variable name.
+  str.append(" '");
+  for (uptr i = 0; i < var.name_len; ++i) {
+    str.append("%c", var.name_pos[i]);
+  }
+  str.append("'");
+  if (pos_descr) {
+    Decorator d;
+    // FIXME: we may want to also print the size of the access here,
+    // but in case of accesses generated by memset it may be confusing.
+    str.append("%s <== Memory access at offset %zd %s this variable%s\n",
+               d.Location(), addr, pos_descr, d.EndLocation());
+  } else {
+    str.append("\n");
+  }
+  Printf("%s", str.data());
+}
 
 bool ParseFrameDescription(const char *frame_descr,
                            InternalMmapVector<StackVarDescr> *vars) {
@@ -109,17 +352,163 @@ bool ParseFrameDescription(const char *frame_descr,
   return true;
 }
 
+bool DescribeAddressIfStack(uptr addr, uptr access_size) {
+  AsanThread *t = FindThreadByStackAddress(addr);
+  if (!t) return false;
+
+  Decorator d;
+  char tname[128];
+  Printf("%s", d.Location());
+  Printf("Address %p is located in stack of thread T%d%s", addr, t->tid(),
+         ThreadNameWithParenthesis(t->tid(), tname, sizeof(tname)));
+
+  // Try to fetch precise stack frame for this access.
+  AsanThread::StackFrameAccess access;
+  if (!t->GetStackFrameAccessByAddr(addr, &access)) {
+    Printf("%s\n", d.EndLocation());
+    return true;
+  }
+  Printf(" at offset %zu in frame%s\n", access.offset, d.EndLocation());
+
+  // Now we print the frame where the alloca has happened.
+  // We print this frame as a stack trace with one element.
+  // The symbolizer may print more than one frame if inlining was involved.
+  // The frame numbers may be different than those in the stack trace printed
+  // previously. That's unfortunate, but I have no better solution,
+  // especially given that the alloca may be from entirely different place
+  // (e.g. use-after-scope, or different thread's stack).
+#if SANITIZER_PPC64V1
+  // On PowerPC64 ELFv1, the address of a function actually points to a
+  // three-doubleword data structure with the first field containing
+  // the address of the function's code.
+  access.frame_pc = *reinterpret_cast<uptr *>(access.frame_pc);
+#endif
+  access.frame_pc += 16;
+  Printf("%s", d.EndLocation());
+  StackTrace alloca_stack(&access.frame_pc, 1);
+  alloca_stack.Print();
+
+  InternalMmapVector<StackVarDescr> vars(16);
+  if (!ParseFrameDescription(access.frame_descr, &vars)) {
+    Printf("AddressSanitizer can't parse the stack frame "
+           "descriptor: |%s|\n", access.frame_descr);
+    // 'addr' is a stack address, so return true even if we can't parse frame
+    return true;
+  }
+  uptr n_objects = vars.size();
+  // Report the number of stack objects.
+  Printf("  This frame has %zu object(s):\n", n_objects);
+
+  // Report all objects in this frame.
+  for (uptr i = 0; i < n_objects; i++) {
+    uptr prev_var_end = i ? vars[i - 1].beg + vars[i - 1].size : 0;
+    uptr next_var_beg = i + 1 < n_objects ? vars[i + 1].beg : ~(0UL);
+    PrintAccessAndVarIntersection(vars[i], access.offset, access_size,
+                                  prev_var_end, next_var_beg);
+  }
+  Printf("HINT: this may be a false positive if your program uses "
+         "some custom stack unwind mechanism or swapcontext\n");
+  if (SANITIZER_WINDOWS)
+    Printf("      (longjmp, SEH and C++ exceptions *are* supported)\n");
+  else
+    Printf("      (longjmp and C++ exceptions *are* supported)\n");
+
+  DescribeThread(t);
+  return true;
+}
+
+static void DescribeAccessToHeapChunk(AsanChunkView chunk, uptr addr,
+                                      uptr access_size) {
+  sptr offset;
+  Decorator d;
+  InternalScopedString str(4096);
+  str.append("%s", d.Location());
+  if (chunk.AddrIsAtLeft(addr, access_size, &offset)) {
+    str.append("%p is located %zd bytes to the left of", (void *)addr, offset);
+  } else if (chunk.AddrIsAtRight(addr, access_size, &offset)) {
+    if (offset < 0) {
+      addr -= offset;
+      offset = 0;
+    }
+    str.append("%p is located %zd bytes to the right of", (void *)addr, offset);
+  } else if (chunk.AddrIsInside(addr, access_size, &offset)) {
+    str.append("%p is located %zd bytes inside of", (void*)addr, offset);
+  } else {
+    str.append("%p is located somewhere around (this is AddressSanitizer bug!)",
+               (void *)addr);
+  }
+  str.append(" %zu-byte region [%p,%p)\n", chunk.UsedSize(),
+             (void *)(chunk.Beg()), (void *)(chunk.End()));
+  str.append("%s", d.EndLocation());
+  Printf("%s", str.data());
+}
+
+void DescribeHeapAddress(uptr addr, uptr access_size) {
+  AsanChunkView chunk = FindHeapChunkByAddress(addr);
+  if (!chunk.IsValid()) {
+    Printf("AddressSanitizer can not describe address in more detail "
+           "(wild memory access suspected).\n");
+    return;
+  }
+  DescribeAccessToHeapChunk(chunk, addr, access_size);
+  CHECK_NE(chunk.AllocTid(), kInvalidTid);
+  asanThreadRegistry().CheckLocked();
+  AsanThreadContext *alloc_thread =
+      GetThreadContextByTidLocked(chunk.AllocTid());
+  StackTrace alloc_stack = chunk.GetAllocStack();
+  char tname[128];
+  Decorator d;
+  AsanThreadContext *free_thread = nullptr;
+  if (chunk.FreeTid() != kInvalidTid) {
+    free_thread = GetThreadContextByTidLocked(chunk.FreeTid());
+    Printf("%sfreed by thread T%d%s here:%s\n", d.Allocation(),
+           free_thread->tid,
+           ThreadNameWithParenthesis(free_thread, tname, sizeof(tname)),
+           d.EndAllocation());
+    StackTrace free_stack = chunk.GetFreeStack();
+    free_stack.Print();
+    Printf("%spreviously allocated by thread T%d%s here:%s\n",
+           d.Allocation(), alloc_thread->tid,
+           ThreadNameWithParenthesis(alloc_thread, tname, sizeof(tname)),
+           d.EndAllocation());
+  } else {
+    Printf("%sallocated by thread T%d%s here:%s\n", d.Allocation(),
+           alloc_thread->tid,
+           ThreadNameWithParenthesis(alloc_thread, tname, sizeof(tname)),
+           d.EndAllocation());
+  }
+  alloc_stack.Print();
+  DescribeThread(GetCurrentThread());
+  if (free_thread)
+    DescribeThread(free_thread);
+  DescribeThread(alloc_thread);
+}
+
+static void DescribeAddress(uptr addr, uptr access_size, const char *bug_type) {
+  // Check if this is shadow or shadow gap.
+  if (DescribeAddressIfShadow(addr))
+    return;
+  CHECK(AddrIsInMem(addr));
+  if (DescribeAddressIfGlobal(addr, access_size, bug_type))
+    return;
+  if (DescribeAddressIfStack(addr, access_size))
+    return;
+  // Assume it is a heap address.
+  DescribeHeapAddress(addr, access_size);
+}
+
 // -------------------- Different kinds of reports ----------------- {{{1
 
 // Use ScopedInErrorReport to run common actions just before and
 // immediately after printing error report.
 class ScopedInErrorReport {
  public:
-  explicit ScopedInErrorReport(bool fatal = false) {
+  explicit ScopedInErrorReport(ReportData *report = nullptr,
+                               bool fatal = false) {
     halt_on_error_ = fatal || flags()->halt_on_error;
 
     if (lock_.TryLock()) {
-      StartReporting();
+      StartReporting(report);
       return;
     }
 
@@ -161,13 +550,10 @@ class ScopedInErrorReport {
       lock_.Lock();
     }
 
-    StartReporting();
+    StartReporting(report);
   }
 
   ~ScopedInErrorReport() {
-    ASAN_ON_ERROR();
-    if (current_error_.IsValid()) current_error_.Print();
-
     // Make sure the current thread is announced.
     DescribeThread(GetCurrentThread());
     // We may want to grab this lock again when printing stats.
@@ -178,8 +564,6 @@ class ScopedInErrorReport {
 
     if (common_flags()->print_cmdline)
       PrintCmdline();
-
-    if (common_flags()->print_module_map == 2) PrintModuleMap();
 
     // Copy the message buffer so that we could start logging without holding a
     // lock that gets aquired during printing.
@@ -195,12 +579,6 @@ class ScopedInErrorReport {
     if (error_report_callback) {
       error_report_callback(buffer_copy.data());
     }
-
-    // In halt_on_error = false mode, reset the current error object (before
-    // unlocking).
-    if (!halt_on_error_)
-      internal_memset(&current_error_, 0, sizeof(current_error_));
-
     CommonSanitizerReportMutex.Unlock();
     reporting_thread_tid_ = kInvalidTid;
     lock_.Unlock();
@@ -210,18 +588,11 @@ class ScopedInErrorReport {
     }
   }
 
-  void ReportError(const ErrorDescription &description) {
-    // Can only report one error per ScopedInErrorReport.
-    CHECK_EQ(current_error_.kind, kErrorKindInvalid);
-    current_error_ = description;
-  }
-
-  static ErrorDescription &CurrentError() {
-    return current_error_;
-  }
-
  private:
-  void StartReporting() {
+  void StartReporting(ReportData *report) {
+    if (report) report_data = *report;
+    report_happened = true;
+    ASAN_ON_ERROR();
     // Make sure the registry and sanitizer report mutexes are locked while
     // we're printing an error report.
     // We can lock them only here to avoid self-deadlock in case of
@@ -235,69 +606,181 @@ class ScopedInErrorReport {
 
   static StaticSpinMutex lock_;
   static u32 reporting_thread_tid_;
-  // Error currently being reported. This enables the destructor to interact
-  // with the debugger and point it to an error description.
-  static ErrorDescription current_error_;
   bool halt_on_error_;
 };
 
 StaticSpinMutex ScopedInErrorReport::lock_;
 u32 ScopedInErrorReport::reporting_thread_tid_ = kInvalidTid;
-ErrorDescription ScopedInErrorReport::current_error_;
 
 void ReportStackOverflow(const SignalContext &sig) {
-  ScopedInErrorReport in_report(/*fatal*/ true);
-  ErrorStackOverflow error(GetCurrentTidOrInvalid(), sig);
-  in_report.ReportError(error);
+  ScopedInErrorReport in_report(/*report*/ nullptr, /*fatal*/ true);
+  Decorator d;
+  Printf("%s", d.Warning());
+  Report(
+      "ERROR: AddressSanitizer: stack-overflow on address %p"
+      " (pc %p bp %p sp %p T%d)\n",
+      (void *)sig.addr, (void *)sig.pc, (void *)sig.bp, (void *)sig.sp,
+      GetCurrentTidOrInvalid());
+  Printf("%s", d.EndWarning());
+  ScarinessScore::PrintSimple(10, "stack-overflow");
+  GET_STACK_TRACE_SIGNAL(sig);
+  stack.Print();
+  ReportErrorSummary("stack-overflow", &stack);
 }
 
-void ReportDeadlySignal(int signo, const SignalContext &sig) {
-  ScopedInErrorReport in_report(/*fatal*/ true);
-  ErrorDeadlySignal error(GetCurrentTidOrInvalid(), sig, signo);
-  in_report.ReportError(error);
+void ReportDeadlySignal(const char *description, const SignalContext &sig) {
+  ScopedInErrorReport in_report(/*report*/ nullptr, /*fatal*/ true);
+  Decorator d;
+  Printf("%s", d.Warning());
+  Report(
+      "ERROR: AddressSanitizer: %s on unknown address %p"
+      " (pc %p bp %p sp %p T%d)\n",
+      description, (void *)sig.addr, (void *)sig.pc, (void *)sig.bp,
+      (void *)sig.sp, GetCurrentTidOrInvalid());
+  Printf("%s", d.EndWarning());
+  ScarinessScore SS;
+  if (sig.pc < GetPageSizeCached())
+    Report("Hint: pc points to the zero page.\n");
+  if (sig.is_memory_access) {
+    const char *access_type =
+        sig.write_flag == SignalContext::WRITE
+            ? "WRITE"
+            : (sig.write_flag == SignalContext::READ ? "READ" : "UNKNOWN");
+    Report("The signal is caused by a %s memory access.\n", access_type);
+    if (sig.addr < GetPageSizeCached()) {
+      Report("Hint: address points to the zero page.\n");
+      SS.Scare(10, "null-deref");
+    } else if (sig.addr == sig.pc) {
+      SS.Scare(60, "wild-jump");
+    } else if (sig.write_flag == SignalContext::WRITE) {
+      SS.Scare(30, "wild-addr-write");
+    } else if (sig.write_flag == SignalContext::READ) {
+      SS.Scare(20, "wild-addr-read");
+    } else {
+      SS.Scare(25, "wild-addr");
+    }
+  } else {
+    SS.Scare(10, "signal");
+  }
+  SS.Print();
+  GET_STACK_TRACE_SIGNAL(sig);
+  stack.Print();
+  MaybeDumpInstructionBytes(sig.pc);
+  Printf("AddressSanitizer can not provide additional info.\n");
+  ReportErrorSummary(description, &stack);
 }
 
 void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack) {
   ScopedInErrorReport in_report;
-  ErrorDoubleFree error(GetCurrentTidOrInvalid(), free_stack, addr);
-  in_report.ReportError(error);
+  Decorator d;
+  Printf("%s", d.Warning());
+  char tname[128];
+  u32 curr_tid = GetCurrentTidOrInvalid();
+  Report("ERROR: AddressSanitizer: attempting double-free on %p in "
+         "thread T%d%s:\n",
+         addr, curr_tid,
+         ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)));
+  Printf("%s", d.EndWarning());
+  CHECK_GT(free_stack->size, 0);
+  ScarinessScore::PrintSimple(42, "double-free");
+  GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
+  stack.Print();
+  DescribeHeapAddress(addr, 1);
+  ReportErrorSummary("double-free", &stack);
 }
 
-void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
+void ReportNewDeleteSizeMismatch(uptr addr, uptr alloc_size, uptr delete_size,
                                  BufferedStackTrace *free_stack) {
   ScopedInErrorReport in_report;
-  ErrorNewDeleteSizeMismatch error(GetCurrentTidOrInvalid(), free_stack, addr,
-                                   delete_size);
-  in_report.ReportError(error);
+  Decorator d;
+  Printf("%s", d.Warning());
+  char tname[128];
+  u32 curr_tid = GetCurrentTidOrInvalid();
+  Report("ERROR: AddressSanitizer: new-delete-type-mismatch on %p in "
+         "thread T%d%s:\n",
+         addr, curr_tid,
+         ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)));
+  Printf("%s  object passed to delete has wrong type:\n", d.EndWarning());
+  Printf("  size of the allocated type:   %zd bytes;\n"
+         "  size of the deallocated type: %zd bytes.\n",
+         alloc_size, delete_size);
+  CHECK_GT(free_stack->size, 0);
+  ScarinessScore::PrintSimple(10, "new-delete-type-mismatch");
+  GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
+  stack.Print();
+  DescribeHeapAddress(addr, 1);
+  ReportErrorSummary("new-delete-type-mismatch", &stack);
+  Report("HINT: if you don't care about these errors you may set "
+         "ASAN_OPTIONS=new_delete_type_mismatch=0\n");
 }
 
 void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack) {
   ScopedInErrorReport in_report;
-  ErrorFreeNotMalloced error(GetCurrentTidOrInvalid(), free_stack, addr);
-  in_report.ReportError(error);
+  Decorator d;
+  Printf("%s", d.Warning());
+  char tname[128];
+  u32 curr_tid = GetCurrentTidOrInvalid();
+  Report("ERROR: AddressSanitizer: attempting free on address "
+             "which was not malloc()-ed: %p in thread T%d%s\n", addr,
+         curr_tid, ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)));
+  Printf("%s", d.EndWarning());
+  CHECK_GT(free_stack->size, 0);
+  ScarinessScore::PrintSimple(40, "bad-free");
+  GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
+  stack.Print();
+  DescribeHeapAddress(addr, 1);
+  ReportErrorSummary("bad-free", &stack);
 }
 
 void ReportAllocTypeMismatch(uptr addr, BufferedStackTrace *free_stack,
                              AllocType alloc_type,
                              AllocType dealloc_type) {
+  static const char *alloc_names[] =
+    {"INVALID", "malloc", "operator new", "operator new []"};
+  static const char *dealloc_names[] =
+    {"INVALID", "free", "operator delete", "operator delete []"};
+  CHECK_NE(alloc_type, dealloc_type);
   ScopedInErrorReport in_report;
-  ErrorAllocTypeMismatch error(GetCurrentTidOrInvalid(), free_stack, addr,
-                               alloc_type, dealloc_type);
-  in_report.ReportError(error);
+  Decorator d;
+  Printf("%s", d.Warning());
+  Report("ERROR: AddressSanitizer: alloc-dealloc-mismatch (%s vs %s) on %p\n",
+        alloc_names[alloc_type], dealloc_names[dealloc_type], addr);
+  Printf("%s", d.EndWarning());
+  CHECK_GT(free_stack->size, 0);
+  ScarinessScore::PrintSimple(10, "alloc-dealloc-mismatch");
+  GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
+  stack.Print();
+  DescribeHeapAddress(addr, 1);
+  ReportErrorSummary("alloc-dealloc-mismatch", &stack);
+  Report("HINT: if you don't care about these errors you may set "
+         "ASAN_OPTIONS=alloc_dealloc_mismatch=0\n");
 }
 
 void ReportMallocUsableSizeNotOwned(uptr addr, BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  ErrorMallocUsableSizeNotOwned error(GetCurrentTidOrInvalid(), stack, addr);
-  in_report.ReportError(error);
+  Decorator d;
+  Printf("%s", d.Warning());
+  Report("ERROR: AddressSanitizer: attempting to call "
+             "malloc_usable_size() for pointer which is "
+             "not owned: %p\n", addr);
+  Printf("%s", d.EndWarning());
+  stack->Print();
+  DescribeHeapAddress(addr, 1);
+  ReportErrorSummary("bad-malloc_usable_size", stack);
 }
 
 void ReportSanitizerGetAllocatedSizeNotOwned(uptr addr,
                                              BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  ErrorSanitizerGetAllocatedSizeNotOwned error(GetCurrentTidOrInvalid(), stack,
-                                               addr);
-  in_report.ReportError(error);
+  Decorator d;
+  Printf("%s", d.Warning());
+  Report("ERROR: AddressSanitizer: attempting to call "
+             "__sanitizer_get_allocated_size() for pointer which is "
+             "not owned: %p\n", addr);
+  Printf("%s", d.EndWarning());
+  stack->Print();
+  DescribeHeapAddress(addr, 1);
+  ReportErrorSummary("bad-__sanitizer_get_allocated_size", stack);
 }
 
 void ReportStringFunctionMemoryRangesOverlap(const char *function,
@@ -305,43 +788,96 @@ void ReportStringFunctionMemoryRangesOverlap(const char *function,
                                              const char *offset2, uptr length2,
                                              BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  ErrorStringFunctionMemoryRangesOverlap error(
-      GetCurrentTidOrInvalid(), stack, (uptr)offset1, length1, (uptr)offset2,
-      length2, function);
-  in_report.ReportError(error);
+  Decorator d;
+  char bug_type[100];
+  internal_snprintf(bug_type, sizeof(bug_type), "%s-param-overlap", function);
+  Printf("%s", d.Warning());
+  Report("ERROR: AddressSanitizer: %s: "
+             "memory ranges [%p,%p) and [%p, %p) overlap\n", \
+             bug_type, offset1, offset1 + length1, offset2, offset2 + length2);
+  Printf("%s", d.EndWarning());
+  ScarinessScore::PrintSimple(10, bug_type);
+  stack->Print();
+  DescribeAddress((uptr)offset1, length1, bug_type);
+  DescribeAddress((uptr)offset2, length2, bug_type);
+  ReportErrorSummary(bug_type, stack);
 }
 
 void ReportStringFunctionSizeOverflow(uptr offset, uptr size,
                                       BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  ErrorStringFunctionSizeOverflow error(GetCurrentTidOrInvalid(), stack, offset,
-                                        size);
-  in_report.ReportError(error);
+  Decorator d;
+  const char *bug_type = "negative-size-param";
+  Printf("%s", d.Warning());
+  Report("ERROR: AddressSanitizer: %s: (size=%zd)\n", bug_type, size);
+  Printf("%s", d.EndWarning());
+  ScarinessScore::PrintSimple(10, bug_type);
+  stack->Print();
+  DescribeAddress(offset, size, bug_type);
+  ReportErrorSummary(bug_type, stack);
 }
 
 void ReportBadParamsToAnnotateContiguousContainer(uptr beg, uptr end,
                                                   uptr old_mid, uptr new_mid,
                                                   BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  ErrorBadParamsToAnnotateContiguousContainer error(
-      GetCurrentTidOrInvalid(), stack, beg, end, old_mid, new_mid);
-  in_report.ReportError(error);
+  Report("ERROR: AddressSanitizer: bad parameters to "
+         "__sanitizer_annotate_contiguous_container:\n"
+         "      beg     : %p\n"
+         "      end     : %p\n"
+         "      old_mid : %p\n"
+         "      new_mid : %p\n",
+         beg, end, old_mid, new_mid);
+  uptr granularity = SHADOW_GRANULARITY;
+  if (!IsAligned(beg, granularity))
+    Report("ERROR: beg is not aligned by %d\n", granularity);
+  stack->Print();
+  ReportErrorSummary("bad-__sanitizer_annotate_contiguous_container", stack);
 }
 
 void ReportODRViolation(const __asan_global *g1, u32 stack_id1,
                         const __asan_global *g2, u32 stack_id2) {
   ScopedInErrorReport in_report;
-  ErrorODRViolation error(GetCurrentTidOrInvalid(), g1, stack_id1, g2,
-                          stack_id2);
-  in_report.ReportError(error);
+  Decorator d;
+  Printf("%s", d.Warning());
+  Report("ERROR: AddressSanitizer: odr-violation (%p):\n", g1->beg);
+  Printf("%s", d.EndWarning());
+  InternalScopedString g1_loc(256), g2_loc(256);
+  PrintGlobalLocation(&g1_loc, *g1);
+  PrintGlobalLocation(&g2_loc, *g2);
+  Printf("  [1] size=%zd '%s' %s\n", g1->size,
+         MaybeDemangleGlobalName(g1->name), g1_loc.data());
+  Printf("  [2] size=%zd '%s' %s\n", g2->size,
+         MaybeDemangleGlobalName(g2->name), g2_loc.data());
+  if (stack_id1 && stack_id2) {
+    Printf("These globals were registered at these points:\n");
+    Printf("  [1]:\n");
+    StackDepotGet(stack_id1).Print();
+    Printf("  [2]:\n");
+    StackDepotGet(stack_id2).Print();
+  }
+  Report("HINT: if you don't care about these errors you may set "
+         "ASAN_OPTIONS=detect_odr_violation=0\n");
+  InternalScopedString error_msg(256);
+  error_msg.append("odr-violation: global '%s' at %s",
+                   MaybeDemangleGlobalName(g1->name), g1_loc.data());
+  ReportErrorSummary(error_msg.data());
 }
 
 // ----------------------- CheckForInvalidPointerPair ----------- {{{1
-static NOINLINE void ReportInvalidPointerPair(uptr pc, uptr bp, uptr sp,
-                                              uptr a1, uptr a2) {
+static NOINLINE void
+ReportInvalidPointerPair(uptr pc, uptr bp, uptr sp, uptr a1, uptr a2) {
   ScopedInErrorReport in_report;
-  ErrorInvalidPointerPair error(GetCurrentTidOrInvalid(), pc, bp, sp, a1, a2);
-  in_report.ReportError(error);
+  const char *bug_type = "invalid-pointer-pair";
+  Decorator d;
+  Printf("%s", d.Warning());
+  Report("ERROR: AddressSanitizer: invalid-pointer-pair: %p %p\n", a1, a2);
+  Printf("%s", d.EndWarning());
+  GET_STACK_TRACE_FATAL(pc, bp);
+  stack.Print();
+  DescribeAddress(a1, 1, bug_type);
+  DescribeAddress(a2, 1, bug_type);
+  ReportErrorSummary(bug_type, &stack);
 }
 
 static INLINE void CheckForInvalidPointerPair(void *p1, void *p2) {
@@ -367,7 +903,7 @@ void ReportMacMzReallocUnknown(uptr addr, uptr zone_ptr, const char *zone_name,
              addr);
   PrintZoneForPointer(addr, zone_ptr, zone_name);
   stack->Print();
-  DescribeAddressIfHeap(addr);
+  DescribeHeapAddress(addr, 1);
 }
 
 // -------------- SuppressErrorReport -------------- {{{1
@@ -384,10 +920,34 @@ static bool SuppressErrorReport(uptr pc) {
   Die();
 }
 
+static void PrintContainerOverflowHint() {
+  Printf("HINT: if you don't care about these errors you may set "
+         "ASAN_OPTIONS=detect_container_overflow=0.\n"
+         "If you suspect a false positive see also: "
+         "https://github.com/google/sanitizers/wiki/"
+         "AddressSanitizerContainerOverflow.\n");
+}
+
+static bool AdjacentShadowValuesAreFullyPoisoned(u8 *s) {
+  return s[-1] > 127 && s[1] > 127;
+}
+
 void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
                         uptr access_size, u32 exp, bool fatal) {
   if (!fatal && SuppressErrorReport(pc)) return;
   ENABLE_FRAME_POINTER;
+  ScarinessScore SS;
+
+  if (access_size) {
+    if (access_size <= 9) {
+      char desr[] = "?-byte";
+      desr[0] = '0' + access_size;
+      SS.Scare(access_size + access_size / 2, desr);
+    } else if (access_size >= 10) {
+      SS.Scare(15, "multi-byte");
+    }
+    is_write ? SS.Scare(20, "write") : SS.Scare(1, "read");
+  }
 
   // Optimization experiments.
   // The experiments can be used to evaluate potential optimizations that remove
@@ -398,10 +958,118 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
   // The reaction to a non-zero value of exp is to be defined.
   (void)exp;
 
-  ScopedInErrorReport in_report(fatal);
-  ErrorGeneric error(GetCurrentTidOrInvalid(), pc, bp, sp, addr, is_write,
-                     access_size);
-  in_report.ReportError(error);
+  // Determine the error type.
+  const char *bug_descr = "unknown-crash";
+  u8 shadow_val = 0;
+  if (AddrIsInMem(addr)) {
+    u8 *shadow_addr = (u8*)MemToShadow(addr);
+    // If we are accessing 16 bytes, look at the second shadow byte.
+    if (*shadow_addr == 0 && access_size > SHADOW_GRANULARITY)
+      shadow_addr++;
+    // If we are in the partial right redzone, look at the next shadow byte.
+    if (*shadow_addr > 0 && *shadow_addr < 128)
+      shadow_addr++;
+    bool far_from_bounds = false;
+    shadow_val = *shadow_addr;
+    int bug_type_score = 0;
+    // For use-after-frees reads are almost as bad as writes.
+    int read_after_free_bonus = 0;
+    switch (shadow_val) {
+      case kAsanHeapLeftRedzoneMagic:
+      case kAsanHeapRightRedzoneMagic:
+      case kAsanArrayCookieMagic:
+        bug_descr = "heap-buffer-overflow";
+        bug_type_score = 10;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
+        break;
+      case kAsanHeapFreeMagic:
+        bug_descr = "heap-use-after-free";
+        bug_type_score = 20;
+        if (!is_write) read_after_free_bonus = 18;
+        break;
+      case kAsanStackLeftRedzoneMagic:
+        bug_descr = "stack-buffer-underflow";
+        bug_type_score = 25;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
+        break;
+      case kAsanInitializationOrderMagic:
+        bug_descr = "initialization-order-fiasco";
+        bug_type_score = 1;
+        break;
+      case kAsanStackMidRedzoneMagic:
+      case kAsanStackRightRedzoneMagic:
+      case kAsanStackPartialRedzoneMagic:
+        bug_descr = "stack-buffer-overflow";
+        bug_type_score = 25;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
+        break;
+      case kAsanStackAfterReturnMagic:
+        bug_descr = "stack-use-after-return";
+        bug_type_score = 30;
+        if (!is_write) read_after_free_bonus = 18;
+        break;
+      case kAsanUserPoisonedMemoryMagic:
+        bug_descr = "use-after-poison";
+        bug_type_score = 20;
+        break;
+      case kAsanContiguousContainerOOBMagic:
+        bug_descr = "container-overflow";
+        bug_type_score = 10;
+        break;
+      case kAsanStackUseAfterScopeMagic:
+        bug_descr = "stack-use-after-scope";
+        bug_type_score = 10;
+        break;
+      case kAsanGlobalRedzoneMagic:
+        bug_descr = "global-buffer-overflow";
+        bug_type_score = 10;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
+        break;
+      case kAsanIntraObjectRedzone:
+        bug_descr = "intra-object-overflow";
+        bug_type_score = 10;
+        break;
+      case kAsanAllocaLeftMagic:
+      case kAsanAllocaRightMagic:
+        bug_descr = "dynamic-stack-buffer-overflow";
+        bug_type_score = 25;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
+        break;
+    }
+    SS.Scare(bug_type_score + read_after_free_bonus, bug_descr);
+    if (far_from_bounds)
+      SS.Scare(10, "far-from-bounds");
+  }
+
+  ReportData report = { pc, sp, bp, addr, (bool)is_write, access_size,
+                        bug_descr };
+  ScopedInErrorReport in_report(&report, fatal);
+
+  Decorator d;
+  Printf("%s", d.Warning());
+  Report("ERROR: AddressSanitizer: %s on address "
+             "%p at pc %p bp %p sp %p\n",
+             bug_descr, (void*)addr, pc, bp, sp);
+  Printf("%s", d.EndWarning());
+
+  u32 curr_tid = GetCurrentTidOrInvalid();
+  char tname[128];
+  Printf("%s%s of size %zu at %p thread T%d%s%s\n",
+         d.Access(),
+         access_size ? (is_write ? "WRITE" : "READ") : "ACCESS",
+         access_size, (void*)addr, curr_tid,
+         ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)),
+         d.EndAccess());
+
+  SS.Print();
+  GET_STACK_TRACE_FATAL(pc, bp);
+  stack.Print();
+
+  DescribeAddress(addr, access_size, bug_descr);
+  if (shadow_val == kAsanContiguousContainerOOBMagic)
+    PrintContainerOverflowHint();
+  ReportErrorSummary(bug_descr, &stack);
+  PrintShadowMemoryForAddress(addr);
 }
 
 }  // namespace __asan
@@ -424,57 +1092,40 @@ void NOINLINE __asan_set_error_report_callback(void (*callback)(const char*)) {
 void __asan_describe_address(uptr addr) {
   // Thread registry must be locked while we're describing an address.
   asanThreadRegistry().Lock();
-  PrintAddressDescription(addr, 1, "");
+  DescribeAddress(addr, 1, "");
   asanThreadRegistry().Unlock();
 }
 
 int __asan_report_present() {
-  return ScopedInErrorReport::CurrentError().kind != kErrorKindInvalid;
+  return report_happened ? 1 : 0;
 }
 
 uptr __asan_get_report_pc() {
-  if (ScopedInErrorReport::CurrentError().kind == kErrorKindGeneric)
-    return ScopedInErrorReport::CurrentError().Generic.pc;
-  return 0;
+  return report_data.pc;
 }
 
 uptr __asan_get_report_bp() {
-  if (ScopedInErrorReport::CurrentError().kind == kErrorKindGeneric)
-    return ScopedInErrorReport::CurrentError().Generic.bp;
-  return 0;
+  return report_data.bp;
 }
 
 uptr __asan_get_report_sp() {
-  if (ScopedInErrorReport::CurrentError().kind == kErrorKindGeneric)
-    return ScopedInErrorReport::CurrentError().Generic.sp;
-  return 0;
+  return report_data.sp;
 }
 
 uptr __asan_get_report_address() {
-  ErrorDescription &err = ScopedInErrorReport::CurrentError();
-  if (err.kind == kErrorKindGeneric)
-    return err.Generic.addr_description.Address();
-  else if (err.kind == kErrorKindDoubleFree)
-    return err.DoubleFree.addr_description.addr;
-  return 0;
+  return report_data.addr;
 }
 
 int __asan_get_report_access_type() {
-  if (ScopedInErrorReport::CurrentError().kind == kErrorKindGeneric)
-    return ScopedInErrorReport::CurrentError().Generic.is_write;
-  return 0;
+  return report_data.is_write ? 1 : 0;
 }
 
 uptr __asan_get_report_access_size() {
-  if (ScopedInErrorReport::CurrentError().kind == kErrorKindGeneric)
-    return ScopedInErrorReport::CurrentError().Generic.access_size;
-  return 0;
+  return report_data.access_size;
 }
 
 const char *__asan_get_report_description() {
-  if (ScopedInErrorReport::CurrentError().kind == kErrorKindGeneric)
-    return ScopedInErrorReport::CurrentError().Generic.bug_descr;
-  return ScopedInErrorReport::CurrentError().Base.scariness.GetDescription();
+  return report_data.description;
 }
 
 extern "C" {

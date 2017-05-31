@@ -27,7 +27,7 @@
 ; SCE-NOT: apple_names
 
 
-@globalvar = global i32 0, align 4, !dbg !4
+@globalvar = global i32 0, align 4
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7}
@@ -37,7 +37,7 @@
 !1 = !DIFile(filename: "debugger-tune.cpp", directory: "/home/probinson/projects/scratch")
 !2 = !{}
 !3 = !{!4}
-!4 = !DIGlobalVariable(name: "globalvar", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true)
+!4 = !DIGlobalVariable(name: "globalvar", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, variable: i32* @globalvar)
 !5 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !6 = !{i32 2, !"Dwarf Version", i32 4}
 !7 = !{i32 2, !"Debug Info Version", i32 3}

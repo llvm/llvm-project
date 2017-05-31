@@ -95,18 +95,12 @@ int DeclarationName::compare(DeclarationName LHS, DeclarationName RHS) {
   case DeclarationName::ObjCMultiArgSelector: {
     Selector LHSSelector = LHS.getObjCSelector();
     Selector RHSSelector = RHS.getObjCSelector();
-    // getNumArgs for ZeroArgSelector returns 0, but we still need to compare.
-    if (LHS.getNameKind() == DeclarationName::ObjCZeroArgSelector &&
-        RHS.getNameKind() == DeclarationName::ObjCZeroArgSelector) {
-      return LHSSelector.getAsIdentifierInfo()->getName().compare(
-             RHSSelector.getAsIdentifierInfo()->getName());
-    }
     unsigned LN = LHSSelector.getNumArgs(), RN = RHSSelector.getNumArgs();
     for (unsigned I = 0, N = std::min(LN, RN); I != N; ++I) {
       switch (LHSSelector.getNameForSlot(I).compare(
                                                RHSSelector.getNameForSlot(I))) {
-      case -1: return -1;
-      case 1: return 1;
+      case -1: return true;
+      case 1: return false;
       default: break;
       }
     }

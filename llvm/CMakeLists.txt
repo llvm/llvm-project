@@ -69,22 +69,9 @@ if(CMAKE_HOST_APPLE AND APPLE)
   if(CMAKE_LIBTOOL)
     set(CMAKE_LIBTOOL ${CMAKE_LIBTOOL} CACHE PATH "libtool executable")
     message(STATUS "Found libtool - ${CMAKE_LIBTOOL}")
-
-    execute_process(COMMAND ${CMAKE_LIBTOOL} -V
-      OUTPUT_VARIABLE LIBTOOL_V_OUTPUT
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if("${LIBTOOL_V_OUTPUT}" MATCHES ".*cctools-([0-9.]+).*")
-      string(REGEX REPLACE ".*cctools-([0-9.]+).*" "\\1" LIBTOOL_VERSION
-        ${LIBTOOL_V_OUTPUT})
-      if(NOT LIBTOOL_VERSION VERSION_LESS "862")
-        set(LIBTOOL_NO_WARNING_FLAG "-no_warning_for_no_symbols")
-      endif()
-    endif()
-    
     foreach(lang ${languages})
       set(CMAKE_${lang}_CREATE_STATIC_LIBRARY
-        "${CMAKE_LIBTOOL} -static ${LIBTOOL_NO_WARNING_FLAG} -o <TARGET> \
-        <LINK_FLAGS> <OBJECTS> ")
+        "${CMAKE_LIBTOOL} -static -o <TARGET> <LINK_FLAGS> <OBJECTS> ")
     endforeach()
   endif()
 
@@ -672,6 +659,20 @@ set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/bin )
 set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
 set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
 
+set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+if (APPLE)
+  set(CMAKE_INSTALL_NAME_DIR "@rpath")
+  set(CMAKE_INSTALL_RPATH "@executable_path/../lib")
+else(UNIX)
+  if(NOT DEFINED CMAKE_INSTALL_RPATH)
+    set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}")
+    if(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,origin")
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,origin")
+    endif()
+  endif(NOT DEFINED CMAKE_INSTALL_RPATH)
+endif()
+
 if(APPLE AND DARWIN_LTO_LIBRARY)
   set(CMAKE_EXE_LINKER_FLAGS
     "${CMAKE_EXE_LINKER_FLAGS} -Wl,-lto_library -Wl,${DARWIN_LTO_LIBRARY}")
@@ -819,19 +820,14 @@ if( LLVM_INCLUDE_TESTS )
   get_property(LLVM_LIT_PARAMS GLOBAL PROPERTY LLVM_LIT_PARAMS)
   get_property(LLVM_LIT_DEPENDS GLOBAL PROPERTY LLVM_LIT_DEPENDS)
   get_property(LLVM_LIT_EXTRA_ARGS GLOBAL PROPERTY LLVM_LIT_EXTRA_ARGS)
-  get_property(LLVM_ADDITIONAL_TEST_TARGETS
-               GLOBAL PROPERTY LLVM_ADDITIONAL_TEST_TARGETS)
-  get_property(LLVM_ADDITIONAL_TEST_DEPENDS
-               GLOBAL PROPERTY LLVM_ADDITIONAL_TEST_DEPENDS)
   add_lit_target(check-all
     "Running all regression tests"
     ${LLVM_LIT_TESTSUITES}
     PARAMS ${LLVM_LIT_PARAMS}
-    DEPENDS ${LLVM_LIT_DEPENDS} ${LLVM_ADDITIONAL_TEST_TARGETS}
+    DEPENDS ${LLVM_LIT_DEPENDS}
     ARGS ${LLVM_LIT_EXTRA_ARGS}
     )
-  add_custom_target(test-depends
-                    DEPENDS ${LLVM_LIT_DEPENDS} ${LLVM_ADDITIONAL_TEST_DEPENDS})
+  add_custom_target(test-depends DEPENDS ${LLVM_LIT_DEPENDS})
   set_target_properties(test-depends PROPERTIES FOLDER "Tests")
 endif()
 

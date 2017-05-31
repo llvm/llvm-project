@@ -18,7 +18,7 @@ This test serves two purposes:
 
 The list of warnings below should NEVER grow.  It should gradually shrink to 0.
 
-CHECK: Warnings without flags (85):
+CHECK: Warnings without flags (84):
 CHECK-NEXT:   ext_excess_initializers
 CHECK-NEXT:   ext_excess_initializers_in_char_array_initializer
 CHECK-NEXT:   ext_expected_semi_decl_list
@@ -40,7 +40,6 @@ CHECK-NEXT:   pp_out_of_date_dependency
 CHECK-NEXT:   pp_poisoning_existing_macro
 CHECK-NEXT:   w_asm_qualifier_ignored
 CHECK-NEXT:   warn_accessor_property_type_mismatch
-CHECK-NEXT:   warn_apinotes_message
 CHECK-NEXT:   warn_arcmt_nsalloc_realloc
 CHECK-NEXT:   warn_asm_label_on_auto_decl
 CHECK-NEXT:   warn_c_kext

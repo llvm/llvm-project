@@ -582,9 +582,7 @@ bool ModuleLinker::run() {
   if (Error E = Mover.move(std::move(SrcM), ValuesToLink.getArrayRef(),
                            [this](GlobalValue &GV, IRMover::ValueAdder Add) {
                              addLazyFor(GV, Add);
-                           },
-                           /* LinkModuleInlineAsm */ !isPerformingImport(),
-                           /* IsPerformingImport */ isPerformingImport())) {
+                           })) {
     handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
       DstM.getContext().diagnose(LinkDiagnosticInfo(DS_Error, EIB.message()));
       HasErrors = true;

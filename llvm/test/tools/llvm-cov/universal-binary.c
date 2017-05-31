@@ -12,4 +12,4 @@ int main(int argc, const char *argv[]) {}
 // WRONG-ARCH: Failed to load coverage
 
 // RUN: not llvm-cov report -instr-profile %t.profdata 2>&1 | FileCheck --check-prefix=MISSING-BINARY %s
-// MISSING-BINARY: No filenames specified!
+// MISSING-BINARY: 1 positional argument: See:

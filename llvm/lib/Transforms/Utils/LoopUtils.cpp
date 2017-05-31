@@ -17,6 +17,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
@@ -961,6 +962,8 @@ void llvm::getLoopAnalysisUsage(AnalysisUsage &AU) {
   AU.addPreserved<SCEVAAWrapperPass>();
   AU.addRequired<ScalarEvolutionWrapperPass>();
   AU.addPreserved<ScalarEvolutionWrapperPass>();
+  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
+  AU.addPreserved<OptimizationRemarkEmitterWrapperPass>();
 }
 
 /// Manually defined generic "LoopPass" dependency initialization. This is used
@@ -981,6 +984,7 @@ void llvm::initializeLoopPassPass(PassRegistry &Registry) {
   INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
   INITIALIZE_PASS_DEPENDENCY(SCEVAAWrapperPass)
   INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
+  INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 }
 
 /// \brief Find string metadata for loop

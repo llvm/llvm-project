@@ -904,9 +904,6 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc::log:
   case LibFunc::logf:
   case LibFunc::logl:
-  case LibFunc::log1p:
-  case LibFunc::log1pf:
-  case LibFunc::log1pl:
   case LibFunc::log10:
   case LibFunc::log10f:
   case LibFunc::log10l:

@@ -33,7 +33,6 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Dwarf.h"
-#include "llvm/Support/YAMLTraits.h"
 #include <vector>
 
 namespace llvm {
@@ -759,23 +758,23 @@ template <> struct MDNodeKeyImpl<DIGlobalVariable> {
   Metadata *Type;
   bool IsLocalToUnit;
   bool IsDefinition;
-  Metadata *Expr;
+  Metadata *Variable;
   Metadata *StaticDataMemberDeclaration;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, MDString *LinkageName,
                 Metadata *File, unsigned Line, Metadata *Type,
-                bool IsLocalToUnit, bool IsDefinition, Metadata *Expr,
+                bool IsLocalToUnit, bool IsDefinition, Metadata *Variable,
                 Metadata *StaticDataMemberDeclaration)
       : Scope(Scope), Name(Name), LinkageName(LinkageName), File(File),
         Line(Line), Type(Type), IsLocalToUnit(IsLocalToUnit),
-        IsDefinition(IsDefinition), Expr(Expr),
+        IsDefinition(IsDefinition), Variable(Variable),
         StaticDataMemberDeclaration(StaticDataMemberDeclaration) {}
   MDNodeKeyImpl(const DIGlobalVariable *N)
       : Scope(N->getRawScope()), Name(N->getRawName()),
         LinkageName(N->getRawLinkageName()), File(N->getRawFile()),
         Line(N->getLine()), Type(N->getRawType()),
         IsLocalToUnit(N->isLocalToUnit()), IsDefinition(N->isDefinition()),
-        Expr(N->getRawExpr()),
+        Variable(N->getRawVariable()),
         StaticDataMemberDeclaration(N->getRawStaticDataMemberDeclaration()) {}
 
   bool isKeyOf(const DIGlobalVariable *RHS) const {
@@ -784,13 +783,13 @@ template <> struct MDNodeKeyImpl<DIGlobalVariable> {
            File == RHS->getRawFile() && Line == RHS->getLine() &&
            Type == RHS->getRawType() && IsLocalToUnit == RHS->isLocalToUnit() &&
            IsDefinition == RHS->isDefinition() &&
-           Expr == RHS->getRawExpr() &&
+           Variable == RHS->getRawVariable() &&
            StaticDataMemberDeclaration ==
                RHS->getRawStaticDataMemberDeclaration();
   }
   unsigned getHashValue() const {
     return hash_combine(Scope, Name, LinkageName, File, Line, Type,
-                        IsLocalToUnit, IsDefinition, Expr,
+                        IsLocalToUnit, IsDefinition, Variable,
                         StaticDataMemberDeclaration);
   }
 };
@@ -1044,7 +1043,6 @@ public:
   void *DiagnosticContext;
   bool RespectDiagnosticFilters;
   bool DiagnosticHotnessRequested;
-  std::unique_ptr<yaml::Output> DiagnosticsOutputFile;
 
   LLVMContext::YieldCallbackTy YieldCallback;
   void *YieldOpaqueHandle;

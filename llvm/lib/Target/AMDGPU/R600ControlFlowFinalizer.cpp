@@ -450,24 +450,27 @@ private:
     return ClauseFile(&ClauseHead, std::move(ClauseContent));
   }
 
-  void EmitFetchClause(MachineBasicBlock::iterator InsertPos,
-                       const DebugLoc &DL, ClauseFile &Clause,
-                       unsigned &CfCount) {
+  void
+  EmitFetchClause(MachineBasicBlock::iterator InsertPos, ClauseFile &Clause,
+      unsigned &CfCount) {
     CounterPropagateAddr(*Clause.first, CfCount);
     MachineBasicBlock *BB = Clause.first->getParent();
-    BuildMI(BB, DL, TII->get(AMDGPU::FETCH_CLAUSE)).addImm(CfCount);
+    BuildMI(BB, InsertPos->getDebugLoc(), TII->get(AMDGPU::FETCH_CLAUSE))
+        .addImm(CfCount);
     for (unsigned i = 0, e = Clause.second.size(); i < e; ++i) {
       BB->splice(InsertPos, BB, Clause.second[i]);
     }
     CfCount += 2 * Clause.second.size();
   }
 
-  void EmitALUClause(MachineBasicBlock::iterator InsertPos, const DebugLoc &DL,
-                     ClauseFile &Clause, unsigned &CfCount) {
+  void
+  EmitALUClause(MachineBasicBlock::iterator InsertPos, ClauseFile &Clause,
+      unsigned &CfCount) {
     Clause.first->getOperand(0).setImm(0);
     CounterPropagateAddr(*Clause.first, CfCount);
     MachineBasicBlock *BB = Clause.first->getParent();
-    BuildMI(BB, DL, TII->get(AMDGPU::ALU_CLAUSE)).addImm(CfCount);
+    BuildMI(BB, InsertPos->getDebugLoc(), TII->get(AMDGPU::ALU_CLAUSE))
+        .addImm(CfCount);
     for (unsigned i = 0, e = Clause.second.size(); i < e; ++i) {
       BB->splice(InsertPos, BB, Clause.second[i]);
     }
@@ -641,18 +644,17 @@ public:
           break;
         }
         case AMDGPU::RETURN: {
-          DebugLoc DL = MBB.findDebugLoc(MI);
-          BuildMI(MBB, MI, DL, getHWInstrDesc(CF_END));
+          BuildMI(MBB, MI, MBB.findDebugLoc(MI), getHWInstrDesc(CF_END));
           CfCount++;
           if (CfCount % 2) {
-            BuildMI(MBB, I, DL, TII->get(AMDGPU::PAD));
+            BuildMI(MBB, I, MBB.findDebugLoc(MI), TII->get(AMDGPU::PAD));
             CfCount++;
           }
           MI->eraseFromParent();
           for (unsigned i = 0, e = FetchClauses.size(); i < e; i++)
-            EmitFetchClause(I, DL, FetchClauses[i], CfCount);
+            EmitFetchClause(I, FetchClauses[i], CfCount);
           for (unsigned i = 0, e = AluClauses.size(); i < e; i++)
-            EmitALUClause(I, DL, AluClauses[i], CfCount);
+            EmitALUClause(I, AluClauses[i], CfCount);
           break;
         }
         default:

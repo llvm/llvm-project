@@ -102,11 +102,3 @@ void exit(int status) __attribute__ ((__noreturn__));
 void _exit(int status) __attribute__ ((__noreturn__));
 void _Exit(int status) __attribute__ ((__noreturn__));
 
-#define UINT32_MAX        4294967295U
-#define INT64_MIN        (-INT64_MAX-1)
-#define __DBL_MAX__ 1.7976931348623157e+308
-#define DBL_MAX __DBL_MAX__
-#ifndef NULL
-#define __DARWIN_NULL 0
-#define NULL __DARWIN_NULL
-#endif

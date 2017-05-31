@@ -24,7 +24,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/NSAPI.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringExtras.h"
@@ -709,8 +708,6 @@ static bool isFlexibleArrayMemberExpr(const Expr *E) {
           DeclContext::decl_iterator(const_cast<FieldDecl *>(FD)));
       return ++FI == FD->getParent()->field_end();
     }
-  } else if (const auto *IRE = dyn_cast<ObjCIvarRefExpr>(E)) {
-    return IRE->getDecl()->getNextIvar() == nullptr;
   }
 
   return false;
@@ -1183,10 +1180,10 @@ CodeGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
   // This should probably fire even for
   if (isa<VarDecl>(value)) {
     if (!getContext().DeclMustBeEmitted(cast<VarDecl>(value)))
-      EmitDeclRefExprDbgValue(refExpr, result.Val);
+      EmitDeclRefExprDbgValue(refExpr, C);
   } else {
     assert(isa<EnumConstantDecl>(value));
-    EmitDeclRefExprDbgValue(refExpr, result.Val);
+    EmitDeclRefExprDbgValue(refExpr, C);
   }
 
   // If we emitted a reference constant, we need to dereference that.
@@ -1220,10 +1217,11 @@ static bool hasBooleanRepresentation(QualType Ty) {
 
 static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
                             llvm::APInt &Min, llvm::APInt &End,
-                            bool StrictEnums, bool IsBool) {
+                            bool StrictEnums) {
   const EnumType *ET = Ty->getAs<EnumType>();
   bool IsRegularCPlusPlusEnum = CGF.getLangOpts().CPlusPlus && StrictEnums &&
                                 ET && !ET->getDecl()->isFixed();
+  bool IsBool = hasBooleanRepresentation(Ty);
   if (!IsBool && !IsRegularCPlusPlusEnum)
     return false;
 
@@ -1253,8 +1251,8 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
 
 llvm::MDNode *CodeGenFunction::getRangeForLoadFromType(QualType Ty) {
   llvm::APInt Min, End;
-  if (!getRangeForType(*this, Ty, Min, End, CGM.getCodeGenOpts().StrictEnums,
-                       hasBooleanRepresentation(Ty)))
+  if (!getRangeForType(*this, Ty, Min, End,
+                       CGM.getCodeGenOpts().StrictEnums))
     return nullptr;
 
   llvm::MDBuilder MDHelper(getLLVMContext());
@@ -1313,15 +1311,14 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
                                       false /*ConvertTypeToTag*/);
   }
 
-  bool IsBool = hasBooleanRepresentation(Ty) ||
-                NSAPI(CGM.getContext()).isObjCBOOLType(Ty);
-  bool NeedsBoolCheck = SanOpts.has(SanitizerKind::Bool) && IsBool;
+  bool NeedsBoolCheck =
+      SanOpts.has(SanitizerKind::Bool) && hasBooleanRepresentation(Ty);
   bool NeedsEnumCheck =
       SanOpts.has(SanitizerKind::Enum) && Ty->getAs<EnumType>();
   if (NeedsBoolCheck || NeedsEnumCheck) {
     SanitizerScope SanScope(this);
     llvm::APInt Min, End;
-    if (getRangeForType(*this, Ty, Min, End, /*StrictEnums=*/true, IsBool)) {
+    if (getRangeForType(*this, Ty, Min, End, true)) {
       --End;
       llvm::Value *Check;
       if (!Min)
@@ -1630,19 +1627,11 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       break;
 
     case Qualifiers::OCL_Strong:
-      if (isInit) {
-        Src = RValue::get(EmitARCRetain(Dst.getType(), Src.getScalarVal()));
-        break;
-      }
       EmitARCStoreStrong(Dst, Src.getScalarVal(), /*ignore*/ true);
       return;
 
     case Qualifiers::OCL_Weak:
-      if (isInit)
-        // Initialize and then skip the primitive store.
-        EmitARCInitWeak(Dst.getAddress(), Src.getScalarVal());
-      else
-        EmitARCStoreWeak(Dst.getAddress(), Src.getScalarVal(), /*ignore*/ true);
+      EmitARCStoreWeak(Dst.getAddress(), Src.getScalarVal(), /*ignore*/ true);
       return;
 
     case Qualifiers::OCL_Autoreleasing:
@@ -2307,19 +2296,9 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
   StringRef NameItems[] = {
       PredefinedExpr::getIdentTypeName(E->getIdentType()), FnName};
   std::string GVName = llvm::join(NameItems, NameItems + 2, ".");
-  if (auto *BD = dyn_cast<BlockDecl>(CurCodeDecl)) {
-    std::string Name = SL->getString();
-    if (!Name.empty()) {
-      unsigned Discriminator =
-          CGM.getCXXABI().getMangleContext().getBlockId(BD, true);
-      if (Discriminator)
-        Name += "_" + Twine(Discriminator + 1).str();
-      auto C = CGM.GetAddrOfConstantCString(Name, GVName.c_str());
-      return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
-    } else {
-      auto C = CGM.GetAddrOfConstantCString(FnName, GVName.c_str());
-      return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
-    }
+  if (CurCodeDecl && isa<BlockDecl>(CurCodeDecl)) {
+    auto C = CGM.GetAddrOfConstantCString(FnName, GVName.c_str());
+    return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
   }
   auto C = CGM.GetAddrOfConstantStringFromLiteral(SL, GVName);
   return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);

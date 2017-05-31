@@ -289,19 +289,6 @@ std::error_code create_link(const Twine &to, const Twine &from) {
   return std::error_code();
 }
 
-std::error_code create_hard_link(const Twine &to, const Twine &from) {
-  // Get arguments.
-  SmallString<128> from_storage;
-  SmallString<128> to_storage;
-  StringRef f = from.toNullTerminatedStringRef(from_storage);
-  StringRef t = to.toNullTerminatedStringRef(to_storage);
-
-  if (::link(t.begin(), f.begin()) == -1)
-    return std::error_code(errno, std::generic_category());
-
-  return std::error_code();
-}
-
 std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
   SmallString<128> path_storage;
   StringRef p = path.toNullTerminatedStringRef(path_storage);

@@ -1070,8 +1070,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
     const EnumType *ET = CondTypeBeforePromotion->getAs<EnumType>();
 
     // If switch has default case, then ignore it.
-    if (!CaseListIsErroneous && !HasConstantCond && ET &&
-        ET->getDecl()->isCompleteDefinition()) {
+    if (!CaseListIsErroneous  && !HasConstantCond && ET) {
       const EnumDecl *ED = ET->getDecl();
       EnumValsTy EnumVals;
 
@@ -2695,16 +2694,16 @@ Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
 /// \param E The expression being returned from the function or block, or
 /// being thrown.
 ///
-/// \param AllowFunctionParameter Whether we allow function parameters to
-/// be considered NRVO candidates. C++ prohibits this for NRVO itself, but
-/// we re-use this logic to determine whether we should try to move as part of
-/// a return or throw (which does allow function parameters).
+/// \param AllowParamOrMoveConstructible Whether we allow function parameters or
+/// id-expressions that could be moved out of the function to be considered NRVO
+/// candidates. C++ prohibits these for NRVO itself, but we re-use this logic to
+/// determine whether we should try to move as part of a return or throw (which
+/// does allow function parameters).
 ///
 /// \returns The NRVO candidate variable, if the return statement may use the
 /// NRVO, or NULL if there is no such candidate.
-VarDecl *Sema::getCopyElisionCandidate(QualType ReturnType,
-                                       Expr *E,
-                                       bool AllowFunctionParameter) {
+VarDecl *Sema::getCopyElisionCandidate(QualType ReturnType, Expr *E,
+                                       bool AllowParamOrMoveConstructible) {
   if (!getLangOpts().CPlusPlus)
     return nullptr;
 
@@ -2717,13 +2716,13 @@ VarDecl *Sema::getCopyElisionCandidate(QualType ReturnType,
   if (!VD)
     return nullptr;
 
-  if (isCopyElisionCandidate(ReturnType, VD, AllowFunctionParameter))
+  if (isCopyElisionCandidate(ReturnType, VD, AllowParamOrMoveConstructible))
     return VD;
   return nullptr;
 }
 
 bool Sema::isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
-                                  bool AllowFunctionParameter) {
+                                  bool AllowParamOrMoveConstructible) {
   QualType VDType = VD->getType();
   // - in a return statement in a function with ...
   // ... a class return type ...
@@ -2731,19 +2730,23 @@ bool Sema::isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
     if (!ReturnType->isRecordType())
       return false;
     // ... the same cv-unqualified type as the function return type ...
-    if (!VDType->isDependentType() &&
+    // When considering moving this expression out, allow dissimilar types.
+    if (!AllowParamOrMoveConstructible && !VDType->isDependentType() &&
         !Context.hasSameUnqualifiedType(ReturnType, VDType))
       return false;
   }
 
   // ...object (other than a function or catch-clause parameter)...
   if (VD->getKind() != Decl::Var &&
-      !(AllowFunctionParameter && VD->getKind() == Decl::ParmVar))
+      !(AllowParamOrMoveConstructible && VD->getKind() == Decl::ParmVar))
     return false;
   if (VD->isExceptionVariable()) return false;
 
   // ...automatic...
   if (!VD->hasLocalStorage()) return false;
+
+  if (AllowParamOrMoveConstructible)
+    return true;
 
   // ...non-volatile...
   if (VD->getType().isVolatileQualified()) return false;
@@ -2763,7 +2766,7 @@ bool Sema::isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
 /// \brief Perform the initialization of a potentially-movable value, which
 /// is the result of return value.
 ///
-/// This routine implements C++0x [class.copy]p33, which attempts to treat
+/// This routine implements C++14 [class.copy]p32, which attempts to treat
 /// returned lvalues as rvalues in certain cases (to prefer move construction),
 /// then falls back to treating them as lvalues if that failed.
 ExprResult
@@ -2772,52 +2775,59 @@ Sema::PerformMoveOrCopyInitialization(const InitializedEntity &Entity,
                                       QualType ResultType,
                                       Expr *Value,
                                       bool AllowNRVO) {
-  // C++0x [class.copy]p33:
-  //   When the criteria for elision of a copy operation are met or would
-  //   be met save for the fact that the source object is a function
-  //   parameter, and the object to be copied is designated by an lvalue,
-  //   overload resolution to select the constructor for the copy is first
-  //   performed as if the object were designated by an rvalue.
+  // C++14 [class.copy]p32:
+  // When the criteria for elision of a copy/move operation are met, but not for
+  // an exception-declaration, and the object to be copied is designated by an
+  // lvalue, or when the expression in a return statement is a (possibly
+  // parenthesized) id-expression that names an object with automatic storage
+  // duration declared in the body or parameter-declaration-clause of the
+  // innermost enclosing function or lambda-expression, overload resolution to
+  // select the constructor for the copy is first performed as if the object
+  // were designated by an rvalue.
   ExprResult Res = ExprError();
-  if (AllowNRVO &&
-      (NRVOCandidate || getCopyElisionCandidate(ResultType, Value, true))) {
-    ImplicitCastExpr AsRvalue(ImplicitCastExpr::OnStack,
-                              Value->getType(), CK_NoOp, Value, VK_XValue);
+
+  if (AllowNRVO && !NRVOCandidate)
+    NRVOCandidate = getCopyElisionCandidate(ResultType, Value, true);
+
+  if (AllowNRVO && NRVOCandidate) {
+    ImplicitCastExpr AsRvalue(ImplicitCastExpr::OnStack, Value->getType(),
+                              CK_NoOp, Value, VK_XValue);
 
     Expr *InitExpr = &AsRvalue;
-    InitializationKind Kind
-      = InitializationKind::CreateCopy(Value->getLocStart(),
-                                       Value->getLocStart());
-    InitializationSequence Seq(*this, Entity, Kind, InitExpr);
 
-    //   [...] If overload resolution fails, or if the type of the first
-    //   parameter of the selected constructor is not an rvalue reference
-    //   to the object's type (possibly cv-qualified), overload resolution
-    //   is performed again, considering the object as an lvalue.
+    InitializationKind Kind = InitializationKind::CreateCopy(
+        Value->getLocStart(), Value->getLocStart());
+
+    InitializationSequence Seq(*this, Entity, Kind, InitExpr);
     if (Seq) {
-      for (InitializationSequence::step_iterator Step = Seq.step_begin(),
-           StepEnd = Seq.step_end();
-           Step != StepEnd; ++Step) {
-        if (Step->Kind != InitializationSequence::SK_ConstructorInitialization)
+      for (const InitializationSequence::Step &Step : Seq.steps()) {
+        if (!(Step.Kind ==
+                  InitializationSequence::SK_ConstructorInitialization ||
+              (Step.Kind == InitializationSequence::SK_UserConversion &&
+               isa<CXXConstructorDecl>(Step.Function.Function))))
           continue;
 
-        CXXConstructorDecl *Constructor
-        = cast<CXXConstructorDecl>(Step->Function.Function);
+        CXXConstructorDecl *Constructor =
+            cast<CXXConstructorDecl>(Step.Function.Function);
 
         const RValueReferenceType *RRefType
           = Constructor->getParamDecl(0)->getType()
                                                  ->getAs<RValueReferenceType>();
 
-        // If we don't meet the criteria, break out now.
+        // [...] If the first overload resolution fails or was not performed, or
+        // if the type of the first parameter of the selected constructor is not
+        // an rvalue reference to the object’s type (possibly cv-qualified),
+        // overload resolution is performed again, considering the object as an
+        // lvalue.
         if (!RRefType ||
             !Context.hasSameUnqualifiedType(RRefType->getPointeeType(),
-                            Context.getTypeDeclType(Constructor->getParent())))
+                                            NRVOCandidate->getType()))
           break;
 
         // Promote "AsRvalue" to the heap, since we now need this
         // expression node to persist.
-        Value = ImplicitCastExpr::Create(Context, Value->getType(),
-                                         CK_NoOp, Value, nullptr, VK_XValue);
+        Value = ImplicitCastExpr::Create(Context, Value->getType(), CK_NoOp,
+                                         Value, nullptr, VK_XValue);
 
         // Complete type-checking the initialization of the return type
         // using the constructor we found.

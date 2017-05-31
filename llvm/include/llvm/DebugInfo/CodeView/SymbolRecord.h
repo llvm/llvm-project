@@ -677,12 +677,15 @@ public:
         RecordOffset(RecordOffset), Header(*H), Gaps(Gaps) {}
 
   DefRangeRegisterSym(uint16_t Register, uint16_t MayHaveNoName,
+                      uint32_t OffsetStart, uint16_t ISectStart, uint16_t Range,
                       ArrayRef<LocalVariableAddrGap> Gaps)
       : SymbolRecord(SymbolRecordKind::DefRangeRegisterSym), RecordOffset(0),
         Gaps(Gaps) {
     Header.Register = Register;
     Header.MayHaveNoName = MayHaveNoName;
-    Header.Range = {};
+    Header.Range.OffsetStart = OffsetStart;
+    Header.Range.ISectStart = ISectStart;
+    Header.Range.Range = Range;
   }
 
   static Expected<DefRangeRegisterSym> deserialize(SymbolRecordKind Kind,
@@ -728,7 +731,6 @@ public:
     Header.Register = Register;
     Header.MayHaveNoName = MayHaveNoName;
     Header.OffsetInParent = OffsetInParent;
-    Header.Range = {};
   }
 
   static Expected<DefRangeSubfieldRegisterSym>
@@ -800,14 +802,17 @@ public:
         RecordOffset(RecordOffset), Header(*H), Gaps(Gaps) {}
 
   DefRangeRegisterRelSym(uint16_t BaseRegister, uint16_t Flags,
-                         int32_t BasePointerOffset,
+                         int32_t BasePointerOffset, uint32_t OffsetStart,
+                         uint16_t ISectStart, uint16_t Range,
                          ArrayRef<LocalVariableAddrGap> Gaps)
       : SymbolRecord(SymbolRecordKind::DefRangeRegisterRelSym), RecordOffset(0),
         Gaps(Gaps) {
     Header.BaseRegister = BaseRegister;
     Header.Flags = Flags;
     Header.BasePointerOffset = BasePointerOffset;
-    Header.Range = {};
+    Header.Range.OffsetStart = OffsetStart;
+    Header.Range.ISectStart = ISectStart;
+    Header.Range.Range = Range;
   }
 
   static Expected<DefRangeRegisterRelSym> deserialize(SymbolRecordKind Kind,
@@ -820,17 +825,8 @@ public:
     return DefRangeRegisterRelSym(RecordOffset, H, Gaps);
   }
 
-  // The flags implement this notional bitfield:
-  //   uint16_t IsSubfield : 1;
-  //   uint16_t Padding : 3;
-  //   uint16_t OffsetInParent : 12;
-  enum : uint16_t {
-    IsSubfieldFlag = 1,
-    OffsetInParentShift = 4,
-  };
-
-  bool hasSpilledUDTMember() const { return Header.Flags & IsSubfieldFlag; }
-  uint16_t offsetInParent() const { return Header.Flags >> OffsetInParentShift; }
+  bool hasSpilledUDTMember() const { return Header.Flags & 1; }
+  uint16_t offsetInParent() const { return Header.Flags >> 4; }
 
   uint32_t getRelocationOffset() const {
     return RecordOffset + offsetof(Hdr, Range);

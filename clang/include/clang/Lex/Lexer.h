@@ -133,16 +133,14 @@ public:
   /// from.  Currently this is only used by _Pragma handling.
   SourceLocation getFileLoc() const { return FileLoc; }
 
+private:
   /// Lex - Return the next token in the file.  If this is the end of file, it
   /// return the tok::eof token.  This implicitly involves the preprocessor.
   bool Lex(Token &Result);
 
+public:
   /// isPragmaLexer - Returns true if this Lexer is being used to lex a pragma.
   bool isPragmaLexer() const { return Is_PragmaLexer; }
-
-  /// Note that this Lexer is being used to lex a pragma, or something like it
-  /// that has simple end-of-file behavior.
-  void setIsPragmaLexer(bool value) { Is_PragmaLexer = value; }
 
 private:
   /// IndirectLex - An indirect call to 'Lex' that can be invoked via

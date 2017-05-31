@@ -36,7 +36,7 @@ public:
 
   /// Construct a ConstraintVal indicating the constraint is underconstrained.
   ConditionTruthVal() {}
-
+  
   /// Return true if the constraint is perfectly constrained to 'true'.
   bool isConstrainedTrue() const {
     return Val.hasValue() && Val.getValue();
@@ -58,11 +58,11 @@ public:
     return !Val.hasValue();
   }
 };
-
+  
 class ConstraintManager {
 public:
   ConstraintManager() : NotifyAssumeClients(true) {}
-
+  
   virtual ~ConstraintManager();
   virtual ProgramStateRef assume(ProgramStateRef state,
                                  DefinedSVal Cond,
@@ -99,26 +99,25 @@ public:
     return ProgramStatePair(StTrue, StFalse);
   }
 
-  virtual ProgramStateRef assumeInclusiveRange(ProgramStateRef State,
-                                               NonLoc Value,
-                                               const llvm::APSInt &From,
-                                               const llvm::APSInt &To,
-                                               bool InBound) = 0;
+  virtual ProgramStateRef assumeWithinInclusiveRange(ProgramStateRef State,
+                                                     NonLoc Value,
+                                                     const llvm::APSInt &From,
+                                                     const llvm::APSInt &To,
+                                                     bool InBound) = 0;
 
-  virtual ProgramStatePair assumeInclusiveRangeDual(ProgramStateRef State,
-                                                    NonLoc Value,
-                                                    const llvm::APSInt &From,
-                                                    const llvm::APSInt &To) {
-    ProgramStateRef StInRange =
-        assumeInclusiveRange(State, Value, From, To, true);
+  virtual ProgramStatePair assumeWithinInclusiveRangeDual(
+      ProgramStateRef State, NonLoc Value, const llvm::APSInt &From,
+      const llvm::APSInt &To) {
+    ProgramStateRef StInRange = assumeWithinInclusiveRange(State, Value, From,
+                                                           To, true);
 
     // If StTrue is infeasible, asserting the falseness of Cond is unnecessary
     // because the existing constraints already establish this.
     if (!StInRange)
       return ProgramStatePair((ProgramStateRef)nullptr, State);
 
-    ProgramStateRef StOutOfRange =
-        assumeInclusiveRange(State, Value, From, To, false);
+    ProgramStateRef StOutOfRange = assumeWithinInclusiveRange(State, Value,
+                                                              From, To, false);
     if (!StOutOfRange) {
       // We are careful to return the original state, /not/ StTrue,
       // because we want to avoid having callers generate a new node
@@ -148,7 +147,7 @@ public:
                      const char *sep) = 0;
 
   virtual void EndPath(ProgramStateRef state) {}
-
+  
   /// Convenience method to query the state to see if a symbol is null or
   /// not null, or if neither assumption can be made.
   ConditionTruthVal isNull(ProgramStateRef State, SymbolRef Sym) {
@@ -174,7 +173,7 @@ protected:
   virtual bool canReasonAbout(SVal X) const = 0;
 
   /// Returns whether or not a symbol is known to be null ("true"), known to be
-  /// non-null ("false"), or may be either ("underconstrained").
+  /// non-null ("false"), or may be either ("underconstrained"). 
   virtual ConditionTruthVal checkNull(ProgramStateRef State, SymbolRef Sym);
 };
 

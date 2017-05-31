@@ -288,16 +288,14 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       SmallString<128> DirNative;
       llvm::sys::path::native(PCHDir->getName(), DirNative);
       bool Found = false;
-      vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
-      for (vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
+      for (llvm::sys::fs::directory_iterator Dir(DirNative, EC), DirEnd;
            Dir != DirEnd && !EC; Dir.increment(EC)) {
         // Check whether this is an acceptable AST file.
         if (ASTReader::isAcceptableASTFile(
-                Dir->getName(), FileMgr, CI.getPCHContainerReader(),
+                Dir->path(), FileMgr, CI.getPCHContainerReader(),
                 CI.getLangOpts(), CI.getTargetOpts(), CI.getPreprocessorOpts(),
                 SpecificModuleCachePath)) {
-          PPOpts.ImplicitPCHInclude = Dir->getName();
-          CI.getLangOpts().NeededByPCHOrCompilationUsesPCH = true;
+          PPOpts.ImplicitPCHInclude = Dir->path();
           Found = true;
           break;
         }
@@ -414,13 +412,6 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     else
       CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
   }
-
-  // Add a module declaration scope so that modules from -fmodule-map-file
-  // arguments may shadow modules found implicitly in search paths.
-  CI.getPreprocessor()
-      .getHeaderSearchInfo()
-      .getModuleMap()
-      .finishModuleDeclarationScope();
 
   // If we were asked to load any module files, do so now.
   for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles)

@@ -169,10 +169,7 @@ if( HAVE_SETJMP_H )
   check_symbol_exists(siglongjmp setjmp.h HAVE_SIGLONGJMP)
   check_symbol_exists(sigsetjmp setjmp.h HAVE_SIGSETJMP)
 endif()
-# Avoid sigaltstack on Apple platforms, where backtrace() cannot handle it
-# (rdar://7089625) and _Unwind_Backtrace is unusable because it cannot unwind
-# past the signal handler after an assertion failure (rdar://29866587).
-if( HAVE_SIGNAL_H AND NOT APPLE )
+if( HAVE_SIGNAL_H )
   check_symbol_exists(sigaltstack signal.h HAVE_SIGALTSTACK)
 endif()
 if( HAVE_SYS_UIO_H )

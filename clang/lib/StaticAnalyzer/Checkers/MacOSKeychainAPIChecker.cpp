@@ -524,7 +524,12 @@ MacOSKeychainAPIChecker::generateAllocatedDataNotReleasedReport(
   // allocated, and only report a single path.
   PathDiagnosticLocation LocUsedForUniqueing;
   const ExplodedNode *AllocNode = getAllocationNode(N, AP.first, C);
-  const Stmt *AllocStmt = PathDiagnosticLocation::getStmt(AllocNode);
+  const Stmt *AllocStmt = nullptr;
+  ProgramPoint P = AllocNode->getLocation();
+  if (Optional<CallExitEnd> Exit = P.getAs<CallExitEnd>())
+    AllocStmt = Exit->getCalleeContext()->getCallSite();
+  else if (Optional<clang::PostStmt> PS = P.getAs<clang::PostStmt>())
+    AllocStmt = PS->getStmt();
 
   if (AllocStmt)
     LocUsedForUniqueing = PathDiagnosticLocation::createBegin(AllocStmt,

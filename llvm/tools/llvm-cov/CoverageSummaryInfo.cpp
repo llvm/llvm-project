@@ -67,17 +67,5 @@ FunctionCoverageSummary::get(const coverage::FunctionRecord &Function) {
   return FunctionCoverageSummary(
       Function.Name, Function.ExecutionCount,
       RegionCoverageInfo(CoveredRegions, NumCodeRegions),
-      LineCoverageInfo(CoveredLines, NumLines));
-}
-
-void FunctionCoverageSummary::update(const FunctionCoverageSummary &Summary) {
-  ExecutionCount += Summary.ExecutionCount;
-  RegionCoverage.Covered =
-      std::max(RegionCoverage.Covered, Summary.RegionCoverage.Covered);
-  RegionCoverage.NotCovered =
-      std::min(RegionCoverage.NotCovered, Summary.RegionCoverage.NotCovered);
-  LineCoverage.Covered =
-      std::max(LineCoverage.Covered, Summary.LineCoverage.Covered);
-  LineCoverage.NotCovered =
-      std::min(LineCoverage.NotCovered, Summary.LineCoverage.NotCovered);
+      LineCoverageInfo(CoveredLines, 0, NumLines));
 }

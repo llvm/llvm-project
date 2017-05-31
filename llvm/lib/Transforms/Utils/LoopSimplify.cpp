@@ -622,10 +622,8 @@ ReprocessLoop:
        (PN = dyn_cast<PHINode>(I++)); )
     if (Value *V = SimplifyInstruction(PN, DL, nullptr, DT, AC)) {
       if (SE) SE->forgetValue(PN);
-      if (!PreserveLCSSA || LI->replacementPreservesLCSSAForm(PN, V)) {
-        PN->replaceAllUsesWith(V);
-        PN->eraseFromParent();
-      }
+      PN->replaceAllUsesWith(V);
+      PN->eraseFromParent();
     }
 
   // If this loop has multiple exits and the exits all go to the same

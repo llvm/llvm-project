@@ -4161,7 +4161,7 @@ AST_MATCHER(QualType, isInteger) {
 ///   void b(unsigned long);
 ///   void c(double);
 /// \endcode
-/// functionDecl(hasAnyParameter(hasType(isUnsignedInteger())))
+/// functionDecl(hasAnyParameter(hasType(isInteger())))
 /// matches "b(unsigned long)", but not "a(int)" and "c(double)".
 AST_MATCHER(QualType, isUnsignedInteger) {
     return Node->isUnsignedIntegerType();
@@ -4175,7 +4175,7 @@ AST_MATCHER(QualType, isUnsignedInteger) {
 ///   void b(unsigned long);
 ///   void c(double);
 /// \endcode
-/// functionDecl(hasAnyParameter(hasType(isSignedInteger())))
+/// functionDecl(hasAnyParameter(hasType(isInteger())))
 /// matches "a(int)", but not "b(unsigned long)" and "c(double)".
 AST_MATCHER(QualType, isSignedInteger) {
     return Node->isSignedIntegerType();

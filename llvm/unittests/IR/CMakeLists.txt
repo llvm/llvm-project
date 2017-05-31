@@ -20,7 +20,6 @@ set(IRSources
   LegacyPassManagerTest.cpp
   MDBuilderTest.cpp
   MetadataTest.cpp
-  ModuleTest.cpp
   PassManagerTest.cpp
   PatternMatch.cpp
   TypeBuilderTest.cpp

@@ -1548,56 +1548,22 @@ StringRef CGDebugInfo::getVTableName(const CXXRecordDecl *RD) {
 }
 
 void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
-                                    SmallVectorImpl<llvm::Metadata *> &EltTys,
-                                    llvm::DICompositeType *RecordTy) {
+                                    SmallVectorImpl<llvm::Metadata *> &EltTys) {
+  const ASTRecordLayout &RL = CGM.getContext().getASTRecordLayout(RD);
+
+  // If there is a primary base then it will hold vtable info.
+  if (RL.getPrimaryBase())
+    return;
+
   // If this class is not dynamic then there is not any vtable info to collect.
   if (!RD->isDynamicClass())
     return;
 
-  // Don't emit any vtable shape or vptr info if this class doesn't have an
-  // extendable vfptr. This can happen if the class doesn't have virtual
-  // methods, or in the MS ABI if those virtual methods only come from virtually
-  // inherited bases.
-  const ASTRecordLayout &RL = CGM.getContext().getASTRecordLayout(RD);
-  if (!RL.hasExtendableVFPtr())
-    return;
-
-  // CodeView needs to know how large the vtable of every dynamic class is, so
-  // emit a special named pointer type into the element list. The vptr type
-  // points to this type as well.
-  llvm::DIType *VPtrTy = nullptr;
-  bool NeedVTableShape = CGM.getCodeGenOpts().EmitCodeView &&
-                         CGM.getTarget().getCXXABI().isMicrosoft();
-  if (NeedVTableShape) {
-    uint64_t PtrWidth =
-        CGM.getContext().getTypeSize(CGM.getContext().VoidPtrTy);
-    const VTableLayout &VFTLayout =
-        CGM.getMicrosoftVTableContext().getVFTableLayout(RD, CharUnits::Zero());
-    unsigned VSlotCount =
-        VFTLayout.getNumVTableComponents() - CGM.getLangOpts().RTTIData;
-    unsigned VTableWidth = PtrWidth * VSlotCount;
-
-    // Create a very wide void* type and insert it directly in the element list.
-    llvm::DIType *VTableType =
-        DBuilder.createPointerType(nullptr, VTableWidth, 0, "__vtbl_ptr_type");
-    EltTys.push_back(VTableType);
-
-    // The vptr is a pointer to this special vtable type.
-    VPtrTy = DBuilder.createPointerType(VTableType, PtrWidth);
-  }
-
-  // If there is a primary base then the artificial vptr member lives there.
-  if (RL.getPrimaryBase())
-    return;
-
-  if (!VPtrTy)
-    VPtrTy = getOrCreateVTablePtrType(Unit);
-
   unsigned Size = CGM.getContext().getTypeSize(CGM.getContext().VoidPtrTy);
-  llvm::DIType *VPtrMember = DBuilder.createMemberType(
+  llvm::DIType *VPTR = DBuilder.createMemberType(
       Unit, getVTableName(RD), Unit, 0, Size, 0, 0,
-      llvm::DINode::FlagArtificial, VPtrTy);
-  EltTys.push_back(VPtrMember);
+      llvm::DINode::FlagArtificial, getOrCreateVTablePtrType(Unit));
+  EltTys.push_back(VPTR);
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateRecordType(QualType RTy,
@@ -1684,24 +1650,18 @@ static bool hasExplicitMemberDefinition(CXXRecordDecl::method_iterator I,
 
 /// Does a type definition exist in an imported clang module?
 static bool isDefinedInClangModule(const RecordDecl *RD) {
-  // Only definitions that where imported from an AST file come from a module.
   if (!RD || !RD->isFromASTFile())
     return false;
-  // Anonymous entities cannot be addressed. Treat them as not from module.
   if (!RD->isExternallyVisible() && RD->getName().empty())
     return false;
   if (auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
-    if (!CXXDecl->isCompleteDefinition())
-      return false;
-    auto TemplateKind = CXXDecl->getTemplateSpecializationKind();
-    if (TemplateKind != TSK_Undeclared) {
-      // This is a template, check the origin of the first member.
-      if (CXXDecl->field_begin() == CXXDecl->field_end())
-        return TemplateKind == TSK_ExplicitInstantiationDeclaration;
-      if (!CXXDecl->field_begin()->isFromASTFile())
-        return false;
-    }
+    assert(CXXDecl->isCompleteDefinition() && "incomplete record definition");
+    if (CXXDecl->getTemplateSpecializationKind() != TSK_Undeclared)
+      // Make sure the instantiation is actually in a module.
+      if (CXXDecl->field_begin() != CXXDecl->field_end())
+        return CXXDecl->field_begin()->isFromASTFile();
   }
+
   return true;
 }
 
@@ -1794,7 +1754,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
   const auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD);
   if (CXXDecl) {
     CollectCXXBases(CXXDecl, DefUnit, EltTys, FwdDecl);
-    CollectVTableInfo(CXXDecl, DefUnit, EltTys, FwdDecl);
+    CollectVTableInfo(CXXDecl, DefUnit, EltTys);
   }
 
   // Collect data fields (including static variables and any initializers).
@@ -1820,18 +1780,6 @@ llvm::DIType *CGDebugInfo::CreateType(const ObjCObjectType *Ty,
                                       llvm::DIFile *Unit) {
   // Ignore protocols.
   return getOrCreateType(Ty->getBaseType(), Unit);
-}
-
-llvm::DIType *CGDebugInfo::CreateType(const ObjCTypeParamType *Ty,
-                                      llvm::DIFile *Unit) {
-  // Ignore protocols.
-  SourceLocation Loc = Ty->getDecl()->getLocation();
-
-  // Use Typedefs to represent ObjCTypeParamType.
-  return DBuilder.createTypedef(
-      getOrCreateType(Ty->getDecl()->getUnderlyingType(), Unit),
-      Ty->getDecl()->getName(), getOrCreateFile(Loc), getLineNumber(Loc),
-      getDeclContextDescriptor(Ty->getDecl()));
 }
 
 /// \return true if Getter has the default name for the property PD.
@@ -1932,9 +1880,7 @@ CGDebugInfo::getOrCreateModuleRef(ExternalASTSource::ASTSourceDescriptor Mod,
   if (CreateSkeletonCU && IsRootModule) {
     // PCH files don't have a signature field in the control block,
     // but LLVM detects skeleton CUs by looking for a non-zero DWO id.
-    // We use the lower 64 bits for debug info.
-    uint64_t Signature = Mod.getSignature() != ASTFileSignature({{0}}) ?
-        (uint64_t)Mod.getSignature()[1] << 32 | Mod.getSignature()[0] : ~1ULL;
+    uint64_t Signature = Mod.getSignature() ? Mod.getSignature() : ~1ULL;
     llvm::DIBuilder DIB(CGM.getModule());
     DIB.createCompileUnit(TheCU->getSourceLanguage(), Mod.getModuleName(),
                           Mod.getPath(), TheCU->getProducer(), true,
@@ -2368,16 +2314,10 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
     case Type::SubstTemplateTypeParm:
       T = cast<SubstTemplateTypeParmType>(T)->getReplacementType();
       break;
-    case Type::Auto: {
+    case Type::Auto:
       QualType DT = cast<AutoType>(T)->getDeducedType();
       assert(!DT.isNull() && "Undeduced types shouldn't reach here.");
       T = DT;
-      break;
-    }
-    case Type::Adjusted:
-    case Type::Decayed:
-      // Decayed and adjusted types use the adjusted type in LLVM and DWARF.
-      T = cast<AdjustedType>(T)->getAdjustedType();
       break;
     }
 
@@ -2488,8 +2428,6 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
     return CreateType(cast<ObjCObjectPointerType>(Ty), Unit);
   case Type::ObjCObject:
     return CreateType(cast<ObjCObjectType>(Ty), Unit);
-  case Type::ObjCTypeParam:
-    return CreateType(cast<ObjCTypeParamType>(Ty), Unit);
   case Type::ObjCInterface:
     return CreateType(cast<ObjCInterfaceType>(Ty), Unit);
   case Type::Builtin:
@@ -2498,6 +2436,11 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
     return CreateType(cast<ComplexType>(Ty));
   case Type::Pointer:
     return CreateType(cast<PointerType>(Ty), Unit);
+  case Type::Adjusted:
+  case Type::Decayed:
+    // Decayed and adjusted types use the adjusted type in LLVM and DWARF.
+    return CreateType(
+        cast<PointerType>(cast<AdjustedType>(Ty)->getAdjustedType()), Unit);
   case Type::BlockPointer:
     return CreateType(cast<BlockPointerType>(Ty), Unit);
   case Type::Typedef:
@@ -2533,8 +2476,6 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
 
   case Type::Auto:
   case Type::Attributed:
-  case Type::Adjusted:
-  case Type::Decayed:
   case Type::Elaborated:
   case Type::Paren:
   case Type::SubstTemplateTypeParm:
@@ -2705,9 +2646,6 @@ void CGDebugInfo::collectFunctionDeclProps(GlobalDecl GD, llvm::DIFile *Unit,
       llvm::DIScope *Mod = getParentModuleOrNull(RDecl);
       FDContext = getContextDescriptor(RDecl, Mod ? Mod : TheCU);
     }
-    // Check if it is a noreturn-marked function
-    if (FD->isNoReturn())
-      Flags |= llvm::DINode::FlagNoReturn;
     // Collect template parameters.
     TParamsArray = CollectFunctionTemplateParams(FD, Unit);
   }
@@ -2983,8 +2921,9 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
 
   if (!HasDecl || D->isImplicit()) {
     Flags |= llvm::DINode::FlagArtificial;
-    // Artificial functions should not silently reuse CurLoc.
-    CurLoc = SourceLocation();
+    // Artificial functions without a location should not silently reuse CurLoc.
+    if (Loc.isInvalid())
+      CurLoc = SourceLocation();
   }
   unsigned LineNo = getLineNumber(Loc);
   unsigned ScopeLine = getLineNumber(ScopeLoc);
@@ -3606,8 +3545,8 @@ llvm::DIGlobalVariable *CGDebugInfo::CollectAnonRecordDecls(
     }
     // Use VarDecl's Tag, Scope and Line number.
     GV = DBuilder.createGlobalVariable(DContext, FieldName, LinkageName, Unit,
-                                       LineNo, FieldTy, Var->hasLocalLinkage());
-    Var->addDebugInfo(GV);
+                                       LineNo, FieldTy,
+                                       Var->hasLocalLinkage(), Var, nullptr);
   }
   return GV;
 }
@@ -3617,13 +3556,6 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
   assert(DebugKind >= codegenoptions::LimitedDebugInfo);
   if (D->hasAttr<NoDebugAttr>())
     return;
-
-  // If we already created a DIGlobalVariable for this declaration, just attach
-  // it to the llvm::GlobalVariable.
-  auto Cached = DeclCache.find(D->getCanonicalDecl());
-  if (Cached != DeclCache.end())
-    return Var->addDebugInfo(cast<llvm::DIGlobalVariable>(Cached->second));
-
   // Create global variable debug descriptor.
   llvm::DIFile *Unit = nullptr;
   llvm::DIScope *DContext = nullptr;
@@ -3647,14 +3579,14 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
   } else {
     GV = DBuilder.createGlobalVariable(
         DContext, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
-        Var->hasLocalLinkage(), /*Expr=*/nullptr,
+        Var->hasLocalLinkage(), Var,
         getOrCreateStaticDataMemberDeclarationOrNull(D));
-    Var->addDebugInfo(GV);
   }
   DeclCache[D->getCanonicalDecl()].reset(GV);
 }
 
-void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
+void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD,
+                                     llvm::Constant *Init) {
   assert(DebugKind >= codegenoptions::LimitedDebugInfo);
   if (VD->hasAttr<NoDebugAttr>())
     return;
@@ -3694,13 +3626,9 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
   auto &GV = DeclCache[VD];
   if (GV)
     return;
-  llvm::DIExpression *InitExpr = nullptr;
-  if (Init.isInt())
-    InitExpr =
-        DBuilder.createConstantValueExpression(Init.getInt().getExtValue());
   GV.reset(DBuilder.createGlobalVariable(
       DContext, Name, StringRef(), Unit, getLineNumber(VD->getLocation()), Ty,
-      true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VarD)));
+      true, Init, getOrCreateStaticDataMemberDeclarationOrNull(VarD)));
 }
 
 llvm::DIScope *CGDebugInfo::getCurrentContextDescriptor(const Decl *D) {

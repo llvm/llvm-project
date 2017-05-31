@@ -1,7 +1,7 @@
-; RUN: opt -basicaa -loop-distribute -enable-loop-distribute -S < %s | \
+; RUN: opt -basicaa -loop-distribute -S < %s | \
 ; RUN:     FileCheck %s --check-prefix=ALL --check-prefix=STRIDE_SPEC
 
-; RUN: opt -basicaa -loop-distribute -enable-loop-distribute -S -enable-mem-access-versioning=0 < %s | \
+; RUN: opt -basicaa -loop-distribute -S -enable-mem-access-versioning=0 < %s | \
 ; RUN:     FileCheck %s --check-prefix=ALL --check-prefix=NO_STRIDE_SPEC
 
 ; If we don't speculate stride for 1 we can't distribute along the line

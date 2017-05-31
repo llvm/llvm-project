@@ -566,12 +566,6 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     if (!I)
       continue;
 
-    // Skip over non-intrinsic callsites, we don't want to remove any nodes from
-    // the CGSCC.
-    CallSite CS = CallSite(I);
-    if (CS && CS.getCalledFunction() && !CS.getCalledFunction()->isIntrinsic())
-      continue;
-
     // See if this instruction simplifies.
     Value *SimpleV = SimplifyInstruction(I, DL);
     if (!SimpleV)

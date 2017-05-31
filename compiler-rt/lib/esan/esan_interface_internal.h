@@ -21,9 +21,6 @@
 // This header should NOT include any other headers.
 // All functions in this header are extern "C" and start with __esan_.
 
-using __sanitizer::uptr;
-using __sanitizer::u32;
-
 extern "C" {
 
 // This should be kept consistent with LLVM's EfficiencySanitizerOptions.

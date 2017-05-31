@@ -77,7 +77,6 @@ struct LTOCodeGenerator {
   /// Resets \a HasVerifiedInput.
   void setModule(std::unique_ptr<LTOModule> M);
 
-  void setAsmUndefinedRefs(struct LTOModule *);
   void setTargetOptions(const TargetOptions &Options);
   void setDebugInfo(lto_debug_model);
   void setCodePICModel(Optional<Reloc::Model> Model) { RelocModel = Model; }
@@ -86,8 +85,8 @@ struct LTOCodeGenerator {
   /// The default is TargetMachine::CGFT_ObjectFile.
   void setFileType(TargetMachine::CodeGenFileType FT) { FileType = FT; }
 
-  void setCpu(StringRef MCpu) { this->MCpu = MCpu; }
-  void setAttr(StringRef MAttr) { this->MAttr = MAttr; }
+  void setCpu(const char *MCpu) { this->MCpu = MCpu; }
+  void setAttr(const char *MAttr) { this->MAttr = MAttr; }
   void setOptLevel(unsigned OptLevel);
 
   void setShouldInternalize(bool Value) { ShouldInternalize = Value; }
@@ -117,7 +116,7 @@ struct LTOCodeGenerator {
   /// name is misleading).  This function should be called before
   /// LTOCodeGenerator::compilexxx(), and
   /// LTOCodeGenerator::writeMergedModules().
-  void setCodeGenDebugOptions(StringRef Opts);
+  void setCodeGenDebugOptions(const char *Opts);
 
   /// Parse the options set in setCodeGenDebugOptions.
   ///
@@ -130,7 +129,7 @@ struct LTOCodeGenerator {
   /// true on success.
   ///
   /// Calls \a verifyMergedModuleOnce().
-  bool writeMergedModules(StringRef Path);
+  bool writeMergedModules(const char *Path);
 
   /// Compile the merged module into a *single* output file; the path to output
   /// file is returned to the caller via argument "name". Return true on

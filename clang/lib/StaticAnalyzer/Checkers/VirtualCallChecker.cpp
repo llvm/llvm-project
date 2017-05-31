@@ -32,18 +32,6 @@ class WalkAST : public StmtVisitor<WalkAST> {
   BugReporter &BR;
   AnalysisDeclContext *AC;
 
-  /// The root constructor or destructor whose callees are being analyzed.
-  const CXXMethodDecl *RootMethod = nullptr;
-
-  /// Whether the checker should walk into bodies of called functions.
-  /// Controlled by the "Interprocedural" analyzer-config option.
-  bool IsInterprocedural = false;
-
-  /// Whether the checker should only warn for calls to pure virtual functions
-  /// (which is undefined behavior) or for all virtual functions (which may
-  /// may result in unexpected behavior).
-  bool ReportPureOnly = false;
-
   typedef const CallExpr * WorkListUnit;
   typedef SmallVector<WorkListUnit, 20> DFSWorkList;
 
@@ -71,16 +59,9 @@ class WalkAST : public StmtVisitor<WalkAST> {
   const CallExpr *visitingCallExpr;
 
 public:
-  WalkAST(const CheckerBase *checker, BugReporter &br, AnalysisDeclContext *ac,
-          const CXXMethodDecl *rootMethod, bool isInterprocedural,
-          bool reportPureOnly)
-      : Checker(checker), BR(br), AC(ac), RootMethod(rootMethod),
-        IsInterprocedural(isInterprocedural), ReportPureOnly(reportPureOnly),
-        visitingCallExpr(nullptr) {
-    // Walking should always start from either a constructor or a destructor.
-    assert(isa<CXXConstructorDecl>(rootMethod) ||
-           isa<CXXDestructorDecl>(rootMethod));
-  }
+  WalkAST(const CheckerBase *checker, BugReporter &br,
+          AnalysisDeclContext *ac)
+      : Checker(checker), BR(br), AC(ac), visitingCallExpr(nullptr) {}
 
   bool hasWork() const { return !WList.empty(); }
 
@@ -151,8 +132,7 @@ void WalkAST::VisitChildren(Stmt *S) {
 
 void WalkAST::VisitCallExpr(CallExpr *CE) {
   VisitChildren(CE);
-  if (IsInterprocedural)
-    Enqueue(CE);
+  Enqueue(CE);
 }
 
 void WalkAST::VisitCXXMemberCallExpr(CallExpr *CE) {
@@ -184,64 +164,51 @@ void WalkAST::VisitCXXMemberCallExpr(CallExpr *CE) {
       !MD->getParent()->hasAttr<FinalAttr>())
     ReportVirtualCall(CE, MD->isPure());
 
-  if (IsInterprocedural)
-    Enqueue(CE);
+  Enqueue(CE);
 }
 
 void WalkAST::ReportVirtualCall(const CallExpr *CE, bool isPure) {
-  if (ReportPureOnly && !isPure)
-    return;
-
   SmallString<100> buf;
   llvm::raw_svector_ostream os(buf);
 
-  // FIXME: The interprocedural diagnostic experience here is not good.
-  // Ultimately this checker should be re-written to be path sensitive.
-  // For now, only diagnose intraprocedurally, by default.
-  if (IsInterprocedural) {
-    os << "Call Path : ";
-    // Name of current visiting CallExpr.
-    os << *CE->getDirectCallee();
+  os << "Call Path : ";
+  // Name of current visiting CallExpr.
+  os << *CE->getDirectCallee();
 
-    // Name of the CallExpr whose body is current being walked.
-    if (visitingCallExpr)
-      os << " <-- " << *visitingCallExpr->getDirectCallee();
-    // Names of FunctionDecls in worklist with state PostVisited.
-    for (SmallVectorImpl<const CallExpr *>::iterator I = WList.end(),
+  // Name of the CallExpr whose body is current walking.
+  if (visitingCallExpr)
+    os << " <-- " << *visitingCallExpr->getDirectCallee();
+  // Names of FunctionDecls in worklist with state PostVisited.
+  for (SmallVectorImpl<const CallExpr *>::iterator I = WList.end(),
          E = WList.begin(); I != E; --I) {
-      const FunctionDecl *FD = (*(I-1))->getDirectCallee();
-      assert(FD);
-      if (VisitedFunctions[FD] == PostVisited)
-        os << " <-- " << *FD;
-    }
-
-    os << "\n";
+    const FunctionDecl *FD = (*(I-1))->getDirectCallee();
+    assert(FD);
+    if (VisitedFunctions[FD] == PostVisited)
+      os << " <-- " << *FD;
   }
 
   PathDiagnosticLocation CELoc =
     PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), AC);
   SourceRange R = CE->getCallee()->getSourceRange();
 
-  os << "Call to ";
-  if (isPure)
-    os << "pure ";
-
-  os << "virtual function during ";
-
-  if (isa<CXXConstructorDecl>(RootMethod))
-    os << "construction ";
-  else
-    os << "destruction ";
-
-  if (isPure)
-    os << "has undefined behavior";
-  else
-    os << "will not dispatch to derived class";
-
-  BR.EmitBasicReport(AC->getDecl(), Checker,
-                     "Call to virtual function during construction or "
-                     "destruction",
-                     "C++ Object Lifecycle", os.str(), CELoc, R);
+  if (isPure) {
+    os << "\n" <<  "Call pure virtual functions during construction or "
+       << "destruction may leads undefined behaviour";
+    BR.EmitBasicReport(AC->getDecl(), Checker,
+                       "Call pure virtual function during construction or "
+                       "Destruction",
+                       "Cplusplus", os.str(), CELoc, R);
+    return;
+  }
+  else {
+    os << "\n" << "Call virtual functions during construction or "
+       << "destruction will never go to a more derived class";
+    BR.EmitBasicReport(AC->getDecl(), Checker,
+                       "Call virtual function during construction or "
+                       "Destruction",
+                       "Cplusplus", os.str(), CELoc, R);
+    return;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -251,18 +218,14 @@ void WalkAST::ReportVirtualCall(const CallExpr *CE, bool isPure) {
 namespace {
 class VirtualCallChecker : public Checker<check::ASTDecl<CXXRecordDecl> > {
 public:
-  DefaultBool isInterprocedural;
-  DefaultBool isPureOnly;
-
   void checkASTDecl(const CXXRecordDecl *RD, AnalysisManager& mgr,
                     BugReporter &BR) const {
-    AnalysisDeclContext *ADC = mgr.getAnalysisDeclContext(RD);
+    WalkAST walker(this, BR, mgr.getAnalysisDeclContext(RD));
 
     // Check the constructors.
     for (const auto *I : RD->ctors()) {
       if (!I->isCopyOrMoveConstructor())
         if (Stmt *Body = I->getBody()) {
-          WalkAST walker(this, BR, ADC, I, isInterprocedural, isPureOnly);
           walker.Visit(Body);
           walker.Execute();
         }
@@ -271,7 +234,6 @@ public:
     // Check the destructor.
     if (CXXDestructorDecl *DD = RD->getDestructor())
       if (Stmt *Body = DD->getBody()) {
-        WalkAST walker(this, BR, ADC, DD, isInterprocedural, isPureOnly);
         walker.Visit(Body);
         walker.Execute();
       }
@@ -280,12 +242,5 @@ public:
 }
 
 void ento::registerVirtualCallChecker(CheckerManager &mgr) {
-  VirtualCallChecker *checker = mgr.registerChecker<VirtualCallChecker>();
-  checker->isInterprocedural =
-      mgr.getAnalyzerOptions().getBooleanOption("Interprocedural", false,
-                                                checker);
-
-  checker->isPureOnly =
-      mgr.getAnalyzerOptions().getBooleanOption("PureOnly", false,
-                                                checker);
+  mgr.registerChecker<VirtualCallChecker>();
 }

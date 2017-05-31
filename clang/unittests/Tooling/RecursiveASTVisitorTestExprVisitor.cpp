@@ -161,21 +161,10 @@ TEST(RecursiveASTVisitor, CanSkipImplicitMemberInitializations) {
 
 class DeclRefExprVisitor : public ExpectedLocationVisitor<DeclRefExprVisitor> {
 public:
-  DeclRefExprVisitor() : ShouldVisitImplicitCode(false) {}
-
-  bool shouldVisitImplicitCode() const { return ShouldVisitImplicitCode; }
-
-  void setShouldVisitImplicitCode(bool NewValue) {
-    ShouldVisitImplicitCode = NewValue;
-  }
-
   bool VisitDeclRefExpr(DeclRefExpr *Reference) {
     Match(Reference->getNameInfo().getAsString(), Reference->getLocation());
     return true;
   }
-
-private:
-  bool ShouldVisitImplicitCode;
 };
 
 TEST(RecursiveASTVisitor, VisitsBaseClassTemplateArguments) {
@@ -202,41 +191,12 @@ TEST(RecursiveASTVisitor, VisitsCallExpr) {
     "void x(); void y() { x(); }"));
 }
 
-TEST(RecursiveASTVisitor, VisitsExplicitLambdaCaptureInit) {
+TEST(RecursiveASTVisitor, VisitsLambdaCaptureInit) {
   DeclRefExprVisitor Visitor;
   Visitor.ExpectMatch("i", 1, 20);
   EXPECT_TRUE(Visitor.runOver(
-    "void f() { int i; [i]{}; }",
+    "void f() { int i; [i]{}; };",
     DeclRefExprVisitor::Lang_CXX11));
-}
-
-TEST(RecursiveASTVisitor, VisitsUseOfImplicitLambdaCapture) {
-  DeclRefExprVisitor Visitor;
-  Visitor.ExpectMatch("i", 1, 24);
-  EXPECT_TRUE(Visitor.runOver(
-    "void f() { int i; [=]{ i; }; }",
-    DeclRefExprVisitor::Lang_CXX11));
-}
-
-TEST(RecursiveASTVisitor, VisitsImplicitLambdaCaptureInit) {
-  DeclRefExprVisitor Visitor;
-  Visitor.setShouldVisitImplicitCode(true);
-  // We're expecting the "i" in the lambda to be visited twice:
-  // - Once for the DeclRefExpr in the lambda capture initialization (whose
-  //   source code location is set to the first use of the variable).
-  // - Once for the DeclRefExpr for the use of "i" inside the lambda.
-  Visitor.ExpectMatch("i", 1, 24, /*Times=*/2);
-  EXPECT_TRUE(Visitor.runOver(
-    "void f() { int i; [=]{ i; }; }",
-    DeclRefExprVisitor::Lang_CXX11));
-}
-
-TEST(RecursiveASTVisitor, VisitsLambdaInitCaptureInit) {
-  DeclRefExprVisitor Visitor;
-  Visitor.ExpectMatch("i", 1, 24);
-  EXPECT_TRUE(Visitor.runOver(
-    "void f() { int i; [a = i + 1]{}; }",
-    DeclRefExprVisitor::Lang_CXX14));
 }
 
 /* FIXME: According to Richard Smith this is a bug in the AST.

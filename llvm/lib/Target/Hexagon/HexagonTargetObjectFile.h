@@ -20,10 +20,10 @@ namespace llvm {
     void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 
     MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
-                                      const TargetMachine &TM) const override;
+        Mangler &Mang, const TargetMachine &TM) const override;
 
     MCSection *getExplicitSectionGlobal(const GlobalValue *GV, SectionKind Kind,
-                                        const TargetMachine &TM) const override;
+        Mangler &Mang, const TargetMachine &TM) const override;
 
     bool isGlobalInSmallSection(const GlobalValue *GV, const TargetMachine &TM)
         const;
@@ -40,8 +40,7 @@ namespace llvm {
         const TargetMachine &TM) const;
 
     MCSection *selectSmallSectionForGlobal(const GlobalValue *GV,
-                                           SectionKind Kind,
-                                           const TargetMachine &TM) const;
+        SectionKind Kind, Mangler &Mang, const TargetMachine &TM) const;
   };
 
 } // namespace llvm

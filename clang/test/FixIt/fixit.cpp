@@ -395,14 +395,3 @@ const const_zero_init czi; // expected-error {{default initialization of an obje
 // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:26-[[@LINE-1]]:26}:"{}"
 int use_czi = czi.a;
 
-namespace dotPointerDestructor {
-
-struct Bar {
-  ~Bar();
-};
-
-void bar(Bar *o) {
-  o.~Bar(); // expected-error {{member reference type 'dotPointerDestructor::Bar *' is a pointer; did you mean to use '->'}}
-}  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:5}:"->"
-
-}

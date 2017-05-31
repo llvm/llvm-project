@@ -56,15 +56,3 @@ namespace test5 {
     (X<int>)test0(); // expected-error{{implicit instantiation of undefined template 'test5::X<int>'}}
   }
 }
-
-namespace test6 {
-  extern __unknown_anytype func();
-  extern __unknown_anytype var;
-  double *d;
-
-  void test() {
-    d = (double*)&func(); // expected-error{{address-of operator cannot be applied to a call to a function with unknown return type}}
-    d = (double*)&var;
-  }
-
-}

@@ -2,7 +2,7 @@
 ; allowing dead stripping to be performed, and that the appropriate runtime
 ; routines are invoked.
 
-; RUN: opt < %s -asan -asan-module -S | FileCheck %s
+; RUN: opt < %s -asan -asan-module -asan-globals-live-support -S | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
@@ -15,18 +15,14 @@ target triple = "x86_64-apple-macosx10.11.0"
 !1 = !{!"test-globals.c", i32 1, i32 5}
 
 
+; Test that there is the flag global variable:
+; CHECK: @__asan_globals_registered = common global i64 0
+
 ; Find the metadata for @global:
-; CHECK: [[METADATA:@.+]] = internal global {{.*}} @global {{.*}} section "__DATA,__asan_globals,regular"
+; CHECK: [[METADATA:@[0-9]+]] = internal global {{.*}} @global {{.*}} section "__DATA,__asan_globals,regular", align 1
 
 ; Find the liveness binder for @global and its metadata:
-; CHECK: @__asan_binder_global = internal global {{.*}} @global {{.*}} [[METADATA]] {{.*}} section "__DATA,__asan_liveness,regular,live_support"
-
-; The binder has to be inserted to llvm.compiler.used to avoid being stripped
-; during LTO.
-; CHECK: @llvm.compiler.used {{.*}} @__asan_binder_global {{.*}} section "llvm.metadata"
-
-; Test that there is the flag global variable:
-; CHECK: @__asan_globals_registered = common hidden global i64 0
+; CHECK: @{{[0-9]+}} = internal global {{.*}} @global {{.*}} [[METADATA]] {{.*}} section "__DATA,__asan_liveness,regular,live_support"
 
 ; Test that __asan_register_image_globals is invoked from the constructor:
 ; CHECK-LABEL: define internal void @asan.module_ctor

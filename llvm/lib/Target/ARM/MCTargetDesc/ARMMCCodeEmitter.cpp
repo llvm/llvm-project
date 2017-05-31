@@ -1545,15 +1545,8 @@ getRegisterListOpValue(const MCInst &MI, unsigned Op,
     else
       Binary |= NumRegs * 2;
   } else {
-    const MCRegisterInfo &MRI = *CTX.getRegisterInfo();
-    assert(std::is_sorted(MI.begin() + Op, MI.end(),
-                          [&](const MCOperand &LHS, const MCOperand &RHS) {
-                            return MRI.getEncodingValue(LHS.getReg()) <
-                                   MRI.getEncodingValue(RHS.getReg());
-                          }));
-
     for (unsigned I = Op, E = MI.getNumOperands(); I < E; ++I) {
-      unsigned RegNo = MRI.getEncodingValue(MI.getOperand(I).getReg());
+      unsigned RegNo = CTX.getRegisterInfo()->getEncodingValue(MI.getOperand(I).getReg());
       Binary |= 1 << RegNo;
     }
   }

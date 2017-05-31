@@ -46,10 +46,10 @@ attributes #1 = { nounwind readnone }
 !21 = !DILocation(line: 3, scope: !4)
 !22 = !DILocalVariable(name: "s", line: 3, arg: 1, scope: !4, file: !5, type: !9)
 !23 = !DILocation(line: 4, scope: !4)
-!24 = !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 64)
+!24 = !DIExpression(DW_OP_deref, DW_OP_bit_piece, 0, 64)
 !25 = !{}
-; This expression has elements after DW_OP_LLVM_fragment.
+; This expression has elements after DW_OP_bit_piece.
 ; CHECK: invalid expression
 ; CHECK-NEXT: !DIExpression({{[0-9]+}}, 64, 32, {{[0-9]+}})
 ; CHECK-NOT: invalid expression
-!27 = !DIExpression(DW_OP_LLVM_fragment, 64, 32, DW_OP_deref)
+!27 = !DIExpression(DW_OP_bit_piece, 64, 32, DW_OP_deref)

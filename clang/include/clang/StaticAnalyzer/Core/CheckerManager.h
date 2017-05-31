@@ -322,6 +322,9 @@ public:
                                  ExprEngine &Eng,
                                  ProgramPoint::Kind K);
 
+  /// \brief True if at least one checker wants to check region changes.
+  bool wantsRegionChangeUpdate(ProgramStateRef state);
+
   /// \brief Run checkers for region changes.
   ///
   /// This corresponds to the check::RegionChanges callback.
@@ -449,6 +452,8 @@ public:
                                 const CallEvent *Call)>
       CheckRegionChangesFunc;
   
+  typedef CheckerFn<bool (ProgramStateRef)> WantsRegionChangeUpdateFunc;
+
   typedef CheckerFn<ProgramStateRef (ProgramStateRef,
                                      const InvalidatedSymbols &Escaped,
                                      const CallEvent *Call,
@@ -496,7 +501,8 @@ public:
 
   void _registerForDeadSymbols(CheckDeadSymbolsFunc checkfn);
 
-  void _registerForRegionChanges(CheckRegionChangesFunc checkfn);
+  void _registerForRegionChanges(CheckRegionChangesFunc checkfn,
+                                 WantsRegionChangeUpdateFunc wantUpdateFn);
 
   void _registerForPointerEscape(CheckPointerEscapeFunc checkfn);
 
@@ -605,7 +611,11 @@ private:
 
   std::vector<CheckDeadSymbolsFunc> DeadSymbolsCheckers;
 
-  std::vector<CheckRegionChangesFunc> RegionChangesCheckers;
+  struct RegionChangesCheckerInfo {
+    CheckRegionChangesFunc CheckFn;
+    WantsRegionChangeUpdateFunc WantUpdateFn;
+  };
+  std::vector<RegionChangesCheckerInfo> RegionChangesCheckers;
 
   std::vector<CheckPointerEscapeFunc> PointerEscapeCheckers;
 

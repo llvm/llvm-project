@@ -591,11 +591,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("IB_DESIGNABLE", "");
   }
 
-  // Define a macro that describes the Objective-C boolean type even for C
-  // and C++ since BOOL can be used from non Objective-C code.
-  Builder.defineMacro("__OBJC_BOOL_IS_BOOL",
-                      Twine(TI.useSignedCharForObjCBool() ? "0" : "1"));
-
   if (LangOpts.CPlusPlus)
     InitializeCPlusPlusFeatureTestMacros(LangOpts, Builder);
 

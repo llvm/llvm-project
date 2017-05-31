@@ -871,12 +871,6 @@ ObjCMethodDecl *ObjCMethodDecl::getNextRedeclarationImpl() {
     }
   }
 
-  // Ensure that the discovered method redeclaration has a valid declaration
-  // context. Used to prevent infinite loops when iterating redeclarations in
-  // a partially invalid AST.
-  if (Redecl && cast<Decl>(Redecl->getDeclContext())->isInvalidDecl())
-    Redecl = nullptr;
-
   if (!Redecl && isRedeclaration()) {
     // This is the last redeclaration, go back to the first method.
     return cast<ObjCContainerDecl>(CtxD)->getMethod(getSelector(),
@@ -903,13 +897,9 @@ ObjCMethodDecl *ObjCMethodDecl::getCanonicalDecl() {
         return MD;
   }
 
-  if (isRedeclaration()) {
-    // It is possible that we have not done deserializing the ObjCMethod yet.
-    ObjCMethodDecl *MD =
-        cast<ObjCContainerDecl>(CtxD)->getMethod(getSelector(),
-                                                 isInstanceMethod());
-    return MD ? MD : this;
-  }
+  if (isRedeclaration())
+    return cast<ObjCContainerDecl>(CtxD)->getMethod(getSelector(),
+                                                    isInstanceMethod());
 
   return this;
 }

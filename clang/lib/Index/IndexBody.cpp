@@ -276,8 +276,7 @@ public:
     return true;
   }
 
-  bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
-                             Expr *Init) {
+  bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C) {
     if (C->capturesThis() || C->capturesVLAType())
       return true;
 
@@ -294,20 +293,35 @@ public:
   // Also visit things that are in the syntactic form but not the semantic one,
   // for example the indices in DesignatedInitExprs.
   bool TraverseInitListExpr(InitListExpr *S, DataRecursionQueue *Q = nullptr) {
+
+    class SyntacticFormIndexer :
+              public RecursiveASTVisitor<SyntacticFormIndexer> {
+      IndexingContext &IndexCtx;
+      const NamedDecl *Parent;
+      const DeclContext *ParentDC;
+
+    public:
+      SyntacticFormIndexer(IndexingContext &indexCtx,
+                            const NamedDecl *Parent, const DeclContext *DC)
+        : IndexCtx(indexCtx), Parent(Parent), ParentDC(DC) { }
+
+      bool shouldWalkTypesOfTypeLocs() const { return false; }
+
+      bool VisitDesignatedInitExpr(DesignatedInitExpr *E) {
+        for (DesignatedInitExpr::Designator &D : llvm::reverse(E->designators())) {
+          if (D.isFieldDesignator())
+            return IndexCtx.handleReference(D.getField(), D.getFieldLoc(),
+                                            Parent, ParentDC, SymbolRoleSet(),
+                                            {}, E);
+        }
+        return true;
+      }
+    };
+
     auto visitForm = [&](InitListExpr *Form) {
       for (Stmt *SubStmt : Form->children()) {
         if (!TraverseStmt(SubStmt, Q))
           return false;
-      }
-      return true;
-    };
-
-    auto visitSyntacticDesignatedInitExpr = [&](DesignatedInitExpr *E) -> bool {
-      for (DesignatedInitExpr::Designator &D : llvm::reverse(E->designators())) {
-        if (D.isFieldDesignator())
-          return IndexCtx.handleReference(D.getField(), D.getFieldLoc(),
-                                          Parent, ParentDC, SymbolRoleSet(),
-                                          {}, E);
       }
       return true;
     };
@@ -318,10 +332,7 @@ public:
     if (SemaForm) {
       // Visit things present in syntactic form but not the semantic form.
       if (SyntaxForm) {
-        for (Expr *init : SyntaxForm->inits()) {
-          if (auto *DIE = dyn_cast<DesignatedInitExpr>(init))
-            visitSyntacticDesignatedInitExpr(DIE);
-        }
+        SyntacticFormIndexer(IndexCtx, Parent, ParentDC).TraverseStmt(SyntaxForm);
       }
       return visitForm(SemaForm);
     }

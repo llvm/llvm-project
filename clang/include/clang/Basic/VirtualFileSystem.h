@@ -335,16 +335,6 @@ struct YAMLVFSEntry {
   std::string RPath;
 };
 
-/// \brief Collect all pairs of <virtual path, real path> entries from the
-/// \p YAMLFilePath. This is used by the module dependency collector to forward
-/// the entries into the reproducer output VFS YAML file.
-void collectVFSFromYAML(
-    std::unique_ptr<llvm::MemoryBuffer> Buffer,
-    llvm::SourceMgr::DiagHandlerTy DiagHandler, StringRef YAMLFilePath,
-    SmallVectorImpl<YAMLVFSEntry> &CollectedEntries,
-    void *DiagContext = nullptr,
-    IntrusiveRefCntPtr<FileSystem> ExternalFS = getRealFileSystem());
-
 class YAMLVFSWriter {
   std::vector<YAMLVFSEntry> Mappings;
   Optional<bool> IsCaseSensitive;

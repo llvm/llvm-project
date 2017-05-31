@@ -16,8 +16,6 @@
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_common.h"
 
-using namespace __sanitizer;
-
 INTERCEPTOR(void *, mmap, void *addr, SIZE_T length, int prot, int flags,
             int fd, OFF_T offset) {
   void *res = REAL(mmap)(addr, length, prot, flags, fd, offset);

@@ -232,12 +232,3 @@ __attribute__((objc_root_class))
   });
 }
 @end
-
-// The incorrect block variable initialization below is a hard compile-time
-// error in C++.
-#if !defined(__cplusplus)
-void call_block_with_fewer_arguments() {
-  void (^b)() = ^(int a) { };
-  b(); // expected-warning {{Block taking 1 argument is called with fewer (0)}}
-}
-#endif

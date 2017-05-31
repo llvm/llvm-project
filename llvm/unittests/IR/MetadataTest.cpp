@@ -1818,14 +1818,13 @@ TEST_F(DIGlobalVariableTest, get) {
   DIType *Type = getDerivedType();
   bool IsLocalToUnit = false;
   bool IsDefinition = true;
-  auto *Expr = DIExpression::get(Context, {1, 2});
-  auto *Expr2 = DIExpression::get(Context, {1, 2, 3});
+  Constant *Variable = getConstant();
   DIDerivedType *StaticDataMemberDeclaration =
       cast<DIDerivedType>(getDerivedType());
 
   auto *N = DIGlobalVariable::get(Context, Scope, Name, LinkageName, File, Line,
-                                  Type, IsLocalToUnit, IsDefinition,
-                                  Expr, StaticDataMemberDeclaration);
+                                  Type, IsLocalToUnit, IsDefinition, Variable,
+                                  StaticDataMemberDeclaration);
   EXPECT_EQ(dwarf::DW_TAG_variable, N->getTag());
   EXPECT_EQ(Scope, N->getScope());
   EXPECT_EQ(Name, N->getName());
@@ -1835,46 +1834,47 @@ TEST_F(DIGlobalVariableTest, get) {
   EXPECT_EQ(Type, N->getType());
   EXPECT_EQ(IsLocalToUnit, N->isLocalToUnit());
   EXPECT_EQ(IsDefinition, N->isDefinition());
-  EXPECT_EQ(Expr, N->getExpr());
+  EXPECT_EQ(Variable, N->getVariable());
   EXPECT_EQ(StaticDataMemberDeclaration, N->getStaticDataMemberDeclaration());
   EXPECT_EQ(N, DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
                                      Line, Type, IsLocalToUnit, IsDefinition,
-                                     Expr, StaticDataMemberDeclaration));
+                                     Variable, StaticDataMemberDeclaration));
 
   EXPECT_NE(N,
             DIGlobalVariable::get(Context, getSubprogram(), Name, LinkageName,
                                   File, Line, Type, IsLocalToUnit, IsDefinition,
-                                  Expr, StaticDataMemberDeclaration));
+                                  Variable, StaticDataMemberDeclaration));
   EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, "other", LinkageName, File,
                                      Line, Type, IsLocalToUnit, IsDefinition,
-                                     Expr, StaticDataMemberDeclaration));
+                                     Variable, StaticDataMemberDeclaration));
   EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, Name, "other", File, Line,
-                                     Type, IsLocalToUnit, IsDefinition, Expr,
-                                     StaticDataMemberDeclaration));
+                                     Type, IsLocalToUnit, IsDefinition,
+                                     Variable, StaticDataMemberDeclaration));
   EXPECT_NE(N,
             DIGlobalVariable::get(Context, Scope, Name, LinkageName, getFile(),
-                                  Line, Type, IsLocalToUnit, IsDefinition, Expr,
-                                  StaticDataMemberDeclaration));
+                                  Line, Type, IsLocalToUnit, IsDefinition,
+                                  Variable, StaticDataMemberDeclaration));
   EXPECT_NE(N,
             DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
                                   Line + 1, Type, IsLocalToUnit, IsDefinition,
-                                  Expr, StaticDataMemberDeclaration));
+                                  Variable, StaticDataMemberDeclaration));
   EXPECT_NE(N,
             DIGlobalVariable::get(Context, Scope, Name, LinkageName, File, Line,
                                   getDerivedType(), IsLocalToUnit, IsDefinition,
-                                  Expr, StaticDataMemberDeclaration));
+                                  Variable, StaticDataMemberDeclaration));
   EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
                                      Line, Type, !IsLocalToUnit, IsDefinition,
-                                     Expr, StaticDataMemberDeclaration));
+                                     Variable, StaticDataMemberDeclaration));
   EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
                                      Line, Type, IsLocalToUnit, !IsDefinition,
-                                     Expr, StaticDataMemberDeclaration));
-  EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
-                                     Line, Type, IsLocalToUnit, IsDefinition,
-                                     Expr2, StaticDataMemberDeclaration));
+                                     Variable, StaticDataMemberDeclaration));
   EXPECT_NE(N,
             DIGlobalVariable::get(Context, Scope, Name, LinkageName, File, Line,
-                                  Type, IsLocalToUnit, IsDefinition, Expr,
+                                  Type, IsLocalToUnit, IsDefinition,
+                                  getConstant(), StaticDataMemberDeclaration));
+  EXPECT_NE(N,
+            DIGlobalVariable::get(Context, Scope, Name, LinkageName, File, Line,
+                                  Type, IsLocalToUnit, IsDefinition, Variable,
                                   cast<DIDerivedType>(getDerivedType())));
 
   TempDIGlobalVariable Temp = N->clone();
@@ -1981,20 +1981,19 @@ TEST_F(DIExpressionTest, isValid) {
   // Valid constructions.
   EXPECT_VALID(dwarf::DW_OP_plus, 6);
   EXPECT_VALID(dwarf::DW_OP_deref);
-  EXPECT_VALID(dwarf::DW_OP_LLVM_fragment, 3, 7);
+  EXPECT_VALID(dwarf::DW_OP_bit_piece, 3, 7);
   EXPECT_VALID(dwarf::DW_OP_plus, 6, dwarf::DW_OP_deref);
   EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_plus, 6);
-  EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_LLVM_fragment, 3, 7);
-  EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_plus, 6,
-               dwarf::DW_OP_LLVM_fragment, 3, 7);
+  EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_bit_piece, 3, 7);
+  EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_plus, 6, dwarf::DW_OP_bit_piece, 3, 7);
 
   // Invalid constructions.
   EXPECT_INVALID(~0u);
   EXPECT_INVALID(dwarf::DW_OP_plus);
-  EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment);
-  EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3);
-  EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3, 7, dwarf::DW_OP_plus, 3);
-  EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3, 7, dwarf::DW_OP_deref);
+  EXPECT_INVALID(dwarf::DW_OP_bit_piece);
+  EXPECT_INVALID(dwarf::DW_OP_bit_piece, 3);
+  EXPECT_INVALID(dwarf::DW_OP_bit_piece, 3, 7, dwarf::DW_OP_plus, 3);
+  EXPECT_INVALID(dwarf::DW_OP_bit_piece, 3, 7, dwarf::DW_OP_deref);
 
 #undef EXPECT_VALID
 #undef EXPECT_INVALID

@@ -28,13 +28,13 @@ define void @_Z3foov() !dbg !9 {
 ; CHECK: !9 = !DISubprogram(scope: null, isLocal: false, isDefinition: false, isOptimized: false)
 !9 = !DISubprogram(isDefinition: false)
 
-; CHECK: !10 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1, file: !2, line: 7, type: !3, isLocal: true, isDefinition: true, scopeLine: 8, containingType: !4, virtuality: DW_VIRTUALITY_pure_virtual, virtualIndex: 10, thisAdjustment: 3, flags: DIFlagPrototyped | DIFlagNoReturn, isOptimized: true, unit: !8, templateParams: !5, declaration: !9, variables: !6)
+; CHECK: !10 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1, file: !2, line: 7, type: !3, isLocal: true, isDefinition: true, scopeLine: 8, containingType: !4, virtuality: DW_VIRTUALITY_pure_virtual, virtualIndex: 10, thisAdjustment: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !8, templateParams: !5, declaration: !9, variables: !6)
 !10 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1,
                             file: !2, line: 7, type: !3, isLocal: true,
                             isDefinition: true, scopeLine: 8,
                             containingType: !4,
                             virtuality: DW_VIRTUALITY_pure_virtual,
-                            virtualIndex: 10, thisAdjustment: 3, flags: DIFlagPrototyped | DIFlagNoReturn,
+                            virtualIndex: 10, thisAdjustment: 3, flags: DIFlagPrototyped,
                             isOptimized: true, unit: !8, templateParams: !5,
                             declaration: !9, variables: !6)
 

@@ -72,36 +72,36 @@ public:
   /// MBBMap - A mapping from LLVM basic blocks to their machine code entry.
   DenseMap<const BasicBlock*, MachineBasicBlock *> MBBMap;
 
-  /// A map from swifterror value in a basic block to the virtual register it is
-  /// currently represented by.
-  llvm::DenseMap<std::pair<const MachineBasicBlock *, const Value *>, unsigned>
-      SwiftErrorVRegDefMap;
-
-  /// A list of upward exposed vreg uses that need to be satisfied by either a
-  /// copy def or a phi node at the beginning of the basic block representing
-  /// the predecessor(s) swifterror value.
-  llvm::DenseMap<std::pair<const MachineBasicBlock *, const Value *>, unsigned>
-      SwiftErrorVRegUpwardsUse;
-
-  /// The swifterror argument of the current function.
-  const Value *SwiftErrorArg;
-
+  typedef SmallVector<unsigned, 1> SwiftErrorVRegs;
   typedef SmallVector<const Value*, 1> SwiftErrorValues;
   /// A function can only have a single swifterror argument. And if it does
   /// have a swifterror argument, it must be the first entry in
   /// SwiftErrorVals.
   SwiftErrorValues SwiftErrorVals;
 
+  /// Track the virtual register for each swifterror value in a given basic
+  /// block. Entries in SwiftErrorVRegs have the same ordering as entries
+  /// in SwiftErrorVals.
+  /// Note that another choice that is more straight-forward is to use
+  /// Map<const MachineBasicBlock*, Map<Value*, unsigned/*VReg*/>>. It
+  /// maintains a map from swifterror values to virtual registers for each
+  /// machine basic block. This choice does not require a one-to-one
+  /// correspondence between SwiftErrorValues and SwiftErrorVRegs. But because
+  /// of efficiency concern, we do not choose it.
+  llvm::DenseMap<const MachineBasicBlock*, SwiftErrorVRegs> SwiftErrorMap;
 
-  /// Get or create the swifterror value virtual register in
-  /// SwiftErrorVRegDefMap for this basic block.
-  unsigned getOrCreateSwiftErrorVReg(const MachineBasicBlock *,
-                                     const Value *);
+  /// Track the virtual register for each swifterror value at the end of a basic
+  /// block when we need the assignment of a virtual register before the basic
+  /// block is visited. When we actually visit the basic block, we will make
+  /// sure the swifterror value is in the correct virtual register.
+  llvm::DenseMap<const MachineBasicBlock*, SwiftErrorVRegs>
+      SwiftErrorWorklist;
 
-  /// Set the swifterror virtual register in the SwiftErrorVRegDefMap for this
-  /// basic block.
-  void setCurrentSwiftErrorVReg(const MachineBasicBlock *MBB, const Value *,
-                                unsigned);
+  /// Find the swifterror virtual register in SwiftErrorMap. We will assert
+  /// failure when the value does not exist in swifterror map.
+  unsigned findSwiftErrorVReg(const MachineBasicBlock*, const Value*) const;
+  /// Set the swifterror virtual register in SwiftErrorMap.
+  void setSwiftErrorVReg(const MachineBasicBlock *MBB, const Value*, unsigned);
 
   /// ValueMap - Since we emit code for the function a basic block at a time,
   /// we must remember which virtual registers hold the values for

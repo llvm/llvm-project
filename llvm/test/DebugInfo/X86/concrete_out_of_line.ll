@@ -118,7 +118,7 @@ declare void @_Z8moz_freePv(i8*)
 !45 = !DILocalVariable(name: "this", line: 4, arg: 1, flags: DIFlagArtificial, scope: !31, file: !6, type: !34)
 !46 = !DILocalVariable(name: "aValue", line: 4, arg: 2, scope: !31, file: !6, type: !9)
 !47 = !{!49}
-!49 = !DIGlobalVariable(name: "mRefCnt", line: 9, isLocal: false, isDefinition: true, scope: null, file: !6, type: !37)
+!49 = !DIGlobalVariable(name: "mRefCnt", line: 9, isLocal: false, isDefinition: true, scope: null, file: !6, type: !37, variable: i32* null)
 !50 = !DILocation(line: 5, column: 5, scope: !51, inlinedAt: !52)
 !51 = distinct !DILexicalBlock(line: 4, column: 29, file: !6, scope: !31)
 !52 = !DILocation(line: 15, scope: !53)

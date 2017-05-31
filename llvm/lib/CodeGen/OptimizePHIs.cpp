@@ -184,7 +184,7 @@ bool OptimizePHIs::OptimizeBB(MachineBasicBlock &MBB) {
       for (InstrSetIterator PI = PHIsInCycle.begin(), PE = PHIsInCycle.end();
            PI != PE; ++PI) {
         MachineInstr *PhiMI = *PI;
-        if (MII == PhiMI)
+        if (&*MII == PhiMI)
           ++MII;
         PhiMI->eraseFromParent();
       }

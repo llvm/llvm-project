@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.cstring,debug.ExprInspection -triple i386-apple-darwin9 -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.cstring,debug.ExprInspection -triple x86_64-apple-darwin9 -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.cstring,debug.ExprInspection -analyzer-constraints=range -triple i386-apple-darwin9 -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.cstring,debug.ExprInspection -analyzer-constraints=range -triple x86_64-apple-darwin9 -verify %s
 
 // This file runs in C++ mode so that the comparison type is 'bool', not 'int'.
 void clang_analyzer_eval(int);

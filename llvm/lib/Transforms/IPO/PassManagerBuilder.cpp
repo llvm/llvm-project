@@ -112,10 +112,6 @@ static cl::opt<bool> EnableLoopLoadElim(
     "enable-loop-load-elim", cl::init(true), cl::Hidden,
     cl::desc("Enable the LoopLoadElimination Pass"));
 
-static cl::opt<bool>
-    EnablePrepareForThinLTO("prepare-for-thinlto", cl::init(false), cl::Hidden,
-                            cl::desc("Enable preparation for ThinLTO."));
-
 static cl::opt<bool> RunPGOInstrGen(
     "profile-generate", cl::init(false), cl::Hidden,
     cl::desc("Enable PGO instrumentation."));
@@ -143,8 +139,8 @@ static cl::opt<int> PreInlineThreshold(
              "(default = 75)"));
 
 static cl::opt<bool> EnableGVNHoist(
-    "enable-gvn-hoist", cl::init(false), cl::Hidden,
-    cl::desc("Enable the experimental GVN Hoisting pass"));
+    "enable-gvn-hoist", cl::init(true), cl::Hidden,
+    cl::desc("Enable the GVN hoisting pass (default = on)"));
 
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
@@ -167,7 +163,7 @@ PassManagerBuilder::PassManagerBuilder() {
     EnablePGOInstrGen = RunPGOInstrGen;
     PGOInstrGen = PGOOutputFile;
     PGOInstrUse = RunPGOInstrUse;
-    PrepareForThinLTO = EnablePrepareForThinLTO;
+    PrepareForThinLTO = false;
     PerformThinLTO = false;
 }
 
@@ -399,10 +395,6 @@ void PassManagerBuilder::populateModulePassManager(
     else if (!GlobalExtensions->empty() || !Extensions.empty())
       MPM.add(createBarrierNoopPass());
 
-    if (PrepareForThinLTO)
-      // Rename anon globals to be able to export them in the summary.
-      MPM.add(createNameAnonGlobalPass());
-
     addExtensionsToPM(EP_EnabledOnOptLevel0, MPM);
     return;
   }
@@ -412,16 +404,6 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(new TargetLibraryInfoWrapperPass(*LibraryInfo));
 
   addInitialAliasAnalysisPasses(MPM);
-
-  // For ThinLTO there are two passes of indirect call promotion. The
-  // first is during the compile phase when PerformThinLTO=false and
-  // intra-module indirect call targets are promoted. The second is during
-  // the ThinLTO backend when PerformThinLTO=true, when we promote imported
-  // inter-module indirect calls. For that we perform indirect call promotion
-  // earlier in the pass pipeline, here before globalopt. Otherwise imported
-  // available_externally functions look unreferenced and are removed.
-  if (PerformThinLTO)
-    MPM.add(createPGOIndirectCallPromotionLegacyPass(/*InLTO = */ true));
 
   if (!DisableUnitAtATime) {
     // Infer attributes about declarations if possible.
@@ -445,11 +427,10 @@ void PassManagerBuilder::populateModulePassManager(
     /// PGO instrumentation is added during the compile phase for ThinLTO, do
     /// not run it a second time
     addPGOInstrPasses(MPM);
-    // Indirect call promotion that promotes intra-module targets only.
-    // For ThinLTO this is done earlier due to interactions with globalopt
-    // for imported functions.
-    MPM.add(createPGOIndirectCallPromotionLegacyPass());
   }
+
+  // Indirect call promotion that promotes intra-module targets only.
+  MPM.add(createPGOIndirectCallPromotionLegacyPass());
 
   if (EnableNonLTOGlobalsModRef)
     // We add a module alias analysis pass here. In part due to bugs in the
@@ -499,8 +480,8 @@ void PassManagerBuilder::populateModulePassManager(
   if (PrepareForThinLTO) {
     // Reduce the size of the IR as much as possible.
     MPM.add(createGlobalOptimizerPass());
-    // Rename anon globals to be able to export them in the summary.
-    MPM.add(createNameAnonGlobalPass());
+    // Rename anon function to be able to export them in the summary.
+    MPM.add(createNameAnonFunctionPass());
     return;
   }
 
@@ -551,7 +532,7 @@ void PassManagerBuilder::populateModulePassManager(
   // into separate loop that would otherwise inhibit vectorization.  This is
   // currently only performed for loops marked with the metadata
   // llvm.loop.distribute=true or when -enable-loop-distribute is specified.
-  MPM.add(createLoopDistributePass());
+  MPM.add(createLoopDistributePass(/*ProcessAllLoopsByDefault=*/false));
 
   MPM.add(createLoopVectorizePass(DisableUnrollLoops, LoopVectorize));
 

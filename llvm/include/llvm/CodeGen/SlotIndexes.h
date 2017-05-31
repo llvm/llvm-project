@@ -69,8 +69,17 @@ namespace llvm {
   };
 
   template <>
-  struct ilist_alloc_traits<IndexListEntry>
-      : public ilist_noalloc_traits<IndexListEntry> {};
+  struct ilist_sentinel_traits<IndexListEntry>
+      : public ilist_half_embedded_sentinel_traits<IndexListEntry> {};
+
+  template <>
+  struct ilist_traits<IndexListEntry>
+      : public ilist_default_traits<IndexListEntry> {
+    void deleteNode(IndexListEntry *N) {}
+
+  private:
+    void createNode(const IndexListEntry &);
+  };
 
   /// SlotIndex - An opaque wrapper around machine indexes.
   class SlotIndex {

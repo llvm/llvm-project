@@ -1390,7 +1390,7 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
     if (RI2 == RE2)
       return Changed;
 
-    Instruction *I1 = &*RI1++, *I2 = &*RI2++;
+    Instruction *I1 = &*RI1, *I2 = &*RI2;
     auto InstPair = std::make_pair(I1, I2);
     // I1 and I2 should have a single use in the same PHI node, and they
     // perform the same operation.
@@ -1463,6 +1463,9 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
     PHINode *OldPN = JointValueMap[InstPair];
     JointValueMap.erase(InstPair);
 
+    // We need to update RE1 and RE2 if we are going to sink the first
+    // instruction in the basic block down.
+    bool UpdateRE1 = (I1 == &BB1->front()), UpdateRE2 = (I2 == &BB2->front());
     // Sink the instruction.
     BBEnd->getInstList().splice(FirstNonPhiInBBEnd->getIterator(),
                                 BB1->getInstList(), I1);
@@ -1477,6 +1480,10 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
     // (analogous to the hoisting case above).
     I2->eraseFromParent();
 
+    if (UpdateRE1)
+      RE1 = BB1->getInstList().rend();
+    if (UpdateRE2)
+      RE2 = BB2->getInstList().rend();
     FirstNonPhiInBBEnd = &*I1;
     NumSinkCommons++;
     Changed = true;
@@ -2017,20 +2024,14 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
 
   // Move all 'aggressive' instructions, which are defined in the
   // conditional parts of the if's up to the dominating block.
-  if (IfBlock1) {
-    for (auto &I : *IfBlock1)
-      I.dropUnknownNonDebugMetadata();
+  if (IfBlock1)
     DomBlock->getInstList().splice(InsertPt->getIterator(),
                                    IfBlock1->getInstList(), IfBlock1->begin(),
                                    IfBlock1->getTerminator()->getIterator());
-  }
-  if (IfBlock2) {
-    for (auto &I : *IfBlock2)
-      I.dropUnknownNonDebugMetadata();
+  if (IfBlock2)
     DomBlock->getInstList().splice(InsertPt->getIterator(),
                                    IfBlock2->getInstList(), IfBlock2->begin(),
                                    IfBlock2->getTerminator()->getIterator());
-  }
 
   while (PHINode *PN = dyn_cast<PHINode>(BB->begin())) {
     // Change the PHI node into a select instruction.
@@ -5498,10 +5499,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I) {
 
     // Now make sure that there are no instructions in between that can alter
     // control flow (eg. calls)
-    for (BasicBlock::iterator
-             i = ++BasicBlock::iterator(I),
-             UI = BasicBlock::iterator(dyn_cast<Instruction>(Use));
-         i != UI; ++i)
+    for (BasicBlock::iterator i = ++BasicBlock::iterator(I); &*i != Use; ++i)
       if (i == I->getParent()->end() || i->mayHaveSideEffects())
         return false;
 

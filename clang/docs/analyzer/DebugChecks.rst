@@ -138,17 +138,6 @@ ExprInspection checks
       clang_analyzer_warnIfReached();  // no-warning
     }
 
-- void clang_analyzer_numTimesReached();
-
-  Same as above, but include the number of times this call expression
-  gets reached by the analyzer during the current analysis.
-
-  Example usage::
-
-    for (int x = 0; x < 3; ++x) {
-      clang_analyzer_numTimesReached(); // expected-warning{{3}}
-    }
-
 - void clang_analyzer_warnOnDeadSymbol(int);
 
   Subscribe for a delayed warning when the symbol that represents the value of
@@ -191,18 +180,6 @@ ExprInspection checks
         clang_analyzer_explain(ptr); // expected-warning{{memory address '0'}}
     }
 
-- void clang_analyzer_dump(a single argument of any type);
-
-  Similar to clang_analyzer_explain, but produces a raw dump of the value,
-  same as SVal::dump().
-
-  Example usage::
-
-    void clang_analyzer_dump(int);
-    void foo(int x) {
-      clang_analyzer_dump(x); // expected-warning{{reg_$0<x>}}
-    }
-
 - size_t clang_analyzer_getExtent(void *);
 
   This function returns the value that represents the extent of a memory region
@@ -218,22 +195,6 @@ ExprInspection checks
       clang_analyzer_explain(xs); // expected-warning{{'4'}}
       size_t ys = clang_analyzer_getExtent(&y);
       clang_analyzer_explain(ys); // expected-warning{{'8'}}
-    }
-
-- void clang_analyzer_printState();
-
-  Dumps the current ProgramState to the stderr. Quickly lookup the program state
-  at any execution point without ViewExplodedGraph or re-compiling the program.
-  This is not very useful for writing tests (apart from testing how ProgramState
-  gets printed), but useful for debugging tests. Also, this method doesn't
-  produce a warning, so it gets printed on the console before all other
-  ExprInspection warnings.
-
-  Example usage::
-
-    void foo() {
-      int x = 1;
-      clang_analyzer_printState(); // Read the stderr!
     }
 
 Statistics

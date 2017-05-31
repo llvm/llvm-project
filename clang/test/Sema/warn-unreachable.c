@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -fblocks -Wunreachable-code-aggressive -Wno-unused-value -Wno-covered-switch-default -I %S/Inputs
-// RUN: %clang_cc1 -fsyntax-only -fblocks -Wunreachable-code-aggressive -Wno-unused-value -Wno-covered-switch-default -fdiagnostics-parseable-fixits -I %S/Inputs %s 2>&1 | FileCheck %s
 
 #include "warn-unreachable.h"
 
@@ -396,58 +395,4 @@ void test_with_paren_silencing(int x) {
     calledFun(); // no-warning
   else
     calledFun();
-}
-
-// rdar://24570531
-
-struct StructWithPointer {
-  void *p;
-};
-
-void emitJustOneWarningForOr(struct StructWithPointer *s) {
-  if (1 || !s->p) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
-    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:7}:"/* DISABLES CODE */ ("
-            // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:8-[[@LINE-2]]:8}:")"
-  emitJustOneWarningForOr(s); // expected-warning {{code will never be executed}}
-}
-
-void emitJustOneWarningForOrSilenced(struct StructWithPointer *s) {
-  if ((1) || !s->p)
-    return;
-
-  emitJustOneWarningForOrSilenced(s); // no warning
-}
-
-void emitJustOneWarningForOr2(struct StructWithPointer *s) {
-  if (1 || !s->p) // expected-warning {{code will never be executed}}
-    return; // expected-note@-1 {{silence by adding parentheses to mark code as explicitly dead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"/* DISABLES CODE */ ("
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:8-[[@LINE-3]]:8}:")"
-}
-
-void wrapOneInFixit(struct StructWithPointer *s) {
-  if (!s->p || 1) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
-    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:16-[[@LINE-1]]:16}:"/* DISABLES CODE */ ("
-            // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:17}:")"
-  wrapOneInFixit(s); // expected-warning {{code will never be executed}}
-}
-
-void unaryOpNoFixit() {
-  if (- 1)
-    return; // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
-  unaryOpNoFixit(); // expected-warning {{code will never be executed}}
-}
-
-void unaryOpStrictFixit(struct StructWithPointer *s) {
-  if (!(s->p && 0)) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
-    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:17-[[@LINE-1]]:17}:"/* DISABLES CODE */ ("
-            // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:18-[[@LINE-2]]:18}:")"
-  unaryOpStrictFixit(s); // expected-warning {{code will never be executed}}
-}
-
-void unaryOpFixitCastSubExpr(int x) {
-  if (! (int)0) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
-    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:7}:"/* DISABLES CODE */ ("
-            // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:")"
-  unaryOpFixitCastSubExpr(x); // expected-warning {{code will never be executed}}
 }

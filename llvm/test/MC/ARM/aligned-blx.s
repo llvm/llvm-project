@@ -27,10 +27,8 @@ _test:
         blx _aligned    @ PC=0 (mod 4)
         movs r0, r0
         blx _aligned    @ PC=2 (mod 4)
-        blx _f1
 
 @ CHECK: blx _elsewhere
 @ CHECK: ff f7 fa ef blx _aligned
 @ CHECK: ff f7 f8 ef blx _aligned
 @ CHECK: ff f7 f6 ef blx _aligned
-@ CHECK: ff f7 f2 ef blx _f1

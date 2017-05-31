@@ -32,7 +32,6 @@ class BranchInst;
 class Instruction;
 class CallInst;
 class DbgDeclareInst;
-class DbgValueInst;
 class StoreInst;
 class LoadInst;
 class Value;
@@ -48,8 +47,6 @@ class DominatorTree;
 class LazyValueInfo;
 
 template<typename T> class SmallVectorImpl;
-
-typedef SmallVector<DbgValueInst *, 1> DbgValueList;
 
 //===----------------------------------------------------------------------===//
 //  Local constant propagation.
@@ -253,18 +250,13 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
 
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
 /// that has an associated llvm.dbg.decl intrinsic.
-void ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
+bool ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                      StoreInst *SI, DIBuilder &Builder);
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
 /// that has an associated llvm.dbg.decl intrinsic.
-void ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
+bool ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                      LoadInst *LI, DIBuilder &Builder);
-
-/// Inserts a llvm.dbg.value intrinsic after a phi of an alloca'd value
-/// that has an associated llvm.dbg.decl intrinsic.
-void ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
-                                     PHINode *LI, DIBuilder &Builder);
 
 /// Lowers llvm.dbg.declare intrinsics into appropriate set of
 /// llvm.dbg.value intrinsics.
@@ -272,9 +264,6 @@ bool LowerDbgDeclare(Function &F);
 
 /// Finds the llvm.dbg.declare intrinsic corresponding to an alloca, if any.
 DbgDeclareInst *FindAllocaDbgDeclare(Value *V);
-
-/// Finds the llvm.dbg.value intrinsics corresponding to an alloca, if any.
-void FindAllocaDbgValues(DbgValueList &DbgValues, Value *V);
 
 /// Replaces llvm.dbg.declare instruction when the address it describes
 /// is replaced with a new value. If Deref is true, an additional DW_OP_deref is
@@ -308,13 +297,6 @@ unsigned removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB);
 /// Insert an unreachable instruction before the specified
 /// instruction, making it and the rest of the code in the block dead.
 unsigned changeToUnreachable(Instruction *I, bool UseLLVMTrap);
-
-/// Convert the CallInst to InvokeInst with the specified unwind edge basic
-/// block.  This also splits the basic block where CI is located, because
-/// InvokeInst is a terminator instruction.  Returns the newly split basic
-/// block.
-BasicBlock *changeToInvokeAndSplitBasicBlock(CallInst *CI,
-                                             BasicBlock *UnwindEdge);
 
 /// Replace 'BB's terminator with one that does not have an unwind successor
 /// block. Rewrites `invoke` to `call`, etc. Updates any PHIs in unwind

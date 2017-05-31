@@ -962,7 +962,7 @@ bool CallAnalyzer::visitCallSite(CallSite CS) {
   // out. Pretend to inline the function, with a custom threshold.
   auto IndirectCallParams = Params;
   IndirectCallParams.DefaultThreshold = InlineConstants::IndirectCallThreshold;
-  CallAnalyzer CA(TTI, GetAssumptionCache, PSI, *F, CS, IndirectCallParams);
+  CallAnalyzer CA(TTI, GetAssumptionCache, PSI, *F, CS, Params);
   if (CA.analyzeCall(CS)) {
     // We were able to inline the indirect call! Subtract the cost from the
     // threshold to get the bonus we want to apply, but don't go below zero.

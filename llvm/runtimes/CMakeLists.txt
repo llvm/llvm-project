@@ -86,9 +86,5 @@ else() # if this is included from LLVM's CMake
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                              PASSTHROUGH_PREFIXES ${prefixes}
                              USE_TOOLCHAIN)
-    if(LLVM_INCLUDE_TESTS)
-      set_property(GLOBAL APPEND PROPERTY LLVM_ADDITIONAL_TEST_DEPENDS runtimes-test-depends)
-      set_property(GLOBAL APPEND PROPERTY LLVM_ADDITIONAL_TEST_TARGETS check-runtimes)
-    endif()
   endif()
 endif()

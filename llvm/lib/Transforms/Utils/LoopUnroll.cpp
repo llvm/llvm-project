@@ -324,33 +324,30 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
       (unsigned)GreatestCommonDivisor64(Count, TripMultiple);
   }
 
-  using namespace ore;
   // Report the unrolling decision.
   if (CompletelyUnroll) {
     DEBUG(dbgs() << "COMPLETELY UNROLLING loop %" << Header->getName()
           << " with trip count " << TripCount << "!\n");
-    ORE->emit(OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLoc(),
-                                 L->getHeader())
-              << "completely unrolled loop with "
-              << NV("UnrollCount", TripCount) << " iterations");
+    ORE->emitOptimizationRemark(DEBUG_TYPE, L,
+                                Twine("completely unrolled loop with ") +
+                                    Twine(TripCount) + " iterations");
   } else {
-    OptimizationRemark Diag(DEBUG_TYPE, "PartialUnrolled", L->getStartLoc(),
-                            L->getHeader());
-    Diag << "unrolled loop by a factor of " << NV("UnrollCount", Count);
+    auto EmitDiag = [&](const Twine &T) {
+      ORE->emitOptimizationRemark(
+          DEBUG_TYPE, L, "unrolled loop by a factor of " + Twine(Count) + T);
+    };
 
     DEBUG(dbgs() << "UNROLLING loop %" << Header->getName()
           << " by " << Count);
     if (TripMultiple == 0 || BreakoutTrip != TripMultiple) {
       DEBUG(dbgs() << " with a breakout at trip " << BreakoutTrip);
-      ORE->emit(Diag << " with a breakout at trip "
-                     << NV("BreakoutTrip", BreakoutTrip));
+      EmitDiag(" with a breakout at trip " + Twine(BreakoutTrip));
     } else if (TripMultiple != 1) {
       DEBUG(dbgs() << " with " << TripMultiple << " trips per branch");
-      ORE->emit(Diag << " with " << NV("TripMultiple", TripMultiple)
-                     << " trips per branch");
+      EmitDiag(" with " + Twine(TripMultiple) + " trips per branch");
     } else if (RuntimeTripCount) {
       DEBUG(dbgs() << " with run-time trip count");
-      ORE->emit(Diag << " with run-time trip count");
+      EmitDiag(" with run-time trip count");
     }
     DEBUG(dbgs() << "!\n");
   }

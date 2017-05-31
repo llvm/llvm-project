@@ -1,4 +1,5 @@
-add_compiler_rt_component(scudo)
+add_custom_target(scudo)
+set_target_properties(scudo PROPERTIES FOLDER "Compiler-RT Misc")
 
 include_directories(..)
 
@@ -27,3 +28,6 @@ if(COMPILER_RT_HAS_SCUDO)
       PARENT_TARGET scudo)
   endforeach()
 endif()
+
+add_dependencies(compiler-rt scudo)
+

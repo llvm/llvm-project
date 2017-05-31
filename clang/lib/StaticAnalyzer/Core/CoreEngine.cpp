@@ -309,19 +309,8 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
     assert (L.getLocationContext()->getCFG()->getExit().size() == 0
             && "EXIT block cannot contain Stmts.");
 
-    // Get return statement..
-    const ReturnStmt *RS = nullptr;
-    if (!L.getSrc()->empty()) {
-      if (Optional<CFGStmt> LastStmt = L.getSrc()->back().getAs<CFGStmt>()) {
-        if ((RS = dyn_cast<ReturnStmt>(LastStmt->getStmt()))) {
-          if (!RS->getRetValue())
-            RS = nullptr;
-        }
-      }
-    }
-
     // Process the final state transition.
-    SubEng.processEndOfFunction(BuilderCtx, Pred, RS);
+    SubEng.processEndOfFunction(BuilderCtx, Pred);
 
     // This path is done. Don't enqueue any more nodes.
     return;
@@ -600,14 +589,13 @@ void CoreEngine::enqueueStmtNode(ExplodedNode *N,
     WList->enqueue(Succ, Block, Idx+1);
 }
 
-ExplodedNode *CoreEngine::generateCallExitBeginNode(ExplodedNode *N,
-                                                    const ReturnStmt *RS) {
+ExplodedNode *CoreEngine::generateCallExitBeginNode(ExplodedNode *N) {
   // Create a CallExitBegin node and enqueue it.
   const StackFrameContext *LocCtx
                          = cast<StackFrameContext>(N->getLocationContext());
 
   // Use the callee location context.
-  CallExitBegin Loc(LocCtx, RS);
+  CallExitBegin Loc(LocCtx);
 
   bool isNew;
   ExplodedNode *Node = G.getNode(Loc, N->getState(), false, &isNew);
@@ -631,12 +619,12 @@ void CoreEngine::enqueue(ExplodedNodeSet &Set,
   }
 }
 
-void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS) {
+void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set) {
   for (ExplodedNodeSet::iterator I = Set.begin(), E = Set.end(); I != E; ++I) {
     ExplodedNode *N = *I;
     // If we are in an inlined call, generate CallExitBegin node.
     if (N->getLocationContext()->getParent()) {
-      N = generateCallExitBeginNode(N, RS);
+      N = generateCallExitBeginNode(N);
       if (N)
         WList->enqueue(N);
     } else {

@@ -3,10 +3,6 @@
 // RUN: %clangxx -target x86_64-unknown-unknown -g -std=c++11 %s -emit-llvm -S -o - | FileCheck %s
 // PR14471
 
-// CHECK: @_ZN1C1aE = global i32 4, align 4, !dbg [[A:![0-9]+]]
-// CHECK: @_ZN1C1bE = global i32 2, align 4, !dbg [[B:![0-9]+]]
-// CHECK: @_ZN1C1cE = global i32 1, align 4, !dbg [[C:![0-9]+]]
-
 enum X {
   Y
 };
@@ -32,8 +28,6 @@ public:
 // why the definition of "a" comes before the declarations while
 // "b" and "c" come after.
 
-// CHECK: [[A]] = distinct !DIGlobalVariable(name: "a", {{.*}} declaration: ![[DECL_A:[0-9]+]])
-//
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "X"{{.*}}, identifier: "_ZTS1X")
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "anon_static_decl_struct"
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "anon_static_decl_var"
@@ -42,21 +36,15 @@ public:
 // CHECK-SAME:             ){{$}}
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "static_decl_templ_var"
 
+// CHECK: !DIGlobalVariable(name: "a", {{.*}}variable: i32* @_ZN1C1aE, declaration: ![[DECL_A:[0-9]+]])
 int C::a = 4;
-// CHECK: [[B]] = distinct !DIGlobalVariable(name: "b", {{.*}} declaration: ![[DECL_B:[0-9]+]])
-// CHECK: ![[DECL_B]] = !DIDerivedType(tag: DW_TAG_member, name: "b"
-// CHECK-NOT:                                 size:
-// CHECK-NOT:                                 align:
-// CHECK-NOT:                                 offset:
-// CHECK-SAME:                                flags: DIFlagProtected | DIFlagStaticMember)
-//
-// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "C"{{.*}}, identifier: "_ZTS1C")
-//
 // CHECK: ![[DECL_A]] = !DIDerivedType(tag: DW_TAG_member, name: "a"
 // CHECK-NOT:                                 size:
 // CHECK-NOT:                                 align:
 // CHECK-NOT:                                 offset:
 // CHECK-SAME:                                flags: DIFlagStaticMember)
+//
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "C"{{.*}}, identifier: "_ZTS1C")
 //
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "const_a"
 // CHECK-NOT:            size:
@@ -65,6 +53,12 @@ int C::a = 4;
 // CHECK-SAME:           flags: DIFlagStaticMember,
 // CHECK-SAME:           extraData: i1 true)
 
+// CHECK: ![[DECL_B:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "b"
+// CHECK-NOT:                                 size:
+// CHECK-NOT:                                 align:
+// CHECK-NOT:                                 offset:
+// CHECK-SAME:                                flags: DIFlagProtected | DIFlagStaticMember)
+//
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "const_b"
 // CHECK-NOT:            size:
 // CHECK-NOT:            align:
@@ -88,8 +82,9 @@ int C::a = 4;
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "x_a"
 // CHECK-SAME:           flags: DIFlagPublic | DIFlagStaticMember)
 
+// CHECK: !DIGlobalVariable(name: "b", {{.*}}variable: i32* @_ZN1C1bE, declaration: ![[DECL_B]])
 int C::b = 2;
-// CHECK: [[C]] = distinct !DIGlobalVariable(name: "c", {{.*}} declaration: ![[DECL_C]])
+// CHECK: !DIGlobalVariable(name: "c", {{.*}}variable: i32* @_ZN1C1cE, declaration: ![[DECL_C]])
 int C::c = 1;
 
 int main()

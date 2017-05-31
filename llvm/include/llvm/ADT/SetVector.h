@@ -62,12 +62,6 @@ public:
 
   ArrayRef<T> getArrayRef() const { return vector_; }
 
-  /// Clear the SetVector and return the underlying vector.
-  Vector takeVector() {
-    set_.clear();
-    return std::move(vector_);
-  }
-
   /// \brief Determine if the SetVector is empty or not.
   bool empty() const {
     return vector_.empty();

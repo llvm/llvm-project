@@ -493,13 +493,8 @@ def arcmt_modify : Flag<["-"], "arcmt-modify">,
 def arcmt_migrate : Flag<["-"], "arcmt-migrate">,
   HelpText<"Apply modifications and produces temporary files that conform to ARC">;
 
-def opt_record_file : Separate<["-"], "opt-record-file">,
-  HelpText<"File name to use for YAML optimization record output">;
-
 def print_stats : Flag<["-"], "print-stats">,
   HelpText<"Print performance metrics and statistics">;
-def stats_file : Joined<["-"], "stats-file=">,
-  HelpText<"Filename to write statistics to">;
 def fdump_record_layouts : Flag<["-"], "fdump-record-layouts">,
   HelpText<"Dump record layout information">;
 def fdump_record_layouts_simple : Flag<["-"], "fdump-record-layouts-simple">,
@@ -639,8 +634,6 @@ def nostdsysteminc : Flag<["-"], "nostdsysteminc">,
   HelpText<"Disable standard system #include directories">;
 def fdisable_module_hash : Flag<["-"], "fdisable-module-hash">,
   HelpText<"Disable the module hash">;
-def fmodules_hash_content : Flag<["-"], "fmodules-hash-content">,
-  HelpText<"Enable hashing the content of a module file">;
 def c_isystem : JoinedOrSeparate<["-"], "c-isystem">, MetaVarName<"<directory>">,
   HelpText<"Add directory to the C SYSTEM include search path">;
 def objc_isystem : JoinedOrSeparate<["-"], "objc-isystem">,

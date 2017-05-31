@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-apple-darwin %s -o - | FileCheck %s
 
-// CHECK: @x = global %"struct.outer<foo>::inner" zeroinitializer, align 4, !dbg [[X:![0-9]+]]
-
 struct MyClass {
   template <int i> int add(int j) {
     return i + j;
@@ -19,8 +17,9 @@ inline int add3(int x) {
 }
 
 // The compile unit pulls in the global variables first.
-// CHECK: [[X]] = distinct !DIGlobalVariable(name: "x",
+// CHECK: !DIGlobalVariable(name: "x",
 // CHECK-SAME:              type: ![[OUTER_FOO_INNER_ID:[0-9]+]]
+// CHECK-SAME:              variable: %"struct.outer<foo>::inner"* @x
 
 // CHECK: ![[OUTER_FOO_INNER_ID:[0-9]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "inner"{{.*}}, identifier:
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
@@ -39,7 +38,7 @@ inline int add3(int x) {
 // CHECK: [[C_MEM]] = !{[[C_VPTR:![0-9]*]], [[C_FUNC:![0-9]*]]}
 // CHECK: [[C_VPTR]] = !DIDerivedType(tag: DW_TAG_member, name: "_vptr$MyClass"
 
-// CHECK: [[C_FUNC]] = !DISubprogram(name: "func",{{.*}} line: 9,
+// CHECK: [[C_FUNC]] = !DISubprogram(name: "func",{{.*}} line: 7,
 
 // CHECK: !DISubprogram(name: "add<2>"
 // CHECK-SAME:          scope: [[C]]

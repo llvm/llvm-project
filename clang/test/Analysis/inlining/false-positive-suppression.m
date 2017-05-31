@@ -1,11 +1,8 @@
 // RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-config suppress-null-return-paths=false -verify %s
 // RUN: %clang_cc1 -analyze -analyzer-checker=core -verify -DSUPPRESSED=1 %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -fobjc-arc -verify -DSUPPRESSED=1 %s
 // RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-config avoid-suppressing-null-argument-paths=true -DSUPPRESSED=1 -DNULL_ARGS=1 -verify %s
 
-#define ARC __has_feature(objc_arc)
-
-#if defined(SUPPRESSED) && !ARC
+#ifdef SUPPRESSED
 // expected-no-diagnostics
 #endif
 
@@ -27,9 +24,8 @@ void testNilReceiverHelperA(int *x) {
 
 void testNilReceiverHelperB(int *x) {
   *x = 1;
-// FIXME: Suppression for this case isn't working under ARC. It should.
-#if !defined(SUPPRESSED) || (defined(SUPPRESSED) && ARC)
-  // expected-warning@-3 {{Dereference of null pointer}}
+#ifndef SUPPRESSED
+  // expected-warning@-2 {{Dereference of null pointer}}
 #endif
 }
 
@@ -44,16 +40,12 @@ void testNilReceiver(int coin) {
 // FALSE NEGATIVES (over-suppression)
 
 __attribute__((objc_root_class))
-@interface SomeClass {
-  int ivar;
-}
+@interface SomeClass
 -(int *)methodReturningNull;
 
 @property(readonly) int *propertyReturningNull;
 
 @property(readonly) int *synthesizedProperty;
-
-@property(readonly) SomeClass *propertyReturningNil;
 
 @end
 
@@ -69,10 +61,6 @@ __attribute__((objc_root_class))
 }
 
 -(int *)propertyReturningNull {
-  return 0;
-}
-
--(SomeClass *)propertyReturningNil {
   return 0;
 }
 
@@ -114,16 +102,6 @@ void testClassPropertyReturningNull() {
   // expected-warning@-2 {{Dereference of null pointer}}
 #endif
 }
-
-@implementation SomeClass (ForTestOfPropertyReturningNil)
-void testPropertyReturningNil(SomeClass *sc) {
-  SomeClass *result = sc.propertyReturningNil;
-  result->ivar = 1;
-#ifndef SUPPRESSED
-  // expected-warning@-2 {{Access to instance variable 'ivar' results in a dereference of a null pointer (loaded from variable 'result')}}
-#endif
-}
-@end
 
 void testSynthesizedPropertyReturningNull(SomeClass *sc) {
   if (sc.synthesizedProperty)

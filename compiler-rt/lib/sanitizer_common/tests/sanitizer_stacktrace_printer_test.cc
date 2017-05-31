@@ -52,18 +52,13 @@ TEST(SanitizerStacktracePrinter, RenderSourceLocation) {
 
 TEST(SanitizerStacktracePrinter, RenderModuleLocation) {
   InternalScopedString str(128);
-  RenderModuleLocation(&str, "/dir/exe", 0x123, kModuleArchUnknown, "");
+  RenderModuleLocation(&str, "/dir/exe", 0x123, "");
   EXPECT_STREQ("(/dir/exe+0x123)", str.data());
 
   // Check that we strip file prefix if necessary.
   str.clear();
-  RenderModuleLocation(&str, "/dir/exe", 0x123, kModuleArchUnknown, "/dir/");
+  RenderModuleLocation(&str, "/dir/exe", 0x123, "/dir/");
   EXPECT_STREQ("(exe+0x123)", str.data());
-
-  // Check that we render the arch.
-  str.clear();
-  RenderModuleLocation(&str, "/dir/exe", 0x123, kModuleArchX86_64H, "/dir/");
-  EXPECT_STREQ("(exe:x86_64h+0x123)", str.data());
 }
 
 TEST(SanitizerStacktracePrinter, RenderFrame) {

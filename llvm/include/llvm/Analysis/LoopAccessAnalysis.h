@@ -22,7 +22,6 @@
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
@@ -336,11 +335,9 @@ public:
   struct PointerInfo {
     /// Holds the pointer value that we need to check.
     TrackingVH<Value> PointerValue;
-    /// Holds the smallest byte address accessed by the pointer throughout all
-    /// iterations of the loop.
+    /// Holds the pointer value at the beginning of the loop.
     const SCEV *Start;
-    /// Holds the largest byte address accessed by the pointer throughout all
-    /// iterations of the loop, plus 1.
+    /// Holds the pointer value at the end of the loop.
     const SCEV *End;
     /// Holds the information if this pointer is used for writing to memory.
     bool IsWritePtr;
@@ -596,7 +593,7 @@ public:
 
   /// \brief The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
-  const OptimizationRemarkAnalysis *getReport() const { return Report.get(); }
+  const Optional<LoopAccessReport> &getReport() const { return Report; }
 
   /// \brief the Memory Dependence Checker which can determine the
   /// loop-independent and loop-carried dependences between memory accesses.
@@ -642,13 +639,7 @@ private:
   /// pass.
   bool canAnalyzeLoop();
 
-  /// \brief Save the analysis remark.
-  ///
-  /// LAA does not directly emits the remarks.  Instead it stores it which the
-  /// client can retrieve and presents as its own analysis
-  /// (e.g. -Rpass-analysis=loop-vectorize).
-  OptimizationRemarkAnalysis &recordAnalysis(StringRef RemarkName,
-                                             Instruction *Instr = nullptr);
+  void emitAnalysis(LoopAccessReport &Message);
 
   /// \brief Collect memory access with loop invariant strides.
   ///
@@ -682,7 +673,7 @@ private:
 
   /// \brief The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
-  std::unique_ptr<OptimizationRemarkAnalysis> Report;
+  Optional<LoopAccessReport> Report;
 
   /// \brief If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.

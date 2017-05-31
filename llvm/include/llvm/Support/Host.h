@@ -70,11 +70,6 @@ namespace sys {
   ///
   /// \return - True on success.
   bool getHostCPUFeatures(StringMap<bool> &Features);
-
-  /// Get the number of physical cores (as opposed to logical cores returned
-  /// from thread::hardware_concurrency(), which includes hyperthreads).
-  /// Returns -1 if unknown for the current host system.
-  int getHostNumPhysicalCores();
 }
 }
 

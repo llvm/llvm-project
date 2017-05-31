@@ -128,24 +128,6 @@ function(get_target_flags_for_arch arch out_var)
   endif()
 endfunction()
 
-# Returns a compiler and CFLAGS that should be used to run tests for the
-# specific architecture.  When cross-compiling, this is controled via
-# COMPILER_RT_TEST_COMPILER and COMPILER_RT_TEST_COMPILER_CFLAGS.
-macro(get_test_cc_for_arch arch cc_out cflags_out)
-  if(ANDROID OR ${arch} MATCHES "arm|aarch64")
-    # This is only true if we are cross-compiling.
-    # Build all tests with host compiler and use host tools.
-    set(${cc_out} ${COMPILER_RT_TEST_COMPILER})
-    set(${cflags_out} ${COMPILER_RT_TEST_COMPILER_CFLAGS})
-  else()
-    get_target_flags_for_arch(${arch} ${cflags_out})
-    if(APPLE)
-      list(APPEND ${cflags_out} ${DARWIN_osx_CFLAGS})
-    endif()
-    string(REPLACE ";" " " ${cflags_out} "${${cflags_out}}")
-  endif()
-endmacro()
-
 set(ARM64 aarch64)
 set(ARM32 arm armhf)
 set(X86 i386 i686)
@@ -227,11 +209,7 @@ if(APPLE)
       set(SANITIZER_MIN_OSX_VERSION 10.9)
     endif()
     if(SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.7")
-      message(FATAL_ERROR "macOS deployment target '${SANITIZER_MIN_OSX_VERSION}' is too old.")
-    endif()
-    if(SANITIZER_MIN_OSX_VERSION VERSION_GREATER "10.9")
-      message(WARNING "macOS deployment target '${SANITIZER_MIN_OSX_VERSION}' is too new, setting to '10.9' instead.")
-      set(SANITIZER_MIN_OSX_VERSION 10.9)
+      message(FATAL_ERROR "Too old OS X version: ${SANITIZER_MIN_OSX_VERSION}")
     endif()
   endif()
 
@@ -291,7 +269,7 @@ if(APPLE)
           DARWIN_${platform}sim_ARCHS
           ${toolchain_arches})
         message(STATUS "${platform} Simulator supported arches: ${DARWIN_${platform}sim_ARCHS}")
-        if(DARWIN_${platform}sim_ARCHS)
+        if(DARWIN_${platform}_ARCHS)
           list(APPEND SANITIZER_COMMON_SUPPORTED_OS ${platform}sim)
           list(APPEND PROFILE_SUPPORTED_OS ${platform}sim)
           if(DARWIN_${platform}_SYSROOT_INTERNAL)

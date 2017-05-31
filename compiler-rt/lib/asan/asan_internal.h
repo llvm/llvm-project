@@ -65,9 +65,6 @@ void AsanInitFromRtl();
 // asan_win.cc
 void InitializePlatformExceptionHandlers();
 
-// asan_win.cc / asan_posix.cc
-const char *DescribeSignalOrException(int signo);
-
 // asan_rtl.cc
 void NORETURN ShowStatsAndAbort();
 
@@ -135,10 +132,12 @@ extern bool asan_init_is_running;
 extern void (*death_callback)(void);
 // These magic values are written to shadow for better error reporting.
 const int kAsanHeapLeftRedzoneMagic = 0xfa;
+const int kAsanHeapRightRedzoneMagic = 0xfb;
 const int kAsanHeapFreeMagic = 0xfd;
 const int kAsanStackLeftRedzoneMagic = 0xf1;
 const int kAsanStackMidRedzoneMagic = 0xf2;
 const int kAsanStackRightRedzoneMagic = 0xf3;
+const int kAsanStackPartialRedzoneMagic = 0xf4;
 const int kAsanStackAfterReturnMagic = 0xf5;
 const int kAsanInitializationOrderMagic = 0xf6;
 const int kAsanUserPoisonedMemoryMagic = 0xf7;

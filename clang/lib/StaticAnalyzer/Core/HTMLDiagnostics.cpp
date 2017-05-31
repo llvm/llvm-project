@@ -152,30 +152,13 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
   }
 
   // Process the path.
-  // Maintain the counts of extra note pieces separately.
-  unsigned TotalPieces = path.size();
-  unsigned TotalNotePieces =
-      std::count_if(path.begin(), path.end(),
-                    [](const IntrusiveRefCntPtr<PathDiagnosticPiece> &p) {
-                      return isa<PathDiagnosticNotePiece>(p.get());
-                    });
+  unsigned n = path.size();
+  unsigned max = n;
 
-  unsigned TotalRegularPieces = TotalPieces - TotalNotePieces;
-  unsigned NumRegularPieces = TotalRegularPieces;
-  unsigned NumNotePieces = TotalNotePieces;
-
-  for (auto I = path.rbegin(), E = path.rend(); I != E; ++I) {
-    if (isa<PathDiagnosticNotePiece>(I->get())) {
-      // This adds diagnostic bubbles, but not navigation.
-      // Navigation through note pieces would be added later,
-      // as a separate pass through the piece list.
-      HandlePiece(R, FID, **I, NumNotePieces, TotalNotePieces);
-      --NumNotePieces;
-    } else {
-      HandlePiece(R, FID, **I, NumRegularPieces, TotalRegularPieces);
-      --NumRegularPieces;
-    }
-  }
+  for (PathPieces::const_reverse_iterator I = path.rbegin(),
+       E = path.rend();
+        I != E; ++I, --n)
+    HandlePiece(R, FID, **I, n, max);
 
   // Add line numbers, header, footer, etc.
 
@@ -209,38 +192,24 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
   int ColumnNumber = path.back()->getLocation().asLocation().getExpansionColumnNumber();
 
   // Add the name of the file as an <h1> tag.
+
   {
     std::string s;
     llvm::raw_string_ostream os(s);
 
     os << "<!-- REPORTHEADER -->\n"
-       << "<h3>Bug Summary</h3>\n<table class=\"simpletable\">\n"
+      << "<h3>Bug Summary</h3>\n<table class=\"simpletable\">\n"
           "<tr><td class=\"rowname\">File:</td><td>"
-       << html::EscapeText(DirName)
-       << html::EscapeText(Entry->getName())
-       << "</td></tr>\n<tr><td class=\"rowname\">Warning:</td><td>"
-          "<a href=\"#EndPath\">line "
-       << LineNumber
-       << ", column "
-       << ColumnNumber
-       << "</a><br />"
-       << D.getVerboseDescription() << "</td></tr>\n";
-
-    // The navigation across the extra notes pieces.
-    unsigned NumExtraPieces = 0;
-    for (const auto &Piece : path) {
-      if (const auto *P = dyn_cast<PathDiagnosticNotePiece>(Piece.get())) {
-        int LineNumber =
-            P->getLocation().asLocation().getExpansionLineNumber();
-        int ColumnNumber =
-            P->getLocation().asLocation().getExpansionColumnNumber();
-        os << "<tr><td class=\"rowname\">Note:</td><td>"
-           << "<a href=\"#Note" << NumExtraPieces << "\">line "
-           << LineNumber << ", column " << ColumnNumber << "</a><br />"
-           << P->getString() << "</td></tr>";
-        ++NumExtraPieces;
-      }
-    }
+      << html::EscapeText(DirName)
+      << html::EscapeText(Entry->getName())
+      << "</td></tr>\n<tr><td class=\"rowname\">Location:</td><td>"
+         "<a href=\"#EndPath\">line "
+      << LineNumber
+      << ", column "
+      << ColumnNumber
+      << "</a></td></tr>\n"
+         "<tr><td class=\"rowname\">Description:</td><td>"
+      << D.getVerboseDescription() << "</td></tr>\n";
 
     // Output any other meta data.
 
@@ -416,20 +385,13 @@ void HTMLDiagnostics::HandlePiece(Rewriter& R, FileID BugFileID,
   // Create the html for the message.
 
   const char *Kind = nullptr;
-  bool IsNote = false;
-  bool SuppressIndex = (max == 1);
   switch (P.getKind()) {
   case PathDiagnosticPiece::Call:
-      llvm_unreachable("Calls and extra notes should already be handled");
+      llvm_unreachable("Calls should already be handled");
   case PathDiagnosticPiece::Event:  Kind = "Event"; break;
   case PathDiagnosticPiece::ControlFlow: Kind = "Control"; break;
     // Setting Kind to "Control" is intentional.
   case PathDiagnosticPiece::Macro: Kind = "Control"; break;
-  case PathDiagnosticPiece::Note:
-    Kind = "Note";
-    IsNote = true;
-    SuppressIndex = true;
-    break;
   }
 
   std::string sbuf;
@@ -437,9 +399,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter& R, FileID BugFileID,
 
   os << "\n<tr><td class=\"num\"></td><td class=\"line\"><div id=\"";
 
-  if (IsNote)
-    os << "Note" << num;
-  else if (num == max)
+  if (num == max)
     os << "EndPath";
   else
     os << "Path" << num;
@@ -501,7 +461,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter& R, FileID BugFileID,
 
   os << "\">";
 
-  if (!SuppressIndex) {
+  if (max > 1) {
     os << "<table class=\"msgT\"><tr><td valign=\"top\">";
     os << "<div class=\"PathIndex";
     if (Kind) os << " PathIndex" << Kind;
@@ -541,7 +501,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter& R, FileID BugFileID,
 
     os << "':\n";
 
-    if (!SuppressIndex) {
+    if (max > 1) {
       os << "</td>";
       if (num < max) {
         os << "<td><div class=\"PathNav\"><a href=\"#";
@@ -563,7 +523,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter& R, FileID BugFileID,
   else {
     os << html::EscapeText(P.getString());
 
-    if (!SuppressIndex) {
+    if (max > 1) {
       os << "</td>";
       if (num < max) {
         os << "<td><div class=\"PathNav\"><a href=\"#";

@@ -6,7 +6,7 @@
 // runtime is able to register globals in the __DATA,__asan_globals section.
 
 // REQUIRES: osx-ld64-live_support
-// RUN: %clang_asan -mmacosx-version-min=10.11 -Xlinker -dead_strip -o %t %s
+// RUN: %clang_asan -mllvm -asan-globals-live-support -Xlinker -dead_strip -o %t %s
 // RUN: llvm-nm -format=posix %t | FileCheck --check-prefix NM-CHECK %s
 // RUN: not %run %t 2>&1 | FileCheck --check-prefix ASAN-CHECK %s
 

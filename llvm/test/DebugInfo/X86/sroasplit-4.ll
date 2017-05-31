@@ -7,10 +7,10 @@
 ; CHECK: call void @llvm.dbg.value(metadata i64 %[[T1]], i64 0, metadata ![[Y]], metadata ![[P2:.*]])
 ; CHECK: call void @llvm.dbg.value(metadata i64 %[[T]], i64 0, metadata ![[R:.*]], metadata ![[P3:.*]])
 ; CHECK: call void @llvm.dbg.value(metadata i64 %[[T1]], i64 0, metadata ![[R]], metadata ![[P4:.*]])
-; CHECK: ![[P1]] = !DIExpression(DW_OP_LLVM_fragment, 0, 64)
-; CHECK: ![[P2]] = !DIExpression(DW_OP_LLVM_fragment, 64, 64)
-; CHECK: ![[P3]] = !DIExpression(DW_OP_LLVM_fragment, 192, 64)
-; CHECK: ![[P4]] = !DIExpression(DW_OP_LLVM_fragment, 256, 64)
+; CHECK: ![[P1]] = !DIExpression(DW_OP_bit_piece, 0, 64)
+; CHECK: ![[P2]] = !DIExpression(DW_OP_bit_piece, 64, 64)
+; CHECK: ![[P3]] = !DIExpression(DW_OP_bit_piece, 192, 64)
+; CHECK: ![[P4]] = !DIExpression(DW_OP_bit_piece, 256, 64)
 ; 
 ; struct p {
 ;   __SIZE_TYPE__ s;

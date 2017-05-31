@@ -37,8 +37,8 @@
 ; ASM:         #DEBUG_VALUE: c <- %EAX
 ; ASM:         testl   %esi, %esi
 ; ASM:         je      .LBB0_2
-; ASM: [[after_je:\.Ltmp.*]]:
 ; ASM: # BB#1:                                 # %if.then
+; ASM-DAG:     #DEBUG_VALUE: c <- %EAX
 ; ASM-DAG:     #DEBUG_VALUE: inlineinc:a <- %EAX
 ; ASM-DAG:     #DEBUG_VALUE: a <- %EAX
 ; ASM-DAG:     #DEBUG_VALUE: f:p <- %ESI
@@ -65,7 +65,7 @@
 ; ASM:         .cv_def_range    [[after_getint]] [[after_inc_eax]], "A\021\021\000\000\000"
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "c"
-; ASM:         .cv_def_range    [[after_getint]] [[after_je]], "A\021\021\000\000\000"
+; ASM:         .cv_def_range    [[after_getint]] [[after_inc_eax]], "A\021\021\000\000\000"
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "b"
 ; ASM:         .cv_def_range    [[after_inc_eax]] [[after_if]], "A\021\021\000\000\000"
@@ -132,7 +132,7 @@
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0xC
 ; OBJ:       ISectStart: 0x0
-; OBJ:       Range: 0x4
+; OBJ:       Range: 0x6
 ; OBJ:     }
 ; OBJ:   }
 ; OBJ:   Local {
@@ -143,7 +143,7 @@
 ; OBJ:   }
 ; OBJ:   DefRangeRegister {
 ; OBJ:     Register: 17
-; OBJ:     MayHaveNoName: 0
+; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0x12
 ; OBJ:       ISectStart: 0x0
 ; OBJ:       Range: 0x6
@@ -192,7 +192,7 @@
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc18.0.0"
 
-@x = internal global i32 0, align 4, !dbg !23
+@x = internal global i32 0, align 4
 
 ; Function Attrs: nounwind uwtable
 define void @f(i32 %p) #0 !dbg !4 {
@@ -261,7 +261,7 @@ attributes #3 = { nounwind }
 !20 = !DILocalVariable(name: "a", arg: 1, scope: !16, file: !1, line: 4, type: !7)
 !21 = !DILocalVariable(name: "b", scope: !16, file: !1, line: 5, type: !7)
 !22 = !{!23}
-!23 = !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 1, type: !24, isLocal: false, isDefinition: true)
+!23 = !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 1, type: !24, isLocal: false, isDefinition: true, variable: i32* @x)
 !24 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !7)
 !25 = !{i32 2, !"CodeView", i32 1}
 !26 = !{i32 2, !"Debug Info Version", i32 3}

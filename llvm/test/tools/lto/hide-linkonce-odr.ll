@@ -9,10 +9,10 @@
 
 ; RUN: llvm-nm %t.dylib | FileCheck --check-prefix=NM %s
 ; check that the linker can hide @a but not @b, nor @GlobLinkonce
-; NM:  S _GlobLinkonce
-; NM:  t _a
-; NM:  T _b
-; NM:  T _c
+; NM: 0000000000000f48 S _GlobLinkonce
+; NM: 0000000000000f10 t _a
+; NM: 0000000000000f20 T _b
+; NM: 0000000000000f00 T _c
 
 
 target triple = "x86_64-apple-macosx10.10.0"

@@ -197,7 +197,6 @@ enum Attribute : uint16_t {
   DW_AT_reference = 0x77,
   DW_AT_rvalue_reference = 0x78,
   DW_AT_macros = 0x79,
-  DW_AT_noreturn = 0x87,
 
   DW_AT_lo_user = 0x2000,
   DW_AT_hi_user = 0x3fff,
@@ -325,8 +324,7 @@ enum LocationAtom {
 #define HANDLE_DW_OP(ID, NAME) DW_OP_##NAME = ID,
 #include "llvm/Support/Dwarf.def"
   DW_OP_lo_user = 0xe0,
-  DW_OP_hi_user = 0xff,
-  DW_OP_LLVM_fragment = 0x1000 ///< Only used in LLVM metadata.
+  DW_OP_hi_user = 0xff
 };
 
 enum TypeKind {

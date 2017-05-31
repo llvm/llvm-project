@@ -163,6 +163,8 @@ def err_drv_bitcode_unsupported_on_toolchain : Error<
   "-fembed-bitcode is not supported on versions of iOS prior to 6.0">;
 
 def warn_O4_is_O3 : Warning<"-O4 is equivalent to -O3">, InGroup<Deprecated>;
+def warn_drv_lto_libpath : Warning<"libLTO.dylib relative to clang installed dir not found; using 'ld' default search path instead">,
+  InGroup<LibLTO>;
 def warn_drv_optimization_value : Warning<"optimization level '%0' is not supported; using '%1%2' instead">,
   InGroup<InvalidCommandLineArgument>;
 def warn_ignored_gcc_optimization : Warning<"optimization flag '%0' is not supported">,
@@ -183,9 +185,6 @@ def warn_drv_unused_argument : Warning<
   InGroup<UnusedCommandLineArgument>;
 def warn_drv_empty_joined_argument : Warning<
   "joined argument expects additional value: '%0'">,
-  InGroup<UnusedCommandLineArgument>;
-def warn_drv_fdiagnostics_show_hotness_requires_pgo : Warning<
-  "argument '-fdiagnostics-show-hotness' requires profile-guided optimization information">,
   InGroup<UnusedCommandLineArgument>;
 def warn_drv_clang_unsupported : Warning<
   "the clang compiler does not support '%0'">;

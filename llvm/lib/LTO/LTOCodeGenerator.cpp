@@ -58,7 +58,6 @@
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/ObjCARC.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <system_error>
 using namespace llvm;
 
@@ -131,18 +130,15 @@ void LTOCodeGenerator::initializeLTOPasses() {
   initializeCFGSimplifyPassPass(R);
 }
 
-void LTOCodeGenerator::setAsmUndefinedRefs(LTOModule *Mod) {
-  const std::vector<StringRef> &undefs = Mod->getAsmUndefinedRefs();
-  for (int i = 0, e = undefs.size(); i != e; ++i)
-    AsmUndefinedRefs[undefs[i]] = 1;
-}
-
 bool LTOCodeGenerator::addModule(LTOModule *Mod) {
   assert(&Mod->getModule().getContext() == &Context &&
          "Expected module in same context");
 
   bool ret = TheLinker->linkInModule(Mod->takeModule());
-  setAsmUndefinedRefs(Mod);
+
+  const std::vector<const char *> &undefs = Mod->getAsmUndefinedRefs();
+  for (int i = 0, e = undefs.size(); i != e; ++i)
+    AsmUndefinedRefs[undefs[i]] = 1;
 
   // We've just changed the input, so let's make sure we verify it.
   HasVerifiedInput = false;
@@ -158,7 +154,10 @@ void LTOCodeGenerator::setModule(std::unique_ptr<LTOModule> Mod) {
 
   MergedModule = Mod->takeModule();
   TheLinker = make_unique<Linker>(*MergedModule);
-  setAsmUndefinedRefs(&*Mod);
+
+  const std::vector<const char*> &Undefs = Mod->getAsmUndefinedRefs();
+  for (int I = 0, E = Undefs.size(); I != E; ++I)
+    AsmUndefinedRefs[Undefs[I]] = 1;
 
   // We've just changed the input, so let's make sure we verify it.
   HasVerifiedInput = false;
@@ -186,21 +185,20 @@ void LTOCodeGenerator::setOptLevel(unsigned Level) {
   switch (OptLevel) {
   case 0:
     CGOptLevel = CodeGenOpt::None;
-    return;
+    break;
   case 1:
     CGOptLevel = CodeGenOpt::Less;
-    return;
+    break;
   case 2:
     CGOptLevel = CodeGenOpt::Default;
-    return;
+    break;
   case 3:
     CGOptLevel = CodeGenOpt::Aggressive;
-    return;
+    break;
   }
-  llvm_unreachable("Unknown optimization level!");
 }
 
-bool LTOCodeGenerator::writeMergedModules(StringRef Path) {
+bool LTOCodeGenerator::writeMergedModules(const char *Path) {
   if (!determineTarget())
     return false;
 
@@ -241,7 +239,7 @@ bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
   SmallString<128> Filename;
   int FD;
 
-  StringRef Extension
+  const char *Extension =
       (FileType == TargetMachine::CGFT_AssemblyFile ? "s" : "o");
 
   std::error_code EC =
@@ -252,12 +250,11 @@ bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
   }
 
   // generate object file
-  tool_output_file objFile(Filename, FD);
+  tool_output_file objFile(Filename.c_str(), FD);
 
   bool genResult = compileOptimized(&objFile.os());
   objFile.os().close();
   if (objFile.os().has_error()) {
-    emitError((Twine("could not write object file: ") + Filename).str());
     objFile.os().clear_error();
     sys::fs::remove(Twine(Filename));
     return false;
@@ -366,19 +363,32 @@ std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
 void LTOCodeGenerator::preserveDiscardableGVs(
     Module &TheModule,
     llvm::function_ref<bool(const GlobalValue &)> mustPreserveGV) {
-  std::vector<GlobalValue *> Used;
+  SetVector<Constant *> UsedValuesSet;
+  if (GlobalVariable *LLVMUsed =
+          TheModule.getGlobalVariable("llvm.compiler.used")) {
+    ConstantArray *Inits = cast<ConstantArray>(LLVMUsed->getInitializer());
+    for (auto &V : Inits->operands())
+      UsedValuesSet.insert(cast<Constant>(&V));
+    LLVMUsed->eraseFromParent();
+  }
+  llvm::Type *i8PTy = llvm::Type::getInt8PtrTy(TheModule.getContext());
   auto mayPreserveGlobal = [&](GlobalValue &GV) {
-    if (!GV.isDiscardableIfUnused() || GV.isDeclaration() ||
-        !mustPreserveGV(GV))
+    if (!GV.isDiscardableIfUnused() || GV.isDeclaration())
       return;
-    if (GV.hasAvailableExternallyLinkage())
-      return emitWarning(
+    if (!mustPreserveGV(GV))
+      return;
+    if (GV.hasAvailableExternallyLinkage()) {
+      emitWarning(
           (Twine("Linker asked to preserve available_externally global: '") +
            GV.getName() + "'").str());
-    if (GV.hasInternalLinkage())
-      return emitWarning((Twine("Linker asked to preserve internal global: '") +
+      return;
+    }
+    if (GV.hasInternalLinkage()) {
+      emitWarning((Twine("Linker asked to preserve internal global: '") +
                    GV.getName() + "'").str());
-    Used.push_back(&GV);
+      return;
+    }
+    UsedValuesSet.insert(ConstantExpr::getBitCast(&GV, i8PTy));
   };
   for (auto &GV : TheModule)
     mayPreserveGlobal(GV);
@@ -387,10 +397,15 @@ void LTOCodeGenerator::preserveDiscardableGVs(
   for (auto &GV : TheModule.aliases())
     mayPreserveGlobal(GV);
 
-  if (Used.empty())
+  if (UsedValuesSet.empty())
     return;
 
-  appendToCompilerUsed(TheModule, Used);
+  llvm::ArrayType *ATy = llvm::ArrayType::get(i8PTy, UsedValuesSet.size());
+  auto *LLVMUsed = new llvm::GlobalVariable(
+      TheModule, ATy, false, llvm::GlobalValue::AppendingLinkage,
+      llvm::ConstantArray::get(ATy, UsedValuesSet.getArrayRef()),
+      "llvm.compiler.used");
+  LLVMUsed->setSection("llvm.metadata");
 }
 
 void LTOCodeGenerator::applyScopeRestrictions() {
@@ -399,7 +414,6 @@ void LTOCodeGenerator::applyScopeRestrictions() {
 
   // Declare a callback for the internalize pass that will ask for every
   // candidate GlobalValue if it can be internalized or not.
-  Mangler Mang;
   SmallString<64> MangledName;
   auto mustPreserveGV = [&](const GlobalValue &GV) -> bool {
     // Unnamed globals can't be mangled, but they can't be preserved either.
@@ -411,7 +425,8 @@ void LTOCodeGenerator::applyScopeRestrictions() {
     // underscore.
     MangledName.clear();
     MangledName.reserve(GV.getName().size() + 1);
-    Mang.getNameWithPrefix(MangledName, &GV, /*CannotUsePrivateLabel=*/false);
+    Mangler::getNameWithPrefix(MangledName, GV.getName(),
+                               MergedModule->getDataLayout());
     return MustPreserveSymbols.count(MangledName);
   };
 
@@ -575,7 +590,7 @@ bool LTOCodeGenerator::compileOptimized(ArrayRef<raw_pwrite_stream *> Out) {
 
 /// setCodeGenDebugOptions - Set codegen debugging options to aid in debugging
 /// LTO problems.
-void LTOCodeGenerator::setCodeGenDebugOptions(StringRef Options) {
+void LTOCodeGenerator::setCodeGenDebugOptions(const char *Options) {
   for (std::pair<StringRef, StringRef> o = getToken(Options); !o.first.empty();
        o = getToken(o.second))
     CodegenOptions.push_back(o.first);

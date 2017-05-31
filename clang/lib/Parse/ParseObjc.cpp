@@ -212,8 +212,6 @@ void Parser::CheckNestedObjCContexts(SourceLocation AtLoc)
 ///     __attribute__((unavailable))
 ///     __attribute__((objc_exception)) - used by NSException on 64-bit
 ///     __attribute__((objc_root_class))
-///     __attribute__((objc_subclassing_restricted))
-///     __attribute__((objc_complete_definition))
 ///
 Decl *Parser::ParseObjCAtInterfaceDeclaration(SourceLocation AtLoc,
                                               ParsedAttributes &attrs) {
@@ -346,11 +344,9 @@ Decl *Parser::ParseObjCAtInterfaceDeclaration(SourceLocation AtLoc,
           protocols, protocolLocs, EndProtoLoc,
           /*consumeLastToken=*/true,
           /*warnOnIncompleteProtocols=*/true);
-      if (Tok.is(tok::eof))
-        return nullptr;
     }
   }
-
+  
   // Next, we need to check for any protocol references.
   if (LAngleLoc.isValid()) {
     if (!ProtocolIdents.empty()) {
@@ -371,8 +367,7 @@ Decl *Parser::ParseObjCAtInterfaceDeclaration(SourceLocation AtLoc,
   }
 
   if (Tok.isNot(tok::less))
-    Actions.ActOnTypedefedProtocols(protocols, protocolLocs,
-                                    superClassId, superClassLoc);
+    Actions.ActOnTypedefedProtocols(protocols, superClassId, superClassLoc);
   
   Decl *ClsType =
     Actions.ActOnStartClassInterface(getCurScope(), AtLoc, nameId, nameLoc, 
@@ -1819,8 +1814,6 @@ void Parser::parseObjCTypeArgsAndProtocolQualifiers(
                                         protocolRAngleLoc,
                                         consumeLastToken,
                                         /*warnOnIncompleteProtocols=*/false);
-  if (Tok.is(tok::eof)) // Nothing else to do here...
-    return;
 
   // An Objective-C object pointer followed by type arguments
   // can then be followed again by a set of protocol references, e.g.,
@@ -1868,9 +1861,6 @@ TypeResult Parser::parseObjCTypeArgsAndProtocolQualifiers(
                                          typeArgsRAngleLoc, protocolLAngleLoc,
                                          protocols, protocolLocs,
                                          protocolRAngleLoc, consumeLastToken);
-
-  if (Tok.is(tok::eof))
-    return true; // Invalid type result.
 
   // Compute the location of the last token.
   if (consumeLastToken)
@@ -2776,7 +2766,6 @@ StmtResult Parser::ParseObjCAtStatement(SourceLocation AtLoc) {
     return Actions.ActOnNullStmt(Tok.getLocation());
   }
 
-  ExprStatementTokLoc = AtLoc;
   ExprResult Res(ParseExpressionWithLeadingAt(AtLoc));
   if (Res.isInvalid()) {
     // If the expression is invalid, skip ahead to the next semicolon. Not
@@ -2873,11 +2862,7 @@ ExprResult Parser::ParseObjCAtExpression(SourceLocation AtLoc) {
       return ParseAvailabilityCheckExpr(AtLoc);
       default: {
         const char *str = nullptr;
-        // Only provide the @try/@finally/@autoreleasepool fixit when we're sure
-        // that this is a proper statement where such directives could actually
-        // occur.
-        if (GetLookAheadToken(1).is(tok::l_brace) &&
-            ExprStatementTokLoc == AtLoc) {
+        if (GetLookAheadToken(1).is(tok::l_brace)) {
           char ch = Tok.getIdentifierInfo()->getNameStart()[0];
           str =  
             ch == 't' ? "try" 

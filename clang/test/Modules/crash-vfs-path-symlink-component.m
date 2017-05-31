@@ -38,7 +38,7 @@
 // CHECKSH-NOT: "-fmodules-cache-path="
 // CHECKSH: "crash-vfs-{{[^ ]*}}.m"
 // CHECKSH: "-ivfsoverlay" "crash-vfs-{{[^ ]*}}.cache/vfs/vfs.yaml"
-// CHECKSH: "-fmodules-cache-path=crash-vfs-{{[^ ]*}}.cache/repro-modules"
+// CHECKSH: "-fmodules-cache-path=crash-vfs-{{[^ ]*}}.cache/modules"
 
 // CHECKYAML: 'case-sensitive':
 // CHECKYAML-NEXT: 'use-external-names': 'false',

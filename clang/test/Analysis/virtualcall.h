@@ -18,15 +18,7 @@ namespace header {
   class A {
   public:
     A() {
-      foo();
-#if !PUREONLY
-#if INTERPROCEDURAL
-          // expected-warning-re@-3 {{{{^}}Call Path : fooCall to virtual function during construction will not dispatch to derived class}}
-#else
-          // expected-warning-re@-5 {{{{^}}Call to virtual function during construction will not dispatch to derived class}}
-#endif
-#endif
-
+      foo(); // expected-warning{{Call virtual functions during construction or destruction will never go to a more derived class}}
     }
 
     virtual int foo();

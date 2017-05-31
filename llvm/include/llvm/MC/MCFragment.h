@@ -25,7 +25,6 @@ class MCSubtargetInfo;
 class MCFragment : public ilist_node_with_parent<MCFragment, MCSection> {
   friend class MCAsmLayout;
 
-  MCFragment() = delete;
   MCFragment(const MCFragment &) = delete;
   void operator=(const MCFragment &) = delete;
 
@@ -84,6 +83,11 @@ protected:
              uint8_t BundlePadding, MCSection *Parent = nullptr);
 
   ~MCFragment();
+private:
+
+  // This is a friend so that the sentinal can be created.
+  friend struct ilist_sentinel_traits<MCFragment>;
+  MCFragment();
 
 public:
   /// Destroys the current fragment.

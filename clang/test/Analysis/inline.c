@@ -114,5 +114,5 @@ void never_called_by_anyone() {
 void knr_one_argument(a) int a; { }
 
 void call_with_less_arguments() {
-  knr_one_argument(); // expected-warning{{too few arguments}} expected-warning{{Function taking 1 argument is called with fewer (0)}}
+  knr_one_argument(); // expected-warning{{too few arguments}} expected-warning{{Function taking 1 argument}}
 }

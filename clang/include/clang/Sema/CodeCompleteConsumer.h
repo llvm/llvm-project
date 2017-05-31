@@ -90,11 +90,7 @@ enum {
   CCD_ProbablyNotObjCCollection = 15,
 
   /// \brief An Objective-C method being used as a property.
-  CCD_MethodAsProperty = 2,
-
-  /// \brief An Objective-C block property completed as a setter with a
-  /// block placeholder.
-  CCD_BlockPropertySetter = 3
+  CCD_MethodAsProperty = 2
 };
 
 /// \brief Priority value factors by which we will divide or multiply the
@@ -741,7 +737,7 @@ public:
 
   /// \brief Build a result that refers to a pattern with an associated
   /// declaration.
-  CodeCompletionResult(CodeCompletionString *Pattern, const NamedDecl *D,
+  CodeCompletionResult(CodeCompletionString *Pattern, NamedDecl *D,
                        unsigned Priority)
     : Declaration(D), Pattern(Pattern), Priority(Priority), StartParameter(0),
       Kind(RK_Pattern), Availability(CXAvailability_Available), Hidden(false),

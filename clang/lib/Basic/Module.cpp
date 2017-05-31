@@ -27,12 +27,11 @@ using namespace clang;
 Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
                bool IsFramework, bool IsExplicit, unsigned VisibilityID)
     : Name(Name), DefinitionLoc(DefinitionLoc), Parent(Parent), Directory(),
-      Umbrella(), Signature({{0}}), ASTFile(nullptr), VisibilityID(VisibilityID),
+      Umbrella(), Signature(0), ASTFile(nullptr), VisibilityID(VisibilityID),
       IsMissingRequirement(false), HasIncompatibleModuleFile(false),
       IsAvailable(true), IsFromModuleFile(false), IsFramework(IsFramework),
       IsExplicit(IsExplicit), IsSystem(false), IsExternC(false),
-      IsInferred(false), IsSwiftInferImportAsMember(false),
-      InferSubmodules(false), InferExplicitSubmodules(false),
+      IsInferred(false), InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
       NameVisibility(Hidden) {
   if (Parent) {
@@ -65,7 +64,6 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
                         .Case("blocks", LangOpts.Blocks)
                         .Case("cplusplus", LangOpts.CPlusPlus)
                         .Case("cplusplus11", LangOpts.CPlusPlus11)
-                        .Case("gnuinlineasm", LangOpts.GNUAsm)
                         .Case("objc", LangOpts.ObjC1)
                         .Case("objc_arc", LangOpts.ObjCAutoRefCount)
                         .Case("opencl", LangOpts.OpenCL)
@@ -81,16 +79,11 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
 
 bool Module::isAvailable(const LangOptions &LangOpts, const TargetInfo &Target,
                          Requirement &Req,
-                         UnresolvedHeaderDirective &MissingHeader,
-                         Module *&ShadowingModule) const {
+                         UnresolvedHeaderDirective &MissingHeader) const {
   if (IsAvailable)
     return true;
 
   for (const Module *Current = this; Current; Current = Current->Parent) {
-    if (Current->ShadowingModule) {
-      ShadowingModule = Current->ShadowingModule;
-      return false;
-    }
     for (unsigned I = 0, N = Current->Requirements.size(); I != N; ++I) {
       if (hasFeature(Current->Requirements[I].first, LangOpts, Target) !=
               Current->Requirements[I].second) {
@@ -339,8 +332,6 @@ void Module::print(raw_ostream &OS, unsigned Indent) const {
       OS << " [system]";
     if (IsExternC)
       OS << " [extern_c]";
-    if (IsSwiftInferImportAsMember)
-      OS << " [swift_infer_import_as_member]";
   }
 
   OS << " {\n";

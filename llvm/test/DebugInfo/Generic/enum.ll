@@ -33,7 +33,7 @@
 ; CHECK: DW_TAG_enumerator
 ; CHECK-NEXT: DW_AT_name{{.*}} = "X"
 
-@a = global i64 0, align 8, !dbg !18
+@a = global i64 0, align 8
 
 ; Function Attrs: nounwind uwtable
 define void @_Z4funcv() #0 !dbg !13 {
@@ -70,7 +70,7 @@ attributes #1 = { nounwind readnone }
 !15 = !DISubroutineType(types: !16)
 !16 = !{null}
 !17 = !{!18}
-!18 = !DIGlobalVariable(name: "a", line: 1, isLocal: false, isDefinition: true, scope: null, file: !14, type: !3)
+!18 = !DIGlobalVariable(name: "a", line: 1, isLocal: false, isDefinition: true, scope: null, file: !14, type: !3, variable: i64* @a)
 !19 = !{i32 2, !"Dwarf Version", i32 3}
 !20 = !DILocalVariable(name: "b", line: 4, scope: !13, file: !14, type: !21)
 !21 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

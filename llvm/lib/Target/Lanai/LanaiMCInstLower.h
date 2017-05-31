@@ -31,7 +31,8 @@ class LLVM_LIBRARY_VISIBILITY LanaiMCInstLower {
   AsmPrinter &Printer;
 
 public:
-  LanaiMCInstLower(MCContext &CTX, AsmPrinter &AP) : Ctx(CTX), Printer(AP) {}
+  LanaiMCInstLower(MCContext &CTX, Mangler & /*Mang*/, AsmPrinter &AP)
+      : Ctx(CTX), Printer(AP) {}
   void Lower(const MachineInstr *MI, MCInst &OutMI) const;
 
   MCOperand LowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;

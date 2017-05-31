@@ -934,10 +934,13 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
                      .addReg(DestLo, getKillRegState(Dest.isDead()))
                      .addReg(DesiredLo, getKillRegState(Desired.isDead())));
 
-  BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
-      .addReg(DestHi, getKillRegState(Dest.isDead()))
-      .addReg(DesiredHi, getKillRegState(Desired.isDead()))
-      .addImm(ARMCC::EQ).addReg(ARM::CPSR, RegState::Kill);
+  unsigned SBCrr = IsThumb ? ARM::t2SBCrr : ARM::SBCrr;
+  MIB = BuildMI(LoadCmpBB, DL, TII->get(SBCrr))
+            .addReg(StatusReg, RegState::Define | RegState::Dead)
+            .addReg(DestHi, getKillRegState(Dest.isDead()))
+            .addReg(DesiredHi, getKillRegState(Desired.isDead()));
+  AddDefaultPred(MIB);
+  MIB.addReg(ARM::CPSR, RegState::Kill);
 
   unsigned Bcc = IsThumb ? ARM::tBcc : ARM::Bcc;
   BuildMI(LoadCmpBB, DL, TII->get(Bcc))

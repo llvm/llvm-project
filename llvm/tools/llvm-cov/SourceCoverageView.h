@@ -115,12 +115,12 @@ protected:
   /// false, skip the ToplevelDir component. If \p Relative is false, skip the
   /// OutputDir component.
   std::string getOutputPath(StringRef Path, StringRef Extension,
-                            bool InToplevel, bool Relative = true) const;
+                            bool InToplevel, bool Relative = true);
 
   /// \brief If directory output is enabled, create a file in that directory
   /// at the path given by getOutputPath(). Otherwise, return stdout.
   Expected<OwnedStream> createOutputStream(StringRef Path, StringRef Extension,
-                                           bool InToplevel) const;
+                                           bool InToplevel);
 
   /// \brief Return the sub-directory name for file coverage reports.
   static StringRef getCoverageDir() { return "coverage"; }
@@ -142,8 +142,7 @@ public:
   virtual void closeViewFile(OwnedStream OS) = 0;
 
   /// \brief Create an index which lists reports for the given source files.
-  virtual Error createIndexFile(ArrayRef<std::string> SourceFiles,
-                                const coverage::CoverageMapping &Coverage) = 0;
+  virtual Error createIndexFile(ArrayRef<StringRef> SourceFiles) = 0;
 
   /// @}
 };
@@ -173,9 +172,6 @@ class SourceCoverageView {
   /// on display.
   std::vector<InstantiationView> InstantiationSubViews;
 
-  /// Get the first uncovered line number for the source file.
-  unsigned getFirstUncoveredLineNo();
-
 protected:
   struct LineRef {
     StringRef Line;
@@ -196,7 +192,7 @@ protected:
   virtual void renderViewFooter(raw_ostream &OS) = 0;
 
   /// \brief Render the source name for the view.
-  virtual void renderSourceName(raw_ostream &OS, bool WholeFile) = 0;
+  virtual void renderSourceName(raw_ostream &OS) = 0;
 
   /// \brief Render the line prefix at the given \p ViewDepth.
   virtual void renderLinePrefix(raw_ostream &OS, unsigned ViewDepth) = 0;
@@ -240,14 +236,6 @@ protected:
   virtual void renderInstantiationView(raw_ostream &OS, InstantiationView &ISV,
                                        unsigned ViewDepth) = 0;
 
-  /// \brief Render \p Title, a project title if one is available, and the
-  /// created time.
-  virtual void renderTitle(raw_ostream &OS, StringRef CellText) = 0;
-
-  /// \brief Render the table header for a given source file.
-  virtual void renderTableHeader(raw_ostream &OS, unsigned FirstUncoveredLineNo,
-                                 unsigned IndentLevel) = 0;
-
   /// @}
 
   /// \brief Format a count using engineering notation with 3 significant
@@ -274,8 +262,7 @@ public:
 
   virtual ~SourceCoverageView() {}
 
-  /// \brief Return the source name formatted for the host OS.
-  std::string getSourceName() const;
+  StringRef getSourceName() const { return SourceName; }
 
   const CoverageViewOptions &getOptions() const { return Options; }
 

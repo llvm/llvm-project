@@ -380,7 +380,6 @@
 // M7-THUMB:#define __ARM_ARCH_EXT_IDIV__ 1
 // M7-THUMB:#define __ARM_FEATURE_DSP 1
 // M7-THUMB:#define __ARM_FP 0xE
-// M7-THUMB:#define __ARM_FPV5__ 1
 
 // Test whether predefines are as expected when targeting krait.
 // RUN: %clang -target armv7 -mcpu=krait -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=KRAIT %s

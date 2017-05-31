@@ -297,20 +297,18 @@ struct fake_shared_weak_count {
 };
 }  // namespace
 
-// The following code adds libc++ interceptors for:
+// This adds a libc++ interceptor for:
 //     void __shared_weak_count::__release_shared() _NOEXCEPT;
-//     bool __shared_count::__release_shared() _NOEXCEPT;
 // Shared and weak pointers in C++ maintain reference counts via atomics in
 // libc++.dylib, which are TSan-invisible, and this leads to false positives in
-// destructor code. These interceptors re-implements the whole functions so that
+// destructor code.  This interceptor re-implements the whole function so that
 // the mo_acq_rel semantics of the atomic decrement are visible.
 //
-// Unfortunately, the interceptors cannot simply Acquire/Release some sync
+// Unfortunately, this interceptor cannot simply Acquire/Release some sync
 // object and call the original function, because it would have a race between
 // the sync and the destruction of the object.  Calling both under a lock will
 // not work because the destructor can invoke this interceptor again (and even
 // in a different thread, so recursive locks don't help).
-
 STDCXX_INTERCEPTOR(void, _ZNSt3__119__shared_weak_count16__release_sharedEv,
                    fake_shared_weak_count *o) {
   if (!flags()->shared_ptr_interceptor)
@@ -327,47 +325,6 @@ STDCXX_INTERCEPTOR(void, _ZNSt3__119__shared_weak_count16__release_sharedEv,
       o->on_zero_shared_weak();
     }
   }
-}
-
-STDCXX_INTERCEPTOR(bool, _ZNSt3__114__shared_count16__release_sharedEv,
-                   fake_shared_weak_count *o) {
-  if (!flags()->shared_ptr_interceptor)
-    return REAL(_ZNSt3__114__shared_count16__release_sharedEv)(o);
-
-  SCOPED_TSAN_INTERCEPTOR(_ZNSt3__114__shared_count16__release_sharedEv, o);
-  if (__tsan_atomic64_fetch_add(&o->shared_owners, -1, mo_release) == 0) {
-    Acquire(thr, pc, (uptr)&o->shared_owners);
-    o->on_zero_shared();
-    return true;
-  }
-  return false;
-}
-
-namespace {
-struct call_once_callback_args {
-  void (*orig_func)(void *arg);
-  void *orig_arg;
-  void *flag;
-};
-
-void call_once_callback_wrapper(void *arg) {
-  call_once_callback_args *new_args = (call_once_callback_args *)arg;
-  new_args->orig_func(new_args->orig_arg);
-  __tsan_release(new_args->flag);
-}
-}  // namespace
-
-// This adds a libc++ interceptor for:
-//     void __call_once(volatile unsigned long&, void*, void(*)(void*));
-// C++11 call_once is implemented via an internal function __call_once which is
-// inside libc++.dylib, and the atomic release store inside it is thus
-// TSan-invisible. To avoid false positives, this interceptor wraps the callback
-// function and performs an explicit Release after the user code has run.
-STDCXX_INTERCEPTOR(void, _ZNSt3__111__call_onceERVmPvPFvS2_E, void *flag,
-                   void *arg, void (*func)(void *arg)) {
-  call_once_callback_args new_args = {func, arg, flag};
-  REAL(_ZNSt3__111__call_onceERVmPvPFvS2_E)(flag, &new_args,
-                                            call_once_callback_wrapper);
 }
 
 }  // namespace __tsan

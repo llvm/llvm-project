@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core.CastToStruct -analyzer-store=region -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core.CastToStruct -analyzer-store=region -analyzer-constraints=range -verify %s
 
 struct s {
   int data;
@@ -134,17 +134,6 @@ void f14() {
 }
 
 void bar(int*);
-
-struct s3 gets3() {
-  struct s3 s;
-  return s;
-}
-
-void accessArrayFieldNoCrash() {
-  bar(gets3().a);
-  bar((gets3().a));
-  bar(((gets3().a)));  
-}
 
 // Test if the array is correctly invalidated.
 void f15() {

@@ -596,26 +596,18 @@ void llvm::AddLandingPadInfo(const LandingPadInst &I, MachineModuleInfo &MMI,
   }
 }
 
-unsigned
-FunctionLoweringInfo::getOrCreateSwiftErrorVReg(const MachineBasicBlock *MBB,
-                                                const Value *Val) {
-  auto Key = std::make_pair(MBB, Val);
-  auto It = SwiftErrorVRegDefMap.find(Key);
-  // If this is the first use of this swifterror value in this basic block,
-  // create a new virtual register.
-  // After we processed all basic blocks we will satisfy this "upwards exposed
-  // use" by inserting a copy or phi at the beginning of this block.
-  if (It == SwiftErrorVRegDefMap.end()) {
-    auto &DL = MF->getDataLayout();
-    const TargetRegisterClass *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
-    auto VReg = MF->getRegInfo().createVirtualRegister(RC);
-    SwiftErrorVRegDefMap[Key] = VReg;
-    SwiftErrorVRegUpwardsUse[Key] = VReg;
-    return VReg;
-  } else return It->second;
+unsigned FunctionLoweringInfo::findSwiftErrorVReg(const MachineBasicBlock *MBB,
+                                                  const Value* Val) const {
+  // Find the index in SwiftErrorVals.
+  SwiftErrorValues::const_iterator I = find(SwiftErrorVals, Val);
+  assert(I != SwiftErrorVals.end() && "Can't find value in SwiftErrorVals");
+  return SwiftErrorMap.lookup(MBB)[I - SwiftErrorVals.begin()];
 }
 
-void FunctionLoweringInfo::setCurrentSwiftErrorVReg(
-    const MachineBasicBlock *MBB, const Value *Val, unsigned VReg) {
-  SwiftErrorVRegDefMap[std::make_pair(MBB, Val)] = VReg;
+void FunctionLoweringInfo::setSwiftErrorVReg(const MachineBasicBlock *MBB,
+                                             const Value* Val, unsigned VReg) {
+  // Find the index in SwiftErrorVals.
+  SwiftErrorValues::iterator I = find(SwiftErrorVals, Val);
+  assert(I != SwiftErrorVals.end() && "Can't find value in SwiftErrorVals");
+  SwiftErrorMap[MBB][I - SwiftErrorVals.begin()] = VReg;
 }

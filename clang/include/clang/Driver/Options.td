@@ -540,21 +540,6 @@ def fno_profile_instr_use : Flag<["-"], "fno-profile-instr-use">,
 def fno_profile_use : Flag<["-"], "fno-profile-use">,
     Alias<fno_profile_instr_use>;
 
-def fapinotes : Flag<["-"], "fapinotes">, Group<f_clang_Group>,
-  Flags<[CC1Option]>, HelpText<"Enable external API notes support">;
-def fapinotes_modules : Flag<["-"], "fapinotes-modules">, Group<f_clang_Group>,
-  Flags<[CC1Option]>, HelpText<"Enable module-based external API notes support">;
-def fno_apinotes : Flag<["-"], "fno-apinotes">, Group<f_clang_Group>,
-  Flags<[CC1Option]>, HelpText<"Disable external API notes support">;
-def fno_apinotes_modules : Flag<["-"], "fno-apinotes-modules">, Group<f_clang_Group>,
-  Flags<[CC1Option]>, HelpText<"Disable module-based external API notes support">;
-def fapinotes_cache_path : Joined<["-"], "fapinotes-cache-path=">,
-  Group<i_Group>, Flags<[DriverOption, CC1Option]>, MetaVarName<"<directory>">,
-  HelpText<"Specify the API notes cache path">;
-def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
-  Group<f_clang_Group>, Flags<[CC1Option]>, MetaVarName<"<version>">,
-  HelpText<"Specify the Swift version to use when filtering API notes">;
-
 def fblocks : Flag<["-"], "fblocks">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Enable the 'blocks' language feature">;
 def fbootclasspath_EQ : Joined<["-"], "fbootclasspath=">, Group<f_Group>;
@@ -598,8 +583,6 @@ def fdiagnostics_parseable_fixits : Flag<["-"], "fdiagnostics-parseable-fixits">
 def fdiagnostics_print_source_range_info : Flag<["-"], "fdiagnostics-print-source-range-info">,
     Group<f_clang_Group>,  Flags<[CC1Option]>,
     HelpText<"Print source range spans in numeric form">;
-def fdiagnostics_show_hotness : Flag<["-"], "fdiagnostics-show-hotness">, Group<f_Group>,
-    Flags<[CC1Option]>, HelpText<"Enable profile hotness information in diagnostic line">;
 def fdiagnostics_show_option : Flag<["-"], "fdiagnostics-show-option">, Group<f_Group>,
     Flags<[CC1Option]>, HelpText<"Print option name with mappable diagnostics">;
 def fdiagnostics_show_note_include_stack : Flag<["-"], "fdiagnostics-show-note-include-stack">,
@@ -826,11 +809,6 @@ def flto : Flag<["-"], "flto">, Flags<[CC1Option]>, Group<f_Group>,
   HelpText<"Enable LTO in 'full' mode">;
 def fno_lto : Flag<["-"], "fno-lto">, Group<f_Group>,
   HelpText<"Disable LTO mode (default)">;
-def flto_jobs_EQ : Joined<["-"], "flto-jobs=">,
-  Flags<[CC1Option]>, Group<f_Group>,
-  HelpText<"Controls the backend parallelism of -flto=thin (default "
-           "of 0 means the number of threads will be derived from "
-           "the number of CPUs detected)">;
 def fthinlto_index_EQ : Joined<["-"], "fthinlto-index=">,
   Flags<[CC1Option]>, Group<f_Group>,
   HelpText<"Perform ThinLTO importing using provided function summary index">;
@@ -862,9 +840,6 @@ def fmodules_cache_path : Joined<["-"], "fmodules-cache-path=">, Group<i_Group>,
 def fmodules_user_build_path : Separate<["-"], "fmodules-user-build-path">, Group<i_Group>,
   Flags<[DriverOption, CC1Option]>, MetaVarName<"<directory>">,
   HelpText<"Specify the module user build path">;
-def fprebuilt_module_path : Joined<["-"], "fprebuilt-module-path=">, Group<i_Group>,
-  Flags<[DriverOption, CC1Option]>, MetaVarName<"<directory>">,
-  HelpText<"Specify the prebuilt module path">;
 def fmodules_prune_interval : Joined<["-"], "fmodules-prune-interval=">, Group<i_Group>,
   Flags<[CC1Option]>, MetaVarName<"<seconds>">,
   HelpText<"Specify the interval (in seconds) between attempts to prune the module cache">;
@@ -958,7 +933,6 @@ def fno_cxx_modules : Flag <["-"], "fno-cxx-modules">, Group<f_Group>,
   Flags<[DriverOption]>;
 def fno_diagnostics_fixit_info : Flag<["-"], "fno-diagnostics-fixit-info">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Do not include fixit information in diagnostics">;
-def fno_diagnostics_show_hotness : Flag<["-"], "fno-diagnostics-show-hotness">, Group<f_Group>;
 def fno_diagnostics_show_option : Flag<["-"], "fno-diagnostics-show-option">, Group<f_Group>;
 def fno_diagnostics_show_note_include_stack : Flag<["-"], "fno-diagnostics-show-note-include-stack">,
     Flags<[CC1Option]>, Group<f_Group>;
@@ -1181,15 +1155,6 @@ def ftemplate_backtrace_limit_EQ : Joined<["-"], "ftemplate-backtrace-limit=">,
                                    Group<f_Group>;
 def foperator_arrow_depth_EQ : Joined<["-"], "foperator-arrow-depth=">,
                                Group<f_Group>;
-
-def fsave_optimization_record : Flag<["-"], "fsave-optimization-record">,
-  Group<f_Group>, HelpText<"Generate a YAML optimization record file">;
-def fno_save_optimization_record : Flag<["-"], "fno-save-optimization-record">,
-  Group<f_Group>, Flags<[NoArgumentUnused]>;
-def foptimization_record_file_EQ : Joined<["-"], "foptimization-record-file=">,
-  Group<f_Group>,
-  HelpText<"Specify the file name of any generated YAML optimization record">;
-
 def ftest_coverage : Flag<["-"], "ftest-coverage">, Group<f_Group>;
 def fvectorize : Flag<["-"], "fvectorize">, Group<f_Group>,
   HelpText<"Enable the loop vectorization passes">;
@@ -1338,7 +1303,7 @@ def gno_column_info : Flag<["-"], "gno-column-info">, Group<g_flags_Group>;
 def gsplit_dwarf : Flag<["-"], "gsplit-dwarf">, Group<g_flags_Group>;
 def ggnu_pubnames : Flag<["-"], "ggnu-pubnames">, Group<g_flags_Group>;
 def gdwarf_aranges : Flag<["-"], "gdwarf-aranges">, Group<g_flags_Group>;
-def gmodules : Flag <["-"], "gmodules">, Group<gN_Group>,
+def gmodules : Flag <["-"], "gmodules">, Group<f_Group>,
   HelpText<"Generate debug info with external references to clang modules"
            " or precompiled headers">;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
@@ -1346,8 +1311,6 @@ def help : Flag<["-", "--"], "help">, Flags<[CC1Option,CC1AsOption]>,
   HelpText<"Display available options">;
 def index_header_map : Flag<["-"], "index-header-map">, Flags<[CC1Option]>,
   HelpText<"Make the next included directory (-I or -F) an indexer header map">;
-def iapinotes_modules : JoinedOrSeparate<["-"], "iapinotes-modules">, Group<clang_i_Group>, Flags<[CC1Option]>,
-  HelpText<"Add directory to the API notes search path referenced by module name">, MetaVarName<"<directory>">;
 def idirafter : JoinedOrSeparate<["-"], "idirafter">, Group<clang_i_Group>, Flags<[CC1Option]>,
   HelpText<"Add directory to AFTER include search path">;
 def iframework : JoinedOrSeparate<["-"], "iframework">, Group<clang_i_Group>, Flags<[CC1Option]>,
@@ -1888,11 +1851,6 @@ def save_temps_EQ : Joined<["-", "--"], "save-temps=">, Flags<[DriverOption]>,
 def save_temps : Flag<["-", "--"], "save-temps">, Flags<[DriverOption]>,
   Alias<save_temps_EQ>, AliasArgs<["cwd"]>,
   HelpText<"Save intermediate compilation results">;
-def save_stats_EQ : Joined<["-", "--"], "save-stats=">, Flags<[DriverOption]>,
-  HelpText<"Save llvm statistics.">;
-def save_stats : Flag<["-", "--"], "save-stats">, Flags<[DriverOption]>,
-  Alias<save_stats_EQ>, AliasArgs<["cwd"]>,
-  HelpText<"Save llvm statistics.">;
 def via_file_asm : Flag<["-", "--"], "via-file-asm">, InternalDebugOpt,
   HelpText<"Write assembly to file for input to assemble jobs">;
 def sectalign : MultiArg<["-"], "sectalign", 3>;
@@ -1995,8 +1953,7 @@ def _CLASSPATH : Separate<["--"], "CLASSPATH">, Alias<fclasspath_EQ>;
 def _all_warnings : Flag<["--"], "all-warnings">, Alias<Wall>;
 def _analyze_auto : Flag<["--"], "analyze-auto">, Flags<[DriverOption]>;
 def _analyzer_no_default_checks : Flag<["--"], "analyzer-no-default-checks">, Flags<[DriverOption]>;
-def _analyzer_output : JoinedOrSeparate<["--"], "analyzer-output">, Flags<[DriverOption]>,
-  HelpText<"Static analyzer report output format (html|plist|plist-multi-file|plist-html|text).">;
+def _analyzer_output : JoinedOrSeparate<["--"], "analyzer-output">, Flags<[DriverOption]>;
 def _analyze : Flag<["--"], "analyze">, Flags<[DriverOption, CoreOption]>,
   HelpText<"Run the static analyzer">;
 def _assemble : Flag<["--"], "assemble">, Alias<S>;

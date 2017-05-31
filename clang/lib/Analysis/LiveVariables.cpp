@@ -19,7 +19,6 @@
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/PriorityQueue.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <vector>
@@ -29,21 +28,20 @@ using namespace clang;
 namespace {
 
 class DataflowWorklist {
+  SmallVector<const CFGBlock *, 20> worklist;
   llvm::BitVector enqueuedBlocks;
   PostOrderCFGView *POV;
-  llvm::PriorityQueue<const CFGBlock *, SmallVector<const CFGBlock *, 20>,
-                      PostOrderCFGView::BlockOrderCompare> worklist;
-
 public:
   DataflowWorklist(const CFG &cfg, AnalysisDeclContext &Ctx)
     : enqueuedBlocks(cfg.getNumBlockIDs()),
-      POV(Ctx.getAnalysis<PostOrderCFGView>()),
-      worklist(POV->getComparator()) {}
+      POV(Ctx.getAnalysis<PostOrderCFGView>()) {}
   
   void enqueueBlock(const CFGBlock *block);
   void enqueuePredecessors(const CFGBlock *block);
 
   const CFGBlock *dequeue();
+
+  void sortWorklist();
 };
 
 }
@@ -51,22 +49,31 @@ public:
 void DataflowWorklist::enqueueBlock(const clang::CFGBlock *block) {
   if (block && !enqueuedBlocks[block->getBlockID()]) {
     enqueuedBlocks[block->getBlockID()] = true;
-    worklist.push(block);
+    worklist.push_back(block);
   }
 }
 
 void DataflowWorklist::enqueuePredecessors(const clang::CFGBlock *block) {
+  const unsigned OldWorklistSize = worklist.size();
   for (CFGBlock::const_pred_iterator I = block->pred_begin(),
        E = block->pred_end(); I != E; ++I) {
     enqueueBlock(*I);
   }
+  
+  if (OldWorklistSize == 0 || OldWorklistSize == worklist.size())
+    return;
+
+  sortWorklist();
+}
+
+void DataflowWorklist::sortWorklist() {
+  std::sort(worklist.begin(), worklist.end(), POV->getComparator());
 }
 
 const CFGBlock *DataflowWorklist::dequeue() {
   if (worklist.empty())
     return nullptr;
-  const CFGBlock *b = worklist.top();
-  worklist.pop();
+  const CFGBlock *b = worklist.pop_back_val();
   enqueuedBlocks[b->getBlockID()] = false;
   return b;
 }
@@ -520,6 +527,8 @@ LiveVariables::computeLiveness(AnalysisDeclContext &AC,
         }
       }
   }
+  
+  worklist.sortWorklist();
   
   while (const CFGBlock *block = worklist.dequeue()) {
     // Determine if the block's end value has changed.  If not, we

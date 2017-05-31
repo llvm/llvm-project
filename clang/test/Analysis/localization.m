@@ -61,7 +61,7 @@ NSString *KHLocalizedString(NSString* key, NSString* comment) {
   UILabel *testLabel = [[UILabel alloc] init];
   NSString *bar = NSLocalizedString(@"Hello", @"Comment");
 
-  if (random()) { // expected-note {{Assuming the condition is true}} expected-note {{Taking true branch}}
+  if (random()) { // expected-note {{Taking true branch}}
     bar = @"Unlocalized string"; // expected-note {{Non-localized string literal here}}
   }
 

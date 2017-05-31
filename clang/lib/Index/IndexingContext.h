@@ -85,13 +85,11 @@ public:
 
   void indexTypeSourceInfo(TypeSourceInfo *TInfo, const NamedDecl *Parent,
                            const DeclContext *DC = nullptr,
-                           bool isBase = false,
-                           bool isIBType = false);
+                           bool isBase = false);
 
   void indexTypeLoc(TypeLoc TL, const NamedDecl *Parent,
                     const DeclContext *DC = nullptr,
-                    bool isBase = false,
-                    bool isIBType = false);
+                    bool isBase = false);
 
   void indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
                                    const NamedDecl *Parent,

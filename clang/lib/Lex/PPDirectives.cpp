@@ -1856,17 +1856,13 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
              ->HasIncompatibleModuleFile) {
       clang::Module::Requirement Requirement;
       clang::Module::UnresolvedHeaderDirective MissingHeader;
-      clang::Module *ShadowingModule = nullptr;
       Module *M = SuggestedModule.getModule();
       // Identify the cause.
       (void)M->isAvailable(getLangOpts(), getTargetInfo(), Requirement,
-                           MissingHeader, ShadowingModule);
+                           MissingHeader);
       if (MissingHeader.FileNameLoc.isValid()) {
         Diag(MissingHeader.FileNameLoc, diag::err_module_header_missing)
             << MissingHeader.IsUmbrella << MissingHeader.FileName;
-      } else if (ShadowingModule) {
-        Diag(M->DefinitionLoc, diag::err_module_shadowed) << M->Name;
-        Diag(ShadowingModule->DefinitionLoc, diag::note_previous_definition);
       } else {
         Diag(M->DefinitionLoc, diag::err_module_unavailable)
             << M->getFullModuleName() << Requirement.second << Requirement.first;
@@ -1984,12 +1980,10 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 
   // Ask HeaderInfo if we should enter this #include file.  If not, #including
   // this file will have no effect.
-  bool SkipHeader = false;
   if (ShouldEnter &&
       !HeaderInfo.ShouldEnterIncludeFile(*this, File, isImport,
                                          SuggestedModule.getModule())) {
     ShouldEnter = false;
-    SkipHeader = true;
     if (Callbacks)
       Callbacks->FileSkipped(*File, FilenameTok, FileCharacter);
   }
@@ -1998,14 +1992,6 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   if (!ShouldEnter) {
     // If this is a module import, make it visible if needed.
     if (auto *M = SuggestedModule.getModule()) {
-      // When building a pch, -fmodule-name tells the compiler to textually
-      // include headers in the specified module. But it is possible that
-      // ShouldEnter is false because we are skipping the header. In that
-      // case, We are not importing the specified module.
-      if (SkipHeader && getLangOpts().CompilingPCH &&
-          M->getTopLevelModuleName() == getLangOpts().CurrentModule)
-        return;
-
       makeModuleVisible(M, HashLoc);
 
       if (IncludeTok.getIdentifierInfo()->getPPKeywordID() !=
@@ -2030,13 +2016,6 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 
   // Determine if we're switching to building a new submodule, and which one.
   if (auto *M = SuggestedModule.getModule()) {
-    // When building a pch, -fmodule-name tells the compiler to textually
-    // include headers in the specified module. We are not building the
-    // specified module.
-    if (getLangOpts().CompilingPCH &&
-        M->getTopLevelModuleName() == getLangOpts().CurrentModule)
-      return;
-
     assert(!CurSubmodule && "should not have marked this as a module yet");
     CurSubmodule = M;
 

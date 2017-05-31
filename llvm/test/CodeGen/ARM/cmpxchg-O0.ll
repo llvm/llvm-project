@@ -69,9 +69,9 @@ define { i64, i1 } @test_cmpxchg_64(i64* %addr, i64 %desired, i64 %new) nounwind
 ; CHECK: [[RETRY:.LBB[0-9]+_[0-9]+]]:
 ; CHECK:     ldrexd [[OLDLO:r[0-9]+]], [[OLDHI:r[0-9]+]], [r0]
 ; CHECK:     cmp [[OLDLO]], r6
-; CHECK:     cmpeq [[OLDHI]], r7
+; CHECK:     sbcs{{(\.w)?}} [[STATUS:r[0-9]+]], [[OLDHI]], r7
 ; CHECK:     bne [[DONE:.LBB[0-9]+_[0-9]+]]
-; CHECK:     strexd [[STATUS:r[0-9]+]], r4, r5, [r0]
+; CHECK:     strexd [[STATUS]], r4, r5, [r0]
 ; CHECK:     cmp{{(\.w)?}} [[STATUS]], #0
 ; CHECK:     bne [[RETRY]]
 ; CHECK: [[DONE]]:
@@ -87,9 +87,9 @@ define { i64, i1 } @test_nontrivial_args(i64* %addr, i64 %desired, i64 %new) {
 ; CHECK: [[RETRY:.LBB[0-9]+_[0-9]+]]:
 ; CHECK:     ldrexd [[OLDLO:r[0-9]+]], [[OLDHI:r[0-9]+]], [r0]
 ; CHECK:     cmp [[OLDLO]], {{r[0-9]+}}
-; CHECK:     cmpeq [[OLDHI]], {{r[0-9]+}}
+; CHECK:     sbcs{{(\.w)?}} [[STATUS:r[0-9]+]], [[OLDHI]], {{r[0-9]+}}
 ; CHECK:     bne [[DONE:.LBB[0-9]+_[0-9]+]]
-; CHECK:     strexd [[STATUS:r[0-9]+]], {{r[0-9]+}}, {{r[0-9]+}}, [r0]
+; CHECK:     strexd [[STATUS]], {{r[0-9]+}}, {{r[0-9]+}}, [r0]
 ; CHECK:     cmp{{(\.w)?}} [[STATUS]], #0
 ; CHECK:     bne [[RETRY]]
 ; CHECK: [[DONE]]:

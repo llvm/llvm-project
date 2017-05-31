@@ -22,7 +22,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -135,7 +134,7 @@ private:
 
   bool runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
                const TargetLibraryInfo &RunTLI, AAResults &RunAA,
-               MemoryDependenceResults *RunMD, LoopInfo *LI);
+               MemoryDependenceResults *RunMD);
 
   /// Push a new Value to the LeaderTable onto the list for its value number.
   void addToLeaderTable(uint32_t N, Value *V, const BasicBlock *BB) {

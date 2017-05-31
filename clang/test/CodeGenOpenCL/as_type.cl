@@ -51,7 +51,7 @@ int f6(char4 x) {
   return __builtin_astype(x, int);
 }
 
-//CHECK: define spir_func <3 x i8> @f7(<3 x i8> %[[x:.*]])
+//CHECK: define spir_func <3 x i8> @f7(<3 x i8> returned %[[x:.*]])
 //CHECK-NOT: bitcast
 //CHECK-NOT: shufflevector
 //CHECK: ret <3 x i8> %[[x]]

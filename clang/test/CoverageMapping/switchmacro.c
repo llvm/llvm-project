@@ -4,7 +4,7 @@
 
 // CHECK: foo
 int foo(int i) { // CHECK-NEXT: File 0, [[@LINE]]:16 -> {{[0-9]+}}:2 = #0
-  switch (i) {
+  switch (i) {   // CHECK-NEXT: File 0, [[@LINE]]:3 -> {{[0-9]+}}:4 = #1
   default:       // CHECK-NEXT: File 0, [[@LINE]]:3 -> {{[0-9]+}}:11 = #2
     if (i == 1)  // CHECK-NEXT: File 0, [[@LINE]]:9 -> [[@LINE]]:15 = #2
       return 0;  // CHECK-NEXT: File 0, [[@LINE]]:7 -> [[@LINE]]:15 = #3

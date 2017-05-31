@@ -1014,9 +1014,6 @@ def err_pragma_loop_invalid_option : Error<
 def err_pragma_invalid_keyword : Error<
   "invalid argument; expected 'enable'%select{|, 'full'}0%select{|, 'assume_safety'}1 or 'disable'">;
 
-// API notes.
-def err_type_unparsed : Error<"unparsed tokens following type">;
-
 // Pragma unroll support.
 def warn_pragma_unroll_cuda_value_in_parens : Warning<
   "argument to '#pragma unroll' should not be in parentheses in CUDA C/C++">,

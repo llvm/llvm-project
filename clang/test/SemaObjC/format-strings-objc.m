@@ -47,7 +47,7 @@ int printf(const char * restrict, ...) ;
 
 void check_nslog(unsigned k) {
   NSLog(@"%d%%", k); // no-warning
-  NSLog(@"%s%lb%d", "unix", 10, 20); // expected-warning {{invalid conversion specifier 'b'}} expected-warning {{data argument not used by format string}}
+  NSLog(@"%s%lb%d", "unix", 10,20); // expected-warning {{invalid conversion specifier 'b'}}
 }
 
 // Check type validation
@@ -263,19 +263,4 @@ void testObjCModifierFlags() {
   NSLog(@"%[blark]@", @"Foo"); // expected-warning {{'blark' is not a valid object format flag}}
   NSLog(@"%2$[tt]@ %1$[tt]@", @"Foo", @"Bar"); // no-warning
   NSLog(@"%2$[tt]@ %1$[tt]s", @"Foo", @"Bar"); // expected-warning {{object format flags cannot be used with 's' conversion specifier}}
-}
-
-// Test os_log_format primitive with ObjC string literal format argument.
-void test_os_log_format(char c, const char *pc, int i, int *pi, void *p, void *buf, NSString *nss) {
-  __builtin_os_log_format(buf, @"");
-  __builtin_os_log_format(buf, @"%d"); // expected-warning {{more '%' conversions than data arguments}}
-  __builtin_os_log_format(buf, @"%d", i);
-  __builtin_os_log_format(buf, @"%P", p); // expected-warning {{using '%P' format specifier without precision}}
-  __builtin_os_log_format(buf, @"%.10P", p);
-  __builtin_os_log_format(buf, @"%.*P", p); // expected-warning {{field precision should have type 'int', but argument has type 'void *'}}
-  __builtin_os_log_format(buf, @"%.*P", i, p);
-  __builtin_os_log_format(buf, @"%.*P", i, i); // expected-warning {{format specifies type 'void *' but the argument has type 'int'}}
-
-  __builtin_os_log_format(buf, @"%{private}s", pc);
-  __builtin_os_log_format(buf, @"%@", nss);
 }

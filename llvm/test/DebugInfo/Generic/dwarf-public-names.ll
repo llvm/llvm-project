@@ -51,9 +51,9 @@
 
 %struct.C = type { i8 }
 
-@_ZN1C22static_member_variableE = global i32 0, align 4, !dbg !25
-@global_variable = global %struct.C zeroinitializer, align 1, !dbg !26
-@_ZN2ns25global_namespace_variableE = global i32 1, align 4, !dbg !27
+@_ZN1C22static_member_variableE = global i32 0, align 4
+@global_variable = global %struct.C zeroinitializer, align 1
+@_ZN2ns25global_namespace_variableE = global i32 1, align 4
 
 define void @_ZN1C15member_functionEv(%struct.C* %this) nounwind uwtable align 2 !dbg !3 {
 entry:
@@ -114,9 +114,9 @@ attributes #1 = { nounwind readnone }
 !22 = !DISubroutineType(types: !23)
 !23 = !{null}
 !24 = !{!25, !26, !27}
-!25 = !DIGlobalVariable(name: "static_member_variable", linkageName: "_ZN1C22static_member_variableE", line: 7, isLocal: false, isDefinition: true, scope: !8, file: !4, type: !11, declaration: !10)
-!26 = !DIGlobalVariable(name: "global_variable", line: 17, isLocal: false, isDefinition: true, scope: null, file: !4, type: !8)
-!27 = !DIGlobalVariable(name: "global_namespace_variable", linkageName: "_ZN2ns25global_namespace_variableE", line: 27, isLocal: false, isDefinition: true, scope: !21, file: !4, type: !11)
+!25 = !DIGlobalVariable(name: "static_member_variable", linkageName: "_ZN1C22static_member_variableE", line: 7, isLocal: false, isDefinition: true, scope: !8, file: !4, type: !11, variable: i32* @_ZN1C22static_member_variableE, declaration: !10)
+!26 = !DIGlobalVariable(name: "global_variable", line: 17, isLocal: false, isDefinition: true, scope: null, file: !4, type: !8, variable: %struct.C* @global_variable)
+!27 = !DIGlobalVariable(name: "global_namespace_variable", linkageName: "_ZN2ns25global_namespace_variableE", line: 27, isLocal: false, isDefinition: true, scope: !21, file: !4, type: !11, variable: i32* @_ZN2ns25global_namespace_variableE)
 !28 = !DILocalVariable(name: "this", line: 9, arg: 1, flags: DIFlagArtificial | DIFlagObjectPointer, scope: !3, file: !4, type: !29)
 !29 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !8)
 !30 = !DILocation(line: 9, scope: !3)

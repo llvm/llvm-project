@@ -19,4 +19,4 @@ template struct AB<int>;
 // CHECK: define
 
 // CHECK: [[THUNK_VEC_DEL_DTOR]] = distinct !DISubprogram
-// CHECK: [[THUNK_LOC]] = !DILocation(line: 0, scope: [[THUNK_VEC_DEL_DTOR]])
+// CHECK: [[THUNK_LOC]] = !DILocation(line: 15, scope: [[THUNK_VEC_DEL_DTOR]])

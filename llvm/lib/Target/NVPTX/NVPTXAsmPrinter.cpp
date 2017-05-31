@@ -848,6 +848,8 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   const_cast<TargetLoweringObjectFile &>(getObjFileLowering())
       .Initialize(OutContext, TM);
 
+  Mang = new Mangler();
+
   // Emit header before any dwarf directives are emitted below.
   emitHeader(M, OS1, STI);
   OutStreamer->EmitRawText(OS1.str());

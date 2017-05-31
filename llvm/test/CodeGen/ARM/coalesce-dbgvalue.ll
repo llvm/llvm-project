@@ -9,10 +9,10 @@
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-a0:0:32-n32-S32"
 target triple = "thumbv7-apple-ios3.0.0"
 
-@c = common global i32 0, align 4, !dbg !19
-@b = common global i32 0, align 4, !dbg !18
-@a = common global i64 0, align 8, !dbg !16
-@d = common global i32 0, align 4, !dbg !20
+@c = common global i32 0, align 4
+@b = common global i32 0, align 4
+@a = common global i64 0, align 8
+@d = common global i32 0, align 4
 
 ; Function Attrs: nounwind ssp
 define i32 @pr16110() #0 !dbg !4 {
@@ -94,11 +94,11 @@ attributes #3 = { nounwind }
 !13 = distinct !DILexicalBlock(line: 12, column: 0, file: !1, scope: !4)
 !14 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, baseType: !8)
 !15 = !{!16, !18, !19, !20}
-!16 = !DIGlobalVariable(name: "a", line: 1, isLocal: false, isDefinition: true, scope: null, file: !5, type: !17)
+!16 = !DIGlobalVariable(name: "a", line: 1, isLocal: false, isDefinition: true, scope: null, file: !5, type: !17, variable: i64* @a)
 !17 = !DIBasicType(tag: DW_TAG_base_type, name: "long long int", size: 64, align: 32, encoding: DW_ATE_signed)
-!18 = !DIGlobalVariable(name: "b", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !8)
-!19 = !DIGlobalVariable(name: "c", line: 3, isLocal: false, isDefinition: true, scope: null, file: !5, type: !8)
-!20 = !DIGlobalVariable(name: "d", line: 4, isLocal: false, isDefinition: true, scope: null, file: !5, type: !8)
+!18 = !DIGlobalVariable(name: "b", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !8, variable: i32* @b)
+!19 = !DIGlobalVariable(name: "c", line: 3, isLocal: false, isDefinition: true, scope: null, file: !5, type: !8, variable: i32* @c)
+!20 = !DIGlobalVariable(name: "d", line: 4, isLocal: false, isDefinition: true, scope: null, file: !5, type: !8, variable: i32* @d)
 !21 = !DILocation(line: 10, scope: !22)
 !22 = distinct !DILexicalBlock(line: 10, column: 0, file: !1, scope: !4)
 !26 = !DILocation(line: 12, scope: !13)

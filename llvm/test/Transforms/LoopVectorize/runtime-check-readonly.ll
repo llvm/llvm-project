@@ -8,10 +8,10 @@ target triple = "x86_64-apple-macosx10.8.0"
 ;CHECK: br
 ;CHECK: getelementptr
 ;CHECK-DAG: getelementptr
-;CHECK-DAG: icmp ugt
-;CHECK-DAG: icmp ugt
-;CHECK-DAG: icmp ugt
-;CHECK-DAG: icmp ugt
+;CHECK-DAG: icmp uge
+;CHECK-DAG: icmp uge
+;CHECK-DAG: icmp uge
+;CHECK-DAG: icmp uge
 ;CHECK-DAG: and
 ;CHECK-DAG: and
 ;CHECK: br

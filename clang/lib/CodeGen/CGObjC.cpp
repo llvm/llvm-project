@@ -1662,8 +1662,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
     elementLValue = EmitLValue(cast<Expr>(S.getElement()));
     EmitStoreThroughLValue(RValue::get(CurrentItem), elementLValue);
   } else {
-    EmitStoreThroughLValue(RValue::get(CurrentItem), elementLValue,
-                           /*isInit*/ true);
+    EmitScalarInit(CurrentItem, elementLValue);
   }
 
   // If we do have an element variable, this assignment is the end of

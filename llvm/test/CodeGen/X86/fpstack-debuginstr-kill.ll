@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mcpu=generic -mtriple=i386-apple-darwin -no-integrated-as
 
-@g1 = global double 0.000000e+00, align 8, !dbg !22
-@g2 = global i32 0, align 4, !dbg !23
+@g1 = global double 0.000000e+00, align 8
+@g2 = global i32 0, align 4
 
 define void @_Z16fpuop_arithmeticjj(i32, i32) !dbg !4 {
 entry:
@@ -64,7 +64,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !19 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !20 = !DILocalVariable(name: "value", line: 16, scope: !4, file: !6, type: !14)
 !21 = !{!22, !23}
-!22 = !DIGlobalVariable(name: "g1", line: 5, isLocal: false, isDefinition: true, scope: null, file: !6, type: !14)
-!23 = !DIGlobalVariable(name: "g2", line: 6, isLocal: false, isDefinition: true, scope: null, file: !6, type: !19)
+!22 = !DIGlobalVariable(name: "g1", line: 5, isLocal: false, isDefinition: true, scope: null, file: !6, type: !14, variable: double* @g1)
+!23 = !DIGlobalVariable(name: "g2", line: 6, isLocal: false, isDefinition: true, scope: null, file: !6, type: !19, variable: i32* @g2)
 !24 = !{i32 2, !"Dwarf Version", i32 2}
 !25 = !{i32 2, !"Debug Info Version", i32 3}

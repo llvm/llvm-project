@@ -101,46 +101,6 @@ const char *DemangleSwiftAndCXX(const char *name) {
   return DemangleCXXABI(name);
 }
 
-static bool CreateTwoHighNumberedPipes(int *infd_, int *outfd_) {
-  int *infd = NULL;
-  int *outfd = NULL;
-  // The client program may close its stdin and/or stdout and/or stderr
-  // thus allowing socketpair to reuse file descriptors 0, 1 or 2.
-  // In this case the communication between the forked processes may be
-  // broken if either the parent or the child tries to close or duplicate
-  // these descriptors. The loop below produces two pairs of file
-  // descriptors, each greater than 2 (stderr).
-  int sock_pair[5][2];
-  for (int i = 0; i < 5; i++) {
-    if (pipe(sock_pair[i]) == -1) {
-      for (int j = 0; j < i; j++) {
-        internal_close(sock_pair[j][0]);
-        internal_close(sock_pair[j][1]);
-      }
-      return false;
-    } else if (sock_pair[i][0] > 2 && sock_pair[i][1] > 2) {
-      if (infd == NULL) {
-        infd = sock_pair[i];
-      } else {
-        outfd = sock_pair[i];
-        for (int j = 0; j < i; j++) {
-          if (sock_pair[j] == infd) continue;
-          internal_close(sock_pair[j][0]);
-          internal_close(sock_pair[j][1]);
-        }
-        break;
-      }
-    }
-  }
-  CHECK(infd);
-  CHECK(outfd);
-  infd_[0] = infd[0];
-  infd_[1] = infd[1];
-  outfd_[0] = outfd[0];
-  outfd_[1] = outfd[1];
-  return true;
-}
-
 bool SymbolizerProcess::StartSymbolizerSubprocess() {
   if (!FileExists(path_)) {
     if (!reported_invalid_path_) {
@@ -150,18 +110,7 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
     return false;
   }
 
-  int pid = -1;
-
-  int infd[2];
-  internal_memset(&infd, 0, sizeof(infd));
-  int outfd[2];
-  internal_memset(&outfd, 0, sizeof(outfd));
-  if (!CreateTwoHighNumberedPipes(infd, outfd)) {
-    Report("WARNING: Can't create a socket pair to start "
-           "external symbolizer (errno: %d)\n", errno);
-    return false;
-  }
-
+  int pid;
   if (use_forkpty_) {
 #if SANITIZER_MAC
     fd_t fd = kInvalidFd;
@@ -171,10 +120,6 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
     // stderr and restore it in the child.
     int saved_stderr = dup(STDERR_FILENO);
     CHECK_GE(saved_stderr, 0);
-
-    // We only need one pipe, for stdin of the child.
-    close(outfd[0]);
-    close(outfd[1]);
 
     // Use forkpty to disable buffering in the new terminal.
     pid = internal_forkpty(&fd);
@@ -186,13 +131,6 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
     } else if (pid == 0) {
       // Child subprocess.
 
-      // infd[0] is the child's reading end.
-      close(infd[1]);
-
-      // Set up stdin to read from the pipe.
-      CHECK_GE(dup2(infd[0], STDIN_FILENO), 0);
-      close(infd[0]);
-
       // Restore stderr.
       CHECK_GE(dup2(saved_stderr, STDERR_FILENO), 0);
       close(saved_stderr);
@@ -203,12 +141,8 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
       internal__exit(1);
     }
 
-    // Input for the child, infd[1] is our writing end.
-    output_fd_ = infd[1];
-    close(infd[0]);
-
     // Continue execution in parent process.
-    input_fd_ = fd;
+    input_fd_ = output_fd_ = fd;
 
     close(saved_stderr);
 
@@ -222,6 +156,41 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
     UNIMPLEMENTED();
 #endif  // SANITIZER_MAC
   } else {
+    int *infd = NULL;
+    int *outfd = NULL;
+    // The client program may close its stdin and/or stdout and/or stderr
+    // thus allowing socketpair to reuse file descriptors 0, 1 or 2.
+    // In this case the communication between the forked processes may be
+    // broken if either the parent or the child tries to close or duplicate
+    // these descriptors. The loop below produces two pairs of file
+    // descriptors, each greater than 2 (stderr).
+    int sock_pair[5][2];
+    for (int i = 0; i < 5; i++) {
+      if (pipe(sock_pair[i]) == -1) {
+        for (int j = 0; j < i; j++) {
+          internal_close(sock_pair[j][0]);
+          internal_close(sock_pair[j][1]);
+        }
+        Report("WARNING: Can't create a socket pair to start "
+               "external symbolizer (errno: %d)\n", errno);
+        return false;
+      } else if (sock_pair[i][0] > 2 && sock_pair[i][1] > 2) {
+        if (infd == NULL) {
+          infd = sock_pair[i];
+        } else {
+          outfd = sock_pair[i];
+          for (int j = 0; j < i; j++) {
+            if (sock_pair[j] == infd) continue;
+            internal_close(sock_pair[j][0]);
+            internal_close(sock_pair[j][1]);
+          }
+          break;
+        }
+      }
+    }
+    CHECK(infd);
+    CHECK(outfd);
+
     const char *argv[kArgVMax];
     GetArgV(path_, argv);
     pid = StartSubprocess(path_, argv, /* stdin */ outfd[0],
@@ -235,8 +204,6 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
     input_fd_ = infd[0];
     output_fd_ = outfd[1];
   }
-
-  CHECK_GT(pid, 0);
 
   // Check that symbolizer subprocess started successfully.
   SleepForMillis(kSymbolizerStartupTimeMillis);

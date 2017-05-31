@@ -438,18 +438,6 @@ ErrorOr<std::unique_ptr<MemoryBuffer>> MemoryBuffer::getSTDIN() {
   return getMemoryBufferForStream(0, "<stdin>");
 }
 
-ErrorOr<std::unique_ptr<MemoryBuffer>>
-MemoryBuffer::getFileAsStream(const Twine &Filename) {
-  int FD;
-  std::error_code EC = sys::fs::openFileForRead(Filename, FD);
-  if (EC)
-    return EC;
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Ret =
-      getMemoryBufferForStream(FD, Filename);
-  close(FD);
-  return Ret;
-}
-
 MemoryBufferRef MemoryBuffer::getMemBufferRef() const {
   StringRef Data = getBuffer();
   StringRef Identifier = getBufferIdentifier();

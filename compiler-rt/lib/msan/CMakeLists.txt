@@ -25,7 +25,8 @@ append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding MSAN_RTL_CFLAGS
 set(MSAN_RUNTIME_LIBRARIES)
 
 # Static runtime library.
-add_compiler_rt_component(msan)
+add_custom_target(msan)
+set_target_properties(msan PROPERTIES FOLDER "Compiler-RT Misc")
 
 foreach(arch ${MSAN_SUPPORTED_ARCH})
   add_compiler_rt_runtime(clang_rt.msan
@@ -60,6 +61,7 @@ foreach(arch ${MSAN_SUPPORTED_ARCH})
 endforeach()
 
 add_compiler_rt_resource_file(msan_blacklist msan_blacklist.txt msan)
+add_dependencies(compiler-rt msan)
 
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)

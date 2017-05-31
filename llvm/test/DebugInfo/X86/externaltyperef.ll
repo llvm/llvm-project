@@ -26,7 +26,7 @@ target triple = "x86_64-apple-macosx10.10.0"
 
 %class.A = type opaque
 
-@a = global %class.A* null, align 8, !dbg !6
+@a = global %class.A* null, align 8
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!13, !14, !15}
@@ -38,7 +38,7 @@ target triple = "x86_64-apple-macosx10.10.0"
 !3 = !{!4, !9}
 !4 = !DICompositeType(tag: DW_TAG_class_type, name: "A", file: !1, flags: DIFlagExternalTypeRef, identifier: "_ZTS1A")
 !5 = !{!6}
-!6 = !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true)
+!6 = !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true, variable: %class.A** @a)
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64, align: 64)
 !8 = !DICompositeType(tag: DW_TAG_class_type, name: "B", file: !1, flags: DIFlagExternalTypeRef, identifier: "_ZTS1B")
 !9 = !DICompositeType(tag: DW_TAG_class_type, name: "A", file: !1, flags: DIFlagExternalTypeRef, identifier: "_ZTSN1N1BE")

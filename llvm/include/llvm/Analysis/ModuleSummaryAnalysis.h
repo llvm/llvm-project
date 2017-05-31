@@ -20,19 +20,41 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
-class BlockFrequencyInfo;
-class ProfileSummaryInfo;
 
-/// Direct function to compute a \c ModuleSummaryIndex from a given module.
-///
-/// If operating within a pass manager which has defined ways to compute the \c
-/// BlockFrequencyInfo for a given function, that can be provided via
-/// a std::function callback. Otherwise, this routine will manually construct
-/// that information.
-ModuleSummaryIndex buildModuleSummaryIndex(
-    const Module &M,
-    std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
-    ProfileSummaryInfo *PSI);
+class BlockFrequencyInfo;
+
+/// Class to build a module summary index for the given Module, possibly from
+/// a Pass.
+class ModuleSummaryIndexBuilder {
+  /// The index being built
+  std::unique_ptr<ModuleSummaryIndex> Index;
+  /// The module for which we are building an index
+  const Module *M;
+
+public:
+  /// Default constructor
+  ModuleSummaryIndexBuilder() = default;
+
+  /// Constructor that builds an index for the given Module. An optional
+  /// callback can be supplied to obtain the frequency info for a function.
+  ModuleSummaryIndexBuilder(
+      const Module *M,
+      std::function<BlockFrequencyInfo *(const Function &F)> Ftor = nullptr);
+
+  /// Get a reference to the index owned by builder
+  ModuleSummaryIndex &getIndex() const { return *Index; }
+
+  /// Take ownership of the built index
+  std::unique_ptr<ModuleSummaryIndex> takeIndex() { return std::move(Index); }
+
+private:
+  /// Compute summary for given function with optional frequency information
+  void computeFunctionSummary(const Function &F,
+                              BlockFrequencyInfo *BFI = nullptr);
+
+  /// Compute summary for given variable with optional frequency information
+  void computeVariableSummary(const GlobalVariable &V);
+};
 
 /// Analysis pass to provide the ModuleSummaryIndex object.
 class ModuleSummaryIndexAnalysis
@@ -40,15 +62,26 @@ class ModuleSummaryIndexAnalysis
   friend AnalysisInfoMixin<ModuleSummaryIndexAnalysis>;
   static char PassID;
 
-public:
-  typedef ModuleSummaryIndex Result;
+  std::unique_ptr<ModuleSummaryIndexBuilder> IndexBuilder;
 
-  Result run(Module &M, ModuleAnalysisManager &AM);
+public:
+  typedef const ModuleSummaryIndex &Result;
+
+  // FIXME: Remove these once MSVC can synthesize them.
+  ModuleSummaryIndexAnalysis() {}
+  ModuleSummaryIndexAnalysis(ModuleSummaryIndexAnalysis &&Arg)
+      : IndexBuilder(std::move(Arg.IndexBuilder)) {}
+  ModuleSummaryIndexAnalysis &operator=(ModuleSummaryIndexAnalysis &&RHS) {
+    IndexBuilder = std::move(RHS.IndexBuilder);
+    return *this;
+  }
+
+  const ModuleSummaryIndex &run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the ModuleSummaryIndex object.
 class ModuleSummaryIndexWrapperPass : public ModulePass {
-  Optional<ModuleSummaryIndex> Index;
+  std::unique_ptr<ModuleSummaryIndexBuilder> IndexBuilder;
 
 public:
   static char ID;
@@ -56,8 +89,10 @@ public:
   ModuleSummaryIndexWrapperPass();
 
   /// Get the index built by pass
-  ModuleSummaryIndex &getIndex() { return *Index; }
-  const ModuleSummaryIndex &getIndex() const { return *Index; }
+  ModuleSummaryIndex &getIndex() { return IndexBuilder->getIndex(); }
+  const ModuleSummaryIndex &getIndex() const {
+    return IndexBuilder->getIndex();
+  }
 
   bool runOnModule(Module &M) override;
   bool doFinalization(Module &M) override;
@@ -70,6 +105,11 @@ public:
 // object for the module, to be written to bitcode or LLVM assembly.
 //
 ModulePass *createModuleSummaryIndexWrapperPass();
+
+/// Returns true if \p M is eligible for ThinLTO promotion.
+///
+/// Currently we check if it has any any InlineASM that uses an internal symbol.
+bool moduleCanBeRenamedForThinLTO(const Module &M);
 }
 
 #endif

@@ -1613,9 +1613,6 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
         CheckConstexprFunctionBody(CallOperator, CallOperator->getBody()));
   }
 
-  // Emit delayed shadowing warnings now that the full capture list is known.
-  DiagnoseShadowingLambdaDecls(LSI);
-
   if (!CurContext->isDependentContext()) {
     switch (ExprEvalContexts.back().Context) {
     // C++11 [expr.prim.lambda]p2:

@@ -99,8 +99,7 @@ bool X86FixupSetCCPass::isSetCCr(unsigned Opcode) {
 MachineInstr *
 X86FixupSetCCPass::findFlagsImpDef(MachineBasicBlock *MBB,
                                    MachineBasicBlock::reverse_iterator MI) {
-  // FIXME: Should this be instr_rend(), and MI be reverse_instr_iterator?
-  auto MBBStart = MBB->rend();
+  auto MBBStart = MBB->instr_rend();
   for (int i = 0; (i < SearchBound) && (MI != MBBStart); ++i, ++MI)
     for (auto &Op : MI->implicit_operands())
       if ((Op.getReg() == X86::EFLAGS) && (Op.isDef()))

@@ -25,9 +25,12 @@
 using namespace llvm;
 
 XCoreMCInstLower::XCoreMCInstLower(class AsmPrinter &asmprinter)
-    : Printer(asmprinter) {}
+: Printer(asmprinter) {}
 
-void XCoreMCInstLower::Initialize(MCContext *C) { Ctx = C; }
+void XCoreMCInstLower::Initialize(Mangler *M, MCContext *C) {
+  Mang = M;
+  Ctx = C;
+}
 
 MCOperand XCoreMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
                                                MachineOperandType MOTy,

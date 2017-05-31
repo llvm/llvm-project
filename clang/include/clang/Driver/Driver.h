@@ -226,20 +226,6 @@ private:
   void generatePrefixedToolNames(const char *Tool, const ToolChain &TC,
                                  SmallVectorImpl<std::string> &Names) const;
 
-  /// \brief Find the appropriate .crash diagonostic file for the child crash
-  /// under this driver and copy it out to a temporary destination with the
-  /// other reproducer related files (.sh, .cache, etc). If not found, suggest a
-  /// directory for the user to look at.
-  ///
-  /// \param The file path to copy the .crash to.
-  /// \param The suggested directory for the user to look at in case the search
-  /// or copy fails.
-  ///
-  /// \returns If the .crash is found and successfully copied return true,
-  /// otherwise false and return the suggested directory in \p CrashDiagDir.
-  bool getCrashDiagnosticFile(StringRef ReproCrashFilename,
-                              SmallString<128> &CrashDiagDir);
-
 public:
   Driver(StringRef ClangExecutable, StringRef DefaultTargetTriple,
          DiagnosticsEngine &Diags,
@@ -283,9 +269,8 @@ public:
   bool isSaveTempsEnabled() const { return SaveTemps != SaveTempsNone; }
   bool isSaveTempsObj() const { return SaveTemps == SaveTempsObj; }
 
-  bool embedBitcodeEnabled() const { return BitcodeEmbed != EmbedNone; }
-  bool embedBitcodeInObject() const { return (BitcodeEmbed == EmbedBitcode); }
-  bool embedBitcodeMarkerOnly() const { return (BitcodeEmbed == EmbedMarker); }
+  bool embedBitcodeEnabled() const { return BitcodeEmbed == EmbedBitcode; }
+  bool embedBitcodeMarkerOnly() const { return BitcodeEmbed == EmbedMarker; }
 
   /// @}
   /// @name Primary Functionality
@@ -356,7 +341,7 @@ public:
   /// up response files, removing temporary files, etc.
   int ExecuteCompilation(Compilation &C,
      SmallVectorImpl< std::pair<int, const Command *> > &FailingCommands);
-
+  
   /// generateCompilationDiagnostics - Generate diagnostics information 
   /// including preprocessed source file(s).
   /// 

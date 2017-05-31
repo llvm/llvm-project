@@ -109,8 +109,7 @@ private:
   CoreEngine(const CoreEngine &) = delete;
   void operator=(const CoreEngine &) = delete;
 
-  ExplodedNode *generateCallExitBeginNode(ExplodedNode *N,
-                                          const ReturnStmt *RS);
+  ExplodedNode *generateCallExitBeginNode(ExplodedNode *N);
 
 public:
   /// Construct a CoreEngine object to analyze the provided CFG.
@@ -173,7 +172,7 @@ public:
 
   /// \brief enqueue the nodes corresponding to the end of function onto the
   /// end of path / work list.
-  void enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS);
+  void enqueueEndOfFunction(ExplodedNodeSet &Set);
 
   /// \brief Enqueue a single node created as a result of statement processing.
   void enqueueStmtNode(ExplodedNode *N, const CFGBlock *Block, unsigned Idx);

@@ -25,38 +25,3 @@ template<typename...Ts> void f(Ts); // expected-error {{unexpanded}}
 // expected-warning@-2 {{variadic templates are a C++11 extension}}
 #endif
 @end
-
-// rdar://20560175
-
-struct OuterType {
-  typedef int InnerType;
-};
-
-namespace ns {
-  typedef int InnerType;
-};
-
-@protocol InvalidProperties
-
-@property (nonatomic) (OuterType::InnerType) invalidTypeParens;
-// expected-error@-1 {{type name requires a specifier or qualifier}}
-// expected-error@-2 {{property requires fields to be named}}
-// expected-error@-3 {{expected ';' at end of declaration list}}
-// expected-error@-4 {{C++ requires a type specifier for all declarations}}
-// expected-error@-5 {{cannot declare variable inside @interface or @protocol}}
-
-@property (nonatomic) (ns::InnerType) invalidTypeParens2;
-// expected-error@-1 {{type name requires a specifier or qualifier}}
-// expected-error@-2 {{property requires fields to be named}}
-// expected-error@-3 {{expected ';' at end of declaration list}}
-// expected-error@-4 {{C++ requires a type specifier for all declarations}}
-// expected-error@-5 {{cannot declare variable inside @interface or @protocol}}
-
-@property (nonatomic) int OuterType::InnerType; // expected-error {{property requires fields to be named}}
-
-@property (nonatomic) int OuterType::InnerType foo; // expected-error {{property requires fields to be named}}
-// expected-error@-1 {{expected ';' at end of declaration list}}
-// expected-error@-2 {{C++ requires a type specifier for all declarations}}
-// expected-error@-3 {{cannot declare variable inside @interface or @protocol}}
-
-@end

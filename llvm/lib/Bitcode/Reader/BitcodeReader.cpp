@@ -210,6 +210,8 @@ class BitcodeReader : public GVMaterializer {
   std::vector<std::pair<Function*, unsigned> > FunctionPrologues;
   std::vector<std::pair<Function*, unsigned> > FunctionPersonalityFns;
 
+  SmallVector<Instruction*, 64> InstsWithTBAATag;
+
   bool HasSeenOldLoopTags = false;
 
   /// The set of attributes by index.  Index zero in the file is for null, and
@@ -535,10 +537,6 @@ private:
   std::error_code parseValueSymbolTable(
       uint64_t Offset,
       DenseMap<unsigned, GlobalValue::LinkageTypes> &ValueIdToLinkageMap);
-  std::vector<ValueInfo> makeRefList(ArrayRef<uint64_t> Record);
-  std::vector<FunctionSummary::EdgeTy> makeCallList(ArrayRef<uint64_t> Record,
-                                                    bool IsOldProfileFormat,
-                                                    bool HasProfile);
   std::error_code parseEntireSummary();
   std::error_code parseModuleStringTable();
   std::error_code initStream(std::unique_ptr<DataStreamer> Streamer);
@@ -730,12 +728,9 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   // to getDecodedLinkage() will need to be taken into account here as above.
   auto Linkage = GlobalValue::LinkageTypes(RawFlags & 0xF); // 4 bits
   RawFlags = RawFlags >> 4;
-  bool NoRename = RawFlags & 0x1;
+  bool HasSection = RawFlags & 0x1;
   bool IsNotViableToInline = RawFlags & 0x2;
-  bool HasInlineAsmMaybeReferencingInternal = RawFlags & 0x4;
-  return GlobalValueSummary::GVFlags(Linkage, NoRename,
-                                     HasInlineAsmMaybeReferencingInternal,
-                                     IsNotViableToInline);
+  return GlobalValueSummary::GVFlags(Linkage, HasSection, IsNotViableToInline);
 }
 
 static GlobalValue::VisibilityTypes getDecodedVisibility(unsigned Val) {
@@ -2313,23 +2308,6 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       if (Tag >= 1u << 16 || Version != 0)
         return error("Invalid record");
 
-      // Deprecated internal hack to support serializing MDModule.
-      // This node has since been deleted.
-      // Upgrading this node is not officially supported.  This code
-      // may be removed in the future.
-      if (Tag == dwarf::DW_TAG_module) {
-        if (Record.size() != 6)
-          return error("Invalid record");
-
-        MetadataList.assignValue(
-            GET_OR_DISTINCT(DIModule,
-                            (Context, getMDOrNull(Record[4]),
-                             getMDString(Record[5]), nullptr,
-                             nullptr, nullptr)),
-            NextMetadataNo++);
-        break;
-      }
-
       auto *Header = getMDString(Record[3]);
       SmallVector<Metadata *, 8> DwarfOps;
       for (unsigned I = 4, E = Record.size(); I != E; ++I)
@@ -2639,35 +2617,14 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
         return error("Invalid record");
 
       IsDistinct = Record[0];
-
-      // Upgrade old metadata, which stored a global variable reference or a
-      // ConstantInt here.
-      Metadata *Expr = getMDOrNull(Record[9]);
-      GlobalVariable *Attach = nullptr;
-      if (auto *CMD = dyn_cast_or_null<ConstantAsMetadata>(Expr)) {
-        if (auto *GV = dyn_cast<GlobalVariable>(CMD->getValue())) {
-          Attach = GV;
-          Expr = nullptr;
-        } else if (auto *CI = dyn_cast<ConstantInt>(CMD->getValue())) {
-          Expr = DIExpression::get(Context,
-                                   {dwarf::DW_OP_constu, CI->getZExtValue(),
-                                    dwarf::DW_OP_stack_value});
-        } else {
-          Expr = nullptr;
-        }
-      }
-
-      DIGlobalVariable *DGV = GET_OR_DISTINCT(
-          DIGlobalVariable,
-          (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
-           getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
-           getDITypeRefOrNull(Record[6]), Record[7], Record[8], Expr,
-           getMDOrNull(Record[10])));
-      MetadataList.assignValue(DGV, NextMetadataNo++);
-
-      if (Attach)
-        Attach->addDebugInfo(DGV);
-
+      MetadataList.assignValue(
+          GET_OR_DISTINCT(DIGlobalVariable,
+                          (Context, getMDOrNull(Record[1]),
+                           getMDString(Record[2]), getMDString(Record[3]),
+                           getMDOrNull(Record[4]), Record[5],
+                           getDITypeRefOrNull(Record[6]), Record[7], Record[8],
+                           getMDOrNull(Record[9]), getMDOrNull(Record[10]))),
+          NextMetadataNo++);
       break;
     }
     case bitc::METADATA_LOCAL_VAR: {
@@ -2693,14 +2650,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       if (Record.size() < 1)
         return error("Invalid record");
 
-      IsDistinct = Record[0] & 1;
-      bool HasOpFragment = Record[0] & 2;
-      auto Elts = MutableArrayRef<uint64_t>(Record).slice(1);
-      if (!HasOpFragment)
-        if (unsigned N = Elts.size())
-          if (N >= 3 && Elts[N - 3] == dwarf::DW_OP_bit_piece)
-            Elts[N-3] = dwarf::DW_OP_LLVM_fragment;
-
+      IsDistinct = Record[0];
       MetadataList.assignValue(
           GET_OR_DISTINCT(DIExpression,
                           (Context, makeArrayRef(Record).slice(1))),
@@ -4384,11 +4334,11 @@ std::error_code BitcodeReader::parseMetadataAttachment(Function &F) {
         if (HasSeenOldLoopTags && I->second == LLVMContext::MD_loop)
           MD = upgradeInstructionLoopAttachment(*MD);
 
-        if (I->second == LLVMContext::MD_tbaa) {
-          assert(!MD->isTemporary() && "should load MDs before attachments");
-          MD = UpgradeTBAANode(*MD);
-        }
         Inst->setMetadata(I->second, MD);
+        if (I->second == LLVMContext::MD_tbaa) {
+          InstsWithTBAATag.push_back(Inst);
+          continue;
+        }
       }
       break;
     }
@@ -5800,6 +5750,11 @@ std::error_code BitcodeReader::materializeModule() {
   if (!BasicBlockFwdRefs.empty())
     return error("Never resolved function from blockaddress");
 
+  // Upgrading intrinsic calls before TBAA can cause TBAA metadata to be lost,
+  // to prevent this instructions with TBAA tags should be upgraded first.
+  for (unsigned I = 0, E = InstsWithTBAATag.size(); I < E; I++)
+    UpgradeInstWithTBAATag(InstsWithTBAATag[I]);
+
   // Upgrade any intrinsic calls that slipped through (should not happen!) and
   // delete the old functions to clean up. We can't do this unless the entire
   // module is materialized because there could always be another function body
@@ -6056,18 +6011,13 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseModule() {
           return error("Invalid record");
         break;
       case bitc::GLOBALVAL_SUMMARY_BLOCK_ID:
+        assert(VSTOffset > 0 && "Expected non-zero VST offset");
         assert(!SeenValueSymbolTable &&
                "Already read VST when parsing summary block?");
-        // We might not have a VST if there were no values in the
-        // summary. An empty summary block generated when we are
-        // performing ThinLTO compiles so we don't later invoke
-        // the regular LTO process on them.
-        if (VSTOffset > 0) {
-          if (std::error_code EC =
-                  parseValueSymbolTable(VSTOffset, ValueIdToLinkageMap))
-            return EC;
-          SeenValueSymbolTable = true;
-        }
+        if (std::error_code EC =
+                parseValueSymbolTable(VSTOffset, ValueIdToLinkageMap))
+          return EC;
+        SeenValueSymbolTable = true;
         SeenGlobalValSummary = true;
         if (std::error_code EC = parseEntireSummary())
           return EC;
@@ -6100,8 +6050,8 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseModule() {
           if (!TheIndex)
             break;
           if (TheIndex->modulePaths().empty())
-            // We always seed the index with the module.
-            TheIndex->addModulePath(Buffer->getBufferIdentifier(), 0);
+            // Does not have any summary emitted.
+            break;
           if (TheIndex->modulePaths().size() != 1)
             return error("Don't expect multiple modules defined?");
           auto &Hash = TheIndex->modulePaths().begin()->second.second;
@@ -6158,33 +6108,6 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseModule() {
   }
 }
 
-std::vector<ValueInfo>
-ModuleSummaryIndexBitcodeReader::makeRefList(ArrayRef<uint64_t> Record) {
-  std::vector<ValueInfo> Ret;
-  Ret.reserve(Record.size());
-  for (uint64_t RefValueId : Record)
-    Ret.push_back(getGUIDFromValueId(RefValueId).first);
-  return Ret;
-}
-
-std::vector<FunctionSummary::EdgeTy> ModuleSummaryIndexBitcodeReader::makeCallList(
-    ArrayRef<uint64_t> Record, bool IsOldProfileFormat, bool HasProfile) {
-  std::vector<FunctionSummary::EdgeTy> Ret;
-  Ret.reserve(Record.size());
-  for (unsigned I = 0, E = Record.size(); I != E; ++I) {
-    CalleeInfo::HotnessType Hotness = CalleeInfo::HotnessType::Unknown;
-    GlobalValue::GUID CalleeGUID = getGUIDFromValueId(Record[I]).first;
-    if (IsOldProfileFormat) {
-      I += 1; // Skip old callsitecount field
-      if (HasProfile)
-        I += 1; // Skip old profilecount field
-    } else if (HasProfile)
-      Hotness = static_cast<CalleeInfo::HotnessType>(Record[++I]);
-    Ret.push_back(FunctionSummary::EdgeTy{CalleeGUID, CalleeInfo{Hotness}});
-  }
-  return Ret;
-}
-
 // Eagerly parse the entire summary block. This populates the GlobalValueSummary
 // objects in the index.
 std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
@@ -6201,10 +6124,8 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       return error("Invalid Summary Block: version expected");
   }
   const uint64_t Version = Record[0];
-  const bool IsOldProfileFormat = Version == 1;
-  if (!IsOldProfileFormat && Version != 2)
-    return error("Invalid summary version " + Twine(Version) +
-                 ", 1 or 2 expected");
+  if (Version != 1)
+    return error("Invalid summary version " + Twine(Version) + ", 1 expected");
   Record.clear();
 
   // Keep around the last seen summary to be used when we see an optional
@@ -6248,10 +6169,10 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
     default: // Default behavior: ignore.
       break;
     // FS_PERMODULE: [valueid, flags, instcount, numrefs, numrefs x valueid,
-    //                n x (valueid)]
+    //                n x (valueid, callsitecount)]
     // FS_PERMODULE_PROFILE: [valueid, flags, instcount, numrefs,
     //                        numrefs x valueid,
-    //                        n x (valueid, hotness)]
+    //                        n x (valueid, callsitecount, profilecount)]
     case bitc::FS_PERMODULE:
     case bitc::FS_PERMODULE_PROFILE: {
       unsigned ValueID = Record[0];
@@ -6259,25 +6180,35 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       unsigned InstCount = Record[2];
       unsigned NumRefs = Record[3];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
+      std::unique_ptr<FunctionSummary> FS =
+          llvm::make_unique<FunctionSummary>(Flags, InstCount);
       // The module path string ref set in the summary must be owned by the
       // index's module string table. Since we don't have a module path
       // string table section in the per-module index, we create a single
       // module path string table entry with an empty (0) ID to take
       // ownership.
+      FS->setModulePath(
+          TheIndex->addModulePath(Buffer->getBufferIdentifier(), 0)->first());
       static int RefListStartIndex = 4;
       int CallGraphEdgeStartIndex = RefListStartIndex + NumRefs;
       assert(Record.size() >= RefListStartIndex + NumRefs &&
              "Record size inconsistent with number of references");
-      std::vector<ValueInfo> Refs = makeRefList(
-          ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
+      for (unsigned I = 4, E = CallGraphEdgeStartIndex; I != E; ++I) {
+        unsigned RefValueId = Record[I];
+        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
+        FS->addRefEdge(RefGUID);
+      }
       bool HasProfile = (BitCode == bitc::FS_PERMODULE_PROFILE);
-      std::vector<FunctionSummary::EdgeTy> Calls = makeCallList(
-          ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
-          IsOldProfileFormat, HasProfile);
-      auto FS = llvm::make_unique<FunctionSummary>(
-          Flags, InstCount, std::move(Refs), std::move(Calls));
+      for (unsigned I = CallGraphEdgeStartIndex, E = Record.size(); I != E;
+           ++I) {
+        unsigned CalleeValueId = Record[I];
+        unsigned CallsiteCount = Record[++I];
+        uint64_t ProfileCount = HasProfile ? Record[++I] : 0;
+        GlobalValue::GUID CalleeGUID = getGUIDFromValueId(CalleeValueId).first;
+        FS->addCallGraphEdge(CalleeGUID,
+                             CalleeInfo(CallsiteCount, ProfileCount));
+      }
       auto GUID = getGUIDFromValueId(ValueID);
-      FS->setModulePath(TheIndex->addModulePath(Buffer->getBufferIdentifier(), 0)->first());
       FS->setOriginalName(GUID.second);
       TheIndex->addGlobalValueSummary(GUID.first, std::move(FS));
       break;
@@ -6290,8 +6221,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       uint64_t RawFlags = Record[1];
       unsigned AliaseeID = Record[2];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      auto AS =
-          llvm::make_unique<AliasSummary>(Flags, std::vector<ValueInfo>{});
+      std::unique_ptr<AliasSummary> AS = llvm::make_unique<AliasSummary>(Flags);
       // The module path string ref set in the summary must be owned by the
       // index's module string table. Since we don't have a module path
       // string table section in the per-module index, we create a single
@@ -6316,20 +6246,25 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       unsigned ValueID = Record[0];
       uint64_t RawFlags = Record[1];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      std::vector<ValueInfo> Refs =
-      makeRefList(ArrayRef<uint64_t>(Record).slice(2));
-      auto FS = llvm::make_unique<GlobalVarSummary>(Flags, std::move(Refs));
+      std::unique_ptr<GlobalVarSummary> FS =
+          llvm::make_unique<GlobalVarSummary>(Flags);
       FS->setModulePath(
           TheIndex->addModulePath(Buffer->getBufferIdentifier(), 0)->first());
+      for (unsigned I = 2, E = Record.size(); I != E; ++I) {
+        unsigned RefValueId = Record[I];
+        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
+        FS->addRefEdge(RefGUID);
+      }
       auto GUID = getGUIDFromValueId(ValueID);
       FS->setOriginalName(GUID.second);
       TheIndex->addGlobalValueSummary(GUID.first, std::move(FS));
       break;
     }
     // FS_COMBINED: [valueid, modid, flags, instcount, numrefs,
-    //               numrefs x valueid, n x (valueid)]
+    //               numrefs x valueid, n x (valueid, callsitecount)]
     // FS_COMBINED_PROFILE: [valueid, modid, flags, instcount, numrefs,
-    //                       numrefs x valueid, n x (valueid, hotness)]
+    //                       numrefs x valueid,
+    //                       n x (valueid, callsitecount, profilecount)]
     case bitc::FS_COMBINED:
     case bitc::FS_COMBINED_PROFILE: {
       unsigned ValueID = Record[0];
@@ -6338,21 +6273,31 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       unsigned InstCount = Record[3];
       unsigned NumRefs = Record[4];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
+      std::unique_ptr<FunctionSummary> FS =
+          llvm::make_unique<FunctionSummary>(Flags, InstCount);
+      LastSeenSummary = FS.get();
+      FS->setModulePath(ModuleIdMap[ModuleId]);
       static int RefListStartIndex = 5;
       int CallGraphEdgeStartIndex = RefListStartIndex + NumRefs;
       assert(Record.size() >= RefListStartIndex + NumRefs &&
              "Record size inconsistent with number of references");
-      std::vector<ValueInfo> Refs = makeRefList(
-          ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
+      for (unsigned I = RefListStartIndex, E = CallGraphEdgeStartIndex; I != E;
+           ++I) {
+        unsigned RefValueId = Record[I];
+        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
+        FS->addRefEdge(RefGUID);
+      }
       bool HasProfile = (BitCode == bitc::FS_COMBINED_PROFILE);
-      std::vector<FunctionSummary::EdgeTy> Edges = makeCallList(
-          ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
-          IsOldProfileFormat, HasProfile);
+      for (unsigned I = CallGraphEdgeStartIndex, E = Record.size(); I != E;
+           ++I) {
+        unsigned CalleeValueId = Record[I];
+        unsigned CallsiteCount = Record[++I];
+        uint64_t ProfileCount = HasProfile ? Record[++I] : 0;
+        GlobalValue::GUID CalleeGUID = getGUIDFromValueId(CalleeValueId).first;
+        FS->addCallGraphEdge(CalleeGUID,
+                             CalleeInfo(CallsiteCount, ProfileCount));
+      }
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID).first;
-      auto FS = llvm::make_unique<FunctionSummary>(
-          Flags, InstCount, std::move(Refs), std::move(Edges));
-      LastSeenSummary = FS.get();
-      FS->setModulePath(ModuleIdMap[ModuleId]);
       TheIndex->addGlobalValueSummary(GUID, std::move(FS));
       Combined = true;
       break;
@@ -6366,7 +6311,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       uint64_t RawFlags = Record[2];
       unsigned AliaseeValueId = Record[3];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      auto AS = llvm::make_unique<AliasSummary>(Flags, std::vector<ValueInfo>{});
+      std::unique_ptr<AliasSummary> AS = llvm::make_unique<AliasSummary>(Flags);
       LastSeenSummary = AS.get();
       AS->setModulePath(ModuleIdMap[ModuleId]);
 
@@ -6388,11 +6333,15 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       uint64_t ModuleId = Record[1];
       uint64_t RawFlags = Record[2];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      std::vector<ValueInfo> Refs =
-          makeRefList(ArrayRef<uint64_t>(Record).slice(3));
-      auto FS = llvm::make_unique<GlobalVarSummary>(Flags, std::move(Refs));
+      std::unique_ptr<GlobalVarSummary> FS =
+          llvm::make_unique<GlobalVarSummary>(Flags);
       LastSeenSummary = FS.get();
       FS->setModulePath(ModuleIdMap[ModuleId]);
+      for (unsigned I = 3, E = Record.size(); I != E; ++I) {
+        unsigned RefValueId = Record[I];
+        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
+        FS->addRefEdge(RefGUID);
+      }
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID).first;
       TheIndex->addGlobalValueSummary(GUID, std::move(FS));
       Combined = true;

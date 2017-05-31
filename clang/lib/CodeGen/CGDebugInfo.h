@@ -156,8 +156,6 @@ class CGDebugInfo {
                                      llvm::DIFile *F);
   /// Get Objective-C object type.
   llvm::DIType *CreateType(const ObjCObjectType *Ty, llvm::DIFile *F);
-  llvm::DIType *CreateType(const ObjCTypeParamType *Ty, llvm::DIFile *Unit);
-
   llvm::DIType *CreateType(const VectorType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const ArrayType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const LValueReferenceType *Ty, llvm::DIFile *F);
@@ -266,8 +264,7 @@ class CGDebugInfo {
   /// If the C++ class has vtable info then insert appropriate debug
   /// info entry in EltTys vector.
   void CollectVTableInfo(const CXXRecordDecl *Decl, llvm::DIFile *F,
-                         SmallVectorImpl<llvm::Metadata *> &EltTys,
-                         llvm::DICompositeType *RecordTy);
+                         SmallVectorImpl<llvm::Metadata *> &EltTys);
   /// @}
 
   /// Create a new lexical block node and push it on the stack.
@@ -356,8 +353,8 @@ public:
   /// Emit information about a global variable.
   void EmitGlobalVariable(llvm::GlobalVariable *GV, const VarDecl *Decl);
 
-  /// Emit a constant global variable's debug info.
-  void EmitGlobalVariable(const ValueDecl *VD, const APValue &Init);
+  /// Emit global variable's debug info.
+  void EmitGlobalVariable(const ValueDecl *VD, llvm::Constant *Init);
 
   /// Emit C++ using directive.
   void EmitUsingDirective(const UsingDirectiveDecl &UD);

@@ -36,15 +36,15 @@
 
 %struct.Record = type { %struct.Record*, i32, i32, i32, [31 x i8] }
 
-@Version = global [4 x i8] c"1.1\00", align 1, !dbg !30
-@IntGlob = common global i32 0, align 4, !dbg !35
-@BoolGlob = common global i32 0, align 4, !dbg !36
-@Char1Glob = common global i8 0, align 1, !dbg !38
-@Char2Glob = common global i8 0, align 1, !dbg !39
-@Array1Glob = common global [51 x i32] zeroinitializer, align 16, !dbg !40
-@Array2Glob = common global [51 x [51 x i32]] zeroinitializer, align 16, !dbg !42
-@PtrGlb = common global %struct.Record* null, align 8, !dbg !46
-@PtrGlbNext = common global %struct.Record* null, align 8, !dbg !63
+@Version = global [4 x i8] c"1.1\00", align 1
+@IntGlob = common global i32 0, align 4
+@BoolGlob = common global i32 0, align 4
+@Char1Glob = common global i8 0, align 1
+@Char2Glob = common global i8 0, align 1
+@Array1Glob = common global [51 x i32] zeroinitializer, align 16
+@Array2Glob = common global [51 x [51 x i32]] zeroinitializer, align 16
+@PtrGlb = common global %struct.Record* null, align 8
+@PtrGlbNext = common global %struct.Record* null, align 8
 
 define void @Proc8(i32* nocapture %Array1Par, [51 x i32]* nocapture %Array2Par, i32 %IntParI1, i32 %IntParI2) nounwind optsize !dbg !12 {
 entry:
@@ -132,23 +132,23 @@ attributes #1 = { nounwind readnone }
 !27 = !DILocalVariable(name: "IntLoc", line: 186, scope: !12, file: !3, type: !21)
 !28 = !DILocalVariable(name: "IntIndex", line: 187, scope: !12, file: !3, type: !21)
 !29 = !{!30, !35, !36, !38, !39, !40, !42, !46, !63}
-!30 = !DIGlobalVariable(name: "Version", line: 111, isLocal: false, isDefinition: true, scope: null, file: !3, type: !31)
+!30 = !DIGlobalVariable(name: "Version", line: 111, isLocal: false, isDefinition: true, scope: null, file: !3, type: !31, variable: [4 x i8]* @Version)
 !31 = !DICompositeType(tag: DW_TAG_array_type, size: 32, align: 8, baseType: !32, elements: !33)
 !32 = !DIBasicType(tag: DW_TAG_base_type, name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
 !33 = !{!34}
 !34 = !DISubrange(count: 4)
-!35 = !DIGlobalVariable(name: "IntGlob", line: 171, isLocal: false, isDefinition: true, scope: null, file: !3, type: !16)
-!36 = !DIGlobalVariable(name: "BoolGlob", line: 172, isLocal: false, isDefinition: true, scope: null, file: !3, type: !37)
+!35 = !DIGlobalVariable(name: "IntGlob", line: 171, isLocal: false, isDefinition: true, scope: null, file: !3, type: !16, variable: i32* @IntGlob)
+!36 = !DIGlobalVariable(name: "BoolGlob", line: 172, isLocal: false, isDefinition: true, scope: null, file: !3, type: !37, variable: i32* @BoolGlob)
 !37 = !DIDerivedType(tag: DW_TAG_typedef, name: "boolean", line: 149, file: !82, baseType: !16)
-!38 = !DIGlobalVariable(name: "Char1Glob", line: 173, isLocal: false, isDefinition: true, scope: null, file: !3, type: !32)
-!39 = !DIGlobalVariable(name: "Char2Glob", line: 174, isLocal: false, isDefinition: true, scope: null, file: !3, type: !32)
-!40 = !DIGlobalVariable(name: "Array1Glob", line: 175, isLocal: false, isDefinition: true, scope: null, file: !3, type: !41)
+!38 = !DIGlobalVariable(name: "Char1Glob", line: 173, isLocal: false, isDefinition: true, scope: null, file: !3, type: !32, variable: i8* @Char1Glob)
+!39 = !DIGlobalVariable(name: "Char2Glob", line: 174, isLocal: false, isDefinition: true, scope: null, file: !3, type: !32, variable: i8* @Char2Glob)
+!40 = !DIGlobalVariable(name: "Array1Glob", line: 175, isLocal: false, isDefinition: true, scope: null, file: !3, type: !41, variable: [51 x i32]* @Array1Glob)
 !41 = !DIDerivedType(tag: DW_TAG_typedef, name: "Array1Dim", line: 135, file: !82, baseType: !18)
-!42 = !DIGlobalVariable(name: "Array2Glob", line: 176, isLocal: false, isDefinition: true, scope: null, file: !3, type: !43)
+!42 = !DIGlobalVariable(name: "Array2Glob", line: 176, isLocal: false, isDefinition: true, scope: null, file: !3, type: !43, variable: [51 x [51 x i32]]* @Array2Glob)
 !43 = !DIDerivedType(tag: DW_TAG_typedef, name: "Array2Dim", line: 136, file: !82, baseType: !44)
 !44 = !DICompositeType(tag: DW_TAG_array_type, size: 83232, align: 32, baseType: !16, elements: !45)
 !45 = !{!20, !20}
-!46 = !DIGlobalVariable(name: "PtrGlb", line: 177, isLocal: false, isDefinition: true, scope: null, file: !3, type: !47)
+!46 = !DIGlobalVariable(name: "PtrGlb", line: 177, isLocal: false, isDefinition: true, scope: null, file: !3, type: !47, variable: %struct.Record** @PtrGlb)
 !47 = !DIDerivedType(tag: DW_TAG_typedef, name: "RecordPtr", line: 148, file: !82, baseType: !48)
 !48 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !49)
 !49 = !DIDerivedType(tag: DW_TAG_typedef, name: "RecordType", line: 147, file: !82, baseType: !50)
@@ -165,7 +165,7 @@ attributes #1 = { nounwind readnone }
 !60 = !DICompositeType(tag: DW_TAG_array_type, size: 248, align: 8, baseType: !32, elements: !61)
 !61 = !{!62}
 !62 = !DISubrange(count: 31)
-!63 = !DIGlobalVariable(name: "PtrGlbNext", line: 178, isLocal: false, isDefinition: true, scope: null, file: !3, type: !47)
+!63 = !DIGlobalVariable(name: "PtrGlbNext", line: 178, isLocal: false, isDefinition: true, scope: null, file: !3, type: !47, variable: %struct.Record** @PtrGlbNext)
 !64 = !DILocation(line: 181, scope: !12)
 !65 = !DILocation(line: 182, scope: !12)
 !66 = !DILocation(line: 183, scope: !12)

@@ -2873,11 +2873,6 @@ CodeGenFunction::CanDevirtualizeMemberFunctionCall(const Expr *Base,
   if (getLangOpts().AppleKext)
     return false;
 
-  // If the member function is marked 'final', we know that it can't be
-  // overridden and can therefore devirtualize it.
-  if (MD->hasAttr<FinalAttr>())
-    return true;
-
   // If the most derived class is marked final, we know that no subclass can
   // override this member function and so we can devirtualize it. For example:
   //
@@ -2888,17 +2883,14 @@ CodeGenFunction::CanDevirtualizeMemberFunctionCall(const Expr *Base,
   //   b->f();
   // }
   //
-  if (const CXXRecordDecl *BestDynamicDecl = Base->getBestDynamicClassType()) {
-    if (BestDynamicDecl->hasAttr<FinalAttr>())
-      return true;
+  const CXXRecordDecl *MostDerivedClassDecl = Base->getBestDynamicClassType();
+  if (MostDerivedClassDecl->hasAttr<FinalAttr>())
+    return true;
 
-    // There may be a method corresponding to MD in a derived class. If that
-    // method is marked final, we can devirtualize it.
-    const CXXMethodDecl *DevirtualizedMethod =
-        MD->getCorrespondingMethodInClass(BestDynamicDecl);
-    if (DevirtualizedMethod->hasAttr<FinalAttr>())
-      return true;
-  }
+  // If the member function is marked 'final', we know that it can't be
+  // overridden and can therefore devirtualize it.
+  if (MD->hasAttr<FinalAttr>())
+    return true;
 
   // Similarly, if the class itself is marked 'final' it can't be overridden
   // and we can therefore devirtualize the member function call.

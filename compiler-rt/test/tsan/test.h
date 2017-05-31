@@ -22,7 +22,6 @@ extern "C" {
 void __tsan_testonly_barrier_init(invisible_barrier_t *barrier,
     unsigned count);
 void __tsan_testonly_barrier_wait(invisible_barrier_t *barrier);
-unsigned long __tsan_testonly_shadow_stack_current_size();
 #ifdef __cplusplus
 }
 #endif

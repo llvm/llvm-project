@@ -600,7 +600,7 @@ public:
   /// the given declaration (e.g., preferring 'unavailable' to
   /// 'deprecated').
   ///
-  /// \param[out] Message If non-NULL and the result is not \c
+  /// \param Message If non-NULL and the result is not \c
   /// AR_Available, will be set to a (possibly empty) message
   /// describing why the declaration has not been introduced, is
   /// deprecated, or is unavailable.
@@ -1326,9 +1326,6 @@ public:
   /// \brief Determines whether this context or some of its ancestors is a
   /// linkage specification context that specifies C linkage.
   bool isExternCContext() const;
-
-  /// \brief Retrieve the nearest enclosing C linkage specification context.
-  const LinkageSpecDecl *getExternCContext() const;
 
   /// \brief Determines whether this context or some of its ancestors is a
   /// linkage specification context that specifies C++ linkage.

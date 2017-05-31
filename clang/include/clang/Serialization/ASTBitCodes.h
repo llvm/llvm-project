@@ -253,10 +253,6 @@ namespace clang {
 
       /// \brief A block containing a module file extension.
       EXTENSION_BLOCK_ID,
-
-      /// \brief A block containing unhashed contents. It currently holds
-      /// Diagnostic Options and Signature.
-      UNHASHED_CONTROL_BLOCK_ID,
     };
 
     /// \brief Record types that occur within the control block.
@@ -292,6 +288,9 @@ namespace clang {
       /// AST file.
       MODULE_MAP_FILE,
 
+      /// \brief Record code for the signature that identifiers this AST file.
+      SIGNATURE,
+
       /// \brief Record code for the module build directory.
       MODULE_DIRECTORY,
     };
@@ -310,6 +309,9 @@ namespace clang {
       /// \brief Record code for the target options table.
       TARGET_OPTIONS,
 
+      /// \brief Record code for the diagnostic options table.
+      DIAGNOSTIC_OPTIONS,
+
       /// \brief Record code for the filesystem options table.
       FILE_SYSTEM_OPTIONS,
 
@@ -320,16 +322,7 @@ namespace clang {
       PREPROCESSOR_OPTIONS,
     };
 
-    /// \brief Record code for the unhashed control block.
-    enum UnhashedControlBlockRecordTypes {
-      /// \brief Record code for the diagnostic options table.
-      DIAGNOSTIC_OPTIONS = 1,
-
-      /// \brief Record code for the signature that identifiers this AST file.
-      SIGNATURE,
-    };
-
-        /// \brief Record code for extension blocks.
+    /// \brief Record code for extension blocks.
     enum ExtensionBlockRecordTypes {
       /// Metadata describing this particular extension.
       EXTENSION_METADATA = 1,
@@ -909,9 +902,7 @@ namespace clang {
       /// \brief An AdjustedType record.
       TYPE_ADJUSTED              = 42,
       /// \brief A PipeType record.
-      TYPE_PIPE                  = 43,
-      /// \brief An ObjCTypeParamType record.
-      TYPE_OBJC_TYPE_PARAM       = 44
+      TYPE_PIPE                  = 43
     };
 
     /// \brief The type IDs for special types constructed by semantic

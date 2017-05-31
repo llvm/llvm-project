@@ -209,35 +209,6 @@ int main() {
 // CHECK-NEXT:       </array>
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:     <dict>
-// CHECK-NEXT:      <key>kind</key><string>event</string>
-// CHECK-NEXT:      <key>location</key>
-// CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>line</key><integer>31</integer>
-// CHECK-NEXT:       <key>col</key><integer>7</integer>
-// CHECK-NEXT:       <key>file</key><integer>0</integer>
-// CHECK-NEXT:      </dict>
-// CHECK-NEXT:      <key>ranges</key>
-// CHECK-NEXT:      <array>
-// CHECK-NEXT:        <array>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>line</key><integer>31</integer>
-// CHECK-NEXT:          <key>col</key><integer>7</integer>
-// CHECK-NEXT:          <key>file</key><integer>0</integer>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>line</key><integer>31</integer>
-// CHECK-NEXT:          <key>col</key><integer>27</integer>
-// CHECK-NEXT:          <key>file</key><integer>0</integer>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:        </array>
-// CHECK-NEXT:      </array>
-// CHECK-NEXT:      <key>depth</key><integer>0</integer>
-// CHECK-NEXT:      <key>extended_message</key>
-// CHECK-NEXT:      <string>Assuming the condition is true</string>
-// CHECK-NEXT:      <key>message</key>
-// CHECK-NEXT:      <string>Assuming the condition is true</string>
-// CHECK-NEXT:     </dict>
-// CHECK-NEXT:     <dict>
 // CHECK-NEXT:      <key>kind</key><string>control</string>
 // CHECK-NEXT:      <key>edges</key>
 // CHECK-NEXT:       <array>

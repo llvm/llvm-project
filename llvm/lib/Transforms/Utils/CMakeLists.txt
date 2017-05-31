@@ -11,7 +11,6 @@ add_llvm_library(LLVMTransformUtils
   CodeExtractor.cpp
   CtorUtils.cpp
   DemoteRegToStack.cpp
-  EscapeEnumerator.cpp
   Evaluator.cpp
   FlattenCFG.cpp
   FunctionImportUtils.cpp
@@ -33,7 +32,7 @@ add_llvm_library(LLVMTransformUtils
   MemorySSA.cpp
   MetaRenamer.cpp
   ModuleUtils.cpp
-  NameAnonGlobals.cpp
+  NameAnonFunctions.cpp
   PromoteMemoryToRegister.cpp
   SSAUpdater.cpp
   SanitizerStats.cpp

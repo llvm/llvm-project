@@ -518,6 +518,15 @@ void CheckerManager::runCheckersForDeadSymbols(ExplodedNodeSet &Dst,
   expandGraphWithCheckers(C, Dst, Src);
 }
 
+/// \brief True if at least one checker wants to check region changes.
+bool CheckerManager::wantsRegionChangeUpdate(ProgramStateRef state) {
+  for (unsigned i = 0, e = RegionChangesCheckers.size(); i != e; ++i)
+    if (RegionChangesCheckers[i].WantUpdateFn(state))
+      return true;
+
+  return false;
+}
+
 /// \brief Run checkers for region changes.
 ProgramStateRef
 CheckerManager::runCheckersForRegionChanges(ProgramStateRef state,
@@ -530,8 +539,8 @@ CheckerManager::runCheckersForRegionChanges(ProgramStateRef state,
     // bail out.
     if (!state)
       return nullptr;
-    state = RegionChangesCheckers[i](state, invalidated,
-                                     ExplicitRegions, Regions, Call);
+    state = RegionChangesCheckers[i].CheckFn(state, invalidated,
+                                             ExplicitRegions, Regions, Call);
   }
   return state;
 }
@@ -717,8 +726,10 @@ void CheckerManager::_registerForDeadSymbols(CheckDeadSymbolsFunc checkfn) {
   DeadSymbolsCheckers.push_back(checkfn);
 }
 
-void CheckerManager::_registerForRegionChanges(CheckRegionChangesFunc checkfn) {
-  RegionChangesCheckers.push_back(checkfn);
+void CheckerManager::_registerForRegionChanges(CheckRegionChangesFunc checkfn,
+                                     WantsRegionChangeUpdateFunc wantUpdateFn) {
+  RegionChangesCheckerInfo info = {checkfn, wantUpdateFn};
+  RegionChangesCheckers.push_back(info);
 }
 
 void CheckerManager::_registerForPointerEscape(CheckPointerEscapeFunc checkfn){

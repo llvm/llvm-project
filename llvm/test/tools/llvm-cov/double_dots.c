@@ -5,8 +5,6 @@
 // RUN: llvm-profdata merge %S/Inputs/double_dots.proftext -o %t.profdata
 // RUN: llvm-cov show %S/Inputs/double_dots.covmapping -instr-profile=%t.profdata -o %t.dir
 // RUN: FileCheck -input-file=%t.dir/index.txt %s
-// RUN: llvm-cov show -format=html %S/Inputs/double_dots.covmapping -instr-profile=%t.profdata -o %t.dir
-// RUN: FileCheck -input-file=%t.dir/index.html %s
 
 // CHECK-NOT: coverage{{.*}}dots{{.*}}..{{.*}}dots
 

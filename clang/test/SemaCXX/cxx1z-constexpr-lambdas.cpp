@@ -46,17 +46,5 @@ namespace ns3 {
 
 } // end ns test_constexpr_call
 
-namespace test_captureless_lambda {
-void f() {
-  const char c = 'c';
-  auto L = [] { return c; };
-  constexpr char C = L();
-}
-  
-void f(char c) { //expected-note{{declared here}}
-  auto L = [] { return c; }; //expected-error{{cannot be implicitly captured}} expected-note{{lambda expression begins here}}
-  int I = L();
-}
-
-}
 #endif // ndef CPP14_AND_EARLIER
+

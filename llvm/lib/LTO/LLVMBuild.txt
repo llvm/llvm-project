@@ -31,7 +31,6 @@ required_libraries =
  MC
  ObjCARC
  Object
- Passes
  Scalar
  Support
  Target

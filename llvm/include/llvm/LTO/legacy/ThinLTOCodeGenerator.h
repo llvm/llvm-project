@@ -38,7 +38,7 @@ struct TargetMachineBuilder {
   std::string MAttr;
   TargetOptions Options;
   Optional<Reloc::Model> RelocModel;
-  CodeGenOpt::Level CGOptLevel = CodeGenOpt::Aggressive;
+  CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
 
   std::unique_ptr<TargetMachine> create() const;
 };
@@ -72,29 +72,15 @@ public:
   /**
    * Process all the modules that were added to the code generator in parallel.
    *
-   * Client can access the resulting object files using getProducedBinaries(),
-   * unless setGeneratedObjectsDirectory() has been called, in which case
-   * results are available through getProducedBinaryFiles().
+   * Client can access the resulting object files using getProducedBinaries()
    */
   void run();
 
   /**
-   * Return the "in memory" binaries produced by the code generator. This is
-   * filled after run() unless setGeneratedObjectsDirectory() has been
-   * called, in which case results are available through
-   * getProducedBinaryFiles().
+   * Return the "in memory" binaries produced by the code generator.
    */
   std::vector<std::unique_ptr<MemoryBuffer>> &getProducedBinaries() {
     return ProducedBinaries;
-  }
-
-  /**
-   * Return the "on-disk" binaries produced by the code generator. This is
-   * filled after run() when setGeneratedObjectsDirectory() has been
-   * called, in which case results are available through getProducedBinaries().
-   */
-  std::vector<std::string> &getProducedBinaryFiles() {
-    return ProducedBinaryFiles;
   }
 
   /**
@@ -170,14 +156,6 @@ public:
   /// the processing.
   void setSaveTempsDir(std::string Path) { SaveTempsDir = std::move(Path); }
 
-  /// Set the path to a directory where to save generated object files. This
-  /// path can be used by a linker to request on-disk files instead of in-memory
-  /// buffers. When set, results are available through getProducedBinaryFiles()
-  /// instead of getProducedBinaries().
-  void setGeneratedObjectsDirectory(std::string Path) {
-    SavedObjectsDirectoryPath = std::move(Path);
-  }
-
   /// CPU to use to initialize the TargetMachine
   void setCpu(std::string Cpu) { TMBuilder.MCpu = std::move(Cpu); }
 
@@ -197,11 +175,6 @@ public:
   /// CodeGen optimization level
   void setCodeGenOptLevel(CodeGenOpt::Level CGOptLevel) {
     TMBuilder.CGOptLevel = CGOptLevel;
-  }
-
-  /// IR optimization level: from 0 to 3.
-  void setOptLevel(unsigned NewOptLevel) {
-    OptLevel = (NewOptLevel > 3) ? 3 : NewOptLevel;
   }
 
   /// Disable CodeGen, only run the stages till codegen and stop. The output
@@ -271,12 +244,8 @@ private:
   /// Helper factory to build a TargetMachine
   TargetMachineBuilder TMBuilder;
 
-  /// Vector holding the in-memory buffer containing the produced binaries, when
-  /// SavedObjectsDirectoryPath isn't set.
+  /// Vector holding the in-memory buffer containing the produced binaries.
   std::vector<std::unique_ptr<MemoryBuffer>> ProducedBinaries;
-
-  /// Path to generated files in the supplied SavedObjectsDirectoryPath if any.
-  std::vector<std::string> ProducedBinaryFiles;
 
   /// Vector holding the input buffers containing the bitcode modules to
   /// process.
@@ -295,9 +264,6 @@ private:
   /// Path to a directory to save the temporary bitcode files.
   std::string SaveTempsDir;
 
-  /// Path to a directory to save the generated object files.
-  std::string SavedObjectsDirectoryPath;
-
   /// Flag to enable/disable CodeGen. When set to true, the process stops after
   /// optimizations and a bitcode is produced.
   bool DisableCodeGen = false;
@@ -305,9 +271,6 @@ private:
   /// Flag to indicate that only the CodeGen will be performed, no cross-module
   /// importing or optimization.
   bool CodeGenOnly = false;
-
-  /// IR Optimization Level [0-3].
-  unsigned OptLevel = 3;
 };
 }
 #endif

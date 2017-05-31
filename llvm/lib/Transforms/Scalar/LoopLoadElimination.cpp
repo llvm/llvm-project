@@ -396,9 +396,7 @@ public:
     Value *InitialPtr = SEE.expandCodeFor(PtrSCEV->getStart(), Ptr->getType(),
                                           PH->getTerminator());
     Value *Initial =
-        new LoadInst(InitialPtr, "load_initial", /* isVolatile */ false,
-                     Cand.Load->getAlignment(), PH->getTerminator());
-
+        new LoadInst(InitialPtr, "load_initial", PH->getTerminator());
     PHINode *PHI = PHINode::Create(Initial->getType(), 2, "store_forwarded",
                                    &L->getHeader()->front());
     PHI->addIncoming(Initial, PH);
@@ -497,11 +495,6 @@ public:
       if (L->getHeader()->getParent()->optForSize()) {
         DEBUG(dbgs() << "Versioning is needed but not allowed when optimizing "
                         "for size.\n");
-        return false;
-      }
-
-      if (!L->isLoopSimplifyForm()) {
-        DEBUG(dbgs() << "Loop is not is loop-simplify form");
         return false;
       }
 

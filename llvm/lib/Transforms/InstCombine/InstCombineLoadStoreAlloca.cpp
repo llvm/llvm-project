@@ -465,10 +465,6 @@ static Instruction *combineLoadToOperationType(InstCombiner &IC, LoadInst &LI) {
   if (LI.use_empty())
     return nullptr;
 
-  // swifterror values can't be bitcasted.
-  if (LI.getPointerOperand()->isSwiftError())
-    return nullptr;
-
   Type *Ty = LI.getType();
   const DataLayout &DL = IC.getDataLayout();
 
@@ -999,10 +995,6 @@ static bool combineStoreToValueType(InstCombiner &IC, StoreInst &SI) {
   // FIXME: We could probably with some care handle both volatile and ordered
   // atomic stores here but it isn't clear that this is important.
   if (!SI.isUnordered())
-    return false;
-
-  // swifterror values can't be bitcasted.
-  if (SI.getPointerOperand()->isSwiftError())
     return false;
 
   Value *V = SI.getValueOperand();

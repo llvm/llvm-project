@@ -107,7 +107,7 @@ static void DumpInput(StringRef Filename) {
       auto MachOOrErr = ObjForArch.getAsObjectFile();
       error(Filename, errorToErrorCode(MachOOrErr.takeError()));
       DumpObjectFile(**MachOOrErr,
-                     Filename + " (" + ObjForArch.getArchFlagName() + ")");
+                     Filename + " (" + ObjForArch.getArchTypeName() + ")");
     }
 }
 

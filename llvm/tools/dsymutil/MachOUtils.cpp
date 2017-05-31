@@ -236,8 +236,6 @@ static void transferSegmentAndSections(
   if (StringRef("__LINKEDIT") == Segment.segname) {
     Segment.fileoff = LinkeditOffset;
     Segment.filesize = LinkeditSize;
-    // Resize vmsize by rounding to the page size.
-    Segment.vmsize = alignTo(LinkeditSize, 0x1000);
   }
 
   // Check if the end address of the last segment and our current

@@ -33,7 +33,7 @@ void SleepMS() {
 }
 
 TEST(Timer, Additivity) {
-  Timer T1("T1", "T1");
+  Timer T1("T1");
 
   EXPECT_TRUE(T1.isInitialized());
 
@@ -50,7 +50,7 @@ TEST(Timer, Additivity) {
 }
 
 TEST(Timer, CheckIfTriggered) {
-  Timer T1("T1", "T1");
+  Timer T1("T1");
 
   EXPECT_FALSE(T1.hasTriggered());
   T1.startTimer();

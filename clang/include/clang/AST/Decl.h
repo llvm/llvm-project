@@ -865,11 +865,6 @@ protected:
 
     unsigned : NumVarDeclBits;
 
-    // FIXME: We need something similar to CXXRecordDecl::DefinitionData.
-    /// \brief Whether this variable is a definition which was demoted due to
-    /// module merge.
-    unsigned IsThisDeclarationADemotedDefinition : 1;
-
     /// \brief Whether this variable is the exception variable in a C++ catch
     /// or an Objective-C @catch statement.
     unsigned ExceptionVar : 1;
@@ -1203,26 +1198,10 @@ public:
   InitializationStyle getInitStyle() const {
     return static_cast<InitializationStyle>(VarDeclBits.InitStyle);
   }
+
   /// \brief Whether the initializer is a direct-initializer (list or call).
   bool isDirectInit() const {
     return getInitStyle() != CInit;
-  }
-
-  /// \brief If this definition should pretend to be a declaration.
-  bool isThisDeclarationADemotedDefinition() const {
-    return isa<ParmVarDecl>(this) ? false :
-      NonParmVarDeclBits.IsThisDeclarationADemotedDefinition;
-  }
-
-  /// \brief This is a definition which should be demoted to a declaration.
-  ///
-  /// In some cases (mostly module merging) we can end up with two visible
-  /// definitions one of which needs to be demoted to a declaration to keep
-  /// the AST invariants.
-  void demoteThisDefinitionToDeclaration() {
-    assert (isThisDeclarationADefinition() && "Not a definition!");
-    assert (!isa<ParmVarDecl>(this) && "Cannot demote ParmVarDecls!");
-    NonParmVarDeclBits.IsThisDeclarationADemotedDefinition = 1;
   }
 
   /// \brief Determine whether this variable is the exception variable in a
@@ -1322,10 +1301,6 @@ public:
     assert(!isa<ParmVarDecl>(this));
     NonParmVarDeclBits.PreviousDeclInSameBlockScope = Same;
   }
-
-  /// \brief Retrieve the variable declaration from which this variable could
-  /// be instantiated, if it is an instantiation (rather than a non-template).
-  VarDecl *getTemplateInstantiationPattern() const;
 
   /// \brief If this variable is an instantiated static data member of a
   /// class template specialization, returns the templated static data member

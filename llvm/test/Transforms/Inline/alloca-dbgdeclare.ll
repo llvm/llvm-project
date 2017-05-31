@@ -21,8 +21,8 @@ target triple = "aarch64-apple-darwin"
 
 %struct.A = type { i32, [2 x double] }
 
-@a = global %struct.A zeroinitializer, align 8, !dbg !26
-@b = global %struct.A zeroinitializer, align 8, !dbg !27
+@a = global %struct.A zeroinitializer, align 8
+@b = global %struct.A zeroinitializer, align 8
 
 ; Function Attrs: nounwind
 declare void @_Z3fn31A(%struct.A* nocapture readonly %p1) #0
@@ -107,8 +107,8 @@ attributes #3 = { noreturn nounwind }
 !23 = !{null}
 !24 = distinct !DISubprogram(name: "fn5", linkageName: "_Z3fn5v", line: 13, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 13, file: !5, scope: !16, type: !22, variables: !2)
 !25 = !{!26, !27}
-!26 = !DIGlobalVariable(name: "a", line: 4, isLocal: false, isDefinition: true, scope: null, file: !16, type: !4)
-!27 = !DIGlobalVariable(name: "b", line: 4, isLocal: false, isDefinition: true, scope: null, file: !16, type: !4)
+!26 = !DIGlobalVariable(name: "a", line: 4, isLocal: false, isDefinition: true, scope: null, file: !16, type: !4, variable: %struct.A* @a)
+!27 = !DIGlobalVariable(name: "b", line: 4, isLocal: false, isDefinition: true, scope: null, file: !16, type: !4, variable: %struct.A* @b)
 !28 = !{i32 2, !"Dwarf Version", i32 4}
 !29 = !{i32 2, !"Debug Info Version", i32 3}
 !30 = !{!"clang version 3.7.0 (trunk 227480) (llvm/trunk 227517)"}
@@ -129,10 +129,10 @@ attributes #3 = { noreturn nounwind }
 !45 = !DILocation(line: 9, scope: !15)
 !46 = !DILocalVariable(name: "p1", line: 6, arg: 1, scope: !15, file: !16, type: !4)
 !47 = distinct !DILocation(line: 11, scope: !21)
-!48 = !DIExpression(DW_OP_LLVM_fragment, 32, 160)
+!48 = !DIExpression(DW_OP_bit_piece, 32, 160)
 !49 = !DILocation(line: 6, scope: !15, inlinedAt: !47)
 !50 = !DILocation(line: 11, scope: !21)
-!51 = !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+!51 = !DIExpression(DW_OP_bit_piece, 0, 32)
 !52 = !DILocation(line: 7, scope: !34, inlinedAt: !47)
 !53 = !DILocation(line: 7, scope: !15, inlinedAt: !47)
 !54 = !DILocation(line: 8, scope: !34, inlinedAt: !47)

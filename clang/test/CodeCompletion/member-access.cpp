@@ -27,16 +27,6 @@ public:
 
 void test(const Proxy &p) {
   p->
-}
-
-struct Test1 {
-  Base1 b;
-
-  static void sfunc() {
-    b. // expected-error {{invalid use of member 'b' in static member function}}
-  }
-};
-
   // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:29:6 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
   // CHECK-CC1: Base1 : Base1::
   // CHECK-CC1: member1 : [#int#][#Base1::#]member1
@@ -49,6 +39,4 @@ struct Test1 {
   // CHECK-CC1: memfun1 (Hidden) : [#void#]Base2::memfun1(<#int#>)
   // CHECK-CC1: memfun2 : [#void#][#Base3::#]memfun2(<#int#>)
   // CHECK-CC1: memfun3 : [#int#]memfun3(<#int#>)
-
-// Make sure this doesn't crash
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:36:7 %s -verify
+  

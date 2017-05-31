@@ -17,8 +17,6 @@
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
 
-using namespace __sanitizer;
-
 namespace __esan {
 
 static const char EsanOptsEnv[] = "ESAN_OPTIONS";

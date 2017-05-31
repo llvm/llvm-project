@@ -269,9 +269,6 @@ def validate(parser, args, from_build_command):
     """ Validation done by the parser itself, but semantic check still
     needs to be done. This method is doing that. """
 
-    # Make plugins always a list. (It might be None when not specified.)
-    args.plugins = args.plugins if args.plugins else []
-
     if args.help_checkers_verbose:
         print_checkers(get_checkers(args.clang, args.plugins))
         parser.exit()

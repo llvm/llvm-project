@@ -3227,7 +3227,7 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     // If the constant is a nan, see if we can fold the comparison based on it.
     if (CFP->getValueAPF().isNaN()) {
       if (FCmpInst::isOrdered(Pred)) // True "if ordered and foo"
-        return ConstantInt::get(GetCompareTy(LHS), 0);
+        return ConstantInt::getFalse(CFP->getContext());
       assert(FCmpInst::isUnordered(Pred) &&
              "Comparison must be either ordered or unordered!");
       // True if unordered.

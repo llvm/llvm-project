@@ -413,8 +413,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // .cfi_offset operations will reflect that.
   if (DPRGapSize) {
     assert(DPRGapSize == 4 && "unexpected alignment requirements for DPRs");
-    if (LastPush != MBB.end() &&
-        tryFoldSPUpdateIntoPushPop(STI, MF, &*LastPush, DPRGapSize))
+    if (tryFoldSPUpdateIntoPushPop(STI, MF, &*LastPush, DPRGapSize))
       DefCFAOffsetCandidates.addExtraBytes(LastPush, DPRGapSize);
     else {
       emitSPUpdate(isARM, MBB, MBBI, dl, TII, -DPRGapSize,
@@ -776,11 +775,11 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
       emitSPUpdate(isARM, MBB, MBBI, dl, TII, NumBytes);
 
     // Increment past our save areas.
-    if (MBBI != MBB.end() && AFI->getDPRCalleeSavedAreaSize()) {
+    if (AFI->getDPRCalleeSavedAreaSize()) {
       MBBI++;
       // Since vpop register list cannot have gaps, there may be multiple vpop
       // instructions in the epilogue.
-      while (MBBI != MBB.end() && MBBI->getOpcode() == ARM::VLDMDIA_UPD)
+      while (MBBI->getOpcode() == ARM::VLDMDIA_UPD)
         MBBI++;
     }
     if (AFI->getDPRCalleeSavedGapSize()) {
@@ -893,12 +892,10 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
                                     unsigned MIFlags) const {
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
   DebugLoc DL;
 
-  typedef std::pair<unsigned, bool> RegAndKill;
-  SmallVector<RegAndKill, 4> Regs;
+  SmallVector<std::pair<unsigned,bool>, 4> Regs;
   unsigned i = CSI.size();
   while (i != 0) {
     unsigned LastReg = 0;
@@ -929,12 +926,6 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
 
     if (Regs.empty())
       continue;
-
-    std::sort(Regs.begin(), Regs.end(), [&](const RegAndKill &LHS,
-                                            const RegAndKill &RHS) {
-      return TRI.getEncodingValue(LHS.first) < TRI.getEncodingValue(RHS.first);
-    });
-
     if (Regs.size() > 1 || StrOpc== 0) {
       MachineInstrBuilder MIB =
         AddDefaultPred(BuildMI(MBB, MI, DL, TII.get(StmOpc), ARM::SP)
@@ -968,7 +959,6 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
                                    unsigned NumAlignedDPRCS2Regs) const {
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   DebugLoc DL;
   bool isTailCall = false;
@@ -1021,11 +1011,6 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
 
     if (Regs.empty())
       continue;
-
-    std::sort(Regs.begin(), Regs.end(), [&](unsigned LHS, unsigned RHS) {
-      return TRI.getEncodingValue(LHS) < TRI.getEncodingValue(RHS);
-    });
-
     if (Regs.size() > 1 || LdrOpc == 0) {
       MachineInstrBuilder MIB =
         AddDefaultPred(BuildMI(MBB, MI, DL, TII.get(LdmOpc), ARM::SP)

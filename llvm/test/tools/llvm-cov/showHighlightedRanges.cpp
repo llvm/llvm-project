@@ -1,38 +1,38 @@
 // RUN: llvm-cov show %S/Inputs/highlightedRanges.covmapping -instr-profile %S/Inputs/highlightedRanges.profdata -dump -filename-equivalence %s 2>&1 | FileCheck %s -check-prefixes=TEXT,SHARED
 
 void func() {
-  return;
-  int i = 0;                     // SHARED: Highlighted line [[@LINE]], 3 ->
+  return;                        // TEXT: Highlighted line [[@LINE+1]], 3 -> ?
+  int i = 0;                     // HTML: Highlighted line [[@LINE]], 1 ->
 }                                // SHARED: Highlighted line [[@LINE]], 1 -> 2
 
 void func2(int x) {
   if(x > 5) {
     while(x >= 9) {
       return;
-      --x;                       // SHARED: Highlighted line [[@LINE]], 7 ->
+      --x;                       // TEXT: Highlighted line [[@LINE]], 7 -> ?
     }                            // SHARED: Highlighted line [[@LINE]], 1 -> 6
-    int i = 0;                   // SHARED: Highlighted line [[@LINE]], 5 ->
+    int i = 0;                   // TEXT: Highlighted line [[@LINE]], 5 -> ?
   }                              // SHARED: Highlighted line [[@LINE]], 1 -> 4
 }
 
 void test() {
   int x = 0;
 
-  if (x) {                       // SHARED: Highlighted line [[@LINE]], 10 ->
-    x = 0;                       // SHARED: Highlighted line [[@LINE]], 1 ->
-  } else {                       // SHARED: Highlighted line [[@LINE]], 1 -> 4
+  if (x) {                       // TEXT: Highlighted line [[@LINE]], 10 -> ?
+    x = 0;                       // SHARED: Highlighted line [[@LINE]], 1 -> ?
+  } else {                       // TEXT: Highlighted line [[@LINE]], 1 -> 4
     x = 1;
   }
 
-                                  // SHARED: Highlighted line [[@LINE+1]], 26 ->
-  for (int i = 0; i < 0; ++i) {   // SHARED: Highlighted line [[@LINE]], 31 ->
-    x = 1;                        // SHARED: Highlighted line [[@LINE]], 1 ->
+                                  // TEXT: Highlighted line [[@LINE+1]], 26 -> 29
+  for (int i = 0; i < 0; ++i) {   // TEXT: Highlighted line [[@LINE]], 31 -> ?
+    x = 1;                        // TEXT: Highlighted line [[@LINE]], 1 -> ?
   }                               // SHARED: Highlighted line [[@LINE]], 1 -> 4
 
   x = x < 10 ? x +
                1
-             : x - 1;             // SHARED: Highlighted line [[@LINE]], 16 -> 21
-  x = x > 10 ? x +                // SHARED: Highlighted line [[@LINE]], 16 ->
+             : x - 1;             // TEXT: Highlighted line [[@LINE]], 16 -> 21
+  x = x > 10 ? x +                // TEXT: Highlighted line [[@LINE]], 16 -> ?
                1                  // SHARED: Highlighted line [[@LINE]], 1 -> 17
              : x - 1;
 }

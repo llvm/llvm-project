@@ -33,8 +33,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Timer.h"
-#include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/YAMLTraits.h"
 #include <memory>
 using namespace clang;
 using namespace llvm;
@@ -75,7 +73,7 @@ namespace clang {
         : Diags(Diags), Action(Action), CodeGenOpts(CodeGenOpts),
           TargetOpts(TargetOpts), LangOpts(LangOpts),
           AsmOutStream(std::move(OS)), Context(nullptr),
-          LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
+          LLVMIRGeneration("LLVM IR Generation Time"),
           LLVMIRGenerationRefCount(0),
           Gen(CreateLLVMCodeGen(Diags, InFile, HeaderSearchOpts, PPOpts,
                                 CodeGenOpts, C, CoverageInfo)) {
@@ -181,25 +179,6 @@ namespace clang {
           Ctx.getDiagnosticHandler();
       void *OldDiagnosticContext = Ctx.getDiagnosticContext();
       Ctx.setDiagnosticHandler(DiagnosticHandler, this);
-      Ctx.setDiagnosticHotnessRequested(CodeGenOpts.DiagnosticsWithHotness);
-
-      std::unique_ptr<llvm::tool_output_file> OptRecordFile;
-      if (!CodeGenOpts.OptRecordFile.empty()) {
-        std::error_code EC;
-        OptRecordFile =
-          llvm::make_unique<llvm::tool_output_file>(CodeGenOpts.OptRecordFile,
-                                                    EC, sys::fs::F_None);
-        if (EC) {
-          Diags.Report(diag::err_cannot_open_file) <<
-            CodeGenOpts.OptRecordFile << EC.message();
-          return;
-        }
-
-        Ctx.setDiagnosticsOutputFile(new yaml::Output(OptRecordFile->os()));
-
-        if (CodeGenOpts.getProfileUse() != CodeGenOptions::ProfileNone)
-          Ctx.setDiagnosticHotnessRequested(true);
-      }
 
       // Link LinkModule into this module if present, preserving its validity.
       for (auto &I : LinkModules) {
@@ -218,9 +197,6 @@ namespace clang {
       Ctx.setInlineAsmDiagnosticHandler(OldHandler, OldContext);
 
       Ctx.setDiagnosticHandler(OldDiagnosticHandler, OldDiagnosticContext);
-
-      if (OptRecordFile)
-        OptRecordFile->keep();
     }
 
     void HandleTagDeclDefinition(TagDecl *D) override {
@@ -283,13 +259,16 @@ namespace clang {
     /// them.
     void EmitOptimizationMessage(const llvm::DiagnosticInfoOptimizationBase &D,
                                  unsigned DiagID);
-    void OptimizationRemarkHandler(const llvm::OptimizationRemark &D);
-    void OptimizationRemarkHandler(const llvm::OptimizationRemarkMissed &D);
-    void OptimizationRemarkHandler(const llvm::OptimizationRemarkAnalysis &D);
+    void
+    OptimizationRemarkHandler(const llvm::DiagnosticInfoOptimizationRemark &D);
     void OptimizationRemarkHandler(
-        const llvm::OptimizationRemarkAnalysisFPCommute &D);
+        const llvm::DiagnosticInfoOptimizationRemarkMissed &D);
     void OptimizationRemarkHandler(
-        const llvm::OptimizationRemarkAnalysisAliasing &D);
+        const llvm::DiagnosticInfoOptimizationRemarkAnalysis &D);
+    void OptimizationRemarkHandler(
+        const llvm::DiagnosticInfoOptimizationRemarkAnalysisFPCommute &D);
+    void OptimizationRemarkHandler(
+        const llvm::DiagnosticInfoOptimizationRemarkAnalysisAliasing &D);
     void OptimizationFailureHandler(
         const llvm::DiagnosticInfoOptimizationFailure &D);
   };
@@ -532,16 +511,9 @@ void BackendConsumer::EmitOptimizationMessage(
   FullSourceLoc Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename,
       Line, Column);
 
-  std::string Msg;
-  raw_string_ostream MsgStream(Msg);
-  MsgStream << D.getMsg();
-
-  if (D.getHotness())
-    MsgStream << " (hotness: " << *D.getHotness() << ")";
-
   Diags.Report(Loc, DiagID)
       << AddFlagValue(D.getPassName() ? D.getPassName() : "")
-      << MsgStream.str();
+      << D.getMsg().str();
 
   if (BadDebugInfo)
     // If we were not able to translate the file:line:col information
@@ -553,7 +525,7 @@ void BackendConsumer::EmitOptimizationMessage(
 }
 
 void BackendConsumer::OptimizationRemarkHandler(
-    const llvm::OptimizationRemark &D) {
+    const llvm::DiagnosticInfoOptimizationRemark &D) {
   // Optimization remarks are active only if the -Rpass flag has a regular
   // expression that matches the name of the pass name in \p D.
   if (CodeGenOpts.OptimizationRemarkPattern &&
@@ -562,7 +534,7 @@ void BackendConsumer::OptimizationRemarkHandler(
 }
 
 void BackendConsumer::OptimizationRemarkHandler(
-    const llvm::OptimizationRemarkMissed &D) {
+    const llvm::DiagnosticInfoOptimizationRemarkMissed &D) {
   // Missed optimization remarks are active only if the -Rpass-missed
   // flag has a regular expression that matches the name of the pass
   // name in \p D.
@@ -573,7 +545,7 @@ void BackendConsumer::OptimizationRemarkHandler(
 }
 
 void BackendConsumer::OptimizationRemarkHandler(
-    const llvm::OptimizationRemarkAnalysis &D) {
+    const llvm::DiagnosticInfoOptimizationRemarkAnalysis &D) {
   // Optimization analysis remarks are active if the pass name is set to
   // llvm::DiagnosticInfo::AlwasyPrint or if the -Rpass-analysis flag has a
   // regular expression that matches the name of the pass name in \p D.
@@ -586,7 +558,7 @@ void BackendConsumer::OptimizationRemarkHandler(
 }
 
 void BackendConsumer::OptimizationRemarkHandler(
-    const llvm::OptimizationRemarkAnalysisFPCommute &D) {
+    const llvm::DiagnosticInfoOptimizationRemarkAnalysisFPCommute &D) {
   // Optimization analysis remarks are active if the pass name is set to
   // llvm::DiagnosticInfo::AlwasyPrint or if the -Rpass-analysis flag has a
   // regular expression that matches the name of the pass name in \p D.
@@ -599,7 +571,7 @@ void BackendConsumer::OptimizationRemarkHandler(
 }
 
 void BackendConsumer::OptimizationRemarkHandler(
-    const llvm::OptimizationRemarkAnalysisAliasing &D) {
+    const llvm::DiagnosticInfoOptimizationRemarkAnalysisAliasing &D) {
   // Optimization analysis remarks are active if the pass name is set to
   // llvm::DiagnosticInfo::AlwasyPrint or if the -Rpass-analysis flag has a
   // regular expression that matches the name of the pass name in \p D.
@@ -643,27 +615,30 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
   case llvm::DK_OptimizationRemark:
     // Optimization remarks are always handled completely by this
     // handler. There is no generic way of emitting them.
-    OptimizationRemarkHandler(cast<OptimizationRemark>(DI));
+    OptimizationRemarkHandler(cast<DiagnosticInfoOptimizationRemark>(DI));
     return;
   case llvm::DK_OptimizationRemarkMissed:
     // Optimization remarks are always handled completely by this
     // handler. There is no generic way of emitting them.
-    OptimizationRemarkHandler(cast<OptimizationRemarkMissed>(DI));
+    OptimizationRemarkHandler(cast<DiagnosticInfoOptimizationRemarkMissed>(DI));
     return;
   case llvm::DK_OptimizationRemarkAnalysis:
     // Optimization remarks are always handled completely by this
     // handler. There is no generic way of emitting them.
-    OptimizationRemarkHandler(cast<OptimizationRemarkAnalysis>(DI));
+    OptimizationRemarkHandler(
+        cast<DiagnosticInfoOptimizationRemarkAnalysis>(DI));
     return;
   case llvm::DK_OptimizationRemarkAnalysisFPCommute:
     // Optimization remarks are always handled completely by this
     // handler. There is no generic way of emitting them.
-    OptimizationRemarkHandler(cast<OptimizationRemarkAnalysisFPCommute>(DI));
+    OptimizationRemarkHandler(
+        cast<DiagnosticInfoOptimizationRemarkAnalysisFPCommute>(DI));
     return;
   case llvm::DK_OptimizationRemarkAnalysisAliasing:
     // Optimization remarks are always handled completely by this
     // handler. There is no generic way of emitting them.
-    OptimizationRemarkHandler(cast<OptimizationRemarkAnalysisAliasing>(DI));
+    OptimizationRemarkHandler(
+        cast<DiagnosticInfoOptimizationRemarkAnalysisAliasing>(DI));
     return;
   case llvm::DK_OptimizationFailure:
     // Optimization failures are always handled completely by this

@@ -28,7 +28,7 @@
 
 %struct.foo = type { i8, i32 }
 
-@f = global %struct.foo zeroinitializer, align 4, !dbg !11
+@f = global %struct.foo zeroinitializer, align 4
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!13, !15}
@@ -45,7 +45,7 @@
 !8 = !DIDerivedType(tag: DW_TAG_member, name: "i", line: 3, size: 32, align: 32, offset: 32, file: !1, scope: !4, baseType: !9)
 !9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !10 = !{!11}
-!11 = !DIGlobalVariable(name: "f", line: 6, isLocal: false, isDefinition: true, scope: null, file: !12, type: !4)
+!11 = !DIGlobalVariable(name: "f", line: 6, isLocal: false, isDefinition: true, scope: null, file: !12, type: !4, variable: %struct.foo* @f)
 !12 = !DIFile(filename: "data_member_location.cpp", directory: "/tmp/dbginfo")
 !13 = !{i32 2, !"Dwarf Version", i32 4}
 !14 = !{!"clang version 3.4 "}

@@ -59,7 +59,6 @@ FileManager::FileManager(const FileSystemOptions &FSO,
   // file system.
   if (!FS)
     this->FS = vfs::getRealFileSystem();
-  BufferMgr = llvm::make_unique<PCMCache>();
 }
 
 FileManager::~FileManager() = default;

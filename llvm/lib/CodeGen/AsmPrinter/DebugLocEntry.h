@@ -72,7 +72,7 @@ public:
     const ConstantFP *getConstantFP() const { return Constant.CFP; }
     const ConstantInt *getConstantInt() const { return Constant.CIP; }
     MachineLocation getLoc() const { return Loc; }
-    bool isFragment() const { return getExpression()->isFragment(); }
+    bool isBitPiece() const { return getExpression()->isBitPiece(); }
     const DIExpression *getExpression() const { return Expression; }
     friend bool operator==(const Value &, const Value &);
     friend bool operator<(const Value &, const Value &);
@@ -129,7 +129,7 @@ public:
     Values.append(Vals.begin(), Vals.end());
     sortUniqueValues();
     assert(all_of(Values, [](DebugLocEntry::Value V) {
-          return V.isFragment();
+          return V.isBitPiece();
         }) && "value must be a piece");
   }
 
@@ -172,11 +172,11 @@ inline bool operator==(const DebugLocEntry::Value &A,
   llvm_unreachable("unhandled EntryKind");
 }
 
-/// Compare two fragments based on their offset.
+/// \brief Compare two pieces based on their offset.
 inline bool operator<(const DebugLocEntry::Value &A,
                       const DebugLocEntry::Value &B) {
-  return A.getExpression()->getFragmentInfo()->OffsetInBits <
-         B.getExpression()->getFragmentInfo()->OffsetInBits;
+  return A.getExpression()->getBitPieceOffset() <
+         B.getExpression()->getBitPieceOffset();
 }
 
 }

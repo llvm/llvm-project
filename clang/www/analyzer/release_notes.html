@@ -14,25 +14,6 @@
 <div id="content">
 
 <h1>Release notes for <tt>checker-XXX</tt> builds</h1>
-<h4 id="checker_279">checker-279</h4>
-<p><b>built:</b> November 14, 2016</br>
-	<b>download:</b> <a href="downloads/checker-279.tar.bz2">checker-279.tar.bz2</a></p>
-	<p><b>highlights:</b></p>
-	<ul>
-    <li>The analyzer includes new checks for:
-      <ul>
-        <li>Improper instance cleanup up in Objective-C -dealloc methods under manual retain/release.</li>
-        <li>Inadvertant comparisons of NSNumber, CFNumberRef, and other number object pointers against scalar values.</li>
-        <li>Unsafe usage of dispatch_once_t predicates stored in Objective-C instance variables and other heap-allocated memory.</li>
-        <li>Issues resulting from self-assignment in C++.</li>
-        <li>Incorrect usage of MPI APIs in C and C++. This check can be enabled by passing the following command to scan-build: <br />
-  &nbsp;&nbsp;<tt>-enable-checker optin.mpi.MPI-Checker</tt></li>
-    </ul>
-    <li>The scan-build tool now supports a <tt>--force-analyze-debug-code flag</tt> that forces projects to analyze in debug mode. This flag leaves in assertions and so typically results in fewer false positives.</li>
-    <li>Additional miscellaneous improvements.</li>
-    <li>Now requires macOS 10.8 or later.</li>
-	</ul>
-
 <h4 id="checker_278">checker-278</h4>
 <p><b>built:</b> February 5, 2016</br>
 	<b>download:</b> <a href="downloads/checker-278.tar.bz2">checker-278.tar.bz2</a></p>

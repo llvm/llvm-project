@@ -98,9 +98,6 @@ void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type);
 bool MprotectNoAccess(uptr addr, uptr size);
 bool MprotectReadOnly(uptr addr, uptr size);
 
-// Find an available address space.
-uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding);
-
 // Used to check if we can map shadow memory to a fixed location.
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end);
 void FlushUnneededShadowMemory(uptr addr, uptr size);
@@ -281,7 +278,6 @@ void UpdateProcessName();
 void CacheBinaryName();
 void DisableCoreDumperIfNecessary();
 void DumpProcessMap();
-void PrintModuleMap();
 bool FileExists(const char *filename);
 const char *GetEnv(const char *name);
 bool SetEnv(const char *name, const char *value);
@@ -393,7 +389,7 @@ void ReportErrorSummary(const char *error_message);
 //   error_type file:line[:column][ function]
 void ReportErrorSummary(const char *error_type, const AddressInfo &info);
 // Same as above, but obtains AddressInfo by symbolizing top stack trace frame.
-void ReportErrorSummary(const char *error_type, const StackTrace *trace);
+void ReportErrorSummary(const char *error_type, StackTrace *trace);
 
 // Math
 #if SANITIZER_WINDOWS && !defined(__clang__) && !defined(__GNUC__)
@@ -645,72 +641,18 @@ uptr InternalBinarySearch(const Container &v, uptr first, uptr last,
   return not_found;
 }
 
-enum ModuleArch {
-  kModuleArchUnknown,
-  kModuleArchI386,
-  kModuleArchX86_64,
-  kModuleArchX86_64H,
-  kModuleArchARMV6,
-  kModuleArchARMV7,
-  kModuleArchARMV7S,
-  kModuleArchARMV7K,
-  kModuleArchARM64
-};
-
-// When adding a new architecture, don't forget to also update
-// script/asan_symbolize.py and sanitizer_symbolizer_libcdep.cc.
-inline const char *ModuleArchToString(ModuleArch arch) {
-  switch (arch) {
-    case kModuleArchUnknown:
-      return "";
-    case kModuleArchI386:
-      return "i386";
-    case kModuleArchX86_64:
-      return "x86_64";
-    case kModuleArchX86_64H:
-      return "x86_64h";
-    case kModuleArchARMV6:
-      return "armv6";
-    case kModuleArchARMV7:
-      return "armv7";
-    case kModuleArchARMV7S:
-      return "armv7s";
-    case kModuleArchARMV7K:
-      return "armv7k";
-    case kModuleArchARM64:
-      return "arm64";
-  }
-  CHECK(0 && "Invalid module arch");
-}
-
-const uptr kModuleUUIDSize = 16;
-
 // Represents a binary loaded into virtual memory (e.g. this can be an
 // executable or a shared object).
 class LoadedModule {
  public:
-  LoadedModule()
-      : full_name_(nullptr),
-        base_address_(0),
-        max_executable_address_(0),
-        arch_(kModuleArchUnknown),
-        instrumented_(false) {
-    internal_memset(uuid_, 0, kModuleUUIDSize);
-    ranges_.clear();
-  }
+  LoadedModule() : full_name_(nullptr), base_address_(0) { ranges_.clear(); }
   void set(const char *module_name, uptr base_address);
-  void set(const char *module_name, uptr base_address, ModuleArch arch,
-           u8 uuid[kModuleUUIDSize], bool instrumented);
   void clear();
   void addAddressRange(uptr beg, uptr end, bool executable);
   bool containsAddress(uptr address) const;
 
   const char *full_name() const { return full_name_; }
   uptr base_address() const { return base_address_; }
-  uptr max_executable_address() const { return max_executable_address_; }
-  ModuleArch arch() const { return arch_; }
-  const u8 *uuid() const { return uuid_; }
-  bool instrumented() const { return instrumented_; }
 
   struct AddressRange {
     AddressRange *next;
@@ -727,10 +669,6 @@ class LoadedModule {
  private:
   char *full_name_;  // Owned.
   uptr base_address_;
-  uptr max_executable_address_;
-  ModuleArch arch_;
-  u8 uuid_[kModuleUUIDSize];
-  bool instrumented_;
   IntrusiveList<AddressRange> ranges_;
 };
 
@@ -851,8 +789,6 @@ struct SignalContext {
         is_memory_access(is_memory_access),
         write_flag(write_flag) {}
 
-  static void DumpAllRegisters(void *context);
-
   // Creates signal context in a platform-specific manner.
   static SignalContext Create(void *siginfo, void *context);
 
@@ -891,16 +827,16 @@ void AvoidCVE_2016_2143();
 INLINE void AvoidCVE_2016_2143() {}
 #endif
 
-struct StackDepotStats {
-  uptr n_uniq_ids;
-  uptr allocated;
-};
-
 }  // namespace __sanitizer
 
 inline void *operator new(__sanitizer::operator_new_size_type size,
                           __sanitizer::LowLevelAllocator &alloc) {
   return alloc.Allocate(size);
 }
+
+struct StackDepotStats {
+  uptr n_uniq_ids;
+  uptr allocated;
+};
 
 #endif  // SANITIZER_COMMON_H

@@ -582,11 +582,13 @@ unsigned HexagonInstrInfo::InsertBranch(MachineBasicBlock &MBB,
       SmallVector<MachineOperand, 4> Cond;
       auto Term = MBB.getFirstTerminator();
       if (Term != MBB.end() && isPredicated(*Term) &&
-          !analyzeBranch(MBB, NewTBB, NewFBB, Cond, false) &&
-          MachineFunction::iterator(NewTBB) == ++MBB.getIterator()) {
-        ReverseBranchCondition(Cond);
-        RemoveBranch(MBB);
-        return InsertBranch(MBB, TBB, nullptr, Cond, DL);
+          !analyzeBranch(MBB, NewTBB, NewFBB, Cond, false)) {
+        MachineBasicBlock *NextBB = &*++MBB.getIterator();
+        if (NewTBB == NextBB) {
+          ReverseBranchCondition(Cond);
+          RemoveBranch(MBB);
+          return InsertBranch(MBB, TBB, nullptr, Cond, DL);
+        }
       }
       BuildMI(&MBB, DL, get(BOpc)).addMBB(TBB);
     } else if (isEndLoopN(Cond[0].getImm())) {

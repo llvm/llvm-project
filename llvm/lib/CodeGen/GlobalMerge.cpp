@@ -434,8 +434,6 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
     std::vector<Type*> Tys;
     std::vector<Constant*> Inits;
 
-    bool HasExternal = false;
-    StringRef FirstExternalName;
     for (j = i; j != -1; j = GlobalSet.find_next(j)) {
       Type *Ty = Globals[j]->getValueType();
       MergedSize += DL.getTypeAllocSize(Ty);
@@ -444,45 +442,18 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
       }
       Tys.push_back(Ty);
       Inits.push_back(Globals[j]->getInitializer());
-
-      if (Globals[j]->hasExternalLinkage() && !HasExternal) {
-        HasExternal = true;
-        FirstExternalName = Globals[j]->getName();
-      }
     }
 
-    // If merged variables doesn't have external linkage, we needn't to expose
-    // the symbol after merging.
-    GlobalValue::LinkageTypes Linkage = HasExternal
-                                            ? GlobalValue::ExternalLinkage
-                                            : GlobalValue::InternalLinkage;
     StructType *MergedTy = StructType::get(M.getContext(), Tys);
     Constant *MergedInit = ConstantStruct::get(MergedTy, Inits);
 
-    // On Darwin external linkage needs to be preserved, otherwise
-    // dsymutil cannot preserve the debug info for the merged
-    // variables.  If they have external linkage, use the symbol name
-    // of the first variable merged as the suffix of global symbol
-    // name.  This avoids a link-time naming conflict for the
-    // _MergedGlobals symbols.
-    Twine MergedName =
-        (IsMachO && HasExternal)
-            ? "_MergedGlobals_" + FirstExternalName
-            : "_MergedGlobals";
-    auto MergedLinkage = IsMachO ? Linkage : GlobalValue::PrivateLinkage;
-    auto *MergedGV = new GlobalVariable(
-        M, MergedTy, isConst, MergedLinkage, MergedInit, MergedName, nullptr,
-        GlobalVariable::NotThreadLocal, AddrSpace);
-
-    const StructLayout *MergedLayout = DL.getStructLayout(MergedTy);
+    GlobalVariable *MergedGV = new GlobalVariable(
+        M, MergedTy, isConst, GlobalValue::PrivateLinkage, MergedInit,
+        "_MergedGlobals", nullptr, GlobalVariable::NotThreadLocal, AddrSpace);
 
     for (ssize_t k = i, idx = 0; k != j; k = GlobalSet.find_next(k), ++idx) {
       GlobalValue::LinkageTypes Linkage = Globals[k]->getLinkage();
       std::string Name = Globals[k]->getName();
-
-      // Copy metadata while adjusting any debug info metadata by the original
-      // global's offset within the merged global.
-      MergedGV->copyMetadata(Globals[k], MergedLayout->getElementOffset(idx));
 
       Constant *Idx[2] = {
         ConstantInt::get(Int32Ty, 0),

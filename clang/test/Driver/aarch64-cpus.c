@@ -131,20 +131,16 @@
 // RUN: %clang -target aarch64 -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN %s
 // RUN: %clang -target aarch64 -mlittle-endian -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN %s
 // RUN: %clang -target aarch64_be -mlittle-endian -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN %s
-// RUN: %clang -target aarch64 -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN-TUNE %s
-// RUN: %clang -target aarch64 -mlittle-endian -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN-TUNE %s
-// RUN: %clang -target aarch64_be -mlittle-endian -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN-TUNE %s
-// VULCAN: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "vulcan" "-target-feature" "+v8.1a"
-// VULCAN-TUNE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "vulcan"
-// VULCAN-TUNE-NOT: +v8.1a
+// RUN: %clang -target aarch64 -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN %s
+// RUN: %clang -target aarch64 -mlittle-endian -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN %s
+// RUN: %clang -target aarch64_be -mlittle-endian -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN %s
+// VULCAN: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "vulcan"
 
 // RUN: %clang -target arm64 -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-VULCAN %s
 // RUN: %clang -target arm64 -mlittle-endian -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-VULCAN %s
-// RUN: %clang -target arm64 -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-VULCAN-TUNE %s
-// RUN: %clang -target arm64 -mlittle-endian -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-VULCAN-TUNE %s
-// ARM64-VULCAN: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "vulcan" "-target-feature" "+v8.1a"
-// ARM64-VULCAN-TUNE: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "vulcan"
-// ARM64-VULCAN-TUNE-NOT: +v8.1a
+// RUN: %clang -target arm64 -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-VULCAN %s
+// RUN: %clang -target arm64 -mlittle-endian -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-VULCAN %s
+// ARM64-VULCAN: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "vulcan"
 
 // RUN: %clang -target aarch64_be -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-BE %s
 // RUN: %clang -target aarch64 -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-BE %s

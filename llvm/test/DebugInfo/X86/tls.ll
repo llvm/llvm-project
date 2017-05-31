@@ -96,8 +96,8 @@
 ; template int func<&glbl>(); // create a second reference to 'glbl'
 
 
-@tls = thread_local global i32 0, align 4, !dbg !13
-@glbl = global i32 0, align 4, !dbg !14
+@tls = thread_local global i32 0, align 4
+@glbl = global i32 0, align 4
 
 ; Function Attrs: nounwind uwtable
 define weak_odr i32 @_Z4funcIXadL_Z4glblEEEiv() #0 !dbg !4 {
@@ -123,8 +123,8 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !10 = !DITemplateValueParameter(tag: DW_TAG_template_value_parameter, name: "I", type: !11, value: i32* @glbl)
 !11 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !8)
 !12 = !{!13, !14}
-!13 = !DIGlobalVariable(name: "tls", line: 1, isLocal: false, isDefinition: true, scope: null, file: !5, type: !8)
-!14 = !DIGlobalVariable(name: "glbl", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !8)
+!13 = !DIGlobalVariable(name: "tls", line: 1, isLocal: false, isDefinition: true, scope: null, file: !5, type: !8, variable: i32* @tls)
+!14 = !DIGlobalVariable(name: "glbl", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !8, variable: i32* @glbl)
 !15 = !{i32 2, !"Dwarf Version", i32 4}
 !16 = !{i32 1, !"Debug Info Version", i32 3}
 !17 = !{!"clang version 3.5 "}

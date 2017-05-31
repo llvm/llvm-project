@@ -106,12 +106,6 @@ private:
   /// \brief The bitstream writer used to emit this precompiled header.
   llvm::BitstreamWriter &Stream;
 
-  /// \brief The buffer associated with the bitstream.
-  const SmallVectorImpl<char> &Buffer;
-
-  /// \brief The PCM manager which manages memory buffers for pcm files.
-  PCMCache *BufferMgr;
-
   /// \brief The ASTContext we're writing.
   ASTContext *Context;
 
@@ -379,10 +373,9 @@ private:
   /// it.
   llvm::SmallSetVector<const DeclContext *, 16> UpdatedDeclContexts;
 
-  /// \brief Keeps track of declarations that we must emit, even though we're
-  /// not guaranteed to be able to find them by walking the AST starting at the
-  /// translation unit.
-  SmallVector<const Decl *, 16> DeclsToEmitEvenIfUnreferenced;
+  /// \brief Keeps track of visible decls that were added in DeclContexts
+  /// coming from another AST file.
+  SmallVector<const Decl *, 16> UpdatingVisibleDecls;
 
   /// \brief The set of Objective-C class that have categories we
   /// should serialize.
@@ -421,9 +414,6 @@ private:
   std::vector<std::unique_ptr<ModuleFileExtensionWriter>>
     ModuleFileExtensionWriters;
 
-  /// \brief Bit position for start of UNHASHED_CONTROL_BLOCK.
-  size_t StartOfUnhashedControl;
-
   /// \brief Retrieve or create a submodule ID for this module.
   unsigned getSubmoduleID(Module *Mod);
 
@@ -431,12 +421,8 @@ private:
   void WriteSubStmt(Stmt *S);
 
   void WriteBlockInfoBlock();
-  void WriteControlBlock(Preprocessor &PP, ASTContext &Context,
-                         StringRef isysroot, const std::string &OutputFile);
-  ASTFileSignature WriteUnhashedControlBlock(Preprocessor &PP,
-                                             ASTContext &Context);
-  /// \brief Calculate hash of the pcm content and write it to SIGNATURE record.
-  ASTFileSignature WriteHash(size_t BlockStartPos);
+  uint64_t WriteControlBlock(Preprocessor &PP, ASTContext &Context,
+                             StringRef isysroot, const std::string &OutputFile);
   void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts,
                        bool Modules);
   void WriteSourceManagerBlock(SourceManager &SourceMgr,
@@ -500,15 +486,14 @@ private:
   void WriteDeclAbbrevs();
   void WriteDecl(ASTContext &Context, Decl *D);
 
-  ASTFileSignature WriteASTCore(Sema &SemaRef, StringRef isysroot,
-                                const std::string &OutputFile,
-                                Module *WritingModule);
+  uint64_t WriteASTCore(Sema &SemaRef,
+                        StringRef isysroot, const std::string &OutputFile,
+                        Module *WritingModule);
 
 public:
   /// \brief Create a new precompiled header writer that outputs to
   /// the given bitstream.
-  ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
-            PCMCache *BufferMgr,
+  ASTWriter(llvm::BitstreamWriter &Stream,
             ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
             bool IncludeTimestamps = true);
   ~ASTWriter() override;
@@ -534,9 +519,9 @@ public:
   ///
   /// \return the module signature, which eventually will be a hash of
   /// the module but currently is merely a random 32-bit number.
-  ASTFileSignature WriteAST(Sema &SemaRef, const std::string &OutputFile,
-                            Module *WritingModule, StringRef isysroot,
-                            bool hasErrors = false);
+  uint64_t WriteAST(Sema &SemaRef, const std::string &OutputFile,
+                    Module *WritingModule, StringRef isysroot,
+                    bool hasErrors = false);
 
   /// \brief Emit a token.
   void AddToken(const Token &Tok, RecordDataImpl &Record);
@@ -682,14 +667,6 @@ private:
   void CompletedTagDefinition(const TagDecl *D) override;
   void AddedVisibleDecl(const DeclContext *DC, const Decl *D) override;
   void AddedCXXImplicitMember(const CXXRecordDecl *RD, const Decl *D) override;
-  void AddedCXXTemplateSpecialization(
-      const ClassTemplateDecl *TD,
-      const ClassTemplateSpecializationDecl *D) override;
-  void AddedCXXTemplateSpecialization(
-      const VarTemplateDecl *TD,
-      const VarTemplateSpecializationDecl *D) override;
-  void AddedCXXTemplateSpecialization(const FunctionTemplateDecl *TD,
-                                      const FunctionDecl *D) override;
   void ResolvedExceptionSpec(const FunctionDecl *FD) override;
   void DeducedReturnType(const FunctionDecl *FD, QualType ReturnType) override;
   void ResolvedOperatorDelete(const CXXDestructorDecl *DD,
@@ -697,7 +674,6 @@ private:
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void StaticDataMemberInstantiated(const VarDecl *D) override;
   void DefaultArgumentInstantiated(const ParmVarDecl *D) override;
-  void DefaultMemberInitializerInstantiated(const FieldDecl *D) override;
   void FunctionDefinitionInstantiated(const FunctionDecl *D) override;
   void AddedObjCCategoryToInterface(const ObjCCategoryDecl *CatD,
                                     const ObjCInterfaceDecl *IFD) override;
@@ -949,7 +925,7 @@ public:
   PCHGenerator(
     const Preprocessor &PP, StringRef OutputFile,
     clang::Module *Module, StringRef isysroot,
-    std::shared_ptr<PCHBuffer> Buffer, PCMCache *BufferMgr,
+    std::shared_ptr<PCHBuffer> Buffer,
     ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
     bool AllowASTWithErrors = false,
     bool IncludeTimestamps = true);

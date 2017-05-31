@@ -2543,8 +2543,8 @@ static void findLiveSetAtInst(Instruction *Inst, GCPtrLivenessData &Data,
   // call result is not live (normal), nor are it's arguments
   // (unless they're used again later).  This adjustment is
   // specifically what we need to relocate
-  computeLiveInValues(BB->rbegin(), ++Inst->getIterator().getReverse(),
-                      LiveOut);
+  BasicBlock::reverse_iterator rend(Inst->getIterator());
+  computeLiveInValues(BB->rbegin(), rend, LiveOut);
   LiveOut.remove(Inst);
   Out.insert(LiveOut.begin(), LiveOut.end());
 }

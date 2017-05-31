@@ -382,11 +382,6 @@ bool AnyFunctionCall::argumentsMayEscape() const {
   if (II->isStr("funopen"))
     return true;
 
-  // - __cxa_demangle - can reallocate memory and can return the pointer to
-  // the input buffer.
-  if (II->isStr("__cxa_demangle"))
-    return true;
-
   StringRef FName = II->getName();
 
   // - CoreFoundation functions that end with "NoCopy" can free a passed-in

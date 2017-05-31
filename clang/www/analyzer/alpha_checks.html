@@ -26,14 +26,13 @@ Patches welcome!
 <ul>
 <li><a href="#core_alpha_checkers">Core Alpha Checkers</a></li>
 <li><a href="#cplusplus_alpha_checkers">C++ Alpha Checkers</a></li>
-<li><a href="#valist_alpha_checkers">Variable Argument Alpha Checkers</a></li>
 <li><a href="#deadcode_alpha_checkers">Dead Code Alpha Checkers</a></li>
 <li><a href="#osx_alpha_checkers">OS X Alpha Checkers</a></li>
 <li><a href="#security_alpha_checkers">Security Alpha Checkers</a></li>
 <li><a href="#unix_alpha_checkers">Unix Alpha Checkers</a></li>
 </ul>
 
-<!-- ============================= core alpha ============================= -->
+<!------------------------------ core alpha ----------------------------------->
 <h3 id="core_alpha_checkers">Core Alpha Checkers</h3>
 <table class="checkers">
 <colgroup><col class="namedescr"><col class="example"></colgroup>
@@ -180,7 +179,7 @@ int test(struct s *p) {
 
 </tbody></table>
 
-<!-- =========================== cplusplus alpha =========================== -->
+<!--------------------------- cplusplus alpha --------------------------------->
 <h3 id="cplusplus_alpha_checkers">C++ Alpha Checkers</h3>
 <table class="checkers">
 <colgroup><col class="namedescr"><col class="example"></colgroup>
@@ -227,76 +226,7 @@ public:
 
 </tbody></table>
 
-
-
-<!-- =============================== va_list =============================== -->
-<h3 id="valist_alpha_checkers">Variable Argument Alpha Checkers</h3>
-<table class="checkers">
-<colgroup><col class="namedescr"><col class="example"></colgroup>
-<thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
-
-<tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
-alpha.valist.CopyToSelf</span><span class="lang">
-(C)</span><div class="descr">
-Calls to the <code>va_copy</code> macro should not copy onto itself.</div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-#include &lt;stdarg.h&gt;
-
-void test(int x, ...) {
-  va_list args;
-  va_start(args, x);
-  va_copy(args, args); // warn
-  va_end(args);
-}
-</pre></div></div></td></tr>
-
-<tr><td><div class="namedescr expandable"><span class="name">
-alpha.valist.Uninitialized</span><span class="lang">
-(C)</span><div class="descr">
-Calls to the <code>va_arg</code>, <code>va_copy</code>, or
-<code>va_end</code> macro must happen after calling <code>va_start</code> and
-before calling <code>va_end</code>.</div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-#include &lt;stdarg.h&gt;
-
-void test(int x, ...) {
-  va_list args;
-  int y = va_arg(args, int); // warn
-}
-</pre></div>
-<div class="example"><pre>
-#include &lt;stdarg.h&gt;
-
-void test(int x, ...) {
-  va_list args;
-  va_start(args, x);
-  va_end(args);
-  int z = va_arg(args, int); // warn
-}
-</pre></div></div></td></tr>
-
-<tr><td><div class="namedescr expandable"><span class="name">
-alpha.valist.Unterminated</span><span class="lang">
-(C)</span><div class="descr">
-Every <code>va_start</code> must be matched by a <code>va_end</code>. A va_list
-can only be ended once.</div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-#include &lt;stdarg.h&gt;
-
-void test(int x, ...) {
-  va_list args;
-  va_start(args, x);
-  int y = x + va_arg(args, int);
-} // warn: missing va_end
-</pre></div></div></td></tr>
-
-</tbody></table>
-
-<!-- =========================== dead code alpha =========================== -->
+<!--------------------------- dead code alpha --------------------------------->
 <h3 id="deadcode_alpha_checkers">Dead Code Alpha Checkers</h3>
 <table class="checkers">
 <colgroup><col class="namedescr"><col class="example"></colgroup>
@@ -337,7 +267,7 @@ void test(id x) {
 </pre></div></div></td></tr>
 </tbody></table>
 
-<!-- ============================== OS X alpha ============================== -->
+<!---------------------------- OS X alpha -------------------------------------->
 <h3 id="osx_alpha_checkers">OS X Alpha Checkers</h3>
 <table class="checkers">
 <colgroup><col class="namedescr"><col class="example"></colgroup>
@@ -503,7 +433,7 @@ invalidatable instance variables.</div></div></td>
 
 </tbody></table>
 
-<!-- =========================== security alpha =========================== -->
+<!------------------------- security alpha ------------------------------------>
 <h3 id="security_alpha_checkers">Security Alpha Checkers</h3>
 <table class="checkers">
 <colgroup><col class="namedescr"><col class="example"></colgroup>
@@ -654,7 +584,7 @@ void test() {
 
 </tbody></table>
 
-<!-- ============================= unix alpha ============================= -->
+<!--------------------------- unix alpha -------------------------------------->
 <h3 id="unix_alpha_checkers">Unix Alpha Checkers</h3>
 <table class="checkers">
 <colgroup><col class="namedescr"><col class="example"></colgroup>

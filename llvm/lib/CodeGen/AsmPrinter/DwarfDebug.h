@@ -135,7 +135,7 @@ public:
     Expr.append(V.Expr.begin(), V.Expr.end());
     FrameIndex.append(V.FrameIndex.begin(), V.FrameIndex.end());
     assert(all_of(Expr, [](const DIExpression *E) {
-             return E && E->isFragment();
+             return E && E->isBitPiece();
            }) && "conflicting locations for variable");
   }
 

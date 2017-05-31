@@ -9,7 +9,6 @@ set(CLANG_BOOTSTRAP_TARGETS
   stage2
   stage2-distribution
   stage2-install-distribution
-  stage2-install-distribution-toolchain
   stage2-check-all
   stage2-check-llvm
   stage2-check-clang

@@ -249,6 +249,17 @@ public:
   /// Add template parameters in buffer.
   void addTemplateParams(DIE &Buffer, DINodeArray TParams);
 
+  /// Add register operand.
+  /// \returns false if the register does not exist, e.g., because it was never
+  /// materialized.
+  bool addRegisterOpPiece(DIELoc &TheDie, unsigned Reg,
+                          unsigned SizeInBits = 0, unsigned OffsetInBits = 0);
+
+  /// Add register offset.
+  /// \returns false if the register does not exist, e.g., because it was never
+  /// materialized.
+  bool addRegisterOffset(DIELoc &TheDie, unsigned Reg, int64_t Offset);
+
   // FIXME: Should be reformulated in terms of addComplexAddress.
   /// Start with the address based on the location provided, and generate the
   /// DWARF information necessary to find the actual Block variable (navigating

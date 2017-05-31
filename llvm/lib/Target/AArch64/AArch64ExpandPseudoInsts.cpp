@@ -714,21 +714,13 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
       .addReg(DestLo.getReg(), getKillRegState(DestLo.isDead()))
       .addOperand(DesiredLo)
       .addImm(0);
-  BuildMI(LoadCmpBB, DL, TII->get(AArch64::CSINCWr), StatusReg)
-    .addUse(AArch64::WZR)
-    .addUse(AArch64::WZR)
-    .addImm(AArch64CC::EQ);
-  BuildMI(LoadCmpBB, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
+  BuildMI(LoadCmpBB, DL, TII->get(AArch64::SBCSXr), AArch64::XZR)
       .addReg(DestHi.getReg(), getKillRegState(DestHi.isDead()))
-      .addOperand(DesiredHi)
-      .addImm(0);
-  BuildMI(LoadCmpBB, DL, TII->get(AArch64::CSINCWr), StatusReg)
-      .addUse(StatusReg, RegState::Kill)
-      .addUse(StatusReg, RegState::Kill)
-      .addImm(AArch64CC::EQ);
-  BuildMI(LoadCmpBB, DL, TII->get(AArch64::CBNZW))
-      .addUse(StatusReg, RegState::Kill)
-      .addMBB(DoneBB);
+      .addOperand(DesiredHi);
+  BuildMI(LoadCmpBB, DL, TII->get(AArch64::Bcc))
+      .addImm(AArch64CC::NE)
+      .addMBB(DoneBB)
+      .addReg(AArch64::NZCV, RegState::Implicit | RegState::Kill);
   LoadCmpBB->addSuccessor(DoneBB);
   LoadCmpBB->addSuccessor(StoreBB);
 

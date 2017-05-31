@@ -147,16 +147,14 @@ unsigned MipsInstrInfo::InsertBranch(MachineBasicBlock &MBB,
 
 unsigned MipsInstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
   MachineBasicBlock::reverse_iterator I = MBB.rbegin(), REnd = MBB.rend();
+  MachineBasicBlock::reverse_iterator FirstBr;
   unsigned removed;
 
   // Skip all the debug instructions.
   while (I != REnd && I->isDebugValue())
     ++I;
 
-  if (I == REnd)
-    return 0;
-
-  MachineBasicBlock::iterator FirstBr = ++I.getReverse();
+  FirstBr = I;
 
   // Up to 2 branches are removed.
   // Note that indirect branches are not removed.
@@ -164,7 +162,7 @@ unsigned MipsInstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
     if (!getAnalyzableBrOpc(I->getOpcode()))
       break;
 
-  MBB.erase((--I).getReverse(), FirstBr);
+  MBB.erase(I.base(), FirstBr.base());
 
   return removed;
 }

@@ -1,12 +1,12 @@
 // Test to make sure basic initialization order errors are caught.
 
-// RUN: %clangxx_asan %macos_min_target_10_11 -O0 %s %p/Helpers/initialization-bug-extra2.cc -o %t-INIT-ORDER-EXE
+// RUN: %clangxx_asan -O0 %s %p/Helpers/initialization-bug-extra2.cc -o %t-INIT-ORDER-EXE
 // RUN: %env_asan_opts=check_initialization_order=true not %run %t-INIT-ORDER-EXE 2>&1 | FileCheck %s
 
 // Do not test with optimization -- the error may be optimized away.
 
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=186
-// XFAIL: win32
+// XFAIL: darwin,win32
 
 // The test is expected to fail on OS X Yosemite and older
 // UNSUPPORTED: osx-no-ld64-live_support

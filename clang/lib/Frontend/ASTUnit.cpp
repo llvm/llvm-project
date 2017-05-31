@@ -185,7 +185,7 @@ struct ASTUnit::ASTWriterData {
   llvm::BitstreamWriter Stream;
   ASTWriter Writer;
 
-  ASTWriterData() : Stream(Buffer), Writer(Stream, Buffer, nullptr, { }) { }
+  ASTWriterData() : Stream(Buffer), Writer(Stream, { }) { }
 };
 
 void ASTUnit::clearFileLevelDecls() {
@@ -923,11 +923,9 @@ class PrecompilePreambleConsumer : public PCHGenerator {
 
 public:
   PrecompilePreambleConsumer(ASTUnit &Unit, PrecompilePreambleAction *Action,
-                             const Preprocessor &PP, PCMCache *BufferMgr,
-                             StringRef isysroot,
+                             const Preprocessor &PP, StringRef isysroot,
                              std::unique_ptr<raw_ostream> Out)
       : PCHGenerator(PP, "", nullptr, isysroot, std::make_shared<PCHBuffer>(),
-                     BufferMgr,
                      ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>>(),
                      /*AllowASTWithErrors=*/true),
         Unit(Unit), Hash(Unit.getCurrentTopLevelHashValue()), Action(Action),
@@ -996,8 +994,7 @@ PrecompilePreambleAction::CreateASTConsumer(CompilerInstance &CI,
       llvm::make_unique<MacroDefinitionTrackerPPCallbacks>(
                                            Unit.getCurrentTopLevelHashValue()));
   return llvm::make_unique<PrecompilePreambleConsumer>(
-      Unit, this, CI.getPreprocessor(), CI.getFileManager().getPCMCache(),
-      Sysroot, std::move(OS));
+      Unit, this, CI.getPreprocessor(), Sysroot, std::move(OS));
 }
 
 static bool isNonDriverDiag(const StoredDiagnostic &StoredDiag) {
@@ -1751,7 +1748,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
     if (!AST)
       return nullptr;
   }
-
+  
   if (!ResourceFilesPath.empty()) {
     // Override the resources path.
     CI->getHeaderSearchOpts().ResourceDir = ResourceFilesPath;
@@ -1983,9 +1980,6 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
 
   if (ModuleFormat)
     CI->getHeaderSearchOpts().ModuleFormat = ModuleFormat.getValue();
-
-  if (ForSerialization)
-    CI->getLangOpts()->NeededByPCHOrCompilationUsesPCH = true;
 
   // Create the AST unit.
   std::unique_ptr<ASTUnit> AST;
@@ -2524,7 +2518,7 @@ bool ASTUnit::serialize(raw_ostream &OS) {
 
   SmallString<128> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
-  ASTWriter Writer(Stream, Buffer, nullptr, { });
+  ASTWriter Writer(Stream, { });
   return serializeUnit(Writer, Buffer, getSema(), hasErrors, OS);
 }
 
@@ -2811,7 +2805,6 @@ const FileEntry *ASTUnit::getPCHFile() {
     switch (M.Kind) {
     case serialization::MK_ImplicitModule:
     case serialization::MK_ExplicitModule:
-    case serialization::MK_PrebuiltModule:
       return true; // skip dependencies.
     case serialization::MK_PCH:
       Mod = &M;

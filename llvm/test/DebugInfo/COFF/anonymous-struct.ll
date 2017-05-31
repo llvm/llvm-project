@@ -36,7 +36,7 @@ target triple = "i686-pc-windows-msvc18.0.0"
 %struct.S = type { i32, %struct.anon }
 %struct.anon = type { i32 }
 
-@s = common global %struct.S zeroinitializer, align 4, !dbg !4
+@s = common global %struct.S zeroinitializer, align 4
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!14, !15}
@@ -46,7 +46,7 @@ target triple = "i686-pc-windows-msvc18.0.0"
 !1 = !DIFile(filename: "-", directory: "/usr/local/google/home/majnemer/llvm/src")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "s", scope: !0, file: !5, line: 5, type: !6, isLocal: false, isDefinition: true)
+!4 = distinct !DIGlobalVariable(name: "s", scope: !0, file: !5, line: 5, type: !6, isLocal: false, isDefinition: true, variable: %struct.S* @s)
 !5 = !DIFile(filename: "<stdin>", directory: "/usr/local/google/home/majnemer/llvm/src")
 !6 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: !5, line: 2, size: 64, align: 32, elements: !7)
 !7 = !{!8, !10}

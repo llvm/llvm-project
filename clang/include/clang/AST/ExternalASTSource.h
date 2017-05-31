@@ -16,7 +16,6 @@
 
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclBase.h"
-#include "clang/Basic/Module.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace clang {
@@ -150,20 +149,20 @@ public:
     StringRef PCHModuleName;
     StringRef Path;
     StringRef ASTFile;
-    ASTFileSignature Signature = {{0}};
+    uint64_t Signature = 0;
     const Module *ClangModule = nullptr;
 
   public:
     ASTSourceDescriptor(){};
     ASTSourceDescriptor(StringRef Name, StringRef Path, StringRef ASTFile,
-                        ASTFileSignature Signature)
+                        uint64_t Signature)
         : PCHModuleName(std::move(Name)), Path(std::move(Path)),
           ASTFile(std::move(ASTFile)), Signature(Signature){};
     ASTSourceDescriptor(const Module &M);
     std::string getModuleName() const;
     StringRef getPath() const { return Path; }
     StringRef getASTFile() const { return ASTFile; }
-    ASTFileSignature getSignature() const { return Signature; }
+    uint64_t getSignature() const { return Signature; }
     const Module *getModuleOrNull() const { return ClangModule; }
   };
 

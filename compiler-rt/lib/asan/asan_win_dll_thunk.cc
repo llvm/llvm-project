@@ -30,8 +30,6 @@ void *__stdcall GetProcAddress(void *module, const char *proc_name);
 void abort();
 }
 
-using namespace __sanitizer;
-
 static uptr getRealProcAddressOrDie(const char *name) {
   uptr ret =
       __interception::InternalGetProcAddress((void *)GetModuleHandleA(0), name);
@@ -201,12 +199,10 @@ static void InterceptHooks();
 // want to call it in the __asan_init interceptor.
 WRAP_W_V(__asan_should_detect_stack_use_after_return)
 WRAP_W_V(__asan_should_detect_stack_use_after_scope)
-WRAP_W_V(__asan_get_shadow_memory_dynamic_address)
 
 extern "C" {
   int __asan_option_detect_stack_use_after_return;
   int __asan_option_detect_stack_use_after_scope;
-  uptr __asan_shadow_memory_dynamic_address;
 
   // Manually wrap __asan_init as we need to initialize
   // __asan_option_detect_stack_use_after_return afterwards.
@@ -222,8 +218,6 @@ extern "C" {
         (__asan_should_detect_stack_use_after_return() != 0);
     __asan_option_detect_stack_use_after_scope =
         (__asan_should_detect_stack_use_after_scope() != 0);
-    __asan_shadow_memory_dynamic_address =
-        (uptr)__asan_get_shadow_memory_dynamic_address();
 
     InterceptHooks();
   }
@@ -337,8 +331,6 @@ INTERFACE_FUNCTION(__sanitizer_get_total_unique_coverage)
 INTERFACE_FUNCTION(__sanitizer_get_unmapped_bytes)
 INTERFACE_FUNCTION(__sanitizer_maybe_open_cov_file)
 INTERFACE_FUNCTION(__sanitizer_print_stack_trace)
-INTERFACE_FUNCTION(__sanitizer_symbolize_pc)
-INTERFACE_FUNCTION(__sanitizer_symbolize_global)
 INTERFACE_FUNCTION(__sanitizer_ptr_cmp)
 INTERFACE_FUNCTION(__sanitizer_ptr_sub)
 INTERFACE_FUNCTION(__sanitizer_report_error_summary)

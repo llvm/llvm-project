@@ -11,7 +11,6 @@
 #endif
 
 EXTERN_C int printf(const char *,...);
-EXTERN_C int scanf(const char *, ...);
 
 typedef enum { Constant = 0 } TestEnum;
 // Note that in C, the type of 'Constant' is 'int'. In C++ it is 'TestEnum'.
@@ -35,18 +34,3 @@ void testLong(LongEnum input) {
   printf("%lu", input);
   printf("%lu", LongConstant);
 }
-
-#ifndef __cplusplus
-// GNU C allows forward declaring enums.
-extern enum forward_declared *fwd;
-
-void forward_enum() {
-  printf("%u", fwd); // expected-warning{{format specifies type 'unsigned int' but the argument has type 'enum forward_declared *}}
-  printf("%p", fwd);
-
-  scanf("%c", fwd); // expected-warning{{format specifies type 'char *' but the argument has type 'enum forward_declared *}}
-  scanf("%u", fwd);
-  scanf("%lu", fwd); // expected-warning{{format specifies type 'unsigned long *' but the argument has type 'enum forward_declared *}}
-  scanf("%p", fwd); // expected-warning{{format specifies type 'void **' but the argument has type 'enum forward_declared *}}
-}
-#endif

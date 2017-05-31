@@ -5105,9 +5105,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
   // If the definition is in this basic block, RE points to the definition;
   // otherwise, RE is the rend of the basic block.
   MachineBasicBlock::reverse_iterator
-      RI = ++I.getReverse(),
+      RI = MachineBasicBlock::reverse_iterator(I),
       RE = CmpInstr.getParent() == MI->getParent()
-               ? Def.getReverse() /* points to MI */
+               ? MachineBasicBlock::reverse_iterator(++Def) /* points to MI */
                : CmpInstr.getParent()->rend();
   MachineInstr *Movr0Inst = nullptr;
   for (; RI != RE; ++RI) {
@@ -5253,8 +5253,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
   if (Movr0Inst) {
     // Look backwards until we find a def that doesn't use the current EFLAGS.
     Def = Sub;
-    MachineBasicBlock::reverse_iterator InsertI = Def.getReverse(),
-                                        InsertE = Sub->getParent()->rend();
+    MachineBasicBlock::reverse_iterator
+      InsertI = MachineBasicBlock::reverse_iterator(++Def),
+                InsertE = Sub->getParent()->rend();
     for (; InsertI != InsertE; ++InsertI) {
       MachineInstr *Instr = &*InsertI;
       if (!Instr->readsRegister(X86::EFLAGS, TRI) &&

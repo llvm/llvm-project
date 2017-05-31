@@ -73,8 +73,6 @@ public:
 
 namespace abi = __cxxabiv1;
 
-using namespace __sanitizer;
-
 // We implement a simple two-level cache for type-checking results. For each
 // (vptr,type) pair, a hash is computed. This hash is assumed to be globally
 // unique; if it collides, we will get false negatives, but:

@@ -20,7 +20,7 @@
 
 %class.A = type { i32 }
 
-@a = global %class.A zeroinitializer, align 4, !dbg !22
+@a = global %class.A zeroinitializer, align 4
 @llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 65535, void ()* @_GLOBAL__I_a }]
 
 define internal void @__cxx_global_var_init() section ".text.startup" !dbg !14 {
@@ -81,7 +81,7 @@ attributes #1 = { nounwind readnone }
 !19 = distinct !DISubprogram(name: "", linkageName: "_GLOBAL__I_a", line: 3, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagArtificial, isOptimized: false, unit: !0, scopeLine: 3, file: !1, scope: !15, type: !20, variables: !2)
 !20 = !DISubroutineType(types: !2)
 !21 = !{!22}
-!22 = !DIGlobalVariable(name: "a", line: 8, isLocal: false, isDefinition: true, scope: null, file: !15, type: !4)
+!22 = !DIGlobalVariable(name: "a", line: 8, isLocal: false, isDefinition: true, scope: null, file: !15, type: !4, variable: %class.A* @a)
 !23 = !{i32 2, !"Dwarf Version", i32 4}
 !24 = !{i32 1, !"Debug Info Version", i32 3}
 !25 = !{!"clang version 3.5 (trunk 199923) (llvm/trunk 199940)"}

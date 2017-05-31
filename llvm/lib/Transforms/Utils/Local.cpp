@@ -1057,27 +1057,9 @@ static bool LdStHasDebugValue(DILocalVariable *DIVar, DIExpression *DIExpr,
   return false;
 }
 
-/// See if there is a dbg.value intrinsic for DIVar for the PHI node.
-static bool PhiHasDebugValue(DILocalVariable *DIVar, 
-                             DIExpression *DIExpr,
-                             PHINode *APN) {
-  // Since we can't guarantee that the original dbg.declare instrinsic
-  // is removed by LowerDbgDeclare(), we need to make sure that we are
-  // not inserting the same dbg.value intrinsic over and over.
-  DbgValueList DbgValues;
-  FindAllocaDbgValues(DbgValues, APN);
-  for (auto DVI : DbgValues) {
-    assert (DVI->getValue() == APN);
-    assert (DVI->getOffset() == 0);
-    if ((DVI->getVariable() == DIVar) && (DVI->getExpression() == DIExpr))
-      return true;
-  }
-  return false;
-}
-
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
 /// that has an associated llvm.dbg.decl intrinsic.
-void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
+bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                            StoreInst *SI, DIBuilder &Builder) {
   auto *DIVar = DDI->getVariable();
   auto *DIExpr = DDI->getExpression();
@@ -1091,27 +1073,26 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   if (SExtInst *SExt = dyn_cast<SExtInst>(SI->getOperand(0)))
     ExtendedArg = dyn_cast<Argument>(SExt->getOperand(0));
   if (ExtendedArg) {
-    // We're now only describing a subset of the variable. The fragment we're
+    // We're now only describing a subset of the variable. The piece we're
     // describing will always be smaller than the variable size, because
     // VariableSize == Size of Alloca described by DDI. Since SI stores
     // to the alloca described by DDI, if it's first operand is an extend,
     // we're guaranteed that before extension, the value was narrower than
     // the size of the alloca, hence the size of the described variable.
     SmallVector<uint64_t, 3> Ops;
-    unsigned FragmentOffset = 0;
-    // If this already is a bit fragment, we drop the bit fragment from the
-    // expression and record the offset.
-    auto Fragment = DIExpr->getFragmentInfo();
-    if (Fragment) {
+    unsigned PieceOffset = 0;
+    // If this already is a bit piece, we drop the bit piece from the expression
+    // and record the offset.
+    if (DIExpr->isBitPiece()) {
       Ops.append(DIExpr->elements_begin(), DIExpr->elements_end()-3);
-      FragmentOffset = Fragment->OffsetInBits;
+      PieceOffset = DIExpr->getBitPieceOffset();
     } else {
       Ops.append(DIExpr->elements_begin(), DIExpr->elements_end());
     }
-    Ops.push_back(dwarf::DW_OP_LLVM_fragment);
-    Ops.push_back(FragmentOffset);
+    Ops.push_back(dwarf::DW_OP_bit_piece);
+    Ops.push_back(PieceOffset); // Offset
     const DataLayout &DL = DDI->getModule()->getDataLayout();
-    Ops.push_back(DL.getTypeSizeInBits(ExtendedArg->getType()));
+    Ops.push_back(DL.getTypeSizeInBits(ExtendedArg->getType())); // Size
     auto NewDIExpr = Builder.createExpression(Ops);
     if (!LdStHasDebugValue(DIVar, NewDIExpr, SI))
       Builder.insertDbgValueIntrinsic(ExtendedArg, 0, DIVar, NewDIExpr,
@@ -1119,18 +1100,19 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   } else if (!LdStHasDebugValue(DIVar, DIExpr, SI))
     Builder.insertDbgValueIntrinsic(SI->getOperand(0), 0, DIVar, DIExpr,
                                     DDI->getDebugLoc(), SI);
+  return true;
 }
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
 /// that has an associated llvm.dbg.decl intrinsic.
-void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
+bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                            LoadInst *LI, DIBuilder &Builder) {
   auto *DIVar = DDI->getVariable();
   auto *DIExpr = DDI->getExpression();
   assert(DIVar && "Missing variable");
 
   if (LdStHasDebugValue(DIVar, DIExpr, LI))
-    return;
+    return true;
 
   // We are now tracking the loaded value instead of the address. In the
   // future if multi-location support is added to the IR, it might be
@@ -1139,28 +1121,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   Instruction *DbgValue = Builder.insertDbgValueIntrinsic(
       LI, 0, DIVar, DIExpr, DDI->getDebugLoc(), (Instruction *)nullptr);
   DbgValue->insertAfter(LI);
-}
-
-/// Inserts a llvm.dbg.value intrinsic after a phi 
-/// that has an associated llvm.dbg.decl intrinsic.
-void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
-                                           PHINode *APN, DIBuilder &Builder) {
-  auto *DIVar = DDI->getVariable();
-  auto *DIExpr = DDI->getExpression();
-  assert(DIVar && "Missing variable");
-
-  if (PhiHasDebugValue(DIVar, DIExpr, APN))
-    return;
-
-  BasicBlock *BB = APN->getParent();
-  auto InsertionPt = BB->getFirstInsertionPt();
-
-  // The block may be a catchswitch block, which does not have a valid
-  // insertion point.
-  // FIXME: Insert dbg.value markers in the successors when appropriate.
-  if (InsertionPt != BB->end())
-    Builder.insertDbgValueIntrinsic(APN, 0, DIVar, DIExpr, DDI->getDebugLoc(),
-                                    &*InsertionPt);
+  return true;
 }
 
 /// Determine whether this alloca is either a VLA or an array.
@@ -1228,16 +1189,6 @@ DbgDeclareInst *llvm::FindAllocaDbgDeclare(Value *V) {
           return DDI;
 
   return nullptr;
-}
-
-/// FindAllocaDbgValues - Finds the llvm.dbg.value intrinsics describing the
-/// alloca 'V', if any.
-void llvm::FindAllocaDbgValues(DbgValueList &DbgValues, Value *V) {
-  if (auto *L = LocalAsMetadata::getIfExists(V))
-    if (auto *MDV = MetadataAsValue::getIfExists(V->getContext(), L))
-      for (User *U : MDV->users())
-        if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(U))
-          DbgValues.push_back(DVI);
 }
 
 static void DIExprAddDeref(SmallVectorImpl<uint64_t> &Expr) {
@@ -1407,43 +1358,6 @@ static void changeToCall(InvokeInst *II) {
   // Update PHI nodes in the unwind destination
   II->getUnwindDest()->removePredecessor(II->getParent());
   II->eraseFromParent();
-}
-
-BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
-                                                   BasicBlock *UnwindEdge) {
-  BasicBlock *BB = CI->getParent();
-
-  // Convert this function call into an invoke instruction.  First, split the
-  // basic block.
-  BasicBlock *Split =
-      BB->splitBasicBlock(CI->getIterator(), CI->getName() + ".noexc");
-
-  // Delete the unconditional branch inserted by splitBasicBlock
-  BB->getInstList().pop_back();
-
-  // Create the new invoke instruction.
-  SmallVector<Value *, 8> InvokeArgs(CI->arg_begin(), CI->arg_end());
-  SmallVector<OperandBundleDef, 1> OpBundles;
-
-  CI->getOperandBundlesAsDefs(OpBundles);
-
-  // Note: we're round tripping operand bundles through memory here, and that
-  // can potentially be avoided with a cleverer API design that we do not have
-  // as of this time.
-
-  InvokeInst *II = InvokeInst::Create(CI->getCalledValue(), Split, UnwindEdge,
-                                      InvokeArgs, OpBundles, CI->getName(), BB);
-  II->setDebugLoc(CI->getDebugLoc());
-  II->setCallingConv(CI->getCallingConv());
-  II->setAttributes(CI->getAttributes());
-
-  // Make sure that anything using the call now uses the invoke!  This also
-  // updates the CallGraph if present, because it uses a WeakVH.
-  CI->replaceAllUsesWith(II);
-
-  // Delete the original call
-  Split->getInstList().pop_front();
-  return Split;
 }
 
 static bool markAliveBlocks(Function &F,

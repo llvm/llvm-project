@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fsyntax-only -fobjc-arc -fblocks -verify -Wno-objc-root-class -Wblock-capture-autoreleasing %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fsyntax-only -fobjc-arc -fblocks -verify -Wno-objc-root-class %s
 
 typedef unsigned long NSUInteger;
 typedef const void * CFTypeRef;
@@ -807,11 +807,4 @@ int garf() {
   id object;
   TKAssertEqual(object, nil);
   TKAssertEqual(object, (id)nil);
-}
-
-void block_capture_autoreleasing(A * __autoreleasing *a, A **b) { // expected-note {{declare the parameter __autoreleasing explicitly to suppress this warning}} expected-note {{declare the parameter __strong or capture a __block __strong variable to keep values alive across autorelease pools}}
-  ^{
-    (void)*a;
-    (void)*b; // expected-warning {{block captures an autoreleasing out-parameter, which may result in use-after-free bugs}}
-  }();
 }

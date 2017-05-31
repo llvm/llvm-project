@@ -74,8 +74,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const MachineBasicBlock &MBB) {
 /// MBBs start out as #-1. When a MBB is added to a MachineFunction, it
 /// gets the next available unique MBB number. If it is removed from a
 /// MachineFunction, it goes back to being #-1.
-void ilist_callback_traits<MachineBasicBlock>::addNodeToList(
-    MachineBasicBlock *N) {
+void ilist_traits<MachineBasicBlock>::addNodeToList(MachineBasicBlock *N) {
   MachineFunction &MF = *N->getParent();
   N->Number = MF.addToMBBNumbering(N);
 
@@ -86,8 +85,7 @@ void ilist_callback_traits<MachineBasicBlock>::addNodeToList(
     I->AddRegOperandsToUseLists(RegInfo);
 }
 
-void ilist_callback_traits<MachineBasicBlock>::removeNodeFromList(
-    MachineBasicBlock *N) {
+void ilist_traits<MachineBasicBlock>::removeNodeFromList(MachineBasicBlock *N) {
   N->getParent()->removeFromMBBNumbering(N->Number);
   N->Number = -1;
 }
@@ -118,13 +116,15 @@ void ilist_traits<MachineInstr>::removeNodeFromList(MachineInstr *N) {
 
 /// When moving a range of instructions from one MBB list to another, we need to
 /// update the parent pointers and the use/def lists.
-void ilist_traits<MachineInstr>::transferNodesFromList(ilist_traits &FromList,
-                                                       instr_iterator First,
-                                                       instr_iterator Last) {
+void ilist_traits<MachineInstr>::
+transferNodesFromList(ilist_traits<MachineInstr> &FromList,
+                      ilist_iterator<MachineInstr> First,
+                      ilist_iterator<MachineInstr> Last) {
   assert(Parent->getParent() == FromList.Parent->getParent() &&
         "MachineInstr parent mismatch!");
-  assert(this != &FromList && "Called without a real transfer...");
-  assert(Parent != FromList.Parent && "Two lists have the same parent?");
+
+  // Splice within the same MBB -> no change.
+  if (Parent == FromList.Parent) return;
 
   // If splicing between two blocks within the same function, just update the
   // parent pointers.
@@ -132,7 +132,7 @@ void ilist_traits<MachineInstr>::transferNodesFromList(ilist_traits &FromList,
     First->setParent(Parent);
 }
 
-void ilist_traits<MachineInstr>::deleteNode(MachineInstr *MI) {
+void ilist_traits<MachineInstr>::deleteNode(MachineInstr* MI) {
   assert(!MI->getParent() && "MI is still in a block!");
   Parent->getParent()->DeleteMachineInstr(MI);
 }
@@ -149,25 +149,12 @@ MachineBasicBlock::iterator MachineBasicBlock::getFirstNonPHI() {
 MachineBasicBlock::iterator
 MachineBasicBlock::SkipPHIsAndLabels(MachineBasicBlock::iterator I) {
   iterator E = end();
-  while (I != E && (I->isPHI() || I->isPosition()))
-    ++I;
-  // FIXME: This needs to change if we wish to bundle labels
-  // inside the bundle.
-  assert((I == E || !I->isInsideBundle()) &&
-         "First non-phi / non-label instruction is inside a bundle!");
-  return I;
-}
-
-MachineBasicBlock::iterator
-MachineBasicBlock::SkipPHIsLabelsAndDebug(MachineBasicBlock::iterator I) {
-  iterator E = end();
   while (I != E && (I->isPHI() || I->isPosition() || I->isDebugValue()))
     ++I;
   // FIXME: This needs to change if we wish to bundle labels / dbg_values
   // inside the bundle.
   assert((I == E || !I->isInsideBundle()) &&
-         "First non-phi / non-label / non-debug "
-         "instruction is inside a bundle!");
+         "First non-phi / non-label instruction is inside a bundle!");
   return I;
 }
 

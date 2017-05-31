@@ -3,7 +3,7 @@
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    -shared %t.o %t2.o -o %t3.o
-; RUN: llvm-dis %t3.o.0.2.internalize.bc -o - | FileCheck %s
+; RUN: llvm-dis %t3.o.2.internalize.bc -o - | FileCheck %s
 
 %zed = type { i8 }
 define void @foo()  {

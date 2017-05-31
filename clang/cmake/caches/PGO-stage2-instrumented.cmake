@@ -2,7 +2,6 @@ set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
 set(CLANG_BOOTSTRAP_TARGETS
   distribution
   install-distribution
-  install-distribution-toolchain
   check-all
   check-llvm
   check-clang

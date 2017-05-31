@@ -10,7 +10,7 @@
 target triple = "x86_64-linux-gnu"
 
 @_ZTId = external constant i8*
-@zed = global [1 x void ()*] [void ()* @bar], !dbg !11
+@zed = global [1 x void ()*] [void ()* @bar]
 
 define void @foo() !dbg !4 {
   ret void
@@ -42,7 +42,7 @@ lpad:                                             ; preds = %0
 !8 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !9 = distinct !DISubprogram(name: "bar_d", linkageName: "bar", scope: !5, file: !5, line: 3, type: !6, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !10 = !{!11}
-!11 = !DIGlobalVariable(name: "zed", scope: !0, file: !5, line: 6, type: !12, isLocal: false, isDefinition: true)
+!11 = !DIGlobalVariable(name: "zed", scope: !0, file: !5, line: 6, type: !12, isLocal: false, isDefinition: true, variable: [1 x void ()*]* @zed)
 !12 = !DICompositeType(tag: DW_TAG_array_type, baseType: !13, size: 64, align: 64, elements: !15)
 !13 = !DIDerivedType(tag: DW_TAG_typedef, name: "vifunc", file: !5, line: 5, baseType: !14)
 !14 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, size: 64, align: 64)

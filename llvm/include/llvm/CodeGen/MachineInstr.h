@@ -51,8 +51,7 @@ class MachineMemOperand;
 /// without having their destructor called.
 ///
 class MachineInstr
-    : public ilist_node_with_parent<MachineInstr, MachineBasicBlock,
-                                    ilist_sentinel_tracking<true>> {
+    : public ilist_node_with_parent<MachineInstr, MachineBasicBlock> {
 public:
   typedef MachineMemOperand **mmo_iterator;
 
@@ -119,7 +118,7 @@ private:
 
   // Intrusive list support
   friend struct ilist_traits<MachineInstr>;
-  friend struct ilist_callback_traits<MachineBasicBlock>;
+  friend struct ilist_traits<MachineBasicBlock>;
   void setParent(MachineBasicBlock *P) { Parent = P; }
 
   /// This constructor creates a copy of the given

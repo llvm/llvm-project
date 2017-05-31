@@ -170,6 +170,10 @@ private:
   BasicBlock *Block;
 };
 
+template <>
+struct ilist_sentinel_traits<MemoryAccess>
+    : public ilist_half_embedded_sentinel_traits<MemoryAccess> {};
+
 inline raw_ostream &operator<<(raw_ostream &OS, const MemoryAccess &MA) {
   MA.print(OS);
   return OS;

@@ -530,7 +530,7 @@ struct Allocator {
 
     if (delete_size && flags()->new_delete_type_mismatch &&
         delete_size != m->UsedSize()) {
-      ReportNewDeleteSizeMismatch(p, delete_size, stack);
+      ReportNewDeleteSizeMismatch(p, m->UsedSize(), delete_size, stack);
     }
 
     QuarantineChunk(m, ptr, stack, alloc_type);
@@ -673,9 +673,6 @@ uptr AsanChunkView::End() { return Beg() + UsedSize(); }
 uptr AsanChunkView::UsedSize() { return chunk_->UsedSize(); }
 uptr AsanChunkView::AllocTid() { return chunk_->alloc_tid; }
 uptr AsanChunkView::FreeTid() { return chunk_->free_tid; }
-AllocType AsanChunkView::AllocType() {
-  return (enum AllocType)chunk_->alloc_type;
-}
 
 static StackTrace GetStackTraceFromId(u32 id) {
   CHECK(id);

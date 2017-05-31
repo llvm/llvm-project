@@ -69,12 +69,23 @@ struct PdbDbiStream {
   std::vector<PdbDbiModuleInfo> ModInfos;
 };
 
+struct PdbTpiRecord {
+  std::vector<uint8_t> RecordData;
+  codeview::CVType Record;
+};
+
+struct PdbTpiStream {
+  PdbRaw_TpiVer Version;
+  std::vector<PdbTpiRecord> Records;
+};
+
 struct PdbObject {
   Optional<MSFHeaders> Headers;
   Optional<std::vector<uint32_t>> StreamSizes;
   Optional<std::vector<StreamBlockList>> StreamMap;
   Optional<PdbInfoStream> PdbStream;
   Optional<PdbDbiStream> DbiStream;
+  Optional<PdbTpiStream> TpiStream;
 };
 }
 }
@@ -107,6 +118,10 @@ template <> struct MappingTraits<pdb::yaml::PdbDbiStream> {
   static void mapping(IO &IO, pdb::yaml::PdbDbiStream &Obj);
 };
 
+template <> struct MappingTraits<pdb::yaml::PdbTpiStream> {
+  static void mapping(IO &IO, pdb::yaml::PdbTpiStream &Obj);
+};
+
 template <> struct MappingTraits<pdb::yaml::NamedStreamMapping> {
   static void mapping(IO &IO, pdb::yaml::NamedStreamMapping &Obj);
 };
@@ -114,13 +129,11 @@ template <> struct MappingTraits<pdb::yaml::NamedStreamMapping> {
 template <> struct MappingTraits<pdb::yaml::PdbDbiModuleInfo> {
   static void mapping(IO &IO, pdb::yaml::PdbDbiModuleInfo &Obj);
 };
-}
-}
 
-LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(uint32_t)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::StringRef)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::NamedStreamMapping)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbDbiModuleInfo)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::StreamBlockList)
+template <> struct MappingTraits<pdb::yaml::PdbTpiRecord> {
+  static void mapping(IO &IO, pdb::yaml::PdbTpiRecord &Obj);
+};
+}
+}
 
 #endif // LLVM_TOOLS_LLVMPDBDUMP_PDBYAML_H

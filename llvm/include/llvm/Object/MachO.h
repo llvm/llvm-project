@@ -410,8 +410,7 @@ public:
 
   static Triple::ArchType getArch(uint32_t CPUType);
   static Triple getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
-                              const char **McpuDefault = nullptr,
-                              const char **ArchFlag = nullptr);
+                              const char **McpuDefault = nullptr);
   static bool isValidArch(StringRef ArchFlag);
   static Triple getHostArch();
 

@@ -281,9 +281,6 @@ static void ReportPiece(raw_ostream &o,
       ReportMacro(o, cast<PathDiagnosticMacroPiece>(P), FM, SM, LangOpts,
                   indent, depth);
       break;
-    case PathDiagnosticPiece::Note:
-      // FIXME: Extend the plist format to support those.
-      break;
   }
 }
 
@@ -300,42 +297,40 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
     SM = &Diags.front()->path.front()->getLocation().getManager();
 
 
-  auto AddPieceFID = [&FM, &Fids, SM](const PathDiagnosticPiece *Piece)->void {
-    AddFID(FM, Fids, *SM, Piece->getLocation().asLocation());
-    ArrayRef<SourceRange> Ranges = Piece->getRanges();
-    for (const SourceRange &Range : Ranges) {
-      AddFID(FM, Fids, *SM, Range.getBegin());
-      AddFID(FM, Fids, *SM, Range.getEnd());
-    }
-  };
+  for (std::vector<const PathDiagnostic*>::iterator DI = Diags.begin(),
+       DE = Diags.end(); DI != DE; ++DI) {
 
-  for (const PathDiagnostic *D : Diags) {
+    const PathDiagnostic *D = *DI;
 
     SmallVector<const PathPieces *, 5> WorkList;
     WorkList.push_back(&D->path);
 
     while (!WorkList.empty()) {
-      const PathPieces &Path = *WorkList.pop_back_val();
+      const PathPieces &path = *WorkList.pop_back_val();
 
-      for (const auto &Iter : Path) {
-        const PathDiagnosticPiece *Piece = Iter.get();
-        AddPieceFID(Piece);
-
-        if (const PathDiagnosticCallPiece *Call =
-            dyn_cast<PathDiagnosticCallPiece>(Piece)) {
-          if (IntrusiveRefCntPtr<PathDiagnosticEventPiece>
-              CallEnterWithin = Call->getCallEnterWithinCallerEvent())
-            AddPieceFID(CallEnterWithin.get());
-
-          if (IntrusiveRefCntPtr<PathDiagnosticEventPiece>
-              CallEnterEvent = Call->getCallEnterEvent())
-            AddPieceFID(CallEnterEvent.get());
-
-          WorkList.push_back(&Call->path);
+      for (PathPieces::const_iterator I = path.begin(), E = path.end(); I != E;
+           ++I) {
+        const PathDiagnosticPiece *piece = I->get();
+        AddFID(FM, Fids, *SM, piece->getLocation().asLocation());
+        ArrayRef<SourceRange> Ranges = piece->getRanges();
+        for (ArrayRef<SourceRange>::iterator I = Ranges.begin(),
+                                             E = Ranges.end(); I != E; ++I) {
+          AddFID(FM, Fids, *SM, I->getBegin());
+          AddFID(FM, Fids, *SM, I->getEnd());
         }
-        else if (const PathDiagnosticMacroPiece *Macro =
-                 dyn_cast<PathDiagnosticMacroPiece>(Piece)) {
-          WorkList.push_back(&Macro->subPieces);
+
+        if (const PathDiagnosticCallPiece *call =
+            dyn_cast<PathDiagnosticCallPiece>(piece)) {
+          IntrusiveRefCntPtr<PathDiagnosticEventPiece>
+            callEnterWithin = call->getCallEnterWithinCallerEvent();
+          if (callEnterWithin)
+            AddFID(FM, Fids, *SM, callEnterWithin->getLocation().asLocation());
+
+          WorkList.push_back(&call->path);
+        }
+        else if (const PathDiagnosticMacroPiece *macro =
+                 dyn_cast<PathDiagnosticMacroPiece>(piece)) {
+          WorkList.push_back(&macro->subPieces);
         }
       }
     }

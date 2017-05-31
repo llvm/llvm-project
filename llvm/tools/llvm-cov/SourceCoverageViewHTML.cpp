@@ -11,13 +11,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "CoverageReport.h"
 #include "SourceCoverageViewHTML.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 
 using namespace llvm;
@@ -75,7 +72,7 @@ const char *BeginHeader =
 
 const char *CSSForCoverage =
     R"(.red {
-  background-color: #ffd0d0;
+  background-color: #FFD0D0;
 }
 .cyan {
   background-color: cyan;
@@ -91,11 +88,10 @@ pre {
   padding: 5px 10px;
   border-bottom: 1px solid #dbdbdb;
   background-color: #eee;
-  line-height: 35px;
 }
 .centered {
   display: table;
-  margin-left: left;
+  margin-left: auto;
   margin-right: auto;
   border: 1px solid #dbdbdb;
   border-radius: 3px;
@@ -111,28 +107,6 @@ pre {
 }
 table {
   border-collapse: collapse;
-}
-.light-row {
-  background: #ffffff;
-  border: 1px solid #dbdbdb;
-}
-.column-entry {
-  text-align: right;
-}
-.column-entry-left {
-  text-align: left;
-}
-.column-entry-yellow {
-  text-align: right;
-  background-color: #ffffd0;
-}
-.column-entry-red {
-  text-align: right;
-  background-color: #ffd0d0;
-}
-.column-entry-green {
-  text-align: right;
-  background-color: #d0ffd0;
 }
 .line-number {
   text-align: right;
@@ -223,12 +197,6 @@ const char *BeginTable = "<table>";
 
 const char *EndTable = "</table>";
 
-const char *ProjectTitleTag = "h1";
-
-const char *ReportTitleTag = "h2";
-
-const char *CreatedTimeTag = "h4";
-
 std::string getPathToStyle(StringRef ViewPath) {
   std::string PathToStyle = "";
   std::string PathSep = sys::path::get_separator();
@@ -251,12 +219,12 @@ void emitPrelude(raw_ostream &OS, const CoverageViewOptions &Opts,
     OS << "<link rel='stylesheet' type='text/css' href='"
        << escape(PathToStyle, Opts) << "'>";
 
-  OS << EndHeader << "<body>";
+  OS << EndHeader << "<body>" << BeginCenteredDiv;
 }
 
 void emitEpilog(raw_ostream &OS) {
-  OS << "</body>"
-     << "</html>";
+  OS << EndCenteredDiv << "</body>"
+                          "</html>";
 }
 
 } // anonymous namespace
@@ -283,76 +251,27 @@ void CoveragePrinterHTML::closeViewFile(OwnedStream OS) {
   emitEpilog(*OS.get());
 }
 
-/// Emit column labels for the table in the index.
-static void emitColumnLabelsForIndex(raw_ostream &OS) {
-  SmallVector<std::string, 4> Columns;
-  Columns.emplace_back(tag("td", "Filename", "column-entry-left"));
-  for (const char *Label : {"Function Coverage", "Instantiation Coverage",
-                            "Line Coverage", "Region Coverage"})
-    Columns.emplace_back(tag("td", Label, "column-entry"));
-  OS << tag("tr", join(Columns.begin(), Columns.end(), ""));
-}
+Error CoveragePrinterHTML::createIndexFile(ArrayRef<StringRef> SourceFiles) {
+  auto OSOrErr = createOutputStream("index", "html", /*InToplevel=*/true);
+  if (Error E = OSOrErr.takeError())
+    return E;
+  auto OS = std::move(OSOrErr.get());
+  raw_ostream &OSRef = *OS.get();
 
-/// Render a file coverage summary (\p FCS) in a table row. If \p IsTotals is
-/// false, link the summary to \p SF.
-void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
-                                          const FileCoverageSummary &FCS,
-                                          bool IsTotals) const {
-  SmallVector<std::string, 8> Columns;
-
-  // Format a coverage triple and add the result to the list of columns.
-  auto AddCoverageTripleToColumn = [&Columns](unsigned Hit, unsigned Total,
-                                              float Pctg) {
-    std::string S;
-    {
-      raw_string_ostream RSO{S};
-      if (Total)
-        RSO << format("%*.2f", 7, Pctg) << "% ";
-      else
-        RSO << "- ";
-      RSO << '(' << Hit << '/' << Total << ')';
-    }
-    const char *CellClass = "column-entry-yellow";
-    if (Hit == Total)
-      CellClass = "column-entry-green";
-    else if (Pctg < 80.0)
-      CellClass = "column-entry-red";
-    Columns.emplace_back(tag("td", tag("pre", S), CellClass));
-  };
-
-  // Simplify the display file path, and wrap it in a link if requested.
-  std::string Filename;
-  if (IsTotals) {
-    Filename = "TOTALS";
-  } else {
-    SmallString<128> LinkTextStr(sys::path::relative_path(FCS.Name));
-    sys::path::remove_dots(LinkTextStr, /*remove_dot_dots=*/true);
-    sys::path::native(LinkTextStr);
-    std::string LinkText = escape(LinkTextStr, Opts);
+  // Emit a table containing links to reports for each file in the covmapping.
+  assert(Opts.hasOutputDirectory() && "No output directory for index file");
+  emitPrelude(OSRef, Opts, getPathToStyle(""));
+  OSRef << BeginSourceNameDiv << "Index" << EndSourceNameDiv;
+  OSRef << BeginTable;
+  for (StringRef SF : SourceFiles) {
+    std::string LinkText = escape(sys::path::relative_path(SF), Opts);
     std::string LinkTarget =
         escape(getOutputPath(SF, "html", /*InToplevel=*/false), Opts);
-    Filename = a(LinkTarget, LinkText);
+    OSRef << tag("tr", tag("td", tag("pre", a(LinkTarget, LinkText), "code")));
   }
+  OSRef << EndTable;
+  emitEpilog(OSRef);
 
-  Columns.emplace_back(tag("td", tag("pre", Filename)));
-  AddCoverageTripleToColumn(FCS.FunctionCoverage.Executed,
-                            FCS.FunctionCoverage.NumFunctions,
-                            FCS.FunctionCoverage.getPercentCovered());
-  AddCoverageTripleToColumn(FCS.InstantiationCoverage.Executed,
-                            FCS.InstantiationCoverage.NumFunctions,
-                            FCS.InstantiationCoverage.getPercentCovered());
-  AddCoverageTripleToColumn(FCS.LineCoverage.Covered, FCS.LineCoverage.NumLines,
-                            FCS.LineCoverage.getPercentCovered());
-  AddCoverageTripleToColumn(FCS.RegionCoverage.Covered,
-                            FCS.RegionCoverage.NumRegions,
-                            FCS.RegionCoverage.getPercentCovered());
-
-  OS << tag("tr", join(Columns.begin(), Columns.end(), ""), "light-row");
-}
-
-Error CoveragePrinterHTML::createIndexFile(
-    ArrayRef<std::string> SourceFiles,
-    const coverage::CoverageMapping &Coverage) {
   // Emit the default stylesheet.
   auto CSSOrErr = createOutputStream("style", "css", /*InToplevel=*/true);
   if (Error E = CSSOrErr.takeError())
@@ -361,55 +280,18 @@ Error CoveragePrinterHTML::createIndexFile(
   OwnedStream CSS = std::move(CSSOrErr.get());
   CSS->operator<<(CSSForCoverage);
 
-  // Emit a file index along with some coverage statistics.
-  auto OSOrErr = createOutputStream("index", "html", /*InToplevel=*/true);
-  if (Error E = OSOrErr.takeError())
-    return E;
-  auto OS = std::move(OSOrErr.get());
-  raw_ostream &OSRef = *OS.get();
-
-  assert(Opts.hasOutputDirectory() && "No output directory for index file");
-  emitPrelude(OSRef, Opts, getPathToStyle(""));
-
-  // Emit some basic information about the coverage report.
-  if (Opts.hasProjectTitle())
-    OSRef << tag(ProjectTitleTag, escape(Opts.ProjectTitle, Opts));
-  OSRef << tag(ReportTitleTag, "Coverage Report");
-  if (Opts.hasCreatedTime())
-    OSRef << tag(CreatedTimeTag, escape(Opts.CreatedTimeStr, Opts));
-
-  // Emit a link to some documentation.
-  OSRef << tag("p", "Click " +
-                        a("http://clang.llvm.org/docs/"
-                          "SourceBasedCodeCoverage.html#interpreting-reports",
-                          "here") +
-                        " for information about interpreting this report.");
-
-  // Emit a table containing links to reports for each file in the covmapping.
-  OSRef << BeginCenteredDiv << BeginTable;
-  emitColumnLabelsForIndex(OSRef);
-  FileCoverageSummary Totals("TOTALS");
-  auto FileReports =
-      CoverageReport::prepareFileReports(Coverage, Totals, SourceFiles);
-  for (unsigned I = 0, E = FileReports.size(); I < E; ++I)
-    emitFileSummary(OSRef, SourceFiles[I], FileReports[I]);
-  emitFileSummary(OSRef, "Totals", Totals, /*IsTotals=*/true);
-  OSRef << EndTable << EndCenteredDiv
-        << tag("h5", escape(Opts.getLLVMVersionString(), Opts));
-  emitEpilog(OSRef);
-
   return Error::success();
 }
 
 void SourceCoverageViewHTML::renderViewHeader(raw_ostream &OS) {
-  OS << BeginCenteredDiv << BeginTable;
+  OS << BeginTable;
 }
 
 void SourceCoverageViewHTML::renderViewFooter(raw_ostream &OS) {
-  OS << EndTable << EndCenteredDiv;
+  OS << EndTable;
 }
 
-void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS, bool WholeFile) {
+void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS) {
   OS << BeginSourceNameDiv << tag("pre", escape(getSourceName(), getOptions()))
      << EndSourceNameDiv;
 }
@@ -447,17 +329,21 @@ void SourceCoverageViewHTML::renderLine(
 
   unsigned LCol = 1;
   auto Snip = [&](unsigned Start, unsigned Len) {
+    assert(Start + Len <= Line.size() && "Snippet extends past the EOL");
     Snippets.push_back(Line.substr(Start, Len));
     LCol += Len;
   };
 
   Snip(LCol - 1, Segments.empty() ? 0 : (Segments.front()->Col - 1));
 
-  for (unsigned I = 1, E = Segments.size(); I < E; ++I)
+  for (unsigned I = 1, E = Segments.size(); I < E; ++I) {
+    assert(LCol == Segments[I - 1]->Col && "Snippet start position is wrong");
     Snip(LCol - 1, Segments[I]->Col - LCol);
+  }
 
   // |Line| + 1 is needed to avoid underflow when, e.g |Line| = 0 and LCol = 1.
   Snip(LCol - 1, Line.size() + 1 - LCol);
+  assert(LCol == Line.size() + 1 && "Final snippet doesn't reach the EOL");
 
   // 2. Escape all of the snippets.
 
@@ -469,21 +355,26 @@ void SourceCoverageViewHTML::renderLine(
   //    snippet 3, and so on.
 
   Optional<std::string> Color;
-  SmallVector<std::pair<unsigned, unsigned>, 2> HighlightedRanges;
+  SmallVector<std::pair<unsigned, unsigned>, 4> HighlightedRanges;
   auto Highlight = [&](const std::string &Snippet, unsigned LC, unsigned RC) {
-    if (getOptions().Debug)
-      HighlightedRanges.emplace_back(LC, RC);
+    if (getOptions().Debug) {
+      if (!HighlightedRanges.empty() &&
+          HighlightedRanges.back().second == LC - 1) {
+        HighlightedRanges.back().second = RC;
+      } else
+        HighlightedRanges.emplace_back(LC, RC);
+    }
     return tag("span", Snippet, Color.getValue());
   };
 
   auto CheckIfUncovered = [](const coverage::CoverageSegment *S) {
-    return S && S->HasCount && S->Count == 0;
+    return S && (S->HasCount && S->Count == 0);
   };
 
-  if (CheckIfUncovered(WrappedSegment)) {
+  if (CheckIfUncovered(WrappedSegment) ||
+      CheckIfUncovered(Segments.empty() ? nullptr : Segments.front())) {
     Color = "red";
-    if (!Snippets[0].empty())
-      Snippets[0] = Highlight(Snippets[0], 1, 1 + Snippets[0].size());
+    Snippets[0] = Highlight(Snippets[0], 0, Snippets[0].size());
   }
 
   for (unsigned I = 0, E = Segments.size(); I < E; ++I) {
@@ -501,15 +392,16 @@ void SourceCoverageViewHTML::renderLine(
   }
 
   if (Color.hasValue() && Segments.empty())
-    Snippets.back() = Highlight(Snippets.back(), 1, 1 + Snippets.back().size());
+    Snippets.back() = Highlight(Snippets.back(), Snippets[0].size(), 0);
 
   if (getOptions().Debug) {
     for (const auto &Range : HighlightedRanges) {
-      errs() << "Highlighted line " << LineNo << ", " << Range.first << " -> ";
+      errs() << "Highlighted line " << LineNo << ", " << Range.first + 1
+             << " -> ";
       if (Range.second == 0)
         errs() << "?";
       else
-        errs() << Range.second;
+        errs() << Range.second + 1;
       errs() << "\n";
     }
   }
@@ -594,43 +486,6 @@ void SourceCoverageViewHTML::renderInstantiationView(raw_ostream &OS,
                                                      InstantiationView &ISV,
                                                      unsigned ViewDepth) {
   OS << BeginExpansionDiv;
-  if (!ISV.View)
-    OS << BeginSourceNameDiv
-       << tag("pre",
-              escape("Unexecuted instantiation: " + ISV.FunctionName.str(),
-                     getOptions()))
-       << EndSourceNameDiv;
-  else
-    ISV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/true,
-                    ViewDepth);
+  ISV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/true, ViewDepth);
   OS << EndExpansionDiv;
-}
-
-void SourceCoverageViewHTML::renderTitle(raw_ostream &OS, StringRef Title) {
-  if (getOptions().hasProjectTitle())
-    OS << tag(ProjectTitleTag, escape(getOptions().ProjectTitle, getOptions()));
-  OS << tag(ReportTitleTag, escape(Title, getOptions()));
-  if (getOptions().hasCreatedTime())
-    OS << tag(CreatedTimeTag,
-              escape(getOptions().CreatedTimeStr, getOptions()));
-}
-
-void SourceCoverageViewHTML::renderTableHeader(raw_ostream &OS,
-                                               unsigned FirstUncoveredLineNo,
-                                               unsigned ViewDepth) {
-  std::string SourceLabel;
-  if (FirstUncoveredLineNo == 0) {
-    SourceLabel = tag("td", tag("pre", "Source"));
-  } else {
-    std::string LinkTarget = "#L" + utostr(uint64_t(FirstUncoveredLineNo));
-    SourceLabel =
-        tag("td", tag("pre", "Source (" +
-                                 a(LinkTarget, "jump to first uncovered line") +
-                                 ")"));
-  }
-
-  renderLinePrefix(OS, ViewDepth);
-  OS << tag("td", tag("pre", "Line")) << tag("td", tag("pre", "Count"))
-     << SourceLabel;
-  renderLineSuffix(OS, ViewDepth);
 }

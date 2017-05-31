@@ -6,7 +6,7 @@
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
-@grid_points = external global [3 x i32], align 4, !dbg !299
+@grid_points = external global [3 x i32], align 4
 
 ; Function Attrs: nounwind
 define fastcc void @compute_rhs() #0 !dbg !114 {
@@ -352,7 +352,7 @@ attributes #1 = { nounwind readnone }
 !296 = !DILocalVariable(name: "j", line: 907, scope: !293, file: !5, type: !8)
 !297 = !DILocalVariable(name: "k", line: 907, scope: !293, file: !5, type: !8)
 !298 = !{!299, !304, !305, !309, !310, !311, !312, !313, !314, !315, !316, !317, !318, !319, !320, !321, !322, !323, !324, !325, !326, !327, !328, !329, !330, !331, !332, !333, !334, !335, !336, !337, !338, !339, !340, !341, !342, !343, !347, !350, !351, !352, !353, !354, !355, !356, !360, !361, !362, !363, !364, !365, !366, !367, !368, !369, !370, !371, !372, !373, !374, !375, !376, !377, !378, !379, !380, !381, !382, !383, !384, !385, !386, !387, !388, !389, !390, !391, !392, !393, !394, !395, !396, !397, !398, !399, !400, !401, !402, !403, !404, !405, !406, !407, !408, !409, !410, !411, !412, !413, !414, !415, !416, !417, !418, !419, !422, !426, !427, !430, !431, !434, !435, !436, !437}
-!299 = !DIGlobalVariable(name: "grid_points", line: 28, isLocal: true, isDefinition: true, scope: null, file: !300, type: !302)
+!299 = !DIGlobalVariable(name: "grid_points", line: 28, isLocal: true, isDefinition: true, scope: null, file: !300, type: !302, variable: [3 x i32]* @grid_points)
 !300 = !DIFile(filename: "./header.h", directory: "/home/hfinkel/src/NPB2.3-omp-C/BT")
 !301 = !{!"./header.h", !"/home/hfinkel/src/NPB2.3-omp-C/BT"}
 !302 = !DICompositeType(tag: DW_TAG_array_type, size: 96, align: 32, baseType: !8, elements: !303)

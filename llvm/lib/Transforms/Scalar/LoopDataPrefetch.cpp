@@ -334,8 +334,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
       ++NumPrefetches;
       DEBUG(dbgs() << "  Access: " << *PtrValue << ", SCEV: " << *LSCEV
                    << "\n");
-      ORE->emit(OptimizationRemark(DEBUG_TYPE, "Prefetched", MemI)
-                << "prefetched memory access");
+      ORE->emitOptimizationRemark(DEBUG_TYPE, MemI, "prefetched memory access");
 
       MadeChange = true;
     }

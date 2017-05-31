@@ -16,6 +16,9 @@ set(LSAN_SOURCES
 
 set(LSAN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
+add_custom_target(lsan)
+set_target_properties(lsan PROPERTIES FOLDER "Compiler-RT Misc")
+
 add_compiler_rt_object_libraries(RTLSanCommon
     OS ${SANITIZER_COMMON_SUPPORTED_OS}
     ARCHS ${LSAN_COMMON_SUPPORTED_ARCH}
@@ -24,8 +27,6 @@ add_compiler_rt_object_libraries(RTLSanCommon
 
 if(COMPILER_RT_HAS_LSAN)
   foreach(arch ${LSAN_SUPPORTED_ARCH})
-    add_compiler_rt_component(lsan)
-    
     add_compiler_rt_runtime(clang_rt.lsan
       STATIC
       ARCHS ${arch}
@@ -38,3 +39,5 @@ if(COMPILER_RT_HAS_LSAN)
       PARENT_TARGET lsan)
   endforeach()
 endif()
+
+add_dependencies(compiler-rt lsan)

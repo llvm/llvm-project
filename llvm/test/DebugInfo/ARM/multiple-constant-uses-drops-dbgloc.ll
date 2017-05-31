@@ -15,8 +15,8 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7--linux-gnueabihf"
 
-@ch = common global i8 0, align 1, !dbg !8
-@b = common global i32 0, align 4, !dbg !10
+@ch = common global i8 0, align 1
+@b = common global i32 0, align 4
 
 ; Function Attrs: nounwind
 define void @proc() #0 !dbg !4 {
@@ -39,9 +39,9 @@ attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"=
 !5 = !DISubroutineType(types: !6)
 !6 = !{null}
 !7 = !{!8, !10}
-!8 = !DIGlobalVariable(name: "ch", scope: !0, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true)
+!8 = !DIGlobalVariable(name: "ch", scope: !0, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, variable: i8* @ch)
 !9 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_unsigned_char)
-!10 = !DIGlobalVariable(name: "b", scope: !0, file: !1, line: 2, type: !11, isLocal: false, isDefinition: true)
+!10 = !DIGlobalVariable(name: "b", scope: !0, file: !1, line: 2, type: !11, isLocal: false, isDefinition: true, variable: i32* @b)
 !11 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !12 = !{i32 2, !"Dwarf Version", i32 4}
 !13 = !{i32 2, !"Debug Info Version", i32 3}

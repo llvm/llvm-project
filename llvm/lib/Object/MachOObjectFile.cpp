@@ -329,81 +329,6 @@ static Error parseSegmentLoadCommand(
   return Error::success();
 }
 
-static Error checkDyldInfoCommand(const MachOObjectFile *Obj,
-                                  const MachOObjectFile::LoadCommandInfo &Load,
-                                  uint32_t LoadCommandIndex,
-                                  const char **LoadCmd, const char *CmdName) {
-  if (Load.C.cmdsize < sizeof(MachO::dyld_info_command))
-    return malformedError("load command " + Twine(LoadCommandIndex) + " " +
-                          CmdName + " cmdsize too small");
-  if (*LoadCmd != nullptr)
-    return malformedError("more than one LC_DYLD_INFO and or LC_DYLD_INFO_ONLY "
-                          "command");
-  MachO::dyld_info_command DyldInfo =
-    getStruct<MachO::dyld_info_command>(Obj, Load.Ptr);
-  if (DyldInfo.cmdsize != sizeof(MachO::dyld_info_command))
-    return malformedError(Twine(CmdName) + " command " +
-                          Twine(LoadCommandIndex) + " has incorrect cmdsize");
-  uint64_t FileSize = Obj->getData().size();
-  if (DyldInfo.rebase_off > FileSize)
-    return malformedError("rebase_off field of " + Twine(CmdName) +
-                          " command " + Twine(LoadCommandIndex) + " extends "
-                          "past the end of the file");
-  uint64_t BigSize = DyldInfo.rebase_off;
-  BigSize += DyldInfo.rebase_size;
-  if (BigSize > FileSize)
-    return malformedError("rebase_off field plus rebase_size field of " +
-                          Twine(CmdName) + " command " +
-                          Twine(LoadCommandIndex) + " extends past the end of "
-                          "the file");
-  if (DyldInfo.bind_off > FileSize)
-    return malformedError("bind_off field of " + Twine(CmdName) +
-                          " command " + Twine(LoadCommandIndex) + " extends "
-                          "past the end of the file");
-  BigSize = DyldInfo.bind_off;
-  BigSize += DyldInfo.bind_size;
-  if (BigSize > FileSize)
-    return malformedError("bind_off field plus bind_size field of " +
-                          Twine(CmdName) + " command " +
-                          Twine(LoadCommandIndex) + " extends past the end of "
-                          "the file");
-  if (DyldInfo.weak_bind_off > FileSize)
-    return malformedError("weak_bind_off field of " + Twine(CmdName) +
-                          " command " + Twine(LoadCommandIndex) + " extends "
-                          "past the end of the file");
-  BigSize = DyldInfo.weak_bind_off;
-  BigSize += DyldInfo.weak_bind_size;
-  if (BigSize > FileSize)
-    return malformedError("weak_bind_off field plus weak_bind_size field of " +
-                          Twine(CmdName) + " command " +
-                          Twine(LoadCommandIndex) + " extends past the end of "
-                          "the file");
-  if (DyldInfo.lazy_bind_off > FileSize)
-    return malformedError("lazy_bind_off field of " + Twine(CmdName) +
-                          " command " + Twine(LoadCommandIndex) + " extends "
-                          "past the end of the file");
-  BigSize = DyldInfo.lazy_bind_off;
-  BigSize += DyldInfo.lazy_bind_size;
-  if (BigSize > FileSize)
-    return malformedError("lazy_bind_off field plus lazy_bind_size field of " +
-                          Twine(CmdName) + " command " +
-                          Twine(LoadCommandIndex) + " extends past the end of "
-                          "the file");
-  if (DyldInfo.export_off > FileSize)
-    return malformedError("export_off field of " + Twine(CmdName) +
-                          " command " + Twine(LoadCommandIndex) + " extends "
-                          "past the end of the file");
-  BigSize = DyldInfo.export_off;
-  BigSize += DyldInfo.export_size;
-  if (BigSize > FileSize)
-    return malformedError("export_off field plus export_size field of " +
-                          Twine(CmdName) + " command " +
-                          Twine(LoadCommandIndex) + " extends past the end of "
-                          "the file");
-  *LoadCmd = Load.Ptr;
-  return Error::success();
-}
-
 Expected<std::unique_ptr<MachOObjectFile>>
 MachOObjectFile::create(MemoryBufferRef Object, bool IsLittleEndian,
                         bool Is64Bits) {
@@ -501,14 +426,14 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
         return;
       }
       LinkOptHintsLoadCmd = Load.Ptr;
-    } else if (Load.C.cmd == MachO::LC_DYLD_INFO) {
-      if ((Err = checkDyldInfoCommand(this, Load, I, &DyldInfoLoadCmd,
-                                      "LC_DYLD_INFO")))
+    } else if (Load.C.cmd == MachO::LC_DYLD_INFO ||
+               Load.C.cmd == MachO::LC_DYLD_INFO_ONLY) {
+      // Multiple dyldinfo load commands
+      if (DyldInfoLoadCmd) {
+        Err = malformedError("Multiple dyldinfo load commands");
         return;
-    } else if (Load.C.cmd == MachO::LC_DYLD_INFO_ONLY) {
-      if ((Err = checkDyldInfoCommand(this, Load, I, &DyldInfoLoadCmd,
-                                      "LC_DYLD_INFO_ONLY")))
-        return;
+      }
+      DyldInfoLoadCmd = Load.Ptr;
     } else if (Load.C.cmd == MachO::LC_UUID) {
       // Multiple UUID load commands
       if (UuidLoadCmd) {
@@ -1348,19 +1273,14 @@ Triple::ArchType MachOObjectFile::getArch(uint32_t CPUType) {
 }
 
 Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
-                                      const char **McpuDefault,
-                                      const char **ArchFlag) {
+                                      const char **McpuDefault) {
   if (McpuDefault)
     *McpuDefault = nullptr;
-  if (ArchFlag)
-    *ArchFlag = nullptr;
 
   switch (CPUType) {
   case MachO::CPU_TYPE_I386:
     switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
     case MachO::CPU_SUBTYPE_I386_ALL:
-      if (ArchFlag)
-        *ArchFlag = "i386";
       return Triple("i386-apple-darwin");
     default:
       return Triple();
@@ -1368,12 +1288,8 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
   case MachO::CPU_TYPE_X86_64:
     switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
     case MachO::CPU_SUBTYPE_X86_64_ALL:
-      if (ArchFlag)
-        *ArchFlag = "x86_64";
       return Triple("x86_64-apple-darwin");
     case MachO::CPU_SUBTYPE_X86_64_H:
-      if (ArchFlag)
-        *ArchFlag = "x86_64h";
       return Triple("x86_64h-apple-darwin");
     default:
       return Triple();
@@ -1381,50 +1297,30 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
   case MachO::CPU_TYPE_ARM:
     switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
     case MachO::CPU_SUBTYPE_ARM_V4T:
-      if (ArchFlag)
-        *ArchFlag = "armv4t";
       return Triple("armv4t-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V5TEJ:
-      if (ArchFlag)
-        *ArchFlag = "armv5e";
       return Triple("armv5e-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_XSCALE:
-      if (ArchFlag)
-        *ArchFlag = "xscale";
       return Triple("xscale-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V6:
-      if (ArchFlag)
-        *ArchFlag = "armv6";
       return Triple("armv6-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V6M:
       if (McpuDefault)
         *McpuDefault = "cortex-m0";
-      if (ArchFlag)
-        *ArchFlag = "armv6m";
       return Triple("armv6m-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V7:
-      if (ArchFlag)
-        *ArchFlag = "armv7";
       return Triple("armv7-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V7EM:
       if (McpuDefault)
         *McpuDefault = "cortex-m4";
-      if (ArchFlag)
-        *ArchFlag = "armv7em";
       return Triple("thumbv7em-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V7K:
-      if (ArchFlag)
-        *ArchFlag = "armv7k";
       return Triple("armv7k-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V7M:
       if (McpuDefault)
         *McpuDefault = "cortex-m3";
-      if (ArchFlag)
-        *ArchFlag = "armv7m";
       return Triple("thumbv7m-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V7S:
-      if (ArchFlag)
-        *ArchFlag = "armv7s";
       return Triple("armv7s-apple-darwin");
     default:
       return Triple();
@@ -1432,8 +1328,6 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
   case MachO::CPU_TYPE_ARM64:
     switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
     case MachO::CPU_SUBTYPE_ARM64_ALL:
-      if (ArchFlag)
-        *ArchFlag = "arm64";
       return Triple("arm64-apple-darwin");
     default:
       return Triple();
@@ -1441,8 +1335,6 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
   case MachO::CPU_TYPE_POWERPC:
     switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
     case MachO::CPU_SUBTYPE_POWERPC_ALL:
-      if (ArchFlag)
-        *ArchFlag = "ppc";
       return Triple("ppc-apple-darwin");
     default:
       return Triple();
@@ -1450,8 +1342,6 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
   case MachO::CPU_TYPE_POWERPC64:
     switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
     case MachO::CPU_SUBTYPE_POWERPC_ALL:
-      if (ArchFlag)
-        *ArchFlag = "ppc64";
       return Triple("ppc64-apple-darwin");
     default:
       return Triple();

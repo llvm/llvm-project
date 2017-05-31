@@ -25,8 +25,8 @@
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG_subprogram
 
-@x = global i32 (i32)* @_Z4funci, align 8, !dbg !11
-@y = global i32 (i32)* @_Z4funci, align 8, !dbg !16
+@x = global i32 (i32)* @_Z4funci, align 8
+@y = global i32 (i32)* @_Z4funci, align 8
 
 ; Function Attrs: inlinehint nounwind uwtable
 define linkonce_odr i32 @_Z4funci(i32 %i) #0 !dbg !4 {
@@ -58,12 +58,12 @@ attributes #1 = { nounwind readnone }
 !8 = !{!9, !9}
 !9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !10 = !{!11}
-!11 = !DIGlobalVariable(name: "x", line: 4, isLocal: false, isDefinition: true, scope: null, file: !6, type: !12)
+!11 = !DIGlobalVariable(name: "x", line: 4, isLocal: false, isDefinition: true, scope: null, file: !6, type: !12, variable: i32 (i32)** @x)
 !12 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !7)
 !13 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !14, enums: !2, retainedTypes: !2, globals: !15, imports: !2)
 !14 = !DIFile(filename: "b.cpp", directory: "/tmp/dbginfo")
 !15 = !{!16}
-!16 = !DIGlobalVariable(name: "y", line: 4, isLocal: false, isDefinition: true, scope: null, file: !6, type: !12)
+!16 = !DIGlobalVariable(name: "y", line: 4, isLocal: false, isDefinition: true, scope: null, file: !6, type: !12, variable: i32 (i32)** @y)
 !17 = !{i32 2, !"Dwarf Version", i32 4}
 !18 = !{i32 1, !"Debug Info Version", i32 3}
 !19 = !{!"clang version 3.5.0 "}

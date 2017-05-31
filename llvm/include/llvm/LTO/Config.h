@@ -43,19 +43,6 @@ struct Config {
   unsigned OptLevel = 2;
   bool DisableVerify = false;
 
-  /// Disable entirely the optimizer, including importing for ThinLTO
-  bool CodeGenOnly = false;
-
-  /// If this field is set, the set of passes run in the middle-end optimizer
-  /// will be the one specified by the string. Only works with the new pass
-  /// manager as the old one doesn't have this ability.
-  std::string OptPipeline;
-
-  // If this field is set, it has the same effect of specifying an AA pipeline
-  // identified by the string. Only works with the new pass manager, in
-  // conjunction OptPipeline.
-  std::string AAPipeline;
-
   /// Setting this field will replace target triples in input files with this
   /// triple.
   std::string OverrideTriple;
@@ -88,8 +75,8 @@ struct Config {
 
   /// A module hook may be used by a linker to perform actions during the LTO
   /// pipeline. For example, a linker may use this function to implement
-  /// -save-temps. If this function returns false, any further processing for
-  /// that task is aborted.
+  /// -save-temps, or to add its own resolved symbols to the module. If this
+  /// function returns false, any further processing for that task is aborted.
   ///
   /// Module hooks must be thread safe with respect to the linker's internal
   /// data structures. A module hook will never be called concurrently from
@@ -97,7 +84,7 @@ struct Config {
   ///
   /// Note that in out-of-process backend scenarios, none of the hooks will be
   /// called for ThinLTO tasks.
-  typedef std::function<bool(unsigned Task, const Module &)> ModuleHookFn;
+  typedef std::function<bool(unsigned Task, Module &)> ModuleHookFn;
 
   /// This module hook is called after linking (regular LTO) or loading
   /// (ThinLTO) the module, before modifying it.
@@ -142,8 +129,6 @@ struct Config {
         RelocModel(std::move(X.RelocModel)), CodeModel(std::move(X.CodeModel)),
         CGOptLevel(std::move(X.CGOptLevel)), OptLevel(std::move(X.OptLevel)),
         DisableVerify(std::move(X.DisableVerify)),
-        OptPipeline(std::move(X.OptPipeline)),
-        AAPipeline(std::move(X.AAPipeline)),
         OverrideTriple(std::move(X.OverrideTriple)),
         DefaultTriple(std::move(X.DefaultTriple)),
         ShouldDiscardValueNames(std::move(X.ShouldDiscardValueNames)),
@@ -167,8 +152,6 @@ struct Config {
     CGOptLevel = std::move(X.CGOptLevel);
     OptLevel = std::move(X.OptLevel);
     DisableVerify = std::move(X.DisableVerify);
-    OptPipeline = std::move(X.OptPipeline);
-    AAPipeline = std::move(X.AAPipeline);
     OverrideTriple = std::move(X.OverrideTriple);
     DefaultTriple = std::move(X.DefaultTriple);
     ShouldDiscardValueNames = std::move(X.ShouldDiscardValueNames);
@@ -202,6 +185,14 @@ struct Config {
   Error addSaveTemps(std::string OutputFileName,
                      bool UseInputModulePath = false);
 };
+
+/// This type defines a stream callback. A stream callback is used to add a
+/// native object that is generated on the fly. The callee must set up and
+/// return a output stream to write the native object to.
+///
+/// Stream callbacks must be thread safe.
+typedef std::function<std::unique_ptr<raw_pwrite_stream>(unsigned Task)>
+    AddStreamFn;
 
 /// A derived class of LLVMContext that initializes itself according to a given
 /// Config object. The purpose of this class is to tie ownership of the

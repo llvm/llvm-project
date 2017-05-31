@@ -8178,7 +8178,6 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
     Namespc->setInvalidDecl();
   
   ProcessDeclAttributeList(DeclRegionScope, Namespc, AttrList);
-  ProcessAPINotes(Namespc);
 
   // FIXME: Should we be merging attributes?
   if (const VisibilityAttr *Attr = Namespc->getAttr<VisibilityAttr>())
@@ -8550,7 +8549,6 @@ Decl *Sema::ActOnUsingDirective(Scope *S,
 
   if (UDir)
     ProcessDeclAttributeList(S, UDir, AttrList);
-  ProcessAPINotes(UDir);
 
   return UDir;
 }
@@ -9562,7 +9560,6 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S,
     NewTD->setInvalidDecl();
 
   ProcessDeclAttributeList(S, NewTD, AttrList);
-  ProcessAPINotes(NewTD);
 
   CheckTypedefForVariablyModifiedType(S, NewTD);
   Invalid |= NewTD->isInvalidDecl();
@@ -12307,20 +12304,13 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
     // Lookup can return at most two results: the pattern for the field, or the
     // injected class name of the parent record. No other member can have the
     // same name as the field.
-    // In modules mode, lookup can return multiple results (coming from
-    // different modules).
-    assert((getLangOpts().Modules || (!Lookup.empty() && Lookup.size() <= 2)) &&
+    assert(!Lookup.empty() && Lookup.size() <= 2 &&
            "more than two lookup results for field name");
     FieldDecl *Pattern = dyn_cast<FieldDecl>(Lookup[0]);
     if (!Pattern) {
       assert(isa<CXXRecordDecl>(Lookup[0]) &&
              "cannot have other non-field member with same name");
-      for (auto L : Lookup)
-        if (isa<FieldDecl>(L)) {
-          Pattern = cast<FieldDecl>(L);
-          break;
-        }
-      assert(Pattern && "We must have set the Pattern!");
+      Pattern = cast<FieldDecl>(Lookup[1]);
     }
 
     if (InstantiateInClassInitializer(Loc, Field, Pattern,
@@ -12743,9 +12733,6 @@ bool Sema::CheckLiteralOperatorDeclaration(FunctionDecl *FnDecl) {
 
   if (FnDecl->isExternC()) {
     Diag(FnDecl->getLocation(), diag::err_literal_operator_extern_c);
-    if (const LinkageSpecDecl *LSD =
-            FnDecl->getDeclContext()->getExternCContext())
-      Diag(LSD->getExternLoc(), diag::note_extern_c_begins_here);
     return true;
   }
 
@@ -13855,9 +13842,6 @@ void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc) {
   if (Fn->isMain())
     Diag(DelLoc, diag::err_deleted_main);
 
-  // C++11 [dcl.fct.def.delete]p4:
-  //  A deleted function is implicitly inline.
-  Fn->setImplicitlyInline();
   Fn->setDeletedAsWritten();
 }
 

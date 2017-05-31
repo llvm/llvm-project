@@ -55,6 +55,8 @@
 //
 // - When (i' - i) is constant but i and i' are not, we could still perform
 //   SLSR.
+#include <vector>
+
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -66,8 +68,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include <list>
-#include <vector>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -80,7 +80,7 @@ class StraightLineStrengthReduce : public FunctionPass {
 public:
   // SLSR candidate. Such a candidate must be in one of the forms described in
   // the header comments.
-  struct Candidate {
+  struct Candidate : public ilist_node<Candidate> {
     enum Kind {
       Invalid, // reserved for the default constructor
       Add,     // B + i * S
@@ -200,7 +200,7 @@ private:
   DominatorTree *DT;
   ScalarEvolution *SE;
   TargetTransformInfo *TTI;
-  std::list<Candidate> Candidates;
+  ilist<Candidate> Candidates;
   // Temporarily holds all instructions that are unlinked (but not deleted) by
   // rewriteCandidateWithBasis. These instructions will be actually removed
   // after all rewriting finishes.

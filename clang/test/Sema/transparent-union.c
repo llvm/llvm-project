@@ -89,12 +89,3 @@ union pr15134v2 {
     unsigned int u3;
   } __attribute__((aligned(8)));
 } __attribute__((transparent_union));
-
-union pr30520v { void b; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'void'}}
-
-union pr30520a { int b[]; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'int []'}}
-
-// expected-note@+1 2 {{forward declaration of 'struct stb'}}
-union pr30520s { struct stb b; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'struct stb'}}
-
-union pr30520s2 { int *v; struct stb b; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'struct stb'}}

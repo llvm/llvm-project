@@ -22,30 +22,20 @@ namespace llvm {
 /// \brief Displays the code coverage report.
 class CoverageReport {
   const CoverageViewOptions &Options;
-  const coverage::CoverageMapping &Coverage;
+  std::unique_ptr<coverage::CoverageMapping> Coverage;
 
-  void render(const FileCoverageSummary &File, raw_ostream &OS) const;
-  void render(const FunctionCoverageSummary &Function, raw_ostream &OS) const;
+  void render(const FileCoverageSummary &File, raw_ostream &OS);
+  void render(const FunctionCoverageSummary &Function, raw_ostream &OS);
 
 public:
   CoverageReport(const CoverageViewOptions &Options,
-                 const coverage::CoverageMapping &Coverage)
-      : Options(Options), Coverage(Coverage) {}
+                 std::unique_ptr<coverage::CoverageMapping> Coverage)
+      : Options(Options), Coverage(std::move(Coverage)) {}
 
-  void renderFunctionReports(ArrayRef<std::string> Files, raw_ostream &OS);
+  void renderFunctionReports(ArrayRef<StringRef> Files, raw_ostream &OS);
 
-  /// Prepare file reports for the files specified in \p Files.
-  static std::vector<FileCoverageSummary>
-  prepareFileReports(const coverage::CoverageMapping &Coverage,
-                     FileCoverageSummary &Totals, ArrayRef<std::string> Files);
-
-  /// Render file reports for every unique file in the coverage mapping.
-  void renderFileReports(raw_ostream &OS) const;
-
-  /// Render file reports for the files specified in \p Files.
-  void renderFileReports(raw_ostream &OS, ArrayRef<std::string> Files) const;
+  void renderFileReports(raw_ostream &OS);
 };
-
-} // end namespace llvm
+}
 
 #endif // LLVM_COV_COVERAGEREPORT_H

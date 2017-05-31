@@ -1522,7 +1522,7 @@ static bool ShouldDiagnoseUnusedDecl(const NamedDecl *D) {
   if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
 
     // White-list anything with an __attribute__((unused)) type.
-    const auto *Ty = VD->getType().getTypePtr();
+    QualType Ty = VD->getType();
 
     // Only look at the outermost level of typedef.
     if (const TypedefType *TT = Ty->getAs<TypedefType>()) {
@@ -1534,10 +1534,6 @@ static bool ShouldDiagnoseUnusedDecl(const NamedDecl *D) {
     // dependent, don't diagnose the variable.
     if (Ty->isIncompleteType() || Ty->isDependentType())
       return false;
-
-    // Look at the element type to ensure that the warning behaviour is
-    // consistent for both scalars and arrays.
-    Ty = Ty->getBaseElementTypeUnsafe();
 
     if (const TagType *TT = Ty->getAs<TagType>()) {
       const TagDecl *Tag = TT->getDecl();
@@ -1899,49 +1895,6 @@ static void filterNonConflictingPreviousTypedefDecls(Sema &S,
   Filter.done();
 }
 
-void Sema::diagnoseRedefinition(SourceLocation Old, SourceLocation New) {
-  SourceManager &SrcMgr = getSourceManager();
-  auto FNewDecLoc = SrcMgr.getDecomposedLoc(New);
-  auto FOldDecLoc = SrcMgr.getDecomposedLoc(Old);
-  auto *FNew = SrcMgr.getFileEntryForID(FNewDecLoc.first);
-  auto *FOld = SrcMgr.getFileEntryForID(FOldDecLoc.first);
-  // Is it the same file and same offset? If so, pointing to redefinition
-  // error to the same file doesn't add much. Provide more information and
-  // mention possible non-modular include.
-  if (FNew == FOld && FNewDecLoc.second == FOldDecLoc.second) {
-    SourceLocation IncludeLoc = SrcMgr.getIncludeLoc(FOldDecLoc.first);
-    if (getLangOpts().Modules) {
-      // Redefinition errors with modules are common with non modular mapped
-      // headers, example: a non-modular header H in module A that also gets
-      // included directly in a TU. Pointing twice to the same header/definition
-      // is confusing, try to get better diagnostics when modules is on.
-      auto OldModLoc = SrcMgr.getModuleImportLoc(Old);
-      if (!OldModLoc.first.isInvalid()) {
-        ModuleMap &Map = PP.getHeaderSearchInfo().getModuleMap();
-        Module *Mod = Map.inferModuleFromLocation(FullSourceLoc(Old, SrcMgr));
-        if (Mod && !IncludeLoc.isInvalid()) {
-          Diag(IncludeLoc, diag::note_redefinition_modules_same_file)
-              << SrcMgr.getFilename(SrcMgr.getSpellingLoc(Old)).str()
-              << Mod->getFullModuleName();
-          if (!Mod->DefinitionLoc.isInvalid())
-            Diag(Mod->DefinitionLoc,
-                 diag::note_redefinition_modules_same_file_modulemap)
-                << SrcMgr.getFilename(SrcMgr.getSpellingLoc(Old)).str()
-                << Mod->getFullModuleName();
-          return;
-        }
-      }
-    } else { // Redefinitions caused by the lack of header guards.
-      Diag(IncludeLoc, diag::note_redefinition_same_file)
-          << SrcMgr.getFilename(SrcMgr.getSpellingLoc(Old)).str();
-      return;
-    }
-  }
-
-  // Redefinition coming from different files or offsets witin a file
-  Diag(Old, diag::note_previous_definition);
-}
-
 bool Sema::isIncompatibleTypedef(TypeDecl *Old, TypedefNameDecl *New) {
   QualType OldType;
   if (TypedefNameDecl *OldTypedef = dyn_cast<TypedefNameDecl>(Old))
@@ -1956,7 +1909,7 @@ bool Sema::isIncompatibleTypedef(TypeDecl *Old, TypedefNameDecl *New) {
     Diag(New->getLocation(), diag::err_redefinition_variably_modified_typedef)
       << Kind << NewType;
     if (Old->getLocation().isValid())
-      diagnoseRedefinition(Old->getLocation(), New->getLocation());
+      Diag(Old->getLocation(), diag::note_previous_definition);
     New->setInvalidDecl();
     return true;
   }
@@ -1969,7 +1922,7 @@ bool Sema::isIncompatibleTypedef(TypeDecl *Old, TypedefNameDecl *New) {
     Diag(New->getLocation(), diag::err_redefinition_different_typedef)
       << Kind << NewType << OldType;
     if (Old->getLocation().isValid())
-      diagnoseRedefinition(Old->getLocation(), New->getLocation());
+      Diag(Old->getLocation(), diag::note_previous_definition);
     New->setInvalidDecl();
     return true;
   }
@@ -2036,7 +1989,7 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
 
     NamedDecl *OldD = OldDecls.getRepresentativeDecl();
     if (OldD->getLocation().isValid())
-      diagnoseRedefinition(OldD->getLocation(), New->getLocation());
+      Diag(OldD->getLocation(), diag::note_previous_definition);
 
     return New->setInvalidDecl();
   }
@@ -2128,7 +2081,7 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
 
     Diag(New->getLocation(), diag::err_redefinition)
       << New->getDeclName();
-    diagnoseRedefinition(Old->getLocation(), New->getLocation());
+    Diag(Old->getLocation(), diag::note_previous_definition);
     return New->setInvalidDecl();
   }
 
@@ -2147,7 +2100,7 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
 
   Diag(New->getLocation(), diag::ext_redefinition_of_typedef)
     << New->getDeclName();
-  diagnoseRedefinition(Old->getLocation(), New->getLocation());
+  Diag(Old->getLocation(), diag::note_previous_definition);
 }
 
 /// DeclhasAttr - returns true if decl Declaration already has the target
@@ -2334,10 +2287,6 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.mergeMinSizeAttr(D, MA->getRange(), AttrSpellingListIndex);
   else if (const auto *OA = dyn_cast<OptimizeNoneAttr>(Attr))
     NewAttr = S.mergeOptimizeNoneAttr(D, OA->getRange(), AttrSpellingListIndex);
-  else if (const auto *SNA = dyn_cast<SwiftNameAttr>(Attr))
-    NewAttr = S.mergeSwiftNameAttr(D, SNA->getRange(), SNA->getName(),
-                                   AMK == Sema::AMK_Override,
-                                   AttrSpellingListIndex);
   else if (const auto *InternalLinkageA = dyn_cast<InternalLinkageAttr>(Attr))
     NewAttr = S.mergeInternalLinkageAttr(
         D, InternalLinkageA->getRange(),
@@ -2354,8 +2303,6 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   else if ((isa<DeprecatedAttr>(Attr) || isa<UnavailableAttr>(Attr)) &&
            (AMK == Sema::AMK_Override ||
             AMK == Sema::AMK_ProtocolImplementation))
-    NewAttr = nullptr;
-  else if (isa<SwiftPrivateAttr>(Attr) && AMK == Sema::AMK_Override)
     NewAttr = nullptr;
   else if (Attr->duplicatesAllowed() || !DeclHasAttr(D, Attr))
     NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
@@ -2424,10 +2371,7 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
                             ? diag::err_alias_after_tentative
                             : diag::err_redefinition;
         S.Diag(VD->getLocation(), Diag) << VD->getDeclName();
-        if (Diag == diag::err_redefinition)
-          S.diagnoseRedefinition(Def->getLocation(), VD->getLocation());
-        else
-          S.Diag(Def->getLocation(), diag::note_previous_definition);
+        S.Diag(Def->getLocation(), diag::note_previous_definition);
         VD->setInvalidDecl();
       }
       ++I;
@@ -2814,7 +2758,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     } else {
       Diag(New->getLocation(), diag::err_redefinition_different_kind)
         << New->getDeclName();
-      diagnoseRedefinition(OldD->getLocation(), New->getLocation());
+      Diag(OldD->getLocation(), diag::note_previous_definition);
       return true;
     }
   }
@@ -3423,11 +3367,11 @@ void Sema::MergeVarDeclTypes(VarDecl *New, VarDecl *Old,
       // We are merging a variable declaration New into Old. If it has an array
       // bound, and that bound differs from Old's bound, we should diagnose the
       // mismatch.
-      if (!NewArray->isIncompleteArrayType() && !NewArray->isDependentType()) {
+      if (!NewArray->isIncompleteArrayType()) {
         for (VarDecl *PrevVD = Old->getMostRecentDecl(); PrevVD;
              PrevVD = PrevVD->getPreviousDecl()) {
           const ArrayType *PrevVDTy = Context.getAsArrayType(PrevVD->getType());
-          if (PrevVDTy->isIncompleteArrayType() || PrevVDTy->isDependentType())
+          if (PrevVDTy->isIncompleteArrayType())
             continue;
 
           if (!Context.hasSameType(NewArray, PrevVDTy))
@@ -3555,8 +3499,8 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   if (!Old) {
     Diag(New->getLocation(), diag::err_redefinition_different_kind)
       << New->getDeclName();
-    diagnoseRedefinition(Previous.getRepresentativeDecl()->getLocation(),
-                         New->getLocation());
+    Diag(Previous.getRepresentativeDecl()->getLocation(),
+         diag::note_previous_definition);
     return New->setInvalidDecl();
   }
 
@@ -3713,16 +3657,29 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   }
 
   // C++ doesn't have tentative definitions, so go right ahead and check here.
+  VarDecl *Def;
   if (getLangOpts().CPlusPlus &&
-      New->isThisDeclarationADefinition() == VarDecl::Definition) {
-    if (Old->isStaticDataMember() && Old->getCanonicalDecl()->isInline() &&
-        Old->getCanonicalDecl()->isConstexpr()) {
+      New->isThisDeclarationADefinition() == VarDecl::Definition &&
+      (Def = Old->getDefinition())) {
+    NamedDecl *Hidden = nullptr;
+    if (!hasVisibleDefinition(Def, &Hidden) &&
+        (New->getFormalLinkage() == InternalLinkage ||
+         New->getDescribedVarTemplate() ||
+         New->getNumTemplateParameterLists() ||
+         New->getDeclContext()->isDependentContext())) {
+      // The previous definition is hidden, and multiple definitions are
+      // permitted (in separate TUs). Form another definition of it.
+    } else if (Old->isStaticDataMember() &&
+               Old->getCanonicalDecl()->isInline() &&
+               Old->getCanonicalDecl()->isConstexpr()) {
       // This definition won't be a definition any more once it's been merged.
       Diag(New->getLocation(),
            diag::warn_deprecated_redundant_constexpr_static_def);
-    } else if (VarDecl *Def = Old->getDefinition()) {
-      if (checkVarDeclRedefinition(Def, New))
-        return;
+    } else {
+      Diag(New->getLocation(), diag::err_redefinition) << New;
+      Diag(Def->getLocation(), diag::note_previous_definition);
+      New->setInvalidDecl();
+      return;
     }
   }
 
@@ -3749,32 +3706,6 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
 
   if (Old->isInline())
     New->setImplicitlyInline();
-}
-
-/// We've just determined that \p Old and \p New both appear to be definitions
-/// of the same variable. Either diagnose or fix the problem.
-bool Sema::checkVarDeclRedefinition(VarDecl *Old, VarDecl *New) {
-  if (!hasVisibleDefinition(Old) &&
-      (New->getFormalLinkage() == InternalLinkage ||
-       New->isInline() ||
-       New->getDescribedVarTemplate() ||
-       New->getNumTemplateParameterLists() ||
-       New->getDeclContext()->isDependentContext())) {
-    // The previous definition is hidden, and multiple definitions are
-    // permitted (in separate TUs). Demote this to a declaration.
-    New->demoteThisDefinitionToDeclaration();
-
-    // Make the canonical definition visible.
-    if (auto *OldTD = Old->getDescribedVarTemplate())
-      makeMergedDefinitionVisible(OldTD, New->getLocation());
-    makeMergedDefinitionVisible(Old, New->getLocation());
-    return false;
-  } else {
-    Diag(New->getLocation(), diag::err_redefinition) << New;
-    diagnoseRedefinition(Old->getLocation(), New->getLocation());
-    New->setInvalidDecl();
-    return true;
-  }
 }
 
 /// ParsedFreeStandingDeclSpec - This method is invoked when a declspec with
@@ -6454,10 +6385,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
   }
 
-  // Find the shadowed declaration before filtering for scope.
-  NamedDecl *ShadowedDecl = D.getCXXScopeSpec().isEmpty()
-                                ? getShadowedDeclaration(NewVD, Previous)
-                                : nullptr;
+  // Diagnose shadowed variables before filtering for scope.
+  if (D.getCXXScopeSpec().isEmpty())
+    CheckShadow(S, NewVD, Previous);
 
   // Don't consider existing declarations that are in a different
   // scope and are out-of-semantic-context declarations (if the new
@@ -6552,10 +6482,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
   }
 
-  // Diagnose shadowed variables iff this isn't a redeclaration.
-  if (ShadowedDecl && !D.isRedeclaration())
-    CheckShadow(NewVD, ShadowedDecl, Previous);
-
   ProcessPragmaWeak(S, NewVD);
 
   // If this is the first declaration of an extern C variable, update
@@ -6618,51 +6544,33 @@ static ShadowedDeclKind computeShadowedDeclKind(const NamedDecl *ShadowedDecl,
   return OldDC->isFileContext() ? SDK_Global : SDK_Local;
 }
 
-/// Return the location of the capture if the given lambda captures the given
-/// variable \p VD, or an invalid source location otherwise.
-static SourceLocation getCaptureLocation(const LambdaScopeInfo *LSI,
-                                         const VarDecl *VD) {
-  for (const LambdaScopeInfo::Capture &Capture : LSI->Captures) {
-    if (Capture.isVariableCapture() && Capture.getVariable() == VD)
-      return Capture.getLocation();
-  }
-  return SourceLocation();
-}
-
-/// \brief Return the declaration shadowed by the given variable \p D, or null
-/// if it doesn't shadow any declaration or shadowing warnings are disabled.
-NamedDecl *Sema::getShadowedDeclaration(const VarDecl *D,
-                                        const LookupResult &R) {
-  // Return if warning is ignored.
-  if (Diags.isIgnored(diag::warn_decl_shadow, R.getNameLoc()))
-    return nullptr;
-
-  // Don't diagnose declarations at file scope.
-  if (D->hasGlobalStorage())
-    return nullptr;
-
-  // Only diagnose if we're shadowing an unambiguous field or variable.
-  if (R.getResultKind() != LookupResult::Found)
-    return nullptr;
-
-  NamedDecl *ShadowedDecl = R.getFoundDecl();
-  return isa<VarDecl>(ShadowedDecl) || isa<FieldDecl>(ShadowedDecl)
-             ? ShadowedDecl
-             : nullptr;
-}
-
 /// \brief Diagnose variable or built-in function shadowing.  Implements
 /// -Wshadow.
 ///
 /// This method is called whenever a VarDecl is added to a "useful"
 /// scope.
 ///
-/// \param ShadowedDecl the declaration that is shadowed by the given variable
+/// \param S the scope in which the shadowing name is being declared
 /// \param R the lookup of the name
 ///
-void Sema::CheckShadow(VarDecl *D, NamedDecl *ShadowedDecl,
-                       const LookupResult &R) {
+void Sema::CheckShadow(Scope *S, VarDecl *D, const LookupResult& R) {
+  // Return if warning is ignored.
+  if (Diags.isIgnored(diag::warn_decl_shadow, R.getNameLoc()))
+    return;
+
+  // Don't diagnose declarations at file scope.
+  if (D->hasGlobalStorage())
+    return;
+
   DeclContext *NewDC = D->getDeclContext();
+
+  // Only diagnose if we're shadowing an unambiguous field or variable.
+  if (R.getResultKind() != LookupResult::Found)
+    return;
+
+  NamedDecl* ShadowedDecl = R.getFoundDecl();
+  if (!isa<VarDecl>(ShadowedDecl) && !isa<FieldDecl>(ShadowedDecl))
+    return;
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(ShadowedDecl)) {
     // Fields are not shadowed by variables in C++ static methods.
@@ -6694,29 +6602,6 @@ void Sema::CheckShadow(VarDecl *D, NamedDecl *ShadowedDecl,
 
   DeclContext *OldDC = ShadowedDecl->getDeclContext();
 
-  unsigned WarningDiag = diag::warn_decl_shadow;
-  SourceLocation CaptureLoc;
-  if (isa<VarDecl>(ShadowedDecl) && NewDC && isa<CXXMethodDecl>(NewDC)) {
-    if (const auto *RD = dyn_cast<CXXRecordDecl>(NewDC->getParent())) {
-      if (RD->isLambda() && OldDC->Encloses(NewDC->getLexicalParent())) {
-        if (RD->getLambdaCaptureDefault() == LCD_None) {
-          // Try to avoid warnings for lambdas with an explicit capture list.
-          const auto *LSI = cast<LambdaScopeInfo>(getCurFunction());
-          // Warn only when the lambda captures the shadowed decl explicitly.
-          CaptureLoc = getCaptureLocation(LSI, cast<VarDecl>(ShadowedDecl));
-          if (CaptureLoc.isInvalid())
-            WarningDiag = diag::warn_decl_shadow_uncaptured_local;
-        } else {
-          // Remember that this was shadowed so we can avoid the warning if the
-          // shadowed decl isn't captured and the warning settings allow it.
-          cast<LambdaScopeInfo>(getCurFunction())
-              ->ShadowingDecls.push_back({D, cast<VarDecl>(ShadowedDecl)});
-          return;
-        }
-      }
-    }
-  }
-
   // Only warn about certain kinds of shadowing for class members.
   if (NewDC && NewDC->isRecord()) {
     // In particular, don't warn about shadowing non-class members.
@@ -6738,31 +6623,8 @@ void Sema::CheckShadow(VarDecl *D, NamedDecl *ShadowedDecl,
   if (getSourceManager().isInSystemMacro(R.getNameLoc()))
     return;
   ShadowedDeclKind Kind = computeShadowedDeclKind(ShadowedDecl, OldDC);
-  Diag(R.getNameLoc(), WarningDiag) << Name << Kind << OldDC;
-  if (!CaptureLoc.isInvalid())
-    Diag(CaptureLoc, diag::note_var_explicitly_captured_here)
-        << Name << /*explicitly*/ 1;
+  Diag(R.getNameLoc(), diag::warn_decl_shadow) << Name << Kind << OldDC;
   Diag(ShadowedDecl->getLocation(), diag::note_previous_declaration);
-}
-
-/// Diagnose shadowing for variables shadowed in the lambda record \p LambdaRD
-/// when these variables are captured by the lambda.
-void Sema::DiagnoseShadowingLambdaDecls(const LambdaScopeInfo *LSI) {
-  for (const auto &Shadow : LSI->ShadowingDecls) {
-    const VarDecl *ShadowedDecl = Shadow.ShadowedDecl;
-    // Try to avoid the warning when the shadowed decl isn't captured.
-    SourceLocation CaptureLoc = getCaptureLocation(LSI, ShadowedDecl);
-    const DeclContext *OldDC = ShadowedDecl->getDeclContext();
-    Diag(Shadow.VD->getLocation(), CaptureLoc.isInvalid()
-                                       ? diag::warn_decl_shadow_uncaptured_local
-                                       : diag::warn_decl_shadow)
-        << Shadow.VD->getDeclName()
-        << computeShadowedDeclKind(ShadowedDecl, OldDC) << OldDC;
-    if (!CaptureLoc.isInvalid())
-      Diag(CaptureLoc, diag::note_var_explicitly_captured_here)
-          << Shadow.VD->getDeclName() << /*explicitly*/ 0;
-    Diag(ShadowedDecl->getLocation(), diag::note_previous_declaration);
-  }
 }
 
 /// \brief Check -Wshadow without the advantage of a previous lookup.
@@ -6773,8 +6635,7 @@ void Sema::CheckShadow(Scope *S, VarDecl *D) {
   LookupResult R(*this, D->getDeclName(), D->getLocation(),
                  Sema::LookupOrdinaryName, Sema::ForRedeclaration);
   LookupName(R, S);
-  if (NamedDecl *ShadowedDecl = getShadowedDeclaration(D, R))
-    CheckShadow(D, ShadowedDecl, R);
+  CheckShadow(S, D, R);
 }
 
 /// Check if 'E', which is an expression that is about to be modified, refers
@@ -9783,15 +9644,24 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init,
       VDecl->setInvalidDecl();
   }
 
-  // If adding the initializer will turn this declaration into a definition,
-  // and we already have a definition for this variable, diagnose or otherwise
-  // handle the situation.
   VarDecl *Def;
-  if ((Def = VDecl->getDefinition()) && Def != VDecl &&
-      (!VDecl->isStaticDataMember() || VDecl->isOutOfLine()) &&
-      !VDecl->isThisDeclarationADemotedDefinition() &&
-      checkVarDeclRedefinition(Def, VDecl))
-    return;
+  if ((Def = VDecl->getDefinition()) && Def != VDecl) {
+    NamedDecl *Hidden = nullptr;
+    if (!hasVisibleDefinition(Def, &Hidden) &&
+        (VDecl->getFormalLinkage() == InternalLinkage ||
+         VDecl->getDescribedVarTemplate() ||
+         VDecl->getNumTemplateParameterLists() ||
+         VDecl->getDeclContext()->isDependentContext())) {
+      // The previous definition is hidden, and multiple definitions are
+      // permitted (in separate TUs). Form another definition of it.
+    } else {
+      Diag(VDecl->getLocation(), diag::err_redefinition)
+        << VDecl->getDeclName();
+      Diag(Def->getLocation(), diag::note_previous_definition);
+      VDecl->setInvalidDecl();
+      return;
+    }
+  }
 
   if (getLangOpts().CPlusPlus) {
     // C++ [class.static.data]p4
@@ -10180,11 +10050,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl,
     // C++11 [dcl.constexpr]p1: The constexpr specifier shall be applied only to
     // the definition of a variable [...] or the declaration of a static data
     // member.
-    if (Var->isConstexpr() && !Var->isThisDeclarationADefinition() &&
-        !Var->isThisDeclarationADemotedDefinition()) {
-      assert((!Var->isThisDeclarationADemotedDefinition() ||
-              getLangOpts().Modules) &&
-             "Demoting decls is only in the contest of modules!");
+    if (Var->isConstexpr() && !Var->isThisDeclarationADefinition()) {
       if (Var->isStaticDataMember()) {
         // C++1z removes the relevant rule; the in-class declaration is always
         // a definition there.
@@ -10575,13 +10441,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   }
 
   // All the following checks are C++ only.
-  if (!getLangOpts().CPlusPlus) {
-      // If this variable must be emitted, add it as an initializer for the
-      // current module.
-     if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty())
-       Context.addModuleInitializer(ModuleScopes.back().Module, var);
-     return;
-  }
+  if (!getLangOpts().CPlusPlus) return;
 
   if (auto *DD = dyn_cast<DecompositionDecl>(var))
     CheckCompleteDecompositionDeclaration(DD);
@@ -11208,8 +11068,10 @@ void Sema::DiagnoseSizeOfParametersAndReturnValue(
   }
 }
 
-QualType Sema::adjustParameterTypeForObjCAutoRefCount(QualType T,
-                                                      SourceLocation Loc) {
+ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
+                                  SourceLocation NameLoc, IdentifierInfo *Name,
+                                  QualType T, TypeSourceInfo *TSInfo,
+                                  StorageClass SC) {
   // In ARC, infer a lifetime qualifier for appropriate parameter types.
   if (getLangOpts().ObjCAutoRefCount &&
       T.getObjCLifetime() == Qualifiers::OCL_None &&
@@ -11224,7 +11086,7 @@ QualType Sema::adjustParameterTypeForObjCAutoRefCount(QualType T,
       if (!T.isConstQualified()) {
         DelayedDiagnostics.add(
             sema::DelayedDiagnostic::makeForbiddenType(
-            Loc, diag::err_arc_array_param_no_ownership, T, false));
+            NameLoc, diag::err_arc_array_param_no_ownership, T, false));
       }
       lifetime = Qualifiers::OCL_ExplicitNone;
     } else {
@@ -11232,16 +11094,6 @@ QualType Sema::adjustParameterTypeForObjCAutoRefCount(QualType T,
     }
     T = Context.getLifetimeQualifiedType(T, lifetime);
   }
-
-  return T;
-}
-
-ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
-                                  SourceLocation NameLoc, IdentifierInfo *Name,
-                                  QualType T, TypeSourceInfo *TSInfo,
-                                  StorageClass SC) {
-  // Perform Objective-C ARC adjustments.
-  T = adjustParameterTypeForObjCAutoRefCount(T, NameLoc);
 
   ParmVarDecl *New = ParmVarDecl::Create(Context, DC, StartLoc, NameLoc, Name,
                                          Context.getAdjustedParameterType(T),
@@ -11415,8 +11267,9 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
     SkipBody->ShouldSkip = true;
     if (auto *TD = Definition->getDescribedFunctionTemplate())
       makeMergedDefinitionVisible(TD, FD->getLocation());
-    makeMergedDefinitionVisible(const_cast<FunctionDecl*>(Definition),
-                                FD->getLocation());
+    else
+      makeMergedDefinitionVisible(const_cast<FunctionDecl*>(Definition),
+                                  FD->getLocation());
     return;
   }
 
@@ -11970,9 +11823,7 @@ void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
   // Always attach attributes to the underlying decl.
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
     D = TD->getTemplatedDecl();
-
-  ProcessDeclAttributeList(S, D, Attrs.getList());  
-  ProcessAPINotes(D);
+  ProcessDeclAttributeList(S, D, Attrs.getList());
 
   if (CXXMethodDecl *Method = dyn_cast_or_null<CXXMethodDecl>(D))
     if (Method->isStatic())
@@ -13132,7 +12983,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
         // The tag name clashes with something else in the target scope,
         // issue an error and recover by making this tag be anonymous.
         Diag(NameLoc, diag::err_redefinition_different_kind) << Name;
-        diagnoseRedefinition(PrevDecl->getLocation(), NameLoc);
+        Diag(PrevDecl->getLocation(), diag::note_previous_definition);
         Name = nullptr;
         Invalid = true;
       }
@@ -13306,7 +13157,6 @@ CreateNewDecl:
 
   if (Attr)
     ProcessDeclAttributeList(S, New, Attr);
-  ProcessAPINotes(New);
 
   // Set the lexical context. If the tag has a C++ scope specifier, the
   // lexical context will be different from the semantic context.
@@ -14522,7 +14372,6 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
   if (Attr)
     ProcessDeclAttributeList(S, Record, Attr);
-  ProcessAPINotes(Record);
 }
 
 /// \brief Determine whether the given integral value is representable within
@@ -14814,15 +14663,13 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
         Diag(IdLoc, diag::err_redefinition_of_enumerator) << Id;
       else
         Diag(IdLoc, diag::err_redefinition) << Id;
-      diagnoseRedefinition(PrevDecl->getLocation(), IdLoc);
+      Diag(PrevDecl->getLocation(), diag::note_previous_definition);
       return nullptr;
     }
   }
 
   // Process attributes.
   if (Attr) ProcessDeclAttributeList(S, New, Attr);
-
-  ProcessAPINotes(New);
 
   // Register this decl in the current scope stack.
   New->setAccess(TheEnumDecl->getAccess());
@@ -15047,7 +14894,6 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
 
   if (Attr)
     ProcessDeclAttributeList(S, Enum, Attr);
-  ProcessAPINotes(Enum);
 
   if (Enum->isDependentType()) {
     for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
@@ -15317,7 +15163,7 @@ static void checkModuleImportContext(Sema &S, Module *M,
   } else if (!M->IsExternC && ExternCLoc.isValid()) {
     S.Diag(ImportLoc, diag::ext_module_import_in_extern_c)
       << M->getFullModuleName();
-    S.Diag(ExternCLoc, diag::note_extern_c_begins_here);
+    S.Diag(ExternCLoc, diag::note_module_import_in_extern_c);
   }
 }
 
@@ -15371,10 +15217,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation AtLoc,
 
 void Sema::ActOnModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
   checkModuleImportContext(*this, Mod, DirectiveLoc, CurContext, true);
-  BuildModuleInclude(DirectiveLoc, Mod);
-}
 
-void Sema::BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
   // Determine whether we're in the #include buffer for a module. The #includes
   // in that buffer do not qualify as module imports; they're just an
   // implementation detail of us building the module.
@@ -15414,27 +15257,20 @@ void Sema::ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod) {
   VisibleModules.setVisible(Mod, DirectiveLoc);
 }
 
-void Sema::ActOnModuleEnd(SourceLocation EofLoc, Module *Mod) {
-  checkModuleImportContext(*this, Mod, EofLoc, CurContext);
+void Sema::ActOnModuleEnd(SourceLocation DirectiveLoc, Module *Mod) {
+  checkModuleImportContext(*this, Mod, DirectiveLoc, CurContext);
 
   if (getLangOpts().ModulesLocalVisibility) {
+    assert(!ModuleScopes.empty() && ModuleScopes.back().Module == Mod &&
+           "left the wrong module scope");
     VisibleModules = std::move(ModuleScopes.back().OuterVisibleModules);
+    ModuleScopes.pop_back();
+
+    VisibleModules.setVisible(Mod, DirectiveLoc);
     // Leaving a module hides namespace names, so our visible namespace cache
     // is now out of date.
     VisibleNamespaceCache.clear();
   }
-
-  assert(!ModuleScopes.empty() && ModuleScopes.back().Module == Mod &&
-         "left the wrong module scope");
-  ModuleScopes.pop_back();
-
-  // We got to the end of processing a #include of a local module. Create an
-  // ImportDecl as we would for an imported module.
-  FileID File = getSourceManager().getFileID(EofLoc);
-  assert(File != getSourceManager().getMainFileID() &&
-         "end of submodule in main source file");
-  SourceLocation DirectiveLoc = getSourceManager().getIncludeLoc(File);
-  BuildModuleInclude(DirectiveLoc, Mod);
 }
 
 void Sema::createImplicitModuleImportForErrorRecovery(SourceLocation Loc,

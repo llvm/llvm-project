@@ -726,12 +726,6 @@ void ARMInstPrinter::printPKHASRShiftImm(const MCInst *MI, unsigned OpNum,
 void ARMInstPrinter::printRegisterList(const MCInst *MI, unsigned OpNum,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
-  assert(std::is_sorted(MI->begin() + OpNum, MI->end(),
-                        [&](const MCOperand &LHS, const MCOperand &RHS) {
-                          return MRI.getEncodingValue(LHS.getReg()) <
-                                 MRI.getEncodingValue(RHS.getReg());
-                        }));
-
   O << "{";
   for (unsigned i = OpNum, e = MI->getNumOperands(); i != e; ++i) {
     if (i != OpNum)

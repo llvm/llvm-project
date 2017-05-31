@@ -55,15 +55,9 @@ std::pair<Function *, Function *> createSanitizerCtorAndInitFunctions(
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
     StringRef VersionCheckName = StringRef());
 
-/// Rename all the anon globals in the module using a hash computed from
+/// Rename all the anon functions in the module using a hash computed from
 /// the list of public globals in the module.
-bool nameUnamedGlobals(Module &M);
-
-/// \brief Adds global values to the llvm.used list.
-void appendToUsed(Module &M, ArrayRef<GlobalValue *> Values);
-
-/// \brief Adds global values to the llvm.compiler.used list.
-void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
+bool nameUnamedFunctions(Module &M);
 
 } // End llvm namespace
 

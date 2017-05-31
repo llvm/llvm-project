@@ -46,7 +46,7 @@ void SetSandboxingCallback(void (*f)()) {
   sandboxing_callback = f;
 }
 
-void ReportErrorSummary(const char *error_type, const StackTrace *stack) {
+void ReportErrorSummary(const char *error_type, StackTrace *stack) {
 #if !SANITIZER_GO
   if (!common_flags()->print_summary)
     return;
@@ -152,7 +152,7 @@ void MaybeStartBackgroudThread() {
 
 void NOINLINE
 __sanitizer_sandbox_on_notify(__sanitizer_sandbox_arguments *args) {
-  __sanitizer::PrepareForSandboxing(args);
-  if (__sanitizer::sandboxing_callback)
-    __sanitizer::sandboxing_callback();
+  PrepareForSandboxing(args);
+  if (sandboxing_callback)
+    sandboxing_callback();
 }

@@ -35,7 +35,7 @@ namespace llvm {
 namespace detail {
 
 template <typename RangeT>
-using IterOfRange = decltype(std::begin(std::declval<RangeT &>()));
+using IterOfRange = decltype(std::begin(std::declval<RangeT>()));
 
 } // End detail namespace
 
@@ -208,24 +208,11 @@ inline mapped_iterator<ItTy, FuncTy> map_iterator(const ItTy &I, FuncTy F) {
   return mapped_iterator<ItTy, FuncTy>(I, F);
 }
 
-/// Helper to determine if type T has a member called rbegin().
-template <typename Ty> class has_rbegin_impl {
-  typedef char yes[1];
-  typedef char no[2];
-
-  template <typename Inner>
-  static yes& test(Inner *I, decltype(I->rbegin()) * = nullptr);
-
-  template <typename>
-  static no& test(...);
-
-public:
-  static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
-};
-
-/// Metafunction to determine if T& or T has a member called rbegin().
-template <typename Ty>
-struct has_rbegin : has_rbegin_impl<typename std::remove_reference<Ty>::type> {
+/// \brief Metafunction to determine if type T has a member called rbegin().
+template <typename T> struct has_rbegin {
+  template <typename U> static char(&f(const U &, decltype(&U::rbegin)))[1];
+  static char(&f(...))[2];
+  const static bool value = sizeof(f(std::declval<T>(), nullptr)) == 1;
 };
 
 // Returns an iterator_range over the given container which iterates in reverse.
@@ -382,11 +369,6 @@ struct build_index_impl<0, I...> : index_sequence<I...> {};
 template <class... Ts>
 struct index_sequence_for : build_index_impl<sizeof...(Ts)> {};
 
-/// Utility type to build an inheritance chain that makes it easy to rank
-/// overload candidates.
-template <int N> struct rank : rank<N - 1> {};
-template <> struct rank<0> {};
-
 //===----------------------------------------------------------------------===//
 //     Extra additions for arrays
 //===----------------------------------------------------------------------===//
@@ -529,14 +511,6 @@ bool is_contained(R &&Range, const E &Element) {
   return std::find(Range.begin(), Range.end(), Element) != Range.end();
 }
 
-/// Wrapper function around std::count to count the number of times an element
-/// \p Element occurs in the given range \p Range.
-template <typename R, typename E>
-auto count(R &&Range, const E &Element) -> typename std::iterator_traits<
-    decltype(std::begin(Range))>::difference_type {
-  return std::count(std::begin(Range), std::end(Range), Element);
-}
-
 /// Wrapper function around std::count_if to count the number of times an
 /// element satisfying a given predicate occurs in a range.
 template <typename R, typename UnaryPredicate>
@@ -633,70 +607,6 @@ template <typename T> struct deref {
     return func(*lhs, *rhs);
   }
 };
-
-namespace detail {
-template <typename R> class enumerator_impl {
-public:
-  template <typename X> struct result_pair {
-    result_pair(std::size_t Index, X Value) : Index(Index), Value(Value) {}
-
-    const std::size_t Index;
-    X Value;
-  };
-
-  class iterator {
-    typedef
-        typename std::iterator_traits<IterOfRange<R>>::reference iter_reference;
-    typedef result_pair<iter_reference> result_type;
-
-  public:
-    iterator(IterOfRange<R> &&Iter, std::size_t Index)
-        : Iter(Iter), Index(Index) {}
-
-    result_type operator*() const { return result_type(Index, *Iter); }
-
-    iterator &operator++() {
-      ++Iter;
-      ++Index;
-      return *this;
-    }
-
-    bool operator!=(const iterator &RHS) const { return Iter != RHS.Iter; }
-
-  private:
-    IterOfRange<R> Iter;
-    std::size_t Index;
-  };
-
-public:
-  explicit enumerator_impl(R &&Range) : Range(std::forward<R>(Range)) {}
-
-  iterator begin() { return iterator(std::begin(Range), 0); }
-  iterator end() { return iterator(std::end(Range), std::size_t(-1)); }
-
-private:
-  R Range;
-};
-}
-
-/// Given an input range, returns a new range whose values are are pair (A,B)
-/// such that A is the 0-based index of the item in the sequence, and B is
-/// the value from the original sequence.  Example:
-///
-/// std::vector<char> Items = {'A', 'B', 'C', 'D'};
-/// for (auto X : enumerate(Items)) {
-///   printf("Item %d - %c\n", X.Item, X.Value);
-/// }
-///
-/// Output:
-///   Item 0 - A
-///   Item 1 - B
-///   Item 2 - C
-///   Item 3 - D
-///
-template <typename R> detail::enumerator_impl<R> enumerate(R &&Range) {
-  return detail::enumerator_impl<R>(std::forward<R>(Range));
-}
 
 } // End llvm namespace
 

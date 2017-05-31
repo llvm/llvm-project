@@ -24,6 +24,5 @@ inline A<int> ff(int i) {
 struct Aggregate {
   int member;
 };
-bool operator==(Aggregate, Aggregate) = delete;
 
 #endif

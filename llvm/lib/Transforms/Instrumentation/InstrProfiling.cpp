@@ -545,8 +545,31 @@ void InstrProfiling::emitRuntimeHook() {
 }
 
 void InstrProfiling::emitUses() {
-  if (!UsedVars.empty())
-    appendToUsed(*M, UsedVars);
+  if (UsedVars.empty())
+    return;
+
+  GlobalVariable *LLVMUsed = M->getGlobalVariable("llvm.used");
+  std::vector<Constant *> MergedVars;
+  if (LLVMUsed) {
+    // Collect the existing members of llvm.used.
+    ConstantArray *Inits = cast<ConstantArray>(LLVMUsed->getInitializer());
+    for (unsigned I = 0, E = Inits->getNumOperands(); I != E; ++I)
+      MergedVars.push_back(Inits->getOperand(I));
+    LLVMUsed->eraseFromParent();
+  }
+
+  Type *i8PTy = Type::getInt8PtrTy(M->getContext());
+  // Add uses for our data.
+  for (auto *Value : UsedVars)
+    MergedVars.push_back(
+        ConstantExpr::getBitCast(cast<Constant>(Value), i8PTy));
+
+  // Recreate llvm.used.
+  ArrayType *ATy = ArrayType::get(i8PTy, MergedVars.size());
+  LLVMUsed =
+      new GlobalVariable(*M, ATy, false, GlobalValue::AppendingLinkage,
+                         ConstantArray::get(ATy, MergedVars), "llvm.used");
+  LLVMUsed->setSection("llvm.metadata");
 }
 
 void InstrProfiling::emitInitialization() {

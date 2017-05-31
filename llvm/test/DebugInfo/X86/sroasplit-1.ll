@@ -26,8 +26,8 @@
 ; CHECK: ret i32 %[[A]]
 ; Read Var and Piece:
 ; CHECK: ![[VAR]] = !DILocalVariable(name: "i1",{{.*}} line: 11,
-; CHECK: ![[PIECE1]] = !DIExpression(DW_OP_LLVM_fragment, 32, 96)
-; CHECK: ![[PIECE2]] = !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; CHECK: ![[PIECE1]] = !DIExpression(DW_OP_bit_piece, 32, 96)
+; CHECK: ![[PIECE2]] = !DIExpression(DW_OP_bit_piece, 0, 32)
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"

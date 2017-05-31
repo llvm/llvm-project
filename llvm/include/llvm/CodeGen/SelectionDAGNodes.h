@@ -49,6 +49,7 @@ class Value;
 class MCSymbol;
 template <typename T> struct DenseMapInfo;
 template <typename T> struct simplify_type;
+template <typename T> struct ilist_traits;
 
 void checkForCycles(const SDNode *N, const SelectionDAG *DAG = nullptr,
                     bool force = false);
@@ -371,6 +372,14 @@ public:
   bool hasAllowReciprocal() const { return AllowReciprocal; }
   bool hasVectorReduction() const { return VectorReduction; }
 
+  /// Return a raw encoding of the flags.
+  /// This function should only be used to add data to the NodeID value.
+  unsigned getRawFlags() const {
+    return (NoUnsignedWrap << 0) | (NoSignedWrap << 1) | (Exact << 2) |
+    (UnsafeAlgebra << 3) | (NoNaNs << 4) | (NoInfs << 5) |
+    (NoSignedZeros << 6) | (AllowReciprocal << 7);
+  }
+
   /// Clear any flags in this flag set that aren't also set in Flags.
   void intersectWith(const SDNodeFlags *Flags) {
     NoUnsignedWrap &= Flags->NoUnsignedWrap;
@@ -432,6 +441,7 @@ private:
   static const EVT *getValueTypeList(EVT VT);
 
   friend class SelectionDAG;
+  friend struct ilist_traits<SDNode>;
   // TODO: unfriend HandleSDNode once we fix its operand handling.
   friend class HandleSDNode;
 

@@ -27,12 +27,12 @@ public:
   AArch64_MachoTargetObjectFile();
 
   const MCExpr *getTTypeGlobalReference(const GlobalValue *GV,
-                                        unsigned Encoding,
+                                        unsigned Encoding, Mangler &Mang,
                                         const TargetMachine &TM,
                                         MachineModuleInfo *MMI,
                                         MCStreamer &Streamer) const override;
 
-  MCSymbol *getCFIPersonalitySymbol(const GlobalValue *GV,
+  MCSymbol *getCFIPersonalitySymbol(const GlobalValue *GV, Mangler &Mang,
                                     const TargetMachine &TM,
                                     MachineModuleInfo *MMI) const override;
 

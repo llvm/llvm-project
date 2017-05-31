@@ -89,6 +89,10 @@ public:
   /// This is a pointer to the current MachineModuleInfo.
   MachineModuleInfo *MMI;
 
+  /// Name-mangler for global names.
+  ///
+  Mangler *Mang;
+
   /// The symbol for the current function. This is recalculated at the beginning
   /// of each call to runOnMachineFunction().
   ///
@@ -122,16 +126,11 @@ private:
 
   struct HandlerInfo {
     AsmPrinterHandler *Handler;
-    const char *TimerName;
-    const char *TimerDescription;
-    const char *TimerGroupName;
-    const char *TimerGroupDescription;
+    const char *TimerName, *TimerGroupName;
     HandlerInfo(AsmPrinterHandler *Handler, const char *TimerName,
-                const char *TimerDescription, const char *TimerGroupName,
-                const char *TimerGroupDescription)
+                const char *TimerGroupName)
         : Handler(Handler), TimerName(TimerName),
-          TimerDescription(TimerDescription), TimerGroupName(TimerGroupName),
-          TimerGroupDescription(TimerGroupDescription) {}
+          TimerGroupName(TimerGroupName) {}
   };
   /// A vector of all debug/EH info emitters we should use. This vector
   /// maintains ownership of the emitters.
@@ -439,6 +438,10 @@ public:
 
   /// Get the value for DW_AT_APPLE_isa. Zero if no isa encoding specified.
   virtual unsigned getISAEncoding() { return 0; }
+
+  /// EmitDwarfRegOp - Emit a dwarf register operation.
+  virtual void EmitDwarfRegOp(ByteStreamer &BS,
+                              const MachineLocation &MLoc) const;
 
   //===------------------------------------------------------------------===//
   // Dwarf Lowering Routines

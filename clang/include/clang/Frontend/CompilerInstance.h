@@ -286,13 +286,6 @@ public:
     return Invocation->getHeaderSearchOpts();
   }
 
-  APINotesOptions &getAPINotesOpts() {
-    return Invocation->getAPINotesOpts();
-  }
-  const APINotesOptions &getAPINotesOpts() const {
-    return Invocation->getAPINotesOpts();
-  }
-
   LangOptions &getLangOpts() {
     return *Invocation->getLangOpts();
   }
@@ -658,8 +651,6 @@ public:
       bool AllowPCHWithCompilerErrors, Preprocessor &PP, ASTContext &Context,
       const PCHContainerReader &PCHContainerRdr,
       ArrayRef<IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
-      DependencyFileGenerator *DependencyFile,
-      ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
       void *DeserializationListener, bool OwnDeserializationListener,
       bool Preamble, bool UseGlobalModuleIndex);
 

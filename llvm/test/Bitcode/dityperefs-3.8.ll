@@ -4,10 +4,6 @@
 ; Establish a stable order.
 !named = !{!0, !1, !2, !3, !4, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16}
 
-; Since this is incomplete debug info the !dbg attachement will be stripped.
-; This doesn't matter for what is being tested here.
-; CHECK: @G1 = global i32 0
-
 ; CHECK:      !0 = !DIFile(filename: "path/to/file", directory: "/path/to/dir")
 ; CHECK-NEXT: !1 = !DICompositeType(tag: DW_TAG_structure_type, name: "T1"{{.*}}, identifier: "T1")
 ; CHECK-NEXT: !2 = !DICompositeType(tag: DW_TAG_structure_type, name: "T2", scope: !1{{.*}}, baseType: !1, vtableHolder: !1, identifier: "T2")
@@ -18,7 +14,7 @@
 ; CHECK-NEXT: !7 = !DILocalVariable(name: "V1", scope: !6, type: !2)
 ; CHECK-NEXT: !8 = !DIObjCProperty(name: "P1", type: !1)
 ; CHECK-NEXT: !9 = !DITemplateTypeParameter(type: !1)
-; CHECK-NEXT: !10 = !DIGlobalVariable(name: "G",{{.*}} type: !1,
+; CHECK-NEXT: !10 = !DIGlobalVariable(name: "G",{{.*}} type: !1,{{.*}} variable: i32* @G1)
 ; CHECK-NEXT: !11 = !DITemplateValueParameter(type: !1, value: i32* @G1)
 ; CHECK-NEXT: !12 = !DIImportedEntity(tag: DW_TAG_imported_module, name: "T2", scope: !0, entity: !1)
 ; CHECK-NEXT: !13 = !DICompositeType(tag: DW_TAG_structure_type, name: "T3", file: !0, elements: !14, identifier: "T3")

@@ -753,12 +753,6 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     // Note, heap base symbolic regions are assumed to not alias with
     // each other; for example, we assume that malloc returns different address
     // on each invocation.
-    // FIXME: ObjC object pointers always reside on the heap, but currently
-    // we treat their memory space as unknown, because symbolic pointers
-    // to ObjC objects may alias. There should be a way to construct
-    // possibly-aliasing heap-based regions. For instance, MacOSXApiChecker
-    // guesses memory space for ObjC object pointers manually instead of
-    // relying on us.
     if (LeftBase != RightBase &&
         ((!isa<SymbolicRegion>(LeftBase) && !isa<SymbolicRegion>(RightBase)) ||
          (isa<HeapSpaceRegion>(LeftMS) || isa<HeapSpaceRegion>(RightMS))) ){

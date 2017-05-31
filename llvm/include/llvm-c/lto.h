@@ -44,7 +44,7 @@ typedef bool lto_bool_t;
  * @{
  */
 
-#define LTO_API_VERSION 21
+#define LTO_API_VERSION 20
 
 /**
  * \since prior to LTO_API_VERSION=3
@@ -637,29 +637,6 @@ extern LTOObjectBuffer thinlto_module_get_object(thinlto_code_gen_t cg,
                                                  unsigned int index);
 
 /**
- * Returns the number of object files produced by the ThinLTO CodeGenerator.
- *
- * It usually matches the number of input files, but this is not a guarantee of
- * the API and may change in future implementation, so the client should not
- * assume it.
- *
- * \since LTO_API_VERSION=21
- */
-unsigned int thinlto_module_get_num_object_files(thinlto_code_gen_t cg);
-
-/**
- * Returns the path to the ith object file produced by the ThinLTO
- * CodeGenerator.
- *
- * Client should use \p thinlto_module_get_num_object_files() to get the number
- * of available objects.
- *
- * \since LTO_API_VERSION=21
- */
-const char *thinlto_module_get_object_file(thinlto_code_gen_t cg,
-                                           unsigned int index);
-
-/**
  * Sets which PIC code model to generate.
  * Returns true on error (check lto_get_error_message() for details).
  *
@@ -746,17 +723,6 @@ extern void thinlto_codegen_set_cache_entry_expiration(thinlto_code_gen_t cg,
  */
 extern void thinlto_codegen_set_savetemps_dir(thinlto_code_gen_t cg,
                                               const char *save_temps_dir);
-
-/**
- * Set the path to a directory where to save generated object files. This
- * path can be used by a linker to request on-disk files instead of in-memory
- * buffers. When set, results are available through
- * thinlto_module_get_object_file() instead of thinlto_module_get_object().
- *
- * \since LTO_API_VERSION=21
- */
-void thinlto_set_generated_objects_dir(thinlto_code_gen_t cg,
-                                       const char *save_temps_dir);
 
 /**
  * Sets the cpu to generate code for.

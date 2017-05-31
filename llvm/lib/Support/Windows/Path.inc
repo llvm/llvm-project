@@ -238,10 +238,6 @@ std::error_code create_link(const Twine &to, const Twine &from) {
   return std::error_code();
 }
 
-std::error_code create_hard_link(const Twine &to, const Twine &from) {
-	return create_link(to, from);
-}
-
 std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
   SmallVector<wchar_t, 128> path_utf16;
 

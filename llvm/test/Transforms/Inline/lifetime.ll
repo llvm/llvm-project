@@ -98,20 +98,3 @@ define void @test_arrays_alloca() {
 ; CHECK: ret void
   ret void
 }
-
-%swift.error = type opaque
-
-define void @helper_swifterror_alloca() {
-entry:
-  %swifterror = alloca swifterror %swift.error*, align 8
-  store %swift.error* null, %swift.error** %swifterror, align 8
-  ret void
-}
-
-define void @test_swifterror_alloca() {
-; CHECK-LABEL: @test_swifterror_alloca(
-; CHECK-NOT: lifetime
-  call void @helper_swifterror_alloca()
-; CHECK: ret void
-  ret void
-}

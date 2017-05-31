@@ -13,7 +13,17 @@ set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
 foreach(arch ${XRAY_TEST_ARCH})
   set(XRAY_TEST_TARGET_ARCH ${arch})
   string(TOLOWER "-${arch}-${OS_NAME}" XRAY_TEST_CONFIG_SUFFIX)
-  get_test_cc_for_arch(${arch} XRAY_TEST_TARGET_CC XRAY_TEST_TARGET_CFLAGS)
+
+  if(ANDROID OR ${arch} MATCHES "arm|aarch64")
+    # This is only true if we are cross-compiling.
+    # Build all tests with host compiler and use host tools.
+    set(XRAY_TEST_TARGET_CC ${COMPILER_RT_TEST_COMPILER})
+    set(XRAY_TEST_TARGET_CFLAGS ${COMPILER_RT_TEST_COMPILER_CFLAGS})
+  else()
+    get_target_flags_for_arch(${arch} XRAY_TEST_TARGET_CFLAGS)
+    string(REPLACE ";" " " XRAY_TEST_TARGET_CFLAGS "${XRAY_TEST_TARGET_CFLAGS}")
+  endif()
+
   string(TOUPPER ${arch} ARCH_UPPER_CASE)
   set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
 

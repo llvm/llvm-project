@@ -441,9 +441,9 @@ id rdar14061675() {
 // CHECK-NEXT:      </array>
 // CHECK-NEXT:      <key>depth</key><integer>0</integer>
 // CHECK-NEXT:      <key>extended_message</key>
-// CHECK-NEXT:      <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type CFDateRef with a +1 retain count</string>
+// CHECK-NEXT:      <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object with a +1 retain count</string>
 // CHECK-NEXT:      <key>message</key>
-// CHECK-NEXT:      <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type CFDateRef with a +1 retain count</string>
+// CHECK-NEXT:      <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object with a +1 retain count</string>
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:     <dict>
 // CHECK-NEXT:      <key>kind</key><string>control</string>
@@ -911,9 +911,9 @@ id rdar14061675() {
 // CHECK-NEXT:      </array>
 // CHECK-NEXT:      <key>depth</key><integer>0</integer>
 // CHECK-NEXT:      <key>extended_message</key>
-// CHECK-NEXT:      <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type CFTypeRef with a +1 retain count</string>
+// CHECK-NEXT:      <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object with a +1 retain count</string>
 // CHECK-NEXT:      <key>message</key>
-// CHECK-NEXT:      <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type CFTypeRef with a +1 retain count</string>
+// CHECK-NEXT:      <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object with a +1 retain count</string>
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:     <dict>
 // CHECK-NEXT:      <key>kind</key><string>control</string>
@@ -1091,9 +1091,9 @@ id rdar14061675() {
 // CHECK-NEXT:      </array>
 // CHECK-NEXT:      <key>depth</key><integer>0</integer>
 // CHECK-NEXT:      <key>extended_message</key>
-// CHECK-NEXT:      <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type CFStringRef with a +1 retain count</string>
+// CHECK-NEXT:      <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object with a +1 retain count</string>
 // CHECK-NEXT:      <key>message</key>
-// CHECK-NEXT:      <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type CFStringRef with a +1 retain count</string>
+// CHECK-NEXT:      <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object with a +1 retain count</string>
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:     <dict>
 // CHECK-NEXT:      <key>kind</key><string>control</string>
@@ -1466,9 +1466,9 @@ id rdar14061675() {
 // CHECK-NEXT:      </array>
 // CHECK-NEXT:      <key>depth</key><integer>0</integer>
 // CHECK-NEXT:      <key>extended_message</key>
-// CHECK-NEXT:      <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type CFDateRef with a +1 retain count</string>
+// CHECK-NEXT:      <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object with a +1 retain count</string>
 // CHECK-NEXT:      <key>message</key>
-// CHECK-NEXT:      <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type CFDateRef with a +1 retain count</string>
+// CHECK-NEXT:      <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object with a +1 retain count</string>
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:     <dict>
 // CHECK-NEXT:      <key>kind</key><string>control</string>
@@ -1782,9 +1782,9 @@ id rdar14061675() {
 // CHECK-NEXT:      </array>
 // CHECK-NEXT:      <key>depth</key><integer>0</integer>
 // CHECK-NEXT:      <key>extended_message</key>
-// CHECK-NEXT:      <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type CFStringRef with a +1 retain count</string>
+// CHECK-NEXT:      <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object with a +1 retain count</string>
 // CHECK-NEXT:      <key>message</key>
-// CHECK-NEXT:      <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type CFStringRef with a +1 retain count</string>
+// CHECK-NEXT:      <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object with a +1 retain count</string>
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:     <dict>
 // CHECK-NEXT:      <key>kind</key><string>control</string>
@@ -1879,9 +1879,9 @@ id rdar14061675() {
 // CHECK-NEXT:      </array>
 // CHECK-NEXT:      <key>depth</key><integer>0</integer>
 // CHECK-NEXT:      <key>extended_message</key>
-// CHECK-NEXT:      <string>Method returns an instance of NSObject with a +0 retain count</string>
+// CHECK-NEXT:      <string>Method returns an Objective-C object with a +0 retain count</string>
 // CHECK-NEXT:      <key>message</key>
-// CHECK-NEXT:      <string>Method returns an instance of NSObject with a +0 retain count</string>
+// CHECK-NEXT:      <string>Method returns an Objective-C object with a +0 retain count</string>
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:     <dict>
 // CHECK-NEXT:      <key>kind</key><string>control</string>

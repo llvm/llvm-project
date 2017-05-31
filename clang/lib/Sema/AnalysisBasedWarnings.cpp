@@ -56,8 +56,6 @@ using namespace clang;
 namespace {
   class UnreachableCodeHandler : public reachable_code::Callback {
     Sema &S;
-    SourceRange PreviousSilenceableCondVal;
-
   public:
     UnreachableCodeHandler(Sema &s) : S(s) {}
 
@@ -66,14 +64,6 @@ namespace {
                            SourceRange SilenceableCondVal,
                            SourceRange R1,
                            SourceRange R2) override {
-      // Avoid reporting multiple unreachable code diagnostics that are
-      // triggered by the same conditional value.
-      if (PreviousSilenceableCondVal.isValid() &&
-          SilenceableCondVal.isValid() &&
-          PreviousSilenceableCondVal == SilenceableCondVal)
-        return;
-      PreviousSilenceableCondVal = SilenceableCondVal;
-
       unsigned diag = diag::warn_unreachable;
       switch (UK) {
         case reachable_code::UK_Break:

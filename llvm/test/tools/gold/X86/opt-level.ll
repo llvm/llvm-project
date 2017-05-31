@@ -1,13 +1,13 @@
 ; RUN: llvm-as -o %t.bc %s
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so -plugin-opt=save-temps \
 ; RUN:    -plugin-opt=O0 -r -o %t.o %t.bc
-; RUN: llvm-dis < %t.o.0.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llvm-dis < %t.o.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O0 %s
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so -plugin-opt=save-temps \
 ; RUN:    -plugin-opt=O1 -r -o %t.o %t.bc
-; RUN: llvm-dis < %t.o.0.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O1 %s
+; RUN: llvm-dis < %t.o.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O1 %s
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so -plugin-opt=save-temps \
 ; RUN:    -plugin-opt=O2 -r -o %t.o %t.bc
-; RUN: llvm-dis < %t.o.0.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O2 %s
+; RUN: llvm-dis < %t.o.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O2 %s
 
 ; CHECK-O0: define internal void @foo(
 ; CHECK-O1: define internal void @foo(

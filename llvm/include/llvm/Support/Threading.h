@@ -115,13 +115,6 @@ namespace llvm {
     TsanHappensAfter(&flag);
 #endif
   }
-
-  /// Get the amount of currency to use for tasks requiring significant
-  /// memory or other resources. Currently based on physical cores, if
-  /// available for the host system, otherwise falls back to
-  /// thread::hardware_concurrency().
-  /// Returns 1 when LLVM is configured with LLVM_ENABLE_THREADS=OFF
-  unsigned heavyweight_hardware_concurrency();
 }
 
 #endif

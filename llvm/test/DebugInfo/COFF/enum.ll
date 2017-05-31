@@ -8,6 +8,7 @@
 ; CHECK:       FieldList (0x1000) {
 ; CHECK-NEXT:    TypeLeafKind: LF_FIELDLIST (0x1203)
 ; CHECK-NEXT:    Enumerator {
+; CHECK-NEXT:      TypeLeafKind: LF_ENUMERATE (0x1502)
 ; CHECK-NEXT:      AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:      EnumValue: 0
 ; CHECK-NEXT:      Name: BLAH
@@ -26,7 +27,7 @@
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
 
-@"\01?e@@3W4E@@A" = global i32 0, align 4, !dbg !9
+@"\01?e@@3W4E@@A" = global i32 0, align 4
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!10, !11}
@@ -41,7 +42,7 @@ target triple = "i686-pc-windows-msvc18.0.0"
 !6 = !{!7}
 !7 = !DIEnumerator(name: "BLAH", value: 0)
 !8 = !{!9}
-!9 = distinct !DIGlobalVariable(name: "e", linkageName: "\01?e@@3W4E@@A", scope: !0, file: !4, line: 2, type: !3, isLocal: false, isDefinition: true)
+!9 = distinct !DIGlobalVariable(name: "e", linkageName: "\01?e@@3W4E@@A", scope: !0, file: !4, line: 2, type: !3, isLocal: false, isDefinition: true, variable: i32* @"\01?e@@3W4E@@A")
 !10 = !{i32 2, !"CodeView", i32 1}
 !11 = !{i32 2, !"Debug Info Version", i32 3}
 !12 = !{!"clang version 3.9.0 (trunk 272790) (llvm/trunk 272813)"}

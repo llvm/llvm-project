@@ -66,7 +66,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Look for the file entry. This only fails if the expected size or
   // modification time differ.
   const FileEntry *Entry;
-  if (Type == MK_ExplicitModule || Type == MK_PrebuiltModule) {
+  if (Type == MK_ExplicitModule) {
     // If we're not expecting to pull this file out of the module cache, it
     // might have a different mtime due to being moved across filesystems in
     // a distributed build. The size must still match, though. (As must the
@@ -93,7 +93,13 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     New->FileName = FileName.str();
     New->File = Entry;
     New->ImportLoc = ImportLoc;
+    Chain.push_back(New);
+    if (!New->isModule())
+      PCHChain.push_back(New);
+    if (!ImportedBy)
+      Roots.push_back(New);
     NewModule = true;
+    ModuleEntry = New;
 
     New->InputFilesValidationTimestamp = 0;
     if (New->Kind == MK_ImplicitModule) {
@@ -108,11 +114,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     // Load the contents of the module
     if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
       // The buffer was already provided for us.
-       New->Buffer = Buffer.get();
-       FileMgr.getPCMCache()->addConsistentBuffer(FileName, std::move(Buffer));
-    } else if(llvm::MemoryBuffer *ConsistentB =
-              FileMgr.getPCMCache()->lookupConsistentBuffer(FileName)) {
-       New->Buffer = ConsistentB;
+      New->Buffer = std::move(Buffer);
     } else {
       // Open the AST file.
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf(
@@ -134,49 +136,38 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
         return Missing;
       }
 
-      New->Buffer = (*Buf).get();
-      FileMgr.getPCMCache()->addConsistentBuffer(FileName, std::move(*Buf));
+      New->Buffer = std::move(*Buf);
     }
 
     // Initialize the stream.
     PCHContainerRdr.ExtractPCH(New->Buffer->getMemBufferRef(), New->StreamFile);
+  }
 
-    if (ExpectedSignature != ASTFileSignature({{0}})) {
-      // Check the signature before hooking it up, so we can still delete it
-      // safely.
-      New->Signature = ReadSignature(New->StreamFile);
-      if (New->Signature != ExpectedSignature) {
-        ErrorStr = New->Signature != ASTFileSignature({{0}})
-                       ? "signature mismatch"
-                       : "could not read module signature";
+  if (ExpectedSignature) {
+    if (NewModule)
+      ModuleEntry->Signature = ReadSignature(ModuleEntry->StreamFile);
+    else
+      assert(ModuleEntry->Signature == ReadSignature(ModuleEntry->StreamFile));
 
-        bool IsSystem;
-        if (!FileMgr.getPCMCache()->isValidatedByAncestor(New->FileName,
-                                                          IsSystem)) {
-          FileMgr.invalidateCache(New->File);
-          FileMgr.getPCMCache()->removeFromConsistentBuffer(New->FileName);
-        }
-        delete New;
-        return OutOfDate;
-      }
-    }
-
-    // We're keeping this module.  Hook it up.
-    Chain.push_back(New);
-    if (!New->isModule())
-      PCHChain.push_back(New);
-    if (!ImportedBy)
-      Roots.push_back(New);
-    ModuleEntry = New;
-  } else if (ExpectedSignature != ASTFileSignature({{0}})) {
-    // Only check the signature here if the module has already been loaded.  New
-    // modules may be invalidated and rebuilt, and the logic for that is in
-    // the caller (ASTReader::ReadASTCore).
-    assert(ModuleEntry->Signature == ReadSignature(ModuleEntry->StreamFile));
     if (ModuleEntry->Signature != ExpectedSignature) {
-      ErrorStr = ModuleEntry->Signature != ASTFileSignature({{0}}) ?
-                 "signature mismatch" : "could not read module signature";
+      ErrorStr = ModuleEntry->Signature ? "signature mismatch"
+                                        : "could not read module signature";
 
+      if (NewModule) {
+        // Remove the module file immediately, since removeModules might try to
+        // invalidate the file cache for Entry, and that is not safe if this
+        // module is *itself* up to date, but has an out-of-date importer.
+        Modules.erase(Entry);
+        assert(Chain.back() == ModuleEntry);
+        Chain.pop_back();
+        if (!ModuleEntry->isModule())
+          PCHChain.pop_back();
+        if (Roots.back() == ModuleEntry)
+          Roots.pop_back();
+        else
+          assert(ImportedBy);
+        delete ModuleEntry;
+      }
       return OutOfDate;
     }
   }
@@ -198,8 +189,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
 void ModuleManager::removeModules(
     ModuleIterator first, ModuleIterator last,
     llvm::SmallPtrSetImpl<ModuleFile *> &LoadedSuccessfully,
-    ModuleMap *modMap,
-    llvm::SmallVectorImpl<std::string> &ValidationConflicts) {
+    ModuleMap *modMap) {
   if (first == last)
     return;
 
@@ -215,14 +205,9 @@ void ModuleManager::removeModules(
   // Remove any references to the now-destroyed modules.
   for (unsigned i = 0, n = Chain.size(); i != n; ++i) {
     Chain[i]->ImportedBy.remove_if(IsVictim);
-    Chain[i]->Imports.remove_if(IsVictim);
   }
   Roots.erase(std::remove_if(Roots.begin(), Roots.end(), IsVictim),
               Roots.end());
-  ModulesInCommonWithGlobalIndex.erase(
-      std::remove_if(ModulesInCommonWithGlobalIndex.begin(),
-                     ModulesInCommonWithGlobalIndex.end(), IsVictim),
-      ModulesInCommonWithGlobalIndex.end());
 
   // Remove the modules from the PCH chain.
   for (auto I = first; I != last; ++I) {
@@ -247,73 +232,14 @@ void ModuleManager::removeModules(
     // Files that didn't make it through ReadASTCore successfully will be
     // rebuilt (or there was an error). Invalidate them so that we can load the
     // new files that will be renamed over the old ones.
-    if (LoadedSuccessfully.count(*victim) == 0) {
-      // Before removing the module file, check if it was validated in an
-      // ancestor thread, if yes, throw a hard error instead of causing
-      // use-after-free in the ancestor thread.
-      bool IsSystem;
-      if (!FileMgr.getPCMCache()->isValidatedByAncestor((*victim)->FileName,
-                                                        IsSystem)) {
-        FileMgr.invalidateCache((*victim)->File);
-        FileMgr.getPCMCache()->removeFromConsistentBuffer((*victim)->FileName);
-      }
-    }
+    if (LoadedSuccessfully.count(*victim) == 0)
+      FileMgr.invalidateCache((*victim)->File);
+
     delete *victim;
   }
 
   // Remove the modules from the chain.
   Chain.erase(first, last);
-}
-
-llvm::MemoryBuffer*
-PCMCache::lookupConsistentBuffer(std::string Name) {
-  if (!ConsistentBuffers.count(Name))
-    return nullptr;
-  return ConsistentBuffers[Name].first.get();
-}
-
-void
-PCMCache::addConsistentBuffer(std::string FileName,
-                              std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  assert(!ConsistentBuffers.count(FileName) && "already has a buffer");
-  ConsistentBuffers[FileName] = std::make_pair(std::move(Buffer),
-                                               /*IsSystem*/false);
-}
-
-void PCMCache::removeFromConsistentBuffer(std::string FileName) {
-  assert(ConsistentBuffers.count(FileName) && "remove a non-existent buffer");
-
-  // This should release the memory.
-  ConsistentBuffers.erase(FileName);
-}
-
-bool PCMCache::isValidatedByAncestor(std::string FileName, bool &IsSystem) {
-  IsSystem = false;
-  if (NestedModuleCompilationContexts.empty())
-    return false;
-  if (NestedModuleCompilationContexts.back().ModulesInParent.count(FileName)) {
-    IsSystem = NestedModuleCompilationContexts.back().ModulesInParent[FileName];
-    return true;
-  }
-  return false;
-}
-
-void PCMCache::setIsSystem(std::string FileName, bool IsSystem) {
-  assert(ConsistentBuffers.count(FileName) &&
-         "set IsSystem for a non-existent buffer");
-  ConsistentBuffers[FileName].second = IsSystem;
-}
-
-void PCMCache::StartCompilation() {
-  // Save all validated module files in thread context.
-  ModuleCompilationContext CompilationC;
-  for (auto &p : ConsistentBuffers)
-    CompilationC.ModulesInParent.insert(std::make_pair(p.first, p.second.second));
-  NestedModuleCompilationContexts.push_back(CompilationC);
-}
-
-void PCMCache::EndCompilation() {
-  NestedModuleCompilationContexts.pop_back();
 }
 
 void
@@ -360,8 +286,7 @@ void ModuleManager::setGlobalIndex(GlobalModuleIndex *Index) {
   }
 }
 
-void ModuleManager::moduleFileAccepted(ModuleFile *MF, bool IsSystem) {
-  FileMgr.getPCMCache()->setIsSystem(MF->FileName, IsSystem);
+void ModuleManager::moduleFileAccepted(ModuleFile *MF) {
   if (!GlobalIndex || GlobalIndex->loadedModuleFile(MF))
     return;
 

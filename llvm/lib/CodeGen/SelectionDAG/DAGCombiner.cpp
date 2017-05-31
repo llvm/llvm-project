@@ -7184,15 +7184,15 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     }
   }
 
-  // trunc (shl x, K) -> shl (trunc x), K => K < VT.getScalarSizeInBits()
+  // trunc (shl x, K) -> shl (trunc x), K => K < vt.size / 2
   if (N0.getOpcode() == ISD::SHL && N0.hasOneUse() &&
       (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::SHL, VT)) &&
       TLI.isTypeDesirableForOp(ISD::SHL, VT)) {
     if (const ConstantSDNode *CAmt = isConstOrConstSplat(N0.getOperand(1))) {
       uint64_t Amt = CAmt->getZExtValue();
-      unsigned Size = VT.getScalarSizeInBits();
+      unsigned Size = VT.getSizeInBits();
 
-      if (Amt < Size) {
+      if (Amt < Size / 2) {
         SDLoc SL(N);
         EVT AmtVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
 

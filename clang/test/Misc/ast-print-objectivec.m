@@ -39,9 +39,3 @@
 // CHECK: }
 
 // CHECK: @end
-
-@class C1;
-struct __attribute__((objc_bridge_related(C1,,))) S1;
-
-// CHECK: @class C1;
-// CHECK: struct __attribute__((objc_bridge_related(C1, , ))) S1;

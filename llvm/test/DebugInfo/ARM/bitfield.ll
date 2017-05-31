@@ -20,7 +20,7 @@ target triple = "thumbv7-apple-ios"
 
 %struct.anon = type { i8, [5 x i8] }
 
-@a = common global %struct.anon zeroinitializer, align 1, !dbg !4
+@a = common global %struct.anon zeroinitializer, align 1
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!11, !12, !13, !14, !15}
@@ -30,7 +30,7 @@ target triple = "thumbv7-apple-ios"
 !1 = !DIFile(filename: "test.i", directory: "/")
 !2 = !{}
 !3 = !{!4}
-!4 = !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 5, type: !5, isLocal: false, isDefinition: true)
+!4 = !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 5, type: !5, isLocal: false, isDefinition: true, variable: %struct.anon* @a)
 !5 = !DICompositeType(tag: DW_TAG_structure_type, file: !1, line: 1, size: 48, align: 8, elements: !6)
 !6 = !{!7, !9}
 !7 = !DIDerivedType(tag: DW_TAG_member, name: "c", scope: !5, file: !1, line: 2, baseType: !8, size: 8, align: 8)

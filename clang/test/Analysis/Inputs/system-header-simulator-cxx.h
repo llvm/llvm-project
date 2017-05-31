@@ -240,12 +240,3 @@ void* operator new (std::size_t size, void* ptr) throw() { return ptr; };
 void* operator new[] (std::size_t size, void* ptr) throw() { return ptr; };
 void operator delete (void* ptr, void*) throw() {};
 void operator delete[] (void* ptr, void*) throw() {};
-
-namespace __cxxabiv1 {
-extern "C" {
-extern char *__cxa_demangle(const char *mangled_name,
-                            char *output_buffer,
-                            size_t *length,
-                            int *status);
-}}
-namespace abi = __cxxabiv1;

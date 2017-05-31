@@ -17,7 +17,6 @@
 #include "llvm/Config/config.h" // plugin-api.h requires HAVE_STDINT_H
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticPrinter.h"
-#include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -90,6 +89,13 @@ struct ResolutionInfo {
   bool DefaultVisibility = true;
 };
 
+struct CommonResolution {
+  bool Prevailing = false;
+  bool VisibleToRegularObj = false;
+  uint64_t Size = 0;
+  unsigned Align = 0;
+};
+
 }
 
 static ld_plugin_add_symbols add_symbols = nullptr;
@@ -103,6 +109,7 @@ static std::string output_name = "";
 static std::list<claimed_file> Modules;
 static DenseMap<int, void *> FDToLeaderHandle;
 static StringMap<ResolutionInfo> ResInfo;
+static std::map<std::string, CommonResolution> Commons;
 static std::vector<std::string> Cleanup;
 static llvm::TargetOptions TargetOpts;
 static size_t MaxTasks;
@@ -118,11 +125,9 @@ namespace options {
   static unsigned OptLevel = 2;
   // Default parallelism of 0 used to indicate that user did not specify.
   // Actual parallelism default value depends on implementation.
-  // Currently only affects ThinLTO, where the default is
-  // llvm::heavyweight_hardware_concurrency.
+  // Currently, code generation defaults to no parallelism, whereas
+  // ThinLTO uses the hardware_concurrency as the default.
   static unsigned Parallelism = 0;
-  // Default regular LTO codegen parallelism (number of partitions).
-  static unsigned ParallelCodeGenParallelismLevel = 1;
 #ifdef NDEBUG
   static bool DisableVerify = true;
 #else
@@ -164,8 +169,6 @@ namespace options {
   // corresponding bitcode file, will use a path formed by replacing the
   // bitcode file's path prefix matching oldprefix with newprefix.
   static std::string thinlto_prefix_replace;
-  // Optional path to a directory for caching ThinLTO objects.
-  static std::string cache_dir;
   // Additional options to pass into the code generator.
   // Note: This array will contain all plugin options which are not claimed
   // as plugin exclusive to pass to the code generator.
@@ -204,8 +207,6 @@ namespace options {
       thinlto_prefix_replace = opt.substr(strlen("thinlto-prefix-replace="));
       if (thinlto_prefix_replace.find(";") == std::string::npos)
         message(LDPL_FATAL, "thinlto-prefix-replace expects 'old;new' format");
-    } else if (opt.startswith("cache-dir=")) {
-      cache_dir = opt.substr(strlen("cache-dir="));
     } else if (opt.size() == 2 && opt[0] == 'O') {
       if (opt[1] < '0' || opt[1] > '3')
         message(LDPL_FATAL, "Optimization level must be between 0 and 3");
@@ -213,10 +214,6 @@ namespace options {
     } else if (opt.startswith("jobs=")) {
       if (StringRef(opt_ + 5).getAsInteger(10, Parallelism))
         message(LDPL_FATAL, "Invalid parallelism level: %s", opt_ + 5);
-    } else if (opt.startswith("lto-partitions=")) {
-      if (opt.substr(strlen("lto-partitions="))
-              .getAsInteger(10, ParallelCodeGenParallelismLevel))
-        message(LDPL_FATAL, "Invalid codegen partition level: %s", opt_ + 5);
     } else if (opt == "disable-verify") {
       DisableVerify = true;
     } else {
@@ -578,7 +575,7 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View) {
 
   unsigned SymNum = 0;
   std::vector<SymbolResolution> Resols(F.syms.size());
-  for (LLVM_ATTRIBUTE_UNUSED auto &ObjSym : Obj.symbols()) {
+  for (auto &ObjSym : Obj.symbols()) {
     ld_plugin_symbol &Sym = F.syms[SymNum];
     SymbolResolution &R = Resols[SymNum];
     ++SymNum;
@@ -620,6 +617,20 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View) {
         (IsExecutable || !Res.DefaultVisibility))
       R.FinalDefinitionInLinkageUnit = true;
 
+    if (ObjSym.getFlags() & object::BasicSymbolRef::SF_Common) {
+      // We ignore gold's resolution for common symbols. A common symbol with
+      // the correct size and alignment is added to the module by the pre-opt
+      // module hook if any common symbol prevailed.
+      CommonResolution &CommonRes = Commons[ObjSym.getIRName()];
+      if (R.Prevailing) {
+        CommonRes.Prevailing = true;
+        CommonRes.VisibleToRegularObj = R.VisibleToRegularObj;
+      }
+      CommonRes.Size = std::max(CommonRes.Size, ObjSym.getCommonSize());
+      CommonRes.Align = std::max(CommonRes.Align, ObjSym.getCommonAlignment());
+      R.Prevailing = false;
+    }
+
     freeSymName(Sym);
   }
 
@@ -636,14 +647,16 @@ static void recordFile(std::string Filename, bool TempOutFile) {
     Cleanup.push_back(Filename.c_str());
 }
 
-/// Return the desired output filename given a base input name, a flag
-/// indicating whether a temp file should be generated, and an optional task id.
-/// The new filename generated is returned in \p NewFilename.
-static void getOutputFileName(SmallString<128> InFilename, bool TempOutFile,
-                              SmallString<128> &NewFilename, int TaskID = -1) {
+/// Open a file and return the new file descriptor given a base input
+/// file name, a flag indicating whether a temp file should be generated,
+/// and an optional task id. The new filename generated is
+/// returned in \p NewFilename.
+static int openOutputFile(SmallString<128> InFilename, bool TempOutFile,
+                          SmallString<128> &NewFilename, int TaskID = -1) {
+  int FD;
   if (TempOutFile) {
     std::error_code EC =
-        sys::fs::createTemporaryFile("lto-llvm", "o", NewFilename);
+        sys::fs::createTemporaryFile("lto-llvm", "o", FD, NewFilename);
     if (EC)
       message(LDPL_FATAL, "Could not create temporary file: %s",
               EC.message().c_str());
@@ -651,6 +664,37 @@ static void getOutputFileName(SmallString<128> InFilename, bool TempOutFile,
     NewFilename = InFilename;
     if (TaskID >= 0)
       NewFilename += utostr(TaskID);
+    std::error_code EC =
+        sys::fs::openFileForWrite(NewFilename, FD, sys::fs::F_None);
+    if (EC)
+      message(LDPL_FATAL, "Could not open file: %s", EC.message().c_str());
+  }
+  return FD;
+}
+
+/// Add all required common symbols to M, which is expected to be the first
+/// combined module.
+static void addCommons(Module &M) {
+  for (auto &I : Commons) {
+    if (!I.second.Prevailing)
+      continue;
+    ArrayType *Ty =
+        ArrayType::get(Type::getInt8Ty(M.getContext()), I.second.Size);
+    GlobalVariable *OldGV = M.getNamedGlobal(I.first);
+    auto *GV = new GlobalVariable(M, Ty, false, GlobalValue::CommonLinkage,
+                                  ConstantAggregateZero::get(Ty), "");
+    GV->setAlignment(I.second.Align);
+    if (OldGV) {
+      OldGV->replaceAllUsesWith(ConstantExpr::getBitCast(GV, OldGV->getType()));
+      GV->takeName(OldGV);
+      OldGV->eraseFromParent();
+    } else {
+      GV->setName(I.first);
+    }
+    // We may only internalize commons if there is a single LTO task because
+    // other native object files may require the common.
+    if (MaxTasks == 1 && !I.second.VisibleToRegularObj)
+      GV->setLinkage(GlobalValue::InternalLinkage);
   }
 }
 
@@ -682,6 +726,7 @@ static void getThinLTOOldAndNewPrefix(std::string &OldPrefix,
 static std::unique_ptr<LTO> createLTO() {
   Config Conf;
   ThinBackend Backend;
+  unsigned ParallelCodeGenParallelismLevel = 1;
 
   Conf.CPU = options::mcpu;
   Conf.Options = InitTargetOptionsFromCodeGenFlags();
@@ -695,8 +740,12 @@ static std::unique_ptr<LTO> createLTO() {
   Conf.CGOptLevel = getCGOptLevel();
   Conf.DisableVerify = options::DisableVerify;
   Conf.OptLevel = options::OptLevel;
-  if (options::Parallelism)
-    Backend = createInProcessThinBackend(options::Parallelism);
+  if (options::Parallelism) {
+    if (options::thinlto)
+      Backend = createInProcessThinBackend(options::Parallelism);
+    else
+      ParallelCodeGenParallelismLevel = options::Parallelism;
+  }
   if (options::thinlto_index_only) {
     std::string OldPrefix, NewPrefix;
     getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
@@ -710,16 +759,22 @@ static std::unique_ptr<LTO> createLTO() {
 
   Conf.DiagHandler = diagnosticHandler;
 
+  Conf.PreOptModuleHook = [](size_t Task, Module &M) {
+    if (Task == 0)
+      addCommons(M);
+    return true;
+  };
+
   switch (options::TheOutputType) {
   case options::OT_NORMAL:
     break;
 
   case options::OT_DISABLE:
-    Conf.PreOptModuleHook = [](size_t Task, const Module &M) { return false; };
+    Conf.PreOptModuleHook = [](size_t Task, Module &M) { return false; };
     break;
 
   case options::OT_BC_ONLY:
-    Conf.PostInternalizeModuleHook = [](size_t Task, const Module &M) {
+    Conf.PostInternalizeModuleHook = [](size_t Task, Module &M) {
       std::error_code EC;
       raw_fd_ostream OS(output_name, EC, sys::fs::OpenFlags::F_None);
       if (EC)
@@ -730,41 +785,12 @@ static std::unique_ptr<LTO> createLTO() {
     break;
 
   case options::OT_SAVE_TEMPS:
-    check(Conf.addSaveTemps(output_name + ".",
-                            /* UseInputModulePath */ true));
+    check(Conf.addSaveTemps(output_name, /* UseInputModulePath */ true));
     break;
   }
 
   return llvm::make_unique<LTO>(std::move(Conf), Backend,
-                                options::ParallelCodeGenParallelismLevel);
-}
-
-// Write empty files that may be expected by a distributed build
-// system when invoked with thinlto_index_only. This is invoked when
-// the linker has decided not to include the given module in the
-// final link. Frequently the distributed build system will want to
-// confirm that all expected outputs are created based on all of the
-// modules provided to the linker.
-static void writeEmptyDistributedBuildOutputs(std::string &ModulePath,
-                                              std::string &OldPrefix,
-                                              std::string &NewPrefix) {
-  std::string NewModulePath =
-      getThinLTOOutputFile(ModulePath, OldPrefix, NewPrefix);
-  std::error_code EC;
-  {
-    raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
-                      sys::fs::OpenFlags::F_None);
-    if (EC)
-      message(LDPL_FATAL, "Failed to write '%s': %s",
-              (NewModulePath + ".thinlto.bc").c_str(), EC.message().c_str());
-  }
-  if (options::thinlto_emit_imports_files) {
-    raw_fd_ostream OS(NewModulePath + ".imports", EC,
-                      sys::fs::OpenFlags::F_None);
-    if (EC)
-      message(LDPL_FATAL, "Failed to write '%s': %s",
-              (NewModulePath + ".imports").c_str(), EC.message().c_str());
-  }
+                                ParallelCodeGenParallelismLevel);
 }
 
 /// gold informs us that all symbols have been read. At this point, we use
@@ -777,36 +803,18 @@ static ld_plugin_status allSymbolsReadHook() {
   if (unsigned NumOpts = options::extra.size())
     cl::ParseCommandLineOptions(NumOpts, &options::extra[0]);
 
-  // Map to own RAII objects that manage the file opening and releasing
-  // interfaces with gold. This is needed only for ThinLTO mode, since
-  // unlike regular LTO, where addModule will result in the opened file
-  // being merged into a new combined module, we need to keep these files open
-  // through Lto->run().
-  DenseMap<void *, std::unique_ptr<PluginInputFile>> HandleToInputFile;
-
   std::unique_ptr<LTO> Lto = createLTO();
 
-  std::string OldPrefix, NewPrefix;
-  if (options::thinlto_index_only)
-    getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
-
   for (claimed_file &F : Modules) {
-    if (options::thinlto && !HandleToInputFile.count(F.leader_handle))
-      HandleToInputFile.insert(std::make_pair(
-          F.leader_handle, llvm::make_unique<PluginInputFile>(F.handle)));
+    PluginInputFile InputFile(F.handle);
     const void *View = getSymbolsAndView(F);
-    if (!View) {
-      if (options::thinlto_index_only)
-        // Write empty output files that may be expected by the distributed
-        // build system.
-        writeEmptyDistributedBuildOutputs(F.name, OldPrefix, NewPrefix);
+    if (!View)
       continue;
-    }
     addModule(*Lto, F, View);
   }
 
   SmallString<128> Filename;
-  // Note that getOutputFileName will append a unique ID for each task
+  // Note that openOutputFile will append a unique ID for each task
   if (!options::obj_path.empty())
     Filename = options::obj_path;
   else if (options::TheOutputType == options::OT_SAVE_TEMPS)
@@ -817,27 +825,15 @@ static ld_plugin_status allSymbolsReadHook() {
   std::vector<uintptr_t> IsTemporary(MaxTasks);
   std::vector<SmallString<128>> Filenames(MaxTasks);
 
-  auto AddStream =
-      [&](size_t Task) -> std::unique_ptr<lto::NativeObjectStream> {
+  auto AddStream = [&](size_t Task) {
+    int FD = openOutputFile(Filename, /*TempOutFile=*/!SaveTemps,
+                            Filenames[Task], MaxTasks > 1 ? Task : -1);
     IsTemporary[Task] = !SaveTemps;
-    getOutputFileName(Filename, /*TempOutFile=*/!SaveTemps, Filenames[Task],
-                      MaxTasks > 1 ? Task : -1);
-    int FD;
-    std::error_code EC =
-        sys::fs::openFileForWrite(Filenames[Task], FD, sys::fs::F_None);
-    if (EC)
-      message(LDPL_FATAL, "Could not open file: %s", EC.message().c_str());
-    return llvm::make_unique<lto::NativeObjectStream>(
-        llvm::make_unique<llvm::raw_fd_ostream>(FD, true));
+
+    return llvm::make_unique<llvm::raw_fd_ostream>(FD, true);
   };
 
-  auto AddFile = [&](size_t Task, StringRef Path) { Filenames[Task] = Path; };
-
-  NativeObjectCache Cache;
-  if (!options::cache_dir.empty())
-    Cache = localCache(options::cache_dir, AddFile);
-
-  check(Lto->run(AddStream, Cache));
+  check(Lto->run(AddStream));
 
   if (options::TheOutputType == options::OT_DISABLE ||
       options::TheOutputType == options::OT_BC_ONLY)

@@ -336,7 +336,9 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   }
 }
 
-void llvm::PrintEscapedString(StringRef Name, raw_ostream &Out) {
+// PrintEscapedString - Print each character of the specified string, escaping
+// it if it is not printable or if it is an escape char.
+static void PrintEscapedString(StringRef Name, raw_ostream &Out) {
   for (unsigned i = 0, e = Name.size(); i != e; ++i) {
     unsigned char C = Name[i];
     if (isprint(C) && C != '\\' && C != '"')
@@ -1843,7 +1845,7 @@ static void writeDIGlobalVariable(raw_ostream &Out, const DIGlobalVariable *N,
   Printer.printMetadata("type", N->getRawType());
   Printer.printBool("isLocal", N->isLocalToUnit());
   Printer.printBool("isDefinition", N->isDefinition());
-  Printer.printMetadata("expr", N->getExpr());
+  Printer.printMetadata("variable", N->getRawVariable());
   Printer.printMetadata("declaration", N->getRawStaticDataMemberDeclaration());
   Out << ")";
 }

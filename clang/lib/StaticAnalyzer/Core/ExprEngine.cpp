@@ -202,32 +202,25 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
   MemRegionManager &MRMgr = StateMgr.getRegionManager();
   StoreManager &StoreMgr = StateMgr.getStoreManager();
 
-  // MaterializeTemporaryExpr may appear out of place, after a few field and
-  // base-class accesses have been made to the object, even though semantically
-  // it is the whole object that gets materialized and lifetime-extended.
-  //
-  // For example:
-  //
-  //   `-MaterializeTemporaryExpr
-  //     `-MemberExpr
-  //       `-CXXTemporaryObjectExpr
-  //
-  // instead of the more natural
-  //
-  //   `-MemberExpr
-  //     `-MaterializeTemporaryExpr
-  //       `-CXXTemporaryObjectExpr
-  //
-  // Use the usual methods for obtaining the expression of the base object,
-  // and record the adjustments that we need to make to obtain the sub-object
-  // that the whole expression 'Ex' refers to. This trick is usual,
-  // in the sense that CodeGen takes a similar route.
+  // We need to be careful about treating a derived type's value as
+  // bindings for a base type. Unless we're creating a temporary pointer region,
+  // start by stripping and recording base casts.
+  SmallVector<const CastExpr *, 4> Casts;
+  const Expr *Inner = Ex->IgnoreParens();
+  if (!Loc::isLocType(Result->getType())) {
+    while (const CastExpr *CE = dyn_cast<CastExpr>(Inner)) {
+      if (CE->getCastKind() == CK_DerivedToBase ||
+          CE->getCastKind() == CK_UncheckedDerivedToBase)
+        Casts.push_back(CE);
+      else if (CE->getCastKind() != CK_NoOp)
+        break;
 
-  SmallVector<const Expr *, 2> CommaLHSs;
-  SmallVector<SubobjectAdjustment, 2> Adjustments;
+      Inner = CE->getSubExpr()->IgnoreParens();
+    }
+  }
 
-  const Expr *Init = Ex->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
-
+  // Create a temporary object region for the inner expression (which may have
+  // a more derived type) and bind the value into it.
   const TypedValueRegion *TR = nullptr;
   if (const MaterializeTemporaryExpr *MT =
           dyn_cast<MaterializeTemporaryExpr>(Result)) {
@@ -235,37 +228,25 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
     // If this object is bound to a reference with static storage duration, we
     // put it in a different region to prevent "address leakage" warnings.
     if (SD == SD_Static || SD == SD_Thread)
-      TR = MRMgr.getCXXStaticTempObjectRegion(Init);
+        TR = MRMgr.getCXXStaticTempObjectRegion(Inner);
   }
   if (!TR)
-    TR = MRMgr.getCXXTempObjectRegion(Init, LC);
+    TR = MRMgr.getCXXTempObjectRegion(Inner, LC);
 
   SVal Reg = loc::MemRegionVal(TR);
 
-  // Make the necessary adjustments to obtain the sub-object.
-  for (auto I = Adjustments.rbegin(), E = Adjustments.rend(); I != E; ++I) {
-    const SubobjectAdjustment &Adj = *I;
-    switch (Adj.Kind) {
-    case SubobjectAdjustment::DerivedToBaseAdjustment:
-      Reg = StoreMgr.evalDerivedToBase(Reg, Adj.DerivedToBase.BasePath);
-      break;
-    case SubobjectAdjustment::FieldAdjustment:
-      Reg = StoreMgr.getLValueField(Adj.Field, Reg);
-      break;
-    case SubobjectAdjustment::MemberPointerAdjustment:
-      // FIXME: Unimplemented.
-      State->bindDefault(Reg, UnknownVal());
-      return State;
-    }
-  }
-
-  // Try to recover some path sensitivity in case we couldn't compute the value.
   if (V.isUnknown())
     V = getSValBuilder().conjureSymbolVal(Result, LC, TR->getValueType(),
                                           currBldrCtx->blockCount());
-  // Bind the value of the expression to the sub-object region, and then bind
-  // the sub-object region to our expression.
   State = State->bindLoc(Reg, V);
+
+  // Re-apply the casts (from innermost to outermost) for type sanity.
+  for (SmallVectorImpl<const CastExpr *>::reverse_iterator I = Casts.rbegin(),
+                                                           E = Casts.rend();
+       I != E; ++I) {
+    Reg = StoreMgr.evalDerivedToBase(Reg, *I);
+  }
+
   State = State->BindExpr(Result, LC, Reg);
   return State;
 }
@@ -279,6 +260,10 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
 ProgramStateRef ExprEngine::processAssume(ProgramStateRef state,
                                               SVal cond, bool assumption) {
   return getCheckerManager().runCheckersForEvalAssume(state, cond, assumption);
+}
+
+bool ExprEngine::wantsRegionChangeUpdate(ProgramStateRef state) {
+  return getCheckerManager().wantsRegionChangeUpdate(state);
 }
 
 ProgramStateRef
@@ -515,9 +500,8 @@ void ExprEngine::ProcessInitializer(const CFGInitializer Init,
           Init = ASE->getBase()->IgnoreImplicit();
 
         SVal LValue = State->getSVal(Init, stackFrame);
-        if (!Field->getType()->isReferenceType())
-          if (Optional<Loc> LValueLoc = LValue.getAs<Loc>())
-            InitVal = State->getSVal(*LValueLoc);
+        if (Optional<Loc> LValueLoc = LValue.getAs<Loc>())
+          InitVal = State->getSVal(*LValueLoc);
 
         // If we fail to get the value for some reason, use a symbolic value.
         if (InitVal.isUnknownOrUndef()) {
@@ -612,17 +596,9 @@ void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
   SVal dest = state->getLValue(varDecl, Pred->getLocationContext());
   const MemRegion *Region = dest.castAs<loc::MemRegionVal>().getRegion();
 
-  if (varType->isReferenceType()) {
-    const MemRegion *ValueRegion = state->getSVal(Region).getAsRegion();
-    if (!ValueRegion) {
-      // FIXME: This should not happen. The language guarantees a presence
-      // of a valid initializer here, so the reference shall not be undefined.
-      // It seems that we're calling destructors over variables that
-      // were not initialized yet.
-      return;
-    }
-    Region = ValueRegion->getBaseRegion();
-    varType = cast<TypedValueRegion>(Region)->getValueType();
+  if (const ReferenceType *refType = varType->getAs<ReferenceType>()) {
+    varType = refType->getPointeeType();
+    Region = state->getSVal(Region).getAsRegion();
   }
 
   VisitCXXDestructor(varType, Region, Dtor.getTriggerStmt(), /*IsBase=*/ false,
@@ -1236,8 +1212,16 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::ObjCBridgedCastExprClass: {
       Bldr.takeNodes(Pred);
       const CastExpr *C = cast<CastExpr>(S);
+      // Handle the previsit checks.
+      ExplodedNodeSet dstPrevisit;
+      getCheckerManager().runCheckersForPreStmt(dstPrevisit, Pred, C, *this);
+
+      // Handle the expression itself.
       ExplodedNodeSet dstExpr;
-      VisitCast(C, C->getSubExpr(), Pred, dstExpr);
+      for (ExplodedNodeSet::iterator i = dstPrevisit.begin(),
+                                     e = dstPrevisit.end(); i != e ; ++i) {
+        VisitCast(C, C->getSubExpr(), *i, dstExpr);
+      }
 
       // Handle the postvisit checks.
       getCheckerManager().runCheckersForPostStmt(Dst, dstExpr, C, *this);
@@ -1790,8 +1774,7 @@ void ExprEngine::processBeginOfFunction(NodeBuilderContext &BC,
 /// ProcessEndPath - Called by CoreEngine.  Used to generate end-of-path
 ///  nodes when the control reaches the end of a function.
 void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
-                                      ExplodedNode *Pred,
-                                      const ReturnStmt *RS) {
+                                      ExplodedNode *Pred) {
   // FIXME: Assert that stackFrameDoesNotContainInitializedTemporaries(*Pred)).
   // We currently cannot enable this assert, as lifetime extended temporaries
   // are not modelled correctly.
@@ -1813,7 +1796,7 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
     getCheckerManager().runCheckersForEndFunction(BC, Dst, Pred, *this);
   }
 
-  Engine.enqueueEndOfFunction(Dst, RS);
+  Engine.enqueueEndOfFunction(Dst);
 }
 
 /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
@@ -1859,7 +1842,7 @@ void ExprEngine::processSwitch(SwitchNodeBuilder& builder) {
     ProgramStateRef StateCase;
     if (Optional<NonLoc> NL = CondV.getAs<NonLoc>())
       std::tie(StateCase, DefaultSt) =
-          DefaultSt->assumeInclusiveRange(*NL, V1, V2);
+          DefaultSt->assumeWithinInclusiveRange(*NL, V1, V2);
     else // UnknownVal
       StateCase = DefaultSt;
 
@@ -1993,26 +1976,24 @@ void ExprEngine::VisitLvalArraySubscriptExpr(const ArraySubscriptExpr *A,
   const Expr *Base = A->getBase()->IgnoreParens();
   const Expr *Idx  = A->getIdx()->IgnoreParens();
 
-  ExplodedNodeSet CheckerPreStmt;
-  getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
+  ExplodedNodeSet checkerPreStmt;
+  getCheckerManager().runCheckersForPreStmt(checkerPreStmt, Pred, A, *this);
 
-  ExplodedNodeSet EvalSet;
-  StmtNodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
+  StmtNodeBuilder Bldr(checkerPreStmt, Dst, *currBldrCtx);
   assert(A->isGLValue() ||
           (!AMgr.getLangOpts().CPlusPlus &&
            A->getType().isCForbiddenLValueType()));
 
-  for (auto *Node : CheckerPreStmt) {
-    const LocationContext *LCtx = Node->getLocationContext();
-    ProgramStateRef state = Node->getState();
+  for (ExplodedNodeSet::iterator it = checkerPreStmt.begin(),
+                                 ei = checkerPreStmt.end(); it != ei; ++it) {
+    const LocationContext *LCtx = (*it)->getLocationContext();
+    ProgramStateRef state = (*it)->getState();
     SVal V = state->getLValue(A->getType(),
                               state->getSVal(Idx, LCtx),
                               state->getSVal(Base, LCtx));
-    Bldr.generateNode(A, Node, state->BindExpr(A, LCtx, V), nullptr,
+    Bldr.generateNode(A, *it, state->BindExpr(A, LCtx, V), nullptr,
                       ProgramPoint::PostLValueKind);
   }
-
-  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, A, *this);
 }
 
 /// VisitMemberExpr - Transfer function for member expressions.
@@ -2071,7 +2052,7 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
         if (!M->isGLValue()) {
           assert(M->getType()->isArrayType());
           const ImplicitCastExpr *PE =
-            dyn_cast<ImplicitCastExpr>((*I)->getParentMap().getParentIgnoreParens(M));
+            dyn_cast<ImplicitCastExpr>((*I)->getParentMap().getParent(M));
           if (!PE || PE->getCastKind() != CK_ArrayToPointerDecay) {
             llvm_unreachable("should always be wrapped in ArrayToPointerDecay");
           }

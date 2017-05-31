@@ -977,18 +977,6 @@ bool DeclContext::isExternCContext() const {
   return isLinkageSpecContext(this, clang::LinkageSpecDecl::lang_c);
 }
 
-const LinkageSpecDecl *DeclContext::getExternCContext() const {
-  const DeclContext *DC = this;
-  while (DC->getDeclKind() != Decl::TranslationUnit) {
-    if (DC->getDeclKind() == Decl::LinkageSpec &&
-        cast<LinkageSpecDecl>(DC)->getLanguage() ==
-            clang::LinkageSpecDecl::lang_c)
-      return cast<LinkageSpecDecl>(DC);
-    DC = DC->getLexicalParent();
-  }
-  return nullptr;
-}
-
 bool DeclContext::isExternCXXContext() const {
   return isLinkageSpecContext(this, clang::LinkageSpecDecl::lang_cxx);
 }

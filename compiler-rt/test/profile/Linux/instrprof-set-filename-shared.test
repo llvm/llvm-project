@@ -1,0 +1,8 @@
+# Test that __llvm_profile_set_filename is honored by shared libary too.
+RUN: mkdir -p %t.d
+RUN: %clang_profgen=%t.shared.profraw -fPIC -shared -o %t.d/t.shared %S/../Inputs/instrprof-dlopen-func.c
+RUN: %clang_profgen -DCALL_SHARED -o %t.m -O3 -rpath %t.d %t.d/t.shared %S/../instrprof-set-filename.c 
+RUN: %run %t.m %t.main.profraw
+RUN: llvm-profdata show %t.main.profraw | FileCheck --check-prefix=SHARED %s
+
+# SHARED: Total functions: 2

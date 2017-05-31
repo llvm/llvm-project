@@ -38,24 +38,6 @@ public:
   }
 };
 
-struct ModuleDependencyPPCallbacks : public PPCallbacks {
-  ModuleDependencyCollector &Collector;
-  SourceManager &SM;
-  ModuleDependencyPPCallbacks(ModuleDependencyCollector &Collector,
-                              SourceManager &SM)
-      : Collector(Collector), SM(SM) {}
-
-  void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
-                          StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported) override {
-    if (!File)
-      return;
-    Collector.addFile(File->getName());
-  }
-};
-
 struct ModuleDependencyMMCallbacks : public ModuleMapCallbacks {
   ModuleDependencyCollector &Collector;
   ModuleDependencyMMCallbacks(ModuleDependencyCollector &Collector)
@@ -120,8 +102,6 @@ void ModuleDependencyCollector::attachToASTReader(ASTReader &R) {
 }
 
 void ModuleDependencyCollector::attachToPreprocessor(Preprocessor &PP) {
-  PP.addPPCallbacks(llvm::make_unique<ModuleDependencyPPCallbacks>(
-      *this, PP.getSourceManager()));
   PP.getHeaderSearchInfo().getModuleMap().addModuleMapCallbacks(
       llvm::make_unique<ModuleDependencyMMCallbacks>(*this));
 }
@@ -201,8 +181,7 @@ bool ModuleDependencyCollector::getRealPath(StringRef SrcPath,
   return true;
 }
 
-std::error_code ModuleDependencyCollector::copyToRoot(StringRef Src,
-                                                      StringRef Dst) {
+std::error_code ModuleDependencyCollector::copyToRoot(StringRef Src) {
   using namespace llvm::sys;
 
   // We need an absolute src path to append to the root.
@@ -214,35 +193,23 @@ std::error_code ModuleDependencyCollector::copyToRoot(StringRef Src,
   AbsoluteSrc = path::remove_leading_dotslash(AbsoluteSrc);
 
   // Canonicalize the source path by removing "..", "." components.
-  SmallString<256> VirtualPath = AbsoluteSrc;
-  path::remove_dots(VirtualPath, /*remove_dot_dot=*/true);
+  SmallString<256> CanonicalPath = AbsoluteSrc;
+  path::remove_dots(CanonicalPath, /*remove_dot_dot=*/true);
 
   // If a ".." component is present after a symlink component, remove_dots may
   // lead to the wrong real destination path. Let the source be canonicalized
   // like that but make sure we always use the real path for the destination.
-  SmallString<256> CopyFrom;
-  if (!getRealPath(AbsoluteSrc, CopyFrom))
-    CopyFrom = VirtualPath;
-  SmallString<256> CacheDst = getDest();
-
-  if (Dst.empty()) {
-    // The common case is to map the virtual path to the same path inside the
-    // cache.
-    path::append(CacheDst, path::relative_path(CopyFrom));
-  } else {
-    // When collecting entries from input vfsoverlays, copy the external
-    // contents into the cache but still map from the source.
-    if (!fs::exists(Dst))
-      return std::error_code();
-    path::append(CacheDst, Dst);
-    CopyFrom = Dst;
-  }
+  SmallString<256> RealPath;
+  if (!getRealPath(AbsoluteSrc, RealPath))
+    RealPath = CanonicalPath;
+  SmallString<256> Dest = getDest();
+  path::append(Dest, path::relative_path(RealPath));
 
   // Copy the file into place.
-  if (std::error_code EC = fs::create_directories(path::parent_path(CacheDst),
-                                                  /*IgnoreExisting=*/true))
+  if (std::error_code EC = fs::create_directories(path::parent_path(Dest),
+                                                   /*IgnoreExisting=*/true))
     return EC;
-  if (std::error_code EC = fs::copy_file(CopyFrom, CacheDst))
+  if (std::error_code EC = fs::copy_file(RealPath, Dest))
     return EC;
 
   // Always map a canonical src path to its real path into the YAML, by doing
@@ -250,12 +217,12 @@ std::error_code ModuleDependencyCollector::copyToRoot(StringRef Src,
   // overlay, which is a way to emulate symlink inside the VFS; this is also
   // needed for correctness, not doing that can lead to module redifinition
   // errors.
-  addFileMapping(VirtualPath, CacheDst);
+  addFileMapping(CanonicalPath, Dest);
   return std::error_code();
 }
 
-void ModuleDependencyCollector::addFile(StringRef Filename, StringRef FileDst) {
+void ModuleDependencyCollector::addFile(StringRef Filename) {
   if (insertSeen(Filename))
-    if (copyToRoot(Filename, FileDst))
+    if (copyToRoot(Filename))
       HasErrors = true;
 }

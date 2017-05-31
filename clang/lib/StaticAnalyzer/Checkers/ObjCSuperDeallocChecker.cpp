@@ -191,7 +191,7 @@ void ObjCSuperDeallocChecker::reportUseAfterDealloc(SymbolRef Sym,
     return;
 
   if (Desc.empty())
-    Desc = "Use of 'self' after it has been deallocated";
+    Desc = "use of 'self' after it has been deallocated";
 
   // Generate the report.
   std::unique_ptr<BugReport> BR(

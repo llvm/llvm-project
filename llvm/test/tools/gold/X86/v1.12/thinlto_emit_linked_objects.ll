@@ -9,25 +9,13 @@
 ; be included in the link, and not %t2.o since it is within
 ; a library (--start-lib/--end-lib pair) and not strongly referenced.
 ; Note that the support for detecting this is in gold v1.12.
-; RUN: rm -f %t.o.thinlto.bc
-; RUN: rm -f %t2.o.thinlto.bc
-; RUN: rm -f %t.o.imports
-; RUN: rm -f %t2.o.imports
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=thinlto-index-only=%t3 \
-; RUN:    --plugin-opt=thinlto-emit-imports-files \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    -o %t4 \
 ; RUN:    %t.o \
 ; RUN:    --start-lib %t2.o --end-lib
-
-; Ensure that the expected output files are created, even for the file
-; the linker decided not to include in the link.
-; RUN: ls %t.o.thinlto.bc
-; RUN: ls %t2.o.thinlto.bc
-; RUN: ls %t.o.imports
-; RUN: ls %t2.o.imports
 
 ; RUN: cat %t3 | FileCheck %s
 ; CHECK: thinlto_emit_linked_objects.ll.tmp.o

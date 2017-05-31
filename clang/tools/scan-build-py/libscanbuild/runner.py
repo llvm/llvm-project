@@ -205,8 +205,19 @@ def filter_debug_flags(opts, continuation=run_analyzer):
     return continuation(opts)
 
 
+@require(['file', 'directory'])
+def set_file_path_relative(opts, continuation=filter_debug_flags):
+    """ Set source file path to relative to the working directory.
+
+    The only purpose of this function is to pass the SATestBuild.py tests. """
+
+    opts.update({'file': os.path.relpath(opts['file'], opts['directory'])})
+
+    return continuation(opts)
+
+
 @require(['language', 'compiler', 'file', 'flags'])
-def language_check(opts, continuation=filter_debug_flags):
+def language_check(opts, continuation=set_file_path_relative):
     """ Find out the language from command line parameters or file name
     extension. The decision also influenced by the compiler invocation. """
 

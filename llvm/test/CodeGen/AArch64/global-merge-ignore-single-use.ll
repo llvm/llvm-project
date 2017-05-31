@@ -11,7 +11,7 @@
 
 ; CHECK-LABEL: f1:
 define void @f1(i32 %a1, i32 %a2) #0 {
-; CHECK-NEXT: adrp x8, [[SET:__MergedGlobals]]@PAGE
+; CHECK-NEXT: adrp x8, [[SET:l__MergedGlobals]]@PAGE
 ; CHECK-NEXT: add x8, x8, [[SET]]@PAGEOFF
 ; CHECK-NEXT: stp w0, w1, [x8]
 ; CHECK-NEXT: ret

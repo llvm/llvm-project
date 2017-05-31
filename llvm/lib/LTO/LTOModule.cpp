@@ -19,6 +19,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCExpr.h"
@@ -62,7 +63,7 @@ bool LTOModule::isBitcodeFile(const void *Mem, size_t Length) {
   return bool(BCData);
 }
 
-bool LTOModule::isBitcodeFile(StringRef Path) {
+bool LTOModule::isBitcodeFile(const char *Path) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFile(Path);
   if (!BufferOrErr)
@@ -106,7 +107,7 @@ std::string LTOModule::getProducerString(MemoryBuffer *Buffer) {
 }
 
 ErrorOr<std::unique_ptr<LTOModule>>
-LTOModule::createFromFile(LLVMContext &Context, StringRef path,
+LTOModule::createFromFile(LLVMContext &Context, const char *path,
                           const TargetOptions &options) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFile(path);
@@ -120,15 +121,15 @@ LTOModule::createFromFile(LLVMContext &Context, StringRef path,
 }
 
 ErrorOr<std::unique_ptr<LTOModule>>
-LTOModule::createFromOpenFile(LLVMContext &Context, int fd, StringRef path,
+LTOModule::createFromOpenFile(LLVMContext &Context, int fd, const char *path,
                               size_t size, const TargetOptions &options) {
   return createFromOpenFileSlice(Context, fd, path, size, 0, options);
 }
 
 ErrorOr<std::unique_ptr<LTOModule>>
-LTOModule::createFromOpenFileSlice(LLVMContext &Context, int fd, StringRef path,
-                                   size_t map_size, off_t offset,
-                                   const TargetOptions &options) {
+LTOModule::createFromOpenFileSlice(LLVMContext &Context, int fd,
+                                   const char *path, size_t map_size,
+                                   off_t offset, const TargetOptions &options) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getOpenFileSlice(fd, path, map_size, offset);
   if (std::error_code EC = BufferOrErr.getError()) {
@@ -280,7 +281,7 @@ void LTOModule::addObjCClass(const GlobalVariable *clgv) {
         _undefines.insert(std::make_pair(superclassName, NameAndAttributes()));
     if (IterBool.second) {
       NameAndAttributes &info = IterBool.first->second;
-      info.name = IterBool.first->first();
+      info.name = IterBool.first->first().data();
       info.attributes = LTO_SYMBOL_DEFINITION_UNDEFINED;
       info.isFunction = false;
       info.symbol = clgv;
@@ -293,7 +294,7 @@ void LTOModule::addObjCClass(const GlobalVariable *clgv) {
     auto Iter = _defines.insert(className).first;
 
     NameAndAttributes info;
-    info.name = Iter->first();
+    info.name = Iter->first().data();
     info.attributes = LTO_SYMBOL_PERMISSIONS_DATA |
       LTO_SYMBOL_DEFINITION_REGULAR | LTO_SYMBOL_SCOPE_DEFAULT;
     info.isFunction = false;
@@ -319,7 +320,7 @@ void LTOModule::addObjCCategory(const GlobalVariable *clgv) {
     return;
 
   NameAndAttributes &info = IterBool.first->second;
-  info.name = IterBool.first->first();
+  info.name = IterBool.first->first().data();
   info.attributes = LTO_SYMBOL_DEFINITION_UNDEFINED;
   info.isFunction = false;
   info.symbol = clgv;
@@ -338,7 +339,7 @@ void LTOModule::addObjCClassRef(const GlobalVariable *clgv) {
     return;
 
   NameAndAttributes &info = IterBool.first->second;
-  info.name = IterBool.first->first();
+  info.name = IterBool.first->first().data();
   info.attributes = LTO_SYMBOL_DEFINITION_UNDEFINED;
   info.isFunction = false;
   info.symbol = clgv;
@@ -349,14 +350,13 @@ void LTOModule::addDefinedDataSymbol(const object::BasicSymbolRef &Sym) {
   {
     raw_svector_ostream OS(Buffer);
     Sym.printName(OS);
-    Buffer.c_str();
   }
 
   const GlobalValue *V = IRFile->getSymbolGV(Sym.getRawDataRefImpl());
-  addDefinedDataSymbol(Buffer, V);
+  addDefinedDataSymbol(Buffer.c_str(), V);
 }
 
-void LTOModule::addDefinedDataSymbol(StringRef Name, const GlobalValue *v) {
+void LTOModule::addDefinedDataSymbol(const char *Name, const GlobalValue *v) {
   // Add to list of defined symbols.
   addDefinedSymbol(Name, v, false);
 
@@ -411,20 +411,19 @@ void LTOModule::addDefinedFunctionSymbol(const object::BasicSymbolRef &Sym) {
   {
     raw_svector_ostream OS(Buffer);
     Sym.printName(OS);
-    Buffer.c_str();
   }
 
   const Function *F =
       cast<Function>(IRFile->getSymbolGV(Sym.getRawDataRefImpl()));
-  addDefinedFunctionSymbol(Buffer, F);
+  addDefinedFunctionSymbol(Buffer.c_str(), F);
 }
 
-void LTOModule::addDefinedFunctionSymbol(StringRef Name, const Function *F) {
+void LTOModule::addDefinedFunctionSymbol(const char *Name, const Function *F) {
   // add to list of defined symbols
   addDefinedSymbol(Name, F, true);
 }
 
-void LTOModule::addDefinedSymbol(StringRef Name, const GlobalValue *def,
+void LTOModule::addDefinedSymbol(const char *Name, const GlobalValue *def,
                                  bool isFunction) {
   // set alignment part log2() can have rounding errors
   uint32_t align = def->getAlignment();
@@ -473,8 +472,8 @@ void LTOModule::addDefinedSymbol(StringRef Name, const GlobalValue *def,
   // fill information structure
   NameAndAttributes info;
   StringRef NameRef = Iter->first();
-  info.name = NameRef;
-  assert(NameRef.data()[NameRef.size()] == '\0');
+  info.name = NameRef.data();
+  assert(info.name[NameRef.size()] == '\0');
   info.attributes = attr;
   info.isFunction = isFunction;
   info.symbol = def;
@@ -485,7 +484,7 @@ void LTOModule::addDefinedSymbol(StringRef Name, const GlobalValue *def,
 
 /// addAsmGlobalSymbol - Add a global symbol from module-level ASM to the
 /// defined list.
-void LTOModule::addAsmGlobalSymbol(StringRef name,
+void LTOModule::addAsmGlobalSymbol(const char *name,
                                    lto_symbol_attributes scope) {
   auto IterBool = _defines.insert(name);
 
@@ -493,7 +492,7 @@ void LTOModule::addAsmGlobalSymbol(StringRef name,
   if (!IterBool.second)
     return;
 
-  NameAndAttributes &info = _undefines[IterBool.first->first()];
+  NameAndAttributes &info = _undefines[IterBool.first->first().data()];
 
   if (info.symbol == nullptr) {
     // FIXME: This is trying to take care of module ASM like this:
@@ -505,7 +504,7 @@ void LTOModule::addAsmGlobalSymbol(StringRef name,
     // much.
 
     // fill information structure
-    info.name = IterBool.first->first();
+    info.name = IterBool.first->first().data();
     info.attributes =
       LTO_SYMBOL_PERMISSIONS_DATA | LTO_SYMBOL_DEFINITION_REGULAR | scope;
     info.isFunction = false;
@@ -527,10 +526,10 @@ void LTOModule::addAsmGlobalSymbol(StringRef name,
 
 /// addAsmGlobalSymbolUndef - Add a global symbol from module-level ASM to the
 /// undefined list.
-void LTOModule::addAsmGlobalSymbolUndef(StringRef name) {
+void LTOModule::addAsmGlobalSymbolUndef(const char *name) {
   auto IterBool = _undefines.insert(std::make_pair(name, NameAndAttributes()));
 
-  _asm_undefines.push_back(IterBool.first->first());
+  _asm_undefines.push_back(IterBool.first->first().data());
 
   // we already have the symbol
   if (!IterBool.second)
@@ -539,7 +538,7 @@ void LTOModule::addAsmGlobalSymbolUndef(StringRef name) {
   uint32_t attr = LTO_SYMBOL_DEFINITION_UNDEFINED;
   attr |= LTO_SYMBOL_SCOPE_DEFAULT;
   NameAndAttributes &info = IterBool.first->second;
-  info.name = IterBool.first->first();
+  info.name = IterBool.first->first().data();
   info.attributes = attr;
   info.isFunction = false;
   info.symbol = nullptr;
@@ -552,7 +551,6 @@ void LTOModule::addPotentialUndefinedSymbol(const object::BasicSymbolRef &Sym,
   {
     raw_svector_ostream OS(name);
     Sym.printName(OS);
-    name.c_str();
   }
 
   auto IterBool = _undefines.insert(std::make_pair(name, NameAndAttributes()));
@@ -563,7 +561,7 @@ void LTOModule::addPotentialUndefinedSymbol(const object::BasicSymbolRef &Sym,
 
   NameAndAttributes &info = IterBool.first->second;
 
-  info.name = IterBool.first->first();
+  info.name = IterBool.first->first().data();
 
   const GlobalValue *decl = IRFile->getSymbolGV(Sym.getRawDataRefImpl());
 
@@ -590,9 +588,8 @@ void LTOModule::parseSymbols() {
       {
         raw_svector_ostream OS(Buffer);
         Sym.printName(OS);
-        Buffer.c_str();
       }
-      StringRef Name(Buffer);
+      const char *Name = Buffer.c_str();
 
       if (IsUndefined)
         addAsmGlobalSymbolUndef(Name);
@@ -651,10 +648,12 @@ void LTOModule::parseMetadata() {
   }
 
   // Globals
+  Mangler Mang;
   for (const NameAndAttributes &Sym : _symbols) {
     if (!Sym.symbol)
       continue;
-    _target->getObjFileLowering()->emitLinkerFlagsForGlobal(OS, Sym.symbol);
+    _target->getObjFileLowering()->emitLinkerFlagsForGlobal(OS, Sym.symbol,
+                                                            Mang);
   }
 
   // Add other interesting metadata here.

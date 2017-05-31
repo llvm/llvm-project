@@ -1,5 +1,4 @@
-; RUN: opt -basicaa -loop-distribute -enable-loop-distribute -loop-simplify -scoped-noalias \
-; RUN:     -loop-versioning -S < %s | FileCheck %s
+; RUN: opt -basicaa -loop-distribute -scoped-noalias -loop-versioning -S < %s | FileCheck %s
 
 ; Test the metadata generated when versioning an already versioned loop.  Here
 ; we invoke loop distribution to perform the first round of versioning.  It

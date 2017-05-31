@@ -74,9 +74,6 @@ COMMON_FLAG(bool, allocator_may_return_null, false,
 COMMON_FLAG(bool, print_summary, true,
             "If false, disable printing error summaries in addition to error "
             "reports.")
-COMMON_FLAG(int, print_module_map, 0,
-            "OS X only. 0 = don't print, 1 = print only once before process "
-            "exits, 2 = print after each report.")
 COMMON_FLAG(bool, check_printf, true, "Check printf arguments.")
 COMMON_FLAG(bool, handle_segv, true,
             "If set, registers the tool's custom SIGSEGV/SIGBUS handler.")

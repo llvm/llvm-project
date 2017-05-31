@@ -714,21 +714,17 @@ CodeViewDebug::createDefRangeMem(uint16_t CVRegister, int Offset) {
   DR.InMemory = -1;
   DR.DataOffset = Offset;
   assert(DR.DataOffset == Offset && "truncation");
-  DR.IsSubfield = 0;
   DR.StructOffset = 0;
   DR.CVRegister = CVRegister;
   return DR;
 }
 
 CodeViewDebug::LocalVarDefRange
-CodeViewDebug::createDefRangeGeneral(uint16_t CVRegister, bool InMemory,
-                                     int Offset, bool IsSubfield,
-                                     uint16_t StructOffset) {
+CodeViewDebug::createDefRangeReg(uint16_t CVRegister) {
   LocalVarDefRange DR;
-  DR.InMemory = InMemory;
-  DR.DataOffset = Offset;
-  DR.IsSubfield = IsSubfield;
-  DR.StructOffset = StructOffset;
+  DR.InMemory = 0;
+  DR.DataOffset = 0;
+  DR.StructOffset = 0;
   DR.CVRegister = CVRegister;
   return DR;
 }
@@ -809,17 +805,10 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
       const MachineInstr *DVInst = Range.first;
       assert(DVInst->isDebugValue() && "Invalid History entry");
       const DIExpression *DIExpr = DVInst->getDebugExpression();
-      bool IsSubfield = false;
-      unsigned StructOffset = 0;
 
-      // Handle fragments.
-      auto Fragment = DIExpr->getFragmentInfo();
-      if (DIExpr && Fragment) {
-        IsSubfield = true;
-        StructOffset = Fragment->OffsetInBits / 8;
-      } else if (DIExpr && DIExpr->getNumElements() > 0) {
-        continue; // Ignore unrecognized exprs.
-      }
+      // Bail if there is a complex DWARF expression for now.
+      if (DIExpr && DIExpr->getNumElements() > 0)
+        continue;
 
       // Bail if operand 0 is not a valid register. This means the variable is a
       // simple constant, or is described by a complex expression.
@@ -831,20 +820,19 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
         continue;
 
       // Handle the two cases we can handle: indirect in memory and in register.
-      unsigned CVReg = TRI->getCodeViewRegNum(Reg);
-      bool InMemory = DVInst->getOperand(1).isImm();
-      int Offset = InMemory ? DVInst->getOperand(1).getImm() : 0;
+      bool IsIndirect = DVInst->getOperand(1).isImm();
+      unsigned CVReg = TRI->getCodeViewRegNum(DVInst->getOperand(0).getReg());
       {
-        LocalVarDefRange DR;
-        DR.CVRegister = CVReg;
-        DR.InMemory = InMemory;
-        DR.DataOffset = Offset;
-        DR.IsSubfield = IsSubfield;
-        DR.StructOffset = StructOffset;
-
+        LocalVarDefRange DefRange;
+        if (IsIndirect) {
+          int64_t Offset = DVInst->getOperand(1).getImm();
+          DefRange = createDefRangeMem(CVReg, Offset);
+        } else {
+          DefRange = createDefRangeReg(CVReg);
+        }
         if (Var.DefRanges.empty() ||
-            Var.DefRanges.back().isDifferentLocation(DR)) {
-          Var.DefRanges.emplace_back(std::move(DR));
+            Var.DefRanges.back().isDifferentLocation(DefRange)) {
+          Var.DefRanges.emplace_back(std::move(DefRange));
         }
       }
 
@@ -852,14 +840,8 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
       const MCSymbol *Begin = getLabelBeforeInsn(Range.first);
       const MCSymbol *End = getLabelAfterInsn(Range.second);
       if (!End) {
-        // This range is valid until the next overlapping bitpiece. In the
-        // common case, ranges will not be bitpieces, so they will overlap.
-        auto J = std::next(I);
-        while (J != E &&
-               !fragmentsOverlap(DIExpr, J->first->getDebugExpression()))
-          ++J;
-        if (J != E)
-          End = getLabelBeforeInsn(J->first);
+        if (std::next(I) != E)
+          End = getLabelBeforeInsn(std::next(I)->first);
         else
           End = Asm->getFunctionEnd();
       }
@@ -1010,25 +992,20 @@ TypeIndex CodeViewDebug::lowerTypeArray(const DICompositeType *Ty) {
 
   uint64_t ElementSize = getBaseTypeSize(ElementTypeRef) / 8;
 
+  bool UndefinedSubrange = false;
 
-  // We want to assert that the element type multiplied by the array lengths
-  // match the size of the overall array. However, if we don't have complete
-  // type information for the base type, we can't make this assertion. This
-  // happens if limited debug info is enabled in this case:
-  //   struct VTableOptzn { VTableOptzn(); virtual ~VTableOptzn(); };
-  //   VTableOptzn array[3];
-  // The DICompositeType of VTableOptzn will have size zero, and the array will
-  // have size 3 * sizeof(void*), and we should avoid asserting.
-  //
-  // There is a related bug in the front-end where an array of a structure,
-  // which was declared as incomplete structure first, ends up not getting a
-  // size assigned to it. (PR28303)
+  // FIXME:
+  // There is a bug in the front-end where an array of a structure, which was
+  // declared as incomplete structure first, ends up not getting a size assigned
+  // to it. (PR28303)
   // Example:
   //   struct A(*p)[3];
   //   struct A { int f; } a[3];
-  bool PartiallyIncomplete = false;
-  if (Ty->getSizeInBits() == 0 || ElementSize == 0) {
-    PartiallyIncomplete = true;
+  //
+  // This needs to be fixed in the front-end, but in the meantime we don't want
+  // to trigger an assertion because of this.
+  if (Ty->getSizeInBits() == 0) {
+    UndefinedSubrange = true;
   }
 
   // Add subranges to array type.
@@ -1047,24 +1024,18 @@ TypeIndex CodeViewDebug::lowerTypeArray(const DICompositeType *Ty) {
     // FIXME: Make front-end support VLA subrange and emit LF_DIMVARLU.
     if (Count == -1) {
       Count = 1;
-      PartiallyIncomplete = true;
+      UndefinedSubrange = true;
     }
 
+    StringRef Name = (i == 0) ? Ty->getName() : "";
     // Update the element size and element type index for subsequent subranges.
     ElementSize *= Count;
-
-    // If this is the outermost array, use the size from the array. It will be
-    // more accurate if PartiallyIncomplete is true.
-    uint64_t ArraySize =
-        (i == 0 && ElementSize == 0) ? Ty->getSizeInBits() / 8 : ElementSize;
-
-    StringRef Name = (i == 0) ? Ty->getName() : "";
     ElementTypeIndex = TypeTable.writeKnownType(
-        ArrayRecord(ElementTypeIndex, IndexType, ArraySize, Name));
+        ArrayRecord(ElementTypeIndex, IndexType, ElementSize, Name));
   }
 
-  (void)PartiallyIncomplete;
-  assert(PartiallyIncomplete || ElementSize == (Ty->getSizeInBits() / 8));
+  (void)UndefinedSubrange;
+  assert(UndefinedSubrange || ElementSize == (Ty->getSizeInBits() / 8));
 
   return ElementTypeIndex;
 }
@@ -1911,15 +1882,13 @@ void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
   SmallString<20> BytePrefix;
   for (const LocalVarDefRange &DefRange : Var.DefRanges) {
     BytePrefix.clear();
+    // FIXME: Handle bitpieces.
+    if (DefRange.StructOffset != 0)
+      continue;
+
     if (DefRange.InMemory) {
-      uint16_t RegRelFlags = 0;
-      if (DefRange.IsSubfield) {
-        RegRelFlags = DefRangeRegisterRelSym::IsSubfieldFlag |
-                      (DefRange.StructOffset
-                       << DefRangeRegisterRelSym::OffsetInParentShift);
-      }
-      DefRangeRegisterRelSym Sym(DefRange.CVRegister, RegRelFlags,
-                                 DefRange.DataOffset, None);
+      DefRangeRegisterRelSym Sym(DefRange.CVRegister, 0, DefRange.DataOffset, 0,
+                                 0, 0, ArrayRef<LocalVariableAddrGap>());
       ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_REGISTER_REL);
       BytePrefix +=
           StringRef(reinterpret_cast<const char *>(&SymKind), sizeof(SymKind));
@@ -1928,26 +1897,15 @@ void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
                     sizeof(Sym.Header) - sizeof(LocalVariableAddrRange));
     } else {
       assert(DefRange.DataOffset == 0 && "unexpected offset into register");
-      if (DefRange.IsSubfield) {
-        // Unclear what matters here.
-        DefRangeSubfieldRegisterSym Sym(DefRange.CVRegister, 0,
-                                        DefRange.StructOffset, None);
-        ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_SUBFIELD_REGISTER);
-        BytePrefix += StringRef(reinterpret_cast<const char *>(&SymKind),
-                                sizeof(SymKind));
-        BytePrefix +=
-            StringRef(reinterpret_cast<const char *>(&Sym.Header),
-                      sizeof(Sym.Header) - sizeof(LocalVariableAddrRange));
-      } else {
-        // Unclear what matters here.
-        DefRangeRegisterSym Sym(DefRange.CVRegister, 0, None);
-        ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_REGISTER);
-        BytePrefix += StringRef(reinterpret_cast<const char *>(&SymKind),
-                                sizeof(SymKind));
-        BytePrefix +=
-            StringRef(reinterpret_cast<const char *>(&Sym.Header),
-                      sizeof(Sym.Header) - sizeof(LocalVariableAddrRange));
-      }
+      // Unclear what matters here.
+      DefRangeRegisterSym Sym(DefRange.CVRegister, 0, 0, 0, 0,
+                              ArrayRef<LocalVariableAddrGap>());
+      ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_REGISTER);
+      BytePrefix +=
+          StringRef(reinterpret_cast<const char *>(&SymKind), sizeof(SymKind));
+      BytePrefix +=
+          StringRef(reinterpret_cast<const char *>(&Sym.Header),
+                    sizeof(Sym.Header) - sizeof(LocalVariableAddrRange));
     }
     OS.EmitCVDefRangeDirective(DefRange.Ranges, BytePrefix);
   }
@@ -2027,14 +1985,6 @@ void CodeViewDebug::emitDebugInfoForUDTs(
 }
 
 void CodeViewDebug::emitDebugInfoForGlobals() {
-  DenseMap<const DIGlobalVariable *, const GlobalVariable *> GlobalMap;
-  for (const GlobalVariable &GV : MMI->getModule()->globals()) {
-    SmallVector<MDNode *, 1> MDs;
-    GV.getMetadata(LLVMContext::MD_dbg, MDs);
-    for (MDNode *MD : MDs)
-      GlobalMap[cast<DIGlobalVariable>(MD)] = &GV;
-  }
-
   NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
   for (const MDNode *Node : CUs->operands()) {
     const auto *CU = cast<DICompileUnit>(Node);
@@ -2045,14 +1995,15 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
     switchToDebugSectionForSymbol(nullptr);
     MCSymbol *EndLabel = nullptr;
     for (const DIGlobalVariable *G : CU->getGlobalVariables()) {
-      if (const auto *GV = GlobalMap.lookup(G))
+      if (const auto *GV = dyn_cast_or_null<GlobalVariable>(G->getVariable())) {
         if (!GV->hasComdat() && !GV->isDeclarationForLinker()) {
           if (!EndLabel) {
             OS.AddComment("Symbol subsection for globals");
             EndLabel = beginCVSubsection(ModuleSubstreamKind::Symbols);
           }
-          emitDebugInfoForGlobal(G, GV, Asm->getSymbol(GV));
+          emitDebugInfoForGlobal(G, Asm->getSymbol(GV));
         }
+      }
     }
     if (EndLabel)
       endCVSubsection(EndLabel);
@@ -2060,14 +2011,14 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
     // Second, emit each global that is in a comdat into its own .debug$S
     // section along with its own symbol substream.
     for (const DIGlobalVariable *G : CU->getGlobalVariables()) {
-      if (const auto *GV = GlobalMap.lookup(G)) {
+      if (const auto *GV = dyn_cast_or_null<GlobalVariable>(G->getVariable())) {
         if (GV->hasComdat()) {
           MCSymbol *GVSym = Asm->getSymbol(GV);
           OS.AddComment("Symbol subsection for " +
                         Twine(GlobalValue::getRealLinkageName(GV->getName())));
           switchToDebugSectionForSymbol(GVSym);
           EndLabel = beginCVSubsection(ModuleSubstreamKind::Symbols);
-          emitDebugInfoForGlobal(G, GV, GVSym);
+          emitDebugInfoForGlobal(G, GVSym);
           endCVSubsection(EndLabel);
         }
       }
@@ -2088,7 +2039,6 @@ void CodeViewDebug::emitDebugInfoForRetainedTypes() {
 }
 
 void CodeViewDebug::emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
-                                           const GlobalVariable *GV,
                                            MCSymbol *GVSym) {
   // DataSym record, see SymbolRecord.h for more info.
   // FIXME: Thread local data, etc
@@ -2097,6 +2047,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
   OS.AddComment("Record length");
   OS.emitAbsoluteSymbolDiff(DataEnd, DataBegin, 2);
   OS.EmitLabel(DataBegin);
+  const auto *GV = cast<GlobalVariable>(DIGV->getVariable());
   if (DIGV->isLocalToUnit()) {
     if (GV->isThreadLocal()) {
       OS.AddComment("Record kind: S_LTHREAD32");

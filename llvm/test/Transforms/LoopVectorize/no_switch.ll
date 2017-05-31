@@ -9,7 +9,7 @@
 ; NOANALYSIS: warning: source.cpp:4:5: loop not interleaved: failed explicitly specified loop interleaving
 
 ; MOREINFO: remark: source.cpp:4:5: loop not vectorized: loop contains a switch statement
-; MOREINFO: remark: source.cpp:4:5: loop not vectorized (Force=true, Vector Width=4)
+; MOREINFO: remark: source.cpp:4:5: loop not vectorized: use -Rpass-analysis=loop-vectorize for more info (Force=true, Vector Width=4)
 ; MOREINFO: warning: source.cpp:4:5: loop not vectorized: failed explicitly specified loop vectorization
 
 ; CHECK: _Z11test_switchPii

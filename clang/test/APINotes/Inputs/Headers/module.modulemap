@@ -1,7 +1,0 @@
-module HeaderLib {
-  header "HeaderLib.h"
-}
-
-module BrokenTypes {
-  header "BrokenTypes.h"
-}

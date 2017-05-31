@@ -726,7 +726,7 @@ MachineBasicBlock::iterator FindLastAluClause(MachineBasicBlock &MBB) {
       It != E; ++It) {
     if (It->getOpcode() == AMDGPU::CF_ALU ||
         It->getOpcode() == AMDGPU::CF_ALU_PUSH_BEFORE)
-      return It.getReverse();
+      return std::prev(It.base());
   }
   return MBB.end();
 }

@@ -20,7 +20,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
-#include "llvm/LTO/LTO.h"
+#include "llvm/LTO/Config.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"

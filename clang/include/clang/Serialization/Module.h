@@ -16,7 +16,6 @@
 #define LLVM_CLANG_SERIALIZATION_MODULE_H
 
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
@@ -49,8 +48,7 @@ enum ModuleKind {
   MK_ExplicitModule, ///< File is an explicitly-loaded module.
   MK_PCH,            ///< File is a PCH file treated as such.
   MK_Preamble,       ///< File is a PCH file treated as the preamble.
-  MK_MainFile,       ///< File is a PCH file treated as the actual main file.
-  MK_PrebuiltModule  ///< File is from a prebuilt module path.
+  MK_MainFile        ///< File is a PCH file treated as the actual main file.
 };
 
 /// \brief The input file that has been loaded from this AST file, along with
@@ -89,6 +87,8 @@ public:
   bool isOutOfDate() const { return Val.getInt() == OutOfDate; }
   bool isNotFound() const { return Val.getInt() == NotFound; }
 };
+
+typedef unsigned ASTFileSignature;
 
 /// \brief Information about a module that has been loaded by the ASTReader.
 ///
@@ -164,8 +164,7 @@ public:
   
   /// \brief The memory buffer that stores the data associated with
   /// this AST file.
-  /// The memory buffer is owned by PCMCache.
-  llvm::MemoryBuffer *Buffer;
+  std::unique_ptr<llvm::MemoryBuffer> Buffer;
 
   /// \brief The size of this file, in bits.
   uint64_t SizeInBits;
@@ -448,8 +447,7 @@ public:
 
   /// \brief Is this a module file for a module (rather than a PCH or similar).
   bool isModule() const {
-    return Kind == MK_ImplicitModule || Kind == MK_ExplicitModule ||
-           Kind == MK_PrebuiltModule;
+    return Kind == MK_ImplicitModule || Kind == MK_ExplicitModule;
   }
 
   /// \brief Dump debugging output for this module.

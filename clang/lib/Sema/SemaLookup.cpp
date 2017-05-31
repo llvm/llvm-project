@@ -1543,12 +1543,7 @@ bool LookupResult::isVisibleSlow(Sema &SemaRef, NamedDecl *D) {
     // For a parameter, check whether our current template declaration's
     // lexical context is visible, not whether there's some other visible
     // definition of it, because parameters aren't "within" the definition.
-    //
-    // In C++ we need to check for a visible definition due to ODR merging,
-    // and in C we must not because each declaration of a function gets its own
-    // set of declarations for tags in prototype scope.
-    if ((D->isTemplateParameter() || isa<ParmVarDecl>(D)
-         || (isa<FunctionDecl>(DC) && !SemaRef.getLangOpts().CPlusPlus))
+    if ((D->isTemplateParameter() || isa<ParmVarDecl>(D))
             ? isVisible(SemaRef, cast<NamedDecl>(DC))
             : SemaRef.hasVisibleDefinition(cast<NamedDecl>(DC))) {
       if (SemaRef.ActiveTemplateInstantiations.empty() &&
@@ -3422,12 +3417,6 @@ NamedDecl *VisibleDeclsRecord::checkHidden(NamedDecl *ND) {
       if (D->getUnderlyingDecl()->isFunctionOrFunctionTemplate() &&
           ND->getUnderlyingDecl()->isFunctionOrFunctionTemplate() &&
           SM == ShadowMaps.rbegin())
-        continue;
-
-      // A shadow declaration that's created by a resolved using declaration
-      // is not hidden by the same using declaration.
-      if (isa<UsingShadowDecl>(ND) && isa<UsingDecl>(D) &&
-          cast<UsingShadowDecl>(ND)->getUsingDecl() == D)
         continue;
 
       // We've found a declaration that hides this one.

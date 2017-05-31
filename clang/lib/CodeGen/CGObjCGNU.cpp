@@ -591,8 +591,8 @@ public:
     return NULLPtr;
   }
 
-  llvm::Constant *GetClassGlobal(StringRef Name, bool ForDefinition,
-                                 bool Weak, bool DLLImport) override {
+  llvm::GlobalVariable *GetClassGlobal(StringRef Name,
+                                       bool Weak = false) override {
     return nullptr;
   }
 };

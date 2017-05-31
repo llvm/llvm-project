@@ -125,22 +125,18 @@ bool ProfileSummaryInfo::isColdCount(uint64_t C) {
   return ColdCountThreshold && C <= ColdCountThreshold.getValue();
 }
 
+ProfileSummaryInfo *ProfileSummaryInfoWrapperPass::getPSI(Module &M) {
+  if (!PSI)
+    PSI.reset(new ProfileSummaryInfo(M));
+  return PSI.get();
+}
+
 INITIALIZE_PASS(ProfileSummaryInfoWrapperPass, "profile-summary-info",
                 "Profile summary info", false, true)
 
 ProfileSummaryInfoWrapperPass::ProfileSummaryInfoWrapperPass()
     : ImmutablePass(ID) {
   initializeProfileSummaryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
-
-bool ProfileSummaryInfoWrapperPass::doInitialization(Module &M) {
-  PSI.reset(new ProfileSummaryInfo(M));
-  return false;
-}
-
-bool ProfileSummaryInfoWrapperPass::doFinalization(Module &M) {
-  PSI.reset();
-  return false;
 }
 
 char ProfileSummaryAnalysis::PassID;

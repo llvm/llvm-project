@@ -1326,6 +1326,15 @@ bool FastISel::selectBitCast(const User *I) {
   return true;
 }
 
+// Return true if we should copy from swift error to the final vreg as specified
+// by SwiftErrorWorklist.
+static bool shouldCopySwiftErrorsToFinalVRegs(const TargetLowering &TLI,
+                                              FunctionLoweringInfo &FuncInfo) {
+  if (!TLI.supportSwiftError())
+    return false;
+  return FuncInfo.SwiftErrorWorklist.count(FuncInfo.MBB);
+}
+
 // Remove local value instructions starting from the instruction after
 // SavedLastLocalValue to the current function insert point.
 void FastISel::removeDeadLocalValueCode(MachineInstr *SavedLastLocalValue)
@@ -1350,6 +1359,10 @@ bool FastISel::selectInstruction(const Instruction *I) {
   // Just before the terminator instruction, insert instructions to
   // feed PHI nodes in successor blocks.
   if (isa<TerminatorInst>(I)) {
+    // If we need to materialize any vreg from worklist, we bail out of
+    // FastISel.
+    if (shouldCopySwiftErrorsToFinalVRegs(TLI, FuncInfo))
+      return false;
     if (!handlePHINodesInSuccessorBlocks(I->getParent())) {
       // PHI node handling may have generated local value instructions,
       // even though it failed to handle all PHI nodes.

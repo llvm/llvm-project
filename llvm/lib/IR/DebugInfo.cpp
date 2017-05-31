@@ -241,38 +241,6 @@ bool DebugInfoFinder::addScope(DIScope *Scope) {
   return true;
 }
 
-static llvm::MDNode *stripDebugLocFromLoopID(llvm::MDNode *N) {
-  assert(N->op_begin() != N->op_end() && "Missing self reference?");
-
-  // if there is no debug location, we do not have to rewrite this MDNode.
-  if (std::none_of(N->op_begin() + 1, N->op_end(), [](const MDOperand &Op) {
-        return isa<DILocation>(Op.get());
-      }))
-    return N;
-
-  // If there is only the debug location without any actual loop metadata, we
-  // can remove the metadata.
-  if (std::none_of(N->op_begin() + 1, N->op_end(), [](const MDOperand &Op) {
-        return !isa<DILocation>(Op.get());
-      }))
-    return nullptr;
-
-  SmallVector<Metadata *, 4> Args;
-  // Reserve operand 0 for loop id self reference.
-  auto TempNode = MDNode::getTemporary(N->getContext(), None);
-  Args.push_back(TempNode.get());
-  // Add all non-debug location operands back.
-  for (auto Op = N->op_begin() + 1; Op != N->op_end(); Op++) {
-    if (!isa<DILocation>(*Op))
-      Args.push_back(*Op);
-  }
-
-  // Set the first operand to itself.
-  MDNode *LoopID = MDNode::get(N->getContext(), Args);
-  LoopID->replaceOperandWith(0, LoopID);
-  return LoopID;
-}
-
 bool llvm::stripDebugInfo(Function &F) {
   bool Changed = false;
   if (F.getSubprogram()) {
@@ -280,7 +248,6 @@ bool llvm::stripDebugInfo(Function &F) {
     F.setSubprogram(nullptr);
   }
 
-  llvm::DenseMap<llvm::MDNode*, llvm::MDNode*> LoopIDsMap;
   for (BasicBlock &BB : F) {
     for (auto II = BB.begin(), End = BB.end(); II != End;) {
       Instruction &I = *II++; // We may delete the instruction, increment now.
@@ -294,15 +261,6 @@ bool llvm::stripDebugInfo(Function &F) {
         I.setDebugLoc(DebugLoc());
       }
     }
-
-    auto *TermInst = BB.getTerminator();
-    if (auto *LoopID = TermInst->getMetadata(LLVMContext::MD_loop)) {
-      auto *NewLoopID = LoopIDsMap.lookup(LoopID);
-      if (!NewLoopID)
-        NewLoopID = LoopIDsMap[LoopID] = stripDebugLocFromLoopID(LoopID);
-      if (NewLoopID != LoopID)
-        TermInst->setMetadata(LLVMContext::MD_loop, NewLoopID);
-    }
   }
   return Changed;
 }
@@ -314,11 +272,7 @@ bool llvm::StripDebugInfo(Module &M) {
          NME = M.named_metadata_end(); NMI != NME;) {
     NamedMDNode *NMD = &*NMI;
     ++NMI;
-
-    // We're stripping debug info, and without them, coverage information
-    // doesn't quite make sense.
-    if (NMD->getName().startswith("llvm.dbg.") ||
-        NMD->getName() == "llvm.gcov") {
+    if (NMD->getName().startswith("llvm.dbg.")) {
       NMD->eraseFromParent();
       Changed = true;
     }
@@ -326,15 +280,6 @@ bool llvm::StripDebugInfo(Module &M) {
 
   for (Function &F : M)
     Changed |= stripDebugInfo(F);
-
-  for (auto &GV : M.globals()) {
-    SmallVector<MDNode *, 1> MDs;
-    GV.getMetadata(LLVMContext::MD_dbg, MDs);
-    if (!MDs.empty()) {
-      GV.eraseMetadata(LLVMContext::MD_dbg);
-      Changed = true;
-    }
-  }
 
   if (GVMaterializer *Materializer = M.getMaterializer())
     Materializer->setStripDebugInfo();

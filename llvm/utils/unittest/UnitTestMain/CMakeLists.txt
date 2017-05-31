@@ -6,7 +6,4 @@ add_llvm_library(gtest_main
 
   LINK_COMPONENTS
   Support # Depends on llvm::cl
-
-  # This library is not meant to be in the install tree, only the build tree.
-  BUILDTREE_ONLY
   )

@@ -19,9 +19,8 @@ int *b2 = &a2;
 
 
 // PS4:  [[NS:![0-9]+]] = !DINamespace
-// PS4:  [[CU:![0-9]+]] = distinct !DICompileUnit
 // PS4:  [[NS2:![0-9]+]] = !DINamespace
-// PS4: !DIImportedEntity(tag: DW_TAG_imported_module, scope: [[CU]], entity: [[NS]])
+// PS4: !DIImportedEntity(tag: DW_TAG_imported_module, scope: !0, entity: [[NS]])
 // PS4: !DIImportedEntity(tag: DW_TAG_imported_module, scope: [[NS]], entity: [[NS2]], line: {{[0-9]+}})
 // NON-PS4-NOT: !DIImportedEntity
 

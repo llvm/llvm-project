@@ -203,14 +203,6 @@ bool LLVMContext::getDiagnosticHotnessRequested() const {
   return pImpl->DiagnosticHotnessRequested;
 }
 
-yaml::Output *LLVMContext::getDiagnosticsOutputFile() {
-  return pImpl->DiagnosticsOutputFile.get();
-}
-
-void LLVMContext::setDiagnosticsOutputFile(yaml::Output *F) {
-  pImpl->DiagnosticsOutputFile.reset(F);
-}
-
 LLVMContext::DiagnosticHandlerTy LLVMContext::getDiagnosticHandler() const {
   return pImpl->DiagnosticHandler;
 }

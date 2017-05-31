@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.ExprInspection -verify -Wno-tautological-compare %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.ExprInspection -verify -analyzer-constraints=range -Wno-tautological-compare %s
 
 void clang_analyzer_eval(bool);
 

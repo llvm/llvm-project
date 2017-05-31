@@ -15,7 +15,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/Analysis/CFGStmtMap.h"
-#include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -917,7 +916,7 @@ static const Expr *peelOffOuterExpr(const Expr *Ex,
     if (PropRef && PropRef->isMessagingGetter()) {
       const Expr *GetterMessageSend =
           POE->getSemanticExpr(POE->getNumSemanticExprs() - 1);
-      assert(isa<ObjCMessageExpr>(GetterMessageSend->IgnoreParenCasts()));
+      assert(isa<ObjCMessageExpr>(GetterMessageSend));
       return peelOffOuterExpr(GetterMessageSend, N);
     }
   }
@@ -1272,22 +1271,7 @@ ConditionBRVisitor::VisitTerminator(const Stmt *Term,
                                     BugReporterContext &BRC) {
   const Expr *Cond = nullptr;
 
-  // In the code below, Term is a CFG terminator and Cond is a branch condition
-  // expression upon which the decision is made on this terminator.
-  //
-  // For example, in "if (x == 0)", the "if (x == 0)" statement is a terminator,
-  // and "x == 0" is the respective condition.
-  //
-  // Another example: in "if (x && y)", we've got two terminators and two
-  // conditions due to short-circuit nature of operator "&&":
-  // 1. The "if (x && y)" statement is a terminator,
-  //    and "y" is the respective condition.
-  // 2. Also "x && ..." is another terminator,
-  //    and "x" is its condition.
-
   switch (Term->getStmtClass()) {
-  // FIXME: Stmt::SwitchStmtClass is worth handling, however it is a bit
-  // more tricky because there are more than two branches to account for.
   default:
     return nullptr;
   case Stmt::IfStmtClass:
@@ -1296,24 +1280,6 @@ ConditionBRVisitor::VisitTerminator(const Stmt *Term,
   case Stmt::ConditionalOperatorClass:
     Cond = cast<ConditionalOperator>(Term)->getCond();
     break;
-  case Stmt::BinaryOperatorClass:
-    // When we encounter a logical operator (&& or ||) as a CFG terminator,
-    // then the condition is actually its LHS; otheriwse, we'd encounter
-    // the parent, such as if-statement, as a terminator.
-    const auto *BO = cast<BinaryOperator>(Term);
-    assert(BO->isLogicalOp() &&
-           "CFG terminator is not a short-circuit operator!");
-    Cond = BO->getLHS();
-    break;
-  }
-
-  // However, when we encounter a logical operator as a branch condition,
-  // then the condition is actually its RHS, because LHS would be
-  // the condition for the logical operator terminator.
-  while (const auto *InnerBO = dyn_cast<BinaryOperator>(Cond)) {
-    if (!InnerBO->isLogicalOp())
-      break;
-    Cond = InnerBO->getRHS()->IgnoreParens();
   }
 
   assert(Cond);
@@ -1328,101 +1294,40 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond,
                                   BugReporterContext &BRC,
                                   BugReport &R,
                                   const ExplodedNode *N) {
-  // These will be modified in code below, but we need to preserve the original
-  //  values in case we want to throw the generic message.
-  const Expr *CondTmp = Cond;
-  bool tookTrueTmp = tookTrue;
+
+  const Expr *Ex = Cond;
 
   while (true) {
-    CondTmp = CondTmp->IgnoreParenCasts();
-    switch (CondTmp->getStmtClass()) {
+    Ex = Ex->IgnoreParenCasts();
+    switch (Ex->getStmtClass()) {
       default:
-        break;
+        return nullptr;
       case Stmt::BinaryOperatorClass:
-        if (PathDiagnosticPiece *P = VisitTrueTest(
-                Cond, cast<BinaryOperator>(CondTmp), tookTrueTmp, BRC, R, N))
-          return P;
-        break;
+        return VisitTrueTest(Cond, cast<BinaryOperator>(Ex), tookTrue, BRC,
+                             R, N);
       case Stmt::DeclRefExprClass:
-        if (PathDiagnosticPiece *P = VisitTrueTest(
-                Cond, cast<DeclRefExpr>(CondTmp), tookTrueTmp, BRC, R, N))
-          return P;
-        break;
+        return VisitTrueTest(Cond, cast<DeclRefExpr>(Ex), tookTrue, BRC,
+                             R, N);
       case Stmt::UnaryOperatorClass: {
-        const UnaryOperator *UO = cast<UnaryOperator>(CondTmp);
+        const UnaryOperator *UO = cast<UnaryOperator>(Ex);
         if (UO->getOpcode() == UO_LNot) {
-          tookTrueTmp = !tookTrueTmp;
-          CondTmp = UO->getSubExpr();
+          tookTrue = !tookTrue;
+          Ex = UO->getSubExpr();
           continue;
         }
-        break;
+        return nullptr;
       }
     }
-    break;
   }
-
-  // Condition too complex to explain? Just say something so that the user
-  // knew we've made some path decision at this point.
-  const LocationContext *LCtx = N->getLocationContext();
-  PathDiagnosticLocation Loc(Cond, BRC.getSourceManager(), LCtx);
-  if (!Loc.isValid() || !Loc.asLocation().isValid())
-    return nullptr;
-
-  PathDiagnosticEventPiece *Event = new PathDiagnosticEventPiece(
-      Loc, tookTrue ? GenericTrueMessage : GenericFalseMessage);
-  return Event;
 }
 
-bool ConditionBRVisitor::patternMatch(const Expr *Ex,
-                                      const Expr *ParentEx,
-                                      raw_ostream &Out,
+bool ConditionBRVisitor::patternMatch(const Expr *Ex, raw_ostream &Out,
                                       BugReporterContext &BRC,
                                       BugReport &report,
                                       const ExplodedNode *N,
                                       Optional<bool> &prunable) {
   const Expr *OriginalExpr = Ex;
   Ex = Ex->IgnoreParenCasts();
-
-  // Use heuristics to determine if Ex is a macro expending to a literal and
-  // if so, use the macro's name.
-  SourceLocation LocStart = Ex->getLocStart();
-  SourceLocation LocEnd = Ex->getLocEnd();
-  if (LocStart.isMacroID() && LocEnd.isMacroID() &&
-      (isa<GNUNullExpr>(Ex) ||
-       isa<ObjCBoolLiteralExpr>(Ex) ||
-       isa<CXXBoolLiteralExpr>(Ex) ||
-       isa<IntegerLiteral>(Ex) ||
-       isa<FloatingLiteral>(Ex))) {
-
-    StringRef StartName = Lexer::getImmediateMacroNameForDiagnostics(LocStart,
-      BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
-    StringRef EndName = Lexer::getImmediateMacroNameForDiagnostics(LocEnd,
-      BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
-    bool beginAndEndAreTheSameMacro = StartName.equals(EndName);
-
-    bool partOfParentMacro = false;
-    if (ParentEx->getLocStart().isMacroID()) {
-      StringRef PName = Lexer::getImmediateMacroNameForDiagnostics(
-        ParentEx->getLocStart(), BRC.getSourceManager(),
-        BRC.getASTContext().getLangOpts());
-      partOfParentMacro = PName.equals(StartName);
-    }
-
-    if (beginAndEndAreTheSameMacro && !partOfParentMacro ) {
-      // Get the location of the macro name as written by the caller.
-      SourceLocation Loc = LocStart;
-      while (LocStart.isMacroID()) {
-        Loc = LocStart;
-        LocStart = BRC.getSourceManager().getImmediateMacroCallerLoc(LocStart);
-      }
-      StringRef MacroName = Lexer::getImmediateMacroNameForDiagnostics(
-        Loc, BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
-
-      // Return the macro name.
-      Out << MacroName;
-      return false;
-    }
-  }
 
   if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(Ex)) {
     const bool quotes = isa<VarDecl>(DR->getDecl());
@@ -1484,10 +1389,10 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond,
   SmallString<128> LhsString, RhsString;
   {
     llvm::raw_svector_ostream OutLHS(LhsString), OutRHS(RhsString);
-    const bool isVarLHS = patternMatch(BExpr->getLHS(), BExpr, OutLHS,
-                                       BRC, R, N, shouldPrune);
-    const bool isVarRHS = patternMatch(BExpr->getRHS(), BExpr, OutRHS,
-                                       BRC, R, N, shouldPrune);
+    const bool isVarLHS = patternMatch(BExpr->getLHS(), OutLHS, BRC, R, N,
+                                       shouldPrune);
+    const bool isVarRHS = patternMatch(BExpr->getRHS(), OutRHS, BRC, R, N,
+                                       shouldPrune);
 
     shouldInvert = !isVarLHS && isVarRHS;
   }
@@ -1645,12 +1550,6 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond,
     }
   }
   return event;
-}
-
-bool ConditionBRVisitor::isPieceMessageGeneric(
-    const PathDiagnosticPiece *Piece) {
-  return Piece->getString() == GenericTrueMessage ||
-         Piece->getString() == GenericFalseMessage;
 }
 
 std::unique_ptr<PathDiagnosticPiece>

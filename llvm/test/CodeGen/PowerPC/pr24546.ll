@@ -3,7 +3,7 @@
 ; Verify that we no longer crash in VSX swap removal when debug values
 ; are in the code stream.
 
-@php_intpow10.powers = external unnamed_addr constant [23 x double], align 8, !dbg !24
+@php_intpow10.powers = external unnamed_addr constant [23 x double], align 8
 
 ; Function Attrs: nounwind
 define double @_php_math_round(double %value, i32 signext %places, i32 signext %mode) #0 !dbg !6 {
@@ -79,7 +79,7 @@ attributes #3 = { nounwind }
 !21 = !{!22}
 !22 = !DILocalVariable(name: "power", arg: 1, scope: !18, file: !1, line: 1, type: !9)
 !23 = !{!24}
-!24 = !DIGlobalVariable(name: "powers", scope: !18, file: !1, line: 3, type: !25, isLocal: true, isDefinition: true)
+!24 = !DIGlobalVariable(name: "powers", scope: !18, file: !1, line: 3, type: !25, isLocal: true, isDefinition: true, variable: [23 x double]* @php_intpow10.powers)
 !25 = !DICompositeType(tag: DW_TAG_array_type, baseType: !26, size: 1472, align: 64, elements: !27)
 !26 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !4)
 !27 = !{!28}

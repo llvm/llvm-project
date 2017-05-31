@@ -16,8 +16,8 @@ define void @f(i32* %A, i32* %B, i32* %C, i64 %N) {
 ; CHECK-NOT: %found.conflict{{.*}} =
 
 entry:
-; Make sure the hoisted load keeps the alignment
-; CHECK: %load_initial = load i32, i32* %A, align 1
+; for.body.ph:
+; CHECK: %load_initial = load i32, i32* %A
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
@@ -34,7 +34,7 @@ for.body:                                         ; preds = %for.body, %entry
   %a_p1 = add i32 %b, 2
   store i32 %a_p1, i32* %Aidx_next, align 4
 
-  %a = load i32, i32* %Aidx, align 1
+  %a = load i32, i32* %Aidx, align 4
 ; CHECK: %c = mul i32 %store_forwarded, 2
   %c = mul i32 %a, 2
   store i32 %c, i32* %Cidx, align 4

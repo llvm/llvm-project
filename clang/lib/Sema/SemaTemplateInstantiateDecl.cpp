@@ -188,7 +188,7 @@ static void instantiateDependentEnableIfAttr(
 
   SmallVector<PartialDiagnosticAt, 8> Diags;
   if (A->getCond()->isValueDependent() && !Cond->isValueDependent() &&
-      !Expr::isPotentialConstantExprUnevaluated(Cond, cast<FunctionDecl>(New),
+      !Expr::isPotentialConstantExprUnevaluated(Cond, cast<FunctionDecl>(Tmpl),
                                                 Diags)) {
     S.Diag(A->getLocation(), diag::err_enable_if_never_constant_expr);
     for (int I = 0, N = Diags.size(); I != N; ++I)
@@ -3396,13 +3396,6 @@ void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
     UpdateExceptionSpec(Decl, EST_None);
     return;
   }
-  if (Inst.isAlreadyInstantiating()) {
-    // This exception specification indirectly depends on itself. Reject.
-    // FIXME: Corresponding rule in the standard?
-    Diag(PointOfInstantiation, diag::err_exception_spec_cycle) << Decl;
-    UpdateExceptionSpec(Decl, EST_None);
-    return;
-  }
 
   // Enter the scope of this instantiation. We don't use
   // PushDeclContext because we don't have a scope.
@@ -3552,8 +3545,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 
   // Never instantiate an explicit specialization except if it is a class scope
   // explicit specialization.
-  TemplateSpecializationKind TSK = Function->getTemplateSpecializationKind();
-  if (TSK == TSK_ExplicitSpecialization &&
+  if (Function->getTemplateSpecializationKind() == TSK_ExplicitSpecialization &&
       !Function->getClassScopeSpecializationPattern())
     return;
 
@@ -3561,40 +3553,13 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   const FunctionDecl *PatternDecl = Function->getTemplateInstantiationPattern();
   assert(PatternDecl && "instantiating a non-template");
 
-  const FunctionDecl *PatternDef = PatternDecl->getDefinition();
-  Stmt *Pattern = nullptr;
-  if (PatternDef) {
-    Pattern = PatternDef->getBody(PatternDef);
-    PatternDecl = PatternDef;
+  Stmt *Pattern = PatternDecl->getBody(PatternDecl);
+  assert(PatternDecl && "template definition is not a template");
+  if (!Pattern) {
+    // Try to find a defaulted definition
+    PatternDecl->isDefined(PatternDecl);
   }
-
-  // FIXME: We need to track the instantiation stack in order to know which
-  // definitions should be visible within this instantiation.
-  if (DiagnoseUninstantiableTemplate(PointOfInstantiation, Function,
-                                Function->getInstantiatedFromMemberFunction(),
-                                     PatternDecl, PatternDef, TSK,
-                                     /*Complain*/DefinitionRequired)) {
-    if (DefinitionRequired)
-      Function->setInvalidDecl();
-    else if (TSK == TSK_ExplicitInstantiationDefinition) {
-      // Try again at the end of the translation unit (at which point a
-      // definition will be required).
-      assert(!Recursive);
-      PendingInstantiations.push_back(
-        std::make_pair(Function, PointOfInstantiation));
-    } else if (TSK == TSK_ImplicitInstantiation) {
-      if (AtEndOfTU && !getDiagnostics().hasErrorOccurred()) {
-        Diag(PointOfInstantiation, diag::warn_func_template_missing)
-          << Function;
-        Diag(PatternDecl->getLocation(), diag::note_forward_template_decl);
-        if (getLangOpts().CPlusPlus11)
-          Diag(PointOfInstantiation, diag::note_inst_declaration_hint)
-            << Function;
-      }
-    }
-
-    return;
-  }
+  assert(PatternDecl && "template definition is not a template");
 
   // Postpone late parsed template instantiations.
   if (PatternDecl->isLateTemplateParsed() &&
@@ -3628,16 +3593,52 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     Pattern = PatternDecl->getBody(PatternDecl);
   }
 
-  // Note, we should never try to instantiate a deleted function template.
-  assert((Pattern || PatternDecl->isDefaulted()) &&
-         "unexpected kind of function template definition");
+  // FIXME: Check that the definition is visible before trying to instantiate
+  // it. This requires us to track the instantiation stack in order to know
+  // which definitions should be visible.
+
+  if (!Pattern && !PatternDecl->isDefaulted()) {
+    if (DefinitionRequired) {
+      if (Function->getPrimaryTemplate())
+        Diag(PointOfInstantiation,
+             diag::err_explicit_instantiation_undefined_func_template)
+          << Function->getPrimaryTemplate();
+      else
+        Diag(PointOfInstantiation,
+             diag::err_explicit_instantiation_undefined_member)
+          << 1 << Function->getDeclName() << Function->getDeclContext();
+
+      if (PatternDecl)
+        Diag(PatternDecl->getLocation(),
+             diag::note_explicit_instantiation_here);
+      Function->setInvalidDecl();
+    } else if (Function->getTemplateSpecializationKind()
+                 == TSK_ExplicitInstantiationDefinition) {
+      assert(!Recursive);
+      PendingInstantiations.push_back(
+        std::make_pair(Function, PointOfInstantiation));
+    } else if (Function->getTemplateSpecializationKind()
+                 == TSK_ImplicitInstantiation) {
+      if (AtEndOfTU && !getDiagnostics().hasErrorOccurred()) {
+        Diag(PointOfInstantiation, diag::warn_func_template_missing)
+          << Function;
+        Diag(PatternDecl->getLocation(), diag::note_forward_template_decl);
+        if (getLangOpts().CPlusPlus11)
+          Diag(PointOfInstantiation, diag::note_inst_declaration_hint)
+            << Function;
+      }
+    }
+
+    return;
+  }
 
   // C++1y [temp.explicit]p10:
   //   Except for inline functions, declarations with types deduced from their
   //   initializer or return value, and class template specializations, other
   //   explicit instantiation declarations have the effect of suppressing the
   //   implicit instantiation of the entity to which they refer.
-  if (TSK == TSK_ExplicitInstantiationDeclaration &&
+  if (Function->getTemplateSpecializationKind() ==
+          TSK_ExplicitInstantiationDeclaration &&
       !PatternDecl->isInlined() &&
       !PatternDecl->getReturnType()->getContainedAutoType())
     return;
@@ -3654,14 +3655,10 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   }
 
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Function);
-  if (Inst.isInvalid() || Inst.isAlreadyInstantiating())
+  if (Inst.isInvalid())
     return;
   PrettyDeclStackTraceEntry CrashInfo(*this, Function, SourceLocation(),
                                       "instantiating function definition");
-
-  // The instantiation is visible here, even if it was first declared in an
-  // unimported module.
-  Function->setHidden(false);
 
   // Copy the inner loc start from the pattern.
   Function->setInnerLocStart(PatternDecl->getInnerLocStart());
@@ -3921,6 +3918,10 @@ void Sema::InstantiateVariableInitializer(
   else if (OldVar->isInline())
     Var->setImplicitlyInline();
 
+  if (Var->getAnyInitializer())
+    // We already have an initializer in the class.
+    return;
+
   if (OldVar->getInit()) {
     if (Var->isStaticDataMember() && !OldVar->isOutOfLine())
       PushExpressionEvaluationContext(Sema::ConstantEvaluated, OldVar);
@@ -3956,23 +3957,9 @@ void Sema::InstantiateVariableInitializer(
     }
 
     PopExpressionEvaluationContext();
-  } else {
-    if (Var->isStaticDataMember()) {
-      if (!Var->isOutOfLine())
-        return;
-
-      // If the declaration inside the class had an initializer, don't add
-      // another one to the out-of-line definition.
-      if (OldVar->getFirstDecl()->hasInit())
-        return;
-    }
-
-    // We'll add an initializer to a for-range declaration later.
-    if (Var->isCXXForRangeDecl())
-      return;
-
+  } else if ((!Var->isStaticDataMember() || Var->isOutOfLine()) &&
+             !Var->isCXXForRangeDecl())
     ActOnUninitializedDecl(Var, false);
-  }
 }
 
 /// \brief Instantiate the definition of the given variable from its
@@ -4062,14 +4049,10 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
       // FIXME: Factor out the duplicated instantiation context setup/tear down
       // code here.
       InstantiatingTemplate Inst(*this, PointOfInstantiation, Var);
-      if (Inst.isInvalid() || Inst.isAlreadyInstantiating())
+      if (Inst.isInvalid())
         return;
       PrettyDeclStackTraceEntry CrashInfo(*this, Var, SourceLocation(),
                                           "instantiating variable initializer");
-
-      // The instantiation is visible here, even if it was first declared in an
-      // unimported module.
-      Var->setHidden(false);
 
       // If we're performing recursive template instantiation, create our own
       // queue of pending implicit instantiations that we will instantiate
@@ -4119,17 +4102,33 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
     Def = PatternDecl->getDefinition();
   }
 
-  TemplateSpecializationKind TSK = Var->getTemplateSpecializationKind();
+  // FIXME: Check that the definition is visible before trying to instantiate
+  // it. This requires us to track the instantiation stack in order to know
+  // which definitions should be visible.
 
   // If we don't have a definition of the variable template, we won't perform
   // any instantiation. Rather, we rely on the user to instantiate this
   // definition (or provide a specialization for it) in another translation
   // unit.
-  if (!Def && !DefinitionRequired) {
-    if (TSK == TSK_ExplicitInstantiationDefinition) {
+  if (!Def) {
+    if (DefinitionRequired) {
+      if (VarSpec)
+        Diag(PointOfInstantiation,
+             diag::err_explicit_instantiation_undefined_var_template) << Var;
+      else
+        Diag(PointOfInstantiation,
+             diag::err_explicit_instantiation_undefined_member)
+            << 2 << Var->getDeclName() << Var->getDeclContext();
+      Diag(PatternDecl->getLocation(),
+           diag::note_explicit_instantiation_here);
+      if (VarSpec)
+        Var->setInvalidDecl();
+    } else if (Var->getTemplateSpecializationKind()
+                 == TSK_ExplicitInstantiationDefinition) {
       PendingInstantiations.push_back(
         std::make_pair(Var, PointOfInstantiation));
-    } else if (TSK == TSK_ImplicitInstantiation) {
+    } else if (Var->getTemplateSpecializationKind()
+                 == TSK_ImplicitInstantiation) {
       // Warn about missing definition at the end of translation unit.
       if (AtEndOfTU && !getDiagnostics().hasErrorOccurred()) {
         Diag(PointOfInstantiation, diag::warn_var_template_missing)
@@ -4138,20 +4137,12 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
         if (getLangOpts().CPlusPlus11)
           Diag(PointOfInstantiation, diag::note_inst_declaration_hint) << Var;
       }
-      return;
     }
 
+    return;
   }
 
-  // FIXME: We need to track the instantiation stack in order to know which
-  // definitions should be visible within this instantiation.
-  // FIXME: Produce diagnostics when Var->getInstantiatedFromStaticDataMember().
-  if (DiagnoseUninstantiableTemplate(PointOfInstantiation, Var,
-                                     /*InstantiatedFromMember*/false,
-                                     PatternDecl, Def, TSK,
-                                     /*Complain*/DefinitionRequired))
-    return;
-
+  TemplateSpecializationKind TSK = Var->getTemplateSpecializationKind();
 
   // Never instantiate an explicit specialization.
   if (TSK == TSK_ExplicitSpecialization)
@@ -4187,7 +4178,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
   }
 
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Var);
-  if (Inst.isInvalid() || Inst.isAlreadyInstantiating())
+  if (Inst.isInvalid())
     return;
   PrettyDeclStackTraceEntry CrashInfo(*this, Var, SourceLocation(),
                                       "instantiating variable definition");

@@ -284,21 +284,6 @@ private:
   void Error(const char *Msg);
 };
 
-/// \brief ASTReaderListenter implementation to set SuggestedPredefines of
-/// ASTReader which is required to use a pch file. This is the replacement
-/// of PCHValidator or SimplePCHValidator when using a pch file without
-/// validating it.
-class SimpleASTReaderListener : public ASTReaderListener {
-  Preprocessor &PP;
-
-public:
-  SimpleASTReaderListener(Preprocessor &PP)
-    : PP(PP) {}
-
-  bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts, bool Complain,
-                               std::string &SuggestedPredefines) override;
-};
-
 namespace serialization {
 
 class ReadMethodPoolVisitor;
@@ -404,9 +389,6 @@ private:
 
   /// \brief The module manager which manages modules and their dependencies
   ModuleManager ModuleMgr;
-
-  /// \brief The PCM manager which manages memory buffers for pcm files.
-  PCMCache *BufferMgr;
 
   /// \brief A dummy identifier resolver used to merge TU-scope declarations in
   /// C, for the cases where we don't have a Sema object to provide a real
@@ -820,7 +802,6 @@ private:
   // \brief A list of late parsed template function data.
   SmallVector<uint64_t, 1> LateParsedTemplates;
 
-public:
   struct ImportedSubmodule {
     serialization::SubmoduleID ID;
     SourceLocation ImportLoc;
@@ -829,7 +810,6 @@ public:
       : ID(ID), ImportLoc(ImportLoc) {}
   };
 
-private:
   /// \brief A list of modules that were imported by precompiled headers or
   /// any other non-module AST file.
   SmallVector<ImportedSubmodule, 2> ImportedModules;
@@ -1164,26 +1144,16 @@ private:
                             SourceLocation ImportLoc, ModuleFile *ImportedBy,
                             SmallVectorImpl<ImportedModule> &Loaded,
                             off_t ExpectedSize, time_t ExpectedModTime,
-                            ASTFileSignature ExpectedSignature,
+                            serialization::ASTFileSignature ExpectedSignature,
                             unsigned ClientLoadCapabilities);
   ASTReadResult ReadControlBlock(ModuleFile &F,
                                  SmallVectorImpl<ImportedModule> &Loaded,
                                  const ModuleFile *ImportedBy,
-                                 unsigned ClientLoadCapabilities,
-                                 ASTFileSignature ExpectedSignature);
-  ASTReadResult
-  findAndReadUnhashedControlBlock(ModuleFile &F, const ModuleFile *ImportedBy,
-                                  ASTFileSignature ExpectedSignature,
-                                  unsigned ClientLoadCapabilities);
+                                 unsigned ClientLoadCapabilities);
   static ASTReadResult ReadOptionsBlock(
       llvm::BitstreamCursor &Stream, unsigned ClientLoadCapabilities,
       bool AllowCompatibleConfigurationMismatch, ASTReaderListener &Listener,
-      std::string &SuggestedPredefines);
-  static ASTReadResult ReadDiagnosticOptionsBlock(
-      ModuleFile *F, llvm::BitstreamCursor &Stream,
-      unsigned ClientLoadCapabilities, ASTFileSignature ExpectedSignature,
-      bool AllowCompatibleConfigurationMismatch, ASTReaderListener *Listener,
-      bool ValidateDiagnosticOptions);
+      std::string &SuggestedPredefines, bool ValidateDiagnosticOptions);
   ASTReadResult ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities);
   ASTReadResult ReadExtensionBlock(ModuleFile &F);
   bool ParseLineTable(ModuleFile &F, const RecordData &Record);
@@ -1415,13 +1385,9 @@ public:
   /// \param ClientLoadCapabilities The set of client load-failure
   /// capabilities, represented as a bitset of the enumerators of
   /// LoadFailureCapabilities.
-  ///
-  /// \param Imported optional out-parameter to append the list of modules
-  /// that were imported by precompiled headers or any other non-module AST file
   ASTReadResult ReadAST(StringRef FileName, ModuleKind Type,
                         SourceLocation ImportLoc,
-                        unsigned ClientLoadCapabilities,
-                        SmallVectorImpl<ImportedSubmodule> *Imported = nullptr);
+                        unsigned ClientLoadCapabilities);
 
   /// \brief Make the entities in the given module and any of its (non-explicit)
   /// submodules visible to name lookup.
@@ -1438,10 +1404,6 @@ public:
 
   /// \brief Make the names within this set of hidden names visible.
   void makeNamesVisible(const HiddenNames &Names, Module *Owner);
-
-  /// \brief Note that MergedDef is a redefinition of the canonical definition
-  /// Def, so Def should be visible whenever MergedDef is.
-  void mergeDefinitionVisibility(NamedDecl *Def, NamedDecl *MergedDef);
 
   /// \brief Take the AST callbacks listener.
   std::unique_ptr<ASTReaderListener> takeListener() {

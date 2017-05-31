@@ -199,14 +199,13 @@ namespace {
     Qualifiers::ObjCLifetime Lifetime;
     const BlockDecl::Capture *Capture; // null for 'this'
     llvm::Type *Type;
-    QualType FieldType;
 
     BlockLayoutChunk(CharUnits align, CharUnits size,
                      Qualifiers::ObjCLifetime lifetime,
                      const BlockDecl::Capture *capture,
-                     llvm::Type *type, QualType fieldType)
+                     llvm::Type *type)
       : Alignment(align), Size(size), Lifetime(lifetime),
-        Capture(capture), Type(type), FieldType(fieldType) {}
+        Capture(capture), Type(type) {}
 
     /// Tell the block info that this chunk has the given field index.
     void setIndex(CGBlockInfo &info, unsigned index, CharUnits offset) {
@@ -214,8 +213,8 @@ namespace {
         info.CXXThisIndex = index;
         info.CXXThisOffset = offset;
       } else {
-        auto C = CGBlockInfo::Capture::makeIndex(index, offset, FieldType);
-        info.Captures.insert({Capture->getVariable(), C});
+        info.Captures.insert({Capture->getVariable(),
+                              CGBlockInfo::Capture::makeIndex(index, offset)});
       }
     }
   };
@@ -322,19 +321,6 @@ static void initializeForBlockHeader(CodeGenModule &CGM, CGBlockInfo &info,
   assert(elementTypes.size() == BlockHeaderSize);
 }
 
-static QualType getCaptureFieldType(const CodeGenFunction &CGF,
-                                    const BlockDecl::Capture &CI) {
-  const VarDecl *VD = CI.getVariable();
-
-  // If the variable is captured by an enclosing block or lambda expression,
-  // use the type of the capture field.
-  if (CGF.BlockInfo && CI.isNested())
-    return CGF.BlockInfo->getCapture(VD).fieldType();
-  if (auto *FD = CGF.LambdaCaptureFields.lookup(VD))
-    return FD->getType();
-  return VD->getType();
-}
-
 /// Compute the layout of the given block.  Attempts to lay the block
 /// out with minimal space requirements.
 static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
@@ -377,7 +363,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
 
     layout.push_back(BlockLayoutChunk(tinfo.second, tinfo.first,
                                       Qualifiers::OCL_None,
-                                      nullptr, llvmType, thisType));
+                                      nullptr, llvmType));
   }
 
   // Next, all the block captures.
@@ -394,7 +380,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
 
       layout.push_back(BlockLayoutChunk(align, CGM.getPointerSize(),
                                         Qualifiers::OCL_None, &CI,
-                                        CGM.VoidPtrTy, variable->getType()));
+                                        CGM.VoidPtrTy));
       continue;
     }
 
@@ -449,7 +435,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
       }
     }
 
-    QualType VT = getCaptureFieldType(*CGF, CI);
+    QualType VT = variable->getType();
     CharUnits size = C.getTypeSizeInChars(VT);
     CharUnits align = C.getDeclAlign(variable);
     
@@ -458,8 +444,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
     llvm::Type *llvmType =
       CGM.getTypes().ConvertTypeForMem(VT);
     
-    layout.push_back(
-        BlockLayoutChunk(align, size, lifetime, &CI, llvmType, VT));
+    layout.push_back(BlockLayoutChunk(align, size, lifetime, &CI, llvmType));
   }
 
   // If that was everything, we're done here.
@@ -615,8 +600,8 @@ static void enterBlockScope(CodeGenFunction &CGF, BlockDecl *block) {
     if (capture.isConstant()) continue;
 
     // Ignore objects that aren't destructed.
-    QualType VT = getCaptureFieldType(CGF, CI);
-    QualType::DestructionKind dtorKind = VT.isDestructedType();
+    QualType::DestructionKind dtorKind =
+      variable->getType().isDestructedType();
     if (dtorKind == QualType::DK_none) continue;
 
     CodeGenFunction::Destroyer *destroyer;
@@ -643,7 +628,7 @@ static void enterBlockScope(CodeGenFunction &CGF, BlockDecl *block) {
     if (useArrayEHCleanup) 
       cleanupKind = InactiveNormalAndEHCleanup;
 
-    CGF.pushDestroy(cleanupKind, addr, VT,
+    CGF.pushDestroy(cleanupKind, addr, variable->getType(),
                     destroyer, useArrayEHCleanup);
 
     // Remember where that cleanup was.
@@ -790,7 +775,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
     // Ignore constant captures.
     if (capture.isConstant()) continue;
 
-    QualType type = capture.fieldType();
+    QualType type = variable->getType();
 
     // This will be a [[type]]*, except that a byref entry will just be
     // an i8**.
@@ -1048,8 +1033,9 @@ Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable,
                                  variable->getName());
   }
 
-  if (auto refType = capture.fieldType()->getAs<ReferenceType>())
+  if (auto refType = variable->getType()->getAs<ReferenceType>()) {
     addr = EmitLoadOfReference(addr, refType);
+  }
 
   return addr;
 }

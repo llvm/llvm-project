@@ -25,7 +25,7 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-branch-relax"
 
 STATISTIC(NumSplit, "Number of basic blocks split");
-STATISTIC(NumConditionalRelaxed, "Number of conditional branches relaxed");
+STATISTIC(NumRelaxed, "Number of conditional branches relaxed");
 
 namespace llvm {
 void initializeAArch64BranchRelaxationPass(PassRegistry &);
@@ -477,43 +477,13 @@ bool AArch64BranchRelaxation::relaxBranchInstructions() {
     if (J == MBB.end())
       continue;
 
-    MachineBasicBlock::iterator Next;
-    for (MachineBasicBlock::iterator J = MBB.getFirstTerminator();
-         J != MBB.end(); J = Next) {
-      Next = std::next(J);
-      MachineInstr &MI = *J;
-
-      if (MI.isConditionalBranch()) {
-        MachineBasicBlock *DestBB = getDestBlock(MI);
-        if (!isBlockInRange(MI, *DestBB)) {
-          if (Next != MBB.end() && Next->isConditionalBranch()) {
-            // If there are multiple conditional branches, this isn't an
-            // analyzable block. Split later terminators into a new block so
-            // each one will be analyzable.
-
-            MachineBasicBlock *NewBB = splitBlockBeforeInstr(*Next);
-            NewBB->transferSuccessors(&MBB);
-            MBB.addSuccessor(NewBB);
-            MBB.addSuccessor(DestBB);
-
-            // Cleanup potential unconditional branch to successor block.
-            NewBB->updateTerminator();
-            MBB.updateTerminator();
-          } else {
-            fixupConditionalBranch(MI);
-            ++NumConditionalRelaxed;
-          }
-
-          Changed = true;
-
-          // This may have modified all of the terminators, so start over.
-          Next = MBB.getFirstTerminator();
-        }
-
-      }
+    MachineInstr &MI = *J;
+    if (MI.isConditionalBranch() && !isBlockInRange(MI, *getDestBlock(MI))) {
+      fixupConditionalBranch(MI);
+      ++NumRelaxed;
+      Changed = true;
     }
   }
-
   return Changed;
 }
 

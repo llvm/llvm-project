@@ -83,38 +83,3 @@ void BufferedStackTrace::Unwind(u32 max_depth, uptr pc, uptr bp, void *context,
 }
 
 }  // namespace __sanitizer
-using namespace __sanitizer;
-
-extern "C" {
-SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_symbolize_pc(uptr pc, const char *fmt, char *out_buf,
-                              uptr out_buf_size) {
-  if (!out_buf_size) return;
-  pc = StackTrace::GetPreviousInstructionPc(pc);
-  SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc);
-  if (!frame) {
-    internal_strncpy(out_buf, "<can't symbolize>", out_buf_size);
-    out_buf[out_buf_size - 1] = 0;
-    return;
-  }
-  InternalScopedString frame_desc(GetPageSizeCached());
-  RenderFrame(&frame_desc, fmt, 0, frame->info,
-              common_flags()->symbolize_vs_style,
-              common_flags()->strip_path_prefix);
-  internal_strncpy(out_buf, frame_desc.data(), out_buf_size);
-  out_buf[out_buf_size - 1] = 0;
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_symbolize_global(uptr data_addr, const char *fmt,
-                                  char *out_buf, uptr out_buf_size) {
-  if (!out_buf_size) return;
-  out_buf[0] = 0;
-  DataInfo DI;
-  if (!Symbolizer::GetOrInit()->SymbolizeData(data_addr, &DI)) return;
-  InternalScopedString data_desc(GetPageSizeCached());
-  RenderData(&data_desc, fmt, &DI, common_flags()->strip_path_prefix);
-  internal_strncpy(out_buf, data_desc.data(), out_buf_size);
-  out_buf[out_buf_size - 1] = 0;
-}
-}  // extern "C"

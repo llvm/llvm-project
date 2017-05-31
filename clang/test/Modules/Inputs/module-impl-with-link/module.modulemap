@@ -1,4 +1,0 @@
-module Clib {
-  header "foo.h"
-  link "Clib"
-}

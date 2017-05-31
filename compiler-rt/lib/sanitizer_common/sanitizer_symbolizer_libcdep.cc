@@ -64,13 +64,11 @@ SymbolizedStack *Symbolizer::SymbolizePC(uptr addr) {
   BlockingMutexLock l(&mu_);
   const char *module_name;
   uptr module_offset;
-  ModuleArch arch;
   SymbolizedStack *res = SymbolizedStack::New(addr);
-  if (!FindModuleNameAndOffsetForAddress(addr, &module_name, &module_offset,
-                                         &arch))
+  if (!FindModuleNameAndOffsetForAddress(addr, &module_name, &module_offset))
     return res;
   // Always fill data about module name and offset.
-  res->info.FillModuleInfo(module_name, module_offset, arch);
+  res->info.FillModuleInfo(module_name, module_offset);
   for (auto &tool : tools_) {
     SymbolizerScope sym_scope(this);
     if (tool.SymbolizePC(addr, res)) {
@@ -84,14 +82,11 @@ bool Symbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   BlockingMutexLock l(&mu_);
   const char *module_name;
   uptr module_offset;
-  ModuleArch arch;
-  if (!FindModuleNameAndOffsetForAddress(addr, &module_name, &module_offset,
-                                         &arch))
+  if (!FindModuleNameAndOffsetForAddress(addr, &module_name, &module_offset))
     return false;
   info->Clear();
   info->module = internal_strdup(module_name);
   info->module_offset = module_offset;
-  info->module_arch = arch;
   for (auto &tool : tools_) {
     SymbolizerScope sym_scope(this);
     if (tool.SymbolizeData(addr, info)) {
@@ -105,9 +100,8 @@ bool Symbolizer::GetModuleNameAndOffsetForPC(uptr pc, const char **module_name,
                                              uptr *module_address) {
   BlockingMutexLock l(&mu_);
   const char *internal_module_name = nullptr;
-  ModuleArch arch;
   if (!FindModuleNameAndOffsetForAddress(pc, &internal_module_name,
-                                         module_address, &arch))
+                                         module_address))
     return false;
 
   if (module_name)
@@ -140,14 +134,12 @@ void Symbolizer::PrepareForSandboxing() {
 
 bool Symbolizer::FindModuleNameAndOffsetForAddress(uptr address,
                                                    const char **module_name,
-                                                   uptr *module_offset,
-                                                   ModuleArch *module_arch) {
+                                                   uptr *module_offset) {
   const LoadedModule *module = FindModuleForAddress(address);
   if (module == nullptr)
     return false;
   *module_name = module->full_name();
   *module_offset = address - module->base_address();
-  *module_arch = module->arch();
   return true;
 }
 
@@ -205,8 +197,6 @@ class LLVMSymbolizerProcess : public SymbolizerProcess {
            buffer[length - 2] == '\n';
   }
 
-  // When adding a new architecture, don't forget to also update
-  // script/asan_symbolize.py and sanitizer_common.h.
   void GetArgV(const char *path_to_binary,
                const char *(&argv)[kArgVMax]) const override {
 #if defined(__x86_64h__)
@@ -298,8 +288,7 @@ void ParseSymbolizePCOutput(const char *str, SymbolizedStack *res) {
       top_frame = false;
     } else {
       cur = SymbolizedStack::New(res->info.address);
-      cur->info.FillModuleInfo(res->info.module, res->info.module_offset,
-                               res->info.module_arch);
+      cur->info.FillModuleInfo(res->info.module, res->info.module_offset);
       last->next = cur;
       last = cur;
     }
@@ -332,10 +321,8 @@ void ParseSymbolizeDataOutput(const char *str, DataInfo *info) {
 }
 
 bool LLVMSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
-  AddressInfo *info = &stack->info;
-  const char *buf = FormatAndSendCommand(
-      /*is_data*/ false, info->module, info->module_offset, info->module_arch);
-  if (buf) {
+  if (const char *buf = SendCommand(/*is_data*/ false, stack->info.module,
+                                    stack->info.module_offset)) {
     ParseSymbolizePCOutput(buf, stack);
     return true;
   }
@@ -343,9 +330,8 @@ bool LLVMSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
 }
 
 bool LLVMSymbolizer::SymbolizeData(uptr addr, DataInfo *info) {
-  const char *buf = FormatAndSendCommand(
-      /*is_data*/ true, info->module, info->module_offset, info->module_arch);
-  if (buf) {
+  if (const char *buf =
+          SendCommand(/*is_data*/ true, info->module, info->module_offset)) {
     ParseSymbolizeDataOutput(buf, info);
     info->start += (addr - info->module_offset); // Add the base address.
     return true;
@@ -353,19 +339,11 @@ bool LLVMSymbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   return false;
 }
 
-const char *LLVMSymbolizer::FormatAndSendCommand(bool is_data,
-                                                 const char *module_name,
-                                                 uptr module_offset,
-                                                 ModuleArch arch) {
+const char *LLVMSymbolizer::SendCommand(bool is_data, const char *module_name,
+                                        uptr module_offset) {
   CHECK(module_name);
-  const char *is_data_str = is_data ? "DATA " : "";
-  if (arch == kModuleArchUnknown) {
-    internal_snprintf(buffer_, kBufferSize, "%s\"%s\" 0x%zx\n", is_data_str,
-                      module_name, module_offset);
-  } else {
-    internal_snprintf(buffer_, kBufferSize, "%s\"%s:%s\" 0x%zx\n", is_data_str,
-                      module_name, ModuleArchToString(arch), module_offset);
-  }
+  internal_snprintf(buffer_, kBufferSize, "%s\"%s\" 0x%zx\n",
+                    is_data ? "DATA " : "", module_name, module_offset);
   return symbolizer_process_->SendCommand(buffer_);
 }
 

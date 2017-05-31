@@ -959,6 +959,9 @@ public:
   step_iterator step_begin() const { return Steps.begin(); }
   step_iterator step_end()   const { return Steps.end(); }
 
+  typedef llvm::iterator_range<step_iterator> step_range;
+  step_range steps() const { return {step_begin(), step_end()}; }
+
   /// \brief Determine whether this initialization is a direct reference 
   /// binding (C++ [dcl.init.ref]).
   bool isDirectReferenceBinding() const;

@@ -3876,7 +3876,6 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::ObjCObject:
     case Type::ObjCInterface:
     case Type::ObjCObjectPointer:
-    case Type::ObjCTypeParam:
     case Type::Pipe:
       llvm_unreachable("type class is never variably-modified!");
     case Type::Adjusted:
@@ -4546,11 +4545,6 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
                                MutiLevelArgList.getInnermost());
     if (Inst.isInvalid())
       return ExprError();
-    if (Inst.isAlreadyInstantiating()) {
-      Diag(Param->getLocStart(), diag::err_recursive_default_argument) << FD;
-      Param->setInvalidDecl();
-      return ExprError();
-    }
 
     ExprResult Result;
     {
@@ -7503,6 +7497,22 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
         return IncompatibleVectors;
       }
     }
+
+    // When the RHS comes from another lax conversion (e.g. binops between
+    // scalars and vectors) the result is canonicalized as a vector. When the
+    // LHS is also a vector, the lax is allowed by the condition above. Handle
+    // the case where LHS is a scalar.
+    if (LHSType->isScalarType()) {
+      const VectorType *VecType = RHSType->getAs<VectorType>();
+      if (VecType && VecType->getNumElements() == 1 &&
+          isLaxVectorConversion(RHSType, LHSType)) {
+        ExprResult *VecExpr = &RHS;
+        *VecExpr = ImpCastExprToType(VecExpr->get(), LHSType, CK_BitCast);
+        Kind = CK_BitCast;
+        return Compatible;
+      }
+    }
+
     return Incompatible;
   }
 
@@ -8047,14 +8057,16 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
       return RHSType;
   }
 
-  // If we're allowing lax vector conversions, only the total (data) size
-  // needs to be the same.
-  // FIXME: Should we really be allowing this?
-  // FIXME: We really just pick the LHS type arbitrarily?
-  if (isLaxVectorConversion(RHSType, LHSType)) {
-    QualType resultType = LHSType;
-    RHS = ImpCastExprToType(RHS.get(), resultType, CK_BitCast);
-    return resultType;
+  // If we're allowing lax vector conversions, only the total (data) size needs
+  // to be the same. If one of the types is scalar, the result is always the
+  // vector type. Don't allow this if the scalar operand is an lvalue.
+  QualType VecType = LHSVecType ? LHSType : RHSType;
+  QualType ScalarType = LHSVecType ? RHSType : LHSType;
+  ExprResult *ScalarExpr = LHSVecType ? &RHS : &LHS;
+  if (isLaxVectorConversion(ScalarType, VecType) &&
+      !ScalarExpr->get()->isLValue()) {
+    *ScalarExpr = ImpCastExprToType(ScalarExpr->get(), VecType, CK_BitCast);
+    return VecType;
   }
 
   // Okay, the expression is invalid.
@@ -8704,8 +8716,7 @@ static void DiagnoseBadShiftValues(Sema& S, ExprResult &LHS, ExprResult &RHS,
 static QualType checkVectorShift(Sema &S, ExprResult &LHS, ExprResult &RHS,
                                  SourceLocation Loc, bool IsCompAssign) {
   // OpenCL v1.1 s6.3.j says RHS can be a vector only if LHS is a vector.
-  if ((S.LangOpts.OpenCL || S.LangOpts.ZVector) &&
-      !LHS.get()->getType()->isVectorType()) {
+  if (!LHS.get()->getType()->isVectorType()) {
     S.Diag(Loc, diag::err_shift_rhs_only_vector)
       << RHS.get()->getType() << LHS.get()->getType()
       << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
@@ -8721,17 +8732,15 @@ static QualType checkVectorShift(Sema &S, ExprResult &LHS, ExprResult &RHS,
   if (RHS.isInvalid()) return QualType();
 
   QualType LHSType = LHS.get()->getType();
-  // Note that LHS might be a scalar because the routine calls not only in
-  // OpenCL case.
-  const VectorType *LHSVecTy = LHSType->getAs<VectorType>();
-  QualType LHSEleType = LHSVecTy ? LHSVecTy->getElementType() : LHSType;
+  const VectorType *LHSVecTy = LHSType->castAs<VectorType>();
+  QualType LHSEleType = LHSVecTy->getElementType();
 
   // Note that RHS might not be a vector.
   QualType RHSType = RHS.get()->getType();
   const VectorType *RHSVecTy = RHSType->getAs<VectorType>();
   QualType RHSEleType = RHSVecTy ? RHSVecTy->getElementType() : RHSType;
 
-  // The operands need to be integers.
+  // OpenCL v1.1 s6.3.j says that the operands need to be integers.
   if (!LHSEleType->isIntegerType()) {
     S.Diag(Loc, diag::err_typecheck_expect_int)
       << LHS.get()->getType() << LHS.get()->getSourceRange();
@@ -8744,19 +8753,7 @@ static QualType checkVectorShift(Sema &S, ExprResult &LHS, ExprResult &RHS,
     return QualType();
   }
 
-  if (!LHSVecTy) {
-    assert(RHSVecTy);
-    if (IsCompAssign)
-      return RHSType;
-    if (LHSEleType != RHSEleType) {
-      LHS = S.ImpCastExprToType(LHS.get(),RHSEleType, CK_IntegralCast);
-      LHSEleType = RHSEleType;
-    }
-    QualType VecTy =
-        S.Context.getExtVectorType(LHSEleType, RHSVecTy->getNumElements());
-    LHS = S.ImpCastExprToType(LHS.get(), VecTy, CK_VectorSplat);
-    LHSType = VecTy;
-  } else if (RHSVecTy) {
+  if (RHSVecTy) {
     // OpenCL v1.1 s6.3.j says that for vector types, the operators
     // are applied component-wise. So if RHS is a vector, then ensure
     // that the number of elements is the same as LHS...
@@ -9607,7 +9604,7 @@ QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
   }
   
   // Return a signed type for the vector.
-  return GetSignedVectorType(LHSType);
+  return GetSignedVectorType(vType);
 }
 
 QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
@@ -11346,7 +11343,7 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
       return checkPseudoObjectAssignment(S, OpLoc, Opc, LHSExpr, RHSExpr);
 
     // Don't resolve overloads if the other type is overloadable.
-    if (getLangOpts().CPlusPlus && pty->getKind() == BuiltinType::Overload) {
+    if (pty->getKind() == BuiltinType::Overload) {
       // We can't actually test that if we still have a placeholder,
       // though.  Fortunately, none of the exceptions we see in that
       // code below are valid when the LHS is an overload set.  Note
@@ -11371,16 +11368,17 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
     // An overload in the RHS can potentially be resolved by the type
     // being assigned to.
     if (Opc == BO_Assign && pty->getKind() == BuiltinType::Overload) {
-      if (getLangOpts().CPlusPlus &&
-          (LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent() ||
-           LHSExpr->getType()->isOverloadableType()))
+      if (LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent())
+        return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
+
+      if (LHSExpr->getType()->isOverloadableType())
         return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
 
       return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
     }
 
     // Don't resolve overloads if the other type is overloadable.
-    if (getLangOpts().CPlusPlus && pty->getKind() == BuiltinType::Overload &&
+    if (pty->getKind() == BuiltinType::Overload &&
         LHSExpr->getType()->isOverloadableType())
       return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
 
@@ -13421,22 +13419,6 @@ static bool captureInBlock(BlockScopeInfo *BSI, VarDecl *Var,
     }
     return false;
   }
-
-  // Warn about implicitly autoreleasing indirect parameters captured by blocks.
-  if (auto *PT = dyn_cast<PointerType>(CaptureType)) {
-    QualType PointeeTy = PT->getPointeeType();
-    if (isa<ObjCObjectPointerType>(PointeeTy.getCanonicalType()) &&
-        PointeeTy.getObjCLifetime() == Qualifiers::OCL_Autoreleasing &&
-        !isa<AttributedType>(PointeeTy)) {
-      if (BuildAndDiagnose) {
-        SourceLocation VarLoc = Var->getLocation();
-        S.Diag(Loc, diag::warn_block_capture_autoreleasing);
-        S.Diag(VarLoc, diag::note_declare_parameter_autoreleasing);
-        S.Diag(VarLoc, diag::note_declare_parameter_strong);
-      }
-    }
-  }
-
   const bool HasBlocksAttr = Var->hasAttr<BlocksAttr>();
   if (HasBlocksAttr || CaptureType->isReferenceType() ||
       (S.getLangOpts().OpenMP && S.IsOpenMPCapturedDecl(Var))) {
@@ -14697,13 +14679,6 @@ namespace {
           << E->getSourceRange();
         return ExprError();
       }
-
-      if (isa<CallExpr>(E->getSubExpr())) {
-        S.Diag(E->getOperatorLoc(), diag::err_unknown_any_addrof_call)
-          << E->getSourceRange();
-        return ExprError();
-      }
-
       assert(E->getValueKind() == VK_RValue);
       assert(E->getObjectKind() == OK_Ordinary);
       E->setType(DestType);

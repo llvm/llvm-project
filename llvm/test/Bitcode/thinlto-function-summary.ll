@@ -1,5 +1,5 @@
-; RUN: opt -name-anon-globals -module-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
-; RUN: opt -passes=name-anon-globals -module-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
+; RUN: opt -name-anon-functions -module-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
+; RUN: opt -passes=name-anon-functions -module-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
 ; Check for summary block/records.
 
 ; Check the value ids in the summary entries against the
@@ -22,7 +22,7 @@
 ; BC-NEXT: <FNENTRY {{.*}} op0=3 {{.*}}> record string = 'anon.
 
 
-; RUN: opt -name-anon-globals -module-summary < %s | llvm-dis | FileCheck %s
+; RUN: opt -name-anon-functions -module-summary < %s | llvm-dis | FileCheck %s
 ; Check that this round-trips correctly.
 
 ; ModuleID = '<stdin>'
@@ -46,7 +46,7 @@ entry:
 }
 
 ; FIXME: Anonymous function and alias not currently in summary until
-; follow on fixes to rename anonymous globals and emit alias summary
+; follow on fixes to rename anonymous functions and emit alias summary
 ; entries are committed.
 ; Check an anonymous function as well, since in that case only the alias
 ; ends up in the value symbol table and having a summary.

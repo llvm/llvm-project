@@ -24,10 +24,10 @@
 
 ; File, line, and column should match those specified in the metadata
 ; CHECK: remark: source.cpp:4:5: loop not vectorized: could not determine number of loop iterations
-; CHECK: remark: source.cpp:4:5: loop not vectorized
+; CHECK: remark: source.cpp:4:5: loop not vectorized: use -Rpass-analysis=loop-vectorize for more info
 ; CHECK: remark: source.cpp:13:5: loop not vectorized: vectorization and interleaving are explicitly disabled, or vectorize width and interleave count are both set to 1
 ; CHECK: remark: source.cpp:19:5: loop not vectorized: cannot identify array bounds
-; CHECK: remark: source.cpp:19:5: loop not vectorized
+; CHECK: remark: source.cpp:19:5: loop not vectorized: use -Rpass-analysis=loop-vectorize for more info
 ; CHECK: warning: source.cpp:19:5: loop not vectorized: failed explicitly specified loop vectorization
 
 ; CHECK: _Z4testPii

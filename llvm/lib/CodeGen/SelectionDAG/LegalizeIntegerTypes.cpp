@@ -1235,15 +1235,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MGATHER(MaskedGatherSDNode *N,
     NewOps[OpNo] = PromoteTargetBoolean(N->getOperand(OpNo), DataVT);
   } else
     NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
-
-  SDValue Res = SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
-  // updated in place.
-  if (Res.getNode() == N)
-    return Res;
-
-  ReplaceValueWith(SDValue(N, 0), Res.getValue(0));
-  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
-  return SDValue();
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_MSCATTER(MaskedScatterSDNode *N,

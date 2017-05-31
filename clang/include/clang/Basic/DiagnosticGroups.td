@@ -279,11 +279,8 @@ def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;
 def NullabilityDeclSpec : DiagGroup<"nullability-declspec">;
-def NullabilityInferredOnNestedType : DiagGroup<"nullability-inferred-on-nested-type">;
 def NullableToNonNullConversion : DiagGroup<"nullable-to-nonnull-conversion">;
-def NullabilityCompletenessOnArrays : DiagGroup<"nullability-completeness-on-arrays">;
-def NullabilityCompleteness : DiagGroup<"nullability-completeness",
-                                        [NullabilityCompletenessOnArrays]>;
+def NullabilityCompleteness : DiagGroup<"nullability-completeness">;
 def NullArithmetic : DiagGroup<"null-arithmetic">;
 def NullCharacter : DiagGroup<"null-character">;
 def NullDereference : DiagGroup<"null-dereference">;
@@ -320,6 +317,7 @@ def ObjCRootClass : DiagGroup<"objc-root-class">;
 def ObjCPointerIntrospectPerformSelector : DiagGroup<"deprecated-objc-pointer-introspection-performSelector">;
 def ObjCPointerIntrospect : DiagGroup<"deprecated-objc-pointer-introspection", [ObjCPointerIntrospectPerformSelector]>;
 def ObjCMultipleMethodNames : DiagGroup<"objc-multiple-method-names">;
+def OpenCLUnsupportedRGBA: DiagGroup<"opencl-unsupported-rgba">;
 def DeprecatedObjCIsaUsage : DiagGroup<"deprecated-objc-isa-usage">;
 def ExplicitInitializeCall : DiagGroup<"explicit-initialize-call">;
 def Packed : DiagGroup<"packed">;
@@ -350,13 +348,11 @@ def MissingMethodReturnType : DiagGroup<"missing-method-return-type">;
 def ShadowFieldInConstructorModified : DiagGroup<"shadow-field-in-constructor-modified">;
 def ShadowFieldInConstructor : DiagGroup<"shadow-field-in-constructor",
                                          [ShadowFieldInConstructorModified]>;
-def ShadowUncapturedLocal : DiagGroup<"shadow-uncaptured-local">;
 
 // -Wshadow-all is a catch-all for all shadowing. -Wshadow is just the
 // shadowing that we think is unsafe.
 def Shadow : DiagGroup<"shadow", [ShadowFieldInConstructorModified]>;
-def ShadowAll : DiagGroup<"shadow-all", [Shadow, ShadowFieldInConstructor,
-                                         ShadowUncapturedLocal]>;
+def ShadowAll : DiagGroup<"shadow-all", [Shadow, ShadowFieldInConstructor]>;
 
 def Shorten64To32 : DiagGroup<"shorten-64-to-32">;
 def : DiagGroup<"sign-promo">;
@@ -376,9 +372,6 @@ def StringCompare : DiagGroup<"string-compare">;
 def StringPlusInt : DiagGroup<"string-plus-int">;
 def StringPlusChar : DiagGroup<"string-plus-char">;
 def StrncatSize : DiagGroup<"strncat-size">;
-
-def SwiftNameAttribute : DiagGroup<"swift-name-attribute">;
-
 def TautologicalOutOfRangeCompare : DiagGroup<"tautological-constant-out-of-range-compare">;
 def TautologicalPointerCompare : DiagGroup<"tautological-pointer-compare">;
 def TautologicalOverlapCompare : DiagGroup<"tautological-overlap-compare">;
@@ -503,7 +496,6 @@ def AutomaticReferenceCounting : DiagGroup<"arc",
 def ARCRepeatedUseOfWeakMaybe : DiagGroup<"arc-maybe-repeated-use-of-weak">;
 def ARCRepeatedUseOfWeak : DiagGroup<"arc-repeated-use-of-weak",
                                      [ARCRepeatedUseOfWeakMaybe]>;
-def BlockCaptureAutoReleasing : DiagGroup<"block-capture-autoreleasing">;
 def ObjCBridge : DiagGroup<"bridge-cast">;
 
 def DeallocInCategory:DiagGroup<"dealloc-in-category">;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount,alpha.core,deadcode.DeadStores -analyzer-store=region -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount,alpha.core,deadcode.DeadStores -analyzer-store=region -analyzer-constraints=range -verify %s
 
 // These declarations were reduced using Delta-Debugging from Foundation.h
 // on Mac OS X.  The test cases are below.

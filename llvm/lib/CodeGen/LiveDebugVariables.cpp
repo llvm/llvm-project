@@ -22,6 +22,7 @@
 #include "LiveDebugVariables.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -74,6 +75,27 @@ LiveDebugVariables::LiveDebugVariables() : MachineFunctionPass(ID), pImpl(nullpt
 
 /// LocMap - Map of where a user value is live, and its location.
 typedef IntervalMap<SlotIndex, unsigned, 4> LocMap;
+
+namespace {
+/// UserValueScopes - Keeps track of lexical scopes associated with a
+/// user value's source location.
+class UserValueScopes {
+  DebugLoc DL;
+  LexicalScopes &LS;
+  SmallPtrSet<const MachineBasicBlock *, 4> LBlocks;
+
+public:
+  UserValueScopes(DebugLoc D, LexicalScopes &L) : DL(std::move(D)), LS(L) {}
+
+  /// dominates - Return true if current scope dominates at least one machine
+  /// instruction in a given machine basic block.
+  bool dominates(MachineBasicBlock *MBB) {
+    if (LBlocks.empty())
+      LS.getMachineBasicBlocks(DL, LBlocks);
+    return LBlocks.count(MBB) != 0 || LS.dominates(DL, MBB);
+  }
+};
+} // end anonymous namespace
 
 /// UserValue - A user value is a part of a debug info user variable.
 ///
@@ -199,8 +221,8 @@ public:
       I.setValue(getLocationNo(LocMO));
   }
 
-  /// extendDef - Extend the current definition as far as possible down.
-  /// Stop when meeting an existing def or when leaving the live
+  /// extendDef - Extend the current definition as far as possible down the
+  /// dominator tree. Stop when meeting an existing def or when leaving the live
   /// range of VNI.
   /// End points where VNI is no longer live are added to Kills.
   /// @param Idx   Starting point for the definition.
@@ -209,10 +231,12 @@ public:
   /// @param VNI   When LR is not null, this is the value to restrict to.
   /// @param Kills Append end points of VNI's live range to Kills.
   /// @param LIS   Live intervals analysis.
+  /// @param MDT   Dominator tree.
   void extendDef(SlotIndex Idx, unsigned LocNo,
                  LiveRange *LR, const VNInfo *VNI,
                  SmallVectorImpl<SlotIndex> *Kills,
-                 LiveIntervals &LIS);
+                 LiveIntervals &LIS, MachineDominatorTree &MDT,
+                 UserValueScopes &UVS);
 
   /// addDefsFromCopies - The value in LI/LocNo may be copies to other
   /// registers. Determine if any of the copies are available at the kill
@@ -230,7 +254,8 @@ public:
   /// computeIntervals - Compute the live intervals of all locations after
   /// collecting all their def points.
   void computeIntervals(MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
-                        LiveIntervals &LIS);
+                        LiveIntervals &LIS, MachineDominatorTree &MDT,
+                        UserValueScopes &UVS);
 
   /// splitRegister - Replace OldReg ranges with NewRegs ranges where NewRegs is
   /// live. Returns true if any changes were made.
@@ -258,6 +283,8 @@ class LDVImpl {
   LocMap::Allocator allocator;
   MachineFunction *MF;
   LiveIntervals *LIS;
+  LexicalScopes LS;
+  MachineDominatorTree *MDT;
   const TargetRegisterInfo *TRI;
 
   /// Whether emitDebugValues is called.
@@ -315,6 +342,7 @@ public:
            "Dbg values are not emitted in LDV");
     EmitDone = false;
     ModifiedMF = false;
+    LS.reset();
   }
 
   /// mapVirtReg - Map virtual register to an equivalence class.
@@ -513,7 +541,8 @@ bool LDVImpl::collectDebugValues(MachineFunction &mf) {
 /// data-flow analysis to propagate them beyond basic block boundaries.
 void UserValue::extendDef(SlotIndex Idx, unsigned LocNo, LiveRange *LR,
                           const VNInfo *VNI, SmallVectorImpl<SlotIndex> *Kills,
-                          LiveIntervals &LIS) {
+                          LiveIntervals &LIS, MachineDominatorTree &MDT,
+                          UserValueScopes &UVS) {
   SlotIndex Start = Idx;
   MachineBasicBlock *MBB = LIS.getMBBFromIndex(Start);
   SlotIndex Stop = LIS.getMBBEndIdx(MBB);
@@ -631,7 +660,9 @@ UserValue::addDefsFromCopies(LiveInterval *LI, unsigned LocNo,
 void
 UserValue::computeIntervals(MachineRegisterInfo &MRI,
                             const TargetRegisterInfo &TRI,
-                            LiveIntervals &LIS) {
+                            LiveIntervals &LIS,
+                            MachineDominatorTree &MDT,
+                            UserValueScopes &UVS) {
   SmallVector<std::pair<SlotIndex, unsigned>, 16> Defs;
 
   // Collect all defs to be extended (Skipping undefs).
@@ -646,7 +677,7 @@ UserValue::computeIntervals(MachineRegisterInfo &MRI,
     const MachineOperand &Loc = locations[LocNo];
 
     if (!Loc.isReg()) {
-      extendDef(Idx, LocNo, nullptr, nullptr, nullptr, LIS);
+      extendDef(Idx, LocNo, nullptr, nullptr, nullptr, LIS, MDT, UVS);
       continue;
     }
 
@@ -659,7 +690,7 @@ UserValue::computeIntervals(MachineRegisterInfo &MRI,
         VNI = LI->getVNInfoAt(Idx);
       }
       SmallVector<SlotIndex, 16> Kills;
-      extendDef(Idx, LocNo, LI, VNI, &Kills, LIS);
+      extendDef(Idx, LocNo, LI, VNI, &Kills, LIS, MDT, UVS);
       if (LI)
         addDefsFromCopies(LI, LocNo, Kills, Defs, MRI, LIS);
       continue;
@@ -670,7 +701,7 @@ UserValue::computeIntervals(MachineRegisterInfo &MRI,
     LiveRange *LR = &LIS.getRegUnit(Unit);
     const VNInfo *VNI = LR->getVNInfoAt(Idx);
     // Don't track copies from physregs, it is too expensive.
-    extendDef(Idx, LocNo, LR, VNI, nullptr, LIS);
+    extendDef(Idx, LocNo, LR, VNI, nullptr, LIS, MDT, UVS);
   }
 
   // Finally, erase all the undefs.
@@ -683,7 +714,8 @@ UserValue::computeIntervals(MachineRegisterInfo &MRI,
 
 void LDVImpl::computeIntervals() {
   for (unsigned i = 0, e = userValues.size(); i != e; ++i) {
-    userValues[i]->computeIntervals(MF->getRegInfo(), *TRI, *LIS);
+    UserValueScopes UVS(userValues[i]->getDebugLoc(), LS);
+    userValues[i]->computeIntervals(MF->getRegInfo(), *TRI, *LIS, *MDT, UVS);
     userValues[i]->mapVirtRegs(this);
   }
 }
@@ -692,7 +724,9 @@ bool LDVImpl::runOnMachineFunction(MachineFunction &mf) {
   clear();
   MF = &mf;
   LIS = &pass.getAnalysis<LiveIntervals>();
+  MDT = &pass.getAnalysis<MachineDominatorTree>();
   TRI = mf.getSubtarget().getRegisterInfo();
+  LS.initialize(mf);
   DEBUG(dbgs() << "********** COMPUTING LIVE DEBUG VARIABLES: "
                << mf.getName() << " **********\n");
 
@@ -917,7 +951,7 @@ findInsertLocation(MachineBasicBlock *MBB, SlotIndex Idx,
   while (!(MI = LIS.getInstructionFromIndex(Idx))) {
     // We've reached the beginning of MBB.
     if (Idx == Start) {
-      MachineBasicBlock::iterator I = MBB->SkipPHIsLabelsAndDebug(MBB->begin());
+      MachineBasicBlock::iterator I = MBB->SkipPHIsAndLabels(MBB->begin());
       return I;
     }
     Idx = Idx.getPrevIndex();

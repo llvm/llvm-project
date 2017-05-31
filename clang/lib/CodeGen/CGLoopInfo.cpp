@@ -112,7 +112,6 @@ void LoopAttributes::clear() {
   UnrollCount = 0;
   VectorizeEnable = LoopAttributes::Unspecified;
   UnrollEnable = LoopAttributes::Unspecified;
-  DistributeEnable = LoopAttributes::Unspecified;
 }
 
 LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,

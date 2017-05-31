@@ -1,8 +1,4 @@
-RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -Xdemangler sed -Xdemangler 's/_/X/g' -filename-equivalence %S/showTemplateInstantiations.cpp | FileCheck %s
+// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -Xdemangler sed -Xdemangler 's/_/X/g' -filename-equivalence %S/showTemplateInstantiations.cpp | FileCheck %s
 
-// Check that we demangle names even if the sub-view will be hidden.
-RUN: llvm-profdata merge %S/Inputs/hideUnexecutedSubviews.proftext -o %t.profdata
-RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %t.profdata -Xdemangler sed -Xdemangler 's/_/X/g' -filename-equivalence %S/showTemplateInstantiations.cpp | FileCheck %s
-
-CHECK-DAG: XZ4funcIbEiTX
-CHECK-DAG: XZ4funcIiEiTX
+// CHECK-DAG: XZ4funcIbEiTX
+// CHECK-DAG: XZ4funcIiEiTX

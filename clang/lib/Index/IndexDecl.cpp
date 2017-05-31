@@ -46,13 +46,10 @@ public:
   }
 
   void handleDeclarator(const DeclaratorDecl *D,
-                        const NamedDecl *Parent = nullptr,
-                        bool isIBType = false) {
+                        const NamedDecl *Parent = nullptr) {
     if (!Parent) Parent = D;
 
-    IndexCtx.indexTypeSourceInfo(D->getTypeSourceInfo(), Parent,
-                                 Parent->getLexicalDeclContext(),
-                                 /*isBase=*/false, isIBType);
+    IndexCtx.indexTypeSourceInfo(D->getTypeSourceInfo(), Parent);
     IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), Parent);
     if (IndexCtx.shouldIndexFunctionLocalSymbols()) {
       // Only index parameters in definitions, parameters in declarations are
@@ -78,28 +75,12 @@ public:
     }
   }
 
-  bool handleObjCMethod(const ObjCMethodDecl *D,
-                        const ObjCPropertyDecl *AssociatedProp = nullptr) {
-    SmallVector<SymbolRelation, 4> Relations;
-    SmallVector<const ObjCMethodDecl*, 4> Overriden;
-
-    D->getOverriddenMethods(Overriden);
-    for(auto overridden: Overriden) {
-      Relations.emplace_back((unsigned) SymbolRole::RelationOverrideOf,
-                             overridden);
-    }
-    if (AssociatedProp)
-      Relations.emplace_back((unsigned)SymbolRole::RelationAccessorOf,
-                             AssociatedProp);
-
-    if (!IndexCtx.handleDecl(D, (unsigned)SymbolRole::Dynamic, Relations))
+  bool handleObjCMethod(const ObjCMethodDecl *D) {
+    if (!IndexCtx.handleDecl(D, (unsigned)SymbolRole::Dynamic))
       return false;
     IndexCtx.indexTypeSourceInfo(D->getReturnTypeSourceInfo(), D);
-    bool hasIBActionAndFirst = D->hasAttr<IBActionAttr>();
-    for (const auto *I : D->parameters()) {
-      handleDeclarator(I, D, /*isIBType=*/hasIBActionAndFirst);
-      hasIBActionAndFirst = false;
-    }
+    for (const auto *I : D->parameters())
+      handleDeclarator(I, D);
 
     if (D->isThisDeclarationADefinition()) {
       const Stmt *Body = D->getBody();
@@ -288,19 +269,9 @@ public:
   }
 
   bool VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
-    const ObjCInterfaceDecl *C = D->getClassInterface();
-    if (!C)
-      return true;
-    TRY_TO(IndexCtx.handleReference(C, D->getLocation(), D, D, SymbolRoleSet(),
-                                   SymbolRelation{
-                                     (unsigned)SymbolRole::RelationExtendedBy, D
-                                   }));
-    SourceLocation CategoryLoc = D->getCategoryNameLoc();
-    if (!CategoryLoc.isValid())
-      CategoryLoc = D->getLocation();
-    TRY_TO(IndexCtx.handleDecl(D, CategoryLoc));
-    TRY_TO(handleReferencedProtocols(D->getReferencedProtocols(), D));
-    TRY_TO(IndexCtx.indexDeclContext(D));
+    if (!IndexCtx.handleDecl(D))
+      return false;
+    IndexCtx.indexDeclContext(D);
     return true;
   }
 
@@ -308,14 +279,8 @@ public:
     const ObjCCategoryDecl *Cat = D->getCategoryDecl();
     if (!Cat)
       return true;
-    const ObjCInterfaceDecl *C = D->getClassInterface();
-    if (C)
-      TRY_TO(IndexCtx.handleReference(C, D->getLocation(), D, D,
-                                      SymbolRoleSet()));
-    SourceLocation CategoryLoc = D->getCategoryNameLoc();
-    if (!CategoryLoc.isValid())
-      CategoryLoc = D->getLocation();
-    if (!IndexCtx.handleDecl(D, CategoryLoc))
+
+    if (!IndexCtx.handleDecl(D))
       return false;
     IndexCtx.indexDeclContext(D);
     return true;
@@ -334,15 +299,12 @@ public:
   bool VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
     if (ObjCMethodDecl *MD = D->getGetterMethodDecl())
       if (MD->getLexicalDeclContext() == D->getLexicalDeclContext())
-        handleObjCMethod(MD, D);
+        handleObjCMethod(MD);
     if (ObjCMethodDecl *MD = D->getSetterMethodDecl())
       if (MD->getLexicalDeclContext() == D->getLexicalDeclContext())
-        handleObjCMethod(MD, D);
+        handleObjCMethod(MD);
     if (!IndexCtx.handleDecl(D))
       return false;
-    if (IBOutletCollectionAttr *attr = D->getAttr<IBOutletCollectionAttr>())
-      IndexCtx.indexTypeSourceInfo(attr->getInterfaceLoc(), D,
-                                   D->getLexicalDeclContext(), false, true);
     IndexCtx.indexTypeSourceInfo(D->getTypeSourceInfo(), D);
     return true;
   }

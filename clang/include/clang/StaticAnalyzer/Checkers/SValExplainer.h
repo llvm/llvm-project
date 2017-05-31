@@ -142,14 +142,6 @@ public:
     // TODO: Explain CXXThisRegion itself, find a way to test it.
     if (isThisObject(R))
       return "'this' object";
-    // Objective-C objects are not normal symbolic regions. At least,
-    // they're always on the heap.
-    if (R->getSymbol()->getType()
-            .getCanonicalType()->getAs<ObjCObjectPointerType>())
-      return "object at " + Visit(R->getSymbol());
-    // Other heap-based symbolic regions are also special.
-    if (isa<HeapSpaceRegion>(R->getMemorySpace()))
-      return "heap segment that starts at " + Visit(R->getSymbol());
     return "pointee of " + Visit(R->getSymbol());
   }
 
@@ -184,8 +176,6 @@ public:
     std::string Name = VD->getQualifiedNameAsString();
     if (isa<ParmVarDecl>(VD))
       return "parameter '" + Name + "'";
-    else if (VD->hasAttr<BlocksAttr>())
-      return "block variable '" + Name + "'";
     else if (VD->hasLocalStorage())
       return "local variable '" + Name + "'";
     else if (VD->isStaticLocal())
@@ -194,11 +184,6 @@ public:
       return "global variable '" + Name + "'";
     else
       llvm_unreachable("A variable is either local or global");
-  }
-
-  std::string VisitObjCIvarRegion(const ObjCIvarRegion *R) {
-    return "instance variable '" + R->getDecl()->getNameAsString() + "' of " +
-           Visit(R->getSuperRegion());
   }
 
   std::string VisitFieldRegion(const FieldRegion *R) {

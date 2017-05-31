@@ -357,9 +357,6 @@ def warn_decl_shadow :
           "static data member of %2|"
           "field of %2}1">,
   InGroup<Shadow>, DefaultIgnore;
-def warn_decl_shadow_uncaptured_local :
-  Warning<warn_decl_shadow.Text>,
-  InGroup<ShadowUncapturedLocal>, DefaultIgnore;
 def warn_ctor_parm_shadows_field:
   Warning<"constructor parameter %0 shadows the field %1 of %2">,
   InGroup<ShadowFieldInConstructor>, DefaultIgnore;
@@ -774,8 +771,6 @@ def note_suppressed_class_declare : Note<
   "class with specified objc_requires_property_definitions attribute is declared here">;
 def err_objc_root_class_subclass : Error<
   "objc_root_class attribute may only be specified on a root class declaration">;
-def err_restricted_superclass_mismatch : Error<
-  "cannot subclass a class with objc_subclassing_restricted attribute">;
 def warn_objc_root_class_missing : Warning<
   "class %0 defined without specifying a base class">,
   InGroup<ObjCRootClass>;
@@ -2658,9 +2653,6 @@ def warn_mismatched_availability_override_unavail : Warning<
   InGroup<Availability>;
 def note_overridden_method : Note<
   "overridden method is here">;
-def warn_availability_swift_unavailable_deprecated_only : Warning<
-  "only 'unavailable' and 'deprecated' are supported for Swift availability">,
-  InGroup<Availability>;
 def note_protocol_method : Note<
   "protocol method is here">;
 
@@ -3025,9 +3017,6 @@ def warn_attribute_nonnull_no_pointers : Warning<
 def warn_attribute_nonnull_parm_no_args : Warning<
   "'nonnull' attribute when used on parameters takes no arguments">,
   InGroup<IgnoredAttributes>;
-def warn_attribute_noescape_non_pointer : Warning<
-  "'noescape' attribute ignored on parameter of non-pointer type %0">,
-  InGroup<IgnoredAttributes>;
 def note_declared_nonnull : Note<
   "declared %select{'returns_nonnull'|'nonnull'}0 here">;
 def warn_attribute_sentinel_named_arguments : Warning<
@@ -3149,68 +3138,6 @@ def err_objc_bridged_related_known_method : Error<
 
 def err_objc_attr_protocol_requires_definition : Error<
   "attribute %0 can only be applied to @protocol definitions, not forward declarations">;
-
-// Swift attributes
-def warn_attr_swift_name_decl_kind : Warning<
-  "%0 attribute cannot be applied to this declaration">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_function : Warning<
-  "parameter of %0 attribute must be a Swift function name string">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_function_no_prototype : Warning<
-  "%0 attribute can only be applied to function declarations with prototypes">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_context_name_invalid_identifier : Warning<
-  "%0 attribute has invalid identifier for context name">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_basename_invalid_identifier : Warning<
-  "%0 attribute has invalid identifier for base name">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_parameter_invalid_identifier : Warning<
-  "%0 attribute has invalid identifier for parameter name">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_missing_parameters : Warning<
-  "%0 attribute is missing parameter label clause">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_subscript_not_accessor : Warning<
-  "%0 attribute for 'subscript' must be a getter or setter">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_subscript_no_parameter : Warning<
-  "%0 attribute for 'subscript' must take at least one parameter">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_subscript_getter_newValue : Warning<
-  "%0 attribute for 'subscript' getter cannot take a 'newValue:' parameter">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_subscript_setter_no_newValue : Warning<
-  "%0 attribute for 'subscript' setter must take a 'newValue:' parameter">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_subscript_setter_multiple_newValues : Warning<
-  "%0 attribute for 'subscript' setter cannot take multiple 'newValue:' parameters">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_getter_parameters : Warning<
-  "%0 attribute for getter must not take any parameters besides 'self:'">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_setter_parameters : Warning<
-  "%0 attribute for setter must take one parameter for new value">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_multiple_selfs : Warning<
-  "%0 attribute cannot specify more than one 'self:' parameter">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_static_subscript : Warning<
-  "%0 attribute for 'subscript' must take a 'self:' parameter">,
-  InGroup<SwiftNameAttribute>;
-def warn_attr_swift_name_num_params : Warning<
-  "too %select{few|many}0 parameters in %1 attribute (expected %2; got %3)">,
-  InGroup<SwiftNameAttribute>;
-def err_attr_swift_error_no_error_parameter : Error<
-  "%0 attribute can only be applied to a %select{function|method}1 "
-  "with an error parameter">;
-def err_attr_swift_error_return_type : Error<
-  "%0 attribute with '%1' convention can only be applied to a "
-  "%select{function|method}2 returning %select{an integral type|a pointer}3">;
-def warn_swift_newtype_attribute_non_typedef : Warning<
-  "'swift_newtype' attribute may be put on a typedef only; "
-  "attribute is ignored">, InGroup<DiagGroup<"swift-newtype-attribute">>;
 
 // Function Parameter Semantic Analysis.
 def err_param_with_void_type : Error<"argument may not have 'void' type">;
@@ -4433,8 +4360,6 @@ def err_abi_tag_on_redeclaration : Error<
   "cannot add 'abi_tag' attribute in a redeclaration">;
 def err_new_abi_tag_on_redeclaration : Error<
   "'abi_tag' %0 missing in original declaration">;
-def note_redefinition_same_file :
-  Note <"'%0' included multiple times, consider augmenting this header with #ifdef guards">;
 
 def note_deleted_dtor_no_operator_delete : Note<
   "virtual destructor requires an unambiguous, accessible 'operator delete'">;
@@ -4518,8 +4443,6 @@ def err_extern_c_global_conflict : Error<
   "conflicts with declaration %select{in global scope|with C language linkage}0">;
 def note_extern_c_global_conflict : Note<
   "declared %select{in global scope|with C language linkage}0 here">;
-def note_extern_c_begins_here : Note<
-  "extern \"C\" language linkage specification begins here">;
 def warn_weak_import : Warning <
   "an already-declared variable is made a weak_import declaration %0">;
 def ext_static_non_static : Extension<
@@ -5120,16 +5043,6 @@ def err_arc_inconsistent_property_ownership : Error<
   "declared %select{|__unsafe_unretained|__strong|__weak|__autoreleasing}2">;
 
 } // end "ARC and @properties" category
-
-def warn_block_capture_autoreleasing : Warning<
-  "block captures an autoreleasing out-parameter, which may result in "
-  "use-after-free bugs">,
-  InGroup<BlockCaptureAutoReleasing>, DefaultIgnore;
-def note_declare_parameter_autoreleasing : Note<
-  "declare the parameter __autoreleasing explicitly to suppress this warning">;
-def note_declare_parameter_strong : Note<
-  "declare the parameter __strong or capture a __block __strong variable to "
-  "keep values alive across autorelease pools">;
 
 def err_arc_atomic_ownership : Error<
   "cannot perform atomic operation on a pointer to type %0: type has "
@@ -6243,8 +6156,6 @@ let CategoryName = "Lambda Issue" in {
   def note_lambda_to_block_conv : Note<
     "implicit capture of lambda object due to conversion to block pointer "
     "here">;
-  def note_var_explicitly_captured_here : Note<"variable %0 is"
-    "%select{| explicitly}1 captured here">;
 
   // C++14 lambda init-captures.
   def warn_cxx11_compat_init_capture : Warning<
@@ -7090,10 +7001,6 @@ def err_in_class_initializer_not_yet_parsed
 def err_in_class_initializer_not_yet_parsed_outer_class
     : Error<"cannot use defaulted default constructor of %0 within "
             "%1 outside of member functions because %2 has an initializer">;
-def err_in_class_initializer_cycle
-    : Error<"default member initializer for %0 uses itself">;
-def err_exception_spec_cycle
-    : Error<"exception specification of %0 uses itself">;
 
 def ext_in_class_initializer_non_constant : Extension<
   "in-class initializer for static data member is not a constant expression; "
@@ -7449,12 +7356,6 @@ def warn_format_non_standard: Warning<
 def warn_format_non_standard_conversion_spec: Warning<
   "using length modifier '%0' with conversion specifier '%1' is not supported by ISO C">,
   InGroup<FormatNonStandard>, DefaultIgnore;
-def warn_format_invalid_annotation : Warning<
-  "using '%0' format specifier annotation outside of os_log()/os_trace()">,
-  InGroup<Format>;
-def warn_format_P_no_precision : Warning<
-  "using '%%P' format specifier without precision">,
-  InGroup<Format>;
 def warn_printf_ignored_flag: Warning<
   "flag '%0' is ignored when flag '%1' is present">,
   InGroup<Format>;
@@ -7591,15 +7492,6 @@ def warn_cfstring_truncated : Warning<
   "belong to the input codeset UTF-8">,
   InGroup<DiagGroup<"CFString-literal">>;
 
-// os_log checking
-// TODO: separate diagnostic for os_trace()
-def err_os_log_format_not_string_constant : Error<
-  "os_log() format argument is not a string constant">;
-def err_os_log_argument_too_big : Error<
-  "os_log() argument %0 is too big (%1 bytes, max %2)">;
-def warn_os_log_format_narg : Error<
- "os_log() '%%n' format specifier is not allowed">, DefaultError;
-
 // Statements.
 def err_continue_not_in_loop : Error<
   "'continue' statement not in loop statement">;
@@ -7706,8 +7598,10 @@ def err_ms_va_start_used_in_sysv_function : Error<
 def warn_second_arg_of_va_start_not_last_named_param : Warning<
   "second argument to 'va_start' is not the last named parameter">,
   InGroup<Varargs>;
-def warn_va_start_of_reference_type_is_undefined : Warning<
-  "'va_start' has undefined behavior with reference types">, InGroup<Varargs>;
+def warn_va_start_type_is_undefined : Warning<
+  "passing %select{an object that undergoes default argument promotion|"
+  "an object of reference type|a parameter declared with the 'register' "
+  "keyword}0 to 'va_start' has undefined behavior">, InGroup<Varargs>;
 def err_first_argument_to_va_arg_not_of_type_va_list : Error<
   "first argument to 'va_arg' is of type %0 and not 'va_list'">;
 def err_second_parameter_to_va_arg_incomplete: Error<
@@ -7902,14 +7796,6 @@ def err_nsconsumed_attribute_mismatch : Error<
 def err_nsreturns_retained_attribute_mismatch : Error<
   "overriding method has mismatched ns_returns_%select{not_retained|retained}0"
   " attributes">;
-
-def err_nserrordomain_not_tagdecl : Error<
-  "ns_error_domain attribute only valid on "
-  "%select{enums, structs, and unions|enums, structs, unions, and classes}0">;
-def err_nserrordomain_invalid_decl : Error<
-  "domain argument %0 does not refer to global constant">;
-def err_nserrordomain_requires_identifier : Error<
-  "domain argument must be an identifier">;
   
 def note_getter_unavailable : Note<
   "or because setter is declared here, but no getter method %0 is found">;
@@ -8018,9 +7904,6 @@ def err_unsupported_unknown_any_call : Error<
 def err_unknown_any_addrof : Error<
   "the address of a declaration with unknown type "
   "can only be cast to a pointer type">;
-def err_unknown_any_addrof_call : Error<
-  "address-of operator cannot be applied to a call to a function with "
-  "unknown return type">;
 def err_unknown_any_var_function_type : Error<
   "variable %0 with unknown type cannot be given a function type">;
 def err_unknown_any_function : Error<
@@ -8162,14 +8045,12 @@ def err_opencl_enqueue_kernel_blocks_non_local_void_args : Error<
   "blocks used in device side enqueue are expected to have parameters of type 'local void*'">;
 def err_opencl_enqueue_kernel_blocks_no_args : Error<
   "blocks in this form of device side enqueue call are expected to have have no parameters">;
+
+// OpenCL v2.2 s2.1.2.3 - Vector Component Access
+def ext_opencl_ext_vector_type_rgba_selector: ExtWarn<
+  "vector component name '%0' is an OpenCL version 2.2 feature">,
+  InGroup<OpenCLUnsupportedRGBA>;
 } // end of sema category
-
-let CategoryName = "API Notes Issue" in {
-
-def err_incompatible_replacement_type : Error<
-  "API notes replacement type %0 has a different size from original type %1">;
-
-}
 
 let CategoryName = "OpenMP Issue" in {
 // OpenMP support.
@@ -8607,6 +8488,8 @@ def ext_module_import_in_extern_c : ExtWarn<
   "import of C++ module '%0' appears within extern \"C\" language linkage "
   "specification">, DefaultError,
   InGroup<DiagGroup<"module-import-in-extern-c">>;
+def note_module_import_in_extern_c : Note<
+  "extern \"C\" language linkage specification begins here">;
 def err_module_import_not_at_top_level_fatal : Error<
   "import of module '%0' appears within %1">, DefaultFatal;
 def ext_module_import_not_at_top_level_noop : ExtWarn<
@@ -8623,11 +8506,6 @@ def ext_equivalent_internal_linkage_decl_in_modules : ExtWarn<
   InGroup<DiagGroup<"modules-ambiguous-internal-linkage">>;
 def note_equivalent_internal_linkage_decl : Note<
   "declared here%select{ in module '%1'|}0">;
-
-def note_redefinition_modules_same_file : Note<
-	"'%0' included multiple times, additional (likely non-modular) include site in module '%1'">;
-def note_redefinition_modules_same_file_modulemap : Note<
-	"consider adding '%0' as part of '%1' definition in">;
 }
 
 let CategoryName = "Coroutines Issue" in {
@@ -8719,19 +8597,6 @@ def warn_nullability_missing : Warning<
   "%select{pointer|block pointer|member pointer}0 is missing a nullability "
   "type specifier (_Nonnull, _Nullable, or _Null_unspecified)">,
   InGroup<NullabilityCompleteness>;
-def warn_nullability_missing_array : Warning<
-  "array parameter is missing a nullability type specifier (_Nonnull, "
-  "_Nullable, or _Null_unspecified)">,
-  InGroup<NullabilityCompletenessOnArrays>;
-def note_nullability_fix_it : Note<
-  "insert '%select{_Nonnull|_Nullable|_Null_unspecified}0' if the "
-  "%select{pointer|block pointer|member pointer|array parameter}1 "
-  "%select{should never be null|may be null|should not declare nullability}0">;
-
-def warn_nullability_inferred_on_nested_type : Warning<
-  "inferring '_Nonnull' for pointer type within %select{array|reference}0 is "
-  "deprecated">,
-  InGroup<NullabilityInferredOnNestedType>;
 
 def err_objc_type_arg_explicit_nullability : Error<
   "type argument %0 cannot explicitly specify nullability">;

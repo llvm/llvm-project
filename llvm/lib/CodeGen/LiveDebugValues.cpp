@@ -23,7 +23,6 @@
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/UniqueVector.h"
-#include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -61,26 +60,6 @@ class LiveDebugValues : public MachineFunctionPass {
 private:
   const TargetRegisterInfo *TRI;
   const TargetInstrInfo *TII;
-  LexicalScopes LS;
-
-  /// Keeps track of lexical scopes associated with a user value's source
-  /// location.
-  class UserValueScopes {
-    DebugLoc DL;
-    LexicalScopes &LS;
-    SmallPtrSet<const MachineBasicBlock *, 4> LBlocks;
-
-  public:
-    UserValueScopes(DebugLoc D, LexicalScopes &L) : DL(std::move(D)), LS(L) {}
-
-    /// Return true if current scope dominates at least one machine
-    /// instruction in a given machine basic block.
-    bool dominates(MachineBasicBlock *MBB) {
-      if (LBlocks.empty())
-        LS.getMachineBasicBlocks(DL, LBlocks);
-      return LBlocks.count(MBB) != 0 || LS.dominates(DL, MBB);
-    }
-  };
 
   /// Based on std::pair so it can be used as an index into a DenseMap.
   typedef std::pair<const DILocalVariable *, const DILocation *>
@@ -104,7 +83,7 @@ private:
   struct VarLoc {
     const DebugVariable Var;
     const MachineInstr &MI; ///< Only used for cloning a new DBG_VALUE.
-    mutable UserValueScopes UVS;
+
     enum { InvalidKind = 0, RegisterKind } Kind;
 
     /// The value location. Stored separately to avoid repeatedly
@@ -117,9 +96,9 @@ private:
       uint64_t Hash;
     } Loc;
 
-    VarLoc(const MachineInstr &MI, LexicalScopes &LS)
+    VarLoc(const MachineInstr &MI)
         : Var(MI.getDebugVariable(), MI.getDebugLoc()->getInlinedAt()), MI(MI),
-          UVS(MI.getDebugLoc(), LS), Kind(InvalidKind) {
+          Kind(InvalidKind) {
       static_assert((sizeof(Loc) == sizeof(uint64_t)),
                     "hash does not cover all members of Loc");
       assert(MI.isDebugValue() && "not a DBG_VALUE");
@@ -145,10 +124,6 @@ private:
         return Loc.RegisterLoc.RegNo;
       return 0;
     }
-
-    /// Determine whether the lexical scope of this value's debug location
-    /// dominates MBB.
-    bool dominates(MachineBasicBlock &MBB) const { return UVS.dominates(&MBB); }
 
     void dump() const { MI.dump(); }
 
@@ -226,8 +201,7 @@ private:
                 VarLocInMBB &OutLocs, VarLocMap &VarLocIDs);
 
   bool join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs, VarLocInMBB &InLocs,
-            const VarLocMap &VarLocIDs,
-            SmallPtrSet<const MachineBasicBlock *, 16> &Visited);
+            const VarLocMap &VarLocIDs);
 
   bool ExtendRanges(MachineFunction &MF);
 
@@ -254,7 +228,6 @@ public:
   /// Calculate the liveness information for the given machine function.
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -287,7 +260,6 @@ void LiveDebugValues::printVarLocInMBB(const MachineFunction &MF,
                                        const VarLocMap &VarLocIDs,
                                        const char *msg,
                                        raw_ostream &Out) const {
-  Out << '\n' << msg << '\n';
   for (const MachineBasicBlock &BB : MF) {
     const auto &L = V.lookup(&BB);
     Out << "MBB: " << BB.getName() << ":\n";
@@ -296,6 +268,7 @@ void LiveDebugValues::printVarLocInMBB(const MachineFunction &MF,
       Out << " Var: " << VL.Var.getVar()->getName();
       Out << " MI: ";
       VL.dump();
+      Out << "\n";
     }
   }
   Out << "\n";
@@ -321,7 +294,7 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
   // Add the VarLoc to OpenRanges from this DBG_VALUE.
   // TODO: Currently handles DBG_VALUE which has only reg as location.
   if (isDbgValueDescribedByReg(MI)) {
-    VarLoc VL(MI, LS);
+    VarLoc VL(MI);
     unsigned ID = VarLocIDs.insert(VL);
     OpenRanges.insert(ID, VL.Var);
   }
@@ -395,8 +368,7 @@ bool LiveDebugValues::transfer(MachineInstr &MI, OpenRangesSet &OpenRanges,
 /// inserting a new DBG_VALUE instruction at the start of the @MBB - if the same
 /// source variable in all the predecessors of @MBB reside in the same location.
 bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
-                           VarLocInMBB &InLocs, const VarLocMap &VarLocIDs,
-                           SmallPtrSet<const MachineBasicBlock *, 16> &Visited) {
+                           VarLocInMBB &InLocs, const VarLocMap &VarLocIDs) {
   DEBUG(dbgs() << "join MBB: " << MBB.getName() << "\n");
   bool Changed = false;
 
@@ -404,39 +376,21 @@ bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
 
   // For all predecessors of this MBB, find the set of VarLocs that
   // can be joined.
-  int NumVisited = 0;
   for (auto p : MBB.predecessors()) {
-    // Ignore unvisited predecessor blocks.  As we are processing
-    // the blocks in reverse post-order any unvisited block can
-    // be considered to not remove any incoming values.
-    if (!Visited.count(p))
-      continue;
     auto OL = OutLocs.find(p);
     // Join is null in case of empty OutLocs from any of the pred.
     if (OL == OutLocs.end())
       return false;
 
-    // Just copy over the Out locs to incoming locs for the first visited
-    // predecessor, and for all other predecessors join the Out locs.
-    if (!NumVisited)
+    // Just copy over the Out locs to incoming locs for the first predecessor.
+    if (p == *MBB.pred_begin()) {
       InLocsT = OL->second;
-    else
-      InLocsT &= OL->second;
-    NumVisited++;
+      continue;
+    }
+    // Join with this predecessor.
+    InLocsT &= OL->second;
   }
 
-  // Filter out DBG_VALUES that are out of scope.
-  VarLocSet KillSet;
-  for (auto ID : InLocsT)
-    if (!VarLocIDs[ID].dominates(MBB))
-      KillSet.set(ID);
-  InLocsT.intersectWithComplement(KillSet);
-
-  // As we are processing blocks in reverse post-order we
-  // should have processed at least one predecessor, unless it
-  // is the entry block which has no predecessor.
-  assert((NumVisited || MBB.pred_empty()) &&
-         "Should have processed at least one predecessor");
   if (InLocsT.empty())
     return false;
 
@@ -509,18 +463,16 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
   // To solve it, we perform join() and transfer() using the two worklist method
   // until the ranges converge.
   // Ranges have converged when both worklists are empty.
-  SmallPtrSet<const MachineBasicBlock *, 16> Visited;
   while (!Worklist.empty() || !Pending.empty()) {
     // We track what is on the pending worklist to avoid inserting the same
     // thing twice.  We could avoid this with a custom priority queue, but this
     // is probably not worth it.
     SmallPtrSet<MachineBasicBlock *, 16> OnPending;
-    DEBUG(dbgs() << "Processing Worklist\n");
     while (!Worklist.empty()) {
       MachineBasicBlock *MBB = OrderToBB[Worklist.top()];
       Worklist.pop();
-      MBBJoined = join(*MBB, OutLocs, InLocs, VarLocIDs, Visited);
-      Visited.insert(MBB);
+      MBBJoined = join(*MBB, OutLocs, InLocs, VarLocIDs);
+
       if (MBBJoined) {
         MBBJoined = false;
         Changed = true;
@@ -553,14 +505,12 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
 }
 
 bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
-  if (!MF.getFunction()->getSubprogram())
-    // LiveDebugValues will already have removed all DBG_VALUEs.
-    return false;
-
   TRI = MF.getSubtarget().getRegisterInfo();
   TII = MF.getSubtarget().getInstrInfo();
-  LS.initialize(MF);
 
-  bool Changed = ExtendRanges(MF);
+  bool Changed = false;
+
+  Changed |= ExtendRanges(MF);
+
   return Changed;
 }

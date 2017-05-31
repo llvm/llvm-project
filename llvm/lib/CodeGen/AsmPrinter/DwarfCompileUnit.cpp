@@ -73,9 +73,36 @@ unsigned DwarfCompileUnit::getOrCreateSourceID(StringRef FileName,
       Asm->OutStreamer->hasRawTextSupport() ? 0 : getUniqueID());
 }
 
+// Return const expression if value is a GEP to access merged global
+// constant. e.g.
+// i8* getelementptr ({ i8, i8, i8, i8 }* @_MergedGlobals, i32 0, i32 0)
+static const ConstantExpr *getMergedGlobalExpr(const Value *V) {
+  const ConstantExpr *CE = dyn_cast_or_null<ConstantExpr>(V);
+  if (!CE || CE->getNumOperands() != 3 ||
+      CE->getOpcode() != Instruction::GetElementPtr)
+    return nullptr;
+
+  // First operand points to a global struct.
+  Value *Ptr = CE->getOperand(0);
+  GlobalValue *GV = dyn_cast<GlobalValue>(Ptr);
+  if (!GV || !isa<StructType>(GV->getValueType()))
+    return nullptr;
+
+  // Second operand is zero.
+  const ConstantInt *CI = dyn_cast_or_null<ConstantInt>(CE->getOperand(1));
+  if (!CI || !CI->isZero())
+    return nullptr;
+
+  // Third operand is offset.
+  if (!isa<ConstantInt>(CE->getOperand(2)))
+    return nullptr;
+
+  return CE;
+}
+
 /// getOrCreateGlobalVariableDIE - get or create global variable DIE.
 DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
-    const DIGlobalVariable *GV, const GlobalVariable *Global) {
+    const DIGlobalVariable *GV) {
   // Check for pre-existence.
   if (DIE *Die = getDIE(GV))
     return Die;
@@ -120,22 +147,12 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
 
   // Add location.
   bool addToAccelTable = false;
-
-  DIExpression *Expr = GV->getExpr();
-
-  // For compatibility with DWARF 3 and earlier,
-  // DW_AT_location(DW_OP_constu, X, DW_OP_stack_value) becomes
-  // DW_AT_const_value(X).
-  if (Expr && Expr->getNumElements() == 3 &&
-      Expr->getElement(0) == dwarf::DW_OP_constu &&
-      Expr->getElement(2) == dwarf::DW_OP_stack_value) {
-    addConstantValue(*VariableDIE, /*Unsigned=*/true, Expr->getElement(1));
+  if (auto *Global = dyn_cast_or_null<GlobalVariable>(GV->getVariable())) {
     // We cannot describe the location of dllimport'd variables: the computation
     // of their address requires loads from the IAT.
-  } else if (!Global || !Global->hasDLLImportStorageClass()) {
-    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-    if (Global) {
+    if (!Global->hasDLLImportStorageClass()) {
       addToAccelTable = true;
+      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
       const MCSymbol *Sym = Asm->getSymbol(Global);
       if (Global->isThreadLocal()) {
         if (Asm->TM.Options.EmulatedTLS) {
@@ -170,18 +187,30 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
         addOpAddress(*Loc, Sym);
       }
 
-      if (Expr) {
-        DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
-        DwarfExpr.addFragmentOffset(Expr);
-        DwarfExpr.AddExpression(Expr);
-        DwarfExpr.finalize();
-      }
+      addBlock(*VariableDIE, dwarf::DW_AT_location, Loc);
+      if (DD->useAllLinkageNames())
+        addLinkageName(*VariableDIE, GV->getLinkageName());
     }
-
-    addBlock(*VariableDIE, dwarf::DW_AT_location, Loc);
-
-    if (DD->useAllLinkageNames())
-      addLinkageName(*VariableDIE, GV->getLinkageName());
+  } else if (const ConstantInt *CI =
+                 dyn_cast_or_null<ConstantInt>(GV->getVariable())) {
+    addConstantValue(*VariableDIE, CI, GTy);
+  } else if (const ConstantExpr *CE = getMergedGlobalExpr(GV->getVariable())) {
+    auto *Ptr = cast<GlobalValue>(CE->getOperand(0));
+    if (!Ptr->hasDLLImportStorageClass()) {
+      addToAccelTable = true;
+      // GV is a merged global.
+      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+      MCSymbol *Sym = Asm->getSymbol(Ptr);
+      DD->addArangeLabel(SymbolCU(this, Sym));
+      addOpAddress(*Loc, Sym);
+      addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_constu);
+      SmallVector<Value *, 3> Idx(CE->op_begin() + 1, CE->op_end());
+      addUInt(*Loc, dwarf::DW_FORM_udata,
+              Asm->getDataLayout().getIndexedOffsetInType(Ptr->getValueType(),
+                                                          Idx));
+      addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_plus);
+      addBlock(*VariableDIE, dwarf::DW_AT_location, Loc);
+    }
   }
 
   if (addToAccelTable) {
@@ -492,10 +521,8 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
         DIELoc *Loc = new (DIEValueAllocator) DIELoc;
         DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
         // If there is an expression, emit raw unsigned bytes.
-        DwarfExpr.addFragmentOffset(Expr);
         DwarfExpr.AddUnsignedConstant(DVInsn->getOperand(0).getImm());
-        DwarfExpr.AddExpression(Expr);
-        DwarfExpr.finalize();
+        DwarfExpr.AddExpression(Expr->expr_op_begin(), Expr->expr_op_end());
         addBlock(*VariableDie, dwarf::DW_AT_location, Loc);
       } else
         addConstantValue(*VariableDie, DVInsn->getOperand(0), DV.getType());
@@ -520,13 +547,11 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
     int Offset = TFI->getFrameIndexReference(*Asm->MF, FI, FrameReg);
     assert(Expr != DV.getExpression().end() && "Wrong number of expressions");
-    DwarfExpr.addFragmentOffset(*Expr);
     DwarfExpr.AddMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
                                     FrameReg, Offset);
-    DwarfExpr.AddExpression(*Expr);
+    DwarfExpr.AddExpression((*Expr)->expr_op_begin(), (*Expr)->expr_op_end());
     ++Expr;
   }
-  DwarfExpr.finalize();
   addBlock(*VariableDie, dwarf::DW_AT_location, Loc);
 
   return VariableDie;
@@ -649,7 +674,7 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
   else if (auto *T = dyn_cast<DIType>(Entity))
     EntityDie = getOrCreateTypeDIE(T);
   else if (auto *GV = dyn_cast<DIGlobalVariable>(Entity))
-    EntityDie = getOrCreateGlobalVariableDIE(GV, nullptr);
+    EntityDie = getOrCreateGlobalVariableDIE(GV);
   else
     EntityDie = getDIE(Entity);
   assert(EntityDie);
@@ -725,21 +750,15 @@ void DwarfCompileUnit::addVariableAddress(const DbgVariable &DV, DIE &Die,
 void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
                                   const MachineLocation &Location) {
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-  DIEDwarfExpression Expr(*Asm, *this, *Loc);
 
   bool validReg;
   if (Location.isReg())
-    validReg = Expr.AddMachineReg(*Asm->MF->getSubtarget().getRegisterInfo(),
-                                  Location.getReg());
+    validReg = addRegisterOpPiece(*Loc, Location.getReg());
   else
-    validReg =
-        Expr.AddMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
-                                   Location.getReg(), Location.getOffset());
+    validReg = addRegisterOffset(*Loc, Location.getReg(), Location.getOffset());
 
   if (!validReg)
     return;
-
-  Expr.finalize();
 
   // Now attach the location information to the DIE.
   addBlock(Die, Attribute, Loc);
@@ -755,22 +774,19 @@ void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   const DIExpression *Expr = DV.getSingleExpression();
-  DIExpressionCursor ExprCursor(Expr);
+  bool ValidReg;
   const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
-  auto Reg = Location.getReg();
-  DwarfExpr.addFragmentOffset(Expr);
-  bool ValidReg =
-      Location.getOffset()
-          ? DwarfExpr.AddMachineRegIndirect(TRI, Reg, Location.getOffset())
-          : DwarfExpr.AddMachineRegExpression(TRI, ExprCursor, Reg);
-
-  if (!ValidReg)
-    return;
-
-  DwarfExpr.AddExpression(std::move(ExprCursor));
+  if (Location.getOffset()) {
+    ValidReg = DwarfExpr.AddMachineRegIndirect(TRI, Location.getReg(),
+                                               Location.getOffset());
+    if (ValidReg)
+      DwarfExpr.AddExpression(Expr->expr_op_begin(), Expr->expr_op_end());
+  } else
+    ValidReg = DwarfExpr.AddMachineRegExpression(TRI, Expr, Location.getReg());
 
   // Now attach the location information to the DIE.
-  addBlock(Die, Attribute, Loc);
+  if (ValidReg)
+    addBlock(Die, Attribute, Loc);
 }
 
 /// Add a Dwarf loclistptr attribute data and value.

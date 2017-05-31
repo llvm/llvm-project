@@ -9,8 +9,8 @@
 define void @f1(i32 %a1, i32 %a2) {
 ;CHECK-APPLE-IOS-LABEL: _f1:
 ;CHECK-APPLE-IOS-NOT: adrp
-;CHECK-APPLE-IOS: adrp	x8, __MergedGlobals_x@PAGE
-;CHECK-APPLE-IOS: add	x8, x8, __MergedGlobals_x@PAGEOFF
+;CHECK-APPLE-IOS: adrp	x8, l__MergedGlobals@PAGE
+;CHECK-APPLE-IOS: add	x8, x8, l__MergedGlobals@PAGEOFF
 ;CHECK-APPLE-IOS-NOT: adrp
   store i32 %a1, i32* @x, align 4
   store i32 %a2, i32* @y, align 4
@@ -19,8 +19,8 @@ define void @f1(i32 %a1, i32 %a2) {
 
 define void @g1(i32 %a1, i32 %a2) {
 ;CHECK-APPLE-IOS-LABEL: _g1:
-;CHECK-APPLE-IOS: adrp	x8, __MergedGlobals_x@PAGE
-;CHECK-APPLE-IOS: add	x8, x8, __MergedGlobals_x@PAGEOFF
+;CHECK-APPLE-IOS: adrp	x8, l__MergedGlobals@PAGE
+;CHECK-APPLE-IOS: add	x8, x8, l__MergedGlobals@PAGEOFF
 ;CHECK-APPLE-IOS-NOT: adrp
   store i32 %a1, i32* @y, align 4
   store i32 %a2, i32* @z, align 4
@@ -41,12 +41,12 @@ define void @g1(i32 %a1, i32 %a2) {
 ;CHECK: z = .L_MergedGlobals+8
 ;CHECK: .size z, 4
 
-;CHECK-APPLE-IOS: .zerofill __DATA,__common,__MergedGlobals_x,12,3
+;CHECK-APPLE-IOS: .zerofill __DATA,__bss,l__MergedGlobals,12,3
 
 ;CHECK-APPLE-IOS: .globl	_x
-;CHECK-APPLE-IOS:  = __MergedGlobals_x
+;CHECK-APPLE-IOS:  = l__MergedGlobals
 ;CHECK-APPLE-IOS: .globl	_y
-;CHECK-APPLE-IOS: _y = __MergedGlobals_x+4
+;CHECK-APPLE-IOS: _y = l__MergedGlobals+4
 ;CHECK-APPLE-IOS: .globl	_z
-;CHECK-APPLE-IOS: _z = __MergedGlobals_x+8
+;CHECK-APPLE-IOS: _z = l__MergedGlobals+8
 ;CHECK-APPLE-IOS: .subsections_via_symbols

@@ -22,6 +22,9 @@ struct b {
 };
 extern template class b<int>;
 b<int> bi;
+// CHECK: DICompositeType(tag: DW_TAG_structure_type, name: "b<int>"
+// CHECK-NOT: DIFlagFwdDecl
+// CHECK-SAME: ){{$}}
 
 template <typename T>
 struct c {
@@ -113,7 +116,3 @@ template <>
 struct k<int>;
 template struct k<int>;
 // CHECK-NOT: !DICompositeType(tag: DW_TAG_structure_type, name: "k<int>"
-
-// CHECK: DICompositeType(tag: DW_TAG_structure_type, name: "b<int>"
-// CHECK-NOT: DIFlagFwdDecl
-// CHECK-SAME: ){{$}}

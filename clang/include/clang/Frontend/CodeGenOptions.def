@@ -239,9 +239,6 @@ ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
 /// filename)
 VALUE_CODEGENOPT(EmitCheckPathComponentsToStrip, 32, 0)
 
-/// Whether to report the hotness of the code region for optimization remarks.
-CODEGENOPT(DiagnosticsWithHotness, 1, 0)
-
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT

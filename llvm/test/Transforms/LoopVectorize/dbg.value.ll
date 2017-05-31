@@ -4,9 +4,9 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.8.0"
 
-@A = global [1024 x i32] zeroinitializer, align 16, !dbg !12
-@B = global [1024 x i32] zeroinitializer, align 16, !dbg !16
-@C = global [1024 x i32] zeroinitializer, align 16, !dbg !17
+@A = global [1024 x i32] zeroinitializer, align 16
+@B = global [1024 x i32] zeroinitializer, align 16
+@C = global [1024 x i32] zeroinitializer, align 16
 
 ; CHECK-LABEL: @test(
 define i32 @test() #0 !dbg !3 {
@@ -55,12 +55,12 @@ attributes #1 = { nounwind readnone }
 !9 = !DILocalVariable(name: "i", line: 6, scope: !10, file: !4, type: !7)
 !10 = distinct !DILexicalBlock(line: 6, column: 0, file: !25, scope: !3)
 !11 = !{!12, !16, !17}
-!12 = !DIGlobalVariable(name: "A", line: 1, isLocal: false, isDefinition: true, scope: null, file: !4, type: !13)
+!12 = !DIGlobalVariable(name: "A", line: 1, isLocal: false, isDefinition: true, scope: null, file: !4, type: !13, variable: [1024 x i32]* @A)
 !13 = !DICompositeType(tag: DW_TAG_array_type, size: 32768, align: 32, baseType: !7, elements: !14)
 !14 = !{!15}
 !15 = !{i32 786465, i64 0, i64 1024}
-!16 = !DIGlobalVariable(name: "B", line: 2, isLocal: false, isDefinition: true, scope: null, file: !4, type: !13)
-!17 = !DIGlobalVariable(name: "C", line: 3, isLocal: false, isDefinition: true, scope: null, file: !4, type: !13)
+!16 = !DIGlobalVariable(name: "B", line: 2, isLocal: false, isDefinition: true, scope: null, file: !4, type: !13, variable: [1024 x i32]* @B)
+!17 = !DIGlobalVariable(name: "C", line: 3, isLocal: false, isDefinition: true, scope: null, file: !4, type: !13, variable: [1024 x i32]* @C)
 !18 = !DILocation(line: 6, scope: !10)
 !19 = !DILocation(line: 7, scope: !20)
 !20 = distinct !DILexicalBlock(line: 6, column: 0, file: !25, scope: !10)

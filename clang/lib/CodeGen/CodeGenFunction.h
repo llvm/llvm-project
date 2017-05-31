@@ -2107,6 +2107,7 @@ public:
 
   void EmitScalarInit(const Expr *init, const ValueDecl *D, LValue lvalue,
                       bool capturedByInit);
+  void EmitScalarInit(llvm::Value *init, LValue lvalue);
 
   typedef void SpecialInitFn(CodeGenFunction &Init, const VarDecl &D,
                              llvm::Value *Address);
@@ -2809,7 +2810,7 @@ public:
   LValue EmitStmtExprLValue(const StmtExpr *E);
   LValue EmitPointerToDataMemberBinaryExpr(const BinaryOperator *E);
   LValue EmitObjCSelectorLValue(const ObjCSelectorExpr *E);
-  void   EmitDeclRefExprDbgValue(const DeclRefExpr *E, const APValue &Init);
+  void   EmitDeclRefExprDbgValue(const DeclRefExpr *E, llvm::Constant *Init);
 
   //===--------------------------------------------------------------------===//
   //                         Scalar Expression Emission

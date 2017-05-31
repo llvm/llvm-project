@@ -26,13 +26,10 @@
 -(void)testIt2 {}
 @end
 
-// CHECK: [[@LINE+3]]:12 | class(test)/ObjC | MyTestCase | c:objc(cs)MyTestCase | _OBJC_CLASS_$_MyTestCase | Ref,RelExt,RelCont | rel: 1
-// CHECK-NEXT: RelExt,RelCont | cat | c:objc(cy)MyTestCase@cat
-// CHECK: [[@LINE+1]]:23 | extension/ObjC | cat | c:objc(cy)MyTestCase@cat | <no-cgname> | Decl | rel: 0
+// CHECK: [[@LINE+1]]:12 | extension/ObjC | cat | c:objc(cy)MyTestCase@cat | <no-cgname> | Decl | rel: 0
 @interface MyTestCase(cat)
 @end
-// CHECK: [[@LINE+2]]:17 | class(test)/ObjC | MyTestCase | c:objc(cs)MyTestCase | _OBJC_CLASS_$_MyTestCase | Ref,RelCont | rel: 1
-// CHECK: [[@LINE+1]]:28 | extension/ObjC | MyTestCase | c:objc(cy)MyTestCase@cat | <no-cgname> | Def | rel: 0
+// CHECK: [[@LINE+1]]:17 | extension/ObjC | MyTestCase | c:objc(cy)MyTestCase@cat | <no-cgname> | Def | rel: 0
 @implementation MyTestCase(cat)
 // CHECK: [[@LINE+1]]:1 | instance-method(test)/ObjC | testInCat | c:objc(cs)MyTestCase(im)testInCat | -[MyTestCase(cat) testInCat] | Def,Dyn,RelChild | rel: 1
 - (void)testInCat {}
@@ -41,20 +38,11 @@
 
 @class NSButton;
 @interface IBCls
-
-// CHECK: [[@LINE+2]]:34 | instance-method/acc-get/ObjC | prop | c:objc(cs)IBCls(im)prop | -[IBCls prop] | Decl,Dyn,RelChild,RelAcc | rel: 2
+// CHECK: [[@LINE+2]]:34 | instance-method/ObjC | prop | c:objc(cs)IBCls(im)prop | -[IBCls prop] | Decl,Dyn,RelChild | rel: 1
 // CHECK: [[@LINE+1]]:34 | instance-property(IB)/ObjC | prop | c:objc(cs)IBCls(py)prop | <no-cgname> | Decl,RelChild | rel: 1
 @property (readonly) IBOutlet id prop;
 // CHECK: [[@LINE+1]]:54 | instance-property(IB,IBColl)/ObjC | propColl | c:objc(cs)IBCls(py)propColl | <no-cgname> | Decl,RelChild | rel: 1
 @property (readonly) IBOutletCollection(NSButton) id propColl;
 // CHECK: [[@LINE+1]]:1 | instance-method(IB)/ObjC | doIt | c:objc(cs)IBCls(im)doIt | -[IBCls doIt] | Decl,Dyn,RelChild | rel: 1
 -(IBAction)doIt;
-@end
-
-
-#define GKInspectable __attribute__((annotate("gk_inspectable")))
-
-@interface GKI
-// CHECK: [[@LINE+1]]:40 | instance-property(GKI)/ObjC | gkIntProp | c:objc(cs)GKI(py)gkIntProp | <no-cgname> | Decl,RelChild | rel: 1
-@property (readonly) GKInspectable int gkIntProp;
 @end

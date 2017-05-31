@@ -138,7 +138,8 @@ void AsmPrinter::EmitTTypeReference(const GlobalValue *GV,
     const TargetLoweringObjectFile &TLOF = getObjFileLowering();
 
     const MCExpr *Exp =
-        TLOF.getTTypeGlobalReference(GV, Encoding, TM, MMI, *OutStreamer);
+        TLOF.getTTypeGlobalReference(GV, Encoding, *Mang, TM, MMI,
+                                     *OutStreamer);
     OutStreamer->EmitValue(Exp, GetSizeOfEncodedValue(Encoding));
   } else
     OutStreamer->EmitIntValue(0, GetSizeOfEncodedValue(Encoding));
@@ -172,6 +173,36 @@ void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntryRef S) const {
 
   // Just emit the offset directly; no need for symbol math.
   EmitInt32(S.getOffset());
+}
+
+/// EmitDwarfRegOp - Emit dwarf register operation.
+void AsmPrinter::EmitDwarfRegOp(ByteStreamer &Streamer,
+                                const MachineLocation &MLoc) const {
+  DebugLocDwarfExpression Expr(getDwarfDebug()->getDwarfVersion(), Streamer);
+  const MCRegisterInfo *MRI = MMI->getContext().getRegisterInfo();
+  int Reg = MRI->getDwarfRegNum(MLoc.getReg(), false);
+  if (Reg < 0) {
+    // We assume that pointers are always in an addressable register.
+    if (MLoc.isIndirect())
+      // FIXME: We have no reasonable way of handling errors in here. The
+      // caller might be in the middle of a dwarf expression. We should
+      // probably assert that Reg >= 0 once debug info generation is more
+      // mature.
+      return Expr.EmitOp(dwarf::DW_OP_nop,
+                         "nop (could not find a dwarf register number)");
+
+    // Attempt to find a valid super- or sub-register.
+    if (!Expr.AddMachineRegPiece(*MF->getSubtarget().getRegisterInfo(),
+                                 MLoc.getReg()))
+      Expr.EmitOp(dwarf::DW_OP_nop,
+                  "nop (could not find a dwarf register number)");
+    return;
+  }
+
+  if (MLoc.isIndirect())
+    Expr.AddRegIndirect(Reg, MLoc.getOffset());
+  else
+    Expr.AddReg(Reg);
 }
 
 //===----------------------------------------------------------------------===//

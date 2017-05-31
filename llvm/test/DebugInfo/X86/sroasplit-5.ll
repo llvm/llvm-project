@@ -19,11 +19,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; When SROA is creating new smaller allocas, it may add padding.
 ;
 ; There should be no debug info for the padding.
-; CHECK-NOT: DW_OP_LLVM_fragment, 56
-; CHECK: DIExpression(DW_OP_LLVM_fragment, 32, 24)
-; CHECK-NOT: DW_OP_LLVM_fragment, 56
-; CHECK: DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NOT: DW_OP_LLVM_fragment, 56
+; CHECK-NOT: DW_OP_bit_piece, 56
+; CHECK: DIExpression(DW_OP_bit_piece, 32, 24)
+; CHECK-NOT: DW_OP_bit_piece, 56
+; CHECK: DIExpression(DW_OP_bit_piece, 0, 32)
+; CHECK-NOT: DW_OP_bit_piece, 56
 %struct.prog_src_register = type { i32, i24 }
 
 ; Function Attrs: nounwind

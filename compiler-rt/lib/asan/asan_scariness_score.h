@@ -34,10 +34,10 @@
 #include "sanitizer_common/sanitizer_libc.h"
 
 namespace __asan {
-struct ScarinessScoreBase {
-  void Clear() {
+class ScarinessScore {
+ public:
+  ScarinessScore() {
     descr[0] = 0;
-    score = 0;
   }
   void Scare(int add_to_score, const char *reason) {
     if (descr[0])
@@ -52,21 +52,14 @@ struct ScarinessScoreBase {
       Printf("SCARINESS: %d (%s)\n", score, descr);
   }
   static void PrintSimple(int score, const char *descr) {
-    ScarinessScoreBase SSB;
-    SSB.Clear();
-    SSB.Scare(score, descr);
-    SSB.Print();
+    ScarinessScore SS;
+    SS.Scare(score, descr);
+    SS.Print();
   }
 
  private:
-  int score;
+  int score = 0;
   char descr[1024];
-};
-
-struct ScarinessScore : ScarinessScoreBase {
-  ScarinessScore() {
-    Clear();
-  }
 };
 
 }  // namespace __asan

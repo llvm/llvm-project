@@ -2428,7 +2428,6 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::Fast:
   case CallingConv::PreserveMost:
   case CallingConv::CXX_FAST_TLS:
-  case CallingConv::Swift:
     if (!Subtarget->isTargetDarwin())
       return CC_AArch64_AAPCS;
     return IsVarArg ? CC_AArch64_DarwinPCS_VarArg : CC_AArch64_DarwinPCS;
@@ -2763,29 +2762,15 @@ SDValue AArch64TargetLowering::LowerCallResult(
   return Chain;
 }
 
-/// Return true if the calling convention is one that we can guarantee TCO for.
-static bool canGuaranteeTCO(CallingConv::ID CC) {
-  return CC == CallingConv::Fast;
-}
-
-/// Return true if we might ever do TCO for calls with this calling convention.
-static bool mayTailCallThisCC(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::C:
-  case CallingConv::PreserveMost:
-  case CallingConv::Swift:
-    return true;
-  default:
-    return canGuaranteeTCO(CC);
-  }
-}
-
 bool AArch64TargetLowering::isEligibleForTailCallOptimization(
     SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals,
     const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const {
-  if (!mayTailCallThisCC(CalleeCC))
+  // For CallingConv::C this function knows whether the ABI needs
+  // changing. That's not true for other conventions so they will have to opt in
+  // manually.
+  if (!IsTailCallConvention(CalleeCC) && CalleeCC != CallingConv::C)
     return false;
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -2802,8 +2787,9 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
     if (i->hasByValAttr())
       return false;
 
-  if (getTargetMachine().Options.GuaranteedTailCallOpt)
-    return canGuaranteeTCO(CalleeCC) && CCMatch;
+  if (getTargetMachine().Options.GuaranteedTailCallOpt) {
+    return IsTailCallConvention(CalleeCC) && CCMatch;
+  }
 
   // Externally-defined functions with weak linkage should not be
   // tail-called on AArch64 when the OS does not support dynamic
@@ -2919,6 +2905,11 @@ SDValue AArch64TargetLowering::addTokenForArgument(SDValue Chain,
 bool AArch64TargetLowering::DoesCalleeRestoreStack(CallingConv::ID CallCC,
                                                    bool TailCallOpt) const {
   return CallCC == CallingConv::Fast && TailCallOpt;
+}
+
+bool AArch64TargetLowering::IsTailCallConvention(CallingConv::ID CallCC) const {
+  return CallCC == CallingConv::Fast ||
+         CallCC == CallingConv::PreserveMost;
 }
 
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,
@@ -7770,15 +7761,13 @@ static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
 /// Fold a floating-point divide by power of two into fixed-point to
 /// floating-point conversion.
 static SDValue performFDivCombine(SDNode *N, SelectionDAG &DAG,
-                                  TargetLowering::DAGCombinerInfo &DCI,
                                   const AArch64Subtarget *Subtarget) {
   if (!Subtarget->hasNEON())
     return SDValue();
 
   SDValue Op = N->getOperand(0);
   unsigned Opc = Op->getOpcode();
-  if (!Op.getValueType().isVector() || !Op.getValueType().isSimple() ||
-      !Op.getOperand(0).getValueType().isSimple() ||
+  if (!Op.getValueType().isVector() ||
       (Opc != ISD::SINT_TO_FP && Opc != ISD::UINT_TO_FP))
     return SDValue();
 
@@ -7815,12 +7804,9 @@ static SDValue performFDivCombine(SDNode *N, SelectionDAG &DAG,
     ResTy = FloatBits == 32 ? MVT::v2i32 : MVT::v2i64;
     break;
   case 4:
-    ResTy = FloatBits == 32 ? MVT::v4i32 : MVT::v4i64;
+    ResTy = MVT::v4i32;
     break;
   }
-
-  if (ResTy == MVT::v4i64 && DCI.isBeforeLegalizeOps())
-    return SDValue();
 
   SDLoc DL(N);
   SDValue ConvInput = Op.getOperand(0);
@@ -9880,7 +9866,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_TO_UINT:
     return performFpToIntCombine(N, DAG, DCI, Subtarget);
   case ISD::FDIV:
-    return performFDivCombine(N, DAG, DCI, Subtarget);
+    return performFDivCombine(N, DAG, Subtarget);
   case ISD::OR:
     return performORCombine(N, DCI, Subtarget);
   case ISD::SRL:

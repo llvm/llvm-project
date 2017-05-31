@@ -301,3 +301,40 @@ void test17(void) {
   char valC;
   char16 destVal = valC ? valA : valB;
 }
+
+typedef __attribute__(( ext_vector_type(16) )) float float16;
+
+float16 vec16, vec16_2;
+
+// CHECK: @test_rgba
+void test_rgba() {
+  // CHECK: fadd <4 x float>
+  vec4_2 = vec4.abgr + vec4;
+
+  // CHECK: shufflevector {{.*}} <i32 0, i32 1>
+  vec2 = vec4.rg;
+  // CHECK: shufflevector {{.*}} <i32 2, i32 3>
+  vec2_2 = vec4.ba;
+  // CHECK: extractelement {{.*}} 2
+  f = vec4.b;
+  // CHECK: shufflevector {{.*}} <i32 2, i32 2, i32 2, i32 2>
+  vec4_2 = vec4_2.bbbb;
+
+  // CHECK: insertelement {{.*}} 0
+  vec2.r = f;
+  // CHECK: shufflevector {{.*}} <i32 1, i32 0>
+  vec2.gr = vec2;
+
+  // CHECK: extractelement {{.*}} 0
+  f = vec4_2.rg.r;
+  // CHECK: shufflevector {{.*}} <i32 2, i32 1, i32 0>
+  // CHECK: shufflevector {{.*}} <i32 0, i32 1, i32 2, i32 undef>
+  // CHECK: shufflevector {{.*}} <i32 4, i32 5, i32 6, i32 3>
+  vec4.rgb = vec4.bgr;
+
+  // CHECK: extractelement {{.*}} 11
+  // CHECK: insertelement {{.*}} 2
+  vec4.b = vec16.sb;
+  // CHECK: shufflevector {{.*}} <i32 10, i32 11, i32 12, i32 13>
+  vec4_2 = vec16.sabcd;
+}

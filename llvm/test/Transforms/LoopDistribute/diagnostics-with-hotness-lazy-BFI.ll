@@ -1,9 +1,9 @@
 ; Check that BFI is not computed when -pass-remarks-with-hotness is off
 
-; RUN: opt -loop-distribute -enable-loop-distribute -S -pass-remarks-missed=loop-distribute \
+; RUN: opt -loop-distribute -S -pass-remarks-missed=loop-distribute \
 ; RUN:     -debug-only=block-freq,branch-prob -pass-remarks-with-hotness \
 ; RUN:     < %s 2>&1 | FileCheck %s --check-prefix=HOTNESS
-; RUN: opt -loop-distribute -enable-loop-distribute -S -pass-remarks-missed=loop-distribute \
+; RUN: opt -loop-distribute -S -pass-remarks-missed=loop-distribute \
 ; RUN:     -debug-only=block-freq,branch-prob \
 ; RUN:     < %s 2>&1 | FileCheck %s --check-prefix=NO_HOTNESS
 

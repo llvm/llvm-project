@@ -452,21 +452,20 @@ namespace llvm {
     /// \param Ty          Variable Type.
     /// \param isLocalToUnit Boolean flag indicate whether this variable is
     ///                      externally visible or not.
-    /// \param Expr        The location of the global relative to the attached
-    ///                    GlobalVariable.
+    /// \param Val         llvm::Value of the variable.
     /// \param Decl        Reference to the corresponding declaration.
     DIGlobalVariable *createGlobalVariable(DIScope *Context, StringRef Name,
                                            StringRef LinkageName, DIFile *File,
                                            unsigned LineNo, DIType *Ty,
                                            bool isLocalToUnit,
-                                           DIExpression *Expr = nullptr,
+                                           llvm::Constant *Val,
                                            MDNode *Decl = nullptr);
 
     /// Identical to createGlobalVariable
     /// except that the resulting DbgNode is temporary and meant to be RAUWed.
     DIGlobalVariable *createTempGlobalVariableFwdDecl(
         DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
-        unsigned LineNo, DIType *Ty, bool isLocalToUnit, DIExpression *Expr,
+        unsigned LineNo, DIType *Ty, bool isLocalToUnit, llvm::Constant *Val,
         MDNode *Decl = nullptr);
 
     /// Create a new descriptor for an auto variable.  This is a local variable
@@ -511,15 +510,8 @@ namespace llvm {
     ///
     /// \param OffsetInBits Offset of the piece in bits.
     /// \param SizeInBits   Size of the piece in bits.
-    DIExpression *createFragmentExpression(unsigned OffsetInBits,
+    DIExpression *createBitPieceExpression(unsigned OffsetInBits,
                                            unsigned SizeInBits);
-
-    /// Create an expression for a variable that does not have an address, but
-    /// does have a constant value.
-    DIExpression *createConstantValueExpression(uint64_t Val) {
-      return DIExpression::get(
-          VMContext, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_stack_value});
-    }
 
     /// Create a new descriptor for the specified subprogram.
     /// See comments in DISubprogram* for descriptions of these fields.

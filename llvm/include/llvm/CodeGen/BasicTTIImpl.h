@@ -281,11 +281,7 @@ public:
 
     // Enable runtime and partial unrolling up to the specified size.
     UP.Partial = UP.Runtime = true;
-    UP.PartialThreshold = MaxOps;
-
-    // Avoid unrolling when optimizing for size.
-    UP.OptSizeThreshold = 0;
-    UP.PartialOptSizeThreshold = 0;
+    UP.PartialThreshold = UP.PartialOptSizeThreshold = MaxOps;
   }
 
   /// @}

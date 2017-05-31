@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -Wunused-variable -analyze -analyzer-checker=core,deadcode.DeadStores -fblocks -verify -Wno-unreachable-code -analyzer-opt-analyze-nested-blocks %s
-// RUN: %clang_cc1 -Wunused-variable -analyze -analyzer-checker=core,deadcode.DeadStores -analyzer-store=region -fblocks -verify -Wno-unreachable-code -analyzer-opt-analyze-nested-blocks %s
+// RUN: %clang_cc1 -Wunused-variable -analyze -analyzer-checker=core,deadcode.DeadStores -analyzer-store=region -analyzer-constraints=range -fblocks -verify -Wno-unreachable-code -analyzer-opt-analyze-nested-blocks %s
 
 void f1() {
   int k, y; // expected-warning{{unused variable 'k'}} expected-warning{{unused variable 'y'}}

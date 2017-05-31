@@ -728,7 +728,8 @@ DataFlowGraph::DataFlowGraph(MachineFunction &mf, const TargetInstrInfo &tii,
       const TargetRegisterInfo &tri, const MachineDominatorTree &mdt,
       const MachineDominanceFrontier &mdf, const RegisterAliasInfo &rai,
       const TargetOperandInfo &toi)
-    : MF(mf), TII(tii), TRI(tri), MDT(mdt), MDF(mdf), RAI(rai), TOI(toi) {
+    : TimeG("rdf"), MF(mf), TII(tii), TRI(tri), MDT(mdt), MDF(mdf), RAI(rai),
+      TOI(toi) {
 }
 
 

@@ -74,9 +74,6 @@ static cl::opt<bool> FullLeadingAddr("full-leading-addr",
 static cl::opt<bool> NoLeadingAddr("no-leading-addr",
                                    cl::desc("Print no leading address"));
 
-static cl::opt<bool> NoLeadingHeaders("no-leading-headers",
-                                      cl::desc("Print no leading headers"));
-
 cl::opt<bool> llvm::UniversalHeaders("universal-headers",
                                      cl::desc("Print Mach-O universal headers "
                                               "(requires -macho)"));
@@ -1192,30 +1189,30 @@ static void DumpInfoPlistSectionContents(StringRef Filename,
 // architectures were specified.  If not then an error is generated and this
 // routine returns false.  Else it returns true.
 static bool checkMachOAndArchFlags(ObjectFile *O, StringRef Filename) {
-  auto *MachO = dyn_cast<MachOObjectFile>(O);
-
-  if (!MachO || ArchAll || ArchFlags.empty())
-    return true;
-
-  MachO::mach_header H;
-  MachO::mach_header_64 H_64;
-  Triple T;
-  const char *McpuDefault, *ArchFlag;
-  if (MachO->is64Bit()) {
-    H_64 = MachO->MachOObjectFile::getHeader64();
-    T = MachOObjectFile::getArchTriple(H_64.cputype, H_64.cpusubtype,
-                                       &McpuDefault, &ArchFlag);
-  } else {
-    H = MachO->MachOObjectFile::getHeader();
-    T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype,
-                                       &McpuDefault, &ArchFlag);
-  }
-  const std::string ArchFlagName(ArchFlag);
-  if (none_of(ArchFlags, [&](const std::string &Name) {
-        return Name == ArchFlagName;
-      })) {
-    errs() << "llvm-objdump: " + Filename + ": No architecture specified.\n";
-    return false;
+  if (isa<MachOObjectFile>(O) && !ArchAll && ArchFlags.size() != 0) {
+    MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(O);
+    bool ArchFound = false;
+    MachO::mach_header H;
+    MachO::mach_header_64 H_64;
+    Triple T;
+    if (MachO->is64Bit()) {
+      H_64 = MachO->MachOObjectFile::getHeader64();
+      T = MachOObjectFile::getArchTriple(H_64.cputype, H_64.cpusubtype);
+    } else {
+      H = MachO->MachOObjectFile::getHeader();
+      T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype);
+    }
+    unsigned i;
+    for (i = 0; i < ArchFlags.size(); ++i) {
+      if (ArchFlags[i] == T.getArchName())
+        ArchFound = true;
+      break;
+    }
+    if (!ArchFound) {
+      errs() << "llvm-objdump: file: " + Filename + " does not contain "
+             << "architecture: " + ArchFlags[i] + "\n";
+      return false;
+    }
   }
   return true;
 }
@@ -1235,14 +1232,12 @@ static void ProcessMachO(StringRef Filename, MachOObjectFile *MachOOF,
   if (Disassemble || PrivateHeaders || ExportsTrie || Rebase || Bind || SymbolTable ||
       LazyBind || WeakBind || IndirectSymbols || DataInCode || LinkOptHints ||
       DylibsUsed || DylibId || ObjcMetaData || (FilterSections.size() != 0)) {
-    if (!NoLeadingHeaders) {
-      outs() << Filename;
-      if (!ArchiveMemberName.empty())
-        outs() << '(' << ArchiveMemberName << ')';
-      if (!ArchitectureName.empty())
-        outs() << " (architecture " << ArchitectureName << ")";
-      outs() << ":\n";
-    }
+    outs() << Filename;
+    if (!ArchiveMemberName.empty())
+      outs() << '(' << ArchiveMemberName << ')';
+    if (!ArchitectureName.empty())
+      outs() << " (architecture " << ArchitectureName << ")";
+    outs() << ":\n";
   }
 
   if (Disassemble)
@@ -1444,7 +1439,7 @@ static void printMachOUniversalHeaders(const object::MachOUniversalBinary *UB,
       }
     }
     if (verbose) {
-      outs() << OFA.getArchFlagName() << "\n";
+      outs() << OFA.getArchTypeName() << "\n";
       printCPUType(cputype, cpusubtype & ~MachO::CPU_SUBTYPE_MASK);
     } else {
       outs() << i << "\n";
@@ -1627,13 +1622,13 @@ void llvm::ParseInputMachO(StringRef Filename) {
         for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
                                                    E = UB->end_objects();
              I != E; ++I) {
-          if (ArchFlags[i] == I->getArchFlagName()) {
+          if (ArchFlags[i] == I->getArchTypeName()) {
             ArchFound = true;
             Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
                 I->getAsObjectFile();
             std::string ArchitectureName = "";
             if (ArchFlags.size() > 1)
-              ArchitectureName = I->getArchFlagName();
+              ArchitectureName = I->getArchTypeName();
             if (ObjOrErr) {
               ObjectFile &O = *ObjOrErr.get();
               if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&O))
@@ -1670,7 +1665,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
             } else {
               consumeError(AOrErr.takeError());
               error("Mach-O universal file: " + Filename + " for " +
-                    "architecture " + StringRef(I->getArchFlagName()) +
+                    "architecture " + StringRef(I->getArchTypeName()) +
                     " is not a Mach-O file or an archive file");
             }
           }
@@ -1690,7 +1685,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
                                                  E = UB->end_objects();
            I != E; ++I) {
         if (MachOObjectFile::getHostArch().getArchName() ==
-            I->getArchFlagName()) {
+            I->getArchTypeName()) {
           Expected<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
           std::string ArchiveName;
           ArchiveName.clear();
@@ -1726,7 +1721,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
           } else {
             consumeError(AOrErr.takeError());
             error("Mach-O universal file: " + Filename + " for architecture " +
-                  StringRef(I->getArchFlagName()) +
+                  StringRef(I->getArchTypeName()) +
                   " is not a Mach-O file or an archive file");
           }
           return;
@@ -1742,7 +1737,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
       Expected<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
       std::string ArchitectureName = "";
       if (moreThanOneArch)
-        ArchitectureName = I->getArchFlagName();
+        ArchitectureName = I->getArchTypeName();
       if (ObjOrErr) {
         ObjectFile &Obj = *ObjOrErr.get();
         if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&Obj))
@@ -1781,7 +1776,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
       } else {
         consumeError(AOrErr.takeError());
         error("Mach-O universal file: " + Filename + " for architecture " +
-              StringRef(I->getArchFlagName()) +
+              StringRef(I->getArchTypeName()) +
               " is not a Mach-O file or an archive file");
       }
     }
@@ -7098,10 +7093,8 @@ printMachOCompactUnwindSection(const MachOObjectFile *Obj,
                                std::map<uint64_t, SymbolRef> &Symbols,
                                const SectionRef &CompactUnwind) {
 
-  if (!Obj->isLittleEndian()) {
-    outs() << "Skipping big-endian __compact_unwind section\n";
-    return;
-  }
+  assert(Obj->isLittleEndian() &&
+         "There should not be a big-endian .o with __compact_unwind");
 
   bool Is64 = Obj->is64Bit();
   uint32_t PointerSize = Is64 ? sizeof(uint64_t) : sizeof(uint32_t);
@@ -7133,10 +7126,8 @@ printMachOCompactUnwindSection(const MachOObjectFile *Obj,
       Entry.PersonalityReloc = Reloc;
     else if (OffsetInEntry == 2 * PointerSize + 2 * sizeof(uint32_t))
       Entry.LSDAReloc = Reloc;
-    else {
-      outs() << "Invalid relocation in __compact_unwind section\n";
-      return;
-    }
+    else
+      llvm_unreachable("Unexpected relocation in __compact_unwind section");
   }
 
   // Finally, we're ready to print the data we've gathered.
@@ -7242,10 +7233,8 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
                                         std::map<uint64_t, SymbolRef> &Symbols,
                                         const SectionRef &UnwindInfo) {
 
-  if (!Obj->isLittleEndian()) {
-    outs() << "Skipping big-endian __unwind_info section\n";
-    return;
-  }
+  assert(Obj->isLittleEndian() &&
+         "There should not be a big-endian .o with __unwind_info");
 
   outs() << "Contents of __unwind_info section:\n";
 
@@ -7260,10 +7249,7 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
   uint32_t Version = readNext<uint32_t>(Pos);
   outs() << "  Version:                                   "
          << format("0x%" PRIx32, Version) << '\n';
-  if (Version != 1) {
-    outs() << "    Skipping section with unknown version\n";
-    return;
-  }
+  assert(Version == 1 && "only understand version 1");
 
   uint32_t CommonEncodingsStart = readNext<uint32_t>(Pos);
   outs() << "  Common encodings array section offset:     "
@@ -7403,8 +7389,7 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
       printCompressedSecondLevelUnwindPage(Pos, IndexEntries[i].FunctionOffset,
                                            CommonEncodings);
     else
-      outs() << "    Skipping 2nd level page with unknown kind " << Kind
-             << '\n';
+      llvm_unreachable("Do not know how to print this kind of 2nd level page");
   }
 }
 

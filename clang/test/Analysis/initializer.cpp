@@ -197,10 +197,3 @@ namespace ReferenceInitialization {
   }
 
 };
-
-namespace PR31592 {
-struct C {
-   C() : f("}") { } // no-crash
-   const char(&f)[2];
-};
-}

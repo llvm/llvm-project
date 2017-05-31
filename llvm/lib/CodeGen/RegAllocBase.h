@@ -105,7 +105,6 @@ protected:
 
   // Use this group name for NamedRegionTimer.
   static const char TimerGroupName[];
-  static const char TimerGroupDescription[];
 
   /// Method called when the allocator is about to remove a LiveInterval.
   virtual void aboutToRemoveInterval(LiveInterval &LI) {}

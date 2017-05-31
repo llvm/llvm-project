@@ -1,7 +1,6 @@
 // Check to make sure clang is somewhat picky about -g options.
 // rdar://10383444
 
-// Linux.
 // RUN: %clang -### -c -g %s -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G -check-prefix=G_GDB %s
 // RUN: %clang -### -c -g2 %s -target x86_64-linux-gnu 2>&1 \
@@ -17,50 +16,21 @@
 // RUN: %clang -### -c -glldb %s -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G -check-prefix=G_LLDB %s
 // RUN: %clang -### -c -gsce %s -target x86_64-linux-gnu 2>&1 \
-
-// Darwin.
 // RUN:             | FileCheck -check-prefix=G -check-prefix=G_SCE %s
-// RUN: %clang -### -c -g %s -target x86_64-apple-darwin 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_STANDALONE \
-// RUN:                         -check-prefix=G_DWARF2 \
-// RUN:                         -check-prefix=G_LLDB %s
-// RUN: %clang -### -c -g %s -target x86_64-apple-darwin16 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_STANDALONE \
-// RUN:                         -check-prefix=G_DWARF4 \
-// RUN:                         -check-prefix=G_LLDB %s
-// RUN: %clang -### -c -g2 %s -target x86_64-apple-darwin16 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_STANDALONE \
-// RUN:                         -check-prefix=G_DWARF4 %s
-// RUN: %clang -### -c -g3 %s -target x86_64-apple-darwin16 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_STANDALONE \
-// RUN:                         -check-prefix=G_DWARF4 %s
-// RUN: %clang -### -c -ggdb %s -target x86_64-apple-darwin16 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_STANDALONE \
-// RUN:                         -check-prefix=G_DWARF4 \
-// RUN:                         -check-prefix=G_GDB %s
-// RUN: %clang -### -c -ggdb1 %s -target x86_64-apple-darwin16 2>&1 \
-// RUN:             | FileCheck -check-prefix=GLTO_ONLY %s
-// RUN: %clang -### -c -ggdb3 %s -target x86_64-apple-darwin16 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_STANDALONE \
-// RUN:                         -check-prefix=G_DWARF4 %s
-// RUN: %clang -### -c -g %s -target x86_64-apple-macosx10.11 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_STANDALONE \
-// RUN:                         -check-prefix=G_DWARF4 %s
-// RUN: %clang -### -c -g %s -target x86_64-apple-macosx10.10 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
-// RUN: %clang -### -c -g %s -target armv7-apple-ios9.0 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_STANDALONE \
-// RUN:                         -check-prefix=G_DWARF4 %s
-// RUN: %clang -### -c -g %s -target armv7-apple-ios8.0 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
-// RUN: %clang -### -c -g %s -target armv7k-apple-watchos 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_STANDALONE \
-// RUN:                         -check-prefix=G_DWARF4 %s
-// RUN: %clang -### -c -g %s -target arm64-apple-tvos9.0 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_STANDALONE \
-// RUN:                         -check-prefix=G_DWARF4 %s
 
-// FreeBSD.
+// RUN: %clang -### -c -g %s -target x86_64-apple-darwin 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_DARWIN -check-prefix=G_LLDB %s
+// RUN: %clang -### -c -g2 %s -target x86_64-apple-darwin 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_DARWIN %s
+// RUN: %clang -### -c -g3 %s -target x86_64-apple-darwin 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_DARWIN %s
+// RUN: %clang -### -c -ggdb %s -target x86_64-apple-darwin 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_DARWIN -check-prefix=G_GDB %s
+// RUN: %clang -### -c -ggdb1 %s -target x86_64-apple-darwin 2>&1 \
+// RUN:             | FileCheck -check-prefix=GLTO_ONLY_DWARF2 %s
+// RUN: %clang -### -c -ggdb3 %s -target x86_64-apple-darwin 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_DARWIN %s
+
 // RUN: %clang -### -c -g %s -target x86_64-pc-freebsd10.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_GDB %s
 
@@ -77,8 +47,7 @@
 // RUN: %clang -### -c %s -g -gcolumn-info -target x86_64-scei-ps4 2>&1 \
 // RUN:             | FileCheck -check-prefix=CI %s
 
-// RUN: %clang -### -c -gdwarf-2 %s 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
+// RUN: %clang -### -c -gdwarf-2 %s 2>&1 | FileCheck -check-prefix=G_D2 %s
 //
 // RUN: %clang -### -c -gfoo %s 2>&1 | FileCheck -check-prefix=G_NO %s
 // RUN: %clang -### -c -g -g0 %s 2>&1 | FileCheck -check-prefix=G_NO %s
@@ -99,15 +68,15 @@
 // RUN: %clang -### -c -gline-tables-only %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY %s
 // RUN: %clang -### -c -gline-tables-only %s -target x86_64-apple-darwin 2>&1 \
-// RUN:             | FileCheck -check-prefix=GLTO_ONLY %s
+// RUN:             | FileCheck -check-prefix=GLTO_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-tables-only %s -target i686-pc-openbsd 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-tables-only %s -target x86_64-pc-freebsd10.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY %s
-// RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-apple-darwin16 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_STANDALONE -check-prefix=G_DWARF4 %s
+// RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-apple-darwin 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-tables-only -g %s -target i686-pc-openbsd 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-pc-freebsd10.0 2>&1 \
@@ -140,17 +109,11 @@
 // RUN: %clang -### -gmodules %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=GEXTREFS %s
 //
-// RUN: %clang -### -gmodules -g %s 2>&1 \
-// RUN:        | FileCheck -check-prefix=GEXTREFS %s
-//
-// RUN: %clang -### -gline-tables-only -gmodules %s 2>&1 \
-// RUN:        | FileCheck -check-prefix=GEXTREFS %s
-//
-// RUN: %clang -### -gmodules -gline-tables-only %s 2>&1 \
-// RUN:        | FileCheck -check-prefix=GLTO_ONLY %s
-//
 // G: "-cc1"
 // G: "-debug-info-kind=limited"
+//
+// G_DARWIN: "-cc1"
+// G_DARWIN: "-dwarf-version=2"
 //
 // NOG_PS4: "-cc1"
 // NOG_PS4-NOT "-dwarf-version=
@@ -161,13 +124,14 @@
 // G_PS4: "-dwarf-version=
 // G_PS4: "-generate-arange-section"
 //
+// G_D2: "-cc1"
+// G_D2: "-dwarf-version=2"
+//
 // G_NO: "-cc1"
 // G_NO-NOT: -debug-info-kind=
 //
 // GLTO_ONLY: "-cc1"
-// GLTO_ONLY-NOT: "-dwarf-ext-refs"
 // GLTO_ONLY: "-debug-info-kind=line-tables-only"
-// GLTO_ONLY-NOT: "-dwarf-ext-refs"
 //
 // GLTO_ONLY_DWARF2: "-cc1"
 // GLTO_ONLY_DWARF2: "-debug-info-kind=line-tables-only"
@@ -176,19 +140,15 @@
 // G_ONLY: "-cc1"
 // G_ONLY: "-debug-info-kind=limited"
 //
+// G_GDB:  "-debugger-tuning=gdb"
+// G_LLDB: "-debugger-tuning=lldb"
+// G_SCE:  "-debugger-tuning=sce"
+//
 // These tests assert that "-gline-tables-only" "-g" uses the latter,
 // but otherwise not caring about the DebugInfoKind.
 // G_ONLY_DWARF2: "-cc1"
 // G_ONLY_DWARF2: "-debug-info-kind={{standalone|limited}}"
 // G_ONLY_DWARF2: "-dwarf-version=2"
-//
-// G_STANDALONE: "-cc1"
-// G_STANDALONE: "-debug-info-kind=standalone"
-// G_DWARF4: "-dwarf-version=4"
-//
-// G_GDB:  "-debugger-tuning=gdb"
-// G_LLDB: "-debugger-tuning=lldb"
-// G_SCE:  "-debugger-tuning=sce"
 //
 // This tests asserts that "-gline-tables-only" "-g0" disables debug info.
 // GLTO_NO: "-cc1"

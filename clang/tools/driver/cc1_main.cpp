@@ -28,7 +28,6 @@
 #include "llvm/LinkAllPasses.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
@@ -36,14 +35,6 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
-
-#ifdef __has_include
-#if __has_include(<sys/resource.h>)
-#define HAVE_RLIMITS
-#include <sys/resource.h>
-#endif
-#endif
-
 using namespace clang;
 using namespace llvm::opt;
 
@@ -73,67 +64,7 @@ void initializePollyPasses(llvm::PassRegistry &Registry);
 }
 #endif
 
-#ifdef HAVE_RLIMITS
-// The amount of stack we think is "sufficient". If less than this much is
-// available, we may be unable to reach our template instantiation depth
-// limit and other similar limits.
-// FIXME: Unify this with the stack we request when spawning a thread to build
-// a module.
-static const int kSufficientStack = 8 << 20;
-
-#if defined(__linux__) && defined(__PIE__)
-LLVM_ATTRIBUTE_NOINLINE
-static void ensureStackAddressSpace() {
-  // Linux kernels prior to 4.1 will sometimes locate the heap of a PIE binary
-  // relatively close to the stack (they are only guaranteed to be 128MiB
-  // apart). This results in crashes if we happen to heap-allocate more than
-  // 128MiB before we reach our stack high-water mark.
-  //
-  // To avoid these crashes, ensure that we have sufficient virtual memory
-  // pages allocated before we start running by touching an early page. (We
-  // allow 512KiB for kernel/libc-provided data such as command-line arguments
-  // and environment variables, and for main and cc1_main)
-  volatile char ReservedStack[kSufficientStack - 512 * 1024];
-  volatile int N = 0;
-  (void)+ReservedStack[N];
-}
-#else
-static void ensureStackAddressSpace() {}
-#endif
-
-/// Attempt to ensure that we have at least 8MiB of usable stack space.
-static void ensureSufficientStack() {
-  struct rlimit rlim;
-  if (getrlimit(RLIMIT_STACK, &rlim) != 0)
-    return;
-
-  // Increase the soft stack limit to our desired level, if necessary and
-  // possible.
-  if (rlim.rlim_cur != RLIM_INFINITY && rlim.rlim_cur < kSufficientStack) {
-    // Try to allocate sufficient stack.
-    if (rlim.rlim_max == RLIM_INFINITY || rlim.rlim_max >= kSufficientStack)
-      rlim.rlim_cur = kSufficientStack;
-    else if (rlim.rlim_cur == rlim.rlim_max)
-      return;
-    else
-      rlim.rlim_cur = rlim.rlim_max;
-
-    if (setrlimit(RLIMIT_STACK, &rlim) != 0 ||
-        rlim.rlim_cur != kSufficientStack)
-      return;
-  }
-
-  // We should now have a stack of size at least kSufficientStack. Ensure
-  // that we can actually use that much, if necessary.
-  ensureStackAddressSpace();
-}
-#else
-static void ensureSufficientStack() {}
-#endif
-
 int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
-  ensureSufficientStack();
-
   std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 

@@ -35,7 +35,6 @@ set(SOURCES
 
 set(LIBS
   clangAST
-  clangAPINotes
   clangBasic
   clangFrontend
   clangIndex

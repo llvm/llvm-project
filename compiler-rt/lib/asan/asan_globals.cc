@@ -25,7 +25,6 @@
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
-#include "sanitizer_common/sanitizer_symbolizer.h"
 
 namespace __asan {
 
@@ -122,6 +121,18 @@ int GetGlobalsForAddress(uptr addr, Global *globals, u32 *reg_sites,
     }
   }
   return res;
+}
+
+bool GetInfoForAddressIfGlobal(uptr addr, AddressDescription *descr) {
+  Global g = {};
+  if (GetGlobalsForAddress(addr, &g, nullptr, 1)) {
+    internal_strncpy(descr->name, g.name, descr->name_size);
+    descr->region_address = g.beg;
+    descr->region_size = g.size;
+    descr->region_kind = "global";
+    return true;
+  }
+  return false;
 }
 
 enum GlobalSymbolState {
@@ -266,46 +277,6 @@ void StopInitOrderChecking() {
     // Poison redzones back.
     PoisonRedZones(*g);
   }
-}
-
-static bool IsASCII(unsigned char c) { return /*0x00 <= c &&*/ c <= 0x7F; }
-
-const char *MaybeDemangleGlobalName(const char *name) {
-  // We can spoil names of globals with C linkage, so use an heuristic
-  // approach to check if the name should be demangled.
-  bool should_demangle = false;
-  if (name[0] == '_' && name[1] == 'Z')
-    should_demangle = true;
-  else if (SANITIZER_WINDOWS && name[0] == '\01' && name[1] == '?')
-    should_demangle = true;
-
-  return should_demangle ? Symbolizer::GetOrInit()->Demangle(name) : name;
-}
-
-// Check if the global is a zero-terminated ASCII string. If so, print it.
-void PrintGlobalNameIfASCII(InternalScopedString *str, const __asan_global &g) {
-  for (uptr p = g.beg; p < g.beg + g.size - 1; p++) {
-    unsigned char c = *(unsigned char *)p;
-    if (c == '\0' || !IsASCII(c)) return;
-  }
-  if (*(char *)(g.beg + g.size - 1) != '\0') return;
-  str->append("  '%s' is ascii string '%s'\n", MaybeDemangleGlobalName(g.name),
-              (char *)g.beg);
-}
-
-static const char *GlobalFilename(const __asan_global &g) {
-  const char *res = g.module_name;
-  // Prefer the filename from source location, if is available.
-  if (g.location) res = g.location->filename;
-  CHECK(res);
-  return res;
-}
-
-void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g) {
-  str->append("%s", GlobalFilename(g));
-  if (!g.location) return;
-  if (g.location->line_no) str->append(":%d", g.location->line_no);
-  if (g.location->column_no) str->append(":%d", g.location->column_no);
 }
 
 } // namespace __asan

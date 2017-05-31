@@ -100,8 +100,10 @@ void HexagonTargetObjectFile::Initialize(MCContext &Ctx,
                                ELF::SHF_HEX_GPREL);
 }
 
+
 MCSection *HexagonTargetObjectFile::SelectSectionForGlobal(
-    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
+      const GlobalValue *GV, SectionKind Kind, Mangler &Mang,
+      const TargetMachine &TM) const {
   TRACE("[SelectSectionForGlobal] GV(" << GV->getName() << ") ");
   TRACE("input section(" << GV->getSection() << ") ");
 
@@ -116,7 +118,7 @@ MCSection *HexagonTargetObjectFile::SelectSectionForGlobal(
          << (Kind.isBSSLocal() ? "kind_bss_local " : "" ));
 
   if (isGlobalInSmallSection(GV, TM))
-    return selectSmallSectionForGlobal(GV, Kind, TM);
+    return selectSmallSectionForGlobal(GV, Kind, Mang, TM);
 
   if (Kind.isCommon()) {
     // This is purely for LTO+Linker Script because commons don't really have a
@@ -128,11 +130,14 @@ MCSection *HexagonTargetObjectFile::SelectSectionForGlobal(
 
   TRACE("default_ELF_section\n");
   // Otherwise, we work the same as ELF.
-  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GV, Kind, TM);
+  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GV, Kind,
+              Mang, TM);
 }
 
+
 MCSection *HexagonTargetObjectFile::getExplicitSectionGlobal(
-    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
+      const GlobalValue *GV, SectionKind Kind, Mangler &Mang,
+      const TargetMachine &TM) const {
   TRACE("[getExplicitSectionGlobal] GV(" << GV->getName() << ") from("
         << GV->getSection() << ") ");
   TRACE((GV->hasPrivateLinkage() ? "private_linkage " : "")
@@ -156,11 +161,12 @@ MCSection *HexagonTargetObjectFile::getExplicitSectionGlobal(
   }
 
   if (isGlobalInSmallSection(GV, TM))
-    return selectSmallSectionForGlobal(GV, Kind, TM);
+    return selectSmallSectionForGlobal(GV, Kind, Mang, TM);
 
   // Otherwise, we work the same as ELF.
   TRACE("default_ELF_section\n");
-  return TargetLoweringObjectFileELF::getExplicitSectionGlobal(GV, Kind, TM);
+  return TargetLoweringObjectFileELF::getExplicitSectionGlobal(GV, Kind,
+            Mang, TM);
 }
 
 
@@ -296,8 +302,10 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
   return 0;
 }
 
+
 MCSection *HexagonTargetObjectFile::selectSmallSectionForGlobal(
-    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
+      const GlobalValue *GV, SectionKind Kind, Mangler &Mang,
+      const TargetMachine &TM) const {
   const Type *GTy = GV->getType()->getElementType();
   unsigned Size = getSmallestAddressableSize(GTy, GV, TM);
 
@@ -378,5 +386,6 @@ MCSection *HexagonTargetObjectFile::selectSmallSectionForGlobal(
 
   TRACE("default ELF section\n");
   // Otherwise, we work the same as ELF.
-  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GV, Kind, TM);
+  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GV, Kind,
+              Mang, TM);
 }

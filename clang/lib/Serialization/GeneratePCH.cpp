@@ -23,12 +23,12 @@ using namespace clang;
 PCHGenerator::PCHGenerator(
   const Preprocessor &PP, StringRef OutputFile,
   clang::Module *Module, StringRef isysroot,
-  std::shared_ptr<PCHBuffer> Buffer, PCMCache *BufferMgr,
+  std::shared_ptr<PCHBuffer> Buffer,
   ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
   bool AllowASTWithErrors, bool IncludeTimestamps)
     : PP(PP), OutputFile(OutputFile), Module(Module), isysroot(isysroot.str()),
       SemaPtr(nullptr), Buffer(Buffer), Stream(Buffer->Data),
-      Writer(Stream, Buffer->Data, BufferMgr, Extensions, IncludeTimestamps),
+      Writer(Stream, Extensions, IncludeTimestamps),
       AllowASTWithErrors(AllowASTWithErrors) {
   Buffer->IsComplete = false;
 }

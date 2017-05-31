@@ -516,7 +516,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
     const yaml::StringValue &Name = Object.Name;
     if (!Name.Value.empty()) {
       Alloca = dyn_cast_or_null<AllocaInst>(
-          F.getValueSymbolTable()->lookup(Name.Value));
+          F.getValueSymbolTable().lookup(Name.Value));
       if (!Alloca)
         return error(Name.SourceRange.Start,
                      "alloca instruction named '" + Name.Value +

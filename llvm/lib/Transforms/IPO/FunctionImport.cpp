@@ -49,22 +49,6 @@ static cl::opt<float>
                                "`import-instr-limit` threshold by this factor "
                                "before processing newly imported functions"));
 
-static cl::opt<float> ImportHotInstrFactor(
-    "import-hot-evolution-factor", cl::init(1.0), cl::Hidden,
-    cl::value_desc("x"),
-    cl::desc("As we import functions called from hot callsite, multiply the "
-             "`import-instr-limit` threshold by this factor "
-             "before processing newly imported functions"));
-
-static cl::opt<float> ImportHotMultiplier(
-    "import-hot-multiplier", cl::init(3.0), cl::Hidden, cl::value_desc("x"),
-    cl::desc("Multiply the `import-instr-limit` threshold for hot callsites"));
-
-// FIXME: This multiplier was not really tuned up.
-static cl::opt<float> ImportColdMultiplier(
-    "import-cold-multiplier", cl::init(0), cl::Hidden, cl::value_desc("N"),
-    cl::desc("Multiply the `import-instr-limit` threshold for cold callsites"));
-
 static cl::opt<bool> PrintImports("print-imports", cl::init(false), cl::Hidden,
                                   cl::desc("Print imported functions"));
 
@@ -111,9 +95,8 @@ static bool canBeExternallyReferenced(const GlobalValueSummary &Summary) {
   if (!Summary.needsRenaming())
     return true;
 
-  if (Summary.noRename())
-    // Can't externally reference a global that needs renaming if has a section
-    // or is referenced from inline assembly, for example.
+  if (Summary.hasSection())
+    // Can't rename a global that needs renaming if has a section.
     return false;
 
   return true;
@@ -153,11 +136,7 @@ static bool eligibleForImport(const ModuleSummaryIndex &Index,
 
   // Check references (and potential calls) in the same module. If the current
   // value references a global that can't be externally referenced it is not
-  // eligible for import. First check the flag set when we have possible
-  // opaque references (e.g. inline asm calls), then check the call and
-  // reference sets.
-  if (Summary.hasInlineAsmMaybeReferencingInternal())
-    return false;
+  // eligible for import.
   bool AllRefsCanBeExternallyReferenced =
       llvm::all_of(Summary.refs(), [&](const ValueInfo &VI) {
         return canBeExternallyReferenced(Index, VI.getGUID());
@@ -235,15 +214,61 @@ static const GlobalValueSummary *selectCallee(GlobalValue::GUID GUID,
   return selectCallee(Index, CalleeSummaryList->second, Threshold);
 }
 
-using EdgeInfo = std::tuple<const FunctionSummary *, unsigned /* Threshold */,
-                            GlobalValue::GUID>;
+/// Mark the global \p GUID as export by module \p ExportModulePath if found in
+/// this module. If it is a GlobalVariable, we also mark any referenced global
+/// in the current module as exported.
+static void exportGlobalInModule(const ModuleSummaryIndex &Index,
+                                 StringRef ExportModulePath,
+                                 GlobalValue::GUID GUID,
+                                 FunctionImporter::ExportSetTy &ExportList) {
+  auto FindGlobalSummaryInModule =
+      [&](GlobalValue::GUID GUID) -> GlobalValueSummary *{
+        auto SummaryList = Index.findGlobalValueSummaryList(GUID);
+        if (SummaryList == Index.end())
+          // This global does not have a summary, it is not part of the ThinLTO
+          // process
+          return nullptr;
+        auto SummaryIter = llvm::find_if(
+            SummaryList->second,
+            [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
+              return Summary->modulePath() == ExportModulePath;
+            });
+        if (SummaryIter == SummaryList->second.end())
+          return nullptr;
+        return SummaryIter->get();
+      };
+
+  auto *Summary = FindGlobalSummaryInModule(GUID);
+  if (!Summary)
+    return;
+  // We found it in the current module, mark as exported
+  ExportList.insert(GUID);
+
+  auto GVS = dyn_cast<GlobalVarSummary>(Summary);
+  if (!GVS)
+    return;
+  // FunctionImportGlobalProcessing::doPromoteLocalToGlobal() will always
+  // trigger importing  the initializer for `constant unnamed addr` globals that
+  // are referenced. We conservatively export all the referenced symbols for
+  // every global to workaround this, so that the ExportList is accurate.
+  // FIXME: with a "isConstant" flag in the summary we could be more targetted.
+  for (auto &Ref : GVS->refs()) {
+    auto GUID = Ref.getGUID();
+    auto *RefSummary = FindGlobalSummaryInModule(GUID);
+    if (RefSummary)
+      // Found a ref in the current module, mark it as exported
+      ExportList.insert(GUID);
+  }
+}
+
+using EdgeInfo = std::pair<const FunctionSummary *, unsigned /* Threshold */>;
 
 /// Compute the list of functions to import for a given caller. Mark these
 /// imported functions and the symbols they reference in their source module as
 /// exported from their source module.
 static void computeImportForFunction(
     const FunctionSummary &Summary, const ModuleSummaryIndex &Index,
-    const unsigned Threshold, const GVSummaryMapTy &DefinedGVSummaries,
+    unsigned Threshold, const GVSummaryMapTy &DefinedGVSummaries,
     SmallVectorImpl<EdgeInfo> &Worklist,
     FunctionImporter::ImportMapTy &ImportList,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
@@ -256,18 +281,7 @@ static void computeImportForFunction(
       continue;
     }
 
-    auto GetBonusMultiplier = [](CalleeInfo::HotnessType Hotness) -> float {
-      if (Hotness == CalleeInfo::HotnessType::Hot)
-        return ImportHotMultiplier;
-      if (Hotness == CalleeInfo::HotnessType::Cold)
-        return ImportColdMultiplier;
-      return 1.0;
-    };
-
-    const auto NewThreshold =
-        Threshold * GetBonusMultiplier(Edge.second.Hotness);
-
-    auto *CalleeSummary = selectCallee(GUID, NewThreshold, Index);
+    auto *CalleeSummary = selectCallee(GUID, Threshold, Index);
     if (!CalleeSummary) {
       DEBUG(dbgs() << "ignored! No qualifying callee with summary found.\n");
       continue;
@@ -283,59 +297,40 @@ static void computeImportForFunction(
     } else
       ResolvedCalleeSummary = cast<FunctionSummary>(CalleeSummary);
 
-    assert(ResolvedCalleeSummary->instCount() <= NewThreshold &&
+    assert(ResolvedCalleeSummary->instCount() <= Threshold &&
            "selectCallee() didn't honor the threshold");
-
-    auto GetAdjustedThreshold = [](unsigned Threshold, bool IsHotCallsite) {
-      // Adjust the threshold for next level of imported functions.
-      // The threshold is different for hot callsites because we can then
-      // inline chains of hot calls.
-      if (IsHotCallsite)
-        return Threshold * ImportHotInstrFactor;
-      return Threshold * ImportInstrFactor;
-    };
-
-    bool IsHotCallsite = Edge.second.Hotness == CalleeInfo::HotnessType::Hot;
-    const auto AdjThreshold = GetAdjustedThreshold(Threshold, IsHotCallsite);
 
     auto ExportModulePath = ResolvedCalleeSummary->modulePath();
     auto &ProcessedThreshold = ImportList[ExportModulePath][GUID];
     /// Since the traversal of the call graph is DFS, we can revisit a function
     /// a second time with a higher threshold. In this case, it is added back to
     /// the worklist with the new threshold.
-    if (ProcessedThreshold && ProcessedThreshold >= AdjThreshold) {
+    if (ProcessedThreshold && ProcessedThreshold >= Threshold) {
       DEBUG(dbgs() << "ignored! Target was already seen with Threshold "
                    << ProcessedThreshold << "\n");
       continue;
     }
-    bool PreviouslyImported = ProcessedThreshold != 0;
     // Mark this function as imported in this module, with the current Threshold
-    ProcessedThreshold = AdjThreshold;
+    ProcessedThreshold = Threshold;
 
     // Make exports in the source module.
     if (ExportLists) {
       auto &ExportList = (*ExportLists)[ExportModulePath];
       ExportList.insert(GUID);
-      if (!PreviouslyImported) {
-        // This is the first time this function was exported from its source
-        // module, so mark all functions and globals it references as exported
-        // to the outside if they are defined in the same source module.
-        // For efficiency, we unconditionally add all the referenced GUIDs
-        // to the ExportList for this module, and will prune out any not
-        // defined in the module later in a single pass.
-        for (auto &Edge : ResolvedCalleeSummary->calls()) {
-          auto CalleeGUID = Edge.first.getGUID();
-          ExportList.insert(CalleeGUID);
-        }
-        for (auto &Ref : ResolvedCalleeSummary->refs()) {
-          auto GUID = Ref.getGUID();
-          ExportList.insert(GUID);
-        }
+      // Mark all functions and globals referenced by this function as exported
+      // to the outside if they are defined in the same source module.
+      for (auto &Edge : ResolvedCalleeSummary->calls()) {
+        auto CalleeGUID = Edge.first.getGUID();
+        exportGlobalInModule(Index, ExportModulePath, CalleeGUID, ExportList);
+      }
+      for (auto &Ref : ResolvedCalleeSummary->refs()) {
+        auto GUID = Ref.getGUID();
+        exportGlobalInModule(Index, ExportModulePath, GUID, ExportList);
       }
     }
 
     // Insert the newly imported function to the worklist.
-    Worklist.emplace_back(ResolvedCalleeSummary, AdjThreshold, GUID);
+    Worklist.push_back(std::make_pair(ResolvedCalleeSummary, Threshold));
   }
 }
 
@@ -366,19 +361,14 @@ static void ComputeImportForModule(
                              ExportLists);
   }
 
-  // Process the newly imported functions and add callees to the worklist.
   while (!Worklist.empty()) {
     auto FuncInfo = Worklist.pop_back_val();
-    auto *Summary = std::get<0>(FuncInfo);
-    auto Threshold = std::get<1>(FuncInfo);
-    auto GUID = std::get<2>(FuncInfo);
+    auto *Summary = FuncInfo.first;
+    auto Threshold = FuncInfo.second;
 
-    // Check if we later added this summary with a higher threshold.
-    // If so, skip this entry.
-    auto ExportModulePath = Summary->modulePath();
-    auto &LatestProcessedThreshold = ImportList[ExportModulePath][GUID];
-    if (LatestProcessedThreshold > Threshold)
-      continue;
+    // Process the newly imported functions and add callees to the worklist.
+    // Adjust the threshold
+    Threshold = Threshold * ImportInstrFactor;
 
     computeImportForFunction(*Summary, Index, Threshold, DefinedGVSummaries,
                              Worklist, ImportList, ExportLists);
@@ -400,22 +390,6 @@ void llvm::ComputeCrossModuleImport(
                  << DefinedGVSummaries.first() << "'\n");
     ComputeImportForModule(DefinedGVSummaries.second, Index, ImportList,
                            &ExportLists);
-  }
-
-  // When computing imports we added all GUIDs referenced by anything
-  // imported from the module to its ExportList. Now we prune each ExportList
-  // of any not defined in that module. This is more efficient than checking
-  // while computing imports because some of the summary lists may be long
-  // due to linkonce (comdat) copies.
-  for (auto &ELI : ExportLists) {
-    const auto &DefinedGVSummaries =
-        ModuleToDefinedGVSummaries.lookup(ELI.first());
-    for (auto EI = ELI.second.begin(); EI != ELI.second.end();) {
-      if (!DefinedGVSummaries.count(*EI))
-        EI = ELI.second.erase(EI);
-      else
-        ++EI;
-    }
   }
 
 #ifndef NDEBUG
@@ -775,17 +749,6 @@ static bool doImportingForModule(Module &M, const ModuleSummaryIndex *Index) {
   FunctionImporter::ImportMapTy ImportList;
   ComputeCrossModuleImportForModule(M.getModuleIdentifier(), *Index,
                                     ImportList);
-
-  // Conservatively mark all internal values as promoted. This interface is
-  // only used when doing importing via the function importing pass. The pass
-  // is only enabled when testing importing via the 'opt' tool, which does
-  // not do the ThinLink that would normally determine what values to promote.
-  for (auto &I : *Index) {
-    for (auto &S : I.second) {
-      if (GlobalValue::isLocalLinkage(S->linkage()))
-        S->setLinkage(GlobalValue::ExternalLinkage);
-    }
-  }
 
   // Next we need to promote to global scope and rename any local values that
   // are potentially exported to other modules.

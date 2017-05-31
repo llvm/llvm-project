@@ -47,7 +47,7 @@ void test_2(char *ptr, int ext) {
   clang_analyzer_explain(glob_ptr); // expected-warning-re{{{{^value derived from \(symbol of type 'int' conjured at statement 'conjure\(\)'\) for global variable 'glob_ptr'$}}}}
   clang_analyzer_explain(clang_analyzer_getExtent(ptr)); // expected-warning-re{{{{^extent of pointee of argument 'ptr'$}}}}
   int *x = new int[ext];
-  clang_analyzer_explain(x); // expected-warning-re{{{{^pointer to element of type 'int' with index 0 of heap segment that starts at symbol of type 'int \*' conjured at statement 'new int \[ext\]'$}}}}
+  clang_analyzer_explain(x); // expected-warning-re{{{{^pointer to element of type 'int' with index 0 of pointee of symbol of type 'int \*' conjured at statement 'new int \[ext\]'$}}}}
   // Sic! What gets computed is the extent of the element-region.
   clang_analyzer_explain(clang_analyzer_getExtent(x)); // expected-warning-re{{{{^signed 32-bit integer '4'$}}}}
   delete[] x;

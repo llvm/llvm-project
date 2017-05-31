@@ -420,10 +420,6 @@ private:
   /// \brief The complete set of modules that has been imported.
   llvm::SetVector<clang::Module *> ImportedModules;
 
-  /// \brief The set of modules for which the module initializers
-  /// have been emitted.
-  llvm::SmallPtrSet<clang::Module *, 16> EmittedModuleInitializers;
-
   /// \brief A vector of metadata strings.
   SmallVector<llvm::Metadata *, 16> LinkerOptionsMetadata;
 

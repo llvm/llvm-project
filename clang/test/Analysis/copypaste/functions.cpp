@@ -4,14 +4,14 @@
 
 void log();
 
-int max(int a, int b) { // expected-warning{{Duplicate code detected}}
+int max(int a, int b) { // expected-warning{{Detected code clone.}}
   log();
   if (a > b)
     return a;
   return b;
 }
 
-int maxClone(int x, int y) { // expected-note{{Similar code here}}
+int maxClone(int x, int y) { // expected-note{{Related code clone is here.}}
   log();
   if (x > y)
     return x;

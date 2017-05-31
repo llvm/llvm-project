@@ -31,8 +31,6 @@
 #include <cstring>
 using namespace llvm;
 
-static void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
-
 // Upgrade the declarations of the SSE4.1 functions whose arguments have
 // changed their type from v4f32 to v2i64.
 static bool UpgradeSSE41Function(Function* F, Intrinsic::ID IID,
@@ -44,7 +42,7 @@ static bool UpgradeSSE41Function(Function* F, Intrinsic::ID IID,
     return false;
 
   // Yes, it's old, replace it with new version.
-  rename(F);
+  F->setName(F->getName() + ".old");
   NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
   return true;
 }
@@ -60,7 +58,7 @@ static bool UpgradeX86IntrinsicsWith8BitMask(Function *F, Intrinsic::ID IID,
     return false;
 
   // Move this function aside and map down.
-  rename(F);
+  F->setName(F->getName() + ".old");
   NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
   return true;
 }
@@ -137,13 +135,13 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
 
   case 'c': {
     if (Name.startswith("ctlz.") && F->arg_size() == 1) {
-      rename(F);
+      F->setName(Name + ".old");
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
                                         F->arg_begin()->getType());
       return true;
     }
     if (Name.startswith("cttz.") && F->arg_size() == 1) {
-      rename(F);
+      F->setName(Name + ".old");
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::cttz,
                                         F->arg_begin()->getType());
       return true;
@@ -156,7 +154,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       Type* ObjectPtr[1] = {Args[1]};
       if (F->getName() !=
           Intrinsic::getName(Intrinsic::invariant_start, ObjectPtr)) {
-        rename(F);
+        F->setName(Name + ".old");
         NewFn = Intrinsic::getDeclaration(
             F->getParent(), Intrinsic::invariant_start, ObjectPtr);
         return true;
@@ -167,7 +165,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       Type* ObjectPtr[1] = {Args[2]};
       if (F->getName() !=
           Intrinsic::getName(Intrinsic::invariant_end, ObjectPtr)) {
-        rename(F);
+        F->setName(Name + ".old");
         NewFn = Intrinsic::getDeclaration(F->getParent(),
                                           Intrinsic::invariant_end, ObjectPtr);
         return true;
@@ -179,7 +177,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     if (Name.startswith("masked.load.")) {
       Type *Tys[] = { F->getReturnType(), F->arg_begin()->getType() };
       if (F->getName() != Intrinsic::getName(Intrinsic::masked_load, Tys)) {
-        rename(F);
+        F->setName(Name + ".old");
         NewFn = Intrinsic::getDeclaration(F->getParent(),
                                           Intrinsic::masked_load,
                                           Tys);
@@ -190,7 +188,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       auto Args = F->getFunctionType()->params();
       Type *Tys[] = { Args[0], Args[1] };
       if (F->getName() != Intrinsic::getName(Intrinsic::masked_store, Tys)) {
-        rename(F);
+        F->setName(Name + ".old");
         NewFn = Intrinsic::getDeclaration(F->getParent(),
                                           Intrinsic::masked_store,
                                           Tys);
@@ -206,7 +204,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     if (F->arg_size() == 2 && Name.startswith("objectsize.")) {
       Type *Tys[2] = { F->getReturnType(), F->arg_begin()->getType() };
       if (F->getName() != Intrinsic::getName(Intrinsic::objectsize, Tys)) {
-        rename(F);
+        F->setName(Name + ".old");
         NewFn = Intrinsic::getDeclaration(F->getParent(),
                                           Intrinsic::objectsize, Tys);
         return true;
@@ -361,13 +359,13 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
 
     // frcz.ss/sd may need to have an argument dropped
     if (IsX86 && Name.startswith("xop.vfrcz.ss") && F->arg_size() == 2) {
-      rename(F);
+      F->setName(Name + ".old");
       NewFn = Intrinsic::getDeclaration(F->getParent(),
                                         Intrinsic::x86_xop_vfrcz_ss);
       return true;
     }
     if (IsX86 && Name.startswith("xop.vfrcz.sd") && F->arg_size() == 2) {
-      rename(F);
+      F->setName(Name + ".old");
       NewFn = Intrinsic::getDeclaration(F->getParent(),
                                         Intrinsic::x86_xop_vfrcz_sd);
       return true;
@@ -385,13 +383,13 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       else
         ShiftID = Name[18] == 'd' ? Intrinsic::x86_avx512_mask_psrl_di_512
                                   : Intrinsic::x86_avx512_mask_psrl_qi_512;
-      rename(F);
+      F->setName("llvm.x86." + Name + ".old");
       NewFn = Intrinsic::getDeclaration(F->getParent(), ShiftID);
       return true;
     }
     // Fix the FMA4 intrinsics to remove the 4
     if (IsX86 && Name.startswith("fma4.")) {
-      rename(F);
+      F->setName("llvm.x86.fma" + Name.substr(5));
       NewFn = F;
       return true;
     }
@@ -400,7 +398,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       auto Params = F->getFunctionType()->params();
       auto Idx = Params[2];
       if (Idx->getScalarType()->isFloatingPointTy()) {
-        rename(F);
+        F->setName("llvm.x86." + Name + ".old");
         unsigned IdxSize = Idx->getPrimitiveSizeInBits();
         unsigned EltSize = Idx->getScalarSizeInBits();
         Intrinsic::ID Permil2ID;
@@ -1396,26 +1394,28 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
   }
 }
 
-MDNode *llvm::UpgradeTBAANode(MDNode &MD) {
+void llvm::UpgradeInstWithTBAATag(Instruction *I) {
+  MDNode *MD = I->getMetadata(LLVMContext::MD_tbaa);
+  assert(MD && "UpgradeInstWithTBAATag should have a TBAA tag");
   // Check if the tag uses struct-path aware TBAA format.
-  if (isa<MDNode>(MD.getOperand(0)) && MD.getNumOperands() >= 3)
-    return &MD;
+  if (isa<MDNode>(MD->getOperand(0)) && MD->getNumOperands() >= 3)
+    return;
 
-  auto &Context = MD.getContext();
-  if (MD.getNumOperands() == 3) {
-    Metadata *Elts[] = {MD.getOperand(0), MD.getOperand(1)};
-    MDNode *ScalarType = MDNode::get(Context, Elts);
+  if (MD->getNumOperands() == 3) {
+    Metadata *Elts[] = {MD->getOperand(0), MD->getOperand(1)};
+    MDNode *ScalarType = MDNode::get(I->getContext(), Elts);
     // Create a MDNode <ScalarType, ScalarType, offset 0, const>
     Metadata *Elts2[] = {ScalarType, ScalarType,
-                         ConstantAsMetadata::get(
-                             Constant::getNullValue(Type::getInt64Ty(Context))),
-                         MD.getOperand(2)};
-    return MDNode::get(Context, Elts2);
+                         ConstantAsMetadata::get(Constant::getNullValue(
+                             Type::getInt64Ty(I->getContext()))),
+                         MD->getOperand(2)};
+    I->setMetadata(LLVMContext::MD_tbaa, MDNode::get(I->getContext(), Elts2));
+  } else {
+    // Create a MDNode <MD, MD, offset 0>
+    Metadata *Elts[] = {MD, MD, ConstantAsMetadata::get(Constant::getNullValue(
+                                    Type::getInt64Ty(I->getContext())))};
+    I->setMetadata(LLVMContext::MD_tbaa, MDNode::get(I->getContext(), Elts));
   }
-  // Create a MDNode <MD, MD, offset 0>
-  Metadata *Elts[] = {&MD, &MD, ConstantAsMetadata::get(Constant::getNullValue(
-                                    Type::getInt64Ty(Context)))};
-  return MDNode::get(Context, Elts);
 }
 
 Instruction *llvm::UpgradeBitCastInst(unsigned Opc, Value *V, Type *DestTy,
@@ -1495,11 +1495,11 @@ bool llvm::UpgradeModuleFlags(Module &M) {
   }
   // "Objective-C Class Properties" is recently added for Objective-C. We
   // upgrade ObjC bitcodes to contain a "Objective-C Class Properties" module
-  // flag of value 0, so we can correclty downgrade this flag when trying to
-  // link an ObjC bitcode without this module flag with an ObjC bitcode with
-  // this module flag.
+  // flag of value 0, so we can correclty report error when trying to link
+  // an ObjC bitcode without this module flag with an ObjC bitcode with this
+  // module flag.
   if (HasObjCFlag && !HasClassProperties) {
-    M.addModuleFlag(llvm::Module::Override, "Objective-C Class Properties",
+    M.addModuleFlag(llvm::Module::Error, "Objective-C Class Properties",
                     (uint32_t)0);
     return true;
   }

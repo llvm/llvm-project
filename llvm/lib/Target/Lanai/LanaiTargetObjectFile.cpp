@@ -90,8 +90,10 @@ bool LanaiTargetObjectFile::isGlobalInSmallSectionImpl(
       GV->getParent()->getDataLayout().getTypeAllocSize(Ty));
 }
 
-MCSection *LanaiTargetObjectFile::SelectSectionForGlobal(
-    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
+MCSection *
+LanaiTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
+                                              SectionKind Kind, Mangler &Mang,
+                                              const TargetMachine &TM) const {
   // Handle Small Section classification here.
   if (Kind.isBSS() && isGlobalInSmallSection(GV, TM, Kind))
     return SmallBSSSection;
@@ -99,7 +101,8 @@ MCSection *LanaiTargetObjectFile::SelectSectionForGlobal(
     return SmallDataSection;
 
   // Otherwise, we work the same as ELF.
-  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GV, Kind, TM);
+  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GV, Kind, Mang,
+                                                             TM);
 }
 
 /// Return true if this constant should be placed into small data section.

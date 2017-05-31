@@ -31,8 +31,16 @@ class MCSection;
 class MCSymbol;
 class raw_ostream;
 
-template <> struct ilist_alloc_traits<MCFragment> {
+template<>
+struct ilist_node_traits<MCFragment> {
+  MCFragment *createNode(const MCFragment &V);
   static void deleteNode(MCFragment *V);
+
+  void addNodeToList(MCFragment *) {}
+  void removeNodeFromList(MCFragment *) {}
+  void transferNodesFromList(ilist_node_traits &    /*SrcTraits*/,
+                             ilist_iterator<MCFragment> /*first*/,
+                             ilist_iterator<MCFragment> /*last*/) {}
 };
 
 /// Instances of this class represent a uniqued identifier for a section in the

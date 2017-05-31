@@ -740,7 +740,7 @@ public:
      ObjCAllocRetE(gcenabled
                     ? RetEffect::MakeGCNotOwned()
                     : (usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
-                               : RetEffect::MakeOwned(RetEffect::ObjC))),
+                               : RetEffect::MakeOwned(RetEffect::ObjC, true))),
      ObjCInitRetE(gcenabled
                     ? RetEffect::MakeGCNotOwned()
                     : (usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
@@ -953,10 +953,7 @@ void RetainSummaryManager::updateSummaryForCall(const RetainSummary *&S,
       if (IdentifierInfo *Name = FC->getDecl()->getIdentifier()) {
         // When the CGBitmapContext is deallocated, the callback here will free
         // the associated data buffer.
-        // The callback in dispatch_data_create frees the buffer, but not
-        // the data object.
-        if (Name->isStr("CGBitmapContextCreateWithData") ||
-            Name->isStr("dispatch_data_create"))
+        if (Name->isStr("CGBitmapContextCreateWithData"))
           RE = S->getRetEffect();
       }
     }
@@ -1089,7 +1086,7 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
                FName == "IOOpenFirmwarePathMatching") {
       // Part of <rdar://problem/6961230>. (IOKit)
       // This should be addressed using a API table.
-      S = getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF),
+      S = getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF, true),
                                DoNothing, DoNothing);
     } else if (FName == "IOServiceGetMatchingService" ||
                FName == "IOServiceGetMatchingServices") {
@@ -1119,7 +1116,7 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
       // passed to CGBitmapContextCreateWithData is released via
       // a callback and doing full IPA to make sure this is done correctly.
       ScratchArgs = AF.add(ScratchArgs, 8, StopTracking);
-      S = getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF),
+      S = getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF, true),
                                DoNothing, DoNothing);
     } else if (FName == "CVPixelBufferCreateWithPlanarBytes") {
       // FIXES: <rdar://problem/7283567>
@@ -1128,14 +1125,6 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
       // via a callback and doing full IPA to make sure this is done
       // correctly.
       ScratchArgs = AF.add(ScratchArgs, 12, StopTracking);
-      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
-    } else if (FName == "VTCompressionSessionEncodeFrame") {
-      // The context argument passed to VTCompressionSessionEncodeFrame()
-      // is passed to the callback specified when creating the session
-      // (e.g. with VTCompressionSessionCreate()) which can release it.
-      // To account for this possibility, conservatively stop tracking
-      // the context.
-      ScratchArgs = AF.add(ScratchArgs, 5, StopTracking);
       S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
     } else if (FName == "dispatch_set_context" ||
                FName == "xpc_connection_set_context") {
@@ -1295,7 +1284,7 @@ const RetainSummary *
 RetainSummaryManager::getCFSummaryCreateRule(const FunctionDecl *FD) {
   assert (ScratchArgs.isEmpty());
 
-  return getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF));
+  return getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF, true));
 }
 
 const RetainSummary *
@@ -1325,7 +1314,7 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
   }
 
   if (D->hasAttr<CFReturnsRetainedAttr>())
-    return RetEffect::MakeOwned(RetEffect::CF);
+    return RetEffect::MakeOwned(RetEffect::CF, true);
 
   if (D->hasAttr<CFReturnsNotRetainedAttr>())
     return RetEffect::MakeNotOwned(RetEffect::CF);
@@ -1438,7 +1427,7 @@ RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
           case OMF_new:
           case OMF_copy:
           case OMF_mutableCopy:
-            ResultEff = RetEffect::MakeOwned(RetEffect::CF);
+            ResultEff = RetEffect::MakeOwned(RetEffect::CF, true);
             break;
           default:
             ResultEff = RetEffect::MakeNotOwned(RetEffect::CF);
@@ -1460,7 +1449,7 @@ RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
       if (cocoa::isCocoaObjectRef(RetTy))
         ResultEff = ObjCAllocRetE;
       else if (coreFoundation::isCFObjectRef(RetTy))
-        ResultEff = RetEffect::MakeOwned(RetEffect::CF);
+        ResultEff = RetEffect::MakeOwned(RetEffect::CF, true);
       break;
     case OMF_autorelease:
       ReceiverEff = Autorelease;
@@ -1591,7 +1580,7 @@ void RetainSummaryManager::InitializeMethodSummaries() {
   // The next methods are allocators.
   const RetainSummary *AllocSumm = getPersistentSummary(ObjCAllocRetE);
   const RetainSummary *CFAllocSumm =
-    getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF));
+    getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF, true));
 
   // Create the "retain" selector.
   RetEffect NoRet = RetEffect::MakeNoRet();
@@ -1990,23 +1979,11 @@ PathDiagnosticPiece *CFRefReportVisitor::VisitNode(const ExplodedNode *N,
       }
 
       if (CurrV.getObjKind() == RetEffect::CF) {
-        if (Sym->getType().isNull()) {
-          os << " returns a Core Foundation object with a ";
-        } else {
-          os << " returns a Core Foundation object of type "
-             << Sym->getType().getAsString() << " with a ";
-        }
+        os << " returns a Core Foundation object with a ";
       }
       else {
         assert (CurrV.getObjKind() == RetEffect::ObjC);
-        QualType T = Sym->getType();
-        if (T.isNull() || !isa<ObjCObjectPointerType>(T)) {
-          os << " returns an Objective-C object with a ";
-        } else {
-          const ObjCObjectPointerType *PT = cast<ObjCObjectPointerType>(T);
-          os << " returns an instance of "
-             << PT->getPointeeType().getAsString() << " with a ";
-        }
+        os << " returns an Objective-C object with a ";
       }
 
       if (CurrV.isOwned()) {
@@ -2382,15 +2359,10 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
       os << "that is annotated as NS_RETURNS_NOT_RETAINED";
     else {
       if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
-        if (BRC.getASTContext().getLangOpts().ObjCAutoRefCount) {
-          os << "managed by Automatic Reference Counting";
-        } else {
-          os << "whose name ('" << MD->getSelector().getAsString()
-             << "') does not start with "
-                "'copy', 'mutableCopy', 'alloc' or 'new'."
-                "  This violates the naming convention rules"
-                " given in the Memory Management Guide for Cocoa";
-        }
+        os << "whose name ('" << MD->getSelector().getAsString()
+           << "') does not start with 'copy', 'mutableCopy', 'alloc' or 'new'."
+              "  This violates the naming convention rules"
+              " given in the Memory Management Guide for Cocoa";
       }
       else {
         const FunctionDecl *FD = cast<FunctionDecl>(D);
@@ -2446,7 +2418,12 @@ CFRefLeakReport::CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts,
   // FIXME: This will crash the analyzer if an allocation comes from an
   // implicit call (ex: a destructor call).
   // (Currently there are no such allocations in Cocoa, though.)
-  const Stmt *AllocStmt = PathDiagnosticLocation::getStmt(AllocNode);
+  const Stmt *AllocStmt = nullptr;
+  ProgramPoint P = AllocNode->getLocation();
+  if (Optional<CallExitEnd> Exit = P.getAs<CallExitEnd>())
+    AllocStmt = Exit->getCalleeContext()->getCallSite();
+  else
+    AllocStmt = P.castAs<PostStmt>().getStmt();
   assert(AllocStmt && "Cannot find allocation statement");
 
   PathDiagnosticLocation AllocLocation =
@@ -2663,6 +2640,10 @@ public:
                      ArrayRef<const MemRegion *> ExplicitRegions,
                      ArrayRef<const MemRegion *> Regions,
                      const CallEvent *Call) const;
+
+  bool wantsRegionChangeUpdate(ProgramStateRef state) const {
+    return true;
+  }
 
   void checkPreStmt(const ReturnStmt *S, CheckerContext &C) const;
   void checkReturnWithRetEffect(const ReturnStmt *S, CheckerContext &C,
@@ -3091,6 +3072,7 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
       // No work necessary.
       break;
 
+    case RetEffect::OwnedAllocatedSymbol:
     case RetEffect::OwnedSymbol: {
       SymbolRef Sym = CallOrMsg.getReturnValue().getAsSymbol();
       if (!Sym)
@@ -3886,7 +3868,7 @@ void RetainCountChecker::checkEndFunction(CheckerContext &Ctx) const {
   // Don't process anything within synthesized bodies.
   const LocationContext *LCtx = Pred->getLocationContext();
   if (LCtx->getAnalysisDeclContext()->isBodyAutosynthesized()) {
-    assert(!LCtx->inTopFrame()); 
+    assert(LCtx->getParent());
     return;
   }
 

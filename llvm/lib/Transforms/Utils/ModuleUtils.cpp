@@ -89,44 +89,6 @@ void llvm::appendToGlobalDtors(Module &M, Function *F, int Priority, Constant *D
   appendToGlobalArray("llvm.global_dtors", M, F, Priority, Data);
 }
 
-static void appendToUsedList(Module &M, StringRef Name, ArrayRef<GlobalValue *> Values) {
-  GlobalVariable *GV = M.getGlobalVariable(Name);
-  SmallPtrSet<Constant *, 16> InitAsSet;
-  SmallVector<Constant *, 16> Init;
-  if (GV) {
-    ConstantArray *CA = dyn_cast<ConstantArray>(GV->getInitializer());
-    for (auto &Op : CA->operands()) {
-      Constant *C = cast_or_null<Constant>(Op);
-      if (InitAsSet.insert(C).second)
-        Init.push_back(C);
-    }
-    GV->eraseFromParent();
-  }
-
-  Type *Int8PtrTy = llvm::Type::getInt8PtrTy(M.getContext());
-  for (auto *V : Values) {
-    Constant *C = ConstantExpr::getBitCast(V, Int8PtrTy);
-    if (InitAsSet.insert(C).second)
-      Init.push_back(C);
-  }
-
-  if (Init.empty())
-    return;
-
-  ArrayType *ATy = ArrayType::get(Int8PtrTy, Init.size());
-  GV = new llvm::GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
-                                ConstantArray::get(ATy, Init), Name);
-  GV->setSection("llvm.metadata");
-}
-
-void llvm::appendToUsed(Module &M, ArrayRef<GlobalValue *> Values) {
-  appendToUsedList(M, "llvm.used", Values);
-}
-
-void llvm::appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values) {
-  appendToUsedList(M, "llvm.compiler.used", Values);
-}
-
 Function *llvm::checkSanitizerInterfaceFunction(Constant *FuncOrBitcast) {
   if (isa<Function>(FuncOrBitcast))
     return cast<Function>(FuncOrBitcast);

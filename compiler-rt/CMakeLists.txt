@@ -190,12 +190,6 @@ elseif(MSVC)
   llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/Z[i7I]" "/Z7")
 endif()
 
-if(LLVM_ENABLE_MODULES)
-  # Sanitizers cannot be built with -fmodules. The interceptors intentionally
-  # don't include system headers, which is incompatible with modules.
-  list(APPEND SANITIZER_COMMON_CFLAGS -fno-modules)
-endif()
-
 # Turn off several warnings.
 append_list_if(COMPILER_RT_HAS_WGNU_FLAG -Wno-gnu SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WVARIADIC_MACROS_FLAG -Wno-variadic-macros SANITIZER_COMMON_CFLAGS)
@@ -210,7 +204,7 @@ append_list_if(COMPILER_RT_HAS_WD4800_FLAG /wd4800 SANITIZER_COMMON_CFLAGS)
 # Warnings to turn off for all libraries, not just sanitizers.
 append_string_if(COMPILER_RT_HAS_WUNUSED_PARAMETER_FLAG -Wno-unused-parameter CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
-if(APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
+if(APPLE AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
   # Mac OS X prior to 10.9 had problems with exporting symbols from
   # libc++/libc++abi.
   set(SANITIZER_CAN_USE_CXXABI FALSE)

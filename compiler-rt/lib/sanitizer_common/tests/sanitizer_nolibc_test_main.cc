@@ -15,5 +15,5 @@
 #include "sanitizer_common/sanitizer_libc.h"
 
 extern "C" void _start() {
-  __sanitizer::internal__exit(0);
+  internal__exit(0);
 }

@@ -1026,21 +1026,6 @@ def : Pat<(v16i16 (X86SubVBroadcast (bc_v8i16 (loadv2i64 addr:$src)))),
           (VBROADCASTI32X4Z256rm addr:$src)>;
 def : Pat<(v32i8 (X86SubVBroadcast (bc_v16i8 (loadv2i64 addr:$src)))),
           (VBROADCASTI32X4Z256rm addr:$src)>;
-
-// Provide fallback in case the load node that is used in the patterns above
-// is used by additional users, which prevents the pattern selection.
-def : Pat<(v8f32 (X86SubVBroadcast (v4f32 VR128X:$src))),
-          (VINSERTF32x4Z256rr (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)), VR128X:$src, sub_xmm),
-                              (v4f32 VR128X:$src), 1)>;
-def : Pat<(v8i32 (X86SubVBroadcast (v4i32 VR128X:$src))),
-          (VINSERTI32x4Z256rr (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)), VR128X:$src, sub_xmm),
-                              (v4i32 VR128X:$src), 1)>;
-def : Pat<(v16i16 (X86SubVBroadcast (v8i16 VR128X:$src))),
-          (VINSERTI32x4Z256rr (INSERT_SUBREG (v16i16 (IMPLICIT_DEF)), VR128X:$src, sub_xmm),
-                              (v8i16 VR128X:$src), 1)>;
-def : Pat<(v32i8 (X86SubVBroadcast (v16i8 VR128X:$src))),
-          (VINSERTI32x4Z256rr (INSERT_SUBREG (v32i8 (IMPLICIT_DEF)), VR128X:$src, sub_xmm),
-                              (v16i8 VR128X:$src), 1)>;
 }
 
 let Predicates = [HasVLX, HasDQI] in {
@@ -1057,15 +1042,6 @@ def : Pat<(v4f64 (X86SubVBroadcast (loadv2f64 addr:$src))),
           (VBROADCASTF32X4Z256rm addr:$src)>;
 def : Pat<(v4i64 (X86SubVBroadcast (loadv2i64 addr:$src))),
           (VBROADCASTI32X4Z256rm addr:$src)>;
-
-// Provide fallback in case the load node that is used in the patterns above
-// is used by additional users, which prevents the pattern selection.
-def : Pat<(v4f64 (X86SubVBroadcast (v2f64 VR128X:$src))),
-          (VINSERTF32x4Z256rr (INSERT_SUBREG (v4f64 (IMPLICIT_DEF)), VR128X:$src, sub_xmm),
-                              (v2f64 VR128X:$src), 1)>;
-def : Pat<(v4i64 (X86SubVBroadcast (v2i64 VR128X:$src))),
-          (VINSERTI32x4Z256rr (INSERT_SUBREG (v4i64 (IMPLICIT_DEF)), VR128X:$src, sub_xmm),
-                              (v2i64 VR128X:$src), 1)>;
 }
 
 let Predicates = [HasDQI] in {
@@ -1081,15 +1057,6 @@ defm VBROADCASTF64X2 : avx512_subvec_broadcast_rm<0x1a, "vbroadcastf64x2",
 defm VBROADCASTF32X8 : avx512_subvec_broadcast_rm<0x1b, "vbroadcastf32x8",
                        v16f32_info, v8f32x_info>,
                        EVEX_V512, EVEX_CD8<32, CD8VT8>;
-
-// Provide fallback in case the load node that is used in the patterns above
-// is used by additional users, which prevents the pattern selection.
-def : Pat<(v4f64 (X86SubVBroadcast (v2f64 VR128X:$src))),
-          (VINSERTI64x2Z256rr (INSERT_SUBREG (v4f64 (IMPLICIT_DEF)), VR128X:$src, sub_xmm),
-                              (v2f64 VR128X:$src), 1)>;
-def : Pat<(v4i64 (X86SubVBroadcast (v2i64 VR128X:$src))),
-          (VINSERTI64x2Z256rr (INSERT_SUBREG (v4i64 (IMPLICIT_DEF)), VR128X:$src, sub_xmm),
-                              (v2i64 VR128X:$src), 1)>;
 }
 
 multiclass avx512_common_broadcast_32x2<bits<8> opc, string OpcodeStr,

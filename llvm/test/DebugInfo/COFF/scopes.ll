@@ -79,7 +79,7 @@ target triple = "x86_64-pc-windows-msvc19.0.23918"
 %"struct.foo::bar::GlobalRecord" = type { i32 }
 %struct.LocalRecord = type { i32 }
 
-@"\01?g@bar@foo@@3UGlobalRecord@12@A" = global %"struct.foo::bar::GlobalRecord" zeroinitializer, align 4, !dbg !4
+@"\01?g@bar@foo@@3UGlobalRecord@12@A" = global %"struct.foo::bar::GlobalRecord" zeroinitializer, align 4
 
 ; Function Attrs: nounwind uwtable
 define void @"\01?baz@bar@foo@@YAXXZ"() #0 !dbg !19 {
@@ -113,7 +113,7 @@ attributes #1 = { nounwind readnone }
 !1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "g", linkageName: "\01?g@bar@foo@@3UGlobalRecord@12@A", scope: !5, file: !1, line: 12, type: !7, isLocal: false, isDefinition: true)
+!4 = distinct !DIGlobalVariable(name: "g", linkageName: "\01?g@bar@foo@@3UGlobalRecord@12@A", scope: !5, file: !1, line: 12, type: !7, isLocal: false, isDefinition: true, variable: %"struct.foo::bar::GlobalRecord"* @"\01?g@bar@foo@@3UGlobalRecord@12@A")
 !5 = !DINamespace(name: "bar", scope: !6, file: !1, line: 2)
 !6 = !DINamespace(name: "foo", scope: null, file: !1, line: 1)
 !7 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "GlobalRecord", scope: !5, file: !1, line: 9, size: 32, align: 32, elements: !8, identifier: ".?AUGlobalRecord@bar@foo@@")

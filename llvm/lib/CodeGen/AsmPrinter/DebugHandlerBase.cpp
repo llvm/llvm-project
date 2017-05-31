@@ -62,14 +62,14 @@ MCSymbol *DebugHandlerBase::getLabelAfterInsn(const MachineInstr *MI) {
   return LabelsAfterInsn.lookup(MI);
 }
 
-int DebugHandlerBase::fragmentCmp(const DIExpression *P1,
-                                  const DIExpression *P2) {
-  auto Fragment1 = *P1->getFragmentInfo();
-  auto Fragment2 = *P2->getFragmentInfo();
-  unsigned l1 = Fragment1.OffsetInBits;
-  unsigned l2 = Fragment2.OffsetInBits;
-  unsigned r1 = l1 + Fragment1.SizeInBits;
-  unsigned r2 = l2 + Fragment2.SizeInBits;
+// Determine the relative position of the pieces described by P1 and P2.
+// Returns  -1 if P1 is entirely before P2, 0 if P1 and P2 overlap,
+// 1 if P1 is entirely after P2.
+int DebugHandlerBase::pieceCmp(const DIExpression *P1, const DIExpression *P2) {
+  unsigned l1 = P1->getBitPieceOffset();
+  unsigned l2 = P2->getBitPieceOffset();
+  unsigned r1 = l1 + P1->getBitPieceSize();
+  unsigned r2 = l2 + P2->getBitPieceSize();
   if (r1 <= l2)
     return -1;
   else if (r2 <= l1)
@@ -78,11 +78,11 @@ int DebugHandlerBase::fragmentCmp(const DIExpression *P1,
     return 0;
 }
 
-bool DebugHandlerBase::fragmentsOverlap(const DIExpression *P1,
-                                        const DIExpression *P2) {
-  if (!P1->isFragment() || !P2->isFragment())
+/// Determine whether two variable pieces overlap.
+bool DebugHandlerBase::piecesOverlap(const DIExpression *P1, const DIExpression *P2) {
+  if (!P1->isBitPiece() || !P2->isBitPiece())
     return true;
-  return fragmentCmp(P1, P2) == 0;
+  return pieceCmp(P1, P2) == 0;
 }
 
 /// If this type is derived from a base type then return base type size.
@@ -141,15 +141,14 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
     if (DIVar->isParameter() &&
         getDISubprogram(DIVar->getScope())->describes(MF->getFunction())) {
       LabelsBeforeInsn[Ranges.front().first] = Asm->getFunctionBegin();
-      if (Ranges.front().first->getDebugExpression()->isFragment()) {
-        // Mark all non-overlapping initial fragments.
+      if (Ranges.front().first->getDebugExpression()->isBitPiece()) {
+        // Mark all non-overlapping initial pieces.
         for (auto I = Ranges.begin(); I != Ranges.end(); ++I) {
-          const DIExpression *Fragment = I->first->getDebugExpression();
+          const DIExpression *Piece = I->first->getDebugExpression();
           if (std::all_of(Ranges.begin(), I,
                           [&](DbgValueHistoryMap::InstrRange Pred) {
-                            return !fragmentsOverlap(
-                                Fragment, Pred.first->getDebugExpression());
-                          }))
+                return !piecesOverlap(Piece, Pred.first->getDebugExpression());
+              }))
             LabelsBeforeInsn[I->first] = Asm->getFunctionBegin();
           else
             break;

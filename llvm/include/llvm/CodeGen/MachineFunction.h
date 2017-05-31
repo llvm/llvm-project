@@ -48,18 +48,18 @@ class TargetRegisterClass;
 struct MachinePointerInfo;
 struct WinEHFuncInfo;
 
-template <> struct ilist_alloc_traits<MachineBasicBlock> {
-  void deleteNode(MachineBasicBlock *MBB);
-};
+template <>
+struct ilist_sentinel_traits<MachineBasicBlock>
+    : public ilist_half_embedded_sentinel_traits<MachineBasicBlock> {};
 
-template <> struct ilist_callback_traits<MachineBasicBlock> {
+template <>
+struct ilist_traits<MachineBasicBlock>
+    : public ilist_default_traits<MachineBasicBlock> {
   void addNodeToList(MachineBasicBlock* MBB);
   void removeNodeFromList(MachineBasicBlock* MBB);
-
-  template <class Iterator>
-  void transferNodesFromList(ilist_callback_traits &OldList, Iterator, Iterator) {
-    llvm_unreachable("Never transfer between lists");
-  }
+  void deleteNode(MachineBasicBlock *MBB);
+private:
+  void createNode(const MachineBasicBlock &);
 };
 
 /// MachineFunctionInfo - This class can be derived from and used by targets to
@@ -428,8 +428,8 @@ public:
   // Provide accessors for the MachineBasicBlock list...
   typedef BasicBlockListType::iterator iterator;
   typedef BasicBlockListType::const_iterator const_iterator;
-  typedef BasicBlockListType::const_reverse_iterator const_reverse_iterator;
-  typedef BasicBlockListType::reverse_iterator reverse_iterator;
+  typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+  typedef std::reverse_iterator<iterator>             reverse_iterator;
 
   /// Support for MachineBasicBlock::getNextNode().
   static BasicBlockListType MachineFunction::*

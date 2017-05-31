@@ -365,6 +365,21 @@ void DwarfUnit::addSourceLine(DIE &Die, const DINamespace *NS) {
   addSourceLine(Die, NS->getLine(), NS->getFilename(), NS->getDirectory());
 }
 
+bool DwarfUnit::addRegisterOpPiece(DIELoc &TheDie, unsigned Reg,
+                                   unsigned SizeInBits, unsigned OffsetInBits) {
+  DIEDwarfExpression Expr(*Asm, *this, TheDie);
+  Expr.AddMachineRegPiece(*Asm->MF->getSubtarget().getRegisterInfo(), Reg,
+                          SizeInBits, OffsetInBits);
+  return true;
+}
+
+bool DwarfUnit::addRegisterOffset(DIELoc &TheDie, unsigned Reg,
+                                  int64_t Offset) {
+  DIEDwarfExpression Expr(*Asm, *this, TheDie);
+  return Expr.AddMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
+                                    Reg, Offset);
+}
+
 /* Byref variables, in Blocks, are declared by the programmer as "SomeType
    VarName;", but the compiler creates a __Block_byref_x_VarName struct, and
    gives the variable VarName either the struct, or a pointer to the struct, as
@@ -457,17 +472,12 @@ void DwarfUnit::addBlockByrefAddress(const DbgVariable &DV, DIE &Die,
   // Decode the original location, and use that as the start of the byref
   // variable's location.
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-  SmallVector<uint64_t, 6> DIExpr;
-  DIEDwarfExpression Expr(*Asm, *this, *Loc);
 
   bool validReg;
   if (Location.isReg())
-    validReg = Expr.AddMachineReg(*Asm->MF->getSubtarget().getRegisterInfo(),
-                                  Location.getReg());
+    validReg = addRegisterOpPiece(*Loc, Location.getReg());
   else
-    validReg =
-        Expr.AddMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
-                                   Location.getReg(), Location.getOffset());
+    validReg = addRegisterOffset(*Loc, Location.getReg(), Location.getOffset());
 
   if (!validReg)
     return;
@@ -475,29 +485,27 @@ void DwarfUnit::addBlockByrefAddress(const DbgVariable &DV, DIE &Die,
   // If we started with a pointer to the __Block_byref... struct, then
   // the first thing we need to do is dereference the pointer (DW_OP_deref).
   if (isPointer)
-    DIExpr.push_back(dwarf::DW_OP_deref);
+    addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_deref);
 
   // Next add the offset for the '__forwarding' field:
   // DW_OP_plus_uconst ForwardingFieldOffset.  Note there's no point in
   // adding the offset if it's 0.
   if (forwardingFieldOffset > 0) {
-    DIExpr.push_back(dwarf::DW_OP_plus);
-    DIExpr.push_back(forwardingFieldOffset);
+    addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_plus_uconst);
+    addUInt(*Loc, dwarf::DW_FORM_udata, forwardingFieldOffset);
   }
 
   // Now dereference the __forwarding field to get to the real __Block_byref
   // struct:  DW_OP_deref.
-  DIExpr.push_back(dwarf::DW_OP_deref);
+  addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_deref);
 
   // Now that we've got the real __Block_byref... struct, add the offset
   // for the variable's field to get to the location of the actual variable:
   // DW_OP_plus_uconst varFieldOffset.  Again, don't add if it's 0.
   if (varFieldOffset > 0) {
-    DIExpr.push_back(dwarf::DW_OP_plus);
-    DIExpr.push_back(varFieldOffset);
+    addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_plus_uconst);
+    addUInt(*Loc, dwarf::DW_FORM_udata, varFieldOffset);
   }
-  Expr.AddExpression(makeArrayRef(DIExpr));
-  Expr.finalize();
 
   // Now attach the location information to the DIE.
   addBlock(Die, Attribute, Loc);
@@ -657,8 +665,6 @@ DIE *DwarfUnit::getOrCreateContextDIE(const DIScope *Context) {
     return getOrCreateTypeDIE(T);
   if (auto *NS = dyn_cast<DINamespace>(Context))
     return getOrCreateNameSpace(NS);
-  if (auto *M = dyn_cast<DIModule>(Context))
-    return getOrCreateModule(M);
   if (auto *SP = dyn_cast<DISubprogram>(Context))
     return getOrCreateSubprogramDIE(SP);
   if (auto *M = dyn_cast<DIModule>(Context))
@@ -969,13 +975,6 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   if (!Name.empty())
     addString(Buffer, dwarf::DW_AT_name, Name);
 
-  // For Swift, mangled names are put into DW_AT_linkage_name; human-readable
-  // names are emitted put into DW_AT_name and the accelerator table.
-  if ((CTy->getRuntimeLang() == dwarf::DW_LANG_Swift ||
-       CTy->getRuntimeLang() == dwarf::DW_LANG_PLI) &&
-      CTy->getRawIdentifier())
-    addString(Buffer, dwarf::DW_AT_linkage_name, CTy->getIdentifier());
-
   if (Tag == dwarf::DW_TAG_enumeration_type ||
       Tag == dwarf::DW_TAG_class_type || Tag == dwarf::DW_TAG_structure_type ||
       Tag == dwarf::DW_TAG_union_type) {
@@ -998,7 +997,8 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     // No harm in adding the runtime language to the declaration.
     unsigned RLang = CTy->getRuntimeLang();
     if (RLang)
-      addUInt(Buffer, dwarf::DW_AT_APPLE_runtime_class, None, RLang);
+      addUInt(Buffer, dwarf::DW_AT_APPLE_runtime_class, dwarf::DW_FORM_data1,
+              RLang);
   }
 }
 
@@ -1247,9 +1247,6 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
   if (SP->isRValueReference())
     addFlag(SPDie, dwarf::DW_AT_rvalue_reference);
-
-  if (SP->isNoReturn())
-    addFlag(SPDie, dwarf::DW_AT_noreturn);
 
   if (SP->isProtected())
     addUInt(SPDie, dwarf::DW_AT_accessibility, dwarf::DW_FORM_data1,

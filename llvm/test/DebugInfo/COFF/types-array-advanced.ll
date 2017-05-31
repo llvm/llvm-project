@@ -127,10 +127,10 @@ target triple = "i686-pc-windows-msvc18.0.31101"
 
 %struct.incomplete_struct = type { i32 }
 
-@"\01?multi_dim_arr@@3PAY146DA" = global [2 x [5 x [7 x i8]]] zeroinitializer, align 1, !dbg !4
-@"\01?p_incomplete_struct_arr@@3PAY02Uincomplete_struct@@A" = global [3 x i8]* null, align 4, !dbg !11
-@"\01?incomplete_struct_arr@@3PAUincomplete_struct@@A" = global [3 x %struct.incomplete_struct] zeroinitializer, align 4, !dbg !20
-@"\01?typedef_arr@@3SDHD" = constant [4 x i32] zeroinitializer, align 4, !dbg !21
+@"\01?multi_dim_arr@@3PAY146DA" = global [2 x [5 x [7 x i8]]] zeroinitializer, align 1
+@"\01?p_incomplete_struct_arr@@3PAY02Uincomplete_struct@@A" = global [3 x i8]* null, align 4
+@"\01?incomplete_struct_arr@@3PAUincomplete_struct@@A" = global [3 x %struct.incomplete_struct] zeroinitializer, align 4
+@"\01?typedef_arr@@3SDHD" = constant [4 x i32] zeroinitializer, align 4
 
 ; Function Attrs: nounwind
 define void @"\01?foo@@YAXH@Z"(i32 %x) #0 !dbg !31 {
@@ -172,14 +172,14 @@ attributes #2 = { nounwind }
 !1 = !DIFile(filename: "t.cpp", directory: "/")
 !2 = !{}
 !3 = !{!4, !11, !20, !21}
-!4 = distinct !DIGlobalVariable(name: "multi_dim_arr", linkageName: "\01?multi_dim_arr@@3PAY146DA", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true)
+!4 = distinct !DIGlobalVariable(name: "multi_dim_arr", linkageName: "\01?multi_dim_arr@@3PAY146DA", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, variable: [2 x [5 x [7 x i8]]]* @"\01?multi_dim_arr@@3PAY146DA")
 !5 = !DICompositeType(tag: DW_TAG_array_type, baseType: !6, size: 560, align: 8, elements: !7)
 !6 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
 !7 = !{!8, !9, !10}
 !8 = !DISubrange(count: 2)
 !9 = !DISubrange(count: 5)
 !10 = !DISubrange(count: 7)
-!11 = distinct !DIGlobalVariable(name: "p_incomplete_struct_arr", linkageName: "\01?p_incomplete_struct_arr@@3PAY02Uincomplete_struct@@A", scope: !0, file: !1, line: 3, type: !12, isLocal: false, isDefinition: true)
+!11 = distinct !DIGlobalVariable(name: "p_incomplete_struct_arr", linkageName: "\01?p_incomplete_struct_arr@@3PAY02Uincomplete_struct@@A", scope: !0, file: !1, line: 3, type: !12, isLocal: false, isDefinition: true, variable: [3 x i8]** @"\01?p_incomplete_struct_arr@@3PAY02Uincomplete_struct@@A")
 !12 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !13, size: 32, align: 32)
 !13 = !DICompositeType(tag: DW_TAG_array_type, baseType: !14, elements: !18)
 !14 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "incomplete_struct", file: !1, line: 4, size: 32, align: 32, elements: !15, identifier: ".?AUincomplete_struct@@")
@@ -188,8 +188,8 @@ attributes #2 = { nounwind }
 !17 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !18 = !{!19}
 !19 = !DISubrange(count: 3)
-!20 = distinct !DIGlobalVariable(name: "incomplete_struct_arr", linkageName: "\01?incomplete_struct_arr@@3PAUincomplete_struct@@A", scope: !0, file: !1, line: 6, type: !13, isLocal: false, isDefinition: true)
-!21 = distinct !DIGlobalVariable(name: "typedef_arr", linkageName: "\01?typedef_arr@@3SDHD", scope: !0, file: !1, line: 14, type: !22, isLocal: false, isDefinition: true)
+!20 = distinct !DIGlobalVariable(name: "incomplete_struct_arr", linkageName: "\01?incomplete_struct_arr@@3PAUincomplete_struct@@A", scope: !0, file: !1, line: 6, type: !13, isLocal: false, isDefinition: true, variable: [3 x %struct.incomplete_struct]* @"\01?incomplete_struct_arr@@3PAUincomplete_struct@@A")
+!21 = distinct !DIGlobalVariable(name: "typedef_arr", linkageName: "\01?typedef_arr@@3SDHD", scope: !0, file: !1, line: 14, type: !22, isLocal: false, isDefinition: true, variable: [4 x i32]* @"\01?typedef_arr@@3SDHD")
 !22 = !DICompositeType(tag: DW_TAG_array_type, baseType: !23, size: 128, align: 32, elements: !26)
 !23 = !DIDerivedType(tag: DW_TAG_typedef, name: "T_INT", file: !1, line: 13, baseType: !24)
 !24 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !25)

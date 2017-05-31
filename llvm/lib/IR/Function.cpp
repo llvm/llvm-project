@@ -258,10 +258,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, const Twine &name,
   assert(FunctionType::isValidReturnType(getReturnType()) &&
          "invalid return type");
   setGlobalObjectSubClassData(0);
-
-  // We only need a symbol table for a function if the context keeps value names
-  if (!getContext().shouldDiscardValueNames())
-    SymTab = make_unique<ValueSymbolTable>();
+  SymTab = new ValueSymbolTable();
 
   // If the function has arguments, mark them as lazily built.
   if (Ty->getNumParams())
@@ -282,6 +279,7 @@ Function::~Function() {
 
   // Delete all of the method arguments and unlink from symbol table...
   ArgumentList.clear();
+  delete SymTab;
 
   // Remove the function from the on-the-side GC table.
   clearGC();

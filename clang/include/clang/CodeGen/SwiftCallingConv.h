@@ -90,7 +90,7 @@ public:
   bool shouldPassIndirectly(bool asReturnValue) const;
 
   using EnumerationCallback =
-    llvm::function_ref<void(CharUnits offset, CharUnits end, llvm::Type *type)>;
+    llvm::function_ref<void(CharUnits offset, llvm::Type *type)>;
 
   /// Enumerate the expanded components of this type.
   ///
@@ -159,9 +159,6 @@ ABIArgInfo classifyArgumentType(CodeGenModule &CGM, CanQualType type);
 /// Compute the ABI information of a swiftcall function.  This is a
 /// private interface for Clang.
 void computeABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
-
-/// Is swifterror lowered to a register by the target ABI.
-bool isSwiftErrorLoweredInRegister(CodeGenModule &CGM);
 
 } // end namespace swiftcall
 } // end namespace CodeGen

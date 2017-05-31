@@ -62,7 +62,6 @@ class AsanChunkView {
   u32 GetFreeStackId();
   StackTrace GetAllocStack();
   StackTrace GetFreeStack();
-  AllocType AllocType();
   bool AddrIsInside(uptr addr, uptr access_size, sptr *offset) {
     if (addr >= Beg() && (addr + access_size) <= End()) {
       *offset = addr - Beg();

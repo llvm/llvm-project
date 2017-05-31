@@ -3982,16 +3982,16 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   if (!IsSorted)
     std::sort(AS.begin(), AS.end());
 
-  /// Describes the allocas introduced by rewritePartition in order to migrate
-  /// the debug info.
-  struct Fragment {
+  /// \brief Describes the allocas introduced by rewritePartition
+  /// in order to migrate the debug info.
+  struct Piece {
     AllocaInst *Alloca;
     uint64_t Offset;
     uint64_t Size;
-    Fragment(AllocaInst *AI, uint64_t O, uint64_t S)
+    Piece(AllocaInst *AI, uint64_t O, uint64_t S)
       : Alloca(AI), Offset(O), Size(S) {}
   };
-  SmallVector<Fragment, 4> Fragments;
+  SmallVector<Piece, 4> Pieces;
 
   // Rewrite each partition.
   for (auto &P : AS.partitions()) {
@@ -4002,7 +4002,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
         uint64_t AllocaSize = DL.getTypeSizeInBits(NewAI->getAllocatedType());
         // Don't include any padding.
         uint64_t Size = std::min(AllocaSize, P.size() * SizeOfByte);
-        Fragments.push_back(Fragment(NewAI, P.beginOffset() * SizeOfByte, Size));
+        Pieces.push_back(Piece(NewAI, P.beginOffset() * SizeOfByte, Size));
       }
     }
     ++NumPartitions;
@@ -4019,34 +4019,35 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
     auto *Expr = DbgDecl->getExpression();
     DIBuilder DIB(*AI.getModule(), /*AllowUnresolved*/ false);
     uint64_t AllocaSize = DL.getTypeSizeInBits(AI.getAllocatedType());
-    for (auto Fragment : Fragments) {
-      // Create a fragment expression describing the new partition or reuse AI's
+    for (auto Piece : Pieces) {
+      // Create a piece expression describing the new partition or reuse AI's
       // expression if there is only one partition.
-      auto *FragmentExpr = Expr;
-      if (Fragment.Size < AllocaSize || Expr->isFragment()) {
+      auto *PieceExpr = Expr;
+      if (Piece.Size < AllocaSize || Expr->isBitPiece()) {
         // If this alloca is already a scalar replacement of a larger aggregate,
-        // Fragment.Offset describes the offset inside the scalar.
-        auto ExprFragment = Expr->getFragmentInfo();
-        uint64_t Offset = ExprFragment ? ExprFragment->OffsetInBits : 0;
-        uint64_t Start = Offset + Fragment.Offset;
-        uint64_t Size = Fragment.Size;
-        if (ExprFragment) {
-          uint64_t AbsEnd =
-	    ExprFragment->OffsetInBits + ExprFragment->SizeInBits;
+        // Piece.Offset describes the offset inside the scalar.
+        uint64_t Offset = Expr->isBitPiece() ? Expr->getBitPieceOffset() : 0;
+        uint64_t Start = Offset + Piece.Offset;
+        uint64_t Size = Piece.Size;
+        if (Expr->isBitPiece()) {
+          uint64_t AbsEnd = Expr->getBitPieceOffset() + Expr->getBitPieceSize();
           if (Start >= AbsEnd)
             // No need to describe a SROAed padding.
             continue;
           Size = std::min(Size, AbsEnd - Start);
         }
-        FragmentExpr = DIB.createFragmentExpression(Start, Size);
+        PieceExpr = DIB.createBitPieceExpression(Start, Size);
+      } else {
+        assert(Pieces.size() == 1 &&
+               "partition is as large as original alloca");
       }
 
       // Remove any existing dbg.declare intrinsic describing the same alloca.
-      if (DbgDeclareInst *OldDDI = FindAllocaDbgDeclare(Fragment.Alloca))
+      if (DbgDeclareInst *OldDDI = FindAllocaDbgDeclare(Piece.Alloca))
         OldDDI->eraseFromParent();
 
-      DIB.insertDeclare(Fragment.Alloca, Var, FragmentExpr,
-                        DbgDecl->getDebugLoc(), &AI);
+      DIB.insertDeclare(Piece.Alloca, Var, PieceExpr, DbgDecl->getDebugLoc(),
+                        &AI);
     }
   }
   return Changed;

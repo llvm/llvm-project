@@ -4539,7 +4539,6 @@ SDValue ARMTargetLowering::LowerShiftRightParts(SDValue Op,
   SDValue ShOpHi = Op.getOperand(1);
   SDValue ShAmt  = Op.getOperand(2);
   SDValue ARMcc;
-  SDValue CCR = DAG.getRegister(ARM::CPSR, MVT::i32);
   unsigned Opc = (Op.getOpcode() == ISD::SRA_PARTS) ? ISD::SRA : ISD::SRL;
 
   assert(Op.getOpcode() == ISD::SRA_PARTS || Op.getOpcode() == ISD::SRL_PARTS);
@@ -4550,23 +4549,15 @@ SDValue ARMTargetLowering::LowerShiftRightParts(SDValue Op,
   SDValue ExtraShAmt = DAG.getNode(ISD::SUB, dl, MVT::i32, ShAmt,
                                    DAG.getConstant(VTBits, dl, MVT::i32));
   SDValue Tmp2 = DAG.getNode(ISD::SHL, dl, VT, ShOpHi, RevShAmt);
-  SDValue LoSmallShift = DAG.getNode(ISD::OR, dl, VT, Tmp1, Tmp2);
-  SDValue LoBigShift = DAG.getNode(Opc, dl, VT, ShOpHi, ExtraShAmt);
-  SDValue CmpLo = getARMCmp(ExtraShAmt, DAG.getConstant(0, dl, MVT::i32),
-                            ISD::SETGE, ARMcc, DAG, dl);
-  SDValue Lo = DAG.getNode(ARMISD::CMOV, dl, VT, LoSmallShift, LoBigShift,
-                           ARMcc, CCR, CmpLo);
+  SDValue FalseVal = DAG.getNode(ISD::OR, dl, VT, Tmp1, Tmp2);
+  SDValue TrueVal = DAG.getNode(Opc, dl, VT, ShOpHi, ExtraShAmt);
 
-
-  SDValue HiSmallShift = DAG.getNode(Opc, dl, VT, ShOpHi, ShAmt);
-  SDValue HiBigShift = Opc == ISD::SRA
-                           ? DAG.getNode(Opc, dl, VT, ShOpHi,
-                                         DAG.getConstant(VTBits - 1, dl, VT))
-                           : DAG.getConstant(0, dl, VT);
-  SDValue CmpHi = getARMCmp(ExtraShAmt, DAG.getConstant(0, dl, MVT::i32),
-                            ISD::SETGE, ARMcc, DAG, dl);
-  SDValue Hi = DAG.getNode(ARMISD::CMOV, dl, VT, HiSmallShift, HiBigShift,
-                           ARMcc, CCR, CmpHi);
+  SDValue CCR = DAG.getRegister(ARM::CPSR, MVT::i32);
+  SDValue Cmp = getARMCmp(ExtraShAmt, DAG.getConstant(0, dl, MVT::i32),
+                          ISD::SETGE, ARMcc, DAG, dl);
+  SDValue Hi = DAG.getNode(Opc, dl, VT, ShOpHi, ShAmt);
+  SDValue Lo = DAG.getNode(ARMISD::CMOV, dl, VT, FalseVal, TrueVal, ARMcc,
+                           CCR, Cmp);
 
   SDValue Ops[2] = { Lo, Hi };
   return DAG.getMergeValues(Ops, dl);
@@ -4584,28 +4575,23 @@ SDValue ARMTargetLowering::LowerShiftLeftParts(SDValue Op,
   SDValue ShOpHi = Op.getOperand(1);
   SDValue ShAmt  = Op.getOperand(2);
   SDValue ARMcc;
-  SDValue CCR = DAG.getRegister(ARM::CPSR, MVT::i32);
 
   assert(Op.getOpcode() == ISD::SHL_PARTS);
   SDValue RevShAmt = DAG.getNode(ISD::SUB, dl, MVT::i32,
                                  DAG.getConstant(VTBits, dl, MVT::i32), ShAmt);
   SDValue Tmp1 = DAG.getNode(ISD::SRL, dl, VT, ShOpLo, RevShAmt);
-  SDValue Tmp2 = DAG.getNode(ISD::SHL, dl, VT, ShOpHi, ShAmt);
-  SDValue HiSmallShift = DAG.getNode(ISD::OR, dl, VT, Tmp1, Tmp2);
-
   SDValue ExtraShAmt = DAG.getNode(ISD::SUB, dl, MVT::i32, ShAmt,
                                    DAG.getConstant(VTBits, dl, MVT::i32));
-  SDValue HiBigShift = DAG.getNode(ISD::SHL, dl, VT, ShOpLo, ExtraShAmt);
-  SDValue CmpHi = getARMCmp(ExtraShAmt, DAG.getConstant(0, dl, MVT::i32),
-                            ISD::SETGE, ARMcc, DAG, dl);
-  SDValue Hi = DAG.getNode(ARMISD::CMOV, dl, VT, HiSmallShift, HiBigShift,
-                           ARMcc, CCR, CmpHi);
+  SDValue Tmp2 = DAG.getNode(ISD::SHL, dl, VT, ShOpHi, ShAmt);
+  SDValue Tmp3 = DAG.getNode(ISD::SHL, dl, VT, ShOpLo, ExtraShAmt);
 
-  SDValue CmpLo = getARMCmp(ExtraShAmt, DAG.getConstant(0, dl, MVT::i32),
+  SDValue FalseVal = DAG.getNode(ISD::OR, dl, VT, Tmp1, Tmp2);
+  SDValue CCR = DAG.getRegister(ARM::CPSR, MVT::i32);
+  SDValue Cmp = getARMCmp(ExtraShAmt, DAG.getConstant(0, dl, MVT::i32),
                           ISD::SETGE, ARMcc, DAG, dl);
-  SDValue LoSmallShift = DAG.getNode(ISD::SHL, dl, VT, ShOpLo, ShAmt);
-  SDValue Lo = DAG.getNode(ARMISD::CMOV, dl, VT, LoSmallShift,
-                           DAG.getConstant(0, dl, VT), ARMcc, CCR, CmpLo);
+  SDValue Lo = DAG.getNode(ISD::SHL, dl, VT, ShOpLo, ShAmt);
+  SDValue Hi = DAG.getNode(ARMISD::CMOV, dl, VT, FalseVal, Tmp3, ARMcc,
+                           CCR, Cmp);
 
   SDValue Ops[2] = { Lo, Hi };
   return DAG.getMergeValues(Ops, dl);
@@ -8998,7 +8984,7 @@ static SDValue AddCombineTo64bitUMAAL(SDNode *AddcNode,
   // be combined into a UMLAL. The other pattern is AddcNode being combined
   // into an UMLAL and then using another addc is handled in ISelDAGToDAG.
 
-  if (!Subtarget->hasV6Ops() || !Subtarget->hasDSP() ||
+  if (!Subtarget->hasV6Ops() ||
       (Subtarget->isThumb() && !Subtarget->hasThumb2()))
     return AddCombineTo64bitMLAL(AddcNode, DCI, Subtarget);
 

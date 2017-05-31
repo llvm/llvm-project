@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 //  This file defines partial implementations of template specializations of
-//  the class ProgramStateTrait<>.  ProgramStateTrait<> is used by ProgramState
+//  the class ProgramStateTrait<>.  ProgramStateTrait<> is used by ProgramState 
 //  to implement set/get methods for manipulating a ProgramState's
 //  generic data map.
 //
@@ -79,10 +79,6 @@ namespace ento {
 
     static data_type Remove(data_type B, key_type K, context_type F) {
       return F.remove(B, K);
-    }
-
-    static bool Contains(data_type B, key_type K) {
-      return B.contains(K);
     }
 
     static inline context_type MakeContext(void *p) {
@@ -189,7 +185,7 @@ namespace ento {
     }
   };
 
-
+  
   // Partial specialization for bool.
   template <> struct ProgramStatePartialTrait<bool> {
     typedef bool data_type;
@@ -202,7 +198,7 @@ namespace ento {
       return (void*) (uintptr_t) d;
     }
   };
-
+  
   // Partial specialization for unsigned.
   template <> struct ProgramStatePartialTrait<unsigned> {
     typedef unsigned data_type;

@@ -18,7 +18,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Availability.h"
 #include "clang/AST/DeclarationName.h"
-#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExternalASTSource.h"
@@ -27,7 +26,6 @@
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/TypeLoc.h"
-#include "clang/APINotes/APINotesManager.h"
 #include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
@@ -54,7 +52,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include <deque>
-#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -304,7 +301,6 @@ public:
   ASTConsumer &Consumer;
   DiagnosticsEngine &Diags;
   SourceManager &SourceMgr;
-  api_notes::APINotesManager APINotes;
 
   /// \brief Flag indicating whether or not to collect detailed statistics.
   bool CollectStats;
@@ -572,10 +568,6 @@ public:
     LateTemplateParserCleanup = LTPCleanup;
     OpaqueParser = P;
   }
-
-  /// \brief Callback to the parser to parse a type expressed as a string.
-  std::function<TypeResult(StringRef, StringRef, SourceLocation)>
-    ParseTypeFromStringCallback;
 
   class DelayedDiagnostics;
 
@@ -1395,24 +1387,6 @@ public:
     }
   };
 
-  /// Do a check to make sure \p Name looks like a legal swift_name
-  /// attribute for the decl \p D. Raise a diagnostic if the name is invalid
-  /// for the given declaration.
-  ///
-  /// For a function, this will validate a compound Swift name,
-  /// e.g. <code>init(foo:bar:baz:)</code> or <code>controllerForName(_:)</code>,
-  /// and the function will output the number of parameter names, and whether
-  /// this is a single-arg initializer.
-  ///
-  /// For a type, enum constant, property, or variable declaration, this will
-  /// validate either a simple identifier, or a qualified
-  /// <code>context.identifier</code> name.
-  ///
-  /// \returns true if the name is a valid swift name for \p D, false otherwise.
-  bool DiagnoseSwiftName(Decl *D, StringRef Name,
-                         SourceLocation ArgLoc,
-                         IdentifierInfo *AttrName);
-
 private:
   bool RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
                                TypeDiagnoser *Diagnoser);
@@ -1719,15 +1693,12 @@ public:
 
   static bool adjustContextForLocalExternDecl(DeclContext *&DC);
   void DiagnoseFunctionSpecifiers(const DeclSpec &DS);
-  NamedDecl *getShadowedDeclaration(const VarDecl *D, const LookupResult &R);
-  void CheckShadow(VarDecl *D, NamedDecl *ShadowedDecl, const LookupResult &R);
+  void CheckShadow(Scope *S, VarDecl *D, const LookupResult& R);
   void CheckShadow(Scope *S, VarDecl *D);
 
   /// Warn if 'E', which is an expression that is about to be modified, refers
   /// to a shadowing declaration.
   void CheckShadowingDeclModification(Expr *E, SourceLocation Loc);
-
-  void DiagnoseShadowingLambdaDecls(const sema::LambdaScopeInfo *LSI);
 
 private:
   /// Map of current shadowing declarations to shadowed declarations. Warn if
@@ -1786,8 +1757,6 @@ public:
   ParmVarDecl *BuildParmVarDeclForTypedef(DeclContext *DC,
                                           SourceLocation Loc,
                                           QualType T);
-  QualType adjustParameterTypeForObjCAutoRefCount(QualType T,
-                                                  SourceLocation Loc);
   ParmVarDecl *CheckParameter(DeclContext *DC, SourceLocation StartLoc,
                               SourceLocation NameLoc, IdentifierInfo *Name,
                               QualType T, TypeSourceInfo *TSInfo,
@@ -1903,7 +1872,6 @@ public:
   /// \brief The parser has processed a module import translated from a
   /// #include or similar preprocessing directive.
   void ActOnModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
-  void BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
 
   /// \brief The parsed has entered a submodule.
   void ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod);
@@ -2242,9 +2210,6 @@ public:
                                 unsigned AttrSpellingListIndex);
   OptimizeNoneAttr *mergeOptimizeNoneAttr(Decl *D, SourceRange Range,
                                           unsigned AttrSpellingListIndex);
-  SwiftNameAttr *mergeSwiftNameAttr(Decl *D, SourceRange Range,
-                                    StringRef Name, bool Override,
-                                    unsigned AttrSpellingListIndex);
   InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D, SourceRange Range,
                                                 IdentifierInfo *Ident,
                                                 unsigned AttrSpellingListIndex);
@@ -2263,8 +2228,6 @@ public:
   void MergeVarDecl(VarDecl *New, LookupResult &Previous);
   void MergeVarDeclTypes(VarDecl *New, VarDecl *Old, bool MergeTypeWithOld);
   void MergeVarDeclExceptionSpecs(VarDecl *New, VarDecl *Old);
-  bool checkVarDeclRedefinition(VarDecl *OldDefn, VarDecl *NewDefn);
-  void diagnoseRedefinition(SourceLocation Old, SourceLocation New);
   bool MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old, Scope *S);
 
   // AssignmentAction - This is used by all the assignment diagnostic functions
@@ -3054,12 +3017,6 @@ public:
 
   void checkUnusedDeclAttributes(Declarator &D);
 
-  /// Map any API notes provided for this declaration to attributes on the
-  /// declaration.
-  ///
-  /// Triggered by declaration-attribute processing.
-  void ProcessAPINotes(Decl *D);
-
   /// Determine if type T is a valid subject for a nonnull and similar
   /// attributes. By default, we look through references (the behavior used by
   /// nonnull), but if the second parameter is true, then we treat a reference
@@ -3111,19 +3068,10 @@ public:
   /// method) or an Objective-C property attribute, rather than as an
   /// underscored type specifier.
   ///
-  /// \param allowArrayTypes Whether to accept nullability specifiers on an
-  /// array type (e.g., because it will decay to a pointer).
-  ///
-  /// \param overrideExisting Whether to override an existing, locally-specified
-  /// nullability specifier rather than complaining about the conflict.
-  ///
   /// \returns true if nullability cannot be applied, false otherwise.
   bool checkNullabilityTypeSpecifier(QualType &type, NullabilityKind nullability,
                                      SourceLocation nullabilityLoc,
-                                     bool isContextSensitive,
-                                     bool allowArrayTypes,
-                                     bool implicit,
-                                     bool overrideExisting = false);
+                                     bool isContextSensitive);
 
   /// \brief Stmt attributes - this routine is the top level dispatcher.
   StmtResult ProcessStmtAttributes(Stmt *Stmt, AttributeList *Attrs,
@@ -3144,6 +3092,7 @@ public:
                              bool IsProtocolMethodDecl);
 
   typedef llvm::SmallPtrSet<Selector, 8> SelectorSet;
+  typedef llvm::DenseMap<Selector, ObjCMethodDecl*> ProtocolsMethodsMap;
 
   /// CheckImplementationIvars - This routine checks if the instance variables
   /// listed in the implelementation match those listed in the interface.
@@ -3541,9 +3490,9 @@ public:
                                            SourceLocation Loc,
                                            unsigned NumParams);
   VarDecl *getCopyElisionCandidate(QualType ReturnType, Expr *E,
-                                   bool AllowFunctionParameters);
+                                   bool AllowParamOrMoveConstructible);
   bool isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
-                              bool AllowFunctionParameters);
+                              bool AllowParamOrMoveConstructible);
 
   StmtResult ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
                              Scope *CurScope);
@@ -5762,14 +5711,6 @@ public:
                                    TemplateTy &SuggestedTemplate,
                                    TemplateNameKind &SuggestedKind);
 
-  bool DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
-                                      NamedDecl *Instantiation,
-                                      bool InstantiatedFromMember,
-                                      const NamedDecl *Pattern,
-                                      const NamedDecl *PatternDef,
-                                      TemplateSpecializationKind TSK,
-                                      bool Complain = true);
-
   void DiagnoseTemplateParameterShadow(SourceLocation Loc, Decl *PrevDecl);
   TemplateDecl *AdjustDeclIfTemplate(Decl *&Decl);
 
@@ -6708,10 +6649,10 @@ public:
       TemplateInstantiation,
 
       /// We are instantiating a default argument for a template
-      /// parameter. The Entity is the template parameter whose argument is
-      /// being instantiated, the Template is the template, and the
-      /// TemplateArgs/NumTemplateArguments provide the template arguments as
-      /// specified.
+      /// parameter. The Entity is the template, and
+      /// TemplateArgs/NumTemplateArguments provides the template
+      /// arguments as specified.
+      /// FIXME: Use a TemplateArgumentList
       DefaultTemplateArgumentInstantiation,
 
       /// We are instantiating a default argument for a function.
@@ -6826,9 +6767,6 @@ public:
   SmallVector<ActiveTemplateInstantiation, 16>
     ActiveTemplateInstantiations;
 
-  /// Specializations whose definitions are currently being instantiated.
-  llvm::DenseSet<std::pair<Decl *, unsigned>> InstantiatingSpecializations;
-
   /// \brief Extra modules inspected when performing a lookup during a template
   /// instantiation. Computed lazily.
   SmallVector<Module*, 16> ActiveTemplateInstantiationLookupModules;
@@ -6935,12 +6873,12 @@ public:
     /// \brief Note that we are instantiating a default argument in a
     /// template-id.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
-                          TemplateParameter Param, TemplateDecl *Template,
+                          TemplateDecl *Template,
                           ArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange = SourceRange());
 
-    /// \brief Note that we are substituting either explicitly-specified or
-    /// deduced template arguments during function template argument deduction.
+    /// \brief Note that we are instantiating a default argument in a
+    /// template-id.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           FunctionTemplateDecl *FunctionTemplate,
                           ArrayRef<TemplateArgument> TemplateArgs,
@@ -7007,14 +6945,9 @@ public:
     /// recursive template instantiations.
     bool isInvalid() const { return Invalid; }
 
-    /// \brief Determine whether we are already instantiating this
-    /// specialization in some surrounding active instantiation.
-    bool isAlreadyInstantiating() const { return AlreadyInstantiating; }
-
   private:
     Sema &SemaRef;
     bool Invalid;
-    bool AlreadyInstantiating;
     bool SavedInNonInstantiationSFINAEContext;
     bool CheckInstantiationDepth(SourceLocation PointOfInstantiation,
                                  SourceRange InstantiationRange);
@@ -7461,7 +7394,6 @@ public:
                                        SourceRange SuperTypeArgsRange);
   
   void ActOnTypedefedProtocols(SmallVectorImpl<Decl *> &ProtocolRefs,
-                               SmallVectorImpl<SourceLocation> &ProtocolLocs,
                                IdentifierInfo *SuperName,
                                SourceLocation SuperLoc);
 
@@ -7567,14 +7499,6 @@ public:
                ArrayRef<Decl *> Protocols,
                ArrayRef<SourceLocation> ProtocolLocs,
                SourceLocation ProtocolRAngleLoc);
-
-  /// Build an Objective-C type parameter type.
-  QualType BuildObjCTypeParamType(const ObjCTypeParamDecl *Decl,
-                                  SourceLocation ProtocolLAngleLoc,
-                                  ArrayRef<ObjCProtocolDecl *> Protocols,
-                                  ArrayRef<SourceLocation> ProtocolLocs,
-                                  SourceLocation ProtocolRAngleLoc,
-                                  bool FailOnError = false);
 
   /// Build an Objective-C object pointer type.
   QualType BuildObjCObjectType(QualType BaseType,
@@ -7822,12 +7746,6 @@ public:
     RTC_Incompatible,
     RTC_Unknown
   };
-
-  /// Check whether the declared result type of the given Objective-C
-  /// method declaration is compatible with the method's class.
-  ResultTypeCompatibilityKind
-  checkRelatedResultTypeCompatibility(const ObjCMethodDecl *Method,
-                                      const ObjCInterfaceDecl *CurrentClass);
 
   void CheckObjCMethodOverrides(ObjCMethodDecl *ObjCMethod,
                                 ObjCInterfaceDecl *CurrentClass,
@@ -9375,8 +9293,8 @@ public:
   void CodeCompleteExpression(Scope *S,
                               const CodeCompleteExpressionData &Data);
   void CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
-                                       SourceLocation OpLoc, bool IsArrow,
-                                       bool IsBaseExprStatement);
+                                       SourceLocation OpLoc,
+                                       bool IsArrow);
   void CodeCompletePostfixExpression(Scope *S, ExprResult LHS);
   void CodeCompleteTag(Scope *S, unsigned TagSpec);
   void CodeCompleteTypeQualifiers(DeclSpec &DS);
@@ -9454,9 +9372,6 @@ public:
                                           bool AtParameterName,
                                           ParsedType ReturnType,
                                           ArrayRef<IdentifierInfo *> SelIdents);
-  void CodeCompleteObjCClassPropertyRefExpr(Scope *S, IdentifierInfo &ClassName,
-                                            SourceLocation ClassNameLoc,
-                                            bool IsBaseExprStatement);
   void CodeCompletePreprocessorDirective(bool InConditional);
   void CodeCompleteInPreprocessorConditionalExclusion(Scope *S);
   void CodeCompletePreprocessorMacroName(bool IsDefinition);
@@ -9511,7 +9426,6 @@ private:
                  VariadicCallType CallType);
 
   bool CheckObjCString(Expr *Arg);
-  ExprResult CheckOSLogFormatStringArg(Expr *Arg);
 
   ExprResult CheckBuiltinFunctionCall(FunctionDecl *FDecl,
                                       unsigned BuiltinID, CallExpr *TheCall);
@@ -9533,7 +9447,6 @@ private:
   bool SemaBuiltinVAStartARM(CallExpr *Call);
   bool SemaBuiltinUnorderedCompare(CallExpr *TheCall);
   bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs);
-  bool SemaBuiltinOSLogFormat(CallExpr *TheCall);
 
 public:
   // Used by C++ template instantiation.
@@ -9569,7 +9482,6 @@ public:
     FST_Kprintf,
     FST_FreeBSDKPrintf,
     FST_OSTrace,
-    FST_OSLog,
     FST_Unknown
   };
   static FormatStringType GetFormatStringType(const FormatAttr *Format);
@@ -9705,7 +9617,6 @@ public:
 
   /// The struct behind the CFErrorRef pointer.
   RecordDecl *CFError = nullptr;
-  bool isCFError(RecordDecl *D);
 
   /// Retrieve the identifier "NSError".
   IdentifierInfo *getNSErrorIdent();
@@ -9816,7 +9727,7 @@ public:
   /// local diagnostics like in reference binding.
   void RefersToMemberWithReducedAlignment(
       Expr *E,
-      std::function<void(Expr *, RecordDecl *, FieldDecl *, CharUnits)> Action);
+      std::function<void(Expr *, RecordDecl *, ValueDecl *, CharUnits)> Action);
 };
 
 /// \brief RAII object that enters a new expression evaluation context.

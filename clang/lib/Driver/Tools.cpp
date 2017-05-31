@@ -1140,9 +1140,9 @@ void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
 // ARM tools end.
 
 /// getAArch64TargetCPU - Get the (LLVM) name of the AArch64 cpu we are
-/// targeting. Set \p A to the Arg corresponding to the -mcpu or -mtune
-/// arguments if they are provided, or to nullptr otherwise.
-static std::string getAArch64TargetCPU(const ArgList &Args, Arg *&A) {
+/// targeting.
+static std::string getAArch64TargetCPU(const ArgList &Args) {
+  Arg *A;
   std::string CPU;
   // If we have -mtune or -mcpu, use that.
   if ((A = Args.getLastArg(options::OPT_mtune_EQ))) {
@@ -1919,15 +1919,13 @@ static StringRef getWebAssemblyTargetCPU(const ArgList &Args) {
 
 static std::string getCPUName(const ArgList &Args, const llvm::Triple &T,
                               bool FromAs = false) {
-  Arg *A;
-
   switch (T.getArch()) {
   default:
     return "";
 
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be:
-    return getAArch64TargetCPU(Args, A);
+    return getAArch64TargetCPU(Args);
 
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
@@ -2002,19 +2000,8 @@ static std::string getCPUName(const ArgList &Args, const llvm::Triple &T,
   }
 }
 
-static unsigned getLTOParallelism(const ArgList &Args, const Driver &D) {
-  unsigned Parallelism = 0;
-  Arg *LtoJobsArg = Args.getLastArg(options::OPT_flto_jobs_EQ);
-  if (LtoJobsArg &&
-      StringRef(LtoJobsArg->getValue()).getAsInteger(10, Parallelism))
-    D.Diag(diag::err_drv_invalid_int_value) << LtoJobsArg->getAsString(Args)
-                                            << LtoJobsArg->getValue();
-  return Parallelism;
-}
-
 static void AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
-                          ArgStringList &CmdArgs, bool IsThinLTO,
-                          const Driver &D) {
+                          ArgStringList &CmdArgs, bool IsThinLTO) {
   // Tell the linker to load the plugin. This has to come before AddLinkerInputs
   // as gold requires -plugin to come before any -plugin-opt that -Wl might
   // forward.
@@ -2046,10 +2033,6 @@ static void AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
 
   if (IsThinLTO)
     CmdArgs.push_back("-plugin-opt=thinlto");
-
-  if (unsigned Parallelism = getLTOParallelism(Args, D))
-    CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=jobs=") +
-                                         std::to_string(Parallelism)));
 
   // If an explicit debugger tuning argument appeared, pass it along.
   if (Arg *A = Args.getLastArg(options::OPT_gTune_Group,
@@ -2381,11 +2364,9 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
     Features.push_back("+neon");
   } else {
     unsigned ArchKind = llvm::AArch64::parseCPUArch(CPU);
-    if (!llvm::AArch64::getArchFeatures(ArchKind, Features))
-      return false;
+    unsigned Extersion = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
 
-    unsigned Extension = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
-    if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
+    if (!llvm::AArch64::getExtensionFeatures(Extersion, Features))
       return false;
    }
 
@@ -2462,8 +2443,8 @@ static void getAArch64TargetFeatures(const Driver &D, const ArgList &Args,
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
     success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Features);
   else if (Args.hasArg(options::OPT_arch))
-    success = getAArch64ArchFeaturesFromMcpu(D, getAArch64TargetCPU(Args, A),
-                                             Args, Features);
+    success = getAArch64ArchFeaturesFromMcpu(D, getAArch64TargetCPU(Args), Args,
+                                             Features);
 
   if (success && (A = Args.getLastArg(options::OPT_mtune_EQ)))
     success =
@@ -2471,9 +2452,9 @@ static void getAArch64TargetFeatures(const Driver &D, const ArgList &Args,
   else if (success && (A = Args.getLastArg(options::OPT_mcpu_EQ)))
     success =
         getAArch64MicroArchFeaturesFromMcpu(D, A->getValue(), Args, Features);
-  else if (success && Args.hasArg(options::OPT_arch))
-    success = getAArch64MicroArchFeaturesFromMcpu(
-        D, getAArch64TargetCPU(Args, A), Args, Features);
+  else if (Args.hasArg(options::OPT_arch))
+    success = getAArch64MicroArchFeaturesFromMcpu(D, getAArch64TargetCPU(Args),
+                                                  Args, Features);
 
   if (!success)
     D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
@@ -4031,14 +4012,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Embed-bitcode option.
-  if (C.getDriver().embedBitcodeInObject() && !C.getDriver().isUsingLTO() &&
+  if (C.getDriver().embedBitcodeEnabled() &&
       (isa<BackendJobAction>(JA) || isa<AssembleJobAction>(JA))) {
     // Add flags implied by -fembed-bitcode.
     Args.AddLastArg(CmdArgs, options::OPT_fembed_bitcode_EQ);
     // Disable all llvm IR level optimizations.
     CmdArgs.push_back("-disable-llvm-optzns");
   }
-  if (C.getDriver().embedBitcodeMarkerOnly() && !C.getDriver().isUsingLTO())
+  if (C.getDriver().embedBitcodeMarkerOnly())
     CmdArgs.push_back("-fembed-bitcode=marker");
 
   // We normally speed up the clang process a bit by skipping destructors at
@@ -4076,7 +4057,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // Add default argument set.
     if (!Args.hasArg(options::OPT__analyzer_no_default_checks)) {
       CmdArgs.push_back("-analyzer-checker=core");
-      CmdArgs.push_back("-analyzer-checker=apiModeling");
 
     if (!IsWindowsMSVC) {
       CmdArgs.push_back("-analyzer-checker=unix");
@@ -4653,9 +4633,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-dwarf-column-info");
 
   // FIXME: Move backend command line options to the module.
-  // If -gline-tables-only is the last option it wins.
-  if (DebugInfoKind != codegenoptions::DebugLineTablesOnly &&
-      Args.hasArg(options::OPT_gmodules)) {
+  if (Args.hasArg(options::OPT_gmodules)) {
     DebugInfoKind = codegenoptions::LimitedDebugInfo;
     CmdArgs.push_back("-dwarf-ext-refs");
     CmdArgs.push_back("-fmodule-format=obj");
@@ -4862,7 +4840,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   claimNoWarnArgs(Args);
 
   Args.AddAllArgs(CmdArgs, options::OPT_R_Group);
-
   Args.AddAllArgs(CmdArgs, options::OPT_W_Group);
   if (Args.hasFlag(options::OPT_pedantic, options::OPT_no_pedantic, false))
     CmdArgs.push_back("-pedantic");
@@ -5353,42 +5330,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_assume_sane_operator_new))
     CmdArgs.push_back("-fno-assume-sane-operator-new");
 
-  if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes,
-                   false) ||
-      Args.hasFlag(options::OPT_fapinotes_modules,
-                     options::OPT_fno_apinotes_modules, false) ||
-      Args.hasArg(options::OPT_iapinotes_modules)) {
-    if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes, false))
-      CmdArgs.push_back("-fapinotes");
-    if (Args.hasFlag(options::OPT_fapinotes_modules,
-                     options::OPT_fno_apinotes_modules, false))
-      CmdArgs.push_back("-fapinotes-modules");
-
-    SmallString<128> APINotesCachePath;
-    if (Arg *A = Args.getLastArg(options::OPT_fapinotes_cache_path)) {
-      APINotesCachePath = A->getValue();
-    }
-
-    if (C.isForDiagnostics()) {
-      // When generating crash reports, we want to emit the API notes along with
-      // the reproduction sources, so we ignore any provided API notes path.
-      APINotesCachePath = Output.getFilename();
-      llvm::sys::path::replace_extension(APINotesCachePath, ".cache");
-      llvm::sys::path::append(APINotesCachePath, "apinotes");
-    } else if (APINotesCachePath.empty()) {
-      // No API notes path was provided: use the default.
-      llvm::sys::path::system_temp_directory(/*erasedOnReboot=*/false,
-                                             APINotesCachePath);
-      llvm::sys::path::append(APINotesCachePath, "org.llvm.clang");
-      llvm::sys::path::append(APINotesCachePath, "APINotesCache");
-    }
-    const char Arg[] = "-fapinotes-cache-path=";
-    APINotesCachePath.insert(APINotesCachePath.begin(), Arg, Arg + strlen(Arg));
-    CmdArgs.push_back(Args.MakeArgString(APINotesCachePath));
-
-    Args.AddLastArg(CmdArgs, options::OPT_fapinotes_swift_version);
-  }
-
   // -fblocks=0 is default.
   if (Args.hasFlag(options::OPT_fblocks, options::OPT_fno_blocks,
                    getToolChain().IsBlocksDefault()) ||
@@ -5440,28 +5381,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_fimplicit_modules,
                     options::OPT_fno_implicit_modules)) {
     CmdArgs.push_back("-fno-implicit-modules");
-  }
-
-  // -fmodule-name specifies the module that is currently being built (or
-  // used for header checking by -fmodule-maps).
-  Args.AddLastArg(CmdArgs, options::OPT_fmodule_name_EQ);
-
-  // -fmodule-map-file can be used to specify files containing module
-  // definitions.
-  Args.AddAllArgs(CmdArgs, options::OPT_fmodule_map_file);
-
-  // -fmodule-file can be used to specify files containing precompiled modules.
-  if (HaveModules)
-    Args.AddAllArgs(CmdArgs, options::OPT_fmodule_file);
-  else
-    Args.ClaimAllArgs(options::OPT_fmodule_file);
-
-  // -fmodule-cache-path specifies where our implicitly-built module files
-  // should be written.
-  SmallString<128> Path;
-  if (Arg *A = Args.getLastArg(options::OPT_fmodules_cache_path))
-    Path = A->getValue();
-  if (HaveModules) {
+  } else if (HaveModules) {
+    // -fmodule-cache-path specifies where our implicitly-built module files
+    // should be written.
+    SmallString<128> Path;
+    if (Arg *A = Args.getLastArg(options::OPT_fmodules_cache_path))
+      Path = A->getValue();
     if (C.isForDiagnostics()) {
       // When generating crash reports, we want to emit the modules along with
       // the reproduction sources, so we ignore any provided module path.
@@ -5480,13 +5405,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(Path));
   }
 
-  if (HaveModules) {
-    // -fprebuilt-module-path specifies where to load the prebuilt module files.
-    for (const Arg *A : Args.filtered(options::OPT_fprebuilt_module_path))
-      CmdArgs.push_back(Args.MakeArgString(
-          std::string("-fprebuilt-module-path=") + A->getValue()));
-  }
-      
+  // -fmodule-name specifies the module that is currently being built (or
+  // used for header checking by -fmodule-maps).
+  Args.AddLastArg(CmdArgs, options::OPT_fmodule_name_EQ);
+
+  // -fmodule-map-file can be used to specify files containing module
+  // definitions.
+  Args.AddAllArgs(CmdArgs, options::OPT_fmodule_map_file);
+
+  // -fmodule-file can be used to specify files containing precompiled modules.
+  if (HaveModules)
+    Args.AddAllArgs(CmdArgs, options::OPT_fmodule_file);
+  else
+    Args.ClaimAllArgs(options::OPT_fmodule_file);
+
   // When building modules and generating crashdumps, we need to dump a module
   // dependency VFS alongside the output.
   if (HaveModules && C.isForDiagnostics()) {
@@ -5896,10 +5828,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
-  if (Args.hasFlag(options::OPT_fdiagnostics_show_hotness,
-                   options::OPT_fno_diagnostics_show_hotness, false))
-    CmdArgs.push_back("-fdiagnostics-show-hotness");
-
   if (const Arg *A = Args.getLastArg(options::OPT_fdiagnostics_format_EQ)) {
     CmdArgs.push_back("-fdiagnostics-format");
     CmdArgs.push_back(A->getValue());
@@ -6022,39 +5950,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fno-math-builtin");
   }
 
-  if (Args.hasFlag(options::OPT_fsave_optimization_record,
-                   options::OPT_fno_save_optimization_record, false)) {
-    CmdArgs.push_back("-opt-record-file");
-
-    const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ);
-    if (A) {
-      CmdArgs.push_back(A->getValue());
-    } else {
-      SmallString<128> F;
-      if (Output.isFilename() && (Args.hasArg(options::OPT_c) ||
-                                  Args.hasArg(options::OPT_S))) {
-        F = Output.getFilename();
-      } else {
-        // Use the compilation directory.
-        F = llvm::sys::path::stem(Input.getBaseInput());
-
-        // If we're compiling for an offload architecture (i.e. a CUDA device),
-        // we need to make the file name for the device compilation different
-        // from the host compilation.
-        if (!JA.isDeviceOffloading(Action::OFK_None) &&
-            !JA.isDeviceOffloading(Action::OFK_Host)) {
-          llvm::sys::path::replace_extension(F, "");
-          F += JA.getOffloadingFileNamePrefix(Triple.normalize());
-          F += "-";
-          F += JA.getOffloadingArch();
-        }
-      }
-
-      llvm::sys::path::replace_extension(F, "opt.yaml");
-      CmdArgs.push_back(Args.MakeArgString(F));
-    }
-  }
-
 // Default to -fno-builtin-str{cat,cpy} on Darwin for ARM.
 //
 // FIXME: Now that PR4941 has been fixed this can be enabled.
@@ -6111,33 +6006,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     A->claim();
   }
 
-  // Setup statistics file output.
-  if (const Arg *A = Args.getLastArg(options::OPT_save_stats_EQ)) {
-    StringRef SaveStats = A->getValue();
-
-    SmallString<128> StatsFile;
-    bool DoSaveStats = false;
-    if (SaveStats == "obj") {
-      if (Output.isFilename()) {
-        StatsFile.assign(Output.getFilename());
-        llvm::sys::path::remove_filename(StatsFile);
-      }
-      DoSaveStats = true;
-    } else if (SaveStats == "cwd") {
-      DoSaveStats = true;
-    } else {
-      D.Diag(diag::err_drv_invalid_value) << A->getAsString(Args) << SaveStats;
-    }
-
-    if (DoSaveStats) {
-      StringRef BaseName = llvm::sys::path::filename(Input.getBaseInput());
-      llvm::sys::path::append(StatsFile, BaseName);
-      llvm::sys::path::replace_extension(StatsFile, "stats");
-      CmdArgs.push_back(Args.MakeArgString(Twine("-stats-file=") +
-                                           StatsFile));
-    }
-  }
-
   // Forward -Xclang arguments to -cc1, and -mllvm arguments to the LLVM option
   // parser.
   Args.AddAllArgValues(CmdArgs, options::OPT_Xclang);
@@ -6161,8 +6029,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // pristine IR generated by the frontend. Ideally, a new compile action should
   // be added so both IR can be captured.
   if (C.getDriver().isSaveTempsEnabled() &&
-      !(C.getDriver().embedBitcodeInObject() && !C.getDriver().isUsingLTO()) &&
-      isa<CompileJobAction>(JA))
+      !C.getDriver().embedBitcodeEnabled() && isa<CompileJobAction>(JA))
     CmdArgs.push_back("-disable-llvm-passes");
 
   if (Output.getType() == types::TY_Dependencies) {
@@ -7689,7 +7556,7 @@ void cloudabi::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_t, options::OPT_Z_Flag, options::OPT_r});
 
   if (D.isUsingLTO())
-    AddGoldPlugin(ToolChain, Args, CmdArgs, D.getLTOMode() == LTOK_Thin, D);
+    AddGoldPlugin(ToolChain, Args, CmdArgs, D.getLTOMode() == LTOK_Thin);
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs);
 
@@ -7801,29 +7668,6 @@ bool darwin::Linker::NeedsTempPath(const InputInfoList &Inputs) const {
   return false;
 }
 
-/// \brief Pass -no_deduplicate to ld64 under certain conditions:
-///
-/// - Either -O0 or -O1 is explicitly specified
-/// - No -O option is specified *and* this is a compile+link (implicit -O0)
-///
-/// Also do *not* add -no_deduplicate when no -O option is specified and this
-/// is just a link (we can't imply -O0)
-static bool shouldLinkerNotDedup(bool IsLinkerOnlyAction, const ArgList &Args) {
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    if (A->getOption().matches(options::OPT_O0))
-      return true;
-    if (A->getOption().matches(options::OPT_O))
-      return llvm::StringSwitch<bool>(A->getValue())
-                    .Case("1", true)
-                    .Default(false);
-    return false; // OPT_Ofast & OPT_O4
-  }
-
-  if (!IsLinkerOnlyAction) // Implicit -O0 for compile+linker only.
-    return true;
-  return false;
-}
-
 void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
                                  ArgStringList &CmdArgs,
                                  const InputInfoList &Inputs) const {
@@ -7861,28 +7705,24 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       CmdArgs.push_back("-object_path_lto");
       CmdArgs.push_back(TmpPath);
     }
-  }
 
-  // Use -lto_library option to specify the libLTO.dylib path. Try to find
-  // it in clang installed libraries. ld64 will only look at this argument
-  // when it actually uses LTO, so libLTO.dylib only needs to exist at link
-  // time if ld64 decides that it needs to use LTO.
-  // Since this is passed unconditionally, ld64 will never look for libLTO.dylib
-  // next to it. That's ok since ld64 using a libLTO.dylib not matching the
-  // clang version won't work anyways.
-  if (Version[0] >= 133) {
-    // Search for libLTO in <InstalledDir>/../lib/libLTO.dylib
-    StringRef P = llvm::sys::path::parent_path(D.getInstalledDir());
-    SmallString<128> LibLTOPath(P);
-    llvm::sys::path::append(LibLTOPath, "lib");
-    llvm::sys::path::append(LibLTOPath, "libLTO.dylib");
-    CmdArgs.push_back("-lto_library");
-    CmdArgs.push_back(C.getArgs().MakeArgString(LibLTOPath));
+    // Use -lto_library option to specify the libLTO.dylib path. Try to find
+    // it in clang installed libraries. If not found, the option is not used
+    // and 'ld' will use its default mechanism to search for libLTO.dylib.
+    if (Version[0] >= 133) {
+      // Search for libLTO in <InstalledDir>/../lib/libLTO.dylib
+      StringRef P = llvm::sys::path::parent_path(D.getInstalledDir());
+      SmallString<128> LibLTOPath(P);
+      llvm::sys::path::append(LibLTOPath, "lib");
+      llvm::sys::path::append(LibLTOPath, "libLTO.dylib");
+      if (llvm::sys::fs::exists(LibLTOPath)) {
+        CmdArgs.push_back("-lto_library");
+        CmdArgs.push_back(C.getArgs().MakeArgString(LibLTOPath));
+      } else {
+        D.Diag(diag::warn_drv_lto_libpath);
+      }
+    }
   }
-
-  // ld64 version 262 and above run the deduplicate pass by default.
-  if (Version[0] >= 262 && shouldLinkerNotDedup(C.getJobs().empty(), Args))
-    CmdArgs.push_back("-no_deduplicate");
 
   // Derived from the "link" spec.
   Args.AddAllArgs(CmdArgs, options::OPT_static);
@@ -7970,17 +7810,13 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
     else
       CmdArgs.push_back("-no_pie");
   }
-
   // for embed-bitcode, use -bitcode_bundle in linker command
-  if (C.getDriver().embedBitcodeEnabled()) {
+  if (C.getDriver().embedBitcodeEnabled() ||
+      C.getDriver().embedBitcodeMarkerOnly()) {
     // Check if the toolchain supports bitcode build flow.
-    if (MachOTC.SupportsEmbeddedBitcode()) {
+    if (MachOTC.SupportsEmbeddedBitcode())
       CmdArgs.push_back("-bitcode_bundle");
-      if (C.getDriver().embedBitcodeMarkerOnly() && Version[0] >= 278) {
-        CmdArgs.push_back("-bitcode_process_mode");
-        CmdArgs.push_back("marker");
-      }
-    } else
+    else
       D.Diag(diag::err_drv_bitcode_unsupported_on_toolchain);
   }
 
@@ -8140,13 +7976,6 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-allow_stack_execute");
 
   getMachOToolChain().addProfileRTLibs(Args, CmdArgs);
-
-  if (unsigned Parallelism =
-          getLTOParallelism(Args, getToolChain().getDriver())) {
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine("-threads=") + std::to_string(Parallelism)));
-  }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     if (getToolChain().getDriver().CCCIsCXX())
@@ -8878,7 +8707,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_r);
 
   if (D.isUsingLTO())
-    AddGoldPlugin(ToolChain, Args, CmdArgs, D.getLTOMode() == LTOK_Thin, D);
+    AddGoldPlugin(ToolChain, Args, CmdArgs, D.getLTOMode() == LTOK_Thin);
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs);
@@ -9711,7 +9540,7 @@ void gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   if (D.isUsingLTO())
-    AddGoldPlugin(ToolChain, Args, CmdArgs, D.getLTOMode() == LTOK_Thin, D);
+    AddGoldPlugin(ToolChain, Args, CmdArgs, D.getLTOMode() == LTOK_Thin);
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");

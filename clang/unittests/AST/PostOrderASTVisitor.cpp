@@ -34,11 +34,6 @@ namespace {
 
     bool shouldTraversePostOrder() const { return VisitPostOrder; }
 
-    bool VisitUnaryOperator(UnaryOperator *Op) {
-      VisitedNodes.push_back(Op->getOpcodeStr(Op->getOpcode()));
-      return true;
-    }
-
     bool VisitBinaryOperator(BinaryOperator *Op) {
       VisitedNodes.push_back(Op->getOpcodeStr());
       return true;
@@ -81,7 +76,7 @@ TEST(RecursiveASTVisitor, PostOrderTraversal) {
   auto ASTUnit = tooling::buildASTFromCode(
     "class A {"
     "  class B {"
-    "    int foo() { while(4) { int i = 9; int j = -5; } return (1 + 3) + 2; }"
+    "    int foo() { while(4) { int i = 9; } return (1 + 3) + 2; }"
     "  };"
     "};"
   );
@@ -91,9 +86,9 @@ TEST(RecursiveASTVisitor, PostOrderTraversal) {
   RecordingVisitor Visitor(true);
   Visitor.TraverseTranslationUnitDecl(TU);
 
-  std::vector<std::string> expected = {"4", "9",      "i",         "5",    "-",
-                                       "j", "1",      "3",         "+",    "2",
-                                       "+", "return", "A::B::foo", "A::B", "A"};
+  std::vector<std::string> expected = {
+    "4", "9", "i", "1", "3", "+", "2", "+", "return", "A::B::foo", "A::B", "A"
+  };
   // Compare the list of actually visited nodes
   // with the expected list of visited nodes.
   ASSERT_EQ(expected.size(), Visitor.VisitedNodes.size());

@@ -29,6 +29,10 @@ class MDNode;
 class BasicBlock;
 struct AAMDNodes;
 
+template <>
+struct SymbolTableListSentinelTraits<Instruction>
+    : public ilist_half_embedded_sentinel_traits<Instruction> {};
+
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock> {
   void operator=(const Instruction &) = delete;
@@ -89,11 +93,6 @@ public:
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right before MovePos.
   void moveBefore(Instruction *MovePos);
-
-  /// Unlink this instruction and insert into BB before I.
-  ///
-  /// \pre I is a valid iterator into BB.
-  void moveBefore(BasicBlock &BB, SymbolTableList<Instruction>::iterator I);
 
   //===--------------------------------------------------------------------===//
   // Subclass classification.

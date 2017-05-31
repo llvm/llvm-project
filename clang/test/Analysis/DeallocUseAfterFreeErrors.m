@@ -125,8 +125,8 @@ struct SomeStruct {
 }
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  self.ivar = nil; // expected-warning {{Use of 'self' after it has been deallocated}}
-      // expected-note@-1 {{Use of 'self' after it has been deallocated}}
+  self.ivar = nil; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -144,8 +144,8 @@ struct SomeStruct {
 }
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  self.delegate = nil; // expected-warning {{Use of 'self' after it has been deallocated}}
-      // expected-note@-1 {{Use of 'self' after it has been deallocated}}
+  self.delegate = nil; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -158,8 +158,8 @@ struct SomeStruct {
 }
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  [self _invalidate]; // expected-warning {{Use of 'self' after it has been deallocated}}
-      // expected-note@-1 {{Use of 'self' after it has been deallocated}}
+  [self _invalidate]; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -173,8 +173,8 @@ static void _invalidate(NSObject *object) {
 @implementation SuperDeallocThenCallNonObjectiveCMethodClass
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  _invalidate(self); // expected-warning {{Use of 'self' after it has been deallocated}}
-      // expected-note@-1 {{Use of 'self' after it has been deallocated}}
+  _invalidate(self); // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -187,8 +187,8 @@ static void _invalidate(NSObject *object) {
 
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  [SuperDeallocThenCallObjectiveClassMethodClass invalidate:self]; // expected-warning {{Use of 'self' after it has been deallocated}}
-      // expected-note@-1 {{Use of 'self' after it has been deallocated}}
+  [SuperDeallocThenCallObjectiveClassMethodClass invalidate:self]; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -202,14 +202,14 @@ static void _invalidate(NSObject *object) {
 - (void)_invalidate {
 }
 - (void)dealloc {
-  if (_ivar) { // expected-note {{Assuming the condition is false}} expected-note {{Taking false branch}}
+  if (_ivar) { // expected-note {{Taking false branch}}
     [_ivar release];
     [super dealloc];
     return;
   }
   [super dealloc];    // expected-note {{[super dealloc] called here}}
-  [self _invalidate]; // expected-warning {{Use of 'self' after it has been deallocated}}
-      // expected-note@-1 {{Use of 'self' after it has been deallocated}}
+  [self _invalidate]; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -223,7 +223,7 @@ static void _invalidate(NSObject *object) {
 
 @implementation MissingReturnCausesDoubleSuperDeallocClass
 - (void)dealloc {
-  if (_ivar) { // expected-note {{Assuming the condition is true}} expected-note {{Taking true branch}}
+  if (_ivar) { // expected-note {{Taking true branch}}
     [_ivar release];
     [super dealloc]; // expected-note {{[super dealloc] called here}}
     // return;
@@ -366,8 +366,8 @@ static void _invalidate(NSObject *object) {
 
 - (void)dealloc; {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  [self anotherMethod]; // expected-warning {{Use of 'self' after it has been deallocated}}
-      // expected-note@-1 {{Use of 'self' after it has been deallocated}}
+  [self anotherMethod]; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
   [super dealloc];
 }
 @end

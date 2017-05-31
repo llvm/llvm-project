@@ -173,11 +173,8 @@ bool USRGenerator::ShouldGenerateLocation(const NamedDecl *D) {
     return false;
   if (D->getParentFunctionOrMethod())
     return true;
-  SourceLocation Loc = D->getLocation();
-  if (Loc.isInvalid())
-    return false;
   const SourceManager &SM = Context->getSourceManager();
-  return !SM.isInSystemHeader(Loc);
+  return !SM.isInSystemHeader(D->getLocation());
 }
 
 void USRGenerator::VisitDeclContext(const DeclContext *DC) {
@@ -286,15 +283,6 @@ void USRGenerator::VisitVarDecl(const VarDecl *D) {
 
   VisitDeclContext(D->getDeclContext());
 
-  if (VarTemplateDecl *VarTmpl = D->getDescribedVarTemplate()) {
-    Out << "@VT";
-    VisitTemplateParameterList(VarTmpl->getTemplateParameters());
-  } else if (const VarTemplatePartialSpecializationDecl *PartialSpec
-             = dyn_cast<VarTemplatePartialSpecializationDecl>(D)) {
-    Out << "@VP";
-    VisitTemplateParameterList(PartialSpec->getTemplateParameters());
-  }
-
   // Variables always have simple names.
   StringRef s = D->getName();
 
@@ -306,17 +294,6 @@ void USRGenerator::VisitVarDecl(const VarDecl *D) {
     IgnoreResults = true;
   else
     Out << '@' << s;
-
-  // For a template specialization, mangle the template arguments.
-  if (const VarTemplateSpecializationDecl *Spec
-                              = dyn_cast<VarTemplateSpecializationDecl>(D)) {
-    const TemplateArgumentList &Args = Spec->getTemplateInstantiationArgs();
-    Out << '>';
-    for (unsigned I = 0, N = Args.size(); I != N; ++I) {
-      Out << '#';
-      VisitTemplateArgument(Args.get(I));
-    }
-  }
 }
 
 void USRGenerator::VisitNonTypeTemplateParmDecl(
@@ -897,11 +874,9 @@ void clang::index::generateUSRForObjCProtocol(StringRef Prot, raw_ostream &OS) {
 
 bool clang::index::generateUSRForDecl(const Decl *D,
                                       SmallVectorImpl<char> &Buf) {
-  if (!D)
+  // Don't generate USRs for things with invalid locations.
+  if (!D || D->getLocStart().isInvalid())
     return true;
-  // We don't ignore decls with invalid source locations. Implicit decls, like
-  // C++'s operator new function, can have invalid locations but it is fine to
-  // create USRs that can identify them.
 
   USRGenerator UG(&D->getASTContext(), Buf);
   UG.Visit(D);

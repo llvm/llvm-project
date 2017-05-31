@@ -46,43 +46,7 @@ INTERCEPTOR(malloc_zone_t *, malloc_create_zone,
     // This matches the behavior of malloc_create_zone() on OSX 10.7 and higher.
     mprotect(new_zone, allocated_size, PROT_READ);
   }
-  // We're explicitly *NOT* registering the zone.
   return new_zone;
-}
-
-INTERCEPTOR(void, malloc_destroy_zone, malloc_zone_t *zone) {
-  COMMON_MALLOC_ENTER();
-  // We don't need to do anything here.  We're not registering new zones, so we
-  // don't to unregister.  Just un-mprotect and free() the zone.
-  if (GetMacosVersion() >= MACOS_VERSION_LION) {
-    uptr page_size = GetPageSizeCached();
-    uptr allocated_size = RoundUpTo(sizeof(sanitizer_zone), page_size);
-    mprotect(zone, allocated_size, PROT_READ | PROT_WRITE);
-  }
-  COMMON_MALLOC_FREE(zone);
-}
-
-extern unsigned malloc_num_zones;
-extern malloc_zone_t **malloc_zones;
-
-// We need to make sure that sanitizer_zone is registered as malloc_zones[0]. If
-// libmalloc tries to set up a different zone as malloc_zones[0], it will call
-// mprotect(malloc_zones, ..., PROT_READ).  This interceptor will catch that and
-// make sure we are still the first (default) zone.
-INTERCEPTOR(int, mprotect, void *addr, size_t len, int prot) {
-  if (addr == malloc_zones && prot == PROT_READ) {
-    if (malloc_num_zones > 1 && malloc_zones[0] != &sanitizer_zone) {
-      for (unsigned i = 1; i < malloc_num_zones; i++) {
-        if (malloc_zones[i] == &sanitizer_zone) {
-          // Swap malloc_zones[0] and malloc_zones[i].
-          malloc_zones[i] = malloc_zones[0];
-          malloc_zones[0] = &sanitizer_zone;
-          break;
-        }
-      }
-    }
-  }
-  return REAL(mprotect)(addr, len, prot);
 }
 
 INTERCEPTOR(malloc_zone_t *, malloc_default_zone, void) {

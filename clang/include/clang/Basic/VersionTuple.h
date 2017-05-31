@@ -17,7 +17,6 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include <string>
 #include <tuple>
 
@@ -70,9 +69,6 @@ public:
   bool empty() const {
     return Major == 0 && Minor == 0 && Subminor == 0 && Build == 0;
   }
-
-  /// Whether this is a non-empty version tuple.
-  explicit operator bool () const { return !empty(); }
 
   /// \brief Retrieve the major version number.
   unsigned getMajor() const { return Major; }
@@ -169,35 +165,4 @@ public:
 raw_ostream& operator<<(raw_ostream &Out, const VersionTuple &V);
 
 } // end namespace clang
-
-namespace llvm {
-  // Provide DenseMapInfo for version tuples.
-  template<>
-  struct DenseMapInfo<clang::VersionTuple> {
-    static inline clang::VersionTuple getEmptyKey() {
-      return clang::VersionTuple(0x7FFFFFFF);
-    }
-    static inline clang::VersionTuple getTombstoneKey() {
-      return clang::VersionTuple(0x7FFFFFFE);
-    }
-    static unsigned getHashValue(const clang::VersionTuple& value) {
-      unsigned result = value.getMajor();
-      if (auto minor = value.getMinor())
-        result = combineHashValue(result, *minor);
-      if (auto subminor = value.getSubminor())
-        result = combineHashValue(result, *subminor);
-      if (auto build = value.getBuild())
-        result = combineHashValue(result, *build);
-
-      return result;
-    }
-
-    static bool isEqual(const clang::VersionTuple &lhs,
-                        const clang::VersionTuple &rhs) {
-      return lhs == rhs;
-    }
-  };
-
-} // end namespace llvm
-
 #endif // LLVM_CLANG_BASIC_VERSIONTUPLE_H

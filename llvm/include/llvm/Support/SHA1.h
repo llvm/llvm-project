@@ -61,10 +61,7 @@ private:
 
   // Internal State
   struct {
-    union {
-      uint8_t C[BLOCK_LENGTH];
-      uint32_t L[BLOCK_LENGTH / 4];
-    } Buffer;
+    uint32_t Buffer[BLOCK_LENGTH / 4];
     uint32_t State[HASH_LENGTH / 4];
     uint32_t ByteCount;
     uint8_t BufferOffset;

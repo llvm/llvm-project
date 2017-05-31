@@ -391,8 +391,6 @@ void Initialize(ThreadState *thr) {
 int Finalize(ThreadState *thr) {
   bool failed = false;
 
-  if (common_flags()->print_module_map == 1) PrintModuleMap();
-
   if (flags()->atexit_sleep_ms > 0 && ThreadCount(thr) > 1)
     SleepForMillis(flags()->atexit_sleep_ms);
 
@@ -989,14 +987,6 @@ void ThreadIgnoreEnd(ThreadState *thr, uptr pc) {
 #endif
   }
 }
-
-#if !SANITIZER_GO
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-uptr __tsan_testonly_shadow_stack_current_size() {
-  ThreadState *thr = cur_thread();
-  return thr->shadow_stack_pos - thr->shadow_stack;
-}
-#endif
 
 void ThreadIgnoreSyncBegin(ThreadState *thr, uptr pc) {
   DPrintf("#%d: ThreadIgnoreSyncBegin\n", thr->tid);

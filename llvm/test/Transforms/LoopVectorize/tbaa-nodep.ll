@@ -36,7 +36,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK: ret i32 0
 
 ; CHECK-NOTBAA-LABEL: @test1
-; CHECK-NOTBAA: icmp ugt i32*
+; CHECK-NOTBAA: icmp uge i32*
 
 ; CHECK-NOTBAA: load <4 x float>, <4 x float>* %{{.*}}, align 4, !tbaa
 ; CHECK-NOTBAA: store <4 x i32> %{{.*}}, <4 x i32>* %{{.*}}, align 4, !tbaa
@@ -70,8 +70,8 @@ for.end:                                          ; preds = %for.body
 ; required. Without TBAA, however, two checks are required.
 
 ; CHECK-LABEL: @test2
-; CHECK: icmp ugt float*
-; CHECK: icmp ugt float*
+; CHECK: icmp uge float*
+; CHECK: icmp uge float*
 ; CHECK-NOT: icmp uge i32*
 
 ; CHECK: load <4 x float>, <4 x float>* %{{.*}}, align 4, !tbaa
@@ -80,10 +80,10 @@ for.end:                                          ; preds = %for.body
 ; CHECK: ret i32 0
 
 ; CHECK-NOTBAA-LABEL: @test2
-; CHECK-NOTBAA: icmp ugt float*
-; CHECK-NOTBAA: icmp ugt float*
-; CHECK-NOTBAA-DAG: icmp ugt float*
-; CHECK-NOTBAA-DAG: icmp ugt i32*
+; CHECK-NOTBAA: icmp uge float*
+; CHECK-NOTBAA: icmp uge float*
+; CHECK-NOTBAA-DAG: icmp uge float*
+; CHECK-NOTBAA-DAG: icmp uge i32*
 
 ; CHECK-NOTBAA: load <4 x float>, <4 x float>* %{{.*}}, align 4, !tbaa
 ; CHECK-NOTBAA: store <4 x float> %{{.*}}, <4 x float>* %{{.*}}, align 4, !tbaa

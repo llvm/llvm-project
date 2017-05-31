@@ -24,6 +24,12 @@ static const EnumEntry<SymbolKind> SymbolTypeNames[] = {
 #undef CV_SYMBOL
 };
 
+static const EnumEntry<TypeLeafKind> TypeLeafNames[] = {
+#define CV_TYPE(name, val) {#name, name},
+#include "llvm/DebugInfo/CodeView/TypeRecords.def"
+#undef CV_TYPE
+};
+
 static const EnumEntry<uint16_t> RegisterNames[] = {
     CV_ENUM_CLASS_ENT(RegisterId, Unknown),
     CV_ENUM_CLASS_ENT(RegisterId, VFrame),
@@ -322,6 +328,10 @@ namespace llvm {
 namespace codeview {
 ArrayRef<EnumEntry<SymbolKind>> getSymbolTypeNames() {
   return makeArrayRef(SymbolTypeNames);
+}
+
+ArrayRef<EnumEntry<TypeLeafKind>> getTypeLeafNames() {
+  return makeArrayRef(TypeLeafNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getRegisterNames() {

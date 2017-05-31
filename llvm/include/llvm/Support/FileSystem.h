@@ -339,14 +339,6 @@ std::error_code create_directory(const Twine &path, bool IgnoreExisting = true,
 /// specific error_code.
 std::error_code create_link(const Twine &to, const Twine &from);
 
-/// Create a hard link from \a from to \a to, or return an error.
-///
-/// @param to The path to hard link to.
-/// @param from The path to hard link from. This is created.
-/// @returns errc::success if the link was created, otherwise a platform
-/// specific error_code.
-std::error_code create_hard_link(const Twine &to, const Twine &from);
-
 /// @brief Get the current path.
 ///
 /// @param result Holds the current path on return.

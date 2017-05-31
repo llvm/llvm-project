@@ -41,7 +41,7 @@
 
 %struct.S1 = type { float*, i32 }
 
-@p = common global %struct.S1 zeroinitializer, align 8, !dbg !19
+@p = common global %struct.S1 zeroinitializer, align 8
 
 define i32 @foo(%struct.S1* nocapture %sp, i32 %nums) nounwind optsize ssp !dbg !0 {
 entry:
@@ -93,7 +93,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !16 = !DIBasicType(tag: DW_TAG_base_type, name: "float", size: 32, align: 32, encoding: DW_ATE_float)
 !17 = !DIDerivedType(tag: DW_TAG_member, name: "nums", line: 3, size: 32, align: 32, offset: 64, file: !42, scope: !1, baseType: !5)
 !18 = !DILocalVariable(name: "nums", line: 7, arg: 2, scope: !0, file: !1, type: !5)
-!19 = !DIGlobalVariable(name: "p", line: 14, isLocal: false, isDefinition: true, scope: !2, file: !1, type: !11)
+!19 = !DIGlobalVariable(name: "p", line: 14, isLocal: false, isDefinition: true, scope: !2, file: !1, type: !11, variable: %struct.S1* @p)
 !20 = !DILocation(line: 7, column: 13, scope: !0)
 !21 = !DILocation(line: 7, column: 21, scope: !0)
 !22 = !DILocation(line: 9, column: 3, scope: !23)

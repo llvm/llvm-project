@@ -18,7 +18,6 @@
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Transforms/IPO/Internalize.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
@@ -29,16 +28,16 @@ class PreserveLibCallsAndAsmUsed {
 public:
   PreserveLibCallsAndAsmUsed(const StringSet<> &AsmUndefinedRefs,
                              const TargetMachine &TM,
-                             std::vector<GlobalValue *> &LLVMUsed)
+                             SmallPtrSetImpl<const GlobalValue *> &LLVMUsed)
       : AsmUndefinedRefs(AsmUndefinedRefs), TM(TM), LLVMUsed(LLVMUsed) {}
 
-  void findInModule(Module &TheModule) {
+  void findInModule(const Module &TheModule) {
     initializeLibCalls(TheModule);
-    for (Function &F : TheModule)
+    for (const Function &F : TheModule)
       findLibCallsAndAsm(F);
-    for (GlobalVariable &GV : TheModule.globals())
+    for (const GlobalVariable &GV : TheModule.globals())
       findLibCallsAndAsm(GV);
-    for (GlobalAlias &GA : TheModule.aliases())
+    for (const GlobalAlias &GA : TheModule.aliases())
       findLibCallsAndAsm(GA);
   }
 
@@ -52,7 +51,7 @@ private:
   StringSet<> Libcalls;
 
   // Output
-  std::vector<GlobalValue *> &LLVMUsed;
+  SmallPtrSetImpl<const GlobalValue *> &LLVMUsed;
 
   // Collect names of runtime library functions. User-defined functions with the
   // same names are added to llvm.compiler.used to prevent them from being
@@ -87,7 +86,7 @@ private:
     }
   }
 
-  void findLibCallsAndAsm(GlobalValue &GV) {
+  void findLibCallsAndAsm(const GlobalValue &GV) {
     // There are no restrictions to apply to declarations.
     if (GV.isDeclaration())
       return;
@@ -101,15 +100,13 @@ private:
     // optimizations like -globalopt, causing problems when later optimizations
     // add new library calls (e.g., llvm.memset => memset and printf => puts).
     // Leave it to the linker to remove any dead code (e.g. with -dead_strip).
-    if (isa<Function>(GV) && Libcalls.count(GV.getName())) {
-      LLVMUsed.push_back(&GV);
-      return;
-    }
+    if (isa<Function>(GV) && Libcalls.count(GV.getName()))
+      LLVMUsed.insert(&GV);
 
     SmallString<64> Buffer;
     TM.getNameWithPrefix(Buffer, &GV, Mangler);
     if (AsmUndefinedRefs.count(Buffer))
-      LLVMUsed.push_back(&GV);
+      LLVMUsed.insert(&GV);
   }
 };
 
@@ -117,12 +114,33 @@ private:
 
 void llvm::updateCompilerUsed(Module &TheModule, const TargetMachine &TM,
                               const StringSet<> &AsmUndefinedRefs) {
-  std::vector<GlobalValue *> UsedValues;
+  SmallPtrSet<const GlobalValue *, 8> UsedValues;
   PreserveLibCallsAndAsmUsed(AsmUndefinedRefs, TM, UsedValues)
       .findInModule(TheModule);
 
   if (UsedValues.empty())
     return;
 
-  appendToCompilerUsed(TheModule, UsedValues);
+  llvm::Type *i8PTy = llvm::Type::getInt8PtrTy(TheModule.getContext());
+  std::vector<Constant *> UsedValuesList;
+  for (const auto *GV : UsedValues) {
+    Constant *c =
+        ConstantExpr::getBitCast(const_cast<GlobalValue *>(GV), i8PTy);
+    UsedValuesList.push_back(c);
+  }
+
+  GlobalVariable *LLVMUsed = TheModule.getGlobalVariable("llvm.compiler.used");
+  if (LLVMUsed) {
+    ConstantArray *Inits = cast<ConstantArray>(LLVMUsed->getInitializer());
+    for (auto &V : Inits->operands())
+      UsedValuesList.push_back(cast<Constant>(&V));
+    LLVMUsed->eraseFromParent();
+  }
+
+  llvm::ArrayType *ATy = llvm::ArrayType::get(i8PTy, UsedValuesList.size());
+  LLVMUsed = new llvm::GlobalVariable(
+      TheModule, ATy, false, llvm::GlobalValue::AppendingLinkage,
+      llvm::ConstantArray::get(ATy, UsedValuesList), "llvm.compiler.used");
+
+  LLVMUsed->setSection("llvm.metadata");
 }

@@ -26,10 +26,8 @@ namespace llvm {
   extern bool TimePassesIsEnabled;
 }
 
-static const char *const TimeIRParsingGroupName = "irparse";
-static const char *const TimeIRParsingGroupDescription = "LLVM IR Parsing";
-static const char *const TimeIRParsingName = "parse";
-static const char *const TimeIRParsingDescription = "Parse IR";
+static const char *const TimeIRParsingGroupName = "LLVM IR Parsing";
+static const char *const TimeIRParsingName = "Parse IR";
 
 static std::unique_ptr<Module>
 getLazyIRModule(std::unique_ptr<MemoryBuffer> Buffer, SMDiagnostic &Err,
@@ -67,8 +65,7 @@ std::unique_ptr<Module> llvm::getLazyIRFileModule(StringRef Filename,
 
 std::unique_ptr<Module> llvm::parseIR(MemoryBufferRef Buffer, SMDiagnostic &Err,
                                       LLVMContext &Context) {
-  NamedRegionTimer T(TimeIRParsingName, TimeIRParsingDescription,
-                     TimeIRParsingGroupName, TimeIRParsingGroupDescription,
+  NamedRegionTimer T(TimeIRParsingName, TimeIRParsingGroupName,
                      TimePassesIsEnabled);
   if (isBitcode((const unsigned char *)Buffer.getBufferStart(),
                 (const unsigned char *)Buffer.getBufferEnd())) {

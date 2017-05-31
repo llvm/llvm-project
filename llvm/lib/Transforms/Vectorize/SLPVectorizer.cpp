@@ -902,11 +902,8 @@ private:
   IRBuilder<> Builder;
 
   /// A map of scalar integer values to the smallest bit width with which they
-  /// can legally be represented. The values map to (width, signed) pairs,
-  /// where "width" indicates the minimum bit width and "signed" is True if the
-  /// value must be signed-extended, rather than zero-extended, back to its
-  /// original width.
-  MapVector<Value *, std::pair<uint64_t, bool>> MinBWs;
+  /// can legally be represented.
+  MapVector<Value *, uint64_t> MinBWs;
 };
 
 } // end namespace llvm
@@ -1568,8 +1565,8 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
   // If we have computed a smaller type for the expression, update VecTy so
   // that the costs will be accurate.
   if (MinBWs.count(VL[0]))
-    VecTy = VectorType::get(
-        IntegerType::get(F->getContext(), MinBWs[VL[0]].first), VL.size());
+    VecTy = VectorType::get(IntegerType::get(F->getContext(), MinBWs[VL[0]]),
+                            VL.size());
 
   if (E->NeedToGather) {
     if (allConstant(VL))
@@ -1843,9 +1840,9 @@ int BoUpSLP::getSpillCost() {
       );
 
     // Now find the sequence of instructions between PrevInst and Inst.
-    BasicBlock::reverse_iterator InstIt = ++Inst->getIterator().getReverse(),
-                                 PrevInstIt =
-                                     PrevInst->getIterator().getReverse();
+    BasicBlock::reverse_iterator InstIt(Inst->getIterator()),
+        PrevInstIt(PrevInst->getIterator());
+    --PrevInstIt;
     while (InstIt != PrevInstIt) {
       if (PrevInstIt == PrevInst->getParent()->rend()) {
         PrevInstIt = Inst->getParent()->rbegin();
@@ -1909,12 +1906,10 @@ int BoUpSLP::getTreeCost() {
     auto *VecTy = VectorType::get(EU.Scalar->getType(), BundleWidth);
     auto *ScalarRoot = VectorizableTree[0].Scalars[0];
     if (MinBWs.count(ScalarRoot)) {
-      auto *MinTy = IntegerType::get(F->getContext(), MinBWs[ScalarRoot].first);
-      auto Extend =
-          MinBWs[ScalarRoot].second ? Instruction::SExt : Instruction::ZExt;
+      auto *MinTy = IntegerType::get(F->getContext(), MinBWs[ScalarRoot]);
       VecTy = VectorType::get(MinTy, BundleWidth);
-      ExtractCost += TTI->getExtractWithExtendCost(Extend, EU.Scalar->getType(),
-                                                   VecTy, EU.Lane);
+      ExtractCost += TTI->getExtractWithExtendCost(
+          Instruction::SExt, EU.Scalar->getType(), VecTy, EU.Lane);
     } else {
       ExtractCost +=
           TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, EU.Lane);
@@ -2640,23 +2635,13 @@ Value *BoUpSLP::vectorizeTree() {
     if (auto *I = dyn_cast<Instruction>(VectorRoot))
       Builder.SetInsertPoint(&*++BasicBlock::iterator(I));
     auto BundleWidth = VectorizableTree[0].Scalars.size();
-    auto *MinTy = IntegerType::get(F->getContext(), MinBWs[ScalarRoot].first);
+    auto *MinTy = IntegerType::get(F->getContext(), MinBWs[ScalarRoot]);
     auto *VecTy = VectorType::get(MinTy, BundleWidth);
     auto *Trunc = Builder.CreateTrunc(VectorRoot, VecTy);
     VectorizableTree[0].VectorizedValue = Trunc;
   }
 
   DEBUG(dbgs() << "SLP: Extracting " << ExternalUses.size() << " values .\n");
-
-  // If necessary, sign-extend or zero-extend ScalarRoot to the larger type
-  // specified by ScalarType.
-  auto extend = [&](Value *ScalarRoot, Value *Ex, Type *ScalarType) {
-    if (!MinBWs.count(ScalarRoot))
-      return Ex;
-    if (MinBWs[ScalarRoot].second)
-      return Builder.CreateSExt(Ex, ScalarType);
-    return Builder.CreateZExt(Ex, ScalarType);
-  };
 
   // Extract all of the elements with the external uses.
   for (const auto &ExternalUse : ExternalUses) {
@@ -2692,7 +2677,8 @@ Value *BoUpSLP::vectorizeTree() {
               Builder.SetInsertPoint(PH->getIncomingBlock(i)->getTerminator());
             }
             Value *Ex = Builder.CreateExtractElement(Vec, Lane);
-            Ex = extend(ScalarRoot, Ex, Scalar->getType());
+            if (MinBWs.count(ScalarRoot))
+              Ex = Builder.CreateSExt(Ex, Scalar->getType());
             CSEBlocks.insert(PH->getIncomingBlock(i));
             PH->setOperand(i, Ex);
           }
@@ -2700,14 +2686,16 @@ Value *BoUpSLP::vectorizeTree() {
       } else {
         Builder.SetInsertPoint(cast<Instruction>(User));
         Value *Ex = Builder.CreateExtractElement(Vec, Lane);
-        Ex = extend(ScalarRoot, Ex, Scalar->getType());
+        if (MinBWs.count(ScalarRoot))
+          Ex = Builder.CreateSExt(Ex, Scalar->getType());
         CSEBlocks.insert(cast<Instruction>(User)->getParent());
         User->replaceUsesOfWith(Scalar, Ex);
      }
     } else {
       Builder.SetInsertPoint(&F->getEntryBlock().front());
       Value *Ex = Builder.CreateExtractElement(Vec, Lane);
-      Ex = extend(ScalarRoot, Ex, Scalar->getType());
+      if (MinBWs.count(ScalarRoot))
+        Ex = Builder.CreateSExt(Ex, Scalar->getType());
       CSEBlocks.insert(&F->getEntryBlock());
       User->replaceUsesOfWith(Scalar, Ex);
     }
@@ -2970,10 +2958,9 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V) {
   }
   // Search up and down at the same time, because we don't know if the new
   // instruction is above or below the existing scheduling region.
-  BasicBlock::reverse_iterator UpIter =
-      ++ScheduleStart->getIterator().getReverse();
+  BasicBlock::reverse_iterator UpIter(ScheduleStart->getIterator());
   BasicBlock::reverse_iterator UpperEnd = BB->rend();
-  BasicBlock::iterator DownIter = ScheduleEnd->getIterator();
+  BasicBlock::iterator DownIter(ScheduleEnd);
   BasicBlock::iterator LowerEnd = BB->end();
   for (;;) {
     if (++ScheduleRegionSize > ScheduleRegionSizeLimit) {
@@ -3428,11 +3415,6 @@ void BoUpSLP::computeMinimumValueSizes() {
         Mask.getBitWidth() - Mask.countLeadingZeros(), MaxBitWidth);
   }
 
-  // True if the roots can be zero-extended back to their original type, rather
-  // than sign-extended. We know that if the leading bits are not demanded, we
-  // can safely zero-extend. So we initialize IsKnownPositive to True.
-  bool IsKnownPositive = true;
-
   // If all the bits of the roots are demanded, we can try a little harder to
   // compute a narrower type. This can happen, for example, if the roots are
   // getelementptr indices. InstCombine promotes these indices to the pointer
@@ -3444,41 +3426,11 @@ void BoUpSLP::computeMinimumValueSizes() {
   // compute the number of high-order bits we can truncate.
   if (MaxBitWidth == DL->getTypeSizeInBits(TreeRoot[0]->getType())) {
     MaxBitWidth = 8u;
-
-    // Determine if the sign bit of all the roots is known to be zero. If not,
-    // IsKnownPositive is set to False.
-    IsKnownPositive = all_of(TreeRoot, [&](Value *R) {
-      bool KnownZero = false;
-      bool KnownOne = false;
-      ComputeSignBit(R, KnownZero, KnownOne, *DL);
-      return KnownZero;
-    });
-
-    // Determine the maximum number of bits required to store the scalar
-    // values.
     for (auto *Scalar : ToDemote) {
       auto NumSignBits = ComputeNumSignBits(Scalar, *DL, 0, AC, 0, DT);
       auto NumTypeBits = DL->getTypeSizeInBits(Scalar->getType());
       MaxBitWidth = std::max<unsigned>(NumTypeBits - NumSignBits, MaxBitWidth);
     }
-
-    // If we can't prove that the sign bit is zero, we must add one to the
-    // maximum bit width to account for the unknown sign bit. This preserves
-    // the existing sign bit so we can safely sign-extend the root back to the
-    // original type. Otherwise, if we know the sign bit is zero, we will
-    // zero-extend the root instead.
-    //
-    // FIXME: This is somewhat suboptimal, as there will be cases where adding
-    //        one to the maximum bit width will yield a larger-than-necessary
-    //        type. In general, we need to add an extra bit only if we can't
-    //        prove that the upper bit of the original type is equal to the
-    //        upper bit of the proposed smaller type. If these two bits are the
-    //        same (either zero or one) we know that sign-extending from the
-    //        smaller type will result in the same value. Here, since we can't
-    //        yet prove this, we are just making the proposed smaller type
-    //        larger to ensure correctness.
-    if (!IsKnownPositive)
-      ++MaxBitWidth;
   }
 
   // Round MaxBitWidth up to the next power-of-two.
@@ -3498,7 +3450,7 @@ void BoUpSLP::computeMinimumValueSizes() {
 
   // Finally, map the values we can demote to the maximum bit with we computed.
   for (auto *Scalar : ToDemote)
-    MinBWs[Scalar] = std::make_pair(MaxBitWidth, !IsKnownPositive);
+    MinBWs[Scalar] = MaxBitWidth;
 }
 
 namespace {
@@ -4021,14 +3973,7 @@ class HorizontalReduction {
   SmallVector<Value *, 32> ReducedVals;
 
   BinaryOperator *ReductionRoot;
-  // After successfull horizontal reduction vectorization attempt for PHI node
-  // vectorizer tries to update root binary op by combining vectorized tree and
-  // the ReductionPHI node. But during vectorization this ReductionPHI can be
-  // vectorized itself and replaced by the undef value, while the instruction
-  // itself is marked for deletion. This 'marked for deletion' PHI node then can
-  // be used in new binary operation, causing "Use still stuck around after Def
-  // is destroyed" crash upon PHI node deletion.
-  WeakVH ReductionPHI;
+  PHINode *ReductionPHI;
 
   /// The opcode of the reduction.
   unsigned ReductionOpcode;
@@ -4047,8 +3992,8 @@ public:
   unsigned MinVecRegSize;
 
   HorizontalReduction(unsigned MinVecRegSize)
-      : ReductionRoot(nullptr), ReductionOpcode(0), ReducedValueOpcode(0),
-        IsPairwiseReduction(false), ReduxWidth(0),
+      : ReductionRoot(nullptr), ReductionPHI(nullptr), ReductionOpcode(0),
+        ReducedValueOpcode(0), IsPairwiseReduction(false), ReduxWidth(0),
         MinVecRegSize(MinVecRegSize) {}
 
   /// \brief Try to find a reduction tree.
@@ -4201,7 +4146,7 @@ public:
                                      ReducedVals[i]);
       }
       // Update users.
-      if (ReductionPHI && !isa<UndefValue>(ReductionPHI)) {
+      if (ReductionPHI) {
         assert(ReductionRoot && "Need a reduction operation");
         ReductionRoot->setOperand(0, VectorizedTree);
         ReductionRoot->setOperand(1, ReductionPHI);

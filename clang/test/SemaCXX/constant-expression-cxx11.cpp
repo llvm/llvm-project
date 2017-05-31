@@ -2066,33 +2066,3 @@ namespace InheritedCtor {
   constexpr Z z(1);
   static_assert(z.w == 1 && z.x == 2 && z.y == 3 && z.z == 4, "");
 }
-
-
-namespace PR28366 {
-namespace ns1 {
-
-void f(char c) { //expected-note2{{declared here}}
-  struct X {
-    static constexpr char f() { //expected-error{{never produces a constant expression}}
-      return c; //expected-error{{reference to local}} expected-note{{non-const variable}}
-    }
-  };
-  int I = X::f();
-}
-
-void g() {
-  const int c = 'c';
-  static const int d = 'd';
-  struct X {
-    static constexpr int f() {
-      return c + d;
-    }
-  };
-  static_assert(X::f() == 'c' + 'd',"");
-}
-
-
-} // end ns1
-
-} //end ns PR28366
-

@@ -14,23 +14,6 @@
 namespace clang {
 namespace ento {
 
-TEST(StaticAnalyzerOptions, getRegisteredCheckers) {
-  auto IsDebugChecker = [](StringRef CheckerName) {
-    return CheckerName.startswith("debug");
-  };
-  auto IsAlphaChecker = [](StringRef CheckerName) {
-    return CheckerName.startswith("alpha");
-  };
-  const auto &AllCheckers =
-      AnalyzerOptions::getRegisteredCheckers(/*IncludeExperimental=*/true);
-  EXPECT_FALSE(llvm::any_of(AllCheckers, IsDebugChecker));
-  EXPECT_TRUE(llvm::any_of(AllCheckers, IsAlphaChecker));
-
-  const auto &StableCheckers = AnalyzerOptions::getRegisteredCheckers();
-  EXPECT_FALSE(llvm::any_of(StableCheckers, IsDebugChecker));
-  EXPECT_FALSE(llvm::any_of(StableCheckers, IsAlphaChecker));
-}
-
 TEST(StaticAnalyzerOptions, SearchInParentPackageTests) {
   AnalyzerOptions Opts;
   Opts.Config["Outer.Inner.CheckerOne:Option"] = "true";

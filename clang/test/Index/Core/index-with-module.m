@@ -7,6 +7,6 @@
 #include "ModA.h"
 
 void foo() {
-  // CHECK: [[@LINE+1]]:3 | function/C | ModA_func | c:@F@ModA_func | {{.*}} | Ref,Call,RelCall,RelCont | rel: 1
+  // CHECK: [[@LINE+1]]:3 | function/C | ModA_func | c:@F@ModA_func | {{.*}} | Ref,Call,RelCall | rel: 1
   ModA_func();
 }

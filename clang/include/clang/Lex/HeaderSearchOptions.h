@@ -93,9 +93,6 @@ public:
   /// \brief The directory used for a user build.
   std::string ModuleUserBuildPath;
 
-  /// \brief The directories used to load prebuilt module files.
-  std::vector<std::string> PrebuiltModulePaths;
-
   /// The module/pch container format.
   std::string ModuleFormat;
 
@@ -177,8 +174,6 @@ public:
 
   unsigned ModulesValidateDiagnosticOptions : 1;
 
-  unsigned ModulesHashContent : 1;
-
   HeaderSearchOptions(StringRef _Sysroot = "/")
       : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(0),
         ImplicitModuleMaps(0), ModuleMapFileHomeIsCwd(0),
@@ -188,8 +183,7 @@ public:
         UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
         ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
-        UseDebugInfo(false), ModulesValidateDiagnosticOptions(true),
-        ModulesHashContent(false) {}
+        UseDebugInfo(false), ModulesValidateDiagnosticOptions(true) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.
   void AddPath(StringRef Path, frontend::IncludeDirGroup Group,
@@ -206,10 +200,6 @@ public:
 
   void AddVFSOverlayFile(StringRef Name) {
     VFSOverlayFiles.push_back(Name);
-  }
-
-  void AddPrebuiltModulePath(StringRef Name) {
-    PrebuiltModulePaths.push_back(Name);
   }
 };
 

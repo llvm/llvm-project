@@ -622,8 +622,8 @@ private:
 class CallExitBegin : public ProgramPoint {
 public:
   // CallExitBegin uses the callee's location context.
-  CallExitBegin(const StackFrameContext *L, const ReturnStmt *RS)
-    : ProgramPoint(RS, CallExitBeginKind, L, nullptr) { }
+  CallExitBegin(const StackFrameContext *L)
+    : ProgramPoint(nullptr, CallExitBeginKind, L, nullptr) {}
 
 private:
   friend class ProgramPoint;

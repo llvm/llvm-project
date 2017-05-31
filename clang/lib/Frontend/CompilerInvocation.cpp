@@ -804,10 +804,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.LinkerOptions = Args.getAllArgValues(OPT_linker_option);
   bool NeedLocTracking = false;
 
-  Opts.OptRecordFile = Args.getLastArgValue(OPT_opt_record_file);
-  if (!Opts.OptRecordFile.empty())
-    NeedLocTracking = true;
-
   if (Arg *A = Args.getLastArg(OPT_Rpass_EQ)) {
     Opts.OptimizationRemarkPattern =
         GenerateOptimizationRemarkRegex(Diags, Args, A);
@@ -825,12 +821,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
         GenerateOptimizationRemarkRegex(Diags, Args, A);
     NeedLocTracking = true;
   }
-
-  Opts.DiagnosticsWithHotness =
-      Args.hasArg(options::OPT_fdiagnostics_show_hotness);
-  if (Opts.DiagnosticsWithHotness &&
-      Opts.getProfileUse() == CodeGenOptions::ProfileNone)
-    Diags.Report(diag::warn_drv_fdiagnostics_show_hotness_requires_pgo);
 
   // If the user requested to use a sample profile for PGO, then the
   // backend will need to track source location information so the profile
@@ -935,7 +925,7 @@ static bool parseShowColorsArgs(const ArgList &Args, bool DefaultColor) {
 
 bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
                                 DiagnosticsEngine *Diags,
-                                bool DefaultDiagColor, bool DefaultShowOpt) {
+                                bool DefaultDiagColor) {
   using namespace options;
   bool Success = true;
 
@@ -954,9 +944,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
                                  /*Default=*/true);
   Opts.ShowFixits = !Args.hasArg(OPT_fno_diagnostics_fixit_info);
   Opts.ShowLocation = !Args.hasArg(OPT_fno_show_source_location);
-  Opts.ShowOptionNames =
-      Args.hasFlag(OPT_fdiagnostics_show_option,
-                   OPT_fno_diagnostics_show_option, DefaultShowOpt);
+  Opts.ShowOptionNames = Args.hasArg(OPT_fdiagnostics_show_option);
 
   llvm::sys::Process::UseANSIEscapeCodes(Args.hasArg(OPT_fansi_escape_codes));
 
@@ -1059,7 +1047,6 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
 
 static void ParseFileSystemArgs(FileSystemOptions &Opts, ArgList &Args) {
   Opts.WorkingDir = Args.getLastArgValue(OPT_working_directory);
-  Opts.APINotesCachePath = Args.getLastArgValue(OPT_fapinotes_cache_path);
 }
 
 /// Parse the argument to the -ftest-module-file-extension
@@ -1237,7 +1224,6 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.AuxTriple =
       llvm::Triple::normalize(Args.getLastArgValue(OPT_aux_triple));
   Opts.FindPchSource = Args.getLastArgValue(OPT_find_pch_source_EQ);
-  Opts.StatsFile = Args.getLastArgValue(OPT_stats_file);
 
   if (const Arg *A = Args.getLastArg(OPT_arcmt_check,
                                      OPT_arcmt_modify,
@@ -1370,8 +1356,7 @@ std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
   return P.str();
 }
 
-static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
-                                  const std::string &WorkingDir) {
+static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args) {
   using namespace options;
   Opts.Sysroot = Args.getLastArgValue(OPT_isysroot, "/");
   Opts.Verbose = Args.hasArg(OPT_v);
@@ -1381,23 +1366,9 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   if (const Arg *A = Args.getLastArg(OPT_stdlib_EQ))
     Opts.UseLibcxx = (strcmp(A->getValue(), "libc++") == 0);
   Opts.ResourceDir = Args.getLastArgValue(OPT_resource_dir);
-
-  // Canonicalize -fmodules-cache-path before storing it.
-  SmallString<128> P(Args.getLastArgValue(OPT_fmodules_cache_path));
-  if (!(P.empty() || llvm::sys::path::is_absolute(P))) {
-    if (WorkingDir.empty())
-      llvm::sys::fs::make_absolute(P);
-    else
-      llvm::sys::fs::make_absolute(WorkingDir, P);
-  }
-  llvm::sys::path::remove_dots(P);
-  Opts.ModuleCachePath = P.str();
-
+  Opts.ModuleCachePath = Args.getLastArgValue(OPT_fmodules_cache_path);
   Opts.ModuleUserBuildPath = Args.getLastArgValue(OPT_fmodules_user_build_path);
-  for (const Arg *A : Args.filtered(OPT_fprebuilt_module_path))
-    Opts.AddPrebuiltModulePath(A->getValue());
   Opts.DisableModuleHash = Args.hasArg(OPT_fdisable_module_hash);
-  Opts.ModulesHashContent = Args.hasArg(OPT_fmodules_hash_content);
   Opts.ModulesValidateDiagnosticOptions =
       !Args.hasArg(OPT_fmodules_disable_diagnostic_validation);
   Opts.ImplicitModuleMaps = Args.hasArg(OPT_fimplicit_module_maps);
@@ -1498,18 +1469,6 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
 
   for (const Arg *A : Args.filtered(OPT_ivfsoverlay))
     Opts.AddVFSOverlayFile(A->getValue());
-}
-
-static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
-                              DiagnosticsEngine &diags) {
-  using namespace options;
-  if (const Arg *A = Args.getLastArg(OPT_fapinotes_swift_version)) {
-    if (Opts.SwiftVersion.tryParse(A->getValue()))
-      diags.Report(diag::err_drv_invalid_value)
-        << A->getAsString(Args) << A->getValue();
-  }
-  for (const Arg *A : Args.filtered(OPT_iapinotes_modules))
-    Opts.ModuleSearchPaths.push_back(A->getValue());
 }
 
 static bool isOpenCL(LangStandard::Kind LangStd) {
@@ -1951,7 +1910,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.ElideConstructors = !Args.hasArg(OPT_fno_elide_constructors);
   Opts.MathErrno = !Opts.OpenCL && Args.hasArg(OPT_fmath_errno);
   Opts.InstantiationDepth =
-      getLastArgIntValue(Args, OPT_ftemplate_depth, 1024, Diags);
+      getLastArgIntValue(Args, OPT_ftemplate_depth, 256, Diags);
   Opts.ArrowDepth =
       getLastArgIntValue(Args, OPT_foperator_arrow_depth, 256, Diags);
   Opts.ConstexprCallDepth =
@@ -2001,8 +1960,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   // is enabled.
   Opts.HalfArgsAndReturns = Args.hasArg(OPT_fallow_half_arguments_and_returns)
                             | Opts.NativeHalfArgsAndReturns;
-  Opts.APINotes = Args.hasArg(OPT_fapinotes);
-  Opts.APINotesModules = Args.hasArg(OPT_fapinotes_modules);
   Opts.GNUAsm = !Args.hasArg(OPT_fno_gnu_inline_asm);
 
   // __declspec is enabled by default for the PS4 by the driver, and also
@@ -2392,9 +2349,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   Success &= ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
   Success &= ParseMigratorArgs(Res.getMigratorOpts(), Args);
   ParseDependencyOutputArgs(Res.getDependencyOutputOpts(), Args);
-  Success &=
-      ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
-                          false /*DefaultDiagColor*/, false /*DefaultShowOpt*/);
+  Success &= ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
+                                 false /*DefaultDiagColor*/);
   ParseCommentArgs(LangOpts.CommentOpts, Args);
   ParseFileSystemArgs(Res.getFileSystemOpts(), Args);
   // FIXME: We shouldn't have to pass the DashX option around here
@@ -2402,10 +2358,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
   Success &= ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags,
                               Res.getTargetOpts());
-  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args,
-                        Res.getFileSystemOpts().WorkingDir);
-  ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
-
+  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args);
   if (DashX == IK_AST || DashX == IK_LLVM_IR) {
     // ObjCAAutoRefCount and Sanitize LangOpts are used to setup the
     // PassManager in BackendUtil.cpp. They need to be initializd no matter
@@ -2424,13 +2377,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
       Res.getPreprocessorOpts(), Diags);
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       LangOpts.ObjCExceptions = 1;
-
-    // -fapinotes and -fapinotes-modules requires -fapinotes-cache-path=<directory>.
-    if ((LangOpts.APINotes || LangOpts.APINotesModules) &&
-        Res.getFileSystemOpts().APINotesCachePath.empty()) {
-      Diags.Report(diag::err_no_apinotes_cache_path);
-      Success = false;
-    }
   }
 
   if (LangOpts.CUDA) {
@@ -2459,10 +2405,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   ParsePreprocessorArgs(Res.getPreprocessorOpts(), Args, FileMgr, Diags);
   ParsePreprocessorOutputArgs(Res.getPreprocessorOutputOpts(), Args,
                               Res.getFrontendOpts().ProgramAction);
-
-  if (!Res.getPreprocessorOpts().ImplicitPCHInclude.empty() ||
-      Res.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
-    LangOpts.NeededByPCHOrCompilationUsesPCH = true;
 
   // Turn on -Wspir-compat for SPIR target.
   llvm::Triple T(Res.getTargetOpts().Triple);
@@ -2541,19 +2483,7 @@ std::string CompilerInvocation::getModuleHash() const {
   // Extend the signature with the module file extensions.
   const FrontendOptions &frontendOpts = getFrontendOpts();
   for (const auto &ext : frontendOpts.ModuleFileExtensions) {
-    code = hash_combine(code, ext->hashExtension(code));
-  }
-
-  // Extend the signature with the SWift version for API notes.
-  const APINotesOptions &apiNotesOpts = getAPINotesOpts();
-  if (apiNotesOpts.SwiftVersion) {
-    code = hash_combine(code, apiNotesOpts.SwiftVersion.getMajor());
-    if (auto minor = apiNotesOpts.SwiftVersion.getMinor())
-      code = hash_combine(code, *minor);
-    if (auto subminor = apiNotesOpts.SwiftVersion.getSubminor())
-      code = hash_combine(code, *subminor);
-    if (auto build = apiNotesOpts.SwiftVersion.getBuild())
-      code = hash_combine(code, *build);
+    code = ext->hashExtension(code);
   }
 
   // Darwin-specific hack: if we have a sysroot, use the contents and

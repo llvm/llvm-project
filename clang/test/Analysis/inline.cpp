@@ -441,6 +441,6 @@ namespace rdar12409977  {
 namespace bug16307 {
   void one_argument(int a) { }
   void call_with_less() {
-    reinterpret_cast<void (*)()>(one_argument)(); // expected-warning{{Function taking 1 argument is called with fewer (0)}}
+    reinterpret_cast<void (*)()>(one_argument)(); // expected-warning{{Function taking 1 argument}}
   }
 }

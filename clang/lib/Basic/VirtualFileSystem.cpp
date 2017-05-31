@@ -887,6 +887,9 @@ private:
   RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> ExternalFS)
       : ExternalFS(std::move(ExternalFS)) {}
 
+  /// \brief Looks up \p Path in \c Roots.
+  ErrorOr<Entry *> lookupPath(const Twine &Path);
+
   /// \brief Looks up the path <tt>[Start, End)</tt> in \p From, possibly
   /// recursing into the contents of \p From if it is a directory.
   ErrorOr<Entry *> lookupPath(sys::path::const_iterator Start,
@@ -896,9 +899,6 @@ private:
   ErrorOr<Status> status(const Twine &Path, Entry *E);
 
 public:
-  /// \brief Looks up \p Path in \c Roots.
-  ErrorOr<Entry *> lookupPath(const Twine &Path);
-
   /// \brief Parses \p Buffer, which is expected to be in YAML format and
   /// returns a virtual file system representing its contents.
   static RedirectingFileSystem *
@@ -1603,47 +1603,6 @@ vfs::getVFSFromYAML(std::unique_ptr<MemoryBuffer> Buffer,
   return RedirectingFileSystem::create(std::move(Buffer), DiagHandler,
                                        YAMLFilePath, DiagContext,
                                        std::move(ExternalFS));
-}
-
-static void getVFSEntries(Entry *SrcE, SmallVectorImpl<StringRef> &Path,
-                          SmallVectorImpl<YAMLVFSEntry> &Entries) {
-  auto Kind = SrcE->getKind();
-  if (Kind == EK_Directory) {
-    auto *DE = dyn_cast<RedirectingDirectoryEntry>(SrcE);
-    assert(DE && "Must be a directory");
-    for (std::unique_ptr<Entry> &SubEntry :
-         llvm::make_range(DE->contents_begin(), DE->contents_end())) {
-      Path.push_back(SubEntry->getName());
-      getVFSEntries(SubEntry.get(), Path, Entries);
-      Path.pop_back();
-    }
-    return;
-  }
-
-  assert(Kind == EK_File && "Must be a EK_File");
-  auto *FE = dyn_cast<RedirectingFileEntry>(SrcE);
-  assert(FE && "Must be a file");
-  SmallString<128> VPath;
-  for (auto &Comp : Path)
-    llvm::sys::path::append(VPath, Comp);
-  Entries.push_back(YAMLVFSEntry(VPath.c_str(), FE->getExternalContentsPath()));
-}
-
-void vfs::collectVFSFromYAML(std::unique_ptr<MemoryBuffer> Buffer,
-                             SourceMgr::DiagHandlerTy DiagHandler,
-                             StringRef YAMLFilePath,
-                             SmallVectorImpl<YAMLVFSEntry> &CollectedEntries,
-                             void *DiagContext,
-                             IntrusiveRefCntPtr<FileSystem> ExternalFS) {
-  RedirectingFileSystem *VFS = RedirectingFileSystem::create(
-      std::move(Buffer), DiagHandler, YAMLFilePath, DiagContext,
-      std::move(ExternalFS));
-  ErrorOr<Entry *> RootE = VFS->lookupPath("/");
-  if (!RootE)
-    return;
-  SmallVector<StringRef, 8> Components;
-  Components.push_back("/");
-  getVFSEntries(*RootE, Components, CollectedEntries);
 }
 
 UniqueID vfs::getNextVirtualUniqueID() {

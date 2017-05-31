@@ -937,8 +937,6 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   const int si_SEGV_ACCERR = SEGV_ACCERR;
 } // namespace __sanitizer
 
-using namespace __sanitizer;
-
 COMPILER_CHECK(sizeof(__sanitizer_pthread_attr_t) >= sizeof(pthread_attr_t));
 
 COMPILER_CHECK(sizeof(socklen_t) == sizeof(unsigned));

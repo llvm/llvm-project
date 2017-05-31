@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fblocks -analyze -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull,nullability.NullablePassedToNonnull,nullability.NullableReturnedFromNonnull,nullability.NullableDereferenced -DNOSYSTEMHEADERS=0 -verify %s
-// RUN: %clang_cc1 -fblocks -analyze -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull,nullability.NullablePassedToNonnull,nullability.NullableReturnedFromNonnull,nullability.NullableDereferenced -analyzer-config nullability:NoDiagnoseCallsToSystemHeaders=true -DNOSYSTEMHEADERS=1 -verify %s
+// RUN: %clang_cc1 -fblocks -analyze -analyzer-checker=core,nullability -DNOSYSTEMHEADERS=0 -verify %s
+// RUN: %clang_cc1 -fblocks -analyze -analyzer-checker=core,nullability -analyzer-config nullability:NoDiagnoseCallsToSystemHeaders=true -DNOSYSTEMHEADERS=1 -verify %s
 
 #include "Inputs/system-header-simulator-for-nullability.h"
 
@@ -75,7 +75,7 @@ void testBasicRules() {
   }
   Dummy a;
   Dummy *_Nonnull nonnull = &a;
-  nonnull = q; // expected-warning {{Null assigned to a pointer which is expected to have non-null value}}
+  nonnull = q; // expected-warning {{Null is assigned to a pointer which is expected to have non-null value}}
   q = &a;
   takesNullable(q);
   takesNonnull(q);
@@ -107,7 +107,7 @@ Dummy *_Nonnull testNullableReturn(Dummy *_Nullable a) {
 
 Dummy *_Nonnull testNullReturn() {
   Dummy *p = 0;
-  return p; // expected-warning {{Null returned from a function that is expected to return a non-null value}}
+  return p; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
 }
 
 void testObjCMessageResultNullability() {
@@ -229,7 +229,7 @@ void testConditionalNilPassToNonnull(Dummy *p) {
 Dummy * _Nonnull testIndirectCastNilToNonnullAndReturn() {
   Dummy *p = (Dummy * _Nonnull)0;
   // FIXME: Ideally the cast above would suppress this warning.
-  return p; // expected-warning {{Null returned from a function that is expected to return a non-null value}}
+  return p; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
 }
 
 void testInvalidPropagation() {

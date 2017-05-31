@@ -217,22 +217,6 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
 
   llvm::FunctionType *Ty = CGM.getTypes().GetFunctionType(*FInfo);
 
-  // C++11 [class.mfct.non-static]p2:
-  //   If a non-static member function of a class X is called for an object that
-  //   is not of type X, or of a type derived from X, the behavior is undefined.
-  SourceLocation CallLoc;
-  ASTContext &C = getContext();
-  if (CE)
-    CallLoc = CE->getExprLoc();
-
-  EmitTypeCheck(isa<CXXConstructorDecl>(CalleeDecl)
-                ? CodeGenFunction::TCK_ConstructorCall
-                : CodeGenFunction::TCK_MemberCall,
-                CallLoc, This.getPointer(), C.getRecordType(CalleeDecl->getParent()));
-
-  // FIXME: Uses of 'MD' past this point need to be audited. We may need to use
-  // 'CalleeDecl' instead.
-
   // C++ [class.virtual]p12:
   //   Explicit qualification with the scope operator (5.1) suppresses the
   //   virtual call mechanism.
@@ -260,9 +244,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
           cast<CXXDestructorDecl>(DevirtualizedMethod);
         Callee = CGM.GetAddrOfFunction(GlobalDecl(DDtor, Dtor_Complete), Ty);
       }
-      EmitCXXMemberOrOperatorCall(
-          CalleeDecl, Callee, ReturnValue, This.getPointer(),
-          /*ImplicitParam=*/nullptr, QualType(), CE);
+      EmitCXXMemberOrOperatorCall(MD, Callee, ReturnValue, This.getPointer(),
+                                  /*ImplicitParam=*/nullptr, QualType(), CE);
     }
     return RValue::get(nullptr);
   }
@@ -294,9 +277,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
         *this, CalleeDecl, This, UseVirtualCall);
   }
 
-  return EmitCXXMemberOrOperatorCall(
-      CalleeDecl, Callee, ReturnValue, This.getPointer(),
-      /*ImplicitParam=*/nullptr, QualType(), CE);
+  return EmitCXXMemberOrOperatorCall(MD, Callee, ReturnValue, This.getPointer(),
+                                     /*ImplicitParam=*/nullptr, QualType(), CE);
 }
 
 RValue
@@ -1564,15 +1546,6 @@ static void EmitObjectDelete(CodeGenFunction &CGF,
                              const CXXDeleteExpr *DE,
                              Address Ptr,
                              QualType ElementType) {
-  // C++11 [expr.delete]p3:
-  //   If the static type of the object to be deleted is different from its
-  //   dynamic type, the static type shall be a base class of the dynamic type
-  //   of the object to be deleted and the static type shall have a virtual
-  //   destructor or the behavior is undefined.
-  CGF.EmitTypeCheck(CodeGenFunction::TCK_MemberCall,
-                    DE->getExprLoc(), Ptr.getPointer(),
-                    ElementType);
-
   // Find the destructor for the type, if applicable.  If the
   // destructor is virtual, we'll just emit the vcall and return.
   const CXXDestructorDecl *Dtor = nullptr;

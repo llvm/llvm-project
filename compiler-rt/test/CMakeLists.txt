@@ -93,5 +93,4 @@ if(COMPILER_RT_STANDALONE_BUILD)
     "Running all regression tests"
     ${LLVM_LIT_TESTSUITES}
     DEPENDS ${LLVM_LIT_DEPENDS})
-  add_custom_target(compiler-rt-test-depends DEPENDS ${LLVM_LIT_DEPENDS})
 endif()

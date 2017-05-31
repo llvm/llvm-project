@@ -289,14 +289,6 @@ void DarwinClang::AddLinkARCArgs(const ArgList &Args,
   CmdArgs.push_back(Args.MakeArgString(P));
 }
 
-unsigned DarwinClang::GetDefaultDwarfVersion() const {
-  // Default to use DWARF 2 on OS X 10.10 / iOS 8 and lower.
-  if ((isTargetMacOS() && isMacosxVersionLT(10, 11)) ||
-      (isTargetIOSBased() && isIPhoneOSVersionLT(9)))
-    return 2;
-  return 4;
-}
-
 void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
                               StringRef DarwinLibName, bool AlwaysLink,
                               bool IsEmbedded, bool AddRPath) const {

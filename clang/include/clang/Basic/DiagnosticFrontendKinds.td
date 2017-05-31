@@ -107,9 +107,6 @@ def warn_fe_cc_print_header_failure : Warning<
     "unable to open CC_PRINT_HEADERS file: %0 (using stderr)">;
 def warn_fe_cc_log_diagnostics_failure : Warning<
     "unable to open CC_LOG_DIAGNOSTICS file: %0 (using stderr)">;
-def warn_fe_unable_to_open_stats_file : Warning<
-    "unable to open statistics output file '%0': '%1'">,
-    InGroup<DiagGroup<"unable-to-open-stats-file">>;
 def err_fe_no_pch_in_dir : Error<
     "no suitable precompiled header file found in directory '%0'">;
 def err_fe_action_not_available : Error<
@@ -217,10 +214,6 @@ def err_missing_vfs_overlay_file : Error<
   "virtual filesystem overlay file '%0' not found">, DefaultFatal;
 def err_invalid_vfs_overlay : Error<
   "invalid virtual filesystem overlay file '%0'">, DefaultFatal;
-
-def err_no_apinotes_cache_path : Error<
-  "-fapinotes was provided without -fapinotes-cache-path=<directory>">,
-  DefaultFatal;
 
 def warn_option_invalid_ocl_version : Warning<
   "OpenCL version %0 does not support the option '%1'">, InGroup<Deprecated>;

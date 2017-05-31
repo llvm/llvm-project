@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -analyze -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -verify -Wno-objc-root-class %s
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -analyze -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -analyzer-config mode=shallow -verify -Wno-objc-root-class %s
-// RUN: %clang_cc1 -DTEST_64 -triple x86_64-apple-darwin10 -analyze -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -verify -Wno-objc-root-class %s
-// RUN: %clang_cc1 -DOSATOMIC_USE_INLINED -triple i386-apple-darwin10 -analyze -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -verify -Wno-objc-root-class %s
+// RUN: %clang_cc1 -triple i386-apple-darwin10 -analyze -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -analyzer-constraints=range -verify -Wno-objc-root-class %s
+// RUN: %clang_cc1 -triple i386-apple-darwin10 -analyze -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -analyzer-constraints=range -analyzer-config mode=shallow -verify -Wno-objc-root-class %s
+// RUN: %clang_cc1 -DTEST_64 -triple x86_64-apple-darwin10 -analyze -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -analyzer-constraints=range -verify -Wno-objc-root-class %s
+// RUN: %clang_cc1 -DOSATOMIC_USE_INLINED -triple i386-apple-darwin10 -analyze -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -analyzer-constraints=range -verify -Wno-objc-root-class %s
 
 //===----------------------------------------------------------------------===//
 // The following code is reduced using delta-debugging from
@@ -289,11 +289,7 @@ _Bool opaque_OSAtomicCompareAndSwapPtr( void *__oldValue, void *__newValue, void
 _Bool OSAtomicCompareAndSwapPtr( void *__oldValue, void *__newValue, void * volatile *__theValue ) {
   return opaque_OSAtomicCompareAndSwapPtr(__oldValue, __newValue, __theValue);
 }
-// Test that the analyzer doesn't crash when the farm model is used. 
-// The analyzer ignores the autosynthesized code.
-_Bool OSAtomicCompareAndSwapEmptyFunction( void *__oldValue, void *__newValue, void * volatile *__theValue ) {
-  return 0;
-}
+
 extern BOOL opaque_objc_atomicCompareAndSwapPtr(id predicate, id replacement, volatile id *objectLocation);
 extern BOOL objc_atomicCompareAndSwapPtr(id predicate, id replacement, volatile id *objectLocation) {
   return opaque_objc_atomicCompareAndSwapPtr(predicate, replacement, objectLocation);

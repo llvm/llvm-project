@@ -1137,9 +1137,6 @@ void DeclPrinter::VisitObjCInterfaceDecl(ObjCInterfaceDecl *OID) {
     return;
   }
   bool eolnOut = false;
-  prettyPrintAttributes(OID);
-  if (OID->hasAttrs()) Out << "\n";
-
   Out << "@interface " << I;
 
   if (auto TypeParams = OID->getTypeParamListAsWritten()) {
@@ -1349,17 +1346,6 @@ void DeclPrinter::VisitUsingDecl(UsingDecl *D) {
   if (D->hasTypename())
     Out << "typename ";
   D->getQualifier()->print(Out, Policy);
-
-  // Use the correct record name when the using declaration is used for
-  // inheriting constructors.
-  for (const auto *Shadow : D->shadows()) {
-    if (const auto *ConstructorShadow =
-            dyn_cast<ConstructorUsingShadowDecl>(Shadow)) {
-      assert(Shadow->getDeclContext() == ConstructorShadow->getDeclContext());
-      Out << *ConstructorShadow->getNominatedBaseClass();
-      return;
-    }
-  }
   Out << *D;
 }
 

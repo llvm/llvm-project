@@ -23,25 +23,6 @@ using namespace clang;
 using namespace ento;
 using namespace llvm;
 
-std::vector<StringRef>
-AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental /* = false */) {
-  static const StringRef StaticAnalyzerChecks[] = {
-#define GET_CHECKERS
-#define CHECKER(FULLNAME, CLASS, DESCFILE, HELPTEXT, GROUPINDEX, HIDDEN)       \
-  FULLNAME,
-#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
-#undef CHECKER
-#undef GET_CHECKERS
-  };
-  std::vector<StringRef> Result;
-  for (StringRef CheckName : StaticAnalyzerChecks) {
-    if (!CheckName.startswith("debug.") &&
-        (IncludeExperimental || !CheckName.startswith("alpha.")))
-      Result.push_back(CheckName);
-  }
-  return Result;
-}
-
 AnalyzerOptions::UserModeKind AnalyzerOptions::getUserMode() {
   if (UserMode == UMK_NotSet) {
     StringRef ModeStr =
@@ -362,11 +343,4 @@ bool AnalyzerOptions::shouldWidenLoops() {
   if (!WidenLoops.hasValue())
     WidenLoops = getBooleanOption("widen-loops", /*Default=*/false);
   return WidenLoops.getValue();
-}
-
-bool AnalyzerOptions::shouldDisplayNotesAsEvents() {
-  if (!DisplayNotesAsEvents.hasValue())
-    DisplayNotesAsEvents =
-        getBooleanOption("notes-as-events", /*Default=*/false);
-  return DisplayNotesAsEvents.getValue();
 }

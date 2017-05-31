@@ -249,26 +249,6 @@ void DontDumpShadowMemory(uptr addr, uptr length) {
   // FIXME: add madvise-analog when we move to 64-bits.
 }
 
-uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding) {
-  uptr address = 0;
-  while (true) {
-    MEMORY_BASIC_INFORMATION info;
-    if (!::VirtualQuery((void*)address, &info, sizeof(info)))
-      return 0;
-
-    if (info.State == MEM_FREE) {
-      uptr shadow_address = RoundUpTo((uptr)info.BaseAddress + left_padding,
-                                      alignment);
-      if (shadow_address + size < (uptr)info.BaseAddress + info.RegionSize)
-        return shadow_address;
-    }
-
-    // Move to the next region.
-    address = (uptr)info.BaseAddress + info.RegionSize;
-  }
-  return 0;
-}
-
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
   MEMORY_BASIC_INFORMATION mbi;
   CHECK(VirtualQuery((void *)range_start, &mbi, sizeof(mbi)));
@@ -373,8 +353,6 @@ void DumpProcessMap() {
   }
 }
 #endif
-
-void PrintModuleMap() { }
 
 void DisableCoreDumperIfNecessary() {
   // Do nothing.
@@ -869,10 +847,6 @@ SignalContext SignalContext::Create(void *siginfo, void *context) {
   bool is_memory_access = write_flag != SignalContext::UNKNOWN;
   return SignalContext(context, access_addr, pc, sp, bp, is_memory_access,
                        write_flag);
-}
-
-void SignalContext::DumpAllRegisters(void *context) {
-  // FIXME: Implement this.
 }
 
 uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {

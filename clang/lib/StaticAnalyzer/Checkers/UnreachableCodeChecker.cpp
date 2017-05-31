@@ -147,14 +147,6 @@ void UnreachableCodeChecker::checkEndAnalysis(ExplodedGraph &G,
     PathDiagnosticLocation DL;
     SourceLocation SL;
     if (const Stmt *S = getUnreachableStmt(CB)) {
-      // In macros, 'do {...} while (0)' is often used. Don't warn about the
-      // condition 0 when it is unreachable.
-      if (S->getLocStart().isMacroID())
-        if (const auto *I = dyn_cast<IntegerLiteral>(S))
-          if (I->getValue() == 0ULL)
-            if (const Stmt *Parent = PM->getParent(S))
-              if (isa<DoStmt>(Parent))
-                continue;
       SR = S->getSourceRange();
       DL = PathDiagnosticLocation::createBegin(S, B.getSourceManager(), LC);
       SL = DL.asLocation();
@@ -199,10 +191,8 @@ void UnreachableCodeChecker::FindUnreachableEntryPoints(const CFGBlock *CB,
 // Find the Stmt* in a CFGBlock for reporting a warning
 const Stmt *UnreachableCodeChecker::getUnreachableStmt(const CFGBlock *CB) {
   for (CFGBlock::const_iterator I = CB->begin(), E = CB->end(); I != E; ++I) {
-    if (Optional<CFGStmt> S = I->getAs<CFGStmt>()) {
-      if (!isa<DeclStmt>(S->getStmt()))
-        return S->getStmt();
-    }
+    if (Optional<CFGStmt> S = I->getAs<CFGStmt>())
+      return S->getStmt();
   }
   if (const Stmt *S = CB->getTerminator())
     return S;

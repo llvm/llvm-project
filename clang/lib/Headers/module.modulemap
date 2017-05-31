@@ -68,7 +68,6 @@ module _Builtin_intrinsics [system] [extern_c] {
     }
 
     explicit module cpuid {
-      requires gnuinlineasm
       header "cpuid.h"
     }
 

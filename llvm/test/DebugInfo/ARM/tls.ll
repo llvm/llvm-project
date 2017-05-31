@@ -6,7 +6,7 @@
 ; Generated with clang with source
 ; __thread int x;
 
-@x = thread_local global i32 0, align 4, !dbg !4
+@x = thread_local global i32 0, align 4
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
@@ -26,7 +26,7 @@
 !1 = !DIFile(filename: "tls.c", directory: "/tmp")
 !2 = !{}
 !3 = !{!4}
-!4 = !DIGlobalVariable(name: "x", line: 1, isLocal: false, isDefinition: true, scope: null, file: !5, type: !6)
+!4 = !DIGlobalVariable(name: "x", line: 1, isLocal: false, isDefinition: true, scope: null, file: !5, type: !6, variable: i32* @x)
 !5 = !DIFile(filename: "tls.c", directory: "/tmp")
 !6 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !7 = !{i32 2, !"Dwarf Version", i32 4}

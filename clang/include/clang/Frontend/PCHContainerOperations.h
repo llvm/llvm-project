@@ -10,7 +10,6 @@
 #ifndef LLVM_CLANG_PCH_CONTAINER_OPERATIONS_H
 #define LLVM_CLANG_PCH_CONTAINER_OPERATIONS_H
 
-#include "clang/Basic/Module.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -31,7 +30,7 @@ class DiagnosticsEngine;
 class CompilerInstance;
 
 struct PCHBuffer {
-  ASTFileSignature Signature;
+  uint64_t Signature;
   llvm::SmallVector<char, 0> Data;
   bool IsComplete;
 };

@@ -816,11 +816,9 @@ const VarRegion* MemRegionManager::getVarRegion(const VarDecl *D,
 
     const StackFrameContext *STC = V.get<const StackFrameContext*>();
 
-    if (!STC) {
-      // FIXME: Assign a more sensible memory space to static locals
-      // we see from within blocks that we analyze as top-level declarations.
+    if (!STC)
       sReg = getUnknownRegion();
-    } else {
+    else {
       if (D->hasLocalStorage()) {
         sReg = isa<ParmVarDecl>(D) || isa<ImplicitParamDecl>(D)
                ? static_cast<const MemRegion*>(getStackArgumentsRegion(STC))

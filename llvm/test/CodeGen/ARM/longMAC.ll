@@ -6,9 +6,6 @@
 ; RUN: llc -mtriple=thumbv6t2-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V6-THUMB2
 ; RUN: llc -mtriple=thumbv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7-THUMB
 ; RUN: llc -mtriple=thumbebv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7-THUMB-BE
-; RUN: llc -mtriple=thumbv6m-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V6M-THUMB
-; RUN: llc -mtriple=thumbv7m-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7M-THUMB
-; RUN: llc -mtriple=thumbv7em-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7EM-THUMB
 ; Check generated signed and unsigned multiply accumulate long.
 
 define i64 @MACLongTest1(i32 %a, i32 %b, i64 %c) {
@@ -23,12 +20,12 @@ define i64 @MACLongTest1(i32 %a, i32 %b, i64 %c) {
 ;CHECK-V6-THUMB2: umlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
 ;CHECK-V6-THUMB2: mov r0, [[RDLO]]
 ;CHECK-V6-THUMB2: mov r1, [[RDHI]]
-;CHECK-V7-THUMB: umlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V7-THUMB: mov r0, [[RDLO]]
-;CHECK-V7-THUMB: mov r1, [[RDHI]]
-;CHECK-V7-THUMB-BE: umlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V7-THUMB-BE: mov r0, [[RDHI]]
-;CHECK-V7-THUMB-BE: mov r1, [[RDLO]]
+;CHECK-V7-THUMB2: umlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-V7-THUMB2: mov r0, [[RDLO]]
+;CHECK-V7-THUMB2: mov r1, [[RDHI]]
+;CHECK-V7-THUMB2-BE: umlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-V7-THUMB2-BE: mov r0, [[RDHI]]
+;CHECK-V7-THUMB2-BE: mov r1, [[RDLO]]
   %conv = zext i32 %a to i64
   %conv1 = zext i32 %b to i64
   %mul = mul i64 %conv1, %conv
@@ -47,12 +44,12 @@ define i64 @MACLongTest2(i32 %a, i32 %b, i64 %c)  {
 ;CHECK-V6-THUMB2: smlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
 ;CHECK-V6-THUMB2: mov r0, [[RDLO]]
 ;CHECK-V6-THUMB2: mov r1, [[RDHI]]
-;CHECK-V7-THUMB: smlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V7-THUMB: mov r0, [[RDLO]]
-;CHECK-V7-THUMB: mov r1, [[RDHI]]
-;CHECK-V7-THUMB-BE: smlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V7-THUMB-BE: mov r0, [[RDHI]]
-;CHECK-V7-THUMB-BE: mov r1, [[RDLO]]
+;CHECK-V7-THUMB2: smlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-V7-THUMB2: mov r0, [[RDLO]]
+;CHECK-V7-THUMB2: mov r1, [[RDHI]]
+;CHECK-V7-THUMB2-BE: smlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-V7-THUMB2-BE: mov r0, [[RDHI]]
+;CHECK-V7-THUMB2-BE: mov r1, [[RDLO]]
   %conv = sext i32 %a to i64
   %conv1 = sext i32 %b to i64
   %mul = mul nsw i64 %conv1, %conv
@@ -181,13 +178,8 @@ define i64 @MACLongTest9(i32 %lhs, i32 %rhs, i32 %lo, i32 %hi) {
 ;CHECK-V7-THUMB-BE: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
 ;CHECK-V7-THUMB-BE: mov r0, [[RDHI]]
 ;CHECK-V7-THUMB-BE: mov r1, [[RDLO]]
-;CHECK-V7EM-THUMB: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V7EM-THUMB: mov r0, [[RDLO]]
-;CHECK-V7EM-THUMB: mov r1, [[RDHI]]
 ;CHECK-NOT:umaal
 ;CHECK-V6-THUMB-NOT: umaal
-;CHECK-V6M-THUMB-NOT: umaal
-;CHECK-V7M-THUMB-NOT: umaal
   %conv = zext i32 %lhs to i64
   %conv1 = zext i32 %rhs to i64
   %mul = mul nuw i64 %conv1, %conv
@@ -215,16 +207,12 @@ define i64 @MACLongTest10(i32 %lhs, i32 %rhs, i32 %lo, i32 %hi) {
 ;CHECK-V7-THUMB-BE: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
 ;CHECK-V7-THUMB-BE: mov r0, [[RDHI]]
 ;CHECK-V7-THUMB-BE: mov r1, [[RDLO]]
-;CHECK-V7EM-THUMB: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V7EM-THUMB: mov r0, [[RDLO]]
-;CHECK-V7EM-THUMB: mov r1, [[RDHI]]
 ;CHECK-NOT:umaal
 ;CHECK-V6-THUMB-NOT:umaal
-;CHECK-V6M-THUMB-NOT: umaal
-;CHECK-V7M-THUMB-NOT: umaal
   %conv = zext i32 %lhs to i64
   %conv1 = zext i32 %rhs to i64
-  %mul = mul nuw i64 %conv1, %conv  %conv2 = zext i32 %lo to i64
+  %mul = mul nuw i64 %conv1, %conv
+  %conv2 = zext i32 %lo to i64
   %conv3 = zext i32 %hi to i64
   %add = add i64 %conv2, %conv3
   %add2 = add i64 %add, %mul

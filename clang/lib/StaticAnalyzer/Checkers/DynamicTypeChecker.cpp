@@ -107,7 +107,12 @@ PathDiagnosticPiece *DynamicTypeChecker::DynamicTypeBugVisitor::VisitNode(
     return nullptr;
 
   // Retrieve the associated statement.
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  const Stmt *S = nullptr;
+  ProgramPoint ProgLoc = N->getLocation();
+  if (Optional<StmtPoint> SP = ProgLoc.getAs<StmtPoint>()) {
+    S = SP->getStmt();
+  }
+
   if (!S)
     return nullptr;
 

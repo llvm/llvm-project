@@ -105,7 +105,7 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
         // RET is generated as part of epilogue generation and hence we know
         // what the two instructions preceding it are and that it is safe to
         // insert RET above them.
-        MachineBasicBlock::reverse_instr_iterator RI = ++I.getReverse();
+        MachineBasicBlock::reverse_instr_iterator RI(I);
         assert(RI->getOpcode() == Lanai::LDW_RI && RI->getOperand(0).isReg() &&
                RI->getOperand(0).getReg() == Lanai::FP &&
                RI->getOperand(1).isReg() &&
@@ -117,7 +117,8 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
                RI->getOperand(0).getReg() == Lanai::SP &&
                RI->getOperand(1).isReg() &&
                RI->getOperand(1).getReg() == Lanai::FP);
-        MachineBasicBlock::instr_iterator FI = RI.getReverse();
+        ++RI;
+        MachineBasicBlock::instr_iterator FI(RI.base());
         MBB.splice(std::next(I), &MBB, FI, I);
         FilledSlots += 2;
       } else {
@@ -153,14 +154,14 @@ bool Filler::findDelayInstr(MachineBasicBlock &MBB,
   bool SawLoad = false;
   bool SawStore = false;
 
-  for (MachineBasicBlock::reverse_instr_iterator I = ++Slot.getReverse();
-       I != MBB.instr_rend(); ++I) {
+  for (MachineBasicBlock::reverse_instr_iterator I(Slot); I != MBB.instr_rend();
+       ++I) {
     // skip debug value
     if (I->isDebugValue())
       continue;
 
     // Convert to forward iterator.
-    MachineBasicBlock::instr_iterator FI = I.getReverse();
+    MachineBasicBlock::instr_iterator FI(std::next(I).base());
 
     if (I->hasUnmodeledSideEffects() || I->isInlineAsm() || I->isLabel() ||
         FI == LastFiller || I->isPseudo())

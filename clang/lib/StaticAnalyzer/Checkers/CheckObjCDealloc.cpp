@@ -34,7 +34,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
@@ -174,7 +173,6 @@ private:
   bool classHasSeparateTeardown(const ObjCInterfaceDecl *ID) const;
 
   bool isReleasedByCIFilterDealloc(const ObjCPropertyImplDecl *PropImpl) const;
-  bool isNibLoadedIvarWithoutRetain(const ObjCPropertyImplDecl *PropImpl) const;
 };
 } // End anonymous namespace.
 
@@ -905,9 +903,6 @@ ReleaseRequirement ObjCDeallocChecker::getDeallocReleaseRequirement(
     if (isReleasedByCIFilterDealloc(PropImpl))
       return ReleaseRequirement::MustNotReleaseDirectly;
 
-    if (isNibLoadedIvarWithoutRetain(PropImpl))
-      return ReleaseRequirement::Unknown;
-
     return ReleaseRequirement::MustRelease;
 
   case ObjCPropertyDecl::Weak:
@@ -1062,32 +1057,6 @@ bool ObjCDeallocChecker::isReleasedByCIFilterDealloc(
   }
 
   return false;
-}
-
-/// Returns whether the ivar backing the property is an IBOutlet that
-/// has its value set by nib loading code without retaining the value.
-///
-/// On macOS, if there is no setter, the nib-loading code sets the ivar
-/// directly, without retaining the value,
-///
-/// On iOS and its derivatives, the nib-loading code will call
-/// -setValue:forKey:, which retains the value before directly setting the ivar.
-bool ObjCDeallocChecker::isNibLoadedIvarWithoutRetain(
-    const ObjCPropertyImplDecl *PropImpl) const {
-  const ObjCIvarDecl *IvarDecl = PropImpl->getPropertyIvarDecl();
-  if (!IvarDecl->hasAttr<IBOutletAttr>())
-    return false;
-
-  const llvm::Triple &Target =
-      IvarDecl->getASTContext().getTargetInfo().getTriple();
-
-  if (!Target.isMacOSX())
-    return false;
-
-  if (PropImpl->getPropertyDecl()->getSetterMethodDecl())
-    return false;
-
-  return true;
 }
 
 void ento::registerObjCDeallocChecker(CheckerManager &Mgr) {

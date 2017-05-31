@@ -55,15 +55,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
-static const char *const DWARFGroupName = "dwarf";
-static const char *const DWARFGroupDescription = "DWARF Emission";
-static const char *const DbgTimerName = "emit";
-static const char *const DbgTimerDescription = "Debug Info Emission";
-static const char *const EHTimerName = "write_exception";
-static const char *const EHTimerDescription = "DWARF Exception Writer";
-static const char *const CodeViewLineTablesGroupName = "linetables";
-static const char *const CodeViewLineTablesGroupDescription =
-  "CodeView Line Tables";
+static const char *const DWARFGroupName = "DWARF Emission";
+static const char *const DbgTimerName = "Debug Info Emission";
+static const char *const EHTimerName = "DWARF Exception Writer";
+static const char *const CodeViewLineTablesGroupName = "CodeView Line Tables";
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
@@ -189,6 +184,8 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   OutStreamer->InitSections(false);
 
+  Mang = new Mangler();
+
   // Emit the version-min deplyment target directive if needed.
   //
   // FIXME: If we end up with a collection of these sorts of Darwin-specific
@@ -255,15 +252,13 @@ bool AsmPrinter::doInitialization(Module &M) {
     bool EmitCodeView = MMI->getModule()->getCodeViewFlag();
     if (EmitCodeView && TM.getTargetTriple().isKnownWindowsMSVCEnvironment()) {
       Handlers.push_back(HandlerInfo(new CodeViewDebug(this),
-                                     DbgTimerName, DbgTimerDescription,
-                                     CodeViewLineTablesGroupName,
-                                     CodeViewLineTablesGroupDescription));
+                                     DbgTimerName,
+                                     CodeViewLineTablesGroupName));
     }
     if (!EmitCodeView || MMI->getModule()->getDwarfVersion()) {
       DD = new DwarfDebug(this, &M);
       DD->beginModule();
-      Handlers.push_back(HandlerInfo(DD, DbgTimerName, DbgTimerDescription,
-                                     DWARFGroupName, DWARFGroupDescription));
+      Handlers.push_back(HandlerInfo(DD, DbgTimerName, DWARFGroupName));
     }
   }
 
@@ -291,8 +286,7 @@ bool AsmPrinter::doInitialization(Module &M) {
     break;
   }
   if (ES)
-    Handlers.push_back(HandlerInfo(ES, EHTimerName, EHTimerDescription,
-                                   DWARFGroupName, DWARFGroupDescription));
+    Handlers.push_back(HandlerInfo(ES, EHTimerName, DWARFGroupName));
   return false;
 }
 
@@ -346,11 +340,11 @@ void AsmPrinter::EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
 
 void AsmPrinter::getNameWithPrefix(SmallVectorImpl<char> &Name,
                                    const GlobalValue *GV) const {
-  TM.getNameWithPrefix(Name, GV, getObjFileLowering().getMangler());
+  TM.getNameWithPrefix(Name, GV, *Mang);
 }
 
 MCSymbol *AsmPrinter::getSymbol(const GlobalValue *GV) const {
-  return TM.getSymbol(GV, getObjFileLowering().getMangler());
+  return TM.getSymbol(GV, *Mang);
 }
 
 /// EmitGlobalVariable - Emit the specified global variable to the .s file.
@@ -413,9 +407,7 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   unsigned AlignLog = getGVAlignmentLog2(GV, DL);
 
   for (const HandlerInfo &HI : Handlers) {
-    NamedRegionTimer T(HI.TimerName, HI.TimerDescription,
-                       HI.TimerGroupName, HI.TimerGroupDescription,
-                       TimePassesIsEnabled);
+    NamedRegionTimer T(HI.TimerName, HI.TimerGroupName, TimePassesIsEnabled);
     HI.Handler->setSymbolSize(GVSym, Size);
   }
 
@@ -432,7 +424,8 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   }
 
   // Determine to which section this global should be emitted.
-  MCSection *TheSection = getObjFileLowering().SectionForGlobal(GV, GVKind, TM);
+  MCSection *TheSection =
+      getObjFileLowering().SectionForGlobal(GV, GVKind, *Mang, TM);
 
   // If we have a bss global going to a section that supports the
   // zerofill directive, do so here.
@@ -490,7 +483,7 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   if (GVKind.isThreadLocal() && MAI->hasMachoTBSSDirective()) {
     // Emit the .tbss symbol
     MCSymbol *MangSym =
-        OutContext.getOrCreateSymbol(GVSym->getName() + Twine("$tlv$init"));
+      OutContext.getOrCreateSymbol(GVSym->getName() + Twine("$tlv$init"));
 
     if (GVKind.isThreadBSS()) {
       TheSection = getObjFileLowering().getTLSBSSSection();
@@ -557,7 +550,8 @@ void AsmPrinter::EmitFunctionHeader() {
   // Print the 'header' of function.
   const Function *F = MF->getFunction();
 
-  OutStreamer->SwitchSection(getObjFileLowering().SectionForGlobal(F, TM));
+  OutStreamer->SwitchSection(
+      getObjFileLowering().SectionForGlobal(F, *Mang, TM));
   EmitVisibility(CurrentFnSym, F->getVisibility());
 
   EmitLinkage(F, CurrentFnSym);
@@ -604,8 +598,7 @@ void AsmPrinter::EmitFunctionHeader() {
 
   // Emit pre-function debug and/or EH information.
   for (const HandlerInfo &HI : Handlers) {
-    NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
-                       HI.TimerGroupDescription, TimePassesIsEnabled);
+    NamedRegionTimer T(HI.TimerName, HI.TimerGroupName, TimePassesIsEnabled);
     HI.Handler->beginFunction(MF);
   }
 
@@ -718,10 +711,9 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   OS << V->getName();
 
   const DIExpression *Expr = MI->getDebugExpression();
-  auto Fragment = Expr->getFragmentInfo();
-  if (Fragment)
-    OS << " [fragment offset=" << Fragment->OffsetInBits
-       << " size=" << Fragment->SizeInBits << "]";
+  if (Expr->isBitPiece())
+    OS << " [bit_piece offset=" << Expr->getBitPieceOffset()
+       << " size=" << Expr->getBitPieceSize() << "]";
   OS << " <- ";
 
   // The second operand is only an offset if it's an immediate.
@@ -729,21 +721,21 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   int64_t Offset = Deref ? MI->getOperand(1).getImm() : 0;
 
   for (unsigned i = 0; i < Expr->getNumElements(); ++i) {
-    uint64_t Op = Expr->getElement(i);
-    if (Op == dwarf::DW_OP_LLVM_fragment) {
-      // There can't be any operands after this in a valid expression
-      break;
-    } else if (Deref) {
+    if (Deref) {
       // We currently don't support extra Offsets or derefs after the first
       // one. Bail out early instead of emitting an incorrect comment
       OS << " [complex expression]";
       AP.OutStreamer->emitRawComment(OS.str());
       return true;
-    } else if (Op == dwarf::DW_OP_deref) {
+    }
+    uint64_t Op = Expr->getElement(i);
+    if (Op == dwarf::DW_OP_deref) {
       Deref = true;
       continue;
+    } else if (Op == dwarf::DW_OP_bit_piece) {
+      // There can't be any operands after this in a valid expression
+      break;
     }
-
     uint64_t ExtraOffset = Expr->getElement(i++);
     if (Op == dwarf::DW_OP_plus)
       Offset += ExtraOffset;
@@ -870,8 +862,7 @@ void AsmPrinter::EmitFunctionBody() {
 
       if (ShouldPrintDebugScopes) {
         for (const HandlerInfo &HI : Handlers) {
-          NamedRegionTimer T(HI.TimerName, HI.TimerDescription,
-                             HI.TimerGroupName, HI.TimerGroupDescription,
+          NamedRegionTimer T(HI.TimerName, HI.TimerGroupName,
                              TimePassesIsEnabled);
           HI.Handler->beginInstruction(&MI);
         }
@@ -915,8 +906,7 @@ void AsmPrinter::EmitFunctionBody() {
 
       if (ShouldPrintDebugScopes) {
         for (const HandlerInfo &HI : Handlers) {
-          NamedRegionTimer T(HI.TimerName, HI.TimerDescription,
-                             HI.TimerGroupName, HI.TimerGroupDescription,
+          NamedRegionTimer T(HI.TimerName, HI.TimerGroupName,
                              TimePassesIsEnabled);
           HI.Handler->endInstruction();
         }
@@ -974,8 +964,7 @@ void AsmPrinter::EmitFunctionBody() {
   }
 
   for (const HandlerInfo &HI : Handlers) {
-    NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
-                       HI.TimerGroupDescription, TimePassesIsEnabled);
+    NamedRegionTimer T(HI.TimerName, HI.TimerGroupName, TimePassesIsEnabled);
     HI.Handler->markFunctionEnd();
   }
 
@@ -984,8 +973,7 @@ void AsmPrinter::EmitFunctionBody() {
 
   // Emit post-function debug and/or EH information.
   for (const HandlerInfo &HI : Handlers) {
-    NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
-                       HI.TimerGroupDescription, TimePassesIsEnabled);
+    NamedRegionTimer T(HI.TimerName, HI.TimerGroupName, TimePassesIsEnabled);
     HI.Handler->endFunction(MF);
   }
   MMI->EndFunction();
@@ -1155,7 +1143,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
   M.getModuleFlagsMetadata(ModuleFlags);
   if (!ModuleFlags.empty())
-    TLOF.emitModuleFlags(*OutStreamer, ModuleFlags, TM);
+    TLOF.emitModuleFlags(*OutStreamer, ModuleFlags, *Mang, TM);
 
   if (TM.getTargetTriple().isOSBinFormatELF()) {
     MachineModuleInfoELF &MMIELF = MMI->getObjFileInfo<MachineModuleInfoELF>();
@@ -1176,8 +1164,8 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   // Finalize debug and EH information.
   for (const HandlerInfo &HI : Handlers) {
-    NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
-                       HI.TimerGroupDescription, TimePassesIsEnabled);
+    NamedRegionTimer T(HI.TimerName, HI.TimerGroupName,
+                       TimePassesIsEnabled);
     HI.Handler->endModule();
     delete HI.Handler;
   }
@@ -1258,6 +1246,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   // after everything else has gone out.
   EmitEndOfAsmFile(M);
 
+  delete Mang; Mang = nullptr;
   MMI = nullptr;
 
   OutStreamer->Finish();
@@ -1403,7 +1392,7 @@ void AsmPrinter::EmitJumpTableInfo() {
       *F);
   if (JTInDiffSection) {
     // Drop it in the readonly section.
-    MCSection *ReadOnlySection = TLOF.getSectionForJumpTable(*F, TM);
+    MCSection *ReadOnlySection = TLOF.getSectionForJumpTable(*F, *Mang, TM);
     OutStreamer->SwitchSection(ReadOnlySection);
   }
 
@@ -1842,8 +1831,8 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
       APInt RHSOffset;
       if (IsConstantOffsetFromGlobal(CE->getOperand(1), RHSGV, RHSOffset,
                                      getDataLayout())) {
-        const MCExpr *RelocExpr =
-            getObjFileLowering().lowerRelativeReference(LHSGV, RHSGV, TM);
+        const MCExpr *RelocExpr = getObjFileLowering().lowerRelativeReference(
+            LHSGV, RHSGV, *Mang, TM);
         if (!RelocExpr)
           RelocExpr = MCBinaryExpr::createSub(
               MCSymbolRefExpr::create(getSymbol(LHSGV), Ctx),
@@ -2384,7 +2373,8 @@ MCSymbol *AsmPrinter::GetJTSetSymbol(unsigned UID, unsigned MBBID) const {
 
 MCSymbol *AsmPrinter::getSymbolWithGlobalValueBase(const GlobalValue *GV,
                                                    StringRef Suffix) const {
-  return getObjFileLowering().getSymbolWithGlobalValueBase(GV, Suffix, TM);
+  return getObjFileLowering().getSymbolWithGlobalValueBase(GV, Suffix, *Mang,
+                                                           TM);
 }
 
 /// Return the MCSymbol for the specified ExternalSymbol.

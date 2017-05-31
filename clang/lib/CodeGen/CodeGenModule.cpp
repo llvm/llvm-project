@@ -1209,15 +1209,9 @@ void CodeGenModule::EmitModuleLinkOptions() {
   SmallVector<clang::Module *, 16> Stack;
 
   // Seed the stack with imported modules.
-  for (Module *M : ImportedModules) {
-    // Do not add any link flags when an implementation TU of a module imports
-    // a header of that same module.
-    if (M->getTopLevelModuleName() == getLangOpts().CurrentModule &&
-        !getLangOpts().CompilingModule)
-      continue;
+  for (Module *M : ImportedModules)
     if (Visited.insert(M).second)
       Stack.push_back(M);
-  }
 
   // Find all of the modules to import, making a little effort to prune
   // non-leaf modules.
@@ -3293,9 +3287,7 @@ CodeGenModule::GetAddrOfConstantString(const StringLiteral *Literal) {
       std::string str = 
         StringClass.empty() ? "OBJC_CLASS_$_NSConstantString" 
                             : "OBJC_CLASS_$_" + StringClass;
-      GV = getObjCRuntime().GetClassGlobal(str,
-                                           /*ForDefinition=*/false,
-                                           /*Weak=*/false);
+      GV = getObjCRuntime().GetClassGlobal(str);
       // Make sure the result is of the correct type.
       llvm::Type *PTy = llvm::PointerType::getUnqual(Ty);
       V = llvm::ConstantExpr::getBitCast(GV, PTy);
@@ -3975,33 +3967,9 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
         DI->EmitImportDecl(*Import);
     }
 
-    // Find all of the submodules and emit the module initializers.
-    llvm::SmallPtrSet<clang::Module *, 16> Visited;
-    SmallVector<clang::Module *, 16> Stack;
-    Visited.insert(Import->getImportedModule());
-    Stack.push_back(Import->getImportedModule());
-
-    while (!Stack.empty()) {
-      clang::Module *Mod = Stack.pop_back_val();
-      if (!EmittedModuleInitializers.insert(Mod).second)
-        continue;
-
-      for (auto *D : Context.getModuleInitializers(Mod))
-        EmitTopLevelDecl(D);
-
-      // Visit the submodules of this module.
-      for (clang::Module::submodule_iterator Sub = Mod->submodule_begin(),
-                                             SubEnd = Mod->submodule_end();
-           Sub != SubEnd; ++Sub) {
-        // Skip explicit children; they need to be explicitly imported to emit
-        // the initializers.
-        if ((*Sub)->IsExplicit)
-          continue;
-
-        if (Visited.insert(*Sub).second)
-          Stack.push_back(*Sub);
-      }
-    }
+    // Emit the module initializers.
+    for (auto *D : Context.getModuleInitializers(Import->getImportedModule()))
+      EmitTopLevelDecl(D);
     break;
   }
 

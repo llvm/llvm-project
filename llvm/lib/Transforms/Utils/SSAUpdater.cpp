@@ -216,11 +216,6 @@ public:
   static BlkSucc_iterator BlkSucc_begin(BlkT *BB) { return succ_begin(BB); }
   static BlkSucc_iterator BlkSucc_end(BlkT *BB) { return succ_end(BB); }
 
-  /// Iterator over phis in a block.
-  typedef BlkT::iterator PhiItT;
-  static PhiItT PhiItT_begin(BlkT *BB) { return BB->begin(); }
-  static PhiItT PhiItT_end(BlkT *BB) { return BB->end(); }
-
   class PHI_iterator {
   private:
     PHINode *PHI;

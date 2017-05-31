@@ -251,8 +251,8 @@ priorNonDebug(MachineBasicBlock::const_iterator I,
 static MachineBasicBlock::iterator
 priorNonDebug(MachineBasicBlock::iterator I,
               MachineBasicBlock::const_iterator Beg) {
-  return priorNonDebug(MachineBasicBlock::const_iterator(I), Beg)
-      .getNonConstIterator();
+  return const_cast<MachineInstr*>(
+    &*priorNonDebug(MachineBasicBlock::const_iterator(I), Beg));
 }
 
 /// If this iterator is a debug value, increment until reaching the End or a
@@ -271,8 +271,12 @@ nextIfDebug(MachineBasicBlock::const_iterator I,
 static MachineBasicBlock::iterator
 nextIfDebug(MachineBasicBlock::iterator I,
             MachineBasicBlock::const_iterator End) {
-  return nextIfDebug(MachineBasicBlock::const_iterator(I), End)
-      .getNonConstIterator();
+  // Cast the return value to nonconst MachineInstr, then cast to an
+  // instr_iterator, which does not check for null, finally return a
+  // bundle_iterator.
+  return MachineBasicBlock::instr_iterator(
+    const_cast<MachineInstr*>(
+      &*nextIfDebug(MachineBasicBlock::const_iterator(I), End)));
 }
 
 /// Instantiate a ScheduleDAGInstrs that will be owned by the caller.

@@ -22,7 +22,7 @@
 // RUN: %clang -### -S %s -g0 -g -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G %s
 // RUN: %clang -### -S %s -g0 -g -target x86_64-apple-darwin 2>&1 \
-// RUN:             | FileCheck --check-prefix=CHECK-WITH-G-STANDALONE %s
+// RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
 // RUN: %clang -### -S %s -g0 -g -target i686-pc-openbsd 2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
 // RUN: %clang -### -S %s -g0 -g -target x86_64-pc-freebsd10.0 2>&1 \
@@ -34,6 +34,3 @@
 // CHECK-WITH-G: "-debug-info-kind=limited"
 // CHECK-WITH-G: "-dwarf-version=4"
 // CHECK-WITH-G-DWARF2: "-dwarf-version=2"
-
-// CHECK-WITH-G-STANDALONE: "-debug-info-kind=standalone"
-// CHECK-WITH-G-STANDALONE: "-dwarf-version=2"

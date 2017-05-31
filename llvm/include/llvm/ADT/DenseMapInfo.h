@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/type_traits.h"
-#include <tuple>
 
 namespace llvm {
 
@@ -163,20 +162,6 @@ template<> struct DenseMapInfo<long long> {
   }
 };
 
-/// Simplistic combination of 32-bit hash values into 32-bit hash values.
-static inline unsigned combineHashValue(unsigned a, unsigned b) {
-  uint64_t key = (uint64_t)a << 32 | (uint64_t)b;
-  key += ~(key << 32);
-  key ^= (key >> 22);
-  key += ~(key << 13);
-  key ^= (key >> 8);
-  key += (key << 3);
-  key ^= (key >> 15);
-  key += ~(key << 27);
-  key ^= (key >> 31);
-  return (unsigned)key;
-}
-
 // Provide DenseMapInfo for all pairs whose members have info.
 template<typename T, typename U>
 struct DenseMapInfo<std::pair<T, U> > {
@@ -193,65 +178,21 @@ struct DenseMapInfo<std::pair<T, U> > {
                           SecondInfo::getTombstoneKey());
   }
   static unsigned getHashValue(const Pair& PairVal) {
-    return combineHashValue(FirstInfo::getHashValue(PairVal.first),
-                            SecondInfo::getHashValue(PairVal.second));
+    uint64_t key = (uint64_t)FirstInfo::getHashValue(PairVal.first) << 32
+          | (uint64_t)SecondInfo::getHashValue(PairVal.second);
+    key += ~(key << 32);
+    key ^= (key >> 22);
+    key += ~(key << 13);
+    key ^= (key >> 8);
+    key += (key << 3);
+    key ^= (key >> 15);
+    key += ~(key << 27);
+    key ^= (key >> 31);
+    return (unsigned)key;
   }
   static bool isEqual(const Pair &LHS, const Pair &RHS) {
     return FirstInfo::isEqual(LHS.first, RHS.first) &&
            SecondInfo::isEqual(LHS.second, RHS.second);
-  }
-};
-
-template<typename ...Ts>
-struct DenseMapInfo<std::tuple<Ts...> > {
-  typedef std::tuple<Ts...> Tuple;
-
-  /// Helper class
-  template<unsigned N> struct UnsignedC { };
-
-  static inline Tuple getEmptyKey() {
-    return Tuple(DenseMapInfo<Ts>::getEmptyKey()...);
-  }
-
-  static inline Tuple getTombstoneKey() {
-    return Tuple(DenseMapInfo<Ts>::getTombstoneKey()...);
-  }
-
-  template<unsigned I>
-  static unsigned getHashValueImpl(const Tuple& values, std::false_type) {
-    typedef typename std::tuple_element<I, Tuple>::type EltType;
-    std::integral_constant<bool, I+1 == sizeof...(Ts)> atEnd;
-    return combineHashValue(
-             DenseMapInfo<EltType>::getHashValue(std::get<I>(values)),
-             getHashValueImpl<I+1>(values, atEnd));
-  }
-
-  template<unsigned I>
-  static unsigned getHashValueImpl(const Tuple& values, std::true_type) {
-    return 0;
-  }
-
-  static unsigned getHashValue(const std::tuple<Ts...>& values) {
-    std::integral_constant<bool, 0 == sizeof...(Ts)> atEnd;
-    return getHashValueImpl<0>(values, atEnd);
-  }
-
-  template<unsigned I>
-  static bool isEqualImpl(const Tuple &lhs, const Tuple &rhs, std::false_type) {
-    typedef typename std::tuple_element<I, Tuple>::type EltType;
-    std::integral_constant<bool, I+1 == sizeof...(Ts)> atEnd;
-    return DenseMapInfo<EltType>::isEqual(std::get<I>(lhs), std::get<I>(rhs))
-           && isEqualImpl<I+1>(lhs, rhs, atEnd);
-  }
-
-  template<unsigned I>
-  static bool isEqualImpl(const Tuple &lhs, const Tuple &rhs, std::true_type) {
-    return true;
-  }
-
-  static bool isEqual(const Tuple &lhs, const Tuple &rhs) {
-    std::integral_constant<bool, 0 == sizeof...(Ts)> atEnd;
-    return isEqualImpl<0>(lhs, rhs, atEnd);
   }
 };
 

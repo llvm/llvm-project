@@ -174,10 +174,6 @@ public:
   /// object file.
   std::vector<std::string> CudaGpuBinaryFileNames;
 
-  /// The name of the file to which the backend should save YAML optimization
-  /// records.
-  std::string OptRecordFile;
-
   /// Regular expression to select optimizations for which we should enable
   /// optimization remarks. Transformation passes whose name matches this
   /// expression (and support this feature), will emit a diagnostic

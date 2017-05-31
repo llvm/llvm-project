@@ -2880,7 +2880,8 @@ void SwingSchedulerDAG::removeDeadInstructions(MachineBasicBlock *KernelBB,
         used = false;
       }
       if (!used) {
-        MI++->eraseFromParent();
+        MI->eraseFromParent();
+        ME = (*MBB)->instr_rend();
         continue;
       }
       ++MI;

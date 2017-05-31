@@ -26,15 +26,11 @@ class TypeIndexer : public RecursiveASTVisitor<TypeIndexer> {
 
 public:
   TypeIndexer(IndexingContext &indexCtx, const NamedDecl *parent,
-              const DeclContext *DC, bool isBase, bool isIBType)
+              const DeclContext *DC, bool isBase)
     : IndexCtx(indexCtx), Parent(parent), ParentDC(DC), IsBase(isBase) {
     if (IsBase) {
       assert(Parent);
       Relations.emplace_back((unsigned)SymbolRole::RelationBaseOf, Parent);
-    }
-    if (isIBType) {
-      assert(Parent);
-      Relations.emplace_back((unsigned)SymbolRole::RelationIBTypeOf, Parent);
     }
   }
   
@@ -97,13 +93,13 @@ public:
 
   bool VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) {
     return IndexCtx.handleReference(TL.getIFaceDecl(), TL.getNameLoc(),
-                                    Parent, ParentDC, SymbolRoleSet(), Relations);
+                                    Parent, ParentDC, SymbolRoleSet());
   }
 
   bool VisitObjCObjectTypeLoc(ObjCObjectTypeLoc TL) {
     for (unsigned i = 0, e = TL.getNumProtocols(); i != e; ++i) {
       IndexCtx.handleReference(TL.getProtocol(i), TL.getProtocolLoc(i),
-                               Parent, ParentDC, SymbolRoleSet(), Relations);
+                               Parent, ParentDC, SymbolRoleSet());
     }
     return true;
   }
@@ -134,25 +130,23 @@ public:
 void IndexingContext::indexTypeSourceInfo(TypeSourceInfo *TInfo,
                                           const NamedDecl *Parent,
                                           const DeclContext *DC,
-                                          bool isBase,
-                                          bool isIBType) {
+                                          bool isBase) {
   if (!TInfo || TInfo->getTypeLoc().isNull())
     return;
   
-  indexTypeLoc(TInfo->getTypeLoc(), Parent, DC, isBase, isIBType);
+  indexTypeLoc(TInfo->getTypeLoc(), Parent, DC, isBase);
 }
 
 void IndexingContext::indexTypeLoc(TypeLoc TL,
                                    const NamedDecl *Parent,
                                    const DeclContext *DC,
-                                   bool isBase,
-                                   bool isIBType) {
+                                   bool isBase) {
   if (TL.isNull())
     return;
 
   if (!DC)
     DC = Parent->getLexicalDeclContext();
-  TypeIndexer(*this, Parent, DC, isBase, isIBType).TraverseTypeLoc(TL);
+  TypeIndexer(*this, Parent, DC, isBase).TraverseTypeLoc(TL);
 }
 
 void IndexingContext::indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,

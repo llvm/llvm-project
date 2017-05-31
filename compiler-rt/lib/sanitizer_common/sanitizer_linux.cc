@@ -1304,10 +1304,6 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag(void *context) {
 #endif
 }
 
-void SignalContext::DumpAllRegisters(void *context) {
-  // FIXME: Implement this.
-}
-
 void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 #if defined(__arm__)
   ucontext_t *ucontext = (ucontext_t*)context;
@@ -1391,13 +1387,6 @@ void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 
 void MaybeReexec() {
   // No need to re-exec on Linux.
-}
-
-void PrintModuleMap() { }
-
-uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding) {
-  UNREACHABLE("FindAvailableMemoryRange is not available");
-  return 0;
 }
 
 } // namespace __sanitizer

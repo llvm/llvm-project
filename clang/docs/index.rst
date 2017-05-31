@@ -36,7 +36,6 @@ Using Clang as a Compiler
    SourceBasedCodeCoverage
    Modules
    MSVCCompatibility
-   ThinLTO
    CommandGuide/index
    FAQ
 

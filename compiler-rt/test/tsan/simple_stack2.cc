@@ -44,10 +44,10 @@ int main() {
 
 // CHECK:      WARNING: ThreadSanitizer: data race
 // CHECK-NEXT:   Write of size 4 at {{.*}} by thread T1:
-// CHECK-NEXT:     #0 foo1{{.*}} {{.*}}simple_stack2.cc:7{{(:10)?}} ({{.*}})
-// CHECK-NEXT:     #1 bar1{{.*}} {{.*}}simple_stack2.cc:14{{(:3)?}} ({{.*}})
-// CHECK-NEXT:     #2 Thread1{{.*}} {{.*}}simple_stack2.cc:32{{(:3)?}} ({{.*}})
+// CHECK-NEXT:     #0 foo1{{.*}} {{.*}}simple_stack2.cc:7{{(:10)?}} (simple_stack2.cc.exe+{{.*}})
+// CHECK-NEXT:     #1 bar1{{.*}} {{.*}}simple_stack2.cc:14{{(:3)?}} (simple_stack2.cc.exe+{{.*}})
+// CHECK-NEXT:     #2 Thread1{{.*}} {{.*}}simple_stack2.cc:32{{(:3)?}} (simple_stack2.cc.exe+{{.*}})
 // CHECK:        Previous read of size 4 at {{.*}} by main thread:
-// CHECK-NEXT:     #0 foo2{{.*}} {{.*}}simple_stack2.cc:18{{(:22)?}} ({{.*}})
-// CHECK-NEXT:     #1 bar2{{.*}} {{.*}}simple_stack2.cc:27{{(:3)?}} ({{.*}})
-// CHECK-NEXT:     #2 main{{.*}} {{.*}}simple_stack2.cc:40{{(:3)?}} ({{.*}})
+// CHECK-NEXT:     #0 foo2{{.*}} {{.*}}simple_stack2.cc:18{{(:22)?}} (simple_stack2.cc.exe+{{.*}})
+// CHECK-NEXT:     #1 bar2{{.*}} {{.*}}simple_stack2.cc:27{{(:3)?}} (simple_stack2.cc.exe+{{.*}})
+// CHECK-NEXT:     #2 main{{.*}} {{.*}}simple_stack2.cc:40{{(:3)?}} (simple_stack2.cc.exe+{{.*}})

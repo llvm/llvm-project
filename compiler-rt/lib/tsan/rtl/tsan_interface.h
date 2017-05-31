@@ -17,7 +17,6 @@
 #define TSAN_INTERFACE_H
 
 #include <sanitizer_common/sanitizer_internal_defs.h>
-using __sanitizer::uptr;
 
 // This header should NOT include any other headers.
 // All functions in this header are extern "C" and start with __tsan_.
@@ -72,9 +71,6 @@ void __tsan_vptr_update(void **vptr_p, void *new_val);
 
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_func_entry(void *call_pc);
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_func_exit();
-
-SANITIZER_INTERFACE_ATTRIBUTE void __tsan_ignore_thread_begin();
-SANITIZER_INTERFACE_ATTRIBUTE void __tsan_ignore_thread_end();
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_read_range(void *addr, unsigned long size);  // NOLINT

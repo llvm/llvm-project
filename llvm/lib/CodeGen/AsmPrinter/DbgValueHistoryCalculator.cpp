@@ -134,8 +134,8 @@ static const MachineInstr *getFirstEpilogueInst(const MachineBasicBlock &MBB) {
   // as the return instruction.
   DebugLoc LastLoc = LastMI->getDebugLoc();
   auto Res = LastMI;
-  for (MachineBasicBlock::const_reverse_iterator I = LastMI.getReverse(),
-                                                 E = MBB.rend();
+  for (MachineBasicBlock::const_reverse_iterator I(std::next(LastMI)),
+       E = MBB.rend();
        I != E; ++I) {
     if (I->getDebugLoc() != LastLoc)
       return &*Res;

@@ -156,7 +156,8 @@ bool AArch64RedundantCopyElimination::optimizeCopy(MachineBasicBlock *MBB) {
     MBB->addLiveIn(TargetReg);
 
   // Clear any kills of TargetReg between CompBr and the last removed COPY.
-  for (MachineInstr &MMI : make_range(MBB->begin(), LastChange))
+  for (MachineInstr &MMI :
+       make_range(MBB->begin()->getIterator(), LastChange->getIterator()))
     MMI.clearRegisterKills(SmallestDef, TRI);
 
   return true;

@@ -12,18 +12,18 @@
 ; CHECK-NOT: DW_TAG
 ; CHECK:    DW_AT_name {{.*}} "x1"
 ; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:    DW_AT_location [DW_FORM_exprloc]        (<0x5> 03 [[ADDR:.. .. .. ..]]   )
+; CHECK:    DW_AT_location [DW_FORM_exprloc]        (<0x8> 03 [[ADDR:.. .. .. ..]] 10 00 22  )
 ; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
 ; CHECK:    DW_AT_name {{.*}} "x2"
 ; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:    DW_AT_location [DW_FORM_exprloc]        (<0x7> 03 [[ADDR]] 23 04  )
+; CHECK:    DW_AT_location [DW_FORM_exprloc]        (<0x8> 03 [[ADDR]] 10 04 22  )
 
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-a0:0:32-n32"
 target triple = "thumbv7-apple-macosx10.7.0"
 
-@x1 = internal unnamed_addr global i32 1, align 4, !dbg !25
-@x2 = internal unnamed_addr global i32 2, align 4, !dbg !26
+@x1 = internal unnamed_addr global i32 1, align 4
+@x2 = internal unnamed_addr global i32 2, align 4
 @x3 = internal unnamed_addr global i32 3, align 4
 @x4 = internal unnamed_addr global i32 4, align 4
 @x5 = global i32 0, align 4
@@ -95,8 +95,8 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !19 = !DILocalVariable(name: "a", line: 14, arg: 1, scope: !8, file: !2, type: !5)
 !20 = !DILocalVariable(name: "b", line: 14, scope: !21, file: !2, type: !5)
 !21 = distinct !DILexicalBlock(line: 14, column: 19, file: !47, scope: !8)
-!25 = !DIGlobalVariable(name: "x1", line: 4, isLocal: true, isDefinition: true, scope: !0, file: !2, type: !5)
-!26 = !DIGlobalVariable(name: "x2", line: 7, isLocal: true, isDefinition: true, scope: !0, file: !2, type: !5)
+!25 = !DIGlobalVariable(name: "x1", line: 4, isLocal: true, isDefinition: true, scope: !0, file: !2, type: !5, variable: i32* @x1)
+!26 = !DIGlobalVariable(name: "x2", line: 7, isLocal: true, isDefinition: true, scope: !0, file: !2, type: !5, variable: i32* @x2)
 !27 = !DILocalVariable(name: "a", line: 17, arg: 1, scope: !9, file: !2, type: !5)
 !28 = !DILocalVariable(name: "b", line: 17, scope: !29, file: !2, type: !5)
 !29 = distinct !DILexicalBlock(line: 17, column: 19, file: !47, scope: !9)

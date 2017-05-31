@@ -102,11 +102,11 @@
 %struct.S4_1 = type { i8 }
 %struct.S4_2 = type { i8 }
 
-@i = global i32 0, align 4, !dbg !28
-@a = global %struct.S1 zeroinitializer, align 1, !dbg !30
-@s2 = global %struct.S2 zeroinitializer, align 1, !dbg !31
-@s3 = global %struct.S3 zeroinitializer, align 1, !dbg !32
-@s4 = global %struct.S4 zeroinitializer, align 1, !dbg !33
+@i = global i32 0, align 4
+@a = global %struct.S1 zeroinitializer, align 1
+@s2 = global %struct.S2 zeroinitializer, align 1
+@s3 = global %struct.S3 zeroinitializer, align 1
+@s4 = global %struct.S4 zeroinitializer, align 1
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!34, !35}
@@ -140,12 +140,12 @@
 !25 = !{!26}
 !26 = !DITemplateValueParameter(tag: DW_TAG_template_value_parameter, name: "T", type: !7, value: i32* @i)
 !27 = !{!28, !30, !31, !32, !33}
-!28 = !DIGlobalVariable(name: "i", line: 1, isLocal: false, isDefinition: true, scope: null, file: !29, type: !8)
+!28 = !DIGlobalVariable(name: "i", line: 1, isLocal: false, isDefinition: true, scope: null, file: !29, type: !8, variable: i32* @i)
 !29 = !DIFile(filename: "tu.cpp", directory: "/tmp/dbginfo")
-!30 = !DIGlobalVariable(name: "a", line: 6, isLocal: false, isDefinition: true, scope: null, file: !29, type: !4)
-!31 = !DIGlobalVariable(name: "s2", line: 15, isLocal: false, isDefinition: true, scope: null, file: !29, type: !9)
-!32 = !DIGlobalVariable(name: "s3", line: 27, isLocal: false, isDefinition: true, scope: null, file: !29, type: !13)
-!33 = !DIGlobalVariable(name: "s4", line: 39, isLocal: false, isDefinition: true, scope: null, file: !29, type: !19)
+!30 = !DIGlobalVariable(name: "a", line: 6, isLocal: false, isDefinition: true, scope: null, file: !29, type: !4, variable: %struct.S1* @a)
+!31 = !DIGlobalVariable(name: "s2", line: 15, isLocal: false, isDefinition: true, scope: null, file: !29, type: !9, variable: %struct.S2* @s2)
+!32 = !DIGlobalVariable(name: "s3", line: 27, isLocal: false, isDefinition: true, scope: null, file: !29, type: !13, variable: %struct.S3* @s3)
+!33 = !DIGlobalVariable(name: "s4", line: 39, isLocal: false, isDefinition: true, scope: null, file: !29, type: !19, variable: %struct.S4* @s4)
 !34 = !{i32 2, !"Dwarf Version", i32 4}
 !35 = !{i32 1, !"Debug Info Version", i32 3}
 !36 = !{!"clang version 3.5.0 "}

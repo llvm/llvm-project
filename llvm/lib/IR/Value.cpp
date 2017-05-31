@@ -143,16 +143,16 @@ static bool getSymTab(Value *V, ValueSymbolTable *&ST) {
   if (Instruction *I = dyn_cast<Instruction>(V)) {
     if (BasicBlock *P = I->getParent())
       if (Function *PP = P->getParent())
-        ST = PP->getValueSymbolTable();
+        ST = &PP->getValueSymbolTable();
   } else if (BasicBlock *BB = dyn_cast<BasicBlock>(V)) {
     if (Function *P = BB->getParent())
-      ST = P->getValueSymbolTable();
+      ST = &P->getValueSymbolTable();
   } else if (GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
     if (Module *P = GV->getParent())
       ST = &P->getValueSymbolTable();
   } else if (Argument *A = dyn_cast<Argument>(V)) {
     if (Function *P = A->getParent())
-      ST = P->getValueSymbolTable();
+      ST = &P->getValueSymbolTable();
   } else {
     assert(isa<Constant>(V) && "Unknown value type!");
     return true;  // no name is setable for this.
@@ -662,16 +662,6 @@ void Value::reverseUseList() {
   }
   UseList = Head;
   Head->setPrev(&UseList);
-}
-
-bool Value::isSwiftError() const {
-  auto *Arg = dyn_cast<Argument>(this);
-  if (Arg)
-    return Arg->hasSwiftErrorAttr();
-  auto *Alloca = dyn_cast<AllocaInst>(this);
-  if (!Alloca)
-    return false;
-  return Alloca->isSwiftError();
 }
 
 //===----------------------------------------------------------------------===//

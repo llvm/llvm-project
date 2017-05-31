@@ -36,19 +36,26 @@
 // ---- Summary: dict => Object summarizing the coverage for the entire binary
 // ------ LineCoverage: dict => Object summarizing line coverage
 // ------ FunctionCoverage: dict => Object summarizing function coverage
-// ------ InstantiationCoverage: dict => Object summarizing inst. coverage
 // ------ RegionCoverage: dict => Object summarizing region coverage
 //
 //===----------------------------------------------------------------------===//
 
-#include "CoverageReport.h"
 #include "CoverageSummaryInfo.h"
 #include "CoverageViewOptions.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include <stack>
 
+/// \brief Major version of the JSON Coverage Export Format.
+#define LLVM_COVERAGE_EXPORT_JSON_MAJOR 1
+
+/// \brief Minor version of the JSON Coverage Export Format.
+#define LLVM_COVERAGE_EXPORT_JSON_MINOR 0
+
+/// \brief Patch version of the JSON Coverage Export Format.
+#define LLVM_COVERAGE_EXPORT_JSON_PATCH 0
+
 /// \brief The semantic version combined as a string.
-#define LLVM_COVERAGE_EXPORT_JSON_STR "2.0.0"
+#define LLVM_COVERAGE_EXPORT_JSON_STR "1.0.0"
 
 /// \brief Unique type identifier for JSON coverage export.
 #define LLVM_COVERAGE_EXPORT_JSON_TYPE_STR "llvm.coverage.json.export"
@@ -57,6 +64,9 @@ using namespace llvm;
 using namespace coverage;
 
 class CoverageExporterJson {
+  /// \brief A Name of the object file coverage is for.
+  StringRef ObjectFilename;
+
   /// \brief Output stream to print JSON to.
   raw_ostream &OS;
 
@@ -68,6 +78,9 @@ class CoverageExporterJson {
 
   /// \brief Tracks state of the JSON output.
   std::stack<JsonState> State;
+
+  /// \brief Get the object filename.
+  StringRef getObjectFilename() const { return ObjectFilename; }
 
   /// \brief Emit a serialized scalar.
   void emitSerialized(const int64_t Value) { OS << Value; }
@@ -164,16 +177,11 @@ class CoverageExporterJson {
 
     // Start Export.
     emitDictStart();
+    emitDictElement("object", getObjectFilename());
 
     emitDictKey("files");
-
     FileCoverageSummary Totals = FileCoverageSummary("Totals");
-    std::vector<std::string> SourceFiles;
-    for (StringRef SF : Coverage.getUniqueSourceFiles())
-      SourceFiles.emplace_back(SF);
-    auto FileReports =
-        CoverageReport::prepareFileReports(Coverage, Totals, SourceFiles);
-    renderFiles(SourceFiles, FileReports);
+    renderFiles(Coverage.getUniqueSourceFiles(), Totals);
 
     emitDictKey("functions");
     renderFunctions(Coverage.getCoveredFunctions());
@@ -230,15 +238,17 @@ class CoverageExporterJson {
   }
 
   /// \brief Render an array of all the source files, also pass back a Summary.
-  void renderFiles(ArrayRef<std::string> SourceFiles,
-                   ArrayRef<FileCoverageSummary> FileReports) {
+  void renderFiles(ArrayRef<StringRef> SourceFiles,
+                   FileCoverageSummary &Summary) {
     // Start List of Files.
     emitArrayStart();
-
-    for (unsigned I = 0, E = SourceFiles.size(); I < E; ++I) {
+    for (const auto &SourceFile : SourceFiles) {
       // Render the file.
-      auto FileCoverage = Coverage.getCoverageForFile(SourceFiles[I]);
-      renderFile(FileCoverage, FileReports[I]);
+      auto FileCoverage = Coverage.getCoverageForFile(SourceFile);
+      renderFile(FileCoverage);
+
+      for (const auto &F : Coverage.getCoveredFunctions(SourceFile))
+        Summary.addFunction(FunctionCoverageSummary::get(F));
     }
 
     // End List of Files.
@@ -246,8 +256,7 @@ class CoverageExporterJson {
   }
 
   /// \brief Render a single file.
-  void renderFile(const CoverageData &FileCoverage,
-                  const FileCoverageSummary &FileReport) {
+  void renderFile(const CoverageData &FileCoverage) {
     // Start File.
     emitDictStart();
 
@@ -274,8 +283,14 @@ class CoverageExporterJson {
     // End List of Expansions.
     emitArrayEnd();
 
+    FileCoverageSummary Summary =
+        FileCoverageSummary(FileCoverage.getFilename());
+    for (const auto &F :
+         Coverage.getCoveredFunctions(FileCoverage.getFilename()))
+      Summary.addFunction(FunctionCoverageSummary::get(F));
+
     emitDictKey("summary");
-    renderSummary(FileReport);
+    renderSummary(Summary);
 
     // End File.
     emitDictEnd();
@@ -363,6 +378,7 @@ class CoverageExporterJson {
     emitDictElement("count", Summary.LineCoverage.NumLines);
     emitDictElement("covered", Summary.LineCoverage.Covered);
     emitDictElement("percent", Summary.LineCoverage.getPercentCovered());
+    emitDictElement("noncode", Summary.LineCoverage.NonCodeLines);
     // End Line Coverage Summary.
     emitDictEnd();
 
@@ -373,17 +389,6 @@ class CoverageExporterJson {
     emitDictElement("count", Summary.FunctionCoverage.NumFunctions);
     emitDictElement("covered", Summary.FunctionCoverage.Executed);
     emitDictElement("percent", Summary.FunctionCoverage.getPercentCovered());
-    // End Function Coverage Summary.
-    emitDictEnd();
-
-    emitDictKey("instantiations");
-
-    // Start Instantiation Coverage Summary.
-    emitDictStart();
-    emitDictElement("count", Summary.InstantiationCoverage.NumFunctions);
-    emitDictElement("covered", Summary.InstantiationCoverage.Executed);
-    emitDictElement("percent",
-                    Summary.InstantiationCoverage.getPercentCovered());
     // End Function Coverage Summary.
     emitDictEnd();
 
@@ -403,8 +408,9 @@ class CoverageExporterJson {
   }
 
 public:
-  CoverageExporterJson(const CoverageMapping &CoverageMapping, raw_ostream &OS)
-      : OS(OS), Coverage(CoverageMapping) {
+  CoverageExporterJson(StringRef ObjectFilename,
+                       const CoverageMapping &CoverageMapping, raw_ostream &OS)
+      : ObjectFilename(ObjectFilename), OS(OS), Coverage(CoverageMapping) {
     State.push(JsonState::None);
   }
 
@@ -413,9 +419,10 @@ public:
 };
 
 /// \brief Export the given CoverageMapping to a JSON Format.
-void exportCoverageDataToJson(const CoverageMapping &CoverageMapping,
+void exportCoverageDataToJson(StringRef ObjectFilename,
+                              const CoverageMapping &CoverageMapping,
                               raw_ostream &OS) {
-  auto Exporter = CoverageExporterJson(CoverageMapping, OS);
+  auto Exporter = CoverageExporterJson(ObjectFilename, CoverageMapping, OS);
 
   Exporter.print();
 }

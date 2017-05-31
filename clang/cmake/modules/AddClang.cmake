@@ -139,7 +139,6 @@ macro(add_clang_tool name)
         -DCMAKE_INSTALL_COMPONENT=${name}
         -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
     endif()
-    set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS ${name})
   endif()
 endmacro()
 

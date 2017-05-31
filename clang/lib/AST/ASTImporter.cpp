@@ -897,23 +897,6 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     break;
   }
 
-  case Type::ObjCTypeParam: {
-    const ObjCTypeParamType *Obj1 = cast<ObjCTypeParamType>(T1);
-    const ObjCTypeParamType *Obj2 = cast<ObjCTypeParamType>(T2);
-    if (!IsStructurallyEquivalent(Context, Obj1->getDecl(),
-                                  Obj2->getDecl()))
-      return false;
-
-    if (Obj1->getNumProtocols() != Obj2->getNumProtocols())
-      return false;
-    for (unsigned I = 0, N = Obj1->getNumProtocols(); I != N; ++I) {
-      if (!IsStructurallyEquivalent(Context,
-                                    Obj1->getProtocol(I),
-                                    Obj2->getProtocol(I)))
-        return false;
-    }
-    break;
-  }
   case Type::ObjCObject: {
     const ObjCObjectType *Obj1 = cast<ObjCObjectType>(T1);
     const ObjCObjectType *Obj2 = cast<ObjCObjectType>(T2);
@@ -6403,10 +6386,10 @@ SourceLocation ASTImporter::Import(SourceLocation FromLoc) {
 
   SourceManager &FromSM = FromContext.getSourceManager();
   
-  // For now, map everything down to its file location, so that we
+  // For now, map everything down to its spelling location, so that we
   // don't have to import macro expansions.
   // FIXME: Import macro expansions!
-  FromLoc = FromSM.getFileLoc(FromLoc);
+  FromLoc = FromSM.getSpellingLoc(FromLoc);
   std::pair<FileID, unsigned> Decomposed = FromSM.getDecomposedLoc(FromLoc);
   SourceManager &ToSM = ToContext.getSourceManager();
   FileID ToFileID = Import(Decomposed.first);

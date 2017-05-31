@@ -31,26 +31,6 @@ static_assert(
     !std::is_convertible<ArrayRef<volatile int *>, ArrayRef<int *>>::value,
     "Removing volatile");
 
-// Check that we can't accidentally assign a temporary location to an ArrayRef.
-// (Unfortunately we can't make use of the same thing with constructors.)
-//
-// Disable this check under MSVC; even MSVC 2015 isn't inconsistent between
-// std::is_assignable and actually writing such an assignment.
-#if !defined(_MSC_VER)
-static_assert(
-    !std::is_assignable<ArrayRef<int *>, int *>::value,
-    "Assigning from single prvalue element");
-static_assert(
-    !std::is_assignable<ArrayRef<int *>, int * &&>::value,
-    "Assigning from single xvalue element");
-static_assert(
-    std::is_assignable<ArrayRef<int *>, int * &>::value,
-    "Assigning from single lvalue element");
-static_assert(
-    !std::is_assignable<ArrayRef<int *>, std::initializer_list<int *>>::value,
-    "Assigning from an initializer list");
-#endif
-
 namespace {
 
 TEST(ArrayRefTest, AllocatorCopy) {
@@ -100,20 +80,6 @@ TEST(ArrayRefTest, DropFront) {
   // Check that drop_front accepts size_t-sized numbers.
   ArrayRef<char> AR3((const char *)0x10000, SIZE_MAX - 0x10000);
   EXPECT_EQ(1U, AR3.drop_front(AR3.size() - 1).size());
-}
-
-TEST(ArrayRefTest, TakeBack) {
-  static const int TheNumbers[] = {4, 8, 15, 16, 23, 42};
-  ArrayRef<int> AR1(TheNumbers);
-  ArrayRef<int> AR2(AR1.end() - 1, 1);
-  EXPECT_TRUE(AR1.take_back().equals(AR2));
-}
-
-TEST(ArrayRefTest, TakeFront) {
-  static const int TheNumbers[] = {4, 8, 15, 16, 23, 42};
-  ArrayRef<int> AR1(TheNumbers);
-  ArrayRef<int> AR2(AR1.data(), 2);
-  EXPECT_TRUE(AR1.take_front(2).equals(AR2));
 }
 
 TEST(ArrayRefTest, Equals) {
@@ -178,14 +144,6 @@ TEST(ArrayRefTest, InitializerList) {
   EXPECT_EQ(2, A[1]);
 
   ArgTest12({1, 2});
-}
-
-TEST(ArrayRefTest, EmptyInitializerList) {
-  ArrayRef<int> A = {};
-  EXPECT_TRUE(A.empty());
-
-  A = {};
-  EXPECT_TRUE(A.empty());
 }
 
 // Test that makeArrayRef works on ArrayRef (no-op)

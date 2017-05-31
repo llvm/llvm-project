@@ -12,7 +12,7 @@ target datalayout = "E-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 
 %struct.S = type { i24 }
 
-@s = common global %struct.S zeroinitializer, align 4, !dbg !4
+@s = common global %struct.S zeroinitializer, align 4
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!12, !13, !14}
@@ -22,7 +22,7 @@ target datalayout = "E-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 !1 = !DIFile(filename: "bitfield.c", directory: "/Volumes/Data/llvm")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "s", scope: !0, file: !1, line: 6, type: !5, isLocal: false, isDefinition: true)
+!4 = distinct !DIGlobalVariable(name: "s", scope: !0, file: !1, line: 6, type: !5, isLocal: false, isDefinition: true, variable: %struct.S* @s)
 !5 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: !1, line: 1, size: 32, align: 32, elements: !6)
 !6 = !{!7, !9, !10, !11}
 ; CHECK: DW_TAG_member

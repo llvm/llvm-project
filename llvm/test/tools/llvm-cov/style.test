@@ -15,12 +15,6 @@ STYLE-DAG: .source-name-title
 STYLE-DAG: .centered
 STYLE-DAG: .expansion-view
 STYLE-DAG: .line-number
-STYLE-DAG: .light-row
-STYLE-DAG: .column-entry
-STYLE-DAG: .column-entry-left
-STYLE-DAG: .column-entry-yellow
-STYLE-DAG: .column-entry-red
-STYLE-DAG: .column-entry-green
 STYLE-DAG: .covered-line
 STYLE-DAG: .uncovered-line
 STYLE-DAG: .tooltip

@@ -34,6 +34,10 @@ class FunctionType;
 class LLVMContext;
 class DISubprogram;
 
+template <>
+struct SymbolTableListSentinelTraits<Argument>
+    : public ilist_half_embedded_sentinel_traits<Argument> {};
+
 class Function : public GlobalObject, public ilist_node<Function> {
 public:
   typedef SymbolTableList<Argument> ArgumentListType;
@@ -50,8 +54,7 @@ private:
   // Important things that make up a function!
   BasicBlockListType  BasicBlocks;        ///< The basic blocks
   mutable ArgumentListType ArgumentList;  ///< The formal arguments
-  std::unique_ptr<ValueSymbolTable>
-      SymTab;                             ///< Symbol table of args/instructions
+  ValueSymbolTable *SymTab;               ///< Symbol table of args/instructions
   AttributeSet AttributeSets;             ///< Parameter attributes
 
   /*
@@ -498,12 +501,10 @@ public:
   //===--------------------------------------------------------------------===//
   // Symbol Table Accessing functions...
 
-  /// getSymbolTable() - Return the symbol table if any, otherwise nullptr.
+  /// getSymbolTable() - Return the symbol table...
   ///
-  inline ValueSymbolTable *getValueSymbolTable() { return SymTab.get(); }
-  inline const ValueSymbolTable *getValueSymbolTable() const {
-    return SymTab.get();
-  }
+  inline       ValueSymbolTable &getValueSymbolTable()       { return *SymTab; }
+  inline const ValueSymbolTable &getValueSymbolTable() const { return *SymTab; }
 
   //===--------------------------------------------------------------------===//
   // BasicBlock iterator forwarding functions

@@ -24,7 +24,7 @@ void testBasicRules() {
 
 Dummy *_Nonnull testNullReturn() {
   Dummy *p = 0;
-  return p; // expected-warning {{Null returned from a function that is expected to return a non-null value}}
+  return p; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
 }
 
 void onlyReportFirstPreconditionViolationOnPath() {
@@ -100,24 +100,24 @@ void testObjCARCImplicitZeroInitialization() {
 }
 
 void testObjCARCExplicitZeroInitialization() {
-  TestObject * _Nonnull explicitlyZeroInitialized = nil; // expected-warning {{nil assigned to a pointer which is expected to have non-null value}}
+  TestObject * _Nonnull explicitlyZeroInitialized = nil; // expected-warning {{Null is assigned to a pointer which is expected to have non-null value}}
 }
 
 // Under ARC, returned expressions of ObjC objects types are are implicitly
 // cast to _Nonnull when the functions return type is _Nonnull, so make
 // sure this doesn't implicit cast doesn't suppress a legitimate warning.
 TestObject * _Nonnull returnsNilObjCInstanceIndirectly() {
-  TestObject *local = nil;
-  return local; // expected-warning {{nil returned from a function that is expected to return a non-null value}}
+  TestObject *local = 0;
+  return local; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
 }
 
 TestObject * _Nonnull returnsNilObjCInstanceIndirectlyWithSupressingCast() {
-  TestObject *local = nil;
+  TestObject *local = 0;
   return (TestObject * _Nonnull)local; // no-warning
 }
 
 TestObject * _Nonnull returnsNilObjCInstanceDirectly() {
-  return nil; // expected-warning {{nil returned from a function that is expected to return a non-null value}}
+  return nil; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
 }
 
 TestObject * _Nonnull returnsNilObjCInstanceDirectlyWithSuppressingCast() {
@@ -130,7 +130,7 @@ TestObject * _Nonnull returnsNilObjCInstanceDirectlyWithSuppressingCast() {
 @implementation SomeClass (MethodReturn)
 - (SomeClass * _Nonnull)testReturnsNilInNonnull {
   SomeClass *local = nil;
-  return local; // expected-warning {{nil returned from a method that is expected to return a non-null value}}
+  return local; // expected-warning {{Null is returned from a method that is expected to return a non-null value}}
 }
 
 - (SomeClass * _Nonnull)testReturnsCastSuppressedNilInNonnull {
@@ -154,7 +154,7 @@ void callFunctionInSystemHeader() {
 
   NSSystemFunctionTakingNonnull(s);
   #if !NOSYSTEMHEADERS
-  // expected-warning@-2{{nil passed to a callee that requires a non-null 1st parameter}}
+  // expected-warning@-2{{Null passed to a callee that requires a non-null 1st parameter}}
   #endif
 }
 
@@ -165,6 +165,6 @@ void callMethodInSystemHeader() {
   NSSystemClass *sc = [[NSSystemClass alloc] init];
   [sc takesNonnull:s];
   #if !NOSYSTEMHEADERS
-  // expected-warning@-2{{nil passed to a callee that requires a non-null 1st parameter}}
+  // expected-warning@-2{{Null passed to a callee that requires a non-null 1st parameter}}
   #endif
 }

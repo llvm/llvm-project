@@ -535,13 +535,13 @@ static void checkGlobalVariableScope(DIScope *Context) {
 
 DIGlobalVariable *DIBuilder::createGlobalVariable(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *F,
-    unsigned LineNumber, DIType *Ty, bool isLocalToUnit, DIExpression *Expr,
+    unsigned LineNumber, DIType *Ty, bool isLocalToUnit, Constant *Val,
     MDNode *Decl) {
   checkGlobalVariableScope(Context);
 
   auto *N = DIGlobalVariable::getDistinct(
       VMContext, cast_or_null<DIScope>(Context), Name, LinkageName, F,
-      LineNumber, Ty, isLocalToUnit, true, Expr,
+      LineNumber, Ty, isLocalToUnit, true, Val,
       cast_or_null<DIDerivedType>(Decl));
   AllGVs.push_back(N);
   return N;
@@ -549,13 +549,13 @@ DIGlobalVariable *DIBuilder::createGlobalVariable(
 
 DIGlobalVariable *DIBuilder::createTempGlobalVariableFwdDecl(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *F,
-    unsigned LineNumber, DIType *Ty, bool isLocalToUnit, DIExpression *Expr,
+    unsigned LineNumber, DIType *Ty, bool isLocalToUnit, Constant *Val,
     MDNode *Decl) {
   checkGlobalVariableScope(Context);
 
   return DIGlobalVariable::getTemporary(
              VMContext, cast_or_null<DIScope>(Context), Name, LinkageName, F,
-             LineNumber, Ty, isLocalToUnit, false, Expr,
+             LineNumber, Ty, isLocalToUnit, false, Val,
              cast_or_null<DIDerivedType>(Decl))
       .release();
 }
@@ -612,9 +612,9 @@ DIExpression *DIBuilder::createExpression(ArrayRef<int64_t> Signed) {
   return createExpression(Addr);
 }
 
-DIExpression *DIBuilder::createFragmentExpression(unsigned OffsetInBytes,
+DIExpression *DIBuilder::createBitPieceExpression(unsigned OffsetInBytes,
                                                   unsigned SizeInBytes) {
-  uint64_t Addr[] = {dwarf::DW_OP_LLVM_fragment, OffsetInBytes, SizeInBytes};
+  uint64_t Addr[] = {dwarf::DW_OP_bit_piece, OffsetInBytes, SizeInBytes};
   return DIExpression::get(VMContext, Addr);
 }
 

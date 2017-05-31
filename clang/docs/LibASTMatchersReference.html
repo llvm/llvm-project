@@ -2986,7 +2986,7 @@ Given
   void a(int);
   void b(unsigned long);
   void c(double);
-functionDecl(hasAnyParameter(hasType(isSignedInteger())))
+functionDecl(hasAnyParameter(hasType(isInteger())))
 matches "a(int)", but not "b(unsigned long)" and "c(double)".
 </pre></td></tr>
 
@@ -2998,7 +2998,7 @@ Given
   void a(int);
   void b(unsigned long);
   void c(double);
-functionDecl(hasAnyParameter(hasType(isUnsignedInteger())))
+functionDecl(hasAnyParameter(hasType(isInteger())))
 matches "b(unsigned long)", but not "a(int)" and "c(double)".
 </pre></td></tr>
 

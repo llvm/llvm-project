@@ -92,13 +92,8 @@ void Instruction::insertAfter(Instruction *InsertPos) {
 /// Unlink this instruction from its current basic block and insert it into the
 /// basic block that MovePos lives in, right before MovePos.
 void Instruction::moveBefore(Instruction *MovePos) {
-  moveBefore(*MovePos->getParent(), MovePos->getIterator());
-}
-
-void Instruction::moveBefore(BasicBlock &BB,
-                             SymbolTableList<Instruction>::iterator I) {
-  assert(I == BB.end() || I->getParent() == &BB);
-  BB.getInstList().splice(I, getParent()->getInstList(), getIterator());
+  MovePos->getParent()->getInstList().splice(
+      MovePos->getIterator(), getParent()->getInstList(), getIterator());
 }
 
 void Instruction::setHasNoUnsignedWrap(bool b) {

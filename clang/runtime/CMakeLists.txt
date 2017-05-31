@@ -77,8 +77,6 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
                -DCOMPILER_RT_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
                -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                -DLLVM_LIBDIR_SUFFIX=${LLVM_LIBDIR_SUFFIX}
-               -DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}
-               -DCMAKE_OSX_SYSROOT:PATH=${CMAKE_OSX_SYSROOT}
                ${COMPILER_RT_PASSTHROUGH_VARIABLES}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
@@ -145,15 +143,6 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
       DEPENDS compiler-rt-build ${COMPILER_RT_TEST_DEPENDENCIES}
       WORKING_DIRECTORY ${BINARY_DIR}
       VERBATIM USES_TERMINAL)
-
-    # Add special target to run all compiler-rt test suites.
-    get_ext_project_build_command(run_check_compiler_rt compiler-rt-test-depends)
-    add_custom_target(compiler-rt-test-depends
-      COMMAND ${run_check_compiler_rt}
-      DEPENDS compiler-rt-build ${COMPILER_RT_TEST_DEPENDENCIES}
-      WORKING_DIRECTORY ${BINARY_DIR}
-      VERBATIM USES_TERMINAL)
-    set_property(GLOBAL APPEND PROPERTY LLVM_ADDITIONAL_TEST_DEPENDS compiler-rt-test-depends)
-    set_property(GLOBAL APPEND PROPERTY LLVM_ADDITIONAL_TEST_TARGETS check-compiler-rt)
+    set_property(GLOBAL APPEND PROPERTY LLVM_LIT_DEPENDS check-compiler-rt)
   endif()
 endif()

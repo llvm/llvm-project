@@ -328,17 +328,6 @@ inline void Trap() {
 
 }  // namespace __sanitizer
 
-namespace __asan  { using namespace __sanitizer; }  // NOLINT
-namespace __dsan  { using namespace __sanitizer; }  // NOLINT
-namespace __dfsan { using namespace __sanitizer; }  // NOLINT
-namespace __esan  { using namespace __sanitizer; }  // NOLINT
-namespace __lsan  { using namespace __sanitizer; }  // NOLINT
-namespace __msan  { using namespace __sanitizer; }  // NOLINT
-namespace __tsan  { using namespace __sanitizer; }  // NOLINT
-namespace __scudo { using namespace __sanitizer; }  // NOLINT
-namespace __ubsan { using namespace __sanitizer; }  // NOLINT
-namespace __xray  { using namespace __sanitizer; }  // NOLINT
-namespace __interception  { using namespace __sanitizer; }  // NOLINT
-
+using namespace __sanitizer;  // NOLINT
 
 #endif  // SANITIZER_DEFS_H

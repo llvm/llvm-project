@@ -358,8 +358,6 @@ void PrintReport(const ReportDesc *rep) {
       ReportErrorSummary(rep_typ_str, frame->info);
   }
 
-  if (common_flags()->print_module_map == 2) PrintModuleMap();
-
   Printf("==================\n");
 }
 

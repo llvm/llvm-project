@@ -72,12 +72,6 @@ public:
   getFile(const Twine &Filename, int64_t FileSize = -1,
           bool RequiresNullTerminator = true, bool IsVolatileSize = false);
 
-  /// Read all of the specified file into a MemoryBuffer as a stream
-  /// (i.e. until EOF reached). This is useful for special files that
-  /// look like a regular file but have 0 size (e.g. /proc/cpuinfo on Linux).
-  static ErrorOr<std::unique_ptr<MemoryBuffer>>
-  getFileAsStream(const Twine &Filename);
-
   /// Given an already-open file descriptor, map some slice of it into a
   /// MemoryBuffer. The slice is specified by an \p Offset and \p MapSize.
   /// Since this is in the middle of a file, the buffer is not null terminated.

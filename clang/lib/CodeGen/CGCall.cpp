@@ -3270,7 +3270,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   if (const ObjCIndirectCopyRestoreExpr *CRE
         = dyn_cast<ObjCIndirectCopyRestoreExpr>(E)) {
     assert(getLangOpts().ObjCAutoRefCount);
-    assert(getContext().hasSameUnqualifiedType(E->getType(), type));
+    assert(getContext().hasSameType(E->getType(), type));
     return emitWritebackArg(*this, args, CRE);
   }
 

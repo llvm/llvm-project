@@ -81,10 +81,11 @@ void SymbolTableListTraits<ValueSubClass>::removeNodeFromList(
 
 template <typename ValueSubClass>
 void SymbolTableListTraits<ValueSubClass>::transferNodesFromList(
-    SymbolTableListTraits &L2, iterator first, iterator last) {
+    SymbolTableListTraits &L2, ilist_iterator<ValueSubClass> first,
+    ilist_iterator<ValueSubClass> last) {
   // We only have to do work here if transferring instructions between BBs
   ItemParentClass *NewIP = getListOwner(), *OldIP = L2.getListOwner();
-  assert(NewIP != OldIP && "Expected different list owners");
+  if (NewIP == OldIP) return;  // No work to do at all...
 
   // We only have to update symbol table entries if we are transferring the
   // instructions to a different symtab object...

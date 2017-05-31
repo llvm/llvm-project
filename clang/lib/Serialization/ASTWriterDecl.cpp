@@ -893,7 +893,6 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   Record.push_back(D->getTSCSpec());
   Record.push_back(D->getInitStyle());
   if (!isa<ParmVarDecl>(D)) {
-    Record.push_back(D->isThisDeclarationADemotedDefinition());
     Record.push_back(D->isExceptionVariable());
     Record.push_back(D->isNRVOVariable());
     Record.push_back(D->isCXXForRangeDecl());
@@ -942,6 +941,8 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
       D->getDeclName().getNameKind() == DeclarationName::Identifier &&
       !D->hasExtInfo() &&
       D->getFirstDecl() == D->getMostRecentDecl() &&
+      D->getInitStyle() == VarDecl::CInit &&
+      D->getInit() == nullptr &&
       D->getKind() == Decl::Var &&
       !D->isInline() &&
       !D->isConstexpr() &&
@@ -998,8 +999,6 @@ void ASTDeclWriter::VisitParmVarDecl(ParmVarDecl *D) {
   // Check things we know are true of *every* PARM_VAR_DECL, which is more than
   // just us assuming it.
   assert(!D->getTSCSpec() && "PARM_VAR_DECL can't use TLS");
-  assert(!D->isThisDeclarationADemotedDefinition()
-         && "PARM_VAR_DECL can't be demoted definition.");
   assert(D->getAccess() == AS_none && "PARM_VAR_DECL can't be public/private");
   assert(!D->isExceptionVariable() && "PARM_VAR_DECL can't be exception var");
   assert(D->getPreviousDecl() == nullptr && "PARM_VAR_DECL can't be redecl");
@@ -1874,9 +1873,9 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // InnerStartLoc
   Abv->Add(BitCodeAbbrevOp(0));                       // hasExtInfo
   // VarDecl
-  Abv->Add(BitCodeAbbrevOp(0));                       // SClass
-  Abv->Add(BitCodeAbbrevOp(0));                       // TSCSpec
-  Abv->Add(BitCodeAbbrevOp(0));                       // InitStyle
+  Abv->Add(BitCodeAbbrevOp(0));                       // StorageClass
+  Abv->Add(BitCodeAbbrevOp(0));                       // getTSCSpec
+  Abv->Add(BitCodeAbbrevOp(0));                       // hasCXXDirectInitializer
   Abv->Add(BitCodeAbbrevOp(0));                       // Linkage
   Abv->Add(BitCodeAbbrevOp(0));                       // HasInit
   Abv->Add(BitCodeAbbrevOp(0));                   // HasMemberSpecializationInfo
@@ -1950,10 +1949,9 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // InnerStartLoc
   Abv->Add(BitCodeAbbrevOp(0));                       // hasExtInfo
   // VarDecl
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // SClass
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // TSCSpec
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // InitStyle
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsThisDeclarationADemotedDefinition
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // StorageClass
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // getTSCSpec
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // CXXDirectInitializer
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isExceptionVariable
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isNRVOVariable
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isCXXForRangeDecl
@@ -1964,8 +1962,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                         // isInitCapture
   Abv->Add(BitCodeAbbrevOp(0));                         // isPrevDeclInSameScope
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Linkage
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // IsInitICE (local)
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // VarKind (local enum)
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // HasInit
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // HasMemberSpecInfo
   // Type Source Info
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));

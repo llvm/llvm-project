@@ -157,7 +157,7 @@ static void RenderLocation(InternalScopedString *Buffer, Location Loc) {
                            common_flags()->strip_path_prefix);
     else if (Info.module)
       RenderModuleLocation(Buffer, Info.module, Info.module_offset,
-                           Info.module_arch, common_flags()->strip_path_prefix);
+                           common_flags()->strip_path_prefix);
     else
       Buffer->append("%p", Info.address);
     return;

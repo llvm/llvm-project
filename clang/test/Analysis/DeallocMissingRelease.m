@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=osx.cocoa.Dealloc -fblocks -triple x86_64-apple-ios4.0 -DMACOS=0 -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=osx.cocoa.Dealloc -fblocks -triple x86_64-apple-macosx10.6.0 -DMACOS=1 -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=osx.cocoa.Dealloc -fblocks -verify %s
 // RUN: %clang_cc1 -analyze -analyzer-checker=osx.cocoa.Dealloc -fblocks -triple x86_64-apple-darwin10 -fobjc-arc -fobjc-runtime-has-weak -verify %s
 
 #include "Inputs/system-header-simulator-for-objc-dealloc.h"
@@ -866,60 +865,4 @@ __attribute__((objc_root_class))
 
 @implementation NotMissingDeallocCIFilter // no-warning
 @synthesize inputIvar = inputIvar;
-@end
-
-
-@interface ClassWithRetainPropWithIBOutletIvarButNoSetter : NSObject {
-  // On macOS, the nib-loading code will set the ivar directly without
-  // retaining value (unike iOS, where it is retained). This means that
-  // on macOS we should not warn about a missing release for a property backed
-  // by an IBOutlet ivar when that property does not have a setter.
-  IBOutlet NSObject *ivarForOutlet;
-}
-
-@property (readonly, retain) NSObject *ivarForOutlet;
-@end
-
-@implementation ClassWithRetainPropWithIBOutletIvarButNoSetter
-
-@synthesize ivarForOutlet;
-- (void)dealloc {
-
-#if NON_ARC
-  [super dealloc];
-#if !MACOS
-// expected-warning@-2{{The 'ivarForOutlet' ivar in 'ClassWithRetainPropWithIBOutletIvarButNoSetter' was retained by a synthesized property but not released before '[super dealloc]'}}
-#endif
-#endif
-}
-
-@end
-
-@interface ClassWithRetainPropWithIBOutletIvarAndShadowingReadWrite : NSObject {
-  IBOutlet NSObject *ivarForOutlet;
-}
-
-@property (readonly, retain) NSObject *ivarForOutlet;
-
-@end
-
-@interface ClassWithRetainPropWithIBOutletIvarAndShadowingReadWrite ()
-
-// Since there is a shadowing readwrite property, there will be a retaining
-// setter and so the ivar will be retained by nib-loading code even on
-// macOS and therefore must be released.
-@property (readwrite, retain) NSObject *ivarForOutlet;
-@end
-
-@implementation ClassWithRetainPropWithIBOutletIvarAndShadowingReadWrite
-
-@synthesize ivarForOutlet;
-- (void)dealloc {
-
-#if NON_ARC
-  [super dealloc];
-// expected-warning@-1{{The 'ivarForOutlet' ivar in 'ClassWithRetainPropWithIBOutletIvarAndShadowingReadWrite' was retained by a synthesized property but not released before '[super dealloc]'}}
-#endif
-}
-
 @end

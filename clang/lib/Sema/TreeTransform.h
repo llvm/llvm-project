@@ -699,12 +699,6 @@ public:
   QualType RebuildMemberPointerType(QualType PointeeType, QualType ClassType,
                                     SourceLocation Sigil);
 
-  QualType RebuildObjCTypeParamType(const ObjCTypeParamDecl *Decl,
-                                    SourceLocation ProtocolLAngleLoc,
-                                    ArrayRef<ObjCProtocolDecl *> Protocols,
-                                    ArrayRef<SourceLocation> ProtocolLocs,
-                                    SourceLocation ProtocolRAngleLoc);
-
   /// \brief Build an Objective-C object type.
   ///
   /// By default, performs semantic analysis when building the object type.
@@ -2929,17 +2923,16 @@ public:
   ExprResult RebuildObjCIvarRefExpr(Expr *BaseArg, ObjCIvarDecl *Ivar,
                                           SourceLocation IvarLoc,
                                           bool IsArrow, bool IsFreeIvar) {
+    // FIXME: We lose track of the IsFreeIvar bit.
     CXXScopeSpec SS;
     DeclarationNameInfo NameInfo(Ivar->getDeclName(), IvarLoc);
-    ExprResult Result = getSema().BuildMemberReferenceExpr(
-        BaseArg, BaseArg->getType(),
-        /*FIXME:*/ IvarLoc, IsArrow, SS, SourceLocation(),
-        /*FirstQualifierInScope=*/nullptr, NameInfo,
-        /*TemplateArgs=*/nullptr,
-        /*S=*/nullptr);
-    if (IsFreeIvar && Result.isUsable())
-      cast<ObjCIvarRefExpr>(Result.get())->setIsFreeIvar(IsFreeIvar);
-    return Result;
+    return getSema().BuildMemberReferenceExpr(BaseArg, BaseArg->getType(),
+                                              /*FIXME:*/IvarLoc, IsArrow,
+                                              SS, SourceLocation(),
+                                              /*FirstQualifierInScope=*/nullptr,
+                                              NameInfo,
+                                              /*TemplateArgs=*/nullptr,
+                                              /*S=*/nullptr);
   }
 
   /// \brief Build a new Objective-C property reference expression.
@@ -5951,39 +5944,6 @@ TreeTransform<Derived>::TransformObjCInterfaceType(TypeLocBuilder &TLB,
 
 template<typename Derived>
 QualType
-TreeTransform<Derived>::TransformObjCTypeParamType(TypeLocBuilder &TLB,
-                                                   ObjCTypeParamTypeLoc TL) {
-  const ObjCTypeParamType *T = TL.getTypePtr();
-  ObjCTypeParamDecl *OTP = cast_or_null<ObjCTypeParamDecl>(
-      getDerived().TransformDecl(T->getDecl()->getLocation(), T->getDecl()));
-  if (!OTP)
-    return QualType();
-
-  QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() ||
-      OTP != T->getDecl()) {
-    Result = getDerived().RebuildObjCTypeParamType(OTP,
-                 TL.getProtocolLAngleLoc(),
-                 llvm::makeArrayRef(TL.getTypePtr()->qual_begin(),
-                                    TL.getNumProtocols()),
-                 TL.getProtocolLocs(),
-                 TL.getProtocolRAngleLoc());
-    if (Result.isNull())
-      return QualType();
-  }
-
-  ObjCTypeParamTypeLoc NewTL = TLB.push<ObjCTypeParamTypeLoc>(Result);
-  if (TL.getNumProtocols()) {
-    NewTL.setProtocolLAngleLoc(TL.getProtocolLAngleLoc());
-    for (unsigned i = 0, n = TL.getNumProtocols(); i != n; ++i)
-      NewTL.setProtocolLoc(i, TL.getProtocolLoc(i));
-    NewTL.setProtocolRAngleLoc(TL.getProtocolRAngleLoc());
-  }
-  return Result;
-}
-
-template<typename Derived>
-QualType
 TreeTransform<Derived>::TransformObjCObjectType(TypeLocBuilder &TLB,
                                                 ObjCObjectTypeLoc TL) {
   // Transform base type.
@@ -8926,19 +8886,6 @@ TreeTransform<Derived>::TransformDesignatedInitExpr(DesignatedInitExpr *E) {
       Desig.AddDesignator(Designator::getField(D.getFieldName(),
                                                D.getDotLoc(),
                                                D.getFieldLoc()));
-      if (D.getField()) {
-        FieldDecl *Field = cast_or_null<FieldDecl>(
-            getDerived().TransformDecl(D.getFieldLoc(), D.getField()));
-        if (Field != D.getField())
-          // Rebuild the expression when the transformed FieldDecl is
-          // different to the already assigned FieldDecl.
-          ExprChanged = true;
-      } else {
-        // Ensure that the designator expression is rebuilt when there isn't
-        // a resolved FieldDecl in the designator as we don't want to assign
-        // a FieldDecl to a pattern designator that will be instantiated again.
-        ExprChanged = true;
-      }
       continue;
     }
 
@@ -10300,18 +10247,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
   LSI->CallOperator = NewCallOperator;
 
-  for (unsigned I = 0, NumParams = NewCallOperator->getNumParams();
-       I != NumParams; ++I) {
-    auto *P = NewCallOperator->getParamDecl(I);
-    if (P->hasUninstantiatedDefaultArg()) {
-      EnterExpressionEvaluationContext Eval(
-          getSema(), Sema::PotentiallyEvaluatedIfUsed, P);
-      ExprResult R = getDerived().TransformExpr(
-          E->getCallOperator()->getParamDecl(I)->getDefaultArg());
-      P->setDefaultArg(R.get());
-    }
-  }
-
   getDerived().transformAttrs(E->getCallOperator(), NewCallOperator);
   getDerived().transformedLocalDecl(E->getCallOperator(), NewCallOperator);
 
@@ -11239,9 +11174,6 @@ TreeTransform<Derived>::TransformObjCMessageExpr(ObjCMessageExpr *E) {
   }
   else if (E->getReceiverKind() == ObjCMessageExpr::SuperClass ||
            E->getReceiverKind() == ObjCMessageExpr::SuperInstance) {
-    if (!E->getMethodDecl())
-      return ExprError();
-
     // Build a new class message send to 'super'.
     SmallVector<SourceLocation, 16> SelLocs;
     E->getSelectorLocs(SelLocs);
@@ -11563,19 +11495,6 @@ TreeTransform<Derived>::RebuildMemberPointerType(QualType PointeeType,
                                                  SourceLocation Sigil) {
   return SemaRef.BuildMemberPointerType(PointeeType, ClassType, Sigil,
                                         getDerived().getBaseEntity());
-}
-
-template<typename Derived>
-QualType TreeTransform<Derived>::RebuildObjCTypeParamType(
-           const ObjCTypeParamDecl *Decl,
-           SourceLocation ProtocolLAngleLoc,
-           ArrayRef<ObjCProtocolDecl *> Protocols,
-           ArrayRef<SourceLocation> ProtocolLocs,
-           SourceLocation ProtocolRAngleLoc) {
-  return SemaRef.BuildObjCTypeParamType(Decl,
-                                        ProtocolLAngleLoc, Protocols,
-                                        ProtocolLocs, ProtocolRAngleLoc,
-                                        /*FailOnError=*/true);
 }
 
 template<typename Derived>

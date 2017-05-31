@@ -85,8 +85,7 @@ void SymbolMetadata::dumpToStream(raw_ostream &os) const {
 void SymbolData::anchor() { }
 
 void SymbolRegionValue::dumpToStream(raw_ostream &os) const {
-  os << "reg_$" << getSymbolID()
-     << '<' << getType().getAsString() << ' ' << R << '>';
+  os << "reg_$" << getSymbolID() << "<" << R << ">";
 }
 
 bool SymExpr::symbol_iterator::operator==(const symbol_iterator &X) const {
@@ -217,18 +216,17 @@ SymbolManager::getExtentSymbol(const SubRegion *R) {
   return cast<SymbolExtent>(SD);
 }
 
-const SymbolMetadata *
+const SymbolMetadata*
 SymbolManager::getMetadataSymbol(const MemRegion* R, const Stmt *S, QualType T,
-                                 const LocationContext *LCtx,
                                  unsigned Count, const void *SymbolTag) {
 
   llvm::FoldingSetNodeID profile;
-  SymbolMetadata::Profile(profile, R, S, T, LCtx, Count, SymbolTag);
+  SymbolMetadata::Profile(profile, R, S, T, Count, SymbolTag);
   void *InsertPos;
   SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
     SD = (SymExpr*) BPAlloc.Allocate<SymbolMetadata>();
-    new (SD) SymbolMetadata(SymbolCounter, R, S, T, LCtx, Count, SymbolTag);
+    new (SD) SymbolMetadata(SymbolCounter, R, S, T, Count, SymbolTag);
     DataSet.InsertNode(SD, InsertPos);
     ++SymbolCounter;
   }

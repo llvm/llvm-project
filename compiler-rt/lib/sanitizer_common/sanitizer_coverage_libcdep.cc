@@ -47,8 +47,6 @@
 #include "sanitizer_symbolizer.h"
 #include "sanitizer_flags.h"
 
-using namespace __sanitizer;
-
 static const u64 kMagic64 = 0xC0BFFFFFFFFFFF64ULL;
 static const u64 kMagic32 = 0xC0BFFFFFFFFFFF32ULL;
 static const uptr kNumWordsForMagic = SANITIZER_WORDSIZE == 64 ? 1 : 2;

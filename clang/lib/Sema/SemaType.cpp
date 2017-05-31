@@ -1000,27 +1000,55 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
   return S.Context.getObjCObjectType(type, finalTypeArgs, { }, false);
 }
 
-QualType Sema::BuildObjCTypeParamType(const ObjCTypeParamDecl *Decl,
-                                      SourceLocation ProtocolLAngleLoc,
-                                      ArrayRef<ObjCProtocolDecl *> Protocols,
-                                      ArrayRef<SourceLocation> ProtocolLocs,
-                                      SourceLocation ProtocolRAngleLoc,
-                                      bool FailOnError) {
-  QualType Result = QualType(Decl->getTypeForDecl(), 0);
-  if (!Protocols.empty()) {
-    bool HasError;
-    Result = Context.applyObjCProtocolQualifiers(Result, Protocols,
-                                                 HasError);
-    if (HasError) {
-      Diag(SourceLocation(), diag::err_invalid_protocol_qualifiers)
-        << SourceRange(ProtocolLAngleLoc, ProtocolRAngleLoc);
-      if (FailOnError) Result = QualType();
-    }
-    if (FailOnError && Result.isNull())
-      return QualType();
+/// Apply Objective-C protocol qualifiers to the given type.
+static QualType applyObjCProtocolQualifiers(
+                  Sema &S, SourceLocation loc, SourceRange range, QualType type,
+                  ArrayRef<ObjCProtocolDecl *> protocols,
+                  const SourceLocation *protocolLocs,
+                  bool failOnError = false) {
+  ASTContext &ctx = S.Context;
+  if (const ObjCObjectType *objT = dyn_cast<ObjCObjectType>(type.getTypePtr())){
+    // FIXME: Check for protocols to which the class type is already
+    // known to conform.
+
+    return ctx.getObjCObjectType(objT->getBaseType(),
+                                 objT->getTypeArgsAsWritten(),
+                                 protocols,
+                                 objT->isKindOfTypeAsWritten());
   }
 
-  return Result;
+  if (type->isObjCObjectType()) {
+    // Silently overwrite any existing protocol qualifiers.
+    // TODO: determine whether that's the right thing to do.
+
+    // FIXME: Check for protocols to which the class type is already
+    // known to conform.
+    return ctx.getObjCObjectType(type, { }, protocols, false);
+  }
+
+  // id<protocol-list>
+  if (type->isObjCIdType()) {
+    const ObjCObjectPointerType *objPtr = type->castAs<ObjCObjectPointerType>();
+    type = ctx.getObjCObjectType(ctx.ObjCBuiltinIdTy, { }, protocols,
+                                 objPtr->isKindOfType());
+    return ctx.getObjCObjectPointerType(type);
+  }
+
+  // Class<protocol-list>
+  if (type->isObjCClassType()) {
+    const ObjCObjectPointerType *objPtr = type->castAs<ObjCObjectPointerType>();
+    type = ctx.getObjCObjectType(ctx.ObjCBuiltinClassTy, { }, protocols,
+                                 objPtr->isKindOfType());
+    return ctx.getObjCObjectPointerType(type);
+  }
+
+  S.Diag(loc, diag::err_invalid_protocol_qualifiers)
+    << range;
+
+  if (failOnError)
+    return QualType();
+
+  return type;
 }
 
 QualType Sema::BuildObjCObjectType(QualType BaseType,
@@ -1044,14 +1072,12 @@ QualType Sema::BuildObjCObjectType(QualType BaseType,
   }
 
   if (!Protocols.empty()) {
-    bool HasError;
-    Result = Context.applyObjCProtocolQualifiers(Result, Protocols,
-                                                 HasError);
-    if (HasError) {
-      Diag(Loc, diag::err_invalid_protocol_qualifiers)
-        << SourceRange(ProtocolLAngleLoc, ProtocolRAngleLoc);
-      if (FailOnError) Result = QualType();
-    }
+    Result = applyObjCProtocolQualifiers(*this, Loc,
+                                         SourceRange(ProtocolLAngleLoc,
+                                                     ProtocolRAngleLoc),
+                                         Result, Protocols,
+                                         ProtocolLocs.data(),
+                                         FailOnError);
     if (FailOnError && Result.isNull())
       return QualType();
   }
@@ -2375,16 +2401,28 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
       }
       continue;
 
+    // swift_context parameters must be the last parameter except for
+    // a possible swift_error parameter.
     case ParameterABI::SwiftContext:
       checkForSwiftCC(paramIndex);
+      if (!(paramIndex == numParams - 1 ||
+            (paramIndex == numParams - 2 &&
+             EPI.ExtParameterInfos[numParams - 1].getABI()
+               == ParameterABI::SwiftErrorResult))) {
+        S.Diag(getParamLoc(paramIndex),
+               diag::err_swift_context_not_before_swift_error_result);
+      }
       continue;
 
-    // swift_error parameters must be preceded by a swift_context parameter.
+    // swift_error parameters must be the last parameter.
     case ParameterABI::SwiftErrorResult:
       checkForSwiftCC(paramIndex);
-      if (paramIndex == 0 ||
-          EPI.ExtParameterInfos[paramIndex - 1].getABI() !=
-              ParameterABI::SwiftContext) {
+      if (paramIndex != numParams - 1) {
+        S.Diag(getParamLoc(paramIndex),
+               diag::err_swift_error_result_not_last);
+      } else if (paramIndex == 0 ||
+                 EPI.ExtParameterInfos[paramIndex - 1].getABI()
+                   != ParameterABI::SwiftContext) {
         S.Diag(getParamLoc(paramIndex),
                diag::err_swift_error_result_not_after_swift_context);
       }
@@ -3185,7 +3223,6 @@ namespace {
     Pointer,
     BlockPointer,
     MemberPointer,
-    Array,
   };
 } // end anonymous namespace
 
@@ -3247,27 +3284,15 @@ namespace {
     // NSError**
     NSErrorPointerPointer,
   };
-
-  /// Describes a declarator chunk wrapping a pointer that marks inference as
-  /// unexpected.
-  // These values must be kept in sync with diagnostics.
-  enum class PointerWrappingDeclaratorKind {
-    /// Pointer is top-level.
-    None = -1,
-    /// Pointer is an array element.
-    Array = 0,
-    /// Pointer is the referent type of a C++ reference.
-    Reference = 1
-  };
 } // end anonymous namespace
 
 /// Classify the given declarator, whose type-specified is \c type, based on
 /// what kind of pointer it refers to.
 ///
 /// This is used to determine the default nullability.
-static PointerDeclaratorKind
-classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
-                          PointerWrappingDeclaratorKind &wrappingKind) {
+static PointerDeclaratorKind classifyPointerDeclarator(Sema &S,
+                                                       QualType type,
+                                                       Declarator &declarator) {
   unsigned numNormalPointers = 0;
 
   // For any dependent type, we consider it a non-pointer.
@@ -3279,10 +3304,6 @@ classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
     DeclaratorChunk &chunk = declarator.getTypeObject(i);
     switch (chunk.Kind) {
     case DeclaratorChunk::Array:
-      if (numNormalPointers == 0)
-        wrappingKind = PointerWrappingDeclaratorKind::Array;
-      break;
-
     case DeclaratorChunk::Function:
     case DeclaratorChunk::Pipe:
       break;
@@ -3293,18 +3314,14 @@ classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
                                    : PointerDeclaratorKind::SingleLevelPointer;
 
     case DeclaratorChunk::Paren:
-      break;
-
     case DeclaratorChunk::Reference:
-      if (numNormalPointers == 0)
-        wrappingKind = PointerWrappingDeclaratorKind::Reference;
-      break;
+      continue;
 
     case DeclaratorChunk::Pointer:
       ++numNormalPointers;
       if (numNormalPointers > 2)
         return PointerDeclaratorKind::MultiLevelPointer;
-      break;
+      continue;
     }
   }
 
@@ -3368,9 +3385,25 @@ classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
     if (auto recordType = type->getAs<RecordType>()) {
       RecordDecl *recordDecl = recordType->getDecl();
 
+      bool isCFError = false;
+      if (S.CFError) {
+        // If we already know about CFError, test it directly.
+        isCFError = (S.CFError == recordDecl);
+      } else {
+        // Check whether this is CFError, which we identify based on its bridge
+        // to NSError.
+        if (recordDecl->getTagKind() == TTK_Struct && numNormalPointers > 0) {
+          if (auto bridgeAttr = recordDecl->getAttr<ObjCBridgeAttr>()) {
+            if (bridgeAttr->getBridgedType() == S.getNSErrorIdent()) {
+              S.CFError = recordDecl;
+              isCFError = true;
+            }
+          }
+        }
+      }
+
       // If this is CFErrorRef*, report it as such.
-      if (numNormalPointers == 2 && numTypeSpecifierPointers < 2 &&
-          S.isCFError(recordDecl)) {
+      if (isCFError && numNormalPointers == 2 && numTypeSpecifierPointers < 2) {
         return PointerDeclaratorKind::CFErrorRefPointer;
       }
       break;
@@ -3392,26 +3425,6 @@ classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
   default:
     return PointerDeclaratorKind::MultiLevelPointer;
   }
-}
-
-bool Sema::isCFError(RecordDecl *recordDecl) {
-  // If we already know about CFError, test it directly.
-  if (CFError) {
-    return (CFError == recordDecl);
-  }
-
-  // Check whether this is CFError, which we identify based on being
-  // bridged to NSError.
-  if (recordDecl->getTagKind() == TTK_Struct) {
-    if (auto bridgeAttr = recordDecl->getAttr<ObjCBridgeAttr>()) {
-      if (bridgeAttr->getBridgedType() == getNSErrorIdent()) {
-        CFError = recordDecl;
-        return true;
-      }
-    }
-  }
-
-  return false;
 }
 
 static FileID getNullabilityCompletenessCheckFileID(Sema &S,
@@ -3451,77 +3464,12 @@ static FileID getNullabilityCompletenessCheckFileID(Sema &S,
   return file;
 }
 
-/// Creates a fix-it to insert a C-style nullability keyword at \p pointerLoc,
-/// taking into account whitespace before and after.
-static void fixItNullability(Sema &S, DiagnosticBuilder &Diag,
-                             SourceLocation PointerLoc,
-                             NullabilityKind Nullability) {
-  assert(PointerLoc.isValid());
-  if (PointerLoc.isMacroID())
-    return;
-
-  SourceLocation FixItLoc = S.getLocForEndOfToken(PointerLoc);
-  if (!FixItLoc.isValid() || FixItLoc == PointerLoc)
-    return;
-
-  const char *NextChar = S.SourceMgr.getCharacterData(FixItLoc);
-  if (!NextChar)
-    return;
-
-  SmallString<32> InsertionTextBuf{" "};
-  InsertionTextBuf += getNullabilitySpelling(Nullability);
-  InsertionTextBuf += " ";
-  StringRef InsertionText = InsertionTextBuf.str();
-
-  if (isWhitespace(*NextChar)) {
-    InsertionText = InsertionText.drop_back();
-  } else if (NextChar[-1] == '[') {
-    if (NextChar[0] == ']')
-      InsertionText = InsertionText.drop_back().drop_front();
-    else
-      InsertionText = InsertionText.drop_front();
-  } else if (!isIdentifierBody(NextChar[0], /*allow dollar*/true) &&
-             !isIdentifierBody(NextChar[-1], /*allow dollar*/true)) {
-    InsertionText = InsertionText.drop_back().drop_front();
-  }
-
-  Diag << FixItHint::CreateInsertion(FixItLoc, InsertionText);
-}
-
-static void emitNullabilityConsistencyWarning(Sema &S,
-                                              SimplePointerKind PointerKind,
-                                              SourceLocation PointerLoc) {
-  assert(PointerLoc.isValid());
-
-  if (PointerKind == SimplePointerKind::Array) {
-    S.Diag(PointerLoc, diag::warn_nullability_missing_array);
-  } else {
-    S.Diag(PointerLoc, diag::warn_nullability_missing)
-      << static_cast<unsigned>(PointerKind);
-  }
-
-  if (PointerLoc.isMacroID())
-    return;
-
-  auto addFixIt = [&](NullabilityKind Nullability) {
-    auto Diag = S.Diag(PointerLoc, diag::note_nullability_fix_it);
-    Diag << static_cast<unsigned>(Nullability);
-    Diag << static_cast<unsigned>(PointerKind);
-    fixItNullability(S, Diag, PointerLoc, Nullability);
-  };
-  addFixIt(NullabilityKind::Nullable);
-  addFixIt(NullabilityKind::NonNull);
-}
-
-/// Complains about missing nullability if the file containing \p pointerLoc
-/// has other uses of nullability (either the keywords or the \c assume_nonnull
-/// pragma).
-///
-/// If the file has \e not seen other uses of nullability, this particular
-/// pointer is saved for possible later diagnosis. See recordNullabilitySeen().
-static void checkNullabilityConsistency(Sema &S,
+/// Check for consistent use of nullability.
+static void checkNullabilityConsistency(TypeProcessingState &state,
                                         SimplePointerKind pointerKind,
                                         SourceLocation pointerLoc) {
+  Sema &S = state.getSema();
+
   // Determine which file we're performing consistency checking for.
   FileID file = getNullabilityCompletenessCheckFileID(S, pointerLoc);
   if (file.isInvalid())
@@ -3531,16 +3479,10 @@ static void checkNullabilityConsistency(Sema &S,
   // about anything.
   FileNullability &fileNullability = S.NullabilityMap[file];
   if (!fileNullability.SawTypeNullability) {
-    // If this is the first pointer declarator in the file, and the appropriate
-    // warning is on, record it in case we need to diagnose it retroactively.
-    diag::kind diagKind;
-    if (pointerKind == SimplePointerKind::Array)
-      diagKind = diag::warn_nullability_missing_array;
-    else
-      diagKind = diag::warn_nullability_missing;
-
+    // If this is the first pointer declarator in the file, record it.
     if (fileNullability.PointerLoc.isInvalid() &&
-        !S.Context.getDiagnostics().isIgnored(diagKind, pointerLoc)) {
+        !S.Context.getDiagnostics().isIgnored(diag::warn_nullability_missing,
+                                              pointerLoc)) {
       fileNullability.PointerLoc = pointerLoc;
       fileNullability.PointerKind = static_cast<unsigned>(pointerKind);
     }
@@ -3549,66 +3491,8 @@ static void checkNullabilityConsistency(Sema &S,
   }
 
   // Complain about missing nullability.
-  emitNullabilityConsistencyWarning(S, pointerKind, pointerLoc);
-}
-
-/// Marks that a nullability feature has been used in the file containing
-/// \p loc.
-///
-/// If this file already had pointer types in it that were missing nullability,
-/// the first such instance is retroactively diagnosed.
-///
-/// \sa checkNullabilityConsistency
-static void recordNullabilitySeen(Sema &S, SourceLocation loc) {
-  FileID file = getNullabilityCompletenessCheckFileID(S, loc);
-  if (file.isInvalid())
-    return;
-
-  FileNullability &fileNullability = S.NullabilityMap[file];
-  if (fileNullability.SawTypeNullability)
-    return;
-  fileNullability.SawTypeNullability = true;
-
-  // If we haven't seen any type nullability before, now we have. Retroactively
-  // diagnose the first unannotated pointer, if there was one.
-  if (fileNullability.PointerLoc.isInvalid())
-    return;
-
-  auto kind = static_cast<SimplePointerKind>(fileNullability.PointerKind);
-  emitNullabilityConsistencyWarning(S, kind, fileNullability.PointerLoc);
-}
-
-/// Returns true if any of the declarator chunks before \p endIndex include a
-/// level of indirection: array, pointer, reference, or pointer-to-member.
-///
-/// Because declarator chunks are stored in outer-to-inner order, testing
-/// every chunk before \p endIndex is testing all chunks that embed the current
-/// chunk as part of their type.
-///
-/// It is legal to pass the result of Declarator::getNumTypeObjects() as the
-/// end index, in which case all chunks are tested.
-static bool hasOuterPointerLikeChunk(const Declarator &D, unsigned endIndex) {
-  unsigned i = endIndex;
-  while (i != 0) {
-    // Walk outwards along the declarator chunks.
-    --i;
-    const DeclaratorChunk &DC = D.getTypeObject(i);
-    switch (DC.Kind) {
-    case DeclaratorChunk::Paren:
-      break;
-    case DeclaratorChunk::Array:
-    case DeclaratorChunk::Pointer:
-    case DeclaratorChunk::Reference:
-    case DeclaratorChunk::MemberPointer:
-      return true;
-    case DeclaratorChunk::Function:
-    case DeclaratorChunk::BlockPointer:
-    case DeclaratorChunk::Pipe:
-      // These are invalid anyway, so just ignore.
-      break;
-    }
-  }
-  return false;
+  S.Diag(pointerLoc, diag::warn_nullability_missing)
+    << static_cast<unsigned>(pointerKind);
 }
 
 static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
@@ -3688,10 +3572,24 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
   // Are we in an assume-nonnull region?
   bool inAssumeNonNullRegion = false;
-  SourceLocation assumeNonNullLoc = S.PP.getPragmaAssumeNonNullLoc();
-  if (assumeNonNullLoc.isValid()) {
+  if (S.PP.getPragmaAssumeNonNullLoc().isValid()) {
     inAssumeNonNullRegion = true;
-    recordNullabilitySeen(S, assumeNonNullLoc);
+    // Determine which file we saw the assume-nonnull region in.
+    FileID file = getNullabilityCompletenessCheckFileID(
+                    S, S.PP.getPragmaAssumeNonNullLoc());
+    if (file.isValid()) {
+      FileNullability &fileNullability = S.NullabilityMap[file];
+
+      // If we haven't seen any type nullability before, now we have.
+      if (!fileNullability.SawTypeNullability) {
+        if (fileNullability.PointerLoc.isValid()) {
+          S.Diag(fileNullability.PointerLoc, diag::warn_nullability_missing)
+            << static_cast<unsigned>(fileNullability.PointerKind);
+        }
+
+        fileNullability.SawTypeNullability = true;
+      }
+    }
   }
 
   // Whether to complain about missing nullability specifiers or not.
@@ -3706,7 +3604,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     CAMN_Yes
   } complainAboutMissingNullability = CAMN_No;
   unsigned NumPointersRemaining = 0;
-  auto complainAboutInferringWithinChunk = PointerWrappingDeclaratorKind::None;
 
   if (IsTypedefName) {
     // For typedefs, we do not infer any nullability (the default),
@@ -3714,17 +3611,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     // inner pointers.
     complainAboutMissingNullability = CAMN_InnerPointers;
 
-    auto isDependentNonPointerType = [](QualType T) -> bool {
-      // Note: This is intended to be the same check as Type::canHaveNullability
-      // except with all of the ambiguous cases being treated as 'false' rather
-      // than 'true'.
-      return T->isDependentType() && !T->isAnyPointerType() &&
-        !T->isBlockPointerType() && !T->isMemberPointerType();
-    };
-
-    if (T->canHaveNullability() && !T->getNullability(S.Context) &&
-        !isDependentNonPointerType(T)) {
-      // Note that we allow but don't require nullability on dependent types.
+    if (T->canHaveNullability() && !T->getNullability(S.Context)) {
       ++NumPointersRemaining;
     }
 
@@ -3775,12 +3662,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // fallthrough
 
     case Declarator::FileContext:
-    case Declarator::KNRTypeListContext: {
+    case Declarator::KNRTypeListContext:
       complainAboutMissingNullability = CAMN_Yes;
 
       // Nullability inference depends on the type and declarator.
-      auto wrappingKind = PointerWrappingDeclaratorKind::None;
-      switch (classifyPointerDeclarator(S, T, D, wrappingKind)) {
+      switch (classifyPointerDeclarator(S, T, D)) {
       case PointerDeclaratorKind::NonPointer:
       case PointerDeclaratorKind::MultiLevelPointer:
         // Cannot infer nullability.
@@ -3789,7 +3675,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       case PointerDeclaratorKind::SingleLevelPointer:
         // Infer _Nonnull if we are in an assumes-nonnull region.
         if (inAssumeNonNullRegion) {
-          complainAboutInferringWithinChunk = wrappingKind;
           inferNullability = NullabilityKind::NonNull;
           inferNullabilityCS = (context == Declarator::ObjCParameterContext ||
                                 context == Declarator::ObjCResultContext);
@@ -3830,7 +3715,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         break;
       }
       break;
-    }
 
     case Declarator::ConversionIdContext:
       complainAboutMissingNullability = CAMN_Yes;
@@ -3855,23 +3739,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       break;
     }
   }
-
-  // Local function that returns true if its argument looks like a va_list.
-  auto isVaList = [&S](QualType T) -> bool {
-    auto *typedefTy = T->getAs<TypedefType>();
-    if (!typedefTy)
-      return false;
-    TypedefDecl *vaListTypedef = S.Context.getBuiltinVaListDecl();
-    do {
-      if (typedefTy->getDecl() == vaListTypedef)
-        return true;
-      if (auto *name = typedefTy->getDecl()->getIdentifier())
-        if (name->isStr("va_list"))
-          return true;
-      typedefTy = typedefTy->desugar()->getAs<TypedefType>();
-    } while (typedefTy);
-    return false;
-  };
 
   // Local function that checks the nullability for a given pointer declarator.
   // Returns true if _Nonnull was inferred.
@@ -3906,15 +3773,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           ->setObjCDeclQualifier(ObjCDeclSpec::DQ_CSNullability);
       }
 
-      if (pointerLoc.isValid() &&
-          complainAboutInferringWithinChunk !=
-            PointerWrappingDeclaratorKind::None) {
-        auto Diag =
-            S.Diag(pointerLoc, diag::warn_nullability_inferred_on_nested_type);
-        Diag << static_cast<int>(complainAboutInferringWithinChunk);
-        fixItNullability(S, Diag, pointerLoc, NullabilityKind::NonNull);
-      }
-
       if (inferNullabilityInnerOnly)
         inferNullabilityInnerOnlyComplete = true;
       return nullabilityAttr;
@@ -3932,42 +3790,27 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // Fallthrough.
 
     case CAMN_Yes:
-      checkNullabilityConsistency(S, pointerKind, pointerLoc);
+      checkNullabilityConsistency(state, pointerKind, pointerLoc);
     }
     return nullptr;
   };
 
   // If the type itself could have nullability but does not, infer pointer
   // nullability and perform consistency checking.
-  if (S.ActiveTemplateInstantiations.empty()) {
-    if (T->canHaveNullability() && !T->getNullability(S.Context)) {
-      if (isVaList(T)) {
-        // Record that we've seen a pointer, but do nothing else.
-        if (NumPointersRemaining > 0)
-          --NumPointersRemaining;
-      } else {
-        SimplePointerKind pointerKind = SimplePointerKind::Pointer;
-        if (T->isBlockPointerType())
-          pointerKind = SimplePointerKind::BlockPointer;
-        else if (T->isMemberPointerType())
-          pointerKind = SimplePointerKind::MemberPointer;
+  if (T->canHaveNullability() && S.ActiveTemplateInstantiations.empty() &&
+      !T->getNullability(S.Context)) {
+    SimplePointerKind pointerKind = SimplePointerKind::Pointer;
+    if (T->isBlockPointerType())
+      pointerKind = SimplePointerKind::BlockPointer;
+    else if (T->isMemberPointerType())
+      pointerKind = SimplePointerKind::MemberPointer;
 
-        if (auto *attr = inferPointerNullability(
-              pointerKind, D.getDeclSpec().getTypeSpecTypeLoc(),
-              D.getMutableDeclSpec().getAttributes().getListRef())) {
-          T = Context.getAttributedType(
-                AttributedType::getNullabilityAttrKind(*inferNullability),T,T);
-          attr->setUsedAsTypeAttr();
-        }
-      }
-    }
-
-    if (complainAboutMissingNullability == CAMN_Yes &&
-        T->isArrayType() && !T->getNullability(S.Context) && !isVaList(T) &&
-        D.isPrototypeContext() &&
-        !hasOuterPointerLikeChunk(D, D.getNumTypeObjects())) {
-      checkNullabilityConsistency(S, SimplePointerKind::Array,
-                                  D.getDeclSpec().getTypeSpecTypeLoc());
+    if (auto *attr = inferPointerNullability(
+                       pointerKind, D.getDeclSpec().getTypeSpecTypeLoc(),
+                       D.getMutableDeclSpec().getAttributes().getListRef())) {
+      T = Context.getAttributedType(
+            AttributedType::getNullabilityAttrKind(*inferNullability), T, T);
+      attr->setUsedAsTypeAttr();
     }
   }
 
@@ -4093,13 +3936,31 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
         // C99 6.7.5.2p1: ... and then only in the outermost array type
         // derivation.
-        if (hasOuterPointerLikeChunk(D, chunkIndex)) {
-          S.Diag(DeclType.Loc, diag::err_array_static_not_outermost) <<
-            (ASM == ArrayType::Static ? "'static'" : "type qualifier");
-          if (ASM == ArrayType::Static)
-            ASM = ArrayType::Normal;
-          ATI.TypeQuals = 0;
-          D.setInvalidType(true);
+        unsigned x = chunkIndex;
+        while (x != 0) {
+          // Walk outwards along the declarator chunks.
+          x--;
+          const DeclaratorChunk &DC = D.getTypeObject(x);
+          switch (DC.Kind) {
+          case DeclaratorChunk::Paren:
+            continue;
+          case DeclaratorChunk::Array:
+          case DeclaratorChunk::Pointer:
+          case DeclaratorChunk::Reference:
+          case DeclaratorChunk::MemberPointer:
+            S.Diag(DeclType.Loc, diag::err_array_static_not_outermost) <<
+              (ASM == ArrayType::Static ? "'static'" : "type qualifier");
+            if (ASM == ArrayType::Static)
+              ASM = ArrayType::Normal;
+            ATI.TypeQuals = 0;
+            D.setInvalidType(true);
+            break;
+          case DeclaratorChunk::Function:
+          case DeclaratorChunk::BlockPointer:
+          case DeclaratorChunk::Pipe:
+            // These are invalid anyway, so just ignore.
+            break;
+          }
         }
       }
       const AutoType *AT = T->getContainedAutoType();
@@ -4112,16 +3973,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             << getPrintableNameForEntity(Name) << T;
         T = QualType();
         break;
-      }
-
-      // Array parameters can be marked nullable as well, although it's not
-      // necessary if they're marked 'static'.
-      if (complainAboutMissingNullability == CAMN_Yes &&
-          !hasNullabilityAttr(DeclType.getAttrs()) &&
-          ASM != ArrayType::Static &&
-          D.isPrototypeContext() &&
-          !hasOuterPointerLikeChunk(D, chunkIndex)) {
-        checkNullabilityConsistency(S, SimplePointerKind::Array, DeclType.Loc);
       }
 
       T = S.BuildArrayType(T, ASM, ArraySize, ATI.TypeQuals,
@@ -5968,34 +5819,26 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
   return false;
 }
 
-/// Rebuild an attributed type without the nullability attribute on it.
-static QualType rebuildAttributedTypeWithoutNullability(ASTContext &ctx,
-                                                        QualType type) {
-  auto attributed = dyn_cast<AttributedType>(type.getTypePtr());
-  if (!attributed) return type;
-
-  // Skip the nullability attribute; we're done.
-  if (attributed->getImmediateNullability()) {
-    return attributed->getModifiedType();
-  }
-
-  // Build the modified type.
-  auto modified = rebuildAttributedTypeWithoutNullability(
-                    ctx, attributed->getModifiedType());
-  assert(modified.getTypePtr() != attributed->getModifiedType().getTypePtr());
-  return ctx.getAttributedType(attributed->getAttrKind(), modified,
-                                   attributed->getEquivalentType());
-}
-
 bool Sema::checkNullabilityTypeSpecifier(QualType &type,
                                          NullabilityKind nullability,
                                          SourceLocation nullabilityLoc,
-                                         bool isContextSensitive,
-                                         bool allowOnArrayType,
-                                         bool implicit,
-                                         bool overrideExisting) {
-  if (!implicit)
-    recordNullabilitySeen(*this, nullabilityLoc);
+                                         bool isContextSensitive) {
+  // We saw a nullability type specifier. If this is the first one for
+  // this file, note that.
+  FileID file = getNullabilityCompletenessCheckFileID(*this, nullabilityLoc);
+  if (!file.isInvalid()) {
+    FileNullability &fileNullability = NullabilityMap[file];
+    if (!fileNullability.SawTypeNullability) {
+      // If we have already seen a pointer declarator without a nullability
+      // annotation, complain about it.
+      if (fileNullability.PointerLoc.isValid()) {
+        Diag(fileNullability.PointerLoc, diag::warn_nullability_missing)
+          << static_cast<unsigned>(fileNullability.PointerKind);
+      }
+
+      fileNullability.SawTypeNullability = true;
+    }
+  }
 
   // Check for existing nullability attributes on the type.
   QualType desugared = type;
@@ -6004,9 +5847,6 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
     if (auto existingNullability = attributed->getImmediateNullability()) {
       // Duplicated nullability.
       if (nullability == *existingNullability) {
-        if (implicit)
-          break;
-
         Diag(nullabilityLoc, diag::warn_nullability_duplicate)
           << DiagNullabilityKind(nullability, isContextSensitive)
           << FixItHint::CreateRemoval(nullabilityLoc);
@@ -6014,16 +5854,11 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
         break;
       } 
 
-      if (!overrideExisting) {
-        // Conflicting nullability.
-        Diag(nullabilityLoc, diag::err_nullability_conflicting)
-          << DiagNullabilityKind(nullability, isContextSensitive)
-          << DiagNullabilityKind(*existingNullability, false);
-        return true;
-      }
-
-      // Rebuild the attributed type, dropping the existing nullability.
-      type  = rebuildAttributedTypeWithoutNullability(Context, type);
+      // Conflicting nullability.
+      Diag(nullabilityLoc, diag::err_nullability_conflicting)
+        << DiagNullabilityKind(nullability, isContextSensitive)
+        << DiagNullabilityKind(*existingNullability, false);
+      return true;
     }
 
     desugared = attributed->getModifiedType();
@@ -6034,7 +5869,7 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
   // have nullability specifiers on them, which means we cannot
   // provide a useful Fix-It.
   if (auto existingNullability = desugared->getNullability(Context)) {
-    if (nullability != *existingNullability && !implicit) {
+    if (nullability != *existingNullability) {
       Diag(nullabilityLoc, diag::err_nullability_conflicting)
         << DiagNullabilityKind(nullability, isContextSensitive)
         << DiagNullabilityKind(*existingNullability, false);
@@ -6057,12 +5892,9 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
   }
 
   // If this definitely isn't a pointer type, reject the specifier.
-  if (!desugared->canHaveNullability() &&
-      !(allowOnArrayType && desugared->isArrayType())) {
-    if (!implicit) {
-      Diag(nullabilityLoc, diag::err_nullability_nonpointer)
-        << DiagNullabilityKind(nullability, isContextSensitive) << type;
-    }
+  if (!desugared->canHaveNullability()) {
+    Diag(nullabilityLoc, diag::err_nullability_nonpointer)
+      << DiagNullabilityKind(nullability, isContextSensitive) << type;
     return true;
   }
   
@@ -6070,12 +5902,7 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
   // attributes, require that the type be a single-level pointer.
   if (isContextSensitive) {
     // Make sure that the pointee isn't itself a pointer type.
-    const Type *pointeeType;
-    if (desugared->isArrayType())
-      pointeeType = desugared->getArrayElementTypeNoTypeQual();
-    else
-      pointeeType = desugared->getPointeeType().getTypePtr();
-
+    QualType pointeeType = desugared->getPointeeType();
     if (pointeeType->isAnyPointerType() ||
         pointeeType->isObjCObjectPointerType() ||
         pointeeType->isMemberPointerType()) {
@@ -6821,22 +6648,12 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       // don't want to distribute the nullability specifier past any
       // dependent type, because that complicates the user model.
       if (type->canHaveNullability() || type->isDependentType() ||
-          type->isArrayType() ||
           !distributeNullabilityTypeAttr(state, type, attr)) {
-        unsigned endIndex;
-        if (TAL == TAL_DeclChunk)
-          endIndex = state.getCurrentChunkIndex();
-        else
-          endIndex = state.getDeclarator().getNumTypeObjects();
-        bool allowOnArrayType =
-            state.getDeclarator().isPrototypeContext() &&
-            !hasOuterPointerLikeChunk(state.getDeclarator(), endIndex);
         if (state.getSema().checkNullabilityTypeSpecifier(
               type,
               mapNullabilityAttrKind(attr.getKind()),
               attr.getLoc(),
-              attr.isContextSensitiveKeywordAttribute(),
-              allowOnArrayType, /*implicit=*/false)) {
+              attr.isContextSensitiveKeywordAttribute())) {
           attr.setInvalid();
         }
 
@@ -7073,14 +6890,6 @@ bool Sema::hasVisibleDefinition(NamedDecl *D, NamedDecl **Suggested,
       return false;
     }
     D = ED->getDefinition();
-  } else if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-    if (auto *Pattern = FD->getTemplateInstantiationPattern())
-      FD = Pattern;
-    D = FD->getDefinition();
-  } else if (auto *VD = dyn_cast<VarDecl>(D)) {
-    if (auto *Pattern = VD->getTemplateInstantiationPattern())
-      VD = Pattern;
-    D = VD->getDefinition();
   }
   assert(D && "missing definition for pattern of instantiated definition");
 
@@ -7088,7 +6897,7 @@ bool Sema::hasVisibleDefinition(NamedDecl *D, NamedDecl **Suggested,
   if (isVisible(D))
     return true;
 
-  // The external source may have additional definitions of this entity that are
+  // The external source may have additional definitions of this type that are
   // visible, so complete the redeclaration chain now and ask again.
   if (auto *Source = Context.getExternalSource()) {
     Source->CompleteRedeclChain(D);

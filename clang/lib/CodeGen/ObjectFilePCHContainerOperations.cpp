@@ -171,8 +171,7 @@ public:
     // Prepare CGDebugInfo to emit debug info for a clang module.
     auto *DI = Builder->getModuleDebugInfo();
     StringRef ModuleName = llvm::sys::path::filename(MainFileName);
-    DI->setPCHDescriptor({ModuleName, "", OutputFileName,
-                          ASTFileSignature{{~0U, ~0U, ~0U, ~0U, ~1U}} });
+    DI->setPCHDescriptor({ModuleName, "", OutputFileName, ~1ULL});
     DI->setModuleMap(MMap);
   }
 
@@ -242,9 +241,7 @@ public:
 
     // PCH files don't have a signature field in the control block,
     // but LLVM detects DWO CUs by looking for a non-zero DWO id.
-    // We use the lower 64 bits for debug info.
-    uint64_t Signature = Buffer->Signature != ASTFileSignature({{0}}) ?
-        (uint64_t)Buffer->Signature[1] << 32 | Buffer->Signature[0] : ~1ULL;
+    uint64_t Signature = Buffer->Signature ? Buffer->Signature : ~1ULL;
     Builder->getModuleDebugInfo()->setDwoId(Signature);
 
     // Finalize the Builder.
@@ -317,29 +314,25 @@ ObjectFilePCHContainerWriter::CreatePCHContainerGenerator(
 
 void ObjectFilePCHContainerReader::ExtractPCH(
     llvm::MemoryBufferRef Buffer, llvm::BitstreamReader &StreamFile) const {
-  auto OFOrErr = llvm::object::ObjectFile::createObjectFile(Buffer);
-  if (OFOrErr) {
-    auto &OF = OFOrErr.get();
-    bool IsCOFF = isa<llvm::object::COFFObjectFile>(*OF);
+  if (auto OF = llvm::object::ObjectFile::createObjectFile(Buffer)) {
+    auto *Obj = OF.get().get();
+    bool IsCOFF = isa<llvm::object::COFFObjectFile>(Obj);
     // Find the clang AST section in the container.
-    for (auto &Section : OF->sections()) {
+    for (auto &Section : OF->get()->sections()) {
       StringRef Name;
       Section.getName(Name);
-      if ((!IsCOFF && Name == "__clangast") || (IsCOFF && Name == "clangast")) {
+      if ((!IsCOFF && Name == "__clangast") ||
+          ( IsCOFF && Name ==   "clangast")) {
         StringRef Buf;
         Section.getContents(Buf);
-        return StreamFile.init((const unsigned char *)Buf.begin(),
-                               (const unsigned char *)Buf.end());
+        StreamFile.init((const unsigned char *)Buf.begin(),
+                        (const unsigned char *)Buf.end());
+        return;
       }
     }
   }
-  handleAllErrors(OFOrErr.takeError(), [&](const llvm::ErrorInfoBase &EIB) {
-    if (EIB.convertToErrorCode() ==
-        llvm::object::object_error::invalid_file_type)
-      // As a fallback, treat the buffer as a raw AST.
-      StreamFile.init((const unsigned char *)Buffer.getBufferStart(),
-                      (const unsigned char *)Buffer.getBufferEnd());
-    else
-      EIB.log(llvm::errs());
-  });
+
+  // As a fallback, treat the buffer as a raw AST.
+  StreamFile.init((const unsigned char *)Buffer.getBufferStart(),
+                  (const unsigned char *)Buffer.getBufferEnd());
 }

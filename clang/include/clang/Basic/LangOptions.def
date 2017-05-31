@@ -144,7 +144,6 @@ BENIGN_LANGOPT(HeinousExtensions , 1, 0, "extensions that we really don't like a
 LANGOPT(Modules           , 1, 0, "modules extension to C")
 LANGOPT(ModulesTS         , 1, 0, "C++ Modules TS")
 BENIGN_LANGOPT(CompilingModule, 1, 0, "compiling a module interface")
-BENIGN_LANGOPT(CompilingPCH, 1, 0, "building a pch")
 COMPATIBLE_LANGOPT(ModulesDeclUse    , 1, 0, "require declaration of module uses")
 BENIGN_LANGOPT(ModulesSearchAll  , 1, 1, "searching even non-imported modules to find unresolved references")
 COMPATIBLE_LANGOPT(ModulesStrictDeclUse, 1, 0, "requiring declaration of module uses and all headers to be in modules")
@@ -236,7 +235,7 @@ ENUM_LANGOPT(SignedOverflowBehavior, SignedOverflowBehaviorTy, 2, SOB_Undefined,
 
 BENIGN_LANGOPT(ArrowDepth, 32, 256,
                "maximum number of operator->s to follow")
-BENIGN_LANGOPT(InstantiationDepth, 32, 1024,
+BENIGN_LANGOPT(InstantiationDepth, 32, 256,
                "maximum template instantiation depth")
 BENIGN_LANGOPT(ConstexprCallDepth, 32, 512,
                "maximum constexpr call depth")
@@ -252,9 +251,6 @@ VALUE_LANGOPT(VtorDispMode, 2, 1, "How many vtordisps to insert")
 LANGOPT(ApplePragmaPack, 1, 0, "Apple gcc-compatible #pragma pack handling")
 
 LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
-LANGOPT(APINotes, 1, 0, "use external API notes")
-LANGOPT(APINotesModules, 1, 0, "use external API notes")
-LANGOPT(NeededByPCHOrCompilationUsesPCH, 1, 0, "compilation involves pch")
 
 LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
                                            "field padding (0: none, 1:least "

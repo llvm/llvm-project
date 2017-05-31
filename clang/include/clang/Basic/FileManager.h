@@ -34,7 +34,6 @@ class MemoryBuffer;
 namespace clang {
 class FileManager;
 class FileSystemStatCache;
-class PCMCache;
 
 /// \brief Cached information about one directory (either on disk or in
 /// the virtual file system).
@@ -173,9 +172,6 @@ class FileManager : public RefCountedBase<FileManager> {
   /// or a directory) as virtual directories.
   void addAncestorsAsVirtualDirs(StringRef Path);
 
-  /// Manage memory buffers associated with pcm files.
-  std::unique_ptr<PCMCache> BufferMgr;
-
 public:
   FileManager(const FileSystemOptions &FileSystemOpts,
               IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
@@ -287,51 +283,6 @@ public:
   StringRef getCanonicalName(const DirectoryEntry *Dir);
 
   void PrintStats() const;
-
-  /// Return the manager for memory buffers associated with pcm files.
-  PCMCache *getPCMCache() {
-    return BufferMgr.get();
-  }
-};
-
-/// This class manages memory buffers associated with pcm files. It also keeps
-/// track of the thread context when we start a thread to implicitly build
-/// a module.
-class PCMCache {
-  /// Map a pcm file to a MemoryBuffer and a boolean that tells us whether
-  // the pcm file is validated as a system module.
-  std::map<std::string, std::pair<std::unique_ptr<llvm::MemoryBuffer>, bool>>
-      ConsistentBuffers;
-
-  typedef std::map<std::string, bool> IsSystemMap;
-  /// When we start a thread to build a module, we push in a
-  /// ModuleCompilationContext; when we end the thread, we pop the
-  /// ModuleCompilationContext out.
-  struct ModuleCompilationContext {
-    /// Keep track of all module files that have been validated in this thread
-    /// and whether the module file is validated as a system module.
-    IsSystemMap ModulesInParent;
-  };
-  SmallVector<ModuleCompilationContext, 8> NestedModuleCompilationContexts;
-
-public:
-  /// Add a memory buffer for a pcm file to the manager.
-  void addConsistentBuffer(std::string FileName,
-                           std::unique_ptr<llvm::MemoryBuffer> Buffer);
-  /// Remove a pcm file from the map.
-  void removeFromConsistentBuffer(std::string FileName);
-  /// Return the memory buffer for a given pcm file.
-  llvm::MemoryBuffer *lookupConsistentBuffer(std::string Name);
-  /// Update the IsSystem boolean flag in ConsistentBuffers. 
-  void setIsSystem(std::string FileName, bool IsSystem);
-
-  /// Check if a pcm file was validated by an ancestor, if yes, return
-  /// whether it was validated as a system module.
-  bool isValidatedByAncestor(std::string FileName, bool &IsSystem);
-
-  void StartCompilation();
-  void EndCompilation();
-
 };
 
 }  // end namespace clang

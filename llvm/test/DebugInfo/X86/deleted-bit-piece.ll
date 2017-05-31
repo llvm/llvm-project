@@ -41,5 +41,5 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !13 = !DISubroutineType(types: !14)
 !14 = !{null}
 !15 = !DILocalVariable(name: "v", scope: !12, type: !6)
-!16 = !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+!16 = !DIExpression(DW_OP_bit_piece, 32, 32)
 !17 = !DILocation(line: 2755, column: 9, scope: !12)

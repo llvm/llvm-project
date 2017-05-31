@@ -162,12 +162,12 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
     return true;
   }
 
-  auto UnreachableProb = BranchProbability::getBranchProbability(
-      UR_TAKEN_WEIGHT, (UR_TAKEN_WEIGHT + UR_NONTAKEN_WEIGHT) *
-                           uint64_t(UnreachableEdges.size()));
-  auto ReachableProb = BranchProbability::getBranchProbability(
-      UR_NONTAKEN_WEIGHT,
-      (UR_TAKEN_WEIGHT + UR_NONTAKEN_WEIGHT) * uint64_t(ReachableEdges.size()));
+  BranchProbability UnreachableProb(UR_TAKEN_WEIGHT,
+                                    (UR_TAKEN_WEIGHT + UR_NONTAKEN_WEIGHT) *
+                                        UnreachableEdges.size());
+  BranchProbability ReachableProb(UR_NONTAKEN_WEIGHT,
+                                  (UR_TAKEN_WEIGHT + UR_NONTAKEN_WEIGHT) *
+                                      ReachableEdges.size());
 
   for (unsigned SuccIdx : UnreachableEdges)
     setEdgeProbability(BB, SuccIdx, UnreachableProb);
@@ -290,12 +290,12 @@ bool BranchProbabilityInfo::calcColdCallHeuristics(const BasicBlock *BB) {
     return true;
   }
 
-  auto ColdProb = BranchProbability::getBranchProbability(
-      CC_TAKEN_WEIGHT,
-      (CC_TAKEN_WEIGHT + CC_NONTAKEN_WEIGHT) * uint64_t(ColdEdges.size()));
-  auto NormalProb = BranchProbability::getBranchProbability(
-      CC_NONTAKEN_WEIGHT,
-      (CC_TAKEN_WEIGHT + CC_NONTAKEN_WEIGHT) * uint64_t(NormalEdges.size()));
+  BranchProbability ColdProb(CC_TAKEN_WEIGHT,
+                             (CC_TAKEN_WEIGHT + CC_NONTAKEN_WEIGHT) *
+                                 ColdEdges.size());
+  BranchProbability NormalProb(CC_NONTAKEN_WEIGHT,
+                               (CC_TAKEN_WEIGHT + CC_NONTAKEN_WEIGHT) *
+                                   NormalEdges.size());
 
   for (unsigned SuccIdx : ColdEdges)
     setEdgeProbability(BB, SuccIdx, ColdProb);

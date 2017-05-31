@@ -171,8 +171,7 @@ static bool addDiscriminators(Function &F) {
   DIBuilder Builder(*M, /*AllowUnresolved*/ false);
 
   typedef std::pair<StringRef, unsigned> Location;
-  typedef SmallDenseMap<DIScope *, DILexicalBlockFile *, 1> ScopeMap;
-  typedef DenseMap<const BasicBlock *, ScopeMap> BBScopeMap;
+  typedef DenseMap<const BasicBlock *, Metadata *> BBScopeMap;
   typedef DenseMap<Location, BBScopeMap> LocationBBMap;
   typedef DenseMap<Location, unsigned> LocationDiscriminatorMap;
   typedef DenseSet<Location> LocationSet;
@@ -190,23 +189,20 @@ static bool addDiscriminators(Function &F) {
       const DILocation *DIL = I.getDebugLoc();
       if (!DIL)
         continue;
-      DIScope *Scope = DIL->getScope();
       Location L = std::make_pair(DIL->getFilename(), DIL->getLine());
       auto &BBMap = LBM[L];
-      auto R = BBMap.insert({&B, ScopeMap()});
+      auto R = BBMap.insert(std::make_pair(&B, (Metadata *)nullptr));
       if (BBMap.size() == 1)
         continue;
       bool InsertSuccess = R.second;
-      ScopeMap &Scopes = R.first->second; 
-      // If we could insert more than one block with the same line+file, a
+      Metadata *&NewScope = R.first->second;
+      // If we could insert a different block in the same location, a
       // discriminator is needed to distinguish both instructions.
-      auto R1 = Scopes.insert({Scope, nullptr});
-      DILexicalBlockFile *&NewScope = R1.first->second;
-      unsigned Discriminator = InsertSuccess ? ++LDM[L] : LDM[L];
-      if (!NewScope) {
-        auto *File = Builder.createFile(DIL->getFilename(),
-                                        Scope->getDirectory());
-        NewScope = Builder.createLexicalBlockFile(Scope, File, Discriminator);
+      if (InsertSuccess) {
+        auto *Scope = DIL->getScope();
+        auto *File =
+            Builder.createFile(DIL->getFilename(), Scope->getDirectory());
+        NewScope = Builder.createLexicalBlockFile(Scope, File, ++LDM[L]);
       }
       I.setDebugLoc(DILocation::get(Ctx, DIL->getLine(), DIL->getColumn(),
                                     NewScope, DIL->getInlinedAt()));

@@ -2058,36 +2058,3 @@ define void @test_scatter_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <16 x dou
   ret void
 }
 declare void @llvm.masked.scatter.v16f64(<16 x double> %src0, <16 x double*> %ptrs, i32, <16 x i1> %mask)
-
-define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i64> %d) {
-; SKX-LABEL: test_pr28312:
-; SKX:       # BB#0:
-; SKX-NEXT:    vpslld $31, %xmm1, %xmm1
-; SKX-NEXT:    vptestmd %xmm1, %xmm1, %k1
-; SKX-NEXT:    vpgatherqq (,%ymm0), %ymm1 {%k1}
-; SKX-NEXT:    vpaddq %ymm1, %ymm1, %ymm0
-; SKX-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
-; SKX-NEXT:    retq
-;
-; KNL_64-LABEL: test_pr28312:
-; KNL_64:       # BB#0:
-; KNL_64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; KNL_64-NEXT:    vpslld $31, %xmm1, %xmm1
-; KNL_64-NEXT:    vpsrad $31, %xmm1, %xmm1
-; KNL_64-NEXT:    vpmovsxdq %xmm1, %ymm1
-; KNL_64-NEXT:    vpxord %zmm2, %zmm2, %zmm2
-; KNL_64-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
-; KNL_64-NEXT:    vpsllq $63, %zmm1, %zmm1
-; KNL_64-NEXT:    vptestmq %zmm1, %zmm1, %k1
-; KNL_64-NEXT:    vpgatherqq (,%zmm0), %zmm1 {%k1}
-; KNL_64-NEXT:    vpaddq %ymm1, %ymm1, %ymm0
-; KNL_64-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
-; KNL_64-NEXT:    retq
-  %g1 = call <4 x i64> @llvm.masked.gather.v4i64(<4 x i64*> %p1, i32 8, <4 x i1> %k, <4 x i64> undef)
-  %g2 = call <4 x i64> @llvm.masked.gather.v4i64(<4 x i64*> %p1, i32 8, <4 x i1> %k, <4 x i64> undef)
-  %g3 = call <4 x i64> @llvm.masked.gather.v4i64(<4 x i64*> %p1, i32 8, <4 x i1> %k, <4 x i64> undef)
-  %a = add <4 x i64> %g1, %g2
-  %b = add <4 x i64> %a, %g3
-  ret <4 x i64> %b
-}
-declare <4 x i64> @llvm.masked.gather.v4i64(<4 x i64*>, i32, <4 x i1>, <4 x i64>)

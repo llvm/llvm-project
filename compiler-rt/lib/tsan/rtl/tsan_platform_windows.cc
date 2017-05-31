@@ -21,6 +21,10 @@
 
 namespace __tsan {
 
+uptr GetShadowMemoryConsumption() {
+  return 0;
+}
+
 void FlushShadowMemory() {
 }
 

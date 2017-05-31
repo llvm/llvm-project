@@ -97,13 +97,3 @@ void rdar8883302() {
 void test8() {
   int bob; // expected-warning {{declaration shadows a variable in the global namespace}}
 }
-
-namespace rdar29067894 {
-
-void avoidWarningWhenRedefining(int b) { // expected-note {{previous definition is here}}
-  int a = 0; // expected-note {{previous definition is here}}
-  int a = 1; // expected-error {{redefinition of 'a'}}
-  int b = 2; // expected-error {{redefinition of 'b'}}
-}
-
-}

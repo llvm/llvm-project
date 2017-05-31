@@ -53,8 +53,6 @@ void MemoryMappingLayout::Reset() {
   current_load_cmd_addr_ = 0;
   current_magic_ = 0;
   current_filetype_ = 0;
-  current_arch_ = kModuleArchUnknown;
-  internal_memset(current_uuid_, 0, kModuleUUIDSize);
 }
 
 // static
@@ -73,12 +71,11 @@ void MemoryMappingLayout::LoadFromCache() {
 // and returns the start and end addresses and file offset of the corresponding
 // segment.
 // Note that the segment addresses are not necessarily sorted.
-template <u32 kLCSegment, typename SegmentCommand>
-bool MemoryMappingLayout::NextSegmentLoad(uptr *start, uptr *end, uptr *offset,
-                                          char filename[], uptr filename_size,
-                                          ModuleArch *arch, u8 *uuid,
-                                          uptr *protection) {
-  const char *lc = current_load_cmd_addr_;
+template<u32 kLCSegment, typename SegmentCommand>
+bool MemoryMappingLayout::NextSegmentLoad(
+    uptr *start, uptr *end, uptr *offset,
+    char filename[], uptr filename_size, uptr *protection) {
+  const char* lc = current_load_cmd_addr_;
   current_load_cmd_addr_ += ((const load_command *)lc)->cmdsize;
   if (((const load_command *)lc)->cmd == kLCSegment) {
     const sptr dlloff = _dyld_get_image_vmaddr_slide(current_image_);
@@ -100,75 +97,14 @@ bool MemoryMappingLayout::NextSegmentLoad(uptr *start, uptr *end, uptr *offset,
       internal_strncpy(filename, _dyld_get_image_name(current_image_),
                        filename_size);
     }
-    if (arch) {
-      *arch = current_arch_;
-    }
-    if (uuid) {
-      internal_memcpy(uuid, current_uuid_, kModuleUUIDSize);
-    }
     return true;
-  }
-  return false;
-}
-
-ModuleArch ModuleArchFromCpuType(cpu_type_t cputype, cpu_subtype_t cpusubtype) {
-  cpusubtype = cpusubtype & ~CPU_SUBTYPE_MASK;
-  switch (cputype) {
-    case CPU_TYPE_I386:
-      return kModuleArchI386;
-    case CPU_TYPE_X86_64:
-      if (cpusubtype == CPU_SUBTYPE_X86_64_ALL) return kModuleArchX86_64;
-      if (cpusubtype == CPU_SUBTYPE_X86_64_H) return kModuleArchX86_64H;
-      CHECK(0 && "Invalid subtype of x86_64");
-      return kModuleArchUnknown;
-    case CPU_TYPE_ARM:
-      if (cpusubtype == CPU_SUBTYPE_ARM_V6) return kModuleArchARMV6;
-      if (cpusubtype == CPU_SUBTYPE_ARM_V7) return kModuleArchARMV7;
-      if (cpusubtype == CPU_SUBTYPE_ARM_V7S) return kModuleArchARMV7S;
-      if (cpusubtype == CPU_SUBTYPE_ARM_V7K) return kModuleArchARMV7K;
-      CHECK(0 && "Invalid subtype of ARM");
-      return kModuleArchUnknown;
-    case CPU_TYPE_ARM64:
-      return kModuleArchARM64;
-    default:
-      CHECK(0 && "Invalid CPU type");
-      return kModuleArchUnknown;
-  }
-}
-
-static const load_command *NextCommand(const load_command *lc) {
-  return (const load_command *)((char *)lc + lc->cmdsize);
-}
-
-static void FindUUID(const load_command *first_lc, u8 *uuid_output) {
-  for (const load_command *lc = first_lc; lc->cmd != 0; lc = NextCommand(lc)) {
-    if (lc->cmd != LC_UUID) continue;
-
-    const uuid_command *uuid_lc = (const uuid_command *)lc;
-    const uint8_t *uuid = &uuid_lc->uuid[0];
-    internal_memcpy(uuid_output, uuid, kModuleUUIDSize);
-    return;
-  }
-}
-
-static bool IsModuleInstrumented(const load_command *first_lc) {
-  for (const load_command *lc = first_lc; lc->cmd != 0; lc = NextCommand(lc)) {
-    if (lc->cmd != LC_LOAD_DYLIB) continue;
-
-    const dylib_command *dylib_lc = (const dylib_command *)lc;
-    uint32_t dylib_name_offset = dylib_lc->dylib.name.offset;
-    const char *dylib_name = ((const char *)dylib_lc) + dylib_name_offset;
-    dylib_name = StripModuleName(dylib_name);
-    if (dylib_name != 0 && (internal_strstr(dylib_name, "libclang_rt."))) {
-      return true;
-    }
   }
   return false;
 }
 
 bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
                                char filename[], uptr filename_size,
-                               uptr *protection, ModuleArch *arch, u8 *uuid) {
+                               uptr *protection) {
   for (; current_image_ >= 0; current_image_--) {
     const mach_header* hdr = _dyld_get_image_header(current_image_);
     if (!hdr) continue;
@@ -177,7 +113,6 @@ bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
       current_load_cmd_count_ = hdr->ncmds;
       current_magic_ = hdr->magic;
       current_filetype_ = hdr->filetype;
-      current_arch_ = ModuleArchFromCpuType(hdr->cputype, hdr->cpusubtype);
       switch (current_magic_) {
 #ifdef MH_MAGIC_64
         case MH_MAGIC_64: {
@@ -193,9 +128,6 @@ bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
           continue;
         }
       }
-      FindUUID((const load_command *)current_load_cmd_addr_, &current_uuid_[0]);
-      current_instrumented_ =
-          IsModuleInstrumented((const load_command *)current_load_cmd_addr_);
     }
 
     for (; current_load_cmd_count_ >= 0; current_load_cmd_count_--) {
@@ -204,16 +136,14 @@ bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
 #ifdef MH_MAGIC_64
         case MH_MAGIC_64: {
           if (NextSegmentLoad<LC_SEGMENT_64, struct segment_command_64>(
-                  start, end, offset, filename, filename_size, arch, uuid,
-                  protection))
+                  start, end, offset, filename, filename_size, protection))
             return true;
           break;
         }
 #endif
         case MH_MAGIC: {
           if (NextSegmentLoad<LC_SEGMENT, struct segment_command>(
-                  start, end, offset, filename, filename_size, arch, uuid,
-                  protection))
+                  start, end, offset, filename, filename_size, protection))
             return true;
           break;
         }
@@ -229,11 +159,9 @@ void MemoryMappingLayout::DumpListOfModules(
     InternalMmapVector<LoadedModule> *modules) {
   Reset();
   uptr cur_beg, cur_end, prot;
-  ModuleArch cur_arch;
-  u8 cur_uuid[kModuleUUIDSize];
   InternalScopedString module_name(kMaxPathLength);
   for (uptr i = 0; Next(&cur_beg, &cur_end, 0, module_name.data(),
-                        module_name.size(), &prot, &cur_arch, &cur_uuid[0]);
+                        module_name.size(), &prot);
        i++) {
     const char *cur_name = module_name.data();
     if (cur_name[0] == '\0')
@@ -245,8 +173,7 @@ void MemoryMappingLayout::DumpListOfModules(
     } else {
       modules->push_back(LoadedModule());
       cur_module = &modules->back();
-      cur_module->set(cur_name, cur_beg, cur_arch, cur_uuid,
-                      current_instrumented_);
+      cur_module->set(cur_name, cur_beg);
     }
     cur_module->addAddressRange(cur_beg, cur_end, prot & kProtectionExecute);
   }

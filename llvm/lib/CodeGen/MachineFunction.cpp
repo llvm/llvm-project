@@ -99,7 +99,7 @@ void MachineFunctionProperties::print(raw_ostream &ROS, bool OnlySet) const {
 // Out-of-line virtual method.
 MachineFunctionInfo::~MachineFunctionInfo() {}
 
-void ilist_alloc_traits<MachineBasicBlock>::deleteNode(MachineBasicBlock *MBB) {
+void ilist_traits<MachineBasicBlock>::deleteNode(MachineBasicBlock *MBB) {
   MBB->getParent()->DeleteMachineBasicBlock(MBB);
 }
 

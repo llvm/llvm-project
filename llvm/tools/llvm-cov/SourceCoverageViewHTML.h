@@ -18,8 +18,6 @@
 
 namespace llvm {
 
-struct FileCoverageSummary;
-
 /// \brief A coverage printer for html output.
 class CoveragePrinterHTML : public CoveragePrinter {
 public:
@@ -28,16 +26,10 @@ public:
 
   void closeViewFile(OwnedStream OS) override;
 
-  Error createIndexFile(ArrayRef<std::string> SourceFiles,
-                        const coverage::CoverageMapping &Coverage) override;
+  Error createIndexFile(ArrayRef<StringRef> SourceFiles) override;
 
   CoveragePrinterHTML(const CoverageViewOptions &Opts)
       : CoveragePrinter(Opts) {}
-
-private:
-  void emitFileSummary(raw_ostream &OS, StringRef SF,
-                       const FileCoverageSummary &FCS,
-                       bool IsTotals = false) const;
 };
 
 /// \brief A code coverage view which supports html-based rendering.
@@ -46,7 +38,7 @@ class SourceCoverageViewHTML : public SourceCoverageView {
 
   void renderViewFooter(raw_ostream &OS) override;
 
-  void renderSourceName(raw_ostream &OS, bool WholeFile) override;
+  void renderSourceName(raw_ostream &OS) override;
 
   void renderLinePrefix(raw_ostream &OS, unsigned ViewDepth) override;
 
@@ -77,11 +69,6 @@ class SourceCoverageViewHTML : public SourceCoverageView {
 
   void renderRegionMarkers(raw_ostream &OS, CoverageSegmentArray Segments,
                            unsigned ViewDepth) override;
-
-  void renderTitle(raw_ostream &OS, StringRef Title) override;
-
-  void renderTableHeader(raw_ostream &OS, unsigned FirstUncoveredLineNo,
-                         unsigned IndentLevel) override;
 
 public:
   SourceCoverageViewHTML(StringRef SourceName, const MemoryBuffer &File,

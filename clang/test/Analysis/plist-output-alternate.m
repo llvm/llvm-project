@@ -1191,9 +1191,9 @@ void rdar8331641(int x) {
 // CHECK-NEXT:      </array>
 // CHECK-NEXT:      <key>depth</key><integer>0</integer>
 // CHECK-NEXT:      <key>extended_message</key>
-// CHECK-NEXT:      <string>Call to function &apos;CFNumberCreate&apos; returns a Core Foundation object of type CFNumberRef with a +1 retain count</string>
+// CHECK-NEXT:      <string>Call to function &apos;CFNumberCreate&apos; returns a Core Foundation object with a +1 retain count</string>
 // CHECK-NEXT:      <key>message</key>
-// CHECK-NEXT:      <string>Call to function &apos;CFNumberCreate&apos; returns a Core Foundation object of type CFNumberRef with a +1 retain count</string>
+// CHECK-NEXT:      <string>Call to function &apos;CFNumberCreate&apos; returns a Core Foundation object with a +1 retain count</string>
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:     <dict>
 // CHECK-NEXT:      <key>kind</key><string>control</string>

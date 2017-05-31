@@ -37,6 +37,16 @@ class RandomNumberGenerator;
 class StructType;
 template <class PtrType> class SmallPtrSetImpl;
 
+template <>
+struct ilist_sentinel_traits<NamedMDNode>
+    : public ilist_embedded_sentinel_traits<NamedMDNode> {};
+
+template<> struct ilist_traits<NamedMDNode>
+  : public ilist_default_traits<NamedMDNode> {
+  void addNodeToList(NamedMDNode *) {}
+  void removeNodeFromList(NamedMDNode *) {}
+};
+
 /// A Module instance is used to store all the information related to an
 /// LLVM module. Modules are the top level container of all other LLVM
 /// Intermediate Representation (IR) objects. Each module directly contains a

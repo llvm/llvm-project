@@ -541,7 +541,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     //
     // Note that the halfwords are stored high first, low second; so we need
     // to transpose the fixup value here to map properly.
-    if (Ctx && Value % 4 != 0) {
+    if (Ctx && Value  % 4 != 0) {
       Ctx->reportError(Fixup.getLoc(), "misaligned ARM call destination");
       return 0;
     }
@@ -703,16 +703,14 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
                                       bool &IsResolved) {
   const MCSymbolRefExpr *A = Target.getSymA();
   const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
-  // MachO (the only user of "Value") tries to make .o files that look vaguely
-  // pre-linked, so for MOVW/MOVT and .word relocations they put the Thumb bit
-  // into the addend if possible. Other relocation types don't want this bit
-  // though (branches couldn't encode it if it *was* present, and no other
-  // relocations exist) and it can interfere with checking valid expressions.
-  if ((unsigned)Fixup.getKind() == FK_Data_4 ||
-      (unsigned)Fixup.getKind() == ARM::fixup_arm_movw_lo16 ||
-      (unsigned)Fixup.getKind() == ARM::fixup_arm_movt_hi16 ||
-      (unsigned)Fixup.getKind() == ARM::fixup_t2_movw_lo16 ||
-      (unsigned)Fixup.getKind() == ARM::fixup_t2_movt_hi16) {
+  // Some fixups to thumb function symbols need the low bit (thumb bit)
+  // twiddled.
+  if ((unsigned)Fixup.getKind() != ARM::fixup_arm_ldst_pcrel_12 &&
+      (unsigned)Fixup.getKind() != ARM::fixup_t2_ldst_pcrel_12 &&
+      (unsigned)Fixup.getKind() != ARM::fixup_arm_adr_pcrel_12 &&
+      (unsigned)Fixup.getKind() != ARM::fixup_thumb_adr_pcrel_10 &&
+      (unsigned)Fixup.getKind() != ARM::fixup_t2_adr_pcrel_12 &&
+      (unsigned)Fixup.getKind() != ARM::fixup_arm_thumb_cp) {
     if (Sym) {
       if (Asm.isThumbFunc(Sym))
         Value |= 1;

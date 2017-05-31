@@ -356,6 +356,7 @@ void CallAndMessageChecker::checkPreStmt(const CXXDeleteExpr *DE,
   }
 }
 
+
 void CallAndMessageChecker::checkPreCall(const CallEvent &Call,
                                          CheckerContext &C) const {
   ProgramStateRef State = C.getState();
@@ -388,10 +389,11 @@ void CallAndMessageChecker::checkPreCall(const CallEvent &Call,
   }
 
   const Decl *D = Call.getDecl();
-  if (D && (isa<FunctionDecl>(D) || isa<BlockDecl>(D))) {
-    // If we have a function or block declaration, we can make sure we pass
-    // enough parameters.
-    unsigned Params = Call.parameters().size();
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
+  if (FD) {
+    // If we have a declaration, we can make sure we pass enough parameters to
+    // the function.
+    unsigned Params = FD->getNumParams();
     if (Call.getNumArgs() < Params) {
       ExplodedNode *N = C.generateErrorNode();
       if (!N)
@@ -401,14 +403,8 @@ void CallAndMessageChecker::checkPreCall(const CallEvent &Call,
 
       SmallString<512> Str;
       llvm::raw_svector_ostream os(Str);
-      if (isa<FunctionDecl>(D)) {
-        os << "Function ";
-      } else {
-        assert(isa<BlockDecl>(D));
-        os << "Block ";
-      }
-      os << "taking " << Params << " argument"
-         << (Params == 1 ? "" : "s") << " is called with fewer ("
+      os << "Function taking " << Params << " argument"
+         << (Params == 1 ? "" : "s") << " is called with less ("
          << Call.getNumArgs() << ")";
 
       C.emitReport(
@@ -429,7 +425,6 @@ void CallAndMessageChecker::checkPreCall(const CallEvent &Call,
   else
     BT = &BT_call_arg;
 
-  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   for (unsigned i = 0, e = Call.getNumArgs(); i != e; ++i) {
     const ParmVarDecl *ParamDecl = nullptr;
     if(FD && i < FD->getNumParams())

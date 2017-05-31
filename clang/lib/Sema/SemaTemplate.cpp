@@ -429,12 +429,7 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
   bool MightBeCxx11UnevalField =
       getLangOpts().CPlusPlus11 && isUnevaluatedContext();
 
-  // Check if the nested name specifier is an enum type.
-  bool IsEnum = false;
-  if (NestedNameSpecifier *NNS = SS.getScopeRep())
-    IsEnum = dyn_cast_or_null<EnumType>(NNS->getAsType());
-
-  if (!MightBeCxx11UnevalField && !isAddressOfOperand && !IsEnum &&
+  if (!MightBeCxx11UnevalField && !isAddressOfOperand &&
       isa<CXXMethodDecl>(DC) && cast<CXXMethodDecl>(DC)->isInstance()) {
     QualType ThisType = cast<CXXMethodDecl>(DC)->getThisType(Context);
 
@@ -459,104 +454,6 @@ Sema::BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
   return DependentScopeDeclRefExpr::Create(
       Context, SS.getWithLocInContext(Context), TemplateKWLoc, NameInfo,
       TemplateArgs);
-}
-
-
-/// Determine whether we would be unable to instantiate this template (because
-/// it either has no definition, or is in the process of being instantiated).
-bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
-                                          NamedDecl *Instantiation,
-                                          bool InstantiatedFromMember,
-                                          const NamedDecl *Pattern,
-                                          const NamedDecl *PatternDef,
-                                          TemplateSpecializationKind TSK,
-                                          bool Complain /*= true*/) {
-  assert(isa<TagDecl>(Instantiation) || isa<FunctionDecl>(Instantiation) ||
-         isa<VarDecl>(Instantiation));
-
-  bool IsEntityBeingDefined = false;
-  if (const TagDecl *TD = dyn_cast_or_null<TagDecl>(PatternDef))
-    IsEntityBeingDefined = TD->isBeingDefined();
-
-  if (PatternDef && !IsEntityBeingDefined) {
-    NamedDecl *SuggestedDef = nullptr;
-    if (!hasVisibleDefinition(const_cast<NamedDecl*>(PatternDef), &SuggestedDef,
-                              /*OnlyNeedComplete*/false)) {
-      // If we're allowed to diagnose this and recover, do so.
-      bool Recover = Complain && !isSFINAEContext();
-      if (Complain)
-        diagnoseMissingImport(PointOfInstantiation, SuggestedDef,
-                              Sema::MissingImportKind::Definition, Recover);
-      return !Recover;
-    }
-    return false;
-  }
-
-  if (!Complain || (PatternDef && PatternDef->isInvalidDecl()))
-    return true;
-
-  llvm::Optional<unsigned> Note;
-  QualType InstantiationTy;
-  if (TagDecl *TD = dyn_cast<TagDecl>(Instantiation))
-    InstantiationTy = Context.getTypeDeclType(TD);
-  if (PatternDef) {
-    Diag(PointOfInstantiation,
-         diag::err_template_instantiate_within_definition)
-      << /*implicit|explicit*/(TSK != TSK_ImplicitInstantiation)
-      << InstantiationTy;
-    // Not much point in noting the template declaration here, since
-    // we're lexically inside it.
-    Instantiation->setInvalidDecl();
-  } else if (InstantiatedFromMember) {
-    if (isa<FunctionDecl>(Instantiation)) {
-      Diag(PointOfInstantiation,
-           diag::err_explicit_instantiation_undefined_member)
-        << /*member function*/ 1 << Instantiation->getDeclName()
-        << Instantiation->getDeclContext();
-      Note = diag::note_explicit_instantiation_here;
-    } else {
-      assert(isa<TagDecl>(Instantiation) && "Must be a TagDecl!");
-      Diag(PointOfInstantiation,
-           diag::err_implicit_instantiate_member_undefined)
-        << InstantiationTy;
-      Note = diag::note_member_declared_at;
-    }
-  } else {
-    if (isa<FunctionDecl>(Instantiation)) {
-      Diag(PointOfInstantiation,
-           diag::err_explicit_instantiation_undefined_func_template)
-        << Pattern;
-      Note = diag::note_explicit_instantiation_here;
-    } else if (isa<TagDecl>(Instantiation)) {
-      Diag(PointOfInstantiation, diag::err_template_instantiate_undefined)
-        << (TSK != TSK_ImplicitInstantiation)
-        << InstantiationTy;
-      Note = diag::note_template_decl_here;
-    } else {
-      assert(isa<VarDecl>(Instantiation) && "Must be a VarDecl!");
-      if (isa<VarTemplateSpecializationDecl>(Instantiation)) {
-        Diag(PointOfInstantiation,
-             diag::err_explicit_instantiation_undefined_var_template)
-          << Instantiation;
-        Instantiation->setInvalidDecl();
-      } else
-        Diag(PointOfInstantiation,
-             diag::err_explicit_instantiation_undefined_member)
-          << /*static data member*/ 2 << Instantiation->getDeclName()
-          << Instantiation->getDeclContext();
-      Note = diag::note_explicit_instantiation_here;
-    }
-  }
-  if (Note) // Diagnostics were emitted.
-    Diag(Pattern->getLocation(), Note.getValue());
-
-  // In general, Instantiation isn't marked invalid to get more than one
-  // error for multiple undefined instantiations. But the code that does
-  // explicit declaration -> explicit definition conversion can't handle
-  // invalid declarations, so mark as invalid in that case.
-  if (TSK == TSK_ExplicitInstantiationDeclaration)
-    Instantiation->setInvalidDecl();
-  return true;
 }
 
 /// DiagnoseTemplateParameterShadow - Produce a diagnostic complaining
@@ -1255,7 +1152,6 @@ Sema::CheckClassTemplate(Scope *S, unsigned TagSpec, TagUseKind TUK,
 
   if (Attr)
     ProcessDeclAttributeList(S, NewClass, Attr);
-  ProcessAPINotes(NewClass);
 
   if (PrevClassTemplate)
     mergeDeclAttributes(NewClass, PrevClassTemplate->getTemplatedDecl());
@@ -3356,7 +3252,7 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
   // on the previously-computed template arguments.
   if (ArgType->getType()->isDependentType()) {
     Sema::InstantiatingTemplate Inst(SemaRef, TemplateLoc,
-                                     Param, Template, Converted,
+                                     Template, Converted,
                                      SourceRange(TemplateLoc, RAngleLoc));
     if (Inst.isInvalid())
       return nullptr;
@@ -3408,7 +3304,7 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
                              NonTypeTemplateParmDecl *Param,
                         SmallVectorImpl<TemplateArgument> &Converted) {
   Sema::InstantiatingTemplate Inst(SemaRef, TemplateLoc,
-                                   Param, Template, Converted,
+                                   Template, Converted,
                                    SourceRange(TemplateLoc, RAngleLoc));
   if (Inst.isInvalid())
     return ExprError();
@@ -3459,9 +3355,8 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
                              TemplateTemplateParmDecl *Param,
                        SmallVectorImpl<TemplateArgument> &Converted,
                              NestedNameSpecifierLoc &QualifierLoc) {
-  Sema::InstantiatingTemplate Inst(
-      SemaRef, TemplateLoc, TemplateParameter(Param), Template, Converted,
-      SourceRange(TemplateLoc, RAngleLoc));
+  Sema::InstantiatingTemplate Inst(SemaRef, TemplateLoc, Template, Converted,
+                                   SourceRange(TemplateLoc, RAngleLoc));
   if (Inst.isInvalid())
     return TemplateName();
 
@@ -4082,9 +3977,7 @@ bool Sema::CheckTemplateArgumentList(TemplateDecl *Template,
     }
 
     // Introduce an instantiation record that describes where we are using
-    // the default template argument. We're not actually instantiating a
-    // template here, we just create this object to put a note into the
-    // context stack.
+    // the default template argument.
     InstantiatingTemplate Inst(*this, RAngleLoc, Template, *Param, Converted,
                                SourceRange(TemplateLoc, RAngleLoc));
     if (Inst.isInvalid())
@@ -5916,13 +5809,9 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
   // C++ [temp]p4:
   //   A template [...] shall not have C linkage.
   DeclContext *Ctx = S->getEntity();
-  if (Ctx && Ctx->isExternCContext()) {
-    Diag(TemplateParams->getTemplateLoc(), diag::err_template_linkage)
-        << TemplateParams->getSourceRange();
-    if (const LinkageSpecDecl *LSD = Ctx->getExternCContext())
-      Diag(LSD->getExternLoc(), diag::note_extern_c_begins_here);
-    return true;
-  }
+  if (Ctx && Ctx->isExternCContext())
+    return Diag(TemplateParams->getTemplateLoc(), diag::err_template_linkage)
+             << TemplateParams->getSourceRange();
 
   while (Ctx && isa<LinkageSpecDecl>(Ctx))
     Ctx = Ctx->getParent();
@@ -6623,7 +6512,6 @@ Sema::ActOnClassTemplateSpecialization(Scope *S, unsigned TagSpec,
 
   if (Attr)
     ProcessDeclAttributeList(S, Specialization, Attr);
-  ProcessAPINotes(Specialization);
 
   // Add alignment attributes if necessary; these attributes are checked when
   // the ASTContext lays out the structure.
@@ -7621,7 +7509,6 @@ Sema::ActOnExplicitInstantiation(Scope *S,
 
   if (Attr)
     ProcessDeclAttributeList(S, Specialization, Attr);
-  ProcessAPINotes(Specialization);
 
   // Add the explicit instantiation into its lexical context. However,
   // since explicit instantiations are never found by name lookup, we
@@ -8029,7 +7916,6 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
         // Merge attributes.
         if (AttributeList *Attr = D.getDeclSpec().getAttributes().getList())
           ProcessDeclAttributeList(S, Prev, Attr);
-        ProcessAPINotes(Prev);
       }
       if (TSK == TSK_ExplicitInstantiationDefinition)
         InstantiateVariableDefinition(D.getIdentifierLoc(), Prev);
@@ -8173,7 +8059,6 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
   AttributeList *Attr = D.getDeclSpec().getAttributes().getList();
   if (Attr)
     ProcessDeclAttributeList(S, Specialization, Attr);
-  ProcessAPINotes(Specialization);
 
   if (Specialization->isDefined()) {
     // Let the ASTConsumer know that this function has been explicitly

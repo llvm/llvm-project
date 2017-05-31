@@ -542,11 +542,11 @@ void ARMAsmPrinter::EmitEndOfAsmFile(Module &M) {
     raw_string_ostream OS(Flags);
 
     for (const auto &Function : M)
-      TLOF.emitLinkerFlagsForGlobal(OS, &Function);
+      TLOF.emitLinkerFlagsForGlobal(OS, &Function, *Mang);
     for (const auto &Global : M.globals())
-      TLOF.emitLinkerFlagsForGlobal(OS, &Global);
+      TLOF.emitLinkerFlagsForGlobal(OS, &Global, *Mang);
     for (const auto &Alias : M.aliases())
-      TLOF.emitLinkerFlagsForGlobal(OS, &Alias);
+      TLOF.emitLinkerFlagsForGlobal(OS, &Alias, *Mang);
 
     OS.flush();
 

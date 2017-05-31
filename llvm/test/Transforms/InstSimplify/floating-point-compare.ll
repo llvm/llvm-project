@@ -123,11 +123,3 @@ define i1 @nonans2(double %in1, double %in2) {
   %cmp = fcmp nnan ord double %in1, %in2
   ret i1 %cmp
 }
-
-define <2 x i1> @orderedCompareWithNaNVector(<2 x double> %A) {
-; CHECK-LABEL: @orderedCompareWithNaNVector(
-; CHECK: ret <2 x i1> zeroinitializer
-  %cmp = fcmp olt <2 x double> %A, <double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF>
-  ret <2 x i1> %cmp
-}
-

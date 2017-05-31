@@ -1066,41 +1066,35 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     case ISD::SRL:
     case ISD::SRA:
     case ISD::ROTL:
-    case ISD::ROTR: {
+    case ISD::ROTR:
       // Legalizing shifts/rotates requires adjusting the shift amount
       // to the appropriate width.
-      SDValue Op0 = Node->getOperand(0);
-      SDValue Op1 = Node->getOperand(1);
-      if (!Op1.getValueType().isVector()) {
-        SDValue SAO = DAG.getShiftAmountOperand(Op0.getValueType(), Op1);
-        // The getShiftAmountOperand() may create a new operand node or
-        // return the existing one. If new operand is created we need
-        // to update the parent node.
-        // Do not try to legalize SAO here! It will be automatically legalized
-        // in the next round.
-        if (SAO != Op1)
-          NewNode = DAG.UpdateNodeOperands(Node, Op0, SAO);
+      if (!Node->getOperand(1).getValueType().isVector()) {
+        SDValue SAO =
+          DAG.getShiftAmountOperand(Node->getOperand(0).getValueType(),
+                                    Node->getOperand(1));
+        HandleSDNode Handle(SAO);
+        LegalizeOp(SAO.getNode());
+        NewNode = DAG.UpdateNodeOperands(Node, Node->getOperand(0),
+                                         Handle.getValue());
       }
-    }
-    break;
+      break;
     case ISD::SRL_PARTS:
     case ISD::SRA_PARTS:
-    case ISD::SHL_PARTS: {
+    case ISD::SHL_PARTS:
       // Legalizing shifts/rotates requires adjusting the shift amount
       // to the appropriate width.
-      SDValue Op0 = Node->getOperand(0);
-      SDValue Op1 = Node->getOperand(1);
-      SDValue Op2 = Node->getOperand(2);
-      if (!Op2.getValueType().isVector()) {
-        SDValue SAO = DAG.getShiftAmountOperand(Op0.getValueType(), Op2);
-        // The getShiftAmountOperand() may create a new operand node or
-        // return the existing one. If new operand is created we need
-        // to update the parent node.
-        if (SAO != Op2)
-          NewNode = DAG.UpdateNodeOperands(Node, Op0, Op1, SAO);
+      if (!Node->getOperand(2).getValueType().isVector()) {
+        SDValue SAO =
+          DAG.getShiftAmountOperand(Node->getOperand(0).getValueType(),
+                                    Node->getOperand(2));
+        HandleSDNode Handle(SAO);
+        LegalizeOp(SAO.getNode());
+        NewNode = DAG.UpdateNodeOperands(Node, Node->getOperand(0),
+                                         Node->getOperand(1),
+                                         Handle.getValue());
       }
-    }
-    break;
+      break;
     }
 
     if (NewNode != Node) {

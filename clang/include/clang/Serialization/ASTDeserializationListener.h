@@ -26,7 +26,6 @@ class QualType;
 class MacroDefinitionRecord;
 class MacroInfo;
 class Module;
-class SourceLocation;
 
 class ASTDeserializationListener {
 public:
@@ -53,9 +52,6 @@ public:
                                    MacroDefinitionRecord *MD) {}
   /// \brief A module definition was read from the AST file.
   virtual void ModuleRead(serialization::SubmoduleID ID, Module *Mod) {}
-  /// \brief A module import was read from the AST file.
-  virtual void ModuleImportRead(serialization::SubmoduleID ID,
-                                SourceLocation ImportLoc) {}
 };
 }
 

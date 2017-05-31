@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
@@ -39,59 +38,46 @@ Command::Command(const Action &Source, const Tool &Creator,
       InputFilenames.push_back(II.getFilename());
 }
 
-/// @brief Check if the compiler flag in question should be skipped when
-/// emitting a reproducer. Also track how many arguments it has and if the
-/// option is some kind of include path.
-static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
-                     bool &IsInclude) {
-  SkipNum = 2;
+static int skipArgs(const char *Flag, bool HaveCrashVFS) {
   // These flags are all of the form -Flag <Arg> and are treated as two
   // arguments.  Therefore, we need to skip the flag and the next argument.
-  bool ShouldSkip = llvm::StringSwitch<bool>(Flag)
+  bool Res = llvm::StringSwitch<bool>(Flag)
     .Cases("-MF", "-MT", "-MQ", "-serialize-diagnostic-file", true)
     .Cases("-o", "-coverage-file", "-dependency-file", true)
-    .Cases("-fdebug-compilation-dir", "-diagnostic-log-file", true)
-    .Cases("-dwarf-debug-flags", "-ivfsoverlay", true)
-    .Default(false);
-  if (ShouldSkip)
-    return true;
-
-  // Some include flags shouldn't be skipped if we have a crash VFS
-  IsInclude = llvm::StringSwitch<bool>(Flag)
-    .Cases("-include", "-header-include-file", true)
-    .Cases("-idirafter", "-internal-isystem", "-iwithprefix", true)
-    .Cases("-internal-externc-isystem", "-iprefix", true)
+    .Cases("-fdebug-compilation-dir", "-idirafter", true)
+    .Cases("-include", "-include-pch", "-internal-isystem", true)
+    .Cases("-internal-externc-isystem", "-iprefix", "-iwithprefix", true)
     .Cases("-iwithprefixbefore", "-isystem", "-iquote", true)
-    .Cases("-isysroot", "-I", "-F", "-resource-dir", true)
-    .Cases("-iframework", "-include-pch", true)
+    .Cases("-dwarf-debug-flags", "-ivfsoverlay", true)
+    .Cases("-header-include-file", "-diagnostic-log-file", true)
+    // Some include flags shouldn't be skipped if we have a crash VFS
+    .Cases("-isysroot", "-I", "-F", "-resource-dir", !HaveCrashVFS)
     .Default(false);
-  if (IsInclude)
-    return HaveCrashVFS ? false : true;
+
+  // Match found.
+  if (Res)
+    return 2;
 
   // The remaining flags are treated as a single argument.
 
   // These flags are all of the form -Flag and have no second argument.
-  ShouldSkip = llvm::StringSwitch<bool>(Flag)
+  Res = llvm::StringSwitch<bool>(Flag)
     .Cases("-M", "-MM", "-MG", "-MP", "-MD", true)
     .Case("-MMD", true)
     .Default(false);
 
   // Match found.
-  SkipNum = 1;
-  if (ShouldSkip)
-    return true;
+  if (Res)
+    return 1;
 
   // These flags are treated as a single argument (e.g., -F<Dir>).
   StringRef FlagRef(Flag);
-  IsInclude = FlagRef.startswith("-F") || FlagRef.startswith("-I");
-  if (IsInclude)
-    return HaveCrashVFS ? false : true;
-  if (FlagRef.startswith("-fmodules-cache-path=") ||
-      FlagRef.startswith("-fapinotes-cache-path="))
-    return true;
+  if ((!HaveCrashVFS &&
+       (FlagRef.startswith("-F") || FlagRef.startswith("-I"))) ||
+      FlagRef.startswith("-fmodules-cache-path="))
+    return 1;
 
-  SkipNum = 0;
-  return false;
+  return 0;
 }
 
 void Command::printArg(raw_ostream &OS, const char *Arg, bool Quote) {
@@ -167,45 +153,6 @@ void Command::buildArgvForResponseFile(
   }
 }
 
-/// @brief Rewrite relative include-like flag paths to absolute ones.
-static void
-rewriteIncludes(const llvm::ArrayRef<const char *> &Args, size_t Idx,
-                size_t NumArgs,
-                llvm::SmallVectorImpl<llvm::SmallString<128>> &IncFlags) {
-  using namespace llvm;
-  using namespace sys;
-  auto getAbsPath = [](StringRef InInc, SmallVectorImpl<char> &OutInc) -> bool {
-    if (path::is_absolute(InInc)) // Nothing to do here...
-      return false;
-    std::error_code EC = fs::current_path(OutInc);
-    if (EC)
-      return false;
-    path::append(OutInc, InInc);
-    return true;
-  };
-
-  SmallString<128> NewInc;
-  if (NumArgs == 1) {
-    StringRef FlagRef(Args[Idx + NumArgs - 1]);
-    assert((FlagRef.startswith("-F") || FlagRef.startswith("-I")) &&
-            "Expecting -I or -F");
-    StringRef Inc = FlagRef.slice(2, StringRef::npos);
-    if (getAbsPath(Inc, NewInc)) {
-      SmallString<128> NewArg(FlagRef.slice(0, 2));
-      NewArg += NewInc;
-      IncFlags.push_back(std::move(NewArg));
-    }
-    return;
-  }
-
-  assert(NumArgs == 2 && "Not expecting more than two arguments");
-  StringRef Inc(Args[Idx + NumArgs - 1]);
-  if (!getAbsPath(Inc, NewInc))
-    return;
-  IncFlags.push_back(SmallString<128>(Args[Idx]));
-  IncFlags.push_back(std::move(NewInc));
-}
-
 void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
                     CrashReportInfo *CrashInfo) const {
   // Always quote the exe.
@@ -224,27 +171,10 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
     const char *const Arg = Args[i];
 
     if (CrashInfo) {
-      int NumArgs = 0;
-      bool IsInclude = false;
-      if (skipArgs(Arg, HaveCrashVFS, NumArgs, IsInclude)) {
-        i += NumArgs - 1;
+      if (int Skip = skipArgs(Arg, HaveCrashVFS)) {
+        i += Skip - 1;
         continue;
       }
-
-      // Relative includes need to be expanded to absolute paths.
-      if (HaveCrashVFS && IsInclude) {
-        SmallVector<SmallString<128>, 2> NewIncFlags;
-        rewriteIncludes(Args, i, NumArgs, NewIncFlags);
-        if (!NewIncFlags.empty()) {
-          for (auto &F : NewIncFlags) {
-            OS << ' ';
-            printArg(OS, F.c_str(), Quote);
-          }
-          i += NumArgs - 1;
-          continue;
-        }
-      }
-
       auto Found = std::find_if(InputFilenames.begin(), InputFilenames.end(),
                                 [&Arg](StringRef IF) { return IF == Arg; });
       if (Found != InputFilenames.end() &&
@@ -267,14 +197,11 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
     OS << ' ';
     printArg(OS, CrashInfo->VFSPath.str().c_str(), Quote);
 
-    // The leftover modules from the crash are stored in
-    //  <name>.cache/vfs/modules
-    // Leave it untouched for pcm inspection and provide a clean/empty dir
-    // path to contain the future generated module cache:
-    //  <name>.cache/vfs/repro-modules
+    // Insert -fmodules-cache-path and use the relative module directory
+    // <name>.cache/vfs/modules where we already dumped the modules.
     SmallString<128> RelModCacheDir = llvm::sys::path::parent_path(
         llvm::sys::path::parent_path(CrashInfo->VFSPath));
-    llvm::sys::path::append(RelModCacheDir, "repro-modules");
+    llvm::sys::path::append(RelModCacheDir, "modules");
 
     std::string ModCachePath = "-fmodules-cache-path=";
     ModCachePath.append(RelModCacheDir.c_str());

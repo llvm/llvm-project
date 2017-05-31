@@ -550,9 +550,8 @@ DIExpression *DIExpression::getImpl(LLVMContext &Context,
 
 unsigned DIExpression::ExprOperand::getSize() const {
   switch (getOp()) {
-  case dwarf::DW_OP_LLVM_fragment:
+  case dwarf::DW_OP_bit_piece:
     return 3;
-  case dwarf::DW_OP_constu:
   case dwarf::DW_OP_plus:
   case dwarf::DW_OP_minus:
     return 2;
@@ -571,12 +570,9 @@ bool DIExpression::isValid() const {
     switch (I->getOp()) {
     default:
       return false;
-    case dwarf::DW_OP_LLVM_fragment:
-    case dwarf::DW_OP_stack_value:
-      // We only support fragment and stack value expressions which appear at
-      // the end.
+    case dwarf::DW_OP_bit_piece:
+      // Piece expressions must be at the end.
       return I->get() + I->getSize() == E->get();
-    case dwarf::DW_OP_constu:
     case dwarf::DW_OP_plus:
     case dwarf::DW_OP_minus:
     case dwarf::DW_OP_deref:
@@ -586,14 +582,22 @@ bool DIExpression::isValid() const {
   return true;
 }
 
-Optional<DIExpression::FragmentInfo>
-DIExpression::getFragmentInfo(expr_op_iterator Start, expr_op_iterator End) {
-  for (auto I = Start; I != End; ++I)
-    if (I->getOp() == dwarf::DW_OP_LLVM_fragment) {
-      DIExpression::FragmentInfo Info = {I->getArg(1), I->getArg(0)};
-      return Info;
-    }
-  return None;
+bool DIExpression::isBitPiece() const {
+  assert(isValid() && "Expected valid expression");
+  if (unsigned N = getNumElements())
+    if (N >= 3)
+      return getElement(N - 3) == dwarf::DW_OP_bit_piece;
+  return false;
+}
+
+uint64_t DIExpression::getBitPieceOffset() const {
+  assert(isBitPiece() && "Expected bit piece");
+  return getElement(getNumElements() - 2);
+}
+
+uint64_t DIExpression::getBitPieceSize() const {
+  assert(isBitPiece() && "Expected bit piece");
+  return getElement(getNumElements() - 1);
 }
 
 DIObjCProperty *DIObjCProperty::getImpl(

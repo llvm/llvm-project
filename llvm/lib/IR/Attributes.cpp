@@ -381,18 +381,10 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     std::string Result;
     Result += (Twine('"') + getKindAsString() + Twine('"')).str();
 
-    std::string AttrVal = pImpl->getValueAsString();
-    if (AttrVal.empty()) return Result;
+    StringRef Val = pImpl->getValueAsString();
+    if (Val.empty()) return Result;
 
-    // Since some attribute strings contain special characters that cannot be
-    // printable, those have to be escaped to make the attribute value printable
-    // as is.  e.g. "\01__gnu_mcount_nc"
-    {
-      raw_string_ostream OS(Result);
-      OS << "=\"";
-      PrintEscapedString(AttrVal, OS);
-      OS << "\"";
-    }
+    Result += ("=\"" + Val + Twine('"')).str();
     return Result;
   }
 

@@ -264,12 +264,10 @@ public:
   /// \returns false if the visitation was terminated early, true otherwise.
   bool TraverseConstructorInitializer(CXXCtorInitializer *Init);
 
-  /// \brief Recursively visit a lambda capture. \c Init is the expression that
-  /// will be used to initialize the capture.
+  /// \brief Recursively visit a lambda capture.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
-                             Expr *Init);
+  bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C);
 
   /// \brief Recursively visit the body of a lambda expression.
   ///
@@ -357,8 +355,7 @@ public:
 #define OPERATOR(NAME)                                                         \
   bool TraverseUnary##NAME(UnaryOperator *S,                                   \
                            DataRecursionQueue *Queue = nullptr) {              \
-    if (!getDerived().shouldTraversePostOrder())                               \
-      TRY_TO(WalkUpFromUnary##NAME(S));                                        \
+    TRY_TO(WalkUpFromUnary##NAME(S));                                          \
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getSubExpr());                          \
     return true;                                                               \
   }                                                                            \
@@ -888,12 +885,9 @@ bool RecursiveASTVisitor<Derived>::TraverseConstructorInitializer(
 template <typename Derived>
 bool
 RecursiveASTVisitor<Derived>::TraverseLambdaCapture(LambdaExpr *LE,
-                                                    const LambdaCapture *C,
-                                                    Expr *Init) {
+                                                    const LambdaCapture *C) {
   if (LE->isInitCapture(C))
     TRY_TO(TraverseDecl(C->getCapturedVar()));
-  else
-    TRY_TO(TraverseStmt(Init));
   return true;
 }
 
@@ -1039,8 +1033,6 @@ DEF_TRAVERSE_TYPE(DependentTemplateSpecializationType, {
 })
 
 DEF_TRAVERSE_TYPE(PackExpansionType, { TRY_TO(TraverseType(T->getPattern())); })
-
-DEF_TRAVERSE_TYPE(ObjCTypeParamType, {})
 
 DEF_TRAVERSE_TYPE(ObjCInterfaceType, {})
 
@@ -1272,8 +1264,6 @@ DEF_TRAVERSE_TYPELOC(DependentTemplateSpecializationType, {
 
 DEF_TRAVERSE_TYPELOC(PackExpansionType,
                      { TRY_TO(TraverseTypeLoc(TL.getPatternLoc())); })
-
-DEF_TRAVERSE_TYPELOC(ObjCTypeParamType, {})
 
 DEF_TRAVERSE_TYPELOC(ObjCInterfaceType, {})
 
@@ -2271,11 +2261,13 @@ DEF_TRAVERSE_STMT(CXXTemporaryObjectExpr, {
 
 // Walk only the visible parts of lambda expressions.
 DEF_TRAVERSE_STMT(LambdaExpr, {
-  for (unsigned I = 0, N = S->capture_size(); I != N; ++I) {
-    const LambdaCapture *C = S->capture_begin() + I;
-    if (C->isExplicit() || getDerived().shouldVisitImplicitCode()) {
-      TRY_TO(TraverseLambdaCapture(S, C, S->capture_init_begin()[I]));
-    }
+  for (LambdaExpr::capture_iterator C = S->explicit_capture_begin(),
+                                    CEnd = S->explicit_capture_end();
+       C != CEnd; ++C) {
+    TRY_TO(TraverseLambdaCapture(S, C));
+  }
+  for (Expr *Init : S->capture_inits()) {
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(Init);
   }
 
   TypeLoc TL = S->getCallOperator()->getTypeSourceInfo()->getTypeLoc();

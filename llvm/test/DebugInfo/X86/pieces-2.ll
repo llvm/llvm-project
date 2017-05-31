@@ -90,6 +90,6 @@ attributes #2 = { nounwind }
 !26 = !DILocation(line: 10, scope: !4)
 !27 = !DILocation(line: 11, scope: !4)
 !28 = !DILocalVariable(name: "i1", line: 11, scope: !4, file: !5, type: !14)
-!29 = !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+!29 = !DIExpression(DW_OP_bit_piece, 0, 32)
 !31 = !{i32 3, i32 0, i32 12}
 !32 = !DILocation(line: 12, scope: !4)

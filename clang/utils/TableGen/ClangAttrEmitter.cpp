@@ -299,13 +299,7 @@ namespace {
         OS << "\" << get" << getUpperName()
            << "()->getNameInfo().getAsString() << \"";
       } else if (type == "IdentifierInfo *") {
-        OS << "\";\n";
-        if (isOptional())
-          OS << "    if (get" << getUpperName() << "()) ";
-        else
-          OS << "    ";
-        OS << "OS << get" << getUpperName() << "()->getName();\n";
-        OS << "    OS << \"";
+        OS << "\" << get" << getUpperName() << "()->getName() << \"";
       } else if (type == "TypeSourceInfo *") {
         OS << "\" << get" << getUpperName() << "().getAsString() << \"";
       } else {

@@ -65,7 +65,7 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
   if (Optional<Loc> L = V.getAs<Loc>())
     V = Pred->getState()->getSVal(*L);
   else
-    assert(V.isUnknownOrUndef());
+    assert(V.isUnknown());
 
   const Expr *CallExpr = Call.getOriginExpr();
   evalBind(Dst, CallExpr, Pred, ThisVal, V, true);
@@ -346,30 +346,6 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
       defaultEvalCall(Bldr, *I, *Call);
   }
 
-  // If the CFG was contructed without elements for temporary destructors
-  // and the just-called constructor created a temporary object then
-  // stop exploration if the temporary object has a noreturn constructor.
-  // This can lose coverage because the destructor, if it were present
-  // in the CFG, would be called at the end of the full expression or
-  // later (for life-time extended temporaries) -- but avoids infeasible
-  // paths when no-return temporary destructors are used for assertions.
-  const AnalysisDeclContext *ADC = LCtx->getAnalysisDeclContext();
-  if (!ADC->getCFGBuildOptions().AddTemporaryDtors) {
-      const MemRegion *Target = Call->getCXXThisVal().getAsRegion();
-      if (Target && isa<CXXTempObjectRegion>(Target) &&
-          Call->getDecl()->getParent()->isAnyDestructorNoReturn()) {
-
-      for (ExplodedNode *N : DstEvaluated) {
-        Bldr.generateSink(CE, N, N->getState());
-      }
-
-      // There is no need to run the PostCall and PostStmtchecker
-      // callbacks because we just generated sinks on all nodes in th
-      // frontier.
-      return;
-    }
- }
-
   ExplodedNodeSet DstPostCall;
   getCheckerManager().runCheckersForPostCall(DstPostCall, DstEvaluated,
                                              *Call, *this);
@@ -602,9 +578,9 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
   const MemRegion *R = svalBuilder.getRegionManager().getCXXTempObjectRegion(
       LE, LocCtxt);
   SVal V = loc::MemRegionVal(R);
-
+  
   ProgramStateRef State = Pred->getState();
-
+  
   // If we created a new MemRegion for the lambda, we should explicitly bind
   // the captures.
   CXXRecordDecl::field_iterator CurField = LE->getLambdaClass()->field_begin();

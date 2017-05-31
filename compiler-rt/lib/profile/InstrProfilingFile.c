@@ -14,7 +14,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
 #ifdef _MSC_VER
 /* For _alloca. */
 #include <malloc.h>
@@ -60,7 +59,6 @@ static const char *getPNSStr(ProfileNameSpecifier PNS) {
 }
 
 #define MAX_PID_SIZE 16
-#define MAX_SIGNAL_HANDLERS 16
 /* Data structure holding the result of parsed filename pattern. */
 typedef struct lprofFilename {
   /* File name string possibly with %p or %h specifiers. */
@@ -81,13 +79,10 @@ typedef struct lprofFilename {
    * 2 profile data files. %1m is equivalent to %m. Also %m specifier
    * can only appear once at the end of the name pattern. */
   unsigned MergePoolSize;
-  char ExitOnSignals[MAX_SIGNAL_HANDLERS];
-  unsigned NumExitSignals;
   ProfileNameSpecifier PNS;
 } lprofFilename;
 
-COMPILER_RT_WEAK lprofFilename lprofCurFilename = {
-    0, 0, 0, {0}, {0}, 0, 0, 0, {0}, 0, PNS_unknown};
+lprofFilename lprofCurFilename = {0, 0, 0, {0}, {0}, 0, 0, 0, PNS_unknown};
 
 int getpid(void);
 static int getCurFilenameLength();
@@ -256,26 +251,6 @@ static void truncateCurrentFile(void) {
   fclose(File);
 }
 
-static void exitSignalHandler(int sig) {
-  (void)sig;
-  exit(0);
-}
-
-static void installExitSignalHandlers(void) {
-  unsigned I;
-  struct sigaction sigact;
-  int err;
-  for (I = 0; I < lprofCurFilename.NumExitSignals; ++I) {
-    memset(&sigact, 0, sizeof(sigact));
-    sigact.sa_handler = exitSignalHandler;
-    err = sigaction(lprofCurFilename.ExitOnSignals[I], &sigact, NULL);
-    if (err)
-      PROF_WARN(
-          "Unable to install an exit signal handler for %d (errno = %d).\n",
-          lprofCurFilename.ExitOnSignals[I], err);
-  }
-}
-
 static const char *DefaultProfileName = "default.profraw";
 static void resetFilenameToDefault(void) {
   if (lprofCurFilename.FilenamePat && lprofCurFilename.OwnsFilenamePat) {
@@ -286,23 +261,12 @@ static void resetFilenameToDefault(void) {
   lprofCurFilename.PNS = PNS_default;
 }
 
-static int isDigit(char C) { return C >= '0' && C <= '9'; }
-
-static int isNonZeroDigit(char C) { return C >= '1' && C <= '9'; }
-
 static int containsMergeSpecifier(const char *FilenamePat, int I) {
   return (FilenamePat[I] == 'm' ||
-          (isNonZeroDigit(FilenamePat[I]) &&
+          (FilenamePat[I] >= '1' && FilenamePat[I] <= '9' &&
            /* If FilenamePat[I] is not '\0', the next byte is guaranteed
             * to be in-bound as the string is null terminated. */
            FilenamePat[I + 1] == 'm'));
-}
-
-static int containsExitOnSignalSpecifier(const char *FilenamePat, int I) {
-  if (!isNonZeroDigit(FilenamePat[I]))
-    return 0;
-  return (FilenamePat[I + 1] == 'x') ||
-         (isDigit(FilenamePat[I + 1]) && FilenamePat[I + 2] == 'x');
 }
 
 /* Parses the pattern string \p FilenamePat and stores the result to
@@ -313,7 +277,6 @@ static int parseFilenamePattern(const char *FilenamePat,
   char *PidChars = &lprofCurFilename.PidChars[0];
   char *Hostname = &lprofCurFilename.Hostname[0];
   int MergingEnabled = 0;
-  char SignalNo;
 
   /* Clean up cached prefix.  */
   if (lprofCurFilename.ProfilePathPrefix)
@@ -363,22 +326,6 @@ static int parseFilenamePattern(const char *FilenamePat,
           lprofCurFilename.MergePoolSize = FilenamePat[I] - '0';
           I++; /* advance to 'm' */
         }
-      } else if (containsExitOnSignalSpecifier(FilenamePat, I)) {
-        if (lprofCurFilename.NumExitSignals == MAX_SIGNAL_HANDLERS) {
-          PROF_WARN("%%x specifier has been specified too many times in %s.\n",
-                    FilenamePat);
-          return -1;
-        }
-        /* Grab the signal number. */
-        SignalNo = FilenamePat[I] - '0';
-        I++; /* advance to either another digit, or 'x' */
-        if (FilenamePat[I] != 'x') {
-          SignalNo = (SignalNo * 10) + (FilenamePat[I] - '0');
-          I++; /* advance to 'x' */
-        }
-        lprofCurFilename.ExitOnSignals[lprofCurFilename.NumExitSignals] =
-            SignalNo;
-        ++lprofCurFilename.NumExitSignals;
       }
     }
 
@@ -411,18 +358,15 @@ static void parseAndSetFilename(const char *FilenamePat,
   lprofCurFilename.PNS = PNS;
 
   if (!OldFilenamePat) {
-    if (getenv("LLVM_PROFILE_VERBOSE"))
-      PROF_NOTE("Set profile file path to \"%s\" via %s.\n",
-                lprofCurFilename.FilenamePat, getPNSStr(PNS));
+    PROF_NOTE("Set profile file path to \"%s\" via %s.\n",
+              lprofCurFilename.FilenamePat, getPNSStr(PNS));
   } else {
-    if (getenv("LLVM_PROFILE_VERBOSE"))
-      PROF_NOTE("Override old profile path \"%s\" via %s to \"%s\" via %s.\n",
-                OldFilenamePat, getPNSStr(OldPNS), lprofCurFilename.FilenamePat,
-                getPNSStr(PNS));
+    PROF_NOTE("Override old profile path \"%s\" via %s to \"%s\" via %s.\n",
+              OldFilenamePat, getPNSStr(OldPNS), lprofCurFilename.FilenamePat,
+              getPNSStr(PNS));
   }
 
   truncateCurrentFile();
-  installExitSignalHandlers();
 }
 
 /* Return buffer length that is required to store the current profile
@@ -431,12 +375,11 @@ static void parseAndSetFilename(const char *FilenamePat,
 #define SIGLEN 24
 static int getCurFilenameLength() {
   int Len;
-  unsigned I;
   if (!lprofCurFilename.FilenamePat || !lprofCurFilename.FilenamePat[0])
     return 0;
 
   if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts ||
-        lprofCurFilename.MergePoolSize || lprofCurFilename.NumExitSignals))
+        lprofCurFilename.MergePoolSize))
     return strlen(lprofCurFilename.FilenamePat);
 
   Len = strlen(lprofCurFilename.FilenamePat) +
@@ -444,11 +387,6 @@ static int getCurFilenameLength() {
         lprofCurFilename.NumHosts * (strlen(lprofCurFilename.Hostname) - 2);
   if (lprofCurFilename.MergePoolSize)
     Len += SIGLEN;
-  for (I = 0; I < lprofCurFilename.NumExitSignals; ++I) {
-    Len -= 3; /* Drop the '%', signal number, and the 'x'. */
-    if (lprofCurFilename.ExitOnSignals[I] >= 10)
-      --Len; /* Drop the second digit of the signal number. */
-  }
   return Len;
 }
 
@@ -464,7 +402,7 @@ static const char *getCurFilename(char *FilenameBuf) {
     return 0;
 
   if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts ||
-        lprofCurFilename.MergePoolSize || lprofCurFilename.NumExitSignals))
+        lprofCurFilename.MergePoolSize))
     return lprofCurFilename.FilenamePat;
 
   PidLength = strlen(lprofCurFilename.PidChars);
@@ -490,9 +428,6 @@ static const char *getCurFilename(char *FilenameBuf) {
         J += S;
         if (FilenamePat[I] != 'm')
           I++;
-      } else if (containsExitOnSignalSpecifier(FilenamePat, I)) {
-        while (FilenamePat[I] != 'x')
-          ++I;
       }
       /* Drop any unknown substitutions. */
     } else
@@ -623,7 +558,7 @@ COMPILER_RT_VISIBILITY
 int __llvm_profile_dump(void) {
   if (!doMerging())
     PROF_WARN("Later invocation of __llvm_profile_dump can lead to clobbering "
-              " of previously dumped profile data : %s. Either use %%m "
+              " of previously dumped profile data : %s. Either use \%m "
               "in profile name or change profile name before dumping.\n",
               "online profile merging is not on");
   int rc = __llvm_profile_write_file();

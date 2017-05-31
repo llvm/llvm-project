@@ -710,7 +710,7 @@ bool DevirtModule::areRemarksEnabled() {
   if (FL.empty())
     return false;
   const Function &Fn = FL.front();
-  auto DI = OptimizationRemark(DEBUG_TYPE, Fn, DebugLoc(), "");
+  auto DI = DiagnosticInfoOptimizationRemark(DEBUG_TYPE, Fn, DebugLoc(), "");
   return DI.isEnabled();
 }
 

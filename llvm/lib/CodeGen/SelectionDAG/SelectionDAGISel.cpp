@@ -721,8 +721,9 @@ void SelectionDAGISel::ComputeLiveOutVRegInfo() {
 }
 
 void SelectionDAGISel::CodeGenAndEmitDAG() {
-  StringRef GroupName = "sdag";
-  StringRef GroupDescription = "Instruction Selection and Scheduling";
+  std::string GroupName;
+  if (TimePassesIsEnabled)
+    GroupName = "Instruction Selection and Scheduling";
   std::string BlockName;
   int BlockNumber = -1;
   (void)BlockNumber;
@@ -750,8 +751,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
   // Run the DAG combiner in pre-legalize mode.
   {
-    NamedRegionTimer T("combine1", "DAG Combining 1", GroupName,
-                       GroupDescription, TimePassesIsEnabled);
+    NamedRegionTimer T("DAG Combining 1", GroupName, TimePassesIsEnabled);
     CurDAG->Combine(BeforeLegalizeTypes, *AA, OptLevel);
   }
 
@@ -765,8 +765,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
   bool Changed;
   {
-    NamedRegionTimer T("legalize_types", "Type Legalization", GroupName,
-                       GroupDescription, TimePassesIsEnabled);
+    NamedRegionTimer T("Type Legalization", GroupName, TimePassesIsEnabled);
     Changed = CurDAG->LegalizeTypes();
   }
 
@@ -781,8 +780,8 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
     // Run the DAG combiner in post-type-legalize mode.
     {
-      NamedRegionTimer T("combine_lt", "DAG Combining after legalize types",
-                         GroupName, GroupDescription, TimePassesIsEnabled);
+      NamedRegionTimer T("DAG Combining after legalize types", GroupName,
+                         TimePassesIsEnabled);
       CurDAG->Combine(AfterLegalizeTypes, *AA, OptLevel);
     }
 
@@ -792,15 +791,13 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   }
 
   {
-    NamedRegionTimer T("legalize_vec", "Vector Legalization", GroupName,
-                       GroupDescription, TimePassesIsEnabled);
+    NamedRegionTimer T("Vector Legalization", GroupName, TimePassesIsEnabled);
     Changed = CurDAG->LegalizeVectors();
   }
 
   if (Changed) {
     {
-      NamedRegionTimer T("legalize_types2", "Type Legalization 2", GroupName,
-                         GroupDescription, TimePassesIsEnabled);
+      NamedRegionTimer T("Type Legalization 2", GroupName, TimePassesIsEnabled);
       CurDAG->LegalizeTypes();
     }
 
@@ -809,8 +806,8 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
     // Run the DAG combiner in post-type-legalize mode.
     {
-      NamedRegionTimer T("combine_lv", "DAG Combining after legalize vectors",
-                         GroupName, GroupDescription, TimePassesIsEnabled);
+      NamedRegionTimer T("DAG Combining after legalize vectors", GroupName,
+                         TimePassesIsEnabled);
       CurDAG->Combine(AfterLegalizeVectorOps, *AA, OptLevel);
     }
 
@@ -822,8 +819,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->viewGraph("legalize input for " + BlockName);
 
   {
-    NamedRegionTimer T("legalize", "DAG Legalization", GroupName,
-                       GroupDescription, TimePassesIsEnabled);
+    NamedRegionTimer T("DAG Legalization", GroupName, TimePassesIsEnabled);
     CurDAG->Legalize();
   }
 
@@ -835,8 +831,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
   // Run the DAG combiner in post-legalize mode.
   {
-    NamedRegionTimer T("combine2", "DAG Combining 2", GroupName,
-                       GroupDescription, TimePassesIsEnabled);
+    NamedRegionTimer T("DAG Combining 2", GroupName, TimePassesIsEnabled);
     CurDAG->Combine(AfterLegalizeDAG, *AA, OptLevel);
   }
 
@@ -852,8 +847,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   // Third, instruction select all of the operations to machine code, adding the
   // code to the MachineBasicBlock.
   {
-    NamedRegionTimer T("isel", "Instruction Selection", GroupName,
-                       GroupDescription, TimePassesIsEnabled);
+    NamedRegionTimer T("Instruction Selection", GroupName, TimePassesIsEnabled);
     DoInstructionSelection();
   }
 
@@ -866,8 +860,8 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   // Schedule machine code.
   ScheduleDAGSDNodes *Scheduler = CreateScheduler();
   {
-    NamedRegionTimer T("sched", "Instruction Scheduling", GroupName,
-                       GroupDescription, TimePassesIsEnabled);
+    NamedRegionTimer T("Instruction Scheduling", GroupName,
+                       TimePassesIsEnabled);
     Scheduler->Run(CurDAG, FuncInfo->MBB);
   }
 
@@ -878,8 +872,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   // inserted into.
   MachineBasicBlock *FirstMBB = FuncInfo->MBB, *LastMBB;
   {
-    NamedRegionTimer T("emit", "Instruction Creation", GroupName,
-                       GroupDescription, TimePassesIsEnabled);
+    NamedRegionTimer T("Instruction Creation", GroupName, TimePassesIsEnabled);
 
     // FuncInfo->InsertPt is passed by reference and set to the end of the
     // scheduled instructions.
@@ -893,8 +886,8 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
   // Free the scheduler state.
   {
-    NamedRegionTimer T("cleanup", "Instruction Scheduling Cleanup", GroupName,
-                       GroupDescription, TimePassesIsEnabled);
+    NamedRegionTimer T("Instruction Scheduling Cleanup", GroupName,
+                       TimePassesIsEnabled);
     delete Scheduler;
   }
 
@@ -1160,22 +1153,14 @@ static void setupSwiftErrorVals(const Function &Fn, const TargetLowering *TLI,
     return;
 
   FuncInfo->SwiftErrorVals.clear();
-  FuncInfo->SwiftErrorVRegDefMap.clear();
-  FuncInfo->SwiftErrorVRegUpwardsUse.clear();
-  FuncInfo->SwiftErrorArg = nullptr;
+  FuncInfo->SwiftErrorMap.clear();
+  FuncInfo->SwiftErrorWorklist.clear();
 
   // Check if function has a swifterror argument.
-  bool HaveSeenSwiftErrorArg = false;
   for (Function::const_arg_iterator AI = Fn.arg_begin(), AE = Fn.arg_end();
        AI != AE; ++AI)
-    if (AI->hasSwiftErrorAttr()) {
-      assert(!HaveSeenSwiftErrorArg &&
-             "Must have only one swifterror parameter");
-      (void)HaveSeenSwiftErrorArg; // silence warning.
-      HaveSeenSwiftErrorArg = true;
-      FuncInfo->SwiftErrorArg = &*AI;
+    if (AI->hasSwiftErrorAttr())
       FuncInfo->SwiftErrorVals.push_back(&*AI);
-    }
 
   for (const auto &LLVMBB : Fn)
     for (const auto &Inst : LLVMBB) {
@@ -1185,152 +1170,95 @@ static void setupSwiftErrorVals(const Function &Fn, const TargetLowering *TLI,
     }
 }
 
-static void createSwiftErrorEntriesInEntryBlock(FunctionLoweringInfo *FuncInfo,
-                                                const TargetLowering *TLI,
-                                                const TargetInstrInfo *TII,
-                                                const BasicBlock *LLVMBB,
-                                                SelectionDAGBuilder *SDB) {
+/// For each basic block, merge incoming swifterror values or simply propagate
+/// them. The merged results will be saved in SwiftErrorMap. For predecessors
+/// that are not yet visited, we create virtual registers to hold the swifterror
+/// values and save them in SwiftErrorWorklist.
+static void mergeIncomingSwiftErrors(FunctionLoweringInfo *FuncInfo,
+                            const TargetLowering *TLI,
+                            const TargetInstrInfo *TII,
+                            const BasicBlock *LLVMBB,
+                            SelectionDAGBuilder *SDB) {
   if (!TLI->supportSwiftError())
     return;
 
-  // We only need to do this when we have swifterror parameter or swifterror
+  // We should only do this when we have swifterror parameter or swifterror
   // alloc.
   if (FuncInfo->SwiftErrorVals.empty())
     return;
 
+  // At beginning of a basic block, insert PHI nodes or get the virtual
+  // register from the only predecessor, and update SwiftErrorMap; if one
+  // of the predecessors is not visited, update SwiftErrorWorklist.
+  // At end of a basic block, if a block is in SwiftErrorWorklist, insert copy
+  // to sync up the virtual register assignment.
+
+  // Always create a virtual register for each swifterror value in entry block.
+  auto &DL = SDB->DAG.getDataLayout();
+  const TargetRegisterClass *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
   if (pred_begin(LLVMBB) == pred_end(LLVMBB)) {
-    auto &DL = FuncInfo->MF->getDataLayout();
-    auto const *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
-    for (const auto *SwiftErrorVal : FuncInfo->SwiftErrorVals) {
-      // We will always generate a copy from the argument. It is always used at
-      // least by the 'return' of the swifterror.
-      if (FuncInfo->SwiftErrorArg && FuncInfo->SwiftErrorArg == SwiftErrorVal)
-        continue;
+    for (unsigned I = 0, E = FuncInfo->SwiftErrorVals.size(); I < E; I++) {
       unsigned VReg = FuncInfo->MF->getRegInfo().createVirtualRegister(RC);
       // Assign Undef to Vreg. We construct MI directly to make sure it works
       // with FastISel.
-      BuildMI(*FuncInfo->MBB, FuncInfo->MBB->getFirstNonPHI(),
-              SDB->getCurDebugLoc(), TII->get(TargetOpcode::IMPLICIT_DEF),
-              VReg);
-      FuncInfo->setCurrentSwiftErrorVReg(FuncInfo->MBB, SwiftErrorVal, VReg);
+      BuildMI(*FuncInfo->MBB, FuncInfo->InsertPt, SDB->getCurDebugLoc(),
+          TII->get(TargetOpcode::IMPLICIT_DEF), VReg);
+      FuncInfo->SwiftErrorMap[FuncInfo->MBB].push_back(VReg);
+    }
+    return;
+  }
+
+  if (auto *UniquePred = LLVMBB->getUniquePredecessor()) {
+    auto *UniquePredMBB = FuncInfo->MBBMap[UniquePred];
+    if (!FuncInfo->SwiftErrorMap.count(UniquePredMBB)) {
+      // Update SwiftErrorWorklist with a new virtual register.
+      for (unsigned I = 0, E = FuncInfo->SwiftErrorVals.size(); I < E; I++) {
+        unsigned VReg = FuncInfo->MF->getRegInfo().createVirtualRegister(RC);
+        FuncInfo->SwiftErrorWorklist[UniquePredMBB].push_back(VReg);
+        // Propagate the information from the single predecessor.
+        FuncInfo->SwiftErrorMap[FuncInfo->MBB].push_back(VReg);
+      }
+      return;
+    }
+    // Propagate the information from the single predecessor.
+    FuncInfo->SwiftErrorMap[FuncInfo->MBB] =
+      FuncInfo->SwiftErrorMap[UniquePredMBB];
+    return;
+  }
+
+  // For the case of multiple predecessors, update SwiftErrorWorklist.
+  // Handle the case where we have two or more predecessors being the same.
+  for (const_pred_iterator PI = pred_begin(LLVMBB), PE = pred_end(LLVMBB);
+       PI != PE; ++PI) {
+    auto *PredMBB = FuncInfo->MBBMap[*PI];
+    if (!FuncInfo->SwiftErrorMap.count(PredMBB) &&
+        !FuncInfo->SwiftErrorWorklist.count(PredMBB)) {
+      for (unsigned I = 0, E = FuncInfo->SwiftErrorVals.size(); I < E; I++) {
+        unsigned VReg = FuncInfo->MF->getRegInfo().createVirtualRegister(RC);
+        // When we actually visit the basic block PredMBB, we will materialize
+        // the virtual register assignment in copySwiftErrorsToFinalVRegs.
+        FuncInfo->SwiftErrorWorklist[PredMBB].push_back(VReg);
+      }
     }
   }
-}
 
-/// Propagate swifterror values through the machine function CFG.
-static void propagateSwiftErrorVRegs(FunctionLoweringInfo *FuncInfo) {
-  auto *TLI = FuncInfo->TLI;
-  if (!TLI->supportSwiftError())
-    return;
+  // For the case of multiple predecessors, create a virtual register for
+  // each swifterror value and generate Phi node.
+  for (unsigned I = 0, E = FuncInfo->SwiftErrorVals.size(); I < E; I++) {
+    unsigned VReg = FuncInfo->MF->getRegInfo().createVirtualRegister(RC);
+    FuncInfo->SwiftErrorMap[FuncInfo->MBB].push_back(VReg);
 
-  // We only need to do this when we have swifterror parameter or swifterror
-  // alloc.
-  if (FuncInfo->SwiftErrorVals.empty())
-    return;
-
-  // For each machine basic block in reverse post order.
-  ReversePostOrderTraversal<MachineFunction *> RPOT(FuncInfo->MF);
-  for (ReversePostOrderTraversal<MachineFunction *>::rpo_iterator
-           It = RPOT.begin(),
-           E = RPOT.end();
-       It != E; ++It) {
-    MachineBasicBlock *MBB = *It;
-
-    // For each swifterror value in the function.
-    for(const auto *SwiftErrorVal : FuncInfo->SwiftErrorVals) {
-      auto Key = std::make_pair(MBB, SwiftErrorVal);
-      auto UUseIt = FuncInfo->SwiftErrorVRegUpwardsUse.find(Key);
-      auto VRegDefIt = FuncInfo->SwiftErrorVRegDefMap.find(Key);
-      bool UpwardsUse = UUseIt != FuncInfo->SwiftErrorVRegUpwardsUse.end();
-      unsigned UUseVReg = UpwardsUse ? UUseIt->second : 0;
-      bool DownwardDef = VRegDefIt != FuncInfo->SwiftErrorVRegDefMap.end();
-      assert(!(UpwardsUse && !DownwardDef) &&
-             "We can't have an upwards use but no downwards def");
-
-      // If there is no upwards exposed use and an entry for the swifterror in
-      // the def map for this value we don't need to do anything: We already
-      // have a downward def for this basic block.
-      if (!UpwardsUse && DownwardDef)
-        continue;
-
-      // Otherwise we either have an upwards exposed use vreg that we need to
-      // materialize or need to forward the downward def from predecessors.
-
-      // Check whether we have a single vreg def from all predecessors.
-      // Otherwise we need a phi.
-      SmallVector<std::pair<MachineBasicBlock *, unsigned>, 4> VRegs;
-      SmallSet<const MachineBasicBlock*, 8> Visited;
-      for (auto *Pred : MBB->predecessors()) {
-        if (!Visited.insert(Pred).second)
-          continue;
-        VRegs.push_back(std::make_pair(
-            Pred, FuncInfo->getOrCreateSwiftErrorVReg(Pred, SwiftErrorVal)));
-        if (Pred != MBB)
-          continue;
-        // We have a self-edge.
-        // If there was no upwards use in this basic block there is now one: the
-        // phi needs to use it self.
-        if (!UpwardsUse) {
-          UpwardsUse = true;
-          UUseIt = FuncInfo->SwiftErrorVRegUpwardsUse.find(Key);
-          assert(UUseIt != FuncInfo->SwiftErrorVRegUpwardsUse.end());
-          UUseVReg = UUseIt->second;
-        }
-      }
-
-      // We need a phi node if we have more than one predecessor with different
-      // downward defs.
-      bool needPHI =
-          VRegs.size() >= 1 &&
-          std::find_if(
-              VRegs.begin(), VRegs.end(),
-              [&](const std::pair<const MachineBasicBlock *, unsigned> &V)
-                  -> bool { return V.second != VRegs[0].second; }) !=
-              VRegs.end();
-
-      // If there is no upwards exposed used and we don't need a phi just
-      // forward the swifterror vreg from the predecessor(s).
-      if (!UpwardsUse && !needPHI) {
-        assert(!VRegs.empty() &&
-               "No predecessors? The entry block should bail out earlier");
-        // Just forward the swifterror vreg from the predecessor(s).
-        FuncInfo->setCurrentSwiftErrorVReg(MBB, SwiftErrorVal, VRegs[0].second);
-        continue;
-      }
-
-      auto DLoc = isa<Instruction>(SwiftErrorVal)
-                      ? dyn_cast<Instruction>(SwiftErrorVal)->getDebugLoc()
-                      : DebugLoc();
-      const auto *TII = FuncInfo->MF->getSubtarget().getInstrInfo();
-
-      // If we don't need a phi create a copy to the upward exposed vreg.
-      if (!needPHI) {
-        assert(UpwardsUse);
-        unsigned DestReg = UUseVReg;
-        BuildMI(*MBB, MBB->getFirstNonPHI(), DLoc, TII->get(TargetOpcode::COPY),
-                DestReg)
-            .addReg(VRegs[0].second);
-        continue;
-      }
-
-      // We need a phi: if there is an upwards exposed use we already have a
-      // destination virtual register number otherwise we generate a new one.
-      auto &DL = FuncInfo->MF->getDataLayout();
-      auto const *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
-      unsigned PHIVReg =
-          UpwardsUse ? UUseVReg
-                     : FuncInfo->MF->getRegInfo().createVirtualRegister(RC);
-      MachineInstrBuilder SwiftErrorPHI =
-          BuildMI(*MBB, MBB->getFirstNonPHI(), DLoc,
-                  TII->get(TargetOpcode::PHI), PHIVReg);
-      for (auto BBRegPair : VRegs) {
-        SwiftErrorPHI.addReg(BBRegPair.second).addMBB(BBRegPair.first);
-      }
-
-      // We did not have a definition in this block before: store the phi's vreg
-      // as this block downward exposed def.
-      if (!UpwardsUse)
-        FuncInfo->setCurrentSwiftErrorVReg(MBB, SwiftErrorVal, PHIVReg);
+    MachineInstrBuilder SwiftErrorPHI = BuildMI(*FuncInfo->MBB,
+        FuncInfo->MBB->begin(), SDB->getCurDebugLoc(),
+        TII->get(TargetOpcode::PHI), VReg);
+    for (const_pred_iterator PI = pred_begin(LLVMBB), PE = pred_end(LLVMBB);
+         PI != PE; ++PI) {
+      auto *PredMBB = FuncInfo->MBBMap[*PI];
+      unsigned SwiftErrorReg = FuncInfo->SwiftErrorMap.count(PredMBB) ?
+        FuncInfo->SwiftErrorMap[PredMBB][I] :
+        FuncInfo->SwiftErrorWorklist[PredMBB][I];
+      SwiftErrorPHI.addReg(SwiftErrorReg)
+                   .addMBB(PredMBB);
     }
   }
 }
@@ -1381,7 +1309,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     if (!FuncInfo->MBB)
       continue; // Some blocks like catchpads have no code or MBB.
     FuncInfo->InsertPt = FuncInfo->MBB->getFirstNonPHI();
-    createSwiftErrorEntriesInEntryBlock(FuncInfo, TLI, TII, LLVMBB, SDB);
+    mergeIncomingSwiftErrors(FuncInfo, TLI, TII, LLVMBB, SDB);
 
     // Setup an EH landing-pad block.
     FuncInfo->ExceptionPointerVirtReg = 0;
@@ -1557,8 +1485,6 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     FinishBasicBlock();
     FuncInfo->PHINodesToUpdate.clear();
   }
-
-  propagateSwiftErrorVRegs(FuncInfo);
 
   delete FastIS;
   SDB->clearDanglingDebugInfo();

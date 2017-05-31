@@ -4477,7 +4477,6 @@ public:
     case CC_X86VectorCall:
     case CC_IntelOclBicc:
     case CC_X86_64SysV:
-    case CC_Swift:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -5263,8 +5262,6 @@ public:
         Builder.defineMacro("__ARM_VFPV3__");
       if (FPU & VFP4FPU)
         Builder.defineMacro("__ARM_VFPV4__");
-      if (FPU & FPARMV8)
-        Builder.defineMacro("__ARM_FPV5__");
     }
 
     // This only gets set when Neon instructions are actually available, unlike

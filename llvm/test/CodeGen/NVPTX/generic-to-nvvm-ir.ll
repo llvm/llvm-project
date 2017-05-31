@@ -7,7 +7,7 @@ target triple = "nvptx64-nvidia-cuda"
 
 ; Generic space variables should be converted to global space AKA addrspace(1).
 ; CHECK-DAG: @static_var = {{.*}}addrspace(1)
-@static_var = externally_initialized global i8 0, align 1, !dbg !4
+@static_var = externally_initialized global i8 0, align 1
 ; CHECK-DAG: @.str = {{.*}}addrspace(1)
 @.str = private unnamed_addr constant [4 x i8] c"XXX\00", align 1
 
@@ -43,11 +43,12 @@ declare void @extfunc(i8 signext)
 ; Find list of global variables and make sure it's the one used by DICompileUnit
 ; CHECK: [[GLOBALSNODE]] = !{[[GVNODE:![0-9]+]]}
 !4 = distinct !DIGlobalVariable(name: "static_var", scope: !0, file: !1, line: 2, type: !5, isLocal: false,
-               isDefinition: true)
+               isDefinition: true, variable: i8* @static_var)
 ; Debug info must also be updated to reflect new address space.
 ; CHECK: [[GVNODE]] = distinct !DIGlobalVariable(name: "static_var"
 ; CHECK-SAME: scope: [[CUNODE]]
 ; CHECK-SAME: type: [[TYPENODE:![0-9]+]]
+; CHECK-SAME: variable: i8* addrspacecast (i8 addrspace(1)* @static_var to i8*)
 !5 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
 ; CHECK: [[TYPENODE]] = !DIBasicType(name: "char"
 !6 = !{i32 2, !"Dwarf Version", i32 4}

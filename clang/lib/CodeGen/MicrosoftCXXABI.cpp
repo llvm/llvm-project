@@ -3850,11 +3850,8 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
     FunctionArgs.push_back(&IsMostDerived);
 
   // Start defining the function.
-  auto NL = ApplyDebugLocation::CreateEmpty(CGF);
   CGF.StartFunction(GlobalDecl(), FnInfo.getReturnType(), ThunkFn, FnInfo,
                     FunctionArgs, CD->getLocation(), SourceLocation());
-  // Create a scope with an artificial location for the body of this function.
-  auto AL = ApplyDebugLocation::CreateArtificial(CGF);
   EmitThisParam(CGF);
   llvm::Value *This = getThisValue(CGF);
 

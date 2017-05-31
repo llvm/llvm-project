@@ -92,8 +92,8 @@ typedef __sanitizer::OFF64_T OFF64_T;
 
 // Just a pair of pointers.
 struct interpose_substitution {
-  const __sanitizer::uptr replacement;
-  const __sanitizer::uptr original;
+  const uptr replacement;
+  const uptr original;
 };
 
 // For a function foo() create a global pair of pointers { wrap_foo, foo } in

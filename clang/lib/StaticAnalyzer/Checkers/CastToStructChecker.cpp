@@ -1,4 +1,4 @@
-//=== CastToStructChecker.cpp ----------------------------------*- C++ -*--===//
+//=== CastToStructChecker.cpp - Fixed address usage checker ----*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,13 +8,12 @@
 //===----------------------------------------------------------------------===//
 //
 // This files defines CastToStructChecker, a builtin checker that checks for
-// cast from non-struct pointer to struct pointer and widening struct data cast.
+// cast from non-struct pointer to struct pointer.
 // This check corresponds to CWE-588.
 //
 //===----------------------------------------------------------------------===//
 
 #include "ClangSACheckers.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -24,22 +23,18 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class CastToStructVisitor : public RecursiveASTVisitor<CastToStructVisitor> {
-  BugReporter &BR;
-  const CheckerBase *Checker;
-  AnalysisDeclContext *AC;
+class CastToStructChecker : public Checker< check::PreStmt<CastExpr> > {
+  mutable std::unique_ptr<BuiltinBug> BT;
 
 public:
-  explicit CastToStructVisitor(BugReporter &B, const CheckerBase *Checker,
-                               AnalysisDeclContext *A)
-      : BR(B), Checker(Checker), AC(A) {}
-  bool VisitCastExpr(const CastExpr *CE);
+  void checkPreStmt(const CastExpr *CE, CheckerContext &C) const;
 };
 }
 
-bool CastToStructVisitor::VisitCastExpr(const CastExpr *CE) {
+void CastToStructChecker::checkPreStmt(const CastExpr *CE,
+                                       CheckerContext &C) const {
   const Expr *E = CE->getSubExpr();
-  ASTContext &Ctx = AC->getASTContext();
+  ASTContext &Ctx = C.getASTContext();
   QualType OrigTy = Ctx.getCanonicalType(E->getType());
   QualType ToTy = Ctx.getCanonicalType(CE->getType());
 
@@ -47,71 +42,33 @@ bool CastToStructVisitor::VisitCastExpr(const CastExpr *CE) {
   const PointerType *ToPTy = dyn_cast<PointerType>(ToTy.getTypePtr());
 
   if (!ToPTy || !OrigPTy)
-    return true;
+    return;
 
   QualType OrigPointeeTy = OrigPTy->getPointeeType();
   QualType ToPointeeTy = ToPTy->getPointeeType();
 
   if (!ToPointeeTy->isStructureOrClassType())
-    return true;
+    return;
 
   // We allow cast from void*.
   if (OrigPointeeTy->isVoidType())
-    return true;
+    return;
 
   // Now the cast-to-type is struct pointer, the original type is not void*.
   if (!OrigPointeeTy->isRecordType()) {
-    SourceRange Sr[1] = {CE->getSourceRange()};
-    PathDiagnosticLocation Loc(CE, BR.getSourceManager(), AC);
-    BR.EmitBasicReport(
-        AC->getDecl(), Checker, "Cast from non-struct type to struct type",
-        categories::LogicError, "Casting a non-structure type to a structure "
-                                "type and accessing a field can lead to memory "
-                                "access errors or data corruption.",
-        Loc, Sr);
-  } else {
-    // Don't warn when size of data is unknown.
-    const auto *U = dyn_cast<UnaryOperator>(E);
-    if (!U || U->getOpcode() != UO_AddrOf)
-      return true;
-
-    // Don't warn for references
-    const ValueDecl *VD = nullptr;
-    if (const auto *SE = dyn_cast<DeclRefExpr>(U->getSubExpr()))
-      VD = dyn_cast<ValueDecl>(SE->getDecl());
-    else if (const auto *SE = dyn_cast<MemberExpr>(U->getSubExpr()))
-      VD = SE->getMemberDecl();
-    if (!VD || VD->getType()->isReferenceType())
-      return true;
-
-    // Warn when there is widening cast.
-    unsigned ToWidth = Ctx.getTypeInfo(ToPointeeTy).Width;
-    unsigned OrigWidth = Ctx.getTypeInfo(OrigPointeeTy).Width;
-    if (ToWidth <= OrigWidth)
-      return true;
-
-    PathDiagnosticLocation Loc(CE, BR.getSourceManager(), AC);
-    BR.EmitBasicReport(AC->getDecl(), Checker, "Widening cast to struct type",
-                       categories::LogicError,
-                       "Casting data to a larger structure type and accessing "
-                       "a field can lead to memory access errors or data "
-                       "corruption.",
-                       Loc, CE->getSourceRange());
+    if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
+      if (!BT)
+        BT.reset(
+            new BuiltinBug(this, "Cast from non-struct type to struct type",
+                           "Casting a non-structure type to a structure type "
+                           "and accessing a field can lead to memory access "
+                           "errors or data corruption."));
+      auto R = llvm::make_unique<BugReport>(*BT, BT->getDescription(), N);
+      R->addRange(CE->getSourceRange());
+      C.emitReport(std::move(R));
+    }
   }
-
-  return true;
 }
-
-namespace {
-class CastToStructChecker : public Checker<check::ASTCodeBody> {
-public:
-  void checkASTCodeBody(const Decl *D, AnalysisManager &Mgr,
-                        BugReporter &BR) const {
-    CastToStructVisitor Visitor(BR, this, Mgr.getAnalysisDeclContext(D));
-    Visitor.TraverseDecl(const_cast<Decl *>(D));
-  }
-};
-} // end anonymous namespace
 
 void ento::registerCastToStructChecker(CheckerManager &mgr) {
   mgr.registerChecker<CastToStructChecker>();

@@ -185,12 +185,6 @@ public:
 /// Visitor that tries to report interesting diagnostics from conditions.
 class ConditionBRVisitor final
     : public BugReporterVisitorImpl<ConditionBRVisitor> {
-
-  static constexpr const char *const GenericTrueMessage =
-      "Assuming the condition is true";
-  static constexpr const char *const GenericFalseMessage =
-      "Assuming the condition is false";
-
 public:
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int x = 0;
@@ -246,14 +240,11 @@ public:
                                               const ExplodedNode *N);
 
   bool patternMatch(const Expr *Ex,
-                    const Expr *ParentEx,
                     raw_ostream &Out,
                     BugReporterContext &BRC,
                     BugReport &R,
                     const ExplodedNode *N,
                     Optional<bool> &prunable);
-
-  static bool isPieceMessageGeneric(const PathDiagnosticPiece *Piece);
 };
 
 /// \brief Suppress reports that might lead to known false positives.

@@ -16,8 +16,8 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios"
 
-@a = common global i32 0, align 4, !dbg !16
-@b = common global i32 0, align 4, !dbg !17
+@a = common global i32 0, align 4
+@b = common global i32 0, align 4
 
 ; Function Attrs: nounwind
 define void @f3() #0 !dbg !12 {
@@ -81,8 +81,8 @@ attributes #3 = { nounwind }
 !13 = !DISubroutineType(types: !14)
 !14 = !{null}
 !15 = !{!16, !17}
-!16 = !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true)
-!17 = !DIGlobalVariable(name: "b", scope: !0, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true)
+!16 = !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, variable: i32* @a)
+!17 = !DIGlobalVariable(name: "b", scope: !0, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, variable: i32* @b)
 !18 = !{i32 2, !"Dwarf Version", i32 2}
 !19 = !{i32 2, !"Debug Info Version", i32 3}
 !20 = !{!"clang version 3.8.0 (trunk 245562) (llvm/trunk 245569)"}

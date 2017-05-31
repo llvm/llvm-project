@@ -150,7 +150,7 @@
 // RUN:            -fmodule-file=%t/a.pch \
 // RUN:            %s 2>&1 | FileCheck --check-prefix=CHECK-A-AS-PCH %s
 //
-// CHECK-A-AS-PCH: error: module file {{.*}}a.pch cannot be loaded due to a configuration mismatch with the current compilation
+// CHECK-A-AS-PCH: fatal error: AST file '{{.*}}a.pch' was not built as a module
 
 // -------------------------------
 // Try to import a non-AST file with -fmodule-file=

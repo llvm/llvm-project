@@ -8745,13 +8745,6 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
     V = DAG.getBitcast(SrcVT, V);
   }
 
-  // 32-bit targets need to load i64 as a f64 and then bitcast the result.
-  if (!Subtarget.is64Bit() && SrcVT == MVT::i64) {
-    V = DAG.getBitcast(MVT::f64, V);
-    unsigned NumBroadcastElts = BroadcastVT.getVectorNumElements();
-    BroadcastVT = MVT::getVectorVT(MVT::f64, NumBroadcastElts);
-  }
-
   return DAG.getBitcast(VT, DAG.getNode(Opcode, DL, BroadcastVT, V));
 }
 
@@ -12957,11 +12950,10 @@ static SDValue LowerINSERT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
       }
       // If lower/upper loads are the same and the only users of the load, then
       // lower to a VBROADCASTF128/VBROADCASTI128/etc.
-      if (auto *Ld = dyn_cast<LoadSDNode>(peekThroughOneUseBitcasts(SubVec2))) {
-        if (SubVec2 == SubVec && ISD::isNormalLoad(Ld) &&
-            areOnlyUsersOf(SubVec2.getNode(), {Op, Vec})) {
-          return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, OpVT, SubVec);
-        }
+      if (SubVec2 == SubVec &&
+          isa<LoadSDNode>(peekThroughOneUseBitcasts(SubVec2)) &&
+          areOnlyUsersOf(SubVec2.getNode(), {Op, Vec})) {
+        return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, OpVT, SubVec);
       }
     }
   }
@@ -32464,8 +32456,4 @@ void X86TargetLowering::insertCopiesSplitCSR(
               TII->get(TargetOpcode::COPY), *I)
           .addReg(NewVR);
   }
-}
-
-bool X86TargetLowering::supportSwiftError() const {
-  return Subtarget.is64Bit();
 }

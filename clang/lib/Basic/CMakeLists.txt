@@ -82,7 +82,6 @@ add_clang_library(clangBasic
   Sanitizers.cpp
   SourceLocation.cpp
   SourceManager.cpp
-  SourceMgrAdapter.cpp
   TargetInfo.cpp
   Targets.cpp
   TokenKinds.cpp

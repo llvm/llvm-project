@@ -384,7 +384,7 @@ void SwiftAggLowering::splitVectorEntry(unsigned index) {
   auto eltTy = split.first;
   CharUnits eltSize = getTypeStoreSize(CGM, eltTy);
   auto numElts = split.second;
-  Entries.insert(Entries.begin() + index + 1, numElts - 1, StorageEntry());
+  Entries.insert(&Entries[index + 1], numElts - 1, StorageEntry());
 
   CharUnits begin = Entries[index].Begin;
   for (unsigned i = 0; i != numElts; ++i) {
@@ -506,7 +506,7 @@ void SwiftAggLowering::enumerateComponents(EnumerationCallback callback) const {
   assert(Finished && "haven't yet finished lowering");
 
   for (auto &entry : Entries) {
-    callback(entry.Begin, entry.End, entry.Type);
+    callback(entry.Begin, entry.Type);
   }
 }
 
@@ -827,9 +827,4 @@ void swiftcall::computeABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI) {
     auto &argInfo = FI.arg_begin()[i];
     argInfo.info = classifyArgumentType(CGM, argInfo.type);
   }
-}
-
-// Is swifterror lowered to a register by the target ABI.
-bool swiftcall::isSwiftErrorLoweredInRegister(CodeGenModule &CGM) {
-  return getSwiftABIInfo(CGM).isSwiftErrorInRegister();
 }

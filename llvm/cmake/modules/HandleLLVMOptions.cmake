@@ -643,11 +643,6 @@ string(TOUPPER "${LLVM_ENABLE_LTO}" uppercase_LLVM_ENABLE_LTO)
 if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
   append("-flto=thin" CMAKE_CXX_FLAGS CMAKE_C_FLAGS
                       CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-  # On darwin, enable the lto cache. This improves initial build time a little
-  # since we re-link a lot of the same objects, and significantly improves
-  # incremental build time.
-  append_if(APPLE "-Wl,-cache_path_lto,${PROJECT_BINARY_DIR}/lto.cache"
-            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
 elseif(uppercase_LLVM_ENABLE_LTO STREQUAL "FULL")
   append("-flto=full" CMAKE_CXX_FLAGS CMAKE_C_FLAGS
                  CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)

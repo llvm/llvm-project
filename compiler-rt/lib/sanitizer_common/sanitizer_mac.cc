@@ -72,21 +72,10 @@ extern "C" {
 #include <unistd.h>
 #include <util.h>
 
-// From <crt_externs.h>, but we don't have that file on iOS.
+// from <crt_externs.h>, but we don't have that file on iOS
 extern "C" {
   extern char ***_NSGetArgv(void);
   extern char ***_NSGetEnviron(void);
-}
-
-// From <mach/mach_vm.h>, but we don't have that file on iOS.
-extern "C" {
-  extern kern_return_t mach_vm_region_recurse(
-    vm_map_t target_task,
-    mach_vm_address_t *address,
-    mach_vm_size_t *size,
-    natural_t *nesting_depth,
-    vm_region_recurse_info_t info,
-    mach_msg_type_number_t *infoCnt);
 }
 
 namespace __sanitizer {
@@ -398,10 +387,6 @@ bool IsHandledDeadlySignal(int signum) {
   if ((SANITIZER_WATCHOS || SANITIZER_TVOS) && !(SANITIZER_IOSSIM))
     // Handling fatal signals on watchOS and tvOS devices is disallowed.
     return false;
-  if (common_flags()->handle_abort && signum == SIGABRT)
-    return true;
-  if (common_flags()->handle_sigill && signum == SIGILL)
-    return true;
   return (signum == SIGSEGV || signum == SIGBUS) && common_flags()->handle_segv;
 }
 
@@ -755,125 +740,8 @@ char **GetArgv() {
   return *_NSGetArgv();
 }
 
-uptr FindAvailableMemoryRange(uptr shadow_size,
-                              uptr alignment,
-                              uptr left_padding) {
-  typedef vm_region_submap_short_info_data_64_t RegionInfo;
-  enum { kRegionInfoSize = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64 };
-  // Start searching for available memory region past PAGEZERO, which is
-  // 4KB on 32-bit and 4GB on 64-bit.
-  mach_vm_address_t start_address =
-    (SANITIZER_WORDSIZE == 32) ? 0x000000001000 : 0x000100000000;
-
-  mach_vm_address_t address = start_address;
-  mach_vm_address_t free_begin = start_address;
-  kern_return_t kr = KERN_SUCCESS;
-  while (kr == KERN_SUCCESS) {
-    mach_vm_size_t vmsize = 0;
-    natural_t depth = 0;
-    RegionInfo vminfo;
-    mach_msg_type_number_t count = kRegionInfoSize;
-    kr = mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
-                                (vm_region_info_t)&vminfo, &count);
-    if (free_begin != address) {
-      // We found a free region [free_begin..address-1].
-      uptr shadow_address = RoundUpTo((uptr)free_begin + left_padding,
-                                      alignment);
-      if (shadow_address + shadow_size < (uptr)address) {
-        return shadow_address;
-      }
-    }
-    // Move to the next region.
-    address += vmsize;
-    free_begin = address;
-  }
-
-  // We looked at all free regions and could not find one large enough.
-  return 0;
-}
-
 // FIXME implement on this platform.
 void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) { }
-
-void SignalContext::DumpAllRegisters(void *context) {
-  Report("Register values:\n");
-
-  ucontext_t *ucontext = (ucontext_t*)context;
-# define DUMPREG64(r) \
-    Printf("%s = 0x%016llx  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
-# define DUMPREG32(r) \
-    Printf("%s = 0x%08x  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
-# define DUMPREG_(r)   Printf(" "); DUMPREG(r);
-# define DUMPREG__(r)  Printf("  "); DUMPREG(r);
-# define DUMPREG___(r) Printf("   "); DUMPREG(r);
-
-# if defined(__x86_64__)
-#  define DUMPREG(r) DUMPREG64(r)
-  DUMPREG(rax); DUMPREG(rbx); DUMPREG(rcx); DUMPREG(rdx); Printf("\n");
-  DUMPREG(rdi); DUMPREG(rsi); DUMPREG(rbp); DUMPREG(rsp); Printf("\n");
-  DUMPREG_(r8); DUMPREG_(r9); DUMPREG(r10); DUMPREG(r11); Printf("\n");
-  DUMPREG(r12); DUMPREG(r13); DUMPREG(r14); DUMPREG(r15); Printf("\n");
-# elif defined(__i386__)
-#  define DUMPREG(r) DUMPREG32(r)
-  DUMPREG(eax); DUMPREG(ebx); DUMPREG(ecx); DUMPREG(edx); Printf("\n");
-  DUMPREG(edi); DUMPREG(esi); DUMPREG(ebp); DUMPREG(esp); Printf("\n");
-# elif defined(__aarch64__)
-#  define DUMPREG(r) DUMPREG64(r)
-  DUMPREG_(x[0]); DUMPREG_(x[1]); DUMPREG_(x[2]); DUMPREG_(x[3]); Printf("\n");
-  DUMPREG_(x[4]); DUMPREG_(x[5]); DUMPREG_(x[6]); DUMPREG_(x[7]); Printf("\n");
-  DUMPREG_(x[8]); DUMPREG_(x[9]); DUMPREG(x[10]); DUMPREG(x[11]); Printf("\n");
-  DUMPREG(x[12]); DUMPREG(x[13]); DUMPREG(x[14]); DUMPREG(x[15]); Printf("\n");
-  DUMPREG(x[16]); DUMPREG(x[17]); DUMPREG(x[18]); DUMPREG(x[19]); Printf("\n");
-  DUMPREG(x[20]); DUMPREG(x[21]); DUMPREG(x[22]); DUMPREG(x[23]); Printf("\n");
-  DUMPREG(x[24]); DUMPREG(x[25]); DUMPREG(x[26]); DUMPREG(x[27]); Printf("\n");
-  DUMPREG(x[28]); DUMPREG___(fp); DUMPREG___(lr); DUMPREG___(sp); Printf("\n");
-# elif defined(__arm__)
-#  define DUMPREG(r) DUMPREG32(r)
-  DUMPREG_(r[0]); DUMPREG_(r[1]); DUMPREG_(r[2]); DUMPREG_(r[3]); Printf("\n");
-  DUMPREG_(r[4]); DUMPREG_(r[5]); DUMPREG_(r[6]); DUMPREG_(r[7]); Printf("\n");
-  DUMPREG_(r[8]); DUMPREG_(r[9]); DUMPREG(r[10]); DUMPREG(r[11]); Printf("\n");
-  DUMPREG(r[12]); DUMPREG___(sp); DUMPREG___(lr); DUMPREG___(pc); Printf("\n");
-# else
-# error "Unknown architecture"
-# endif
-
-# undef DUMPREG64
-# undef DUMPREG32
-# undef DUMPREG_
-# undef DUMPREG__
-# undef DUMPREG___
-# undef DUMPREG
-}
-
-static inline bool CompareBaseAddress(const LoadedModule &a,
-                                      const LoadedModule &b) {
-  return a.base_address() < b.base_address();
-}
-
-void FormatUUID(char *out, uptr size, const u8 *uuid) {
-  internal_snprintf(out, size,
-                    "<%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-"
-                    "%02X%02X%02X%02X%02X%02X>",
-                    uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5],
-                    uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11],
-                    uuid[12], uuid[13], uuid[14], uuid[15]);
-}
-
-void PrintModuleMap() {
-  Printf("Process module map:\n");
-  MemoryMappingLayout memory_mapping(false);
-  InternalMmapVector<LoadedModule> modules(/*initial_capacity*/ 128);
-  memory_mapping.DumpListOfModules(&modules);
-  InternalSort(&modules, modules.size(), CompareBaseAddress);
-  for (uptr i = 0; i < modules.size(); ++i) {
-    char uuid_str[128];
-    FormatUUID(uuid_str, sizeof(uuid_str), modules[i].uuid());
-    Printf("0x%zx-0x%zx %s (%s) %s\n", modules[i].base_address(),
-           modules[i].max_executable_address(), modules[i].full_name(),
-           ModuleArchToString(modules[i].arch()), uuid_str);
-  }
-  Printf("End of module map.\n");
-}
 
 }  // namespace __sanitizer
 

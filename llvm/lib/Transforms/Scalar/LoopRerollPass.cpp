@@ -1412,12 +1412,13 @@ bool LoopReroll::DAGRootTracker::validate(ReductionTracker &Reductions) {
 void LoopReroll::DAGRootTracker::replace(const SCEV *IterCount) {
   BasicBlock *Header = L->getHeader();
   // Remove instructions associated with non-base iterations.
-  for (BasicBlock::reverse_iterator J = Header->rbegin(), JE = Header->rend();
-       J != JE;) {
+  for (BasicBlock::reverse_iterator J = Header->rbegin();
+       J != Header->rend();) {
     unsigned I = Uses[&*J].find_first();
     if (I > 0 && I < IL_All) {
-      DEBUG(dbgs() << "LRR: removing: " << *J << "\n");
-      J++->eraseFromParent();
+      Instruction *D = &*J;
+      DEBUG(dbgs() << "LRR: removing: " << *D << "\n");
+      D->eraseFromParent();
       continue;
     }
 

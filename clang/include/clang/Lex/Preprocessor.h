@@ -398,8 +398,6 @@ class Preprocessor : public RefCountedBase<Preprocessor> {
 
     ModuleMacroInfo *getModuleInfo(Preprocessor &PP,
                                    const IdentifierInfo *II) const {
-      if (II->isOutOfDate())
-        PP.updateOutOfDateIdentifier(const_cast<IdentifierInfo&>(*II));
       // FIXME: Find a spare bit on IdentifierInfo and store a
       //        HasModuleMacros flag.
       if (!II->hasMacroDefinition() ||
@@ -655,8 +653,6 @@ class Preprocessor : public RefCountedBase<Preprocessor> {
   };
   DeserializedMacroInfoChain *DeserialMIChainHead;
 
-  void updateOutOfDateIdentifier(IdentifierInfo &II) const;
-
 public:
   Preprocessor(IntrusiveRefCntPtr<PreprocessorOptions> PPOpts,
                DiagnosticsEngine &diags, LangOptions &opts,
@@ -904,8 +900,6 @@ public:
 
   /// \brief Get the list of leaf (non-overridden) module macros for a name.
   ArrayRef<ModuleMacro*> getLeafModuleMacros(const IdentifierInfo *II) const {
-    if (II->isOutOfDate())
-      updateOutOfDateIdentifier(const_cast<IdentifierInfo&>(*II));
     auto I = LeafModuleMacros.find(II);
     if (I != LeafModuleMacros.end())
       return I->second;
@@ -1084,24 +1078,6 @@ public:
 
   /// \brief Disable the last EnableBacktrackAtThisPos call.
   void CommitBacktrackedTokens();
-
-  struct CachedTokensRange {
-    CachedTokensTy::size_type Begin, End;
-  };
-
-private:
-  /// \brief A range of cached tokens that should be erased after lexing
-  /// when backtracking requires the erasure of such cached tokens.
-  Optional<CachedTokensRange> CachedTokenRangeToErase;
-
-public:
-  /// \brief Returns the range of cached tokens that were lexed since
-  /// EnableBacktrackAtThisPos() was previously called.
-  CachedTokensRange LastCachedTokenRange();
-
-  /// \brief Erase the range of cached tokens that were lexed since
-  /// EnableBacktrackAtThisPos() was previously called.
-  void EraseCachedTokens(CachedTokensRange TokenRange);
 
   /// \brief Make Preprocessor re-lex the tokens that were lexed since
   /// EnableBacktrackAtThisPos() was previously called.

@@ -117,11 +117,8 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   if (GV && GV->hasDLLImportStorageClass())
     return false;
 
-  // Every other GV is local on COFF.
-  // Make an exception for windows OS in the triple: Some firmwares builds use
-  // *-win32-macho triples. This (accidentally?) produced windows relocations
-  // without GOT tables in older clang versions; Keep this behaviour.
-  if (TT.isOSBinFormatCOFF() || (TT.isOSWindows() && TT.isOSBinFormatMachO()))
+  // Every other GV is local on COFF
+  if (TT.isOSBinFormatCOFF())
     return true;
 
   if (GV && (GV->hasLocalLinkage() || !GV->hasDefaultVisibility()))
@@ -201,7 +198,7 @@ void TargetMachine::getNameWithPrefix(SmallVectorImpl<char> &Name,
     return;
   }
   const TargetLoweringObjectFile *TLOF = getObjFileLowering();
-  TLOF->getNameWithPrefix(Name, GV, *this);
+  TLOF->getNameWithPrefix(Name, GV, Mang, *this);
 }
 
 MCSymbol *TargetMachine::getSymbol(const GlobalValue *GV, Mangler &Mang) const {

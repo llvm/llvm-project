@@ -25,20 +25,16 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; MOD2: @linkoncealias = linkonce alias void (), void ()* @linkoncefuncwithalias
 @linkoncealias = linkonce alias void (), void ()* @linkoncefuncwithalias
 
-; Function with an alias are resolved to weak_odr in prevailing module, but
-; not optimized in non-prevailing module (illegal to have an
-; available_externally aliasee).
-; MOD1: define weak_odr void @linkonceodrfuncwithalias()
+; Function with an alias are not optimized
+; MOD1: define linkonce_odr void @linkonceodrfuncwithalias()
 ; MOD2: define linkonce_odr void @linkonceodrfuncwithalias()
 define linkonce_odr void @linkonceodrfuncwithalias() #0 {
 entry:
   ret void
 }
 
-; Function with an alias are resolved to weak in prevailing module, but
-; not optimized in non-prevailing module (illegal to have an
-; available_externally aliasee).
-; MOD1: define weak void @linkoncefuncwithalias()
+; Function with an alias are not optimized
+; MOD1: define linkonce void @linkoncefuncwithalias()
 ; MOD2: define linkonce void @linkoncefuncwithalias()
 define linkonce void @linkoncefuncwithalias() #0 {
 entry:

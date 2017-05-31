@@ -15,5 +15,5 @@ int main()
     return 0; // not reached
 }
 
-// CHECK: @__func__.__main_block_invoke = private unnamed_addr constant [18 x i8] c"main_block_invoke\00"
-// CHECK: call void @PRINTF({{.*}}@__func__.__main_block_invoke
+// CHECK: @__func__.__main_block_invoke = private unnamed_addr constant [20 x i8] c"__main_block_invoke\00"
+// CHECK: call void @PRINTF({{.*}}@__func__.__main_block_invoke 

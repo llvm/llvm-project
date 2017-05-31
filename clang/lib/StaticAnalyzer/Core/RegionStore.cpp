@@ -1674,8 +1674,7 @@ RegionStoreManager::getBindingForDerivedDefaultValue(RegionBindingsConstRef B,
 
     // Lazy bindings are usually handled through getExistingLazyBinding().
     // We should unify these two code paths at some point.
-    if (val.getAs<nonloc::LazyCompoundVal>() ||
-        val.getAs<nonloc::CompoundVal>())
+    if (val.getAs<nonloc::LazyCompoundVal>())
       return val;
 
     llvm_unreachable("Unknown default value");
@@ -1849,8 +1848,6 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
 
     // Function-scoped static variables are default-initialized to 0; if they
     // have an initializer, it would have been processed by now.
-    // FIXME: This is only true when we're starting analysis from main().
-    // We're losing a lot of coverage here.
     if (isa<StaticGlobalSpaceRegion>(MS))
       return svalBuilder.makeZeroVal(T);
 

@@ -60,8 +60,8 @@
 
 %"struct.y_impl<int>::nested" = type { i8 }
 
-@glbl = global i32 0, align 4, !dbg !31
-@n = global %"struct.y_impl<int>::nested" zeroinitializer, align 1, !dbg !32
+@glbl = global i32 0, align 4
+@n = global %"struct.y_impl<int>::nested" zeroinitializer, align 1
 @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_template.cpp, i8* null }]
 
 define internal void @__cxx_global_var_init() section ".text.startup" !dbg !10 {
@@ -119,8 +119,8 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !28 = distinct !DISubprogram(name: "", linkageName: "_GLOBAL__sub_I_template.cpp", isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !0, file: !1, scope: !11, type: !29, variables: !2)
 !29 = !DISubroutineType(types: !2)
 !30 = !{!31, !32}
-!31 = !DIGlobalVariable(name: "glbl", line: 3, isLocal: false, isDefinition: true, scope: null, file: !11, type: !7)
-!32 = !DIGlobalVariable(name: "n", line: 4, isLocal: false, isDefinition: true, scope: null, file: !11, type: !8)
+!31 = !DIGlobalVariable(name: "glbl", line: 3, isLocal: false, isDefinition: true, scope: null, file: !11, type: !7, variable: i32* @glbl)
+!32 = !DIGlobalVariable(name: "n", line: 4, isLocal: false, isDefinition: true, scope: null, file: !11, type: !8, variable: %"struct.y_impl<int>::nested"* @n)
 !33 = !{i32 2, !"Dwarf Version", i32 4}
 !34 = !{i32 2, !"Debug Info Version", i32 3}
 !35 = !{!"clang version 3.6.0 (trunk 224394) (llvm/trunk 224384)"}
