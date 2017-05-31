@@ -4111,6 +4111,15 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 
   Distro Distro(D.getVFS());
 
+  if (Distro.IsRedhat()) {
+    // On RHEL, we want to add a bin directory that is relative to the detected
+    // gcc install, because if we are using devtoolset gcc then we want to
+    // use other tools from devtoolset (e.g. ld) instead of the standard system
+    // tools.
+    PPaths.push_back(Twine(GCCInstallation.getParentLibPath() +
+                     "/../bin").str());
+  }
+
   if (Distro.IsOpenSUSE() || Distro.IsUbuntu()) {
     ExtraOpts.push_back("-z");
     ExtraOpts.push_back("relro");
