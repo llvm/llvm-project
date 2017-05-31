@@ -46,7 +46,7 @@ Error CVSymbolVisitor::visitSymbolRecord(CVSymbol &Record) {
   }
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)                \
   SYMBOL_RECORD(EnumVal, EnumVal, AliasName)
-#include "llvm/DebugInfo/CodeView/CVSymbolTypes.def"
+#include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
   }
 
   if (auto EC = Callbacks.visitSymbolEnd(Record))

@@ -1572,12 +1572,6 @@ RecordVal::RecordVal(Init *N, RecTy *T, bool P)
   assert(Value && "Cannot create unset value for current type!");
 }
 
-RecordVal::RecordVal(StringRef N, RecTy *T, bool P)
-  : Name(StringInit::get(N)), TyAndPrefix(T, P) {
-  Value = UnsetInit::get()->convertInitializerTo(T);
-  assert(Value && "Cannot create unset value for current type!");
-}
-
 StringRef RecordVal::getName() const {
   return cast<StringInit>(getNameInit())->getValue();
 }

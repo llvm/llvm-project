@@ -539,7 +539,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::FSIN, VT, Expand);
       setOperationAction(ISD::FCOS, VT, Expand);
       setOperationAction(ISD::FABS, VT, Expand);
-      setOperationAction(ISD::FPOWI, VT, Expand);
       setOperationAction(ISD::FFLOOR, VT, Expand);
       setOperationAction(ISD::FCEIL,  VT, Expand);
       setOperationAction(ISD::FTRUNC, VT, Expand);
@@ -798,7 +797,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FABS , MVT::v4f64, Legal);
     setOperationAction(ISD::FSIN , MVT::v4f64, Expand);
     setOperationAction(ISD::FCOS , MVT::v4f64, Expand);
-    setOperationAction(ISD::FPOWI , MVT::v4f64, Expand);
     setOperationAction(ISD::FPOW , MVT::v4f64, Expand);
     setOperationAction(ISD::FLOG , MVT::v4f64, Expand);
     setOperationAction(ISD::FLOG2 , MVT::v4f64, Expand);
@@ -844,7 +842,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FABS , MVT::v4f32, Legal);
     setOperationAction(ISD::FSIN , MVT::v4f32, Expand);
     setOperationAction(ISD::FCOS , MVT::v4f32, Expand);
-    setOperationAction(ISD::FPOWI , MVT::v4f32, Expand);
     setOperationAction(ISD::FPOW , MVT::v4f32, Expand);
     setOperationAction(ISD::FLOG , MVT::v4f32, Expand);
     setOperationAction(ISD::FLOG2 , MVT::v4f32, Expand);

@@ -1,4 +1,4 @@
-//===- ModuleDebugUnknownFragment.h -----------------------------*- C++ -*-===//
+//===- DebugUnknownSubsection.h -----------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,17 +10,16 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGUNKNOWNFRAGMENT_H
 #define LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGUNKNOWNFRAGMENT_H
 
-#include "llvm/DebugInfo/CodeView/ModuleDebugFragment.h"
+#include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/Support/BinaryStreamRef.h"
 
 namespace llvm {
 namespace codeview {
 
-class ModuleDebugUnknownFragmentRef final : public ModuleDebugFragmentRef {
+class DebugUnknownSubsectionRef final : public DebugSubsectionRef {
 public:
-  ModuleDebugUnknownFragmentRef(ModuleDebugFragmentKind Kind,
-                                BinaryStreamRef Data)
-      : ModuleDebugFragmentRef(Kind), Data(Data) {}
+  DebugUnknownSubsectionRef(DebugSubsectionKind Kind, BinaryStreamRef Data)
+      : DebugSubsectionRef(Kind), Data(Data) {}
 
   BinaryStreamRef getData() const { return Data; }
 

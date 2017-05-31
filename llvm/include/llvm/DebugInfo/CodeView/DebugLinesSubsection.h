@@ -1,4 +1,4 @@
-//===- ModuleDebugLineFragment.h --------------------------------*- C++ -*-===//
+//===- DebugLinesSubsection.h --------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,8 +10,8 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGLINEFRAGMENT_H
 #define LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGLINEFRAGMENT_H
 
+#include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugFragment.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
@@ -19,8 +19,8 @@
 namespace llvm {
 namespace codeview {
 
-class ModuleDebugFileChecksumFragment;
-class StringTable;
+class DebugChecksumsSubsection;
+class DebugStringTableSubsection;
 
 // Corresponds to the `CV_DebugSLinesHeader_t` structure.
 struct LineFragmentHeader {
@@ -70,16 +70,16 @@ public:
                        LineColumnEntry &Item, const LineFragmentHeader *Ctx);
 };
 
-class ModuleDebugLineFragmentRef final : public ModuleDebugFragmentRef {
+class DebugLinesSubsectionRef final : public DebugSubsectionRef {
   friend class LineColumnExtractor;
   typedef VarStreamArray<LineColumnEntry, LineColumnExtractor> LineInfoArray;
   typedef LineInfoArray::Iterator Iterator;
 
 public:
-  ModuleDebugLineFragmentRef();
+  DebugLinesSubsectionRef();
 
-  static bool classof(const ModuleDebugFragmentRef *S) {
-    return S->kind() == ModuleDebugFragmentKind::Lines;
+  static bool classof(const DebugSubsectionRef *S) {
+    return S->kind() == DebugSubsectionKind::Lines;
   }
 
   Error initialize(BinaryStreamReader Reader);
@@ -96,7 +96,7 @@ private:
   LineInfoArray LinesAndColumns;
 };
 
-class ModuleDebugLineFragment final : public ModuleDebugFragment {
+class DebugLinesSubsection final : public DebugSubsection {
   struct Block {
     Block(uint32_t ChecksumBufferOffset)
         : ChecksumBufferOffset(ChecksumBufferOffset) {}
@@ -107,11 +107,11 @@ class ModuleDebugLineFragment final : public ModuleDebugFragment {
   };
 
 public:
-  ModuleDebugLineFragment(ModuleDebugFileChecksumFragment &Checksums,
-                          StringTable &Strings);
+  DebugLinesSubsection(DebugChecksumsSubsection &Checksums,
+                       DebugStringTableSubsection &Strings);
 
-  static bool classof(const ModuleDebugFragment *S) {
-    return S->kind() == ModuleDebugFragmentKind::Lines;
+  static bool classof(const DebugSubsection *S) {
+    return S->kind() == DebugSubsectionKind::Lines;
   }
 
   void createBlock(StringRef FileName);
@@ -119,8 +119,8 @@ public:
   void addLineAndColumnInfo(uint32_t Offset, const LineInfo &Line,
                             uint32_t ColStart, uint32_t ColEnd);
 
-  uint32_t calculateSerializedLength() override;
-  Error commit(BinaryStreamWriter &Writer) override;
+  uint32_t calculateSerializedSize() const override;
+  Error commit(BinaryStreamWriter &Writer) const override;
 
   void setRelocationAddress(uint16_t Segment, uint16_t Offset);
   void setCodeSize(uint32_t Size);
@@ -129,7 +129,7 @@ public:
   bool hasColumnInfo() const;
 
 private:
-  ModuleDebugFileChecksumFragment &Checksums;
+  DebugChecksumsSubsection &Checksums;
 
   uint16_t RelocOffset = 0;
   uint16_t RelocSegment = 0;

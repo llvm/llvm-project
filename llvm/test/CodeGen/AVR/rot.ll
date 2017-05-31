@@ -6,7 +6,7 @@
 define i8 @rol8(i8 %val, i8 %amt) {
   ; CHECK:      andi r22, 7
 
-  ; CHECK-NEXT: cp r22, r0
+  ; CHECK-NEXT: cpi r22, 0
   ; CHECK-NEXT: breq LBB0_2
 
 ; CHECK-NEXT: LBB0_1:
@@ -32,7 +32,7 @@ define i8 @rol8(i8 %val, i8 %amt) {
 define i8 @ror8(i8 %val, i8 %amt) {
   ; CHECK:      andi r22, 7
 
-  ; CHECK-NEXT: cp r22, r0
+  ; CHECK-NEXT: cpi r22, 0
   ; CHECK-NEXT: breq LBB1_2
 
 ; CHECK-NEXT: LBB1_1:

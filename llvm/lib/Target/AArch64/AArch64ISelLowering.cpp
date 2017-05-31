@@ -381,7 +381,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FNEARBYINT, MVT::v4f16, Expand);
   setOperationAction(ISD::FNEG, MVT::v4f16, Expand);
   setOperationAction(ISD::FPOW, MVT::v4f16, Expand);
-  setOperationAction(ISD::FPOWI, MVT::v4f16, Expand);
   setOperationAction(ISD::FREM, MVT::v4f16, Expand);
   setOperationAction(ISD::FROUND, MVT::v4f16, Expand);
   setOperationAction(ISD::FRINT, MVT::v4f16, Expand);
@@ -413,7 +412,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FNEARBYINT, MVT::v8f16, Expand);
   setOperationAction(ISD::FNEG, MVT::v8f16, Expand);
   setOperationAction(ISD::FPOW, MVT::v8f16, Expand);
-  setOperationAction(ISD::FPOWI, MVT::v8f16, Expand);
   setOperationAction(ISD::FREM, MVT::v8f16, Expand);
   setOperationAction(ISD::FROUND, MVT::v8f16, Expand);
   setOperationAction(ISD::FRINT, MVT::v8f16, Expand);
@@ -726,7 +724,6 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT, MVT PromotedBitwiseVT) {
   if (VT == MVT::v2f32 || VT == MVT::v4f32 || VT == MVT::v2f64) {
     setOperationAction(ISD::FSIN, VT, Expand);
     setOperationAction(ISD::FCOS, VT, Expand);
-    setOperationAction(ISD::FPOWI, VT, Expand);
     setOperationAction(ISD::FPOW, VT, Expand);
     setOperationAction(ISD::FLOG, VT, Expand);
     setOperationAction(ISD::FLOG2, VT, Expand);

@@ -904,7 +904,7 @@ let Defs = [SREG] in
   // Compares a register with an 8 bit immediate.
   def CPIRdK : FRdK<0b0011,
                     (outs),
-                    (ins GPR8:$rd, imm_ldi8:$k),
+                    (ins LD8:$rd, imm_ldi8:$k),
                     "cpi\t$rd, $k",
                     [(AVRcmp i8:$rd, imm:$k), (implicit SREG)]>;
 }

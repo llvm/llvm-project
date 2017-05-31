@@ -34,6 +34,17 @@ class SymbolDeserializer : public SymbolVisitorCallbacks {
   };
 
 public:
+  template <typename T> static Error deserializeAs(CVSymbol Symbol, T &Record) {
+    SymbolDeserializer S(nullptr);
+    if (auto EC = S.visitSymbolBegin(Symbol))
+      return EC;
+    if (auto EC = S.visitKnownRecord(Symbol, Record))
+      return EC;
+    if (auto EC = S.visitSymbolEnd(Symbol))
+      return EC;
+    return Error::success();
+  }
+
   explicit SymbolDeserializer(SymbolVisitorDelegate *Delegate)
       : Delegate(Delegate) {}
 
@@ -54,7 +65,7 @@ public:
     return visitKnownRecordImpl(CVR, Record);                                  \
   }
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "CVSymbolTypes.def"
+#include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
 
 private:
   template <typename T> Error visitKnownRecordImpl(CVSymbol &CVR, T &Record) {

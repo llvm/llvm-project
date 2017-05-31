@@ -131,7 +131,7 @@ int main(int argc_, const char *argv_[]) {
   std::vector<std::string> InputFiles = InputArgs.getAllArgValues(OPT_INPUT);
 
   if (InputFiles.size() == 0) {
-    reportError("No input file specified");
+    reportError("No input file specified.\n");
   }
 
   SmallString<128> OutputFile;
@@ -142,6 +142,20 @@ int main(int argc_, const char *argv_[]) {
     OutputFile = StringRef(InputFiles[0]);
     llvm::sys::path::replace_extension(OutputFile, ".obj");
   }
+
+  outs() << "Machine: ";
+  switch (Machine) {
+  case machine::ARM:
+    outs() << "ARM\n";
+    break;
+  case machine::X86:
+    outs() << "X86\n";
+    break;
+  default:
+    outs() << "X64\n";
+  }
+
+  WindowsResourceParser Parser;
 
   for (const auto &File : InputFiles) {
     Expected<object::OwningBinary<object::Binary>> BinaryOrErr =
@@ -166,17 +180,11 @@ int main(int argc_, const char *argv_[]) {
       EntryNumber++;
     }
     outs() << "Number of resources: " << EntryNumber << "\n";
+
+    error(Parser.parse(RF));
   }
-  outs() << "Machine: ";
-  switch (Machine) {
-  case machine::ARM:
-    outs() << "ARM\n";
-    break;
-  case machine::X86:
-    outs() << "X86\n";
-    break;
-  default:
-    outs() << "X64\n";
-  }
+
+  Parser.printTree();
+
   return 0;
 }

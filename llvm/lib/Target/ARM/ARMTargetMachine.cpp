@@ -382,7 +382,7 @@ namespace {
 /// ARM Code Generator Pass Configuration Options.
 class ARMPassConfig : public TargetPassConfig {
 public:
-  ARMPassConfig(ARMBaseTargetMachine *TM, PassManagerBase &PM)
+  ARMPassConfig(ARMBaseTargetMachine &TM, PassManagerBase &PM)
     : TargetPassConfig(TM, PM) {}
 
   ARMBaseTargetMachine &getARMTargetMachine() const {
@@ -419,7 +419,7 @@ INITIALIZE_PASS(ARMExecutionDepsFix, "arm-execution-deps-fix",
                 "ARM Execution Dependency Fix", false, false)
 
 TargetPassConfig *ARMBaseTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new ARMPassConfig(this, PM);
+  return new ARMPassConfig(*this, PM);
 }
 
 void ARMPassConfig::addIRPasses() {

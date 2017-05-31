@@ -54,7 +54,7 @@ namespace {
 /// XCore Code Generator Pass Configuration Options.
 class XCorePassConfig : public TargetPassConfig {
 public:
-  XCorePassConfig(XCoreTargetMachine *TM, PassManagerBase &PM)
+  XCorePassConfig(XCoreTargetMachine &TM, PassManagerBase &PM)
     : TargetPassConfig(TM, PM) {}
 
   XCoreTargetMachine &getXCoreTargetMachine() const {
@@ -70,7 +70,7 @@ public:
 } // end anonymous namespace
 
 TargetPassConfig *XCoreTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new XCorePassConfig(this, PM);
+  return new XCorePassConfig(*this, PM);
 }
 
 void XCorePassConfig::addIRPasses() {

@@ -123,7 +123,8 @@ define amdgpu_kernel void @store_literal_imm_v2f16(<2 x half> addrspace(1)* %out
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 0, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 0, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONST0:v[0-9]+]], 0
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONST0]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_0.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -140,7 +141,8 @@ define amdgpu_kernel void @add_inline_imm_0.0_v2f16(<2 x half> addrspace(1)* %ou
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 0.5, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 0.5, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONST05:v[0-9]+]], 0x3800
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONST05]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -157,7 +159,8 @@ define amdgpu_kernel void @add_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %ou
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -0.5, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -0.5, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONSTM05:v[0-9]+]], 0xb800
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONSTM05]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_neg_0.5_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -174,7 +177,8 @@ define amdgpu_kernel void @add_inline_imm_neg_0.5_v2f16(<2 x half> addrspace(1)*
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 1.0, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 1.0, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONST1:v[0-9]+]], 0x3c00
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONST1]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_1.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -191,7 +195,8 @@ define amdgpu_kernel void @add_inline_imm_1.0_v2f16(<2 x half> addrspace(1)* %ou
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -1.0, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -1.0, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONSTM1:v[0-9]+]], 0xbc00
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONSTM1]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_neg_1.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -208,7 +213,8 @@ define amdgpu_kernel void @add_inline_imm_neg_1.0_v2f16(<2 x half> addrspace(1)*
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 2.0, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 2.0, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONST2:v[0-9]+]], 0x4000
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONST2]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_2.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -225,7 +231,8 @@ define amdgpu_kernel void @add_inline_imm_2.0_v2f16(<2 x half> addrspace(1)* %ou
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -2.0, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -2.0, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONSTM2:v[0-9]+]], 0xc000
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONSTM2]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_neg_2.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -242,7 +249,8 @@ define amdgpu_kernel void @add_inline_imm_neg_2.0_v2f16(<2 x half> addrspace(1)*
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 4.0, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 4.0, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONST4:v[0-9]+]], 0x4400
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONST4]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_4.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -259,7 +267,8 @@ define amdgpu_kernel void @add_inline_imm_4.0_v2f16(<2 x half> addrspace(1)* %ou
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -4.0, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -4.0, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONSTM4:v[0-9]+]], 0xc400
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONSTM4]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_neg_4.0_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -273,10 +282,10 @@ define amdgpu_kernel void @add_inline_imm_neg_4.0_v2f16(<2 x half> addrspace(1)*
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5
 ; GFX9: buffer_store_dword [[REG]]
 
+; VI: v_mov_b32_e32 [[CONST05:v[0-9]+]], 0x3800
 ; VI: buffer_load_dword
 ; VI-NOT: and
-; VI: v_lshrrev_b32_e32 {{v[0-9]+}}, 16,
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 0.5, v{{[0-9]+}}
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONST05]], v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 0.5, v{{[0-9]+}}
 ; VI: v_or_b32
 ; VI: buffer_store_dword
@@ -290,7 +299,7 @@ define amdgpu_kernel void @commute_add_inline_imm_0.5_v2f16(<2 x half> addrspace
 ; GCN-LABEL: {{^}}commute_add_literal_v2f16:
 ; GFX9-DAG: buffer_load_dword [[VAL:v[0-9]+]]
 ; GFX9-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x6400{{$}}
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[K]], [[VAL]] op_sel_hi:[0,1]{{$}}
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], [[K]] op_sel_hi:[1,0]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x6400{{$}}
@@ -315,7 +324,8 @@ define amdgpu_kernel void @commute_add_literal_v2f16(<2 x half> addrspace(1)* %o
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 1, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 1, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONST1:v[0-9]+]], 1
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONST1]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_1_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -332,7 +342,8 @@ define amdgpu_kernel void @add_inline_imm_1_v2f16(<2 x half> addrspace(1)* %out,
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 2, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 2, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONST2:v[0-9]+]], 2
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONST2]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_2_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -349,7 +360,8 @@ define amdgpu_kernel void @add_inline_imm_2_v2f16(<2 x half> addrspace(1)* %out,
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 16, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 16, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONST16:v[0-9]+]], 16
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONST16]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_16_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -366,7 +378,8 @@ define amdgpu_kernel void @add_inline_imm_16_v2f16(<2 x half> addrspace(1)* %out
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -1, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -1, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONSTM1:v[0-9]+]], 0xffff
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONSTM1]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_neg_1_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -383,7 +396,8 @@ define amdgpu_kernel void @add_inline_imm_neg_1_v2f16(<2 x half> addrspace(1)* %
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -2, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -2, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONSTM2:v[0-9]+]], 0xfffe
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONSTM2]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_neg_2_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -400,7 +414,8 @@ define amdgpu_kernel void @add_inline_imm_neg_2_v2f16(<2 x half> addrspace(1)* %
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -16, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, -16, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONSTM16:v[0-9]+]], 0xfff0
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONSTM16]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_neg_16_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -417,7 +432,8 @@ define amdgpu_kernel void @add_inline_imm_neg_16_v2f16(<2 x half> addrspace(1)* 
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 63, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 63, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONST63:v[0-9]+]], 63
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONST63]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_63_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {
@@ -434,7 +450,8 @@ define amdgpu_kernel void @add_inline_imm_63_v2f16(<2 x half> addrspace(1)* %out
 ; VI: buffer_load_ushort [[VAL0:v[0-9]+]]
 ; VI: buffer_load_ushort [[VAL1:v[0-9]+]]
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 64, [[VAL0]]
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 64, [[VAL1]]
+; VI-DAG: v_mov_b32_e32 [[CONST64:v[0-9]+]], 64
+; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, [[CONST64]], [[VAL1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32
 ; VI: buffer_store_dword
 define amdgpu_kernel void @add_inline_imm_64_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %x) #0 {

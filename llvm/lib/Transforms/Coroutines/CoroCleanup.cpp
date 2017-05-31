@@ -101,7 +101,9 @@ namespace {
 struct CoroCleanup : FunctionPass {
   static char ID; // Pass identification, replacement for typeid
 
-  CoroCleanup() : FunctionPass(ID) {}
+  CoroCleanup() : FunctionPass(ID) {
+    initializeCoroCleanupPass(*PassRegistry::getPassRegistry());
+  }
 
   std::unique_ptr<Lowerer> L;
 

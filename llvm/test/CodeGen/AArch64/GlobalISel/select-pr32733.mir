@@ -13,7 +13,6 @@
 name:            main
 alignment:       2
 exposesReturnsTwice: false
-noVRegs:         false
 legalized:       true
 regBankSelected: true
 selected:        false

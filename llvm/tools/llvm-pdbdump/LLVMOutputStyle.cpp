@@ -15,14 +15,14 @@
 #include "llvm-pdbdump.h"
 
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugSubsectionVisitor.h"
+#include "llvm/DebugInfo/CodeView/DebugUnknownSubsection.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugFragmentVisitor.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugInlineeLinesFragment.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugUnknownFragment.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabaseVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
@@ -830,8 +830,8 @@ Error LLVMOutputStyle::dumpDbiStream() {
             return ExpectedTypes.takeError();
           auto &IpiItems = *ExpectedTypes;
           C13RawVisitor V(P, File, IpiItems);
-          if (auto EC = codeview::visitModuleDebugFragments(
-                  ModS.linesAndChecksums(), V))
+          if (auto EC =
+                  codeview::visitDebugSubsections(ModS.linesAndChecksums(), V))
             return EC;
         }
       }

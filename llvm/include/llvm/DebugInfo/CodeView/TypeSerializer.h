@@ -106,7 +106,7 @@ public:
     return visitKnownMemberImpl<Name##Record>(CVR, Record);                    \
   }
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "llvm/DebugInfo/CodeView/TypeRecords.def"
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
 
 private:
   template <typename RecordKind>

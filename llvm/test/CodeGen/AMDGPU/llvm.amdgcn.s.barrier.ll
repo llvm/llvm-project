@@ -3,9 +3,8 @@
 
 ; GCN-LABEL: {{^}}test_barrier:
 ; GFX8: buffer_store_dword
-; GFX8: s_waitcnt
 ; GFX9: flat_store_dword
-; GFX9-NOT: s_waitcnt
+; GCN: s_waitcnt
 ; GCN: s_barrier
 define amdgpu_kernel void @test_barrier(i32 addrspace(1)* %out, i32 %size) #0 {
 entry:

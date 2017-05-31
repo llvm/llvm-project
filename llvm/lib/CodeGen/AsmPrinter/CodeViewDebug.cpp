@@ -15,8 +15,8 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugInlineeLinesFragment.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabase.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
@@ -393,7 +393,7 @@ void CodeViewDebug::endModule() {
   // subprograms.
   switchToDebugSectionForSymbol(nullptr);
 
-  MCSymbol *CompilerInfo = beginCVSubsection(ModuleDebugFragmentKind::Symbols);
+  MCSymbol *CompilerInfo = beginCVSubsection(DebugSubsectionKind::Symbols);
   emitCompilerInformation();
   endCVSubsection(CompilerInfo);
 
@@ -417,7 +417,7 @@ void CodeViewDebug::endModule() {
 
   // Emit UDT records for any types used by global variables.
   if (!GlobalUDTs.empty()) {
-    MCSymbol *SymbolsEnd = beginCVSubsection(ModuleDebugFragmentKind::Symbols);
+    MCSymbol *SymbolsEnd = beginCVSubsection(DebugSubsectionKind::Symbols);
     emitDebugInfoForUDTs(GlobalUDTs);
     endCVSubsection(SymbolsEnd);
   }
@@ -630,8 +630,7 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
     return;
 
   OS.AddComment("Inlinee lines subsection");
-  MCSymbol *InlineEnd =
-      beginCVSubsection(ModuleDebugFragmentKind::InlineeLines);
+  MCSymbol *InlineEnd = beginCVSubsection(DebugSubsectionKind::InlineeLines);
 
   // We don't provide any extra file info.
   // FIXME: Find out if debuggers use this info.
@@ -756,7 +755,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
 
   // Emit a symbol subsection, required by VS2012+ to find function boundaries.
   OS.AddComment("Symbol subsection for " + Twine(FuncName));
-  MCSymbol *SymbolsEnd = beginCVSubsection(ModuleDebugFragmentKind::Symbols);
+  MCSymbol *SymbolsEnd = beginCVSubsection(DebugSubsectionKind::Symbols);
   {
     MCSymbol *ProcRecordBegin = MMI->getContext().createTempSymbol(),
              *ProcRecordEnd = MMI->getContext().createTempSymbol();
@@ -2111,7 +2110,7 @@ void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   maybeRecordLocation(DL, Asm->MF);
 }
 
-MCSymbol *CodeViewDebug::beginCVSubsection(ModuleDebugFragmentKind Kind) {
+MCSymbol *CodeViewDebug::beginCVSubsection(DebugSubsectionKind Kind) {
   MCSymbol *BeginLabel = MMI->getContext().createTempSymbol(),
            *EndLabel = MMI->getContext().createTempSymbol();
   OS.EmitIntValue(unsigned(Kind), 4);
@@ -2171,7 +2170,7 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
         if (!GV->hasComdat() && !GV->isDeclarationForLinker()) {
           if (!EndLabel) {
             OS.AddComment("Symbol subsection for globals");
-            EndLabel = beginCVSubsection(ModuleDebugFragmentKind::Symbols);
+            EndLabel = beginCVSubsection(DebugSubsectionKind::Symbols);
           }
           // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
           emitDebugInfoForGlobal(GVE->getVariable(), GV, Asm->getSymbol(GV));
@@ -2189,7 +2188,7 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
           OS.AddComment("Symbol subsection for " +
                         Twine(GlobalValue::dropLLVMManglingEscape(GV->getName())));
           switchToDebugSectionForSymbol(GVSym);
-          EndLabel = beginCVSubsection(ModuleDebugFragmentKind::Symbols);
+          EndLabel = beginCVSubsection(DebugSubsectionKind::Symbols);
           // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
           emitDebugInfoForGlobal(GVE->getVariable(), GV, GVSym);
           endCVSubsection(EndLabel);

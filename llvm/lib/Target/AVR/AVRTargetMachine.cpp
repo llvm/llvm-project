@@ -57,7 +57,7 @@ namespace {
 /// AVR Code Generator Pass Configuration Options.
 class AVRPassConfig : public TargetPassConfig {
 public:
-  AVRPassConfig(AVRTargetMachine *TM, PassManagerBase &PM)
+  AVRPassConfig(AVRTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM) {}
 
   AVRTargetMachine &getAVRTargetMachine() const {
@@ -71,7 +71,7 @@ public:
 } // namespace
 
 TargetPassConfig *AVRTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new AVRPassConfig(this, PM);
+  return new AVRPassConfig(*this, PM);
 }
 
 extern "C" void LLVMInitializeAVRTarget() {

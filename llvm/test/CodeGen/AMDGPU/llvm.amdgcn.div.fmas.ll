@@ -17,7 +17,7 @@ declare double @llvm.amdgcn.div.fmas.f64(double, double, double, i1) nounwind re
 ; GCN-DAG: v_mov_b32_e32 [[VC:v[0-9]+]], [[SC]]
 ; GCN-DAG: v_mov_b32_e32 [[VB:v[0-9]+]], [[SB]]
 ; GCN-DAG: v_mov_b32_e32 [[VA:v[0-9]+]], [[SA]]
-; GCN: v_div_fmas_f32 [[RESULT:v[0-9]+]], [[VB]], [[VA]], [[VC]]
+; GCN: v_div_fmas_f32 [[RESULT:v[0-9]+]], [[VA]], [[VB]], [[VC]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_div_fmas_f32(float addrspace(1)* %out, float %a, float %b, float %c, i1 %d) nounwind {

@@ -39,7 +39,6 @@
 name:            l5
 alignment:       2
 exposesReturnsTwice: false
-noVRegs:         true
 legalized:       false
 regBankSelected: false
 selected:        false

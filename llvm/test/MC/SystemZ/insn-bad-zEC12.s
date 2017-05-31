@@ -62,6 +62,46 @@
 	bprp	0, 0, 1
 	bprp	0, 0, 0x1000000
 
+#CHECK: error: instruction requires: dfp-packed-conversion
+#CHECK: cdpt	%f0, 0(1), 0
+
+	cdpt	%f0, 0(1), 0
+
+#CHECK: error: invalid operand
+#CHECK: cdzt	%f0, 0(1), -1
+#CHECK: error: invalid operand
+#CHECK: cdzt	%f0, 0(1), 16
+#CHECK: error: missing length in address
+#CHECK: cdzt	%f0, 0, 0
+#CHECK: error: missing length in address
+#CHECK: cdzt	%f0, 0(%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cdzt	%f0, 0(0,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cdzt	%f0, 0(257,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cdzt	%f0, -1(1,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cdzt	%f0, 4096(1,%r1), 0
+#CHECK: error: %r0 used in an address
+#CHECK: cdzt	%f0, 0(1,%r0), 0
+#CHECK: error: invalid use of indexed addressing
+#CHECK: cdzt	%f0, 0(%r1,%r2), 0
+#CHECK: error: unknown token in expression
+#CHECK: cdzt	%f0, 0(-), 0
+
+	cdzt	%f0, 0(1), -1
+	cdzt	%f0, 0(1), 16
+	cdzt	%f0, 0, 0
+	cdzt	%f0, 0(%r1), 0
+	cdzt	%f0, 0(0,%r1), 0
+	cdzt	%f0, 0(257,%r1), 0
+	cdzt	%f0, -1(1,%r1), 0
+	cdzt	%f0, 4096(1,%r1), 0
+	cdzt	%f0, 0(1,%r0), 0
+	cdzt	%f0, 0(%r1,%r2), 0
+	cdzt	%f0, 0(-), 0
+
 #CHECK: error: invalid operand
 #CHECK: clgt	%r0, -1, 0
 #CHECK: error: invalid operand
@@ -111,6 +151,132 @@
 
         cltno   %r0, 0
         clto    %r0, 0
+
+#CHECK: error: instruction requires: dfp-packed-conversion
+#CHECK: cpdt	%f0, 0(1), 0
+
+	cpdt	%f0, 0(1), 0
+
+#CHECK: error: instruction requires: dfp-packed-conversion
+#CHECK: cpxt	%f0, 0(1), 0
+
+	cpxt	%f0, 0(1), 0
+
+#CHECK: error: instruction requires: dfp-packed-conversion
+#CHECK: cxpt	%f0, 0(1), 0
+
+	cxpt	%f0, 0(1), 0
+
+#CHECK: error: invalid operand
+#CHECK: cxzt	%f0, 0(1), -1
+#CHECK: error: invalid operand
+#CHECK: cxzt	%f0, 0(1), 16
+#CHECK: error: missing length in address
+#CHECK: cxzt	%f0, 0, 0
+#CHECK: error: missing length in address
+#CHECK: cxzt	%f0, 0(%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cxzt	%f0, 0(0,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cxzt	%f0, 0(257,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cxzt	%f0, -1(1,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: cxzt	%f0, 4096(1,%r1), 0
+#CHECK: error: %r0 used in an address
+#CHECK: cxzt	%f0, 0(1,%r0), 0
+#CHECK: error: invalid use of indexed addressing
+#CHECK: cxzt	%f0, 0(%r1,%r2), 0
+#CHECK: error: unknown token in expression
+#CHECK: cxzt	%f0, 0(-), 0
+#CHECK: error: invalid register pair
+#CHECK: cxzt	%f15, 0(1), 0
+
+	cxzt	%f0, 0(1), -1
+	cxzt	%f0, 0(1), 16
+	cxzt	%f0, 0, 0
+	cxzt	%f0, 0(%r1), 0
+	cxzt	%f0, 0(0,%r1), 0
+	cxzt	%f0, 0(257,%r1), 0
+	cxzt	%f0, -1(1,%r1), 0
+	cxzt	%f0, 4096(1,%r1), 0
+	cxzt	%f0, 0(1,%r0), 0
+	cxzt	%f0, 0(%r1,%r2), 0
+	cxzt	%f0, 0(-), 0
+	cxzt	%f15, 0(1), 0
+
+#CHECK: error: invalid operand
+#CHECK: czdt	%f0, 0(1), -1
+#CHECK: error: invalid operand
+#CHECK: czdt	%f0, 0(1), 16
+#CHECK: error: missing length in address
+#CHECK: czdt	%f0, 0, 0
+#CHECK: error: missing length in address
+#CHECK: czdt	%f0, 0(%r1), 0
+#CHECK: error: invalid operand
+#CHECK: czdt	%f0, 0(0,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: czdt	%f0, 0(257,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: czdt	%f0, -1(1,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: czdt	%f0, 4096(1,%r1), 0
+#CHECK: error: %r0 used in an address
+#CHECK: czdt	%f0, 0(1,%r0), 0
+#CHECK: error: invalid use of indexed addressing
+#CHECK: czdt	%f0, 0(%r1,%r2), 0
+#CHECK: error: unknown token in expression
+#CHECK: czdt	%f0, 0(-), 0
+
+	czdt	%f0, 0(1), -1
+	czdt	%f0, 0(1), 16
+	czdt	%f0, 0, 0
+	czdt	%f0, 0(%r1), 0
+	czdt	%f0, 0(0,%r1), 0
+	czdt	%f0, 0(257,%r1), 0
+	czdt	%f0, -1(1,%r1), 0
+	czdt	%f0, 4096(1,%r1), 0
+	czdt	%f0, 0(1,%r0), 0
+	czdt	%f0, 0(%r1,%r2), 0
+	czdt	%f0, 0(-), 0
+
+#CHECK: error: invalid operand
+#CHECK: czxt	%f0, 0(1), -1
+#CHECK: error: invalid operand
+#CHECK: czxt	%f0, 0(1), 16
+#CHECK: error: missing length in address
+#CHECK: czxt	%f0, 0, 0
+#CHECK: error: missing length in address
+#CHECK: czxt	%f0, 0(%r1), 0
+#CHECK: error: invalid operand
+#CHECK: czxt	%f0, 0(0,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: czxt	%f0, 0(257,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: czxt	%f0, -1(1,%r1), 0
+#CHECK: error: invalid operand
+#CHECK: czxt	%f0, 4096(1,%r1), 0
+#CHECK: error: %r0 used in an address
+#CHECK: czxt	%f0, 0(1,%r0), 0
+#CHECK: error: invalid use of indexed addressing
+#CHECK: czxt	%f0, 0(%r1,%r2), 0
+#CHECK: error: unknown token in expression
+#CHECK: czxt	%f0, 0(-), 0
+#CHECK: error: invalid register pair
+#CHECK: czxt	%f15, 0(1), 0
+
+	czxt	%f0, 0(1), -1
+	czxt	%f0, 0(1), 16
+	czxt	%f0, 0, 0
+	czxt	%f0, 0(%r1), 0
+	czxt	%f0, 0(0,%r1), 0
+	czxt	%f0, 0(257,%r1), 0
+	czxt	%f0, -1(1,%r1), 0
+	czxt	%f0, 4096(1,%r1), 0
+	czxt	%f0, 0(1,%r0), 0
+	czxt	%f0, 0(%r1,%r2), 0
+	czxt	%f0, 0(-), 0
+	czxt	%f15, 0(1), 0
 
 #CHECK: error: invalid operand
 #CHECK: lat	%r0, -524289

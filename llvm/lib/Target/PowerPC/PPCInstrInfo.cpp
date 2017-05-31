@@ -1983,3 +1983,7 @@ PPCInstrInfo::updatedRC(const TargetRegisterClass *RC) const {
     return &PPC::VSRCRegClass;
   return RC;
 }
+
+int PPCInstrInfo::getRecordFormOpcode(unsigned Opcode) {
+  return PPC::getRecordFormOpcode(Opcode);
+}

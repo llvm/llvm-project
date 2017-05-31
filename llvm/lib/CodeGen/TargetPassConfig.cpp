@@ -261,9 +261,9 @@ TargetPassConfig::~TargetPassConfig() {
 
 // Out of line constructor provides default values for pass options and
 // registers all common codegen passes.
-TargetPassConfig::TargetPassConfig(TargetMachine *tm, PassManagerBase &pm)
+TargetPassConfig::TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm)
     : ImmutablePass(ID), PM(&pm), Started(true), Stopped(false),
-      AddingMachinePasses(false), TM(tm), Impl(nullptr), Initialized(false),
+      AddingMachinePasses(false), TM(&TM), Impl(nullptr), Initialized(false),
       DisableVerify(false), EnableTailMerge(true),
       RequireCodeGenSCCOrder(false) {
 
@@ -282,9 +282,9 @@ TargetPassConfig::TargetPassConfig(TargetMachine *tm, PassManagerBase &pm)
   substitutePass(&PostRAMachineLICMID, &MachineLICMID);
 
   if (StringRef(PrintMachineInstrs.getValue()).equals(""))
-    TM->Options.PrintMachineCode = true;
+    TM.Options.PrintMachineCode = true;
 
-  if (TM->Options.EnableIPRA)
+  if (TM.Options.EnableIPRA)
     setRequiresCodeGenSCCOrder();
 }
 
@@ -310,7 +310,7 @@ void TargetPassConfig::insertPass(AnalysisID TargetPassID,
 ///
 /// Targets may override this to extend TargetPassConfig.
 TargetPassConfig *LLVMTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new TargetPassConfig(this, PM);
+  return new TargetPassConfig(*this, PM);
 }
 
 TargetPassConfig::TargetPassConfig()

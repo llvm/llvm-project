@@ -51,7 +51,7 @@ define amdgpu_kernel void @commute_mul_imm_fneg_f32(float addrspace(1)* %out, fl
 ; FUNC-LABEL: @commute_add_lit_fabs_f32
 ; SI: buffer_load_dword [[X:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI: v_mov_b32_e32 [[K:v[0-9]+]], 0x44800000
-; SI: v_add_f32_e64 [[REG:v[0-9]+]], [[K]], |[[X]]|
+; SI: v_add_f32_e64 [[REG:v[0-9]+]], |[[X]]|, [[K]]
 ; SI: buffer_store_dword [[REG]]
 define amdgpu_kernel void @commute_add_lit_fabs_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1

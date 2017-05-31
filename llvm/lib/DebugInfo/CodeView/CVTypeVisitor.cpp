@@ -71,7 +71,7 @@ static Error visitMemberRecord(CVMemberRecord &Record,
   MEMBER_RECORD(EnumVal, EnumVal, AliasName)
 #define TYPE_RECORD(EnumName, EnumVal, Name)
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "llvm/DebugInfo/CodeView/TypeRecords.def"
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
   }
 
   if (auto EC = Callbacks.visitMemberEnd(Record))
@@ -155,7 +155,7 @@ Error CVTypeVisitor::finishVisitation(CVType &Record) {
   TYPE_RECORD(EnumVal, EnumVal, AliasName)
 #define MEMBER_RECORD(EnumName, EnumVal, Name)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "llvm/DebugInfo/CodeView/TypeRecords.def"
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
   }
 
   if (auto EC = Callbacks.visitTypeEnd(Record))

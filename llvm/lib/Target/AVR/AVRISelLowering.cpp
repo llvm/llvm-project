@@ -1500,9 +1500,9 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
   unsigned DstReg = MI.getOperand(0).getReg();
 
   // BB:
-  // cp 0, N
+  // cpi N, 0
   // breq RemBB
-  BuildMI(BB, dl, TII.get(AVR::CPRdRr)).addReg(ShiftAmtSrcReg).addReg(AVR::R0);
+  BuildMI(BB, dl, TII.get(AVR::CPIRdK)).addReg(ShiftAmtSrcReg).addImm(0);
   BuildMI(BB, dl, TII.get(AVR::BREQk)).addMBB(RemBB);
 
   // LoopBB:

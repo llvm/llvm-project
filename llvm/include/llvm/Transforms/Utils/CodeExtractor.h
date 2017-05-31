@@ -25,6 +25,7 @@ template <typename T> class ArrayRef;
   class BranchProbabilityInfo;
   class DominatorTree;
   class Function;
+  class Instruction;
   class Loop;
   class Module;
   class RegionNode;
@@ -103,7 +104,17 @@ template <typename T> class ArrayRef;
     /// a code sequence, that sequence is modified, including changing these
     /// sets, before extraction occurs. These modifications won't have any
     /// significant impact on the cost however.
-    void findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs) const;
+    void findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
+                           const ValueSet &Allocas) const;
+    /// Find the set of allocas whose life ranges are contained within the
+    /// outlined region.
+    ///
+    /// Allocas which have life_time markers contained in the outlined region
+    /// should be pushed to the outlined function. The address bitcasts that
+    /// are used by the lifetime markers are also candidates for shrink-
+    /// wrapping. The instructions that need to be sinked are collected in
+    /// 'Allocas'.
+    void findAllocas(ValueSet &Allocas) const;
 
   private:
     void severSplitPHINodes(BasicBlock *&Header);

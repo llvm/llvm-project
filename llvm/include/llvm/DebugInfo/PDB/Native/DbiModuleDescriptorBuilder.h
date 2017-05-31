@@ -11,9 +11,9 @@
 #define LLVM_DEBUGINFO_PDB_RAW_DBIMODULEDESCRIPTORBUILDER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugInlineeLinesFragment.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
+#include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/Error.h"
@@ -25,7 +25,7 @@ namespace llvm {
 class BinaryStreamWriter;
 
 namespace codeview {
-class ModuleDebugFragmentRecordBuilder;
+class DebugSubsectionRecordBuilder;
 }
 
 namespace msf {
@@ -49,11 +49,11 @@ public:
   void setObjFileName(StringRef Name);
   void addSymbol(codeview::CVSymbol Symbol);
 
-  void addC13Fragment(std::unique_ptr<codeview::ModuleDebugLineFragment> Lines);
+  void addC13Fragment(std::unique_ptr<codeview::DebugLinesSubsection> Lines);
   void addC13Fragment(
-      std::unique_ptr<codeview::ModuleDebugInlineeLineFragment> Inlinees);
+      std::unique_ptr<codeview::DebugInlineeLinesSubsection> Inlinees);
   void setC13FileChecksums(
-      std::unique_ptr<codeview::ModuleDebugFileChecksumFragment> Checksums);
+      std::unique_ptr<codeview::DebugChecksumsSubsection> Checksums);
 
   uint16_t getStreamIndex() const;
   StringRef getModuleName() const { return ModuleName; }
@@ -83,12 +83,11 @@ private:
   std::vector<std::string> SourceFiles;
   std::vector<codeview::CVSymbol> Symbols;
 
-  std::unique_ptr<codeview::ModuleDebugFileChecksumFragment> ChecksumInfo;
-  std::vector<std::unique_ptr<codeview::ModuleDebugLineFragment>> LineInfo;
-  std::vector<std::unique_ptr<codeview::ModuleDebugInlineeLineFragment>>
-      Inlinees;
+  std::unique_ptr<codeview::DebugChecksumsSubsection> ChecksumInfo;
+  std::vector<std::unique_ptr<codeview::DebugLinesSubsection>> LineInfo;
+  std::vector<std::unique_ptr<codeview::DebugInlineeLinesSubsection>> Inlinees;
 
-  std::vector<std::unique_ptr<codeview::ModuleDebugFragmentRecordBuilder>>
+  std::vector<std::unique_ptr<codeview::DebugSubsectionRecordBuilder>>
       C13Builders;
 
   ModuleInfoHeader Layout;

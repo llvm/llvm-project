@@ -1237,7 +1237,8 @@ class RecordVal {
 
 public:
   RecordVal(Init *N, RecTy *T, bool P);
-  RecordVal(StringRef N, RecTy *T, bool P);
+  RecordVal(StringRef N, RecTy *T, bool P)
+    : RecordVal(StringInit::get(N), T, P) {}
 
   StringRef getName() const;
   Init *getNameInit() const { return Name; }
@@ -1378,13 +1379,11 @@ public:
   }
 
   RecordVal *getValue(const Init *Name) {
-    for (RecordVal &Val : Values)
-      if (Val.Name == Name) return &Val;
-    return nullptr;
+    return const_cast<RecordVal *>(static_cast<const Record *>(this)->getValue(Name));
   }
 
   RecordVal *getValue(StringRef Name) {
-    return getValue(StringInit::get(Name));
+    return const_cast<RecordVal *>(static_cast<const Record *>(this)->getValue(Name));
   }
 
   void addTemplateArg(Init *Name) {

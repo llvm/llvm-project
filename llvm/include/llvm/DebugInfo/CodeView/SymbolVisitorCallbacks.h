@@ -39,7 +39,7 @@ public:
     return Error::success();                                                   \
   }
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "CVSymbolTypes.def"
+#include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
 };
 
 } // end namespace codeview

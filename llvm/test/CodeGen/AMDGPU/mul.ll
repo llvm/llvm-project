@@ -211,10 +211,10 @@ endif:
 ; SI: s_mul_i32
 ; SI: v_mul_hi_u32
 ; SI: s_mul_i32
-; SI: s_mul_i32
-; SI: v_mul_hi_u32
-; SI: v_mul_hi_u32
-; SI: s_mul_i32
+; SI-DAG: s_mul_i32
+; SI-DAG: v_mul_hi_u32
+; SI-DAG: v_mul_hi_u32
+; SI-DAG: s_mul_i32
 ; SI-DAG: s_mul_i32
 ; SI-DAG: v_mul_hi_u32
 ; SI: s_mul_i32
