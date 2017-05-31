@@ -1,4 +1,4 @@
-//===- ModuleDebugFragment.h ------------------------------------*- C++ -*-===//
+//===- DebugSubsection.h ------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,52 +20,49 @@
 namespace llvm {
 namespace codeview {
 
-class ModuleDebugFragment;
+class DebugSubsection;
 
 // Corresponds to the `CV_DebugSSubsectionHeader_t` structure.
-struct ModuleDebugFragmentHeader {
-  support::ulittle32_t Kind;   // codeview::ModuleDebugFragmentKind enum
+struct DebugSubsectionHeader {
+  support::ulittle32_t Kind;   // codeview::DebugSubsectionKind enum
   support::ulittle32_t Length; // number of bytes occupied by this record.
 };
 
-class ModuleDebugFragmentRecord {
+class DebugSubsectionRecord {
 public:
-  ModuleDebugFragmentRecord();
-  ModuleDebugFragmentRecord(ModuleDebugFragmentKind Kind, BinaryStreamRef Data);
+  DebugSubsectionRecord();
+  DebugSubsectionRecord(DebugSubsectionKind Kind, BinaryStreamRef Data);
 
-  static Error initialize(BinaryStreamRef Stream,
-                          ModuleDebugFragmentRecord &Info);
+  static Error initialize(BinaryStreamRef Stream, DebugSubsectionRecord &Info);
 
   uint32_t getRecordLength() const;
-  ModuleDebugFragmentKind kind() const;
+  DebugSubsectionKind kind() const;
   BinaryStreamRef getRecordData() const;
 
 private:
-  ModuleDebugFragmentKind Kind;
+  DebugSubsectionKind Kind;
   BinaryStreamRef Data;
 };
 
-class ModuleDebugFragmentRecordBuilder {
+class DebugSubsectionRecordBuilder {
 public:
-  ModuleDebugFragmentRecordBuilder(ModuleDebugFragmentKind Kind,
-                                   ModuleDebugFragment &Frag);
+  DebugSubsectionRecordBuilder(DebugSubsectionKind Kind, DebugSubsection &Frag);
   uint32_t calculateSerializedLength();
   Error commit(BinaryStreamWriter &Writer);
 
 private:
-  ModuleDebugFragmentKind Kind;
-  ModuleDebugFragment &Frag;
+  DebugSubsectionKind Kind;
+  DebugSubsection &Frag;
 };
 
 } // namespace codeview
 
-template <>
-struct VarStreamArrayExtractor<codeview::ModuleDebugFragmentRecord> {
+template <> struct VarStreamArrayExtractor<codeview::DebugSubsectionRecord> {
   typedef void ContextType;
 
   static Error extract(BinaryStreamRef Stream, uint32_t &Length,
-                       codeview::ModuleDebugFragmentRecord &Info) {
-    if (auto EC = codeview::ModuleDebugFragmentRecord::initialize(Stream, Info))
+                       codeview::DebugSubsectionRecord &Info) {
+    if (auto EC = codeview::DebugSubsectionRecord::initialize(Stream, Info))
       return EC;
     Length = Info.getRecordLength();
     return Error::success();
@@ -73,7 +70,7 @@ struct VarStreamArrayExtractor<codeview::ModuleDebugFragmentRecord> {
 };
 
 namespace codeview {
-typedef VarStreamArray<ModuleDebugFragmentRecord> ModuleDebugFragmentArray;
+typedef VarStreamArray<DebugSubsectionRecord> DebugSubsectionArray;
 }
 } // namespace llvm
 

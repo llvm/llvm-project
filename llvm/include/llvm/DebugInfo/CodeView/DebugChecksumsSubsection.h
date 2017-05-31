@@ -1,4 +1,4 @@
-//===- ModuleDebugFileChecksumFragment.h ------------------------*- C++ -*-===//
+//===- DebugChecksumsSubsection.h -------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGFILECHECKSUMFRAGMENT_H
-#define LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGFILECHECKSUMFRAGMENT_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGCHECKSUMSSUBSECTION_H
+#define LLVM_DEBUGINFO_CODEVIEW_DEBUGCHECKSUMSSUBSECTION_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugFragment.h"
+#include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -21,7 +21,7 @@
 namespace llvm {
 namespace codeview {
 
-class StringTable;
+class DebugStringTableSubsection;
 
 struct FileChecksumEntry {
   uint32_t FileNameOffset;    // Byte offset of filename in global stringtable.
@@ -43,19 +43,22 @@ public:
 
 namespace llvm {
 namespace codeview {
-class ModuleDebugFileChecksumFragmentRef final : public ModuleDebugFragmentRef {
+class DebugChecksumsSubsectionRef final : public DebugSubsectionRef {
   typedef VarStreamArray<codeview::FileChecksumEntry> FileChecksumArray;
   typedef FileChecksumArray::Iterator Iterator;
 
 public:
-  ModuleDebugFileChecksumFragmentRef()
-      : ModuleDebugFragmentRef(ModuleDebugFragmentKind::FileChecksums) {}
+  DebugChecksumsSubsectionRef()
+      : DebugSubsectionRef(DebugSubsectionKind::FileChecksums) {}
 
-  static bool classof(const ModuleDebugFragmentRef *S) {
-    return S->kind() == ModuleDebugFragmentKind::FileChecksums;
+  static bool classof(const DebugSubsectionRef *S) {
+    return S->kind() == DebugSubsectionKind::FileChecksums;
   }
 
+  bool valid() const { return Checksums.valid(); }
+
   Error initialize(BinaryStreamReader Reader);
+  Error initialize(BinaryStreamRef Stream);
 
   Iterator begin() { return Checksums.begin(); }
   Iterator end() { return Checksums.end(); }
@@ -66,23 +69,23 @@ private:
   FileChecksumArray Checksums;
 };
 
-class ModuleDebugFileChecksumFragment final : public ModuleDebugFragment {
+class DebugChecksumsSubsection final : public DebugSubsection {
 public:
-  explicit ModuleDebugFileChecksumFragment(StringTable &Strings);
+  explicit DebugChecksumsSubsection(DebugStringTableSubsection &Strings);
 
-  static bool classof(const ModuleDebugFragment *S) {
-    return S->kind() == ModuleDebugFragmentKind::FileChecksums;
+  static bool classof(const DebugSubsection *S) {
+    return S->kind() == DebugSubsectionKind::FileChecksums;
   }
 
   void addChecksum(StringRef FileName, FileChecksumKind Kind,
                    ArrayRef<uint8_t> Bytes);
 
-  uint32_t calculateSerializedLength() override;
-  Error commit(BinaryStreamWriter &Writer) override;
+  uint32_t calculateSerializedSize() const override;
+  Error commit(BinaryStreamWriter &Writer) const override;
   uint32_t mapChecksumOffset(StringRef FileName) const;
 
 private:
-  StringTable &Strings;
+  DebugStringTableSubsection &Strings;
 
   DenseMap<uint32_t, uint32_t> OffsetMap;
   uint32_t SerializedSize = 0;

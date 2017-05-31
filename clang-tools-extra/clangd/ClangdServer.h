@@ -28,6 +28,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <utility>
 
 namespace clang {
@@ -41,24 +42,54 @@ size_t positionToOffset(StringRef Code, Position P);
 /// Turn an offset in Code into a [line, column] pair.
 Position offsetToPosition(StringRef Code, size_t Offset);
 
+/// A tag supplied by the FileSytemProvider.
+typedef int VFSTag;
+
+/// A value of an arbitrary type and VFSTag that was supplied by the
+/// FileSystemProvider when this value was computed.
+template <class T> class Tagged {
+public:
+  template <class U>
+  Tagged(U &&Value, VFSTag Tag) : Value(std::forward<U>(Value)), Tag(Tag) {}
+
+  template <class U>
+  Tagged(const Tagged<U> &Other) : Value(Other.Value), Tag(Other.Tag) {}
+
+  template <class U>
+  Tagged(Tagged<U> &&Other) : Value(std::move(Other.Value)), Tag(Other.Tag) {}
+
+  T Value;
+  VFSTag Tag;
+};
+
+template <class T>
+Tagged<typename std::decay<T>::type> make_tagged(T &&Value, VFSTag Tag) {
+  return Tagged<T>(std::forward<T>(Value), Tag);
+}
+
 class DiagnosticsConsumer {
 public:
   virtual ~DiagnosticsConsumer() = default;
 
   /// Called by ClangdServer when \p Diagnostics for \p File are ready.
-  virtual void onDiagnosticsReady(PathRef File,
-                                  std::vector<DiagWithFixIts> Diagnostics) = 0;
+  virtual void
+  onDiagnosticsReady(PathRef File,
+                     Tagged<std::vector<DiagWithFixIts>> Diagnostics) = 0;
 };
 
 class FileSystemProvider {
 public:
   virtual ~FileSystemProvider() = default;
-  virtual IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() = 0;
+  /// \return A filesystem that will be used for all file accesses in clangd.
+  /// A Tag returned by this method will be propagated to all results of clangd
+  /// that will use this filesystem.
+  virtual Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> getTaggedFileSystem() = 0;
 };
 
 class RealFileSystemProvider : public FileSystemProvider {
 public:
-  IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override;
+  /// \return getRealFileSystem() tagged with default tag, i.e. VFSTag()
+  Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> getTaggedFileSystem() override;
 };
 
 class ClangdServer;
@@ -120,7 +151,7 @@ public:
   void forceReparse(PathRef File);
 
   /// Run code completion for \p File at \p Pos.
-  std::vector<CompletionItem> codeComplete(PathRef File, Position Pos);
+  Tagged<std::vector<CompletionItem>> codeComplete(PathRef File, Position Pos);
 
   /// Run formatting for \p Rng inside \p File.
   std::vector<tooling::Replacement> formatRange(PathRef File, Range Rng);

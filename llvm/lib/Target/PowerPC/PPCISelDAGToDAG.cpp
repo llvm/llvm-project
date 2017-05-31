@@ -77,6 +77,11 @@ STATISTIC(SignExtensionsAdded,
           "Number of sign extensions for compare inputs added.");
 STATISTIC(ZeroExtensionsAdded,
           "Number of zero extensions for compare inputs added.");
+STATISTIC(NumLogicOpsOnComparison,
+          "Number of logical ops on i1 values calculated in GPR.");
+STATISTIC(OmittedForNonExtendUses,
+          "Number of compares not eliminated as they have non-extending uses.");
+
 // FIXME: Remove this once the bug has been fixed!
 cl::opt<bool> ANDIGlueBug("expose-ppc-andi-glue-bug",
 cl::desc("expose the ANDI glue bug on PPC"), cl::Hidden);
@@ -275,6 +280,8 @@ private:
 
     bool trySETCC(SDNode *N);
     bool tryEXTEND(SDNode *N);
+    bool tryLogicOpOfCompares(SDNode *N);
+    SDValue computeLogicOpInGPR(SDValue LogicOp);
     SDValue signExtendInputIfNeeded(SDValue Input);
     SDValue zeroExtendInputIfNeeded(SDValue Input);
     SDValue addExtOrTrunc(SDValue NatWidthRes, ExtOrTruncConversion Conv);
@@ -2501,6 +2508,11 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
   return true;
 }
 
+// Is this opcode a bitwise logical operation?
+static bool isLogicOp(unsigned Opc) {
+  return Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR;
+}
+
 /// If this node is a sign/zero extension of an integer comparison,
 /// it can usually be computed in GPR's rather than using comparison
 /// instructions and ISEL. We only do this on 64-bit targets for now
@@ -2513,13 +2525,20 @@ bool PPCDAGToDAGISel::tryEXTEND(SDNode *N) {
           N->getOpcode() == ISD::SIGN_EXTEND) &&
           "Expecting a zero/sign extend node!");
 
-  if (N->getOperand(0).getOpcode() != ISD::SETCC)
+  SDValue WideRes;
+  // If we are zero-extending the result of a logical operation on i1
+  // values, we can keep the values in GPRs.
+  if (isLogicOp(N->getOperand(0).getOpcode()) &&
+      N->getOperand(0).getValueType() == MVT::i1 &&
+      N->getOpcode() == ISD::ZERO_EXTEND)
+    WideRes = computeLogicOpInGPR(N->getOperand(0));
+  else if (N->getOperand(0).getOpcode() != ISD::SETCC)
     return false;
-
-  SDValue WideRes =
-    getSETCCInGPR(N->getOperand(0),
-                  N->getOpcode() == ISD::SIGN_EXTEND ?
-                  SetccInGPROpts::SExtOrig : SetccInGPROpts::ZExtOrig);
+  else
+    WideRes =
+      getSETCCInGPR(N->getOperand(0),
+                    N->getOpcode() == ISD::SIGN_EXTEND ?
+                    SetccInGPROpts::SExtOrig : SetccInGPROpts::ZExtOrig);
 
   if (!WideRes)
     return false;
@@ -2537,6 +2556,159 @@ bool PPCDAGToDAGISel::tryEXTEND(SDNode *N) {
                            ExtOrTruncConversion::Trunc);
   ReplaceNode(N, ConvOp.getNode());
 
+  return true;
+}
+
+// Lower a logical operation on i1 values into a GPR sequence if possible.
+// The result can be kept in a GPR if requested.
+// Three types of inputs can be handled:
+// - SETCC
+// - TRUNCATE
+// - Logical operation (AND/OR/XOR)
+// There is also a special case that is handled (namely a complement operation
+// achieved with xor %a, -1).
+SDValue PPCDAGToDAGISel::computeLogicOpInGPR(SDValue LogicOp) {
+  assert(isLogicOp(LogicOp.getOpcode()) &&
+         "Can only handle logic operations here.");
+  assert(LogicOp.getValueType() == MVT::i1 &&
+         "Can only handle logic operations on i1 values here.");
+  SDLoc dl(LogicOp);
+  SDValue LHS, RHS;
+
+  // Special case: xor %a, -1
+  bool IsBitwiseNegation = isBitwiseNot(LogicOp);
+
+  // Produces a GPR sequence for each operand of the binary logic operation.
+  // For SETCC, it produces the respective comparison, for TRUNCATE it truncates
+  // the value in a GPR and for logic operations, it will recursively produce
+  // a GPR sequence for the operation.
+  auto getLogicOperand = [&] (SDValue Operand) -> SDValue {
+    unsigned OperandOpcode = Operand.getOpcode();
+    if (OperandOpcode == ISD::SETCC)
+      return getSETCCInGPR(Operand, SetccInGPROpts::ZExtOrig);
+    else if (OperandOpcode == ISD::TRUNCATE) {
+      SDValue InputOp = Operand.getOperand(0);
+      EVT InVT = InputOp.getValueType();
+      return
+        SDValue(CurDAG->getMachineNode(InVT == MVT::i32 ? PPC::RLDICL_32 :
+                                       PPC::RLDICL, dl, InVT, InputOp,
+                                       getI64Imm(0, dl), getI64Imm(63, dl)), 0);
+    } else if (isLogicOp(OperandOpcode))
+      return computeLogicOpInGPR(Operand);
+    return SDValue();
+  };
+  LHS = getLogicOperand(LogicOp.getOperand(0));
+  RHS = getLogicOperand(LogicOp.getOperand(1));
+
+  // If a GPR sequence can't be produced for the LHS we can't proceed.
+  // Not producing a GPR sequence for the RHS is only a problem if this isn't
+  // a bitwise negation operation.
+  if (!LHS || (!RHS && !IsBitwiseNegation))
+    return SDValue();
+
+  NumLogicOpsOnComparison++;
+
+  // We will use the inputs as 64-bit values.
+  if (LHS.getValueType() == MVT::i32)
+    LHS = addExtOrTrunc(LHS, ExtOrTruncConversion::Ext);
+  if (!IsBitwiseNegation && RHS.getValueType() == MVT::i32)
+    RHS = addExtOrTrunc(RHS, ExtOrTruncConversion::Ext);
+
+  unsigned NewOpc;
+  switch (LogicOp.getOpcode()) {
+  default: llvm_unreachable("Unknown logic operation.");
+  case ISD::AND: NewOpc = PPC::AND8; break;
+  case ISD::OR:  NewOpc = PPC::OR8;  break;
+  case ISD::XOR: NewOpc = PPC::XOR8; break;
+  }
+
+  if (IsBitwiseNegation) {
+    RHS = getI64Imm(1, dl);
+    NewOpc = PPC::XORI8;
+  }
+
+  return SDValue(CurDAG->getMachineNode(NewOpc, dl, MVT::i64, LHS, RHS), 0);
+
+}
+
+/// Try performing logical operations on results of comparisons in GPRs.
+/// It is typically preferred from a performance perspective over performing
+/// the operations on individual bits in the CR. We only do this on 64-bit
+/// targets for now as the code is specialized for 64-bit (it uses 64-bit
+/// instructions and assumes 64-bit registers).
+bool PPCDAGToDAGISel::tryLogicOpOfCompares(SDNode *N) {
+  if (TM.getOptLevel() == CodeGenOpt::None || !TM.isPPC64())
+    return false;
+  if (N->getValueType(0) != MVT::i1)
+    return false;
+  assert(isLogicOp(N->getOpcode()) &&
+         "Expected a logic operation on setcc results.");
+  SDValue LoweredLogical = computeLogicOpInGPR(SDValue(N, 0));
+  if (!LoweredLogical)
+    return false;
+
+  SDLoc dl(N);
+  bool IsBitwiseNegate = LoweredLogical.getMachineOpcode() == PPC::XORI8;
+  unsigned SubRegToExtract = IsBitwiseNegate ? PPC::sub_eq : PPC::sub_gt;
+  SDValue CR0Reg = CurDAG->getRegister(PPC::CR0, MVT::i32);
+  SDValue LHS = LoweredLogical.getOperand(0);
+  SDValue RHS = LoweredLogical.getOperand(1);
+  SDValue WideOp;
+  SDValue OpToConvToRecForm;
+
+  // Look through any 32-bit to 64-bit implicit extend nodes to find the opcode
+  // that is input to the XORI.
+  if (IsBitwiseNegate &&
+      LoweredLogical.getOperand(0).getMachineOpcode() == PPC::INSERT_SUBREG)
+    OpToConvToRecForm = LoweredLogical.getOperand(0).getOperand(1);
+  else if (IsBitwiseNegate)
+    // If the input to the XORI isn't an extension, that's what we're after.
+    OpToConvToRecForm = LoweredLogical.getOperand(0);
+  else
+    // If this is not an XORI, it is a reg-reg logical op and we can convert it
+    // to record-form.
+    OpToConvToRecForm = LoweredLogical;
+
+  // Get the record-form version of the node we're looking to use to get the
+  // CR result from.
+  uint16_t NonRecOpc = OpToConvToRecForm.getMachineOpcode();
+  int NewOpc = PPCInstrInfo::getRecordFormOpcode(NonRecOpc);
+
+  // Convert the right node to record-form. This is either the logical we're
+  // looking at or it is the input node to the negation (if we're looking at
+  // a bitwise negation).
+  if (NewOpc != -1 && IsBitwiseNegate) {
+    // The input to the XORI has a record-form. Use it.
+    assert(LoweredLogical.getConstantOperandVal(1) == 1 &&
+           "Expected a PPC::XORI8 only for bitwise negation.");
+    // Emit the record-form instruction.
+    std::vector<SDValue> Ops;
+    for (int i = 0, e = OpToConvToRecForm.getNumOperands(); i < e; i++)
+      Ops.push_back(OpToConvToRecForm.getOperand(i));
+
+    WideOp =
+      SDValue(CurDAG->getMachineNode(NewOpc, dl,
+                                     OpToConvToRecForm.getValueType(),
+                                     MVT::Glue, Ops), 0);
+  } else {
+    assert((NewOpc != -1 || !IsBitwiseNegate) &&
+           "No record form available for AND8/OR8/XOR8?");
+    WideOp =
+      SDValue(CurDAG->getMachineNode(NewOpc == -1 ? PPC::ANDIo8 : NewOpc, dl,
+                                     MVT::i64, MVT::Glue, LHS, RHS), 0);
+  }
+
+  // Select this node to a single bit from CR0 set by the record-form node
+  // just created. For bitwise negation, use the EQ bit which is the equivalent
+  // of negating the result (i.e. it is a bit set when the result of the
+  // operation is zero).
+  SDValue SRIdxVal =
+    CurDAG->getTargetConstant(SubRegToExtract, dl, MVT::i32);
+  SDValue CRBit =
+    SDValue(CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl,
+                                   MVT::i1, CR0Reg, SRIdxVal,
+                                   WideOp.getValue(1)), 0);
+  ReplaceNode(N, CRBit.getNode());
   return true;
 }
 
@@ -2677,6 +2849,31 @@ SDValue PPCDAGToDAGISel::get32BitSExtCompare(SDValue LHS, SDValue RHS,
   }
 }
 
+/// Does this SDValue have any uses for which keeping the value in a GPR is
+/// appropriate. This is meant to be used on values that have type i1 since
+/// it is somewhat meaningless to ask if values of other types can be kept in
+/// GPR's.
+static bool allUsesExtend(SDValue Compare, SelectionDAG *CurDAG) {
+  assert(Compare.getOpcode() == ISD::SETCC &&
+         "An ISD::SETCC node required here.");
+
+  // For values that have a single use, the caller should obviously already have
+  // checked if that use is an extending use. We check the other uses here.
+  if (Compare.hasOneUse())
+    return true;
+  // We want the value in a GPR if it is being extended, used for a select, or
+  // used in logical operations.
+  for (auto CompareUse : Compare.getNode()->uses())
+    if (CompareUse->getOpcode() != ISD::SIGN_EXTEND &&
+        CompareUse->getOpcode() != ISD::ZERO_EXTEND &&
+        CompareUse->getOpcode() != ISD::SELECT &&
+        !isLogicOp(CompareUse->getOpcode())) {
+      OmittedForNonExtendUses++;
+      return false;
+    }
+  return true;
+}
+
 /// Returns an equivalent of a SETCC node but with the result the same width as
 /// the inputs. This can nalso be used for SELECT_CC if either the true or false
 /// values is a power of two while the other is zero.
@@ -2685,6 +2882,11 @@ SDValue PPCDAGToDAGISel::getSETCCInGPR(SDValue Compare,
   assert((Compare.getOpcode() == ISD::SETCC ||
           Compare.getOpcode() == ISD::SELECT_CC) &&
          "An ISD::SETCC node required here.");
+
+  // Don't convert this comparison to a GPR sequence because there are uses
+  // of the i1 result (i.e. uses that require the result in the CR).
+  if ((Compare.getOpcode() == ISD::SETCC) && !allUsesExtend(Compare, CurDAG))
+    return SDValue();
 
   SDValue LHS = Compare.getOperand(0);
   SDValue RHS = Compare.getOperand(1);
@@ -2906,6 +3108,9 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
   }
 
   case ISD::AND: {
+    if (tryLogicOpOfCompares(N))
+      return;
+
     unsigned Imm, Imm2, SH, MB, ME;
     uint64_t Imm64;
 
@@ -3025,6 +3230,9 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       if (tryBitfieldInsert(N))
         return;
 
+    if (tryLogicOpOfCompares(N))
+      return;
+
     short Imm;
     if (N->getOperand(0)->getOpcode() == ISD::FrameIndex &&
         isIntS16Immediate(N->getOperand(1), Imm)) {
@@ -3040,6 +3248,11 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     }
 
     // Other cases are autogenerated.
+    break;
+  }
+  case ISD::XOR: {
+    if (tryLogicOpOfCompares(N))
+      return;
     break;
   }
   case ISD::ADD: {

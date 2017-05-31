@@ -1,4 +1,5 @@
 ; RUN: %llc_dwarf %s -filetype=obj -o - | llvm-objdump -h - | FileCheck %s
+; REQUIRES: default_triple
 
 ; CHECK-NOT: .debug_
 

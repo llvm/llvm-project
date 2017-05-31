@@ -12,7 +12,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/CodeView/StringTable.h"
+#include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
@@ -52,7 +52,7 @@ private:
   Error readEpilogue(BinaryStreamReader &Reader);
 
   const PDBStringTableHeader *Header = nullptr;
-  codeview::StringTableRef Strings;
+  codeview::DebugStringTableSubsectionRef Strings;
   FixedStreamArray<support::ulittle32_t> IDs;
   uint32_t ByteSize = 0;
   uint32_t NameCount = 0;

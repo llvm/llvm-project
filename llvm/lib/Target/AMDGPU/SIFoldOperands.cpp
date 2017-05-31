@@ -247,9 +247,10 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
 
 // If the use operand doesn't care about the value, this may be an operand only
 // used for register indexing, in which case it is unsafe to fold.
-static bool isUseSafeToFold(const MachineInstr &MI,
+static bool isUseSafeToFold(const SIInstrInfo *TII,
+                            const MachineInstr &MI,
                             const MachineOperand &UseMO) {
-  return !UseMO.isUndef();
+  return !UseMO.isUndef() && !TII->isSDWA(MI);
   //return !MI.hasRegisterImplicitUseOperand(UseMO.getReg());
 }
 
@@ -261,7 +262,7 @@ void SIFoldOperands::foldOperand(
   SmallVectorImpl<MachineInstr *> &CopiesToReplace) const {
   const MachineOperand &UseOp = UseMI->getOperand(UseOpIdx);
 
-  if (!isUseSafeToFold(*UseMI, UseOp))
+  if (!isUseSafeToFold(TII, *UseMI, UseOp))
     return;
 
   // FIXME: Fold operands with subregs.

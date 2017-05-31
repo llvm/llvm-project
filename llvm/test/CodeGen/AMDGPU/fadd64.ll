@@ -13,7 +13,7 @@ define amdgpu_kernel void @v_fadd_f64(double addrspace(1)* %out, double addrspac
 }
 
 ; CHECK-LABEL: {{^}}s_fadd_f64:
-; CHECK: v_add_f64 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}
+; CHECK: v_add_f64 {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @s_fadd_f64(double addrspace(1)* %out, double %r0, double %r1) {
   %r2 = fadd double %r0, %r1
   store double %r2, double addrspace(1)* %out

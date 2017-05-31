@@ -52,3 +52,19 @@ define i1 @test4(i8 %arg) {
   %res = icmp eq i8 %cnt, 2
   ret i1 %res
 }
+
+; Test when the number of possible known bits isn't one less than a power of 2
+; and the compare value is greater but less than the next power of 2.
+; TODO: The icmp is unnecessary given the known bits of the input.
+define i1 @test5(i32 %arg) {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARG:%.*]], 3
+; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.ctpop.i32(i32 [[AND]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[CNT]], 3
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %and = and i32 %arg, 3
+  %cnt = call i32 @llvm.ctpop.i32(i32 %and)
+  %res = icmp eq i32 %cnt, 3
+  ret i1 %res
+}

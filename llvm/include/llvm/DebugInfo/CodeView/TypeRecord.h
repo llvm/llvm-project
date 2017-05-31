@@ -123,13 +123,13 @@ protected:
 public:
   TypeRecordKind getKind() const { return Kind; }
 
-private:
   TypeRecordKind Kind;
 };
 
 // LF_MODIFIER
 class ModifierRecord : public TypeRecord {
 public:
+  ModifierRecord() = default;
   explicit ModifierRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   ModifierRecord(TypeIndex ModifiedType, ModifierOptions Modifiers)
       : TypeRecord(TypeRecordKind::Modifier), ModifiedType(ModifiedType),
@@ -145,6 +145,7 @@ public:
 // LF_PROCEDURE
 class ProcedureRecord : public TypeRecord {
 public:
+  ProcedureRecord() = default;
   explicit ProcedureRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   ProcedureRecord(TypeIndex ReturnType, CallingConvention CallConv,
                   FunctionOptions Options, uint16_t ParameterCount,
@@ -169,6 +170,7 @@ public:
 // LF_MFUNCTION
 class MemberFunctionRecord : public TypeRecord {
 public:
+  MemberFunctionRecord() = default;
   explicit MemberFunctionRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
 
   MemberFunctionRecord(TypeIndex ReturnType, TypeIndex ClassType,
@@ -203,6 +205,7 @@ public:
 // LF_LABEL
 class LabelRecord : public TypeRecord {
 public:
+  LabelRecord() = default;
   explicit LabelRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
 
   LabelRecord(LabelType Mode) : TypeRecord(TypeRecordKind::Label), Mode(Mode) {}
@@ -213,6 +216,7 @@ public:
 // LF_MFUNC_ID
 class MemberFuncIdRecord : public TypeRecord {
 public:
+  MemberFuncIdRecord() = default;
   explicit MemberFuncIdRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   MemberFuncIdRecord(TypeIndex ClassType, TypeIndex FunctionType,
                          StringRef Name)
@@ -230,6 +234,7 @@ public:
 // LF_ARGLIST
 class ArgListRecord : public TypeRecord {
 public:
+  ArgListRecord() = default;
   explicit ArgListRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
 
   ArgListRecord(TypeRecordKind Kind, ArrayRef<TypeIndex> Indices)
@@ -243,6 +248,7 @@ public:
 // LF_SUBSTR_LIST
 class StringListRecord : public TypeRecord {
 public:
+  StringListRecord() = default;
   explicit StringListRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
 
   StringListRecord(TypeRecordKind Kind, ArrayRef<TypeIndex> Indices)
@@ -267,6 +273,7 @@ public:
   static const uint32_t PointerSizeShift = 13;
   static const uint32_t PointerSizeMask = 0xFF;
 
+  PointerRecord() = default;
   explicit PointerRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
 
   PointerRecord(TypeIndex ReferentType, uint32_t Attrs)
@@ -341,6 +348,7 @@ private:
 // LF_NESTTYPE
 class NestedTypeRecord : public TypeRecord {
 public:
+  NestedTypeRecord() = default;
   explicit NestedTypeRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   NestedTypeRecord(TypeIndex Type, StringRef Name)
       : TypeRecord(TypeRecordKind::NestedType), Type(Type), Name(Name) {}
@@ -355,6 +363,7 @@ public:
 // LF_FIELDLIST
 class FieldListRecord : public TypeRecord {
 public:
+  FieldListRecord() = default;
   explicit FieldListRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   explicit FieldListRecord(ArrayRef<uint8_t> Data)
       : TypeRecord(TypeRecordKind::FieldList), Data(Data) {}
@@ -365,6 +374,7 @@ public:
 // LF_ARRAY
 class ArrayRecord : public TypeRecord {
 public:
+  ArrayRecord() = default;
   explicit ArrayRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   ArrayRecord(TypeIndex ElementType, TypeIndex IndexType, uint64_t Size,
               StringRef Name)
@@ -384,6 +394,7 @@ public:
 
 class TagRecord : public TypeRecord {
 protected:
+  TagRecord() = default;
   explicit TagRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   TagRecord(TypeRecordKind Kind, uint16_t MemberCount, ClassOptions Options,
             TypeIndex FieldList, StringRef Name, StringRef UniqueName)
@@ -416,6 +427,7 @@ public:
 // LF_CLASS, LF_STRUCTURE, LF_INTERFACE
 class ClassRecord : public TagRecord {
 public:
+  ClassRecord() = default;
   explicit ClassRecord(TypeRecordKind Kind) : TagRecord(Kind) {}
   ClassRecord(TypeRecordKind Kind, uint16_t MemberCount, ClassOptions Options,
               TypeIndex FieldList, TypeIndex DerivationList,
@@ -447,6 +459,7 @@ public:
 
 // LF_UNION
 struct UnionRecord : public TagRecord {
+  UnionRecord() = default;
   explicit UnionRecord(TypeRecordKind Kind) : TagRecord(Kind) {}
   UnionRecord(uint16_t MemberCount, ClassOptions Options, TypeIndex FieldList,
               uint64_t Size, StringRef Name, StringRef UniqueName)
@@ -468,6 +481,7 @@ struct UnionRecord : public TagRecord {
 // LF_ENUM
 class EnumRecord : public TagRecord {
 public:
+  EnumRecord() = default;
   explicit EnumRecord(TypeRecordKind Kind) : TagRecord(Kind) {}
   EnumRecord(uint16_t MemberCount, ClassOptions Options, TypeIndex FieldList,
              StringRef Name, StringRef UniqueName, TypeIndex UnderlyingType)
@@ -482,6 +496,7 @@ public:
 // LF_BITFIELD
 class BitFieldRecord : public TypeRecord {
 public:
+  BitFieldRecord() = default;
   explicit BitFieldRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   BitFieldRecord(TypeIndex Type, uint8_t BitSize, uint8_t BitOffset)
       : TypeRecord(TypeRecordKind::BitField), Type(Type), BitSize(BitSize),
@@ -498,6 +513,7 @@ public:
 // LF_VTSHAPE
 class VFTableShapeRecord : public TypeRecord {
 public:
+  VFTableShapeRecord() = default;
   explicit VFTableShapeRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   explicit VFTableShapeRecord(ArrayRef<VFTableSlotKind> Slots)
       : TypeRecord(TypeRecordKind::VFTableShape), SlotsRef(Slots) {}
@@ -518,6 +534,7 @@ public:
 // LF_TYPESERVER2
 class TypeServer2Record : public TypeRecord {
 public:
+  TypeServer2Record() = default;
   explicit TypeServer2Record(TypeRecordKind Kind) : TypeRecord(Kind) {}
   TypeServer2Record(StringRef Guid, uint32_t Age, StringRef Name)
       : TypeRecord(TypeRecordKind::TypeServer2), Guid(Guid), Age(Age),
@@ -537,6 +554,7 @@ public:
 // LF_STRING_ID
 class StringIdRecord : public TypeRecord {
 public:
+  StringIdRecord() = default;
   explicit StringIdRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   StringIdRecord(TypeIndex Id, StringRef String)
       : TypeRecord(TypeRecordKind::StringId), Id(Id), String(String) {}
@@ -551,6 +569,7 @@ public:
 // LF_FUNC_ID
 class FuncIdRecord : public TypeRecord {
 public:
+  FuncIdRecord() = default;
   explicit FuncIdRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   FuncIdRecord(TypeIndex ParentScope, TypeIndex FunctionType, StringRef Name)
       : TypeRecord(TypeRecordKind::FuncId), ParentScope(ParentScope),
@@ -570,6 +589,7 @@ public:
 // LF_UDT_SRC_LINE
 class UdtSourceLineRecord : public TypeRecord {
 public:
+  UdtSourceLineRecord() = default;
   explicit UdtSourceLineRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   UdtSourceLineRecord(TypeIndex UDT, TypeIndex SourceFile, uint32_t LineNumber)
       : TypeRecord(TypeRecordKind::UdtSourceLine), UDT(UDT),
@@ -587,6 +607,7 @@ public:
 // LF_UDT_MOD_SRC_LINE
 class UdtModSourceLineRecord : public TypeRecord {
 public:
+  UdtModSourceLineRecord() = default;
   explicit UdtModSourceLineRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   UdtModSourceLineRecord(TypeIndex UDT, TypeIndex SourceFile,
                          uint32_t LineNumber, uint16_t Module)
@@ -607,6 +628,7 @@ public:
 // LF_BUILDINFO
 class BuildInfoRecord : public TypeRecord {
 public:
+  BuildInfoRecord() = default;
   explicit BuildInfoRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   BuildInfoRecord(ArrayRef<TypeIndex> ArgIndices)
       : TypeRecord(TypeRecordKind::BuildInfo),
@@ -619,6 +641,7 @@ public:
 // LF_VFTABLE
 class VFTableRecord : public TypeRecord {
 public:
+  VFTableRecord() = default;
   explicit VFTableRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   VFTableRecord(TypeIndex CompleteClass, TypeIndex OverriddenVFTable,
                 uint32_t VFPtrOffset, StringRef Name,
@@ -646,7 +669,7 @@ public:
 // LF_ONEMETHOD
 class OneMethodRecord : public TypeRecord {
 public:
-  OneMethodRecord() : TypeRecord(TypeRecordKind::OneMethod) {}
+  OneMethodRecord() = default;
   explicit OneMethodRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   OneMethodRecord(TypeIndex Type, MemberAttributes Attrs, int32_t VFTableOffset,
                   StringRef Name)
@@ -678,6 +701,7 @@ public:
 // LF_METHODLIST
 class MethodOverloadListRecord : public TypeRecord {
 public:
+  MethodOverloadListRecord() = default;
   explicit MethodOverloadListRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   MethodOverloadListRecord(ArrayRef<OneMethodRecord> Methods)
       : TypeRecord(TypeRecordKind::MethodOverloadList), Methods(Methods) {}
@@ -689,6 +713,7 @@ public:
 /// For method overload sets.  LF_METHOD
 class OverloadedMethodRecord : public TypeRecord {
 public:
+  OverloadedMethodRecord() = default;
   explicit OverloadedMethodRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   OverloadedMethodRecord(uint16_t NumOverloads, TypeIndex MethodList,
                          StringRef Name)
@@ -706,6 +731,7 @@ public:
 // LF_MEMBER
 class DataMemberRecord : public TypeRecord {
 public:
+  DataMemberRecord() = default;
   explicit DataMemberRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   DataMemberRecord(MemberAttributes Attrs, TypeIndex Type, uint64_t Offset,
                    StringRef Name)
@@ -730,6 +756,7 @@ public:
 // LF_STMEMBER
 class StaticDataMemberRecord : public TypeRecord {
 public:
+  StaticDataMemberRecord() = default;
   explicit StaticDataMemberRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   StaticDataMemberRecord(MemberAttributes Attrs, TypeIndex Type, StringRef Name)
       : TypeRecord(TypeRecordKind::StaticDataMember), Attrs(Attrs), Type(Type),
@@ -750,6 +777,7 @@ public:
 // LF_ENUMERATE
 class EnumeratorRecord : public TypeRecord {
 public:
+  EnumeratorRecord() = default;
   explicit EnumeratorRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   EnumeratorRecord(MemberAttributes Attrs, APSInt Value, StringRef Name)
       : TypeRecord(TypeRecordKind::Enumerator), Attrs(Attrs),
@@ -770,6 +798,7 @@ public:
 // LF_VFUNCTAB
 class VFPtrRecord : public TypeRecord {
 public:
+  VFPtrRecord() = default;
   explicit VFPtrRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   VFPtrRecord(TypeIndex Type)
       : TypeRecord(TypeRecordKind::VFPtr), Type(Type) {}
@@ -782,6 +811,7 @@ public:
 // LF_BCLASS, LF_BINTERFACE
 class BaseClassRecord : public TypeRecord {
 public:
+  BaseClassRecord() = default;
   explicit BaseClassRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   BaseClassRecord(MemberAttributes Attrs, TypeIndex Type, uint64_t Offset)
       : TypeRecord(TypeRecordKind::BaseClass), Attrs(Attrs), Type(Type),
@@ -802,6 +832,7 @@ public:
 // LF_VBCLASS, LF_IVBCLASS
 class VirtualBaseClassRecord : public TypeRecord {
 public:
+  VirtualBaseClassRecord() = default;
   explicit VirtualBaseClassRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   VirtualBaseClassRecord(TypeRecordKind Kind, MemberAttributes Attrs,
                          TypeIndex BaseType, TypeIndex VBPtrType,
@@ -831,6 +862,7 @@ public:
 /// together. The first will end in an LF_INDEX record that points to the next.
 class ListContinuationRecord : public TypeRecord {
 public:
+  ListContinuationRecord() = default;
   explicit ListContinuationRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   ListContinuationRecord(TypeIndex ContinuationIndex)
       : TypeRecord(TypeRecordKind::ListContinuation),

@@ -11,4 +11,4 @@
 type = Library
 name = ObjectYAML
 parent = Libraries
-required_libraries = Support
+required_libraries = Support DebugInfoCodeView

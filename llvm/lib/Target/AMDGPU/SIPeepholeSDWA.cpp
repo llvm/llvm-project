@@ -55,6 +55,7 @@ private:
 
   std::unordered_map<MachineInstr *, std::unique_ptr<SDWAOperand>> SDWAOperands;
   std::unordered_map<MachineInstr *, SDWAOperandsVector> PotentialMatches;
+  SmallVector<MachineInstr *, 8> ConvertedInstructions;
 
   Optional<int64_t> foldToImm(const MachineOperand &Op) const;
 
@@ -69,6 +70,7 @@ public:
   void matchSDWAOperands(MachineFunction &MF);
   bool isConvertibleToSDWA(const MachineInstr &MI) const;
   bool convertToSDWA(MachineInstr &MI, const SDWAOperandsVector &SDWAOperands);
+  void legalizeScalarOperands(MachineInstr &MI) const;
 
   StringRef getPassName() const override { return "SI Peephole SDWA"; }
 
@@ -289,7 +291,7 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   MachineOperand *SrcSel = TII->getNamedOperand(MI, AMDGPU::OpName::src0_sel);
   MachineOperand *SrcMods =
       TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
-  assert(Src && Src->isReg());
+  assert(Src && (Src->isReg() || Src->isImm()));
   if (!isSameReg(*Src, *getReplacedOperand())) {
     // If this is not src0 then it should be src1
     Src = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
@@ -580,18 +582,8 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineFunction &MF) {
 }
 
 bool SIPeepholeSDWA::isConvertibleToSDWA(const MachineInstr &MI) const {
-  // Check if this instruction can be converted to SDWA:
-  // 1. Does this opcode support SDWA
-  if (AMDGPU::getSDWAOp(MI.getOpcode()) == -1)
-    return false;
-
-  // 2. Are all operands - VGPRs
-  for (const MachineOperand &Operand : MI.explicit_operands()) {
-    if (!Operand.isReg() || !TRI->isVGPR(*MRI, Operand.getReg()))
-      return false;
-  }
-
-  return true;
+  // Check if this instruction has opcode that supports SDWA
+  return AMDGPU::getSDWAOp(MI.getOpcode()) != -1;
 }
 
 bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
@@ -685,7 +677,9 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
     if (PotentialMatches.count(Operand->getParentInst()) == 0)
       Converted |= Operand->convertToSDWA(*SDWAInst, TII);
   }
-  if (!Converted) {
+  if (Converted) {
+    ConvertedInstructions.push_back(SDWAInst);
+  } else {
     SDWAInst->eraseFromParent();
     return false;
   }
@@ -696,6 +690,29 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
+}
+
+// If an instruction was converted to SDWA it should not have immediates or SGPR
+// operands. Copy its scalar operands into VGPRs.
+void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI) const {
+  const MCInstrDesc &Desc = TII->get(MI.getOpcode());
+  for (unsigned I = 0, E = MI.getNumExplicitOperands(); I != E; ++I) {
+    MachineOperand &Op = MI.getOperand(I);
+    if (!Op.isImm() && !(Op.isReg() && !TRI->isVGPR(*MRI, Op.getReg())))
+      continue;
+    if (Desc.OpInfo[I].RegClass == -1 ||
+       !TRI->hasVGPRs(TRI->getRegClass(Desc.OpInfo[I].RegClass)))
+      continue;
+    unsigned VGPR = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    auto Copy = BuildMI(*MI.getParent(), MI.getIterator(), MI.getDebugLoc(),
+                        TII->get(AMDGPU::V_MOV_B32_e32), VGPR);
+    if (Op.isImm())
+      Copy.addImm(Op.getImm());
+    else if (Op.isReg())
+      Copy.addReg(Op.getReg(), Op.isKill() ? RegState::Kill : 0,
+                  Op.getSubReg());
+    Op.ChangeToRegister(VGPR, false);
+  }
 }
 
 bool SIPeepholeSDWA::runOnMachineFunction(MachineFunction &MF) {
@@ -728,5 +745,9 @@ bool SIPeepholeSDWA::runOnMachineFunction(MachineFunction &MF) {
 
   PotentialMatches.clear();
   SDWAOperands.clear();
+
+  while (!ConvertedInstructions.empty())
+    legalizeScalarOperands(*ConvertedInstructions.pop_back_val());
+
   return false;
 }

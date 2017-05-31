@@ -613,7 +613,7 @@ private:
     return CClass;
   }
   void initializeCongruenceClasses(Function &F);
-  const Expression *makePossiblePhiOfOps(Instruction *, bool,
+  const Expression *makePossiblePhiOfOps(Instruction *,
                                          SmallPtrSetImpl<Value *> &);
   void addPhiOfOps(PHINode *Op, BasicBlock *BB, Instruction *ExistingValue);
 
@@ -1937,7 +1937,8 @@ void NewGVN::touchAndErase(Map &M, const KeyType &Key) {
 }
 
 void NewGVN::addAdditionalUsers(Value *To, Value *User) const {
-  AdditionalUsers[To].insert(User);
+  if (isa<Instruction>(To))
+    AdditionalUsers[To].insert(User);
 }
 
 void NewGVN::markUsersTouched(Value *V) {
@@ -2423,7 +2424,7 @@ static bool okayForPHIOfOps(const Instruction *I) {
 // When we see an instruction that is an op of phis, generate the equivalent phi
 // of ops form.
 const Expression *
-NewGVN::makePossiblePhiOfOps(Instruction *I, bool HasBackedge,
+NewGVN::makePossiblePhiOfOps(Instruction *I,
                              SmallPtrSetImpl<Value *> &Visited) {
   if (!okayForPHIOfOps(I))
     return nullptr;
@@ -2438,24 +2439,6 @@ NewGVN::makePossiblePhiOfOps(Instruction *I, bool HasBackedge,
     return nullptr;
 
   unsigned IDFSNum = InstrToDFSNum(I);
-  // Pretty much all of the instructions we can convert to phi of ops over a
-  // backedge that are adds, are really induction variables, and those are
-  // pretty much pointless to convert.  This is very coarse-grained for a
-  // test, so if we do find some value, we can change it later.
-  // But otherwise, what can happen is we convert the induction variable from
-  //
-  // i = phi (0, tmp)
-  // tmp = i + 1
-  //
-  // to
-  // i = phi (0, tmpphi)
-  // tmpphi = phi(1, tmpphi+1)
-  //
-  // Which we don't want to happen.  We could just avoid this for all non-cycle
-  // free phis, and we made go that route.
-  if (HasBackedge && I->getOpcode() == Instruction::Add)
-    return nullptr;
-
   SmallPtrSet<const Value *, 8> ProcessedPHIs;
   // TODO: We don't do phi translation on memory accesses because it's
   // complicated. For a load, we'd need to be able to simulate a new memoryuse,
@@ -2470,6 +2453,16 @@ NewGVN::makePossiblePhiOfOps(Instruction *I, bool HasBackedge,
 
   // Convert op of phis to phi of ops
   for (auto &Op : I->operands()) {
+    // TODO: We can't handle expressions that must be recursively translated
+    // IE
+    // a = phi (b, c)
+    // f = use a
+    // g = f + phi of something
+    // To properly make a phi of ops for g, we'd have to properly translate and
+    // use the instruction for f.  We should add this by splitting out the
+    // instruction creation we do below.
+    if (isa<Instruction>(Op) && PHINodeUses.count(cast<Instruction>(Op)))
+      return nullptr;
     if (!isa<PHINode>(Op))
       continue;
     auto *OpPHI = cast<PHINode>(Op);
@@ -2782,8 +2775,7 @@ void NewGVN::valueNumberInstruction(Instruction *I) {
       // Make a phi of ops if necessary
       if (Symbolized && !isa<ConstantExpression>(Symbolized) &&
           !isa<VariableExpression>(Symbolized) && PHINodeUses.count(I)) {
-        // FIXME: Backedge argument
-        auto *PHIE = makePossiblePhiOfOps(I, false, Visited);
+        auto *PHIE = makePossiblePhiOfOps(I, Visited);
         if (PHIE)
           Symbolized = PHIE;
       }

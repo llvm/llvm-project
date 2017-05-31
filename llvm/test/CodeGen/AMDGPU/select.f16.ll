@@ -196,11 +196,11 @@ entry:
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
-; SI:  v_cmp_lt_f32_e64
-; SI:  v_cmp_lt_f32_e32 vcc, 0.5
+; SI-DAG:  v_cmp_gt_f32_e64
+; SI-DAG:  v_cmp_lt_f32_e32 vcc, 0.5
 
 ; VI:  v_cmp_lt_f16_e32
-; VI:  v_cmp_lt_f16_e64
+; VI:  v_cmp_gt_f16_e64
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e64
 ; SI:  v_cvt_f16_f32_e32
@@ -228,11 +228,11 @@ entry:
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
-; SI:  v_cmp_gt_f32_e64
-; SI:  v_cmp_gt_f32_e32 vcc, 0.5
+; SI-DAG:  v_cmp_lt_f32_e64
+; SI-DAG:  v_cmp_gt_f32_e32 vcc, 0.5
 
 ; VI:  v_cmp_gt_f16_e32
-; VI:  v_cmp_gt_f16_e64
+; VI:  v_cmp_lt_f16_e64
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e64
 

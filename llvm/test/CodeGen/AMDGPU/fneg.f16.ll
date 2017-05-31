@@ -130,13 +130,15 @@ define amdgpu_kernel void @v_fneg_fold_v2f16(<2 x half> addrspace(1)* %out, <2 x
 }
 
 ; GCN-LABEL: {{^}}v_extract_fneg_fold_v2f16:
-; GCN: flat_load_dword [[VAL:v[0-9]+]]
+; GCN-DAG: flat_load_dword [[VAL:v[0-9]+]]
 ; CI-DAG: v_mul_f32_e32 v{{[0-9]+}}, -4.0, v{{[0-9]+}}
 ; CI-DAG: v_sub_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 
-; GFX89: v_lshrrev_b32_e32 [[ELT1:v[0-9]+]], 16, [[VAL]]
+; GFX9: v_lshrrev_b32_e32 [[ELT1:v[0-9]+]], 16, [[VAL]]
 ; GFX89-DAG: v_mul_f16_e32 v{{[0-9]+}}, -4.0, [[VAL]]
-; GFX89-DAG: v_sub_f16_e32 v{{[0-9]+}}, 2.0, [[ELT1]]
+; GFX9-DAG: v_sub_f16_e32 v{{[0-9]+}}, 2.0, [[ELT1]]
+; VI-DAG: v_mov_b32_e32 [[CONST2:v[0-9]+]], 0x4000
+; VI-DAG: v_sub_f16_sdwa v{{[0-9]+}}, [[CONST2]], [[VAL]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 define amdgpu_kernel void @v_extract_fneg_fold_v2f16(<2 x half> addrspace(1)* %in) #0 {
   %val = load <2 x half>, <2 x half> addrspace(1)* %in
   %fneg = fsub <2 x half> <half -0.0, half -0.0>, %val

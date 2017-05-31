@@ -94,7 +94,6 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned(<4 x float> addrspace(1)
 ; GCN-DAG: v_cvt_f32_ubyte3_e32
 
 ; GCN-DAG: v_lshrrev_b32_e32 v{{[0-9]+}}, 24
-; GCN-DAG: v_lshrrev_b32_e32 v{{[0-9]+}}, 16
 
 ; SI-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 16
 ; SI-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 8

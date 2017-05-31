@@ -6,7 +6,7 @@ int main(int argc, char **argv) {
   #pragma omp nowait target exit data map(from: i) // expected-error {{expected an OpenMP directive}}
   #pragma omp target nowait exit data map(from: i) // expected-warning {{extra tokens at the end of '#pragma omp target' are ignored}}
   #pragma omp target exit nowait data map(from: i) // expected-error {{expected an OpenMP directive}}
-  #pragma omp target exit data nowait() map(from: i) // expected-warning {{extra tokens at the end of '#pragma omp target exit data' are ignored}} expected-error {{expected at least one map clause for '#pragma omp target exit data'}}
+  #pragma omp target exit data nowait() map(from: i) // expected-warning {{extra tokens at the end of '#pragma omp target exit data' are ignored}} expected-error {{expected at least one 'map' clause for '#pragma omp target exit data'}}
   #pragma omp target exit data map(from: i) nowait( // expected-warning {{extra tokens at the end of '#pragma omp target exit data' are ignored}}
   #pragma omp target exit data map(from: i) nowait (argc)) // expected-warning {{extra tokens at the end of '#pragma omp target exit data' are ignored}}
   #pragma omp target exit data map(from: i) nowait device (-10u)

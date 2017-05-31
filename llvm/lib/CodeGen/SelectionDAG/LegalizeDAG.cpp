@@ -925,10 +925,6 @@ getStrictFPOpcodeAction(const TargetLowering &TLI, unsigned Opcode, EVT VT) {
   if (Action != TargetLowering::Legal)
     Action = TargetLowering::Expand;
 
-  // ISD::FPOWI returns 'Legal' even though it should be expanded.
-  if (Opcode == ISD::STRICT_FPOWI && Action == TargetLowering::Legal)
-    Action = TargetLowering::Expand;
-
   return Action;
 }
 
@@ -1027,7 +1023,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     break;
   case ISD::EXTRACT_ELEMENT:
   case ISD::FLT_ROUNDS_:
-  case ISD::FPOWI:
   case ISD::MERGE_VALUES:
   case ISD::EH_RETURN:
   case ISD::FRAME_TO_ARGS_OFFSET:

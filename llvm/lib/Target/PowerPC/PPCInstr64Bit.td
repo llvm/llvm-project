@@ -735,12 +735,12 @@ def RLDICL_32_64 : MDForm_1<30, 0,
                             "rldicl $rA, $rS, $SH, $MBE", IIC_IntRotateDI,
                             []>, isPPC64;
 // End fast-isel.
-let isCodeGenOnly = 1 in
-def RLDICL_32 : MDForm_1<30, 0,
-                         (outs gprc:$rA),
-                         (ins gprc:$rS, u6imm:$SH, u6imm:$MBE),
-                         "rldicl $rA, $rS, $SH, $MBE", IIC_IntRotateDI,
-                         []>, isPPC64;
+let Interpretation64Bit = 1, isCodeGenOnly = 1 in
+defm RLDICL_32 : MDForm_1r<30, 0,
+                           (outs gprc:$rA),
+                           (ins gprc:$rS, u6imm:$SH, u6imm:$MBE),
+                           "rldicl", "$rA, $rS, $SH, $MBE", IIC_IntRotateDI,
+                           []>, isPPC64;
 defm RLDICR : MDForm_1r<30, 1,
                         (outs g8rc:$rA), (ins g8rc:$rS, u6imm:$SH, u6imm:$MBE),
                         "rldicr", "$rA, $rS, $SH, $MBE", IIC_IntRotateDI,

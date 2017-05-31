@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x c++-module-map %s -fmodule-name=a -verify
+// RUN: %clang_cc1 -x c++-module-map %s -fmodule-name=a -verify -std=c++98
 module a {
   module b {
     requires cplusplus11

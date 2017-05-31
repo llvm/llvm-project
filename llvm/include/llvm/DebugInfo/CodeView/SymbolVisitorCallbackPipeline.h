@@ -59,7 +59,7 @@ public:
     return Error::success();                                                   \
   }
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "llvm/DebugInfo/CodeView/CVSymbolTypes.def"
+#include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
 
 private:
   std::vector<SymbolVisitorCallbacks *> Pipeline;

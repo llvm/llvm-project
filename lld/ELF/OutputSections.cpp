@@ -351,7 +351,7 @@ static bool canMergeToProgbits(unsigned Type) {
          Type == SHT_NOTE;
 }
 
-static void reportDiscarded(InputSectionBase *IS) {
+void elf::reportDiscarded(InputSectionBase *IS) {
   if (!Config->PrintGcSections)
     return;
   message("removing unused section from '" + IS->Name + "' in file '" +

@@ -1036,8 +1036,6 @@ static void checkAndSanitizeDiags(SmallVectorImpl<StoredDiagnostic> &
 bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                     std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer,
                     IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
-  SavedMainFileBuffer.reset();
-
   if (!Invocation)
     return true;
 
@@ -1090,17 +1088,11 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     Clang->createFileManager();
     FileMgr = &Clang->getFileManager();
   }
+
+  ResetForParse();
+
   SourceMgr = new SourceManager(getDiagnostics(), *FileMgr,
                                 UserFilesAreVolatile);
-  TheSema.reset();
-  Ctx = nullptr;
-  PP = nullptr;
-  Reader = nullptr;
-
-  // Clear out old caches and data.
-  TopLevelDecls.clear();
-  clearFileLevelDecls();
-
   if (!OverrideMainBuffer) {
     checkAndRemoveNonDriverDiags(StoredDiagnostics);
     TopLevelDeclsInPreamble.clear();
@@ -2114,6 +2106,19 @@ bool ASTUnit::Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   CCTUInfo.reset();
   
   return Result;
+}
+
+void ASTUnit::ResetForParse() {
+  SavedMainFileBuffer.reset();
+
+  SourceMgr.reset();
+  TheSema.reset();
+  Ctx.reset();
+  PP.reset();
+  Reader.reset();
+
+  TopLevelDecls.clear();
+  clearFileLevelDecls();
 }
 
 //----------------------------------------------------------------------------//

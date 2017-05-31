@@ -1,4 +1,4 @@
-//===- ModuleDebugInlineeLinesFragment.h ------------------------*- C++ -*-===//
+//===- DebugInlineeLinesSubsection.h ----------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGINLINEELINESFRAGMENT_H
-#define LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGINLINEELINESFRAGMENT_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_BUGINLINEELINESSUBSECTION_H
+#define LLVM_DEBUGINFO_CODEVIEW_BUGINLINEELINESSUBSECTION_H
 
+#include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugFragment.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
@@ -19,9 +19,8 @@
 namespace llvm {
 namespace codeview {
 
-class ModuleDebugInlineeLineFragmentRef;
-class ModuleDebugFileChecksumFragment;
-class StringTable;
+class DebugInlineeLinesSubsectionsRef;
+class DebugChecksumsSubsection;
 
 enum class InlineeLinesSignature : uint32_t {
   Normal,    // CV_INLINEE_SOURCE_LINE_SIGNATURE
@@ -51,15 +50,15 @@ template <> struct VarStreamArrayExtractor<codeview::InlineeSourceLine> {
 };
 
 namespace codeview {
-class ModuleDebugInlineeLineFragmentRef final : public ModuleDebugFragmentRef {
+class DebugInlineeLinesSubsectionRef final : public DebugSubsectionRef {
   typedef VarStreamArray<InlineeSourceLine> LinesArray;
   typedef LinesArray::Iterator Iterator;
 
 public:
-  ModuleDebugInlineeLineFragmentRef();
+  DebugInlineeLinesSubsectionRef();
 
-  static bool classof(const ModuleDebugFragmentRef *S) {
-    return S->kind() == ModuleDebugFragmentKind::InlineeLines;
+  static bool classof(const DebugSubsectionRef *S) {
+    return S->kind() == DebugSubsectionKind::InlineeLines;
   }
 
   Error initialize(BinaryStreamReader Reader);
@@ -73,23 +72,23 @@ private:
   VarStreamArray<InlineeSourceLine> Lines;
 };
 
-class ModuleDebugInlineeLineFragment final : public ModuleDebugFragment {
+class DebugInlineeLinesSubsection final : public DebugSubsection {
 public:
-  ModuleDebugInlineeLineFragment(ModuleDebugFileChecksumFragment &Checksums,
-                                 bool HasExtraFiles);
+  DebugInlineeLinesSubsection(DebugChecksumsSubsection &Checksums,
+                              bool HasExtraFiles);
 
-  static bool classof(const ModuleDebugFragment *S) {
-    return S->kind() == ModuleDebugFragmentKind::InlineeLines;
+  static bool classof(const DebugSubsection *S) {
+    return S->kind() == DebugSubsectionKind::InlineeLines;
   }
 
-  Error commit(BinaryStreamWriter &Writer) override;
-  uint32_t calculateSerializedLength() override;
+  Error commit(BinaryStreamWriter &Writer) const override;
+  uint32_t calculateSerializedSize() const override;
 
   void addInlineSite(TypeIndex FuncId, StringRef FileName, uint32_t SourceLine);
   void addExtraFile(StringRef FileName);
 
 private:
-  ModuleDebugFileChecksumFragment &Checksums;
+  DebugChecksumsSubsection &Checksums;
 
   bool HasExtraFiles = false;
   uint32_t ExtraFileCount = 0;

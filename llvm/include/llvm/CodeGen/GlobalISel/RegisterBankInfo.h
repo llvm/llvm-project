@@ -396,7 +396,7 @@ protected:
   mutable DenseMap<unsigned, std::unique_ptr<const InstructionMapping>>
       MapOfInstructionMappings;
 
-  /// Create a RegisterBankInfo that can accomodate up to \p NumRegBanks
+  /// Create a RegisterBankInfo that can accommodate up to \p NumRegBanks
   /// RegisterBank instances.
   RegisterBankInfo(RegisterBank **RegBanks, unsigned NumRegBanks);
 

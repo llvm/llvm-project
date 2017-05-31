@@ -345,7 +345,10 @@ entry:
 
 ; GCN-LABEL: {{^}}immediate_mul_v2i16:
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
-; SDWA-NOT: v_mul_u32_u24_sdwa
+; SDWA-DAG: v_mov_b32_e32 v[[M321:[0-9]+]], 0x141
+; SDWA-DAG: v_mov_b32_e32 v[[M123:[0-9]+]], 0x7b
+; SDWA-DAG: v_mul_u32_u24_sdwa v{{[0-9]+}}, v[[M123]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; SDWA-DAG: v_mul_u32_u24_sdwa v{{[0-9]+}}, v[[M321]], v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
 define amdgpu_kernel void @immediate_mul_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) {
 entry:

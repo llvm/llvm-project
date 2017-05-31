@@ -15,34 +15,37 @@
 #define LLVM_CODEGEN_MACHINEINSTRBUNDLEITERATOR_H
 
 #include "llvm/ADT/ilist.h"
+#include "llvm/ADT/simple_ilist.h"
+#include <cassert>
 #include <iterator>
+#include <type_traits>
 
 namespace llvm {
 
 template <class T, bool IsReverse> struct MachineInstrBundleIteratorTraits;
 template <class T> struct MachineInstrBundleIteratorTraits<T, false> {
-  typedef simple_ilist<T, ilist_sentinel_tracking<true>> list_type;
-  typedef typename list_type::iterator instr_iterator;
-  typedef typename list_type::iterator nonconst_instr_iterator;
-  typedef typename list_type::const_iterator const_instr_iterator;
+  using list_type = simple_ilist<T, ilist_sentinel_tracking<true>>;
+  using instr_iterator = typename list_type::iterator;
+  using nonconst_instr_iterator = typename list_type::iterator;
+  using const_instr_iterator = typename list_type::const_iterator;
 };
 template <class T> struct MachineInstrBundleIteratorTraits<T, true> {
-  typedef simple_ilist<T, ilist_sentinel_tracking<true>> list_type;
-  typedef typename list_type::reverse_iterator instr_iterator;
-  typedef typename list_type::reverse_iterator nonconst_instr_iterator;
-  typedef typename list_type::const_reverse_iterator const_instr_iterator;
+  using list_type = simple_ilist<T, ilist_sentinel_tracking<true>>;
+  using instr_iterator = typename list_type::reverse_iterator;
+  using nonconst_instr_iterator = typename list_type::reverse_iterator;
+  using const_instr_iterator = typename list_type::const_reverse_iterator;
 };
 template <class T> struct MachineInstrBundleIteratorTraits<const T, false> {
-  typedef simple_ilist<T, ilist_sentinel_tracking<true>> list_type;
-  typedef typename list_type::const_iterator instr_iterator;
-  typedef typename list_type::iterator nonconst_instr_iterator;
-  typedef typename list_type::const_iterator const_instr_iterator;
+  using list_type = simple_ilist<T, ilist_sentinel_tracking<true>>;
+  using instr_iterator = typename list_type::const_iterator;
+  using nonconst_instr_iterator = typename list_type::iterator;
+  using const_instr_iterator = typename list_type::const_iterator;
 };
 template <class T> struct MachineInstrBundleIteratorTraits<const T, true> {
-  typedef simple_ilist<T, ilist_sentinel_tracking<true>> list_type;
-  typedef typename list_type::const_reverse_iterator instr_iterator;
-  typedef typename list_type::reverse_iterator nonconst_instr_iterator;
-  typedef typename list_type::const_reverse_iterator const_instr_iterator;
+  using list_type = simple_ilist<T, ilist_sentinel_tracking<true>>;
+  using instr_iterator = typename list_type::const_reverse_iterator;
+  using nonconst_instr_iterator = typename list_type::reverse_iterator;
+  using const_instr_iterator = typename list_type::const_reverse_iterator;
 };
 
 template <bool IsReverse> struct MachineInstrBundleIteratorHelper;
@@ -104,27 +107,27 @@ template <> struct MachineInstrBundleIteratorHelper<true> {
 /// inside bundles (i.e. walk top level MIs only).
 template <typename Ty, bool IsReverse = false>
 class MachineInstrBundleIterator : MachineInstrBundleIteratorHelper<IsReverse> {
-  typedef MachineInstrBundleIteratorTraits<Ty, IsReverse> Traits;
-  typedef typename Traits::instr_iterator instr_iterator;
+  using Traits = MachineInstrBundleIteratorTraits<Ty, IsReverse>;
+  using instr_iterator = typename Traits::instr_iterator;
+
   instr_iterator MII;
 
 public:
-  typedef typename instr_iterator::value_type value_type;
-  typedef typename instr_iterator::difference_type difference_type;
-  typedef typename instr_iterator::pointer pointer;
-  typedef typename instr_iterator::reference reference;
-  typedef std::bidirectional_iterator_tag iterator_category;
-
-  typedef typename instr_iterator::const_pointer const_pointer;
-  typedef typename instr_iterator::const_reference const_reference;
+  using value_type = typename instr_iterator::value_type;
+  using difference_type = typename instr_iterator::difference_type;
+  using pointer = typename instr_iterator::pointer;
+  using reference = typename instr_iterator::reference;
+  using const_pointer = typename instr_iterator::const_pointer;
+  using const_reference = typename instr_iterator::const_reference;
+  using iterator_category = std::bidirectional_iterator_tag;
 
 private:
-  typedef typename Traits::nonconst_instr_iterator nonconst_instr_iterator;
-  typedef typename Traits::const_instr_iterator const_instr_iterator;
-  typedef MachineInstrBundleIterator<
-      typename nonconst_instr_iterator::value_type, IsReverse>
-      nonconst_iterator;
-  typedef MachineInstrBundleIterator<Ty, !IsReverse> reverse_iterator;
+  using nonconst_instr_iterator = typename Traits::nonconst_instr_iterator;
+  using const_instr_iterator = typename Traits::const_instr_iterator;
+  using nonconst_iterator =
+      MachineInstrBundleIterator<typename nonconst_instr_iterator::value_type,
+                                 IsReverse>;
+  using reverse_iterator = MachineInstrBundleIterator<Ty, !IsReverse>;
 
 public:
   MachineInstrBundleIterator(instr_iterator MI) : MII(MI) {
@@ -138,12 +141,14 @@ public:
                                       "MachineInstrBundleIterator with a "
                                       "bundled MI");
   }
+
   MachineInstrBundleIterator(pointer MI) : MII(MI) {
     // FIXME: This conversion should be explicit.
     assert((!MI || !MI->isBundledWithPred()) && "It's not legal to initialize "
                                                 "MachineInstrBundleIterator "
                                                 "with a bundled MI");
   }
+
   // Template allows conversion from const to nonconst.
   template <class OtherTy>
   MachineInstrBundleIterator(
@@ -151,6 +156,7 @@ public:
       typename std::enable_if<std::is_convertible<OtherTy *, Ty *>::value,
                               void *>::type = nullptr)
       : MII(I.getInstrIterator()) {}
+
   MachineInstrBundleIterator() : MII(nullptr) {}
 
   /// Explicit conversion between forward/reverse iterators.
@@ -280,4 +286,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINEINSTRBUNDLEITERATOR_H

@@ -14,6 +14,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/type_traits.h"
@@ -103,6 +104,13 @@ public:
   /// \returns a success error code if the data was successfully read, otherwise
   /// returns an appropriate error code.
   Error readCString(StringRef &Dest);
+
+  /// Similar to readCString, however read a null-terminated UTF16 string
+  /// instead.
+  ///
+  /// \returns a success error code if the data was successfully read, otherwise
+  /// returns an appropriate error code.
+  Error readWideString(ArrayRef<UTF16> &Dest);
 
   /// Read a \p Length byte string into \p Dest.  Whether a copy occurs depends
   /// on the implementation of the underlying stream.  Updates the stream's

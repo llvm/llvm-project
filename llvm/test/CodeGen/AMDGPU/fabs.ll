@@ -75,7 +75,7 @@ define amdgpu_kernel void @fabs_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 ; SI: s_load_dword [[ABS_VALUE:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xb
 ; VI: s_load_dword [[ABS_VALUE:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x2c
 ; GCN-NOT: and
-; GCN: v_mul_f32_e64 v{{[0-9]+}}, v{{[0-9]+}}, |[[ABS_VALUE]]|
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, |[[ABS_VALUE]]|, v{{[0-9]+}}
 define amdgpu_kernel void @fabs_fn_fold(float addrspace(1)* %out, float %in0, float %in1) {
   %fabs = call float @fabs(float %in0)
   %fmul = fmul float %fabs, %in1
@@ -87,7 +87,7 @@ define amdgpu_kernel void @fabs_fn_fold(float addrspace(1)* %out, float %in0, fl
 ; SI: s_load_dword [[ABS_VALUE:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xb
 ; VI: s_load_dword [[ABS_VALUE:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x2c
 ; GCN-NOT: and
-; GCN: v_mul_f32_e64 v{{[0-9]+}}, v{{[0-9]+}}, |[[ABS_VALUE]]|
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, |[[ABS_VALUE]]|, v{{[0-9]+}}
 define amdgpu_kernel void @fabs_fold(float addrspace(1)* %out, float %in0, float %in1) {
   %fabs = call float @llvm.fabs.f32(float %in0)
   %fmul = fmul float %fabs, %in1
