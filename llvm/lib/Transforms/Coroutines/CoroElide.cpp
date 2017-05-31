@@ -258,7 +258,9 @@ static bool replaceDevirtTrigger(Function &F) {
 namespace {
 struct CoroElide : FunctionPass {
   static char ID;
-  CoroElide() : FunctionPass(ID) {}
+  CoroElide() : FunctionPass(ID) {
+    initializeCoroElidePass(*PassRegistry::getPassRegistry());
+  }
 
   std::unique_ptr<Lowerer> L;
 

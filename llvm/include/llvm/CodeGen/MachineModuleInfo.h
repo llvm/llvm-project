@@ -31,35 +31,26 @@
 #ifndef LLVM_CODEGEN_MACHINEMODULEINFO_H
 #define LLVM_CODEGEN_MACHINEMODULEINFO_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MachineLocation.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/DataTypes.h"
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 
-//===----------------------------------------------------------------------===//
-// Forward declarations.
-class BlockAddress;
+class BasicBlock;
 class CallInst;
-class Constant;
-class GlobalVariable;
-class LandingPadInst;
-class MDNode;
-class MMIAddrLabelMap;
-class MachineBasicBlock;
+class Function;
 class MachineFunction;
 class MachineFunctionInitializer;
+class MMIAddrLabelMap;
 class Module;
-class PointerType;
-class StructType;
+class TargetMachine;
 
 //===----------------------------------------------------------------------===//
 /// This class can be derived from and used by targets to hold private
@@ -69,11 +60,12 @@ class StructType;
 ///
 class MachineModuleInfoImpl {
 public:
-  typedef PointerIntPair<MCSymbol*, 1, bool> StubValueTy;
-  virtual ~MachineModuleInfoImpl();
-  typedef std::vector<std::pair<MCSymbol*, StubValueTy> > SymbolListTy;
-protected:
+  using StubValueTy = PointerIntPair<MCSymbol *, 1, bool>;
+  using SymbolListTy = std::vector<std::pair<MCSymbol *, StubValueTy>>;
 
+  virtual ~MachineModuleInfoImpl();
+
+protected:
   /// Return the entries from a DenseMap in a deterministic sorted orer.
   /// Clears the map.
   static SymbolListTy getSortedStubs(DenseMap<MCSymbol*, StubValueTy>&);
@@ -252,6 +244,6 @@ public:
 /// which will link in MSVCRT's floating-point support.
 void computeUsesVAFloatArgument(const CallInst &I, MachineModuleInfo &MMI);
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINEMODULEINFO_H

@@ -2186,13 +2186,23 @@ ARMExidxSentinelSection::ARMExidxSentinelSection()
 // This section will have been sorted last in the .ARM.exidx table.
 // This table entry will have the form:
 // | PREL31 upper bound of code that has exception tables | EXIDX_CANTUNWIND |
+// The sentinel must have the PREL31 value of an address higher than any
+// address described by any other table entry.
 void ARMExidxSentinelSection::writeTo(uint8_t *Buf) {
-  // Get the InputSection before us, we are by definition last
-  auto RI = this->OutSec->Sections.rbegin();
-  InputSection *LE = *(++RI);
-  InputSection *LC = cast<InputSection>(LE->getLinkOrderDep());
-  uint64_t S = LC->OutSec->Addr + LC->getOffset(LC->getSize());
-  uint64_t P = this->getVA();
+  // The Sections are sorted in order of ascending PREL31 address with the
+  // sentinel last. We need to find the InputSection that precedes the
+  // sentinel. By construction the Sentinel is in the last
+  // InputSectionDescription as the InputSection that precedes it.
+  OutputSectionCommand *C = Script->getCmd(OutSec);
+  auto ISD = std::find_if(C->Commands.rbegin(), C->Commands.rend(),
+                          [](const BaseCommand *Base) {
+                            return isa<InputSectionDescription>(Base);
+                          });
+  auto L = cast<InputSectionDescription>(*ISD);
+  InputSection *Highest = L->Sections[L->Sections.size() - 2];
+  InputSection *LS = cast<InputSection>(Highest->getLinkOrderDep());
+  uint64_t S = LS->OutSec->Addr + LS->getOffset(LS->getSize());
+  uint64_t P = getVA();
   Target->relocateOne(Buf, R_ARM_PREL31, S - P);
   write32le(Buf + 4, 0x1);
 }

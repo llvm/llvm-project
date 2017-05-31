@@ -210,6 +210,11 @@ template <typename CFLAA> class CFLGraphBuilder {
 
     void addDerefEdge(Value *From, Value *To, bool IsRead) {
       assert(From != nullptr && To != nullptr);
+      // FIXME: This is subtly broken, due to how we model some instructions
+      // (e.g. extractvalue, extractelement) as loads. Since those take
+      // non-pointer operands, we'll entirely skip adding edges for those.
+      //
+      // addAssignEdge seems to have a similar issue with insertvalue, etc.
       if (!From->getType()->isPointerTy() || !To->getType()->isPointerTy())
         return;
       addNode(From);
@@ -540,6 +545,7 @@ template <typename CFLAA> class CFLGraphBuilder {
       case Instruction::ExtractValue: {
         auto *Ptr = CE->getOperand(0);
         addLoadEdge(Ptr, CE);
+        break;
       }
       case Instruction::ShuffleVector: {
         auto *From1 = CE->getOperand(0);

@@ -968,8 +968,9 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
       if (Reg >= ARM::D8 && Reg < ARM::D8 + NumAlignedDPRCS2Regs)
         continue;
 
-      bool isLiveIn = MF.getRegInfo().isLiveIn(Reg);
-      if (!isLiveIn)
+      const MachineRegisterInfo &MRI = MF.getRegInfo();
+      bool isLiveIn = MRI.isLiveIn(Reg);
+      if (!isLiveIn && !MRI.isReserved(Reg))
         MBB.addLiveIn(Reg);
       // If NoGap is true, push consecutive registers and then leave the rest
       // for other instructions. e.g.

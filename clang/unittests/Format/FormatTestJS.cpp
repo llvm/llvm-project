@@ -474,9 +474,8 @@ TEST_F(FormatTestJS, FormatsFreestandingFunctions) {
                "(function f() {\n"
                "  var x = 1;\n"
                "}());\n");
-  // Known issue: this should wrap after {}, but calculateBraceTypes
-  // misclassifies the first braces as a BK_BracedInit.
-  verifyFormat("function aFunction(){} {\n"
+  verifyFormat("function aFunction() {}\n"
+               "{\n"
                "  let x = 1;\n"
                "  console.log(x);\n"
                "}\n");
@@ -1233,6 +1232,10 @@ TEST_F(FormatTestJS, ClassDeclarations) {
   verifyFormat("class C {\n  x: string = 12;\n}");
   verifyFormat("class C {\n  x(): string => 12;\n}");
   verifyFormat("class C {\n  ['x' + 2]: string = 12;\n}");
+  verifyFormat("class C {\n"
+               "  foo() {}\n"
+               "  [bar]() {}\n"
+               "}\n");
   verifyFormat("class C {\n  private x: string = 12;\n}");
   verifyFormat("class C {\n  private static x: string = 12;\n}");
   verifyFormat("class C {\n  static x(): string {\n    return 'asd';\n  }\n}");

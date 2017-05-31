@@ -103,13 +103,8 @@ static bool ValueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
     return false;
 
   // If we have a DominatorTree then do a precise test.
-  if (DT) {
-    if (!DT->isReachableFromEntry(P->getParent()))
-      return true;
-    if (!DT->isReachableFromEntry(I->getParent()))
-      return false;
+  if (DT)
     return DT->dominates(I, P);
-  }
 
   // Otherwise, if the instruction is in the entry block and is not an invoke,
   // then it obviously dominates all phi nodes.

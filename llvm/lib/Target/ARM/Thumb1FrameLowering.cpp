@@ -698,13 +698,14 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
       CopyRegs.insert(ArgReg);
 
   // Push the low registers and lr
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   if (!LoRegsToSave.empty()) {
     MachineInstrBuilder MIB =
         BuildMI(MBB, MI, DL, TII.get(ARM::tPUSH)).add(predOps(ARMCC::AL));
     for (unsigned Reg : {ARM::R4, ARM::R5, ARM::R6, ARM::R7, ARM::LR}) {
       if (LoRegsToSave.count(Reg)) {
-        bool isKill = !MF.getRegInfo().isLiveIn(Reg);
-        if (isKill)
+        bool isKill = !MRI.isLiveIn(Reg);
+        if (isKill && !MRI.isReserved(Reg))
           MBB.addLiveIn(Reg);
 
         MIB.addReg(Reg, getKillRegState(isKill));
@@ -746,8 +747,8 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
     SmallVector<unsigned, 4> RegsToPush;
     while (HiRegToSave != AllHighRegsEnd && CopyReg != AllCopyRegsEnd) {
       if (HiRegsToSave.count(*HiRegToSave)) {
-        bool isKill = !MF.getRegInfo().isLiveIn(*HiRegToSave);
-        if (isKill)
+        bool isKill = !MRI.isLiveIn(*HiRegToSave);
+        if (isKill && !MRI.isReserved(*HiRegToSave))
           MBB.addLiveIn(*HiRegToSave);
 
         // Emit a MOV from the high reg to the low reg.

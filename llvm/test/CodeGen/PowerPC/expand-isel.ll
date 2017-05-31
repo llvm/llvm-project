@@ -212,13 +212,14 @@ cleanup:
   ret i32 %retval.0
 
 ; CHECK-LABEL: @testComplexISEL
-; CHECK: bc 12, 2, [[TRUE:.LBB[0-9]+]]
-; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
-; CHECK-NEXT:  [[TRUE]]
-; CHECK-NEXT: addi r3, r12, 0
-; CHECK-NEXT: [[SUCCESSOR]]
-; CHECK-NEXT: clrldi r3, r3, 32
-; CHECK-NEXT: blr
+; CHECK-DAG: [[LI:r[0-9]+]], 1
+; CHECK-DAG: cmplwi [[LD:r[0-9]+]], 0
+; CHECK: beq cr0, [[EQ:.LBB[0-9_]+]]
+; CHECK: blr
+; CHECK: [[EQ]]
+; CHECK: xor [[XOR:r[0-9]+]]
+; CHECK: cntlzd [[CZ:r[0-9]+]], [[XOR]]
+; CHECK: rldicl [[SH:r[0-9]+]], [[CZ]], 58, 63
 }
 
 !1 = !{!2, !2, i64 0}
