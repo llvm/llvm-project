@@ -57,6 +57,7 @@ SWIFTCALL void context_error_2(short s, CONTEXT int *self, ERROR float **error) 
 /********************************** LOWERING *********************************/
 /*****************************************************************************/
 
+typedef float float3 __attribute__((ext_vector_type(3)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef float float8 __attribute__((ext_vector_type(8)));
 typedef double double2 __attribute__((ext_vector_type(2)));
@@ -1013,3 +1014,10 @@ typedef struct {
 TEST(struct_vf81)
 // CHECK-LABEL: define swiftcc { <4 x float>, <4 x float> } @return_struct_vf81()
 // CHECK-LABEL: define swiftcc void @take_struct_vf81(<4 x float>, <4 x float>)
+
+typedef struct {
+  float3 f3;
+} struct_v1f3;
+TEST(struct_v1f3)
+// CHECK-LABEL: define swiftcc { <2 x float>, float } @return_struct_v1f3()
+// CHECK-LABEL: define swiftcc void @take_struct_v1f3(<2 x float>, float)
