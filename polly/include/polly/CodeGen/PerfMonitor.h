@@ -37,7 +37,7 @@ public:
   /// Mark the beginning of a timing region.
   ///
   /// @param InsertBefore The instruction before which the timing region starts.
-  void insertRegionStart(llvm::Instruction *InserBefore);
+  void insertRegionStart(llvm::Instruction *InsertBefore);
 
   /// Mark the end of a timing region.
   ///

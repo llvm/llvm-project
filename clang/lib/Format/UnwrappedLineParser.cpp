@@ -360,16 +360,21 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
 
     switch (Tok->Tok.getKind()) {
     case tok::l_brace:
-      if (Style.Language == FormatStyle::LK_JavaScript && PrevTok &&
-          PrevTok->is(tok::colon))
-        // A colon indicates this code is in a type, or a braced list following
-        // a label in an object literal ({a: {b: 1}}).
-        // The code below could be confused by semicolons between the individual
-        // members in a type member list, which would normally trigger BK_Block.
-        // In both cases, this must be parsed as an inline braced init.
-        Tok->BlockKind = BK_BracedInit;
-      else
+      if (Style.Language == FormatStyle::LK_JavaScript && PrevTok) {
+        if (PrevTok->is(tok::colon))
+          // A colon indicates this code is in a type, or a braced list
+          // following a label in an object literal ({a: {b: 1}}). The code
+          // below could be confused by semicolons between the individual
+          // members in a type member list, which would normally trigger
+          // BK_Block. In both cases, this must be parsed as an inline braced
+          // init.
+          Tok->BlockKind = BK_BracedInit;
+        else if (PrevTok->is(tok::r_paren))
+          // `) { }` can only occur in function or method declarations in JS.
+          Tok->BlockKind = BK_Block;
+      } else {
         Tok->BlockKind = BK_Unknown;
+      }
       LBraceStack.push_back(Tok);
       break;
     case tok::r_brace:
@@ -391,6 +396,8 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
           // BlockKind later if we parse a braced list (where all blocks
           // inside are by default braced lists), or when we explicitly detect
           // blocks (for example while parsing lambdas).
+          // FIXME: Some of these do not apply to JS, e.g. "} {" can never be a
+          // braced list in JS.
           ProbablyBracedList =
               (Style.Language == FormatStyle::LK_JavaScript &&
                NextTok->isOneOf(Keywords.kw_of, Keywords.kw_in,

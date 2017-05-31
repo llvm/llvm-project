@@ -305,6 +305,7 @@ clang_remap_getFilenames
 clang_remap_getNumFiles
 clang_reparseTranslationUnit
 clang_saveTranslationUnit
+clang_suspendTranslationUnit
 clang_sortCodeCompletionResults
 clang_toggleCrashRecovery
 clang_tokenize

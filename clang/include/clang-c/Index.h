@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 40
+#define CINDEX_VERSION_MINOR 41
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -1417,6 +1417,15 @@ enum CXSaveError {
 CINDEX_LINKAGE int clang_saveTranslationUnit(CXTranslationUnit TU,
                                              const char *FileName,
                                              unsigned options);
+
+/**
+ * \brief Suspend a translation unit in order to free memory associated with it.
+ *
+ * A suspended translation unit uses significantly less memory but on the other
+ * side does not support any other calls than \c clang_reparseTranslationUnit
+ * to resume it or \c clang_disposeTranslationUnit to dispose it completely.
+ */
+CINDEX_LINKAGE unsigned clang_suspendTranslationUnit(CXTranslationUnit);
 
 /**
  * \brief Destroy the specified CXTranslationUnit object.

@@ -110,7 +110,24 @@ void ODRHash::AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
   }
 }
 
-void ODRHash::AddTemplateName(TemplateName Name) {}
+void ODRHash::AddTemplateName(TemplateName Name) {
+  auto Kind = Name.getKind();
+  ID.AddInteger(Kind);
+
+  switch (Kind) {
+  case TemplateName::Template:
+    AddDecl(Name.getAsTemplateDecl());
+    break;
+  // TODO: Support these cases.
+  case TemplateName::OverloadedTemplate:
+  case TemplateName::QualifiedTemplate:
+  case TemplateName::DependentTemplate:
+  case TemplateName::SubstTemplateTemplateParm:
+  case TemplateName::SubstTemplateTemplateParmPack:
+    break;
+  }
+}
+
 void ODRHash::AddTemplateArgument(TemplateArgument TA) {}
 void ODRHash::AddTemplateParameterList(const TemplateParameterList *TPL) {}
 
@@ -491,6 +508,15 @@ public:
     AddNestedNameSpecifier(T->getQualifier());
     AddQualType(T->getNamedType());
     VisitTypeWithKeyword(T);
+  }
+
+  void VisitTemplateSpecializationType(const TemplateSpecializationType *T) {
+    ID.AddInteger(T->getNumArgs());
+    for (const auto &TA : T->template_arguments()) {
+      Hash.AddTemplateArgument(TA);
+    }
+    Hash.AddTemplateName(T->getTemplateName());
+    VisitType(T);
   }
 };
 
