@@ -1112,6 +1112,7 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::VPERM:           return "PPCISD::VPERM";
   case PPCISD::XXSPLT:          return "PPCISD::XXSPLT";
   case PPCISD::XXINSERT:        return "PPCISD::XXINSERT";
+  case PPCISD::XXPERMDI:        return "PPCISD::XXPERMDI";
   case PPCISD::VECSHL:          return "PPCISD::VECSHL";
   case PPCISD::CMPB:            return "PPCISD::CMPB";
   case PPCISD::Hi:              return "PPCISD::Hi";
@@ -1593,17 +1594,25 @@ bool PPC::isSplatShuffleMask(ShuffleVectorSDNode *N, unsigned EltSize) {
   return true;
 }
 
-  // Check that the mask is shuffling words
-static bool isWordShuffleMask(ShuffleVectorSDNode *N) {
-  for (unsigned i = 0; i < 4; ++i) {
-    unsigned B0 = N->getMaskElt(i*4);
-    unsigned B1 = N->getMaskElt(i*4+1);
-    unsigned B2 = N->getMaskElt(i*4+2);
-    unsigned B3 = N->getMaskElt(i*4+3);
-    if (B0 % 4)
+// Check that the mask is shuffling N byte elements.
+static bool isNByteElemShuffleMask(ShuffleVectorSDNode *N, unsigned Width) {
+  assert((Width == 2 || Width == 4 || Width == 8 || Width == 16) &&
+         "Unexpected element width.");
+
+  unsigned NumOfElem = 16 / Width;
+  unsigned MaskVal[16]; //  Width is never greater than 16
+  for (unsigned i = 0; i < NumOfElem; ++i) {
+    MaskVal[0] = N->getMaskElt(i * Width);
+    if (MaskVal[0] % Width) {
       return false;
-    if (B1 != B0+1 || B2 != B1+1 || B3 != B2+1)
-      return false;
+    }
+
+    for (unsigned int j = 1; j < Width; ++j) {
+      MaskVal[j] = N->getMaskElt(i * Width + j);
+      if (MaskVal[j] != MaskVal[j-1] + 1) {
+        return false;
+      }
+    }
   }
 
   return true;
@@ -1611,7 +1620,7 @@ static bool isWordShuffleMask(ShuffleVectorSDNode *N) {
 
 bool PPC::isXXINSERTWMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
                           unsigned &InsertAtByte, bool &Swap, bool IsLE) {
-  if (!isWordShuffleMask(N))
+  if (!isNByteElemShuffleMask(N, 4))
     return false;
 
   // Now we look at mask elements 0,4,8,12
@@ -1688,7 +1697,7 @@ bool PPC::isXXSLDWIShuffleMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
                                bool &Swap, bool IsLE) {
   assert(N->getValueType(0) == MVT::v16i8 && "Shuffle vector expects v16i8");
   // Ensure each byte index of the word is consecutive.
-  if (!isWordShuffleMask(N))
+  if (!isNByteElemShuffleMask(N, 4))
     return false;
 
   // Now we look at mask elements 0,4,8,12, which are the beginning of words.
@@ -1742,6 +1751,66 @@ bool PPC::isXXSLDWIShuffleMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
       ShiftElts = M0 - 4;
     }
 
+    return true;
+  }
+}
+
+/// Can node \p N be lowered to an XXPERMDI instruction? If so, set \p Swap
+/// if the inputs to the instruction should be swapped and set \p DM to the
+/// value for the immediate.
+/// Specifically, set \p Swap to true only if \p N can be lowered to XXPERMDI
+/// AND element 0 of the result comes from the first input (LE) or second input
+/// (BE). Set \p DM to the calculated result (0-3) only if \p N can be lowered.
+/// \return true iff the given mask of shuffle node \p N is a XXPERMDI shuffle
+/// mask.
+bool PPC::isXXPERMDIShuffleMask(ShuffleVectorSDNode *N, unsigned &DM,
+                               bool &Swap, bool IsLE) {
+  assert(N->getValueType(0) == MVT::v16i8 && "Shuffle vector expects v16i8");
+
+  // Ensure each byte index of the double word is consecutive.
+  if (!isNByteElemShuffleMask(N, 8))
+    return false;
+
+  unsigned M0 = N->getMaskElt(0) / 8;
+  unsigned M1 = N->getMaskElt(8) / 8;
+  assert(((M0 | M1) < 4) && "A mask element out of bounds?");
+
+  // If both vector operands for the shuffle are the same vector, the mask will
+  // contain only elements from the first one and the second one will be undef.
+  if (N->getOperand(1).isUndef()) {
+    if ((M0 | M1) < 2) {
+      DM = IsLE ? (((~M1) & 1) << 1) + ((~M0) & 1) : (M0 << 1) + (M1 & 1);
+      Swap = false;
+      return true;
+    } else
+      return false;
+  }
+
+  if (IsLE) {
+    if (M0 > 1 && M1 < 2) {
+      Swap = false;
+    } else if (M0 < 2 && M1 > 1) {
+      M0 = (M0 + 2) % 4;
+      M1 = (M1 + 2) % 4;
+      Swap = true;
+    } else
+      return false;
+
+    // Note: if control flow comes here that means Swap is already set above
+    DM = (((~M1) & 1) << 1) + ((~M0) & 1);
+    return true;
+  } else { // BE
+    if (M0 < 2 && M1 > 1) {
+      Swap = false;
+    } else if (M0 > 1 && M1 < 2) {
+      M0 = (M0 + 2) % 4;
+      M1 = (M1 + 2) % 4;
+      Swap = true;
+    } else
+      return false;
+
+    // Note: if control flow comes here that means Swap is already set above
+    DM = (M0 << 1) + (M1 & 1);
     return true;
   }
 }
@@ -7758,6 +7827,19 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     SDValue Shl = DAG.getNode(PPCISD::VECSHL, dl, MVT::v4i32, Conv1, Conv2,
                               DAG.getConstant(ShiftElts, dl, MVT::i32));
     return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Shl);
+  }
+
+  if (Subtarget.hasVSX() &&
+    PPC::isXXPERMDIShuffleMask(SVOp, ShiftElts, Swap, isLittleEndian)) {
+    if (Swap)
+      std::swap(V1, V2);
+    SDValue Conv1 = DAG.getNode(ISD::BITCAST, dl, MVT::v2i64, V1);
+    SDValue Conv2 =
+        DAG.getNode(ISD::BITCAST, dl, MVT::v2i64, V2.isUndef() ? V1 : V2);
+
+    SDValue PermDI = DAG.getNode(PPCISD::XXPERMDI, dl, MVT::v2i64, Conv1, Conv2,
+                              DAG.getConstant(ShiftElts, dl, MVT::i32));
+    return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, PermDI);
   }
 
   if (Subtarget.hasVSX()) {

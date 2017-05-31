@@ -843,7 +843,9 @@ let Uses = [RM] in {
 
   def XXPERMDI : XX3Form_2<60, 10,
                        (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB, u2imm:$DM),
-                       "xxpermdi $XT, $XA, $XB, $DM", IIC_VecPerm, []>;
+                       "xxpermdi $XT, $XA, $XB, $DM", IIC_VecPerm,
+                       [(set v2i64:$XT, (PPCxxpermdi v2i64:$XA, v2i64:$XB,
+                         imm32SExt16:$DM))]>;
   let isCodeGenOnly = 1 in
   def XXPERMDIs : XX3Form_2s<60, 10, (outs vsrc:$XT), (ins vsfrc:$XA, u2imm:$DM),
                              "xxpermdi $XT, $XA, $XA, $DM", IIC_VecPerm, []>;

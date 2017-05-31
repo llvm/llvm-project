@@ -289,6 +289,10 @@ private:
                                 int64_t RHSValue, SDLoc dl);
     SDValue get32BitSExtCompare(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                                 int64_t RHSValue, SDLoc dl);
+    SDValue get64BitZExtCompare(SDValue LHS, SDValue RHS, ISD::CondCode CC,
+                                int64_t RHSValue, SDLoc dl);
+    SDValue get64BitSExtCompare(SDValue LHS, SDValue RHS, ISD::CondCode CC,
+                                int64_t RHSValue, SDLoc dl);
     SDValue getSETCCInGPR(SDValue Compare, SetccInGPROpts ConvOpts);
 
     void PeepholePPC64();
@@ -2849,6 +2853,52 @@ SDValue PPCDAGToDAGISel::get32BitSExtCompare(SDValue LHS, SDValue RHS,
   }
 }
 
+/// Produces a zero-extended result of comparing two 64-bit values according to
+/// the passed condition code.
+SDValue PPCDAGToDAGISel::get64BitZExtCompare(SDValue LHS, SDValue RHS,
+                                             ISD::CondCode CC,
+                                             int64_t RHSValue, SDLoc dl) {
+  bool IsRHSZero = RHSValue == 0;
+  switch (CC) {
+  default: return SDValue();
+  case ISD::SETEQ: {
+    // (zext (setcc %a, %b, seteq)) -> (lshr (ctlz (xor %a, %b)), 6)
+    // (zext (setcc %a, 0, seteq)) ->  (lshr (ctlz %a), 6)
+    SDValue Xor = IsRHSZero ? LHS :
+      SDValue(CurDAG->getMachineNode(PPC::XOR8, dl, MVT::i64, LHS, RHS), 0);
+    SDValue Clz =
+      SDValue(CurDAG->getMachineNode(PPC::CNTLZD, dl, MVT::i64, Xor), 0);
+    return SDValue(CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, Clz,
+                                          getI64Imm(58, dl), getI64Imm(63, dl)),
+                   0);
+  }
+  }
+}
+
+/// Produces a sign-extended result of comparing two 64-bit values according to
+/// the passed condition code.
+SDValue PPCDAGToDAGISel::get64BitSExtCompare(SDValue LHS, SDValue RHS,
+                                             ISD::CondCode CC,
+                                             int64_t RHSValue, SDLoc dl) {
+  bool IsRHSZero = RHSValue == 0;
+  switch (CC) {
+  default: return SDValue();
+  case ISD::SETEQ: {
+    // {addc.reg, addc.CA} = (addcarry (xor %a, %b), -1)
+    // (sext (setcc %a, %b, seteq)) -> (sube addc.reg, addc.reg, addc.CA)
+    // {addcz.reg, addcz.CA} = (addcarry %a, -1)
+    // (sext (setcc %a, 0, seteq)) -> (sube addcz.reg, addcz.reg, addcz.CA)
+    SDValue AddInput = IsRHSZero ? LHS :
+      SDValue(CurDAG->getMachineNode(PPC::XOR8, dl, MVT::i64, LHS, RHS), 0);
+    SDValue Addic =
+      SDValue(CurDAG->getMachineNode(PPC::ADDIC8, dl, MVT::i64, MVT::Glue,
+                                     AddInput, getI32Imm(~0U, dl)), 0);
+    return SDValue(CurDAG->getMachineNode(PPC::SUBFE8, dl, MVT::i64, Addic,
+                                          Addic, Addic.getValue(1)), 0);
+  }
+  }
+}
+
 /// Does this SDValue have any uses for which keeping the value in a GPR is
 /// appropriate. This is meant to be used on values that have type i1 since
 /// it is somewhat meaningless to ask if values of other types can be kept in
@@ -2896,30 +2946,35 @@ SDValue PPCDAGToDAGISel::getSETCCInGPR(SDValue Compare,
   ISD::CondCode CC =
     cast<CondCodeSDNode>(Compare.getOperand(CCOpNum))->get();
   EVT InputVT = LHS.getValueType();
-  if (InputVT != MVT::i32)
+  if (InputVT != MVT::i32 && InputVT != MVT::i64)
     return SDValue();
-
-  SDLoc dl(Compare);
-  ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
-  int64_t RHSValue = RHSConst ? RHSConst->getSExtValue() : INT64_MAX;
 
   if (ConvOpts == SetccInGPROpts::ZExtInvert ||
       ConvOpts == SetccInGPROpts::SExtInvert)
     CC = ISD::getSetCCInverse(CC, true);
 
-  if (ISD::isSignedIntSetCC(CC)) {
+  bool Inputs32Bit = InputVT == MVT::i32;
+  if (ISD::isSignedIntSetCC(CC) && Inputs32Bit) {
     LHS = signExtendInputIfNeeded(LHS);
     RHS = signExtendInputIfNeeded(RHS);
-  } else if (ISD::isUnsignedIntSetCC(CC)) {
+  } else if (ISD::isUnsignedIntSetCC(CC) && Inputs32Bit) {
     LHS = zeroExtendInputIfNeeded(LHS);
     RHS = zeroExtendInputIfNeeded(RHS);
   }
 
+  SDLoc dl(Compare);
+  ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
+  int64_t RHSValue = RHSConst ? RHSConst->getSExtValue() : INT64_MAX;
   bool IsSext = ConvOpts == SetccInGPROpts::SExtOrig ||
     ConvOpts == SetccInGPROpts::SExtInvert;
-  if (IsSext)
+
+  if (IsSext && Inputs32Bit)
     return get32BitSExtCompare(LHS, RHS, CC, RHSValue, dl);
-  return get32BitZExtCompare(LHS, RHS, CC, RHSValue, dl);
+  else if (Inputs32Bit)
+    return get32BitZExtCompare(LHS, RHS, CC, RHSValue, dl);
+  else if (IsSext)
+    return get64BitSExtCompare(LHS, RHS, CC, RHSValue, dl);
+  return get64BitZExtCompare(LHS, RHS, CC, RHSValue, dl);
 }
 
 void PPCDAGToDAGISel::transferMemOperands(SDNode *N, SDNode *Result) {

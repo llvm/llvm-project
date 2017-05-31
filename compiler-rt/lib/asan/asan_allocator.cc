@@ -47,8 +47,6 @@ static u32 RZSize2Log(u32 rz_size) {
   return res;
 }
 
-static AsanAllocator &get_allocator();
-
 // The memory chunk allocated from the underlying allocator looks like this:
 // L L L L L L H H U U U U U U R R
 //   L -- left redzone words (0 or more bytes)
@@ -719,7 +717,7 @@ struct Allocator {
 
 static Allocator instance(LINKER_INITIALIZED);
 
-static AsanAllocator &get_allocator() {
+AsanAllocator &get_allocator() {
   return instance.allocator;
 }
 
