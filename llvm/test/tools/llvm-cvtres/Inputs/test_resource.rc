@@ -42,3 +42,9 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_AUS
 	MENUITEM "salad", 101
 	MENUITEM "duck", 102
 }
+
+
+myresource stringarray {
+	"this is a user defined resource\0",
+	"it contains many strings\0",
+}

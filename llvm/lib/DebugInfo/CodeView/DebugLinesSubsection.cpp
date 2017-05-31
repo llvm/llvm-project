@@ -1,4 +1,4 @@
-//===- ModuleDebugLineFragment.cpp -------------------------------*- C++-*-===//
+//===- DebugLinesSubsection.cpp -------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/CodeView/ModuleDebugLineFragment.h"
+#include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
-#include "llvm/DebugInfo/CodeView/ModuleDebugFragmentRecord.h"
-#include "llvm/DebugInfo/CodeView/StringTable.h"
+#include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -49,10 +49,10 @@ Error LineColumnExtractor::extract(BinaryStreamRef Stream, uint32_t &Len,
   return Error::success();
 }
 
-ModuleDebugLineFragmentRef::ModuleDebugLineFragmentRef()
-    : ModuleDebugFragmentRef(ModuleDebugFragmentKind::Lines) {}
+DebugLinesSubsectionRef::DebugLinesSubsectionRef()
+    : DebugSubsectionRef(DebugSubsectionKind::Lines) {}
 
-Error ModuleDebugLineFragmentRef::initialize(BinaryStreamReader Reader) {
+Error DebugLinesSubsectionRef::initialize(BinaryStreamReader Reader) {
   if (auto EC = Reader.readObject(Header))
     return EC;
 
@@ -63,23 +63,21 @@ Error ModuleDebugLineFragmentRef::initialize(BinaryStreamReader Reader) {
   return Error::success();
 }
 
-bool ModuleDebugLineFragmentRef::hasColumnInfo() const {
+bool DebugLinesSubsectionRef::hasColumnInfo() const {
   return !!(Header->Flags & LF_HaveColumns);
 }
 
-ModuleDebugLineFragment::ModuleDebugLineFragment(
-    ModuleDebugFileChecksumFragment &Checksums, StringTable &Strings)
-    : ModuleDebugFragment(ModuleDebugFragmentKind::Lines),
-      Checksums(Checksums) {}
+DebugLinesSubsection::DebugLinesSubsection(DebugChecksumsSubsection &Checksums,
+                                           DebugStringTableSubsection &Strings)
+    : DebugSubsection(DebugSubsectionKind::Lines), Checksums(Checksums) {}
 
-void ModuleDebugLineFragment::createBlock(StringRef FileName) {
+void DebugLinesSubsection::createBlock(StringRef FileName) {
   uint32_t Offset = Checksums.mapChecksumOffset(FileName);
 
   Blocks.emplace_back(Offset);
 }
 
-void ModuleDebugLineFragment::addLineInfo(uint32_t Offset,
-                                          const LineInfo &Line) {
+void DebugLinesSubsection::addLineInfo(uint32_t Offset, const LineInfo &Line) {
   Block &B = Blocks.back();
   LineNumberEntry LNE;
   LNE.Flags = Line.getRawData();
@@ -87,10 +85,10 @@ void ModuleDebugLineFragment::addLineInfo(uint32_t Offset,
   B.Lines.push_back(LNE);
 }
 
-void ModuleDebugLineFragment::addLineAndColumnInfo(uint32_t Offset,
-                                                   const LineInfo &Line,
-                                                   uint32_t ColStart,
-                                                   uint32_t ColEnd) {
+void DebugLinesSubsection::addLineAndColumnInfo(uint32_t Offset,
+                                                const LineInfo &Line,
+                                                uint32_t ColStart,
+                                                uint32_t ColEnd) {
   Block &B = Blocks.back();
   assert(B.Lines.size() == B.Columns.size());
 
@@ -101,7 +99,7 @@ void ModuleDebugLineFragment::addLineAndColumnInfo(uint32_t Offset,
   B.Columns.push_back(CNE);
 }
 
-Error ModuleDebugLineFragment::commit(BinaryStreamWriter &Writer) {
+Error DebugLinesSubsection::commit(BinaryStreamWriter &Writer) const {
   LineFragmentHeader Header;
   Header.CodeSize = CodeSize;
   Header.Flags = hasColumnInfo() ? LF_HaveColumns : 0;
@@ -135,7 +133,7 @@ Error ModuleDebugLineFragment::commit(BinaryStreamWriter &Writer) {
   return Error::success();
 }
 
-uint32_t ModuleDebugLineFragment::calculateSerializedLength() {
+uint32_t DebugLinesSubsection::calculateSerializedSize() const {
   uint32_t Size = sizeof(LineFragmentHeader);
   for (const auto &B : Blocks) {
     Size += sizeof(LineBlockFragmentHeader);
@@ -146,16 +144,16 @@ uint32_t ModuleDebugLineFragment::calculateSerializedLength() {
   return Size;
 }
 
-void ModuleDebugLineFragment::setRelocationAddress(uint16_t Segment,
-                                                   uint16_t Offset) {
+void DebugLinesSubsection::setRelocationAddress(uint16_t Segment,
+                                                uint16_t Offset) {
   RelocOffset = Offset;
   RelocSegment = Segment;
 }
 
-void ModuleDebugLineFragment::setCodeSize(uint32_t Size) { CodeSize = Size; }
+void DebugLinesSubsection::setCodeSize(uint32_t Size) { CodeSize = Size; }
 
-void ModuleDebugLineFragment::setFlags(LineFlags Flags) { this->Flags = Flags; }
+void DebugLinesSubsection::setFlags(LineFlags Flags) { this->Flags = Flags; }
 
-bool ModuleDebugLineFragment::hasColumnInfo() const {
+bool DebugLinesSubsection::hasColumnInfo() const {
   return Flags & LF_HaveColumns;
 }

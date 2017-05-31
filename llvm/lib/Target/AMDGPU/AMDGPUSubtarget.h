@@ -730,7 +730,7 @@ public:
   /// \returns True if waitcnt instruction is needed before barrier instruction,
   /// false otherwise.
   bool needWaitcntBeforeBarrier() const {
-    return getGeneration() < GFX9;
+    return true;
   }
 
   /// \returns true if the flat_scratch register should be initialized with the

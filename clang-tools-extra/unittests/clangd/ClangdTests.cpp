@@ -133,9 +133,9 @@ namespace {
 class ErrorCheckingDiagConsumer : public DiagnosticsConsumer {
 public:
   void onDiagnosticsReady(PathRef File,
-                          std::vector<DiagWithFixIts> Diagnostics) override {
+                          Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
     bool HadError = false;
-    for (const auto &DiagAndFixIts : Diagnostics) {
+    for (const auto &DiagAndFixIts : Diagnostics.Value) {
       // FIXME: severities returned by clangd should have a descriptive
       // diagnostic severity enum
       const int ErrorSeverity = 1;
@@ -144,6 +144,7 @@ public:
 
     std::lock_guard<std::mutex> Lock(Mutex);
     HadErrorInLastDiags = HadError;
+    LastVFSTag = Diagnostics.Tag;
   }
 
   bool hadErrorInLastDiags() {
@@ -151,9 +152,14 @@ public:
     return HadErrorInLastDiags;
   }
 
+  VFSTag lastVFSTag() {
+    return LastVFSTag;
+  }
+
 private:
   std::mutex Mutex;
   bool HadErrorInLastDiags = false;
+  VFSTag LastVFSTag = VFSTag();
 };
 
 class MockCompilationDatabase : public GlobalCompilationDatabase {
@@ -166,7 +172,7 @@ public:
 
 class MockFSProvider : public FileSystemProvider {
 public:
-  IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override {
+  Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> getTaggedFileSystem() override {
     IntrusiveRefCntPtr<vfs::InMemoryFileSystem> MemFS(
         new vfs::InMemoryFileSystem);
     for (auto &FileAndContents : Files)
@@ -177,10 +183,11 @@ public:
     auto OverlayFS = IntrusiveRefCntPtr<vfs::OverlayFileSystem>(
         new vfs::OverlayFileSystem(vfs::getTempOnlyFS()));
     OverlayFS->pushOverlay(std::move(MemFS));
-    return OverlayFS;
+    return make_tagged(OverlayFS, Tag);
   }
 
   llvm::StringMap<std::string> Files;
+  VFSTag Tag = VFSTag();
 };
 
 /// Replaces all patterns of the form 0x123abc with spaces
@@ -364,6 +371,31 @@ int b = a;
 
   EXPECT_EQ(DumpParse1, DumpParse2);
   EXPECT_NE(DumpParse1, DumpParseDifferent);
+}
+
+TEST_F(ClangdVFSTest, CheckVersions) {
+  MockFSProvider *FS;
+  ErrorCheckingDiagConsumer *DiagConsumer;
+
+  ClangdServer Server(
+      llvm::make_unique<MockCompilationDatabase>(),
+      getAndMove(llvm::make_unique<ErrorCheckingDiagConsumer>(), DiagConsumer),
+      getAndMove(llvm::make_unique<MockFSProvider>(), FS),
+      /*RunSynchronously=*/true);
+
+  auto FooCpp = getVirtualTestFilePath("foo.cpp");
+  const auto SourceContents = "int a;";
+  FS->Files[FooCpp] = SourceContents;
+  FS->Tag = 123;
+
+  Server.addDocument(FooCpp, SourceContents);
+  EXPECT_EQ(DiagConsumer->lastVFSTag(), FS->Tag);
+  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS->Tag);
+
+  FS->Tag = 321;
+  Server.addDocument(FooCpp, SourceContents);
+  EXPECT_EQ(DiagConsumer->lastVFSTag(), FS->Tag);
+  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS->Tag);
 }
 
 } // namespace clangd

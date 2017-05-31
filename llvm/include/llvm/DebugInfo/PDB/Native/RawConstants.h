@@ -12,7 +12,6 @@
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-
 #include <cstdint>
 
 namespace llvm {

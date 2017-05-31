@@ -1,4 +1,4 @@
-//===- StringTable.cpp - CodeView String Table Reader/Writer ----*- C++ -*-===//
+//===- DebugStringTableSubsection.cpp - CodeView String Table ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/CodeView/StringTable.h"
+#include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 
 #include "llvm/Support/BinaryStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -16,14 +16,16 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-StringTableRef::StringTableRef() {}
+DebugStringTableSubsectionRef::DebugStringTableSubsectionRef()
+    : DebugSubsectionRef(DebugSubsectionKind::StringTable) {}
 
-Error StringTableRef::initialize(BinaryStreamRef Contents) {
+Error DebugStringTableSubsectionRef::initialize(BinaryStreamRef Contents) {
   Stream = Contents;
   return Error::success();
 }
 
-Expected<StringRef> StringTableRef::getString(uint32_t Offset) const {
+Expected<StringRef>
+DebugStringTableSubsectionRef::getString(uint32_t Offset) const {
   BinaryStreamReader Reader(Stream);
   Reader.setOffset(Offset);
   StringRef Result;
@@ -32,7 +34,10 @@ Expected<StringRef> StringTableRef::getString(uint32_t Offset) const {
   return Result;
 }
 
-uint32_t StringTable::insert(StringRef S) {
+DebugStringTableSubsection::DebugStringTableSubsection()
+    : DebugSubsection(DebugSubsectionKind::StringTable) {}
+
+uint32_t DebugStringTableSubsection::insert(StringRef S) {
   auto P = Strings.insert({S, StringSize});
 
   // If a given string didn't exist in the string table, we want to increment
@@ -42,9 +47,11 @@ uint32_t StringTable::insert(StringRef S) {
   return P.first->second;
 }
 
-uint32_t StringTable::calculateSerializedSize() const { return StringSize; }
+uint32_t DebugStringTableSubsection::calculateSerializedSize() const {
+  return StringSize;
+}
 
-Error StringTable::commit(BinaryStreamWriter &Writer) const {
+Error DebugStringTableSubsection::commit(BinaryStreamWriter &Writer) const {
   assert(Writer.bytesRemaining() == StringSize);
   uint32_t MaxOffset = 1;
 
@@ -62,9 +69,9 @@ Error StringTable::commit(BinaryStreamWriter &Writer) const {
   return Error::success();
 }
 
-uint32_t StringTable::size() const { return Strings.size(); }
+uint32_t DebugStringTableSubsection::size() const { return Strings.size(); }
 
-uint32_t StringTable::getStringId(StringRef S) const {
+uint32_t DebugStringTableSubsection::getStringId(StringRef S) const {
   auto P = Strings.find(S);
   assert(P != Strings.end());
   return P->second;

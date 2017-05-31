@@ -79,6 +79,7 @@ Error InfoStream::reload() {
       break;
     case uint32_t(PdbRaw_FeatureSig::MinimalDebugInfo):
       Features |= PdbFeatureMinimalDebugInfo;
+      break;
     default:
       continue;
     }

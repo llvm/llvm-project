@@ -39,7 +39,6 @@
 name:            Func
 alignment:       1
 exposesReturnsTwice: false
-noVRegs:         true
 legalized:       false
 regBankSelected: false
 selected:        false

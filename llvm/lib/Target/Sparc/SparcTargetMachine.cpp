@@ -114,7 +114,7 @@ namespace {
 /// Sparc Code Generator Pass Configuration Options.
 class SparcPassConfig : public TargetPassConfig {
 public:
-  SparcPassConfig(SparcTargetMachine *TM, PassManagerBase &PM)
+  SparcPassConfig(SparcTargetMachine &TM, PassManagerBase &PM)
     : TargetPassConfig(TM, PM) {}
 
   SparcTargetMachine &getSparcTargetMachine() const {
@@ -128,7 +128,7 @@ public:
 } // namespace
 
 TargetPassConfig *SparcTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new SparcPassConfig(this, PM);
+  return new SparcPassConfig(*this, PM);
 }
 
 void SparcPassConfig::addIRPasses() {

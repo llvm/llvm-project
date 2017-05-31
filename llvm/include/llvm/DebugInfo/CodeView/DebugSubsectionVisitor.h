@@ -1,4 +1,4 @@
-//===- ModuleDebugFragmentVisitor.h -----------------------------*- C++ -*-===//
+//===- DebugSubsectionVisitor.h -----------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,43 +17,41 @@ namespace llvm {
 
 namespace codeview {
 
-class ModuleDebugFileChecksumFragmentRef;
-class ModuleDebugFragmentRecord;
-class ModuleDebugInlineeLineFragmentRef;
-class ModuleDebugLineFragmentRef;
-class ModuleDebugUnknownFragmentRef;
+class DebugChecksumsSubsectionRef;
+class DebugSubsectionRecord;
+class DebugInlineeLinesSubsectionRef;
+class DebugLinesSubsectionRef;
+class DebugUnknownSubsectionRef;
 
-class ModuleDebugFragmentVisitor {
+class DebugSubsectionVisitor {
 public:
-  virtual ~ModuleDebugFragmentVisitor() = default;
+  virtual ~DebugSubsectionVisitor() = default;
 
-  virtual Error visitUnknown(ModuleDebugUnknownFragmentRef &Unknown) {
+  virtual Error visitUnknown(DebugUnknownSubsectionRef &Unknown) {
     return Error::success();
   }
-  virtual Error visitLines(ModuleDebugLineFragmentRef &Lines) {
-    return Error::success();
-  }
-
-  virtual Error
-  visitFileChecksums(ModuleDebugFileChecksumFragmentRef &Checksums) {
+  virtual Error visitLines(DebugLinesSubsectionRef &Lines) {
     return Error::success();
   }
 
-  virtual Error visitInlineeLines(ModuleDebugInlineeLineFragmentRef &Inlinees) {
+  virtual Error visitFileChecksums(DebugChecksumsSubsectionRef &Checksums) {
+    return Error::success();
+  }
+
+  virtual Error visitInlineeLines(DebugInlineeLinesSubsectionRef &Inlinees) {
     return Error::success();
   }
 
   virtual Error finished() { return Error::success(); }
 };
 
-Error visitModuleDebugFragment(const ModuleDebugFragmentRecord &R,
-                               ModuleDebugFragmentVisitor &V);
+Error visitDebugSubsection(const DebugSubsectionRecord &R,
+                           DebugSubsectionVisitor &V);
 
 template <typename T>
-Error visitModuleDebugFragments(T &&FragmentRange,
-                                ModuleDebugFragmentVisitor &V) {
+Error visitDebugSubsections(T &&FragmentRange, DebugSubsectionVisitor &V) {
   for (const auto &L : FragmentRange) {
-    if (auto EC = visitModuleDebugFragment(L, V))
+    if (auto EC = visitDebugSubsection(L, V))
       return EC;
   }
   if (auto EC = V.finished())

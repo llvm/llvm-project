@@ -1928,11 +1928,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
   setOperationAction(ISD::BSWAP, MVT::i32, Legal);
   setOperationAction(ISD::BSWAP, MVT::i64, Legal);
-
-  // We custom lower i64 to i64 mul, so that it is not considered as a legal
-  // operation. There is a pattern that will match i64 mul and transform it
-  // to a series of instructions.
-  setOperationAction(ISD::MUL,   MVT::i64, Expand);
+  setOperationAction(ISD::MUL,   MVT::i64, Legal);
 
   for (unsigned IntExpOp :
        { ISD::SDIV,      ISD::UDIV,      ISD::SREM,      ISD::UREM,
@@ -2003,7 +1999,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     // Floating point arithmetic/math functions:
     ISD::FADD,    ISD::FSUB,    ISD::FMUL,    ISD::FMA,     ISD::FDIV,
     ISD::FREM,    ISD::FNEG,    ISD::FABS,    ISD::FSQRT,   ISD::FSIN,
-    ISD::FCOS,    ISD::FPOWI,   ISD::FPOW,    ISD::FLOG,    ISD::FLOG2,
+    ISD::FCOS,    ISD::FPOW,    ISD::FLOG,    ISD::FLOG2,
     ISD::FLOG10,  ISD::FEXP,    ISD::FEXP2,   ISD::FCEIL,   ISD::FTRUNC,
     ISD::FRINT,   ISD::FNEARBYINT,            ISD::FROUND,  ISD::FFLOOR,
     ISD::FMINNUM, ISD::FMAXNUM, ISD::FSINCOS,

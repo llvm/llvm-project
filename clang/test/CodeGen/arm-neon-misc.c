@@ -32,11 +32,3 @@ void t2(uint64_t *src1, uint8_t *src2, uint64x2_t *dst) {
     *dst = q;
 // CHECK: store <2 x i64>
 }
-
-// Neon types have 64-bit alignment
-int32x4_t gl_b;
-void t3(int32x4_t *src) {
-// CHECK: @t3
-  gl_b = *src;
-// CHECK: store <4 x i32> {{%.*}}, <4 x i32>* @gl_b, align 8
-}

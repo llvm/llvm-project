@@ -482,8 +482,9 @@ entry:
 ; SI-DAG:  v_mac_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A0]]
 ; SI-DAG:  v_mac_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A1]]
 
-; VI:  v_sub_f16_e32 v[[NEG_A0:[0-9]+]], 0, v{{[0-9]+}}
-; VI:  v_sub_f16_e32 v[[NEG_A1:[0-9]+]], 0, v{{[0-9]+}}
+; VI-DAG:  v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
+; VI-DAG:  v_sub_f16_e32 v[[NEG_A1:[0-9]+]], 0, v{{[0-9]+}}
+; VI-DAG:  v_sub_f16_sdwa v[[NEG_A0:[0-9]+]], [[ZERO]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-DAG:  v_mac_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A0]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-DAG:  v_mac_f16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A1]]
 
@@ -513,8 +514,9 @@ entry:
 ; SI-DAG:  v_mac_f32_e32 v{{[0-9]+}}, v[[NEG_A0]], v{{[0-9]+}}
 ; SI-DAG:  v_mac_f32_e32 v{{[0-9]+}}, v[[NEG_A1]], v{{[0-9]+}}
 
-; VI:  v_sub_f16_e32 v[[NEG_A0:[0-9]+]], 0, v{{[0-9]+}}
+; VI:  v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; VI:  v_sub_f16_e32 v[[NEG_A1:[0-9]+]], 0, v{{[0-9]+}}
+; VI:  v_sub_f16_sdwa v[[NEG_A0:[0-9]+]], [[ZERO]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-DAG:  v_mac_f16_sdwa v{{[0-9]+}}, v[[NEG_A0]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-DAG:  v_mac_f16_e32 v{{[0-9]+}}, v[[NEG_A1]], v{{[0-9]+}}
 
@@ -544,8 +546,9 @@ entry:
 ; SI-DAG:  v_mac_f32_e32 v[[NEG_A0]], v{{[0-9]+}}, v{{[0-9]+}}
 ; SI-DAG:  v_mac_f32_e32 v[[NEG_A1]], v{{[0-9]+}}, v{{[0-9]+}}
 
-; VI:  v_sub_f16_e32 v[[NEG_A0:[0-9]+]], 0, v{{[0-9]+}}
+; VI:  v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; VI:  v_sub_f16_e32 v[[NEG_A1:[0-9]+]], 0, v{{[0-9]+}}
+; VI:  v_sub_f16_sdwa v[[NEG_A0:[0-9]+]], [[ZERO]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-DAG:  v_mac_f16_sdwa v[[NEG_A0]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-DAG:  v_mac_f16_e32 v[[NEG_A1]], v{{[0-9]+}}, v{{[0-9]+}}
 

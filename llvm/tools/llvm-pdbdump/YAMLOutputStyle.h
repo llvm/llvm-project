@@ -27,7 +27,7 @@ public:
   Error dump() override;
 
 private:
-  Expected<Optional<llvm::pdb::yaml::PdbSourceFileInfo>>
+  Expected<Optional<CodeViewYAML::SourceFileInfo>>
   getFileLineInfo(const pdb::ModuleDebugStreamRef &ModS);
 
   Error dumpStringTable();

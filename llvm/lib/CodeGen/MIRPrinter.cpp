@@ -183,8 +183,6 @@ void MIRPrinter::print(const MachineFunction &MF) {
   YamlMF.Alignment = MF.getAlignment();
   YamlMF.ExposesReturnsTwice = MF.exposesReturnsTwice();
 
-  YamlMF.NoVRegs = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::NoVRegs);
   YamlMF.Legalized = MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::Legalized);
   YamlMF.RegBankSelected = MF.getProperties().hasProperty(

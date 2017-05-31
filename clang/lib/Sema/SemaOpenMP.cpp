@@ -5929,16 +5929,17 @@ StmtResult Sema::ActOnOpenMPTargetParallelForDirective(
                                                B, DSAStack->isCancelRegion());
 }
 
-/// \brief Check for existence of a map clause in the list of clauses.
-static bool HasMapClause(ArrayRef<OMPClause *> Clauses) {
-  for (ArrayRef<OMPClause *>::iterator I = Clauses.begin(), E = Clauses.end();
-       I != E; ++I) {
-    if (*I != nullptr && (*I)->getClauseKind() == OMPC_map) {
-      return true;
-    }
-  }
+/// Check for existence of a map clause in the list of clauses.
+static bool hasClauses(ArrayRef<OMPClause *> Clauses,
+                       const OpenMPClauseKind K) {
+  return llvm::any_of(
+      Clauses, [K](const OMPClause *C) { return C->getClauseKind() == K; });
+}
 
-  return false;
+template <typename... Params>
+static bool hasClauses(ArrayRef<OMPClause *> Clauses, const OpenMPClauseKind K,
+                       const Params... ClauseTypes) {
+  return hasClauses(Clauses, K) || hasClauses(Clauses, ClauseTypes...);
 }
 
 StmtResult Sema::ActOnOpenMPTargetDataDirective(ArrayRef<OMPClause *> Clauses,
@@ -5952,8 +5953,9 @@ StmtResult Sema::ActOnOpenMPTargetDataDirective(ArrayRef<OMPClause *> Clauses,
 
   // OpenMP [2.10.1, Restrictions, p. 97]
   // At least one map clause must appear on the directive.
-  if (!HasMapClause(Clauses)) {
-    Diag(StartLoc, diag::err_omp_no_map_for_directive)
+  if (!hasClauses(Clauses, OMPC_map, OMPC_use_device_ptr)) {
+    Diag(StartLoc, diag::err_omp_no_clause_for_directive)
+        << "'map' or 'use_device_ptr'"
         << getOpenMPDirectiveName(OMPD_target_data);
     return StmtError();
   }
@@ -5970,9 +5972,9 @@ Sema::ActOnOpenMPTargetEnterDataDirective(ArrayRef<OMPClause *> Clauses,
                                           SourceLocation EndLoc) {
   // OpenMP [2.10.2, Restrictions, p. 99]
   // At least one map clause must appear on the directive.
-  if (!HasMapClause(Clauses)) {
-    Diag(StartLoc, diag::err_omp_no_map_for_directive)
-        << getOpenMPDirectiveName(OMPD_target_enter_data);
+  if (!hasClauses(Clauses, OMPC_map)) {
+    Diag(StartLoc, diag::err_omp_no_clause_for_directive)
+        << "'map'" << getOpenMPDirectiveName(OMPD_target_enter_data);
     return StmtError();
   }
 
@@ -5986,9 +5988,9 @@ Sema::ActOnOpenMPTargetExitDataDirective(ArrayRef<OMPClause *> Clauses,
                                          SourceLocation EndLoc) {
   // OpenMP [2.10.3, Restrictions, p. 102]
   // At least one map clause must appear on the directive.
-  if (!HasMapClause(Clauses)) {
-    Diag(StartLoc, diag::err_omp_no_map_for_directive)
-        << getOpenMPDirectiveName(OMPD_target_exit_data);
+  if (!hasClauses(Clauses, OMPC_map)) {
+    Diag(StartLoc, diag::err_omp_no_clause_for_directive)
+        << "'map'" << getOpenMPDirectiveName(OMPD_target_exit_data);
     return StmtError();
   }
 
@@ -5998,12 +6000,7 @@ Sema::ActOnOpenMPTargetExitDataDirective(ArrayRef<OMPClause *> Clauses,
 StmtResult Sema::ActOnOpenMPTargetUpdateDirective(ArrayRef<OMPClause *> Clauses,
                                                   SourceLocation StartLoc,
                                                   SourceLocation EndLoc) {
-  bool seenMotionClause = false;
-  for (auto *C : Clauses) {
-    if (C->getClauseKind() == OMPC_to || C->getClauseKind() == OMPC_from)
-      seenMotionClause = true;
-  }
-  if (!seenMotionClause) {
+  if (!hasClauses(Clauses, OMPC_to, OMPC_from)) {
     Diag(StartLoc, diag::err_omp_at_least_one_motion_clause_required);
     return StmtError();
   }

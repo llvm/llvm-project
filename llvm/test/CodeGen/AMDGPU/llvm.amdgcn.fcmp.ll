@@ -14,7 +14,7 @@ define amdgpu_kernel void @v_fcmp_f32_dynamic_cc(i64 addrspace(1)* %out, float %
 }
 
 ; GCN-LABEL: {{^}}v_fcmp_f32_oeq_with_fabs:
-; GCN: v_cmp_eq_f32_e64 {{s\[[0-9]+:[0-9]+\]}}, |{{v[0-9]+}}|, {{s[0-9]+}}
+; GCN: v_cmp_eq_f32_e64 {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}}, |{{v[0-9]+}}|
 define amdgpu_kernel void @v_fcmp_f32_oeq_with_fabs(i64 addrspace(1)* %out, float %src, float %a) {
   %temp = call float @llvm.fabs.f32(float %a)
   %result = call i64 @llvm.amdgcn.fcmp.f32(float %src, float %temp, i32 1)
@@ -23,7 +23,7 @@ define amdgpu_kernel void @v_fcmp_f32_oeq_with_fabs(i64 addrspace(1)* %out, floa
 }
 
 ; GCN-LABEL: {{^}}v_fcmp_f32_oeq_both_operands_with_fabs:
-; GCN: v_cmp_eq_f32_e64 {{s\[[0-9]+:[0-9]+\]}}, |{{v[0-9]+}}|, |{{s[0-9]+}}|
+; GCN: v_cmp_eq_f32_e64 {{s\[[0-9]+:[0-9]+\]}}, |{{s[0-9]+}}|, |{{v[0-9]+}}|
 define amdgpu_kernel void @v_fcmp_f32_oeq_both_operands_with_fabs(i64 addrspace(1)* %out, float %src, float %a) {
   %temp = call float @llvm.fabs.f32(float %a)
   %src_input = call float @llvm.fabs.f32(float %src)

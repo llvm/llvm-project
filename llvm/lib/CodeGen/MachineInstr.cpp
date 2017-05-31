@@ -1841,7 +1841,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     return;
 
   // Print the rest of the operands.
-  bool OmittedAnyCallClobbers = false;
   bool FirstOp = true;
   unsigned AsmDescOp = ~0u;
   unsigned AsmOpCount = 0;
@@ -1877,31 +1876,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
     if (MO.isReg() && TargetRegisterInfo::isVirtualRegister(MO.getReg()))
       VirtRegs.push_back(MO.getReg());
-
-    // Omit call-clobbered registers which aren't used anywhere. This makes
-    // call instructions much less noisy on targets where calls clobber lots
-    // of registers. Don't rely on MO.isDead() because we may be called before
-    // LiveVariables is run, or we may be looking at a non-allocatable reg.
-    if (MRI && isCall() &&
-        MO.isReg() && MO.isImplicit() && MO.isDef()) {
-      unsigned Reg = MO.getReg();
-      if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
-        if (MRI->use_empty(Reg)) {
-          bool HasAliasLive = false;
-          for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI) {
-            unsigned AliasReg = *AI;
-            if (!MRI->use_empty(AliasReg)) {
-              HasAliasLive = true;
-              break;
-            }
-          }
-          if (!HasAliasLive) {
-            OmittedAnyCallClobbers = true;
-            continue;
-          }
-        }
-      }
-    }
 
     if (FirstOp) FirstOp = false; else OS << ",";
     OS << " ";
@@ -1982,12 +1956,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       AsmDescOp += 1 + InlineAsm::getNumOperandRegisters(Flag);
     } else
       MO.print(OS, MST, TRI);
-  }
-
-  // Briefly indicate whether any call clobbers were omitted.
-  if (OmittedAnyCallClobbers) {
-    if (!FirstOp) OS << ",";
-    OS << " ...";
   }
 
   bool HaveSemi = false;

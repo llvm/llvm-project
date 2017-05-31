@@ -4,7 +4,7 @@
 int main(int argc, char **argv) {
 
   int r;
-  #pragma omp target enter data // expected-error {{expected at least one map clause for '#pragma omp target enter data'}}
+  #pragma omp target enter data // expected-error {{expected at least one 'map' clause for '#pragma omp target enter data'}}
 
   #pragma omp target enter data map(r) // expected-error {{map type must be specified for '#pragma omp target enter data'}}
   #pragma omp target enter data map(tofrom: r) // expected-error {{map type 'tofrom' is not allowed for '#pragma omp target enter data'}}

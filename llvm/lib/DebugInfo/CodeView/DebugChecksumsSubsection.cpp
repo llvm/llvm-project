@@ -1,4 +1,4 @@
-//===- ModuleDebugFileChecksumFragment.cpp ----------------------*- C++ -*-===//
+//===- DebugChecksumsSubsection.cpp ----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/CodeView/ModuleDebugFileChecksumFragment.h"
+#include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
-#include "llvm/DebugInfo/CodeView/StringTable.h"
+#include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/Support/BinaryStreamReader.h"
 
 using namespace llvm;
@@ -42,22 +42,24 @@ Error llvm::VarStreamArrayExtractor<FileChecksumEntry>::extract(
   return Error::success();
 }
 
-Error ModuleDebugFileChecksumFragmentRef::initialize(
-    BinaryStreamReader Reader) {
+Error DebugChecksumsSubsectionRef::initialize(BinaryStreamReader Reader) {
   if (auto EC = Reader.readArray(Checksums, Reader.bytesRemaining()))
     return EC;
 
   return Error::success();
 }
+Error DebugChecksumsSubsectionRef::initialize(BinaryStreamRef Section) {
+  BinaryStreamReader Reader(Section);
+  return initialize(Reader);
+}
 
-ModuleDebugFileChecksumFragment::ModuleDebugFileChecksumFragment(
-    StringTable &Strings)
-    : ModuleDebugFragment(ModuleDebugFragmentKind::FileChecksums),
-      Strings(Strings) {}
+DebugChecksumsSubsection::DebugChecksumsSubsection(
+    DebugStringTableSubsection &Strings)
+    : DebugSubsection(DebugSubsectionKind::FileChecksums), Strings(Strings) {}
 
-void ModuleDebugFileChecksumFragment::addChecksum(StringRef FileName,
-                                                  FileChecksumKind Kind,
-                                                  ArrayRef<uint8_t> Bytes) {
+void DebugChecksumsSubsection::addChecksum(StringRef FileName,
+                                           FileChecksumKind Kind,
+                                           ArrayRef<uint8_t> Bytes) {
   FileChecksumEntry Entry;
   if (!Bytes.empty()) {
     uint8_t *Copy = Storage.Allocate<uint8_t>(Bytes.size());
@@ -78,11 +80,11 @@ void ModuleDebugFileChecksumFragment::addChecksum(StringRef FileName,
   SerializedSize += Len;
 }
 
-uint32_t ModuleDebugFileChecksumFragment::calculateSerializedLength() {
+uint32_t DebugChecksumsSubsection::calculateSerializedSize() const {
   return SerializedSize;
 }
 
-Error ModuleDebugFileChecksumFragment::commit(BinaryStreamWriter &Writer) {
+Error DebugChecksumsSubsection::commit(BinaryStreamWriter &Writer) const {
   for (const auto &FC : Checksums) {
     FileChecksumEntryHeader Header;
     Header.ChecksumKind = uint8_t(FC.Kind);
@@ -98,8 +100,7 @@ Error ModuleDebugFileChecksumFragment::commit(BinaryStreamWriter &Writer) {
   return Error::success();
 }
 
-uint32_t
-ModuleDebugFileChecksumFragment::mapChecksumOffset(StringRef FileName) const {
+uint32_t DebugChecksumsSubsection::mapChecksumOffset(StringRef FileName) const {
   uint32_t Offset = Strings.getStringId(FileName);
   auto Iter = OffsetMap.find(Offset);
   assert(Iter != OffsetMap.end());

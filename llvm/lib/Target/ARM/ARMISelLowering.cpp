@@ -585,7 +585,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSQRT, MVT::v2f64, Expand);
     setOperationAction(ISD::FSIN, MVT::v2f64, Expand);
     setOperationAction(ISD::FCOS, MVT::v2f64, Expand);
-    setOperationAction(ISD::FPOWI, MVT::v2f64, Expand);
     setOperationAction(ISD::FPOW, MVT::v2f64, Expand);
     setOperationAction(ISD::FLOG, MVT::v2f64, Expand);
     setOperationAction(ISD::FLOG2, MVT::v2f64, Expand);
@@ -603,7 +602,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSQRT, MVT::v4f32, Expand);
     setOperationAction(ISD::FSIN, MVT::v4f32, Expand);
     setOperationAction(ISD::FCOS, MVT::v4f32, Expand);
-    setOperationAction(ISD::FPOWI, MVT::v4f32, Expand);
     setOperationAction(ISD::FPOW, MVT::v4f32, Expand);
     setOperationAction(ISD::FLOG, MVT::v4f32, Expand);
     setOperationAction(ISD::FLOG2, MVT::v4f32, Expand);
@@ -620,7 +618,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSQRT, MVT::v2f32, Expand);
     setOperationAction(ISD::FSIN, MVT::v2f32, Expand);
     setOperationAction(ISD::FCOS, MVT::v2f32, Expand);
-    setOperationAction(ISD::FPOWI, MVT::v2f32, Expand);
     setOperationAction(ISD::FPOW, MVT::v2f32, Expand);
     setOperationAction(ISD::FLOG, MVT::v2f32, Expand);
     setOperationAction(ISD::FLOG2, MVT::v2f32, Expand);
@@ -743,7 +740,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSQRT,      MVT::f64, Expand);
     setOperationAction(ISD::FSIN,       MVT::f64, Expand);
     setOperationAction(ISD::FCOS,       MVT::f64, Expand);
-    setOperationAction(ISD::FPOWI,      MVT::f64, Expand);
     setOperationAction(ISD::FPOW,       MVT::f64, Expand);
     setOperationAction(ISD::FLOG,       MVT::f64, Expand);
     setOperationAction(ISD::FLOG2,      MVT::f64, Expand);

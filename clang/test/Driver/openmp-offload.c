@@ -210,14 +210,16 @@
 // CHK-LKS-ST: INPUT([[T2BIN:.+\.out-openmp-x86_64-pc-linux-gnu]])
 // CHK-LKS: SECTIONS
 // CHK-LKS: {
-// CHK-LKS:   .omp_offloading :
+// CHK-LKS:   .omp_offloading.powerpc64le-ibm-linux-gnu :
 // CHK-LKS:   ALIGN(0x10)
 // CHK-LKS:   {
-// CHK-LKS:     . = ALIGN(0x10);
 // CHK-LKS:     PROVIDE_HIDDEN(.omp_offloading.img_start.powerpc64le-ibm-linux-gnu = .);
 // CHK-LKS:     [[T1BIN]]
 // CHK-LKS:     PROVIDE_HIDDEN(.omp_offloading.img_end.powerpc64le-ibm-linux-gnu = .);
-// CHK-LKS:     . = ALIGN(0x10);
+// CHK-LKS:   }
+// CHK-LKS:   .omp_offloading.x86_64-pc-linux-gnu :
+// CHK-LKS:   ALIGN(0x10)
+// CHK-LKS:   {
 // CHK-LKS:     PROVIDE_HIDDEN(.omp_offloading.img_start.x86_64-pc-linux-gnu = .);
 // CHK-LKS:     [[T2BIN]]
 // CHK-LKS:     PROVIDE_HIDDEN(.omp_offloading.img_end.x86_64-pc-linux-gnu = .);

@@ -3494,7 +3494,8 @@ def t2B   : T2I<(outs), (ins thumb_br_target:$target), IIC_Br,
   let AsmMatchConverter = "cvtThumbBranches";
 }
 
-let Size = 4, isNotDuplicable = 1, isIndirectBranch = 1 in {
+let Size = 4, isNotDuplicable = 1, isBranch = 1, isTerminator = 1,
+    isBarrier = 1, isIndirectBranch = 1 in {
 
 // available in both v8-M.Baseline and Thumb2 targets
 def t2BR_JT : t2basePseudoInst<(outs),

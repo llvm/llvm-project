@@ -119,7 +119,7 @@ namespace {
 /// SystemZ Code Generator Pass Configuration Options.
 class SystemZPassConfig : public TargetPassConfig {
 public:
-  SystemZPassConfig(SystemZTargetMachine *TM, PassManagerBase &PM)
+  SystemZPassConfig(SystemZTargetMachine &TM, PassManagerBase &PM)
     : TargetPassConfig(TM, PM) {}
 
   SystemZTargetMachine &getSystemZTargetMachine() const {
@@ -212,7 +212,7 @@ void SystemZPassConfig::addPreEmitPass() {
 }
 
 TargetPassConfig *SystemZTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new SystemZPassConfig(this, PM);
+  return new SystemZPassConfig(*this, PM);
 }
 
 TargetIRAnalysis SystemZTargetMachine::getTargetIRAnalysis() {

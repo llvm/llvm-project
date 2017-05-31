@@ -56,5 +56,5 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
 }
 
 TargetPassConfig *RISCVTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new TargetPassConfig(this, PM);
+  return new TargetPassConfig(*this, PM);
 }

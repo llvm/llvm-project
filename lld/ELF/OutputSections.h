@@ -149,6 +149,7 @@ private:
 };
 
 uint64_t getHeaderSize();
+void reportDiscarded(InputSectionBase *IS);
 
 } // namespace elf
 } // namespace lld
