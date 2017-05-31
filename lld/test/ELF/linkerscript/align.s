@@ -64,7 +64,7 @@
 # SYMBOLS-NEXT: 0000000000010000         *ABS*           00000000 __code_base__
 # SYMBOLS-NEXT: 0000000000001000         *ABS*           00000000 VAR
 # SYMBOLS-NEXT: 0000000000011000         .bbb            00000000 __start_bbb
-# SYMBOLS-NEXT: 0000000000012000         *ABS*           00000000 __end_bbb
+# SYMBOLS-NEXT: 0000000000012000         .bbb            00000000 __end_bbb
 
 .global _start
 _start:

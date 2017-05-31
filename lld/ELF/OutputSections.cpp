@@ -117,7 +117,7 @@ template <class ELFT> static void finalizeShtGroup(OutputSection *Sec) {
   // the symbol table.
   Sec->Link = InX::SymTab->OutSec->SectionIndex;
 
-  // sh_link then contain index of an entry in symbol table section which
+  // sh_info then contain index of an entry in symbol table section which
   // provides signature of the section group.
   elf::ObjectFile<ELFT> *Obj = Sec->Sections[0]->getFile<ELFT>();
   assert(Config->Relocatable && Sec->Sections.size() == 1);
@@ -351,7 +351,7 @@ static bool canMergeToProgbits(unsigned Type) {
          Type == SHT_NOTE;
 }
 
-static void reportDiscarded(InputSectionBase *IS) {
+void elf::reportDiscarded(InputSectionBase *IS) {
   if (!Config->PrintGcSections)
     return;
   message("removing unused section from '" + IS->Name + "' in file '" +

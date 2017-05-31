@@ -52,11 +52,12 @@ LinkerScript *elf::Script;
 uint64_t ExprValue::getValue() const {
   if (Sec) {
     if (Sec->getOutputSection())
-      return Sec->getOffset(Val) + Sec->getOutputSection()->Addr;
+      return alignTo(Sec->getOffset(Val) + Sec->getOutputSection()->Addr,
+                     Alignment);
     error("unable to evaluate expression: input section " + Sec->Name +
           " has no output section assigned");
   }
-  return Val;
+  return alignTo(Val, Alignment);
 }
 
 uint64_t ExprValue::getSecAddr() const {
@@ -143,7 +144,7 @@ void LinkerScript::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
   } else {
     Sym->Section = V.Sec;
     if (Sym->Section->Flags & SHF_ALLOC)
-      Sym->Value = V.Val;
+      Sym->Value = alignTo(V.Val, V.Alignment);
     else
       Sym->Value = V.getValue();
   }
@@ -292,6 +293,11 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
     for (InputSectionBase *Sec : InputSections) {
       if (Sec->Assigned)
         continue;
+
+      if (!Sec->Live) {
+        reportDiscarded(Sec);
+        continue;
+      }
 
       // For -emit-relocs we have to ignore entries like
       //   .rela.dyn : { *(.rela.data) }
@@ -586,7 +592,7 @@ void LinkerScript::process(BaseCommand &Base) {
   // It calculates and assigns the offsets for each section and also
   // updates the output section size.
   auto &Cmd = cast<InputSectionDescription>(Base);
-  for (InputSectionBase *Sec : Cmd.Sections) {
+  for (InputSection *Sec : Cmd.Sections) {
     // We tentatively added all synthetic sections at the beginning and removed
     // empty ones afterwards (because there is no way to know whether they were
     // going be empty or not other than actually running linker scripts.)
@@ -598,7 +604,7 @@ void LinkerScript::process(BaseCommand &Base) {
     if (!Sec->Live)
       continue;
     assert(CurOutSec == Sec->OutSec);
-    output(cast<InputSection>(Sec));
+    output(Sec);
   }
 }
 
@@ -1075,6 +1081,9 @@ template <class ELFT> void OutputSectionCommand::writeTo(uint8_t *Buf) {
            Sec->CompressedData.size());
     return;
   }
+
+  if (Sec->Type == SHT_NOBITS)
+    return;
 
   // Write leading padding.
   ArrayRef<InputSection *> Sections = Sec->Sections;

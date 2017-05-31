@@ -74,6 +74,7 @@ private:
   std::unique_ptr<FileOutputBuffer> Buffer;
 
   std::vector<OutputSection *> OutputSections;
+  std::vector<OutputSectionCommand *> OutputSectionCommands;
   OutputSectionFactory Factory{OutputSections};
 
   void addRelIpltSymbols();
@@ -262,6 +263,10 @@ template <class ELFT> void Writer<ELFT>::run() {
     Script->fabricateDefaultCommands();
   }
 
+  for (BaseCommand *Base : Script->Opt.Commands)
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
+      OutputSectionCommands.push_back(Cmd);
+
   // If -compressed-debug-sections is specified, we need to compress
   // .debug_* sections. Do it right now because it changes the size of
   // output sections.
@@ -311,7 +316,7 @@ template <class ELFT> void Writer<ELFT>::run() {
 
 
   // Handle -Map option.
-  writeMapFile<ELFT>(Script->Opt.Commands);
+  writeMapFile<ELFT>(OutputSectionCommands);
   if (ErrorCount)
     return;
 
@@ -1201,8 +1206,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (ErrorCount)
     return;
 
-  // So far we have added sections from input object files.
-  // This function adds linker-created Out::* sections.
   addPredefinedSections();
   removeUnusedSyntheticSections(OutputSections);
 
@@ -1270,8 +1273,20 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   // ARM ABI requires .ARM.exidx to be terminated by some piece of data.
   // We have the terminater synthetic section class. Add that at the end.
   auto *OS = dyn_cast_or_null<OutputSection>(findSection(".ARM.exidx"));
-  if (OS && !OS->Sections.empty() && !Config->Relocatable)
-    OS->addSection(make<ARMExidxSentinelSection>());
+  if (!OS || OS->Sections.empty() || Config->Relocatable)
+    return;
+
+  auto *Sentinel = make<ARMExidxSentinelSection>();
+  OS->addSection(Sentinel);
+  // If there are linker script commands existing at this point then add the
+  // sentinel to the last of these too.
+  if (OutputSectionCommand *C = Script->getCmd(OS)) {
+    auto ISD = std::find_if(C->Commands.rbegin(), C->Commands.rend(),
+                            [](const BaseCommand *Base) {
+                              return isa<InputSectionDescription>(Base);
+                            });
+    cast<InputSectionDescription>(*ISD)->Sections.push_back(Sentinel);
+  }
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end
@@ -1315,10 +1330,9 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection *Sec) {
 
 template <class ELFT>
 OutputSectionCommand *Writer<ELFT>::findSectionCommand(StringRef Name) {
-  for (BaseCommand *Base : Script->Opt.Commands)
-    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
-      if (Cmd->Name == Name)
-        return Cmd;
+  for (OutputSectionCommand *Cmd : OutputSectionCommands)
+    if (Cmd->Name == Name)
+      return Cmd;
   return nullptr;
 }
 
@@ -1713,7 +1727,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_ehsize = sizeof(Elf_Ehdr);
   EHdr->e_phnum = Phdrs.size();
   EHdr->e_shentsize = sizeof(Elf_Shdr);
-  EHdr->e_shnum = OutputSections.size() + 1;
+  EHdr->e_shnum = OutputSectionCommands.size() + 1;
   EHdr->e_shstrndx = InX::ShStrTab->OutSec->SectionIndex;
 
   if (Config->EMachine == EM_ARM)
@@ -1745,8 +1759,8 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 
   // Write the section header table. Note that the first table entry is null.
   auto *SHdrs = reinterpret_cast<Elf_Shdr *>(Buf + EHdr->e_shoff);
-  for (OutputSection *Sec : OutputSections)
-    Sec->writeHeaderTo<ELFT>(++SHdrs);
+  for (OutputSectionCommand *Cmd : OutputSectionCommands)
+    Cmd->Sec->writeHeaderTo<ELFT>(++SHdrs);
 }
 
 // Open a result file.
@@ -1769,10 +1783,7 @@ template <class ELFT> void Writer<ELFT>::openFile() {
 
 template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
   uint8_t *Buf = Buffer->getBufferStart();
-  for (BaseCommand *Base : Script->Opt.Commands) {
-    auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
-    if (!Cmd)
-      continue;
+  for (OutputSectionCommand *Cmd : OutputSectionCommands) {
     OutputSection *Sec = Cmd->Sec;
     if (Sec->Flags & SHF_ALLOC)
       Cmd->writeTo<ELFT>(Buf + Sec->Offset);
@@ -1799,19 +1810,13 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   // In -r or -emit-relocs mode, write the relocation sections first as in
   // ELf_Rel targets we might find out that we need to modify the relocated
   // section while doing it.
-  for (BaseCommand *Base : Script->Opt.Commands) {
-    auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
-    if (!Cmd)
-      continue;
+  for (OutputSectionCommand *Cmd : OutputSectionCommands) {
     OutputSection *Sec = Cmd->Sec;
     if (Sec->Type == SHT_REL || Sec->Type == SHT_RELA)
       Cmd->writeTo<ELFT>(Buf + Sec->Offset);
   }
 
-  for (BaseCommand *Base : Script->Opt.Commands) {
-    auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
-    if (!Cmd)
-      continue;
+  for (OutputSectionCommand *Cmd : OutputSectionCommands) {
     OutputSection *Sec = Cmd->Sec;
     if (Sec != Out::Opd && Sec != EhFrameHdr && Sec->Type != SHT_REL &&
         Sec->Type != SHT_RELA)
