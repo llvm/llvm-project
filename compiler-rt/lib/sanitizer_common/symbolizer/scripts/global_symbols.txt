@@ -59,6 +59,7 @@ getpagesize U
 getpid U
 gettimeofday U
 ioctl U
+isalpha U
 isatty U
 isprint U
 isupper U

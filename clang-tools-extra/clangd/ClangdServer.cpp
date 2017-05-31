@@ -58,8 +58,9 @@ Position clangd::offsetToPosition(StringRef Code, size_t Offset) {
   return {Lines, Cols};
 }
 
-IntrusiveRefCntPtr<vfs::FileSystem> RealFileSystemProvider::getFileSystem() {
-  return vfs::getRealFileSystem();
+Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
+RealFileSystemProvider::getTaggedFileSystem() {
+  return make_tagged(vfs::getRealFileSystem(), VFSTag());
 }
 
 ClangdScheduler::ClangdScheduler(bool RunSynchronously)
@@ -156,11 +157,13 @@ void ClangdServer::addDocument(PathRef File, StringRef Contents) {
 
     assert(FileContents.Draft &&
            "No contents inside a file that was scheduled for reparse");
-    Units.runOnUnit(FileStr, *FileContents.Draft, *CDB, PCHs,
-                    FSProvider->getFileSystem(), [&](ClangdUnit const &Unit) {
-                      DiagConsumer->onDiagnosticsReady(
-                          FileStr, Unit.getLocalDiagnostics());
-                    });
+    auto TaggedFS = FSProvider->getTaggedFileSystem();
+    Units.runOnUnit(
+        FileStr, *FileContents.Draft, *CDB, PCHs, TaggedFS.Value,
+        [&](ClangdUnit const &Unit) {
+          DiagConsumer->onDiagnosticsReady(
+              FileStr, make_tagged(Unit.getLocalDiagnostics(), TaggedFS.Tag));
+        });
   });
 }
 
@@ -181,18 +184,18 @@ void ClangdServer::forceReparse(PathRef File) {
   addDocument(File, getDocument(File));
 }
 
-std::vector<CompletionItem> ClangdServer::codeComplete(PathRef File,
-                                                       Position Pos) {
+Tagged<std::vector<CompletionItem>> ClangdServer::codeComplete(PathRef File,
+                                                               Position Pos) {
   auto FileContents = DraftMgr.getDraft(File);
   assert(FileContents.Draft && "codeComplete is called for non-added document");
 
   std::vector<CompletionItem> Result;
-  auto VFS = FSProvider->getFileSystem();
+  auto TaggedFS = FSProvider->getTaggedFileSystem();
   Units.runOnUnitWithoutReparse(
-      File, *FileContents.Draft, *CDB, PCHs, VFS, [&](ClangdUnit &Unit) {
-        Result = Unit.codeComplete(*FileContents.Draft, Pos, VFS);
+      File, *FileContents.Draft, *CDB, PCHs, TaggedFS.Value, [&](ClangdUnit &Unit) {
+        Result = Unit.codeComplete(*FileContents.Draft, Pos, TaggedFS.Value);
       });
-  return Result;
+  return make_tagged(std::move(Result), TaggedFS.Tag);
 }
 
 std::vector<tooling::Replacement> ClangdServer::formatRange(PathRef File,

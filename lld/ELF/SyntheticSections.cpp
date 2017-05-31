@@ -1185,7 +1185,7 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 uint64_t DynamicReloc::getOffset() const {
-  return InputSec->OutSec->Addr + InputSec->getOffset(OffsetInSec);
+  return InputSec->getOutputSection()->Addr + InputSec->getOffset(OffsetInSec);
 }
 
 int64_t DynamicReloc::getAddend() const {
