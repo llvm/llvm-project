@@ -290,6 +290,7 @@ public:
     return Reg >= PPC::V0 && Reg <= PPC::V31;
   }
   const TargetRegisterClass *updatedRC(const TargetRegisterClass *RC) const;
+  static int getRecordFormOpcode(unsigned Opcode);
 };
 
 }

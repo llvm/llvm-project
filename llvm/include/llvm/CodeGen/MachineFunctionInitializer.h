@@ -1,4 +1,4 @@
-//===- MachineFunctionInitializer.h - machine function initializer ---------===//
+//=- MachineFunctionInitializer.h - machine function initializer --*- C++ -*-=//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -25,7 +25,7 @@ class MachineFunctionInitializer {
   virtual void anchor();
 
 public:
-  virtual ~MachineFunctionInitializer() {}
+  virtual ~MachineFunctionInitializer() = default;
 
   /// Initialize the machine function.
   ///
@@ -35,4 +35,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINEFUNCTIONINITIALIZER_H

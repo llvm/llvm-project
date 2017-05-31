@@ -389,6 +389,23 @@ bb6:                                              ; preds = %bb6, %bb2
 
 ;; Ensure that we revisit predicateinfo operands at the right points in time.
 define void @test10() {
+; CHECK-LABEL: @test10(
+; CHECK-NEXT:  b:
+; CHECK-NEXT:    br label [[G:%.*]]
+; CHECK:       g:
+; CHECK-NEXT:    [[N:%.*]] = phi i32* [ [[H:%.*]], [[I:%.*]] ], [ null, [[B:%.*]] ]
+; CHECK-NEXT:    [[H]] = getelementptr i32, i32* [[N]], i64 1
+; CHECK-NEXT:    [[J:%.*]] = icmp eq i32* [[H]], getelementptr (i32, i32* null, i64 8)
+; CHECK-NEXT:    br i1 [[J]], label [[C:%.*]], label [[I]]
+; CHECK:       i:
+; CHECK-NEXT:    br i1 undef, label [[K:%.*]], label [[G]]
+; CHECK:       k:
+; CHECK-NEXT:    br i1 false, label [[C]], label [[O:%.*]]
+; CHECK:       o:
+; CHECK-NEXT:    br label [[C]]
+; CHECK:       c:
+; CHECK-NEXT:    ret void
+;
 b:
   %m = getelementptr i32, i32* null, i64 8
   br label %g

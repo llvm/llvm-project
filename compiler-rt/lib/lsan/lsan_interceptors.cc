@@ -22,6 +22,7 @@
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_posix.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "lsan.h"
 #include "lsan_allocator.h"
@@ -96,6 +97,24 @@ INTERCEPTOR(void*, valloc, uptr size) {
   return lsan_valloc(size, stack);
 }
 #endif
+
+static void BeforeFork() {
+  LockAllocator();
+  StackDepotLockAll();
+}
+
+static void AfterFork() {
+  StackDepotUnlockAll();
+  UnlockAllocator();
+}
+
+INTERCEPTOR(int, fork, void) {
+  ENSURE_LSAN_INITED;
+  BeforeFork();
+  int pid = REAL(fork)();
+  AfterFork();
+  return pid;
+}
 
 #if SANITIZER_INTERCEPT_MEMALIGN
 INTERCEPTOR(void*, memalign, uptr alignment, uptr size) {
@@ -336,6 +355,7 @@ void InitializeInterceptors() {
   LSAN_MAYBE_INTERCEPT_MALLOPT;
   INTERCEPT_FUNCTION(pthread_create);
   INTERCEPT_FUNCTION(pthread_join);
+  INTERCEPT_FUNCTION(fork);
 
   if (pthread_key_create(&g_thread_finalize_key, &thread_finalize)) {
     Report("LeakSanitizer: failed to create thread key.\n");

@@ -28,7 +28,6 @@
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
-#include "llvm/ObjectYAML/CodeViewYAML.h"
 
 using namespace llvm;
 using namespace llvm::codeview;

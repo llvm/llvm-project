@@ -22,6 +22,7 @@
 #include "asan_stats.h"
 #include "asan_suppressions.h"
 #include "lsan/lsan_common.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_libc.h"
 
 #if SANITIZER_POSIX
@@ -705,11 +706,23 @@ INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
 #endif  // ASAN_INTERCEPT___CXA_ATEXIT
 
 #if ASAN_INTERCEPT_FORK
+static void BeforeFork() {
+  get_allocator().ForceLock();
+  StackDepotLockAll();
+}
+
+static void AfterFork() {
+  StackDepotUnlockAll();
+  get_allocator().ForceUnlock();
+}
+
 INTERCEPTOR(int, fork, void) {
   ENSURE_ASAN_INITED();
+  BeforeFork();
   if (common_flags()->coverage) CovBeforeFork();
   int pid = REAL(fork)();
   if (common_flags()->coverage) CovAfterFork(pid);
+  AfterFork();
   return pid;
 }
 #endif  // ASAN_INTERCEPT_FORK

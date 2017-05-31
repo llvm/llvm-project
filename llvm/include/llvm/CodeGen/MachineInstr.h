@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/MachineInstr.h - MachineInstr class --------*- C++ -*-===//
+//===- llvm/CodeGen/MachineInstr.h - MachineInstr class ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,7 +17,6 @@
 #define LLVM_CODEGEN_MACHINEINSTR_H
 
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
@@ -28,19 +27,27 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Target/TargetOpcodes.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <utility>
 
 namespace llvm {
 
-class StringRef;
 template <typename T> class ArrayRef;
-template <typename T> class SmallVectorImpl;
-class DILocalVariable;
 class DIExpression;
+class DILocalVariable;
+class MachineBasicBlock;
+class MachineFunction;
+class MachineMemOperand;
+class MachineRegisterInfo;
+class ModuleSlotTracker;
+class raw_ostream;
+template <typename T> class SmallVectorImpl;
+class StringRef;
 class TargetInstrInfo;
 class TargetRegisterClass;
 class TargetRegisterInfo;
-class MachineFunction;
-class MachineMemOperand;
 
 //===----------------------------------------------------------------------===//
 /// Representation of each machine instruction.
@@ -53,7 +60,7 @@ class MachineInstr
     : public ilist_node_with_parent<MachineInstr, MachineBasicBlock,
                                     ilist_sentinel_tracking<true>> {
 public:
-  typedef MachineMemOperand **mmo_iterator;
+  using mmo_iterator = MachineMemOperand **;
 
   /// Flags to specify different kinds of comments to output in
   /// assembly code.  These flags carry semantic information not
@@ -72,42 +79,38 @@ public:
     BundledPred  = 1 << 2,              // Instruction has bundled predecessors.
     BundledSucc  = 1 << 3               // Instruction has bundled successors.
   };
+
 private:
   const MCInstrDesc *MCID;              // Instruction descriptor.
-  MachineBasicBlock *Parent;            // Pointer to the owning basic block.
+  MachineBasicBlock *Parent = nullptr;  // Pointer to the owning basic block.
 
   // Operands are allocated by an ArrayRecycler.
-  MachineOperand *Operands;             // Pointer to the first operand.
-  unsigned NumOperands;                 // Number of operands on instruction.
-  typedef ArrayRecycler<MachineOperand>::Capacity OperandCapacity;
+  MachineOperand *Operands = nullptr;   // Pointer to the first operand.
+  unsigned NumOperands = 0;             // Number of operands on instruction.
+  using OperandCapacity = ArrayRecycler<MachineOperand>::Capacity;
   OperandCapacity CapOperands;          // Capacity of the Operands array.
 
-  uint8_t Flags;                        // Various bits of additional
+  uint8_t Flags = 0;                    // Various bits of additional
                                         // information about machine
                                         // instruction.
 
-  uint8_t AsmPrinterFlags;              // Various bits of information used by
+  uint8_t AsmPrinterFlags = 0;          // Various bits of information used by
                                         // the AsmPrinter to emit helpful
                                         // comments.  This is *not* semantic
                                         // information.  Do not use this for
                                         // anything other than to convey comment
                                         // information to AsmPrinter.
 
-  uint8_t NumMemRefs;                   // Information on memory references.
+  uint8_t NumMemRefs = 0;               // Information on memory references.
   // Note that MemRefs == nullptr,  means 'don't know', not 'no memory access'.
   // Calling code must treat missing information conservatively.  If the number
   // of memory operands required to be precise exceeds the maximum value of
   // NumMemRefs - currently 256 - we remove the operands entirely. Note also
   // that this is a non-owning reference to a shared copy on write buffer owned
   // by the MachineFunction and created via MF.allocateMemRefsArray.
-  mmo_iterator MemRefs;
+  mmo_iterator MemRefs = nullptr;
 
   DebugLoc debugLoc;                    // Source line information.
-
-  MachineInstr(const MachineInstr&) = delete;
-  void operator=(const MachineInstr&) = delete;
-  // Use MachineFunction::DeleteMachineInstr() instead.
-  ~MachineInstr() = delete;
 
   // Intrusive list support
   friend struct ilist_traits<MachineInstr>;
@@ -128,6 +131,11 @@ private:
   friend class MachineFunction;
 
 public:
+  MachineInstr(const MachineInstr &) = delete;
+  MachineInstr &operator=(const MachineInstr &) = delete;
+  // Use MachineFunction::DeleteMachineInstr() instead.
+  ~MachineInstr() = delete;
+
   const MachineBasicBlock* getParent() const { return Parent; }
   MachineBasicBlock* getParent() { return Parent; }
 
@@ -177,7 +185,6 @@ public:
   void clearFlag(MIFlag Flag) {
     Flags &= ~((uint8_t)Flag);
   }
-
 
   /// Return true if MI is in a bundle (but not the first MI in a bundle).
   ///
@@ -263,7 +270,6 @@ public:
   /// earlier.
   ///
   /// If this method returns, the caller should try to recover from the error.
-  ///
   void emitError(StringRef Msg) const;
 
   /// Returns the target instruction descriptor of this MachineInstr.
@@ -273,7 +279,6 @@ public:
   unsigned getOpcode() const { return MCID->Opcode; }
 
   /// Access to explicit operands of the instruction.
-  ///
   unsigned getNumOperands() const { return NumOperands; }
 
   const MachineOperand& getOperand(unsigned i) const {
@@ -289,8 +294,8 @@ public:
   unsigned getNumExplicitOperands() const;
 
   /// iterator/begin/end - Iterate over all operands of a machine instruction.
-  typedef MachineOperand *mop_iterator;
-  typedef const MachineOperand *const_mop_iterator;
+  using mop_iterator = MachineOperand *;
+  using const_mop_iterator = const MachineOperand *;
 
   mop_iterator operands_begin() { return Operands; }
   mop_iterator operands_end() { return Operands + NumOperands; }
@@ -713,7 +718,6 @@ public:
     return hasProperty(MCID::ExtraDefRegAllocReq, Type);
   }
 
-
   enum MICheckType {
     CheckDefs,      // Check all operands for equality
     CheckKillDead,  // Check all operands including kill / dead markers
@@ -767,6 +771,7 @@ public:
 
   /// Returns true if the MachineInstr represents a label.
   bool isLabel() const { return isEHLabel() || isGCLabel(); }
+
   bool isCFIInstruction() const {
     return getOpcode() == TargetOpcode::CFI_INSTRUCTION;
   }
@@ -775,6 +780,7 @@ public:
   bool isPosition() const { return isLabel() || isCFIInstruction(); }
 
   bool isDebugValue() const { return getOpcode() == TargetOpcode::DBG_VALUE; }
+
   /// A DBG_VALUE is indirect iff the first operand is a register and
   /// the second operand is an immediate.
   bool isIndirectDebugValue() const {
@@ -787,29 +793,38 @@ public:
   bool isKill() const { return getOpcode() == TargetOpcode::KILL; }
   bool isImplicitDef() const { return getOpcode()==TargetOpcode::IMPLICIT_DEF; }
   bool isInlineAsm() const { return getOpcode() == TargetOpcode::INLINEASM; }
+
   bool isMSInlineAsm() const {
     return getOpcode() == TargetOpcode::INLINEASM && getInlineAsmDialect();
   }
+
   bool isStackAligningInlineAsm() const;
   InlineAsm::AsmDialect getInlineAsmDialect() const;
+
   bool isInsertSubreg() const {
     return getOpcode() == TargetOpcode::INSERT_SUBREG;
   }
+
   bool isSubregToReg() const {
     return getOpcode() == TargetOpcode::SUBREG_TO_REG;
   }
+
   bool isRegSequence() const {
     return getOpcode() == TargetOpcode::REG_SEQUENCE;
   }
+
   bool isBundle() const {
     return getOpcode() == TargetOpcode::BUNDLE;
   }
+
   bool isCopy() const {
     return getOpcode() == TargetOpcode::COPY;
   }
+
   bool isFullCopy() const {
     return isCopy() && !getOperand(0).getSubReg() && !getOperand(1).getSubReg();
   }
+
   bool isExtractSubreg() const {
     return getOpcode() == TargetOpcode::EXTRACT_SUBREG;
   }
@@ -978,7 +993,6 @@ public:
   ///
   /// The flag operand is an immediate that can be decoded with methods like
   /// InlineAsm::hasRegClassConstraint().
-  ///
   int findInlineAsmFlagIdx(unsigned OpIdx, unsigned *GroupNo = nullptr) const;
 
   /// Compute the static register class constraint for operand OpIdx.
@@ -987,7 +1001,6 @@ public:
   ///
   /// Returns NULL if the static register class constraint cannot be
   /// determined.
-  ///
   const TargetRegisterClass*
   getRegClassConstraint(unsigned OpIdx,
                         const TargetInstrInfo *TII,
@@ -1328,6 +1341,6 @@ inline raw_ostream& operator<<(raw_ostream &OS, const MachineInstr &MI) {
   return OS;
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINEINSTR_H

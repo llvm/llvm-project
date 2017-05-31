@@ -1,4 +1,4 @@
-//===-- Mips16FrameLowering.cpp - Mips16 Frame Information ----------------===//
+//===- Mips16FrameLowering.cpp - Mips16 Frame Information -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,20 +11,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Mips16FrameLowering.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
+#include "Mips16FrameLowering.h"
 #include "Mips16InstrInfo.h"
 #include "MipsInstrInfo.h"
 #include "MipsRegisterInfo.h"
 #include "MipsSubtarget.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Function.h"
-#include "llvm/Target/TargetOptions.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/MC/MachineLocation.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Target/TargetFrameLowering.h"
+#include <cassert>
+#include <cstdint>
+#include <vector>
 
 using namespace llvm;
 
@@ -63,7 +72,7 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
-  if (CSI.size()) {
+  if (!CSI.empty()) {
     const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
     for (std::vector<CalleeSavedInfo>::const_iterator I = CSI.begin(),
@@ -80,7 +89,6 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
   if (hasFP(MF))
     BuildMI(MBB, MBBI, dl, TII.get(Mips::MoveR3216), Mips::S0)
       .addReg(Mips::SP).setMIFlag(MachineInstr::FrameSetup);
-
 }
 
 void Mips16FrameLowering::emitEpilogue(MachineFunction &MF,

@@ -866,6 +866,40 @@ S9 s9;
 #endif
 }
 
+namespace TemplateSpecializationType {
+#if defined(FIRST)
+template <class T1> struct U1 {};
+struct S1 {
+  U1<int> u;
+};
+#elif defined(SECOND)
+template <class T1, class T2> struct U1 {};
+struct S1 {
+  U1<int, int> u;
+};
+#else
+S1 s1;
+// expected-error@first.h:* {{'TemplateSpecializationType::S1::u' from module 'FirstModule' is not present in definition of 'TemplateSpecializationType::S1' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'u' does not match}}
+#endif
+
+#if defined(FIRST)
+template <class T1> struct U2 {};
+struct S2 {
+  U2<int> u;
+};
+#elif defined(SECOND)
+template <class T1> struct V1 {};
+struct S2 {
+  V1<int> u;
+};
+#else
+S2 s2;
+// expected-error@first.h:* {{'TemplateSpecializationType::S2::u' from module 'FirstModule' is not present in definition of 'TemplateSpecializationType::S2' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'u' does not match}}
+#endif
+}
+
 // Interesting cases that should not cause errors.  struct S should not error
 // while struct T should error at the access specifier mismatch at the end.
 namespace AllDecls {

@@ -1,4 +1,4 @@
-//===-- CodeGen/MachineConstantPool.h - Abstract Constant Pool --*- C++ -*-===//
+//===- CodeGen/MachineConstantPool.h - Abstract Constant Pool ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,29 +18,28 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/MC/SectionKind.h"
-#include <cassert>
 #include <climits>
 #include <vector>
 
 namespace llvm {
 
 class Constant;
-class FoldingSetNodeID;
 class DataLayout;
-class TargetMachine;
-class Type;
+class FoldingSetNodeID;
 class MachineConstantPool;
 class raw_ostream;
+class Type;
 
 /// Abstract base class for all machine specific constantpool value subclasses.
 ///
 class MachineConstantPoolValue {
   virtual void anchor();
+
   Type *Ty;
 
 public:
   explicit MachineConstantPoolValue(Type *ty) : Ty(ty) {}
-  virtual ~MachineConstantPoolValue() {}
+  virtual ~MachineConstantPoolValue() = default;
 
   /// getType - get type of this MachineConstantPoolValue.
   ///
@@ -81,6 +80,7 @@ public:
     : Alignment(A) {
     Val.ConstVal = V;
   }
+
   MachineConstantPoolEntry(MachineConstantPoolValue *V, unsigned A)
       : Alignment(A) {
     Val.MachineCPVal = V;
@@ -153,13 +153,12 @@ public:
 
   /// print - Used by the MachineFunction printer to print information about
   /// constant pool objects.  Implemented in MachineFunction.cpp
-  ///
   void print(raw_ostream &OS) const;
 
   /// dump - Call print(cerr) to be called from the debugger.
   void dump() const;
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINECONSTANTPOOL_H
