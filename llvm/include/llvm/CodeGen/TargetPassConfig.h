@@ -22,7 +22,7 @@ namespace llvm {
 
 class PassConfigImpl;
 class ScheduleDAGInstrs;
-class TargetMachine;
+class LLVMTargetMachine;
 struct MachineSchedContext;
 
 // The old pass manager infrastructure is hidden in a legacy namespace now.
@@ -103,7 +103,7 @@ private:
   bool AddingMachinePasses;
 
 protected:
-  TargetMachine *TM;
+  LLVMTargetMachine *TM;
   PassConfigImpl *Impl; // Internal data structures
   bool Initialized;     // Flagged after all passes are configured.
 
@@ -120,7 +120,7 @@ protected:
   bool RequireCodeGenSCCOrder;
 
 public:
-  TargetPassConfig(TargetMachine *tm, PassManagerBase &pm);
+  TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm);
   // Dummy constructor.
   TargetPassConfig();
 

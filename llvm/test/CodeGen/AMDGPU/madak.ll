@@ -151,7 +151,7 @@ define amdgpu_kernel void @s_s_madak_f32(float addrspace(1)* %out, float %a, flo
 ; GCN-LABEL: {{^}}no_madak_src0_modifier_f32:
 ; GCN: buffer_load_dword [[VA:v[0-9]+]]
 ; GCN: buffer_load_dword [[VB:v[0-9]+]]
-; GCN: v_mad_f32 {{v[0-9]+}}, {{v[0-9]+}}, |{{v[0-9]+}}|, {{[sv][0-9]+}}
+; GCN: v_mad_f32 {{v[0-9]+}}, |{{v[0-9]+}}|, {{v[0-9]+}}, {{[sv][0-9]+}}
 ; GCN: s_endpgm
 define amdgpu_kernel void @no_madak_src0_modifier_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in.a, float addrspace(1)* noalias %in.b) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -173,7 +173,7 @@ define amdgpu_kernel void @no_madak_src0_modifier_f32(float addrspace(1)* noalia
 ; GCN-LABEL: {{^}}no_madak_src1_modifier_f32:
 ; GCN: buffer_load_dword [[VA:v[0-9]+]]
 ; GCN: buffer_load_dword [[VB:v[0-9]+]]
-; GCN: v_mad_f32 {{v[0-9]+}}, |{{v[0-9]+}}|, {{v[0-9]+}}, {{[sv][0-9]+}}
+; GCN: v_mad_f32 {{v[0-9]+}}, {{v[0-9]+}}, |{{v[0-9]+}}|, {{[sv][0-9]+}}
 ; GCN: s_endpgm
 define amdgpu_kernel void @no_madak_src1_modifier_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in.a, float addrspace(1)* noalias %in.b) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

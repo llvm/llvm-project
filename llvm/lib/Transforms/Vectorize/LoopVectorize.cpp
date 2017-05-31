@@ -7170,10 +7170,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, unsigned VF) {
   Type *VectorTy;
   unsigned C = getInstructionCost(I, VF, VectorTy);
 
-  // Note: Even if all instructions are scalarized, return true if any memory
-  // accesses appear in the loop to get benefits from address folding etc.
   bool TypeNotScalarized =
-      VF > 1 && !VectorTy->isVoidTy() && TTI.getNumberOfParts(VectorTy) < VF;
+      VF > 1 && VectorTy->isVectorTy() && TTI.getNumberOfParts(VectorTy) < VF;
   return VectorizationCostTy(C, TypeNotScalarized);
 }
 
@@ -7312,7 +7310,7 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   Type *RetTy = I->getType();
   if (canTruncateToMinimalBitwidth(I, VF))
     RetTy = IntegerType::get(RetTy->getContext(), MinBWs[I]);
-  VectorTy = ToVectorTy(RetTy, VF);
+  VectorTy = isScalarAfterVectorization(I, VF) ? RetTy : ToVectorTy(RetTy, VF);
   auto SE = PSE.getSE();
 
   // TODO: We need to estimate the cost of intrinsic calls.
@@ -7445,9 +7443,10 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     } else if (Legal->isUniform(Op2)) {
       Op2VK = TargetTransformInfo::OK_UniformValue;
     }
-    SmallVector<const Value *, 4> Operands(I->operand_values()); 
-    return TTI.getArithmeticInstrCost(I->getOpcode(), VectorTy, Op1VK,
-                                      Op2VK, Op1VP, Op2VP, Operands);
+    SmallVector<const Value *, 4> Operands(I->operand_values());
+    unsigned N = isScalarAfterVectorization(I, VF) ? VF : 1;
+    return N * TTI.getArithmeticInstrCost(I->getOpcode(), VectorTy, Op1VK,
+                                          Op2VK, Op1VP, Op2VP, Operands);
   }
   case Instruction::Select: {
     SelectInst *SI = cast<SelectInst>(I);
@@ -7470,7 +7469,15 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   }
   case Instruction::Store:
   case Instruction::Load: {
-    VectorTy = ToVectorTy(getMemInstValueType(I), VF);
+    unsigned Width = VF;
+    if (Width > 1) {
+      InstWidening Decision = getWideningDecision(I, Width);
+      assert(Decision != CM_Unknown &&
+             "CM decision should be taken at this point");
+      if (Decision == CM_Scalarize)
+        Width = 1;
+    }
+    VectorTy = ToVectorTy(getMemInstValueType(I), Width);
     return getMemoryInstructionCost(I, VF);
   }
   case Instruction::ZExt:
@@ -7495,7 +7502,8 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     }
 
     Type *SrcScalarTy = I->getOperand(0)->getType();
-    Type *SrcVecTy = ToVectorTy(SrcScalarTy, VF);
+    Type *SrcVecTy =
+        VectorTy->isVectorTy() ? ToVectorTy(SrcScalarTy, VF) : SrcScalarTy;
     if (canTruncateToMinimalBitwidth(I, VF)) {
       // This cast is going to be shrunk. This may remove the cast or it might
       // turn it into slightly different cast. For example, if MinBW == 16,
@@ -7515,7 +7523,8 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       }
     }
 
-    return TTI.getCastInstrCost(I->getOpcode(), VectorTy, SrcVecTy, I);
+    unsigned N = isScalarAfterVectorization(I, VF) ? VF : 1;
+    return N * TTI.getCastInstrCost(I->getOpcode(), VectorTy, SrcVecTy, I);
   }
   case Instruction::Call: {
     bool NeedToScalarize;

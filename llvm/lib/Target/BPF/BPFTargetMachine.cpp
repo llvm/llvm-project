@@ -58,7 +58,7 @@ namespace {
 // BPF Code Generator Pass Configuration Options.
 class BPFPassConfig : public TargetPassConfig {
 public:
-  BPFPassConfig(BPFTargetMachine *TM, PassManagerBase &PM)
+  BPFPassConfig(BPFTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM) {}
 
   BPFTargetMachine &getBPFTargetMachine() const {
@@ -70,7 +70,7 @@ public:
 }
 
 TargetPassConfig *BPFTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new BPFPassConfig(this, PM);
+  return new BPFPassConfig(*this, PM);
 }
 
 // Install an instruction selector pass using

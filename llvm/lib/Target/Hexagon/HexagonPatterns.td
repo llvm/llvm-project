@@ -382,48 +382,42 @@ def: T_MType_acc_pat3 <M4_or_andn, and, or>;
 def: T_MType_acc_pat3 <M4_and_andn, and, and>;
 def: T_MType_acc_pat3 <M4_xor_andn, and, xor>;
 
+// This complex pattern is really only to detect various forms of
+// sign-extension i32->i64. The selected value will be of type i64
+// whose low word is the value being extended. The high word is
+// unspecified.
+def Usxtw : ComplexPattern<i64, 1, "DetectUseSxtw", [], []>;
+
 def Aext64: PatFrag<(ops node:$Rs), (i64 (anyext node:$Rs))>;
-def Sext64: PatFrag<(ops node:$Rs), (i64 (sext node:$Rs))>;
 def Zext64: PatFrag<(ops node:$Rs), (i64 (zext node:$Rs))>;
+def Sext64: PatLeaf<(i64 Usxtw:$Rs)>;
 
-// Return true if for a 32 to 64-bit sign-extended load.
-def Sext64Ld : PatLeaf<(i64 DoubleRegs:$src1), [{
-  LoadSDNode *LD = dyn_cast<LoadSDNode>(N);
-  if (!LD)
-    return false;
-  return LD->getExtensionType() == ISD::SEXTLOAD &&
-         LD->getMemoryVT().getScalarType() == MVT::i32;
-}]>;
+def: Pat<(mul (Aext64 I32:$Rs), (Aext64 I32:$Rt)),
+         (M2_dpmpyuu_s0 I32:$Rs, I32:$Rt)>;
 
-def: Pat<(mul (Aext64 I32:$src1), (Aext64 I32:$src2)),
-         (M2_dpmpyuu_s0 IntRegs:$src1, IntRegs:$src2)>;
-
-def: Pat<(mul (Sext64 I32:$src1), (Sext64 I32:$src2)),
-         (M2_dpmpyss_s0 IntRegs:$src1, IntRegs:$src2)>;
-
-def: Pat<(mul Sext64Ld:$src1, Sext64Ld:$src2),
-         (M2_dpmpyss_s0 (LoReg DoubleRegs:$src1), (LoReg DoubleRegs:$src2))>;
+def: Pat<(mul Sext64:$Rs, Sext64:$Rt),
+         (M2_dpmpyss_s0 (LoReg Sext64:$Rs), (LoReg Sext64:$Rt))>;
 
 // Multiply and accumulate, use full result.
 // Rxx[+-]=mpy(Rs,Rt)
 
-def: Pat<(add I64:$src1, (mul (Sext64 I32:$src2), (Sext64 I32:$src3))),
-         (M2_dpmpyss_acc_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>;
+def: Pat<(add I64:$Rx, (mul Sext64:$Rs, Sext64:$Rt)),
+         (M2_dpmpyss_acc_s0 I64:$Rx, (LoReg Sext64:$Rs), (LoReg Sext64:$Rt))>;
 
-def: Pat<(sub I64:$src1, (mul (Sext64 I32:$src2), (Sext64 I32:$src3))),
-         (M2_dpmpyss_nac_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>;
+def: Pat<(sub I64:$Rx, (mul Sext64:$Rs, Sext64:$Rt)),
+         (M2_dpmpyss_nac_s0 I64:$Rx, (LoReg Sext64:$Rs), (LoReg Sext64:$Rt))>;
 
-def: Pat<(add I64:$src1, (mul (Aext64 I32:$src2), (Aext64 I32:$src3))),
-         (M2_dpmpyuu_acc_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>;
+def: Pat<(add I64:$Rx, (mul (Aext64 I32:$Rs), (Aext64 I32:$Rt))),
+         (M2_dpmpyuu_acc_s0 I64:$Rx, I32:$Rs, I32:$Rt)>;
 
-def: Pat<(add I64:$src1, (mul (Zext64 I32:$src2), (Zext64 I32:$src3))),
-         (M2_dpmpyuu_acc_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>;
+def: Pat<(add I64:$Rx, (mul (Zext64 I32:$Rs), (Zext64 I32:$Rt))),
+         (M2_dpmpyuu_acc_s0 I64:$Rx, I32:$Rs, I32:$Rt)>;
 
-def: Pat<(sub I64:$src1, (mul (Aext64 I32:$src2), (Aext64 I32:$src3))),
-         (M2_dpmpyuu_nac_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>;
+def: Pat<(sub I64:$Rx, (mul (Aext64 I32:$Rs), (Aext64 I32:$Rt))),
+         (M2_dpmpyuu_nac_s0 I64:$Rx, I32:$Rs, I32:$Rt)>;
 
-def: Pat<(sub I64:$src1, (mul (Zext64 I32:$src2), (Zext64 I32:$src3))),
-         (M2_dpmpyuu_nac_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>;
+def: Pat<(sub I64:$Rx, (mul (Zext64 I32:$Rs), (Zext64 I32:$Rt))),
+         (M2_dpmpyuu_nac_s0 I64:$Rx, I32:$Rs, I32:$Rt)>;
 
 class Storepi_pat<PatFrag Store, PatFrag Value, PatFrag Offset,
                   InstHexagon MI>
@@ -545,7 +539,8 @@ def: Storexm_simple_pat<truncstorei8,  I64, LoReg, S2_storerb_io>;
 def: Storexm_simple_pat<truncstorei16, I64, LoReg, S2_storerh_io>;
 def: Storexm_simple_pat<truncstorei32, I64, LoReg, S2_storeri_io>;
 
-def: Pat <(Sext64 I32:$src), (A2_sxtw I32:$src)>;
+def: Pat <(i64 (sext I32:$src)),            (A2_sxtw I32:$src)>;
+def: Pat <(i64 (sext_inreg I64:$src, i32)), (A2_sxtw (LoReg I64:$src))>;
 
 def: Pat<(select (i1 (setlt I32:$src, 0)), (sub 0, I32:$src), I32:$src),
          (A2_abs IntRegs:$src)>;
@@ -1159,8 +1154,8 @@ multiclass MinMax_pats_p<PatFrag Op, InstHexagon Inst, InstHexagon SwapInst> {
   defm: T_MinMax_pats<Op, I64, Inst, SwapInst>;
 }
 
-def: Pat<(add (Sext64 I32:$Rs), I64:$Rt),
-         (A2_addsp IntRegs:$Rs, DoubleRegs:$Rt)>;
+def: Pat<(add Sext64:$Rs, I64:$Rt),
+         (A2_addsp (LoReg Sext64:$Rs), DoubleRegs:$Rt)>;
 
 let AddedComplexity = 200 in {
   defm: MinMax_pats_p<setge,  A2_maxp,  A2_minp>;

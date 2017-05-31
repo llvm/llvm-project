@@ -58,7 +58,7 @@ public:
   Error visitKnownMember(CVMemberRecord &CVR, Name##Record &Record) override;
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "TypeRecords.def"
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
 
 private:
   void printMemberAttributes(MemberAttributes Attrs);

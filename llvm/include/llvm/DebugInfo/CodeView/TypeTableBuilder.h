@@ -13,8 +13,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
-#include "llvm/DebugInfo/CodeView/TypeSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeSerializer.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>

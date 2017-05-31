@@ -5382,11 +5382,6 @@ public:
     // ARM has atomics up to 8 bytes
     setAtomic();
 
-    if (Triple.getEnvironment() == llvm::Triple::Android)
-      MaxVectorAlign = 128; // don't break existing Android ABI
-    else
-      MaxVectorAlign = 64; // AAPCS
-
     // Do force alignment of members that follow zero length bitfields.  If
     // the alignment of the zero-length bitfield is greater than the member
     // that follows it, `bar', `bar' will be aligned as the  type of the

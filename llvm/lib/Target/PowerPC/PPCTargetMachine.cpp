@@ -296,7 +296,7 @@ namespace {
 /// PPC Code Generator Pass Configuration Options.
 class PPCPassConfig : public TargetPassConfig {
 public:
-  PPCPassConfig(PPCTargetMachine *TM, PassManagerBase &PM)
+  PPCPassConfig(PPCTargetMachine &TM, PassManagerBase &PM)
     : TargetPassConfig(TM, PM) {}
 
   PPCTargetMachine &getPPCTargetMachine() const {
@@ -316,7 +316,7 @@ public:
 } // end anonymous namespace
 
 TargetPassConfig *PPCTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new PPCPassConfig(this, PM);
+  return new PPCPassConfig(*this, PM);
 }
 
 void PPCPassConfig::addIRPasses() {

@@ -550,8 +550,6 @@ namespace {
 
   enum PreambleDirectiveKind {
     PDK_Skipped,
-    PDK_StartIf,
-    PDK_EndIf,
     PDK_Unknown
   };
 
@@ -574,8 +572,6 @@ std::pair<unsigned, bool> Lexer::ComputePreamble(StringRef Buffer,
 
   bool InPreprocessorDirective = false;
   Token TheTok;
-  Token IfStartTok;
-  unsigned IfCount = 0;
   SourceLocation ActiveCommentLoc;
 
   unsigned MaxLineOffset = 0;
@@ -658,33 +654,18 @@ std::pair<unsigned, bool> Lexer::ComputePreamble(StringRef Buffer,
               .Case("sccs", PDK_Skipped)
               .Case("assert", PDK_Skipped)
               .Case("unassert", PDK_Skipped)
-              .Case("if", PDK_StartIf)
-              .Case("ifdef", PDK_StartIf)
-              .Case("ifndef", PDK_StartIf)
+              .Case("if", PDK_Skipped)
+              .Case("ifdef", PDK_Skipped)
+              .Case("ifndef", PDK_Skipped)
               .Case("elif", PDK_Skipped)
               .Case("else", PDK_Skipped)
-              .Case("endif", PDK_EndIf)
+              .Case("endif", PDK_Skipped)
               .Default(PDK_Unknown);
 
         switch (PDK) {
         case PDK_Skipped:
           continue;
 
-        case PDK_StartIf:
-          if (IfCount == 0)
-            IfStartTok = HashTok;
-            
-          ++IfCount;
-          continue;
-            
-        case PDK_EndIf:
-          // Mismatched #endif. The preamble ends here.
-          if (IfCount == 0)
-            break;
-
-          --IfCount;
-          continue;
-            
         case PDK_Unknown:
           // We don't know what this directive is; stop at the '#'.
           break;
@@ -705,16 +686,13 @@ std::pair<unsigned, bool> Lexer::ComputePreamble(StringRef Buffer,
   } while (true);
   
   SourceLocation End;
-  if (IfCount)
-    End = IfStartTok.getLocation();
-  else if (ActiveCommentLoc.isValid())
+  if (ActiveCommentLoc.isValid())
     End = ActiveCommentLoc; // don't truncate a decl comment.
   else
     End = TheTok.getLocation();
 
   return std::make_pair(End.getRawEncoding() - StartLoc.getRawEncoding(),
-                        IfCount? IfStartTok.isAtStartOfLine()
-                               : TheTok.isAtStartOfLine());
+                        TheTok.isAtStartOfLine());
 }
 
 /// AdvanceToTokenCharacter - Given a location that specifies the start of a
@@ -2570,6 +2548,11 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
     return true;
   }
   
+  if (PP->isRecordingPreamble() && !PP->isInMainFile()) {
+    PP->setRecordedPreambleConditionalStack(ConditionalStack);
+    ConditionalStack.clear();
+  }
+
   // Issue diagnostics for unterminated #if and missing newline.
 
   // If we are in a #if directive, emit an error.

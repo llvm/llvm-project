@@ -27,7 +27,7 @@ entry:
 ; GCN: buffer_load_ushort v[[B_F16:[0-9]+]]
 ; GCN: buffer_load_ushort v[[C_F16:[0-9]+]]
 ; VI:  v_mov_b32_e32 v[[A_F16:[0-9]+]], 0x4200{{$}}
-; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[B_F16]], v[[A_F16]], v[[C_F16]]
+; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[A_F16]], v[[B_F16]], v[[C_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @div_fixup_f16_imm_a(
@@ -46,7 +46,7 @@ entry:
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; GCN: buffer_load_ushort v[[C_F16:[0-9]+]]
 ; VI:  v_mov_b32_e32 v[[B_F16:[0-9]+]], 0x4200{{$}}
-; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[B_F16]], v[[A_F16]], v[[C_F16]]
+; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[A_F16]], v[[B_F16]], v[[C_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @div_fixup_f16_imm_b(
@@ -65,7 +65,7 @@ entry:
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; GCN: buffer_load_ushort v[[B_F16:[0-9]+]]
 ; VI:  v_mov_b32_e32 v[[C_F16:[0-9]+]], 0x4200{{$}}
-; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[B_F16]], v[[A_F16]], v[[C_F16]]
+; VI:  v_div_fixup_f16 v[[R_F16:[0-9]+]], v[[A_F16]], v[[B_F16]], v[[C_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @div_fixup_f16_imm_c(

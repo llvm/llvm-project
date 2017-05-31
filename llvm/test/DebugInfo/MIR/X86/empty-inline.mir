@@ -73,7 +73,6 @@
 name:            _ZN1C5m_fn3Ev
 alignment:       4
 exposesReturnsTwice: false
-noVRegs:         true
 legalized:       false
 regBankSelected: false
 selected:        false

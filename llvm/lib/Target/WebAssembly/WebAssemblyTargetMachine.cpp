@@ -129,7 +129,7 @@ namespace {
 /// WebAssembly Code Generator Pass Configuration Options.
 class WebAssemblyPassConfig final : public TargetPassConfig {
 public:
-  WebAssemblyPassConfig(WebAssemblyTargetMachine *TM, PassManagerBase &PM)
+  WebAssemblyPassConfig(WebAssemblyTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM) {}
 
   WebAssemblyTargetMachine &getWebAssemblyTargetMachine() const {
@@ -154,7 +154,7 @@ TargetIRAnalysis WebAssemblyTargetMachine::getTargetIRAnalysis() {
 
 TargetPassConfig *
 WebAssemblyTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new WebAssemblyPassConfig(this, PM);
+  return new WebAssemblyPassConfig(*this, PM);
 }
 
 FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {

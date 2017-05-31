@@ -256,9 +256,9 @@ namespace {
 /// AArch64 Code Generator Pass Configuration Options.
 class AArch64PassConfig : public TargetPassConfig {
 public:
-  AArch64PassConfig(AArch64TargetMachine *TM, PassManagerBase &PM)
+  AArch64PassConfig(AArch64TargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM) {
-    if (TM->getOptLevel() != CodeGenOpt::None)
+    if (TM.getOptLevel() != CodeGenOpt::None)
       substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
   }
 
@@ -317,7 +317,7 @@ TargetIRAnalysis AArch64TargetMachine::getTargetIRAnalysis() {
 }
 
 TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new AArch64PassConfig(this, PM);
+  return new AArch64PassConfig(*this, PM);
 }
 
 void AArch64PassConfig::addIRPasses() {

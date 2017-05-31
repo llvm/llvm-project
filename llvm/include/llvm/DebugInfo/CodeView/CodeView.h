@@ -6,12 +6,18 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// Defines constants and basic types describing CodeView debug information.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_DEBUGINFO_CODEVIEW_CODEVIEW_H
 #define LLVM_DEBUGINFO_CODEVIEW_CODEVIEW_H
 
 #include <cinttypes>
 #include <type_traits>
+
+#include "llvm/Support/Endian.h"
 
 namespace llvm {
 namespace codeview {
@@ -20,28 +26,28 @@ namespace codeview {
 /// documentation and headers talk about this as the "leaf" type.
 enum class TypeRecordKind : uint16_t {
 #define TYPE_RECORD(lf_ename, value, name) name = value,
-#include "TypeRecords.def"
+#include "CodeViewTypes.def"
 };
 
 /// Duplicate copy of the above enum, but using the official CV names. Useful
 /// for reference purposes and when dealing with unknown record types.
 enum TypeLeafKind : uint16_t {
 #define CV_TYPE(name, val) name = val,
-#include "TypeRecords.def"
+#include "CodeViewTypes.def"
 };
 
 /// Distinguishes individual records in the Symbols subsection of a .debug$S
 /// section. Equivalent to SYM_ENUM_e in cvinfo.h.
 enum class SymbolRecordKind : uint16_t {
 #define SYMBOL_RECORD(lf_ename, value, name) name = value,
-#include "CVSymbolTypes.def"
+#include "CodeViewSymbols.def"
 };
 
 /// Duplicate copy of the above enum, but using the official CV names. Useful
 /// for reference purposes and when dealing with unknown record types.
 enum SymbolKind : uint16_t {
 #define CV_SYMBOL(name, val) name = val,
-#include "CVSymbolTypes.def"
+#include "CodeViewSymbols.def"
 };
 
 #define CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(Class)                            \
@@ -278,7 +284,7 @@ CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(MethodOptions)
 /// Equivalent to CV_LABEL_TYPE_e.
 enum class LabelType : uint16_t {
   Near = 0x0,
-  Far  = 0x4,
+  Far = 0x4,
 };
 
 /// Equivalent to CV_modifier_t.
@@ -291,7 +297,7 @@ enum class ModifierOptions : uint16_t {
 };
 CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(ModifierOptions)
 
-enum class ModuleDebugFragmentKind : uint32_t {
+enum class DebugSubsectionKind : uint32_t {
   None = 0,
   Symbols = 0xf1,
   Lines = 0xf2,
@@ -549,6 +555,24 @@ enum class FileChecksumKind : uint8_t { None, MD5, SHA1, SHA256 };
 enum LineFlags : uint16_t {
   LF_None = 0,
   LF_HaveColumns = 1, // CV_LINES_HAVE_COLUMNS
+};
+
+/// Data in the the SUBSEC_FRAMEDATA subection.
+struct FrameData {
+  support::ulittle32_t RvaStart;
+  support::ulittle32_t CodeSize;
+  support::ulittle32_t LocalSize;
+  support::ulittle32_t ParamsSize;
+  support::ulittle32_t MaxStackSize;
+  support::ulittle32_t FrameFunc;
+  support::ulittle16_t PrologSize;
+  support::ulittle16_t SavedRegsSize;
+  support::ulittle32_t Flags;
+  enum : uint32_t {
+    HasSEH = 1 << 0,
+    HasEH = 1 << 1,
+    IsFunctionStart = 1 << 2,
+  };
 };
 }
 }

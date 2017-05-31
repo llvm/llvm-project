@@ -54,8 +54,8 @@ define amdgpu_kernel void @test_sgpr_use_twice_ternary_op_a_a_b(float addrspace(
 ; VI: buffer_load_dword [[VA0:v[0-9]+]]
 ; VI: buffer_load_dword [[VA1:v[0-9]+]]
 
-; GCN-DAG: v_fma_f32 [[RESULT0:v[0-9]+]], [[VA0]], [[SA]], [[VB]]
-; GCN-DAG: v_fma_f32 [[RESULT1:v[0-9]+]], [[VA1]], [[SA]], [[VB]]
+; GCN-DAG: v_fma_f32 [[RESULT0:v[0-9]+]], [[SA]], [[VA0]], [[VB]]
+; GCN-DAG: v_fma_f32 [[RESULT1:v[0-9]+]], [[SA]], [[VA1]], [[VB]]
 ; GCN: buffer_store_dword [[RESULT0]]
 ; GCN: buffer_store_dword [[RESULT1]]
 define amdgpu_kernel void @test_use_s_v_s(float addrspace(1)* %out, float %a, float %b, float addrspace(1)* %in) #0 {
@@ -74,7 +74,7 @@ define amdgpu_kernel void @test_use_s_v_s(float addrspace(1)* %out, float %a, fl
 ; VI-DAG: s_load_dword [[SGPR0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
 ; VI-DAG: s_load_dword [[SGPR1:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x30
 ; GCN: v_mov_b32_e32 [[VGPR1:v[0-9]+]], [[SGPR1]]
-; GCN: v_fma_f32 [[RESULT:v[0-9]+]], [[VGPR1]], [[SGPR0]], [[SGPR0]]
+; GCN: v_fma_f32 [[RESULT:v[0-9]+]], [[SGPR0]], [[VGPR1]], [[SGPR0]]
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @test_sgpr_use_twice_ternary_op_a_b_a(float addrspace(1)* %out, float %a, float %b) #0 {
   %fma = call float @llvm.fma.f32(float %a, float %b, float %a) #1
@@ -88,7 +88,7 @@ define amdgpu_kernel void @test_sgpr_use_twice_ternary_op_a_b_a(float addrspace(
 ; VI-DAG: s_load_dword [[SGPR0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
 ; VI-DAG: s_load_dword [[SGPR1:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x30
 ; GCN: v_mov_b32_e32 [[VGPR1:v[0-9]+]], [[SGPR1]]
-; GCN: v_fma_f32 [[RESULT:v[0-9]+]], [[SGPR0]], [[VGPR1]], [[SGPR0]]
+; GCN: v_fma_f32 [[RESULT:v[0-9]+]], [[VGPR1]], [[SGPR0]], [[SGPR0]]
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @test_sgpr_use_twice_ternary_op_b_a_a(float addrspace(1)* %out, float %a, float %b) #0 {
   %fma = call float @llvm.fma.f32(float %b, float %a, float %a) #1
@@ -228,7 +228,7 @@ define amdgpu_kernel void @test_literal_use_twice_ternary_op_s_k_k_x2(float addr
 ; GCN-DAG: v_mov_b32_e32 [[VK0:v[0-9]+]], 0x44800000
 ; GCN-DAG: v_mov_b32_e32 [[VS1:v[0-9]+]], [[SGPR1]]
 
-; GCN-DAG: v_fma_f32 [[RESULT0:v[0-9]+]], [[VS1]], [[SGPR0]], [[VK0]]
+; GCN-DAG: v_fma_f32 [[RESULT0:v[0-9]+]], [[SGPR0]], [[VS1]], [[VK0]]
 ; GCN-DAG: v_mov_b32_e32 [[VK1:v[0-9]+]], 0x45800000
 ; GCN-DAG: v_fma_f32 [[RESULT1:v[0-9]+]], [[SGPR0]], [[VS1]], [[VK1]]
 
@@ -251,7 +251,7 @@ define amdgpu_kernel void @test_s0_s1_k_f32(float addrspace(1)* %out, float %a, 
 
 ; GCN-DAG: v_mov_b32_e32 v[[VS1_SUB0:[0-9]+]], s[[SGPR1_SUB0]]
 ; GCN-DAG: v_mov_b32_e32 v[[VS1_SUB1:[0-9]+]], s[[SGPR1_SUB1]]
-; GCN: v_fma_f64 [[RESULT0:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[VS1_SUB0]]:[[VS1_SUB1]]{{\]}}, [[SGPR0]], v{{\[}}[[VZERO]]:[[VK0_SUB1]]{{\]}}
+; GCN: v_fma_f64 [[RESULT0:v\[[0-9]+:[0-9]+\]]], [[SGPR0]], v{{\[}}[[VS1_SUB0]]:[[VS1_SUB1]]{{\]}}, v{{\[}}[[VZERO]]:[[VK0_SUB1]]{{\]}}
 
 ; Same zero component is re-used for half of each immediate.
 ; GCN: v_mov_b32_e32 v[[VK1_SUB1:[0-9]+]], 0x40b00000

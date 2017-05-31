@@ -43,8 +43,8 @@ public:
   LSPDiagnosticsConsumer(ClangdLSPServer &Server) : Server(Server) {}
 
   virtual void onDiagnosticsReady(PathRef File,
-                                  std::vector<DiagWithFixIts> Diagnostics) {
-    Server.consumeDiagnostics(File, Diagnostics);
+                                  Tagged<std::vector<DiagWithFixIts>> Diagnostics) {
+    Server.consumeDiagnostics(File, Diagnostics.Value);
   }
 
 private:
@@ -181,7 +181,7 @@ void ClangdLSPServer::LSPProtocolCallbacks::onCompletion(
 
   auto Items = LangServer.Server.codeComplete(
       Params.textDocument.uri.file,
-      Position{Params.position.line, Params.position.character});
+      Position{Params.position.line, Params.position.character}).Value;
 
   std::string Completions;
   for (const auto &Item : Items) {

@@ -670,7 +670,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSINCOS,   VT, Expand);
     setOperationAction(ISD::FCOS,      VT, Expand);
     setOperationAction(ISD::FREM,      VT, Expand);
-    setOperationAction(ISD::FPOWI,     VT, Expand);
     setOperationAction(ISD::FCOPYSIGN, VT, Expand);
     setOperationAction(ISD::FPOW,      VT, Expand);
     setOperationAction(ISD::FLOG,      VT, Expand);

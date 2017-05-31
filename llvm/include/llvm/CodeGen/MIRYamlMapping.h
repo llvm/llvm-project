@@ -381,7 +381,6 @@ struct MachineFunction {
   StringRef Name;
   unsigned Alignment = 0;
   bool ExposesReturnsTwice = false;
-  bool NoVRegs;
   // GISel MachineFunctionProperties.
   bool Legalized = false;
   bool RegBankSelected = false;
@@ -406,7 +405,6 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapRequired("name", MF.Name);
     YamlIO.mapOptional("alignment", MF.Alignment);
     YamlIO.mapOptional("exposesReturnsTwice", MF.ExposesReturnsTwice);
-    YamlIO.mapOptional("noVRegs", MF.NoVRegs);
     YamlIO.mapOptional("legalized", MF.Legalized);
     YamlIO.mapOptional("regBankSelected", MF.RegBankSelected);
     YamlIO.mapOptional("selected", MF.Selected);

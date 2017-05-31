@@ -216,7 +216,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// Opens a subsection of the given kind in a .debug$S codeview section.
   /// Returns an end label for use with endCVSubsection when the subsection is
   /// finished.
-  MCSymbol *beginCVSubsection(codeview::ModuleDebugFragmentKind Kind);
+  MCSymbol *beginCVSubsection(codeview::DebugSubsectionKind Kind);
 
   void endCVSubsection(MCSymbol *EndLabel);
 

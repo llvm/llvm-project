@@ -26,7 +26,7 @@ using namespace llvm::codeview;
 
 static const EnumEntry<TypeLeafKind> LeafTypeNames[] = {
 #define CV_TYPE(enum, val) {#enum, enum},
-#include "llvm/DebugInfo/CodeView/TypeRecords.def"
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
 };
 
 #define ENUM_ENTRY(enum_class, enum)                                           \
@@ -155,7 +155,7 @@ static StringRef getLeafTypeName(TypeLeafKind LT) {
 #define TYPE_RECORD(ename, value, name)                                        \
   case ename:                                                                  \
     return #name;
-#include "llvm/DebugInfo/CodeView/TypeRecords.def"
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
   default:
     break;
   }

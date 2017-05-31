@@ -35,8 +35,6 @@ protected:
 
 public:
   SymbolRecordKind getKind() const { return Kind; }
-
-private:
   SymbolRecordKind Kind;
 };
 

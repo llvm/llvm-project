@@ -98,12 +98,10 @@ bool Localizer::runOnMachineFunction(MachineFunction &MF) {
           // Create the localized instruction.
           MachineInstr *LocalizedMI = MF.CloneMachineInstr(&MI);
           LocalizedInstrs.insert(LocalizedMI);
-          // Move it at the right place.
-          MachineInstr &MIUse = *MOUse.getParent();
-          if (MIUse.getParent() == InsertMBB)
-            InsertMBB->insert(MIUse, LocalizedMI);
-          else
-            InsertMBB->insert(InsertMBB->getFirstNonPHI(), LocalizedMI);
+          // Don't try to be smart for the insertion point.
+          // There is no guarantee that the first seen use is the first
+          // use in the block.
+          InsertMBB->insert(InsertMBB->getFirstNonPHI(), LocalizedMI);
 
           // Set a new register for the definition.
           unsigned NewReg =

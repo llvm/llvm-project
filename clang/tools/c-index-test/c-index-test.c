@@ -1742,6 +1742,8 @@ int perform_test_load_source(int argc, const char **argv,
       return -1;
 
     if (Repeats > 1) {
+      clang_suspendTranslationUnit(TU);
+
       Err = clang_reparseTranslationUnit(TU, num_unsaved_files, unsaved_files,
                                          clang_defaultReparseOptions(TU));
       if (Err != CXError_Success) {

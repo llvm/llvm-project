@@ -18,7 +18,7 @@ using namespace llvm::pdb;
 
 static const EnumEntry<TypeLeafKind> LeafTypeNames[] = {
 #define CV_TYPE(enum, val) {#enum, enum},
-#include "llvm/DebugInfo/CodeView/TypeRecords.def"
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
 };
 
 static StringRef getLeafName(TypeLeafKind K) {

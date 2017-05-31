@@ -201,7 +201,7 @@ namespace {
 /// Mips Code Generator Pass Configuration Options.
 class MipsPassConfig : public TargetPassConfig {
 public:
-  MipsPassConfig(MipsTargetMachine *TM, PassManagerBase &PM)
+  MipsPassConfig(MipsTargetMachine &TM, PassManagerBase &PM)
     : TargetPassConfig(TM, PM) {
     // The current implementation of long branch pass requires a scratch
     // register ($at) to be available before branch instructions. Tail merging
@@ -227,7 +227,7 @@ public:
 } // end anonymous namespace
 
 TargetPassConfig *MipsTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new MipsPassConfig(this, PM);
+  return new MipsPassConfig(*this, PM);
 }
 
 void MipsPassConfig::addIRPasses() {

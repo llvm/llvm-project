@@ -41,6 +41,7 @@ public:
   TypeDeserializer() = default;
 
   template <typename T> static Error deserializeAs(CVType &CVT, T &Record) {
+    Record.Kind = static_cast<TypeRecordKind>(CVT.kind());
     MappingInfo I(CVT.content());
     if (auto EC = I.Mapping.visitTypeBegin(CVT))
       return EC;
@@ -75,7 +76,7 @@ public:
 #define MEMBER_RECORD(EnumName, EnumVal, Name)
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "TypeRecords.def"
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
 
 private:
   template <typename RecordType>
@@ -127,7 +128,7 @@ public:
   }
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "TypeRecords.def"
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
 
 private:
   template <typename RecordType>

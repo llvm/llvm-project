@@ -10,7 +10,7 @@ declare i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
 ; GCN-LABEL: {{^}}get_global_id_0:
 ; GCN: s_and_b32 [[WGSIZEX:s[0-9]+]], {{s[0-9]+}}, 0xffff
 ; GCN: v_mov_b32_e32 [[VWGSIZEX:v[0-9]+]], [[WGSIZEX]]
-; GCN: v_mad_u32_u24 v{{[0-9]+}}, [[VWGSIZEX]], s8, v0
+; GCN: v_mad_u32_u24 v{{[0-9]+}}, s8, [[VWGSIZEX]], v0
 define amdgpu_kernel void @get_global_id_0(i32 addrspace(1)* %out) #1 {
   %dispatch.ptr = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
   %cast.dispatch.ptr = bitcast i8 addrspace(2)* %dispatch.ptr to i32 addrspace(2)*

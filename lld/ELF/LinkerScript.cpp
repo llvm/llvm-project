@@ -291,11 +291,13 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
     size_t SizeBefore = Ret.size();
 
     for (InputSectionBase *Sec : InputSections) {
-      if (!isa<InputSection>(Sec))
-        continue;
-
       if (Sec->Assigned)
         continue;
+
+      if (!Sec->Live) {
+        reportDiscarded(Sec);
+        continue;
+      }
 
       // For -emit-relocs we have to ignore entries like
       //   .rela.dyn : { *(.rela.data) }
@@ -590,7 +592,7 @@ void LinkerScript::process(BaseCommand &Base) {
   // It calculates and assigns the offsets for each section and also
   // updates the output section size.
   auto &Cmd = cast<InputSectionDescription>(Base);
-  for (InputSectionBase *Sec : Cmd.Sections) {
+  for (InputSection *Sec : Cmd.Sections) {
     // We tentatively added all synthetic sections at the beginning and removed
     // empty ones afterwards (because there is no way to know whether they were
     // going be empty or not other than actually running linker scripts.)
@@ -602,7 +604,7 @@ void LinkerScript::process(BaseCommand &Base) {
     if (!Sec->Live)
       continue;
     assert(CurOutSec == Sec->OutSec);
-    output(cast<InputSection>(Sec));
+    output(Sec);
   }
 }
 

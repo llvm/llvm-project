@@ -878,6 +878,11 @@ public:
                ArrayRef<RemappedFile> RemappedFiles = None,
                IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr);
 
+  /// \brief Free data that will be re-generated on the next parse.
+  ///
+  /// Preamble-related data is not affected.
+  void ResetForParse();
+
   /// \brief Perform code completion at the given file, line, and
   /// column within this translation unit.
   ///

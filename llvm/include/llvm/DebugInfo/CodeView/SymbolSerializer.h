@@ -45,6 +45,17 @@ class SymbolSerializer : public SymbolVisitorCallbacks {
   }
 
 public:
+  template <typename SymType>
+  static CVSymbol writeOneSymbol(SymType &Sym, BumpPtrAllocator &Storage) {
+    CVSymbol Result;
+    Result.Type = static_cast<SymbolKind>(Sym.Kind);
+    SymbolSerializer Serializer(Storage);
+    consumeError(Serializer.visitSymbolBegin(Result));
+    consumeError(Serializer.visitKnownRecord(Result, Sym));
+    consumeError(Serializer.visitSymbolEnd(Result));
+    return Result;
+  }
+
   explicit SymbolSerializer(BumpPtrAllocator &Storage);
 
   virtual Error visitSymbolBegin(CVSymbol &Record) override;
@@ -55,7 +66,7 @@ public:
     return visitKnownRecordImpl(CVR, Record);                                  \
   }
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
-#include "CVSymbolTypes.def"
+#include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
 
 private:
   template <typename RecordKind>
