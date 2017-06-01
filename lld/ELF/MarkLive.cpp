@@ -220,7 +220,8 @@ template <class ELFT> void elf::markLive() {
 
   auto MarkSymbol = [&](const SymbolBody *Sym) {
     if (auto *D = dyn_cast_or_null<DefinedRegular>(Sym))
-      Enqueue({cast<InputSectionBase>(D->Section), D->Value});
+      if (auto *IS = cast_or_null<InputSectionBase>(D->Section))
+        Enqueue({IS, D->Value});
   };
 
   // Add GC root symbols.

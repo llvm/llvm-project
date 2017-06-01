@@ -595,7 +595,10 @@ void BlockGenerator::generateConditionalExecution(
 
   // If the condition is a tautology, don't generate a condition around the
   // code.
-  if (StmtDom.is_subset(Subdomain)) {
+  bool IsPartialWrite =
+      !StmtDom.intersect_params(give(Stmt.getParent()->getContext()))
+           .is_subset(Subdomain);
+  if (!IsPartialWrite) {
     GenThenFunc();
     return;
   }
