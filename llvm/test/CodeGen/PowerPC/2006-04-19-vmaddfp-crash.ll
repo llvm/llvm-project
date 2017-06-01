@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 -mcpu=g5
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5
 ; END.
 
 define void @test(i8* %stack) {

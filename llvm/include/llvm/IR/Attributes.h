@@ -18,8 +18,10 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include "llvm-c/Types.h"
 #include <bitset>
 #include <cassert>
 #include <map>
@@ -33,6 +35,7 @@ class AttributeSetImpl;
 class AttributeSetNode;
 class Constant;
 template<typename T> struct DenseMapInfo;
+class Function;
 class LLVMContext;
 class Type;
 
@@ -64,61 +67,8 @@ public:
   enum AttrKind {
     // IR-Level Attributes
     None,                  ///< No attributes have been set
-    Alignment,             ///< Alignment of parameter (5 bits)
-                           ///< stored as log2 of alignment with +1 bias
-                           ///< 0 means unaligned (different from align(1))
-    AlwaysInline,          ///< inline=always
-    Builtin,               ///< Callee is recognized as a builtin, despite
-                           ///< nobuiltin attribute on its declaration.
-    ByVal,                 ///< Pass structure by value
-    InAlloca,              ///< Pass structure in an alloca
-    Cold,                  ///< Marks function as being in a cold path.
-    Convergent,            ///< Can only be moved to control-equivalent blocks
-    InlineHint,            ///< Source said inlining was desirable
-    InReg,                 ///< Force argument to be passed in register
-    JumpTable,             ///< Build jump-instruction tables and replace refs.
-    MinSize,               ///< Function must be optimized for size first
-    Naked,                 ///< Naked function
-    Nest,                  ///< Nested function static chain
-    NoAlias,               ///< Considered to not alias after call
-    NoBuiltin,             ///< Callee isn't recognized as a builtin
-    NoCapture,             ///< Function creates no aliases of pointer
-    NoDuplicate,           ///< Call cannot be duplicated
-    NoImplicitFloat,       ///< Disable implicit floating point insts
-    NoInline,              ///< inline=never
-    NoRecurse,             ///< The function does not recurse
-    NonLazyBind,           ///< Function is called early and/or
-                           ///< often, so lazy binding isn't worthwhile
-    NonNull,               ///< Pointer is known to be not null
-    Dereferenceable,       ///< Pointer is known to be dereferenceable
-    DereferenceableOrNull, ///< Pointer is either null or dereferenceable
-    NoRedZone,             ///< Disable redzone
-    NoReturn,              ///< Mark the function as not returning
-    NoUnwind,              ///< Function doesn't unwind stack
-    OptimizeForSize,       ///< opt_size
-    OptimizeNone,          ///< Function must not be optimized.
-    ReadNone,              ///< Function does not access memory
-    ReadOnly,              ///< Function only reads from memory
-    ArgMemOnly,            ///< Funciton can access memory only using pointers
-                           ///< based on its arguments.
-    Returned,              ///< Return value is always equal to this argument
-    ReturnsTwice,          ///< Function can return twice
-    SExt,                  ///< Sign extended before/after call
-    StackAlignment,        ///< Alignment of stack for function (3 bits)
-                           ///< stored as log2 of alignment with +1 bias 0
-                           ///< means unaligned (different from
-                           ///< alignstack=(1))
-    StackProtect,          ///< Stack protection.
-    StackProtectReq,       ///< Stack protection required.
-    StackProtectStrong,    ///< Strong Stack protection.
-    SafeStack,             ///< Safe Stack protection.
-    StructRet,             ///< Hidden pointer to structure to return
-    SanitizeAddress,       ///< AddressSanitizer is on.
-    SanitizeThread,        ///< ThreadSanitizer is on.
-    SanitizeMemory,        ///< MemorySanitizer is on.
-    UWTable,               ///< Function must be in a unwind table
-    ZExt,                  ///< Zero extended before/after call
-
+    #define GET_ATTR_ENUM
+    #include "llvm/IR/Attributes.gen"
     EndAttrKinds           ///< Sentinal value useful for loops
   };
 
@@ -146,6 +96,9 @@ public:
                                               uint64_t Bytes);
   static Attribute getWithDereferenceableOrNullBytes(LLVMContext &Context,
                                                      uint64_t Bytes);
+  static Attribute getWithAllocSizeArgs(LLVMContext &Context,
+                                        unsigned ElemSizeArg,
+                                        const Optional<unsigned> &NumElemsArg);
 
   //===--------------------------------------------------------------------===//
   // Attribute Accessors
@@ -168,11 +121,11 @@ public:
   bool hasAttribute(StringRef Val) const;
 
   /// \brief Return the attribute's kind as an enum (Attribute::AttrKind). This
-  /// requires the attribute to be an enum or alignment attribute.
+  /// requires the attribute to be an enum or integer attribute.
   Attribute::AttrKind getKindAsEnum() const;
 
   /// \brief Return the attribute's value as an integer. This requires that the
-  /// attribute be an alignment attribute.
+  /// attribute be an integer attribute.
   uint64_t getValueAsInt() const;
 
   /// \brief Return the attribute's kind as a string. This requires the
@@ -192,12 +145,16 @@ public:
   unsigned getStackAlignment() const;
 
   /// \brief Returns the number of dereferenceable bytes from the
-  /// dereferenceable attribute (or zero if unknown).
+  /// dereferenceable attribute.
   uint64_t getDereferenceableBytes() const;
 
   /// \brief Returns the number of dereferenceable_or_null bytes from the
-  /// dereferenceable_or_null attribute (or zero if unknown).
+  /// dereferenceable_or_null attribute.
   uint64_t getDereferenceableOrNullBytes() const;
+
+  /// Returns the argument numbers for the allocsize attribute (or pair(0, 0)
+  /// if not known).
+  std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
 
   /// \brief The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -213,7 +170,27 @@ public:
   void Profile(FoldingSetNodeID &ID) const {
     ID.AddPointer(pImpl);
   }
+
+  /// \brief Return a raw pointer that uniquely identifies this attribute.
+  void *getRawPointer() const {
+    return pImpl;
+  }
+
+  /// \brief Get an attribute from a raw pointer created by getRawPointer.
+  static Attribute fromRawPointer(void *RawPtr) {
+    return Attribute(reinterpret_cast<AttributeImpl*>(RawPtr));
+  }
 };
+
+// Specialized opaque value conversions.
+inline LLVMAttributeRef wrap(Attribute Attr) {
+  return reinterpret_cast<LLVMAttributeRef>(Attr.getRawPointer());
+}
+
+// Specialized opaque value conversions.
+inline Attribute unwrap(LLVMAttributeRef Attr) {
+  return Attribute::fromRawPointer(Attr);
+}
 
 //===----------------------------------------------------------------------===//
 /// \class
@@ -233,6 +210,7 @@ public:
 private:
   friend class AttrBuilder;
   friend class AttributeSetImpl;
+  friend class AttributeSetNode;
   template <typename Ty> friend struct DenseMapInfo;
 
   /// \brief The attributes that we are managing. This can be null to represent
@@ -265,20 +243,25 @@ public:
   /// \brief Return an AttributeSet with the specified parameters in it.
   static AttributeSet get(LLVMContext &C, ArrayRef<AttributeSet> Attrs);
   static AttributeSet get(LLVMContext &C, unsigned Index,
-                          ArrayRef<Attribute::AttrKind> Kind);
+                          ArrayRef<Attribute::AttrKind> Kinds);
+  static AttributeSet get(LLVMContext &C, unsigned Index,
+                          ArrayRef<StringRef> Kind);
   static AttributeSet get(LLVMContext &C, unsigned Index, const AttrBuilder &B);
 
   /// \brief Add an attribute to the attribute set at the given index. Because
   /// attribute sets are immutable, this returns a new set.
   AttributeSet addAttribute(LLVMContext &C, unsigned Index,
-                            Attribute::AttrKind Attr) const;
+                            Attribute::AttrKind Kind) const;
 
   /// \brief Add an attribute to the attribute set at the given index. Because
   /// attribute sets are immutable, this returns a new set.
-  AttributeSet addAttribute(LLVMContext &C, unsigned Index,
-                            StringRef Kind) const;
-  AttributeSet addAttribute(LLVMContext &C, unsigned Index,
-                            StringRef Kind, StringRef Value) const;
+  AttributeSet addAttribute(LLVMContext &C, unsigned Index, StringRef Kind,
+                            StringRef Value = StringRef()) const;
+
+  /// Add an attribute to the attribute set at the given indices. Because
+  /// attribute sets are immutable, this returns a new set.
+  AttributeSet addAttribute(LLVMContext &C, ArrayRef<unsigned> Indices,
+                            Attribute A) const;
 
   /// \brief Add attributes to the attribute set at the given index. Because
   /// attribute sets are immutable, this returns a new set.
@@ -289,7 +272,13 @@ public:
   /// attribute list. Because attribute lists are immutable, this returns the
   /// new list.
   AttributeSet removeAttribute(LLVMContext &C, unsigned Index,
-                               Attribute::AttrKind Attr) const;
+                               Attribute::AttrKind Kind) const;
+
+  /// \brief Remove the specified attribute at the specified index from this
+  /// attribute list. Because attribute lists are immutable, this returns the
+  /// new list.
+  AttributeSet removeAttribute(LLVMContext &C, unsigned Index,
+                               StringRef Kind) const;
 
   /// \brief Remove the specified attributes at the specified index from this
   /// attribute list. Because attribute lists are immutable, this returns the
@@ -313,6 +302,12 @@ public:
   /// set.
   AttributeSet addDereferenceableOrNullAttr(LLVMContext &C, unsigned Index,
                                             uint64_t Bytes) const;
+
+  /// Add the allocsize attribute to the attribute set at the given index.
+  /// Because attribute sets are immutable, this returns a new set.
+  AttributeSet addAllocSizeAttr(LLVMContext &C, unsigned Index,
+                                unsigned ElemSizeArg,
+                                const Optional<unsigned> &NumElemsArg);
 
   //===--------------------------------------------------------------------===//
   // AttributeSet Accessors
@@ -339,9 +334,19 @@ public:
   /// \brief Return true if attribute exists at the given index.
   bool hasAttributes(unsigned Index) const;
 
+  /// \brief Equivalent to hasAttribute(AttributeSet::FunctionIndex, Kind) but
+  /// may be faster.
+  bool hasFnAttribute(Attribute::AttrKind Kind) const;
+
+  /// \brief Equivalent to hasAttribute(AttributeSet::FunctionIndex, Kind) but
+  /// may be faster.
+  bool hasFnAttribute(StringRef Kind) const;
+
   /// \brief Return true if the specified attribute is set for at least one
-  /// parameter or for the return value.
-  bool hasAttrSomewhere(Attribute::AttrKind Attr) const;
+  /// parameter or for the return value. If Index is not nullptr, the index
+  /// of a parameter with the specified attribute is provided.
+  bool hasAttrSomewhere(Attribute::AttrKind Kind,
+                        unsigned *Index = nullptr) const;
 
   /// \brief Return the attribute object that exists at the given index.
   Attribute getAttribute(unsigned Index, Attribute::AttrKind Kind) const;
@@ -362,6 +367,10 @@ public:
   /// unknown).
   uint64_t getDereferenceableOrNullBytes(unsigned Index) const;
 
+  /// Get the allocsize argument numbers (or pair(0, 0) if unknown).
+  std::pair<unsigned, Optional<unsigned>>
+  getAllocSizeArgs(unsigned Index) const;
+
   /// \brief Return the attributes at the index as a string.
   std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
 
@@ -381,9 +390,6 @@ public:
   //===--------------------------------------------------------------------===//
   // AttributeSet Introspection
   //===--------------------------------------------------------------------===//
-
-  // FIXME: Remove this.
-  uint64_t Raw(unsigned Index) const;
 
   /// \brief Return a raw pointer that uniquely identifies this attribute list.
   void *getRawPointer() const {
@@ -443,19 +449,15 @@ class AttrBuilder {
   uint64_t StackAlignment;
   uint64_t DerefBytes;
   uint64_t DerefOrNullBytes;
+  uint64_t AllocSizeArgs;
 
 public:
   AttrBuilder()
       : Attrs(0), Alignment(0), StackAlignment(0), DerefBytes(0),
-        DerefOrNullBytes(0) {}
-  explicit AttrBuilder(uint64_t Val)
-      : Attrs(0), Alignment(0), StackAlignment(0), DerefBytes(0),
-        DerefOrNullBytes(0) {
-    addRawValue(Val);
-  }
+        DerefOrNullBytes(0), AllocSizeArgs(0) {}
   AttrBuilder(const Attribute &A)
       : Attrs(0), Alignment(0), StackAlignment(0), DerefBytes(0),
-        DerefOrNullBytes(0) {
+        DerefOrNullBytes(0), AllocSizeArgs(0) {
     addAttribute(A);
   }
   AttrBuilder(AttributeSet AS, unsigned Idx);
@@ -524,6 +526,10 @@ public:
   /// dereferenceable_or_null attribute exists (zero is returned otherwise).
   uint64_t getDereferenceableOrNullBytes() const { return DerefOrNullBytes; }
 
+  /// Retrieve the allocsize args, if the allocsize attribute exists.  If it
+  /// doesn't exist, pair(0, 0) is returned.
+  std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
+
   /// \brief This turns an int alignment (which must be a power of 2) into the
   /// form used internally in Attribute.
   AttrBuilder &addAlignmentAttr(unsigned Align);
@@ -539,6 +545,14 @@ public:
   /// \brief This turns the number of dereferenceable_or_null bytes into the
   /// form used internally in Attribute.
   AttrBuilder &addDereferenceableOrNullAttr(uint64_t Bytes);
+
+  /// This turns one (or two) ints into the form used internally in Attribute.
+  AttrBuilder &addAllocSizeAttr(unsigned ElemSizeArg,
+                                const Optional<unsigned> &NumElemsArg);
+
+  /// Add an allocsize attribute, using the representation returned by
+  /// Attribute.getIntValue().
+  AttrBuilder &addAllocSizeAttrFromRawRepr(uint64_t RawAllocSizeRepr);
 
   /// \brief Return true if the builder contains no target-independent
   /// attributes.
@@ -568,17 +582,19 @@ public:
   bool operator!=(const AttrBuilder &B) {
     return !(*this == B);
   }
-
-  // FIXME: Remove this in 4.0.
-
-  /// \brief Add the raw value to the internal representation.
-  AttrBuilder &addRawValue(uint64_t Val);
 };
 
 namespace AttributeFuncs {
 
 /// \brief Which attributes cannot be applied to a type.
 AttrBuilder typeIncompatible(Type *Ty);
+
+/// \returns Return true if the two functions have compatible target-independent
+/// attributes for inlining purposes.
+bool areInlineCompatible(const Function &Caller, const Function &Callee);
+
+/// \brief Merge caller's and callee's attributes.
+void mergeAttributesForInlining(Function &Caller, const Function &Callee);
 
 } // end AttributeFuncs namespace
 

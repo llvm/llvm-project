@@ -11,15 +11,15 @@
 
 #include "llvm-pdbdump.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Regex.h"
 
 #include <algorithm>
 
-namespace {
-template <class T, class Pred> bool any_of_range(T &&R, Pred P) {
-  return std::any_of(R.begin(), R.end(), P);
-}
+using namespace llvm;
+using namespace llvm::pdb;
 
+namespace {
 bool IsItemExcluded(llvm::StringRef Item,
                     std::list<llvm::Regex> &IncludeFilters,
                     std::list<llvm::Regex> &ExcludeFilters) {
@@ -30,10 +30,10 @@ bool IsItemExcluded(llvm::StringRef Item,
 
   // Include takes priority over exclude.  If the user specified include
   // filters, and none of them include this item, them item is gone.
-  if (!IncludeFilters.empty() && !any_of_range(IncludeFilters, match_pred))
+  if (!IncludeFilters.empty() && !any_of(IncludeFilters, match_pred))
     return true;
 
-  if (any_of_range(ExcludeFilters, match_pred))
+  if (any_of(ExcludeFilters, match_pred))
     return true;
 
   return false;
@@ -44,19 +44,19 @@ using namespace llvm;
 
 LinePrinter::LinePrinter(int Indent, llvm::raw_ostream &Stream)
     : OS(Stream), IndentSpaces(Indent), CurrentIndent(0) {
-  SetFilters(ExcludeTypeFilters, opts::ExcludeTypes.begin(),
-             opts::ExcludeTypes.end());
-  SetFilters(ExcludeSymbolFilters, opts::ExcludeSymbols.begin(),
-             opts::ExcludeSymbols.end());
-  SetFilters(ExcludeCompilandFilters, opts::ExcludeCompilands.begin(),
-             opts::ExcludeCompilands.end());
+  SetFilters(ExcludeTypeFilters, opts::pretty::ExcludeTypes.begin(),
+             opts::pretty::ExcludeTypes.end());
+  SetFilters(ExcludeSymbolFilters, opts::pretty::ExcludeSymbols.begin(),
+             opts::pretty::ExcludeSymbols.end());
+  SetFilters(ExcludeCompilandFilters, opts::pretty::ExcludeCompilands.begin(),
+             opts::pretty::ExcludeCompilands.end());
 
-  SetFilters(IncludeTypeFilters, opts::IncludeTypes.begin(),
-             opts::IncludeTypes.end());
-  SetFilters(IncludeSymbolFilters, opts::IncludeSymbols.begin(),
-             opts::IncludeSymbols.end());
-  SetFilters(IncludeCompilandFilters, opts::IncludeCompilands.begin(),
-             opts::IncludeCompilands.end());
+  SetFilters(IncludeTypeFilters, opts::pretty::IncludeTypes.begin(),
+             opts::pretty::IncludeTypes.end());
+  SetFilters(IncludeSymbolFilters, opts::pretty::IncludeSymbols.begin(),
+             opts::pretty::IncludeSymbols.end());
+  SetFilters(IncludeCompilandFilters, opts::pretty::IncludeCompilands.begin(),
+             opts::pretty::IncludeCompilands.end());
 }
 
 void LinePrinter::Indent() { CurrentIndent += IndentSpaces; }

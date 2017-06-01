@@ -14,13 +14,17 @@
 
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cctype>
+#include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <system_error>
+
 using namespace llvm;
 
 static bool isSignedChar(char C) {
@@ -215,10 +219,12 @@ int llvm::DiffFilesWithTolerance(StringRef NameA,
   }
 
   bool CompareFailed = false;
-  while (1) {
+  while (true) {
     // Scan for the end of file or next difference.
-    while (F1P < File1End && F2P < File2End && *F1P == *F2P)
-      ++F1P, ++F2P;
+    while (F1P < File1End && F2P < File2End && *F1P == *F2P) {
+      ++F1P;
+      ++F2P;
+    }
 
     if (F1P >= File1End || F2P >= File2End) break;
 

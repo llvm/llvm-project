@@ -1,6 +1,11 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only
+// RUN: %clang_cc1 %s -verify -fsyntax-only -triple x86_64-pc-linux-gnu
 typedef unsigned long long uint64_t;
-typedef unsigned long long uint32_t;
+typedef unsigned int uint32_t;
+
+// Check integer sizes.
+int array64[sizeof(uint64_t) == 8 ? 1 : -1];
+int array32[sizeof(uint32_t) == 4 ? 1 : -1];
+int arrayint[sizeof(int) < sizeof(uint64_t) ? 1 : -1];
 
 uint64_t f0(uint64_t);
 uint64_t f1(uint64_t, uint32_t);
@@ -145,3 +150,31 @@ uint64_t check_integer_overflows(int i) {
 // expected-warning@+1 2{{overflow in expression; result is 536870912 with type 'int'}}
   return ((4608 * 1024 * 1024) + ((uint64_t)(4608 * 1024 * 1024)));
 }
+
+struct s {
+  unsigned x;
+  unsigned y;
+} s = {
+  .y = 5,
+  .x = 4 * 1024 * 1024 * 1024  // expected-warning {{overflow in expression; result is 0 with type 'int'}}
+};
+
+struct s2 {
+  unsigned a0;
+
+  struct s3 {
+    unsigned a2;
+
+    struct s4 {
+      unsigned a4;
+    } a3;
+  } a1;
+} s2 = {
+  .a0 = 4 * 1024 * 1024 * 1024, // expected-warning {{overflow in expression; result is 0 with type 'int'}}
+  {
+    .a2 = 4 * 1024 * 1024 * 1024, // expected-warning {{overflow in expression; result is 0 with type 'int'}}
+    {
+      .a4 = 4 * 1024 * 1024 * 1024 // expected-warning {{overflow in expression; result is 0 with type 'int'}}
+    }
+  }
+};

@@ -89,7 +89,10 @@ enum CleanupKind : unsigned {
   InactiveCleanup = 0x4,
   InactiveEHCleanup = EHCleanup | InactiveCleanup,
   InactiveNormalCleanup = NormalCleanup | InactiveCleanup,
-  InactiveNormalAndEHCleanup = NormalAndEHCleanup | InactiveCleanup
+  InactiveNormalAndEHCleanup = NormalAndEHCleanup | InactiveCleanup,
+
+  LifetimeMarker = 0x8,
+  NormalEHLifetimeMarker = LifetimeMarker | NormalAndEHCleanup,
 };
 
 /// A stack of scopes which respond to exceptions, including cleanups
@@ -268,7 +271,7 @@ public:
 
   /// Push a lazily-created cleanup on the stack.
   template <class T, class... As> void pushCleanup(CleanupKind Kind, As... A) {
-    static_assert(llvm::AlignOf<T>::Alignment <= ScopeStackAlignment,
+    static_assert(alignof(T) <= ScopeStackAlignment,
                   "Cleanup's alignment is too large.");
     void *Buffer = pushCleanup(Kind, sizeof(T));
     Cleanup *Obj = new (Buffer) T(A...);
@@ -278,7 +281,7 @@ public:
   /// Push a lazily-created cleanup on the stack. Tuple version.
   template <class T, class... As>
   void pushCleanupTuple(CleanupKind Kind, std::tuple<As...> A) {
-    static_assert(llvm::AlignOf<T>::Alignment <= ScopeStackAlignment,
+    static_assert(alignof(T) <= ScopeStackAlignment,
                   "Cleanup's alignment is too large.");
     void *Buffer = pushCleanup(Kind, sizeof(T));
     Cleanup *Obj = new (Buffer) T(std::move(A));
@@ -300,7 +303,7 @@ public:
   /// stack is modified.
   template <class T, class... As>
   T *pushCleanupWithExtra(CleanupKind Kind, size_t N, As... A) {
-    static_assert(llvm::AlignOf<T>::Alignment <= ScopeStackAlignment,
+    static_assert(alignof(T) <= ScopeStackAlignment,
                   "Cleanup's alignment is too large.");
     void *Buffer = pushCleanup(Kind, sizeof(T) + T::getExtraSize(N));
     return new (Buffer) T(N, A...);
@@ -334,10 +337,6 @@ public:
   /// Pops a terminate handler off the stack.
   void popTerminate();
 
-  void pushPadEnd(llvm::BasicBlock *PadEndBB);
-
-  void popPadEnd();
-
   // Returns true iff the current scope is either empty or contains only
   // lifetime markers, i.e. no real cleanup code
   bool containsOnlyLifetimeMarkers(stable_iterator Old) const;
@@ -345,9 +344,7 @@ public:
   /// Determines whether the exception-scopes stack is empty.
   bool empty() const { return StartOfData == EndOfBuffer; }
 
-  bool requiresLandingPad() const {
-    return InnermostEHScope != stable_end();
-  }
+  bool requiresLandingPad() const;
 
   /// Determines whether there are any normal cleanups on the stack.
   bool hasNormalCleanups() const {

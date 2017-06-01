@@ -1,21 +1,20 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -relocation-model=pic -show-encoding | \
+# RUN: llvm-mc %s -arch=mips -mcpu=mips32 --position-independent -show-encoding | \
 # RUN:  FileCheck %s
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -relocation-model=pic -filetype=obj -o -| \
-# RUN:  llvm-objdump -d -r -arch=mips - | \
-# RUN:   FileCheck %s -check-prefix=CHECK-FOR-STORE
+# RUN: llvm-mc %s -arch=mips -mcpu=mips32 --position-independent -filetype=obj -o -| \
+# RUN:  llvm-objdump -d -r - | FileCheck %s -check-prefix=CHECK-FOR-STORE
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=+micromips -relocation-model=pic -show-encoding | \
+# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=+micromips --position-independent -show-encoding | \
 # RUN:  FileCheck %s -check-prefix=MICROMIPS
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -relocation-model=static -show-encoding | \
+# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -show-encoding | \
 # RUN:  FileCheck %s -check-prefix=NO-PIC
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips64 -target-abi n32 -relocation-model=pic -show-encoding | \
-# RUN:  FileCheck %s -check-prefix=BAD-ABI -check-prefix=BAD-ABI-N32
+# RUN: llvm-mc %s -arch=mips -mcpu=mips64 -target-abi n32 --position-independent -show-encoding | \
+# RUN:  FileCheck %s -check-prefixes=BAD-ABI,BAD-ABI-N32
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 -relocation-model=pic -show-encoding | \
-# RUN:  FileCheck %s -check-prefix=BAD-ABI -check-prefix=BAD-ABI-N64
+# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 --position-independent -show-encoding | \
+# RUN:  FileCheck %s -check-prefixes=BAD-ABI,BAD-ABI-N64
 
   .text
   .ent foo
@@ -44,9 +43,9 @@ foo:
 # CHECK: lw    $gp, 8($sp)         # encoding: [0x8f,0xbc,0x00,0x08]
 
 # CHECK: lw    $25, %got(foo)($gp) # encoding: [0x8f,0x99,A,A]
-# CHECK:                           #   fixup A - offset: 0, value: foo@GOT, kind: fixup_Mips_GOT_Local
+# CHECK:                           #   fixup A - offset: 0, value: %got(foo), kind: fixup_Mips_GOT
 # CHECK: addiu $25, $25, %lo(foo)  # encoding: [0x27,0x39,A,A]
-# CHECK:                           #   fixup A - offset: 0, value: foo@ABS_LO, kind: fixup_Mips_LO16
+# CHECK:                           #   fixup A - offset: 0, value: %lo(foo), kind: fixup_Mips_LO16
 # CHECK: jalr  $25                 # encoding: [0x03,0x20,0xf8,0x09]
 # CHECK: nop                       # encoding: [0x00,0x00,0x00,0x00]
 # CHECK: lw    $gp, 8($sp)         # encoding: [0x8f,0xbc,0x00,0x08]
@@ -62,9 +61,9 @@ foo:
 # MICROMIPS: lw      $gp, 8($sp)         # encoding: [0xff,0x9d,0x00,0x08]
 
 # MICROMIPS: lw      $25, %got(foo)($gp) # encoding: [0xff,0x3c,A,A]
-# MICROMIPS:                             #   fixup A - offset: 0, value: foo@GOT, kind: fixup_MICROMIPS_GOT16
+# MICROMIPS:                             #   fixup A - offset: 0, value: %got(foo), kind: fixup_MICROMIPS_GOT16
 # MICROMIPS: addiu   $25, $25, %lo(foo)  # encoding: [0x33,0x39,A,A]
-# MICROMIPS:                             #   fixup A - offset: 0, value: foo@ABS_LO, kind: fixup_MICROMIPS_LO16
+# MICROMIPS:                             #   fixup A - offset: 0, value: %lo(foo), kind: fixup_MICROMIPS_LO16
 # MICROMIPS: jalrs   $ra, $25            # encoding: [0x03,0xf9,0x4f,0x3c]
 # MICROMIPS: nop                         # encoding: [0x0c,0x00]
 # MICROMIPS: lw      $gp, 8($sp)         # encoding: [0xff,0x9d,0x00,0x08]
@@ -91,7 +90,7 @@ foo:
 
 # BAD-ABI-N32: lw    $25, %got_disp(foo)($gp) # encoding: [0x8f,0x99,A,A]
 # BAD-ABI-N64: ld    $25, %got_disp(foo)($gp) # encoding: [0xdf,0x99,A,A]
-# BAD-ABI:                                    #   fixup A - offset: 0, value: foo@GOT_DISP, kind: fixup_Mips_GOT_DISP
+# BAD-ABI:                                    #   fixup A - offset: 0, value: %got_disp(foo), kind: fixup_Mips_GOT_DISP
 # BAD-ABI:     jalr  $25                      # encoding: [0x03,0x20,0xf8,0x09]
 # BAD-ABI-NOT: lw    $gp, 8($sp)              # encoding: [0x8f,0xbc,0x00,0x08]
 # BAD-ABI:  .end  foo

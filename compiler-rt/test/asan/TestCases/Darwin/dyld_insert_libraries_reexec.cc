@@ -37,10 +37,10 @@ int main() {
 
 // CHECK-NOINSERT: exec()-ing the program with
 // CHECK-NOINSERT: DYLD_INSERT_LIBRARIES
-// CHECK-NOINSERT: to enable ASan wrappers.
+// CHECK-NOINSERT: to enable wrappers.
 // CHECK-NOINSERT: Passed
 
 // CHECK-NOT: exec()-ing the program with
 // CHECK-NOT: DYLD_INSERT_LIBRARIES
-// CHECK-NOT: to enable ASan wrappers.
+// CHECK-NOT: to enable wrappers.
 // CHECK: Passed

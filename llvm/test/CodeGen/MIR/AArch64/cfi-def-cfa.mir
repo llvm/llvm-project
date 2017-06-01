@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -start-after branch-folder -stop-after branch-folder -o /dev/null %s | FileCheck %s
-# This test ensures that the MIR parser parses the .cfi_def_cfa operands
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the def_cfa operands
 # correctly.
 
 --- |
@@ -21,10 +21,10 @@ body: |
 
     %sp = frame-setup STPXpre killed %fp, killed %lr, %sp, -2
     %fp = frame-setup ADDXri %sp, 0, 0
-    ; CHECK: CFI_INSTRUCTION .cfi_def_cfa %w29, 16
-    frame-setup CFI_INSTRUCTION .cfi_def_cfa %w29, 16
-    frame-setup CFI_INSTRUCTION .cfi_offset %w30, -8
-    frame-setup CFI_INSTRUCTION .cfi_offset %w29, -16
+    ; CHECK: CFI_INSTRUCTION def_cfa %w29, 16
+    frame-setup CFI_INSTRUCTION def_cfa %w29, 16
+    frame-setup CFI_INSTRUCTION offset %w30, -8
+    frame-setup CFI_INSTRUCTION offset %w29, -16
     BL @foo, csr_aarch64_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
     %sp, %fp, %lr = LDPXpost %sp, 2
     RET_ReallyLR

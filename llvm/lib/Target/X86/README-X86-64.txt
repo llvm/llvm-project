@@ -170,7 +170,7 @@ generated for it.  The primary issue with the result is that it doesn't do any
 of the optimizations which are possible if we know the address of a va_list
 in the current function is never taken:
 1. We shouldn't spill the XMM registers because we only call va_arg with "int".
-2. It would be nice if we could scalarrepl the va_list.
+2. It would be nice if we could sroa the va_list.
 3. Probably overkill, but it'd be cool if we could peel off the first five
 iterations of the loop.
 

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=aarch64-none-linux-gnu -mattr=+neon -show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple=aarch64-none-linux-gnu -mattr=+neon,+fullfp16 -show-encoding < %s | FileCheck %s
 
 // Check that the assembler can handle the documented syntax for AArch64
 
@@ -400,16 +400,24 @@
 //------------------------------------------------------------------------------
 // Fixed-point convert to floating-point
 //------------------------------------------------------------------------------
+         scvtf v0.4h, v1.4h, #3
+         scvtf v0.8h, v1.8h, #3
          scvtf v0.2s, v1.2s, #3
          scvtf v0.4s, v1.4s, #3
          scvtf v0.2d, v1.2d, #3
+         ucvtf v0.4h, v1.4h, #3
+         ucvtf v0.8h, v1.8h, #3
          ucvtf v0.2s, v1.2s, #3
          ucvtf v0.4s, v1.4s, #3
          ucvtf v0.2d, v1.2d, #3
 
+// CHECK: scvtf v0.4h, v1.4h, #3        // encoding: [0x20,0xe4,0x1d,0x0f]
+// CHECK: scvtf v0.8h, v1.8h, #3        // encoding: [0x20,0xe4,0x1d,0x4f]
 // CHECK:	scvtf	v0.2s, v1.2s, #3        // encoding: [0x20,0xe4,0x3d,0x0f]
 // CHECK:	scvtf	v0.4s, v1.4s, #3        // encoding: [0x20,0xe4,0x3d,0x4f]
 // CHECK:	scvtf	v0.2d, v1.2d, #3        // encoding: [0x20,0xe4,0x7d,0x4f]
+// CHECK:	ucvtf v0.4h, v1.4h, #3        // encoding: [0x20,0xe4,0x1d,0x2f]
+// CHECK:	ucvtf v0.8h, v1.8h, #3        // encoding: [0x20,0xe4,0x1d,0x6f]
 // CHECK:	ucvtf	v0.2s, v1.2s, #3        // encoding: [0x20,0xe4,0x3d,0x2f]
 // CHECK:	ucvtf	v0.4s, v1.4s, #3        // encoding: [0x20,0xe4,0x3d,0x6f]
 // CHECK:	ucvtf	v0.2d, v1.2d, #3        // encoding: [0x20,0xe4,0x7d,0x6f]
@@ -417,17 +425,25 @@
 //------------------------------------------------------------------------------
 // Floating-point convert to fixed-point
 //------------------------------------------------------------------------------
+         fcvtzs v0.4h, v1.4h, #3
+         fcvtzs v0.8h, v1.8h, #3
          fcvtzs v0.2s, v1.2s, #3
          fcvtzs v0.4s, v1.4s, #3
          fcvtzs v0.2d, v1.2d, #3
+         fcvtzu v0.4h, v1.4h, #3
+         fcvtzu v0.8h, v1.8h, #3
          fcvtzu v0.2s, v1.2s, #3
          fcvtzu v0.4s, v1.4s, #3
          fcvtzu v0.2d, v1.2d, #3
 
 
+// CHECK:	fcvtzs  v0.4h, v1.4h, #3        // encoding: [0x20,0xfc,0x1d,0x0f]
+// CHECK:	fcvtzs  v0.8h, v1.8h, #3        // encoding: [0x20,0xfc,0x1d,0x4f]
 // CHECK:	fcvtzs	v0.2s, v1.2s, #3        // encoding: [0x20,0xfc,0x3d,0x0f]
 // CHECK:	fcvtzs	v0.4s, v1.4s, #3        // encoding: [0x20,0xfc,0x3d,0x4f]
 // CHECK:	fcvtzs	v0.2d, v1.2d, #3        // encoding: [0x20,0xfc,0x7d,0x4f]
+// CHECK:	fcvtzu  v0.4h, v1.4h, #3        // encoding: [0x20,0xfc,0x1d,0x2f]
+// CHECK:	fcvtzu  v0.8h, v1.8h, #3        // encoding: [0x20,0xfc,0x1d,0x6f]
 // CHECK:	fcvtzu	v0.2s, v1.2s, #3        // encoding: [0x20,0xfc,0x3d,0x2f]
 // CHECK:	fcvtzu	v0.4s, v1.4s, #3        // encoding: [0x20,0xfc,0x3d,0x6f]
 // CHECK:	fcvtzu	v0.2d, v1.2d, #3        // encoding: [0x20,0xfc,0x7d,0x6f]

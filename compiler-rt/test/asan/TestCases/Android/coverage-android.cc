@@ -101,6 +101,10 @@
 // RUN: %sancov rawunpack *.sancov.raw
 // RUN: %sancov print *.sancov |& FileCheck --check-prefix=CHECK3 %s
 
+// PC counts in CHECK lines are platform dependent and match arm32 at the moment.
+// sancov tool does not support Android well enough to match function names
+// REQUIRES: arm
+
 #include <assert.h>
 #include <dlfcn.h>
 #include <stdio.h>
@@ -139,5 +143,5 @@ int main(int argc, char **argv) {
 #endif
 
 // CHECK1: 2 PCs total
-// CHECK2: 7 PCs total
-// CHECK3: 8 PCs total
+// CHECK2: 4 PCs total
+// CHECK3: 5 PCs total

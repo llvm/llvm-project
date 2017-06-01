@@ -121,7 +121,7 @@ struct CGRecordLowering {
   /// \brief Wraps llvm::Type::getIntNTy with some implicit arguments.
   llvm::Type *getIntNType(uint64_t NumBits) {
     return llvm::Type::getIntNTy(Types.getLLVMContext(),
-        (unsigned)llvm::RoundUpToAlignment(NumBits, 8));
+                                 (unsigned)llvm::alignTo(NumBits, 8));
   }
   /// \brief Gets an llvm type of size NumBytes and alignment 1.
   llvm::Type *getByteArrayType(CharUnits NumBytes) {
@@ -555,7 +555,7 @@ void CGRecordLowering::clipTailPadding() {
     if (Member->Offset < Tail) {
       assert(Prior->Kind == MemberInfo::Field && !Prior->FD &&
              "Only storage fields have tail padding!");
-      Prior->Data = getByteArrayType(bitsToCharUnits(llvm::RoundUpToAlignment(
+      Prior->Data = getByteArrayType(bitsToCharUnits(llvm::alignTo(
           cast<llvm::IntegerType>(Prior->Data)->getIntegerBitWidth(), 8)));
     }
     if (Member->Data)
@@ -609,8 +609,8 @@ void CGRecordLowering::insertPadding() {
     CharUnits Offset = Member->Offset;
     assert(Offset >= Size);
     // Insert padding if we need to.
-    if (Offset != Size.RoundUpToAlignment(Packed ? CharUnits::One() :
-                                          getAlignment(Member->Data)))
+    if (Offset !=
+        Size.alignTo(Packed ? CharUnits::One() : getAlignment(Member->Data)))
       Padding.push_back(std::make_pair(Size, Offset - Size));
     Size = Offset + getSize(Member->Data);
   }
@@ -842,7 +842,7 @@ void CGRecordLayout::print(raw_ostream &OS) const {
   OS << "]>\n";
 }
 
-void CGRecordLayout::dump() const {
+LLVM_DUMP_METHOD void CGRecordLayout::dump() const {
   print(llvm::errs());
 }
 
@@ -855,6 +855,6 @@ void CGBitFieldInfo::print(raw_ostream &OS) const {
      << " StorageOffset:" << StorageOffset.getQuantity() << ">";
 }
 
-void CGBitFieldInfo::dump() const {
+LLVM_DUMP_METHOD void CGBitFieldInfo::dump() const {
   print(llvm::errs());
 }

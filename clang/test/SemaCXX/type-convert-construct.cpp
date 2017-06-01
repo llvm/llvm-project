@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=gnu++98 %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=gnu++11 %s 
 
 void f() {
   float v1 = float(1);
@@ -12,8 +14,21 @@ void f() {
   typedef int T;
   int *p;
   bool v6 = T(0) == p;
+#if __cplusplus >= 201103L
+  // expected-error@-2 {{comparison between pointer and integer ('T' (aka 'int') and 'int *')}}
+#endif
   char *str;
-  str = "a string"; // expected-warning{{conversion from string literal to 'char *' is deprecated}}
+  str = "a string";
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{conversion from string literal to 'char *' is deprecated}}
+#else
+  // expected-warning@-4 {{ISO C++11 does not allow conversion from string literal to 'char *'}}
+#endif
   wchar_t *wstr;
-  wstr = L"a wide string"; // expected-warning{{conversion from string literal to 'wchar_t *' is deprecated}}
+  wstr = L"a wide string";
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{conversion from string literal to 'wchar_t *' is deprecated}}
+#else
+  // expected-warning@-4 {{ISO C++11 does not allow conversion from string literal to 'wchar_t *'}}
+#endif
 }

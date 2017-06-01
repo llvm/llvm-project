@@ -1,3 +1,5 @@
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 //   A program that calls for default-initialization or value-initialization of
@@ -5,6 +7,11 @@
 //   cv-unqualified version of T is used for these definitions of
 //   zero-initialization, default-initialization, and value-initialization.
 
+typedef int &IR;
+IR r; // expected-error {{declaration of reference variable 'r' requires an initializer}}
+int n = IR(); // expected-error {{reference to type 'int' requires an initializer}}
+
+#if __cplusplus < 201103L
 struct S { // expected-error {{implicit default constructor for 'S' must explicitly initialize the reference member}}
   int &x; // expected-note {{declared here}} expected-error 3{{reference to type 'int' requires an initializer}}
 };
@@ -22,6 +29,25 @@ struct U {
   T t[3]; // expected-note {{in value-initialization of type 'T' here}}
 };
 U u = U(); // expected-note {{in value-initialization of type 'U' here}}
+#else
+struct S {
+  int &x; // expected-note 4{{because field 'x' of reference type 'int &' would not be initialized}}
+};
+S s; // expected-error {{deleted default constructor}}
+S f() {
+  return S(); // expected-error {{deleted default constructor}}
+}
+
+struct T
+  : S { // expected-note 2{{because base class 'S' has a deleted default constructor}}
+};
+T t = T(); // expected-error {{deleted default constructor}}
+
+struct U {
+  T t[3]; // expected-note {{because field 't' has a deleted default constructor}}
+};
+U u = U(); // expected-error {{deleted default constructor}}
+#endif
 
 // Ensure that we handle C++11 in-class initializers properly as an extension.
 // In this case, there is no user-declared default constructor, so we
@@ -29,20 +55,19 @@ U u = U(); // expected-note {{in value-initialization of type 'U' here}}
 // constructor call anyway, because the default constructor is not trivial.
 struct V {
   int n;
-  int &r = n; // expected-warning {{C++11}}
+  int &r = n; // expected-warning 0-1{{C++11}}
 };
 V v = V(); // ok
 struct W {
   int n;
-  S s = { n }; // expected-warning {{C++11}}
+  S s = { n }; // expected-warning 0-1{{C++11}}
 };
 W w = W(); // ok
 
 // Ensure we're not faking this up by making the default constructor
 // non-trivial.
-#define static_assert(B, S) typedef int assert_failed[(B) ? 1 : -1];
-static_assert(__has_trivial_constructor(S), "");
-static_assert(__has_trivial_constructor(T), "");
-static_assert(__has_trivial_constructor(U), "");
-static_assert(!__has_trivial_constructor(V), "");
-static_assert(!__has_trivial_constructor(W), "");
+_Static_assert(__has_trivial_constructor(S), "");
+_Static_assert(__has_trivial_constructor(T), "");
+_Static_assert(__has_trivial_constructor(U), "");
+_Static_assert(!__has_trivial_constructor(V), "");
+_Static_assert(!__has_trivial_constructor(W), "");

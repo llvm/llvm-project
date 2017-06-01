@@ -1,6 +1,8 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -basicaa -gvn -stats -disable-output 2>&1 | grep "Number of loads deleted"
+; RUN: opt < %s -basicaa -gvn -stats -disable-output 2>&1 | FileCheck %s
 ; rdar://7363102
+
+; CHECK: Number of loads deleted
 
 ; GVN should be able to eliminate load %tmp22.i, because it is redundant with
 ; load %tmp8.i. This requires being able to prove that %tmp7.i doesn't

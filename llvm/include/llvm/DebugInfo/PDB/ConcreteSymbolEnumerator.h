@@ -10,11 +10,15 @@
 #ifndef LLVM_DEBUGINFO_PDB_CONCRETESYMBOLENUMERATOR_H
 #define LLVM_DEBUGINFO_PDB_CONCRETESYMBOLENUMERATOR_H
 
-#include "IPDBEnumChildren.h"
+#include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
+#include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Support/Casting.h"
+#include <algorithm>
+#include <cstdint>
 #include <memory>
 
 namespace llvm {
+namespace pdb {
 
 template <typename ChildType>
 class ConcreteSymbolEnumerator : public IPDBEnumChildren<ChildType> {
@@ -22,7 +26,7 @@ public:
   ConcreteSymbolEnumerator(std::unique_ptr<IPDBEnumSymbols> SymbolEnumerator)
       : Enumerator(std::move(SymbolEnumerator)) {}
 
-  ~ConcreteSymbolEnumerator() override {}
+  ~ConcreteSymbolEnumerator() override = default;
 
   uint32_t getChildCount() const override {
     return Enumerator->getChildCount();
@@ -54,6 +58,8 @@ private:
 
   std::unique_ptr<IPDBEnumSymbols> Enumerator;
 };
-}
 
-#endif
+} // end namespace pdb
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_PDB_CONCRETESYMBOLENUMERATOR_H

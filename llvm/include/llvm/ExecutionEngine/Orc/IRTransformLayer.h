@@ -14,7 +14,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_IRTRANSFORMLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_IRTRANSFORMLAYER_H
 
-#include "JITSymbol.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 
 namespace llvm {
 namespace orc {

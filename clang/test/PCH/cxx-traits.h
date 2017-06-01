@@ -20,6 +20,7 @@ struct is_trivially_constructible {
 struct __is_abstract {};  // expected-warning {{made available}}
 struct __is_arithmetic {};  // expected-warning {{made available}}
 struct __is_array {};  // expected-warning {{made available}}
+struct __is_assignable {};  // expected-warning {{made available}}
 struct __is_base_of {};  // expected-warning {{made available}}
 struct __is_class {};  // expected-warning {{made available}}
 struct __is_complete_type {};  // expected-warning {{made available}}

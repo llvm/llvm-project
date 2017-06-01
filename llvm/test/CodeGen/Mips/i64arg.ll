@@ -1,4 +1,4 @@
-; RUN: llc -march=mips < %s | FileCheck %s
+; RUN: llc -march=mips -relocation-model=pic -mips-tail-calls=1 < %s | FileCheck %s
 
 define void @f1(i64 %ll1, float %f, i64 %ll, i32 %i, float %f2) nounwind {
 entry:
@@ -9,7 +9,7 @@ entry:
 ; CHECK-DAG: ori $6, ${{[0-9]+}}, 3855
 ; CHECK-DAG: ori $7, ${{[0-9]+}}, 22136
 ; CHECK-DAG: lw  $25, %call16(ff1)
-; CHECK: jalr
+; CHECK: jalr $25
   tail call void @ff1(i32 %i, i64 1085102592623924856) nounwind
 ; CHECK-DAG: lw $25, %call16(ff2)
 ; CHECK-DAG: move $4, $[[R2]]

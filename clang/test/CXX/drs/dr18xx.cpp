@@ -7,11 +7,11 @@
 // expected-no-diagnostics
 #endif
 
-void dr1891() { // dr1891: 3.6
+void dr1891() { // dr1891: 4
 #if __cplusplus >= 201103L
   int n;
-  auto a = []{}; // expected-note 2{{candidate}}
-  auto b = [=]{ return n; }; // expected-note 2{{candidate}}
+  auto a = []{}; // expected-note 2{{candidate}} expected-note 2{{here}}
+  auto b = [=]{ return n; }; // expected-note 2{{candidate}} expected-note 2{{here}}
   typedef decltype(a) A;
   typedef decltype(b) B;
 
@@ -20,5 +20,10 @@ void dr1891() { // dr1891: 3.6
 
   A x; // expected-error {{no matching constructor}}
   B y; // expected-error {{no matching constructor}}
+
+  a = a; // expected-error {{copy assignment operator is implicitly deleted}}
+  a = static_cast<A&&>(a); // expected-error {{copy assignment operator is implicitly deleted}}
+  b = b; // expected-error {{copy assignment operator is implicitly deleted}}
+  b = static_cast<B&&>(b); // expected-error {{copy assignment operator is implicitly deleted}}
 #endif
 }

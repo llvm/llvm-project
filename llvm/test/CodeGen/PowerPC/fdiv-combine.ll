@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=ppc64 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=ppc64 < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -9,8 +9,8 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define void @three_fdiv_double(double %D, double %a, double %b, double %c) #0 {
 ; CHECK-LABEL: three_fdiv_double:
-; CHECK: fdiv
-; CHECK-NEXT-NOT: fdiv
+; CHECK: fdiv {{[0-9]}}
+; CHECK-NOT: fdiv
 ; CHECK: fmul
 ; CHECK: fmul
 ; CHECK: fmul
@@ -23,9 +23,9 @@ define void @three_fdiv_double(double %D, double %a, double %b, double %c) #0 {
 
 define void @two_fdiv_double(double %D, double %a, double %b) #0 {
 ; CHECK-LABEL: two_fdiv_double:
-; CHECK: fdiv
-; CHECK: fdiv
-; CHECK-NEXT-NOT: fmul
+; CHECK: fdiv {{[0-9]}}
+; CHECK: fdiv {{[0-9]}}
+; CHECK-NOT: fmul
   %div = fdiv double %a, %D
   %div1 = fdiv double %b, %D
   tail call void @foo_2d(double %div, double %div1)

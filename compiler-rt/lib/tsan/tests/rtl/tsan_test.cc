@@ -47,6 +47,19 @@ int run_tests(int argc, char **argv) {
 
 const char *argv0;
 
+#ifdef __APPLE__
+// On Darwin, turns off symbolication and crash logs to make tests faster.
+extern "C" const char* __tsan_default_options() {
+  return "symbolize=false:abort_on_error=0";
+}
+#endif
+
+namespace __sanitizer {
+bool ReexecDisabled() {
+  return true;
+}
+}
+
 int main(int argc, char **argv) {
   argv0 = argv[0];
   return run_tests(argc, argv);

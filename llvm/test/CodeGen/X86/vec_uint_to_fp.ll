@@ -23,10 +23,10 @@
 ; CST-NEXT: .long	1392508928              ## 0x53000000
 
 ; CST: [[MAGICCSTADDR:LCPI0_[0-9]+]]:
-; CST-NEXT: .long	3539992704              ## float -5.497642e+11
-; CST-NEXT: .long	3539992704              ## float -5.497642e+11
-; CST-NEXT: .long	3539992704              ## float -5.497642e+11
-; CST-NEXT: .long	3539992704              ## float -5.497642e+11
+; CST-NEXT: .long	3539992704              ## float -5.49764202E+11
+; CST-NEXT: .long	3539992704              ## float -5.49764202E+11
+; CST-NEXT: .long	3539992704              ## float -5.49764202E+11
+; CST-NEXT: .long	3539992704              ## float -5.49764202E+11
 
 ; AVX2: [[LOWCSTADDR:LCPI0_[0-9]+]]:
 ; AVX2-NEXT: .long	1258291200              ## 0x4b000000

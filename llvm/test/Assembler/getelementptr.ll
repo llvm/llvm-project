@@ -23,6 +23,25 @@
 @PR23753_b = global i8* getelementptr (i8, i8* @PR23753_a, i64 ptrtoint (i8* @PR23753_a to i64))
 ; CHECK: @PR23753_b = global i8* getelementptr (i8, i8* @PR23753_a, i64 ptrtoint (i8* @PR23753_a to i64))
 
+; Verify that inrange on an index inhibits over-indexed getelementptr folding.
+
+@nestedarray = global [2 x [4 x i8*]] zeroinitializer
+
+; CHECK: @nestedarray.1 = alias i8*, getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, inrange i32 0, i64 1, i32 0)
+@nestedarray.1 = alias i8*, getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, inrange i32 0, i32 0, i32 4)
+
+; CHECK: @nestedarray.2 = alias i8*, getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, i32 0, inrange i32 0, i32 4)
+@nestedarray.2 = alias i8*, getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, i32 0, inrange i32 0, i32 4)
+
+; CHECK: @nestedarray.3 = alias i8*, getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, i32 0, inrange i32 0, i32 0)
+@nestedarray.3 = alias i8*, getelementptr inbounds ([4 x i8*], [4 x i8*]* getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, i32 0, inrange i32 0), i32 0, i32 0)
+
+; CHECK: @nestedarray.4 = alias i8*, getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, i32 0, i32 1, i32 0)
+@nestedarray.4 = alias i8*, getelementptr inbounds ([4 x i8*], [4 x i8*]* getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, i32 0, inrange i32 0), i32 1, i32 0)
+
+; CHECK: @nestedarray.5 = alias i8*, getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, inrange i32 0, i32 1, i32 0)
+@nestedarray.5 = alias i8*, getelementptr inbounds ([4 x i8*], [4 x i8*]* getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, inrange i32 0, i32 0), i32 1, i32 0)
+
 ; See if i92 indices work too.
 define i32 *@test({i32, i32}* %t, i92 %n) {
 ; CHECK: @test
@@ -45,4 +64,14 @@ define <2 x i32*> @test7(<2 x {i32, i32}*> %a) {
 define <2 x i8*> @test8(<2 x [2 x i8]*> %a) {
   %w = getelementptr  [2 x i8], <2 x  [2 x i8]*> %a, <2 x i32> <i32 0, i32 0>, <2 x i8> <i8 0, i8 1>
   ret <2 x i8*> %w
+}
+
+@array = internal global [16 x i32] [i32 -200, i32 -199, i32 -198, i32 -197, i32 -196, i32 -195, i32 -194, i32 -193, i32 -192, i32 -191, i32 -190, i32 -189, i32 -188, i32 -187, i32 -186, i32 -185], align 16
+
+; Verify that array GEP doesn't incorrectly infer inbounds.
+define i32* @test9() {
+entry:
+  ret i32* getelementptr ([16 x i32], [16 x i32]* @array, i64 0, i64 -13)
+; CHECK-LABEL: define i32* @test9(
+; CHECK: ret i32* getelementptr ([16 x i32], [16 x i32]* @array, i64 0, i64 -13)
 }

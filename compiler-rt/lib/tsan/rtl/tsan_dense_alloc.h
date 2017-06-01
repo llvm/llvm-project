@@ -108,7 +108,7 @@ class DenseSlabAlloc {
       // Reserve 0 as invalid index.
       IndexT start = fillpos_ == 0 ? 1 : 0;
       for (IndexT i = start; i < kL2Size; i++) {
-        new(batch + i) T();
+        new(batch + i) T;
         *(IndexT*)(batch + i) = i + 1 + fillpos_ * kL2Size;
       }
       *(IndexT*)(batch + kL2Size - 1) = 0;

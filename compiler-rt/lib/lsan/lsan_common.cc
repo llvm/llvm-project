@@ -23,6 +23,7 @@
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_suppressions.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
+#include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 #if CAN_SANITIZE_LEAKS
 namespace __lsan {
@@ -31,8 +32,17 @@ namespace __lsan {
 // also to protect the global list of root regions.
 BlockingMutex global_mutex(LINKER_INITIALIZED);
 
+__attribute__((tls_model("initial-exec")))
 THREADLOCAL int disable_counter;
 bool DisabledInThisThread() { return disable_counter > 0; }
+void DisableInThisThread() { disable_counter++; }
+void EnableInThisThread() {
+  if (!disable_counter && common_flags()->detect_leaks) {
+    Report("Unmatched call to __lsan_enable().\n");
+    Die();
+  }
+  disable_counter--;
+}
 
 Flags lsan_flags;
 
@@ -120,7 +130,9 @@ static inline bool CanBeAHeapPointer(uptr p) {
 #elif defined(__mips64)
   return ((p >> 40) == 0);
 #elif defined(__aarch64__)
-  return ((p >> SANITIZER_AARCH64_VMA) == 0);
+  unsigned runtimeVMA =
+    (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
+  return ((p >> runtimeVMA) == 0);
 #else
   return true;
 #endif
@@ -183,9 +195,10 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
     uptr os_id = static_cast<uptr>(suspended_threads.GetThreadID(i));
     LOG_THREADS("Processing thread %d.\n", os_id);
     uptr stack_begin, stack_end, tls_begin, tls_end, cache_begin, cache_end;
+    DTLS *dtls;
     bool thread_found = GetThreadRangesLocked(os_id, &stack_begin, &stack_end,
                                               &tls_begin, &tls_end,
-                                              &cache_begin, &cache_end);
+                                              &cache_begin, &cache_end, &dtls);
     if (!thread_found) {
       // If a thread can't be found in the thread registry, it's probably in the
       // process of destruction. Log this event and move on.
@@ -209,9 +222,18 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       LOG_THREADS("Stack at %p-%p (SP = %p).\n", stack_begin, stack_end, sp);
       if (sp < stack_begin || sp >= stack_end) {
         // SP is outside the recorded stack range (e.g. the thread is running a
-        // signal handler on alternate stack). Again, consider the entire stack
-        // range to be reachable.
+        // signal handler on alternate stack, or swapcontext was used).
+        // Again, consider the entire stack range to be reachable.
         LOG_THREADS("WARNING: stack pointer not in stack range.\n");
+        uptr page_size = GetPageSizeCached();
+        int skipped = 0;
+        while (stack_begin < stack_end &&
+               !IsAccessibleMemoryRange(stack_begin, 1)) {
+          skipped++;
+          stack_begin += page_size;
+        }
+        LOG_THREADS("Skipped %d guard page(s) to obtain stack %p-%p.\n",
+                    skipped, stack_begin, stack_end);
       } else {
         // Shrink the stack range to ignore out-of-scope values.
         stack_begin = sp;
@@ -235,6 +257,17 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                                kReachable);
         if (tls_end > cache_end)
           ScanRangeForPointers(cache_end, tls_end, frontier, "TLS", kReachable);
+      }
+      if (dtls) {
+        for (uptr j = 0; j < dtls->dtv_size; ++j) {
+          uptr dtls_beg = dtls->dtv[j].beg;
+          uptr dtls_end = dtls_beg + dtls->dtv[j].size;
+          if (dtls_beg < dtls_end) {
+            LOG_THREADS("DTLS %zu at %p-%p.\n", j, dtls_beg, dtls_end);
+            ScanRangeForPointers(dtls_beg, dtls_end, frontier, "DTLS",
+                                 kReachable);
+          }
+        }
       }
     }
   }
@@ -414,6 +447,11 @@ static bool CheckForLeaks() {
 
   if (!param.success) {
     Report("LeakSanitizer has encountered a fatal error.\n");
+    Report(
+        "HINT: For debugging, try setting environment variable "
+        "LSAN_OPTIONS=verbosity=1:log_threads=1\n");
+    Report(
+        "HINT: LeakSanitizer does not work under ptrace (strace, gdb, etc)\n");
     Die();
   }
   param.leak_report.ApplySuppressions();
@@ -615,6 +653,13 @@ uptr LeakReport::UnsuppressedLeakCount() {
 }
 
 } // namespace __lsan
+#else // CAN_SANITIZE_LEAKS
+namespace __lsan {
+void InitCommonLsan() { }
+void DoLeakCheck() { }
+void DisableInThisThread() { }
+void EnableInThisThread() { }
+}
 #endif // CAN_SANITIZE_LEAKS
 
 using namespace __lsan;  // NOLINT
@@ -680,18 +725,14 @@ void __lsan_unregister_root_region(const void *begin, uptr size) {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lsan_disable() {
 #if CAN_SANITIZE_LEAKS
-  __lsan::disable_counter++;
+  __lsan::DisableInThisThread();
 #endif
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lsan_enable() {
 #if CAN_SANITIZE_LEAKS
-  if (!__lsan::disable_counter && common_flags()->detect_leaks) {
-    Report("Unmatched call to __lsan_enable().\n");
-    Die();
-  }
-  __lsan::disable_counter--;
+  __lsan::EnableInThisThread();
 #endif
 }
 
@@ -716,6 +757,11 @@ int __lsan_do_recoverable_leak_check() {
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 int __lsan_is_turned_off() {
   return 0;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+const char *__lsan_default_suppressions() {
+  return "";
 }
 #endif
 } // extern "C"

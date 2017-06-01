@@ -60,71 +60,60 @@ def : T_PPR_pat <S2_lsr_r_p_xor, int_hexagon_S2_lsr_r_p_xor>;
 def : T_PPR_pat <S2_lsl_r_p_xor, int_hexagon_S2_lsl_r_p_xor>;
 
 // Multiply and use upper result
-def : MType_R32_pat <int_hexagon_M2_mpysu_up, M2_mpysu_up>;
-def : MType_R32_pat <int_hexagon_M2_mpy_up_s1, M2_mpy_up_s1>;
-def : MType_R32_pat <int_hexagon_M2_hmmpyh_s1, M2_hmmpyh_s1>;
-def : MType_R32_pat <int_hexagon_M2_hmmpyl_s1, M2_hmmpyl_s1>;
-def : MType_R32_pat <int_hexagon_M2_mpy_up_s1_sat, M2_mpy_up_s1_sat>;
+def : T_RR_pat <M2_mpysu_up, int_hexagon_M2_mpysu_up>;
+def : T_RR_pat <M2_mpy_up_s1, int_hexagon_M2_mpy_up_s1>;
+def : T_RR_pat <M2_hmmpyh_s1, int_hexagon_M2_hmmpyh_s1>;
+def : T_RR_pat <M2_hmmpyl_s1, int_hexagon_M2_hmmpyl_s1>;
+def : T_RR_pat <M2_mpy_up_s1_sat, int_hexagon_M2_mpy_up_s1_sat>;
+
+def : T_PP_pat <A2_vaddub, int_hexagon_A2_vaddb_map>;
+def : T_PP_pat <A2_vsubub, int_hexagon_A2_vsubb_map>;
 
 // Vector reduce add unsigned halfwords
-def : Pat <(int_hexagon_M2_vraddh DoubleRegs:$src1, DoubleRegs:$src2),
-           (M2_vraddh DoubleRegs:$src1, DoubleRegs:$src2)>;
+def : T_PP_pat <M2_vraddh, int_hexagon_M2_vraddh>;
 
-def : T_P_pat <S2_brevp, int_hexagon_S2_brevp>;
+def: T_P_pat<S2_brevp, int_hexagon_S2_brevp>;
+def: T_P_pat<S2_ct0p,  int_hexagon_S2_ct0p>;
+def: T_P_pat<S2_ct1p,  int_hexagon_S2_ct1p>;
 
-def: T_P_pat  <S2_ct0p,      int_hexagon_S2_ct0p>;
-def: T_P_pat  <S2_ct1p,      int_hexagon_S2_ct1p>;
-def: T_RR_pat<C4_nbitsset,  int_hexagon_C4_nbitsset>;
-def: T_RR_pat<C4_nbitsclr,  int_hexagon_C4_nbitsclr>;
-def: T_RI_pat<C4_nbitsclri, int_hexagon_C4_nbitsclri>;
+def: T_Q_RR_pat<C4_nbitsset,  int_hexagon_C4_nbitsset>;
+def: T_Q_RR_pat<C4_nbitsclr,  int_hexagon_C4_nbitsclr>;
+def: T_Q_RI_pat<C4_nbitsclri, int_hexagon_C4_nbitsclri>;
 
+def : T_Q_PI_pat<A4_vcmpbeqi,     int_hexagon_A4_vcmpbeqi>;
+def : T_Q_PI_pat<A4_vcmpbgti,     int_hexagon_A4_vcmpbgti>;
+def : T_Q_PI_pat<A4_vcmpbgtui,    int_hexagon_A4_vcmpbgtui>;
+def : T_Q_PI_pat<A4_vcmpheqi,     int_hexagon_A4_vcmpheqi>;
+def : T_Q_PI_pat<A4_vcmphgti,     int_hexagon_A4_vcmphgti>;
+def : T_Q_PI_pat<A4_vcmphgtui,    int_hexagon_A4_vcmphgtui>;
+def : T_Q_PI_pat<A4_vcmpweqi,     int_hexagon_A4_vcmpweqi>;
+def : T_Q_PI_pat<A4_vcmpwgti,     int_hexagon_A4_vcmpwgti>;
+def : T_Q_PI_pat<A4_vcmpwgtui,    int_hexagon_A4_vcmpwgtui>;
+def : T_Q_PP_pat<A4_vcmpbeq_any,  int_hexagon_A4_vcmpbeq_any>;
 
-class vcmpImm_pat <InstHexagon MI, Intrinsic IntID, PatLeaf immPred> :
-      Pat <(IntID  (i64 DoubleRegs:$src1), immPred:$src2),
-           (MI (i64 DoubleRegs:$src1), immPred:$src2)>;
+def : T_Q_RR_pat<A4_cmpbeq,   int_hexagon_A4_cmpbeq>;
+def : T_Q_RR_pat<A4_cmpbgt,   int_hexagon_A4_cmpbgt>;
+def : T_Q_RR_pat<A4_cmpbgtu,  int_hexagon_A4_cmpbgtu>;
+def : T_Q_RR_pat<A4_cmpheq,   int_hexagon_A4_cmpheq>;
+def : T_Q_RR_pat<A4_cmphgt,   int_hexagon_A4_cmphgt>;
+def : T_Q_RR_pat<A4_cmphgtu,  int_hexagon_A4_cmphgtu>;
 
-def : vcmpImm_pat <A4_vcmpbeqi, int_hexagon_A4_vcmpbeqi, u8ImmPred>;
-def : vcmpImm_pat <A4_vcmpbgti, int_hexagon_A4_vcmpbgti, s8ImmPred>;
-def : vcmpImm_pat <A4_vcmpbgtui, int_hexagon_A4_vcmpbgtui, u7ImmPred>;
+def : T_Q_RI_pat<A4_cmpbeqi,  int_hexagon_A4_cmpbeqi>;
+def : T_Q_RI_pat<A4_cmpbgti,  int_hexagon_A4_cmpbgti>;
+def : T_Q_RI_pat<A4_cmpbgtui, int_hexagon_A4_cmpbgtui>;
 
-def : vcmpImm_pat <A4_vcmpheqi, int_hexagon_A4_vcmpheqi, s8ImmPred>;
-def : vcmpImm_pat <A4_vcmphgti, int_hexagon_A4_vcmphgti, s8ImmPred>;
-def : vcmpImm_pat <A4_vcmphgtui, int_hexagon_A4_vcmphgtui, u7ImmPred>;
+def : T_Q_RI_pat<A4_cmpheqi,  int_hexagon_A4_cmpheqi>;
+def : T_Q_RI_pat<A4_cmphgti,  int_hexagon_A4_cmphgti>;
+def : T_Q_RI_pat<A4_cmphgtui, int_hexagon_A4_cmphgtui>;
 
-def : vcmpImm_pat <A4_vcmpweqi, int_hexagon_A4_vcmpweqi, s8ImmPred>;
-def : vcmpImm_pat <A4_vcmpwgti, int_hexagon_A4_vcmpwgti, s8ImmPred>;
-def : vcmpImm_pat <A4_vcmpwgtui, int_hexagon_A4_vcmpwgtui, u7ImmPred>;
+def : T_Q_RP_pat<A4_boundscheck, int_hexagon_A4_boundscheck>;
+def : T_Q_PR_pat<A4_tlbmatch,    int_hexagon_A4_tlbmatch>;
 
-def : T_PP_pat<A4_vcmpbeq_any, int_hexagon_A4_vcmpbeq_any>;
-
-def : T_RR_pat<A4_cmpbeq,   int_hexagon_A4_cmpbeq>;
-def : T_RR_pat<A4_cmpbgt,   int_hexagon_A4_cmpbgt>;
-def : T_RR_pat<A4_cmpbgtu,  int_hexagon_A4_cmpbgtu>;
-def : T_RR_pat<A4_cmpheq,   int_hexagon_A4_cmpheq>;
-def : T_RR_pat<A4_cmphgt,   int_hexagon_A4_cmphgt>;
-def : T_RR_pat<A4_cmphgtu,  int_hexagon_A4_cmphgtu>;
-
-def : T_RI_pat<A4_cmpbeqi,  int_hexagon_A4_cmpbeqi>;
-def : T_RI_pat<A4_cmpbgti,  int_hexagon_A4_cmpbgti>;
-def : T_RI_pat<A4_cmpbgtui, int_hexagon_A4_cmpbgtui>;
-
-def : T_RI_pat<A4_cmpheqi,  int_hexagon_A4_cmpheqi>;
-def : T_RI_pat<A4_cmphgti,  int_hexagon_A4_cmphgti>;
-def : T_RI_pat<A4_cmphgtui, int_hexagon_A4_cmphgtui>;
-
-def : T_RP_pat <A4_boundscheck, int_hexagon_A4_boundscheck>;
-
-def : T_PR_pat<A4_tlbmatch, int_hexagon_A4_tlbmatch>;
-
-def : Pat <(int_hexagon_M4_mpyrr_addr IntRegs:$src1, IntRegs:$src2,
-                                      IntRegs:$src3),
-           (M4_mpyrr_addr IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>;
-
-def : T_IRR_pat <M4_mpyrr_addi, int_hexagon_M4_mpyrr_addi>;
-def : T_IRI_pat <M4_mpyri_addi, int_hexagon_M4_mpyri_addi>;
+def : T_RRR_pat <M4_mpyrr_addr,    int_hexagon_M4_mpyrr_addr>;
+def : T_IRR_pat <M4_mpyrr_addi,    int_hexagon_M4_mpyrr_addi>;
+def : T_IRI_pat <M4_mpyri_addi,    int_hexagon_M4_mpyri_addi>;
 def : T_RIR_pat <M4_mpyri_addr_u2, int_hexagon_M4_mpyri_addr_u2>;
-def : T_RRI_pat <M4_mpyri_addr, int_hexagon_M4_mpyri_addr>;
-// Multiply 32x32 and use upper result
+def : T_RRI_pat <M4_mpyri_addr,    int_hexagon_M4_mpyri_addr>;
 def : T_RRR_pat <M4_mac_up_s1_sat, int_hexagon_M4_mac_up_s1_sat>;
 def : T_RRR_pat <M4_nac_up_s1_sat, int_hexagon_M4_nac_up_s1_sat>;
 
@@ -178,15 +167,15 @@ def : T_PPR_pat <A4_vrminuw, int_hexagon_A4_vrminuw>;
 
 // Rotate and reduce bytes
 def : Pat <(int_hexagon_S4_vrcrotate DoubleRegs:$src1, IntRegs:$src2,
-                                     u2ImmPred:$src3),
-           (S4_vrcrotate DoubleRegs:$src1, IntRegs:$src2, u2ImmPred:$src3)>;
+                                     u2_0ImmPred:$src3),
+           (S4_vrcrotate DoubleRegs:$src1, IntRegs:$src2, u2_0ImmPred:$src3)>;
 
 // Rotate and reduce bytes with accumulation
 // Rxx+=vrcrotate(Rss,Rt,#u2)
 def : Pat <(int_hexagon_S4_vrcrotate_acc DoubleRegs:$src1, DoubleRegs:$src2,
-                                         IntRegs:$src3, u2ImmPred:$src4),
+                                         IntRegs:$src3, u2_0ImmPred:$src4),
            (S4_vrcrotate_acc DoubleRegs:$src1, DoubleRegs:$src2,
-                             IntRegs:$src3, u2ImmPred:$src4)>;
+                             IntRegs:$src3, u2_0ImmPred:$src4)>;
 
 // Vector conditional negate
 def : T_PPR_pat<S2_vrcnegh, int_hexagon_S2_vrcnegh>;
@@ -210,41 +199,46 @@ def : T_IRI_pat <S4_subi_lsr_ri, int_hexagon_S4_subi_lsr_ri>;
 
 // Split bitfield
 def : T_RI_pat <A4_bitspliti, int_hexagon_A4_bitspliti>;
-def : T_RR_pat <A4_bitsplit, int_hexagon_A4_bitsplit>;
+def : T_RR_pat <A4_bitsplit,  int_hexagon_A4_bitsplit>;
 
-def: T_RR_pat<S4_parity,   int_hexagon_S4_parity>;
+def: T_RR_pat<S4_parity,      int_hexagon_S4_parity>;
 
-def: T_RI_pat<S4_ntstbit_i,  int_hexagon_S4_ntstbit_i>;
-def: T_RR_pat<S4_ntstbit_r,  int_hexagon_S4_ntstbit_r>;
+def: T_Q_RI_pat<S4_ntstbit_i, int_hexagon_S4_ntstbit_i>;
+def: T_Q_RR_pat<S4_ntstbit_r, int_hexagon_S4_ntstbit_r>;
 
-def: T_RI_pat<S4_clbaddi,  int_hexagon_S4_clbaddi>;
-def: T_PI_pat<S4_clbpaddi, int_hexagon_S4_clbpaddi>;
-def: T_P_pat <S4_clbpnorm, int_hexagon_S4_clbpnorm>;
+def: T_RI_pat<S4_clbaddi,     int_hexagon_S4_clbaddi>;
+def: T_PI_pat<S4_clbpaddi,    int_hexagon_S4_clbpaddi>;
+def: T_P_pat <S4_clbpnorm,    int_hexagon_S4_clbpnorm>;
 
-/********************************************************************
-*            ALU32/ALU                                              *
-*********************************************************************/
+//*******************************************************************
+//            ALU32/ALU
+//*******************************************************************
 
 // ALU32 / ALU / Logical Operations.
 def: T_RR_pat<A4_andn, int_hexagon_A4_andn>;
 def: T_RR_pat<A4_orn,  int_hexagon_A4_orn>;
 
-/********************************************************************
-*            ALU32/PERM                                             *
-*********************************************************************/
+//*******************************************************************
+//            ALU32/PERM
+//*******************************************************************
 
 // Combine Words Into Doublewords.
-def: T_RI_pat<A4_combineri, int_hexagon_A4_combineri, s32ImmPred>;
-def: T_IR_pat<A4_combineir, int_hexagon_A4_combineir, s32ImmPred>;
+def: T_RI_pat<A4_combineri, int_hexagon_A4_combineri, s32_0ImmPred>;
+def: T_IR_pat<A4_combineir, int_hexagon_A4_combineir, s32_0ImmPred>;
 
-/********************************************************************
-*            ALU32/PRED                                             *
-*********************************************************************/
+//*******************************************************************
+//           ALU32/PRED
+//*******************************************************************
 
 // Compare
-def : T_RI_pat<C4_cmpneqi, int_hexagon_C4_cmpneqi, s32ImmPred>;
-def : T_RI_pat<C4_cmpltei, int_hexagon_C4_cmpltei, s32ImmPred>;
-def : T_RI_pat<C4_cmplteui, int_hexagon_C4_cmplteui, u32ImmPred>;
+def : T_Q_RI_pat<C4_cmpneqi, int_hexagon_C4_cmpneqi, s32_0ImmPred>;
+def : T_Q_RI_pat<C4_cmpltei, int_hexagon_C4_cmpltei, s32_0ImmPred>;
+def : T_Q_RI_pat<C4_cmplteui, int_hexagon_C4_cmplteui, u32_0ImmPred>;
+
+// Compare To General Register.
+def: T_Q_RR_pat<C4_cmpneq,  int_hexagon_C4_cmpneq>;
+def: T_Q_RR_pat<C4_cmplte,  int_hexagon_C4_cmplte>;
+def: T_Q_RR_pat<C4_cmplteu, int_hexagon_C4_cmplteu>;
 
 def: T_RR_pat<A4_rcmpeq,  int_hexagon_A4_rcmpeq>;
 def: T_RR_pat<A4_rcmpneq, int_hexagon_A4_rcmpneq>;
@@ -252,30 +246,23 @@ def: T_RR_pat<A4_rcmpneq, int_hexagon_A4_rcmpneq>;
 def: T_RI_pat<A4_rcmpeqi,  int_hexagon_A4_rcmpeqi>;
 def: T_RI_pat<A4_rcmpneqi, int_hexagon_A4_rcmpneqi>;
 
-/********************************************************************
-*            CR                                                     *
-*********************************************************************/
+//*******************************************************************
+//           CR
+//*******************************************************************
 
 // CR / Logical Operations On Predicates.
+def: T_Q_QQQ_pat<C4_and_and,  int_hexagon_C4_and_and>;
+def: T_Q_QQQ_pat<C4_and_andn, int_hexagon_C4_and_andn>;
+def: T_Q_QQQ_pat<C4_and_or,   int_hexagon_C4_and_or>;
+def: T_Q_QQQ_pat<C4_and_orn,  int_hexagon_C4_and_orn>;
+def: T_Q_QQQ_pat<C4_or_and,   int_hexagon_C4_or_and>;
+def: T_Q_QQQ_pat<C4_or_andn,  int_hexagon_C4_or_andn>;
+def: T_Q_QQQ_pat<C4_or_or,    int_hexagon_C4_or_or>;
+def: T_Q_QQQ_pat<C4_or_orn,   int_hexagon_C4_or_orn>;
 
-class qi_CRInst_qiqiqi_pat<Intrinsic IntID, InstHexagon Inst> :
-  Pat<(i32 (IntID IntRegs:$Rs, IntRegs:$Rt, IntRegs:$Ru)),
-      (i32 (C2_tfrpr (Inst (C2_tfrrp IntRegs:$Rs),
-                           (C2_tfrrp IntRegs:$Rt),
-                           (C2_tfrrp IntRegs:$Ru))))>;
-
-def: qi_CRInst_qiqiqi_pat<int_hexagon_C4_and_and,   C4_and_and>;
-def: qi_CRInst_qiqiqi_pat<int_hexagon_C4_and_andn,  C4_and_andn>;
-def: qi_CRInst_qiqiqi_pat<int_hexagon_C4_and_or,    C4_and_or>;
-def: qi_CRInst_qiqiqi_pat<int_hexagon_C4_and_orn,   C4_and_orn>;
-def: qi_CRInst_qiqiqi_pat<int_hexagon_C4_or_and,    C4_or_and>;
-def: qi_CRInst_qiqiqi_pat<int_hexagon_C4_or_andn,   C4_or_andn>;
-def: qi_CRInst_qiqiqi_pat<int_hexagon_C4_or_or,     C4_or_or>;
-def: qi_CRInst_qiqiqi_pat<int_hexagon_C4_or_orn,    C4_or_orn>;
-
-/********************************************************************
-*            XTYPE/ALU                                              *
-*********************************************************************/
+//*******************************************************************
+//           XTYPE/ALU
+//*******************************************************************
 
 // Add And Accumulate.
 

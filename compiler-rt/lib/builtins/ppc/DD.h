@@ -1,5 +1,5 @@
-#ifndef __DD_HEADER
-#define __DD_HEADER
+#ifndef COMPILERRT_DD_HEADER
+#define COMPILERRT_DD_HEADER
 
 #include "../int_lib.h"
 
@@ -9,7 +9,7 @@ typedef union {
 		double hi;
 		double lo;
 	}s;
-}DD;
+} DD;
 
 typedef union { 
 	double d;
@@ -37,4 +37,9 @@ static __inline ALWAYS_INLINE int different_sign(double x, double y) {
   return result;
 }
 
-#endif /* __DD_HEADER */
+long double __gcc_qadd(long double, long double);
+long double __gcc_qsub(long double, long double);
+long double __gcc_qmul(long double, long double);
+long double __gcc_qdiv(long double, long double);
+
+#endif /* COMPILERRT_DD_HEADER */

@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the itinerary class data for the Freescale e500mc 32-bit 
+// This file defines the itinerary class data for the Freescale e500mc 32-bit
 // Power processor.
-// 
+//
 // All information is derived from the "e500mc Core Reference Manual",
 // Freescale Document Number E500MCRM, Rev. 1, 03/2012.
 //
@@ -25,12 +25,12 @@ def E500_DIS1 : FuncUnit; // Dispatch stage - insn 2
 //  * Execute
 //    6 pipelined execution units: SFX0, SFX1, BU, FPU, LSU, CFX.
 //    Some instructions can only execute in SFX0 but not SFX1.
-//    The CFX has a bypass path, allowing non-divide instructions to execute 
+//    The CFX has a bypass path, allowing non-divide instructions to execute
 //    while a divide instruction is executed.
 def E500_SFX0  : FuncUnit; // Simple unit 0
 def E500_SFX1  : FuncUnit; // Simple unit 1
 def E500_BU    : FuncUnit; // Branch unit
-def E500_CFX_DivBypass 
+def E500_CFX_DivBypass
                : FuncUnit; // CFX divide bypass path
 def E500_CFX_0 : FuncUnit; // CFX pipeline
 def E500_LSU_0 : FuncUnit; // LSU pipeline
@@ -249,6 +249,10 @@ def PPCE500mcItineraries : ProcessorItineraries<
                                   InstrStage<5, [E500_SFX0]>],
                                  [8, 1],
                                  [E500_GPR_Bypass, E500_CR_Bypass]>,
+  InstrItinData<IIC_SprMFPMR,    [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
+                                  InstrStage<4, [E500_SFX0]>],
+                                 [7, 1], // Latency = 4, Repeat rate = 4
+                                 [E500_GPR_Bypass, E500_GPR_Bypass]>,
   InstrItinData<IIC_SprMFMSR,    [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
                                   InstrStage<4, [E500_SFX0]>],
                                  [7, 1], // Latency = 4, Repeat rate = 4
@@ -257,6 +261,10 @@ def PPCE500mcItineraries : ProcessorItineraries<
                                   InstrStage<1, [E500_SFX0, E500_SFX1]>],
                                  [4, 1], // Latency = 1, Repeat rate = 1
                                  [E500_GPR_Bypass, E500_CR_Bypass]>,
+  InstrItinData<IIC_SprMTPMR,    [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
+                                  InstrStage<1, [E500_SFX0]>],
+                                 [4, 1], // Latency = 1, Repeat rate = 1
+                                 [E500_CR_Bypass, E500_GPR_Bypass]>,
   InstrItinData<IIC_SprMFTB,     [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
                                   InstrStage<4, [E500_SFX0]>],
                                  [7, 1], // Latency = 4, Repeat rate = 4
@@ -271,12 +279,12 @@ def PPCE500mcItineraries : ProcessorItineraries<
                                  [NoBypass, E500_GPR_Bypass]>,
   InstrItinData<IIC_FPGeneral,   [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
                                   InstrStage<2, [E500_FPU_0]>],
-                                 [11, 1, 1], // Latency = 8, Repeat rate = 2 
+                                 [11, 1, 1], // Latency = 8, Repeat rate = 2
                                  [E500_FPR_Bypass,
                                   E500_FPR_Bypass, E500_FPR_Bypass]>,
   InstrItinData<IIC_FPAddSub,    [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
                                   InstrStage<4, [E500_FPU_0]>],
-                                 [13, 1, 1], // Latency = 10, Repeat rate = 4 
+                                 [13, 1, 1], // Latency = 10, Repeat rate = 4
                                  [E500_FPR_Bypass,
                                   E500_FPR_Bypass, E500_FPR_Bypass]>,
   InstrItinData<IIC_FPCompare,   [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
@@ -311,10 +319,11 @@ def PPCE500mcItineraries : ProcessorItineraries<
 
 def PPCE500mcModel : SchedMachineModel {
   let IssueWidth = 2;  // 2 micro-ops are dispatched per cycle.
-  let MinLatency = -1; // OperandCycles are interpreted as MinLatency.
   let LoadLatency = 5; // Optimistic load latency assuming bypass.
                        // This is overriden by OperandCycles if the
                        // Itineraries are queried instead.
+
+  let CompleteModel = 0;
 
   let Itineraries = PPCE500mcItineraries;
 }

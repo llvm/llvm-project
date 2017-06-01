@@ -6,10 +6,10 @@
 ; they must not be placed on the same chain after merging.
 
 ; X86-LABEL: {{^}}merge_store_partial_overlap_load:
-; X86-DAG: movw ([[BASEREG:%[a-z]+]]), [[LO2:%[a-z]+]]
+; X86-DAG: movzwl ([[BASEREG:%[a-z]+]]), %e[[LO2:[a-z]+]]
 ; X86-DAG: movb 2([[BASEREG]]), [[HI1:%[a-z]+]]
 
-; X86-NEXT: movw [[LO2]], 1([[BASEREG]])
+; X86-NEXT: movw %[[LO2]], 1([[BASEREG]])
 ; X86-NEXT: movb [[HI1]], 3([[BASEREG]])
 ; X86-NEXT: retq
 

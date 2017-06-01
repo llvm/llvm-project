@@ -204,7 +204,7 @@ IR features is specified by the selected :ref:`GC strategy description
 Specifying GC code generation: ``gc "..."``
 -------------------------------------------
 
-.. code-block:: llvm
+.. code-block:: text
 
   define <returntype> @name(...) gc "name" { ... }
 
@@ -1007,7 +1007,7 @@ a realistic example:
 
   void MyGCPrinter::finishAssembly(AsmPrinter &AP) {
     MCStreamer &OS = AP.OutStreamer;
-    unsigned IntPtrSize = AP.TM.getSubtargetImpl()->getDataLayout()->getPointerSize();
+    unsigned IntPtrSize = AP.getPointerSize();
 
     // Put this in the data section.
     OS.SwitchSection(AP.getObjFileLowering().getDataSection());

@@ -11,7 +11,6 @@
 #define LLVM_CLANG_FRONTEND_SERIALIZED_DIAGNOSTIC_READER_H_
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Bitcode/BitstreamReader.h"
 #include "llvm/Support/ErrorOr.h"
 

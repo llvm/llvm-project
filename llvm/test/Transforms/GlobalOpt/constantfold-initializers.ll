@@ -4,13 +4,13 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 @.str91250 = global [3 x i8] zeroinitializer
 
-; CHECK: @A = global i1 false
+; CHECK: @A = local_unnamed_addr global i1 false
 @A = global i1 icmp ne (i64 sub nsw (i64 ptrtoint (i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str91250, i64 0, i64 1) to i64), i64 ptrtoint ([3 x i8]* @.str91250 to i64)), i64 1)
 
 ; PR11352
 
 @xs = global [2 x i32] zeroinitializer, align 4
-; CHECK: @xs = global [2 x i32] [i32 1, i32 1]
+; CHECK: @xs = local_unnamed_addr global [2 x i32] [i32 1, i32 1]
 
 ; PR12642
 %PR12642.struct = type { i8 }
@@ -32,7 +32,7 @@ entry:
 @f = internal global %closure zeroinitializer, align 4
 @m = global i32 0, align 4
 ; CHECK-NOT: @f
-; CHECK: @m = global i32 13
+; CHECK: @m = local_unnamed_addr global i32 13
 
 define internal i32 @test2_helper(%closure* %this, i32 %b) {
 entry:
@@ -53,7 +53,7 @@ entry:
 ; PR19955
 
 @dllimportptr = global i32* null, align 4
-; CHECK: @dllimportptr = global i32* null, align 4
+; CHECK: @dllimportptr = local_unnamed_addr global i32* null, align 4
 @dllimportvar = external dllimport global i32
 define internal void @test3() {
 entry:
@@ -62,7 +62,7 @@ entry:
 }
 
 @dllexportptr = global i32* null, align 4
-; CHECK: @dllexportptr = global i32* @dllexportvar, align 4
+; CHECK: @dllexportptr = local_unnamed_addr global i32* @dllexportvar, align 4
 @dllexportvar = dllexport global i32 0, align 4
 ; CHECK: @dllexportvar = dllexport global i32 20, align 4
 define internal void @test4() {
@@ -83,7 +83,7 @@ entry:
 
 @test6_v1 = internal global { i32, i32 } { i32 42, i32 0 }, align 8
 @test6_v2 = global i32 0, align 4
-; CHECK: @test6_v2 = global i32 42, align 4
+; CHECK: @test6_v2 = local_unnamed_addr global i32 42, align 4
 define internal void @test6() {
   %load = load { i32, i32 }, { i32, i32 }* @test6_v1, align 8
   %xv0 = extractvalue { i32, i32 } %load, 0

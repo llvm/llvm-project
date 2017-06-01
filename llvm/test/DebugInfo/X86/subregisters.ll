@@ -2,12 +2,17 @@
 ; RUN: llvm-dwarfdump %t.o | FileCheck %s
 ;
 ; Test that on x86_64, the 32-bit subregister esi is emitted as
-; DW_OP_piece 32 of the 64-bit rsi.
+; subregister of the 64-bit rsi.
 ;
 ; rdar://problem/16015314
 ;
-; CHECK:  DW_AT_location [DW_FORM_block1]       (<0x03> 54 93 04 )
-; CHECK:  DW_AT_name [DW_FORM_strp]{{.*}} "a"
+; CHECK:  .debug_info contents:
+; CHECK:  DW_TAG_variable
+; CHECK-NEXT:  DW_AT_location [DW_FORM_data4]	(0x00000000)
+; CHECK-NEXT:  DW_AT_name [DW_FORM_strp]{{.*}} "a"
+; CHECK: .debug_loc contents:
+;                                    rsi
+; CHECK:       Location description: 54
 ;
 ; struct bar {
 ;   int a;
@@ -78,11 +83,10 @@ attributes #4 = { nounwind }
 !llvm.module.flags = !{!22, !23}
 !llvm.ident = !{!24}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5 ", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5 ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "subregisters.c", directory: "")
 !2 = !{}
-!3 = !{!4, !17}
-!4 = distinct !DISubprogram(name: "doSomething", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 11, file: !1, scope: !5, type: !6, variables: !14)
+!4 = distinct !DISubprogram(name: "doSomething", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 11, file: !1, scope: !5, type: !6, variables: !14)
 !5 = !DIFile(filename: "subregisters.c", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null, !8}
@@ -95,7 +99,7 @@ attributes #4 = { nounwind }
 !14 = !{!15, !16}
 !15 = !DILocalVariable(name: "b", line: 10, arg: 1, scope: !4, file: !5, type: !8)
 !16 = !DILocalVariable(name: "a", line: 12, scope: !4, file: !5, type: !12)
-!17 = distinct !DISubprogram(name: "main", line: 16, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, scopeLine: 17, file: !1, scope: !5, type: !18, variables: !20)
+!17 = distinct !DISubprogram(name: "main", line: 16, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !0, scopeLine: 17, file: !1, scope: !5, type: !18, variables: !20)
 !18 = !DISubroutineType(types: !19)
 !19 = !{!12}
 !20 = !{!21}

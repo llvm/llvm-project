@@ -73,7 +73,7 @@ int getPosixProtectionFlags(unsigned Flags) {
   return PROT_NONE;
 }
 
-} // namespace
+} // anonymous namespace
 
 namespace llvm {
 namespace sys {
@@ -91,17 +91,9 @@ Memory::allocateMappedMemory(size_t NumBytes,
   const size_t NumPages = (NumBytes+PageSize-1)/PageSize;
 
   int fd = -1;
-#ifdef NEED_DEV_ZERO_FOR_MMAP
-  static int zero_fd = open("/dev/zero", O_RDWR);
-  if (zero_fd == -1) {
-    EC = std::error_code(errno, std::generic_category());
-    return MemoryBlock();
-  }
-  fd = zero_fd;
-#endif
 
   int MMFlags = MAP_PRIVATE |
-#ifdef HAVE_MMAP_ANONYMOUS
+#ifdef MAP_ANONYMOUS
   MAP_ANONYMOUS
 #else
   MAP_ANON
@@ -152,6 +144,7 @@ Memory::releaseMappedMemory(MemoryBlock &M) {
 
 std::error_code
 Memory::protectMappedMemory(const MemoryBlock &M, unsigned Flags) {
+  static const size_t PageSize = Process::getPageSize();
   if (M.Address == nullptr || M.Size == 0)
     return std::error_code();
 
@@ -160,7 +153,10 @@ Memory::protectMappedMemory(const MemoryBlock &M, unsigned Flags) {
 
   int Protect = getPosixProtectionFlags(Flags);
 
-  int Result = ::mprotect(M.Address, M.Size, Protect);
+  uintptr_t Start = alignAddr((uint8_t *)M.Address - PageSize + 1, PageSize);
+  uintptr_t End = alignAddr((uint8_t *)M.Address + M.Size, PageSize);
+  int Result = ::mprotect((void *)Start, End - Start, Protect);
+
   if (Result != 0)
     return std::error_code(errno, std::generic_category());
 
@@ -180,21 +176,13 @@ Memory::AllocateRWX(size_t NumBytes, const MemoryBlock* NearBlock,
                     std::string *ErrMsg) {
   if (NumBytes == 0) return MemoryBlock();
 
-  size_t PageSize = Process::getPageSize();
+  static const size_t PageSize = Process::getPageSize();
   size_t NumPages = (NumBytes+PageSize-1)/PageSize;
 
   int fd = -1;
-#ifdef NEED_DEV_ZERO_FOR_MMAP
-  static int zero_fd = open("/dev/zero", O_RDWR);
-  if (zero_fd == -1) {
-    MakeErrMsg(ErrMsg, "Can't open /dev/zero device");
-    return MemoryBlock();
-  }
-  fd = zero_fd;
-#endif
 
   int flags = MAP_PRIVATE |
-#ifdef HAVE_MMAP_ANONYMOUS
+#ifdef MAP_ANONYMOUS
   MAP_ANONYMOUS
 #else
   MAP_ANON
@@ -264,15 +252,12 @@ bool Memory::setWritable (MemoryBlock &M, std::string *ErrMsg) {
 }
 
 bool Memory::setExecutable (MemoryBlock &M, std::string *ErrMsg) {
-#if defined(__APPLE__) && (defined(__arm__) || defined(__arm64__))
-  if (M.Address == 0 || M.Size == 0) return false;
+  if (M.Address == nullptr || M.Size == 0) return false;
   Memory::InvalidateInstructionCache(M.Address, M.Size);
+#if defined(__APPLE__) && (defined(__arm__) || defined(__arm64__))
   kern_return_t kr = vm_protect(mach_task_self(), (vm_address_t)M.Address,
     (vm_size_t)M.Size, 0, VM_PROT_READ | VM_PROT_EXECUTE | VM_PROT_COPY);
   return KERN_SUCCESS == kr;
-#elif defined(__arm__) || defined(__aarch64__)
-  Memory::InvalidateInstructionCache(M.Address, M.Size);
-  return true;
 #else
   return true;
 #endif

@@ -15,7 +15,7 @@
 #ifndef LLVM_COV_COVERAGESUMMARYINFO_H
 #define LLVM_COV_COVERAGESUMMARYINFO_H
 
-#include "llvm/ProfileData/CoverageMapping.h"
+#include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -47,6 +47,8 @@ struct RegionCoverageInfo {
   bool isFullyCovered() const { return Covered == NumRegions; }
 
   double getPercentCovered() const {
+    if (NumRegions == 0)
+      return 0.0;
     return double(Covered) / double(NumRegions) * 100.0;
   }
 };
@@ -59,31 +61,27 @@ struct LineCoverageInfo {
   /// \brief The number of lines that weren't executed.
   size_t NotCovered;
 
-  /// \brief The number of lines that aren't code.
-  size_t NonCodeLines;
-
   /// \brief The total number of lines in a function/file.
   size_t NumLines;
 
-  LineCoverageInfo()
-      : Covered(0), NotCovered(0), NonCodeLines(0), NumLines(0) {}
+  LineCoverageInfo() : Covered(0), NotCovered(0), NumLines(0) {}
 
-  LineCoverageInfo(size_t Covered, size_t NumNonCodeLines, size_t NumLines)
-      : Covered(Covered), NotCovered(NumLines - NumNonCodeLines - Covered),
-        NonCodeLines(NumNonCodeLines), NumLines(NumLines) {}
+  LineCoverageInfo(size_t Covered, size_t NumLines)
+      : Covered(Covered), NotCovered(NumLines - Covered), NumLines(NumLines) {}
 
   LineCoverageInfo &operator+=(const LineCoverageInfo &RHS) {
     Covered += RHS.Covered;
     NotCovered += RHS.NotCovered;
-    NonCodeLines += RHS.NonCodeLines;
     NumLines += RHS.NumLines;
     return *this;
   }
 
-  bool isFullyCovered() const { return Covered == (NumLines - NonCodeLines); }
+  bool isFullyCovered() const { return Covered == NumLines; }
 
   double getPercentCovered() const {
-    return double(Covered) / double(NumLines - NonCodeLines) * 100.0;
+    if (NumLines == 0)
+      return 0.0;
+    return double(Covered) / double(NumLines) * 100.0;
   }
 };
 
@@ -109,6 +107,8 @@ struct FunctionCoverageInfo {
   bool isFullyCovered() const { return Executed == NumFunctions; }
 
   double getPercentCovered() const {
+    if (NumFunctions == 0)
+      return 0.0;
     return double(Executed) / double(NumFunctions) * 100.0;
   }
 };
@@ -133,6 +133,10 @@ struct FunctionCoverageSummary {
   /// mapping record.
   static FunctionCoverageSummary
   get(const coverage::FunctionRecord &Function);
+
+  /// \brief Update the summary with information from another instantiation
+  /// of this function.
+  void update(const FunctionCoverageSummary &Summary);
 };
 
 /// \brief A summary of file's code coverage.
@@ -141,6 +145,7 @@ struct FileCoverageSummary {
   RegionCoverageInfo RegionCoverage;
   LineCoverageInfo LineCoverage;
   FunctionCoverageInfo FunctionCoverage;
+  FunctionCoverageInfo InstantiationCoverage;
 
   FileCoverageSummary(StringRef Name) : Name(Name) {}
 
@@ -148,6 +153,23 @@ struct FileCoverageSummary {
     RegionCoverage += Function.RegionCoverage;
     LineCoverage += Function.LineCoverage;
     FunctionCoverage.addFunction(/*Covered=*/Function.ExecutionCount > 0);
+  }
+
+  void addInstantiation(const FunctionCoverageSummary &Function) {
+    InstantiationCoverage.addFunction(/*Covered=*/Function.ExecutionCount > 0);
+  }
+};
+
+/// \brief A cache for demangled symbols.
+struct DemangleCache {
+  StringMap<std::string> DemangledNames;
+
+  /// \brief Demangle \p Sym if possible. Otherwise, just return \p Sym.
+  StringRef demangle(StringRef Sym) const {
+    const auto DemangledName = DemangledNames.find(Sym);
+    if (DemangledName == DemangledNames.end())
+      return Sym;
+    return DemangledName->getValue();
   }
 };
 

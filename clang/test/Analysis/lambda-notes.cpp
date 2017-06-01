@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -analyze -analyzer-checker=core -analyzer-config inline-lambdas=true -analyzer-output plist -verify %s -o %t
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core.DivideZero -analyzer-config inline-lambdas=true -analyzer-output plist -verify %s -o %t
 // RUN: FileCheck --input-file=%t %s
 
 

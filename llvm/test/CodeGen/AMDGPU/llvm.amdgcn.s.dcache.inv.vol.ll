@@ -2,6 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 declare void @llvm.amdgcn.s.dcache.inv.vol() #0
+declare void @llvm.amdgcn.s.waitcnt(i32) #0
 
 ; GCN-LABEL: {{^}}test_s_dcache_inv_vol:
 ; GCN-NEXT: ; BB#0:
@@ -16,9 +17,10 @@ define void @test_s_dcache_inv_vol() #0 {
 ; GCN-LABEL: {{^}}test_s_dcache_inv_vol_insert_wait:
 ; GCN-NEXT: ; BB#0:
 ; GCN-NEXT: s_dcache_inv_vol
-; GCN-NEXT: s_waitcnt lgkmcnt(0) ; encoding
+; GCN: s_waitcnt lgkmcnt(0) ; encoding
 define void @test_s_dcache_inv_vol_insert_wait() #0 {
   call void @llvm.amdgcn.s.dcache.inv.vol()
+  call void @llvm.amdgcn.s.waitcnt(i32 0)
   br label %end
 
 end:

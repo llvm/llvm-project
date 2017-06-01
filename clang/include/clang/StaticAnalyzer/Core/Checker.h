@@ -238,6 +238,20 @@ public:
   }
 };
 
+class BeginFunction {
+  template <typename CHECKER>
+  static void _checkBeginFunction(void *checker, CheckerContext &C) {
+    ((const CHECKER *)checker)->checkBeginFunction(C);
+  }
+
+public:
+  template <typename CHECKER>
+  static void _register(CHECKER *checker, CheckerManager &mgr) {
+    mgr._registerForBeginFunction(CheckerManager::CheckBeginFunctionFunc(
+        checker, _checkBeginFunction<CHECKER>));
+  }
+};
+
 class EndFunction {
   template <typename CHECKER>
   static void _checkEndFunction(void *checker,
@@ -307,14 +321,11 @@ class RegionChanges {
                       const InvalidatedSymbols *invalidated,
                       ArrayRef<const MemRegion *> Explicits,
                       ArrayRef<const MemRegion *> Regions,
+                      const LocationContext *LCtx,
                       const CallEvent *Call) {
-    return ((const CHECKER *)checker)->checkRegionChanges(state, invalidated,
-                                                      Explicits, Regions, Call);
-  }
-  template <typename CHECKER>
-  static bool _wantsRegionChangeUpdate(void *checker,
-                                       ProgramStateRef state) {
-    return ((const CHECKER *)checker)->wantsRegionChangeUpdate(state);
+    return ((const CHECKER *) checker)->checkRegionChanges(state, invalidated,
+                                                           Explicits, Regions,
+                                                           LCtx, Call);
   }
 
 public:
@@ -322,9 +333,7 @@ public:
   static void _register(CHECKER *checker, CheckerManager &mgr) {
     mgr._registerForRegionChanges(
           CheckerManager::CheckRegionChangesFunc(checker,
-                                                 _checkRegionChanges<CHECKER>),
-          CheckerManager::WantsRegionChangeUpdateFunc(checker,
-                                            _wantsRegionChangeUpdate<CHECKER>));
+                                                 _checkRegionChanges<CHECKER>));
   }
 };
 

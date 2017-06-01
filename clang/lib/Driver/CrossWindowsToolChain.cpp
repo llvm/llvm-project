@@ -11,6 +11,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -62,6 +63,8 @@ AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
     llvm::sys::path::append(ResourceDir, "include");
     addSystemInclude(DriverArgs, CC1Args, ResourceDir);
   }
+  for (const auto &P : DriverArgs.getAllArgValues(options::OPT_isystem_after))
+    addSystemInclude(DriverArgs, CC1Args, P);
   addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/include");
 }
 

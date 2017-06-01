@@ -7,10 +7,16 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(AnalysisTests
   AliasAnalysisTest.cpp
-  CallGraphTest.cpp
+  BlockFrequencyInfoTest.cpp
+  BranchProbabilityInfoTest.cpp
   CFGTest.cpp
+  CGSCCPassManagerTest.cpp
+  CallGraphTest.cpp
   LazyCallGraphTest.cpp
+  MemoryBuiltinsTest.cpp
   ScalarEvolutionTest.cpp
-  MixedTBAATest.cpp
+  TBAATest.cpp
+  TargetLibraryInfoTest.cpp
+  UnrollAnalyzer.cpp
   ValueTrackingTest.cpp
   )

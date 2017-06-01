@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/PBQP/ReductionRules.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <set>
 
 namespace llvm {
 
@@ -88,26 +89,7 @@ public:
     std::copy(OptVec.begin(), OptVec.end(), Opts.get());
   }
 
-  AllowedRegVector(const AllowedRegVector &Other)
-    : NumOpts(Other.NumOpts), Opts(new unsigned[NumOpts]) {
-    std::copy(Other.Opts.get(), Other.Opts.get() + NumOpts, Opts.get());
-  }
-
-  AllowedRegVector(AllowedRegVector &&Other)
-    : NumOpts(std::move(Other.NumOpts)), Opts(std::move(Other.Opts)) {}
-
-  AllowedRegVector& operator=(const AllowedRegVector &Other) {
-    NumOpts = Other.NumOpts;
-    Opts.reset(new unsigned[NumOpts]);
-    std::copy(Other.Opts.get(), Other.Opts.get() + NumOpts, Opts.get());
-    return *this;
-  }
-
-  AllowedRegVector& operator=(AllowedRegVector &&Other) {
-    NumOpts = std::move(Other.NumOpts);
-    Opts = std::move(Other.Opts);
-    return *this;
-  }
+  AllowedRegVector(AllowedRegVector &&) = default;
 
   unsigned size() const { return NumOpts; }
   unsigned operator[](size_t I) const { return Opts[I]; }
@@ -162,10 +144,6 @@ public:
     return VRegItr->second;
   }
 
-  void eraseNodeIdForVReg(unsigned VReg) {
-    VRegToNodeId.erase(VReg);
-  }
-
   AllowedRegVecRef getAllowedRegs(AllowedRegVector Allowed) {
     return AllowedRegVecs.getValue(std::move(Allowed));
   }
@@ -198,8 +176,6 @@ public:
 #endif
       {}
 
-  // FIXME: Re-implementing default behavior to work around MSVC. Remove once
-  // MSVC synthesizes move constructors properly.
   NodeMetadata(const NodeMetadata &Other)
     : RS(Other.RS), NumOpts(Other.NumOpts), DeniedOpts(Other.DeniedOpts),
       OptUnsafeEdges(new unsigned[NumOpts]), VReg(Other.VReg),
@@ -214,48 +190,9 @@ public:
     }
   }
 
-  // FIXME: Re-implementing default behavior to work around MSVC. Remove once
-  // MSVC synthesizes move constructors properly.
-  NodeMetadata(NodeMetadata &&Other)
-    : RS(Other.RS), NumOpts(Other.NumOpts), DeniedOpts(Other.DeniedOpts),
-      OptUnsafeEdges(std::move(Other.OptUnsafeEdges)), VReg(Other.VReg),
-      AllowedRegs(std::move(Other.AllowedRegs))
-#ifndef NDEBUG
-      , everConservativelyAllocatable(Other.everConservativelyAllocatable)
-#endif
-  {}
+  NodeMetadata(NodeMetadata &&Other) = default;
 
-  // FIXME: Re-implementing default behavior to work around MSVC. Remove once
-  // MSVC synthesizes move constructors properly.
-  NodeMetadata& operator=(const NodeMetadata &Other) {
-    RS = Other.RS;
-    NumOpts = Other.NumOpts;
-    DeniedOpts = Other.DeniedOpts;
-    OptUnsafeEdges.reset(new unsigned[NumOpts]);
-    std::copy(Other.OptUnsafeEdges.get(), Other.OptUnsafeEdges.get() + NumOpts,
-              OptUnsafeEdges.get());
-    VReg = Other.VReg;
-    AllowedRegs = Other.AllowedRegs;
-#ifndef NDEBUG
-    everConservativelyAllocatable = Other.everConservativelyAllocatable;
-#endif
-    return *this;
-  }
-
-  // FIXME: Re-implementing default behavior to work around MSVC. Remove once
-  // MSVC synthesizes move constructors properly.
-  NodeMetadata& operator=(NodeMetadata &&Other) {
-    RS = Other.RS;
-    NumOpts = Other.NumOpts;
-    DeniedOpts = Other.DeniedOpts;
-    OptUnsafeEdges = std::move(Other.OptUnsafeEdges);
-    VReg = Other.VReg;
-    AllowedRegs = std::move(Other.AllowedRegs);
-#ifndef NDEBUG
-    everConservativelyAllocatable = Other.everConservativelyAllocatable;
-#endif
-    return *this;
-  }
+  NodeMetadata& operator=(NodeMetadata &&Other) = default;
 
   void setVReg(unsigned VReg) { this->VReg = VReg; }
   unsigned getVReg() const { return VReg; }
@@ -282,7 +219,6 @@ public:
       everConservativelyAllocatable = true;
 #endif
   }
-
 
   void handleAddEdge(const MatrixMetadata& MD, bool Transpose) {
     DeniedOpts += Transpose ? MD.getWorstRow() : MD.getWorstCol();
@@ -366,11 +302,6 @@ public:
   void handleAddEdge(EdgeId EId) {
     handleReconnectEdge(EId, G.getEdgeNode1Id(EId));
     handleReconnectEdge(EId, G.getEdgeNode2Id(EId));
-  }
-
-  void handleRemoveEdge(EdgeId EId) {
-    handleDisconnectEdge(EId, G.getEdgeNode1Id(EId));
-    handleDisconnectEdge(EId, G.getEdgeNode2Id(EId));
   }
 
   void handleDisconnectEdge(EdgeId EId, NodeId NId) {
@@ -565,7 +496,7 @@ class PBQPRAGraph : public PBQP::Graph<RegAllocSolverImpl> {
 private:
   typedef PBQP::Graph<RegAllocSolverImpl> BaseT;
 public:
-  PBQPRAGraph(GraphMetadata Metadata) : BaseT(Metadata) {}
+  PBQPRAGraph(GraphMetadata Metadata) : BaseT(std::move(Metadata)) {}
 
   /// @brief Dump this graph to dbgs().
   void dump() const;

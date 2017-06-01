@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -O1 -disable-llvm-optzns -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -O1 -disable-llvm-passes -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
 
 // CHECK: @_ZN7PR100011xE = global
 // CHECK-NOT: @_ZN7PR100014kBarE = external global i32

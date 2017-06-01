@@ -7,12 +7,12 @@
 ; Check that moving the pointer out of the resource descriptor to
 ; vaddr works for atomics.
 
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; GCN-LABEL: {{^}}atomic_max_i32:
 ; GCN: buffer_atomic_smax v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:400 glc{{$}}
 define void @atomic_max_i32(i32 addrspace(1)* %out, i32 addrspace(1)* addrspace(1)* %in, i32 addrspace(1)* %x, i32 %y) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.gep = getelementptr i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %in, i32 %tid
   %ptr = load volatile i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %tid.gep
   %xor = xor i32 %tid, 1
@@ -32,7 +32,7 @@ exit:
 ; GCN-LABEL: {{^}}atomic_max_i32_noret:
 ; GCN: buffer_atomic_smax v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:400{{$}}
 define void @atomic_max_i32_noret(i32 addrspace(1)* %out, i32 addrspace(1)* addrspace(1)* %in, i32 addrspace(1)* %x, i32 %y) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.gep = getelementptr i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %in, i32 %tid
   %ptr = load volatile i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %tid.gep
   %xor = xor i32 %tid, 1

@@ -49,6 +49,7 @@ struct __declspec(uuid(3)) uuid_attr_bad2 { };// expected-error {{'uuid' attribu
 struct __declspec(uuid("0000000-0000-0000-1234-0000500000047")) uuid_attr_bad3 { };// expected-error {{uuid attribute contains a malformed GUID}}
 struct __declspec(uuid("0000000-0000-0000-Z234-000000000047")) uuid_attr_bad4 { };// expected-error {{uuid attribute contains a malformed GUID}}
 struct __declspec(uuid("000000000000-0000-1234-000000000047")) uuid_attr_bad5 { };// expected-error {{uuid attribute contains a malformed GUID}}
+[uuid("000000000000-0000-1234-000000000047")] struct uuid_attr_bad6 { };// expected-error {{uuid attribute contains a malformed GUID}}
 
 __declspec(uuid("000000A0-0000-0000-C000-000000000046")) int i; // expected-warning {{'uuid' attribute only applies to classes}}
 
@@ -59,8 +60,16 @@ struct struct_without_uuid { };
 struct __declspec(uuid("000000A0-0000-0000-C000-000000000049"))
 struct_with_uuid2;
 
+[uuid("000000A0-0000-0000-C000-000000000049")] struct struct_with_uuid3;
+
 struct
 struct_with_uuid2 {} ;
+
+enum __declspec(uuid("000000A0-0000-0000-C000-000000000046"))
+enum_with_uuid { };
+enum enum_without_uuid { };
+
+int __declspec(uuid("000000A0-0000-0000-C000-000000000046")) inappropriate_uuid; // expected-warning {{'uuid' attribute only applies to classes and enumerations}}
 
 int uuid_sema_test()
 {
@@ -69,6 +78,7 @@ int uuid_sema_test()
 
    __uuidof(struct_with_uuid);
    __uuidof(struct_with_uuid2);
+   __uuidof(struct_with_uuid3);
    __uuidof(struct_without_uuid); // expected-error {{cannot call operator __uuidof on a type with no GUID}}
    __uuidof(struct_with_uuid*);
    __uuidof(struct_without_uuid*); // expected-error {{cannot call operator __uuidof on a type with no GUID}}
@@ -76,6 +86,15 @@ int uuid_sema_test()
    __uuidof(struct_with_uuid*[1]); // expected-error {{cannot call operator __uuidof on a type with no GUID}}
    __uuidof(const struct_with_uuid[1][1]);
    __uuidof(const struct_with_uuid*[1][1]); // expected-error {{cannot call operator __uuidof on a type with no GUID}}
+
+   __uuidof(enum_with_uuid);
+   __uuidof(enum_without_uuid); // expected-error {{cannot call operator __uuidof on a type with no GUID}}
+   __uuidof(enum_with_uuid*);
+   __uuidof(enum_without_uuid*); // expected-error {{cannot call operator __uuidof on a type with no GUID}}
+   __uuidof(enum_with_uuid[1]);
+   __uuidof(enum_with_uuid*[1]); // expected-error {{cannot call operator __uuidof on a type with no GUID}}
+   __uuidof(const enum_with_uuid[1][1]);
+   __uuidof(const enum_with_uuid*[1][1]); // expected-error {{cannot call operator __uuidof on a type with no GUID}}
 
    __uuidof(var_with_uuid);
    __uuidof(var_without_uuid);// expected-error {{cannot call operator __uuidof on a type with no GUID}}

@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=gnu++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=gnu++11 %s
 
 static void test() {
   int *pi;
@@ -9,5 +11,10 @@ static void test() {
 // Part of rdar://problem/8347416;  from the gcc test suite.
 struct S {
   int i;
-  __typeof(S::i) foo(); // expected-error {{invalid use of non-static data member 'i'}}
+  __typeof(S::i) foo();
+#if __cplusplus <= 199711L
+  // expected-error@-2 {{invalid use of non-static data member 'i'}}
+#else
+  // expected-no-diagnostics
+#endif
 };

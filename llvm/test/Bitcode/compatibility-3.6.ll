@@ -1180,8 +1180,8 @@ define void @intrinsics.codegen() {
 ; CHECK: attributes #27 = { uwtable }
 ; CHECK: attributes #28 = { "cpu"="cortex-a8" }
 ; CHECK: attributes #29 = { nounwind readnone }
-; CHECK: attributes #30 = { nounwind readonly argmemonly }
-; CHECK: attributes #31 = { nounwind argmemonly }
+; CHECK: attributes #30 = { argmemonly nounwind readonly }
+; CHECK: attributes #31 = { argmemonly nounwind }
 ; CHECK: attributes #32 = { nounwind readonly }
 ; CHECK: attributes #33 = { builtin }
 

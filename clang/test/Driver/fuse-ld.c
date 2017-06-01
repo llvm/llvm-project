@@ -1,4 +1,10 @@
 // RUN: %clang %s -### \
+// RUN:     -fuse-ld=/usr/local/bin/or1k-linux-ld 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-ABSOLUTE-LD
+// CHECK-ABSOLUTE-LD: /usr/local/bin/or1k-linux-ld
+
+
+// RUN: %clang %s -### \
 // RUN:     -target x86_64-unknown-freebsd 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-FREEBSD-LD
 // CHECK-FREEBSD-LD: ld
@@ -26,7 +32,7 @@
 
 
 
-// RUN: %clang %s -### \
+// RUN: %clang %s -### -fuse-ld=ld \
 // RUN:     -target arm-linux-androideabi \
 // RUN:     -B%S/Inputs/basic_android_tree/bin 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ANDROID-ARM-LD
@@ -44,7 +50,7 @@
 // RUN:   | FileCheck %s -check-prefix=CHECK-ANDROID-ARM-GOLD
 // CHECK-ANDROID-ARM-GOLD: Inputs/basic_android_tree/bin{{/|\\+}}arm-linux-androideabi-ld.gold
 
-// RUN: %clang %s -### \
+// RUN: %clang %s -### -fuse-ld=ld \
 // RUN:     -target arm-linux-androideabi \
 // RUN:     -gcc-toolchain %S/Inputs/basic_android_tree 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ANDROID-ARM-LD-TC

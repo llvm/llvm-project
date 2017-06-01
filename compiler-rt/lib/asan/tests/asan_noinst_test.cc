@@ -26,6 +26,8 @@
 #include <vector>
 #include <limits>
 
+using namespace __sanitizer;
+
 // ATTENTION!
 // Please don't call intercepted functions (including malloc() and friends)
 // in this test. The static runtime library is linked explicitly (without
@@ -34,7 +36,6 @@
 // Make sure __asan_init is called before any test case is run.
 struct AsanInitCaller {
   AsanInitCaller() {
-    __asan::DisableReexec();
     __asan_init();
   }
 };
@@ -169,6 +170,12 @@ void *ThreadedQuarantineTestWorker(void *unused) {
 // Check that the thread local allocators are flushed when threads are
 // destroyed.
 TEST(AddressSanitizer, ThreadedQuarantineTest) {
+  // Run the routine once to warm up ASAN internal structures to get more
+  // predictable incremental memory changes.
+  pthread_t t;
+  PTHREAD_CREATE(&t, NULL, ThreadedQuarantineTestWorker, 0);
+  PTHREAD_JOIN(t, 0);
+
   const int n_threads = 3000;
   size_t mmaped1 = __sanitizer_get_heap_size();
   for (int i = 0; i < n_threads; i++) {
@@ -176,6 +183,7 @@ TEST(AddressSanitizer, ThreadedQuarantineTest) {
     PTHREAD_CREATE(&t, NULL, ThreadedQuarantineTestWorker, 0);
     PTHREAD_JOIN(t, 0);
     size_t mmaped2 = __sanitizer_get_heap_size();
+    // Figure out why this much memory is required.
     EXPECT_LT(mmaped2 - mmaped1, 320U * (1 << 20));
   }
 }

@@ -14,18 +14,40 @@
 #ifndef LLVM_LIB_EXECUTIONENGINE_ORC_ORCMCJITREPLACEMENT_H
 #define LLVM_LIB_EXECUTIONENGINE_ORC_ORCMCJITREPLACEMENT_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/LazyEmittingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/Binary.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <algorithm>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
 
 namespace llvm {
 namespace orc {
 
 class OrcMCJITReplacement : public ExecutionEngine {
-
   // OrcMCJITReplacement needs to do a little extra book-keeping to ensure that
   // Orc's automatic finalization doesn't kick in earlier than MCJIT clients are
   // expecting - see finalizeMemory.
@@ -54,10 +76,13 @@ class OrcMCJITReplacement : public ExecutionEngine {
       return Addr;
     }
 
-    void reserveAllocationSpace(uintptr_t CodeSize, uintptr_t DataSizeRO,
-                                uintptr_t DataSizeRW) override {
-      return ClientMM->reserveAllocationSpace(CodeSize, DataSizeRO,
-                                                DataSizeRW);
+    void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
+                                uintptr_t RODataSize, uint32_t RODataAlign,
+                                uintptr_t RWDataSize,
+                                uint32_t RWDataAlign) override {
+      return ClientMM->reserveAllocationSpace(CodeSize, CodeAlign,
+                                              RODataSize, RODataAlign,
+                                              RWDataSize, RWDataAlign);
     }
 
     bool needsToReserveAllocationSpace() override {
@@ -72,6 +97,11 @@ class OrcMCJITReplacement : public ExecutionEngine {
     void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr,
                             size_t Size) override {
       return ClientMM->deregisterEHFrames(Addr, LoadAddr, Size);
+    }
+
+    void notifyObjectLoaded(RuntimeDyld &RTDyld,
+                            const object::ObjectFile &O) override {
+      return ClientMM->notifyObjectLoaded(RTDyld, O);
     }
 
     void notifyObjectLoaded(ExecutionEngine *EE,
@@ -103,16 +133,17 @@ class OrcMCJITReplacement : public ExecutionEngine {
     std::shared_ptr<MCJITMemoryManager> ClientMM;
   };
 
-  class LinkingResolver : public RuntimeDyld::SymbolResolver {
+  class LinkingResolver : public JITSymbolResolver {
   public:
     LinkingResolver(OrcMCJITReplacement &M) : M(M) {}
 
-    RuntimeDyld::SymbolInfo findSymbol(const std::string &Name) override {
-      return M.findMangledSymbol(Name);
+    JITSymbol findSymbol(const std::string &Name) override {
+      return M.ClientResolver->findSymbol(Name);
     }
 
-    RuntimeDyld::SymbolInfo
-    findSymbolInLogicalDylib(const std::string &Name) override {
+    JITSymbol findSymbolInLogicalDylib(const std::string &Name) override {
+      if (auto Sym = M.findMangledSymbol(Name))
+        return Sym;
       return M.ClientResolver->findSymbolInLogicalDylib(Name);
     }
 
@@ -125,7 +156,7 @@ private:
   static ExecutionEngine *
   createOrcMCJITReplacement(std::string *ErrorMsg,
                             std::shared_ptr<MCJITMemoryManager> MemMgr,
-                            std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver,
+                            std::shared_ptr<JITSymbolResolver> Resolver,
                             std::unique_ptr<TargetMachine> TM) {
     return new OrcMCJITReplacement(std::move(MemMgr), std::move(Resolver),
                                    std::move(TM));
@@ -138,7 +169,7 @@ public:
 
   OrcMCJITReplacement(
       std::shared_ptr<MCJITMemoryManager> MemMgr,
-      std::shared_ptr<RuntimeDyld::SymbolResolver> ClientResolver,
+      std::shared_ptr<JITSymbolResolver> ClientResolver,
       std::unique_ptr<TargetMachine> TM)
       : ExecutionEngine(TM->createDataLayout()), TM(std::move(TM)),
         MemMgr(*this, std::move(MemMgr)), Resolver(*this),
@@ -170,11 +201,10 @@ public:
   }
 
   void addObjectFile(object::OwningBinary<object::ObjectFile> O) override {
-    std::unique_ptr<object::ObjectFile> Obj;
-    std::unique_ptr<MemoryBuffer> Buf;
-    std::tie(Obj, Buf) = O.takeBinary();
-    std::vector<std::unique_ptr<object::ObjectFile>> Objs;
-    Objs.push_back(std::move(Obj));
+    std::vector<std::unique_ptr<object::OwningBinary<object::ObjectFile>>> Objs;
+    Objs.push_back(
+      llvm::make_unique<object::OwningBinary<object::ObjectFile>>(
+        std::move(O)));
     ObjectLayer.addObjectSet(std::move(Objs), &MemMgr, &Resolver);
   }
 
@@ -186,7 +216,7 @@ public:
     return findSymbol(Name).getAddress();
   }
 
-  RuntimeDyld::SymbolInfo findSymbol(StringRef Name) {
+  JITSymbol findSymbol(StringRef Name) {
     return findMangledSymbol(Mangle(Name));
   }
 
@@ -235,14 +265,13 @@ public:
   }
 
 private:
-
-  RuntimeDyld::SymbolInfo findMangledSymbol(StringRef Name) {
+  JITSymbol findMangledSymbol(StringRef Name) {
     if (auto Sym = LazyEmitLayer.findSymbol(Name, false))
-      return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+      return Sym;
     if (auto Sym = ClientResolver->findSymbol(Name))
-      return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+      return Sym;
     if (auto Sym = scanArchives(Name))
-      return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+      return Sym;
 
     return nullptr;
   }
@@ -251,15 +280,19 @@ private:
     for (object::OwningBinary<object::Archive> &OB : Archives) {
       object::Archive *A = OB.getBinary();
       // Look for our symbols in each Archive
-      object::Archive::child_iterator ChildIt = A->findSym(Name);
-      if (std::error_code EC = ChildIt->getError())
-        report_fatal_error(EC.message());
-      if (ChildIt != A->child_end()) {
+      auto OptionalChildOrErr = A->findSym(Name);
+      if (!OptionalChildOrErr)
+        report_fatal_error(OptionalChildOrErr.takeError());
+      auto &OptionalChild = *OptionalChildOrErr;
+      if (OptionalChild) {
         // FIXME: Support nested archives?
-        ErrorOr<std::unique_ptr<object::Binary>> ChildBinOrErr =
-            (*ChildIt)->getAsBinary();
-        if (ChildBinOrErr.getError())
+        Expected<std::unique_ptr<object::Binary>> ChildBinOrErr =
+            OptionalChild->getAsBinary();
+        if (!ChildBinOrErr) {
+          // TODO: Actually report errors helpfully.
+          consumeError(ChildBinOrErr.takeError());
           continue;
+        }
         std::unique_ptr<object::Binary> &ChildBin = ChildBinOrErr.get();
         if (ChildBin->isObject()) {
           std::vector<std::unique_ptr<object::ObjectFile>> ObjSet;
@@ -276,12 +309,12 @@ private:
 
   class NotifyObjectLoadedT {
   public:
-    typedef std::vector<std::unique_ptr<object::ObjectFile>> ObjListT;
     typedef std::vector<std::unique_ptr<RuntimeDyld::LoadedObjectInfo>>
         LoadedObjInfoListT;
 
     NotifyObjectLoadedT(OrcMCJITReplacement &M) : M(M) {}
 
+    template <typename ObjListT>
     void operator()(ObjectLinkingLayerBase::ObjSetHandleT H,
                     const ObjListT &Objects,
                     const LoadedObjInfoListT &Infos) const {
@@ -290,16 +323,27 @@ private:
       assert(Objects.size() == Infos.size() &&
              "Incorrect number of Infos for Objects.");
       for (unsigned I = 0; I < Objects.size(); ++I)
-        M.MemMgr.notifyObjectLoaded(&M, *Objects[I]);
+        M.MemMgr.notifyObjectLoaded(&M, getObject(*Objects[I]));
     }
 
   private:
+    static const object::ObjectFile& getObject(const object::ObjectFile &Obj) {
+      return Obj;
+    }
+
+    template <typename ObjT>
+    static const object::ObjectFile&
+    getObject(const object::OwningBinary<ObjT> &Obj) {
+      return *Obj.getBinary();
+    }
+
     OrcMCJITReplacement &M;
   };
 
   class NotifyFinalizedT {
   public:
     NotifyFinalizedT(OrcMCJITReplacement &M) : M(M) {}
+
     void operator()(ObjectLinkingLayerBase::ObjSetHandleT H) {
       M.UnfinalizedSections.erase(H);
     }
@@ -324,7 +368,7 @@ private:
   std::unique_ptr<TargetMachine> TM;
   MCJITReplacementMemMgr MemMgr;
   LinkingResolver Resolver;
-  std::shared_ptr<RuntimeDyld::SymbolResolver> ClientResolver;
+  std::shared_ptr<JITSymbolResolver> ClientResolver;
   Mangler Mang;
 
   NotifyObjectLoadedT NotifyObjectLoaded;
@@ -351,7 +395,7 @@ private:
   std::vector<object::OwningBinary<object::Archive>> Archives;
 };
 
-} // End namespace orc.
-} // End namespace llvm.
+} // end namespace orc
+} // end namespace llvm
 
 #endif // LLVM_LIB_EXECUTIONENGINE_ORC_MCJITREPLACEMENT_H

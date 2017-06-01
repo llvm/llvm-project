@@ -8,6 +8,9 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-ar
   llvm-ar.cpp
+
+  DEPENDS
+  intrinsics_gen
   )
 
 add_llvm_tool_symlink(llvm-ranlib llvm-ar)

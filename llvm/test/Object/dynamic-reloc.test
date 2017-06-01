@@ -1,0 +1,12 @@
+RUN: llvm-readobj -r %p/Inputs/dynamic-reloc.so | FileCheck --check-prefix=READOBJ %s
+
+READOBJ:      Relocations [
+READOBJ-NEXT:   Section (4) .rela.dyn {
+READOBJ-NEXT:     0x1328 R_X86_64_RELATIVE - 0x1320
+READOBJ-NEXT:   }
+READOBJ-NEXT: ]
+
+RUN: llvm-objdump -r %p/Inputs/dynamic-reloc.so | FileCheck --check-prefix=OBJDUMP %s
+
+OBJDUMP: file format ELF64-x86-64
+OBJDUMP-NOT: RELOCATION

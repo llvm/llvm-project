@@ -1,9 +1,10 @@
-; RUN: llc < %s -mcpu=pwr7 -mattr=+vsx | FileCheck %s
-; RUN: llc < %s -mcpu=pwr7 -mattr=+vsx -fast-isel -O0 | FileCheck -check-prefix=CHECK-FISL %s
+; RUN: llc -verify-machineinstrs < %s -mcpu=pwr7 -mattr=+vsx | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mcpu=pwr7 -mattr=+vsx -fast-isel -O0 | FileCheck -check-prefix=CHECK-FISL %s
+; XFAIL: *
 
 ; Also run with -schedule-ppc-vsx-fma-mutation-early as a stress test for the
 ; live-interval-updating logic.
-; RUN: llc < %s -mcpu=pwr7 -mattr=+vsx -schedule-ppc-vsx-fma-mutation-early
+; RUN: llc -verify-machineinstrs < %s -mcpu=pwr7 -mattr=+vsx -schedule-ppc-vsx-fma-mutation-early
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

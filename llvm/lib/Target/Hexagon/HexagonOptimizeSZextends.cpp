@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -38,13 +37,9 @@ namespace {
     }
     bool runOnFunction(Function &F) override;
 
-    const char *getPassName() const override {
-      return "Remove sign extends";
-    }
+    StringRef getPassName() const override { return "Remove sign extends"; }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineFunctionAnalysis>();
-      AU.addPreserved<MachineFunctionAnalysis>();
       AU.addPreserved<StackProtector>();
       FunctionPass::getAnalysisUsage(AU);
     }
@@ -69,6 +64,9 @@ bool HexagonOptimizeSZextends::intrinsicAlreadySextended(Intrinsic::ID IntID) {
 }
 
 bool HexagonOptimizeSZextends::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   unsigned Idx = 1;
   // Try to optimize sign extends in formal parameters. It's relying on
   // callee already sign extending the values. I'm not sure if our ABI

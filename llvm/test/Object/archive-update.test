@@ -7,12 +7,13 @@ Create a file named evenlen that is newer than the evenlen on the source dir.
 RUN: mkdir -p %t.older
 RUN: echo older > %t.older/evenlen
 
+RUN: mkdir -p %t.newer
+
 Either the shell supports the 'touch' command with a flag to manually set the
 mtime or we sleep for over two seconds so that the mtime is definitely
 observable.
 RUN: touch -m -t 200001010000 %t.older/evenlen || sleep 2.1
 
-RUN: mkdir -p %t.newer
 RUN: echo newer > %t.newer/evenlen
 RUN: touch %t.newer/evenlen
 

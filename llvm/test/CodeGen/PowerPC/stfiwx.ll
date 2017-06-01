@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=ppc32 -mtriple=powerpc-apple-darwin8 -mattr=stfiwx | FileCheck %s
-; RUN: llc < %s -march=ppc32 -mtriple=powerpc-apple-darwin8 -mattr=-stfiwx | FileCheck -check-prefix=CHECK-LS %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mtriple=powerpc-apple-darwin8 -mattr=stfiwx | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mtriple=powerpc-apple-darwin8 -mattr=-stfiwx | FileCheck -check-prefix=CHECK-LS %s
 
 define void @test1(float %a, i32* %b) nounwind {
 ; CHECK-LABEL: @test1

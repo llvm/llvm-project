@@ -1,4 +1,4 @@
-; RUN: llc < %s -O3 -march arm64 | FileCheck %s
+; RUN: llc < %s -O3 -mtriple=arm64-apple-ios -disable-post-ra | FileCheck %s
 ; <rdar://13463602>
 
 %struct.Counter_Struct = type { i64, i64 }

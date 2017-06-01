@@ -69,3 +69,16 @@ entry:
 return:                                           ; preds = %entry
   ret void
 }
+
+
+define i64 @fred() nounwind {
+entry:
+  %s0 = cmpxchg i32* undef, i32 undef, i32 undef seq_cst seq_cst
+  %s1 = extractvalue { i32, i1 } %s0, 0
+  %t0 = cmpxchg i64* undef, i64 undef, i64 undef seq_cst seq_cst
+  %t1 = extractvalue { i64, i1 } %t0, 0
+  %u0 = zext i32 %s1 to i64
+  %u1 = add i64 %u0, %t1
+  ret i64 %u1
+}
+

@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -288,7 +287,8 @@ namespace llvm {
     char OnTheFlyTest::ID=0;
 
     TEST(PassManager, RunOnce) {
-      Module M("test-once", getGlobalContext());
+      LLVMContext Context;
+      Module M("test-once", Context);
       struct ModuleNDNM *mNDNM = new ModuleNDNM();
       struct ModuleDNM *mDNM = new ModuleDNM();
       struct ModuleNDM *mNDM = new ModuleNDM();
@@ -311,7 +311,8 @@ namespace llvm {
     }
 
     TEST(PassManager, ReRun) {
-      Module M("test-rerun", getGlobalContext());
+      LLVMContext Context;
+      Module M("test-rerun", Context);
       struct ModuleNDNM *mNDNM = new ModuleNDNM();
       struct ModuleDNM *mDNM = new ModuleDNM();
       struct ModuleNDM *mNDM = new ModuleNDM();
@@ -334,11 +335,12 @@ namespace llvm {
       EXPECT_EQ(1, mDNM->run);
     }
 
-    Module* makeLLVMModule();
+    Module *makeLLVMModule(LLVMContext &Context);
 
     template<typename T>
     void MemoryTestHelper(int run) {
-      std::unique_ptr<Module> M(makeLLVMModule());
+      LLVMContext Context;
+      std::unique_ptr<Module> M(makeLLVMModule(Context));
       T *P = new T();
       legacy::PassManager Passes;
       Passes.add(P);
@@ -348,7 +350,8 @@ namespace llvm {
 
     template<typename T>
     void MemoryTestHelper(int run, int N) {
-      Module *M = makeLLVMModule();
+      LLVMContext Context;
+      Module *M = makeLLVMModule(Context);
       T *P = new T();
       legacy::PassManager Passes;
       Passes.add(P);
@@ -383,7 +386,8 @@ namespace llvm {
     }
 
     TEST(PassManager, MemoryOnTheFly) {
-      Module *M = makeLLVMModule();
+      LLVMContext Context;
+      Module *M = makeLLVMModule(Context);
       {
         SCOPED_TRACE("Running OnTheFlyTest");
         struct OnTheFlyTest *O = new OnTheFlyTest();
@@ -396,9 +400,9 @@ namespace llvm {
       delete M;
     }
 
-    Module* makeLLVMModule() {
+    Module *makeLLVMModule(LLVMContext &Context) {
       // Module Construction
-      Module* mod = new Module("test-mem", getGlobalContext());
+      Module *mod = new Module("test-mem", Context);
       mod->setDataLayout("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
                          "i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-"
                          "a:0:64-s:64:64-f80:128:128");
@@ -406,18 +410,17 @@ namespace llvm {
 
       // Type Definitions
       std::vector<Type*>FuncTy_0_args;
-      FunctionType* FuncTy_0 = FunctionType::get(
-        /*Result=*/IntegerType::get(getGlobalContext(), 32),
-        /*Params=*/FuncTy_0_args,
-        /*isVarArg=*/false);
+      FunctionType *FuncTy_0 = FunctionType::get(
+          /*Result=*/IntegerType::get(Context, 32),
+          /*Params=*/FuncTy_0_args,
+          /*isVarArg=*/false);
 
       std::vector<Type*>FuncTy_2_args;
-      FuncTy_2_args.push_back(IntegerType::get(getGlobalContext(), 1));
-      FunctionType* FuncTy_2 = FunctionType::get(
-        /*Result=*/Type::getVoidTy(getGlobalContext()),
-        /*Params=*/FuncTy_2_args,
-        /*isVarArg=*/false);
-
+      FuncTy_2_args.push_back(IntegerType::get(Context, 1));
+      FunctionType *FuncTy_2 = FunctionType::get(
+          /*Result=*/Type::getVoidTy(Context),
+          /*Params=*/FuncTy_2_args,
+          /*isVarArg=*/false);
 
       // Function Declarations
 
@@ -465,7 +468,8 @@ namespace llvm {
       // Function: test1 (func_test1)
       {
 
-        BasicBlock* label_entry = BasicBlock::Create(getGlobalContext(), "entry",func_test1,nullptr);
+        BasicBlock *label_entry =
+            BasicBlock::Create(Context, "entry", func_test1, nullptr);
 
         // Block entry (label_entry)
         CallInst* int32_3 = CallInst::Create(func_test2, "", label_entry);
@@ -473,14 +477,14 @@ namespace llvm {
         int32_3->setTailCall(false);AttributeSet int32_3_PAL;
         int32_3->setAttributes(int32_3_PAL);
 
-        ReturnInst::Create(getGlobalContext(), int32_3, label_entry);
-
+        ReturnInst::Create(Context, int32_3, label_entry);
       }
 
       // Function: test2 (func_test2)
       {
 
-        BasicBlock* label_entry_5 = BasicBlock::Create(getGlobalContext(), "entry",func_test2,nullptr);
+        BasicBlock *label_entry_5 =
+            BasicBlock::Create(Context, "entry", func_test2, nullptr);
 
         // Block entry (label_entry_5)
         CallInst* int32_6 = CallInst::Create(func_test3, "", label_entry_5);
@@ -488,14 +492,14 @@ namespace llvm {
         int32_6->setTailCall(false);AttributeSet int32_6_PAL;
         int32_6->setAttributes(int32_6_PAL);
 
-        ReturnInst::Create(getGlobalContext(), int32_6, label_entry_5);
-
+        ReturnInst::Create(Context, int32_6, label_entry_5);
       }
 
       // Function: test3 (func_test3)
       {
 
-        BasicBlock* label_entry_8 = BasicBlock::Create(getGlobalContext(), "entry",func_test3,nullptr);
+        BasicBlock *label_entry_8 =
+            BasicBlock::Create(Context, "entry", func_test3, nullptr);
 
         // Block entry (label_entry_8)
         CallInst* int32_9 = CallInst::Create(func_test1, "", label_entry_8);
@@ -503,8 +507,7 @@ namespace llvm {
         int32_9->setTailCall(false);AttributeSet int32_9_PAL;
         int32_9->setAttributes(int32_9_PAL);
 
-        ReturnInst::Create(getGlobalContext(), int32_9, label_entry_8);
-
+        ReturnInst::Create(Context, int32_9, label_entry_8);
       }
 
       // Function: test4 (func_test4)
@@ -513,10 +516,14 @@ namespace llvm {
         Value *int1_f = &*args++;
         int1_f->setName("f");
 
-        BasicBlock* label_entry_11 = BasicBlock::Create(getGlobalContext(), "entry",func_test4,nullptr);
-        BasicBlock* label_bb = BasicBlock::Create(getGlobalContext(), "bb",func_test4,nullptr);
-        BasicBlock* label_bb1 = BasicBlock::Create(getGlobalContext(), "bb1",func_test4,nullptr);
-        BasicBlock* label_return = BasicBlock::Create(getGlobalContext(), "return",func_test4,nullptr);
+        BasicBlock *label_entry_11 =
+            BasicBlock::Create(Context, "entry", func_test4, nullptr);
+        BasicBlock *label_bb =
+            BasicBlock::Create(Context, "bb", func_test4, nullptr);
+        BasicBlock *label_bb1 =
+            BasicBlock::Create(Context, "bb1", func_test4, nullptr);
+        BasicBlock *label_return =
+            BasicBlock::Create(Context, "return", func_test4, nullptr);
 
         // Block entry (label_entry_11)
         BranchInst::Create(label_bb, label_entry_11);
@@ -528,8 +535,7 @@ namespace llvm {
         BranchInst::Create(label_bb1, label_return, int1_f, label_bb1);
 
         // Block return (label_return)
-        ReturnInst::Create(getGlobalContext(), label_return);
-
+        ReturnInst::Create(Context, label_return);
       }
       return mod;
     }

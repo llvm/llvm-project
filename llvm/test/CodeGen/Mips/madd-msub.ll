@@ -1,10 +1,10 @@
-; RUN: llc -march=mips -mcpu=mips32   < %s | FileCheck %s -check-prefix=ALL -check-prefix=32
-; RUN: llc -march=mips -mcpu=mips32r2 < %s | FileCheck %s -check-prefix=ALL -check-prefix=32
-; RUN: llc -march=mips -mcpu=mips32r6 < %s | FileCheck %s -check-prefix=ALL -check-prefix=32R6
+; RUN: llc -march=mips -mcpu=mips32   < %s | FileCheck %s -check-prefixes=ALL,32
+; RUN: llc -march=mips -mcpu=mips32r2 < %s | FileCheck %s -check-prefixes=ALL,32
+; RUN: llc -march=mips -mcpu=mips32r6 < %s | FileCheck %s -check-prefixes=ALL,32R6
 ; RUN: llc -march=mips -mcpu=mips32 -mattr=dsp < %s | FileCheck %s -check-prefix=DSP
-; RUN: llc -march=mips -mcpu=mips64   < %s | FileCheck %s -check-prefix=ALL -check-prefix=64
-; RUN: llc -march=mips -mcpu=mips64r2 < %s | FileCheck %s -check-prefix=ALL -check-prefix=64
-; RUN: llc -march=mips -mcpu=mips64r6 < %s | FileCheck %s -check-prefix=ALL -check-prefix=64R6
+; RUN: llc -march=mips -mcpu=mips64   -target-abi n64 < %s | FileCheck %s -check-prefixes=ALL,64
+; RUN: llc -march=mips -mcpu=mips64r2 -target-abi n64 < %s | FileCheck %s -check-prefixes=ALL,64
+; RUN: llc -march=mips -mcpu=mips64r6 -target-abi n64 < %s | FileCheck %s -check-prefixes=ALL,64R6
 
 ; FIXME: The MIPS16 test should check its output
 ; RUN: llc -march=mips -mattr=mips16 < %s
@@ -18,7 +18,7 @@
 ; 32-DAG:        [[m]]flo $3
 
 ; DSP-DAG:       sra $[[T0:[0-9]+]], $6, 31
-; DSP-DAG:       mtlo $[[AC:ac[0-3]+]], $6
+; DSP-DAG:       mtlo $6, $[[AC:ac[0-3]+]]
 ; DSP-DAG:       madd $[[AC]], ${{[45]}}, ${{[45]}}
 ; DSP-DAG:       mfhi $2, $[[AC]]
 ; DSP-DAG:       mflo $3, $[[AC]]
@@ -64,7 +64,7 @@ entry:
 ; 32-DAG:        [[m]]flo $3
 
 ; DSP-DAG:       addiu $[[T0:[0-9]+]], $zero, 0
-; DSP-DAG:       mtlo $[[AC:ac[0-3]+]], $6
+; DSP-DAG:       mtlo $6, $[[AC:ac[0-3]+]]
 ; DSP-DAG:       maddu $[[AC]], ${{[45]}}, ${{[45]}}
 ; DSP-DAG:       mfhi $2, $[[AC]]
 ; DSP-DAG:       mflo $3, $[[AC]]
@@ -101,8 +101,8 @@ entry:
 ; 32-DAG:        [[m]]fhi $2
 ; 32-DAG:        [[m]]flo $3
 
-; DSP-DAG:       mthi $[[AC:ac[0-3]+]], $6
-; DSP-DAG:       mtlo $[[AC]], $7
+; DSP-DAG:       mthi $6, $[[AC:ac[0-3]+]]
+; DSP-DAG:       mtlo $7, $[[AC]]
 ; DSP-DAG:       madd $[[AC]], ${{[45]}}, ${{[45]}}
 ; DSP-DAG:       mfhi $2, $[[AC]]
 ; DSP-DAG:       mflo $3, $[[AC]]
@@ -143,7 +143,7 @@ entry:
 ; 32-DAG:        [[m]]flo $3
 
 ; DSP-DAG:       sra $[[T0:[0-9]+]], $6, 31
-; DSP-DAG:       mtlo $[[AC:ac[0-3]+]], $6
+; DSP-DAG:       mtlo $6, $[[AC:ac[0-3]+]]
 ; DSP-DAG:       msub $[[AC]], ${{[45]}}, ${{[45]}}
 ; DSP-DAG:       mfhi $2, $[[AC]]
 ; DSP-DAG:       mflo $3, $[[AC]]
@@ -189,7 +189,7 @@ entry:
 ; 32-DAG:        [[m]]flo $3
 
 ; DSP-DAG:       addiu $[[T0:[0-9]+]], $zero, 0
-; DSP-DAG:       mtlo $[[AC:ac[0-3]+]], $6
+; DSP-DAG:       mtlo $6, $[[AC:ac[0-3]+]]
 ; DSP-DAG:       msubu $[[AC]], ${{[45]}}, ${{[45]}}
 ; DSP-DAG:       mfhi $2, $[[AC]]
 ; DSP-DAG:       mflo $3, $[[AC]]
@@ -229,7 +229,7 @@ entry:
 ; 32-DAG:        [[m]]flo $3
 
 ; DSP-DAG:       addiu $[[T0:[0-9]+]], $zero, 0
-; DSP-DAG:       mtlo $[[AC:ac[0-3]+]], $6
+; DSP-DAG:       mtlo $6, $[[AC:ac[0-3]+]]
 ; DSP-DAG:       msub $[[AC]], ${{[45]}}, ${{[45]}}
 ; DSP-DAG:       mfhi $2, $[[AC]]
 ; DSP-DAG:       mflo $3, $[[AC]]

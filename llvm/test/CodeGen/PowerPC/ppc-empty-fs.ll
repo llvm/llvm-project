@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 ; This guarantees that we add the default set of features to the current feature
 ; string. We won't successfully legalize the types here without +64bit being
 ; silently added.

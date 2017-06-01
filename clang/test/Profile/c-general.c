@@ -1,25 +1,25 @@
 // Test instrumentation of general constructs in C.
 
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instr-generate | FileCheck -check-prefix=PGOGEN %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck -check-prefix=PGOGEN %s
 
 // RUN: llvm-profdata merge %S/Inputs/c-general.proftext -o %t.profdata
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instr-use=%t.profdata | FileCheck -check-prefix=PGOUSE %s
-
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata | FileCheck -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v3 | FileCheck -check-prefix=PGOUSE %s
 // Also check compatibility with older profiles.
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instr-use=%S/Inputs/c-general.profdata.v1 | FileCheck -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v1 | FileCheck -check-prefix=PGOUSE %s
 
-// PGOGEN: @[[SLC:__llvm_profile_counters_simple_loops]] = private global [4 x i64] zeroinitializer
-// PGOGEN: @[[IFC:__llvm_profile_counters_conditionals]] = private global [11 x i64] zeroinitializer
-// PGOGEN: @[[EEC:__llvm_profile_counters_early_exits]] = private global [9 x i64] zeroinitializer
-// PGOGEN: @[[JMC:__llvm_profile_counters_jumps]] = private global [22 x i64] zeroinitializer
-// PGOGEN: @[[SWC:__llvm_profile_counters_switches]] = private global [19 x i64] zeroinitializer
-// PGOGEN: @[[BSC:__llvm_profile_counters_big_switch]] = private global [17 x i64] zeroinitializer
-// PGOGEN: @[[BOC:__llvm_profile_counters_boolean_operators]] = private global [8 x i64] zeroinitializer
-// PGOGEN: @[[BLC:__llvm_profile_counters_boolop_loops]] = private global [9 x i64] zeroinitializer
-// PGOGEN: @[[COC:__llvm_profile_counters_conditional_operator]] = private global [3 x i64] zeroinitializer
-// PGOGEN: @[[DFC:__llvm_profile_counters_do_fallthrough]] = private global [4 x i64] zeroinitializer
-// PGOGEN: @[[MAC:__llvm_profile_counters_main]] = private global [1 x i64] zeroinitializer
-// PGOGEN: @[[STC:"__llvm_profile_counters_c-general.c:static_func"]] = private global [2 x i64] zeroinitializer
+// PGOGEN: @[[SLC:__profc_simple_loops]] = private global [4 x i64] zeroinitializer
+// PGOGEN: @[[IFC:__profc_conditionals]] = private global [11 x i64] zeroinitializer
+// PGOGEN: @[[EEC:__profc_early_exits]] = private global [9 x i64] zeroinitializer
+// PGOGEN: @[[JMC:__profc_jumps]] = private global [22 x i64] zeroinitializer
+// PGOGEN: @[[SWC:__profc_switches]] = private global [19 x i64] zeroinitializer
+// PGOGEN: @[[BSC:__profc_big_switch]] = private global [17 x i64] zeroinitializer
+// PGOGEN: @[[BOC:__profc_boolean_operators]] = private global [8 x i64] zeroinitializer
+// PGOGEN: @[[BLC:__profc_boolop_loops]] = private global [9 x i64] zeroinitializer
+// PGOGEN: @[[COC:__profc_conditional_operator]] = private global [3 x i64] zeroinitializer
+// PGOGEN: @[[DFC:__profc_do_fallthrough]] = private global [4 x i64] zeroinitializer
+// PGOGEN: @[[MAC:__profc_main]] = private global [1 x i64] zeroinitializer
+// PGOGEN: @[[STC:__profc_c_general.c_static_func]] = private global [2 x i64] zeroinitializer
 
 // PGOGEN-LABEL: @simple_loops()
 // PGOUSE-LABEL: @simple_loops()

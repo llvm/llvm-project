@@ -1,5 +1,5 @@
-; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=ARM
-; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -verify-machineinstrs | FileCheck %s --check-prefix=ARM
+; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=ARM --check-prefix=ARM-MACHO
+; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -verify-machineinstrs | FileCheck %s --check-prefix=ARM --check-prefix=ARM-ELF
 ; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=THUMB
 
 ; Very basic fast-isel functionality.
@@ -154,9 +154,13 @@ define void @test4() {
 ; THUMB: adds r1, #1
 ; THUMB: str r1, [r0]
 
-; ARM: {{(movw r0, :lower16:L_test4g\$non_lazy_ptr)|(ldr r0, .LCPI)}}
-; ARM: {{(movt r0, :upper16:L_test4g\$non_lazy_ptr)?}}
-; ARM: ldr r0, [r0]
+; ARM-MACHO: {{(movw r0, :lower16:L_test4g\$non_lazy_ptr)|(ldr r0, .LCPI)}}
+; ARM-MACHO: {{(movt r0, :upper16:L_test4g\$non_lazy_ptr)?}}
+; ARM-MACHO: ldr r0, [r0]
+
+; ARM-ELF: movw r0, :lower16:test4g
+; ARM-ELF: movt r0, :upper16:test4g
+
 ; ARM: ldr r1, [r0]
 ; ARM: add r1, r1, #1
 ; ARM: str r1, [r0]

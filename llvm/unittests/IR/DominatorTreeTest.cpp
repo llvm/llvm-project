@@ -29,7 +29,8 @@ namespace llvm {
       bool runOnFunction(Function &F) override {
         DominatorTree *DT =
             &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-        PostDominatorTree *PDT = &getAnalysis<PostDominatorTree>();
+        PostDominatorTree *PDT =
+            &getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
         Function::iterator FI = F.begin();
 
         BasicBlock *BB0 = &*FI++;
@@ -202,11 +203,21 @@ namespace llvm {
         EXPECT_EQ(DT->getNode(BB4)->getDFSNumIn(), 5UL);
         EXPECT_EQ(DT->getNode(BB4)->getDFSNumOut(), 6UL);
 
+        // Change root node
+        DT->verifyDomTree();
+        BasicBlock *NewEntry = BasicBlock::Create(F.getContext(), "new_entry",
+                                                  &F, BB0);
+        BranchInst::Create(BB0, NewEntry);
+        EXPECT_EQ(F.begin()->getName(), NewEntry->getName());
+        EXPECT_TRUE(&F.getEntryBlock() == NewEntry);
+        DT->setNewRoot(NewEntry);
+        DT->verifyDomTree();
+
         return false;
       }
       void getAnalysisUsage(AnalysisUsage &AU) const override {
         AU.addRequired<DominatorTreeWrapperPass>();
-        AU.addRequired<PostDominatorTree>();
+        AU.addRequired<PostDominatorTreeWrapperPass>();
       }
       DPass() : FunctionPass(ID) {
         initializeDPassPass(*PassRegistry::getPassRegistry());
@@ -214,7 +225,7 @@ namespace llvm {
     };
     char DPass::ID = 0;
 
-    std::unique_ptr<Module> makeLLVMModule(DPass *P) {
+    std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context, DPass *P) {
       const char *ModuleStrig =
         "declare i32 @g()\n" \
         "define void @f(i32 %x) personality i32 ()* @g {\n" \
@@ -238,14 +249,14 @@ namespace llvm {
         "  %y9 = phi i32 [0, %bb2], [%y4, %bb1]\n"
         "  ret void\n" \
         "}\n";
-      LLVMContext &C = getGlobalContext();
       SMDiagnostic Err;
-      return parseAssemblyString(ModuleStrig, Err, C);
+      return parseAssemblyString(ModuleStrig, Err, Context);
     }
 
     TEST(DominatorTree, Unreachable) {
       DPass *P = new DPass();
-      std::unique_ptr<Module> M = makeLLVMModule(P);
+      LLVMContext Context;
+      std::unique_ptr<Module> M = makeLLVMModule(Context, P);
       legacy::PassManager Passes;
       Passes.add(P);
       Passes.run(*M);
@@ -255,5 +266,5 @@ namespace llvm {
 
 INITIALIZE_PASS_BEGIN(DPass, "dpass", "dpass", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(DPass, "dpass", "dpass", false, false)

@@ -1,4 +1,4 @@
-; RUN: opt -irce -S < %s | FileCheck %s
+; RUN: opt -verify-loop-info -irce -S < %s | FileCheck %s
 
 define void @multiple_access_no_preloop(
     i32* %arr_a, i32* %a_len_ptr, i32* %arr_b, i32* %b_len_ptr, i32 %n) {
@@ -34,9 +34,9 @@ define void @multiple_access_no_preloop(
   ret void
 }
 
-; CHECK-LABEL: multiple_access_no_preloop
+; CHECK-LABEL: @multiple_access_no_preloop(
 
-; CHECK-LABEL: loop.preheader:
+; CHECK: loop.preheader:
 ; CHECK: [[not_len_b:[^ ]+]] = sub i32 -1, %len.b
 ; CHECK: [[not_len_a:[^ ]+]] = sub i32 -1, %len.a
 ; CHECK: [[smax_not_len_cond:[^ ]+]] = icmp sgt i32 [[not_len_b]], [[not_len_a]]
@@ -48,17 +48,17 @@ define void @multiple_access_no_preloop(
 ; CHECK: [[upper_limit_cmp:[^ ]+]] = icmp sgt i32 [[upper_limit_loclamp]], 0
 ; CHECK: [[upper_limit:[^ ]+]] = select i1 [[upper_limit_cmp]], i32 [[upper_limit_loclamp]], i32 0
 
-; CHECK-LABEL: loop:
+; CHECK: loop:
 ; CHECK: br i1 true, label %in.bounds.a, label %out.of.bounds
 
-; CHECK-LABEL: in.bounds.a:
+; CHECK: in.bounds.a:
 ; CHECK: br i1 true, label %in.bounds.b, label %out.of.bounds
 
-; CHECK-LABEL: in.bounds.b:
+; CHECK: in.bounds.b:
 ; CHECK: [[main_loop_cond:[^ ]+]] = icmp slt i32 %idx.next, [[upper_limit]]
 ; CHECK: br i1 [[main_loop_cond]], label %loop, label %main.exit.selector
 
-; CHECK-LABEL: in.bounds.b.postloop:
+; CHECK: in.bounds.b.postloop:
 ; CHECK: %next.postloop = icmp slt i32 %idx.next.postloop, %n
 ; CHECK: br i1 %next.postloop, label %loop.postloop, label %exit.loopexit
 

@@ -7,32 +7,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitstreamReader.h"
 #include "llvm/Bitcode/BitstreamWriter.h"
-#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Support/DataStream.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/StreamingMemoryObject.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
 namespace {
 
-std::unique_ptr<Module> parseAssembly(const char *Assembly) {
+std::unique_ptr<Module> parseAssembly(LLVMContext &Context,
+                                      const char *Assembly) {
   SMDiagnostic Error;
-  std::unique_ptr<Module> M =
-      parseAssemblyString(Assembly, Error, getGlobalContext());
+  std::unique_ptr<Module> M = parseAssemblyString(Assembly, Error, Context);
 
   std::string ErrMsg;
   raw_string_ostream OS(ErrMsg);
@@ -54,114 +54,12 @@ static void writeModuleToBuffer(std::unique_ptr<Module> Mod,
 static std::unique_ptr<Module> getLazyModuleFromAssembly(LLVMContext &Context,
                                                          SmallString<1024> &Mem,
                                                          const char *Assembly) {
-  writeModuleToBuffer(parseAssembly(Assembly), Mem);
-  std::unique_ptr<MemoryBuffer> Buffer =
-      MemoryBuffer::getMemBuffer(Mem.str(), "test", false);
-  ErrorOr<std::unique_ptr<Module>> ModuleOrErr =
-      getLazyBitcodeModule(std::move(Buffer), Context);
+  writeModuleToBuffer(parseAssembly(Context, Assembly), Mem);
+  Expected<std::unique_ptr<Module>> ModuleOrErr =
+      getLazyBitcodeModule(MemoryBufferRef(Mem.str(), "test"), Context);
+  if (!ModuleOrErr)
+    report_fatal_error("Could not parse bitcode module");
   return std::move(ModuleOrErr.get());
-}
-
-class BufferDataStreamer : public DataStreamer {
-  std::unique_ptr<MemoryBuffer> Buffer;
-  unsigned Pos = 0;
-  size_t GetBytes(unsigned char *Out, size_t Len) override {
-    StringRef Buf = Buffer->getBuffer();
-    size_t Left = Buf.size() - Pos;
-    Len = std::min(Left, Len);
-    memcpy(Out, Buffer->getBuffer().substr(Pos).data(), Len);
-    Pos += Len;
-    return Len;
-  }
-
-public:
-  BufferDataStreamer(std::unique_ptr<MemoryBuffer> Buffer)
-      : Buffer(std::move(Buffer)) {}
-};
-
-static std::unique_ptr<Module>
-getStreamedModuleFromAssembly(LLVMContext &Context, SmallString<1024> &Mem,
-                              const char *Assembly) {
-  writeModuleToBuffer(parseAssembly(Assembly), Mem);
-  std::unique_ptr<MemoryBuffer> Buffer =
-      MemoryBuffer::getMemBuffer(Mem.str(), "test", false);
-  auto Streamer = llvm::make_unique<BufferDataStreamer>(std::move(Buffer));
-  ErrorOr<std::unique_ptr<Module>> ModuleOrErr =
-      getStreamedBitcodeModule("test", std::move(Streamer), Context);
-  return std::move(ModuleOrErr.get());
-}
-
-// Checks if we correctly detect eof if we try to read N bits when there are not
-// enough bits left on the input stream to read N bits, and we are using a data
-// streamer. In particular, it checks if we properly set the object size when
-// the eof is reached under such conditions.
-TEST(BitReaderTest, TestForEofAfterReadFailureOnDataStreamer) {
-  // Note: Because StreamingMemoryObject does a call to method GetBytes in it's
-  // constructor, using internal constant kChunkSize, we must fill the input
-  // with more characters than that amount.
-  static size_t InputSize = StreamingMemoryObject::kChunkSize + 5;
-  char *Text = new char[InputSize];
-  std::memset(Text, 'a', InputSize);
-  Text[InputSize - 1] = '\0';
-  StringRef Input(Text);
-
-  // Build bitsteam reader using data streamer.
-  auto MemoryBuf = MemoryBuffer::getMemBuffer(Input);
-  std::unique_ptr<DataStreamer> Streamer(
-      new BufferDataStreamer(std::move(MemoryBuf)));
-  auto OwnedBytes =
-      llvm::make_unique<StreamingMemoryObject>(std::move(Streamer));
-  auto Reader = llvm::make_unique<BitstreamReader>(std::move(OwnedBytes));
-  BitstreamCursor Cursor;
-  Cursor.init(Reader.get());
-
-  // Jump to two bytes before end of stream.
-  Cursor.JumpToBit((InputSize - 4) * CHAR_BIT);
-  // Try to read 4 bytes when only 2 are present, resulting in error value 0.
-  const size_t ReadErrorValue = 0;
-  EXPECT_EQ(ReadErrorValue, Cursor.Read(32));
-  // Should be at eof now.
-  EXPECT_TRUE(Cursor.AtEndOfStream());
-
-  delete[] Text;
-}
-
-TEST(BitReaderTest, MateralizeForwardRefWithStream) {
-  SmallString<1024> Mem;
-
-  LLVMContext Context;
-  std::unique_ptr<Module> M = getStreamedModuleFromAssembly(
-      Context, Mem, "@table = constant i8* blockaddress(@func, %bb)\n"
-                    "define void @func() {\n"
-                    "  unreachable\n"
-                    "bb:\n"
-                    "  unreachable\n"
-                    "}\n");
-  EXPECT_FALSE(M->getFunction("func")->empty());
-}
-
-TEST(BitReaderTest, DematerializeFunctionPreservesLinkageType) {
-  SmallString<1024> Mem;
-
-  LLVMContext Context;
-  std::unique_ptr<Module> M = getLazyModuleFromAssembly(
-      Context, Mem, "define internal i32 @func() {\n"
-                      "ret i32 0\n"
-                    "}\n");
-
-  EXPECT_FALSE(verifyModule(*M, &dbgs()));
-
-  M->getFunction("func")->materialize();
-  EXPECT_FALSE(M->getFunction("func")->empty());
-  EXPECT_TRUE(M->getFunction("func")->getLinkage() ==
-              GlobalValue::InternalLinkage);
-
-  // Check that the linkage type is preserved after dematerialization.
-  M->getFunction("func")->dematerialize();
-  EXPECT_TRUE(M->getFunction("func")->empty());
-  EXPECT_TRUE(M->getFunction("func")->getLinkage() ==
-              GlobalValue::InternalLinkage);
-  EXPECT_FALSE(verifyModule(*M, &dbgs()));
 }
 
 // Tests that lazy evaluation can parse functions out of order.
@@ -196,7 +94,7 @@ TEST(BitReaderTest, MaterializeFunctionsOutOfOrder) {
   EXPECT_FALSE(verifyModule(*M, &dbgs()));
 
   // Materialize h.
-  H->materialize();
+  ASSERT_FALSE(H->materialize());
   EXPECT_TRUE(F->empty());
   EXPECT_TRUE(G->empty());
   EXPECT_FALSE(H->empty());
@@ -204,7 +102,7 @@ TEST(BitReaderTest, MaterializeFunctionsOutOfOrder) {
   EXPECT_FALSE(verifyModule(*M, &dbgs()));
 
   // Materialize g.
-  G->materialize();
+  ASSERT_FALSE(G->materialize());
   EXPECT_TRUE(F->empty());
   EXPECT_FALSE(G->empty());
   EXPECT_FALSE(H->empty());
@@ -212,7 +110,7 @@ TEST(BitReaderTest, MaterializeFunctionsOutOfOrder) {
   EXPECT_FALSE(verifyModule(*M, &dbgs()));
 
   // Materialize j.
-  J->materialize();
+  ASSERT_FALSE(J->materialize());
   EXPECT_TRUE(F->empty());
   EXPECT_FALSE(G->empty());
   EXPECT_FALSE(H->empty());
@@ -220,7 +118,7 @@ TEST(BitReaderTest, MaterializeFunctionsOutOfOrder) {
   EXPECT_FALSE(verifyModule(*M, &dbgs()));
 
   // Materialize f.
-  F->materialize();
+  ASSERT_FALSE(F->materialize());
   EXPECT_FALSE(F->empty());
   EXPECT_FALSE(G->empty());
   EXPECT_FALSE(H->empty());
@@ -240,9 +138,6 @@ TEST(BitReaderTest, MaterializeFunctionsForBlockAddr) { // PR11677
                     "  unreachable\n"
                     "}\n");
   EXPECT_FALSE(verifyModule(*M, &dbgs()));
-
-  // Try (and fail) to dematerialize @func.
-  M->getFunction("func")->dematerialize();
   EXPECT_FALSE(M->getFunction("func")->empty());
 }
 
@@ -271,11 +166,6 @@ TEST(BitReaderTest, MaterializeFunctionsForBlockAddrInFunctionBefore) {
   EXPECT_FALSE(M->getFunction("func")->empty());
   EXPECT_TRUE(M->getFunction("other")->empty());
   EXPECT_FALSE(verifyModule(*M, &dbgs()));
-
-  // Try (and fail) to dematerialize @func.
-  M->getFunction("func")->dematerialize();
-  EXPECT_FALSE(M->getFunction("func")->empty());
-  EXPECT_FALSE(verifyModule(*M, &dbgs()));
 }
 
 TEST(BitReaderTest, MaterializeFunctionsForBlockAddrInFunctionAfter) {
@@ -302,11 +192,6 @@ TEST(BitReaderTest, MaterializeFunctionsForBlockAddrInFunctionAfter) {
   EXPECT_FALSE(M->getFunction("after")->materialize());
   EXPECT_FALSE(M->getFunction("func")->empty());
   EXPECT_TRUE(M->getFunction("other")->empty());
-  EXPECT_FALSE(verifyModule(*M, &dbgs()));
-
-  // Try (and fail) to dematerialize @func.
-  M->getFunction("func")->dematerialize();
-  EXPECT_FALSE(M->getFunction("func")->empty());
   EXPECT_FALSE(verifyModule(*M, &dbgs()));
 }
 

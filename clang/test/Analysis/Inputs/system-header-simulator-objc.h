@@ -10,9 +10,19 @@ typedef unsigned short UInt16;
 
 typedef signed long CFIndex;
 typedef signed char BOOL;
+#define YES ((BOOL)1)
+#define NO ((BOOL)0)
+
 typedef unsigned long NSUInteger;
 typedef unsigned short unichar;
 typedef UInt16 UniChar;
+
+#ifndef NULL
+#define __DARWIN_NULL ((void *)0)
+#define NULL __DARWIN_NULL
+#endif
+
+#define nil ((id)0)
 
 enum {
     NSASCIIStringEncoding = 1,
@@ -48,6 +58,7 @@ typedef struct _NSZone NSZone;
 - (oneway void)release;
 - (id)autorelease;
 - (id)init;
+@property (readonly, copy) NSString *description;
 @end  @protocol NSCopying  - (id)copyWithZone:(NSZone *)zone;
 @end  @protocol NSMutableCopying  - (id)mutableCopyWithZone:(NSZone *)zone;
 @end  @protocol NSCoding  - (void)encodeWithCoder:(NSCoder *)aCoder;
@@ -72,6 +83,7 @@ NSFastEnumerationState;
 @end
 @interface NSNumber : NSValue  - (char)charValue;
 - (id)initWithInt:(int)value;
+- (BOOL)boolValue;
 @end   @class NSString;
 @interface NSArray : NSObject <NSCopying, NSMutableCopying, NSCoding, NSFastEnumeration>  - (NSUInteger)count;
 @end  @interface NSArray (NSArrayCreation)  + (id)array;

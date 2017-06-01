@@ -14,7 +14,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_OBJECTTRANSFORMLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_OBJECTTRANSFORMLAYER_H
 
-#include "JITSymbol.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 
 namespace llvm {
 namespace orc {
@@ -42,13 +42,13 @@ public:
   /// @return A handle for the added objects.
   template <typename ObjSetT, typename MemoryManagerPtrT,
             typename SymbolResolverPtrT>
-  ObjSetHandleT addObjectSet(ObjSetT &Objects, MemoryManagerPtrT MemMgr,
+  ObjSetHandleT addObjectSet(ObjSetT Objects, MemoryManagerPtrT MemMgr,
                              SymbolResolverPtrT Resolver) {
 
     for (auto I = Objects.begin(), E = Objects.end(); I != E; ++I)
       *I = Transform(std::move(*I));
 
-    return BaseLayer.addObjectSet(Objects, std::move(MemMgr),
+    return BaseLayer.addObjectSet(std::move(Objects), std::move(MemMgr),
                                   std::move(Resolver));
   }
 
@@ -83,16 +83,8 @@ public:
 
   /// @brief Map section addresses for the objects associated with the handle H.
   void mapSectionAddress(ObjSetHandleT H, const void *LocalAddress,
-                         TargetAddress TargetAddr) {
+                         JITTargetAddress TargetAddr) {
     BaseLayer.mapSectionAddress(H, LocalAddress, TargetAddr);
-  }
-
-  // Ownership hack.
-  // FIXME: Remove this as soon as RuntimeDyldELF can apply relocations without
-  //        referencing the original object.
-  template <typename OwningMBSet>
-  void takeOwnershipOfBuffers(ObjSetHandleT H, OwningMBSet MBs) {
-    BaseLayer.takeOwnershipOfBuffers(H, std::move(MBs));
   }
 
   /// @brief Access the transform functor directly.

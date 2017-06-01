@@ -307,12 +307,19 @@ struct A {
   void CreateBar(float, float);
 };
 struct B : A {
-  using A::CreateFoo;
+  using A::CreateFoo; // expected-note {{'CreateFoo' declared here}}
   void CreateFoo(int, int);  // expected-note {{'CreateFoo' declared here}}
 };
 void f(B &x) {
   x.Createfoo(0,0);  // expected-error {{no member named 'Createfoo' in 'PR13387::B'; did you mean 'CreateFoo'?}}
+  x.Createfoo(0.f,0.f);  // expected-error {{no member named 'Createfoo' in 'PR13387::B'; did you mean 'CreateFoo'?}}
 }
+}
+
+namespace using_decl {
+  namespace somewhere { int foobar; }
+  using somewhere::foobar; // expected-note {{declared here}}
+  int k = goobar; // expected-error {{did you mean 'foobar'?}}
 }
 
 struct DataStruct {void foo();};
@@ -655,4 +662,47 @@ class Bar : public A::B::Foofoo {};
 }
 
 using C::D::Foofoo;  // expected-error {{no member named 'Foofoo' in namespace 'PR24781_using_crash::C::D'; did you mean 'A::B::Foofoo'?}}
+}
+
+int d = ? L : d; // expected-error {{expected expression}} expected-error {{undeclared identifier}}
+
+struct B0 {
+  int : 0 |         // expected-error {{invalid operands to binary expression}}
+      (struct B0)e; // expected-error {{use of undeclared identifier}}
+};
+
+namespace {
+struct a0is0 {};
+struct b0is0 {};
+int g() {
+  0 [                 // expected-error {{subscripted value is not an array}}
+      sizeof(c0is0)]; // expected-error {{use of undeclared identifier}}
+};
+}
+
+namespace avoidRedundantRedefinitionErrors {
+class Class {
+  void function(int pid); // expected-note {{'function' declared here}}
+};
+
+void Class::function2(int pid) { // expected-error {{out-of-line definition of 'function2' does not match any declaration in 'avoidRedundantRedefinitionErrors::Class'; did you mean 'function'?}}
+}
+
+// Expected no redefinition error here.
+void Class::function(int pid) { // expected-note {{previous definition is here}}
+}
+
+void Class::function(int pid) { // expected-error {{redefinition of 'function'}}
+}
+
+namespace ns {
+void create_test(); // expected-note {{'create_test' declared here}}
+}
+
+void ns::create_test2() { // expected-error {{out-of-line definition of 'create_test2' does not match any declaration in namespace 'avoidRedundantRedefinitionErrors::ns'; did you mean 'create_test'?}}
+}
+
+// Expected no redefinition error here.
+void ns::create_test() {
+}
 }

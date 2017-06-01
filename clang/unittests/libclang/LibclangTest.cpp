@@ -14,6 +14,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <fstream>
+#include <functional>
+#include <map>
+#include <memory>
 #include <set>
 #define DEBUG_TYPE "libclang-test"
 
@@ -349,21 +352,25 @@ TEST(libclang, ModuleMapDescriptor) {
   clang_ModuleMapDescriptor_dispose(MMD);
 }
 
-class LibclangReparseTest : public ::testing::Test {
+class LibclangParseTest : public ::testing::Test {
   std::set<std::string> Files;
+  typedef std::unique_ptr<std::string> fixed_addr_string;
+  std::map<fixed_addr_string, fixed_addr_string> UnsavedFileContents;
 public:
   std::string TestDir;
   CXIndex Index;
   CXTranslationUnit ClangTU;
   unsigned TUFlags;
+  std::vector<CXUnsavedFile> UnsavedFiles;
 
   void SetUp() override {
     llvm::SmallString<256> Dir;
     ASSERT_FALSE(llvm::sys::fs::createUniqueDirectory("libclang-test", Dir));
     TestDir = Dir.str();
     TUFlags = CXTranslationUnit_DetailedPreprocessingRecord |
-              clang_defaultEditingTranslationUnitOptions();
+      clang_defaultEditingTranslationUnitOptions();
     Index = clang_createIndex(0, 0);
+    ClangTU = nullptr;
   }
   void TearDown() override {
     clang_disposeTranslationUnit(ClangTU);
@@ -379,9 +386,82 @@ public:
       Filename = Path.str();
       Files.insert(Filename);
     }
+    llvm::sys::fs::create_directories(llvm::sys::path::parent_path(Filename));
     std::ofstream OS(Filename);
     OS << Contents;
+    assert(OS.good());
   }
+  void MapUnsavedFile(std::string Filename, const std::string &Contents) {
+    if (!llvm::sys::path::is_absolute(Filename)) {
+      llvm::SmallString<256> Path(TestDir);
+      llvm::sys::path::append(Path, Filename);
+      Filename = Path.str();
+    }
+    auto it = UnsavedFileContents.insert(std::make_pair(
+        fixed_addr_string(new std::string(Filename)),
+        fixed_addr_string(new std::string(Contents))));
+    UnsavedFiles.push_back({
+        it.first->first->c_str(),   // filename
+        it.first->second->c_str(),  // contents
+        it.first->second->size()    // length
+    });
+  }
+  template<typename F>
+  void Traverse(const F &TraversalFunctor) {
+    CXCursor TuCursor = clang_getTranslationUnitCursor(ClangTU);
+    std::reference_wrapper<const F> FunctorRef = std::cref(TraversalFunctor);
+    clang_visitChildren(TuCursor,
+        &TraverseStateless<std::reference_wrapper<const F>>,
+        &FunctorRef);
+  }
+private:
+  template<typename TState>
+  static CXChildVisitResult TraverseStateless(CXCursor cx, CXCursor parent,
+      CXClientData data) {
+    TState *State = static_cast<TState*>(data);
+    return State->get()(cx, parent);
+  }
+};
+
+TEST_F(LibclangParseTest, AllSkippedRanges) {
+  std::string Header = "header.h", Main = "main.cpp";
+  WriteFile(Header,
+    "#ifdef MANGOS\n"
+    "printf(\"mmm\");\n"
+    "#endif");
+  WriteFile(Main,
+    "#include \"header.h\"\n"
+    "#ifdef KIWIS\n"
+    "printf(\"mmm!!\");\n"
+    "#endif");
+
+  ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0,
+                                       nullptr, 0, TUFlags);
+
+  CXSourceRangeList *Ranges = clang_getAllSkippedRanges(ClangTU);
+  EXPECT_EQ(2U, Ranges->count);
+  
+  CXSourceLocation cxl;
+  unsigned line;
+  cxl = clang_getRangeStart(Ranges->ranges[0]);
+  clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+  EXPECT_EQ(1U, line);
+  cxl = clang_getRangeEnd(Ranges->ranges[0]);
+  clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+  EXPECT_EQ(3U, line);
+
+  cxl = clang_getRangeStart(Ranges->ranges[1]);
+  clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+  EXPECT_EQ(2U, line);
+  cxl = clang_getRangeEnd(Ranges->ranges[1]);
+  clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+  EXPECT_EQ(4U, line);
+
+  clang_disposeSourceRangeList(Ranges);
+}
+
+class LibclangReparseTest : public LibclangParseTest {
+public:
   void DisplayDiagnostics() {
     unsigned NumDiagnostics = clang_getNumDiagnostics(ClangTU);
     for (unsigned i = 0; i < NumDiagnostics; ++i) {
@@ -464,4 +544,31 @@ TEST_F(LibclangReparseTest, ReparseWithModule) {
   // Reparse after fix.
   ASSERT_TRUE(ReparseTU(0, nullptr /* No unsaved files. */));
   EXPECT_EQ(0U, clang_getNumDiagnostics(ClangTU));
+}
+
+TEST_F(LibclangReparseTest, clang_parseTranslationUnit2FullArgv) {
+  // Provide a fake GCC 99.9.9 standard library that always overrides any local
+  // GCC installation.
+  std::string EmptyFiles[] = {"lib/gcc/arm-linux-gnueabi/99.9.9/crtbegin.o",
+                              "include/arm-linux-gnueabi/.keep",
+                              "include/c++/99.9.9/vector"};
+
+  for (auto &Name : EmptyFiles)
+    WriteFile(Name, "\n");
+
+  std::string Filename = "test.cc";
+  WriteFile(Filename, "#include <vector>\n");
+
+  std::string Clang = "bin/clang";
+  WriteFile(Clang, "");
+
+  const char *Argv[] = {Clang.c_str(), "-target", "arm-linux-gnueabi",
+                        "-stdlib=libstdc++", "--gcc-toolchain="};
+
+  EXPECT_EQ(CXError_Success,
+            clang_parseTranslationUnit2FullArgv(Index, Filename.c_str(), Argv,
+                                                sizeof(Argv) / sizeof(Argv[0]),
+                                                nullptr, 0, TUFlags, &ClangTU));
+  EXPECT_EQ(0U, clang_getNumDiagnostics(ClangTU));
+  DisplayDiagnostics();
 }

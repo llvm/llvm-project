@@ -13,23 +13,27 @@
 
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/AST/ASTConsumer.h"
+#include "clang/Lex/ModuleLoader.h"
 #include "llvm/Bitcode/BitstreamReader.h"
 #include "llvm/Support/raw_ostream.h"
-#include "clang/Lex/ModuleLoader.h"
+#include <utility>
 
 using namespace clang;
+
+PCHContainerWriter::~PCHContainerWriter() {}
+PCHContainerReader::~PCHContainerReader() {}
 
 namespace {
 
 /// \brief A PCHContainerGenerator that writes out the PCH to a flat file.
 class RawPCHContainerGenerator : public ASTConsumer {
   std::shared_ptr<PCHBuffer> Buffer;
-  raw_pwrite_stream *OS;
+  std::unique_ptr<raw_pwrite_stream> OS;
 
 public:
-  RawPCHContainerGenerator(llvm::raw_pwrite_stream *OS,
+  RawPCHContainerGenerator(std::unique_ptr<llvm::raw_pwrite_stream> OS,
                            std::shared_ptr<PCHBuffer> Buffer)
-      : Buffer(Buffer), OS(OS) {}
+      : Buffer(std::move(Buffer)), OS(std::move(OS)) {}
 
   ~RawPCHContainerGenerator() override = default;
 
@@ -49,15 +53,14 @@ public:
 
 std::unique_ptr<ASTConsumer> RawPCHContainerWriter::CreatePCHContainerGenerator(
     CompilerInstance &CI, const std::string &MainFileName,
-    const std::string &OutputFileName, llvm::raw_pwrite_stream *OS,
+    const std::string &OutputFileName, std::unique_ptr<llvm::raw_pwrite_stream> OS,
     std::shared_ptr<PCHBuffer> Buffer) const {
-  return llvm::make_unique<RawPCHContainerGenerator>(OS, Buffer);
+  return llvm::make_unique<RawPCHContainerGenerator>(std::move(OS), Buffer);
 }
 
-void RawPCHContainerReader::ExtractPCH(
-    llvm::MemoryBufferRef Buffer, llvm::BitstreamReader &StreamFile) const {
-  StreamFile.init((const unsigned char *)Buffer.getBufferStart(),
-                  (const unsigned char *)Buffer.getBufferEnd());
+StringRef
+RawPCHContainerReader::ExtractPCH(llvm::MemoryBufferRef Buffer) const {
+  return Buffer.getBuffer();
 }
 
 PCHContainerOperations::PCHContainerOperations() {

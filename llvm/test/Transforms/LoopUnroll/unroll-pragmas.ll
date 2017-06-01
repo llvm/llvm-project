@@ -322,3 +322,40 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 !15 = !{!15, !14}
+
+; #pragma clang loop unroll_count(3)
+; Loop has a runtime trip count.  Runtime unrolling should occur and loop
+; should be duplicated (original and 3x unrolled).
+;
+; CHECK-LABEL: @runtime_loop_with_count3(
+; CHECK: for.body.prol:
+; CHECK: store
+; CHECK-NOT: store
+; CHECK: br i1
+; CHECK: for.body
+; CHECK: store
+; CHECK: store
+; CHECK: store
+; CHECK-NOT: store
+; CHECK: br i1
+define void @runtime_loop_with_count3(i32* nocapture %a, i32 %b) {
+entry:
+  %cmp3 = icmp sgt i32 %b, 0
+  br i1 %cmp3, label %for.body, label %for.end, !llvm.loop !16
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %inc = add nsw i32 %0, 1
+  store i32 %inc, i32* %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %b
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !16
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+!16 = !{!16, !17}
+!17 = !{!"llvm.loop.unroll.count", i32 3}

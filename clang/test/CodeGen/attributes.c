@@ -90,5 +90,5 @@ void __attribute__((section(".bar"))) t22(void) {}
 
 // CHECK: define void @t22() [[NUW]] section ".bar"
 
-// CHECK: attributes [[NUW]] = { nounwind{{.*}} }
-// CHECK: attributes [[NR]] = { noreturn nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }
+// CHECK: attributes [[NR]] = { noinline noreturn nounwind{{.*}} }

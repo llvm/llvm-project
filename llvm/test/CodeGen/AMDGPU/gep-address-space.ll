@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs< %s | FileCheck --check-prefix=SI --check-prefix=CHECK %s
+; RUN: llc -march=amdgcn -verify-machineinstrs< %s | FileCheck --check-prefix=SI --check-prefix=CHECK %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs< %s | FileCheck --check-prefix=CI --check-prefix=CHECK %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs< %s | FileCheck --check-prefix=CI --check-prefix=CHECK %s
 

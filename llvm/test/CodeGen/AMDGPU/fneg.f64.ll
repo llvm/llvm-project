@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}fneg_f64:
 ; GCN: v_xor_b32
@@ -39,7 +39,7 @@ define void @fneg_v4f64(<4 x double> addrspace(1)* nocapture %out, <4 x double> 
 ; unless the target returns true for isNegFree()
 
 ; FUNC-LABEL: {{^}}fneg_free_f64:
-; GCN: v_add_f64 {{v\[[0-9]+:[0-9]+\]}}, 0, -{{s\[[0-9]+:[0-9]+\]$}}
+; GCN: v_add_f64 {{v\[[0-9]+:[0-9]+\]}}, -{{s\[[0-9]+:[0-9]+\]}}, 0{{$}}
 define void @fneg_free_f64(double addrspace(1)* %out, i64 %in) {
   %bc = bitcast i64 %in to double
   %fsub = fsub double 0.0, %bc

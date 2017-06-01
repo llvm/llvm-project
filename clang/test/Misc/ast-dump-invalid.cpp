@@ -34,6 +34,7 @@ int g(int i) {
 // CHECK-NEXT:   `-CompoundStmt
 // CHECK-NEXT:     `-IfStmt {{.*}} <line:25:3, line:28:12>
 // CHECK-NEXT:       |-<<<NULL>>>
+// CHECK-NEXT:       |-<<<NULL>>>
 // CHECK-NEXT:       |-OpaqueValueExpr {{.*}} <<invalid sloc>> '_Bool'
 // CHECK-NEXT:       |-ReturnStmt {{.*}} <line:26:5, col:12>
 // CHECK-NEXT:       | `-IntegerLiteral {{.*}} <col:12> 'int' 4
@@ -41,3 +42,23 @@ int g(int i) {
 // CHECK-NEXT:         `-ImplicitCastExpr {{.*}} <col:12> 'int' <LValueToRValue>
 // CHECK-NEXT:           `-DeclRefExpr {{.*}} <col:12> 'int' lvalue ParmVar {{.*}} 'i' 'int'
 
+namespace TestInvalidFunctionDecl {
+struct Str {
+   double foo1(double, invalid_type);
+};
+double Str::foo1(double, invalid_type)
+{ return 45; }
+}
+// CHECK: NamespaceDecl {{.*}} <{{.*}}> {{.*}} TestInvalidFunctionDecl
+// CHECK-NEXT: |-CXXRecordDecl {{.*}} <line:46:1, line:48:1> line:46:8 struct Str definition
+// CHECK-NEXT: | |-CXXRecordDecl {{.*}} <col:1, col:8> col:8 implicit struct Str
+// CHECK-NEXT: | `-CXXMethodDecl {{.*}} <line:47:4, col:36> col:11 invalid foo1 'double (double, int)'
+// CHECK-NEXT: |   |-ParmVarDecl {{.*}} <col:16> col:22 'double'
+// CHECK-NEXT: |   `-ParmVarDecl {{.*}} <col:24, <invalid sloc>> col:36 invalid 'int'
+// CHECK-NEXT: `-CXXMethodDecl {{.*}} parent {{.*}} <line:49:1, line:50:14> line:49:13 invalid foo1 'double (double, int)'
+// CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:18> col:24 'double'
+// CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:26, <invalid sloc>> col:38 invalid 'int'
+// CHECK-NEXT:   `-CompoundStmt {{.*}} <line:50:1, col:14>
+// CHECK-NEXT:     `-ReturnStmt {{.*}} <col:3, col:10>
+// CHECK-NEXT:       `-ImplicitCastExpr {{.*}} <col:10> 'double' <IntegralToFloating>
+// CHECK-NEXT:         `-IntegerLiteral {{.*}} <col:10> 'int' 45

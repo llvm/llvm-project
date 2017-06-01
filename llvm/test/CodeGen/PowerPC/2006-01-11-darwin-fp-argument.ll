@@ -1,4 +1,4 @@
-; RUN: llc < %s | not grep ", f1"
+; RUN: llc -verify-machineinstrs < %s | not grep ", f1"
 
 target datalayout = "E-p:32:32"
 target triple = "powerpc-apple-darwin8.2.0"

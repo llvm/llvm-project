@@ -1,0 +1,46 @@
+RUN: llvm-readobj -h %p/Inputs/trivial.obj.elf-i386 --elf-output-style=GNU \
+RUN:   | FileCheck %s -check-prefix ELF32
+RUN: llvm-readobj -h %p/Inputs/trivial.obj.elf-x86-64 --elf-output-style=GNU \
+RUN:   | FileCheck %s -check-prefix ELF64
+
+ELF32:      ELF Header:
+ELF32-NEXT:  Magic:   7f 45 4c 46 01 01 01 03 00 00 00 00 00 00 00 00
+ELF32-NEXT:  Class:                             ELF32
+ELF32-NEXT:  Data:                              2's complement, little endian
+ELF32-NEXT:  Version:                           1 (current)
+ELF32-NEXT:  OS/ABI:                            UNIX - GNU
+ELF32-NEXT:  ABI Version:                       0
+ELF32-NEXT:  Type:                              REL (Relocatable file)
+ELF32-NEXT:  Machine:                           Intel 80386
+ELF32-NEXT:  Version:                           0x1
+ELF32-NEXT:  Entry point address:               0x0
+ELF32-NEXT:  Start of program headers:          0 (bytes into file)
+ELF32-NEXT:  Start of section headers:          200 (bytes into file)
+ELF32-NEXT:  Flags:                             0x0
+ELF32-NEXT:  Size of this header:               52 (bytes)
+ELF32-NEXT:  Size of program headers:            0 (bytes)
+ELF32-NEXT:  Number of program headers:          0
+ELF32-NEXT:  Size of section headers:           40 (bytes)
+ELF32-NEXT:  Number of section headers:         10
+ELF32-NEXT:  Section header string table index: 7
+
+ELF64:     ELF Header:
+ELF64-NEXT:  Magic:   7f 45 4c 46 02 01 01 03 00 00 00 00 00 00 00 00
+ELF64-NEXT:  Class:                             ELF64
+ELF64-NEXT:  Data:                              2's complement, little endian
+ELF64-NEXT:  Version:                           1 (current)
+ELF64-NEXT:  OS/ABI:                            UNIX - GNU
+ELF64-NEXT:  ABI Version:                       0
+ELF64-NEXT:  Type:                              REL (Relocatable file)
+ELF64-NEXT:  Machine:                           Advanced Micro Devices X86-64
+ELF64-NEXT:  Version:                           0x1
+ELF64-NEXT:  Entry point address:               0x0
+ELF64-NEXT:  Start of program headers:          0 (bytes into file)
+ELF64-NEXT:  Start of section headers:          184 (bytes into file)
+ELF64-NEXT:  Flags:                             0x0
+ELF64-NEXT:  Size of this header:               64 (bytes)
+ELF64-NEXT:  Size of program headers:            0 (bytes)
+ELF64-NEXT:  Number of program headers:          0
+ELF64-NEXT:  Size of section headers:           64 (bytes)
+ELF64-NEXT:  Number of section headers:         10
+ELF64-NEXT:  Section header string table index: 7

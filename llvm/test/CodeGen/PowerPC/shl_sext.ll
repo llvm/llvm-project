@@ -1,5 +1,5 @@
 ; This test should not contain a sign extend
-; RUN: llc < %s -march=ppc32 | not grep extsb 
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 | not grep extsb 
 
 define i32 @test(i32 %mode.0.i.0) {
         %tmp.79 = trunc i32 %mode.0.i.0 to i8           ; <i8> [#uses=1]

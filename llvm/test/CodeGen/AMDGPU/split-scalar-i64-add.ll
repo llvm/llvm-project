@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
-declare i32 @llvm.r600.read.tidig.x() readnone
+declare i32 @llvm.amdgcn.workitem.id.x() readnone
 
 ; This is broken because the low half of the 64-bit add remains on the
 ; SALU, but the upper half does not. The addc expects the carry bit
@@ -62,7 +62,7 @@ define void @s_imp_def_vcc_split_i64_add_1(i64 addrspace(1)* %out, i32 %val0, i6
 ; SI: v_add_i32_e32 {{v[0-9]+}}, vcc, {{s[0-9]+}}, {{v[0-9]+}}
 ; SI: v_addc_u32_e32 {{v[0-9]+}}, vcc, {{v[0-9]+}}, {{v[0-9]+}}, vcc
 define void @imp_def_vcc_split_i64_add_2(i64 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %val0, i64 %val1) {
-  %tid = call i32 @llvm.r600.read.tidig.x() readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() readnone
   %gep = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
   %load = load i32, i32 addrspace(1)* %gep
   %vec.0 = insertelement <2 x i32> undef, i32 %val0, i32 0

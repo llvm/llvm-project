@@ -1,5 +1,5 @@
-// RUN: %clang --analyze %s -Xanalyzer -analyzer-output=text -Xclang -verify
-// RUN: %clang --analyze %s -Xanalyzer -analyzer-config -Xanalyzer path-diagnostics-alternate=false -o %t
+// RUN: %clang_analyze_cc1 %s -analyzer-checker=core.NullDereference -analyzer-output=text -verify
+// RUN: %clang_analyze_cc1 %s -analyzer-checker=core.NullDereference -analyzer-output=plist -analyzer-config path-diagnostics-alternate=false -o %t
 // RUN: FileCheck --input-file=%t %s
 
 void testCondOp(int *p) {
@@ -64,10 +64,12 @@ void testDiagnosableBranch(int a) {
   }
 }
 
-void testNonDiagnosableBranchLogical(int a, int b) {
+void testDiagnosableBranchLogical(int a, int b) {
   if (a && b) {
-    // expected-note@-1 {{Left side of '&&' is true}}
-    // expected-note@-2 {{Taking true branch}}
+    // expected-note@-1 {{Assuming 'a' is not equal to 0}}
+    // expected-note@-2 {{Left side of '&&' is true}}
+    // expected-note@-3 {{Assuming 'b' is not equal to 0}}
+    // expected-note@-4 {{Taking true branch}}
     *(volatile int *)0 = 1; // expected-warning{{Dereference of null pointer}}
     // expected-note@-1 {{Dereference of null pointer}}
   }
@@ -1342,6 +1344,35 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:       </array>
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:     <dict>
+// CHECK-NEXT:      <key>kind</key><string>event</string>
+// CHECK-NEXT:      <key>location</key>
+// CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>line</key><integer>68</integer>
+// CHECK-NEXT:       <key>col</key><integer>7</integer>
+// CHECK-NEXT:       <key>file</key><integer>0</integer>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <key>ranges</key>
+// CHECK-NEXT:      <array>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>line</key><integer>68</integer>
+// CHECK-NEXT:          <key>col</key><integer>7</integer>
+// CHECK-NEXT:          <key>file</key><integer>0</integer>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>line</key><integer>68</integer>
+// CHECK-NEXT:          <key>col</key><integer>7</integer>
+// CHECK-NEXT:          <key>file</key><integer>0</integer>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </array>
+// CHECK-NEXT:      <key>depth</key><integer>0</integer>
+// CHECK-NEXT:      <key>extended_message</key>
+// CHECK-NEXT:      <string>Assuming &apos;a&apos; is not equal to 0</string>
+// CHECK-NEXT:      <key>message</key>
+// CHECK-NEXT:      <string>Assuming &apos;a&apos; is not equal to 0</string>
+// CHECK-NEXT:     </dict>
+// CHECK-NEXT:     <dict>
 // CHECK-NEXT:      <key>kind</key><string>control</string>
 // CHECK-NEXT:      <key>edges</key>
 // CHECK-NEXT:       <array>
@@ -1376,6 +1407,35 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:       </array>
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:     <dict>
+// CHECK-NEXT:      <key>kind</key><string>event</string>
+// CHECK-NEXT:      <key>location</key>
+// CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>line</key><integer>68</integer>
+// CHECK-NEXT:       <key>col</key><integer>12</integer>
+// CHECK-NEXT:       <key>file</key><integer>0</integer>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <key>ranges</key>
+// CHECK-NEXT:      <array>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>line</key><integer>68</integer>
+// CHECK-NEXT:          <key>col</key><integer>12</integer>
+// CHECK-NEXT:          <key>file</key><integer>0</integer>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>line</key><integer>68</integer>
+// CHECK-NEXT:          <key>col</key><integer>12</integer>
+// CHECK-NEXT:          <key>file</key><integer>0</integer>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </array>
+// CHECK-NEXT:      <key>depth</key><integer>0</integer>
+// CHECK-NEXT:      <key>extended_message</key>
+// CHECK-NEXT:      <string>Assuming &apos;b&apos; is not equal to 0</string>
+// CHECK-NEXT:      <key>message</key>
+// CHECK-NEXT:      <string>Assuming &apos;b&apos; is not equal to 0</string>
+// CHECK-NEXT:     </dict>
+// CHECK-NEXT:     <dict>
 // CHECK-NEXT:      <key>kind</key><string>control</string>
 // CHECK-NEXT:      <key>edges</key>
 // CHECK-NEXT:       <array>
@@ -1396,12 +1456,12 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:         <key>end</key>
 // CHECK-NEXT:          <array>
 // CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>71</integer>
+// CHECK-NEXT:            <key>line</key><integer>73</integer>
 // CHECK-NEXT:            <key>col</key><integer>5</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
 // CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>71</integer>
+// CHECK-NEXT:            <key>line</key><integer>73</integer>
 // CHECK-NEXT:            <key>col</key><integer>5</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
@@ -1417,12 +1477,12 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:         <key>start</key>
 // CHECK-NEXT:          <array>
 // CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>71</integer>
+// CHECK-NEXT:            <key>line</key><integer>73</integer>
 // CHECK-NEXT:            <key>col</key><integer>5</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
 // CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>71</integer>
+// CHECK-NEXT:            <key>line</key><integer>73</integer>
 // CHECK-NEXT:            <key>col</key><integer>5</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
@@ -1430,12 +1490,12 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:         <key>end</key>
 // CHECK-NEXT:          <array>
 // CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>71</integer>
+// CHECK-NEXT:            <key>line</key><integer>73</integer>
 // CHECK-NEXT:            <key>col</key><integer>24</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
 // CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>71</integer>
+// CHECK-NEXT:            <key>line</key><integer>73</integer>
 // CHECK-NEXT:            <key>col</key><integer>24</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
@@ -1447,7 +1507,7 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:      <key>kind</key><string>event</string>
 // CHECK-NEXT:      <key>location</key>
 // CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>line</key><integer>71</integer>
+// CHECK-NEXT:       <key>line</key><integer>73</integer>
 // CHECK-NEXT:       <key>col</key><integer>24</integer>
 // CHECK-NEXT:       <key>file</key><integer>0</integer>
 // CHECK-NEXT:      </dict>
@@ -1455,12 +1515,12 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:      <array>
 // CHECK-NEXT:        <array>
 // CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>line</key><integer>71</integer>
+// CHECK-NEXT:          <key>line</key><integer>73</integer>
 // CHECK-NEXT:          <key>col</key><integer>5</integer>
 // CHECK-NEXT:          <key>file</key><integer>0</integer>
 // CHECK-NEXT:         </dict>
 // CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>line</key><integer>71</integer>
+// CHECK-NEXT:          <key>line</key><integer>73</integer>
 // CHECK-NEXT:          <key>col</key><integer>26</integer>
 // CHECK-NEXT:          <key>file</key><integer>0</integer>
 // CHECK-NEXT:         </dict>
@@ -1478,13 +1538,13 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:    <key>type</key><string>Dereference of null pointer</string>
 // CHECK-NEXT:    <key>check_name</key><string>core.NullDereference</string>
 // CHECK-NEXT:    <!-- This hash is experimental and going to change! -->
-// CHECK-NEXT:    <key>issue_hash_content_of_line_in_context</key><string>ebd0bb32bbdcaa2a806ff1984974c07a</string>
+// CHECK-NEXT:    <key>issue_hash_content_of_line_in_context</key><string>a2b345c9681d9dd3aa15d12810759cb9</string>
 // CHECK-NEXT:   <key>issue_context_kind</key><string>function</string>
-// CHECK-NEXT:   <key>issue_context</key><string>testNonDiagnosableBranchLogical</string>
-// CHECK-NEXT:   <key>issue_hash_function_offset</key><string>4</string>
+// CHECK-NEXT:   <key>issue_context</key><string>testDiagnosableBranchLogical</string>
+// CHECK-NEXT:   <key>issue_hash_function_offset</key><string>6</string>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>71</integer>
+// CHECK-NEXT:    <key>line</key><integer>73</integer>
 // CHECK-NEXT:    <key>col</key><integer>24</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
@@ -1500,12 +1560,12 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:         <key>start</key>
 // CHECK-NEXT:          <array>
 // CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>77</integer>
+// CHECK-NEXT:            <key>line</key><integer>79</integer>
 // CHECK-NEXT:            <key>col</key><integer>3</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
 // CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>77</integer>
+// CHECK-NEXT:            <key>line</key><integer>79</integer>
 // CHECK-NEXT:            <key>col</key><integer>4</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
@@ -1513,12 +1573,12 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:         <key>end</key>
 // CHECK-NEXT:          <array>
 // CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>79</integer>
+// CHECK-NEXT:            <key>line</key><integer>81</integer>
 // CHECK-NEXT:            <key>col</key><integer>5</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
 // CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>79</integer>
+// CHECK-NEXT:            <key>line</key><integer>81</integer>
 // CHECK-NEXT:            <key>col</key><integer>5</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
@@ -1534,12 +1594,12 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:         <key>start</key>
 // CHECK-NEXT:          <array>
 // CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>79</integer>
+// CHECK-NEXT:            <key>line</key><integer>81</integer>
 // CHECK-NEXT:            <key>col</key><integer>5</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
 // CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>79</integer>
+// CHECK-NEXT:            <key>line</key><integer>81</integer>
 // CHECK-NEXT:            <key>col</key><integer>5</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
@@ -1547,12 +1607,12 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:         <key>end</key>
 // CHECK-NEXT:          <array>
 // CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>79</integer>
+// CHECK-NEXT:            <key>line</key><integer>81</integer>
 // CHECK-NEXT:            <key>col</key><integer>24</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
 // CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>79</integer>
+// CHECK-NEXT:            <key>line</key><integer>81</integer>
 // CHECK-NEXT:            <key>col</key><integer>24</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
@@ -1564,7 +1624,7 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:      <key>kind</key><string>event</string>
 // CHECK-NEXT:      <key>location</key>
 // CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>line</key><integer>79</integer>
+// CHECK-NEXT:       <key>line</key><integer>81</integer>
 // CHECK-NEXT:       <key>col</key><integer>24</integer>
 // CHECK-NEXT:       <key>file</key><integer>0</integer>
 // CHECK-NEXT:      </dict>
@@ -1572,12 +1632,12 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:      <array>
 // CHECK-NEXT:        <array>
 // CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>line</key><integer>79</integer>
+// CHECK-NEXT:          <key>line</key><integer>81</integer>
 // CHECK-NEXT:          <key>col</key><integer>5</integer>
 // CHECK-NEXT:          <key>file</key><integer>0</integer>
 // CHECK-NEXT:         </dict>
 // CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>line</key><integer>79</integer>
+// CHECK-NEXT:          <key>line</key><integer>81</integer>
 // CHECK-NEXT:          <key>col</key><integer>26</integer>
 // CHECK-NEXT:          <key>file</key><integer>0</integer>
 // CHECK-NEXT:         </dict>
@@ -1601,7 +1661,7 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
 // CHECK-NEXT:   <key>issue_hash_function_offset</key><string>3</string>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>79</integer>
+// CHECK-NEXT:    <key>line</key><integer>81</integer>
 // CHECK-NEXT:    <key>col</key><integer>24</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>

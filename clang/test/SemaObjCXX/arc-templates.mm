@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -fobjc-runtime-has-weak -fsyntax-only -fobjc-arc -verify -fblocks %s
+// RUN: %clang_cc1 -fobjc-runtime-has-weak -fsyntax-only -fobjc-arc -verify -fblocks -std=c++11 %s
+
+#define CONSUMED __attribute__((ns_consumed))
+#define PRODUCED __attribute__((ns_returns_retained))
 
 @interface A
 @end
@@ -316,5 +319,134 @@ namespace rdar15713945 {
     float &fr = (f)(weak);
     __unsafe_unretained NSString * const unsafe = 0;
     double &dr = (f)(unsafe);
+  }
+}
+
+namespace consumed {
+  void take_yes_no(void (&)(id CONSUMED, id)); // expected-note 2 {{candidate function not viable}}
+  void take_no_yes(void (&)(id, CONSUMED id)); // expected-note 2 {{candidate function not viable}}
+  void take_yes_yes(void (&)(CONSUMED id, CONSUMED id)); // expected-note 2 {{candidate function not viable}}
+
+  template <class... As> void consumes_first(id CONSUMED, As...);
+  void test1() {
+    take_yes_no(consumes_first<id>);
+    take_no_yes(consumes_first<id>); // expected-error {{no matching function}}
+    take_yes_yes(consumes_first<id>); // expected-error {{no matching function}}
+  }
+
+  template <class... As> void consumes_rest(id, CONSUMED As...);
+  void test2() {
+    take_yes_no(consumes_rest<id>); // expected-error {{no matching function}}
+    take_no_yes(consumes_rest<id>);
+    take_yes_yes(consumes_rest<id>); // expected-error {{no matching function}}
+  }
+
+  template <class T, class U> void consumes_two(CONSUMED T, CONSUMED U);
+  void test3() {
+    take_yes_no(consumes_two); // expected-error {{no matching function}}
+    take_no_yes(consumes_two); // expected-error {{no matching function}}
+    take_yes_yes(consumes_two);
+  }
+}
+
+namespace consumed_nested {
+  void take_yes_no(void (&)(id CONSUMED, id)); // expected-note 4 {{candidate function not viable}}
+  void take_no_yes(void (&)(id, CONSUMED id)); // expected-note 4 {{candidate function not viable}}
+  void take_yes_yes(void (&)(CONSUMED id, CONSUMED id)); // expected-note 4 {{candidate function not viable}}
+
+  template <unsigned N> struct consumes_first {
+    template <class... As> static void fn(id CONSUMED, As...);
+  };
+  void test1() {
+    take_yes_no(consumes_first<1>::fn<id>);
+    take_no_yes(consumes_first<2>::fn<id>); // expected-error {{no matching function}}
+    take_yes_yes(consumes_first<3>::fn<id>); // expected-error {{no matching function}}
+    take_yes_no(consumes_first<4>::fn);
+    take_no_yes(consumes_first<5>::fn); // expected-error {{no matching function}}
+    take_yes_yes(consumes_first<6>::fn); // expected-error {{no matching function}}
+  }
+
+  template <unsigned N> struct consumes_rest {
+    template <class... As> static void fn(id, CONSUMED As...);
+  };
+  void test2() {
+    take_yes_no(consumes_rest<1>::fn<id>); // expected-error {{no matching function}}
+    take_no_yes(consumes_rest<2>::fn<id>);
+    take_yes_yes(consumes_rest<3>::fn<id>); // expected-error {{no matching function}}
+    take_yes_no(consumes_rest<4>::fn<id>); // expected-error {{no matching function}}
+    take_no_yes(consumes_rest<5>::fn<id>);
+    take_yes_yes(consumes_rest<6>::fn<id>); // expected-error {{no matching function}}
+  }
+
+  template <unsigned N> struct consumes_two {
+    template <class T, class U> static void fn(CONSUMED T, CONSUMED U);
+  };
+  void test3() {
+    take_yes_no(consumes_two<1>::fn<id, id>); // expected-error {{no matching function}}
+    take_no_yes(consumes_two<2>::fn<id, id>); // expected-error {{no matching function}}
+    take_yes_yes(consumes_two<3>::fn<id, id>);
+    take_yes_no(consumes_two<1>::fn); // expected-error {{no matching function}}
+    take_no_yes(consumes_two<2>::fn); // expected-error {{no matching function}}
+    take_yes_yes(consumes_two<3>::fn);
+  }
+}
+
+namespace produced {
+  void take_yes(PRODUCED id (&)()); // expected-note 2 {{candidate function not viable}}
+  void take_no(id (&)()); // expected-note 2 {{candidate function not viable}}
+
+  template <class T> T non_produces1();
+  template <class T> T non_produces2();
+  template <class T> T non_produces3();
+  template <class T> T non_produces4();
+  void test1() {
+    take_yes(non_produces1<id>); // expected-error {{no matching function}}
+    take_yes(non_produces2); // expected-error {{no matching function}}
+    take_no(non_produces3<id>);
+    take_no(non_produces4);
+  }
+
+  template <class T> PRODUCED T produces1();
+  template <class T> PRODUCED T produces2();
+  template <class T> PRODUCED T produces3();
+  template <class T> PRODUCED T produces4();
+  void test2() {
+    take_yes(produces1<id>);
+    take_yes(produces2);
+    take_no(produces3<id>); // expected-error {{no matching function}}
+    take_no(produces4); // expected-error {{no matching function}}
+  }
+}
+
+namespace produced_nested {
+  void take_yes(PRODUCED id (&)()); // expected-note 2 {{candidate function not viable}}
+  void take_no(id (&)()); // expected-note 2 {{candidate function not viable}}
+
+  template <unsigned N> struct non_produces {
+    template <class T> static T fn();
+  };
+  void test1() {
+    take_yes(non_produces<1>::fn<id>); // expected-error {{no matching function}}
+    take_yes(non_produces<2>::fn); // expected-error {{no matching function}}
+    take_no(non_produces<3>::fn<id>);
+    take_no(non_produces<4>::fn);
+  }
+
+  template <unsigned N> struct produces {
+    template <class T> static PRODUCED T fn();
+  };
+  void test2() {
+    take_yes(produces<1>::fn<id>);
+    take_yes(produces<2>::fn);
+    take_no(produces<3>::fn<id>); // expected-error {{no matching function}}
+    take_no(produces<4>::fn); // expected-error {{no matching function}}
+  }
+}
+
+namespace instantiate_consumed {
+  template <class T> void take(CONSUMED T t) {} // expected-note {{candidate template ignored: substitution failure [with T = int]: ns_consumed attribute only applies to Objective-C object parameters}}
+  void test() {
+    take((id) 0);
+    take((int) 0); // expected-error {{no matching function for call to 'take'}}
   }
 }

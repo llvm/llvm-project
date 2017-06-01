@@ -17,6 +17,8 @@ auto g() -> enum E {
   return E();
 }
 
+int decltype(f())::*ptr_mem_decltype;
+
 class ExtraSemiAfterMemFn {
   // Due to a peculiarity in the C++11 grammar, a deleted or defaulted function
   // is permitted to be followed by either one or two semicolons.
@@ -134,5 +136,5 @@ template<int ...N> void NoMissingSemicolonHereEither(struct S
                                                      ... [N]);
 
 // This must be at the end of the file; we used to look ahead past the EOF token here.
-// expected-error@+1 {{expected unqualified-id}}
+// expected-error@+1 {{expected unqualified-id}} expected-error@+1{{expected ';'}}
 using

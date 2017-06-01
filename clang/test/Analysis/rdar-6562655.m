@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount,alpha.core -analyzer-constraints=range -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -verify %s
 // expected-no-diagnostics
 //
 // This test case mainly checks that the retain/release checker doesn't crash

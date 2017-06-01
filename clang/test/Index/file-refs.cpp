@@ -59,7 +59,7 @@ void f() {
 // RUN:  -file-refs-at=%s:2:9 \
 // CHECK-NEXT: ClassDecl=C:2:9 (Definition)
 // CHECK-NEXT: ClassDecl=C:2:9 (Definition) =[2:9 - 2:10]
-// CHECK-NEXT: CXXConstructor=C:4:5 (Definition) =[4:5 - 4:6]
+// CHECK-NEXT: CXXConstructor=C:4:5 (Definition) (default constructor) =[4:5 - 4:6]
 // CHECK-NEXT: TypeRef=class NS::C:2:9 =[9:10 - 9:11]
 // CHECK-NEXT: TypeRef=class NS::C:2:9 =[10:3 - 10:4]
 // CHECK-NEXT: TypeRef=class NS::C:2:9 =[15:7 - 15:8]
@@ -69,7 +69,7 @@ void f() {
 // RUN:  -file-refs-at=%s:16:18 \
 // CHECK-NEXT: CallExpr=C:4:5
 // CHECK-NEXT: ClassDecl=C:2:9 (Definition) =[2:9 - 2:10]
-// CHECK-NEXT: CXXConstructor=C:4:5 (Definition) =[4:5 - 4:6]
+// CHECK-NEXT: CXXConstructor=C:4:5 (Definition) (default constructor) =[4:5 - 4:6]
 // CHECK-NEXT: TypeRef=class NS::C:2:9 =[9:10 - 9:11]
 // CHECK-NEXT: TypeRef=class NS::C:2:9 =[10:3 - 10:4]
 // CHECK-NEXT: TypeRef=class NS::C:2:9 =[15:7 - 15:8]
@@ -91,7 +91,7 @@ void f() {
 // CHECK-NEXT: CallExpr=S:35:3
 // CHECK-NEXT: StructDecl=S:34:8 (Definition) =[34:8 - 34:9]
 // CHECK-NEXT: CXXConstructor=S:35:3 =[35:3 - 35:4]
-// CHECK-NEXT: CXXConstructor=S:36:3 =[36:3 - 36:4]
+// CHECK-NEXT: CXXConstructor=S:36:3 (default constructor) =[36:3 - 36:4]
 // CHECK-NEXT: TypeRef=struct Test2::S:34:8 =[39:9 - 39:10]
 // CHECK-NEXT: TypeRef=struct Test2::S:34:8 =[43:14 - 43:15]
 

@@ -12,12 +12,18 @@
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-Target llvm::TheNVPTXTarget32;
-Target llvm::TheNVPTXTarget64;
+Target &llvm::getTheNVPTXTarget32() {
+  static Target TheNVPTXTarget32;
+  return TheNVPTXTarget32;
+}
+Target &llvm::getTheNVPTXTarget64() {
+  static Target TheNVPTXTarget64;
+  return TheNVPTXTarget64;
+}
 
 extern "C" void LLVMInitializeNVPTXTargetInfo() {
-  RegisterTarget<Triple::nvptx> X(TheNVPTXTarget32, "nvptx",
+  RegisterTarget<Triple::nvptx> X(getTheNVPTXTarget32(), "nvptx",
                                   "NVIDIA PTX 32-bit");
-  RegisterTarget<Triple::nvptx64> Y(TheNVPTXTarget64, "nvptx64",
+  RegisterTarget<Triple::nvptx64> Y(getTheNVPTXTarget64(), "nvptx64",
                                     "NVIDIA PTX 64-bit");
 }

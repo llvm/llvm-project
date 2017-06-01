@@ -4,6 +4,7 @@ foo
 bar
 buzz
 
-OVERLAP: foo
-AAAOVERLAP: bar
-OVERLAP: buzz
+// Use regex notation so the checks don't match themselves.
+OVERLAP: fo{{o}}
+AAAOVERLAP: ba{{r}}
+OVERLAP: buz{{z}}

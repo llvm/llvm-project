@@ -88,9 +88,10 @@ public:
   virtual void deleteAnalysisLoop(Loop *L) {}
 
 protected:
-  /// skipOptnoneFunction - Containing function has Attribute::OptimizeNone
-  /// and most transformation passes should skip it.
-  bool skipOptnoneFunction(const Loop *L) const;
+  /// Optional passes call this function to check whether the pass should be
+  /// skipped. This is the case when Attribute::OptimizeNone is set or when
+  /// optimization bisect is over the limit.
+  bool skipLoop(const Loop *L) const;
 };
 
 class LPPassManager : public FunctionPass, public PMDataManager {
@@ -106,9 +107,7 @@ public:
   // LPPassManager needs LoopInfo.
   void getAnalysisUsage(AnalysisUsage &Info) const override;
 
-  const char *getPassName() const override {
-    return "Loop Pass Manager";
-  }
+  StringRef getPassName() const override { return "Loop Pass Manager"; }
 
   PMDataManager *getAsPMDataManager() override { return this; }
   Pass *getAsPass() override { return this; }
@@ -127,9 +126,6 @@ public:
   }
 
 public:
-  // Delete loop from the loop queue and loop nest (LoopInfo).
-  void deleteLoopFromQueue(Loop *L);
-
   // Add a new loop into the loop queue as a child of the given parent, or at
   // the top level if \c ParentLoop is null.
   Loop &addLoop(Loop *ParentLoop);
@@ -155,9 +151,24 @@ public:
 
 private:
   std::deque<Loop *> LQ;
-  bool skipThisLoop;
   LoopInfo *LI;
   Loop *CurrentLoop;
+};
+
+// This pass is required by the LCSSA transformation. It is used inside
+// LPPassManager to check if current pass preserves LCSSA form, and if it does
+// pass manager calls lcssa verification for the current loop.
+struct LCSSAVerificationPass : public FunctionPass {
+  static char ID;
+  LCSSAVerificationPass() : FunctionPass(ID) {
+    initializeLCSSAVerificationPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnFunction(Function &F) override { return false; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
 };
 
 } // End llvm namespace

@@ -32,9 +32,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !llvm.module.flags = !{!20}
 
 !0 = !DILocalVariable(name: "x", line: 7, arg: 1, scope: !1, file: !2, type: !7)
-!1 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scopeLine: 7, file: !18, scope: !2, type: !4)
+!1 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, scopeLine: 7, file: !18, scope: !2, type: !4)
 !2 = !DIFile(filename: "a.c", directory: "/tmp/")
-!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: 0, file: !18, enums: !19, retainedTypes: !19, subprograms: !17, imports:  null)
+!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: FullDebug, file: !18, enums: !19, retainedTypes: !19, imports:  null)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !7, !9}
 !6 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -48,7 +48,6 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !14 = !DILocalVariable(name: "y", line: 7, arg: 2, scope: !1, file: !2, type: !9)
 !15 = !DILocation(line: 7, scope: !16)
 !16 = distinct !DILexicalBlock(line: 7, column: 0, file: !18, scope: !1)
-!17 = !{!1}
 !18 = !DIFile(filename: "a.c", directory: "/tmp/")
 !19 = !{}
 !20 = !{i32 1, !"Debug Info Version", i32 3}

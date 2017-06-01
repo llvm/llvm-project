@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/TypeBuilder.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/LLVMContext.h"
 #include "gtest/gtest.h"
 
@@ -17,141 +16,175 @@ using namespace llvm;
 namespace {
 
 TEST(TypeBuilderTest, Void) {
-  EXPECT_EQ(Type::getVoidTy(getGlobalContext()), (TypeBuilder<void, true>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getVoidTy(getGlobalContext()), (TypeBuilder<void, false>::get(getGlobalContext())));
+  LLVMContext Context;
+  EXPECT_EQ(Type::getVoidTy(Context), (TypeBuilder<void, true>::get(Context)));
+  EXPECT_EQ(Type::getVoidTy(Context), (TypeBuilder<void, false>::get(Context)));
   // Special cases for C compatibility:
-  EXPECT_EQ(Type::getInt8PtrTy(getGlobalContext()),
-            (TypeBuilder<void*, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt8PtrTy(getGlobalContext()),
-            (TypeBuilder<const void*, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt8PtrTy(getGlobalContext()),
-            (TypeBuilder<volatile void*, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt8PtrTy(getGlobalContext()),
-            (TypeBuilder<const volatile void*, false>::get(
-              getGlobalContext())));
+  EXPECT_EQ(Type::getInt8PtrTy(Context),
+            (TypeBuilder<void *, false>::get(Context)));
+  EXPECT_EQ(Type::getInt8PtrTy(Context),
+            (TypeBuilder<const void *, false>::get(Context)));
+  EXPECT_EQ(Type::getInt8PtrTy(Context),
+            (TypeBuilder<volatile void *, false>::get(Context)));
+  EXPECT_EQ(Type::getInt8PtrTy(Context),
+            (TypeBuilder<const volatile void *, false>::get(Context)));
 }
 
 TEST(TypeBuilderTest, HostIntegers) {
-  EXPECT_EQ(Type::getInt8Ty(getGlobalContext()), (TypeBuilder<int8_t, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt8Ty(getGlobalContext()), (TypeBuilder<uint8_t, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt16Ty(getGlobalContext()), (TypeBuilder<int16_t, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt16Ty(getGlobalContext()), (TypeBuilder<uint16_t, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt32Ty(getGlobalContext()), (TypeBuilder<int32_t, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt32Ty(getGlobalContext()), (TypeBuilder<uint32_t, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt64Ty(getGlobalContext()), (TypeBuilder<int64_t, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt64Ty(getGlobalContext()), (TypeBuilder<uint64_t, false>::get(getGlobalContext())));
+  LLVMContext Context;
+  EXPECT_EQ(Type::getInt8Ty(Context),
+            (TypeBuilder<int8_t, false>::get(Context)));
+  EXPECT_EQ(Type::getInt8Ty(Context),
+            (TypeBuilder<uint8_t, false>::get(Context)));
+  EXPECT_EQ(Type::getInt16Ty(Context),
+            (TypeBuilder<int16_t, false>::get(Context)));
+  EXPECT_EQ(Type::getInt16Ty(Context),
+            (TypeBuilder<uint16_t, false>::get(Context)));
+  EXPECT_EQ(Type::getInt32Ty(Context),
+            (TypeBuilder<int32_t, false>::get(Context)));
+  EXPECT_EQ(Type::getInt32Ty(Context),
+            (TypeBuilder<uint32_t, false>::get(Context)));
+  EXPECT_EQ(Type::getInt64Ty(Context),
+            (TypeBuilder<int64_t, false>::get(Context)));
+  EXPECT_EQ(Type::getInt64Ty(Context),
+            (TypeBuilder<uint64_t, false>::get(Context)));
 
-  EXPECT_EQ(IntegerType::get(getGlobalContext(), sizeof(size_t) * CHAR_BIT),
-            (TypeBuilder<size_t, false>::get(getGlobalContext())));
-  EXPECT_EQ(IntegerType::get(getGlobalContext(), sizeof(ptrdiff_t) * CHAR_BIT),
-            (TypeBuilder<ptrdiff_t, false>::get(getGlobalContext())));
+  EXPECT_EQ(IntegerType::get(Context, sizeof(size_t) * CHAR_BIT),
+            (TypeBuilder<size_t, false>::get(Context)));
+  EXPECT_EQ(IntegerType::get(Context, sizeof(ptrdiff_t) * CHAR_BIT),
+            (TypeBuilder<ptrdiff_t, false>::get(Context)));
 }
 
 TEST(TypeBuilderTest, CrossCompilableIntegers) {
-  EXPECT_EQ(IntegerType::get(getGlobalContext(), 1), (TypeBuilder<types::i<1>, true>::get(getGlobalContext())));
-  EXPECT_EQ(IntegerType::get(getGlobalContext(), 1), (TypeBuilder<types::i<1>, false>::get(getGlobalContext())));
-  EXPECT_EQ(IntegerType::get(getGlobalContext(), 72), (TypeBuilder<types::i<72>, true>::get(getGlobalContext())));
-  EXPECT_EQ(IntegerType::get(getGlobalContext(), 72), (TypeBuilder<types::i<72>, false>::get(getGlobalContext())));
+  LLVMContext Context;
+  EXPECT_EQ(IntegerType::get(Context, 1),
+            (TypeBuilder<types::i<1>, true>::get(Context)));
+  EXPECT_EQ(IntegerType::get(Context, 1),
+            (TypeBuilder<types::i<1>, false>::get(Context)));
+  EXPECT_EQ(IntegerType::get(Context, 72),
+            (TypeBuilder<types::i<72>, true>::get(Context)));
+  EXPECT_EQ(IntegerType::get(Context, 72),
+            (TypeBuilder<types::i<72>, false>::get(Context)));
 }
 
 TEST(TypeBuilderTest, Float) {
-  EXPECT_EQ(Type::getFloatTy(getGlobalContext()), (TypeBuilder<float, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getDoubleTy(getGlobalContext()), (TypeBuilder<double, false>::get(getGlobalContext())));
+  LLVMContext Context;
+  EXPECT_EQ(Type::getFloatTy(Context),
+            (TypeBuilder<float, false>::get(Context)));
+  EXPECT_EQ(Type::getDoubleTy(Context),
+            (TypeBuilder<double, false>::get(Context)));
   // long double isn't supported yet.
-  EXPECT_EQ(Type::getFloatTy(getGlobalContext()), (TypeBuilder<types::ieee_float, true>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getFloatTy(getGlobalContext()), (TypeBuilder<types::ieee_float, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getDoubleTy(getGlobalContext()), (TypeBuilder<types::ieee_double, true>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getDoubleTy(getGlobalContext()), (TypeBuilder<types::ieee_double, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getX86_FP80Ty(getGlobalContext()), (TypeBuilder<types::x86_fp80, true>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getX86_FP80Ty(getGlobalContext()), (TypeBuilder<types::x86_fp80, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getFP128Ty(getGlobalContext()), (TypeBuilder<types::fp128, true>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getFP128Ty(getGlobalContext()), (TypeBuilder<types::fp128, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getPPC_FP128Ty(getGlobalContext()), (TypeBuilder<types::ppc_fp128, true>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getPPC_FP128Ty(getGlobalContext()), (TypeBuilder<types::ppc_fp128, false>::get(getGlobalContext())));
+  EXPECT_EQ(Type::getFloatTy(Context),
+            (TypeBuilder<types::ieee_float, true>::get(Context)));
+  EXPECT_EQ(Type::getFloatTy(Context),
+            (TypeBuilder<types::ieee_float, false>::get(Context)));
+  EXPECT_EQ(Type::getDoubleTy(Context),
+            (TypeBuilder<types::ieee_double, true>::get(Context)));
+  EXPECT_EQ(Type::getDoubleTy(Context),
+            (TypeBuilder<types::ieee_double, false>::get(Context)));
+  EXPECT_EQ(Type::getX86_FP80Ty(Context),
+            (TypeBuilder<types::x86_fp80, true>::get(Context)));
+  EXPECT_EQ(Type::getX86_FP80Ty(Context),
+            (TypeBuilder<types::x86_fp80, false>::get(Context)));
+  EXPECT_EQ(Type::getFP128Ty(Context),
+            (TypeBuilder<types::fp128, true>::get(Context)));
+  EXPECT_EQ(Type::getFP128Ty(Context),
+            (TypeBuilder<types::fp128, false>::get(Context)));
+  EXPECT_EQ(Type::getPPC_FP128Ty(Context),
+            (TypeBuilder<types::ppc_fp128, true>::get(Context)));
+  EXPECT_EQ(Type::getPPC_FP128Ty(Context),
+            (TypeBuilder<types::ppc_fp128, false>::get(Context)));
 }
 
 TEST(TypeBuilderTest, Derived) {
-  EXPECT_EQ(PointerType::getUnqual(Type::getInt8PtrTy(getGlobalContext())),
-            (TypeBuilder<int8_t**, false>::get(getGlobalContext())));
-  EXPECT_EQ(ArrayType::get(Type::getInt8Ty(getGlobalContext()), 7),
-            (TypeBuilder<int8_t[7], false>::get(getGlobalContext())));
-  EXPECT_EQ(ArrayType::get(Type::getInt8Ty(getGlobalContext()), 0),
-            (TypeBuilder<int8_t[], false>::get(getGlobalContext())));
+  LLVMContext Context;
+  EXPECT_EQ(PointerType::getUnqual(Type::getInt8PtrTy(Context)),
+            (TypeBuilder<int8_t **, false>::get(Context)));
+  EXPECT_EQ(ArrayType::get(Type::getInt8Ty(Context), 7),
+            (TypeBuilder<int8_t[7], false>::get(Context)));
+  EXPECT_EQ(ArrayType::get(Type::getInt8Ty(Context), 0),
+            (TypeBuilder<int8_t[], false>::get(Context)));
 
-  EXPECT_EQ(PointerType::getUnqual(Type::getInt8PtrTy(getGlobalContext())),
-            (TypeBuilder<types::i<8>**, false>::get(getGlobalContext())));
-  EXPECT_EQ(ArrayType::get(Type::getInt8Ty(getGlobalContext()), 7),
-            (TypeBuilder<types::i<8>[7], false>::get(getGlobalContext())));
-  EXPECT_EQ(ArrayType::get(Type::getInt8Ty(getGlobalContext()), 0),
-            (TypeBuilder<types::i<8>[], false>::get(getGlobalContext())));
+  EXPECT_EQ(PointerType::getUnqual(Type::getInt8PtrTy(Context)),
+            (TypeBuilder<types::i<8> **, false>::get(Context)));
+  EXPECT_EQ(ArrayType::get(Type::getInt8Ty(Context), 7),
+            (TypeBuilder<types::i<8>[7], false>::get(Context)));
+  EXPECT_EQ(ArrayType::get(Type::getInt8Ty(Context), 0),
+            (TypeBuilder<types::i<8>[], false>::get(Context)));
 
-  EXPECT_EQ(PointerType::getUnqual(Type::getInt8PtrTy(getGlobalContext())),
-            (TypeBuilder<types::i<8>**, true>::get(getGlobalContext())));
-  EXPECT_EQ(ArrayType::get(Type::getInt8Ty(getGlobalContext()), 7),
-            (TypeBuilder<types::i<8>[7], true>::get(getGlobalContext())));
-  EXPECT_EQ(ArrayType::get(Type::getInt8Ty(getGlobalContext()), 0),
-            (TypeBuilder<types::i<8>[], true>::get(getGlobalContext())));
+  EXPECT_EQ(PointerType::getUnqual(Type::getInt8PtrTy(Context)),
+            (TypeBuilder<types::i<8> **, true>::get(Context)));
+  EXPECT_EQ(ArrayType::get(Type::getInt8Ty(Context), 7),
+            (TypeBuilder<types::i<8>[7], true>::get(Context)));
+  EXPECT_EQ(ArrayType::get(Type::getInt8Ty(Context), 0),
+            (TypeBuilder<types::i<8>[], true>::get(Context)));
 
+  EXPECT_EQ(Type::getInt8Ty(Context),
+            (TypeBuilder<const int8_t, false>::get(Context)));
+  EXPECT_EQ(Type::getInt8Ty(Context),
+            (TypeBuilder<volatile int8_t, false>::get(Context)));
+  EXPECT_EQ(Type::getInt8Ty(Context),
+            (TypeBuilder<const volatile int8_t, false>::get(Context)));
 
-  EXPECT_EQ(Type::getInt8Ty(getGlobalContext()),
-            (TypeBuilder<const int8_t, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt8Ty(getGlobalContext()),
-            (TypeBuilder<volatile int8_t, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt8Ty(getGlobalContext()),
-            (TypeBuilder<const volatile int8_t, false>::get(getGlobalContext())));
+  EXPECT_EQ(Type::getInt8Ty(Context),
+            (TypeBuilder<const types::i<8>, false>::get(Context)));
+  EXPECT_EQ(Type::getInt8Ty(Context),
+            (TypeBuilder<volatile types::i<8>, false>::get(Context)));
+  EXPECT_EQ(Type::getInt8Ty(Context),
+            (TypeBuilder<const volatile types::i<8>, false>::get(Context)));
 
-  EXPECT_EQ(Type::getInt8Ty(getGlobalContext()),
-            (TypeBuilder<const types::i<8>, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt8Ty(getGlobalContext()),
-            (TypeBuilder<volatile types::i<8>, false>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt8Ty(getGlobalContext()),
-            (TypeBuilder<const volatile types::i<8>, false>::get(getGlobalContext())));
+  EXPECT_EQ(Type::getInt8Ty(Context),
+            (TypeBuilder<const types::i<8>, true>::get(Context)));
+  EXPECT_EQ(Type::getInt8Ty(Context),
+            (TypeBuilder<volatile types::i<8>, true>::get(Context)));
+  EXPECT_EQ(Type::getInt8Ty(Context),
+            (TypeBuilder<const volatile types::i<8>, true>::get(Context)));
 
-  EXPECT_EQ(Type::getInt8Ty(getGlobalContext()),
-            (TypeBuilder<const types::i<8>, true>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt8Ty(getGlobalContext()),
-            (TypeBuilder<volatile types::i<8>, true>::get(getGlobalContext())));
-  EXPECT_EQ(Type::getInt8Ty(getGlobalContext()),
-            (TypeBuilder<const volatile types::i<8>, true>::get(getGlobalContext())));
-
-  EXPECT_EQ(Type::getInt8PtrTy(getGlobalContext()),
-            (TypeBuilder<const volatile int8_t*const volatile, false>::get(getGlobalContext())));
+  EXPECT_EQ(Type::getInt8PtrTy(Context),
+            (TypeBuilder<const volatile int8_t *const volatile, false>::get(
+                Context)));
 }
 
 TEST(TypeBuilderTest, Functions) {
+  LLVMContext Context;
   std::vector<Type*> params;
-  EXPECT_EQ(FunctionType::get(Type::getVoidTy(getGlobalContext()), params, false),
-            (TypeBuilder<void(), true>::get(getGlobalContext())));
-  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(getGlobalContext()), params, true),
-            (TypeBuilder<int8_t(...), false>::get(getGlobalContext())));
-  params.push_back(TypeBuilder<int32_t*, false>::get(getGlobalContext()));
-  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(getGlobalContext()), params, false),
-            (TypeBuilder<int8_t(const int32_t*), false>::get(getGlobalContext())));
-  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(getGlobalContext()), params, true),
-            (TypeBuilder<int8_t(const int32_t*, ...), false>::get(getGlobalContext())));
-  params.push_back(TypeBuilder<char*, false>::get(getGlobalContext()));
-  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(getGlobalContext()), params, false),
-            (TypeBuilder<int8_t(int32_t*, void*), false>::get(getGlobalContext())));
-  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(getGlobalContext()), params, true),
-            (TypeBuilder<int8_t(int32_t*, char*, ...), false>::get(getGlobalContext())));
-  params.push_back(TypeBuilder<char, false>::get(getGlobalContext()));
-  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(getGlobalContext()), params, false),
-            (TypeBuilder<int8_t(int32_t*, void*, char), false>::get(getGlobalContext())));
-  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(getGlobalContext()), params, true),
-            (TypeBuilder<int8_t(int32_t*, char*, char, ...), false>::get(getGlobalContext())));
-  params.push_back(TypeBuilder<char, false>::get(getGlobalContext()));
-  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(getGlobalContext()), params, false),
-            (TypeBuilder<int8_t(int32_t*, void*, char, char), false>::get(getGlobalContext())));
-  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(getGlobalContext()), params, true),
-            (TypeBuilder<int8_t(int32_t*, char*, char, char, ...),
-                         false>::get(getGlobalContext())));
-  params.push_back(TypeBuilder<char, false>::get(getGlobalContext()));
-  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(getGlobalContext()), params, false),
-            (TypeBuilder<int8_t(int32_t*, void*, char, char, char),
-                         false>::get(getGlobalContext())));
-  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(getGlobalContext()), params, true),
-            (TypeBuilder<int8_t(int32_t*, char*, char, char, char, ...),
-                         false>::get(getGlobalContext())));
+  EXPECT_EQ(FunctionType::get(Type::getVoidTy(Context), params, false),
+            (TypeBuilder<void(), true>::get(Context)));
+  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(Context), params, true),
+            (TypeBuilder<int8_t(...), false>::get(Context)));
+  params.push_back(TypeBuilder<int32_t *, false>::get(Context));
+  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(Context), params, false),
+            (TypeBuilder<int8_t(const int32_t *), false>::get(Context)));
+  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(Context), params, true),
+            (TypeBuilder<int8_t(const int32_t *, ...), false>::get(Context)));
+  params.push_back(TypeBuilder<char *, false>::get(Context));
+  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(Context), params, false),
+            (TypeBuilder<int8_t(int32_t *, void *), false>::get(Context)));
+  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(Context), params, true),
+            (TypeBuilder<int8_t(int32_t *, char *, ...), false>::get(Context)));
+  params.push_back(TypeBuilder<char, false>::get(Context));
+  EXPECT_EQ(
+      FunctionType::get(Type::getInt8Ty(Context), params, false),
+      (TypeBuilder<int8_t(int32_t *, void *, char), false>::get(Context)));
+  EXPECT_EQ(
+      FunctionType::get(Type::getInt8Ty(Context), params, true),
+      (TypeBuilder<int8_t(int32_t *, char *, char, ...), false>::get(Context)));
+  params.push_back(TypeBuilder<char, false>::get(Context));
+  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(Context), params, false),
+            (TypeBuilder<int8_t(int32_t *, void *, char, char), false>::get(
+                Context)));
+  EXPECT_EQ(
+      FunctionType::get(Type::getInt8Ty(Context), params, true),
+      (TypeBuilder<int8_t(int32_t *, char *, char, char, ...), false>::get(
+          Context)));
+  params.push_back(TypeBuilder<char, false>::get(Context));
+  EXPECT_EQ(
+      FunctionType::get(Type::getInt8Ty(Context), params, false),
+      (TypeBuilder<int8_t(int32_t *, void *, char, char, char), false>::get(
+          Context)));
+  EXPECT_EQ(FunctionType::get(Type::getInt8Ty(Context), params, true),
+            (TypeBuilder<int8_t(int32_t *, char *, char, char, char, ...),
+                         false>::get(Context)));
 }
 
 TEST(TypeBuilderTest, Context) {
@@ -230,24 +263,24 @@ public:
 namespace {
 
 TEST(TypeBuilderTest, Extensions) {
+  LLVMContext Context;
   EXPECT_EQ(PointerType::getUnqual(StructType::get(
-                                     TypeBuilder<int, false>::get(getGlobalContext()),
-                                     TypeBuilder<int*, false>::get(getGlobalContext()),
-                                     TypeBuilder<void*[], false>::get(getGlobalContext()),
-                                     (void*)nullptr)),
-            (TypeBuilder<MyType*, false>::get(getGlobalContext())));
-  EXPECT_EQ(PointerType::getUnqual(StructType::get(
-                                     TypeBuilder<types::i<32>, false>::get(getGlobalContext()),
-                                     TypeBuilder<types::i<32>*, false>::get(getGlobalContext()),
-                                     TypeBuilder<types::i<8>*[], false>::get(getGlobalContext()),
-                                     (void*)nullptr)),
-            (TypeBuilder<MyPortableType*, false>::get(getGlobalContext())));
-  EXPECT_EQ(PointerType::getUnqual(StructType::get(
-                                     TypeBuilder<types::i<32>, false>::get(getGlobalContext()),
-                                     TypeBuilder<types::i<32>*, false>::get(getGlobalContext()),
-                                     TypeBuilder<types::i<8>*[], false>::get(getGlobalContext()),
-                                     (void*)nullptr)),
-            (TypeBuilder<MyPortableType*, true>::get(getGlobalContext())));
+                TypeBuilder<int, false>::get(Context),
+                TypeBuilder<int *, false>::get(Context),
+                TypeBuilder<void *[], false>::get(Context), (void *)nullptr)),
+            (TypeBuilder<MyType *, false>::get(Context)));
+  EXPECT_EQ(
+      PointerType::getUnqual(StructType::get(
+          TypeBuilder<types::i<32>, false>::get(Context),
+          TypeBuilder<types::i<32> *, false>::get(Context),
+          TypeBuilder<types::i<8> *[], false>::get(Context), (void *)nullptr)),
+      (TypeBuilder<MyPortableType *, false>::get(Context)));
+  EXPECT_EQ(
+      PointerType::getUnqual(StructType::get(
+          TypeBuilder<types::i<32>, false>::get(Context),
+          TypeBuilder<types::i<32> *, false>::get(Context),
+          TypeBuilder<types::i<8> *[], false>::get(Context), (void *)nullptr)),
+      (TypeBuilder<MyPortableType *, true>::get(Context)));
 }
 
 }  // anonymous namespace

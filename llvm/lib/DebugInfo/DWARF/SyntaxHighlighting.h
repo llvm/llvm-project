@@ -17,7 +17,7 @@ namespace dwarf {
 namespace syntax {
 
 // Symbolic names for various syntax elements.
-enum HighlightColor { Address, String, Tag, Attribute, Enumerator };
+enum HighlightColor { Address, String, Tag, Attribute, Enumerator, Macro };
 
 /// An RAII object that temporarily switches an output stream to a
 /// specific color.

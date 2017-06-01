@@ -78,6 +78,11 @@ typedef void (F)(void);
 
 - (NSMutableArray*) pieces; // expected-note 2 {{declared here}}
 - (NSArray*) first;
+
+// Don't warn about setter-like methods for readonly properties.
+- (void)setFirst:(char)val;
+- (void)setPieces:(char)val;
+
 @end
 
 @interface Class2  {

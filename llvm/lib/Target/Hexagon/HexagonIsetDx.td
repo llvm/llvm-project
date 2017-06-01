@@ -13,9 +13,9 @@
 
 // SA1_combine1i: Combines.
 let isCodeGenOnly = 1, hasSideEffects = 0 in
-def V4_SA1_combine1i: SUBInst <
+def SA1_combine1i: SUBInst <
   (outs DoubleRegs:$Rdd),
-  (ins u2Imm:$u2),
+  (ins u2_0Imm:$u2),
   "$Rdd = combine(#1, #$u2)"> {
     bits<3> Rdd;
     bits<2> u2;
@@ -30,7 +30,7 @@ def V4_SA1_combine1i: SUBInst <
 // SL2_jumpr31_f: Indirect conditional jump if false.
 // SL2_jumpr31_f -> SL2_jumpr31_fnew
 let Defs = [PC], Uses = [P0, R31], isCodeGenOnly = 1, isPredicated = 1, isPredicatedFalse = 1, isBranch = 1, isIndirectBranch = 1, hasSideEffects = 0 in
-def V4_SL2_jumpr31_f: SUBInst <
+def SL2_jumpr31_f: SUBInst <
   (outs ),
   (ins ),
   "if (!p0) jumpr r31"> {
@@ -40,7 +40,7 @@ def V4_SL2_jumpr31_f: SUBInst <
 
 // SL2_deallocframe: Deallocate stack frame.
 let Defs = [R31, R29, R30], Uses = [R30], isCodeGenOnly = 1, mayLoad = 1, accessSize = DoubleWordAccess in
-def V4_SL2_deallocframe: SUBInst <
+def SL2_deallocframe: SUBInst <
   (outs ),
   (ins ),
   "deallocframe"> {
@@ -51,7 +51,7 @@ def V4_SL2_deallocframe: SUBInst <
 // SL2_return_f: Deallocate stack frame and return.
 // SL2_return_f -> SL2_return_fnew
 let Defs = [PC, R31, R29, R30], Uses = [R30, P0], isCodeGenOnly = 1, isPredicated = 1, isPredicatedFalse = 1, mayLoad = 1, accessSize = DoubleWordAccess, isBranch = 1, isIndirectBranch = 1 in
-def V4_SL2_return_f: SUBInst <
+def SL2_return_f: SUBInst <
   (outs ),
   (ins ),
   "if (!p0) dealloc_return"> {
@@ -61,9 +61,9 @@ def V4_SL2_return_f: SUBInst <
 
 // SA1_combine3i: Combines.
 let isCodeGenOnly = 1, hasSideEffects = 0 in
-def V4_SA1_combine3i: SUBInst <
+def SA1_combine3i: SUBInst <
   (outs DoubleRegs:$Rdd),
-  (ins u2Imm:$u2),
+  (ins u2_0Imm:$u2),
   "$Rdd = combine(#3, #$u2)"> {
     bits<3> Rdd;
     bits<2> u2;
@@ -77,7 +77,7 @@ def V4_SA1_combine3i: SUBInst <
 
 // SS2_storebi0: Store byte.
 let isCodeGenOnly = 1, mayStore = 1, accessSize = ByteAccess in
-def V4_SS2_storebi0: SUBInst <
+def SS2_storebi0: SUBInst <
   (outs ),
   (ins IntRegs:$Rs, u4_0Imm:$u4_0),
   "memb($Rs + #$u4_0)=#0"> {
@@ -91,10 +91,10 @@ def V4_SS2_storebi0: SUBInst <
 
 // SA1_clrtnew: Clear if true.
 let Uses = [P0], isCodeGenOnly = 1, isPredicated = 1, isPredicatedNew = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_clrtnew: SUBInst <
+def SA1_clrtnew: SUBInst <
   (outs IntRegs:$Rd),
-  (ins ),
-  "if (p0.new) $Rd = #0"> {
+  (ins PredRegs:$Pu),
+  "if ($Pu.new) $Rd = #0"> {
     bits<4> Rd;
 
     let Inst{12-9} = 0b1101;
@@ -104,7 +104,7 @@ def V4_SA1_clrtnew: SUBInst <
 
 // SL2_loadruh_io: Load half.
 let isCodeGenOnly = 1, mayLoad = 1, accessSize = HalfWordAccess, hasNewValue = 1, opNewValue = 0 in
-def V4_SL2_loadruh_io: SUBInst <
+def SL2_loadruh_io: SUBInst <
   (outs IntRegs:$Rd),
   (ins IntRegs:$Rs, u3_1Imm:$u3_1),
   "$Rd = memuh($Rs + #$u3_1)"> {
@@ -120,7 +120,7 @@ def V4_SL2_loadruh_io: SUBInst <
 
 // SL2_jumpr31_tnew: Indirect conditional jump if true.
 let Defs = [PC], Uses = [P0, R31], isCodeGenOnly = 1, isPredicated = 1, isPredicatedNew = 1, isBranch = 1, isIndirectBranch = 1, hasSideEffects = 0 in
-def V4_SL2_jumpr31_tnew: SUBInst <
+def SL2_jumpr31_tnew: SUBInst <
   (outs ),
   (ins ),
   "if (p0.new) jumpr:nt r31"> {
@@ -130,9 +130,9 @@ def V4_SL2_jumpr31_tnew: SUBInst <
 
 // SA1_addi: Add.
 let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0, isExtendable = 1, isExtentSigned = 1, opExtentBits = 7, opExtendable = 2 in
-def V4_SA1_addi: SUBInst <
+def SA1_addi: SUBInst <
   (outs IntRegs:$Rx),
-  (ins IntRegs:$_src_, s7Ext:$s7),
+  (ins IntRegs:$_src_, s7_0Ext:$s7),
   "$Rx = add($_src_, #$s7)" ,
   [] ,
   "$_src_ = $Rx"> {
@@ -146,7 +146,7 @@ def V4_SA1_addi: SUBInst <
 
 // SL1_loadrub_io: Load byte.
 let isCodeGenOnly = 1, mayLoad = 1, accessSize = ByteAccess, hasNewValue = 1, opNewValue = 0 in
-def V4_SL1_loadrub_io: SUBInst <
+def SL1_loadrub_io: SUBInst <
   (outs IntRegs:$Rd),
   (ins IntRegs:$Rs, u4_0Imm:$u4_0),
   "$Rd = memub($Rs + #$u4_0)"> {
@@ -162,7 +162,7 @@ def V4_SL1_loadrub_io: SUBInst <
 
 // SL1_loadri_io: Load word.
 let isCodeGenOnly = 1, mayLoad = 1, accessSize = WordAccess, hasNewValue = 1, opNewValue = 0 in
-def V4_SL1_loadri_io: SUBInst <
+def SL1_loadri_io: SUBInst <
   (outs IntRegs:$Rd),
   (ins IntRegs:$Rs, u4_2Imm:$u4_2),
   "$Rd = memw($Rs + #$u4_2)"> {
@@ -178,9 +178,9 @@ def V4_SL1_loadri_io: SUBInst <
 
 // SA1_cmpeqi: Compareimmed.
 let Defs = [P0], isCodeGenOnly = 1, hasSideEffects = 0 in
-def V4_SA1_cmpeqi: SUBInst <
+def SA1_cmpeqi: SUBInst <
   (outs ),
-  (ins IntRegs:$Rs, u2Imm:$u2),
+  (ins IntRegs:$Rs, u2_0Imm:$u2),
   "p0 = cmp.eq($Rs, #$u2)"> {
     bits<4> Rs;
     bits<2> u2;
@@ -192,7 +192,7 @@ def V4_SA1_cmpeqi: SUBInst <
 
 // SA1_combinerz: Combines.
 let isCodeGenOnly = 1, hasSideEffects = 0 in
-def V4_SA1_combinerz: SUBInst <
+def SA1_combinerz: SUBInst <
   (outs DoubleRegs:$Rdd),
   (ins IntRegs:$Rs),
   "$Rdd = combine($Rs, #0)"> {
@@ -209,7 +209,7 @@ def V4_SA1_combinerz: SUBInst <
 // SL2_return_t: Deallocate stack frame and return.
 // SL2_return_t -> SL2_return_tnew
 let Defs = [PC, R31, R29, R30], Uses = [R30, P0], isCodeGenOnly = 1, isPredicated = 1, mayLoad = 1, accessSize = DoubleWordAccess, isBranch = 1, isIndirectBranch = 1 in
-def V4_SL2_return_t: SUBInst <
+def SL2_return_t: SUBInst <
   (outs ),
   (ins ),
   "if (p0) dealloc_return"> {
@@ -219,7 +219,7 @@ def V4_SL2_return_t: SUBInst <
 
 // SS2_allocframe: Allocate stack frame.
 let Defs = [R29, R30], Uses = [R30, R31, R29], isCodeGenOnly = 1, mayStore = 1, accessSize = DoubleWordAccess in
-def V4_SS2_allocframe: SUBInst <
+def SS2_allocframe: SUBInst <
   (outs ),
   (ins u5_3Imm:$u5_3),
   "allocframe(#$u5_3)"> {
@@ -231,7 +231,7 @@ def V4_SS2_allocframe: SUBInst <
 
 // SS2_storeh_io: Store half.
 let isCodeGenOnly = 1, mayStore = 1, accessSize = HalfWordAccess in
-def V4_SS2_storeh_io: SUBInst <
+def SS2_storeh_io: SUBInst <
   (outs ),
   (ins IntRegs:$Rs, u3_1Imm:$u3_1, IntRegs:$Rt),
   "memh($Rs + #$u3_1) = $Rt"> {
@@ -247,7 +247,7 @@ def V4_SS2_storeh_io: SUBInst <
 
 // SS2_storewi0: Store word.
 let isCodeGenOnly = 1, mayStore = 1, accessSize = WordAccess in
-def V4_SS2_storewi0: SUBInst <
+def SS2_storewi0: SUBInst <
   (outs ),
   (ins IntRegs:$Rs, u4_2Imm:$u4_2),
   "memw($Rs + #$u4_2)=#0"> {
@@ -261,7 +261,7 @@ def V4_SS2_storewi0: SUBInst <
 
 // SS2_storewi1: Store word.
 let isCodeGenOnly = 1, mayStore = 1, accessSize = WordAccess in
-def V4_SS2_storewi1: SUBInst <
+def SS2_storewi1: SUBInst <
   (outs ),
   (ins IntRegs:$Rs, u4_2Imm:$u4_2),
   "memw($Rs + #$u4_2)=#1"> {
@@ -275,7 +275,7 @@ def V4_SS2_storewi1: SUBInst <
 
 // SL2_jumpr31: Indirect conditional jump if true.
 let Defs = [PC], Uses = [R31], isCodeGenOnly = 1, isBranch = 1, isIndirectBranch = 1, hasSideEffects = 0 in
-def V4_SL2_jumpr31: SUBInst <
+def SL2_jumpr31: SUBInst <
   (outs ),
   (ins ),
   "jumpr r31"> {
@@ -285,7 +285,7 @@ def V4_SL2_jumpr31: SUBInst <
 
 // SA1_combinezr: Combines.
 let isCodeGenOnly = 1, hasSideEffects = 0 in
-def V4_SA1_combinezr: SUBInst <
+def SA1_combinezr: SUBInst <
   (outs DoubleRegs:$Rdd),
   (ins IntRegs:$Rs),
   "$Rdd = combine(#0, $Rs)"> {
@@ -301,7 +301,7 @@ def V4_SA1_combinezr: SUBInst <
 
 // SL2_loadrh_io: Load half.
 let isCodeGenOnly = 1, mayLoad = 1, accessSize = HalfWordAccess, hasNewValue = 1, opNewValue = 0 in
-def V4_SL2_loadrh_io: SUBInst <
+def SL2_loadrh_io: SUBInst <
   (outs IntRegs:$Rd),
   (ins IntRegs:$Rs, u3_1Imm:$u3_1),
   "$Rd = memh($Rs + #$u3_1)"> {
@@ -317,7 +317,7 @@ def V4_SL2_loadrh_io: SUBInst <
 
 // SA1_addrx: Add.
 let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_addrx: SUBInst <
+def SA1_addrx: SUBInst <
   (outs IntRegs:$Rx),
   (ins IntRegs:$_src_, IntRegs:$Rs),
   "$Rx = add($_src_, $Rs)" ,
@@ -333,10 +333,10 @@ def V4_SA1_addrx: SUBInst <
 
 // SA1_setin1: Set to -1.
 let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_setin1: SUBInst <
+def SA1_setin1: SUBInst <
   (outs IntRegs:$Rd),
   (ins ),
-  "$Rd = #-1"> {
+  "$Rd = #{-1}"> {
     bits<4> Rd;
 
     let Inst{12-9} = 0b1101;
@@ -346,7 +346,7 @@ def V4_SA1_setin1: SUBInst <
 
 // SA1_sxth: Sxth.
 let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_sxth: SUBInst <
+def SA1_sxth: SUBInst <
   (outs IntRegs:$Rd),
   (ins IntRegs:$Rs),
   "$Rd = sxth($Rs)"> {
@@ -360,9 +360,9 @@ def V4_SA1_sxth: SUBInst <
 
 // SA1_combine0i: Combines.
 let isCodeGenOnly = 1, hasSideEffects = 0 in
-def V4_SA1_combine0i: SUBInst <
+def SA1_combine0i: SUBInst <
   (outs DoubleRegs:$Rdd),
-  (ins u2Imm:$u2),
+  (ins u2_0Imm:$u2),
   "$Rdd = combine(#0, #$u2)"> {
     bits<3> Rdd;
     bits<2> u2;
@@ -376,9 +376,9 @@ def V4_SA1_combine0i: SUBInst <
 
 // SA1_combine2i: Combines.
 let isCodeGenOnly = 1, hasSideEffects = 0 in
-def V4_SA1_combine2i: SUBInst <
+def SA1_combine2i: SUBInst <
   (outs DoubleRegs:$Rdd),
-  (ins u2Imm:$u2),
+  (ins u2_0Imm:$u2),
   "$Rdd = combine(#2, #$u2)"> {
     bits<3> Rdd;
     bits<2> u2;
@@ -392,7 +392,7 @@ def V4_SA1_combine2i: SUBInst <
 
 // SA1_sxtb: Sxtb.
 let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_sxtb: SUBInst <
+def SA1_sxtb: SUBInst <
   (outs IntRegs:$Rd),
   (ins IntRegs:$Rs),
   "$Rd = sxtb($Rs)"> {
@@ -407,10 +407,10 @@ def V4_SA1_sxtb: SUBInst <
 // SA1_clrf: Clear if false.
 // SA1_clrf -> SA1_clrfnew
 let Uses = [P0], isCodeGenOnly = 1, isPredicated = 1, isPredicatedFalse = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_clrf: SUBInst <
+def SA1_clrf: SUBInst <
   (outs IntRegs:$Rd),
-  (ins ),
-  "if (!p0) $Rd = #0"> {
+  (ins PredRegs:$Pu),
+  "if (!$Pu) $Rd = #0"> {
     bits<4> Rd;
 
     let Inst{12-9} = 0b1101;
@@ -420,7 +420,7 @@ def V4_SA1_clrf: SUBInst <
 
 // SL2_loadrb_io: Load byte.
 let isCodeGenOnly = 1, mayLoad = 1, accessSize = ByteAccess, hasNewValue = 1, opNewValue = 0 in
-def V4_SL2_loadrb_io: SUBInst <
+def SL2_loadrb_io: SUBInst <
   (outs IntRegs:$Rd),
   (ins IntRegs:$Rs, u3_0Imm:$u3_0),
   "$Rd = memb($Rs + #$u3_0)"> {
@@ -436,7 +436,7 @@ def V4_SL2_loadrb_io: SUBInst <
 
 // SA1_tfr: Tfr.
 let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_tfr: SUBInst <
+def SA1_tfr: SUBInst <
   (outs IntRegs:$Rd),
   (ins IntRegs:$Rs),
   "$Rd = $Rs"> {
@@ -450,7 +450,7 @@ def V4_SA1_tfr: SUBInst <
 
 // SL2_loadrd_sp: Load dword.
 let Uses = [R29], isCodeGenOnly = 1, mayLoad = 1, accessSize = DoubleWordAccess in
-def V4_SL2_loadrd_sp: SUBInst <
+def SL2_loadrd_sp: SUBInst <
   (outs DoubleRegs:$Rdd),
   (ins u5_3Imm:$u5_3),
   "$Rdd = memd(r29 + #$u5_3)"> {
@@ -464,7 +464,7 @@ def V4_SL2_loadrd_sp: SUBInst <
 
 // SA1_and1: And #1.
 let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_and1: SUBInst <
+def SA1_and1: SUBInst <
   (outs IntRegs:$Rd),
   (ins IntRegs:$Rs),
   "$Rd = and($Rs, #1)"> {
@@ -478,7 +478,7 @@ def V4_SA1_and1: SUBInst <
 
 // SS2_storebi1: Store byte.
 let isCodeGenOnly = 1, mayStore = 1, accessSize = ByteAccess in
-def V4_SS2_storebi1: SUBInst <
+def SS2_storebi1: SUBInst <
   (outs ),
   (ins IntRegs:$Rs, u4_0Imm:$u4_0),
   "memb($Rs + #$u4_0)=#1"> {
@@ -492,7 +492,7 @@ def V4_SS2_storebi1: SUBInst <
 
 // SA1_inc: Inc.
 let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_inc: SUBInst <
+def SA1_inc: SUBInst <
   (outs IntRegs:$Rd),
   (ins IntRegs:$Rs),
   "$Rd = add($Rs, #1)"> {
@@ -506,7 +506,7 @@ def V4_SA1_inc: SUBInst <
 
 // SS2_stored_sp: Store dword.
 let Uses = [R29], isCodeGenOnly = 1, mayStore = 1, accessSize = DoubleWordAccess in
-def V4_SS2_stored_sp: SUBInst <
+def SS2_stored_sp: SUBInst <
   (outs ),
   (ins s6_3Imm:$s6_3, DoubleRegs:$Rtt),
   "memd(r29 + #$s6_3) = $Rtt"> {
@@ -520,7 +520,7 @@ def V4_SS2_stored_sp: SUBInst <
 
 // SS2_storew_sp: Store word.
 let Uses = [R29], isCodeGenOnly = 1, mayStore = 1, accessSize = WordAccess in
-def V4_SS2_storew_sp: SUBInst <
+def SS2_storew_sp: SUBInst <
   (outs ),
   (ins u5_2Imm:$u5_2, IntRegs:$Rt),
   "memw(r29 + #$u5_2) = $Rt"> {
@@ -534,7 +534,7 @@ def V4_SS2_storew_sp: SUBInst <
 
 // SL2_jumpr31_fnew: Indirect conditional jump if false.
 let Defs = [PC], Uses = [P0, R31], isCodeGenOnly = 1, isPredicated = 1, isPredicatedFalse = 1, isPredicatedNew = 1, isBranch = 1, isIndirectBranch = 1, hasSideEffects = 0 in
-def V4_SL2_jumpr31_fnew: SUBInst <
+def SL2_jumpr31_fnew: SUBInst <
   (outs ),
   (ins ),
   "if (!p0.new) jumpr:nt r31"> {
@@ -545,10 +545,10 @@ def V4_SL2_jumpr31_fnew: SUBInst <
 // SA1_clrt: Clear if true.
 // SA1_clrt -> SA1_clrtnew
 let Uses = [P0], isCodeGenOnly = 1, isPredicated = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_clrt: SUBInst <
+def SA1_clrt: SUBInst <
   (outs IntRegs:$Rd),
-  (ins ),
-  "if (p0) $Rd = #0"> {
+  (ins PredRegs:$Pu),
+  "if ($Pu) $Rd = #0"> {
     bits<4> Rd;
 
     let Inst{12-9} = 0b1101;
@@ -558,7 +558,7 @@ def V4_SA1_clrt: SUBInst <
 
 // SL2_return: Deallocate stack frame and return.
 let Defs = [PC, R31, R29, R30], Uses = [R30], isCodeGenOnly = 1, mayLoad = 1, accessSize = DoubleWordAccess, isBranch = 1, isIndirectBranch = 1 in
-def V4_SL2_return: SUBInst <
+def SL2_return: SUBInst <
   (outs ),
   (ins ),
   "dealloc_return"> {
@@ -568,10 +568,10 @@ def V4_SL2_return: SUBInst <
 
 // SA1_dec: Dec.
 let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_dec: SUBInst <
+def SA1_dec: SUBInst <
   (outs IntRegs:$Rd),
   (ins IntRegs:$Rs),
-  "$Rd = add($Rs,#-1)"> {
+  "$Rd = add($Rs,#{-1})"> {
     bits<4> Rd;
     bits<4> Rs;
 
@@ -582,9 +582,9 @@ def V4_SA1_dec: SUBInst <
 
 // SA1_seti: Set immed.
 let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0, isExtendable = 1, isExtentSigned = 0, opExtentBits = 6, opExtendable = 1 in
-def V4_SA1_seti: SUBInst <
+def SA1_seti: SUBInst <
   (outs IntRegs:$Rd),
-  (ins u6Ext:$u6),
+  (ins u6_0Ext:$u6),
   "$Rd = #$u6"> {
     bits<4> Rd;
     bits<6> u6;
@@ -597,7 +597,7 @@ def V4_SA1_seti: SUBInst <
 // SL2_jumpr31_t: Indirect conditional jump if true.
 // SL2_jumpr31_t -> SL2_jumpr31_tnew
 let Defs = [PC], Uses = [P0, R31], isCodeGenOnly = 1, isPredicated = 1, isBranch = 1, isIndirectBranch = 1, hasSideEffects = 0 in
-def V4_SL2_jumpr31_t: SUBInst <
+def SL2_jumpr31_t: SUBInst <
   (outs ),
   (ins ),
   "if (p0) jumpr r31"> {
@@ -607,10 +607,10 @@ def V4_SL2_jumpr31_t: SUBInst <
 
 // SA1_clrfnew: Clear if false.
 let Uses = [P0], isCodeGenOnly = 1, isPredicated = 1, isPredicatedFalse = 1, isPredicatedNew = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_clrfnew: SUBInst <
+def SA1_clrfnew: SUBInst <
   (outs IntRegs:$Rd),
-  (ins ),
-  "if (!p0.new) $Rd = #0"> {
+  (ins PredRegs:$Pu),
+  "if (!$Pu.new) $Rd = #0"> {
     bits<4> Rd;
 
     let Inst{12-9} = 0b1101;
@@ -620,7 +620,7 @@ def V4_SA1_clrfnew: SUBInst <
 
 // SS1_storew_io: Store word.
 let isCodeGenOnly = 1, mayStore = 1, accessSize = WordAccess in
-def V4_SS1_storew_io: SUBInst <
+def SS1_storew_io: SUBInst <
   (outs ),
   (ins IntRegs:$Rs, u4_2Imm:$u4_2, IntRegs:$Rt),
   "memw($Rs + #$u4_2) = $Rt"> {
@@ -636,7 +636,7 @@ def V4_SS1_storew_io: SUBInst <
 
 // SA1_zxtb: Zxtb.
 let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_zxtb: SUBInst <
+def SA1_zxtb: SUBInst <
   (outs IntRegs:$Rd),
   (ins IntRegs:$Rs),
   "$Rd = and($Rs, #255)"> {
@@ -650,7 +650,7 @@ def V4_SA1_zxtb: SUBInst <
 
 // SA1_addsp: Add.
 let Uses = [R29], isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_addsp: SUBInst <
+def SA1_addsp: SUBInst <
   (outs IntRegs:$Rd),
   (ins u6_2Imm:$u6_2),
   "$Rd = add(r29, #$u6_2)"> {
@@ -664,7 +664,7 @@ def V4_SA1_addsp: SUBInst <
 
 // SL2_loadri_sp: Load word.
 let Uses = [R29], isCodeGenOnly = 1, mayLoad = 1, accessSize = WordAccess, hasNewValue = 1, opNewValue = 0 in
-def V4_SL2_loadri_sp: SUBInst <
+def SL2_loadri_sp: SUBInst <
   (outs IntRegs:$Rd),
   (ins u5_2Imm:$u5_2),
   "$Rd = memw(r29 + #$u5_2)"> {
@@ -678,7 +678,7 @@ def V4_SL2_loadri_sp: SUBInst <
 
 // SS1_storeb_io: Store byte.
 let isCodeGenOnly = 1, mayStore = 1, accessSize = ByteAccess in
-def V4_SS1_storeb_io: SUBInst <
+def SS1_storeb_io: SUBInst <
   (outs ),
   (ins IntRegs:$Rs, u4_0Imm:$u4_0, IntRegs:$Rt),
   "memb($Rs + #$u4_0) = $Rt"> {
@@ -694,7 +694,7 @@ def V4_SS1_storeb_io: SUBInst <
 
 // SL2_return_tnew: Deallocate stack frame and return.
 let Defs = [PC, R31, R29, R30], Uses = [R30, P0], isCodeGenOnly = 1, isPredicated = 1, isPredicatedNew = 1, mayLoad = 1, accessSize = DoubleWordAccess, isBranch = 1, isIndirectBranch = 1 in
-def V4_SL2_return_tnew: SUBInst <
+def SL2_return_tnew: SUBInst <
   (outs ),
   (ins ),
   "if (p0.new) dealloc_return:nt"> {
@@ -704,7 +704,7 @@ def V4_SL2_return_tnew: SUBInst <
 
 // SL2_return_fnew: Deallocate stack frame and return.
 let Defs = [PC, R31, R29, R30], Uses = [R30, P0], isCodeGenOnly = 1, isPredicated = 1, isPredicatedFalse = 1, isPredicatedNew = 1, mayLoad = 1, accessSize = DoubleWordAccess, isBranch = 1, isIndirectBranch = 1 in
-def V4_SL2_return_fnew: SUBInst <
+def SL2_return_fnew: SUBInst <
   (outs ),
   (ins ),
   "if (!p0.new) dealloc_return:nt"> {
@@ -714,7 +714,7 @@ def V4_SL2_return_fnew: SUBInst <
 
 // SA1_zxth: Zxth.
 let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
-def V4_SA1_zxth: SUBInst <
+def SA1_zxth: SUBInst <
   (outs IntRegs:$Rd),
   (ins IntRegs:$Rs),
   "$Rd = zxth($Rs)"> {

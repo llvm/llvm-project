@@ -12,7 +12,7 @@ declare double @foo()
 define i64 @f1(i64 %a, i64 %b, double %f1, double %f2) {
 ; CHECK-LABEL: f1:
 ; CHECK: cdbr %f0, %f2
-; CHECK-SCALAR-NEXT: je
+; CHECK-SCALAR-NEXT: ber %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrne %r2, %r3
 ; CHECK: br %r14
@@ -25,7 +25,7 @@ define i64 @f1(i64 %a, i64 %b, double %f1, double %f2) {
 define i64 @f2(i64 %a, i64 %b, double %f1, double *%ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: cdb %f0, 0(%r4)
-; CHECK-SCALAR-NEXT: je
+; CHECK-SCALAR-NEXT: ber %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrne %r2, %r3
 ; CHECK: br %r14
@@ -39,7 +39,7 @@ define i64 @f2(i64 %a, i64 %b, double %f1, double *%ptr) {
 define i64 @f3(i64 %a, i64 %b, double %f1, double *%base) {
 ; CHECK-LABEL: f3:
 ; CHECK: cdb %f0, 4088(%r4)
-; CHECK-SCALAR-NEXT: je
+; CHECK-SCALAR-NEXT: ber %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrne %r2, %r3
 ; CHECK: br %r14
@@ -56,7 +56,7 @@ define i64 @f4(i64 %a, i64 %b, double %f1, double *%base) {
 ; CHECK-LABEL: f4:
 ; CHECK: aghi %r4, 4096
 ; CHECK: cdb %f0, 0(%r4)
-; CHECK-SCALAR-NEXT: je
+; CHECK-SCALAR-NEXT: ber %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrne %r2, %r3
 ; CHECK: br %r14
@@ -72,7 +72,7 @@ define i64 @f5(i64 %a, i64 %b, double %f1, double *%base) {
 ; CHECK-LABEL: f5:
 ; CHECK: aghi %r4, -8
 ; CHECK: cdb %f0, 0(%r4)
-; CHECK-SCALAR-NEXT: je
+; CHECK-SCALAR-NEXT: ber %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrne %r2, %r3
 ; CHECK: br %r14
@@ -88,7 +88,7 @@ define i64 @f6(i64 %a, i64 %b, double %f1, double *%base, i64 %index) {
 ; CHECK-LABEL: f6:
 ; CHECK: sllg %r1, %r5, 3
 ; CHECK: cdb %f0, 800(%r1,%r4)
-; CHECK-SCALAR-NEXT: je
+; CHECK-SCALAR-NEXT: ber %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrne %r2, %r3
 ; CHECK: br %r14
@@ -162,7 +162,7 @@ define double @f7(double *%ptr0) {
 define i64 @f8(i64 %a, i64 %b, double %f) {
 ; CHECK-LABEL: f8:
 ; CHECK-SCALAR: ltdbr %f0, %f0
-; CHECK-SCALAR-NEXT: je
+; CHECK-SCALAR-NEXT: ber %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR: ltdbr %f0, %f0
 ; CHECK-VECTOR-NEXT: locgrne %r2, %r3
@@ -176,7 +176,7 @@ define i64 @f8(i64 %a, i64 %b, double %f) {
 define i64 @f9(i64 %a, i64 %b, double %f2, double *%ptr) {
 ; CHECK-LABEL: f9:
 ; CHECK: cdb %f0, 0(%r4)
-; CHECK-SCALAR-NEXT: jl
+; CHECK-SCALAR-NEXT: blr %r14
 ; CHECK-SCALAR: lgr %r2, %r3
 ; CHECK-VECTOR-NEXT: locgrnl %r2, %r3
 ; CHECK: br %r14

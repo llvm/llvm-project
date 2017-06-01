@@ -14,9 +14,3 @@
 // VFS: 'name': "Sub2.h"
 
 @import AlsoDependsOnModule;
-
-// FIXME: This fails on win32 due to ERROR_FILENAME_EXCED_RANGE
-// if the working directory is too deep.
-// We should make Win32/Path.inc capable of long pathnames with '\\?\'.
-// For now, this is suppressed on win32.
-// REQUIRES: shell

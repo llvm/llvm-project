@@ -13,6 +13,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -38,9 +39,9 @@ void ArgList::append(Arg *A) {
 }
 
 void ArgList::eraseArg(OptSpecifier Id) {
-  Args.erase(std::remove_if(begin(), end(),
-                            [=](Arg *A) { return A->getOption().matches(Id); }),
-             end());
+  Args.erase(
+      remove_if(*this, [=](Arg *A) { return A->getOption().matches(Id); }),
+      end());
 }
 
 Arg *ArgList::getLastArgNoClaim(OptSpecifier Id) const {
@@ -258,17 +259,34 @@ void ArgList::AddLastArg(ArgStringList &Output, OptSpecifier Id0,
   }
 }
 
-void ArgList::AddAllArgs(ArgStringList &Output,
-                         ArrayRef<OptSpecifier> Ids) const {
+void ArgList::AddAllArgsExcept(ArgStringList &Output,
+                               ArrayRef<OptSpecifier> Ids,
+                               ArrayRef<OptSpecifier> ExcludeIds) const {
   for (const Arg *Arg : Args) {
-    for (OptSpecifier Id : Ids) {
+    bool Excluded = false;
+    for (OptSpecifier Id : ExcludeIds) {
       if (Arg->getOption().matches(Id)) {
-        Arg->claim();
-        Arg->render(*this, Output);
+        Excluded = true;
         break;
       }
     }
+    if (!Excluded) {
+      for (OptSpecifier Id : Ids) {
+        if (Arg->getOption().matches(Id)) {
+          Arg->claim();
+          Arg->render(*this, Output);
+          break;
+        }
+      }
+    }
   }
+}
+
+/// This is a nicer interface when you don't have a list of Ids to exclude.
+void ArgList::AddAllArgs(ArgStringList &Output,
+                         ArrayRef<OptSpecifier> Ids) const {
+  ArrayRef<OptSpecifier> Exclude = None;
+  AddAllArgsExcept(Output, Ids, Exclude);
 }
 
 /// This 3-opt variant of AddAllArgs could be eliminated in favor of one
@@ -327,6 +345,17 @@ const char *ArgList::GetOrMakeJoinedArgString(unsigned Index,
 
   return MakeArgString(LHS + RHS);
 }
+
+void ArgList::print(raw_ostream &O) const {
+  for (Arg *A : *this) {
+    O << "* ";
+    A->print(O);
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void ArgList::dump() const { print(dbgs()); }
+#endif
 
 //
 

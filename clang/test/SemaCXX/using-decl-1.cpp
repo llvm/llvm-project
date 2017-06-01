@@ -30,9 +30,7 @@ struct X0 {
 };
 
 struct X1 : X0 {
-  // FIXME: give this operator() a 'float' parameter to test overloading
-  // behavior. It currently fails.
-  void operator()();
+  void operator()(float&);
   using X0::operator();
   
   void test() {
@@ -245,6 +243,41 @@ namespace PR19171 {
   struct F : E {
     using E::EE; // expected-error-re {{no member named 'EE' in 'PR19171::E'{{$}}}}
   };
+
+  struct TypoDuplicate { // expected-note 0-4{{here}}
+    TypoDuplicate(int);
+    void foobar(); // expected-note 2{{here}}
+  };
+  struct TypoDuplicateDerived1 : TypoDuplicate {
+#if __cplusplus >= 201103L
+    using TypoDuplicate::TypoFuplicate; // expected-error {{did you mean 'TypoDuplicate'}} expected-note {{previous}}
+    using TypoDuplicate::TypoDuplicate; // expected-error {{redeclaration}}
+#endif
+    using TypoDuplicate::goobar; // expected-error {{did you mean 'foobar'}} expected-note {{previous}}
+    using TypoDuplicate::foobar; // expected-error {{redeclaration}}
+  };
+  struct TypoDuplicateDerived2 : TypoDuplicate {
+#if __cplusplus >= 201103L
+    using TypoFuplicate::TypoDuplicate; // expected-error {{did you mean 'TypoDuplicate'}} expected-note {{previous}}
+    using TypoDuplicate::TypoDuplicate; // expected-error {{redeclaration}}
+#endif
+  };
+  struct TypoDuplicateDerived3 : TypoDuplicate {
+#if __cplusplus >= 201103L
+    // FIXME: Don't suggest a correction that would lead to a redeclaration
+    // error here... or at least diagnose the error.
+    using TypoDuplicate::TypoDuplicate;
+    using TypoDuplicate::TypoFuplicate; // expected-error {{did you mean 'TypoDuplicate'}}
+#endif
+    using TypoDuplicate::foobar;
+    using TypoDuplicate::goobar; // expected-error {{did you mean 'foobar'}}
+  };
+  struct TypoDuplicateDerived4 : TypoDuplicate {
+#if __cplusplus >= 201103L
+    using TypoDuplicate::TypoDuplicate; // expected-note {{previous}}
+    using TypoFuplicate::TypoDuplicate; // expected-error {{did you mean 'TypoDuplicate'}} expected-error {{redeclaration}}
+#endif
+  };
 }
 
 namespace TypoCorrectTemplateMember {
@@ -339,4 +372,27 @@ struct B : A {
 #endif
   enum { X = sizeof(field) };
 };
+}
+
+namespace tag_vs_var {
+  namespace N {
+    struct X {};
+
+    struct Y {};
+    int Y;
+
+    int Z;
+  }
+  using N::X;
+  using N::Y;
+  using N::Z;
+
+  namespace N {
+    int X;
+
+    struct Z {};
+  }
+  using N::X;
+  using N::Y;
+  using N::Z;
 }

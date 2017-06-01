@@ -1,6 +1,9 @@
 // RUN: %clangxx_tsan %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
+// bench.h needs pthread barriers which are not available on OS X
+// UNSUPPORTED: darwin
+
 #include "bench.h"
 
 const int kMutex = 10;

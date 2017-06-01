@@ -1,0 +1,64 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# REQUIRES: global-isel
+# Test that the MIR parser parses types on generic instructions correctly.
+
+--- |
+  target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+  %type_alias = type <2 x i32>
+  %structure_alias = type { i32, i16 }
+  define void @test_vregs() {
+    ret void
+  }
+
+  define void @test_unsized() {
+    ret void
+  }
+
+...
+
+---
+name:            test_vregs
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: _ }
+# CHECK-NEXT:   - { id: 1, class: _ }
+# CHECK-NEXT:   - { id: 2, class: _ }
+# CHECK-NEXT:   - { id: 3, class: _ }
+# CHECK-NEXT:   - { id: 4, class: _ }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }
+  - { id: 8, class: _ }
+body: |
+  bb.0:
+    liveins: %edi, %xmm0
+    ; CHECK:      %1(s32) = G_ADD %0
+    %0(s32) = COPY %edi
+    %6(<2 x s32>) = COPY %xmm0
+    %7(s64) = COPY %rdi
+
+    %1(s32) = G_ADD %0, %0
+    ; CHECK:      %2(<2 x s32>) = G_ADD %6, %6
+    %2(<2 x s32>) = G_ADD %6, %6
+    ; CHECK:      %3(s64) = G_ADD %7, %7
+    %3(s64) = G_ADD %7, %7
+
+    ; CHECK:      %5(s48) = G_ADD %8, %8
+    %8(s48) = G_TRUNC %7
+    %5(s48) = G_ADD %8, %8
+...
+
+---
+name:            test_unsized
+body: |
+  bb.0:
+    successors: %bb.0
+
+    ; CHECK:      G_BR %bb.0
+    G_BR  %bb.0
+...

@@ -3,7 +3,13 @@
 
 ; V8-LABEL: variable_alloca_with_adj_call_stack
 ; V8:       save %sp, -96, %sp
-; V8:       add {{.+}}, 96, %o0
+; (this should ideally be doing "add 4+7; and -8", instead of
+;  "add 7; and -8; add 8"; see comments in LowerDYNAMIC_STACKALLOC)
+; V8:       add %i0, 7, %i0
+; V8-NEXT:  and %i0, -8, %i0
+; V8-NEXT:  add %i0, 8, %i0
+; V8-NEXT:  sub %sp, %i0, %i0
+; V8-NEXT:  add %i0, 96, %o0
 ; V8:       add %sp, -16, %sp
 ; V8:       call foo
 ; V8:       add %sp, 16, %sp
@@ -22,5 +28,4 @@ entry:
   ret void
 }
 
-
-declare void @foo(i8* , i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*);
+declare void @foo(i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*);

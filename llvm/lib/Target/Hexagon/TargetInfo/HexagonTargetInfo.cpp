@@ -12,8 +12,12 @@
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-Target llvm::TheHexagonTarget;
+Target &llvm::getTheHexagonTarget() {
+  static Target TheHexagonTarget;
+  return TheHexagonTarget;
+}
 
 extern "C" void LLVMInitializeHexagonTargetInfo() {
-  RegisterTarget<Triple::hexagon, /*HasJIT=*/false>  X(TheHexagonTarget, "hexagon", "Hexagon");
+  RegisterTarget<Triple::hexagon, /*HasJIT=*/false> X(getTheHexagonTarget(),
+                                                      "hexagon", "Hexagon");
 }

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu | FileCheck %s
 
 declare {i32, i1} @llvm.umul.with.overflow.i32(i32 %a, i32 %b)
 define zeroext i1 @a(i32 %x)  nounwind {
@@ -9,7 +9,6 @@ define zeroext i1 @a(i32 %x)  nounwind {
 ; CHECK-LABEL: a:
 ; CHECK: mull
 ; CHECK: seto %al
-; CHECK: movzbl	%al, %eax
 ; CHECK: ret
 }
 

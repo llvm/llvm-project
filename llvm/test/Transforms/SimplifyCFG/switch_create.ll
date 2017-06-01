@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg < %s | FileCheck -check-prefix=CHECK %s
+; RUN: opt -S -simplifycfg < %s | FileCheck %s
 ; RUN: opt -S -default-data-layout="p:32:32-p1:16:16" -simplifycfg < %s | FileCheck -check-prefix=CHECK -check-prefix=DL %s
 
 declare void @foo1()
@@ -553,4 +553,108 @@ bb20:                                             ; preds = %bb19, %bb8
 ; CHECK-LABEL: @test18(
 ; CHECK: %arg.off = add i32 %arg, -8
 ; CHECK: icmp ult i32 %arg.off, 11
+}
+
+define void @PR26323(i1 %tobool23, i32 %tmp3) {
+entry:
+  %tobool5 = icmp ne i32 %tmp3, 0
+  %neg14 = and i32 %tmp3, -2
+  %cmp17 = icmp ne i32 %neg14, -1
+  %or.cond = and i1 %tobool5, %tobool23
+  %or.cond1 = and i1 %cmp17, %or.cond
+  br i1 %or.cond1, label %if.end29, label %if.then27
+
+if.then27:                                        ; preds = %entry
+  call void @foo1()
+  unreachable
+
+if.end29:                                         ; preds = %entry
+  ret void
+}
+
+; CHECK-LABEL: define void @PR26323(
+; CHECK:  %tobool5 = icmp ne i32 %tmp3, 0
+; CHECK:  %neg14 = and i32 %tmp3, -2
+; CHECK:  %cmp17 = icmp ne i32 %neg14, -1
+; CHECK:  %or.cond = and i1 %tobool5, %tobool23
+; CHECK:  %or.cond1 = and i1 %cmp17, %or.cond
+; CHECK:  br i1 %or.cond1, label %if.end29, label %if.then27
+
+; Form a switch when and'ing a negated power of two
+; CHECK-LABEL: define void @test19
+; CHECK: switch i32 %arg, label %else [
+; CHECK: i32 32, label %if
+; CHECK: i32 13, label %if
+; CHECK: i32 12, label %if
+define void @test19(i32 %arg) {
+  %and = and i32 %arg, -2
+  %cmp1 = icmp eq i32 %and, 12
+  %cmp2 = icmp eq i32 %arg, 32
+  %pred = or i1 %cmp1, %cmp2
+  br i1 %pred, label %if, label %else
+
+if:
+  call void @foo1()
+  ret void
+
+else:
+  ret void
+}
+
+; Since %cmp1 is always false, a switch is never formed
+; CHECK-LABEL: define void @test20
+; CHECK-NOT: switch
+; CHECK: ret void
+define void @test20(i32 %arg) {
+  %and = and i32 %arg, -2
+  %cmp1 = icmp eq i32 %and, 13
+  %cmp2 = icmp eq i32 %arg, 32
+  %pred = or i1 %cmp1, %cmp2
+  br i1 %pred, label %if, label %else
+
+if:
+  call void @foo1()
+  ret void
+
+else:
+  ret void
+}
+
+; Form a switch when or'ing a power of two
+; CHECK-LABEL: define void @test21
+; CHECK: i32 32, label %else
+; CHECK: i32 13, label %else
+; CHECK: i32 12, label %else
+define void @test21(i32 %arg) {
+  %and = or i32 %arg, 1
+  %cmp1 = icmp ne i32 %and, 13
+  %cmp2 = icmp ne i32 %arg, 32
+  %pred = and i1 %cmp1, %cmp2
+  br i1 %pred, label %if, label %else
+
+if:
+  call void @foo1()
+  ret void
+
+else:
+  ret void
+}
+
+; Since %cmp1 is always false, a switch is never formed
+; CHECK-LABEL: define void @test22
+; CHECK-NOT: switch
+; CHECK: ret void
+define void @test22(i32 %arg) {
+  %and = or i32 %arg, 1
+  %cmp1 = icmp ne i32 %and, 12
+  %cmp2 = icmp ne i32 %arg, 32
+  %pred = and i1 %cmp1, %cmp2
+  br i1 %pred, label %if, label %else
+
+if:
+  call void @foo1()
+  ret void
+
+else:
+  ret void
 }

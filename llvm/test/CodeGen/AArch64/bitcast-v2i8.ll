@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-apple-ios | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck %s
 
 ; Part of PR21549: going through the stack isn't ideal but is correct.
 

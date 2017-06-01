@@ -17,8 +17,7 @@
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/MathExtras.h"
-#include <string>
-#include <limits.h>
+#include <climits>
 
 namespace llvm {
 
@@ -46,6 +45,21 @@ namespace ISD {
     static const uint64_t SplitOffs      = 11;
     static const uint64_t InAlloca       = 1ULL<<12; ///< Passed with inalloca
     static const uint64_t InAllocaOffs   = 12;
+    static const uint64_t SplitEnd       = 1ULL<<13; ///< Last part of a split
+    static const uint64_t SplitEndOffs   = 13;
+    static const uint64_t SwiftSelf      = 1ULL<<14; ///< Swift self parameter
+    static const uint64_t SwiftSelfOffs  = 14;
+    static const uint64_t SwiftError     = 1ULL<<15; ///< Swift error parameter
+    static const uint64_t SwiftErrorOffs = 15;
+    static const uint64_t Hva            = 1ULL << 16; ///< HVA field for
+                                                       ///< vectorcall
+    static const uint64_t HvaOffs        = 16;
+    static const uint64_t HvaStart       = 1ULL << 17; ///< HVA structure start
+                                                       ///< for vectorcall
+    static const uint64_t HvaStartOffs   = 17;
+    static const uint64_t SecArgPass     = 1ULL << 18; ///< Second argument
+                                                       ///< pass for vectorcall
+    static const uint64_t SecArgPassOffs = 18;
     static const uint64_t OrigAlign      = 0x1FULL<<27;
     static const uint64_t OrigAlignOffs  = 27;
     static const uint64_t ByValSize      = 0x3fffffffULL<<32; ///< Struct size
@@ -58,6 +72,7 @@ namespace ISD {
     static const uint64_t One            = 1ULL; ///< 1 of this type, for shifts
 
     uint64_t Flags;
+
   public:
     ArgFlagsTy() : Flags(0) { }
 
@@ -78,6 +93,21 @@ namespace ISD {
 
     bool isInAlloca()  const { return Flags & InAlloca; }
     void setInAlloca() { Flags |= One << InAllocaOffs; }
+
+    bool isSwiftSelf() const { return Flags & SwiftSelf; }
+    void setSwiftSelf() { Flags |= One << SwiftSelfOffs; }
+
+    bool isSwiftError() const { return Flags & SwiftError; }
+    void setSwiftError() { Flags |= One << SwiftErrorOffs; }
+
+    bool isHva() const { return Flags & Hva; }
+    void setHva() { Flags |= One << HvaOffs; }
+
+    bool isHvaStart() const { return Flags & HvaStart; }
+    void setHvaStart() { Flags |= One << HvaStartOffs; }
+
+    bool isSecArgPass() const { return Flags & SecArgPass; }
+    void setSecArgPass() { Flags |= One << SecArgPassOffs; }
 
     bool isNest()      const { return Flags & Nest; }
     void setNest()     { Flags |= One << NestOffs; }
@@ -102,6 +132,9 @@ namespace ISD {
 
     bool isSplit()   const { return Flags & Split; }
     void setSplit()  { Flags |= One << SplitOffs; }
+
+    bool isSplitEnd()   const { return Flags & SplitEnd; }
+    void setSplitEnd()  { Flags |= One << SplitEndOffs; }
 
     unsigned getOrigAlign() const {
       return (unsigned)
@@ -190,8 +223,8 @@ namespace ISD {
       ArgVT = argvt;
     }
   };
-}
+} // end namespace ISD
 
 } // end llvm namespace
 
-#endif
+#endif // LLVM_TARGET_TARGETCALLINGCONV_H

@@ -50,7 +50,7 @@ template<int L, class T, class N> T test_template(T* arr, N num) {
   T sum = (T)0;
   T ind2 = - num * L;
   // Negative number is passed as L.
-  // expected-error@+1 {{argument to 'aligned' clause must be a positive integer value}}
+  // expected-error@+1 {{argument to 'aligned' clause must be a strictly positive integer value}}
   #pragma omp simd aligned(arr:L)
   for (i = 0; i < num; ++i) {
     T cur = arr[(int)ind2];
@@ -65,7 +65,7 @@ template<int L, class T, class N> T test_template(T* arr, N num) {
 
 template<int LEN> int test_warn() {
   int *ind2 = 0;
-  // expected-error@+1 {{argument to 'aligned' clause must be a positive integer value}}
+  // expected-error@+1 {{argument to 'aligned' clause must be a strictly positive integer value}}
   #pragma omp simd aligned(ind2:LEN)
   for (int i = 0; i < 100; i++) {
     ind2 += LEN;
@@ -121,7 +121,8 @@ template<class I, class C> int foomain(I argc, C **argv) {
   for (I k = 0; k < argc; ++k) ++k;
   #pragma omp simd aligned (argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (I k = 0; k < argc; ++k) ++k;
-  #pragma omp simd aligned (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
+// FIXME: Should argc really be a pointer?
+  #pragma omp simd aligned (*argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (I k = 0; k < argc; ++k) ++k;
   #pragma omp simd aligned (argc : 5) // expected-warning {{aligned clause will be ignored because the requested alignment is not a power of 2}}
   for (I k = 0; k < argc; ++k) ++k;
@@ -196,6 +197,7 @@ int main(int argc, char **argv) {
   #pragma omp simd aligned(h)
   for (int k = 0; k < argc; ++k) ++k;
   int *pargc = &argc;
+  // expected-note@+1 {{in instantiation of function template specialization 'foomain<int *, char>' requested here}}
   foomain<int*,char>(pargc,argv);
   return 0;
 }

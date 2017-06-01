@@ -93,13 +93,16 @@ private:
   bool Initialized;
   bool DisableLineMarkers;
   bool DumpDefines;
+  bool DumpIncludeDirectives;
   bool UseLineDirectives;
   bool IsFirstFileEntered;
 public:
   PrintPPOutputPPCallbacks(Preprocessor &pp, raw_ostream &os, bool lineMarkers,
-                           bool defines, bool UseLineDirectives)
+                           bool defines, bool DumpIncludeDirectives,
+                           bool UseLineDirectives)
       : PP(pp), SM(PP.getSourceManager()), ConcatInfo(PP), OS(os),
         DisableLineMarkers(lineMarkers), DumpDefines(defines),
+        DumpIncludeDirectives(DumpIncludeDirectives),
         UseLineDirectives(UseLineDirectives) {
     CurLine = 0;
     CurFilename += "<uninit>";
@@ -320,18 +323,44 @@ void PrintPPOutputPPCallbacks::InclusionDirective(SourceLocation HashLoc,
                                                   StringRef SearchPath,
                                                   StringRef RelativePath,
                                                   const Module *Imported) {
-  // When preprocessing, turn implicit imports into @imports.
-  // FIXME: This is a stop-gap until a more comprehensive "preprocessing with
-  // modules" solution is introduced.
   if (Imported) {
+    // When preprocessing, turn implicit imports into @imports.
+    // FIXME: This is a stop-gap until a more comprehensive "preprocessing with
+    // modules" solution is introduced.
     startNewLineIfNeeded();
     MoveToLine(HashLoc);
-    OS << "@import " << Imported->getFullModuleName() << ";"
-       << " /* clang -E: implicit import for \"" << File->getName() << "\" */";
+    if (PP.getLangOpts().ObjC2) {
+      OS << "@import " << Imported->getFullModuleName() << ";"
+         << " /* clang -E: implicit import for \"" << File->getName()
+         << "\" */";
+    } else {
+      const std::string TokenText = PP.getSpelling(IncludeTok);
+      assert(!TokenText.empty());
+      OS << "#" << TokenText << " "
+         << (IsAngled ? '<' : '"')
+         << FileName
+         << (IsAngled ? '>' : '"')
+         << " /* clang -E: implicit import for module "
+         << Imported->getFullModuleName() << " */";
+    }
     // Since we want a newline after the @import, but not a #<line>, start a new
     // line immediately.
     EmittedTokensOnThisLine = true;
     startNewLineIfNeeded();
+  } else {
+    // Not a module import; it's a more vanilla inclusion of some file using one
+    // of: #include, #import, #include_next, #include_macros.
+    if (DumpIncludeDirectives) {
+      startNewLineIfNeeded();
+      MoveToLine(HashLoc);
+      const std::string TokenText = PP.getSpelling(IncludeTok);
+      assert(!TokenText.empty());
+      OS << "#" << TokenText << " "
+         << (IsAngled ? '<' : '"') << FileName << (IsAngled ? '>' : '"')
+         << " /* clang -E -dI */";
+      setEmittedDirectiveOnThisLine();
+      startNewLineIfNeeded();
+    }
   }
 }
 
@@ -369,18 +398,16 @@ void PrintPPOutputPPCallbacks::MacroUndefined(const Token &MacroNameTok,
   setEmittedDirectiveOnThisLine();
 }
 
-static void outputPrintable(llvm::raw_ostream& OS,
-                                             const std::string &Str) {
-    for (unsigned i = 0, e = Str.size(); i != e; ++i) {
-      unsigned char Char = Str[i];
-      if (isPrintable(Char) && Char != '\\' && Char != '"')
-        OS << (char)Char;
-      else  // Output anything hard as an octal escape.
-        OS << '\\'
-           << (char)('0'+ ((Char >> 6) & 7))
-           << (char)('0'+ ((Char >> 3) & 7))
-           << (char)('0'+ ((Char >> 0) & 7));
-    }
+static void outputPrintable(raw_ostream &OS, StringRef Str) {
+  for (unsigned char Char : Str) {
+    if (isPrintable(Char) && Char != '\\' && Char != '"')
+      OS << (char)Char;
+    else // Output anything hard as an octal escape.
+      OS << '\\'
+         << (char)('0' + ((Char >> 6) & 7))
+         << (char)('0' + ((Char >> 3) & 7))
+         << (char)('0' + ((Char >> 0) & 7));
+  }
 }
 
 void PrintPPOutputPPCallbacks::PragmaMessage(SourceLocation Loc,
@@ -547,8 +574,10 @@ void PrintPPOutputPPCallbacks::HandleNewlinesInToken(const char *TokStr,
     // If we have \n\r or \r\n, skip both and count as one line.
     if (Len != 1 &&
         (TokStr[1] == '\n' || TokStr[1] == '\r') &&
-        TokStr[0] != TokStr[1])
-      ++TokStr, --Len;
+        TokStr[0] != TokStr[1]) {
+      ++TokStr;
+      --Len;
+    }
   }
 
   if (NumNewlines == 0) return;
@@ -577,6 +606,15 @@ struct UnknownPragmaHandler : public PragmaHandler {
     Callbacks->MoveToLine(PragmaTok.getLocation());
     Callbacks->OS.write(Prefix, strlen(Prefix));
 
+    if (ShouldExpandTokens) {
+      // The first token does not have expanded macros. Expand them, if
+      // required.
+      auto Toks = llvm::make_unique<Token[]>(1);
+      Toks[0] = PragmaTok;
+      PP.EnterTokenStream(std::move(Toks), /*NumToks=*/1,
+                          /*DisableMacroExpansion=*/false);
+      PP.Lex(PragmaTok);
+    }
     Token PrevToken;
     Token PrevPrevToken;
     PrevToken.startToken();
@@ -730,7 +768,8 @@ void clang::DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
   PP.SetCommentRetentionState(Opts.ShowComments, Opts.ShowMacroComments);
 
   PrintPPOutputPPCallbacks *Callbacks = new PrintPPOutputPPCallbacks(
-      PP, *OS, !Opts.ShowLineMarkers, Opts.ShowMacros, Opts.UseLineDirectives);
+      PP, *OS, !Opts.ShowLineMarkers, Opts.ShowMacros,
+      Opts.ShowIncludeDirectives, Opts.UseLineDirectives);
 
   // Expand macros in pragmas with -fms-extensions.  The assumption is that
   // the majority of pragmas in such a file will be Microsoft pragmas.

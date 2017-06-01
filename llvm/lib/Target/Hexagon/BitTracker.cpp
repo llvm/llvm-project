@@ -53,28 +53,36 @@
 //
 // The code below is intended to be fully target-independent.
 
+#include "BitTracker.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetRegisterInfo.h"
-
-#include "BitTracker.h"
+#include <iterator>
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
 typedef BitTracker BT;
 
 namespace {
+
   // Local trickery to pretty print a register (without the whole "%vreg"
   // business).
   struct printv {
     printv(unsigned r) : R(r) {}
+
     unsigned R;
   };
+
   raw_ostream &operator<< (raw_ostream &OS, const printv &PV) {
     if (PV.R)
       OS << 'v' << TargetRegisterInfo::virtReg2Index(PV.R);
@@ -82,89 +90,99 @@ namespace {
       OS << 's';
     return OS;
   }
-}
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, const BT::BitValue &BV) {
-  switch (BV.Type) {
-    case BT::BitValue::Top:
-      OS << 'T';
-      break;
-    case BT::BitValue::Zero:
-      OS << '0';
-      break;
-    case BT::BitValue::One:
-      OS << '1';
-      break;
-    case BT::BitValue::Ref:
-      OS << printv(BV.RefI.Reg) << '[' << BV.RefI.Pos << ']';
-      break;
+} // end anonymous namespace
+
+namespace llvm {
+
+  raw_ostream &operator<<(raw_ostream &OS, const BT::BitValue &BV) {
+    switch (BV.Type) {
+      case BT::BitValue::Top:
+        OS << 'T';
+        break;
+      case BT::BitValue::Zero:
+        OS << '0';
+        break;
+      case BT::BitValue::One:
+        OS << '1';
+        break;
+      case BT::BitValue::Ref:
+        OS << printv(BV.RefI.Reg) << '[' << BV.RefI.Pos << ']';
+        break;
+    }
+    return OS;
   }
-  return OS;
-}
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, const BT::RegisterCell &RC) {
-  unsigned n = RC.Bits.size();
-  OS << "{ w:" << n;
-  // Instead of printing each bit value individually, try to group them
-  // into logical segments, such as sequences of 0 or 1 bits or references
-  // to consecutive bits (e.g. "bits 3-5 are same as bits 7-9 of reg xyz").
-  // "Start" will be the index of the beginning of the most recent segment.
-  unsigned Start = 0;
-  bool SeqRef = false;    // A sequence of refs to consecutive bits.
-  bool ConstRef = false;  // A sequence of refs to the same bit.
+  raw_ostream &operator<<(raw_ostream &OS, const BT::RegisterCell &RC) {
+    unsigned n = RC.Bits.size();
+    OS << "{ w:" << n;
+    // Instead of printing each bit value individually, try to group them
+    // into logical segments, such as sequences of 0 or 1 bits or references
+    // to consecutive bits (e.g. "bits 3-5 are same as bits 7-9 of reg xyz").
+    // "Start" will be the index of the beginning of the most recent segment.
+    unsigned Start = 0;
+    bool SeqRef = false;    // A sequence of refs to consecutive bits.
+    bool ConstRef = false;  // A sequence of refs to the same bit.
 
-  for (unsigned i = 1, n = RC.Bits.size(); i < n; ++i) {
-    const BT::BitValue &V = RC[i];
-    const BT::BitValue &SV = RC[Start];
-    bool IsRef = (V.Type == BT::BitValue::Ref);
-    // If the current value is the same as Start, skip to the next one.
-    if (!IsRef && V == SV)
-      continue;
-    if (IsRef && SV.Type == BT::BitValue::Ref && V.RefI.Reg == SV.RefI.Reg) {
-      if (Start+1 == i) {
-        SeqRef = (V.RefI.Pos == SV.RefI.Pos+1);
-        ConstRef = (V.RefI.Pos == SV.RefI.Pos);
+    for (unsigned i = 1, n = RC.Bits.size(); i < n; ++i) {
+      const BT::BitValue &V = RC[i];
+      const BT::BitValue &SV = RC[Start];
+      bool IsRef = (V.Type == BT::BitValue::Ref);
+      // If the current value is the same as Start, skip to the next one.
+      if (!IsRef && V == SV)
+        continue;
+      if (IsRef && SV.Type == BT::BitValue::Ref && V.RefI.Reg == SV.RefI.Reg) {
+        if (Start+1 == i) {
+          SeqRef = (V.RefI.Pos == SV.RefI.Pos+1);
+          ConstRef = (V.RefI.Pos == SV.RefI.Pos);
+        }
+        if (SeqRef && V.RefI.Pos == SV.RefI.Pos+(i-Start))
+          continue;
+        if (ConstRef && V.RefI.Pos == SV.RefI.Pos)
+          continue;
       }
-      if (SeqRef && V.RefI.Pos == SV.RefI.Pos+(i-Start))
-        continue;
-      if (ConstRef && V.RefI.Pos == SV.RefI.Pos)
-        continue;
+
+      // The current value is different. Print the previous one and reset
+      // the Start.
+      OS << " [" << Start;
+      unsigned Count = i - Start;
+      if (Count == 1) {
+        OS << "]:" << SV;
+      } else {
+        OS << '-' << i-1 << "]:";
+        if (SV.Type == BT::BitValue::Ref && SeqRef)
+          OS << printv(SV.RefI.Reg) << '[' << SV.RefI.Pos << '-'
+             << SV.RefI.Pos+(Count-1) << ']';
+        else
+          OS << SV;
+      }
+      Start = i;
+      SeqRef = ConstRef = false;
     }
 
-    // The current value is different. Print the previous one and reset
-    // the Start.
     OS << " [" << Start;
-    unsigned Count = i - Start;
-    if (Count == 1) {
-      OS << "]:" << SV;
+    unsigned Count = n - Start;
+    if (n-Start == 1) {
+      OS << "]:" << RC[Start];
     } else {
-      OS << '-' << i-1 << "]:";
+      OS << '-' << n-1 << "]:";
+      const BT::BitValue &SV = RC[Start];
       if (SV.Type == BT::BitValue::Ref && SeqRef)
         OS << printv(SV.RefI.Reg) << '[' << SV.RefI.Pos << '-'
            << SV.RefI.Pos+(Count-1) << ']';
       else
         OS << SV;
     }
-    Start = i;
-    SeqRef = ConstRef = false;
+    OS << " }";
+
+    return OS;
   }
 
-  OS << " [" << Start;
-  unsigned Count = n - Start;
-  if (n-Start == 1) {
-    OS << "]:" << RC[Start];
-  } else {
-    OS << '-' << n-1 << "]:";
-    const BT::BitValue &SV = RC[Start];
-    if (SV.Type == BT::BitValue::Ref && SeqRef)
-      OS << printv(SV.RefI.Reg) << '[' << SV.RefI.Pos << '-'
-         << SV.RefI.Pos+(Count-1) << ']';
-    else
-      OS << SV;
-  }
-  OS << " }";
+} // end namespace llvm
 
-  return OS;
+void BitTracker::print_cells(raw_ostream &OS) const {
+  for (CellMapType::iterator I = Map.begin(), E = Map.end(); I != E; ++I)
+    dbgs() << PrintReg(I->first, &ME.TRI) << " -> " << I->second << "\n";
 }
 
 BitTracker::BitTracker(const MachineEvaluator &E, MachineFunction &F)
@@ -173,7 +191,6 @@ BitTracker::BitTracker(const MachineEvaluator &E, MachineFunction &F)
 BitTracker::~BitTracker() {
   delete &Map;
 }
-
 
 // If we were allowed to update a cell for a part of a register, the meet
 // operation would need to be parametrized by the register number and the
@@ -192,7 +209,6 @@ bool BT::RegisterCell::meet(const RegisterCell &RC, unsigned SelfR) {
   }
   return Changed;
 }
-
 
 // Insert the entire cell RC into the current cell at position given by M.
 BT::RegisterCell &BT::RegisterCell::insert(const BT::RegisterCell &RC,
@@ -216,7 +232,6 @@ BT::RegisterCell &BT::RegisterCell::insert(const BT::RegisterCell &RC,
   return *this;
 }
 
-
 BT::RegisterCell BT::RegisterCell::extract(const BitMask &M) const {
   uint16_t B = M.first(), E = M.last(), W = width();
   assert(B < W && E < W);
@@ -234,7 +249,6 @@ BT::RegisterCell BT::RegisterCell::extract(const BitMask &M) const {
     RC.Bits[i+(W-B)] = Bits[i];
   return RC;
 }
-
 
 BT::RegisterCell &BT::RegisterCell::rol(uint16_t Sh) {
   // Rotate left (i.e. towards increasing bit indices).
@@ -257,7 +271,6 @@ BT::RegisterCell &BT::RegisterCell::rol(uint16_t Sh) {
   return *this;
 }
 
-
 BT::RegisterCell &BT::RegisterCell::fill(uint16_t B, uint16_t E,
       const BitValue &V) {
   assert(B <= E);
@@ -265,7 +278,6 @@ BT::RegisterCell &BT::RegisterCell::fill(uint16_t B, uint16_t E,
     Bits[B++] = V;
   return *this;
 }
-
 
 BT::RegisterCell &BT::RegisterCell::cat(const RegisterCell &RC) {
   // Append the cell given as the argument to the "this" cell.
@@ -277,7 +289,6 @@ BT::RegisterCell &BT::RegisterCell::cat(const RegisterCell &RC) {
   return *this;
 }
 
-
 uint16_t BT::RegisterCell::ct(bool B) const {
   uint16_t W = width();
   uint16_t C = 0;
@@ -286,7 +297,6 @@ uint16_t BT::RegisterCell::ct(bool B) const {
     C++;
   return C;
 }
-
 
 uint16_t BT::RegisterCell::cl(bool B) const {
   uint16_t W = width();
@@ -297,7 +307,6 @@ uint16_t BT::RegisterCell::cl(bool B) const {
   return C;
 }
 
-
 bool BT::RegisterCell::operator== (const RegisterCell &RC) const {
   uint16_t W = Bits.size();
   if (RC.Bits.size() != W)
@@ -307,7 +316,6 @@ bool BT::RegisterCell::operator== (const RegisterCell &RC) const {
       return false;
   return true;
 }
-
 
 uint16_t BT::MachineEvaluator::getRegBitWidth(const RegisterRef &RR) const {
   // The general problem is with finding a register class that corresponds
@@ -333,7 +341,6 @@ uint16_t BT::MachineEvaluator::getRegBitWidth(const RegisterRef &RR) const {
   uint16_t BW = RC->getSize()*8;
   return BW;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::getCell(const RegisterRef &RR,
       const CellMapType &M) const {
@@ -362,7 +369,6 @@ BT::RegisterCell BT::MachineEvaluator::getCell(const RegisterRef &RR,
   return RegisterCell::top(BW);
 }
 
-
 void BT::MachineEvaluator::putCell(const RegisterRef &RR, RegisterCell RC,
       CellMapType &M) const {
   // While updating the cell map can be done in a meaningful way for
@@ -380,7 +386,6 @@ void BT::MachineEvaluator::putCell(const RegisterRef &RR, RegisterCell RC,
   M[RR.Reg] = RC;
 }
 
-
 // Check if the cell represents a compile-time integer value.
 bool BT::MachineEvaluator::isInt(const RegisterCell &A) const {
   uint16_t W = A.width();
@@ -389,7 +394,6 @@ bool BT::MachineEvaluator::isInt(const RegisterCell &A) const {
       return false;
   return true;
 }
-
 
 // Convert a cell to the integer value. The result must fit in uint64_t.
 uint64_t BT::MachineEvaluator::toInt(const RegisterCell &A) const {
@@ -402,7 +406,6 @@ uint64_t BT::MachineEvaluator::toInt(const RegisterCell &A) const {
   }
   return Val;
 }
-
 
 // Evaluator helper functions. These implement some common operation on
 // register cells that can be used to implement target-specific instructions
@@ -418,9 +421,8 @@ BT::RegisterCell BT::MachineEvaluator::eIMM(int64_t V, uint16_t W) const {
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eIMM(const ConstantInt *CI) const {
-  APInt A = CI->getValue();
+  const APInt &A = CI->getValue();
   uint16_t BW = A.getBitWidth();
   assert((unsigned)BW == A.getBitWidth() && "BitWidth overflow");
   RegisterCell Res(BW);
@@ -428,7 +430,6 @@ BT::RegisterCell BT::MachineEvaluator::eIMM(const ConstantInt *CI) const {
     Res[i] = A[i];
   return Res;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eADD(const RegisterCell &A1,
       const RegisterCell &A2) const {
@@ -463,7 +464,6 @@ BT::RegisterCell BT::MachineEvaluator::eADD(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eSUB(const RegisterCell &A1,
       const RegisterCell &A2) const {
   uint16_t W = A1.width();
@@ -497,28 +497,25 @@ BT::RegisterCell BT::MachineEvaluator::eSUB(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eMLS(const RegisterCell &A1,
       const RegisterCell &A2) const {
   uint16_t W = A1.width() + A2.width();
-  uint16_t Z = A1.ct(0) + A2.ct(0);
+  uint16_t Z = A1.ct(false) + A2.ct(false);
   RegisterCell Res(W);
   Res.fill(0, Z, BitValue::Zero);
   Res.fill(Z, W, BitValue::self());
   return Res;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eMLU(const RegisterCell &A1,
       const RegisterCell &A2) const {
   uint16_t W = A1.width() + A2.width();
-  uint16_t Z = A1.ct(0) + A2.ct(0);
+  uint16_t Z = A1.ct(false) + A2.ct(false);
   RegisterCell Res(W);
   Res.fill(0, Z, BitValue::Zero);
   Res.fill(Z, W, BitValue::self());
   return Res;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eASL(const RegisterCell &A1,
       uint16_t Sh) const {
@@ -528,7 +525,6 @@ BT::RegisterCell BT::MachineEvaluator::eASL(const RegisterCell &A1,
   Res.fill(0, Sh, BitValue::Zero);
   return Res;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eLSR(const RegisterCell &A1,
       uint16_t Sh) const {
@@ -540,7 +536,6 @@ BT::RegisterCell BT::MachineEvaluator::eLSR(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eASR(const RegisterCell &A1,
       uint16_t Sh) const {
   uint16_t W = A1.width();
@@ -551,7 +546,6 @@ BT::RegisterCell BT::MachineEvaluator::eASR(const RegisterCell &A1,
   Res.fill(W-Sh, W, Sign);
   return Res;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eAND(const RegisterCell &A1,
       const RegisterCell &A2) const {
@@ -575,7 +569,6 @@ BT::RegisterCell BT::MachineEvaluator::eAND(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eORL(const RegisterCell &A1,
       const RegisterCell &A2) const {
   uint16_t W = A1.width();
@@ -598,7 +591,6 @@ BT::RegisterCell BT::MachineEvaluator::eORL(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eXOR(const RegisterCell &A1,
       const RegisterCell &A2) const {
   uint16_t W = A1.width();
@@ -619,7 +611,6 @@ BT::RegisterCell BT::MachineEvaluator::eXOR(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eNOT(const RegisterCell &A1) const {
   uint16_t W = A1.width();
   RegisterCell Res(W);
@@ -635,7 +626,6 @@ BT::RegisterCell BT::MachineEvaluator::eNOT(const RegisterCell &A1) const {
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eSET(const RegisterCell &A1,
       uint16_t BitN) const {
   assert(BitN < A1.width());
@@ -644,7 +634,6 @@ BT::RegisterCell BT::MachineEvaluator::eSET(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eCLR(const RegisterCell &A1,
       uint16_t BitN) const {
   assert(BitN < A1.width());
@@ -652,7 +641,6 @@ BT::RegisterCell BT::MachineEvaluator::eCLR(const RegisterCell &A1,
   Res[BitN] = BitValue::Zero;
   return Res;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eCLB(const RegisterCell &A1, bool B,
       uint16_t W) const {
@@ -664,7 +652,6 @@ BT::RegisterCell BT::MachineEvaluator::eCLB(const RegisterCell &A1, bool B,
   return RegisterCell::self(0, W);
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eCTB(const RegisterCell &A1, bool B,
       uint16_t W) const {
   uint16_t C = A1.ct(B), AW = A1.width();
@@ -674,7 +661,6 @@ BT::RegisterCell BT::MachineEvaluator::eCTB(const RegisterCell &A1, bool B,
     return eIMM(C, W);
   return RegisterCell::self(0, W);
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eSXT(const RegisterCell &A1,
       uint16_t FromN) const {
@@ -687,7 +673,6 @@ BT::RegisterCell BT::MachineEvaluator::eSXT(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eZXT(const RegisterCell &A1,
       uint16_t FromN) const {
   uint16_t W = A1.width();
@@ -696,7 +681,6 @@ BT::RegisterCell BT::MachineEvaluator::eZXT(const RegisterCell &A1,
   Res.fill(FromN, W, BitValue::Zero);
   return Res;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eXTR(const RegisterCell &A1,
       uint16_t B, uint16_t E) const {
@@ -710,7 +694,6 @@ BT::RegisterCell BT::MachineEvaluator::eXTR(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eINS(const RegisterCell &A1,
       const RegisterCell &A2, uint16_t AtN) const {
   uint16_t W1 = A1.width(), W2 = A2.width();
@@ -723,7 +706,6 @@ BT::RegisterCell BT::MachineEvaluator::eINS(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::BitMask BT::MachineEvaluator::mask(unsigned Reg, unsigned Sub) const {
   assert(Sub == 0 && "Generic BitTracker::mask called for Sub != 0");
   uint16_t W = getRegBitWidth(Reg);
@@ -731,18 +713,18 @@ BT::BitMask BT::MachineEvaluator::mask(unsigned Reg, unsigned Sub) const {
   return BitMask(0, W-1);
 }
 
-
-bool BT::MachineEvaluator::evaluate(const MachineInstr *MI,
-      const CellMapType &Inputs, CellMapType &Outputs) const {
-  unsigned Opc = MI->getOpcode();
+bool BT::MachineEvaluator::evaluate(const MachineInstr &MI,
+                                    const CellMapType &Inputs,
+                                    CellMapType &Outputs) const {
+  unsigned Opc = MI.getOpcode();
   switch (Opc) {
     case TargetOpcode::REG_SEQUENCE: {
-      RegisterRef RD = MI->getOperand(0);
+      RegisterRef RD = MI.getOperand(0);
       assert(RD.Sub == 0);
-      RegisterRef RS = MI->getOperand(1);
-      unsigned SS = MI->getOperand(2).getImm();
-      RegisterRef RT = MI->getOperand(3);
-      unsigned ST = MI->getOperand(4).getImm();
+      RegisterRef RS = MI.getOperand(1);
+      unsigned SS = MI.getOperand(2).getImm();
+      RegisterRef RT = MI.getOperand(3);
+      unsigned ST = MI.getOperand(4).getImm();
       assert(SS != ST);
 
       uint16_t W = getRegBitWidth(RD);
@@ -756,8 +738,8 @@ bool BT::MachineEvaluator::evaluate(const MachineInstr *MI,
     case TargetOpcode::COPY: {
       // COPY can transfer a smaller register into a wider one.
       // If that is the case, fill the remaining high bits with 0.
-      RegisterRef RD = MI->getOperand(0);
-      RegisterRef RS = MI->getOperand(1);
+      RegisterRef RD = MI.getOperand(0);
+      RegisterRef RS = MI.getOperand(1);
       assert(RD.Sub == 0);
       uint16_t WD = getRegBitWidth(RD);
       uint16_t WS = getRegBitWidth(RS);
@@ -777,15 +759,14 @@ bool BT::MachineEvaluator::evaluate(const MachineInstr *MI,
   return true;
 }
 
-
 // Main W-Z implementation.
 
-void BT::visitPHI(const MachineInstr *PI) {
-  int ThisN = PI->getParent()->getNumber();
+void BT::visitPHI(const MachineInstr &PI) {
+  int ThisN = PI.getParent()->getNumber();
   if (Trace)
-    dbgs() << "Visit FI(BB#" << ThisN << "): " << *PI;
+    dbgs() << "Visit FI(BB#" << ThisN << "): " << PI;
 
-  const MachineOperand &MD = PI->getOperand(0);
+  const MachineOperand &MD = PI.getOperand(0);
   assert(MD.getSubReg() == 0 && "Unexpected sub-register in definition");
   RegisterRef DefRR(MD);
   uint16_t DefBW = ME.getRegBitWidth(DefRR);
@@ -796,8 +777,8 @@ void BT::visitPHI(const MachineInstr *PI) {
 
   bool Changed = false;
 
-  for (unsigned i = 1, n = PI->getNumOperands(); i < n; i += 2) {
-    const MachineBasicBlock *PB = PI->getOperand(i+1).getMBB();
+  for (unsigned i = 1, n = PI.getNumOperands(); i < n; i += 2) {
+    const MachineBasicBlock *PB = PI.getOperand(i + 1).getMBB();
     int PredN = PB->getNumber();
     if (Trace)
       dbgs() << "  edge BB#" << PredN << "->BB#" << ThisN;
@@ -807,7 +788,7 @@ void BT::visitPHI(const MachineInstr *PI) {
       continue;
     }
 
-    RegisterRef RU = PI->getOperand(i);
+    RegisterRef RU = PI.getOperand(i);
     RegisterCell ResC = ME.getCell(RU, Map);
     if (Trace)
       dbgs() << " input reg: " << PrintReg(RU.Reg, &ME.TRI, RU.Sub)
@@ -824,22 +805,21 @@ void BT::visitPHI(const MachineInstr *PI) {
   }
 }
 
-
-void BT::visitNonBranch(const MachineInstr *MI) {
+void BT::visitNonBranch(const MachineInstr &MI) {
   if (Trace) {
-    int ThisN = MI->getParent()->getNumber();
-    dbgs() << "Visit MI(BB#" << ThisN << "): " << *MI;
+    int ThisN = MI.getParent()->getNumber();
+    dbgs() << "Visit MI(BB#" << ThisN << "): " << MI;
   }
-  if (MI->isDebugValue())
+  if (MI.isDebugValue())
     return;
-  assert(!MI->isBranch() && "Unexpected branch instruction");
+  assert(!MI.isBranch() && "Unexpected branch instruction");
 
   CellMapType ResMap;
   bool Eval = ME.evaluate(MI, Map, ResMap);
 
   if (Trace && Eval) {
-    for (unsigned i = 0, n = MI->getNumOperands(); i < n; ++i) {
-      const MachineOperand &MO = MI->getOperand(i);
+    for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i) {
+      const MachineOperand &MO = MI.getOperand(i);
       if (!MO.isReg() || !MO.isUse())
         continue;
       RegisterRef RU(MO);
@@ -857,8 +837,8 @@ void BT::visitNonBranch(const MachineInstr *MI) {
 
   // Iterate over all definitions of the instruction, and update the
   // cells accordingly.
-  for (unsigned i = 0, n = MI->getNumOperands(); i < n; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     // Visit register defs only.
     if (!MO.isReg() || !MO.isDef())
       continue;
@@ -905,9 +885,8 @@ void BT::visitNonBranch(const MachineInstr *MI) {
   }
 }
 
-
-void BT::visitBranchesFrom(const MachineInstr *BI) {
-  const MachineBasicBlock &B = *BI->getParent();
+void BT::visitBranchesFrom(const MachineInstr &BI) {
+  const MachineBasicBlock &B = *BI.getParent();
   MachineBasicBlock::const_iterator It = BI, End = B.end();
   BranchTargetList Targets, BTs;
   bool FallsThrough = true, DefaultToAll = false;
@@ -915,11 +894,11 @@ void BT::visitBranchesFrom(const MachineInstr *BI) {
 
   do {
     BTs.clear();
-    const MachineInstr *MI = &*It;
+    const MachineInstr &MI = *It;
     if (Trace)
-      dbgs() << "Visit BR(BB#" << ThisN << "): " << *MI;
-    assert(MI->isBranch() && "Expecting branch instruction");
-    InstrExec.insert(MI);
+      dbgs() << "Visit BR(BB#" << ThisN << "): " << MI;
+    assert(MI.isBranch() && "Expecting branch instruction");
+    InstrExec.insert(&MI);
     bool Eval = ME.evaluate(MI, Map, BTs, FallsThrough);
     if (!Eval) {
       // If the evaluation failed, we will add all targets. Keep going in
@@ -971,7 +950,6 @@ void BT::visitBranchesFrom(const MachineInstr *BI) {
   }
 }
 
-
 void BT::visitUsesOf(unsigned Reg) {
   if (Trace)
     dbgs() << "visiting uses of " << PrintReg(Reg, &ME.TRI) << "\n";
@@ -983,24 +961,21 @@ void BT::visitUsesOf(unsigned Reg) {
     if (!InstrExec.count(UseI))
       continue;
     if (UseI->isPHI())
-      visitPHI(UseI);
+      visitPHI(*UseI);
     else if (!UseI->isBranch())
-      visitNonBranch(UseI);
+      visitNonBranch(*UseI);
     else
-      visitBranchesFrom(UseI);
+      visitBranchesFrom(*UseI);
   }
 }
-
 
 BT::RegisterCell BT::get(RegisterRef RR) const {
   return ME.getCell(RR, Map);
 }
 
-
 void BT::put(RegisterRef RR, const RegisterCell &RC) {
   ME.putCell(RR, RC, Map);
 }
-
 
 // Replace all references to bits from OldRR with the corresponding bits
 // in NewRR.
@@ -1027,7 +1002,6 @@ void BT::subst(RegisterRef OldRR, RegisterRef NewRR) {
   }
 }
 
-
 // Check if the block has been "executed" during propagation. (If not, the
 // block is dead, but it may still appear to be reachable.)
 bool BT::reached(const MachineBasicBlock *B) const {
@@ -1041,13 +1015,24 @@ bool BT::reached(const MachineBasicBlock *B) const {
   return false;
 }
 
+// Visit an individual instruction. This could be a newly added instruction,
+// or one that has been modified by an optimization.
+void BT::visit(const MachineInstr &MI) {
+  assert(!MI.isBranch() && "Only non-branches are allowed");
+  InstrExec.insert(&MI);
+  visitNonBranch(MI);
+  // The call to visitNonBranch could propagate the changes until a branch
+  // is actually visited. This could result in adding CFG edges to the flow
+  // queue. Since the queue won't be processed, clear it.
+  while (!FlowQ.empty())
+    FlowQ.pop();
+}
 
 void BT::reset() {
   EdgeExec.clear();
   InstrExec.clear();
   Map.clear();
 }
-
 
 void BT::run() {
   reset();
@@ -1084,8 +1069,8 @@ void BT::run() {
     MachineBasicBlock::const_iterator It = B.begin(), End = B.end();
     // Visit PHI nodes first.
     while (It != End && It->isPHI()) {
-      const MachineInstr *PI = &*It++;
-      InstrExec.insert(PI);
+      const MachineInstr &PI = *It++;
+      InstrExec.insert(&PI);
       visitPHI(PI);
     }
 
@@ -1098,8 +1083,8 @@ void BT::run() {
 
     // Visit non-branch instructions.
     while (It != End && !It->isBranch()) {
-      const MachineInstr *MI = &*It++;
-      InstrExec.insert(MI);
+      const MachineInstr &MI = *It++;
+      InstrExec.insert(&MI);
       visitNonBranch(MI);
     }
     // If block end has been reached, add the fall-through edge to the queue.
@@ -1114,14 +1099,10 @@ void BT::run() {
     } else {
       // Handle the remaining sequence of branches. This function will update
       // the work queue.
-      visitBranchesFrom(It);
+      visitBranchesFrom(*It);
     }
   } // while (!FlowQ->empty())
 
-  if (Trace) {
-    dbgs() << "Cells after propagation:\n";
-    for (CellMapType::iterator I = Map.begin(), E = Map.end(); I != E; ++I)
-      dbgs() << PrintReg(I->first, &ME.TRI) << " -> " << I->second << "\n";
-  }
+  if (Trace)
+    print_cells(dbgs() << "Cells after propagation:\n");
 }
-

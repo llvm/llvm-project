@@ -69,7 +69,8 @@ public:
 
   /// \brief Perform an action for an invocation.
   virtual bool
-  runInvocation(clang::CompilerInvocation *Invocation, FileManager *Files,
+  runInvocation(std::shared_ptr<clang::CompilerInvocation> Invocation,
+                FileManager *Files,
                 std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                 DiagnosticConsumer *DiagConsumer) = 0;
 };
@@ -85,7 +86,8 @@ public:
   ~FrontendActionFactory() override;
 
   /// \brief Invokes the compiler with a FrontendAction created by create().
-  bool runInvocation(clang::CompilerInvocation *Invocation, FileManager *Files,
+  bool runInvocation(std::shared_ptr<clang::CompilerInvocation> Invocation,
+                     FileManager *Files,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) override;
 
@@ -163,6 +165,8 @@ typedef std::vector<std::pair<std::string, std::string>> FileContentMappings;
 /// \param Code C++ code.
 /// \param Args Additional flags to pass on.
 /// \param FileName The file name which 'Code' will be mapped as.
+/// \param ToolName The name of the binary running the tool. Standard library
+///                 header paths will be resolved relative to this.
 /// \param PCHContainerOps   The PCHContainerOperations for loading and creating
 ///                          clang modules.
 ///
@@ -170,6 +174,7 @@ typedef std::vector<std::pair<std::string, std::string>> FileContentMappings;
 bool runToolOnCodeWithArgs(
     clang::FrontendAction *ToolAction, const Twine &Code,
     const std::vector<std::string> &Args, const Twine &FileName = "input.cc",
+    const Twine &ToolName = "clang-tool",
     std::shared_ptr<PCHContainerOperations> PCHContainerOps =
         std::make_shared<PCHContainerOperations>(),
     const FileContentMappings &VirtualMappedFiles = FileContentMappings());
@@ -192,13 +197,15 @@ buildASTFromCode(const Twine &Code, const Twine &FileName = "input.cc",
 /// \param Code C++ code.
 /// \param Args Additional flags to pass on.
 /// \param FileName The file name which 'Code' will be mapped as.
+/// \param ToolName The name of the binary running the tool. Standard library
+///                 header paths will be resolved relative to this.
 /// \param PCHContainerOps The PCHContainerOperations for loading and creating
 /// clang modules.
 ///
 /// \return The resulting AST or null if an error occurred.
 std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     const Twine &Code, const std::vector<std::string> &Args,
-    const Twine &FileName = "input.cc",
+    const Twine &FileName = "input.cc", const Twine &ToolName = "clang-tool",
     std::shared_ptr<PCHContainerOperations> PCHContainerOps =
         std::make_shared<PCHContainerOperations>());
 
@@ -256,7 +263,7 @@ public:
 
   bool runInvocation(const char *BinaryName,
                      clang::driver::Compilation *Compilation,
-                     clang::CompilerInvocation *Invocation,
+                     std::shared_ptr<clang::CompilerInvocation> Invocation,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps);
 
   std::vector<std::string> CommandLine;

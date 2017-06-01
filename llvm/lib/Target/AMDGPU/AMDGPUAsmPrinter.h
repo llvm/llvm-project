@@ -12,15 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_AMDGPUASMPRINTER_H
-#define LLVM_LIB_TARGET_R600_AMDGPUASMPRINTER_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUASMPRINTER_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUASMPRINTER_H
+
+#include "AMDGPUMCInstLower.h"
 
 #include "llvm/CodeGen/AsmPrinter.h"
 #include <vector>
 
 namespace llvm {
+class MCOperand;
 
-class AMDGPUAsmPrinter : public AsmPrinter {
+class AMDGPUAsmPrinter final : public AsmPrinter {
 private:
   struct SIProgramInfo {
     SIProgramInfo() :
@@ -40,6 +43,12 @@ private:
       NumVGPR(0),
       NumSGPR(0),
       FlatUsed(false),
+      NumSGPRsForWavesPerEU(0),
+      NumVGPRsForWavesPerEU(0),
+      ReservedVGPRFirst(0),
+      ReservedVGPRCount(0),
+      DebuggerWavefrontPrivateSegmentOffsetSGPR((uint16_t)-1),
+      DebuggerPrivateSegmentBufferSGPR((uint16_t)-1),
       VCCUsed(false),
       CodeLen(0) {}
 
@@ -67,6 +76,28 @@ private:
     uint32_t LDSSize;
     bool FlatUsed;
 
+    // Number of SGPRs that meets number of waves per execution unit request.
+    uint32_t NumSGPRsForWavesPerEU;
+
+    // Number of VGPRs that meets number of waves per execution unit request.
+    uint32_t NumVGPRsForWavesPerEU;
+
+    // If ReservedVGPRCount is 0 then must be 0. Otherwise, this is the first
+    // fixed VGPR number reserved.
+    uint16_t ReservedVGPRFirst;
+
+    // The number of consecutive VGPRs reserved.
+    uint16_t ReservedVGPRCount;
+
+    // Fixed SGPR number used to hold wave scratch offset for entire kernel
+    // execution, or uint16_t(-1) if the register is not used or not known.
+    uint16_t DebuggerWavefrontPrivateSegmentOffsetSGPR;
+
+    // Fixed SGPR number of the first 4 SGPRs used to hold scratch V# for entire
+    // kernel execution, or uint16_t(-1) if the register is not used or not
+    // known.
+    uint16_t DebuggerPrivateSegmentBufferSGPR;
+
     // Bonus information for debugging.
     bool VCCUsed;
     uint64_t CodeLen;
@@ -90,18 +121,30 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override {
-    return "AMDGPU Assembly Printer";
-  }
+  StringRef getPassName() const override;
+
+  /// \brief Wrapper for MCInstLowering.lowerOperand() for the tblgen'erated
+  /// pseudo lowering.
+  bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const;
+
+  /// \brief tblgen'erated driver function for lowering simple MI->MC pseudo
+  /// instructions.
+  bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
+                                   const MachineInstr *MI);
 
   /// Implemented in AMDGPUMCInstLower.cpp
   void EmitInstruction(const MachineInstr *MI) override;
 
   void EmitFunctionBodyStart() override;
 
-  void EmitEndOfAsmFile(Module &M) override;
-
   void EmitFunctionEntryLabel() override;
+
+  void EmitGlobalVariable(const GlobalVariable *GV) override;
+
+  void EmitStartOfAsmFile(Module &M) override;
+
+  bool isBlockOnlyReachableByFallthrough(
+    const MachineBasicBlock *MBB) const override;
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        unsigned AsmVariant, const char *ExtraCode,

@@ -29,17 +29,34 @@ void foo() {
   i = 8;
 }
 
-// CHECK: [[FILE:.*]] = !DIFile(filename: "{{.*}}debug-info-anon-union-vars.cpp",
-// CHECK: !DIGlobalVariable(name: "c",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true
+// A funky reinterpret cast idiom that we used to crash on.
+template <class T>
+unsigned char *buildBytes(const T v) {
+  static union {
+    unsigned char result[sizeof(T)];
+    T value;
+  };
+  value = v;
+  return result;
+}
+
+void instantiate(int x) {
+  buildBytes(x);
+}
+
+// CHECK: !DIGlobalVariable(name: "c",{{.*}} file: [[FILE:.*]], line: 6,{{.*}} isLocal: true, isDefinition: true
 // CHECK: !DIGlobalVariable(name: "d",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true
+// CHECK: [[FILE]] = !DIFile(filename: "{{.*}}debug-info-anon-union-vars.cpp",
 // CHECK: !DIGlobalVariable(name: "a",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true
 // CHECK: !DIGlobalVariable(name: "b",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true
+// CHECK: !DIGlobalVariable(name: "result", {{.*}} isLocal: false, isDefinition: true
+// CHECK: !DIGlobalVariable(name: "value", {{.*}} isLocal: false, isDefinition: true
 // CHECK: !DILocalVariable(name: "i", {{.*}}, flags: DIFlagArtificial
 // CHECK: !DILocalVariable(name: "c", {{.*}}, flags: DIFlagArtificial
 // CHECK: !DILocalVariable(
 // CHECK-NOT: name:
 // CHECK: type: ![[UNION:[0-9]+]]
-// CHECK: ![[UNION]] = !DICompositeType(tag: DW_TAG_union_type,
+// CHECK: ![[UNION]] = distinct !DICompositeType(tag: DW_TAG_union_type,
 // CHECK-NOT: name:
 // CHECK: elements
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "i", scope: ![[UNION]],

@@ -8,9 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/DIA/DIADataStream.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ConvertUTF.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 DIADataStream::DIADataStream(CComPtr<IDiaEnumDebugStreamData> DiaStreamData)
     : StreamData(DiaStreamData) {}

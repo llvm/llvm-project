@@ -9,7 +9,7 @@ namespace test0 {
     typedef int A; // expected-note {{declared here}}
 
     int test() {
-      struct A a; // expected-error {{elaborated type refers to a typedef}}
+      struct A a; // expected-error {{typedef 'A' cannot be referenced with a struct specifier}}
       return a.foo;
     }
   }
@@ -18,7 +18,7 @@ namespace test0 {
     template <class> class A; // expected-note {{declared here}}
 
     int test() {
-      struct A a; // expected-error {{elaborated type refers to a template}}
+      struct A a; // expected-error {{template 'A' cannot be referenced with a struct specifier}}
       return a.foo;
     }
   }

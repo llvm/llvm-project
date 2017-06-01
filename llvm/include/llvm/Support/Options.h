@@ -93,7 +93,7 @@ public:
   /// option stores (\p ValT), the class that will read the option (\p Base),
   /// and the member that the class will store the data into (\p Mem).
   template <typename ValT, typename Base, ValT(Base::*Mem)>
-  static void registerOption(const char *ArgStr, const char *Desc,
+  static void registerOption(StringRef ArgStr, StringRef Desc,
                              const ValT &InitValue) {
     cl::opt<ValT> *Option = new cl::opt<ValT>(ArgStr, cl::desc(Desc),
                                               cl::Hidden, cl::init(InitValue));

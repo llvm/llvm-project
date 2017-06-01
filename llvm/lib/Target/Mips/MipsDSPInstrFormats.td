@@ -32,6 +32,10 @@ class ISA_DSPR2 {
   list<Predicate> InsnPredicates = [HasDSPR2];
 }
 
+class ISA_DSPR3 {
+  list<Predicate> InsnPredicates = [HasDSPR3];
+}
+
 // Fields.
 class Field6<bits<6> val> {
   bits<6> V = val;
@@ -41,16 +45,21 @@ def SPECIAL3_OPCODE : Field6<0b011111>;
 def REGIMM_OPCODE : Field6<0b000001>;
 
 class DSPInst<string opstr = "">
-    : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther> {
-  let Predicates = [HasDSP];
+    : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther>, PredicateControl {
+  let InsnPredicates = [HasDSP];
   string BaseOpcode = opstr;
   string Arch = "dsp";
 }
 
 class PseudoDSP<dag outs, dag ins, list<dag> pattern,
-                InstrItinClass itin = IIPseudo>:
-  MipsPseudo<outs, ins, pattern, itin> {
-  let Predicates = [HasDSP];
+                InstrItinClass itin = IIPseudo>
+    : MipsPseudo<outs, ins, pattern, itin>, PredicateControl {
+  let InsnPredicates = [HasDSP];
+}
+
+class DSPInstAlias<string Asm, dag Result, bit Emit = 0b1>
+    : InstAlias<Asm, Result, Emit>, PredicateControl {
+  let InsnPredicates = [HasDSP];
 }
 
 // ADDU.QB sub-class format.

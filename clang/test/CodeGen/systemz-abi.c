@@ -4,6 +4,8 @@
 // RUN:   -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple s390x-linux-gnu -target-cpu z13 \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple s390x-linux-gnu -target-cpu arch11 \
+// RUN:   -emit-llvm -o - %s | FileCheck %s
 
 // Scalar types
 

@@ -12,8 +12,14 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
+#include "llvm/Object/Decompressor.h"
+#include "llvm/Object/MachO.h"
+#include "llvm/Object/RelocVisitor.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Dwarf.h"
+#include "llvm/Support/ELF.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -28,37 +34,6 @@ typedef DWARFDebugLine::LineTable DWARFLineTable;
 typedef DILineInfoSpecifier::FileLineInfoKind FileLineInfoKind;
 typedef DILineInfoSpecifier::FunctionNameKind FunctionNameKind;
 
-static void dumpPubSection(raw_ostream &OS, StringRef Name, StringRef Data,
-                           bool LittleEndian, bool GnuStyle) {
-  OS << "\n." << Name << " contents:\n";
-  DataExtractor pubNames(Data, LittleEndian, 0);
-  uint32_t offset = 0;
-  while (pubNames.isValidOffset(offset)) {
-    OS << "length = " << format("0x%08x", pubNames.getU32(&offset));
-    OS << " version = " << format("0x%04x", pubNames.getU16(&offset));
-    OS << " unit_offset = " << format("0x%08x", pubNames.getU32(&offset));
-    OS << " unit_size = " << format("0x%08x", pubNames.getU32(&offset)) << '\n';
-    if (GnuStyle)
-      OS << "Offset     Linkage  Kind     Name\n";
-    else
-      OS << "Offset     Name\n";
-
-    while (offset < Data.size()) {
-      uint32_t dieRef = pubNames.getU32(&offset);
-      if (dieRef == 0)
-        break;
-      OS << format("0x%8.8x ", dieRef);
-      if (GnuStyle) {
-        PubIndexEntryDescriptor desc(pubNames.getU8(&offset));
-        OS << format("%-8s", dwarf::GDBIndexEntryLinkageString(desc.Linkage))
-           << ' ' << format("%-8s", dwarf::GDBIndexEntryKindString(desc.Kind))
-           << ' ';
-      }
-      OS << '\"' << pubNames.getCStr(&offset) << "\"\n";
-    }
-  }
-}
-
 static void dumpAccelSection(raw_ostream &OS, StringRef Name,
                              const DWARFSection& Section, StringRef StringSection,
                              bool LittleEndian) {
@@ -71,7 +46,8 @@ static void dumpAccelSection(raw_ostream &OS, StringRef Name,
   Accel.dump(OS);
 }
 
-void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
+void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH,
+                        bool SummarizeTypes) {
   if (DumpType == DIDT_All || DumpType == DIDT_Abbrev) {
     OS << ".debug_abbrev contents:\n";
     getDebugAbbrev()->dump(OS);
@@ -100,7 +76,7 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
     OS << "\n.debug_types contents:\n";
     for (const auto &TUS : type_unit_sections())
       for (const auto &TU : TUS)
-        TU->dump(OS);
+        TU->dump(OS, SummarizeTypes);
   }
 
   if ((DumpType == DIDT_All || DumpType == DIDT_TypesDwo) &&
@@ -108,7 +84,7 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
     OS << "\n.debug_types.dwo contents:\n";
     for (const auto &DWOTUS : dwo_type_unit_sections())
       for (const auto &DWOTU : DWOTUS)
-        DWOTU->dump(OS);
+        DWOTU->dump(OS, SummarizeTypes);
   }
 
   if (DumpType == DIDT_All || DumpType == DIDT_Loc) {
@@ -124,6 +100,15 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
   if (DumpType == DIDT_All || DumpType == DIDT_Frames) {
     OS << "\n.debug_frame contents:\n";
     getDebugFrame()->dump(OS);
+    if (DumpEH) {
+      OS << "\n.eh_frame contents:\n";
+      getEHFrame()->dump(OS);
+    }
+  }
+
+  if (DumpType == DIDT_All || DumpType == DIDT_Macro) {
+    OS << "\n.debug_macinfo contents:\n";
+    getDebugMacro()->dump(OS);
   }
 
   uint32_t offset = 0;
@@ -140,19 +125,29 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
     OS << "\n.debug_line contents:\n";
     for (const auto &CU : compile_units()) {
       savedAddressByteSize = CU->getAddressByteSize();
-      const auto *CUDIE = CU->getUnitDIE();
-      if (CUDIE == nullptr)
+      auto CUDIE = CU->getUnitDIE();
+      if (!CUDIE)
         continue;
-      unsigned stmtOffset = CUDIE->getAttributeValueAsSectionOffset(
-          CU.get(), DW_AT_stmt_list, -1U);
-      if (stmtOffset != -1U) {
+      if (auto StmtOffset =
+              CUDIE.getAttributeValueAsSectionOffset(DW_AT_stmt_list)) {
         DataExtractor lineData(getLineSection().Data, isLittleEndian(),
                                savedAddressByteSize);
         DWARFDebugLine::LineTable LineTable;
-        LineTable.parse(lineData, &getLineSection().Relocs, &stmtOffset);
+        uint32_t Offset = *StmtOffset;
+        LineTable.parse(lineData, &getLineSection().Relocs, &Offset);
         LineTable.dump(OS);
       }
     }
+  }
+
+  if (DumpType == DIDT_All || DumpType == DIDT_CUIndex) {
+    OS << "\n.debug_cu_index contents:\n";
+    getCUIndex().dump(OS);
+  }
+
+  if (DumpType == DIDT_All || DumpType == DIDT_TUIndex) {
+    OS << "\n.debug_tu_index contents:\n";
+    getTUIndex().dump(OS);
   }
 
   if (DumpType == DIDT_All || DumpType == DIDT_LineDwo) {
@@ -205,20 +200,22 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
   }
 
   if (DumpType == DIDT_All || DumpType == DIDT_Pubnames)
-    dumpPubSection(OS, "debug_pubnames", getPubNamesSection(),
-                   isLittleEndian(), false);
+    DWARFDebugPubTable(getPubNamesSection(), isLittleEndian(), false)
+        .dump("debug_pubnames", OS);
 
   if (DumpType == DIDT_All || DumpType == DIDT_Pubtypes)
-    dumpPubSection(OS, "debug_pubtypes", getPubTypesSection(),
-                   isLittleEndian(), false);
+    DWARFDebugPubTable(getPubTypesSection(), isLittleEndian(), false)
+        .dump("debug_pubtypes", OS);
 
   if (DumpType == DIDT_All || DumpType == DIDT_GnuPubnames)
-    dumpPubSection(OS, "debug_gnu_pubnames", getGnuPubNamesSection(),
-                   isLittleEndian(), true /* GnuStyle */);
+    DWARFDebugPubTable(getGnuPubNamesSection(), isLittleEndian(),
+                       true /* GnuStyle */)
+        .dump("debug_gnu_pubnames", OS);
 
   if (DumpType == DIDT_All || DumpType == DIDT_GnuPubtypes)
-    dumpPubSection(OS, "debug_gnu_pubtypes", getGnuPubTypesSection(),
-                   isLittleEndian(), true /* GnuStyle */);
+    DWARFDebugPubTable(getGnuPubTypesSection(), isLittleEndian(),
+                       true /* GnuStyle */)
+        .dump("debug_gnu_pubtypes", OS);
 
   if ((DumpType == DIDT_All || DumpType == DIDT_StrOffsetsDwo) &&
       !getStringOffsetDWOSection().empty()) {
@@ -231,6 +228,12 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
       OS << format("0x%8.8x: ", offset);
       OS << format("%8.8x\n", strOffsetExt.getU32(&offset));
     }
+  }
+
+  if ((DumpType == DIDT_All || DumpType == DIDT_GdbIndex) &&
+      !getGdbIndexSection().empty()) {
+    OS << "\n.gnu_index contents:\n";
+    getGdbIndex().dump(OS);
   }
 
   if (DumpType == DIDT_All || DumpType == DIDT_AppleNames)
@@ -248,6 +251,38 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
   if (DumpType == DIDT_All || DumpType == DIDT_AppleObjC)
     dumpAccelSection(OS, "apple_objc", getAppleObjCSection(),
                      getStringSection(), isLittleEndian());
+}
+
+const DWARFUnitIndex &DWARFContext::getCUIndex() {
+  if (CUIndex)
+    return *CUIndex;
+
+  DataExtractor CUIndexData(getCUIndexSection(), isLittleEndian(), 0);
+
+  CUIndex = llvm::make_unique<DWARFUnitIndex>(DW_SECT_INFO);
+  CUIndex->parse(CUIndexData);
+  return *CUIndex;
+}
+
+const DWARFUnitIndex &DWARFContext::getTUIndex() {
+  if (TUIndex)
+    return *TUIndex;
+
+  DataExtractor TUIndexData(getTUIndexSection(), isLittleEndian(), 0);
+
+  TUIndex = llvm::make_unique<DWARFUnitIndex>(DW_SECT_TYPES);
+  TUIndex->parse(TUIndexData);
+  return *TUIndex;
+}
+
+DWARFGdbIndex &DWARFContext::getGdbIndex() {
+  if (GdbIndex)
+    return *GdbIndex;
+
+  DataExtractor GdbIndexData(getGdbIndexSection(), true /*LE*/, 0);
+  GdbIndex = llvm::make_unique<DWARFGdbIndex>();
+  GdbIndex->parse(GdbIndexData);
+  return *GdbIndex;
 }
 
 const DWARFDebugAbbrev *DWARFContext::getDebugAbbrev() {
@@ -317,29 +352,52 @@ const DWARFDebugFrame *DWARFContext::getDebugFrame() {
   // http://lists.dwarfstd.org/htdig.cgi/dwarf-discuss-dwarfstd.org/2011-December/001173.html
   DataExtractor debugFrameData(getDebugFrameSection(), isLittleEndian(),
                                getAddressSize());
-  DebugFrame.reset(new DWARFDebugFrame());
+  DebugFrame.reset(new DWARFDebugFrame(false /* IsEH */));
   DebugFrame->parse(debugFrameData);
   return DebugFrame.get();
+}
+
+const DWARFDebugFrame *DWARFContext::getEHFrame() {
+  if (EHFrame)
+    return EHFrame.get();
+
+  DataExtractor debugFrameData(getEHFrameSection(), isLittleEndian(),
+                               getAddressSize());
+  DebugFrame.reset(new DWARFDebugFrame(true /* IsEH */));
+  DebugFrame->parse(debugFrameData);
+  return DebugFrame.get();
+}
+
+const DWARFDebugMacro *DWARFContext::getDebugMacro() {
+  if (Macro)
+    return Macro.get();
+
+  DataExtractor MacinfoData(getMacinfoSection(), isLittleEndian(), 0);
+  Macro.reset(new DWARFDebugMacro());
+  Macro->parse(MacinfoData);
+  return Macro.get();
 }
 
 const DWARFLineTable *
 DWARFContext::getLineTableForUnit(DWARFUnit *U) {
   if (!Line)
     Line.reset(new DWARFDebugLine(&getLineSection().Relocs));
-  const auto *UnitDIE = U->getUnitDIE();
-  if (UnitDIE == nullptr)
+
+  auto UnitDIE = U->getUnitDIE();
+  if (!UnitDIE)
     return nullptr;
-  unsigned stmtOffset =
-      UnitDIE->getAttributeValueAsSectionOffset(U, DW_AT_stmt_list, -1U);
-  if (stmtOffset == -1U)
+
+  auto Offset = UnitDIE.getAttributeValueAsSectionOffset(DW_AT_stmt_list);
+  if (!Offset)
     return nullptr; // No line table for this compile unit.
 
+  uint32_t stmtOffset = *Offset + U->getLineTableOffset();
   // See if the line table is cached.
   if (const DWARFLineTable *lt = Line->getLineTable(stmtOffset))
     return lt;
 
   // We have to parse it first.
-  DataExtractor lineData(getLineSection().Data, isLittleEndian(),
+  DataExtractor lineData(U->getLineSection(), isLittleEndian(),
                          U->getAddressByteSize());
   return Line->getOrParseLineTable(lineData, stmtOffset);
 }
@@ -389,14 +447,12 @@ static bool getFunctionNameForAddress(DWARFCompileUnit *CU, uint64_t Address,
     return false;
   // The address may correspond to instruction in some inlined function,
   // so we have to build the chain of inlined functions and take the
-  // name of the topmost function in it.
-  const DWARFDebugInfoEntryInlinedChain &InlinedChain =
-      CU->getInlinedChainForAddress(Address);
-  if (InlinedChain.DIEs.size() == 0)
+  // name of the topmost function in it.SmallVectorImpl<DWARFDie> &InlinedChain
+  SmallVector<DWARFDie, 4> InlinedChain;
+  CU->getInlinedChainForAddress(Address, InlinedChain);
+  if (InlinedChain.size() == 0)
     return false;
-  const DWARFDebugInfoEntryMinimal &TopFunctionDIE = InlinedChain.DIEs[0];
-  if (const char *Name =
-          TopFunctionDIE.getSubroutineName(InlinedChain.U, Kind)) {
+  if (const char *Name = InlinedChain[0].getSubroutineName(Kind)) {
     FunctionName = Name;
     return true;
   }
@@ -471,9 +527,9 @@ DWARFContext::getInliningInfoForAddress(uint64_t Address,
     return InliningInfo;
 
   const DWARFLineTable *LineTable = nullptr;
-  const DWARFDebugInfoEntryInlinedChain &InlinedChain =
-      CU->getInlinedChainForAddress(Address);
-  if (InlinedChain.DIEs.size() == 0) {
+  SmallVector<DWARFDie, 4> InlinedChain;
+  CU->getInlinedChainForAddress(Address, InlinedChain);
+  if (InlinedChain.size() == 0) {
     // If there is no DIE for address (e.g. it is in unavailable .dwo file),
     // try to at least get file/line info from symbol table.
     if (Spec.FLIKind != FileLineInfoKind::None) {
@@ -488,12 +544,11 @@ DWARFContext::getInliningInfoForAddress(uint64_t Address,
   }
 
   uint32_t CallFile = 0, CallLine = 0, CallColumn = 0;
-  for (uint32_t i = 0, n = InlinedChain.DIEs.size(); i != n; i++) {
-    const DWARFDebugInfoEntryMinimal &FunctionDIE = InlinedChain.DIEs[i];
+  for (uint32_t i = 0, n = InlinedChain.size(); i != n; i++) {
+    DWARFDie &FunctionDIE = InlinedChain[i];
     DILineInfo Frame;
     // Get function name if necessary.
-    if (const char *Name =
-            FunctionDIE.getSubroutineName(InlinedChain.U, Spec.FNKind))
+    if (const char *Name = FunctionDIE.getSubroutineName(Spec.FNKind))
       Frame.FunctionName = Name;
     if (Spec.FLIKind != FileLineInfoKind::None) {
       if (i == 0) {
@@ -515,29 +570,12 @@ DWARFContext::getInliningInfoForAddress(uint64_t Address,
       }
       // Get call file/line/column of a current DIE.
       if (i + 1 < n) {
-        FunctionDIE.getCallerFrame(InlinedChain.U, CallFile, CallLine,
-                                   CallColumn);
+        FunctionDIE.getCallerFrame(CallFile, CallLine, CallColumn);
       }
     }
     InliningInfo.addFrame(Frame);
   }
   return InliningInfo;
-}
-
-static bool consumeCompressedDebugSectionHeader(StringRef &data,
-                                                uint64_t &OriginalSize) {
-  // Consume "ZLIB" prefix.
-  if (!data.startswith("ZLIB"))
-    return false;
-  data = data.substr(4);
-  // Consume uncompressed section size (big-endian 8 bytes).
-  DataExtractor extractor(data, false, 8);
-  uint32_t Offset = 0;
-  OriginalSize = extractor.getU64(&Offset);
-  if (Offset == 0)
-    return false;
-  data = data.substr(Offset);
-  return true;
 }
 
 DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
@@ -563,24 +601,22 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
     if (!L || !L->getLoadedSectionContents(*RelocatedSection,data))
       Section.getContents(data);
 
-    name = name.substr(name.find_first_not_of("._")); // Skip . and _ prefixes.
-
-    // Check if debug info section is compressed with zlib.
-    if (name.startswith("zdebug_")) {
-      uint64_t OriginalSize;
-      if (!zlib::isAvailable() ||
-          !consumeCompressedDebugSectionHeader(data, OriginalSize))
+    if (Decompressor::isCompressed(Section)) {
+      Expected<Decompressor> Decompressor =
+          Decompressor::create(name, data, IsLittleEndian, AddressSize == 8);
+      if (!Decompressor)
         continue;
-      UncompressedSections.resize(UncompressedSections.size() + 1);
-      if (zlib::uncompress(data, UncompressedSections.back(), OriginalSize) !=
-          zlib::StatusOK) {
-        UncompressedSections.pop_back();
+      SmallString<32> Out;
+      if (auto Err = Decompressor->decompress(Out))
         continue;
-      }
-      // Make data point to uncompressed section contents and save its contents.
-      name = name.substr(1);
+      UncompressedSections.emplace_back(std::move(Out));
       data = UncompressedSections.back();
     }
+
+    // Compressed sections names in GNU style starts from ".z",
+    // at this point section is decompressed and we drop compression prefix.
+    name = name.substr(
+        name.find_first_not_of("._z")); // Skip ".", "z" and "_" prefixes.
 
     StringRef *SectionData =
         StringSwitch<StringRef *>(name)
@@ -590,8 +626,10 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
             .Case("debug_line", &LineSection.Data)
             .Case("debug_aranges", &ARangeSection)
             .Case("debug_frame", &DebugFrameSection)
+            .Case("eh_frame", &EHFrameSection)
             .Case("debug_str", &StringSection)
             .Case("debug_ranges", &RangeSection)
+            .Case("debug_macinfo", &MacinfoSection)
             .Case("debug_pubnames", &PubNamesSection)
             .Case("debug_pubtypes", &PubTypesSection)
             .Case("debug_gnu_pubnames", &GnuPubNamesSection)
@@ -608,6 +646,9 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
             .Case("apple_namespaces", &AppleNamespacesSection.Data)
             .Case("apple_namespac", &AppleNamespacesSection.Data)
             .Case("apple_objc", &AppleObjCSection.Data)
+            .Case("debug_cu_index", &CUIndexSection)
+            .Case("debug_tu_index", &TUIndexSection)
+            .Case("gdb_index", &GdbIndexSection)
             // Any more debug info sections go here.
             .Default(nullptr);
     if (SectionData) {
@@ -642,7 +683,7 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
     // relocation point already factors in the section address
     // (actually applying the relocations will produce wrong results
     // as the section address will be added twice).
-    if (!L && dyn_cast<MachOObjectFile>(&Obj))
+    if (!L && isa<MachOObjectFile>(&Obj))
       continue;
 
     RelSecName = RelSecName.substr(
@@ -685,15 +726,29 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
         // First calculate the address of the symbol or section as it appears
         // in the objct file
         if (Sym != Obj.symbol_end()) {
-          ErrorOr<uint64_t> SymAddrOrErr = Sym->getAddress();
-          if (std::error_code EC = SymAddrOrErr.getError()) {
+          Expected<uint64_t> SymAddrOrErr = Sym->getAddress();
+          if (!SymAddrOrErr) {
+            std::string Buf;
+            raw_string_ostream OS(Buf);
+            logAllUnhandledErrors(SymAddrOrErr.takeError(), OS, "");
+            OS.flush();
             errs() << "error: failed to compute symbol address: "
-                   << EC.message() << '\n';
+                   << Buf << '\n';
             continue;
           }
           SymAddr = *SymAddrOrErr;
           // Also remember what section this symbol is in for later
-          RSec = *Sym->getSection();
+          auto SectOrErr = Sym->getSection();
+          if (!SectOrErr) {
+            std::string Buf;
+            raw_string_ostream OS(Buf);
+            logAllUnhandledErrors(SectOrErr.takeError(), OS, "");
+            OS.flush();
+            errs() << "error: failed to get symbol section: "
+                   << Buf << '\n';
+            continue;
+          }
+          RSec = *SectOrErr;
         } else if (auto *MObj = dyn_cast<MachOObjectFile>(&Obj)) {
           // MachO also has relocations that point to sections and
           // scattered relocations.

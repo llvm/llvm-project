@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | not grep select
+; RUN: opt < %s -indvars -S | FileCheck %s
 
 ; This loop has backedge-taken-count zero. Indvars shouldn't expand any
 ; instructions to compute a trip count.
@@ -7,6 +7,8 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 target triple = "i386-pc-linux-gnu"
 
 define i8* @string_expandtabs() nounwind {
+; CHECK-LABEL: @string_expandtabs(
+; CHECK-NOT: select
 entry:
 	br i1 undef, label %bb33, label %bb1
 

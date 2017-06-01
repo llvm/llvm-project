@@ -46,4 +46,27 @@ TEST(DiagnosticTest, suppressAndTrap) {
   EXPECT_FALSE(Diags.hasUnrecoverableErrorOccurred());
 }
 
+// Check that FatalsAsErrors works as intended
+TEST(DiagnosticTest, fatalsAsErrors) {
+  DiagnosticsEngine Diags(new DiagnosticIDs(),
+                          new DiagnosticOptions,
+                          new IgnoringDiagConsumer());
+  Diags.setFatalsAsError(true);
+
+  // Diag that would set UncompilableErrorOccurred and ErrorOccurred.
+  Diags.Report(diag::err_target_unknown_triple) << "unknown";
+
+  // Diag that would set UnrecoverableErrorOccurred and ErrorOccurred.
+  Diags.Report(diag::err_cannot_open_file) << "file" << "error";
+
+  // Diag that would set FatalErrorOccurred
+  // (via non-note following a fatal error).
+  Diags.Report(diag::warn_mt_message) << "warning";
+
+  EXPECT_TRUE(Diags.hasErrorOccurred());
+  EXPECT_FALSE(Diags.hasFatalErrorOccurred());
+  EXPECT_TRUE(Diags.hasUncompilableErrorOccurred());
+  EXPECT_TRUE(Diags.hasUnrecoverableErrorOccurred());
+}
+
 }

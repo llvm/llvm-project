@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef HEXAGONMCELFSTREAMER_H
-#define HEXAGONMCELFSTREAMER_H
+#ifndef LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCELFSTREAMER_H
+#define LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCELFSTREAMER_H
 
-#include "MCTargetDesc/HexagonMCCodeEmitter.h"
-#include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/MC/MCELFStreamer.h"
-#include "HexagonTargetStreamer.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include <cstdint>
+#include <memory>
 
 namespace llvm {
 
@@ -27,8 +27,7 @@ public:
       : MCELFStreamer(Context, TAB, OS, Emitter),
         MCII(createHexagonMCInstrInfo()) {}
 
-  virtual void EmitInstruction(const MCInst &Inst,
-                               const MCSubtargetInfo &STI) override;
+  void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void EmitSymbol(const MCInst &Inst);
   void HexagonMCEmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                       unsigned ByteAlignment,
@@ -40,6 +39,6 @@ public:
 MCStreamer *createHexagonELFStreamer(MCContext &Context, MCAsmBackend &MAB,
                                      raw_pwrite_stream &OS, MCCodeEmitter *CE);
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONMCELFSTREAMER_H

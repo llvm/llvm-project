@@ -17,6 +17,7 @@
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/VersionTuple.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -32,6 +33,8 @@ class DeclContext;
 class DeclarationName;
 class DependentDiagnostic;
 class EnumDecl;
+class ExportDecl;
+class ExternalSourceSymbolAttr;
 class FunctionDecl;
 class FunctionType;
 enum Linkage : unsigned char;
@@ -52,6 +55,7 @@ struct PrintingPolicy;
 class RecordDecl;
 class Stmt;
 class StoredDeclsMap;
+class TemplateDecl;
 class TranslationUnitDecl;
 class UsingDirectiveDecl;
 }
@@ -72,13 +76,10 @@ namespace clang {
 ///
 /// Note: There are objects tacked on before the *beginning* of Decl
 /// (and its subclasses) in its Decl::operator new(). Proper alignment
-/// of all subclasses (not requiring more than DeclObjAlignment) is
+/// of all subclasses (not requiring more than the alignment of Decl) is
 /// asserted in DeclBase.cpp.
-class Decl {
+class LLVM_ALIGNAS(/*alignof(uint64_t)*/ 8) Decl {
 public:
-  /// \brief Alignment guaranteed when allocating Decl and any subtypes.
-  enum { DeclObjAlignment = llvm::AlignOf<uint64_t>::Alignment };
-
   /// \brief Lists the kind of concrete classes of Decl.
   enum Kind {
 #define DECL(DERIVED, BASE) DERIVED,
@@ -113,6 +114,9 @@ public:
     /// Tags, declared with 'struct foo;' and referenced with
     /// 'struct foo'.  All tags are also types.  This is what
     /// elaborated-type-specifiers look for in C.
+    /// This also contains names that conflict with tags in the
+    /// same scope but that are otherwise ordinary names (non-type
+    /// template parameters and indirect field declarations).
     IDNS_Tag                 = 0x0002,
 
     /// Types, declared with 'struct foo', typedefs, etc.
@@ -131,7 +135,7 @@ public:
     IDNS_Namespace           = 0x0010,
 
     /// Ordinary names.  In C, everything that's not a label, tag,
-    /// or member ends up here.
+    /// member, or function-local extern ends up here.
     IDNS_Ordinary            = 0x0020,
 
     /// Objective C \@protocol.
@@ -160,8 +164,13 @@ public:
 
     /// This declaration is a function-local extern declaration of a
     /// variable or function. This may also be IDNS_Ordinary if it
-    /// has been declared outside any function.
-    IDNS_LocalExtern         = 0x0800
+    /// has been declared outside any function. These act mostly like
+    /// invisible friend declarations, but are also visible to unqualified
+    /// lookup within the scope of the declaring function.
+    IDNS_LocalExtern         = 0x0800,
+
+    /// This declaration is an OpenMP user defined reduction construction.
+    IDNS_OMPReduction        = 0x1000
   };
 
   /// ObjCDeclQualifier - 'Qualifiers' written next to the return and
@@ -251,7 +260,7 @@ private:
   SourceLocation Loc;
 
   /// DeclKind - This indicates which class this is.
-  unsigned DeclKind : 8;
+  unsigned DeclKind : 7;
 
   /// InvalidDecl - This indicates a semantic error occurred.
   unsigned InvalidDecl :  1;
@@ -291,7 +300,7 @@ protected:
   unsigned Hidden : 1;
   
   /// IdentifierNamespace - This specifies what IDNS_* namespace this lives in.
-  unsigned IdentifierNamespace : 12;
+  unsigned IdentifierNamespace : 13;
 
   /// \brief If 0, we have not computed the linkage of this declaration.
   /// Otherwise, it is the linkage + 1.
@@ -475,8 +484,7 @@ public:
 
   template <typename T>
   llvm::iterator_range<specific_attr_iterator<T>> specific_attrs() const {
-    return llvm::iterator_range<specific_attr_iterator<T>>(
-        specific_attr_begin<T>(), specific_attr_end<T>());
+    return llvm::make_range(specific_attr_begin<T>(), specific_attr_end<T>());
   }
 
   template <typename T>
@@ -510,8 +518,8 @@ public:
   bool isImplicit() const { return Implicit; }
   void setImplicit(bool I = true) { Implicit = I; }
 
-  /// \brief Whether this declaration was used, meaning that a definition
-  /// is required.
+  /// \brief Whether *any* (re-)declaration of the entity was used, meaning that
+  /// a definition is required.
   ///
   /// \param CheckUsedAttr When true, also consider the "used" attribute
   /// (in addition to the "used" bit set by \c setUsed()) when determining
@@ -521,7 +529,8 @@ public:
   /// \brief Set whether the declaration is used, in the sense of odr-use.
   ///
   /// This should only be used immediately after creating a declaration.
-  void setIsUsed() { Used = true; }
+  /// It intentionally doesn't notify any listeners.
+  void setIsUsed() { getCanonicalDecl()->Used = true; }
 
   /// \brief Mark the declaration used, in the sense of odr-use.
   ///
@@ -554,11 +563,26 @@ public:
     NextInContextAndBits.setInt(Bits);
   }
 
+  /// \brief Looks on this and related declarations for an applicable
+  /// external source symbol attribute.
+  ExternalSourceSymbolAttr *getExternalSourceSymbolAttr() const;
+
   /// \brief Whether this declaration was marked as being private to the
   /// module in which it was defined.
   bool isModulePrivate() const {
     return NextInContextAndBits.getInt() & ModulePrivateFlag;
   }
+
+  /// \brief Whether this declaration is exported (by virtue of being lexically
+  /// within an ExportDecl or by being a NamespaceDecl).
+  bool isExported() const;
+
+  /// Return true if this declaration has an attribute which acts as
+  /// definition of the entity, such as 'alias' or 'ifunc'.
+  bool hasDefiningAttr() const;
+
+  /// Return this declaration's defining attribute if it has one.
+  const Attr *getDefiningAttr() const;
 
 protected:
   /// \brief Specify whether this declaration was marked as being private
@@ -590,7 +614,20 @@ public:
   /// AR_Available, will be set to a (possibly empty) message
   /// describing why the declaration has not been introduced, is
   /// deprecated, or is unavailable.
-  AvailabilityResult getAvailability(std::string *Message = nullptr) const;
+  ///
+  /// \param EnclosingVersion The version to compare with. If empty, assume the
+  /// deployment target version.
+  AvailabilityResult
+  getAvailability(std::string *Message = nullptr,
+                  VersionTuple EnclosingVersion = VersionTuple()) const;
+
+  /// \brief Retrieve the version of the target platform in which this
+  /// declaration was introduced.
+  ///
+  /// \returns An empty version tuple if this declaration has no 'introduced'
+  /// availability attributes, or the version tuple that's specified in the
+  /// attribute otherwise.
+  VersionTuple getVersionIntroduced() const;
 
   /// \brief Determine whether this declaration is marked 'deprecated'.
   ///
@@ -891,6 +928,10 @@ public:
            DeclKind == FunctionTemplate;
   }
 
+  /// \brief If this is a declaration that describes some template, this
+  /// method returns that template declaration.
+  TemplateDecl *getDescribedTemplate() const;
+
   /// \brief Returns the function itself, or the templated function if this is a
   /// function template.
   FunctionDecl *getAsFunction() LLVM_READONLY;
@@ -1112,7 +1153,9 @@ public:
 ///   ObjCMethodDecl
 ///   ObjCContainerDecl
 ///   LinkageSpecDecl
+///   ExportDecl
 ///   BlockDecl
+///   OMPDeclareReductionDecl
 ///
 class DeclContext {
   /// DeclKind - This indicates which class this is.
@@ -1141,6 +1184,11 @@ class DeclContext {
   /// \brief If \c true, the external source may have lexical declarations
   /// that are missing from the lookup table.
   mutable bool HasLazyExternalLexicalLookups : 1;
+
+  /// \brief If \c true, lookups should only return identifier from
+  /// DeclContext scope (for example TranslationUnit). Used in
+  /// LookupQualifiedName()
+  mutable bool UseQualifiedLookup : 1;
 
   /// \brief Pointer to the data structure used to lookup declarations
   /// within this context (or a DependentStoredDeclsMap if this is a
@@ -1176,6 +1224,7 @@ protected:
         ExternalVisibleStorage(false),
         NeedToReconcileExternalVisibleStorage(false),
         HasLazyLocalLexicalLookups(false), HasLazyExternalLexicalLookups(false),
+        UseQualifiedLookup(false),
         LookupPtr(nullptr), FirstDecl(nullptr), LastDecl(nullptr) {}
 
 public:
@@ -1249,7 +1298,8 @@ public:
 
   /// \brief Test whether the context supports looking up names.
   bool isLookupContext() const {
-    return !isFunctionOrMethod() && DeclKind != Decl::LinkageSpec;
+    return !isFunctionOrMethod() && DeclKind != Decl::LinkageSpec &&
+           DeclKind != Decl::Export;
   }
 
   bool isFileContext() const {
@@ -1296,6 +1346,9 @@ public:
   /// \brief Determines whether this context or some of its ancestors is a
   /// linkage specification context that specifies C linkage.
   bool isExternCContext() const;
+
+  /// \brief Retrieve the nearest enclosing C linkage specification context.
+  const LinkageSpecDecl *getExternCContext() const;
 
   /// \brief Determines whether this context or some of its ancestors is a
   /// linkage specification context that specifies C++ linkage.
@@ -1754,6 +1807,16 @@ public:
   bool isDeclInLexicalTraversal(const Decl *D) const {
     return D && (D->NextInContextAndBits.getPointer() || D == FirstDecl || 
                  D == LastDecl);
+  }
+
+  bool setUseQualifiedLookup(bool use = true) {
+    bool old_value = UseQualifiedLookup;
+    UseQualifiedLookup = use;
+    return old_value;
+  }
+
+  bool shouldUseQualifiedLookup() const {
+    return UseQualifiedLookup;
   }
 
   static bool classof(const Decl *D);

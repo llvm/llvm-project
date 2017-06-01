@@ -11,16 +11,20 @@
 #define LLVM_DEBUGINFO_PDB_PDB_H
 
 #include "PDBTypes.h"
+#include "llvm/Support/Error.h"
 #include <memory>
+#include <system_error>
 
 namespace llvm {
 class StringRef;
 
-PDB_ErrorCode loadDataForPDB(PDB_ReaderType Type, StringRef Path,
-                             std::unique_ptr<IPDBSession> &Session);
+namespace pdb {
 
-PDB_ErrorCode loadDataForEXE(PDB_ReaderType Type, StringRef Path,
-                             std::unique_ptr<IPDBSession> &Session);
+Error loadDataForPDB(PDB_ReaderType Type, StringRef Path,
+                     std::unique_ptr<IPDBSession> &Session);
+
+Error loadDataForEXE(PDB_ReaderType Type, StringRef Path,
+                     std::unique_ptr<IPDBSession> &Session);
 }
-
+}
 #endif

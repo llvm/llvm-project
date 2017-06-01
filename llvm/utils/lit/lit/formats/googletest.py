@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import os
+import subprocess
 import sys
 
 import lit.Test
@@ -34,16 +35,29 @@ class GoogleTest(TestFormat):
             if kIsWindows:
               lines = lines.replace('\r', '')
             lines = lines.split('\n')
-        except:
-            litConfig.error("unable to discover google-tests in %r" % path)
+        except Exception as exc:
+            out = exc.output if isinstance(exc, subprocess.CalledProcessError) else ''
+            litConfig.warning("unable to discover google-tests in %r: %s. Process output: %s"
+                              % (path, sys.exc_info()[1], out))
             raise StopIteration
 
         nested_tests = []
         for ln in lines:
-            if not ln.strip():
+            # The test name list includes trailing comments beginning with
+            # a '#' on some lines, so skip those. We don't support test names
+            # that use escaping to embed '#' into their name as the names come
+            # from C++ class and method names where such things are hard and
+            # uninteresting to support.
+            ln = ln.split('#', 1)[0].rstrip()
+            if not ln.lstrip():
                 continue
 
-            prefix = ''
+            if 'Running main() from gtest_main.cc' in ln:
+                # Upstream googletest prints this to stdout prior to running
+                # tests. LLVM removed that print statement in r61540, but we
+                # handle it here in case upstream googletest is being used.
+                continue
+
             index = 0
             while ln[index*2:index*2+2] == '  ':
                 index += 1
@@ -109,8 +123,15 @@ class GoogleTest(TestFormat):
         if litConfig.noExecute:
             return lit.Test.PASS, ''
 
-        out, err, exitCode = lit.util.executeCommand(
-            cmd, env=test.config.environment)
+        try:
+            out, err, exitCode = lit.util.executeCommand(
+                cmd, env=test.config.environment,
+                timeout=litConfig.maxIndividualTestTime)
+        except lit.util.ExecuteCommandTimeoutException:
+            return (lit.Test.TIMEOUT,
+                    'Reached timeout of {} seconds'.format(
+                        litConfig.maxIndividualTestTime)
+                   )
 
         if exitCode:
             return lit.Test.FAIL, out + err
@@ -122,4 +143,3 @@ class GoogleTest(TestFormat):
             return lit.Test.UNRESOLVED, msg
 
         return lit.Test.PASS,''
-

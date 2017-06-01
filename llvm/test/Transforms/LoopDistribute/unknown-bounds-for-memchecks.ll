@@ -1,4 +1,4 @@
-; RUN: opt -basicaa -loop-distribute -S < %s | FileCheck %s
+; RUN: opt -basicaa -loop-distribute -enable-loop-distribute -S < %s | FileCheck %s
 
 ; If we can't find the bounds for one of the arrays in order to generate the
 ; memchecks (e.g., C[i * i] below), loop shold not get distributed.

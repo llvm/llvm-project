@@ -6,7 +6,7 @@ add  $1\@, %eax
 .macro A @
   mov  %eax, %eax
 .endm
-# CHECK: :[[@LINE-3]]:11: error: expected identifier in '.macro' directive
+# CHECK: :[[@LINE-3]]:10: error: expected identifier in '.macro' directive
 
 .rept 2
   addi $8, $8, \@

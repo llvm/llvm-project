@@ -41,7 +41,7 @@ char llvm::sys::DynamicLibrary::Invalid = 0;
 
 #else
 
-#if HAVE_DLFCN_H
+#if defined(HAVE_DLFCN_H) && defined(HAVE_DLOPEN)
 #include <dlfcn.h>
 using namespace llvm;
 using namespace llvm::sys;
@@ -119,7 +119,7 @@ void* DynamicLibrary::SearchForAddressOfSymbol(const char *symbolName) {
       return i->second;
   }
 
-#if HAVE_DLFCN_H
+#if defined(HAVE_DLFCN_H) && defined(HAVE_DLOPEN)
   // Now search the libraries.
   if (OpenedHandles) {
     for (DenseSet<void *>::iterator I = OpenedHandles->begin(),

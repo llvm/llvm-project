@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.ExprInspection -analyzer-store=region -fblocks -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-store=region -fblocks -verify -Wno-objc-root-class %s
 
 void clang_analyzer_eval(int);
 

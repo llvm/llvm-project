@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 -mtriple=arm64-apple-ios -aarch64-atomic-cfg-tidy=0 < %s | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
 ; rdar://11935841
 
 define void @t1() nounwind ssp {

@@ -1,0 +1,22 @@
+# RUN: llc -o - %s -mtriple=armv7s-- -run-pass=machine-cp | FileCheck %s
+---
+# Test that machine copy prop recognizes the implicit-def operands on a COPY
+# as clobbering the register.
+# CHECK-LABEL: name: func
+# CHECK: %d2 = VMOVv2i32 2, 14, _
+# CHECK: %s5 = COPY %s0, implicit %q1, implicit-def %q1
+# CHECK: VST1q32 %r0, 0, %q1, 14, _
+# The following two COPYs must not be removed
+# CHECK: %s4 = COPY %s20, implicit-def %q1
+# CHECK: %s5 = COPY %s0, implicit killed %d0, implicit %q1, implicit-def %q1
+# CHECK: VST1q32 %r2, 0, %q1, 14, _
+name: func
+body: |
+  bb.0:
+    %d2 = VMOVv2i32 2, 14, _
+    %s5 = COPY %s0, implicit %q1, implicit-def %q1
+    VST1q32 %r0, 0, %q1, 14, _
+    %s4 = COPY %s20, implicit-def %q1
+    %s5 = COPY %s0, implicit killed %d0, implicit %q1, implicit-def %q1
+    VST1q32 %r2, 0, %q1, 14, _
+...

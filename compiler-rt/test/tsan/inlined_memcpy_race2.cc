@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
+// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
 #include "test.h"
 #include <string.h>
 
@@ -25,7 +25,7 @@ int main() {
   pthread_join(t[0], NULL);
   pthread_join(t[1], NULL);
 
-  printf("PASS\n");
+  fprintf(stderr, "PASS\n");
   return 0;
 }
 
@@ -33,5 +33,5 @@ int main() {
 // CHECK:   #0 memset
 // CHECK:   #1 MemSetThread
 // CHECK:  Previous write
-// CHECK:   #0 memmove
+// CHECK:   #0 {{(memcpy|memmove)}}
 // CHECK:   #1 MemMoveThread

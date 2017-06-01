@@ -87,10 +87,10 @@
 # Vector Bitwise Bit Clear (AND NOT) - immediate
 # Vector Bitwise OR - immedidate
 #------------------------------------------------------------------------------
-# CHECK: movi v31.4s, #0xff, lsl #24
+# CHECK: movi v31.4s, #255, lsl #24
 # CHECK: mvni v0.2s, #{{0x0|0}}
-# CHECK: bic v15.4h, #0xf, lsl #8
-# CHECK: orr v16.8h, #0x1f
+# CHECK: bic v15.4h, #15, lsl #8
+# CHECK: orr v16.8h, #31
 0xff 0x67 0x07 0x4f
 0x00 0x04 0x00 0x2f
 0xef 0xb5 0x00 0x2f
@@ -100,8 +100,8 @@
 # Vector Move Immediate Masked
 # Vector Move Inverted Immediate Masked
 #------------------------------------------------------------------------------
-# CHECK: movi v8.2s, #0x8, msl #8
-# CHECK: mvni v16.4s, #0x10, msl #16
+# CHECK: movi v8.2s, #8, msl #8
+# CHECK: mvni v16.4s, #16, msl #16
 0x08 0xc5 0x00 0x0f
 0x10 0xd6 0x00 0x6f
 
@@ -110,8 +110,8 @@
 # Vector Move Immediate - bytemask, per doubleword
 # Vector Move Immediate - bytemask, one doubleword
 #------------------------------------------------------------------------------
-# CHECK: movi v16.8b, #0xff
-# CHECK: movi v31.16b, #0x1f
+# CHECK: movi v16.8b, #255
+# CHECK: movi v31.16b, #31
 # CHECK: movi d15, #0xff00ff00ff00ff
 # CHECK: movi v31.2d, #0xff0000ff0000ffff
 0xf0 0xe7 0x07 0x0f

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -analyze -analyzer-checker=core -analyzer-store=region -fblocks -analyzer-opt-analyze-nested-blocks -verify %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -analyze -analyzer-checker=core -analyzer-store=region -fblocks -analyzer-opt-analyze-nested-blocks -verify -x objective-c++ %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core -analyzer-store=region -fblocks -analyzer-opt-analyze-nested-blocks -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core -analyzer-store=region -fblocks -analyzer-opt-analyze-nested-blocks -verify -x objective-c++ %s
 
 //===----------------------------------------------------------------------===//
 // The following code is reduced using delta-debugging from Mac OS X headers:
@@ -210,3 +210,34 @@ void testCallContainingWithSignature5()
   });
 }
 
+__attribute__((objc_root_class))
+@interface SuperClass
+- (void)someMethod;
+@end
+
+@interface SomeClass : SuperClass
+@end
+
+// Make sure to properly handle super-calls when a block captures
+// a local variable named 'self'.
+@implementation SomeClass
+-(void)foo; {
+  /*__weak*/ SomeClass *weakSelf = self;
+  (void)(^(void) {
+    SomeClass *self = weakSelf;
+    (void)(^(void) {
+      (void)self;
+      [super someMethod]; // no-warning
+    });
+  });
+}
+@end
+
+// The incorrect block variable initialization below is a hard compile-time
+// error in C++.
+#if !defined(__cplusplus)
+void call_block_with_fewer_arguments() {
+  void (^b)() = ^(int a) { };
+  b(); // expected-warning {{Block taking 1 argument is called with fewer (0)}}
+}
+#endif

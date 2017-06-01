@@ -47,13 +47,22 @@
 #include "sanitizer_symbolizer.h"
 #include "sanitizer_flags.h"
 
+using namespace __sanitizer;
+
 static const u64 kMagic64 = 0xC0BFFFFFFFFFFF64ULL;
 static const u64 kMagic32 = 0xC0BFFFFFFFFFFF32ULL;
+static const uptr kNumWordsForMagic = SANITIZER_WORDSIZE == 64 ? 1 : 2;
+static const u64 kMagic = SANITIZER_WORDSIZE == 64 ? kMagic64 : kMagic32;
 
 static atomic_uint32_t dump_once_guard;  // Ensure that CovDump runs only once.
 
 static atomic_uintptr_t coverage_counter;
 static atomic_uintptr_t caller_callee_counter;
+
+static void ResetGlobalCounters() {
+  return atomic_store(&coverage_counter, 0, memory_order_relaxed);
+  return atomic_store(&caller_callee_counter, 0, memory_order_relaxed);
+}
 
 // pc_array is the array containing the covered PCs.
 // To make the pc_array thread- and async-signal-safe it has to be large enough.
@@ -91,7 +100,7 @@ class CoverageData {
   void DumpAll();
 
   ALWAYS_INLINE
-  void TraceBasicBlock(s32 *id);
+  void TraceBasicBlock(u32 *id);
 
   void InitializeGuardArray(s32 *guards);
   void InitializeGuards(s32 *guards, uptr n, const char *module_name,
@@ -102,17 +111,23 @@ class CoverageData {
   uptr Update8bitCounterBitsetAndClearCounters(u8 *bitset);
 
   uptr *data();
-  uptr size();
+  uptr size() const;
 
  private:
+  struct NamedPcRange {
+    const char *copied_module_name;
+    uptr beg, end; // elements [beg,end) in pc_array.
+  };
+
   void DirectOpen();
   void UpdateModuleNameVec(uptr caller_pc, uptr range_beg, uptr range_end);
+  void GetRangeOffsets(const NamedPcRange& r, Symbolizer* s,
+      InternalMmapVector<uptr>* offsets) const;
 
   // Maximal size pc array may ever grow.
   // We MmapNoReserve this space to ensure that the array is contiguous.
-  static const uptr kPcArrayMaxSize = FIRST_32_SECOND_64(
-      1 << (SANITIZER_ANDROID ? 24 : (SANITIZER_WINDOWS ? 27 : 26)),
-      1 << 27);
+  static const uptr kPcArrayMaxSize =
+      FIRST_32_SECOND_64(1 << (SANITIZER_ANDROID ? 24 : 26), 1 << 27);
   // The amount file mapping for the pc array is grown by.
   static const uptr kPcArrayMmapSize = 64 * 1024;
 
@@ -130,11 +145,6 @@ class CoverageData {
 
   // Vector of coverage guard arrays, protected by mu.
   InternalMmapVectorNoCtor<s32*> guard_array_vec;
-
-  struct NamedPcRange {
-    const char *copied_module_name;
-    uptr beg, end; // elements [beg,end) in pc_array.
-  };
 
   // Vector of module and compilation unit pc ranges.
   InternalMmapVectorNoCtor<NamedPcRange> comp_unit_name_vec;
@@ -161,7 +171,11 @@ class CoverageData {
   //   - not thread-safe;
   //   - does not support long traces;
   //   - not tuned for performance.
-  static const uptr kTrEventArrayMaxSize = FIRST_32_SECOND_64(1 << 22, 1 << 30);
+  // Windows doesn't do overcommit (committed virtual memory costs swap), so
+  // programs can't reliably map such large amounts of virtual memory.
+  // TODO(etienneb): Find a way to support coverage of larger executable
+static const uptr kTrEventArrayMaxSize =
+    (SANITIZER_WORDSIZE == 32 || SANITIZER_WINDOWS) ? 1 << 22 : 1 << 30;
   u32 *tr_event_array;
   uptr tr_event_array_size;
   u32 *tr_event_pointer;
@@ -226,7 +240,8 @@ void CoverageData::InitializeGuardArray(s32 *guards) {
   Enable();  // Make sure coverage is enabled at this point.
   s32 n = guards[0];
   for (s32 j = 1; j <= n; j++) {
-    uptr idx = atomic_fetch_add(&pc_array_index, 1, memory_order_relaxed);
+    uptr idx = atomic_load_relaxed(&pc_array_index);
+    atomic_store_relaxed(&pc_array_index, idx + 1);
     guards[j] = -static_cast<s32>(idx + 1);
   }
 }
@@ -506,7 +521,7 @@ uptr *CoverageData::data() {
   return pc_array;
 }
 
-uptr CoverageData::size() {
+uptr CoverageData::size() const {
   return atomic_load(&pc_array_index, memory_order_relaxed);
 }
 
@@ -676,11 +691,11 @@ void CoverageData::DumpCallerCalleePairs() {
 // it once and then cache in the provided 'cache' storage.
 //
 // This function will eventually be inlined by the compiler.
-void CoverageData::TraceBasicBlock(s32 *id) {
+void CoverageData::TraceBasicBlock(u32 *id) {
   // Will trap here if
   //  1. coverage is not enabled at run-time.
   //  2. The array tr_event_array is full.
-  *tr_event_pointer = static_cast<u32>(*id - 1);
+  *tr_event_pointer = *id - 1;
   tr_event_pointer++;
 }
 
@@ -736,41 +751,96 @@ void CoverageData::DumpAsBitSet() {
   }
 }
 
+
+void CoverageData::GetRangeOffsets(const NamedPcRange& r, Symbolizer* sym,
+    InternalMmapVector<uptr>* offsets) const {
+  offsets->clear();
+  for (uptr i = 0; i < kNumWordsForMagic; i++)
+    offsets->push_back(0);
+  CHECK(r.copied_module_name);
+  CHECK_LE(r.beg, r.end);
+  CHECK_LE(r.end, size());
+  for (uptr i = r.beg; i < r.end; i++) {
+    uptr pc = UnbundlePc(pc_array[i]);
+    uptr counter = UnbundleCounter(pc_array[i]);
+    if (!pc) continue; // Not visited.
+    uptr offset = 0;
+    sym->GetModuleNameAndOffsetForPC(pc, nullptr, &offset);
+    offsets->push_back(BundlePcAndCounter(offset, counter));
+  }
+
+  CHECK_GE(offsets->size(), kNumWordsForMagic);
+  SortArray(offsets->data(), offsets->size());
+  for (uptr i = 0; i < offsets->size(); i++)
+    (*offsets)[i] = UnbundlePc((*offsets)[i]);
+}
+
+static void GenerateHtmlReport(const InternalMmapVector<char *> &cov_files) {
+  if (!common_flags()->html_cov_report) {
+    return;
+  }
+  char *sancov_path = FindPathToBinary(common_flags()->sancov_path);
+  if (sancov_path == nullptr) {
+    return;
+  }
+
+  InternalMmapVector<char *> sancov_argv(cov_files.size() * 2 + 3);
+  sancov_argv.push_back(sancov_path);
+  sancov_argv.push_back(internal_strdup("-html-report"));
+  auto argv_deleter = at_scope_exit([&] {
+    for (uptr i = 0; i < sancov_argv.size(); ++i) {
+      InternalFree(sancov_argv[i]);
+    }
+  });
+
+  for (const auto &cov_file : cov_files) {
+    sancov_argv.push_back(internal_strdup(cov_file));
+  }
+
+  {
+    ListOfModules modules;
+    modules.init();
+    for (const LoadedModule &module : modules) {
+      sancov_argv.push_back(internal_strdup(module.full_name()));
+    }
+  }
+
+  InternalScopedString report_path(kMaxPathLength);
+  fd_t report_fd =
+      CovOpenFile(&report_path, false /* packed */, GetProcessName(), "html");
+  int pid = StartSubprocess(sancov_argv[0], sancov_argv.data(),
+                            kInvalidFd /* stdin */, report_fd /* std_out */);
+  if (pid > 0) {
+    int result = WaitForProcess(pid);
+    if (result == 0)
+      Printf("coverage report generated to %s\n", report_path.data());
+  }
+}
+
 void CoverageData::DumpOffsets() {
   auto sym = Symbolizer::GetOrInit();
   if (!common_flags()->coverage_pcs) return;
   CHECK_NE(sym, nullptr);
   InternalMmapVector<uptr> offsets(0);
   InternalScopedString path(kMaxPathLength);
-  for (uptr m = 0; m < module_name_vec.size(); m++) {
-    offsets.clear();
-    uptr num_words_for_magic = SANITIZER_WORDSIZE == 64 ? 1 : 2;
-    for (uptr i = 0; i < num_words_for_magic; i++)
-      offsets.push_back(0);
-    auto r = module_name_vec[m];
-    CHECK(r.copied_module_name);
-    CHECK_LE(r.beg, r.end);
-    CHECK_LE(r.end, size());
-    for (uptr i = r.beg; i < r.end; i++) {
-      uptr pc = UnbundlePc(pc_array[i]);
-      uptr counter = UnbundleCounter(pc_array[i]);
-      if (!pc) continue; // Not visited.
-      uptr offset = 0;
-      sym->GetModuleNameAndOffsetForPC(pc, nullptr, &offset);
-      offsets.push_back(BundlePcAndCounter(offset, counter));
+
+  InternalMmapVector<char *> cov_files(module_name_vec.size());
+  auto cov_files_deleter = at_scope_exit([&] {
+    for (uptr i = 0; i < cov_files.size(); ++i) {
+      InternalFree(cov_files[i]);
     }
+  });
 
-    CHECK_GE(offsets.size(), num_words_for_magic);
-    SortArray(offsets.data(), offsets.size());
-    for (uptr i = 0; i < offsets.size(); i++)
-      offsets[i] = UnbundlePc(offsets[i]);
+  for (uptr m = 0; m < module_name_vec.size(); m++) {
+    auto r = module_name_vec[m];
+    GetRangeOffsets(r, sym, &offsets);
 
-    uptr num_offsets = offsets.size() - num_words_for_magic;
+    uptr num_offsets = offsets.size() - kNumWordsForMagic;
     u64 *magic_p = reinterpret_cast<u64*>(offsets.data());
     CHECK_EQ(*magic_p, 0ULL);
     // FIXME: we may want to write 32-bit offsets even in 64-mode
     // if all the offsets are small enough.
-    *magic_p = SANITIZER_WORDSIZE == 64 ? kMagic64 : kMagic32;
+    *magic_p = kMagic;
 
     const char *module_name = StripModuleName(r.copied_module_name);
     if (cov_sandboxed) {
@@ -785,11 +855,14 @@ void CoverageData::DumpOffsets() {
       if (fd == kInvalidFd) continue;
       WriteToFile(fd, offsets.data(), offsets.size() * sizeof(offsets[0]));
       CloseFile(fd);
+      cov_files.push_back(internal_strdup(path.data()));
       VReport(1, " CovDump: %s: %zd PCs written\n", path.data(), num_offsets);
     }
   }
   if (cov_fd != kInvalidFd)
     CloseFile(cov_fd);
+
+  GenerateHtmlReport(cov_files);
 }
 
 void CoverageData::DumpAll() {
@@ -885,6 +958,9 @@ SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_init() {
 }
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_dump() {
   coverage_data.DumpAll();
+#if SANITIZER_LINUX
+  __sanitizer_dump_trace_pc_guard_coverage();
+#endif
 }
 SANITIZER_INTERFACE_ATTRIBUTE void
 __sanitizer_cov_module_init(s32 *guards, uptr npcs, u8 *counters,
@@ -914,15 +990,18 @@ uptr __sanitizer_get_total_unique_caller_callee_pairs() {
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_cov_trace_func_enter(s32 *id) {
+void __sanitizer_cov_trace_func_enter(u32 *id) {
+  __sanitizer_cov_with_check(id);
   coverage_data.TraceBasicBlock(id);
 }
 SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_cov_trace_basic_block(s32 *id) {
+void __sanitizer_cov_trace_basic_block(u32 *id) {
+  __sanitizer_cov_with_check(id);
   coverage_data.TraceBasicBlock(id);
 }
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_reset_coverage() {
+  ResetGlobalCounters();
   coverage_data.ReinitializeGuards();
   internal_bzero_aligned16(
       coverage_data.data(),
@@ -944,8 +1023,26 @@ uptr __sanitizer_update_counter_bitset_and_clear_counters(u8 *bitset) {
   return coverage_data.Update8bitCounterBitsetAndClearCounters(bitset);
 }
 // Default empty implementations (weak). Users should redefine them.
+#if !SANITIZER_WINDOWS  // weak does not work on Windows.
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void __sanitizer_cov_trace_cmp() {}
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+void __sanitizer_cov_trace_cmp1() {}
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+void __sanitizer_cov_trace_cmp2() {}
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+void __sanitizer_cov_trace_cmp4() {}
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+void __sanitizer_cov_trace_cmp8() {}
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void __sanitizer_cov_trace_switch() {}
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+void __sanitizer_cov_trace_div4() {}
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+void __sanitizer_cov_trace_div8() {}
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+void __sanitizer_cov_trace_gep() {}
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+void __sanitizer_cov_trace_pc_indir() {}
+#endif  // !SANITIZER_WINDOWS
 } // extern "C"

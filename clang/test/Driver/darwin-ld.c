@@ -152,6 +152,15 @@
 // RUN: FileCheck -check-prefix=LINK_NO_IOS_ARM64_CRT1 %s < %t.log
 // LINK_NO_IOS_ARM64_CRT1-NOT: crt
 
+// RUN: %clang -target x86_64-apple-ios6.0 -miphoneos-version-min=6.0 -fprofile-instr-generate -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_IOSSIM_PROFILE %s < %t.log
+// LINK_IOSSIM_PROFILE: {{ld(.exe)?"}}
+// LINK_IOSSIM_PROFILE: libclang_rt.profile_iossim.a
+
+// FIXME: Currently the builtin library is only added to the command line if it,
+// so we can't check for it here
+// FIXME_LINK_IOSSIM_PROFILE: libclang_rt.ios.a
+
 // RUN: %clang -target arm64-apple-tvos8.3 -mtvos-version-min=8.3 -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_TVOS_ARM64 %s < %t.log
 // LINK_TVOS_ARM64: {{ld(.exe)?"}}
@@ -294,3 +303,41 @@
 // RUN:   FileCheck --check-prefix=LINK-IFRAMEWORK %s
 // LINK-IFRAMEWORK: {{ld(.exe)?"}}
 // LINK-IFRAMEWORK: "-FBar"
+
+// Check ld64 accepts up to 5 digits with no extra characters
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN:   -mlinker-version=133.3 2> %t.log
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN:   -mlinker-version=133.3.0 2>> %t.log
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN:   -mlinker-version=133.3.0.1 2>> %t.log
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN:   -mlinker-version=133.3.0.1.2 2>> %t.log
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN:   -mlinker-version=133.3.0.1.2.6 2>> %t.log
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN:   -mlinker-version=133.3.0.1.a 2>> %t.log
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN:   -mlinker-version=133.3.0.1a 2>> %t.log
+// RUN: FileCheck -check-prefix=LINK_VERSION_DIGITS %s < %t.log
+// LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3'
+// LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0'
+// LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0.1'
+// LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0.1.2'
+// LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.2.6'
+// LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.a'
+// LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1a'
+
+// Check that we're passing -lto-pass-remarks-output for LTO
+// RUN: %clang -target x86_64-apple-darwin12 %t.o -fsave-optimization-record -### -o foo/bar.out 2> %t.log
+// RUN: FileCheck -check-prefix=PASS_REMARKS_OUTPUT %s < %t.log
+// PASS_REMARKS_OUTPUT: "-mllvm" "-lto-pass-remarks-output" "-mllvm" "foo/bar.out.opt.yaml"
+// PASS_REMARKS_OUTPUT-NOT: -lto-pass-remarks-with-hotness
+
+// RUN: %clang -target x86_64-apple-darwin12 %t.o -fsave-optimization-record -### 2> %t.log
+// RUN: FileCheck -check-prefix=PASS_REMARKS_OUTPUT_NO_O %s < %t.log
+// PASS_REMARKS_OUTPUT_NO_O: "-mllvm" "-lto-pass-remarks-output" "-mllvm" "a.out.opt.yaml"
+
+// RUN: %clang -target x86_64-apple-darwin12 %t.o -fsave-optimization-record -fprofile-instr-use=blah -### -o foo/bar.out 2> %t.log
+// RUN: FileCheck -check-prefix=PASS_REMARKS_WITH_HOTNESS %s < %t.log
+// PASS_REMARKS_WITH_HOTNESS: "-mllvm" "-lto-pass-remarks-output" "-mllvm" "foo/bar.out.opt.yaml" "-mllvm" "-lto-pass-remarks-with-hotness"

@@ -18,33 +18,36 @@
 
 using namespace llvm;
 
-static ErrorOr<std::unique_ptr<MemoryBuffer>>
-setupMemoryBuffer(std::string Path) {
+static Expected<std::unique_ptr<MemoryBuffer>>
+setupMemoryBuffer(const Twine &Path) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFileOrSTDIN(Path);
   if (std::error_code EC = BufferOrErr.getError())
-    return EC;
+    return errorCodeToError(EC);
   return std::move(BufferOrErr.get());
 }
 
-static std::error_code initializeReader(InstrProfReader &Reader) {
+static Error initializeReader(InstrProfReader &Reader) {
   return Reader.readHeader();
 }
 
-ErrorOr<std::unique_ptr<InstrProfReader>>
-InstrProfReader::create(std::string Path) {
+Expected<std::unique_ptr<InstrProfReader>>
+InstrProfReader::create(const Twine &Path) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path);
-  if (std::error_code EC = BufferOrError.getError())
-    return EC;
+  if (Error E = BufferOrError.takeError())
+    return std::move(E);
   return InstrProfReader::create(std::move(BufferOrError.get()));
 }
 
-ErrorOr<std::unique_ptr<InstrProfReader>>
+Expected<std::unique_ptr<InstrProfReader>>
 InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
   // Sanity check the buffer.
   if (Buffer->getBufferSize() > std::numeric_limits<unsigned>::max())
-    return instrprof_error::too_large;
+    return make_error<InstrProfError>(instrprof_error::too_large);
+
+  if (Buffer->getBufferSize() == 0)
+    return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
 
   std::unique_ptr<InstrProfReader> Result;
   // Create the reader.
@@ -54,59 +57,164 @@ InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
     Result.reset(new RawInstrProfReader64(std::move(Buffer)));
   else if (RawInstrProfReader32::hasFormat(*Buffer))
     Result.reset(new RawInstrProfReader32(std::move(Buffer)));
-  else
+  else if (TextInstrProfReader::hasFormat(*Buffer))
     Result.reset(new TextInstrProfReader(std::move(Buffer)));
+  else
+    return make_error<InstrProfError>(instrprof_error::unrecognized_format);
 
   // Initialize the reader and return the result.
-  if (std::error_code EC = initializeReader(*Result))
-    return EC;
+  if (Error E = initializeReader(*Result))
+    return std::move(E);
 
   return std::move(Result);
 }
 
-ErrorOr<std::unique_ptr<IndexedInstrProfReader>>
-IndexedInstrProfReader::create(std::string Path) {
+Expected<std::unique_ptr<IndexedInstrProfReader>>
+IndexedInstrProfReader::create(const Twine &Path) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path);
-  if (std::error_code EC = BufferOrError.getError())
-    return EC;
+  if (Error E = BufferOrError.takeError())
+    return std::move(E);
   return IndexedInstrProfReader::create(std::move(BufferOrError.get()));
 }
 
 
-ErrorOr<std::unique_ptr<IndexedInstrProfReader>>
+Expected<std::unique_ptr<IndexedInstrProfReader>>
 IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
   // Sanity check the buffer.
   if (Buffer->getBufferSize() > std::numeric_limits<unsigned>::max())
-    return instrprof_error::too_large;
+    return make_error<InstrProfError>(instrprof_error::too_large);
 
   // Create the reader.
   if (!IndexedInstrProfReader::hasFormat(*Buffer))
-    return instrprof_error::bad_magic;
+    return make_error<InstrProfError>(instrprof_error::bad_magic);
   auto Result = llvm::make_unique<IndexedInstrProfReader>(std::move(Buffer));
 
   // Initialize the reader and return the result.
-  if (std::error_code EC = initializeReader(*Result))
-    return EC;
+  if (Error E = initializeReader(*Result))
+    return std::move(E);
 
   return std::move(Result);
 }
 
 void InstrProfIterator::Increment() {
-  if (Reader->readNextRecord(Record))
+  if (auto E = Reader->readNextRecord(Record)) {
+    // Handle errors in the reader.
+    InstrProfError::take(std::move(E));
     *this = InstrProfIterator();
+  }
 }
 
-std::error_code TextInstrProfReader::readNextRecord(InstrProfRecord &Record) {
+bool TextInstrProfReader::hasFormat(const MemoryBuffer &Buffer) {
+  // Verify that this really looks like plain ASCII text by checking a
+  // 'reasonable' number of characters (up to profile magic size).
+  size_t count = std::min(Buffer.getBufferSize(), sizeof(uint64_t));
+  StringRef buffer = Buffer.getBufferStart();
+  return count == 0 ||
+         std::all_of(buffer.begin(), buffer.begin() + count,
+                     [](char c) { return ::isprint(c) || ::isspace(c); });
+}
+
+// Read the profile variant flag from the header: ":FE" means this is a FE
+// generated profile. ":IR" means this is an IR level profile. Other strings
+// with a leading ':' will be reported an error format.
+Error TextInstrProfReader::readHeader() {
+  Symtab.reset(new InstrProfSymtab());
+  bool IsIRInstr = false;
+  if (!Line->startswith(":")) {
+    IsIRLevelProfile = false;
+    return success();
+  }
+  StringRef Str = (Line)->substr(1);
+  if (Str.equals_lower("ir"))
+    IsIRInstr = true;
+  else if (Str.equals_lower("fe"))
+    IsIRInstr = false;
+  else
+    return error(instrprof_error::bad_header);
+
+  ++Line;
+  IsIRLevelProfile = IsIRInstr;
+  return success();
+}
+
+Error
+TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
+
+#define CHECK_LINE_END(Line)                                                   \
+  if (Line.is_at_end())                                                        \
+    return error(instrprof_error::truncated);
+#define READ_NUM(Str, Dst)                                                     \
+  if ((Str).getAsInteger(10, (Dst)))                                           \
+    return error(instrprof_error::malformed);
+#define VP_READ_ADVANCE(Val)                                                   \
+  CHECK_LINE_END(Line);                                                        \
+  uint32_t Val;                                                                \
+  READ_NUM((*Line), (Val));                                                    \
+  Line++;
+
+  if (Line.is_at_end())
+    return success();
+
+  uint32_t NumValueKinds;
+  if (Line->getAsInteger(10, NumValueKinds)) {
+    // No value profile data
+    return success();
+  }
+  if (NumValueKinds == 0 || NumValueKinds > IPVK_Last + 1)
+    return error(instrprof_error::malformed);
+  Line++;
+
+  for (uint32_t VK = 0; VK < NumValueKinds; VK++) {
+    VP_READ_ADVANCE(ValueKind);
+    if (ValueKind > IPVK_Last)
+      return error(instrprof_error::malformed);
+    VP_READ_ADVANCE(NumValueSites);
+    if (!NumValueSites)
+      continue;
+
+    Record.reserveSites(VK, NumValueSites);
+    for (uint32_t S = 0; S < NumValueSites; S++) {
+      VP_READ_ADVANCE(NumValueData);
+
+      std::vector<InstrProfValueData> CurrentValues;
+      for (uint32_t V = 0; V < NumValueData; V++) {
+        CHECK_LINE_END(Line);
+        std::pair<StringRef, StringRef> VD = Line->rsplit(':');
+        uint64_t TakenCount, Value;
+        if (VK == IPVK_IndirectCallTarget) {
+          Symtab->addFuncName(VD.first);
+          Value = IndexedInstrProf::ComputeHash(VD.first);
+        } else {
+          READ_NUM(VD.first, Value);
+        }
+        READ_NUM(VD.second, TakenCount);
+        CurrentValues.push_back({Value, TakenCount});
+        Line++;
+      }
+      Record.addValueData(VK, S, CurrentValues.data(), NumValueData, nullptr);
+    }
+  }
+  return success();
+
+#undef CHECK_LINE_END
+#undef READ_NUM
+#undef VP_READ_ADVANCE
+}
+
+Error TextInstrProfReader::readNextRecord(InstrProfRecord &Record) {
   // Skip empty lines and comments.
   while (!Line.is_at_end() && (Line->empty() || Line->startswith("#")))
     ++Line;
   // If we hit EOF while looking for a name, we're done.
-  if (Line.is_at_end())
+  if (Line.is_at_end()) {
+    Symtab->finalizeSymtab();
     return error(instrprof_error::eof);
+  }
 
   // Read the function name.
   Record.Name = *Line++;
+  Symtab->addFuncName(Record.Name);
 
   // Read the function hash.
   if (Line.is_at_end())
@@ -135,6 +243,13 @@ std::error_code TextInstrProfReader::readNextRecord(InstrProfRecord &Record) {
     Record.Counts.push_back(Count);
   }
 
+  // Check if value profile data exists and read it if so.
+  if (Error E = readValueProfileData(Record))
+    return E;
+
+  // This is needed to avoid two pass parsing because llvm-profdata
+  // does dumping while reading.
+  Symtab->finalizeSymtab();
   return success();
 }
 
@@ -149,7 +264,7 @@ bool RawInstrProfReader<IntPtrT>::hasFormat(const MemoryBuffer &DataBuffer) {
 }
 
 template <class IntPtrT>
-std::error_code RawInstrProfReader<IntPtrT>::readHeader() {
+Error RawInstrProfReader<IntPtrT>::readHeader() {
   if (!hasFormat(*DataBuffer))
     return error(instrprof_error::bad_magic);
   if (DataBuffer->getBufferSize() < sizeof(RawInstrProf::Header))
@@ -161,26 +276,25 @@ std::error_code RawInstrProfReader<IntPtrT>::readHeader() {
 }
 
 template <class IntPtrT>
-std::error_code
-RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
+Error RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
   const char *End = DataBuffer->getBufferEnd();
   // Skip zero padding between profiles.
   while (CurrentPos != End && *CurrentPos == 0)
     ++CurrentPos;
   // If there's nothing left, we're done.
   if (CurrentPos == End)
-    return instrprof_error::eof;
+    return make_error<InstrProfError>(instrprof_error::eof);
   // If there isn't enough space for another header, this is probably just
   // garbage at the end of the file.
   if (CurrentPos + sizeof(RawInstrProf::Header) > End)
-    return instrprof_error::malformed;
+    return make_error<InstrProfError>(instrprof_error::malformed);
   // The writer ensures each profile is padded to start at an aligned address.
-  if (reinterpret_cast<size_t>(CurrentPos) % alignOf<uint64_t>())
-    return instrprof_error::malformed;
+  if (reinterpret_cast<size_t>(CurrentPos) % alignof(uint64_t))
+    return make_error<InstrProfError>(instrprof_error::malformed);
   // The magic should have the same byte order as in the previous header.
   uint64_t Magic = *reinterpret_cast<const uint64_t *>(CurrentPos);
   if (Magic != swap(RawInstrProf::getMagic<IntPtrT>()))
-    return instrprof_error::bad_magic;
+    return make_error<InstrProfError>(instrprof_error::bad_magic);
 
   // There's another profile to read, so we need to process the header.
   auto *Header = reinterpret_cast<const RawInstrProf::Header *>(CurrentPos);
@@ -188,25 +302,43 @@ RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
 }
 
 template <class IntPtrT>
-std::error_code RawInstrProfReader<IntPtrT>::readHeader(
+Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
+  if (Error E = Symtab.create(StringRef(NamesStart, NamesSize)))
+    return error(std::move(E));
+  for (const RawInstrProf::ProfileData<IntPtrT> *I = Data; I != DataEnd; ++I) {
+    const IntPtrT FPtr = swap(I->FunctionPointer);
+    if (!FPtr)
+      continue;
+    Symtab.mapAddress(FPtr, I->NameRef);
+  }
+  Symtab.finalizeSymtab();
+  return success();
+}
+
+template <class IntPtrT>
+Error RawInstrProfReader<IntPtrT>::readHeader(
     const RawInstrProf::Header &Header) {
-  if (swap(Header.Version) != RawInstrProf::Version)
+  Version = swap(Header.Version);
+  if (GET_VERSION(Version) != RawInstrProf::Version)
     return error(instrprof_error::unsupported_version);
 
   CountersDelta = swap(Header.CountersDelta);
   NamesDelta = swap(Header.NamesDelta);
   auto DataSize = swap(Header.DataSize);
   auto CountersSize = swap(Header.CountersSize);
-  auto NamesSize = swap(Header.NamesSize);
+  NamesSize = swap(Header.NamesSize);
+  ValueKindLast = swap(Header.ValueKindLast);
+
+  auto DataSizeInBytes = DataSize * sizeof(RawInstrProf::ProfileData<IntPtrT>);
+  auto PaddingSize = getNumPaddingBytes(NamesSize);
 
   ptrdiff_t DataOffset = sizeof(RawInstrProf::Header);
-  ptrdiff_t CountersOffset =
-      DataOffset + sizeof(RawInstrProf::ProfileData<IntPtrT>) * DataSize;
+  ptrdiff_t CountersOffset = DataOffset + DataSizeInBytes;
   ptrdiff_t NamesOffset = CountersOffset + sizeof(uint64_t) * CountersSize;
-  size_t ProfileSize = NamesOffset + sizeof(char) * NamesSize;
+  ptrdiff_t ValueDataOffset = NamesOffset + NamesSize + PaddingSize;
 
   auto *Start = reinterpret_cast<const char *>(&Header);
-  if (Start + ProfileSize > DataBuffer->getBufferEnd())
+  if (Start + ValueDataOffset > DataBuffer->getBufferEnd())
     return error(instrprof_error::bad_header);
 
   Data = reinterpret_cast<const RawInstrProf::ProfileData<IntPtrT> *>(
@@ -214,30 +346,30 @@ std::error_code RawInstrProfReader<IntPtrT>::readHeader(
   DataEnd = Data + DataSize;
   CountersStart = reinterpret_cast<const uint64_t *>(Start + CountersOffset);
   NamesStart = Start + NamesOffset;
-  ProfileEnd = Start + ProfileSize;
+  ValueDataStart = reinterpret_cast<const uint8_t *>(Start + ValueDataOffset);
 
+  std::unique_ptr<InstrProfSymtab> NewSymtab = make_unique<InstrProfSymtab>();
+  if (Error E = createSymtab(*NewSymtab.get()))
+    return E;
+
+  Symtab = std::move(NewSymtab);
   return success();
 }
 
 template <class IntPtrT>
-std::error_code RawInstrProfReader<IntPtrT>::readName(InstrProfRecord &Record) {
-  Record.Name = StringRef(getName(Data->NamePtr), swap(Data->NameSize));
-  if (Record.Name.data() < NamesStart ||
-      Record.Name.data() + Record.Name.size() > DataBuffer->getBufferEnd())
-    return error(instrprof_error::malformed);
-
+Error RawInstrProfReader<IntPtrT>::readName(InstrProfRecord &Record) {
+  Record.Name = getName(Data->NameRef);
   return success();
 }
 
 template <class IntPtrT>
-std::error_code RawInstrProfReader<IntPtrT>::readFuncHash(
-    InstrProfRecord &Record) {
+Error RawInstrProfReader<IntPtrT>::readFuncHash(InstrProfRecord &Record) {
   Record.Hash = swap(Data->FuncHash);
   return success();
 }
 
 template <class IntPtrT>
-std::error_code RawInstrProfReader<IntPtrT>::readRawCounts(
+Error RawInstrProfReader<IntPtrT>::readRawCounts(
     InstrProfRecord &Record) {
   uint32_t NumCounters = swap(Data->NumCounters);
   IntPtrT CounterPtr = Data->CounterPtr;
@@ -264,19 +396,57 @@ std::error_code RawInstrProfReader<IntPtrT>::readRawCounts(
 }
 
 template <class IntPtrT>
-std::error_code RawInstrProfReader<IntPtrT>::readNextRecord(
+Error RawInstrProfReader<IntPtrT>::readValueProfilingData(
     InstrProfRecord &Record) {
+
+  Record.clearValueData();
+  CurValueDataSize = 0;
+  // Need to match the logic in value profile dumper code in compiler-rt:
+  uint32_t NumValueKinds = 0;
+  for (uint32_t I = 0; I < IPVK_Last + 1; I++)
+    NumValueKinds += (Data->NumValueSites[I] != 0);
+
+  if (!NumValueKinds)
+    return success();
+
+  Expected<std::unique_ptr<ValueProfData>> VDataPtrOrErr =
+      ValueProfData::getValueProfData(
+          ValueDataStart, (const unsigned char *)DataBuffer->getBufferEnd(),
+          getDataEndianness());
+
+  if (Error E = VDataPtrOrErr.takeError())
+    return E;
+
+  // Note that besides deserialization, this also performs the conversion for
+  // indirect call targets.  The function pointers from the raw profile are
+  // remapped into function name hashes.
+  VDataPtrOrErr.get()->deserializeTo(Record, &Symtab->getAddrHashMap());
+  CurValueDataSize = VDataPtrOrErr.get()->getSize();
+  return success();
+}
+
+template <class IntPtrT>
+Error RawInstrProfReader<IntPtrT>::readNextRecord(InstrProfRecord &Record) {
   if (atEnd())
-    if (std::error_code EC = readNextHeader(ProfileEnd)) return EC;
+    // At this point, ValueDataStart field points to the next header.
+    if (Error E = readNextHeader(getNextHeaderPos()))
+      return E;
 
   // Read name ad set it in Record.
-  if (std::error_code EC = readName(Record)) return EC;
+  if (Error E = readName(Record))
+    return E;
 
   // Read FuncHash and set it in Record.
-  if (std::error_code EC = readFuncHash(Record)) return EC;
+  if (Error E = readFuncHash(Record))
+    return E;
 
   // Read raw counts and set Record.
-  if (std::error_code EC = readRawCounts(Record)) return EC;
+  if (Error E = readRawCounts(Record))
+    return E;
+
+  // Read value data and set Record.
+  if (Error E = readValueProfilingData(Record))
+    return E;
 
   // Iterate.
   advanceData();
@@ -296,53 +466,17 @@ InstrProfLookupTrait::ComputeHash(StringRef K) {
 typedef InstrProfLookupTrait::data_type data_type;
 typedef InstrProfLookupTrait::offset_type offset_type;
 
-bool InstrProfLookupTrait::ReadValueProfilingData(
+bool InstrProfLookupTrait::readValueProfilingData(
     const unsigned char *&D, const unsigned char *const End) {
+  Expected<std::unique_ptr<ValueProfData>> VDataPtrOrErr =
+      ValueProfData::getValueProfData(D, End, ValueProfDataEndianness);
 
-  using namespace support;
-  // Read number of value kinds with value sites.
-  if (D + sizeof(uint64_t) > End)
+  if (VDataPtrOrErr.takeError())
     return false;
-  uint64_t ValueKindCount = endian::readNext<uint64_t, little, unaligned>(D);
 
-  InstrProfRecord &ProfRecord = DataBuffer.back();
-  for (uint32_t Kind = 0; Kind < ValueKindCount; ++Kind) {
+  VDataPtrOrErr.get()->deserializeTo(DataBuffer.back(), nullptr);
+  D += VDataPtrOrErr.get()->TotalSize;
 
-    // Read value kind and number of value sites for kind.
-    if (D + 2 * sizeof(uint64_t) > End)
-      return false;
-
-    uint64_t ValueKind = endian::readNext<uint64_t, little, unaligned>(D);
-    uint64_t ValueSiteCount = endian::readNext<uint64_t, little, unaligned>(D);
-
-    ProfRecord.reserveSites(ValueKind, ValueSiteCount);
-
-    for (uint64_t VSite = 0; VSite < ValueSiteCount; ++VSite) {
-      // Read number of value data pairs at value site.
-      if (D + sizeof(uint64_t) > End)
-        return false;
-
-      uint64_t ValueDataCount =
-          endian::readNext<uint64_t, little, unaligned>(D);
-
-      // Check if there are as many ValueDataPairs as ValueDataCount in memory.
-      if (D + (ValueDataCount << 1) * sizeof(uint64_t) > End)
-        return false;
-
-      std::unique_ptr<InstrProfValueData[]> VDataPtr(
-          ValueDataCount == 0 ? nullptr
-                              : new InstrProfValueData[ValueDataCount]);
-
-      for (uint64_t VCount = 0; VCount < ValueDataCount; ++VCount) {
-        VDataPtr[VCount].Value =
-            endian::readNext<uint64_t, little, unaligned>(D);
-        VDataPtr[VCount].Count =
-            endian::readNext<uint64_t, little, unaligned>(D);
-      }
-      ProfRecord.addValueData(ValueKind, VSite, VDataPtr.get(), ValueDataCount,
-                              &HashKeys);
-    }
-  }
   return true;
 }
 
@@ -363,10 +497,10 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
       return data_type();
     uint64_t Hash = endian::readNext<uint64_t, little, unaligned>(D);
 
-    // Initialize number of counters for FormatVersion == 1.
+    // Initialize number of counters for GET_VERSION(FormatVersion) == 1.
     uint64_t CountsSize = N / sizeof(uint64_t) - 1;
     // If format version is different then read the number of counters.
-    if (FormatVersion != 1) {
+    if (GET_VERSION(FormatVersion) != IndexedInstrProf::ProfVersion::Version1) {
       if (D + sizeof(uint64_t) > End)
         return data_type();
       CountsSize = endian::readNext<uint64_t, little, unaligned>(D);
@@ -383,7 +517,8 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     DataBuffer.emplace_back(K, Hash, std::move(CounterBuffer));
 
     // Read value profiling data.
-    if (FormatVersion > 2 && !ReadValueProfilingData(D, End)) {
+    if (GET_VERSION(FormatVersion) > IndexedInstrProf::ProfVersion::Version2 &&
+        !readValueProfilingData(D, End)) {
       DataBuffer.clear();
       return data_type();
     }
@@ -391,51 +526,49 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
   return DataBuffer;
 }
 
-std::error_code InstrProfReaderIndex::getRecords(
+template <typename HashTableImpl>
+Error InstrProfReaderIndex<HashTableImpl>::getRecords(
     StringRef FuncName, ArrayRef<InstrProfRecord> &Data) {
-  auto Iter = Index->find(FuncName);
-  if (Iter == Index->end()) return instrprof_error::unknown_function;
+  auto Iter = HashTable->find(FuncName);
+  if (Iter == HashTable->end())
+    return make_error<InstrProfError>(instrprof_error::unknown_function);
 
   Data = (*Iter);
-  if (Data.empty()) return instrprof_error::malformed;
+  if (Data.empty())
+    return make_error<InstrProfError>(instrprof_error::malformed);
 
-  return instrprof_error::success;
+  return Error::success();
 }
 
-std::error_code InstrProfReaderIndex::getRecords(
+template <typename HashTableImpl>
+Error InstrProfReaderIndex<HashTableImpl>::getRecords(
     ArrayRef<InstrProfRecord> &Data) {
-  if (atEnd()) return instrprof_error::eof;
+  if (atEnd())
+    return make_error<InstrProfError>(instrprof_error::eof);
 
   Data = *RecordIterator;
 
-  if (Data.empty()) return instrprof_error::malformed;
+  if (Data.empty())
+    return make_error<InstrProfError>(instrprof_error::malformed);
 
-  return instrprof_error::success;
+  return Error::success();
 }
 
-void InstrProfReaderIndex::Init(const unsigned char *Buckets,
-                                const unsigned char *const Payload,
-                                const unsigned char *const Base,
-                                IndexedInstrProf::HashT HashType,
-                                uint64_t Version) {
+template <typename HashTableImpl>
+InstrProfReaderIndex<HashTableImpl>::InstrProfReaderIndex(
+    const unsigned char *Buckets, const unsigned char *const Payload,
+    const unsigned char *const Base, IndexedInstrProf::HashT HashType,
+    uint64_t Version) {
   FormatVersion = Version;
-  Index.reset(IndexType::Create(Buckets, Payload, Base,
-                                InstrProfLookupTrait(HashType, Version)));
-  // Form the map of hash values to const char* keys in profiling data.
-  std::vector<std::pair<uint64_t, const char *>> HashKeys;
-  for (auto Key : Index->keys()) {
-    const char *KeyTableRef = StringTable.insertString(Key);
-    HashKeys.push_back(std::make_pair(ComputeHash(HashType, Key), KeyTableRef));
-  }
-  std::sort(HashKeys.begin(), HashKeys.end(), less_first());
-  HashKeys.erase(std::unique(HashKeys.begin(), HashKeys.end()), HashKeys.end());
-  // Set the hash key map for the InstrLookupTrait
-  Index->getInfoObj().setHashKeys(std::move(HashKeys));
-  RecordIterator = Index->data_begin();
+  HashTable.reset(HashTableImpl::Create(
+      Buckets, Payload, Base,
+      typename HashTableImpl::InfoType(HashType, Version)));
+  RecordIterator = HashTable->data_begin();
 }
 
 bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
-  if (DataBuffer.getBufferSize() < 8) return false;
+  if (DataBuffer.getBufferSize() < 8)
+    return false;
   using namespace support;
   uint64_t Magic =
       endian::read<uint64_t, little, aligned>(DataBuffer.getBufferStart());
@@ -443,7 +576,56 @@ bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
   return Magic == IndexedInstrProf::Magic;
 }
 
-std::error_code IndexedInstrProfReader::readHeader() {
+const unsigned char *
+IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
+                                    const unsigned char *Cur) {
+  using namespace IndexedInstrProf;
+  using namespace support;
+  if (Version >= IndexedInstrProf::Version4) {
+    const IndexedInstrProf::Summary *SummaryInLE =
+        reinterpret_cast<const IndexedInstrProf::Summary *>(Cur);
+    uint64_t NFields =
+        endian::byte_swap<uint64_t, little>(SummaryInLE->NumSummaryFields);
+    uint64_t NEntries =
+        endian::byte_swap<uint64_t, little>(SummaryInLE->NumCutoffEntries);
+    uint32_t SummarySize =
+        IndexedInstrProf::Summary::getSize(NFields, NEntries);
+    std::unique_ptr<IndexedInstrProf::Summary> SummaryData =
+        IndexedInstrProf::allocSummary(SummarySize);
+
+    const uint64_t *Src = reinterpret_cast<const uint64_t *>(SummaryInLE);
+    uint64_t *Dst = reinterpret_cast<uint64_t *>(SummaryData.get());
+    for (unsigned I = 0; I < SummarySize / sizeof(uint64_t); I++)
+      Dst[I] = endian::byte_swap<uint64_t, little>(Src[I]);
+
+    llvm::SummaryEntryVector DetailedSummary;
+    for (unsigned I = 0; I < SummaryData->NumCutoffEntries; I++) {
+      const IndexedInstrProf::Summary::Entry &Ent = SummaryData->getEntry(I);
+      DetailedSummary.emplace_back((uint32_t)Ent.Cutoff, Ent.MinBlockCount,
+                                   Ent.NumBlocks);
+    }
+    // initialize InstrProfSummary using the SummaryData from disk.
+    this->Summary = llvm::make_unique<ProfileSummary>(
+        ProfileSummary::PSK_Instr, DetailedSummary,
+        SummaryData->get(Summary::TotalBlockCount),
+        SummaryData->get(Summary::MaxBlockCount),
+        SummaryData->get(Summary::MaxInternalBlockCount),
+        SummaryData->get(Summary::MaxFunctionCount),
+        SummaryData->get(Summary::TotalNumBlocks),
+        SummaryData->get(Summary::TotalNumFunctions));
+    return Cur + SummarySize;
+  } else {
+    // For older version of profile data, we need to compute on the fly:
+    using namespace IndexedInstrProf;
+    InstrProfSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
+    // FIXME: This only computes an empty summary. Need to call addRecord for
+    // all InstrProfRecords to get the correct summary.
+    this->Summary = Builder.getSummary();
+    return Cur;
+  }
+}
+
+Error IndexedInstrProfReader::readHeader() {
   const unsigned char *Start =
       (const unsigned char *)DataBuffer->getBufferStart();
   const unsigned char *Cur = Start;
@@ -462,12 +644,11 @@ std::error_code IndexedInstrProfReader::readHeader() {
 
   // Read the version.
   uint64_t FormatVersion = endian::byte_swap<uint64_t, little>(Header->Version);
-  if (FormatVersion > IndexedInstrProf::Version)
+  if (GET_VERSION(FormatVersion) >
+      IndexedInstrProf::ProfVersion::CurrentVersion)
     return error(instrprof_error::unsupported_version);
 
-  // Read the maximal function count.
-  MaxFunctionCount =
-      endian::byte_swap<uint64_t, little>(Header->MaxFunctionCount);
+  Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur);
 
   // Read the hash type and start offset.
   IndexedInstrProf::HashT HashType = static_cast<IndexedInstrProf::HashT>(
@@ -478,17 +659,31 @@ std::error_code IndexedInstrProfReader::readHeader() {
   uint64_t HashOffset = endian::byte_swap<uint64_t, little>(Header->HashOffset);
 
   // The rest of the file is an on disk hash table.
-  Index.Init(Start + HashOffset, Cur, Start, HashType, FormatVersion);
-
+  InstrProfReaderIndexBase *IndexPtr = nullptr;
+  IndexPtr = new InstrProfReaderIndex<OnDiskHashTableImplV3>(
+      Start + HashOffset, Cur, Start, HashType, FormatVersion);
+  Index.reset(IndexPtr);
   return success();
 }
 
-ErrorOr<InstrProfRecord>
+InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
+  if (Symtab.get())
+    return *Symtab.get();
+
+  std::unique_ptr<InstrProfSymtab> NewSymtab = make_unique<InstrProfSymtab>();
+  Index->populateSymtab(*NewSymtab.get());
+
+  Symtab = std::move(NewSymtab);
+  return *Symtab.get();
+}
+
+Expected<InstrProfRecord>
 IndexedInstrProfReader::getInstrProfRecord(StringRef FuncName,
                                            uint64_t FuncHash) {
   ArrayRef<InstrProfRecord> Data;
-  std::error_code EC = Index.getRecords(FuncName, Data);
-  if (EC != instrprof_error::success) return EC;
+  Error Err = Index->getRecords(FuncName, Data);
+  if (Err)
+    return std::move(Err);
   // Found it. Look for counters with the right hash.
   for (unsigned I = 0, E = Data.size(); I < E; ++I) {
     // Check for a match and fill the vector if there is one.
@@ -499,29 +694,29 @@ IndexedInstrProfReader::getInstrProfRecord(StringRef FuncName,
   return error(instrprof_error::hash_mismatch);
 }
 
-std::error_code
-IndexedInstrProfReader::getFunctionCounts(StringRef FuncName, uint64_t FuncHash,
-                                          std::vector<uint64_t> &Counts) {
-  ErrorOr<InstrProfRecord> Record = getInstrProfRecord(FuncName, FuncHash);
-  if (std::error_code EC = Record.getError())
-    return EC;
+Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
+                                                uint64_t FuncHash,
+                                                std::vector<uint64_t> &Counts) {
+  Expected<InstrProfRecord> Record = getInstrProfRecord(FuncName, FuncHash);
+  if (Error E = Record.takeError())
+    return error(std::move(E));
 
   Counts = Record.get().Counts;
   return success();
 }
 
-std::error_code IndexedInstrProfReader::readNextRecord(
-    InstrProfRecord &Record) {
+Error IndexedInstrProfReader::readNextRecord(InstrProfRecord &Record) {
   static unsigned RecordIndex = 0;
 
   ArrayRef<InstrProfRecord> Data;
 
-  std::error_code EC = Index.getRecords(Data);
-  if (EC != instrprof_error::success) return error(EC);
+  Error E = Index->getRecords(Data);
+  if (E)
+    return error(std::move(E));
 
   Record = Data[RecordIndex++];
   if (RecordIndex >= Data.size()) {
-    Index.advanceToNextKey();
+    Index->advanceToNextKey();
     RecordIndex = 0;
   }
   return success();

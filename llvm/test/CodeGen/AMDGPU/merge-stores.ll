@@ -1,9 +1,10 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-NOAA %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-NOAA %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-NOAA %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-NOAA %s
 
-; RUN: llc -march=amdgcn -verify-machineinstrs -combiner-alias-analysis < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -combiner-alias-analysis < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -combiner-alias-analysis -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -combiner-alias-analysis -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
 
+; This test is mostly to test DAG store merging, so disable the vectorizer.
 ; Run with devices with different unaligned load restrictions.
 
 ; TODO: Vector element tests
@@ -148,12 +149,8 @@ define void @merge_global_store_4_constants_f32(float addrspace(1)* %out) #0 {
   ret void
 }
 
-; FIXME: Should be able to merge this
 ; GCN-LABEL: {{^}}merge_global_store_4_constants_mixed_i32_f32:
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
+; GCN-NOAA: buffer_store_dwordx4 v
 
 ; GCN-AA: buffer_store_dwordx2
 ; GCN-AA: buffer_store_dword v
@@ -191,9 +188,7 @@ define void @merge_global_store_3_constants_i32(i32 addrspace(1)* %out) #0 {
 }
 
 ; GCN-LABEL: {{^}}merge_global_store_2_constants_i64:
-; XGCN: buffer_store_dwordx4
-; GCN: buffer_store_dwordx2
-; GCN: buffer_store_dwordx2
+; GCN: buffer_store_dwordx4
 define void @merge_global_store_2_constants_i64(i64 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i64, i64 addrspace(1)* %out, i64 1
 
@@ -203,13 +198,8 @@ define void @merge_global_store_2_constants_i64(i64 addrspace(1)* %out) #0 {
 }
 
 ; GCN-LABEL: {{^}}merge_global_store_4_constants_i64:
-; XGCN: buffer_store_dwordx4
-; XGCN: buffer_store_dwordx4
-
-; GCN: buffer_store_dwordx2
-; GCN: buffer_store_dwordx2
-; GCN: buffer_store_dwordx2
-; GCN: buffer_store_dwordx2
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
 define void @merge_global_store_4_constants_i64(i64 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i64, i64 addrspace(1)* %out, i64 1
   %out.gep.2 = getelementptr i64, i64 addrspace(1)* %out, i64 2
@@ -238,8 +228,8 @@ define void @merge_global_store_2_adjacent_loads_i32(i32 addrspace(1)* %out, i32
 }
 
 ; GCN-LABEL: {{^}}merge_global_store_2_adjacent_loads_i32_nonzero_base:
-; GCN: buffer_load_dwordx2 [[LOAD:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
-; GCN: buffer_store_dwordx2 [[LOAD]], s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
+; GCN: buffer_load_dwordx2 [[LOAD:v\[[0-9]+:[0-9]+\]]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
+; GCN: buffer_store_dwordx2 [[LOAD]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
 define void @merge_global_store_2_adjacent_loads_i32_nonzero_base(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %in.gep.0 = getelementptr i32, i32 addrspace(1)* %in, i32 2
   %in.gep.1 = getelementptr i32, i32 addrspace(1)* %in, i32 3
@@ -341,8 +331,8 @@ define void @merge_global_store_4_adjacent_loads_f32(float addrspace(1)* %out, f
 }
 
 ; GCN-LABEL: {{^}}merge_global_store_4_adjacent_loads_i32_nonzero_base:
-; GCN: buffer_load_dwordx4 [[LOAD:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, 0 offset:44
-; GCN: buffer_store_dwordx4 [[LOAD]], s{{\[[0-9]+:[0-9]+\]}}, 0 offset:28
+; GCN: buffer_load_dwordx4 [[LOAD:v\[[0-9]+:[0-9]+\]]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:44
+; GCN: buffer_store_dwordx4 [[LOAD]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:28
 define void @merge_global_store_4_adjacent_loads_i32_nonzero_base(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %in.gep.0 = getelementptr i32, i32 addrspace(1)* %in, i32 11
   %in.gep.1 = getelementptr i32, i32 addrspace(1)* %in, i32 12
@@ -383,7 +373,7 @@ define void @merge_global_store_4_adjacent_loads_inverse_i32(i32 addrspace(1)* %
   %w = load i32, i32 addrspace(1)* %in.gep.3
 
   ; Make sure the barrier doesn't stop this
-  tail call void @llvm.AMDGPU.barrier.local() #1
+  tail call void @llvm.amdgcn.s.barrier() #1
 
   store i32 %w, i32 addrspace(1)* %out.gep.3
   store i32 %z, i32 addrspace(1)* %out.gep.2
@@ -420,7 +410,7 @@ define void @merge_global_store_4_adjacent_loads_shuffle_i32(i32 addrspace(1)* %
   %w = load i32, i32 addrspace(1)* %in.gep.3
 
   ; Make sure the barrier doesn't stop this
-  tail call void @llvm.AMDGPU.barrier.local() #1
+  tail call void @llvm.amdgcn.s.barrier() #1
 
   store i32 %w, i32 addrspace(1)* %out
   store i32 %z, i32 addrspace(1)* %out.gep.1
@@ -539,10 +529,15 @@ define void @merge_local_store_2_constants_i32(i32 addrspace(3)* %out) #0 {
 }
 
 ; GCN-LABEL: {{^}}merge_local_store_4_constants_i32:
-; GCN: ds_write_b32
-; GCN: ds_write_b32
-; GCN: ds_write_b32
-; GCN: ds_write_b32
+; GCN-DAG: v_mov_b32_e32 [[K2:v[0-9]+]], 0x1c8
+; GCN-DAG: v_mov_b32_e32 [[K3:v[0-9]+]], 0x14d
+; GCN-DAG: ds_write2_b32 v{{[0-9]+}}, [[K2]], [[K3]] offset0:2 offset1:3
+
+; GCN-DAG: v_mov_b32_e32 [[K0:v[0-9]+]], 0x4d2
+; GCN-DAG: v_mov_b32_e32 [[K1:v[0-9]+]], 0x7b
+; GCN-DAG: ds_write2_b32 v{{[0-9]+}}, [[K0]], [[K1]] offset1:1
+
+; GCN: s_endpgm
 define void @merge_local_store_4_constants_i32(i32 addrspace(3)* %out) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(3)* %out, i32 1
   %out.gep.2 = getelementptr i32, i32 addrspace(3)* %out, i32 2
@@ -613,22 +608,9 @@ define void @merge_global_store_7_constants_i32(i32 addrspace(1)* %out) {
   ret void
 }
 
-; FIXME: This should do 2 dwordx4 loads
 ; GCN-LABEL: {{^}}merge_global_store_8_constants_i32:
-
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-
-; GCN-AA: buffer_store_dwordx4
-; GCN-AA: buffer_store_dwordx2
-; GCN-AA: buffer_store_dwordx2
-
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
 ; GCN: s_endpgm
 define void @merge_global_store_8_constants_i32(i32 addrspace(1)* %out) {
   store i32 34, i32 addrspace(1)* %out, align 4
@@ -649,7 +631,78 @@ define void @merge_global_store_8_constants_i32(i32 addrspace(1)* %out) {
   ret void
 }
 
-declare void @llvm.AMDGPU.barrier.local() #1
+; This requires handling of scalar_to_vector for v2i64 to avoid
+; scratch usage.
+; FIXME: Should do single load and store
+
+; GCN-LABEL: {{^}}copy_v3i32_align4:
+; GCN-NOT: SCRATCH_RSRC_DWORD
+; GCN-DAG: buffer_load_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
+; GCN-DAG: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN-NOT: offen
+; GCN: s_waitcnt vmcnt
+; GCN-NOT: offen
+; GCN-DAG: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN-DAG: buffer_store_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
+
+; GCN: ScratchSize: 0{{$}}
+define void @copy_v3i32_align4(<3 x i32> addrspace(1)* noalias %out, <3 x i32> addrspace(1)* noalias %in) #0 {
+  %vec = load <3 x i32>, <3 x i32> addrspace(1)* %in, align 4
+  store <3 x i32> %vec, <3 x i32> addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}copy_v3i64_align4:
+; GCN-NOT: SCRATCH_RSRC_DWORD
+; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN-DAG: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:16{{$}}
+; GCN-NOT: offen
+; GCN: s_waitcnt vmcnt
+; GCN-NOT: offen
+; GCN-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN-DAG: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:16{{$}}
+; GCN: ScratchSize: 0{{$}}
+define void @copy_v3i64_align4(<3 x i64> addrspace(1)* noalias %out, <3 x i64> addrspace(1)* noalias %in) #0 {
+  %vec = load <3 x i64>, <3 x i64> addrspace(1)* %in, align 4
+  store <3 x i64> %vec, <3 x i64> addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}copy_v3f32_align4:
+; GCN-NOT: SCRATCH_RSRC_DWORD
+; GCN-DAG: buffer_load_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
+; GCN-DAG: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN-NOT: offen
+; GCN: s_waitcnt vmcnt
+; GCN-NOT: offen
+; GCN-DAG: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN-DAG: buffer_store_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
+; GCN: ScratchSize: 0{{$}}
+define void @copy_v3f32_align4(<3 x float> addrspace(1)* noalias %out, <3 x float> addrspace(1)* noalias %in) #0 {
+  %vec = load <3 x float>, <3 x float> addrspace(1)* %in, align 4
+  %fadd = fadd <3 x float> %vec, <float 1.0, float 2.0, float 4.0>
+  store <3 x float> %fadd, <3 x float> addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}copy_v3f64_align4:
+; GCN-NOT: SCRATCH_RSRC_DWORD
+; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN-DAG: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:16{{$}}
+; GCN-NOT: offen
+; GCN: s_waitcnt vmcnt
+; GCN-NOT: offen
+; GCN-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN-DAG: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:16{{$}}
+; GCN: ScratchSize: 0{{$}}
+define void @copy_v3f64_align4(<3 x double> addrspace(1)* noalias %out, <3 x double> addrspace(1)* noalias %in) #0 {
+  %vec = load <3 x double>, <3 x double> addrspace(1)* %in, align 4
+  %fadd = fadd <3 x double> %vec, <double 1.0, double 2.0, double 4.0>
+  store <3 x double> %fadd, <3 x double> addrspace(1)* %out
+  ret void
+}
+
+declare void @llvm.amdgcn.s.barrier() #1
 
 attributes #0 = { nounwind }
-attributes #1 = { noduplicate nounwind }
+attributes #1 = { convergent nounwind }

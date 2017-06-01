@@ -8,20 +8,19 @@
 @ CHECK: .byte target(sbrel)
 @ CHECK:       ^
 
-@ TODO: enable these negative test cases
-@ 	.hword target(sbrel)
-@ @ CHECK-SBREL-HWORD: error: relocated expression must be 32-bit
-@ @ CHECK-SBREL-HWORD: .hword target(sbrel)
-@ @ CHECK-SBREL-HWORD:        ^
-@
-@ 	.short target(sbrel)
-@ @ CHECK-SBREL-SHORT: error: relocated expression must be 32-bit
-@ @ CHECK-SBREL-SHORT: .short target(sbrel)
-@ @ CHECK-SBREL-SHORT:        ^
-@
-@ 	.quad target(sbrel)
-@ @ CHECK-SBREL-SHORT: error: relocated expression must be 32-bit
-@ @ CHECK-SBREL-SHORT: .quad target(sbrel)
-@ @ CHECK-SBREL-SHORT:        ^
+	.hword target(sbrel)
+@ CHECK: error: relocated expression must be 32-bit
+@ CHECK: .hword target(sbrel)
+@ CHECK:        ^
+
+	.short target(sbrel)
+@ CHECK: error: relocated expression must be 32-bit
+@ CHECK: .short target(sbrel)
+@ CHECK:        ^
+
+	.quad target(sbrel)
+@ CHECK: error: relocated expression must be 32-bit
+@ CHECK: .quad target(sbrel)
+@ CHECK:        ^
 
 

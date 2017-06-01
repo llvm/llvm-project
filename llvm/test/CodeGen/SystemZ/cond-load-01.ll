@@ -2,6 +2,10 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z196 | FileCheck %s
 
+; Run the test again to make sure it still works the same even
+; in the presence of the load-store-on-condition-2 facility.
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
+
 declare i32 @foo(i32 *)
 
 ; Test the simple case.
@@ -128,3 +132,17 @@ exit:
   %res = phi i32 [ %easy, %entry ], [ %other, %load ]
   ret i32 %res
 }
+
+; Test that volatile loads do not use LOC, since if the condition is false,
+; it is unspecified whether or not the load happens.  LOCR is fine though.
+define i32 @f10(i32 %easy, i32 *%ptr, i32 %limit) {
+; CHECK-LABEL: f10:
+; CHECK: l {{%r[0-9]*}}, 0(%r3)
+; CHECK: locr
+; CHECK: br %r14
+  %cond = icmp ult i32 %limit, 42
+  %other = load volatile i32, i32 *%ptr
+  %res = select i1 %cond, i32 %easy, i32 %other
+  ret i32 %res
+}
+

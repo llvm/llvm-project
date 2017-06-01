@@ -10,7 +10,7 @@
 ; CHECK-NEXT: %B = type { %A }
 ; CHECK-NEXT: %A = type { i8 }
 
-; CHECK: @g1 = external global %C.0
+; CHECK: @g1 = global %C.0 zeroinitializer
 ; CHECK:  getelementptr %C.0, %C.0* null, i64 0, i32 0, i32 0
 
 %A   = type { i8 }
@@ -21,4 +21,4 @@ define void @f1() {
   getelementptr %C, %C* null, i64 0, i32 0, i32 0
   ret void
 }
-@g1 = external global %C.0
+@g1 = global %C.0 zeroinitializer

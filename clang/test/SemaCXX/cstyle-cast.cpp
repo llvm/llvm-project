@@ -84,11 +84,11 @@ void t_529_2()
   (void)(void*)((int*)0);
   (void)(volatile const void*)((const int*)0);
   (void)(A*)((B*)0);
-  (void)(A&)(*((B*)0));
+  (void)(A&)(*((B*)0)); // expected-warning {{binding dereferenced null pointer to reference has undefined behavior}}
   (void)(const B*)((C1*)0);
-  (void)(B&)(*((C1*)0));
+  (void)(B&)(*((C1*)0)); // expected-warning {{binding dereferenced null pointer to reference has undefined behavior}}
   (void)(A*)((D*)0);
-  (void)(const A&)(*((D*)0));
+  (void)(const A&)(*((D*)0)); // expected-warning {{binding dereferenced null pointer to reference has undefined behavior}}
   (void)(int B::*)((int A::*)0);
   (void)(void (B::*)())((void (A::*)())0);
   (void)(A*)((E*)0); // C-style cast ignores access control

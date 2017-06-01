@@ -23,7 +23,6 @@
 #define LLVM_C_ORCBINDINGS_H
 
 #include "llvm-c/Object.h"
-#include "llvm-c/Support.h"
 #include "llvm-c/TargetMachine.h"
 
 #ifdef __cplusplus
@@ -33,10 +32,11 @@ extern "C" {
 typedef struct LLVMOrcOpaqueJITStack *LLVMOrcJITStackRef;
 typedef uint32_t LLVMOrcModuleHandle;
 typedef uint64_t LLVMOrcTargetAddress;
-typedef uint64_t (*LLVMOrcSymbolResolverFn)(const char *Name,
-                                            void *LookupCtx);
+typedef uint64_t (*LLVMOrcSymbolResolverFn)(const char *Name, void *LookupCtx);
 typedef uint64_t (*LLVMOrcLazyCompileCallbackFn)(LLVMOrcJITStackRef JITStack,
                                                  void *CallbackCtx);
+
+typedef enum { LLVMOrcErrSuccess = 0, LLVMOrcErrGeneric } LLVMOrcErrorCode;
 
 /**
  * Create an ORC JIT stack.
@@ -50,6 +50,14 @@ typedef uint64_t (*LLVMOrcLazyCompileCallbackFn)(LLVMOrcJITStackRef JITStack,
 LLVMOrcJITStackRef LLVMOrcCreateInstance(LLVMTargetMachineRef TM);
 
 /**
+ * Get the error message for the most recent error (if any).
+ *
+ * This message is owned by the ORC JIT Stack and will be freed when the stack
+ * is disposed of by LLVMOrcDisposeInstance.
+ */
+const char *LLVMOrcGetErrorMsg(LLVMOrcJITStackRef JITStack);
+
+/**
  * Mangle the given symbol.
  * Memory will be allocated for MangledSymbol to hold the result. The client
  */
@@ -59,7 +67,6 @@ void LLVMOrcGetMangledSymbol(LLVMOrcJITStackRef JITStack, char **MangledSymbol,
 /**
  * Dispose of a mangled symbol.
  */
-
 void LLVMOrcDisposeMangledSymbol(char *MangledSymbol);
 
 /**
@@ -73,16 +80,16 @@ LLVMOrcCreateLazyCompileCallback(LLVMOrcJITStackRef JITStack,
 /**
  * Create a named indirect call stub.
  */
-void LLVMOrcCreateIndirectStub(LLVMOrcJITStackRef JITStack,
-                               const char *StubName,
-                               LLVMOrcTargetAddress InitAddr);
+LLVMOrcErrorCode LLVMOrcCreateIndirectStub(LLVMOrcJITStackRef JITStack,
+                                           const char *StubName,
+                                           LLVMOrcTargetAddress InitAddr);
 
 /**
  * Set the pointer for the given indirect stub.
  */
-void LLVMOrcSetIndirectStubPointer(LLVMOrcJITStackRef JITStack,
-                                   const char *StubName,
-                                   LLVMOrcTargetAddress NewAddr);
+LLVMOrcErrorCode LLVMOrcSetIndirectStubPointer(LLVMOrcJITStackRef JITStack,
+                                               const char *StubName,
+                                               LLVMOrcTargetAddress NewAddr);
 
 /**
  * Add module to be eagerly compiled.
@@ -103,10 +110,10 @@ LLVMOrcAddLazilyCompiledIR(LLVMOrcJITStackRef JITStack, LLVMModuleRef Mod,
 /**
  * Add an object file.
  */
-LLVMOrcModuleHandle
-LLVMOrcAddObjectFile(LLVMOrcJITStackRef JITStack, LLVMObjectFileRef Obj,
-                     LLVMOrcSymbolResolverFn SymbolResolver,
-                     void *SymbolResolverCtx);
+LLVMOrcModuleHandle LLVMOrcAddObjectFile(LLVMOrcJITStackRef JITStack,
+                                         LLVMObjectFileRef Obj,
+                                         LLVMOrcSymbolResolverFn SymbolResolver,
+                                         void *SymbolResolverCtx);
 
 /**
  * Remove a module set from the JIT.

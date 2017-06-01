@@ -16,10 +16,10 @@
 ; CHECK-NEXT: br i1 %a, label %entry.split, label %abort0.split
 
 ; CHECK: entry.split:
-; CHECK-NEXT: br i1 %b, label %cond.end, label %abort1.split
+; CHECK-NEXT: br i1 %b, label %for.body, label %abort1.split
 
-; CHECK: cond.end:
-; CHECK-NEXT: br label %cond.end
+; CHECK: for.body:
+; CHECK-NEXT: br label %for.body
 
 ; CHECK: abort0.split:
 ; CHECK-NEXT: call void @end0() [[NOR_NUW:#[0-9]+]]

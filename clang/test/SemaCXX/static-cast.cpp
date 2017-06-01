@@ -43,11 +43,11 @@ void t_529_2()
   (void)static_cast<void*>((int*)0);
   (void)static_cast<volatile const void*>((const int*)0);
   (void)static_cast<A*>((B*)0);
-  (void)static_cast<A&>(*((B*)0));
+  (void)static_cast<A&>(*((B*)0)); // expected-warning {{binding dereferenced null pointer to reference has undefined behavior}}
   (void)static_cast<const B*>((C1*)0);
-  (void)static_cast<B&>(*((C1*)0));
+  (void)static_cast<B&>(*((C1*)0)); // expected-warning {{binding dereferenced null pointer to reference has undefined behavior}}
   (void)static_cast<A*>((D*)0);
-  (void)static_cast<const A&>(*((D*)0));
+  (void)static_cast<const A&>(*((D*)0)); // expected-warning {{binding dereferenced null pointer to reference has undefined behavior}}
   (void)static_cast<int B::*>((int A::*)0);
   (void)static_cast<void (B::*)()>((void (A::*)())0);
 

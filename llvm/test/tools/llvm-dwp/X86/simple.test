@@ -1,0 +1,98 @@
+RUN: llvm-dwp %p/../Inputs/simple/notypes/a.dwo %p/../Inputs/simple/notypes/b.dwo -o %t
+RUN: llvm-dwarfdump %t | FileCheck --check-prefix=CHECK --check-prefix=NOTYP %s
+RUN: llvm-objdump -h %t | FileCheck --check-prefix=NOTYPOBJ %s
+UN: llvm-dwp %p/../Inputs/simple/types/a.dwo %p/../Inputs/simple/types/b.dwo -o %t
+UN: llvm-dwarfdump %t | FileCheck --check-prefix=CHECK --check-prefix=TYPES %s
+
+FIXME: For some reason, piping straight from llvm-dwp to llvm-dwarfdump doesn't behave well - looks like dwarfdump is reading/closes before dwp has finished.
+
+DWP from non-type-unit debug info for these two translation units:
+a.cpp:
+  struct foo { };
+  foo a;
+
+b.cpp:
+  struct bar { };
+  void b(bar) {
+  }
+
+CHECK-LABEL: .debug_abbrev.dwo contents:
+CHECK-LABEL: Abbrev table for offset:
+CHECK: 0x0000[[AAOFF:.*]]
+CHECK: DW_TAG_compile_unit
+CHECK: DW_TAG_variable
+CHECK: DW_TAG_structure_type
+CHECK-LABEL: Abbrev table for offset:
+CHECK: 0x0000[[BAOFF:.*]]
+CHECK: DW_TAG_compile_unit
+CHECK: DW_TAG_structure_type
+CHECK: DW_TAG_subprogram
+CHECK: DW_TAG_formal_parameter
+
+CHECK: .debug_info.dwo contents:
+CHECK: [[AOFF:0x[0-9a-f]*]]:
+CHECK-LABEL: Compile Unit: length = {{.*}} version = 0x0004 abbr_offset =
+CHECK:         0x[[AAOFF]] addr_size = 0x08 (next unit at [[BOFF:.*]])
+CHECK: DW_TAG_compile_unit
+CHECK:   DW_AT_name {{.*}} "a.cpp"
+CHECK:   DW_AT_GNU_dwo_id {{.*}} ([[DWOA:.*]])
+CHECK:   DW_TAG_variable
+CHECK:     DW_AT_name {{.*}} "a"
+CHECK:   DW_TAG_structure_type
+NOTYP:     DW_AT_name {{.*}} "foo"
+TYPES:     DW_AT_signature {{.*}} ([[FOOSIG:.*]])
+
+CHECK: [[BOFF]]:
+CHECK-LABEL: Compile Unit: length = {{.*}} version = 0x0004 abbr_offset =
+CHECK:         0x[[BAOFF]] addr_size = 0x08 (next unit at [[XOFF:.*]])
+CHECK:   DW_AT_name {{.*}} "b.cpp"
+CHECK:   DW_AT_GNU_dwo_id {{.*}} ([[DWOB:.*]])
+CHECK:   DW_TAG_structure_type
+NOTYP:     DW_AT_name {{.*}} "bar"
+TYPES:     DW_AT_signature {{.*}} ([[BARSIG:.*]])
+CHECK:   DW_TAG_subprogram
+CHECK:     DW_AT_name {{.*}} "b"
+CHECK:     DW_TAG_formal_parameter
+
+NOTYP-NOT: .debug_types.dwo contents:
+TYPES-LABEL: .debug_types.dwo contents:
+TYPES: [[FOOUOFF:0x[0-9a-f]*]]:
+TYPES-LABEL: Type Unit: length = 0x00000020 version = 0x0004 abbr_offset =
+TYPES:         0x[[AAOFF]] addr_size = 0x08 type_signature = [[FOOSIG]] type_offset = 0x[[FOOOFF:.*]] (next unit at [[BARUOFF:.*]])
+TYPES:             DW_TAG_type_unit
+TYPES: [[FOOOFF]]:   DW_TAG_structure_type
+TYPES:                 DW_AT_name {{.*}} "foo"
+TYPES: [[BARUOFF]]:
+TYPES-LABEL: Type Unit: length = 0x00000020 version = 0x0004 abbr_offset =
+TYPES:         0x[[BAOFF]] addr_size = 0x08 type_signature = [[BARSIG]] type_offset = 0x001e (next unit at [[XUOFF:.*]])
+TYPES:             DW_TAG_type_unit
+TYPES: 0x00000042:   DW_TAG_structure_type
+TYPES:                 DW_AT_name {{.*}} "bar"
+
+CHECK-LABEL: .debug_cu_index contents:
+CHECK: Index Signature INFO                      ABBREV                             LINE                     STR_OFFSETS
+TYPES:     1 [[DWOA]]  {{\[}}[[AOFF]], [[BOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000000, 0x0000001a) [0x00000000, 0x00000010)
+TYPES:     3 [[DWOB]]  {{\[}}[[BOFF]], [[XOFF]]) [0x0000[[BAOFF]], 0x00000099)      [0x0000001a, 0x00000034) [0x00000010, 0x00000024)
+NOTYP:     3 [[DWOA]]  {{\[}}[[AOFF]], [[BOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000000, 0x00000011) [0x00000000, 0x00000010)
+NOTYP:     4 [[DWOB]]  {{\[}}[[BOFF]], [[XOFF]]) [0x0000[[BAOFF]], 0x00000075)      [0x00000011, 0x00000022) [0x00000010, 0x00000024)
+
+CHECK-LABEL: .debug_tu_index contents:
+NOTYP-NOT: Index
+TYPES: Index Signature  TYPES                           ABBREV                             LINE                     STR_OFFSETS
+TYPES:     1 [[FOOSIG]] {{\[}}[[FOOUOFF]], [[BARUOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000000, 0x0000001a) [0x00000000, 0x00000010)
+TYPES:     4 [[BARSIG]] {{\[}}[[BARUOFF]], [[XUOFF]])   [0x0000[[BAOFF]], 0x00000099)      [0x0000001a, 0x00000034) [0x00000010, 0x00000024)
+
+Ensure we do not create a debug_tu_index, even an empty or malformed one.
+NOTYPOBJ-NOT: .debug_tu_index
+
+CHECK-LABEL: .debug_str.dwo contents:
+CHECK: "clang version
+CHECK: 0x[[ACPP:.*]]: "a.cpp"
+CHECK-NOT: "clang version
+CHECK: 0x[[BCPP:.*]]: "b.cpp"
+
+CHECK-LABEL: .debug_str_offsets.dwo contents:
+CHECK: : 00000000
+CHECK: : [[ACPP]]
+CHECK: : 00000000
+CHECK: : [[BCPP]]

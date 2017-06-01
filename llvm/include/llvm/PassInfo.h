@@ -13,6 +13,8 @@
 #ifndef LLVM_PASSINFO_H
 #define LLVM_PASSINFO_H
 
+#include "llvm/ADT/StringRef.h"
+
 #include <cassert>
 #include <vector>
 
@@ -33,8 +35,8 @@ public:
   typedef Pass *(*TargetMachineCtor_t)(TargetMachine *);
 
 private:
-  const char *const PassName;     // Nice name for Pass
-  const char *const PassArgument; // Command Line argument to run this pass
+  StringRef PassName;     // Nice name for Pass
+  StringRef PassArgument; // Command Line argument to run this pass
   const void *PassID;
   const bool IsCFGOnlyPass;              // Pass only looks at the CFG.
   const bool IsAnalysis;                 // True if an analysis pass.
@@ -47,8 +49,8 @@ private:
 public:
   /// PassInfo ctor - Do not call this directly, this should only be invoked
   /// through RegisterPass.
-  PassInfo(const char *name, const char *arg, const void *pi,
-           NormalCtor_t normal, bool isCFGOnly, bool is_analysis,
+  PassInfo(StringRef name, StringRef arg, const void *pi, NormalCtor_t normal,
+           bool isCFGOnly, bool is_analysis,
            TargetMachineCtor_t machine = nullptr)
       : PassName(name), PassArgument(arg), PassID(pi), IsCFGOnlyPass(isCFGOnly),
         IsAnalysis(is_analysis), IsAnalysisGroup(false), NormalCtor(normal),
@@ -56,20 +58,20 @@ public:
   /// PassInfo ctor - Do not call this directly, this should only be invoked
   /// through RegisterPass. This version is for use by analysis groups; it
   /// does not auto-register the pass.
-  PassInfo(const char *name, const void *pi)
+  PassInfo(StringRef name, const void *pi)
       : PassName(name), PassArgument(""), PassID(pi), IsCFGOnlyPass(false),
         IsAnalysis(false), IsAnalysisGroup(true), NormalCtor(nullptr),
         TargetMachineCtor(nullptr) {}
 
   /// getPassName - Return the friendly name for the pass, never returns null
   ///
-  const char *getPassName() const { return PassName; }
+  StringRef getPassName() const { return PassName; }
 
   /// getPassArgument - Return the command line option that may be passed to
   /// 'opt' that will cause this pass to be run.  This will return null if there
   /// is no argument.
   ///
-  const char *getPassArgument() const { return PassArgument; }
+  StringRef getPassArgument() const { return PassArgument; }
 
   /// getTypeInfo - Return the id object for the pass...
   /// TODO : Rename

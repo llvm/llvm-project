@@ -39,10 +39,14 @@ TEST(Rewriter, ContinuesOverwritingFilesOnError) {
 
 TEST(Rewriter, AdjacentInsertAndDelete) {
   Replacements Replaces;
-  Replaces.insert(Replacement("<file>", 6, 6, ""));
-  Replaces.insert(Replacement("<file>", 6, 0, "replaced\n"));
-  EXPECT_EQ("line1\nreplaced\nline3\nline4",
-            applyAllReplacements("line1\nline2\nline3\nline4", Replaces));
+  auto Err = Replaces.add(Replacement("<file>", 6, 6, ""));
+  EXPECT_TRUE(!Err);
+  Replaces =
+      Replaces.merge(Replacements(Replacement("<file>", 6, 0, "replaced\n")));
+
+  auto Rewritten = applyAllReplacements("line1\nline2\nline3\nline4", Replaces);
+  EXPECT_TRUE(static_cast<bool>(Rewritten));
+  EXPECT_EQ("line1\nreplaced\nline3\nline4", *Rewritten);
 }
 
 } // end namespace

@@ -28,7 +28,9 @@ static bool IsOneOf(char c, char c1, char c2) {
 
 bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
                                char filename[], uptr filename_size,
-                               uptr *protection) {
+                               uptr *protection, ModuleArch *arch, u8 *uuid) {
+  CHECK(!arch && "not implemented");
+  CHECK(!uuid && "not implemented");
   char *last = proc_self_maps_.data + proc_self_maps_.len;
   if (current_ >= last) return false;
   uptr dummy;
@@ -67,7 +69,7 @@ bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
   while (IsDecimal(*current_))
     current_++;
   // Qemu may lack the trailing space.
-  // http://code.google.com/p/address-sanitizer/issues/detail?id=160
+  // https://github.com/google/sanitizers/issues/160
   // CHECK_EQ(*current_++, ' ');
   // Skip spaces.
   while (current_ < next_line && *current_ == ' ')

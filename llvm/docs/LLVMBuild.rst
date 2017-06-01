@@ -49,8 +49,7 @@ Build Integration
 
 The LLVMBuild files themselves are just a declarative way to describe
 the project structure. The actual building of the LLVM project is
-handled by another build system (currently we support both
-:doc:`Makefiles <MakefileGuide>` and :doc:`CMake <CMake>`).
+handled by another build system (See: :doc:`CMake <CMake>`).
 
 The build system implementation will load the relevant contents of the
 LLVMBuild files and use that to drive the actual project build.
@@ -322,4 +321,3 @@ the properties which are associated with that component.
    ``BuildTool`` components currently use the exact same properties as
    ``Tool`` components, the type distinction is only used to differentiate
    what the tool is built for.
-

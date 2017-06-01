@@ -28,11 +28,11 @@
 # CHECK-FIXUP:                      value: bar-4, kind: fixup_MIPS_PC26_S2
 # CHECK-FIXUP: aluipc $2, %pcrel_hi(bar)    # encoding: [0xec,0x5f,A,A]
 # CHECK-FIXUP:                              #   fixup A - offset: 0,
-# CHECK-FIXUP:                                  value: bar@PCREL_HI16,
+# CHECK-FIXUP:                                  value: %pcrel_hi(bar),
 # CHECK-FIXUP:                                  kind: fixup_MIPS_PCHI16
 # CHECK-FIXUP: addiu $2, $2, %pcrel_lo(bar) # encoding: [0x24,0x42,A,A]
 # CHECK-FIXUP:                              #   fixup A - offset: 0,
-# CHECK-FIXUP:                                  value: bar@PCREL_LO16,
+# CHECK-FIXUP:                                  value: %pcrel_lo(bar),
 # CHECK-FIXUP:                                  kind: fixup_MIPS_PCLO16
 # CHECK-FIXUP: ldpc    $2, bar  # encoding: [0xec,0b010110AA,A,A]
 # CHECK-FIXUP:                  # fixup A - offset: 0,

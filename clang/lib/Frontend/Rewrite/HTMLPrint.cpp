@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Rewrite/Frontend/ASTConsumers.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -21,7 +20,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Rewrite/Core/HTMLRewrite.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "clang/Rewrite/Frontend/ASTConsumers.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 
@@ -32,14 +31,14 @@ using namespace clang;
 namespace {
   class HTMLPrinter : public ASTConsumer {
     Rewriter R;
-    raw_ostream *Out;
+    std::unique_ptr<raw_ostream> Out;
     Preprocessor &PP;
     bool SyntaxHighlight, HighlightMacros;
 
   public:
-    HTMLPrinter(raw_ostream *OS, Preprocessor &pp,
+    HTMLPrinter(std::unique_ptr<raw_ostream> OS, Preprocessor &pp,
                 bool _SyntaxHighlight, bool _HighlightMacros)
-      : Out(OS), PP(pp), SyntaxHighlight(_SyntaxHighlight),
+      : Out(std::move(OS)), PP(pp), SyntaxHighlight(_SyntaxHighlight),
         HighlightMacros(_HighlightMacros) {}
 
     void Initialize(ASTContext &context) override;
@@ -47,11 +46,10 @@ namespace {
   };
 }
 
-std::unique_ptr<ASTConsumer> clang::CreateHTMLPrinter(raw_ostream *OS,
-                                                      Preprocessor &PP,
-                                                      bool SyntaxHighlight,
-                                                      bool HighlightMacros) {
-  return llvm::make_unique<HTMLPrinter>(OS, PP, SyntaxHighlight,
+std::unique_ptr<ASTConsumer>
+clang::CreateHTMLPrinter(std::unique_ptr<raw_ostream> OS, Preprocessor &PP,
+                         bool SyntaxHighlight, bool HighlightMacros) {
+  return llvm::make_unique<HTMLPrinter>(std::move(OS), PP, SyntaxHighlight,
                                         HighlightMacros);
 }
 
@@ -66,7 +64,7 @@ void HTMLPrinter::HandleTranslationUnit(ASTContext &Ctx) {
   // Format the file.
   FileID FID = R.getSourceMgr().getMainFileID();
   const FileEntry* Entry = R.getSourceMgr().getFileEntryForID(FID);
-  const char* Name;
+  StringRef Name;
   // In some cases, in particular the case where the input is from stdin,
   // there is no entry.  Fall back to the memory buffer for a name in those
   // cases.

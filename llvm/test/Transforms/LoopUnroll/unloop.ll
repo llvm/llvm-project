@@ -1,6 +1,7 @@
 ; RUN: opt < %s -S -loop-unroll -verify-loop-info | FileCheck %s
+; RUN: opt < %s -S -passes='function(require<scalar-evolution>,require<targetir>,require<opt-remark-emit>,loop(unroll),verify<loops>)' | FileCheck %s
 ;
-; Unit tests for LoopInfo::updateUnloop.
+; Unit tests for LoopInfo::markAsRemoved.
 
 declare i1 @check() nounwind
 

@@ -9,6 +9,7 @@
 
 #include "OrcTestCommon.h"
 #include "gtest/gtest.h"
+#include "llvm-c/Core.h"
 #include "llvm-c/OrcBindings.h"
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
@@ -24,11 +25,11 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(TargetMachine, LLVMTargetMachineRef)
 class OrcCAPIExecutionTest : public testing::Test, public OrcExecutionTest {
 protected:
   std::unique_ptr<Module> createTestModule(const Triple &TT) {
-    ModuleBuilder MB(getGlobalContext(), TT.str(), "");
+    ModuleBuilder MB(Context, TT.str(), "");
     Function *TestFunc = MB.createFunctionDecl<int()>("testFunc");
     Function *Main = MB.createFunctionDecl<int(int, char*[])>("main");
 
-    Main->getBasicBlockList().push_back(BasicBlock::Create(getGlobalContext()));
+    Main->getBasicBlockList().push_back(BasicBlock::Create(Context));
     IRBuilder<> B(&Main->back());
     Value* Result = B.CreateCall(TestFunc);
     B.CreateRet(Result);

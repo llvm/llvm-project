@@ -1,9 +1,10 @@
 ; RUN: opt < %s -instcombine -mtriple=x86_64-apple-macosx -mcpu=core-avx2 -S | FileCheck %s
 
 define <2 x double> @constant_blendvpd(<2 x double> %xy, <2 x double> %ab) {
-; CHECK-LABEL: @constant_blendvpd
-; CHECK-NEXT: %1 = select <2 x i1> <i1 true, i1 false>, <2 x double> %ab, <2 x double> %xy
-; CHECK-NEXT: ret <2 x double> %1
+; CHECK-LABEL: @constant_blendvpd(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> %ab, <2 x double> %xy, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+;
   %1 = tail call <2 x double> @llvm.x86.sse41.blendvpd(<2 x double> %xy, <2 x double> %ab, <2 x double> <double 0xFFFFFFFFE0000000, double 0.000000e+00>)
   ret <2 x double> %1
 }
@@ -23,9 +24,10 @@ define <2 x double> @constant_blendvpd_dup(<2 x double> %xy, <2 x double> %sel) 
 }
 
 define <4 x float> @constant_blendvps(<4 x float> %xyzw, <4 x float> %abcd) {
-; CHECK-LABEL: @constant_blendvps
-; CHECK-NEXT: %1 = select <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> %abcd, <4 x float> %xyzw
-; CHECK-NEXT: ret <4 x float> %1
+; CHECK-LABEL: @constant_blendvps(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> %abcd, <4 x float> %xyzw, <4 x i32> <i32 4, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
   %1 = tail call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %xyzw, <4 x float> %abcd, <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0xFFFFFFFFE0000000>)
   ret <4 x float> %1
 }
@@ -45,9 +47,10 @@ define <4 x float> @constant_blendvps_dup(<4 x float> %xyzw, <4 x float> %sel) {
 }
 
 define <16 x i8> @constant_pblendvb(<16 x i8> %xyzw, <16 x i8> %abcd) {
-; CHECK-LABEL: @constant_pblendvb
-; CHECK-NEXT: %1 = select <16 x i1> <i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false>, <16 x i8> %abcd, <16 x i8> %xyzw
-; CHECK-NEXT: ret <16 x i8> %1
+; CHECK-LABEL: @constant_pblendvb(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> %abcd, <16 x i8> %xyzw, <16 x i32> <i32 16, i32 17, i32 2, i32 19, i32 4, i32 5, i32 6, i32 23, i32 24, i32 25, i32 10, i32 27, i32 12, i32 13, i32 14, i32 31>
+; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
+;
   %1 = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %xyzw, <16 x i8> %abcd, <16 x i8> <i8 0, i8 0, i8 255, i8 0, i8 255, i8 255, i8 255, i8 0, i8 0, i8 0, i8 255, i8 0, i8 255, i8 255, i8 255, i8 0>)
   ret <16 x i8> %1
 }
@@ -67,9 +70,10 @@ define <16 x i8> @constant_pblendvb_dup(<16 x i8> %xyzw, <16 x i8> %sel) {
 }
 
 define <4 x double> @constant_blendvpd_avx(<4 x double> %xy, <4 x double> %ab) {
-; CHECK-LABEL: @constant_blendvpd_avx
-; CHECK-NEXT: %1 = select <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x double> %ab, <4 x double> %xy
-; CHECK-NEXT: ret <4 x double> %1
+; CHECK-LABEL: @constant_blendvpd_avx(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> %ab, <4 x double> %xy, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    ret <4 x double> [[TMP1]]
+;
   %1 = tail call <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double> %xy, <4 x double> %ab, <4 x double> <double 0xFFFFFFFFE0000000, double 0.000000e+00, double 0xFFFFFFFFE0000000, double 0.000000e+00>)
   ret <4 x double> %1
 }
@@ -89,9 +93,10 @@ define <4 x double> @constant_blendvpd_avx_dup(<4 x double> %xy, <4 x double> %s
 }
 
 define <8 x float> @constant_blendvps_avx(<8 x float> %xyzw, <8 x float> %abcd) {
-; CHECK-LABEL: @constant_blendvps_avx
-; CHECK-NEXT: %1 = select <8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true>, <8 x float> %abcd, <8 x float> %xyzw
-; CHECK-NEXT: ret <8 x float> %1
+; CHECK-LABEL: @constant_blendvps_avx(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> %abcd, <8 x float> %xyzw, <8 x i32> <i32 8, i32 9, i32 10, i32 3, i32 12, i32 13, i32 14, i32 7>
+; CHECK-NEXT:    ret <8 x float> [[TMP1]]
+;
   %1 = tail call <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %xyzw, <8 x float> %abcd, <8 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0xFFFFFFFFE0000000, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0xFFFFFFFFE0000000>)
   ret <8 x float> %1
 }
@@ -111,9 +116,10 @@ define <8 x float> @constant_blendvps_avx_dup(<8 x float> %xyzw, <8 x float> %se
 }
 
 define <32 x i8> @constant_pblendvb_avx2(<32 x i8> %xyzw, <32 x i8> %abcd) {
-; CHECK-LABEL: @constant_pblendvb_avx2
-; CHECK-NEXT: %1 = select <32 x i1> <i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false>, <32 x i8> %abcd, <32 x i8> %xyzw
-; CHECK-NEXT: ret <32 x i8> %1
+; CHECK-LABEL: @constant_pblendvb_avx2(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> %abcd, <32 x i8> %xyzw, <32 x i32> <i32 32, i32 33, i32 2, i32 35, i32 4, i32 5, i32 6, i32 39, i32 40, i32 41, i32 10, i32 43, i32 12, i32 13, i32 14, i32 47, i32 48, i32 49, i32 18, i32 51, i32 20, i32 21, i32 22, i32 55, i32 56, i32 57, i32 26, i32 59, i32 28, i32 29, i32 30, i32 63>
+; CHECK-NEXT:    ret <32 x i8> [[TMP1]]
+;
   %1 = tail call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> %xyzw, <32 x i8> %abcd,
         <32 x i8> <i8 0, i8 0, i8 255, i8 0, i8 255, i8 255, i8 255, i8 0,
                    i8 0, i8 0, i8 255, i8 0, i8 255, i8 255, i8 255, i8 0,

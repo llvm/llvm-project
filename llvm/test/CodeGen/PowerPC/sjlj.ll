@@ -66,7 +66,7 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK-NOT: mfspr
 
 ; CHECK-DAG: stfd
-; CHECK-DAG: stvx
+; CHECK-DAG: stxvd2x
 
 ; CHECK-DAG: addis [[REG:[0-9]+]], 2, env_sigill@toc@ha
 ; CHECK-DAG: std 31, env_sigill@toc@l([[REG]])
@@ -74,30 +74,30 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK-DAG: std [[REGA]], [[OFF:[0-9]+]](31)                  # 8-byte Folded Spill
 ; CHECK-DAG: std 1, 16([[REGA]])
 ; CHECK-DAG: std 2, 24([[REGA]])
-; CHECK: bcl 20, 31, .LBB1_1
+; CHECK: bcl 20, 31, .LBB1_3
 ; CHECK: li 3, 1
-; CHECK: #EH_SjLj_Setup	.LBB1_1
-; CHECK: b .LBB1_2
+; CHECK: #EH_SjLj_Setup	.LBB1_3
+; CHECK: b .LBB1_1
 
-; CHECK: .LBB1_1:
+; CHECK: .LBB1_3:
 ; CHECK: mflr [[REGL:[0-9]+]]
 ; CHECK: ld [[REG2:[0-9]+]], [[OFF]](31)                   # 8-byte Folded Reload
 ; CHECK: std [[REGL]], 8([[REG2]])
 ; CHECK: li 3, 0
 
-; CHECK: .LBB1_2:
+; CHECK: .LBB1_5:
 
 ; CHECK: lfd
-; CHECK: lvx
+; CHECK: lxvd2x
 ; CHECK: ld
 ; CHECK: blr
 
 ; CHECK-NOAV: @main
-; CHECK-NOAV-NOT: stvx
+; CHECK-NOAV-NOT: stxvd2x
 ; CHECK-NOAV: bcl
 ; CHECK-NOAV: mflr
 ; CHECK-NOAV: bl foo
-; CHECK-NOAV-NOT: lvx
+; CHECK-NOAV-NOT: lxvd2x
 ; CHECK-NOAV: blr
 }
 

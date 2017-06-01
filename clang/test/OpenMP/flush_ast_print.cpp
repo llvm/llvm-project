@@ -15,13 +15,13 @@ T tmain(T argc) {
 #pragma omp flush(a)
   return a + argc;
 }
+// CHECK:      static T a;
+// CHECK-NEXT: #pragma omp flush
+// CHECK-NEXT: #pragma omp flush (a)
 // CHECK:      static int a;
 // CHECK-NEXT: #pragma omp flush
 // CHECK-NEXT: #pragma omp flush (a)
 // CHECK:      static char a;
-// CHECK-NEXT: #pragma omp flush
-// CHECK-NEXT: #pragma omp flush (a)
-// CHECK:      static T a;
 // CHECK-NEXT: #pragma omp flush
 // CHECK-NEXT: #pragma omp flush (a)
 

@@ -410,6 +410,7 @@ namespace clang {
 #define OBJCCONTAINER(DERIVED, BASE)
 #define FILESCOPEASM(DERIVED, BASE)
 #define IMPORT(DERIVED, BASE)
+#define EXPORT(DERIVED, BASE)
 #define LINKAGESPEC(DERIVED, BASE)
 #define OBJCCOMPATIBLEALIAS(DERIVED, BASE)
 #define OBJCMETHOD(DERIVED, BASE)
@@ -433,7 +434,8 @@ namespace clang {
     Decl *VisitFunctionDecl(FunctionDecl *D,
                             TemplateParameterList *TemplateParams);
     Decl *VisitDecl(Decl *D);
-    Decl *VisitVarDecl(VarDecl *D, bool InstantiatingVarTemplate);
+    Decl *VisitVarDecl(VarDecl *D, bool InstantiatingVarTemplate,
+                       ArrayRef<BindingDecl *> *Bindings = nullptr);
 
     // Enable late instantiation of attributes.  Late instantiated attributes
     // will be stored in LA.
@@ -513,6 +515,11 @@ namespace clang {
         VarTemplateDecl *VarTemplate,
         VarTemplatePartialSpecializationDecl *PartialSpec);
     void InstantiateEnumDefinition(EnumDecl *Enum, EnumDecl *Pattern);
+
+  private:
+    template<typename T>
+    Decl *instantiateUnresolvedUsingDecl(T *D,
+                                         bool InstantiatingPackElement = false);
   };  
 }
 

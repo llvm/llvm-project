@@ -1,7 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
 
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare double @llvm.fabs.f64(double) #1
 
 ; FUNC-LABEL: @fp_to_sint_f64_i32
 ; SI: v_cvt_i32_f64_e32
@@ -47,10 +48,30 @@ define void @fp_to_sint_v4f64_v4i32(<4 x i32> addrspace(1)* %out, <4 x double> %
 ; CI-DAG: v_cvt_i32_f64_e32 v[[HI:[0-9]+]], [[FLOOR]]
 ; CI: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
 define void @fp_to_sint_i64_f64(i64 addrspace(1)* %out, double addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr double, double addrspace(1)* %in, i32 %tid
   %val = load double, double addrspace(1)* %gep, align 8
   %cast = fptosi double %val to i64
   store i64 %cast, i64 addrspace(1)* %out, align 8
   ret void
 }
+
+; FUNC-LABEL: {{^}}fp_to_sint_f64_to_i1:
+; SI: v_cmp_eq_f64_e64 s{{\[[0-9]+:[0-9]+\]}}, -1.0, s{{\[[0-9]+:[0-9]+\]}}
+define void @fp_to_sint_f64_to_i1(i1 addrspace(1)* %out, double %in) #0 {
+  %conv = fptosi double %in to i1
+  store i1 %conv, i1 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}fp_to_sint_fabs_f64_to_i1:
+; SI: v_cmp_eq_f64_e64 s{{\[[0-9]+:[0-9]+\]}}, -1.0, |s{{\[[0-9]+:[0-9]+\]}}|
+define void @fp_to_sint_fabs_f64_to_i1(i1 addrspace(1)* %out, double %in) #0 {
+  %in.fabs = call double @llvm.fabs.f64(double %in)
+  %conv = fptosi double %in.fabs to i1
+  store i1 %conv, i1 addrspace(1)* %out
+  ret void
+}
+
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }

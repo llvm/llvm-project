@@ -170,6 +170,32 @@ define void @memintr_test(i8* %a, i8* %b) nounwind uwtable sanitize_address {
 ; CHECK: __asan_memcpy
 ; CHECK: ret void
 
+; CHECK-LABEL: @test_swifterror
+; CHECK-NOT: __asan_report_load
+; CHECK: ret void
+define void @test_swifterror(i8** swifterror) sanitize_address {
+  %swifterror_ptr_value = load i8*, i8** %0
+  ret void
+}
+
+; CHECK-LABEL: @test_swifterror_2
+; CHECK-NOT: __asan_report_store
+; CHECK: ret void
+define void @test_swifterror_2(i8** swifterror) sanitize_address {
+  store i8* null, i8** %0
+  ret void
+}
+
+; CHECK-LABEL: @test_swifterror_3
+; CHECK-NOT: __asan_report_store
+; CHECK: ret void
+define void @test_swifterror_3() sanitize_address {
+  %swifterror_addr = alloca swifterror i8*
+  store i8* null, i8** %swifterror_addr
+  call void @test_swifterror_2(i8** swifterror %swifterror_addr)
+  ret void
+}
+
 ; CHECK: define internal void @asan.module_ctor()
 ; CHECK: call void @__asan_init()
 

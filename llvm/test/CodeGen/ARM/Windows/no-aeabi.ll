@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumbv7-windows-itanium -mcpu=cortex-a9 -o - %s | FileCheck %s
+; RUN: llc -mtriple=thumbv7-windows-itanium -mcpu=cortex-a9 -verify-machineinstrs -o - %s | FileCheck %s
 
 declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind

@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 %s -emit-llvm -O1 -o - -triple=i686-apple-darwin9 -std=c++11 | FileCheck %s
 
-// CHECK-DAG: @PR22043 = global i32 0, align 4
+// CHECK-DAG: @PR22043 = local_unnamed_addr global i32 0, align 4
 typedef _Atomic(int) AtomicInt;
 AtomicInt PR22043 = AtomicInt();
 
-// CHECK-DAG: @_ZN7PR180978constant1aE = global { i16, i8 } { i16 1, i8 6 }, align 4
-// CHECK-DAG: @_ZN7PR180978constant1bE = global { i16, i8 } { i16 2, i8 6 }, align 4
-// CHECK-DAG: @_ZN7PR180978constant1cE = global { i16, i8 } { i16 3, i8 6 }, align 4
-// CHECK-DAG: @_ZN7PR180978constant1yE = global { { i16, i8 }, i32 } { { i16, i8 } { i16 4, i8 6 }, i32 5 }, align 4
+// CHECK-DAG: @_ZN7PR180978constant1aE = local_unnamed_addr global { i16, i8 } { i16 1, i8 6 }, align 4
+// CHECK-DAG: @_ZN7PR180978constant1bE = local_unnamed_addr global { i16, i8 } { i16 2, i8 6 }, align 4
+// CHECK-DAG: @_ZN7PR180978constant1cE = local_unnamed_addr global { i16, i8 } { i16 3, i8 6 }, align 4
+// CHECK-DAG: @_ZN7PR180978constant1yE = local_unnamed_addr global { { i16, i8 }, i32 } { { i16, i8 } { i16 4, i8 6 }, i32 5 }, align 4
 
 struct A {
   _Atomic(int) i;
@@ -51,8 +51,8 @@ struct AtomicBoolMember {
 };
 
 // CHECK-LABEL: define void @_ZN16AtomicBoolMemberC2Eb
-// CHECK: {{zext i1.*to i8}}
-// CHECK-NEXT: store i8
+// CHECK: zext i1 {{.*}} to i8
+// CHECK: store i8
 // CHECK-NEXT: ret void
 AtomicBoolMember::AtomicBoolMember(bool b) : ab(b) { }
 

@@ -17,6 +17,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <utility>
 
 using namespace llvm;
 
@@ -64,6 +65,15 @@ int TargetTransformInfo::getCallCost(const Function *F,
   int Cost = TTIImpl->getCallCost(F, Arguments);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
+}
+
+unsigned TargetTransformInfo::getInliningThresholdMultiplier() const {
+  return TTIImpl->getInliningThresholdMultiplier();
+}
+
+int TargetTransformInfo::getGEPCost(Type *PointeeType, const Value *Ptr,
+                                    ArrayRef<const Value *> Operands) const {
+  return TTIImpl->getGEPCost(PointeeType, Ptr, Operands);
 }
 
 int TargetTransformInfo::getIntrinsicCost(
@@ -140,12 +150,13 @@ int TargetTransformInfo::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
   return Cost;
 }
 
-bool TargetTransformInfo::isTruncateFree(Type *Ty1, Type *Ty2) const {
-  return TTIImpl->isTruncateFree(Ty1, Ty2);
+bool TargetTransformInfo::isFoldableMemAccessOffset(Instruction *I,
+                                                    int64_t Offset) const {
+  return TTIImpl->isFoldableMemAccessOffset(I, Offset);
 }
 
-bool TargetTransformInfo::isZExtFree(Type *Ty1, Type *Ty2) const {
-  return TTIImpl->isZExtFree(Ty1, Ty2);
+bool TargetTransformInfo::isTruncateFree(Type *Ty1, Type *Ty2) const {
+  return TTIImpl->isTruncateFree(Ty1, Ty2);
 }
 
 bool TargetTransformInfo::isProfitableToHoist(Instruction *I) const {
@@ -167,6 +178,9 @@ unsigned TargetTransformInfo::getJumpBufSize() const {
 bool TargetTransformInfo::shouldBuildLookupTables() const {
   return TTIImpl->shouldBuildLookupTables();
 }
+bool TargetTransformInfo::shouldBuildLookupTablesForConstant(Constant *C) const {
+  return TTIImpl->shouldBuildLookupTablesForConstant(C);
+}
 
 bool TargetTransformInfo::enableAggressiveInterleaving(bool LoopHasReductions) const {
   return TTIImpl->enableAggressiveInterleaving(LoopHasReductions);
@@ -174,6 +188,19 @@ bool TargetTransformInfo::enableAggressiveInterleaving(bool LoopHasReductions) c
 
 bool TargetTransformInfo::enableInterleavedAccessVectorization() const {
   return TTIImpl->enableInterleavedAccessVectorization();
+}
+
+bool TargetTransformInfo::isFPVectorizationPotentiallyUnsafe() const {
+  return TTIImpl->isFPVectorizationPotentiallyUnsafe();
+}
+
+bool TargetTransformInfo::allowsMisalignedMemoryAccesses(LLVMContext &Context,
+                                                         unsigned BitWidth,
+                                                         unsigned AddressSpace,
+                                                         unsigned Alignment,
+                                                         bool *Fast) const {
+  return TTIImpl->allowsMisalignedMemoryAccesses(Context, BitWidth, AddressSpace,
+                                                 Alignment, Fast);
 }
 
 TargetTransformInfo::PopcntSupportKind
@@ -187,6 +214,14 @@ bool TargetTransformInfo::haveFastSqrt(Type *Ty) const {
 
 int TargetTransformInfo::getFPOpCost(Type *Ty) const {
   int Cost = TTIImpl->getFPOpCost(Ty);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
+int TargetTransformInfo::getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
+                                               const APInt &Imm,
+                                               Type *Ty) const {
+  int Cost = TTIImpl->getIntImmCodeSizeCost(Opcode, Idx, Imm, Ty);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -219,6 +254,26 @@ unsigned TargetTransformInfo::getRegisterBitWidth(bool Vector) const {
   return TTIImpl->getRegisterBitWidth(Vector);
 }
 
+unsigned TargetTransformInfo::getMinVectorRegisterBitWidth() const {
+  return TTIImpl->getMinVectorRegisterBitWidth();
+}
+
+unsigned TargetTransformInfo::getCacheLineSize() const {
+  return TTIImpl->getCacheLineSize();
+}
+
+unsigned TargetTransformInfo::getPrefetchDistance() const {
+  return TTIImpl->getPrefetchDistance();
+}
+
+unsigned TargetTransformInfo::getMinPrefetchStride() const {
+  return TTIImpl->getMinPrefetchStride();
+}
+
+unsigned TargetTransformInfo::getMaxPrefetchIterationsAhead() const {
+  return TTIImpl->getMaxPrefetchIterationsAhead();
+}
+
 unsigned TargetTransformInfo::getMaxInterleaveFactor(unsigned VF) const {
   return TTIImpl->getMaxInterleaveFactor(VF);
 }
@@ -226,9 +281,10 @@ unsigned TargetTransformInfo::getMaxInterleaveFactor(unsigned VF) const {
 int TargetTransformInfo::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, OperandValueKind Opd1Info,
     OperandValueKind Opd2Info, OperandValueProperties Opd1PropInfo,
-    OperandValueProperties Opd2PropInfo) const {
+    OperandValueProperties Opd2PropInfo,
+    ArrayRef<const Value *> Args) const {
   int Cost = TTIImpl->getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
-                                             Opd1PropInfo, Opd2PropInfo);
+                                             Opd1PropInfo, Opd2PropInfo, Args);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -243,6 +299,14 @@ int TargetTransformInfo::getShuffleCost(ShuffleKind Kind, Type *Ty, int Index,
 int TargetTransformInfo::getCastInstrCost(unsigned Opcode, Type *Dst,
                                           Type *Src) const {
   int Cost = TTIImpl->getCastInstrCost(Opcode, Dst, Src);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
+int TargetTransformInfo::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                                  VectorType *VecTy,
+                                                  unsigned Index) const {
+  int Cost = TTIImpl->getExtractWithExtendCost(Opcode, Dst, VecTy, Index);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -284,6 +348,15 @@ int TargetTransformInfo::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
   return Cost;
 }
 
+int TargetTransformInfo::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
+                                                Value *Ptr, bool VariableMask,
+                                                unsigned Alignment) const {
+  int Cost = TTIImpl->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
+                                             Alignment);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 int TargetTransformInfo::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     unsigned Alignment, unsigned AddressSpace) const {
@@ -294,8 +367,17 @@ int TargetTransformInfo::getInterleavedMemoryOpCost(
 }
 
 int TargetTransformInfo::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                               ArrayRef<Type *> Tys) const {
-  int Cost = TTIImpl->getIntrinsicInstrCost(ID, RetTy, Tys);
+                                               ArrayRef<Type *> Tys,
+                                               FastMathFlags FMF) const {
+  int Cost = TTIImpl->getIntrinsicInstrCost(ID, RetTy, Tys, FMF);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
+int TargetTransformInfo::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
+                                               ArrayRef<Value *> Args,
+                                               FastMathFlags FMF) const {
+  int Cost = TTIImpl->getIntrinsicInstrCost(ID, RetTy, Args, FMF);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -312,8 +394,9 @@ unsigned TargetTransformInfo::getNumberOfParts(Type *Tp) const {
 }
 
 int TargetTransformInfo::getAddressComputationCost(Type *Tp,
-                                                   bool IsComplex) const {
-  int Cost = TTIImpl->getAddressComputationCost(Tp, IsComplex);
+                                                   ScalarEvolution *SE,
+                                                   const SCEV *Ptr) const {
+  int Cost = TTIImpl->getAddressComputationCost(Tp, SE, Ptr);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -345,19 +428,58 @@ bool TargetTransformInfo::areInlineCompatible(const Function *Caller,
   return TTIImpl->areInlineCompatible(Caller, Callee);
 }
 
+unsigned TargetTransformInfo::getLoadStoreVecRegBitWidth(unsigned AS) const {
+  return TTIImpl->getLoadStoreVecRegBitWidth(AS);
+}
+
+bool TargetTransformInfo::isLegalToVectorizeLoad(LoadInst *LI) const {
+  return TTIImpl->isLegalToVectorizeLoad(LI);
+}
+
+bool TargetTransformInfo::isLegalToVectorizeStore(StoreInst *SI) const {
+  return TTIImpl->isLegalToVectorizeStore(SI);
+}
+
+bool TargetTransformInfo::isLegalToVectorizeLoadChain(
+    unsigned ChainSizeInBytes, unsigned Alignment, unsigned AddrSpace) const {
+  return TTIImpl->isLegalToVectorizeLoadChain(ChainSizeInBytes, Alignment,
+                                              AddrSpace);
+}
+
+bool TargetTransformInfo::isLegalToVectorizeStoreChain(
+    unsigned ChainSizeInBytes, unsigned Alignment, unsigned AddrSpace) const {
+  return TTIImpl->isLegalToVectorizeStoreChain(ChainSizeInBytes, Alignment,
+                                               AddrSpace);
+}
+
+unsigned TargetTransformInfo::getLoadVectorFactor(unsigned VF,
+                                                  unsigned LoadSize,
+                                                  unsigned ChainSizeInBytes,
+                                                  VectorType *VecTy) const {
+  return TTIImpl->getLoadVectorFactor(VF, LoadSize, ChainSizeInBytes, VecTy);
+}
+
+unsigned TargetTransformInfo::getStoreVectorFactor(unsigned VF,
+                                                   unsigned StoreSize,
+                                                   unsigned ChainSizeInBytes,
+                                                   VectorType *VecTy) const {
+  return TTIImpl->getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
+}
+
 TargetTransformInfo::Concept::~Concept() {}
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}
 
 TargetIRAnalysis::TargetIRAnalysis(
     std::function<Result(const Function &)> TTICallback)
-    : TTICallback(TTICallback) {}
+    : TTICallback(std::move(TTICallback)) {}
 
-TargetIRAnalysis::Result TargetIRAnalysis::run(const Function &F) {
+TargetIRAnalysis::Result TargetIRAnalysis::run(const Function &F,
+                                               FunctionAnalysisManager &) {
   return TTICallback(F);
 }
 
-char TargetIRAnalysis::PassID;
+AnalysisKey TargetIRAnalysis::Key;
 
 TargetIRAnalysis::Result TargetIRAnalysis::getDefaultTTI(const Function &F) {
   return Result(F.getParent()->getDataLayout());
@@ -384,7 +506,8 @@ TargetTransformInfoWrapperPass::TargetTransformInfoWrapperPass(
 }
 
 TargetTransformInfo &TargetTransformInfoWrapperPass::getTTI(const Function &F) {
-  TTI = TIRA.run(F);
+  FunctionAnalysisManager DummyFAM;
+  TTI = TIRA.run(F, DummyFAM);
   return *TTI;
 }
 

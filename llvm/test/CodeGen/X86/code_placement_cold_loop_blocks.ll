@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux < %s | FileCheck %s -check-prefix=CHECK
+; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux < %s | FileCheck %s
 
 define void @foo() !prof !1 {
 ; Test if a cold block in a loop will be placed at the end of the function

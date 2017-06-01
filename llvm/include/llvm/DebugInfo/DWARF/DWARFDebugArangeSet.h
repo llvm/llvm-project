@@ -59,6 +59,8 @@ public:
 
   uint32_t getCompileUnitDIEOffset() const { return HeaderData.CuOffset; }
 
+  const Header &getHeader() const { return HeaderData; }
+
   desc_iterator_range descriptors() const {
     return desc_iterator_range(ArangeDescriptors.begin(),
                                ArangeDescriptors.end());

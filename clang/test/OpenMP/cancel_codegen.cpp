@@ -1,8 +1,7 @@
-// RUN: %clang_cc1 -verify -fopenmp -triple x86_64-apple-darwin13.4.0 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-apple-darwin13.4.0 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -triple x86_64-apple-darwin13.4.0 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -triple x86_64-apple-darwin13.4.0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple x86_64-apple-darwin13.4.0 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -std=c++11 -include-pch %t -fsyntax-only -verify %s -triple x86_64-apple-darwin13.4.0 -emit-llvm -o - | FileCheck %s
 // expected-no-diagnostics
-// REQUIRES: x86-registered-target
 #ifndef HEADER
 #define HEADER
 
@@ -13,15 +12,17 @@ int main (int argc, char **argv) {
 {
 #pragma omp cancel parallel if(flag)
   argv[0][0] = argc;
+#pragma omp barrier
+  argv[0][0] += argc;
 }
 // CHECK: call void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
 #pragma omp sections
 {
 #pragma omp cancel sections
 }
-// CHECK: call i32 @__kmpc_single(
-// CHECK-NOT: @__kmpc_cancel
-// CHECK: call void @__kmpc_end_single(
+// CHECK: call void @__kmpc_for_static_init_4(
+// CHECK: call i32 @__kmpc_cancel(
+// CHECK: call void @__kmpc_for_static_fini(
 // CHECK: call void @__kmpc_barrier(%ident_t*
 #pragma omp sections
 {
@@ -36,7 +37,6 @@ int main (int argc, char **argv) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
@@ -44,7 +44,6 @@ int main (int argc, char **argv) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
@@ -62,7 +61,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
@@ -90,9 +88,11 @@ for (int i = 0; i < argc; ++i) {
   }
 }
 // CHECK: call void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
-#pragma omp parallel for
+int r = 0;
+#pragma omp parallel for reduction(+: r)
 for (int i = 0; i < argc; ++i) {
 #pragma omp cancel for
+  r += i;
 }
 // CHECK: call void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
   return argc;
@@ -107,11 +107,11 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,]+]],
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label %[[RETURN:.+]]
 // CHECK: [[ELSE]]
+// The barrier directive should now call __kmpc_cancel_barrier
+// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
-// CHECK: call void @__kmpc_barrier
 // CHECK: [[RETURN]]
 // CHECK: ret void
 
@@ -120,16 +120,14 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,]+]],
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label %[[RETURN:.+]]
 // CHECK: [[RETURN]]
 // CHECK: ret i32 0
 
 // CHECK: define internal void @{{[^(]+}}(i32* {{[^,]+}}, i32* {{[^,]+}})
-// CHECK: call i32 @__kmpc_single(
-// CHECK-NOT: @__kmpc_cancel
-// CHECK: call void @__kmpc_end_single(
-// CHECK: call void @__kmpc_barrier(%ident_t*
+// CHECK: call void @__kmpc_for_static_init_4(
+// CHECK: call i32 @__kmpc_cancel(
+// CHECK: call void @__kmpc_for_static_fini(
 // CHECK: ret void
 
 // CHECK: define internal void @{{[^(]+}}(i32* {{[^,]+}}, i32* {{[^,]+}})
@@ -138,7 +136,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
@@ -146,7 +143,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
@@ -159,12 +155,13 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_barrier(%ident_t*
+// CHECK: call i32 @__kmpc_reduce_nowait(
+// CHECK: call void @__kmpc_end_reduce_nowait(
+// CHECK: call void @__kmpc_for_static_fini(
 // CHECK: ret void
 
 #endif

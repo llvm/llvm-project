@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -verify-machineinstrs | FileCheck %s
 
 define void @st1lane_16b(<16 x i8> %A, i8* %D) {
 ; CHECK-LABEL: st1lane_16b

@@ -8,9 +8,9 @@ define i64 @multistep1(i64 %a, i64 %b, i64 %c) {
   %t2 = mul i64 %a, %c
   %t3 = mul i64 %a, %t2 ; a*(a*c)
   %t4 = add i64 %t1, %t3
-; CHECK-NEXT: add i64 %c, %b
-; CHECK-NEXT: mul i64 %a, %tmp{{.*}}
-; CHECK-NEXT: mul i64 %tmp{{.*}}, %a
+; CHECK-NEXT: [[TMP1:%tmp.*]] = add i64 %c, %b
+; CHECK-NEXT: [[TMP2:%tmp.*]] = mul i64 %a, %a
+; CHECK-NEXT: mul i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT: ret
   ret i64 %t4
 }

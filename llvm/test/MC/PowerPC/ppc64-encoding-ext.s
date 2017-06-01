@@ -3497,6 +3497,12 @@
 # CHECK-BE: mfctr 2                         # encoding: [0x7c,0x49,0x02,0xa6]
 # CHECK-LE: mfctr 2                         # encoding: [0xa6,0x02,0x49,0x7c]
             mfctr 2
+# CHECK-BE: mfvrsave 2                      # encoding: [0x7c,0x40,0x42,0xa6]
+# CHECK-LE: mfvrsave 2                      # encoding: [0xa6,0x42,0x40,0x7c]
+            mfvrsave 2
+# CHECK-BE: mtvrsave 2                      # encoding: [0x7c,0x40,0x43,0xa6]
+# CHECK-LE: mtvrsave 2                      # encoding: [0xa6,0x43,0x40,0x7c]
+            mtvrsave 2
 
 # Miscellaneous mnemonics
 
@@ -3666,3 +3672,16 @@
 # CHECK-LE: attn                             # encoding: [0x00,0x02,0x00,0x00]
             attn
 
+# Copy-Paste Facility (Extended Mnemonics):
+# CHECK-BE: copy 2, 19, 0                      # encoding: [0x7c,0x02,0x9e,0x0c]
+# CHECK-LE: copy 2, 19, 0                      # encoding: [0x0c,0x9e,0x02,0x7c]
+            copy 2, 19
+# CHECK-BE: copy 2, 19, 1                      # encoding: [0x7c,0x22,0x9e,0x0c]
+# CHECK-LE: copy 2, 19, 1                      # encoding: [0x0c,0x9e,0x22,0x7c]
+            copy_first 2, 19
+# CHECK-BE: paste 17, 1, 0                     # encoding: [0x7c,0x11,0x0f,0x0c]
+# CHECK-LE: paste 17, 1, 0                     # encoding: [0x0c,0x0f,0x11,0x7c]
+            paste 17, 1
+# CHECK-BE: paste. 17, 1, 1                    # encoding: [0x7c,0x31,0x0f,0x0d]
+# CHECK-LE: paste. 17, 1, 1                    # encoding: [0x0d,0x0f,0x31,0x7c]
+            paste_last 17, 1

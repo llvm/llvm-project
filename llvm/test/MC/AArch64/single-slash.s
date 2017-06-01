@@ -2,5 +2,5 @@
 
 // Test that a single slash is not mistaken as the start of comment.
 
-//CHECK: movz    x0, #0x10
+//CHECK: mov    x0, #16
     movz x0, #(32 / 2)

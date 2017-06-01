@@ -29,8 +29,7 @@ static cl::opt<AsmWriterVariantTy> AsmWriterVariant(
     "aarch64-neon-syntax", cl::init(Default),
     cl::desc("Choose style of NEON code to emit from AArch64 backend:"),
     cl::values(clEnumValN(Generic, "generic", "Emit generic NEON assembly"),
-               clEnumValN(Apple, "apple", "Emit Apple-style NEON assembly"),
-               clEnumValEnd));
+               clEnumValN(Apple, "apple", "Emit Apple-style NEON assembly")));
 
 AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin() {
   // We prefer NEON instructions to be printed in the short form.
@@ -48,10 +47,6 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin() {
   UseDataRegionDirectives = true;
 
   ExceptionsType = ExceptionHandling::DwarfCFI;
-
-  // AArch64 Darwin doesn't have the baggage of X86/ARM, so it's fine to use
-  // LShr instead of AShr.
-  UseLogicalShr = true;
 }
 
 const MCExpr *AArch64MCAsmInfoDarwin::getExprForPersonalitySymbol(

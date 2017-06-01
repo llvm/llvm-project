@@ -153,5 +153,56 @@ TEST(EndianStream, WriteDoubleBE) {
   EXPECT_EQ(static_cast<uint8_t>(data[7]), 0x20);
 }
 
+TEST(EndianStream, WriteArrayLE) {
+  SmallString<16> Data;
+
+  {
+    raw_svector_ostream OS(Data);
+    endian::Writer<little> LE(OS);
+    LE.write<uint16_t>({0x1234, 0x5678});
+  }
+
+  EXPECT_EQ(static_cast<uint8_t>(Data[0]), 0x34);
+  EXPECT_EQ(static_cast<uint8_t>(Data[1]), 0x12);
+  EXPECT_EQ(static_cast<uint8_t>(Data[2]), 0x78);
+  EXPECT_EQ(static_cast<uint8_t>(Data[3]), 0x56);
+}
+
+TEST(EndianStream, WriteVectorLE) {
+  SmallString<16> Data;
+
+  {
+    raw_svector_ostream OS(Data);
+    endian::Writer<little> LE(OS);
+    std::vector<uint16_t> Vec{0x1234, 0x5678};
+    LE.write<uint16_t>(Vec);
+  }
+
+  EXPECT_EQ(static_cast<uint8_t>(Data[0]), 0x34);
+  EXPECT_EQ(static_cast<uint8_t>(Data[1]), 0x12);
+  EXPECT_EQ(static_cast<uint8_t>(Data[2]), 0x78);
+  EXPECT_EQ(static_cast<uint8_t>(Data[3]), 0x56);
+}
+
+TEST(EndianStream, WriteFloatArrayLE) {
+  SmallString<16> Data;
+
+  {
+    raw_svector_ostream OS(Data);
+    endian::Writer<little> LE(OS);
+    LE.write<float>({12345.0f, 12346.0f});
+  }
+
+  EXPECT_EQ(static_cast<uint8_t>(Data[0]), 0x00);
+  EXPECT_EQ(static_cast<uint8_t>(Data[1]), 0xE4);
+  EXPECT_EQ(static_cast<uint8_t>(Data[2]), 0x40);
+  EXPECT_EQ(static_cast<uint8_t>(Data[3]), 0x46);
+
+  EXPECT_EQ(static_cast<uint8_t>(Data[4]), 0x00);
+  EXPECT_EQ(static_cast<uint8_t>(Data[5]), 0xE8);
+  EXPECT_EQ(static_cast<uint8_t>(Data[6]), 0x40);
+  EXPECT_EQ(static_cast<uint8_t>(Data[7]), 0x46);
+}
+
 
 } // end anon namespace

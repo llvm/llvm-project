@@ -4,7 +4,7 @@
 // Since this is a short response file, clang must not use a response file
 // to pass its parameters to other tools. This is only necessary for a large
 // number of parameters.
-// RUN: echo "-DTEST" >> %t.0.txt
+// RUN: echo "-DTEST" > %t.0.txt
 // RUN: %clang -E @%t.0.txt %s -v 2>&1 | FileCheck %s -check-prefix=SHORT
 // SHORT-NOT: Arguments passed via response file
 // SHORT: extern int it_works;

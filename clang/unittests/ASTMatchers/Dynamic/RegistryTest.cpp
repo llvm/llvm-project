@@ -421,7 +421,7 @@ TEST_F(RegistryTest, Errors) {
                        constructMatcher("parameterCountIs", 3), Error.get())
           .isNull());
   EXPECT_EQ("Incorrect type for arg 2. (Expected = Matcher<CXXRecordDecl>) != "
-            "(Actual = Matcher<FunctionDecl>)",
+            "(Actual = Matcher<FunctionDecl|FunctionProtoType>)",
             Error->toString());
 
   // Bad argument type with variadic.
@@ -449,26 +449,25 @@ TEST_F(RegistryTest, Completion) {
   // Overloaded
   EXPECT_TRUE(hasCompletion(
       Comps, "hasParent(",
-      "Matcher<TemplateArgument|NestedNameSpecifierLoc|Decl|...> "
-      "hasParent(Matcher<TemplateArgument|NestedNameSpecifierLoc|Decl|...>)"));
+      "Matcher<NestedNameSpecifierLoc|TypeLoc|Decl|...> "
+      "hasParent(Matcher<NestedNameSpecifierLoc|TypeLoc|Decl|...>)"));
   // Variadic.
   EXPECT_TRUE(hasCompletion(Comps, "whileStmt(",
                             "Matcher<Stmt> whileStmt(Matcher<WhileStmt>...)"));
   // Polymorphic.
   EXPECT_TRUE(hasCompletion(
       Comps, "hasDescendant(",
-      "Matcher<TemplateArgument|NestedNameSpecifier|NestedNameSpecifierLoc|...>"
-      " hasDescendant(Matcher<TemplateArgument|NestedNameSpecifier|"
-      "NestedNameSpecifierLoc|...>)"));
+      "Matcher<NestedNameSpecifierLoc|QualType|TypeLoc|...> "
+      "hasDescendant(Matcher<NestedNameSpecifierLoc|QualType|TypeLoc|...>)"));
 
   CompVector WhileComps = getCompletions("whileStmt", 0);
 
   EXPECT_TRUE(hasCompletion(WhileComps, "hasBody(",
                             "Matcher<WhileStmt> hasBody(Matcher<Stmt>)"));
-  EXPECT_TRUE(hasCompletion(WhileComps, "hasParent(",
-                            "Matcher<Stmt> "
-                            "hasParent(Matcher<TemplateArgument|"
-                            "NestedNameSpecifierLoc|Decl|...>)"));
+  EXPECT_TRUE(hasCompletion(
+      WhileComps, "hasParent(",
+      "Matcher<Stmt> "
+      "hasParent(Matcher<NestedNameSpecifierLoc|TypeLoc|Decl|...>)"));
   EXPECT_TRUE(
       hasCompletion(WhileComps, "allOf(", "Matcher<T> allOf(Matcher<T>...)"));
 
@@ -504,6 +503,12 @@ TEST_F(RegistryTest, HasArgs) {
       .getTypedMatcher<Decl>();
   EXPECT_TRUE(matches("struct __attribute__((warn_unused)) X {};", Value));
   EXPECT_FALSE(matches("struct X {};", Value));
+}
+
+TEST_F(RegistryTest, ParenExpr) {
+  Matcher<Stmt> Value = constructMatcher("parenExpr").getTypedMatcher<Stmt>();
+  EXPECT_TRUE(matches("int i = (1);", Value));
+  EXPECT_FALSE(matches("int i = 1;", Value));
 }
 
 } // end anonymous namespace

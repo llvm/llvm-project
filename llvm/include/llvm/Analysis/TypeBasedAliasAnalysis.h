@@ -27,14 +27,13 @@ class TypeBasedAAResult : public AAResultBase<TypeBasedAAResult> {
   friend AAResultBase<TypeBasedAAResult>;
 
 public:
-  explicit TypeBasedAAResult(const TargetLibraryInfo &TLI)
-      : AAResultBase(TLI) {}
-  TypeBasedAAResult(TypeBasedAAResult &&Arg) : AAResultBase(std::move(Arg)) {}
-
   /// Handle invalidation events from the new pass manager.
   ///
   /// By definition, this result is stateless and so remains valid.
-  bool invalidate(Function &, const PreservedAnalyses &) { return false; }
+  bool invalidate(Function &, const PreservedAnalyses &,
+                  FunctionAnalysisManager::Invalidator &) {
+    return false;
+  }
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
   bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal);
@@ -49,20 +48,14 @@ private:
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
-class TypeBasedAA {
+class TypeBasedAA : public AnalysisInfoMixin<TypeBasedAA> {
+  friend AnalysisInfoMixin<TypeBasedAA>;
+  static AnalysisKey Key;
+
 public:
   typedef TypeBasedAAResult Result;
 
-  /// \brief Opaque, unique identifier for this analysis pass.
-  static void *ID() { return (void *)&PassID; }
-
-  TypeBasedAAResult run(Function &F, AnalysisManager<Function> *AM);
-
-  /// \brief Provide access to a name for this pass for debugging purposes.
-  static StringRef name() { return "TypeBasedAA"; }
-
-private:
-  static char PassID;
+  TypeBasedAAResult run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the TypeBasedAAResult object.

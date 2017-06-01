@@ -20,6 +20,7 @@
 namespace __sanitizer {
 
 struct Suppression {
+  Suppression() { internal_memset(this, 0, sizeof(*this)); }
   const char *type;
   char *templ;
   atomic_uint32_t hit_count;
@@ -42,7 +43,7 @@ class SuppressionContext {
   void GetMatched(InternalMmapVector<Suppression *> *matched);
 
  private:
-  static const int kMaxSuppressionTypes = 16;
+  static const int kMaxSuppressionTypes = 32;
   const char **const suppression_types_;
   const int suppression_types_num_;
 

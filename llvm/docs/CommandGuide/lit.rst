@@ -324,6 +324,9 @@ executed, two important global variables are predefined:
  on the pipe fail. If this is not desired, setting this variable to false
  makes the test fail only if the last command in the pipe fails.
 
+ **available_features** A set of features that can be used in `XFAIL`,
+ `REQUIRES`, and `UNSUPPORTED` directives.
+
 TEST DISCOVERY
 ~~~~~~~~~~~~~~
 
@@ -354,6 +357,35 @@ specialize the configuration for each individual directory.  This facility can
 be used to define subdirectories of optional tests, or to change other
 configuration parameters --- for example, to change the test format, or the
 suffixes which identify test files.
+
+PRE-DEFINED SUBSTITUTIONS
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:program:`lit` provides various patterns that can be used with the RUN command.
+These are defined in TestRunner.py.
+
+ ========== ==============
+  Macro      Substitution
+ ========== ==============
+ %s         source path (path to the file currently being run)
+ %S         source dir (directory of the file currently being run)
+ %p         same as %S
+ %{pathsep} path separator
+ %t         temporary file name unique to the test
+ %T         temporary directory unique to the test
+ %%         %
+ %/s        same as %s but replace all / with \\
+ %/S        same as %S but replace all / with \\
+ %/p        same as %p but replace all / with \\
+ %/t        same as %t but replace all / with \\
+ %/T        same as %T but replace all / with \\
+ ========== ==============
+
+Further substitution patterns might be defined by each test module.
+See the modules :ref:`local-configuration-files`.
+
+More information on the testing infrastucture can be found in the
+:doc:`../TestingGuide`.
 
 TEST RUN OUTPUT FORMAT
 ~~~~~~~~~~~~~~~~~~~~~~

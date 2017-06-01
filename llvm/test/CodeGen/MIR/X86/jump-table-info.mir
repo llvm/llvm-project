@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -start-after branch-folder -stop-after branch-folder -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses the jump table info and jump
 # table operands correctly.
 
@@ -62,7 +62,7 @@ name:            test_jumptable
 # CHECK-NEXT: entries:
 # CHECK-NEXT: - id: 0
 # CHECK-NEXT: blocks: [ '%bb.3.lbl1', '%bb.4.lbl2', '%bb.5.lbl3', '%bb.6.lbl4' ]
-# CHECK_NEXT: body:
+# CHECK-NEXT: body:
 jumpTable:
   kind:          label-difference32
   entries:

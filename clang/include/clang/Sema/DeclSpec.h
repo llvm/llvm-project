@@ -31,7 +31,6 @@
 #include "clang/Lex/Token.h"
 #include "clang/Sema/AttributeList.h"
 #include "clang/Sema/Ownership.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -41,14 +40,10 @@ namespace clang {
   class CXXRecordDecl;
   class TypeLoc;
   class LangOptions;
-  class DiagnosticsEngine;
   class IdentifierInfo;
   class NamespaceAliasDecl;
   class NamespaceDecl;
-  class NestedNameSpecifier;
-  class NestedNameSpecifierLoc;
   class ObjCDeclSpec;
-  class Preprocessor;
   class Sema;
   class Declarator;
   struct TemplateIdAnnotation;
@@ -285,6 +280,7 @@ public:
   static const TST TST_half = clang::TST_half;
   static const TST TST_float = clang::TST_float;
   static const TST TST_double = clang::TST_double;
+  static const TST TST_float128 = clang::TST_float128;
   static const TST TST_bool = clang::TST_bool;
   static const TST TST_decimal32 = clang::TST_decimal32;
   static const TST TST_decimal64 = clang::TST_decimal64;
@@ -301,8 +297,12 @@ public:
   static const TST TST_decltype_auto = clang::TST_decltype_auto;
   static const TST TST_underlyingType = clang::TST_underlyingType;
   static const TST TST_auto = clang::TST_auto;
+  static const TST TST_auto_type = clang::TST_auto_type;
   static const TST TST_unknown_anytype = clang::TST_unknown_anytype;
   static const TST TST_atomic = clang::TST_atomic;
+#define GENERIC_IMAGE_TYPE(ImgType, Id) \
+  static const TST TST_##ImgType##_t = clang::TST_##ImgType##_t;
+#include "clang/Basic/OpenCLImageTypes.def"
   static const TST TST_error = clang::TST_error;
 
   // type-qualifiers
@@ -311,9 +311,10 @@ public:
     TQ_const       = 1,
     TQ_restrict    = 2,
     TQ_volatile    = 4,
+    TQ_unaligned   = 8,
     // This has no corresponding Qualifiers::TQ value, because it's not treated
     // as a qualifier in our type system.
-    TQ_atomic      = 8
+    TQ_atomic      = 16
   };
 
   /// ParsedSpecifiers - Flags to query which specifiers were applied.  This is
@@ -341,9 +342,10 @@ private:
   unsigned TypeAltiVecPixel : 1;
   unsigned TypeAltiVecBool : 1;
   unsigned TypeSpecOwned : 1;
+  unsigned TypeSpecPipe : 1;
 
   // type-qualifiers
-  unsigned TypeQualifiers : 4;  // Bitwise OR of TQ.
+  unsigned TypeQualifiers : 5;  // Bitwise OR of TQ.
 
   // function-specifier
   unsigned FS_inline_specified : 1;
@@ -378,17 +380,20 @@ private:
   SourceRange Range;
 
   SourceLocation StorageClassSpecLoc, ThreadStorageClassSpecLoc;
-  SourceLocation TSWLoc, TSCLoc, TSSLoc, TSTLoc, AltiVecLoc;
+  SourceRange TSWRange;
+  SourceLocation TSCLoc, TSSLoc, TSTLoc, AltiVecLoc;
   /// TSTNameLoc - If TypeSpecType is any of class, enum, struct, union,
   /// typename, then this is the location of the named type (if present);
   /// otherwise, it is the same as TSTLoc. Hence, the pair TSTLoc and
   /// TSTNameLoc provides source range info for tag types.
   SourceLocation TSTNameLoc;
   SourceRange TypeofParensRange;
-  SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc;
+  SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc,
+      TQ_unalignedLoc;
   SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
   SourceLocation FS_forceinlineLoc;
   SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc, ConceptLoc;
+  SourceLocation TQ_pipeLoc;
 
   WrittenBuiltinSpecs writtenBS;
   void SaveWrittenBuiltinSpecs();
@@ -424,6 +429,7 @@ public:
       TypeAltiVecPixel(false),
       TypeAltiVecBool(false),
       TypeSpecOwned(false),
+      TypeSpecPipe(false),
       TypeQualifiers(TQ_unspecified),
       FS_inline_specified(false),
       FS_forceinline_specified(false),
@@ -477,6 +483,7 @@ public:
   bool isTypeAltiVecBool() const { return TypeAltiVecBool; }
   bool isTypeSpecOwned() const { return TypeSpecOwned; }
   bool isTypeRep() const { return isTypeRep((TST) TypeSpecType); }
+  bool isTypeSpecPipe() const { return TypeSpecPipe; }
 
   ParsedType getRepAsType() const {
     assert(isTypeRep((TST) TypeSpecType) && "DeclSpec does not store a type");
@@ -497,7 +504,8 @@ public:
   SourceLocation getLocStart() const LLVM_READONLY { return Range.getBegin(); }
   SourceLocation getLocEnd() const LLVM_READONLY { return Range.getEnd(); }
 
-  SourceLocation getTypeSpecWidthLoc() const { return TSWLoc; }
+  SourceLocation getTypeSpecWidthLoc() const { return TSWRange.getBegin(); }
+  SourceRange getTypeSpecWidthRange() const { return TSWRange; }
   SourceLocation getTypeSpecComplexLoc() const { return TSCLoc; }
   SourceLocation getTypeSpecSignLoc() const { return TSSLoc; }
   SourceLocation getTypeSpecTypeLoc() const { return TSTLoc; }
@@ -512,7 +520,8 @@ public:
   void setTypeofParensRange(SourceRange range) { TypeofParensRange = range; }
 
   bool containsPlaceholderType() const {
-    return TypeSpecType == TST_auto || TypeSpecType == TST_decltype_auto;
+    return (TypeSpecType == TST_auto || TypeSpecType == TST_auto_type ||
+            TypeSpecType == TST_decltype_auto);
   }
 
   bool hasTagDefinition() const;
@@ -535,6 +544,8 @@ public:
   SourceLocation getRestrictSpecLoc() const { return TQ_restrictLoc; }
   SourceLocation getVolatileSpecLoc() const { return TQ_volatileLoc; }
   SourceLocation getAtomicSpecLoc() const { return TQ_atomicLoc; }
+  SourceLocation getUnalignedSpecLoc() const { return TQ_unalignedLoc; }
+  SourceLocation getPipeLoc() const { return TQ_pipeLoc; }
 
   /// \brief Clear out all of the type qualifiers.
   void ClearTypeQualifiers() {
@@ -543,6 +554,8 @@ public:
     TQ_restrictLoc = SourceLocation();
     TQ_volatileLoc = SourceLocation();
     TQ_atomicLoc = SourceLocation();
+    TQ_unalignedLoc = SourceLocation();
+    TQ_pipeLoc = SourceLocation();
   }
 
   // function-specifier
@@ -646,6 +659,9 @@ public:
   bool SetTypeAltiVecBool(bool isAltiVecBool, SourceLocation Loc,
                        const char *&PrevSpec, unsigned &DiagID,
                        const PrintingPolicy &Policy);
+  bool SetTypePipe(bool isPipe, SourceLocation Loc,
+                       const char *&PrevSpec, unsigned &DiagID,
+                       const PrintingPolicy &Policy);
   bool SetTypeSpecError();
   void UpdateDeclRep(Decl *Rep) {
     assert(isDeclRep((TST) TypeSpecType));
@@ -742,8 +758,7 @@ public:
   /// Finish - This does final analysis of the declspec, issuing diagnostics for
   /// things like "_Imaginary" (lacking an FP type).  After calling this method,
   /// DeclSpec is guaranteed self-consistent, even if an error occurred.
-  void Finish(DiagnosticsEngine &D, Preprocessor &PP,
-              const PrintingPolicy &Policy);
+  void Finish(Sema &S, const PrintingPolicy &Policy);
 
   const WrittenBuiltinSpecs& getWrittenBuiltinSpecs() const {
     return writtenBS;
@@ -780,6 +795,7 @@ public:
   };
 
   /// PropertyAttributeKind - list of property attributes.
+  /// Keep this list in sync with LLVM's Dwarf.h ApplePropertyAttributes.
   enum ObjCPropertyAttributeKind {
     DQ_PR_noattr = 0x0,
     DQ_PR_readonly = 0x01,
@@ -795,7 +811,8 @@ public:
     DQ_PR_strong = 0x400,
     DQ_PR_unsafe_unretained = 0x800,
     DQ_PR_nullability = 0x1000,
-    DQ_PR_null_resettable = 0x2000
+    DQ_PR_null_resettable = 0x2000,
+    DQ_PR_class = 0x4000
   };
 
   ObjCDeclSpec()
@@ -842,11 +859,19 @@ public:
 
   const IdentifierInfo *getGetterName() const { return GetterName; }
   IdentifierInfo *getGetterName() { return GetterName; }
-  void setGetterName(IdentifierInfo *name) { GetterName = name; }
+  SourceLocation getGetterNameLoc() const { return GetterNameLoc; }
+  void setGetterName(IdentifierInfo *name, SourceLocation loc) {
+    GetterName = name;
+    GetterNameLoc = loc;
+  }
 
   const IdentifierInfo *getSetterName() const { return SetterName; }
   IdentifierInfo *getSetterName() { return SetterName; }
-  void setSetterName(IdentifierInfo *name) { SetterName = name; }
+  SourceLocation getSetterNameLoc() const { return SetterNameLoc; }
+  void setSetterName(IdentifierInfo *name, SourceLocation loc) {
+    SetterName = name;
+    SetterNameLoc = loc;
+  }
 
 private:
   // FIXME: These two are unrelated and mutually exclusive. So perhaps
@@ -855,7 +880,7 @@ private:
   ObjCDeclQualifier objcDeclQualifier : 7;
 
   // NOTE: VC++ treats enums as signed, avoid using ObjCPropertyAttributeKind
-  unsigned PropertyAttributes : 14;
+  unsigned PropertyAttributes : 15;
 
   unsigned Nullability : 2;
 
@@ -863,6 +888,9 @@ private:
 
   IdentifierInfo *GetterName;    // getter name or NULL if no getter
   IdentifierInfo *SetterName;    // setter name or NULL if no setter
+  SourceLocation GetterNameLoc; // location of the getter attribute's value
+  SourceLocation SetterNameLoc; // location of the setter attribute's value
+
 };
 
 /// \brief Represents a C++ unqualified-id that has been parsed. 
@@ -1085,7 +1113,7 @@ typedef SmallVector<Token, 4> CachedTokens;
 /// This is intended to be a small value object.
 struct DeclaratorChunk {
   enum {
-    Pointer, Reference, Array, Function, BlockPointer, MemberPointer, Paren
+    Pointer, Reference, Array, Function, BlockPointer, MemberPointer, Paren, Pipe
   } Kind;
 
   /// Loc - The place where this type was defined.
@@ -1104,8 +1132,8 @@ struct DeclaratorChunk {
   };
 
   struct PointerTypeInfo : TypeInfoCommon {
-    /// The type qualifiers: const/volatile/restrict/atomic.
-    unsigned TypeQuals : 4;
+    /// The type qualifiers: const/volatile/restrict/unaligned/atomic.
+    unsigned TypeQuals : 5;
 
     /// The location of the const-qualifier, if any.
     unsigned ConstQualLoc;
@@ -1118,6 +1146,9 @@ struct DeclaratorChunk {
 
     /// The location of the _Atomic-qualifier, if any.
     unsigned AtomicQualLoc;
+
+    /// The location of the __unaligned-qualifier, if any.
+    unsigned UnalignedQualLoc;
 
     void destroy() {
     }
@@ -1133,14 +1164,15 @@ struct DeclaratorChunk {
   };
 
   struct ArrayTypeInfo : TypeInfoCommon {
-    /// The type qualifiers for the array: const/volatile/restrict/_Atomic.
-    unsigned TypeQuals : 4;
+    /// The type qualifiers for the array:
+    /// const/volatile/restrict/__unaligned/_Atomic.
+    unsigned TypeQuals : 5;
 
     /// True if this dimension included the 'static' keyword.
-    bool hasStatic : 1;
+    unsigned hasStatic : 1;
 
     /// True if this dimension was [*].  In this case, NumElts is null.
-    bool isStar : 1;
+    unsigned isStar : 1;
 
     /// This is the size of the array, or null if [] or [*] was specified.
     /// Since the parser is multi-purpose, and we don't want to impose a root
@@ -1167,14 +1199,14 @@ struct DeclaratorChunk {
     /// declaration of a member function), it will be stored here as a
     /// sequence of tokens to be parsed once the class definition is
     /// complete. Non-NULL indicates that there is a default argument.
-    CachedTokens *DefaultArgTokens;
+    std::unique_ptr<CachedTokens> DefaultArgTokens;
 
-    ParamInfo() {}
+    ParamInfo() = default;
     ParamInfo(IdentifierInfo *ident, SourceLocation iloc,
               Decl *param,
-              CachedTokens *DefArgTokens = nullptr)
+              std::unique_ptr<CachedTokens> DefArgTokens = nullptr)
       : Ident(ident), IdentLoc(iloc), Param(param),
-        DefaultArgTokens(DefArgTokens) {}
+        DefaultArgTokens(std::move(DefArgTokens)) {}
   };
 
   struct TypeAndRange {
@@ -1200,9 +1232,9 @@ struct DeclaratorChunk {
     /// Otherwise, it's an rvalue reference.
     unsigned RefQualifierIsLValueRef : 1;
 
-    /// The type qualifiers: const/volatile/restrict.
+    /// The type qualifiers: const/volatile/restrict/__unaligned
     /// The qualifier bitmask values are the same as in QualType.
-    unsigned TypeQuals : 3;
+    unsigned TypeQuals : 4;
 
     /// ExceptionSpecType - An ExceptionSpecificationType value.
     unsigned ExceptionSpecType : 4;
@@ -1227,9 +1259,10 @@ struct DeclaratorChunk {
     /// declarator.
     unsigned NumParams;
 
-    /// NumExceptions - This is the number of types in the dynamic-exception-
-    /// decl, if the function has one.
-    unsigned NumExceptions;
+    /// NumExceptionsOrDecls - This is the number of types in the
+    /// dynamic-exception-decl, if the function has one. In C, this is the
+    /// number of declarations in the function prototype.
+    unsigned NumExceptionsOrDecls;
 
     /// \brief The location of the ref-qualifier, if any.
     ///
@@ -1279,6 +1312,11 @@ struct DeclaratorChunk {
       /// \brief Pointer to the cached tokens for an exception-specification
       /// that has not yet been parsed.
       CachedTokens *ExceptionSpecTokens;
+
+      /// Pointer to a new[]'d array of declarations that need to be available
+      /// for lookup inside the function body, if one exists. Does not exist in
+      /// C++.
+      NamedDecl **DeclsInPrototype;
     };
 
     /// \brief If HasTrailingReturnType is true, this is the trailing return
@@ -1289,10 +1327,8 @@ struct DeclaratorChunk {
     ///
     /// This is used in various places for error recovery.
     void freeParams() {
-      for (unsigned I = 0; I < NumParams; ++I) {
-        delete Params[I].DefaultArgTokens;
-        Params[I].DefaultArgTokens = nullptr;
-      }
+      for (unsigned I = 0; I < NumParams; ++I)
+        Params[I].DefaultArgTokens.reset();
       if (DeleteParams) {
         delete[] Params;
         DeleteParams = false;
@@ -1303,10 +1339,20 @@ struct DeclaratorChunk {
     void destroy() {
       if (DeleteParams)
         delete[] Params;
-      if (getExceptionSpecType() == EST_Dynamic)
+      switch (getExceptionSpecType()) {
+      default:
+        break;
+      case EST_Dynamic:
         delete[] Exceptions;
-      else if (getExceptionSpecType() == EST_Unparsed)
+        break;
+      case EST_Unparsed:
         delete ExceptionSpecTokens;
+        break;
+      case EST_None:
+        if (NumExceptionsOrDecls != 0)
+          delete[] DeclsInPrototype;
+        break;
+      }
     }
 
     /// isKNRPrototype - Return true if this is a K&R style identifier list,
@@ -1376,6 +1422,19 @@ struct DeclaratorChunk {
       return static_cast<ExceptionSpecificationType>(ExceptionSpecType);
     }
 
+    /// \brief Get the number of dynamic exception specifications.
+    unsigned getNumExceptions() const {
+      assert(ExceptionSpecType != EST_None);
+      return NumExceptionsOrDecls;
+    }
+
+    /// \brief Get the non-parameter decls defined within this function
+    /// prototype. Typically these are tag declarations.
+    ArrayRef<NamedDecl *> getDeclsInPrototype() const {
+      assert(ExceptionSpecType == EST_None);
+      return llvm::makeArrayRef(DeclsInPrototype, NumExceptionsOrDecls);
+    }
+
     /// \brief Determine whether this function declarator had a
     /// trailing-return-type.
     bool hasTrailingReturnType() const { return HasTrailingReturnType; }
@@ -1386,31 +1445,35 @@ struct DeclaratorChunk {
 
   struct BlockPointerTypeInfo : TypeInfoCommon {
     /// For now, sema will catch these as invalid.
-    /// The type qualifiers: const/volatile/restrict/_Atomic.
-    unsigned TypeQuals : 4;
+    /// The type qualifiers: const/volatile/restrict/__unaligned/_Atomic.
+    unsigned TypeQuals : 5;
 
     void destroy() {
     }
   };
 
   struct MemberPointerTypeInfo : TypeInfoCommon {
-    /// The type qualifiers: const/volatile/restrict/_Atomic.
-    unsigned TypeQuals : 4;
+    /// The type qualifiers: const/volatile/restrict/__unaligned/_Atomic.
+    unsigned TypeQuals : 5;
     // CXXScopeSpec has a constructor, so it can't be a direct member.
     // So we need some pointer-aligned storage and a bit of trickery.
-    union {
-      void *Aligner;
-      char Mem[sizeof(CXXScopeSpec)];
-    } ScopeMem;
+    alignas(CXXScopeSpec) char ScopeMem[sizeof(CXXScopeSpec)];
     CXXScopeSpec &Scope() {
-      return *reinterpret_cast<CXXScopeSpec*>(ScopeMem.Mem);
+      return *reinterpret_cast<CXXScopeSpec *>(ScopeMem);
     }
     const CXXScopeSpec &Scope() const {
-      return *reinterpret_cast<const CXXScopeSpec*>(ScopeMem.Mem);
+      return *reinterpret_cast<const CXXScopeSpec *>(ScopeMem);
     }
     void destroy() {
       Scope().~CXXScopeSpec();
     }
+  };
+
+  struct PipeTypeInfo : TypeInfoCommon {
+  /// The access writes.
+  unsigned AccessWrites : 3;
+
+  void destroy() {}
   };
 
   union {
@@ -1421,6 +1484,7 @@ struct DeclaratorChunk {
     FunctionTypeInfo      Fun;
     BlockPointerTypeInfo  Cls;
     MemberPointerTypeInfo Mem;
+    PipeTypeInfo          PipeInfo;
   };
 
   void destroy() {
@@ -1432,6 +1496,7 @@ struct DeclaratorChunk {
     case DeclaratorChunk::Array:         return Arr.destroy();
     case DeclaratorChunk::MemberPointer: return Mem.destroy();
     case DeclaratorChunk::Paren:         return;
+    case DeclaratorChunk::Pipe:          return PipeInfo.destroy();
     }
   }
 
@@ -1450,7 +1515,8 @@ struct DeclaratorChunk {
                                     SourceLocation ConstQualLoc,
                                     SourceLocation VolatileQualLoc,
                                     SourceLocation RestrictQualLoc,
-                                    SourceLocation AtomicQualLoc) {
+                                    SourceLocation AtomicQualLoc,
+                                    SourceLocation UnalignedQualLoc) {
     DeclaratorChunk I;
     I.Kind                = Pointer;
     I.Loc                 = Loc;
@@ -1459,6 +1525,7 @@ struct DeclaratorChunk {
     I.Ptr.VolatileQualLoc = VolatileQualLoc.getRawEncoding();
     I.Ptr.RestrictQualLoc = RestrictQualLoc.getRawEncoding();
     I.Ptr.AtomicQualLoc   = AtomicQualLoc.getRawEncoding();
+    I.Ptr.UnalignedQualLoc = UnalignedQualLoc.getRawEncoding();
     I.Ptr.AttrList        = nullptr;
     return I;
   }
@@ -1513,6 +1580,7 @@ struct DeclaratorChunk {
                                      unsigned NumExceptions,
                                      Expr *NoexceptExpr,
                                      CachedTokens *ExceptionSpecTokens,
+                                     ArrayRef<NamedDecl *> DeclsInPrototype,
                                      SourceLocation LocalRangeBegin,
                                      SourceLocation LocalRangeEnd,
                                      Declarator &TheDeclarator,
@@ -1530,6 +1598,17 @@ struct DeclaratorChunk {
     return I;
   }
 
+  /// \brief Return a DeclaratorChunk for a block.
+  static DeclaratorChunk getPipe(unsigned TypeQuals,
+                                 SourceLocation Loc) {
+    DeclaratorChunk I;
+    I.Kind          = Pipe;
+    I.Loc           = Loc;
+    I.Cls.TypeQuals = TypeQuals;
+    I.Cls.AttrList  = nullptr;
+    return I;
+  }
+
   static DeclaratorChunk getMemberPointer(const CXXScopeSpec &SS,
                                           unsigned TypeQuals,
                                           SourceLocation Loc) {
@@ -1539,7 +1618,7 @@ struct DeclaratorChunk {
     I.EndLoc        = Loc;
     I.Mem.TypeQuals = TypeQuals;
     I.Mem.AttrList  = nullptr;
-    new (I.Mem.ScopeMem.Mem) CXXScopeSpec(SS);
+    new (I.Mem.ScopeMem) CXXScopeSpec(SS);
     return I;
   }
 
@@ -1556,6 +1635,58 @@ struct DeclaratorChunk {
 
   bool isParen() const {
     return Kind == Paren;
+  }
+};
+
+/// A parsed C++17 decomposition declarator of the form
+///   '[' identifier-list ']'
+class DecompositionDeclarator {
+public:
+  struct Binding {
+    IdentifierInfo *Name;
+    SourceLocation NameLoc;
+  };
+
+private:
+  /// The locations of the '[' and ']' tokens.
+  SourceLocation LSquareLoc, RSquareLoc;
+
+  /// The bindings.
+  Binding *Bindings;
+  unsigned NumBindings : 31;
+  unsigned DeleteBindings : 1;
+
+  friend class Declarator;
+
+public:
+  DecompositionDeclarator()
+      : Bindings(nullptr), NumBindings(0), DeleteBindings(false) {}
+  DecompositionDeclarator(const DecompositionDeclarator &G) = delete;
+  DecompositionDeclarator &operator=(const DecompositionDeclarator &G) = delete;
+  ~DecompositionDeclarator() {
+    if (DeleteBindings)
+      delete[] Bindings;
+  }
+
+  void clear() {
+    LSquareLoc = RSquareLoc = SourceLocation();
+    if (DeleteBindings)
+      delete[] Bindings;
+    Bindings = nullptr;
+    NumBindings = 0;
+    DeleteBindings = false;
+  }
+
+  ArrayRef<Binding> bindings() const {
+    return llvm::makeArrayRef(Bindings, NumBindings);
+  }
+
+  bool isSet() const { return LSquareLoc.isValid(); }
+
+  SourceLocation getLSquareLoc() const { return LSquareLoc; }
+  SourceLocation getRSquareLoc() const { return RSquareLoc; }
+  SourceRange getSourceRange() const {
+    return SourceRange(LSquareLoc, RSquareLoc);
   }
 };
 
@@ -1592,6 +1723,7 @@ public:
     MemberContext,       // Struct/Union field.
     BlockContext,        // Declaration within a block in a function.
     ForContext,          // Declaration within first part of a for loop.
+    InitStmtContext,     // Declaration within optional init stmt of if/switch.
     ConditionContext,    // Condition declaration in a C++ if/switch/while/for.
     TemplateParamContext,// Within a template parameter list.
     CXXNewContext,       // C++ new-expression.
@@ -1616,6 +1748,9 @@ private:
   /// \brief Where we are parsing this declarator.
   TheContext Context;
 
+  /// The C++17 structured binding, if any. This is an alternative to a Name.
+  DecompositionDeclarator BindingGroup;
+
   /// DeclTypeInfo - This holds each type that the declarator includes as it is
   /// parsed.  This is pushed from the identifier out, which means that element
   /// #0 will be the most closely bound to the identifier, and
@@ -1623,10 +1758,10 @@ private:
   SmallVector<DeclaratorChunk, 8> DeclTypeInfo;
 
   /// InvalidType - Set by Sema::GetTypeForDeclarator().
-  bool InvalidType : 1;
+  unsigned InvalidType : 1;
 
   /// GroupingParens - Set by Parser::ParseParenDeclarator().
-  bool GroupingParens : 1;
+  unsigned GroupingParens : 1;
 
   /// FunctionDefinition - Is this Declarator for a function or member 
   /// definition and, if so, what kind?
@@ -1635,19 +1770,7 @@ private:
   unsigned FunctionDefinition : 2;
 
   /// \brief Is this Declarator a redeclaration?
-  bool Redeclaration : 1;
-
-  /// Attrs - Attributes.
-  ParsedAttributes Attrs;
-
-  /// \brief The asm label, if specified.
-  Expr *AsmLabel;
-
-  /// InlineParams - This is a local array used for the first function decl
-  /// chunk to avoid going to the heap for the common case when we have one
-  /// function chunk in the declarator.
-  DeclaratorChunk::ParamInfo InlineParams[16];
-  bool InlineParamsUsed;
+  unsigned Redeclaration : 1;
 
   /// \brief true if the declaration is preceded by \c __extension__.
   unsigned Extension : 1;
@@ -1657,6 +1780,27 @@ private:
     
   /// Indicates whether this is an Objective-C 'weak' property.
   unsigned ObjCWeakProperty : 1;
+
+  /// Indicates whether the InlineParams / InlineBindings storage has been used.
+  unsigned InlineStorageUsed : 1;
+
+  /// Attrs - Attributes.
+  ParsedAttributes Attrs;
+
+  /// \brief The asm label, if specified.
+  Expr *AsmLabel;
+
+#ifndef _MSC_VER
+  union {
+#endif
+    /// InlineParams - This is a local array used for the first function decl
+    /// chunk to avoid going to the heap for the common case when we have one
+    /// function chunk in the declarator.
+    DeclaratorChunk::ParamInfo InlineParams[16];
+    DecompositionDeclarator::Binding InlineBindings[16];
+#ifndef _MSC_VER
+  };
+#endif
 
   /// \brief If this is the second or subsequent declarator in this declaration,
   /// the location of the comma before this declarator.
@@ -1670,14 +1814,12 @@ private:
 
 public:
   Declarator(const DeclSpec &ds, TheContext C)
-    : DS(ds), Range(ds.getSourceRange()), Context(C),
-      InvalidType(DS.getTypeSpecType() == DeclSpec::TST_error),
-      GroupingParens(false), FunctionDefinition(FDK_Declaration), 
-      Redeclaration(false),
-      Attrs(ds.getAttributePool().getFactory()), AsmLabel(nullptr),
-      InlineParamsUsed(false), Extension(false), ObjCIvar(false),
-      ObjCWeakProperty(false) {
-  }
+      : DS(ds), Range(ds.getSourceRange()), Context(C),
+        InvalidType(DS.getTypeSpecType() == DeclSpec::TST_error),
+        GroupingParens(false), FunctionDefinition(FDK_Declaration),
+        Redeclaration(false), Extension(false), ObjCIvar(false),
+        ObjCWeakProperty(false), InlineStorageUsed(false),
+        Attrs(ds.getAttributePool().getFactory()), AsmLabel(nullptr) {}
 
   ~Declarator() {
     clear();
@@ -1704,6 +1846,10 @@ public:
 
   /// \brief Retrieve the name specified by this declarator.
   UnqualifiedId &getName() { return Name; }
+
+  const DecompositionDeclarator &getDecompositionDeclarator() const {
+    return BindingGroup;
+  }
   
   TheContext getContext() const { return Context; }
 
@@ -1747,13 +1893,14 @@ public:
     SS.clear();
     Name.clear();
     Range = DS.getSourceRange();
-    
+    BindingGroup.clear();
+
     for (unsigned i = 0, e = DeclTypeInfo.size(); i != e; ++i)
       DeclTypeInfo[i].destroy();
     DeclTypeInfo.clear();
     Attrs.clear();
     AsmLabel = nullptr;
-    InlineParamsUsed = false;
+    InlineStorageUsed = false;
     ObjCIvar = false;
     ObjCWeakProperty = false;
     CommaLoc = SourceLocation();
@@ -1770,6 +1917,7 @@ public:
     case MemberContext:
     case BlockContext:
     case ForContext:
+    case InitStmtContext:
     case ConditionContext:
       return false;
 
@@ -1804,6 +1952,7 @@ public:
     case MemberContext:
     case BlockContext:
     case ForContext:
+    case InitStmtContext:
     case ConditionContext:
     case PrototypeContext:
     case LambdaExprParameterContext:
@@ -1837,6 +1986,7 @@ public:
     case MemberContext:
     case BlockContext:
     case ForContext:
+    case InitStmtContext:
     case ConditionContext:
     case PrototypeContext:
     case LambdaExprParameterContext:
@@ -1861,6 +2011,45 @@ public:
     llvm_unreachable("unknown context kind!");
   }
 
+  /// Return true if the context permits a C++17 decomposition declarator.
+  bool mayHaveDecompositionDeclarator() const {
+    switch (Context) {
+    case FileContext:
+      // FIXME: It's not clear that the proposal meant to allow file-scope
+      // structured bindings, but it does.
+    case BlockContext:
+    case ForContext:
+    case InitStmtContext:
+      return true;
+
+    case ConditionContext:
+    case MemberContext:
+    case PrototypeContext:
+    case TemplateParamContext:
+      // Maybe one day...
+      return false;
+
+    // These contexts don't allow any kind of non-abstract declarator.
+    case KNRTypeListContext:
+    case TypeNameContext:
+    case AliasDeclContext:
+    case AliasTemplateContext:
+    case LambdaExprParameterContext:
+    case ObjCParameterContext:
+    case ObjCResultContext:
+    case CXXNewContext:
+    case CXXCatchContext:
+    case ObjCCatchContext:
+    case BlockLiteralContext:
+    case LambdaExprContext:
+    case ConversionIdContext:
+    case TemplateTypeArgContext:
+    case TrailingReturnContext:
+      return false;
+    }
+    llvm_unreachable("unknown context kind!");
+  }
+
   /// mayBeFollowedByCXXDirectInit - Return true if the declarator can be
   /// followed by a C++ direct initializer, e.g. "int x(1);".
   bool mayBeFollowedByCXXDirectInit() const {
@@ -1881,6 +2070,7 @@ public:
     case FileContext:
     case BlockContext:
     case ForContext:
+    case InitStmtContext:
       return true;
 
     case ConditionContext:
@@ -1913,14 +2103,22 @@ public:
   }
 
   /// isPastIdentifier - Return true if we have parsed beyond the point where
-  /// the
+  /// the name would appear. (This may happen even if we haven't actually parsed
+  /// a name, perhaps because this context doesn't require one.)
   bool isPastIdentifier() const { return Name.isValid(); }
 
   /// hasName - Whether this declarator has a name, which might be an
   /// identifier (accessible via getIdentifier()) or some kind of
-  /// special C++ name (constructor, destructor, etc.).
-  bool hasName() const { 
-    return Name.getKind() != UnqualifiedId::IK_Identifier || Name.Identifier;
+  /// special C++ name (constructor, destructor, etc.), or a structured
+  /// binding (which is not exactly a name, but occupies the same position).
+  bool hasName() const {
+    return Name.getKind() != UnqualifiedId::IK_Identifier || Name.Identifier ||
+           isDecompositionDeclarator();
+  }
+
+  /// Return whether this declarator is a decomposition declarator.
+  bool isDecompositionDeclarator() const {
+    return BindingGroup.isSet();
   }
 
   IdentifierInfo *getIdentifier() const { 
@@ -1935,7 +2133,13 @@ public:
   void SetIdentifier(IdentifierInfo *Id, SourceLocation IdLoc) {
     Name.setIdentifier(Id, IdLoc);
   }
-  
+
+  /// Set the decomposition bindings for this declarator.
+  void
+  setDecompositionBindings(SourceLocation LSquareLoc,
+                           ArrayRef<DecompositionDeclarator::Binding> Bindings,
+                           SourceLocation RSquareLoc);
+
   /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
   /// EndLoc, which should be the last token of the chunk.
   void AddTypeInfo(const DeclaratorChunk &TI,
@@ -2030,6 +2234,7 @@ public:
       case DeclaratorChunk::Array:
       case DeclaratorChunk::BlockPointer:
       case DeclaratorChunk::MemberPointer:
+      case DeclaratorChunk::Pipe:
         return false;
       }
       llvm_unreachable("Invalid type chunk");
@@ -2078,9 +2283,10 @@ public:
     case FileContext:
     case MemberContext:
     case BlockContext:
+    case ForContext:
+    case InitStmtContext:
       return true;
 
-    case ForContext:
     case ConditionContext:
     case KNRTypeListContext:
     case TypeNameContext:
@@ -2231,7 +2437,9 @@ public:
     VS_None = 0,
     VS_Override = 1,
     VS_Final = 2,
-    VS_Sealed = 4
+    VS_Sealed = 4,
+    // Represents the __final keyword, which is legal for gcc in pre-C++11 mode.
+    VS_GNU_Final = 8
   };
 
   VirtSpecifiers() : Specifiers(0), LastSpecifier(VS_None) { }
@@ -2244,7 +2452,7 @@ public:
   bool isOverrideSpecified() const { return Specifiers & VS_Override; }
   SourceLocation getOverrideLoc() const { return VS_overrideLoc; }
 
-  bool isFinalSpecified() const { return Specifiers & (VS_Final | VS_Sealed); }
+  bool isFinalSpecified() const { return Specifiers & (VS_Final | VS_Sealed | VS_GNU_Final); }
   bool isFinalSpelledSealed() const { return Specifiers & VS_Sealed; }
   SourceLocation getFinalLoc() const { return VS_finalLoc; }
 
@@ -2265,6 +2473,13 @@ private:
   SourceLocation LastLocation;
 };
 
+enum class LambdaCaptureInitKind {
+  NoInit,     //!< [a]
+  CopyInit,   //!< [a = b], [a = {b}]
+  DirectInit, //!< [a(b)]
+  ListInit    //!< [a{b}]
+};
+
 /// \brief Represents a complete lambda introducer.
 struct LambdaIntroducer {
   /// \brief An individual capture in a lambda introducer.
@@ -2273,13 +2488,15 @@ struct LambdaIntroducer {
     SourceLocation Loc;
     IdentifierInfo *Id;
     SourceLocation EllipsisLoc;
+    LambdaCaptureInitKind InitKind;
     ExprResult Init;
     ParsedType InitCaptureType;
     LambdaCapture(LambdaCaptureKind Kind, SourceLocation Loc,
                   IdentifierInfo *Id, SourceLocation EllipsisLoc,
-                  ExprResult Init, ParsedType InitCaptureType)
-        : Kind(Kind), Loc(Loc), Id(Id), EllipsisLoc(EllipsisLoc), Init(Init),
-          InitCaptureType(InitCaptureType) {}
+                  LambdaCaptureInitKind InitKind, ExprResult Init,
+                  ParsedType InitCaptureType)
+        : Kind(Kind), Loc(Loc), Id(Id), EllipsisLoc(EllipsisLoc),
+          InitKind(InitKind), Init(Init), InitCaptureType(InitCaptureType) {}
   };
 
   SourceRange Range;
@@ -2295,13 +2512,14 @@ struct LambdaIntroducer {
                   SourceLocation Loc,
                   IdentifierInfo* Id,
                   SourceLocation EllipsisLoc,
+                  LambdaCaptureInitKind InitKind,
                   ExprResult Init, 
                   ParsedType InitCaptureType) {
-    Captures.push_back(LambdaCapture(Kind, Loc, Id, EllipsisLoc, Init, 
-        InitCaptureType));
+    Captures.push_back(LambdaCapture(Kind, Loc, Id, EllipsisLoc, InitKind, Init,
+                                     InitCaptureType));
   }
 };
 
 } // end namespace clang
 
-#endif
+#endif // LLVM_CLANG_SEMA_DECLSPEC_H

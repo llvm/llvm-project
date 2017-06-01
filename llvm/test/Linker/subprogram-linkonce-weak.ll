@@ -53,37 +53,33 @@ entry:
 ; WL-SAME: !{![[WCU:[0-9]+]], ![[LCU:[0-9]+]]}
 !llvm.dbg.cu = !{!1}
 
-; LW: ![[LCU]] = distinct !DICompileUnit({{.*}} subprograms: ![[LSPs:[0-9]+]]
-; LW: ![[LSPs]] = !{![[BARSP]], ![[FOOSP:[0-9]+]]}
-; LW: ![[BARSP]] = distinct !DISubprogram(name: "bar",
-; LW: ![[FOOSP]] = distinct !DISubprogram(name: "foo",
-; LW: ![[WCU]] = distinct !DICompileUnit({{.*}} subprograms: ![[WSPs:[0-9]+]]
-; LW: ![[WSPs]] = !{![[WEAKFOOSP]]}
-; LW: ![[WEAKFOOSP]] = distinct !DISubprogram(name: "foo",
-; LW: ![[FOOINBAR]] = !DILocation(line: 2, scope: ![[FOOSP]], inlinedAt: ![[BARIA:[0-9]+]])
+; LW: ![[LCU]] = distinct !DICompileUnit(
+; LW: ![[WCU]] = distinct !DICompileUnit(
+; LW: ![[BARSP]] = distinct !DISubprogram(name: "bar",{{.*}} unit: ![[LCU]]
+; LW: ![[FOOINBAR]] = !DILocation(line: 2, scope: ![[FOOSP:.*]], inlinedAt: ![[BARIA:[0-9]+]])
+; LW: ![[FOOSP]] = distinct !DISubprogram(name: "foo",{{.*}} unit: ![[LCU]]
 ; LW: ![[BARIA]] = !DILocation(line: 12, scope: ![[BARSP]])
 ; LW: ![[BARRET]] = !DILocation(line: 13, scope: ![[BARSP]])
+; LW: ![[WEAKFOOSP]] = distinct !DISubprogram(name: "foo",{{.*}} unit: ![[WCU]]
 ; LW: ![[FOOCALL]] = !DILocation(line: 52, scope: ![[WEAKFOOSP]])
 ; LW: ![[FOORET]] = !DILocation(line: 53, scope: ![[WEAKFOOSP]])
 
 ; Same as above, but reordered.
-; WL: ![[WCU]] = distinct !DICompileUnit({{.*}} subprograms: ![[WSPs:[0-9]+]]
-; WL: ![[WSPs]] = !{![[WEAKFOOSP]]}
-; WL: ![[WEAKFOOSP]] = distinct !DISubprogram(name: "foo",
-; WL: ![[LCU]] = distinct !DICompileUnit({{.*}} subprograms: ![[LSPs:[0-9]+]]
-; WL: ![[LSPs]] = !{![[BARSP:[0-9]+]], ![[FOOSP:[0-9]+]]}
-; WL: ![[BARSP]] = distinct !DISubprogram(name: "bar",
-; WL: ![[FOOSP]] = distinct !DISubprogram(name: "foo",
+; WL: ![[WCU]] = distinct !DICompileUnit(
+; WL: ![[LCU]] = distinct !DICompileUnit(
+; WL: ![[WEAKFOOSP]] = distinct !DISubprogram(name: "foo",{{.*}} unit: ![[WCU]]
 ; WL: ![[FOOCALL]] = !DILocation(line: 52, scope: ![[WEAKFOOSP]])
 ; WL: ![[FOORET]] = !DILocation(line: 53, scope: ![[WEAKFOOSP]])
-; WL: ![[FOOINBAR]] = !DILocation(line: 2, scope: ![[FOOSP]], inlinedAt: ![[BARIA:[0-9]+]])
+; WL: ![[BARSP]] = distinct !DISubprogram(name: "bar",{{.*}} unit: ![[LCU]]
+; WL: ![[FOOINBAR]] = !DILocation(line: 2, scope: ![[FOOSP:.*]], inlinedAt: ![[BARIA:[0-9]+]])
+; WL: ![[FOOSP]] = distinct !DISubprogram(name: "foo",{{.*}} unit: ![[LCU]]
 ; WL: ![[BARIA]] = !DILocation(line: 12, scope: ![[BARSP]])
 ; WL: ![[BARRET]] = !DILocation(line: 13, scope: ![[BARSP]])
 
-!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, subprograms: !{!3, !4}, emissionKind: 1)
+!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, emissionKind: FullDebug)
 !2 = !DIFile(filename: "bar.c", directory: "/path/to/dir")
-!3 = distinct !DISubprogram(file: !2, scope: !2, line: 11, name: "bar", type: !5)
-!4 = distinct !DISubprogram(file: !2, scope: !2, line: 1, name: "foo", type: !5)
+!3 = distinct !DISubprogram(file: !2, scope: !2, line: 11, name: "bar", type: !5, unit: !1)
+!4 = distinct !DISubprogram(file: !2, scope: !2, line: 1, name: "foo", type: !5, unit: !1)
 !5 = !DISubroutineType(types: !{})
 
 ; Crasher for llc.

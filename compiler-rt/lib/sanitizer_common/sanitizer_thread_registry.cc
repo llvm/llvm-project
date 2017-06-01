@@ -19,7 +19,7 @@ namespace __sanitizer {
 ThreadContextBase::ThreadContextBase(u32 tid)
     : tid(tid), unique_id(0), reuse_count(), os_id(0), user_id(0),
       status(ThreadStatusInvalid),
-      detached(false), parent_tid(0), next(0) {
+      detached(false), workerthread(false), parent_tid(0), next(0) {
   name[0] = '\0';
 }
 
@@ -59,9 +59,10 @@ void ThreadContextBase::SetFinished() {
   OnFinished();
 }
 
-void ThreadContextBase::SetStarted(uptr _os_id, void *arg) {
+void ThreadContextBase::SetStarted(uptr _os_id, bool _workerthread, void *arg) {
   status = ThreadStatusRunning;
   os_id = _os_id;
+  workerthread = _workerthread;
   OnStarted(arg);
 }
 
@@ -131,7 +132,7 @@ u32 ThreadRegistry::CreateThread(uptr user_id, bool detached, u32 parent_tid,
     tctx = context_factory_(tid);
     threads_[tid] = tctx;
   } else {
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
     Report("%s: Thread limit (%u threads) exceeded. Dying.\n",
            SanitizerToolName, max_threads_);
 #else
@@ -266,17 +267,20 @@ void ThreadRegistry::FinishThread(u32 tid) {
   }
 }
 
-void ThreadRegistry::StartThread(u32 tid, uptr os_id, void *arg) {
+void ThreadRegistry::StartThread(u32 tid, uptr os_id, bool workerthread,
+                                 void *arg) {
   BlockingMutexLock l(&mtx_);
   running_threads_++;
   CHECK_LT(tid, n_contexts_);
   ThreadContextBase *tctx = threads_[tid];
   CHECK_NE(tctx, 0);
   CHECK_EQ(ThreadStatusCreated, tctx->status);
-  tctx->SetStarted(os_id, arg);
+  tctx->SetStarted(os_id, workerthread, arg);
 }
 
 void ThreadRegistry::QuarantinePush(ThreadContextBase *tctx) {
+  if (tctx->tid == 0)
+    return;  // Don't reuse the main thread.  It's a special snowflake.
   dead_threads_.push_back(tctx);
   if (dead_threads_.size() <= thread_quarantine_size_)
     return;

@@ -15,8 +15,11 @@
 ;
 ;===------------------------------------------------------------------------===;
 
+[common]
+subdirectories = Coverage
+
 [component_0]
 type = Library
 name = ProfileData
 parent = Libraries
-required_libraries = Core Support Object
+required_libraries = Core Support

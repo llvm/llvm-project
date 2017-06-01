@@ -23,7 +23,6 @@
 #include <cstring>
 #include <dirent.h>
 #include <fcntl.h>
-#include <sstream>
 #include <stddef.h>
 #include <sys/stat.h>
 #include <unistd.h>

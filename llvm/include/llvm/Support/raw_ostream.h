@@ -16,20 +16,26 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DataTypes.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <string>
 #include <system_error>
 
 namespace llvm {
+
+class formatv_object_base;
 class format_object_base;
 class FormattedString;
 class FormattedNumber;
-template <typename T> class SmallVectorImpl;
+class FormattedBytes;
 
 namespace sys {
 namespace fs {
 enum OpenFlags : unsigned;
-}
-}
+} // end namespace fs
+} // end namespace sys
 
 /// This class implements an extremely fast bulk output stream that can *only*
 /// output to a stream.  It does not support seeking, reopening, rewinding, line
@@ -37,9 +43,6 @@ enum OpenFlags : unsigned;
 /// a chunk at a time.
 class raw_ostream {
 private:
-  void operator=(const raw_ostream &) = delete;
-  raw_ostream(const raw_ostream &) = delete;
-
   /// The buffer is handled in such a way that the buffer is
   /// uninitialized, unbuffered, or out of space when OutBufCur >=
   /// OutBufEnd. Thus a single comparison suffices to determine if we
@@ -69,7 +72,7 @@ private:
 public:
   // color order matches ANSI escape sequence, don't change
   enum Colors {
-    BLACK=0,
+    BLACK = 0,
     RED,
     GREEN,
     YELLOW,
@@ -85,6 +88,9 @@ public:
     // Start out ready to flush.
     OutBufStart = OutBufEnd = OutBufCur = nullptr;
   }
+
+  raw_ostream(const raw_ostream &) = delete;
+  void operator=(const raw_ostream &) = delete;
 
   virtual ~raw_ostream();
 
@@ -184,7 +190,7 @@ public:
     return write(Str.data(), Str.length());
   }
 
-  raw_ostream &operator<<(const llvm::SmallVectorImpl<char> &Str) {
+  raw_ostream &operator<<(const SmallVectorImpl<char> &Str) {
     return write(Str.data(), Str.size());
   }
 
@@ -193,6 +199,7 @@ public:
   raw_ostream &operator<<(unsigned long long N);
   raw_ostream &operator<<(long long N);
   raw_ostream &operator<<(const void *P);
+
   raw_ostream &operator<<(unsigned int N) {
     return this->operator<<(static_cast<unsigned long>(N));
   }
@@ -221,6 +228,12 @@ public:
 
   // Formatted output, see the formatHex() function in Support/Format.h.
   raw_ostream &operator<<(const FormattedNumber &);
+
+  // Formatted output, see the formatv() function in Support/FormatVariadic.h.
+  raw_ostream &operator<<(const formatv_object_base &);
+
+  // Formatted output, see the format_bytes() function in Support/Format.h.
+  raw_ostream &operator<<(const FormattedBytes &);
 
   /// indent - Insert 'NumSpaces' spaces.
   raw_ostream &indent(unsigned NumSpaces);
@@ -349,10 +362,6 @@ class raw_fd_ostream : public raw_pwrite_stream {
   ///
   bool Error;
 
-  /// Controls whether the stream should attempt to use atomic writes, when
-  /// possible.
-  bool UseAtomicWrites;
-
   uint64_t pos;
 
   bool SupportsSeeking;
@@ -401,16 +410,6 @@ public:
   /// Flushes the stream and repositions the underlying file descriptor position
   /// to the offset specified from the beginning of the file.
   uint64_t seek(uint64_t off);
-
-  /// Set the stream to attempt to use atomic writes for individual output
-  /// routines where possible.
-  ///
-  /// Note that because raw_ostream's are typically buffered, this flag is only
-  /// sensible when used on unbuffered streams which will flush their output
-  /// immediately.
-  void SetUseAtomicWrites(bool Value) {
-    UseAtomicWrites = Value;
-  }
 
   raw_ostream &changeColor(enum Colors colors, bool bold=false,
                            bool bg=false) override;
@@ -507,7 +506,8 @@ public:
   explicit raw_svector_ostream(SmallVectorImpl<char> &O) : OS(O) {
     SetUnbuffered();
   }
-  ~raw_svector_ostream() override {}
+
+  ~raw_svector_ostream() override = default;
 
   void flush() = delete;
 
@@ -526,7 +526,7 @@ class raw_null_ostream : public raw_pwrite_stream {
   uint64_t current_pos() const override;
 
 public:
-  explicit raw_null_ostream() {}
+  explicit raw_null_ostream() = default;
   ~raw_null_ostream() override;
 };
 
@@ -539,6 +539,6 @@ public:
   ~buffer_ostream() override { OS << str(); }
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
 #endif // LLVM_SUPPORT_RAW_OSTREAM_H

@@ -591,37 +591,38 @@ def ROR64rCL : RI<0xD3, MRM1r, (outs GR64:$dst), (ins GR64:$src1),
 
 def ROR8ri   : Ii8<0xC0, MRM1r, (outs GR8 :$dst), (ins GR8 :$src1, u8imm:$src2),
                    "ror{b}\t{$src2, $dst|$dst, $src2}",
-                   [(set GR8:$dst, (rotr GR8:$src1, (i8 imm:$src2)))], IIC_SR>;
+                   [(set GR8:$dst, (rotr GR8:$src1, (i8 relocImm:$src2)))],
+                   IIC_SR>;
 def ROR16ri  : Ii8<0xC1, MRM1r, (outs GR16:$dst), (ins GR16:$src1, u8imm:$src2),
                    "ror{w}\t{$src2, $dst|$dst, $src2}",
-                   [(set GR16:$dst, (rotr GR16:$src1, (i8 imm:$src2)))],
+                   [(set GR16:$dst, (rotr GR16:$src1, (i8 relocImm:$src2)))],
                    IIC_SR>, OpSize16;
 def ROR32ri  : Ii8<0xC1, MRM1r, (outs GR32:$dst), (ins GR32:$src1, u8imm:$src2),
                    "ror{l}\t{$src2, $dst|$dst, $src2}",
-                   [(set GR32:$dst, (rotr GR32:$src1, (i8 imm:$src2)))],
+                   [(set GR32:$dst, (rotr GR32:$src1, (i8 relocImm:$src2)))],
                    IIC_SR>, OpSize32;
 def ROR64ri  : RIi8<0xC1, MRM1r, (outs GR64:$dst),
                     (ins GR64:$src1, u8imm:$src2),
                     "ror{q}\t{$src2, $dst|$dst, $src2}",
-                    [(set GR64:$dst, (rotr GR64:$src1, (i8 imm:$src2)))],
+                    [(set GR64:$dst, (rotr GR64:$src1, (i8 relocImm:$src2)))],
                     IIC_SR>;
 
 // Rotate by 1
 def ROR8r1   : I<0xD0, MRM1r, (outs GR8 :$dst), (ins GR8 :$src1),
                  "ror{b}\t$dst",
-                 [(set GR8:$dst, (rotr GR8:$src1, (i8 1)))],
+                 [(set GR8:$dst, (rotl GR8:$src1, (i8 7)))],
                  IIC_SR>;
 def ROR16r1  : I<0xD1, MRM1r, (outs GR16:$dst), (ins GR16:$src1),
                  "ror{w}\t$dst",
-                 [(set GR16:$dst, (rotr GR16:$src1, (i8 1)))],
+                 [(set GR16:$dst, (rotl GR16:$src1, (i8 15)))],
                  IIC_SR>, OpSize16;
 def ROR32r1  : I<0xD1, MRM1r, (outs GR32:$dst), (ins GR32:$src1),
                  "ror{l}\t$dst",
-                 [(set GR32:$dst, (rotr GR32:$src1, (i8 1)))],
+                 [(set GR32:$dst, (rotl GR32:$src1, (i8 31)))],
                  IIC_SR>, OpSize32;
 def ROR64r1  : RI<0xD1, MRM1r, (outs GR64:$dst), (ins GR64:$src1),
                   "ror{q}\t$dst",
-                  [(set GR64:$dst, (rotr GR64:$src1, (i8 1)))],
+                  [(set GR64:$dst, (rotl GR64:$src1, (i8 63)))],
                   IIC_SR>;
 } // Constraints = "$src = $dst", SchedRW
 
@@ -873,19 +874,19 @@ let hasSideEffects = 0 in {
 
 multiclass bmi_shift<string asm, RegisterClass RC, X86MemOperand x86memop> {
 let hasSideEffects = 0 in {
-  def rr : I<0xF7, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
+  def rr : I<0xF7, MRMSrcReg4VOp3, (outs RC:$dst), (ins RC:$src1, RC:$src2),
              !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"), []>,
-             VEX_4VOp3, Sched<[WriteShift]>;
+             VEX, Sched<[WriteShift]>;
   let mayLoad = 1 in
-  def rm : I<0xF7, MRMSrcMem, (outs RC:$dst), (ins x86memop:$src1, RC:$src2),
+  def rm : I<0xF7, MRMSrcMem4VOp3,
+             (outs RC:$dst), (ins x86memop:$src1, RC:$src2),
              !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"), []>,
-             VEX_4VOp3,
-             Sched<[WriteShiftLd,
-                    // x86memop:$src1
-                    ReadDefault, ReadDefault, ReadDefault, ReadDefault,
-                    ReadDefault,
-                    // RC:$src1
-                    ReadAfterLd]>;
+             VEX, Sched<[WriteShiftLd,
+                         // x86memop:$src1
+                         ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+                         ReadDefault,
+                         // RC:$src1
+                         ReadAfterLd]>;
 }
 }
 

@@ -15,6 +15,8 @@
 #define LLVM_IR_TYPEFINDER_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Type.h"
 #include <vector>
 
 namespace llvm {
@@ -22,7 +24,6 @@ namespace llvm {
 class MDNode;
 class Module;
 class StructType;
-class Type;
 class Value;
 
 /// TypeFinder - Walk over a module, identifying all of the types that are
@@ -57,6 +58,8 @@ public:
   iterator erase(iterator I, iterator E) { return StructTypes.erase(I, E); }
 
   StructType *&operator[](unsigned Idx) { return StructTypes[Idx]; }
+
+  DenseSet<const MDNode *> &getVisitedMetadata() { return VisitedMetadata; }
 
 private:
   /// incorporateType - This method adds the type to the list of used

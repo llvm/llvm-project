@@ -10,30 +10,19 @@
 // This file describes the Hexagon V60 instructions in TableGen format.
 //
 //===----------------------------------------------------------------------===//
-
-
-// Vector store
-let mayStore = 1, validSubTargets = HasV60SubT, hasSideEffects = 0 in
-{
-  class VSTInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                string cstr = "", InstrItinClass itin = PSEUDO,
-                IType type = TypeCVI_VM_ST>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, type>, OpcodeHexagon;
-
-}
-
 // Vector load
 let Predicates = [HasV60T, UseHVX] in
 let mayLoad = 1, validSubTargets = HasV60SubT, hasSideEffects = 0 in
   class V6_LDInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                  string cstr = "", InstrItinClass itin = PSEUDO,
+                  string cstr = "", InstrItinClass itin = CVI_VM_LD,
                   IType type = TypeCVI_VM_LD>
   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, type>;
 
+// Vector store
 let Predicates = [HasV60T, UseHVX] in
 let mayStore = 1, validSubTargets = HasV60SubT, hasSideEffects = 0 in
 class V6_STInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                string cstr = "", InstrItinClass itin = PSEUDO,
+                string cstr = "", InstrItinClass itin = CVI_VM_ST,
                 IType type = TypeCVI_VM_ST>
 : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, type>;
 
@@ -62,14 +51,14 @@ let isCVLoadable = 1, hasNewValue = 1 in {
                             V6_vL32b_nt_ai_128B_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VM_VP_LDU, hasNewValue = 1 in {
+let Itinerary = CVI_VM_VP_LDU, Type = TypeCVI_VM_VP_LDU, hasNewValue = 1 in {
   def V6_vL32Ub_ai      : T_vload_ai <"$dst = vmemu($src1+#$src2)">,
                           V6_vL32Ub_ai_enc;
   def V6_vL32Ub_ai_128B : T_vload_ai_128B <"$dst = vmemu($src1+#$src2)">,
                           V6_vL32Ub_ai_128B_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VM_LD, isCVLoad = 1,
+let Itinerary = CVI_VM_LD, Type = TypeCVI_VM_LD, isCVLoad = 1,
     hasNewValue = 1 in {
   def V6_vL32b_cur_ai    : T_vload_ai <"$dst.cur = vmem($src1+#$src2)">,
                            V6_vL32b_cur_ai_enc;
@@ -85,7 +74,7 @@ let Itinerary = PSEUDO, Type = TypeCVI_VM_LD, isCVLoad = 1,
 }
 
 
-let Itinerary = PSEUDO, Type = TypeCVI_VM_TMP_LD, hasNewValue = 1 in {
+let Itinerary = CVI_VM_TMP_LD, Type = TypeCVI_VM_TMP_LD, hasNewValue = 1 in {
   def V6_vL32b_tmp_ai    : T_vload_ai <"$dst.tmp = vmem($src1+#$src2)">,
                            V6_vL32b_tmp_ai_enc;
   def V6_vL32b_nt_tmp_ai : T_vload_ai <"$dst.tmp = vmem($src1+#$src2):nt">,
@@ -102,7 +91,7 @@ let Itinerary = PSEUDO, Type = TypeCVI_VM_TMP_LD, hasNewValue = 1 in {
 //===----------------------------------------------------------------------===//
 // Vector stores with base + immediate offset - unconditional
 //===----------------------------------------------------------------------===//
-let addrMode = BaseImmOffset, accessSize = Vector64Access in
+let addrMode = BaseImmOffset, accessSize = Vector64Access, isPredicable = 1 in
 class T_vstore_ai <string mnemonic, string baseOp, Operand ImmOp,
                    RegisterClass RC, bit isNT>
   : V6_STInst <(outs), (ins IntRegs:$src1, ImmOp:$src2, RC:$src3),
@@ -132,17 +121,17 @@ let isNVStorable = 1, isNonTemporal = 1 in {
                             V6_vS32b_nt_ai_128B_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VM_STU in {
-  def V6_vS32Ub_ai      : T_vstore_ai_64B <"vmemu", "vs32Ub_ai">,
+let Itinerary = CVI_VM_STU, Type = TypeCVI_VM_STU in {
+  def V6_vS32Ub_ai      : T_vstore_ai_64B <"vmemu", "vS32Ub_ai">,
                           V6_vS32Ub_ai_enc;
-  def V6_vS32Ub_ai_128B : T_vstore_ai_128B <"vmemu", "vs32Ub_ai">,
+  def V6_vS32Ub_ai_128B : T_vstore_ai_128B <"vmemu", "vS32Ub_ai">,
                           V6_vS32Ub_ai_128B_enc;
 }
 //===----------------------------------------------------------------------===//
 // Vector stores with base + immediate offset - unconditional new
 //===----------------------------------------------------------------------===//
 let addrMode = BaseImmOffset, isNewValue = 1, opNewValue = 2, isNVStore = 1,
-    Itinerary = PSEUDO, Type = TypeCVI_VM_NEW_ST in
+    isPredicable = 1, Itinerary = CVI_VM_NEW_ST, Type = TypeCVI_VM_NEW_ST in
 class T_vstore_new_ai <string baseOp, Operand ImmOp, RegisterClass RC, bit isNT>
   : V6_STInst <(outs ), (ins IntRegs:$src1, ImmOp:$src2, RC:$src3),
     "vmem($src1+#$src2)"#!if(isNT, ":nt", "")#" = $src3.new">, NewValueRel {
@@ -204,6 +193,8 @@ let isNVStorable = 1 in {
   def V6_vS32b_npred_ai_128B   : T_vstore_pred_ai_128B <"vmem", "vS32b_ai", 1>,
                                  V6_vS32b_npred_ai_128B_enc;
 }
+
+
 let isNVStorable = 1, isNonTemporal = 1 in {
   def V6_vS32b_nt_pred_ai  : T_vstore_pred_ai_64B <"vmem", "vS32b_ai", 0, 1>,
                              V6_vS32b_nt_pred_ai_enc;
@@ -218,7 +209,7 @@ let isNVStorable = 1, isNonTemporal = 1 in {
                                   V6_vS32b_nt_npred_ai_128B_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VM_STU in {
+let Itinerary = CVI_VM_STU, Type = TypeCVI_VM_STU in {
   def V6_vS32Ub_pred_ai  : T_vstore_pred_ai_64B <"vmemu", "vS32Ub_ai">,
                            V6_vS32Ub_pred_ai_enc;
   def V6_vS32Ub_npred_ai : T_vstore_pred_ai_64B <"vmemu", "vS32Ub_ai", 1>,
@@ -272,7 +263,7 @@ def V6_vS32b_nt_nqpred_ai_128B : T_vstore_qpred_ai_128B<1, 1>,
 // Vector stores with base + immediate offset - conditional new
 //===----------------------------------------------------------------------===//
 let addrMode = BaseImmOffset, isPredicated = 1, isNewValue = 1, opNewValue = 3,
-    isNVStore = 1, Type = TypeCVI_VM_NEW_ST, Itinerary = PSEUDO in
+    isNVStore = 1, Type = TypeCVI_VM_NEW_ST, Itinerary = CVI_VM_NEW_ST in
 class T_vstore_new_pred_ai <string baseOp, Operand ImmOp, RegisterClass RC,
                             bit isPredNot, bit isNT>
   : V6_STInst <(outs),
@@ -345,7 +336,7 @@ let isCVLoadable = 1 in {
                             V6_vL32b_nt_pi_128B_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VM_VP_LDU in {
+let Itinerary = CVI_VM_VP_LDU, Type = TypeCVI_VM_VP_LDU in {
   def V6_vL32Ub_pi : T_vload_pi_64B <"$dst = vmemu($src1++#$src2)">,
                      V6_vL32Ub_pi_enc;
   // 128B
@@ -353,7 +344,7 @@ let Itinerary = PSEUDO, Type = TypeCVI_VM_VP_LDU in {
                           V6_vL32Ub_pi_128B_enc;
 }
 
-let isCVLoad = 1, Itinerary = PSEUDO, Type = TypeCVI_VM_LD in {
+let isCVLoad = 1, Itinerary = CVI_VM_LD, Type = TypeCVI_VM_LD in {
   def V6_vL32b_cur_pi    : T_vload_pi_64B <"$dst.cur = vmem($src1++#$src2)">,
                            V6_vL32b_cur_pi_enc;
   def V6_vL32b_nt_cur_pi : T_vload_pi_64B <"$dst.cur = vmem($src1++#$src2):nt">,
@@ -367,7 +358,7 @@ let isCVLoad = 1, Itinerary = PSEUDO, Type = TypeCVI_VM_LD in {
                                 V6_vL32b_nt_cur_pi_128B_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VM_TMP_LD in {
+let Itinerary = CVI_VM_TMP_LD, Type = TypeCVI_VM_TMP_LD in {
   def V6_vL32b_tmp_pi    : T_vload_pi_64B <"$dst.tmp = vmem($src1++#$src2)">,
                            V6_vL32b_tmp_pi_enc;
   def V6_vL32b_nt_tmp_pi : T_vload_pi_64B <"$dst.tmp = vmem($src1++#$src2):nt">,
@@ -384,13 +375,15 @@ let Itinerary = PSEUDO, Type = TypeCVI_VM_TMP_LD in {
 //===----------------------------------------------------------------------===//
 // Post increment vector stores with immediate offset.
 //===----------------------------------------------------------------------===//
-let addrMode = PostInc in
+let addrMode = PostInc, isPredicable = 1 in
 class T_vstore_pi <string mnemonic, string baseOp, Operand ImmOp,
                    RegisterClass RC, bit isNT>
   : V6_STInst <(outs IntRegs:$_dst_),
                (ins IntRegs:$src1, ImmOp:$src2, RC:$src3),
     mnemonic#"($src1++#$src2)"#!if(isNT, ":nt", "")#" = $src3", [],
-    "$src1 = $_dst_">, NewValueRel;
+    "$src1 = $_dst_">, NewValueRel {
+  let BaseOpcode = baseOp;
+}
 
 let accessSize = Vector64Access in
 class T_vstore_pi_64B <string mnemonic, string baseOp, bit isNT = 0>
@@ -398,7 +391,7 @@ class T_vstore_pi_64B <string mnemonic, string baseOp, bit isNT = 0>
 
 let isCodeGenOnly = 1, accessSize = Vector128Access in
 class T_vstore_pi_128B <string mnemonic, string baseOp, bit isNT = 0>
-  : T_vstore_pi <mnemonic, baseOp, s3_7Imm, VectorRegs128B, isNT>;
+  : T_vstore_pi <mnemonic, baseOp#"128B", s3_7Imm, VectorRegs128B, isNT>;
 
 let isNVStorable = 1 in {
   def V6_vS32b_pi      : T_vstore_pi_64B <"vmem", "vS32b_pi">, V6_vS32b_pi_enc;
@@ -414,7 +407,7 @@ let isNVStorable = 1 , isNonTemporal = 1  in {
 }
 
 
-let Itinerary = PSEUDO, Type = TypeCVI_VM_STU in {
+let Itinerary = CVI_VM_STU, Type = TypeCVI_VM_STU in {
   def V6_vS32Ub_pi      : T_vstore_pi_64B <"vmemu", "vS32Ub_pi">,
                           V6_vS32Ub_pi_enc;
   def V6_vS32Ub_pi_128B : T_vstore_pi_128B <"vmemu", "vS32Ub_pi">,
@@ -425,8 +418,8 @@ let Itinerary = PSEUDO, Type = TypeCVI_VM_STU in {
 // Post increment unconditional .new vector stores with immediate offset.
 //===----------------------------------------------------------------------===//
 let addrMode = PostInc, isNVStore = 1 in
-let Itinerary = PSEUDO, Type = TypeCVI_VM_NEW_ST, isNewValue = 1,
-    opNewValue = 3, isNVStore = 1 in
+let Itinerary = CVI_VM_NEW_ST, Type = TypeCVI_VM_NEW_ST, isNewValue = 1,
+    isPredicable = 1, opNewValue = 3, isNVStore = 1 in
 class T_vstore_new_pi <string baseOp, Operand ImmOp, RegisterClass RC, bit isNT>
   : V6_STInst <(outs IntRegs:$_dst_),
                (ins IntRegs:$src1, ImmOp:$src2, RC:$src3),
@@ -507,7 +500,7 @@ let isNVStorable = 1, isNonTemporal = 1 in {
                                   V6_vS32b_nt_npred_pi_128B_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VM_STU in {
+let Itinerary = CVI_VM_STU, Type = TypeCVI_VM_STU in {
   def V6_vS32Ub_pred_pi  : T_vstore_pred_pi_64B <"vmemu", "vS32Ub_pi">,
                            V6_vS32Ub_pred_pi_enc;
   def V6_vS32Ub_npred_pi : T_vstore_pred_pi_64B <"vmemu", "vS32Ub_pi", 1>,
@@ -562,7 +555,7 @@ let isNonTemporal = 1 in {
 //===----------------------------------------------------------------------===//
 // Post increment conditional .new vector stores with immediate offset
 //===----------------------------------------------------------------------===//
-let Itinerary = PSEUDO, Type = TypeCVI_VM_NEW_ST, isPredicated = 1,
+let Itinerary = CVI_VM_NEW_ST, Type = TypeCVI_VM_NEW_ST, isPredicated = 1,
     isNewValue = 1, opNewValue = 4, addrMode = PostInc, isNVStore = 1 in
 class T_vstore_new_pred_pi <string baseOp, Operand ImmOp, RegisterClass RC,
                             bit isPredNot, bit isNT>
@@ -623,18 +616,18 @@ let isCVLoadable = 1 in {
                         V6_vL32b_nt_ppu_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VM_VP_LDU in
+let Itinerary = CVI_VM_VP_LDU, Type = TypeCVI_VM_VP_LDU in
 def V6_vL32Ub_ppu : T_vload_ppu <"$dst = vmemu($src1++$src2)">,
                      V6_vL32Ub_ppu_enc;
 
-let isCVLoad = 1, Itinerary = PSEUDO, Type = TypeCVI_VM_CUR_LD in {
+let isCVLoad = 1, Itinerary = CVI_VM_CUR_LD, Type = TypeCVI_VM_CUR_LD in {
   def V6_vL32b_cur_ppu    : T_vload_ppu <"$dst.cur = vmem($src1++$src2)">,
                              V6_vL32b_cur_ppu_enc;
   def V6_vL32b_nt_cur_ppu : T_vload_ppu <"$dst.cur = vmem($src1++$src2):nt">,
                              V6_vL32b_nt_cur_ppu_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VM_TMP_LD in {
+let Itinerary = CVI_VM_TMP_LD, Type = TypeCVI_VM_TMP_LD in {
   def V6_vL32b_tmp_ppu    : T_vload_ppu <"$dst.tmp = vmem($src1++$src2)">,
                              V6_vL32b_tmp_ppu_enc;
   def V6_vL32b_nt_tmp_ppu : T_vload_ppu <"$dst.tmp = vmem($src1++$src2):nt">,
@@ -644,6 +637,7 @@ let Itinerary = PSEUDO, Type = TypeCVI_VM_TMP_LD in {
 //===----------------------------------------------------------------------===//
 // Post increment vector stores with register offset
 //===----------------------------------------------------------------------===//
+let isPredicable = 1 in
 class T_vstore_ppu <string mnemonic, bit isNT = 0>
   : V6_STInst <(outs IntRegs:$_dst_),
                (ins IntRegs:$src1, ModRegs:$src2, VectorRegs:$src3),
@@ -658,14 +652,14 @@ let isNVStorable = 1, BaseOpcode = "vS32b_ppu" in {
                         V6_vS32b_nt_ppu_enc;
 }
 
-let BaseOpcode = "vS32Ub_ppu", Itinerary = PSEUDO, Type = TypeCVI_VM_STU in
+let BaseOpcode = "vS32Ub_ppu", Itinerary = CVI_VM_STU, Type = TypeCVI_VM_STU in
 def V6_vS32Ub_ppu   : T_vstore_ppu <"vmemu">, V6_vS32Ub_ppu_enc;
 
 //===----------------------------------------------------------------------===//
 // Post increment .new vector stores with register offset
 //===----------------------------------------------------------------------===//
-let Itinerary = PSEUDO, Type = TypeCVI_VM_NEW_ST, isNewValue = 1,
-    opNewValue = 3, isNVStore = 1 in
+let Itinerary = CVI_VM_NEW_ST, Type = TypeCVI_VM_NEW_ST, isNewValue = 1,
+    isPredicable = 1, opNewValue = 3, isNVStore = 1 in
 class T_vstore_new_ppu <bit isNT = 0>
   : V6_STInst <(outs IntRegs:$_dst_),
                (ins IntRegs:$src1, ModRegs:$src2, VectorRegs:$src3),
@@ -703,7 +697,7 @@ let isNVStorable = 1, BaseOpcode = "vS32b_ppu", isNonTemporal = 1 in {
                               V6_vS32b_nt_npred_ppu_enc;
 }
 
-let BaseOpcode = "vS32Ub_ppu", Itinerary = PSEUDO,
+let BaseOpcode = "vS32Ub_ppu", Itinerary = CVI_VM_STU,
     Type = TypeCVI_VM_STU in {
   def V6_vS32Ub_pred_ppu  : T_vstore_pred_ppu <"vmemu">,
                             V6_vS32Ub_pred_ppu_enc;
@@ -731,7 +725,7 @@ def V6_vS32b_nt_nqpred_ppu : T_vstore_qpred_ppu<1, 1>,
 //===----------------------------------------------------------------------===//
 // Post increment conditional .new vector stores with register offset
 //===----------------------------------------------------------------------===//
-let Itinerary = PSEUDO, Type = TypeCVI_VM_NEW_ST, isPredicated = 1,
+let Itinerary = CVI_VM_NEW_ST, Type = TypeCVI_VM_NEW_ST, isPredicated = 1,
     isNewValue = 1, opNewValue = 4, isNVStore = 1 in
 class T_vstore_new_pred_ppu <bit isPredNot = 0, bit isNT = 0>
   : V6_STInst <(outs IntRegs:$_dst_),
@@ -756,240 +750,81 @@ def V6_vS32b_nt_new_npred_ppu : T_vstore_new_pred_ppu<1, 1>,
                                 V6_vS32b_nt_new_npred_ppu_enc;
 }
 
-let isPseudo = 1, validSubTargets = HasV60SubT in
-class STrivv_template<string mnemonic, Operand ImmOp, RegisterClass RC>:
-        VSTInst<(outs), (ins IntRegs:$addr, ImmOp:$off, RC:$src),
-                #mnemonic#"($addr+#$off) = $src", []>;
 
-def STrivv_indexed: STrivv_template<"vvmem", s4_6Imm, VecDblRegs>,
-                    Requires<[HasV60T, UseHVXSgl]>;
-def STrivv_indexed_128B: STrivv_template<"vvmem", s4_7Imm, VecDblRegs128B>,
-                         Requires<[HasV60T, UseHVXDbl]>;
+// Vector load/store pseudos
 
-multiclass STrivv_pats <ValueType VTSgl, ValueType VTDbl> {
-  def : Pat<(store (VTSgl VecDblRegs:$src1), IntRegs:$addr),
-            (STrivv_indexed IntRegs:$addr, #0, (VTSgl VecDblRegs:$src1))>,
-            Requires<[UseHVXSgl]>;
+let isPseudo = 1, isCodeGenOnly = 1, validSubTargets = HasV60SubT in
+class STrivv_template<RegisterClass RC>
+  : V6_STInst<(outs), (ins IntRegs:$addr, s32_0Imm:$off, RC:$src), "", []>;
 
-  def : Pat<(store (VTDbl VecDblRegs128B:$src1), IntRegs:$addr),
-            (STrivv_indexed_128B IntRegs:$addr, #0,
-                                 (VTDbl VecDblRegs128B:$src1))>,
-            Requires<[UseHVXDbl]>;
-}
+def PS_vstorerw_ai: STrivv_template<VecDblRegs>,
+      Requires<[HasV60T,UseHVXSgl]>;
+def PS_vstorerwu_ai: STrivv_template<VecDblRegs>,
+      Requires<[HasV60T,UseHVXSgl]>;
+def PS_vstorerw_ai_128B: STrivv_template<VecDblRegs128B>,
+      Requires<[HasV60T,UseHVXDbl]>;
+def PS_vstorerwu_ai_128B: STrivv_template<VecDblRegs128B>,
+      Requires<[HasV60T,UseHVXDbl]>;
 
 
-multiclass vS32b_ai_pats <ValueType VTSgl, ValueType VTDbl> {
-  // Aligned stores
-  def : Pat<(store (VTSgl VectorRegs:$src1), IntRegs:$addr),
-            (V6_vS32b_ai IntRegs:$addr, #0, (VTSgl VectorRegs:$src1))>,
-            Requires<[UseHVXSgl]>;
+let isPseudo = 1, isCodeGenOnly = 1, validSubTargets = HasV60SubT in
+class LDrivv_template<RegisterClass RC>
+  : V6_LDInst<(outs RC:$dst), (ins IntRegs:$addr, s32_0Imm:$off), "", []>;
 
-  // 128B Aligned stores
-  def : Pat<(store (VTDbl VectorRegs128B:$src1), IntRegs:$addr),
-            (V6_vS32b_ai_128B IntRegs:$addr, #0, (VTDbl VectorRegs128B:$src1))>,
-            Requires<[UseHVXDbl]>;
-
-  // Fold Add R+IFF into vector store.
-  let AddedComplexity = 10 in
-  def : Pat<(store (VTSgl VectorRegs:$src1),
-                   (add IntRegs:$src2, s4_6ImmPred:$offset)),
-            (V6_vS32b_ai IntRegs:$src2, s4_6ImmPred:$offset,
-                         (VTSgl VectorRegs:$src1))>,
-            Requires<[UseHVXSgl]>;
-
-  // Fold Add R+IFF into vector store 128B.
-  let AddedComplexity = 10 in
-  def : Pat<(store (VTDbl VectorRegs128B:$src1),
-                   (add IntRegs:$src2, s4_7ImmPred:$offset)),
-            (V6_vS32b_ai_128B IntRegs:$src2, s4_7ImmPred:$offset,
-                              (VTDbl VectorRegs128B:$src1))>,
-            Requires<[UseHVXDbl]>;
-}
-
-defm : vS32b_ai_pats <v8i64,  v16i64>;
-
-let isPseudo = 1, validSubTargets = HasV60SubT in
-class LDrivv_template<string mnemonic, Operand ImmOp, RegisterClass RC>
-  : V6_LDInst <(outs RC:$dst), (ins IntRegs:$addr, ImmOp:$off),
-               "$dst="#mnemonic#"($addr+#$off)",
-               []>,
-               Requires<[HasV60T,UseHVXSgl]>;
-
-def LDrivv_indexed: LDrivv_template<"vvmem", s4_6Imm, VecDblRegs>;
-def LDrivv_indexed_128B: LDrivv_template<"vvmem", s4_7Imm, VecDblRegs128B>;
-
-multiclass LDrivv_pats <ValueType VTSgl, ValueType VTDbl> {
-  def : Pat < (VTSgl (load IntRegs:$addr)),
-              (LDrivv_indexed IntRegs:$addr, #0) >,
-              Requires<[UseHVXSgl]>;
-
-  def : Pat < (VTDbl (load IntRegs:$addr)),
-              (LDrivv_indexed_128B IntRegs:$addr, #0) >,
-              Requires<[UseHVXDbl]>;
-}
-
-multiclass vL32b_ai_pats <ValueType VTSgl, ValueType VTDbl> {
-  // Aligned loads
-  def : Pat < (VTSgl (load IntRegs:$addr)),
-              (V6_vL32b_ai IntRegs:$addr, #0) >,
-              Requires<[UseHVXSgl]>;
-
-  // 128B Load
-  def : Pat < (VTDbl (load IntRegs:$addr)),
-              (V6_vL32b_ai_128B IntRegs:$addr, #0) >,
-              Requires<[UseHVXDbl]>;
-
-  // Fold Add R+IFF into vector load.
-  let AddedComplexity = 10 in
-  def : Pat<(VTDbl (load (add IntRegs:$src2, s4_7ImmPred:$offset))),
-            (V6_vL32b_ai_128B IntRegs:$src2, s4_7ImmPred:$offset)>,
-             Requires<[UseHVXDbl]>;
-
-  let AddedComplexity = 10 in
-  def : Pat<(VTSgl (load (add IntRegs:$src2, s4_6ImmPred:$offset))),
-            (V6_vL32b_ai IntRegs:$src2, s4_6ImmPred:$offset)>,
-            Requires<[UseHVXSgl]>;
-}
-
-defm : vL32b_ai_pats <v8i64,  v16i64>;
+def PS_vloadrw_ai: LDrivv_template<VecDblRegs>,
+      Requires<[HasV60T,UseHVXSgl]>;
+def PS_vloadrwu_ai: LDrivv_template<VecDblRegs>,
+      Requires<[HasV60T,UseHVXSgl]>;
+def PS_vloadrw_ai_128B: LDrivv_template<VecDblRegs128B>,
+      Requires<[HasV60T,UseHVXDbl]>;
+def PS_vloadrwu_ai_128B: LDrivv_template<VecDblRegs128B>,
+      Requires<[HasV60T,UseHVXDbl]>;
 
 // Store vector predicate pseudo.
 let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
     isCodeGenOnly = 1, isPseudo = 1, mayStore = 1, hasSideEffects = 0 in {
-def STriq_pred_V6 : STInst<(outs),
-            (ins IntRegs:$base, s32Imm:$offset, VecPredRegs:$src1),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXSgl]>;
-
-def STriq_pred_vec_V6 : STInst<(outs),
-            (ins IntRegs:$base, s32Imm:$offset, VectorRegs:$src1),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXSgl]>;
-
-def STriq_pred_V6_128B : STInst<(outs),
-            (ins IntRegs:$base, s32Imm:$offset, VecPredRegs128B:$src1),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXDbl]>;
-
-def STriq_pred_vec_V6_128B : STInst<(outs),
-            (ins IntRegs:$base, s32Imm:$offset, VectorRegs128B:$src1),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXDbl]>;
+  def PS_vstorerq_ai : STInst<(outs),
+              (ins IntRegs:$base, s32_0Imm:$offset, VecPredRegs:$src1),
+              ".error \"should not emit\"", []>,
+              Requires<[HasV60T,UseHVXSgl]>;
+  def PS_vstorerq_ai_128B : STInst<(outs),
+              (ins IntRegs:$base, s32_0Imm:$offset, VecPredRegs128B:$src1),
+              ".error \"should not emit\"", []>,
+              Requires<[HasV60T,UseHVXDbl]>;
 }
 
 // Load vector predicate pseudo.
 let isExtendable = 1, opExtendable = 2, isExtentSigned = 1, opExtentBits = 13,
     opExtentAlign = 2, isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in {
-def LDriq_pred_V6 : LDInst<(outs VecPredRegs:$dst),
-            (ins IntRegs:$base, s32Imm:$offset),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXSgl]>;
-def LDriq_pred_vec_V6 : LDInst<(outs VectorRegs:$dst),
-            (ins IntRegs:$base, s32Imm:$offset),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXSgl]>;
-def LDriq_pred_V6_128B : LDInst<(outs VecPredRegs128B:$dst),
-            (ins IntRegs:$base, s32Imm:$offset),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXDbl]>;
-def LDriq_pred_vec_V6_128B : LDInst<(outs VectorRegs128B:$dst),
-            (ins IntRegs:$base, s32Imm:$offset),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXDbl]>;
-}
-
-// Store vector pseudo.
-let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
-    isCodeGenOnly = 1, isPseudo = 1, mayStore = 1, hasSideEffects = 0 in {
-def STriv_pseudo_V6 : STInst<(outs),
-            (ins IntRegs:$base, s32Imm:$offset, VectorRegs:$src1),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXSgl]>;
-def STriv_pseudo_V6_128B : STInst<(outs),
-            (ins IntRegs:$base, s32Imm:$offset, VectorRegs128B:$src1),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXDbl]>;
-}
-
-let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,
-    isCodeGenOnly = 1, isPseudo = 1, mayStore = 1, hasSideEffects = 0 in {
-def STrivv_pseudo_V6 : STInst<(outs),
-            (ins IntRegs:$base, s32Imm:$offset, VecDblRegs:$src1),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXSgl]>;
-def STrivv_pseudo_V6_128B : STInst<(outs),
-            (ins IntRegs:$base, s32Imm:$offset, VecDblRegs128B:$src1),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXDbl]>;
-}
-
-// Load vector pseudo.
-let isExtendable = 1, opExtendable = 2, isExtentSigned = 1, opExtentBits = 13,
-    opExtentAlign = 2, isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in {
-def LDriv_pseudo_V6 : LDInst<(outs VectorRegs:$dst),
-            (ins IntRegs:$base, s32Imm:$offset),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXSgl]>;
-def LDriv_pseudo_V6_128B : LDInst<(outs VectorRegs128B:$dst),
-            (ins IntRegs:$base, s32Imm:$offset),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXDbl]>;
-}
-
-let isExtendable = 1, opExtendable = 2, isExtentSigned = 1, opExtentBits = 13,
-    opExtentAlign = 2, isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in {
-def LDrivv_pseudo_V6 : LDInst<(outs VecDblRegs:$dst),
-            (ins IntRegs:$base, s32Imm:$offset),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXSgl]>;
-def LDrivv_pseudo_V6_128B : LDInst<(outs VecDblRegs128B:$dst),
-            (ins IntRegs:$base, s32Imm:$offset),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXDbl]>;
+  def PS_vloadrq_ai : LDInst<(outs VecPredRegs:$dst),
+              (ins IntRegs:$base, s32_0Imm:$offset),
+              ".error \"should not emit\"", []>,
+              Requires<[HasV60T,UseHVXSgl]>;
+  def PS_vloadrq_ai_128B : LDInst<(outs VecPredRegs128B:$dst),
+              (ins IntRegs:$base, s32_0Imm:$offset),
+              ".error \"should not emit\"", []>,
+              Requires<[HasV60T,UseHVXDbl]>;
 }
 
 class VSELInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "", InstrItinClass itin = PSEUDO,
+              string cstr = "", InstrItinClass itin = CVI_VA_DV,
               IType type = TypeCVI_VA_DV>
   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, type>;
 
 let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in {
-def VSelectPseudo_V6 : VSELInst<(outs VectorRegs:$dst),
-            (ins PredRegs:$src1, VectorRegs:$src2, VectorRegs:$src3),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXSgl]>;
-def VSelectDblPseudo_V6 : VSELInst<(outs VecDblRegs:$dst),
-               (ins PredRegs:$src1, VecDblRegs:$src2, VecDblRegs:$src3),
-               ".error \"should not emit\" ",
-               []>,
-               Requires<[HasV60T,UseHVXSgl]>;
+  def PS_vselect: VSELInst<(outs VectorRegs:$dst),
+        (ins PredRegs:$src1, VectorRegs:$src2, VectorRegs:$src3), "", []>,
+        Requires<[HasV60T,UseHVXSgl]>;
+  def PS_vselect_128B: VSELInst<(outs VectorRegs128B:$dst),
+        (ins PredRegs:$src1, VectorRegs128B:$src2, VectorRegs128B:$src3),
+        "", []>, Requires<[HasV60T,UseHVXDbl]>;
+  def PS_wselect: VSELInst<(outs VecDblRegs:$dst),
+        (ins PredRegs:$src1, VecDblRegs:$src2, VecDblRegs:$src3), "", []>,
+        Requires<[HasV60T,UseHVXSgl]>;
+  def PS_wselect_128B: VSELInst<(outs VecDblRegs128B:$dst),
+        (ins PredRegs:$src1, VecDblRegs128B:$src2, VecDblRegs128B:$src3),
+        "", []>, Requires<[HasV60T,UseHVXDbl]>;
 }
-
-def : Pat <(v16i32 (selectcc (i32 IntRegs:$lhs), (i32 IntRegs:$rhs),
-                             (v16i32 VectorRegs:$tval),
-                             (v16i32 VectorRegs:$fval), SETEQ)),
-      (v16i32 (VSelectPseudo_V6 (i32 (C2_cmpeq (i32 IntRegs:$lhs),
-                                (i32 IntRegs:$rhs))),
-                                (v16i32 VectorRegs:$tval),
-                                (v16i32 VectorRegs:$fval)))>;
-
 
 let hasNewValue = 1 in
 class T_vmpy <string asmString, RegisterClass RCout, RegisterClass RCin>
@@ -1028,7 +863,7 @@ defm V6_vmpyiwh  :T_vmpy_VV<"$dst.w = vmpyi($src1.w,$src2.h)">, V6_vmpyiwh_enc;
 defm V6_vtmpyhb  :T_vmpy_WW<"$dst.w = vtmpy($src1.h,$src2.b)">, V6_vtmpyhb_enc;
 defm V6_vmpyub   :T_vmpy_WV<"$dst.uh = vmpy($src1.ub,$src2.ub)">, V6_vmpyub_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VX in
+let Itinerary = CVI_VX_LONG, Type = TypeCVI_VX in
 defm V6_vmpyihb  :T_vmpy_VV<"$dst.h = vmpyi($src1.h,$src2.b)">, V6_vmpyihb_enc;
 
 defm V6_vdmpybus_dv :
@@ -1048,10 +883,10 @@ defm V6_vmpyhss :
 defm V6_vmpyhsrs :
      T_vmpy_VV <"$dst.h = vmpy($src1.h,$src2.h):<<1:rnd:sat">, V6_vmpyhsrs_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VP in
+let Itinerary = CVI_VP, Type = TypeCVI_VP in
 defm V6_vror : T_vmpy_VV <"$dst = vror($src1,$src2)">, V6_vror_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VX in {
+let Itinerary = CVI_VX, Type = TypeCVI_VX in {
 defm V6_vdmpyhb  : T_vmpy_VV<"$dst.w = vdmpy($src1.h,$src2.b)">, V6_vdmpyhb_enc;
 defm V6_vrmpybus : T_vmpy_VV<"$dst.w = vrmpy($src1.ub,$src2.b)">, V6_vrmpybus_enc;
 defm V6_vdmpybus : T_vmpy_VV<"$dst.h = vdmpy($src1.ub,$src2.b)">, V6_vdmpybus_enc;
@@ -1059,7 +894,7 @@ defm V6_vmpyiwb  : T_vmpy_VV<"$dst.w = vmpyi($src1.w,$src2.b)">, V6_vmpyiwb_enc;
 defm V6_vrmpyub : T_vmpy_VV<"$dst.uw = vrmpy($src1.ub,$src2.ub)">, V6_vrmpyub_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VS in {
+let Itinerary = CVI_VS, Type = TypeCVI_VS in {
 defm V6_vasrw  : T_vmpy_VV <"$dst.w = vasr($src1.w,$src2)">, V6_vasrw_enc;
 defm V6_vasrh  : T_vmpy_VV <"$dst.h = vasr($src1.h,$src2)">, V6_vasrh_enc;
 defm V6_vaslw  : T_vmpy_VV <"$dst.w = vasl($src1.w,$src2)">, V6_vaslw_enc;
@@ -1087,16 +922,16 @@ multiclass T_HVX_alu <string asmString, RegisterClass RCout,
 }
 
 multiclass T_HVX_alu_VV <string asmString>:
-  T_HVX_alu <asmString, VectorRegs, VectorRegs, PSEUDO>;
+  T_HVX_alu <asmString, VectorRegs, VectorRegs, CVI_VA>;
 
 multiclass T_HVX_alu_WW <string asmString>:
-  T_HVX_alu <asmString, VecDblRegs, VecDblRegs, PSEUDO>;
+  T_HVX_alu <asmString, VecDblRegs, VecDblRegs, CVI_VA_DV>;
 
 multiclass T_HVX_alu_WV <string asmString>:
-  T_HVX_alu <asmString, VecDblRegs, VectorRegs, PSEUDO>;
+  T_HVX_alu <asmString, VecDblRegs, VectorRegs, CVI_VX_DV>;
 
 
-let Itinerary  =  PSEUDO, Type  =  TypeCVI_VX in {
+let Itinerary  =  CVI_VX, Type  =  TypeCVI_VX in {
 defm V6_vrmpyubv :
      T_HVX_alu_VV <"$dst.uw = vrmpy($src1.ub,$src2.ub)">, V6_vrmpyubv_enc;
 defm V6_vrmpybv :
@@ -1113,7 +948,7 @@ defm V6_vabsdiffw :
      T_HVX_alu_VV <"$dst.uw = vabsdiff($src1.w,$src2.w)">, V6_vabsdiffw_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VX_DV in {
+let Itinerary = CVI_VX_DV, Type = TypeCVI_VX_DV in {
 defm V6_vdmpyhvsat :
      T_HVX_alu_VV <"$dst.w = vdmpy($src1.h,$src2.h):sat">, V6_vdmpyhvsat_enc;
 defm V6_vmpyhvsrs :
@@ -1229,7 +1064,7 @@ defm V6_vsubhsat_dv :
 defm V6_vsubwsat_dv :
      T_HVX_alu_WW <"$dst.w = vsub($src1.w,$src2.w):sat">, V6_vsubwsat_dv_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VX_DV in {
+let Itinerary = CVI_VX_DV_LONG, Type = TypeCVI_VX_DV in {
 defm V6_vmpabusv :
      T_HVX_alu_WW <"$dst.h = vmpa($src1.ub,$src2.b)">, V6_vmpabusv_enc;
 defm V6_vmpabuuv :
@@ -1258,22 +1093,22 @@ multiclass T_HVX_vmpyacc_both <string asmString, RegisterClass RCout,
 }
 
 multiclass T_HVX_vmpyacc_VVR <string asmString>:
-  T_HVX_vmpyacc_both <asmString, VectorRegs, VectorRegs, IntRegs, PSEUDO>;
+  T_HVX_vmpyacc_both <asmString, VectorRegs, VectorRegs, IntRegs, CVI_VX>;
 
 multiclass T_HVX_vmpyacc_VWR <string asmString>:
-  T_HVX_vmpyacc_both <asmString, VectorRegs, VecDblRegs, IntRegs, PSEUDO>;
+  T_HVX_vmpyacc_both <asmString, VectorRegs, VecDblRegs, IntRegs, CVI_VX_DV>;
 
 multiclass T_HVX_vmpyacc_WVR <string asmString>:
-  T_HVX_vmpyacc_both <asmString, VecDblRegs, VectorRegs, IntRegs, PSEUDO>;
+  T_HVX_vmpyacc_both <asmString, VecDblRegs, VectorRegs, IntRegs, CVI_VX_DV>;
 
 multiclass T_HVX_vmpyacc_WWR <string asmString>:
-  T_HVX_vmpyacc_both <asmString, VecDblRegs, VecDblRegs, IntRegs, PSEUDO>;
+  T_HVX_vmpyacc_both <asmString, VecDblRegs, VecDblRegs, IntRegs, CVI_VX_DV>;
 
 multiclass T_HVX_vmpyacc_VVV <string asmString>:
-  T_HVX_vmpyacc_both <asmString, VectorRegs, VectorRegs, VectorRegs, PSEUDO>;
+  T_HVX_vmpyacc_both <asmString, VectorRegs, VectorRegs, VectorRegs, CVI_VX_DV>;
 
 multiclass T_HVX_vmpyacc_WVV <string asmString>:
-  T_HVX_vmpyacc_both <asmString, VecDblRegs, VectorRegs, VectorRegs, PSEUDO>;
+  T_HVX_vmpyacc_both <asmString, VecDblRegs, VectorRegs, VectorRegs, CVI_VX_DV>;
 
 
 defm V6_vtmpyb_acc :
@@ -1337,7 +1172,7 @@ defm V6_vmpyub_acc :
      T_HVX_vmpyacc_WVR <"$dst.uh += vmpy($src1.ub,$src2.ub)">,
      V6_vmpyub_acc_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VX_DV in {
+let Itinerary = CVI_VX_DV, Type = TypeCVI_VX_DV in {
 defm V6_vdmpyhsusat_acc :
      T_HVX_vmpyacc_VVR <"$dst.w += vdmpy($src1.h,$src2.uh):sat">,
      V6_vdmpyhsusat_acc_enc;
@@ -1348,7 +1183,7 @@ defm V6_vmpyiwh_acc : T_HVX_vmpyacc_VVR
      <"$dst.w += vmpyi($src1.w,$src2.h)">, V6_vmpyiwh_acc_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VS in {
+let Itinerary = CVI_VS, Type = TypeCVI_VS in {
 defm V6_vaslw_acc :
      T_HVX_vmpyacc_VVR <"$dst.w += vasl($src1.w,$src2)">, V6_vaslw_acc_enc;
 defm V6_vasrw_acc :
@@ -1401,7 +1236,7 @@ class T_HVX_vcmp <string asmString, RegisterClass RCout, RegisterClass RCin>
   : CVI_VA_Resource1 <(outs RCout:$dst),
                       (ins RCout:$_src_, RCin:$src1, RCin:$src2), asmString,
                       [], "$dst = $_src_" > {
-  let Itinerary = PSEUDO;
+  let Itinerary = CVI_VA;
   let Type = TypeCVI_VA;
 }
 
@@ -1491,7 +1326,7 @@ defm V6_vshufeh :
 defm V6_vshufoh :
      T_HVX_alu_VV <"$dst.h = vshuffo($src1.h,$src2.h)">, V6_vshufoh_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VX_DV in {
+let Itinerary = CVI_VX_DV, Type = TypeCVI_VX_DV in {
 defm V6_vmpyowh_rnd :
      T_HVX_alu_VV <"$dst.w = vmpyo($src1.w,$src2.h):<<1:rnd:sat">,
      V6_vmpyowh_rnd_enc;
@@ -1504,29 +1339,29 @@ defm V6_vmpyowh :
 defm V6_vmpyiowh :
      T_HVX_alu_VV <"$dst.w = vmpyio($src1.w,$src2.h)">, V6_vmpyiowh_enc;
 }
-let Itinerary = PSEUDO, Type = TypeCVI_VX in
+let Itinerary = CVI_VX, Type = TypeCVI_VX in
 defm V6_vmpyieoh :
      T_HVX_alu_VV <"$dst.w = vmpyieo($src1.h,$src2.h)">, V6_vmpyieoh_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VA_DV in {
+let Itinerary = CVI_VA_DV, Type = TypeCVI_VA_DV in {
 defm V6_vshufoeh :
      T_HVX_alu_WV <"$dst.h = vshuffoe($src1.h,$src2.h)">, V6_vshufoeh_enc;
 defm V6_vshufoeb :
      T_HVX_alu_WV <"$dst.b = vshuffoe($src1.b,$src2.b)">, V6_vshufoeb_enc;
 }
 
-let isRegSequence = 1, Itinerary = PSEUDO, Type = TypeCVI_VA_DV in
+let isRegSequence = 1, Itinerary = CVI_VA_DV, Type = TypeCVI_VA_DV in
 defm V6_vcombine :
      T_HVX_alu_WV <"$dst = vcombine($src1,$src2)">, V6_vcombine_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VINLANESAT in {
+let Itinerary = CVI_VINLANESAT, Type = TypeCVI_VINLANESAT in {
 defm V6_vsathub :
      T_HVX_alu_VV <"$dst.ub = vsat($src1.h,$src2.h)">, V6_vsathub_enc;
 defm V6_vsatwh :
      T_HVX_alu_VV <"$dst.h = vsat($src1.w,$src2.w)">, V6_vsatwh_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VS in {
+let Itinerary = CVI_VS, Type = TypeCVI_VS in {
 defm V6_vroundwh :
      T_HVX_alu_VV <"$dst.h = vround($src1.w,$src2.w):sat">, V6_vroundwh_enc;
 defm V6_vroundwuh :
@@ -1554,7 +1389,7 @@ defm V6_vaddb :
 defm V6_vaddh :
      T_HVX_alu_VV <"$dst.h = vadd($src1.h,$src2.h)">, V6_vaddh_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VP in {
+let Itinerary = CVI_VP, Type = TypeCVI_VP in {
 defm V6_vdelta :
      T_HVX_alu_VV <"$dst = vdelta($src1,$src2)">, V6_vdelta_enc;
 defm V6_vrdelta :
@@ -1584,7 +1419,7 @@ class T_HVX_condALU <string asmString, RegisterClass RC1, RegisterClass RC2>
   : CVI_VA_Resource1 <(outs RC2:$dst),
                       (ins RC1:$src1, RC2:$_src_, RC2:$src2), asmString,
                       [], "$dst = $_src_" > {
-  let Itinerary = PSEUDO;
+  let Itinerary = CVI_VA;
   let Type = TypeCVI_VA;
 }
 
@@ -1639,10 +1474,10 @@ multiclass T_HVX_alu_2op <string asmString, RegisterClass RCout,
 
 let hasNewValue = 1 in
 multiclass T_HVX_alu_2op_VV <string asmString>:
-  T_HVX_alu_2op <asmString, VectorRegs, VectorRegs, PSEUDO>;
+  T_HVX_alu_2op <asmString, VectorRegs, VectorRegs, CVI_VA>;
 
 multiclass T_HVX_alu_2op_WV <string asmString>:
-  T_HVX_alu_2op <asmString, VecDblRegs, VectorRegs, PSEUDO>;
+  T_HVX_alu_2op <asmString, VecDblRegs, VectorRegs, CVI_VA_DV>;
 
 
 defm V6_vabsh     : T_HVX_alu_2op_VV <"$dst.h = vabs($src1.h)">,
@@ -1667,7 +1502,7 @@ defm V6_vsb       : T_HVX_alu_2op_WV <"$dst.h = vsxt($src1.b)">,
 defm V6_vsh       : T_HVX_alu_2op_WV <"$dst.w = vsxt($src1.h)">,
                     V6_vsh_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VP in {
+let Itinerary = CVI_VP, Type = TypeCVI_VP in {
 defm V6_vdealh    : T_HVX_alu_2op_VV <"$dst.h = vdeal($src1.h)">,
                     V6_vdealh_enc;
 defm V6_vdealb    : T_HVX_alu_2op_VV <"$dst.b = vdeal($src1.b)">,
@@ -1678,7 +1513,7 @@ defm V6_vshuffb   : T_HVX_alu_2op_VV <"$dst.b = vshuff($src1.b)">,
                     V6_vshuffb_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VP_VS in {
+let Itinerary = CVI_VP_VS, Type = TypeCVI_VP_VS in {
 defm V6_vunpackub : T_HVX_alu_2op_WV <"$dst.uh = vunpack($src1.ub)">,
                     V6_vunpackub_enc;
 defm V6_vunpackuh : T_HVX_alu_2op_WV <"$dst.uw = vunpack($src1.uh)">,
@@ -1689,7 +1524,7 @@ defm V6_vunpackh  : T_HVX_alu_2op_WV <"$dst.w = vunpack($src1.h)">,
                     V6_vunpackh_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VS in {
+let Itinerary = CVI_VS, Type = TypeCVI_VS in {
 defm V6_vcl0w     : T_HVX_alu_2op_VV <"$dst.uw = vcl0($src1.uw)">,
                     V6_vcl0w_enc;
 defm V6_vcl0h     : T_HVX_alu_2op_VV <"$dst.uh = vcl0($src1.uh)">,
@@ -1702,11 +1537,11 @@ defm V6_vpopcounth : T_HVX_alu_2op_VV <"$dst.h = vpopcount($src1.h)">,
                      V6_vpopcounth_enc;
 }
 
-let isAccumulator = 1, hasNewValue = 1, Itinerary = PSEUDO,
+let isAccumulator = 1, hasNewValue = 1, Itinerary = CVI_VX_DV_LONG,
     Type = TypeCVI_VX_DV in
 class T_HVX_vmpyacc2 <string asmString, RegisterClass RC>
   : CVI_VA_Resource1 <(outs RC:$dst),
-                      (ins RC:$_src_, RC:$src1, IntRegs:$src2, u1Imm:$src3),
+                      (ins RC:$_src_, RC:$src1, IntRegs:$src2, u1_0Imm:$src3),
     asmString, [], "$dst = $_src_" > ;
 
 
@@ -1728,9 +1563,9 @@ defm V6_vrmpyubi_acc :
      V6_vrmpyubi_acc_enc;
 
 
-let Itinerary = PSEUDO, Type = TypeCVI_VX_DV, hasNewValue = 1 in
+let Itinerary = CVI_VX_DV_LONG, Type = TypeCVI_VX_DV, hasNewValue = 1 in
 class T_HVX_vmpy2 <string asmString, RegisterClass RC>
-  : CVI_VA_Resource1<(outs RC:$dst), (ins RC:$src1, IntRegs:$src2, u1Imm:$src3),
+  : CVI_VA_Resource1<(outs RC:$dst), (ins RC:$src1, IntRegs:$src2, u1_0Imm:$src3),
     asmString>;
 
 
@@ -1749,7 +1584,7 @@ defm V6_vrmpyubi :
      T_HVX_vmpy2 <"$dst.uw = vrmpy($src1.ub,$src2.ub,#$src3)">, V6_vrmpyubi_enc;
 
 
-let Itinerary = PSEUDO, Type = TypeCVI_VP_VS,
+let Itinerary = CVI_VP_VS_LONG_EARLY, Type = TypeCVI_VP_VS,
     hasSideEffects = 0, hasNewValue2 = 1, opNewValue2 = 1 in
 class T_HVX_perm <string asmString, RegisterClass RC>
   : CVI_VA_Resource1 <(outs RC:$_dst1_, RC:$_dst2_),
@@ -1787,7 +1622,7 @@ defm V6_vcmov : T_HVX_cmov, V6_vcmov_enc;
 defm V6_vncmov : T_HVX_cmov<1>, V6_vncmov_enc;
 
 // Conditional vector combine.
-let Itinerary = PSEUDO, Type = TypeCVI_VA_DV, isPredicated = 1,
+let Itinerary = CVI_VA_DV, Type = TypeCVI_VA_DV, isPredicated = 1,
     hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
 class T_HVX_ccombine <bit isPredNot, RegisterClass RCout, RegisterClass RCin>
   : CVI_VA_Resource1 < (outs RCout:$dst),
@@ -1826,14 +1661,14 @@ multiclass T_HVX_shift_VV <string asmString>:
 multiclass T_HVX_shift_WV <string asmString>:
   T_HVX_shift <asmString, VecDblRegs, VectorRegs>;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VP in {
+let Itinerary = CVI_VP_LONG, Type = TypeCVI_VP in {
 defm V6_valignb :
      T_HVX_shift_VV <"$dst = valign($src1,$src2,$src3)">, V6_valignb_enc;
 defm V6_vlalignb :
      T_HVX_shift_VV <"$dst = vlalign($src1,$src2,$src3)">, V6_vlalignb_enc;
 }
 
-let Itinerary = PSEUDO, Type = TypeCVI_VS in {
+let Itinerary = CVI_VS, Type = TypeCVI_VS in {
 defm V6_vasrwh :
      T_HVX_shift_VV <"$dst.h = vasr($src1.w,$src2.w,$src3)">, V6_vasrwh_enc;
 defm V6_vasrwhsat :
@@ -1856,16 +1691,16 @@ defm V6_vasrhbrndsat :
      V6_vasrhbrndsat_enc;
 }
 
-// Assemlber mapped -- alias?
+// Assembler mapped -- alias?
 //defm V6_vtran2x2vdd : T_HVX_shift_VV <"">, V6_vtran2x2vdd_enc;
-let Itinerary = PSEUDO, Type = TypeCVI_VP_VS in {
+let Itinerary = CVI_VP_VS_LONG, Type = TypeCVI_VP_VS in {
 defm V6_vshuffvdd :
      T_HVX_shift_WV <"$dst = vshuff($src1,$src2,$src3)">, V6_vshuffvdd_enc;
 defm V6_vdealvdd :
      T_HVX_shift_WV <"$dst = vdeal($src1,$src2,$src3)">, V6_vdealvdd_enc;
 }
 
-let hasNewValue = 1, Itinerary = PSEUDO, Type = TypeCVI_VP_VS in
+let hasNewValue = 1, Itinerary = CVI_VP_VS_LONG, Type = TypeCVI_VP_VS in
 class T_HVX_unpack <string asmString, RegisterClass RCout, RegisterClass RCin>
   : CVI_VX_DV_Resource1<(outs RCout:$dst), (ins RCout:$_src_, RCin:$src1),
     asmString, [], "$dst = $_src_">;
@@ -1879,10 +1714,10 @@ multiclass T_HVX_unpack <string asmString> {
 defm V6_vunpackob : T_HVX_unpack <"$dst.h |= vunpacko($src1.b)">, V6_vunpackob_enc;
 defm V6_vunpackoh : T_HVX_unpack <"$dst.w |= vunpacko($src1.h)">, V6_vunpackoh_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VP, hasNewValue = 1,
+let Itinerary = CVI_VP_LONG, Type = TypeCVI_VP, hasNewValue = 1,
     hasSideEffects = 0 in
 class T_HVX_valign <string asmString, RegisterClass RC>
-  : CVI_VA_Resource1<(outs RC:$dst), (ins RC:$src1, RC:$src2, u3Imm:$src3),
+  : CVI_VA_Resource1<(outs RC:$dst), (ins RC:$src1, RC:$src2, u3_0Imm:$src3),
     asmString>;
 
 multiclass T_HVX_valign <string asmString> {
@@ -1897,7 +1732,7 @@ defm V6_valignbi :
 defm V6_vlalignbi :
      T_HVX_valign <"$dst = vlalign($src1,$src2,#$src3)">, V6_vlalignbi_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VA_DV in
+let Itinerary = CVI_VA_DV, Type = TypeCVI_VA_DV in
 class T_HVX_predAlu <string asmString, RegisterClass RC>
   : CVI_VA_Resource1<(outs RC:$dst), (ins RC:$src1, RC:$src2),
     asmString>;
@@ -1916,7 +1751,7 @@ defm V6_pred_or_n : T_HVX_predAlu <"$dst = or($src1,!$src2)">, V6_pred_or_n_enc;
 defm V6_pred_and_n :
      T_HVX_predAlu <"$dst = and($src1,!$src2)">, V6_pred_and_n_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VA in
+let Itinerary = CVI_VA, Type = TypeCVI_VA in
 class T_HVX_prednot <RegisterClass RC>
   : CVI_VA_Resource1<(outs RC:$dst), (ins RC:$src1),
     "$dst = not($src1)">, V6_pred_not_enc;
@@ -1925,7 +1760,7 @@ def V6_pred_not : T_HVX_prednot <VecPredRegs>;
 let isCodeGenOnly =  1 in
 def V6_pred_not_128B : T_HVX_prednot <VecPredRegs128B>;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VA in
+let Itinerary = CVI_VA, Type = TypeCVI_VA in
 class T_HVX_vcmp2 <string asmString, RegisterClass RCout, RegisterClass RCin>
   : CVI_VA_Resource1 <(outs RCout:$dst), (ins RCin:$src1, RCin:$src2),
     asmString >;
@@ -1997,7 +1832,7 @@ let isCodeGenOnly = 1 in
 def V6_vinsertwr_128B : T_V6_vinsertwr <VectorRegs128B>;
 
 
-let Itinerary = PSEUDO, Type = TypeCVI_VP in
+let Itinerary = CVI_VP_LONG, Type = TypeCVI_VP in
 class T_V6_pred_scalar2 <RegisterClass RC>
   : CVI_VA_Resource1<(outs RC:$dst), (ins IntRegs:$src1),
     "$dst = vsetq($src1)">, V6_pred_scalar2_enc;
@@ -2019,9 +1854,9 @@ class T_HVX_rol <string asmString, RegisterClass RC, Operand ImmOp >
   : SInst2 <(outs RC:$dst), (ins  RC:$src1, ImmOp:$src2), asmString>;
 
 class T_HVX_rol_R <string asmString>
-  : T_HVX_rol <asmString, IntRegs, u5Imm>;
+  : T_HVX_rol <asmString, IntRegs, u5_0Imm>;
 class T_HVX_rol_P <string asmString>
-  : T_HVX_rol <asmString, DoubleRegs, u6Imm>;
+  : T_HVX_rol <asmString, DoubleRegs, u6_0Imm>;
 
 def S6_rol_i_p : T_HVX_rol_P <"$dst = rol($src1,#$src2)">, S6_rol_i_p_enc;
 let hasNewValue = 1, opNewValue = 0 in
@@ -2033,10 +1868,10 @@ class T_HVX_rol_acc <string asmString, RegisterClass RC, Operand ImmOp>
     asmString, [], "$dst = $_src_" >;
 
 class T_HVX_rol_acc_P <string asmString>
-  : T_HVX_rol_acc <asmString, DoubleRegs, u6Imm>;
+  : T_HVX_rol_acc <asmString, DoubleRegs, u6_0Imm>;
 
 class T_HVX_rol_acc_R <string asmString>
-  : T_HVX_rol_acc <asmString, IntRegs, u5Imm>;
+  : T_HVX_rol_acc <asmString, IntRegs, u5_0Imm>;
 
 def S6_rol_i_p_nac :
     T_HVX_rol_acc_P <"$dst -= rol($src1,#$src2)">, S6_rol_i_p_nac_enc;
@@ -2111,7 +1946,7 @@ def A5_ACS : MInst2 <(outs DoubleRegs:$dst1, PredRegs:$dst2),
   "$dst1,$dst2 = vacsh($src1,$src2)", [],
   "$dst1 = $_src_" >, Requires<[HasV55T]>, A5_ACS_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VA_DV, hasNewValue = 1,
+let Itinerary = CVI_VA_DV, Type = TypeCVI_VA_DV, hasNewValue = 1,
     hasSideEffects = 0 in
 class T_HVX_alu2 <string asmString, RegisterClass RCout, RegisterClass RCin1,
                   RegisterClass RCin2>
@@ -2133,7 +1968,7 @@ multiclass T_HVX_alu2_W <string asmString> :
 
 defm V6_vswap : T_HVX_alu2_W <"$dst = vswap($src1,$src2,$src3)">, V6_vswap_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VA, hasNewValue = 1,
+let Itinerary = CVI_VA, Type = TypeCVI_VA, hasNewValue = 1,
     hasSideEffects = 0 in
 defm V6_vmux  : T_HVX_alu2_V <"$dst = vmux($src1,$src2,$src3)">, V6_vmux_enc;
 
@@ -2155,7 +1990,7 @@ multiclass T_HVX_vlutb_V <string asmString> :
 multiclass T_HVX_vlutb_W <string asmString> :
   T_HVX_vlutb <asmString, VecDblRegs, VectorRegs>;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VP_VS, isAccumulator = 1 in
+let Itinerary = CVI_VP_VS_LONG, Type = TypeCVI_VP_VS, isAccumulator = 1 in
 class T_HVX_vlutb_acc <string asmString, RegisterClass RCout,
                        RegisterClass RCin>
   : CVI_VA_Resource1<(outs RCout:$dst),
@@ -2178,11 +2013,11 @@ multiclass T_HVX_vlutb_acc_W <string asmString> :
   T_HVX_vlutb_acc <asmString, VecDblRegs, VectorRegs>;
 
 
-let Itinerary = PSEUDO, Type = TypeCVI_VP, hasNewValue = 1 in
+let Itinerary = CVI_VP_LONG, Type = TypeCVI_VP, hasNewValue = 1 in
 defm V6_vlutvvb:
      T_HVX_vlutb_V <"$dst.b = vlut32($src1.b,$src2.b,$src3)">, V6_vlutvvb_enc;
 
-let Itinerary = PSEUDO, Type = TypeCVI_VP_VS, hasNewValue = 1 in
+let Itinerary = CVI_VP_VS_LONG, Type = TypeCVI_VP_VS, hasNewValue = 1 in
 defm V6_vlutvwh:
      T_HVX_vlutb_W <"$dst.h = vlut16($src1.b,$src2.h,$src3)">, V6_vlutvwh_enc;
 
@@ -2209,3 +2044,25 @@ def V6_vhistq
 def V6_vhist
   : CVI_HIST_Resource1 <(outs), (ins),
     "vhist" >, V6_vhist_enc;
+
+
+let isPseudo = 1, isCodeGenOnly = 1, hasSideEffects = 0 in {
+  def V6_vd0: CVI_VA_Resource<(outs VectorRegs:$dst), (ins), "$dst = #0", []>;
+  def V6_vd0_128B: CVI_VA_Resource<(outs VectorRegs128B:$dst), (ins),
+      "$dst = #0", []>;
+
+  def V6_vassignp: CVI_VA_Resource<(outs VecDblRegs:$dst),
+      (ins VecDblRegs:$src), "", []>;
+  def V6_vassignp_128B : CVI_VA_Resource<(outs VecDblRegs128B:$dst),
+      (ins VecDblRegs128B:$src), "", []>;
+
+  def V6_lo: CVI_VA_Resource<(outs VectorRegs:$dst), (ins VecDblRegs:$src1),
+      "", []>;
+  def V6_lo_128B: CVI_VA_Resource<(outs VectorRegs128B:$dst),
+      (ins VecDblRegs128B:$src1), "", []>;
+
+  def V6_hi: CVI_VA_Resource<(outs VectorRegs:$dst), (ins VecDblRegs:$src1),
+      "", []>;
+  def V6_hi_128B: CVI_VA_Resource<(outs VectorRegs128B:$dst),
+      (ins VecDblRegs128B:$src1), "", []>;
+}

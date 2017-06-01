@@ -95,11 +95,9 @@ static unsigned getXCoreSectionFlags(SectionKind K, bool IsCPRel) {
   return Flags;
 }
 
-MCSection *
-XCoreTargetObjectFile::getExplicitSectionGlobal(const GlobalValue *GV,
-                                                SectionKind Kind, Mangler &Mang,
-                                                const TargetMachine &TM) const {
-  StringRef SectionName = GV->getSection();
+MCSection *XCoreTargetObjectFile::getExplicitSectionGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  StringRef SectionName = GO->getSection();
   // Infer section flags from the section name if we can.
   bool IsCPRel = SectionName.startswith(".cp.");
   if (IsCPRel && !Kind.isReadOnly())
@@ -108,12 +106,10 @@ XCoreTargetObjectFile::getExplicitSectionGlobal(const GlobalValue *GV,
                                     getXCoreSectionFlags(Kind, IsCPRel));
 }
 
-MCSection *
-XCoreTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
-                                              SectionKind Kind, Mangler &Mang,
-                                              const TargetMachine &TM) const {
+MCSection *XCoreTargetObjectFile::SelectSectionForGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
 
-  bool UseCPRel = GV->isLocalLinkage(GV->getLinkage());
+  bool UseCPRel = GO->hasLocalLinkage();
 
   if (Kind.isText())                    return TextSection;
   if (UseCPRel) {
@@ -122,20 +118,22 @@ XCoreTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
     if (Kind.isMergeableConst8())       return MergeableConst8Section;
     if (Kind.isMergeableConst16())      return MergeableConst16Section;
   }
-  Type *ObjType = GV->getType()->getPointerElementType();
-  auto &DL = GV->getParent()->getDataLayout();
+  Type *ObjType = GO->getValueType();
+  auto &DL = GO->getParent()->getDataLayout();
   if (TM.getCodeModel() == CodeModel::Small || !ObjType->isSized() ||
       DL.getTypeAllocSize(ObjType) < CodeModelLargeSize) {
     if (Kind.isReadOnly())              return UseCPRel? ReadOnlySection
                                                        : DataRelROSection;
     if (Kind.isBSS() || Kind.isCommon())return BSSSection;
-    if (Kind.isDataRel())               return DataSection;
+    if (Kind.isData())
+      return DataSection;
     if (Kind.isReadOnlyWithRel())       return DataRelROSection;
   } else {
     if (Kind.isReadOnly())              return UseCPRel? ReadOnlySectionLarge
                                                        : DataRelROSectionLarge;
     if (Kind.isBSS() || Kind.isCommon())return BSSSectionLarge;
-    if (Kind.isDataRel())               return DataSectionLarge;
+    if (Kind.isData())
+      return DataSectionLarge;
     if (Kind.isReadOnlyWithRel())       return DataRelROSectionLarge;
   }
 
@@ -143,8 +141,10 @@ XCoreTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
   report_fatal_error("Target does not support TLS or Common sections");
 }
 
-MCSection *XCoreTargetObjectFile::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C) const {
+MCSection *XCoreTargetObjectFile::getSectionForConstant(const DataLayout &DL,
+                                                        SectionKind Kind,
+                                                        const Constant *C,
+                                                        unsigned &Align) const {
   if (Kind.isMergeableConst4())           return MergeableConst4Section;
   if (Kind.isMergeableConst8())           return MergeableConst8Section;
   if (Kind.isMergeableConst16())          return MergeableConst16Section;

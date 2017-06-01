@@ -13,20 +13,27 @@
 //===----------------------------------------------------------------------===//
 #define DEBUG_TYPE "hexagonmcelfstreamer"
 
-#include "Hexagon.h"
-#include "HexagonMCELFStreamer.h"
-#include "MCTargetDesc/HexagonBaseInfo.h"
+#include "MCTargetDesc/HexagonMCELFStreamer.h"
+#include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCShuffler.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/ELF.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
@@ -37,9 +44,7 @@ static cl::opt<unsigned>
 
 void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCK,
                                            const MCSubtargetInfo &STI) {
-  MCInst HMI;
-  HMI.setOpcode(Hexagon::BUNDLE);
-  HMI.addOperand(MCOperand::createImm(0));
+  MCInst HMI = HexagonMCInstrInfo::createBundle();
   MCInst *MCB;
 
   if (MCK.getOpcode() != Hexagon::BUNDLE) {
@@ -50,7 +55,7 @@ void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCK,
 
   // Examines packet and pad the packet, if needed, when an
   // end-loop is in the bundle.
-  HexagonMCInstrInfo::padEndloop(*MCB);
+  HexagonMCInstrInfo::padEndloop(getContext(), *MCB);
   HexagonMCShuffle(*MCII, STI, *MCB);
 
   assert(HexagonMCInstrInfo::bundleSize(*MCB) <= HEXAGON_PACKET_SIZE);
@@ -60,9 +65,9 @@ void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCK,
     if (Extended) {
       if (HexagonMCInstrInfo::isDuplex(*MCII, *MCI)) {
         MCInst *SubInst = const_cast<MCInst *>(MCI->getOperand(1).getInst());
-        HexagonMCInstrInfo::clampExtended(*MCII, *SubInst);
+        HexagonMCInstrInfo::clampExtended(*MCII, getContext(), *SubInst);
       } else {
-        HexagonMCInstrInfo::clampExtended(*MCII, *MCI);
+        HexagonMCInstrInfo::clampExtended(*MCII, getContext(), *MCI);
       }
       Extended = false;
     } else {
@@ -109,15 +114,20 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
         ((AccessSize == 0) || (Size == 0) || (Size > GPSize))
             ? ".bss"
             : sbss[(Log2_64(AccessSize))];
-
-    MCSection *CrntSection = getCurrentSection().first;
-    MCSection *Section = getAssembler().getContext().getELFSection(
+    MCSection &Section = *getAssembler().getContext().getELFSection(
         SectionName, ELF::SHT_NOBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
-    SwitchSection(Section);
-    AssignFragment(Symbol, getCurrentFragment());
+    MCSectionSubPair P = getCurrentSection();
+    SwitchSection(&Section);
 
-    MCELFStreamer::EmitCommonSymbol(Symbol, Size, ByteAlignment);
-    SwitchSection(CrntSection);
+    EmitValueToAlignment(ByteAlignment, 0, 1, 0);
+    EmitLabel(Symbol);
+    EmitZeros(Size);
+
+    // Update the maximum alignment of the section if necessary.
+    if (ByteAlignment > Section.getAlignment())
+      Section.setAlignment(ByteAlignment);
+
+    SwitchSection(P.first, P.second);
   } else {
     if (ELFSymbol->declareCommon(Size, ByteAlignment))
       report_fatal_error("Symbol: " + Symbol->getName() +
@@ -145,8 +155,10 @@ void HexagonMCELFStreamer::HexagonMCEmitLocalCommonSymbol(
 }
 
 namespace llvm {
+
 MCStreamer *createHexagonELFStreamer(MCContext &Context, MCAsmBackend &MAB,
                                      raw_pwrite_stream &OS, MCCodeEmitter *CE) {
   return new HexagonMCELFStreamer(Context, MAB, OS, CE);
 }
-}
+
+} // end namespace llvm

@@ -1,0 +1,39 @@
+{
+  'version': 0,
+  'case-sensitive': 'false',
+  'ignore-non-existent-contents': 'true',
+  'roots': [
+    {
+      'type': 'directory',
+      'name': "VDIR/Bar.framework/Headers",
+      'contents': [
+        {
+          'type': 'file',
+          'name': "A.h",
+          'external-contents': "OUT_DIR/Bar.framework/Headers/A.h"
+        },
+        {
+          'type': 'file',
+          'name': "B.h",
+          'external-contents': "OUT_DIR/Bar.framework/Headers/B.h"
+        },
+        {
+          'type': 'file',
+          'name': "C.h",
+          'external-contents': "OUT_DIR/Bar.framework/Headers/C.h"
+        }
+      ]
+    },
+    {
+      'type': 'directory',
+      'name': "VDIR/Bar.framework/Modules",
+      'contents': [
+        {
+          'type': 'file',
+          'name': "module.modulemap",
+          'external-contents': "OUT_DIR/Bar.framework/Modules/module.modulemap"
+        }
+      ]
+    },
+  ]
+}

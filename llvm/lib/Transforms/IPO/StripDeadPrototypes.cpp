@@ -53,7 +53,8 @@ static bool stripDeadPrototypes(Module &M) {
   return MadeChange;
 }
 
-PreservedAnalyses StripDeadPrototypesPass::run(Module &M) {
+PreservedAnalyses StripDeadPrototypesPass::run(Module &M,
+                                               ModuleAnalysisManager &) {
   if (stripDeadPrototypes(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -69,6 +70,9 @@ public:
         *PassRegistry::getPassRegistry());
   }
   bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+
     return stripDeadPrototypes(M);
   }
 };

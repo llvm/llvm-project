@@ -53,7 +53,7 @@ int main() {
     exit(printf("close failed\n"));
   if (close(fd2) == -1)
     exit(printf("close failed\n"));
-  printf("DONE\n");
+  fprintf(stderr, "DONE\n");
 }
 
 // CHECK-NOT: WARNING: ThreadSanitizer: data race

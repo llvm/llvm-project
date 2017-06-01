@@ -23,17 +23,22 @@
 namespace llvm {
 class MipsRegisterInfo : public MipsGenRegisterInfo {
 public:
-  MipsRegisterInfo();
+  enum class MipsPtrClass {
+    /// The default register class for integer values.
+    Default = 0,
+    /// The subset of registers permitted in certain microMIPS instructions
+    /// such as lw16.
+    GPR16MM = 1,
+    /// The stack pointer only.
+    StackPointer = 2,
+    /// The global pointer only.
+    GlobalPointer = 3,
+  };
 
-  /// getRegisterNumbering - Given the enum value for some register, e.g.
-  /// Mips::RA, return the number that it corresponds to (e.g. 31).
-  static unsigned getRegisterNumbering(unsigned RegEnum);
+  MipsRegisterInfo();
 
   /// Get PIC indirect call register
   static unsigned getPICCallReg();
-
-  /// Adjust the Mips stack frame.
-  void adjustMipsStackFrame(MachineFunction &MF) const;
 
   /// Code Generation virtual methods...
   const TargetRegisterClass *getPointerRegClass(const MachineFunction &MF,
@@ -56,9 +61,6 @@ public:
   void eliminateFrameIndex(MachineBasicBlock::iterator II,
                            int SPAdj, unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
-
-  void processFunctionBeforeFrameFinalized(MachineFunction &MF,
-                                       RegScavenger *RS = nullptr) const;
 
   // Stack realignment queries.
   bool canRealignStack(const MachineFunction &MF) const override;

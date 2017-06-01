@@ -2,8 +2,8 @@
 
 // Make sure that we emit H's constructor twice: once with the first lambda
 // inside of 'lep' and again with the second lambda inside of 'lep'.
-// CHECK-DAG: @"\01??0?$H@V<lambda_1>@??$lep@X@@YAXXZ@@@QAE@XZ"
-// CHECK-DAG: @"\01??0?$H@V<lambda_2>@??$lep@X@@YAXXZ@@@QAE@XZ"
+// CHECK-DAG: @"\01??0?$H@V<lambda_1>@?0???$lep@X@@YAXXZ@@@QAE@XZ"
+// CHECK-DAG: @"\01??0?$H@V<lambda_2>@?0???$lep@X@@YAXXZ@@@QAE@XZ"
 
 template <typename>
 struct H {

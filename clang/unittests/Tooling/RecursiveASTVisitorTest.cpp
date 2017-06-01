@@ -42,14 +42,22 @@ TEST(RecursiveASTVisitor, VisitsLambdaExpr) {
   LambdaExprVisitor Visitor;
   Visitor.ExpectMatch("", 1, 12);
   EXPECT_TRUE(Visitor.runOver("void f() { []{ return; }(); }",
-			      LambdaExprVisitor::Lang_CXX11));
+                              LambdaExprVisitor::Lang_CXX11));
 }
 
 TEST(RecursiveASTVisitor, TraverseLambdaBodyCanBeOverridden) {
   LambdaExprVisitor Visitor;
   EXPECT_TRUE(Visitor.runOver("void f() { []{ return; }(); }",
-			      LambdaExprVisitor::Lang_CXX11));
+                              LambdaExprVisitor::Lang_CXX11));
   EXPECT_TRUE(Visitor.allBodiesHaveBeenTraversed());
+}
+
+TEST(RecursiveASTVisitor, VisitsAttributedLambdaExpr) {
+  LambdaExprVisitor Visitor;
+  Visitor.ExpectMatch("", 1, 12);
+  EXPECT_TRUE(Visitor.runOver(
+      "void f() { [] () __attribute__ (( fastcall )) { return; }(); }",
+      LambdaExprVisitor::Lang_CXX14));
 }
 
 // Matches the (optional) capture-default of a lambda-introducer.
@@ -92,8 +100,7 @@ private:
 
 TEST(RecursiveASTVisitor, LambdaClosureTypesAreImplicit) {
   ClassVisitor Visitor;
-  EXPECT_TRUE(Visitor.runOver("auto lambda = []{};",
-			      ClassVisitor::Lang_CXX11));
+  EXPECT_TRUE(Visitor.runOver("auto lambda = []{};", ClassVisitor::Lang_CXX11));
   EXPECT_TRUE(Visitor.sawOnlyImplicitLambdaClasses());
 }
 
@@ -132,6 +139,23 @@ TEST(RecursiveASTVisitor, AttributesAreVisited) {
     "  int a __attribute__((guarded_by(mu1)));\n"
     "  void bar() __attribute__((exclusive_locks_required(mu1, mu2)));\n"
     "};\n"));
+}
+
+// Check to ensure that implicit default argument expressions are visited.
+class IntegerLiteralVisitor
+    : public ExpectedLocationVisitor<IntegerLiteralVisitor> {
+public:
+  bool VisitIntegerLiteral(const IntegerLiteral *IL) {
+    Match("literal", IL->getLocation());
+    return true;
+  }
+};
+
+TEST(RecursiveASTVisitor, DefaultArgumentsAreVisited) {
+  IntegerLiteralVisitor Visitor;
+  Visitor.ExpectMatch("literal", 1, 15, 2);
+  EXPECT_TRUE(Visitor.runOver("int f(int i = 1);\n"
+                              "static int k = f();\n"));
 }
 
 } // end anonymous namespace

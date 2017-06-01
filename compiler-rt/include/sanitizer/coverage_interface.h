@@ -23,6 +23,11 @@ extern "C" {
   void __sanitizer_cov_init();
   // Record and dump coverage info.
   void __sanitizer_cov_dump();
+
+  //  Dump collected coverage info. Sorts pcs by module into individual
+  //  .sancov files.
+  void __sanitizer_dump_coverage(const uintptr_t *pcs, uintptr_t len);
+
   // Open <name>.sancov.packed in the coverage directory and return the file
   // descriptor. Returns -1 on failure, or if coverage dumping is disabled.
   // This is intended for use by sandboxing code.
@@ -58,6 +63,7 @@ extern "C" {
   // __sanitizer_get_number_of_counters bytes long and 8-aligned.
   uintptr_t
   __sanitizer_update_counter_bitset_and_clear_counters(uint8_t *bitset);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

@@ -19,7 +19,7 @@
 ; reusing the pre-addition register later, or the post-addition one. Currently,
 ; it does the latter, so we check:
 
-; CHECK: # %while.body85.i
+; CHECK: # %while.body85.i{{$}}
 ; CHECK-NOT: # %
 ; CHECK-NOT: add
 ; CHECK: movl %[[POSTR:e[abcdxi]+]], %[[PRER:e[abcdxi]+]]

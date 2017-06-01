@@ -28,12 +28,23 @@ test(std::basic_string_view<charT> sv)
     typedef std::basic_string<charT, std::char_traits<charT>, test_allocator<charT> > S;
     typedef typename S::traits_type T;
     typedef typename S::allocator_type A;
+  {
     S s2(sv);
     LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == sv.size());
     assert(T::compare(s2.data(), sv.data(), sv.size()) == 0);
     assert(s2.get_allocator() == A());
     assert(s2.capacity() >= s2.size());
+  }
+  {
+    S s2;
+    s2 = sv;
+    LIBCPP_ASSERT(s2.__invariants());
+    assert(s2.size() == sv.size());
+    assert(T::compare(s2.data(), sv.data(), sv.size()) == 0);
+    assert(s2.get_allocator() == A());
+    assert(s2.capacity() >= s2.size());
+  }
 }
 
 template <class charT, class A>
@@ -42,12 +53,23 @@ test(std::basic_string_view<charT> sv, const A& a)
 {
     typedef std::basic_string<charT, std::char_traits<charT>, A> S;
     typedef typename S::traits_type T;
+  {
     S s2(sv, a);
     LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == sv.size());
     assert(T::compare(s2.data(), sv.data(), sv.size()) == 0);
     assert(s2.get_allocator() == a);
     assert(s2.capacity() >= s2.size());
+  }
+  {
+    S s2(a);
+    s2 = sv;
+    LIBCPP_ASSERT(s2.__invariants());
+    assert(s2.size() == sv.size());
+    assert(T::compare(s2.data(), sv.data(), sv.size()) == 0);
+    assert(s2.get_allocator() == a);
+    assert(s2.capacity() >= s2.size());
+  }
 }
 
 int main()

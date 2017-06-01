@@ -72,15 +72,10 @@
 
 using namespace llvm;
 
-// VMA size definition for architecture that support multiple sizes.
-// AArch64 has 3 VMA sizes: 39, 42 and 48.
-#ifndef SANITIZER_AARCH64_VMA
-# define SANITIZER_AARCH64_VMA 39
-#else
-# if SANITIZER_AARCH64_VMA != 39 && SANITIZER_AARCH64_VMA != 42
-#  error "invalid SANITIZER_AARCH64_VMA size"
-# endif
-#endif
+// External symbol to be used when generating the shadow address for
+// architectures with multiple VMAs. Instead of using a constant integer
+// the runtime will set the external mask based on the VMA range.
+static const char *const kDFSanExternShadowPtrMask = "__dfsan_shadow_ptr_mask";
 
 // The -dfsan-preserve-alignment flag controls whether this pass assumes that
 // alignment requirements provided by the input IR are correct.  For example,
@@ -134,11 +129,12 @@ static cl::opt<bool> ClDebugNonzeroLabels(
              "load or return with a nonzero label"),
     cl::Hidden);
 
+
 namespace {
 
 StringRef GetGlobalTypeString(const GlobalValue &G) {
   // Types of GlobalVariables are always pointer types.
-  Type *GType = G.getType()->getElementType();
+  Type *GType = G.getValueType();
   // For now we support blacklisting struct types only.
   if (StructType *SGType = dyn_cast<StructType>(GType)) {
     if (!SGType->isLiteral())
@@ -170,7 +166,7 @@ class DFSanABIList {
     if (isIn(*GA.getParent(), Category))
       return true;
 
-    if (isa<FunctionType>(GA.getType()->getElementType()))
+    if (isa<FunctionType>(GA.getValueType()))
       return SCL->inSection("fun", GA.getName(), Category);
 
     return SCL->inSection("global", GA.getName(), Category) ||
@@ -241,6 +237,7 @@ class DataFlowSanitizer : public ModulePass {
   void *(*GetRetvalTLSPtr)();
   Constant *GetArgTLS;
   Constant *GetRetvalTLS;
+  Constant *ExternalShadowMask;
   FunctionType *DFSanUnionFnTy;
   FunctionType *DFSanUnionLoadFnTy;
   FunctionType *DFSanUnimplementedFnTy;
@@ -258,6 +255,7 @@ class DataFlowSanitizer : public ModulePass {
   DFSanABIList ABIList;
   DenseMap<Value *, Function *> UnwrappedFnMap;
   AttributeSet ReadOnlyNoneAttrs;
+  bool DFSanRuntimeShadowMask;
 
   Value *getShadowAddress(Value *Addr, Instruction *Pos);
   bool isInstrumented(const Function *F);
@@ -371,7 +369,8 @@ llvm::createDataFlowSanitizerPass(const std::vector<std::string> &ABIListFiles,
 DataFlowSanitizer::DataFlowSanitizer(
     const std::vector<std::string> &ABIListFiles, void *(*getArgTLS)(),
     void *(*getRetValTLS)())
-    : ModulePass(ID), GetArgTLSPtr(getArgTLS), GetRetvalTLSPtr(getRetValTLS) {
+    : ModulePass(ID), GetArgTLSPtr(getArgTLS), GetRetvalTLSPtr(getRetValTLS),
+      DFSanRuntimeShadowMask(false) {
   std::vector<std::string> AllABIListFiles(std::move(ABIListFiles));
   AllABIListFiles.insert(AllABIListFiles.end(), ClABIListFiles.begin(),
                          ClABIListFiles.end());
@@ -445,12 +444,9 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
     ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0x700000000000LL);
   else if (IsMIPS64)
     ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0xF000000000LL);
+  // AArch64 supports multiple VMAs and the shadow mask is set at runtime.
   else if (IsAArch64)
-#if SANITIZER_AARCH64_VMA == 39
-    ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0x7800000000LL);
-#else
-    ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0x3c000000000LL);
-#endif
+    DFSanRuntimeShadowMask = true;
   else
     report_fatal_error("unsupported triple");
 
@@ -620,6 +616,9 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     if (GlobalVariable *G = dyn_cast<GlobalVariable>(RetvalTLS))
       G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
   }
+
+  ExternalShadowMask =
+      Mod->getOrInsertGlobal(kDFSanExternShadowPtrMask, IntptrTy);
 
   DFSanUnionFn = Mod->getOrInsertFunction("__dfsan_union", DFSanUnionFnTy);
   if (Function *F = dyn_cast<Function>(DFSanUnionFn)) {
@@ -792,25 +791,20 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     }
   }
 
-  for (std::vector<Function *>::iterator i = FnsToInstrument.begin(),
-                                         e = FnsToInstrument.end();
-       i != e; ++i) {
-    if (!*i || (*i)->isDeclaration())
+  for (Function *i : FnsToInstrument) {
+    if (!i || i->isDeclaration())
       continue;
 
-    removeUnreachableBlocks(**i);
+    removeUnreachableBlocks(*i);
 
-    DFSanFunction DFSF(*this, *i, FnsWithNativeABI.count(*i));
+    DFSanFunction DFSF(*this, i, FnsWithNativeABI.count(i));
 
     // DFSanVisitor may create new basic blocks, which confuses df_iterator.
     // Build a copy of the list before iterating over it.
-    llvm::SmallVector<BasicBlock *, 4> BBList(
-        depth_first(&(*i)->getEntryBlock()));
+    llvm::SmallVector<BasicBlock *, 4> BBList(depth_first(&i->getEntryBlock()));
 
-    for (llvm::SmallVector<BasicBlock *, 4>::iterator i = BBList.begin(),
-                                                      e = BBList.end();
-         i != e; ++i) {
-      Instruction *Inst = &(*i)->front();
+    for (BasicBlock *i : BBList) {
+      Instruction *Inst = &i->front();
       while (1) {
         // DFSanVisitor may split the current basic block, changing the current
         // instruction's next pointer and moving the next instruction to the
@@ -938,9 +932,15 @@ void DFSanFunction::setShadow(Instruction *I, Value *Shadow) {
 Value *DataFlowSanitizer::getShadowAddress(Value *Addr, Instruction *Pos) {
   assert(Addr != RetvalTLS && "Reinstrumenting?");
   IRBuilder<> IRB(Pos);
+  Value *ShadowPtrMaskValue;
+  if (DFSanRuntimeShadowMask)
+    ShadowPtrMaskValue = IRB.CreateLoad(IntptrTy, ExternalShadowMask);
+  else
+    ShadowPtrMaskValue = ShadowPtrMask;
   return IRB.CreateIntToPtr(
       IRB.CreateMul(
-          IRB.CreateAnd(IRB.CreatePtrToInt(Addr, IntptrTy), ShadowPtrMask),
+          IRB.CreateAnd(IRB.CreatePtrToInt(Addr, IntptrTy),
+                        IRB.CreatePtrToInt(ShadowPtrMaskValue, IntptrTy)),
           ShadowPtrMul),
       ShadowPtrTy);
 }
@@ -1061,11 +1061,10 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
   SmallVector<Value *, 2> Objs;
   GetUnderlyingObjects(Addr, Objs, Pos->getModule()->getDataLayout());
   bool AllConstants = true;
-  for (SmallVector<Value *, 2>::iterator i = Objs.begin(), e = Objs.end();
-       i != e; ++i) {
-    if (isa<Function>(*i) || isa<BlockAddress>(*i))
+  for (Value *Obj : Objs) {
+    if (isa<Function>(Obj) || isa<BlockAddress>(Obj))
       continue;
-    if (isa<GlobalVariable>(*i) && cast<GlobalVariable>(*i)->isConstant())
+    if (isa<GlobalVariable>(Obj) && cast<GlobalVariable>(Obj)->isConstant())
       continue;
 
     AllConstants = false;
@@ -1406,10 +1405,6 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
   // instrument them.
   if (F == DFSF.DFS.DFSanVarargWrapperFn)
     return;
-
-  assert(!(cast<FunctionType>(
-      CS.getCalledValue()->getType()->getPointerElementType())->isVarArg() &&
-           dyn_cast<InvokeInst>(CS.getInstruction())));
 
   IRBuilder<> IRB(CS.getInstruction());
 

@@ -89,3 +89,41 @@ define <2 x i32> @test10(<2 x i32> %a) nounwind {
         %abs = select <2 x i1> %b, <2 x i32> %tmp1neg, <2 x i32> %a
         ret <2 x i32> %abs
 }
+
+;; Check that absdiff patterns as emitted by log2 shuffles are
+;; matched by VABD.
+
+define <4 x i32> @test11(<4 x i16> %a, <4 x i16> %b) nounwind {
+; CHECK-LABEL: test11:
+; CHECK: vabdl.u16 q
+        %zext1 = zext <4 x i16> %a to <4 x i32>
+        %zext2 = zext <4 x i16> %b to <4 x i32>
+        %diff = sub <4 x i32> %zext1, %zext2
+        %shift1 = ashr <4 x i32> %diff, <i32 31, i32 31, i32 31, i32 31>
+        %add1 = add <4 x i32> %shift1, %diff
+        %res = xor <4 x i32> %shift1, %add1
+        ret <4 x i32> %res
+}
+define <8 x i16> @test12(<8 x i8> %a, <8 x i8> %b) nounwind {
+; CHECK-LABEL: test12:
+; CHECK: vabdl.u8 q
+        %zext1 = zext <8 x i8> %a to <8 x i16>
+        %zext2 = zext <8 x i8> %b to <8 x i16>
+        %diff = sub <8 x i16> %zext1, %zext2
+        %shift1 = ashr <8 x i16> %diff,<i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+        %add1 = add <8 x i16> %shift1, %diff
+        %res = xor <8 x i16> %shift1, %add1
+        ret <8 x i16> %res
+}
+
+define <2 x i64> @test13(<2 x i32> %a, <2 x i32> %b) nounwind {
+; CHECK-LABEL: test13:
+; CHECK: vabdl.u32 q
+        %zext1 = zext <2 x i32> %a to <2 x i64>
+        %zext2 = zext <2 x i32> %b to <2 x i64>
+        %diff = sub <2 x i64> %zext1, %zext2
+        %shift1 = ashr <2 x i64> %diff,<i64 63, i64 63>
+        %add1 = add <2 x i64> %shift1, %diff
+        %res = xor <2 x i64> %shift1, %add1
+        ret <2 x i64> %res
+}

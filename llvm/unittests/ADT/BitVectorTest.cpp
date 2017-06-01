@@ -399,5 +399,31 @@ TYPED_TEST(BitVectorTest, CompoundTestReset) {
   C.reset(C);
   EXPECT_TRUE(C.none());
 }
+
+TYPED_TEST(BitVectorTest, MoveConstructor) {
+  TypeParam A(10, true);
+  TypeParam B(std::move(A));
+  // Check that the move ctor leaves the moved-from object in a valid state.
+  // The following line used to crash.
+  A = B;
+
+  TypeParam C(10, true);
+  EXPECT_EQ(C, A);
+  EXPECT_EQ(C, B);
+}
+
+TYPED_TEST(BitVectorTest, MoveAssignment) {
+  TypeParam A(10, true);
+  TypeParam B;
+  B = std::move(A);
+  // Check that move assignment leaves the moved-from object in a valid state.
+  // The following line used to crash.
+  A = B;
+
+  TypeParam C(10, true);
+  EXPECT_EQ(C, A);
+  EXPECT_EQ(C, B);
+}
+
 }
 #endif

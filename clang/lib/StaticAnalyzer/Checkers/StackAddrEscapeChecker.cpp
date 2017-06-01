@@ -156,6 +156,15 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
   if (isa<CXXConstructExpr>(RetE) && RetE->getType()->isRecordType())
     return;
 
+  // The CK_CopyAndAutoreleaseBlockObject cast causes the block to be copied
+  // so the stack address is not escaping here.
+  if (auto *ICE = dyn_cast<ImplicitCastExpr>(RetE)) {
+    if (isa<BlockDataRegion>(R) &&
+        ICE->getCastKind() == CK_CopyAndAutoreleaseBlockObject) {
+      return;
+    }
+  }
+
   EmitStackError(C, R, RetE);
 }
 
@@ -227,7 +236,12 @@ void StackAddrEscapeChecker::checkEndFunction(CheckerContext &Ctx) const {
     SmallString<512> buf;
     llvm::raw_svector_ostream os(buf);
     SourceRange range = genName(os, cb.V[i].second, Ctx.getASTContext());
-    os << " is still referred to by the global variable '";
+    os << " is still referred to by the ";
+    if (isa<StaticGlobalSpaceRegion>(cb.V[i].first->getMemorySpace()))
+      os << "static";
+    else
+      os << "global";
+    os << " variable '";
     const VarRegion *VR = cast<VarRegion>(cb.V[i].first->getBaseRegion());
     os << *VR->getDecl()
        << "' upon returning to the caller.  This will be a dangling reference";

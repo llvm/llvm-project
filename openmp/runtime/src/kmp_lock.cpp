@@ -3573,6 +3573,12 @@ __kmp_init_dynamic_user_locks()
         __kmp_indirect_unset = indirect_unset;
         __kmp_indirect_test  = indirect_test;
     }
+    // If the user locks have already been initialized, then return.
+    // Allow the switch between different KMP_CONSISTENCY_CHECK values,
+    // but do not allocate new lock tables if they have already been
+    // allocated.
+    if (__kmp_init_user_locks)
+        return;
 
     // Initialize lock index table
     __kmp_i_lock_table.size = KMP_I_LOCK_CHUNK;

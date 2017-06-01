@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZ.h"
-#include "llvm/MC/MCDisassembler.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -42,8 +42,36 @@ static MCDisassembler *createSystemZDisassembler(const Target &T,
 
 extern "C" void LLVMInitializeSystemZDisassembler() {
   // Register the disassembler.
-  TargetRegistry::RegisterMCDisassembler(TheSystemZTarget,
+  TargetRegistry::RegisterMCDisassembler(getTheSystemZTarget(),
                                          createSystemZDisassembler);
+}
+
+/// tryAddingSymbolicOperand - trys to add a symbolic operand in place of the
+/// immediate Value in the MCInst.
+///
+/// @param Value      - The immediate Value, has had any PC adjustment made by
+///                     the caller.
+/// @param isBranch   - If the instruction is a branch instruction
+/// @param Address    - The starting address of the instruction
+/// @param Offset     - The byte offset to this immediate in the instruction
+/// @param Width      - The byte width of this immediate in the instruction
+///
+/// If the getOpInfo() function was set when setupForSymbolicDisassembly() was
+/// called then that function is called to get any symbolic information for the
+/// immediate in the instruction using the Address, Offset and Width.  If that
+/// returns non-zero then the symbolic information it returns is used to create
+/// an MCExpr and that is added as an operand to the MCInst.  If getOpInfo()
+/// returns zero and isBranch is true then a symbol look up for immediate Value
+/// is done and if a symbol is found an MCExpr is created with that, else
+/// an MCExpr with the immediate Value is created.  This function returns true
+/// if it adds an operand to the MCInst and false otherwise.
+static bool tryAddingSymbolicOperand(int64_t Value, bool isBranch,
+                                     uint64_t Address, uint64_t Offset,
+                                     uint64_t Width, MCInst &MI,
+                                     const void *Decoder) {
+  const MCDisassembler *Dis = static_cast<const MCDisassembler*>(Decoder);
+  return Dis->tryAddingSymbolicOperand(MI, Value, Address, isBranch,
+                                       Offset, Width);
 }
 
 static DecodeStatus decodeRegisterClass(MCInst &Inst, uint64_t RegNo,
@@ -122,6 +150,12 @@ static DecodeStatus DecodeVR128BitRegisterClass(MCInst &Inst, uint64_t RegNo,
   return decodeRegisterClass(Inst, RegNo, SystemZMC::VR128Regs, 32);
 }
 
+static DecodeStatus DecodeAR32BitRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, SystemZMC::AR32Regs, 16);
+}
+
 template<unsigned N>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm) {
   if (!isUInt<N>(Imm))
@@ -136,12 +170,6 @@ static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm) {
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createImm(SignExtend64<N>(Imm)));
   return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeAccessRegOperand(MCInst &Inst, uint64_t Imm,
-                                           uint64_t Address,
-                                           const void *Decoder) {
-  return decodeUImmOperand<4>(Inst, Imm);
 }
 
 static DecodeStatus decodeU1ImmOperand(MCInst &Inst, uint64_t Imm,
@@ -206,22 +234,47 @@ static DecodeStatus decodeS32ImmOperand(MCInst &Inst, uint64_t Imm,
 
 template<unsigned N>
 static DecodeStatus decodePCDBLOperand(MCInst &Inst, uint64_t Imm,
-                                       uint64_t Address) {
+                                       uint64_t Address,
+                                       bool isBranch,
+                                       const void *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid PC-relative offset");
-  Inst.addOperand(MCOperand::createImm(SignExtend64<N>(Imm) * 2 + Address));
+  uint64_t Value = SignExtend64<N>(Imm) * 2 + Address;
+
+  if (!tryAddingSymbolicOperand(Value, isBranch, Address, 2, N / 8,
+                                Inst, Decoder))
+    Inst.addOperand(MCOperand::createImm(Value));
+
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodePC16DBLOperand(MCInst &Inst, uint64_t Imm,
-                                         uint64_t Address,
-                                         const void *Decoder) {
-  return decodePCDBLOperand<16>(Inst, Imm, Address);
+static DecodeStatus decodePC12DBLBranchOperand(MCInst &Inst, uint64_t Imm,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  return decodePCDBLOperand<12>(Inst, Imm, Address, true, Decoder);
+}
+
+static DecodeStatus decodePC16DBLBranchOperand(MCInst &Inst, uint64_t Imm,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  return decodePCDBLOperand<16>(Inst, Imm, Address, true, Decoder);
+}
+
+static DecodeStatus decodePC24DBLBranchOperand(MCInst &Inst, uint64_t Imm,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  return decodePCDBLOperand<24>(Inst, Imm, Address, true, Decoder);
+}
+
+static DecodeStatus decodePC32DBLBranchOperand(MCInst &Inst, uint64_t Imm,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  return decodePCDBLOperand<32>(Inst, Imm, Address, true, Decoder);
 }
 
 static DecodeStatus decodePC32DBLOperand(MCInst &Inst, uint64_t Imm,
                                          uint64_t Address,
                                          const void *Decoder) {
-  return decodePCDBLOperand<32>(Inst, Imm, Address);
+  return decodePCDBLOperand<32>(Inst, Imm, Address, false, Decoder);
 }
 
 static DecodeStatus decodeBDAddr12Operand(MCInst &Inst, uint64_t Field,
@@ -280,6 +333,18 @@ static DecodeStatus decodeBDLAddr12Len8Operand(MCInst &Inst, uint64_t Field,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeBDRAddr12Operand(MCInst &Inst, uint64_t Field,
+                                           const unsigned *Regs) {
+  uint64_t Length = Field >> 16;
+  uint64_t Base = (Field >> 12) & 0xf;
+  uint64_t Disp = Field & 0xfff;
+  assert(Length < 16 && "Invalid BDRAddr12");
+  Inst.addOperand(MCOperand::createReg(Base == 0 ? 0 : Regs[Base]));
+  Inst.addOperand(MCOperand::createImm(Disp));
+  Inst.addOperand(MCOperand::createReg(Regs[Length]));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeBDVAddr12Operand(MCInst &Inst, uint64_t Field,
                                            const unsigned *Regs) {
   uint64_t Index = Field >> 16;
@@ -333,6 +398,13 @@ static DecodeStatus decodeBDLAddr64Disp12Len8Operand(MCInst &Inst,
                                                      uint64_t Address,
                                                      const void *Decoder) {
   return decodeBDLAddr12Len8Operand(Inst, Field, SystemZMC::GR64Regs);
+}
+
+static DecodeStatus decodeBDRAddr64Disp12Operand(MCInst &Inst,
+                                                 uint64_t Field,
+                                                 uint64_t Address,
+                                                 const void *Decoder) {
+  return decodeBDRAddr12Operand(Inst, Field, SystemZMC::GR64Regs);
 }
 
 static DecodeStatus decodeBDVAddr64Disp12Operand(MCInst &Inst, uint64_t Field,

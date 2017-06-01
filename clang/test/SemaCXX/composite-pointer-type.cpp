@@ -53,8 +53,8 @@ bool f(Matrix4 m1, const Matrix4 m2) {
 
 // PR6346
 bool f1(bool b, void **p, const void **q) {
-  if (p == q) // expected-warning{{comparison of distinct pointer types ('void **' and 'const void **') uses non-standard composite pointer type 'const void *const *'}}
+  if (p == q)
     return false;
 
-  return b? p : q; // expected-warning{{incompatible operand types ('void **' and 'const void **') use non-standard composite pointer type 'const void *const *'}}
+  return b? p : q;
 }

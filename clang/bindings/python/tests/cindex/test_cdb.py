@@ -38,27 +38,34 @@ def test_all_compilecommand():
     cmds = cdb.getAllCompileCommands()
     assert len(cmds) == 3
     expected = [
+        { 'wd': '/home/john.doe/MyProject',
+          'file': '/home/john.doe/MyProject/project.cpp',
+          'line': ['clang++', '-o', 'project.o', '-c',
+                   '/home/john.doe/MyProject/project.cpp']},
         { 'wd': '/home/john.doe/MyProjectA',
+          'file': '/home/john.doe/MyProject/project2.cpp',
           'line': ['clang++', '-o', 'project2.o', '-c',
                    '/home/john.doe/MyProject/project2.cpp']},
         { 'wd': '/home/john.doe/MyProjectB',
+          'file': '/home/john.doe/MyProject/project2.cpp',
           'line': ['clang++', '-DFEATURE=1', '-o', 'project2-feature.o', '-c',
                    '/home/john.doe/MyProject/project2.cpp']},
-        { 'wd': '/home/john.doe/MyProject',
-          'line': ['clang++', '-o', 'project.o', '-c',
-                   '/home/john.doe/MyProject/project.cpp']}
+
         ]
     for i in range(len(cmds)):
         assert cmds[i].directory == expected[i]['wd']
+        assert cmds[i].filename == expected[i]['file']
         for arg, exp in zip(cmds[i].arguments, expected[i]['line']):
             assert arg == exp
 
 def test_1_compilecommand():
     """Check file with single compile command"""
     cdb = CompilationDatabase.fromDirectory(kInputsDir)
-    cmds = cdb.getCompileCommands('/home/john.doe/MyProject/project.cpp')
+    file = '/home/john.doe/MyProject/project.cpp'
+    cmds = cdb.getCompileCommands(file)
     assert len(cmds) == 1
-    assert cmds[0].directory == '/home/john.doe/MyProject'
+    assert cmds[0].directory == os.path.dirname(file)
+    assert cmds[0].filename == file
     expected = [ 'clang++', '-o', 'project.o', '-c',
                  '/home/john.doe/MyProject/project.cpp']
     for arg, exp in zip(cmds[0].arguments, expected):

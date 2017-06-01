@@ -99,7 +99,7 @@ public:
     void push_back(const value_type& x);
     void push_back(value_type&& x);
     template <class... Args>
-        reference emplace_back(Args&&... args);
+        reference emplace_back(Args&&... args); // reference in C++17
     void pop_back();
 
     template <class... Args> iterator emplace(const_iterator position, Args&&... args);
@@ -218,7 +218,7 @@ public:
     const_reference back() const;
 
     void push_back(const value_type& x);
-    template <class... Args> reference emplace_back(Args&&... args);  // C++14
+    template <class... Args> reference emplace_back(Args&&... args);  // C++14; reference in C++17
     void pop_back();
 
     template <class... Args> iterator emplace(const_iterator position, Args&&... args);  // C++14
@@ -679,7 +679,11 @@ public:
 #ifndef _LIBCPP_HAS_NO_VARIADICS
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
+#if _LIBCPP_STD_VER > 14
         reference emplace_back(_Args&&... __args);
+#else
+        void      emplace_back(_Args&&... __args);
+#endif
 #endif  // _LIBCPP_HAS_NO_VARIADICS
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY
@@ -1625,7 +1629,11 @@ vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args)
 template <class _Tp, class _Allocator>
 template <class... _Args>
 inline
+#if _LIBCPP_STD_VER > 14
 typename vector<_Tp, _Allocator>::reference
+#else
+void
+#endif
 vector<_Tp, _Allocator>::emplace_back(_Args&&... __args)
 {
     if (this->__end_ < this->__end_cap())
@@ -1639,7 +1647,9 @@ vector<_Tp, _Allocator>::emplace_back(_Args&&... __args)
     }
     else
         __emplace_back_slow_path(_VSTD::forward<_Args>(__args)...);
+#if _LIBCPP_STD_VER > 14
     return this->back();
+#endif
 }
 
 #endif  // _LIBCPP_HAS_NO_VARIADICS
@@ -2336,9 +2346,16 @@ public:
     void push_back(const value_type& __x);
 #if _LIBCPP_STD_VER > 11
     template <class... _Args>
-    _LIBCPP_INLINE_VISIBILITY reference emplace_back(_Args&&... __args) {
+#if _LIBCPP_STD_VER > 14
+    _LIBCPP_INLINE_VISIBILITY reference emplace_back(_Args&&... __args)
+#else
+    _LIBCPP_INLINE_VISIBILITY void      emplace_back(_Args&&... __args)
+#endif
+    {
         push_back ( value_type ( _VSTD::forward<_Args>(__args)... ));
+#if _LIBCPP_STD_VER > 14
         return this->back();
+#endif
     }
 #endif
 

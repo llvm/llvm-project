@@ -5,7 +5,7 @@
 define i32 @f1(i32 %x, i32 %y, i32 %op) {
 ; CHECK-LABEL: f1:
 ; CHECK: ahi %r4, -1
-; CHECK: clijh %r4, 5,
+; CHECK: clibh %r4, 5, 0(%r14)
 ; CHECK: llgfr [[OP64:%r[0-5]]], %r4
 ; CHECK: sllg [[INDEX:%r[1-5]]], [[OP64]], 3
 ; CHECK: larl [[BASE:%r[1-5]]]

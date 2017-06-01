@@ -26,6 +26,5 @@ if.end:                                           ; preds = %if.then, %entry
   ret void
 
 ; CHECK-LABEL: fn1:
-; CHECK: shrq $32, [[REG:%.*]]
-; CHECK: sete
+; CHECK: jb
 }

@@ -15,14 +15,14 @@
 #ifndef LLVM_ADT_SPARSEBITVECTOR_H
 #define LLVM_ADT_SPARSEBITVECTOR_H
 
-#include "llvm/ADT/ilist.h"
-#include "llvm/ADT/ilist_node.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <climits>
+#include <cstring>
+#include <iterator>
+#include <list>
 
 namespace llvm {
 
@@ -39,9 +39,7 @@ namespace llvm {
 /// etc) do not perform as well in practice as a linked list with this iterator
 /// kept up to date.  They are also significantly more memory intensive.
 
-template <unsigned ElementSize = 128>
-struct SparseBitVectorElement
-  : public ilist_node<SparseBitVectorElement<ElementSize> > {
+template <unsigned ElementSize = 128> struct SparseBitVectorElement {
 public:
   typedef unsigned long BitWord;
   typedef unsigned size_type;
@@ -55,8 +53,7 @@ private:
   // Index of Element in terms of where first bit starts.
   unsigned ElementIndex;
   BitWord Bits[BITWORDS_PER_ELEMENT];
-  // Needed for sentinels
-  friend struct ilist_sentinel_traits<SparseBitVectorElement>;
+
   SparseBitVectorElement() {
     ElementIndex = ~0U;
     memset(&Bits[0], 0, sizeof (BitWord) * BITWORDS_PER_ELEMENT);
@@ -84,7 +81,7 @@ public:
 
   // Return the bits that make up word Idx in our element.
   BitWord word(unsigned Idx) const {
-    assert (Idx < BITWORDS_PER_ELEMENT);
+    assert(Idx < BITWORDS_PER_ELEMENT);
     return Bits[Idx];
   }
 
@@ -144,8 +141,8 @@ public:
     unsigned WordPos = Curr / BITWORD_SIZE;
     unsigned BitPos = Curr % BITWORD_SIZE;
     BitWord Copy = Bits[WordPos];
-    assert (WordPos <= BITWORDS_PER_ELEMENT
-            && "Word Position outside of element");
+    assert(WordPos <= BITWORDS_PER_ELEMENT
+           && "Word Position outside of element");
 
     // Mask off previous bits.
     Copy &= ~0UL << BitPos;
@@ -244,25 +241,9 @@ public:
   }
 };
 
-template <unsigned ElementSize>
-struct ilist_traits<SparseBitVectorElement<ElementSize> >
-  : public ilist_default_traits<SparseBitVectorElement<ElementSize> > {
-  typedef SparseBitVectorElement<ElementSize> Element;
-
-  Element *createSentinel() const { return static_cast<Element *>(&Sentinel); }
-  static void destroySentinel(Element *) {}
-
-  Element *provideInitialHead() const { return createSentinel(); }
-  Element *ensureHead(Element *) const { return createSentinel(); }
-  static void noteHead(Element *, Element *) {}
-
-private:
-  mutable ilist_half_node<Element> Sentinel;
-};
-
 template <unsigned ElementSize = 128>
 class SparseBitVector {
-  typedef ilist<SparseBitVectorElement<ElementSize> > ElementList;
+  typedef std::list<SparseBitVectorElement<ElementSize>> ElementList;
   typedef typename ElementList::iterator ElementListIter;
   typedef typename ElementList::const_iterator ElementListConstIter;
   enum {
@@ -310,7 +291,7 @@ class SparseBitVector {
   private:
     bool AtEnd;
 
-    const SparseBitVector<ElementSize> *BitVector;
+    const SparseBitVector<ElementSize> *BitVector = nullptr;
 
     // Current element inside of bitmap.
     ElementListConstIter Iter;
@@ -380,7 +361,20 @@ class SparseBitVector {
         }
       }
     }
+
   public:
+    SparseBitVectorIterator() = default;
+
+    SparseBitVectorIterator(const SparseBitVector<ElementSize> *RHS,
+                            bool end = false):BitVector(RHS) {
+      Iter = BitVector->Elements.begin();
+      BitNumber = 0;
+      Bits = 0;
+      WordNumber = ~0;
+      AtEnd = end;
+      AdvanceToFirstNonZero();
+    }
+
     // Preincrement.
     inline SparseBitVectorIterator& operator++() {
       ++BitNumber;
@@ -413,29 +407,16 @@ class SparseBitVector {
     bool operator!=(const SparseBitVectorIterator &RHS) const {
       return !(*this == RHS);
     }
-
-    SparseBitVectorIterator(): BitVector(nullptr) {
-    }
-
-    SparseBitVectorIterator(const SparseBitVector<ElementSize> *RHS,
-                            bool end = false):BitVector(RHS) {
-      Iter = BitVector->Elements.begin();
-      BitNumber = 0;
-      Bits = 0;
-      WordNumber = ~0;
-      AtEnd = end;
-      AdvanceToFirstNonZero();
-    }
   };
+
 public:
   typedef SparseBitVectorIterator iterator;
 
-  SparseBitVector () {
-    CurrElementIter = Elements.begin ();
+  SparseBitVector() {
+    CurrElementIter = Elements.begin();
   }
 
-  ~SparseBitVector() {
-  }
+  ~SparseBitVector() = default;
 
   // SparseBitVector copy ctor.
   SparseBitVector(const SparseBitVector &RHS) {
@@ -510,26 +491,21 @@ public:
 
   void set(unsigned Idx) {
     unsigned ElementIndex = Idx / ElementSize;
-    SparseBitVectorElement<ElementSize> *Element;
     ElementListIter ElementIter;
     if (Elements.empty()) {
-      Element = new SparseBitVectorElement<ElementSize>(ElementIndex);
-      ElementIter = Elements.insert(Elements.end(), Element);
-
+      ElementIter = Elements.emplace(Elements.end(), ElementIndex);
     } else {
       ElementIter = FindLowerBound(ElementIndex);
 
       if (ElementIter == Elements.end() ||
           ElementIter->index() != ElementIndex) {
-        Element = new SparseBitVectorElement<ElementSize>(ElementIndex);
         // We may have hit the beginning of our SparseBitVector, in which case,
         // we may need to insert right after this element, which requires moving
         // the current iterator forward one, because insert does insert before.
         if (ElementIter != Elements.end() &&
             ElementIter->index() < ElementIndex)
-          ElementIter = Elements.insert(++ElementIter, Element);
-        else
-          ElementIter = Elements.insert(ElementIter, Element);
+          ++ElementIter;
+        ElementIter = Elements.emplace(ElementIter, ElementIndex);
       }
     }
     CurrElementIter = ElementIter;
@@ -537,7 +513,7 @@ public:
     ElementIter->set(Idx % ElementSize);
   }
 
-  bool test_and_set (unsigned Idx) {
+  bool test_and_set(unsigned Idx) {
     bool old = test(Idx);
     if (!old) {
       set(Idx);
@@ -577,8 +553,7 @@ public:
 
     while (Iter2 != RHS.Elements.end()) {
       if (Iter1 == Elements.end() || Iter1->index() > Iter2->index()) {
-        Elements.insert(Iter1,
-                        new SparseBitVectorElement<ElementSize>(*Iter2));
+        Elements.insert(Iter1, *Iter2);
         ++Iter2;
         changed = true;
       } else if (Iter1->index() == Iter2->index()) {
@@ -725,31 +700,19 @@ public:
         ++Iter2;
       } else if (Iter1->index() == Iter2->index()) {
         bool BecameZero = false;
-        SparseBitVectorElement<ElementSize> *NewElement =
-          new SparseBitVectorElement<ElementSize>(Iter1->index());
-        NewElement->intersectWithComplement(*Iter1, *Iter2, BecameZero);
-        if (!BecameZero) {
-          Elements.push_back(NewElement);
-        }
-        else
-          delete NewElement;
+        Elements.emplace_back(Iter1->index());
+        Elements.back().intersectWithComplement(*Iter1, *Iter2, BecameZero);
+        if (BecameZero)
+          Elements.pop_back();
         ++Iter1;
         ++Iter2;
       } else {
-        SparseBitVectorElement<ElementSize> *NewElement =
-          new SparseBitVectorElement<ElementSize>(*Iter1);
-        Elements.push_back(NewElement);
-        ++Iter1;
+        Elements.push_back(*Iter1++);
       }
     }
 
     // copy the remaining elements
-    while (Iter1 != RHS1.Elements.end()) {
-        SparseBitVectorElement<ElementSize> *NewElement =
-          new SparseBitVectorElement<ElementSize>(*Iter1);
-        Elements.push_back(NewElement);
-        ++Iter1;
-      }
+    std::copy(Iter1, RHS1.Elements.end(), std::back_inserter(Elements));
   }
 
   void intersectWithComplement(const SparseBitVector<ElementSize> *RHS1,
@@ -819,6 +782,7 @@ public:
 
     return BitCount;
   }
+
   iterator begin() const {
     return iterator(this);
   }
@@ -899,6 +863,7 @@ void dump(const SparseBitVector<ElementSize> &LHS, raw_ostream &out) {
   }
   out << "]\n";
 }
+
 } // end namespace llvm
 
 #endif // LLVM_ADT_SPARSEBITVECTOR_H

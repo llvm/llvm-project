@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only  -verify -std=c++11 %s
 
 typedef int&& irr;
 typedef irr& ilr_c1; // Collapses to int&
@@ -30,11 +30,15 @@ void f() {
   int &&virr2 = 0;
   int &&virr3 = virr2; // expected-error {{rvalue reference to type 'int' cannot bind to lvalue of type 'int'}}
   int i1 = 0;
+  const double d1 = 0;
+  const int ci1 = 1;
   int &&virr4 = i1; // expected-error {{rvalue reference to type 'int' cannot bind to lvalue of type 'int'}}
   int &&virr5 = ret_irr();
   int &&virr6 = static_cast<int&&>(i1);
-  (void)static_cast<not_int&&>(i1); // expected-error {{types are not compatible}}
-
+  (void)static_cast<not_int &&>(i1); // expected-error {{reference to type 'not_int' could not bind to an lvalue of type 'int'}}
+  (void)static_cast<int &&>(static_cast<int const&&>(i1)); // expected-error {{cannot cast from rvalue of type 'const int' to rvalue reference type 'int &&'}}
+  (void)static_cast<int &&>(ci1);    // expected-error {{types are not compatible}}
+  (void)static_cast<int &&>(d1);
   int i2 = over(i1);
   not_int ni1 = over(0);
   int i3 = over(virr2);
@@ -72,23 +76,17 @@ int&& should_not_warn(int&& i) { // But GCC 4.4 does
 // Test the return dance. This also tests IsReturnCopyElidable.
 struct MoveOnly {
   MoveOnly();
-  MoveOnly(const MoveOnly&) = delete;	// expected-note {{candidate constructor}} \
-  // expected-note 3{{explicitly marked deleted here}}
-  MoveOnly(MoveOnly&&);	// expected-note {{candidate constructor}}
-  MoveOnly(int&&);	// expected-note {{candidate constructor}}
+  MoveOnly(const MoveOnly&) = delete;	// expected-note 3{{explicitly marked deleted here}}
 };
 
 MoveOnly gmo;
 MoveOnly returningNonEligible() {
-  int i;
   static MoveOnly mo;
   MoveOnly &r = mo;
   if (0) // Copy from global can't be elided
     return gmo; // expected-error {{call to deleted constructor}}
   else if (0) // Copy from local static can't be elided
     return mo; // expected-error {{call to deleted constructor}}
-  else if (0) // Copy from reference can't be elided
+  else // Copy from reference can't be elided
     return r; // expected-error {{call to deleted constructor}}
-  else // Construction from different type can't be elided
-    return i; // expected-error {{no viable conversion from returned value of type 'int' to function return type 'MoveOnly'}}
 }

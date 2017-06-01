@@ -73,10 +73,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include <vector>
 using namespace llvm;
 
@@ -96,7 +94,7 @@ private:
   // A helper function that explores sync dependents of TI.
   void exploreSyncDependency(TerminatorInst *TI);
   // Computes the influence region from Start to End. This region includes all
-  // basic blocks on any path from Start to End.
+  // basic blocks on any simple path from Start to End.
   void computeInfluenceRegion(BasicBlock *Start, BasicBlock *End,
                               DenseSet<BasicBlock *> &InfluenceRegion);
   // Finds all users of I that are outside the influence region, and add these
@@ -140,14 +138,25 @@ void DivergencePropagator::exploreSyncDependency(TerminatorInst *TI) {
   //   a2 = 2;
   // a = phi(a1, a2); // sync dependent on (tid < 5)
   BasicBlock *ThisBB = TI->getParent();
-  BasicBlock *IPostDom = PDT.getNode(ThisBB)->getIDom()->getBlock();
+
+  // Unreachable blocks may not be in the dominator tree.
+  if (!DT.isReachableFromEntry(ThisBB))
+    return;
+
+  // If the function has no exit blocks or doesn't reach any exit blocks, the
+  // post dominator may be null.
+  DomTreeNode *ThisNode = PDT.getNode(ThisBB);
+  if (!ThisNode)
+    return;
+
+  BasicBlock *IPostDom = ThisNode->getIDom()->getBlock();
   if (IPostDom == nullptr)
     return;
 
   for (auto I = IPostDom->begin(); isa<PHINode>(I); ++I) {
     // A PHINode is uniform if it returns the same value no matter which path is
     // taken.
-    if (!cast<PHINode>(I)->hasConstantValue() && DV.insert(&*I).second)
+    if (!cast<PHINode>(I)->hasConstantOrUndefValue() && DV.insert(&*I).second)
       Worklist.push_back(&*I);
   }
 
@@ -198,21 +207,33 @@ void DivergencePropagator::findUsersOutsideInfluenceRegion(
   }
 }
 
+// A helper function for computeInfluenceRegion that adds successors of "ThisBB"
+// to the influence region.
+static void
+addSuccessorsToInfluenceRegion(BasicBlock *ThisBB, BasicBlock *End,
+                               DenseSet<BasicBlock *> &InfluenceRegion,
+                               std::vector<BasicBlock *> &InfluenceStack) {
+  for (BasicBlock *Succ : successors(ThisBB)) {
+    if (Succ != End && InfluenceRegion.insert(Succ).second)
+      InfluenceStack.push_back(Succ);
+  }
+}
+
 void DivergencePropagator::computeInfluenceRegion(
     BasicBlock *Start, BasicBlock *End,
     DenseSet<BasicBlock *> &InfluenceRegion) {
   assert(PDT.properlyDominates(End, Start) &&
          "End does not properly dominate Start");
+
+  // The influence region starts from the end of "Start" to the beginning of
+  // "End". Therefore, "Start" should not be in the region unless "Start" is in
+  // a loop that doesn't contain "End".
   std::vector<BasicBlock *> InfluenceStack;
-  InfluenceStack.push_back(Start);
-  InfluenceRegion.insert(Start);
+  addSuccessorsToInfluenceRegion(Start, End, InfluenceRegion, InfluenceStack);
   while (!InfluenceStack.empty()) {
     BasicBlock *BB = InfluenceStack.back();
     InfluenceStack.pop_back();
-    for (BasicBlock *Succ : successors(BB)) {
-      if (End != Succ && InfluenceRegion.insert(Succ).second)
-        InfluenceStack.push_back(Succ);
-    }
+    addSuccessorsToInfluenceRegion(BB, End, InfluenceRegion, InfluenceStack);
   }
 }
 
@@ -247,7 +268,7 @@ char DivergenceAnalysis::ID = 0;
 INITIALIZE_PASS_BEGIN(DivergenceAnalysis, "divergence", "Divergence Analysis",
                       false, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(DivergenceAnalysis, "divergence", "Divergence Analysis",
                     false, true)
 
@@ -257,7 +278,7 @@ FunctionPass *llvm::createDivergenceAnalysisPass() {
 
 void DivergenceAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequired<PostDominatorTree>();
+  AU.addRequired<PostDominatorTreeWrapperPass>();
   AU.setPreservesAll();
 }
 
@@ -273,9 +294,10 @@ bool DivergenceAnalysis::runOnFunction(Function &F) {
     return false;
 
   DivergentValues.clear();
+  auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
   DivergencePropagator DP(F, TTI,
                           getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
-                          getAnalysis<PostDominatorTree>(), DivergentValues);
+                          PDT, DivergentValues);
   DP.populateWithSourcesOfDivergence();
   DP.propagate();
   return false;

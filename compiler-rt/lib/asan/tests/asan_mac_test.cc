@@ -216,12 +216,12 @@ TEST(AddressSanitizerMac, NSObjectOOB) {
 
 // Make sure that correct pointer is passed to free() when deallocating a
 // NSURL object.
-// See http://code.google.com/p/address-sanitizer/issues/detail?id=70.
+// See https://github.com/google/sanitizers/issues/70.
 TEST(AddressSanitizerMac, NSURLDeallocation) {
   TestNSURLDeallocation();
 }
 
-// See http://code.google.com/p/address-sanitizer/issues/detail?id=109.
+// See https://github.com/google/sanitizers/issues/109.
 TEST(AddressSanitizerMac, Mstats) {
   malloc_statistics_t stats1, stats2;
   malloc_zone_statistics(/*all zones*/NULL, &stats1);

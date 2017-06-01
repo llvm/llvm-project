@@ -93,8 +93,11 @@ if (LLVM_ENABLE_DOXYGEN)
   endif()
 
   if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen/html
-      DESTINATION docs/html)
+    # ./ suffix is needed to copy the contents of html directory without
+    # appending html/ into LLVM_INSTALL_DOXYGEN_HTML_DIR.
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen/html/.
+      COMPONENT doxygen-html
+      DESTINATION "${LLVM_INSTALL_DOXYGEN_HTML_DIR}")
   endif()
 endif()
 endif()
@@ -115,7 +118,7 @@ if (LLVM_ENABLE_SPHINX)
 endif()
 
 list(FIND LLVM_BINDINGS_LIST ocaml uses_ocaml)
-if( NOT uses_ocaml LESS 0 )
+if( NOT uses_ocaml LESS 0 AND LLVM_ENABLE_OCAMLDOC )
   set(doc_targets
         ocaml_llvm
         ocaml_llvm_all_backends
@@ -154,7 +157,10 @@ if( NOT uses_ocaml LESS 0 )
   add_dependencies(ocaml_doc ${doc_targets})
 
   if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ocamldoc/html
-      DESTINATION docs/ocaml/html)
+    # ./ suffix is needed to copy the contents of html directory without
+    # appending html/ into LLVM_INSTALL_OCAMLDOC_HTML_DIR.
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ocamldoc/html/.
+      COMPONENT ocamldoc-html
+      DESTINATION "${LLVM_INSTALL_OCAMLDOC_HTML_DIR}")
   endif()
 endif()

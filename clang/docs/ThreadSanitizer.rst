@@ -30,7 +30,7 @@ and line numbers in the warning messages.
 
 Example:
 
-.. code-block:: c++
+.. code-block:: console
 
   % cat projects/compiler-rt/lib/tsan/lit_tests/tiny_race.c
   #include <pthread.h>
@@ -83,11 +83,11 @@ this purpose.
     #  endif
     #endif
 
-``__attribute__((no_sanitize_thread))``
+``__attribute__((no_sanitize("thread")))``
 -----------------------------------------------
 
 Some code should not be instrumented by ThreadSanitizer.  One may use the
-function attribute `no_sanitize_thread` to disable instrumentation of plain
+function attribute ``no_sanitize("thread")`` to disable instrumentation of plain
 (non-atomic) loads/stores in a particular function.  ThreadSanitizer still
 instruments such functions to avoid false positives and provide meaningful stack
 traces.  This attribute may not be supported by other compilers, so we suggest
@@ -99,9 +99,9 @@ Blacklist
 ThreadSanitizer supports ``src`` and ``fun`` entity types in
 :doc:`SanitizerSpecialCaseList`, that can be used to suppress data race reports
 in the specified source files or functions. Unlike functions marked with
-`no_sanitize_thread` attribute, blacklisted functions are not instrumented at
-all. This can lead to false positives due to missed synchronization via atomic
-operations and missed stack frames in reports.
+``no_sanitize("thread")`` attribute, blacklisted functions are not instrumented
+at all. This can lead to false positives due to missed synchronization via
+atomic operations and missed stack frames in reports.
 
 Limitations
 -----------
@@ -131,5 +131,4 @@ especially in the form of minimized standalone tests is more than welcome.
 
 More Information
 ----------------
-`http://code.google.com/p/thread-sanitizer <http://code.google.com/p/thread-sanitizer/>`_.
-
+`<https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual>`_

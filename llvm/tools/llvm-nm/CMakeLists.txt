@@ -9,4 +9,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-nm
   llvm-nm.cpp
+
+  DEPENDS
+  intrinsics_gen
   )

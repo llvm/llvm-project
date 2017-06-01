@@ -7,9 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
+#include "llvm/ExecutionEngine/Orc/NullResolver.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
+#include "llvm/Object/ObjectFile.h"
 #include "gtest/gtest.h"
 
 using namespace llvm::orc;
@@ -51,13 +56,14 @@ public:
 
   template <typename ObjSetT, typename MemoryManagerPtrT,
             typename SymbolResolverPtrT>
-  ObjSetHandleT addObjectSet(ObjSetT &Objects, MemoryManagerPtrT MemMgr,
+  ObjSetHandleT addObjectSet(ObjSetT Objects, MemoryManagerPtrT MemMgr,
                              SymbolResolverPtrT Resolver) {
     EXPECT_EQ(MockManager, *MemMgr) << "MM should pass through";
     EXPECT_EQ(MockResolver, *Resolver) << "Resolver should pass through";
     size_t I = 0;
     for (auto &ObjPtr : Objects) {
-      EXPECT_EQ(MockObjects[I++] + 1, *ObjPtr) << "Transform should be applied";
+      EXPECT_EQ(MockObjects[I] + 1, *ObjPtr) << "Transform should be applied";
+      I++;
     }
     EXPECT_EQ(MockObjects.size(), I) << "Number of objects should match";
     LastCalled = "addObjectSet";
@@ -89,31 +95,32 @@ public:
     resetExpectations();
   }
 
-  JITSymbol findSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
+  llvm::JITSymbol findSymbol(const std::string &Name,
+                             bool ExportedSymbolsOnly) {
     EXPECT_EQ(MockName, Name) << "Name should pass through";
     EXPECT_EQ(MockBool, ExportedSymbolsOnly) << "Flag should pass through";
     LastCalled = "findSymbol";
-    MockSymbol = JITSymbol(122, llvm::JITSymbolFlags::None);
+    MockSymbol = llvm::JITSymbol(122, llvm::JITSymbolFlags::None);
     return MockSymbol;
   }
   void expectFindSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
     MockName = Name;
     MockBool = ExportedSymbolsOnly;
   }
-  void verifyFindSymbol(llvm::orc::JITSymbol Returned) {
+  void verifyFindSymbol(llvm::JITSymbol Returned) {
     EXPECT_EQ("findSymbol", LastCalled);
     EXPECT_EQ(MockSymbol.getAddress(), Returned.getAddress())
         << "Return should pass through";
     resetExpectations();
   }
 
-  JITSymbol findSymbolIn(ObjSetHandleT H, const std::string &Name,
-                         bool ExportedSymbolsOnly) {
+  llvm::JITSymbol findSymbolIn(ObjSetHandleT H, const std::string &Name,
+                               bool ExportedSymbolsOnly) {
     EXPECT_EQ(MockObjSetHandle, H) << "Handle should pass through";
     EXPECT_EQ(MockName, Name) << "Name should pass through";
     EXPECT_EQ(MockBool, ExportedSymbolsOnly) << "Flag should pass through";
     LastCalled = "findSymbolIn";
-    MockSymbol = JITSymbol(122, llvm::JITSymbolFlags::None);
+    MockSymbol = llvm::JITSymbol(122, llvm::JITSymbolFlags::None);
     return MockSymbol;
   }
   void expectFindSymbolIn(ObjSetHandleT H, const std::string &Name,
@@ -122,7 +129,7 @@ public:
     MockName = Name;
     MockBool = ExportedSymbolsOnly;
   }
-  void verifyFindSymbolIn(llvm::orc::JITSymbol Returned) {
+  void verifyFindSymbolIn(llvm::JITSymbol Returned) {
     EXPECT_EQ("findSymbolIn", LastCalled);
     EXPECT_EQ(MockSymbol.getAddress(), Returned.getAddress())
         << "Return should pass through";
@@ -140,35 +147,20 @@ public:
   }
 
   void mapSectionAddress(ObjSetHandleT H, const void *LocalAddress,
-                         TargetAddress TargetAddr) {
+                         llvm::JITTargetAddress TargetAddr) {
     EXPECT_EQ(MockObjSetHandle, H);
     EXPECT_EQ(MockLocalAddress, LocalAddress);
     EXPECT_EQ(MockTargetAddress, TargetAddr);
     LastCalled = "mapSectionAddress";
   }
   void expectMapSectionAddress(ObjSetHandleT H, const void *LocalAddress,
-                               TargetAddress TargetAddr) {
+                               llvm::JITTargetAddress TargetAddr) {
     MockObjSetHandle = H;
     MockLocalAddress = LocalAddress;
     MockTargetAddress = TargetAddr;
   }
   void verifyMapSectionAddress() {
     EXPECT_EQ("mapSectionAddress", LastCalled);
-    resetExpectations();
-  }
-
-  template <typename OwningMBSet>
-  void takeOwnershipOfBuffers(ObjSetHandleT H, OwningMBSet MBs) {
-    EXPECT_EQ(MockObjSetHandle, H);
-    EXPECT_EQ(MockBufferSet, *MBs);
-    LastCalled = "takeOwnershipOfBuffers";
-  }
-  void expectTakeOwnershipOfBuffers(ObjSetHandleT H, MockMemoryBufferSet *MBs) {
-    MockObjSetHandle = H;
-    MockBufferSet = *MBs;
-  }
-  void verifyTakeOwnershipOfBuffers() {
-    EXPECT_EQ("takeOwnershipOfBuffers", LastCalled);
     resetExpectations();
   }
 
@@ -181,9 +173,9 @@ private:
   ObjSetHandleT MockObjSetHandle;
   std::string MockName;
   bool MockBool;
-  JITSymbol MockSymbol;
+  llvm::JITSymbol MockSymbol;
   const void *MockLocalAddress;
-  TargetAddress MockTargetAddress;
+  llvm::JITTargetAddress MockTargetAddress;
   MockMemoryBufferSet MockBufferSet;
 
   // Clear remembered parameters between calls
@@ -194,7 +186,7 @@ private:
     MockObjects.clear();
     MockObjSetHandle = 0;
     MockName = "bogus";
-    MockSymbol = JITSymbol(nullptr);
+    MockSymbol = llvm::JITSymbol(nullptr);
     MockLocalAddress = nullptr;
     MockTargetAddress = 0;
     MockBufferSet = 0;
@@ -231,13 +223,14 @@ TEST(ObjectTransformLayerTest, Main) {
   auto MM = llvm::make_unique<MockMemoryManager>(MockManager);
   auto SR = llvm::make_unique<MockSymbolResolver>(MockResolver);
   M.expectAddObjectSet(Objs1, MM.get(), SR.get());
-  auto H = T1.addObjectSet(Objs1, std::move(MM), std::move(SR));
+  auto H = T1.addObjectSet(std::move(Objs1), std::move(MM), std::move(SR));
   M.verifyAddObjectSet(H);
 
   // Test addObjectSet with T2 (mutating, naked pointers)
-  llvm::SmallVector<MockObjectFile *, 2> Objs2;
-  Objs2.push_back(&MockObject1);
-  Objs2.push_back(&MockObject2);
+  llvm::SmallVector<MockObjectFile *, 2> Objs2Vec;
+  Objs2Vec.push_back(&MockObject1);
+  Objs2Vec.push_back(&MockObject2);
+  llvm::MutableArrayRef<MockObjectFile *> Objs2(Objs2Vec);
   M.expectAddObjectSet(Objs2, &MockManager, &MockResolver);
   H = T2.addObjectSet(Objs2, &MockManager, &MockResolver);
   M.verifyAddObjectSet(H);
@@ -253,7 +246,7 @@ TEST(ObjectTransformLayerTest, Main) {
   std::string Name = "foo";
   bool ExportedOnly = true;
   M.expectFindSymbol(Name, ExportedOnly);
-  JITSymbol Symbol = T2.findSymbol(Name, ExportedOnly);
+  llvm::JITSymbol Symbol = T2.findSymbol(Name, ExportedOnly);
   M.verifyFindSymbol(Symbol);
 
   // Test findSymbolIn
@@ -270,22 +263,10 @@ TEST(ObjectTransformLayerTest, Main) {
 
   // Test mapSectionAddress
   char Buffer[24];
-  TargetAddress MockAddress = 255;
+  llvm::JITTargetAddress MockAddress = 255;
   M.expectMapSectionAddress(H, Buffer, MockAddress);
   T1.mapSectionAddress(H, Buffer, MockAddress);
   M.verifyMapSectionAddress();
-
-  // Test takeOwnershipOfBuffers, using unique pointer to buffer set
-  auto MockBufferSetPtr = llvm::make_unique<MockMemoryBufferSet>(366);
-  M.expectTakeOwnershipOfBuffers(H, MockBufferSetPtr.get());
-  T2.takeOwnershipOfBuffers(H, std::move(MockBufferSetPtr));
-  M.verifyTakeOwnershipOfBuffers();
-
-  // Test takeOwnershipOfBuffers, using naked pointer to buffer set
-  MockMemoryBufferSet MockBufferSet = 266;
-  M.expectTakeOwnershipOfBuffers(H, &MockBufferSet);
-  T1.takeOwnershipOfBuffers(H, &MockBufferSet);
-  M.verifyTakeOwnershipOfBuffers();
 
   // Verify transform getter (non-const)
   MockObjectFile Mutatee = 277;
@@ -298,5 +279,61 @@ TEST(ObjectTransformLayerTest, Main) {
   const auto &T1C = T1;
   OwnedObj = T1C.getTransform()(std::move(OwnedObj));
   EXPECT_EQ(289, *OwnedObj) << "Expected incrementing transform";
+
+  volatile bool RunStaticChecks = false;
+  if (!RunStaticChecks)
+    return;
+
+  // Make sure that ObjectTransformLayer implements the object layer concept
+  // correctly by sandwitching one between an ObjectLinkingLayer and an
+  // IRCompileLayer, verifying that it compiles if we have a call to the
+  // IRComileLayer's addModuleSet that should call the transform layer's
+  // addObjectSet, and also calling the other public transform layer methods
+  // directly to make sure the methods they intend to forward to exist on
+  // the ObjectLinkingLayer.
+
+  // We'll need a concrete MemoryManager class.
+  class NullManager : public llvm::RuntimeDyld::MemoryManager {
+  public:
+    uint8_t *allocateCodeSection(uintptr_t, unsigned, unsigned,
+                                 llvm::StringRef) override {
+      return nullptr;
+    }
+    uint8_t *allocateDataSection(uintptr_t, unsigned, unsigned, llvm::StringRef,
+                                 bool) override {
+      return nullptr;
+    }
+    void registerEHFrames(uint8_t *, uint64_t, size_t) override {}
+    void deregisterEHFrames(uint8_t *, uint64_t, size_t) override {}
+    bool finalizeMemory(std::string *) override { return false; }
+  };
+
+  // Construct the jit layers.
+  ObjectLinkingLayer<> BaseLayer;
+  auto IdentityTransform = [](
+      std::unique_ptr<llvm::object::OwningBinary<llvm::object::ObjectFile>>
+          Obj) { return Obj; };
+  ObjectTransformLayer<decltype(BaseLayer), decltype(IdentityTransform)>
+      TransformLayer(BaseLayer, IdentityTransform);
+  auto NullCompiler = [](llvm::Module &) {
+    return llvm::object::OwningBinary<llvm::object::ObjectFile>();
+  };
+  IRCompileLayer<decltype(TransformLayer)> CompileLayer(TransformLayer,
+                                                        NullCompiler);
+
+  // Make sure that the calls from IRCompileLayer to ObjectTransformLayer
+  // compile.
+  NullResolver Resolver;
+  NullManager Manager;
+  CompileLayer.addModuleSet(std::vector<llvm::Module *>(), &Manager, &Resolver);
+
+  // Make sure that the calls from ObjectTransformLayer to ObjectLinkingLayer
+  // compile.
+  decltype(TransformLayer)::ObjSetHandleT ObjSet;
+  TransformLayer.emitAndFinalize(ObjSet);
+  TransformLayer.findSymbolIn(ObjSet, Name, false);
+  TransformLayer.findSymbol(Name, true);
+  TransformLayer.mapSectionAddress(ObjSet, nullptr, 0);
+  TransformLayer.removeObjectSet(ObjSet);
 }
 }

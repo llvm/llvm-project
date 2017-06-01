@@ -1,7 +1,6 @@
-; RUN: llc -march=arm64 -aarch64-neon-syntax=apple < %s -mcpu=cyclone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios3.0.0 -aarch64-neon-syntax=apple -mcpu=cyclone | FileCheck %s
 ; ModuleID = 'arm64_vecCmpBr.c'
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n32:64-S128"
-target triple = "arm64-apple-ios3.0.0"
 
 
 define i32 @anyZero64(<4 x i16> %a) #0 {
@@ -59,7 +58,7 @@ define i32 @anyNonZero64(<4 x i16> %a) #0 {
 ; CHECK-NEXT: fmov w[[REGNO2:[0-9]+]], s[[REGNO1]]
 ; CHECK-NEXT: cbz w[[REGNO2]], [[LABEL:[A-Z_0-9]+]]
 ; CHECK: [[LABEL]]:
-; CHECK-NEXT: movz w0, #0
+; CHECK-NEXT: mov w0, #0
 
 entry:
   %0 = bitcast <4 x i16> %a to <8 x i8>
@@ -83,7 +82,7 @@ define i32 @anyNonZero128(<8 x i16> %a) #0 {
 ; CHECK-NEXT: fmov w[[REGNO2:[0-9]+]], s[[REGNO1]]
 ; CHECK-NEXT: cbz w[[REGNO2]], [[LABEL:[A-Z_0-9]+]]
 ; CHECK: [[LABEL]]:
-; CHECK-NEXT: movz w0, #0
+; CHECK-NEXT: mov w0, #0
 entry:
   %0 = bitcast <8 x i16> %a to <16 x i8>
   %vmaxv.i = tail call i32 @llvm.aarch64.neon.umaxv.i32.v16i8(<16 x i8> %0) #3
@@ -152,7 +151,7 @@ define i32 @allNonZero64(<4 x i16> %a) #0 {
 ; CHECK-NEXT: fmov w[[REGNO2:[0-9]+]], s[[REGNO1]]
 ; CHECK-NEXT: cbz w[[REGNO2]], [[LABEL:[A-Z_0-9]+]]
 ; CHECK: [[LABEL]]:
-; CHECK-NEXT: movz w0, #0
+; CHECK-NEXT: mov w0, #0
 entry:
   %0 = bitcast <4 x i16> %a to <8 x i8>
   %vminv.i = tail call i32 @llvm.aarch64.neon.uminv.i32.v8i8(<8 x i8> %0) #3
@@ -175,7 +174,7 @@ define i32 @allNonZero128(<8 x i16> %a) #0 {
 ; CHECK-NEXT: fmov w[[REGNO2:[0-9]+]], s[[REGNO1]]
 ; CHECK-NEXT: cbz w[[REGNO2]], [[LABEL:[A-Z_0-9]+]]
 ; CHECK: [[LABEL]]:
-; CHECK-NEXT: movz w0, #0
+; CHECK-NEXT: mov w0, #0
 entry:
   %0 = bitcast <8 x i16> %a to <16 x i8>
   %vminv.i = tail call i32 @llvm.aarch64.neon.uminv.i32.v16i8(<16 x i8> %0) #3

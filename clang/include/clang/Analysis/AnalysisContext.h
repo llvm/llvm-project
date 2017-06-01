@@ -201,6 +201,10 @@ public:
     }
     return static_cast<T*>(data);
   }
+
+  /// Returns true if the root namespace of the given declaration is the 'std'
+  /// C++ namespace.
+  static bool isInStdNamespace(const Decl *D);
 private:
   ManagedAnalysis *&getAnalysisImpl(const void* tag);
 
@@ -402,7 +406,8 @@ private:
 };
 
 class AnalysisDeclContextManager {
-  typedef llvm::DenseMap<const Decl*, AnalysisDeclContext*> ContextMap;
+  typedef llvm::DenseMap<const Decl *, std::unique_ptr<AnalysisDeclContext>>
+      ContextMap;
 
   ContextMap Contexts;
   LocationContextManager LocContexts;

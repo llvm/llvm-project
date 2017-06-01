@@ -1,14 +1,14 @@
-; RUN: llc -mtriple=mips-linux-gnu -relocation-model=static < %s | FileCheck --check-prefix=ALL --check-prefix=O32 --check-prefix=O32-BE %s
-; RUN: llc -mtriple=mipsel-linux-gnu -relocation-model=static < %s | FileCheck --check-prefix=ALL --check-prefix=O32 --check-prefix=O32-LE %s
+; RUN: llc -mtriple=mips-linux-gnu -relocation-model=static < %s | FileCheck --check-prefixes=ALL,O32,O32-BE %s
+; RUN: llc -mtriple=mipsel-linux-gnu -relocation-model=static < %s | FileCheck --check-prefixes=ALL,O32,O32-LE %s
 
-; RUN-TODO: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
-; RUN-TODO: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
+; RUN-TODO: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN-TODO: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
 
-; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=N32 --check-prefix=N32-BE %s
-; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=N32 --check-prefix=N32-LE %s
+; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32,N32-BE %s
+; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32,N32-LE %s
 
-; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=N64 --check-prefix=N64-BE %s
-; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=N64 --check-prefix=N64-LE %s
+; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64,N64-BE %s
+; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64,N64-LE %s
 
 ; Test struct returns for all ABI's and byte orders.
 
@@ -158,9 +158,6 @@ entry:
 ; sret pointer is already in $4
 ; N32-DAG:        lui [[PTR_HI:\$[0-9]+]], %hi(struct_128xi16)
 ; N32-DAG:        addiu [[PTR:\$[0-9]+]], [[PTR_HI]], %lo(struct_128xi16)
-; FIXME: This signext isn't necessary. Like integers, pointers are
-;        but unlike integers, pointers cannot have the signext attribute.
-; N32-DAG:        sll $5, [[PTR]], 0
 ; N32:            jal memcpy
 
 ; sret pointer is already in $4

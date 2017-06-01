@@ -267,8 +267,8 @@ void html::AddLineNumbers(Rewriter& R, FileID FID) {
   RB.InsertTextAfter(FileEnd - FileBeg, "</table>");
 }
 
-void html::AddHeaderFooterInternalBuiltinCSS(Rewriter& R, FileID FID,
-                                             const char *title) {
+void html::AddHeaderFooterInternalBuiltinCSS(Rewriter &R, FileID FID,
+                                             StringRef title) {
 
   const llvm::MemoryBuffer *Buf = R.getSourceMgr().getBuffer(FID);
   const char* FileStart = Buf->getBufferStart();
@@ -282,7 +282,7 @@ void html::AddHeaderFooterInternalBuiltinCSS(Rewriter& R, FileID FID,
   os << "<!doctype html>\n" // Use HTML 5 doctype
         "<html>\n<head>\n";
 
-  if (title)
+  if (!title.empty())
     os << "<title>" << html::EscapeText(title) << "</title>\n";
 
   os << "<style type=\"text/css\">\n"
@@ -301,6 +301,7 @@ void html::AddHeaderFooterInternalBuiltinCSS(Rewriter& R, FileID FID,
       " .macro:hover .expansion { display: block; border: 2px solid #FF0000; "
           "padding: 2px; background-color:#FFF0F0; font-weight: normal; "
           "  -webkit-border-radius:5px;  -webkit-box-shadow:1px 1px 7px #000; "
+          "  border-radius:5px;  box-shadow:1px 1px 7px #000; "
           "position: absolute; top: -1em; left:10em; z-index: 1 } \n"
       " .macro { color: darkmagenta; background-color:LemonChiffon;"
              // Macros are position: relative to provide base for expansions.
@@ -311,7 +312,9 @@ void html::AddHeaderFooterInternalBuiltinCSS(Rewriter& R, FileID FID,
       " .line { padding-left: 1ex; border-left: 3px solid #ccc }\n"
       " .line { white-space: pre }\n"
       " .msg { -webkit-box-shadow:1px 1px 7px #000 }\n"
+      " .msg { box-shadow:1px 1px 7px #000 }\n"
       " .msg { -webkit-border-radius:5px }\n"
+      " .msg { border-radius:5px }\n"
       " .msg { font-family:Helvetica, sans-serif; font-size:8pt }\n"
       " .msg { float:left }\n"
       " .msg { padding:0.25em 1ex 0.25em 1ex }\n"
@@ -321,11 +324,13 @@ void html::AddHeaderFooterInternalBuiltinCSS(Rewriter& R, FileID FID,
       " .msgT { padding:0x; spacing:0x }\n"
       " .msgEvent { background-color:#fff8b4; color:#000000 }\n"
       " .msgControl { background-color:#bbbbbb; color:#000000 }\n"
+      " .msgNote { background-color:#ddeeff; color:#000000 }\n"
       " .mrange { background-color:#dfddf3 }\n"
       " .mrange { border-bottom:1px solid #6F9DBE }\n"
       " .PathIndex { font-weight: bold; padding:0px 5px; "
         "margin-right:5px; }\n"
       " .PathIndex { -webkit-border-radius:8px }\n"
+      " .PathIndex { border-radius:8px }\n"
       " .PathIndexEvent { background-color:#bfba87 }\n"
       " .PathIndexControl { background-color:#8c8c8c }\n"
       " .PathNav a { text-decoration:none; font-size: larger }\n"
@@ -339,8 +344,12 @@ void html::AddHeaderFooterInternalBuiltinCSS(Rewriter& R, FileID FID,
       "   border-collapse: collapse; border-spacing: 0px;\n"
       " }\n"
       " td.rowname {\n"
-      "   text-align:right; font-weight:bold; color:#444444;\n"
-      "   padding-right:2ex; }\n"
+      "   text-align: right;\n"
+      "   vertical-align: top;\n"
+      "   font-weight: bold;\n"
+      "   color:#444444;\n"
+      "   padding-right:2ex;\n"
+      " }\n"
       "</style>\n</head>\n<body>";
 
   // Generate header
@@ -502,7 +511,7 @@ void html::HighlightMacros(Rewriter &R, FileID FID, const Preprocessor& PP) {
 
   // Enter the tokens we just lexed.  This will cause them to be macro expanded
   // but won't enter sub-files (because we removed #'s).
-  TmpPP.EnterTokenStream(&TokenStream[0], TokenStream.size(), false, false);
+  TmpPP.EnterTokenStream(TokenStream, false);
 
   TokenConcatenation ConcatInfo(TmpPP);
 

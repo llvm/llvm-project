@@ -18,42 +18,40 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include <memory>
-#include <vector>
 
 namespace llvm {
 namespace orc {
 
-template <typename ExternalLookupFtorT, typename DylibLookupFtorT>
-class LambdaResolver : public RuntimeDyld::SymbolResolver {
+template <typename DylibLookupFtorT, typename ExternalLookupFtorT>
+class LambdaResolver : public JITSymbolResolver {
 public:
 
-  LambdaResolver(ExternalLookupFtorT ExternalLookupFtor,
-                 DylibLookupFtorT DylibLookupFtor)
-      : ExternalLookupFtor(ExternalLookupFtor),
-        DylibLookupFtor(DylibLookupFtor) {}
+  LambdaResolver(DylibLookupFtorT DylibLookupFtor,
+                 ExternalLookupFtorT ExternalLookupFtor)
+      : DylibLookupFtor(DylibLookupFtor),
+        ExternalLookupFtor(ExternalLookupFtor) {}
 
-  RuntimeDyld::SymbolInfo findSymbol(const std::string &Name) final {
-    return ExternalLookupFtor(Name);
-  }
-
-  RuntimeDyld::SymbolInfo
-  findSymbolInLogicalDylib(const std::string &Name) final {
+  JITSymbol findSymbolInLogicalDylib(const std::string &Name) final {
     return DylibLookupFtor(Name);
   }
 
+  JITSymbol findSymbol(const std::string &Name) final {
+    return ExternalLookupFtor(Name);
+  }
+
 private:
-  ExternalLookupFtorT ExternalLookupFtor;
   DylibLookupFtorT DylibLookupFtor;
+  ExternalLookupFtorT ExternalLookupFtor;
 };
 
-template <typename ExternalLookupFtorT,
-          typename DylibLookupFtorT>
-std::unique_ptr<LambdaResolver<ExternalLookupFtorT, DylibLookupFtorT>>
-createLambdaResolver(ExternalLookupFtorT ExternalLookupFtor,
-                     DylibLookupFtorT DylibLookupFtor) {
-  typedef LambdaResolver<ExternalLookupFtorT, DylibLookupFtorT> LR;
-  return make_unique<LR>(std::move(ExternalLookupFtor),
-                         std::move(DylibLookupFtor));
+template <typename DylibLookupFtorT,
+          typename ExternalLookupFtorT>
+std::unique_ptr<LambdaResolver<DylibLookupFtorT, ExternalLookupFtorT>>
+createLambdaResolver(DylibLookupFtorT DylibLookupFtor,
+                     ExternalLookupFtorT ExternalLookupFtor) {
+  typedef LambdaResolver<DylibLookupFtorT, ExternalLookupFtorT> LR;
+  return make_unique<LR>(std::move(DylibLookupFtor),
+                         std::move(ExternalLookupFtor));
 }
 
 } // End namespace orc.

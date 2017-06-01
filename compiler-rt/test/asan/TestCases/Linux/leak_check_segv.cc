@@ -1,5 +1,5 @@
 // Test that SIGSEGV during leak checking does not crash the process.
-// RUN: %clangxx_asan -O1 %s -o %t && LSAN_OPTIONS="verbosity=1" not %run %t 2>&1
+// RUN: %clangxx_asan -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // REQUIRES: leak-detection
 #include <stdlib.h>
 #include <stdio.h>
@@ -11,7 +11,7 @@ char data[10 * 1024 * 1024];
 int main() {
   void *p = malloc(10 * 1024 * 1024);
   // surprise-surprise!
-  mprotect((void*)(((unsigned long)p + 4095) & ~4095), 16 * 1024, PROT_NONE); 
+  mprotect((void*)(((unsigned long)p + 4095) & ~4095), 16 * 1024, PROT_NONE);
   mprotect((void*)(((unsigned long)data + 4095) & ~4095), 16 * 1024, PROT_NONE);
   __lsan_do_leak_check();
   fprintf(stderr, "DONE\n");
@@ -19,5 +19,5 @@ int main() {
 
 // CHECK: Tracer caught signal 11
 // CHECK: LeakSanitizer has encountered a fatal error
+// CHECK: HINT: For debugging, try setting {{.*}} LSAN_OPTIONS
 // CHECK-NOT: DONE
-

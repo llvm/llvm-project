@@ -1,4 +1,6 @@
-; RUN: opt < %s -adce -simplifycfg | llvm-dis
+; RUN: opt < %s -adce -disable-output
+; RUN: opt < %s -adce -adce-remove-loops -S | FileCheck %s
+
 	%FILE = type { i32, i8*, i8*, i8, i8, i32, i32, i32 }
 	%spec_fd_t = type { i32, i32, i32, i8* }
 @__iob = external global [20 x %FILE]		; <[20 x %FILE]*> [#uses=1]
@@ -24,6 +26,7 @@ declare void @perror(i8*)
 define i32 @spec_getc(i32 %fd) {
 	%reg109 = load i32, i32* @dbglvl		; <i32> [#uses=1]
 	%cond266 = icmp sle i32 %reg109, 4		; <i1> [#uses=1]
+; CHECK: br label %bb3
 	br i1 %cond266, label %bb3, label %bb2
 
 bb2:		; preds = %0
@@ -55,6 +58,7 @@ bb5:		; preds = %bb3
 bb6:		; preds = %bb5
 	%reg134 = load i32, i32* @dbglvl		; <i32> [#uses=1]
 	%cond271 = icmp sle i32 %reg134, 4		; <i1> [#uses=1]
+; CHECK: br label %bb8
 	br i1 %cond271, label %bb8, label %bb7
 
 bb7:		; preds = %bb6
@@ -77,6 +81,7 @@ bb9:		; preds = %bb5
 	store i32 %reg157, i32* %idx5
 	%reg163 = load i32, i32* @dbglvl		; <i32> [#uses=1]
 	%cond272 = icmp sle i32 %reg163, 4		; <i1> [#uses=1]
+; CHECK: br label %bb11
 	br i1 %cond272, label %bb11, label %bb10
 
 bb10:		; preds = %bb9

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fexceptions -fcxx-exceptions -verify %s
 
 struct S0;
 struct S1;
@@ -30,7 +30,7 @@ struct pr19018 {
 
 void pr19018_1 (enum e19018_1 {qq} x); // expected-error{{cannot be defined in a parameter type}}
 void pr19018_1a (enum e19018_1 {qq} x); // expected-error{{cannot be defined in a parameter type}}
-e19018_1 x2;  // expected-error{{unknown type name 'e19018_1'}}
+e19018_1 x2;
 
 void pr19018_2 (enum {qq} x); // expected-error{{cannot be defined in a parameter type}}
 void pr19018_3 (struct s19018_2 {int qq;} x); // expected-error{{cannot be defined in a parameter type}}
@@ -53,14 +53,17 @@ struct pr19018a {
 
 struct s19018b {
   void func1 (enum en_2 {qq} x); // expected-error{{cannot be defined in a parameter type}}
-  en_2 x1;  // expected-error{{unknown type name 'en_2'}}
+  en_2 x1;
   void func2 (enum en_3 {qq} x); // expected-error{{cannot be defined in a parameter type}}
-  enum en_3 x2; // expected-error{{ISO C++ forbids forward references to 'enum' types}} \
-                // expected-error{{field has incomplete type 'enum en_3'}} \
-                // expected-note{{forward declaration of 'en_3'}}
+  enum en_3 x2;
 };
 
 struct pr18963 {
   short bar5 (struct foo4 {} bar2); // expected-error{{'foo4' cannot be defined in a parameter type}}
-  long foo5 (float foo6 = foo4);  // expected-error{{use of undeclared identifier 'foo4'}}
+  long foo5 (float foo6 = foo4);
 };
+
+// expected-error@+2 {{cannot be defined in a parameter type}}
+// expected-note@+1 {{previous definition is here}}
+void func_with_eh_and_type(struct type_in_eh {} o) throw(int) {}
+struct type_in_eh {}; // expected-error {{redefinition of 'type_in_eh'}}

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fobjc-runtime-has-weak -fobjc-arc -fblocks -Wno-objc-root-class -std=c++11 -Warc-repeated-use-of-weak -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fobjc-runtime-has-weak -fobjc-weak -fblocks -Wno-objc-root-class -std=c++11 -Warc-repeated-use-of-weak -verify %s
 
 @interface Test {
 @public
@@ -439,3 +440,42 @@ void doubleLevelAccessIvar(Test *a, Test *b) {
 }
 @end
 
+// This used to crash in WeakObjectProfileTy::getBaseInfo when getBase() was
+// called on an ObjCPropertyRefExpr object whose receiver was an interface.
+
+@class NSString;
+@interface NSBundle
++(NSBundle *)foo;
+@property (class, strong) NSBundle *foo2;
+@property (strong) NSString *prop;
+@property(weak) NSString *weakProp;
+@end
+
+@interface NSBundle2 : NSBundle
+@end
+
+void foo() {
+  NSString * t = NSBundle.foo.prop;
+  use(NSBundle.foo.weakProp); // expected-warning{{weak property 'weakProp' may be accessed multiple times}}
+  use(NSBundle2.foo.weakProp); // expected-note{{also accessed here}}
+
+  NSString * t2 = NSBundle.foo2.prop;
+  use(NSBundle.foo2.weakProp); // expected-warning{{weak property 'weakProp' may be accessed multiple times}}
+  use(NSBundle2.foo2.weakProp); // expected-note{{also accessed here}}
+}
+
+// This used to crash in the constructor of WeakObjectProfileTy when a
+// DeclRefExpr was passed that didn't reference a VarDecl.
+
+typedef INTF * INTFPtrTy;
+
+enum E {
+  e1
+};
+
+void foo1() {
+  INTFPtrTy tmp = (INTFPtrTy)e1;
+#if __has_feature(objc_arc)
+// expected-error@-2{{cast of 'E' to 'INTFPtrTy' (aka 'INTF *') is disallowed with ARC}}
+#endif
+}

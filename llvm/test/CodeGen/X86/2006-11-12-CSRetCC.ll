@@ -6,7 +6,14 @@ target triple = "i686-pc-linux-gnu"
 define i32 @main() {
 ; CHECK-LABEL: main:
 ; CHECK-NOT: ret
-; CHECK: subl $4, %{{.*}}
+; CHECK: subl $12, %esp
+; CHECK: pushl
+; CHECK: pushl
+; CHECK: pushl
+; CHECK: pushl
+; CHECK: pushl
+; CHECK: calll cexp
+; CHECK: addl $28, %esp
 ; CHECK: ret
 
 entry:

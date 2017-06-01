@@ -28,3 +28,10 @@ int k = n + m; // OK, a and b are visible here.
 #ifndef B
 #error B is not defined
 #endif
+
+// Ensure we don't compute the linkage of this struct before we find it has a
+// typedef name for linkage purposes.
+typedef struct {
+  int p;                 
+  void (*f)(int p);                                                                       
+} name_for_linkage;

@@ -62,10 +62,9 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!54}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 (trunk 167506) (llvm/trunk 167505)", isOptimized: true, emissionKind: 0, file: !53, enums: !1, retainedTypes: !1, subprograms: !3, globals: !1, imports:  !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 (trunk 167506) (llvm/trunk 167505)", isOptimized: true, emissionKind: FullDebug, file: !53, enums: !1, retainedTypes: !1, globals: !1, imports:  !1)
 !1 = !{}
-!3 = !{!5, !31}
-!5 = distinct !DISubprogram(name: "D", linkageName: "_ZN1DC2Ev", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 12, file: !6, scope: null, type: !7, declaration: !17, variables: !27)
+!5 = distinct !DISubprogram(name: "D", linkageName: "_ZN1DC2Ev", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 12, file: !6, scope: null, type: !7, declaration: !17, variables: !27)
 !6 = !DIFile(filename: "foo.cpp", directory: "/usr/local/google/home/echristo")
 !7 = !DISubroutineType(types: !8)
 !8 = !{null, !9}
@@ -81,12 +80,12 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !20 = !DISubprogram(name: "D", line: 4, isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 4, file: !6, scope: !10, type: !21)
 !21 = !DISubroutineType(types: !22)
 !22 = !{null, !9, !23}
-!23 = !DIDerivedType(tag: DW_TAG_reference_type, baseType: !24)
+!23 = !DIDerivedType(tag: DW_TAG_reference_type, size: 64, align: 64, baseType: !24)
 !24 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !10)
 !27 = !{!29}
 !29 = !DILocalVariable(name: "this", line: 12, arg: 1, flags: DIFlagArtificial | DIFlagObjectPointer, scope: !5, file: !6, type: !30)
 !30 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !10)
-!31 = distinct !DISubprogram(name: "D", linkageName: "_ZN1DC2ERKS_", line: 19, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 19, file: !6, scope: null, type: !21, declaration: !20, variables: !32)
+!31 = distinct !DISubprogram(name: "D", linkageName: "_ZN1DC2ERKS_", line: 19, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 19, file: !6, scope: null, type: !21, declaration: !20, variables: !32)
 !32 = !{!34, !35}
 !34 = !DILocalVariable(name: "this", line: 19, arg: 1, flags: DIFlagArtificial | DIFlagObjectPointer, scope: !31, file: !6, type: !30)
 !35 = !DILocalVariable(name: "d", line: 19, arg: 2, scope: !31, file: !6, type: !23)

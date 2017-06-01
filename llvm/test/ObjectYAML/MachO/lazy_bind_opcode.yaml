@@ -1,0 +1,466 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !mach-o
+FileHeader:      
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           4
+  sizeofcmds:      224
+  flags:           0x00218085
+  reserved:        0x00000000
+LoadCommands:    
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294979584
+    vmsize:          4096
+    fileoff:         1024
+    filesize:        2508
+    maxprot:         7
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      1024
+    rebase_size:     8
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   1032
+    weak_bind_size:  96
+    lazy_bind_off:   1128
+    lazy_bind_size:  624
+    export_off:      1752
+    export_size:     48
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          1816
+    nsyms:           30
+    stroff:          2436
+    strsize:         1096
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       9
+    iextdefsym:      9
+    nextdefsym:      2
+    iundefsym:       11
+    nundefsym:       19
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  2296
+    nindirectsyms:   35
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:    
+  LazyBindOpcodes: 
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000028
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZNKSt3__16locale9use_facetERNS0_2idE
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000030
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZNKSt3__18ios_base6getlocEv
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000038
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6__initEmc
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000040
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED1Ev
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000048
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sentryC1ERS3_
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000050
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sentryD1Ev
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000058
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZNSt3__16localeD1Ev
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000060
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZNSt3__18ios_base33__set_badbit_and_consider_rethrowEv
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000068
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZNSt3__18ios_base5clearEj
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000070
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZSt9terminatev
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000078
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          ___cxa_begin_catch
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000080
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          ___cxa_end_catch
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000088
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             2
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __Unwind_Resume
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000090
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             2
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          _memset
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000098
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             2
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          _strlen
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+...
+
+#CHECK: LinkEditData:    
+#CHECK:   LazyBindOpcodes: 
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000028
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             1
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          __ZNKSt3__16locale9use_facetERNS0_2idE
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000030
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             1
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          __ZNKSt3__18ios_base6getlocEv
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000038
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             1
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          __ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6__initEmc
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000040
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             1
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          __ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED1Ev
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000048
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             1
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          __ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sentryC1ERS3_
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000050
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             1
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          __ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sentryD1Ev
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000058
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             1
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          __ZNSt3__16localeD1Ev
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000060
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             1
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          __ZNSt3__18ios_base33__set_badbit_and_consider_rethrowEv
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000068
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             1
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          __ZNSt3__18ios_base5clearEj
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000070
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             1
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          __ZSt9terminatev
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000078
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             1
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          ___cxa_begin_catch
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000080
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             1
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          ___cxa_end_catch
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000088
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             2
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          __Unwind_Resume
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000090
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             2
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          _memset
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000098
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             2
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          _strlen
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0

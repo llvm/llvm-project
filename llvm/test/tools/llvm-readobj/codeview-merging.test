@@ -1,0 +1,65 @@
+# To regenerate t1.obj and t2.obj, run the following:
+# $ cat t.cpp
+# #ifdef CONFIG1
+# struct A;
+# struct B {
+#   A *a;
+# };
+# int f(A *a);
+# int g(B *b) { return f(b->a); }
+# #else
+# struct B;
+# struct A {
+#   B *b;
+# };
+# int g(B *b);
+# int f(A *a) { return g(a->b); }
+# #endif
+# $ cl -c -DCONFIG1 -Z7 t.cpp -Fot1.obj && cl -c -Z7 t.cpp -Fot2.obj
+
+RUN: llvm-readobj -codeview %S/Inputs/codeview-merging-1.obj | FileCheck %s --check-prefix=OBJ1
+RUN: llvm-readobj -codeview %S/Inputs/codeview-merging-2.obj | FileCheck %s --check-prefix=OBJ2
+RUN: llvm-readobj -codeview-merged-types %S/Inputs/codeview-merging-1.obj %S/Inputs/codeview-merging-2.obj | FileCheck %s
+
+OBJ1:       FuncId (0x100D) {
+OBJ1-NEXT:    TypeLeafKind: LF_FUNC_ID (0x1601)
+OBJ1-NEXT:    ParentScope: 0x0
+OBJ1-NEXT:    FunctionType: int (B*) (0x100C)
+OBJ1-NEXT:    Name: g
+OBJ1-NEXT:  }
+OBJ1-NEXT:  FuncId (0x100E) {
+OBJ1-NEXT:    TypeLeafKind: LF_FUNC_ID (0x1601)
+OBJ1-NEXT:    ParentScope: 0x0
+OBJ1-NEXT:    FunctionType: int (A*) (0x1003)
+OBJ1-NEXT:    Name: f
+OBJ1-NEXT:  }
+OBJ1-NOT: FuncId
+
+OBJ2:       FuncId (0x100D) {
+OBJ2-NEXT:    TypeLeafKind: LF_FUNC_ID (0x1601)
+OBJ2-NEXT:    ParentScope: 0x0
+OBJ2-NEXT:    FunctionType: int (A*) (0x100C)
+OBJ2-NEXT:    Name: f
+OBJ2-NEXT:  }
+
+OBJ2:       FuncId (0x1069) {
+OBJ2-NEXT:    TypeLeafKind: LF_FUNC_ID (0x1601)
+OBJ2-NEXT:    ParentScope: 0x0
+OBJ2-NEXT:    FunctionType: int (B*) (0x1003)
+OBJ2-NEXT:    Name: g
+OBJ2-NEXT:  }
+OBJ2-NOT: FuncId
+
+CHECK:       FuncId (0x100D) {
+CHECK-NEXT:    TypeLeafKind: LF_FUNC_ID (0x1601)
+CHECK-NEXT:    ParentScope: 0x0
+CHECK-NEXT:    FunctionType: int (B*) (0x100C)
+CHECK-NEXT:    Name: g
+CHECK-NEXT:  }
+CHECK-NEXT:  FuncId (0x100E) {
+CHECK-NEXT:    TypeLeafKind: LF_FUNC_ID (0x1601)
+CHECK-NEXT:    ParentScope: 0x0
+CHECK-NEXT:    FunctionType: int (A*) (0x1003)
+CHECK-NEXT:    Name: f
+CHECK-NEXT:  }
+CHECK-NOT: FuncId

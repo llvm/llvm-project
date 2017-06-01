@@ -4,11 +4,11 @@
 //
 // RUN: %clangxx_tsan -O0 %s -o %t
 // RUN: not %run %t malloc 2>&1 | FileCheck %s --check-prefix=CHECK-mCRASH
-// RUN: TSAN_OPTIONS=allocator_may_return_null=0 not %run %t malloc 2>&1 | FileCheck %s --check-prefix=CHECK-mCRASH
-// RUN: TSAN_OPTIONS=allocator_may_return_null=0 not %run %t calloc 2>&1 | FileCheck %s --check-prefix=CHECK-cCRASH
-// RUN: TSAN_OPTIONS=allocator_may_return_null=0 not %run %t calloc-overflow 2>&1 | FileCheck %s --check-prefix=CHECK-coCRASH
-// RUN: TSAN_OPTIONS=allocator_may_return_null=0 not %run %t realloc 2>&1 | FileCheck %s --check-prefix=CHECK-rCRASH
-// RUN: TSAN_OPTIONS=allocator_may_return_null=0 not %run %t realloc-after-malloc 2>&1 | FileCheck %s --check-prefix=CHECK-mrCRASH
+// RUN: %env_tsan_opts=allocator_may_return_null=0 not %run %t malloc 2>&1 | FileCheck %s --check-prefix=CHECK-mCRASH
+// RUN: %env_tsan_opts=allocator_may_return_null=0 not %run %t calloc 2>&1 | FileCheck %s --check-prefix=CHECK-cCRASH
+// RUN: %env_tsan_opts=allocator_may_return_null=0 not %run %t calloc-overflow 2>&1 | FileCheck %s --check-prefix=CHECK-coCRASH
+// RUN: %env_tsan_opts=allocator_may_return_null=0 not %run %t realloc 2>&1 | FileCheck %s --check-prefix=CHECK-rCRASH
+// RUN: %env_tsan_opts=allocator_may_return_null=0 not %run %t realloc-after-malloc 2>&1 | FileCheck %s --check-prefix=CHECK-mrCRASH
 
 #include <limits.h>
 #include <stdlib.h>

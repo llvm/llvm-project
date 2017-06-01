@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-none-linux-gnu -mattr=+neon -aarch64-simd-scalar| FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-none-linux-gnu -mattr=+neon -aarch64-enable-simd-scalar| FileCheck %s
 
 define <8 x i8> @add8xi8(<8 x i8> %A, <8 x i8> %B) {
 ;CHECK: add {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, {{v[0-9]+}}.8b

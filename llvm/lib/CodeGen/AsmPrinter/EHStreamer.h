@@ -22,7 +22,6 @@ struct LandingPadInfo;
 class MachineModuleInfo;
 class MachineInstr;
 class MachineFunction;
-class AsmPrinter;
 class MCSymbol;
 class MCSymbolRefExpr;
 

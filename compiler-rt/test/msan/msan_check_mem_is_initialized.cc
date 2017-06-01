@@ -1,5 +1,5 @@
 // RUN: %clangxx_msan -O0 -g -DPOSITIVE %s -o %t
-// RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK
+// RUN: not %run %t 2>&1 | FileCheck %s
 // RUN: MSAN_OPTIONS=verbosity=1 not %run %t 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-VERBOSE
 

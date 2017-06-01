@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXAllocaHoisting.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -28,11 +27,10 @@ public:
   NVPTXAllocaHoisting() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<MachineFunctionAnalysis>();
     AU.addPreserved<StackProtector>();
   }
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "NVPTX specific alloca hoisting";
   }
 

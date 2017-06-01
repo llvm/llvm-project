@@ -1,0 +1,5 @@
+module M {
+  module "textual_shadow" { header "textual_file_shadow.h" export *}
+  module "trigger" { header "empty.h" export * }
+  export *
+}

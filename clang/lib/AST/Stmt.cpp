@@ -295,14 +295,15 @@ CompoundStmt::CompoundStmt(const ASTContext &C, ArrayRef<Stmt*> Stmts,
   std::copy(Stmts.begin(), Stmts.end(), Body);
 }
 
-void CompoundStmt::setStmts(const ASTContext &C, Stmt **Stmts,
-                            unsigned NumStmts) {
-  if (this->Body)
+void CompoundStmt::setStmts(const ASTContext &C, ArrayRef<Stmt *> Stmts) {
+  if (Body)
     C.Deallocate(Body);
-  this->CompoundStmtBits.NumStmts = NumStmts;
+  CompoundStmtBits.NumStmts = Stmts.size();
+  assert(CompoundStmtBits.NumStmts == Stmts.size() &&
+         "NumStmts doesn't fit in bits of CompoundStmtBits.NumStmts!");
 
-  Body = new (C) Stmt*[NumStmts];
-  memcpy(Body, Stmts, sizeof(Stmt *) * NumStmts);
+  Body = new (C) Stmt*[Stmts.size()];
+  std::copy(Stmts.begin(), Stmts.end(), Body);
 }
 
 const char *LabelStmt::getName() const {
@@ -314,7 +315,7 @@ AttributedStmt *AttributedStmt::Create(const ASTContext &C, SourceLocation Loc,
                                        Stmt *SubStmt) {
   assert(!Attrs.empty() && "Attrs should not be empty");
   void *Mem = C.Allocate(sizeof(AttributedStmt) + sizeof(Attr *) * Attrs.size(),
-                         llvm::alignOf<AttributedStmt>());
+                         alignof(AttributedStmt));
   return new (Mem) AttributedStmt(Loc, Attrs, SubStmt);
 }
 
@@ -322,7 +323,7 @@ AttributedStmt *AttributedStmt::CreateEmpty(const ASTContext &C,
                                             unsigned NumAttrs) {
   assert(NumAttrs > 0 && "NumAttrs should be greater than zero");
   void *Mem = C.Allocate(sizeof(AttributedStmt) + sizeof(Attr *) * NumAttrs,
-                         llvm::alignOf<AttributedStmt>());
+                         alignof(AttributedStmt));
   return new (Mem) AttributedStmt(EmptyShell(), NumAttrs);
 }
 
@@ -502,6 +503,9 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
 
   bool HasVariants = !C.getTargetInfo().hasNoAsmVariants();
 
+  unsigned LastAsmStringToken = 0;
+  unsigned LastAsmStringOffset = 0;
+
   while (1) {
     // Done with the string?
     if (CurPtr == StrEnd) {
@@ -529,15 +533,17 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
       DiagOffs = CurPtr-StrStart-1;
       return diag::err_asm_invalid_escape;
     }
-
+    // Handle escaped char and continue looping over the asm string.
     char EscapedChar = *CurPtr++;
-    if (EscapedChar == '%') {  // %% -> %
-      // Escaped percentage sign.
-      CurStringPiece += '%';
+    switch (EscapedChar) {
+    default:
+      break;
+    case '%': // %% -> %
+    case '{': // %{ -> {
+    case '}': // %} -> }
+      CurStringPiece += EscapedChar;
       continue;
-    }
-
-    if (EscapedChar == '=') {  // %= -> Generate an unique ID.
+    case '=': // %= -> Generate a unique ID.
       CurStringPiece += "${:uid}";
       continue;
     }
@@ -588,10 +594,12 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
 
       // (BeginLoc, EndLoc) represents the range of the operand we are currently
       // processing. Unlike Str, the range includes the leading '%'.
-      SourceLocation BeginLoc =
-          getAsmString()->getLocationOfByte(Percent - StrStart, SM, LO, TI);
-      SourceLocation EndLoc =
-          getAsmString()->getLocationOfByte(CurPtr - StrStart, SM, LO, TI);
+      SourceLocation BeginLoc = getAsmString()->getLocationOfByte(
+          Percent - StrStart, SM, LO, TI, &LastAsmStringToken,
+          &LastAsmStringOffset);
+      SourceLocation EndLoc = getAsmString()->getLocationOfByte(
+          CurPtr - StrStart, SM, LO, TI, &LastAsmStringToken,
+          &LastAsmStringOffset);
 
       Pieces.emplace_back(N, std::move(Str), BeginLoc, EndLoc);
       continue;
@@ -622,10 +630,12 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
 
       // (BeginLoc, EndLoc) represents the range of the operand we are currently
       // processing. Unlike Str, the range includes the leading '%'.
-      SourceLocation BeginLoc =
-          getAsmString()->getLocationOfByte(Percent - StrStart, SM, LO, TI);
-      SourceLocation EndLoc =
-          getAsmString()->getLocationOfByte(NameEnd + 1 - StrStart, SM, LO, TI);
+      SourceLocation BeginLoc = getAsmString()->getLocationOfByte(
+          Percent - StrStart, SM, LO, TI, &LastAsmStringToken,
+          &LastAsmStringOffset);
+      SourceLocation EndLoc = getAsmString()->getLocationOfByte(
+          NameEnd + 1 - StrStart, SM, LO, TI, &LastAsmStringToken,
+          &LastAsmStringOffset);
 
       Pieces.emplace_back(N, std::move(Str), BeginLoc, EndLoc);
 
@@ -730,37 +740,38 @@ void MSAsmStmt::initialize(const ASTContext &C, StringRef asmstr,
   assert(NumAsmToks == asmtoks.size());
   assert(NumClobbers == clobbers.size());
 
-  unsigned NumExprs = exprs.size();
-  assert(NumExprs == NumOutputs + NumInputs);
-  assert(NumExprs == constraints.size());
+  assert(exprs.size() == NumOutputs + NumInputs);
+  assert(exprs.size() == constraints.size());
 
   AsmStr = copyIntoContext(C, asmstr);
 
-  Exprs = new (C) Stmt*[NumExprs];
-  for (unsigned i = 0, e = NumExprs; i != e; ++i)
-    Exprs[i] = exprs[i];
+  Exprs = new (C) Stmt*[exprs.size()];
+  std::copy(exprs.begin(), exprs.end(), Exprs);
 
-  AsmToks = new (C) Token[NumAsmToks];
-  for (unsigned i = 0, e = NumAsmToks; i != e; ++i)
-    AsmToks[i] = asmtoks[i];
+  AsmToks = new (C) Token[asmtoks.size()];
+  std::copy(asmtoks.begin(), asmtoks.end(), AsmToks);
 
-  Constraints = new (C) StringRef[NumExprs];
-  for (unsigned i = 0, e = NumExprs; i != e; ++i) {
-    Constraints[i] = copyIntoContext(C, constraints[i]);
-  }
+  Constraints = new (C) StringRef[exprs.size()];
+  std::transform(constraints.begin(), constraints.end(), Constraints,
+                 [&](StringRef Constraint) {
+                   return copyIntoContext(C, Constraint);
+                 });
 
   Clobbers = new (C) StringRef[NumClobbers];
-  for (unsigned i = 0, e = NumClobbers; i != e; ++i) {
-    // FIXME: Avoid the allocation/copy if at all possible.
-    Clobbers[i] = copyIntoContext(C, clobbers[i]);
-  }
+  // FIXME: Avoid the allocation/copy if at all possible.
+  std::transform(clobbers.begin(), clobbers.end(), Clobbers,
+                 [&](StringRef Clobber) {
+                   return copyIntoContext(C, Clobber);
+                 });
 }
 
-IfStmt::IfStmt(const ASTContext &C, SourceLocation IL, VarDecl *var, Expr *cond,
-               Stmt *then, SourceLocation EL, Stmt *elsev)
-  : Stmt(IfStmtClass), IfLoc(IL), ElseLoc(EL)
-{
+IfStmt::IfStmt(const ASTContext &C, SourceLocation IL, bool IsConstexpr,
+               Stmt *init, VarDecl *var, Expr *cond, Stmt *then,
+               SourceLocation EL, Stmt *elsev)
+    : Stmt(IfStmtClass), IfLoc(IL), ElseLoc(EL) {
+  setConstexpr(IsConstexpr);
   setConditionVariable(C, var);
+  SubExprs[INIT] = init;
   SubExprs[COND] = cond;
   SubExprs[THEN] = then;
   SubExprs[ELSE] = elsev;
@@ -783,6 +794,10 @@ void IfStmt::setConditionVariable(const ASTContext &C, VarDecl *V) {
   SourceRange VarRange = V->getSourceRange();
   SubExprs[VAR] = new (C) DeclStmt(DeclGroupRef(V), VarRange.getBegin(),
                                    VarRange.getEnd());
+}
+
+bool IfStmt::isObjCAvailabilityCheck() const {
+  return isa<ObjCAvailabilityCheckExpr>(SubExprs[COND]);
 }
 
 ForStmt::ForStmt(const ASTContext &C, Stmt *Init, Expr *Cond, VarDecl *condVar,
@@ -816,9 +831,11 @@ void ForStmt::setConditionVariable(const ASTContext &C, VarDecl *V) {
                                        VarRange.getEnd());
 }
 
-SwitchStmt::SwitchStmt(const ASTContext &C, VarDecl *Var, Expr *cond)
+SwitchStmt::SwitchStmt(const ASTContext &C, Stmt *init, VarDecl *Var,
+                       Expr *cond)
     : Stmt(SwitchStmtClass), FirstCase(nullptr, false) {
   setConditionVariable(C, Var);
+  SubExprs[INIT] = init;
   SubExprs[COND] = cond;
   SubExprs[BODY] = nullptr;
 }
@@ -945,12 +962,49 @@ SEHFinallyStmt* SEHFinallyStmt::Create(const ASTContext &C, SourceLocation Loc,
   return new(C)SEHFinallyStmt(Loc,Block);
 }
 
+CapturedStmt::Capture::Capture(SourceLocation Loc, VariableCaptureKind Kind,
+                               VarDecl *Var)
+    : VarAndKind(Var, Kind), Loc(Loc) {
+  switch (Kind) {
+  case VCK_This:
+    assert(!Var && "'this' capture cannot have a variable!");
+    break;
+  case VCK_ByRef:
+    assert(Var && "capturing by reference must have a variable!");
+    break;
+  case VCK_ByCopy:
+    assert(Var && "capturing by copy must have a variable!");
+    assert(
+        (Var->getType()->isScalarType() || (Var->getType()->isReferenceType() &&
+                                            Var->getType()
+                                                ->castAs<ReferenceType>()
+                                                ->getPointeeType()
+                                                ->isScalarType())) &&
+        "captures by copy are expected to have a scalar type!");
+    break;
+  case VCK_VLAType:
+    assert(!Var &&
+           "Variable-length array type capture cannot have a variable!");
+    break;
+  }
+}
+
+CapturedStmt::VariableCaptureKind
+CapturedStmt::Capture::getCaptureKind() const {
+  return VarAndKind.getInt();
+}
+
+VarDecl *CapturedStmt::Capture::getCapturedVar() const {
+  assert((capturesVariable() || capturesVariableByCopy()) &&
+         "No variable available for 'this' or VAT capture");
+  return VarAndKind.getPointer();
+}
+
 CapturedStmt::Capture *CapturedStmt::getStoredCaptures() const {
   unsigned Size = sizeof(CapturedStmt) + sizeof(Stmt *) * (NumCaptures + 1);
 
   // Offset of the first Capture object.
-  unsigned FirstCaptureOffset =
-    llvm::RoundUpToAlignment(Size, llvm::alignOf<Capture>());
+  unsigned FirstCaptureOffset = llvm::alignTo(Size, alignof(Capture));
 
   return reinterpret_cast<Capture *>(
       reinterpret_cast<char *>(const_cast<CapturedStmt *>(this))
@@ -1007,7 +1061,7 @@ CapturedStmt *CapturedStmt::Create(const ASTContext &Context, Stmt *S,
   unsigned Size = sizeof(CapturedStmt) + sizeof(Stmt *) * (Captures.size() + 1);
   if (!Captures.empty()) {
     // Realign for the following Capture array.
-    Size = llvm::RoundUpToAlignment(Size, llvm::alignOf<Capture>());
+    Size = llvm::alignTo(Size, alignof(Capture));
     Size += sizeof(Capture) * Captures.size();
   }
 
@@ -1020,7 +1074,7 @@ CapturedStmt *CapturedStmt::CreateDeserialized(const ASTContext &Context,
   unsigned Size = sizeof(CapturedStmt) + sizeof(Stmt *) * (NumCaptures + 1);
   if (NumCaptures > 0) {
     // Realign for the following Capture array.
-    Size = llvm::RoundUpToAlignment(Size, llvm::alignOf<Capture>());
+    Size = llvm::alignTo(Size, alignof(Capture));
     Size += sizeof(Capture) * NumCaptures;
   }
 
@@ -1031,6 +1085,29 @@ CapturedStmt *CapturedStmt::CreateDeserialized(const ASTContext &Context,
 Stmt::child_range CapturedStmt::children() {
   // Children are captured field initilizers.
   return child_range(getStoredStmts(), getStoredStmts() + NumCaptures);
+}
+
+CapturedDecl *CapturedStmt::getCapturedDecl() {
+  return CapDeclAndKind.getPointer();
+}
+const CapturedDecl *CapturedStmt::getCapturedDecl() const {
+  return CapDeclAndKind.getPointer();
+}
+
+/// \brief Set the outlined function declaration.
+void CapturedStmt::setCapturedDecl(CapturedDecl *D) {
+  assert(D && "null CapturedDecl");
+  CapDeclAndKind.setPointer(D);
+}
+
+/// \brief Retrieve the captured region kind.
+CapturedRegionKind CapturedStmt::getCapturedRegionKind() const {
+  return CapDeclAndKind.getInt();
+}
+
+/// \brief Set the captured region kind.
+void CapturedStmt::setCapturedRegionKind(CapturedRegionKind Kind) {
+  CapDeclAndKind.setInt(Kind);
 }
 
 bool CapturedStmt::capturesVariable(const VarDecl *Var) const {

@@ -3,7 +3,7 @@
 // RUN: echo running w/o suppressions:
 // RUN: %deflake %run %t | FileCheck %s --check-prefix=CHECK-NOSUPP
 // RUN: echo running with suppressions:
-// RUN: TSAN_OPTIONS="$TSAN_OPTIONS suppressions='%s.supp'" %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-WITHSUPP
+// RUN: %env_tsan_opts=suppressions='%s.supp' %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-WITHSUPP
 
 // Tests that interceptors coming from a dynamically loaded library specified
 // in called_from_lib suppression are ignored.

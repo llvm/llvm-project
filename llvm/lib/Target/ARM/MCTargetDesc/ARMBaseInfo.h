@@ -289,18 +289,20 @@ namespace ARMII {
     /// higher 16 bit of the address. Used only via movt instruction.
     MO_HI16 = 0x2,
 
-    /// MO_PLT - On a symbol operand, this represents an ELF PLT reference on a
-    /// call operand.
-    MO_PLT = 0x3,
-
     /// MO_OPTION_MASK - Most flags are mutually exclusive; this mask selects
     /// just that part of the flag set.
-    MO_OPTION_MASK = 0x3f,
+    MO_OPTION_MASK = 0x1f,
 
     /// MO_DLLIMPORT - On a symbol operand, this represents that the reference
     /// to the symbol is for an import stub.  This is used for DLL import
     /// storage class indication on Windows.
-    MO_DLLIMPORT = 0x40,
+    MO_DLLIMPORT = 0x20,
+
+    /// MO_SECREL - On a symbol operand this indicates that the immediate is
+    /// the offset from beginning of section.
+    ///
+    /// This is the TLS offset for the COFF/Windows TLS mechanism.
+    MO_SECREL = 0x40,
 
     /// MO_NONLAZY - This is an independent flag, on a symbol operand "FOO" it
     /// represents a symbol which, if indirect, will get special Darwin mangling

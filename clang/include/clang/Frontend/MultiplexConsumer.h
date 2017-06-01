@@ -36,7 +36,7 @@ public:
   void Initialize(ASTContext &Context) override;
   void HandleCXXStaticMemberVarInstantiation(VarDecl *VD) override;
   bool HandleTopLevelDecl(DeclGroupRef D) override;
-  void HandleInlineMethodDefinition(CXXMethodDecl *D) override;
+  void HandleInlineFunctionDefinition(FunctionDecl *D) override;
   void HandleInterestingDecl(DeclGroupRef D) override;
   void HandleTranslationUnit(ASTContext &Ctx) override;
   void HandleTagDeclDefinition(TagDecl *D) override;
@@ -44,15 +44,13 @@ public:
   void HandleCXXImplicitFunctionInstantiation(FunctionDecl *D) override;
   void HandleTopLevelDeclInObjCContainer(DeclGroupRef D) override;
   void HandleImplicitImportDecl(ImportDecl *D) override;
-  void HandleLinkerOptionPragma(llvm::StringRef Opts) override;
-  void HandleDetectMismatch(llvm::StringRef Name,
-                            llvm::StringRef Value) override;
-  void HandleDependentLibrary(llvm::StringRef Lib) override;
   void CompleteTentativeDefinition(VarDecl *D) override;
+  void AssignInheritanceModel(CXXRecordDecl *RD) override;
   void HandleVTable(CXXRecordDecl *RD) override;
   ASTMutationListener *GetASTMutationListener() override;
   ASTDeserializationListener *GetASTDeserializationListener() override;
   void PrintStats() override;
+  bool shouldSkipFunctionBody(Decl *D) override;
 
   // SemaConsumer
   void InitializeSema(Sema &S) override;

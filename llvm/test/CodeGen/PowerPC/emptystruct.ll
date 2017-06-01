@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr7 -O0 -fast-isel=false < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -fast-isel=false < %s | FileCheck %s
 
 ; This tests correct handling of empty aggregate parameters and return values.
 ; An empty parameter passed by value does not consume a protocol register or

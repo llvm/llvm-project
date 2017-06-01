@@ -1,4 +1,4 @@
-; RUN: llc -O=2 < %s -mtriple=powerpc-netbsd | FileCheck %s
+; RUN: llc -verify-machineinstrs -O=2 < %s -mtriple=powerpc-netbsd | FileCheck %s
 
 ; CHECK-NOT: bl __lshrti3
 

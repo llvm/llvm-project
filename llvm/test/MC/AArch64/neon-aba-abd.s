@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+neon -show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+neon,+fullfp16 -show-encoding < %s | FileCheck %s
 
 // Check that the assembler can handle the documented syntax for AArch64
 
@@ -68,10 +68,12 @@
 //----------------------------------------------------------------------
 // Vector Absolute Difference (Floating Point)
 //----------------------------------------------------------------------
+         fabd v0.4h, v1.4h, v2.4h
          fabd v0.2s, v1.2s, v2.2s
          fabd v31.4s, v15.4s, v16.4s
          fabd v7.2d, v8.2d, v25.2d
 
+// CHECK: fabd    v0.4h, v1.4h, v2.4h     // encoding: [0x20,0x14,0xc2,0x2e]
 // CHECK: fabd v0.2s, v1.2s, v2.2s    // encoding: [0x20,0xd4,0xa2,0x2e]
 // CHECK: fabd v31.4s, v15.4s, v16.4s // encoding: [0xff,0xd5,0xb0,0x6e]
 // CHECK: fabd v7.2d, v8.2d, v25.2d   // encoding: [0x07,0xd5,0xf9,0x6e]

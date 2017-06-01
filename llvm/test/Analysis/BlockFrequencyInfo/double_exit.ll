@@ -1,4 +1,5 @@
 ; RUN: opt < %s -analyze -block-freq | FileCheck %s
+; RUN: opt < %s -passes='print<block-freq>' -disable-output 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: Printing analysis {{.*}} for function 'double_exit':
 ; CHECK-NEXT: block-frequency-info: double_exit

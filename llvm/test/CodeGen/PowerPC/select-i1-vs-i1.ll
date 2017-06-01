@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -714,18 +714,12 @@ entry:
   %cond = select i1 %cmp3, <4 x float> %a1, <4 x float> %a2
   ret <4 x float> %cond
 
-; FIXME: This test (and the other v4f32 tests) should use the same bclr
-; technique as the v2f64 tests below.
-
 ; CHECK-LABEL: @testv4floatslt
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 3, 4
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
-; CHECK-DAG: xxlor [[REG2:[0-9]+]], 34, 34
-; CHECK-DAG: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
-; CHECK: bc 12, [[REG1]], .LBB[[BB:[0-9_]+]]
-; CHECK: xxlor [[REG2]], 35, 35
-; CHECK: .LBB[[BB]]:
-; CHECK: xxlor 34, [[REG2]], [[REG2]]
+; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK: bclr 12, [[REG1]], 0
+; CHECK: vor 2, 3, 3
 ; CHECK: blr
 }
 
@@ -740,12 +734,9 @@ entry:
 ; CHECK-LABEL: @testv4floatult
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 3, 4
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
-; CHECK-DAG: xxlor [[REG2:[0-9]+]], 34, 34
-; CHECK-DAG: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
-; CHECK: bc 12, [[REG1]], .LBB[[BB:[0-9_]+]]
-; CHECK: xxlor [[REG2]], 35, 35
-; CHECK: .LBB[[BB]]:
-; CHECK: xxlor 34, [[REG2]], [[REG2]]
+; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK: bclr 12, [[REG1]], 0
+; CHECK: vor 2, 3, 3
 ; CHECK: blr
 }
 
@@ -760,12 +751,9 @@ entry:
 ; CHECK-LABEL: @testv4floatsle
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 3, 4
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
-; CHECK-DAG: xxlor [[REG2:[0-9]+]], 34, 34
-; CHECK-DAG: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
-; CHECK: bc 12, [[REG1]], .LBB[[BB:[0-9_]+]]
-; CHECK: xxlor [[REG2]], 35, 35
-; CHECK: .LBB[[BB]]:
-; CHECK: xxlor 34, [[REG2]], [[REG2]]
+; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK: bclr 12, [[REG1]], 0
+; CHECK: vor 2, 3, 3
 ; CHECK: blr
 }
 
@@ -780,12 +768,9 @@ entry:
 ; CHECK-LABEL: @testv4floatule
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 3, 4
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
-; CHECK-DAG: xxlor [[REG2:[0-9]+]], 34, 34
-; CHECK-DAG: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
-; CHECK: bc 12, [[REG1]], .LBB[[BB:[0-9_]+]]
-; CHECK: xxlor [[REG2]], 35, 35
-; CHECK: .LBB[[BB]]:
-; CHECK: xxlor 34, [[REG2]], [[REG2]]
+; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK: bclr 12, [[REG1]], 0
+; CHECK: vor 2, 3, 3
 ; CHECK: blr
 }
 
@@ -800,12 +785,11 @@ entry:
 ; CHECK-LABEL: @testv4floateq
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 3, 4
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
-; CHECK-DAG: xxlor [[REG2:[0-9]+]], 34, 34
-; CHECK-DAG: creqv [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
-; CHECK: bc 12, [[REG1]], .LBB[[BB:[0-9_]+]]
-; CHECK: xxlor [[REG2]], 35, 35
-; CHECK: .LBB[[BB]]:
-; CHECK: xxlor 34, [[REG2]], [[REG2]]
+; CHECK: crxor [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK: bc 12, [[REG1]], .LBB[[BB1:[0-9_]+]]
+; CHECK: vor 3, 2, 2
+; CHECK: .LBB[[BB1]]
+; CHECK: vor 2, 3, 3
 ; CHECK: blr
 }
 
@@ -820,12 +804,9 @@ entry:
 ; CHECK-LABEL: @testv4floatsge
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 3, 4
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
-; CHECK-DAG: xxlor [[REG2:[0-9]+]], 34, 34
-; CHECK-DAG: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
-; CHECK: bc 12, [[REG1]], .LBB[[BB:[0-9_]+]]
-; CHECK: xxlor [[REG2]], 35, 35
-; CHECK: .LBB[[BB]]:
-; CHECK: xxlor 34, [[REG2]], [[REG2]]
+; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK: bclr 12, [[REG1]], 0
+; CHECK: vor 2, 3, 3
 ; CHECK: blr
 }
 
@@ -840,12 +821,9 @@ entry:
 ; CHECK-LABEL: @testv4floatuge
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 3, 4
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
-; CHECK-DAG: xxlor [[REG2:[0-9]+]], 34, 34
-; CHECK-DAG: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
-; CHECK: bc 12, [[REG1]], .LBB[[BB:[0-9_]+]]
-; CHECK: xxlor [[REG2]], 35, 35
-; CHECK: .LBB[[BB]]:
-; CHECK: xxlor 34, [[REG2]], [[REG2]]
+; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK: bclr 12, [[REG1]], 0
+; CHECK: vor 2, 3, 3
 ; CHECK: blr
 }
 
@@ -860,12 +838,9 @@ entry:
 ; CHECK-LABEL: @testv4floatsgt
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 3, 4
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
-; CHECK-DAG: xxlor [[REG2:[0-9]+]], 34, 34
-; CHECK-DAG: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
-; CHECK: bc 12, [[REG1]], .LBB[[BB:[0-9_]+]]
-; CHECK: xxlor [[REG2]], 35, 35
-; CHECK: .LBB[[BB]]:
-; CHECK: xxlor 34, [[REG2]], [[REG2]]
+; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK: bclr 12, [[REG1]], 0
+; CHECK: vor 2, 3, 3
 ; CHECK: blr
 }
 
@@ -880,12 +855,9 @@ entry:
 ; CHECK-LABEL: @testv4floatugt
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 3, 4
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
-; CHECK-DAG: xxlor [[REG2:[0-9]+]], 34, 34
-; CHECK-DAG: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
-; CHECK: bc 12, [[REG1]], .LBB[[BB:[0-9_]+]]
-; CHECK: xxlor [[REG2]], 35, 35
-; CHECK: .LBB[[BB]]:
-; CHECK: xxlor 34, [[REG2]], [[REG2]]
+; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK: bclr 12, [[REG1]], 0
+; CHECK: vor 2, 3, 3
 ; CHECK: blr
 }
 
@@ -900,12 +872,9 @@ entry:
 ; CHECK-LABEL: @testv4floatne
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 3, 4
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
-; CHECK-DAG: xxlor [[REG2:[0-9]+]], 34, 34
-; CHECK-DAG: crxor [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
-; CHECK: bc 12, [[REG1]], .LBB[[BB:[0-9_]+]]
-; CHECK: xxlor [[REG2]], 35, 35
-; CHECK: .LBB[[BB]]:
-; CHECK: xxlor 34, [[REG2]], [[REG2]]
+; CHECK: crxor [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK: bclr 12, [[REG1]], 0
+; CHECK: vor 2, 3, 3
 ; CHECK: blr
 }
 
@@ -928,15 +897,15 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 3
 ; CHECK: crand [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: crand [[REG2:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
-; CHECK: creqv [[REG3:[0-9]+]], [[REG2]], [[REG1]]
+; CHECK: crxor [[REG3:[0-9]+]], [[REG2]], [[REG1]]
 ; CHECK: bc 12, [[REG3]], .LBB[[BB1:[0-9_]+]]
-; CHECK: fmr 9, 11
+; CHECK: fmr 11, 9
 ; CHECK: .LBB[[BB1]]:
 ; CHECK: bc 12, [[REG3]], .LBB[[BB2:[0-9_]+]]
-; CHECK: fmr 10, 12
+; CHECK: fmr 12, 10
 ; CHECK: .LBB[[BB2]]:
-; CHECK-DAG: fmr 1, 9
-; CHECK-DAG: fmr 2, 10
+; CHECK-DAG: fmr 1, 11
+; CHECK-DAG: fmr 2, 12
 ; CHECK: blr
 }
 
@@ -1019,8 +988,10 @@ entry:
 ; CHECK-LABEL: @testv2doubleeq
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 3, 4
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
-; CHECK: creqv [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
-; CHECK: bclr 12, [[REG1]], 0
+; CHECK: crxor [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK: bc 12, [[REG1]], .LBB[[BB55:[0-9_]+]]
+; CHECK: vor 3, 2, 2
+; CHECK: .LBB[[BB55]]
 ; CHECK: vor 2, 3, 3
 ; CHECK: blr
 }

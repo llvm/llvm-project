@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=osx.coreFoundation.containers.PointerSizedValues,osx.coreFoundation.containers.OutOfBounds -analyzer-store=region -triple x86_64-apple-darwin -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=osx.coreFoundation.containers.PointerSizedValues,osx.coreFoundation.containers.OutOfBounds -analyzer-store=region -triple x86_64-apple-darwin -verify %s
 
 typedef const struct __CFAllocator * CFAllocatorRef;
 typedef const struct __CFString * CFStringRef;

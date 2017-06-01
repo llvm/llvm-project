@@ -21,6 +21,7 @@ class Function;
 class GlobalValue;
 class MachineFunction;
 class MCExpr;
+class MCSection;
 class Value;
 struct WinEHFuncInfo;
 
@@ -40,9 +41,12 @@ class LLVM_LIBRARY_VISIBILITY WinException : public EHStreamer {
   /// Pointer to the current funclet entry BB.
   const MachineBasicBlock *CurrentFuncletEntry = nullptr;
 
+  /// The section of the last funclet start.
+  MCSection *CurrentFuncletTextSection = nullptr;
+
   void emitCSpecificHandlerTable(const MachineFunction *MF);
 
-  void emitSEHActionsForRange(WinEHFuncInfo &FuncInfo,
+  void emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
                               const MCSymbol *BeginLabel,
                               const MCSymbol *EndLabel, int State);
 
@@ -58,7 +62,7 @@ class LLVM_LIBRARY_VISIBILITY WinException : public EHStreamer {
   void emitCLRExceptionTable(const MachineFunction *MF);
 
   void computeIP2StateTable(
-      const MachineFunction *MF, WinEHFuncInfo &FuncInfo,
+      const MachineFunction *MF, const WinEHFuncInfo &FuncInfo,
       SmallVectorImpl<std::pair<const MCExpr *, int>> &IPToStateTable);
 
   /// Emits the label used with llvm.x86.seh.recoverfp, which is used by
@@ -77,7 +81,7 @@ class LLVM_LIBRARY_VISIBILITY WinException : public EHStreamer {
   /// given index. For targets using CFI (Win64, etc), this is relative to the
   /// established SP at the end of the prologue. For targets without CFI (Win32
   /// only), it is relative to the frame pointer.
-  int getFrameIndexOffset(int FrameIndex, WinEHFuncInfo &FuncInfo);
+  int getFrameIndexOffset(int FrameIndex, const WinEHFuncInfo &FuncInfo);
 
 public:
   //===--------------------------------------------------------------------===//

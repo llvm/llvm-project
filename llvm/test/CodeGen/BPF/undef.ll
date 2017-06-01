@@ -15,48 +15,48 @@
 define i32 @ebpf_filter(%struct.__sk_buff* nocapture readnone %ebpf_packet) #0 section "socket1" {
   %key = alloca %struct.routing_key_2, align 1
   %1 = getelementptr inbounds %struct.routing_key_2, %struct.routing_key_2* %key, i64 0, i32 0, i64 0
-; CHECK: mov	r1, 5
-; CHECK: stb	-8(r10), r1
+; CHECK: r1 = 5
+; CHECK: *(u8 *)(r10 - 8) = r1
   store i8 5, i8* %1, align 1
   %2 = getelementptr inbounds %struct.routing_key_2, %struct.routing_key_2* %key, i64 0, i32 0, i64 1
-; CHECK: mov	r1, 6
-; CHECK: stb	-7(r10), r1
+; CHECK: r1 = 6
+; CHECK: *(u8 *)(r10 - 7) = r1
   store i8 6, i8* %2, align 1
   %3 = getelementptr inbounds %struct.routing_key_2, %struct.routing_key_2* %key, i64 0, i32 0, i64 2
-; CHECK: mov	r1, 7
-; CHECK: stb	-6(r10), r1
+; CHECK: r1 = 7
+; CHECK: *(u8 *)(r10 - 6) = r1
   store i8 7, i8* %3, align 1
   %4 = getelementptr inbounds %struct.routing_key_2, %struct.routing_key_2* %key, i64 0, i32 0, i64 3
-; CHECK: mov	r1, 8
-; CHECK: stb	-5(r10), r1
+; CHECK: r1 = 8
+; CHECK: *(u8 *)(r10 - 5) = r1
   store i8 8, i8* %4, align 1
   %5 = getelementptr inbounds %struct.routing_key_2, %struct.routing_key_2* %key, i64 0, i32 0, i64 4
-; CHECK: mov	r1, 9
-; CHECK: stb	-4(r10), r1
+; CHECK: r1 = 9
+; CHECK: *(u8 *)(r10 - 4) = r1
   store i8 9, i8* %5, align 1
   %6 = getelementptr inbounds %struct.routing_key_2, %struct.routing_key_2* %key, i64 0, i32 0, i64 5
-; CHECK: mov	r1, 10
-; CHECK: stb	-3(r10), r1
+; CHECK: r1 = 10
+; CHECK: *(u8 *)(r10 - 3) = r1
   store i8 10, i8* %6, align 1
   %7 = getelementptr inbounds %struct.routing_key_2, %struct.routing_key_2* %key, i64 1, i32 0, i64 0
-; CHECK: mov	r1, r10
-; CHECK: addi	r1, -2
-; CHECK: mov	r2, 0
-; CHECK: sth	6(r1), r2
-; CHECK: sth	4(r1), r2
-; CHECK: sth	2(r1), r2
-; CHECK: sth	24(r10), r2
-; CHECK: sth	22(r10), r2
-; CHECK: sth	20(r10), r2
-; CHECK: sth	18(r10), r2
-; CHECK: sth	16(r10), r2
-; CHECK: sth	14(r10), r2
-; CHECK: sth	12(r10), r2
-; CHECK: sth	10(r10), r2
-; CHECK: sth	8(r10), r2
-; CHECK: sth	6(r10), r2
-; CHECK: sth	-2(r10), r2
-; CHECK: sth	26(r10), r2
+; CHECK: r1 = r10
+; CHECK: r1 += -2
+; CHECK: r2 = 0
+; CHECK: *(u16 *)(r1 + 6) = r2
+; CHECK: *(u16 *)(r1 + 4) = r2
+; CHECK: *(u16 *)(r1 + 2) = r2
+; CHECK: *(u16 *)(r10 + 24) = r2
+; CHECK: *(u16 *)(r10 + 22) = r2
+; CHECK: *(u16 *)(r10 + 20) = r2
+; CHECK: *(u16 *)(r10 + 18) = r2
+; CHECK: *(u16 *)(r10 + 16) = r2
+; CHECK: *(u16 *)(r10 + 14) = r2
+; CHECK: *(u16 *)(r10 + 12) = r2
+; CHECK: *(u16 *)(r10 + 10) = r2
+; CHECK: *(u16 *)(r10 + 8) = r2
+; CHECK: *(u16 *)(r10 + 6) = r2
+; CHECK: *(u16 *)(r10 - 2) = r2
+; CHECK: *(u16 *)(r10 + 26) = r2
   call void @llvm.memset.p0i8.i64(i8* %7, i8 0, i64 30, i32 1, i1 false)
   %8 = call i32 (%struct.bpf_map_def*, %struct.routing_key_2*, ...) bitcast (i32 (...)* @bpf_map_lookup_elem to i32 (%struct.bpf_map_def*, %struct.routing_key_2*, ...)*)(%struct.bpf_map_def* nonnull @routing, %struct.routing_key_2* nonnull %key) #3
   ret i32 undef

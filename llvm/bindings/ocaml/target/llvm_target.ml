@@ -54,9 +54,6 @@ module DataLayout = struct
 
   external of_string : string -> t = "llvm_datalayout_of_string"
   external as_string : t -> string = "llvm_datalayout_as_string"
-  external add_to_pass_manager : [<Llvm.PassManager.any]
-                                 Llvm.PassManager.t -> t -> unit
-                               = "llvm_datalayout_add_to_pass_manager"
   external byte_order : t -> Endian.t = "llvm_datalayout_byte_order"
   external pointer_size : t -> int = "llvm_datalayout_pointer_size"
   external intptr_type : Llvm.llcontext -> t -> Llvm.lltype

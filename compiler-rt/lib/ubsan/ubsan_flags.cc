@@ -45,6 +45,7 @@ void InitializeFlags() {
     CommonFlags cf;
     cf.CopyFrom(*common_flags());
     cf.print_summary = false;
+    cf.external_symbolizer_path = GetEnv("UBSAN_SYMBOLIZER_PATH");
     OverrideCommonFlags(cf);
   }
 
@@ -59,7 +60,7 @@ void InitializeFlags() {
   parser.ParseString(MaybeCallUbsanDefaultOptions());
   // Override from environment variable.
   parser.ParseString(GetEnv("UBSAN_OPTIONS"));
-  SetVerbosity(common_flags()->verbosity);
+  InitializeCommonFlags();
   if (Verbosity()) ReportUnrecognizedFlags();
 
   if (common_flags()->help) parser.PrintFlagDescriptions();

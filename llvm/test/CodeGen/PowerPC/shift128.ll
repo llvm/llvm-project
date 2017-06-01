@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc64 | grep sld | count 5
+; RUN: llc -verify-machineinstrs < %s -march=ppc64 | grep sld | count 5
 
 define i128 @foo_lshr(i128 %x, i128 %y) {
   %r = lshr i128 %x, %y

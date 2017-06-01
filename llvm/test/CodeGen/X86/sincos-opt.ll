@@ -1,6 +1,8 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-macosx10.9.0 -mcpu=core2 | FileCheck %s --check-prefix=OSX_SINCOS
 ; RUN: llc < %s -mtriple=x86_64-apple-macosx10.8.0 -mcpu=core2 | FileCheck %s --check-prefix=OSX_NOOPT
+; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu -mcpu=core2 | FileCheck %s --check-prefix=GNU_NOOPT
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu -mcpu=core2 -enable-unsafe-fp-math | FileCheck %s --check-prefix=GNU_SINCOS
+; RUN: llc < %s -mtriple=x86_64-pc-linux-gnux32 -mcpu=core2 -enable-unsafe-fp-math | FileCheck %s --check-prefix=GNUX32_SINCOS
 
 ; Combine sin / cos into a single call.
 ; rdar://13087969
@@ -12,6 +14,15 @@ entry:
 ; GNU_SINCOS: callq sincosf
 ; GNU_SINCOS: movss 4(%rsp), %xmm0
 ; GNU_SINCOS: addss (%rsp), %xmm0
+
+; GNUX32_SINCOS-LABEL: test1:
+; GNUX32_SINCOS: callq sincosf
+; GNUX32_SINCOS: movss 4(%esp), %xmm0
+; GNUX32_SINCOS: addss (%esp), %xmm0
+
+; GNU_NOOPT: test1
+; GNU_NOOPT: callq sinf
+; GNU_NOOPT: callq cosf
 
 ; OSX_SINCOS-LABEL: test1:
 ; OSX_SINCOS: callq ___sincosf_stret
@@ -34,6 +45,15 @@ entry:
 ; GNU_SINCOS: movsd 16(%rsp), %xmm0
 ; GNU_SINCOS: addsd 8(%rsp), %xmm0
 
+; GNUX32_SINCOS-LABEL: test2:
+; GNUX32_SINCOS: callq sincos
+; GNUX32_SINCOS: movsd 16(%esp), %xmm0
+; GNUX32_SINCOS: addsd 8(%esp), %xmm0
+
+; GNU_NOOPT: test2:
+; GNU_NOOPT: callq sin
+; GNU_NOOPT: callq cos
+
 ; OSX_SINCOS-LABEL: test2:
 ; OSX_SINCOS: callq ___sincos_stret
 ; OSX_SINCOS: addsd %xmm1, %xmm0
@@ -53,6 +73,16 @@ entry:
 ; GNU_SINCOS: callq sinl
 ; GNU_SINCOS: callq cosl
 ; GNU_SINCOS: ret
+
+; GNUX32_SINCOS-LABEL: test3:
+; GNUX32_SINCOS: callq sinl
+; GNUX32_SINCOS: callq cosl
+; GNUX32_SINCOS: ret
+
+; GNU_NOOPT: test3:
+; GNU_NOOPT: callq sinl
+; GNU_NOOPT: callq cosl
+
   %call = tail call x86_fp80 @sinl(x86_fp80 %x) nounwind
   %call1 = tail call x86_fp80 @cosl(x86_fp80 %x) nounwind
   %add = fadd x86_fp80 %call, %call1

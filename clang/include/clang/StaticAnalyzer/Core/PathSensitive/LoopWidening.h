@@ -1,4 +1,4 @@
-//===--- LoopWidening.h - Instruction class definition ----------*- C++ -*-===//
+//===--- LoopWidening.h - Widen loops ---------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -28,8 +28,7 @@ namespace ento {
 /// by the loop body in any iteration.
 ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
                                     const LocationContext *LCtx,
-                                    unsigned BlockCount,
-                                    const Stmt *LoopStmt);
+                                    unsigned BlockCount, const Stmt *LoopStmt);
 
 } // end namespace ento
 } // end namespace clang

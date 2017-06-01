@@ -107,10 +107,21 @@ TEST(ASTNodeKind, UnknownKind) {
 }
 
 TEST(ASTNodeKind, Name) {
-  EXPECT_EQ("Decl", DNT<Decl>().asStringRef());
-  EXPECT_EQ("CallExpr", DNT<CallExpr>().asStringRef());
-  EXPECT_EQ("ConstantArrayType", DNT<ConstantArrayType>().asStringRef());
   EXPECT_EQ("<None>", ASTNodeKind().asStringRef());
+#define VERIFY_NAME(Node) EXPECT_EQ(#Node, DNT<Node>().asStringRef());
+  VERIFY_NAME(TemplateArgument);
+  VERIFY_NAME(NestedNameSpecifierLoc);
+  VERIFY_NAME(QualType);
+  VERIFY_NAME(TypeLoc);
+  VERIFY_NAME(CXXCtorInitializer);
+  VERIFY_NAME(NestedNameSpecifier);
+  VERIFY_NAME(Decl);
+  VERIFY_NAME(CXXRecordDecl);
+  VERIFY_NAME(Stmt);
+  VERIFY_NAME(CallExpr);
+  VERIFY_NAME(Type);
+  VERIFY_NAME(ConstantArrayType);
+#undef VERIFY_NAME
 }
 
 TEST(DynTypedNode, DeclSourceRange) {
@@ -152,7 +163,7 @@ TEST(DynTypedNode, StmtDump) {
 
 TEST(DynTypedNode, DeclPrint) {
   PrintVerifier Verifier;
-  Verifier.expectString("void f() {\n}\n\n");
+  Verifier.expectString("void f() {\n}\n");
   EXPECT_TRUE(Verifier.match("void f() {}", functionDecl()));
 }
 
@@ -160,6 +171,13 @@ TEST(DynTypedNode, StmtPrint) {
   PrintVerifier Verifier;
   Verifier.expectString("{\n}\n");
   EXPECT_TRUE(Verifier.match("void f() {}", stmt()));
+}
+
+TEST(DynTypedNode, QualType) {
+  QualType Q;
+  DynTypedNode Node = DynTypedNode::create(Q);
+  EXPECT_TRUE(Node == Node);
+  EXPECT_FALSE(Node < Node);
 }
 
 }  // namespace ast_type_traits

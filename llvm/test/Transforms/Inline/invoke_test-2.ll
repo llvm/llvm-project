@@ -1,36 +1,52 @@
 ; Test that if an invoked function is inlined, and if that function cannot
 ; throw, that the dead handler is now unreachable.
 
-; RUN: opt < %s -inline -simplifycfg -S | \
-; RUN:   not grep UnreachableExceptionHandler
+; RUN: opt < %s -inline -simplifycfg -S | FileCheck %s
 
 declare void @might_throw()
 
 define internal i32 @callee() personality i32 (...)* @__gxx_personality_v0 {
-        invoke void @might_throw( )
-                        to label %cont unwind label %exc
+enrty:
+  invoke void @might_throw()
+      to label %cont unwind label %exc
 
-cont:           ; preds = %0
-        ret i32 0
+cont:
+  ret i32 0
 
-exc:            ; preds = %0
-        %exn = landingpad {i8*, i32}
-                 cleanup
-        ret i32 1
+exc:
+  %exn = landingpad {i8*, i32}
+         cleanup
+  ret i32 1
 }
 
 ; caller returns true if might_throw throws an exception... callee cannot throw.
 define i32 @caller() personality i32 (...)* @__gxx_personality_v0 {
-        %X = invoke i32 @callee( )
-                        to label %cont unwind label %UnreachableExceptionHandler                ; <i32> [#uses=1]
+; CHECK-LABEL: define i32 @caller() personality i32 (...)* @__gxx_personality_v0
+enrty:
+  %X = invoke i32 @callee()
+           to label %cont unwind label %UnreachableExceptionHandler
+; CHECK-NOT: @callee
+; CHECK: invoke void @might_throw()
+; CHECK:     to label %[[C:.*]] unwind label %[[E:.*]]
 
-cont:           ; preds = %0
-        ret i32 %X
+; CHECK: [[E]]:
+; CHECK:   landingpad
+; CHECK:      cleanup
+; CHECK:   br label %[[C]]
 
-UnreachableExceptionHandler:            ; preds = %0
-        %exn = landingpad {i8*, i32}
-                 cleanup
-        ret i32 -1
+cont:
+; CHECK: [[C]]:
+  ret i32 %X
+; CHECK:   %[[PHI:.*]] = phi i32
+; CHECK:   ret i32 %[[PHI]]
+
+UnreachableExceptionHandler:
+; CHECK-NOT: UnreachableExceptionHandler:
+  %exn = landingpad {i8*, i32}
+         cleanup
+  ret i32 -1
+; CHECK-NOT: ret i32 -1
 }
+; CHECK: }
 
 declare i32 @__gxx_personality_v0(...)

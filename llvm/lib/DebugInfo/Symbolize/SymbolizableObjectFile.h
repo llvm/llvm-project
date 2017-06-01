@@ -43,6 +43,9 @@ public:
   uint64_t getModulePreferredBase() const override;
 
 private:
+  bool shouldOverrideWithSymbolTable(FunctionNameKind FNKind,
+                                     bool UseSymbolTable) const;
+
   bool getNameFromSymbolTable(object::SymbolRef::Type Type, uint64_t Address,
                               std::string &Name, uint64_t &Addr,
                               uint64_t &Size) const;

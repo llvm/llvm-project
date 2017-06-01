@@ -16,9 +16,7 @@ void *Thread(void *a) {
 
 int main() {
   barrier_init(&barrier, 2);
-  fprintf(stderr, "addr3=");
-  print_address(XXX::YYY::ZZZ);
-  fprintf(stderr, "\n");
+  print_address("addr3=", 1, XXX::YYY::ZZZ);
   pthread_t t;
   pthread_create(&t, 0, Thread, 0);
   XXX::YYY::ZZZ[0] = 0;
@@ -28,4 +26,4 @@ int main() {
 
 // CHECK: addr3=[[ADDR3:0x[0-9,a-f]+]]
 // CHECK: WARNING: ThreadSanitizer: data race
-// CHECK: Location is global 'XXX::YYY::ZZZ' of size 40 at [[ADDR3]] ({{.*}}+0x{{[0-9,a-f]+}})
+// CHECK: Location is global 'XXX::YYY::ZZZ' {{(of size 40 )?}}at [[ADDR3]] ({{.*}}+0x{{[0-9,a-f]+}})

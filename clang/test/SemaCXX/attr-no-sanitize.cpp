@@ -2,8 +2,6 @@
 // RUN: not %clang_cc1 -std=c++11 -ast-dump %s | FileCheck --check-prefix=DUMP %s
 // RUN: not %clang_cc1 -std=c++11 -ast-print %s | FileCheck --check-prefix=PRINT %s
 
-int v1 __attribute__((no_sanitize("address"))); // expected-error{{'no_sanitize' attribute only applies to functions and methods}}
-
 int f1() __attribute__((no_sanitize)); // expected-error{{'no_sanitize' attribute takes at least 1 argument}}
 
 int f2() __attribute__((no_sanitize(1))); // expected-error{{'no_sanitize' attribute requires a string}}

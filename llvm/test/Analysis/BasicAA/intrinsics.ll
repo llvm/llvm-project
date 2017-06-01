@@ -38,6 +38,6 @@ entry:
 declare <8 x i16> @llvm.arm.neon.vld1.v8i16.p0i8(i8*, i32) nounwind readonly
 declare void @llvm.arm.neon.vst1.p0i8.v8i16(i8*, <8 x i16>, i32) nounwind
 
-; CHECK: attributes #0 = { nounwind readonly argmemonly }
-; CHECK: attributes #1 = { nounwind argmemonly }
+; CHECK: attributes #0 = { argmemonly nounwind readonly }
+; CHECK: attributes #1 = { argmemonly nounwind }
 ; CHECK: attributes [[ATTR]] = { nounwind }

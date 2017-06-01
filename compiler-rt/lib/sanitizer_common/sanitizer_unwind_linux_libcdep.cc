@@ -48,6 +48,11 @@ unwind_backtrace_signal_arch_func unwind_backtrace_signal_arch;
 
 #if SANITIZER_ANDROID
 void SanitizerInitializeUnwinder() {
+  if (AndroidGetApiLevel() >= ANDROID_LOLLIPOP_MR1) return;
+
+  // Pre-lollipop Android can not unwind through signal handler frames with
+  // libgcc unwinder, but it has a libcorkscrew.so library with the necessary
+  // workarounds.
   void *p = dlopen("libcorkscrew.so", RTLD_LAZY);
   if (!p) {
     VReport(1,
@@ -103,6 +108,11 @@ _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
   UnwindTraceArg *arg = (UnwindTraceArg*)param;
   CHECK_LT(arg->stack->size, arg->max_depth);
   uptr pc = Unwind_GetIP(ctx);
+  const uptr kPageSize = GetPageSizeCached();
+  // Let's assume that any pointer in the 0th page (i.e. <0x1000 on i386 and
+  // x86_64) is invalid and stop unwinding here.  If we're adding support for
+  // a platform where this isn't true, we need to reconsider this check.
+  if (pc < kPageSize) return UNWIND_STOP;
   arg->stack->trace_buffer[arg->stack->size++] = pc;
   if (arg->stack->size == arg->max_depth) return UNWIND_STOP;
   return UNWIND_CONTINUE;

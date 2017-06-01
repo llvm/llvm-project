@@ -11,9 +11,7 @@ void *Thread(void *a) {
 
 int main() {
   barrier_init(&barrier, 2);
-  fprintf(stderr, "addr2=");
-  print_address(&x);
-  fprintf(stderr, "\n");
+  print_address("addr2=", 1, &x);
   pthread_t t;
   pthread_create(&t, 0, Thread, 0);
   x = 0;
@@ -23,5 +21,5 @@ int main() {
 
 // CHECK: addr2=[[ADDR2:0x[0-9,a-f]+]]
 // CHECK: WARNING: ThreadSanitizer: data race
-// CHECK: Location is global 'x' of size 4 at [[ADDR2]] ({{.*}}+0x{{[0-9,a-f]+}})
+// CHECK: Location is global 'x' {{(of size 4 )?}}at [[ADDR2]] ({{.*}}+0x{{[0-9,a-f]+}})
 

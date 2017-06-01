@@ -21,6 +21,8 @@ typedef struct CGColor * __attribute__((NSObject)) CGColorRefNoNSObject; // no-w
 @property (nonatomic, retain) CGColorRefNoNSObject color;
 // rdar://problem/12197822
 @property (strong) __attribute__((NSObject)) CFTypeRef myObj; // no-warning
+//rdar://problem/27747154
+@property (strong, nullable) CGColorRefNoNSObject color2; // no-warning
 @end
 
 void setProperty(id self, id value)  {

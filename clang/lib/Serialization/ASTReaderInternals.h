@@ -13,14 +13,12 @@
 #ifndef LLVM_CLANG_LIB_SERIALIZATION_ASTREADERINTERNALS_H
 #define LLVM_CLANG_LIB_SERIALIZATION_ASTREADERINTERNALS_H
 
+#include "MultiOnDiskHashTable.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/OnDiskHashTable.h"
-#include "MultiOnDiskHashTable.h"
 #include <utility>
 
 namespace clang {
@@ -112,17 +110,6 @@ public:
 
 struct DeclContextLookupTable {
   MultiOnDiskHashTable<ASTDeclContextNameLookupTrait> Table;
-
-  // These look redundant, but don't remove them -- they work around MSVC 2013's
-  // inability to synthesize move operations. Without them, the
-  // MultiOnDiskHashTable will be copied (despite being move-only!).
-  DeclContextLookupTable() : Table() {}
-  DeclContextLookupTable(DeclContextLookupTable &&O)
-      : Table(std::move(O.Table)) {}
-  DeclContextLookupTable &operator=(DeclContextLookupTable &&O) {
-    Table = std::move(O.Table);
-    return *this;
-  }
 };
 
 /// \brief Base class for the trait describing the on-disk hash table for the
@@ -259,7 +246,7 @@ public:
   struct internal_key_type {
     off_t Size;
     time_t ModTime;
-    const char *Filename;
+    StringRef Filename;
     bool Imported;
   };
   typedef const internal_key_type &internal_key_ref;

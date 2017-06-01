@@ -303,7 +303,7 @@ Currently, there are 2 modes:
 
  DynamicDispatchModeConservative - Models the case where the dynamic type
    information is assumed to be incorrect, for example, implies that the method 
-   definition is overriden in a subclass. In such cases, ExprEngine does not 
+   definition is overridden in a subclass. In such cases, ExprEngine does not 
    inline the methods sent to the receiver (MemoryRegion), even if a candidate 
    definition is available. This mode is conservative about simulating the 
    effects of a call.

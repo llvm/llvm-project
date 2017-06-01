@@ -106,6 +106,40 @@ TEST(MathExtras, findLastSet) {
   EXPECT_EQ(5u, findLastSet(NZ64));
 }
 
+TEST(MathExtras, isIntN) {
+  EXPECT_TRUE(isIntN(16, 32767));
+  EXPECT_FALSE(isIntN(16, 32768));
+}
+
+TEST(MathExtras, isUIntN) {
+  EXPECT_TRUE(isUIntN(16, 65535));
+  EXPECT_FALSE(isUIntN(16, 65536));
+  EXPECT_TRUE(isUIntN(1, 0));
+  EXPECT_TRUE(isUIntN(6, 63));
+}
+
+TEST(MathExtras, maxIntN) {
+  EXPECT_EQ(32767, maxIntN(16));
+  EXPECT_EQ(2147483647, maxIntN(32));
+  EXPECT_EQ(std::numeric_limits<int32_t>::max(), maxIntN(32));
+  EXPECT_EQ(std::numeric_limits<int64_t>::max(), maxIntN(64));
+}
+
+TEST(MathExtras, minIntN) {
+  EXPECT_EQ(-32768LL, minIntN(16));
+  EXPECT_EQ(-64LL, minIntN(7));
+  EXPECT_EQ(std::numeric_limits<int32_t>::min(), minIntN(32));
+  EXPECT_EQ(std::numeric_limits<int64_t>::min(), minIntN(64));
+}
+
+TEST(MathExtras, maxUIntN) {
+  EXPECT_EQ(0xffffULL, maxUIntN(16));
+  EXPECT_EQ(0xffffffffULL, maxUIntN(32));
+  EXPECT_EQ(0xffffffffffffffffULL, maxUIntN(64));
+  EXPECT_EQ(1ULL, maxUIntN(1));
+  EXPECT_EQ(0x0fULL, maxUIntN(4));
+}
+
 TEST(MathExtras, reverseBits) {
   uint8_t NZ8 = 42;
   uint16_t NZ16 = 42;
@@ -129,6 +163,18 @@ TEST(MathExtras, isPowerOf2_64) {
   EXPECT_TRUE(isPowerOf2_64(1LL << 12));
   EXPECT_FALSE(isPowerOf2_64((1LL << 53) + 3));
   EXPECT_FALSE(isPowerOf2_64(0xABCDEF0ABCDEF0LL));
+}
+
+TEST(MathExtras, PowerOf2Ceil) {
+  EXPECT_EQ(0U, PowerOf2Ceil(0U));
+  EXPECT_EQ(8U, PowerOf2Ceil(8U));
+  EXPECT_EQ(8U, PowerOf2Ceil(7U));
+}
+
+TEST(MathExtras, PowerOf2Floor) {
+  EXPECT_EQ(0U, PowerOf2Floor(0U));
+  EXPECT_EQ(8U, PowerOf2Floor(8U));
+  EXPECT_EQ(4U, PowerOf2Floor(7U));
 }
 
 TEST(MathExtras, ByteSwap_32) {
@@ -163,7 +209,7 @@ TEST(MathExtras, FloatBits) {
 
 TEST(MathExtras, DoubleBits) {
   static const double kValue = 87987234.983498;
-  EXPECT_FLOAT_EQ(kValue, BitsToDouble(DoubleToBits(kValue)));
+  EXPECT_DOUBLE_EQ(kValue, BitsToDouble(DoubleToBits(kValue)));
 }
 
 TEST(MathExtras, MinAlign) {
@@ -179,15 +225,221 @@ TEST(MathExtras, NextPowerOf2) {
   EXPECT_EQ(256u, NextPowerOf2(128));
 }
 
-TEST(MathExtras, RoundUpToAlignment) {
-  EXPECT_EQ(8u, RoundUpToAlignment(5, 8));
-  EXPECT_EQ(24u, RoundUpToAlignment(17, 8));
-  EXPECT_EQ(0u, RoundUpToAlignment(~0LL, 8));
+TEST(MathExtras, alignTo) {
+  EXPECT_EQ(8u, alignTo(5, 8));
+  EXPECT_EQ(24u, alignTo(17, 8));
+  EXPECT_EQ(0u, alignTo(~0LL, 8));
 
-  EXPECT_EQ(7u, RoundUpToAlignment(5, 8, 7));
-  EXPECT_EQ(17u, RoundUpToAlignment(17, 8, 1));
-  EXPECT_EQ(3u, RoundUpToAlignment(~0LL, 8, 3));
-  EXPECT_EQ(552u, RoundUpToAlignment(321, 255, 42));
+  EXPECT_EQ(7u, alignTo(5, 8, 7));
+  EXPECT_EQ(17u, alignTo(17, 8, 1));
+  EXPECT_EQ(3u, alignTo(~0LL, 8, 3));
+  EXPECT_EQ(552u, alignTo(321, 255, 42));
 }
 
+template<typename T>
+void SaturatingAddTestHelper()
+{
+  const T Max = std::numeric_limits<T>::max();
+  bool ResultOverflowed;
+
+  EXPECT_EQ(T(3), SaturatingAdd(T(1), T(2)));
+  EXPECT_EQ(T(3), SaturatingAdd(T(1), T(2), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(Max, T(1)));
+  EXPECT_EQ(Max, SaturatingAdd(Max, T(1), &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(T(1), T(Max - 1)));
+  EXPECT_EQ(Max, SaturatingAdd(T(1), T(Max - 1), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(T(1), Max));
+  EXPECT_EQ(Max, SaturatingAdd(T(1), Max, &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingAdd(Max, Max));
+  EXPECT_EQ(Max, SaturatingAdd(Max, Max, &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
 }
+
+TEST(MathExtras, SaturatingAdd) {
+  SaturatingAddTestHelper<uint8_t>();
+  SaturatingAddTestHelper<uint16_t>();
+  SaturatingAddTestHelper<uint32_t>();
+  SaturatingAddTestHelper<uint64_t>();
+}
+
+template<typename T>
+void SaturatingMultiplyTestHelper()
+{
+  const T Max = std::numeric_limits<T>::max();
+  bool ResultOverflowed;
+
+  // Test basic multiplication.
+  EXPECT_EQ(T(6), SaturatingMultiply(T(2), T(3)));
+  EXPECT_EQ(T(6), SaturatingMultiply(T(2), T(3), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(T(6), SaturatingMultiply(T(3), T(2)));
+  EXPECT_EQ(T(6), SaturatingMultiply(T(3), T(2), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  // Test multiplication by zero.
+  EXPECT_EQ(T(0), SaturatingMultiply(T(0), T(0)));
+  EXPECT_EQ(T(0), SaturatingMultiply(T(0), T(0), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(T(0), SaturatingMultiply(T(1), T(0)));
+  EXPECT_EQ(T(0), SaturatingMultiply(T(1), T(0), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(T(0), SaturatingMultiply(T(0), T(1)));
+  EXPECT_EQ(T(0), SaturatingMultiply(T(0), T(1), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(T(0), SaturatingMultiply(Max, T(0)));
+  EXPECT_EQ(T(0), SaturatingMultiply(Max, T(0), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(T(0), SaturatingMultiply(T(0), Max));
+  EXPECT_EQ(T(0), SaturatingMultiply(T(0), Max, &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  // Test multiplication by maximum value.
+  EXPECT_EQ(Max, SaturatingMultiply(Max, T(2)));
+  EXPECT_EQ(Max, SaturatingMultiply(Max, T(2), &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingMultiply(T(2), Max));
+  EXPECT_EQ(Max, SaturatingMultiply(T(2), Max, &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingMultiply(Max, Max));
+  EXPECT_EQ(Max, SaturatingMultiply(Max, Max, &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  // Test interesting boundary conditions for algorithm -
+  // ((1 << A) - 1) * ((1 << B) + K) for K in [-1, 0, 1]
+  // and A + B == std::numeric_limits<T>::digits.
+  // We expect overflow iff A > B and K = 1.
+  const int Digits = std::numeric_limits<T>::digits;
+  for (int A = 1, B = Digits - 1; B >= 1; ++A, --B) {
+    for (int K = -1; K <= 1; ++K) {
+      T X = (T(1) << A) - T(1);
+      T Y = (T(1) << B) + K;
+      bool OverflowExpected = A > B && K == 1;
+
+      if(OverflowExpected) {
+        EXPECT_EQ(Max, SaturatingMultiply(X, Y));
+        EXPECT_EQ(Max, SaturatingMultiply(X, Y, &ResultOverflowed));
+        EXPECT_TRUE(ResultOverflowed);
+      } else {
+        EXPECT_EQ(X * Y, SaturatingMultiply(X, Y));
+        EXPECT_EQ(X * Y, SaturatingMultiply(X, Y, &ResultOverflowed));
+        EXPECT_FALSE(ResultOverflowed);
+      }
+    }
+  }
+}
+
+TEST(MathExtras, SaturatingMultiply) {
+  SaturatingMultiplyTestHelper<uint8_t>();
+  SaturatingMultiplyTestHelper<uint16_t>();
+  SaturatingMultiplyTestHelper<uint32_t>();
+  SaturatingMultiplyTestHelper<uint64_t>();
+}
+
+template<typename T>
+void SaturatingMultiplyAddTestHelper()
+{
+  const T Max = std::numeric_limits<T>::max();
+  bool ResultOverflowed;
+
+  // Test basic multiply-add.
+  EXPECT_EQ(T(16), SaturatingMultiplyAdd(T(2), T(3), T(10)));
+  EXPECT_EQ(T(16), SaturatingMultiplyAdd(T(2), T(3), T(10), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  // Test multiply overflows, add doesn't overflow
+  EXPECT_EQ(Max, SaturatingMultiplyAdd(Max, Max, T(0), &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  // Test multiply doesn't overflow, add overflows
+  EXPECT_EQ(Max, SaturatingMultiplyAdd(T(1), T(1), Max, &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  // Test multiply-add with Max as operand
+  EXPECT_EQ(Max, SaturatingMultiplyAdd(T(1), T(1), Max, &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingMultiplyAdd(T(1), Max, T(1), &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingMultiplyAdd(Max, Max, T(1), &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  EXPECT_EQ(Max, SaturatingMultiplyAdd(Max, Max, Max, &ResultOverflowed));
+  EXPECT_TRUE(ResultOverflowed);
+
+  // Test multiply-add with 0 as operand
+  EXPECT_EQ(T(1), SaturatingMultiplyAdd(T(1), T(1), T(0), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(T(1), SaturatingMultiplyAdd(T(1), T(0), T(1), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(T(1), SaturatingMultiplyAdd(T(0), T(0), T(1), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+  EXPECT_EQ(T(0), SaturatingMultiplyAdd(T(0), T(0), T(0), &ResultOverflowed));
+  EXPECT_FALSE(ResultOverflowed);
+
+}
+
+TEST(MathExtras, SaturatingMultiplyAdd) {
+  SaturatingMultiplyAddTestHelper<uint8_t>();
+  SaturatingMultiplyAddTestHelper<uint16_t>();
+  SaturatingMultiplyAddTestHelper<uint32_t>();
+  SaturatingMultiplyAddTestHelper<uint64_t>();
+}
+
+TEST(MathExtras, IsShiftedUInt) {
+  EXPECT_TRUE((isShiftedUInt<1, 0>(0)));
+  EXPECT_TRUE((isShiftedUInt<1, 0>(1)));
+  EXPECT_FALSE((isShiftedUInt<1, 0>(2)));
+  EXPECT_FALSE((isShiftedUInt<1, 0>(3)));
+  EXPECT_FALSE((isShiftedUInt<1, 0>(0x8000000000000000)));
+  EXPECT_TRUE((isShiftedUInt<1, 63>(0x8000000000000000)));
+  EXPECT_TRUE((isShiftedUInt<2, 62>(0xC000000000000000)));
+  EXPECT_FALSE((isShiftedUInt<2, 62>(0xE000000000000000)));
+
+  // 0x201 is ten bits long and has a 1 in the MSB and LSB.
+  EXPECT_TRUE((isShiftedUInt<10, 5>(uint64_t(0x201) << 5)));
+  EXPECT_FALSE((isShiftedUInt<10, 5>(uint64_t(0x201) << 4)));
+  EXPECT_FALSE((isShiftedUInt<10, 5>(uint64_t(0x201) << 6)));
+}
+
+TEST(MathExtras, IsShiftedInt) {
+  EXPECT_TRUE((isShiftedInt<1, 0>(0)));
+  EXPECT_TRUE((isShiftedInt<1, 0>(-1)));
+  EXPECT_FALSE((isShiftedInt<1, 0>(2)));
+  EXPECT_FALSE((isShiftedInt<1, 0>(3)));
+  EXPECT_FALSE((isShiftedInt<1, 0>(0x8000000000000000)));
+  EXPECT_TRUE((isShiftedInt<1, 63>(0x8000000000000000)));
+  EXPECT_TRUE((isShiftedInt<2, 62>(0xC000000000000000)));
+  EXPECT_FALSE((isShiftedInt<2, 62>(0xE000000000000000)));
+
+  // 0x201 is ten bits long and has a 1 in the MSB and LSB.
+  EXPECT_TRUE((isShiftedInt<11, 5>(int64_t(0x201) << 5)));
+  EXPECT_FALSE((isShiftedInt<11, 5>(int64_t(0x201) << 3)));
+  EXPECT_FALSE((isShiftedInt<11, 5>(int64_t(0x201) << 6)));
+  EXPECT_TRUE((isShiftedInt<11, 5>(-(int64_t(0x201) << 5))));
+  EXPECT_FALSE((isShiftedInt<11, 5>(-(int64_t(0x201) << 3))));
+  EXPECT_FALSE((isShiftedInt<11, 5>(-(int64_t(0x201) << 6))));
+
+  EXPECT_TRUE((isShiftedInt<6, 10>(-(int64_t(1) << 15))));
+  EXPECT_FALSE((isShiftedInt<6, 10>(int64_t(1) << 15)));
+}
+
+} // namespace

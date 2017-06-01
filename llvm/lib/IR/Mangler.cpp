@@ -99,7 +99,7 @@ static void addByteCountSuffix(raw_ostream &OS, const Function *F,
       Ty = cast<PointerType>(Ty)->getElementType();
     // Size should be aligned to pointer size.
     unsigned PtrSize = DL.getPointerSize();
-    ArgWords += RoundUpToAlignment(DL.getTypeAllocSize(Ty), PtrSize);
+    ArgWords += alignTo(DL.getTypeAllocSize(Ty), PtrSize);
   }
 
   OS << '@' << ArgWords;
@@ -121,7 +121,7 @@ void Mangler::getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
     // already.
     unsigned &ID = AnonGlobalIDs[GV];
     if (ID == 0)
-      ID = NextAnonGlobalID++;
+      ID = AnonGlobalIDs.size();
 
     // Must mangle the global into a unique ID.
     getNameWithPrefixImpl(OS, "__unnamed_" + Twine(ID), DL, PrefixTy);

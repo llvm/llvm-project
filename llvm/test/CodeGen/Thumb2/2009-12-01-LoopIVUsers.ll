@@ -8,7 +8,6 @@ entry:
 ; -- The loop following the load should only use a single add-literation
 ;    instruction.
 ; CHECK: vldr
-; CHECK: adds r{{[0-9]+.*}}#1
 ; CHECK-NOT: adds
 ; CHECK: subsections_via_symbols
 

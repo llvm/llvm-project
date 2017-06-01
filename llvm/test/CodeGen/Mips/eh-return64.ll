@@ -1,7 +1,7 @@
-; RUN: llc -march=mips64el -mcpu=mips4    -asm-show-inst < %s | FileCheck %s -check-prefix=CHECK -check-prefix=NOT-R6
-; RUN: llc -march=mips64el -mcpu=mips64   -asm-show-inst < %s | FileCheck %s -check-prefix=CHECK -check-prefix=NOT-R6
-; RUN: llc -march=mips64el -mcpu=mips64r2 -asm-show-inst < %s | FileCheck %s -check-prefix=CHECK -check-prefix=NOT-R6
-; RUN: llc -march=mips64el -mcpu=mips64r6 -asm-show-inst < %s | FileCheck %s -check-prefix=CHECK -check-prefix=R6
+; RUN: llc -march=mips64el -mcpu=mips4    -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
+; RUN: llc -march=mips64el -mcpu=mips64   -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
+; RUN: llc -march=mips64el -mcpu=mips64r2 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
+; RUN: llc -march=mips64el -mcpu=mips64r6 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,R6
 
 declare void @llvm.eh.return.i64(i64, i8*)
 declare void @foo(...)

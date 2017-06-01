@@ -8,24 +8,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Action.h"
+#include "clang/Driver/ToolChain.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Regex.h"
 #include <cassert>
 using namespace clang::driver;
 using namespace llvm::opt;
 
-Action::~Action() {
-  if (OwnsInputs) {
-    for (iterator it = begin(), ie = end(); it != ie; ++it)
-      delete *it;
-  }
-}
+Action::~Action() {}
 
 const char *Action::getClassName(ActionClass AC) {
   switch (AC) {
   case InputClass: return "input";
   case BindArchClass: return "bind-arch";
-  case CudaDeviceClass: return "cuda-device";
-  case CudaHostClass: return "cuda-host";
+  case OffloadClass:
+    return "offload";
   case PreprocessJobClass: return "preprocessor";
   case PrecompileJobClass: return "precompiler";
   case AnalyzeJobClass: return "analyzer";
@@ -38,9 +37,117 @@ const char *Action::getClassName(ActionClass AC) {
   case DsymutilJobClass: return "dsymutil";
   case VerifyDebugInfoJobClass: return "verify-debug-info";
   case VerifyPCHJobClass: return "verify-pch";
+  case OffloadBundlingJobClass:
+    return "clang-offload-bundler";
+  case OffloadUnbundlingJobClass:
+    return "clang-offload-unbundler";
   }
 
   llvm_unreachable("invalid class");
+}
+
+void Action::propagateDeviceOffloadInfo(OffloadKind OKind, const char *OArch) {
+  // Offload action set its own kinds on their dependences.
+  if (Kind == OffloadClass)
+    return;
+  // Unbundling actions use the host kinds.
+  if (Kind == OffloadUnbundlingJobClass)
+    return;
+
+  assert((OffloadingDeviceKind == OKind || OffloadingDeviceKind == OFK_None) &&
+         "Setting device kind to a different device??");
+  assert(!ActiveOffloadKindMask && "Setting a device kind in a host action??");
+  OffloadingDeviceKind = OKind;
+  OffloadingArch = OArch;
+
+  for (auto *A : Inputs)
+    A->propagateDeviceOffloadInfo(OffloadingDeviceKind, OArch);
+}
+
+void Action::propagateHostOffloadInfo(unsigned OKinds, const char *OArch) {
+  // Offload action set its own kinds on their dependences.
+  if (Kind == OffloadClass)
+    return;
+
+  assert(OffloadingDeviceKind == OFK_None &&
+         "Setting a host kind in a device action.");
+  ActiveOffloadKindMask |= OKinds;
+  OffloadingArch = OArch;
+
+  for (auto *A : Inputs)
+    A->propagateHostOffloadInfo(ActiveOffloadKindMask, OArch);
+}
+
+void Action::propagateOffloadInfo(const Action *A) {
+  if (unsigned HK = A->getOffloadingHostActiveKinds())
+    propagateHostOffloadInfo(HK, A->getOffloadingArch());
+  else
+    propagateDeviceOffloadInfo(A->getOffloadingDeviceKind(),
+                               A->getOffloadingArch());
+}
+
+std::string Action::getOffloadingKindPrefix() const {
+  switch (OffloadingDeviceKind) {
+  case OFK_None:
+    break;
+  case OFK_Host:
+    llvm_unreachable("Host kind is not an offloading device kind.");
+    break;
+  case OFK_Cuda:
+    return "device-cuda";
+  case OFK_OpenMP:
+    return "device-openmp";
+
+    // TODO: Add other programming models here.
+  }
+
+  if (!ActiveOffloadKindMask)
+    return "";
+
+  std::string Res("host");
+  if (ActiveOffloadKindMask & OFK_Cuda)
+    Res += "-cuda";
+  if (ActiveOffloadKindMask & OFK_OpenMP)
+    Res += "-openmp";
+
+  // TODO: Add other programming models here.
+
+  return Res;
+}
+
+/// Return a string that can be used as prefix in order to generate unique files
+/// for each offloading kind.
+std::string
+Action::GetOffloadingFileNamePrefix(OffloadKind Kind,
+                                    llvm::StringRef NormalizedTriple,
+                                    bool CreatePrefixForHost) {
+  // Don't generate prefix for host actions unless required.
+  if (!CreatePrefixForHost && (Kind == OFK_None || Kind == OFK_Host))
+    return "";
+
+  std::string Res("-");
+  Res += GetOffloadKindName(Kind);
+  Res += "-";
+  Res += NormalizedTriple;
+  return Res;
+}
+
+/// Return a string with the offload kind name. If that is not defined, we
+/// assume 'host'.
+llvm::StringRef Action::GetOffloadKindName(OffloadKind Kind) {
+  switch (Kind) {
+  case OFK_None:
+  case OFK_Host:
+    return "host";
+  case OFK_Cuda:
+    return "cuda";
+  case OFK_OpenMP:
+    return "openmp";
+
+    // TODO: Add other programming models here.
+  }
+
+  llvm_unreachable("invalid offload kind");
 }
 
 void InputAction::anchor() {}
@@ -51,36 +158,146 @@ InputAction::InputAction(const Arg &_Input, types::ID _Type)
 
 void BindArchAction::anchor() {}
 
-BindArchAction::BindArchAction(std::unique_ptr<Action> Input,
-                               const char *_ArchName)
-    : Action(BindArchClass, std::move(Input)), ArchName(_ArchName) {}
+BindArchAction::BindArchAction(Action *Input, llvm::StringRef ArchName)
+    : Action(BindArchClass, Input), ArchName(ArchName) {}
 
-void CudaDeviceAction::anchor() {}
+void OffloadAction::anchor() {}
 
-CudaDeviceAction::CudaDeviceAction(std::unique_ptr<Action> Input,
-                                   const char *ArchName,
-                                   const char *DeviceTriple, bool AtTopLevel)
-    : Action(CudaDeviceClass, std::move(Input)), GpuArchName(ArchName),
-      DeviceTriple(DeviceTriple), AtTopLevel(AtTopLevel) {}
+OffloadAction::OffloadAction(const HostDependence &HDep)
+    : Action(OffloadClass, HDep.getAction()), HostTC(HDep.getToolChain()) {
+  OffloadingArch = HDep.getBoundArch();
+  ActiveOffloadKindMask = HDep.getOffloadKinds();
+  HDep.getAction()->propagateHostOffloadInfo(HDep.getOffloadKinds(),
+                                             HDep.getBoundArch());
+}
 
-void CudaHostAction::anchor() {}
+OffloadAction::OffloadAction(const DeviceDependences &DDeps, types::ID Ty)
+    : Action(OffloadClass, DDeps.getActions(), Ty),
+      DevToolChains(DDeps.getToolChains()) {
+  auto &OKinds = DDeps.getOffloadKinds();
+  auto &BArchs = DDeps.getBoundArchs();
 
-CudaHostAction::CudaHostAction(std::unique_ptr<Action> Input,
-                               const ActionList &DeviceActions,
-                               const char *DeviceTriple)
-    : Action(CudaHostClass, std::move(Input)), DeviceActions(DeviceActions),
-      DeviceTriple(DeviceTriple) {}
+  // If all inputs agree on the same kind, use it also for this action.
+  if (llvm::all_of(OKinds, [&](OffloadKind K) { return K == OKinds.front(); }))
+    OffloadingDeviceKind = OKinds.front();
 
-CudaHostAction::~CudaHostAction() {
-  for (auto &DA : DeviceActions)
-    delete DA;
+  // If we have a single dependency, inherit the architecture from it.
+  if (OKinds.size() == 1)
+    OffloadingArch = BArchs.front();
+
+  // Propagate info to the dependencies.
+  for (unsigned i = 0, e = getInputs().size(); i != e; ++i)
+    getInputs()[i]->propagateDeviceOffloadInfo(OKinds[i], BArchs[i]);
+}
+
+OffloadAction::OffloadAction(const HostDependence &HDep,
+                             const DeviceDependences &DDeps)
+    : Action(OffloadClass, HDep.getAction()), HostTC(HDep.getToolChain()),
+      DevToolChains(DDeps.getToolChains()) {
+  // We use the kinds of the host dependence for this action.
+  OffloadingArch = HDep.getBoundArch();
+  ActiveOffloadKindMask = HDep.getOffloadKinds();
+  HDep.getAction()->propagateHostOffloadInfo(HDep.getOffloadKinds(),
+                                             HDep.getBoundArch());
+
+  // Add device inputs and propagate info to the device actions. Do work only if
+  // we have dependencies.
+  for (unsigned i = 0, e = DDeps.getActions().size(); i != e; ++i)
+    if (auto *A = DDeps.getActions()[i]) {
+      getInputs().push_back(A);
+      A->propagateDeviceOffloadInfo(DDeps.getOffloadKinds()[i],
+                                    DDeps.getBoundArchs()[i]);
+    }
+}
+
+void OffloadAction::doOnHostDependence(const OffloadActionWorkTy &Work) const {
+  if (!HostTC)
+    return;
+  assert(!getInputs().empty() && "No dependencies for offload action??");
+  auto *A = getInputs().front();
+  Work(A, HostTC, A->getOffloadingArch());
+}
+
+void OffloadAction::doOnEachDeviceDependence(
+    const OffloadActionWorkTy &Work) const {
+  auto I = getInputs().begin();
+  auto E = getInputs().end();
+  if (I == E)
+    return;
+
+  // We expect to have the same number of input dependences and device tool
+  // chains, except if we also have a host dependence. In that case we have one
+  // more dependence than we have device tool chains.
+  assert(getInputs().size() == DevToolChains.size() + (HostTC ? 1 : 0) &&
+         "Sizes of action dependences and toolchains are not consistent!");
+
+  // Skip host action
+  if (HostTC)
+    ++I;
+
+  auto TI = DevToolChains.begin();
+  for (; I != E; ++I, ++TI)
+    Work(*I, *TI, (*I)->getOffloadingArch());
+}
+
+void OffloadAction::doOnEachDependence(const OffloadActionWorkTy &Work) const {
+  doOnHostDependence(Work);
+  doOnEachDeviceDependence(Work);
+}
+
+void OffloadAction::doOnEachDependence(bool IsHostDependence,
+                                       const OffloadActionWorkTy &Work) const {
+  if (IsHostDependence)
+    doOnHostDependence(Work);
+  else
+    doOnEachDeviceDependence(Work);
+}
+
+bool OffloadAction::hasHostDependence() const { return HostTC != nullptr; }
+
+Action *OffloadAction::getHostDependence() const {
+  assert(hasHostDependence() && "Host dependence does not exist!");
+  assert(!getInputs().empty() && "No dependencies for offload action??");
+  return HostTC ? getInputs().front() : nullptr;
+}
+
+bool OffloadAction::hasSingleDeviceDependence(
+    bool DoNotConsiderHostActions) const {
+  if (DoNotConsiderHostActions)
+    return getInputs().size() == (HostTC ? 2 : 1);
+  return !HostTC && getInputs().size() == 1;
+}
+
+Action *
+OffloadAction::getSingleDeviceDependence(bool DoNotConsiderHostActions) const {
+  assert(hasSingleDeviceDependence(DoNotConsiderHostActions) &&
+         "Single device dependence does not exist!");
+  // The previous assert ensures the number of entries in getInputs() is
+  // consistent with what we are doing here.
+  return HostTC ? getInputs()[1] : getInputs().front();
+}
+
+void OffloadAction::DeviceDependences::add(Action &A, const ToolChain &TC,
+                                           const char *BoundArch,
+                                           OffloadKind OKind) {
+  DeviceActions.push_back(&A);
+  DeviceToolChains.push_back(&TC);
+  DeviceBoundArchs.push_back(BoundArch);
+  DeviceOffloadKinds.push_back(OKind);
+}
+
+OffloadAction::HostDependence::HostDependence(Action &A, const ToolChain &TC,
+                                              const char *BoundArch,
+                                              const DeviceDependences &DDeps)
+    : HostAction(A), HostToolChain(TC), HostBoundArch(BoundArch) {
+  for (auto K : DDeps.getOffloadKinds())
+    HostOffloadKinds |= K;
 }
 
 void JobAction::anchor() {}
 
-JobAction::JobAction(ActionClass Kind, std::unique_ptr<Action> Input,
-                     types::ID Type)
-    : Action(Kind, std::move(Input), Type) {}
+JobAction::JobAction(ActionClass Kind, Action *Input, types::ID Type)
+    : Action(Kind, Input, Type) {}
 
 JobAction::JobAction(ActionClass Kind, const ActionList &Inputs, types::ID Type)
   : Action(Kind, Inputs, Type) {
@@ -88,45 +305,38 @@ JobAction::JobAction(ActionClass Kind, const ActionList &Inputs, types::ID Type)
 
 void PreprocessJobAction::anchor() {}
 
-PreprocessJobAction::PreprocessJobAction(std::unique_ptr<Action> Input,
-                                         types::ID OutputType)
-    : JobAction(PreprocessJobClass, std::move(Input), OutputType) {}
+PreprocessJobAction::PreprocessJobAction(Action *Input, types::ID OutputType)
+    : JobAction(PreprocessJobClass, Input, OutputType) {}
 
 void PrecompileJobAction::anchor() {}
 
-PrecompileJobAction::PrecompileJobAction(std::unique_ptr<Action> Input,
-                                         types::ID OutputType)
-    : JobAction(PrecompileJobClass, std::move(Input), OutputType) {}
+PrecompileJobAction::PrecompileJobAction(Action *Input, types::ID OutputType)
+    : JobAction(PrecompileJobClass, Input, OutputType) {}
 
 void AnalyzeJobAction::anchor() {}
 
-AnalyzeJobAction::AnalyzeJobAction(std::unique_ptr<Action> Input,
-                                   types::ID OutputType)
-    : JobAction(AnalyzeJobClass, std::move(Input), OutputType) {}
+AnalyzeJobAction::AnalyzeJobAction(Action *Input, types::ID OutputType)
+    : JobAction(AnalyzeJobClass, Input, OutputType) {}
 
 void MigrateJobAction::anchor() {}
 
-MigrateJobAction::MigrateJobAction(std::unique_ptr<Action> Input,
-                                   types::ID OutputType)
-    : JobAction(MigrateJobClass, std::move(Input), OutputType) {}
+MigrateJobAction::MigrateJobAction(Action *Input, types::ID OutputType)
+    : JobAction(MigrateJobClass, Input, OutputType) {}
 
 void CompileJobAction::anchor() {}
 
-CompileJobAction::CompileJobAction(std::unique_ptr<Action> Input,
-                                   types::ID OutputType)
-    : JobAction(CompileJobClass, std::move(Input), OutputType) {}
+CompileJobAction::CompileJobAction(Action *Input, types::ID OutputType)
+    : JobAction(CompileJobClass, Input, OutputType) {}
 
 void BackendJobAction::anchor() {}
 
-BackendJobAction::BackendJobAction(std::unique_ptr<Action> Input,
-                                   types::ID OutputType)
-    : JobAction(BackendJobClass, std::move(Input), OutputType) {}
+BackendJobAction::BackendJobAction(Action *Input, types::ID OutputType)
+    : JobAction(BackendJobClass, Input, OutputType) {}
 
 void AssembleJobAction::anchor() {}
 
-AssembleJobAction::AssembleJobAction(std::unique_ptr<Action> Input,
-                                     types::ID OutputType)
-    : JobAction(AssembleJobClass, std::move(Input), OutputType) {}
+AssembleJobAction::AssembleJobAction(Action *Input, types::ID OutputType)
+    : JobAction(AssembleJobClass, Input, OutputType) {}
 
 void LinkJobAction::anchor() {}
 
@@ -148,21 +358,30 @@ DsymutilJobAction::DsymutilJobAction(ActionList &Inputs, types::ID Type)
 
 void VerifyJobAction::anchor() {}
 
-VerifyJobAction::VerifyJobAction(ActionClass Kind,
-                                 std::unique_ptr<Action> Input, types::ID Type)
-    : JobAction(Kind, std::move(Input), Type) {
+VerifyJobAction::VerifyJobAction(ActionClass Kind, Action *Input,
+                                 types::ID Type)
+    : JobAction(Kind, Input, Type) {
   assert((Kind == VerifyDebugInfoJobClass || Kind == VerifyPCHJobClass) &&
          "ActionClass is not a valid VerifyJobAction");
 }
 
 void VerifyDebugInfoJobAction::anchor() {}
 
-VerifyDebugInfoJobAction::VerifyDebugInfoJobAction(
-    std::unique_ptr<Action> Input, types::ID Type)
-    : VerifyJobAction(VerifyDebugInfoJobClass, std::move(Input), Type) {}
+VerifyDebugInfoJobAction::VerifyDebugInfoJobAction(Action *Input,
+                                                   types::ID Type)
+    : VerifyJobAction(VerifyDebugInfoJobClass, Input, Type) {}
 
 void VerifyPCHJobAction::anchor() {}
 
-VerifyPCHJobAction::VerifyPCHJobAction(std::unique_ptr<Action> Input,
-                                       types::ID Type)
-    : VerifyJobAction(VerifyPCHJobClass, std::move(Input), Type) {}
+VerifyPCHJobAction::VerifyPCHJobAction(Action *Input, types::ID Type)
+    : VerifyJobAction(VerifyPCHJobClass, Input, Type) {}
+
+void OffloadBundlingJobAction::anchor() {}
+
+OffloadBundlingJobAction::OffloadBundlingJobAction(ActionList &Inputs)
+    : JobAction(OffloadBundlingJobClass, Inputs, Inputs.front()->getType()) {}
+
+void OffloadUnbundlingJobAction::anchor() {}
+
+OffloadUnbundlingJobAction::OffloadUnbundlingJobAction(Action *Input)
+    : JobAction(OffloadUnbundlingJobClass, Input, Input->getType()) {}

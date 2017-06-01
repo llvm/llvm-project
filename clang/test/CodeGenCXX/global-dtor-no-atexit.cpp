@@ -43,4 +43,4 @@ void func() {
   static A a1, a2;
 }
 
-// CHECK: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }

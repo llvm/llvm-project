@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -fexceptions -fcxx-exceptions -fprofile-instr-generate -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name trycatch.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -fexceptions -fcxx-exceptions -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name trycatch.cpp %s | FileCheck %s
 
 class Error {
 };
@@ -23,7 +23,7 @@ void func(int i) {                    // CHECK-NEXT: File 0, [[@LINE]]:18 -> {{[
                                       // CHECK-NEXT: main
 int main() {                          // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+13]]:2 = #0
   int j = 1;
-  try {
+  try {                               // CHECK-NEXT: File 0, [[@LINE]]:7 -> [[@LINE+2]]:4 = #0
     func(j);
   } catch(const Error &e) {           // CHECK-NEXT: File 0, [[@LINE]]:27 -> [[@LINE+2]]:4 = #2
     j = 1;

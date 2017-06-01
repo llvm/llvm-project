@@ -126,3 +126,48 @@ define i32 @mul40_32_minsize(i32 %A) minsize {
     %mul = mul i32 %A, 40
     ret i32 %mul
 }
+
+define i32 @mul33_32(i32 %A) {
+; X64-LABEL: mul33_32:
+; X64: shll
+; X64-NEXT: leal
+; X86-LABEL: mul33_32:
+; X86: shll
+; X86-NEXT: addl
+    %mul = mul i32 %A, 33
+    ret i32 %mul
+}
+
+define i32 @mul31_32(i32 %A) {
+; X64-LABEL: mul31_32:
+; X64: shll
+; X64-NEXT: subl
+; X86-LABEL: mul31_32:
+; X86: shll
+; X86-NEXT: subl
+    %mul = mul i32 %A, 31
+    ret i32 %mul
+}
+
+define i32 @mul0_32(i32 %A) {
+; X64-LABEL: mul0_32:
+; X64: xorl	%eax, %eax
+    %mul = mul i32 %A, 0
+    ret i32 %mul
+}
+
+define i32 @mul4294967295_32(i32 %A) {
+; X64-LABEL: mul4294967295_32:
+; X64: negl	%edi
+; X64-NEXT:	movl	%edi, %eax
+    %mul = mul i32 %A, 4294967295
+    ret i32 %mul
+}
+
+define i64 @mul18446744073709551615_64(i64 %A) {
+; X64-LABEL: mul18446744073709551615_64:
+; X64: negq	%rdi
+; X64-NEXT:	movq	%rdi, %rax
+    %mul = mul i64 %A, 18446744073709551615
+    ret i64 %mul
+}

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-pc-win32 -disable-llvm-optzns -emit-llvm -o - -O1 %s | FileCheck %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -disable-llvm-passes -emit-llvm -o - -O1 %s | FileCheck %s
 //
 // Test that TBAA works in the Microsoft C++ ABI.  We used to error out while
 // attempting to mangle RTTI.

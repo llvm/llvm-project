@@ -22,17 +22,15 @@ endif()
 
 foreach(arch ${UBSAN_TEST_ARCH})
   set(UBSAN_TEST_TARGET_ARCH ${arch})
-  if(${arch} MATCHES "arm|aarch64")
-    # This is only true if we're cross-compiling.
-    set(UBSAN_TEST_TARGET_CFLAGS ${COMPILER_RT_TEST_COMPILER_CFLAGS})
-  else()
-    get_target_flags_for_arch(${arch} UBSAN_TEST_TARGET_CFLAGS)
-    string(REPLACE ";" " " UBSAN_TEST_TARGET_CFLAGS "${UBSAN_TEST_TARGET_CFLAGS}")
-  endif()
+  get_test_cc_for_arch(${arch} UBSAN_TEST_TARGET_CC UBSAN_TEST_TARGET_CFLAGS)
   add_ubsan_testsuite("Standalone" ubsan ${arch})
 
   if(COMPILER_RT_HAS_ASAN AND ";${ASAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
-    add_ubsan_testsuite("AddressSanitizer" asan ${arch})
+    # TODO(wwchrome): Re-enable ubsan for asan win 64-bit when ready.
+    # Disable ubsan with AddressSanitizer tests for Windows 64-bit.
+    if(NOT OS_NAME MATCHES "Windows" OR CMAKE_SIZEOF_VOID_P EQUAL 4)
+      add_ubsan_testsuite("AddressSanitizer" asan ${arch})
+    endif()
   endif()
   if(COMPILER_RT_HAS_MSAN AND ";${MSAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
     add_ubsan_testsuite("MemorySanitizer" msan ${arch})
@@ -45,4 +43,4 @@ endforeach()
 add_lit_testsuite(check-ubsan "Running UndefinedBehaviorSanitizer tests"
   ${UBSAN_TESTSUITES}
   DEPENDS ${UBSAN_TEST_DEPS})
-set_target_properties(check-ubsan PROPERTIES FOLDER "UBSan tests")
+set_target_properties(check-ubsan PROPERTIES FOLDER "Compiler-RT Misc")

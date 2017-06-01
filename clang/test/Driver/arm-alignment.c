@@ -83,11 +83,13 @@
 // CHECK-ALIGNED-ARM: "-target-feature" "+strict-align"
 // CHECK-ALIGNED-AARCH64: "-target-feature" "+strict-align"
 
-// Make sure that v6M cores always trigger the unsupported aligned accesses error
-// for all supported architecture triples.
+// Make sure that v6M cores and v8M Baseline always trigger the unsupported
+// aligned accesses error for all supported architecture triples.
 // RUN: not %clang -c -target thumbv6m-none-gnueabi -mcpu=cortex-m0 -munaligned-access %s 2>&1 | \
 // RUN:   FileCheck --check-prefix CHECK-UNALIGN-NOT-SUPPORTED %s
 // RUN: not %clang -c -target thumb-none-gnueabi -mcpu=cortex-m0 -munaligned-access %s 2>&1 | \
 // RUN:   FileCheck --check-prefix CHECK-UNALIGN-NOT-SUPPORTED %s
+// RUN: not %clang -c -target thumbv8m.base-none-gnueabi -munaligned-access %s 2>&1 | \
+// RUN:   FileCheck --check-prefix CHECK-UNALIGN-NOT-SUPPORTED %s
 
-// CHECK-UNALIGN-NOT-SUPPORTED: error: the v6m sub-architecture does not support unaligned accesses
+// CHECK-UNALIGN-NOT-SUPPORTED: error: the {{.*}} sub-architecture does not support unaligned accesses

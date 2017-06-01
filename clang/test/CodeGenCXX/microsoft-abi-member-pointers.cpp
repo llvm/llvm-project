@@ -3,16 +3,29 @@
 // RUN: %clang_cc1 -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 -DINCOMPLETE_VIRTUAL -fms-extensions -verify
 // RUN: %clang_cc1 -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 -DINCOMPLETE_VIRTUAL -DMEMFUN -fms-extensions -verify
 
+struct PR26313_Y;
+typedef void (PR26313_Y::*PR26313_FUNC)();
+struct PR26313_X {
+  PR26313_FUNC *ptr;
+  PR26313_X();
+};
+PR26313_X::PR26313_X() {}
+void PR26313_f(PR26313_FUNC *p) { delete p; }
+
+struct PR26313_Z;
+int PR26313_Z::**a = nullptr;
+int PR26313_Z::*b = *a;
+// CHECK-DAG: @"\01?a@@3PAPQPR26313_Z@@HA" = global %0* null, align 4
+// CHECK-DAG: @"\01?b@@3PQPR26313_Z@@HQ1@" = global { i32, i32, i32 } { i32 0, i32 0, i32 -1 }, align 4
+
 namespace PR20947 {
 struct A;
 int A::**a = nullptr;
-// CHECK: %[[opaque0:.*]] = type opaque
-// CHECK: %[[opaque1:.*]] = type opaque
-// CHECK: @"\01?a@PR20947@@3PAPQA@1@HA" = global %[[opaque0]]* null, align 4
+// CHECK-DAG: @"\01?a@PR20947@@3PAPQA@1@HA" = global %{{.*}}* null, align 4
 
 struct B;
 int B::*&b = b;
-// CHECK: @"\01?b@PR20947@@3AAPQB@1@HA" = global %[[opaque1]]* null, align 4
+// CHECK-DAG: @"\01?b@PR20947@@3AAPQB@1@HA" = global %{{.*}}* null, align 4
 }
 
 namespace PR20017 {

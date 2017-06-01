@@ -3,9 +3,9 @@
 
 // FIXME: This is in p11 (?) in C++1y.
 void f() {
-  decltype(auto) a = a; // expected-error{{variable 'a' declared with 'auto' type cannot appear in its own initializer}}
-  if (decltype(auto) b = b) {} // expected-error {{variable 'b' declared with 'auto' type cannot appear in its own initializer}}
-  decltype(auto) c = ({ decltype(auto) d = c; 0; }); // expected-error {{variable 'c' declared with 'auto' type cannot appear in its own initializer}}
+  decltype(auto) a = a; // expected-error{{variable 'a' declared with 'decltype(auto)' type cannot appear in its own initializer}}
+  if (decltype(auto) b = b) {} // expected-error {{variable 'b' declared with 'decltype(auto)' type cannot appear in its own initializer}}
+  decltype(auto) c = ({ decltype(auto) d = c; 0; }); // expected-error {{variable 'c' declared with 'decltype(auto)' type cannot appear in its own initializer}}
 }
 
 void g() {

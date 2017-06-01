@@ -1,5 +1,5 @@
-# RUN: yaml2obj -format=elf %s | llvm-readobj -sections -section-data - | FileCheck %s
-# RUN: yaml2obj -format=elf -o %t %s
+# RUN: yaml2obj %s | llvm-readobj -sections -section-data - | FileCheck %s
+# RUN: yaml2obj -o %t %s
 # RUN: llvm-readobj -sections -section-data %t | FileCheck %s
 
 !ELF

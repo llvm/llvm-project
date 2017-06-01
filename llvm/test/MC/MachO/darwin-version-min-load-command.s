@@ -26,3 +26,10 @@
 // CHECK-TVOS:            cmd LC_VERSION_MIN_TVOS
 // CHECK-TVOS-NEXT:   cmdsize 16
 // CHECK-TVOS-NEXT:   version 8.0
+
+// CHECK-BRIDGEOS:            cmd LC_BUILD_VERSION
+// CHECK-BRIDGEOS-NEXT:   cmdsize 24
+// CHECK-BRIDGEOS-NEXT:  platform bridgeos
+// CHECK-BRIDGEOS-NEXT:       sdk n/a
+// CHECK-BRIDGEOS-NEXT:     minos 2.0
+// CHECK-BRIDGEOS-NEXT:    ntools 0

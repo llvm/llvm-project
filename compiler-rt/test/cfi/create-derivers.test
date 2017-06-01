@@ -1,20 +1,20 @@
 REQUIRES: asserts
 
 RUN: %clangxx_cfi -c -o %t1.o %S/simple-fail.cpp
-RUN: opt -lowerbitsets -debug-only=lowerbitsets -o /dev/null %t1.o 2>&1 | FileCheck --check-prefix=B0 %s
+RUN: opt -lowertypetests -debug-only=lowertypetests -o /dev/null %t1.o 2>&1 | FileCheck --check-prefix=B0 %s
 B0: {{1B|B@@}}: {{.*}} size 1
 
 RUN: %clangxx_cfi -DB32 -c -o %t2.o %S/simple-fail.cpp
-RUN: opt -lowerbitsets -debug-only=lowerbitsets -o /dev/null %t2.o 2>&1 | FileCheck --check-prefix=B32 %s
+RUN: opt -lowertypetests -debug-only=lowertypetests -o /dev/null %t2.o 2>&1 | FileCheck --check-prefix=B32 %s
 B32: {{1B|B@@}}: {{.*}} size 24
 B32-NOT: all-ones
 
 RUN: %clangxx_cfi -DB64 -c -o %t3.o %S/simple-fail.cpp
-RUN: opt -lowerbitsets -debug-only=lowerbitsets -o /dev/null %t3.o 2>&1 | FileCheck --check-prefix=B64 %s
+RUN: opt -lowertypetests -debug-only=lowertypetests -o /dev/null %t3.o 2>&1 | FileCheck --check-prefix=B64 %s
 B64: {{1B|B@@}}: {{.*}} size 54
 B64-NOT: all-ones
 
 RUN: %clangxx_cfi -DBM -c -o %t4.o %S/simple-fail.cpp
-RUN: opt -lowerbitsets -debug-only=lowerbitsets -o /dev/null %t4.o 2>&1 | FileCheck --check-prefix=BM %s
+RUN: opt -lowertypetests -debug-only=lowertypetests -o /dev/null %t4.o 2>&1 | FileCheck --check-prefix=BM %s
 BM: {{1B|B@@}}: {{.*}} size 84
 BM-NOT: all-ones

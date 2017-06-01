@@ -62,7 +62,7 @@ public:
       : Compilations(std::move(Compilations)) {}
 
   void appendArgumentsAdjuster(ArgumentsAdjuster Adjuster) {
-    Adjusters.push_back(Adjuster);
+    Adjusters.push_back(std::move(Adjuster));
   }
 
   std::vector<CompileCommand>
@@ -116,9 +116,10 @@ CommonOptionsParser::CommonOptionsParser(
 
   cl::HideUnrelatedOptions(Category);
 
-  Compilations.reset(FixedCompilationDatabase::loadFromCommandLine(argc,
-                                                                   argv));
+  Compilations.reset(FixedCompilationDatabase::loadFromCommandLine(argc, argv));
   cl::ParseCommandLineOptions(argc, argv, Overview);
+  cl::PrintOptionValues();
+
   SourcePathList = SourcePaths;
   if ((OccurrencesFlag == cl::ZeroOrMore || OccurrencesFlag == cl::Optional) &&
       SourcePathList.empty())
@@ -132,8 +133,12 @@ CommonOptionsParser::CommonOptionsParser(
       Compilations = CompilationDatabase::autoDetectFromSource(SourcePaths[0],
                                                                ErrorMessage);
     }
-    if (!Compilations)
-      llvm::report_fatal_error(ErrorMessage);
+    if (!Compilations) {
+      llvm::errs() << "Error while trying to load a compilation database:\n"
+                   << ErrorMessage << "Running without flags.\n";
+      Compilations.reset(
+          new FixedCompilationDatabase(".", std::vector<std::string>()));
+    }
   }
   auto AdjustingCompilations =
       llvm::make_unique<ArgumentsAdjustingCompilations>(

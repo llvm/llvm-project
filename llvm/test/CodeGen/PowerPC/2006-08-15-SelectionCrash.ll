@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -verify-machineinstrs < %s
 ; REQUIRES: default_triple
 
 	%struct..0anon = type { i32 }

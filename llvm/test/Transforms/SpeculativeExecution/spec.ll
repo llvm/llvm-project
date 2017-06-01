@@ -1,6 +1,9 @@
 ; RUN: opt < %s -S -speculative-execution \
 ; RUN:   -spec-exec-max-speculation-cost 4 -spec-exec-max-not-hoisted 3 \
 ; RUN:   | FileCheck %s
+; RUN: opt < %s -S -passes='speculative-execution' \
+; RUN:   -spec-exec-max-speculation-cost 4 -spec-exec-max-not-hoisted 3 \
+; RUN:   | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 

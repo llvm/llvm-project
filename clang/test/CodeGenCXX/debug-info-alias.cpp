@@ -14,8 +14,6 @@ bar
 }
 
 // CHECK: !DIGlobalVariable(name: "bi",{{.*}} type: [[BINT:![0-9]+]]
-// CHECK: [[BINT]] = !DIDerivedType(tag: DW_TAG_typedef, name: "bar<int>"
-// CHECK-SAME:                      line: 42,
 x::bar<int> bi;
 // CHECK: !DIGlobalVariable(name: "bf",{{.*}} type: [[BFLOAT:![0-9]+]]
 // CHECK: [[BFLOAT]] = !DIDerivedType(tag: DW_TAG_typedef, name: "bar<float>"
@@ -37,3 +35,6 @@ tv<int> *tvp;
 using v = void;
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "v"
 v *vp;
+
+// CHECK: [[BINT]] = !DIDerivedType(tag: DW_TAG_typedef, name: "bar<int>"
+// CHECK-SAME:                      line: 42,

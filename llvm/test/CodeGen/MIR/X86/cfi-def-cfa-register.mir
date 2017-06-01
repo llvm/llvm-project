@@ -1,5 +1,5 @@
-# RUN: llc -march=x86-64 -start-after branch-folder -stop-after branch-folder -o /dev/null %s | FileCheck %s
-# This test ensures that the MIR parser parses the .cfi_def_cfa_register
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the cfi def_cfa_register
 # operands correctly.
 
 --- |
@@ -24,9 +24,9 @@ body: |
     liveins: %rbp
 
     PUSH64r killed %rbp, implicit-def %rsp, implicit %rsp
-    CFI_INSTRUCTION .cfi_def_cfa_offset 16
-    CFI_INSTRUCTION .cfi_offset %rbp, -16
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset %rbp, -16
     %rbp = MOV64rr %rsp
-    ; CHECK: CFI_INSTRUCTION .cfi_def_cfa_register %rbp
-    CFI_INSTRUCTION .cfi_def_cfa_register %rbp
+    ; CHECK: CFI_INSTRUCTION def_cfa_register %rbp
+    CFI_INSTRUCTION def_cfa_register %rbp
 ...

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple thumbv7--windows-itanium -code-model large -filetype obj -o - %s \
+; RUN: llc -mtriple thumbv7--windows-itanium -code-model large -verify-machineinstrs -filetype obj -o - %s \
 ; RUN:    | llvm-objdump -no-show-raw-insn -d - | FileCheck %s
 
 ; ModuleID = 'reduced.c'

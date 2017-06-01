@@ -1,4 +1,4 @@
-// RUN: %clangxx -frtti -fsanitize=vptr -fno-sanitize-recover=vptr -g %s -O3 -o %t
+// RUN: %clangxx -frtti -fsanitize=vptr -fno-sanitize-recover=vptr -g %s -O3 -o %t -mllvm -enable-tail-merge=false
 // RUN: %run %t rT && %run %t mT && %run %t fT && %run %t cT
 // RUN: %run %t rU && %run %t mU && %run %t fU && %run %t cU
 // RUN: %run %t rS && %run %t rV && %run %t oV
@@ -50,6 +50,8 @@ struct V : S {};
 // Make p global so that lsan does not complain.
 T *p = 0;
 
+volatile void *sink1, *sink2;
+
 int access_p(T *p, char type);
 
 int main(int argc, char **argv) {
@@ -74,6 +76,11 @@ int main(int argc, char **argv) {
 
   char Buffer[sizeof(U)] = {};
   char TStorage[sizeof(T)];
+  // Allocate two dummy objects so that the real object
+  // is not on the boundary of mapped memory. Otherwise ubsan
+  // will not be able to describe the vptr in detail.
+  sink1 = new T;
+  sink2 = new U;
   switch (argv[1][1]) {
   case '0':
     p = reinterpret_cast<T*>(Buffer);
@@ -109,7 +116,7 @@ int access_p(T *p, char type) {
     for (int i = 0; i < 2; i++) {
       // Check that the first iteration ("S") succeeds, while the second ("V") fails.
       p = reinterpret_cast<T*>((i == 0) ? new S : new V);
-      // CHECK-LOC-SUPPRESS: vptr.cpp:[[@LINE+5]]:7: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
+      // CHECK-LOC-SUPPRESS: vptr.cpp:[[@LINE+5]]:10: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
       // CHECK-LOC-SUPPRESS-NEXT: [[PTR]]: note: object is of type 'V'
       // CHECK-LOC-SUPPRESS-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  }}
       // CHECK-LOC-SUPPRESS-NEXT: {{^              \^~~~~~~~~~~(~~~~~~~~~~~~)? *$}}
@@ -135,7 +142,7 @@ int access_p(T *p, char type) {
     // CHECK-Linux-NULL-MEMBER: #0 {{.*}}access_p{{.*}}vptr.cpp:[[@LINE-7]]
 
   case 'f':
-    // CHECK-MEMFUN: vptr.cpp:[[@LINE+6]]:12: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
+    // CHECK-MEMFUN: vptr.cpp:[[@LINE+6]]:15: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
     // CHECK-MEMFUN-NEXT: [[PTR]]: note: object is of type [[DYN_TYPE:'S'|'U']]
     // CHECK-MEMFUN-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  }}
     // CHECK-MEMFUN-NEXT: {{^              \^~~~~~~~~~~(~~~~~~~~~~~~)? *$}}
@@ -144,7 +151,7 @@ int access_p(T *p, char type) {
     return p->g();
 
   case 'o':
-    // CHECK-OFFSET: vptr.cpp:[[@LINE+6]]:12: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'U'
+    // CHECK-OFFSET: vptr.cpp:[[@LINE+6]]:37: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'U'
     // CHECK-OFFSET-NEXT: 0x{{[0-9a-f]*}}: note: object is base class subobject at offset {{8|16}} within object of type [[DYN_TYPE:'U']]
     // CHECK-OFFSET-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  .. .. .. .. .. .. .. ..  .. .. .. .. .. .. .. ..  }}
     // CHECK-OFFSET-NEXT: {{^              \^                        (                         ~~~~~~~~~~~~)?~~~~~~~~~~~ *$}}

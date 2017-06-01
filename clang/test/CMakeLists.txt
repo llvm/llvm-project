@@ -9,6 +9,15 @@ endif ()
 
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} CLANG_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
 
+if(CLANG_BUILT_STANDALONE)
+  # Set HAVE_LIBZ according to recorded LLVM_ENABLE_ZLIB value. This
+  # value is forced to 0 if zlib was not found, so it is fine to use it
+  # instead of HAVE_LIBZ (not recorded).
+  if(LLVM_ENABLE_ZLIB)
+    set(HAVE_LIBZ 1)
+  endif()
+endif()
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
@@ -26,10 +35,18 @@ endif ()
 
 list(APPEND CLANG_TEST_DEPS
   clang clang-headers
-  clang-check clang-format
+  clang-format
   c-index-test diagtool
   clang-tblgen
+  clang-offload-bundler
+  clang-import-test
   )
+  
+if(CLANG_ENABLE_STATIC_ANALYZER)
+  list(APPEND CLANG_TEST_DEPS
+    clang-check
+    )
+endif()
 
 if (CLANG_ENABLE_ARCMT)
   list(APPEND CLANG_TEST_DEPS
@@ -40,6 +57,7 @@ endif ()
 
 if (ENABLE_CLANG_EXAMPLES)
   list(APPEND CLANG_TEST_DEPS
+    AnnotateFunctions
     clang-interpreter
     PrintFunctionNames
     )
@@ -61,13 +79,21 @@ if( NOT CLANG_BUILT_STANDALONE )
     FileCheck count not
     llc
     llvm-bcanalyzer
+    llvm-nm
     llvm-objdump
     llvm-profdata
     llvm-readobj
     llvm-symbolizer
     opt
     )
+
+  if(TARGET llvm-lto)
+    list(APPEND CLANG_TEST_DEPS llvm-lto)
+  endif()
 endif()
+
+add_custom_target(clang-test-depends DEPENDS ${CLANG_TEST_DEPS})
+set_target_properties(clang-test-depends PROPERTIES FOLDER "Clang tests")
 
 add_lit_testsuite(check-clang "Running the Clang regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
@@ -77,6 +103,11 @@ add_lit_testsuite(check-clang "Running the Clang regression tests"
   ARGS ${CLANG_TEST_EXTRA_ARGS}
   )
 set_target_properties(check-clang PROPERTIES FOLDER "Clang tests")
+
+add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
+  PARAMS ${CLANG_TEST_PARAMS}
+  DEPENDS ${CLANG_TEST_DEPS}
+)
 
 # Add a legacy target spelling: clang-test
 add_custom_target(clang-test)

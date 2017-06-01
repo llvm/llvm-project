@@ -57,6 +57,22 @@
 // ERR32: error: instruction requires: 64-bit mode
 // ERR16: error: instruction requires: 64-bit mode
 
+	retn
+// 64: retq
+// 64: encoding: [0xc3]
+// 32: retl
+// 32: encoding: [0xc3]
+// 16: retw
+// 16: encoding: [0xc3]
+
+  retn $0
+// 64: retq $0
+// 64: encoding: [0xc2,0x00,0x00]
+// 32: retl $0
+// 32: encoding: [0xc2,0x00,0x00]
+// 16: retw $0
+// 16: encoding: [0xc2,0x00,0x00]
+
 	lret
 // 64: lretl
 // 64: encoding: [0xcb]

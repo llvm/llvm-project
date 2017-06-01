@@ -39,14 +39,14 @@ bool DWARFAcceleratorTable::extract() {
 
   for (unsigned i = 0; i < NumAtoms; ++i) {
     uint16_t AtomType = AccelSection.getU16(&Offset);
-    uint16_t AtomForm = AccelSection.getU16(&Offset);
+    auto AtomForm = static_cast<dwarf::Form>(AccelSection.getU16(&Offset));
     HdrData.Atoms.push_back(std::make_pair(AtomType, AtomForm));
   }
 
   return true;
 }
 
-void DWARFAcceleratorTable::dump(raw_ostream &OS) const {
+LLVM_DUMP_METHOD void DWARFAcceleratorTable::dump(raw_ostream &OS) const {
   // Dump the header.
   OS << "Magic = " << format("0x%08x", Hdr.Magic) << '\n'
      << "Version = " << format("0x%04x", Hdr.Version) << '\n'
@@ -61,12 +61,14 @@ void DWARFAcceleratorTable::dump(raw_ostream &OS) const {
   SmallVector<DWARFFormValue, 3> AtomForms;
   for (const auto &Atom: HdrData.Atoms) {
     OS << format("Atom[%d] Type: ", i++);
-    if (const char *TypeString = dwarf::AtomTypeString(Atom.first))
+    auto TypeString = dwarf::AtomTypeString(Atom.first);
+    if (!TypeString.empty())
       OS << TypeString;
     else
       OS << format("DW_ATOM_Unknown_0x%x", Atom.first);
     OS << " Form: ";
-    if (const char *FormString = dwarf::FormEncodingString(Atom.second))
+    auto FormString = dwarf::FormEncodingString(Atom.second);
+    if (!FormString.empty())
       OS << FormString;
     else
       OS << format("DW_FORM_Unknown_0x%x", Atom.second);
@@ -118,7 +120,7 @@ void DWARFAcceleratorTable::dump(raw_ostream &OS) const {
           for (auto &Atom : AtomForms) {
             OS << format("{Atom[%d]: ", i++);
             if (Atom.extractValue(AccelSection, &DataOffset, nullptr))
-              Atom.dump(OS, nullptr);
+              Atom.dump(OS);
             else
               OS << "Error extracting the value";
             OS << "} ";

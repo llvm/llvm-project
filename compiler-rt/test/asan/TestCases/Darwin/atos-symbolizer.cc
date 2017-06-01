@@ -11,8 +11,8 @@ int main(int argc, char **argv) {
   int res = x[argc];
   free(x);
   free(x + argc - 1);  // BOOM
-  // CHECK: AddressSanitizer: attempting double-free{{.*}}in thread T0
   // CHECK: Using atos at user-specified path:
+  // CHECK: AddressSanitizer: attempting double-free{{.*}}in thread T0
   // CHECK: #0 0x{{.*}} in {{.*}}free
   // CHECK: #1 0x{{.*}} in main {{.*}}atos-symbolizer.cc:[[@LINE-4]]
   // CHECK: freed by thread T0 here:

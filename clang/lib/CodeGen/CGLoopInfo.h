@@ -16,8 +16,8 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGLOOPINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Compiler.h"
 
@@ -57,13 +57,17 @@ struct LoopAttributes {
 
   /// \brief llvm.unroll.
   unsigned UnrollCount;
+
+  /// \brief Value for llvm.loop.distribute.enable metadata.
+  LVEnableState DistributeEnable;
 };
 
 /// \brief Information used when generating a structured loop.
 class LoopInfo {
 public:
   /// \brief Construct a new LoopInfo for the loop with entry Header.
-  LoopInfo(llvm::BasicBlock *Header, const LoopAttributes &Attrs);
+  LoopInfo(llvm::BasicBlock *Header, const LoopAttributes &Attrs,
+           const llvm::DebugLoc &StartLoc, const llvm::DebugLoc &EndLoc);
 
   /// \brief Get the loop id metadata for this loop.
   llvm::MDNode *getLoopID() const { return LoopID; }
@@ -95,12 +99,14 @@ public:
 
   /// \brief Begin a new structured loop. The set of staged attributes will be
   /// applied to the loop and then cleared.
-  void push(llvm::BasicBlock *Header);
+  void push(llvm::BasicBlock *Header, const llvm::DebugLoc &StartLoc,
+            const llvm::DebugLoc &EndLoc);
 
   /// \brief Begin a new structured loop. Stage attributes from the Attrs list.
   /// The staged attributes are applied to the loop and then cleared.
   void push(llvm::BasicBlock *Header, clang::ASTContext &Ctx,
-            llvm::ArrayRef<const Attr *> Attrs);
+            llvm::ArrayRef<const Attr *> Attrs, const llvm::DebugLoc &StartLoc,
+            const llvm::DebugLoc &EndLoc);
 
   /// \brief End the current loop.
   void pop();
@@ -123,6 +129,12 @@ public:
   /// \brief Set the next pushed loop 'vectorize.enable'
   void setVectorizeEnable(bool Enable = true) {
     StagedAttrs.VectorizeEnable =
+        Enable ? LoopAttributes::Enable : LoopAttributes::Disable;
+  }
+
+  /// \brief Set the next pushed loop as a distribution candidate.
+  void setDistributeState(bool Enable = true) {
+    StagedAttrs.DistributeEnable =
         Enable ? LoopAttributes::Enable : LoopAttributes::Disable;
   }
 

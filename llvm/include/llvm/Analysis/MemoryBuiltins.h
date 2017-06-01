@@ -32,6 +32,11 @@ class TargetLibraryInfo;
 class Type;
 class Value;
 
+enum class ObjSizeMode {
+  Exact = 0,
+  Min = 1,
+  Max = 2
+};
 
 /// \brief Tests if a value is a call or invoke to a library function that
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
@@ -58,16 +63,6 @@ bool isCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
 /// allocates memory (either malloc, calloc, or strdup like).
 bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                    bool LookThroughBitCast = false);
-
-/// \brief Tests if a value is a call or invoke to a library function that
-/// reallocates memory (such as realloc).
-bool isReallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
-                     bool LookThroughBitCast = false);
-
-/// \brief Tests if a value is a call or invoke to a library function that
-/// allocates memory and never returns null (such as operator new).
-bool isOperatorNewLikeFn(const Value *V, const TargetLibraryInfo *TLI,
-                         bool LookThroughBitCast = false);
 
 //===----------------------------------------------------------------------===//
 //  malloc Call Utility Functions.
@@ -140,8 +135,21 @@ static inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
 /// underlying object pointed to by Ptr.
 /// If RoundToAlign is true, then Size is rounded up to the aligment of allocas,
 /// byval arguments, and global variables.
+/// If Mode is Min or Max the size will be evaluated even if it depends on
+/// a condition and corresponding value will be returned (min or max).
 bool getObjectSize(const Value *Ptr, uint64_t &Size, const DataLayout &DL,
-                   const TargetLibraryInfo *TLI, bool RoundToAlign = false);
+                   const TargetLibraryInfo *TLI, bool RoundToAlign = false,
+                   ObjSizeMode Mode = ObjSizeMode::Exact);
+
+/// Try to turn a call to @llvm.objectsize into an integer value of the given
+/// Type. Returns null on failure.
+/// If MustSucceed is true, this function will not return null, and may return
+/// conservative values governed by the second argument of the call to
+/// objectsize.
+ConstantInt *lowerObjectSizeCall(IntrinsicInst *ObjectSize,
+                                 const DataLayout &DL,
+                                 const TargetLibraryInfo *TLI,
+                                 bool MustSucceed);
 
 typedef std::pair<APInt, APInt> SizeOffsetType;
 
@@ -153,6 +161,7 @@ class ObjectSizeOffsetVisitor
   const DataLayout &DL;
   const TargetLibraryInfo *TLI;
   bool RoundToAlign;
+  ObjSizeMode Mode;
   unsigned IntTyBits;
   APInt Zero;
   SmallPtrSet<Instruction *, 8> SeenInsts;
@@ -165,19 +174,20 @@ class ObjectSizeOffsetVisitor
 
 public:
   ObjectSizeOffsetVisitor(const DataLayout &DL, const TargetLibraryInfo *TLI,
-                          LLVMContext &Context, bool RoundToAlign = false);
+                          LLVMContext &Context, bool RoundToAlign = false,
+                          ObjSizeMode Mode = ObjSizeMode::Exact);
 
   SizeOffsetType compute(Value *V);
 
-  bool knownSize(SizeOffsetType &SizeOffset) {
+  static bool knownSize(const SizeOffsetType &SizeOffset) {
     return SizeOffset.first.getBitWidth() > 1;
   }
 
-  bool knownOffset(SizeOffsetType &SizeOffset) {
+  static bool knownOffset(const SizeOffsetType &SizeOffset) {
     return SizeOffset.second.getBitWidth() > 1;
   }
 
-  bool bothKnown(SizeOffsetType &SizeOffset) {
+  static bool bothKnown(const SizeOffsetType &SizeOffset) {
     return knownSize(SizeOffset) && knownOffset(SizeOffset);
   }
 
@@ -208,7 +218,7 @@ typedef std::pair<Value*, Value*> SizeOffsetEvalType;
 class ObjectSizeOffsetEvaluator
   : public InstVisitor<ObjectSizeOffsetEvaluator, SizeOffsetEvalType> {
 
-  typedef IRBuilder<true, TargetFolder> BuilderTy;
+  typedef IRBuilder<TargetFolder> BuilderTy;
   typedef std::pair<WeakVH, WeakVH> WeakEvalType;
   typedef DenseMap<const Value*, WeakEvalType> CacheMapTy;
   typedef SmallPtrSet<const Value*, 8> PtrSetTy;

@@ -52,8 +52,6 @@ public:
     addDirectiveHandler<
       &ELFAsmParser::ParseSectionDirectiveDataRelRo>(".data.rel.ro");
     addDirectiveHandler<
-      &ELFAsmParser::ParseSectionDirectiveDataRelRoLocal>(".data.rel.ro.local");
-    addDirectiveHandler<
       &ELFAsmParser::ParseSectionDirectiveEhFrame>(".eh_frame");
     addDirectiveHandler<&ELFAsmParser::ParseDirectiveSection>(".section");
     addDirectiveHandler<
@@ -81,8 +79,8 @@ public:
   // the best way for us to get access to it?
   bool ParseSectionDirectiveData(StringRef, SMLoc) {
     return ParseSectionSwitch(".data", ELF::SHT_PROGBITS,
-                              ELF::SHF_WRITE |ELF::SHF_ALLOC,
-                              SectionKind::getDataRel());
+                              ELF::SHF_WRITE | ELF::SHF_ALLOC,
+                              SectionKind::getData());
   }
   bool ParseSectionDirectiveText(StringRef, SMLoc) {
     return ParseSectionSwitch(".text", ELF::SHT_PROGBITS,
@@ -113,9 +111,8 @@ public:
   }
   bool ParseSectionDirectiveDataRel(StringRef, SMLoc) {
     return ParseSectionSwitch(".data.rel", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC |
-                              ELF::SHF_WRITE,
-                              SectionKind::getDataRel());
+                              ELF::SHF_ALLOC | ELF::SHF_WRITE,
+                              SectionKind::getData());
   }
   bool ParseSectionDirectiveDataRelRo(StringRef, SMLoc) {
     return ParseSectionSwitch(".data.rel.ro", ELF::SHT_PROGBITS,
@@ -123,17 +120,10 @@ public:
                               ELF::SHF_WRITE,
                               SectionKind::getReadOnlyWithRel());
   }
-  bool ParseSectionDirectiveDataRelRoLocal(StringRef, SMLoc) {
-    return ParseSectionSwitch(".data.rel.ro.local", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC |
-                              ELF::SHF_WRITE,
-                              SectionKind::getReadOnlyWithRelLocal());
-  }
   bool ParseSectionDirectiveEhFrame(StringRef, SMLoc) {
     return ParseSectionSwitch(".eh_frame", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC |
-                              ELF::SHF_WRITE,
-                              SectionKind::getDataRel());
+                              ELF::SHF_ALLOC | ELF::SHF_WRITE,
+                              SectionKind::getData());
   }
   bool ParseDirectivePushSection(StringRef, SMLoc);
   bool ParseDirectivePopSection(StringRef, SMLoc);
@@ -198,6 +188,7 @@ bool ELFAsmParser::ParseSectionSwitch(StringRef Section, unsigned Type,
     if (getParser().parseExpression(Subsection))
       return true;
   }
+  Lex();
 
   getStreamer().SwitchSection(getContext().getELFSection(Section, Type, Flags),
                               Subsection);
@@ -221,6 +212,7 @@ bool ELFAsmParser::ParseDirectiveSize(StringRef, SMLoc) {
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in directive");
+  Lex();
 
   getStreamer().emitELFSize(Sym, Expr);
   return false;
@@ -239,22 +231,23 @@ bool ELFAsmParser::ParseSectionName(StringRef &SectionName) {
   }
 
   for (;;) {
-    unsigned CurSize;
-
+    
     SMLoc PrevLoc = getLexer().getLoc();
-    if (getLexer().is(AsmToken::Minus)) {
-      CurSize = 1;
-      Lex(); // Consume the "-".
-    } else if (getLexer().is(AsmToken::String)) {
+    if (getLexer().is(AsmToken::Comma) ||
+      getLexer().is(AsmToken::EndOfStatement))
+      break;
+    
+    unsigned CurSize;
+    if (getLexer().is(AsmToken::String)) {
       CurSize = getTok().getIdentifier().size() + 2;
       Lex();
     } else if (getLexer().is(AsmToken::Identifier)) {
       CurSize = getTok().getIdentifier().size();
       Lex();
     } else {
-      break;
+      CurSize = getTok().getString().size();
+      Lex();
     }
-
     Size += CurSize;
     SectionName = StringRef(FirstLoc.getPointer(), Size);
 
@@ -271,8 +264,12 @@ bool ELFAsmParser::ParseSectionName(StringRef &SectionName) {
 static unsigned parseSectionFlags(StringRef flagsStr, bool *UseLastGroup) {
   unsigned flags = 0;
 
-  for (unsigned i = 0; i < flagsStr.size(); i++) {
-    switch (flagsStr[i]) {
+  // If a valid numerical value is set for the section flag, use it verbatim
+  if (!flagsStr.getAsInteger(0, flags))
+    return flags;
+
+  for (char i : flagsStr) {
+    switch (i) {
     case 'a':
       flags |= ELF::SHF_ALLOC;
       break;
@@ -299,6 +296,9 @@ static unsigned parseSectionFlags(StringRef flagsStr, bool *UseLastGroup) {
       break;
     case 'd':
       flags |= ELF::XCORE_SHF_DP_SECTION;
+      break;
+    case 'y':
+      flags |= ELF::SHF_ARM_PURECODE;
       break;
     case 'G':
       flags |= ELF::SHF_GROUP;
@@ -486,6 +486,7 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
 EndStmt:
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in directive");
+  Lex();
 
   unsigned Type = ELF::SHT_PROGBITS;
 
@@ -637,6 +638,10 @@ bool ELFAsmParser::ParseDirectiveIdent(StringRef, SMLoc) {
 
   Lex();
 
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("unexpected token in '.ident' directive");
+  Lex();
+
   getStreamer().EmitIdent(Data);
   return false;
 }
@@ -734,6 +739,8 @@ bool ELFAsmParser::ParseDirectiveSubsection(StringRef, SMLoc) {
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in directive");
+
+  Lex();
 
   getStreamer().SubSection(Subsection);
   return false;

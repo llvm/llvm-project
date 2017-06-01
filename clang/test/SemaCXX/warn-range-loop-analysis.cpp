@@ -29,7 +29,7 @@ struct Bar {
 // test1-6 are set in pairs, the odd numbers are the non-reference returning
 //   versions of the even numbers.
 // test7-9 use an array instead of a range object
-// tests use all four versions of the loop varaible, const &T, const T, T&, and
+// tests use all four versions of the loop variable, const &T, const T, T&, and
 //   T.  Versions producing errors and are commented out.
 //
 // Conversion chart:

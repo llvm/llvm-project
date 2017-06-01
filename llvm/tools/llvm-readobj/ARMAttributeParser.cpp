@@ -8,10 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMAttributeParser.h"
-#include "StreamWriter.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
 using namespace llvm::ARMBuildAttrs;
@@ -63,6 +63,7 @@ ARMAttributeParser::DisplayRoutines[] = {
   ATTRIBUTE_HANDLER(ABI_FP_16bit_format),
   ATTRIBUTE_HANDLER(MPextension_use),
   ATTRIBUTE_HANDLER(DIV_use),
+  ATTRIBUTE_HANDLER(DSP_extension),
   ATTRIBUTE_HANDLER(T2EE_use),
   ATTRIBUTE_HANDLER(Virtualization_use),
   ATTRIBUTE_HANDLER(nodefaults)
@@ -340,7 +341,7 @@ void ARMAttributeParser::ABI_align_needed(AttrType Tag, const uint8_t *Data,
   if (Value < array_lengthof(Strings))
     Description = std::string(Strings[Value]);
   else if (Value <= 12)
-    Description = std::string("8-byte alignment, ") + utostr(1 << Value)
+    Description = std::string("8-byte alignment, ") + utostr(1ULL << Value)
                 + std::string("-byte extended alignment");
   else
     Description = "Invalid";
@@ -361,8 +362,8 @@ void ARMAttributeParser::ABI_align_preserved(AttrType Tag, const uint8_t *Data,
   if (Value < array_lengthof(Strings))
     Description = std::string(Strings[Value]);
   else if (Value <= 12)
-    Description = std::string("8-byte stack alignment, ") + utostr(1 << Value)
-                + std::string("-byte data alignment");
+    Description = std::string("8-byte stack alignment, ") +
+                  utostr(1ULL << Value) + std::string("-byte data alignment");
   else
     Description = "Invalid";
 
@@ -510,6 +511,16 @@ void ARMAttributeParser::DIV_use(AttrType Tag, const uint8_t *Data,
   static const char *const Strings[] = {
     "If Available", "Not Permitted", "Permitted"
   };
+
+  uint64_t Value = ParseInteger(Data, Offset);
+  StringRef ValueDesc =
+    (Value < array_lengthof(Strings)) ? Strings[Value] : nullptr;
+  PrintAttribute(Tag, Value, ValueDesc);
+}
+
+void ARMAttributeParser::DSP_extension(AttrType Tag, const uint8_t *Data,
+                                       uint32_t &Offset) {
+  static const char *const Strings[] = { "Not Permitted", "Permitted" };
 
   uint64_t Value = ParseInteger(Data, Offset);
   StringRef ValueDesc =

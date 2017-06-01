@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 -mcpu=g5
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5
 
 define void @glgRunProcessor15() {
         %tmp26355.i = shufflevector <4 x float> zeroinitializer, <4 x float> < float 0x379FFFE000000000, float 0x379FFFE000000000, float 0x379FFFE000000000, float 0x379FFFE000000000 >, <4 x i32> < i32 0, i32 1, i32 2, i32 7 >; <<4 x float>> [#uses=1]

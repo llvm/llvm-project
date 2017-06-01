@@ -17,12 +17,10 @@
 //                        *** Must match BaseInfo.h ***
 //----------------------------------------------------------------------------//
 
-def TypeMEMOP    : IType<9>;
+def TypeV4LDST    : IType<9>;
 def TypeNV       : IType<10>;
 def TypeDUPLEX   : IType<11>;
 def TypeCOMPOUND : IType<12>;
-def TypeAG_VX    : IType<28>;
-def TypeAG_VM    : IType<29>;
 def TypePREFIX   : IType<30>;
 
 //                      Duplex Instruction Class Declaration
@@ -134,14 +132,13 @@ class NCJInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
 let mayLoad = 1, mayStore = 1 in
 class MEMInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
               string cstr = "", InstrItinClass itin = V4LDST_tc_st_SLOT0>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeMEMOP>,
+  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeV4LDST>,
     OpcodeHexagon;
 
 class MEMInst_V4<dag outs, dag ins, string asmstr, list<dag> pattern = [],
                  string cstr = "", InstrItinClass itin = V4LDST_tc_st_SLOT0>
   : MEMInst<outs, ins, asmstr, pattern, cstr, itin>;
 
-let isCodeGenOnly = 1 in
 class EXTENDERInst<dag outs, dag ins, string asmstr, list<dag> pattern = []>
   : InstHexagon<outs, ins, asmstr, pattern, "", EXTENDER_tc_1_SLOT0123,
                 TypePREFIX>, OpcodeHexagon;
@@ -153,5 +150,11 @@ class SUBInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
 
 class CJInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
               string cstr = "">
+  : InstHexagon<outs, ins, asmstr, pattern, cstr, COMPOUND_CJ_ARCHDEPSLOT, TypeCOMPOUND>,
+    OpcodeHexagon;
+
+class CJInst_JMPSET<dag outs, dag ins, string asmstr, list<dag> pattern = [],
+              string cstr = "">
   : InstHexagon<outs, ins, asmstr, pattern, cstr, COMPOUND, TypeCOMPOUND>,
     OpcodeHexagon;
+

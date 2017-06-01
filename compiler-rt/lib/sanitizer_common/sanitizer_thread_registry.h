@@ -45,6 +45,7 @@ class ThreadContextBase {
 
   ThreadStatus status;
   bool detached;
+  bool workerthread;
 
   u32 parent_tid;
   ThreadContextBase *next;  // For storing thread contexts in a list.
@@ -54,7 +55,7 @@ class ThreadContextBase {
   void SetDead();
   void SetJoined(void *arg);
   void SetFinished();
-  void SetStarted(uptr _os_id, void *arg);
+  void SetStarted(uptr _os_id, bool _workerthread, void *arg);
   void SetCreated(uptr _user_id, u64 _unique_id, bool _detached,
                   u32 _parent_tid, void *arg);
   void Reset();
@@ -115,7 +116,7 @@ class ThreadRegistry {
   void DetachThread(u32 tid, void *arg);
   void JoinThread(u32 tid, void *arg);
   void FinishThread(u32 tid);
-  void StartThread(u32 tid, uptr os_id, void *arg);
+  void StartThread(u32 tid, uptr os_id, bool workerthread, void *arg);
 
  private:
   const ThreadContextFactory context_factory_;

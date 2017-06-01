@@ -61,7 +61,7 @@ class C {
   int z;
   void init_capture() {
     [n(0)] () mutable -> int { return ++n; }; // expected-warning{{extension}}
-    [n{0}] { return; }; // expected-error {{<initializer_list>}} expected-warning{{extension}} expected-warning{{will change meaning in a future version}}
+    [n{0}] { return; }; // expected-warning{{extension}}
     [n = 0] { return ++n; }; // expected-error {{captured by copy in a non-mutable}} expected-warning{{extension}}
     [n = {0}] { return; }; // expected-error {{<initializer_list>}} expected-warning{{extension}}
     [a([&b = z]{})](){}; // expected-warning 2{{extension}}

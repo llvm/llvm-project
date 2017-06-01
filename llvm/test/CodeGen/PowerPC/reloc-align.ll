@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr7 -O1 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O1 < %s | FileCheck %s
 
 ; This test verifies that the peephole optimization of address accesses
 ; does not produce a load or store with a relocation that can't be

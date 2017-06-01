@@ -87,6 +87,11 @@ public:
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
+  /// getGPRsForTailCall - Returns a register class with registers that can be
+  /// used in forming tail calls.
+  const TargetRegisterClass *
+  getGPRsForTailCall(const MachineFunction &MF) const;
+
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
 
@@ -94,9 +99,15 @@ public:
   /// callee-save registers on this target.
   const MCPhysReg *
   getCalleeSavedRegs(const MachineFunction* MF) const override;
+  const MCPhysReg *
+  getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
   const uint32_t *getNoPreservedMask() const override;
+
+  // Calls involved in thread-local variable lookup save more registers than
+  // normal calls, so they need a different mask to represent this.
+  const uint32_t *getDarwinTLSCallPreservedMask() const;
 
   /// getReservedRegs - Returns a bitset indexed by physical register number
   /// indicating if a register is a special register that has particular uses and
@@ -122,22 +133,14 @@ public:
   unsigned getPtrSizedFrameRegister(const MachineFunction &MF) const;
   unsigned getStackRegister() const { return StackPtr; }
   unsigned getBaseRegister() const { return BasePtr; }
+  /// Returns physical register used as frame pointer.
+  /// This will always returns the frame pointer register, contrary to
+  /// getFrameRegister() which returns the "base pointer" in situations
+  /// involving a stack, frame and base pointer.
+  unsigned getFramePtr() const { return FramePtr; }
   // FIXME: Move to FrameInfok
   unsigned getSlotSize() const { return SlotSize; }
 };
-
-/// Returns the sub or super register of a specific X86 register.
-/// e.g. getX86SubSuperRegister(X86::EAX, MVT::i16) returns X86::AX.
-/// Aborts on error.
-unsigned getX86SubSuperRegister(unsigned, MVT::SimpleValueType, bool High=false);
-
-/// Returns the sub or super register of a specific X86 register.
-/// Like getX86SubSuperRegister() but returns 0 on error.
-unsigned getX86SubSuperRegisterOrZero(unsigned, MVT::SimpleValueType,
-                                      bool High = false);
-
-//get512BitRegister - X86 utility - returns 512-bit super register
-unsigned get512BitSuperRegister(unsigned Reg);
 
 } // End llvm namespace
 

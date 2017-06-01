@@ -13,11 +13,13 @@ int main() {
   {
     __lsan::ScopedDisabler d;
     p = new void *;
+    fprintf(stderr, "Test alloc p: %p.\n", p);
   }
-  *reinterpret_cast<void **>(p) = malloc(666);
+  *p = malloc(666);
   void *q = malloc(1337);
-  // Break optimization.
-  fprintf(stderr, "Test alloc: %p.\n", q);
+  fprintf(stderr, "Test alloc q: %p.\n", q);
   return 0;
 }
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)
+
+// CHECK: Test alloc p: [[ADDR:.*]].
+// CHECK-NOT: [[ADDR]]

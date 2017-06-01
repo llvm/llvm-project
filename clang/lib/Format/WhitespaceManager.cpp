@@ -30,7 +30,7 @@ WhitespaceManager::Change::Change(
     unsigned IndentLevel, int Spaces, unsigned StartOfTokenColumn,
     unsigned NewlinesBefore, StringRef PreviousLinePostfix,
     StringRef CurrentLinePrefix, tok::TokenKind Kind, bool ContinuesPPDirective,
-    bool IsStartOfDeclName)
+    bool IsStartOfDeclName, bool IsInsideToken)
     : CreateReplacement(CreateReplacement),
       OriginalWhitespaceRange(OriginalWhitespaceRange),
       StartOfTokenColumn(StartOfTokenColumn), NewlinesBefore(NewlinesBefore),
@@ -38,14 +38,9 @@ WhitespaceManager::Change::Change(
       CurrentLinePrefix(CurrentLinePrefix), Kind(Kind),
       ContinuesPPDirective(ContinuesPPDirective),
       IsStartOfDeclName(IsStartOfDeclName), IndentLevel(IndentLevel),
-      Spaces(Spaces), IsTrailingComment(false), TokenLength(0),
-      PreviousEndOfTokenColumn(0), EscapedNewlineColumn(0),
+      Spaces(Spaces), IsInsideToken(IsInsideToken), IsTrailingComment(false),
+      TokenLength(0), PreviousEndOfTokenColumn(0), EscapedNewlineColumn(0),
       StartOfBlockComment(nullptr), IndentationOffset(0) {}
-
-void WhitespaceManager::reset() {
-  Changes.clear();
-  Replaces.clear();
-}
 
 void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
                                           unsigned IndentLevel, unsigned Spaces,
@@ -55,20 +50,23 @@ void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
     return;
   Tok.Decision = (Newlines > 0) ? FD_Break : FD_Continue;
   Changes.push_back(
-      Change(true, Tok.WhitespaceRange, IndentLevel, Spaces, StartOfTokenColumn,
-             Newlines, "", "", Tok.Tok.getKind(), InPPDirective && !Tok.IsFirst,
-             Tok.is(TT_StartOfName) || Tok.is(TT_FunctionDeclarationName)));
+      Change(/*CreateReplacement=*/true, Tok.WhitespaceRange, IndentLevel,
+             Spaces, StartOfTokenColumn, Newlines, "", "", Tok.Tok.getKind(),
+             InPPDirective && !Tok.IsFirst,
+             Tok.is(TT_StartOfName) || Tok.is(TT_FunctionDeclarationName),
+             /*IsInsideToken=*/false));
 }
 
 void WhitespaceManager::addUntouchableToken(const FormatToken &Tok,
                                             bool InPPDirective) {
   if (Tok.Finalized)
     return;
-  Changes.push_back(
-      Change(false, Tok.WhitespaceRange, /*IndentLevel=*/0,
-             /*Spaces=*/0, Tok.OriginalColumn, Tok.NewlinesBefore, "", "",
-             Tok.Tok.getKind(), InPPDirective && !Tok.IsFirst,
-             Tok.is(TT_StartOfName) || Tok.is(TT_FunctionDeclarationName)));
+  Changes.push_back(Change(
+      /*CreateReplacement=*/false, Tok.WhitespaceRange, /*IndentLevel=*/0,
+      /*Spaces=*/0, Tok.OriginalColumn, Tok.NewlinesBefore, "", "",
+      Tok.Tok.getKind(), InPPDirective && !Tok.IsFirst,
+      Tok.is(TT_StartOfName) || Tok.is(TT_FunctionDeclarationName),
+      /*IsInsideToken=*/false));
 }
 
 void WhitespaceManager::replaceWhitespaceInToken(
@@ -81,15 +79,10 @@ void WhitespaceManager::replaceWhitespaceInToken(
   Changes.push_back(Change(
       true, SourceRange(Start, Start.getLocWithOffset(ReplaceChars)),
       IndentLevel, Spaces, std::max(0, Spaces), Newlines, PreviousPostfix,
-      CurrentPrefix,
-      // If we don't add a newline this change doesn't start a comment. Thus,
-      // when we align line comments, we don't need to treat this change as one.
-      // FIXME: We still need to take this change in account to properly
-      // calculate the new length of the comment and to calculate the changes
-      // for which to do the alignment when aligning comments.
-      Tok.is(TT_LineComment) && Newlines > 0 ? tok::comment : tok::unknown,
+      CurrentPrefix, Tok.is(TT_LineComment) ? tok::comment : tok::unknown,
       InPPDirective && !Tok.IsFirst,
-      Tok.is(TT_StartOfName) || Tok.is(TT_FunctionDeclarationName)));
+      Tok.is(TT_StartOfName) || Tok.is(TT_FunctionDeclarationName),
+      /*IsInsideToken=*/Newlines == 0));
 }
 
 const tooling::Replacements &WhitespaceManager::generateReplacements() {
@@ -109,6 +102,7 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
 
 void WhitespaceManager::calculateLineBreakInformation() {
   Changes[0].PreviousEndOfTokenColumn = 0;
+  Change *LastOutsideTokenChange = &Changes[0];
   for (unsigned i = 1, e = Changes.size(); i != e; ++i) {
     unsigned OriginalWhitespaceStart =
         SourceMgr.getFileOffset(Changes[i].OriginalWhitespaceRange.getBegin());
@@ -119,11 +113,20 @@ void WhitespaceManager::calculateLineBreakInformation() {
                                  Changes[i].PreviousLinePostfix.size() +
                                  Changes[i - 1].CurrentLinePrefix.size();
 
+    // If there are multiple changes in this token, sum up all the changes until
+    // the end of the line.
+    if (Changes[i - 1].IsInsideToken)
+      LastOutsideTokenChange->TokenLength +=
+          Changes[i - 1].TokenLength + Changes[i - 1].Spaces;
+    else
+      LastOutsideTokenChange = &Changes[i - 1];
+
     Changes[i].PreviousEndOfTokenColumn =
         Changes[i - 1].StartOfTokenColumn + Changes[i - 1].TokenLength;
 
     Changes[i - 1].IsTrailingComment =
-        (Changes[i].NewlinesBefore > 0 || Changes[i].Kind == tok::eof) &&
+        (Changes[i].NewlinesBefore > 0 || Changes[i].Kind == tok::eof ||
+         (Changes[i].IsInsideToken && Changes[i].Kind == tok::comment)) &&
         Changes[i - 1].Kind == tok::comment;
   }
   // FIXME: The last token is currently not always an eof token; in those
@@ -133,6 +136,10 @@ void WhitespaceManager::calculateLineBreakInformation() {
 
   const WhitespaceManager::Change *LastBlockComment = nullptr;
   for (auto &Change : Changes) {
+    // Reset the IsTrailingComment flag for changes inside of trailing comments
+    // so they don't get realigned later.
+    if (Change.IsInsideToken)
+      Change.IsTrailingComment = false;
     Change.StartOfBlockComment = nullptr;
     Change.IndentationOffset = 0;
     if (Change.Kind == tok::comment) {
@@ -148,241 +155,183 @@ void WhitespaceManager::calculateLineBreakInformation() {
   }
 }
 
-// Walk through all of the changes and find sequences of "=" to align.  To do
-// so, keep track of the lines and whether or not an "=" was found on align. If
-// a "=" is found on a line, extend the current sequence. If the current line
-// cannot be part of a sequence, e.g. because there is an empty line before it
-// or it contains non-assignments, finalize the previous sequence.
-//
-// FIXME: The code between assignment and declaration alignment is mostly
-// duplicated and would benefit from factorization.
+// Align a single sequence of tokens, see AlignTokens below.
+template <typename F>
+static void
+AlignTokenSequence(unsigned Start, unsigned End, unsigned Column, F &&Matches,
+                   SmallVector<WhitespaceManager::Change, 16> &Changes) {
+  bool FoundMatchOnLine = false;
+  int Shift = 0;
+  for (unsigned i = Start; i != End; ++i) {
+    if (Changes[i].NewlinesBefore > 0) {
+      FoundMatchOnLine = false;
+      Shift = 0;
+    }
+
+    // If this is the first matching token to be aligned, remember by how many
+    // spaces it has to be shifted, so the rest of the changes on the line are
+    // shifted by the same amount
+    if (!FoundMatchOnLine && Matches(Changes[i])) {
+      FoundMatchOnLine = true;
+      Shift = Column - Changes[i].StartOfTokenColumn;
+      Changes[i].Spaces += Shift;
+    }
+
+    assert(Shift >= 0);
+    Changes[i].StartOfTokenColumn += Shift;
+    if (i + 1 != Changes.size())
+      Changes[i + 1].PreviousEndOfTokenColumn += Shift;
+  }
+}
+
+// Walk through all of the changes and find sequences of matching tokens to
+// align. To do so, keep track of the lines and whether or not a matching token
+// was found on a line. If a matching token is found, extend the current
+// sequence. If the current line cannot be part of a sequence, e.g. because
+// there is an empty line before it or it contains only non-matching tokens,
+// finalize the previous sequence.
+template <typename F>
+static void AlignTokens(const FormatStyle &Style, F &&Matches,
+                        SmallVector<WhitespaceManager::Change, 16> &Changes) {
+  unsigned MinColumn = 0;
+  unsigned MaxColumn = UINT_MAX;
+
+  // Line number of the start and the end of the current token sequence.
+  unsigned StartOfSequence = 0;
+  unsigned EndOfSequence = 0;
+
+  // Keep track of the nesting level of matching tokens, i.e. the number of
+  // surrounding (), [], or {}. We will only align a sequence of matching
+  // token that share the same scope depth.
+  //
+  // FIXME: This could use FormatToken::NestingLevel information, but there is
+  // an outstanding issue wrt the brace scopes.
+  unsigned NestingLevelOfLastMatch = 0;
+  unsigned NestingLevel = 0;
+
+  // Keep track of the number of commas before the matching tokens, we will only
+  // align a sequence of matching tokens if they are preceded by the same number
+  // of commas.
+  unsigned CommasBeforeLastMatch = 0;
+  unsigned CommasBeforeMatch = 0;
+
+  // Whether a matching token has been found on the current line.
+  bool FoundMatchOnLine = false;
+
+  // Aligns a sequence of matching tokens, on the MinColumn column.
+  //
+  // Sequences start from the first matching token to align, and end at the
+  // first token of the first line that doesn't need to be aligned.
+  //
+  // We need to adjust the StartOfTokenColumn of each Change that is on a line
+  // containing any matching token to be aligned and located after such token.
+  auto AlignCurrentSequence = [&] {
+    if (StartOfSequence > 0 && StartOfSequence < EndOfSequence)
+      AlignTokenSequence(StartOfSequence, EndOfSequence, MinColumn, Matches,
+                         Changes);
+    MinColumn = 0;
+    MaxColumn = UINT_MAX;
+    StartOfSequence = 0;
+    EndOfSequence = 0;
+  };
+
+  for (unsigned i = 0, e = Changes.size(); i != e; ++i) {
+    if (Changes[i].NewlinesBefore != 0) {
+      CommasBeforeMatch = 0;
+      EndOfSequence = i;
+      // If there is a blank line, or if the last line didn't contain any
+      // matching token, the sequence ends here.
+      if (Changes[i].NewlinesBefore > 1 || !FoundMatchOnLine)
+        AlignCurrentSequence();
+
+      FoundMatchOnLine = false;
+    }
+
+    if (Changes[i].Kind == tok::comma) {
+      ++CommasBeforeMatch;
+    } else if (Changes[i].Kind == tok::r_brace ||
+               Changes[i].Kind == tok::r_paren ||
+               Changes[i].Kind == tok::r_square) {
+      --NestingLevel;
+    } else if (Changes[i].Kind == tok::l_brace ||
+               Changes[i].Kind == tok::l_paren ||
+               Changes[i].Kind == tok::l_square) {
+      // We want sequences to skip over child scopes if possible, but not the
+      // other way around.
+      NestingLevelOfLastMatch = std::min(NestingLevelOfLastMatch, NestingLevel);
+      ++NestingLevel;
+    }
+
+    if (!Matches(Changes[i]))
+      continue;
+
+    // If there is more than one matching token per line, or if the number of
+    // preceding commas, or the scope depth, do not match anymore, end the
+    // sequence.
+    if (FoundMatchOnLine || CommasBeforeMatch != CommasBeforeLastMatch ||
+        NestingLevel != NestingLevelOfLastMatch)
+      AlignCurrentSequence();
+
+    CommasBeforeLastMatch = CommasBeforeMatch;
+    NestingLevelOfLastMatch = NestingLevel;
+    FoundMatchOnLine = true;
+
+    if (StartOfSequence == 0)
+      StartOfSequence = i;
+
+    unsigned ChangeMinColumn = Changes[i].StartOfTokenColumn;
+    int LineLengthAfter = -Changes[i].Spaces;
+    for (unsigned j = i; j != e && Changes[j].NewlinesBefore == 0; ++j)
+      LineLengthAfter += Changes[j].Spaces + Changes[j].TokenLength;
+    unsigned ChangeMaxColumn = Style.ColumnLimit - LineLengthAfter;
+
+    // If we are restricted by the maximum column width, end the sequence.
+    if (ChangeMinColumn > MaxColumn || ChangeMaxColumn < MinColumn ||
+        CommasBeforeLastMatch != CommasBeforeMatch) {
+      AlignCurrentSequence();
+      StartOfSequence = i;
+    }
+
+    MinColumn = std::max(MinColumn, ChangeMinColumn);
+    MaxColumn = std::min(MaxColumn, ChangeMaxColumn);
+  }
+
+  EndOfSequence = Changes.size();
+  AlignCurrentSequence();
+}
+
 void WhitespaceManager::alignConsecutiveAssignments() {
   if (!Style.AlignConsecutiveAssignments)
     return;
 
-  unsigned MinColumn = 0;
-  unsigned MaxColumn = UINT_MAX;
-  unsigned StartOfSequence = 0;
-  unsigned EndOfSequence = 0;
-  bool FoundAssignmentOnLine = false;
-  bool FoundLeftBraceOnLine = false;
-  bool FoundLeftParenOnLine = false;
+  AlignTokens(Style,
+              [&](const Change &C) {
+                // Do not align on equal signs that are first on a line.
+                if (C.NewlinesBefore > 0)
+                  return false;
 
-  // Aligns a sequence of assignment tokens, on the MinColumn column.
-  //
-  // Sequences start from the first assignment token to align, and end at the
-  // first token of the first line that doesn't need to be aligned.
-  //
-  // We need to adjust the StartOfTokenColumn of each Change that is on a line
-  // containing any assignment to be aligned and located after such assignment
-  auto AlignSequence = [&] {
-    if (StartOfSequence > 0 && StartOfSequence < EndOfSequence)
-      alignConsecutiveAssignments(StartOfSequence, EndOfSequence, MinColumn);
-    MinColumn = 0;
-    MaxColumn = UINT_MAX;
-    StartOfSequence = 0;
-    EndOfSequence = 0;
-  };
+                // Do not align on equal signs that are last on a line.
+                if (&C != &Changes.back() && (&C + 1)->NewlinesBefore > 0)
+                  return false;
 
-  for (unsigned i = 0, e = Changes.size(); i != e; ++i) {
-    if (Changes[i].NewlinesBefore != 0) {
-      EndOfSequence = i;
-      // If there is a blank line, if the last line didn't contain any
-      // assignment, or if we found an open brace or paren, the sequence ends
-      // here.
-      if (Changes[i].NewlinesBefore > 1 || !FoundAssignmentOnLine ||
-          FoundLeftBraceOnLine || FoundLeftParenOnLine) {
-        // NB: In the latter case, the sequence should end at the beggining of
-        // the previous line, but it doesn't really matter as there is no
-        // assignment on it
-        AlignSequence();
-      }
-
-      FoundAssignmentOnLine = false;
-      FoundLeftBraceOnLine = false;
-      FoundLeftParenOnLine = false;
-    }
-
-    // If there is more than one "=" per line, or if the "=" appears first on
-    // the line of if it appears last, end the sequence
-    if (Changes[i].Kind == tok::equal &&
-        (FoundAssignmentOnLine || Changes[i].NewlinesBefore > 0 ||
-         Changes[i + 1].NewlinesBefore > 0)) {
-      AlignSequence();
-    } else if (Changes[i].Kind == tok::r_brace) {
-      if (!FoundLeftBraceOnLine)
-        AlignSequence();
-      FoundLeftBraceOnLine = false;
-    } else if (Changes[i].Kind == tok::l_brace) {
-      FoundLeftBraceOnLine = true;
-      if (!FoundAssignmentOnLine)
-        AlignSequence();
-    } else if (Changes[i].Kind == tok::r_paren) {
-      if (!FoundLeftParenOnLine)
-        AlignSequence();
-      FoundLeftParenOnLine = false;
-    } else if (Changes[i].Kind == tok::l_paren) {
-      FoundLeftParenOnLine = true;
-      if (!FoundAssignmentOnLine)
-        AlignSequence();
-    } else if (!FoundAssignmentOnLine && !FoundLeftBraceOnLine &&
-               !FoundLeftParenOnLine && Changes[i].Kind == tok::equal) {
-      FoundAssignmentOnLine = true;
-      if (StartOfSequence == 0)
-        StartOfSequence = i;
-
-      unsigned ChangeMinColumn = Changes[i].StartOfTokenColumn;
-      int LineLengthAfter = -Changes[i].Spaces;
-      for (unsigned j = i; j != e && Changes[j].NewlinesBefore == 0; ++j)
-        LineLengthAfter += Changes[j].Spaces + Changes[j].TokenLength;
-      unsigned ChangeMaxColumn = Style.ColumnLimit - LineLengthAfter;
-
-      if (ChangeMinColumn > MaxColumn || ChangeMaxColumn < MinColumn) {
-        AlignSequence();
-        StartOfSequence = i;
-      }
-
-      MinColumn = std::max(MinColumn, ChangeMinColumn);
-      MaxColumn = std::min(MaxColumn, ChangeMaxColumn);
-    }
-  }
-
-  EndOfSequence = Changes.size();
-  AlignSequence();
+                return C.Kind == tok::equal;
+              },
+              Changes);
 }
 
-void WhitespaceManager::alignConsecutiveAssignments(unsigned Start,
-                                                    unsigned End,
-                                                    unsigned Column) {
-  bool FoundAssignmentOnLine = false;
-  int Shift = 0;
-  for (unsigned i = Start; i != End; ++i) {
-    if (Changes[i].NewlinesBefore > 0) {
-      FoundAssignmentOnLine = false;
-      Shift = 0;
-    }
-
-    // If this is the first assignment to be aligned, remember by how many
-    // spaces it has to be shifted, so the rest of the changes on the line are
-    // shifted by the same amount
-    if (!FoundAssignmentOnLine && Changes[i].Kind == tok::equal) {
-      FoundAssignmentOnLine = true;
-      Shift = Column - Changes[i].StartOfTokenColumn;
-      Changes[i].Spaces += Shift;
-    }
-
-    assert(Shift >= 0);
-    Changes[i].StartOfTokenColumn += Shift;
-    if (i + 1 != Changes.size())
-      Changes[i + 1].PreviousEndOfTokenColumn += Shift;
-  }
-}
-
-// Walk through all of the changes and find sequences of declaration names to
-// align.  To do so, keep track of the lines and whether or not a name was found
-// on align. If a name is found on a line, extend the current sequence. If the
-// current line cannot be part of a sequence, e.g. because there is an empty
-// line before it or it contains non-declarations, finalize the previous
-// sequence.
-//
-// FIXME: The code between assignment and declaration alignment is mostly
-// duplicated and would benefit from factorization.
 void WhitespaceManager::alignConsecutiveDeclarations() {
   if (!Style.AlignConsecutiveDeclarations)
     return;
 
-  unsigned MinColumn = 0;
-  unsigned MaxColumn = UINT_MAX;
-  unsigned StartOfSequence = 0;
-  unsigned EndOfSequence = 0;
-  bool FoundDeclarationOnLine = false;
-  bool FoundLeftBraceOnLine = false;
-  bool FoundLeftParenOnLine = false;
+  // FIXME: Currently we don't handle properly the PointerAlignment: Right
+  // The * and & are not aligned and are left dangling. Something has to be done
+  // about it, but it raises the question of alignment of code like:
+  //   const char* const* v1;
+  //   float const* v2;
+  //   SomeVeryLongType const& v3;
 
-  auto AlignSequence = [&] {
-    if (StartOfSequence > 0 && StartOfSequence < EndOfSequence)
-      alignConsecutiveDeclarations(StartOfSequence, EndOfSequence, MinColumn);
-    MinColumn = 0;
-    MaxColumn = UINT_MAX;
-    StartOfSequence = 0;
-    EndOfSequence = 0;
-  };
-
-  for (unsigned i = 0, e = Changes.size(); i != e; ++i) {
-    if (Changes[i].NewlinesBefore != 0) {
-      EndOfSequence = i;
-      if (Changes[i].NewlinesBefore > 1 || !FoundDeclarationOnLine ||
-          FoundLeftBraceOnLine || FoundLeftParenOnLine)
-        AlignSequence();
-      FoundDeclarationOnLine = false;
-      FoundLeftBraceOnLine = false;
-      FoundLeftParenOnLine = false;
-    }
-
-    if (Changes[i].Kind == tok::r_brace) {
-      if (!FoundLeftBraceOnLine)
-        AlignSequence();
-      FoundLeftBraceOnLine = false;
-    } else if (Changes[i].Kind == tok::l_brace) {
-      FoundLeftBraceOnLine = true;
-      if (!FoundDeclarationOnLine)
-        AlignSequence();
-    } else if (Changes[i].Kind == tok::r_paren) {
-      if (!FoundLeftParenOnLine)
-        AlignSequence();
-      FoundLeftParenOnLine = false;
-    } else if (Changes[i].Kind == tok::l_paren) {
-      FoundLeftParenOnLine = true;
-      if (!FoundDeclarationOnLine)
-        AlignSequence();
-    } else if (!FoundDeclarationOnLine && !FoundLeftBraceOnLine &&
-               !FoundLeftParenOnLine && Changes[i].IsStartOfDeclName) {
-      FoundDeclarationOnLine = true;
-      if (StartOfSequence == 0)
-        StartOfSequence = i;
-
-      unsigned ChangeMinColumn = Changes[i].StartOfTokenColumn;
-      int LineLengthAfter = -Changes[i].Spaces;
-      for (unsigned j = i; j != e && Changes[j].NewlinesBefore == 0; ++j)
-        LineLengthAfter += Changes[j].Spaces + Changes[j].TokenLength;
-      unsigned ChangeMaxColumn = Style.ColumnLimit - LineLengthAfter;
-
-      if (ChangeMinColumn > MaxColumn || ChangeMaxColumn < MinColumn) {
-        AlignSequence();
-        StartOfSequence = i;
-      }
-
-      MinColumn = std::max(MinColumn, ChangeMinColumn);
-      MaxColumn = std::min(MaxColumn, ChangeMaxColumn);
-    }
-  }
-
-  EndOfSequence = Changes.size();
-  AlignSequence();
-}
-
-void WhitespaceManager::alignConsecutiveDeclarations(unsigned Start,
-                                                     unsigned End,
-                                                     unsigned Column) {
-  bool FoundDeclarationOnLine = false;
-  int Shift = 0;
-  for (unsigned i = Start; i != End; ++i) {
-    if (Changes[i].NewlinesBefore != 0) {
-      FoundDeclarationOnLine = false;
-      Shift = 0;
-    }
-
-    if (!FoundDeclarationOnLine && Changes[i].IsStartOfDeclName) {
-      FoundDeclarationOnLine = true;
-      Shift = Column - Changes[i].StartOfTokenColumn;
-      Changes[i].Spaces += Shift;
-    }
-
-    assert(Shift >= 0);
-    Changes[i].StartOfTokenColumn += Shift;
-    if (i + 1 != Changes.size())
-      Changes[i + 1].PreviousEndOfTokenColumn += Shift;
-  }
+  AlignTokens(Style, [](Change const &C) { return C.IsStartOfDeclName; },
+              Changes);
 }
 
 void WhitespaceManager::alignTrailingComments() {
@@ -400,6 +349,12 @@ void WhitespaceManager::alignTrailingComments() {
 
     unsigned ChangeMinColumn = Changes[i].StartOfTokenColumn;
     unsigned ChangeMaxColumn = Style.ColumnLimit - Changes[i].TokenLength;
+
+    // If we don't create a replacement for this change, we have to consider
+    // it to be immovable.
+    if (!Changes[i].CreateReplacement)
+      ChangeMaxColumn = ChangeMinColumn;
+
     if (i + 1 != e && Changes[i + 1].ContinuesPPDirective)
       ChangeMaxColumn -= 2;
     // If this comment follows an } in column 0, it probably documents the
@@ -412,16 +367,20 @@ void WhitespaceManager::alignTrailingComments() {
       unsigned CommentColumn = SourceMgr.getSpellingColumnNumber(
           Changes[i].OriginalWhitespaceRange.getEnd());
       for (unsigned j = i + 1; j != e; ++j) {
-        if (Changes[j].Kind != tok::comment) { // Skip over comments.
-          unsigned NextColumn = SourceMgr.getSpellingColumnNumber(
-              Changes[j].OriginalWhitespaceRange.getEnd());
-          // The start of the next token was previously aligned with the
-          // start of this comment.
-          WasAlignedWithStartOfNextLine =
-              CommentColumn == NextColumn ||
-              CommentColumn == NextColumn + Style.IndentWidth;
-          break;
-        }
+        if (Changes[j].Kind == tok::comment ||
+            Changes[j].Kind == tok::unknown)
+          // Skip over comments and unknown tokens. "unknown tokens are used for
+          // the continuation of multiline comments.
+          continue;
+
+        unsigned NextColumn = SourceMgr.getSpellingColumnNumber(
+            Changes[j].OriginalWhitespaceRange.getEnd());
+        // The start of the next token was previously aligned with the
+        // start of this comment.
+        WasAlignedWithStartOfNextLine =
+            CommentColumn == NextColumn ||
+            CommentColumn == NextColumn + Style.IndentWidth;
+        break;
       }
     }
     if (!Style.AlignTrailingComments || FollowsRBraceInColumn0) {
@@ -468,7 +427,7 @@ void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
     }
     assert(Shift >= 0);
     Changes[i].Spaces += Shift;
-    if (i + 1 != End)
+    if (i + 1 != Changes.size())
       Changes[i + 1].PreviousEndOfTokenColumn += Shift;
     Changes[i].StartOfTokenColumn += Shift;
   }
@@ -538,8 +497,14 @@ void WhitespaceManager::storeReplacement(SourceRange Range,
   if (StringRef(SourceMgr.getCharacterData(Range.getBegin()),
                 WhitespaceLength) == Text)
     return;
-  Replaces.insert(tooling::Replacement(
+  auto Err = Replaces.add(tooling::Replacement(
       SourceMgr, CharSourceRange::getCharRange(Range), Text));
+  // FIXME: better error handling. For now, just print an error message in the
+  // release version.
+  if (Err) {
+    llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+    assert(false);
+  }
 }
 
 void WhitespaceManager::appendNewlineText(std::string &Text,
@@ -589,6 +554,14 @@ void WhitespaceManager::appendIndentText(std::string &Text,
       if (Indentation > Spaces)
         Indentation = Spaces;
       unsigned Tabs = Indentation / Style.TabWidth;
+      Text.append(Tabs, '\t');
+      Spaces -= Tabs * Style.TabWidth;
+    }
+    Text.append(Spaces, ' ');
+    break;
+  case FormatStyle::UT_ForContinuationAndIndentation:
+    if (WhitespaceStartColumn == 0) {
+      unsigned Tabs = Spaces / Style.TabWidth;
       Text.append(Tabs, '\t');
       Spaces -= Tabs * Style.TabWidth;
     }

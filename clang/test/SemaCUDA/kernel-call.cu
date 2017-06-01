@@ -23,4 +23,6 @@ int main(void) {
 
   int (*fp)(int) = h2;
   fp<<<1, 1>>>(42); // expected-error {{must have void return type}}
+
+  g1<<<undeclared, 1>>>(42); // expected-error {{use of undeclared identifier 'undeclared'}}
 }

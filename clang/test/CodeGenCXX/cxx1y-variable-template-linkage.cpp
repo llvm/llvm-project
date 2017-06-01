@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -std=c++1y -O1 -disable-llvm-optzns %s -o - | FileCheck %s -check-prefix=CHECKA -check-prefix=CHECK
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -std=c++1y -O1 -disable-llvm-optzns -fcxx-exceptions %s -o - | FileCheck %s -check-prefix=CHECKB -check-prefix=CHECK
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -std=c++1y -O1 -disable-llvm-passes %s -o - | FileCheck %s -check-prefix=CHECKA -check-prefix=CHECK
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -std=c++1y -O1 -disable-llvm-passes -fcxx-exceptions %s -o - | FileCheck %s -check-prefix=CHECKB -check-prefix=CHECK
 // expected-no-diagnostics
 
 // The variable template specialization x<Foo> generated in each file

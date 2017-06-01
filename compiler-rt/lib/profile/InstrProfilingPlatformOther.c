@@ -10,6 +10,7 @@
 #include "InstrProfiling.h"
 
 #if !defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__)
+
 #include <stdlib.h>
 
 static const __llvm_profile_data *DataFirst = NULL;
@@ -19,6 +20,14 @@ static const char *NamesLast = NULL;
 static uint64_t *CountersFirst = NULL;
 static uint64_t *CountersLast = NULL;
 
+static const void *getMinAddr(const void *A1, const void *A2) {
+  return A1 < A2 ? A1 : A2;
+}
+
+static const void *getMaxAddr(const void *A1, const void *A2) {
+  return A1 > A2 ? A1 : A2;
+}
+
 /*!
  * \brief Register an instrumented function.
  *
@@ -26,49 +35,60 @@ static uint64_t *CountersLast = NULL;
  * calls are only required (and only emitted) on targets where we haven't
  * implemented linker magic to find the bounds of the sections.
  */
-__attribute__((visibility("hidden")))
+COMPILER_RT_VISIBILITY
 void __llvm_profile_register_function(void *Data_) {
   /* TODO: Only emit this function if we can't use linker magic. */
-  const __llvm_profile_data *Data = (__llvm_profile_data*)Data_;
+  const __llvm_profile_data *Data = (__llvm_profile_data *)Data_;
   if (!DataFirst) {
     DataFirst = Data;
     DataLast = Data + 1;
-    NamesFirst = Data->NamePtr;
-    NamesLast = Data->NamePtr + Data->NameSize;
     CountersFirst = Data->CounterPtr;
-    CountersLast = Data->CounterPtr + Data->NumCounters;
+    CountersLast = (uint64_t *)Data->CounterPtr + Data->NumCounters;
     return;
   }
 
-#define UPDATE_FIRST(First, New) \
-  First = New < First ? New : First
-  UPDATE_FIRST(DataFirst, Data);
-  UPDATE_FIRST(NamesFirst, Data->NamePtr);
-  UPDATE_FIRST(CountersFirst, Data->CounterPtr);
-#undef UPDATE_FIRST
+  DataFirst = (const __llvm_profile_data *)getMinAddr(DataFirst, Data);
+  CountersFirst = (uint64_t *)getMinAddr(CountersFirst, Data->CounterPtr);
 
-#define UPDATE_LAST(Last, New) \
-  Last = New > Last ? New : Last
-  UPDATE_LAST(DataLast, Data + 1);
-  UPDATE_LAST(NamesLast, Data->NamePtr + Data->NameSize);
-  UPDATE_LAST(CountersLast, Data->CounterPtr + Data->NumCounters);
-#undef UPDATE_LAST
+  DataLast = (const __llvm_profile_data *)getMaxAddr(DataLast, Data + 1);
+  CountersLast = (uint64_t *)getMaxAddr(
+      CountersLast, (uint64_t *)Data->CounterPtr + Data->NumCounters);
 }
 
-__attribute__((visibility("hidden")))
-const __llvm_profile_data *__llvm_profile_begin_data(void) {
-  return DataFirst;
+COMPILER_RT_VISIBILITY
+void __llvm_profile_register_names_function(void *NamesStart,
+                                            uint64_t NamesSize) {
+  if (!NamesFirst) {
+    NamesFirst = (const char *)NamesStart;
+    NamesLast = (const char *)NamesStart + NamesSize;
+    return;
+  }
+  NamesFirst = (const char *)getMinAddr(NamesFirst, NamesStart);
+  NamesLast =
+      (const char *)getMaxAddr(NamesLast, (const char *)NamesStart + NamesSize);
 }
-__attribute__((visibility("hidden")))
-const __llvm_profile_data *__llvm_profile_end_data(void) {
-  return DataLast;
-}
-__attribute__((visibility("hidden")))
+
+COMPILER_RT_VISIBILITY
+const __llvm_profile_data *__llvm_profile_begin_data(void) { return DataFirst; }
+COMPILER_RT_VISIBILITY
+const __llvm_profile_data *__llvm_profile_end_data(void) { return DataLast; }
+COMPILER_RT_VISIBILITY
 const char *__llvm_profile_begin_names(void) { return NamesFirst; }
-__attribute__((visibility("hidden")))
+COMPILER_RT_VISIBILITY
 const char *__llvm_profile_end_names(void) { return NamesLast; }
-__attribute__((visibility("hidden")))
+COMPILER_RT_VISIBILITY
 uint64_t *__llvm_profile_begin_counters(void) { return CountersFirst; }
-__attribute__((visibility("hidden")))
+COMPILER_RT_VISIBILITY
 uint64_t *__llvm_profile_end_counters(void) { return CountersLast; }
+
+COMPILER_RT_VISIBILITY
+ValueProfNode *__llvm_profile_begin_vnodes(void) {
+  return 0;
+}
+COMPILER_RT_VISIBILITY
+ValueProfNode *__llvm_profile_end_vnodes(void) { return 0; }
+
+COMPILER_RT_VISIBILITY ValueProfNode *CurrentVNode = 0;
+COMPILER_RT_VISIBILITY ValueProfNode *EndVNode = 0;
+
 #endif

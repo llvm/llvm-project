@@ -45,6 +45,9 @@ def color_diagnostics: F<"color-diagnostics">,
 def color_diagnostics_eq: J<"color-diagnostics=">,
   HelpText<"Use colors in diagnostics">;
 
+def define_common: F<"define-common">,
+  HelpText<"Assign space to common symbols">;
+
 def disable_new_dtags: F<"disable-new-dtags">,
   HelpText<"Disable new dynamic tags">;
 
@@ -129,6 +132,9 @@ def no_as_needed: F<"no-as-needed">,
 
 def no_color_diagnostics: F<"no-color-diagnostics">,
   HelpText<"Do not use colors in diagnostics">;
+
+def no_define_common: F<"no-define-common">,
+  HelpText<"Do not assign space to common symbols">;
 
 def no_demangle: F<"no-demangle">,
   HelpText<"Do not demangle symbol names">;
@@ -255,6 +261,9 @@ def alias_Bstatic_dn: F<"dn">, Alias<Bstatic>;
 def alias_Bstatic_non_shared: F<"non_shared">, Alias<Bstatic>;
 def alias_Bstatic_static: F<"static">, Alias<Bstatic>;
 def alias_L__library_path: J<"library-path=">, Alias<L>;
+def alias_define_common_d: Flag<["-"], "d">, Alias<define_common>;
+def alias_define_common_dc: F<"dc">, Alias<define_common>;
+def alias_define_common_dp: F<"dp">, Alias<define_common>;
 def alias_discard_all_x: Flag<["-"], "x">, Alias<discard_all>;
 def alias_discard_locals_X: Flag<["-"], "X">, Alias<discard_locals>;
 def alias_dynamic_list: J<"dynamic-list=">, Alias<dynamic_list>;
@@ -320,7 +329,6 @@ def plugin_opt_eq: J<"plugin-opt=">;
 // Options listed below are silently ignored for now for compatibility.
 def allow_shlib_undefined: F<"allow-shlib-undefined">;
 def cref: Flag<["--"], "cref">;
-def define_common: F<"define-common">;
 def demangle: F<"demangle">;
 def detect_odr_violations: F<"detect-odr-violations">;
 def g: Flag<["-"], "g">;
@@ -347,9 +355,6 @@ def G: JoinedOrSeparate<["-"], "G">;
 def Qy : F<"Qy">;
 
 // Aliases for ignored options
-def alias_define_common_d: Flag<["-"], "d">, Alias<define_common>;
-def alias_define_common_dc: F<"dc">, Alias<define_common>;
-def alias_define_common_dp: F<"dp">, Alias<define_common>;
 def alias_Map_eq: J<"Map=">, Alias<Map>;
 def alias_version_script_version_script: J<"version-script=">,
   Alias<version_script>;

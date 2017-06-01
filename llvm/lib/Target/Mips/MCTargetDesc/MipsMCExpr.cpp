@@ -12,69 +12,110 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCSymbolELF.h"
+#include "llvm/Support/ELF.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "mipsmcexpr"
 
-bool MipsMCExpr::isSupportedBinaryExpr(MCSymbolRefExpr::VariantKind VK,
-                                       const MCBinaryExpr *BE) {
-  switch (VK) {
-  case MCSymbolRefExpr::VK_Mips_ABS_LO:
-  case MCSymbolRefExpr::VK_Mips_ABS_HI:
-  case MCSymbolRefExpr::VK_Mips_HIGHER:
-  case MCSymbolRefExpr::VK_Mips_HIGHEST:
-    break;
-  default:
-    return false;
-  }
-
-  // We support expressions of the form "(sym1 binop1 sym2) binop2 const",
-  // where "binop2 const" is optional.
-  if (isa<MCBinaryExpr>(BE->getLHS())) {
-    if (!isa<MCConstantExpr>(BE->getRHS()))
-      return false;
-    BE = cast<MCBinaryExpr>(BE->getLHS());
-  }
-  return (isa<MCSymbolRefExpr>(BE->getLHS())
-          && isa<MCSymbolRefExpr>(BE->getRHS()));
-}
-
-const MipsMCExpr*
-MipsMCExpr::create(MCSymbolRefExpr::VariantKind VK, const MCExpr *Expr,
-                   MCContext &Ctx) {
-  VariantKind Kind;
-  switch (VK) {
-  case MCSymbolRefExpr::VK_Mips_ABS_LO:
-    Kind = VK_Mips_LO;
-    break;
-  case MCSymbolRefExpr::VK_Mips_ABS_HI:
-    Kind = VK_Mips_HI;
-    break;
-  case MCSymbolRefExpr::VK_Mips_HIGHER:
-    Kind = VK_Mips_HIGHER;
-    break;
-  case MCSymbolRefExpr::VK_Mips_HIGHEST:
-    Kind = VK_Mips_HIGHEST;
-    break;
-  default:
-    llvm_unreachable("Invalid kind!");
-  }
-
+const MipsMCExpr *MipsMCExpr::create(MipsMCExpr::MipsExprKind Kind,
+                                     const MCExpr *Expr, MCContext &Ctx) {
   return new (Ctx) MipsMCExpr(Kind, Expr);
 }
 
+const MipsMCExpr *MipsMCExpr::createGpOff(MipsMCExpr::MipsExprKind Kind,
+                                          const MCExpr *Expr, MCContext &Ctx) {
+  return create(Kind, create(MEK_NEG, create(MEK_GPREL, Expr, Ctx), Ctx), Ctx);
+}
+
 void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
+  int64_t AbsVal;
+
   switch (Kind) {
-  default: llvm_unreachable("Invalid kind!");
-  case VK_Mips_LO: OS << "%lo"; break;
-  case VK_Mips_HI: OS << "%hi"; break;
-  case VK_Mips_HIGHER: OS << "%higher"; break;
-  case VK_Mips_HIGHEST: OS << "%highest"; break;
+  case MEK_None:
+  case MEK_Special:
+    llvm_unreachable("MEK_None and MEK_Special are invalid");
+    break;
+  case MEK_CALL_HI16:
+    OS << "%call_hi";
+    break;
+  case MEK_CALL_LO16:
+    OS << "%call_lo";
+    break;
+  case MEK_DTPREL_HI:
+    OS << "%dtprel_hi";
+    break;
+  case MEK_DTPREL_LO:
+    OS << "%dtprel_lo";
+    break;
+  case MEK_GOT:
+    OS << "%got";
+    break;
+  case MEK_GOTTPREL:
+    OS << "%gottprel";
+    break;
+  case MEK_GOT_CALL:
+    OS << "%call16";
+    break;
+  case MEK_GOT_DISP:
+    OS << "%got_disp";
+    break;
+  case MEK_GOT_HI16:
+    OS << "%got_hi";
+    break;
+  case MEK_GOT_LO16:
+    OS << "%got_lo";
+    break;
+  case MEK_GOT_PAGE:
+    OS << "%got_page";
+    break;
+  case MEK_GOT_OFST:
+    OS << "%got_ofst";
+    break;
+  case MEK_GPREL:
+    OS << "%gp_rel";
+    break;
+  case MEK_HI:
+    OS << "%hi";
+    break;
+  case MEK_HIGHER:
+    OS << "%higher";
+    break;
+  case MEK_HIGHEST:
+    OS << "%highest";
+    break;
+  case MEK_LO:
+    OS << "%lo";
+    break;
+  case MEK_NEG:
+    OS << "%neg";
+    break;
+  case MEK_PCREL_HI16:
+    OS << "%pcrel_hi";
+    break;
+  case MEK_PCREL_LO16:
+    OS << "%pcrel_lo";
+    break;
+  case MEK_TLSGD:
+    OS << "%tlsgd";
+    break;
+  case MEK_TLSLDM:
+    OS << "%tlsldm";
+    break;
+  case MEK_TPREL_HI:
+    OS << "%tprel_hi";
+    break;
+  case MEK_TPREL_LO:
+    OS << "%tprel_lo";
+    break;
   }
 
   OS << '(';
-  Expr->print(OS, MAI);
+  if (Expr->evaluateAsAbsolute(AbsVal))
+    OS << AbsVal;
+  else
+    Expr->print(OS, MAI, true);
   OS << ')';
 }
 
@@ -82,9 +123,165 @@ bool
 MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                       const MCAsmLayout *Layout,
                                       const MCFixup *Fixup) const {
-  return getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup);
+  // Look for the %hi(%neg(%gp_rel(X))) and %lo(%neg(%gp_rel(X))) special cases.
+  if (isGpOff()) {
+    const MCExpr *SubExpr =
+        cast<MipsMCExpr>(cast<MipsMCExpr>(getSubExpr())->getSubExpr())
+            ->getSubExpr();
+    if (!SubExpr->evaluateAsRelocatable(Res, Layout, Fixup))
+      return false;
+
+    Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
+                       MEK_Special);
+    return true;
+  }
+
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup))
+    return false;
+
+  if (Res.getRefKind() != MCSymbolRefExpr::VK_None)
+    return false;
+
+  // evaluateAsAbsolute() and evaluateAsValue() require that we evaluate the
+  // %hi/%lo/etc. here. Fixup is a null pointer when either of these is the
+  // caller.
+  if (Res.isAbsolute() && Fixup == nullptr) {
+    int64_t AbsVal = Res.getConstant();
+    switch (Kind) {
+    case MEK_None:
+    case MEK_Special:
+      llvm_unreachable("MEK_None and MEK_Special are invalid");
+    case MEK_DTPREL_HI:
+    case MEK_DTPREL_LO:
+    case MEK_GOT:
+    case MEK_GOTTPREL:
+    case MEK_GOT_CALL:
+    case MEK_GOT_DISP:
+    case MEK_GOT_HI16:
+    case MEK_GOT_LO16:
+    case MEK_GOT_OFST:
+    case MEK_GOT_PAGE:
+    case MEK_GPREL:
+    case MEK_PCREL_HI16:
+    case MEK_PCREL_LO16:
+    case MEK_TLSGD:
+    case MEK_TLSLDM:
+    case MEK_TPREL_HI:
+    case MEK_TPREL_LO:
+      return false;
+    case MEK_LO:
+    case MEK_CALL_LO16:
+      AbsVal = SignExtend64<16>(AbsVal);
+      break;
+    case MEK_CALL_HI16:
+    case MEK_HI:
+      AbsVal = SignExtend64<16>((AbsVal + 0x8000) >> 16);
+      break;
+    case MEK_HIGHER:
+      AbsVal = SignExtend64<16>((AbsVal + 0x80008000LL) >> 32);
+      break;
+    case MEK_HIGHEST:
+      AbsVal = SignExtend64<16>((AbsVal + 0x800080008000LL) >> 48);
+      break;
+    case MEK_NEG:
+      AbsVal = -AbsVal;
+      break;
+    }
+    Res = MCValue::get(AbsVal);
+    return true;
+  }
+
+  // We want to defer it for relocatable expressions since the constant is
+  // applied to the whole symbol value.
+  //
+  // The value of getKind() that is given to MCValue is only intended to aid
+  // debugging when inspecting MCValue objects. It shouldn't be relied upon
+  // for decision making.
+  Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
+
+  return true;
 }
 
 void MipsMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
   Streamer.visitUsedExpr(*getSubExpr());
+}
+
+static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
+  switch (Expr->getKind()) {
+  case MCExpr::Target:
+    fixELFSymbolsInTLSFixupsImpl(cast<MipsMCExpr>(Expr)->getSubExpr(), Asm);
+    break;
+  case MCExpr::Constant:
+    break;
+  case MCExpr::Binary: {
+    const MCBinaryExpr *BE = cast<MCBinaryExpr>(Expr);
+    fixELFSymbolsInTLSFixupsImpl(BE->getLHS(), Asm);
+    fixELFSymbolsInTLSFixupsImpl(BE->getRHS(), Asm);
+    break;
+  }
+  case MCExpr::SymbolRef: {
+    // We're known to be under a TLS fixup, so any symbol should be
+    // modified. There should be only one.
+    const MCSymbolRefExpr &SymRef = *cast<MCSymbolRefExpr>(Expr);
+    cast<MCSymbolELF>(SymRef.getSymbol()).setType(ELF::STT_TLS);
+    break;
+  }
+  case MCExpr::Unary:
+    fixELFSymbolsInTLSFixupsImpl(cast<MCUnaryExpr>(Expr)->getSubExpr(), Asm);
+    break;
+  }
+}
+
+void MipsMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
+  switch (getKind()) {
+  case MEK_None:
+  case MEK_Special:
+    llvm_unreachable("MEK_None and MEK_Special are invalid");
+    break;
+  case MEK_CALL_HI16:
+  case MEK_CALL_LO16:
+  case MEK_DTPREL_HI:
+  case MEK_DTPREL_LO:
+  case MEK_GOT:
+  case MEK_GOT_CALL:
+  case MEK_GOT_DISP:
+  case MEK_GOT_HI16:
+  case MEK_GOT_LO16:
+  case MEK_GOT_OFST:
+  case MEK_GOT_PAGE:
+  case MEK_GPREL:
+  case MEK_HI:
+  case MEK_HIGHER:
+  case MEK_HIGHEST:
+  case MEK_LO:
+  case MEK_NEG:
+  case MEK_PCREL_HI16:
+  case MEK_PCREL_LO16:
+  case MEK_TLSLDM:
+    // If we do have nested target-specific expressions, they will be in
+    // a consecutive chain.
+    if (const MipsMCExpr *E = dyn_cast<const MipsMCExpr>(getSubExpr()))
+      E->fixELFSymbolsInTLSFixups(Asm);
+    break;
+  case MEK_GOTTPREL:
+  case MEK_TLSGD:
+  case MEK_TPREL_HI:
+  case MEK_TPREL_LO:
+    fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
+    break;
+  }
+}
+
+bool MipsMCExpr::isGpOff(MipsExprKind &Kind) const {
+  if (getKind() == MEK_HI || getKind() == MEK_LO) {
+    if (const MipsMCExpr *S1 = dyn_cast<const MipsMCExpr>(getSubExpr())) {
+      if (const MipsMCExpr *S2 = dyn_cast<const MipsMCExpr>(S1->getSubExpr())) {
+        if (S1->getKind() == MEK_NEG && S2->getKind() == MEK_GPREL) {
+          Kind = getKind();
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }

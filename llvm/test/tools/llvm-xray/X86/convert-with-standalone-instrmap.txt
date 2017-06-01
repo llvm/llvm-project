@@ -1,0 +1,17 @@
+; RUN: llvm-xray convert -m %S/Inputs/elf64-objcopied-instrmap.bin -y %S/Inputs/naive-log-simple.xray -f=yaml -o - 2>&1 | FileCheck %s
+
+; CHECK:      ---
+; CHECK-NEXT: header:
+; CHECK-NEXT:   version:         1
+; CHECK-NEXT:   type:            0
+; CHECK-NEXT:   constant-tsc:    true
+; CHECK-NEXT:   nonstop-tsc:     true
+; CHECK-NEXT:   cycle-frequency: 2601000000
+; CHECK-NEXT: records:
+; CHECK-NEXT:   - { type: 0, func-id: 3, function: '@(41caa0)', cpu: 37, thread: 84697, kind: function-enter, tsc: 3315356841453914 }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: '@(41ca70)', cpu: 37, thread: 84697, kind: function-enter, tsc: 3315356841454542 }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: '@(41ca70)', cpu: 37, thread: 84697, kind: function-exit, tsc: 3315356841454670 }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '@(41ca40)', cpu: 37, thread: 84697, kind: function-enter, tsc: 3315356841454762 }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '@(41ca40)', cpu: 37, thread: 84697, kind: function-exit, tsc: 3315356841454802 }
+; CHECK-NEXT:   - { type: 0, func-id: 3, function: '@(41caa0)', cpu: 37, thread: 84697, kind: function-exit, tsc: 3315356841494828 }
+; CHECK-NEXT: ...

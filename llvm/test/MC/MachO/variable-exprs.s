@@ -151,7 +151,7 @@ Lt0_x = Lt0_a - Lt0_b
 // CHECK-I386:     Type: Section (0xE)
 // CHECK-I386:     Section: __data (0x2)
 // CHECK-I386:     RefType: UndefinedNonLazy (0x0)
-// CHECK-I386:     Flags [ (0x0)
+// CHECK-I386:     Flags [ (0x200)
 // CHECK-I386:     ]
 // CHECK-I386:     Value: 0x9
 // CHECK-I386:   }
@@ -208,7 +208,7 @@ Lt0_x = Lt0_a - Lt0_b
 // CHECK-I386:     Type: Undef (0x0)
 // CHECK-I386:     Section:  (0x0)
 // CHECK-I386:     RefType: UndefinedNonLazy (0x0)
-// CHECK-I386:     Flags [ (0x0)
+// CHECK-I386:     Flags [ (0x200)
 // CHECK-I386:     ]
 // CHECK-I386:     Value: 0x0
 // CHECK-I386:   }
@@ -360,7 +360,7 @@ Lt0_x = Lt0_a - Lt0_b
 // CHECK-X86_64:     Type: Section (0xE)
 // CHECK-X86_64:     Section: __data (0x2)
 // CHECK-X86_64:     RefType: UndefinedNonLazy (0x0)
-// CHECK-X86_64:     Flags [ (0x0)
+// CHECK-X86_64:     Flags [ (0x200)
 // CHECK-X86_64:     ]
 // CHECK-X86_64:     Value: 0x9
 // CHECK-X86_64:   }
@@ -417,7 +417,7 @@ Lt0_x = Lt0_a - Lt0_b
 // CHECK-X86_64:     Type: Undef (0x0)
 // CHECK-X86_64:     Section:  (0x0)
 // CHECK-X86_64:     RefType: UndefinedNonLazy (0x0)
-// CHECK-X86_64:     Flags [ (0x0)
+// CHECK-X86_64:     Flags [ (0x200)
 // CHECK-X86_64:     ]
 // CHECK-X86_64:     Value: 0x0
 // CHECK-X86_64:   }

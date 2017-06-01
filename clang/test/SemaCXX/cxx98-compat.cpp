@@ -100,6 +100,9 @@ struct RefQualifier {
 };
 
 auto f() -> int; // expected-warning {{trailing return types are incompatible with C++98}}
+#ifdef CXX14COMPAT
+auto ff() { return 5; } // expected-warning {{'auto' type specifier is incompatible with C++98}}
+#endif
 
 void RangeFor() {
   int xs[] = {1, 2, 3};
@@ -358,7 +361,7 @@ template<typename T> T var = T(10);
 // diagnosed the primary template.
 template<typename T> T* var<T*> = new T();
 template<> int var<int> = 10;
-template int var<int>;
+template char var<char>;
 float fvar = var<float>;
 
 class A {
@@ -388,7 +391,7 @@ template<typename T> T B::v = T();
 
 template<typename T> T* B::v<T*> = new T();
 template<> int B::v<int> = 10;
-template int B::v<int>;
+template char B::v<char>;
 float fsvar = B::v<float>;
 
 #ifdef CXX14COMPAT

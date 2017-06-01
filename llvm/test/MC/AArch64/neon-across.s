@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=arm64 -mattr=+neon -show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple=arm64 -mattr=+neon,+fullfp16 -show-encoding < %s | FileCheck %s
 
 // Check that the assembler can handle the documented syntax for AArch64
 
@@ -90,11 +90,27 @@
 // CHECK: addv	h0, v1.8h               // encoding: [0x20,0xb8,0x71,0x4e]
 // CHECK: addv	s0, v1.4s               // encoding: [0x20,0xb8,0xb1,0x4e]
 
+        fmaxnmv h0, v1.4h
+        fminnmv h0, v1.4h
+        fmaxv h0, v1.4h
+        fminv h0, v1.4h
+        fmaxnmv h0, v1.8h
+        fminnmv h0, v1.8h
+        fmaxv h0, v1.8h
+        fminv h0, v1.8h
         fmaxnmv s0, v1.4s
         fminnmv s0, v1.4s
         fmaxv s0, v1.4s
         fminv s0, v1.4s
 
+// CHECK: fmaxnmv h0, v1.4h               // encoding: [0x20,0xc8,0x30,0x0e]
+// CHECK: fminnmv h0, v1.4h               // encoding: [0x20,0xc8,0xb0,0x0e]
+// CHECK: fmaxv   h0, v1.4h               // encoding: [0x20,0xf8,0x30,0x0e]
+// CHECK: fminv   h0, v1.4h               // encoding: [0x20,0xf8,0xb0,0x0e]
+// CHECK: fmaxnmv h0, v1.8h               // encoding: [0x20,0xc8,0x30,0x4e]
+// CHECK: fminnmv h0, v1.8h               // encoding: [0x20,0xc8,0xb0,0x4e]
+// CHECK: fmaxv   h0, v1.8h               // encoding: [0x20,0xf8,0x30,0x4e]
+// CHECK: fminv   h0, v1.8h               // encoding: [0x20,0xf8,0xb0,0x4e]
 // CHECK: fmaxnmv	s0, v1.4s               // encoding: [0x20,0xc8,0x30,0x6e]
 // CHECK: fminnmv	s0, v1.4s               // encoding: [0x20,0xc8,0xb0,0x6e]
 // CHECK: fmaxv	s0, v1.4s               // encoding: [0x20,0xf8,0x30,0x6e]

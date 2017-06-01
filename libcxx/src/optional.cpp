@@ -15,6 +15,10 @@ namespace std
 
 bad_optional_access::~bad_optional_access() _NOEXCEPT = default;
 
+const char* bad_optional_access::what() const _NOEXCEPT {
+  return "bad_optional_access";
+  }
+
 } // std
 
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL

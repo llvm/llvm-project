@@ -11,7 +11,6 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -std=c++11 -DLAMBDA -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck -check-prefix=TLS-LAMBDA %s
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -fblocks -DBLOCKS -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck -check-prefix=TLS-BLOCKS %s
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -std=c++11 -DARRAY -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck -check-prefix=TLS-ARRAY %s
-// REQUIRES: tls
 // expected-no-diagnostics
 #ifndef ARRAY
 #ifndef HEADER
@@ -85,12 +84,8 @@ int main() {
   // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
   // LAMBDA: call {{.*}}void {{.+}} @__kmpc_fork_call({{.+}}, i32 0, {{.+}}* [[OMP_REGION:@.+]] to {{.+}})
 
-  // TLS-LAMBDA:     [[G_CPY_VAL:%.+]] = call i{{[0-9]+}}* [[G_CTOR:@.+]]()
+  // TLS-LAMBDA:     [[G_CPY_VAL:%.+]] = call{{( cxx_fast_tlscc)?}} i{{[0-9]+}}* [[G_CTOR:@.+]]()
   // TLS-LAMBDA:     call {{.*}}void {{.+}} @__kmpc_fork_call({{.+}}, i32 1, {{.+}}* [[OMP_REGION:@.+]] to {{.+}}, i32* [[G_CPY_VAL]])
-
-  // TLS-LAMBDA:     define {{.*}}i{{[0-9]+}}* [[G_CTOR]]() {
-  // TLS-LAMBDA:     ret i{{[0-9]+}}* [[G]]
-  // TLS-LAMBDA:     }
 
 #pragma omp parallel copyin(g)
   {
@@ -108,7 +103,7 @@ int main() {
     // LAMBDA: [[DONE]]
 
     // TLS-LAMBDA-DAG: [[G_CAPTURE_SRC:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** %
-    // TLS-LAMBDA-DAG: [[G_CAPTURE_DST:%.+]] = call i{{[0-9]+}}* [[G_CTOR]]()
+    // TLS-LAMBDA-DAG: [[G_CAPTURE_DST:%.+]] = call{{( cxx_fast_tlscc)?}} i{{[0-9]+}}* [[G_CTOR]]()
     // TLS-LAMBDA-DAG: [[G_CAPTURE_SRCC:%.+]] = ptrtoint i{{[0-9]+}}* [[G_CAPTURE_SRC]] to i{{[0-9]+}}
     // TLS-LAMBDA-DAG: [[G_CAPTURE_DSTC:%.+]] = ptrtoint i{{[0-9]+}}* [[G_CAPTURE_DST]] to i{{[0-9]+}}
     // TLS-LAMBDA: icmp ne i{{[0-9]+}} {{%.+}}, {{%.+}}
@@ -123,13 +118,18 @@ int main() {
     g = 1;
     // LAMBDA: call{{.*}} void [[INNER_LAMBDA:@.+]](%{{.+}}*
     // TLS-LAMBDA: call{{.*}} void [[INNER_LAMBDA:@.+]](%{{.+}}*
+
+    // TLS-LAMBDA:     define {{.*}}i{{[0-9]+}}* [[G_CTOR]]()
+    // TLS-LAMBDA:     ret i{{[0-9]+}}* [[G]]
+    // TLS-LAMBDA:     }
+
     [&]() {
       // LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* [[ARG_PTR:%.+]])
       // LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
       g = 2;
       // LAMBDA: [[ARG_PTR:%.+]] = load %{{.+}}*, %{{.+}}** [[ARG_PTR_REF]]
 
-      // TLS-LAMBDA: [[G_CAPTURE_DST:%.+]] = call i{{[0-9]+}}* [[G_CTOR]]()
+      // TLS-LAMBDA: [[G_CAPTURE_DST:%.+]] = call{{( cxx_fast_tlscc)?}} i{{[0-9]+}}* [[G_CTOR]]()
       // TLS-LAMBDA: store volatile i{{[0-9]+}} 2, i{{[0-9]+}}* [[G_CAPTURE_DST]], align 128
     }();
   }
@@ -147,12 +147,9 @@ int main() {
   // BLOCKS: define{{.*}} internal{{.*}} void {{.+}}(i8*
   // BLOCKS: call {{.*}}void {{.+}} @__kmpc_fork_call({{.+}}, i32 0, {{.+}}* [[OMP_REGION:@.+]] to {{.+}})
 
-  // TLS-BLOCKS:     [[G_CPY_VAL:%.+]] = call i{{[0-9]+}}* [[G_CTOR:@.+]]()
+  // TLS-BLOCKS:     [[G_CPY_VAL:%.+]] = call{{( cxx_fast_tlscc)?}} i{{[0-9]+}}* [[G_CTOR:@.+]]()
   // TLS-BLOCKS:     call {{.*}}void {{.+}} @__kmpc_fork_call({{.+}}, i32 1, {{.+}}* [[OMP_REGION:@.+]] to {{.+}}, i32* [[G_CPY_VAL]])
 
-  // TLS-BLOCKS:     define {{.*}}i{{[0-9]+}}* [[G_CTOR]]() {
-  // TLS-BLOCKS:     ret i{{[0-9]+}}* [[G]]
-  // TLS-BLOCKS:     }
 #pragma omp parallel copyin(g)
   {
     // BLOCKS: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}})
@@ -169,7 +166,7 @@ int main() {
     // BLOCKS: [[DONE]]
 
     // TLS-BLOCKS-DAG: [[G_CAPTURE_SRC:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** %
-    // TLS-BLOCKS-DAG: [[G_CAPTURE_DST:%.+]] = call i{{[0-9]+}}* [[G_CTOR]]()
+    // TLS-BLOCKS-DAG: [[G_CAPTURE_DST:%.+]] = call{{( cxx_fast_tlscc)?}} i{{[0-9]+}}* [[G_CTOR]]()
     // TLS-BLOCKS-DAG: [[G_CAPTURE_SRCC:%.+]] = ptrtoint i{{[0-9]+}}* [[G_CAPTURE_SRC]] to i{{[0-9]+}}
     // TLS-BLOCKS-DAG: [[G_CAPTURE_DSTC:%.+]] = ptrtoint i{{[0-9]+}}* [[G_CAPTURE_DST]] to i{{[0-9]+}}
     // TLS-BLOCKS: icmp ne i{{[0-9]+}} {{%.+}}, {{%.+}}
@@ -186,10 +183,14 @@ int main() {
     // BLOCKS-NOT: [[G]]{{[[^:word:]]}}
     // BLOCKS: call {{.*}}void {{%.+}}(i8
 
-    // TLS-BLOCKS: [[G_CAPTURE_DST:%.+]] = call i{{[0-9]+}}* [[G_CTOR]]()
+    // TLS-BLOCKS: [[G_CAPTURE_DST:%.+]] = call{{( cxx_fast_tlscc)?}} i{{[0-9]+}}* [[G_CTOR]]()
     // TLS-BLOCKS: store volatile i{{[0-9]+}} 1, i{{[0-9]+}}* [[G_CAPTURE_DST]]
     // TLS-BLOCKS-NOT: [[G]]{{[[^:word:]]}}
     // TLS-BLOCKS: call {{.*}}void {{%.+}}(i8
+
+    // TLS-BLOCKS:     define {{.*}}i{{[0-9]+}}* [[G_CTOR]]()
+    // TLS-BLOCKS:     ret i{{[0-9]+}}* [[G]]
+    // TLS-BLOCKS:     }
     ^{
       // BLOCKS: define {{.+}} void {{@.+}}(i8*
       // TLS-BLOCKS: define {{.+}} void {{@.+}}(i8*
@@ -201,7 +202,7 @@ int main() {
       // BLOCKS: ret
 
       // TLS-BLOCKS-NOT: [[G]]{{[[^:word:]]}}
-      // TLS-BLOCKS: [[G_CAPTURE_DST:%.+]] = call i{{[0-9]+}}* [[G_CTOR]]()
+      // TLS-BLOCKS: [[G_CAPTURE_DST:%.+]] = call{{( cxx_fast_tlscc)?}} i{{[0-9]+}}* [[G_CTOR]]()
       // TLS-BLOCKS: store volatile i{{[0-9]+}} 2, i{{[0-9]+}}* [[G_CAPTURE_DST]]
       // TLS-BLOCKS-NOT: [[G]]{{[[^:word:]]}}
       // TLS-BLOCKS: ret

@@ -150,10 +150,12 @@ RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
   // See <reloc.h>.
   const MCSymbol *A = &Target.getSymA()->getSymbol();
 
-  if (!A->getFragment())
-    Asm.getContext().reportFatalError(Fixup.getLoc(),
+  if (!A->getFragment()) {
+    Asm.getContext().reportError(Fixup.getLoc(),
                        "symbol '" + A->getName() +
                        "' can not be undefined in a subtraction expression");
+    return;
+  }
 
   uint32_t Value = Writer->getSymbolAddress(*A, Layout);
   uint32_t Value2 = 0;
@@ -163,10 +165,12 @@ RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
   if (const MCSymbolRefExpr *B = Target.getSymB()) {
     const MCSymbol *SB = &B->getSymbol();
 
-    if (!SB->getFragment())
-      Asm.getContext().reportFatalError(Fixup.getLoc(),
+    if (!SB->getFragment()) {
+      Asm.getContext().reportError(Fixup.getLoc(),
                          "symbol '" + B->getSymbol().getName() +
                          "' can not be undefined in a subtraction expression");
+      return;
+    }
 
     // Select the appropriate difference relocation type.
     Type = MachO::ARM_RELOC_HALF_SECTDIFF;
@@ -204,7 +208,7 @@ RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
     if (Asm.isThumbFunc(A))
       FixedValue &= 0xfffffffe;
     MovtBit = 1;
-    // Fallthrough
+    LLVM_FALLTHROUGH;
   case ARM::fixup_t2_movw_lo16:
     ThumbBit = 1;
     break;
@@ -251,10 +255,12 @@ void ARMMachObjectWriter::RecordARMScatteredRelocation(MachObjectWriter *Writer,
   // See <reloc.h>.
   const MCSymbol *A = &Target.getSymA()->getSymbol();
 
-  if (!A->getFragment())
-    Asm.getContext().reportFatalError(Fixup.getLoc(),
+  if (!A->getFragment()) {
+    Asm.getContext().reportError(Fixup.getLoc(),
                        "symbol '" + A->getName() +
                        "' can not be undefined in a subtraction expression");
+    return;
+  }
 
   uint32_t Value = Writer->getSymbolAddress(*A, Layout);
   uint64_t SecAddr = Writer->getSectionAddress(A->getFragment()->getParent());
@@ -265,10 +271,12 @@ void ARMMachObjectWriter::RecordARMScatteredRelocation(MachObjectWriter *Writer,
     assert(Type == MachO::ARM_RELOC_VANILLA && "invalid reloc for 2 symbols");
     const MCSymbol *SB = &B->getSymbol();
 
-    if (!SB->getFragment())
-      Asm.getContext().reportFatalError(Fixup.getLoc(),
+    if (!SB->getFragment()) {
+      Asm.getContext().reportError(Fixup.getLoc(),
                          "symbol '" + B->getSymbol().getName() +
                          "' can not be undefined in a subtraction expression");
+      return;
+    }
 
     // Select the appropriate difference relocation type.
     Type = MachO::ARM_RELOC_SECTDIFF;
@@ -346,13 +354,15 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
   unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
   unsigned Log2Size;
   unsigned RelocType = MachO::ARM_RELOC_VANILLA;
-  if (!getARMFixupKindMachOInfo(Fixup.getKind(), RelocType, Log2Size))
+  if (!getARMFixupKindMachOInfo(Fixup.getKind(), RelocType, Log2Size)) {
     // If we failed to get fixup kind info, it's because there's no legal
     // relocation type for the fixup kind. This happens when it's a fixup that's
     // expected to always be resolvable at assembly time and not have any
     // relocations needed.
-    Asm.getContext().reportFatalError(Fixup.getLoc(),
-                                "unsupported relocation on symbol");
+    Asm.getContext().reportError(Fixup.getLoc(),
+                                 "unsupported relocation on symbol");
+    return;
+  }
 
   // If this is a difference or a defined symbol plus an offset, then we need a
   // scattered relocation entry.  Differences always require scattered
@@ -379,7 +389,8 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
   uint32_t Offset = Target.getConstant();
   if (IsPCRel && RelocType == MachO::ARM_RELOC_VANILLA)
     Offset += 1 << Log2Size;
-  if (Offset && A && !Writer->doesSymbolRequireExternRelocation(*A))
+  if (Offset && A && !Writer->doesSymbolRequireExternRelocation(*A) &&
+      RelocType != MachO::ARM_RELOC_HALF)
     return RecordARMScatteredRelocation(Writer, Asm, Layout, Fragment, Fixup,
                                         Target, RelocType, Log2Size,
                                         FixedValue);
@@ -437,8 +448,10 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
   // Even when it's not a scattered relocation, movw/movt always uses
   // a PAIR relocation.
   if (Type == MachO::ARM_RELOC_HALF) {
-    // The other-half value only gets populated for the movt and movw
-    // relocation entries.
+    // The entire addend is needed to correctly apply a relocation. One half is
+    // extracted from the instruction itself, the other comes from this
+    // PAIR. I.e. it's correct that we insert the high bits of the addend in the
+    // MOVW case here.  relocation entries.
     uint32_t Value = 0;
     switch ((unsigned)Fixup.getKind()) {
     default: break;

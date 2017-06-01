@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin
 ; Avoid reading memory that's already freed.
 
 @llvm.used = appending global [1 x i8*] [ i8* bitcast (i32 (i64)* @_Z13GetSectorSizey to i8*) ], section "llvm.metadata"		; <[1 x i8*]*> [#uses=0]

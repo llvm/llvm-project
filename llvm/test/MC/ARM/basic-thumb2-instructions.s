@@ -886,6 +886,7 @@ _func:
         ldr.w r5, _foo
         ldr   lr, (_strcmp-4)
         ldr sp, _foo
+        ldr pc, _foo
 
 @ CHECK: ldr.w	r5, _foo                @ encoding: [0x5f'A',0xf8'A',A,0x50'A']
 @ CHECK: @   fixup A - offset: 0, value: _foo, kind: fixup_t2_ldst_pcrel_12
@@ -898,6 +899,10 @@ _func:
 @ CHECK: ldr.w sp, _foo                 @ encoding: [0x5f'A',0xf8'A',A,0xd0'A']
 @ CHECK: @   fixup A - offset: 0, value: _foo, kind: fixup_t2_ldst_pcrel_12
 @ CHECK-BE: ldr.w sp, _foo                 @ encoding: [0xf8'A',0x5f'A',0xd0'A',A]
+@ CHECK-BE: @   fixup A - offset: 0, value: _foo, kind: fixup_t2_ldst_pcrel_12
+@ CHECK: ldr.w pc, _foo                 @ encoding: [0x5f'A',0xf8'A',A,0xf0'A']
+@ CHECK: @   fixup A - offset: 0, value: _foo, kind: fixup_t2_ldst_pcrel_12
+@ CHECK-BE: ldr.w pc, _foo                 @ encoding: [0xf8'A',0x5f'A',0xf0'A',A]
 @ CHECK-BE: @   fixup A - offset: 0, value: _foo, kind: fixup_t2_ldst_pcrel_12
 
         ldr r7, [pc, #8]
@@ -1731,7 +1736,7 @@ _func:
 @ CHECK: pkhbt	r2, r2, r3              @ encoding: [0xc2,0xea,0x03,0x02]
 @ CHECK: pkhbt	r2, r2, r3, lsl #15     @ encoding: [0xc2,0xea,0xc3,0x32]
 
-@ CHECK: pkhbt	r2, r2, r3              @ encoding: [0xc2,0xea,0x03,0x02]
+@ CHECK: pkhbt	r2, r3, r2              @ encoding: [0xc3,0xea,0x02,0x02]
 @ CHECK: pkhtb	r2, r2, r3, asr #31     @ encoding: [0xc2,0xea,0xe3,0x72]
 @ CHECK: pkhtb	r2, r2, r3, asr #15     @ encoding: [0xc2,0xea,0xe3,0x32]
 

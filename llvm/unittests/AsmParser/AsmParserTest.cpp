@@ -21,7 +21,7 @@ using namespace llvm;
 namespace {
 
 TEST(AsmParserTest, NullTerminatedInput) {
-  LLVMContext &Ctx = getGlobalContext();
+  LLVMContext Ctx;
   StringRef Source = "; Empty module \n";
   SMDiagnostic Error;
   auto Mod = parseAssemblyString(Source, Error, Ctx);
@@ -34,7 +34,7 @@ TEST(AsmParserTest, NullTerminatedInput) {
 #ifndef NDEBUG
 
 TEST(AsmParserTest, NonNullTerminatedInput) {
-  LLVMContext &Ctx = getGlobalContext();
+  LLVMContext Ctx;
   StringRef Source = "; Empty module \n\1\2";
   SMDiagnostic Error;
   std::unique_ptr<Module> Mod;
@@ -47,7 +47,7 @@ TEST(AsmParserTest, NonNullTerminatedInput) {
 #endif
 
 TEST(AsmParserTest, SlotMappingTest) {
-  LLVMContext &Ctx = getGlobalContext();
+  LLVMContext Ctx;
   StringRef Source = "@0 = global i32 0\n !0 = !{}\n !42 = !{i32 42}";
   SMDiagnostic Error;
   SlotMapping Mapping;
@@ -66,7 +66,7 @@ TEST(AsmParserTest, SlotMappingTest) {
 }
 
 TEST(AsmParserTest, TypeAndConstantValueParsing) {
-  LLVMContext &Ctx = getGlobalContext();
+  LLVMContext Ctx;
   SMDiagnostic Error;
   StringRef Source = "define void @test() {\n  entry:\n  ret void\n}";
   auto Mod = parseAssemblyString(Source, Error, Ctx);
@@ -117,7 +117,7 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
 }
 
 TEST(AsmParserTest, TypeAndConstantValueWithSlotMappingParsing) {
-  LLVMContext &Ctx = getGlobalContext();
+  LLVMContext Ctx;
   SMDiagnostic Error;
   StringRef Source =
       "%st = type { i32, i32 }\n"
@@ -150,6 +150,269 @@ TEST(AsmParserTest, TypeAndConstantValueWithSlotMappingParsing) {
                          Error, M, &Mapping);
   ASSERT_TRUE(V);
   ASSERT_TRUE(isa<ConstantExpr>(V));
+}
+
+TEST(AsmParserTest, TypeWithSlotMappingParsing) {
+  LLVMContext Ctx;
+  SMDiagnostic Error;
+  StringRef Source =
+      "%st = type { i32, i32 }\n"
+      "@v = common global [50 x %st] zeroinitializer, align 16\n"
+      "%0 = type { i32, i32, i32, i32 }\n"
+      "@g = common global [50 x %0] zeroinitializer, align 16\n"
+      "define void @marker4(i64 %d) {\n"
+      "entry:\n"
+      "  %conv = trunc i64 %d to i32\n"
+      "  store i32 %conv, i32* getelementptr inbounds "
+      "    ([50 x %st], [50 x %st]* @v, i64 0, i64 0, i32 0), align 16\n"
+      "  store i32 %conv, i32* getelementptr inbounds "
+      "    ([50 x %0], [50 x %0]* @g, i64 0, i64 0, i32 0), align 16\n"
+      "  ret void\n"
+      "}";
+  SlotMapping Mapping;
+  auto Mod = parseAssemblyString(Source, Error, Ctx, &Mapping);
+  ASSERT_TRUE(Mod != nullptr);
+  auto &M = *Mod;
+
+  // Check we properly parse integer types.
+  Type *Ty;
+  Ty = parseType("i32", Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isIntegerTy());
+  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+
+  // Check we properly parse integer types with exotic size.
+  Ty = parseType("i13", Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isIntegerTy());
+  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 13);
+
+  // Check we properly parse floating point types.
+  Ty = parseType("float", Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isFloatTy());
+
+  Ty = parseType("double", Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isDoubleTy());
+
+  // Check we properly parse struct types.
+  // Named struct.
+  Ty = parseType("%st", Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isStructTy());
+
+  // Check the details of the struct.
+  StructType *ST = cast<StructType>(Ty);
+  ASSERT_TRUE(ST->getNumElements() == 2);
+  for (unsigned i = 0, e = ST->getNumElements(); i != e; ++i) {
+    Ty = ST->getElementType(i);
+    ASSERT_TRUE(Ty->isIntegerTy());
+    ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+  }
+
+  // Anonymous struct.
+  Ty = parseType("%0", Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isStructTy());
+
+  // Check the details of the struct.
+  ST = cast<StructType>(Ty);
+  ASSERT_TRUE(ST->getNumElements() == 4);
+  for (unsigned i = 0, e = ST->getNumElements(); i != e; ++i) {
+    Ty = ST->getElementType(i);
+    ASSERT_TRUE(Ty->isIntegerTy());
+    ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+  }
+
+  // Check we properly parse vector types.
+  Ty = parseType("<5 x i32>", Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isVectorTy());
+
+  // Check the details of the vector.
+  VectorType *VT = cast<VectorType>(Ty);
+  ASSERT_TRUE(VT->getNumElements() == 5);
+  ASSERT_TRUE(VT->getBitWidth() == 160);
+  Ty = VT->getElementType();
+  ASSERT_TRUE(Ty->isIntegerTy());
+  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+
+  // Opaque struct.
+  Ty = parseType("%opaque", Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isStructTy());
+
+  ST = cast<StructType>(Ty);
+  ASSERT_TRUE(ST->isOpaque());
+
+  // Check we properly parse pointer types.
+  // One indirection.
+  Ty = parseType("i32*", Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isPointerTy());
+
+  PointerType *PT = cast<PointerType>(Ty);
+  Ty = PT->getElementType();
+  ASSERT_TRUE(Ty->isIntegerTy());
+  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+
+  // Two indirections.
+  Ty = parseType("i32**", Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isPointerTy());
+
+  PT = cast<PointerType>(Ty);
+  Ty = PT->getElementType();
+  ASSERT_TRUE(Ty->isPointerTy());
+
+  PT = cast<PointerType>(Ty);
+  Ty = PT->getElementType();
+  ASSERT_TRUE(Ty->isIntegerTy());
+  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+
+  // Check that we reject types with garbage.
+  Ty = parseType("i32 garbage", Error, M, &Mapping);
+  ASSERT_TRUE(!Ty);
+}
+
+TEST(AsmParserTest, TypeAtBeginningWithSlotMappingParsing) {
+  LLVMContext Ctx;
+  SMDiagnostic Error;
+  StringRef Source =
+      "%st = type { i32, i32 }\n"
+      "@v = common global [50 x %st] zeroinitializer, align 16\n"
+      "%0 = type { i32, i32, i32, i32 }\n"
+      "@g = common global [50 x %0] zeroinitializer, align 16\n"
+      "define void @marker4(i64 %d) {\n"
+      "entry:\n"
+      "  %conv = trunc i64 %d to i32\n"
+      "  store i32 %conv, i32* getelementptr inbounds "
+      "    ([50 x %st], [50 x %st]* @v, i64 0, i64 0, i32 0), align 16\n"
+      "  store i32 %conv, i32* getelementptr inbounds "
+      "    ([50 x %0], [50 x %0]* @g, i64 0, i64 0, i32 0), align 16\n"
+      "  ret void\n"
+      "}";
+  SlotMapping Mapping;
+  auto Mod = parseAssemblyString(Source, Error, Ctx, &Mapping);
+  ASSERT_TRUE(Mod != nullptr);
+  auto &M = *Mod;
+  unsigned Read;
+
+  // Check we properly parse integer types.
+  Type *Ty;
+  Ty = parseTypeAtBeginning("i32", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isIntegerTy());
+  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+  ASSERT_TRUE(Read == 3);
+
+  // Check we properly parse integer types with exotic size.
+  Ty = parseTypeAtBeginning("i13", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isIntegerTy());
+  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 13);
+  ASSERT_TRUE(Read == 3);
+
+  // Check we properly parse floating point types.
+  Ty = parseTypeAtBeginning("float", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isFloatTy());
+  ASSERT_TRUE(Read == 5);
+
+  Ty = parseTypeAtBeginning("double", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isDoubleTy());
+  ASSERT_TRUE(Read == 6);
+
+  // Check we properly parse struct types.
+  // Named struct.
+  Ty = parseTypeAtBeginning("%st", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isStructTy());
+  ASSERT_TRUE(Read == 3);
+
+  // Check the details of the struct.
+  StructType *ST = cast<StructType>(Ty);
+  ASSERT_TRUE(ST->getNumElements() == 2);
+  for (unsigned i = 0, e = ST->getNumElements(); i != e; ++i) {
+    Ty = ST->getElementType(i);
+    ASSERT_TRUE(Ty->isIntegerTy());
+    ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+  }
+
+  // Anonymous struct.
+  Ty = parseTypeAtBeginning("%0", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isStructTy());
+  ASSERT_TRUE(Read == 2);
+
+  // Check the details of the struct.
+  ST = cast<StructType>(Ty);
+  ASSERT_TRUE(ST->getNumElements() == 4);
+  for (unsigned i = 0, e = ST->getNumElements(); i != e; ++i) {
+    Ty = ST->getElementType(i);
+    ASSERT_TRUE(Ty->isIntegerTy());
+    ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+  }
+
+  // Check we properly parse vector types.
+  Ty = parseTypeAtBeginning("<5 x i32>", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isVectorTy());
+  ASSERT_TRUE(Read == 9);
+
+  // Check the details of the vector.
+  VectorType *VT = cast<VectorType>(Ty);
+  ASSERT_TRUE(VT->getNumElements() == 5);
+  ASSERT_TRUE(VT->getBitWidth() == 160);
+  Ty = VT->getElementType();
+  ASSERT_TRUE(Ty->isIntegerTy());
+  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+
+  // Opaque struct.
+  Ty = parseTypeAtBeginning("%opaque", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isStructTy());
+  ASSERT_TRUE(Read == 7);
+
+  ST = cast<StructType>(Ty);
+  ASSERT_TRUE(ST->isOpaque());
+
+  // Check we properly parse pointer types.
+  // One indirection.
+  Ty = parseTypeAtBeginning("i32*", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isPointerTy());
+  ASSERT_TRUE(Read == 4);
+
+  PointerType *PT = cast<PointerType>(Ty);
+  Ty = PT->getElementType();
+  ASSERT_TRUE(Ty->isIntegerTy());
+  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+
+  // Two indirections.
+  Ty = parseTypeAtBeginning("i32**", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isPointerTy());
+  ASSERT_TRUE(Read == 5);
+
+  PT = cast<PointerType>(Ty);
+  Ty = PT->getElementType();
+  ASSERT_TRUE(Ty->isPointerTy());
+
+  PT = cast<PointerType>(Ty);
+  Ty = PT->getElementType();
+  ASSERT_TRUE(Ty->isIntegerTy());
+  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+
+  // Check that we reject types with garbage.
+  Ty = parseTypeAtBeginning("i32 garbage", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Ty);
+  ASSERT_TRUE(Ty->isIntegerTy());
+  ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
+  // We go to the next token, i.e., we read "i32" + ' '.
+  ASSERT_TRUE(Read == 4);
 }
 
 } // end anonymous namespace

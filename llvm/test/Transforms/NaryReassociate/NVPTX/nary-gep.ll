@@ -1,4 +1,5 @@
 ; RUN: opt < %s -nary-reassociate -early-cse -S | FileCheck %s
+; RUN: opt < %s -passes='nary-reassociate' -S | opt -early-cse -S | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-unknown-unknown"
@@ -120,6 +121,23 @@ define void @reassociate_gep_128(float* %a, i128 %i, i128 %j) {
 ; CHECK: [[t2:[^ ]+]] = getelementptr float, float* [[t1]], i64 [[truncj]]
   call void @foo(float* %3)
 ; CHECK: call void @foo(float* [[t2]])
+  ret void
+}
+
+%struct.complex = type { float, float }
+
+declare void @bar(%struct.complex*)
+
+define void @different_types(%struct.complex* %input, i64 %i) {
+; CHECK-LABEL: @different_types(
+  %t1 = getelementptr %struct.complex, %struct.complex* %input, i64 %i
+  call void @bar(%struct.complex* %t1)
+  %j = add i64 %i, 5
+  %t2 = getelementptr %struct.complex, %struct.complex* %input, i64 %j, i32 0
+; CHECK: [[cast:[^ ]+]] = bitcast %struct.complex* %t1 to float*
+; CHECK-NEXT: %t2 = getelementptr float, float* [[cast]], i64 10
+; CHECK-NEXT: call void @foo(float* %t2)
+  call void @foo(float* %t2)
   ret void
 }
 

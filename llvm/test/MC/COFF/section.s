@@ -30,6 +30,7 @@
 .section s_a,"a"; .long 1
 .section s_b,"b"; .long 1
 .section s_d,"d"; .long 1
+.section s_D,"D"; .long 1
 .section s_n,"n"; .long 1
 .section s_r,"r"; .long 1
 .section s_s,"s"; .long 1
@@ -78,6 +79,15 @@
 // CHECK:          Characteristics [
 // CHECK-NEXT:       IMAGE_SCN_ALIGN_1BYTES
 // CHECK-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA
+// CHECK-NEXT:       IMAGE_SCN_MEM_READ
+// CHECK-NEXT:       IMAGE_SCN_MEM_WRITE
+// CHECK-NEXT:     ]
+// CHECK:        }
+// CHECK:        Section {
+// CHECK:          Name: s_D
+// CHECK:          Characteristics [
+// CHECK-NEXT:       IMAGE_SCN_ALIGN_1BYTES
+// CHECK-NEXT:       IMAGE_SCN_MEM_DISCARDABLE
 // CHECK-NEXT:       IMAGE_SCN_MEM_READ
 // CHECK-NEXT:       IMAGE_SCN_MEM_WRITE
 // CHECK-NEXT:     ]
@@ -166,5 +176,19 @@
 // CHECK-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA
 // CHECK-NEXT:     ]
 // CHECK:        }
+
+// Sections starting with ".debug" are implicitly discardable. This is
+// compatible with gas.
+.section .debug_asdf,"dr"; .long 1
+// CHECK:        Section {
+// CHECK:          Name: .debug_asdf
+// CHECK:          Characteristics [
+// CHECK-NEXT:       IMAGE_SCN_ALIGN_1BYTES
+// CHECK-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA
+// CHECK-NEXT:       IMAGE_SCN_MEM_DISCARDABLE
+// CHECK-NEXT:       IMAGE_SCN_MEM_READ
+// CHECK-NEXT:     ]
+// CHECK:        }
+
 
 // CHECK:      ]

@@ -18,13 +18,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -307,7 +304,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
     case AArch64::CBNZW:
     case AArch64::CBNZX:
       // These can be converted into a ccmp against #0.
-      return I;
+      return &*I;
     }
     ++NumCmpTermRejs;
     DEBUG(dbgs() << "Flags not used by terminator: " << *I);
@@ -332,13 +329,13 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
         ++NumImmRangeRejs;
         return nullptr;
       }
-    // Fall through.
+      LLVM_FALLTHROUGH;
     case AArch64::SUBSWrr:
     case AArch64::SUBSXrr:
     case AArch64::ADDSWrr:
     case AArch64::ADDSXrr:
       if (isDeadDef(I->getOperand(0).getReg()))
-        return I;
+        return &*I;
       DEBUG(dbgs() << "Can't convert compare with live destination: " << *I);
       ++NumLiveDstRejs;
       return nullptr;
@@ -346,14 +343,14 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
     case AArch64::FCMPDrr:
     case AArch64::FCMPESrr:
     case AArch64::FCMPEDrr:
-      return I;
+      return &*I;
     }
 
     // Check for flag reads and clobbers.
     MIOperands::PhysRegInfo PRI =
-        MIOperands(I).analyzePhysReg(AArch64::NZCV, TRI);
+        MIOperands(*I).analyzePhysReg(AArch64::NZCV, TRI);
 
-    if (PRI.Reads) {
+    if (PRI.Read) {
       // The ccmp doesn't produce exactly the same flags as the original
       // compare, so reject the transform if there are uses of the flags
       // besides the terminators.
@@ -362,7 +359,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
       return nullptr;
     }
 
-    if (PRI.Clobbers) {
+    if (PRI.Defined || PRI.Clobbered) {
       DEBUG(dbgs() << "Not convertible compare: " << *I);
       ++NumUnknNZCVDefs;
       return nullptr;
@@ -496,7 +493,7 @@ bool SSACCmpConv::canConvert(MachineBasicBlock *MBB) {
   // The branch we're looking to eliminate must be analyzable.
   HeadCond.clear();
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
-  if (TII->AnalyzeBranch(*Head, TBB, FBB, HeadCond)) {
+  if (TII->analyzeBranch(*Head, TBB, FBB, HeadCond)) {
     DEBUG(dbgs() << "Head branch not analyzable.\n");
     ++NumHeadBranchRejs;
     return false;
@@ -524,7 +521,7 @@ bool SSACCmpConv::canConvert(MachineBasicBlock *MBB) {
 
   CmpBBCond.clear();
   TBB = FBB = nullptr;
-  if (TII->AnalyzeBranch(*CmpBB, TBB, FBB, CmpBBCond)) {
+  if (TII->analyzeBranch(*CmpBB, TBB, FBB, CmpBBCond)) {
     DEBUG(dbgs() << "CmpBB branch not analyzable.\n");
     ++NumCmpBranchRejs;
     return false;
@@ -567,11 +564,11 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   // All CmpBB instructions are moved into Head, and CmpBB is deleted.
   // Update the CFG first.
   updateTailPHIs();
-  Head->removeSuccessor(CmpBB);
-  CmpBB->removeSuccessor(Tail);
+  Head->removeSuccessor(CmpBB, true);
+  CmpBB->removeSuccessor(Tail, true);
   Head->transferSuccessorsAndUpdatePHIs(CmpBB);
   DebugLoc TermDL = Head->getFirstTerminator()->getDebugLoc();
-  TII->RemoveBranch(*Head);
+  TII->removeBranch(*Head);
 
   // If the Head terminator was one of the cbz / tbz branches with built-in
   // compare, we need to insert an explicit compare instruction in its place.
@@ -735,10 +732,12 @@ class AArch64ConditionalCompares : public MachineFunctionPass {
 
 public:
   static char ID;
-  AArch64ConditionalCompares() : MachineFunctionPass(ID) {}
+  AArch64ConditionalCompares() : MachineFunctionPass(ID) {
+    initializeAArch64ConditionalComparesPass(*PassRegistry::getPassRegistry());
+  }
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "AArch64 Conditional Compares";
   }
 
@@ -753,13 +752,8 @@ private:
 
 char AArch64ConditionalCompares::ID = 0;
 
-namespace llvm {
-void initializeAArch64ConditionalComparesPass(PassRegistry &);
-}
-
 INITIALIZE_PASS_BEGIN(AArch64ConditionalCompares, "aarch64-ccmp",
                       "AArch64 CCMP Pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
 INITIALIZE_PASS_END(AArch64ConditionalCompares, "aarch64-ccmp",
@@ -770,7 +764,6 @@ FunctionPass *llvm::createAArch64ConditionalCompares() {
 }
 
 void AArch64ConditionalCompares::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfo>();
   AU.addRequired<MachineDominatorTree>();
   AU.addPreserved<MachineDominatorTree>();
   AU.addRequired<MachineLoopInfo>();
@@ -849,9 +842,9 @@ bool AArch64ConditionalCompares::shouldConvert() {
 
   // Instruction depths can be computed for all trace instructions above CmpBB.
   unsigned HeadDepth =
-      Trace.getInstrCycles(CmpConv.Head->getFirstTerminator()).Depth;
+      Trace.getInstrCycles(*CmpConv.Head->getFirstTerminator()).Depth;
   unsigned CmpBBDepth =
-      Trace.getInstrCycles(CmpConv.CmpBB->getFirstTerminator()).Depth;
+      Trace.getInstrCycles(*CmpConv.CmpBB->getFirstTerminator()).Depth;
   DEBUG(dbgs() << "Head depth:  " << HeadDepth
                << "\nCmpBB depth: " << CmpBBDepth << '\n');
   if (CmpBBDepth > HeadDepth + DelayLimit) {
@@ -891,6 +884,9 @@ bool AArch64ConditionalCompares::tryConvert(MachineBasicBlock *MBB) {
 bool AArch64ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
                << "********** Function: " << MF.getName() << '\n');
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   SchedModel = MF.getSubtarget().getSchedModel();

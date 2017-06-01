@@ -17,7 +17,6 @@
 
 #include "llvm/MC/MCWinEH.h"
 #include "llvm/Support/Win64EH.h"
-#include <vector>
 
 namespace llvm {
 class MCStreamer;

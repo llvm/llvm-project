@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
+#include "llvm/Support/Dwarf.h"
 #include <cstdint>
 
 namespace llvm {
@@ -30,7 +31,7 @@ class DWARFAcceleratorTable {
 
   struct HeaderData {
     typedef uint16_t AtomType;
-    typedef uint16_t Form;
+    typedef dwarf::Form Form;
     uint32_t DIEOffsetBase;
     SmallVector<std::pair<AtomType, Form>, 3> Atoms;
   };

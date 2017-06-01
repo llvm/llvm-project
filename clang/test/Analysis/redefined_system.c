@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=osx,unix,core,alpha.security.taint -w -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=osx,unix,core,alpha.security.taint -w -verify %s
 // expected-no-diagnostics
 
 // Make sure we don't crash when someone redefines a system function we reason about.

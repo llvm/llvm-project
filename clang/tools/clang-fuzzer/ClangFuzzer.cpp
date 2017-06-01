@@ -16,6 +16,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/Option/Option.h"
 
 using namespace clang;
@@ -41,7 +42,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
       tooling::newFrontendActionFactory<clang::SyntaxOnlyAction>());
   std::shared_ptr<PCHContainerOperations> PCHContainerOps =
       std::make_shared<PCHContainerOperations>();
-  action->runInvocation(Invocation.release(), Files.get(), PCHContainerOps,
+  action->runInvocation(std::move(Invocation), Files.get(), PCHContainerOps,
                         &Diags);
   return 0;
 }

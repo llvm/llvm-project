@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -o - | not grep 10
+; RUN: llc < %s -march=x86 -o - | FileCheck %s
 
 declare void @llvm.va_start(i8*) nounwind
 
@@ -6,6 +6,8 @@ declare void @llvm.va_copy(i8*, i8*) nounwind
 
 declare void @llvm.va_end(i8*) nounwind
 
+; CHECK-LABEL: test:
+; CHECK-NOT: 10
 define x86_fp80 @test(...) nounwind {
 	%ap = alloca i8*		; <i8**> [#uses=3]
 	%v1 = bitcast i8** %ap to i8*		; <i8*> [#uses=1]

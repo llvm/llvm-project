@@ -1,0 +1,42 @@
+# RUN: llc -run-pass=aarch64-expand-pseudo %s -o - | FileCheck %s
+
+--- |
+  ; ModuleID = 'simple.ll'
+  source_filename = "simple.ll"
+  target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--linux-gnu"
+
+  define i32 @test_mov_0() {
+    ret i32 42
+  }
+
+...
+---
+name:            test_mov_0
+alignment:       2
+exposesReturnsTwice: false
+tracksRegLiveness: false
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    %wzr = MOVi32imm 42
+    %xzr = MOVi64imm 42
+    RET_ReallyLR implicit killed %w0
+
+...
+
+# CHECK: bb.0
+# CHECK-NEXT: RET undef %lr

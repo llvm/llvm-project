@@ -10,8 +10,8 @@ define internal void @0() {
   ret void
 }
 
-; CHECK0: declare hidden void @__llvmsplit_unnamed1()
-; CHECK1: define hidden void @__llvmsplit_unnamed1()
+; CHECK0: declare hidden void @__llvmsplit_unnamed.1()
+; CHECK1: define hidden void @__llvmsplit_unnamed.1()
 define internal void @1() {
   ; CHECK1: call void @foo()
   ; CHECK1: call void @foo()
@@ -23,7 +23,7 @@ define internal void @1() {
 ; CHECK0: define void @foo()
 ; CHECK1: declare void @foo()
 define void @foo() {
-  ; CHECK0: call void @__llvmsplit_unnamed1()
+  ; CHECK0: call void @__llvmsplit_unnamed.1()
   ; CHECK0: call void @__llvmsplit_unnamed()
   call void @1()
   call void @0()

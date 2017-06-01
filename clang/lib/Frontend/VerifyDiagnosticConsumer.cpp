@@ -43,7 +43,8 @@ VerifyDiagnosticConsumer::~VerifyDiagnosticConsumer() {
   assert(!CurrentPreprocessor && "CurrentPreprocessor should be invalid!");
   SrcManager = nullptr;
   CheckDiagnostics();
-  Diags.takeClient().release();
+  assert(!Diags.ownsClient() &&
+         "The VerifyDiagnosticConsumer takes over ownership of the client!");
 }
 
 #ifndef NDEBUG
@@ -186,9 +187,7 @@ public:
       Regex(RegexStr) { }
 
   bool isValid(std::string &Error) override {
-    if (Regex.isValid(Error))
-      return true;
-    return false;
+    return Regex.isValid(Error);
   }
 
   bool match(StringRef S) override {
@@ -401,7 +400,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
         const DirectoryLookup *CurDir;
         const FileEntry *FE =
             PP->LookupFile(Pos, Filename, false, nullptr, nullptr, CurDir,
-                           nullptr, nullptr, nullptr);
+                           nullptr, nullptr, nullptr, nullptr);
         if (!FE) {
           Diags.Report(Pos.getLocWithOffset(PH.C-PH.Begin),
                        diag::err_verify_missing_file) << Filename << KindStr;

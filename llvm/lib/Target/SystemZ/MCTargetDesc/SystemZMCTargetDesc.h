@@ -21,13 +21,14 @@ class MCInstrInfo;
 class MCObjectWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
+class MCTargetOptions;
 class StringRef;
 class Target;
 class Triple;
 class raw_pwrite_stream;
 class raw_ostream;
 
-extern Target TheSystemZTarget;
+Target &getTheSystemZTarget();
 
 namespace SystemZMC {
 // How many bytes are in the ABI-defined, caller-allocated part of
@@ -53,6 +54,7 @@ extern const unsigned FP128Regs[16];
 extern const unsigned VR32Regs[32];
 extern const unsigned VR64Regs[32];
 extern const unsigned VR128Regs[32];
+extern const unsigned AR32Regs[16];
 
 // Return the 0-based number of the first architectural register that
 // contains the given LLVM register.   E.g. R1D -> 1.
@@ -85,7 +87,8 @@ MCCodeEmitter *createSystemZMCCodeEmitter(const MCInstrInfo &MCII,
 
 MCAsmBackend *createSystemZMCAsmBackend(const Target &T,
                                         const MCRegisterInfo &MRI,
-                                        const Triple &TT, StringRef CPU);
+                                        const Triple &TT, StringRef CPU,
+                                        const MCTargetOptions &Options);
 
 MCObjectWriter *createSystemZObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI);
 } // end namespace llvm

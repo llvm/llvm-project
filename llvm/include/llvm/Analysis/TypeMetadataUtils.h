@@ -1,0 +1,45 @@
+//===- TypeMetadataUtils.h - Utilities related to type metadata --*- C++ -*-==//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains functions that make it easier to manipulate type metadata
+// for devirtualization.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_ANALYSIS_TYPEMETADATAUTILS_H
+#define LLVM_ANALYSIS_TYPEMETADATAUTILS_H
+
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/CallSite.h"
+
+namespace llvm {
+
+/// A call site that could be devirtualized.
+struct DevirtCallSite {
+  /// The offset from the address point to the virtual function.
+  uint64_t Offset;
+  /// The call site itself.
+  CallSite CS;
+};
+
+/// Given a call to the intrinsic @llvm.type.test, find all devirtualizable
+/// call sites based on the call and return them in DevirtCalls.
+void findDevirtualizableCallsForTypeTest(
+    SmallVectorImpl<DevirtCallSite> &DevirtCalls,
+    SmallVectorImpl<CallInst *> &Assumes, CallInst *CI);
+
+/// Given a call to the intrinsic @llvm.type.checked.load, find all
+/// devirtualizable call sites based on the call and return them in DevirtCalls.
+void findDevirtualizableCallsForTypeCheckedLoad(
+    SmallVectorImpl<DevirtCallSite> &DevirtCalls,
+    SmallVectorImpl<Instruction *> &LoadedPtrs,
+    SmallVectorImpl<Instruction *> &Preds, bool &HasNonCallUses, CallInst *CI);
+}
+
+#endif

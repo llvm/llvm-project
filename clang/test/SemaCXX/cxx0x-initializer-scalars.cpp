@@ -91,10 +91,23 @@ namespace integral {
   }
 
   void edge_cases() {
-    // FIXME: very poor error message
-    int a({0}); // expected-error {{cannot initialize}}
-    (void) int({0}); // expected-error {{functional-style cast}}
-    new int({0});  // expected-error {{cannot initialize}}
+    int a({0}); // expected-error {{list-initializer for non-class type 'int' must not be parenthesized}}
+    (void) int({0}); // expected-error {{list-initializer for non-class type 'int' must not be parenthesized}}
+    new int({0});  // expected-error {{list-initializer for non-class type 'int' must not be parenthesized}}
+
+    int *b({0});  // expected-error {{list-initializer for non-class type 'int *' must not be parenthesized}}
+    typedef int *intptr;
+    int *c = intptr({0});  // expected-error {{list-initializer for non-class type 'intptr' (aka 'int *') must not be parenthesized}}
+  }
+
+  template<typename T> void dependent_edge_cases() {
+    T a({0});
+    (void) T({0});
+    new T({0});
+
+    T *b({0});
+    typedef T *tptr;
+    T *c = tptr({0});
   }
 
   void default_argument(int i = {}) {

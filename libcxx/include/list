@@ -93,10 +93,10 @@ public:
     size_type max_size() const noexcept;
 
     template <class... Args>
-        reference emplace_front(Args&&... args);
+        reference emplace_front(Args&&... args); // reference in C++17
     void pop_front();
     template <class... Args>
-        reference emplace_back(Args&&... args);
+        reference emplace_back(Args&&... args);  // reference in C++17
     void pop_back();
     void push_front(const value_type& x);
     void push_front(value_type&& x);
@@ -969,9 +969,17 @@ public:
     void push_back(value_type&& __x);
 #ifndef _LIBCPP_HAS_NO_VARIADICS
     template <class... _Args>
+#if _LIBCPP_STD_VER > 14
        reference emplace_front(_Args&&... __args);
+#else
+       void      emplace_front(_Args&&... __args);
+#endif
     template <class... _Args>
+#if _LIBCPP_STD_VER > 14
         reference emplace_back(_Args&&... __args);
+#else
+       void       emplace_back(_Args&&... __args);
+#endif
     template <class... _Args>
         iterator emplace(const_iterator __p, _Args&&... __args);
 #endif  // _LIBCPP_HAS_NO_VARIADICS
@@ -1600,7 +1608,11 @@ list<_Tp, _Alloc>::push_back(value_type&& __x)
 
 template <class _Tp, class _Alloc>
 template <class... _Args>
+#if _LIBCPP_STD_VER > 14
 typename list<_Tp, _Alloc>::reference
+#else
+void
+#endif
 list<_Tp, _Alloc>::emplace_front(_Args&&... __args)
 {
     __node_allocator& __na = base::__node_alloc();
@@ -1609,12 +1621,20 @@ list<_Tp, _Alloc>::emplace_front(_Args&&... __args)
     __node_alloc_traits::construct(__na, _VSTD::addressof(__hold->__value_), _VSTD::forward<_Args>(__args)...);
     __link_nodes_at_front(__hold.get()->__as_link(), __hold.get()->__as_link());
     ++base::__sz();
+#if _LIBCPP_STD_VER > 14
     return __hold.release()->__value_;
+#else
+    __hold.release();
+#endif
 }
 
 template <class _Tp, class _Alloc>
 template <class... _Args>
+#if _LIBCPP_STD_VER > 14
 typename list<_Tp, _Alloc>::reference
+#else
+void
+#endif
 list<_Tp, _Alloc>::emplace_back(_Args&&... __args)
 {
     __node_allocator& __na = base::__node_alloc();
@@ -1624,7 +1644,11 @@ list<_Tp, _Alloc>::emplace_back(_Args&&... __args)
     __link_pointer __nl = __hold->__as_link();
     __link_nodes_at_back(__nl, __nl);
     ++base::__sz();
+#if _LIBCPP_STD_VER > 14
     return __hold.release()->__value_;
+#else
+    __hold.release();
+#endif
 }
 
 template <class _Tp, class _Alloc>

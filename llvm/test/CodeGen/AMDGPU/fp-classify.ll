@@ -1,9 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
-declare i1 @llvm.AMDGPU.class.f32(float, i32) #1
-declare i1 @llvm.AMDGPU.class.f64(double, i32) #1
-declare i32 @llvm.r600.read.tidig.x() #1
 declare float @llvm.fabs.f32(float) #1
 declare double @llvm.fabs.f64(double) #1
 

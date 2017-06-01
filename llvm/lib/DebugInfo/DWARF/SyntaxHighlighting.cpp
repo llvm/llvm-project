@@ -27,6 +27,7 @@ WithColor::WithColor(llvm::raw_ostream &OS, enum HighlightColor Type) : OS(OS) {
     case Tag:        OS.changeColor(llvm::raw_ostream::BLUE);    break;
     case Attribute:  OS.changeColor(llvm::raw_ostream::CYAN);    break;
     case Enumerator: OS.changeColor(llvm::raw_ostream::MAGENTA); break;
+    case Macro:      OS.changeColor(llvm::raw_ostream::RED);     break;
     }
   }
 }

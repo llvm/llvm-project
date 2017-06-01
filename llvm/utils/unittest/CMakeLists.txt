@@ -15,14 +15,22 @@
 include_directories(
   googletest/include
   googletest
+  googlemock/include
+  googlemock
   )
 
 if(WIN32)
   add_definitions(-DGTEST_OS_WINDOWS=1)
 endif()
 
-if(SUPPORTS_NO_VARIADIC_MACROS_FLAG)
+if(SUPPORTS_VARIADIC_MACROS_FLAG)
   add_definitions("-Wno-variadic-macros")
+endif()
+if(SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG)
+  add_definitions("-Wno-gnu-zero-variadic-macro-arguments")
+endif()
+if(CXX_SUPPORTS_COVERED_SWITCH_DEFAULT_FLAG)
+  add_definitions("-Wno-covered-switch-default")
 endif()
 
 set(LLVM_REQUIRES_RTTI 1)
@@ -32,20 +40,23 @@ if (NOT LLVM_ENABLE_THREADS)
   add_definitions( -DGTEST_HAS_PTHREAD=0 )
 endif()
 
-set(LIBS
-  LLVMSupport # Depends on llvm::raw_ostream
-)
-
-find_library(PTHREAD_LIBRARY_PATH pthread)
-if (PTHREAD_LIBRARY_PATH)
+find_library(LLVM_PTHREAD_LIBRARY_PATH pthread)
+if (LLVM_PTHREAD_LIBRARY_PATH)
   list(APPEND LIBS pthread)
 endif()
 
 add_llvm_library(gtest
   googletest/src/gtest-all.cc
+  googlemock/src/gmock-all.cc
 
   LINK_LIBS
   ${LIBS}
+
+  LINK_COMPONENTS
+  Support # Depends on llvm::raw_ostream
+
+  # This is a library meant only for the build tree.
+  BUILDTREE_ONLY
 )
 
 add_subdirectory(UnitTestMain)

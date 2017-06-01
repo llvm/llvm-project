@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 namespace PR8965 {
   template<typename T>
@@ -106,7 +108,10 @@ namespace test2 {
 namespace AliasTagDef {
   template<typename T>
   struct F {
-    using S = struct U { // expected-warning {{C++11}}
+    using S = struct U {
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{alias declarations are a C++11 extension}}
+#endif
       T g() {
         return T();
       }
@@ -122,8 +127,13 @@ namespace rdar10397846 {
   {
     struct B
     {
-      struct C { C() { int *ptr = I; } }; // expected-error{{cannot initialize a variable of type 'int *' with an rvalue of type 'int'}} \
-                                             expected-warning{{expression which evaluates to zero treated as a null pointer constant of type 'int *'}}
+      struct C { C() { int *ptr = I; } };
+#if __cplusplus >= 201103L
+      // expected-error@-2 {{cannot initialize a variable of type 'int *' with an rvalue of type 'int'}}
+#else
+      // expected-warning@-4 {{expression which evaluates to zero treated as a null pointer constant of type 'int *'}}
+#endif
+      // expected-error@-6 {{cannot initialize a variable of type 'int *' with an rvalue of type 'int'}}
     };
   };
 

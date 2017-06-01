@@ -1,4 +1,5 @@
-; RUN: llc < %s -march=ppc64 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc64 -O1 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc64 | FileCheck --check-prefix=CHECK-OPT  %s
 
         %struct.__db_region = type { %struct.__mutex_t, [4 x i8], %struct.anon, i32, [1 x i32] }
         %struct.__mutex_t = type { i32 }
@@ -15,6 +16,24 @@ entry:
 ; CHECK: @foo
 ; CHECK: lwzx
 ; CHECK: blr
+; CHECK-OPT: @foo
+; CHECK-OPT: lwz
+; CHECK-OPT: blr
 }
+
+define signext i32 @test(i32* noalias nocapture readonly %b, i32 signext %n)  {
+entry:
+  %idxprom = sext i32 %n to i64
+  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %idxprom
+  %0 = load i32, i32* %arrayidx, align 4
+  %mul = mul nsw i32 %0, 7
+  ret i32 %mul
+
+; CHECK-OPT: @test
+; CHECK-OPT: lwzx
+; CHECK-OPT: blr
+
+}
+
 
 declare i32 @bork(...)

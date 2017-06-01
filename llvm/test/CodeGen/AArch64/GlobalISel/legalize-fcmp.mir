@@ -1,0 +1,35 @@
+# RUN: llc -O0 -run-pass=legalizer -global-isel %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+  define void @test_icmp() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_icmp
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+body: |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2, %x3
+    %0(s64) = COPY %x0
+    %1(s64) = COPY %x0
+
+    %2(s32) = G_TRUNC %0
+    %3(s32) = G_TRUNC %1
+
+    ; CHECK: %4(s1) = G_FCMP floatpred(oge), %0(s64), %1
+    %4(s1) = G_FCMP floatpred(oge), %0, %1
+
+    ; CHECK: %5(s1) = G_FCMP floatpred(uno), %2(s32), %3
+    %5(s1) = G_FCMP floatpred(uno), %2, %3
+...

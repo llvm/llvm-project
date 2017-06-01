@@ -132,7 +132,7 @@ namespace {
     void checkPostStmt(const ObjCArrayLiteral *AL,
                        CheckerContext &C) const;
   };
-}
+} // end anonymous namespace
 
 void NilArgChecker::warnIfNilExpr(const Expr *E,
                                   const char *Msg,
@@ -143,7 +143,6 @@ void NilArgChecker::warnIfNilExpr(const Expr *E,
     if (ExplodedNode *N = C.generateErrorNode()) {
       generateBugReport(N, Msg, E->getSourceRange(), E, C);
     }
-
   }
 }
 
@@ -307,8 +306,7 @@ void NilArgChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
       warnIfNilArg(C, msg, /* Arg */1, Class);
     } else if (S == SetObjectForKeyedSubscriptSel) {
       CanBeSubscript = true;
-      Arg = 0;
-      warnIfNilArg(C, msg, /* Arg */1, Class, CanBeSubscript);
+      Arg = 1;
     } else if (S == RemoveObjectForKeySel) {
       Arg = 0;
     }
@@ -338,15 +336,15 @@ void NilArgChecker::checkPostStmt(const ObjCDictionaryLiteral *DL,
 }
 
 //===----------------------------------------------------------------------===//
-// Error reporting.
+// Checking for mismatched types passed to CFNumberCreate/CFNumberGetValue.
 //===----------------------------------------------------------------------===//
 
 namespace {
-class CFNumberCreateChecker : public Checker< check::PreStmt<CallExpr> > {
+class CFNumberChecker : public Checker< check::PreStmt<CallExpr> > {
   mutable std::unique_ptr<APIMisuse> BT;
-  mutable IdentifierInfo* II;
+  mutable IdentifierInfo *ICreate, *IGetValue;
 public:
-  CFNumberCreateChecker() : II(nullptr) {}
+  CFNumberChecker() : ICreate(nullptr), IGetValue(nullptr) {}
 
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 
@@ -427,7 +425,7 @@ static const char* GetCFNumberTypeStr(uint64_t i) {
 }
 #endif
 
-void CFNumberCreateChecker::checkPreStmt(const CallExpr *CE,
+void CFNumberChecker::checkPreStmt(const CallExpr *CE,
                                          CheckerContext &C) const {
   ProgramStateRef state = C.getState();
   const FunctionDecl *FD = C.getCalleeDecl(CE);
@@ -435,10 +433,12 @@ void CFNumberCreateChecker::checkPreStmt(const CallExpr *CE,
     return;
 
   ASTContext &Ctx = C.getASTContext();
-  if (!II)
-    II = &Ctx.Idents.get("CFNumberCreate");
-
-  if (FD->getIdentifier() != II || CE->getNumArgs() != 3)
+  if (!ICreate) {
+    ICreate = &Ctx.Idents.get("CFNumberCreate");
+    IGetValue = &Ctx.Idents.get("CFNumberGetValue");
+  }
+  if (!(FD->getIdentifier() == ICreate || FD->getIdentifier() == IGetValue) ||
+      CE->getNumArgs() != 3)
     return;
 
   // Get the value of the "theType" argument.
@@ -452,13 +452,13 @@ void CFNumberCreateChecker::checkPreStmt(const CallExpr *CE,
     return;
 
   uint64_t NumberKind = V->getValue().getLimitedValue();
-  Optional<uint64_t> OptTargetSize = GetCFNumberSize(Ctx, NumberKind);
+  Optional<uint64_t> OptCFNumberSize = GetCFNumberSize(Ctx, NumberKind);
 
   // FIXME: In some cases we can emit an error.
-  if (!OptTargetSize)
+  if (!OptCFNumberSize)
     return;
 
-  uint64_t TargetSize = *OptTargetSize;
+  uint64_t CFNumberSize = *OptCFNumberSize;
 
   // Look at the value of the integer being passed by reference.  Essentially
   // we want to catch cases where the value passed in is not equal to the
@@ -483,39 +483,44 @@ void CFNumberCreateChecker::checkPreStmt(const CallExpr *CE,
   if (!T->isIntegralOrEnumerationType())
     return;
 
-  uint64_t SourceSize = Ctx.getTypeSize(T);
+  uint64_t PrimitiveTypeSize = Ctx.getTypeSize(T);
 
-  // CHECK: is SourceSize == TargetSize
-  if (SourceSize == TargetSize)
+  if (PrimitiveTypeSize == CFNumberSize)
     return;
 
-  // Generate an error.  Only generate a sink error node
-  // if 'SourceSize < TargetSize'; otherwise generate a non-fatal error node.
-  //
   // FIXME: We can actually create an abstract "CFNumber" object that has
   //  the bits initialized to the provided values.
-  //
-  ExplodedNode *N = SourceSize < TargetSize ? C.generateErrorNode()
-                                            : C.generateNonFatalErrorNode();
+  ExplodedNode *N = C.generateNonFatalErrorNode();
   if (N) {
     SmallString<128> sbuf;
     llvm::raw_svector_ostream os(sbuf);
+    bool isCreate = (FD->getIdentifier() == ICreate);
 
-    os << (SourceSize == 8 ? "An " : "A ")
-       << SourceSize << " bit integer is used to initialize a CFNumber "
-                        "object that represents "
-       << (TargetSize == 8 ? "an " : "a ")
-       << TargetSize << " bit integer. ";
+    if (isCreate) {
+      os << (PrimitiveTypeSize == 8 ? "An " : "A ")
+         << PrimitiveTypeSize << "-bit integer is used to initialize a "
+         << "CFNumber object that represents "
+         << (CFNumberSize == 8 ? "an " : "a ")
+         << CFNumberSize << "-bit integer; ";
+    } else {
+      os << "A CFNumber object that represents "
+         << (CFNumberSize == 8 ? "an " : "a ")
+         << CFNumberSize << "-bit integer is used to initialize "
+         << (PrimitiveTypeSize == 8 ? "an " : "a ")
+         << PrimitiveTypeSize << "-bit integer; ";
+    }
 
-    if (SourceSize < TargetSize)
-      os << (TargetSize - SourceSize)
-      << " bits of the CFNumber value will be garbage." ;
+    if (PrimitiveTypeSize < CFNumberSize)
+      os << (CFNumberSize - PrimitiveTypeSize)
+      << " bits of the CFNumber value will "
+      << (isCreate ? "be garbage." : "overwrite adjacent storage.");
     else
-      os << (SourceSize - TargetSize)
-      << " bits of the input integer will be lost.";
+      os << (PrimitiveTypeSize - CFNumberSize)
+      << " bits of the integer value will be "
+      << (isCreate ? "lost." : "garbage.");
 
     if (!BT)
-      BT.reset(new APIMisuse(this, "Bad use of CFNumberCreate"));
+      BT.reset(new APIMisuse(this, "Bad use of CFNumber APIs"));
 
     auto report = llvm::make_unique<BugReport>(*BT, os.str(), N);
     report->addRange(CE->getArg(2)->getSourceRange());
@@ -531,6 +536,7 @@ namespace {
 class CFRetainReleaseChecker : public Checker< check::PreStmt<CallExpr> > {
   mutable std::unique_ptr<APIMisuse> BT;
   mutable IdentifierInfo *Retain, *Release, *MakeCollectable, *Autorelease;
+
 public:
   CFRetainReleaseChecker()
       : Retain(nullptr), Release(nullptr), MakeCollectable(nullptr),
@@ -538,7 +544,6 @@ public:
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 };
 } // end anonymous namespace
-
 
 void CFRetainReleaseChecker::checkPreStmt(const CallExpr *CE,
                                           CheckerContext &C) const {
@@ -632,11 +637,10 @@ class ClassReleaseChecker : public Checker<check::PreObjCMessage> {
 public:
   void checkPreObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
 };
-}
+} // end anonymous namespace
 
 void ClassReleaseChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
                                               CheckerContext &C) const {
-
   if (!BT) {
     BT.reset(new APIMisuse(
         this, "message incorrectly sent to class instead of class instance"));
@@ -693,7 +697,7 @@ class VariadicMethodTypeChecker : public Checker<check::PreObjCMessage> {
 public:
   void checkPreObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
 };
-}
+} // end anonymous namespace
 
 /// isVariadicMessage - Returns whether the given message is a variadic message,
 /// where all arguments must be Objective-C types.
@@ -856,7 +860,7 @@ public:
                                      const CallEvent *Call,
                                      PointerEscapeKind Kind) const;
 };
-}
+} // end anonymous namespace
 
 static bool isKnownNonNilCollectionType(QualType T) {
   const ObjCObjectPointerType *PT = T->getAs<ObjCObjectPointerType>();
@@ -984,7 +988,6 @@ assumeCollectionNonEmpty(CheckerContext &C, ProgramStateRef State,
   return assumeCollectionNonEmpty(C, State, CollectionS, Assumption);
 }
 
-
 /// If the fist block edge is a back edge, we are reentering the loop.
 static bool alreadyExecutedAtLeastOneLoopIteration(const ExplodedNode *N,
                                              const ObjCForCollectionStmt *FCS) {
@@ -993,9 +996,7 @@ static bool alreadyExecutedAtLeastOneLoopIteration(const ExplodedNode *N,
 
   ProgramPoint P = N->getLocation();
   if (Optional<BlockEdge> BE = P.getAs<BlockEdge>()) {
-    if (BE->getSrc()->getLoopTarget() == FCS)
-      return true;
-    return false;
+    return BE->getSrc()->getLoopTarget() == FCS;
   }
 
   // Keep looking for a block edge.
@@ -1039,11 +1040,8 @@ bool ObjCLoopChecker::isCollectionCountMethod(const ObjCMethodCall &M,
     CountSelectorII = &C.getASTContext().Idents.get("count");
 
   // If the method returns collection count, record the value.
-  if (S.isUnarySelector() &&
-      (S.getIdentifierInfoForSlot(0) == CountSelectorII))
-    return true;
-
-  return false;
+  return S.isUnarySelector() &&
+         (S.getIdentifierInfoForSlot(0) == CountSelectorII);
 }
 
 void ObjCLoopChecker::checkPostObjCMessage(const ObjCMethodCall &M,
@@ -1086,7 +1084,6 @@ void ObjCLoopChecker::checkPostObjCMessage(const ObjCMethodCall &M,
 
     C.addTransition(State);
   }
-  return;
 }
 
 static SymbolRef getMethodReceiverIfKnownImmutable(const CallEvent *Call) {
@@ -1209,7 +1206,7 @@ public:
 
   void checkPostObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
 };
-}
+} // end anonymous namespace
 
 ProgramStateRef
 ObjCNonNilReturnValueChecker::assumeExprIsNonNull(const Expr *NonNullExpr,
@@ -1282,8 +1279,8 @@ void ento::registerNilArgChecker(CheckerManager &mgr) {
   mgr.registerChecker<NilArgChecker>();
 }
 
-void ento::registerCFNumberCreateChecker(CheckerManager &mgr) {
-  mgr.registerChecker<CFNumberCreateChecker>();
+void ento::registerCFNumberChecker(CheckerManager &mgr) {
+  mgr.registerChecker<CFNumberChecker>();
 }
 
 void ento::registerCFRetainReleaseChecker(CheckerManager &mgr) {

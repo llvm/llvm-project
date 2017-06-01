@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/SMLoc.h"
 
 namespace llvm {
 class MCContext;
@@ -24,13 +25,15 @@ class MCExpr;
 class MCSection;
 class MCStreamer;
 class MCSymbol;
+class MCSymbolRefExpr;
 
 struct ConstantPoolEntry {
-  ConstantPoolEntry(MCSymbol *L, const MCExpr *Val, unsigned Sz)
-    : Label(L), Value(Val), Size(Sz) {}
+  ConstantPoolEntry(MCSymbol *L, const MCExpr *Val, unsigned Sz, SMLoc Loc_)
+    : Label(L), Value(Val), Size(Sz), Loc(Loc_) {}
   MCSymbol *Label;
   const MCExpr *Value;
   unsigned Size;
+  SMLoc Loc;
 };
 
 // A class to keep track of assembler-generated constant pools that are use to
@@ -38,6 +41,7 @@ struct ConstantPoolEntry {
 class ConstantPool {
   typedef SmallVector<ConstantPoolEntry, 4> EntryVecTy;
   EntryVecTy Entries;
+  DenseMap<int64_t, const MCSymbolRefExpr *> CachedEntries;
 
 public:
   // Initialize a new empty constant pool
@@ -49,13 +53,15 @@ public:
   //
   // \returns a MCExpr that references the newly inserted value
   const MCExpr *addEntry(const MCExpr *Value, MCContext &Context,
-                         unsigned Size);
+                         unsigned Size, SMLoc Loc);
 
   // Emit the contents of the constant pool using the provided streamer.
   void emitEntries(MCStreamer &Streamer);
 
   // Return true if the constant pool is empty
   bool empty();
+
+  void clearCache();
 };
 
 class AssemblerConstantPools {
@@ -79,8 +85,9 @@ class AssemblerConstantPools {
 public:
   void emitAll(MCStreamer &Streamer);
   void emitForCurrentSection(MCStreamer &Streamer);
+  void clearCacheForCurrentSection(MCStreamer &Streamer);
   const MCExpr *addEntry(MCStreamer &Streamer, const MCExpr *Expr,
-                         unsigned Size);
+                         unsigned Size, SMLoc Loc);
 
 private:
   ConstantPool *getConstantPool(MCSection *Section);

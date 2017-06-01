@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-apple-darwin -mattr=+sse2 | grep mov | count 6
+; RUN: llc < %s -mtriple=i686-apple-darwin -mattr=+sse2 -no-x86-call-frame-opt | grep mov | count 6
 
 	%struct.quad_struct = type { i32, i32, %struct.quad_struct*, %struct.quad_struct*, %struct.quad_struct*, %struct.quad_struct*, %struct.quad_struct* }
 

@@ -7,9 +7,9 @@
 
 define <4 x i32> @f1(<4 x i32> %x, i64 %y) {
 ; CHECK-CODE-LABEL: f1:
-; CHECK-CODE: vlvgf [[ELT:%v[0-9]+]], %r2, 0
-; CHECK-CODE: larl [[REG:%r[0-5]]],
-; CHECK-CODE: vl [[MASK:%v[0-9]+]], 0([[REG]])
+; CHECK-CODE-DAG: vlvgf [[ELT:%v[0-9]+]], %r2, 0
+; CHECK-CODE-DAG: larl [[REG:%r[0-5]]],
+; CHECK-CODE-DAG: vl [[MASK:%v[0-9]+]], 0([[REG]])
 ; CHECK-CODE: vperm %v24, %v24, [[ELT]], [[MASK]]
 ; CHECK-CODE: br %r14
 

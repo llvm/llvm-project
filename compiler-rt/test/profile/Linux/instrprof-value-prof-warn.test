@@ -1,0 +1,8 @@
+RUN: %clang_profgen -O2 -mllvm -disable-vp=false -Xclang -fprofile-instrument=llvm -mllvm -vp-static-alloc=true -DSTRESS=1 -o %t.ir.warn  %S/../Inputs/instrprof-value-prof-real.c
+RUN: env LLVM_PROFILE_FILE=%t.ir.profraw LLVM_VP_MAX_NUM_VALS_PER_SITE=255  %run %t.ir.warn 2>&1 |FileCheck --check-prefix=WARNING %s
+#  Test that enough static counters have been allocated
+RUN: env LLVM_PROFILE_FILE=%t.ir.profraw LLVM_VP_MAX_NUM_VALS_PER_SITE=150  %run %t.ir.warn 2>&1 |FileCheck --check-prefix=NOWARNING --allow-empty %s
+
+# WARNING: LLVM Profile Warning:
+# NOWARNING-NOT: LLVM Profile Warning:
+

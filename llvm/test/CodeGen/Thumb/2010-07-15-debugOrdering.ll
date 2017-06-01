@@ -8,10 +8,10 @@
 @llvm.used = appending global [1 x i8*] [i8* bitcast (void (%0*, i32, i32)* @_Z19getClosestDiagonal3ii to i8*)], section "llvm.metadata" ; <[1 x i8*]*> [#uses=0]
 
 define void @_Z19getClosestDiagonal3ii(%0* noalias sret, i32, i32) nounwind {
-; CHECK: blx ___muldf3
-; CHECK: blx ___muldf3
+; CHECK: bl ___muldf3
+; CHECK: bl ___muldf3
 ; CHECK: beq LBB0
-; CHECK: blx ___muldf3
+; CHECK: bl ___muldf3
 ; <label>:3
   switch i32 %1, label %4 [
     i32 0, label %5
@@ -51,9 +51,9 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !0 = !DILocation(line: 46, scope: !1)
 !1 = distinct !DILexicalBlock(line: 44, column: 0, file: !101, scope: !2)
 !2 = distinct !DILexicalBlock(line: 44, column: 0, file: !101, scope: !3)
-!3 = distinct !DISubprogram(name: "getClosestDiagonal3", linkageName: "_Z19getClosestDiagonal3ii", line: 44, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !101, scope: null, type: !6)
+!3 = distinct !DISubprogram(name: "getClosestDiagonal3", linkageName: "_Z19getClosestDiagonal3ii", line: 44, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !5, file: !101, scope: null, type: !6)
 !4 = !DIFile(filename: "ggEdgeDiscrepancy.cc", directory: "/Volumes/Home/grosbaj/sources/llvm-externals/speccpu2000/benchspec/CINT2000/252.eon/src")
-!5 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 00)", isOptimized: true, emissionKind: 0, file: !101, enums: !102, retainedTypes: !102, subprograms: !103)
+!5 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 00)", isOptimized: true, emissionKind: FullDebug, file: !101, enums: !102, retainedTypes: !102)
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !22, !22}
 !8 = !DICompositeType(tag: DW_TAG_structure_type, name: "ggVector3", line: 66, size: 192, align: 32, file: !99, elements: !10)
@@ -87,12 +87,12 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !34 = !DIDerivedType(tag: DW_TAG_const_type, size: 192, align: 32, file: !101, scope: !4, baseType: !8)
 !35 = !DISubprogram(name: "y", linkageName: "_ZNK9ggVector31yEv", line: 83, isLocal: false, isDefinition: false, virtualIndex: 6, isOptimized: false, file: !9, scope: !8, type: !31)
 !36 = !DISubprogram(name: "z", linkageName: "_ZNK9ggVector31zEv", line: 84, isLocal: false, isDefinition: false, virtualIndex: 6, isOptimized: false, file: !9, scope: !8, type: !31)
-!37 = distinct !DISubprogram(name: "x", linkageName: "_ZN9ggVector31xEv", line: 85, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !9, scope: !8, type: !38)
+!37 = distinct !DISubprogram(name: "x", linkageName: "_ZN9ggVector31xEv", line: 85, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !5, file: !9, scope: !8, type: !38)
 !38 = !DISubroutineType(types: !39)
 !39 = !{!40, !19}
 !40 = !DIDerivedType(tag: DW_TAG_reference_type, name: "double", size: 32, align: 32, file: !101, scope: !4, baseType: !13)
-!41 = distinct !DISubprogram(name: "y", linkageName: "_ZN9ggVector31yEv", line: 86, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !9, scope: !8, type: !38)
-!42 = distinct !DISubprogram(name: "z", linkageName: "_ZN9ggVector31zEv", line: 87, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !9, scope: !8, type: !38)
+!41 = distinct !DISubprogram(name: "y", linkageName: "_ZN9ggVector31yEv", line: 86, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !5, file: !9, scope: !8, type: !38)
+!42 = distinct !DISubprogram(name: "z", linkageName: "_ZN9ggVector31zEv", line: 87, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !5, file: !9, scope: !8, type: !38)
 !43 = !DISubprogram(name: "SetX", linkageName: "_ZN9ggVector34SetXEd", line: 88, isLocal: false, isDefinition: false, virtualIndex: 6, isOptimized: false, file: !9, scope: !8, type: !44)
 !44 = !DISubroutineType(types: !45)
 !45 = !{null, !19, !13}
@@ -127,7 +127,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !74 = !DISubprogram(name: "operator/=", linkageName: "_ZN9ggVector3dVEd", line: 324, isLocal: false, isDefinition: false, virtualIndex: 6, isOptimized: false, file: !9, scope: !8, type: !72)
 !75 = !DISubprogram(name: "length", linkageName: "_ZNK9ggVector36lengthEv", line: 121, isLocal: false, isDefinition: false, virtualIndex: 6, isOptimized: false, file: !9, scope: !8, type: !31)
 !76 = !DISubprogram(name: "squaredLength", linkageName: "_ZNK9ggVector313squaredLengthEv", line: 122, isLocal: false, isDefinition: false, virtualIndex: 6, isOptimized: false, file: !9, scope: !8, type: !31)
-!77 = distinct !DISubprogram(name: "MakeUnitVector", linkageName: "_ZN9ggVector314MakeUnitVectorEv", line: 217, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !9, scope: !8, type: !24)
+!77 = distinct !DISubprogram(name: "MakeUnitVector", linkageName: "_ZN9ggVector314MakeUnitVectorEv", line: 217, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !5, file: !9, scope: !8, type: !24)
 !78 = !DISubprogram(name: "Perturb", linkageName: "_ZNK9ggVector37PerturbEdd", line: 126, isLocal: false, isDefinition: false, virtualIndex: 6, isOptimized: false, file: !9, scope: !8, type: !79)
 !79 = !DISubroutineType(types: !80)
 !80 = !{!8, !33, !13, !13}

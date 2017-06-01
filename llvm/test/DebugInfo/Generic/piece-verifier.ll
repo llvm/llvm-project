@@ -23,11 +23,10 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!17, !18}
 !llvm.ident = !{!19}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5 ", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5 ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "pieces.c", directory: "")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 3, file: !1, scope: !5, type: !6, variables: !15)
+!4 = distinct !DISubprogram(name: "foo", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !1, scope: !5, type: !6, variables: !15)
 !5 = !DIFile(filename: "pieces.c", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !9}
@@ -47,10 +46,10 @@ attributes #1 = { nounwind readnone }
 !21 = !DILocation(line: 3, scope: !4)
 !22 = !DILocalVariable(name: "s", line: 3, arg: 1, scope: !4, file: !5, type: !9)
 !23 = !DILocation(line: 4, scope: !4)
-!24 = !DIExpression(DW_OP_deref, DW_OP_bit_piece, 0, 64)
+!24 = !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 64)
 !25 = !{}
-; This expression has elements after DW_OP_bit_piece.
+; This expression has elements after DW_OP_LLVM_fragment.
 ; CHECK: invalid expression
 ; CHECK-NEXT: !DIExpression({{[0-9]+}}, 64, 32, {{[0-9]+}})
 ; CHECK-NOT: invalid expression
-!27 = !DIExpression(DW_OP_bit_piece, 64, 32, DW_OP_deref)
+!27 = !DIExpression(DW_OP_LLVM_fragment, 64, 32, DW_OP_deref)

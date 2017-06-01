@@ -74,7 +74,7 @@ void *internal_memmove(void *dest, const void *src, uptr n) {
 
 // Semi-fast bzero for 16-aligned data. Still far from peak performance.
 void internal_bzero_aligned16(void *s, uptr n) {
-  struct S16 { u64 a, b; } ALIGNED(16);
+  struct ALIGNED(16) S16 { u64 a, b; };
   CHECK_EQ((reinterpret_cast<uptr>(s) | n) & 15, 0);
   for (S16 *p = reinterpret_cast<S16*>(s), *end = p + n / 16; p < end; p++) {
     p->a = p->b = 0;
@@ -175,6 +175,19 @@ uptr internal_strlen(const char *s) {
   return i;
 }
 
+uptr internal_strlcat(char *dst, const char *src, uptr maxlen) {
+  const uptr srclen = internal_strlen(src);
+  const uptr dstlen = internal_strnlen(dst, maxlen);
+  if (dstlen == maxlen) return maxlen + srclen;
+  if (srclen < maxlen - dstlen) {
+    internal_memmove(dst + dstlen, src, srclen + 1);
+  } else {
+    internal_memmove(dst + dstlen, src, maxlen - dstlen - 1);
+    dst[maxlen - 1] = '\0';
+  }
+  return dstlen + srclen;
+}
+
 char *internal_strncat(char *dst, const char *src, uptr n) {
   uptr len = internal_strlen(dst);
   uptr i;
@@ -182,6 +195,17 @@ char *internal_strncat(char *dst, const char *src, uptr n) {
     dst[len + i] = src[i];
   dst[len + i] = 0;
   return dst;
+}
+
+uptr internal_strlcpy(char *dst, const char *src, uptr maxlen) {
+  const uptr srclen = internal_strlen(src);
+  if (srclen < maxlen) {
+    internal_memmove(dst, src, srclen + 1);
+  } else if (maxlen != 0) {
+    internal_memmove(dst, src, maxlen - 1);
+    dst[maxlen - 1] = '\0';
+  }
+  return srclen;
 }
 
 char *internal_strncpy(char *dst, const char *src, uptr n) {
@@ -208,6 +232,12 @@ char *internal_strstr(const char *haystack, const char *needle) {
       return const_cast<char *>(haystack) + pos;
   }
   return nullptr;
+}
+
+uptr internal_wcslen(const wchar_t *s) {
+  uptr i = 0;
+  while (s[i]) i++;
+  return i;
 }
 
 s64 internal_simple_strtoll(const char *nptr, char **endptr, int base) {

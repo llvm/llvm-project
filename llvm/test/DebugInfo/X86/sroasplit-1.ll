@@ -26,8 +26,8 @@
 ; CHECK: ret i32 %[[A]]
 ; Read Var and Piece:
 ; CHECK: ![[VAR]] = !DILocalVariable(name: "i1",{{.*}} line: 11,
-; CHECK: ![[PIECE1]] = !DIExpression(DW_OP_bit_piece, 32, 96)
-; CHECK: ![[PIECE2]] = !DIExpression(DW_OP_bit_piece, 0, 32)
+; CHECK: ![[PIECE1]] = !DIExpression(DW_OP_LLVM_fragment, 32, 96)
+; CHECK: ![[PIECE2]] = !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
@@ -65,11 +65,10 @@ attributes #2 = { nounwind }
 !llvm.module.flags = !{!22, !23}
 !llvm.ident = !{!24}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !{}, retainedTypes: !{}, subprograms: !3, globals: !{}, imports: !{})
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !{}, retainedTypes: !{}, globals: !{}, imports: !{})
 !1 = !DIFile(filename: "sroasplit-1.c", directory: "")
 !2 = !DIExpression()
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 10, file: !1, scope: !5, type: !6, variables: !{})
+!4 = distinct !DISubprogram(name: "foo", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 10, file: !1, scope: !5, type: !6, variables: !{})
 !5 = !DIFile(filename: "sroasplit-1.c", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !9}

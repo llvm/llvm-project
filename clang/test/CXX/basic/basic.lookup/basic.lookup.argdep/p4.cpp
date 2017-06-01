@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 namespace A {
   class A {
@@ -20,6 +22,9 @@ namespace D {
 
 namespace C {
   class C {}; // expected-note {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'B::B' to 'const C::C &' for 1st argument}}
+#if __cplusplus >= 201103L // C++11 or later
+  // expected-note@-2 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'B::B' to 'C::C &&' for 1st argument}}
+#endif
   void func(C); // expected-note {{'C::func' declared here}} \
                 // expected-note {{passing argument to parameter here}}
   C operator+(C,C);

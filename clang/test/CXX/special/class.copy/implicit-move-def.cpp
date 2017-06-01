@@ -1,4 +1,4 @@
-// FIXME: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -o - -std=c++11 %s | FileCheck -check-prefix=CHECK %s
+// FIXME: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -o - -std=c++11 %s | FileCheck %s
 // RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -o - -std=c++11 %s | FileCheck -check-prefix=CHECK-ASSIGN %s
 // RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -o - -std=c++11 %s | FileCheck -check-prefix=CHECK-CTOR %s
 
@@ -110,8 +110,8 @@ void move_VirtualWithEmptyBase(VirtualWithEmptyBase &x, VirtualWithEmptyBase &y)
 // CHECK-CTOR: call {{.*}} @_ZN1FC1EOS_
 // CHECK-CTOR: call {{.*}} @_ZN1EC1EOS_
 // array loop
-// CHECK-CTOR: br i1
 // CHECK-CTOR: call {{.*}} @_ZN1FC1EOS_
+// CHECK-CTOR: br i1
 
 // CHECK-CTOR: define linkonce_odr {{.*}} @_ZN1GC2EOS_
 // CHECK-CTOR: call {{.*}} @_ZN1EC1EOS_

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc64
+; RUN: llc -verify-machineinstrs < %s -march=ppc64
 
 define void @__divtc3({ ppc_fp128, ppc_fp128 }* noalias sret %agg.result, ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128 %d) nounwind {
 entry:

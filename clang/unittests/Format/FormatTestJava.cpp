@@ -25,10 +25,10 @@ protected:
     DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
     tooling::Replacements Replaces = reformat(Style, Code, Ranges);
-    std::string Result = applyAllReplacements(Code, Replaces);
-    EXPECT_NE("", Result);
-    DEBUG(llvm::errs() << "\n" << Result << "\n\n");
-    return Result;
+    auto Result = applyAllReplacements(Code, Replaces);
+    EXPECT_TRUE(static_cast<bool>(Result));
+    DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
+    return *Result;
   }
 
   static std::string
@@ -312,6 +312,9 @@ TEST_F(FormatTestJava, Annotations) {
                "      String bbbbbbbbbbbbbbb) {}\n"
                "}",
                getStyleWithColumns(60));
+  verifyFormat("@Annotation(\"Some\"\n"
+               "    + \" text\")\n"
+               "List<Integer> list;");
 }
 
 TEST_F(FormatTestJava, Generics) {
@@ -426,6 +429,7 @@ TEST_F(FormatTestJava, CppKeywords) {
   verifyFormat("public void union(Type a, Type b);");
   verifyFormat("public void struct(Object o);");
   verifyFormat("public void delete(Object o);");
+  verifyFormat("return operator && (aa);");
 }
 
 TEST_F(FormatTestJava, NeverAlignAfterReturn) {

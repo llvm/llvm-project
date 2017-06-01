@@ -19,7 +19,7 @@ Initiative (OSI).
 Can I modify LLVM source code and redistribute the modified source?
 -------------------------------------------------------------------
 Yes.  The modified source distribution must retain the copyright notice and
-follow the three bulletted conditions listed in the `LLVM license
+follow the three bulleted conditions listed in the `LLVM license
 <http://llvm.org/svn/llvm-project/llvm/trunk/LICENSE.TXT>`_.
 
 
@@ -75,149 +75,17 @@ reference. In fact, the names of dummy numbered temporaries like ``%1`` are
 not explicitly represented in the in-memory representation at all (see
 ``Value::getName()``).
 
-Build Problems
-==============
-
-When I run configure, it finds the wrong C compiler.
-----------------------------------------------------
-The ``configure`` script attempts to locate first ``gcc`` and then ``cc``,
-unless it finds compiler paths set in ``CC`` and ``CXX`` for the C and C++
-compiler, respectively.
-
-If ``configure`` finds the wrong compiler, either adjust your ``PATH``
-environment variable or set ``CC`` and ``CXX`` explicitly.
-
-
-The ``configure`` script finds the right C compiler, but it uses the LLVM tools from a previous build.  What do I do?
----------------------------------------------------------------------------------------------------------------------
-The ``configure`` script uses the ``PATH`` to find executables, so if it's
-grabbing the wrong linker/assembler/etc, there are two ways to fix it:
-
-#. Adjust your ``PATH`` environment variable so that the correct program
-   appears first in the ``PATH``.  This may work, but may not be convenient
-   when you want them *first* in your path for other work.
-
-#. Run ``configure`` with an alternative ``PATH`` that is correct. In a
-   Bourne compatible shell, the syntax would be:
-
-.. code-block:: console
-
-   % PATH=[the path without the bad program] $LLVM_SRC_DIR/configure ...
-
-This is still somewhat inconvenient, but it allows ``configure`` to do its
-work without having to adjust your ``PATH`` permanently.
-
-
-When creating a dynamic library, I get a strange GLIBC error.
--------------------------------------------------------------
-Under some operating systems (i.e. Linux), libtool does not work correctly if
-GCC was compiled with the ``--disable-shared option``.  To work around this,
-install your own version of GCC that has shared libraries enabled by default.
-
-
-I've updated my source tree from Subversion, and now my build is trying to use a file/directory that doesn't exist.
--------------------------------------------------------------------------------------------------------------------
-You need to re-run configure in your object directory.  When new Makefiles
-are added to the source tree, they have to be copied over to the object tree
-in order to be used by the build.
-
-
-I've modified a Makefile in my source tree, but my build tree keeps using the old version.  What do I do?
----------------------------------------------------------------------------------------------------------
-If the Makefile already exists in your object tree, you can just run the
-following command in the top level directory of your object tree:
-
-.. code-block:: console
-
-   % ./config.status <relative path to Makefile>;
-
-If the Makefile is new, you will have to modify the configure script to copy
-it over.
-
-
-I've upgraded to a new version of LLVM, and I get strange build errors.
------------------------------------------------------------------------
-Sometimes, changes to the LLVM source code alters how the build system works.
-Changes in ``libtool``, ``autoconf``, or header file dependencies are
-especially prone to this sort of problem.
-
-The best thing to try is to remove the old files and re-build.  In most cases,
-this takes care of the problem.  To do this, just type ``make clean`` and then
-``make`` in the directory that fails to build.
-
-
-I've built LLVM and am testing it, but the tests freeze.
---------------------------------------------------------
-This is most likely occurring because you built a profile or release
-(optimized) build of LLVM and have not specified the same information on the
-``gmake`` command line.
-
-For example, if you built LLVM with the command:
-
-.. code-block:: console
-
-   % gmake ENABLE_PROFILING=1
-
-...then you must run the tests with the following commands:
-
-.. code-block:: console
-
-   % cd llvm/test
-   % gmake ENABLE_PROFILING=1
-
-Why do test results differ when I perform different types of builds?
---------------------------------------------------------------------
-The LLVM test suite is dependent upon several features of the LLVM tools and
-libraries.
-
-First, the debugging assertions in code are not enabled in optimized or
-profiling builds.  Hence, tests that used to fail may pass.
-
-Second, some tests may rely upon debugging options or behavior that is only
-available in the debug build.  These tests will fail in an optimized or
-profile build.
-
-
-Compiling LLVM with GCC 3.3.2 fails, what should I do?
-------------------------------------------------------
-This is `a bug in GCC <http://gcc.gnu.org/bugzilla/show_bug.cgi?id=13392>`_,
-and affects projects other than LLVM.  Try upgrading or downgrading your GCC.
-
-
-After Subversion update, rebuilding gives the error "No rule to make target".
------------------------------------------------------------------------------
-If the error is of the form:
-
-.. code-block:: console
-
-   gmake[2]: *** No rule to make target `/path/to/somefile',
-                 needed by `/path/to/another/file.d'.
-   Stop.
-
-This may occur anytime files are moved within the Subversion repository or
-removed entirely.  In this case, the best solution is to erase all ``.d``
-files, which list dependencies for source files, and rebuild:
-
-.. code-block:: console
-
-   % cd $LLVM_OBJ_DIR
-   % rm -f `find . -name \*\.d`
-   % gmake
-
-In other cases, it may be necessary to run ``make clean`` before rebuilding.
-
 
 Source Languages
 ================
 
 What source languages are supported?
 ------------------------------------
-LLVM currently has full support for C and C++ source languages. These are
-available through both `Clang <http://clang.llvm.org/>`_ and `DragonEgg
-<http://dragonegg.llvm.org/>`_.
 
-The PyPy developers are working on integrating LLVM into the PyPy backend so
-that PyPy language can translate to LLVM.
+LLVM currently has full support for C and C++ source languages through
+`Clang <http://clang.llvm.org/>`_. Many other language frontends have
+been written using LLVM, and an incomplete list is available at
+`projects with LLVM <http://llvm.org/ProjectsWithLLVM/>`_.
 
 
 I'd like to write a self-hosting LLVM compiler. How should I interface with the LLVM middle-end optimizers and back-end code generators?

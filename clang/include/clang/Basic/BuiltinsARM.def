@@ -18,9 +18,12 @@
 #   define LANGBUILTIN(ID, TYPE, ATTRS, BUILTIN_LANG) BUILTIN(ID, TYPE, ATTRS)
 #endif
 
+#if defined(BUILTIN) && !defined(TARGET_HEADER_BUILTIN)
+#  define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANG, FEATURE) BUILTIN(ID, TYPE, ATTRS)
+#endif
+
 // In libgcc
 BUILTIN(__clear_cache, "vv*v*", "i")
-BUILTIN(__builtin_thread_pointer, "v*", "")
 
 // Saturating arithmetic
 BUILTIN(__builtin_arm_qadd, "iii", "nc")
@@ -48,14 +51,26 @@ BUILTIN(__builtin_arm_vcvtr_f, "ffi", "nc")
 BUILTIN(__builtin_arm_vcvtr_d, "fdi", "nc")
 
 // Coprocessor
+BUILTIN(__builtin_arm_ldc, "vUIiUIivC*", "")
+BUILTIN(__builtin_arm_ldcl, "vUIiUIivC*", "")
+BUILTIN(__builtin_arm_ldc2, "vUIiUIivC*", "")
+BUILTIN(__builtin_arm_ldc2l, "vUIiUIivC*", "")
+
+BUILTIN(__builtin_arm_stc, "vUIiUIiv*", "")
+BUILTIN(__builtin_arm_stcl, "vUIiUIiv*", "")
+BUILTIN(__builtin_arm_stc2, "vUIiUIiv*", "")
+BUILTIN(__builtin_arm_stc2l, "vUIiUIiv*", "")
+
+BUILTIN(__builtin_arm_cdp, "vUIiUIiUIiUIiUIiUIi", "")
+BUILTIN(__builtin_arm_cdp2, "vUIiUIiUIiUIiUIiUIi", "")
 BUILTIN(__builtin_arm_mcr, "vUIiUIiUiUIiUIiUIi", "")
 BUILTIN(__builtin_arm_mcr2, "vUIiUIiUiUIiUIiUIi", "")
 BUILTIN(__builtin_arm_mrc, "UiUIiUIiUIiUIiUIi", "")
 BUILTIN(__builtin_arm_mrc2, "UiUIiUIiUIiUIiUIi", "")
-BUILTIN(__builtin_arm_cdp, "vUiUiUiUiUiUi", "")
-BUILTIN(__builtin_arm_cdp2, "vUiUiUiUiUiUi", "")
-BUILTIN(__builtin_arm_mcrr, "vUIiUIiUiUiUIi", "")
-BUILTIN(__builtin_arm_mcrr2, "vUIiUIiUiUiUIi", "")
+BUILTIN(__builtin_arm_mcrr, "vUIiUIiLLUiUIi", "")
+BUILTIN(__builtin_arm_mcrr2, "vUIiUIiLLUiUIi", "")
+BUILTIN(__builtin_arm_mrrc, "LLUiUIiUIiUIi", "")
+BUILTIN(__builtin_arm_mrrc2, "LLUiUIiUIiUIi", "")
 
 // CRC32
 BUILTIN(__builtin_arm_crc32b, "UiUiUc", "nc")
@@ -104,11 +119,34 @@ LANGBUILTIN(__sevl, "v", "", ALL_MS_LANGUAGES)
 LANGBUILTIN(__dmb, "vUi", "nc", ALL_MS_LANGUAGES)
 LANGBUILTIN(__dsb, "vUi", "nc", ALL_MS_LANGUAGES)
 LANGBUILTIN(__isb, "vUi", "nc", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_load8,   "ccCD*",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_load16,  "ssCD*",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_load32,  "iiCD*",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_load64,  "LLiLLiCD*", "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_store8,  "vcD*c",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_store16, "vsD*s",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_store32, "viD*i",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_store64, "vLLiD*LLi", "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(__ldrexd, "WiWiCD*", "", ALL_MS_LANGUAGES)
 LANGBUILTIN(_MoveFromCoprocessor, "UiIUiIUiIUiIUiIUi", "", ALL_MS_LANGUAGES)
 LANGBUILTIN(_MoveFromCoprocessor2, "UiIUiIUiIUiIUiIUi", "", ALL_MS_LANGUAGES)
 LANGBUILTIN(_MoveToCoprocessor, "vUiIUiIUiIUiIUiIUi", "", ALL_MS_LANGUAGES)
 LANGBUILTIN(_MoveToCoprocessor2, "vUiIUiIUiIUiIUiIUi", "", ALL_MS_LANGUAGES)
 
+TARGET_HEADER_BUILTIN(_BitScanForward, "UcULi*ULi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_BitScanReverse, "UcULi*ULi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_BitScanForward64, "UcULi*ULLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_BitScanReverse64, "UcULi*ULLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+
+TARGET_HEADER_BUILTIN(_InterlockedAnd64,         "LLiLLiD*LLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedDecrement64,   "LLiLLiD*",    "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchange64,    "LLiLLiD*LLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchangeAdd64, "LLiLLiD*LLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchangeSub64, "LLiLLiD*LLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedIncrement64,   "LLiLLiD*",    "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedOr64,          "LLiLLiD*LLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedXor64,         "LLiLLiD*LLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+
 #undef BUILTIN
 #undef LANGBUILTIN
+#undef TARGET_HEADER_BUILTIN

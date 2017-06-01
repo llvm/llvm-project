@@ -9,7 +9,8 @@ foreach(entry ${entries})
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/libcxx) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/libcxxabi) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/libunwind) AND
-       (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/test-suite))
+       (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/test-suite) AND
+       (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/parallel-libs))
       add_subdirectory(${entry})
     endif()
   endif()
@@ -21,11 +22,11 @@ if(${LLVM_BUILD_RUNTIME})
   # MSVC isn't quite working with libc++ yet, disable it until issues are
   # fixed.
   if(NOT MSVC)
-    # libc++ uses the libc++abi target names so libc++abi should be added
-    # first.
+    # Add the projects in reverse order of their dependencies so that the
+    # dependent projects can see the target names of their dependencies.
+    add_llvm_external_project(libunwind)
     add_llvm_external_project(libcxxabi)
     add_llvm_external_project(libcxx)
-    add_llvm_external_project(libunwind)
   endif()
   if(NOT LLVM_BUILD_EXTERNAL_COMPILER_RT)
     add_llvm_external_project(compiler-rt)
@@ -33,3 +34,4 @@ if(${LLVM_BUILD_RUNTIME})
 endif()
 
 add_llvm_external_project(dragonegg)
+add_llvm_external_project(parallel-libs)

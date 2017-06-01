@@ -1,8 +1,8 @@
-; RUN: llc -march=mips64 -relocation-model=static -mattr=+soft-float -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=SYM32 %s
-; RUN: llc -march=mips64el -relocation-model=static -mattr=+soft-float -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=SYM32 %s
+; RUN: llc -march=mips64 -relocation-model=static -mattr=+soft-float -target-abi n32 < %s | FileCheck --check-prefixes=ALL,SYM32 %s
+; RUN: llc -march=mips64el -relocation-model=static -mattr=+soft-float -target-abi n32 < %s | FileCheck --check-prefixes=ALL,SYM32 %s
 
-; RUN: llc -march=mips64 -relocation-model=static -mattr=+soft-float -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=SYM64 %s
-; RUN: llc -march=mips64el -relocation-model=static -mattr=+soft-float -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=SYM64 %s
+; RUN: llc -march=mips64 -relocation-model=static -mattr=+soft-float -target-abi n64 < %s | FileCheck --check-prefixes=ALL,SYM64 %s
+; RUN: llc -march=mips64el -relocation-model=static -mattr=+soft-float -target-abi n64 < %s | FileCheck --check-prefixes=ALL,SYM64 %s
 
 ; Test the fp128 arguments for all ABI's and byte orders as specified
 ; by section 2 of the MIPSpro N32 Handbook.

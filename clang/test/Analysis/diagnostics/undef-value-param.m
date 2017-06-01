@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx -analyzer-output=text -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx -analyzer-output=plist-multi-file -analyzer-config path-diagnostics-alternate=false %s -o %t.plist
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx -analyzer-output=plist-multi-file -analyzer-config path-diagnostics-alternate=false %s -o %t.plist
 // RUN: FileCheck --input-file=%t.plist %s
 
 typedef signed char BOOL;
@@ -45,8 +45,8 @@ SCDynamicStoreRef anotherCreateRef(unsigned *err, unsigned x);
     CreateRefUndef(&storeRef, 4);
                              //expected-note@-1{{Calling 'CreateRefUndef'}}
                              //expected-note@-2{{Returning from 'CreateRefUndef'}}
-    CFRelease(storeRef); //expected-warning {{Function call argument is an uninitialized value}}
-                         //expected-note@-1{{Function call argument is an uninitialized value}}
+    CFRelease(storeRef); //expected-warning {{1st function call argument is an uninitialized value}}
+                         //expected-note@-1{{1st function call argument is an uninitialized value}}
 }
 @end
 
@@ -918,12 +918,12 @@ static void CreateRefUndef(SCDynamicStoreRef *storeRef, unsigned x) {
 // CHECK-NEXT:      </array>
 // CHECK-NEXT:      <key>depth</key><integer>0</integer>
 // CHECK-NEXT:      <key>extended_message</key>
-// CHECK-NEXT:      <string>Function call argument is an uninitialized value</string>
+// CHECK-NEXT:      <string>1st function call argument is an uninitialized value</string>
 // CHECK-NEXT:      <key>message</key>
-// CHECK-NEXT:      <string>Function call argument is an uninitialized value</string>
+// CHECK-NEXT:      <string>1st function call argument is an uninitialized value</string>
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:    </array>
-// CHECK-NEXT:    <key>description</key><string>Function call argument is an uninitialized value</string>
+// CHECK-NEXT:    <key>description</key><string>1st function call argument is an uninitialized value</string>
 // CHECK-NEXT:    <key>category</key><string>Logic error</string>
 // CHECK-NEXT:    <key>type</key><string>Uninitialized argument value</string>
 // CHECK-NEXT:    <key>check_name</key><string>core.CallAndMessage</string>

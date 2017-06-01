@@ -1,12 +1,18 @@
-; RUN: opt < %s -S -loop-unroll -unroll-threshold=25 -unroll-runtime -unroll-count=8 | FileCheck %s
+; RUN: opt < %s -S -loop-unroll -unroll-threshold=25 -unroll-runtime -unroll-runtime-epilog=true  -unroll-count=8 | FileCheck %s  -check-prefix=EPILOG
+; RUN: opt < %s -S -loop-unroll -unroll-threshold=25 -unroll-runtime -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
 
 ; Choose a smaller, power-of-two, unroll count if the loop is too large.
 ; This test makes sure we're not unrolling 'odd' counts
 
-; CHECK: for.body.prol:
-; CHECK: for.body:
-; CHECK: br i1 %exitcond.3, label %for.end.loopexit{{.*}}, label %for.body
-; CHECK-NOT: br i1 %exitcond.4, label %for.end.loopexit{{.*}}, label %for.body
+; EPILOG: for.body:
+; EPILOG: br i1 %niter.ncmp.3, label %for.end.loopexit.unr-lcssa.loopexit{{.*}}, label %for.body
+; EPILOG-NOT: br i1 %niter.ncmp.4, label %for.end.loopexit.unr-lcssa.loopexit{{.*}}, label %for.body
+; EPILOG: for.body.epil:
+
+; PROLOG: for.body.prol:
+; PROLOG: for.body:
+; PROLOG: br i1 %exitcond.3, label %for.end.loopexit{{.*}}, label %for.body
+; PROLOG-NOT: br i1 %exitcond.4, label %for.end.loopexit{{.*}}, label %for.body
 
 define i32 @test(i32* nocapture %a, i32 %n) nounwind uwtable readonly {
 entry:

@@ -23,7 +23,7 @@ revision="HEAD"
 
 base_url="https://llvm.org/svn/llvm-project"
 
-function usage() {
+usage() {
     echo "usage: `basename $0` -release <num> [-rebranch] [-revision <num>] [-dry-run]"
     echo "usage: `basename $0` -release <num> -rc <num> [-dry-run]"
     echo " "
@@ -35,7 +35,7 @@ function usage() {
     echo "  -dry-run         Make no changes to the repository, just print the commands"
 }
 
-function tag_version() {
+tag_version() {
     set -x
     for proj in  $projects; do
         if svn ls $base_url/$proj/branches/release_$branch_release > /dev/null 2>&1 ; then
@@ -53,7 +53,7 @@ function tag_version() {
     set +x
 }
 
-function tag_release_candidate() {
+tag_release_candidate() {
     set -x
     for proj in $projects ; do
         if ! svn ls $base_url/$proj/tags/RELEASE_$tag_release > /dev/null 2>&1 ; then

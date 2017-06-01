@@ -1,4 +1,4 @@
-; RUN: opt -elim-avail-extern -S < %s | FileCheck %s
+; RUN: opt -passes=elim-avail-extern -S < %s | FileCheck %s
 
 ; CHECK: declare hidden void @f()
 define available_externally hidden void @f() {

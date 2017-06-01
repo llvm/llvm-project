@@ -1,6 +1,6 @@
 // RUN: %clang_tsan -O1 %s -lpthread -o %t && %deflake %run %t | FileCheck %s
 // Regression test for
-// https://code.google.com/p/thread-sanitizer/issues/detail?id=61
+// https://github.com/google/sanitizers/issues/468
 // When the data race was reported, pthread_atfork() handler used to be
 // executed which caused another race report in the same thread, which resulted
 // in a deadlock.

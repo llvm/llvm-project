@@ -153,9 +153,9 @@ StackTrace StackDepotReverseMap::Get(u32 id) {
   if (!map_.size())
     return StackTrace();
   IdDescPair pair = {id, nullptr};
-  uptr idx = InternalBinarySearch(map_, 0, map_.size(), pair,
-                                  IdDescPair::IdComparator);
-  if (idx > map_.size())
+  uptr idx =
+      InternalLowerBound(map_, 0, map_.size(), pair, IdDescPair::IdComparator);
+  if (idx > map_.size() || map_[idx].id != id)
     return StackTrace();
   return map_[idx].desc->load();
 }

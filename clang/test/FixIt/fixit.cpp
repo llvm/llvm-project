@@ -1,8 +1,12 @@
-// RUN: %clang_cc1 -pedantic -Wall -Wno-comment -verify -fcxx-exceptions -x c++ %s
+// RUN: %clang_cc1 -pedantic -Wall -Wno-comment -verify -fcxx-exceptions -x c++ -std=c++98 %s
+// RUN: cp %s %t-98
+// RUN: not %clang_cc1 -pedantic -Wall -Wno-comment -fcxx-exceptions -fixit -x c++ -std=c++98 %t-98
+// RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Werror -Wno-comment -fcxx-exceptions -x c++ -std=c++98 %t-98
 // RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits -x c++ -std=c++11 %s 2>&1 | FileCheck %s
-// RUN: cp %s %t
-// RUN: not %clang_cc1 -pedantic -Wall -Wno-comment -fcxx-exceptions -fixit -x c++ %t
-// RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Werror -Wno-comment -fcxx-exceptions -x c++ %t
+// RUN: %clang_cc1 -pedantic -Wall -Wno-comment -verify -fcxx-exceptions -x c++ -std=c++11 %s
+// RUN: cp %s %t-11
+// RUN: not %clang_cc1 -pedantic -Wall -Wno-comment -fcxx-exceptions -fixit -x c++ -std=c++11 %t-11
+// RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Werror -Wno-comment -fcxx-exceptions -x c++ -std=c++11 %t-11
 
 /* This is a test of the various code modification hints that are
    provided as part of warning or extension diagnostics. All of the
@@ -21,7 +25,11 @@ static void C1::g() { } // expected-error{{'static' can only be specified inside
 
 template<int Value> struct CT { template<typename> struct Inner; }; // expected-note{{previous use is here}}
 
+// FIXME: In C++11 this gets 'expected unqualified-id' which fixit can't fix.
+// Probably parses as `CT<10> > 2 > ct;` rather than `CT<(10 >> 2)> ct;`.
+#if __cplusplus < 201103L
 CT<10 >> 2> ct; // expected-warning{{require parentheses}}
+#endif
 
 class C3 {
 public:
@@ -41,7 +49,11 @@ protected:
 };
 
 class B : public A {
+#if __cplusplus >= 201103L
+  A::foo; // expected-error{{ISO C++11 does not allow access declarations}}
+#else
   A::foo; // expected-warning{{access declarations are deprecated}}
+#endif
 };
 
 void f() throw(); // expected-note{{previous}}
@@ -285,8 +297,10 @@ namespace greatergreater {
     void (*p)() = &t<int>;
     (void)(&t<int>==p); // expected-error {{use '> ='}}
     (void)(&t<int>>=p); // expected-error {{use '> >'}}
+#if __cplusplus < 201103L
     (void)(&t<S<int>>>=p); // expected-error {{use '> >'}}
     (Shr)&t<S<int>>>>=p; // expected-error {{use '> >'}}
+#endif
 
     // FIXME: We correct this to '&t<int> > >= p;' not '&t<int> >>= p;'
     //(Shr)&t<int>>>=p;
@@ -395,3 +409,14 @@ const const_zero_init czi; // expected-error {{default initialization of an obje
 // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:26-[[@LINE-1]]:26}:"{}"
 int use_czi = czi.a;
 
+namespace dotPointerDestructor {
+
+struct Bar {
+  ~Bar();
+};
+
+void bar(Bar *o) {
+  o.~Bar(); // expected-error {{member reference type 'dotPointerDestructor::Bar *' is a pointer; did you mean to use '->'}}
+}  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:5}:"->"
+
+}

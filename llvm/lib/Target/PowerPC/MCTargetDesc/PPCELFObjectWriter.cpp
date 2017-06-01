@@ -25,8 +25,8 @@ namespace {
     PPCELFObjectWriter(bool Is64Bit, uint8_t OSABI);
 
   protected:
-    unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
-                          bool IsPCRel) const override;
+    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                          const MCFixup &Fixup, bool IsPCRel) const override;
 
     bool needsRelocateWithSymbol(const MCSymbol &Sym,
                                  unsigned Type) const override;
@@ -66,7 +66,7 @@ static MCSymbolRefExpr::VariantKind getAccessVariant(const MCValue &Target,
   llvm_unreachable("unknown PPCMCExpr kind");
 }
 
-unsigned PPCELFObjectWriter::GetRelocType(const MCValue &Target,
+unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
   MCSymbolRefExpr::VariantKind Modifier = getAccessVariant(Target, Fixup);
@@ -113,13 +113,10 @@ unsigned PPCELFObjectWriter::GetRelocType(const MCValue &Target,
         break;
       }
       break;
-    case PPC::fixup_ppc_half16ds: {
-      raw_ostream &OS = *(new raw_fd_ostream(2, false));
-      Target.print(OS);
-      OS << "\n";
+    case PPC::fixup_ppc_half16ds:
+      Target.print(errs());
+      errs() << '\n';
       report_fatal_error("Invalid PC-relative half16ds relocation");
-      break;
-    }
     case FK_Data_4:
     case FK_PCRel_4:
       Type = ELF::R_PPC_REL32;
@@ -189,7 +186,7 @@ unsigned PPCELFObjectWriter::GetRelocType(const MCValue &Target,
       case MCSymbolRefExpr::VK_PPC_TOC_HA:
         Type = ELF::R_PPC64_TOC16_HA;
         break;
-      case MCSymbolRefExpr::VK_PPC_TPREL:
+      case MCSymbolRefExpr::VK_TPREL:
         Type = ELF::R_PPC_TPREL16;
         break;
       case MCSymbolRefExpr::VK_PPC_TPREL_LO:
@@ -213,7 +210,7 @@ unsigned PPCELFObjectWriter::GetRelocType(const MCValue &Target,
       case MCSymbolRefExpr::VK_PPC_TPREL_HIGHESTA:
         Type = ELF::R_PPC64_TPREL16_HIGHESTA;
         break;
-      case MCSymbolRefExpr::VK_PPC_DTPREL:
+      case MCSymbolRefExpr::VK_DTPREL:
         Type = ELF::R_PPC64_DTPREL16;
         break;
       case MCSymbolRefExpr::VK_PPC_DTPREL_LO:
@@ -322,13 +319,13 @@ unsigned PPCELFObjectWriter::GetRelocType(const MCValue &Target,
       case MCSymbolRefExpr::VK_PPC_TOC_LO:
         Type = ELF::R_PPC64_TOC16_LO_DS;
         break;
-      case MCSymbolRefExpr::VK_PPC_TPREL:
+      case MCSymbolRefExpr::VK_TPREL:
         Type = ELF::R_PPC64_TPREL16_DS;
         break;
       case MCSymbolRefExpr::VK_PPC_TPREL_LO:
         Type = ELF::R_PPC64_TPREL16_LO_DS;
         break;
-      case MCSymbolRefExpr::VK_PPC_DTPREL:
+      case MCSymbolRefExpr::VK_DTPREL:
         Type = ELF::R_PPC64_DTPREL16_DS;
         break;
       case MCSymbolRefExpr::VK_PPC_DTPREL_LO:
@@ -383,10 +380,10 @@ unsigned PPCELFObjectWriter::GetRelocType(const MCValue &Target,
       case MCSymbolRefExpr::VK_PPC_DTPMOD:
         Type = ELF::R_PPC64_DTPMOD64;
         break;
-      case MCSymbolRefExpr::VK_PPC_TPREL:
+      case MCSymbolRefExpr::VK_TPREL:
         Type = ELF::R_PPC64_TPREL64;
         break;
-      case MCSymbolRefExpr::VK_PPC_DTPREL:
+      case MCSymbolRefExpr::VK_DTPREL:
         Type = ELF::R_PPC64_DTPREL64;
         break;
       }

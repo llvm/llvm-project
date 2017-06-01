@@ -31,13 +31,22 @@ typedef ArrayRef<std::pair<IdentifierInfo *, SourceLocation> > ModuleIdPath;
 
 /// \brief Describes the result of attempting to load a module.
 class ModuleLoadResult {
-  llvm::PointerIntPair<Module *, 1, bool> Storage;
-
 public:
-  ModuleLoadResult() : Storage() { }
+  enum LoadResultKind {
+    // We either succeeded or failed to load the named module.
+    Normal,
+    // The module exists, but does not actually contain the named submodule.
+    // This should only happen if the named submodule was inferred from an
+    // umbrella directory, but not actually part of the umbrella header.
+    MissingExpected,
+    // The module exists but cannot be imported due to a configuration mismatch.
+    ConfigMismatch
+  };
+  llvm::PointerIntPair<Module *, 2, LoadResultKind> Storage;
 
-  ModuleLoadResult(Module *module, bool missingExpected)
-    : Storage(module, missingExpected) { }
+  ModuleLoadResult() : Storage() { }
+  ModuleLoadResult(Module *M) : Storage(M, Normal) {}
+  ModuleLoadResult(LoadResultKind Kind) : Storage(nullptr, Kind) {}
 
   operator Module *() const { return Storage.getPointer(); }
 
@@ -45,7 +54,11 @@ public:
   /// actually a submodule that we expected to see (based on implying the
   /// submodule from header structure), but didn't materialize in the actual
   /// module.
-  bool isMissingExpected() const { return Storage.getInt(); }
+  bool isMissingExpected() const { return Storage.getInt() == MissingExpected; }
+
+  /// \brief Determines whether the module failed to load due to a configuration
+  /// mismatch with an explicitly-named .pcm file from the command line.
+  bool isConfigMismatch() const { return Storage.getInt() == ConfigMismatch; }
 };
 
 /// \brief Abstract interface for a module loader.

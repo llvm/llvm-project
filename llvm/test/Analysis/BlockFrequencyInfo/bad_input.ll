@@ -1,4 +1,5 @@
 ; RUN: opt < %s -analyze -block-freq | FileCheck %s
+; RUN: opt < %s -passes='print<block-freq>' -disable-output 2>&1 | FileCheck %s
 
 declare void @g(i32 %x)
 
@@ -9,8 +10,8 @@ define void @branch_weight_0(i32 %a) {
 entry:
   br label %for.body
 
-; Check that we get 1,4 instead of 0,3.
-; CHECK-NEXT: for.body: float = 4.0,
+; Check that we get 1 and a huge frequency instead of 0,3.
+; CHECK-NEXT: for.body: float = 2147483647.8,
 for.body:
   %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   call void @g(i32 %i)

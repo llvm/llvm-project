@@ -1,6 +1,6 @@
 ; Check the vctlz* instructions that were added in P8
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s
 
 declare <16 x i8> @llvm.ctlz.v16i8(<16 x i8>) nounwind readnone
 declare <8 x i16> @llvm.ctlz.v8i16(<8 x i16>) nounwind readnone

@@ -34,12 +34,24 @@ using namespace llvm;
 STATISTIC(ExpectIntrinsicsHandled,
           "Number of 'expect' intrinsic instructions handled");
 
-static cl::opt<uint32_t>
-LikelyBranchWeight("likely-branch-weight", cl::Hidden, cl::init(64),
-                   cl::desc("Weight of the branch likely to be taken (default = 64)"));
-static cl::opt<uint32_t>
-UnlikelyBranchWeight("unlikely-branch-weight", cl::Hidden, cl::init(4),
-                   cl::desc("Weight of the branch unlikely to be taken (default = 4)"));
+// These default values are chosen to represent an extremely skewed outcome for
+// a condition, but they leave some room for interpretation by later passes.
+//
+// If the documentation for __builtin_expect() was made explicit that it should
+// only be used in extreme cases, we could make this ratio higher. As it stands,
+// programmers may be using __builtin_expect() / llvm.expect to annotate that a
+// branch is likely or unlikely to be taken.
+//
+// There is a known dependency on this ratio in CodeGenPrepare when transforming
+// 'select' instructions. It may be worthwhile to hoist these values to some
+// shared space, so they can be used directly by other passes.
+
+static cl::opt<uint32_t> LikelyBranchWeight(
+    "likely-branch-weight", cl::Hidden, cl::init(2000),
+    cl::desc("Weight of the branch likely to be taken (default = 2000)"));
+static cl::opt<uint32_t> UnlikelyBranchWeight(
+    "unlikely-branch-weight", cl::Hidden, cl::init(1),
+    cl::desc("Weight of the branch unlikely to be taken (default = 1)"));
 
 static bool handleSwitchExpect(SwitchInst &SI) {
   CallInst *CI = dyn_cast<CallInst>(SI.getCondition());
@@ -71,9 +83,8 @@ static bool handleSwitchExpect(SwitchInst &SI) {
   return true;
 }
 
-static bool handleBranchExpect(BranchInst &BI) {
-  if (BI.isUnconditional())
-    return false;
+// Handle both BranchInst and SelectInst.
+template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
 
   // Handle non-optimized IR code like:
   //   %expval = call i64 @llvm.expect.i64(i64 %conv1, i64 1)
@@ -86,9 +97,9 @@ static bool handleBranchExpect(BranchInst &BI) {
 
   CallInst *CI;
 
-  ICmpInst *CmpI = dyn_cast<ICmpInst>(BI.getCondition());
+  ICmpInst *CmpI = dyn_cast<ICmpInst>(BSI.getCondition());
   if (!CmpI) {
-    CI = dyn_cast<CallInst>(BI.getCondition());
+    CI = dyn_cast<CallInst>(BSI.getCondition());
   } else {
     if (CmpI->getPredicate() != CmpInst::ICMP_NE)
       return false;
@@ -117,13 +128,20 @@ static bool handleBranchExpect(BranchInst &BI) {
   else
     Node = MDB.createBranchWeights(UnlikelyBranchWeight, LikelyBranchWeight);
 
-  BI.setMetadata(LLVMContext::MD_prof, Node);
+  BSI.setMetadata(LLVMContext::MD_prof, Node);
 
   if (CmpI)
     CmpI->setOperand(0, ArgValue);
   else
-    BI.setCondition(ArgValue);
+    BSI.setCondition(ArgValue);
   return true;
+}
+
+static bool handleBranchExpect(BranchInst &BI) {
+  if (BI.isUnconditional())
+    return false;
+
+  return handleBrSelExpect<BranchInst>(BI);
 }
 
 static bool lowerExpectIntrinsic(Function &F) {
@@ -139,11 +157,19 @@ static bool lowerExpectIntrinsic(Function &F) {
         ExpectIntrinsicsHandled++;
     }
 
-    // Remove llvm.expect intrinsics.
-    for (BasicBlock::iterator BI = BB.begin(), BE = BB.end(); BI != BE;) {
-      CallInst *CI = dyn_cast<CallInst>(BI++);
-      if (!CI)
+    // Remove llvm.expect intrinsics. Iterate backwards in order
+    // to process select instructions before the intrinsic gets
+    // removed.
+    for (auto BI = BB.rbegin(), BE = BB.rend(); BI != BE;) {
+      Instruction *Inst = &*BI++;
+      CallInst *CI = dyn_cast<CallInst>(Inst);
+      if (!CI) {
+        if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
+          if (handleBrSelExpect(*SI))
+            ExpectIntrinsicsHandled++;
+        }
         continue;
+      }
 
       Function *Fn = CI->getCalledFunction();
       if (Fn && Fn->getIntrinsicID() == Intrinsic::expect) {
@@ -158,7 +184,8 @@ static bool lowerExpectIntrinsic(Function &F) {
   return Changed;
 }
 
-PreservedAnalyses LowerExpectIntrinsicPass::run(Function &F) {
+PreservedAnalyses LowerExpectIntrinsicPass::run(Function &F,
+                                                FunctionAnalysisManager &) {
   if (lowerExpectIntrinsic(F))
     return PreservedAnalyses::none();
 

@@ -1,8 +1,10 @@
-// RUN: %clang -target i686-pc-linux-gnu -### -nodefaultlibs %s 2> %t
-// RUN: FileCheck < %t %s
-//
-// CHECK-NOT: start-group
-// CHECK-NOT: "-lgcc"
-// CHECK-NOT: "-lc"
-// CHECK: crtbegin
-// CHECK: crtend
+// RUN: %clang -target i686-pc-linux-gnu -### -nodefaultlibs %s 2>&1 | FileCheck -check-prefix=TEST1 %s
+// TEST1-NOT: start-group
+// TEST1-NOT: "-lgcc"
+// TEST1-NOT: "-lc"
+// TEST1: crtbegin
+// TEST1: crtend
+
+// RUN: %clang -target i686-pc-linux-gnu -stdlib=libc++ -nodefaultlibs -lstdc++ -### %s 2>&1 | FileCheck -check-prefix=TEST2 %s
+// TEST2-NOT: "-lc++"
+// TEST2: "-lstdc++"

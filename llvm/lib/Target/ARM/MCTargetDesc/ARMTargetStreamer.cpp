@@ -27,16 +27,20 @@ ARMTargetStreamer::~ARMTargetStreamer() {}
 
 // The constant pool handling is shared by all ARMTargetStreamer
 // implementations.
-const MCExpr *ARMTargetStreamer::addConstantPoolEntry(const MCExpr *Expr) {
-  return ConstantPools->addEntry(Streamer, Expr, 4);
+const MCExpr *ARMTargetStreamer::addConstantPoolEntry(const MCExpr *Expr, SMLoc Loc) {
+  return ConstantPools->addEntry(Streamer, Expr, 4, Loc);
 }
 
 void ARMTargetStreamer::emitCurrentConstantPool() {
   ConstantPools->emitForCurrentSection(Streamer);
+  ConstantPools->clearCacheForCurrentSection(Streamer);
 }
 
 // finish() - write out any non-empty assembler constant pools.
 void ARMTargetStreamer::finish() { ConstantPools->emitAll(Streamer); }
+
+// reset() - Reset any state
+void ARMTargetStreamer::reset() {}
 
 // The remaining callbacks should be handled separately by each
 // streamer.

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-config ipa=dynamic-bifurcate -analyzer-config objc-inlining=false -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-config ipa=dynamic-bifurcate -analyzer-config objc-inlining=false -verify %s
 // expected-no-diagnostics
 
 typedef signed char BOOL;

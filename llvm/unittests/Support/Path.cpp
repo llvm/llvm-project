@@ -8,15 +8,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Path.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 #ifdef LLVM_ON_WIN32
+#include "llvm/ADT/ArrayRef.h"
 #include <windows.h>
 #include <winerror.h>
 #endif
@@ -119,22 +122,24 @@ TEST(Support, Path) {
     }
     ASSERT_TRUE(ComponentStack.empty());
 
-    path::has_root_path(*i);
-    path::root_path(*i);
-    path::has_root_name(*i);
-    path::root_name(*i);
-    path::has_root_directory(*i);
-    path::root_directory(*i);
-    path::has_parent_path(*i);
-    path::parent_path(*i);
-    path::has_filename(*i);
-    path::filename(*i);
-    path::has_stem(*i);
-    path::stem(*i);
-    path::has_extension(*i);
-    path::extension(*i);
-    path::is_absolute(*i);
-    path::is_relative(*i);
+    // Crash test most of the API - since we're iterating over all of our paths
+    // here there isn't really anything reasonable to assert on in the results.
+    (void)path::has_root_path(*i);
+    (void)path::root_path(*i);
+    (void)path::has_root_name(*i);
+    (void)path::root_name(*i);
+    (void)path::has_root_directory(*i);
+    (void)path::root_directory(*i);
+    (void)path::has_parent_path(*i);
+    (void)path::parent_path(*i);
+    (void)path::has_filename(*i);
+    (void)path::filename(*i);
+    (void)path::has_stem(*i);
+    (void)path::stem(*i);
+    (void)path::has_extension(*i);
+    (void)path::extension(*i);
+    (void)path::is_absolute(*i);
+    (void)path::is_relative(*i);
 
     SmallString<128> temp_store;
     temp_store = *i;
@@ -351,6 +356,76 @@ TEST(Support, UserCacheDirectory) {
   }
 }
 
+TEST(Support, TempDirectory) {
+  SmallString<32> TempDir;
+  path::system_temp_directory(false, TempDir);
+  EXPECT_TRUE(!TempDir.empty());
+  TempDir.clear();
+  path::system_temp_directory(true, TempDir);
+  EXPECT_TRUE(!TempDir.empty());
+}
+
+#ifdef LLVM_ON_WIN32
+static std::string path2regex(std::string Path) {
+  size_t Pos = 0;
+  while ((Pos = Path.find('\\', Pos)) != std::string::npos) {
+    Path.replace(Pos, 1, "\\\\");
+    Pos += 2;
+  }
+  return Path;
+}
+
+/// Helper for running temp dir test in separated process. See below.
+#define EXPECT_TEMP_DIR(prepare, expected)                                     \
+  EXPECT_EXIT(                                                                 \
+      {                                                                        \
+        prepare;                                                               \
+        SmallString<300> TempDir;                                              \
+        path::system_temp_directory(true, TempDir);                            \
+        raw_os_ostream(std::cerr) << TempDir;                                  \
+        std::exit(0);                                                          \
+      },                                                                       \
+      ::testing::ExitedWithCode(0), path2regex(expected))
+
+TEST(SupportDeathTest, TempDirectoryOnWindows) {
+  // In this test we want to check how system_temp_directory responds to
+  // different values of specific env vars. To prevent corrupting env vars of
+  // the current process all checks are done in separated processes.
+  EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"C:\\OtherFolder"), "C:\\OtherFolder");
+  EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"C:/Unix/Path/Seperators"),
+                  "C:\\Unix\\Path\\Seperators");
+  EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"Local Path"), ".+\\Local Path$");
+  EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"F:\\TrailingSep\\"), "F:\\TrailingSep");
+  EXPECT_TEMP_DIR(
+      _wputenv_s(L"TMP", L"C:\\2\x03C0r-\x00B5\x00B3\\\x2135\x2080"),
+      "C:\\2\xCF\x80r-\xC2\xB5\xC2\xB3\\\xE2\x84\xB5\xE2\x82\x80");
+
+  // Test $TMP empty, $TEMP set.
+  EXPECT_TEMP_DIR(
+      {
+        _wputenv_s(L"TMP", L"");
+        _wputenv_s(L"TEMP", L"C:\\Valid\\Path");
+      },
+      "C:\\Valid\\Path");
+
+  // All related env vars empty
+  EXPECT_TEMP_DIR(
+  {
+    _wputenv_s(L"TMP", L"");
+    _wputenv_s(L"TEMP", L"");
+    _wputenv_s(L"USERPROFILE", L"");
+  },
+    "C:\\Temp");
+
+  // Test evn var / path with 260 chars.
+  SmallString<270> Expected{"C:\\Temp\\AB\\123456789"};
+  while (Expected.size() < 260)
+    Expected.append("\\DirNameWith19Charss");
+  ASSERT_EQ(260U, Expected.size());
+  EXPECT_TEMP_DIR(_putenv_s("TMP", Expected.c_str()), Expected.c_str());
+}
+#endif
+
 class FileSystemTest : public testing::Test {
 protected:
   /// Unique temporary directory in which all created filesystem entities must
@@ -415,6 +490,10 @@ TEST_F(FileSystemTest, Unique) {
      fs::createUniqueDirectory("dir2", Dir2));
   ASSERT_NO_ERROR(fs::getUniqueID(Dir2.c_str(), F2));
   ASSERT_NE(F1, F2);
+  ASSERT_NO_ERROR(fs::remove(Dir1));
+  ASSERT_NO_ERROR(fs::remove(Dir2));
+  ASSERT_NO_ERROR(fs::remove(TempPath2));
+  ASSERT_NO_ERROR(fs::remove(TempPath));
 }
 
 TEST_F(FileSystemTest, TempFiles) {
@@ -458,6 +537,7 @@ TEST_F(FileSystemTest, TempFiles) {
   SmallString<64> TempPath3;
   ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "", TempPath3));
   ASSERT_FALSE(TempPath3.endswith("."));
+  FileRemover Cleanup3(TempPath3);
 
   // Create a hard link to Temp1.
   ASSERT_NO_ERROR(fs::create_link(Twine(TempPath), Twine(TempPath2)));
@@ -606,16 +686,15 @@ TEST_F(FileSystemTest, DirectoryIteration) {
       i.no_push();
     visited.push_back(path::filename(i->path()));
   }
-  v_t::const_iterator a0 = std::find(visited.begin(), visited.end(), "a0");
-  v_t::const_iterator aa1 = std::find(visited.begin(), visited.end(), "aa1");
-  v_t::const_iterator ab1 = std::find(visited.begin(), visited.end(), "ab1");
-  v_t::const_iterator dontlookhere = std::find(visited.begin(), visited.end(),
-                                               "dontlookhere");
-  v_t::const_iterator da1 = std::find(visited.begin(), visited.end(), "da1");
-  v_t::const_iterator z0 = std::find(visited.begin(), visited.end(), "z0");
-  v_t::const_iterator za1 = std::find(visited.begin(), visited.end(), "za1");
-  v_t::const_iterator pop = std::find(visited.begin(), visited.end(), "pop");
-  v_t::const_iterator p1 = std::find(visited.begin(), visited.end(), "p1");
+  v_t::const_iterator a0 = find(visited, "a0");
+  v_t::const_iterator aa1 = find(visited, "aa1");
+  v_t::const_iterator ab1 = find(visited, "ab1");
+  v_t::const_iterator dontlookhere = find(visited, "dontlookhere");
+  v_t::const_iterator da1 = find(visited, "da1");
+  v_t::const_iterator z0 = find(visited, "z0");
+  v_t::const_iterator za1 = find(visited, "za1");
+  v_t::const_iterator pop = find(visited, "pop");
+  v_t::const_iterator p1 = find(visited, "p1");
 
   // Make sure that each path was visited correctly.
   ASSERT_NE(a0, visited.end());
@@ -645,6 +724,20 @@ TEST_F(FileSystemTest, DirectoryIteration) {
   ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/recursive/z0/za1"));
   ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/recursive/z0"));
   ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/recursive"));
+
+  // Test recursive_directory_iterator level()
+  ASSERT_NO_ERROR(
+      fs::create_directories(Twine(TestDirectory) + "/reclevel/a/b/c"));
+  fs::recursive_directory_iterator I(Twine(TestDirectory) + "/reclevel", ec), E;
+  for (int l = 0; I != E; I.increment(ec), ++l) {
+    ASSERT_NO_ERROR(ec);
+    EXPECT_EQ(I.level(), l);
+  }
+  EXPECT_EQ(I, E);
+  ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/reclevel/a/b/c"));
+  ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/reclevel/a/b"));
+  ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/reclevel/a"));
+  ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/reclevel"));
 }
 
 const char archive[] = "!<arch>\x0A";
@@ -655,22 +748,30 @@ const char coff_bigobj[] = "\x00\x00\xff\xff\x00\x02......"
 const char coff_import_library[] = "\x00\x00\xff\xff....";
 const char elf_relocatable[] = { 0x7f, 'E', 'L', 'F', 1, 2, 1, 0, 0,
                                  0,    0,   0,   0,   0, 0, 0, 0, 1 };
-const char macho_universal_binary[] = "\xca\xfe\xba\xbe...\0x00";
-const char macho_object[] = "\xfe\xed\xfa\xce..........\x00\x01";
-const char macho_executable[] = "\xfe\xed\xfa\xce..........\x00\x02";
+const char macho_universal_binary[] = "\xca\xfe\xba\xbe...\x00";
+const char macho_object[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x01............";
+const char macho_executable[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x02............";
 const char macho_fixed_virtual_memory_shared_lib[] =
-    "\xfe\xed\xfa\xce..........\x00\x03";
-const char macho_core[] = "\xfe\xed\xfa\xce..........\x00\x04";
-const char macho_preload_executable[] = "\xfe\xed\xfa\xce..........\x00\x05";
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x03............";
+const char macho_core[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x04............";
+const char macho_preload_executable[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x05............";
 const char macho_dynamically_linked_shared_lib[] =
-    "\xfe\xed\xfa\xce..........\x00\x06";
-const char macho_dynamic_linker[] = "\xfe\xed\xfa\xce..........\x00\x07";
-const char macho_bundle[] = "\xfe\xed\xfa\xce..........\x00\x08";
-const char macho_dsym_companion[] = "\xfe\xed\xfa\xce..........\x00\x0a";
-const char macho_kext_bundle[] = "\xfe\xed\xfa\xce..........\x00\x0b";
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x06............";
+const char macho_dynamic_linker[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x07............";
+const char macho_bundle[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x08............";
+const char macho_dsym_companion[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x0a............";
+const char macho_kext_bundle[] =
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x0b............";
 const char windows_resource[] = "\x00\x00\x00\x00\x020\x00\x00\x00\xff";
 const char macho_dynamically_linked_shared_lib_stub[] =
-    "\xfe\xed\xfa\xce..........\x00\x09";
+    "\xfe\xed\xfa\xce........\x00\x00\x00\x09............";
 
 TEST_F(FileSystemTest, Magic) {
   struct type {
@@ -758,6 +859,8 @@ TEST_F(FileSystemTest, Resize) {
   fs::file_status Status;
   ASSERT_NO_ERROR(fs::status(FD, Status));
   ASSERT_EQ(Status.getSize(), 123U);
+  ::close(FD);
+  ASSERT_NO_ERROR(fs::remove(TempPath));
 }
 
 TEST_F(FileSystemTest, FileMapping) {
@@ -781,21 +884,25 @@ TEST_F(FileSystemTest, FileMapping) {
     mfr.data()[Val.size()] = 0;
     // Unmap temp file
   }
+  ASSERT_EQ(close(FileDescriptor), 0);
 
   // Map it back in read-only
-  int FD;
-  EC = fs::openFileForRead(Twine(TempPath), FD);
-  ASSERT_NO_ERROR(EC);
-  fs::mapped_file_region mfr(FD, fs::mapped_file_region::readonly, Size, 0, EC);
-  ASSERT_NO_ERROR(EC);
+  {
+    int FD;
+    EC = fs::openFileForRead(Twine(TempPath), FD);
+    ASSERT_NO_ERROR(EC);
+    fs::mapped_file_region mfr(FD, fs::mapped_file_region::readonly, Size, 0, EC);
+    ASSERT_NO_ERROR(EC);
 
-  // Verify content
-  EXPECT_EQ(StringRef(mfr.const_data()), Val);
+    // Verify content
+    EXPECT_EQ(StringRef(mfr.const_data()), Val);
 
-  // Unmap temp file
-  fs::mapped_file_region m(FD, fs::mapped_file_region::readonly, Size, 0, EC);
-  ASSERT_NO_ERROR(EC);
-  ASSERT_EQ(close(FD), 0);
+    // Unmap temp file
+    fs::mapped_file_region m(FD, fs::mapped_file_region::readonly, Size, 0, EC);
+    ASSERT_NO_ERROR(EC);
+    ASSERT_EQ(close(FD), 0);
+  }
+  ASSERT_NO_ERROR(fs::remove(TempPath));
 }
 
 TEST(Support, NormalizePath) {
@@ -843,5 +950,189 @@ TEST(Support, RemoveLeadingDotSlash) {
   EXPECT_EQ(Path1, "foolz/wat");
   Path2 = path::remove_leading_dotslash(Path2);
   EXPECT_EQ(Path2, "");
+}
+
+static std::string remove_dots(StringRef path,
+    bool remove_dot_dot) {
+  SmallString<256> buffer(path);
+  path::remove_dots(buffer, remove_dot_dot);
+  return buffer.str();
+}
+
+TEST(Support, RemoveDots) {
+#if defined(LLVM_ON_WIN32)
+  EXPECT_EQ("foolz\\wat", remove_dots(".\\.\\\\foolz\\wat", false));
+  EXPECT_EQ("", remove_dots(".\\\\\\\\\\", false));
+
+  EXPECT_EQ("a\\..\\b\\c", remove_dots(".\\a\\..\\b\\c", false));
+  EXPECT_EQ("b\\c", remove_dots(".\\a\\..\\b\\c", true));
+  EXPECT_EQ("c", remove_dots(".\\.\\c", true));
+  EXPECT_EQ("..\\a\\c", remove_dots("..\\a\\b\\..\\c", true));
+  EXPECT_EQ("..\\..\\a\\c", remove_dots("..\\..\\a\\b\\..\\c", true));
+
+  SmallString<64> Path1(".\\.\\c");
+  EXPECT_TRUE(path::remove_dots(Path1, true));
+  EXPECT_EQ("c", Path1);
+#else
+  EXPECT_EQ("foolz/wat", remove_dots("././/foolz/wat", false));
+  EXPECT_EQ("", remove_dots("./////", false));
+
+  EXPECT_EQ("a/../b/c", remove_dots("./a/../b/c", false));
+  EXPECT_EQ("b/c", remove_dots("./a/../b/c", true));
+  EXPECT_EQ("c", remove_dots("././c", true));
+  EXPECT_EQ("../a/c", remove_dots("../a/b/../c", true));
+  EXPECT_EQ("../../a/c", remove_dots("../../a/b/../c", true));
+  EXPECT_EQ("/a/c", remove_dots("/../../a/c", true));
+  EXPECT_EQ("/a/c", remove_dots("/../a/b//../././/c", true));
+
+  SmallString<64> Path1("././c");
+  EXPECT_TRUE(path::remove_dots(Path1, true));
+  EXPECT_EQ("c", Path1);
+#endif
+}
+
+TEST(Support, ReplacePathPrefix) {
+  SmallString<64> Path1("/foo");
+  SmallString<64> Path2("/old/foo");
+  SmallString<64> OldPrefix("/old");
+  SmallString<64> NewPrefix("/new");
+  SmallString<64> NewPrefix2("/longernew");
+  SmallString<64> EmptyPrefix("");
+
+  SmallString<64> Path = Path1;
+  path::replace_path_prefix(Path, OldPrefix, NewPrefix);
+  EXPECT_EQ(Path, "/foo");
+  Path = Path2;
+  path::replace_path_prefix(Path, OldPrefix, NewPrefix);
+  EXPECT_EQ(Path, "/new/foo");
+  Path = Path2;
+  path::replace_path_prefix(Path, OldPrefix, NewPrefix2);
+  EXPECT_EQ(Path, "/longernew/foo");
+  Path = Path1;
+  path::replace_path_prefix(Path, EmptyPrefix, NewPrefix);
+  EXPECT_EQ(Path, "/new/foo");
+  Path = Path2;
+  path::replace_path_prefix(Path, OldPrefix, EmptyPrefix);
+  EXPECT_EQ(Path, "/foo");
+}
+
+TEST_F(FileSystemTest, PathFromFD) {
+  // Create a temp file.
+  int FileDescriptor;
+  SmallString<64> TempPath;
+  ASSERT_NO_ERROR(
+      fs::createTemporaryFile("prefix", "temp", FileDescriptor, TempPath));
+  FileRemover Cleanup(TempPath);
+
+  // Make sure it exists.
+  ASSERT_TRUE(sys::fs::exists(Twine(TempPath)));
+
+  // Try to get the path from the file descriptor
+  SmallString<64> ResultPath;
+  std::error_code ErrorCode =
+      fs::getPathFromOpenFD(FileDescriptor, ResultPath);
+
+  // If we succeeded, check that the paths are the same (modulo case):
+  if (!ErrorCode) {
+    // The paths returned by createTemporaryFile and getPathFromOpenFD
+    // should reference the same file on disk.
+    fs::UniqueID D1, D2;
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath), D1));
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(ResultPath), D2));
+    ASSERT_EQ(D1, D2);
+  }
+
+  ::close(FileDescriptor);
+}
+
+TEST_F(FileSystemTest, PathFromFDWin32) {
+  // Create a temp file.
+  int FileDescriptor;
+  SmallString<64> TempPath;
+  ASSERT_NO_ERROR(
+    fs::createTemporaryFile("prefix", "temp", FileDescriptor, TempPath));
+  FileRemover Cleanup(TempPath);
+
+  // Make sure it exists.
+  ASSERT_TRUE(sys::fs::exists(Twine(TempPath)));
+  
+  SmallVector<char, 8> ResultPath;
+  std::error_code ErrorCode =
+    fs::getPathFromOpenFD(FileDescriptor, ResultPath);
+
+  if (!ErrorCode) {
+    // Now that we know how much space is required for the path, create a path
+    // buffer with exactly enough space (sans null terminator, which should not
+    // be present), and call getPathFromOpenFD again to ensure that the API
+    // properly handles exactly-sized buffers.
+    SmallVector<char, 8> ExactSizedPath(ResultPath.size());
+    ErrorCode = fs::getPathFromOpenFD(FileDescriptor, ExactSizedPath);
+    ResultPath = ExactSizedPath;
+  }
+
+  if (!ErrorCode) {
+    fs::UniqueID D1, D2;
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath), D1));
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(ResultPath), D2));
+    ASSERT_EQ(D1, D2);
+  }
+  ::close(FileDescriptor);
+}
+
+TEST_F(FileSystemTest, PathFromFDUnicode) {
+  // Create a temp file.
+  int FileDescriptor;
+  SmallString<64> TempPath;
+
+  // Test Unicode: "<temp directory>/(pi)r^2<temp rand chars>.aleth.0"
+  ASSERT_NO_ERROR(
+    fs::createTemporaryFile("\xCF\x80r\xC2\xB2",
+                            "\xE2\x84\xB5.0", FileDescriptor, TempPath));
+  FileRemover Cleanup(TempPath);
+
+  // Make sure it exists.
+  ASSERT_TRUE(sys::fs::exists(Twine(TempPath)));
+
+  SmallVector<char, 8> ResultPath;
+  std::error_code ErrorCode =
+    fs::getPathFromOpenFD(FileDescriptor, ResultPath);
+
+  if (!ErrorCode) {
+    fs::UniqueID D1, D2;
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath), D1));
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(ResultPath), D2));
+    ASSERT_EQ(D1, D2);
+  }
+  ::close(FileDescriptor);
+}
+
+TEST_F(FileSystemTest, OpenFileForRead) {
+  // Create a temp file.
+  int FileDescriptor;
+  SmallString<64> TempPath;
+  ASSERT_NO_ERROR(
+      fs::createTemporaryFile("prefix", "temp", FileDescriptor, TempPath));
+  FileRemover Cleanup(TempPath);
+
+  // Make sure it exists.
+  ASSERT_TRUE(sys::fs::exists(Twine(TempPath)));
+
+  // Open the file for read
+  int FileDescriptor2;
+  SmallString<64> ResultPath;
+  ASSERT_NO_ERROR(
+      fs::openFileForRead(Twine(TempPath), FileDescriptor2, &ResultPath))
+
+  // If we succeeded, check that the paths are the same (modulo case):
+  if (!ResultPath.empty()) {
+    // The paths returned by createTemporaryFile and getPathFromOpenFD
+    // should reference the same file on disk.
+    fs::UniqueID D1, D2;
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath), D1));
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(ResultPath), D2));
+    ASSERT_EQ(D1, D2);
+  }
+
+  ::close(FileDescriptor);
 }
 } // anonymous namespace

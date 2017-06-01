@@ -43,39 +43,52 @@
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/ScratchBuffer.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Capacity.h"
-#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 using namespace clang;
+
+LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
 
 //===----------------------------------------------------------------------===//
 ExternalPreprocessorSource::~ExternalPreprocessorSource() { }
 
-Preprocessor::Preprocessor(IntrusiveRefCntPtr<PreprocessorOptions> PPOpts,
+Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
                            DiagnosticsEngine &diags, LangOptions &opts,
-                           SourceManager &SM, HeaderSearch &Headers,
-                           ModuleLoader &TheModuleLoader,
+                           SourceManager &SM, MemoryBufferCache &PCMCache,
+                           HeaderSearch &Headers, ModuleLoader &TheModuleLoader,
                            IdentifierInfoLookup *IILookup, bool OwnsHeaders,
                            TranslationUnitKind TUKind)
-    : PPOpts(PPOpts), Diags(&diags), LangOpts(opts), Target(nullptr),
+    : PPOpts(std::move(PPOpts)), Diags(&diags), LangOpts(opts), Target(nullptr),
       AuxTarget(nullptr), FileMgr(Headers.getFileMgr()), SourceMgr(SM),
-      ScratchBuf(new ScratchBuffer(SourceMgr)), HeaderInfo(Headers),
-      TheModuleLoader(TheModuleLoader), ExternalSource(nullptr),
-      Identifiers(opts, IILookup),
+      PCMCache(PCMCache), ScratchBuf(new ScratchBuffer(SourceMgr)),
+      HeaderInfo(Headers), TheModuleLoader(TheModuleLoader),
+      ExternalSource(nullptr), Identifiers(opts, IILookup),
       PragmaHandlers(new PragmaNamespace(StringRef())),
       IncrementalProcessing(false), TUKind(TUKind), CodeComplete(nullptr),
       CodeCompletionFile(nullptr), CodeCompletionOffset(0),
       LastTokenWasAt(false), ModuleImportExpectsIdentifier(false),
-      CodeCompletionReached(0), MainFileDir(nullptr),
-      SkipMainFilePreamble(0, true), CurPPLexer(nullptr), CurDirLookup(nullptr),
-      CurLexerKind(CLK_Lexer), CurSubmodule(nullptr), Callbacks(nullptr),
-      CurSubmoduleState(&NullSubmoduleState), MacroArgCache(nullptr),
-      Record(nullptr), MIChainHead(nullptr), DeserialMIChainHead(nullptr) {
+      CodeCompletionReached(false), CodeCompletionII(nullptr),
+      MainFileDir(nullptr), SkipMainFilePreamble(0, true), CurPPLexer(nullptr),
+      CurDirLookup(nullptr), CurLexerKind(CLK_Lexer), CurSubmodule(nullptr),
+      Callbacks(nullptr), CurSubmoduleState(&NullSubmoduleState),
+      MacroArgCache(nullptr), Record(nullptr), MIChainHead(nullptr),
+      DeserialMIChainHead(nullptr) {
   OwnsHeaderSearch = OwnsHeaders;
   
   CounterValue = 0; // __COUNTER__ starts at 0.
@@ -477,7 +490,7 @@ void Preprocessor::CreateString(StringRef Str, Token &Tok,
 }
 
 Module *Preprocessor::getCurrentModule() {
-  if (getLangOpts().CurrentModule.empty())
+  if (!getLangOpts().isCompilingModule())
     return nullptr;
 
   return getHeaderSearchInfo().lookupModule(getLangOpts().CurrentModule);
@@ -486,7 +499,6 @@ Module *Preprocessor::getCurrentModule() {
 //===----------------------------------------------------------------------===//
 // Preprocessor Initialization Methods
 //===----------------------------------------------------------------------===//
-
 
 /// EnterMainSourceFile - Enter the specified FileID as the main source file,
 /// which implicitly adds the builtin defines etc.
@@ -615,6 +627,11 @@ static diag::kind getFutureCompatDiagKind(const IdentifierInfo &II,
       "Keyword not known to come from a newer Standard or proposed Standard");
 }
 
+void Preprocessor::updateOutOfDateIdentifier(IdentifierInfo &II) const {
+  assert(II.isOutOfDate() && "not out of date");
+  getExternalSource()->updateOutOfDateIdentifier(II);
+}
+
 /// HandleIdentifier - This callback is invoked when the lexer reads an
 /// identifier.  This callback looks up the identifier in the map and/or
 /// potentially macro expands it or turns it into a named token (like 'for').
@@ -639,7 +656,7 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     if (&II == Ident__VA_ARGS__)
       CurrentIsPoisoned = Ident__VA_ARGS__->isPoisoned();
 
-    ExternalSource->updateOutOfDateIdentifier(II);
+    updateOutOfDateIdentifier(II);
     Identifier.setKind(II.getTokenID());
 
     if (&II == Ident__VA_ARGS__)
@@ -704,9 +721,12 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
   // Note that we do not treat 'import' as a contextual
   // keyword when we're in a caching lexer, because caching lexers only get
   // used in contexts where import declarations are disallowed.
-  if (LastTokenWasAt && II.isModulesImport() && !InMacroArgs && 
-      !DisableMacroExpansion &&
-      (getLangOpts().Modules || getLangOpts().DebuggerSupport) && 
+  //
+  // Likewise if this is the C++ Modules TS import keyword.
+  if (((LastTokenWasAt && II.isModulesImport()) ||
+       Identifier.is(tok::kw_import)) &&
+      !InMacroArgs && !DisableMacroExpansion &&
+      (getLangOpts().Modules || getLangOpts().DebuggerSupport) &&
       CurLexerKind != CLK_CachingLexer) {
     ModuleImportLoc = Identifier.getLocation();
     ModuleImportPath.clear();
@@ -741,9 +761,11 @@ void Preprocessor::Lex(Token &Result) {
     }
   } while (!ReturnedToken);
 
+  if (Result.is(tok::code_completion))
+    setCodeCompletionIdentifierInfo(Result.getIdentifierInfo());
+
   LastTokenWasAt = Result.is(tok::at);
 }
-
 
 /// \brief Lex a token following the 'import' contextual keyword.
 ///
@@ -771,7 +793,8 @@ void Preprocessor::LexAfterModuleImport(Token &Result) {
   }
   
   // If we're expecting a '.' or a ';', and we got a '.', then wait until we
-  // see the next identifier.
+  // see the next identifier. (We can also see a '[[' that begins an
+  // attribute-specifier-seq here under the C++ Modules TS.)
   if (!ModuleImportExpectsIdentifier && Result.getKind() == tok::period) {
     ModuleImportExpectsIdentifier = true;
     CurLexerKind = CLK_LexAfterModuleImport;
@@ -780,6 +803,23 @@ void Preprocessor::LexAfterModuleImport(Token &Result) {
 
   // If we have a non-empty module path, load the named module.
   if (!ModuleImportPath.empty()) {
+    // Under the Modules TS, the dot is just part of the module name, and not
+    // a real hierarachy separator. Flatten such module names now.
+    //
+    // FIXME: Is this the right level to be performing this transformation?
+    std::string FlatModuleName;
+    if (getLangOpts().ModulesTS) {
+      for (auto &Piece : ModuleImportPath) {
+        if (!FlatModuleName.empty())
+          FlatModuleName += ".";
+        FlatModuleName += Piece.first->getName();
+      }
+      SourceLocation FirstPathLoc = ModuleImportPath[0].second;
+      ModuleImportPath.clear();
+      ModuleImportPath.push_back(
+          std::make_pair(getIdentifierInfo(FlatModuleName), FirstPathLoc));
+    }
+
     Module *Imported = nullptr;
     if (getLangOpts().Modules) {
       Imported = TheModuleLoader.loadModule(ModuleImportLoc,

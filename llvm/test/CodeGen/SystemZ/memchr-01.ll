@@ -13,7 +13,7 @@ define i8 *@f1(i8 *%src, i16 %char, i32 %len) {
 ; CHECK: [[LABEL:\.[^:]*]]:
 ; CHECK: srst %r2, [[REG]]
 ; CHECK-NEXT: jo [[LABEL]]
-; CHECK: jl {{\.L.*}}
+; CHECK: blr %r14
 ; CHECK: lghi %r2, 0
 ; CHECK: br %r14
   %res = call i8 *@memchr(i8 *%src, i16 %char, i32 %len)

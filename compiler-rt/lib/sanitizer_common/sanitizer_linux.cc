@@ -60,7 +60,10 @@
 #include <unistd.h>
 
 #if SANITIZER_FREEBSD
+#include <sys/exec.h>
 #include <sys/sysctl.h>
+#include <vm/vm_param.h>
+#include <vm/pmap.h>
 #include <machine/atomic.h>
 extern "C" {
 // <sys/umtx.h> must be included after <errno.h> and <sys/types.h> on
@@ -89,10 +92,17 @@ const int FUTEX_WAKE = 1;
 // Are we using 32-bit or 64-bit Linux syscalls?
 // x32 (which defines __x86_64__) has SANITIZER_WORDSIZE == 32
 // but it still needs to use 64-bit syscalls.
-#if SANITIZER_LINUX && (defined(__x86_64__) || SANITIZER_WORDSIZE == 64)
+#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__powerpc64__) || \
+    SANITIZER_WORDSIZE == 64)
 # define SANITIZER_LINUX_USES_64BIT_SYSCALLS 1
 #else
 # define SANITIZER_LINUX_USES_64BIT_SYSCALLS 0
+#endif
+
+#if defined(__x86_64__) || SANITIZER_MIPS64
+extern "C" {
+extern void internal_sigreturn();
+}
 #endif
 
 namespace __sanitizer {
@@ -106,6 +116,7 @@ namespace __sanitizer {
 #endif
 
 // --------------- sanitizer_libc.h
+#if !SANITIZER_S390
 uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
                    OFF_T offset) {
 #if SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
@@ -118,6 +129,7 @@ uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
                           offset / 4096);
 #endif
 }
+#endif // !SANITIZER_S390
 
 uptr internal_munmap(void *addr, uptr length) {
   return internal_syscall(SYSCALL(munmap), (uptr)addr, length);
@@ -240,7 +252,15 @@ uptr internal_lstat(const char *path, void *buf) {
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path,
                          (uptr)buf, AT_SYMLINK_NOFOLLOW);
 #elif SANITIZER_LINUX_USES_64BIT_SYSCALLS
+# if SANITIZER_MIPS64
+  // For mips64, lstat syscall fills buffer in the format of kernel_stat
+  struct kernel_stat kbuf;
+  int res = internal_syscall(SYSCALL(lstat), path, &kbuf);
+  kernel_stat_to_stat(&kbuf, (struct stat *)buf);
+  return res;
+# else
   return internal_syscall(SYSCALL(lstat), (uptr)path, (uptr)buf);
+# endif
 #else
   struct stat64 buf64;
   int res = internal_syscall(SYSCALL(lstat64), path, &buf64);
@@ -251,7 +271,15 @@ uptr internal_lstat(const char *path, void *buf) {
 
 uptr internal_fstat(fd_t fd, void *buf) {
 #if SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
+# if SANITIZER_MIPS64
+  // For mips64, fstat syscall fills buffer in the format of kernel_stat
+  struct kernel_stat kbuf;
+  int res = internal_syscall(SYSCALL(fstat), fd, &kbuf);
+  kernel_stat_to_stat(&kbuf, (struct stat *)buf);
+  return res;
+# else
   return internal_syscall(SYSCALL(fstat), fd, (uptr)buf);
+# endif
 #else
   struct stat64 buf64;
   int res = internal_syscall(SYSCALL(fstat64), fd, &buf64);
@@ -312,6 +340,15 @@ void internal__exit(int exitcode) {
   internal_syscall(SYSCALL(exit_group), exitcode);
 #endif
   Die();  // Unreachable.
+}
+
+unsigned int internal_sleep(unsigned int seconds) {
+  struct timespec ts;
+  ts.tv_sec = 1;
+  ts.tv_nsec = 0;
+  int res = internal_syscall(SYSCALL(nanosleep), &ts, &ts);
+  if (res) return ts.tv_sec;
+  return 0;
 }
 
 uptr internal_execve(const char *filename, char *const argv[],
@@ -394,11 +431,13 @@ const char *GetEnv(const char *name) {
 #endif
 }
 
+#if !SANITIZER_FREEBSD
 extern "C" {
   SANITIZER_WEAK_ATTRIBUTE extern void *__libc_stack_end;
 }
+#endif
 
-#if !SANITIZER_GO
+#if !SANITIZER_GO && !SANITIZER_FREEBSD
 static void ReadNullSepFileToArray(const char *path, char ***arr,
                                    int arr_size) {
   char *buff;
@@ -423,7 +462,8 @@ static void ReadNullSepFileToArray(const char *path, char ***arr,
 }
 #endif
 
-static void GetArgsAndEnv(char*** argv, char*** envp) {
+static void GetArgsAndEnv(char ***argv, char ***envp) {
+#if !SANITIZER_FREEBSD
 #if !SANITIZER_GO
   if (&__libc_stack_end) {
 #endif
@@ -438,6 +478,25 @@ static void GetArgsAndEnv(char*** argv, char*** envp) {
     ReadNullSepFileToArray("/proc/self/environ", envp, kMaxEnvp);
   }
 #endif
+#else
+  // On FreeBSD, retrieving the argument and environment arrays is done via the
+  // kern.ps_strings sysctl, which returns a pointer to a structure containing
+  // this information. See also <sys/exec.h>.
+  ps_strings *pss;
+  size_t sz = sizeof(pss);
+  if (sysctlbyname("kern.ps_strings", &pss, &sz, NULL, 0) == -1) {
+    Printf("sysctl kern.ps_strings failed\n");
+    Die();
+  }
+  *argv = pss->ps_argvstr;
+  *envp = pss->ps_envstr;
+#endif
+}
+
+char **GetArgv() {
+  char **argv, **envp;
+  GetArgsAndEnv(&argv, &envp);
+  return argv;
 }
 
 void ReExec() {
@@ -563,7 +622,8 @@ int internal_fork() {
 
 #if SANITIZER_LINUX
 #define SA_RESTORER 0x04000000
-// Doesn't set sa_restorer, use with caution (see below).
+// Doesn't set sa_restorer if the caller did not set it, so use with caution
+//(see below).
 int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
   __sanitizer_kernel_sigaction_t k_act, k_oldact;
   internal_memset(&k_act, 0, sizeof(__sanitizer_kernel_sigaction_t));
@@ -585,7 +645,9 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
     // rt_sigaction, so we need to do the same (we'll need to reimplement the
     // restorers; for x86_64 the restorer address can be obtained from
     // oldact->sa_restorer upon a call to sigaction(xxx, NULL, oldact).
+#if !SANITIZER_ANDROID || !SANITIZER_MIPS32
     k_act.sa_restorer = u_act->sa_restorer;
+#endif
   }
 
   uptr result = internal_syscall(SYSCALL(rt_sigaction), (uptr)signum,
@@ -599,10 +661,31 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
     internal_memcpy(&u_oldact->sa_mask, &k_oldact.sa_mask,
                     sizeof(__sanitizer_kernel_sigset_t));
     u_oldact->sa_flags = k_oldact.sa_flags;
+#if !SANITIZER_ANDROID || !SANITIZER_MIPS32
     u_oldact->sa_restorer = k_oldact.sa_restorer;
+#endif
   }
   return result;
 }
+
+// Invokes sigaction via a raw syscall with a restorer, but does not support
+// all platforms yet.
+// We disable for Go simply because we have not yet added to buildgo.sh.
+#if (defined(__x86_64__) || SANITIZER_MIPS64) && !SANITIZER_GO
+int internal_sigaction_syscall(int signum, const void *act, void *oldact) {
+  if (act == nullptr)
+    return internal_sigaction_norestorer(signum, act, oldact);
+  __sanitizer_sigaction u_adjust;
+  internal_memcpy(&u_adjust, act, sizeof(u_adjust));
+#if !SANITIZER_ANDROID || !SANITIZER_MIPS32
+    if (u_adjust.sa_restorer == nullptr) {
+      u_adjust.sa_restorer = internal_sigreturn;
+    }
+#endif
+    return internal_sigaction_norestorer(signum, (const void *)&u_adjust,
+                                         oldact);
+}
+#endif // defined(__x86_64__) && !SANITIZER_GO
 #endif  // SANITIZER_LINUX
 
 uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
@@ -622,6 +705,10 @@ void internal_sigfillset(__sanitizer_sigset_t *set) {
   internal_memset(set, 0xff, sizeof(*set));
 }
 
+void internal_sigemptyset(__sanitizer_sigset_t *set) {
+  internal_memset(set, 0, sizeof(*set));
+}
+
 #if SANITIZER_LINUX
 void internal_sigdelset(__sanitizer_sigset_t *set, int signum) {
   signum -= 1;
@@ -631,6 +718,16 @@ void internal_sigdelset(__sanitizer_sigset_t *set, int signum) {
   const uptr idx = signum / (sizeof(k_set->sig[0]) * 8);
   const uptr bit = signum % (sizeof(k_set->sig[0]) * 8);
   k_set->sig[idx] &= ~(1 << bit);
+}
+
+bool internal_sigismember(__sanitizer_sigset_t *set, int signum) {
+  signum -= 1;
+  CHECK_GE(signum, 0);
+  CHECK_LT(signum, sizeof(*set) * 8);
+  __sanitizer_kernel_sigset_t *k_set = (__sanitizer_kernel_sigset_t *)set;
+  const uptr idx = signum / (sizeof(k_set->sig[0]) * 8);
+  const uptr bit = signum % (sizeof(k_set->sig[0]) * 8);
+  return k_set->sig[idx] & (1 << bit);
 }
 #endif  // SANITIZER_LINUX
 
@@ -703,7 +800,10 @@ bool ThreadLister::GetDirectoryEntries() {
 }
 
 uptr GetPageSize() {
-#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__))
+// Android post-M sysconf(_SC_PAGESIZE) crashes if called from .preinit_array.
+#if SANITIZER_ANDROID
+  return 4096;
+#elif SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__))
   return EXEC_PAGESIZE;
 #else
   return sysconf(_SC_PAGESIZE);  // EXEC_PAGESIZE may not be trustworthy.
@@ -910,8 +1010,18 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                        "bnez $2,1f;\n"
 
                        /* Call "fn(arg)". */
+#if SANITIZER_WORDSIZE == 32
+#ifdef __BIG_ENDIAN__
+                       "lw $25,4($29);\n"
+                       "lw $4,12($29);\n"
+#else
+                       "lw $25,0($29);\n"
+                       "lw $4,8($29);\n"
+#endif
+#else
                        "ld $25,0($29);\n"
                        "ld $4,8($29);\n"
+#endif
                        "jal $25;\n"
 
                        /* Call _exit($v0). */
@@ -983,18 +1093,91 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                        : "x30", "memory");
   return res;
 }
+#elif defined(__powerpc64__)
+uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
+                   int *parent_tidptr, void *newtls, int *child_tidptr) {
+  long long res;
+/* Stack frame offsets.  */
+#if _CALL_ELF != 2
+#define FRAME_MIN_SIZE         112
+#define FRAME_TOC_SAVE         40
+#else
+#define FRAME_MIN_SIZE         32
+#define FRAME_TOC_SAVE         24
+#endif
+  if (!fn || !child_stack)
+    return -EINVAL;
+  CHECK_EQ(0, (uptr)child_stack % 16);
+  child_stack = (char *)child_stack - 2 * sizeof(unsigned long long);
+  ((unsigned long long *)child_stack)[0] = (uptr)fn;
+  ((unsigned long long *)child_stack)[1] = (uptr)arg;
+
+  register int (*__fn)(void *) __asm__("r3") = fn;
+  register void *__cstack      __asm__("r4") = child_stack;
+  register int __flags         __asm__("r5") = flags;
+  register void * __arg        __asm__("r6") = arg;
+  register int * __ptidptr     __asm__("r7") = parent_tidptr;
+  register void * __newtls     __asm__("r8") = newtls;
+  register int * __ctidptr     __asm__("r9") = child_tidptr;
+
+ __asm__ __volatile__(
+           /* fn, arg, child_stack are saved acrVoss the syscall */
+           "mr 28, %5\n\t"
+           "mr 29, %6\n\t"
+           "mr 27, %8\n\t"
+
+           /* syscall
+             r3 == flags
+             r4 == child_stack
+             r5 == parent_tidptr
+             r6 == newtls
+             r7 == child_tidptr */
+           "mr 3, %7\n\t"
+           "mr 5, %9\n\t"
+           "mr 6, %10\n\t"
+           "mr 7, %11\n\t"
+           "li 0, %3\n\t"
+           "sc\n\t"
+
+           /* Test if syscall was successful */
+           "cmpdi  cr1, 3, 0\n\t"
+           "crandc cr1*4+eq, cr1*4+eq, cr0*4+so\n\t"
+           "bne-   cr1, 1f\n\t"
+
+           /* Do the function call */
+           "std   2, %13(1)\n\t"
+#if _CALL_ELF != 2
+           "ld    0, 0(28)\n\t"
+           "ld    2, 8(28)\n\t"
+           "mtctr 0\n\t"
+#else
+           "mr    12, 28\n\t"
+           "mtctr 12\n\t"
+#endif
+           "mr    3, 27\n\t"
+           "bctrl\n\t"
+           "ld    2, %13(1)\n\t"
+
+           /* Call _exit(r3) */
+           "li 0, %4\n\t"
+           "sc\n\t"
+
+           /* Return to parent */
+           "1:\n\t"
+           "mr %0, 3\n\t"
+             : "=r" (res)
+             : "0" (-1), "i" (EINVAL),
+               "i" (__NR_clone), "i" (__NR_exit),
+               "r" (__fn), "r" (__cstack), "r" (__flags),
+               "r" (__arg), "r" (__ptidptr), "r" (__newtls),
+               "r" (__ctidptr), "i" (FRAME_MIN_SIZE), "i" (FRAME_TOC_SAVE)
+             : "cr0", "cr1", "memory", "ctr",
+               "r0", "r29", "r27", "r28");
+  return res;
+}
 #endif  // defined(__x86_64__) && SANITIZER_LINUX
 
 #if SANITIZER_ANDROID
-#define PROP_VALUE_MAX 92
-extern "C" SANITIZER_WEAK_ATTRIBUTE int __system_property_get(const char *name,
-                                                              char *value);
-void GetExtraActivationFlags(char *buf, uptr size) {
-  CHECK(size > PROP_VALUE_MAX);
-  CHECK(&__system_property_get);
-  __system_property_get("asan.options", buf);
-}
-
 #if __ANDROID_API__ < 21
 extern "C" __attribute__((weak)) int dl_iterate_phdr(
     int (*)(struct dl_phdr_info *, size_t, void *), void *);
@@ -1037,15 +1220,17 @@ AndroidApiLevel AndroidGetApiLevel() {
 
 #endif
 
-bool IsDeadlySignal(int signum) {
+bool IsHandledDeadlySignal(int signum) {
   if (common_flags()->handle_abort && signum == SIGABRT)
+    return true;
+  if (common_flags()->handle_sigill && signum == SIGILL)
     return true;
   if (common_flags()->handle_sigfpe && signum == SIGFPE)
     return true;
   return (signum == SIGSEGV || signum == SIGBUS) && common_flags()->handle_segv;
 }
 
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
 void *internal_start_thread(void(*func)(void *arg), void *arg) {
   // Start the thread with signals blocked, otherwise it can steal user signals.
   __sanitizer_sigset_t set, old;
@@ -1070,6 +1255,58 @@ void *internal_start_thread(void (*func)(void *), void *arg) { return 0; }
 
 void internal_join_thread(void *th) {}
 #endif
+
+#if defined(__aarch64__)
+// Android headers in the older NDK releases miss this definition.
+struct __sanitizer_esr_context {
+  struct _aarch64_ctx head;
+  uint64_t esr;
+};
+
+static bool Aarch64GetESR(ucontext_t *ucontext, u64 *esr) {
+  static const u32 kEsrMagic = 0x45535201;
+  u8 *aux = ucontext->uc_mcontext.__reserved;
+  while (true) {
+    _aarch64_ctx *ctx = (_aarch64_ctx *)aux;
+    if (ctx->size == 0) break;
+    if (ctx->magic == kEsrMagic) {
+      *esr = ((__sanitizer_esr_context *)ctx)->esr;
+      return true;
+    }
+    aux += ctx->size;
+  }
+  return false;
+}
+#endif
+
+SignalContext::WriteFlag SignalContext::GetWriteFlag(void *context) {
+  ucontext_t *ucontext = (ucontext_t *)context;
+#if defined(__x86_64__) || defined(__i386__)
+  static const uptr PF_WRITE = 1U << 1;
+#if SANITIZER_FREEBSD
+  uptr err = ucontext->uc_mcontext.mc_err;
+#else
+  uptr err = ucontext->uc_mcontext.gregs[REG_ERR];
+#endif
+  return err & PF_WRITE ? WRITE : READ;
+#elif defined(__arm__)
+  static const uptr FSR_WRITE = 1U << 11;
+  uptr fsr = ucontext->uc_mcontext.error_code;
+  return fsr & FSR_WRITE ? WRITE : READ;
+#elif defined(__aarch64__)
+  static const u64 ESR_ELx_WNR = 1U << 6;
+  u64 esr;
+  if (!Aarch64GetESR(ucontext, &esr)) return UNKNOWN;
+  return esr & ESR_ELx_WNR ? WRITE : READ;
+#else
+  (void)ucontext;
+  return UNKNOWN;  // FIXME: Implement.
+#endif
+}
+
+void SignalContext::DumpAllRegisters(void *context) {
+  // FIXME: Implement this.
+}
 
 void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 #if defined(__arm__)
@@ -1138,9 +1375,29 @@ void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   *pc = ucontext->uc_mcontext.pc;
   *bp = ucontext->uc_mcontext.gregs[30];
   *sp = ucontext->uc_mcontext.gregs[29];
+#elif defined(__s390__)
+  ucontext_t *ucontext = (ucontext_t*)context;
+# if defined(__s390x__)
+  *pc = ucontext->uc_mcontext.psw.addr;
+# else
+  *pc = ucontext->uc_mcontext.psw.addr & 0x7fffffff;
+# endif
+  *bp = ucontext->uc_mcontext.gregs[11];
+  *sp = ucontext->uc_mcontext.gregs[15];
 #else
 # error "Unsupported arch"
 #endif
+}
+
+void MaybeReexec() {
+  // No need to re-exec on Linux.
+}
+
+void PrintModuleMap() { }
+
+uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding) {
+  UNREACHABLE("FindAvailableMemoryRange is not available");
+  return 0;
 }
 
 } // namespace __sanitizer

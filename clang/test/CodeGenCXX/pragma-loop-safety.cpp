@@ -10,12 +10,12 @@ void vectorize_test(int *List, int Length) {
 #pragma clang loop vectorize(assume_safety) interleave(disable) unroll(disable)
   for (int i = 0; i < Length; i++) {
     // CHECK: [[RHIV1:.+]] = load i32, i32* [[IV1]], {{.*}}!llvm.mem.parallel_loop_access ![[LOOP1_ID]]
-    // CHECK-NEXT: [[CALC1:.+]] = mul nsw i32[[RHIV1]], 2
-    // CHECK-NEXT: [[SIV1:.+]] = load i32, i32* [[IV1]]{{.*}}!llvm.mem.parallel_loop_access ![[LOOP1_ID]]
-    // CHECK-NEXT: [[INDEX1:.+]] = sext i32[[SIV1]] to i64
-    // CHECK-NEXT: [[ARRAY1:.+]] = load i32*, i32** [[LIST1:.*]], {{.*}}!llvm.mem.parallel_loop_access ![[LOOP1_ID]]
-    // CHECK-NEXT: [[PTR1:.+]] = getelementptr inbounds i32, i32*[[ARRAY1]], i64[[INDEX1]]
-    // CHECK-NEXT: store i32[[CALC1]], i32*[[PTR1]], {{.*}}!llvm.mem.parallel_loop_access ![[LOOP1_ID]]
+    // CHECK-DAG: [[CALC1:.+]] = mul nsw i32[[RHIV1]], 2
+    // CHECK-DAG: [[SIV1:.+]] = load i32, i32* [[IV1]]{{.*}}!llvm.mem.parallel_loop_access ![[LOOP1_ID]]
+    // CHECK-DAG: [[INDEX1:.+]] = sext i32[[SIV1]] to i64
+    // CHECK-DAG: [[ARRAY1:.+]] = load i32*, i32** [[LIST1:.*]], {{.*}}!llvm.mem.parallel_loop_access ![[LOOP1_ID]]
+    // CHECK-DAG: [[PTR1:.+]] = getelementptr inbounds i32, i32*[[ARRAY1]], i64[[INDEX1]]
+    // CHECK: store i32[[CALC1]], i32*[[PTR1]], {{.*}}!llvm.mem.parallel_loop_access ![[LOOP1_ID]]
     // CHECK-NEXT: br label [[LOOP1_INC:[^,]+]]
     List[i] = i * 2;
 
@@ -33,12 +33,12 @@ void interleave_test(int *List, int Length) {
 #pragma clang loop interleave(assume_safety) vectorize(disable) unroll(disable)
   for (int i = 0; i < Length; i++) {
     // CHECK: [[RHIV2:.+]] = load i32, i32* [[IV2]], {{.*}}!llvm.mem.parallel_loop_access ![[LOOP2_ID]]
-    // CHECK-NEXT: [[CALC2:.+]] = mul nsw i32[[RHIV2]], 2
-    // CHECK-NEXT: [[SIV2:.+]] = load i32, i32* [[IV2]]{{.*}}!llvm.mem.parallel_loop_access ![[LOOP2_ID]]
-    // CHECK-NEXT: [[INDEX2:.+]] = sext i32[[SIV2]] to i64
-    // CHECK-NEXT: [[ARRAY2:.+]] = load i32*, i32** [[LIST2:.*]], {{.*}}!llvm.mem.parallel_loop_access ![[LOOP2_ID]]
-    // CHECK-NEXT: [[PTR2:.+]] = getelementptr inbounds i32, i32*[[ARRAY2]], i64[[INDEX2]]
-    // CHECK-NEXT: store i32[[CALC2]], i32*[[PTR2]], {{.*}}!llvm.mem.parallel_loop_access ![[LOOP2_ID]]
+    // CHECK-DAG: [[CALC2:.+]] = mul nsw i32[[RHIV2]], 2
+    // CHECK-DAG: [[SIV2:.+]] = load i32, i32* [[IV2]]{{.*}}!llvm.mem.parallel_loop_access ![[LOOP2_ID]]
+    // CHECK-DAG: [[INDEX2:.+]] = sext i32[[SIV2]] to i64
+    // CHECK-DAG: [[ARRAY2:.+]] = load i32*, i32** [[LIST2:.*]], {{.*}}!llvm.mem.parallel_loop_access ![[LOOP2_ID]]
+    // CHECK-DAG: [[PTR2:.+]] = getelementptr inbounds i32, i32*[[ARRAY2]], i64[[INDEX2]]
+    // CHECK: store i32[[CALC2]], i32*[[PTR2]], {{.*}}!llvm.mem.parallel_loop_access ![[LOOP2_ID]]
     // CHECK-NEXT: br label [[LOOP2_INC:[^,]+]]
     List[i] = i * 2;
 

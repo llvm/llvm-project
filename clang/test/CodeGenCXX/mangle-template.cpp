@@ -201,3 +201,14 @@ namespace test14 {
 
   int call(bool b) { return inl<void>(b); }
 }
+
+namespace std {
+template <class _Tp, _Tp...> struct integer_sequence {};
+}
+
+namespace test15 {
+template <int N>
+__make_integer_seq<std::integer_sequence, int, N> make() {}
+template __make_integer_seq<std::integer_sequence, int, 5> make<5>();
+// CHECK: define weak_odr {{.*}} @_ZN6test154makeILi5EEE18__make_integer_seqISt16integer_sequenceiXT_EEv(
+}

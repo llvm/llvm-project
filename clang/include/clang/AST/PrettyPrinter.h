@@ -32,20 +32,35 @@ public:
 
 /// \brief Describes how types, statements, expressions, and
 /// declarations should be printed.
+///
+/// This type is intended to be small and suitable for passing by value.
+/// It is very frequently copied.
 struct PrintingPolicy {
-  /// \brief Create a default printing policy for C.
+  /// \brief Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
-    : LangOpts(LO), Indentation(2), SuppressSpecifiers(false),
-      SuppressTagKeyword(false), SuppressTag(false), SuppressScope(false),
+    : Indentation(2), SuppressSpecifiers(false),
+      SuppressTagKeyword(LO.CPlusPlus),
+      IncludeTagDefinition(false), SuppressScope(false),
       SuppressUnwrittenScope(false), SuppressInitializers(false),
       ConstantArraySizeAsWritten(false), AnonymousTagLocations(true),
       SuppressStrongLifetime(false), SuppressLifetimeQualifiers(false),
-      Bool(LO.Bool), TerseOutput(false), PolishForDeclaration(false),
+      SuppressTemplateArgsInCXXConstructors(false),
+      Bool(LO.Bool), Restrict(LO.C99),
+      Alignof(LO.CPlusPlus11), UnderscoreAlignof(LO.C11),
+      UseVoidForZeroParams(!LO.CPlusPlus),
+      TerseOutput(false), PolishForDeclaration(false),
       Half(LO.Half), MSWChar(LO.MicrosoftExt && !LO.WChar),
-      IncludeNewlines(true) { }
+      IncludeNewlines(true), MSVCFormatting(false) { }
 
-  /// \brief What language we're printing.
-  LangOptions LangOpts;
+  /// \brief Adjust this printing policy for cases where it's known that
+  /// we're printing C++ code (for instance, if AST dumping reaches a
+  /// C++-only construct). This should not be used if a real LangOptions
+  /// object is available.
+  void adjustForCPlusPlus() {
+    SuppressTagKeyword = true;
+    Bool = true;
+    UseVoidForZeroParams = false;
+  }
 
   /// \brief The number of spaces to use to indent each line.
   unsigned Indentation : 8;
@@ -76,15 +91,15 @@ struct PrintingPolicy {
   /// \endcode
   bool SuppressTagKeyword : 1;
 
-  /// \brief Whether type printing should skip printing the actual tag type.
+  /// \brief When true, include the body of a tag definition.
   ///
-  /// This is used when the caller needs to print a tag definition in front
-  /// of the type, as in constructs like the following:
+  /// This is used to place the definition of a struct
+  /// in the middle of another declaration as with:
   ///
   /// \code
   /// typedef struct { int x, y; } Point;
   /// \endcode
-  bool SuppressTag : 1;
+  bool IncludeTagDefinition : 1;
 
   /// \brief Suppresses printing of scope specifiers.
   bool SuppressScope : 1;
@@ -136,10 +151,27 @@ struct PrintingPolicy {
   /// \brief When true, suppress printing of lifetime qualifier in
   /// ARC.
   unsigned SuppressLifetimeQualifiers : 1;
-  
-  /// \brief Whether we can use 'bool' rather than '_Bool', even if the language
-  /// doesn't actually have 'bool' (because, e.g., it is defined as a macro).
+
+  /// When true, suppresses printing template arguments in names of C++
+  /// constructors.
+  unsigned SuppressTemplateArgsInCXXConstructors : 1;
+
+  /// \brief Whether we can use 'bool' rather than '_Bool' (even if the language
+  /// doesn't actually have 'bool', because, e.g., it is defined as a macro).
   unsigned Bool : 1;
+
+  /// \brief Whether we can use 'restrict' rather than '__restrict'.
+  unsigned Restrict : 1;
+
+  /// \brief Whether we can use 'alignof' rather than '__alignof'.
+  unsigned Alignof : 1;
+
+  /// \brief Whether we can use '_Alignof' rather than '__alignof'.
+  unsigned UnderscoreAlignof : 1;
+
+  /// \brief Whether we should use '(void)' rather than '()' for a function
+  /// prototype with zero parameters.
+  unsigned UseVoidForZeroParams : 1;
 
   /// \brief Provide a 'terse' output.
   ///
@@ -163,6 +195,11 @@ struct PrintingPolicy {
 
   /// \brief When true, include newlines after statements like "break", etc.
   unsigned IncludeNewlines : 1;
+
+  /// \brief Use whitespace and punctuation like MSVC does. In particular, this
+  /// prints anonymous namespaces as `anonymous namespace' and does not insert
+  /// spaces after template arguments.
+  bool MSVCFormatting : 1;
 };
 
 } // end namespace clang

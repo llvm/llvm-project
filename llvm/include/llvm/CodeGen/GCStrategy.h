@@ -117,11 +117,11 @@ public:
   /** @name Statepoint Specific Properties */
   ///@{
 
-  /// If the value specified can be reliably distinguished, returns true for
+  /// If the type specified can be reliably distinguished, returns true for
   /// pointers to GC managed locations and false for pointers to non-GC
   /// managed locations.  Note a GCStrategy can always return 'None' (i.e. an
   /// empty optional indicating it can't reliably distinguish.
-  virtual Optional<bool> isGCManagedPointer(const Value *V) const {
+  virtual Optional<bool> isGCManagedPointer(const Type *Ty) const {
     return None;
   }
   ///@}

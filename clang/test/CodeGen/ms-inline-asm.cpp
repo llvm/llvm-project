@@ -126,14 +126,14 @@ void t7_using() {
 void t8() {
   __asm some_label:
   // CHECK-LABEL: define void @_Z2t8v()
-  // CHECK: call void asm sideeffect inteldialect "L__MSASMLABEL_.1__some_label:", "~{dirflag},~{fpsr},~{flags}"()
+  // CHECK: call void asm sideeffect inteldialect "L__MSASMLABEL_.${:uid}__some_label:", "~{dirflag},~{fpsr},~{flags}"()
   struct A {
     static void g() {
       __asm jmp some_label ; This should jump forwards
       __asm some_label:
       __asm nop
       // CHECK-LABEL: define internal void @_ZZ2t8vEN1A1gEv()
-      // CHECK: call void asm sideeffect inteldialect "jmp L__MSASMLABEL_.2__some_label\0A\09L__MSASMLABEL_.2__some_label:\0A\09nop", "~{dirflag},~{fpsr},~{flags}"()
+      // CHECK: call void asm sideeffect inteldialect "jmp L__MSASMLABEL_.${:uid}__some_label\0A\09L__MSASMLABEL_.${:uid}__some_label:\0A\09nop", "~{dirflag},~{fpsr},~{flags}"()
     }
   };
   A::g();

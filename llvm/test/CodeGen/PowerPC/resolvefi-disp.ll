@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -print-after=localstackalloc <%s >%t 2>&1 && FileCheck <%t %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -print-after=localstackalloc <%s >%t 2>&1 && FileCheck <%t %s
 
 ; Due to a bug in isFrameOffsetLegal we ended up with resolveFrameIndex creating
 ; addresses with out-of-range displacements.  Verify that this no longer happens.

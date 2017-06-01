@@ -1,4 +1,4 @@
-//===- ScalarEvolutionNormalization.cpp - See below -------------*- C++ -*-===//
+//===- ScalarEvolutionNormalization.cpp - See below -----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

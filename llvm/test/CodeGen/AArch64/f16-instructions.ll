@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple aarch64-unknown-unknown -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple aarch64-unknown-unknown -aarch64-neon-syntax=apple -asm-verbose=false -disable-post-ra -disable-fp-elim | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
@@ -143,6 +143,33 @@ define half @test_select_cc(half %a, half %b, half %c, half %d) #0 {
   ret half %r
 }
 
+; CHECK-LABEL: test_select_cc_f32_f16:
+; CHECK-DAG:   fcvt s2, h2
+; CHECK-DAG:   fcvt s3, h3
+; CHECK-NEXT:  fcmp s2, s3
+; CHECK-NEXT:  fcsel s0, s0, s1, ne
+; CHECK-NEXT:  ret
+define float @test_select_cc_f32_f16(float %a, float %b, half %c, half %d) #0 {
+  %cc = fcmp une half %c, %d
+  %r = select i1 %cc, float %a, float %b
+  ret float %r
+}
+
+; CHECK-LABEL: test_select_cc_f16_f32:
+; CHECK-DAG:  fcvt s0, h0
+; CHECK-DAG:  fcvt s1, h1
+; CHECK-DAG:  fcmp s2, s3
+; CHECK-DAG:  cset w8, ne
+; CHECK-NEXT: cmp w8, #0
+; CHECK-NEXT: fcsel s0, s0, s1, ne
+; CHECK-NEXT: fcvt h0, s0
+; CHECK-NEXT: ret
+define half @test_select_cc_f16_f32(half %a, half %b, float %c, float %d) #0 {
+  %cc = fcmp une float %c, %d
+  %r = select i1 %cc, half %a, half %b
+  ret half %r
+}
+
 ; CHECK-LABEL: test_fcmp_une:
 ; CHECK-NEXT: fcvt s1, h1
 ; CHECK-NEXT: fcvt s0, h0
@@ -158,9 +185,8 @@ define i1 @test_fcmp_une(half %a, half %b) #0 {
 ; CHECK-NEXT: fcvt s1, h1
 ; CHECK-NEXT: fcvt s0, h0
 ; CHECK-NEXT: fcmp s0, s1
-; CHECK-NEXT: orr [[TRUE:w[0-9]+]], wzr, #0x1
-; CHECK-NEXT: csel [[CC:w[0-9]+]], [[TRUE]], wzr, eq
-; CHECK-NEXT: csel w0, [[TRUE]], [[CC]], vs
+; CHECK-NEXT: cset [[TRUE:w[0-9]+]], eq
+; CHECK-NEXT: csinc w0, [[TRUE]], wzr, vc
 ; CHECK-NEXT: ret
 define i1 @test_fcmp_ueq(half %a, half %b) #0 {
   %r = fcmp ueq half %a, %b
@@ -227,9 +253,8 @@ define i1 @test_fcmp_uno(half %a, half %b) #0 {
 ; CHECK-NEXT: fcvt s1, h1
 ; CHECK-NEXT: fcvt s0, h0
 ; CHECK-NEXT: fcmp s0, s1
-; CHECK-NEXT: orr [[TRUE:w[0-9]+]], wzr, #0x1
-; CHECK-NEXT: csel [[CC:w[0-9]+]], [[TRUE]], wzr, mi
-; CHECK-NEXT: csel w0, [[TRUE]], [[CC]], gt
+; CHECK-NEXT: cset [[TRUE:w[0-9]+]], mi
+; CHECK-NEXT: csinc w0, [[TRUE]], wzr, le
 ; CHECK-NEXT: ret
 define i1 @test_fcmp_one(half %a, half %b) #0 {
   %r = fcmp one half %a, %b
@@ -416,6 +441,34 @@ define half @test_sitofp_i32(i32 %a) #0 {
 ; CHECK-NEXT: ret
 define half @test_sitofp_i64(i64 %a) #0 {
   %r = sitofp i64 %a to half
+  ret half %r
+}
+
+; CHECK-LABEL: test_uitofp_i32_fadd:
+; CHECK-NEXT: ucvtf s1, w0
+; CHECK-NEXT: fcvt h1, s1
+; CHECK-NEXT: fcvt s0, h0
+; CHECK-NEXT: fcvt s1, h1
+; CHECK-NEXT: fadd s0, s0, s1
+; CHECK-NEXT: fcvt h0, s0
+; CHECK-NEXT: ret
+define half @test_uitofp_i32_fadd(i32 %a, half %b) #0 {
+  %c = uitofp i32 %a to half
+  %r = fadd half %b, %c
+  ret half %r
+}
+
+; CHECK-LABEL: test_sitofp_i32_fadd:
+; CHECK-NEXT: scvtf s1, w0
+; CHECK-NEXT: fcvt h1, s1
+; CHECK-NEXT: fcvt s0, h0
+; CHECK-NEXT: fcvt s1, h1
+; CHECK-NEXT: fadd s0, s0, s1
+; CHECK-NEXT: fcvt h0, s0
+; CHECK-NEXT: ret
+define half @test_sitofp_i32_fadd(i32 %a, half %b) #0 {
+  %c = sitofp i32 %a to half
+  %r = fadd half %b, %c
   ret half %r
 }
 
@@ -668,7 +721,7 @@ define half @test_maxnum(half %a, half %b) #0 {
 ; CHECK-LABEL: test_copysign:
 ; CHECK-NEXT: fcvt s1, h1
 ; CHECK-NEXT: fcvt s0, h0
-; CHECK-NEXT: movi.4s v2, #0x80, lsl #24
+; CHECK-NEXT: movi.4s v2, #128, lsl #24
 ; CHECK-NEXT: bit.16b v0, v1, v2
 ; CHECK-NEXT: fcvt h0, s0
 ; CHECK-NEXT: ret
@@ -679,7 +732,7 @@ define half @test_copysign(half %a, half %b) #0 {
 
 ; CHECK-LABEL: test_copysign_f32:
 ; CHECK-NEXT: fcvt s0, h0
-; CHECK-NEXT: movi.4s v2, #0x80, lsl #24
+; CHECK-NEXT: movi.4s v2, #128, lsl #24
 ; CHECK-NEXT: bit.16b v0, v1, v2
 ; CHECK-NEXT: fcvt h0, s0
 ; CHECK-NEXT: ret
@@ -692,7 +745,7 @@ define half @test_copysign_f32(half %a, float %b) #0 {
 ; CHECK-LABEL: test_copysign_f64:
 ; CHECK-NEXT: fcvt s1, d1
 ; CHECK-NEXT: fcvt s0, h0
-; CHECK-NEXT: movi.4s v2, #0x80, lsl #24
+; CHECK-NEXT: movi.4s v2, #128, lsl #24
 ; CHECK-NEXT: bit.16b v0, v1, v2
 ; CHECK-NEXT: fcvt h0, s0
 ; CHECK-NEXT: ret
@@ -708,7 +761,7 @@ define half @test_copysign_f64(half %a, double %b) #0 {
 ; CHECK-LABEL: test_copysign_extended:
 ; CHECK-NEXT: fcvt s1, h1
 ; CHECK-NEXT: fcvt s0, h0
-; CHECK-NEXT: movi.4s v2, #0x80, lsl #24
+; CHECK-NEXT: movi.4s v2, #128, lsl #24
 ; CHECK-NEXT: bit.16b v0, v1, v2
 ; CHECK-NEXT: ret
 define float @test_copysign_extended(half %a, half %b) #0 {

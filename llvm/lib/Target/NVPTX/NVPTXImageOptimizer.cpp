@@ -50,6 +50,9 @@ NVPTXImageOptimizer::NVPTXImageOptimizer()
   : FunctionPass(ID) {}
 
 bool NVPTXImageOptimizer::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   bool Changed = false;
   InstrToDelete.clear();
 

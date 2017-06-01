@@ -78,6 +78,7 @@ void test3(int x) {
   {
     x = [=]() { return x + 1; } ();
   }
+  x = [=]() { return x + 1; }();
 
   // CHECK-3: %[[Capture:struct\.anon[\.0-9]*]] = type { i32* }
 

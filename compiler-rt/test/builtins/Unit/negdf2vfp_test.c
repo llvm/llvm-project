@@ -11,14 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "int_lib.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 
 
+#if __arm__
 extern COMPILER_RT_ABI double __negdf2vfp(double a);
 
-#if __arm__
 int test__negdf2vfp(double a)
 {
     double actual = __negdf2vfp(a);

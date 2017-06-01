@@ -1,6 +1,5 @@
-; RUN: llvm-as %s -o %t.new.bc
-; RUN: llvm-link %t.new.bc %S/Inputs/old_global_ctors.3.4.bc | llvm-dis | FileCheck %s
-; RUN: llvm-link %S/Inputs/old_global_ctors.3.4.bc %t.new.bc | llvm-dis | FileCheck %s
+; RUN: llvm-link -S %s %S/Inputs/old_global_ctors.3.4.bc | FileCheck %s
+; RUN: llvm-link -S %S/Inputs/old_global_ctors.3.4.bc %s | FileCheck %s
 
 ; old_global_ctors.3.4.bc contains the following LLVM IL, assembled into
 ; bitcode by llvm-as from 3.4.  It uses a two element @llvm.global_ctors array.

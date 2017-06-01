@@ -6,7 +6,7 @@
 ; GCN: v_cvt_pkrtz_f16_f32
 ; GCN-NOT: v_cvt_pkrtz_f16_f32
 
-define void @main(float %src) #0 {
+define amdgpu_ps void @main(float %src) {
 main_body:
   %p1 = call i32 @llvm.SI.packf16(float undef, float %src)
   %p2 = call i32 @llvm.SI.packf16(float %src, float undef)
@@ -21,9 +21,8 @@ main_body:
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.SI.packf16(float, float) #1
+declare i32 @llvm.SI.packf16(float, float) #0
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
-attributes #0 = { "ShaderType"="0" }
-attributes #1 = { nounwind readnone }
+attributes #0 = { nounwind readnone }

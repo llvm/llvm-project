@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s
+; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck %s
 
 @data = global [8193 x i32] zeroinitializer
 

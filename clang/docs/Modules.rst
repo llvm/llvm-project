@@ -174,6 +174,9 @@ Command-line parameters
 ``-fmodules``
   Enable the modules feature.
 
+``-fbuiltin-module-map``
+  Load the Clang builtins module map file. (Equivalent to ``-fmodule-map-file=<resource dir>/include/module.modulemap``)
+
 ``-fimplicit-module-maps``
   Enable implicit search for module map files named ``module.modulemap`` and similar. This option is implied by ``-fmodules``. If this is disabled with ``-fno-implicit-module-maps``, module map files will only be loaded if they are explicitly specified via ``-fmodule-map-file`` or transitively used by another module map file.
 
@@ -212,6 +215,9 @@ Command-line parameters
 
 ``-fmodule-file=<file>``
   Load the given precompiled module file.
+
+``-fprebuilt-module-path=<directory>``
+  Specify the path to the prebuilt modules. If specified, we will look for modules in this directory for a given top-level module name. We don't need a module map for loading prebuilt modules in this directory and the compiler will not try to rebuild these modules. This can be specified multiple times.
 
 Module Semantics
 ================
@@ -354,6 +360,7 @@ The ``framework`` qualifier specifies that this module corresponds to a Darwin-s
   Name.framework/
     Modules/module.modulemap  Module map for the framework
     Headers/                  Subdirectory containing framework headers
+    PrivateHeaders/           Subdirectory containing framework private headers
     Frameworks/               Subdirectory containing embedded frameworks
     Resources/                Subdirectory containing additional resources
     Name                      Symbolic link to the shared library for the framework
@@ -361,6 +368,8 @@ The ``framework`` qualifier specifies that this module corresponds to a Darwin-s
 The ``system`` attribute specifies that the module is a system module. When a system module is rebuilt, all of the module's headers will be considered system headers, which suppresses warnings. This is equivalent to placing ``#pragma GCC system_header`` in each of the module's headers. The form of attributes is described in the section Attributes_, below.
 
 The ``extern_c`` attribute specifies that the module contains C code that can be used from within C++. When such a module is built for use in C++ code, all of the module's headers will be treated as if they were contained within an implicit ``extern "C"`` block. An import for a module with this attribute can appear within an ``extern "C"`` block. No other restrictions are lifted, however: the module currently cannot be imported within an ``extern "C"`` block in a namespace.
+
+The ``no_undeclared_includes`` attribute specifies that the module can only reach non-modular headers and headers from used modules. Since some headers could be present in more than one search path and map to different modules in each path, this mechanism helps clang to find the right header, i.e., prefer the one for the current module or in a submodule instead of the first usual match in the search paths.
 
 Modules can have a number of different kinds of members, each of which is described below:
 
@@ -409,6 +418,12 @@ cplusplus
 
 cplusplus11
   C++11 support is available.
+
+freestanding
+  A freestanding environment is available.
+
+gnuinlineasm
+  GNU inline ASM is available.
 
 objc
   Objective-C support is available.
@@ -827,6 +842,16 @@ file. In our example library, the ``module.private.modulemap`` file
 would be available when ``Foo_Private.h`` is available, making it
 easier to split a library's public and private APIs along header
 boundaries.
+
+When writing a private module as part of a *framework*, it's recommended that:
+
+* Headers for this module are present in the ``PrivateHeaders``
+  framework subdirectory.
+* The private module is defined as a *submodule* of the public framework (if
+  there's one), similar to how ``Foo.Private`` is defined in the example above.
+* The ``explicit`` keyword should be used to guarantee that its content will
+  only be available when the submodule itself is explicitly named (through a
+  ``@import`` for example).
 
 Modularizing a Platform
 =======================

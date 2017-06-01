@@ -239,14 +239,6 @@
 	.cfi_offset %reef,0
 	.cfi_offset %arid,0
 
-# Test invalid CFI registers.  Will need to be updated once access
-# registers are modelled as LLVM registers.
-#
-#CHECK: error: invalid operand for instruction
-#CHECK: .cfi_offset %a0,0
-
-	.cfi_offset %a0,0
-
 	.cfi_endproc
 
 #CHECK: error: %r0 used in an address

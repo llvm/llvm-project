@@ -15,11 +15,11 @@
 #define LLVM_CLANG_AST_REDECLARABLE_H
 
 #include "clang/AST/ExternalASTSource.h"
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/Casting.h"
 #include <iterator>
 
 namespace clang {
+class ASTContext;
 
 /// \brief Provides common interface for the Decls that can be redeclared.
 template<typename decl_type>
@@ -32,7 +32,11 @@ protected:
                                       &ExternalASTSource::CompleteRedeclChain>
                                           KnownLatest;
 
-    typedef const ASTContext *UninitializedLatest;
+    /// We store a pointer to the ASTContext in the UninitializedLatest
+    /// pointer, but to avoid circular type dependencies when we steal the low
+    /// bits of this pointer, we use a raw void* here.
+    typedef const void *UninitializedLatest;
+
     typedef Decl *Previous;
 
     /// A pointer to either an uninitialized latest declaration (where either
@@ -47,7 +51,7 @@ protected:
     enum LatestTag { LatestLink };
 
     DeclLink(LatestTag, const ASTContext &Ctx)
-        : Next(NotKnownLatest(&Ctx)) {}
+        : Next(NotKnownLatest(reinterpret_cast<UninitializedLatest>(&Ctx))) {}
     DeclLink(PreviousTag, decl_type *D)
         : Next(NotKnownLatest(Previous(D))) {}
 
@@ -67,7 +71,8 @@ protected:
           return static_cast<decl_type*>(NKL.get<Previous>());
 
         // Allocate the generational 'most recent' cache now, if needed.
-        Next = KnownLatest(*NKL.get<UninitializedLatest>(),
+        Next = KnownLatest(*reinterpret_cast<const ASTContext *>(
+                               NKL.get<UninitializedLatest>()),
                            const_cast<decl_type *>(D));
       }
 
@@ -83,7 +88,9 @@ protected:
       assert(NextIsLatest() && "decl became canonical unexpectedly");
       if (Next.is<NotKnownLatest>()) {
         NotKnownLatest NKL = Next.get<NotKnownLatest>();
-        Next = KnownLatest(*NKL.get<UninitializedLatest>(), D);
+        Next = KnownLatest(*reinterpret_cast<const ASTContext *>(
+                               NKL.get<UninitializedLatest>()),
+                           D);
       } else {
         auto Latest = Next.get<KnownLatest>();
         Latest.set(D);
@@ -272,6 +279,68 @@ public:
   bool isFirstDecl() const { return getFirstDecl() == this; }
 };
 
-}
+/// A wrapper class around a pointer that always points to its canonical
+/// declaration.
+///
+/// CanonicalDeclPtr<decl_type> behaves just like decl_type*, except we call
+/// decl_type::getCanonicalDecl() on construction.
+///
+/// This is useful for hashtables that you want to be keyed on a declaration's
+/// canonical decl -- if you use CanonicalDeclPtr as the key, you don't need to
+/// remember to call getCanonicalDecl() everywhere.
+template <typename decl_type> class CanonicalDeclPtr {
+public:
+  CanonicalDeclPtr() : Ptr(nullptr) {}
+  CanonicalDeclPtr(decl_type *Ptr)
+      : Ptr(Ptr ? Ptr->getCanonicalDecl() : nullptr) {}
+  CanonicalDeclPtr(const CanonicalDeclPtr &) = default;
+  CanonicalDeclPtr &operator=(const CanonicalDeclPtr &) = default;
+
+  operator decl_type *() { return Ptr; }
+  operator const decl_type *() const { return Ptr; }
+
+  decl_type *operator->() { return Ptr; }
+  const decl_type *operator->() const { return Ptr; }
+
+  decl_type &operator*() { return *Ptr; }
+  const decl_type &operator*() const { return *Ptr; }
+
+private:
+  friend struct llvm::DenseMapInfo<CanonicalDeclPtr<decl_type>>;
+
+  decl_type *Ptr;
+};
+} // namespace clang
+
+namespace llvm {
+template <typename decl_type>
+struct DenseMapInfo<clang::CanonicalDeclPtr<decl_type>> {
+  using CanonicalDeclPtr = clang::CanonicalDeclPtr<decl_type>;
+  using BaseInfo = DenseMapInfo<decl_type *>;
+
+  static CanonicalDeclPtr getEmptyKey() {
+    // Construct our CanonicalDeclPtr this way because the regular constructor
+    // would dereference P.Ptr, which is not allowed.
+    CanonicalDeclPtr P;
+    P.Ptr = BaseInfo::getEmptyKey();
+    return P;
+  }
+
+  static CanonicalDeclPtr getTombstoneKey() {
+    CanonicalDeclPtr P;
+    P.Ptr = BaseInfo::getTombstoneKey();
+    return P;
+  }
+
+  static unsigned getHashValue(const CanonicalDeclPtr &P) {
+    return BaseInfo::getHashValue(P);
+  }
+
+  static bool isEqual(const CanonicalDeclPtr &LHS,
+                      const CanonicalDeclPtr &RHS) {
+    return BaseInfo::isEqual(LHS, RHS);
+  }
+};
+} // namespace llvm
 
 #endif

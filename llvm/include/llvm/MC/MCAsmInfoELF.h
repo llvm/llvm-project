@@ -18,6 +18,10 @@ class MCAsmInfoELF : public MCAsmInfo {
   MCSection *getNonexecutableStackSection(MCContext &Ctx) const final;
 
 protected:
+  /// Targets which have non-executable stacks by default can set this to false
+  /// to disable the special section which requests a non-executable stack.
+  bool UsesNonexecutableStackSection;
+
   MCAsmInfoELF();
 };
 }

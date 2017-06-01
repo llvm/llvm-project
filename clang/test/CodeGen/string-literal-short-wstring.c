@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -x c++ -triple %ms_abi_triple -emit-llvm -fshort-wchar %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=MSABI
 // Runs in c++ mode so that wchar_t is available.
 
+// XFAIL: hexagon
+// Hexagon aligns arrays of size 8+ bytes to a 64-bit boundary, which fails
+// the first check line with "align 1".
+
 int main() {
   // This should convert to utf8.
   // CHECK: private unnamed_addr constant [10 x i8] c"\E1\84\A0\C8\A0\F4\82\80\B0\00", align 1

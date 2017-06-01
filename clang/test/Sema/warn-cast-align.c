@@ -39,3 +39,31 @@ void test2(char *P) {
 void test3(char *P) {
   struct B *b = (struct B*) P;
 }
+
+// Do not issue a warning. The aligned attribute changes the alignment of the
+// variables and fields.
+char __attribute__((aligned(4))) a[16];
+
+struct S0 {
+  char a[16];
+};
+
+struct S {
+  char __attribute__((aligned(4))) a[16];
+  struct S0 __attribute__((aligned(4))) s0;
+};
+
+void test4() {
+  struct S s;
+  int *i = (int *)s.a;
+  i = (int *)&s.s0;
+  i = (int *)a;
+}
+
+// No warnings.
+typedef int (*FnTy)(void);
+unsigned int func5(void);
+
+FnTy test5(void) {
+  return (FnTy)&func5;
+}

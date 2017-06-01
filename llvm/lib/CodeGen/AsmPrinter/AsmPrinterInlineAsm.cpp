@@ -23,10 +23,10 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCTargetAsmParser.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -100,6 +100,8 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   }
 
   SourceMgr SrcMgr;
+  SrcMgr.setIncludeDirs(MCOptions.IASSearchPaths);
+
   SrcMgrDiagInfo DiagInfo;
 
   // If the current LLVMContext has an inline asm handler, set it in SourceMgr.
@@ -127,19 +129,13 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(SrcMgr, OutContext, *OutStreamer, *MAI));
 
-  // Create a temporary copy of the original STI because the parser may modify
-  // it. For example, when switching between arm and thumb mode. If the target
-  // needs to emit code to return to the original state it can do so in
-  // emitInlineAsmEnd().
-  MCSubtargetInfo TmpSTI = STI;
-
   // We create a new MCInstrInfo here since we might be at the module level
   // and not have a MachineFunction to initialize the TargetInstrInfo from and
   // we only need MCInstrInfo for asm parsing. We create one unconditionally
   // because it's not subtarget dependent.
   std::unique_ptr<MCInstrInfo> MII(TM.getTarget().createMCInstrInfo());
   std::unique_ptr<MCTargetAsmParser> TAP(TM.getTarget().createMCAsmParser(
-      TmpSTI, *Parser, *MII, MCOptions));
+      STI, *Parser, *MII, MCOptions));
   if (!TAP)
     report_fatal_error("Inline asm not supported by this streamer because"
                        " we don't have an asm parser for this target\n");
@@ -154,7 +150,7 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   // Don't implicitly switch to the text section before the asm.
   int Res = Parser->Run(/*NoInitialTextSection*/ true,
                         /*NoFinalize*/ true);
-  emitInlineAsmEnd(STI, &TmpSTI);
+  emitInlineAsmEnd(STI, &TAP->getSTI());
   if (Res && !HasDiagHandler)
     report_fatal_error("Error parsing inline asm\n");
 }
@@ -198,6 +194,23 @@ static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
         break;
       }
       if (Done) break;
+
+      // If we have ${:foo}, then this is not a real operand reference, it is a
+      // "magic" string reference, just like in .td files.  Arrange to call
+      // PrintSpecial.
+      if (LastEmitted[0] == '{' && LastEmitted[1] == ':') {
+        LastEmitted += 2;
+        const char *StrStart = LastEmitted;
+        const char *StrEnd = strchr(StrStart, '}');
+        if (!StrEnd)
+          report_fatal_error("Unterminated ${:foo} operand in inline asm"
+                             " string: '" + Twine(AsmStr) + "'");
+
+        std::string Val(StrStart, StrEnd);
+        AP->PrintSpecial(MI, OS, Val.c_str());
+        LastEmitted = StrEnd+1;
+        break;
+      }
 
       const char *IDStart = LastEmitted;
       const char *IDEnd = IDStart;
@@ -560,6 +573,11 @@ bool AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       if (MO.getType() != MachineOperand::MO_Immediate)
         return true;
       O << -MO.getImm();
+      return false;
+    case 's':  // The GCC deprecated s modifier
+      if (MO.getType() != MachineOperand::MO_Immediate)
+        return true;
+      O << ((32 - MO.getImm()) & 31);
       return false;
     }
   }

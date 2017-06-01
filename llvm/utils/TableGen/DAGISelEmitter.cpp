@@ -121,7 +121,7 @@ struct PatternSortingPredicate {
 
 void DAGISelEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("DAG Instruction Selector for the " +
-                       CGP.getTargetInfo().getName() + " target", OS);
+                       CGP.getTargetInfo().getName().str() + " target", OS);
 
   OS << "// *** NOTE: This file is #included into the middle of the target\n"
      << "// *** instruction selector class.  These functions are really "

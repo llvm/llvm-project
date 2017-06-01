@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=asm < %s | FileCheck %s
-; CHECK: @DEBUG_VALUE: h:x <- [R{{.*}}+{{.*}}]
+; CHECK: @DEBUG_VALUE: h:x <- [%R{{.*}}+{{.*}}]
 ; generated from:
 ; clang -cc1 -triple  thumbv7 -S -O1 arm.cpp  -g
 ;
@@ -13,7 +13,7 @@ target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:64:64-
 target triple = "thumbv7-apple-ios"
 
 ; Function Attrs: nounwind
-define arm_aapcscc void @_Z1hiiiif(i32, i32, i32, i32, float %x) #0 !dbg !4 {
+define arm_aapcscc void @_Z1hiiiif(i32, i32, i32, i32, float %x) #0 "no-frame-pointer-elim"="true" !dbg !4 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 %0, i64 0, metadata !12, metadata !DIExpression()), !dbg !18
   tail call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !13, metadata !DIExpression()), !dbg !18
@@ -41,11 +41,10 @@ attributes #3 = { nounwind }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!17, !21}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 (trunk 190804) (llvm/trunk 190797)", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 (trunk 190804) (llvm/trunk 190797)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "/<unknown>", directory: "")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "h", linkageName: "_Z1hiiiif", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 3, file: !5, scope: !6, type: !7, variables: !11)
+!4 = distinct !DISubprogram(name: "h", linkageName: "_Z1hiiiif", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !7, variables: !11)
 !5 = !DIFile(filename: "/arm.cpp", directory: "")
 !6 = !DIFile(filename: "/arm.cpp", directory: "")
 !7 = !DISubroutineType(types: !8)

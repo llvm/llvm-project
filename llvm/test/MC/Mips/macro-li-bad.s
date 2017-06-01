@@ -7,5 +7,5 @@
 
   .text
   li $5, 0x100000000
-  # 32-BIT: :[[@LINE-1]]:3: error: instruction requires a 32-bit immediate
-  # 64-BIT: :[[@LINE-2]]:3: error: instruction requires a 32-bit immediate
+  # 32-BIT: :[[@LINE-1]]:10: error: expected 32-bit immediate
+  # 64-BIT: :[[@LINE-2]]:10: error: expected 32-bit immediate

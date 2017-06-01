@@ -1,0 +1,71 @@
+// Check that 'llvm-readobj -dyn-relocations' shows dynamic relocations
+// if they have REL record format.
+
+// dyn-rel.so.elf-mips
+// % cat test.s
+//   .globl  __start
+// __start:
+//   nop
+// 
+//   .data
+//   .type  v1,@object
+//   .size  v1,4
+// v1:
+//   .word 0
+// 
+//   .globl v2
+//   .type  v2,@object
+//   .size  v2,8
+// v2:
+//   .word v2+4 # R_MIPS_32 target v2 addend 4
+//   .word v1   # R_MIPS_32 target v1 addend 0
+//
+// % llvm-mc -filetype=obj -triple=mips-unknown-linux -o test.o test.s
+// % ld  -m elf32btsmip -shared -o dyn-rel.so.elf-mips test.o
+
+RUN: llvm-readobj -relocations -dyn-relocations -expand-relocs \
+RUN:   %p/Inputs/dyn-rel.so.elf-mips | FileCheck %s
+
+// CHECK:      Relocations [
+// CHECK-NEXT:   Section (6) .rel.dyn {
+// CHECK-NEXT:     Relocation {
+// CHECK-NEXT:       Offset: 0x0
+// CHECK-NEXT:       Type: R_MIPS_NONE (0)
+// CHECK-NEXT:       Symbol: - (0)
+// CHECK-NEXT:       Addend: 0x0
+// CHECK-NEXT:     }
+// CHECK-NEXT:     Relocation {
+// CHECK-NEXT:       Offset: 0x102F8
+// CHECK-NEXT:       Type: R_MIPS_REL32 (3)
+// CHECK-NEXT:       Symbol: - (0)
+// CHECK-NEXT:       Addend: 0x0
+// CHECK-NEXT:     }
+// CHECK-NEXT:     Relocation {
+// CHECK-NEXT:       Offset: 0x102F4
+// CHECK-NEXT:       Type: R_MIPS_REL32 (3)
+// CHECK-NEXT:       Symbol: v2 (9)
+// CHECK-NEXT:       Addend: 0x0
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+// CHECK-NEXT: ]
+
+// CHECK:      Dynamic Relocations {
+// CHECK-NEXT:   Relocation {
+// CHECK-NEXT:     Offset: 0x0
+// CHECK-NEXT:     Type: R_MIPS_NONE (0)
+// CHECK-NEXT:     Symbol: -
+// CHECK-NEXT:     Addend: 0x0
+// CHECK-NEXT:   }
+// CHECK-NEXT:   Relocation {
+// CHECK-NEXT:     Offset: 0x102F8
+// CHECK-NEXT:     Type: R_MIPS_REL32 (3)
+// CHECK-NEXT:     Symbol: -
+// CHECK-NEXT:     Addend: 0x0
+// CHECK-NEXT:   }
+// CHECK-NEXT:   Relocation {
+// CHECK-NEXT:     Offset: 0x102F4
+// CHECK-NEXT:     Type: R_MIPS_REL32 (3)
+// CHECK-NEXT:     Symbol: v2
+// CHECK-NEXT:     Addend: 0x0
+// CHECK-NEXT:   }
+// CHECK-NEXT: }

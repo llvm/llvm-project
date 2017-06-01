@@ -35,13 +35,14 @@ typedef const char c;
 void operator "" _good (c*);
 
 // Check extra cv-qualifiers
-void operator "" _cv_good (volatile const char *, const size_t); // expected-error {{parameter declaration for literal operator 'operator""_cv_good' is not valid}}
+void operator "" _cv_good (volatile const char *, const size_t); // expected-error {{invalid literal operator parameter type 'const volatile char *', did you mean 'const char *'?}}
 
 // Template declaration
 template <char...> void operator "" _good ();
 
-// FIXME: Test some invalid decls that might crop up.
-template <typename...> void operator "" _invalid(); // expected-error {{parameter declaration for literal operator 'operator""_invalid' is not valid}}
+template <typename...> void operator "" _invalid(); // expected-error {{template parameter list for literal operator must be either 'char...' or 'typename T, T...'}}
+template <wchar_t...> void operator "" _invalid();  // expected-error {{template parameter list for literal operator must be either 'char...' or 'typename T, T...'}}
+template <unsigned long long...> void operator "" _invalid();  // expected-error {{template parameter list for literal operator must be either 'char...' or 'typename T, T...'}}
 
 _Complex float operator""if(long double); // expected-warning {{reserved}}
 _Complex float test_if_1() { return 2.0f + 1.5if; };

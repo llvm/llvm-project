@@ -1,4 +1,5 @@
 ; RUN: opt -loop-accesses -analyze < %s | FileCheck %s
+; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
 
 ;   for (unsigned i = 0; i < 100; i++) {
 ;     A[i+8] = B[i] + 2;

@@ -70,15 +70,16 @@ void LiveRegMatrix::releaseMemory() {
   }
 }
 
-template<typename Callable>
-bool foreachUnit(const TargetRegisterInfo *TRI, LiveInterval &VRegInterval,
-                 unsigned PhysReg, Callable Func) {
+template <typename Callable>
+static bool foreachUnit(const TargetRegisterInfo *TRI,
+                        LiveInterval &VRegInterval, unsigned PhysReg,
+                        Callable Func) {
   if (VRegInterval.hasSubRanges()) {
     for (MCRegUnitMaskIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
       unsigned Unit = (*Units).first;
       LaneBitmask Mask = (*Units).second;
       for (LiveInterval::SubRange &S : VRegInterval.subranges()) {
-        if (S.LaneMask & Mask) {
+        if ((S.LaneMask & Mask).any()) {
           if (Func(Unit, S))
             return true;
           break;

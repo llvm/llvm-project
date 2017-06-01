@@ -1,15 +1,17 @@
-; RUN: llc -march=amdgcn -mcpu=SI -enable-misched < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -enable-misched < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -enable-misched < %s | FileCheck -check-prefix=CI -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -enable-misched < %s | FileCheck -check-prefix=CI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -enable-misched < %s | FileCheck -check-prefix=CI -check-prefix=GCN -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}frem_f32:
 ; GCN-DAG: buffer_load_dword [[X:v[0-9]+]], {{.*$}}
 ; GCN-DAG: buffer_load_dword [[Y:v[0-9]+]], {{.*}} offset:16
-; GCN-DAG: v_cmp
-; GCN-DAG: v_mul_f32
+; GCN: v_div_scale_f32
+
 ; GCN: v_rcp_f32_e32
+; GCN: v_fma_f32
 ; GCN: v_mul_f32_e32
-; GCN: v_mul_f32_e32
+; GCN: v_div_fmas_f32
+; GCN: v_div_fixup_f32
 ; GCN: v_trunc_f32_e32
 ; GCN: v_mad_f32
 ; GCN: s_endpgm

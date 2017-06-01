@@ -45,11 +45,6 @@
 // RUN:   | FileCheck -check-prefix=MIPS64-DEF-EL-AS %s
 // MIPS64-DEF-EL-AS: as{{(.exe)?}}" "-march" "mips64r2" "-mabi" "64" "-EL"
 //
-// RUN: %clang -target mips-unknown-freebsd -mabi=eabi -### \
-// RUN:   -no-integrated-as -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=MIPS-EABI %s
-// MIPS-EABI: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "eabi" "-EB"
-//
 // RUN: %clang -target mips64-unknown-freebsd -mabi=n32 -### \
 // RUN:   -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-N32 %s
@@ -89,3 +84,9 @@
 // RUN:   -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-ALIAS-64R2 %s
 // MIPS-ALIAS-64R2: as{{(.exe)?}}" "-march" "mips64r2" "-mabi" "64" "-EB"
+//
+// RUN: %clang -target mips-unknown-freebsd -### \
+// RUN:   -no-integrated-as -G0 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS32-EB-AS-G0 %s
+// MIPS32-EB-AS-G0: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "32" "-EB" "-G0"
+// MIPS32-EB-AS-G0-NOT: "-KPIC"

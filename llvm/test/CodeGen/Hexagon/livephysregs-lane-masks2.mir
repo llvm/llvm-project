@@ -1,0 +1,55 @@
+# RUN: llc -march=hexagon -verify-machineinstrs -run-pass branch-folder -o - %s | FileCheck %s
+
+# CHECK-LABEL: name: fred
+
+--- |
+  define void @fred() { ret void }
+
+...
+---
+
+name: fred
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: %p2, %r0
+    successors: %bb.1, %bb.2
+        J2_jumpt killed %p2, %bb.1, implicit-def %pc
+        J2_jump %bb.2, implicit-def %pc
+
+  bb.1:
+    liveins: %r0, %r19
+    successors: %bb.3
+        %r2 = A2_tfrsi 4
+        %r1 = COPY %r19
+        %r0 = S2_asl_r_r killed %r0, killed %r2
+        %r0 = A2_asrh killed %r0
+        J2_jump %bb.3, implicit-def %pc
+
+  bb.2:
+    liveins: %r0, %r18
+    successors: %bb.3
+        %r2 = A2_tfrsi 5
+        %r1 = L2_loadrh_io %r18, 0
+        %r0 = S2_asl_r_r killed %r0, killed %r2
+        %r0 = A2_asrh killed %r0
+
+  bb.3:
+    ; A live-in register without subregs, but with a lane mask that is not ~0
+    ; is not recognized by LivePhysRegs. Branch folding exposes this problem
+    ; (through tail merging).
+    ;
+    ; CHECK: bb.3:
+    ; CHECK: liveins:{{.*}}%p0
+    ; CHECK:   %r0 = S2_asl_r_r killed %r0, killed %r2
+    ; CHECK:   %r0 = A2_asrh killed %r0
+    ; CHECK:   %r0 = C2_cmoveit killed %p0, 1
+    ; CHECK:   J2_jumpr %r31, implicit-def %pc, implicit %r0
+    ;
+    liveins: %p0:0x1
+        %r0 = C2_cmoveit killed %p0, 1
+        J2_jumpr %r31, implicit-def %pc, implicit %r0
+...
+
+

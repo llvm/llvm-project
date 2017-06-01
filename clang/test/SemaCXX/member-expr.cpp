@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 class X{
 public:
@@ -116,8 +118,10 @@ namespace rdar8231724 {
   void f(Y *y) {
     y->N::X1<int>; // expected-error{{'rdar8231724::N::X1' is not a member of class 'rdar8231724::Y'}}
     y->Z<int>::n; // expected-error{{'rdar8231724::Z<int>::n' is not a member of class 'rdar8231724::Y'}}
-    y->template Z<int>::n; // expected-error{{'rdar8231724::Z<int>::n' is not a member of class 'rdar8231724::Y'}} \
-    // expected-warning{{'template' keyword outside of a template}}
+    y->template Z<int>::n; // expected-error{{'rdar8231724::Z<int>::n' is not a member of class 'rdar8231724::Y'}}
+#if __cplusplus <= 199711L // C++03 or earlier modes
+    // expected-warning@-2{{'template' keyword outside of a template}}
+#endif
   }
 }
 

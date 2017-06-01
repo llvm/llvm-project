@@ -14,11 +14,11 @@ T tmain(T argc) {
 #pragma omp taskyield
   return a + argc;
 }
+// CHECK:      static T a;
+// CHECK-NEXT: #pragma omp taskyield
 // CHECK:      static int a;
 // CHECK-NEXT: #pragma omp taskyield
 // CHECK:      static char a;
-// CHECK-NEXT: #pragma omp taskyield
-// CHECK:      static T a;
 // CHECK-NEXT: #pragma omp taskyield
 
 int main(int argc, char **argv) {

@@ -1,18 +1,12 @@
-===================================================
-Extra Clang Tools 4.0.0 (In-Progress) Release Notes
-===================================================
+=====================================
+Extra Clang Tools 4.0.0 Release Notes
+=====================================
 
 .. contents::
    :local:
    :depth: 3
 
 Written by the `LLVM Team <http://llvm.org/>`_
-
-.. warning::
-
-   These are in-progress notes for the upcoming Extra Clang Tools 4.0 release.
-   You may prefer the `Extra Clang Tools 3.9 Release Notes
-   <http://llvm.org/releases/3.9.0/tools/clang/tools/extra/docs/ReleaseNotes.html>`_.
 
 Introduction
 ============
@@ -27,32 +21,11 @@ For more information about Clang or LLVM, including information about
 the latest release, please see the `Clang Web Site <http://clang.llvm.org>`_ or
 the `LLVM Web Site <http://llvm.org>`_.
 
-Note that if you are reading this file from a Subversion checkout or the
-main Clang web page, this document applies to the *next* release, not
-the current one. To see the release notes for a specific release, please
-see the `releases page <http://llvm.org/releases/>`_.
-
 What's New in Extra Clang Tools 4.0.0?
 ======================================
 
 Some of the major new features and improvements to Extra Clang Tools are listed
-here. Generic improvements to Extra Clang Tools as a whole or to its underlying
-infrastructure are described first, followed by tool-specific sections.
-
-Major New Features
-------------------
-
-...
-
-Improvements to clang-query
----------------------------
-
-The improvements are...
-
-Improvements to clang-rename
-----------------------------
-
-- Emacs integration was added.
+here.
 
 Improvements to clang-tidy
 --------------------------
@@ -113,7 +86,7 @@ Improvements to clang-tidy
 
 - The modernize-use-default check has been renamed to `modernize-use-equals-default
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-equals-default.html>`_.
-  
+
 - New `modernize-use-default-member-init
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-default-member-init.html>`_ check
 
@@ -205,8 +178,3 @@ Improvements to include-fixer
 -----------------------------
 
 - Emacs integration was added.
-
-Improvements to modularize
---------------------------
-
-The improvements are...

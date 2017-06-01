@@ -13,10 +13,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_AMDGPUREGISTERINFO_H
-#define LLVM_LIB_TARGET_R600_AMDGPUREGISTERINFO_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUREGISTERINFO_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUREGISTERINFO_H
 
-#include "llvm/ADT/BitVector.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
@@ -29,30 +28,14 @@ class AMDGPUSubtarget;
 class TargetInstrInfo;
 
 struct AMDGPURegisterInfo : public AMDGPUGenRegisterInfo {
-  static const MCPhysReg CalleeSavedReg;
-
   AMDGPURegisterInfo();
-
-  BitVector getReservedRegs(const MachineFunction &MF) const override {
-    assert(!"Unimplemented");  return BitVector();
-  }
-
-  virtual unsigned getHWRegIndex(unsigned Reg) const {
-    assert(!"Unimplemented"); return 0;
-  }
 
   /// \returns the sub reg enum value for the given \p Channel
   /// (e.g. getSubRegFromChannel(0) -> AMDGPU::sub0)
   unsigned getSubRegFromChannel(unsigned Channel) const;
 
   const MCPhysReg* getCalleeSavedRegs(const MachineFunction *MF) const override;
-  void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
-                           unsigned FIOperandNum,
-                           RegScavenger *RS) const override;
   unsigned getFrameRegister(const MachineFunction &MF) const override;
-
-  unsigned getIndirectSubReg(unsigned IndirectIndex) const;
-
 };
 
 } // End namespace llvm

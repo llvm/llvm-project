@@ -11,7 +11,6 @@
 #define LLVM_SUPPORT_CRASHRECOVERYCONTEXT_H
 
 #include "llvm/ADT/STLExtras.h"
-#include <string>
 
 namespace llvm {
 class CrashRecoveryContextCleanup;
@@ -70,8 +69,7 @@ public:
   /// \return True if the function completed successfully, and false if the
   /// function crashed (or HandleCrash was called explicitly). Clients should
   /// make as little assumptions as possible about the program state when
-  /// RunSafely has returned false. Clients can use getBacktrace() to retrieve
-  /// the backtrace of the crash on failures.
+  /// RunSafely has returned false.
   bool RunSafely(function_ref<void()> Fn);
   bool RunSafely(void (*Fn)(void*), void *UserData) {
     return RunSafely([&]() { Fn(UserData); });
@@ -94,13 +92,6 @@ public:
   /// \brief Explicitly trigger a crash recovery in the current process, and
   /// return failure from RunSafely(). This function does not return.
   void HandleCrash();
-
-  /// \brief Return a string containing the backtrace where the crash was
-  /// detected; or empty if the backtrace wasn't recovered.
-  ///
-  /// This function is only valid when a crash has been detected (i.e.,
-  /// RunSafely() has returned false.
-  const std::string &getBacktrace() const;
 };
 
 class CrashRecoveryContextCleanup {

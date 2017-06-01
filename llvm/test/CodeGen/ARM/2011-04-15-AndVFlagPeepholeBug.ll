@@ -3,7 +3,7 @@
 ; CHECK: _f
 ; CHECK-NOT: ands
 ; CHECK: cmp
-; CHECK: blxle _g
+; CHECK: blle _g
 
 define i32 @f(i32 %a, i32 %b) nounwind ssp {
 entry:

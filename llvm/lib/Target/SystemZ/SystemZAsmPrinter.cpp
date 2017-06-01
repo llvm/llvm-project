@@ -109,6 +109,85 @@ void SystemZAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     LoweredMI = MCInstBuilder(SystemZ::BR).addReg(SystemZ::R14D);
     break;
 
+  case SystemZ::CondReturn:
+    LoweredMI = MCInstBuilder(SystemZ::BCR)
+      .addImm(MI->getOperand(0).getImm())
+      .addImm(MI->getOperand(1).getImm())
+      .addReg(SystemZ::R14D);
+    break;
+
+  case SystemZ::CRBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CRB)
+      .addReg(MI->getOperand(0).getReg())
+      .addReg(MI->getOperand(1).getReg())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CGRBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CGRB)
+      .addReg(MI->getOperand(0).getReg())
+      .addReg(MI->getOperand(1).getReg())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CIBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CIB)
+      .addReg(MI->getOperand(0).getReg())
+      .addImm(MI->getOperand(1).getImm())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CGIBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CGIB)
+      .addReg(MI->getOperand(0).getReg())
+      .addImm(MI->getOperand(1).getImm())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CLRBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CLRB)
+      .addReg(MI->getOperand(0).getReg())
+      .addReg(MI->getOperand(1).getReg())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CLGRBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CLGRB)
+      .addReg(MI->getOperand(0).getReg())
+      .addReg(MI->getOperand(1).getReg())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CLIBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CLIB)
+      .addReg(MI->getOperand(0).getReg())
+      .addImm(MI->getOperand(1).getImm())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CLGIBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CLGIB)
+      .addReg(MI->getOperand(0).getReg())
+      .addImm(MI->getOperand(1).getImm())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
   case SystemZ::CallBRASL:
     LoweredMI = MCInstBuilder(SystemZ::BRASL)
       .addReg(SystemZ::R14D)
@@ -126,8 +205,94 @@ void SystemZAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       .addExpr(Lower.getExpr(MI->getOperand(0), MCSymbolRefExpr::VK_PLT));
     break;
 
+  case SystemZ::CallBRCL:
+    LoweredMI = MCInstBuilder(SystemZ::BRCL)
+      .addImm(MI->getOperand(0).getImm())
+      .addImm(MI->getOperand(1).getImm())
+      .addExpr(Lower.getExpr(MI->getOperand(2), MCSymbolRefExpr::VK_PLT));
+    break;
+
   case SystemZ::CallBR:
     LoweredMI = MCInstBuilder(SystemZ::BR).addReg(SystemZ::R1D);
+    break;
+
+  case SystemZ::CallBCR:
+    LoweredMI = MCInstBuilder(SystemZ::BCR)
+      .addImm(MI->getOperand(0).getImm())
+      .addImm(MI->getOperand(1).getImm())
+      .addReg(SystemZ::R1D);
+    break;
+
+  case SystemZ::CRBCall:
+    LoweredMI = MCInstBuilder(SystemZ::CRB)
+      .addReg(MI->getOperand(0).getReg())
+      .addReg(MI->getOperand(1).getReg())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R1D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CGRBCall:
+    LoweredMI = MCInstBuilder(SystemZ::CGRB)
+      .addReg(MI->getOperand(0).getReg())
+      .addReg(MI->getOperand(1).getReg())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R1D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CIBCall:
+    LoweredMI = MCInstBuilder(SystemZ::CIB)
+      .addReg(MI->getOperand(0).getReg())
+      .addImm(MI->getOperand(1).getImm())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R1D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CGIBCall:
+    LoweredMI = MCInstBuilder(SystemZ::CGIB)
+      .addReg(MI->getOperand(0).getReg())
+      .addImm(MI->getOperand(1).getImm())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R1D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CLRBCall:
+    LoweredMI = MCInstBuilder(SystemZ::CLRB)
+      .addReg(MI->getOperand(0).getReg())
+      .addReg(MI->getOperand(1).getReg())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R1D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CLGRBCall:
+    LoweredMI = MCInstBuilder(SystemZ::CLGRB)
+      .addReg(MI->getOperand(0).getReg())
+      .addReg(MI->getOperand(1).getReg())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R1D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CLIBCall:
+    LoweredMI = MCInstBuilder(SystemZ::CLIB)
+      .addReg(MI->getOperand(0).getReg())
+      .addImm(MI->getOperand(1).getImm())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R1D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CLGIBCall:
+    LoweredMI = MCInstBuilder(SystemZ::CLGIB)
+      .addReg(MI->getOperand(0).getReg())
+      .addImm(MI->getOperand(1).getImm())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R1D)
+      .addImm(0);
     break;
 
   case SystemZ::TLS_GDCALL:
@@ -253,11 +418,46 @@ void SystemZAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   case SystemZ::Serialize:
     if (MF->getSubtarget<SystemZSubtarget>().hasFastSerialization())
-      LoweredMI = MCInstBuilder(SystemZ::AsmBCR)
+      LoweredMI = MCInstBuilder(SystemZ::BCRAsm)
         .addImm(14).addReg(SystemZ::R0D);
     else
-      LoweredMI = MCInstBuilder(SystemZ::AsmBCR)
+      LoweredMI = MCInstBuilder(SystemZ::BCRAsm)
         .addImm(15).addReg(SystemZ::R0D);
+    break;
+
+  // Emit nothing here but a comment if we can.
+  case SystemZ::MemBarrier:
+    OutStreamer->emitRawComment("MEMBARRIER");
+    return;
+
+  // We want to emit "j .+2" for traps, jumping to the relative immediate field
+  // of the jump instruction, which is an illegal instruction. We cannot emit a
+  // "." symbol, so create and emit a temp label before the instruction and use
+  // that instead.
+  case SystemZ::Trap: {
+    MCSymbol *DotSym = OutContext.createTempSymbol();
+    OutStreamer->EmitLabel(DotSym);
+
+    const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(DotSym, OutContext);
+    const MCConstantExpr *ConstExpr = MCConstantExpr::create(2, OutContext);
+    LoweredMI = MCInstBuilder(SystemZ::J)
+      .addExpr(MCBinaryExpr::createAdd(Expr, ConstExpr, OutContext));
+    }
+    break;
+
+  // Conditional traps will create a branch on condition instruction that jumps
+  // to the relative immediate field of the jump instruction. (eg. "jo .+2")
+  case SystemZ::CondTrap: {
+    MCSymbol *DotSym = OutContext.createTempSymbol();
+    OutStreamer->EmitLabel(DotSym);
+
+    const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(DotSym, OutContext);
+    const MCConstantExpr *ConstExpr = MCConstantExpr::create(2, OutContext);
+    LoweredMI = MCInstBuilder(SystemZ::BRC)
+      .addImm(MI->getOperand(0).getImm())
+      .addImm(MI->getOperand(1).getImm())
+      .addExpr(MCBinaryExpr::createAdd(Expr, ConstExpr, OutContext));
+    }
     break;
 
   default:
@@ -323,5 +523,5 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 
 // Force static initialization.
 extern "C" void LLVMInitializeSystemZAsmPrinter() {
-  RegisterAsmPrinter<SystemZAsmPrinter> X(TheSystemZTarget);
+  RegisterAsmPrinter<SystemZAsmPrinter> X(getTheSystemZTarget());
 }

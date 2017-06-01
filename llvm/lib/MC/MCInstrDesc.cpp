@@ -53,7 +53,7 @@ bool MCInstrDesc::mayAffectControlFlow(const MCInst &MI,
 
 bool MCInstrDesc::hasImplicitDefOfPhysReg(unsigned Reg,
                                           const MCRegisterInfo *MRI) const {
-  if (const uint16_t *ImpDefs = ImplicitDefs)
+  if (const MCPhysReg *ImpDefs = ImplicitDefs)
     for (; *ImpDefs; ++ImpDefs)
       if (*ImpDefs == Reg || (MRI && MRI->isSubRegister(Reg, *ImpDefs)))
         return true;

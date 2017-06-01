@@ -1,59 +1,57 @@
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck %s
 
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
-
-; CHECK: {{^}}cube:
+; CHECK-LABEL: {{^}}cube:
 ; CHECK: CUBE T{{[0-9]}}.X
 ; CHECK: CUBE T{{[0-9]}}.Y
 ; CHECK: CUBE T{{[0-9]}}.Z
 ; CHECK: CUBE * T{{[0-9]}}.W
-define void @cube() #0 {
+define amdgpu_ps void @cube() {
 main_body:
-  %0 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 9)
-  %1 = extractelement <4 x float> %0, i32 3
-  %2 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 9)
-  %3 = extractelement <4 x float> %2, i32 0
-  %4 = fdiv float %3, %1
-  %5 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 9)
-  %6 = extractelement <4 x float> %5, i32 1
-  %7 = fdiv float %6, %1
-  %8 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 9)
-  %9 = extractelement <4 x float> %8, i32 2
-  %10 = fdiv float %9, %1
-  %11 = insertelement <4 x float> undef, float %4, i32 0
-  %12 = insertelement <4 x float> %11, float %7, i32 1
-  %13 = insertelement <4 x float> %12, float %10, i32 2
-  %14 = insertelement <4 x float> %13, float 1.000000e+00, i32 3
-  %15 = call <4 x float> @llvm.AMDGPU.cube(<4 x float> %14)
-  %16 = extractelement <4 x float> %15, i32 0
-  %17 = extractelement <4 x float> %15, i32 1
-  %18 = extractelement <4 x float> %15, i32 2
-  %19 = extractelement <4 x float> %15, i32 3
-  %20 = call float @fabs(float %18)
-  %21 = fdiv float 1.000000e+00, %20
-  %22 = fmul float %16, %21
-  %23 = fadd float %22, 1.500000e+00
-  %24 = fmul float %17, %21
-  %25 = fadd float %24, 1.500000e+00
-  %26 = insertelement <4 x float> undef, float %25, i32 0
-  %27 = insertelement <4 x float> %26, float %23, i32 1
-  %28 = insertelement <4 x float> %27, float %19, i32 2
-  %29 = insertelement <4 x float> %28, float %25, i32 3
-  %30 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %29, i32 16, i32 0, i32 4)
-  call void @llvm.R600.store.swizzle(<4 x float> %30, i32 0, i32 0)
+  %tmp = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 9)
+  %tmp1 = extractelement <4 x float> %tmp, i32 3
+  %tmp2 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 9)
+  %tmp3 = extractelement <4 x float> %tmp2, i32 0
+  %tmp4 = fdiv float %tmp3, %tmp1
+  %tmp5 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 9)
+  %tmp6 = extractelement <4 x float> %tmp5, i32 1
+  %tmp7 = fdiv float %tmp6, %tmp1
+  %tmp8 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 9)
+  %tmp9 = extractelement <4 x float> %tmp8, i32 2
+  %tmp10 = fdiv float %tmp9, %tmp1
+  %tmp11 = insertelement <4 x float> undef, float %tmp4, i32 0
+  %tmp12 = insertelement <4 x float> %tmp11, float %tmp7, i32 1
+  %tmp13 = insertelement <4 x float> %tmp12, float %tmp10, i32 2
+  %tmp14 = insertelement <4 x float> %tmp13, float 1.000000e+00, i32 3
+  %tmp15 = call <4 x float> @llvm.AMDGPU.cube(<4 x float> %tmp14)
+  %tmp16 = extractelement <4 x float> %tmp15, i32 0
+  %tmp17 = extractelement <4 x float> %tmp15, i32 1
+  %tmp18 = extractelement <4 x float> %tmp15, i32 2
+  %tmp19 = extractelement <4 x float> %tmp15, i32 3
+  %tmp20 = call float @llvm.fabs.f32(float %tmp18)
+  %tmp21 = fdiv float 1.000000e+00, %tmp20
+  %tmp22 = fmul float %tmp16, %tmp21
+  %tmp23 = fadd float %tmp22, 1.500000e+00
+  %tmp24 = fmul float %tmp17, %tmp21
+  %tmp25 = fadd float %tmp24, 1.500000e+00
+  %tmp26 = insertelement <4 x float> undef, float %tmp25, i32 0
+  %tmp27 = insertelement <4 x float> %tmp26, float %tmp23, i32 1
+  %tmp28 = insertelement <4 x float> %tmp27, float %tmp19, i32 2
+  %tmp29 = insertelement <4 x float> %tmp28, float %tmp25, i32 3
+  %tmp30 = shufflevector <4 x float> %tmp29, <4 x float> %tmp29, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %tmp31 = call <4 x float> @llvm.r600.tex(<4 x float> %tmp30, i32 0, i32 0, i32 0, i32 16, i32 0, i32 1, i32 1, i32 1, i32 1)
+  call void @llvm.r600.store.swizzle(<4 x float> %tmp31, i32 0, i32 0)
   ret void
 }
 
 ; Function Attrs: readnone
-declare <4 x float> @llvm.AMDGPU.cube(<4 x float>) #1
+declare <4 x float> @llvm.AMDGPU.cube(<4 x float>) #0
+
+; Function Attrs: nounwind readnone
+declare float @llvm.fabs.f32(float) #0
+
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
 ; Function Attrs: readnone
-declare float @fabs(float) #1
+declare <4 x float> @llvm.r600.tex(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) #0
 
-; Function Attrs: readnone
-declare <4 x float> @llvm.AMDGPU.tex(<4 x float>, i32, i32, i32) #1
-
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
-
-attributes #0 = { "ShaderType"="0" }
-attributes #1 = { readnone }
-
+attributes #0 = { nounwind readnone }

@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -ferror-limit 150 -o - %s
 
 void foo() {
 }
@@ -7,20 +9,27 @@ bool foobool(int argc) {
   return argc;
 }
 
+void foobar(int &ref) {
+#pragma omp parallel sections reduction(+:ref)
+  {
+    foo();
+  }
+}
+
 struct S1; // expected-note {{declared here}} expected-note 4 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
   mutable int a;
-  S2 &operator+(const S2 &arg) { return (*this); } // expected-note 4 {{implicitly declared private here}}
+  S2 &operator+(const S2 &arg) { return (*this); } // expected-note 3 {{implicitly declared private here}}
 
 public:
   S2() : a(0) {}
   S2(S2 &s2) : a(s2.a) {}
-  static float S2s;
+  static float S2s; // expected-note 2 {{static data member is predetermined as shared}}
   static const float S2sc;
 };
 const float S2::S2sc = 0; // expected-note 2 {{'S2sc' defined here}}
-S2 b;                     // expected-note 2 {{'b' defined here}}
+S2 b;                     // expected-note 3 {{'b' defined here}}
 const S2 ba[5];           // expected-note 2 {{'ba' defined here}}
 class S3 {
   int a;
@@ -32,7 +41,7 @@ public:
   S3 operator+(const S3 &arg1) { return arg1; }
 };
 int operator+(const S3 &arg1, const S3 &arg2) { return 5; }
-S3 c;               // expected-note 2 {{'c' defined here}}
+S3 c;               // expected-note 3 {{'c' defined here}}
 const S3 ca[5];     // expected-note 2 {{'ca' defined here}}
 extern const int f; // expected-note 4 {{'f' declared here}}
 class S4 {
@@ -54,7 +63,10 @@ class S5 {
 public:
   S5(int v) : a(v) {}
 };
-class S6 { // expected-note 2 {{candidate function (the implicit copy assignment operator) not viable: no known conversion from 'int' to 'const S6' for 1st argument}}
+class S6 { // expected-note 3 {{candidate function (the implicit copy assignment operator) not viable: no known conversion from 'int' to 'const S6' for 1st argument}}
+#if __cplusplus >= 201103L // C++11 or later
+// expected-note@-2 3 {{candidate function (the implicit move assignment operator) not viable}}
+#endif
   int a;
 
 public:
@@ -116,7 +128,7 @@ T tmain(T argc) {
   {
     foo();
   }
-#pragma omp parallel sections reduction(foo : argc) //expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max'}}
+#pragma omp parallel sections reduction(foo : argc) //expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'float'}} expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
   {
     foo();
   }
@@ -128,11 +140,11 @@ T tmain(T argc) {
   {
     foo();
   }
-#pragma omp parallel sections reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified list item cannot be reduction}} expected-error 3 {{'operator+' is a private member of 'S2'}}
+#pragma omp parallel sections reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified list item cannot be reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}}
   {
     foo();
   }
-#pragma omp parallel sections reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{arguments of OpenMP clause 'reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 3 {{const-qualified list item cannot be reduction}}
+#pragma omp parallel sections reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 4 {{arguments of OpenMP clause 'reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 3 {{const-qualified list item cannot be reduction}}
   {
     foo();
   }
@@ -140,15 +152,15 @@ T tmain(T argc) {
   {
     foo();
   }
-#pragma omp parallel sections reduction(+ : ba) // expected-error {{a reduction list item with array type 'const S2 [5]'}}
+#pragma omp parallel sections reduction(+ : ba) // expected-error {{const-qualified list item cannot be reduction}}
   {
     foo();
   }
-#pragma omp parallel sections reduction(* : ca) // expected-error {{a reduction list item with array type 'const S3 [5]'}}
+#pragma omp parallel sections reduction(* : ca) // expected-error {{const-qualified list item cannot be reduction}}
   {
     foo();
   }
-#pragma omp parallel sections reduction(- : da) // expected-error {{a reduction list item with array type 'const int [5]'}} expected-error {{a reduction list item with array type 'const float [5]'}}
+#pragma omp parallel sections reduction(- : da) // expected-error {{const-qualified list item cannot be reduction}} expected-error {{const-qualified list item cannot be reduction}}
   {
     foo();
   }
@@ -156,7 +168,7 @@ T tmain(T argc) {
   {
     foo();
   }
-#pragma omp parallel sections reduction(&& : S2::S2s)
+#pragma omp parallel sections reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
   {
     foo();
   }
@@ -168,7 +180,7 @@ T tmain(T argc) {
   {
     foo();
   }
-#pragma omp parallel sections reduction(+ : o) // expected-error {{no viable overloaded '='}}
+#pragma omp parallel sections reduction(+ : o) // expected-error 2 {{no viable overloaded '='}}
   {
     foo();
   }
@@ -181,7 +193,7 @@ T tmain(T argc) {
   {
     foo();
   }
-#pragma omp parallel sections reduction(+ : p), reduction(+ : p) // expected-error 3 {{variable can appear only once in OpenMP 'reduction' clause}} expected-note 3 {{previously referenced here}}
+#pragma omp parallel sections reduction(+ : p), reduction(+ : p) // expected-error 2 {{variable can appear only once in OpenMP 'reduction' clause}} expected-note 2 {{previously referenced here}}
   {
     foo();
   }
@@ -293,15 +305,15 @@ int main(int argc, char **argv) {
   {
     foo();
   }
-#pragma omp parallel sections reduction(+ : ba) // expected-error {{a reduction list item with array type 'const S2 [5]'}}
+#pragma omp parallel sections reduction(+ : ba) // expected-error {{const-qualified list item cannot be reduction}}
   {
     foo();
   }
-#pragma omp parallel sections reduction(* : ca) // expected-error {{a reduction list item with array type 'const S3 [5]'}}
+#pragma omp parallel sections reduction(* : ca) // expected-error {{const-qualified list item cannot be reduction}}
   {
     foo();
   }
-#pragma omp parallel sections reduction(- : da) // expected-error {{a reduction list item with array type 'const int [5]'}}
+#pragma omp parallel sections reduction(- : da) // expected-error {{const-qualified list item cannot be reduction}}
   {
     foo();
   }
@@ -309,7 +321,7 @@ int main(int argc, char **argv) {
   {
     foo();
   }
-#pragma omp parallel sections reduction(&& : S2::S2s)
+#pragma omp parallel sections reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
   {
     foo();
   }

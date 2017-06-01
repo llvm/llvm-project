@@ -530,13 +530,13 @@ and:
 
 .. code-block:: c
 
-    struct _block_byref_i i = {( .forwarding=&i, .flags=0, .size=sizeof(struct _block_byref_i) )};
+    struct _block_byref_i i = {( .isa=NULL, .forwarding=&i, .flags=0, .size=sizeof(struct _block_byref_i), .captured_i=2 )};
     struct __block_literal_5 _block_literal = {
           &_NSConcreteStackBlock,
           (1<<25)|(1<<29), <uninitialized>,
           __block_invoke_5,
           &__block_descriptor_5,
-          2,
+          &i,
     };
 
 Importing ``__attribute__((NSObject))`` ``__block`` variables

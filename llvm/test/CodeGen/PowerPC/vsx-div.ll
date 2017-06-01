@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr7 -mattr=+vsx -O1 -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+vsx -O1 -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s
 
 @vf = global <4 x float> <float -1.500000e+00, float 2.500000e+00, float -3.500000e+00, float 4.500000e+00>, align 16
 @vd = global <2 x double> <double 3.500000e+00, double -7.500000e+00>, align 16

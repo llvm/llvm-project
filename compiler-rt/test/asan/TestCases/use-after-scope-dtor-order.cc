@@ -1,6 +1,6 @@
-// RUN: %clangxx_asan -O0 -fsanitize=use-after-scope %s -o %t && \
+// RUN: %clangxx_asan -O1 -fsanitize-address-use-after-scope %s -o %t && \
 // RUN:     not %run %t 2>&1 | FileCheck %s
-// XFAIL: *
+
 #include <stdio.h>
 
 struct IntHolder {
@@ -8,7 +8,7 @@ struct IntHolder {
   ~IntHolder() {
     printf("Value: %d\n", *val_);  // BOOM
     // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
-    // CHECK:  #0 0x{{.*}} in IntHolder::~IntHolder{{.*}}use-after-scope-dtor-order.cc:[[@LINE-2]]
+    // CHECK:  #0 0x{{.*}} in IntHolder::~IntHolder{{.*}}.cc:[[@LINE-2]]
   }
   void set(int *val) { val_ = val; }
   int *get() { return val_; }

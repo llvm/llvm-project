@@ -16,7 +16,6 @@
 #ifndef LLVM_SUPPORT_PATH_H
 #define LLVM_SUPPORT_PATH_H
 
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
 #include <iterator>
@@ -88,6 +87,9 @@ public:
   reverse_iterator &operator++();    // preincrement
   bool operator==(const reverse_iterator &RHS) const;
   bool operator!=(const reverse_iterator &RHS) const { return !(*this == RHS); }
+
+  /// @brief Difference in bytes between this and RHS.
+  ptrdiff_t operator-(const reverse_iterator &RHS) const;
 };
 
 /// @brief Get begin iterator over \a path.
@@ -140,6 +142,23 @@ void remove_filename(SmallVectorImpl<char> &path);
 ///                  prepended.
 void replace_extension(SmallVectorImpl<char> &path, const Twine &extension);
 
+/// @brief Replace matching path prefix with another path.
+///
+/// @code
+///   /foo, /old, /new => /foo
+///   /old/foo, /old, /new => /new/foo
+///   /foo, <empty>, /new => /new/foo
+///   /old/foo, /old, <empty> => /foo
+/// @endcode
+///
+/// @param Path If \a Path starts with \a OldPrefix modify to instead
+///        start with \a NewPrefix.
+/// @param OldPrefix The path prefix to strip from \a Path.
+/// @param NewPrefix The path prefix to replace \a NewPrefix with.
+void replace_path_prefix(SmallVectorImpl<char> &Path,
+                         const StringRef &OldPrefix,
+                         const StringRef &NewPrefix);
+
 /// @brief Append to path.
 ///
 /// @code
@@ -187,6 +206,14 @@ void native(const Twine &path, SmallVectorImpl<char> &result);
 ///
 /// @param path A path that is transformed to native format.
 void native(SmallVectorImpl<char> &path);
+
+/// @brief Replaces backslashes with slashes if Windows.
+///
+/// @param path processed path
+/// @result The result of replacing backslashes with forward slashes if Windows.
+/// On Unix, this function is a no-op because backslashes are valid path
+/// chracters.
+std::string convert_to_slash(StringRef path);
 
 /// @}
 /// @name Lexical Observers
@@ -422,6 +449,14 @@ bool is_relative(const Twine &path);
 /// @param path Input path.
 /// @result The cleaned-up \a path.
 StringRef remove_leading_dotslash(StringRef path);
+
+/// @brief In-place remove any './' and optionally '../' components from a path.
+///
+/// @param path processed path
+/// @param remove_dot_dot specify if '../' (except for leading "../") should be
+/// removed
+/// @result True if path was changed
+bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot = false);
 
 } // end namespace path
 } // end namespace sys

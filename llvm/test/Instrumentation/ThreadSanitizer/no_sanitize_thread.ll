@@ -32,5 +32,5 @@ entry:
 ; CHECK-NEXT:   call void @__tsan_func_exit()
 ; CHECK-NEXT:   ret i32 %tmp1
 
-declare void @foo()
+declare void @foo() nounwind
 

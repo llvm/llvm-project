@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -fblocks -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -fblocks -verify %s
 #include "Inputs/system-header-simulator-cxx.h"
 
 typedef __typeof__(sizeof(int)) size_t;
@@ -244,7 +244,7 @@ void testUninitDeleteArray() {
 
 void testUninitFree() {
   int *x;
-  free(x); // expected-warning{{Function call argument is an uninitialized value}}
+  free(x); // expected-warning{{1st function call argument is an uninitialized value}}
 }
 
 void testUninitDeleteSink() {
@@ -376,4 +376,20 @@ void testDoubleDeleteEmptyClass() {
   EmptyClass *foo = new EmptyClass();
   delete foo;
   delete foo;  // expected-warning {{Attempt to delete released memory}}
+}
+
+struct Base {
+  virtual ~Base() {}
+};
+
+struct Derived : Base {
+};
+
+Base *allocate() {
+  return new Derived;
+}
+
+void shouldNotReportLeak() {
+  Derived *p = (Derived *)allocate();
+  delete p;
 }

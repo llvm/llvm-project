@@ -11,6 +11,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 #define PDB_SYMDUMP_UNREACHABLE(Type)                                          \
   if (RequireImpl)                                                             \
@@ -19,7 +20,7 @@ using namespace llvm;
 PDBSymDumper::PDBSymDumper(bool ShouldRequireImpl)
     : RequireImpl(ShouldRequireImpl) {}
 
-PDBSymDumper::~PDBSymDumper() {}
+PDBSymDumper::~PDBSymDumper() = default;
 
 void PDBSymDumper::dump(const PDBSymbolAnnotation &Symbol) {
   PDB_SYMDUMP_UNREACHABLE(PDBSymbolAnnotation)

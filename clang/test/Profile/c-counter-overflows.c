@@ -2,7 +2,7 @@
 // truncated.
 
 // RUN: llvm-profdata merge %S/Inputs/c-counter-overflows.proftext -o %t.profdata
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-counter-overflows.c %s -o - -emit-llvm -fprofile-instr-use=%t.profdata | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-counter-overflows.c %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata | FileCheck %s
 
 typedef unsigned long long uint64_t;
 

@@ -10,7 +10,6 @@
 #ifndef LLVM_CODEGEN_FAULTMAPS_H
 #define LLVM_CODEGEN_FAULTMAPS_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"

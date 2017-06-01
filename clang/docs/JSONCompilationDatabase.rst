@@ -78,6 +78,11 @@ The contracts for each field in the command object are:
    Parameters use shell quoting and shell escaping of quotes, with '``"``'
    and '``\``' being the only special characters. Shell expansion is not
    supported.
+-  **arguments:** The compile command executed as list of strings.
+   Either **arguments** or **command** is required.
+-  **output:** The name of the output created by this compilation step.
+   This field is optional. It can be used to distinguish different processing
+   modes of the same input file.
 
 Build System Integration
 ========================

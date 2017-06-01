@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCInstPrinter.h"
+#include "PPCInstrInfo.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "llvm/MC/MCExpr.h"
@@ -32,6 +33,11 @@ using namespace llvm;
 static cl::opt<bool>
 FullRegNames("ppc-asm-full-reg-names", cl::Hidden, cl::init(false),
              cl::desc("Use full register names when printing assembly"));
+
+// Useful for testing purposes. Prints vs{31-63} as v{0-31} respectively.
+static cl::opt<bool>
+ShowVSRNumsAsVR("ppc-vsr-nums-as-vr", cl::Hidden, cl::init(false),
+             cl::desc("Prints full register names with vs{31-63} as v{0-31}"));
 
 #define PRINT_ALIAS_INSTR
 #include "PPCGenAsmWriter.inc"
@@ -135,18 +141,26 @@ void PPCInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
     printAnnotation(O, Annot);
     return;
   }
-  
-  // For fast-isel, a COPY_TO_REGCLASS may survive this long.  This is
-  // used when converting a 32-bit float to a 64-bit float as part of
-  // conversion to an integer (see PPCFastISel.cpp:SelectFPToI()),
-  // as otherwise we have problems with incorrect register classes
-  // in machine instruction verification.  For now, just avoid trying
-  // to print it as such an instruction has no effect (a 32-bit float
-  // in a register is already in 64-bit form, just with lower
-  // precision).  FIXME: Is there a better solution?
-  if (MI->getOpcode() == TargetOpcode::COPY_TO_REGCLASS)
-    return;
 
+  if (MI->getOpcode() == PPC::DCBF) {
+    unsigned char L = MI->getOperand(0).getImm();
+    if (!L || L == 1 || L == 3) {
+      O << "\tdcbf";
+      if (L == 1 || L == 3)
+        O << "l";
+      if (L == 3)
+        O << "p";
+      O << " ";
+
+      printOperand(MI, 1, O);
+      O << ", ";
+      printOperand(MI, 2, O);
+
+      printAnnotation(O, Annot);
+      return;
+    }
+  }
+  
   if (!printAliasInstr(MI, O))
     printInstruction(MI, O);
   printAnnotation(O, Annot);
@@ -250,6 +264,15 @@ void PPCInstPrinter::printPredicateOperand(const MCInst *MI, unsigned OpNo,
   printOperand(MI, OpNo+1, O);
 }
 
+void PPCInstPrinter::printATBitsAsHint(const MCInst *MI, unsigned OpNo,
+                                       raw_ostream &O) {
+  unsigned Code = MI->getOperand(OpNo).getImm();
+  if (Code == 2)
+    O << "-";
+  else if (Code == 3)
+    O << "+";
+}
+
 void PPCInstPrinter::printU1ImmOperand(const MCInst *MI, unsigned OpNo,
                                        raw_ostream &O) {
   unsigned int Value = MI->getOperand(OpNo).getImm();
@@ -296,6 +319,22 @@ void PPCInstPrinter::printU6ImmOperand(const MCInst *MI, unsigned OpNo,
                                        raw_ostream &O) {
   unsigned int Value = MI->getOperand(OpNo).getImm();
   assert(Value <= 63 && "Invalid u6imm argument!");
+  O << (unsigned int)Value;
+}
+
+void PPCInstPrinter::printU7ImmOperand(const MCInst *MI, unsigned OpNo,
+                                       raw_ostream &O) {
+  unsigned int Value = MI->getOperand(OpNo).getImm();
+  assert(Value <= 127 && "Invalid u7imm argument!");
+  O << (unsigned int)Value;
+}
+
+// Operands of BUILD_VECTOR are signed and we use this to print operands
+// of XXSPLTIB which are unsigned. So we simply truncate to 8 bits and
+// print as unsigned.
+void PPCInstPrinter::printU8ImmOperand(const MCInst *MI, unsigned OpNo,
+                                       raw_ostream &O) {
+  unsigned char Value = MI->getOperand(OpNo).getImm();
   O << (unsigned int)Value;
 }
 
@@ -409,7 +448,7 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
 /// stripRegisterPrefix - This method strips the character prefix from a
 /// register name so that only the number is left.  Used by for linux asm.
 static const char *stripRegisterPrefix(const char *RegName) {
-  if (FullRegNames)
+  if (FullRegNames || ShowVSRNumsAsVR)
     return RegName;
 
   switch (RegName[0]) {
@@ -430,7 +469,24 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                   raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    const char *RegName = getRegisterName(Op.getReg());
+    unsigned Reg = Op.getReg();
+
+    // There are VSX instructions that use VSX register numbering (vs0 - vs63)
+    // as well as those that use VMX register numbering (v0 - v31 which
+    // correspond to vs32 - vs63). If we have an instruction that uses VSX
+    // numbering, we need to convert the VMX registers to VSX registers.
+    // Namely, we print 32-63 when the instruction operates on one of the
+    // VMX registers.
+    // (Please synchronize with PPCAsmPrinter::printOperand)
+    if ((MII.get(MI->getOpcode()).TSFlags & PPCII::UseVSXReg) &&
+        !ShowVSRNumsAsVR) {
+      if (PPCInstrInfo::isVRRegister(Reg))
+        Reg = PPC::VSX32 + (Reg - PPC::V0);
+      else if (PPCInstrInfo::isVFRegister(Reg))
+        Reg = PPC::VSX32 + (Reg - PPC::VF0);
+    }
+
+    const char *RegName = getRegisterName(Reg);
     // The linux and AIX assembler does not take register prefixes.
     if (!isDarwinSyntax())
       RegName = stripRegisterPrefix(RegName);

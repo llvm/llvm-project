@@ -1,0 +1,2 @@
+RUN: echo "\"" | FileCheck %s
+CHECK: {{^"$}}

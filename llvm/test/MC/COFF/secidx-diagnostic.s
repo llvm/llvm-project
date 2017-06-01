@@ -2,7 +2,9 @@
 // RUN: FileCheck %s < %t
 
 // CHECK: symbol 'bar' can not be undefined
+// CHECK: symbol 'baz' can not be undefined
 
 .data
 foo:
         .secidx bar
+        .secidx baz

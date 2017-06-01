@@ -16,6 +16,15 @@ int a __attribute__((deprecated("warning")));
 // CHECK: int b {{\[}}[gnu::deprecated("warning")]];
 int b [[gnu::deprecated("warning")]];
 
+// CHECK: __declspec(deprecated("warning"))
+__declspec(deprecated("warning")) int c;
+
+// CHECK: int d {{\[}}[deprecated("warning")]];
+int d [[deprecated("warning")]];
+
+// CHECK: __attribute__((deprecated("warning", "fixit")));
+int e __attribute__((deprecated("warning", "fixit")));
+
 // CHECK: int cxx11_alignas alignas(4);
 alignas(4) int cxx11_alignas;
 

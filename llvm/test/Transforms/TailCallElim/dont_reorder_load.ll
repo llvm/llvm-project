@@ -1,4 +1,4 @@
-; RUN: opt < %s -tailcallelim -S | grep call | count 3
+; RUN: opt < %s -tailcallelim -S | grep call | count 4
 ; PR4323
 
 ; Several cases where tail call elimination should not move the load above the
@@ -59,6 +59,24 @@ else:		; preds = %entry
 	%tmp7 = add i32 %start_arg, 1		; <i32> [#uses=1]
 	%tmp8 = call fastcc i32 @no_tailrecelim_3(i32* %a_arg, i32 %a_len_arg, i32 %tmp7)		; <i32> [#uses=1]
 	%tmp9 = load volatile i32, i32* %a_arg		; <i32> [#uses=1]
+	%tmp10 = add i32 %tmp9, %tmp8		; <i32> [#uses=1]
+	ret i32 %tmp10
+}
+
+; This load can NOT be moved above the call because the a_arg is not
+; sufficiently dereferenceable.
+define fastcc i32 @no_tailrecelim_4(i32* dereferenceable(2) %a_arg, i32 %a_len_arg, i32 %start_arg) readonly {
+entry:
+	%tmp2 = icmp sge i32 %start_arg, %a_len_arg		; <i1> [#uses=1]
+	br i1 %tmp2, label %if, label %else
+
+if:		; preds = %entry
+	ret i32 0
+
+else:		; preds = %entry
+	%tmp7 = add i32 %start_arg, 1		; <i32> [#uses=1]
+	%tmp8 = call fastcc i32 @no_tailrecelim_4(i32* %a_arg, i32 %a_len_arg, i32 %tmp7)		; <i32> [#uses=1]
+	%tmp9 = load i32, i32* %a_arg		; <i32> [#uses=1]
 	%tmp10 = add i32 %tmp9, %tmp8		; <i32> [#uses=1]
 	ret i32 %tmp10
 }

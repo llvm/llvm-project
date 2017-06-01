@@ -21,16 +21,16 @@ namespace dsymutil {
 using namespace llvm::object;
 
 DebugMapObject::DebugMapObject(StringRef ObjectFilename,
-                               sys::TimeValue Timestamp)
+                               sys::TimePoint<std::chrono::seconds> Timestamp)
     : Filename(ObjectFilename), Timestamp(Timestamp) {}
 
-bool DebugMapObject::addSymbol(StringRef Name, uint64_t ObjectAddress,
+bool DebugMapObject::addSymbol(StringRef Name, Optional<uint64_t> ObjectAddress,
                                uint64_t LinkedAddress, uint32_t Size) {
   auto InsertResult = Symbols.insert(
       std::make_pair(Name, SymbolMapping(ObjectAddress, LinkedAddress, Size)));
 
-  if (InsertResult.second)
-    AddressToMapping[ObjectAddress] = &*InsertResult.first;
+  if (ObjectAddress && InsertResult.second)
+    AddressToMapping[*ObjectAddress] = &*InsertResult.first;
   return InsertResult.second;
 }
 
@@ -47,8 +47,11 @@ void DebugMapObject::print(raw_ostream &OS) const {
       Entries.begin(), Entries.end(),
       [](const Entry &LHS, const Entry &RHS) { return LHS.first < RHS.first; });
   for (const auto &Sym : Entries) {
-    OS << format("\t%016" PRIx64 " => %016" PRIx64 "+0x%x\t%s\n",
-                 uint64_t(Sym.second.ObjectAddress),
+    if (Sym.second.ObjectAddress)
+      OS << format("\t%016" PRIx64, uint64_t(*Sym.second.ObjectAddress));
+    else
+      OS << "\t????????????????";
+    OS << format(" => %016" PRIx64 "+0x%x\t%s\n",
                  uint64_t(Sym.second.BinaryAddress), uint32_t(Sym.second.Size),
                  Sym.first.data());
   }
@@ -59,8 +62,9 @@ void DebugMapObject::print(raw_ostream &OS) const {
 void DebugMapObject::dump() const { print(errs()); }
 #endif
 
-DebugMapObject &DebugMap::addDebugMapObject(StringRef ObjectFilePath,
-                                            sys::TimeValue Timestamp) {
+DebugMapObject &
+DebugMap::addDebugMapObject(StringRef ObjectFilePath,
+                            sys::TimePoint<std::chrono::seconds> Timestamp) {
   Objects.emplace_back(new DebugMapObject(ObjectFilePath, Timestamp));
   return *Objects.back();
 }
@@ -129,14 +133,14 @@ struct MappingTraits<dsymutil::DebugMapObject>::YamlDMO {
   dsymutil::DebugMapObject denormalize(IO &IO);
 
   std::string Filename;
-  sys::TimeValue::SecondsType Timestamp;
+  int64_t Timestamp;
   std::vector<dsymutil::DebugMapObject::YAMLSymbolMapping> Entries;
 };
 
 void MappingTraits<std::pair<std::string, DebugMapObject::SymbolMapping>>::
     mapping(IO &io, std::pair<std::string, DebugMapObject::SymbolMapping> &s) {
   io.mapRequired("sym", s.first);
-  io.mapRequired("objAddr", s.second.ObjectAddress);
+  io.mapOptional("objAddr", s.second.ObjectAddress);
   io.mapRequired("binAddr", s.second.BinaryAddress);
   io.mapOptional("size", s.second.Size);
 }
@@ -199,7 +203,7 @@ void MappingTraits<std::unique_ptr<dsymutil::DebugMap>>::mapping(
 MappingTraits<dsymutil::DebugMapObject>::YamlDMO::YamlDMO(
     IO &io, dsymutil::DebugMapObject &Obj) {
   Filename = Obj.Filename;
-  Timestamp = Obj.getTimestamp().toEpochTime();
+  Timestamp = sys::toTimeT(Obj.getTimestamp());
   Entries.reserve(Obj.Symbols.size());
   for (auto &Entry : Obj.Symbols)
     Entries.push_back(std::make_pair(Entry.getKey(), Entry.getValue()));
@@ -225,19 +229,24 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
     // look them up here and rewrite them.
     for (const auto &Sym : ErrOrObjectFile->symbols()) {
       uint64_t Address = Sym.getValue();
-      ErrorOr<StringRef> Name = Sym.getName();
-      if (!Name)
+      Expected<StringRef> Name = Sym.getName();
+      if (!Name ||
+          (Sym.getFlags() & (SymbolRef::SF_Absolute | SymbolRef::SF_Common))) {
+        // TODO: Actually report errors helpfully.
+        if (!Name)
+          consumeError(Name.takeError());
         continue;
+      }
       SymbolAddresses[*Name] = Address;
     }
   }
 
-  sys::TimeValue TV;
-  TV.fromEpochTime(Timestamp);
-  dsymutil::DebugMapObject Res(Path, TV);
+  dsymutil::DebugMapObject Res(Path, sys::toTimePoint(Timestamp));
   for (auto &Entry : Entries) {
     auto &Mapping = Entry.second;
-    uint64_t ObjAddress = Mapping.ObjectAddress;
+    Optional<uint64_t> ObjAddress;
+    if (Mapping.ObjectAddress)
+      ObjAddress = *Mapping.ObjectAddress;
     auto AddressIt = SymbolAddresses.find(Entry.first);
     if (AddressIt != SymbolAddresses.end())
       ObjAddress = AddressIt->getValue();

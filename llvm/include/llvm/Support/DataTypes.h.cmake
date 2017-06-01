@@ -21,8 +21,6 @@
 
 /* Please leave this file C-compatible. */
 
-/* Please keep this file in sync with DataTypes.h.in */
-
 #ifndef SUPPORT_DATATYPES_H
 #define SUPPORT_DATATYPES_H
 
@@ -37,36 +35,43 @@
 #include <math.h>
 #endif
 
+#ifdef __cplusplus
+#include <cinttypes>
+#else
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
+#endif
 
+#ifdef __cplusplus
+#include <cstdint>
+#else
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #else
 #error "Compiler must provide an implementation of stdint.h"
 #endif
+#endif
 
 #ifndef _MSC_VER
 
-/* Note that this header's correct operation depends on __STDC_LIMIT_MACROS
-   being defined.  We would define it here, but in order to prevent Bad Things
-   happening when system headers or C++ STL headers include stdint.h before we
-   define it here, we define it on the g++ command line (in Makefile.rules). */
-#if !defined(__STDC_LIMIT_MACROS)
-# error "Must #define __STDC_LIMIT_MACROS before #including Support/DataTypes.h"
+#if !defined(UINT32_MAX)
+# error "The standard header <cstdint> is not C++11 compliant. Must #define "\
+        "__STDC_LIMIT_MACROS before #including Support/DataTypes.h"
 #endif
 
-#if !defined(__STDC_CONSTANT_MACROS)
-# error "Must #define __STDC_CONSTANT_MACROS before " \
-        "#including Support/DataTypes.h"
+#if !defined(UINT32_C)
+# error "The standard header <cstdint> is not C++11 compliant. Must #define "\
+        "__STDC_CONSTANT_MACROS before #including Support/DataTypes.h"
 #endif
 
 /* Note that <inttypes.h> includes <stdint.h>, if this is a C99 system. */
 #include <sys/types.h>
 
 #ifdef _AIX
-#include "llvm/Support/AIXDataTypesFix.h"
+// GCC is strict about defining large constants: they must have LL modifier.
+#undef INT64_MAX
+#undef INT64_MIN
 #endif
 
 /* Handle incorrect definition of uint64_t as u_int64_t */
@@ -79,14 +84,14 @@ typedef u_int64_t uint64_t;
 #endif
 
 #else /* _MSC_VER */
+#ifdef __cplusplus
+#include <cstdlib>
+#include <cstddef>
+#else
 #include <stdlib.h>
 #include <stddef.h>
-#include <sys/types.h>
-#ifdef __cplusplus
-#include <cmath>
-#else
-#include <math.h>
 #endif
+#include <sys/types.h>
 
 #if defined(_WIN64)
 typedef signed __int64 ssize_t;
@@ -127,4 +132,4 @@ typedef signed int ssize_t;
 #define HUGE_VALF (float)HUGE_VAL
 #endif
 
-#endif  /* SUPPORT_DATATYPES_H */
+#endif /* SUPPORT_DATATYPES_H */

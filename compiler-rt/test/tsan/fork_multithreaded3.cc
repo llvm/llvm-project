@@ -1,5 +1,4 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
-// UNSUPPORTED: darwin
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>

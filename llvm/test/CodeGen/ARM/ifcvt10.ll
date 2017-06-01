@@ -4,7 +4,7 @@
 ; micro-coded and would have long issue latency even if predicated on
 ; false predicate.
 
-define void @t(double %a, double %b, double %c, double %d, i32* nocapture %solutions, double* nocapture %x) nounwind {
+define void @t(double %a, double %b, double %c, double %d, i32* nocapture %solutions, double* nocapture %x) nounwind "no-frame-pointer-elim"="true" {
 entry:
 ; CHECK-LABEL: t:
 ; CHECK: vpop {d8}

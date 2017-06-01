@@ -41,6 +41,11 @@ namespace COFF {
       '\xaf', '\x20', '\xfa', '\xf6', '\x6a', '\xa4', '\xdc', '\xb8',
   };
 
+  static const char ClGlObjMagic[] = {
+      '\x38', '\xfe', '\xb3', '\x0c', '\xa5', '\xd9', '\xab', '\x4d',
+      '\xac', '\x9b', '\xd6', '\xb6', '\x22', '\x26', '\x53', '\xc2',
+  };
+
   // Sizes in bytes of various things in the COFF format.
   enum {
     Header16Size   = 20,
@@ -377,7 +382,6 @@ namespace COFF {
     uint8_t  unused[10];
   };
 
-  /// These are not documented in the spec, but are located in WinNT.h.
   enum WeakExternalCharacteristics {
     IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY = 1,
     IMAGE_WEAK_EXTERN_SEARCH_LIBRARY   = 2,
@@ -530,7 +534,7 @@ namespace COFF {
     EXCEPTION_TABLE,
     CERTIFICATE_TABLE,
     BASE_RELOCATION_TABLE,
-    DEBUG,
+    DEBUG_DIRECTORY,
     ARCHITECTURE,
     GLOBAL_PTR,
     TLS_TABLE,
@@ -599,7 +603,13 @@ namespace COFF {
     IMAGE_DEBUG_TYPE_OMAP_TO_SRC   = 7,
     IMAGE_DEBUG_TYPE_OMAP_FROM_SRC = 8,
     IMAGE_DEBUG_TYPE_BORLAND       = 9,
-    IMAGE_DEBUG_TYPE_CLSID         = 11
+    IMAGE_DEBUG_TYPE_RESERVED10    = 10,
+    IMAGE_DEBUG_TYPE_CLSID         = 11,
+    IMAGE_DEBUG_TYPE_VC_FEATURE    = 12,
+    IMAGE_DEBUG_TYPE_POGO          = 13,
+    IMAGE_DEBUG_TYPE_ILTCG         = 14,
+    IMAGE_DEBUG_TYPE_MPX           = 15,
+    IMAGE_DEBUG_TYPE_REPRO         = 16,
   };
 
   enum BaseRelocationType {
@@ -652,21 +662,12 @@ namespace COFF {
     }
 
     ImportNameType getNameType() const {
-      return static_cast<ImportNameType>((TypeInfo & 0x1C) >> 3);
+      return static_cast<ImportNameType>((TypeInfo & 0x1C) >> 2);
     }
   };
 
   enum CodeViewIdentifiers {
-    DEBUG_LINE_TABLES_HAVE_COLUMN_RECORDS = 0x1,
     DEBUG_SECTION_MAGIC = 0x4,
-    DEBUG_SYMBOL_SUBSECTION = 0xF1,
-    DEBUG_LINE_TABLE_SUBSECTION = 0xF2,
-    DEBUG_STRING_TABLE_SUBSECTION = 0xF3,
-    DEBUG_INDEX_SUBSECTION = 0xF4,
-
-    // Symbol subsections are split into records of different types.
-    DEBUG_SYMBOL_TYPE_PROC_START = 0x1147,
-    DEBUG_SYMBOL_TYPE_PROC_END = 0x114F
   };
 
   inline bool isReservedSectionNumber(int32_t SectionNumber) {

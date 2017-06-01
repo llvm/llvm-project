@@ -1,0 +1,7 @@
+RUN: not llvm-dwp %p/../Inputs/compressfail/a.dwo -o %t 2>&1 | FileCheck %s
+RUN: not llvm-dwp %p/../Inputs/empty_compressed_section.dwo -o %t 2>&1 | FileCheck %s
+RUN: not llvm-dwp %p/../Inputs/invalid_compressed.dwo -o %t 2>&1 | FileCheck %s
+
+REQUIRES: zlib
+
+CHECK: error: failure while decompressing compressed section: 'zdebug_{{.*}}.dwo'

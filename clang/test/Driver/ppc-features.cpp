@@ -12,6 +12,50 @@
 // RUN: not %clang -target mips64-linux-gnu -faltivec -fsyntax-only %s 2>&1 | FileCheck %s
 // RUN: not %clang -target sparc-unknown-solaris -faltivec -fsyntax-only %s 2>&1 | FileCheck %s
 
+// check -msoft-float option for ppc32
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTFLOAT %s
+// CHECK-SOFTFLOAT: "-target-feature" "-hard-float"
+
+// check -mfloat-abi=soft option for ppc32
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -mfloat-abi=soft -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-FLOATABISOFT %s
+// CHECK-FLOATABISOFT: "-target-feature" "-hard-float"
+
+// check -mhard-float option for ppc32
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -mhard-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-HARDFLOAT %s
+// CHECK-HARDFLOAT-NOT: "-target-feature" "-hard-float"
+
+// check -mfloat-abi=hard option for ppc32
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -mfloat-abi=hard -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-FLOATABIHARD %s
+// CHECK-FLOATABIHARD-NOT: "-target-feature" "-hard-float"
+
+// check combine -mhard-float -msoft-float option for ppc32
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -mhard-float -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-HARDSOFT %s
+// CHECK-HARDSOFT: "-target-feature" "-hard-float"
+
+// check combine -msoft-float -mhard-float option for ppc32
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -msoft-float -mhard-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTHARD %s
+// CHECK-SOFTHARD-NOT: "-target-feature" "-hard-float"
+
+// check -mfloat-abi=x option
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -mfloat-abi=x -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ERRMSG %s
+// CHECK-ERRMSG: error: invalid float ABI '-mfloat-abi=x'
+
+// check -msoft-float option for ppc64
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTFLOAT64 %s
+// CHECK-SOFTFLOAT64: "-target-feature" "-hard-float"
+
+// check -mfloat-abi=soft option for ppc64
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mfloat-abi=soft -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-FLOATABISOFT64 %s
+// CHECK-FLOATABISOFT64: "-target-feature" "-hard-float"
+
+// check -msoft-float option for ppc64
+// RUN: %clang -target powerpc64le-unknown-linux-gnu %s -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTFLOAT64le %s
+// CHECK-SOFTFLOAT64le: "-target-feature" "-hard-float"
+
+// check -mfloat-abi=soft option for ppc64
+// RUN: %clang -target powerpc64le-unknown-linux-gnu %s -mfloat-abi=soft -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-FLOATABISOFT64le %s
+// CHECK-FLOATABISOFT64le: "-target-feature" "-hard-float"
+
 // CHECK: invalid argument '-faltivec' only allowed with 'ppc/ppc64/ppc64le'
 
 // Check that -fno-altivec and -mno-altivec correctly disable the altivec
@@ -118,6 +162,12 @@
 
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-crbits -mcrbits -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-CRBITS %s
 // CHECK-CRBITS: "-target-feature" "+crbits"
+
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-longcall -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOLONGCALL %s
+// CHECK-NOLONGCALL: "-target-feature" "-longcall"
+
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-longcall -mlongcall -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-LONGCALL %s
+// CHECK-LONGCALL: "-target-feature" "+longcall"
 
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-invariant-function-descriptors -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOINVFUNCDESC %s
 // CHECK-NOINVFUNCDESC: "-target-feature" "-invariant-function-descriptors"

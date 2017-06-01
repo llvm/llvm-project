@@ -17,7 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -26,7 +26,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/DataStream.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -58,6 +58,11 @@ static cl::opt<bool> PreserveAssemblyUseListOrder(
     "preserve-ll-uselistorder",
     cl::desc("Preserve use-list order when writing LLVM assembly."),
     cl::init(false), cl::Hidden);
+
+static cl::opt<bool>
+    MaterializeMetadata("materialize-metadata",
+                        cl::desc("Load module without materializing metadata, "
+                                 "then materialize only the metadata"));
 
 namespace {
 
@@ -132,38 +137,36 @@ static void diagnosticHandler(const DiagnosticInfo &DI, void *Context) {
     exit(1);
 }
 
+static ExitOnError ExitOnErr;
+
+static std::unique_ptr<Module> openInputFile(LLVMContext &Context) {
+  std::unique_ptr<MemoryBuffer> MB =
+      ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(InputFilename)));
+  std::unique_ptr<Module> M =
+      ExitOnErr(getOwningLazyBitcodeModule(std::move(MB), Context,
+                                           /*ShouldLazyLoadMetadata=*/true));
+  if (MaterializeMetadata)
+    ExitOnErr(M->materializeMetadata());
+  else
+    ExitOnErr(M->materializeAll());
+  return M;
+}
+
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
 
-  LLVMContext &Context = getGlobalContext();
+  ExitOnErr.setBanner(std::string(argv[0]) + ": error: ");
+
+  LLVMContext Context;
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 
   Context.setDiagnosticHandler(diagnosticHandler, argv[0]);
 
   cl::ParseCommandLineOptions(argc, argv, "llvm .bc -> .ll disassembler\n");
 
-  std::string ErrorMessage;
-  std::unique_ptr<Module> M;
-
-  // Use the bitcode streaming interface
-  std::unique_ptr<DataStreamer> Streamer =
-      getDataFileStreamer(InputFilename, &ErrorMessage);
-  if (Streamer) {
-    std::string DisplayFilename;
-    if (InputFilename == "-")
-      DisplayFilename = "<stdin>";
-    else
-      DisplayFilename = InputFilename;
-    ErrorOr<std::unique_ptr<Module>> MOrErr =
-        getStreamedBitcodeModule(DisplayFilename, std::move(Streamer), Context);
-    M = std::move(*MOrErr);
-    M->materializeAllPermanently();
-  } else {
-    errs() << argv[0] << ": " << ErrorMessage << '\n';
-    return 1;
-  }
+  std::unique_ptr<Module> M = openInputFile(Context);
 
   // Just use stdout.  We won't actually print anything on it.
   if (DontPrint)

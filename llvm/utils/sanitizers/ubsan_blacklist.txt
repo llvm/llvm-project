@@ -1,0 +1,7 @@
+# This blacklist should be applied when LLVM is built
+# with -fsanitize=undefined instrumentation. It exists
+# because libstdc++ has some undefined behavior issues
+# in some of the headers, in particular, stl_tree.h.
+
+# upcast of address with insufficient space for an object of type std::_Rb_tree_node<...>
+src:*bits/stl_tree.h

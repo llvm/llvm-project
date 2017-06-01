@@ -41,3 +41,6 @@ DEFINE_COMPILERRT_FUNCTION(__floatundixf)
 END_COMPILERRT_FUNCTION(__floatundixf)
 
 #endif // __i386__
+
+NO_EXEC_STACK_DIRECTIVE
+

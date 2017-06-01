@@ -12,6 +12,7 @@ module Clang_AST {
   umbrella "AST"
 
   textual header "AST/BuiltinTypes.def"
+  textual header "AST/OperationKinds.def"
   textual header "AST/TypeLocNodes.def"
   textual header "AST/TypeNodes.def"
 
@@ -37,10 +38,12 @@ module Clang_Basic {
   textual header "Basic/BuiltinsSystemZ.def"
   textual header "Basic/BuiltinsWebAssembly.def"
   textual header "Basic/BuiltinsX86.def"
+  textual header "Basic/BuiltinsX86_64.def"
   textual header "Basic/BuiltinsXCore.def"
   textual header "Basic/DiagnosticOptions.def"
   textual header "Basic/LangOptions.def"
   textual header "Basic/OpenCLExtensions.def"
+  textual header "Basic/OpenCLImageTypes.def"
   textual header "Basic/OpenMPKinds.def"
   textual header "Basic/OperatorKinds.def"
   textual header "Basic/Sanitizers.def"
@@ -108,6 +111,9 @@ module Clang_StaticAnalyzer_Core {
   umbrella "StaticAnalyzer/Core"
 
   textual header "StaticAnalyzer/Core/Analyses.def"
+  textual header "StaticAnalyzer/Core/PathSensitive/SVals.def"
+  textual header "StaticAnalyzer/Core/PathSensitive/Symbols.def"
+  textual header "StaticAnalyzer/Core/PathSensitive/Regions.def"
 
   module * { export * }
 }

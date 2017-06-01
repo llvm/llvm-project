@@ -1,12 +1,11 @@
-// REQUIRES: shell
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
 // (sanity check)
 
 // RUN: rm -rf %t.dir
 // RUN: mkdir -p %t.dir
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-output=plist-html -o %t.dir/index.plist %s
-// RUN: ls %t.dir | grep \\.html | count 1
-// RUN: grep \\.html %t.dir/index.plist | count 1
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=plist-html -o %t.dir/index.plist %s
+// RUN: ls %t.dir | grep '\.html' | count 1
+// RUN: grep '\.html' %t.dir/index.plist | count 1
 
 // This tests two things: that the two calls to null_deref below are coalesced
 // into a single bug by both the plist and HTML diagnostics, and that the plist

@@ -28,7 +28,7 @@ return:
 ; ARM64-LABEL: @widen_switch_i16(
 ; ARM64:       %0 = zext i16 %trunc to i32
 ; ARM64-NEXT:  switch i32 %0, label %sw.default [
-; ARM64-NEXT:    i32 1, label %return
+; ARM64-NEXT:    i32 1, label %sw.bb0
 ; ARM64-NEXT:    i32 65535, label %sw.bb1
 }
 
@@ -58,7 +58,7 @@ return:
 ; ARM64-LABEL: @widen_switch_i17(
 ; ARM64:       %0 = zext i17 %trunc to i32
 ; ARM64-NEXT:  switch i32 %0, label %sw.default [
-; ARM64-NEXT:    i32 10, label %return
+; ARM64-NEXT:    i32 10, label %sw.bb0
 ; ARM64-NEXT:    i32 131071, label %sw.bb1
 }
 
@@ -89,7 +89,7 @@ return:
 ; ARM64-LABEL: @widen_switch_i16_sext(
 ; ARM64:       %0 = sext i2 %a to i32
 ; ARM64-NEXT:  switch i32 %0, label %sw.default [
-; ARM64-NEXT:    i32 1, label %return
+; ARM64-NEXT:    i32 1, label %sw.bb0
 ; ARM64-NEXT:    i32 -1, label %sw.bb1
 }
 

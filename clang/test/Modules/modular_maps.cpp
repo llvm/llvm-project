@@ -16,4 +16,4 @@
 #include "b.h" // expected-error {{private header}}
 @import C;
 const int v = a + c + x;
-const int val = a + b + c + x; // expected-error {{undeclared identifier}}
+const int val = a + b + c + x;

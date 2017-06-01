@@ -15,7 +15,7 @@ entry:
 ; load-relax-NOT: 	lw	${{[0-9]+}}, $CPI0_0 # 16 bit inst
 ; load-relax1: lw	${{[0-9]+}}, $CPI0_0
 ; load-relax:	jrc	 $ra
-; load-relax:	.align	2
+; load-relax:	.p2align	2
 ; load-relax: $CPI0_0:
 ; load-relax:	.4byte	3735943886
 ; load-relax:	.end	t

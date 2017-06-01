@@ -12,7 +12,7 @@ set(UBSAN_STANDALONE_SOURCES
   ubsan_init_standalone.cc
   )
 
-set(UBSAN_CXX_SOURCES
+set(UBSAN_CXXABI_SOURCES
   ubsan_handlers_cxx.cc
   ubsan_type_hash.cc
   ubsan_type_hash_itanium.cc
@@ -22,17 +22,23 @@ set(UBSAN_CXX_SOURCES
 include_directories(..)
 
 set(UBSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
-append_no_rtti_flag(UBSAN_CFLAGS)
-set(UBSAN_STANDALONE_CFLAGS ${SANITIZER_COMMON_CFLAGS})
-append_no_rtti_flag(UBSAN_STANDALONE_CFLAGS)
-set(UBSAN_CXXFLAGS ${SANITIZER_COMMON_CFLAGS})
+append_rtti_flag(OFF UBSAN_CFLAGS)
+append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_CFLAGS)
 
-add_custom_target(ubsan)
+set(UBSAN_STANDALONE_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+append_rtti_flag(OFF UBSAN_STANDALONE_CFLAGS)
+append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_STANDALONE_CFLAGS)
+
+set(UBSAN_CXXFLAGS ${SANITIZER_COMMON_CFLAGS})
+append_rtti_flag(ON UBSAN_CXXFLAGS)
+append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_CXXFLAGS)
+
+add_compiler_rt_component(ubsan)
 
 if(APPLE)
   set(UBSAN_COMMON_SOURCES ${UBSAN_SOURCES})
   if(SANITIZER_CAN_USE_CXXABI)
-    list(APPEND UBSAN_COMMON_SOURCES ${UBSAN_CXX_SOURCES})
+    list(APPEND UBSAN_COMMON_SOURCES ${UBSAN_CXXABI_SOURCES})
   endif()
 
   # Common parts of UBSan runtime.
@@ -50,6 +56,9 @@ if(APPLE)
       SOURCES ${UBSAN_STANDALONE_SOURCES}
       CFLAGS ${UBSAN_STANDALONE_CFLAGS})
 
+    add_weak_symbols("ubsan" WEAK_SYMBOL_LINK_FLAGS)
+    add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
+
     add_compiler_rt_runtime(clang_rt.ubsan
       SHARED
       OS ${SANITIZER_COMMON_SUPPORTED_OS}
@@ -58,6 +67,7 @@ if(APPLE)
                   RTUbsan_standalone
                   RTSanitizerCommon
                   RTSanitizerCommonLibc
+      LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
       PARENT_TARGET ubsan)
   endif()
 
@@ -66,7 +76,16 @@ else()
   add_compiler_rt_object_libraries(RTUbsan
     ARCHS ${UBSAN_COMMON_SUPPORTED_ARCH}
     SOURCES ${UBSAN_SOURCES} CFLAGS ${UBSAN_CFLAGS})
-  # C++-specific parts of UBSan runtime. Requires a C++ ABI library.
+
+  if(SANITIZER_CAN_USE_CXXABI)
+    # C++-specific parts of UBSan runtime. Requires a C++ ABI library.
+    set(UBSAN_CXX_SOURCES ${UBSAN_CXXABI_SOURCES})
+  else()
+    # Dummy target if we don't have C++ ABI library.
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/cxx_dummy.cc "")
+    set(UBSAN_CXX_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/cxx_dummy.cc)
+  endif()
+
   add_compiler_rt_object_libraries(RTUbsan_cxx
     ARCHS ${UBSAN_COMMON_SUPPORTED_ARCH}
     SOURCES ${UBSAN_CXX_SOURCES} CFLAGS ${UBSAN_CXXFLAGS})
@@ -109,5 +128,3 @@ else()
     endif()
   endif()
 endif()
-
-add_dependencies(compiler-rt ubsan)

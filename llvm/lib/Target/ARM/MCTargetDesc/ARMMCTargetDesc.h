@@ -28,6 +28,7 @@ class MCObjectWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCStreamer;
+class MCTargetOptions;
 class MCRelocationInfo;
 class MCTargetStreamer;
 class StringRef;
@@ -36,8 +37,10 @@ class Triple;
 class raw_ostream;
 class raw_pwrite_stream;
 
-extern Target TheARMLETarget, TheThumbLETarget;
-extern Target TheARMBETarget, TheThumbBETarget;
+Target &getTheARMLETarget();
+Target &getTheThumbLETarget();
+Target &getTheARMBETarget();
+Target &getTheThumbBETarget();
 
 namespace ARM_MC {
 std::string ParseARMTriple(const Triple &TT, StringRef CPU);
@@ -66,27 +69,33 @@ MCCodeEmitter *createARMBEMCCodeEmitter(const MCInstrInfo &MCII,
 
 MCAsmBackend *createARMAsmBackend(const Target &T, const MCRegisterInfo &MRI,
                                   const Triple &TT, StringRef CPU,
+                                  const MCTargetOptions &Options,
                                   bool IsLittleEndian);
 
 MCAsmBackend *createARMLEAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                    const Triple &TT, StringRef CPU);
+                                    const Triple &TT, StringRef CPU,
+                                    const MCTargetOptions &Options);
 
 MCAsmBackend *createARMBEAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                    const Triple &TT, StringRef CPU);
+                                    const Triple &TT, StringRef CPU,
+                                    const MCTargetOptions &Options);
 
 MCAsmBackend *createThumbLEAsmBackend(const Target &T,
                                       const MCRegisterInfo &MRI,
-                                      const Triple &TT, StringRef CPU);
+                                      const Triple &TT, StringRef CPU,
+                                      const MCTargetOptions &Options);
 
 MCAsmBackend *createThumbBEAsmBackend(const Target &T,
                                       const MCRegisterInfo &MRI,
-                                      const Triple &TT, StringRef CPU);
+                                      const Triple &TT, StringRef CPU,
+                                      const MCTargetOptions &Options);
 
 // Construct a PE/COFF machine code streamer which will generate a PE/COFF
 // object file.
 MCStreamer *createARMWinCOFFStreamer(MCContext &Context, MCAsmBackend &MAB,
                                      raw_pwrite_stream &OS,
-                                     MCCodeEmitter *Emitter, bool RelaxAll);
+                                     MCCodeEmitter *Emitter, bool RelaxAll,
+                                     bool IncrementalLinkerCompatible);
 
 /// Construct an ELF Mach-O object writer.
 MCObjectWriter *createARMELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,

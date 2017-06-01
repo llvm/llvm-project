@@ -1,11 +1,6 @@
 Overview
 ========
 
-.. warning::
-
-   If you are using a released version of LLVM, see `the download page
-   <http://llvm.org/releases/>`_ to find your documentation.
-
 The LLVM compiler infrastructure supports a wide range of projects, from
 industrial strength compilers to specialized JIT applications to small
 research projects.
@@ -65,12 +60,13 @@ representation.
    :hidden:
 
    CMake
+   CMakePrimer
+   AdvancedBuilds
    HowToBuildOnARM
    HowToCrossCompileLLVM
    CommandGuide/index
    GettingStarted
    GettingStartedVS
-   BuildingLLVMWithAutotools
    FAQ
    Lexicon
    HowToAddABuilder
@@ -86,6 +82,9 @@ representation.
    GetElementPtr
    Frontend/PerformanceTips
    MCJITDesignAndImplementation
+   CodeOfConduct
+   CompileCudaWithLLVM
+   ReportingGuide
 
 :doc:`GettingStarted`
    Discusses how to get up and running quickly with the LLVM infrastructure.
@@ -105,10 +104,6 @@ representation.
 :doc:`GettingStartedVS`
    An addendum to the main Getting Started guide for those using Visual Studio
    on Windows.
-
-:doc:`BuildingLLVMWithAutotools`
-   An addendum to the Getting Started guide with instructions for building LLVM
-   with the Autotools build system.
 
 :doc:`tutorial/index`
    Tutorials about using LLVM. Includes a tutorial about making a custom
@@ -178,6 +173,8 @@ For developers of applications which use LLVM as a library.
    ProgrammersManual
    Extensions
    LibFuzzer
+   ScudoHardenedAllocator
+   OptBisect
 
 :doc:`LLVM Language Reference Manual <LangRef>`
   Defines the LLVM intermediate representation and the assembly form of the
@@ -222,6 +219,12 @@ For developers of applications which use LLVM as a library.
 :doc:`LibFuzzer`
   A library for writing in-process guided fuzzers.
 
+:doc:`ScudoHardenedAllocator`
+  A library that implements a security-hardened `malloc()`.
+
+:doc:`OptBisect`
+  A command line option for debugging optimization-induced failures.
+
 Subsystem Documentation
 =======================
 
@@ -231,6 +234,7 @@ For API clients and LLVM developers.
    :hidden:
 
    AliasAnalysis
+   MemorySSA
    BitCodeFormat
    BlockFrequencyTerminology
    BranchWeightMetadata
@@ -259,9 +263,13 @@ For API clients and LLVM developers.
    CoverageMappingFormat
    Statepoints
    MergeFunctions
-   BitSets
+   TypeMetadata
    FaultMaps
    MIRLangRef
+   Coroutines
+   GlobalISel
+   XRay
+   PDB/index
 
 :doc:`WritingAnLLVMPass`
    Information on how to write LLVM transformations and analyses.
@@ -285,6 +293,9 @@ For API clients and LLVM developers.
 :doc:`AliasAnalysis`
    Information on how to write a new alias analysis implementation or how to
    use existing analyses.
+
+:doc:`MemorySSA`
+   Information about the MemorySSA utility in LLVM, as well as how to use it.
 
 :doc:`GarbageCollection`
    The interfaces source-language compilers should use for compiling GC'd
@@ -371,6 +382,21 @@ For API clients and LLVM developers.
 :doc:`FaultMaps`
   LLVM support for folding control flow into faulting machine instructions.
 
+:doc:`CompileCudaWithLLVM`
+  LLVM support for CUDA.
+
+:doc:`Coroutines`
+  LLVM support for coroutines.
+
+:doc:`GlobalISel`
+  This describes the prototype instruction selection replacement, GlobalISel.
+
+:doc:`XRay`
+  High-level documentation of how to use XRay in LLVM.
+
+:doc:`The Microsoft PDB File Format <PDB/index>`
+  A detailed description of the Microsoft PDB (Program Database) file format.
+
 Development Process Documentation
 =================================
 
@@ -380,7 +406,6 @@ Information about LLVM's development process.
    :hidden:
 
    DeveloperPolicy
-   MakefileGuide
    Projects
    LLVMBuild
    HowToReleaseLLVM
@@ -400,9 +425,6 @@ Information about LLVM's development process.
 :doc:`LLVMBuild`
   Describes the LLVMBuild organization and files used by LLVM to specify
   component descriptions.
-
-:doc:`MakefileGuide`
-  Describes how the LLVM makefiles work and how to use them.
 
 :doc:`HowToReleaseLLVM`
   This is a guide to preparing LLVM releases. Most developers can ignore it.
@@ -484,6 +506,25 @@ This channel has several bots.
 
 * clang-bot - A `geordi <http://www.eelis.net/geordi/>`_ instance running
   near-trunk clang instead of gcc.
+
+Community wide proposals
+------------------------
+
+Proposals for massive changes in how the community behaves and how the work flow
+can be better.
+
+.. toctree::
+   :hidden:
+
+   CodeOfConduct
+   Proposals/GitHubMove
+
+:doc:`CodeOfConduct`
+   Proposal to adopt a code of conduct on the LLVM social spaces (lists, events,
+   IRC, etc).
+
+:doc:`Proposals/GitHubMove`
+   Proposal to move from SVN/Git to GitHub.
 
 
 Indices and tables

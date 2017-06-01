@@ -11,14 +11,14 @@
 ; CHECK-NEXT: incq %rax
 
 
-; ATOM: xorl  %eax, %eax
 ; ATOM: movsd .LCPI0_0(%rip), %xmm0
+; ATOM: xorl  %eax, %eax
 ; ATOM: align
 ; ATOM-NEXT: BB0_2:
 ; ATOM-NEXT: movsd A(,%rax,8)
 ; ATOM-NEXT: mulsd
 ; ATOM-NEXT: movsd
-; ATOM-NEXT: leaq 1(%rax), %rax
+; ATOM-NEXT: incq %rax
 
 @A = external global [0 x double]
 

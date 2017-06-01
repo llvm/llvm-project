@@ -1,4 +1,5 @@
-; RUN: opt < %s -adce -simplifycfg -S | not grep then:
+; RUN: opt < %s -adce -S | FileCheck %s
+; RUN: opt < %s -adce -adce-remove-loops -S | FileCheck %s
 
 define void @dead_test8(i32* %data.1, i32 %idx.1) {
 entry:
@@ -17,7 +18,9 @@ no_exit:                ; preds = %endif, %no_exit.preheader
         %i.0 = phi i32 [ %inc.1, %endif ], [ 0, %no_exit.preheader ]            ; <i32> [#uses=1]
         %tmp.12 = load i32, i32* %tmp.11             ; <i32> [#uses=1]
         %tmp.14 = sub i32 0, %tmp.12            ; <i32> [#uses=1]
+; CHECK-NOT: %tmp.161
         %tmp.161 = icmp ne i32 %k.1, %tmp.14            ; <i1> [#uses=1]
+; CHECK: br label %then
         br i1 %tmp.161, label %then, label %else
 
 then:           ; preds = %no_exit

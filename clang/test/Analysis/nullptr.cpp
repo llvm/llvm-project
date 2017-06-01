@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -std=c++11 -Wno-conversion-null -analyze -analyzer-checker=core -analyzer-store region -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -Wno-conversion-null -analyzer-checker=core,debug.ExprInspection -analyzer-store region -verify %s
+
+void clang_analyzer_eval(int);
 
 // test to see if nullptr is detected as a null pointer
 void foo1(void) {
@@ -86,4 +88,60 @@ typedef decltype(nullptr) nullptr_t;
 void testMaterializeTemporaryExprWithNullPtr() {
   // Create MaterializeTemporaryExpr with a nullptr inside.
   const nullptr_t &r = nullptr;
+}
+
+int getSymbol();
+
+struct X {
+  virtual void f() {}
+};
+
+void invokeF(X* x) {
+  x->f(); // expected-warning{{Called C++ object pointer is null}}
+}
+
+struct Type {
+  decltype(nullptr) x;
+};
+
+void shouldNotCrash() {
+  decltype(nullptr) p;
+  if (getSymbol())
+    invokeF(p); // expected-warning{{1st function call argument is an uninit}}
+  if (getSymbol())
+    invokeF(nullptr);
+  if (getSymbol()) {
+    X *x = Type().x;
+    x->f(); // expected-warning{{Called C++ object pointer is null}}
+  }
+}
+
+void f(decltype(nullptr) p) {
+  int *q = nullptr;
+  clang_analyzer_eval(p == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(q == 0); // expected-warning{{TRUE}}
+}
+
+decltype(nullptr) returnsNullPtrType();
+void fromReturnType() {
+  ((X *)returnsNullPtrType())->f(); // expected-warning{{Called C++ object pointer is null}}
+}
+
+#define AS_ATTRIBUTE __attribute__((address_space(256)))
+class AS1 {
+public:
+  int x;
+  ~AS1() {
+    int AS_ATTRIBUTE *x = 0;
+    *x = 3; // no-warning
+  }
+};
+void test_address_space_field_access() {
+  AS1 AS_ATTRIBUTE *pa = 0;
+  pa->x = 0; // no-warning
+}
+void test_address_space_bind() {
+  AS1 AS_ATTRIBUTE *pa = 0;
+  AS1 AS_ATTRIBUTE &r = *pa;
+  r.x = 0; // no-warning
 }

@@ -21,7 +21,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
@@ -318,7 +317,7 @@ public:
 
 class PTHFileLookupCommonTrait {
 public:
-  typedef std::pair<unsigned char, const char*> internal_key_type;
+  typedef std::pair<unsigned char, StringRef> internal_key_type;
   typedef unsigned hash_value_type;
   typedef unsigned offset_type;
 
@@ -353,7 +352,7 @@ public:
   }
 
   static bool EqualKey(internal_key_type a, internal_key_type b) {
-    return a.first == b.first && strcmp(a.second, b.second) == 0;
+    return a.first == b.first && a.second == b.second;
   }
 
   static PTHFileData ReadData(const internal_key_type& k,
@@ -629,15 +628,15 @@ PTHLexer *PTHManager::CreateLexer(FileID FID) {
 namespace {
 class PTHStatData {
 public:
-  const bool HasData;
   uint64_t Size;
   time_t ModTime;
   llvm::sys::fs::UniqueID UniqueID;
+  const bool HasData;
   bool IsDirectory;
 
   PTHStatData(uint64_t Size, time_t ModTime, llvm::sys::fs::UniqueID UniqueID,
               bool IsDirectory)
-      : HasData(true), Size(Size), ModTime(ModTime), UniqueID(UniqueID),
+      : Size(Size), ModTime(ModTime), UniqueID(UniqueID), HasData(true),
         IsDirectory(IsDirectory) {}
 
   PTHStatData() : HasData(false) {}
@@ -645,10 +644,10 @@ public:
 
 class PTHStatLookupTrait : public PTHFileLookupCommonTrait {
 public:
-  typedef const char* external_key_type;  // const char*
+  typedef StringRef external_key_type; // const char*
   typedef PTHStatData data_type;
 
-  static internal_key_type GetInternalKey(const char *path) {
+  static internal_key_type GetInternalKey(StringRef path) {
     // The key 'kind' doesn't matter here because it is ignored in EqualKey.
     return std::make_pair((unsigned char) 0x0, path);
   }
@@ -656,7 +655,7 @@ public:
   static bool EqualKey(internal_key_type a, internal_key_type b) {
     // When doing 'stat' lookups we don't care about the kind of 'a' and 'b',
     // just the paths.
-    return strcmp(a.second, b.second) == 0;
+    return a.second == b.second;
   }
 
   static data_type ReadData(const internal_key_type& k, const unsigned char* d,
@@ -695,7 +694,7 @@ public:
       : Cache(FL.getNumBuckets(), FL.getNumEntries(), FL.getBuckets(),
               FL.getBase()) {}
 
-  LookupResult getStat(const char *Path, FileData &Data, bool isFile,
+  LookupResult getStat(StringRef Path, FileData &Data, bool isFile,
                        std::unique_ptr<vfs::File> *F,
                        vfs::FileSystem &FS) override {
     // Do the lookup for the file's data in the PTH file.

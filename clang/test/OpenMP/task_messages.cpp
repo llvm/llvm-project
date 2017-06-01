@@ -60,11 +60,10 @@ int foo() {
 // expected-error@+1 2 {{calling a private constructor of class 'S'}}
 #pragma omp parallel shared(a, b)
   ++a, ++b;
-// expected-note@+1 3 {{defined as reduction}}
+// expected-note@+1 2 {{defined as reduction}}
 #pragma omp parallel reduction(+ : r)
-// expected-error@+1 {{argument of a reduction clause of a parallel construct must not appear in a firstprivate clause on a task construct}}
+// expected-error@+1 2 {{argument of a reduction clause of a parallel construct must not appear in a firstprivate clause on a task construct}}
 #pragma omp task firstprivate(r)
-  // expected-error@+1 2 {{reduction variables may not be accessed in an explicit task}}
   ++r;
 // expected-note@+1 2 {{defined as reduction}}
 #pragma omp parallel reduction(+ : r)
@@ -77,12 +76,11 @@ int foo() {
   // expected-error@+1 2 {{reduction variables may not be accessed in an explicit task}}
   ++r;
 #pragma omp parallel
-// expected-note@+1 3 {{defined as reduction}}
+// expected-note@+1 2 {{defined as reduction}}
 #pragma omp for reduction(+ : r)
   for (int i = 0; i < 10; ++i)
-// expected-error@+1 {{argument of a reduction clause of a for construct must not appear in a firstprivate clause on a task construct}}
+// expected-error@+1 2 {{argument of a reduction clause of a for construct must not appear in a firstprivate clause on a task construct}}
 #pragma omp task firstprivate(r)
-    // expected-error@+1 2 {{reduction variables may not be accessed in an explicit task}}
     ++r;
 #pragma omp parallel
 // expected-note@+1 2 {{defined as reduction}}

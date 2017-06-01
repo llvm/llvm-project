@@ -1,0 +1,39 @@
+# RUN: llc -O0 -run-pass=legalizer -global-isel %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+  define void @test_vaarg() { ret void }
+...
+
+---
+name:            test_vaarg
+body: |
+  bb.0:
+    %0:_(p0) = COPY %x0
+
+    ; CHECK-LABEL: name: test_vaarg
+    ; CHECK: [[LIST:%[0-9]+]](p0) = G_LOAD %0(p0) :: (load 8)
+    ; CHECK: %1(s8) = G_LOAD [[LIST]](p0) :: (load 1, align 8)
+    ; CHECK: [[SLOTSIZE:%[0-9]+]](s64) = G_CONSTANT i64 8
+    ; CHECK: [[NEXT:%[0-9]+]](p0) = G_GEP [[LIST]], [[SLOTSIZE]](s64)
+    ; CHECK: G_STORE [[NEXT]](p0), %0(p0) :: (store 8)
+    %1:_(s8) = G_VAARG %0(p0), 1
+
+    ; CHECK: [[LIST:%[0-9]+]](p0) = G_LOAD %0(p0) :: (load 8)
+    ; CHECK: %2(s64) = G_LOAD [[LIST]](p0) :: (load 8)
+    ; CHECK: [[SLOTSIZE:%[0-9]+]](s64) = G_CONSTANT i64 8
+    ; CHECK: [[NEXT:%[0-9]+]](p0) = G_GEP [[LIST]], [[SLOTSIZE]](s64)
+    ; CHECK: G_STORE [[NEXT]](p0), %0(p0) :: (store 8)
+    %2:_(s64) = G_VAARG %0(p0), 8
+
+    ; CHECK: [[LIST:%[0-9]+]](p0) = G_LOAD %0(p0) :: (load 8)
+    ; CHECK: [[ALIGNM1:%[0-9]+]](s64) = G_CONSTANT i64 15
+    ; CHECK: [[ALIGNTMP:%[0-9]+]](p0) = G_GEP [[LIST]], [[ALIGNM1]](s64)
+    ; CHECK: [[LIST:%[0-9]+]](p0) = G_PTR_MASK [[ALIGNTMP]], 4
+    ; CHECK: %3(s64) = G_LOAD [[LIST]](p0) :: (load 8, align 16)
+    ; CHECK: [[SLOTSIZE:%[0-9]+]](s64) = G_CONSTANT i64 8
+    ; CHECK: [[NEXT:%[0-9]+]](p0) = G_GEP [[LIST]], [[SLOTSIZE]](s64)
+    ; CHECK: G_STORE [[NEXT]](p0), %0(p0) :: (store 8)
+    %3:_(s64) = G_VAARG %0(p0), 16
+...

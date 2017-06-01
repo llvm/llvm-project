@@ -21,9 +21,60 @@ namespace object {
 
 using support::endianness;
 
-template <endianness target_endianness, bool is64Bits> struct ELFType {
-  static const endianness TargetEndianness = target_endianness;
-  static const bool Is64Bits = is64Bits;
+template <class ELFT> struct Elf_Ehdr_Impl;
+template <class ELFT> struct Elf_Shdr_Impl;
+template <class ELFT> struct Elf_Sym_Impl;
+template <class ELFT> struct Elf_Dyn_Impl;
+template <class ELFT> struct Elf_Phdr_Impl;
+template <class ELFT, bool isRela> struct Elf_Rel_Impl;
+template <class ELFT> struct Elf_Verdef_Impl;
+template <class ELFT> struct Elf_Verdaux_Impl;
+template <class ELFT> struct Elf_Verneed_Impl;
+template <class ELFT> struct Elf_Vernaux_Impl;
+template <class ELFT> struct Elf_Versym_Impl;
+template <class ELFT> struct Elf_Hash_Impl;
+template <class ELFT> struct Elf_GnuHash_Impl;
+template <class ELFT> struct Elf_Chdr_Impl;
+
+template <endianness E, bool Is64> struct ELFType {
+private:
+  template <typename Ty>
+  using packed = support::detail::packed_endian_specific_integral<Ty, E, 2>;
+
+public:
+  static const endianness TargetEndianness = E;
+  static const bool Is64Bits = Is64;
+
+  typedef typename std::conditional<Is64, uint64_t, uint32_t>::type uint;
+  typedef Elf_Ehdr_Impl<ELFType<E, Is64>> Ehdr;
+  typedef Elf_Shdr_Impl<ELFType<E, Is64>> Shdr;
+  typedef Elf_Sym_Impl<ELFType<E, Is64>> Sym;
+  typedef Elf_Dyn_Impl<ELFType<E, Is64>> Dyn;
+  typedef Elf_Phdr_Impl<ELFType<E, Is64>> Phdr;
+  typedef Elf_Rel_Impl<ELFType<E, Is64>, false> Rel;
+  typedef Elf_Rel_Impl<ELFType<E, Is64>, true> Rela;
+  typedef Elf_Verdef_Impl<ELFType<E, Is64>> Verdef;
+  typedef Elf_Verdaux_Impl<ELFType<E, Is64>> Verdaux;
+  typedef Elf_Verneed_Impl<ELFType<E, Is64>> Verneed;
+  typedef Elf_Vernaux_Impl<ELFType<E, Is64>> Vernaux;
+  typedef Elf_Versym_Impl<ELFType<E, Is64>> Versym;
+  typedef Elf_Hash_Impl<ELFType<E, Is64>> Hash;
+  typedef Elf_GnuHash_Impl<ELFType<E, Is64>> GnuHash;
+  typedef Elf_Chdr_Impl<ELFType<E, Is64>> Chdr;
+  typedef ArrayRef<Dyn> DynRange;
+  typedef ArrayRef<Shdr> ShdrRange;
+  typedef ArrayRef<Sym> SymRange;
+  typedef ArrayRef<Rel> RelRange;
+  typedef ArrayRef<Rela> RelaRange;
+  typedef ArrayRef<Phdr> PhdrRange;
+
+  typedef packed<uint16_t> Half;
+  typedef packed<uint32_t> Word;
+  typedef packed<int32_t> Sword;
+  typedef packed<uint64_t> Xword;
+  typedef packed<int64_t> Sxword;
+  typedef packed<uint> Addr;
+  typedef packed<uint> Off;
 };
 
 typedef ELFType<support::little, false> ELF32LE;
@@ -73,20 +124,19 @@ struct ELFDataTypeTypedefHelper<ELFType<TargetEndianness, true>>
 };
 
 // I really don't like doing this, but the alternative is copypasta.
-#define LLVM_ELF_IMPORT_TYPES(E, W)                                            \
-  typedef typename ELFDataTypeTypedefHelper<ELFType<E, W>>::Elf_Addr Elf_Addr; \
-  typedef typename ELFDataTypeTypedefHelper<ELFType<E, W>>::Elf_Off Elf_Off;   \
-  typedef typename ELFDataTypeTypedefHelper<ELFType<E, W>>::Elf_Half Elf_Half; \
-  typedef typename ELFDataTypeTypedefHelper<ELFType<E, W>>::Elf_Word Elf_Word; \
-  typedef                                                                      \
-      typename ELFDataTypeTypedefHelper<ELFType<E, W>>::Elf_Sword Elf_Sword;   \
-  typedef                                                                      \
-      typename ELFDataTypeTypedefHelper<ELFType<E, W>>::Elf_Xword Elf_Xword;   \
-  typedef                                                                      \
-      typename ELFDataTypeTypedefHelper<ELFType<E, W>>::Elf_Sxword Elf_Sxword;
 
 #define LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)                                       \
-  LLVM_ELF_IMPORT_TYPES(ELFT::TargetEndianness, ELFT::Is64Bits)
+  typedef typename ELFT::Addr Elf_Addr;                                        \
+  typedef typename ELFT::Off Elf_Off;                                          \
+  typedef typename ELFT::Half Elf_Half;                                        \
+  typedef typename ELFT::Word Elf_Word;                                        \
+  typedef typename ELFT::Sword Elf_Sword;                                      \
+  typedef typename ELFT::Xword Elf_Xword;                                      \
+  typedef typename ELFT::Sxword Elf_Sxword;
+
+#define LLD_ELF_COMMA ,
+#define LLVM_ELF_IMPORT_TYPES(E, W)                                            \
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFType<E LLD_ELF_COMMA W>)
 
 // Section header.
 template <class ELFT> struct Elf_Shdr_Base;
@@ -208,14 +258,14 @@ struct Elf_Sym_Impl : Elf_Sym_Base<ELFT> {
     return getBinding() != ELF::STB_LOCAL;
   }
 
-  ErrorOr<StringRef> getName(StringRef StrTab) const;
+  Expected<StringRef> getName(StringRef StrTab) const;
 };
 
 template <class ELFT>
-ErrorOr<StringRef> Elf_Sym_Impl<ELFT>::getName(StringRef StrTab) const {
+Expected<StringRef> Elf_Sym_Impl<ELFT>::getName(StringRef StrTab) const {
   uint32_t Offset = this->st_name;
   if (Offset >= StrTab.size())
-    return object_error::parse_failed;
+    return errorCodeToError(object_error::parse_failed);
   return StringRef(StrTab.data() + Offset);
 }
 
@@ -320,12 +370,10 @@ struct Elf_Dyn_Impl : Elf_Dyn_Base<ELFT> {
   uintX_t getPtr() const { return d_un.d_ptr; }
 };
 
-// Elf_Rel: Elf Relocation
-template <class ELFT, bool isRela> struct Elf_Rel_Impl;
-
 template <endianness TargetEndianness>
 struct Elf_Rel_Impl<ELFType<TargetEndianness, false>, false> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
+  static const bool IsRela = false;
   Elf_Addr r_offset; // Location (file byte offset, or program virtual addr)
   Elf_Word r_info;   // Symbol table index and type of relocation to apply
 
@@ -361,12 +409,14 @@ template <endianness TargetEndianness>
 struct Elf_Rel_Impl<ELFType<TargetEndianness, false>, true>
     : public Elf_Rel_Impl<ELFType<TargetEndianness, false>, false> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
+  static const bool IsRela = true;
   Elf_Sword r_addend; // Compute value for relocatable field by adding this
 };
 
 template <endianness TargetEndianness>
 struct Elf_Rel_Impl<ELFType<TargetEndianness, true>, false> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
+  static const bool IsRela = false;
   Elf_Addr r_offset; // Location (file byte offset, or program virtual addr)
   Elf_Xword r_info;  // Symbol table index and type of relocation to apply
 
@@ -411,6 +461,7 @@ template <endianness TargetEndianness>
 struct Elf_Rel_Impl<ELFType<TargetEndianness, true>, true>
     : public Elf_Rel_Impl<ELFType<TargetEndianness, true>, false> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
+  static const bool IsRela = true;
   Elf_Sxword r_addend; // Compute value for relocatable field by adding this.
 };
 
@@ -467,7 +518,7 @@ struct Elf_Phdr_Impl<ELFType<TargetEndianness, true>> {
   Elf_Xword p_align;  // Segment alignment constraint
 };
 
-// ELFT needed for endianess.
+// ELFT needed for endianness.
 template <class ELFT>
 struct Elf_Hash_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
@@ -508,6 +559,25 @@ struct Elf_GnuHash_Impl {
   }
 };
 
+// Compressed section headers.
+// http://www.sco.com/developers/gabi/latest/ch4.sheader.html#compression_header
+template <endianness TargetEndianness>
+struct Elf_Chdr_Impl<ELFType<TargetEndianness, false>> {
+  LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
+  Elf_Word ch_type;
+  Elf_Word ch_size;
+  Elf_Word ch_addralign;
+};
+
+template <endianness TargetEndianness>
+struct Elf_Chdr_Impl<ELFType<TargetEndianness, true>> {
+  LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
+  Elf_Word ch_type;
+  Elf_Word ch_reserved;
+  Elf_Xword ch_size;
+  Elf_Xword ch_addralign;
+};
+
 // MIPS .reginfo section
 template <class ELFT>
 struct Elf_Mips_RegInfo;
@@ -538,10 +608,13 @@ template <class ELFT> struct Elf_Mips_Options {
                     // or 0 for global options
   Elf_Word info;    // Kind-specific information
 
-  const Elf_Mips_RegInfo<ELFT> &getRegInfo() const {
+  Elf_Mips_RegInfo<ELFT> &getRegInfo() {
     assert(kind == llvm::ELF::ODK_REGINFO);
-    return *reinterpret_cast<const Elf_Mips_RegInfo<ELFT> *>(
-               (const uint8_t *)this + sizeof(Elf_Mips_Options));
+    return *reinterpret_cast<Elf_Mips_RegInfo<ELFT> *>(
+        (uint8_t *)this + sizeof(Elf_Mips_Options));
+  }
+  const Elf_Mips_RegInfo<ELFT> &getRegInfo() const {
+    return const_cast<Elf_Mips_Options *>(this)->getRegInfo();
   }
 };
 

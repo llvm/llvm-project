@@ -45,7 +45,12 @@ typedef SizeClassAllocatorLocalCache<PrimaryInternalAllocator>
 typedef CombinedAllocator<PrimaryInternalAllocator, InternalAllocatorCache,
                           LargeMmapAllocator<> > InternalAllocator;
 
-void *InternalAlloc(uptr size, InternalAllocatorCache *cache = nullptr);
+void *InternalAlloc(uptr size, InternalAllocatorCache *cache = nullptr,
+                    uptr alignment = 0);
+void *InternalRealloc(void *p, uptr size,
+                      InternalAllocatorCache *cache = nullptr);
+void *InternalCalloc(uptr countr, uptr size,
+                     InternalAllocatorCache *cache = nullptr);
 void InternalFree(void *p, InternalAllocatorCache *cache = nullptr);
 InternalAllocator *internal_allocator();
 
@@ -56,8 +61,8 @@ enum InternalAllocEnum {
 } // namespace __sanitizer
 
 inline void *operator new(__sanitizer::operator_new_size_type size,
-                          InternalAllocEnum) {
-  return InternalAlloc(size);
+                          __sanitizer::InternalAllocEnum) {
+  return __sanitizer::InternalAlloc(size);
 }
 
 #endif // SANITIZER_ALLOCATOR_INTERNAL_H

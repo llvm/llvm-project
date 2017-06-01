@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+
 namespace A { // expected-note 2 {{previous definition is here}}
   int A;
   void f() { A = 0; }
@@ -8,8 +11,11 @@ void f() { A = 0; } // expected-error {{unexpected namespace name 'A': expected 
 int A; // expected-error {{redefinition of 'A' as different kind of symbol}}
 class A; // expected-error {{redefinition of 'A' as different kind of symbol}}
 
-class B {}; // expected-note {{previous definition is here}} \
-            // expected-note{{candidate function (the implicit copy assignment operator)}}
+class B {}; // expected-note {{previous definition is here}}
+// expected-note@-1 {{candidate function (the implicit copy assignment operator) not viable}}
+#if __cplusplus >= 201103L // C++11 or later
+// expected-note@-3 {{candidate function (the implicit move assignment operator) not viable}}
+#endif
 
 void C(); // expected-note {{previous definition is here}}
 namespace C {} // expected-error {{redefinition of 'C' as different kind of symbol}}

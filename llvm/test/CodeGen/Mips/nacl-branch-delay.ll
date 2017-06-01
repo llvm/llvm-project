@@ -44,7 +44,7 @@ define void @test1() {
 
 define void @test2() {
   store i32 1, i32* @x, align 4
-  tail call void @f2()
+  call void @f2()
   ret void
 
 

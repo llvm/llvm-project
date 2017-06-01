@@ -30,11 +30,15 @@ if(CYGWIN OR NOT LLVM_ENABLE_PIC)
   set(LLVM_TOOL_LLVM_LTO_BUILD Off)
 endif()
 
-# Add LTO, llvm-ar, and llvm-config before clang, ExternalProject requires
-# targets specified in DEPENDS to exist before the call to ExternalProject_Add.
+# Add LTO, llvm-ar, llvm-config, and llvm-profdata before clang, ExternalProject
+# requires targets specified in DEPENDS to exist before the call to
+# ExternalProject_Add.
 add_llvm_tool_subdirectory(lto)
+add_llvm_tool_subdirectory(gold)
 add_llvm_tool_subdirectory(llvm-ar)
 add_llvm_tool_subdirectory(llvm-config)
+add_llvm_tool_subdirectory(llvm-lto)
+add_llvm_tool_subdirectory(llvm-profdata)
 
 # Projects supported via LLVM_EXTERNAL_*_SOURCE_DIR need to be explicitly
 # specified.
@@ -46,5 +50,10 @@ add_llvm_external_project(lldb)
 # Automatically add remaining sub-directories containing a 'CMakeLists.txt'
 # file as external projects.
 add_llvm_implicit_projects()
+
+# Add subprojects specified using LLVM_EXTERNAL_PROJECTS
+foreach(p ${LLVM_EXTERNAL_PROJECTS})
+  add_llvm_external_project(${p})
+endforeach(p)
 
 set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} PARENT_SCOPE)

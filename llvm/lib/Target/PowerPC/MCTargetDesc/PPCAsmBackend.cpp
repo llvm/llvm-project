@@ -168,8 +168,8 @@ public:
     llvm_unreachable("relaxInstruction() unimplemented");
   }
 
-
-  void relaxInstruction(const MCInst &Inst, MCInst &Res) const override {
+  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                        MCInst &Res) const override {
     // FIXME.
     llvm_unreachable("relaxInstruction() unimplemented");
   }
@@ -230,7 +230,8 @@ namespace {
 
 MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,
                                         const MCRegisterInfo &MRI,
-                                        const Triple &TT, StringRef CPU) {
+                                        const Triple &TT, StringRef CPU,
+                                        const MCTargetOptions &Options) {
   if (TT.isOSDarwin())
     return new DarwinPPCAsmBackend(T);
 

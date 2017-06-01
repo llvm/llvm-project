@@ -352,12 +352,6 @@ enum ModRMDecisionType {
   ENUM_ENTRY(ENCODING_RM_CD64,"R/M operand with CDisp scaling of 64")          \
   ENUM_ENTRY(ENCODING_VVVV,   "Register operand in VEX.vvvv byte.")            \
   ENUM_ENTRY(ENCODING_WRITEMASK, "Register operand in EVEX.aaa byte.")         \
-  ENUM_ENTRY(ENCODING_CB,     "1-byte code offset (possible new CS value)")    \
-  ENUM_ENTRY(ENCODING_CW,     "2-byte")                                        \
-  ENUM_ENTRY(ENCODING_CD,     "4-byte")                                        \
-  ENUM_ENTRY(ENCODING_CP,     "6-byte")                                        \
-  ENUM_ENTRY(ENCODING_CO,     "8-byte")                                        \
-  ENUM_ENTRY(ENCODING_CT,     "10-byte")                                       \
   ENUM_ENTRY(ENCODING_IB,     "1-byte immediate")                              \
   ENUM_ENTRY(ENCODING_IW,     "2-byte")                                        \
   ENUM_ENTRY(ENCODING_ID,     "4-byte")                                        \
@@ -436,14 +430,11 @@ enum OperandEncoding {
   ENUM_ENTRY(TYPE_MOFFS16,    "2-byte")                                        \
   ENUM_ENTRY(TYPE_MOFFS32,    "4-byte")                                        \
   ENUM_ENTRY(TYPE_MOFFS64,    "8-byte")                                        \
-  ENUM_ENTRY(TYPE_SREG,       "Byte with single bit set: 0 = ES, 1 = CS, "     \
-                              "2 = SS, 3 = DS, 4 = FS, 5 = GS")                \
   ENUM_ENTRY(TYPE_M32FP,      "32-bit IEE754 memory floating-point operand")   \
   ENUM_ENTRY(TYPE_M64FP,      "64-bit")                                        \
   ENUM_ENTRY(TYPE_M80FP,      "80-bit extended")                               \
   ENUM_ENTRY(TYPE_ST,         "Position on the floating-point stack")          \
   ENUM_ENTRY(TYPE_MM64,       "8-byte MMX register")                           \
-  ENUM_ENTRY(TYPE_XMM,        "XMM register operand")                          \
   ENUM_ENTRY(TYPE_XMM32,      "4-byte XMM register or memory operand")         \
   ENUM_ENTRY(TYPE_XMM64,      "8-byte")                                        \
   ENUM_ENTRY(TYPE_XMM128,     "16-byte")                                       \
@@ -456,7 +447,6 @@ enum OperandEncoding {
   ENUM_ENTRY(TYPE_VK16,       "16-bit")                                        \
   ENUM_ENTRY(TYPE_VK32,       "32-bit")                                        \
   ENUM_ENTRY(TYPE_VK64,       "64-bit")                                        \
-  ENUM_ENTRY(TYPE_XMM0,       "Implicit use of XMM0")                          \
   ENUM_ENTRY(TYPE_SEGMENTREG, "Segment register operand")                      \
   ENUM_ENTRY(TYPE_DEBUGREG,   "Debug register operand")                        \
   ENUM_ENTRY(TYPE_CONTROLREG, "Control register operand")                      \

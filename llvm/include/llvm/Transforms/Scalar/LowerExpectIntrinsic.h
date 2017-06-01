@@ -21,10 +21,7 @@
 
 namespace llvm {
 
-class LowerExpectIntrinsicPass {
-public:
-  static StringRef name() { return "LowerExpectIntrinsicPass"; }
-
+struct LowerExpectIntrinsicPass : PassInfoMixin<LowerExpectIntrinsicPass> {
   /// \brief Run the pass over the function.
   ///
   /// This will lower all of th expect intrinsic calls in this function into
@@ -32,7 +29,7 @@ public:
   /// of the probabilities and frequencies of the CFG. After running this pass,
   /// no more expect intrinsics remain, allowing the rest of the optimizer to
   /// ignore them.
-  PreservedAnalyses run(Function &F);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
 
 }

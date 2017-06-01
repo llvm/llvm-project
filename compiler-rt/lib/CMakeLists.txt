@@ -4,45 +4,59 @@
 include(AddCompilerRT)
 include(SanitizerUtils)
 
+# Hoist the building of sanitizer_common on whether we're building either the
+# sanitizers or xray (or both).
+#
+#TODO: Refactor sanitizer_common into smaller pieces (e.g. flag parsing, utils).
+if (COMPILER_RT_HAS_SANITIZER_COMMON AND
+    (COMPILER_RT_BUILD_SANITIZERS OR COMPILER_RT_BUILD_XRAY))
+  add_subdirectory(sanitizer_common)
+endif()
+
 if(COMPILER_RT_BUILD_BUILTINS)
   add_subdirectory(builtins)
 endif()
 
-if(COMPILER_RT_BUILD_SANITIZERS)
-  if(COMPILER_RT_HAS_INTERCEPTION)
-    add_subdirectory(interception)
+function(compiler_rt_build_runtime runtime)
+  string(TOUPPER ${runtime} runtime_uppercase)
+  if(COMPILER_RT_HAS_${runtime_uppercase})
+    add_subdirectory(${runtime})
+    foreach(directory ${ARGN})
+      add_subdirectory(${directory})
+    endforeach()
   endif()
+endfunction()
+
+function(compiler_rt_build_sanitizer sanitizer)
+  string(TOUPPER ${sanitizer} sanitizer_uppercase)
+  string(TOLOWER ${sanitizer} sanitizer_lowercase)
+  list(FIND COMPILER_RT_SANITIZERS_TO_BUILD ${sanitizer_lowercase} result)
+  if(NOT ${result} EQUAL -1)
+    compiler_rt_build_runtime(${sanitizer} ${ARGN})
+  endif()
+endfunction()
+
+if(COMPILER_RT_BUILD_SANITIZERS)
+  compiler_rt_build_runtime(interception)
 
   if(COMPILER_RT_HAS_SANITIZER_COMMON)
-    add_subdirectory(sanitizer_common)
+    add_subdirectory(stats)
     add_subdirectory(lsan)
     add_subdirectory(ubsan)
   endif()
 
-  add_subdirectory(cfi)
+  compiler_rt_build_sanitizer(asan)
+  compiler_rt_build_sanitizer(dfsan)
+  compiler_rt_build_sanitizer(msan)
+  compiler_rt_build_sanitizer(tsan tsan/dd)
+  compiler_rt_build_sanitizer(safestack)
+  compiler_rt_build_sanitizer(cfi)
+  compiler_rt_build_sanitizer(esan)
+  compiler_rt_build_sanitizer(scudo)
 
-  if(COMPILER_RT_HAS_ASAN)
-    add_subdirectory(asan)
-  endif()
+  compiler_rt_build_runtime(profile)
+endif()
 
-  if(COMPILER_RT_HAS_DFSAN)
-    add_subdirectory(dfsan)
-  endif()
-
-  if(COMPILER_RT_HAS_MSAN)
-    add_subdirectory(msan)
-  endif()
-
-  if(COMPILER_RT_HAS_PROFILE)
-    add_subdirectory(profile)
-  endif()
-
-  if(COMPILER_RT_HAS_TSAN)
-    add_subdirectory(tsan)
-    add_subdirectory(tsan/dd)
-  endif()
-
-  if(COMPILER_RT_HAS_SAFESTACK)
-    add_subdirectory(safestack)
-  endif()
+if(COMPILER_RT_BUILD_XRAY)
+  compiler_rt_build_runtime(xray)
 endif()

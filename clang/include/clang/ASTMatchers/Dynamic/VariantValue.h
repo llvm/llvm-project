@@ -21,7 +21,6 @@
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/Twine.h"
 #include <memory>
 #include <vector>
 
@@ -120,9 +119,9 @@ class VariantMatcher {
   /// \brief Payload interface to be specialized by each matcher type.
   ///
   /// It follows a similar interface as VariantMatcher itself.
-  class Payload : public RefCountedBaseVPTR {
+  class Payload {
   public:
-    ~Payload() override;
+    virtual ~Payload();
     virtual llvm::Optional<DynTypedMatcher> getSingleMatcher() const = 0;
     virtual std::string getTypeAsString() const = 0;
     virtual llvm::Optional<DynTypedMatcher>
@@ -209,7 +208,8 @@ public:
   std::string getTypeAsString() const;
 
 private:
-  explicit VariantMatcher(Payload *Value) : Value(Value) {}
+  explicit VariantMatcher(std::shared_ptr<Payload> Value)
+      : Value(std::move(Value)) {}
 
   template <typename T> struct TypedMatcherOps;
 
@@ -217,7 +217,7 @@ private:
   class PolymorphicPayload;
   class VariadicOpPayload;
 
-  IntrusiveRefCntPtr<const Payload> Value;
+  std::shared_ptr<const Payload> Value;
 };
 
 template <typename T>

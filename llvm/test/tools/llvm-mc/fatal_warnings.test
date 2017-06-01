@@ -1,5 +1,4 @@
 # RUN: not llvm-mc --fatal-warnings %s 2>&1 | FileCheck %s
-# XFAIL: hexagon
 
 # CHECK: error: .warning directive invoked in source file
 .warning

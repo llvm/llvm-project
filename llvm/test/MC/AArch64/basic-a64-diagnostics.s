@@ -172,9 +172,14 @@
 
         // A relocation should be provided for symbols
         add x3, x9, #variable
+        add x3, x9, #variable-16
 // CHECK-ERROR: error: expected compatible register, symbol or integer in range [0, 4095]
 // CHECK-ERROR-NEXT:         add x3, x9, #variable
 // CHECK-ERROR-NEXT:                      ^
+// CHECK-ERROR-NEXT: error: expected compatible register, symbol or integer in range [0, 4095]
+// CHECK-ERROR-NEXT:         add x3, x9, #variable-16
+// CHECK-ERROR-NEXT:                 ^
+
 
 
 //------------------------------------------------------------------------------
@@ -1603,7 +1608,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         fcsel q3, q20, q9, pl
 // CHECK-ERROR-NEXT:               ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
+// CHECK-ERROR-NEXT: error: instruction requires: fullfp16
 // CHECK-ERROR-NEXT:         fcsel h9, h10, h11, mi
 // CHECK-ERROR-NEXT:               ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
@@ -1652,7 +1657,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         fmadd b3, b4, b5, b6
 // CHECK-ERROR-NEXT:               ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
+// CHECK-ERROR-NEXT: error: instruction requires: fullfp16
 // CHECK-ERROR-NEXT:         fmsub h1, h2, h3, h4
 // CHECK-ERROR-NEXT:               ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
@@ -3282,18 +3287,10 @@
         msr spsel, #-1
         msr spsel #-1
         msr daifclr, #16
-// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [0, 15]
-// CHECK-ERROR-NEXT:         msr daifset, x4
-// CHECK-ERROR-NEXT:                      ^
-// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [0, 15]
-// CHECK-ERROR-NEXT:         msr spsel, #-1
-// CHECK-ERROR-NEXT:                    ^
-// CHECK-ERROR-NEXT: error: {{expected comma before next operand|unexpected token in argument list}}
-// CHECK-ERROR-NEXT:         msr spsel #-1
-// CHECK-ERROR-NEXT:                   ^
-// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [0, 15]
-// CHECK-ERROR-NEXT:         msr daifclr, #16
-// CHECK-ERROR-NEXT:                      ^
+// CHECK-ERROR: [[@LINE-4]]:22: error: {{expected|immediate must be an}} integer in range [0, 15]
+// CHECK-ERROR: [[@LINE-4]]:20: error: {{expected|immediate must be an}} integer in range [0, 15]
+// CHECK-ERROR: [[@LINE-4]]:{{9|19}}: error: {{too few operands for instruction|expected comma before next operand|unexpected token in argument list}}
+// CHECK-ERROR: [[@LINE-4]]:22: error: {{expected|immediate must be an}} integer in range [0, 15]
 
         sys #8, c1, c2, #7, x9
         sys #3, c16, c2, #3, x10
@@ -3303,7 +3300,7 @@
         sysl x13, #3, c16, c2, #3
         sysl x9, #2, c11, c16, #5
         sysl x4, #4, c9, c8, #8
-// CHECK-ERROR-NEXT: error:  {{expected|immediate must be an}} integer in range [0, 7]
+// CHECK-ERROR: error:  {{expected|immediate must be an}} integer in range [0, 7]
 // CHECK-ERROR-NEXT:         sys #8, c1, c2, #7, x9
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: Expected cN operand where 0 <= N <= 15

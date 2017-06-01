@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -std=c++11 -analyzer-checker=debug.ExprInspection %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=debug.ExprInspection %s
 
 void clang_analyzer_eval(bool);
 
@@ -23,4 +23,17 @@ void testCasting(int i) {
     clang_analyzer_eval(f == Foo::Zero); // expected-warning{{FALSE}}
     clang_analyzer_eval(j == 0); // expected-warning{{FALSE}}
   }
+}
+
+enum class EnumBool : bool {
+  F = false,
+  T = true
+};
+
+bool testNoCrashOnSwitchEnumBool(EnumBool E) {
+  switch (E) {
+  case EnumBool::F:
+    return false;
+  }
+  return true;
 }

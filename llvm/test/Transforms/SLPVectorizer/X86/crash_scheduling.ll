@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -slp-vectorizer -S -mtriple=x86_64-apple-macosx10.8.0 -mcpu=corei7
+; RUN: opt < %s -basicaa -disable-verify -slp-vectorizer -S -mtriple=x86_64-apple-macosx10.8.0 -mcpu=corei7
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-darwin13.3.0"

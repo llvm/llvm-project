@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PPCInstrInfo.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCFixupKinds.h"
 #include "llvm/ADT/Statistic.h"
@@ -69,6 +70,9 @@ public:
   unsigned getMemRIXEncoding(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
+  unsigned getMemRIX16Encoding(const MCInst &MI, unsigned OpNo,
+                               SmallVectorImpl<MCFixup> &Fixups,
+                               const MCSubtargetInfo &STI) const;
   unsigned getSPE8DisEncoding(const MCInst &MI, unsigned OpNo,
                               SmallVectorImpl<MCFixup> &Fixups,
                               const MCSubtargetInfo &STI) const;
@@ -102,19 +106,19 @@ public:
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override {
-    // For fast-isel, a float COPY_TO_REGCLASS can survive this long.
-    // It's just a nop to keep the register classes happy, so don't
-    // generate anything.
+    verifyInstructionPredicates(MI,
+                                computeAvailableFeatures(STI.getFeatureBits()));
+
     unsigned Opcode = MI.getOpcode();
     const MCInstrDesc &Desc = MCII.get(Opcode);
-    if (Opcode == TargetOpcode::COPY_TO_REGCLASS)
-      return;
 
     uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
 
     // Output the constant in big/little endian byte order.
     unsigned Size = Desc.getSize();
     switch (Size) {
+    case 0:
+      break;
     case 4:
       if (IsLittleEndian) {
         support::endian::Writer<support::little>(OS).write<uint32_t>(Bits);
@@ -138,7 +142,11 @@ public:
     
     ++MCNumEmitted;  // Keep track of the # of mi's emitted.
   }
-  
+
+private:
+  uint64_t computeAvailableFeatures(const FeatureBitset &FB) const;
+  void verifyInstructionPredicates(const MCInst &MI,
+                                   uint64_t AvailableFeatures) const;
 };
   
 } // end anonymous namespace
@@ -249,6 +257,19 @@ unsigned PPCMCCodeEmitter::getMemRIXEncoding(const MCInst &MI, unsigned OpNo,
   return RegBits;
 }
 
+unsigned PPCMCCodeEmitter::getMemRIX16Encoding(const MCInst &MI, unsigned OpNo,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  // Encode (imm, reg) as a memrix16, which has the low 12-bits as the
+  // displacement and the next 5 bits as the register #.
+  assert(MI.getOperand(OpNo+1).isReg());
+  unsigned RegBits = getMachineOpValue(MI, MI.getOperand(OpNo+1), Fixups, STI) << 12;
+
+  const MCOperand &MO = MI.getOperand(OpNo);
+  assert(MO.isImm());
+
+  return ((getMachineOpValue(MI, MO, Fixups, STI) >> 4) & 0xFFF) | RegBits;
+}
 
 unsigned PPCMCCodeEmitter::getSPE8DisEncoding(const MCInst &MI, unsigned OpNo,
                                               SmallVectorImpl<MCFixup> &Fixups,
@@ -337,7 +358,6 @@ get_crbitm_encoding(const MCInst &MI, unsigned OpNo,
   return 0x80 >> CTX.getRegisterInfo()->getEncodingValue(MO.getReg());
 }
 
-
 unsigned PPCMCCodeEmitter::
 getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                   SmallVectorImpl<MCFixup> &Fixups,
@@ -348,7 +368,14 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
     assert((MI.getOpcode() != PPC::MTOCRF && MI.getOpcode() != PPC::MTOCRF8 &&
             MI.getOpcode() != PPC::MFOCRF && MI.getOpcode() != PPC::MFOCRF8) ||
            MO.getReg() < PPC::CR0 || MO.getReg() > PPC::CR7);
-    return CTX.getRegisterInfo()->getEncodingValue(MO.getReg());
+    unsigned Reg = MO.getReg();
+    unsigned Encode = CTX.getRegisterInfo()->getEncodingValue(Reg);
+
+    if ((MCII.get(MI.getOpcode()).TSFlags & PPCII::UseVSXReg))
+      if (PPCInstrInfo::isVRRegister(Reg))
+        Encode += 32;
+
+    return Encode;
   }
   
   assert(MO.isImm() &&
@@ -357,4 +384,6 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
 }
 
 
+
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "PPCGenMCCodeEmitter.inc"

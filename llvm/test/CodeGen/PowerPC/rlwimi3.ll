@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -march=ppc32 -stats 2>&1 | \
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -stats 2>&1 | \
 ; RUN:   grep "Number of machine instrs printed" | grep 12
 
 define i16 @Trans16Bit(i32 %srcA, i32 %srcB, i32 %alpha) {

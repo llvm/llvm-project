@@ -81,6 +81,7 @@ private:
   void parsePPElse();
   void parsePPEndIf();
   void parsePPUnknown();
+  void readTokenWithJavaScriptASI();
   void parseStructuralElement();
   bool tryToParseBracedList();
   bool parseBracedList(bool ContinueOnSemicolons = false);
@@ -96,7 +97,7 @@ private:
   void parseNamespace();
   void parseNew();
   void parseAccessSpecifier();
-  void parseEnum();
+  bool parseEnum();
   void parseJavaEnumBody();
   void parseRecord();
   void parseObjCProtocolList();
@@ -110,6 +111,7 @@ private:
   void addUnwrappedLine();
   bool eof() const;
   void nextToken();
+  const FormatToken *getPreviousToken();
   void readToken();
   void flushComments(bool NewlineBeforeNext);
   void pushToken(FormatToken *Tok);

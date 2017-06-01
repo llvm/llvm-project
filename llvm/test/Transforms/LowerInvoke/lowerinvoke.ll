@@ -1,4 +1,5 @@
 ; RUN: opt < %s -lowerinvoke -S | FileCheck %s
+; RUN: opt < %s -passes='lowerinvoke' -S | FileCheck %s
 
 declare i32 @external_func(i64 %arg)
 

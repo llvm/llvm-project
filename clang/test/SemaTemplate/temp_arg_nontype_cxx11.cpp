@@ -23,3 +23,16 @@ namespace CanonicalNullptr {
   B<int> b = MakeB<int>();
   C<int> c = MakeC<int>();
 }
+
+namespace Auto {
+  template<auto> struct A { };  // expected-error {{until C++1z}}
+}
+
+namespace check_conversion_early {
+  struct X {};
+  template<int> struct A {};
+  template<X &x> struct A<x> {}; // expected-error {{not implicitly convertible}}
+
+  struct Y { constexpr operator int() const { return 0; } };
+  template<Y &y> struct A<y> {}; // expected-error {{cannot be deduced}} expected-note {{'y'}}
+}

@@ -1,125 +1,398 @@
 # RUN: llvm-mc -filetype=obj -arch mipsel %s | llvm-readobj -r | FileCheck %s
 
 # Test the order of records in the relocation table.
-# *HI16 and local *GOT16 relocations should be immediately followed by the
-# corresponding *LO16 relocation against the same symbol.
 #
-# We try to implement the same semantics as gas, ie. to order the relocation
-# table the same way as gas.
+# MIPS has a few relocations that have an AHL component in the expression used
+# to evaluate them. This AHL component is an addend with the same number of
+# bits as a symbol value but not all of our ABI's are able to supply a
+# sufficiently sized addend in a single relocation.
 #
-# gnu as command line:
-# mips-linux-gnu-as -EL sort-relocation-table.s -o sort-relocation-table.o
+# The O32 ABI for example, uses REL relocations which store the addend in the
+# section data. All the relocations with AHL components affect 16-bit fields
+# so the addend is limited to 16-bit. This ABI resolves the limitation by
+# linking relocations (e.g. R_MIPS_HI16 and R_MIPS_LO16) and distributing the
+# addend between the linked relocations. The ABI mandates that such relocations
+# must be next to each other in a particular order (e.g. R_MIPS_HI16 must be
+# followed by a matching R_MIPS_LO16) but the rule is less strict in practice.
+#
+# See MipsELFObjectWriter.cpp for a full description of the rules.
 #
 # TODO: Add mips16 and micromips tests.
-# Note: offsets are part of expected output, so it's simpler to add new test
-#       cases at the bottom of the file.
 
-# CHECK:       Relocations [
-# CHECK-NEXT:  {
+# HILO 1: HI/LO already match
+	.section .mips_hilo_1, "ax", @progbits
+	lui $2, %hi(sym1)
+	addiu $2, $2, %lo(sym1)
 
-# Put HI before LO.
-addiu $2,$2,%lo(sym1)
-lui $2,%hi(sym1)
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_hilo_1 {
+# CHECK-NEXT:    0x0 R_MIPS_HI16 sym1
+# CHECK-NEXT:    0x4 R_MIPS_LO16 sym1
+# CHECK-NEXT:  }
 
+# HILO 2: R_MIPS_HI16 must be followed by a matching R_MIPS_LO16.
+	.section .mips_hilo_2, "ax", @progbits
+	addiu $2, $2, %lo(sym1)
+	lui $2, %hi(sym1)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_hilo_2 {
 # CHECK-NEXT:    0x4 R_MIPS_HI16 sym1
 # CHECK-NEXT:    0x0 R_MIPS_LO16 sym1
+# CHECK-NEXT:  }
 
-# When searching for a matching LO, ignore LOs against a different symbol.
-addiu $2,$2,%lo(sym2)
-lui $2,%hi(sym2)
-addiu $2,$2,%lo(sym2_d)
+# HILO 3: R_MIPS_HI16 must be followed by a matching R_MIPS_LO16.
+#         The second relocation matches if the symbol is the same.
+	.section .mips_hilo_3, "ax", @progbits
+	addiu $2, $2, %lo(sym1)
+	lui $2, %hi(sym2)
+	addiu $2, $2, %lo(sym2)
+	lui $2, %hi(sym1)
 
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_hilo_3 {
+# CHECK-NEXT:    0xC R_MIPS_HI16 sym1
+# CHECK-NEXT:    0x0 R_MIPS_LO16 sym1
+# CHECK-NEXT:    0x4 R_MIPS_HI16 sym2
+# CHECK-NEXT:    0x8 R_MIPS_LO16 sym2
+# CHECK-NEXT:  }
+
+# HILO 3b: Same as 3 but a different starting order.
+	.section .mips_hilo_3b, "ax", @progbits
+	addiu $2, $2, %lo(sym1)
+	lui $2, %hi(sym1)
+	addiu $2, $2, %lo(sym2)
+	lui $2, %hi(sym2)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_hilo_3b {
+# CHECK-NEXT:    0x4 R_MIPS_HI16 sym1
+# CHECK-NEXT:    0x0 R_MIPS_LO16 sym1
 # CHECK-NEXT:    0xC R_MIPS_HI16 sym2
 # CHECK-NEXT:    0x8 R_MIPS_LO16 sym2
-# CHECK-NEXT:    0x10 R_MIPS_LO16 sym2_d
+# CHECK-NEXT:  }
 
-# Match HI with 2nd LO because it has higher offset (than the 1st LO).
-addiu $2,$2,%lo(sym3)
-addiu $2,$2,%lo(sym3)
-lui $2,%hi(sym3)
+# HILO 4: R_MIPS_HI16 must be followed by a matching R_MIPS_LO16.
+#         The second relocation matches if the symbol is the same and the
+#         offset is the same.
+	.section .mips_hilo_4, "ax", @progbits
+	addiu $2, $2, %lo(sym1)
+	addiu $2, $2, %lo(sym1+4)
+	lui $2, %hi(sym1+4)
+	lui $2, %hi(sym1)
 
-# CHECK-NEXT:    0x14 R_MIPS_LO16 sym3
-# CHECK-NEXT:    0x1C R_MIPS_HI16 sym3
-# CHECK-NEXT:    0x18 R_MIPS_LO16 sym3
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_hilo_4 {
+# CHECK-NEXT:    0xC R_MIPS_HI16 sym1
+# CHECK-NEXT:    0x0 R_MIPS_LO16 sym1
+# CHECK-NEXT:    0x8 R_MIPS_HI16 sym1
+# CHECK-NEXT:    0x4 R_MIPS_LO16 sym1
+# CHECK-NEXT:  }
 
-# HI is already followed by a matching LO, so don't look further, ie. ignore the
-# "free" LO with higher offset.
-lui $2,%hi(sym4)
-addiu $2,$2,%lo(sym4)
-addiu $2,$2,%lo(sym4)
+# HILO 5: R_MIPS_HI16 must be followed by a matching R_MIPS_LO16.
+#         The second relocation matches if the symbol is the same and the
+#         offset is greater or equal. Exact matches are preferred so both
+#         R_MIPS_HI16's match the same R_MIPS_LO16.
+	.section .mips_hilo_5, "ax", @progbits
+	lui $2, %hi(sym1)
+	lui $2, %hi(sym1)
+	addiu $2, $2, %lo(sym1+1)
+	addiu $2, $2, %lo(sym1)
 
-# CHECK-NEXT:    0x20 R_MIPS_HI16 sym4
-# CHECK-NEXT:    0x24 R_MIPS_LO16 sym4
-# CHECK-NEXT:    0x28 R_MIPS_LO16 sym4
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_hilo_5 {
+# CHECK-NEXT:    0x8 R_MIPS_LO16 sym1
+# CHECK-NEXT:    0x0 R_MIPS_HI16 sym1
+# CHECK-NEXT:    0x4 R_MIPS_HI16 sym1
+# CHECK-NEXT:    0xC R_MIPS_LO16 sym1
+# CHECK-NEXT:  }
 
-# Match 2nd HI with 2nd LO, since it's the one with highest offset among the
-# "free" ones.
-addiu $2,$2,%lo(sym5)
-addiu $2,$2,%lo(sym5)
-lui $2,%hi(sym5)
-addiu $2,$2,%lo(sym5)
-lui $2,%hi(sym5)
+# HILO 6: R_MIPS_HI16 must be followed by a matching R_MIPS_LO16.
+#         The second relocation matches if the symbol is the same and the
+#         offset is greater or equal. Smaller offsets are preferred so both
+#         R_MIPS_HI16's still match the same R_MIPS_LO16.
+	.section .mips_hilo_6, "ax", @progbits
+	lui $2, %hi(sym1)
+	lui $2, %hi(sym1)
+	addiu $2, $2, %lo(sym1+2)
+	addiu $2, $2, %lo(sym1+1)
 
-# CHECK-NEXT:    0x2C R_MIPS_LO16 sym5
-# CHECK-NEXT:    0x3C R_MIPS_HI16 sym5
-# CHECK-NEXT:    0x30 R_MIPS_LO16 sym5
-# CHECK-NEXT:    0x34 R_MIPS_HI16 sym5
-# CHECK-NEXT:    0x38 R_MIPS_LO16 sym5
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_hilo_6 {
+# CHECK-NEXT:    0x8 R_MIPS_LO16 sym1
+# CHECK-NEXT:    0x0 R_MIPS_HI16 sym1
+# CHECK-NEXT:    0x4 R_MIPS_HI16 sym1
+# CHECK-NEXT:    0xC R_MIPS_LO16 sym1
+# CHECK-NEXT:  }
 
-# When more HIs are matched with one LO, sort them in descending order of
-# offset.
-addiu $2,$2,%lo(sym6)
-lui $2,%hi(sym6)
-lui $2,%hi(sym6)
+# HILO 7: R_MIPS_HI16 must be followed by a matching R_MIPS_LO16.
+#         The second relocation matches if the symbol is the same and the
+#         offset is greater or equal so that the carry bit is correct. The two
+#         R_MIPS_HI16's therefore match different R_MIPS_LO16's.
+	.section .mips_hilo_7, "ax", @progbits
+	addiu $2, $2, %lo(sym1+1)
+	addiu $2, $2, %lo(sym1+6)
+	lui $2, %hi(sym1+4)
+	lui $2, %hi(sym1)
 
-# CHECK-NEXT:    0x48 R_MIPS_HI16 sym6
-# CHECK-NEXT:    0x44 R_MIPS_HI16 sym6
-# CHECK-NEXT:    0x40 R_MIPS_LO16 sym6
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_hilo_7 {
+# CHECK-NEXT:    0xC R_MIPS_HI16 sym1
+# CHECK-NEXT:    0x0 R_MIPS_LO16 sym1
+# CHECK-NEXT:    0x8 R_MIPS_HI16 sym1
+# CHECK-NEXT:    0x4 R_MIPS_LO16 sym1
+# CHECK-NEXT:  }
 
-#  sym7 is a local symbol, so GOT relocation against it needs a matching LO.
-sym7:
-addiu $2,$2,%lo(sym7)
-lui $2,%got(sym7)
+# HILO 8: R_MIPS_LO16's may be orphaned.
+	.section .mips_hilo_8, "ax", @progbits
+	lw $2, %lo(sym1)
 
-# CHECK-NEXT:    0x50 R_MIPS_GOT16 sym7
-# CHECK-NEXT:    0x4C R_MIPS_LO16 sym7
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_hilo_8 {
+# CHECK-NEXT:    0x0 R_MIPS_LO16 sym1
+# CHECK-NEXT:  }
 
-# sym8 is not a local symbol, don't look for a matching LO for GOT.
-.global sym8
-addiu $2,$2,%lo(sym8)
-lui $2,%got(sym8)
+# HILO 8b: Another example of 8. The R_MIPS_LO16 at 0x4 is orphaned.
+	.section .mips_hilo_8b, "ax", @progbits
+	lw $2, %lo(sym1)
+	lw $2, %lo(sym1)
+	lui $2, %hi(sym1)
 
-# CHECK-NEXT:    0x54 R_MIPS_LO16 sym8
-# CHECK-NEXT:    0x58 R_MIPS_GOT16 sym8
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_hilo_8b {
+# CHECK-NEXT:    0x8 R_MIPS_HI16 sym1
+# CHECK-NEXT:    0x0 R_MIPS_LO16 sym1
+# CHECK-NEXT:    0x4 R_MIPS_LO16 sym1
+# CHECK-NEXT:  }
 
-# A small combination of previous checks.
-symc1:
-addiu $2,$2,%lo(symc1)
-addiu $2,$2,%lo(symc1)
-addiu $2,$2,%lo(symc1)
-lui $2,%hi(symc1)
-lui $2,%got(symc1)
-addiu $2,$2,%lo(symc2)
-lui $2,%hi(symc1)
-lui $2,%hi(symc1)
-lui $2,%got(symc2)
-lui $2,%hi(symc1)
-addiu $2,$2,%lo(symc1)
-addiu $2,$2,%lo(symc2)
-lui $2,%hi(symc1)
-lui $2,%hi(symc1)
+# HILO 9: R_MIPS_HI16's don't need a matching R_MIPS_LO16 to immediately follow
+#         so long as there is one after the R_MIPS_HI16 somewhere. This isn't
+#         permitted by the ABI specification but has been allowed in practice
+#         for a very long time. The R_MIPS_HI16's should be ordered by the
+#         address they affect for purely cosmetic reasons.
+	.section .mips_hilo_9, "ax", @progbits
+	lw $2, %lo(sym1)
+	lui $2, %hi(sym1)
+	lui $2, %hi(sym1)
 
-# CHECK-NEXT:    0x78 R_MIPS_HI16 symc1
-# CHECK-NEXT:    0x74 R_MIPS_HI16 symc1
-# CHECK-NEXT:    0x6C R_MIPS_GOT16 symc1
-# CHECK-NEXT:    0x68 R_MIPS_HI16 symc1
-# CHECK-NEXT:    0x5C R_MIPS_LO16 symc1
-# CHECK-NEXT:    0x8C R_MIPS_HI16 symc1
-# CHECK-NEXT:    0x60 R_MIPS_LO16 symc1
-# CHECK-NEXT:    0x90 R_MIPS_HI16 symc1
-# CHECK-NEXT:    0x64 R_MIPS_LO16 symc1
-# CHECK-NEXT:    0x70 R_MIPS_LO16 symc2
-# CHECK-NEXT:    0x7C R_MIPS_GOT16 symc2
-# CHECK-NEXT:    0x80 R_MIPS_HI16 symc1
-# CHECK-NEXT:    0x84 R_MIPS_LO16 symc1
-# CHECK-NEXT:    0x88 R_MIPS_LO16 symc2
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_hilo_9 {
+# CHECK-NEXT:    0x4 R_MIPS_HI16 sym1
+# CHECK-NEXT:    0x8 R_MIPS_HI16 sym1
+# CHECK-NEXT:    0x0 R_MIPS_LO16 sym1
+# CHECK-NEXT:  }
+
+# HILO 10: R_MIPS_HI16's must have a matching R_MIPS_LO16 somewhere though.
+#          When this is impossible we have two possible bad behaviours
+#          depending on the linker implementation:
+#          * The linker silently computes the wrong value using a partially
+#            matching R_MIPS_LO16.
+#          * The linker rejects the relocation table as invalid.
+#          The latter is preferable since it's far easier to detect and debug so
+#          check that we encourage this behaviour by putting invalid
+#          R_MIPS_HI16's at the end of the relocation table where the risk of a
+#          partial match is very low.
+	.section .mips_hilo_10, "ax", @progbits
+	lui $2, %hi(sym1)
+	lw $2, %lo(sym1)
+	lui $2, %hi(sym2)
+	lui $2, %hi(sym3)
+	lw $2, %lo(sym3)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_hilo_10 {
+# CHECK-NEXT:    0x0 R_MIPS_HI16 sym1
+# CHECK-NEXT:    0x4 R_MIPS_LO16 sym1
+# CHECK-NEXT:    0xC R_MIPS_HI16 sym3
+# CHECK-NEXT:    0x10 R_MIPS_LO16 sym3
+# CHECK-NEXT:    0x8 R_MIPS_HI16 sym2
+# CHECK-NEXT:  }
+
+# Now do the same tests for GOT/LO.
+# The rules only apply to R_MIPS_GOT16 on local symbols which are also
+# rewritten into section relative relocations.
+
+# GOTLO 1: GOT/LO already match
+	.section .mips_gotlo_1, "ax", @progbits
+	lui $2, %got(local1)
+	addiu $2, $2, %lo(local1)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_1 {
+# CHECK-NEXT:    0x0 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x4 R_MIPS_LO16 .text
+# CHECK-NEXT:  }
+
+# GOTLO 2: R_MIPS_GOT16 must be followed by a matching R_MIPS_LO16.
+	.section .mips_gotlo_2, "ax", @progbits
+	addiu $2, $2, %lo(local1)
+	lui $2, %got(local1)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_2 {
+# CHECK-NEXT:    0x4 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
+# CHECK-NEXT:  }
+
+# GOTLO 3: R_MIPS_GOT16 must be followed by a matching R_MIPS_LO16.
+#          The second relocation matches if the symbol is the same.
+	.section .mips_gotlo_3, "ax", @progbits
+	addiu $2, $2, %lo(local1)
+	lui $2, %got(local2)
+	addiu $2, $2, %lo(local2)
+	lui $2, %got(local1)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_3 {
+# CHECK-NEXT:    0xC R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x4 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x8 R_MIPS_LO16 .text
+# CHECK-NEXT:  }
+
+# GOTLO 3b: Same as 3 but a different starting order.
+	.section .mips_gotlo_3b, "ax", @progbits
+	addiu $2, $2, %lo(local1)
+	lui $2, %got(local1)
+	addiu $2, $2, %lo(local2)
+	lui $2, %got(local2)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_3b {
+# CHECK-NEXT:    0x4 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
+# CHECK-NEXT:    0xC R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x8 R_MIPS_LO16 .text
+# CHECK-NEXT:  }
+
+# GOTLO 4: R_MIPS_GOT16 must be followed by a matching R_MIPS_LO16.
+#          The second relocation matches if the symbol is the same and the
+#          offset is the same.
+	.section .mips_gotlo_4, "ax", @progbits
+	addiu $2, $2, %lo(local1)
+	addiu $2, $2, %lo(local1+4)
+	lui $2, %got(local1+4)
+	lui $2, %got(local1)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_4 {
+# CHECK-NEXT:    0xC R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x8 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x4 R_MIPS_LO16 .text
+# CHECK-NEXT:  }
+
+# GOTLO 5: R_MIPS_GOT16 must be followed by a matching R_MIPS_LO16.
+#          The second relocation matches if the symbol is the same and the
+#          offset is greater or equal. Exact matches are preferred so both
+#          R_MIPS_GOT16's match the same R_MIPS_LO16.
+	.section .mips_gotlo_5, "ax", @progbits
+	lui $2, %got(local1)
+	lui $2, %got(local1)
+	addiu $2, $2, %lo(local1+1)
+	addiu $2, $2, %lo(local1)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_5 {
+# CHECK-NEXT:    0x8 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x0 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x4 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0xC R_MIPS_LO16 .text
+# CHECK-NEXT:  }
+
+# GOTLO 6: R_MIPS_GOT16 must be followed by a matching R_MIPS_LO16.
+#          The second relocation matches if the symbol is the same and the
+#          offset is greater or equal. Smaller offsets are preferred so both
+#          R_MIPS_GOT16's still match the same R_MIPS_LO16.
+	.section .mips_gotlo_6, "ax", @progbits
+	lui $2, %got(local1)
+	lui $2, %got(local1)
+	addiu $2, $2, %lo(local1+2)
+	addiu $2, $2, %lo(local1+1)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_6 {
+# CHECK-NEXT:    0x8 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x0 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x4 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0xC R_MIPS_LO16 .text
+# CHECK-NEXT:  }
+
+# GOTLO 7: R_MIPS_GOT16 must be followed by a matching R_MIPS_LO16.
+#          The second relocation matches if the symbol is the same and the
+#          offset is greater or equal so that the carry bit is correct. The two
+#          R_MIPS_GOT16's therefore match different R_MIPS_LO16's.
+	.section .mips_gotlo_7, "ax", @progbits
+	addiu $2, $2, %lo(local1+1)
+	addiu $2, $2, %lo(local1+6)
+	lui $2, %got(local1+4)
+	lui $2, %got(local1)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_7 {
+# CHECK-NEXT:    0xC R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x8 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x4 R_MIPS_LO16 .text
+# CHECK-NEXT:  }
+
+# GOTLO 8: R_MIPS_LO16's may be orphaned.
+	.section .mips_gotlo_8, "ax", @progbits
+	lw $2, %lo(local1)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_8 {
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
+# CHECK-NEXT:  }
+
+# GOTLO 8b: Another example of 8. The R_MIPS_LO16 at 0x4 is orphaned.
+	.section .mips_gotlo_8b, "ax", @progbits
+	lw $2, %lo(local1)
+	lw $2, %lo(local1)
+	lui $2, %got(local1)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_8b {
+# CHECK-NEXT:    0x8 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x4 R_MIPS_LO16 .text
+# CHECK-NEXT:  }
+
+# GOTLO 9: R_MIPS_GOT16's don't need a matching R_MIPS_LO16 to immediately
+#          follow so long as there is one after the R_MIPS_GOT16 somewhere.
+#          This isn't permitted by the ABI specification but has been allowed
+#          in practice for a very long time. The R_MIPS_GOT16's should be
+#          ordered by the address they affect for purely cosmetic reasons.
+	.section .mips_gotlo_9, "ax", @progbits
+	lw $2, %lo(local1)
+	lui $2, %got(local1)
+	lui $2, %got(local1)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_9 {
+# CHECK-NEXT:    0x4 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x8 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
+# CHECK-NEXT:  }
+
+# GOTLO 10: R_MIPS_GOT16's must have a matching R_MIPS_LO16 somewhere though.
+#           When this is impossible we have two possible bad behaviours
+#           depending on the linker implementation:
+#           * The linker silently computes the wrong value using a partially
+#             matching R_MIPS_LO16.
+#           * The linker rejects the relocation table as invalid.
+#           The latter is preferable since it's far easier to detect and debug
+#           so check that we encourage this behaviour by putting invalid
+#           R_MIPS_GOT16's at the end of the relocation table where the risk of
+#           a partial match is very low.
+	.section .mips_gotlo_10, "ax", @progbits
+	lui $2, %got(local1)
+	lw $2, %lo(local1)
+	lui $2, %got(local2)
+	lui $2, %got(local3)
+	lw $2, %lo(local3)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_10 {
+# CHECK-NEXT:    0x0 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x4 R_MIPS_LO16 .text
+# CHECK-NEXT:    0xC R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x10 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x8 R_MIPS_GOT16 .text
+# CHECK-NEXT:  }
+
+# Finally, do test 2 for R_MIPS_GOT16 on external symbols to prove they are
+# exempt from the rules for local symbols.
+
+# External GOTLO 2: R_MIPS_GOT16 must be followed by a matching R_MIPS_LO16.
+	.section .mips_ext_gotlo_2, "ax", @progbits
+	addiu $2, $2, %lo(sym1)
+	lui $2, %got(sym1)
+
+# CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_ext_gotlo_2 {
+# CHECK-NEXT:    0x0 R_MIPS_LO16 sym1
+# CHECK-NEXT:    0x4 R_MIPS_GOT16 sym1
+# CHECK-NEXT:  }
+
+# Define some local symbols.
+        .text
+        nop
+local1: nop
+local2: nop
+local3: nop

@@ -1,5 +1,7 @@
 ; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=+micromips \
 ; RUN:   -relocation-model=static -O2 < %s | FileCheck %s
+; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=+micromips \
+; RUN:   -relocation-model=static -O2 < %s | FileCheck %s -check-prefix=CHECK-MMR6
 
 ; Function Attrs: nounwind
 define i32 @foo(i32 signext %a) #0 {
@@ -16,3 +18,5 @@ declare i32 @bar(i32 signext) #1
 
 ; CHECK:      jals
 ; CHECK-NEXT: sll16
+; CHECK-MMR6: jal
+; CHECK-MMR6-NOT: sll16

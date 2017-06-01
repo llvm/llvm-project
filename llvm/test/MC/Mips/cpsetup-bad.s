@@ -13,7 +13,7 @@ t1:
         .cpsetup $31, $32, __cerror
 # ASM: :[[@LINE-1]]:23: error: invalid register
         .cpsetup $25, $2, $3
-# ASM: :[[@LINE-1]]:28: error: expected expression
+# ASM: :[[@LINE-1]]:27: error: expected expression
         .cpsetup $25, $2, 4
 # ASM: :[[@LINE-1]]:28: error: expected symbol
         .cpsetup $25, $2, 4+65

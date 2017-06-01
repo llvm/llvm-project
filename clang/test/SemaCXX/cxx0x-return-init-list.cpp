@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 
 // Test that a very basic variation of generalized initializer returns (that
 // required for libstdc++ 4.5) is supported in C++98.

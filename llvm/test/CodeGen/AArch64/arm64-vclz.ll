@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 -aarch64-neon-syntax=apple < %s | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define <8 x i8> @test_vclz_u8(<8 x i8> %a) nounwind readnone ssp {
   ; CHECK-LABEL: test_vclz_u8:
@@ -46,6 +46,18 @@ define <2 x i32> @test_vclz_s32(<2 x i32> %a) nounwind readnone ssp {
   ; CHECK-NEXT: ret
   %vclz1.i = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %a, i1 false) nounwind
   ret <2 x i32> %vclz1.i
+}
+
+define <1 x i64> @test_vclz_u64(<1 x i64> %a) nounwind readnone ssp {
+  ; CHECK-LABEL: test_vclz_u64:
+  %vclz1.i = tail call <1 x i64> @llvm.ctlz.v1i64(<1 x i64> %a, i1 false) nounwind
+  ret <1 x i64> %vclz1.i
+}
+
+define <1 x i64> @test_vclz_s64(<1 x i64> %a) nounwind readnone ssp {
+  ; CHECK-LABEL: test_vclz_s64:
+  %vclz1.i = tail call <1 x i64> @llvm.ctlz.v1i64(<1 x i64> %a, i1 false) nounwind
+  ret <1 x i64> %vclz1.i
 }
 
 define <16 x i8> @test_vclzq_u8(<16 x i8> %a) nounwind readnone ssp {
@@ -96,11 +108,27 @@ define <4 x i32> @test_vclzq_s32(<4 x i32> %a) nounwind readnone ssp {
   ret <4 x i32> %vclz1.i
 }
 
+define <2 x i64> @test_vclzq_u64(<2 x i64> %a) nounwind readnone ssp {
+  ; CHECK-LABEL: test_vclzq_u64:
+  %vclz1.i = tail call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false) nounwind
+  ret <2 x i64> %vclz1.i
+}
+
+define <2 x i64> @test_vclzq_s64(<2 x i64> %a) nounwind readnone ssp {
+  ; CHECK-LABEL: test_vclzq_s64:
+  %vclz1.i = tail call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false) nounwind
+  ret <2 x i64> %vclz1.i
+}
+
+declare <2 x i64> @llvm.ctlz.v2i64(<2 x i64>, i1) nounwind readnone
+
 declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32>, i1) nounwind readnone
 
 declare <8 x i16> @llvm.ctlz.v8i16(<8 x i16>, i1) nounwind readnone
 
 declare <16 x i8> @llvm.ctlz.v16i8(<16 x i8>, i1) nounwind readnone
+
+declare <1 x i64> @llvm.ctlz.v1i64(<1 x i64>, i1) nounwind readnone
 
 declare <2 x i32> @llvm.ctlz.v2i32(<2 x i32>, i1) nounwind readnone
 

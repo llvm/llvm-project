@@ -9,5 +9,5 @@ entry:
   ret i8 %0
 }
 !0 = !{!2, !2, i64 0}
-!1 = !{!"Simple C/C++ TBAA", null}
+!1 = !{!"Simple C/C++ TBAA"}
 !2 = !{!"vtable pointer", !1}

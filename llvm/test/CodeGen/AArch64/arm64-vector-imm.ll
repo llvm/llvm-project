@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define <8 x i8> @v_orrimm(<8 x i8>* %A) nounwind {
 ; CHECK-LABEL: v_orrimm:
@@ -50,35 +50,35 @@ define <2 x double> @foo(<2 x double> %bar) nounwind {
 define <4 x i32> @movi_4s_imm_t1() nounwind readnone ssp {
 entry:
 ; CHECK-LABEL: movi_4s_imm_t1:
-; CHECK: movi.4s v0, #0x4b
+; CHECK: movi.4s v0, #75
   ret <4 x i32> <i32 75, i32 75, i32 75, i32 75>
 }
 
 define <4 x i32> @movi_4s_imm_t2() nounwind readnone ssp {
 entry:
 ; CHECK-LABEL: movi_4s_imm_t2:
-; CHECK: movi.4s v0, #0x4b, lsl #8
+; CHECK: movi.4s v0, #75, lsl #8
   ret <4 x i32> <i32 19200, i32 19200, i32 19200, i32 19200>
 }
 
 define <4 x i32> @movi_4s_imm_t3() nounwind readnone ssp {
 entry:
 ; CHECK-LABEL: movi_4s_imm_t3:
-; CHECK: movi.4s v0, #0x4b, lsl #16
+; CHECK: movi.4s v0, #75, lsl #16
   ret <4 x i32> <i32 4915200, i32 4915200, i32 4915200, i32 4915200>
 }
 
 define <4 x i32> @movi_4s_imm_t4() nounwind readnone ssp {
 entry:
 ; CHECK-LABEL: movi_4s_imm_t4:
-; CHECK: movi.4s v0, #0x4b, lsl #24
+; CHECK: movi.4s v0, #75, lsl #24
   ret <4 x i32> <i32 1258291200, i32 1258291200, i32 1258291200, i32 1258291200>
 }
 
 define <8 x i16> @movi_8h_imm_t5() nounwind readnone ssp {
 entry:
 ; CHECK-LABEL: movi_8h_imm_t5:
-; CHECK: movi.8h v0, #0x4b
+; CHECK: movi.8h v0, #75
   ret <8 x i16> <i16 75, i16 75, i16 75, i16 75, i16 75, i16 75, i16 75, i16 75>
 }
 
@@ -86,28 +86,28 @@ entry:
 define <8 x i16> @movi_8h_imm_t6() nounwind readnone ssp {
 entry:
 ; CHECK-LABEL: movi_8h_imm_t6:
-; CHECK: movi.8h v0, #0x4b, lsl #8
+; CHECK: movi.8h v0, #75, lsl #8
   ret <8 x i16> <i16 19200, i16 19200, i16 19200, i16 19200, i16 19200, i16 19200, i16 19200, i16 19200>
 }
 
 define <4 x i32> @movi_4s_imm_t7() nounwind readnone ssp {
 entry:
 ; CHECK-LABEL: movi_4s_imm_t7:
-; CHECK: movi.4s v0, #0x4b, msl #8
+; CHECK: movi.4s v0, #75, msl #8
 ret <4 x i32> <i32 19455, i32 19455, i32 19455, i32 19455>
 }
 
 define <4 x i32> @movi_4s_imm_t8() nounwind readnone ssp {
 entry:
 ; CHECK-LABEL: movi_4s_imm_t8:
-; CHECK: movi.4s v0, #0x4b, msl #16
+; CHECK: movi.4s v0, #75, msl #16
 ret <4 x i32> <i32 4980735, i32 4980735, i32 4980735, i32 4980735>
 }
 
 define <16 x i8> @movi_16b_imm_t9() nounwind readnone ssp {
 entry:
 ; CHECK-LABEL: movi_16b_imm_t9:
-; CHECK: movi.16b v0, #0x4b
+; CHECK: movi.16b v0, #75
 ret <16 x i8> <i8 75, i8 75, i8 75, i8 75, i8 75, i8 75, i8 75, i8 75,
                i8 75, i8 75, i8 75, i8 75, i8 75, i8 75, i8 75, i8 75>
 }

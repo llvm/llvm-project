@@ -15,11 +15,14 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CODEEXTRACTOR_H
 #define LLVM_TRANSFORMS_UTILS_CODEEXTRACTOR_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 
 namespace llvm {
+template <typename T> class ArrayRef;
   class BasicBlock;
+  class BlockFrequency;
+  class BlockFrequencyInfo;
+  class BranchProbabilityInfo;
   class DominatorTree;
   class Function;
   class Loop;
@@ -47,6 +50,8 @@ namespace llvm {
     // Various bits of state computed on construction.
     DominatorTree *const DT;
     const bool AggregateArgs;
+    BlockFrequencyInfo *BFI;
+    BranchProbabilityInfo *BPI;
 
     // Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
@@ -54,11 +59,19 @@ namespace llvm {
     Type *RetTy;
 
   public:
+
+    /// \brief Check to see if a block is valid for extraction.
+    ///
+    /// Blocks containing EHPads, allocas, invokes, or vastarts are not valid.
+    static bool isBlockValidForExtraction(const BasicBlock &BB);
+
     /// \brief Create a code extractor for a single basic block.
     ///
     /// In this formation, we don't require a dominator tree. The given basic
     /// block is set up for extraction.
-    CodeExtractor(BasicBlock *BB, bool AggregateArgs = false);
+    CodeExtractor(BasicBlock *BB, bool AggregateArgs = false,
+                  BlockFrequencyInfo *BFI = nullptr,
+                  BranchProbabilityInfo *BPI = nullptr);
 
     /// \brief Create a code extractor for a sequence of blocks.
     ///
@@ -67,20 +80,24 @@ namespace llvm {
     /// sequence out into its new function. When a DominatorTree is also given,
     /// extra checking and transformations are enabled.
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
-                  bool AggregateArgs = false);
+                  bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
+                  BranchProbabilityInfo *BPI = nullptr);
 
     /// \brief Create a code extractor for a loop body.
     ///
     /// Behaves just like the generic code sequence constructor, but uses the
     /// block sequence of the loop.
-    CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs = false);
+    CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs = false,
+                  BlockFrequencyInfo *BFI = nullptr,
+                  BranchProbabilityInfo *BPI = nullptr);
 
     /// \brief Create a code extractor for a region node.
     ///
     /// Behaves just like the generic code sequence constructor, but uses the
     /// block sequence of the region node passed in.
     CodeExtractor(DominatorTree &DT, const RegionNode &RN,
-                  bool AggregateArgs = false);
+                  bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
+                  BranchProbabilityInfo *BPI = nullptr);
 
     /// \brief Perform the extraction, returning the new function.
     ///
@@ -115,6 +132,11 @@ namespace llvm {
                                 Function *oldFunction, Module *M);
 
     void moveCodeToFunction(Function *newFunction);
+
+    void calculateNewCallTerminatorWeights(
+        BasicBlock *CodeReplacer,
+        DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
+        BranchProbabilityInfo *BPI);
 
     void emitCallAndSwitchStatement(Function *newFunction,
                                     BasicBlock *newHeader,

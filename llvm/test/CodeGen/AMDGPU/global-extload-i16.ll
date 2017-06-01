@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs< %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs< %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs< %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs< %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; XUN: llc -march=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 ; FIXME: cypress is broken because the bigger testcases spill and it's not implemented
 
@@ -154,8 +154,8 @@ define void @sextload_global_v64i16_to_v64i32(<64 x i32> addrspace(1)* %out, <64
 }
 
 ; FUNC-LABEL: {{^}}zextload_global_i16_to_i64:
-; SI: buffer_load_ushort v[[LO:[0-9]+]],
-; SI: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
+; SI-DAG: buffer_load_ushort v[[LO:[0-9]+]],
+; SI-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
 ; SI: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]]
 define void @zextload_global_i16_to_i64(i64 addrspace(1)* %out, i16 addrspace(1)* %in) nounwind {
   %a = load i16, i16 addrspace(1)* %in
@@ -165,9 +165,9 @@ define void @zextload_global_i16_to_i64(i64 addrspace(1)* %out, i16 addrspace(1)
 }
 
 ; FUNC-LABEL: {{^}}sextload_global_i16_to_i64:
-; SI: buffer_load_sshort [[LOAD:v[0-9]+]],
-; SI: v_ashrrev_i32_e32 v{{[0-9]+}}, 31, [[LOAD]]
-; SI: buffer_store_dwordx2
+; VI: buffer_load_ushort [[LOAD:v[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0
+; VI: v_ashrrev_i32_e32 v{{[0-9]+}}, 31, [[LOAD]]
+; VI: buffer_store_dwordx2 v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0
 define void @sextload_global_i16_to_i64(i64 addrspace(1)* %out, i16 addrspace(1)* %in) nounwind {
   %a = load i16, i16 addrspace(1)* %in
   %ext = sext i16 %a to i64

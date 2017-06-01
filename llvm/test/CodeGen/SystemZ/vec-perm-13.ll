@@ -19,8 +19,8 @@ define <4 x i16> @f1(<4 x i16> %x) {
 ; CHECK-VECTOR-NEXT: .space  1                                        
 ; CHECK-VECTOR-NEXT: .byte   6
 ; CHECK-VECTOR-NEXT: .byte   7
-; CHECK-VECTOR-NEXT: .byte   16
-; CHECK-VECTOR-NEXT: .byte   17
+; CHECK-VECTOR-NEXT: .byte   22
+; CHECK-VECTOR-NEXT: .byte   23
 ; CHECK-VECTOR-NEXT: .space  1                                        
 ; CHECK-VECTOR-NEXT: .space  1                                        
 ; CHECK-VECTOR-NEXT: .space  1                                        

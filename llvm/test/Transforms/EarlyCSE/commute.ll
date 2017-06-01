@@ -1,4 +1,5 @@
 ; RUN: opt < %s -S -early-cse | FileCheck %s
+; RUN: opt < %s -S -basicaa -early-cse-memssa | FileCheck %s
 
 ; CHECK-LABEL: @test1(
 define void @test1(float %A, float %B, float* %PA, float* %PB) {

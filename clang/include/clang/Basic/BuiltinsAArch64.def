@@ -60,6 +60,5 @@ BUILTIN(__builtin_arm_rsrp, "v*cC*", "nc")
 BUILTIN(__builtin_arm_wsr, "vcC*Ui", "nc")
 BUILTIN(__builtin_arm_wsr64, "vcC*LUi", "nc")
 BUILTIN(__builtin_arm_wsrp, "vcC*vC*", "nc")
-BUILTIN(__builtin_thread_pointer, "v*", "nc")
 
 #undef BUILTIN

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -Wno-nullability-declspec %s -verify
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -Wno-nullability-declspec %s -verify -Wnullable-to-nonnull-conversion
 
 #if __has_feature(nullability)
 #else
@@ -67,3 +67,66 @@ void test_accepts_nonnull_null_pointer_literal_template() {
 }
 
 template void test_accepts_nonnull_null_pointer_literal_template<&accepts_nonnull_4>(); // expected-note{{instantiation of function template specialization}}
+
+void TakeNonnull(void *_Nonnull);
+// Check different forms of assignment to a nonull type from a nullable one.
+void AssignAndInitNonNull() {
+  void *_Nullable nullable;
+  void *_Nonnull p(nullable); // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
+  void *_Nonnull p2{nullable}; // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
+  void *_Nonnull p3 = {nullable}; // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
+  void *_Nonnull p4 = nullable; // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
+  void *_Nonnull nonnull;
+  nonnull = nullable; // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
+  nonnull = {nullable}; // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
+
+  TakeNonnull(nullable); //expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull}}
+  TakeNonnull(nonnull); // OK
+}
+
+void *_Nullable ReturnNullable();
+
+void AssignAndInitNonNullFromFn() {
+  void *_Nonnull p(ReturnNullable()); // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
+  void *_Nonnull p2{ReturnNullable()}; // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
+  void *_Nonnull p3 = {ReturnNullable()}; // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
+  void *_Nonnull p4 = ReturnNullable(); // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
+  void *_Nonnull nonnull;
+  nonnull = ReturnNullable(); // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
+  nonnull = {ReturnNullable()}; // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
+
+  TakeNonnull(ReturnNullable()); //expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull}}
+}
+
+void ConditionalExpr(bool c) {
+  struct Base {};
+  struct Derived : Base {};
+
+  Base * _Nonnull p;
+  Base * _Nonnull nonnullB;
+  Base * _Nullable nullableB;
+  Derived * _Nonnull nonnullD;
+  Derived * _Nullable nullableD;
+
+  p = c ? nonnullB : nonnullD;
+  p = c ? nonnullB : nullableD; // expected-warning{{implicit conversion from nullable pointer 'Base * _Nullable' to non-nullable pointer type 'Base * _Nonnull}}
+  p = c ? nullableB : nonnullD; // expected-warning{{implicit conversion from nullable pointer 'Base * _Nullable' to non-nullable pointer type 'Base * _Nonnull}}
+  p = c ? nullableB : nullableD; // expected-warning{{implicit conversion from nullable pointer 'Base * _Nullable' to non-nullable pointer type 'Base * _Nonnull}}
+  p = c ? nonnullD : nonnullB;
+  p = c ? nonnullD : nullableB; // expected-warning{{implicit conversion from nullable pointer 'Base * _Nullable' to non-nullable pointer type 'Base * _Nonnull}}
+  p = c ? nullableD : nonnullB; // expected-warning{{implicit conversion from nullable pointer 'Base * _Nullable' to non-nullable pointer type 'Base * _Nonnull}}
+  p = c ? nullableD : nullableB; // expected-warning{{implicit conversion from nullable pointer 'Base * _Nullable' to non-nullable pointer type 'Base * _Nonnull}}
+}
+
+void arraysInLambdas() {
+  typedef int INTS[4];
+  auto simple = [](int [_Nonnull 2]) {};
+  simple(nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  auto nested = [](void *_Nullable [_Nonnull 2]) {};
+  nested(nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  auto nestedBad = [](int [2][_Nonnull 2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int [2]'}}
+
+  auto withTypedef = [](INTS _Nonnull) {};
+  withTypedef(nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  auto withTypedefBad = [](INTS _Nonnull[2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int [4]')}}
+}

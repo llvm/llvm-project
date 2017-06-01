@@ -38,9 +38,26 @@ OPTIONS
  prefixes to match. Multiple prefixes are useful for tests which might
  change for different run options, but most lines remain the same.
 
+.. option:: --check-prefixes prefix1,prefix2,...
+
+ An alias of :option:`--check-prefix` that allows multiple prefixes to be
+ specified as a comma separated list.
+
 .. option:: --input-file filename
 
   File to check (defaults to stdin).
+
+.. option:: --match-full-lines
+
+ By default, FileCheck allows matches of anywhere on a line. This
+ option will require all positive matches to cover an entire
+ line. Leading and trailing whitespace is ignored, unless
+ :option:`--strict-whitespace` is also specified. (Note: negative
+ matches from ``CHECK-NOT`` are not affected by this option!)
+
+ Passing this option is equivalent to inserting ``{{^ *}}`` or
+ ``{{^}}`` before, and ``{{ *$}}`` or ``{{$}}`` after every positive
+ check pattern.
 
 .. option:: --strict-whitespace
 
@@ -127,7 +144,7 @@ exists anywhere in the file.
 The FileCheck -check-prefix option
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The FileCheck :option:`-check-prefix` option allows multiple test
+The FileCheck `-check-prefix` option allows multiple test
 configurations to be driven from one `.ll` file.  This is useful in many
 circumstances, for example, testing different architectural variants with
 :program:`llc`.  Here's a simple example:
@@ -286,7 +303,7 @@ be aware that the definition rule can match `after` its use.
 
 So, for instance, the code below will pass:
 
-.. code-block:: llvm
+.. code-block:: text
 
   ; CHECK-DAG: vmov.32 [[REG2:d[0-9]+]][0]
   ; CHECK-DAG: vmov.32 [[REG2]][1]
@@ -295,7 +312,7 @@ So, for instance, the code below will pass:
 
 While this other code, will not:
 
-.. code-block:: llvm
+.. code-block:: text
 
   ; CHECK-DAG: vmov.32 [[REG2:d[0-9]+]][0]
   ; CHECK-DAG: vmov.32 [[REG2]][1]
@@ -444,3 +461,22 @@ relative line number references, for example:
    // CHECK-NEXT: {{^     ;}}
    int a
 
+Matching Newline Characters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To match newline characters in regular expressions the character class
+``[[:space:]]`` can be used. For example, the following pattern:
+
+.. code-block:: c++
+
+   // CHECK: DW_AT_location [DW_FORM_sec_offset] ([[DLOC:0x[0-9a-f]+]]){{[[:space:]].*}}"intd"
+
+matches output of the form (from llvm-dwarfdump):
+
+.. code-block:: text
+
+       DW_AT_location [DW_FORM_sec_offset]   (0x00000233)
+       DW_AT_name [DW_FORM_strp]  ( .debug_str[0x000000c9] = "intd")
+
+letting us set the :program:`FileCheck` variable ``DLOC`` to the desired value 
+``0x00000233``, extracted from the line immediately preceding "``intd``".

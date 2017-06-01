@@ -1,8 +1,11 @@
 ; RUN: llc < %s -print-machineinstrs=expand-isel-pseudos -o /dev/null 2>&1 | FileCheck %s
 
 ; ARM & AArch64 run an extra SimplifyCFG which disrupts this test.
-; Hexagon crashes (PR23377)
-; XFAIL: arm,aarch64,hexagon
+; XFAIL: arm,aarch64
+
+; Hexagon runs passes that renumber the basic blocks, causing this test
+; to fail.
+; XFAIL: hexagon
 
 ; Make sure we have the correct weight attached to each successor.
 define i32 @test2(i32 %x) nounwind uwtable readnone ssp {
@@ -16,11 +19,11 @@ entry:
     i64 5, label %sw.bb1
   ], !prof !0
 ; CHECK: BB#0: derived from LLVM BB %entry
-; CHECK: Successors according to CFG: BB#2(64) BB#4(21)
+; CHECK: Successors according to CFG: BB#2({{[0-9a-fx/= ]+}}75.29%) BB#4({{[0-9a-fx/= ]+}}24.71%)
 ; CHECK: BB#4: derived from LLVM BB %entry
-; CHECK: Successors according to CFG: BB#1(10) BB#5(11)
+; CHECK: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}47.62%) BB#5({{[0-9a-fx/= ]+}}52.38%)
 ; CHECK: BB#5: derived from LLVM BB %entry
-; CHECK: Successors according to CFG: BB#1(4) BB#3(7)
+; CHECK: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}36.36%) BB#3({{[0-9a-fx/= ]+}}63.64%)
 
 sw.bb:
   br label %return
@@ -41,11 +44,11 @@ define void @left_leaning_weight_balanced_tree(i32 %x) {
 entry:
   switch i32 %x, label %return [
     i32 0,  label %bb0
-    i32 10, label %bb1
-    i32 20, label %bb2
-    i32 30, label %bb3
-    i32 40, label %bb4
-    i32 50, label %bb5
+    i32 100, label %bb1
+    i32 200, label %bb2
+    i32 300, label %bb3
+    i32 400, label %bb4
+    i32 500, label %bb5
   ], !prof !1
 bb0: tail call void @g(i32 0) br label %return
 bb1: tail call void @g(i32 1) br label %return
@@ -62,13 +65,13 @@ return: ret void
 ; CHECK-LABEL: Machine code for function left_leaning_weight_balanced_tree:
 ; CHECK: BB#0: derived from LLVM BB %entry
 ; CHECK-NOT: Successors
-; CHECK: Successors according to CFG: BB#8(13) BB#9(20)
+; CHECK: Successors according to CFG: BB#8({{[0-9a-fx/= ]+}}39.71%) BB#9({{[0-9a-fx/= ]+}}60.29%)
 }
 
 !1 = !{!"branch_weights",
   ; Default:
   i32 1,
-  ; Case 0, 10, 20:
+  ; Case 0, 100, 200:
   i32 10, i32 1, i32 1,
-  ; Case 30, 40, 50:
+  ; Case 300, 400, 500:
   i32 1, i32 10, i32 10}

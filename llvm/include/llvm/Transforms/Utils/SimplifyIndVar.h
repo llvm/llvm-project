@@ -17,7 +17,6 @@
 #define LLVM_TRANSFORMS_UTILS_SIMPLIFYINDVAR_H
 
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
@@ -25,7 +24,7 @@ class CastInst;
 class DominatorTree;
 class IVUsers;
 class Loop;
-class LPPassManager;
+class LoopInfo;
 class PHINode;
 class ScalarEvolution;
 
@@ -34,37 +33,27 @@ class ScalarEvolution;
 class IVVisitor {
 protected:
   const DominatorTree *DT;
-  bool ShouldSplitOverflowIntrinsics;
 
   virtual void anchor();
 
 public:
-  IVVisitor(): DT(nullptr), ShouldSplitOverflowIntrinsics(false) {}
+  IVVisitor() : DT(nullptr) {}
   virtual ~IVVisitor() {}
 
   const DominatorTree *getDomTree() const { return DT; }
-
-  bool shouldSplitOverflowInstrinsics() const {
-    return ShouldSplitOverflowIntrinsics;
-  }
-  void setSplitOverflowIntrinsics() {
-    ShouldSplitOverflowIntrinsics = true;
-    assert(DT && "Splitting overflow intrinsics requires a DomTree.");
-  }
-
   virtual void visitCast(CastInst *Cast) = 0;
 };
 
 /// simplifyUsersOfIV - Simplify instructions that use this induction variable
 /// by using ScalarEvolution to analyze the IV's recurrence.
 bool simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
-                       LPPassManager *LPM, SmallVectorImpl<WeakVH> &Dead,
+                       LoopInfo *LI, SmallVectorImpl<WeakVH> &Dead,
                        IVVisitor *V = nullptr);
 
 /// SimplifyLoopIVs - Simplify users of induction variables within this
 /// loop. This does not actually change or add IVs.
 bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
-                     LPPassManager *LPM, SmallVectorImpl<WeakVH> &Dead);
+                     LoopInfo *LI, SmallVectorImpl<WeakVH> &Dead);
 
 } // namespace llvm
 

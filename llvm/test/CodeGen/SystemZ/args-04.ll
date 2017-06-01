@@ -1,7 +1,7 @@
 ; Test incoming GPR, FPR and stack arguments when no extension type is given.
 ; This type of argument is used for passing structures, etc.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -verify-machineinstrs | FileCheck %s
 
 ; Do some arithmetic so that we can see the register being used.
 define i8 @f1(i8 %r2) {

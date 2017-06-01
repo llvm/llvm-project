@@ -1,14 +1,38 @@
-; RUN: opt -S < %s -indvars | opt -analyze -iv-users | grep "%cmp = icmp slt i32" | grep "= {%\.ph,+,1}<%for.cond>"
-; PR8079
+; RUN: opt -S < %s -analyze -scalar-evolution -loop-simplify -scalar-evolution | FileCheck %s
 
 ; Provide legal integer types.
 target datalayout = "n8:16:32:64"
 
-; LoopSimplify should invalidate indvars when splitting out the
-; inner loop.
-
 @maxStat = external global i32
 
+; LoopSimplify should invalidate SCEV when splitting out the
+; inner loop.
+;
+; First SCEV print:
+; CHECK-LABEL: Classifying expressions for: @test
+; CHECK: %[[PHI:.*]] = phi i32 [ 0, %entry ], [ %{{.*}}, %if.then5 ], [ %[[PHI]], %if.end ]
+; CHECK-LABEL: Determining loop execution counts for: @test
+; CHECK: Loop %for.body18: Unpredictable backedge-taken count.
+; CHECK: Loop %for.body18: Unpredictable max backedge-taken count.
+; CHECK: Loop %for.body18: Unpredictable predicated backedge-taken count.
+; CHECK: Loop %for.cond: <multiple exits> Unpredictable backedge-taken count.
+; CHECK: Loop %for.cond: Unpredictable max backedge-taken count.
+; CHECK: Loop %for.cond: Unpredictable predicated backedge-taken count.
+;
+; Now simplify the loop, which should cause SCEV to re-compute more precise
+; info here in addition to having preheader PHIs. Second SCEV print:
+; CHECK-LABEL: Classifying expressions for: @test
+; CHECK: phi i32 [ %{{.*}}, %if.then5 ], [ 0, %entry ]
+; CHECK-LABEL: Determining loop execution counts for: @test
+; CHECK: Loop %for.body18: Unpredictable backedge-taken count.
+; CHECK: Loop %for.body18: Unpredictable max backedge-taken count.
+; CHECK: Loop %for.body18: Unpredictable predicated backedge-taken count.
+; CHECK: Loop %for.cond: <multiple exits> Unpredictable backedge-taken count.
+; CHECK: Loop %for.cond: max backedge-taken count is -2147483647
+; CHECK: Loop %for.cond: Unpredictable predicated backedge-taken count.
+; CHECK: Loop %for.cond.outer: <multiple exits> Unpredictable backedge-taken count.
+; CHECK: Loop %for.cond.outer: Unpredictable max backedge-taken count.
+; CHECK: Loop %for.cond.outer: Unpredictable predicated backedge-taken count.
 define i32 @test() nounwind {
 entry:
   br label %for.cond
@@ -52,12 +76,27 @@ return:                                           ; preds = %for.body18, %for.bo
 
 declare void @foo() nounwind
 
-; Notify SCEV when removing an ExitingBlock.
-; CHECK-LABEL: @mergeExit(
-; CHECK: while.cond191:
-; CHECK: br i1 %or.cond, label %while.body197
-; CHECK-NOT: land.rhs:
-; CHECK: ret
+; Notify SCEV when removing an ExitingBlock. This only changes the
+; backedge-taken information.
+;
+; First SCEV print:
+; CHECK-LABEL: Determining loop execution counts for: @mergeExit
+; CHECK: Loop %while.cond191: <multiple exits> Unpredictable backedge-taken count.
+; CHECK: Loop %while.cond191: max backedge-taken count is -1
+; CHECK: Loop %while.cond191: Unpredictable predicated backedge-taken count.
+; CHECK: Loop %while.cond191.outer: <multiple exits> Unpredictable backedge-taken count.
+; CHECK: Loop %while.cond191.outer: Unpredictable max backedge-taken count.
+; CHECK: Loop %while.cond191.outer: Unpredictable predicated backedge-taken count.
+;
+; After simplifying, the max backedge count is refined.
+; Second SCEV print:
+; CHECK-LABEL: Determining loop execution counts for: @mergeExit
+; CHECK: Loop %while.cond191: <multiple exits> Unpredictable backedge-taken count.
+; CHECK: Loop %while.cond191: max backedge-taken count is 0
+; CHECK: Loop %while.cond191: Unpredictable predicated backedge-taken count.
+; CHECK: Loop %while.cond191.outer: <multiple exits> Unpredictable backedge-taken count.
+; CHECK: Loop %while.cond191.outer: Unpredictable max backedge-taken count.
+; CHECK: Loop %while.cond191.outer: Unpredictable predicated backedge-taken count.
 define void @mergeExit(i32 %MapAttrCount) nounwind uwtable ssp {
 entry:
   br i1 undef, label %if.then124, label %if.end126

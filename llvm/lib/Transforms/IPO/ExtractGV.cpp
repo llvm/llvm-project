@@ -68,6 +68,9 @@ namespace {
       : ModulePass(ID), Named(GVs.begin(), GVs.end()), deleteStuff(deleteS) {}
 
     bool runOnModule(Module &M) override {
+      if (skipModule(M))
+        return false;
+
       // Visit the global inline asm.
       if (!deleteStuff)
         M.setModuleInlineAsm("");
@@ -101,20 +104,20 @@ namespace {
       }
 
       // Visit the Functions.
-      for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
+      for (Function &F : M) {
         bool Delete =
-            deleteStuff == (bool)Named.count(&*I) && !I->isDeclaration();
+            deleteStuff == (bool)Named.count(&F) && !F.isDeclaration();
         if (!Delete) {
-          if (I->hasAvailableExternallyLinkage())
+          if (F.hasAvailableExternallyLinkage())
             continue;
         }
 
-        makeVisible(*I, Delete);
+        makeVisible(F, Delete);
 
         if (Delete) {
           // Make this a declaration and drop it's comdat.
-          I->deleteBody();
-          I->setComdat(nullptr);
+          F.deleteBody();
+          F.setComdat(nullptr);
         }
       }
 
@@ -128,7 +131,7 @@ namespace {
         makeVisible(*CurI, Delete);
 
         if (Delete) {
-          Type *Ty =  CurI->getType()->getElementType();
+          Type *Ty =  CurI->getValueType();
 
           CurI->removeFromParent();
           llvm::Value *Declaration;

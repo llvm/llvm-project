@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=core-avx-i < %s | FileCheck %s --check-prefix CHECK
+; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=core-avx-i < %s | FileCheck %s
 
 define i256 @foo(<8 x i32> %a) {
   %r = bitcast <8 x i32> %a to i256

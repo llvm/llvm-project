@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -mcpu=cyclone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -mcpu=cyclone | FileCheck %s
 
 %struct.x = type { i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }
 
@@ -40,7 +40,7 @@ entry:
 define void @t2(i8* nocapture %C) nounwind {
 entry:
 ; CHECK-LABEL: t2:
-; CHECK: movz [[REG3:w[0-9]+]]
+; CHECK: mov [[REG3:w[0-9]+]]
 ; CHECK: movk [[REG3]],
 ; CHECK: str [[REG3]], [x0, #32]
 ; CHECK: ldp [[DEST1:q[0-9]+]], [[DEST2:q[0-9]+]], [x{{[0-9]+}}]
@@ -75,9 +75,9 @@ define void @t5(i8* nocapture %C) nounwind {
 entry:
 ; CHECK-LABEL: t5:
 ; CHECK: strb wzr, [x0, #6]
-; CHECK: movz [[REG7:w[0-9]+]], #0x5453
+; CHECK: mov [[REG7:w[0-9]+]], #21587
 ; CHECK: strh [[REG7]], [x0, #4]
-; CHECK: movz [[REG8:w[0-9]+]],
+; CHECK: mov [[REG8:w[0-9]+]],
 ; CHECK: movk [[REG8]],
 ; CHECK: str [[REG8]], [x0]
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str5, i64 0, i64 0), i64 7, i32 1, i1 false)

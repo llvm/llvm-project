@@ -54,7 +54,7 @@ class MemAccessSize<bits<4> value> {
   bits<4> Value = value;
 }
 
-def NoMemAccess      : MemAccessSize<0>;// Not a memory acces instruction.
+def NoMemAccess      : MemAccessSize<0>;// Not a memory access instruction.
 def ByteAccess       : MemAccessSize<1>;// Byte access instruction (memb).
 def HalfWordAccess   : MemAccessSize<2>;// Half word access instruction (memh).
 def WordAccess       : MemAccessSize<3>;// Word access instruction (memw).
@@ -178,6 +178,9 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
 
   bits<1> isAccumulator = 0;
   let TSFlags{54} = isAccumulator;
+
+  bit cofMax1 = 0;
+  let TSFlags{60} = cofMax1;
 
   // Fields used for relation models.
   bit isNonTemporal = 0;
@@ -342,6 +345,10 @@ class JInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
             string cstr = "", InstrItinClass itin = J_tc_2early_SLOT23>
   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeJ>, OpcodeHexagon;
 
+class JInst_CJUMP_UCJUMP<dag outs, dag ins, string asmstr, list<dag> pattern = [],
+            string cstr = "", InstrItinClass itin = J_tc_2early_CJUMP_UCJUMP_ARCHDEPSLOT>
+  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeJ>, OpcodeHexagon;
+
 // JR Instruction Class in V2/V3/V4.
 // Definition of the instruction class NOT CHANGED.
 class JRInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
@@ -412,19 +419,9 @@ class STInstPI<dag outs, dag ins, string asmstr, list<dag> pattern = [],
                string cstr = "">
   : STInst<outs, ins, asmstr, pattern, cstr>;
 
-let mayStore = 1 in
-class STInst2PI<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                string cstr = "">
-  : STInst<outs, ins, asmstr, pattern, cstr>;
-
 // Post increment LD Instruction.
 class LDInstPI<dag outs, dag ins, string asmstr, list<dag> pattern = [],
                string cstr = "">
-  : LDInst<outs, ins, asmstr, pattern, cstr>;
-
-let mayLoad = 1 in
-class LDInst2PI<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                string cstr = "">
   : LDInst<outs, ins, asmstr, pattern, cstr>;
 
 //===----------------------------------------------------------------------===//

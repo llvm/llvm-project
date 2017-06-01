@@ -26,7 +26,7 @@ let isAsCheapAsAMove=1, VecInstType=isVecExtract.Value in {
 def V2i16Extract : NVPTXVecInst<(outs Int16Regs:$dst),
   (ins V2I16Regs:$src, i8imm:$c),
                          "mov.u16 \t$dst, $src${c:vecelem};",
-                         [(set Int16Regs:$dst, (vector_extract
+                         [(set Int16Regs:$dst, (extractelt
                            (v2i16 V2I16Regs:$src), imm:$c))],
                          IMOV16rr>;
 
@@ -34,7 +34,7 @@ def V2i16Extract : NVPTXVecInst<(outs Int16Regs:$dst),
 def V4i16Extract : NVPTXVecInst<(outs Int16Regs:$dst),
   (ins V4I16Regs:$src, i8imm:$c),
                          "mov.u16 \t$dst, $src${c:vecelem};",
-                         [(set Int16Regs:$dst, (vector_extract
+                         [(set Int16Regs:$dst, (extractelt
                            (v4i16 V4I16Regs:$src), imm:$c))],
                          IMOV16rr>;
 
@@ -42,7 +42,7 @@ def V4i16Extract : NVPTXVecInst<(outs Int16Regs:$dst),
 def V2i8Extract : NVPTXVecInst<(outs Int8Regs:$dst),
   (ins V2I8Regs:$src, i8imm:$c),
                          "mov.u16 \t$dst, $src${c:vecelem};",
-                         [(set Int8Regs:$dst, (vector_extract
+                         [(set Int8Regs:$dst, (extractelt
                            (v2i8 V2I8Regs:$src), imm:$c))],
                          IMOV8rr>;
 
@@ -50,7 +50,7 @@ def V2i8Extract : NVPTXVecInst<(outs Int8Regs:$dst),
 def V4i8Extract : NVPTXVecInst<(outs Int8Regs:$dst),
   (ins V4I8Regs:$src, i8imm:$c),
                          "mov.u16 \t$dst, $src${c:vecelem};",
-                         [(set Int8Regs:$dst, (vector_extract
+                         [(set Int8Regs:$dst, (extractelt
                            (v4i8 V4I8Regs:$src), imm:$c))],
                          IMOV8rr>;
 
@@ -58,7 +58,7 @@ def V4i8Extract : NVPTXVecInst<(outs Int8Regs:$dst),
 def V2i32Extract : NVPTXVecInst<(outs Int32Regs:$dst),
   (ins V2I32Regs:$src, i8imm:$c),
                          "mov.u32 \t$dst, $src${c:vecelem};",
-                         [(set Int32Regs:$dst, (vector_extract
+                         [(set Int32Regs:$dst, (extractelt
                            (v2i32 V2I32Regs:$src), imm:$c))],
                          IMOV32rr>;
 
@@ -66,7 +66,7 @@ def V2i32Extract : NVPTXVecInst<(outs Int32Regs:$dst),
 def V2f32Extract : NVPTXVecInst<(outs Float32Regs:$dst),
   (ins V2F32Regs:$src, i8imm:$c),
                          "mov.f32 \t$dst, $src${c:vecelem};",
-                         [(set Float32Regs:$dst, (vector_extract
+                         [(set Float32Regs:$dst, (extractelt
                            (v2f32 V2F32Regs:$src), imm:$c))],
                          FMOV32rr>;
 
@@ -74,7 +74,7 @@ def V2f32Extract : NVPTXVecInst<(outs Float32Regs:$dst),
 def V2i64Extract : NVPTXVecInst<(outs Int64Regs:$dst),
   (ins V2I64Regs:$src, i8imm:$c),
                          "mov.u64 \t$dst, $src${c:vecelem};",
-                         [(set Int64Regs:$dst, (vector_extract
+                         [(set Int64Regs:$dst, (extractelt
                            (v2i64 V2I64Regs:$src), imm:$c))],
                          IMOV64rr>;
 
@@ -82,7 +82,7 @@ def V2i64Extract : NVPTXVecInst<(outs Int64Regs:$dst),
 def V2f64Extract : NVPTXVecInst<(outs Float64Regs:$dst),
   (ins V2F64Regs:$src, i8imm:$c),
                          "mov.f64 \t$dst, $src${c:vecelem};",
-                         [(set Float64Regs:$dst, (vector_extract
+                         [(set Float64Regs:$dst, (extractelt
                            (v2f64 V2F64Regs:$src), imm:$c))],
                          FMOV64rr>;
 
@@ -90,7 +90,7 @@ def V2f64Extract : NVPTXVecInst<(outs Float64Regs:$dst),
 def V4i32Extract : NVPTXVecInst<(outs Int32Regs:$dst),
   (ins V4I32Regs:$src, i8imm:$c),
                          "mov.u32 \t$dst, $src${c:vecelem};",
-                         [(set Int32Regs:$dst, (vector_extract
+                         [(set Int32Regs:$dst, (extractelt
                            (v4i32 V4I32Regs:$src), imm:$c))],
                          IMOV32rr>;
 
@@ -98,7 +98,7 @@ def V4i32Extract : NVPTXVecInst<(outs Int32Regs:$dst),
 def V4f32Extract : NVPTXVecInst<(outs Float32Regs:$dst),
   (ins V4F32Regs:$src, i8imm:$c),
                          "mov.f32 \t$dst, $src${c:vecelem};",
-                         [(set Float32Regs:$dst, (vector_extract
+                         [(set Float32Regs:$dst, (extractelt
                            (v4f32 V4F32Regs:$src), imm:$c))],
                          FMOV32rr>;
 }
@@ -110,8 +110,7 @@ def V2i8Insert : NVPTXVecInst<(outs V2I8Regs:$dst),
         "mov.v2.u16 \t${dst:vecfull}, ${src:vecfull};"
         "\n\tmov.u16 \t$dst${c:vecelem}, $val;",
        [(set V2I8Regs:$dst,
-         (vector_insert V2I8Regs:$src, Int8Regs:$val, imm:$c))],
-                         IMOV8rr>;
+         (insertelt V2I8Regs:$src, Int8Regs:$val, imm:$c))], IMOV8rr>;
 
 // Insert v4i8
 def V4i8Insert : NVPTXVecInst<(outs V4I8Regs:$dst),
@@ -119,8 +118,7 @@ def V4i8Insert : NVPTXVecInst<(outs V4I8Regs:$dst),
                        "mov.v4.u16 \t${dst:vecfull}, ${src:vecfull};"
                        "\n\tmov.u16 \t$dst${c:vecelem}, $val;",
        [(set V4I8Regs:$dst,
-         (vector_insert V4I8Regs:$src, Int8Regs:$val, imm:$c))],
-                         IMOV8rr>;
+         (insertelt V4I8Regs:$src, Int8Regs:$val, imm:$c))], IMOV8rr>;
 
 // Insert v2i16
 def V2i16Insert : NVPTXVecInst<(outs V2I16Regs:$dst),
@@ -128,8 +126,8 @@ def V2i16Insert : NVPTXVecInst<(outs V2I16Regs:$dst),
                        "mov.v2.u16 \t${dst:vecfull}, ${src:vecfull};"
                        "\n\tmov.u16 \t$dst${c:vecelem}, $val;",
        [(set V2I16Regs:$dst,
-         (vector_insert V2I16Regs:$src, Int16Regs:$val, imm:$c))],
-                         IMOV16rr>;
+         (insertelt V2I16Regs:$src, Int16Regs:$val, imm:$c))],
+                    IMOV16rr>;
 
 // Insert v4i16
 def V4i16Insert : NVPTXVecInst<(outs V4I16Regs:$dst),
@@ -137,8 +135,8 @@ def V4i16Insert : NVPTXVecInst<(outs V4I16Regs:$dst),
                        "mov.v4.u16 \t${dst:vecfull}, ${src:vecfull};"
                        "\n\tmov.u16 \t$dst${c:vecelem}, $val;",
        [(set V4I16Regs:$dst,
-         (vector_insert V4I16Regs:$src, Int16Regs:$val, imm:$c))],
-                         IMOV16rr>;
+         (insertelt V4I16Regs:$src, Int16Regs:$val, imm:$c))],
+                    IMOV16rr>;
 
 // Insert v2i32
 def V2i32Insert : NVPTXVecInst<(outs V2I32Regs:$dst),
@@ -146,8 +144,8 @@ def V2i32Insert : NVPTXVecInst<(outs V2I32Regs:$dst),
                        "mov.v2.u32 \t${dst:vecfull}, ${src:vecfull};"
                        "\n\tmov.u32 \t$dst${c:vecelem}, $val;",
        [(set V2I32Regs:$dst,
-         (vector_insert V2I32Regs:$src, Int32Regs:$val, imm:$c))],
-                         IMOV32rr>;
+         (insertelt V2I32Regs:$src, Int32Regs:$val, imm:$c))],
+                    IMOV32rr>;
 
 // Insert v2f32
 def V2f32Insert : NVPTXVecInst<(outs V2F32Regs:$dst),
@@ -155,8 +153,8 @@ def V2f32Insert : NVPTXVecInst<(outs V2F32Regs:$dst),
                        "mov.v2.f32 \t${dst:vecfull}, ${src:vecfull};"
                        "\n\tmov.f32 \t$dst${c:vecelem}, $val;",
        [(set V2F32Regs:$dst,
-         (vector_insert V2F32Regs:$src, Float32Regs:$val, imm:$c))],
-                         FMOV32rr>;
+         (insertelt V2F32Regs:$src, Float32Regs:$val, imm:$c))],
+                    FMOV32rr>;
 
 // Insert v2i64
 def V2i64Insert : NVPTXVecInst<(outs V2I64Regs:$dst),
@@ -164,8 +162,8 @@ def V2i64Insert : NVPTXVecInst<(outs V2I64Regs:$dst),
                        "mov.v2.u64 \t${dst:vecfull}, ${src:vecfull};"
                        "\n\tmov.u64 \t$dst${c:vecelem}, $val;",
        [(set V2I64Regs:$dst,
-         (vector_insert V2I64Regs:$src, Int64Regs:$val, imm:$c))],
-                         IMOV64rr>;
+         (insertelt V2I64Regs:$src, Int64Regs:$val, imm:$c))],
+                    IMOV64rr>;
 
 // Insert v2f64
 def V2f64Insert : NVPTXVecInst<(outs V2F64Regs:$dst),
@@ -173,8 +171,8 @@ def V2f64Insert : NVPTXVecInst<(outs V2F64Regs:$dst),
                        "mov.v2.f64 \t${dst:vecfull}, ${src:vecfull};"
                        "\n\tmov.f64 \t$dst${c:vecelem}, $val;",
        [(set V2F64Regs:$dst,
-         (vector_insert V2F64Regs:$src, Float64Regs:$val, imm:$c))],
-                         FMOV64rr>;
+         (insertelt V2F64Regs:$src, Float64Regs:$val, imm:$c))],
+                    FMOV64rr>;
 
 // Insert v4i32
 def V4i32Insert : NVPTXVecInst<(outs V4I32Regs:$dst),
@@ -182,8 +180,8 @@ def V4i32Insert : NVPTXVecInst<(outs V4I32Regs:$dst),
                        "mov.v4.u32 \t${dst:vecfull}, ${src:vecfull};"
                        "\n\tmov.u32 \t$dst${c:vecelem}, $val;",
        [(set V4I32Regs:$dst,
-         (vector_insert V4I32Regs:$src, Int32Regs:$val, imm:$c))],
-                         IMOV32rr>;
+         (insertelt V4I32Regs:$src, Int32Regs:$val, imm:$c))],
+                    IMOV32rr>;
 
 // Insert v4f32
 def V4f32Insert : NVPTXVecInst<(outs V4F32Regs:$dst),
@@ -191,8 +189,8 @@ def V4f32Insert : NVPTXVecInst<(outs V4F32Regs:$dst),
                        "mov.v4.f32 \t${dst:vecfull}, ${src:vecfull};"
                        "\n\tmov.f32 \t$dst${c:vecelem}, $val;",
        [(set V4F32Regs:$dst,
-         (vector_insert V4F32Regs:$src, Float32Regs:$val, imm:$c))],
-                         FMOV32rr>;
+         (insertelt V4F32Regs:$src, Float32Regs:$val, imm:$c))],
+                    FMOV32rr>;
 }
 
 class BinOpAsmString<string c> {

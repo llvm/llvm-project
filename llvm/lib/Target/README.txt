@@ -183,8 +183,8 @@ so cool to turn it into something like:
    
 ... which would only do one 32-bit XOR per loop iteration instead of two.
 
-It would also be nice to recognize the reg->size doesn't alias reg->node[i], but
-this requires TBAA.
+It would also be nice to recognize the reg->size doesn't alias reg->node[i],
+but this requires TBAA.
 
 //===---------------------------------------------------------------------===//
 
@@ -2081,7 +2081,7 @@ struct x testfunc() {
 }
 
 We currently compile this to:
-$ clang t.c -S -o - -O0 -emit-llvm | opt -scalarrepl -S
+$ clang t.c -S -o - -O0 -emit-llvm | opt -sroa -S
 
 
 %struct.x = type { i8, [4 x i32] }

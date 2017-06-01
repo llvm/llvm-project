@@ -445,7 +445,7 @@ class AggValueSlot {
   // Qualifiers
   Qualifiers Quals;
 
-  unsigned short Alignment;
+  unsigned Alignment;
 
   /// DestructedFlag - This is set to true if some external code is
   /// responsible for setting up a destructor for the slot.  Otherwise

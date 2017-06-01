@@ -51,12 +51,27 @@ class LLVM_LIBRARY_VISIBILITY ARMAsmPrinter : public AsmPrinter {
   /// labels used for ARMv4t thumb code to make register indirect calls.
   SmallVector<std::pair<unsigned, MCSymbol*>, 4> ThumbIndirectPads;
 
+  /// OptimizationGoals - Maintain a combined optimization goal for all
+  /// functions in a module: one of Tag_ABI_optimization_goals values,
+  /// -1 if uninitialized, 0 if conflicting goals
+  int OptimizationGoals;
+
+  /// List of globals that have had their storage promoted to a constant
+  /// pool. This lives between calls to runOnMachineFunction and collects
+  /// data from every MachineFunction. It is used during doFinalization
+  /// when all non-function globals are emitted.
+  SmallPtrSet<const GlobalVariable*,2> PromotedGlobals;
+  /// Set of globals in PromotedGlobals that we've emitted labels for.
+  /// We need to emit labels even for promoted globals so that DWARF
+  /// debug info can link properly.
+  SmallPtrSet<const GlobalVariable*,2> EmittedPromotedGlobalLabels;
+
 public:
   explicit ARMAsmPrinter(TargetMachine &TM,
                          std::unique_ptr<MCStreamer> Streamer);
 
-  const char *getPassName() const override {
-    return "ARM Assembly / Object Emitter";
+  StringRef getPassName() const override {
+    return "ARM Assembly Printer";
   }
 
   void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O);
@@ -85,11 +100,23 @@ public:
   void EmitStartOfAsmFile(Module &M) override;
   void EmitEndOfAsmFile(Module &M) override;
   void EmitXXStructor(const DataLayout &DL, const Constant *CV) override;
-
+  void EmitGlobalVariable(const GlobalVariable *GV) override;
+  
   // lowerOperand - Convert a MachineOperand into the equivalent MCOperand.
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
 
+  //===------------------------------------------------------------------===//
+  // XRay implementation
+  //===------------------------------------------------------------------===//
+public:
+  // XRay-specific lowering for ARM.
+  void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
+  void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
+  void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
+
 private:
+  void EmitSled(const MachineInstr &MI, SledKind Kind);
+
   // Helpers for EmitStartOfAsmFile() and EmitEndOfAsmFile()
   void emitAttributes();
 

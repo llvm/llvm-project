@@ -340,12 +340,7 @@ _LIBCPP_BEGIN_NAMESPACE_LFTS
         // [string.view.ops], string operations:
         template<class _Allocator>
         _LIBCPP_INLINE_VISIBILITY
-        // Clang's extended C++11 explict conversions don't work with
-        // string_view in C++03.
-#ifndef _LIBCPP_CXX03_LANG
-        _LIBCPP_EXPLICIT
-#endif
-        operator basic_string<_CharT, _Traits, _Allocator>() const
+        _LIBCPP_EXPLICIT operator basic_string<_CharT, _Traits, _Allocator>() const
         { return basic_string<_CharT, _Traits, _Allocator>( begin(), end()); }
 
         template<class _Allocator = allocator<_CharT> >

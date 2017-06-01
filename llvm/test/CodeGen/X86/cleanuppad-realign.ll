@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686-pc-windows-msvc < %s | FileCheck --check-prefix=X86 %s
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck --check-prefix=X64 %s
+; RUN: llc -mtriple=i686-pc-windows-msvc -stack-symbol-ordering=0 < %s | FileCheck --check-prefix=X86 %s
+; RUN: llc -mtriple=x86_64-pc-windows-msvc -stack-symbol-ordering=0 < %s | FileCheck --check-prefix=X64 %s
 
 declare i32 @__CxxFrameHandler3(...)
 declare void @Dtor(i64* %o)
@@ -17,9 +17,9 @@ invoke.cont:                                      ; preds = %entry
   ret void
 
 ehcleanup:                                        ; preds = %entry
-  %0 = cleanuppad []
-  call void @Dtor(i64* %o)
-  cleanupret %0 unwind to caller
+  %0 = cleanuppad within none []
+  call void @Dtor(i64* %o) [ "funclet"(token %0) ]
+  cleanupret from %0 unwind to caller
 }
 
 ; X86-LABEL: _realigned_cleanup: # @realigned_cleanup
@@ -50,15 +50,16 @@ ehcleanup:                                        ; preds = %entry
 ; X64:         .seh_pushreg 5
 ; X64:         pushq   %rbx
 ; X64:         .seh_pushreg 3
-; X64:         subq    $72, %rsp
-; X64:         .seh_stackalloc 72
-; X64:         leaq    64(%rsp), %rbp
-; X64:         .seh_setframe 5, 64
+; X64:         subq    $104, %rsp
+; X64:         .seh_stackalloc 104
+; X64:         leaq    96(%rsp), %rbp
+; X64:         .seh_setframe 5, 96
 ; X64:         .seh_endprologue
 ; X64:         andq    $-32, %rsp
 ; X64:         movq    %rsp, %rbx
 ;	RBP will reload from this offset.
-; X64:         movq    %rbp, 48(%rbx)
+; X64:         movq    %rbp, 56(%rbx)
+; X64: 	       movq    $-2, (%rbp)
 
 ; X64-LABEL: "?dtor$2@?0?realigned_cleanup@4HA":
 ; X64:         movq    %rdx, 16(%rsp)
@@ -68,7 +69,7 @@ ehcleanup:                                        ; preds = %entry
 ; X64:         .seh_pushreg 3
 ; X64:         subq    $40, %rsp
 ; X64:         .seh_stackalloc 40
-; X64:         leaq    64(%rdx), %rbp
+; X64:         leaq    96(%rdx), %rbp
 ; X64:         .seh_endprologue
 ; X64: 	       andq    $-32, %rdx
 ; X64: 	       movq    %rdx, %rbx

@@ -88,25 +88,25 @@ while.cond.loopexit:                              ; preds = %while.body4, %while
 
 while.body:                                       ; preds = %entry, %while.cond.loopexit
   store i32 0, i32* %ref.tmp, align 4, !dbg !41, !tbaa !42
-  call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !21, metadata !36), !dbg !46
+  call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !21, metadata !DIExpression(DW_OP_deref)), !dbg !46
   call void @_Z4funcRKiS0_(i32* dereferenceable(4) %x, i32* dereferenceable(4) %ref.tmp), !dbg !47
   %call29 = call i32 @_Z4condv(), !dbg !48
   %tobool310 = icmp eq i32 %call29, 0, !dbg !48
   br i1 %tobool310, label %while.cond.loopexit, label %while.body4, !dbg !49
 
 while.body4:                                      ; preds = %while.body, %while.body4
-  call void @llvm.dbg.value(metadata i8* %y, i64 0, metadata !23, metadata !36), !dbg !50
+  call void @llvm.dbg.value(metadata i8* %y, i64 0, metadata !23, metadata !DIExpression(DW_OP_deref)), !dbg !50
   call void @_Z4funcPv(i8* %y), !dbg !51
-  call void @llvm.dbg.value(metadata i8* %j, i64 0, metadata !26, metadata !36), !dbg !52
+  call void @llvm.dbg.value(metadata i8* %j, i64 0, metadata !26, metadata !DIExpression(DW_OP_deref)), !dbg !52
   call void @_Z4funcPv(i8* %j), !dbg !53
-  call void @llvm.dbg.value(metadata i8* %I, i64 0, metadata !27, metadata !36), !dbg !54
+  call void @llvm.dbg.value(metadata i8* %I, i64 0, metadata !27, metadata !DIExpression(DW_OP_deref)), !dbg !54
   call void @_Z4funcPv(i8* %I), !dbg !55
   store i32 0, i32* %ref.tmp5, align 4, !dbg !56, !tbaa !42
   store i32 0, i32* %ref.tmp6, align 4, !dbg !57, !tbaa !42
   call void @_Z4funcRKiS0_(i32* dereferenceable(4) %ref.tmp5, i32* dereferenceable(4) %ref.tmp6), !dbg !58
   call void @llvm.dbg.declare(metadata %struct.A* undef, metadata !28, metadata !36), !dbg !59
   call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !28, metadata !33), !dbg !59
-  call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !21, metadata !36), !dbg !46
+  call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !21, metadata !DIExpression(DW_OP_deref)), !dbg !46
   call void @llvm.dbg.value(metadata i32* %x, i64 0, metadata !60, metadata !33), !dbg !62
   call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !60, metadata !35), !dbg !62
   call void @llvm.dbg.declare(metadata %struct.A* undef, metadata !60, metadata !36), !dbg !62
@@ -136,24 +136,23 @@ attributes #3 = { ssp uwtable }
 !llvm.module.flags = !{!29, !30, !31}
 !llvm.ident = !{!32}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.7.0 (trunk 227088) (llvm/trunk 227091)", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !10, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.7.0 (trunk 227088) (llvm/trunk 227091)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, globals: !2, imports: !2)
 !1 = !DIFile(filename: "test.cpp", directory: "")
 !2 = !{}
 !3 = !{!4}
 !4 = !DICompositeType(tag: DW_TAG_structure_type, name: "A", line: 1, size: 128, align: 64, file: !1, elements: !5, identifier: "_ZTS1A")
 !5 = !{!6, !9}
-!6 = !DIDerivedType(tag: DW_TAG_member, name: "m1", line: 2, size: 64, align: 64, file: !1, scope: !"_ZTS1A", baseType: !7)
+!6 = !DIDerivedType(tag: DW_TAG_member, name: "m1", line: 2, size: 64, align: 64, file: !1, scope: !4, baseType: !7)
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !8)
 !8 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!9 = !DIDerivedType(tag: DW_TAG_member, name: "m2", line: 3, size: 32, align: 32, offset: 64, file: !1, scope: !"_ZTS1A", baseType: !8)
-!10 = !{!11, !17}
-!11 = distinct !DISubprogram(name: "f2", linkageName: "_Z2f21A", line: 7, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 7, file: !1, scope: !12, type: !13, variables: !15)
+!9 = !DIDerivedType(tag: DW_TAG_member, name: "m2", line: 3, size: 32, align: 32, offset: 64, file: !1, scope: !4, baseType: !8)
+!11 = distinct !DISubprogram(name: "f2", linkageName: "_Z2f21A", line: 7, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 7, file: !1, scope: !12, type: !13, variables: !15)
 !12 = !DIFile(filename: "test.cpp", directory: "")
 !13 = !DISubroutineType(types: !14)
-!14 = !{null, !"_ZTS1A"}
+!14 = !{null, !4}
 !15 = !{!16}
-!16 = !DILocalVariable(name: "p5", line: 7, arg: 1, scope: !11, file: !12, type: !"_ZTS1A")
-!17 = distinct !DISubprogram(name: "f", linkageName: "_Z1fv", line: 12, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 12, file: !1, scope: !12, type: !18, variables: !20)
+!16 = !DILocalVariable(name: "p5", line: 7, arg: 1, scope: !11, file: !12, type: !4)
+!17 = distinct !DISubprogram(name: "f", linkageName: "_Z1fv", line: 12, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 12, file: !1, scope: !12, type: !18, variables: !20)
 !18 = !DISubroutineType(types: !19)
 !19 = !{null}
 !20 = !{!21, !23, !26, !27, !28}
@@ -164,14 +163,14 @@ attributes #3 = { ssp uwtable }
 !25 = !DIBasicType(tag: DW_TAG_base_type, name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
 !26 = !DILocalVariable(name: "j", line: 19, scope: !24, file: !12, type: !25)
 !27 = !DILocalVariable(name: "I", line: 21, scope: !24, file: !12, type: !25)
-!28 = !DILocalVariable(name: "g", line: 24, scope: !24, file: !12, type: !"_ZTS1A")
+!28 = !DILocalVariable(name: "g", line: 24, scope: !24, file: !12, type: !4)
 !29 = !{i32 2, !"Dwarf Version", i32 2}
 !30 = !{i32 2, !"Debug Info Version", i32 3}
 !31 = !{i32 1, !"PIC Level", i32 2}
 !32 = !{!"clang version 3.7.0 (trunk 227088) (llvm/trunk 227091)"}
-!33 = !DIExpression(DW_OP_bit_piece, 0, 8)
+!33 = !DIExpression(DW_OP_LLVM_fragment, 0, 8)
 !34 = !DILocation(line: 7, column: 42, scope: !11)
-!35 = !DIExpression(DW_OP_bit_piece, 8, 4)
+!35 = !DIExpression(DW_OP_LLVM_fragment, 8, 4)
 !36 = !DIExpression()
 !37 = !DILocation(line: 7, column: 48, scope: !11)
 !38 = !DILocation(line: 7, column: 66, scope: !11)
@@ -196,7 +195,7 @@ attributes #3 = { ssp uwtable }
 !57 = !DILocation(line: 23, column: 15, scope: !24)
 !58 = !DILocation(line: 23, column: 7, scope: !24)
 !59 = !DILocation(line: 24, column: 9, scope: !24)
-!60 = !DILocalVariable(name: "p5", line: 7, arg: 1, scope: !11, file: !12, type: !"_ZTS1A")
+!60 = !DILocalVariable(name: "p5", line: 7, arg: 1, scope: !11, file: !12, type: !4)
 !61 = distinct !DILocation(line: 26, column: 7, scope: !24)
 !62 = !DILocation(line: 7, column: 42, scope: !11, inlinedAt: !61)
 !63 = !DILocation(line: 7, column: 48, scope: !11, inlinedAt: !61)

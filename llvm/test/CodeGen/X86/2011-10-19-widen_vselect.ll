@@ -6,9 +6,9 @@
 ; CHECK-LABEL: simple_widen
 ; CHECK-NOT: blend
 ; CHECK: ret
-define void @simple_widen() {
+define void @simple_widen(<2 x float> %a, <2 x float> %b) {
 entry:
-  %0 = select <2 x i1> undef, <2 x float> undef, <2 x float> undef
+  %0 = select <2 x i1> undef, <2 x float> %a, <2 x float> %b
   store <2 x float> %0, <2 x float>* undef
   ret void
 }
@@ -17,10 +17,10 @@ entry:
 ; CHECK: blend
 ; CHECK: ret
 
-define void @complex_inreg_work() {
+define void @complex_inreg_work(<2 x float> %a, <2 x float> %b) {
 entry:
   %0 = fcmp oeq <2 x float> undef, undef
-  %1 = select <2 x i1> %0, <2 x float> undef, <2 x float> undef
+  %1 = select <2 x i1> %0, <2 x float> %a, <2 x float> %b
   store <2 x float> %1, <2 x float>* undef
   ret void
 }

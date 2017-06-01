@@ -50,15 +50,15 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!29}
 
-!0 = distinct !DISubprogram(name: "foo", line: 19510, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 19510, file: !26, scope: !1, type: !3)
+!0 = distinct !DISubprogram(name: "foo", line: 19510, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 19510, file: !26, scope: !1, type: !3)
 !1 = !DIFile(filename: "/tmp/f.c", directory: "/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 124753)", isOptimized: true, emissionKind: 0, file: !27, enums: !28, retainedTypes: !28, subprograms: !24, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 124753)", isOptimized: true, emissionKind: FullDebug, file: !27, enums: !28, retainedTypes: !28, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!6 = distinct !DISubprogram(name: "bar3", line: 14827, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, file: !26, scope: !1, type: !3)
-!7 = distinct !DISubprogram(name: "bar2", line: 15397, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, file: !26, scope: !1, type: !3)
-!8 = distinct !DISubprogram(name: "bar", line: 12382, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, file: !26, scope: !1, type: !9)
+!6 = distinct !DISubprogram(name: "bar3", line: 14827, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !26, scope: !1, type: !3)
+!7 = distinct !DISubprogram(name: "bar2", line: 15397, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !26, scope: !1, type: !3)
+!8 = distinct !DISubprogram(name: "bar", line: 12382, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !26, scope: !1, type: !9)
 !9 = !DISubroutineType(types: !10)
 !10 = !{!11}
 !11 = !DIBasicType(tag: DW_TAG_base_type, name: "unsigned char", size: 8, align: 8, encoding: DW_ATE_unsigned_char)
@@ -66,12 +66,11 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !13 = !DILocation(line: 19509, column: 20, scope: !0)
 !14 = !DILocation(line: 18091, column: 2, scope: !15, inlinedAt: !17)
 !15 = distinct !DILexicalBlock(line: 18086, column: 1, file: !26, scope: !16)
-!16 = distinct !DISubprogram(name: "foo_bar", line: 18086, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, file: !26, scope: !1, type: !3)
+!16 = distinct !DISubprogram(name: "foo_bar", line: 18086, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !26, scope: !1, type: !3)
 !17 = !DILocation(line: 19514, column: 2, scope: !18)
 !18 = distinct !DILexicalBlock(line: 19510, column: 1, file: !26, scope: !0)
 !22 = !DILocation(line: 18094, column: 2, scope: !15, inlinedAt: !17)
 !23 = !DILocation(line: 19524, column: 1, scope: !18)
-!24 = !{!0, !6, !7, !8, !16}
 !25 = !DIFile(filename: "f.i", directory: "/tmp")
 !26 = !DIFile(filename: "/tmp/f.c", directory: "/tmp")
 !27 = !DIFile(filename: "f.i", directory: "/tmp")

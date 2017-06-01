@@ -1,4 +1,4 @@
-; RUN: opt -S -o - -mtriple=armv7-apple-ios7.0 -atomic-expand %s | FileCheck %s
+; RUN: opt -S -o - -mtriple=armv7-apple-ios7.0 -atomic-expand -codegen-opt-level=1 %s | FileCheck %s
 
 define i8 @test_atomic_xchg_i8(i8* %ptr, i8 %xchgend) {
 ; CHECK-LABEL: @test_atomic_xchg_i8
@@ -222,26 +222,37 @@ define i8 @test_atomic_umin_i8(i8* %ptr, i8 %uminend) {
 
 define i8 @test_cmpxchg_i8_seqcst_seqcst(i8* %ptr, i8 %desired, i8 %newval) {
 ; CHECK-LABEL: @test_cmpxchg_i8_seqcst_seqcst
+; CHECK: br label %[[START:.*]]
+
+; CHECK: [[START]]:
+; CHECK: [[OLDVAL32:%.*]] = call i32 @llvm.arm.ldrex.p0i8(i8* %ptr)
+; CHECK: [[OLDVAL:%.*]] = trunc i32 [[OLDVAL32]] to i8
+; CHECK: [[SHOULD_STORE:%.*]] = icmp eq i8 [[OLDVAL]], %desired
+; CHECK: br i1 [[SHOULD_STORE]], label %[[FENCED_STORE:.*]], label %[[NO_STORE_BB:.*]]
+
+; CHECK: [[FENCED_STORE]]:
 ; CHECK: call void @llvm.arm.dmb(i32 11)
 ; CHECK: br label %[[LOOP:.*]]
 
 ; CHECK: [[LOOP]]:
-; CHECK: [[OLDVAL32:%.*]] = call i32 @llvm.arm.ldrex.p0i8(i8* %ptr)
-; CHECK: [[OLDVAL:%.*]] = trunc i32 %1 to i8
-; CHECK: [[SHOULD_STORE:%.*]] = icmp eq i8 [[OLDVAL]], %desired
-; CHECK: br i1 [[SHOULD_STORE]], label %[[TRY_STORE:.*]], label %[[NO_STORE_BB:.*]]
-
-; CHECK: [[TRY_STORE]]:
+; CHECK: [[LOADED_LOOP:%.*]] = phi i8 [ [[OLDVAL]], %[[FENCED_STORE]] ], [ [[OLDVAL_LOOP:%.*]], %[[RELEASED_LOAD:.*]] ]
 ; CHECK: [[NEWVAL32:%.*]] = zext i8 %newval to i32
 ; CHECK: [[TRYAGAIN:%.*]] =  call i32 @llvm.arm.strex.p0i8(i32 [[NEWVAL32]], i8* %ptr)
 ; CHECK: [[TST:%.*]] = icmp eq i32 [[TRYAGAIN]], 0
-; CHECK: br i1 [[TST]], label %[[SUCCESS_BB:.*]], label %[[LOOP]]
+; CHECK: br i1 [[TST]], label %[[SUCCESS_BB:.*]], label %[[RELEASED_LOAD]]
+
+; CHECK: [[RELEASED_LOAD]]:
+; CHECK: [[OLDVAL32_LOOP:%.*]] = call i32 @llvm.arm.ldrex.p0i8(i8* %ptr)
+; CHECK: [[OLDVAL_LOOP]] = trunc i32 [[OLDVAL32_LOOP]] to i8
+; CHECK: [[SHOULD_STORE_LOOP:%.*]] = icmp eq i8 [[OLDVAL_LOOP]], %desired
+; CHECK: br i1 [[SHOULD_STORE_LOOP]], label %[[LOOP]], label %[[NO_STORE_BB]]
 
 ; CHECK: [[SUCCESS_BB]]:
 ; CHECK: call void @llvm.arm.dmb(i32 11)
 ; CHECK: br label %[[DONE:.*]]
 
 ; CHECK: [[NO_STORE_BB]]:
+; CHECK-NEXT: [[LOADED_NO_STORE:%.*]] = phi i8 [ [[OLDVAL]], %[[START]] ], [ [[OLDVAL_LOOP]], %[[RELEASED_LOAD]] ]
 ; CHECK-NEXT: call void @llvm.arm.clrex()
 ; CHECK-NEXT: br label %[[FAILURE_BB:.*]]
 
@@ -251,7 +262,8 @@ define i8 @test_cmpxchg_i8_seqcst_seqcst(i8* %ptr, i8 %desired, i8 %newval) {
 
 ; CHECK: [[DONE]]:
 ; CHECK: [[SUCCESS:%.*]] = phi i1 [ true, %[[SUCCESS_BB]] ], [ false, %[[FAILURE_BB]] ]
-; CHECK: ret i8 [[OLDVAL]]
+; CHECK: [[LOADED:%.*]] = phi i8 [ [[LOADED_LOOP]], %[[SUCCESS_BB]] ], [ [[LOADED_NO_STORE]], %[[FAILURE_BB]] ]
+; CHECK: ret i8 [[LOADED]]
 
   %pairold = cmpxchg i8* %ptr, i8 %desired, i8 %newval seq_cst seq_cst
   %old = extractvalue { i8, i1 } %pairold, 0
@@ -260,26 +272,37 @@ define i8 @test_cmpxchg_i8_seqcst_seqcst(i8* %ptr, i8 %desired, i8 %newval) {
 
 define i16 @test_cmpxchg_i16_seqcst_monotonic(i16* %ptr, i16 %desired, i16 %newval) {
 ; CHECK-LABEL: @test_cmpxchg_i16_seqcst_monotonic
-; CHECK: call void @llvm.arm.dmb(i32 11)
 ; CHECK: br label %[[LOOP:.*]]
 
 ; CHECK: [[LOOP]]:
 ; CHECK: [[OLDVAL32:%.*]] = call i32 @llvm.arm.ldrex.p0i16(i16* %ptr)
 ; CHECK: [[OLDVAL:%.*]] = trunc i32 %1 to i16
 ; CHECK: [[SHOULD_STORE:%.*]] = icmp eq i16 [[OLDVAL]], %desired
-; CHECK: br i1 [[SHOULD_STORE]], label %[[TRY_STORE:.*]], label %[[NO_STORE_BB:.*]]
+; CHECK: br i1 [[SHOULD_STORE]], label %[[FENCED_STORE:.*]], label %[[NO_STORE_BB:.*]]
 
-; CHECK: [[TRY_STORE]]:
+; CHECK: [[FENCED_STORE]]:
+; CHECK: call void @llvm.arm.dmb(i32 11)
+; CHECK: br label %[[LOOP:.*]]
+
+; CHECK: [[LOOP]]:
+; CHECK: [[LOADED_LOOP:%.*]] = phi i16 [ [[OLDVAL]], %[[FENCED_STORE]] ], [ [[OLDVAL_LOOP:%.*]], %[[RELEASED_LOAD:.*]] ]
 ; CHECK: [[NEWVAL32:%.*]] = zext i16 %newval to i32
 ; CHECK: [[TRYAGAIN:%.*]] =  call i32 @llvm.arm.strex.p0i16(i32 [[NEWVAL32]], i16* %ptr)
 ; CHECK: [[TST:%.*]] = icmp eq i32 [[TRYAGAIN]], 0
-; CHECK: br i1 [[TST]], label %[[SUCCESS_BB:.*]], label %[[LOOP]]
+; CHECK: br i1 [[TST]], label %[[SUCCESS_BB:.*]], label %[[RELEASED_LOAD:.*]]
+
+; CHECK: [[RELEASED_LOAD]]:
+; CHECK: [[OLDVAL32_LOOP:%.*]] = call i32 @llvm.arm.ldrex.p0i16(i16* %ptr)
+; CHECK: [[OLDVAL_LOOP]] = trunc i32 [[OLDVAL32_LOOP]] to i16
+; CHECK: [[SHOULD_STORE_LOOP:%.*]] = icmp eq i16 [[OLDVAL_LOOP]], %desired
+; CHECK: br i1 [[SHOULD_STORE_LOOP]], label %[[LOOP]], label %[[NO_STORE_BB]]
 
 ; CHECK: [[SUCCESS_BB]]:
 ; CHECK: call void @llvm.arm.dmb(i32 11)
 ; CHECK: br label %[[DONE:.*]]
 
 ; CHECK: [[NO_STORE_BB]]:
+; CHECK-NEXT: [[LOADED_NO_STORE:%.*]] = phi i16 [ [[OLDVAL]], %[[START]] ], [ [[OLDVAL_LOOP]], %[[RELEASED_LOAD]] ]
 ; CHECK-NEXT: call void @llvm.arm.clrex()
 ; CHECK-NEXT: br label %[[FAILURE_BB:.*]]
 
@@ -289,7 +312,8 @@ define i16 @test_cmpxchg_i16_seqcst_monotonic(i16* %ptr, i16 %desired, i16 %newv
 
 ; CHECK: [[DONE]]:
 ; CHECK: [[SUCCESS:%.*]] = phi i1 [ true, %[[SUCCESS_BB]] ], [ false, %[[FAILURE_BB]] ]
-; CHECK: ret i16 [[OLDVAL]]
+; CHECK: [[LOADED:%.*]] = phi i16 [ [[LOADED_LOOP]], %[[SUCCESS_BB]] ], [ [[LOADED_NO_STORE]], %[[FAILURE_BB]] ]
+; CHECK: ret i16 [[LOADED]]
 
   %pairold = cmpxchg i16* %ptr, i16 %desired, i16 %newval seq_cst monotonic
   %old = extractvalue { i16, i1 } %pairold, 0
@@ -377,4 +401,40 @@ define i64 @test_cmpxchg_i64_monotonic_monotonic(i64* %ptr, i64 %desired, i64 %n
   %pairold = cmpxchg i64* %ptr, i64 %desired, i64 %newval monotonic monotonic
   %old = extractvalue { i64, i1 } %pairold, 0
   ret i64 %old
+}
+
+define i32 @test_cmpxchg_minsize(i32* %addr, i32 %desired, i32 %new) minsize {
+; CHECK-LABEL: @test_cmpxchg_minsize
+; CHECK:     call void @llvm.arm.dmb(i32 11)
+; CHECK:     br label %[[START:.*]]
+
+; CHECK: [[START]]:
+; CHECK:     [[LOADED:%.*]] = call i32 @llvm.arm.ldrex.p0i32(i32* %addr)
+; CHECK:     [[SHOULD_STORE:%.*]] = icmp eq i32 [[LOADED]], %desired
+; CHECK:     br i1 [[SHOULD_STORE]], label %[[TRY_STORE:.*]], label %[[NO_STORE_BB:.*]]
+
+; CHECK: [[TRY_STORE]]:
+; CHECK:     [[STREX:%.*]] = call i32 @llvm.arm.strex.p0i32(i32 %new, i32* %addr)
+; CHECK:     [[SUCCESS:%.*]] = icmp eq i32 [[STREX]], 0
+; CHECK:     br i1 [[SUCCESS]], label %[[SUCCESS_BB:.*]], label %[[START]]
+
+; CHECK: [[SUCCESS_BB]]:
+; CHECK:     call void @llvm.arm.dmb(i32 11)
+; CHECK:     br label %[[END:.*]]
+
+; CHECK: [[NO_STORE_BB]]:
+; CHECK:     call void @llvm.arm.clrex()
+; CHECK:     br label %[[FAILURE_BB]]
+
+; CHECK: [[FAILURE_BB]]:
+; CHECK:     call void @llvm.arm.dmb(i32 11)
+; CHECK:     br label %[[END]]
+
+; CHECK: [[END]]:
+; CHECK:     [[SUCCESS:%.*]] = phi i1 [ true, %[[SUCCESS_BB]] ], [ false, %[[FAILURE_BB]] ]
+; CHECK:     ret i32 [[LOADED]]
+
+  %pair = cmpxchg i32* %addr, i32 %desired, i32 %new seq_cst seq_cst
+  %oldval = extractvalue { i32, i1 } %pair, 0
+  ret i32 %oldval
 }

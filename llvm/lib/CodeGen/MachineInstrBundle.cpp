@@ -17,21 +17,23 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <utility>
 using namespace llvm;
 
 namespace {
   class UnpackMachineBundles : public MachineFunctionPass {
   public:
     static char ID; // Pass identification
-    UnpackMachineBundles(std::function<bool(const Function &)> Ftor = nullptr)
-        : MachineFunctionPass(ID), PredicateFtor(Ftor) {
+    UnpackMachineBundles(
+        std::function<bool(const MachineFunction &)> Ftor = nullptr)
+        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {
       initializeUnpackMachineBundlesPass(*PassRegistry::getPassRegistry());
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
   private:
-    std::function<bool(const Function &)> PredicateFtor;
+    std::function<bool(const MachineFunction &)> PredicateFtor;
   };
 } // end anonymous namespace
 
@@ -41,7 +43,7 @@ INITIALIZE_PASS(UnpackMachineBundles, "unpack-mi-bundles",
                 "Unpack machine instruction bundles", false, false)
 
 bool UnpackMachineBundles::runOnMachineFunction(MachineFunction &MF) {
-  if (PredicateFtor && !PredicateFtor(*MF.getFunction()))
+  if (PredicateFtor && !PredicateFtor(MF))
     return false;
 
   bool Changed = false;
@@ -77,8 +79,9 @@ bool UnpackMachineBundles::runOnMachineFunction(MachineFunction &MF) {
 }
 
 FunctionPass *
-llvm::createUnpackMachineBundles(std::function<bool(const Function &)> Ftor) {
-  return new UnpackMachineBundles(Ftor);
+llvm::createUnpackMachineBundles(
+    std::function<bool(const MachineFunction &)> Ftor) {
+  return new UnpackMachineBundles(std::move(Ftor));
 }
 
 namespace {
@@ -293,15 +296,17 @@ MachineOperandIteratorBase::PhysRegInfo
 MachineOperandIteratorBase::analyzePhysReg(unsigned Reg,
                                            const TargetRegisterInfo *TRI) {
   bool AllDefsDead = true;
-  PhysRegInfo PRI = {false, false, false, false, false, false};
+  PhysRegInfo PRI = {false, false, false, false, false, false, false, false};
 
   assert(TargetRegisterInfo::isPhysicalRegister(Reg) &&
          "analyzePhysReg not given a physical register!");
   for (; isValid(); ++*this) {
     MachineOperand &MO = deref();
 
-    if (MO.isRegMask() && MO.clobbersPhysReg(Reg))
-      PRI.Clobbers = true;    // Regmask clobbers Reg.
+    if (MO.isRegMask() && MO.clobbersPhysReg(Reg)) {
+      PRI.Clobbered = true;
+      continue;
+    }
 
     if (!MO.isReg())
       continue;
@@ -310,33 +315,32 @@ MachineOperandIteratorBase::analyzePhysReg(unsigned Reg,
     if (!MOReg || !TargetRegisterInfo::isPhysicalRegister(MOReg))
       continue;
 
-    bool IsRegOrSuperReg = MOReg == Reg || TRI->isSuperRegister(MOReg, Reg);
-    bool IsRegOrOverlapping = MOReg == Reg || TRI->regsOverlap(MOReg, Reg);
-
-    if (IsRegOrSuperReg && MO.readsReg()) {
-      // Reg or a super-reg is read, and perhaps killed also.
-      PRI.Reads = true;
-      PRI.Kills = MO.isKill();
-    }
-
-    if (IsRegOrOverlapping && MO.readsReg()) {
-      PRI.ReadsOverlap = true;// Reg or an overlapping register is read.
-    }
-
-    if (!MO.isDef())
+    if (!TRI->regsOverlap(MOReg, Reg))
       continue;
 
-    if (IsRegOrSuperReg) {
-      PRI.Defines = true;     // Reg or a super-register is defined.
+    bool Covered = TRI->isSuperRegisterEq(Reg, MOReg);
+    if (MO.readsReg()) {
+      PRI.Read = true;
+      if (Covered) {
+        PRI.FullyRead = true;
+        if (MO.isKill())
+          PRI.Killed = true;
+      }
+    } else if (MO.isDef()) {
+      PRI.Defined = true;
+      if (Covered)
+        PRI.FullyDefined = true;
       if (!MO.isDead())
         AllDefsDead = false;
     }
-    if (IsRegOrOverlapping)
-      PRI.Clobbers = true;    // Reg or an overlapping reg is defined.
   }
 
-  if (AllDefsDead && PRI.Defines)
-    PRI.DefinesDead = true;   // Reg or super-register was defined and was dead.
+  if (AllDefsDead) {
+    if (PRI.FullyDefined || PRI.Clobbered)
+      PRI.DeadDef = true;
+    else if (PRI.Defined)
+      PRI.PartialDeadDef = true;
+  }
 
   return PRI;
 }

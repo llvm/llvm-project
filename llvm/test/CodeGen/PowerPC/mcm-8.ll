@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=pwr7 -O0 -code-model=medium < %s | FileCheck %s
-; RUN: llc -mcpu=pwr7 -O0 -code-model=large < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -code-model=medium < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -code-model=large < %s | FileCheck %s
 
 ; Test correct code generation for medium and large code model
 ; for loading a variable with available-externally linkage.

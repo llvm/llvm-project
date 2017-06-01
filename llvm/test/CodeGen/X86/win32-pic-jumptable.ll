@@ -1,16 +1,20 @@
 ; RUN: llc < %s -relocation-model=pic | FileCheck %s
 
 ; CHECK:        calll L0$pb
+; CHECK-NEXT: Lcfi{{[0-9]+}}:
+; CHECK-NEXT: .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT: L0$pb:
 ; CHECK-NEXT:   popl %eax
+; CHECK-NEXT: Lcfi{{[0-9]+}}:
+; CHECK-NEXT: .cfi_adjust_cfa_offset -4
 ; CHECK-NEXT:   addl LJTI0_0(,%ecx,4), %eax
 ; CHECK-NEXT:   jmpl *%eax
 
 ; CHECK:      LJTI0_0:
+; CHECK-NEXT:   .long LBB0_2-L0$pb
+; CHECK-NEXT:   .long LBB0_3-L0$pb
 ; CHECK-NEXT:   .long LBB0_4-L0$pb
 ; CHECK-NEXT:   .long LBB0_5-L0$pb
-; CHECK-NEXT:   .long LBB0_6-L0$pb
-; CHECK-NEXT:   .long LBB0_7-L0$pb
 
 
 target triple = "i686--windows-itanium"

@@ -1,0 +1,82 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass greedy -verify-machineinstrs  -o - %s | FileCheck %s
+--- |
+  define i64 @test_subreg_spill_fold() { ret i64 0 }
+  define i64 @test_subreg_spill_fold2() { ret i64 0 }
+  define i64 @test_subreg_spill_fold3() { ret i64 0 }
+  define i64 @test_subreg_fill_fold() { ret i64 0 }
+  define double @test_subreg_fill_fold2() { ret double 0.0 }
+...
+---
+# CHECK-LABEL: name: test_subreg_spill_fold
+# Ensure that the spilled subreg COPY is eliminated and folded into the spill store.
+name:            test_subreg_spill_fold
+registers:
+  - { id: 0, class: gpr64 }
+body:             |
+  bb.0:
+    ; CHECK: STRXui %xzr, %stack.0, 0 :: (store 8 into %stack.0)
+    undef %0.sub_32 = COPY %wzr
+    INLINEASM $nop, 1, 12, implicit-def dead %x0, 12, implicit-def dead %x1, 12, implicit-def dead %x2, 12, implicit-def dead %x3, 12, implicit-def dead %x4, 12, implicit-def dead %x5, 12, implicit-def dead %x6, 12, implicit-def dead %x7, 12, implicit-def dead %x8, 12, implicit-def dead %x9, 12, implicit-def dead %x10, 12, implicit-def dead %x11, 12, implicit-def dead %x12, 12, implicit-def dead %x13, 12, implicit-def dead %x14, 12, implicit-def dead %x15, 12, implicit-def dead %x16, 12, implicit-def dead %x17, 12, implicit-def dead %x18, 12, implicit-def dead %x19, 12, implicit-def dead %x20, 12, implicit-def dead %x21, 12, implicit-def dead %x22, 12, implicit-def dead %x23, 12, implicit-def dead %x24, 12, implicit-def dead %x25, 12, implicit-def dead %x26, 12, implicit-def dead %x27, 12, implicit-def dead %x28, 12, implicit-def dead %fp, 12, implicit-def dead %lr, 12, implicit-def %sp
+    %x0 = COPY %0
+    RET_ReallyLR implicit %x0
+...
+---
+# CHECK-LABEL: name: test_subreg_spill_fold2
+# Similar to test_subreg_spill_fold, but with a vreg0 register class not containing %WZR.
+name:            test_subreg_spill_fold2
+registers:
+  - { id: 0, class: gpr64sp }
+body:             |
+  bb.0:
+    ; CHECK: STRXui %xzr, %stack.0, 0 :: (store 8 into %stack.0)
+    undef %0.sub_32 = COPY %wzr
+    INLINEASM $nop, 1, 12, implicit-def dead %x0, 12, implicit-def dead %x1, 12, implicit-def dead %x2, 12, implicit-def dead %x3, 12, implicit-def dead %x4, 12, implicit-def dead %x5, 12, implicit-def dead %x6, 12, implicit-def dead %x7, 12, implicit-def dead %x8, 12, implicit-def dead %x9, 12, implicit-def dead %x10, 12, implicit-def dead %x11, 12, implicit-def dead %x12, 12, implicit-def dead %x13, 12, implicit-def dead %x14, 12, implicit-def dead %x15, 12, implicit-def dead %x16, 12, implicit-def dead %x17, 12, implicit-def dead %x18, 12, implicit-def dead %x19, 12, implicit-def dead %x20, 12, implicit-def dead %x21, 12, implicit-def dead %x22, 12, implicit-def dead %x23, 12, implicit-def dead %x24, 12, implicit-def dead %x25, 12, implicit-def dead %x26, 12, implicit-def dead %x27, 12, implicit-def dead %x28, 12, implicit-def dead %fp, 12, implicit-def dead %lr, 12, implicit-def %sp
+    %x0 = ADDXri %0, 1, 0
+    RET_ReallyLR implicit %x0
+...
+---
+# CHECK-LABEL: name: test_subreg_spill_fold3
+# Similar to test_subreg_spill_fold, but with a cross register class copy.
+name:            test_subreg_spill_fold3
+registers:
+  - { id: 0, class: fpr64 }
+body:             |
+  bb.0:
+    ; CHECK: STRXui %xzr, %stack.0, 0 :: (store 8 into %stack.0)
+    undef %0.ssub = COPY %wzr
+    INLINEASM $nop, 1, 12, implicit-def dead %d0, 12, implicit-def dead %d1, 12, implicit-def dead %d2, 12, implicit-def dead %d3, 12, implicit-def dead %d4, 12, implicit-def dead %d5, 12, implicit-def dead %d6, 12, implicit-def dead %d7, 12, implicit-def dead %d8, 12, implicit-def dead %d9, 12, implicit-def dead %d10, 12, implicit-def dead %d11, 12, implicit-def dead %d12, 12, implicit-def dead %d13, 12, implicit-def dead %d14, 12, implicit-def dead %d15, 12, implicit-def dead %d16, 12, implicit-def dead %d17, 12, implicit-def dead %d18, 12, implicit-def dead %d19, 12, implicit-def dead %d20, 12, implicit-def dead %d21, 12, implicit-def dead %d22, 12, implicit-def dead %d23, 12, implicit-def dead %d24, 12, implicit-def dead %d25, 12, implicit-def dead %d26, 12, implicit-def dead %d27, 12, implicit-def dead %d28, 12, implicit-def dead %d29, 12, implicit-def dead %d30, 12, implicit-def %d31
+    %x0 = COPY %0
+    RET_ReallyLR implicit %x0
+...
+---
+# CHECK-LABEL: name: test_subreg_fill_fold
+# Ensure that the filled COPY is eliminated and folded into the fill load.
+name:            test_subreg_fill_fold
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr64 }
+body:             |
+  bb.0:
+    %0 = COPY %wzr
+    INLINEASM $nop, 1, 12, implicit-def dead %x0, 12, implicit-def dead %x1, 12, implicit-def dead %x2, 12, implicit-def dead %x3, 12, implicit-def dead %x4, 12, implicit-def dead %x5, 12, implicit-def dead %x6, 12, implicit-def dead %x7, 12, implicit-def dead %x8, 12, implicit-def dead %x9, 12, implicit-def dead %x10, 12, implicit-def dead %x11, 12, implicit-def dead %x12, 12, implicit-def dead %x13, 12, implicit-def dead %x14, 12, implicit-def dead %x15, 12, implicit-def dead %x16, 12, implicit-def dead %x17, 12, implicit-def dead %x18, 12, implicit-def dead %x19, 12, implicit-def dead %x20, 12, implicit-def dead %x21, 12, implicit-def dead %x22, 12, implicit-def dead %x23, 12, implicit-def dead %x24, 12, implicit-def dead %x25, 12, implicit-def dead %x26, 12, implicit-def dead %x27, 12, implicit-def dead %x28, 12, implicit-def dead %fp, 12, implicit-def dead %lr, 12, implicit-def %sp
+    ; CHECK: undef %1.sub_32 = LDRWui %stack.0, 0 :: (load 4 from %stack.0)
+    undef %1.sub_32 = COPY %0
+    %x0 = COPY %1
+    RET_ReallyLR implicit %x0
+...
+---
+# CHECK-LABEL: name: test_subreg_fill_fold2
+# Similar to test_subreg_fill_fold, but with a cross-class copy.
+name:            test_subreg_fill_fold2
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: fpr64 }
+body:             |
+  bb.0:
+    %0 = COPY %wzr
+    INLINEASM $nop, 1, 12, implicit-def dead %x0, 12, implicit-def dead %x1, 12, implicit-def dead %x2, 12, implicit-def dead %x3, 12, implicit-def dead %x4, 12, implicit-def dead %x5, 12, implicit-def dead %x6, 12, implicit-def dead %x7, 12, implicit-def dead %x8, 12, implicit-def dead %x9, 12, implicit-def dead %x10, 12, implicit-def dead %x11, 12, implicit-def dead %x12, 12, implicit-def dead %x13, 12, implicit-def dead %x14, 12, implicit-def dead %x15, 12, implicit-def dead %x16, 12, implicit-def dead %x17, 12, implicit-def dead %x18, 12, implicit-def dead %x19, 12, implicit-def dead %x20, 12, implicit-def dead %x21, 12, implicit-def dead %x22, 12, implicit-def dead %x23, 12, implicit-def dead %x24, 12, implicit-def dead %x25, 12, implicit-def dead %x26, 12, implicit-def dead %x27, 12, implicit-def dead %x28, 12, implicit-def dead %fp, 12, implicit-def dead %lr, 12, implicit-def %sp
+    ; CHECK: undef %1.ssub = LDRSui %stack.0, 0 :: (load 4 from %stack.0)
+    undef %1.ssub = COPY %0
+    %d0 = COPY %1
+    RET_ReallyLR implicit %d0
+...

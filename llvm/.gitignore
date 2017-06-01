@@ -46,6 +46,8 @@ autoconf/autom4te.cache
 projects/*
 !projects/*.*
 !projects/Makefile
+runtimes/*
+!runtimes/*.*
 # Clang, which is tracked independently.
 tools/clang
 # LLDB, which is tracked independently.
@@ -56,8 +58,12 @@ tools/lld
 tools/llgo
 # Polly, which is tracked independently.
 tools/polly
+# avrlit, which is tracked independently.
+tools/avrlit
 # Sphinx build tree, if building in-source dir.
 docs/_build
+# VSCode config files.
+.vscode
 
 #==============================================================================#
 # Files created in tree by the Go bindings.

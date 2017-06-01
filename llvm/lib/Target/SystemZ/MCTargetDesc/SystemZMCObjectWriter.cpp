@@ -24,8 +24,8 @@ public:
 
 protected:
   // Override MCELFObjectTargetWriter.
-  unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
-                        bool IsPCRel) const override;
+  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                        const MCFixup &Fixup, bool IsPCRel) const override;
 };
 } // end anonymous namespace
 
@@ -53,7 +53,9 @@ static unsigned getPCRelReloc(unsigned Kind) {
   case FK_Data_2:                return ELF::R_390_PC16;
   case FK_Data_4:                return ELF::R_390_PC32;
   case FK_Data_8:                return ELF::R_390_PC64;
+  case SystemZ::FK_390_PC12DBL:  return ELF::R_390_PC12DBL;
   case SystemZ::FK_390_PC16DBL:  return ELF::R_390_PC16DBL;
+  case SystemZ::FK_390_PC24DBL:  return ELF::R_390_PC24DBL;
   case SystemZ::FK_390_PC32DBL:  return ELF::R_390_PC32DBL;
   }
   llvm_unreachable("Unsupported PC-relative address");
@@ -100,13 +102,16 @@ static unsigned getTLSGDReloc(unsigned Kind) {
 // Return the PLT relocation counterpart of MCFixupKind Kind.
 static unsigned getPLTReloc(unsigned Kind) {
   switch (Kind) {
+  case SystemZ::FK_390_PC12DBL: return ELF::R_390_PLT12DBL;
   case SystemZ::FK_390_PC16DBL: return ELF::R_390_PLT16DBL;
+  case SystemZ::FK_390_PC24DBL: return ELF::R_390_PLT24DBL;
   case SystemZ::FK_390_PC32DBL: return ELF::R_390_PLT32DBL;
   }
   llvm_unreachable("Unsupported absolute address");
 }
 
-unsigned SystemZObjectWriter::GetRelocType(const MCValue &Target,
+unsigned SystemZObjectWriter::getRelocType(MCContext &Ctx,
+                                           const MCValue &Target,
                                            const MCFixup &Fixup,
                                            bool IsPCRel) const {
   MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();

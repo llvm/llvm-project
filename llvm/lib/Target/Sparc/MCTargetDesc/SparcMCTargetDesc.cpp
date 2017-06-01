@@ -15,7 +15,6 @@
 #include "InstPrinter/SparcInstPrinter.h"
 #include "SparcMCAsmInfo.h"
 #include "SparcTargetStreamer.h"
-#include "llvm/MC/MCCodeGenInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -81,12 +80,8 @@ createSparcMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
 //
 // All code models require that the text segment is smaller than 2GB.
 
-static MCCodeGenInfo *createSparcMCCodeGenInfo(const Triple &TT,
-                                               Reloc::Model RM,
-                                               CodeModel::Model CM,
-                                               CodeGenOpt::Level OL) {
-  MCCodeGenInfo *X = new MCCodeGenInfo();
-
+static void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
+                              CodeModel::Model &CM) {
   // The default 32-bit code model is abs32/pic32 and the default 32-bit
   // code model for JIT is abs32.
   switch (CM) {
@@ -94,17 +89,10 @@ static MCCodeGenInfo *createSparcMCCodeGenInfo(const Triple &TT,
   case CodeModel::Default:
   case CodeModel::JITDefault: CM = CodeModel::Small; break;
   }
-
-  X->initMCCodeGenInfo(RM, CM, OL);
-  return X;
 }
 
-static MCCodeGenInfo *createSparcV9MCCodeGenInfo(const Triple &TT,
-                                                 Reloc::Model RM,
-                                                 CodeModel::Model CM,
-                                                 CodeGenOpt::Level OL) {
-  MCCodeGenInfo *X = new MCCodeGenInfo();
-
+static void adjustCodeGenOptsV9(const Triple &TT, Reloc::Model RM,
+                                CodeModel::Model &CM) {
   // The default 64-bit code model is abs44/pic32 and the default 64-bit
   // code model for JIT is abs64.
   switch (CM) {
@@ -116,9 +104,6 @@ static MCCodeGenInfo *createSparcV9MCCodeGenInfo(const Triple &TT,
     CM = CodeModel::Large;
     break;
   }
-
-  X->initMCCodeGenInfo(RM, CM, OL);
-  return X;
 }
 
 static MCTargetStreamer *
@@ -143,11 +128,12 @@ static MCInstPrinter *createSparcMCInstPrinter(const Triple &T,
 
 extern "C" void LLVMInitializeSparcTargetMC() {
   // Register the MC asm info.
-  RegisterMCAsmInfoFn X(TheSparcTarget, createSparcMCAsmInfo);
-  RegisterMCAsmInfoFn Y(TheSparcV9Target, createSparcV9MCAsmInfo);
-  RegisterMCAsmInfoFn Z(TheSparcelTarget, createSparcMCAsmInfo);
+  RegisterMCAsmInfoFn X(getTheSparcTarget(), createSparcMCAsmInfo);
+  RegisterMCAsmInfoFn Y(getTheSparcV9Target(), createSparcV9MCAsmInfo);
+  RegisterMCAsmInfoFn Z(getTheSparcelTarget(), createSparcMCAsmInfo);
 
-  for (Target *T : {&TheSparcTarget, &TheSparcV9Target, &TheSparcelTarget}) {
+  for (Target *T :
+       {&getTheSparcTarget(), &getTheSparcV9Target(), &getTheSparcelTarget()}) {
     // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createSparcMCInstrInfo);
 
@@ -175,10 +161,10 @@ extern "C" void LLVMInitializeSparcTargetMC() {
   }
 
   // Register the MC codegen info.
-  TargetRegistry::RegisterMCCodeGenInfo(TheSparcTarget,
-                                        createSparcMCCodeGenInfo);
-  TargetRegistry::RegisterMCCodeGenInfo(TheSparcV9Target,
-                                        createSparcV9MCCodeGenInfo);
-  TargetRegistry::RegisterMCCodeGenInfo(TheSparcelTarget,
-                                        createSparcMCCodeGenInfo);
+  TargetRegistry::registerMCAdjustCodeGenOpts(getTheSparcTarget(),
+                                              adjustCodeGenOpts);
+  TargetRegistry::registerMCAdjustCodeGenOpts(getTheSparcV9Target(),
+                                              adjustCodeGenOptsV9);
+  TargetRegistry::registerMCAdjustCodeGenOpts(getTheSparcelTarget(),
+                                              adjustCodeGenOpts);
 }

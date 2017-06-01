@@ -9,9 +9,9 @@ entry:
   invoke void @bar()
     to label %exit unwind label %cleanup
 cleanup:
-  %c = cleanuppad []
-  call void @bar()
-  cleanupret %c unwind to caller
+  %c = cleanuppad within none []
+  call void @bar() [ "funclet"(token %c) ]
+  cleanupret from %c unwind to caller
 exit:
   ret void
 }

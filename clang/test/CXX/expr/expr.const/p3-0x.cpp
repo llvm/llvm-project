@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++1z -verify %s
 
 // A converted constant expression of type T is a core constant expression,
 int nonconst = 8; // expected-note 3 {{here}}
@@ -40,10 +41,10 @@ const E e10 = E10;
 template<E> struct T {};
 T<e10> s10;
 
-//  integral promotions, and
+//  integral promotions,
 enum class EE { EE32 = ' ', EE65 = 'A', EE1 = (short)1, EE5 = E5 };
 
-//  integral conversions other than narrowing conversions
+//  integral conversions other than narrowing conversions,
 int b(unsigned n) {
   switch (n) {
     case E6:
@@ -74,11 +75,21 @@ using Int = A<-3>; // expected-error {{template argument evaluates to -3, which 
 
 // Note, conversions from integral or unscoped enumeration types to bool are
 // integral conversions as well as boolean conversions.
+// FIXME: Per core issue 1407, this is not correct.
 template<typename T, T v> struct Val { static constexpr T value = v; };
 static_assert(Val<bool, E1>::value == 1, ""); // ok
 static_assert(Val<bool, '\0'>::value == 0, ""); // ok
 static_assert(Val<bool, U'\1'>::value == 1, ""); // ok
 static_assert(Val<bool, E5>::value == 1, ""); // expected-error {{5, which cannot be narrowed to type 'bool'}}
+
+//  function pointer conversions [C++17]
+void noexcept_false() noexcept(false);
+void noexcept_true() noexcept(true);
+Val<decltype(&noexcept_false), &noexcept_true> remove_noexcept;
+Val<decltype(&noexcept_true), &noexcept_false> add_noexcept;
+#if __cplusplus > 201402L
+// expected-error@-2 {{value of type 'void (*)() noexcept(false)' is not implicitly convertible to 'void (*)() noexcept'}}
+#endif
 
 // (no other conversions are permitted)
 using Int = A<1.0>; // expected-error {{conversion from 'double' to 'unsigned char' is not allowed in a converted constant expression}}

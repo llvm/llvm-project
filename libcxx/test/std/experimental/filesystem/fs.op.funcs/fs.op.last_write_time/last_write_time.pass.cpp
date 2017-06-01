@@ -72,13 +72,60 @@ std::pair<std::time_t, std::time_t> GetSymlinkTimes(path const& p) {
     return {st.st_atime, st.st_mtime};
 }
 
-inline bool TimeIsRepresentableAsTimeT(file_time_type tp) {
+namespace {
+bool TestSupportsNegativeTimes() {
+    using namespace std::chrono;
+    std::error_code ec;
+    std::time_t old_write_time, new_write_time;
+    { // WARNING: Do not assert in this scope.
+        scoped_test_env env;
+        const path file = env.create_file("file", 42);
+        old_write_time = LastWriteTime(file);
+        file_time_type tp(seconds(-5));
+        fs::last_write_time(file, tp, ec);
+        new_write_time = LastWriteTime(file);
+    }
+    return !ec && new_write_time <= -5;
+}
+
+bool TestSupportsMaxTime() {
+    using namespace std::chrono;
+    using Lim = std::numeric_limits<std::time_t>;
+    auto max_sec = duration_cast<seconds>(file_time_type::max().time_since_epoch()).count();
+    if (max_sec > Lim::max()) return false;
+    std::error_code ec;
+    std::time_t old_write_time, new_write_time;
+    { // WARNING: Do not assert in this scope.
+        scoped_test_env env;
+        const path file = env.create_file("file", 42);
+        old_write_time = LastWriteTime(file);
+        file_time_type tp = file_time_type::max();
+        fs::last_write_time(file, tp, ec);
+        new_write_time = LastWriteTime(file);
+    }
+    return !ec && new_write_time > max_sec - 1;
+}
+
+static const bool SupportsNegativeTimes = TestSupportsNegativeTimes();
+static const bool SupportsMaxTime = TestSupportsMaxTime();
+
+} // end namespace
+
+// Check if a time point is representable on a given filesystem. Check that:
+// (A) 'tp' is representable as a time_t
+// (B) 'tp' is non-negative or the filesystem supports negative times.
+// (C) 'tp' is not 'file_time_type::max()' or the filesystem supports the max
+//     value.
+inline bool TimeIsRepresentableByFilesystem(file_time_type tp) {
     using namespace std::chrono;
     using Lim = std::numeric_limits<std::time_t>;
     auto sec = duration_cast<seconds>(tp.time_since_epoch()).count();
-    return (sec >= Lim::min() && sec <= Lim::max());
+    auto microsec = duration_cast<microseconds>(tp.time_since_epoch()).count();
+    if (sec < Lim::min() || sec > Lim::max())   return false;
+    else if (microsec < 0 && !SupportsNegativeTimes) return false;
+    else if (tp == file_time_type::max() && !SupportsMaxTime) return false;
+    return true;
 }
-
 
 TEST_SUITE(exists_test_suite)
 
@@ -214,15 +261,17 @@ TEST_CASE(set_last_write_time_dynamic_env_test)
 
         file_time_type  got_time = last_write_time(TC.p);
 
-        TEST_CHECK(got_time != old_time);
-        if (TC.new_time < epoch_time) {
-            TEST_CHECK(got_time <= TC.new_time);
-            TEST_CHECK(got_time > TC.new_time - Sec(1));
-        } else {
-            TEST_CHECK(got_time <= TC.new_time + Sec(1));
-            TEST_CHECK(got_time >= TC.new_time - Sec(1));
+        if (TimeIsRepresentableByFilesystem(TC.new_time)) {
+            TEST_CHECK(got_time != old_time);
+            if (TC.new_time < epoch_time) {
+                TEST_CHECK(got_time <= TC.new_time);
+                TEST_CHECK(got_time > TC.new_time - Sec(1));
+            } else {
+                TEST_CHECK(got_time <= TC.new_time + Sec(1));
+                TEST_CHECK(got_time >= TC.new_time - Sec(1));
+            }
+            TEST_CHECK(LastAccessTime(TC.p) == old_times.first);
         }
-        TEST_CHECK(LastAccessTime(TC.p) == old_times.first);
     }
 }
 
@@ -269,17 +318,12 @@ TEST_CASE(test_write_min_time)
     const path p = env.create_file("file", 42);
 
     std::error_code ec = GetTestEC();
-    file_time_type last_time = last_write_time(p);
     file_time_type new_time = file_time_type::min();
 
     last_write_time(p, new_time, ec);
     file_time_type tt = last_write_time(p);
 
-    if (!TimeIsRepresentableAsTimeT(new_time)) {
-        TEST_CHECK(ec);
-        TEST_CHECK(ec != GetTestEC());
-        TEST_CHECK(tt == last_time);
-    } else {
+    if (TimeIsRepresentableByFilesystem(new_time)) {
         TEST_CHECK(!ec);
         TEST_CHECK(tt >= new_time);
         TEST_CHECK(tt < new_time + Sec(1));
@@ -287,18 +331,13 @@ TEST_CASE(test_write_min_time)
 
     ec = GetTestEC();
     last_write_time(p, Clock::now());
-    last_time = last_write_time(p);
 
     new_time = file_time_type::min() + MicroSec(1);
 
     last_write_time(p, new_time, ec);
     tt = last_write_time(p);
 
-    if (!TimeIsRepresentableAsTimeT(new_time)) {
-        TEST_CHECK(ec);
-        TEST_CHECK(ec != GetTestEC());
-        TEST_CHECK(tt == last_time);
-    } else {
+    if (TimeIsRepresentableByFilesystem(new_time)) {
         TEST_CHECK(!ec);
         TEST_CHECK(tt >= new_time);
         TEST_CHECK(tt < new_time + Sec(1));
@@ -317,18 +356,13 @@ TEST_CASE(test_write_min_max_time)
     const path p = env.create_file("file", 42);
 
     std::error_code ec = GetTestEC();
-    file_time_type last_time = last_write_time(p);
     file_time_type new_time = file_time_type::max();
 
     ec = GetTestEC();
     last_write_time(p, new_time, ec);
     file_time_type tt = last_write_time(p);
 
-    if (!TimeIsRepresentableAsTimeT(new_time)) {
-        TEST_CHECK(ec);
-        TEST_CHECK(ec != GetTestEC());
-        TEST_CHECK(tt == last_time);
-    } else {
+    if (TimeIsRepresentableByFilesystem(new_time)) {
         TEST_CHECK(!ec);
         TEST_CHECK(tt > new_time - Sec(1));
         TEST_CHECK(tt <= new_time);

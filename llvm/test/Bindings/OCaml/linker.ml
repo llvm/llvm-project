@@ -16,6 +16,8 @@ open Llvm_linker
 let context = global_context ()
 let void_type = Llvm.void_type context
 
+let diagnostic_handler _ = ()
+
 (* Tiny unit test framework - really just to help find which line is busted *)
 let print_checkpoints = false
 
@@ -28,6 +30,8 @@ let suite name f =
 (*===-- Linker -----------------------------------------------------------===*)
 
 let test_linker () =
+  set_diagnostic_handler context (Some diagnostic_handler);
+
   let fty = function_type void_type [| |] in
 
   let make_module name =
@@ -39,23 +43,21 @@ let test_linker () =
 
   let m1 = make_module "one"
   and m2 = make_module "two" in
-  link_modules m1 m2;
+  link_modules' m1 m2;
   dispose_module m1;
-  dispose_module m2;
 
   let m1 = make_module "one"
   and m2 = make_module "two" in
-  link_modules m1 m2;
+  link_modules' m1 m2;
   dispose_module m1;
 
   let m1 = make_module "one"
   and m2 = make_module "one" in
   try
-    link_modules m1 m2;
+    link_modules' m1 m2;
     failwith "must raise"
   with Error _ ->
-    dispose_module m1;
-    dispose_module m2
+    dispose_module m1
 
 (*===-- Driver ------------------------------------------------------------===*)
 

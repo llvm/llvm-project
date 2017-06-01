@@ -1,0 +1,120 @@
+//===-- WebAssemblyCallIndirectFixup.cpp - Fix call_indirects -------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// \brief This file converts pseudo call_indirect instructions into real
+/// call_indirects.
+///
+/// The order of arguments for a call_indirect is the arguments to the function
+/// call, followed by the function pointer. There's no natural way to express
+/// a machineinstr with varargs followed by one more arg, so we express it as
+/// the function pointer followed by varargs, then rewrite it here.
+///
+/// We need to rewrite the order of the arguments on the machineinstrs
+/// themselves so that register stackification knows the order they'll be
+/// executed in.
+///
+//===----------------------------------------------------------------------===//
+
+#include "WebAssembly.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h" // for WebAssembly::ARGUMENT_*
+#include "WebAssemblyMachineFunctionInfo.h"
+#include "WebAssemblySubtarget.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+using namespace llvm;
+
+#define DEBUG_TYPE "wasm-call-indirect-fixup"
+
+namespace {
+class WebAssemblyCallIndirectFixup final : public MachineFunctionPass {
+  StringRef getPassName() const override {
+    return "WebAssembly CallIndirect Fixup";
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+  WebAssemblyCallIndirectFixup() : MachineFunctionPass(ID) {}
+};
+} // end anonymous namespace
+
+char WebAssemblyCallIndirectFixup::ID = 0;
+FunctionPass *llvm::createWebAssemblyCallIndirectFixup() {
+  return new WebAssemblyCallIndirectFixup();
+}
+
+static unsigned GetNonPseudoCallIndirectOpcode(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+    using namespace WebAssembly;
+  case PCALL_INDIRECT_VOID: return CALL_INDIRECT_VOID;
+  case PCALL_INDIRECT_I32: return CALL_INDIRECT_I32;
+  case PCALL_INDIRECT_I64: return CALL_INDIRECT_I64;
+  case PCALL_INDIRECT_F32: return CALL_INDIRECT_F32;
+  case PCALL_INDIRECT_F64: return CALL_INDIRECT_F64;
+  case PCALL_INDIRECT_v16i8: return CALL_INDIRECT_v16i8;
+  case PCALL_INDIRECT_v8i16: return CALL_INDIRECT_v8i16;
+  case PCALL_INDIRECT_v4i32: return CALL_INDIRECT_v4i32;
+  case PCALL_INDIRECT_v4f32: return CALL_INDIRECT_v4f32;
+  default: return INSTRUCTION_LIST_END;
+  }
+}
+
+static bool IsPseudoCallIndirect(const MachineInstr &MI) {
+  return GetNonPseudoCallIndirectOpcode(MI) !=
+         WebAssembly::INSTRUCTION_LIST_END;
+}
+
+bool WebAssemblyCallIndirectFixup::runOnMachineFunction(MachineFunction &MF) {
+  DEBUG(dbgs() << "********** Fixing up CALL_INDIRECTs **********\n"
+               << MF.getName() << '\n');
+
+  bool Changed = false;
+  const WebAssemblyInstrInfo *TII =
+      MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (IsPseudoCallIndirect(MI)) {
+        DEBUG(dbgs() << "Found call_indirect: " << MI << '\n');
+
+        // Rewrite pseudo to non-pseudo
+        const MCInstrDesc &Desc = TII->get(GetNonPseudoCallIndirectOpcode(MI));
+        MI.setDesc(Desc);
+
+        // Rewrite argument order
+        auto Uses = MI.explicit_uses();
+        MachineInstr::mop_iterator it = Uses.begin();
+        const MachineOperand MO = *it;
+
+        // Set up the flags immediate, which currently has no defined flags
+        // so it's always zero.
+        it->ChangeToImmediate(0);
+
+        MI.addOperand(MF, MO);
+
+        DEBUG(dbgs() << "  After transform: " << MI);
+        Changed = true;
+      }
+    }
+  }
+
+  DEBUG(dbgs() << "\nDone fixing up CALL_INDIRECTs\n\n");
+
+  return Changed;
+}
+

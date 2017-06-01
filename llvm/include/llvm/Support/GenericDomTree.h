@@ -13,6 +13,12 @@
 /// dominance queries on the CFG, but is fully generic w.r.t. the underlying
 /// graph types.
 ///
+/// Unlike ADT/* graph algorithms, generic dominator tree has more reuiqrement
+/// on the graph's NodeRef. The NodeRef should be a pointer and, depending on
+/// the implementation, e.g. NodeRef->getParent() return the parent node.
+///
+/// FIXME: Maybe GenericDomTree needs a TreeTraits, instead of GraphTraits.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_GENERICDOMTREE_H
@@ -29,6 +35,23 @@
 #include <algorithm>
 
 namespace llvm {
+
+template <class NodeT> class DominatorTreeBase;
+
+namespace detail {
+
+template <typename GT> struct DominatorTreeBaseTraits {
+  static_assert(std::is_pointer<typename GT::NodeRef>::value,
+                "Currently NodeRef must be a pointer type.");
+  using type = DominatorTreeBase<
+      typename std::remove_pointer<typename GT::NodeRef>::type>;
+};
+
+} // End namespace detail
+
+template <typename GT>
+using DominatorTreeBaseByGraphTraits =
+    typename detail::DominatorTreeBaseTraits<GT>::type;
 
 /// \brief Base class that other, more interesting dominator analyses
 /// inherit from.
@@ -62,7 +85,6 @@ public:
   bool isPostDominator() const { return IsPostDominators; }
 };
 
-template <class NodeT> class DominatorTreeBase;
 struct PostDominatorTree;
 
 /// \brief Base class for the actual dominator tree node.
@@ -109,13 +131,13 @@ public:
       return true;
 
     SmallPtrSet<const NodeT *, 4> OtherChildren;
-    for (const_iterator I = Other->begin(), E = Other->end(); I != E; ++I) {
-      const NodeT *Nd = (*I)->getBlock();
+    for (const DomTreeNodeBase *I : *Other) {
+      const NodeT *Nd = I->getBlock();
       OtherChildren.insert(Nd);
     }
 
-    for (const_iterator I = begin(), E = end(); I != E; ++I) {
-      const NodeT *N = (*I)->getBlock();
+    for (const DomTreeNodeBase *I : *this) {
+      const NodeT *N = I->getBlock();
       if (OtherChildren.count(N) == 0)
         return true;
     }
@@ -126,7 +148,7 @@ public:
     assert(IDom && "No immediate dominator?");
     if (IDom != NewIDom) {
       typename std::vector<DomTreeNodeBase<NodeT> *>::iterator I =
-          std::find(IDom->Children.begin(), IDom->Children.end(), this);
+          find(IDom->Children, this);
       assert(I != IDom->Children.end() &&
              "Not in immediate dominator children set!");
       // I am no longer your child...
@@ -138,8 +160,9 @@ public:
     }
   }
 
-  /// getDFSNumIn/getDFSNumOut - These are an internal implementation detail, do
-  /// not call them.
+  /// getDFSNumIn/getDFSNumOut - These return the DFS visitation order for nodes
+  /// in the dominator tree. They are only guaranteed valid if
+  /// updateDFSNumbers() has been called.
   unsigned getDFSNumIn() const { return DFSNumIn; }
   unsigned getDFSNumOut() const { return DFSNumOut; }
 
@@ -176,8 +199,7 @@ void PrintDomTree(const DomTreeNodeBase<NodeT> *N, raw_ostream &o,
 
 // The calculate routine is provided in a separate header but referenced here.
 template <class FuncT, class N>
-void Calculate(DominatorTreeBase<typename GraphTraits<N>::NodeType> &DT,
-               FuncT &F);
+void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<N>> &DT, FuncT &F);
 
 /// \brief Core dominator tree base class.
 ///
@@ -250,14 +272,14 @@ protected:
   // NewBB is split and now it has one successor. Update dominator tree to
   // reflect this change.
   template <class N, class GraphT>
-  void Split(DominatorTreeBase<typename GraphT::NodeType> &DT,
-             typename GraphT::NodeType *NewBB) {
+  void Split(DominatorTreeBaseByGraphTraits<GraphT> &DT,
+             typename GraphT::NodeRef NewBB) {
     assert(std::distance(GraphT::child_begin(NewBB),
                          GraphT::child_end(NewBB)) == 1 &&
            "NewBB should have a single successor!");
-    typename GraphT::NodeType *NewBBSucc = *GraphT::child_begin(NewBB);
+    typename GraphT::NodeRef NewBBSucc = *GraphT::child_begin(NewBB);
 
-    std::vector<typename GraphT::NodeType *> PredBlocks;
+    std::vector<typename GraphT::NodeRef> PredBlocks;
     typedef GraphTraits<Inverse<N>> InvTraits;
     for (typename InvTraits::ChildIteratorType
              PI = InvTraits::child_begin(NewBB),
@@ -272,7 +294,7 @@ protected:
              PI = InvTraits::child_begin(NewBBSucc),
              E = InvTraits::child_end(NewBBSucc);
          PI != E; ++PI) {
-      typename InvTraits::NodeType *ND = *PI;
+      typename InvTraits::NodeRef ND = *PI;
       if (ND != NewBB && !DT.dominates(NewBBSucc, ND) &&
           DT.isReachableFromEntry(ND)) {
         NewBBDominatesNewBBSucc = false;
@@ -348,17 +370,14 @@ public:
     if (DomTreeNodes.size() != OtherDomTreeNodes.size())
       return true;
 
-    for (typename DomTreeNodeMapType::const_iterator
-             I = this->DomTreeNodes.begin(),
-             E = this->DomTreeNodes.end();
-         I != E; ++I) {
-      NodeT *BB = I->first;
+    for (const auto &DomTreeNode : this->DomTreeNodes) {
+      NodeT *BB = DomTreeNode.first;
       typename DomTreeNodeMapType::const_iterator OI =
           OtherDomTreeNodes.find(BB);
       if (OI == OtherDomTreeNodes.end())
         return true;
 
-      DomTreeNodeBase<NodeT> &MyNd = *I->second;
+      DomTreeNodeBase<NodeT> &MyNd = *DomTreeNode.second;
       DomTreeNodeBase<NodeT> &OtherNd = *OI->second;
 
       if (MyNd.compare(&OtherNd))
@@ -453,7 +472,7 @@ public:
 
     // Compare the result of the tree walk and the dfs numbers, if expensive
     // checks are enabled.
-#ifdef XDEBUG
+#ifdef EXPENSIVE_CHECKS
     assert((!DFSInfoValid ||
             (dominatedBySlowTreeWalk(A, B) == B->DominatedBy(A))) &&
            "Tree walk disagrees with dfs numbers!");
@@ -552,9 +571,15 @@ public:
   // API to update (Post)DominatorTree information based on modifications to
   // the CFG...
 
-  /// addNewBlock - Add a new node to the dominator tree information.  This
-  /// creates a new node as a child of DomBB dominator node,linking it into
-  /// the children list of the immediate dominator.
+  /// Add a new node to the dominator tree information.
+  ///
+  /// This creates a new node as a child of DomBB dominator node, linking it
+  /// into the children list of the immediate dominator.
+  ///
+  /// \param BB New node in CFG.
+  /// \param DomBB CFG node that is dominator for BB.
+  /// \returns New dominator tree node that represents new CFG node.
+  ///
   DomTreeNodeBase<NodeT> *addNewBlock(NodeT *BB, NodeT *DomBB) {
     assert(getNode(BB) == nullptr && "Block already in dominator tree!");
     DomTreeNodeBase<NodeT> *IDomNode = getNode(DomBB);
@@ -562,6 +587,31 @@ public:
     DFSInfoValid = false;
     return (DomTreeNodes[BB] = IDomNode->addChild(
                 llvm::make_unique<DomTreeNodeBase<NodeT>>(BB, IDomNode))).get();
+  }
+
+  /// Add a new node to the forward dominator tree and make it a new root.
+  ///
+  /// \param BB New node in CFG.
+  /// \returns New dominator tree node that represents new CFG node.
+  ///
+  DomTreeNodeBase<NodeT> *setNewRoot(NodeT *BB) {
+    assert(getNode(BB) == nullptr && "Block already in dominator tree!");
+    assert(!this->isPostDominator() &&
+           "Cannot change root of post-dominator tree");
+    DFSInfoValid = false;
+    auto &Roots = DominatorBase<NodeT>::Roots;
+    DomTreeNodeBase<NodeT> *NewNode = (DomTreeNodes[BB] =
+      llvm::make_unique<DomTreeNodeBase<NodeT>>(BB, nullptr)).get();
+    if (Roots.empty()) {
+      addRoot(BB);
+    } else {
+      assert(Roots.size() == 1);
+      NodeT *OldRoot = Roots.front();
+      DomTreeNodes[OldRoot] =
+        NewNode->addChild(std::move(DomTreeNodes[OldRoot]));
+      Roots[0] = BB;
+    }
+    return RootNode = NewNode;
   }
 
   /// changeImmediateDominator - This method is used to update the dominator
@@ -590,7 +640,7 @@ public:
     DomTreeNodeBase<NodeT> *IDom = Node->getIDom();
     if (IDom) {
       typename std::vector<DomTreeNodeBase<NodeT> *>::iterator I =
-          std::find(IDom->Children.begin(), IDom->Children.end(), Node);
+          find(IDom->Children, Node);
       assert(I != IDom->Children.end() &&
              "Not in immediate dominator children set!");
       // I am no longer your child...
@@ -629,18 +679,17 @@ public:
 
 protected:
   template <class GraphT>
-  friend typename GraphT::NodeType *
-  Eval(DominatorTreeBase<typename GraphT::NodeType> &DT,
-       typename GraphT::NodeType *V, unsigned LastLinked);
+  friend typename GraphT::NodeRef
+  Eval(DominatorTreeBaseByGraphTraits<GraphT> &DT, typename GraphT::NodeRef V,
+       unsigned LastLinked);
 
   template <class GraphT>
-  friend unsigned DFSPass(DominatorTreeBase<typename GraphT::NodeType> &DT,
-                          typename GraphT::NodeType *V, unsigned N);
+  friend unsigned DFSPass(DominatorTreeBaseByGraphTraits<GraphT> &DT,
+                          typename GraphT::NodeRef V, unsigned N);
 
   template <class FuncT, class N>
-  friend void
-  Calculate(DominatorTreeBase<typename GraphTraits<N>::NodeType> &DT, FuncT &F);
-
+  friend void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<N>> &DT,
+                        FuncT &F);
 
   DomTreeNodeBase<NodeT> *getNodeForBlock(NodeT *BB) {
     if (DomTreeNodeBase<NodeT> *Node = getNode(BB))
@@ -724,24 +773,16 @@ public:
     if (!this->IsPostDominators) {
       // Initialize root
       NodeT *entry = TraitsTy::getEntryNode(&F);
-      this->Roots.push_back(entry);
-      this->IDoms[entry] = nullptr;
-      this->DomTreeNodes[entry] = nullptr;
+      addRoot(entry);
 
       Calculate<FT, NodeT *>(*this, F);
     } else {
       // Initialize the roots list
       for (typename TraitsTy::nodes_iterator I = TraitsTy::nodes_begin(&F),
                                              E = TraitsTy::nodes_end(&F);
-           I != E; ++I) {
-        if (TraitsTy::child_begin(&*I) == TraitsTy::child_end(&*I))
-          addRoot(&*I);
-
-        // Prepopulate maps so that we don't get iterator invalidation issues
-        // later.
-        this->IDoms[&*I] = nullptr;
-        this->DomTreeNodes[&*I] = nullptr;
-      }
+           I != E; ++I)
+        if (TraitsTy::child_begin(*I) == TraitsTy::child_end(*I))
+          addRoot(*I);
 
       Calculate<FT, Inverse<NodeT *>>(*this, F);
     }

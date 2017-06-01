@@ -18,7 +18,11 @@
 #ifndef LLVM_CLANG_LIB_SERIALIZATION_MULTIONDISKHASHTABLE_H
 #define LLVM_CLANG_LIB_SERIALIZATION_MULTIONDISKHASHTABLE_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
 

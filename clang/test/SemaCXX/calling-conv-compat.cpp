@@ -370,6 +370,19 @@ X<fun_cdecl   >::p tmpl6 = &A::method_thiscall;
 X<fun_stdcall >::p tmpl7 = &A::method_stdcall;
 X<fun_fastcall>::p tmpl8 = &A::method_fastcall;
 
+// Make sure we adjust thiscall to cdecl when extracting the function type from
+// a member pointer.
+template <typename> struct Y;
+
+template <typename Fn, typename C>
+struct Y<Fn C::*> {
+  typedef Fn *p;
+};
+
+void __cdecl f_cdecl();
+Y<decltype(&A::method_thiscall)>::p tmpl9 = &f_cdecl;
+
+
 } // end namespace MemberPointers
 
 // Test that lambdas that capture nothing convert to cdecl function pointers.

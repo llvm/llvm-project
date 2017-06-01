@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -I %S/Inputs -triple x86_64-apple-macosx -emit-llvm -O2 -disable-llvm-optzns -o - %s | FileCheck %s
+// RUN: %clang_cc1 -I %S/Inputs -triple x86_64-apple-macosx -emit-llvm -O2 -disable-llvm-passes -o - %s | FileCheck %s
 
 #import "nsvalue-boxed-expressions-support.h"
 
 // CHECK:      [[CLASS:@.*]]        = external global %struct._class_t
 // CHECK:      [[NSVALUE:@.*]]      = {{.*}}[[CLASS]]{{.*}}
 // CHECK:      [[RANGE_STR:.*]]     = {{.*}}_NSRange=QQ{{.*}}
-// CHECK:      [[METH:@.*]]         = private global{{.*}}valueWithBytes:objCType:{{.*}}
+// CHECK:      [[METH:@.*]]         = private unnamed_addr constant {{.*}}valueWithBytes:objCType:{{.*}}
 // CHECK:      [[VALUE_SEL:@.*]]    = {{.*}}[[METH]]{{.*}}
 // CHECK:      [[POINT_STR:.*]]     = {{.*}}_NSPoint=dd{{.*}}
 // CHECK:      [[SIZE_STR:.*]]      = {{.*}}_NSSize=dd{{.*}}

@@ -3,3 +3,7 @@ module LLVM_Support_DataTypes {
   header "Support/DataTypes.h"
   export *
 }
+module LLVM_Config_ABI_Breaking {
+  header "Config/abi-breaking.h"
+  export *
+}

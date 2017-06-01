@@ -52,8 +52,8 @@ enum SDNP {
 /// record corresponds to.
 MVT::SimpleValueType getValueType(Record *Rec);
 
-std::string getName(MVT::SimpleValueType T);
-std::string getEnumName(MVT::SimpleValueType T);
+StringRef getName(MVT::SimpleValueType T);
+StringRef getEnumName(MVT::SimpleValueType T);
 
 /// getQualifiedName - Return the name of the specified record, with a
 /// namespace qualifier if the record contains one.
@@ -82,7 +82,7 @@ public:
   ~CodeGenTarget();
 
   Record *getTargetRecord() const { return TargetRec; }
-  const std::string &getName() const;
+  const StringRef getName() const;
 
   /// getInstNamespace - Return the target-specific instruction namespace.
   ///
@@ -139,9 +139,7 @@ public:
   /// supported by the target (i.e. there are registers that directly hold it).
   bool isLegalValueType(MVT::SimpleValueType VT) const {
     ArrayRef<MVT::SimpleValueType> LegalVTs = getLegalValueTypes();
-    for (unsigned i = 0, e = LegalVTs.size(); i != e; ++i)
-      if (LegalVTs[i] == VT) return true;
-    return false;
+    return is_contained(LegalVTs, VT);
   }
 
   CodeGenSchedModels &getSchedModels() const;
@@ -163,18 +161,15 @@ public:
 
   /// getInstructionsByEnumValue - Return all of the instructions defined by the
   /// target, ordered by their enum value.
-  const std::vector<const CodeGenInstruction*> &
+  ArrayRef<const CodeGenInstruction *>
   getInstructionsByEnumValue() const {
     if (InstrsByEnum.empty()) ComputeInstrsByEnum();
     return InstrsByEnum;
   }
 
-  typedef std::vector<const CodeGenInstruction*>::const_iterator inst_iterator;
+  typedef ArrayRef<const CodeGenInstruction *>::const_iterator inst_iterator;
   inst_iterator inst_begin() const{return getInstructionsByEnumValue().begin();}
   inst_iterator inst_end() const { return getInstructionsByEnumValue().end(); }
-  iterator_range<inst_iterator> instructions() const {
-    return iterator_range<inst_iterator>(inst_begin(), inst_end());
-  }
 
 
   /// isLittleEndianEncoding - are instruction bit patterns defined as  [0..n]?
@@ -201,8 +196,8 @@ class ComplexPattern {
   std::string SelectFunc;
   std::vector<Record*> RootNodes;
   unsigned Properties; // Node properties
+  unsigned Complexity;
 public:
-  ComplexPattern() : NumOperands(0) {}
   ComplexPattern(Record *R);
 
   MVT::SimpleValueType getValueType() const { return Ty; }
@@ -212,6 +207,7 @@ public:
     return RootNodes;
   }
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
+  unsigned getComplexity() const { return Complexity; }
 };
 
 } // End llvm namespace

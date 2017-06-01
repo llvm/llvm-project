@@ -5,7 +5,9 @@
 declare void @abort()
 
 define fastcc void @t(%struct.SString* %word, i8 signext  %c) {
-; CHECK: popne
+; CHECK-NOT: pop
+; CHECK: bxne
+; CHECK-NOT: pop
 entry:
 	%tmp1 = icmp eq %struct.SString* %word, null		; <i1> [#uses=1]
 	br i1 %tmp1, label %cond_true, label %cond_false

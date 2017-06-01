@@ -9,6 +9,7 @@
 
 #include "gtest/gtest.h"
 #include "llvm/ADT/Optional.h"
+
 using namespace llvm;
 
 namespace {
@@ -377,17 +378,144 @@ TEST_F(OptionalTest, MoveGetValueOr) {
 
 #endif // LLVM_HAS_RVALUE_REFERENCE_THIS
 
-TEST_F(OptionalTest, NoneComparison) {
-  Optional<int> o;
-  EXPECT_EQ(o, None);
-  EXPECT_EQ(None, o);
-  EXPECT_FALSE(o != None);
-  EXPECT_FALSE(None != o);
-  o = 3;
-  EXPECT_FALSE(o == None);
-  EXPECT_FALSE(None == o);
-  EXPECT_TRUE(o != None);
-  EXPECT_TRUE(None != o);
+struct EqualTo {
+  template <typename T, typename U> static bool apply(const T &X, const U &Y) {
+    return X == Y;
+  }
+};
+
+struct NotEqualTo {
+  template <typename T, typename U> static bool apply(const T &X, const U &Y) {
+    return X != Y;
+  }
+};
+
+struct Less {
+  template <typename T, typename U> static bool apply(const T &X, const U &Y) {
+    return X < Y;
+  }
+};
+
+struct Greater {
+  template <typename T, typename U> static bool apply(const T &X, const U &Y) {
+    return X > Y;
+  }
+};
+
+struct LessEqual {
+  template <typename T, typename U> static bool apply(const T &X, const U &Y) {
+    return X <= Y;
+  }
+};
+
+struct GreaterEqual {
+  template <typename T, typename U> static bool apply(const T &X, const U &Y) {
+    return X >= Y;
+  }
+};
+
+template <typename OperatorT, typename T>
+void CheckRelation(const Optional<T> &Lhs, const Optional<T> &Rhs,
+                   bool Expected) {
+  EXPECT_EQ(Expected, OperatorT::apply(Lhs, Rhs));
+
+  if (Lhs)
+    EXPECT_EQ(Expected, OperatorT::apply(*Lhs, Rhs));
+  else
+    EXPECT_EQ(Expected, OperatorT::apply(None, Rhs));
+
+  if (Rhs)
+    EXPECT_EQ(Expected, OperatorT::apply(Lhs, *Rhs));
+  else
+    EXPECT_EQ(Expected, OperatorT::apply(Lhs, None));
+}
+
+struct EqualityMock {};
+const Optional<EqualityMock> NoneEq, EqualityLhs((EqualityMock())),
+    EqualityRhs((EqualityMock()));
+bool IsEqual;
+
+bool operator==(const EqualityMock &Lhs, const EqualityMock &Rhs) {
+  EXPECT_EQ(&*EqualityLhs, &Lhs);
+  EXPECT_EQ(&*EqualityRhs, &Rhs);
+  return IsEqual;
+}
+
+TEST_F(OptionalTest, OperatorEqual) {
+  CheckRelation<EqualTo>(NoneEq, NoneEq, true);
+  CheckRelation<EqualTo>(NoneEq, EqualityRhs, false);
+  CheckRelation<EqualTo>(EqualityLhs, NoneEq, false);
+
+  IsEqual = false;
+  CheckRelation<EqualTo>(EqualityLhs, EqualityRhs, IsEqual);
+  IsEqual = true;
+  CheckRelation<EqualTo>(EqualityLhs, EqualityRhs, IsEqual);
+}
+
+TEST_F(OptionalTest, OperatorNotEqual) {
+  CheckRelation<NotEqualTo>(NoneEq, NoneEq, false);
+  CheckRelation<NotEqualTo>(NoneEq, EqualityRhs, true);
+  CheckRelation<NotEqualTo>(EqualityLhs, NoneEq, true);
+
+  IsEqual = false;
+  CheckRelation<NotEqualTo>(EqualityLhs, EqualityRhs, !IsEqual);
+  IsEqual = true;
+  CheckRelation<NotEqualTo>(EqualityLhs, EqualityRhs, !IsEqual);
+}
+
+struct InequalityMock {};
+const Optional<InequalityMock> NoneIneq, InequalityLhs((InequalityMock())),
+    InequalityRhs((InequalityMock()));
+bool IsLess;
+
+bool operator<(const InequalityMock &Lhs, const InequalityMock &Rhs) {
+  EXPECT_EQ(&*InequalityLhs, &Lhs);
+  EXPECT_EQ(&*InequalityRhs, &Rhs);
+  return IsLess;
+}
+
+TEST_F(OptionalTest, OperatorLess) {
+  CheckRelation<Less>(NoneIneq, NoneIneq, false);
+  CheckRelation<Less>(NoneIneq, InequalityRhs, true);
+  CheckRelation<Less>(InequalityLhs, NoneIneq, false);
+
+  IsLess = false;
+  CheckRelation<Less>(InequalityLhs, InequalityRhs, IsLess);
+  IsLess = true;
+  CheckRelation<Less>(InequalityLhs, InequalityRhs, IsLess);
+}
+
+TEST_F(OptionalTest, OperatorGreater) {
+  CheckRelation<Greater>(NoneIneq, NoneIneq, false);
+  CheckRelation<Greater>(NoneIneq, InequalityRhs, false);
+  CheckRelation<Greater>(InequalityLhs, NoneIneq, true);
+
+  IsLess = false;
+  CheckRelation<Greater>(InequalityRhs, InequalityLhs, IsLess);
+  IsLess = true;
+  CheckRelation<Greater>(InequalityRhs, InequalityLhs, IsLess);
+}
+
+TEST_F(OptionalTest, OperatorLessEqual) {
+  CheckRelation<LessEqual>(NoneIneq, NoneIneq, true);
+  CheckRelation<LessEqual>(NoneIneq, InequalityRhs, true);
+  CheckRelation<LessEqual>(InequalityLhs, NoneIneq, false);
+
+  IsLess = false;
+  CheckRelation<LessEqual>(InequalityRhs, InequalityLhs, !IsLess);
+  IsLess = true;
+  CheckRelation<LessEqual>(InequalityRhs, InequalityLhs, !IsLess);
+}
+
+TEST_F(OptionalTest, OperatorGreaterEqual) {
+  CheckRelation<GreaterEqual>(NoneIneq, NoneIneq, true);
+  CheckRelation<GreaterEqual>(NoneIneq, InequalityRhs, false);
+  CheckRelation<GreaterEqual>(InequalityLhs, NoneIneq, true);
+
+  IsLess = false;
+  CheckRelation<GreaterEqual>(InequalityLhs, InequalityRhs, !IsLess);
+  IsLess = true;
+  CheckRelation<GreaterEqual>(InequalityLhs, InequalityRhs, !IsLess);
 }
 
 } // end anonymous namespace

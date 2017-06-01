@@ -54,6 +54,7 @@ llvm::findPHICopyInsertPoint(MachineBasicBlock* MBB, MachineBasicBlock* SuccMBB,
     ++InsertPoint;
   }
 
-  // Make sure the copy goes after any phi nodes however.
+  // Make sure the copy goes after any phi nodes but before
+  // any debug nodes.
   return MBB->SkipPHIsAndLabels(InsertPoint);
 }

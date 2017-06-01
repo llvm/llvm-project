@@ -16,6 +16,7 @@
 
 #include "yaml2obj.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -32,27 +33,6 @@ using namespace llvm;
 static cl::opt<std::string>
   Input(cl::Positional, cl::desc("<input>"), cl::init("-"));
 
-// TODO: The "right" way to tell what kind of object file a given YAML file
-// corresponds to is to look at YAML "tags" (e.g. `!Foo`). Then, different
-// tags (`!ELF`, `!COFF`, etc.) would be used to discriminate between them.
-// Interpreting the tags is needed eventually for when writing test cases,
-// so that we can e.g. have `!Archive` contain a sequence of `!ELF`, and
-// just Do The Right Thing. However, interpreting these tags and acting on
-// them appropriately requires some work in the YAML parser and the YAMLIO
-// library.
-enum YAMLObjectFormat {
-  YOF_COFF,
-  YOF_ELF
-};
-
-cl::opt<YAMLObjectFormat> Format(
-  "format",
-  cl::desc("Interpret input as this type of object file"),
-  cl::values(
-    clEnumValN(YOF_COFF, "coff", "COFF object file format"),
-    clEnumValN(YOF_ELF, "elf", "ELF object file format"),
-  clEnumValEnd));
-
 cl::opt<unsigned>
 DocNum("docnum", cl::init(1),
        cl::desc("Read specified document from input (default = 1)"));
@@ -60,14 +40,26 @@ DocNum("docnum", cl::init(1),
 static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"));
 
-typedef int (*ConvertFuncPtr)(yaml::Input & YIn, raw_ostream &Out);
-
-static int convertYAML(yaml::Input &YIn, raw_ostream &Out,
-                       ConvertFuncPtr Convert) {
+static int convertYAML(yaml::Input &YIn, raw_ostream &Out) {
   unsigned CurDocNum = 0;
   do {
-    if (++CurDocNum == DocNum)
-      return Convert(YIn, Out);
+    if (++CurDocNum == DocNum) {
+      yaml::YamlObjectFile Doc;
+      YIn >> Doc;
+      if (YIn.error()) {
+        errs() << "yaml2obj: Failed to parse YAML file!\n";
+        return 1;
+      }
+
+      if (Doc.Elf)
+        return yaml2elf(*Doc.Elf, Out);
+      if (Doc.Coff)
+        return yaml2coff(*Doc.Coff, Out);
+      if (Doc.MachO || Doc.FatMachO)
+        return yaml2macho(Doc, Out);
+      errs() << "yaml2obj: Unknown document type!\n";
+      return 1;
+    }
   } while (YIn.nextDocument());
 
   errs() << "yaml2obj: Cannot find the " << DocNum
@@ -77,7 +69,7 @@ static int convertYAML(yaml::Input &YIn, raw_ostream &Out,
 
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 
@@ -97,19 +89,9 @@ int main(int argc, char **argv) {
   if (!Buf)
     return 1;
 
-  ConvertFuncPtr Convert = nullptr;
-  if (Format == YOF_COFF)
-    Convert = yaml2coff;
-  else if (Format == YOF_ELF)
-    Convert = yaml2elf;
-  else {
-    errs() << "Not yet implemented\n";
-    return 1;
-  }
-
   yaml::Input YIn(Buf.get()->getBuffer());
 
-  int Res = convertYAML(YIn, Out->os(), Convert);
+  int Res = convertYAML(YIn, Out->os());
   if (Res == 0)
     Out->keep();
 

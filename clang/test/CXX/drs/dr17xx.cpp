@@ -3,19 +3,63 @@
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
+#if __cplusplus < 201103L
 // expected-no-diagnostics
+#endif
 
+namespace dr1715 { // dr1715: 3.9
 #if __cplusplus >= 201103L
-namespace dr1756 {  // dr1756: 3.7 c++11
+  struct B {
+    template<class T> B(T, typename T::Q);
+  };
+
+  class S {
+    using Q = int;
+    template<class T> friend B::B(T, typename T::Q);
+  };
+
+  struct D : B {
+    using B::B;
+  };
+  struct E : B { // expected-note 2{{candidate}}
+    template<class T> E(T t, typename T::Q q) : B(t, q) {} // expected-note {{'Q' is a private member}}
+  };
+
+  B b(S(), 1);
+  D d(S(), 2);
+  E e(S(), 3); // expected-error {{no match}}
+#endif
+}
+
+namespace dr1736 { // dr1736: 3.9
+#if __cplusplus >= 201103L
+struct S {
+  template <class T> S(T t) {
+    struct L : S {
+      using S::S;
+    };
+    typename T::type value; // expected-error {{no member}}
+    L l(value); // expected-note {{instantiation of}}
+  }
+};
+struct Q { typedef int type; } q;
+S s(q); // expected-note {{instantiation of}}
+#endif
+}
+
+namespace dr1756 { // dr1756: 3.7
+#if __cplusplus >= 201103L
   // Direct-list-initialization of a non-class object
   
   int a{0};
   
   struct X { operator int(); } x;
   int b{x};
-} // dr1756
+#endif
+}
 
-namespace dr1758 {  // dr1758: 3.7 c++11
+namespace dr1758 { // dr1758: 3.7
+#if __cplusplus >= 201103L
   // Explicit conversion in copy/move list initialization
 
   struct X { X(); };
@@ -30,5 +74,5 @@ namespace dr1758 {  // dr1758: 3.7 c++11
     operator A() { return A(); }
   } b;
   A a{b};
-} // dr1758
 #endif
+}

@@ -28,15 +28,15 @@ def A57Write_5cyc_1M  : SchedWriteRes<[A57UnitM]> { let Latency = 5;  }
 def A57Write_5cyc_1V  : SchedWriteRes<[A57UnitV]> { let Latency = 5;  }
 def A57Write_5cyc_1W  : SchedWriteRes<[A57UnitW]> { let Latency = 5;  }
 def A57Write_10cyc_1V : SchedWriteRes<[A57UnitV]> { let Latency = 10; }
-def A57Write_18cyc_1X : SchedWriteRes<[A57UnitX]> { let Latency = 18;
-                                                    let ResourceCycles = [18]; }
+def A57Write_17cyc_1W : SchedWriteRes<[A57UnitW]> { let Latency = 17;
+                                                    let ResourceCycles = [17]; }
 def A57Write_19cyc_1M : SchedWriteRes<[A57UnitM]> { let Latency = 19;
                                                     let ResourceCycles = [19]; }
 def A57Write_1cyc_1B  : SchedWriteRes<[A57UnitB]> { let Latency = 1;  }
 def A57Write_1cyc_1I  : SchedWriteRes<[A57UnitI]> { let Latency = 1;  }
 def A57Write_1cyc_1S  : SchedWriteRes<[A57UnitS]> { let Latency = 1;  }
 def A57Write_2cyc_1M  : SchedWriteRes<[A57UnitM]> { let Latency = 2;  }
-def A57Write_32cyc_1X : SchedWriteRes<[A57UnitX]> { let Latency = 32;
+def A57Write_32cyc_1W : SchedWriteRes<[A57UnitW]> { let Latency = 32;
                                                     let ResourceCycles = [32]; }
 def A57Write_35cyc_1M : SchedWriteRes<[A57UnitM]> { let Latency = 35;
                                                     let ResourceCycles = [35]; }
@@ -54,7 +54,7 @@ def A57Write_6cyc_1V  : SchedWriteRes<[A57UnitV]> { let Latency = 6;  }
 //===----------------------------------------------------------------------===//
 // Define Generic 2 micro-op types
 
-def A57Write_64cyc_2X    : SchedWriteRes<[A57UnitX, A57UnitX]> {
+def A57Write_64cyc_2W    : SchedWriteRes<[A57UnitW, A57UnitW]> {
   let Latency     = 64;
   let NumMicroOps = 2;
   let ResourceCycles = [32, 32];
@@ -139,10 +139,10 @@ def A57Write_2cyc_2V     : SchedWriteRes<[A57UnitV, A57UnitV]> {
   let Latency     = 2;
   let NumMicroOps = 2;
 }
-def A57Write_36cyc_2X    : SchedWriteRes<[A57UnitX, A57UnitX]> {
-  let Latency     = 36;
+def A57Write_34cyc_2W    : SchedWriteRes<[A57UnitW, A57UnitW]> {
+  let Latency     = 34;
   let NumMicroOps = 2;
-  let ResourceCycles = [18, 18];
+  let ResourceCycles = [17, 17];
 }
 def A57Write_3cyc_1I_1M  : SchedWriteRes<[A57UnitI,
                                           A57UnitM]> {

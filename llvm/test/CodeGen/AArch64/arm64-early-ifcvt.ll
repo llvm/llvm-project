@@ -1,4 +1,4 @@
-; RUN: llc < %s -stress-early-ifcvt -aarch64-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc < %s -stress-early-ifcvt -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
 target triple = "arm64-apple-macosx"
 
 ; CHECK: mm2

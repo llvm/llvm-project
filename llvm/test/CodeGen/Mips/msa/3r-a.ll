@@ -1,8 +1,8 @@
 ; Test the MSA intrinsics that are encoded with the 3R instruction format.
 ; There are lots of these so this covers those beginning with 'a'
 
-; RUN: llc -march=mips -mattr=+msa,+fp64 < %s | FileCheck %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64 < %s | FileCheck %s
+; RUN: llc -march=mips -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -march=mipsel -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck %s
 
 ; It should fail to compile without fp64.
 ; RUN: not llc -march=mips -mattr=+msa < %s 2>&1 | \

@@ -50,10 +50,20 @@
 // aggressive speculation while counting on later passes to either capitalize on
 // that or clean it up.
 //
+// If the pass was created by calling
+// createSpeculativeExecutionIfHasBranchDivergencePass or the
+// -spec-exec-only-if-divergent-target option is present, this pass only has an
+// effect on targets where TargetTransformInfo::hasBranchDivergence() is true;
+// on other targets, it is a nop.
+//
+// This lets you include this pass unconditionally in the IR pass pipeline, but
+// only enable it for relevant targets.
+//
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/SpeculativeExecution.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -83,40 +93,70 @@ static cl::opt<unsigned> SpecExecMaxNotHoisted(
              "number of instructions that would not be speculatively executed "
              "exceeds this limit."));
 
+static cl::opt<bool> SpecExecOnlyIfDivergentTarget(
+    "spec-exec-only-if-divergent-target", cl::init(false), cl::Hidden,
+    cl::desc("Speculative execution is applied only to targets with divergent "
+             "branches, even if the pass was configured to apply only to all "
+             "targets."));
+
 namespace {
-class SpeculativeExecution : public FunctionPass {
- public:
+
+class SpeculativeExecutionLegacyPass : public FunctionPass {
+public:
   static char ID;
-  SpeculativeExecution(): FunctionPass(ID) {}
+  explicit SpeculativeExecutionLegacyPass(bool OnlyIfDivergentTarget = false)
+      : FunctionPass(ID), OnlyIfDivergentTarget(OnlyIfDivergentTarget ||
+                                                SpecExecOnlyIfDivergentTarget),
+        Impl(OnlyIfDivergentTarget) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
 
- private:
-  bool runOnBasicBlock(BasicBlock &B);
-  bool considerHoistingFromTo(BasicBlock &FromBlock, BasicBlock &ToBlock);
+  StringRef getPassName() const override {
+    if (OnlyIfDivergentTarget)
+      return "Speculatively execute instructions if target has divergent "
+             "branches";
+    return "Speculatively execute instructions";
+  }
 
-  const TargetTransformInfo *TTI = nullptr;
+private:
+  // Variable preserved purely for correct name printing.
+  const bool OnlyIfDivergentTarget;
+
+  SpeculativeExecutionPass Impl;
 };
 } // namespace
 
-char SpeculativeExecution::ID = 0;
-INITIALIZE_PASS_BEGIN(SpeculativeExecution, "speculative-execution",
+char SpeculativeExecutionLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(SpeculativeExecutionLegacyPass, "speculative-execution",
                       "Speculatively execute instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(SpeculativeExecution, "speculative-execution",
-                      "Speculatively execute instructions", false, false)
+INITIALIZE_PASS_END(SpeculativeExecutionLegacyPass, "speculative-execution",
+                    "Speculatively execute instructions", false, false)
 
-void SpeculativeExecution::getAnalysisUsage(AnalysisUsage &AU) const {
+void SpeculativeExecutionLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetTransformInfoWrapperPass>();
+  AU.addPreserved<GlobalsAAWrapperPass>();
 }
 
-bool SpeculativeExecution::runOnFunction(Function &F) {
-  if (skipOptnoneFunction(F))
+bool SpeculativeExecutionLegacyPass::runOnFunction(Function &F) {
+  if (skipFunction(F))
     return false;
 
-  TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  return Impl.runImpl(F, TTI);
+}
 
+namespace llvm {
+
+bool SpeculativeExecutionPass::runImpl(Function &F, TargetTransformInfo *TTI) {
+  if (OnlyIfDivergentTarget && !TTI->hasBranchDivergence()) {
+    DEBUG(dbgs() << "Not running SpeculativeExecution because "
+                    "TTI->hasBranchDivergence() is false.\n");
+    return false;
+  }
+
+  this->TTI = TTI;
   bool Changed = false;
   for (auto& B : F) {
     Changed |= runOnBasicBlock(B);
@@ -124,7 +164,7 @@ bool SpeculativeExecution::runOnFunction(Function &F) {
   return Changed;
 }
 
-bool SpeculativeExecution::runOnBasicBlock(BasicBlock &B) {
+bool SpeculativeExecutionPass::runOnBasicBlock(BasicBlock &B) {
   BranchInst *BI = dyn_cast<BranchInst>(B.getTerminator());
   if (BI == nullptr)
     return false;
@@ -184,6 +224,24 @@ static unsigned ComputeSpeculationCost(const Instruction *I,
     case Instruction::Xor:
     case Instruction::ZExt:
     case Instruction::SExt:
+    case Instruction::Call:
+    case Instruction::BitCast:
+    case Instruction::PtrToInt:
+    case Instruction::IntToPtr:
+    case Instruction::AddrSpaceCast:
+    case Instruction::FPToUI:
+    case Instruction::FPToSI:
+    case Instruction::UIToFP:
+    case Instruction::SIToFP:
+    case Instruction::FPExt:
+    case Instruction::FPTrunc:
+    case Instruction::FAdd:
+    case Instruction::FSub:
+    case Instruction::FMul:
+    case Instruction::FDiv:
+    case Instruction::FRem:
+    case Instruction::ICmp:
+    case Instruction::FCmp:
       return TTI.getUserCost(I);
 
     default:
@@ -191,8 +249,8 @@ static unsigned ComputeSpeculationCost(const Instruction *I,
   }
 }
 
-bool SpeculativeExecution::considerHoistingFromTo(BasicBlock &FromBlock,
-                                                  BasicBlock &ToBlock) {
+bool SpeculativeExecutionPass::considerHoistingFromTo(
+    BasicBlock &FromBlock, BasicBlock &ToBlock) {
   SmallSet<const Instruction *, 8> NotHoisted;
   const auto AllPrecedingUsesFromBlockHoisted = [&NotHoisted](User *U) {
     for (Value* V : U->operand_values()) {
@@ -234,10 +292,28 @@ bool SpeculativeExecution::considerHoistingFromTo(BasicBlock &FromBlock,
   return true;
 }
 
-namespace llvm {
-
 FunctionPass *createSpeculativeExecutionPass() {
-  return new SpeculativeExecution();
+  return new SpeculativeExecutionLegacyPass();
 }
 
+FunctionPass *createSpeculativeExecutionIfHasBranchDivergencePass() {
+  return new SpeculativeExecutionLegacyPass(/* OnlyIfDivergentTarget = */ true);
+}
+
+SpeculativeExecutionPass::SpeculativeExecutionPass(bool OnlyIfDivergentTarget)
+    : OnlyIfDivergentTarget(OnlyIfDivergentTarget ||
+                            SpecExecOnlyIfDivergentTarget) {}
+
+PreservedAnalyses SpeculativeExecutionPass::run(Function &F,
+                                                FunctionAnalysisManager &AM) {
+  auto *TTI = &AM.getResult<TargetIRAnalysis>(F);
+
+  bool Changed = runImpl(F, TTI);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<GlobalsAA>();
+  return PA;
+}
 }  // namespace llvm

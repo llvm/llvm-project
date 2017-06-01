@@ -620,7 +620,7 @@ namespace dr254 { // dr254: yes
   template<typename T> struct A {
     typedef typename T::type type; // ok even if this is a typedef-name, because
                                    // it's not an elaborated-type-specifier
-    typedef struct T::type foo; // expected-error {{elaborated type refers to a typedef}}
+    typedef struct T::type foo; // expected-error {{typedef 'type' cannot be referenced with a struct specifier}}
   };
   struct B { struct type {}; };
   struct C { typedef struct {} type; }; // expected-note {{here}}
@@ -679,17 +679,13 @@ namespace dr258 { // dr258: yes
   } f; // expected-error {{abstract}}
 }
 
-namespace dr259 { // dr259: yes c++11
+namespace dr259 { // dr259: 4
   template<typename T> struct A {};
   template struct A<int>; // expected-note {{previous}}
   template struct A<int>; // expected-error {{duplicate explicit instantiation}}
 
-  // FIXME: We only apply this DR in C++11 mode.
-  template<> struct A<float>;
-  template struct A<float>;
-#if __cplusplus < 201103L
-  // expected-error@-2 {{extension}} expected-note@-3 {{here}}
-#endif
+  template<> struct A<float>; // expected-note {{previous}}
+  template struct A<float>; // expected-warning {{has no effect}}
 
   template struct A<char>; // expected-note {{here}}
   template<> struct A<char>; // expected-error {{explicit specialization of 'dr259::A<char>' after instantiation}}
@@ -702,11 +698,8 @@ namespace dr259 { // dr259: yes c++11
   template<typename T> struct B; // expected-note {{here}}
   template struct B<int>; // expected-error {{undefined}}
 
-  template<> struct B<float>;
-  template struct B<float>;
-#if __cplusplus < 201103L
-  // expected-error@-2 {{extension}} expected-note@-3 {{here}}
-#endif
+  template<> struct B<float>; // expected-note {{previous}}
+  template struct B<float>; // expected-warning {{has no effect}}
 }
 
 // FIXME: When dr260 is resolved, also add tests for DR507.
@@ -990,12 +983,32 @@ namespace dr289 { // dr289: yes
 
 namespace dr294 { // dr294: no
   void f() throw(int);
+#if __cplusplus > 201402L
+    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+#endif
   int main() {
-    (void)static_cast<void (*)() throw()>(f); // FIXME: ill-formed
-    (void)static_cast<void (*)() throw(int)>(f); // FIXME: ill-formed
+    (void)static_cast<void (*)() throw()>(f); // FIXME: ill-formed in C++14 and before
+#if __cplusplus > 201402L
+    // FIXME: expected-error@-2 {{not allowed}}
+    //
+    // Irony: the above is valid in C++17 and beyond, but that's exactly when
+    // we reject it. In C++14 and before, this is ill-formed because an
+    // exception-specification is not permitted in a type-id. In C++17, this is
+    // valid because it's the inverse of a standard conversion sequence
+    // containing a function pointer conversion. (Well, it's actually not valid
+    // yet, as a static_cast is not permitted to reverse a function pointer
+    // conversion, but that is being changed by core issue).
+#endif
+    (void)static_cast<void (*)() throw(int)>(f); // FIXME: ill-formed in C++14 and before
+#if __cplusplus > 201402L
+    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+#endif
 
-    void (*p)() throw() = f; // expected-error {{not superset}}
+    void (*p)() throw() = f; // expected-error-re {{{{not superset|different exception specification}}}}
     void (*q)() throw(int) = f;
+#if __cplusplus > 201402L
+    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+#endif
   }
 }
 
@@ -1035,8 +1048,8 @@ namespace dr298 { // dr298: yes
   C::type i3;
 
   struct A a;
-  struct B b; // expected-error {{refers to a typedef}}
-  struct C c; // expected-error {{refers to a typedef}}
+  struct B b; // expected-error {{typedef 'B' cannot be referenced with a struct specifier}}
+  struct C c; // expected-error {{typedef 'C' cannot be referenced with a struct specifier}}
 
   B::B() {} // expected-error {{requires a type specifier}}
   B::A() {} // ok

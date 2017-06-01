@@ -44,9 +44,7 @@ will either need to build gold or install a version with plugin support.
   the ``-plugin`` option. Running ``make`` will additionally build
   ``build/binutils/ar`` and ``nm-new`` binaries supporting plugins.
 
-* Build the LLVMgold plugin.  If building with autotools, run configure with
-  ``--with-binutils-include=/path/to/binutils/include`` and run ``make``.
-  If building with CMake, run cmake with
+* Build the LLVMgold plugin. Run CMake with
   ``-DLLVM_BINUTILS_INCDIR=/path/to/binutils/include``.  The correct include
   path will contain the file ``plugin-api.h``.
 

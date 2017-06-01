@@ -88,11 +88,11 @@ def pre_truncstv4f32 : PatFrag<(ops node:$val, node:$base, node:$offset),
   return cast<StoreSDNode>(N)->getMemoryVT() == MVT::v4f32;
 }]>;
 
-def fround_inexact : PatFrag<(ops node:$val), (fround node:$val), [{
+def fround_inexact : PatFrag<(ops node:$val), (fpround node:$val), [{
   return cast<ConstantSDNode>(N->getOperand(1))->getZExtValue() == 0;
 }]>;
 
-def fround_exact : PatFrag<(ops node:$val), (fround node:$val), [{
+def fround_exact : PatFrag<(ops node:$val), (fpround node:$val), [{
   return cast<ConstantSDNode>(N->getOperand(1))->getZExtValue() == 1;
 }]>;
 
@@ -311,11 +311,11 @@ let Uses = [RM] in {
 
   def QVFRIN : XForm_19<4, 392, (outs qfrc:$FRT), (ins qfrc:$FRB),
                         "qvfrin $FRT, $FRB", IIC_FPGeneral,
-                        [(set v4f64:$FRT, (frnd v4f64:$FRB))]>;
+                        [(set v4f64:$FRT, (fround v4f64:$FRB))]>;
   let isCodeGenOnly = 1 in
     def QVFRINs : XForm_19<4, 392, (outs qsrc:$FRT), (ins qsrc:$FRB),
                            "qvfrin $FRT, $FRB", IIC_FPGeneral,
-                           [(set v4f32:$FRT, (frnd v4f32:$FRB))]>;
+                           [(set v4f32:$FRT, (fround v4f32:$FRB))]>;
 
   def QVFRIP : XForm_19<4, 456, (outs qfrc:$FRT), (ins qfrc:$FRB),
                         "qvfrip $FRT, $FRB", IIC_FPGeneral,
@@ -839,31 +839,31 @@ def : Pat<(v4f64 (scalar_to_vector f64:$A)),
 def : Pat<(v4f32 (scalar_to_vector f32:$A)),
           (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), $A, sub_64)>;
 
-def : Pat<(f64 (vector_extract v4f64:$S, 0)),
+def : Pat<(f64 (extractelt v4f64:$S, 0)),
           (EXTRACT_SUBREG $S, sub_64)>;
-def : Pat<(f32 (vector_extract v4f32:$S, 0)),
+def : Pat<(f32 (extractelt v4f32:$S, 0)),
           (EXTRACT_SUBREG $S, sub_64)>;
 
-def : Pat<(f64 (vector_extract v4f64:$S, 1)),
+def : Pat<(f64 (extractelt v4f64:$S, 1)),
           (EXTRACT_SUBREG (QVESPLATI $S, 1), sub_64)>;
-def : Pat<(f64 (vector_extract v4f64:$S, 2)),
+def : Pat<(f64 (extractelt v4f64:$S, 2)),
           (EXTRACT_SUBREG (QVESPLATI $S, 2), sub_64)>;
-def : Pat<(f64 (vector_extract v4f64:$S, 3)),
+def : Pat<(f64 (extractelt v4f64:$S, 3)),
           (EXTRACT_SUBREG (QVESPLATI $S, 3), sub_64)>;
 
-def : Pat<(f32 (vector_extract v4f32:$S, 1)),
+def : Pat<(f32 (extractelt v4f32:$S, 1)),
           (EXTRACT_SUBREG (QVESPLATIs $S, 1), sub_64)>;
-def : Pat<(f32 (vector_extract v4f32:$S, 2)),
+def : Pat<(f32 (extractelt v4f32:$S, 2)),
           (EXTRACT_SUBREG (QVESPLATIs $S, 2), sub_64)>;
-def : Pat<(f32 (vector_extract v4f32:$S, 3)),
+def : Pat<(f32 (extractelt v4f32:$S, 3)),
           (EXTRACT_SUBREG (QVESPLATIs $S, 3), sub_64)>;
 
-def : Pat<(f64 (vector_extract v4f64:$S, i64:$F)),
+def : Pat<(f64 (extractelt v4f64:$S, i64:$F)),
           (EXTRACT_SUBREG (QVFPERM $S, $S,
                                    (QVLPCLSXint (RLDICR $F, 2,
                                                         /* 63-2 = */ 61))),
                           sub_64)>;
-def : Pat<(f32 (vector_extract v4f32:$S, i64:$F)),
+def : Pat<(f32 (extractelt v4f32:$S, i64:$F)),
           (EXTRACT_SUBREG (QVFPERMs $S, $S,
                                     (QVLPCLSXint (RLDICR $F, 2,
                                                          /* 63-2 = */ 61))),
@@ -1103,7 +1103,7 @@ def : Pat<(xor v4i1:$FRA, v4i1:$FRB),
 def : Pat<(not v4i1:$FRA),
           (QVFLOGICALb $FRA, $FRA, (i32 10))>;
 
-def : Pat<(v4f64 (fextend v4f32:$src)),
+def : Pat<(v4f64 (fpextend v4f32:$src)),
           (COPY_TO_REGCLASS $src, QFRC)>;
 
 def : Pat<(v4f32 (fround_exact v4f64:$src)),

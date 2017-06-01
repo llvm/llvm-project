@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix,osx,alpha.unix,alpha.security.taint -analyzer-store region -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix,osx,alpha.unix,alpha.security.taint -analyzer-store region -verify %s
 // expected-no-diagnostics
 
 class Evil {

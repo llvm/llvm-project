@@ -61,11 +61,11 @@ entry:
 ; ELF64: t10
   %call = call i32 @bar(i8 zeroext 0, i8 zeroext -8, i8 zeroext -69, i8 zeroext 28, i8 zeroext 40, i8 zeroext -70)
 ; ELF64: li 3, 0
-; ELF64: li 4, -8
-; ELF64: li 5, -69
+; ELF64: li 4, 248
+; ELF64: li 5, 187
 ; ELF64: li 6, 28
 ; ELF64: li 7, 40
-; ELF64: li 8, -70
+; ELF64: li 8, 186
 ; ELF64: rldicl 3, 3, 0, 56
 ; ELF64: rldicl 4, 4, 0, 56
 ; ELF64: rldicl 5, 5, 0, 56

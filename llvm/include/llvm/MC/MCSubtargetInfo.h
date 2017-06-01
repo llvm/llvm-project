@@ -14,6 +14,7 @@
 #ifndef LLVM_MC_MCSUBTARGETINFO_H
 #define LLVM_MC_MCSUBTARGETINFO_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include <string>
@@ -86,8 +87,9 @@ protected:
   void InitMCProcessorInfo(StringRef CPU, StringRef FS);
 
 public:
-  /// Set the features to the default for the given CPU.
-  void setDefaultFeatures(StringRef CPU);
+  /// Set the features to the default for the given CPU with an appended feature
+  /// string.
+  void setDefaultFeatures(StringRef CPU, StringRef FS);
 
   /// ToggleFeature - Toggle a feature and returns the re-computed feature
   /// bits. This version does not change the implied bits.

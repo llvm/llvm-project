@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // rdar: //6734520
 
+void tooManyArgs() __attribute__((unavailable("a", "b"))); // expected-error {{'unavailable' attribute takes no more than 1 argument}}
+
 int foo(int)  __attribute__((__unavailable__("USE IFOO INSTEAD"))); // expected-note {{'foo' has been explicitly marked unavailable here}}
 double dfoo(double)  __attribute__((__unavailable__("NO LONGER"))); // expected-note 2 {{'dfoo' has been explicitly marked unavailable here}}
 

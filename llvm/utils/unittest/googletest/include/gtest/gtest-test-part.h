@@ -62,7 +62,7 @@ class GTEST_API_ TestPartResult {
                  int a_line_number,
                  const char* a_message)
       : type_(a_type),
-        file_name_(a_file_name),
+        file_name_(a_file_name == NULL ? "" : a_file_name),
         line_number_(a_line_number),
         summary_(ExtractSummary(a_message)),
         message_(a_message) {
@@ -73,7 +73,9 @@ class GTEST_API_ TestPartResult {
 
   // Gets the name of the source file where the test part took place, or
   // NULL if it's unknown.
-  const char* file_name() const { return file_name_.c_str(); }
+  const char* file_name() const {
+    return file_name_.empty() ? NULL : file_name_.c_str();
+  }
 
   // Gets the line in the source file where the test part took place,
   // or -1 if it's unknown.
@@ -96,21 +98,22 @@ class GTEST_API_ TestPartResult {
 
   // Returns true iff the test part fatally failed.
   bool fatally_failed() const { return type_ == kFatalFailure; }
+
  private:
   Type type_;
 
   // Gets the summary of the failure message by omitting the stack
   // trace in it.
-  static internal::String ExtractSummary(const char* message);
+  static std::string ExtractSummary(const char* message);
 
   // The name of the source file where the test part took place, or
-  // NULL if the source file is unknown.
-  internal::String file_name_;
+  // "" if the source file is unknown.
+  std::string file_name_;
   // The line in the source file where the test part took place, or -1
   // if the line number is unknown.
   int line_number_;
-  internal::String summary_;  // The test failure summary.
-  internal::String message_;  // The test failure message.
+  std::string summary_;  // The test failure summary.
+  std::string message_;  // The test failure message.
 };
 
 // Prints a TestPartResult object.
@@ -142,7 +145,7 @@ class GTEST_API_ TestPartResultArray {
 // This interface knows how to report a test part result.
 class TestPartResultReporterInterface {
  public:
-  virtual ~TestPartResultReporterInterface();
+  virtual ~TestPartResultReporterInterface() {}
 
   virtual void ReportTestPartResult(const TestPartResult& result) = 0;
 };
@@ -159,8 +162,8 @@ class GTEST_API_ HasNewFatalFailureHelper
     : public TestPartResultReporterInterface {
  public:
   HasNewFatalFailureHelper();
-  ~HasNewFatalFailureHelper() override;
-  void ReportTestPartResult(const TestPartResult &result) override;
+  virtual ~HasNewFatalFailureHelper();
+  virtual void ReportTestPartResult(const TestPartResult& result);
   bool has_new_fatal_failure() const { return has_new_fatal_failure_; }
  private:
   bool has_new_fatal_failure_;

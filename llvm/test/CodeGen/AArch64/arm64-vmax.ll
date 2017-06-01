@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define <8 x i8> @smax_8b(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ;CHECK-LABEL: smax_8b:
@@ -244,7 +244,7 @@ declare <8 x i16> @llvm.aarch64.neon.umin.v8i16(<8 x i16>, <8 x i16>) nounwind r
 declare <2 x i32> @llvm.aarch64.neon.umin.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
 declare <4 x i32> @llvm.aarch64.neon.umin.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
 
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define <8 x i8> @smaxp_8b(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ;CHECK-LABEL: smaxp_8b:
@@ -368,7 +368,7 @@ declare <8 x i16> @llvm.aarch64.neon.umaxp.v8i16(<8 x i16>, <8 x i16>) nounwind 
 declare <2 x i32> @llvm.aarch64.neon.umaxp.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
 declare <4 x i32> @llvm.aarch64.neon.umaxp.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
 
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define <8 x i8> @sminp_8b(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ;CHECK-LABEL: sminp_8b:

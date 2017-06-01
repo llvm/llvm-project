@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -O3 < %s | FileCheck %s
+; RUN: llc -march=mipsel -O3 -relocation-model=pic < %s | FileCheck %s
 
 
 ; MIPS direct branches implicitly define register $at. This test makes sure that
@@ -11,19 +11,19 @@
 ; CHECK-LABEL: readLumaCoeff8x8_CABAC
 
 ; The check for first "addiu" instruction is added so that we can match the correct "b" instruction.
-; CHECK:           addiu ${{[0-9]+}}, $zero, -1
+; CHECK:           andi
 ; CHECK:           b $[[BB0:BB[0-9_]+]]
-; CHECK-NEXT:      addiu ${{[0-9]+}}, $zero, 0
+; CHECK:           sll
 
 ; Check that at the start of a fallthrough block there is a instruction that writes to $1.
-; CHECK-NEXT:  {{BB[0-9_#]+}}: 
-; CHECK-NEXT:      lw      $[[R1:[0-9]+]], %got(assignSE2partition)($[[R2:[0-9]+]])
-; CHECK-NEXT:      sll $1, $[[R0:[0-9]+]], 4
+; CHECK:       {{BB[0-9_#]+}}:
+; CHECK:           sll $1, $[[R0:[0-9]+]], 4
+; CHECK:           lw      $[[R1:[0-9]+]], %got(assignSE2partition)($[[R2:[0-9]+]])
 
 ; Check that identical instructions are at the start of a target block.
 ; CHECK:       [[BB0]]:
-; CHECK-NEXT:      lw      $[[R1]], %got(assignSE2partition)($[[R2]])
-; CHECK-NEXT:      sll $1, $[[R0]], 4
+; CHECK:           sll $1, $[[R0]], 4
+; CHECK:           lw      $[[R1]], %got(assignSE2partition)($[[R2]])
 
 
 %struct.img_par = type { i32, i32, i32, i32, i32*, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [16 x [16 x i16]], [6 x [32 x i32]], [16 x [16 x i32]], [4 x [12 x [4 x [4 x i32]]]], [16 x i32], i8**, i32*, i32***, i32**, i32, i32, i32, i32, %struct.Slice*, %struct.macroblock*, i32, i32, i32, i32, i32, i32, %struct.DecRefPicMarking_s*, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [3 x i32], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32***, i32***, i32****, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [3 x [2 x i32]], [3 x [2 x i32]], i32, i32, i32, i32, %struct.timeb, %struct.timeb, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32 }

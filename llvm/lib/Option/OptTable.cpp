@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Option/OptTable.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -142,8 +143,7 @@ OptTable::OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase)
     StringRef Prefix = I->getKey();
     for (StringRef::const_iterator C = Prefix.begin(), CE = Prefix.end();
                                    C != CE; ++C)
-      if (std::find(PrefixChars.begin(), PrefixChars.end(), *C)
-            == PrefixChars.end())
+      if (!is_contained(PrefixChars, *C))
         PrefixChars.push_back(*C);
   }
 }
@@ -315,9 +315,9 @@ static std::string getOptionHelpName(const OptTable &Opts, OptSpecifier Id) {
     break;
 
   case Option::SeparateClass: case Option::JoinedOrSeparateClass:
-  case Option::RemainingArgsClass:
+  case Option::RemainingArgsClass: case Option::RemainingArgsJoinedClass:
     Name += ' ';
-    // FALLTHROUGH
+    LLVM_FALLTHROUGH;
   case Option::JoinedClass: case Option::CommaJoinedClass:
   case Option::JoinedAndSeparateClass:
     if (const char *MetaVarName = Opts.getOptionMetaVar(Id))

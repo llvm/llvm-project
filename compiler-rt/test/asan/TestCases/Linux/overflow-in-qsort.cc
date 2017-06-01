@@ -7,7 +7,7 @@
 // https://code.google.com/p/address-sanitizer/issues/detail?id=137
 
 // Fast unwinder is only available on x86_64 and i386.
-// REQUIRES: x86_64-supported-target
+// REQUIRES: x86-target-arch
 
 #include <stdlib.h>
 #include <stdio.h>

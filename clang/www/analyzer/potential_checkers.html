@@ -180,64 +180,6 @@ void test(A *dst, A *src) {
 
 </table>
 
-<!-- =============================== va_list =============================== -->
-<h3>va_list</h3>
-<table class="checkers">
-<col class="namedescr"><col class="example"><col class="progress">
-<thead><tr><td>Name, Description</td><td>Example</td><td>Progress</td></tr></thead>
-
-<tr><td><div class="namedescr expandable"><span class="name">
-valist.Uninitialized</span><span class="lang">
-(C)</span><div class="descr">
-Calls to the <code>va_arg</code>, <code>va_copy</code>, or
-<code>va_end</code> macro must happen after calling <code>va_start</code> and
-before calling <code>va_end</code>.</div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-#include &lt;stdarg.h&gt;
-
-void test(int x, ...) {
-  va_list args;
-  int y = va_arg(args, int); // warn
-}
-</pre></div>
-<div class="example"><pre>
-#include &lt;stdarg.h&gt;
-
-void test(int x, ...) {
-  va_list args;
-  va_start(args, x); 
-  va_end(args);
-  int z = va_arg(args, int); // warn
-}
-</pre></div></div></td>
-<td class="aligned"><a href="http://llvm.org/bugs/show_bug.cgi?id=16812">
-PR16811</a></td></tr>
-
-<tr><td><div class="namedescr expandable"><span class="name">
-valist.Unterminated</span><span class="lang">
-(C)</span><div class="descr">
-Every <code>va_start</code> must be matched by a <code>va_end</code>. A va_list
-can only be ended once.
-
-<i>This should be folded into the generalized "ownership checker"
-described on the <a href="open_projects.html">
-Open Projects</a> page.</i></div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-#include &lt;stdarg.h&gt;
-
-void test(int x, ...) {
-  va_list args;
-  va_start(args, x);
-  int y = x + va_arg(args, int);
-} // warn: missing va_end
-</pre></div></div></td>
-<td class="aligned"><a href="http://llvm.org/bugs/show_bug.cgi?id=16812">
-PR16812</a></td></tr>
-
-</table>
-
 <!-- ============================== exceptions ============================= -->
 <h3>exceptions</h3>
 <table class="checkers">
@@ -384,7 +326,8 @@ void test() {
    // warn: the right operand to '-' is always 0
 }
 </pre></div></div></td>
-<td class="aligned">removed from alpha.deadcode.* at r198476</td></tr>
+<td class="aligned">removed from alpha.deadcode.* at
+<a href="https://reviews.llvm.org/rL198476">r198476</a></td></tr>
 
 </table>
 

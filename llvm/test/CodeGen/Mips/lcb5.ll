@@ -212,7 +212,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; ci:	btnez	$BB7_1  # 16 bit inst
 ; ci:	jal	$BB7_2	# branch
 ; ci:	nop
-; ci:	.align	2
+; ci:	.p2align	2
 ; ci: $BB7_1:
 ; ci:	.end	z4
 

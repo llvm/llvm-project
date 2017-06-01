@@ -16,9 +16,9 @@
 
 #include "ManagedStringPool.h"
 #include "NVPTXSubtarget.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetSelectionDAGInfo.h"
 
 namespace llvm {
 
@@ -36,8 +36,8 @@ class NVPTXTargetMachine : public LLVMTargetMachine {
 public:
   NVPTXTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
-                     Reloc::Model RM, CodeModel::Model CM, CodeGenOpt::Level OP,
-                     bool is64bit);
+                     Optional<Reloc::Model> RM, CodeModel::Model CM,
+                     CodeGenOpt::Level OP, bool is64bit);
 
   ~NVPTXTargetMachine() override;
   const NVPTXSubtarget *getSubtargetImpl(const Function &) const override {
@@ -61,6 +61,7 @@ public:
     return TLOF.get();
   }
 
+  void addEarlyAsPossiblePasses(PassManagerBase &PM) override;
   TargetIRAnalysis getTargetIRAnalysis() override;
 
 }; // NVPTXTargetMachine.
@@ -70,7 +71,7 @@ class NVPTXTargetMachine32 : public NVPTXTargetMachine {
 public:
   NVPTXTargetMachine32(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Reloc::Model RM, CodeModel::Model CM,
+                       Optional<Reloc::Model> RM, CodeModel::Model CM,
                        CodeGenOpt::Level OL);
 };
 
@@ -79,7 +80,7 @@ class NVPTXTargetMachine64 : public NVPTXTargetMachine {
 public:
   NVPTXTargetMachine64(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Reloc::Model RM, CodeModel::Model CM,
+                       Optional<Reloc::Model> RM, CodeModel::Model CM,
                        CodeGenOpt::Level OL);
 };
 

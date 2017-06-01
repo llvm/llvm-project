@@ -3,19 +3,21 @@
 ; Do not unnecessarily use AT_specification DIE.
 ; CHECK-NOT: AT_specification
 
-@a = common global [10 x i32] zeroinitializer, align 16
+source_filename = "test/DebugInfo/Generic/dbg-at-specficiation.ll"
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!12}
+@a = common global [10 x i32] zeroinitializer, align 16, !dbg !0
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 140253)", isOptimized: true, emissionKind: 0, file: !11, enums: !2, retainedTypes: !2, subprograms: !2, globals: !3)
-!2 = !{}
-!3 = !{!5}
-!5 = !DIGlobalVariable(name: "a", line: 1, isLocal: false, isDefinition: true, scope: null, file: !6, type: !7, variable: [10 x i32]* @a)
-!6 = !DIFile(filename: "x.c", directory: "/private/tmp")
-!7 = !DICompositeType(tag: DW_TAG_array_type, size: 320, align: 32, baseType: !8, elements: !9)
-!8 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!9 = !{!10}
-!10 = !DISubrange(count: 10)
-!11 = !DIFile(filename: "x.c", directory: "/private/tmp")
-!12 = !{i32 1, !"Debug Info Version", i32 3}
+!llvm.dbg.cu = !{!7}
+!llvm.module.flags = !{!10}
+
+!0 = !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
+!2 = !DIFile(filename: "x.c", directory: "/private/tmp")
+!3 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 320, align: 32, elements: !5)
+!4 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+!5 = !{!6}
+!6 = !DISubrange(count: 10)
+!7 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang version 3.0 (trunk 140253)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !8, retainedTypes: !8, globals: !9)
+!8 = !{}
+!9 = !{!0}
+!10 = !{i32 1, !"Debug Info Version", i32 3}

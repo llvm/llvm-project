@@ -98,6 +98,7 @@ struct Configuration {
   bool Bsymbolic;
   bool BsymbolicFunctions;
   bool ColorDiagnostics = false;
+  bool DefineCommon;
   bool Demangle = true;
   bool DisableVerify;
   bool EhFrameHdr;
@@ -134,6 +135,7 @@ struct Configuration {
   bool ZCombreloc;
   bool ZExecstack;
   bool ZNodelete;
+  bool ZNodlopen;
   bool ZNow;
   bool ZOrigin;
   bool ZRelro;

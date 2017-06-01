@@ -103,9 +103,7 @@ public:
       : AsmPrinter(TM, std::move(Streamer)), MCP(nullptr),
         InConstantPool(false), MCInstLowering(*this) {}
 
-  const char *getPassName() const override {
-    return "Mips Assembly Printer";
-  }
+  StringRef getPassName() const override { return "Mips Assembly Printer"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -134,8 +132,6 @@ public:
                              unsigned AsmVariant, const char *ExtraCode,
                              raw_ostream &O) override;
   void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
-  void printUnsignedImm(const MachineInstr *MI, int opNum, raw_ostream &O);
-  void printUnsignedImm8(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printMemOperandEA(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printFCCOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
@@ -144,6 +140,7 @@ public:
   void EmitStartOfAsmFile(Module &M) override;
   void EmitEndOfAsmFile(Module &M) override;
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
+  void EmitDebugValue(const MCExpr *Value, unsigned Size) const override;
 };
 }
 

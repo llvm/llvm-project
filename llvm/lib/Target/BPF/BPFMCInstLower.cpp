@@ -20,9 +20,8 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 MCSymbol *
@@ -50,7 +49,7 @@ void BPFMCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     MCOperand MCOp;
     switch (MO.getType()) {
     default:
-      MI->dump();
+      MI->print(errs());
       llvm_unreachable("unknown operand type");
     case MachineOperand::MO_Register:
       // Ignore all implicit register operands.

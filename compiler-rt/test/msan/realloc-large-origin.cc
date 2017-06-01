@@ -1,7 +1,7 @@
 // RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -O0 %s -o %t && not %run %t >%t.out 2>&1
-// RUN: FileCheck %s < %t.out
+// RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-%short-stack %s < %t.out
 // RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -O2 %s -o %t && not %run %t >%t.out 2>&1
-// RUN: FileCheck %s < %t.out
+// RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-%short-stack %s < %t.out
 
 // This is a regression test: there used to be broken "stored to memory at"
 // stacks with
@@ -21,10 +21,11 @@ int main(int argc, char **argv) {
 // CHECK:   {{#0 0x.* in main .*realloc-large-origin.cc:}}[[@LINE-3]]
 
 // CHECK:  Uninitialized value was stored to memory at
-// CHECK:   {{#0 0x.* in .*realloc}}
-// CHECK:   {{#1 0x.* in main .*realloc-large-origin.cc:}}[[@LINE-10]]
+// CHECK-FULL-STACK:   {{#0 0x.* in .*realloc}}
+// CHECK-FULL-STACK:   {{#1 0x.* in main .*realloc-large-origin.cc:}}[[@LINE-10]]
+// CHECK-SHORT-STACK:   {{#0 0x.* in .*realloc}}
 
 // CHECK:   Uninitialized value was created by a heap allocation
 // CHECK:   {{#0 0x.* in .*malloc}}
-// CHECK:   {{#1 0x.* in main .*realloc-large-origin.cc:}}[[@LINE-15]]
+// CHECK:   {{#1 0x.* in main .*realloc-large-origin.cc:}}[[@LINE-16]]
 }

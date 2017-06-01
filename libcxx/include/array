@@ -185,14 +185,17 @@ struct _LIBCPP_TEMPLATE_VIS array
     _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT {return _Size == 0;}
 
     // element access:
-    _LIBCPP_INLINE_VISIBILITY reference operator[](size_type __n)             {return __elems_[__n];}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 const_reference operator[](size_type __n) const {return __elems_[__n];}
-    reference at(size_type __n);
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    reference operator[](size_type __n)             {return __elems_[__n];}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+    const_reference operator[](size_type __n) const {return __elems_[__n];}
+
+    _LIBCPP_CONSTEXPR_AFTER_CXX14       reference at(size_type __n);
     _LIBCPP_CONSTEXPR_AFTER_CXX11 const_reference at(size_type __n) const;
 
-    _LIBCPP_INLINE_VISIBILITY reference front()             {return __elems_[0];}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 reference front()             {return __elems_[0];}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 const_reference front() const {return __elems_[0];}
-    _LIBCPP_INLINE_VISIBILITY reference back()              {return __elems_[_Size > 0 ? _Size-1 : 0];}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 reference back()              {return __elems_[_Size > 0 ? _Size-1 : 0];}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 const_reference back() const  {return __elems_[_Size > 0 ? _Size-1 : 0];}
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
@@ -202,6 +205,7 @@ struct _LIBCPP_TEMPLATE_VIS array
 };
 
 template <class _Tp, size_t _Size>
+_LIBCPP_CONSTEXPR_AFTER_CXX14
 typename array<_Tp, _Size>::reference
 array<_Tp, _Size>::at(size_type __n)
 {

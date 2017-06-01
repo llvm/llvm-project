@@ -30,12 +30,12 @@ define i32 @bpf_prog1(%struct.bpf_context* nocapture %ctx) #0 section "events/ne
 ; CHECK-LABEL: bpf_prog1:
 ; CHECK: call 4
 ; CHECK: call 9
-; CHECK: jnei r0, 0
-; CHECK: mov r1, 622884453
-; CHECK: ld_64 r1, 7214898703899978611
+; CHECK: if r0 != 0
+; CHECK: r1 = 622884453
+; CHECK: r1 = 7214898703899978611ll
 ; CHECK: call 11
-; CHECK: mov r0, 0
-; CHECK: ret
+; CHECK: r0 = 0
+; CHECK: exit
   br label %13
 
 ; <label>:13                                      ; preds = %10, %0

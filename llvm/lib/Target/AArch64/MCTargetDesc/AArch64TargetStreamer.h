@@ -24,7 +24,7 @@ public:
   /// Callback used to implement the ldr= pseudo.
   /// Add a new entry to the constant pool for the current section and return an
   /// MCExpr that can be used to refer to the constant pool location.
-  const MCExpr *addConstantPoolEntry(const MCExpr *, unsigned Size);
+  const MCExpr *addConstantPoolEntry(const MCExpr *, unsigned Size, SMLoc Loc);
 
   /// Callback used to implemnt the .ltorg directive.
   /// Emit contents of constant pool for the current section.

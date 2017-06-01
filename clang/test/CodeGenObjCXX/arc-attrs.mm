@@ -46,3 +46,24 @@ void templateTest() {
   // CHECK-NEXT: call void @objc_storeStrong(i8** [[X]], i8* null)
   // CHECK-NEXT: ret void
 }
+
+// PR27887
+struct ForwardConsumed {
+  ForwardConsumed(__attribute__((ns_consumed)) id x);
+};
+
+ForwardConsumed::ForwardConsumed(__attribute__((ns_consumed)) id x) {}
+
+// CHECK: define void @_ZN15ForwardConsumedC2EP11objc_object(
+// CHECK-NOT:  objc_retain
+// CHECK:      store i8* {{.*}}, i8** [[X:%.*]],
+// CHECK-NOT:  [[X]]
+// CHECK:      call void @objc_storeStrong(i8** [[X]], i8* null)
+
+// CHECK: define void @_ZN15ForwardConsumedC1EP11objc_object(
+// CHECK-NOT:  objc_retain
+// CHECK:      store i8* {{.*}}, i8** [[X:%.*]],
+// CHECK:      [[T0:%.*]] = load i8*, i8** [[X]],
+// CHECK-NEXT: store i8* null, i8** [[X]],
+// CHECK-NEXT: call void @_ZN15ForwardConsumedC2EP11objc_object({{.*}}, i8* [[T0]])
+// CHECK:      call void @objc_storeStrong(i8** [[X]], i8* null)

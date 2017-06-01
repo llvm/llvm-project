@@ -45,7 +45,7 @@ public:
   MemRegionRef(llvm::BumpPtrAllocator *A) : Allocator(A) {}
 
   void *allocate(size_t Sz) {
-    return Allocator->Allocate(Sz, llvm::AlignOf<AlignmentType>::Alignment);
+    return Allocator->Allocate(Sz, alignof(AlignmentType));
   }
 
   template <typename T> T *allocateT() { return Allocator->Allocate<T>(); }
@@ -58,17 +58,14 @@ private:
   llvm::BumpPtrAllocator *Allocator;
 };
 
-
 } // end namespace til
 } // end namespace threadSafety
 } // end namespace clang
-
 
 inline void *operator new(size_t Sz,
                           clang::threadSafety::til::MemRegionRef &R) {
   return R.allocate(Sz);
 }
-
 
 namespace clang {
 namespace threadSafety {
@@ -79,7 +76,6 @@ using llvm::StringRef;
 using clang::SourceLocation;
 
 namespace til {
-
 
 // A simple fixed size array class that does not manage its own memory,
 // suitable for use with bump pointer allocation.
@@ -117,7 +113,6 @@ public:
     Data = A.allocateT<T>(Ncp);
     Capacity = Ncp;
     memcpy(Data, Odata, sizeof(T) * Size);
-    return;
   }
 
   // Reserve space for at least N more items.
@@ -221,9 +216,7 @@ private:
   size_t Capacity;
 };
 
-
 }  // end namespace til
-
 
 // A copy on write vector.
 // The vector can be in one of three states:
@@ -346,13 +339,11 @@ private:
   VectorData *Data;
 };
 
-
 inline std::ostream& operator<<(std::ostream& ss, const StringRef str) {
   return ss.write(str.data(), str.size());
 }
 
-
 } // end namespace threadSafety
 } // end namespace clang
 
-#endif  // LLVM_CLANG_THREAD_SAFETY_UTIL_H
+#endif // LLVM_CLANG_THREAD_SAFETY_UTIL_H

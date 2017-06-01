@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-config suppress-null-return-paths=true -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-config suppress-null-return-paths=true -analyzer-output=text -verify %s
 // expected-no-diagnostics
 
 int *returnNull() { return 0; }

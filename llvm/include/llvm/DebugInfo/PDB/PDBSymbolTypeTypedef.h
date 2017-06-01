@@ -16,6 +16,7 @@
 namespace llvm {
 
 class raw_ostream;
+namespace pdb {
 
 class PDBSymbolTypeTypedef : public PDBSymbol {
 public:
@@ -41,7 +42,6 @@ public:
   FORWARD_SYMBOL_METHOD(isPacked)
   FORWARD_SYMBOL_METHOD(isReference)
   FORWARD_SYMBOL_METHOD(isScoped)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
   FORWARD_SYMBOL_METHOD(getTypeId)
   FORWARD_SYMBOL_METHOD(getUdtKind)
   FORWARD_SYMBOL_METHOD(isUnalignedType)
@@ -50,5 +50,6 @@ public:
 };
 
 } // namespace llvm
+}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPETYPEDEF_H

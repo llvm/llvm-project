@@ -2,7 +2,7 @@
 
 // Test this without pch.
 // RUN: cp %S/Inputs/case-insensitive-include.h %T
-// RUN: %clang_cc1 -fsyntax-only %s -include %s -I %T -verify
+// RUN: %clang_cc1 -Wno-nonportable-include-path -fsyntax-only %s -include %s -I %T -verify
 
 // Test with pch.
 // RUN: %clang_cc1 -emit-pch -o %t.pch %s -I %T

@@ -102,9 +102,9 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!24}
 
-!0 = distinct !DISubprogram(name: "f", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 4, file: !23, scope: !1, type: !3, variables: !22)
+!0 = distinct !DISubprogram(name: "f", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 4, file: !23, scope: !1, type: !3, variables: !22)
 !1 = !DIFile(filename: "simple.c", directory: "/home/rengol01/temp/tests/dwarf/relocation")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk)", isOptimized: true, emissionKind: 1, file: !23, enums: !{}, retainedTypes: !{}, subprograms: !21, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk)", isOptimized: true, emissionKind: FullDebug, file: !23, enums: !{}, retainedTypes: !{}, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{null}
 !5 = !DILocalVariable(name: "x", line: 5, scope: !6, file: !1, type: !7)
@@ -120,7 +120,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !18 = !DILocation(line: 11, column: 3, scope: !6)
 !19 = !DILocation(line: 12, column: 3, scope: !6)
 !20 = !DILocation(line: 13, column: 1, scope: !6)
-!21 = !{!0}
 !22 = !{!5}
 !23 = !DIFile(filename: "simple.c", directory: "/home/rengol01/temp/tests/dwarf/relocation")
 !24 = !{i32 1, !"Debug Info Version", i32 3}

@@ -1,5 +1,6 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 ; RUN: opt < %s -alignment-from-assumptions -S | FileCheck %s
+; RUN: opt < %s -passes=alignment-from-assumptions -S | FileCheck %s
 
 define i32 @foo(i32* nocapture %a) nounwind uwtable readonly {
 entry:

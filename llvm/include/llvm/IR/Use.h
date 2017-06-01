@@ -25,12 +25,9 @@
 #ifndef LLVM_IR_USE_H
 #define LLVM_IR_USE_H
 
-#include "llvm-c/Core.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/CBindingWrapping.h"
-#include "llvm/Support/Compiler.h"
-#include <cstddef>
-#include <iterator>
+#include "llvm-c/Types.h"
 
 namespace llvm {
 
@@ -38,16 +35,6 @@ class Value;
 class User;
 class Use;
 template <typename> struct simplify_type;
-
-// Use** is only 4-byte aligned.
-template <> class PointerLikeTypeTraits<Use **> {
-public:
-  static inline void *getAsVoidPointer(Use **P) { return P; }
-  static inline Use **getFromVoidPointer(void *P) {
-    return static_cast<Use **>(P);
-  }
-  enum { NumLowBitsAvailable = 2 };
-};
 
 /// \brief A Use represents the edge between a Value definition and its users.
 ///
@@ -68,6 +55,8 @@ public:
 /// time complexity.
 class Use {
 public:
+  Use(const Use &U) = delete;
+
   /// \brief Provide a fast substitute to std::swap<Use>
   /// that also works with less standard-compliant compilers
   void swap(Use &RHS);
@@ -77,8 +66,6 @@ public:
   typedef PointerIntPair<User *, 1, unsigned> UserRef;
 
 private:
-  Use(const Use &U) = delete;
-
   /// Destructor - Only for zap()
   ~Use() {
     if (Val)
@@ -102,14 +89,8 @@ public:
 
   inline void set(Value *Val);
 
-  Value *operator=(Value *RHS) {
-    set(RHS);
-    return RHS;
-  }
-  const Use &operator=(const Use &RHS) {
-    set(RHS.Val);
-    return *this;
-  }
+  inline Value *operator=(Value *RHS);
+  inline const Use &operator=(const Use &RHS);
 
   Value *operator->() { return Val; }
   const Value *operator->() const { return Val; }
@@ -137,6 +118,7 @@ private:
   PointerIntPair<Use **, 2, PrevPtrTag> Prev;
 
   void setPrev(Use **NewPrev) { Prev.setPointer(NewPrev); }
+
   void addToList(Use **List) {
     Next = *List;
     if (Next)
@@ -144,6 +126,7 @@ private:
     setPrev(List);
     *List = this;
   }
+
   void removeFromList() {
     Use **StrippedPrev = Prev.getPointer();
     *StrippedPrev = Next;
@@ -168,6 +151,6 @@ template <> struct simplify_type<const Use> {
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(Use, LLVMUseRef)
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_USE_H

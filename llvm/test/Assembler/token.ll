@@ -4,3 +4,8 @@
 
 ; CHECK: declare void @llvm.token.foobar(token)
 declare void @llvm.token.foobar(token)
+
+define void @f() {
+  call void @llvm.token.foobar(token none)
+  ret void
+}

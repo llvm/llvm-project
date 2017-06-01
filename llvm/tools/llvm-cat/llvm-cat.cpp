@@ -1,0 +1,73 @@
+//===-- llvm-cat.cpp - LLVM module concatenation utility ------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This program is for testing features that rely on multi-module bitcode files.
+// It takes a list of input modules and uses them to create a multi-module
+// bitcode file.
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
+
+using namespace llvm;
+
+static cl::opt<bool>
+    BinaryCat("b", cl::desc("Whether to perform binary concatenation"));
+
+static cl::opt<std::string> OutputFilename("o", cl::Required,
+                                           cl::desc("Output filename"),
+                                           cl::value_desc("filename"));
+
+static cl::list<std::string> InputFilenames(cl::Positional, cl::ZeroOrMore,
+                                            cl::desc("<input  files>"));
+
+int main(int argc, char **argv) {
+  cl::ParseCommandLineOptions(argc, argv, "Module concatenation");
+
+  ExitOnError ExitOnErr("llvm-cat: ");
+  LLVMContext Context;
+
+  SmallVector<char, 0> Buffer;
+  BitcodeWriter Writer(Buffer);
+  if (BinaryCat) {
+    for (std::string InputFilename : InputFilenames) {
+      std::unique_ptr<MemoryBuffer> MB = ExitOnErr(
+          errorOrToExpected(MemoryBuffer::getFileOrSTDIN(InputFilename)));
+      std::vector<BitcodeModule> Mods = ExitOnErr(getBitcodeModuleList(*MB));
+      for (auto &BitcodeMod : Mods)
+        Buffer.insert(Buffer.end(), BitcodeMod.getBuffer().begin(),
+                      BitcodeMod.getBuffer().end());
+    }
+  } else {
+    for (std::string InputFilename : InputFilenames) {
+      SMDiagnostic Err;
+      std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);
+      if (!M) {
+        Err.print(argv[0], errs());
+        return 1;
+      }
+      Writer.writeModule(M.get());
+    }
+  }
+
+  std::error_code EC;
+  raw_fd_ostream OS(OutputFilename, EC, sys::fs::OpenFlags::F_None);
+  if (EC) {
+    llvm::errs() << argv[0] << ": cannot open " << OutputFilename
+                 << " for writing: " << EC.message();
+    return 1;
+  }
+
+  OS.write(Buffer.data(), Buffer.size());
+  return 0;
+}

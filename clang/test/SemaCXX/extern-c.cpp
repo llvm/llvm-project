@@ -204,3 +204,41 @@ extern "C" {
   struct pr5065_n6 : public virtual pr5065_3 {};
 }
 struct pr5065_n7 {};
+
+namespace tag_hiding {
+  namespace namespace_with_injected_name {
+    class Boo {
+      friend struct ExternCStruct1;
+    };
+    void ExternCStruct4(); // expected-note 2{{candidate}}
+  }
+
+  class Baz {
+    friend struct ExternCStruct2;
+    friend void ExternCStruct3();
+  };
+
+  using namespace namespace_with_injected_name;
+
+  extern "C" {
+    struct ExternCStruct1;
+    struct ExternCStruct2;
+    struct ExternCStruct3;
+    struct ExternCStruct4; // expected-note {{candidate}}
+  }
+  ExternCStruct1 *p1;
+  ExternCStruct2 *p2;
+  ExternCStruct3 *p3;
+  ExternCStruct4 *p4; // expected-error {{ambiguous}}
+
+  extern "C" {
+    struct ExternCStruct1;
+    struct ExternCStruct2;
+    struct ExternCStruct3;
+    struct ExternCStruct4; // expected-note {{candidate}}
+  }
+  ExternCStruct1 *q1 = p1;
+  ExternCStruct2 *q2 = p2;
+  ExternCStruct3 *q3 = p3;
+  ExternCStruct4 *q4 = p4; // expected-error {{ambiguous}}
+}

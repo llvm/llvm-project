@@ -238,6 +238,63 @@ SystemZTTIImpl::getPopcntSupport(unsigned TyWidth) {
   return TTI::PSK_Software;
 }
 
+void SystemZTTIImpl::getUnrollingPreferences(Loop *L,
+                                             TTI::UnrollingPreferences &UP) {
+  // Find out if L contains a call, what the machine instruction count
+  // estimate is, and how many stores there are.
+  bool HasCall = false;
+  unsigned NumStores = 0;
+  for (auto &BB : L->blocks())
+    for (auto &I : *BB) {
+      if (isa<CallInst>(&I) || isa<InvokeInst>(&I)) {
+        ImmutableCallSite CS(&I);
+        if (const Function *F = CS.getCalledFunction()) {
+          if (isLoweredToCall(F))
+            HasCall = true;
+          if (F->getIntrinsicID() == Intrinsic::memcpy ||
+              F->getIntrinsicID() == Intrinsic::memset)
+            NumStores++;
+        } else { // indirect call.
+          HasCall = true;
+        }
+      }
+      if (isa<StoreInst>(&I)) {
+        NumStores++;
+        Type *MemAccessTy = I.getOperand(0)->getType();
+        if((MemAccessTy->isIntegerTy() || MemAccessTy->isFloatingPointTy()) &&
+           (getDataLayout().getTypeSizeInBits(MemAccessTy) == 128))
+          NumStores++;  // 128 bit fp/int stores get split.
+      }
+    }
+
+  // The z13 processor will run out of store tags if too many stores
+  // are fed into it too quickly. Therefore make sure there are not
+  // too many stores in the resulting unrolled loop.
+  unsigned const Max = (NumStores ? (12 / NumStores) : UINT_MAX);
+
+  if (HasCall) {
+    // Only allow full unrolling if loop has any calls.
+    UP.FullUnrollMaxCount = Max;
+    UP.MaxCount = 1;
+    return;
+  }
+
+  UP.MaxCount = Max;
+  if (UP.MaxCount <= 1)
+    return;
+
+  // Allow partial and runtime trip count unrolling.
+  UP.Partial = UP.Runtime = true;
+
+  UP.PartialThreshold = 75;
+  UP.DefaultUnrollRuntimeCount = 4;
+
+  // Allow expensive instructions in the pre-header of the loop.
+  UP.AllowExpensiveTripCount = true;
+
+  UP.Force = true;
+}
+
 unsigned SystemZTTIImpl::getNumberOfRegisters(bool Vector) {
   if (!Vector)
     // Discount the stack pointer.  Also leave out %r0, since it can't

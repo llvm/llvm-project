@@ -1,28 +1,36 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 #include <pthread.h>
-#include <semaphore.h>
 #include <stdio.h>
 
 struct A {
   A() {
-    sem_init(&sem_, 0, 0);
+    pthread_mutex_init(&m, 0);
+    pthread_cond_init(&c, 0);
+    signaled = false;
   }
   virtual void F() {
   }
   void Done() {
-    sem_post(&sem_);
+    pthread_mutex_lock(&m);
+    signaled = true;
+    pthread_cond_signal(&c);
+    pthread_mutex_unlock(&m);
   }
   virtual ~A() {
   }
-  sem_t sem_;
+  pthread_mutex_t m;
+  pthread_cond_t c;
+  bool signaled;
 };
 
 struct B : A {
   virtual void F() {
   }
   virtual ~B() {
-    sem_wait(&sem_);
-    sem_destroy(&sem_);
+    pthread_mutex_lock(&m);
+    while (!signaled)
+      pthread_cond_wait(&c, &m);
+    pthread_mutex_unlock(&m);
   }
 };
 

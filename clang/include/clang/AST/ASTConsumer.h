@@ -14,8 +14,6 @@
 #ifndef LLVM_CLANG_AST_ASTCONSUMER_H
 #define LLVM_CLANG_AST_ASTCONSUMER_H
 
-#include "llvm/ADT/StringRef.h"
-
 namespace clang {
   class ASTContext;
   class CXXMethodDecl;
@@ -55,9 +53,9 @@ public:
   /// \returns true to continue parsing, or false to abort parsing.
   virtual bool HandleTopLevelDecl(DeclGroupRef D);
 
-  /// \brief This callback is invoked each time an inline method definition is
-  /// completed.
-  virtual void HandleInlineMethodDefinition(CXXMethodDecl *D) {}
+  /// \brief This callback is invoked each time an inline (method or friend)
+  /// function definition in a class is completed.
+  virtual void HandleInlineFunctionDefinition(FunctionDecl *D) {}
 
   /// HandleInterestingDecl - Handle the specified interesting declaration. This
   /// is called by the AST reader when deserializing things that might interest
@@ -94,21 +92,6 @@ public:
   /// The default implementation passes it to HandleTopLevelDecl.
   virtual void HandleImplicitImportDecl(ImportDecl *D);
 
-  /// \brief Handle a pragma that appends to Linker Options.  Currently this
-  /// only exists to support Microsoft's #pragma comment(linker, "/foo").
-  virtual void HandleLinkerOptionPragma(llvm::StringRef Opts) {}
-
-  /// \brief Handle a pragma that emits a mismatch identifier and value to the
-  /// object file for the linker to work with.  Currently, this only exists to
-  /// support Microsoft's #pragma detect_mismatch.
-  virtual void HandleDetectMismatch(llvm::StringRef Name,
-                                    llvm::StringRef Value) {}
-
-  /// \brief Handle a dependent library created by a pragma in the source.
-  /// Currently this only exists to support Microsoft's
-  /// #pragma comment(lib, "/foo").
-  virtual void HandleDependentLibrary(llvm::StringRef Lib) {}
-
   /// CompleteTentativeDefinition - Callback invoked at the end of a translation
   /// unit to notify the consumer that the given tentative definition should be
   /// completed.
@@ -119,6 +102,10 @@ public:
   /// declaration remains a tentative definition and has not been
   /// modified by the introduction of an implicit zero initializer.
   virtual void CompleteTentativeDefinition(VarDecl *D) {}
+
+  /// \brief Callback invoked when an MSInheritanceAttr has been attached to a
+  /// CXXRecordDecl.
+  virtual void AssignInheritanceModel(CXXRecordDecl *RD) {}
 
   /// HandleCXXStaticMemberVarInstantiation - Tell the consumer that this
   // variable has been instantiated.

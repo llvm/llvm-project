@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -emit-llvm %s -fstrict-vtable-pointers -O1 -o - -disable-llvm-optzns | FileCheck %s
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -emit-llvm %s -fstrict-vtable-pointers -O1 -o - -disable-llvm-passes | FileCheck %s
 
 struct A {
   virtual void foo();
@@ -23,7 +23,7 @@ void testExternallyVisible() {
   // CHECK: load {{.*}} !invariant.group ![[A_MD]]
   a2->foo();
 }
-// CHECK-LABEL: }
+// CHECK-LABEL: {{^}}}
 
 namespace {
 
@@ -52,7 +52,7 @@ void testInternallyVisible(bool p) {
 // Checking A::A()
 // CHECK-LABEL: define linkonce_odr void @_ZN1AC2Ev(
 // CHECK: store {{.*}}, !invariant.group ![[A_MD]]
-// CHECK-LABEL: }
+// CHECK-LABEL: {{^}}}
 
 // Checking D::D()
 // CHECK-LABEL: define linkonce_odr void @_ZN1DC2Ev(

@@ -1,0 +1,87 @@
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+spe --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu --disassemble < %s | FileCheck --check-prefix=NO_SPE %s
+
+[0x3f,0x22,0x03,0xd5]
+# CHECK: psb csync
+# NO_SPE: hint #17
+
+[0x00,0x9a,0x18,0xd5]
+[0x20,0x9a,0x18,0xd5]
+[0x60,0x9a,0x18,0xd5]
+[0xe0,0x9a,0x18,0xd5]
+[0x00,0x99,0x1c,0xd5]
+[0x00,0x99,0x1d,0xd5]
+[0x00,0x99,0x18,0xd5]
+[0x40,0x99,0x18,0xd5]
+[0x60,0x99,0x18,0xd5]
+[0x80,0x99,0x18,0xd5]
+[0xa0,0x99,0x18,0xd5]
+[0xc0,0x99,0x18,0xd5]
+[0xe0,0x99,0x18,0xd5]
+# CHECK: msr PMBLIMITR_EL1, x0
+# NO_SPE: msr S3_0_C9_C10_0, x0
+# CHECK: msr PMBPTR_EL1, x0
+# NO_SPE: msr S3_0_C9_C10_1, x0
+# CHECK: msr PMBSR_EL1, x0
+# NO_SPE: msr S3_0_C9_C10_3, x0
+# CHECK: msr PMBIDR_EL1, x0
+# NO_SPE: msr S3_0_C9_C10_7, x0
+# CHECK: msr PMSCR_EL2, x0
+# NO_SPE: msr S3_4_C9_C9_0, x0
+# CHECK: msr PMSCR_EL12, x0
+# NO_SPE: msr S3_5_C9_C9_0, x0
+# CHECK: msr PMSCR_EL1, x0
+# NO_SPE: msr S3_0_C9_C9_0, x0
+# CHECK: msr PMSICR_EL1, x0
+# NO_SPE: msr S3_0_C9_C9_2, x0
+# CHECK: msr PMSIRR_EL1, x0
+# NO_SPE: msr S3_0_C9_C9_3, x0
+# CHECK: msr PMSFCR_EL1, x0
+# NO_SPE: msr S3_0_C9_C9_4, x0
+# CHECK: msr PMSEVFR_EL1, x0
+# NO_SPE: msr S3_0_C9_C9_5, x0
+# CHECK: msr PMSLATFR_EL1, x0
+# NO_SPE: msr S3_0_C9_C9_6, x0
+# CHECK: msr PMSIDR_EL1, x0
+# NO_SPE: msr S3_0_C9_C9_7, x0
+
+[0x00,0x9a,0x38,0xd5]
+[0x20,0x9a,0x38,0xd5]
+[0x60,0x9a,0x38,0xd5]
+[0xe0,0x9a,0x38,0xd5]
+[0x00,0x99,0x3c,0xd5]
+[0x00,0x99,0x3d,0xd5]
+[0x00,0x99,0x38,0xd5]
+[0x40,0x99,0x38,0xd5]
+[0x60,0x99,0x38,0xd5]
+[0x80,0x99,0x38,0xd5]
+[0xa0,0x99,0x38,0xd5]
+[0xc0,0x99,0x38,0xd5]
+[0xe0,0x99,0x38,0xd5]
+
+# CHECK: mrs x0, PMBLIMITR_EL1
+# NO_SPE: mrs x0, S3_0_C9_C10_0
+# CHECK: mrs x0, PMBPTR_EL1
+# NO_SPE: mrs x0, S3_0_C9_C10_1
+# CHECK: mrs x0, PMBSR_EL1
+# NO_SPE: mrs x0, S3_0_C9_C10_3
+# CHECK: mrs x0, PMBIDR_EL1
+# NO_SPE: mrs x0, S3_0_C9_C10_7
+# CHECK: mrs x0, PMSCR_EL2
+# NO_SPE: mrs x0, S3_4_C9_C9_0
+# CHECK: mrs x0, PMSCR_EL12
+# NO_SPE: mrs x0, S3_5_C9_C9_0
+# CHECK: mrs x0, PMSCR_EL1
+# NO_SPE: mrs x0, S3_0_C9_C9_0
+# CHECK: mrs x0, PMSICR_EL1
+# NO_SPE: mrs x0, S3_0_C9_C9_2
+# CHECK: mrs x0, PMSIRR_EL1
+# NO_SPE: mrs x0, S3_0_C9_C9_3
+# CHECK: mrs x0, PMSFCR_EL1
+# NO_SPE: mrs x0, S3_0_C9_C9_4
+# CHECK: mrs x0, PMSEVFR_EL1
+# NO_SPE: mrs x0, S3_0_C9_C9_5
+# CHECK: mrs x0, PMSLATFR_EL1
+# NO_SPE: mrs x0, S3_0_C9_C9_6
+# CHECK: mrs x0, PMSIDR_EL1
+# NO_SPE: mrs x0, S3_0_C9_C9_7

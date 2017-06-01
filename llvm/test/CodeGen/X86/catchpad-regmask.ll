@@ -41,23 +41,20 @@ entry:
           to label %unreachable unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %0 = catchpad [i8* null, i32 64, i8* null]
-          to label %catch unwind label %catchendblock
+  %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
+  %0 = catchpad within %cs1 [i8* null, i32 64, i8* null]
   %idxprom1 = sext i32 %idx2 to i64
   %arrayidx2 = getelementptr inbounds [4 x i32], [4 x i32]* @array, i64 0, i64 %idxprom1
   store i32 222, i32* %arrayidx2, align 4, !tbaa !2
-  catchret %0 to label %try.cont
+  catchret from %0 to label %try.cont
 
 try.cont:                                         ; preds = %catch
   %idxprom3 = sext i32 %idx3 to i64
   %arrayidx4 = getelementptr inbounds [4 x i32], [4 x i32]* @array, i64 0, i64 %idxprom3
   store i32 333, i32* %arrayidx4, align 4, !tbaa !2
   ret void
-
-catchendblock:                                    ; preds = %catch.dispatch
-  catchendpad unwind to caller
 
 unreachable:                                      ; preds = %entry
   unreachable
@@ -98,19 +95,16 @@ entry:
           to label %unreachable unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %0 = catchpad [i8* null, i32 64, i8* null]
-          to label %catch unwind label %catchendblock
+  %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
+  %0 = catchpad within %cs1 [i8* null, i32 64, i8* null]
   store i32 222, i32* @imported, align 4, !tbaa !2
-  catchret %0 to label %try.cont
+  catchret from %0 to label %try.cont
 
 try.cont:                                         ; preds = %catch
   store i32 333, i32* @imported, align 4, !tbaa !2
   ret void
-
-catchendblock:                                    ; preds = %catch.dispatch
-  catchendpad unwind to caller
 
 unreachable:                                      ; preds = %entry
   unreachable

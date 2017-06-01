@@ -23,7 +23,7 @@ T tmain(T argc, S **argv) {
   {foo();}
   #pragma omp parallel sections num_threads ((argc > 0) ? argv[1] : argv[2]) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'char *'}}
   {foo();}
-  #pragma omp parallel sections num_threads (foobool(argc)), num_threads (true), num_threads (-5) // expected-error 2 {{directive '#pragma omp parallel sections' cannot contain more than one 'num_threads' clause}} expected-error {{argument to 'num_threads' clause must be a positive integer value}}
+  #pragma omp parallel sections num_threads (foobool(argc)), num_threads (true), num_threads (-5) // expected-error 2 {{directive '#pragma omp parallel sections' cannot contain more than one 'num_threads' clause}} expected-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
   {foo();}
   #pragma omp parallel sections num_threads (S) // expected-error {{'S' does not refer to a value}}
   {foo();}
@@ -31,7 +31,7 @@ T tmain(T argc, S **argv) {
   {foo();}
   #pragma omp parallel sections num_threads (argc)
   {foo();}
-  #pragma omp parallel sections num_threads (N) // expected-error {{argument to 'num_threads' clause must be a positive integer value}}
+  #pragma omp parallel sections num_threads (N) // expected-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
   {foo();}
 
   return argc;
@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
   {foo();}
   #pragma omp parallel sections num_threads (argc > 0 ? argv[1] : argv[2]) // expected-error {{integral }}
   {foo();}
-  #pragma omp parallel sections num_threads (foobool(argc)), num_threads (true), num_threads (-5) // expected-error 2 {{directive '#pragma omp parallel sections' cannot contain more than one 'num_threads' clause}} expected-error {{argument to 'num_threads' clause must be a positive integer value}}
+  #pragma omp parallel sections num_threads (foobool(argc)), num_threads (true), num_threads (-5) // expected-error 2 {{directive '#pragma omp parallel sections' cannot contain more than one 'num_threads' clause}} expected-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
   {foo();}
   #pragma omp parallel sections num_threads (S1) // expected-error {{'S1' does not refer to a value}}
   {foo();}

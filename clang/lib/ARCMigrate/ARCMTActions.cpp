@@ -25,8 +25,8 @@ bool CheckAction::BeginInvocation(CompilerInstance &CI) {
   return true;
 }
 
-CheckAction::CheckAction(FrontendAction *WrappedAction)
-  : WrapperFrontendAction(WrappedAction) {}
+CheckAction::CheckAction(std::unique_ptr<FrontendAction> WrappedAction)
+  : WrapperFrontendAction(std::move(WrappedAction)) {}
 
 bool ModifyAction::BeginInvocation(CompilerInstance &CI) {
   return !arcmt::applyTransformations(CI.getInvocation(), getCurrentInput(),
@@ -34,8 +34,8 @@ bool ModifyAction::BeginInvocation(CompilerInstance &CI) {
                                       CI.getDiagnostics().getClient());
 }
 
-ModifyAction::ModifyAction(FrontendAction *WrappedAction)
-  : WrapperFrontendAction(WrappedAction) {}
+ModifyAction::ModifyAction(std::unique_ptr<FrontendAction> WrappedAction)
+  : WrapperFrontendAction(std::move(WrappedAction)) {}
 
 bool MigrateAction::BeginInvocation(CompilerInstance &CI) {
   if (arcmt::migrateWithTemporaryFiles(
@@ -49,11 +49,11 @@ bool MigrateAction::BeginInvocation(CompilerInstance &CI) {
   return true;
 }
 
-MigrateAction::MigrateAction(FrontendAction *WrappedAction,
+MigrateAction::MigrateAction(std::unique_ptr<FrontendAction> WrappedAction,
                              StringRef migrateDir,
                              StringRef plistOut,
                              bool emitPremigrationARCErrors)
-  : WrapperFrontendAction(WrappedAction), MigrateDir(migrateDir),
+  : WrapperFrontendAction(std::move(WrappedAction)), MigrateDir(migrateDir),
     PlistOut(plistOut), EmitPremigrationARCErros(emitPremigrationARCErrors) {
   if (MigrateDir.empty())
     MigrateDir = "."; // user current directory if none is given.

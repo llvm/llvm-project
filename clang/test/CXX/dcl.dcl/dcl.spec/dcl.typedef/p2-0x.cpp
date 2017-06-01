@@ -38,8 +38,8 @@ namespace VariableLengthArrays {
   using T = int[n]; // expected-error {{variable length array declaration not allowed at file scope}}
 
   const int m = 42;
-  using U = int[m]; // expected-note {{previous definition}}
-  using U = int[42]; // ok
+  using U = int[m];
+  using U = int[42]; // expected-note {{previous definition}}
   using U = int; // expected-error {{type alias redefinition with different types ('int' vs 'int [42]')}}
 
   void f() {

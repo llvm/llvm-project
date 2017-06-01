@@ -1,7 +1,6 @@
 ; RUN: opt < %s  -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine -S -enable-if-conversion | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.9.0"
 
 ; This is kernel11 from "LivermoreLoops". We can't vectorize it because we
 ; access both x[k] and x[k-1].
@@ -62,11 +61,9 @@ define i32 @kernel11(double* %x, double* %y, i32 %n) nounwind uwtable ssp {
 }
 
 
-
-; We don't vectorize this function because A[i*7] is scalarized, and the
-; different scalars can in theory wrap around and overwrite other scalar
-; elements. At the moment we only allow read/write access to arrays
-; that are consecutive.
+; A[i*7] is scalarized, and the different scalars can in theory wrap
+; around and overwrite other scalar elements. However we can still
+; vectorize because we can version the loop to avoid this case.
 ; 
 ; void foo(int *a) {
 ;   for (int i=0; i<256; ++i) {
@@ -78,7 +75,7 @@ define i32 @kernel11(double* %x, double* %y, i32 %n) nounwind uwtable ssp {
 ; }
 
 ; CHECK-LABEL: @func2(
-; CHECK-NOT: <4 x i32>
+; CHECK: <4 x i32>
 ; CHECK: ret
 define i32 @func2(i32* nocapture %a) nounwind uwtable ssp {
   br label %1

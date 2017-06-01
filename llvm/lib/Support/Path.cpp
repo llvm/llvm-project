@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/COFF.h"
+#include "llvm/Support/MachO.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -352,6 +353,10 @@ bool reverse_iterator::operator==(const reverse_iterator &RHS) const {
          Position == RHS.Position;
 }
 
+ptrdiff_t reverse_iterator::operator-(const reverse_iterator &RHS) const {
+  return Position - RHS.Position;
+}
+
 StringRef root_path(StringRef path) {
   const_iterator b = begin(path),
                  pos = b,
@@ -517,6 +522,29 @@ void replace_extension(SmallVectorImpl<char> &path, const Twine &extension) {
   path.append(ext.begin(), ext.end());
 }
 
+void replace_path_prefix(SmallVectorImpl<char> &Path,
+                         const StringRef &OldPrefix,
+                         const StringRef &NewPrefix) {
+  if (OldPrefix.empty() && NewPrefix.empty())
+    return;
+
+  StringRef OrigPath(Path.begin(), Path.size());
+  if (!OrigPath.startswith(OldPrefix))
+    return;
+
+  // If prefixes have the same size we can simply copy the new one over.
+  if (OldPrefix.size() == NewPrefix.size()) {
+    std::copy(NewPrefix.begin(), NewPrefix.end(), Path.begin());
+    return;
+  }
+
+  StringRef RelPath = OrigPath.substr(OldPrefix.size());
+  SmallString<256> NewPath;
+  path::append(NewPath, NewPrefix);
+  path::append(NewPath, RelPath);
+  Path.swap(NewPath);
+}
+
 void native(const Twine &path, SmallVectorImpl<char> &result) {
   assert((!path.isSingleStringRef() ||
           path.getSingleStringRef().data() != result.data()) &&
@@ -540,6 +568,16 @@ void native(SmallVectorImpl<char> &Path) {
         *PI = '/';
     }
   }
+#endif
+}
+
+std::string convert_to_slash(StringRef path) {
+#ifdef LLVM_ON_WIN32
+  std::string s = path.str();
+  std::replace(s.begin(), s.end(), '\\', '/');
+  return s;
+#else
+  return path;
 #endif
 }
 
@@ -669,6 +707,43 @@ StringRef remove_leading_dotslash(StringRef Path) {
       Path = Path.substr(1);
   }
   return Path;
+}
+
+static SmallString<256> remove_dots(StringRef path, bool remove_dot_dot) {
+  SmallVector<StringRef, 16> components;
+
+  // Skip the root path, then look for traversal in the components.
+  StringRef rel = path::relative_path(path);
+  for (StringRef C : llvm::make_range(path::begin(rel), path::end(rel))) {
+    if (C == ".")
+      continue;
+    // Leading ".." will remain in the path unless it's at the root.
+    if (remove_dot_dot && C == "..") {
+      if (!components.empty() && components.back() != "..") {
+        components.pop_back();
+        continue;
+      }
+      if (path::is_absolute(path))
+        continue;
+    }
+    components.push_back(C);
+  }
+
+  SmallString<256> buffer = path::root_path(path);
+  for (StringRef C : components)
+    path::append(buffer, C);
+  return buffer;
+}
+
+bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot) {
+  StringRef p(path.data(), path.size());
+
+  SmallString<256> result = remove_dots(p, remove_dot_dot);
+  if (result == path)
+    return false;
+
+  path.swap(result);
+  return true;
 }
 
 } // end namespace path
@@ -915,62 +990,59 @@ void directory_entry::replace_filename(const Twine &filename, file_status st) {
   Status = st;
 }
 
+template <size_t N>
+static bool startswith(StringRef Magic, const char (&S)[N]) {
+  return Magic.startswith(StringRef(S, N - 1));
+}
+
 /// @brief Identify the magic in magic.
 file_magic identify_magic(StringRef Magic) {
   if (Magic.size() < 4)
     return file_magic::unknown;
   switch ((unsigned char)Magic[0]) {
     case 0x00: {
-      // COFF bigobj or short import library file
-      if (Magic[1] == (char)0x00 && Magic[2] == (char)0xff &&
-          Magic[3] == (char)0xff) {
+      // COFF bigobj, CL.exe's LTO object file, or short import library file
+      if (startswith(Magic, "\0\0\xFF\xFF")) {
         size_t MinSize = offsetof(COFF::BigObjHeader, UUID) + sizeof(COFF::BigObjMagic);
         if (Magic.size() < MinSize)
           return file_magic::coff_import_library;
 
-        int BigObjVersion = read16le(
-            Magic.data() + offsetof(COFF::BigObjHeader, Version));
-        if (BigObjVersion < COFF::BigObjHeader::MinBigObjectVersion)
-          return file_magic::coff_import_library;
-
         const char *Start = Magic.data() + offsetof(COFF::BigObjHeader, UUID);
-        if (memcmp(Start, COFF::BigObjMagic, sizeof(COFF::BigObjMagic)) != 0)
-          return file_magic::coff_import_library;
-        return file_magic::coff_object;
+        if (memcmp(Start, COFF::BigObjMagic, sizeof(COFF::BigObjMagic)) == 0)
+          return file_magic::coff_object;
+        if (memcmp(Start, COFF::ClGlObjMagic, sizeof(COFF::BigObjMagic)) == 0)
+          return file_magic::coff_cl_gl_object;
+        return file_magic::coff_import_library;
       }
       // Windows resource file
-      const char Expected[] = { 0, 0, 0, 0, '\x20', 0, 0, 0, '\xff' };
-      if (Magic.size() >= sizeof(Expected) &&
-          memcmp(Magic.data(), Expected, sizeof(Expected)) == 0)
+      if (startswith(Magic, "\0\0\0\0\x20\0\0\0\xFF"))
         return file_magic::windows_resource;
       // 0x0000 = COFF unknown machine type
       if (Magic[1] == 0)
         return file_magic::coff_object;
+      if (startswith(Magic, "\0asm"))
+        return file_magic::wasm_object;
       break;
     }
     case 0xDE:  // 0x0B17C0DE = BC wraper
-      if (Magic[1] == (char)0xC0 && Magic[2] == (char)0x17 &&
-          Magic[3] == (char)0x0B)
+      if (startswith(Magic, "\xDE\xC0\x17\x0B"))
         return file_magic::bitcode;
       break;
     case 'B':
-      if (Magic[1] == 'C' && Magic[2] == (char)0xC0 && Magic[3] == (char)0xDE)
+      if (startswith(Magic, "BC\xC0\xDE"))
         return file_magic::bitcode;
       break;
     case '!':
-      if (Magic.size() >= 8)
-        if (memcmp(Magic.data(), "!<arch>\n", 8) == 0 ||
-            memcmp(Magic.data(), "!<thin>\n", 8) == 0)
-          return file_magic::archive;
+      if (startswith(Magic, "!<arch>\n") || startswith(Magic, "!<thin>\n"))
+        return file_magic::archive;
       break;
 
     case '\177':
-      if (Magic.size() >= 18 && Magic[1] == 'E' && Magic[2] == 'L' &&
-          Magic[3] == 'F') {
+      if (startswith(Magic, "\177ELF") && Magic.size() >= 18) {
         bool Data2MSB = Magic[5] == 2;
         unsigned high = Data2MSB ? 16 : 17;
         unsigned low  = Data2MSB ? 17 : 16;
-        if (Magic[high] == 0)
+        if (Magic[high] == 0) {
           switch (Magic[low]) {
             default: return file_magic::elf;
             case 1: return file_magic::elf_relocatable;
@@ -978,15 +1050,15 @@ file_magic identify_magic(StringRef Magic) {
             case 3: return file_magic::elf_shared_object;
             case 4: return file_magic::elf_core;
           }
-        else
-          // It's still some type of ELF file.
-          return file_magic::elf;
+        }
+        // It's still some type of ELF file.
+        return file_magic::elf;
       }
       break;
 
     case 0xCA:
-      if (Magic[1] == char(0xFE) && Magic[2] == char(0xBA) &&
-          Magic[3] == char(0xBE)) {
+      if (startswith(Magic, "\xCA\xFE\xBA\xBE") ||
+          startswith(Magic, "\xCA\xFE\xBA\xBF")) {
         // This is complicated by an overlap with Java class files.
         // See the Mach-O section in /usr/share/file/magic for details.
         if (Magic.size() >= 8 && Magic[7] < 43)
@@ -1001,16 +1073,26 @@ file_magic identify_magic(StringRef Magic) {
     case 0xCE:
     case 0xCF: {
       uint16_t type = 0;
-      if (Magic[0] == char(0xFE) && Magic[1] == char(0xED) &&
-          Magic[2] == char(0xFA) &&
-          (Magic[3] == char(0xCE) || Magic[3] == char(0xCF))) {
+      if (startswith(Magic, "\xFE\xED\xFA\xCE") ||
+          startswith(Magic, "\xFE\xED\xFA\xCF")) {
         /* Native endian */
-        if (Magic.size() >= 16) type = Magic[14] << 8 | Magic[15];
-      } else if ((Magic[0] == char(0xCE) || Magic[0] == char(0xCF)) &&
-                 Magic[1] == char(0xFA) && Magic[2] == char(0xED) &&
-                 Magic[3] == char(0xFE)) {
+        size_t MinSize;
+        if (Magic[3] == char(0xCE))
+          MinSize = sizeof(MachO::mach_header);
+        else
+          MinSize = sizeof(MachO::mach_header_64);
+        if (Magic.size() >= MinSize)
+          type = Magic[12] << 24 | Magic[13] << 12 | Magic[14] << 8 | Magic[15];
+      } else if (startswith(Magic, "\xCE\xFA\xED\xFE") ||
+                 startswith(Magic, "\xCF\xFA\xED\xFE")) {
         /* Reverse endian */
-        if (Magic.size() >= 14) type = Magic[13] << 8 | Magic[12];
+        size_t MinSize;
+        if (Magic[0] == char(0xCE))
+          MinSize = sizeof(MachO::mach_header);
+        else
+          MinSize = sizeof(MachO::mach_header_64);
+        if (Magic.size() >= MinSize)
+          type = Magic[15] << 24 | Magic[14] << 12 |Magic[13] << 8 | Magic[12];
       }
       switch (type) {
         default: break;
@@ -1045,7 +1127,7 @@ file_magic identify_magic(StringRef Magic) {
       break;
 
     case 'M': // Possible MS-DOS stub on Windows PE file
-      if (Magic[1] == 'Z') {
+      if (startswith(Magic, "MZ")) {
         uint32_t off = read32le(Magic.data() + 0x3c);
         // PE/COFF file, either EXE or DLL.
         if (off < Magic.size() &&

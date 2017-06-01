@@ -48,12 +48,14 @@ void f(D d) {
 // CHECK: call void @_ZN1BC2ERS_
 // CHECK: {{call void @llvm.memcpy.p0i8.p0i8.i64.*i64 28}}
 // CHECK: call void @_ZN1BC1ERS_
-// CHECK: br
-// CHECK: {{icmp ult.*, 2}}
-// CHECK: {{icmp ult.*, 3}}
+// CHECK: br label
 // CHECK: call void @_ZN1AC1Ev
 // CHECK: call void @_ZN1CC1ERS_1A
 // CHECK: call void @_ZN1AD1Ev
+// CHECK: {{icmp eq.*, 3}}
+// CHECK: br i1
+// CHECK: {{icmp eq.*, 2}}
+// CHECK: br i1
 // CHECK: {{call void @llvm.memcpy.p0i8.p0i8.i64.*i64 300}}
 // CHECK: ret void
 

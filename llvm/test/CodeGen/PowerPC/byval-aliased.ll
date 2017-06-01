@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=ppc64 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=ppc64 < %s | FileCheck %s
 target datalayout = "E-m:o-p:32:32-f64:32:64-n32"
 target triple = "powerpc-apple-macosx10.5.0"
  

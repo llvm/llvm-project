@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -verify %s
+// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -std=c++11 -triple %ms_abi_triple -DMSABI -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -verify %s
 class A {
 public:
@@ -217,8 +217,8 @@ class simple_ptr {
 public:
   simple_ptr(T* t): _ptr(t) {}
   ~simple_ptr() { delete _ptr; } // \
-    // expected-warning {{delete called on 'dnvd::B' that has virtual functions but non-virtual destructor}} \
-    // expected-warning {{delete called on 'dnvd::D' that has virtual functions but non-virtual destructor}}
+    // expected-warning {{delete called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}} \
+    // expected-warning {{delete called on non-final 'dnvd::D' that has virtual functions but non-virtual destructor}}
   T& operator*() const { return *_ptr; }
 private:
   T* _ptr;
@@ -228,7 +228,7 @@ template <typename T>
 class simple_ptr2 {
 public:
   simple_ptr2(T* t): _ptr(t) {}
-  ~simple_ptr2() { delete _ptr; } // expected-warning {{delete called on 'dnvd::B' that has virtual functions but non-virtual destructor}}
+  ~simple_ptr2() { delete _ptr; } // expected-warning {{delete called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}}
   T& operator*() const { return *_ptr; }
 private:
   T* _ptr;
@@ -257,6 +257,7 @@ void nowarnnonpoly() {
   }
 }
 
+// FIXME: Why are these supposed to not warn?
 void nowarnarray() {
   {
     B* b = new B[4];
@@ -311,19 +312,38 @@ void nowarn0() {
   }
 }
 
+void nowarn0_explicit_dtor(F* f, VB* vb, VD* vd, VF* vf) {
+  f->~F();
+  f->~F();
+  vb->~VB();
+  vd->~VD();
+  vf->~VF();
+}
+
 void warn0() {
   {
     B* b = new B();
-    delete b; // expected-warning {{delete called on 'dnvd::B' that has virtual functions but non-virtual destructor}}
+    delete b; // expected-warning {{delete called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}}
   }
   {
     B* b = new D();
-    delete b; // expected-warning {{delete called on 'dnvd::B' that has virtual functions but non-virtual destructor}}
+    delete b; // expected-warning {{delete called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}}
   }
   {
     D* d = new D();
-    delete d; // expected-warning {{delete called on 'dnvd::D' that has virtual functions but non-virtual destructor}}
+    delete d; // expected-warning {{delete called on non-final 'dnvd::D' that has virtual functions but non-virtual destructor}}
   }
+}
+
+void warn0_explicit_dtor(B* b, B& br, D* d) {
+  b->~B(); // expected-warning {{destructor called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}} expected-note{{qualify call to silence this warning}}
+  b->B::~B(); // No warning when the call isn't virtual.
+
+  br.~B(); // expected-warning {{destructor called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}} expected-note{{qualify call to silence this warning}}
+  br.B::~B();
+
+  d->~D(); // expected-warning {{destructor called on non-final 'dnvd::D' that has virtual functions but non-virtual destructor}} expected-note{{qualify call to silence this warning}}
+  d->D::~D();
 }
 
 void nowarn1() {
@@ -401,5 +421,33 @@ void f(S s) {
 }
 void g(S s) {
   (s.~S); // expected-error{{reference to destructor must be called}}
+}
+}
+
+class Invalid {
+    ~Invalid();
+    UnknownType xx; // expected-error{{unknown type name}}
+};
+
+// The constructor definition should not have errors
+Invalid::~Invalid() {}
+
+namespace PR30361 {
+template <typename T>
+struct C1 {
+  ~C1() {}
+  operator C1<T>* () { return nullptr; }
+  void foo1();
+};
+
+template<typename T>
+void C1<T>::foo1() {
+  C1::operator C1<T>*();
+  C1::~C1();
+}
+
+void foo1() {
+  C1<int> x;
+  x.foo1();
 }
 }

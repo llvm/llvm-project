@@ -2025,12 +2025,12 @@ def A9WriteAdr#NumAddr : WriteSequence<[A9WriteAdr], NumAddr>;
 
 // Define a predicate to select the LDM based on number of memory addresses.
 def A9LMAdr#NumAddr#Pred :
-  SchedPredicate<"(TII->getNumLDMAddresses(MI)+1)/2 == "#NumAddr>;
+  SchedPredicate<"(TII->getNumLDMAddresses(*MI)+1)/2 == "#NumAddr>;
 
 } // foreach NumAddr
 
 // Fall-back for unknown LDMs.
-def A9LMUnknownPred : SchedPredicate<"TII->getNumLDMAddresses(MI) == 0">;
+def A9LMUnknownPred : SchedPredicate<"TII->getNumLDMAddresses(*MI) == 0">;
 
 // LDM/VLDM/VLDn address generation latency & resources.
 // Dynamically select the A9WriteAdrN sequence using a predicate.

@@ -31,7 +31,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; CHECK-LABEL: .section	.llvm_stackmaps
 ; CHECK-NEXT:  __LLVM_StackMaps:
 ; Header
-; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 2
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
@@ -44,20 +44,28 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; Functions and stack size
 ; CHECK-NEXT:   .quad test
 ; CHECK-NEXT:   .quad 128
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad property_access1
 ; CHECK-NEXT:   .quad 128
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad property_access2
 ; CHECK-NEXT:   .quad 128
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad property_access3
 ; CHECK-NEXT:   .quad 128
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad anyreg_test1
 ; CHECK-NEXT:   .quad 144
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad anyreg_test2
 ; CHECK-NEXT:   .quad 144
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad patchpoint_spilldef
 ; CHECK-NEXT:   .quad 256
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad patchpoint_spillargs
 ; CHECK-NEXT:   .quad 288
+; CHECK-NEXT:   .quad 1
 
 
 ; test

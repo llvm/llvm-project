@@ -20,9 +20,13 @@ int main() {
 // CHECK:   {{#0 .* main .*}}intercept_strdup.cc:[[@LINE-3]]
 // CHECK: [[ADDR]] is located 1 bytes to the left of 6-byte region
 // CHECK: allocated by thread T0 here:
-// CHECK:   {{#0 .* malloc }}
-// FIXME: llvm-symbolizer can't find strdup in the CRT.
-// CHECKX:   {{#1 .*strdup}}
-// CHECK:   {{#2 .* main .*}}intercept_strdup.cc:[[@LINE-17]]
+//
+// The first frame is our wrapper normally but will be malloc in the dynamic
+// config.
+// CHECK:   #0 {{.*}} in {{malloc|__asan_wrap_strdup}}
+//
+// The local call to _strdup above may be the second or third frame depending
+// on whether we're using the dynamic config.
+// CHECK:   #{{[12]}} {{.*}} in main {{.*}}intercept_strdup.cc:[[@LINE-21]]
   free(ptr);
 }

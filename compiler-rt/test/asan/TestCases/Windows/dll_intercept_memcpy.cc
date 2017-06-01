@@ -27,6 +27,6 @@ int test_function() {
 // CHECK-NEXT:  test_function {{.*}}dll_intercept_memcpy.cc:[[@LINE-4]]
 // CHECK: Address [[ADDR]] is located in stack of thread T0 at offset {{.*}} in frame
 // CHECK-NEXT:  test_function {{.*}}dll_intercept_memcpy.cc
-// CHECK: 'buff2' <== Memory access at offset {{.*}} overflows this variable
+// CHECK: 'buff2'{{.*}} <== Memory access at offset {{.*}} overflows this variable
   return 0;
 }

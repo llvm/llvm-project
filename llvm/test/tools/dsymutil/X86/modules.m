@@ -58,6 +58,13 @@ struct PruneMeNot;
 // CHECK-NEXT:              DW_AT_name{{.*}}"Foo"
 // CHECK-NOT:               DW_TAG
 // CHECK:                   DW_TAG_typedef
+// CHECK-NOT:                 DW_TAG
+// CHECK:                     DW_AT_type [DW_FORM_ref_addr] (0x{{0*}}[[BAR]])
+// CHECK:                   DW_TAG_structure_type
+// CHECK-NEXT:                DW_AT_name{{.*}}"S"
+// CHECK-NOT:                 DW_TAG
+// CHECK: 0x0[[INTERFACE:.*]]: DW_TAG_structure_type
+// CHECK-NEXT:                DW_AT_name{{.*}}"Foo"
 
 @import Bar;
 typedef struct Bar Bar;
@@ -72,19 +79,15 @@ struct S {};
 #else
 // ---------------------------------------------------------------------
 
-// CHECK:   DW_TAG_compile_unit
-// CHECK:     DW_TAG_module
-// CHECK-NEXT:  DW_AT_name{{.*}}"Bar"
+// CHECK:  DW_TAG_compile_unit
+// CHECK:    DW_AT_low_pc
+// CHECK-NOT:DW_TAG
 // CHECK:     DW_TAG_module
 // CHECK-NEXT:  DW_AT_name{{.*}}"Foo"
 // CHECK-NOT:   DW_TAG
 // CHECK:       DW_TAG_typedef
 // CHECK-NOT:     DW_TAG
-// CHECK:         DW_AT_type [DW_FORM_ref_addr] (0x{{0*}}[[BAR]])
-// CHECK: 0x0[[INTERFACE:.*]]: DW_TAG_structure_type
-// CHECK-NOT:     DW_TAG
-// CHECK:         DW_AT_name{{.*}}"Foo"
-
+// CHECK:       NULL
 //
 // CHECK:   DW_TAG_imported_declaration
 // CHECK-NOT: DW_TAG

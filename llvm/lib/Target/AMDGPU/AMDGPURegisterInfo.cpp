@@ -24,18 +24,12 @@ AMDGPURegisterInfo::AMDGPURegisterInfo() : AMDGPUGenRegisterInfo(0) {}
 // they are not supported at this time.
 //===----------------------------------------------------------------------===//
 
-const MCPhysReg AMDGPURegisterInfo::CalleeSavedReg = AMDGPU::NoRegister;
+// Dummy to not crash RegisterClassInfo.
+static const MCPhysReg CalleeSavedReg = AMDGPU::NoRegister;
 
-const MCPhysReg*
-AMDGPURegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
+const MCPhysReg *AMDGPURegisterInfo::getCalleeSavedRegs(
+  const MachineFunction *) const {
   return &CalleeSavedReg;
-}
-
-void AMDGPURegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
-                                             int SPAdj,
-                                             unsigned FIOperandNum,
-                                             RegScavenger *RS) const {
-  llvm_unreachable("Subroutines not supported yet");
 }
 
 unsigned AMDGPURegisterInfo::getFrameRegister(const MachineFunction &MF) const {
@@ -52,11 +46,6 @@ unsigned AMDGPURegisterInfo::getSubRegFromChannel(unsigned Channel) const {
 
   assert(Channel < array_lengthof(SubRegs));
   return SubRegs[Channel];
-}
-
-unsigned AMDGPURegisterInfo::getIndirectSubReg(unsigned IndirectIndex) const {
-
-  return getSubRegFromChannel(IndirectIndex);
 }
 
 #define GET_REGINFO_TARGET_DESC

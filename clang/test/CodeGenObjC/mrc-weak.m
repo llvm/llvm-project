@@ -6,6 +6,26 @@
 - (void) run;
 @end
 
+// The ivars in HighlyAlignedSubclass should be placed in the tail-padding
+// of the superclass.  Ensure that they're still covered by layouts.
+@interface HighlyAligned : Object {
+  __attribute__((aligned(32))) void *array[2];
+}
+@end
+// CHECK-MODERN: @"OBJC_IVAR_$_HighlyAlignedSubclass.ivar2" = global i64 24,
+// CHECK-MODERN: @"OBJC_IVAR_$_HighlyAlignedSubclass.ivar" = global i64 16,
+// CHECK-MODERN: @OBJC_CLASS_NAME_{{.*}} = {{.*}} c"\02\00"
+// CHECK-MODERN: @"\01l_OBJC_CLASS_RO_$_HighlyAlignedSubclass" = {{.*}} {
+// CHECK-FRAGILE: @OBJC_INSTANCE_VARIABLES_HighlyAlignedSubclass = {{.*}}, i32 8 }, {{.*}}, i32 12 }]
+// CHECK-FRAGILE: @OBJC_CLASS_NAME_{{.*}} = {{.*}} c"\02\00"
+// CHECK-FRAGILE: @OBJC_CLASS_HighlyAlignedSubclass
+@interface HighlyAlignedSubclass : HighlyAligned {
+  __weak id ivar;
+  __weak id ivar2;
+}
+@end
+@implementation HighlyAlignedSubclass @end
+
 // CHECK-MODERN: @OBJC_CLASS_NAME_{{.*}} = {{.*}} c"\01\00"
 // CHECK-MODERN: @"\01l_OBJC_CLASS_RO_$_Foo" = {{.*}} { i32 772
 //   772 == 0x304
@@ -140,3 +160,32 @@ void test8(void) {
 
 // CHECK-LABEL: define internal void @__Block_byref_object_dispose
 // CHECK:       call void @objc_destroyWeak
+
+// CHECK-LABEL: define void @test9_baseline()
+// CHECK:       define internal void @__copy_helper
+// CHECK:       define internal void @__destroy_helper
+void test9_baseline(void) {
+  Foo *p = get_object();
+  use_block(^{ [p run]; });
+}
+
+// CHECK-LABEL: define void @test9()
+// CHECK-NOT:   define internal void @__copy_helper
+// CHECK-NOT:   define internal void @__destroy_helper
+// CHECK:       define void @test9_fin()
+void test9(void) {
+  __unsafe_unretained Foo *p = get_object();
+  use_block(^{ [p run]; });
+}
+void test9_fin() {}
+
+// CHECK-LABEL: define void @test10()
+// CHECK-NOT:   define internal void @__copy_helper
+// CHECK-NOT:   define internal void @__destroy_helper
+// CHECK:       define void @test10_fin()
+void test10(void) {
+  typedef __unsafe_unretained Foo *UnsafeFooPtr;
+  UnsafeFooPtr p = get_object();
+  use_block(^{ [p run]; });
+}
+void test10_fin() {}

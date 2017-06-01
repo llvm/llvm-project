@@ -15,5 +15,8 @@ l2:                                               ; preds = %l1
   br label %l1
 }
 
-; CHECK: .Ltmp0:                                 # Address of block that was removed by CodeGen
+; It is correct for either l1 or l2 to be removed.
+; If l2 is removed, the message should be "Address of block that was removed by CodeGen"
+; If l1 is removed, it should be "Block address taken."
+; CHECK: .Ltmp0:                                 # {{Address of block that was removed by CodeGen|Block address taken}}
 ; CHECK: .quad	.Ltmp0

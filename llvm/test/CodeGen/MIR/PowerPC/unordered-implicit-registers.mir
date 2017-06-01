@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=powerpc64-unknown-linux-gnu -start-after machine-combiner -stop-after machine-combiner -o /dev/null %s | FileCheck %s
+# RUN: llc -mtriple=powerpc64-unknown-linux-gnu -run-pass none -o - %s | FileCheck %s
 # PR24724
 
 --- |
@@ -20,7 +20,6 @@
 ...
 ---
 name:            main
-isSSA:           true
 tracksRegLiveness: true
 registers:
   - { id: 0, class: g8rc_and_g8rc_nox0 }

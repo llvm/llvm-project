@@ -19,8 +19,11 @@
 #ifndef LLVM_IR_INSTITERATOR_H
 #define LLVM_IR_INSTITERATOR_H
 
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/SymbolTableListTraits.h"
+#include <iterator>
 
 namespace llvm {
 
@@ -35,6 +38,7 @@ template <class BB_t, class BB_i_t, class BI_t, class II_t> class InstIterator {
   BB_t *BBs; // BasicBlocksType
   BB_i_t BB; // BasicBlocksType::iterator
   BI_t BI;   // BasicBlock::iterator
+
 public:
   typedef std::bidirectional_iterator_tag iterator_category;
   typedef IIty                            value_type;
@@ -43,7 +47,7 @@ public:
   typedef IIty&                           reference;
 
   // Default constructor
-  InstIterator() {}
+  InstIterator() = default;
 
   // Copy constructor...
   template<typename A, typename B, typename C, typename D>
@@ -97,7 +101,7 @@ public:
     --BI;
     return *this;
   }
-  inline InstIterator  operator--(int) {
+  inline InstIterator operator--(int) {
     InstIterator tmp = *this; --*this; return tmp;
   }
 
@@ -152,6 +156,6 @@ inline const_inst_range instructions(const Function &F) {
   return const_inst_range(inst_begin(F), inst_end(F));
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_INSTITERATOR_H

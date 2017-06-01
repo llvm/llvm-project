@@ -17,7 +17,7 @@
 #include "BPFFrameLowering.h"
 #include "BPFISelLowering.h"
 #include "BPFInstrInfo.h"
-#include "llvm/Target/TargetSelectionDAGInfo.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
@@ -33,7 +33,7 @@ class BPFSubtarget : public BPFGenSubtargetInfo {
   BPFInstrInfo InstrInfo;
   BPFFrameLowering FrameLowering;
   BPFTargetLowering TLInfo;
-  TargetSelectionDAGInfo TSInfo;
+  SelectionDAGTargetInfo TSInfo;
 
 public:
   // This constructor initializes the data members to match that
@@ -52,7 +52,7 @@ public:
   const BPFTargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
-  const TargetSelectionDAGInfo *getSelectionDAGInfo() const override {
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
   const TargetRegisterInfo *getRegisterInfo() const override {

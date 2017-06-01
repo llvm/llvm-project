@@ -1,5 +1,5 @@
-// RUN: not %clang_cc1 -fsyntax-only -fcolor-diagnostics %s 2>&1 | FileCheck %s
-// RUN: not %clang_cc1 -fsyntax-only -fcolor-diagnostics -fdiagnostics-show-template-tree %s 2>&1 | FileCheck %s -check-prefix=TREE
+// RUN: not %clang_cc1 -fsyntax-only -std=c++11 -fcolor-diagnostics %s 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -fsyntax-only -std=c++11 -fcolor-diagnostics -fdiagnostics-show-template-tree %s 2>&1 | FileCheck %s -check-prefix=TREE
 // REQUIRES: ansi-escape-sequences
 template<typename> struct foo {};
 void func(foo<int>);
@@ -34,42 +34,38 @@ void set16(vector<vector<int> >) {}
 void test16() {
   set16(vector<const vector<int> >());
 }
-// CHECK: {{.*}}candidate function not viable: no known conversion from 'vector<[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}vector<[...]>>' to 'vector<vector<[...]>>' for 1st argument
+// CHECK: {{.*}}candidate function not viable: no known conversion from 'vector<[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}vector<...>>' to 'vector<vector<...>>' for 1st argument
 // TREE: {{.*}}candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // TREE:   vector<
-// TREE:     {{\[}}[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}!= [[CYAN]](no qualifiers){{ ?}}[[RESET]]]{{ ?}}vector<
-// TREE:       [...]>>
+// TREE:     {{\[}}[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}!= [[CYAN]](no qualifiers){{ ?}}[[RESET]]]{{ ?}}vector<...>>
 
 void set17(vector<const vector<int> >) {}
 void test17() {
   set17(vector<vector<int> >());
 }
-// CHECK: candidate function not viable: no known conversion from 'vector<vector<[...]>>' to 'vector<[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}vector<[...]>>' for 1st argument
+// CHECK: candidate function not viable: no known conversion from 'vector<vector<...>>' to 'vector<[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}vector<...>>' for 1st argument
 // TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // TREE:   vector<
-// TREE:     {{\[}}[[CYAN]](no qualifiers){{ ?}}[[RESET]]{{ ?}}!= [[CYAN]]const[[RESET]]] vector<
-// TREE:       [...]>>
+// TREE:     {{\[}}[[CYAN]](no qualifiers){{ ?}}[[RESET]]{{ ?}}!= [[CYAN]]const[[RESET]]] vector<...>>
 
 void set18(vector<volatile vector<int> >) {}
 void test18() {
   set18(vector<const vector<int> >());
 }
-// CHECK: candidate function not viable: no known conversion from 'vector<[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}vector<[...]>>' to 'vector<[[CYAN]]volatile{{ ?}}[[RESET]]{{ ?}}vector<[...]>>' for 1st argument
+// CHECK: candidate function not viable: no known conversion from 'vector<[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}vector<...>>' to 'vector<[[CYAN]]volatile{{ ?}}[[RESET]]{{ ?}}vector<...>>' for 1st argument
 // TREE: no matching function for call to 'set18'
 // TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // TREE:   vector<
-// TREE:     {{\[}}[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}!= [[CYAN]]volatile[[RESET]]] vector<
-// TREE:       [...]>>
+// TREE:     {{\[}}[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}!= [[CYAN]]volatile[[RESET]]] vector<...>>
 
 void set19(vector<const volatile vector<int> >) {}
 void test19() {
   set19(vector<const vector<int> >());
 }
-// CHECK: candidate function not viable: no known conversion from 'vector<const vector<[...]>>' to 'vector<const [[CYAN]]volatile{{ ?}}[[RESET]]{{ ?}}vector<[...]>>' for 1st argument
+// CHECK: candidate function not viable: no known conversion from 'vector<const vector<...>>' to 'vector<const [[CYAN]]volatile{{ ?}}[[RESET]]{{ ?}}vector<...>>' for 1st argument
 // TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // TREE:   vector<
-// TREE:     [const != const [[CYAN]]volatile[[RESET]]] vector<
-// TREE:       [...]>>
+// TREE:     [const != const [[CYAN]]volatile[[RESET]]] vector<...>>
 
 namespace default_args {
   template <int x, int y = 1+1, int z = 2>
@@ -82,5 +78,23 @@ namespace default_args {
     // CHECK: no viable conversion from 'A<[2 * ...], (default) [[CYAN]]2[[RESET]][[BOLD]]>' to 'A<[2 * ...], [[CYAN]]0[[RESET]][[BOLD]]>'
     A<0, 2, 0> N2 = M;
   }
+}
 
+namespace MixedDeclarationIntegerArgument {
+  template<typename T, T n = 5> class A{};
+  int x;
+  int y[5];
+  A<int> a1 = A<int&, x>();
+  // CHECK: no viable conversion from 'A<[[CYAN]]int &[[RESET]][[BOLD]], [[CYAN]]x[[RESET]][[BOLD]]>' to 'A<[[CYAN]]int[[RESET]][[BOLD]], (default) [[CYAN]]5[[RESET]][[BOLD]]>'
+  // TREE: no viable conversion
+  // TREE:   A<
+  // TREE:     {{\[}}[[CYAN]]int &[[RESET]][[BOLD]] != [[CYAN]]int[[RESET]][[BOLD]]],
+  // TREE:     {{\[}}[[CYAN]]x[[RESET]][[BOLD]] != (default) [[CYAN]]5[[RESET]][[BOLD]]]>
+
+  A<int**, nullptr> a2 = A<int, 3 + 1>();
+  // CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<[[CYAN]]int[[RESET]][[BOLD]], [[CYAN]]3 + 1[[RESET]][[BOLD]] aka [[CYAN]]4[[RESET]][[BOLD]]>' to 'A<[[CYAN]]int **[[RESET]][[BOLD]], [[CYAN]]nullptr[[RESET]][[BOLD]]>'
+  // TREE: no viable conversion
+  // TREE:   A<
+  // TREE:     {{\[}}[[CYAN]]int[[RESET]][[BOLD]] != [[CYAN]]int **[[RESET]][[BOLD]]],
+  // TREE:     {{\[}}[[CYAN]]3 + 1[[RESET]][[BOLD]] aka [[CYAN]]4[[RESET]][[BOLD]] != [[CYAN]]nullptr[[RESET]][[BOLD]]]>
 }

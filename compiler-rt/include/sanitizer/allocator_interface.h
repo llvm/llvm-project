@@ -59,6 +59,23 @@ extern "C" {
        deallocation of "ptr". */
   void __sanitizer_malloc_hook(const volatile void *ptr, size_t size);
   void __sanitizer_free_hook(const volatile void *ptr);
+
+  /* Installs a pair of hooks for malloc/free.
+     Several (currently, 5) hook pairs may be installed, they are executed
+     in the order they were installed and after calling
+     __sanitizer_malloc_hook/__sanitizer_free_hook.
+     Unlike __sanitizer_malloc_hook/__sanitizer_free_hook these hooks can be
+     chained and do not rely on weak symbols working on the platform, but
+     require __sanitizer_install_malloc_and_free_hooks to be called at startup
+     and thus will not be called on malloc/free very early in the process.
+     Returns the number of hooks currently installed or 0 on failure.
+     Not thread-safe, should be called in the main thread before starting
+     other threads.
+  */
+  int __sanitizer_install_malloc_and_free_hooks(
+      void (*malloc_hook)(const volatile void *, size_t),
+      void (*free_hook)(const volatile void *));
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

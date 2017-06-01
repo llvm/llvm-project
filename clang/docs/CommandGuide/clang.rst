@@ -105,7 +105,12 @@ Language Selection and Mode Options
 .. option:: -stdlib=<library>
 
  Specify the C++ standard library to use; supported options are libstdc++ and
- libc++.
+ libc++. If not specified, platform default will be used.
+
+.. option:: -rtlib=<library>
+
+ Specify the compiler runtime library to use; supported options are libgcc and
+ compiler-rt. If not specified, platform default will be used.
 
 .. option:: -ansi
 
@@ -162,16 +167,6 @@ Language Selection and Mode Options
 
  Enable the "Blocks" language feature.
 
-.. option:: -fobjc-gc-only
-
- Indicate that Objective-C code should be compiled in GC-only mode, which only
- works when Objective-C Garbage Collection is enabled.
-
-.. option:: -fobjc-gc
-
- Indicate that Objective-C code should be compiled in hybrid-GC mode, which
- works with both GC and non-GC mode.
-
 .. option:: -fobjc-abi-version=version
 
  Select the Objective-C ABI version to use. Available versions are 1 (legacy
@@ -184,7 +179,7 @@ Language Selection and Mode Options
  (either via :option:`-fobjc-nonfragile-abi`, or because it is the platform
  default).
 
-.. option:: -fobjc-nonfragile-abi
+.. option:: -fobjc-nonfragile-abi, -fno-objc-nonfragile-abi
 
  Enable use of the Objective-C non-fragile ABI. On platforms for which this is
  the default ABI, it can be disabled with :option:`-fno-objc-nonfragile-abi`.
@@ -221,7 +216,7 @@ number of cross compilers, or may only support a native target.
 Code Generation Options
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. option:: -O0, -O1, -O2, -O3, -Ofast, -Os, -Oz, -O, -O4
+.. option:: -O0, -O1, -O2, -O3, -Ofast, -Os, -Oz, -Og, -O, -O4
 
   Specify which optimization level to use:
 
@@ -247,23 +242,41 @@ Code Generation Options
     :option:`-Oz` Like :option:`-Os` (and thus :option:`-O2`), but reduces code
     size further.
 
+    :option:`-Og` Like :option:`-O1`. In future versions, this option might 
+    disable different optimizations in order to improve debuggability.
+
     :option:`-O` Equivalent to :option:`-O2`.
 
     :option:`-O4` and higher
 
       Currently equivalent to :option:`-O3`
 
-.. option:: -g
+.. option:: -g, -gline-tables-only, -gmodules
 
-  Generate debug information.  Note that Clang debug information works best at -O0.
+  Control debug information output.  Note that Clang debug information works
+  best at :option:`-O0`.  When more than one option starting with `-g` is
+  specified, the last one wins:
 
-.. option:: -gmodules
+    :option:`-g` Generate debug information.
 
-  Generate debug information that contains external references to
-  types defined in clang modules or precompiled headers instead of
-  emitting redundant debug type information into every object file.
-  This option implies `-fmodule-format=obj`.
-  
+    :option:`-gline-tables-only` Generate only line table debug information. This
+    allows for symbolicated backtraces with inlining information, but does not
+    include any information about variables, their locations or types.
+
+    :option:`-gmodules` Generate debug information that contains external
+    references to types defined in Clang modules or precompiled headers instead
+    of emitting redundant debug type information into every object file.  This
+    option transparently switches the Clang module format to object file
+    containers that hold the Clang module together with the debug information.
+    When compiling a program that uses Clang modules or precompiled headers,
+    this option produces complete debug information with faster compile
+    times and much smaller object files.
+
+    This option should not be used when building static libraries for
+    distribution to other machines because the debug info will contain
+    references to the module cache on the machine the object files in the
+    library were built on.
+
 .. option:: -fstandalone-debug -fno-standalone-debug
 
   Clang supports a number of optimizations to reduce the size of debug
@@ -295,7 +308,7 @@ Code Generation Options
 
   This flag sets the default visibility level.
 
-.. option:: -fcommon
+.. option:: -fcommon, -fno-common
 
   This flag specifies that variables without initializers get common linkage.
   It can be disabled with :option:`-fno-common`.
@@ -308,12 +321,18 @@ Code Generation Options
   model can be overridden with the tls_model attribute. The compiler will try
   to choose a more efficient model if possible.
 
-.. option:: -flto, -emit-llvm
+.. option:: -flto, -flto=full, -flto=thin, -emit-llvm
 
   Generate output files in LLVM formats, suitable for link time optimization.
   When used with :option:`-S` this generates LLVM intermediate language
   assembly files, otherwise this generates LLVM bitcode format object files
   (which may be passed to the linker depending on the stage selection options).
+
+  The default for :option:`-flto` is "full", in which the
+  LLVM bitcode is suitable for monolithic Link Time Optimization (LTO), where
+  the linker merges all such modules into a single combined module for
+  optimization. With "thin", :doc:`ThinLTO <../ThinLTO>`
+  compilation is invoked instead.
 
 Driver Options
 ~~~~~~~~~~~~~~
@@ -368,7 +387,8 @@ Driver Options
 
 .. option:: -print-libgcc-file-name
 
-  Print the library path for "libgcc.a".
+  Print the library path for the currently used compiler runtime library
+  ("libgcc.a" or "libclang_rt.builtins.*.a").
 
 .. option:: -print-prog-name=<name>
 
@@ -381,6 +401,12 @@ Driver Options
 .. option:: -save-temps
 
   Save intermediate compilation results.
+
+.. option:: -save-stats, -save-stats=cwd, -save-stats=obj
+
+  Save internal code generation (LLVM) statistics to a file in the current
+  directory (:option:`-save-stats`/"-save-stats=cwd") or the directory
+  of the output file ("-save-state=obj").
 
 .. option:: -integrated-as, -no-integrated-as
 

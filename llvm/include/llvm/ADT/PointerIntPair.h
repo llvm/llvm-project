@@ -21,8 +21,10 @@
 
 namespace llvm {
 
-template<typename T>
-struct DenseMapInfo;
+template <typename T> struct DenseMapInfo;
+
+template <typename PointerT, unsigned IntBits, typename PtrTraits>
+struct PointerIntPairInfo;
 
 /// PointerIntPair - This class implements a pair of a pointer and small
 /// integer.  It is designed to represent this in the space required by one
@@ -38,84 +40,40 @@ struct DenseMapInfo;
 ///   PointerIntPair<PointerIntPair<void*, 1, bool>, 1, bool>
 /// ... and the two bools will land in different bits.
 ///
-template <typename PointerTy, unsigned IntBits, typename IntType=unsigned,
-          typename PtrTraits = PointerLikeTypeTraits<PointerTy> >
+template <typename PointerTy, unsigned IntBits, typename IntType = unsigned,
+          typename PtrTraits = PointerLikeTypeTraits<PointerTy>,
+          typename Info = PointerIntPairInfo<PointerTy, IntBits, PtrTraits>>
 class PointerIntPair {
   intptr_t Value;
-  static_assert(PtrTraits::NumLowBitsAvailable <
-                std::numeric_limits<uintptr_t>::digits,
-                "cannot use a pointer type that has all bits free");
-  static_assert(IntBits <= PtrTraits::NumLowBitsAvailable,
-                "PointerIntPair with integer size too large for pointer");
-  enum : uintptr_t {
-    /// PointerBitMask - The bits that come from the pointer.
-    PointerBitMask =
-      ~(uintptr_t)(((intptr_t)1 << PtrTraits::NumLowBitsAvailable)-1),
-
-    /// IntShift - The number of low bits that we reserve for other uses, and
-    /// keep zero.
-    IntShift = (uintptr_t)PtrTraits::NumLowBitsAvailable - IntBits,
-
-    /// IntMask - This is the unshifted mask for valid bits of the int type.
-    IntMask = (uintptr_t)(((intptr_t)1 << IntBits) - 1),
-
-    // ShiftedIntMask - This is the bits for the integer shifted in place.
-    ShiftedIntMask = (uintptr_t)(IntMask << IntShift)
-  };
 
 public:
   PointerIntPair() : Value(0) {}
   PointerIntPair(PointerTy PtrVal, IntType IntVal) {
     setPointerAndInt(PtrVal, IntVal);
   }
-  explicit PointerIntPair(PointerTy PtrVal) {
-    initWithPointer(PtrVal);
-  }
+  explicit PointerIntPair(PointerTy PtrVal) { initWithPointer(PtrVal); }
 
-  PointerTy getPointer() const {
-    return PtrTraits::getFromVoidPointer(
-                         reinterpret_cast<void*>(Value & PointerBitMask));
-  }
+  PointerTy getPointer() const { return Info::getPointer(Value); }
 
   IntType getInt() const {
-    return (IntType)((Value >> IntShift) & IntMask);
+    return (IntType)Info::getInt(Value);
   }
 
   void setPointer(PointerTy PtrVal) {
-    intptr_t PtrWord
-      = reinterpret_cast<intptr_t>(PtrTraits::getAsVoidPointer(PtrVal));
-    assert((PtrWord & ~PointerBitMask) == 0 &&
-           "Pointer is not sufficiently aligned");
-    // Preserve all low bits, just update the pointer.
-    Value = PtrWord | (Value & ~PointerBitMask);
+    Value = Info::updatePointer(Value, PtrVal);
   }
 
   void setInt(IntType IntVal) {
-    intptr_t IntWord = static_cast<intptr_t>(IntVal);
-    assert((IntWord & ~IntMask) == 0 && "Integer too large for field");
-
-    // Preserve all bits other than the ones we are updating.
-    Value &= ~ShiftedIntMask;     // Remove integer field.
-    Value |= IntWord << IntShift;  // Set new integer.
+    Value = Info::updateInt(Value, static_cast<intptr_t>(IntVal));
   }
 
   void initWithPointer(PointerTy PtrVal) {
-    intptr_t PtrWord
-      = reinterpret_cast<intptr_t>(PtrTraits::getAsVoidPointer(PtrVal));
-    assert((PtrWord & ~PointerBitMask) == 0 &&
-           "Pointer is not sufficiently aligned");
-    Value = PtrWord;
+    Value = Info::updatePointer(0, PtrVal);
   }
 
   void setPointerAndInt(PointerTy PtrVal, IntType IntVal) {
-    intptr_t PtrWord
-      = reinterpret_cast<intptr_t>(PtrTraits::getAsVoidPointer(PtrVal));
-    assert((PtrWord & ~PointerBitMask) == 0 &&
-           "Pointer is not sufficiently aligned");
-    intptr_t IntWord = static_cast<intptr_t>(IntVal);
-    assert((IntWord & ~IntMask) == 0 && "Integer too large for field");
-
-    Value = PtrWord | (IntWord << IntShift);
+    Value = Info::updateInt(Info::updatePointer(0, PtrVal),
+                            static_cast<intptr_t>(IntVal));
   }
 
   PointerTy const *getAddrOfPointer() const {
@@ -129,8 +87,10 @@ public:
     return reinterpret_cast<PointerTy *>(&Value);
   }
 
-  void *getOpaqueValue() const { return reinterpret_cast<void*>(Value); }
-  void setFromOpaqueValue(void *Val) { Value = reinterpret_cast<intptr_t>(Val);}
+  void *getOpaqueValue() const { return reinterpret_cast<void *>(Value); }
+  void setFromOpaqueValue(void *Val) {
+    Value = reinterpret_cast<intptr_t>(Val);
+  }
 
   static PointerIntPair getFromOpaqueValue(void *V) {
     PointerIntPair P;
@@ -145,23 +105,81 @@ public:
     return getFromOpaqueValue(const_cast<void *>(V));
   }
 
-  bool operator==(const PointerIntPair &RHS) const {return Value == RHS.Value;}
-  bool operator!=(const PointerIntPair &RHS) const {return Value != RHS.Value;}
-  bool operator<(const PointerIntPair &RHS) const {return Value < RHS.Value;}
-  bool operator>(const PointerIntPair &RHS) const {return Value > RHS.Value;}
-  bool operator<=(const PointerIntPair &RHS) const {return Value <= RHS.Value;}
-  bool operator>=(const PointerIntPair &RHS) const {return Value >= RHS.Value;}
+  bool operator==(const PointerIntPair &RHS) const {
+    return Value == RHS.Value;
+  }
+  bool operator!=(const PointerIntPair &RHS) const {
+    return Value != RHS.Value;
+  }
+  bool operator<(const PointerIntPair &RHS) const { return Value < RHS.Value; }
+  bool operator>(const PointerIntPair &RHS) const { return Value > RHS.Value; }
+  bool operator<=(const PointerIntPair &RHS) const {
+    return Value <= RHS.Value;
+  }
+  bool operator>=(const PointerIntPair &RHS) const {
+    return Value >= RHS.Value;
+  }
+};
+
+template <typename PointerT, unsigned IntBits, typename PtrTraits>
+struct PointerIntPairInfo {
+  static_assert(PtrTraits::NumLowBitsAvailable <
+                    std::numeric_limits<uintptr_t>::digits,
+                "cannot use a pointer type that has all bits free");
+  static_assert(IntBits <= PtrTraits::NumLowBitsAvailable,
+                "PointerIntPair with integer size too large for pointer");
+  enum : uintptr_t {
+    /// PointerBitMask - The bits that come from the pointer.
+    PointerBitMask =
+        ~(uintptr_t)(((intptr_t)1 << PtrTraits::NumLowBitsAvailable) - 1),
+
+    /// IntShift - The number of low bits that we reserve for other uses, and
+    /// keep zero.
+    IntShift = (uintptr_t)PtrTraits::NumLowBitsAvailable - IntBits,
+
+    /// IntMask - This is the unshifted mask for valid bits of the int type.
+    IntMask = (uintptr_t)(((intptr_t)1 << IntBits) - 1),
+
+    // ShiftedIntMask - This is the bits for the integer shifted in place.
+    ShiftedIntMask = (uintptr_t)(IntMask << IntShift)
+  };
+
+  static PointerT getPointer(intptr_t Value) {
+    return PtrTraits::getFromVoidPointer(
+        reinterpret_cast<void *>(Value & PointerBitMask));
+  }
+
+  static intptr_t getInt(intptr_t Value) {
+    return (Value >> IntShift) & IntMask;
+  }
+
+  static intptr_t updatePointer(intptr_t OrigValue, PointerT Ptr) {
+    intptr_t PtrWord =
+        reinterpret_cast<intptr_t>(PtrTraits::getAsVoidPointer(Ptr));
+    assert((PtrWord & ~PointerBitMask) == 0 &&
+           "Pointer is not sufficiently aligned");
+    // Preserve all low bits, just update the pointer.
+    return PtrWord | (OrigValue & ~PointerBitMask);
+  }
+
+  static intptr_t updateInt(intptr_t OrigValue, intptr_t Int) {
+    intptr_t IntWord = static_cast<intptr_t>(Int);
+    assert((IntWord & ~IntMask) == 0 && "Integer too large for field");
+
+    // Preserve all bits other than the ones we are updating.
+    return (OrigValue & ~ShiftedIntMask) | IntWord << IntShift;
+  }
 };
 
 template <typename T> struct isPodLike;
-template<typename PointerTy, unsigned IntBits, typename IntType>
-struct isPodLike<PointerIntPair<PointerTy, IntBits, IntType> > {
-   static const bool value = true;
+template <typename PointerTy, unsigned IntBits, typename IntType>
+struct isPodLike<PointerIntPair<PointerTy, IntBits, IntType>> {
+  static const bool value = true;
 };
 
 // Provide specialization of DenseMapInfo for PointerIntPair.
-template<typename PointerTy, unsigned IntBits, typename IntType>
-struct DenseMapInfo<PointerIntPair<PointerTy, IntBits, IntType> > {
+template <typename PointerTy, unsigned IntBits, typename IntType>
+struct DenseMapInfo<PointerIntPair<PointerTy, IntBits, IntType>> {
   typedef PointerIntPair<PointerTy, IntBits, IntType> Ty;
   static Ty getEmptyKey() {
     uintptr_t Val = static_cast<uintptr_t>(-1);
@@ -181,10 +199,10 @@ struct DenseMapInfo<PointerIntPair<PointerTy, IntBits, IntType> > {
 };
 
 // Teach SmallPtrSet that PointerIntPair is "basically a pointer".
-template<typename PointerTy, unsigned IntBits, typename IntType,
-         typename PtrTraits>
-class PointerLikeTypeTraits<PointerIntPair<PointerTy, IntBits, IntType,
-                                           PtrTraits> > {
+template <typename PointerTy, unsigned IntBits, typename IntType,
+          typename PtrTraits>
+class PointerLikeTypeTraits<
+    PointerIntPair<PointerTy, IntBits, IntType, PtrTraits>> {
 public:
   static inline void *
   getAsVoidPointer(const PointerIntPair<PointerTy, IntBits, IntType> &P) {
@@ -198,9 +216,7 @@ public:
   getFromVoidPointer(const void *P) {
     return PointerIntPair<PointerTy, IntBits, IntType>::getFromOpaqueValue(P);
   }
-  enum {
-    NumLowBitsAvailable = PtrTraits::NumLowBitsAvailable - IntBits
-  };
+  enum { NumLowBitsAvailable = PtrTraits::NumLowBitsAvailable - IntBits };
 };
 
 } // end namespace llvm

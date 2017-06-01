@@ -1,0 +1,27 @@
+
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
+
+--- |
+  define i1 @no-clobber-zr(i64* %p, i64 %x) { ret i1 0 }
+...
+---
+# Check that write of xzr doesn't inhibit pairing of xzr stores since
+# it isn't actually clobbered.  Written as a MIR test to avoid
+# schedulers reordering instructions such that SUBS doesn't appear
+# between stores.
+# CHECK-LABEL: name: no-clobber-zr
+# CHECK: STPXi %xzr, %xzr, %x0, 0
+name: no-clobber-zr
+body: |
+  bb.0:
+    liveins: %x0,  %x1
+    STRXui %xzr, %x0, 0 :: (store 8 into %ir.p)
+    dead %xzr = SUBSXri killed %x1, 0, 0, implicit-def %nzcv
+    %w8 = CSINCWr %wzr, %wzr, 1, implicit killed %nzcv
+    STRXui %xzr, killed %x0, 1 :: (store 8 into %ir.p)
+    %w0 = ORRWrs %wzr, killed %w8, 0
+    RET %lr, implicit %w0
+...
+
+
+

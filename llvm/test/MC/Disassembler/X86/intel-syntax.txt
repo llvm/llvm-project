@@ -108,10 +108,10 @@
 # CHECK: vshufpd xmm0, xmm1, xmm2, 1
 0xc5 0xf1 0xc6 0xc2 0x01
 
-# CHECK: vpgatherqq ymm2, qword ptr [rdi + 2*ymm1], ymm0
+# CHECK: vpgatherqq ymm2, ymmword ptr [rdi + 2*ymm1], ymm0
 0xc4 0xe2 0xfd 0x91 0x14 0x4f
 
-# CHECK: vpgatherdd xmm10, dword ptr [r15 + 2*xmm9], xmm8
+# CHECK: vpgatherdd xmm10, xmmword ptr [r15 + 2*xmm9], xmm8
 0xc4 0x02 0x39 0x90 0x14 0x4f
 
 # CHECK: xsave64 opaque ptr [rax]

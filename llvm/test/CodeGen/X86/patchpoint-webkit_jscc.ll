@@ -7,7 +7,7 @@
 define void @jscall_patchpoint_codegen(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 entry:
 ; CHECK-LABEL: jscall_patchpoint_codegen:
-; CHECK:      Ltmp
+; CHECK:      Lcfi
 ; CHECK:      movq %r{{.+}}, (%rsp)
 ; CHECK:      movq %r{{.+}}, %rax
 ; CHECK:      Ltmp
@@ -16,7 +16,7 @@ entry:
 ; CHECK:      movq %rax, (%rsp)
 ; CHECK:      callq
 ; FAST-LABEL: jscall_patchpoint_codegen:
-; FAST:       Ltmp
+; FAST:       Lcfi
 ; FAST:       movq %r{{.+}}, (%rsp)
 ; FAST:       movq %r{{.+}}, %rax
 ; FAST:       Ltmp
@@ -35,7 +35,7 @@ entry:
 define i64 @jscall_patchpoint_codegen2(i64 %callee) {
 entry:
 ; CHECK-LABEL: jscall_patchpoint_codegen2:
-; CHECK:      Ltmp
+; CHECK:      Lcfi
 ; CHECK:      movq $6, 24(%rsp)
 ; CHECK-NEXT: movl $4, 16(%rsp)
 ; CHECK-NEXT: movq $2, (%rsp)
@@ -43,7 +43,7 @@ entry:
 ; CHECK-NEXT: movabsq $-559038736, %r11
 ; CHECK-NEXT: callq *%r11
 ; FAST-LABEL: jscall_patchpoint_codegen2:
-; FAST:       Ltmp
+; FAST:       Lcfi
 ; FAST:       movq $2, (%rsp)
 ; FAST-NEXT:  movl $4, 16(%rsp)
 ; FAST-NEXT:  movq $6, 24(%rsp)
@@ -59,7 +59,7 @@ entry:
 define i64 @jscall_patchpoint_codegen3(i64 %callee) {
 entry:
 ; CHECK-LABEL: jscall_patchpoint_codegen3:
-; CHECK:      Ltmp
+; CHECK:      Lcfi
 ; CHECK:      movq $10, 48(%rsp)
 ; CHECK-NEXT: movl  $8, 36(%rsp)
 ; CHECK-NEXT: movq  $6, 24(%rsp)
@@ -69,7 +69,7 @@ entry:
 ; CHECK-NEXT: movabsq $-559038736, %r11
 ; CHECK-NEXT: callq *%r11
 ; FAST-LABEL: jscall_patchpoint_codegen3:
-; FAST:       Ltmp
+; FAST:       Lcfi
 ; FAST:       movq  $2, (%rsp)
 ; FAST-NEXT:  movl  $4, 16(%rsp)
 ; FAST-NEXT:  movq  $6, 24(%rsp)

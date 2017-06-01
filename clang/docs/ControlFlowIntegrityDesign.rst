@@ -90,10 +90,10 @@ For example on x86 a typical virtual call may look like this:
 
 The compiler relies on co-operation from the linker in order to assemble
 the bit vectors for the whole program. It currently does this using LLVM's
-`bit sets`_ mechanism together with link-time optimization.
+`type metadata`_ mechanism together with link-time optimization.
 
 .. _address point: https://mentorembedded.github.io/cxx-abi/abi.html#vtable-general
-.. _bit sets: http://llvm.org/docs/BitSets.html
+.. _type metadata: http://llvm.org/docs/TypeMetadata.html
 .. _ByteArrayBuilder: http://llvm.org/docs/doxygen/html/structllvm_1_1ByteArrayBuilder.html
 
 Optimizations
@@ -196,7 +196,7 @@ those sub-hierarchies need to be (see "Stripping Leading/Trailing Zeros in Bit
 Vectors" above). The `GlobalLayoutBuilder`_ class is responsible for laying
 out the globals efficiently to minimize the sizes of the underlying bitsets.
 
-.. _GlobalLayoutBuilder: http://llvm.org/viewvc/llvm-project/llvm/trunk/include/llvm/Transforms/IPO/LowerBitSets.h?view=markup
+.. _GlobalLayoutBuilder: http://llvm.org/viewvc/llvm-project/llvm/trunk/include/llvm/Transforms/IPO/LowerTypeTests.h?view=markup
 
 Alignment
 ~~~~~~~~~
@@ -277,7 +277,277 @@ likely to occur if the virtual tables are padded.
 Forward-Edge CFI for Indirect Function Calls
 ============================================
 
-Sorry, no documentation yet, but see the comments at the top of
-``LowerBitSets::buildBitSetsFromFunctions`` in `LowerBitSets.cpp`_.
+Under forward-edge CFI for indirect function calls, each unique function
+type has its own bit vector, and at each call site we need to check that the
+function pointer is a member of the function type's bit vector. This scheme
+works in a similar way to forward-edge CFI for virtual calls, the distinction
+being that we need to build bit vectors of function entry points rather than
+of virtual tables.
 
-.. _LowerBitSets.cpp: http://llvm.org/klaus/llvm/blob/master/lib/Transforms/IPO/LowerBitSets.cpp
+Unlike when re-arranging global variables, we cannot re-arrange functions
+in a particular order and base our calculations on the layout of the
+functions' entry points, as we have no idea how large a particular function
+will end up being (the function sizes could even depend on how we arrange
+the functions). Instead, we build a jump table, which is a block of code
+consisting of one branch instruction for each of the functions in the bit
+set that branches to the target function, and redirect any taken function
+addresses to the corresponding jump table entry. In this way, the distance
+between function entry points is predictable and controllable. In the object
+file's symbol table, the symbols for the target functions also refer to the
+jump table entries, so that addresses taken outside the module will pass
+any verification done inside the module.
+
+In more concrete terms, suppose we have three functions ``f``, ``g``,
+``h`` which are all of the same type, and a function foo that returns their
+addresses:
+
+.. code-block:: none
+
+  f:
+  mov 0, %eax
+  ret
+
+  g:
+  mov 1, %eax
+  ret
+
+  h:
+  mov 2, %eax
+  ret
+
+  foo:
+  mov f, %eax
+  mov g, %edx
+  mov h, %ecx
+  ret
+
+Our jump table will (conceptually) look like this:
+
+.. code-block:: none
+
+  f:
+  jmp .Ltmp0 ; 5 bytes
+  int3       ; 1 byte
+  int3       ; 1 byte
+  int3       ; 1 byte
+
+  g:
+  jmp .Ltmp1 ; 5 bytes
+  int3       ; 1 byte
+  int3       ; 1 byte
+  int3       ; 1 byte
+
+  h:
+  jmp .Ltmp2 ; 5 bytes
+  int3       ; 1 byte
+  int3       ; 1 byte
+  int3       ; 1 byte
+
+  .Ltmp0:
+  mov 0, %eax
+  ret
+
+  .Ltmp1:
+  mov 1, %eax
+  ret
+
+  .Ltmp2:
+  mov 2, %eax
+  ret
+
+  foo:
+  mov f, %eax
+  mov g, %edx
+  mov h, %ecx
+  ret
+
+Because the addresses of ``f``, ``g``, ``h`` are evenly spaced at a power of
+2, and function types do not overlap (unlike class types with base classes),
+we can normally apply the `Alignment`_ and `Eliminating Bit Vector Checks
+for All-Ones Bit Vectors`_ optimizations thus simplifying the check at each
+call site to a range and alignment check.
+
+Shared library support
+======================
+
+**EXPERIMENTAL**
+
+The basic CFI mode described above assumes that the application is a
+monolithic binary; at least that all possible virtual/indirect call
+targets and the entire class hierarchy are known at link time. The
+cross-DSO mode, enabled with **-f[no-]sanitize-cfi-cross-dso** relaxes
+this requirement by allowing virtual and indirect calls to cross the
+DSO boundary.
+
+Assuming the following setup: the binary consists of several
+instrumented and several uninstrumented DSOs. Some of them may be
+dlopen-ed/dlclose-d periodically, even frequently.
+
+  - Calls made from uninstrumented DSOs are not checked and just work.
+  - Calls inside any instrumented DSO are fully protected.
+  - Calls between different instrumented DSOs are also protected, with
+     a performance penalty (in addition to the monolithic CFI
+     overhead).
+  - Calls from an instrumented DSO to an uninstrumented one are
+     unchecked and just work, with performance penalty.
+  - Calls from an instrumented DSO outside of any known DSO are
+     detected as CFI violations.
+
+In the monolithic scheme a call site is instrumented as
+
+.. code-block:: none
+
+   if (!InlinedFastCheck(f))
+     abort();
+   call *f
+
+In the cross-DSO scheme it becomes
+
+.. code-block:: none
+
+   if (!InlinedFastCheck(f))
+     __cfi_slowpath(CallSiteTypeId, f);
+   call *f
+
+CallSiteTypeId
+--------------
+
+``CallSiteTypeId`` is a stable process-wide identifier of the
+call-site type. For a virtual call site, the type in question is the class
+type; for an indirect function call it is the function signature. The
+mapping from a type to an identifier is an ABI detail. In the current,
+experimental, implementation the identifier of type T is calculated as
+follows:
+
+  -  Obtain the mangled name for "typeinfo name for T".
+  -  Calculate MD5 hash of the name as a string.
+  -  Reinterpret the first 8 bytes of the hash as a little-endian
+     64-bit integer.
+
+It is possible, but unlikely, that collisions in the
+``CallSiteTypeId`` hashing will result in weaker CFI checks that would
+still be conservatively correct.
+
+CFI_Check
+---------
+
+In the general case, only the target DSO knows whether the call to
+function ``f`` with type ``CallSiteTypeId`` is valid or not.  To
+export this information, every DSO implements
+
+.. code-block:: none
+
+   void __cfi_check(uint64 CallSiteTypeId, void *TargetAddr)
+
+This function provides external modules with access to CFI checks for the
+targets inside this DSO.  For each known ``CallSiteTypeId``, this function
+performs an ``llvm.type.test`` with the corresponding type identifier. It
+aborts if the type is unknown, or if the check fails.
+
+The basic implementation is a large switch statement over all values
+of CallSiteTypeId supported by this DSO, and each case is similar to
+the InlinedFastCheck() in the basic CFI mode.
+
+CFI Shadow
+----------
+
+To route CFI checks to the target DSO's __cfi_check function, a
+mapping from possible virtual / indirect call targets to
+the corresponding __cfi_check functions is maintained. This mapping is
+implemented as a sparse array of 2 bytes for every possible page (4096
+bytes) of memory. The table is kept readonly (FIXME: not yet) most of
+the time.
+
+There are 3 types of shadow values:
+
+  -  Address in a CFI-instrumented DSO.
+  -  Unchecked address (a “trusted” non-instrumented DSO). Encoded as
+     value 0xFFFF.
+  -  Invalid address (everything else). Encoded as value 0.
+
+For a CFI-instrumented DSO, a shadow value encodes the address of the
+__cfi_check function for all call targets in the corresponding memory
+page. If Addr is the target address, and V is the shadow value, then
+the address of __cfi_check is calculated as
+
+.. code-block:: none
+
+  __cfi_check = AlignUpTo(Addr, 4096) - (V + 1) * 4096
+
+This works as long as __cfi_check is aligned by 4096 bytes and located
+below any call targets in its DSO, but not more than 256MB apart from
+them.
+
+CFI_SlowPath
+------------
+
+The slow path check is implemented in compiler-rt library as
+
+.. code-block:: none
+
+  void __cfi_slowpath(uint64 CallSiteTypeId, void *TargetAddr)
+
+This functions loads a shadow value for ``TargetAddr``, finds the
+address of __cfi_check as described above and calls that.
+
+Position-independent executable requirement
+-------------------------------------------
+
+Cross-DSO CFI mode requires that the main executable is built as PIE.
+In non-PIE executables the address of an external function (taken from
+the main executable) is the address of that function’s PLT record in
+the main executable. This would break the CFI checks.
+
+
+Hardware support
+================
+
+We believe that the above design can be efficiently implemented in hardware.
+A single new instruction added to an ISA would allow to perform the CFI check
+with fewer bytes per check (smaller code size overhead) and potentially more
+efficiently. The current software-only instrumentation requires at least
+32-bytes per check (on x86_64).
+A hardware instruction may probably be less than ~ 12 bytes.
+Such instruction would check that the argument pointer is in-bounds,
+and is properly aligned, and if the checks fail it will either trap (in monolithic scheme)
+or call the slow path function (cross-DSO scheme).
+The bit vector lookup is probably too complex for a hardware implementation.
+
+.. code-block:: none
+
+  //  This instruction checks that 'Ptr'
+  //   * is aligned by (1 << kAlignment) and
+  //   * is inside [kRangeBeg, kRangeBeg+(kRangeSize<<kAlignment))
+  //  and if the check fails it jumps to the given target (slow path).
+  //
+  // 'Ptr' is a register, pointing to the virtual function table
+  //    or to the function which we need to check. We may require an explicit
+  //    fixed register to be used.
+  // 'kAlignment' is a 4-bit constant.
+  // 'kRangeSize' is a ~20-bit constant.
+  // 'kRangeBeg' is a PC-relative constant (~28 bits)
+  //    pointing to the beginning of the allowed range for 'Ptr'.
+  // 'kFailedCheckTarget': is a PC-relative constant (~28 bits)
+  //    representing the target to branch to when the check fails.
+  //    If kFailedCheckTarget==0, the process will trap
+  //    (monolithic binary scheme).
+  //    Otherwise it will jump to a handler that implements `CFI_SlowPath`
+  //    (cross-DSO scheme).
+  CFI_Check(Ptr, kAlignment, kRangeSize, kRangeBeg, kFailedCheckTarget) {
+     if (Ptr < kRangeBeg ||
+         Ptr >= kRangeBeg + (kRangeSize << kAlignment) ||
+         Ptr & ((1 << kAlignment) - 1))
+           Jump(kFailedCheckTarget);
+  }
+
+An alternative and more compact enconding would not use `kFailedCheckTarget`,
+and will trap on check failure instead.
+This will allow us to fit the instruction into **8-9 bytes**.
+The cross-DSO checks will be performed by a trap handler and
+performance-critical ones will have to be black-listed and checked using the
+software-only scheme.
+
+Note that such hardware extension would be complementary to checks
+at the callee side, such as e.g. **Intel ENDBRANCH**.
+Moreover, CFI would have two benefits over ENDBRANCH: a) precision and b)
+ability to protect against invalid casts between polymorphic types.

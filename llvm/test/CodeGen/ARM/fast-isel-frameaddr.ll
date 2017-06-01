@@ -6,22 +6,22 @@
 define i8* @frameaddr_index0() nounwind {
 entry:
 ; DARWIN-ARM-LABEL: frameaddr_index0:
-; DARWIN-ARM: push {r7}
+; DARWIN-ARM: push {r7, lr}
 ; DARWIN-ARM: mov r7, sp
 ; DARWIN-ARM: mov r0, r7
 
 ; DARWIN-THUMB2-LABEL: frameaddr_index0:
-; DARWIN-THUMB2: str r7, [sp, #-4]!
+; DARWIN-THUMB2: push {r7, lr}
 ; DARWIN-THUMB2: mov r7, sp
 ; DARWIN-THUMB2: mov r0, r7
 
 ; LINUX-ARM-LABEL: frameaddr_index0:
-; LINUX-ARM: push {r11}
+; LINUX-ARM: push {r11, lr}
 ; LINUX-ARM: mov r11, sp
 ; LINUX-ARM: mov r0, r11
 
 ; LINUX-THUMB2-LABEL: frameaddr_index0:
-; LINUX-THUMB2: str r7, [sp, #-4]!
+; LINUX-THUMB2: push {r7, lr}
 ; LINUX-THUMB2: mov r7, sp
 ; LINUX-THUMB2: mov r0, r7
 
@@ -32,22 +32,22 @@ entry:
 define i8* @frameaddr_index1() nounwind {
 entry:
 ; DARWIN-ARM-LABEL: frameaddr_index1:
-; DARWIN-ARM: push {r7}
+; DARWIN-ARM: push {r7, lr}
 ; DARWIN-ARM: mov r7, sp
 ; DARWIN-ARM: ldr r0, [r7]
 
 ; DARWIN-THUMB2-LABEL: frameaddr_index1:
-; DARWIN-THUMB2: str r7, [sp, #-4]!
+; DARWIN-THUMB2: push {r7, lr}
 ; DARWIN-THUMB2: mov r7, sp
 ; DARWIN-THUMB2: ldr r0, [r7]
 
 ; LINUX-ARM-LABEL: frameaddr_index1:
-; LINUX-ARM: push {r11}
+; LINUX-ARM: push {r11, lr}
 ; LINUX-ARM: mov r11, sp
 ; LINUX-ARM: ldr r0, [r11]
 
 ; LINUX-THUMB2-LABEL: frameaddr_index1:
-; LINUX-THUMB2: str r7, [sp, #-4]!
+; LINUX-THUMB2: push {r7, lr}
 ; LINUX-THUMB2: mov r7, sp
 ; LINUX-THUMB2: mov r0, r7
 ; LINUX-THUMB2: ldr r0, [r0]
@@ -59,28 +59,28 @@ entry:
 define i8* @frameaddr_index3() nounwind {
 entry:
 ; DARWIN-ARM-LABEL: frameaddr_index3:
-; DARWIN-ARM: push {r7}
+; DARWIN-ARM: push {r7, lr}
 ; DARWIN-ARM: mov r7, sp
 ; DARWIN-ARM: ldr r0, [r7]
 ; DARWIN-ARM: ldr r0, [r0]
 ; DARWIN-ARM: ldr r0, [r0]
 
 ; DARWIN-THUMB2-LABEL: frameaddr_index3:
-; DARWIN-THUMB2: str r7, [sp, #-4]!
+; DARWIN-THUMB2: push {r7, lr}
 ; DARWIN-THUMB2: mov r7, sp
 ; DARWIN-THUMB2: ldr r0, [r7]
 ; DARWIN-THUMB2: ldr r0, [r0]
 ; DARWIN-THUMB2: ldr r0, [r0]
 
 ; LINUX-ARM-LABEL: frameaddr_index3:
-; LINUX-ARM: push {r11}
+; LINUX-ARM: push {r11, lr}
 ; LINUX-ARM: mov r11, sp
 ; LINUX-ARM: ldr r0, [r11]
 ; LINUX-ARM: ldr r0, [r0]
 ; LINUX-ARM: ldr r0, [r0]
 
 ; LINUX-THUMB2-LABEL: frameaddr_index3:
-; LINUX-THUMB2: str r7, [sp, #-4]!
+; LINUX-THUMB2: push {r7, lr}
 ; LINUX-THUMB2: mov r7, sp
 ; LINUX-THUMB2: mov r0, r7
 ; LINUX-THUMB2: ldr r0, [r0]

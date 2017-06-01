@@ -1,7 +1,6 @@
 ; RUN: opt < %s  -tbaa -basicaa -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine -simplifycfg -S | FileCheck %s
 ; RUN: opt < %s  -basicaa -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine -simplifycfg -S | FileCheck %s --check-prefix=CHECK-NOTBAA
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
 define i32 @test1(i32* nocapture %a, float* nocapture readonly %b) #0 {
@@ -36,7 +35,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK: ret i32 0
 
 ; CHECK-NOTBAA-LABEL: @test1
-; CHECK-NOTBAA: icmp uge i32*
+; CHECK-NOTBAA: icmp ugt i32*
 
 ; CHECK-NOTBAA: load <4 x float>, <4 x float>* %{{.*}}, align 4, !tbaa
 ; CHECK-NOTBAA: store <4 x i32> %{{.*}}, <4 x i32>* %{{.*}}, align 4, !tbaa
@@ -70,8 +69,8 @@ for.end:                                          ; preds = %for.body
 ; required. Without TBAA, however, two checks are required.
 
 ; CHECK-LABEL: @test2
-; CHECK: icmp uge float*
-; CHECK: icmp uge float*
+; CHECK: icmp ugt float*
+; CHECK: icmp ugt float*
 ; CHECK-NOT: icmp uge i32*
 
 ; CHECK: load <4 x float>, <4 x float>* %{{.*}}, align 4, !tbaa
@@ -80,10 +79,10 @@ for.end:                                          ; preds = %for.body
 ; CHECK: ret i32 0
 
 ; CHECK-NOTBAA-LABEL: @test2
-; CHECK-NOTBAA: icmp uge float*
-; CHECK-NOTBAA: icmp uge float*
-; CHECK-NOTBAA-DAG: icmp uge float*
-; CHECK-NOTBAA-DAG: icmp uge i32*
+; CHECK-NOTBAA: icmp ugt float*
+; CHECK-NOTBAA: icmp ugt float*
+; CHECK-NOTBAA-DAG: icmp ugt float*
+; CHECK-NOTBAA-DAG: icmp ugt i32*
 
 ; CHECK-NOTBAA: load <4 x float>, <4 x float>* %{{.*}}, align 4, !tbaa
 ; CHECK-NOTBAA: store <4 x float> %{{.*}}, <4 x float>* %{{.*}}, align 4, !tbaa

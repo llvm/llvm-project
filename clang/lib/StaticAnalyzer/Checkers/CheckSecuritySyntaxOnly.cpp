@@ -86,8 +86,7 @@ public:
   // Helpers.
   bool checkCall_strCommon(const CallExpr *CE, const FunctionDecl *FD);
 
-  typedef void (WalkAST::*FnCheck)(const CallExpr *,
-				   const FunctionDecl *);
+  typedef void (WalkAST::*FnCheck)(const CallExpr *, const FunctionDecl *);
 
   // Checker-specific methods.
   void checkLoopConditionForFloat(const ForStmt *FS);

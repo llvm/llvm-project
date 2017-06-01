@@ -25,4 +25,4 @@ void quux(int a1, int a2, int a3) {
 // CHECK-LABEL: define x86_stdcallcc void @quux
 // CHECK: call void (i32, ...) @qux
 
-// CHECK: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }

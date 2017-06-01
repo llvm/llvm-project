@@ -9,9 +9,9 @@ target triple = "x86_64-apple-macosx"
 ; CHECK-NOT: {{.*}}, %xmm0
 ; %addr lives in rdi.
 ; %addr2 lives in rsi.
-; CHECK: vmovss (%rsi), [[ADDR2:%xmm[0-9]+]]
+; CHECK: vmovss (%rdi), [[ADDR:%xmm[0-9]+]]
 ; The assembly syntax is in the reverse order.
-; CHECK: vfmadd231ss (%rdi), [[ADDR2]], %xmm0
+; CHECK: vfmadd231ss (%rsi), [[ADDR]], %xmm0
 define void @test1(float* %addr, float* %addr2, float %arg) {
 entry:
   br label %loop
