@@ -33,9 +33,12 @@ struct MsanMapUnmapCallback {
 
     // We are about to unmap a chunk of user memory.
     // Mark the corresponding shadow memory as not needed.
-    FlushUnneededShadowMemory(MEM_TO_SHADOW(p), size);
-    if (__msan_get_track_origins())
-      FlushUnneededShadowMemory(MEM_TO_ORIGIN(p), size);
+    uptr shadow_p = MEM_TO_SHADOW(p);
+    ReleaseMemoryPagesToOS(shadow_p, shadow_p + size);
+    if (__msan_get_track_origins()) {
+      uptr origin_p = MEM_TO_ORIGIN(p);
+      ReleaseMemoryPagesToOS(origin_p, origin_p + size);
+    }
   }
 };
 
@@ -56,23 +59,32 @@ struct MsanMapUnmapCallback {
 #else
   static const uptr kAllocatorSpace = 0x600000000000ULL;
 #endif
-  static const uptr kAllocatorSize = 0x80000000000; // 8T.
-  static const uptr kMetadataSize  = sizeof(Metadata);
   static const uptr kMaxAllowedMallocSize = 8UL << 30;
 
-  typedef SizeClassAllocator64<kAllocatorSpace, kAllocatorSize, kMetadataSize,
-                             DefaultSizeClassMap,
-                             MsanMapUnmapCallback> PrimaryAllocator;
+  struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+    static const uptr kSpaceBeg = kAllocatorSpace;
+    static const uptr kSpaceSize = 0x40000000000; // 4T.
+    static const uptr kMetadataSize = sizeof(Metadata);
+    typedef DefaultSizeClassMap SizeClassMap;
+    typedef MsanMapUnmapCallback MapUnmapCallback;
+    static const uptr kFlags = 0;
+  };
+
+  typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 
 #elif defined(__powerpc64__)
-  static const uptr kAllocatorSpace = 0x300000000000;
-  static const uptr kAllocatorSize  = 0x020000000000;  // 2T
-  static const uptr kMetadataSize  = sizeof(Metadata);
   static const uptr kMaxAllowedMallocSize = 2UL << 30;  // 2G
 
-  typedef SizeClassAllocator64<kAllocatorSpace, kAllocatorSize, kMetadataSize,
-                             DefaultSizeClassMap,
-                             MsanMapUnmapCallback> PrimaryAllocator;
+  struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+    static const uptr kSpaceBeg = 0x300000000000;
+    static const uptr kSpaceSize = 0x020000000000; // 2T.
+    static const uptr kMetadataSize = sizeof(Metadata);
+    typedef DefaultSizeClassMap SizeClassMap;
+    typedef MsanMapUnmapCallback MapUnmapCallback;
+    static const uptr kFlags = 0;
+  };
+
+  typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 #elif defined(__aarch64__)
   static const uptr kMaxAllowedMallocSize = 2UL << 30;  // 2G
   static const uptr kRegionSizeLog = 20;
@@ -94,7 +106,9 @@ static AllocatorCache fallback_allocator_cache;
 static SpinMutex fallback_mutex;
 
 void MsanAllocatorInit() {
-  allocator.Init(common_flags()->allocator_may_return_null);
+  allocator.Init(
+      common_flags()->allocator_may_return_null,
+      common_flags()->allocator_release_to_os_interval_ms);
 }
 
 AllocatorCache *GetAllocatorCache(MsanThreadLocalMallocStorage *ms) {
@@ -112,7 +126,7 @@ static void *MsanAllocate(StackTrace *stack, uptr size, uptr alignment,
   if (size > kMaxAllowedMallocSize) {
     Report("WARNING: MemorySanitizer failed to allocate %p bytes\n",
            (void *)size);
-    return allocator.ReturnNullOrDie();
+    return allocator.ReturnNullOrDieOnBadRequest();
   }
   MsanThread *t = GetCurrentThread();
   void *allocated;
@@ -170,7 +184,7 @@ void MsanDeallocate(StackTrace *stack, void *p) {
 
 void *MsanCalloc(StackTrace *stack, uptr nmemb, uptr size) {
   if (CallocShouldReturnNullDueToOverflow(size, nmemb))
-    return allocator.ReturnNullOrDie();
+    return allocator.ReturnNullOrDieOnBadRequest();
   return MsanReallocate(stack, nullptr, nmemb * size, sizeof(u64), true);
 }
 

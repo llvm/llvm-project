@@ -11,6 +11,12 @@ declare void @f()
 ; CHECK: Alias must point to a definition
 ; CHECK-NEXT: @ga
 
+define available_externally void @f2() {
+  ret void
+}
+@fa2 = alias void(), void()* @f2
+; CHECK: Alias must point to a definition
+; CHECK-NEXT: @fa2
 
 @test2_a = alias i32, i32* @test2_b
 @test2_b = alias i32, i32* @test2_a
@@ -23,5 +29,5 @@ declare void @f()
 @test3_a = global i32 42
 @test3_b = weak alias i32, i32* @test3_a
 @test3_c = alias i32, i32* @test3_b
-; CHECK: Alias cannot point to a weak alias
+; CHECK: Alias cannot point to an interposable alias
 ; CHECK-NEXT: i32* @test3_c

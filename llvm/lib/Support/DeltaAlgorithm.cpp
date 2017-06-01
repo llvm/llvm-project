@@ -9,6 +9,7 @@
 #include "llvm/ADT/DeltaAlgorithm.h"
 #include <algorithm>
 #include <iterator>
+#include <set>
 using namespace llvm;
 
 DeltaAlgorithm::~DeltaAlgorithm() {

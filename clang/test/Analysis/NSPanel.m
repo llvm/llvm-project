@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -analyzer-constraints=range -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -verify -Wno-objc-root-class %s
 // expected-no-diagnostics
 
 // BEGIN delta-debugging reduced header stuff

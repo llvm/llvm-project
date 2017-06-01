@@ -1,5 +1,5 @@
-// RUN: llvm-mc -filetype=obj -triple i386-pc-linux-gnu %s -o - | llvm-readobj -r  | FileCheck  %s --check-prefix=CHECK --check-prefix=I386 
-// RUN: llvm-mc -filetype=obj -triple i386-pc-elfiamcu %s -o - | llvm-readobj -r  | FileCheck  %s --check-prefix=CHECK --check-prefix=IAMCU
+// RUN: llvm-mc -filetype=obj -triple i386-pc-linux-gnu %s -relax-relocations=false -o - | llvm-readobj -r  | FileCheck  %s --check-prefix=CHECK --check-prefix=I386
+// RUN: llvm-mc -filetype=obj -triple i386-pc-elfiamcu %s -relax-relocations=false  -o - | llvm-readobj -r  | FileCheck  %s --check-prefix=CHECK --check-prefix=IAMCU
 
 // Test that we produce the correct relocation types and that the relocations
 // correctly point to the section or the symbol.

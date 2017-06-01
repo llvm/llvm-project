@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-store=region -analyzer-output=text -fblocks -verify -Wno-objc-root-class %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-store=region -analyzer-output=plist-multi-file -analyzer-config path-diagnostics-alternate=false -fblocks -Wno-objc-root-class %s -o %t
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region -analyzer-output=text -fblocks -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region -analyzer-output=plist-multi-file -analyzer-config path-diagnostics-alternate=false -fblocks -Wno-objc-root-class %s -o %t
 // RUN: FileCheck --input-file=%t %s
 
 @interface Root {

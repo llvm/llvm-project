@@ -1,7 +1,6 @@
-; RUN: llc -march=aarch64 -aarch64-neon-syntax=generic < %s | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-linux--gnu -aarch64-neon-syntax=generic | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-linu--gnu"
 
 ; CHECK-LABEL: smax_B
 ; CHECK: smaxv {{b[0-9]+}}, {{v[0-9]+}}.16b

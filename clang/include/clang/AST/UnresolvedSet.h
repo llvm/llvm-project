@@ -17,7 +17,6 @@
 
 #include "clang/AST/DeclAccessPair.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 
@@ -39,7 +38,9 @@ class UnresolvedSetIterator : public llvm::iterator_adaptor_base<
       : iterator_adaptor_base(const_cast<DeclAccessPair *>(Iter)) {}
 
 public:
-  UnresolvedSetIterator() {}
+  // Work around a bug in MSVC 2013 where explicitly default constructed
+  // temporaries with defaulted ctors are not zero initialized.
+  UnresolvedSetIterator() : iterator_adaptor_base(nullptr) {}
 
   NamedDecl *getDecl() const { return I->getDecl(); }
   void setDecl(NamedDecl *ND) const { return I->setDecl(ND); }
@@ -59,8 +60,13 @@ class UnresolvedSetImpl {
   // UnresolvedSet.
 private:
   template <unsigned N> friend class UnresolvedSet;
-  UnresolvedSetImpl() {}
-  UnresolvedSetImpl(const UnresolvedSetImpl &) {}
+  UnresolvedSetImpl() = default;
+  UnresolvedSetImpl(const UnresolvedSetImpl &) = default;
+  UnresolvedSetImpl &operator=(const UnresolvedSetImpl &) = default;
+
+  // FIXME: Switch these to "= default" once MSVC supports generating move ops
+  UnresolvedSetImpl(UnresolvedSetImpl &&) {}
+  UnresolvedSetImpl &operator=(UnresolvedSetImpl &&) { return *this; }
 
 public:
   // We don't currently support assignment through this iterator, so we might

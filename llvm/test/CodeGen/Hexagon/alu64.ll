@@ -193,7 +193,7 @@ entry:
 }
 
 ; CHECK-LABEL: @test53
-; CHECK: = add(r0, r3:2)
+; CHECK: = add(r1:0, r3:2):raw:
 define i64 @test53(i32 %Rs, i64 %Rt) #0 {
 entry:
   %0 = tail call i64 @llvm.hexagon.A2.addsp(i32 %Rs, i64 %Rt)

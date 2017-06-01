@@ -27,14 +27,16 @@
 #ifndef LLVM_SUPPORT_FILESYSTEM_H
 #define LLVM_SUPPORT_FILESYSTEM_H
 
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TimeValue.h"
+#include "llvm/Support/ErrorOr.h"
+#include <cassert>
+#include <cstdint>
 #include <ctime>
-#include <iterator>
+#include <memory>
 #include <stack>
 #include <string>
 #include <system_error>
@@ -122,6 +124,7 @@ class UniqueID {
 public:
   UniqueID() = default;
   UniqueID(uint64_t Device, uint64_t File) : Device(Device), File(File) {}
+
   bool operator==(const UniqueID &Other) const {
     return Device == Other.Device && File == Other.File;
   }
@@ -129,6 +132,7 @@ public:
   bool operator<(const UniqueID &Other) const {
     return std::tie(Device, File) < std::tie(Other.Device, Other.File);
   }
+
   uint64_t getDevice() const { return Device; }
   uint64_t getFile() const { return File; }
 };
@@ -140,11 +144,14 @@ class file_status
   #if defined(LLVM_ON_UNIX)
   dev_t fs_st_dev;
   ino_t fs_st_ino;
+  time_t fs_st_atime;
   time_t fs_st_mtime;
   uid_t fs_st_uid;
   gid_t fs_st_gid;
   off_t fs_st_size;
   #elif defined (LLVM_ON_WIN32)
+  uint32_t LastAccessedTimeHigh;
+  uint32_t LastAccessedTimeLow;
   uint32_t LastWriteTimeHigh;
   uint32_t LastWriteTimeLow;
   uint32_t VolumeSerialNumber;
@@ -159,44 +166,52 @@ class file_status
 
 public:
   #if defined(LLVM_ON_UNIX)
-    file_status() : fs_st_dev(0), fs_st_ino(0), fs_st_mtime(0),
+  file_status()
+      : fs_st_dev(0), fs_st_ino(0), fs_st_atime(0), fs_st_mtime(0),
         fs_st_uid(0), fs_st_gid(0), fs_st_size(0),
         Type(file_type::status_error), Perms(perms_not_known) {}
 
-    file_status(file_type Type) : fs_st_dev(0), fs_st_ino(0), fs_st_mtime(0),
+  file_status(file_type Type)
+      : fs_st_dev(0), fs_st_ino(0), fs_st_atime(0), fs_st_mtime(0),
         fs_st_uid(0), fs_st_gid(0), fs_st_size(0), Type(Type),
         Perms(perms_not_known) {}
 
-    file_status(file_type Type, perms Perms, dev_t Dev, ino_t Ino, time_t MTime,
-                uid_t UID, gid_t GID, off_t Size)
-        : fs_st_dev(Dev), fs_st_ino(Ino), fs_st_mtime(MTime), fs_st_uid(UID),
-          fs_st_gid(GID), fs_st_size(Size), Type(Type), Perms(Perms) {}
+  file_status(file_type Type, perms Perms, dev_t Dev, ino_t Ino, time_t ATime,
+              time_t MTime, uid_t UID, gid_t GID, off_t Size)
+      : fs_st_dev(Dev), fs_st_ino(Ino), fs_st_atime(ATime), fs_st_mtime(MTime),
+        fs_st_uid(UID), fs_st_gid(GID), fs_st_size(Size), Type(Type),
+        Perms(Perms) {}
   #elif defined(LLVM_ON_WIN32)
-    file_status() : LastWriteTimeHigh(0), LastWriteTimeLow(0),
-        VolumeSerialNumber(0), FileSizeHigh(0), FileSizeLow(0),
-        FileIndexHigh(0), FileIndexLow(0), Type(file_type::status_error),
+  file_status()
+      : LastAccessedTimeHigh(0), LastAccessedTimeLow(0), LastWriteTimeHigh(0),
+        LastWriteTimeLow(0), VolumeSerialNumber(0), FileSizeHigh(0),
+        FileSizeLow(0), FileIndexHigh(0), FileIndexLow(0),
+        Type(file_type::status_error), Perms(perms_not_known) {}
+
+  file_status(file_type Type)
+      : LastAccessedTimeHigh(0), LastAccessedTimeLow(0), LastWriteTimeHigh(0),
+        LastWriteTimeLow(0), VolumeSerialNumber(0), FileSizeHigh(0),
+        FileSizeLow(0), FileIndexHigh(0), FileIndexLow(0), Type(Type),
         Perms(perms_not_known) {}
 
-    file_status(file_type Type) : LastWriteTimeHigh(0), LastWriteTimeLow(0),
-        VolumeSerialNumber(0), FileSizeHigh(0), FileSizeLow(0),
-        FileIndexHigh(0), FileIndexLow(0), Type(Type),
-        Perms(perms_not_known) {}
-
-    file_status(file_type Type, uint32_t LastWriteTimeHigh,
-                uint32_t LastWriteTimeLow, uint32_t VolumeSerialNumber,
-                uint32_t FileSizeHigh, uint32_t FileSizeLow,
-                uint32_t FileIndexHigh, uint32_t FileIndexLow)
-        : LastWriteTimeHigh(LastWriteTimeHigh),
-          LastWriteTimeLow(LastWriteTimeLow),
-          VolumeSerialNumber(VolumeSerialNumber), FileSizeHigh(FileSizeHigh),
-          FileSizeLow(FileSizeLow), FileIndexHigh(FileIndexHigh),
-          FileIndexLow(FileIndexLow), Type(Type), Perms(perms_not_known) {}
+  file_status(file_type Type, uint32_t LastAccessTimeHigh,
+              uint32_t LastAccessTimeLow, uint32_t LastWriteTimeHigh,
+              uint32_t LastWriteTimeLow, uint32_t VolumeSerialNumber,
+              uint32_t FileSizeHigh, uint32_t FileSizeLow,
+              uint32_t FileIndexHigh, uint32_t FileIndexLow)
+      : LastAccessedTimeHigh(LastAccessTimeHigh), LastAccessedTimeLow(LastAccessTimeLow),
+        LastWriteTimeHigh(LastWriteTimeHigh),
+        LastWriteTimeLow(LastWriteTimeLow),
+        VolumeSerialNumber(VolumeSerialNumber), FileSizeHigh(FileSizeHigh),
+        FileSizeLow(FileSizeLow), FileIndexHigh(FileIndexHigh),
+        FileIndexLow(FileIndexLow), Type(Type), Perms(perms_not_known) {}
   #endif
 
   // getters
   file_type type() const { return Type; }
   perms permissions() const { return Perms; }
-  TimeValue getLastModificationTime() const;
+  TimePoint<> getLastAccessedTime() const;
+  TimePoint<> getLastModificationTime() const;
   UniqueID getUniqueID() const;
 
   #if defined(LLVM_ON_UNIX)
@@ -244,14 +259,16 @@ struct file_magic {
     macho_dsym_companion,     ///< Mach-O dSYM companion file
     macho_kext_bundle,        ///< Mach-O kext bundle file
     macho_universal_binary,   ///< Mach-O universal binary
+    coff_cl_gl_object,        ///< Microsoft cl.exe's intermediate code file
     coff_object,              ///< COFF object file
     coff_import_library,      ///< COFF import library
     pecoff_executable,        ///< PECOFF executable file
-    windows_resource          ///< Windows compiled resource file (.rc)
+    windows_resource,         ///< Windows compiled resource file (.rc)
+    wasm_object               ///< WebAssembly Object file
   };
 
   bool is_object() const {
-    return V == unknown ? false : true;
+    return V != unknown;
   }
 
   file_magic() : V(unknown) {}
@@ -324,6 +341,14 @@ std::error_code create_directory(const Twine &path, bool IgnoreExisting = true,
 /// @returns errc::success if the link was created, otherwise a platform
 /// specific error_code.
 std::error_code create_link(const Twine &to, const Twine &from);
+
+/// Create a hard link from \a from to \a to, or return an error.
+///
+/// @param to The path to hard link to.
+/// @param from The path to hard link from. This is created.
+/// @returns errc::success if the link was created, otherwise a platform
+/// specific error_code.
+std::error_code create_hard_link(const Twine &to, const Twine &from);
 
 /// @brief Get the current path.
 ///
@@ -526,7 +551,7 @@ inline std::error_code file_size(const Twine &Path, uint64_t &Result) {
 /// @returns errc::success if the file times were successfully set, otherwise a
 ///          platform-specific error_code or errc::function_not_supported on
 ///          platforms where the functionality isn't available.
-std::error_code setLastModificationAndAccessTime(int FD, TimeValue Time);
+std::error_code setLastModificationAndAccessTime(int FD, TimePoint<> Time);
 
 /// @brief Is status available?
 ///
@@ -590,6 +615,12 @@ std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
 std::error_code createUniqueDirectory(const Twine &Prefix,
                                       SmallVectorImpl<char> &ResultPath);
 
+/// @brief Fetch a path to an open file, as specified by a file descriptor
+///
+/// @param FD File descriptor to a currently open file
+/// @param ResultPath The buffer into which to write the path
+std::error_code getPathFromOpenFD(int FD, SmallVectorImpl<char> &ResultPath);
+
 enum OpenFlags : unsigned {
   F_None = 0,
 
@@ -622,7 +653,8 @@ inline OpenFlags &operator|=(OpenFlags &A, OpenFlags B) {
 std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
                                  OpenFlags Flags, unsigned Mode = 0666);
 
-std::error_code openFileForRead(const Twine &Name, int &ResultFD);
+std::error_code openFileForRead(const Twine &Name, int &ResultFD,
+                                SmallVectorImpl<char> *RealPath = nullptr);
 
 /// @brief Identify the type of a binary file based on how magical it is.
 file_magic identify_magic(StringRef magic);
@@ -637,13 +669,20 @@ std::error_code identify_magic(const Twine &path, file_magic &result);
 
 std::error_code getUniqueID(const Twine Path, UniqueID &Result);
 
+/// @brief Get disk space usage information.
+///
+/// Note: Users must be careful about "Time Of Check, Time Of Use" kind of bug.
+/// Note: Windows reports results according to the quota allocated to the user.
+///
+/// @param Path Input path.
+/// @returns a space_info structure filled with the capacity, free, and
+/// available space on the device \a Path is on. A platform specific error_code
+/// is returned on error.
+ErrorOr<space_info> disk_space(const Twine &Path);
+
 /// This class represents a memory mapped file. It is based on
 /// boost::iostreams::mapped_file.
 class mapped_file_region {
-  mapped_file_region() = delete;
-  mapped_file_region(mapped_file_region&) = delete;
-  mapped_file_region &operator =(mapped_file_region&) = delete;
-
 public:
   enum mapmode {
     readonly, ///< May only access map via const_data as read only.
@@ -659,6 +698,10 @@ private:
   std::error_code init(int FD, uint64_t Offset, mapmode Mode);
 
 public:
+  mapped_file_region() = delete;
+  mapped_file_region(mapped_file_region&) = delete;
+  mapped_file_region &operator =(mapped_file_region&) = delete;
+
   /// \param fd An open file descriptor to map. mapped_file_region takes
   ///   ownership if closefd is true. It must have been opended in the correct
   ///   mode.
@@ -699,7 +742,7 @@ public:
     : Path(path.str())
     , Status(st) {}
 
-  directory_entry() {}
+  directory_entry() = default;
 
   void assign(const Twine &path, file_status st = file_status()) {
     Path = path.str();
@@ -726,42 +769,38 @@ namespace detail {
   std::error_code directory_iterator_increment(DirIterState &);
   std::error_code directory_iterator_destruct(DirIterState &);
 
-  /// DirIterState - Keeps state for the directory_iterator. It is reference
-  /// counted in order to preserve InputIterator semantics on copy.
-  struct DirIterState : public RefCountedBase<DirIterState> {
-    DirIterState()
-      : IterationHandle(0) {}
-
+  /// Keeps state for the directory_iterator.
+  struct DirIterState {
     ~DirIterState() {
       directory_iterator_destruct(*this);
     }
 
-    intptr_t IterationHandle;
+    intptr_t IterationHandle = 0;
     directory_entry CurrentEntry;
   };
-}
+} // end namespace detail
 
 /// directory_iterator - Iterates through the entries in path. There is no
 /// operator++ because we need an error_code. If it's really needed we can make
 /// it call report_fatal_error on error.
 class directory_iterator {
-  IntrusiveRefCntPtr<detail::DirIterState> State;
+  std::shared_ptr<detail::DirIterState> State;
 
 public:
   explicit directory_iterator(const Twine &path, std::error_code &ec) {
-    State = new detail::DirIterState;
+    State = std::make_shared<detail::DirIterState>();
     SmallString<128> path_storage;
     ec = detail::directory_iterator_construct(*State,
             path.toStringRef(path_storage));
   }
 
   explicit directory_iterator(const directory_entry &de, std::error_code &ec) {
-    State = new detail::DirIterState;
+    State = std::make_shared<detail::DirIterState>();
     ec = detail::directory_iterator_construct(*State, de.path());
   }
 
   /// Construct end iterator.
-  directory_iterator() : State(nullptr) {}
+  directory_iterator() = default;
 
   // No operator++ because we need error_code.
   directory_iterator &increment(std::error_code &ec) {
@@ -790,35 +829,31 @@ public:
 };
 
 namespace detail {
-  /// RecDirIterState - Keeps state for the recursive_directory_iterator. It is
-  /// reference counted in order to preserve InputIterator semantics on copy.
-  struct RecDirIterState : public RefCountedBase<RecDirIterState> {
-    RecDirIterState()
-      : Level(0)
-      , HasNoPushRequest(false) {}
-
-    std::stack<directory_iterator, std::vector<directory_iterator> > Stack;
-    uint16_t Level;
-    bool HasNoPushRequest;
+  /// Keeps state for the recursive_directory_iterator.
+  struct RecDirIterState {
+    std::stack<directory_iterator, std::vector<directory_iterator>> Stack;
+    uint16_t Level = 0;
+    bool HasNoPushRequest = false;
   };
-}
+} // end namespace detail
 
 /// recursive_directory_iterator - Same as directory_iterator except for it
 /// recurses down into child directories.
 class recursive_directory_iterator {
-  IntrusiveRefCntPtr<detail::RecDirIterState> State;
+  std::shared_ptr<detail::RecDirIterState> State;
 
 public:
-  recursive_directory_iterator() {}
+  recursive_directory_iterator() = default;
   explicit recursive_directory_iterator(const Twine &path, std::error_code &ec)
-      : State(new detail::RecDirIterState) {
+      : State(std::make_shared<detail::RecDirIterState>()) {
     State->Stack.push(directory_iterator(path, ec));
     if (State->Stack.top() == directory_iterator())
       State.reset();
   }
+
   // No operator++ because we need error_code.
   recursive_directory_iterator &increment(std::error_code &ec) {
-    const directory_iterator end_itr;
+    const directory_iterator end_itr = {};
 
     if (State->HasNoPushRequest)
       State->HasNoPushRequest = false;
@@ -865,7 +900,7 @@ public:
     assert(State && "Cannot pop an end iterator!");
     assert(State->Level > 0 && "Cannot pop an iterator with level < 1");
 
-    const directory_iterator end_itr;
+    const directory_iterator end_itr = {};
     std::error_code ec;
     do {
       if (ec)
@@ -900,4 +935,4 @@ public:
 } // end namespace sys
 } // end namespace llvm
 
-#endif
+#endif // LLVM_SUPPORT_FILESYSTEM_H

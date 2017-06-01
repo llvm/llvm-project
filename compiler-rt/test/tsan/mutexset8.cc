@@ -26,7 +26,7 @@ int main() {
   // CHECK:   Previous write of size 4 at {{.*}} by thread T2:
   // CHECK:   Mutex [[M1]] (0x{{.*}}) created at:
   // CHECK:     #0 pthread_mutex_init
-  // CHECK:     #1 main {{.*}}/mutexset8.cc
+  // CHECK:     #1 main {{.*}}mutexset8.cc
   mtx = new pthread_mutex_t;
   pthread_mutex_init(mtx, 0);
   pthread_t t[2];

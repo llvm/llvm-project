@@ -17,6 +17,10 @@
 
 #include "sanitizer_common/sanitizer_thread_registry.h"
 
+namespace __sanitizer {
+struct DTLS;
+}
+
 namespace __lsan {
 
 class ThreadContext : public ThreadContextBase {
@@ -30,10 +34,13 @@ class ThreadContext : public ThreadContextBase {
   uptr tls_end() { return tls_end_; }
   uptr cache_begin() { return cache_begin_; }
   uptr cache_end() { return cache_end_; }
+  DTLS *dtls() { return dtls_; }
+
  private:
   uptr stack_begin_, stack_end_,
        cache_begin_, cache_end_,
        tls_begin_, tls_end_;
+  DTLS *dtls_;
 };
 
 void InitializeThreadRegistry();

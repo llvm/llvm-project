@@ -19,11 +19,17 @@
 #ifndef LLVM_CLANG_TOOLING_CORE_REPLACEMENT_H
 #define LLVM_CLANG_TOOLING_CORE_REPLACEMENT_H
 
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
+#include <map>
 #include <set>
 #include <string>
+#include <system_error>
 #include <vector>
 
 namespace clang {
@@ -55,6 +61,11 @@ public:
   bool contains(Range RHS) const {
     return RHS.Offset >= Offset &&
            (RHS.Offset + RHS.Length) <= (Offset + Length);
+  }
+
+  /// \brief Whether this range equals to \p RHS or not.
+  bool operator==(const Range &RHS) const {
+    return Offset == RHS.getOffset() && Length == RHS.getLength();
   }
   /// @}
 
@@ -116,18 +127,70 @@ public:
   /// \brief Returns a human readable string representation.
   std::string toString() const;
 
- private:
-   void setFromSourceLocation(const SourceManager &Sources,
-                              SourceLocation Start, unsigned Length,
-                              StringRef ReplacementText);
-   void setFromSourceRange(const SourceManager &Sources,
-                           const CharSourceRange &Range,
-                           StringRef ReplacementText,
-                           const LangOptions &LangOpts);
+private:
+  void setFromSourceLocation(const SourceManager &Sources, SourceLocation Start,
+                             unsigned Length, StringRef ReplacementText);
+  void setFromSourceRange(const SourceManager &Sources,
+                          const CharSourceRange &Range,
+                          StringRef ReplacementText,
+                          const LangOptions &LangOpts);
 
   std::string FilePath;
   Range ReplacementRange;
   std::string ReplacementText;
+};
+
+enum class replacement_error {
+  fail_to_apply = 0,
+  wrong_file_path,
+  overlap_conflict,
+  insert_conflict,
+};
+
+/// \brief Carries extra error information in replacement-related llvm::Error,
+/// e.g. fail applying replacements and replacements conflict.
+class ReplacementError : public llvm::ErrorInfo<ReplacementError> {
+public:
+  ReplacementError(replacement_error Err) : Err(Err) {}
+
+  /// \brief Constructs an error related to an existing replacement.
+  ReplacementError(replacement_error Err, Replacement Existing)
+      : Err(Err), ExistingReplacement(std::move(Existing)) {}
+
+  /// \brief Constructs an error related to a new replacement and an existing
+  /// replacement in a set of replacements.
+  ReplacementError(replacement_error Err, Replacement New, Replacement Existing)
+      : Err(Err), NewReplacement(std::move(New)),
+        ExistingReplacement(std::move(Existing)) {}
+
+  std::string message() const override;
+
+  void log(raw_ostream &OS) const override { OS << message(); }
+
+  replacement_error get() const { return Err; }
+
+  static char ID;
+
+  const llvm::Optional<Replacement> &getNewReplacement() const {
+    return NewReplacement;
+  }
+
+  const llvm::Optional<Replacement> &getExistingReplacement() const {
+    return ExistingReplacement;
+  }
+
+private:
+  // Users are not expected to use error_code.
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+
+  replacement_error Err;
+  // A new replacement, which is to expected be added into a set of
+  // replacements, that is causing problem.
+  llvm::Optional<Replacement> NewReplacement;
+  // An existing replacement in a replacements set that is causing problem.
+  llvm::Optional<Replacement> ExistingReplacement;
 };
 
 /// \brief Less-than operator between two Replacements.
@@ -136,65 +199,112 @@ bool operator<(const Replacement &LHS, const Replacement &RHS);
 /// \brief Equal-to operator between two Replacements.
 bool operator==(const Replacement &LHS, const Replacement &RHS);
 
-/// \brief A set of Replacements.
-/// FIXME: Change to a vector and deduplicate in the RefactoringTool.
-typedef std::set<Replacement> Replacements;
+/// \brief Maintains a set of replacements that are conflict-free.
+/// Two replacements are considered conflicts if they overlap or have the same
+/// offset (i.e. order-dependent).
+class Replacements {
+ private:
+   typedef std::set<Replacement> ReplacementsImpl;
 
-/// \brief Apply all replacements in \p Replaces to the Rewriter \p Rewrite.
-///
-/// Replacement applications happen independently of the success of
-/// other applications.
-///
-/// \returns true if all replacements apply. false otherwise.
-bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite);
+ public:
+  typedef ReplacementsImpl::const_iterator const_iterator;
+  typedef ReplacementsImpl::const_reverse_iterator const_reverse_iterator;
 
-/// \brief Apply all replacements in \p Replaces to the Rewriter \p Rewrite.
-///
-/// Replacement applications happen independently of the success of
-/// other applications.
-///
-/// \returns true if all replacements apply. false otherwise.
-bool applyAllReplacements(const std::vector<Replacement> &Replaces,
-                          Rewriter &Rewrite);
+  Replacements() = default;
 
-/// \brief Applies all replacements in \p Replaces to \p Code.
-///
-/// This completely ignores the path stored in each replacement. If one or more
-/// replacements cannot be applied, this returns an empty \c string.
-std::string applyAllReplacements(StringRef Code, const Replacements &Replaces);
+  explicit Replacements(const Replacement &R) { Replaces.insert(R); }
 
-/// \brief Calculates how a code \p Position is shifted when \p Replaces are
-/// applied.
-unsigned shiftedCodePosition(const Replacements& Replaces, unsigned Position);
+  /// \brief Adds a new replacement \p R to the current set of replacements.
+  /// \p R must have the same file path as all existing replacements.
+  /// Returns `success` if the replacement is successfully inserted; otherwise,
+  /// it returns an llvm::Error, i.e. there is a conflict between R and the
+  /// existing replacements (i.e. they are order-dependent) or R's file path is
+  /// different from the filepath of existing replacements. Callers must
+  /// explicitly check the Error returned, and the returned error can be
+  /// converted to a string message with `llvm::toString()`. This prevents users
+  /// from adding order-dependent replacements. To control the order in which
+  /// order-dependent replacements are applied, use merge({R}) with R referring
+  /// to the changed code after applying all existing replacements.
+  /// Two replacements A and B are considered order-independent if applying them
+  /// in either order produces the same result. Note that the range of the
+  /// replacement that is applied later still refers to the original code.
+  /// These include (but not restricted to) replacements that:
+  ///   - don't overlap (being directly adjacent is fine) and
+  ///   - are overlapping deletions.
+  ///   - are insertions at the same offset and applying them in either order
+  ///     has the same effect, i.e. X + Y = Y + X when inserting X and Y
+  ///     respectively.
+  ///   - are identical replacements, i.e. applying the same replacement twice
+  ///     is equivalent to applying it once.
+  /// Examples:
+  /// 1. Replacement A(0, 0, "a") and B(0, 0, "aa") are order-independent since
+  ///    applying them in either order gives replacement (0, 0, "aaa").
+  ///    However, A(0, 0, "a") and B(0, 0, "b") are order-dependent since
+  ///    applying A first gives (0, 0, "ab") while applying B first gives (B, A,
+  ///    "ba").
+  /// 2. Replacement A(0, 2, "123") and B(0, 2, "123") are order-independent
+  ///    since applying them in either order gives (0, 2, "123").
+  /// 3. Replacement A(0, 3, "123") and B(2, 3, "321") are order-independent
+  ///    since either order gives (0, 5, "12321").
+  /// 4. Replacement A(0, 3, "ab") and B(0, 3, "ab") are order-independent since
+  ///    applying the same replacement twice is equivalent to applying it once.
+  /// Replacements with offset UINT_MAX are special - we do not detect conflicts
+  /// for such replacements since users may add them intentionally as a special
+  /// category of replacements.
+  llvm::Error add(const Replacement &R);
 
-/// \brief Calculates how a code \p Position is shifted when \p Replaces are
-/// applied.
-///
-/// \pre Replaces[i].getOffset() <= Replaces[i+1].getOffset().
-unsigned shiftedCodePosition(const std::vector<Replacement> &Replaces,
-                             unsigned Position);
+  /// \brief Merges \p Replaces into the current replacements. \p Replaces
+  /// refers to code after applying the current replacements.
+  Replacements merge(const Replacements &Replaces) const;
 
-/// \brief Removes duplicate Replacements and reports if Replacements conflict
-/// with one another. All Replacements are assumed to be in the same file.
-///
-/// \post Replaces[i].getOffset() <= Replaces[i+1].getOffset().
-///
-/// This function sorts \p Replaces so that conflicts can be reported simply by
-/// offset into \p Replaces and number of elements in the conflict.
-void deduplicate(std::vector<Replacement> &Replaces,
-                 std::vector<Range> &Conflicts);
+  // Returns the affected ranges in the changed code.
+  std::vector<Range> getAffectedRanges() const;
 
-/// \brief Collection of Replacements generated from a single translation unit.
-struct TranslationUnitReplacements {
-  /// Name of the main source for the translation unit.
-  std::string MainSourceFile;
+  // Returns the new offset in the code after replacements being applied.
+  // Note that if there is an insertion at Offset in the current replacements,
+  // \p Offset will be shifted to Offset + Length in inserted text.
+  unsigned getShiftedCodePosition(unsigned Position) const;
 
-  /// A freeform chunk of text to describe the context of the replacements.
-  /// Will be printed, for example, when detecting conflicts during replacement
-  /// deduplication.
-  std::string Context;
+  unsigned size() const { return Replaces.size(); }
 
-  std::vector<Replacement> Replacements;
+  void clear() { Replaces.clear(); }
+
+  bool empty() const { return Replaces.empty(); }
+
+  const_iterator begin() const { return Replaces.begin(); }
+
+  const_iterator end() const { return Replaces.end(); }
+
+  const_reverse_iterator rbegin() const  { return Replaces.rbegin(); }
+
+  const_reverse_iterator rend() const { return Replaces.rend(); }
+
+  bool operator==(const Replacements &RHS) const {
+    return Replaces == RHS.Replaces;
+  }
+
+
+private:
+  Replacements(const_iterator Begin, const_iterator End)
+      : Replaces(Begin, End) {}
+
+  // Returns `R` with new range that refers to code after `Replaces` being
+  // applied.
+  Replacement getReplacementInChangedCode(const Replacement &R) const;
+
+  // Returns a set of replacements that is equivalent to the current
+  // replacements by merging all adjacent replacements. Two sets of replacements
+  // are considered equivalent if they have the same effect when they are
+  // applied.
+  Replacements getCanonicalReplacements() const;
+
+  // If `R` and all existing replacements are order-indepedent, then merge it
+  // with `Replaces` and returns the merged replacements; otherwise, returns an
+  // error.
+  llvm::Expected<Replacements>
+  mergeIfOrderIndependent(const Replacement &R) const;
+
+  ReplacementsImpl Replaces;
 };
 
 /// \brief Apply all replacements in \p Replaces to the Rewriter \p Rewrite.
@@ -205,26 +315,41 @@ struct TranslationUnitReplacements {
 /// \returns true if all replacements apply. false otherwise.
 bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite);
 
-/// \brief Apply all replacements in \p Replaces to the Rewriter \p Rewrite.
-///
-/// Replacement applications happen independently of the success of
-/// other applications.
-///
-/// \returns true if all replacements apply. false otherwise.
-bool applyAllReplacements(const std::vector<Replacement> &Replaces,
-                          Rewriter &Rewrite);
-
 /// \brief Applies all replacements in \p Replaces to \p Code.
 ///
-/// This completely ignores the path stored in each replacement. If one or more
-/// replacements cannot be applied, this returns an empty \c string.
-std::string applyAllReplacements(StringRef Code, const Replacements &Replaces);
+/// This completely ignores the path stored in each replacement. If all
+/// replacements are applied successfully, this returns the code with
+/// replacements applied; otherwise, an llvm::Error carrying llvm::StringError
+/// is returned (the Error message can be converted to string using
+/// `llvm::toString()` and 'std::error_code` in the `Error` should be ignored).
+llvm::Expected<std::string> applyAllReplacements(StringRef Code,
+                                                 const Replacements &Replaces);
 
-/// \brief Merges two sets of replacements with the second set referring to the
-/// code after applying the first set. Within both 'First' and 'Second',
-/// replacements must not overlap.
-Replacements mergeReplacements(const Replacements &First,
-                               const Replacements &Second);
+/// \brief Collection of Replacements generated from a single translation unit.
+struct TranslationUnitReplacements {
+  /// Name of the main source for the translation unit.
+  std::string MainSourceFile;
+  std::vector<Replacement> Replacements;
+};
+
+/// \brief Calculates the new ranges after \p Replaces are applied. These
+/// include both the original \p Ranges and the affected ranges of \p Replaces
+/// in the new code.
+///
+/// \pre Replacements must be for the same file.
+///
+/// \return The new ranges after \p Replaces are applied. The new ranges will be
+/// sorted and non-overlapping.
+std::vector<Range>
+calculateRangesAfterReplacements(const Replacements &Replaces,
+                                 const std::vector<Range> &Ranges);
+
+/// \brief If there are multiple <File, Replacements> pairs with the same file
+/// entry, we only keep one pair and discard the rest.
+/// If a file does not exist, its corresponding replacements will be ignored.
+std::map<std::string, Replacements> groupReplacementsByFile(
+    FileManager &FileMgr,
+    const std::map<std::string, Replacements> &FileToReplaces);
 
 template <typename Node>
 Replacement::Replacement(const SourceManager &Sources,

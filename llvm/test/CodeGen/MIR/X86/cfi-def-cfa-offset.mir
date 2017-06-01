@@ -1,5 +1,5 @@
-# RUN: llc -march=x86-64 -start-after branch-folder -stop-after branch-folder -o /dev/null %s | FileCheck %s
-# This test ensures that the MIR parser parses the .cfi_def_cfa_offset operands
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the cfi offset operands
 # correctly.
 
 --- |
@@ -21,8 +21,8 @@ stack:
 body: |
   bb.0.entry:
     %rsp = SUB64ri32 %rsp, 4040, implicit-def dead %eflags
-    ; CHECK: CFI_INSTRUCTION .cfi_def_cfa_offset 4048
-    CFI_INSTRUCTION .cfi_def_cfa_offset 4048
+    ; CHECK: CFI_INSTRUCTION def_cfa_offset 4048
+    CFI_INSTRUCTION def_cfa_offset 4048
     %rsp = ADD64ri32 %rsp, 4040, implicit-def dead %eflags
     RETQ
 ...

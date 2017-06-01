@@ -32,9 +32,10 @@ entry:
 ; HARD: vcvtb.f32.f16   {{s[0-9]+}}, s1
 ; HARD: vcvtb.f32.f16   {{s[0-9]+}}, s0
 ; HARD: vadd.f32        {{s[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}
-; HARD: vcvtb.f16.f32   s0, {{s[0-9]+}}
-; HARD-NOT: vmov
-; HARD-NOT: uxth
+; HARD: vcvtb.f16.f32   [[SREG:s[0-9]+]], {{s[0-9]+}}
+; HARD-NEXT: vmov            [[REG0:r[0-9]+]], [[SREG]]
+; HARD-NEXT: uxth            [[REG1:r[0-9]+]], [[REG0]]
+; HARD-NEXT: vmov            s0, [[REG1]]
 
 ; CHECK: bx lr
 }

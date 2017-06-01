@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
@@ -71,6 +72,7 @@ TEST_F(MemoryBufferTest, NullTerminator4K) {
   SmallString<64> TestPath;
   sys::fs::createTemporaryFile("MemoryBufferTest_NullTerminator4K", "temp",
                                TestFD, TestPath);
+  FileRemover Cleanup(TestPath);
   raw_fd_ostream OF(TestFD, true, /*unbuffered=*/true);
   for (unsigned i = 0; i < 4096 / 16; ++i) {
     OF << "0123456789abcdef";
@@ -133,6 +135,7 @@ void MemoryBufferTest::testGetOpenFileSlice(bool Reopen) {
   SmallString<64> TestPath;
   // Create a temporary file and write data into it.
   sys::fs::createTemporaryFile("prefix", "temp", TestFD, TestPath);
+  FileRemover Cleanup(TestPath);
   // OF is responsible for closing the file; If the file is not
   // reopened, it will be unbuffered so that the results are
   // immediately visible through the fd.
@@ -169,12 +172,20 @@ TEST_F(MemoryBufferTest, getOpenFileReopened) {
   testGetOpenFileSlice(true);
 }
 
+TEST_F(MemoryBufferTest, reference) {
+  OwningBuffer MB(MemoryBuffer::getMemBuffer(data));
+  MemoryBufferRef MBR(*MB);
+
+  EXPECT_EQ(MB->getBufferStart(), MBR.getBufferStart());
+  EXPECT_EQ(MB->getBufferIdentifier(), MBR.getBufferIdentifier());
+}
 
 TEST_F(MemoryBufferTest, slice) {
   // Create a file that is six pages long with different data on each page.
   int FD;
   SmallString<64> TestPath;
   sys::fs::createTemporaryFile("MemoryBufferTest_Slice", "temp", FD, TestPath);
+  FileRemover Cleanup(TestPath);
   raw_fd_ostream OF(FD, true, /*unbuffered=*/true);
   for (unsigned i = 0; i < 0x2000 / 8; ++i) {
     OF << "12345678";
@@ -214,9 +225,5 @@ TEST_F(MemoryBufferTest, slice) {
   EXPECT_TRUE(BufData2.substr(0x17F8,8).equals("12345678"));
   EXPECT_TRUE(BufData2.substr(0x1800,8).equals("abcdefgh"));
   EXPECT_TRUE(BufData2.substr(0x2FF8,8).equals("abcdefgh"));
- 
 }
-
-
-
 }

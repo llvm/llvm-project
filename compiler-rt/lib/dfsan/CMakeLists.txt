@@ -6,12 +6,13 @@ set(DFSAN_RTL_SOURCES
   dfsan_custom.cc
   dfsan_interceptors.cc)
 set(DFSAN_COMMON_CFLAGS ${SANITIZER_COMMON_CFLAGS})
-append_no_rtti_flag(DFSAN_COMMON_CFLAGS)
+append_rtti_flag(OFF DFSAN_COMMON_CFLAGS)
 # Prevent clang from generating libc calls.
 append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding DFSAN_COMMON_CFLAGS)
 
 # Static runtime library.
-add_custom_target(dfsan)
+add_compiler_rt_component(dfsan)
+
 foreach(arch ${DFSAN_SUPPORTED_ARCH})
   set(DFSAN_CFLAGS ${DFSAN_COMMON_CFLAGS})
   append_list_if(COMPILER_RT_HAS_FPIE_FLAG -fPIE DFSAN_CFLAGS)
@@ -44,5 +45,3 @@ add_custom_command(OUTPUT ${dfsan_abilist_filename}
 add_dependencies(dfsan dfsan_abilist)
 install(FILES ${dfsan_abilist_filename}
         DESTINATION ${COMPILER_RT_INSTALL_PATH})
-
-add_dependencies(compiler-rt dfsan)

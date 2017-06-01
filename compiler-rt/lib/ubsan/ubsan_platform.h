@@ -16,7 +16,8 @@
 // Other platforms should be easy to add, and probably work as-is.
 #if (defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)) && \
     (defined(__x86_64__) || defined(__i386__) || defined(__arm__) || \
-     defined(__aarch64__) || defined(__mips__) || defined(__powerpc64__))
+     defined(__aarch64__) || defined(__mips__) || defined(__powerpc64__) || \
+     defined(__s390__))
 # define CAN_SANITIZE_UB 1
 #elif defined(_WIN32)
 # define CAN_SANITIZE_UB 1

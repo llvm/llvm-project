@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-windows-msvc < %s | FileCheck %s
+; RUN: llc -stack-symbol-ordering=0 -mtriple=i686-windows-msvc < %s | FileCheck %s
 
 ; 32-bit catch-all has to use a filter function because that's how it saves the
 ; exception code.
@@ -23,16 +23,13 @@ entry:
           to label %__try.cont unwind label %lpad
 
 lpad:                                             ; preds = %entry
-  %p = catchpad [i8* bitcast (i32 ()* @"filt$main" to i8*)]
-          to label %__except unwind label %endpad
+  %cs1 = catchswitch within none [label %__except] unwind to caller
 
 __except:                                         ; preds = %lpad
+  %p = catchpad within %cs1 [i8* bitcast (i32 ()* @"filt$main" to i8*)]
   %code = load i32, i32* %__exceptioncode, align 4
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @str, i32 0, i32 0), i32 %code) #4
-  catchret %p to label %__try.cont
-
-endpad:
-  catchendpad unwind to caller
+  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @str, i32 0, i32 0), i32 %code) #4 [ "funclet"(token %p) ]
+  catchret from %p to label %__try.cont
 
 __try.cont:                                       ; preds = %entry, %__except
   ret i32 0
@@ -57,27 +54,26 @@ entry:
 
 ; CHECK-LABEL: _main:
 ; CHECK: Lmain$frame_escape_0 = [[code_offs:[-0-9]+]]
-; CHECK: Lmain$frame_escape_1 = [[reg_offs:[-0-9]+]]
-; CHECK: movl %esp, [[reg_offs]](%esi)
+; CHECK: movl %esp, [[reg_offs:[-0-9]+]](%esi)
 ; CHECK: movl $L__ehtable$main,
 ;       EH state 0
-; CHECK: movl $0, 40(%esi)
+; CHECK: movl $0, 32(%esi)
 ; CHECK: calll _crash
 ; CHECK: retl
-; CHECK: LBB0_[[lpbb:[0-9]+]]: # %lpad
+; CHECK: LBB0_[[lpbb:[0-9]+]]: # %__except
 ;       Restore ESP
 ; CHECK: movl -24(%ebp), %esp
 ;       Restore ESI
-; CHECK: leal -44(%ebp), %esi
+; CHECK: leal -36(%ebp), %esi
 ;       Restore EBP
-; CHECK: movl 12(%esi), %ebp
+; CHECK: movl 4(%esi), %ebp
 ; CHECK: movl [[code_offs]](%esi), %[[code:[a-z]+]]
-; CHECK-DAG: movl %[[code]], 4(%esp)
-; CHECK-DAG: movl $_str, (%esp)
+; CHECK: pushl %[[code]]
+; CHECK: pushl $_str
 ; CHECK: calll _printf
 
 ; CHECK: .section .xdata,"dr"
-; CHECK: Lmain$parent_frame_offset = Lmain$frame_escape_1
+; CHECK: Lmain$parent_frame_offset = [[reg_offs]]
 ; CHECK: L__ehtable$main
 ; CHECK-NEXT: .long -1
 ; CHECK-NEXT: .long _filt$main

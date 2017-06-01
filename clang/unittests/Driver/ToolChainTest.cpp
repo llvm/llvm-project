@@ -117,4 +117,29 @@ TEST(ToolChainTest, VFSGCCInstallationRelativeDir) {
             S);
 }
 
+TEST(ToolChainTest, DefaultDriverMode) {
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  struct TestDiagnosticConsumer : public DiagnosticConsumer {};
+  DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new vfs::InMemoryFileSystem);
+
+  Driver CCDriver("/home/test/bin/clang", "arm-linux-gnueabi", Diags,
+                  InMemoryFileSystem);
+  Driver CXXDriver("/home/test/bin/clang++", "arm-linux-gnueabi", Diags,
+                   InMemoryFileSystem);
+  Driver CLDriver("/home/test/bin/clang-cl", "arm-linux-gnueabi", Diags,
+                  InMemoryFileSystem);
+
+  std::unique_ptr<Compilation> CC(CCDriver.BuildCompilation({"foo.cpp"}));
+  std::unique_ptr<Compilation> CXX(CXXDriver.BuildCompilation({"foo.cpp"}));
+  std::unique_ptr<Compilation> CL(CLDriver.BuildCompilation({"foo.cpp"}));
+
+  EXPECT_TRUE(CCDriver.CCCIsCC());
+  EXPECT_TRUE(CXXDriver.CCCIsCXX());
+  EXPECT_TRUE(CLDriver.IsCLMode());
+}
+
 } // end anonymous namespace

@@ -4,9 +4,9 @@
 
 // If a program calls for the default initialization of an object of a
 // const-qualified type T, T shall be a class type with a
-// user-provided default constructor.
+// user-provided default constructor, except if T has no uninitialized fields.
 struct MakeNonPOD { MakeNonPOD(); };
-struct NoUserDefault : public MakeNonPOD { };
+struct NoUserDefault : public MakeNonPOD { int field; };
 struct HasUserDefault { HasUserDefault(); };
 
 void test_const_default_init() {
@@ -16,7 +16,7 @@ void test_const_default_init() {
 }
 
 // rdar://8501008
-struct s0 {};
+struct s0 { int field; };
 struct s1 { static const s0 foo; };
 const struct s0 s1::foo; // expected-error{{default initialization of an object of const type 'const struct s0' without a user-provided default constructor}}
 

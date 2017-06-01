@@ -1,0 +1,24 @@
+RUN: not llvm-strings -n 0 2>&1 %S/Inputs/variable-length | FileCheck --check-prefix CHECK-0 %s
+RUN: llvm-strings -n 1 %S/Inputs/variable-length | FileCheck --check-prefix CHECK-1 %s
+RUN: llvm-strings -n 2 %S/Inputs/variable-length | FileCheck --check-prefix CHECK-2 %s
+RUN: llvm-strings %S/Inputs/variable-length | FileCheck --check-prefix CHECK-DEFAULT %s
+
+STDIN: a
+STDIN: ab
+STDIN: abc
+STDIN: abcd
+
+CHECK-DEFAULT: abcd
+
+CHECK-0: invalid minimum string length 0
+
+CHECK-1: a
+CHECK-1: ab
+CHECK-1: abc
+CHECK-1: abcd
+
+CHECK-2-NOT: a
+CHECK-2: ab
+CHECK-2: abc
+CHECK-2: abcd
+

@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 // This is just the test for [namespace.udecl]p4 with 'using'
 // uniformly stripped out.
@@ -24,10 +26,33 @@ namespace test0 {
   }
 
   class Test0 {
-    NonClass::type; // expected-error {{not a class}} expected-warning {{access declarations are deprecated}}
-    NonClass::hiding; // expected-error {{not a class}} expected-warning {{access declarations are deprecated}}
-    NonClass::union_member; // expected-error {{not a class}} expected-warning {{access declarations are deprecated}}
-    NonClass::enumerator; // expected-error {{not a class}} expected-warning {{access declarations are deprecated}}
+    NonClass::type; // expected-error {{not a class}}
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    NonClass::hiding; // expected-error {{not a class}}
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    NonClass::union_member; // expected-error {{not a class}}
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    NonClass::enumerator; // expected-error {{not a class}}
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
   };
 }
 
@@ -43,11 +68,39 @@ namespace test1 {
   };
 
   struct B : A {
-    A::type; // expected-warning {{access declarations are deprecated}}
-    A::hiding; // expected-warning {{access declarations are deprecated}}
-    A::union_member; // expected-warning {{access declarations are deprecated}}
-    A::enumerator; // expected-warning {{access declarations are deprecated}}
-    A::tagname; // expected-warning {{access declarations are deprecated}}
+    A::type;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+    A::hiding;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    A::union_member;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    A::enumerator;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    A::tagname;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
 
     void test0() {
       type t = 0;
@@ -86,11 +139,40 @@ namespace test2 {
   };
 
   template <class T> struct B : A {
-    A::type; // expected-warning {{access declarations are deprecated}}
-    A::hiding; // expected-warning {{access declarations are deprecated}}
-    A::union_member; // expected-warning {{access declarations are deprecated}}
-    A::enumerator; // expected-warning {{access declarations are deprecated}}
-    A::tagname; // expected-warning {{access declarations are deprecated}}
+    A::type;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    A::hiding;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    A::union_member;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    A::enumerator;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    A::tagname;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
 
     void test0() {
       type t = 0;
@@ -131,11 +213,40 @@ namespace test3 {
   };
 
   template <class T> struct B : A<T> {
-    A<T>::type; // expected-error {{dependent using declaration resolved to type without 'typename'}} // expected-warning {{access declarations are deprecated}}
-    A<T>::hiding; // expected-warning {{access declarations are deprecated}}
-    A<T>::union_member; // expected-warning {{access declarations are deprecated}}
-    A<T>::enumerator; // expected-warning {{access declarations are deprecated}}
-    A<T>::tagname; // expected-error {{dependent using declaration resolved to type without 'typename'}} // expected-warning {{access declarations are deprecated}}
+    A<T>::type; // expected-error {{dependent using declaration resolved to type without 'typename'}}
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    A<T>::hiding;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    A<T>::union_member;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    A<T>::enumerator;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    A<T>::tagname; // expected-error {{dependent using declaration resolved to type without 'typename'}}
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
 
     // FIXME: re-enable these when the various bugs involving tags are fixed
 #if 0
@@ -186,14 +297,54 @@ namespace test4 {
 
   // We should be able to diagnose these without instantiation.
   template <class T> struct C : Base {
-    InnerNS::foo; // expected-error {{not a class}} expected-warning {{access declarations are deprecated}}
-    Base::bar; // expected-error {{no member named 'bar'}} expected-warning {{access declarations are deprecated}}
-    Unrelated::foo; // expected-error {{not a base class}} expected-warning {{access declarations are deprecated}}
-    C::foo; // legal in C++03 // expected-warning {{access declarations are deprecated}}
-    Subclass::foo; // legal in C++03 // expected-warning {{access declarations are deprecated}}
+    InnerNS::foo; // expected-error {{not a class}}
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
 
-    int bar(); //expected-note {{target of using declaration}}
-    C::bar; // expected-error {{refers to its own class}} expected-warning {{access declarations are deprecated}}
+    Base::bar; // expected-error {{no member named 'bar'}}
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    Unrelated::foo; // expected-error {{not a base class}}
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+
+    C::foo; // legal in C++03
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+    // expected-error@-5 {{using declaration refers to its own class}}
+#endif
+
+    Subclass::foo; // legal in C++03
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+    // expected-error@-5 {{using declaration refers into 'Subclass::', which is not a base class of 'C'}}
+#endif
+
+    int bar();
+#if __cplusplus <= 199711L
+    //expected-note@-2 {{target of using declaration}}
+#endif
+    C::bar;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
+#else
+    // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
+#endif
+    // expected-error@-6 {{using declaration refers to its own class}}
   };
 }
 

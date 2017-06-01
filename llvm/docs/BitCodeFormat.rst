@@ -467,10 +467,11 @@ Native Object File Wrapper Format
 =================================
 
 Bitcode files for LLVM IR may also be wrapped in a native object file
-(i.e. ELF, COFF, Mach-O).  The bitcode must be stored in a section of the
-object file named ``.llvmbc``.  This wrapper format is useful for accommodating
-LTO in compilation pipelines where intermediate objects must be native object
-files which contain metadata in other sections.
+(i.e. ELF, COFF, Mach-O).  The bitcode must be stored in a section of the object
+file named ``__LLVM,__bitcode`` for MachO and ``.llvmbc`` for the other object
+formats.  This wrapper format is useful for accommodating LTO in compilation
+pipelines where intermediate objects must be native object files which contain
+metadata in other sections.
 
 Not all tools support this format.
 
@@ -533,14 +534,12 @@ LLVM IR is defined with the following blocks:
 
 * 9 --- `PARAMATTR_BLOCK`_ --- This enumerates the parameter attributes.
 
-* 10 --- `TYPE_BLOCK`_ --- This describes all of the types in the module.
+* 10 --- `PARAMATTR_GROUP_BLOCK`_ --- This describes the attribute group table.
 
 * 11 --- `CONSTANTS_BLOCK`_ --- This describes constants for a module or
   function.
 
 * 12 --- `FUNCTION_BLOCK`_ --- This describes a function body.
-
-* 13 --- `TYPE_SYMTAB_BLOCK`_ --- This describes the type symbol table.
 
 * 14 --- `VALUE_SYMTAB_BLOCK`_ --- This describes a value symbol table.
 
@@ -548,6 +547,8 @@ LLVM IR is defined with the following blocks:
 
 * 16 --- `METADATA_ATTACHMENT`_ --- This contains records associating metadata
   with function instruction values.
+
+* 17 --- `TYPE_BLOCK`_ --- This describes all of the types in the module.
 
 .. _MODULE_BLOCK:
 
@@ -561,8 +562,8 @@ block may contain the following sub-blocks:
 
 * `BLOCKINFO`_
 * `PARAMATTR_BLOCK`_
+* `PARAMATTR_GROUP_BLOCK`_
 * `TYPE_BLOCK`_
-* `TYPE_SYMTAB_BLOCK`_
 * `VALUE_SYMTAB_BLOCK`_
 * `CONSTANTS_BLOCK`_
 * `FUNCTION_BLOCK`_
@@ -595,7 +596,7 @@ will be encoded as 1.
 
 For example, instead of
 
-.. code-block:: llvm
+.. code-block:: none
 
   #n = load #n-1
   #n+1 = icmp eq #n, #const0
@@ -603,7 +604,7 @@ For example, instead of
 
 version 1 will encode the instructions as
 
-.. code-block:: llvm
+.. code-block:: none
 
   #n = load #1
   #n+1 = icmp eq #1, (#n+1)-#const0
@@ -689,6 +690,7 @@ global variable. The operand fields are:
 .. _linkage type:
 
 * *linkage*: An encoding of the linkage type for this variable:
+
   * ``external``: code 0
   * ``weak``: code 1
   * ``appending``: code 2
@@ -713,20 +715,30 @@ global variable. The operand fields are:
 .. _visibility:
 
 * *visibility*: If present, an encoding of the visibility of this variable:
+
   * ``default``: code 0
   * ``hidden``: code 1
   * ``protected``: code 2
 
+.. _bcthreadlocal:
+
 * *threadlocal*: If present, an encoding of the thread local storage mode of the
   variable:
+
   * ``not thread local``: code 0
   * ``thread local; default TLS model``: code 1
   * ``localdynamic``: code 2
   * ``initialexec``: code 3
   * ``localexec``: code 4
 
-* *unnamed_addr*: If present and non-zero, indicates that the variable has
-  ``unnamed_addr``
+.. _bcunnamedaddr:
+
+* *unnamed_addr*: If present, an encoding of the ``unnamed_addr`` attribute of this
+  variable:
+
+  * not ``unnamed_addr``: code 0
+  * ``unnamed_addr``: code 1
+  * ``local_unnamed_addr``: code 2
 
 .. _bcdllstorageclass:
 
@@ -735,6 +747,8 @@ global variable. The operand fields are:
   * ``default``: code 0
   * ``dllimport``: code 1
   * ``dllexport``: code 2
+
+* *comdat*: An encoding of the COMDAT of this function
 
 .. _FUNCTION:
 
@@ -756,6 +770,8 @@ function. The operand fields are:
   * ``anyregcc``: code 13
   * ``preserve_mostcc``: code 14
   * ``preserve_allcc``: code 15
+  * ``swiftcc`` : code 16
+  * ``cxx_fast_tlscc``: code 17
   * ``x86_stdcallcc``: code 64
   * ``x86_fastcallcc``: code 65
   * ``arm_apcscc``: code 66
@@ -781,8 +797,8 @@ function. The operand fields are:
 * *gc*: If present and nonzero, the 1-based garbage collector index in the table
   of `MODULE_CODE_GCNAME`_ entries.
 
-* *unnamed_addr*: If present and non-zero, indicates that the function has
-  ``unnamed_addr``
+* *unnamed_addr*: If present, an encoding of the
+  :ref:`unnamed_addr<bcunnamedaddr>` attribute of this function
 
 * *prologuedata*: If non-zero, the value index of the prologue data for this function,
   plus 1.
@@ -801,7 +817,7 @@ function. The operand fields are:
 MODULE_CODE_ALIAS Record
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-``[ALIAS, alias type, aliasee val#, linkage, visibility, dllstorageclass]``
+``[ALIAS, alias type, aliasee val#, linkage, visibility, dllstorageclass, threadlocal, unnamed_addr]``
 
 The ``ALIAS`` record (code 9) marks the definition of an alias. The operand
 fields are
@@ -816,6 +832,12 @@ fields are
 
 * *dllstorageclass*: If present, an encoding of the
   :ref:`dllstorageclass<bcdllstorageclass>` of the alias
+
+* *threadlocal*: If present, an encoding of the
+  :ref:`thread local property<bcthreadlocal>` of the alias
+
+* *unnamed_addr*: If present, an encoding of the
+  :ref:`unnamed_addr<bcunnamedaddr>` attribute of this alias
 
 MODULE_CODE_PURGEVALS Record
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -858,6 +880,23 @@ Entries within ``PARAMATTR_BLOCK`` are constructed to ensure that each is unique
 PARAMATTR_CODE_ENTRY Record
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+``[ENTRY, attrgrp0, attrgrp1, ...]``
+
+The ``ENTRY`` record (code 2) contains a variable number of values describing a
+unique set of function parameter attributes. Each *attrgrp* value is used as a
+key with which to look up an entry in the the attribute group table described
+in the ``PARAMATTR_GROUP_BLOCK`` block.
+
+.. _PARAMATTR_CODE_ENTRY_OLD:
+
+PARAMATTR_CODE_ENTRY_OLD Record
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. note::
+  This is a legacy encoding for attributes, produced by LLVM versions 3.2 and
+  earlier. It is guaranteed to be understood by the current LLVM version, as
+  specified in the :ref:`IR backwards compatibility` policy.
+
 ``[ENTRY, paramidx0, attr0, paramidx1, attr1...]``
 
 The ``ENTRY`` record (code 1) contains an even number of values describing a
@@ -892,12 +931,120 @@ following interpretation:
 * bits 37-39: ``alignstack n``, represented as the logarithm
   base 2 of the requested alignment, plus 1
 
+.. _PARAMATTR_GROUP_BLOCK:
+
+PARAMATTR_GROUP_BLOCK Contents
+------------------------------
+
+The ``PARAMATTR_GROUP_BLOCK`` block (id 10) contains a table of entries
+describing the attribute groups present in the module. These entries can be
+referenced within ``PARAMATTR_CODE_ENTRY`` entries.
+
+.. _PARAMATTR_GRP_CODE_ENTRY:
+
+PARAMATTR_GRP_CODE_ENTRY Record
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[ENTRY, grpid, paramidx, attr0, attr1, ...]``
+
+The ``ENTRY`` record (code 3) contains *grpid* and *paramidx* values, followed
+by a variable number of values describing a unique group of attributes. The
+*grpid* value is a unique key for the attribute group, which can be referenced
+within ``PARAMATTR_CODE_ENTRY`` entries. The *paramidx* value indicates which
+set of attributes is represented, with 0 representing the return value
+attributes, 0xFFFFFFFF representing function attributes, and other values
+representing 1-based function parameters.
+
+Each *attr* is itself represented as a variable number of values:
+
+``kind, key [, ...], [value [, ...]]``
+
+Each attribute is either a well-known LLVM attribute (possibly with an integer
+value associated with it), or an arbitrary string (possibly with an arbitrary
+string value associated with it). The *kind* value is an integer code
+distinguishing between these possibilities:
+
+* code 0: well-known attribute
+* code 1: well-known attribute with an integer value
+* code 3: string attribute
+* code 4: string attribute with a string value
+
+For well-known attributes (code 0 or 1), the *key* value is an integer code
+identifying the attribute. For attributes with an integer argument (code 1),
+the *value* value indicates the argument.
+
+For string attributes (code 3 or 4), the *key* value is actually a variable
+number of values representing the bytes of a null-terminated string. For
+attributes with a string argument (code 4), the *value* value is similarly a
+variable number of values representing the bytes of a null-terminated string.
+
+The integer codes are mapped to well-known attributes as follows.
+
+* code 1: ``align(<n>)``
+* code 2: ``alwaysinline``
+* code 3: ``byval``
+* code 4: ``inlinehint``
+* code 5: ``inreg``
+* code 6: ``minsize``
+* code 7: ``naked``
+* code 8: ``nest``
+* code 9: ``noalias``
+* code 10: ``nobuiltin``
+* code 11: ``nocapture``
+* code 12: ``noduplicates``
+* code 13: ``noimplicitfloat``
+* code 14: ``noinline``
+* code 15: ``nonlazybind``
+* code 16: ``noredzone``
+* code 17: ``noreturn``
+* code 18: ``nounwind``
+* code 19: ``optsize``
+* code 20: ``readnone``
+* code 21: ``readonly``
+* code 22: ``returned``
+* code 23: ``returns_twice``
+* code 24: ``signext``
+* code 25: ``alignstack(<n>)``
+* code 26: ``ssp``
+* code 27: ``sspreq``
+* code 28: ``sspstrong``
+* code 29: ``sret``
+* code 30: ``sanitize_address``
+* code 31: ``sanitize_thread``
+* code 32: ``sanitize_memory``
+* code 33: ``uwtable``
+* code 34: ``zeroext``
+* code 35: ``builtin``
+* code 36: ``cold``
+* code 37: ``optnone``
+* code 38: ``inalloca``
+* code 39: ``nonnull``
+* code 40: ``jumptable``
+* code 41: ``dereferenceable(<n>)``
+* code 42: ``dereferenceable_or_null(<n>)``
+* code 43: ``convergent``
+* code 44: ``safestack``
+* code 45: ``argmemonly``
+* code 46: ``swiftself``
+* code 47: ``swifterror``
+* code 48: ``norecurse``
+* code 49: ``inaccessiblememonly``
+* code 50: ``inaccessiblememonly_or_argmemonly``
+* code 51: ``allocsize(<EltSizeParam>[, <NumEltsParam>])``
+* code 52: ``writeonly``
+
+.. note::
+  The ``allocsize`` attribute has a special encoding for its arguments. Its two
+  arguments, which are 32-bit integers, are packed into one 64-bit integer value
+  (i.e. ``(EltSizeParam << 32) | NumEltsParam``), with ``NumEltsParam`` taking on
+  the sentinel value -1 if it is not specified.
+
 .. _TYPE_BLOCK:
 
 TYPE_BLOCK Contents
 -------------------
 
-The ``TYPE_BLOCK`` block (id 10) contains records which constitute a table of
+The ``TYPE_BLOCK`` block (id 17) contains records which constitute a table of
 type operator entries used to represent types referenced within an LLVM
 module. Each record (with the exception of `NUMENTRY`_) generates a single type
 table entry, which may be referenced by 0-based index from instructions,
@@ -961,8 +1108,9 @@ TYPE_CODE_OPAQUE Record
 
 ``[OPAQUE]``
 
-The ``OPAQUE`` record (code 6) adds an ``opaque`` type to the type table. Note
-that distinct ``opaque`` types are not unified.
+The ``OPAQUE`` record (code 6) adds an ``opaque`` type to the type table, with
+a name defined by a previously encountered ``STRUCT_NAME`` record. Note that
+distinct ``opaque`` types are not unified.
 
 TYPE_CODE_INTEGER Record
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -985,13 +1133,18 @@ operand fields are
 * *address space*: If supplied, the target-specific numbered address space where
   the pointed-to object resides. Otherwise, the default address space is zero.
 
-TYPE_CODE_FUNCTION Record
-^^^^^^^^^^^^^^^^^^^^^^^^^
+TYPE_CODE_FUNCTION_OLD Record
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``[FUNCTION, vararg, ignored, retty, ...paramty... ]``
+.. note::
+  This is a legacy encoding for functions, produced by LLVM versions 3.0 and
+  earlier. It is guaranteed to be understood by the current LLVM version, as
+  specified in the :ref:`IR backwards compatibility` policy.
 
-The ``FUNCTION`` record (code 9) adds a function type to the type table. The
-operand fields are
+``[FUNCTION_OLD, vararg, ignored, retty, ...paramty... ]``
+
+The ``FUNCTION_OLD`` record (code 9) adds a function type to the type table.
+The operand fields are
 
 * *vararg*: Non-zero if the type represents a varargs function
 
@@ -1002,19 +1155,6 @@ operand fields are
 
 * *paramty*: Zero or more type indices representing the parameter types of the
   function
-
-TYPE_CODE_STRUCT Record
-^^^^^^^^^^^^^^^^^^^^^^^
-
-``[STRUCT, ispacked, ...eltty...]``
-
-The ``STRUCT`` record (code 10) adds a struct type to the type table. The
-operand fields are
-
-* *ispacked*: Non-zero if the type represents a packed structure
-
-* *eltty*: Zero or more type indices representing the element types of the
-  structure
 
 TYPE_CODE_ARRAY Record
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -1071,6 +1211,64 @@ TYPE_CODE_METADATA Record
 
 The ``METADATA`` record (code 16) adds a ``metadata`` type to the type table.
 
+TYPE_CODE_X86_MMX Record
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[X86_MMX]``
+
+The ``X86_MMX`` record (code 17) adds an ``x86_mmx`` type to the type table.
+
+TYPE_CODE_STRUCT_ANON Record
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[STRUCT_ANON, ispacked, ...eltty...]``
+
+The ``STRUCT_ANON`` record (code 18) adds a literal struct type to the type
+table. The operand fields are
+
+* *ispacked*: Non-zero if the type represents a packed structure
+
+* *eltty*: Zero or more type indices representing the element types of the
+  structure
+
+TYPE_CODE_STRUCT_NAME Record
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[STRUCT_NAME, ...string...]``
+
+The ``STRUCT_NAME`` record (code 19) contains a variable number of values
+representing the bytes of a struct name. The next ``OPAQUE`` or
+``STRUCT_NAMED`` record will use this name.
+
+TYPE_CODE_STRUCT_NAMED Record
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[STRUCT_NAMED, ispacked, ...eltty...]``
+
+The ``STRUCT_NAMED`` record (code 20) adds an identified struct type to the
+type table, with a name defined by a previously encountered ``STRUCT_NAME``
+record. The operand fields are
+
+* *ispacked*: Non-zero if the type represents a packed structure
+
+* *eltty*: Zero or more type indices representing the element types of the
+  structure
+
+TYPE_CODE_FUNCTION Record
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[FUNCTION, vararg, retty, ...paramty... ]``
+
+The ``FUNCTION`` record (code 21) adds a function type to the type table. The
+operand fields are
+
+* *vararg*: Non-zero if the type represents a varargs function
+
+* *retty*: The type index of the function's return type
+
+* *paramty*: Zero or more type indices representing the parameter types of the
+  function
+
 .. _CONSTANTS_BLOCK:
 
 CONSTANTS_BLOCK Contents
@@ -1091,26 +1289,6 @@ contain the following sub-blocks:
 * `CONSTANTS_BLOCK`_
 * `VALUE_SYMTAB_BLOCK`_
 * `METADATA_ATTACHMENT`_
-
-.. _TYPE_SYMTAB_BLOCK:
-
-TYPE_SYMTAB_BLOCK Contents
---------------------------
-
-The ``TYPE_SYMTAB_BLOCK`` block (id 13) contains entries which map between
-module-level named types and their corresponding type indices.
-
-.. _TST_CODE_ENTRY:
-
-TST_CODE_ENTRY Record
-^^^^^^^^^^^^^^^^^^^^^
-
-``[ENTRY, typeid, ...string...]``
-
-The ``ENTRY`` record (code 1) contains a variable number of values, with the
-first giving the type index of the designated type, and the remaining values
-giving the character codes of the type name. Each entry corresponds to a single
-named type.
 
 .. _VALUE_SYMTAB_BLOCK:
 

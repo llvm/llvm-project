@@ -248,7 +248,8 @@ namespace {
       llvm_unreachable("fixupNeedsRelaxation() unimplemented");
       return false;
     }
-    void relaxInstruction(const MCInst &Inst, MCInst &Res) const override {
+    void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                          MCInst &Res) const override {
       // FIXME.
       llvm_unreachable("relaxInstruction() unimplemented");
     }
@@ -299,6 +300,7 @@ namespace {
 
 MCAsmBackend *llvm::createSparcAsmBackend(const Target &T,
                                           const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU) {
+                                          const Triple &TT, StringRef CPU,
+                                          const MCTargetOptions &Options) {
   return new ELFSparcAsmBackend(T, TT.getOS());
 }

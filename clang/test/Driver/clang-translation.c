@@ -11,18 +11,35 @@
 // I386: "hidden"
 // I386: "-o"
 // I386: clang-translation
+
 // RUN: %clang -target i386-apple-darwin9 -### -S %s -o %t.s 2>&1 | \
+// RUN: FileCheck -check-prefix=YONAH %s
+// RUN: %clang -target i386-apple-macosx10.11 -### -S %s -o %t.s 2>&1 | \
 // RUN: FileCheck -check-prefix=YONAH %s
 // YONAH: "-target-cpu"
 // YONAH: "yonah"
+
 // RUN: %clang -target x86_64-apple-darwin9 -### -S %s -o %t.s 2>&1 | \
+// RUN: FileCheck -check-prefix=CORE2 %s
+// RUN: %clang -target x86_64-apple-macosx10.11 -### -S %s -o %t.s 2>&1 | \
 // RUN: FileCheck -check-prefix=CORE2 %s
 // CORE2: "-target-cpu"
 // CORE2: "core2"
+
 // RUN: %clang -target x86_64h-apple-darwin -### -S %s -o %t.s 2>&1 | \
+// RUN: FileCheck -check-prefix=AVX2 %s
+// RUN: %clang -target x86_64h-apple-macosx10.12 -### -S %s -o %t.s 2>&1 | \
 // RUN: FileCheck -check-prefix=AVX2 %s
 // AVX2: "-target-cpu"
 // AVX2: "core-avx2"
+
+// RUN: %clang -target i386-apple-macosx10.12 -### -S %s -o %t.s 2>&1 | \
+// RUN: FileCheck -check-prefix=PENRYN %s
+// RUN: %clang -target x86_64-apple-macosx10.12 -### -S %s -o %t.s 2>&1 | \
+// RUN: FileCheck -check-prefix=PENRYN %s
+// PENRYN: "-target-cpu"
+// PENRYN: "penryn"
+
 
 // RUN: %clang -target x86_64-apple-darwin10 -### -S %s -arch armv7 2>&1 | \
 // RUN: FileCheck -check-prefix=ARMV7_DEFAULT %s
@@ -245,8 +262,19 @@
 // RUN: FileCheck -check-prefix=MIPSEL-ANDROID %s
 // MIPSEL-ANDROID: clang
 // MIPSEL-ANDROID: "-cc1"
-// MIPSEL-ANDROID: "-target-cpu" "mips32r2"
+// MIPSEL-ANDROID: "-target-cpu" "mips32"
+// MIPSEL-ANDROID: "-target-feature" "+fpxx"
+// MIPSEL-ANDROID: "-target-feature" "+nooddspreg"
 // MIPSEL-ANDROID: "-mfloat-abi" "hard"
+
+// RUN: %clang -target mipsel-linux-android -### -S %s -mcpu=mips32r6 2>&1 | \
+// RUN: FileCheck -check-prefix=MIPSEL-ANDROID-R6 %s
+// MIPSEL-ANDROID-R6: clang
+// MIPSEL-ANDROID-R6: "-cc1"
+// MIPSEL-ANDROID-R6: "-target-cpu" "mips32r6"
+// MIPSEL-ANDROID-R6: "-target-feature" "+fp64"
+// MIPSEL-ANDROID-R6: "-target-feature" "+nooddspreg"
+// MIPSEL-ANDROID-R6: "-mfloat-abi" "hard"
 
 // RUN: %clang -target mips64-linux-gnu -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=MIPS64 %s

@@ -30,14 +30,6 @@
 namespace llvm {
 class ValueSymbolTable;
 
-template <typename NodeTy> class ilist_iterator;
-template <typename NodeTy, typename Traits> class iplist;
-template <typename Ty> struct ilist_traits;
-
-template <typename NodeTy>
-struct SymbolTableListSentinelTraits
-    : public ilist_embedded_sentinel_traits<NodeTy> {};
-
 /// Template metafunction to get the parent type for a symbol table list.
 ///
 /// Implementations create a typedef called \c type so that we only need a
@@ -49,6 +41,7 @@ class Function;
 class Instruction;
 class GlobalVariable;
 class GlobalAlias;
+class GlobalIFunc;
 class Module;
 #define DEFINE_SYMBOL_TABLE_PARENT_TYPE(NODE, PARENT)                          \
   template <> struct SymbolTableListParentType<NODE> { typedef PARENT type; };
@@ -58,6 +51,7 @@ DEFINE_SYMBOL_TABLE_PARENT_TYPE(Argument, Function)
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(Function, Module)
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(GlobalVariable, Module)
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(GlobalAlias, Module)
+DEFINE_SYMBOL_TABLE_PARENT_TYPE(GlobalIFunc, Module)
 #undef DEFINE_SYMBOL_TABLE_PARENT_TYPE
 
 template <typename NodeTy> class SymbolTableList;
@@ -66,11 +60,9 @@ template <typename NodeTy> class SymbolTableList;
 // ItemParentClass - The type of object that owns the list, e.g. BasicBlock.
 //
 template <typename ValueSubClass>
-class SymbolTableListTraits
-    : public ilist_nextprev_traits<ValueSubClass>,
-      public SymbolTableListSentinelTraits<ValueSubClass>,
-      public ilist_node_traits<ValueSubClass> {
+class SymbolTableListTraits : public ilist_alloc_traits<ValueSubClass> {
   typedef SymbolTableList<ValueSubClass> ListTy;
+  typedef typename simple_ilist<ValueSubClass>::iterator iterator;
   typedef
       typename SymbolTableListParentType<ValueSubClass>::type ItemParentClass;
 
@@ -99,10 +91,9 @@ private:
 public:
   void addNodeToList(ValueSubClass *V);
   void removeNodeFromList(ValueSubClass *V);
-  void transferNodesFromList(SymbolTableListTraits &L2,
-                             ilist_iterator<ValueSubClass> first,
-                             ilist_iterator<ValueSubClass> last);
-//private:
+  void transferNodesFromList(SymbolTableListTraits &L2, iterator first,
+                             iterator last);
+  // private:
   template<typename TPtr>
   void setSymTabObject(TPtr *, TPtr);
   static ValueSymbolTable *toPtr(ValueSymbolTable *P) { return P; }
@@ -114,8 +105,9 @@ public:
 /// When nodes are inserted into and removed from this list, the associated
 /// symbol table will be automatically updated.  Similarly, parent links get
 /// updated automatically.
-template <typename NodeTy>
-class SymbolTableList : public iplist<NodeTy, SymbolTableListTraits<NodeTy>> {};
+template <class T>
+class SymbolTableList
+    : public iplist_impl<simple_ilist<T>, SymbolTableListTraits<T>> {};
 
 } // End llvm namespace
 

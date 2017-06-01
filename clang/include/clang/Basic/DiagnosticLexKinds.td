@@ -13,9 +13,8 @@
 
 let Component = "Lex", CategoryName = "Lexical or Preprocessor Issue" in {
 
-def null_in_string : Warning<"null character(s) preserved in string literal">,
-  InGroup<NullCharacter>;
-def null_in_char : Warning<"null character(s) preserved in character literal">,
+def null_in_char_or_string : Warning<
+  "null character(s) preserved in %select{char|string}0 literal">,
   InGroup<NullCharacter>;
 def null_in_file : Warning<"null character ignored">, InGroup<NullCharacter>;
 def warn_nested_block_comment : Warning<"'/*' within block comment">,
@@ -60,6 +59,12 @@ def ext_dollar_in_identifier : Extension<"'$' in identifier">,
 def ext_charize_microsoft : Extension<
   "charizing operator #@ is a Microsoft extension">,
   InGroup<MicrosoftCharize>;
+def ext_comment_paste_microsoft : Extension<
+  "pasting two '/' tokens into a '//' comment is a Microsoft extension">,
+  InGroup<MicrosoftCommentPaste>;
+def ext_ctrl_z_eof_microsoft : Extension<
+  "treating Ctrl-Z as end-of-file is a Microsoft extension">,
+  InGroup<MicrosoftEndOfFile>;
 
 def ext_token_used : Extension<"extension used">,
   InGroup<DiagGroup<"language-extension-token">>;
@@ -67,10 +72,8 @@ def ext_token_used : Extension<"extension used">,
 def warn_cxx11_keyword : Warning<"'%0' is a keyword in C++11">,
   InGroup<CXX11Compat>, DefaultIgnore;
 
-def ext_unterminated_string : ExtWarn<"missing terminating '\"' character">,
-  InGroup<InvalidPPToken>;
-def ext_unterminated_char : ExtWarn<"missing terminating ' character">,
-  InGroup<InvalidPPToken>;
+def ext_unterminated_char_or_string : ExtWarn<
+  "missing terminating %select{'|'\"'}0 character">, InGroup<InvalidPPToken>;
 def ext_empty_character : ExtWarn<"empty character constant">,
   InGroup<InvalidPPToken>;
 def err_unterminated_block_comment : Error<"unterminated /* comment">;
@@ -154,13 +157,10 @@ def ext_nonstandard_escape : Extension<
   "use of non-standard escape character '\\%0'">;
 def ext_unknown_escape : ExtWarn<"unknown escape sequence '\\%0'">,
   InGroup<DiagGroup<"unknown-escape-sequence">>;
-def err_invalid_decimal_digit : Error<"invalid digit '%0' in decimal constant">;
-def err_invalid_binary_digit : Error<"invalid digit '%0' in binary constant">;
-def err_invalid_octal_digit : Error<"invalid digit '%0' in octal constant">;
-def err_invalid_suffix_integer_constant : Error<
-  "invalid suffix '%0' on integer constant">;
-def err_invalid_suffix_float_constant : Error<
-  "invalid suffix '%0' on floating constant">;
+def err_invalid_digit : Error<
+  "invalid digit '%0' in %select{decimal|octal|binary}1 constant">;
+def err_invalid_suffix_constant : Error<
+  "invalid suffix '%0' on %select{integer|floating}1 constant">;
 def warn_cxx11_compat_digit_separator : Warning<
   "digit separators are incompatible with C++ standards before C++14">,
   InGroup<CXXPre14Compat>, DefaultIgnore;
@@ -175,12 +175,17 @@ def err_multichar_utf_character_literal : Error<
 def err_exponent_has_no_digits : Error<"exponent has no digits">;
 def ext_imaginary_constant : Extension<
   "imaginary constants are a GNU extension">, InGroup<GNUImaginaryConstant>;
-def err_hexconstant_requires_exponent : Error<
-  "hexadecimal floating constants require an exponent">;
-def err_hexconstant_requires_digits : Error<
-  "hexadecimal floating constants require a significand">;
-def ext_hexconstant_invalid : Extension<
+def err_hex_constant_requires : Error<
+  "hexadecimal floating %select{constant|literal}0 requires "
+  "%select{an exponent|a significand}1">;
+def ext_hex_constant_invalid : Extension<
   "hexadecimal floating constants are a C99 feature">, InGroup<C99>;
+def ext_hex_literal_invalid : Extension<
+  "hexadecimal floating literals are a C++1z feature">, InGroup<CXX1z>;
+def warn_cxx1z_hex_literal : Warning<
+  "hexadecimal floating literals are incompatible with "
+  "C++ standards before C++1z">,
+  InGroup<CXXPre1zCompatPedantic>, DefaultIgnore;
 def ext_binary_literal : Extension<
   "binary integer literals are a GNU extension">, InGroup<GNUBinaryLiteral>;
 def ext_binary_literal_cxx14 : Extension<
@@ -189,8 +194,8 @@ def warn_cxx11_compat_binary_literal : Warning<
   "binary integer literals are incompatible with C++ standards before C++14">,
   InGroup<CXXPre14CompatPedantic>, DefaultIgnore;
 def err_pascal_string_too_long : Error<"Pascal string is too long">;
-def err_octal_escape_too_large : Error<"octal escape sequence out of range">;
-def err_hex_escape_too_large : Error<"hex escape sequence out of range">;
+def err_escape_too_large : Error<
+  "%select{hex|octal}0 escape sequence out of range">;
 def ext_string_too_long : Extension<"string literal of length %0 exceeds "
   "maximum length %1 that %select{C90|ISO C99|C++}2 compilers are required to "
   "support">, InGroup<OverlengthStrings>;
@@ -237,6 +242,7 @@ def warn_bad_character_encoding : ExtWarn<
   "illegal character encoding in character literal">,
   InGroup<InvalidSourceEncoding>;
 def err_lexing_string : Error<"failure when lexing a string">;
+def err_placeholder_in_source : Error<"editor placeholder in source file">;
 
 
 //===----------------------------------------------------------------------===//
@@ -269,6 +275,14 @@ def ext_missing_whitespace_after_macro_name : ExtWarn<
   "whitespace required after macro name">;
 def warn_missing_whitespace_after_macro_name : Warning<
   "whitespace recommended after macro name">;
+
+class NonportablePath  : Warning<
+  "non-portable path to file '%0'; specified path differs in case from file"
+  " name on disk">;
+def pp_nonportable_path : NonportablePath,
+  InGroup<DiagGroup<"nonportable-include-path">>;
+def pp_nonportable_system_path : NonportablePath, DefaultIgnore,
+  InGroup<DiagGroup<"nonportable-system-include-path">>;
   
 def pp_pragma_once_in_main_file : Warning<"#pragma once in main file">,
   InGroup<DiagGroup<"pragma-once-outside-header">>;
@@ -301,15 +315,17 @@ def warn_pp_macro_hides_keyword : Extension<
 def warn_pp_macro_is_reserved_id : Warning<
   "macro name is a reserved identifier">, DefaultIgnore,
   InGroup<ReservedIdAsMacro>;
+def warn_pp_objc_macro_redef_ignored : Warning<
+  "ignoring redefinition of Objective-C qualifier macro">,
+  InGroup<DiagGroup<"objc-macro-redefinition">>;
 
 def pp_invalid_string_literal : Warning<
   "invalid string literal, ignoring final '\\'">;
 def warn_pp_expr_overflow : Warning<
   "integer overflow in preprocessor expression">;
-def warn_pp_convert_lhs_to_positive : Warning<
-  "left side of operator converted from negative value to unsigned: %0">;
-def warn_pp_convert_rhs_to_positive : Warning<
-  "right side of operator converted from negative value to unsigned: %0">;
+def warn_pp_convert_to_positive : Warning<
+  "%select{left|right}0 side of operator converted from negative value to "
+  "unsigned: %1">;
 
 def ext_pp_import_directive : Extension<"#import is a language extension">,
   InGroup<DiagGroup<"import-preprocessor-directive-pedantic">>;
@@ -380,7 +396,7 @@ def err_pp_expected_comma_in_arg_list : Error<
 def err_pp_duplicate_name_in_arg_list : Error<
   "duplicate macro parameter name %0">;
 def err_pp_stringize_not_parameter : Error<
-  "'#' is not followed by a macro parameter">;
+  "'%select{#|#@}0' is not followed by a macro parameter">;
 def err_pp_malformed_ident : Error<"invalid #ident directive">;
 def err_pp_unterminated_conditional : Error<
   "unterminated conditional directive">;
@@ -394,6 +410,7 @@ def err_pp_expected_rparen : Error<"expected ')' in preprocessor expression">;
 def err_pp_expected_eol : Error<
   "expected end of line in preprocessor expression">;
 def err_pp_expected_after : Error<"missing %1 after %0">;
+def err_pp_nested_paren : Error<"nested parentheses not permitted in %0">;
 def err_pp_colon_without_question : Error<"':' without preceding '?'">;
 def err_pp_division_by_zero : Error<
   "division by zero in preprocessor expression">;
@@ -401,6 +418,8 @@ def err_pp_remainder_by_zero : Error<
   "remainder by zero in preprocessor expression">;
 def err_pp_expr_bad_token_binop : Error<
   "token is not a valid binary operator in a preprocessor subexpression">;
+def err_pp_expr_bad_token_lparen : Error<
+  "function-like macro %0 is not defined">;
 def err_pp_expr_bad_token_start_expr : Error<
   "invalid token at start of a preprocessor expression">;
 def err_pp_invalid_poison : Error<"can only poison identifier tokens">;
@@ -409,8 +428,6 @@ def err_pp_used_poisoned_id : Error<"attempt to use a poisoned identifier">;
 def err_feature_check_malformed : Error<
   "builtin feature check macro requires a parenthesized identifier">;
 
-def err_warning_check_malformed : Error<
-  "builtin warning check macro requires a parenthesized string">;
 def warn_has_warning_invalid_option :
    ExtWarn<"__has_warning expected option name (e.g. \"-Wundef\")">,
    InGroup<MalformedWarningCheck>;
@@ -486,10 +503,12 @@ def warn_pragma_diagnostic_invalid_token :
    InGroup<UnknownPragmas>;
 def warn_pragma_diagnostic_unknown_warning :
    ExtWarn<"unknown warning group '%0', ignored">,
-   InGroup<UnknownPragmas>;
+   InGroup<UnknownWarningOption>;
 // - #pragma __debug
 def warn_pragma_debug_unexpected_command : Warning<
   "unexpected debug command '%0'">, InGroup<IgnoredPragmas>;
+def warn_pragma_debug_missing_argument : Warning<
+  "missing argument to debug command '%0'">, InGroup<IgnoredPragmas>;
 
 def err_defined_macro_name : Error<"'defined' cannot be used as a macro name">;
 def err_paste_at_start : Error<
@@ -624,6 +643,11 @@ def err_mmap_expected_feature : Error<"expected a feature name">;
 def err_mmap_expected_attribute : Error<"expected an attribute name">;
 def warn_mmap_unknown_attribute : Warning<"unknown attribute '%0'">,
   InGroup<IgnoredAttributes>;
+def warn_mmap_mismatched_top_level_private : Warning<
+  "top-level module '%0' in private module map, expected a submodule of '%1'">,
+  InGroup<PrivateModule>;
+def note_mmap_rename_top_level_private_as_submodule : Note<
+  "make '%0' a submodule of '%1' to ensure it can be found by name">;
 
 def warn_auto_module_import : Warning<
   "treating #%select{include|import|include_next|__include_macros}0 as an "
@@ -641,10 +665,10 @@ def warn_use_of_private_header_outside_module : Warning<
 def err_undeclared_use_of_module : Error<
   "module %0 does not depend on a module exporting '%1'">;
 def warn_non_modular_include_in_framework_module : Warning<
-  "include of non-modular header inside framework module '%0'">,
+  "include of non-modular header inside framework module '%0': '%1'">,
   InGroup<NonModularIncludeInFrameworkModule>, DefaultIgnore;
 def warn_non_modular_include_in_module : Warning<
-  "include of non-modular header inside module '%0'">,
+  "include of non-modular header inside module '%0': '%1'">,
   InGroup<NonModularIncludeInModule>, DefaultIgnore;
 def warn_module_conflict : Warning<
   "module '%0' conflicts with already-imported module '%1': %2">, 

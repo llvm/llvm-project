@@ -19,7 +19,9 @@ bool AddrIsApp(void *p) {
          (addr >= 0x510000000000ULL && addr < 0x600000000000ULL) ||
          (addr >= 0x700000000000ULL && addr < 0x800000000000ULL);
 #elif defined(__mips64)
-  return addr >= 0x00e000000000ULL;
+  return (addr >= 0x0000000000ULL && addr <= 0x0200000000ULL) ||
+         (addr >= 0xa200000000ULL && addr <= 0xc000000000ULL) ||
+         addr >= 0xe200000000ULL;
 #elif defined(__powerpc64__)
   return addr < 0x000100000000ULL || addr >= 0x300000000000ULL;
 #elif defined(__aarch64__)
@@ -37,6 +39,12 @@ bool AddrIsApp(void *p) {
     {0x2E000000000ULL, 0x2F000000000ULL},
     {0x3B000000000ULL, 0x3C000000000ULL},
     {0x3F000000000ULL, 0x40000000000ULL},
+    {0x0041000000000ULL, 0x0042000000000ULL},
+    {0x0050000000000ULL, 0x0051000000000ULL},
+    {0x0058000000000ULL, 0x0059000000000ULL},
+    {0x0061000000000ULL, 0x0062000000000ULL},
+    {0x0AAAAA0000000ULL, 0x0AAAB00000000ULL},
+    {0x0FFFF00000000ULL, 0x1000000000000ULL},
   };
   const size_t mappingsSize = sizeof (mappings) / sizeof (mappings[0]);
 

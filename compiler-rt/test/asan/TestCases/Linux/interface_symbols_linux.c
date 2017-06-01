@@ -24,6 +24,18 @@
 // RUN: echo __asan_report_store16 >> %t.interface
 // RUN: echo __asan_report_load_n >> %t.interface
 // RUN: echo __asan_report_store_n >> %t.interface
+// RUN: echo __asan_report_load1_noabort >> %t.interface
+// RUN: echo __asan_report_load2_noabort >> %t.interface
+// RUN: echo __asan_report_load4_noabort >> %t.interface
+// RUN: echo __asan_report_load8_noabort >> %t.interface
+// RUN: echo __asan_report_load16_noabort >> %t.interface
+// RUN: echo __asan_report_store1_noabort >> %t.interface
+// RUN: echo __asan_report_store2_noabort >> %t.interface
+// RUN: echo __asan_report_store4_noabort >> %t.interface
+// RUN: echo __asan_report_store8_noabort >> %t.interface
+// RUN: echo __asan_report_store16_noabort >> %t.interface
+// RUN: echo __asan_report_load_n_noabort >> %t.interface
+// RUN: echo __asan_report_store_n_noabort >> %t.interface
 // RUN: echo __asan_report_exp_load1 >> %t.interface
 // RUN: echo __asan_report_exp_load2 >> %t.interface
 // RUN: echo __asan_report_exp_load4 >> %t.interface
@@ -44,6 +56,6 @@
 
 // FIXME: nm -D on powerpc somewhy shows ASan interface symbols residing
 // in "initialized data section".
-// REQUIRES: x86_64-supported-target,i386-supported-target,asan-static-runtime
+// REQUIRES: x86-target-arch,asan-static-runtime
 
 int main() { return 0; }

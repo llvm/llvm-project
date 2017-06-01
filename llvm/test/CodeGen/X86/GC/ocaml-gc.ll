@@ -22,12 +22,12 @@ define i32 @main(i32 %x) nounwind gc "ocaml" {
 ; CHECK-NEXT:   .globl "caml<stdin>__frametable"
 ; CHECK-NEXT: "caml<stdin>__frametable":
 ; CHECK-NEXT:   .short  1
-; CHECK-NEXT:   .align  8
+; CHECK-NEXT:   .p2align  3
 ; CHECK-NEXT:                # live roots for main
 ; CHECK-NEXT:   .quad   .Ltmp0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  0
-; CHECK-NEXT:   .align  8
+; CHECK-NEXT:   .p2align  3
 }
 
 declare i32 @foo(i32)

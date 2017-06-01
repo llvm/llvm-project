@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 template<typename T, int N = 2> struct X; // expected-note{{template is declared here}}
 
 X<int, 1> *x1;
@@ -142,7 +144,10 @@ namespace PR9643 {
 namespace PR16288 {
   template<typename X>
   struct S {
-    template<typename T = int, typename U> // expected-warning {{C++11}}
+    template<typename T = int, typename U>
+#if __cplusplus <= 199711L // C++03 or earlier modes
+    // expected-warning@-2 {{default template arguments for a function template are a C++11 extension}}
+#endif
     void f();
   };
   template<typename X>
@@ -152,8 +157,10 @@ namespace PR16288 {
 
 namespace DR1635 {
   template <class T> struct X {
-    template <class U = typename T::type> static void f(int) {} // expected-error {{type 'int' cannot be used prior to '::' because it has no members}} \
-                                                                // expected-warning {{C++11}}
+    template <class U = typename T::type> static void f(int) {} // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+#if __cplusplus <= 199711L // C++03 or earlier modes
+    // expected-warning@-2 {{default template arguments for a function template are a C++11 extension}}
+#endif
     static void f(...) {}
   };
 
@@ -172,3 +179,31 @@ struct C {
   C(T t = ); // expected-error {{expected expression}}
 };
 C<int> obj;
+
+namespace PR26134 {
+// Make sure when substituting default template arguments we do it in the current context.
+template<class T, bool Val = T::value>
+struct X {};
+
+template<bool B> struct Y {
+  void f() { X<Y> xy; }
+  static const bool value = B;
+};
+
+namespace ns1 {
+template<class T0>
+struct X {
+  template<bool B = T0::value> struct XInner { static const bool value = B; };
+};
+template<bool B> struct S { static const bool value = B; };
+#if __cplusplus > 199711L
+template<bool B> struct Y {
+  static constexpr bool f() { return typename X<S<B>>::template XInner<>{}.value; }
+  static_assert(f() == B, "");
+};
+Y<true> y;
+Y<false> y2;
+#endif
+
+} // end ns1
+} // end ns PR26134

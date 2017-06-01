@@ -3,7 +3,7 @@
 ; -0x000000bb = 4294967109
 define i1 @f1(i32 %a) {
 ; CHECK-LABEL: f1:
-; CHECK: cmn.w {{r.*}}, #187
+; CHECK: adds {{r.*}}, #187
     %tmp = icmp ne i32 %a, 4294967109
     ret i1 %tmp
 }

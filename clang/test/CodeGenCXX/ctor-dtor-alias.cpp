@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -triple i686-linux -emit-llvm -o - -mconstructor-aliases | FileCheck --check-prefix=NOOPT %s
 
-// RUN: %clang_cc1 %s -triple i686-linux -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-optzns > %t
+// RUN: %clang_cc1 %s -triple i686-linux -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-passes > %t
 // RUN: FileCheck --check-prefix=CHECK1 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK2 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK3 --input-file=%t %s
@@ -8,7 +8,7 @@
 // RUN: FileCheck --check-prefix=CHECK5 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK6 --input-file=%t %s
 
-// RUN: %clang_cc1 %s -triple i686-pc-windows-gnu -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-optzns | FileCheck --check-prefix=COFF %s
+// RUN: %clang_cc1 %s -triple i686-pc-windows-gnu -emit-llvm -o - -mconstructor-aliases -O1 -disable-llvm-passes | FileCheck --check-prefix=COFF %s
 
 namespace test1 {
 // Test that we produce the apropriate comdats when creating aliases to
@@ -172,7 +172,7 @@ void zed() {
 }
 }
 
-// CHECK5: @_ZTV1C = linkonce_odr unnamed_addr constant [4 x i8*] [{{[^@]*}}@_ZTI1C {{[^@]*}}@_ZN1CD2Ev {{[^@]*}}@_ZN1CD0Ev {{[^@]*}}]
+// CHECK5: @_ZTV1C = linkonce_odr unnamed_addr constant { [4 x i8*] } {{[^@]*}}@_ZTI1C {{[^@]*}}@_ZN1CD2Ev {{[^@]*}}@_ZN1CD0Ev {{[^@]*}}]
 // r194296 replaced C::~C with B::~B without emitting the later.
 
 class A {

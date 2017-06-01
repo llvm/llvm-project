@@ -3,26 +3,31 @@
 define i32 @test_return(i32* %p, i32 %oldval, i32 %newval) {
 ; CHECK-LABEL: test_return:
 
-; CHECK: dmb ishst
-
-; CHECK: [[LOOP:LBB[0-9]+_[0-9]+]]:
 ; CHECK: ldrex [[LOADED:r[0-9]+]], [r0]
 ; CHECK: cmp [[LOADED]], r1
 ; CHECK: bne [[FAILED:LBB[0-9]+_[0-9]+]]
 
-; CHECK: strex [[STATUS:r[0-9]+]], {{r[0-9]+}}, [r0]
-; CHECK: cmp [[STATUS]], #0
-; CHECK: bne [[LOOP]]
+; CHECK: dmb ishst
 
-; CHECK-NOT: cmp {{r[0-9]+}}, {{r[0-9]+}}
-; CHECK: dmb ish
-; CHECK: movs r0, #1
-; CHECK: bx lr
+; CHECK: [[LOOP:LBB[0-9]+_[0-9]+]]:
+; CHECK: strex [[STATUS:r[0-9]+]], {{r[0-9]+}}, [r0]
+; CHECK: cbz [[STATUS]], [[SUCCESS:LBB[0-9]+_[0-9]+]]
+
+; CHECK: ldrex [[LOADED]], [r0]
+; CHECK: cmp [[LOADED]], r1
+; CHECK: beq [[LOOP]]
 
 ; CHECK: [[FAILED]]:
 ; CHECK-NOT: cmp {{r[0-9]+}}, {{r[0-9]+}}
+; CHECK: clrex
 ; CHECK: dmb ish
 ; CHECK: movs r0, #0
+; CHECK: bx lr
+
+; CHECK: [[SUCCESS]]:
+; CHECK-NOT: cmp {{r[0-9]+}}, {{r[0-9]+}}
+; CHECK: dmb ish
+; CHECK: movs r0, #1
 ; CHECK: bx lr
 
   %pair = cmpxchg i32* %p, i32 %oldval, i32 %newval seq_cst seq_cst
@@ -34,26 +39,33 @@ define i32 @test_return(i32* %p, i32 %oldval, i32 %newval) {
 define i1 @test_return_bool(i8* %value, i8 %oldValue, i8 %newValue) {
 ; CHECK-LABEL: test_return_bool:
 
-; CHECK: dmb ishst
 ; CHECK: uxtb [[OLDBYTE:r[0-9]+]], r1
 
-; CHECK: [[LOOP:LBB[0-9]+_[0-9]+]]:
 ; CHECK: ldrexb [[LOADED:r[0-9]+]], [r0]
 ; CHECK: cmp [[LOADED]], [[OLDBYTE]]
 ; CHECK: bne [[FAIL:LBB[0-9]+_[0-9]+]]
 
+; CHECK: dmb ishst
+
+; CHECK: [[LOOP:LBB[0-9]+_[0-9]+]]:
 ; CHECK: strexb [[STATUS:r[0-9]+]], {{r[0-9]+}}, [r0]
-; CHECK: cmp [[STATUS]], #0
-; CHECK: bne [[LOOP]]
+; CHECK: cbz [[STATUS]], [[SUCCESS:LBB[0-9]+_[0-9]+]]
+
+; CHECK: ldrexb [[LOADED]], [r0]
+; CHECK: cmp [[LOADED]], [[OLDBYTE]]
+; CHECK: beq [[LOOP]]
+
 
   ; FIXME: this eor is redundant. Need to teach DAG combine that.
-; CHECK-NOT: cmp {{r[0-9]+}}, {{r[0-9]+}}
-; CHECK: movs [[TMP:r[0-9]+]], #1
+; CHECK: [[FAIL]]:
+; CHECK: clrex
+; CHECK: movs [[TMP:r[0-9]+]], #0
 ; CHECK: eor r0, [[TMP]], #1
 ; CHECK: bx lr
 
-; CHECK: [[FAIL]]:
-; CHECK: movs [[TMP:r[0-9]+]], #0
+; CHECK: [[SUCCESS]]:
+; CHECK-NOT: cmp {{r[0-9]+}}, {{r[0-9]+}}
+; CHECK: movs [[TMP:r[0-9]+]], #1
 ; CHECK: eor r0, [[TMP]], #1
 ; CHECK: bx lr
 
@@ -67,25 +79,30 @@ define i1 @test_return_bool(i8* %value, i8 %oldValue, i8 %newValue) {
 define void @test_conditional(i32* %p, i32 %oldval, i32 %newval) {
 ; CHECK-LABEL: test_conditional:
 
-; CHECK: dmb ishst
-
-; CHECK: [[LOOP:LBB[0-9]+_[0-9]+]]:
 ; CHECK: ldrex [[LOADED:r[0-9]+]], [r0]
 ; CHECK: cmp [[LOADED]], r1
 ; CHECK: bne [[FAILED:LBB[0-9]+_[0-9]+]]
 
-; CHECK: strex [[STATUS:r[0-9]+]], r2, [r0]
-; CHECK: cmp [[STATUS]], #0
-; CHECK: bne [[LOOP]]
+; CHECK: dmb ishst
 
-; CHECK-NOT: cmp {{r[0-9]+}}, {{r[0-9]+}}
-; CHECK: dmb ish
-; CHECK: b.w _bar
+; CHECK: [[LOOP:LBB[0-9]+_[0-9]+]]:
+; CHECK: strex [[STATUS:r[0-9]+]], r2, [r0]
+; CHECK: cbz [[STATUS]], [[SUCCESS:LBB[0-9]+_[0-9]+]]
+
+; CHECK: ldrex [[LOADED]], [r0]
+; CHECK: cmp [[LOADED]], r1
+; CHECK: beq [[LOOP]]
 
 ; CHECK: [[FAILED]]:
 ; CHECK-NOT: cmp {{r[0-9]+}}, {{r[0-9]+}}
+; CHECK: clrex
 ; CHECK: dmb ish
 ; CHECK: b.w _baz
+
+; CHECK: [[SUCCESS]]:
+; CHECK-NOT: cmp {{r[0-9]+}}, {{r[0-9]+}}
+; CHECK: dmb ish
+; CHECK: b.w _bar
 
   %pair = cmpxchg i32* %p, i32 %oldval, i32 %newval seq_cst seq_cst
   %success = extractvalue { i32, i1 } %pair, 1

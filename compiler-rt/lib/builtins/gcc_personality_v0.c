@@ -12,6 +12,17 @@
 #include "int_lib.h"
 
 #include <unwind.h>
+#if defined(__arm__) && !defined(__ARM_DWARF_EH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+/*
+ * When building with older compilers (e.g. clang <3.9), it is possible that we
+ * have a version of unwind.h which does not provide the EHABI declarations
+ * which are quired for the C personality to conform to the specification.  In
+ * order to provide forward compatibility for such compilers, we re-declare the
+ * necessary interfaces in the helper to permit a standalone compilation of the
+ * builtins (which contains the C unwinding personality for historical reasons).
+ */
+#include "unwind-ehabi-helpers.h"
+#endif
 
 /*
  * Pointer encodings documented at:
@@ -131,6 +142,26 @@ static uintptr_t readEncodedPointer(const uint8_t** data, uint8_t encoding)
     return result;
 }
 
+#if defined(__arm__) && !defined(__USING_SJLJ_EXCEPTIONS__) &&                 \
+    !defined(__ARM_DWARF_EH__)
+#define USING_ARM_EHABI 1
+_Unwind_Reason_Code __gnu_unwind_frame(struct _Unwind_Exception *,
+                                       struct _Unwind_Context *);
+#endif
+
+static inline _Unwind_Reason_Code
+continueUnwind(struct _Unwind_Exception *exceptionObject,
+               struct _Unwind_Context *context) {
+#if USING_ARM_EHABI
+    /*
+     * On ARM EHABI the personality routine is responsible for actually
+     * unwinding a single stack frame before returning (ARM EHABI Sec. 6.1).
+     */
+    if (__gnu_unwind_frame(exceptionObject, context) != _URC_OK)
+        return _URC_FAILURE;
+#endif
+    return _URC_CONTINUE_UNWIND;
+}
 
 /*
  * The C compiler makes references to __gcc_personality_v0 in
@@ -141,10 +172,16 @@ static uintptr_t readEncodedPointer(const uint8_t** data, uint8_t encoding)
  * throw through a C function compiled with -fexceptions.
  */
 #if __USING_SJLJ_EXCEPTIONS__
-// the setjump-longjump based exceptions personality routine has a different name
+/* the setjump-longjump based exceptions personality routine has a
+ * different name */
 COMPILER_RT_ABI _Unwind_Reason_Code
 __gcc_personality_sj0(int version, _Unwind_Action actions,
          uint64_t exceptionClass, struct _Unwind_Exception* exceptionObject,
+         struct _Unwind_Context *context)
+#elif USING_ARM_EHABI
+/* The ARM EHABI personality routine has a different signature. */
+COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_v0(
+         _Unwind_State state, struct _Unwind_Exception *exceptionObject,
          struct _Unwind_Context *context)
 #else
 COMPILER_RT_ABI _Unwind_Reason_Code
@@ -155,13 +192,19 @@ __gcc_personality_v0(int version, _Unwind_Action actions,
 {
     /* Since C does not have catch clauses, there is nothing to do during */
     /* phase 1 (the search phase). */
-    if ( actions & _UA_SEARCH_PHASE ) 
-        return _URC_CONTINUE_UNWIND;
-        
+#if USING_ARM_EHABI
+    /* After resuming from a cleanup we should also continue on to the next
+     * frame straight away. */
+    if ((state & _US_ACTION_MASK) != _US_UNWIND_FRAME_STARTING)
+#else
+    if ( actions & _UA_SEARCH_PHASE )
+#endif
+        return continueUnwind(exceptionObject, context);
+
     /* There is nothing to do if there is no LSDA for this frame. */
     const uint8_t* lsda = (uint8_t*)_Unwind_GetLanguageSpecificData(context);
     if ( lsda == (uint8_t*) 0 )
-        return _URC_CONTINUE_UNWIND;
+        return continueUnwind(exceptionObject, context);
 
     uintptr_t pc = _Unwind_GetIP(context)-1;
     uintptr_t funcStart = _Unwind_GetRegionStart(context);
@@ -204,6 +247,6 @@ __gcc_personality_v0(int version, _Unwind_Action actions,
     }
 
     /* No landing pad found, continue unwinding. */
-    return _URC_CONTINUE_UNWIND;
+    return continueUnwind(exceptionObject, context);
 }
 

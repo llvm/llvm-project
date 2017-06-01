@@ -17,13 +17,13 @@ namespace {
 
 TEST(DwarfTest, TagStringOnInvalid) {
   // This is invalid, so it shouldn't be stringified.
-  EXPECT_EQ(nullptr, TagString(DW_TAG_invalid));
+  EXPECT_EQ(StringRef(), TagString(DW_TAG_invalid));
 
   // These aren't really tags: they describe ranges within tags.  They
   // shouldn't be stringified either.
-  EXPECT_EQ(nullptr, TagString(DW_TAG_lo_user));
-  EXPECT_EQ(nullptr, TagString(DW_TAG_hi_user));
-  EXPECT_EQ(nullptr, TagString(DW_TAG_user_base));
+  EXPECT_EQ(StringRef(), TagString(DW_TAG_lo_user));
+  EXPECT_EQ(StringRef(), TagString(DW_TAG_hi_user));
+  EXPECT_EQ(StringRef(), TagString(DW_TAG_user_base));
 }
 
 TEST(DwarfTest, getTag) {
@@ -58,12 +58,12 @@ TEST(DwarfTest, getOperationEncoding) {
 
 TEST(DwarfTest, LanguageStringOnInvalid) {
   // This is invalid, so it shouldn't be stringified.
-  EXPECT_EQ(nullptr, LanguageString(0));
+  EXPECT_EQ(StringRef(), LanguageString(0));
 
   // These aren't really tags: they describe ranges within tags.  They
   // shouldn't be stringified either.
-  EXPECT_EQ(nullptr, LanguageString(DW_LANG_lo_user));
-  EXPECT_EQ(nullptr, LanguageString(DW_LANG_hi_user));
+  EXPECT_EQ(StringRef(), LanguageString(DW_LANG_lo_user));
+  EXPECT_EQ(StringRef(), LanguageString(DW_LANG_hi_user));
 }
 
 TEST(DwarfTest, getLanguage) {
@@ -85,12 +85,12 @@ TEST(DwarfTest, getLanguage) {
 
 TEST(DwarfTest, AttributeEncodingStringOnInvalid) {
   // This is invalid, so it shouldn't be stringified.
-  EXPECT_EQ(nullptr, AttributeEncodingString(0));
+  EXPECT_EQ(StringRef(), AttributeEncodingString(0));
 
   // These aren't really tags: they describe ranges within tags.  They
   // shouldn't be stringified either.
-  EXPECT_EQ(nullptr, AttributeEncodingString(DW_ATE_lo_user));
-  EXPECT_EQ(nullptr, AttributeEncodingString(DW_ATE_hi_user));
+  EXPECT_EQ(StringRef(), AttributeEncodingString(DW_ATE_lo_user));
+  EXPECT_EQ(StringRef(), AttributeEncodingString(DW_ATE_hi_user));
 }
 
 TEST(DwarfTest, getAttributeEncoding) {
@@ -122,8 +122,8 @@ TEST(DwarfTest, VirtualityString) {
             VirtualityString(DW_VIRTUALITY_max));
 
   // Invalid numbers shouldn't be stringified.
-  EXPECT_EQ(nullptr, VirtualityString(DW_VIRTUALITY_max + 1));
-  EXPECT_EQ(nullptr, VirtualityString(DW_VIRTUALITY_max + 77));
+  EXPECT_EQ(StringRef(), VirtualityString(DW_VIRTUALITY_max + 1));
+  EXPECT_EQ(StringRef(), VirtualityString(DW_VIRTUALITY_max + 77));
 }
 
 TEST(DwarfTest, getVirtuality) {

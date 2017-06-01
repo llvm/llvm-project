@@ -44,3 +44,4 @@
         pul.ps    $f9,$f30,$f26       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         puu.ps    $f24,$f9,$f2        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         sub.ps    $f5,$f14,$f26       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
+

@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/ResourcePriorityQueue.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -54,6 +53,10 @@ class VLIWResourceModel {
   unsigned TotalPackets;
 
 public:
+  /// Save the last formed packet.
+  std::vector<SUnit*> OldPacket;
+
+public:
   VLIWResourceModel(const TargetSubtargetInfo &STI, const TargetSchedModel *SM)
       : SchedModel(SM), TotalPackets(0) {
   ResourcesModel = STI.getInstrInfo()->CreateTargetScheduleState(STI);
@@ -64,6 +67,8 @@ public:
 
     Packet.resize(SchedModel->getIssueWidth());
     Packet.clear();
+    OldPacket.resize(SchedModel->getIssueWidth());
+    OldPacket.clear();
     ResourcesModel->clearResources();
   }
 
@@ -86,7 +91,10 @@ public:
 
   bool isResourceAvailable(SUnit *SU);
   bool reserveResources(SUnit *SU);
+  void savePacket();
   unsigned getTotalPackets() const { return TotalPackets; }
+
+  bool isInPacket(SUnit *SU) const { return is_contained(Packet, SU); }
 };
 
 /// Extend the standard ScheduleDAGMI to provide more context and override the
@@ -100,8 +108,6 @@ public:
   /// Schedule - This is called back from ScheduleDAGInstrs::Run() when it's
   /// time to do some work.
   void schedule() override;
-  /// Perform platform-specific DAG postprocessing.
-  void postprocessDAG();
 };
 
 /// ConvergingVLIWScheduler shrinks the unscheduled zone using heuristics
@@ -167,6 +173,7 @@ class ConvergingVLIWScheduler : public MachineSchedStrategy {
     void init(VLIWMachineScheduler *dag, const TargetSchedModel *smodel) {
       DAG = dag;
       SchedModel = smodel;
+      IssueCount = 0;
     }
 
     bool isTop() const {
@@ -234,7 +241,10 @@ protected:
                                SchedCandidate &Candidate);
 #ifndef NDEBUG
   void traceCandidate(const char *Label, const ReadyQueue &Q, SUnit *SU,
-                      PressureChange P = PressureChange());
+                      int Cost, PressureChange P = PressureChange());
+
+  void readyQueueVerboseDump(const RegPressureTracker &RPTracker,
+                             SchedCandidate &Candidate, ReadyQueue &Q);
 #endif
 };
 

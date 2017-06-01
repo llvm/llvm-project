@@ -1,11 +1,11 @@
 // RUN: %clangxx_tsan %s -o %t
 // RUN:                                 not %run %t 2>&1 | FileCheck %s
-// RUN: TSAN_OPTIONS=detect_deadlocks=1 not %run %t 2>&1 | FileCheck %s
-// RUN: TSAN_OPTIONS=detect_deadlocks=0     %run %t 2>&1 | FileCheck %s --check-prefix=DISABLED
+// RUN: %env_tsan_opts=detect_deadlocks=1 not %run %t 2>&1 | FileCheck %s
+// RUN: %env_tsan_opts=detect_deadlocks=0     %run %t 2>&1 | FileCheck %s --check-prefix=DISABLED
 // RUN: echo "deadlock:main" > %t.supp
-// RUN: TSAN_OPTIONS="suppressions='%t.supp'" %run %t 2>&1 | FileCheck %s --check-prefix=DISABLED
+// RUN: %env_tsan_opts=suppressions='%t.supp' %run %t 2>&1 | FileCheck %s --check-prefix=DISABLED
 // RUN: echo "deadlock:zzzz" > %t.supp
-// RUN: TSAN_OPTIONS="suppressions='%t.supp'" not %run %t 2>&1 | FileCheck %s
+// RUN: %env_tsan_opts=suppressions='%t.supp' not %run %t 2>&1 | FileCheck %s
 #include <pthread.h>
 #include <stdio.h>
 

@@ -12,31 +12,36 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/BPFMCTargetDesc.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCSymbol.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/EndianStream.h"
+#include <cassert>
+#include <cstdint>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "mccodeemitter"
 
 namespace {
+
 class BPFMCCodeEmitter : public MCCodeEmitter {
-  BPFMCCodeEmitter(const BPFMCCodeEmitter &) = delete;
-  void operator=(const BPFMCCodeEmitter &) = delete;
+  const MCInstrInfo &MCII;
   const MCRegisterInfo &MRI;
   bool IsLittleEndian;
 
 public:
-  BPFMCCodeEmitter(const MCRegisterInfo &mri, bool IsLittleEndian)
-    : MRI(mri), IsLittleEndian(IsLittleEndian) {}
-
-  ~BPFMCCodeEmitter() {}
+  BPFMCCodeEmitter(const MCInstrInfo &mcii, const MCRegisterInfo &mri,
+                   bool IsLittleEndian)
+      : MCII(mcii), MRI(mri), IsLittleEndian(IsLittleEndian) {}
+  BPFMCCodeEmitter(const BPFMCCodeEmitter &) = delete;
+  void operator=(const BPFMCCodeEmitter &) = delete;
+  ~BPFMCCodeEmitter() override = default;
 
   // getBinaryCodeForInstr - TableGen'erated function for getting the
   // binary encoding for an instruction.
@@ -57,19 +62,25 @@ public:
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
+
+private:
+  uint64_t computeAvailableFeatures(const FeatureBitset &FB) const;
+  void verifyInstructionPredicates(const MCInst &MI,
+                                   uint64_t AvailableFeatures) const;
 };
-}
+
+} // end anonymous namespace
 
 MCCodeEmitter *llvm::createBPFMCCodeEmitter(const MCInstrInfo &MCII,
                                             const MCRegisterInfo &MRI,
                                             MCContext &Ctx) {
-  return new BPFMCCodeEmitter(MRI, true);
+  return new BPFMCCodeEmitter(MCII, MRI, true);
 }
 
 MCCodeEmitter *llvm::createBPFbeMCCodeEmitter(const MCInstrInfo &MCII,
                                               const MCRegisterInfo &MRI,
                                               MCContext &Ctx) {
-  return new BPFMCCodeEmitter(MRI, false);
+  return new BPFMCCodeEmitter(MCII, MRI, false);
 }
 
 unsigned BPFMCCodeEmitter::getMachineOpValue(const MCInst &MI,
@@ -107,6 +118,9 @@ static uint8_t SwapBits(uint8_t Val)
 void BPFMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                          SmallVectorImpl<MCFixup> &Fixups,
                                          const MCSubtargetInfo &STI) const {
+  verifyInstructionPredicates(MI,
+                              computeAvailableFeatures(STI.getFeatureBits()));
+
   unsigned Opcode = MI.getOpcode();
   support::endian::Writer<support::little> LE(OS);
   support::endian::Writer<support::big> BE(OS);
@@ -164,4 +178,5 @@ uint64_t BPFMCCodeEmitter::getMemoryOpValue(const MCInst &MI, unsigned Op,
   return Encoding;
 }
 
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "BPFGenMCCodeEmitter.inc"

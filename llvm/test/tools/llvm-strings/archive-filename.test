@@ -1,0 +1,9 @@
+RUN: rm -f %T/archive.a
+RUN: llvm-ar -format gnu crs %T/archive.a %S/Inputs/abcd
+RUN: llvm-strings -f %T/archive.a | FileCheck %s
+RUN: llvm-strings --print-file-name %T/archive.a | FileCheck %s
+
+CHECK: archive.a: !<arch>
+CHECK: archive.a: abcd/           0           0     0     644     4         `
+CHECK: archive.a: abcd
+

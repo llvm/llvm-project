@@ -57,7 +57,7 @@ struct NVPTXPeephole : public MachineFunctionPass {
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "NVPTX optimize redundant cvta.to.local instruction";
   }
 
@@ -125,6 +125,9 @@ static void CombineCVTAToLocal(MachineInstr &Root) {
 }
 
 bool NVPTXPeephole::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   bool Changed = false;
   // Loop over all of the basic blocks.
   for (auto &MBB : MF) {

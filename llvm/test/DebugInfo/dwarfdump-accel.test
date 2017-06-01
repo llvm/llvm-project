@@ -21,28 +21,30 @@ CHECK: .apple_names contents:
 CHECK: Magic = 0x48415348
 CHECK: Version = 0x0001
 CHECK: Hash function = 0x00000000
-CHECK: Bucket count = 11
-CHECK: Hashes count = 22
+CHECK: Bucket count = 21
+CHECK: Hashes count = 42
 CHECK: HeaderData length = 12
 CHECK: DIE offset base = 0
 CHECK: Number of atoms = 1
 CHECK: Atom[0]  Type: DW_ATOM_die_offset Form: DW_FORM_data4
 
-Check that empty buckets are handled correctly.
-CHECK: Bucket[2]
-CHECK:   EMPTY
-CHECK: Bucket[3]
-
 Check that the accelerators point to the right DIEs.
 CHECK:     Name:{{.*}}"-[TestInterface ReadOnly]"
 CHECK-NOT: Name
 CHECK:     {Atom[0]: [[READONLY]]}
-CHECK:     Name:{{.*}}"-[TestInterface setAssign:]"
-CHECK-NOT: Name
-CHECK:     {Atom[0]: [[SETASSIGN]]}
+
+Check that empty buckets are handled correctly.
+CHECK: Bucket[3]
+CHECK:   EMPTY
+CHECK: Bucket[4]
+
+Check that the accelerators point to the right DIEs.
 CHECK:     Name:{{.*}}"-[TestInterface Assign]"
 CHECK-NOT: Name
 CHECK:     {Atom[0]: [[ASSIGN]]}
+CHECK:     Name:{{.*}}"-[TestInterface setAssign:]"
+CHECK-NOT: Name
+CHECK:     {Atom[0]: [[SETASSIGN]]}
 
 Check that types are referenced correctly.
 CHECK: .apple_types contents:
@@ -50,7 +52,7 @@ CHECK:     Name{{.*}}"TestInterface"
 CHECK-NOT: Name
 CHECK:     {Atom[0]: [[TESTINTERFACE]]}
 
-Check that an empty ecceleratorsection is handled correctly.
+Check that an empty accelerator section is handled correctly.
 CHECK: .apple_namespaces contents:
 CHECK-NOT: Magic
 

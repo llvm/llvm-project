@@ -75,9 +75,9 @@ void MCWinCOFFStreamer::InitSections(bool NoExecStack) {
   SwitchSection(getContext().getObjectFileInfo()->getTextSection());
 }
 
-void MCWinCOFFStreamer::EmitLabel(MCSymbol *Symbol) {
-  assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
-  MCObjectStreamer::EmitLabel(Symbol);
+void MCWinCOFFStreamer::EmitLabel(MCSymbol *S, SMLoc Loc) {
+  auto *Symbol = cast<MCSymbolCOFF>(S);
+  MCObjectStreamer::EmitLabel(Symbol, Loc);
 }
 
 void MCWinCOFFStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
@@ -88,25 +88,23 @@ void MCWinCOFFStreamer::EmitThumbFunc(MCSymbol *Func) {
   llvm_unreachable("not implemented");
 }
 
-bool MCWinCOFFStreamer::EmitSymbolAttribute(MCSymbol *Symbol,
+bool MCWinCOFFStreamer::EmitSymbolAttribute(MCSymbol *S,
                                             MCSymbolAttr Attribute) {
-  assert(Symbol && "Symbol must be non-null!");
-  assert((!Symbol->isInSection() ||
-          Symbol->getSection().getVariant() == MCSection::SV_COFF) &&
-         "Got non-COFF section in the COFF backend!");
-
+  auto *Symbol = cast<MCSymbolCOFF>(S);
   getAssembler().registerSymbol(*Symbol);
 
   switch (Attribute) {
   default: return false;
   case MCSA_WeakReference:
   case MCSA_Weak:
-    cast<MCSymbolCOFF>(Symbol)->setIsWeakExternal();
+    Symbol->setIsWeakExternal();
     Symbol->setExternal(true);
     break;
   case MCSA_Global:
     Symbol->setExternal(true);
     break;
+  case MCSA_AltEntry:
+    llvm_unreachable("COFF doesn't support the .alt_entry attribute");
   }
 
   return true;
@@ -116,35 +114,40 @@ void MCWinCOFFStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   llvm_unreachable("not implemented");
 }
 
-void MCWinCOFFStreamer::BeginCOFFSymbolDef(MCSymbol const *Symbol) {
-  assert((!Symbol->isInSection() ||
-          Symbol->getSection().getVariant() == MCSection::SV_COFF) &&
-         "Got non-COFF section in the COFF backend!");
-
+void MCWinCOFFStreamer::BeginCOFFSymbolDef(MCSymbol const *S) {
+  auto *Symbol = cast<MCSymbolCOFF>(S);
   if (CurSymbol)
-    FatalError("starting a new symbol definition without completing the "
-               "previous one");
+    Error("starting a new symbol definition without completing the "
+          "previous one");
   CurSymbol = Symbol;
 }
 
 void MCWinCOFFStreamer::EmitCOFFSymbolStorageClass(int StorageClass) {
-  if (!CurSymbol)
-    FatalError("storage class specified outside of symbol definition");
+  if (!CurSymbol) {
+    Error("storage class specified outside of symbol definition");
+    return;
+  }
 
-  if (StorageClass & ~COFF::SSC_Invalid)
-    FatalError("storage class value '" + Twine(StorageClass) +
+  if (StorageClass & ~COFF::SSC_Invalid) {
+    Error("storage class value '" + Twine(StorageClass) +
                "' out of range");
+    return;
+  }
 
   getAssembler().registerSymbol(*CurSymbol);
   cast<MCSymbolCOFF>(CurSymbol)->setClass((uint16_t)StorageClass);
 }
 
 void MCWinCOFFStreamer::EmitCOFFSymbolType(int Type) {
-  if (!CurSymbol)
-    FatalError("symbol type specified outside of a symbol definition");
+  if (!CurSymbol) {
+    Error("symbol type specified outside of a symbol definition");
+    return;
+  }
 
-  if (Type & ~0xffff)
-    FatalError("type value '" + Twine(Type) + "' out of range");
+  if (Type & ~0xffff) {
+    Error("type value '" + Twine(Type) + "' out of range");
+    return;
+  }
 
   getAssembler().registerSymbol(*CurSymbol);
   cast<MCSymbolCOFF>(CurSymbol)->setType((uint16_t)Type);
@@ -152,7 +155,7 @@ void MCWinCOFFStreamer::EmitCOFFSymbolType(int Type) {
 
 void MCWinCOFFStreamer::EndCOFFSymbolDef() {
   if (!CurSymbol)
-    FatalError("ending symbol definition without starting one");
+    Error("ending symbol definition without starting one");
   CurSymbol = nullptr;
 }
 
@@ -191,19 +194,26 @@ void MCWinCOFFStreamer::EmitCOFFSectionIndex(MCSymbol const *Symbol) {
   DF->getContents().resize(DF->getContents().size() + 2, 0);
 }
 
-void MCWinCOFFStreamer::EmitCOFFSecRel32(MCSymbol const *Symbol) {
+void MCWinCOFFStreamer::EmitCOFFSecRel32(MCSymbol const *Symbol,
+                                         uint64_t Offset) {
   MCDataFragment *DF = getOrCreateDataFragment();
-  const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(Symbol, getContext());
-  MCFixup Fixup = MCFixup::create(DF->getContents().size(), SRE, FK_SecRel_4);
+  // Create Symbol A for the relocation relative reference.
+  const MCExpr *MCE = MCSymbolRefExpr::create(Symbol, getContext());
+  // Add the constant offset, if given.
+  if (Offset)
+    MCE = MCBinaryExpr::createAdd(
+        MCE, MCConstantExpr::create(Offset, getContext()), getContext());
+  // Build the secrel32 relocation.
+  MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_SecRel_4);
+  // Record the relocation.
   DF->getFixups().push_back(Fixup);
+  // Emit 4 bytes (zeros) to the object file.
   DF->getContents().resize(DF->getContents().size() + 4, 0);
 }
 
-void MCWinCOFFStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+void MCWinCOFFStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
                                          unsigned ByteAlignment) {
-  assert((!Symbol->isInSection() ||
-          Symbol->getSection().getVariant() == MCSection::SV_COFF) &&
-         "Got non-COFF section in the COFF backend!");
+  auto *Symbol = cast<MCSymbolCOFF>(S);
 
   const Triple &T = getContext().getObjectFileInfo()->getTargetTriple();
   if (T.isKnownWindowsMSVCEnvironment()) {
@@ -233,9 +243,9 @@ void MCWinCOFFStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
   }
 }
 
-void MCWinCOFFStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+void MCWinCOFFStreamer::EmitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
                                               unsigned ByteAlignment) {
-  assert(!Symbol->isInSection() && "Symbol must not already have a section!");
+  auto *Symbol = cast<MCSymbolCOFF>(S);
 
   MCSection *Section = getContext().getObjectFileInfo()->getBSSSection();
   getAssembler().registerSection(*Section);
@@ -250,7 +260,7 @@ void MCWinCOFFStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         ByteAlignment, Section);
 
   MCFillFragment *Fragment = new MCFillFragment(
-      /*Value=*/0, /*ValueSize=*/0, Size, Section);
+      /*Value=*/0, Size, Section);
   Symbol->setFragment(Fragment);
 }
 
@@ -281,9 +291,8 @@ void MCWinCOFFStreamer::FinishImpl() {
   MCObjectStreamer::FinishImpl();
 }
 
-LLVM_ATTRIBUTE_NORETURN
-void MCWinCOFFStreamer::FatalError(const Twine &Msg) const {
-  getContext().reportFatalError(SMLoc(), Msg);
+void MCWinCOFFStreamer::Error(const Twine &Msg) const {
+  getContext().reportError(SMLoc(), Msg);
 }
 }
 

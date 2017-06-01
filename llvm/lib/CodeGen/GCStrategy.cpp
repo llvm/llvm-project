@@ -16,6 +16,8 @@
 
 using namespace llvm;
 
+LLVM_INSTANTIATE_REGISTRY(GCRegistry)
+
 GCStrategy::GCStrategy()
     : UseStatepoints(false), NeededSafePoints(0), CustomReadBarriers(false),
       CustomWriteBarriers(false), CustomRoots(false), InitRoots(true),

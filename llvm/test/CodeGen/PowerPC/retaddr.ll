@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=ppc32 | grep mflr
-; RUN: llc < %s -march=ppc32 | grep lwz
-; RUN: llc < %s -march=ppc64 | grep "ld r., 16(r1)"
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep mflr
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep lwz
+; RUN: llc -verify-machineinstrs < %s -march=ppc64 | grep "ld r., 16(r1)"
 
 target triple = "powerpc-apple-darwin8"
 

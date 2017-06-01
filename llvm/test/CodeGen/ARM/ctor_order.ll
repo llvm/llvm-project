@@ -1,10 +1,14 @@
 ; RUN: llc < %s -mtriple=arm-apple-darwin  | FileCheck %s -check-prefix=DARWIN
+; RUN: llc < %s -mtriple=arm-apple-darwin -relocation-model=dynamic-no-pic  | FileCheck %s --check-prefix=DARWIN
+; RUN: llc < %s -mtriple=arm-apple-darwin -relocation-model=static  | FileCheck %s -check-prefix=DARWIN-STATIC
 ; RUN: llc < %s -mtriple=arm-linux-gnu     | FileCheck %s -check-prefix=ELF
 ; RUN: llc < %s -mtriple=arm-linux-gnueabi | FileCheck %s -check-prefix=GNUEABI
 
 ; DARWIN:      .section	__DATA,__mod_init_func,mod_init_funcs
 ; DARWIN:      .long _f151
 ; DARWIN-NEXT: .long _f152
+
+; DARWIN-STATIC: .section __TEXT,__constructor
 
 ; ELF:      .section .ctors.65384,"aw",%progbits
 ; ELF:      .long    f151

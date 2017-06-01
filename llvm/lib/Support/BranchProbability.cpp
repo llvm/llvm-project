@@ -22,14 +22,19 @@ using namespace llvm;
 const uint32_t BranchProbability::D;
 
 raw_ostream &BranchProbability::print(raw_ostream &OS) const {
+  if (isUnknown())
+    return OS << "?%";
+
   // Get a percentage rounded to two decimal digits. This avoids
   // implementation-defined rounding inside printf.
   double Percent = rint(((double)N / D) * 100.0 * 100.0) / 100.0;
-  OS << format("0x%08" PRIx32 " / 0x%08" PRIx32 " = %.2f%%", N, D, Percent);
-  return OS;
+  return OS << format("0x%08" PRIx32 " / 0x%08" PRIx32 " = %.2f%%", N, D,
+                      Percent);
 }
 
-void BranchProbability::dump() const { print(dbgs()) << '\n'; }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void BranchProbability::dump() const { print(dbgs()) << '\n'; }
+#endif
 
 BranchProbability::BranchProbability(uint32_t Numerator, uint32_t Denominator) {
   assert(Denominator > 0 && "Denominator cannot be 0!");
@@ -41,6 +46,19 @@ BranchProbability::BranchProbability(uint32_t Numerator, uint32_t Denominator) {
         (Numerator * static_cast<uint64_t>(D) + Denominator / 2) / Denominator;
     N = static_cast<uint32_t>(Prob64);
   }
+}
+
+BranchProbability
+BranchProbability::getBranchProbability(uint64_t Numerator,
+                                        uint64_t Denominator) {
+  assert(Numerator <= Denominator && "Probability cannot be bigger than 1!");
+  // Scale down Denominator to fit in a 32-bit integer.
+  int Scale = 0;
+  while (Denominator > UINT32_MAX) {
+    Denominator >>= 1;
+    Scale++;
+  }
+  return BranchProbability(Numerator >> Scale, Denominator);
 }
 
 // If ConstD is not zero, then replace D by ConstD so that division and modulo

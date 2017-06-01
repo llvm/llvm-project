@@ -28,7 +28,7 @@ CXXTryStmt *CXXTryStmt::Create(const ASTContext &C, SourceLocation tryLoc,
   std::size_t Size = sizeof(CXXTryStmt);
   Size += ((handlers.size() + 1) * sizeof(Stmt *));
 
-  void *Mem = C.Allocate(Size, llvm::alignOf<CXXTryStmt>());
+  void *Mem = C.Allocate(Size, alignof(CXXTryStmt));
   return new (Mem) CXXTryStmt(tryLoc, tryBlock, handlers);
 }
 
@@ -37,7 +37,7 @@ CXXTryStmt *CXXTryStmt::Create(const ASTContext &C, EmptyShell Empty,
   std::size_t Size = sizeof(CXXTryStmt);
   Size += ((numHandlers + 1) * sizeof(Stmt *));
 
-  void *Mem = C.Allocate(Size, llvm::alignOf<CXXTryStmt>());
+  void *Mem = C.Allocate(Size, alignof(CXXTryStmt));
   return new (Mem) CXXTryStmt(Empty, numHandlers);
 }
 
@@ -49,7 +49,8 @@ CXXTryStmt::CXXTryStmt(SourceLocation tryLoc, Stmt *tryBlock,
   std::copy(handlers.begin(), handlers.end(), Stmts + 1);
 }
 
-CXXForRangeStmt::CXXForRangeStmt(DeclStmt *Range, DeclStmt *BeginEndStmt,
+CXXForRangeStmt::CXXForRangeStmt(DeclStmt *Range,
+                                 DeclStmt *BeginStmt, DeclStmt *EndStmt,
                                  Expr *Cond, Expr *Inc, DeclStmt *LoopVar,
                                  Stmt *Body, SourceLocation FL,
                                  SourceLocation CAL, SourceLocation CL,
@@ -57,7 +58,8 @@ CXXForRangeStmt::CXXForRangeStmt(DeclStmt *Range, DeclStmt *BeginEndStmt,
     : Stmt(CXXForRangeStmtClass), ForLoc(FL), CoawaitLoc(CAL), ColonLoc(CL),
       RParenLoc(RPL) {
   SubExprs[RANGE] = Range;
-  SubExprs[BEGINEND] = BeginEndStmt;
+  SubExprs[BEGINSTMT] = BeginStmt;
+  SubExprs[ENDSTMT] = EndStmt;
   SubExprs[COND] = Cond;
   SubExprs[INC] = Inc;
   SubExprs[LOOPVAR] = LoopVar;

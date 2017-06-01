@@ -1,4 +1,5 @@
 ; RUN: opt < %s -loop-deletion -S | FileCheck %s
+; RUN: opt < %s -passes='require<scalar-evolution>,loop(loop-deletion)' -S | FileCheck %s
 
 ; ScalarEvolution can prove the loop iteration is finite, even though
 ; it can't represent the exact trip count as an expression. That's

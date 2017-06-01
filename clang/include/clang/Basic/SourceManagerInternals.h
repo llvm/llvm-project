@@ -95,9 +95,9 @@ public:
   }
 
   unsigned getLineTableFilenameID(StringRef Str);
-  const char *getFilename(unsigned ID) const {
+  StringRef getFilename(unsigned ID) const {
     assert(ID < FilenamesByID.size() && "Invalid FilenameID");
-    return FilenamesByID[ID]->getKeyData();
+    return FilenamesByID[ID]->getKey();
   }
   unsigned getNumFilenames() const { return FilenamesByID.size(); }
 

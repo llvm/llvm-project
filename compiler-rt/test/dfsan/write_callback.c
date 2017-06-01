@@ -3,6 +3,7 @@
 
 // Tests that the custom implementation of write() does writes with or without
 // a callback set using dfsan_set_write_callback().
+// REQUIRES: stable-runtime
 
 #include <sanitizer/dfsan_interface.h>
 

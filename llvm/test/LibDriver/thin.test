@@ -1,4 +1,4 @@
-RUN: echo foo > %t
+RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t %S/Inputs/a.s
 
 RUN: llvm-lib  -out:%t.a %t
 RUN: FileCheck --check-prefix=FAT %s < %t.a

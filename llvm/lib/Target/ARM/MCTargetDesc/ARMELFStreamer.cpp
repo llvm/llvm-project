@@ -79,7 +79,7 @@ class ARMTargetAsmStreamer : public ARMTargetStreamer {
   void emitAttribute(unsigned Attribute, unsigned Value) override;
   void emitTextAttribute(unsigned Attribute, StringRef String) override;
   void emitIntTextAttribute(unsigned Attribute, unsigned IntValue,
-                            StringRef StrinValue) override;
+                            StringRef StringValue) override;
   void emitArch(unsigned Arch) override;
   void emitArchExtension(unsigned ArchExt) override;
   void emitObjectArch(unsigned Arch) override;
@@ -243,7 +243,7 @@ void ARMTargetAsmStreamer::emitUnwindRaw(int64_t Offset,
 class ARMTargetELFStreamer : public ARMTargetStreamer {
 private:
   // This structure holds all attributes, accounting for
-  // their string/numeric value, so we can later emmit them
+  // their string/numeric value, so we can later emit them
   // in declaration order, keeping all in the same vector
   struct AttributeItem {
     enum {
@@ -254,7 +254,7 @@ private:
     } Type;
     unsigned Tag;
     unsigned IntValue;
-    StringRef StringValue;
+    std::string StringValue;
 
     static bool LessTag(const AttributeItem &LHS, const AttributeItem &RHS) {
       // The conformance tag must be emitted first when serialised
@@ -388,6 +388,9 @@ private:
 
   size_t calculateContentSize() const;
 
+  // Reset state between object emissions
+  void reset() override;
+
 public:
   ARMTargetELFStreamer(MCStreamer &S)
     : ARMTargetStreamer(S), CurrentVendor("aeabi"), FPU(ARM::FK_INVALID),
@@ -415,7 +418,7 @@ public:
                  MCCodeEmitter *Emitter, bool IsThumb)
       : MCELFStreamer(Context, TAB, OS, Emitter), IsThumb(IsThumb),
         MappingSymbolCounter(0), LastEMS(EMS_None) {
-    Reset();
+    EHReset();
   }
 
   ~ARMELFStreamer() {}
@@ -509,11 +512,13 @@ public:
   /// necessary.
   void EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
     if (const MCSymbolRefExpr *SRE = dyn_cast_or_null<MCSymbolRefExpr>(Value))
-      if (SRE->getKind() == MCSymbolRefExpr::VK_ARM_SBREL && !(Size == 4))
-        getContext().reportFatalError(Loc, "relocated expression must be 32-bit");
+      if (SRE->getKind() == MCSymbolRefExpr::VK_ARM_SBREL && !(Size == 4)) {
+        getContext().reportError(Loc, "relocated expression must be 32-bit");
+        return;
+      }
 
     EmitDataMappingSymbol();
-    MCELFStreamer::EmitValueImpl(Value, Size);
+    MCELFStreamer::EmitValueImpl(Value, Size, Loc);
   }
 
   void EmitAssemblerFlag(MCAssemblerFlag Flag) override {
@@ -577,13 +582,16 @@ private:
   }
 
   // Helper functions for ARM exception handling directives
-  void Reset();
+  void EHReset();
+
+  // Reset state between object emissions
+  void reset() override;
 
   void EmitPersonalityFixup(StringRef Name);
   void FlushPendingOffset();
   void FlushUnwindOpcodes(bool NoHandlerData);
 
-  void SwitchToEHSection(const char *Prefix, unsigned Type, unsigned Flags,
+  void SwitchToEHSection(StringRef Prefix, unsigned Type, unsigned Flags,
                          SectionKind Kind, const MCSymbol &Fn);
   void SwitchToExTabSection(const MCSymbol &FnStart);
   void SwitchToExIdxSection(const MCSymbol &FnStart);
@@ -701,7 +709,6 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::AK_ARMV3:
   case ARM::AK_ARMV3M:
   case ARM::AK_ARMV4:
-  case ARM::AK_ARMV5:
     setAttributeItem(ARM_ISA_use, Allowed, false);
     break;
 
@@ -709,7 +716,6 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::AK_ARMV5T:
   case ARM::AK_ARMV5TE:
   case ARM::AK_ARMV6:
-  case ARM::AK_ARMV6J:
     setAttributeItem(ARM_ISA_use, Allowed, false);
     setAttributeItem(THUMB_ISA_use, Allowed, false);
     break;
@@ -720,8 +726,7 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
     break;
 
   case ARM::AK_ARMV6K:
-  case ARM::AK_ARMV6Z:
-  case ARM::AK_ARMV6ZK:
+  case ARM::AK_ARMV6KZ:
     setAttributeItem(ARM_ISA_use, Allowed, false);
     setAttributeItem(THUMB_ISA_use, Allowed, false);
     setAttributeItem(Virtualization_use, AllowTZ, false);
@@ -729,10 +734,6 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
 
   case ARM::AK_ARMV6M:
     setAttributeItem(THUMB_ISA_use, Allowed, false);
-    break;
-
-  case ARM::AK_ARMV7:
-    setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
     break;
 
   case ARM::AK_ARMV7A:
@@ -754,11 +755,18 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
 
   case ARM::AK_ARMV8A:
   case ARM::AK_ARMV8_1A:
+  case ARM::AK_ARMV8_2A:
     setAttributeItem(CPU_arch_profile, ApplicationProfile, false);
     setAttributeItem(ARM_ISA_use, Allowed, false);
     setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
     setAttributeItem(MPextension_use, Allowed, false);
     setAttributeItem(Virtualization_use, AllowTZVirtualization, false);
+    break;
+
+  case ARM::AK_ARMV8MBaseline:
+  case ARM::AK_ARMV8MMainline:
+    setAttributeItem(THUMB_ISA_use, AllowThumbDerived, false);
+    setAttributeItem(CPU_arch_profile, MicroControllerProfile, false);
     break;
 
   case ARM::AK_IWMMXT:
@@ -1044,6 +1052,8 @@ void ARMTargetELFStreamer::emitInst(uint32_t Inst, char Suffix) {
   getStreamer().emitInst(Inst, Suffix);
 }
 
+void ARMTargetELFStreamer::reset() { AttributeSection = nullptr; }
+
 void ARMELFStreamer::FinishImpl() {
   MCTargetStreamer &TS = *getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
@@ -1052,7 +1062,19 @@ void ARMELFStreamer::FinishImpl() {
   MCELFStreamer::FinishImpl();
 }
 
-inline void ARMELFStreamer::SwitchToEHSection(const char *Prefix,
+void ARMELFStreamer::reset() {
+  MCTargetStreamer &TS = *getTargetStreamer();
+  ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
+  ATS.reset();
+  MappingSymbolCounter = 0;
+  MCELFStreamer::reset();
+  // MCELFStreamer clear's the assembler's e_flags. However, for
+  // arm we manually set the ABI version on streamer creation, so
+  // do the same here
+  getAssembler().setELFHeaderEFlags(ELF::EF_ARM_EABI_VER5);
+}
+
+inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix,
                                               unsigned Type,
                                               unsigned Flags,
                                               SectionKind Kind,
@@ -1071,9 +1093,8 @@ inline void ARMELFStreamer::SwitchToEHSection(const char *Prefix,
   const MCSymbolELF *Group = FnSection.getGroup();
   if (Group)
     Flags |= ELF::SHF_GROUP;
-  MCSectionELF *EHSection =
-      getContext().getELFSection(EHSecName, Type, Flags, 0, Group,
-                                 FnSection.getUniqueID(), nullptr, &FnSection);
+  MCSectionELF *EHSection = getContext().getELFSection(
+      EHSecName, Type, Flags, 0, Group, FnSection.getUniqueID(), &FnSection);
 
   assert(EHSection && "Failed to get the required EH section");
 
@@ -1083,19 +1104,14 @@ inline void ARMELFStreamer::SwitchToEHSection(const char *Prefix,
 }
 
 inline void ARMELFStreamer::SwitchToExTabSection(const MCSymbol &FnStart) {
-  SwitchToEHSection(".ARM.extab",
-                    ELF::SHT_PROGBITS,
-                    ELF::SHF_ALLOC,
-                    SectionKind::getDataRel(),
-                    FnStart);
+  SwitchToEHSection(".ARM.extab", ELF::SHT_PROGBITS, ELF::SHF_ALLOC,
+                    SectionKind::getData(), FnStart);
 }
 
 inline void ARMELFStreamer::SwitchToExIdxSection(const MCSymbol &FnStart) {
-  SwitchToEHSection(".ARM.exidx",
-                    ELF::SHT_ARM_EXIDX,
+  SwitchToEHSection(".ARM.exidx", ELF::SHT_ARM_EXIDX,
                     ELF::SHF_ALLOC | ELF::SHF_LINK_ORDER,
-                    SectionKind::getDataRel(),
-                    FnStart);
+                    SectionKind::getData(), FnStart);
 }
 void ARMELFStreamer::EmitFixup(const MCExpr *Expr, MCFixupKind Kind) {
   MCDataFragment *Frag = getOrCreateDataFragment();
@@ -1103,7 +1119,7 @@ void ARMELFStreamer::EmitFixup(const MCExpr *Expr, MCFixupKind Kind) {
                                               Kind));
 }
 
-void ARMELFStreamer::Reset() {
+void ARMELFStreamer::EHReset() {
   ExTab = nullptr;
   FnStart = nullptr;
   Personality = nullptr;
@@ -1173,7 +1189,7 @@ void ARMELFStreamer::emitFnEnd() {
   SwitchSection(&FnStart->getSection());
 
   // Clean exception handling frame information
-  Reset();
+  EHReset();
 }
 
 void ARMELFStreamer::emitCantUnwind() { CantUnwind = true; }

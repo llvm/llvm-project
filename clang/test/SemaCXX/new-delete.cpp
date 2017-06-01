@@ -444,11 +444,11 @@ namespace r150682 {
 
   template<typename X>
   void tfn() {
-    new (*(PlacementArg*)0) T[1];
+    new (*(PlacementArg*)0) T[1]; // expected-warning 2 {{binding dereferenced null pointer to reference has undefined behavior}}
   }
 
   void fn() {
-    tfn<int>();
+    tfn<int>();  // expected-note {{in instantiation of function template specialization 'r150682::tfn<int>' requested here}}
   }
 
 }

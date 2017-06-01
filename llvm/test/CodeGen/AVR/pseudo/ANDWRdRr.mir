@@ -1,0 +1,24 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+
+# This test checks the expansion of the 16-bit AND pseudo instruction.
+
+--- |
+  target triple = "avr--"
+  define void @test_andwrdrr() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_andwrdrr
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test_andwrdrr
+
+    ; CHECK:      %r14 = ANDRdRr %r14, %r20, implicit-def dead %sreg
+    ; CHECK-NEXT: %r15 = ANDRdRr %r15, %r21, implicit-def %sreg
+
+    %r15r14 = ANDWRdRr %r15r14, %r21r20, implicit-def %sreg
+...

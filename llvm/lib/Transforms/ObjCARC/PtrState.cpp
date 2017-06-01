@@ -201,7 +201,7 @@ bool BottomUpPtrState::MatchWithRetain() {
     // imprecise release, clear our reverse insertion points.
     if (OldSeq != S_Use || IsTrackingImpreciseReleases())
       ClearReverseInsertPts();
-  // FALL THROUGH
+    LLVM_FALLTHROUGH;
   case S_CanRelease:
     return true;
   case S_None:
@@ -244,6 +244,18 @@ void BottomUpPtrState::HandlePotentialUse(BasicBlock *BB, Instruction *Inst,
                                           const Value *Ptr,
                                           ProvenanceAnalysis &PA,
                                           ARCInstKind Class) {
+  auto SetSeqAndInsertReverseInsertPt = [&](Sequence NewSeq){
+    assert(!HasReverseInsertPts());
+    SetSeq(NewSeq);
+    // If this is an invoke instruction, we're scanning it as part of
+    // one of its successor blocks, since we can't insert code after it
+    // in its own block, and we don't want to split critical edges.
+    if (isa<InvokeInst>(Inst))
+      InsertReverseInsertPt(&*BB->getFirstInsertionPt());
+    else
+      InsertReverseInsertPt(&*++Inst->getIterator());
+  };
+
   // Check for possible direct uses.
   switch (GetSeq()) {
   case S_Release:
@@ -251,26 +263,18 @@ void BottomUpPtrState::HandlePotentialUse(BasicBlock *BB, Instruction *Inst,
     if (CanUse(Inst, Ptr, PA, Class)) {
       DEBUG(dbgs() << "            CanUse: Seq: " << GetSeq() << "; " << *Ptr
                    << "\n");
-      assert(!HasReverseInsertPts());
-      // If this is an invoke instruction, we're scanning it as part of
-      // one of its successor blocks, since we can't insert code after it
-      // in its own block, and we don't want to split critical edges.
-      if (isa<InvokeInst>(Inst))
-        InsertReverseInsertPt(&*BB->getFirstInsertionPt());
-      else
-        InsertReverseInsertPt(&*++Inst->getIterator());
-      SetSeq(S_Use);
+      SetSeqAndInsertReverseInsertPt(S_Use);
     } else if (Seq == S_Release && IsUser(Class)) {
       DEBUG(dbgs() << "            PreciseReleaseUse: Seq: " << GetSeq() << "; "
                    << *Ptr << "\n");
       // Non-movable releases depend on any possible objc pointer use.
-      SetSeq(S_Stop);
-      assert(!HasReverseInsertPts());
-      // As above; handle invoke specially.
-      if (isa<InvokeInst>(Inst))
-        InsertReverseInsertPt(&*BB->getFirstInsertionPt());
-      else
-        InsertReverseInsertPt(&*++Inst->getIterator());
+      SetSeqAndInsertReverseInsertPt(S_Stop);
+    } else if (const auto *Call = getreturnRVOperand(*Inst, Class)) {
+      if (CanUse(Call, Ptr, PA, GetBasicARCInstKind(Call))) {
+        DEBUG(dbgs() << "            ReleaseUse: Seq: " << GetSeq() << "; "
+                     << *Ptr << "\n");
+        SetSeqAndInsertReverseInsertPt(S_Stop);
+      }
     }
     break;
   case S_Stop:
@@ -332,7 +336,7 @@ bool TopDownPtrState::MatchWithRelease(ARCMDKindCache &Cache,
   case S_CanRelease:
     if (OldSeq == S_Retain || ReleaseMetadata != nullptr)
       ClearReverseInsertPts();
-  // FALL THROUGH
+    LLVM_FALLTHROUGH;
   case S_Use:
     SetReleaseMetadata(ReleaseMetadata);
     SetTailCallRelease(cast<CallInst>(Release)->isTailCall());
@@ -351,8 +355,10 @@ bool TopDownPtrState::HandlePotentialAlterRefCount(Instruction *Inst,
                                                    const Value *Ptr,
                                                    ProvenanceAnalysis &PA,
                                                    ARCInstKind Class) {
-  // Check for possible releases.
-  if (!CanAlterRefCount(Inst, Ptr, PA, Class))
+  // Check for possible releases. Treat clang.arc.use as a releasing instruction
+  // to prevent sinking a retain past it.
+  if (!CanAlterRefCount(Inst, Ptr, PA, Class) &&
+      Class != ARCInstKind::IntrinsicUser)
     return false;
 
   DEBUG(dbgs() << "            CanAlterRefCount: Seq: " << GetSeq() << "; " << *Ptr

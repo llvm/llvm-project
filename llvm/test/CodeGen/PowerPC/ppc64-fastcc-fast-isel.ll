@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr7 -mattr=-vsx -fast-isel -fast-isel-abort=1 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-vsx -fast-isel -fast-isel-abort=1 < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

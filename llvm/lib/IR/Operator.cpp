@@ -12,6 +12,12 @@ Type *GEPOperator::getSourceElementType() const {
   return cast<GetElementPtrConstantExpr>(this)->getSourceElementType();
 }
 
+Type *GEPOperator::getResultElementType() const {
+  if (auto *I = dyn_cast<GetElementPtrInst>(this))
+    return I->getResultElementType();
+  return cast<GetElementPtrConstantExpr>(this)->getResultElementType();
+}
+
 bool GEPOperator::accumulateConstantOffset(const DataLayout &DL,
                                            APInt &Offset) const {
   assert(Offset.getBitWidth() ==
@@ -27,7 +33,7 @@ bool GEPOperator::accumulateConstantOffset(const DataLayout &DL,
       continue;
 
     // Handle a struct index, which adds its field offset to the pointer.
-    if (StructType *STy = dyn_cast<StructType>(*GTI)) {
+    if (StructType *STy = GTI.getStructTypeOrNull()) {
       unsigned ElementIdx = OpC->getZExtValue();
       const StructLayout *SL = DL.getStructLayout(STy);
       Offset += APInt(Offset.getBitWidth(), SL->getElementOffset(ElementIdx));

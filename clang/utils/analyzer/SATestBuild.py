@@ -218,11 +218,11 @@ def runScript(ScriptPath, PBuildLogFile, Cwd):
         try:
             if Verbose == 1:
                 print "  Executing: %s" % (ScriptPath,)
-            check_call("chmod +x %s" % ScriptPath, cwd = Cwd,
+            check_call("chmod +x '%s'" % ScriptPath, cwd = Cwd,
                                               stderr=PBuildLogFile,
                                               stdout=PBuildLogFile,
                                               shell=True)
-            check_call(ScriptPath, cwd = Cwd, stderr=PBuildLogFile,
+            check_call("'%s'" % ScriptPath, cwd = Cwd, stderr=PBuildLogFile,
                                               stdout=PBuildLogFile,
                                               shell=True)
         except:
@@ -261,7 +261,7 @@ def applyPatch(Dir, PBuildLogFile):
 
     print "  Applying patch."
     try:
-        check_call("patch -p1 < %s" % (PatchfilePath),
+        check_call("patch -p1 < '%s'" % (PatchfilePath),
                     cwd = PatchedSourceDirPath,
                     stderr=PBuildLogFile,
                     stdout=PBuildLogFile,
@@ -285,8 +285,8 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
     # Run scan-build from within the patched source directory.
     SBCwd = os.path.join(Dir, PatchedSourceDirName)
 
-    SBOptions = "--use-analyzer " + Clang + " "
-    SBOptions += "-plist-html -o " + SBOutputDir + " "
+    SBOptions = "--use-analyzer '%s' " %  Clang
+    SBOptions += "-plist-html -o '%s' " % SBOutputDir
     SBOptions += "-enable-checker " + AllCheckers + " "
     SBOptions += "--keep-empty "
     # Always use ccc-analyze to ensure that we can locate the failures
@@ -376,8 +376,8 @@ def runAnalyzePreprocessed(Dir, SBOutputDir, Mode):
             raise Exception()
 
         # Build and call the analyzer command.
-        OutputOption = "-o " + os.path.join(PlistPath, FileName) + ".plist "
-        Command = CmdPrefix + OutputOption + FileName
+        OutputOption = "-o '%s.plist' " % os.path.join(PlistPath, FileName)
+        Command = CmdPrefix + OutputOption + ("'%s'" % FileName)
         LogFile = open(os.path.join(FailPath, FileName + ".stderr.txt"), "w+b")
         try:
             if Verbose == 1:
@@ -397,23 +397,30 @@ def runAnalyzePreprocessed(Dir, SBOutputDir, Mode):
         if Failed == False:
             os.remove(LogFile.name);
 
+def getBuildLogPath(SBOutputDir):
+  return os.path.join(SBOutputDir, LogFolderName, BuildLogName)
+
+def removeLogFile(SBOutputDir):
+  BuildLogPath = getBuildLogPath(SBOutputDir)
+  # Clean up the log file.
+  if (os.path.exists(BuildLogPath)) :
+      RmCommand = "rm '%s'" % BuildLogPath
+      if Verbose == 1:
+          print "  Executing: %s" % (RmCommand,)
+      check_call(RmCommand, shell=True)
+
 def buildProject(Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
     TBegin = time.time()
 
-    BuildLogPath = os.path.join(SBOutputDir, LogFolderName, BuildLogName)
+    BuildLogPath = getBuildLogPath(SBOutputDir)
     print "Log file: %s" % (BuildLogPath,)
     print "Output directory: %s" %(SBOutputDir, )
 
-    # Clean up the log file.
-    if (os.path.exists(BuildLogPath)) :
-        RmCommand = "rm " + BuildLogPath
-        if Verbose == 1:
-            print "  Executing: %s" % (RmCommand,)
-        check_call(RmCommand, shell=True)
+    removeLogFile(SBOutputDir)
 
     # Clean up scan build results.
     if (os.path.exists(SBOutputDir)) :
-        RmCommand = "rm -r " + SBOutputDir
+        RmCommand = "rm -r '%s'" % SBOutputDir
         if Verbose == 1:
             print "  Executing: %s" % (RmCommand,)
             check_call(RmCommand, shell=True)
@@ -585,6 +592,19 @@ def runCmpResults(Dir, Strictness = 0):
     print "Diagnostic comparison complete (time: %.2f)." % (time.time()-TBegin)
     return (NumDiffs > 0)
 
+def cleanupReferenceResults(SBOutputDir):
+    # Delete html, css, and js files from reference results. These can
+    # include multiple copies of the benchmark source and so get very large.
+    Extensions = ["html", "css", "js"]
+    for E in Extensions:
+        for F in glob.glob("%s/*/*.%s" % (SBOutputDir, E)):
+            P = os.path.join(SBOutputDir, F)
+            RmCommand = "rm '%s'" % P
+            check_call(RmCommand, shell=True)
+
+    # Remove the log file. It leaks absolute path names.
+    removeLogFile(SBOutputDir)
+
 def updateSVN(Mode, ProjectsMap):
     try:
         ProjectsMap.seek(0)
@@ -593,9 +613,9 @@ def updateSVN(Mode, ProjectsMap):
             Path = os.path.join(ProjName, getSBOutputDirName(True))
 
             if Mode == "delete":
-                Command = "svn delete %s" % (Path,)
+                Command = "svn delete '%s'" % (Path,)
             else:
-                Command = "svn add %s" % (Path,)
+                Command = "svn add '%s'" % (Path,)
 
             if Verbose == 1:
                 print "  Executing: %s" % (Command,)
@@ -634,15 +654,23 @@ def testProject(ID, ProjectBuildMode, IsReferenceBuild=False, Dir=None, Strictne
 
     if IsReferenceBuild == False:
         runCmpResults(Dir, Strictness)
+    else:
+        cleanupReferenceResults(SBOutputDir)
 
     print "Completed tests for project %s (time: %.2f)." % \
           (ID, (time.time()-TBegin))
+
+def isCommentCSVLine(Entries):
+  # Treat CSV lines starting with a '#' as a comment.
+  return len(Entries) > 0 and Entries[0].startswith("#")
 
 def testAll(IsReferenceBuild = False, UpdateSVN = False, Strictness = 0):
     PMapFile = open(getProjectMapPath(), "rb")
     try:
         # Validate the input.
         for I in csv.reader(PMapFile):
+            if (isCommentCSVLine(I)):
+                continue
             if (len(I) != 2) :
                 print "Error: Rows in the ProjectMapFile should have 3 entries."
                 raise Exception()
@@ -660,6 +688,8 @@ def testAll(IsReferenceBuild = False, UpdateSVN = False, Strictness = 0):
         # Test the projects.
         PMapFile.seek(0)
         for I in csv.reader(PMapFile):
+            if isCommentCSVLine(I):
+              continue;
             testProject(I[0], int(I[1]), IsReferenceBuild, None, Strictness)
 
         # Add reference results to SVN.

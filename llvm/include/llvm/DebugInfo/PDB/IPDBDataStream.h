@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
+namespace pdb {
 
 /// IPDBDataStream defines an interface used to represent a stream consisting
 /// of a name and a series of records whose formats depend on the particular
@@ -32,6 +33,7 @@ public:
   virtual void reset() = 0;
   virtual IPDBDataStream *clone() const = 0;
 };
+}
 }
 
 #endif

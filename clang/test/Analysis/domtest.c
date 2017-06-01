@@ -1,5 +1,5 @@
 // RUN: rm -f %t
-// RUN: %clang_cc1 -analyze -analyzer-checker=debug.DumpDominators %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpDominators %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 // Test the DominatorsTree implementation with various control flows

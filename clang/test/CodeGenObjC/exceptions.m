@@ -83,7 +83,7 @@ void f3() {
 
   // CHECK:      [[X:%.*]] = alloca i32
   // CHECK:      [[XPTR:%.*]] = bitcast i32* [[X]] to i8*
-  // CHECK:      call void @llvm.lifetime.start(i64 4, i8* [[XPTR]])
+  // CHECK:      call void @llvm.lifetime.start(i64 4, i8* nonnull [[XPTR]])
   // CHECK:      store i32 0, i32* [[X]]
   int x = 0;
 

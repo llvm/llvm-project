@@ -89,6 +89,7 @@ bool IsStackTraceSuppressed(const StackTrace *stack) {
 
     if (suppression_ctx->HasSuppressionType(kInterceptorViaFunction)) {
       SymbolizedStack *frames = symbolizer->SymbolizePC(addr);
+      CHECK(frames);
       for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
         const char *function_name = cur->info.function;
         if (!function_name) {

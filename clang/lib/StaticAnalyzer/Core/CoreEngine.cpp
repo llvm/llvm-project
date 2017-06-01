@@ -18,7 +18,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 
@@ -192,14 +191,27 @@ bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned Steps,
     WList->setBlockCounter(BCounterFactory.GetEmptyCounter());
 
     if (!InitState)
-      // Generate the root.
-      generateNode(StartLoc, SubEng.getInitialState(L), nullptr);
-    else
-      generateNode(StartLoc, InitState, nullptr);
+      InitState = SubEng.getInitialState(L);
+
+    bool IsNew;
+    ExplodedNode *Node = G.getNode(StartLoc, InitState, false, &IsNew);
+    assert (IsNew);
+    G.addRoot(Node);
+
+    NodeBuilderContext BuilderCtx(*this, StartLoc.getDst(), Node);
+    ExplodedNodeSet DstBegin;
+    SubEng.processBeginOfFunction(BuilderCtx, Node, DstBegin, StartLoc);
+
+    enqueue(DstBegin);
   }
 
   // Check if we have a steps limit
   bool UnlimitedSteps = Steps == 0;
+  // Cap our pre-reservation in the event that the user specifies
+  // a very large number of maximum steps.
+  const unsigned PreReservationCap = 4000000;
+  if(!UnlimitedSteps)
+    G.reserve(std::min(Steps,PreReservationCap));
 
   while (WList->hasWork()) {
     if (!UnlimitedSteps) {
@@ -243,8 +255,7 @@ void CoreEngine::dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,
       break;
 
     case ProgramPoint::CallEnterKind: {
-      CallEnter CEnter = Loc.castAs<CallEnter>();
-      SubEng.processCallEnter(CEnter, Pred);
+      HandleCallEnter(Loc.castAs<CallEnter>(), Pred);
       break;
     }
 
@@ -298,8 +309,19 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
     assert (L.getLocationContext()->getCFG()->getExit().size() == 0
             && "EXIT block cannot contain Stmts.");
 
+    // Get return statement..
+    const ReturnStmt *RS = nullptr;
+    if (!L.getSrc()->empty()) {
+      if (Optional<CFGStmt> LastStmt = L.getSrc()->back().getAs<CFGStmt>()) {
+        if ((RS = dyn_cast<ReturnStmt>(LastStmt->getStmt()))) {
+          if (!RS->getRetValue())
+            RS = nullptr;
+        }
+      }
+    }
+
     // Process the final state transition.
-    SubEng.processEndOfFunction(BuilderCtx, Pred);
+    SubEng.processEndOfFunction(BuilderCtx, Pred, RS);
 
     // This path is done. Don't enqueue any more nodes.
     return;
@@ -456,6 +478,11 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
                Pred->State, Pred);
 }
 
+void CoreEngine::HandleCallEnter(const CallEnter &CE, ExplodedNode *Pred) {
+  NodeBuilderContext BuilderCtx(*this, CE.getEntry(), Pred);
+  SubEng.processCallEnter(BuilderCtx, CE, Pred);
+}
+
 void CoreEngine::HandleBranch(const Stmt *Cond, const Stmt *Term,
                                 const CFGBlock * B, ExplodedNode *Pred) {
   assert(B->succ_size() == 2);
@@ -573,13 +600,14 @@ void CoreEngine::enqueueStmtNode(ExplodedNode *N,
     WList->enqueue(Succ, Block, Idx+1);
 }
 
-ExplodedNode *CoreEngine::generateCallExitBeginNode(ExplodedNode *N) {
+ExplodedNode *CoreEngine::generateCallExitBeginNode(ExplodedNode *N,
+                                                    const ReturnStmt *RS) {
   // Create a CallExitBegin node and enqueue it.
   const StackFrameContext *LocCtx
                          = cast<StackFrameContext>(N->getLocationContext());
 
   // Use the callee location context.
-  CallExitBegin Loc(LocCtx);
+  CallExitBegin Loc(LocCtx, RS);
 
   bool isNew;
   ExplodedNode *Node = G.getNode(Loc, N->getState(), false, &isNew);
@@ -603,12 +631,12 @@ void CoreEngine::enqueue(ExplodedNodeSet &Set,
   }
 }
 
-void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set) {
+void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS) {
   for (ExplodedNodeSet::iterator I = Set.begin(), E = Set.end(); I != E; ++I) {
     ExplodedNode *N = *I;
     // If we are in an inlined call, generate CallExitBegin node.
     if (N->getLocationContext()->getParent()) {
-      N = generateCallExitBeginNode(N);
+      N = generateCallExitBeginNode(N, RS);
       if (N)
         WList->enqueue(N);
     } else {

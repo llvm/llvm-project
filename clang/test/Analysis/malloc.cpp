@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -w -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc,cplusplus.NewDelete -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -triple i386-unknown-linux-gnu -w -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc,cplusplus.NewDelete -analyzer-store=region -verify %s
+
+#include "Inputs/system-header-simulator-cxx.h"
 
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);
@@ -105,4 +108,34 @@ void appendWrapperNested(char *getterName) {
 void fooNested(const char* name) {
   char* getterName = strdup(name);
   appendWrapperNested(getterName); // no-warning
+}
+
+namespace PR31226 {
+  struct b2 {
+    int f;
+  };
+
+  struct b1 : virtual b2 {
+    void m();
+  };
+
+  struct d : b1, b2 {
+  };
+
+  void f() {
+    d *p = new d();
+    p->m(); // no-crash // no-warning
+  }
+}
+
+// Allow __cxa_demangle to escape.
+char* test_cxa_demangle(const char* sym) {
+  size_t funcnamesize = 256;
+  char* funcname = (char*)malloc(funcnamesize);
+  int status;
+  char* ret = abi::__cxa_demangle(sym, funcname, &funcnamesize, &status);
+  if (status == 0) {
+    funcname = ret;
+  }
+  return funcname; // no-warning
 }

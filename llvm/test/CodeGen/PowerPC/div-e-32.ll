@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=powerpc-unknown-linux-gnu -mcpu=pwr7 < %s | FileCheck %s
-; RUN: llc -mtriple=powerpc-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-linux-gnu -mcpu=pwr7 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s
 
 ; Function Attrs: nounwind
 define signext i32 @test1() #0 {

@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s
 
 ; This should have the exactly the same output as the test for rint,
 ; so no need to check anything.

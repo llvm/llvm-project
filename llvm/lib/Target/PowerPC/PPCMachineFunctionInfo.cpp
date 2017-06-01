@@ -23,3 +23,24 @@ MCSymbol *PPCFunctionInfo::getPICOffsetSymbol() const {
                                            Twine(MF.getFunctionNumber()) +
                                            "$poff");
 }
+
+MCSymbol *PPCFunctionInfo::getGlobalEPSymbol() const {
+  const DataLayout &DL = MF.getDataLayout();
+  return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+                                           "func_gep" +
+                                           Twine(MF.getFunctionNumber()));
+}
+
+MCSymbol *PPCFunctionInfo::getLocalEPSymbol() const {
+  const DataLayout &DL = MF.getDataLayout();
+  return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+                                           "func_lep" +
+                                           Twine(MF.getFunctionNumber()));
+}
+
+MCSymbol *PPCFunctionInfo::getTOCOffsetSymbol() const {
+  const DataLayout &DL = MF.getDataLayout();
+  return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+                                           "func_toc" +
+                                           Twine(MF.getFunctionNumber()));
+}

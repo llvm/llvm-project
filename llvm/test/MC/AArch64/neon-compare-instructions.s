@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+neon -show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+neon,+fullfp16 -show-encoding < %s | FileCheck %s
 
 // Check that the assembler can handle the documented syntax for AArch64
 
@@ -194,10 +194,14 @@
 // Vector Compare Mask Equal (Floating Point)
 //----------------------------------------------------------------------
 
+         fcmeq v0.4h, v31.4h, v16.4h
+         fcmeq v4.8h, v7.8h, v15.8h
          fcmeq v0.2s, v31.2s, v16.2s
          fcmeq v4.4s, v7.4s, v15.4s
          fcmeq v29.2d, v2.2d, v5.2d
 
+// CHECK: fcmeq   v0.4h, v31.4h, v16.4h   // encoding: [0xe0,0x27,0x50,0x0e]
+// CHECK: fcmeq   v4.8h, v7.8h, v15.8h    // encoding: [0xe4,0x24,0x4f,0x4e]
 // CHECK: fcmeq v0.2s, v31.2s, v16.2s // encoding: [0xe0,0xe7,0x30,0x0e]
 // CHECK: fcmeq v4.4s, v7.4s, v15.4s  // encoding: [0xe4,0xe4,0x2f,0x4e]
 // CHECK: fcmeq v29.2d, v2.2d, v5.2d  // encoding: [0x5d,0xe4,0x65,0x4e]
@@ -208,6 +212,10 @@
 // FCMLE is alias for FCMGE with operands reversed.
 //----------------------------------------------------------------------
 
+         fcmge v3.4h, v8.4h, v12.4h
+         fcmge v31.8h, v29.8h, v28.8h
+         fcmle v3.4h,  v12.4h, v8.4h
+         fcmle v31.8h, v28.8h, v29.8h
          fcmge v31.4s, v29.4s, v28.4s
          fcmge v3.2s, v8.2s, v12.2s
          fcmge v17.2d, v15.2d, v13.2d
@@ -215,6 +223,10 @@
          fcmle v3.2s,  v12.2s, v8.2s
          fcmle v17.2d, v13.2d, v15.2d
 
+// CHECK: fcmge   v3.4h, v8.4h, v12.4h    // encoding: [0x03,0x25,0x4c,0x2e]
+// CHECK: fcmge   v31.8h, v29.8h, v28.8h  // encoding: [0xbf,0x27,0x5c,0x6e]
+// CHECK: fcmge   v3.4h, v8.4h, v12.4h    // encoding: [0x03,0x25,0x4c,0x2e]
+// CHECK: fcmge   v31.8h, v29.8h, v28.8h  // encoding: [0xbf,0x27,0x5c,0x6e]
 // CHECK: fcmge v31.4s, v29.4s, v28.4s  // encoding: [0xbf,0xe7,0x3c,0x6e]
 // CHECK: fcmge v3.2s, v8.2s, v12.2s    // encoding: [0x03,0xe5,0x2c,0x2e]
 // CHECK: fcmge v17.2d, v15.2d, v13.2d  // encoding: [0xf1,0xe5,0x6d,0x6e]
@@ -228,6 +240,10 @@
 // FCMLT is alias for FCMGT with operands reversed.
 //----------------------------------------------------------------------
 
+         fcmgt v0.4h, v31.4h, v16.4h
+         fcmgt v4.8h, v7.8h, v15.8h
+         fcmlt v0.4h, v16.4h, v31.4h
+         fcmlt v4.8h, v15.8h, v7.8h
          fcmgt v0.2s, v31.2s, v16.2s
          fcmgt v4.4s, v7.4s, v15.4s
          fcmgt v29.2d, v2.2d, v5.2d
@@ -235,6 +251,10 @@
          fcmlt v4.4s, v15.4s, v7.4s
          fcmlt v29.2d, v5.2d, v2.2d
 
+// CHECK: fcmgt   v0.4h, v31.4h, v16.4h   // encoding: [0xe0,0x27,0xd0,0x2e]
+// CHECK: fcmgt   v4.8h, v7.8h, v15.8h    // encoding: [0xe4,0x24,0xcf,0x6e]
+// CHECK: fcmgt   v0.4h, v31.4h, v16.4h   // encoding: [0xe0,0x27,0xd0,0x2e]
+// CHECK: fcmgt   v4.8h, v7.8h, v15.8h    // encoding: [0xe4,0x24,0xcf,0x6e]
 // CHECK: fcmgt v0.2s, v31.2s, v16.2s  // encoding: [0xe0,0xe7,0xb0,0x2e]
 // CHECK: fcmgt v4.4s, v7.4s, v15.4s   // encoding: [0xe4,0xe4,0xaf,0x6e]
 // CHECK: fcmgt v29.2d, v2.2d, v5.2d   // encoding: [0x5d,0xe4,0xe5,0x6e]
@@ -343,16 +363,24 @@
 //----------------------------------------------------------------------
 // Vector Compare Mask Equal to Zero (Floating Point)
 //----------------------------------------------------------------------
+         fcmeq v0.4h, v31.4h, #0.0
+         fcmeq v4.8h, v7.8h, #0.0
          fcmeq v0.2s, v31.2s, #0.0
          fcmeq v4.4s, v7.4s, #0.0
          fcmeq v29.2d, v2.2d, #0.0
+         fcmeq v0.4h, v31.4h, #0
+         fcmeq v4.8h, v7.8h, #0
          fcmeq v0.2s, v31.2s, #0
          fcmeq v4.4s, v7.4s, #0
          fcmeq v29.2d, v2.2d, #0
 
+// CHECK: fcmeq   v0.4h, v31.4h, #0.0     // encoding: [0xe0,0xdb,0xf8,0x0e]
+// CHECK: fcmeq   v4.8h, v7.8h, #0.0      // encoding: [0xe4,0xd8,0xf8,0x4e]
 // CHECK: fcmeq v0.2s, v31.2s, #0.0  // encoding: [0xe0,0xdb,0xa0,0x0e]
 // CHECK: fcmeq v4.4s, v7.4s, #0.0   // encoding: [0xe4,0xd8,0xa0,0x4e]
 // CHECK: fcmeq v29.2d, v2.2d, #0.0  // encoding: [0x5d,0xd8,0xe0,0x4e]
+// CHECK: fcmeq   v0.4h, v31.4h, #0.0     // encoding: [0xe0,0xdb,0xf8,0x0e]
+// CHECK: fcmeq   v4.8h, v7.8h, #0.0      // encoding: [0xe4,0xd8,0xf8,0x4e]
 // CHECK: fcmeq v0.2s, v31.2s, #0.0  // encoding: [0xe0,0xdb,0xa0,0x0e]
 // CHECK: fcmeq v4.4s, v7.4s, #0.0   // encoding: [0xe4,0xd8,0xa0,0x4e]
 // CHECK: fcmeq v29.2d, v2.2d, #0.0  // encoding: [0x5d,0xd8,0xe0,0x4e]
@@ -360,16 +388,24 @@
 //----------------------------------------------------------------------
 // Vector Compare Mask Greater Than or Equal to Zero (Floating Point)
 //----------------------------------------------------------------------
+         fcmge v3.4h, v8.4h, #0.0
+         fcmge v31.8h, v29.8h, #0.0
          fcmge v31.4s, v29.4s, #0.0
          fcmge v3.2s, v8.2s, #0.0
          fcmge v17.2d, v15.2d, #0.0
+         fcmge v3.4h, v8.4h, #0
+         fcmge v31.8h, v29.8h, #0
          fcmge v31.4s, v29.4s, #0
          fcmge v3.2s, v8.2s, #0
          fcmge v17.2d, v15.2d, #0
 
+// CHECK: fcmge   v3.4h, v8.4h, #0.0      // encoding: [0x03,0xc9,0xf8,0x2e]
+// CHECK: fcmge   v31.8h, v29.8h, #0.0    // encoding: [0xbf,0xcb,0xf8,0x6e]
 // CHECK: fcmge v31.4s, v29.4s, #0.0  // encoding: [0xbf,0xcb,0xa0,0x6e]
 // CHECK: fcmge v3.2s, v8.2s, #0.0    // encoding: [0x03,0xc9,0xa0,0x2e]
 // CHECK: fcmge v17.2d, v15.2d, #0.0   // encoding: [0xf1,0xc9,0xe0,0x6e]
+// CHECK: fcmge   v3.4h, v8.4h, #0.0      // encoding: [0x03,0xc9,0xf8,0x2e]
+// CHECK: fcmge   v31.8h, v29.8h, #0.0    // encoding: [0xbf,0xcb,0xf8,0x6e]
 // CHECK: fcmge v31.4s, v29.4s, #0.0  // encoding: [0xbf,0xcb,0xa0,0x6e]
 // CHECK: fcmge v3.2s, v8.2s, #0.0    // encoding: [0x03,0xc9,0xa0,0x2e]
 // CHECK: fcmge v17.2d, v15.2d, #0.0   // encoding: [0xf1,0xc9,0xe0,0x6e]
@@ -377,16 +413,24 @@
 //----------------------------------------------------------------------
 // Vector Compare Mask Greater Than Zero (Floating Point)
 //----------------------------------------------------------------------
+         fcmgt v0.4h, v31.4h, #0.0
+         fcmgt v4.8h, v7.8h, #0.0
          fcmgt v0.2s, v31.2s, #0.0
          fcmgt v4.4s, v7.4s, #0.0
          fcmgt v29.2d, v2.2d, #0.0
+         fcmgt v0.4h, v31.4h, #0
+         fcmgt v4.8h, v7.8h, #0
          fcmgt v0.2s, v31.2s, #0
          fcmgt v4.4s, v7.4s, #0
          fcmgt v29.2d, v2.2d, #0
 
+// CHECK: fcmgt   v0.4h, v31.4h, #0.0     // encoding: [0xe0,0xcb,0xf8,0x0e]
+// CHECK: fcmgt   v4.8h, v7.8h, #0.0      // encoding: [0xe4,0xc8,0xf8,0x4e]
 // CHECK: fcmgt v0.2s, v31.2s, #0.0   // encoding: [0xe0,0xcb,0xa0,0x0e]
 // CHECK: fcmgt v4.4s, v7.4s, #0.0    // encoding: [0xe4,0xc8,0xa0,0x4e]
 // CHECK: fcmgt v29.2d, v2.2d, #0.0   // encoding: [0x5d,0xc8,0xe0,0x4e]
+// CHECK: fcmgt   v0.4h, v31.4h, #0.0     // encoding: [0xe0,0xcb,0xf8,0x0e]
+// CHECK: fcmgt   v4.8h, v7.8h, #0.0      // encoding: [0xe4,0xc8,0xf8,0x4e]
 // CHECK: fcmgt v0.2s, v31.2s, #0.0   // encoding: [0xe0,0xcb,0xa0,0x0e]
 // CHECK: fcmgt v4.4s, v7.4s, #0.0    // encoding: [0xe4,0xc8,0xa0,0x4e]
 // CHECK: fcmgt v29.2d, v2.2d, #0.0   // encoding: [0x5d,0xc8,0xe0,0x4e]
@@ -394,16 +438,24 @@
 //----------------------------------------------------------------------
 // Vector Compare Mask Less Than or Equal To Zero (Floating Point)
 //----------------------------------------------------------------------
+         fcmle v3.4h, v20.4h, #0.0
+         fcmle v1.8h, v8.8h, #0.0
          fcmle v1.4s, v8.4s, #0.0
          fcmle v3.2s, v20.2s, #0.0
          fcmle v7.2d, v13.2d, #0.0
+         fcmle v3.4h, v20.4h, #0
+         fcmle v1.8h, v8.8h, #0
          fcmle v1.4s, v8.4s, #0
          fcmle v3.2s, v20.2s, #0
          fcmle v7.2d, v13.2d, #0
 
+// CHECK: fcmle   v3.4h, v20.4h, #0.0     // encoding: [0x83,0xda,0xf8,0x2e]
+// CHECK: fcmle   v1.8h, v8.8h, #0.0      // encoding: [0x01,0xd9,0xf8,0x6e]
 // CHECK: fcmle v1.4s, v8.4s, #0.0   // encoding: [0x01,0xd9,0xa0,0x6e]
 // CHECK: fcmle v3.2s, v20.2s, #0.0  // encoding: [0x83,0xda,0xa0,0x2e]
 // CHECK: fcmle v7.2d, v13.2d, #0.0  // encoding: [0xa7,0xd9,0xe0,0x6e]
+// CHECK: fcmle   v3.4h, v20.4h, #0.0     // encoding: [0x83,0xda,0xf8,0x2e]
+// CHECK: fcmle   v1.8h, v8.8h, #0.0      // encoding: [0x01,0xd9,0xf8,0x6e]
 // CHECK: fcmle v1.4s, v8.4s, #0.0   // encoding: [0x01,0xd9,0xa0,0x6e]
 // CHECK: fcmle v3.2s, v20.2s, #0.0  // encoding: [0x83,0xda,0xa0,0x2e]
 // CHECK: fcmle v7.2d, v13.2d, #0.0  // encoding: [0xa7,0xd9,0xe0,0x6e]
@@ -411,16 +463,24 @@
 //----------------------------------------------------------------------
 // Vector Compare Mask Less Than Zero (Floating Point)
 //----------------------------------------------------------------------
+         fcmlt v16.4h, v2.4h, #0.0
+         fcmlt v15.8h, v4.8h, #0.0
          fcmlt v16.2s, v2.2s, #0.0
          fcmlt v15.4s, v4.4s, #0.0
          fcmlt v5.2d, v29.2d, #0.0
+         fcmlt v16.4h, v2.4h, #0
+         fcmlt v15.8h, v4.8h, #0
          fcmlt v16.2s, v2.2s, #0
          fcmlt v15.4s, v4.4s, #0
          fcmlt v5.2d, v29.2d, #0
 
+// CHECK: fcmlt   v16.4h, v2.4h, #0.0     // encoding: [0x50,0xe8,0xf8,0x0e]
+// CHECK: fcmlt   v15.8h, v4.8h, #0.0     // encoding: [0x8f,0xe8,0xf8,0x4e]
 // CHECK: fcmlt v16.2s, v2.2s, #0.0   // encoding: [0x50,0xe8,0xa0,0x0e]
 // CHECK: fcmlt v15.4s, v4.4s, #0.0   // encoding: [0x8f,0xe8,0xa0,0x4e]
 // CHECK: fcmlt v5.2d, v29.2d, #0.0   // encoding: [0xa5,0xeb,0xe0,0x4e]
+// CHECK: fcmlt   v16.4h, v2.4h, #0.0     // encoding: [0x50,0xe8,0xf8,0x0e]
+// CHECK: fcmlt   v15.8h, v4.8h, #0.0     // encoding: [0x8f,0xe8,0xf8,0x4e]
 // CHECK: fcmlt v16.2s, v2.2s, #0.0   // encoding: [0x50,0xe8,0xa0,0x0e]
 // CHECK: fcmlt v15.4s, v4.4s, #0.0   // encoding: [0x8f,0xe8,0xa0,0x4e]
 // CHECK: fcmlt v5.2d, v29.2d, #0.0   // encoding: [0xa5,0xeb,0xe0,0x4e]

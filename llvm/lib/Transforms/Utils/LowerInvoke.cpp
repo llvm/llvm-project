@@ -14,14 +14,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/LowerInvoke.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Scalar.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "lowerinvoke"
@@ -29,36 +29,29 @@ using namespace llvm;
 STATISTIC(NumInvokes, "Number of invokes replaced");
 
 namespace {
-  class LowerInvoke : public FunctionPass {
+  class LowerInvokeLegacyPass : public FunctionPass {
   public:
     static char ID; // Pass identification, replacement for typeid
-    explicit LowerInvoke() : FunctionPass(ID) {
-      initializeLowerInvokePass(*PassRegistry::getPassRegistry());
+    explicit LowerInvokeLegacyPass() : FunctionPass(ID) {
+      initializeLowerInvokeLegacyPassPass(*PassRegistry::getPassRegistry());
     }
     bool runOnFunction(Function &F) override;
   };
 }
 
-char LowerInvoke::ID = 0;
-INITIALIZE_PASS(LowerInvoke, "lowerinvoke",
+char LowerInvokeLegacyPass::ID = 0;
+INITIALIZE_PASS(LowerInvokeLegacyPass, "lowerinvoke",
                 "Lower invoke and unwind, for unwindless code generators",
                 false, false)
 
-char &llvm::LowerInvokePassID = LowerInvoke::ID;
-
-// Public Interface To the LowerInvoke pass.
-FunctionPass *llvm::createLowerInvokePass() {
-  return new LowerInvoke();
-}
-
-bool LowerInvoke::runOnFunction(Function &F) {
+static bool runImpl(Function &F) {
   bool Changed = false;
-  for (Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB)
-    if (InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator())) {
-      SmallVector<Value*,16> CallArgs(II->op_begin(), II->op_end() - 3);
+  for (BasicBlock &BB : F)
+    if (InvokeInst *II = dyn_cast<InvokeInst>(BB.getTerminator())) {
+      SmallVector<Value *, 16> CallArgs(II->op_begin(), II->op_end() - 3);
       // Insert a normal call instruction...
-      CallInst *NewCall = CallInst::Create(II->getCalledValue(),
-                                           CallArgs, "", II);
+      CallInst *NewCall =
+          CallInst::Create(II->getCalledValue(), CallArgs, "", II);
       NewCall->takeName(II);
       NewCall->setCallingConv(II->getCallingConv());
       NewCall->setAttributes(II->getAttributes());
@@ -69,12 +62,33 @@ bool LowerInvoke::runOnFunction(Function &F) {
       BranchInst::Create(II->getNormalDest(), II);
 
       // Remove any PHI node entries from the exception destination.
-      II->getUnwindDest()->removePredecessor(&*BB);
+      II->getUnwindDest()->removePredecessor(&BB);
 
       // Remove the invoke instruction now.
-      BB->getInstList().erase(II);
+      BB.getInstList().erase(II);
 
-      ++NumInvokes; Changed = true;
+      ++NumInvokes;
+      Changed = true;
     }
   return Changed;
+}
+
+bool LowerInvokeLegacyPass::runOnFunction(Function &F) {
+  return runImpl(F);
+}
+
+namespace llvm {
+char &LowerInvokePassID = LowerInvokeLegacyPass::ID;
+
+// Public Interface To the LowerInvoke pass.
+FunctionPass *createLowerInvokePass() { return new LowerInvokeLegacyPass(); }
+
+PreservedAnalyses LowerInvokePass::run(Function &F,
+                                       FunctionAnalysisManager &AM) {
+  bool Changed = runImpl(F);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  return PreservedAnalyses::none();
+}
 }

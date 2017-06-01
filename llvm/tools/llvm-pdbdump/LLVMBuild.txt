@@ -19,5 +19,5 @@
 type = Tool
 name = llvm-pdbdump
 parent = Tools
-required_libraries = DebugInfoPDB
+required_libraries = DebugInfoMSF DebugInfoPDB
 

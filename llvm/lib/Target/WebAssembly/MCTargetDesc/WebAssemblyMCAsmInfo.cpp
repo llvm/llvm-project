@@ -15,7 +15,6 @@
 
 #include "WebAssemblyMCAsmInfo.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Support/CommandLine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-mc-asm-info"
@@ -27,10 +26,11 @@ WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T) {
 
   // TODO: What should MaxInstLength be?
 
-  PrivateGlobalPrefix = "";
-  PrivateLabelPrefix = "";
-
   UseDataRegionDirectives = true;
+
+  // Use .skip instead of .zero because .zero is confusing when used with two
+  // arguments (it doesn't actually zero things out).
+  ZeroDirective = "\t.skip\t";
 
   Data8bitsDirective = "\t.int8\t";
   Data16bitsDirective = "\t.int16\t";
@@ -47,4 +47,7 @@ WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T) {
   ExceptionsType = ExceptionHandling::None;
 
   // TODO: UseIntegratedAssembler?
+
+  // WebAssembly's stack is never executable.
+  UsesNonexecutableStackSection = false;
 }

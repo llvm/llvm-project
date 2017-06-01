@@ -70,7 +70,7 @@ entry:
 
 ; <label>:28                                      ; preds = %22, %entry
   store i32 %0, i32* %3, align 4
-  call void @llvm.dbg.declare(metadata %struct.A* %agg.result, metadata !24, metadata !DIExpression(DW_OP_deref)), !dbg !25
+  call void @llvm.dbg.declare(metadata %struct.A* %agg.result, metadata !24, metadata !DIExpression()), !dbg !25
   call void @_ZN1AC1Ev(%struct.A* %agg.result), !dbg !25
   store i64 1172321806, i64* %4, !dbg !26
   %29 = inttoptr i64 %10 to i32*, !dbg !26
@@ -147,11 +147,10 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!22, !27}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "crash.cpp", directory: "/tmp")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "func", linkageName: "_Z4funci", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 6, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "func", linkageName: "_Z4funci", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 6, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "crash.cpp", directory: "/tmp")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !21}

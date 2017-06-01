@@ -1,0 +1,3 @@
+# RUN: llvm-mc --disassemble %s -triple=mips-unknown-linux -mcpu=mips32r6 -mattr=micromips -mattr=+dspr3 | FileCheck %s
+
+0x43 0x20 0x00 0xab # CHECK: bposge32c 342

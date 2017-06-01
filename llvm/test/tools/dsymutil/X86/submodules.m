@@ -42,8 +42,6 @@ struct PruneMeNot;
 // CHECK:            DW_TAG_compile_unit
 // CHECK:              DW_TAG_module
 // CHECK-NEXT:           DW_AT_name{{.*}}"Parent"
-// CHECK:              DW_TAG_module
-// CHECK-NEXT:           DW_AT_name{{.*}}"Child"
 // CHECK: 0x0[[EMPTY:.*]]: DW_TAG_module
 // CHECK-NEXT:             DW_AT_name{{.*}}"Empty"
 

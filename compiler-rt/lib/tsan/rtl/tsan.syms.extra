@@ -1,4 +1,5 @@
 __tsan_init
+__tsan_flush_memory
 __tsan_read*
 __tsan_write*
 __tsan_vptr*

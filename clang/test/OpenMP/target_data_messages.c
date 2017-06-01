@@ -3,19 +3,22 @@
 void foo() { }
 
 int main(int argc, char **argv) {
+  int a;
+  #pragma omp target data // expected-error {{expected at least one map clause for '#pragma omp target data'}}
+  {}
   L1:
     foo();
-  #pragma omp target data
+  #pragma omp target data map(a)
   {
     foo();
     goto L1; // expected-error {{use of undeclared label 'L1'}}
   }
   goto L2; // expected-error {{use of undeclared label 'L2'}}
-  #pragma omp target data
+  #pragma omp target data map(a)
   L2:
   foo();
 
-  #pragma omp target data(i) // expected-warning {{extra tokens at the end of '#pragma omp target data' are ignored}}
+  #pragma omp target data map(a)(i) // expected-warning {{extra tokens at the end of '#pragma omp target data' are ignored}}
   {
     foo();
   }

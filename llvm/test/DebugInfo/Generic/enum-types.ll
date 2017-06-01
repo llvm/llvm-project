@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 ;
-; RUN: %llc_dwarf -filetype=obj -O0 -dwarf-linkage-names=Enable < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: %llc_dwarf -filetype=obj -O0 -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 
 ; Make sure we can handle enums with the same identifier but in enum types of
 ; different compile units.
@@ -48,31 +48,29 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!19, !20}
 !llvm.ident = !{!21, !21}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (trunk 214102:214133) (llvm/trunk 214102:214132)", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !6, globals: !11, imports: !11)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (trunk 214102:214133) (llvm/trunk 214102:214132)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !11, imports: !11)
 !1 = !DIFile(filename: "a.cpp", directory: "")
 !2 = !{!3}
 !3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "EA", line: 1, size: 32, align: 32, file: !1, elements: !4, identifier: "_ZTS2EA")
 !4 = !{!5}
 !5 = !DIEnumerator(name: "EA_0", value: 0) ; [ DW_TAG_enumerator ] [EA_0 :: 0]
-!6 = !{!7}
-!7 = distinct !DISubprogram(name: "topA", linkageName: "_Z4topA2EA", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 5, file: !1, scope: !8, type: !9, variables: !11)
+!7 = distinct !DISubprogram(name: "topA", linkageName: "_Z4topA2EA", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 5, file: !1, scope: !8, type: !9, variables: !11)
 !8 = !DIFile(filename: "a.cpp", directory: "")
 !9 = !DISubroutineType(types: !10)
-!10 = !{null, !"_ZTS2EA"}
+!10 = !{null, !3}
 !11 = !{}
-!12 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (trunk 214102:214133) (llvm/trunk 214102:214132)", isOptimized: false, emissionKind: 1, file: !13, enums: !14, retainedTypes: !14, subprograms: !16, globals: !11, imports: !11)
+!12 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (trunk 214102:214133) (llvm/trunk 214102:214132)", isOptimized: false, emissionKind: FullDebug, file: !13, enums: !14, retainedTypes: !14, globals: !11, imports: !11)
 !13 = !DIFile(filename: "b.cpp", directory: "")
 !14 = !{!15}
 !15 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "EA", line: 1, size: 32, align: 32, file: !13, elements: !4, identifier: "_ZTS2EA")
-!16 = !{!17}
-!17 = distinct !DISubprogram(name: "topB", linkageName: "_Z4topB2EA", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 5, file: !13, scope: !18, type: !9, variables: !11)
+!17 = distinct !DISubprogram(name: "topB", linkageName: "_Z4topB2EA", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !12, scopeLine: 5, file: !13, scope: !18, type: !9, variables: !11)
 !18 = !DIFile(filename: "b.cpp", directory: "")
 !19 = !{i32 2, !"Dwarf Version", i32 2}
 !20 = !{i32 2, !"Debug Info Version", i32 3}
 !21 = !{!"clang version 3.5.0 (trunk 214102:214133) (llvm/trunk 214102:214132)"}
-!22 = !DILocalVariable(name: "sa", line: 5, arg: 1, scope: !7, file: !8, type: !"_ZTS2EA")
+!22 = !DILocalVariable(name: "sa", line: 5, arg: 1, scope: !7, file: !8, type: !3)
 !23 = !DILocation(line: 5, column: 14, scope: !7)
 !24 = !DILocation(line: 6, column: 1, scope: !7)
-!25 = !DILocalVariable(name: "sa", line: 5, arg: 1, scope: !17, file: !18, type: !"_ZTS2EA")
+!25 = !DILocalVariable(name: "sa", line: 5, arg: 1, scope: !17, file: !18, type: !3)
 !26 = !DILocation(line: 5, column: 14, scope: !17)
 !27 = !DILocation(line: 6, column: 1, scope: !17)

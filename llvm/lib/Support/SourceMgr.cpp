@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Locale.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -25,8 +26,8 @@ static const size_t TabStop = 8;
 
 namespace {
   struct LineNoCacheTy {
-    unsigned LastQueryBufferID;
     const char *LastQuery;
+    unsigned LastQueryBufferID;
     unsigned LineNoOfQuery;
   };
 }
@@ -141,7 +142,7 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
   // location to pull out the source line.
   SmallVector<std::pair<unsigned, unsigned>, 4> ColRanges;
   std::pair<unsigned, unsigned> LineAndCol;
-  const char *BufferID = "<unknown>";
+  StringRef BufferID = "<unknown>";
   std::string LineStr;
   
   if (Loc.isValid()) {
@@ -395,8 +396,7 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &S, bool ShowColors,
   // map like Clang's TextDiagnostic. For now, we'll just handle tabs by
   // expanding them later, and bail out rather than show incorrect ranges and
   // misaligned fixits for any other odd characters.
-  if (std::find_if(LineContents.begin(), LineContents.end(), isNonASCII) !=
-      LineContents.end()) {
+  if (find_if(LineContents, isNonASCII) != LineContents.end()) {
     printSourceLine(S, LineContents);
     return;
   }

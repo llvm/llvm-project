@@ -56,7 +56,7 @@ public:
   // may get rid of NDEBUG in this header. Unfortunately there are some
   // problems to get this working with MSVC 2013. Change this when
   // the support for MSVC 2013 is dropped.
-  LLVM_CONSTEXPR UnicodeCharSet(CharRanges Ranges) : Ranges(Ranges) {}
+  constexpr UnicodeCharSet(CharRanges Ranges) : Ranges(Ranges) {}
 #else
   UnicodeCharSet(CharRanges Ranges) : Ranges(Ranges) {
     assert(rangesAreValid());

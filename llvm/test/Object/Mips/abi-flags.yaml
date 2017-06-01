@@ -1,4 +1,4 @@
-# RUN: yaml2obj -format=elf %s > %t
+# RUN: yaml2obj %s > %t
 # RUN: llvm-readobj -mips-abi-flags %t | FileCheck -check-prefix=OBJ %s
 # RUN: obj2yaml %t | FileCheck -check-prefix=YAML %s
 
@@ -34,6 +34,7 @@
 # YAML-NEXT:   CPR1Size:        REG_64
 # YAML-NEXT:   Flags1:          [ ODDSPREG ]
 
+!ELF
 FileHeader:
   Class:   ELFCLASS64
   Data:    ELFDATA2MSB

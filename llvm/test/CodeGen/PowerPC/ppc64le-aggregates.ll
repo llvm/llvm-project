@@ -1,5 +1,9 @@
-; RUN: llc < %s -march=ppc64le -mcpu=pwr8 -mattr=+altivec -mattr=-vsx | FileCheck %s
-; RUN: llc < %s -march=ppc64le -mattr=+altivec -mattr=-vsx | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc64le -mcpu=pwr8 \
+; RUN:   -mattr=+altivec -mattr=-vsx | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc64le -mattr=+altivec \
+; RUN:   -mattr=-vsx | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc64le -mcpu=pwr9 \
+; RUN:   -mattr=-direct-move -mattr=+altivec | FileCheck %s
 
 ; Currently VSX support is disabled for this test because we generate lxsdx
 ; instead of lfd, and stxsdx instead of stfd.  That is a poor choice when we

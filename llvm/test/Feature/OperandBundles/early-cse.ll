@@ -2,8 +2,8 @@
 
 ; While it is normally okay to do memory optimizations over calls to
 ; @readonly_function and @readnone_function, we cannot do that if
-; they're carrying operand bundles since the presence of unknown
-; operand bundles implies arbitrary memory effects.
+; they're carrying unknown operand bundles since the presence of
+; unknown operand bundles implies arbitrary memory effects.
 
 declare void @readonly_function() readonly nounwind
 declare void @readnone_function() readnone nounwind
@@ -67,5 +67,23 @@ define void @test5(i32* %x) {
   call void @readnone_function() readnone [ "tag"() ]
   store i32 200, i32* %x
 ; CHECK: store i32 200, i32* %x
+  ret void
+}
+
+define void @test6(i32* %x) {
+; The "deopt" operand bundle does not make the call to
+; @readonly_function read-write; and so the nounwind readonly call can
+; be deleted.
+
+; CHECK-LABEL: @test6(
+ entry:
+
+; CHECK-NEXT: entry:
+; CHECK-NEXT:  store i32 200, i32* %x
+; CHECK-NEXT:  ret void
+
+  store i32 100, i32* %x
+  call void @readonly_function() [ "deopt"() ]
+  store i32 200, i32* %x
   ret void
 }

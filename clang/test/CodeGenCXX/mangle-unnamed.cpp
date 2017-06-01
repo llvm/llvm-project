@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin10 | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 -emit-llvm %s -o - -triple=x86_64-apple-darwin10 | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple=x86_64-apple-darwin10 | FileCheck %s
 
 struct S {
   virtual ~S() { }

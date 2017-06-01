@@ -15,7 +15,7 @@ int main() {
 
   // CHECK: br label
   // CHECK: br label
-  // CHECK: br label {{.*}}, !dbg [[DBG1:!.*]]
+  // CHECK: br label {{.*}}, !dbg [[DBG1:![0-9]*]], !llvm.loop [[L1:![0-9]*]]
 
 #line 200
   while (a)
@@ -25,7 +25,7 @@ int main() {
       ++a; // CHECK: add nsw{{.*}}, 1
 
   // CHECK: br label
-  // CHECK: br label {{.*}}, !dbg [[DBG2:!.*]]
+  // CHECK: br label {{.*}}, !dbg [[DBG2:![0-9]*]], !llvm.loop [[L2:![0-9]*]]
 
 #line 300
   for (; a; )
@@ -35,7 +35,7 @@ int main() {
       ++a; // CHECK: add nsw{{.*}}, 1
 
   // CHECK: br label
-  // CHECK: br label {{.*}}, !dbg [[DBG3:!.*]]
+  // CHECK: br label {{.*}}, !dbg [[DBG3:![0-9]*]], !llvm.loop [[L3:![0-9]*]]
 
 #line 400
   int x[] = {1, 2};
@@ -46,10 +46,26 @@ int main() {
       ++a; // CHECK: add nsw{{.*}}, 1
 
   // CHECK: br label
-  // CHECK: br label {{.*}}, !dbg [[DBG4:!.*]]
+  // CHECK: br label {{.*}}, !dbg [[DBG4:![0-9]*]], !llvm.loop [[L4:![0-9]*]]
 
-  // CHECK: [[DBG1]] = !DILocation(line: 100, scope: !{{.*}})
-  // CHECK: [[DBG2]] = !DILocation(line: 200, scope: !{{.*}})
-  // CHECK: [[DBG3]] = !DILocation(line: 300, scope: !{{.*}})
-  // CHECK: [[DBG4]] = !DILocation(line: 401, scope: !{{.*}})
+  // CHECK-DAG: [[DBG1]] = !DILocation(line: 100, scope: !{{.*}})
+  // CHECK-DAG: [[DBG2]] = !DILocation(line: 200, scope: !{{.*}})
+  // CHECK-DAG: [[DBG3]] = !DILocation(line: 300, scope: !{{.*}})
+  // CHECK-DAG: [[DBG4]] = !DILocation(line: 401, scope: !{{.*}})
+
+  // CHECK-DAG: [[L1]] = distinct !{[[L1]], [[SLDBG1:![0-9]*]], [[ELDBG1:![0-9]*]]}
+  // CHECK-DAG: [[SLDBG1]] = !DILocation(line: 100, scope: !{{.*}})
+  // CHECK-DAG: [[ELDBG1]] = !DILocation(line: 104, scope: !{{.*}})
+
+  // CHECK-DAG: [[L2]] = distinct !{[[L2]], [[SLDBG2:![0-9]*]], [[ELDBG2:![0-9]*]]}
+  // CHECK-DAG: [[SLDBG2]] = !DILocation(line: 200, scope: !{{.*}})
+  // CHECK-DAG: [[ELDBG2]] = !DILocation(line: 204, scope: !{{.*}})
+
+  // CHECK-DAG: [[L3]] = distinct !{[[L3]], [[SLDBG3:![0-9]*]], [[ELDBG3:![0-9]*]]}
+  // CHECK-DAG: [[SLDBG3]] = !DILocation(line: 300, scope: !{{.*}})
+  // CHECK-DAG: [[ELDBG3]] = !DILocation(line: 304, scope: !{{.*}})
+
+  // CHECK-DAG: [[L4]] = distinct !{[[L4]], [[SLDBG4:![0-9]*]], [[ELDBG4:![0-9]*]]}
+  // CHECK-DAG: [[SLDBG4]] = !DILocation(line: 401, scope: !{{.*}})
+  // CHECK-DAG: [[ELDBG4]] = !DILocation(line: 405, scope: !{{.*}})
 }

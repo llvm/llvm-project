@@ -1,4 +1,4 @@
-; RUN: llc -O3 -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
 
 ; Test swap removal when a vector splat must be adjusted to make it legal.
 ;
@@ -87,5 +87,5 @@ entry:
 
 ; CHECK-LABEL: @ifoo
 ; CHECK: lxvd2x
-; CHECK: vspltw {{[0-9]+}}, {{[0-9]+}}, 0
+; CHECK: xxspltw {{[0-9]+}}, {{[0-9]+}}, 0
 ; CHECK: stxvd2x

@@ -37,7 +37,9 @@ namespace clang {
 /// @endcode
 ///
 /// The semantic context of a friend decl is its declaring class.
-class FriendDecl : public Decl {
+class FriendDecl final
+    : public Decl,
+      private llvm::TrailingObjects<FriendDecl, TemplateParameterList *> {
   virtual void anchor();
 public:
   typedef llvm::PointerUnion<NamedDecl*,TypeSourceInfo*> FriendUnion;
@@ -55,20 +57,12 @@ private:
   /// True if this 'friend' declaration is unsupported.  Eventually we
   /// will support every possible friend declaration, but for now we
   /// silently ignore some and set this flag to authorize all access.
-  bool UnsupportedFriend : 1;
+  unsigned UnsupportedFriend : 1;
 
   // The number of "outer" template parameter lists in non-templatic
   // (currently unsupported) friend type declarations, such as
   //     template <class T> friend class A<T>::B;
   unsigned NumTPLists : 31;
-
-  // The tail-allocated friend type template parameter lists (if any).
-  TemplateParameterList* const *getTPLists() const {
-    return reinterpret_cast<TemplateParameterList* const *>(this + 1);
-  }
-  TemplateParameterList **getTPLists() {
-    return reinterpret_cast<TemplateParameterList**>(this + 1);
-  }
 
   friend class CXXRecordDecl::friend_iterator;
   friend class CXXRecordDecl;
@@ -83,11 +77,12 @@ private:
       UnsupportedFriend(false),
       NumTPLists(FriendTypeTPLists.size()) {
     for (unsigned i = 0; i < NumTPLists; ++i)
-      getTPLists()[i] = FriendTypeTPLists[i];
+      getTrailingObjects<TemplateParameterList *>()[i] = FriendTypeTPLists[i];
   }
 
   FriendDecl(EmptyShell Empty, unsigned NumFriendTypeTPLists)
     : Decl(Decl::Friend, Empty), NextFriend(),
+      UnsupportedFriend(false),
       NumTPLists(NumFriendTypeTPLists) { }
 
   FriendDecl *getNextFriend() {
@@ -118,7 +113,7 @@ public:
   }
   TemplateParameterList *getFriendTypeTemplateParameterList(unsigned N) const {
     assert(N < NumTPLists);
-    return getTPLists()[N];
+    return getTrailingObjects<TemplateParameterList *>()[N];
   }
 
   /// If this friend declaration doesn't name a type, return the inner
@@ -148,9 +143,10 @@ public:
       return SourceRange(getFriendLoc(), ND->getLocEnd());
     }
     else if (TypeSourceInfo *TInfo = getFriendType()) {
-      SourceLocation StartL = (NumTPLists == 0)
-        ? getFriendLoc()
-        : getTPLists()[0]->getTemplateLoc();
+      SourceLocation StartL =
+          (NumTPLists == 0) ? getFriendLoc()
+                            : getTrailingObjects<TemplateParameterList *>()[0]
+                                  ->getTemplateLoc();
       return SourceRange(StartL, TInfo->getTypeLoc().getEndLoc());
     }
     else
@@ -171,6 +167,8 @@ public:
 
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+  friend class ASTNodeImporter;
+  friend TrailingObjects;
 };
 
 /// An iterator over the friend declarations of a class.

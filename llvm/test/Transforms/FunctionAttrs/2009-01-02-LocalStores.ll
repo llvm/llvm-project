@@ -14,7 +14,7 @@ define i32* @b(i32 *%q) {
 	ret i32* %tmp
 }
 
-; CHECK: define i32* @c(i32* readnone %r)
+; CHECK: define i32* @c(i32* readnone returned %r)
 @g = global i32 0
 define i32* @c(i32 *%r) {
 	%a = icmp eq i32* %r, null

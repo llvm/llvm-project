@@ -6,7 +6,7 @@
 ; CHECK-LABEL:  .section  __LLVM_STACKMAPS,__llvm_stackmaps
 ; CHECK-NEXT:   __LLVM_StackMaps:
 ; Header
-; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 2
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
@@ -19,8 +19,10 @@
 ; Functions and stack size
 ; CHECK-NEXT:   .quad _stackmap_liveness
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 3
 ; CHECK-NEXT:   .quad _mixed_liveness
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 2
 
 define void @stackmap_liveness() {
 entry:
@@ -34,7 +36,7 @@ entry:
 ; Num LiveOut Entries: 0
 ; CHECK-NEXT:   .short  0
 ; Align
-; CHECK-NEXT:   .align  3
+; CHECK-NEXT:   .p2align  3
 
 ; StackMap 1 (patchpoint liveness information enabled)
 ; PATCH-LABEL:  .long L{{.*}}-_stackmap_liveness
@@ -49,7 +51,7 @@ entry:
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16
 ; Align
-; PATCH-NEXT:   .align  3
+; PATCH-NEXT:   .p2align  3
   call anyregcc void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 1, i32 12, i8* null, i32 0)
   %a2 = call i64 asm sideeffect "", "={r8}"() nounwind
   %a3 = call i8 asm sideeffect "", "={ah}"() nounwind
@@ -65,7 +67,7 @@ entry:
 ; Num LiveOut Entries: 0
 ; CHECK-NEXT:   .short  0
 ; Align
-; CHECK-NEXT:   .align  3
+; CHECK-NEXT:   .p2align  3
 
 ; StackMap 2 (patchpoint liveness information enabled)
 ; PATCH-LABEL:  .long L{{.*}}-_stackmap_liveness
@@ -96,7 +98,7 @@ entry:
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16
 ; Align
-; PATCH-NEXT:   .align  3
+; PATCH-NEXT:   .p2align  3
   call anyregcc void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 2, i32 12, i8* null, i32 0)
   call void asm sideeffect "", "{r8},{ah},{ymm0},{ymm1}"(i64 %a2, i8 %a3, <4 x double> %a4, <4 x double> %a5) nounwind
 
@@ -109,7 +111,7 @@ entry:
 ; Num LiveOut Entries: 0
 ; CHECK-NEXT:   .short  0
 ; Align
-; CHECK-NEXT:   .align  3
+; CHECK-NEXT:   .p2align  3
 
 ; StackMap 3 (patchpoint liveness information enabled)
 ; PATCH-LABEL:  .long L{{.*}}-_stackmap_liveness
@@ -128,7 +130,7 @@ entry:
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16
 ; Align
-; PATCH-NEXT:   .align  3
+; PATCH-NEXT:   .p2align  3
   call anyregcc void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 3, i32 12, i8* null, i32 0)
   call void asm sideeffect "", "{xmm2}"(<2 x double> %a1) nounwind
   ret void
@@ -146,7 +148,7 @@ entry:
 ; Num LiveOut Entries: 0
 ; PATCH-NEXT:   .short  0
 ; Align
-; PATCH-NEXT:   .align  3
+; PATCH-NEXT:   .p2align  3
 
 ; StackMap 5 (patchpoint liveness information enabled)
 ; PATCH-LABEL:  .long L{{.*}}-_mixed_liveness
@@ -165,7 +167,7 @@ entry:
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16
 ; Align
-; PATCH-NEXT:   .align  3
+; PATCH-NEXT:   .p2align  3
   call void (i64, i32, ...) @llvm.experimental.stackmap(i64 4, i32 5)
   call anyregcc void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 5, i32 0, i8* null, i32 0)
   call void asm sideeffect "", "{xmm2}"(<2 x double> %a1) nounwind

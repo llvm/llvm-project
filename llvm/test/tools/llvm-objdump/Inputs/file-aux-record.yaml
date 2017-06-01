@@ -1,3 +1,4 @@
+!COFF
 header: !Header
   Machine: IMAGE_FILE_MACHINE_I386 # (0x14c)
   Characteristics: [ IMAGE_FILE_DEBUG_STRIPPED ]

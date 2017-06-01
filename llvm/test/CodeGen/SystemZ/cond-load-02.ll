@@ -128,3 +128,17 @@ exit:
   %res = phi i64 [ %easy, %entry ], [ %other, %load ]
   ret i64 %res
 }
+
+; Test that volatile loads do not use LOCG, since if the condition is false,
+; it is unspecified whether or not the load happens.  LOCGR is fine though.
+define i64 @f10(i64 %easy, i64 *%ptr, i64 %limit) {
+; CHECK-LABEL: f10:
+; CHECK: lg {{%r[0-9]*}}, 0(%r3)
+; CHECK: locgr
+; CHECK: br %r14
+  %cond = icmp ult i64 %limit, 42
+  %other = load volatile i64, i64 *%ptr
+  %res = select i1 %cond, i64 %easy, i64 %other
+  ret i64 %res
+}
+

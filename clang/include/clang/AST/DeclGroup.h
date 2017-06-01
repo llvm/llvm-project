@@ -15,6 +15,7 @@
 #define LLVM_CLANG_AST_DECLGROUP_H
 
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 
 namespace clang {
@@ -24,13 +25,9 @@ class Decl;
 class DeclGroup;
 class DeclGroupIterator;
 
-class DeclGroup {
+class DeclGroup final : private llvm::TrailingObjects<DeclGroup, Decl *> {
   // FIXME: Include a TypeSpecifier object.
-  union {
-    unsigned NumDecls;
-
-    Decl *Aligner;
-  };
+  unsigned NumDecls;
 
 private:
   DeclGroup() : NumDecls(0) {}
@@ -43,13 +40,15 @@ public:
 
   Decl*& operator[](unsigned i) {
     assert (i < NumDecls && "Out-of-bounds access.");
-    return ((Decl**) (this+1))[i];
+    return getTrailingObjects<Decl *>()[i];
   }
 
   Decl* const& operator[](unsigned i) const {
     assert (i < NumDecls && "Out-of-bounds access.");
-    return ((Decl* const*) (this+1))[i];
+    return getTrailingObjects<Decl *>()[i];
   }
+
+  friend TrailingObjects;
 };
 
 class DeclGroupRef {
@@ -85,7 +84,7 @@ public:
   bool isDeclGroup() const { return getKind() == DeclGroupKind; }
 
   Decl *getSingleDecl() {
-    assert(isSingleDecl() && "Isn't a declgroup");
+    assert(isSingleDecl() && "Isn't a single decl");
     return D;
   }
   const Decl *getSingleDecl() const {

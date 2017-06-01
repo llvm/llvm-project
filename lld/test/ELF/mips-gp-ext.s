@@ -20,10 +20,10 @@
 # REQUIRES: mips
 
 # REL:      Contents of section .text:
-# REL-NEXT:  0000 3c080000 2108010c 8f82fff0
+# REL-NEXT:  0000 3c080000 2108010c 8f82fffc
 #                 ^-- %hi(_gp_disp)
 #                          ^-- %lo(_gp_disp)
-#                                   ^-- 8 - (0x10c - 0xf4)
+#                                   ^-- 8 - (0x10c - 0x100)
 #                                       G - (GP - .got)
 
 # REL:      Contents of section .reginfo:
@@ -40,10 +40,10 @@
 # REL: 0000010c         *ABS*           00000000 .hidden _gp
 
 # ABS:      Contents of section .text:
-# ABS-NEXT:  0000 3c080000 21080200 8f82fefc
+# ABS-NEXT:  0000 3c080000 21080200 8f82ff08
 #                 ^-- %hi(_gp_disp)
 #                          ^-- %lo(_gp_disp)
-#                                   ^-- 8 - (0x200 - 0xf4)
+#                                   ^-- 8 - (0x200 - 0x100)
 #                                       G - (GP - .got)
 
 # ABS:      Contents of section .reginfo:

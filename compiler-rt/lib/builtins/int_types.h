@@ -20,6 +20,10 @@
 
 #include "int_endianness.h"
 
+/* si_int is defined in Linux sysroot's asm-generic/siginfo.h */
+#ifdef si_int
+#undef si_int
+#endif
 typedef      int si_int;
 typedef unsigned su_int;
 
@@ -57,7 +61,8 @@ typedef union
 } udwords;
 
 /* MIPS64 issue: PR 20098 */
-#if defined(__LP64__) && !(defined(__mips__) && defined(__clang__))
+#if (defined(__LP64__) || defined(__wasm__)) && \
+    !(defined(__mips__) && defined(__clang__))
 #define CRT_HAS_128BIT
 #endif
 

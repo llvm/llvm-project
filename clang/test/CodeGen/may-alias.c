@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -Werror -triple i386-unknown-unknown -emit-llvm -O1 -no-struct-path-tbaa -disable-llvm-optzns -o - %s | FileCheck %s
-// RUN: %clang_cc1 -Werror -triple i386-unknown-unknown -emit-llvm -O1 -disable-llvm-optzns -o - %s | FileCheck %s -check-prefix=PATH
+// RUN: %clang_cc1 -Werror -triple i386-unknown-unknown -emit-llvm -O1 -no-struct-path-tbaa -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Werror -triple i386-unknown-unknown -emit-llvm -O1 -disable-llvm-passes -o - %s | FileCheck %s -check-prefix=PATH
 
 // Types with the may_alias attribute should be considered equivalent
 // to char for aliasing.

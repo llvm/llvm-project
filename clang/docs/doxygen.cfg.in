@@ -745,7 +745,7 @@ WARN_LOGFILE           =
 
 INPUT                  = @abs_srcdir@/../include \
                          @abs_srcdir@/../lib \
-                         @abs_srcdir@/doxygen.intro
+                         @abs_srcdir@/doxygen-mainpage.dox
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -1791,18 +1791,6 @@ GENERATE_XML           = NO
 
 XML_OUTPUT             = xml
 
-# The XML_SCHEMA tag can be used to specify a XML schema, which can be used by a
-# validating XML parser to check the syntax of the XML files.
-# This tag requires that the tag GENERATE_XML is set to YES.
-
-XML_SCHEMA             =
-
-# The XML_DTD tag can be used to specify a XML DTD, which can be used by a
-# validating XML parser to check the syntax of the XML files.
-# This tag requires that the tag GENERATE_XML is set to YES.
-
-XML_DTD                =
-
 # If the XML_PROGRAMLISTING tag is set to YES doxygen will dump the program
 # listings (including syntax highlighting and cross-referencing information) to
 # the XML output. Note that enabling this will significantly increase the size
@@ -1949,7 +1937,7 @@ PREDEFINED             =
 EXPAND_AS_DEFINED      =
 
 # If the SKIP_FUNCTION_MACROS tag is set to YES then doxygen's preprocessor will
-# remove all refrences to function-like macros that are alone on a line, have an
+# remove all references to function-like macros that are alone on a line, have an
 # all uppercase name, and do not end with a semicolon. Such function macros are
 # typically used for boiler-plate code, and will confuse the parser if not
 # removed.

@@ -32,7 +32,7 @@ public:
   /// the destination along with the FrameIndex of the loaded stack slot.  If
   /// not, return 0.  This predicate must return 0 if the instruction has
   /// any side effects other than loading from the stack slot.
-  unsigned isLoadFromStackSlot(const MachineInstr *MI,
+  unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
 
   /// isStoreToStackSlot - If the specified machine instruction is a direct
@@ -40,12 +40,11 @@ public:
   /// the source reg along with the FrameIndex of the loaded stack slot.  If
   /// not, return 0.  This predicate must return 0 if the instruction has
   /// any side effects other than storing to the stack slot.
-  unsigned isStoreToStackSlot(const MachineInstr *MI,
+  unsigned isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
-  void copyPhysReg(MachineBasicBlock &MBB,
-                   MachineBasicBlock::iterator MI, DebugLoc DL,
-                   unsigned DestReg, unsigned SrcReg,
+  void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                   const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                    bool KillSrc) const override;
 
   void storeRegToStack(MachineBasicBlock &MBB,
@@ -62,7 +61,7 @@ public:
                         const TargetRegisterInfo *TRI,
                         int64_t Offset) const override;
 
-  bool expandPostRAPseudo(MachineBasicBlock::iterator MI) const override;
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   unsigned getOppositeBranchOpc(unsigned Opc) const override;
 
@@ -74,7 +73,7 @@ public:
   /// non-NULL parameter, the last instruction is not emitted, but instead
   /// its immediate operand is returned in NewImm.
   unsigned loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator II, DebugLoc DL,
+                         MachineBasicBlock::iterator II, const DebugLoc &DL,
                          unsigned *NewImm) const;
 
 private:

@@ -23,13 +23,16 @@ define void @test2() {
 
 ; CHECK-ARM-LABEL: test2:
 ; CHECK-ARM: .cfi_startproc
-; CHECK-ARM: push    {r4, r5}
-; CHECK-ARM: .cfi_def_cfa_offset 8
-; CHECK-ARM: .cfi_offset r5, -4
-; CHECK-ARM: .cfi_offset r4, -8
+; CHECK-ARM: push    {r4, r5, r11, lr}
+; CHECK-ARM: .cfi_def_cfa_offset 16
+; CHECK-ARM: .cfi_offset lr, -4
+; CHECK-ARM: .cfi_offset r11, -8
+; CHECK-ARM: .cfi_offset r5, -12
+; CHECK-ARM: .cfi_offset r4, -16
+; CHECK-ARM: add    r11, sp, #8
+; CHECK-ARM: .cfi_def_cfa r11, 8
 ; CHECK-ARM: sub    sp, sp, #72
 ; CHECK-ARM: sub    sp, sp, #4096
-; CHECK-ARM: .cfi_def_cfa_offset 4176
 ; CHECK-ARM: .cfi_endproc
 
 ; CHECK-ARM-FP_ELIM-LABEL: test2:
@@ -54,14 +57,15 @@ define i32 @test3() {
 
 ; CHECK-ARM-LABEL: test3:
 ; CHECK-ARM: .cfi_startproc
-; CHECK-ARM: push    {r4, r5, r11}
-; CHECK-ARM: .cfi_def_cfa_offset 12
-; CHECK-ARM: .cfi_offset r11, -4
-; CHECK-ARM: .cfi_offset r5, -8
-; CHECK-ARM: .cfi_offset r4, -12
+; CHECK-ARM: push    {r4, r5, r11, lr}
+; CHECK-ARM: .cfi_def_cfa_offset 16
+; CHECK-ARM: .cfi_offset lr, -4
+; CHECK-ARM: .cfi_offset r11, -8
+; CHECK-ARM: .cfi_offset r5, -12
+; CHECK-ARM: .cfi_offset r4, -16
 ; CHECK-ARM: add    r11, sp, #8
-; CHECK-ARM: .cfi_def_cfa r11, 4
-; CHECK-ARM: sub    sp, sp, #20
+; CHECK-ARM: .cfi_def_cfa r11, 8
+; CHECK-ARM: sub    sp, sp, #16
 ; CHECK-ARM: sub    sp, sp, #805306368
 ; CHECK-ARM: bic    sp, sp, #15
 ; CHECK-ARM: .cfi_endproc

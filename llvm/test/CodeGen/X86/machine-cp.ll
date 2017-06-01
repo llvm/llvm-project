@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-macosx -mcpu=nocona -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-apple-macosx -mattr=+sse2 -verify-machineinstrs < %s | FileCheck %s
 
 ; After tail duplication, two copies in an early exit BB can be cancelled out.
 ; rdar://10640363

@@ -1,6 +1,11 @@
 // RUN: %clang_asan -O0 %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
+// Since ASan is built with -fomit-frame-pointer, backtrace is not able to
+// symbolicate the trace past ASan runtime on i386. (This is fixed in
+// latest OS X.)
+// REQUIRES: asan-64-bits
+
 #include <execinfo.h>
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>

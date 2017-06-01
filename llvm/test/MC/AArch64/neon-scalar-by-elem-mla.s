@@ -1,8 +1,9 @@
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+neon -show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+neon,+fullfp16 -show-encoding < %s | FileCheck %s
 
 //------------------------------------------------------------------------------
 // Floating Point fused multiply-add (scalar, by element)
 //------------------------------------------------------------------------------
+    fmla    h0, h1, v1.h[5]
     fmla    s0, s1, v1.s[0]
     fmla    s30, s11, v1.s[1]
     fmla    s4, s5, v7.s[2]
@@ -10,6 +11,7 @@
     fmla    d0, d1, v1.d[0]
     fmla    d30, d11, v1.d[1]
 
+// CHECK: fmla    h0, h1, v1.h[5]         // encoding: [0x20,0x18,0x11,0x5f]
 // CHECK: fmla    s0, s1, v1.s[0]         // encoding: [0x20,0x10,0x81,0x5f]
 // CHECK: fmla    s30, s11, v1.s[1]       // encoding: [0x7e,0x11,0xa1,0x5f]
 // CHECK: fmla    s4, s5, v7.s[2]         // encoding: [0xa4,0x18,0x87,0x5f]
@@ -21,6 +23,7 @@
 // Floating Point fused multiply-subtract (scalar, by element)
 //------------------------------------------------------------------------------
 
+    fmls    h2, h3, v4.h[5]
     fmls    s2, s3, v4.s[0]
     fmls    s29, s10, v28.s[1]      
     fmls    s5, s12, v23.s[2]       
@@ -28,6 +31,7 @@
     fmls    d0, d1, v1.d[0]         
     fmls    d30, d11, v1.d[1]       
 
+// CHECK: fmls    h2, h3, v4.h[5]         // encoding: [0x62,0x58,0x14,0x5f]
 // CHECK: fmls    s2, s3, v4.s[0]     // encoding: [0x62,0x50,0x84,0x5f]
 // CHECK: fmls    s29, s10, v28.s[1]  // encoding: [0x5d,0x51,0xbc,0x5f]
 // CHECK: fmls    s5, s12, v23.s[2]   // encoding: [0x85,0x59,0x97,0x5f]

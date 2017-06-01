@@ -34,16 +34,11 @@
 #include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -51,7 +46,6 @@
 #include <algorithm>
 #include <deque>
 #include <iterator>
-#include <vector>
 
 using namespace clang;
 
@@ -62,6 +56,8 @@ using namespace clang;
 namespace {
   class UnreachableCodeHandler : public reachable_code::Callback {
     Sema &S;
+    SourceRange PreviousSilenceableCondVal;
+
   public:
     UnreachableCodeHandler(Sema &s) : S(s) {}
 
@@ -70,6 +66,14 @@ namespace {
                            SourceRange SilenceableCondVal,
                            SourceRange R1,
                            SourceRange R2) override {
+      // Avoid reporting multiple unreachable code diagnostics that are
+      // triggered by the same conditional value.
+      if (PreviousSilenceableCondVal.isValid() &&
+          SilenceableCondVal.isValid() &&
+          PreviousSilenceableCondVal == SilenceableCondVal)
+        return;
+      PreviousSilenceableCondVal = SilenceableCondVal;
+
       unsigned diag = diag::warn_unreachable;
       switch (UK) {
         case reachable_code::UK_Break:
@@ -371,7 +375,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
 
     CFGStmt CS = ri->castAs<CFGStmt>();
     const Stmt *S = CS.getStmt();
-    if (isa<ReturnStmt>(S)) {
+    if (isa<ReturnStmt>(S) || isa<CoreturnStmt>(S)) {
       HasLiveReturn = true;
       continue;
     }
@@ -422,7 +426,7 @@ struct CheckFallThroughDiagnostics {
   unsigned diag_AlwaysFallThrough_HasNoReturn;
   unsigned diag_AlwaysFallThrough_ReturnsNonVoid;
   unsigned diag_NeverFallThroughOrReturn;
-  enum { Function, Block, Lambda } funMode;
+  enum { Function, Block, Lambda, Coroutine } funMode;
   SourceLocation FuncLoc;
 
   static CheckFallThroughDiagnostics MakeForFunction(const Decl *Func) {
@@ -455,6 +459,19 @@ struct CheckFallThroughDiagnostics {
       D.diag_NeverFallThroughOrReturn = 0;
     
     D.funMode = Function;
+    return D;
+  }
+
+  static CheckFallThroughDiagnostics MakeForCoroutine(const Decl *Func) {
+    CheckFallThroughDiagnostics D;
+    D.FuncLoc = Func->getLocation();
+    D.diag_MaybeFallThrough_HasNoReturn = 0;
+    D.diag_MaybeFallThrough_ReturnsNonVoid =
+        diag::warn_maybe_falloff_nonvoid_coroutine;
+    D.diag_AlwaysFallThrough_HasNoReturn = 0;
+    D.diag_AlwaysFallThrough_ReturnsNonVoid =
+        diag::warn_falloff_nonvoid_coroutine;
+    D.funMode = Coroutine;
     return D;
   }
 
@@ -500,7 +517,13 @@ struct CheckFallThroughDiagnostics {
              (!ReturnsVoid ||
               D.isIgnored(diag::warn_suggest_noreturn_block, FuncLoc));
     }
-
+    if (funMode == Coroutine) {
+      return (ReturnsVoid ||
+              D.isIgnored(diag::warn_maybe_falloff_nonvoid_function, FuncLoc) ||
+              D.isIgnored(diag::warn_maybe_falloff_nonvoid_coroutine,
+                          FuncLoc)) &&
+             (!HasNoReturn);
+    }
     // For blocks / lambdas.
     return ReturnsVoid && !HasNoReturn;
   }
@@ -520,11 +543,14 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
   bool ReturnsVoid = false;
   bool HasNoReturn = false;
 
-  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-    ReturnsVoid = FD->getReturnType()->isVoidType();
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (const auto *CBody = dyn_cast<CoroutineBodyStmt>(Body))
+      ReturnsVoid = CBody->getFallthroughHandler() != nullptr;
+    else
+      ReturnsVoid = FD->getReturnType()->isVoidType();
     HasNoReturn = FD->isNoReturn();
   }
-  else if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
+  else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     ReturnsVoid = MD->getReturnType()->isVoidType();
     HasNoReturn = MD->hasAttr<NoReturnAttr>();
   }
@@ -657,8 +683,7 @@ static void CreateIfFixit(Sema &S, const Stmt *If, const Stmt *Then,
         CharSourceRange::getCharRange(If->getLocStart(),
                                       Then->getLocStart()));
     if (Else) {
-      SourceLocation ElseKwLoc = Lexer::getLocForEndOfToken(
-          Then->getLocEnd(), 0, S.getSourceManager(), S.getLangOpts());
+      SourceLocation ElseKwLoc = S.getLocForEndOfToken(Then->getLocEnd());
       Fixit2 = FixItHint::CreateRemoval(
           SourceRange(ElseKwLoc, Else->getLocEnd()));
     }
@@ -891,7 +916,7 @@ static bool DiagnoseUninitializedUse(Sema &S, const VarDecl *VD,
   // the initializer of that declaration & we didn't already suggest
   // an initialization fixit.
   if (!SuggestInitializationFixit(S, VD))
-    S.Diag(VD->getLocStart(), diag::note_uninit_var_def)
+    S.Diag(VD->getLocStart(), diag::note_var_declared_here)
       << VD->getDeclName();
 
   return true;
@@ -1073,6 +1098,34 @@ namespace {
   };
 } // anonymous namespace
 
+static StringRef getFallthroughAttrSpelling(Preprocessor &PP,
+                                            SourceLocation Loc) {
+  TokenValue FallthroughTokens[] = {
+    tok::l_square, tok::l_square,
+    PP.getIdentifierInfo("fallthrough"),
+    tok::r_square, tok::r_square
+  };
+
+  TokenValue ClangFallthroughTokens[] = {
+    tok::l_square, tok::l_square, PP.getIdentifierInfo("clang"),
+    tok::coloncolon, PP.getIdentifierInfo("fallthrough"),
+    tok::r_square, tok::r_square
+  };
+
+  bool PreferClangAttr = !PP.getLangOpts().CPlusPlus1z;
+
+  StringRef MacroName;
+  if (PreferClangAttr)
+    MacroName = PP.getLastMacroWithSpelling(Loc, ClangFallthroughTokens);
+  if (MacroName.empty())
+    MacroName = PP.getLastMacroWithSpelling(Loc, FallthroughTokens);
+  if (MacroName.empty() && !PreferClangAttr)
+    MacroName = PP.getLastMacroWithSpelling(Loc, ClangFallthroughTokens);
+  if (MacroName.empty())
+    MacroName = PreferClangAttr ? "[[clang::fallthrough]]" : "[[fallthrough]]";
+  return MacroName;
+}
+
 static void DiagnoseSwitchLabelsFallthrough(Sema &S, AnalysisDeclContext &AC,
                                             bool PerFunction) {
   // Only perform this analysis when using C++11.  There is no good workflow
@@ -1131,15 +1184,7 @@ static void DiagnoseSwitchLabelsFallthrough(Sema &S, AnalysisDeclContext &AC,
         }
         if (!(B->empty() && Term && isa<BreakStmt>(Term))) {
           Preprocessor &PP = S.getPreprocessor();
-          TokenValue Tokens[] = {
-            tok::l_square, tok::l_square, PP.getIdentifierInfo("clang"),
-            tok::coloncolon, PP.getIdentifierInfo("fallthrough"),
-            tok::r_square, tok::r_square
-          };
-          StringRef AnnotationSpelling = "[[clang::fallthrough]]";
-          StringRef MacroName = PP.getLastMacroWithSpelling(L, Tokens);
-          if (!MacroName.empty())
-            AnnotationSpelling = MacroName;
+          StringRef AnnotationSpelling = getFallthroughAttrSpelling(PP, L);
           SmallString<64> TextToInsert(AnnotationSpelling);
           TextToInsert += "; ";
           S.Diag(L, diag::note_insert_fallthrough_fixit) <<
@@ -1153,7 +1198,7 @@ static void DiagnoseSwitchLabelsFallthrough(Sema &S, AnalysisDeclContext &AC,
   }
 
   for (const auto *F : FM.getFallthroughStmts())
-    S.Diag(F->getLocStart(), diag::warn_fallthrough_attr_invalid_placement);
+    S.Diag(F->getLocStart(), diag::err_fallthrough_attr_invalid_placement);
 }
 
 static bool isInLoop(const ASTContext &Ctx, const ParentMap &PM,
@@ -1304,21 +1349,27 @@ static void diagnoseRepeatedUseOfWeak(Sema &S,
       Ivar
     } ObjectKind;
 
-    const NamedDecl *D = Key.getProperty();
-    if (isa<VarDecl>(D))
+    const NamedDecl *KeyProp = Key.getProperty();
+    if (isa<VarDecl>(KeyProp))
       ObjectKind = Variable;
-    else if (isa<ObjCPropertyDecl>(D))
+    else if (isa<ObjCPropertyDecl>(KeyProp))
       ObjectKind = Property;
-    else if (isa<ObjCMethodDecl>(D))
+    else if (isa<ObjCMethodDecl>(KeyProp))
       ObjectKind = ImplicitProperty;
-    else if (isa<ObjCIvarDecl>(D))
+    else if (isa<ObjCIvarDecl>(KeyProp))
       ObjectKind = Ivar;
     else
       llvm_unreachable("Unexpected weak object kind!");
 
+    // Do not warn about IBOutlet weak property receivers being set to null
+    // since they are typically only used from the main thread.
+    if (const ObjCPropertyDecl *Prop = dyn_cast<ObjCPropertyDecl>(KeyProp))
+      if (Prop->hasAttr<IBOutletAttr>())
+        continue;
+
     // Show the first time the object was read.
     S.Diag(FirstRead->getLocStart(), DiagKind)
-      << int(ObjectKind) << D << int(FunctionKind)
+      << int(ObjectKind) << KeyProp << int(FunctionKind)
       << FirstRead->getSourceRange();
 
     // Print all the other accesses as notes.
@@ -1341,20 +1392,16 @@ class UninitValsDiagReporter : public UninitVariablesHandler {
   // the same as insertion order. This is needed to obtain a deterministic
   // order of diagnostics when calling flushDiagnostics().
   typedef llvm::MapVector<const VarDecl *, MappedType> UsesMap;
-  UsesMap *uses;
+  UsesMap uses;
   
 public:
-  UninitValsDiagReporter(Sema &S) : S(S), uses(nullptr) {}
+  UninitValsDiagReporter(Sema &S) : S(S) {}
   ~UninitValsDiagReporter() override { flushDiagnostics(); }
 
   MappedType &getUses(const VarDecl *vd) {
-    if (!uses)
-      uses = new UsesMap();
-
-    MappedType &V = (*uses)[vd];
+    MappedType &V = uses[vd];
     if (!V.getPointer())
       V.setPointer(new UsesVec());
-    
     return V;
   }
 
@@ -1368,10 +1415,7 @@ public:
   }
   
   void flushDiagnostics() {
-    if (!uses)
-      return;
-
-    for (const auto &P : *uses) {
+    for (const auto &P : uses) {
       const VarDecl *vd = P.first;
       const MappedType &V = P.second;
 
@@ -1412,7 +1456,8 @@ public:
       // Release the uses vector.
       delete vec;
     }
-    delete uses;
+
+    uses.clear();
   }
 
 private:
@@ -1879,7 +1924,7 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
   if (cast<DeclContext>(D)->isDependentContext())
     return;
 
-  if (Diags.hasUncompilableErrorOccurred() || Diags.hasFatalErrorOccurred()) {
+  if (Diags.hasUncompilableErrorOccurred()) {
     // Flush out any possibly unreachable diagnostics.
     flushDiagnostics(S, fscope);
     return;
@@ -1973,13 +2018,22 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
   
   // Warning: check missing 'return'
   if (P.enableCheckFallThrough) {
+    auto IsCoro = [&]() {
+      if (auto *FD = dyn_cast<FunctionDecl>(D))
+        if (FD->getBody() && isa<CoroutineBodyStmt>(FD->getBody()))
+          return true;
+      return false;
+    };
     const CheckFallThroughDiagnostics &CD =
-      (isa<BlockDecl>(D) ? CheckFallThroughDiagnostics::MakeForBlock()
-       : (isa<CXXMethodDecl>(D) &&
-          cast<CXXMethodDecl>(D)->getOverloadedOperator() == OO_Call &&
-          cast<CXXMethodDecl>(D)->getParent()->isLambda())
-            ? CheckFallThroughDiagnostics::MakeForLambda()
-            : CheckFallThroughDiagnostics::MakeForFunction(D));
+        (isa<BlockDecl>(D)
+             ? CheckFallThroughDiagnostics::MakeForBlock()
+             : (isa<CXXMethodDecl>(D) &&
+                cast<CXXMethodDecl>(D)->getOverloadedOperator() == OO_Call &&
+                cast<CXXMethodDecl>(D)->getParent()->isLambda())
+                   ? CheckFallThroughDiagnostics::MakeForLambda()
+                   : (IsCoro()
+                          ? CheckFallThroughDiagnostics::MakeForCoroutine(D)
+                          : CheckFallThroughDiagnostics::MakeForFunction(D)));
     CheckFallThroughForBody(S, D, Body, blkExpr, CD, AC);
   }
 
@@ -2046,7 +2100,8 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
       !Diags.isIgnored(diag::warn_unannotated_fallthrough, D->getLocStart());
   bool FallThroughDiagPerFunction = !Diags.isIgnored(
       diag::warn_unannotated_fallthrough_per_function, D->getLocStart());
-  if (FallThroughDiagFull || FallThroughDiagPerFunction) {
+  if (FallThroughDiagFull || FallThroughDiagPerFunction ||
+      fscope->HasFallthroughStmt) {
     DiagnoseSwitchLabelsFallthrough(S, AC, !FallThroughDiagFull);
   }
 

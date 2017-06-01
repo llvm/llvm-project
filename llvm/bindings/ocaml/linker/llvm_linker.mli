@@ -14,6 +14,6 @@
 
 exception Error of string
 
-(** [link_modules dst src mode] links [src] into [dst], raising [Error]
-    if the linking fails. *)
-val link_modules : Llvm.llmodule -> Llvm.llmodule -> unit
+(** [link_modules' dst src] links [src] into [dst], raising [Error]
+    if the linking fails. The src module is destroyed. *)
+val link_modules' : Llvm.llmodule -> Llvm.llmodule -> unit

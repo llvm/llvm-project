@@ -21,7 +21,7 @@ CHECK-DAG: 	sym: _private_int, objAddr: 0x0000000000000560, binAddr: 0x000000010
 CHECK: filename{{.*}}/Inputs/basic3.macho.x86_64.o
 CHECK-DAG: 	sym: _bar, objAddr: 0x0000000000000020, binAddr: 0x0000000100000F40, size: 0x00000050
 CHECK-DAG: 	sym: _inc, objAddr: 0x0000000000000070, binAddr: 0x0000000100000F90, size: 0x00000019
-CHECK-DAG: 	sym: _val, objAddr: 0x0000000000000004, binAddr: 0x0000000100001004, size: 0x00000000
+CHECK-DAG: 	sym: _val, binAddr: 0x0000000100001004, size: 0x00000000
 CHECK: ...
 
 
@@ -65,7 +65,7 @@ CHECK-ARCHIVE-DAG: 	sym: _private_int, objAddr: 0x0000000000000560, binAddr: 0x0
 CHECK-ARCHIVE: /Inputs/./libbasic.a(basic3.macho.x86_64.o)
 CHECK-ARCHIVE-DAG: 	sym: _bar, objAddr: 0x0000000000000020, binAddr: 0x0000000100000F40, size: 0x00000050
 CHECK-ARCHIVE-DAG: 	sym: _inc, objAddr: 0x0000000000000070, binAddr: 0x0000000100000F90, size: 0x00000019
-CHECK-ARCHIVE-DAG: 	sym: _val, objAddr: 0x0000000000000004, binAddr: 0x0000000100001008, size: 0x00000000
+CHECK-ARCHIVE-DAG: 	sym: _val, binAddr: 0x0000000100001008, size: 0x00000000
 CHECK-ARCHIVE: ...
 
 Check that we warn about missing object files (this presumes that the files aren't

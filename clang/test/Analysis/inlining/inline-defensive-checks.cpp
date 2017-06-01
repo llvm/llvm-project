@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
 // expected-no-diagnostics
 
 extern void __assert_fail (__const char *__assertion, __const char *__file,
@@ -70,4 +70,17 @@ int *retNull() {
 void test(int *p1, int *p2) {
   idc(p1);
 	Foo f(p1);
+}
+
+struct Bar {
+  int x;
+};
+void idcBar(Bar *b) {
+  if (b)
+    ;
+}
+void testRefToField(Bar *b) {
+  idcBar(b);
+  int &x = b->x; // no-warning
+  x = 5;
 }

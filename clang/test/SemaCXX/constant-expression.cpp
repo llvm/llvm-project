@@ -141,3 +141,16 @@ namespace rdar16064952 {
    unsigned w = ({int a = b.val[sizeof(0)]; 0; }); // expected-warning {{use of GNU statement expression extension}}
   }
 }
+
+char PR17381_ice = 1000000 * 1000000; // expected-warning {{overflow}} expected-warning {{changes value}}
+
+namespace PR31701 {
+  struct C {
+    template<int i> static int n; // expected-warning {{extension}}
+  };
+  template <int M> class D;
+  template <int M>
+  template<int i> void D<M>::set() { // expected-error {{from class 'D<M>' without definition}}
+    const C c = C::n<i>;
+  }
+}

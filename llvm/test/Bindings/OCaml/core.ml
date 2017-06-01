@@ -404,6 +404,42 @@ let test_constants () =
   end
 
 
+(*===-- Attributes --------------------------------------------------------===*)
+
+let test_attributes () =
+  group "enum attrs";
+  let nonnull_kind = enum_attr_kind "nonnull" in
+  let dereferenceable_kind = enum_attr_kind "dereferenceable" in
+  insist (nonnull_kind = (enum_attr_kind "nonnull"));
+  insist (nonnull_kind <> dereferenceable_kind);
+
+  let nonnull =
+    create_enum_attr context "nonnull" 0L in
+  let dereferenceable_4 =
+    create_enum_attr context "dereferenceable" 4L in
+  let dereferenceable_8 =
+    create_enum_attr context "dereferenceable" 8L in
+  insist (nonnull <> dereferenceable_4);
+  insist (dereferenceable_4 <> dereferenceable_8);
+  insist (nonnull = (create_enum_attr context "nonnull" 0L));
+  insist ((repr_of_attr nonnull) =
+          AttrRepr.Enum(nonnull_kind, 0L));
+  insist ((repr_of_attr dereferenceable_4) =
+          AttrRepr.Enum(dereferenceable_kind, 4L));
+  insist ((attr_of_repr context (repr_of_attr nonnull)) =
+          nonnull);
+  insist ((attr_of_repr context (repr_of_attr dereferenceable_4)) =
+          dereferenceable_4);
+
+  group "string attrs";
+  let foo_bar = create_string_attr context "foo" "bar" in
+  let foo_baz = create_string_attr context "foo" "baz" in
+  insist (foo_bar <> foo_baz);
+  insist (foo_bar = (create_string_attr context "foo" "bar"));
+  insist ((repr_of_attr foo_bar) = AttrRepr.String("foo", "bar"));
+  insist ((attr_of_repr context (repr_of_attr foo_bar)) = foo_bar);
+  ()
+
 (*===-- Global Values -----------------------------------------------------===*)
 
 let test_global_values () =
@@ -624,7 +660,7 @@ let test_users () =
 (*===-- Aliases -----------------------------------------------------------===*)
 
 let test_aliases () =
-  (* CHECK: @alias = alias i32* @aliasee
+  (* CHECK: @alias = alias i32, i32* @aliasee
    *)
   let forty_two32 = const_int i32_type 42 in
   let v = define_global "aliasee" forty_two32 m in
@@ -747,12 +783,6 @@ let test_params () =
     let p2 = param f 1 in
     set_value_name "One" p1;
     set_value_name "Two" p2;
-    add_param_attr p1 Attribute.Sext;
-    add_param_attr p2 Attribute.Noalias;
-    remove_param_attr p2 Attribute.Noalias;
-    add_function_attr f Attribute.Nounwind;
-    add_function_attr f Attribute.Noreturn;
-    remove_function_attr f Attribute.Noreturn;
 
     insist (Before p1 = param_begin f);
     insist (Before p2 = param_succ p1);
@@ -960,11 +990,25 @@ let test_builder () =
 
   group "function attribute";
   begin
-      ignore (add_function_attr fn Attribute.UWTable);
-      (* CHECK: X7{{.*}}#0
-       * #0 is uwtable, defined at EOF.
-       *)
-      insist ([Attribute.UWTable] = function_attr fn);
+    let signext  = create_enum_attr context "signext" 0L in
+    let zeroext  = create_enum_attr context "zeroext" 0L in
+    let noalias  = create_enum_attr context "noalias" 0L in
+    let nounwind = create_enum_attr context "nounwind" 0L in
+    let no_sse   = create_string_attr context "no-sse" "" in
+
+    add_function_attr fn signext (AttrIndex.Param 0);
+    add_function_attr fn noalias (AttrIndex.Param 1);
+    insist ((function_attrs fn (AttrIndex.Param 1)) = [|noalias|]);
+    remove_enum_function_attr fn (enum_attr_kind "noalias") (AttrIndex.Param 1);
+    add_function_attr fn no_sse (AttrIndex.Param 1);
+    insist ((function_attrs fn (AttrIndex.Param 1)) = [|no_sse|]);
+    remove_string_function_attr fn "no-sse" (AttrIndex.Param 1);
+    insist ((function_attrs fn (AttrIndex.Param 1)) = [||]);
+    add_function_attr fn nounwind AttrIndex.Function;
+    add_function_attr fn zeroext AttrIndex.Return;
+
+    (* CHECK: define zeroext i32 @X7(i32 signext %P1, i32 %P2)
+     *)
   end;
 
   group "casts"; begin
@@ -1057,7 +1101,7 @@ let test_builder () =
   end;
 
   group "miscellaneous"; begin
-    (* CHECK: %build_call = tail call cc63 i32 @{{.*}}(i32 signext %P2, i32 %P1)
+    (* CHECK: %build_call = tail call cc63 zeroext i32 @{{.*}}(i32 signext %P2, i32 %P1)
      * CHECK: %build_select = select i1 %build_icmp, i32 %P1, i32 %P2
      * CHECK: %build_va_arg = va_arg i8** null, i32
      * CHECK: %build_extractelement = extractelement <4 x i32> %Vec1, i32 %P2
@@ -1073,9 +1117,23 @@ let test_builder () =
     insist (not (is_tail_call ci));
     set_tail_call true ci;
     insist (is_tail_call ci);
-    add_instruction_param_attr ci 1 Attribute.Sext;
-    add_instruction_param_attr ci 2 Attribute.Noalias;
-    remove_instruction_param_attr ci 2 Attribute.Noalias;
+
+    let signext  = create_enum_attr context "signext" 0L in
+    let zeroext  = create_enum_attr context "zeroext" 0L in
+    let noalias  = create_enum_attr context "noalias" 0L in
+    let noreturn = create_enum_attr context "noreturn" 0L in
+    let no_sse   = create_string_attr context "no-sse" "" in
+
+    add_call_site_attr ci signext (AttrIndex.Param 0);
+    add_call_site_attr ci noalias (AttrIndex.Param 1);
+    insist ((call_site_attrs ci (AttrIndex.Param 1)) = [|noalias|]);
+    remove_enum_call_site_attr ci (enum_attr_kind "noalias") (AttrIndex.Param 1);
+    add_call_site_attr ci no_sse (AttrIndex.Param 1);
+    insist ((call_site_attrs ci (AttrIndex.Param 1)) = [|no_sse|]);
+    remove_string_call_site_attr ci "no-sse" (AttrIndex.Param 1);
+    insist ((call_site_attrs ci (AttrIndex.Param 1)) = [||]);
+    add_call_site_attr ci noreturn AttrIndex.Function;
+    add_call_site_attr ci zeroext AttrIndex.Return;
 
     let inst46 = build_icmp Icmp.Eq p1 p2 "build_icmp" atentry in
     ignore (build_select inst46 p1 p2 "build_select" atentry);
@@ -1122,6 +1180,7 @@ let test_builder () =
 
     insist ((has_metadata i) = true);
     insist ((metadata i kind) = Some md);
+    insist ((get_mdnode_operands md) = [| m1; m2 |]);
 
     clear_metadata i kind;
 
@@ -1135,32 +1194,11 @@ let test_builder () =
     (* !llvm.module.flags is emitted at EOF. *)
     let n1 = const_int i32_type 1 in
     let n2 = mdstring context "Debug Info Version" in
-    let n3 = const_int i32_type 2 in
+    let n3 = const_int i32_type 3 in
     let md = mdnode context [| n1; n2; n3 |] in
     add_named_metadata_operand m "llvm.module.flags" md;
 
     insist ((get_named_metadata m "llvm.module.flags") = [| md |])
-  end;
-
-  group "dbg"; begin
-    (* CHECK: %dbg = add i32 %P1, %P2, !dbg !2
-     * !2 is metadata emitted at EOF.
-     *)
-    insist ((current_debug_location atentry) = Some (mdnode context [||]));
-
-    let m_line = const_int i32_type 2 in
-    let m_col = const_int i32_type 3 in
-    let m_scope = mdnode context [| |] in
-    let m_inlined = mdnode context [| |] in
-    let md = mdnode context [| m_line; m_col; m_scope; m_inlined |] in
-    set_current_debug_location atentry md;
-
-    insist ((current_debug_location atentry) = Some md);
-
-    let i = build_add p1 p2 "dbg" atentry in
-    insist ((has_metadata i) = true);
-
-    clear_current_debug_location atentry
   end;
 
   group "ret"; begin
@@ -1191,7 +1229,7 @@ let test_builder () =
            add_clause lp (const_array ety [| ztipkc; ztid |]);
            ignore (build_resume lp (builder_at_end context bblpad));
       end;
-      (* CHECK: landingpad{{.*}}personality{{.*}}__gxx_personality_v0
+      (* CHECK: landingpad
        * CHECK: cleanup
        * CHECK: catch{{.*}}i8**{{.*}}@_ZTIc
        * CHECK: filter{{.*}}@_ZTIPKc{{.*}}@_ZTId
@@ -1362,10 +1400,10 @@ let test_builder () =
 
     (* CHECK: %build_alloca = alloca i32
      * CHECK: %build_array_alloca = alloca i32, i32 %P2
-     * CHECK: %build_load = load volatile i32* %build_array_alloca, align 4
+     * CHECK: %build_load = load volatile i32, i32* %build_array_alloca, align 4
      * CHECK: store volatile i32 %P2, i32* %build_alloca, align 4
-     * CHECK: %build_gep = getelementptr i32* %build_array_alloca, i32 %P2
-     * CHECK: %build_in_bounds_gep = getelementptr inbounds i32* %build_array_alloca, i32 %P2
+     * CHECK: %build_gep = getelementptr i32, i32* %build_array_alloca, i32 %P2
+     * CHECK: %build_in_bounds_gep = getelementptr inbounds i32, i32* %build_array_alloca, i32 %P2
      * CHECK: %build_struct_gep = getelementptr inbounds{{.*}}%build_alloca2, i32 0, i32 1
      * CHECK: %build_atomicrmw = atomicrmw xchg i8* %p, i8 42 seq_cst
      *)
@@ -1441,11 +1479,9 @@ let test_builder () =
   end
 
 (* End-of-file checks for things like metdata and attributes.
- * CHECK: attributes #0 = {{.*}}uwtable{{.*}}
  * CHECK: !llvm.module.flags = !{!0}
  * CHECK: !0 = !{i32 1, !"Debug Info Version", i32 3}
  * CHECK: !1 = !{i32 1, !"metadata test"}
- * CHECK: !2 = !DILocation(line: 2, column: 3, scope: !3, inlinedAt: !3)
  *)
 
 (*===-- Pass Managers -----------------------------------------------------===*)
@@ -1500,6 +1536,7 @@ let _ =
   suite "conversion"       test_conversion;
   suite "target"           test_target;
   suite "constants"        test_constants;
+  suite "attributes"       test_attributes;
   suite "global values"    test_global_values;
   suite "global variables" test_global_variables;
   suite "uses"             test_uses;

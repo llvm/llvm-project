@@ -5,7 +5,7 @@
 ; to that containing %G should likewise drop to null.
 @G = internal global i8** null
 
-define i32 @main(i32 %argc, i8** %argv) {
+define i32 @main(i32 %argc, i8** %argv) norecurse {
 ; CHECK-LABEL: @main(
 ; CHECK: %G = alloca
   store i8** %argv, i8*** @G
@@ -28,5 +28,5 @@ declare void @llvm.foo(metadata, metadata) nounwind readnone
 ; CHECK: !named = !{![[NULL:[0-9]+]]}
 
 !0 = !{i8*** @G}
-; CHECK-DAG: ![[NULL]] = !{null}
+; CHECK-DAG: ![[NULL]] = distinct !{null}
 ; CHECK-DAG: ![[EMPTY]] = !{}

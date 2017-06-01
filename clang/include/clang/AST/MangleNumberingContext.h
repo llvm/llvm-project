@@ -16,7 +16,6 @@
 #define LLVM_CLANG_AST_MANGLENUMBERINGCONTEXT_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 
 namespace clang {
@@ -30,7 +29,7 @@ class VarDecl;
 
 /// \brief Keeps track of the mangled names of lambda expressions and block
 /// literals within a particular context.
-class MangleNumberingContext : public RefCountedBase<MangleNumberingContext> {
+class MangleNumberingContext {
 public:
   virtual ~MangleNumberingContext() {}
 

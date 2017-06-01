@@ -27,10 +27,17 @@ namespace symbolize {
 class DIPrinter {
   raw_ostream &OS;
   bool PrintFunctionNames;
+  bool PrintPretty;
+  int PrintSourceContext;
+
+  void print(const DILineInfo &Info, bool Inlined);
+  void printContext(const std::string &FileName, int64_t Line);
 
 public:
-  DIPrinter(raw_ostream &OS, bool PrintFunctionNames = true)
-      : OS(OS), PrintFunctionNames(PrintFunctionNames) {}
+  DIPrinter(raw_ostream &OS, bool PrintFunctionNames = true,
+            bool PrintPretty = false, int PrintSourceContext = 0)
+      : OS(OS), PrintFunctionNames(PrintFunctionNames),
+        PrintPretty(PrintPretty), PrintSourceContext(PrintSourceContext) {}
 
   DIPrinter &operator<<(const DILineInfo &Info);
   DIPrinter &operator<<(const DIInliningInfo &Info);

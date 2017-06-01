@@ -1,5 +1,5 @@
-; RUN: llc                             -aarch64-atomic-cfg-tidy=0 -mtriple=aarch64-apple-darwin < %s | FileCheck %s
-; RUN: llc -fast-isel -fast-isel-abort=1 -aarch64-atomic-cfg-tidy=0 -mtriple=aarch64-apple-darwin < %s | FileCheck %s
+; RUN: llc                               -aarch64-enable-atomic-cfg-tidy=0 -mtriple=aarch64-apple-darwin < %s | FileCheck %s
+; RUN: llc -fast-isel -fast-isel-abort=1 -aarch64-enable-atomic-cfg-tidy=0 -mtriple=aarch64-apple-darwin < %s | FileCheck %s
 
 define i32 @fcmp_oeq(float %x, float %y) {
 ; CHECK-LABEL: fcmp_oeq

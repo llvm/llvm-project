@@ -14,14 +14,23 @@
 
 #include "sanitizer_platform.h"
 #if SANITIZER_WINDOWS
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <dbghelp.h>
-#pragma comment(lib, "dbghelp.lib")
 
+#include "sanitizer_dbghelp.h"
 #include "sanitizer_symbolizer_internal.h"
 
 namespace __sanitizer {
+
+decltype(::StackWalk64) *StackWalk64;
+decltype(::SymCleanup) *SymCleanup;
+decltype(::SymFromAddr) *SymFromAddr;
+decltype(::SymFunctionTableAccess64) *SymFunctionTableAccess64;
+decltype(::SymGetLineFromAddr64) *SymGetLineFromAddr64;
+decltype(::SymGetModuleBase64) *SymGetModuleBase64;
+decltype(::SymGetSearchPathW) *SymGetSearchPathW;
+decltype(::SymInitialize) *SymInitialize;
+decltype(::SymSetOptions) *SymSetOptions;
+decltype(::SymSetSearchPathW) *SymSetSearchPathW;
+decltype(::UnDecorateSymbolName) *UnDecorateSymbolName;
 
 namespace {
 
@@ -42,12 +51,37 @@ bool TrySymInitialize() {
   // FIXME: We don't call SymCleanup() on exit yet - should we?
 }
 
+}  // namespace
+
 // Initializes DbgHelp library, if it's not yet initialized. Calls to this
 // function should be synchronized with respect to other calls to DbgHelp API
 // (e.g. from WinSymbolizerTool).
 void InitializeDbgHelpIfNeeded() {
   if (is_dbghelp_initialized)
     return;
+
+  HMODULE dbghelp = LoadLibraryA("dbghelp.dll");
+  CHECK(dbghelp && "failed to load dbghelp.dll");
+
+#define DBGHELP_IMPORT(name)                                                  \
+  do {                                                                        \
+    name =                                                                    \
+        reinterpret_cast<decltype(::name) *>(GetProcAddress(dbghelp, #name)); \
+    CHECK(name != nullptr);                                                   \
+  } while (0)
+  DBGHELP_IMPORT(StackWalk64);
+  DBGHELP_IMPORT(SymCleanup);
+  DBGHELP_IMPORT(SymFromAddr);
+  DBGHELP_IMPORT(SymFunctionTableAccess64);
+  DBGHELP_IMPORT(SymGetLineFromAddr64);
+  DBGHELP_IMPORT(SymGetModuleBase64);
+  DBGHELP_IMPORT(SymGetSearchPathW);
+  DBGHELP_IMPORT(SymInitialize);
+  DBGHELP_IMPORT(SymSetOptions);
+  DBGHELP_IMPORT(SymSetSearchPathW);
+  DBGHELP_IMPORT(UnDecorateSymbolName);
+#undef DBGHELP_IMPORT
+
   if (!TrySymInitialize()) {
     // OK, maybe the client app has called SymInitialize already.
     // That's a bit unfortunate for us as all the DbgHelp functions are
@@ -96,8 +130,6 @@ void InitializeDbgHelpIfNeeded() {
     return;
   }
 }
-
-}  // namespace
 
 bool WinSymbolizerTool::SymbolizePC(uptr addr, SymbolizedStack *frame) {
   InitializeDbgHelpIfNeeded();
@@ -277,6 +309,10 @@ Symbolizer *Symbolizer::PlatformInit() {
   ChooseSymbolizerTools(&list, &symbolizer_allocator_);
 
   return new(symbolizer_allocator_) Symbolizer(list);
+}
+
+void Symbolizer::LateInitialize() {
+  Symbolizer::GetOrInit();
 }
 
 }  // namespace __sanitizer

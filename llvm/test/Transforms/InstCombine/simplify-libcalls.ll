@@ -141,5 +141,40 @@ define void @test9(i8* %x) {
   ret void
 }
 
+; PR30484 - https://llvm.org/bugs/show_bug.cgi?id=30484
+; These aren't the library functions you're looking for...
+
+declare i32 @isdigit(i8)
+declare i32 @isascii(i8)
+declare i32 @toascii(i8)
+
+define i32 @fake_isdigit(i8 %x) {
+; CHECK-LABEL: @fake_isdigit(
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @isdigit(i8 %x)
+; CHECK-NEXT:    ret i32 [[Y]]
+;
+  %y = call i32 @isdigit(i8 %x)
+  ret i32 %y
+}
+
+define i32 @fake_isascii(i8 %x) {
+; CHECK-LABEL: @fake_isascii(
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @isascii(i8 %x)
+; CHECK-NEXT:    ret i32 [[Y]]
+;
+  %y = call i32 @isascii(i8 %x)
+  ret i32 %y
+}
+
+define i32 @fake_toascii(i8 %x) {
+; CHECK-LABEL: @fake_toascii(
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @toascii(i8 %x)
+; CHECK-NEXT:    ret i32 [[Y]]
+;
+  %y = call i32 @toascii(i8 %x)
+  ret i32 %y
+}
+
+
 attributes #0 = { nobuiltin }
 attributes #1 = { builtin }

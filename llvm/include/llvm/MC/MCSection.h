@@ -15,16 +15,15 @@
 #define LLVM_MC_MCSECTION_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
-#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-class MCAssembler;
 class MCAsmInfo;
+class MCAssembler;
 class MCContext;
 class MCExpr;
 class MCFragment;
@@ -32,16 +31,8 @@ class MCSection;
 class MCSymbol;
 class raw_ostream;
 
-template<>
-struct ilist_node_traits<MCFragment> {
-  MCFragment *createNode(const MCFragment &V);
+template <> struct ilist_alloc_traits<MCFragment> {
   static void deleteNode(MCFragment *V);
-
-  void addNodeToList(MCFragment *) {}
-  void removeNodeFromList(MCFragment *) {}
-  void transferNodesFromList(ilist_node_traits &    /*SrcTraits*/,
-                             ilist_iterator<MCFragment> /*first*/,
-                             ilist_iterator<MCFragment> /*last*/) {}
 };
 
 /// Instances of this class represent a uniqued identifier for a section in the
@@ -154,28 +145,25 @@ public:
     return const_cast<MCSection *>(this)->getFragmentList();
   }
 
+  /// Support for MCFragment::getNextNode().
+  static FragmentListType MCSection::*getSublistAccess(MCFragment *) {
+    return &MCSection::Fragments;
+  }
+
   const MCDummyFragment &getDummyFragment() const { return DummyFragment; }
   MCDummyFragment &getDummyFragment() { return DummyFragment; }
 
-  MCSection::iterator begin();
-  MCSection::const_iterator begin() const {
-    return const_cast<MCSection *>(this)->begin();
-  }
+  iterator begin() { return Fragments.begin(); }
+  const_iterator begin() const { return Fragments.begin(); }
 
-  MCSection::iterator end();
-  MCSection::const_iterator end() const {
-    return const_cast<MCSection *>(this)->end();
-  }
+  iterator end() { return Fragments.end(); }
+  const_iterator end() const { return Fragments.end(); }
 
-  MCSection::reverse_iterator rbegin();
-  MCSection::const_reverse_iterator rbegin() const {
-    return const_cast<MCSection *>(this)->rbegin();
-  }
+  reverse_iterator rbegin() { return Fragments.rbegin(); }
+  const_reverse_iterator rbegin() const { return Fragments.rbegin(); }
 
-  MCSection::reverse_iterator rend();
-  MCSection::const_reverse_iterator rend() const {
-    return const_cast<MCSection *>(this)->rend();
-  }
+  reverse_iterator rend() { return Fragments.rend(); }
+  const_reverse_iterator rend() const  { return Fragments.rend(); }
 
   MCSection::iterator getSubsectionInsertionPoint(unsigned Subsection);
 

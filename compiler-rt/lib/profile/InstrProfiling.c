@@ -8,41 +8,74 @@
 \*===----------------------------------------------------------------------===*/
 
 #include "InstrProfiling.h"
+#include "InstrProfilingInternal.h"
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#define INSTR_PROF_VALUE_PROF_DATA
+#include "InstrProfData.inc"
 
-__attribute__((visibility("hidden")))
-uint64_t __llvm_profile_get_magic(void) {
-  /* Magic number to detect file format and endianness.
-   *
-   * Use 255 at one end, since no UTF-8 file can use that character.  Avoid 0,
-   * so that utilities, like strings, don't grab it as a string.  129 is also
-   * invalid UTF-8, and high enough to be interesting.
-   *
-   * Use "lprofr" in the centre to stand for "LLVM Profile Raw", or "lprofR"
-   * for 32-bit platforms.
-   */
-  unsigned char R = sizeof(void *) == sizeof(uint64_t) ? 'r' : 'R';
-  return
-    (uint64_t)255 << 56 |
-    (uint64_t)'l' << 48 |
-    (uint64_t)'p' << 40 |
-    (uint64_t)'r' << 32 |
-    (uint64_t)'o' << 24 |
-    (uint64_t)'f' << 16 |
-    (uint64_t) R  <<  8 |
-    (uint64_t)129;
+
+COMPILER_RT_WEAK uint64_t INSTR_PROF_RAW_VERSION_VAR = INSTR_PROF_RAW_VERSION;
+
+COMPILER_RT_WEAK char INSTR_PROF_PROFILE_NAME_VAR[1] = {0};
+
+COMPILER_RT_VISIBILITY uint64_t __llvm_profile_get_magic(void) {
+  return sizeof(void *) == sizeof(uint64_t) ? (INSTR_PROF_RAW_MAGIC_64)
+                                            : (INSTR_PROF_RAW_MAGIC_32);
 }
 
-__attribute__((visibility("hidden")))
-uint64_t __llvm_profile_get_version(void) {
-  /* This should be bumped any time the output format changes. */
-  return 1;
+static unsigned ProfileDumped = 0;
+
+COMPILER_RT_VISIBILITY unsigned lprofProfileDumped() {
+  return ProfileDumped;
 }
 
-__attribute__((visibility("hidden")))
-void __llvm_profile_reset_counters(void) {
+COMPILER_RT_VISIBILITY void lprofSetProfileDumped() {
+  ProfileDumped = 1;
+}
+
+/* Return the number of bytes needed to add to SizeInBytes to make it
+ *   the result a multiple of 8.
+ */
+COMPILER_RT_VISIBILITY uint8_t
+__llvm_profile_get_num_padding_bytes(uint64_t SizeInBytes) {
+  return 7 & (sizeof(uint64_t) - SizeInBytes % sizeof(uint64_t));
+}
+
+COMPILER_RT_VISIBILITY uint64_t __llvm_profile_get_version(void) {
+  return __llvm_profile_raw_version;
+}
+
+COMPILER_RT_VISIBILITY void __llvm_profile_reset_counters(void) {
   uint64_t *I = __llvm_profile_begin_counters();
   uint64_t *E = __llvm_profile_end_counters();
 
-  memset(I, 0, sizeof(uint64_t)*(E - I));
+  memset(I, 0, sizeof(uint64_t) * (E - I));
+
+  const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
+  const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
+  const __llvm_profile_data *DI;
+  for (DI = DataBegin; DI < DataEnd; ++DI) {
+    uint64_t CurrentVSiteCount = 0;
+    uint32_t VKI, i;
+    if (!DI->Values)
+      continue;
+
+    ValueProfNode **ValueCounters = (ValueProfNode **)DI->Values;
+
+    for (VKI = IPVK_First; VKI <= IPVK_Last; ++VKI)
+      CurrentVSiteCount += DI->NumValueSites[VKI];
+
+    for (i = 0; i < CurrentVSiteCount; ++i) {
+      ValueProfNode *CurrentVNode = ValueCounters[i];
+
+      while (CurrentVNode) {
+        CurrentVNode->Count = 0;
+        CurrentVNode = CurrentVNode->Next;
+      }
+    }
+  }
+  ProfileDumped = 0;
 }

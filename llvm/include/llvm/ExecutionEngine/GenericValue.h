@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/DataTypes.h"
+#include <vector>
 
 namespace llvm {
 

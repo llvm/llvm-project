@@ -65,3 +65,8 @@ namespace rdar8876150 {
 
   bool f(D d) { return !d; } // expected-error{{ambiguous conversion from derived class 'rdar8876150::D' to base class 'rdar8876150::A':}}
 }
+
+namespace assignment {
+  struct A { operator short(); operator bool(); }; // expected-note 2{{candidate}}
+  void f(int n, A a) { n = a; } // expected-error{{ambiguous}}
+}

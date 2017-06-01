@@ -1,10 +1,10 @@
-; RUN: llc < %s -emulated-tls -march=x86 -mcpu=generic -mtriple=i386-linux-gnu -relocation-model=pic -enable-pie \
+; RUN: llc < %s -emulated-tls -march=x86 -mcpu=generic -mtriple=i386-linux-gnu -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=X32 %s
-; RUN: llc < %s -emulated-tls -march=x86-64 -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic -enable-pie \
+; RUN: llc < %s -emulated-tls -march=x86-64 -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=X64 %s
-; RUN: llc < %s -emulated-tls -march=x86 -mcpu=generic -mtriple=i386-linux-android -relocation-model=pic -enable-pie \
+; RUN: llc < %s -emulated-tls -march=x86 -mcpu=generic -mtriple=i386-linux-android -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=X32 %s
-; RUN: llc < %s -emulated-tls -march=x86-64 -mcpu=generic -mtriple=x86_64-linux-android -relocation-model=pic -enable-pie \
+; RUN: llc < %s -emulated-tls -march=x86-64 -mcpu=generic -mtriple=x86_64-linux-android -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=X64 %s
 
 ; Use my_emutls_get_address like __emutls_get_address.
@@ -24,7 +24,7 @@ define i32 @my_get_xyz() {
 ; X64:      movq my_emutls_v_xyz@GOTPCREL(%rip), %rdi
 ; X64-NEXT: callq my_emutls_get_address@PLT
 ; X64-NEXT: movl (%rax), %eax
-; X64-NEXT: popq %rdx
+; X64-NEXT: popq %rcx
 ; X64-NEXT: retq
 
 entry:
@@ -39,7 +39,7 @@ entry:
 
 define i32 @f1() {
 ; X32-LABEL: f1:
-; X32:      movl __emutls_v.i@GOT(%ebx), %eax
+; X32:      leal __emutls_v.i@GOTOFF(%ebx), %eax
 ; X32-NEXT: movl %eax, (%esp)
 ; X32-NEXT: calll __emutls_get_address@PLT
 ; X32-NEXT: movl (%eax), %eax
@@ -47,10 +47,10 @@ define i32 @f1() {
 ; X32-NEXT: popl %ebx
 ; X32-NEXT: retl
 ; X64-LABEL: f1:
-; X64:      movq __emutls_v.i@GOTPCREL(%rip), %rdi
+; X64:      leaq __emutls_v.i(%rip), %rdi
 ; X64-NEXT: callq __emutls_get_address@PLT
 ; X64-NEXT: movl (%rax), %eax
-; X64-NEXT: popq %rdx
+; X64-NEXT: popq %rcx
 ; X64-NEXT: retq
 
 entry:
@@ -60,11 +60,11 @@ entry:
 
 define i32* @f2() {
 ; X32-LABEL: f2:
-; X32:      movl __emutls_v.i@GOT(%ebx), %eax
+; X32:      leal __emutls_v.i@GOTOFF(%ebx), %eax
 ; X32-NEXT: movl %eax, (%esp)
 ; X32-NEXT: calll __emutls_get_address@PLT
 ; X64-LABEL: f2:
-; X64:      movq __emutls_v.i@GOTPCREL(%rip), %rdi
+; X64:      leaq __emutls_v.i(%rip), %rdi
 ; X64-NEXT: callq __emutls_get_address@PLT
 
 entry:
@@ -100,7 +100,7 @@ entry:
 
 ;;;;; 32-bit targets
 
-; X32:      .section .data.rel.local,
+; X32:      .data
 ; X32-LABEL: __emutls_v.i:
 ; X32-NEXT: .long 4
 ; X32-NEXT: .long 4
@@ -116,7 +116,7 @@ entry:
 
 ;;;;; 64-bit targets
 
-; X64:      .section .data.rel.local,
+; X64:      .data
 ; X64-LABEL: __emutls_v.i:
 ; X64-NEXT: .quad 4
 ; X64-NEXT: .quad 4
@@ -129,3 +129,8 @@ entry:
 
 ; X64-NOT:   __emutls_v.i2
 ; X64-NOT:   __emutls_t.i2
+
+
+!llvm.module.flags = !{!0, !1}
+!0 = !{i32 1, !"PIC Level", i32 1}
+!1 = !{i32 1, !"PIE Level", i32 1}

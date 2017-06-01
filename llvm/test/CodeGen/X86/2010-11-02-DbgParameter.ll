@@ -18,9 +18,9 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!19}
 
-!0 = distinct !DISubprogram(name: "foo", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 3, file: !17, scope: !1, type: !3, variables: !16)
+!0 = distinct !DISubprogram(name: "foo", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 3, file: !17, scope: !1, type: !3, variables: !16)
 !1 = !DIFile(filename: "one.c", directory: "/private/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 117922)", isOptimized: true, emissionKind: 0, file: !17, enums: !18, retainedTypes: !18, subprograms: !15, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 117922)", isOptimized: true, emissionKind: FullDebug, file: !17, enums: !18, retainedTypes: !18, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -33,7 +33,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !12 = !DILocation(line: 3, column: 47, scope: !0)
 !13 = !DILocation(line: 4, column: 2, scope: !14)
 !14 = distinct !DILexicalBlock(line: 3, column: 50, file: !17, scope: !0)
-!15 = !{!0}
 !16 = !{!6}
 !17 = !DIFile(filename: "one.c", directory: "/private/tmp")
 !18 = !{}

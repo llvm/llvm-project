@@ -32,3 +32,10 @@
 @ CHECK: @   fixup A - offset: 0, value: fred, kind: fixup_arm_movw_lo16
 @ CHECK-BE: movw  r2, :lower16:fred                 @ encoding: [0xe3,0b0000AAAA,0x20'A',A]
 @ CHECK-BE: @   fixup A - offset: 0, value: fred, kind: fixup_arm_movw_lo16
+
+    add r0, r0, #(L1 - L2)
+
+@ CHECK: add     r0, r0, #L1-L2          @ encoding: [A,0b0000AAAA,0x80,0xe2]
+@ CHECK: @   fixup A - offset: 0, value: L1-L2, kind: fixup_arm_mod_imm
+@ CHECK-BE: add     r0, r0, #L1-L2          @ encoding: [0xe2,0x80,0b0000AAAA,A]
+@ CHECK-BE: @   fixup A - offset: 0, value: L1-L2, kind: fixup_arm_mod_imm

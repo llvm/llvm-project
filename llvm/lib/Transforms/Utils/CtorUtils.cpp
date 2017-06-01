@@ -71,8 +71,8 @@ std::vector<Function *> parseGlobalCtors(GlobalVariable *GV) {
   ConstantArray *CA = cast<ConstantArray>(GV->getInitializer());
   std::vector<Function *> Result;
   Result.reserve(CA->getNumOperands());
-  for (User::op_iterator i = CA->op_begin(), e = CA->op_end(); i != e; ++i) {
-    ConstantStruct *CS = cast<ConstantStruct>(*i);
+  for (auto &V : CA->operands()) {
+    ConstantStruct *CS = cast<ConstantStruct>(V);
     Result.push_back(dyn_cast<Function>(CS->getOperand(1)));
   }
   return Result;
@@ -94,10 +94,10 @@ GlobalVariable *findGlobalCtors(Module &M) {
     return GV;
   ConstantArray *CA = cast<ConstantArray>(GV->getInitializer());
 
-  for (User::op_iterator i = CA->op_begin(), e = CA->op_end(); i != e; ++i) {
-    if (isa<ConstantAggregateZero>(*i))
+  for (auto &V : CA->operands()) {
+    if (isa<ConstantAggregateZero>(V))
       continue;
-    ConstantStruct *CS = cast<ConstantStruct>(*i);
+    ConstantStruct *CS = cast<ConstantStruct>(V);
     if (isa<ConstantPointerNull>(CS->getOperand(1)))
       continue;
 

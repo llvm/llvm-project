@@ -22,7 +22,9 @@
                 { 'name': 'public_header.h', 'type': 'file',
                   'external-contents': 'INPUT_DIR/public_header.h' },
                 { 'name': 'public_header2.h', 'type': 'file',
-                  'external-contents': 'INPUT_DIR/public_header2.h' }
+                  'external-contents': 'INPUT_DIR/public_header2.h' },
+                { 'name': 'public_header3.h', 'type': 'file',
+                  'external-contents': 'INPUT_DIR/public_header3.h' }
               ]
             }
           ]

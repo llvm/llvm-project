@@ -61,11 +61,14 @@ wrap(const relocation_iterator *SI) {
 // ObjectFile creation
 LLVMObjectFileRef LLVMCreateObjectFile(LLVMMemoryBufferRef MemBuf) {
   std::unique_ptr<MemoryBuffer> Buf(unwrap(MemBuf));
-  ErrorOr<std::unique_ptr<ObjectFile>> ObjOrErr(
+  Expected<std::unique_ptr<ObjectFile>> ObjOrErr(
       ObjectFile::createObjectFile(Buf->getMemBufferRef()));
   std::unique_ptr<ObjectFile> Obj;
-  if (!ObjOrErr)
+  if (!ObjOrErr) {
+    // TODO: Actually report errors helpfully.
+    consumeError(ObjOrErr.takeError());
     return nullptr;
+  }
 
   auto *Ret = new OwningBinary<ObjectFile>(std::move(ObjOrErr.get()), std::move(Buf));
   return wrap(Ret);
@@ -98,9 +101,14 @@ void LLVMMoveToNextSection(LLVMSectionIteratorRef SI) {
 
 void LLVMMoveToContainingSection(LLVMSectionIteratorRef Sect,
                                  LLVMSymbolIteratorRef Sym) {
-  ErrorOr<section_iterator> SecOrErr = (*unwrap(Sym))->getSection();
-  if (std::error_code ec = SecOrErr.getError())
-    report_fatal_error(ec.message());
+  Expected<section_iterator> SecOrErr = (*unwrap(Sym))->getSection();
+  if (!SecOrErr) {
+   std::string Buf;
+   raw_string_ostream OS(Buf);
+   logAllUnhandledErrors(SecOrErr.takeError(), OS, "");
+   OS.flush();
+   report_fatal_error(Buf);
+  }
   *unwrap(Sect) = *SecOrErr;
 }
 
@@ -175,16 +183,26 @@ void LLVMMoveToNextRelocation(LLVMRelocationIteratorRef SI) {
 
 // SymbolRef accessors
 const char *LLVMGetSymbolName(LLVMSymbolIteratorRef SI) {
-  ErrorOr<StringRef> Ret = (*unwrap(SI))->getName();
-  if (std::error_code EC = Ret.getError())
-    report_fatal_error(EC.message());
+  Expected<StringRef> Ret = (*unwrap(SI))->getName();
+  if (!Ret) {
+    std::string Buf;
+    raw_string_ostream OS(Buf);
+    logAllUnhandledErrors(Ret.takeError(), OS, "");
+    OS.flush();
+    report_fatal_error(Buf);
+  }
   return Ret->data();
 }
 
 uint64_t LLVMGetSymbolAddress(LLVMSymbolIteratorRef SI) {
-  ErrorOr<uint64_t> Ret = (*unwrap(SI))->getAddress();
-  if (std::error_code EC = Ret.getError())
-    report_fatal_error(EC.message());
+  Expected<uint64_t> Ret = (*unwrap(SI))->getAddress();
+  if (!Ret) {
+    std::string Buf;
+    raw_string_ostream OS(Buf);
+    logAllUnhandledErrors(Ret.takeError(), OS, "");
+    OS.flush();
+    report_fatal_error(Buf);
+  }
   return *Ret;
 }
 

@@ -326,7 +326,7 @@ public:
   Expr *getThrowExpr() { return reinterpret_cast<Expr*>(Throw); }
   void setThrowExpr(Stmt *S) { Throw = S; }
 
-  SourceLocation getThrowLoc() { return AtThrowLoc; }
+  SourceLocation getThrowLoc() const LLVM_READONLY { return AtThrowLoc; }
   void setThrowLoc(SourceLocation Loc) { AtThrowLoc = Loc; }
 
   SourceLocation getLocStart() const LLVM_READONLY { return AtThrowLoc; }

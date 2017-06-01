@@ -57,15 +57,19 @@ TEST_CASE(hard_link_count_for_directory)
     Dir3Expect = 3; // .  ..  file5
 #endif
     TEST_CHECK(hard_link_count(StaticEnv::Dir) == DirExpect ||
-               hard_link_count(StaticEnv::Dir) == DirExpectAlt);
+               hard_link_count(StaticEnv::Dir) == DirExpectAlt ||
+               hard_link_count(StaticEnv::Dir) == 1);
     TEST_CHECK(hard_link_count(StaticEnv::Dir3) == Dir3Expect ||
-               hard_link_count(StaticEnv::Dir3) == Dir3ExpectAlt);
+               hard_link_count(StaticEnv::Dir3) == Dir3ExpectAlt ||
+               hard_link_count(StaticEnv::Dir3) == 1);
 
     std::error_code ec;
     TEST_CHECK(hard_link_count(StaticEnv::Dir, ec) == DirExpect ||
-               hard_link_count(StaticEnv::Dir, ec) == DirExpectAlt);
+               hard_link_count(StaticEnv::Dir, ec) == DirExpectAlt ||
+               hard_link_count(StaticEnv::Dir) == 1);
     TEST_CHECK(hard_link_count(StaticEnv::Dir3, ec) == Dir3Expect ||
-               hard_link_count(StaticEnv::Dir3, ec) == Dir3ExpectAlt);
+               hard_link_count(StaticEnv::Dir3, ec) == Dir3ExpectAlt ||
+               hard_link_count(StaticEnv::Dir3) == 1);
 }
 TEST_CASE(hard_link_count_increments_test)
 {

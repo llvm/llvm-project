@@ -23,10 +23,21 @@ namespace llvm {
   class StringSet : public llvm::StringMap<char, AllocatorTy> {
     typedef llvm::StringMap<char, AllocatorTy> base;
   public:
+    StringSet() = default;
+    StringSet(std::initializer_list<StringRef> S) {
+      for (StringRef X : S)
+        insert(X);
+    }
 
     std::pair<typename base::iterator, bool> insert(StringRef Key) {
       assert(!Key.empty());
       return base::insert(std::make_pair(Key, '\0'));
+    }
+
+    template <typename InputIt>
+    void insert(const InputIt &Begin, const InputIt &End) {
+      for (auto It = Begin; It != End; ++It)
+        base::insert(std::make_pair(*It, '\0'));
     }
   };
 }

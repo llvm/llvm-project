@@ -11,11 +11,14 @@
 #define LLVM_DEBUGINFO_PDB_PDBTYPES_H
 
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/Endian.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
+#include <cstdint>
+#include <cstring>
 #include <functional>
-#include <stdint.h>
 
 namespace llvm {
+namespace pdb {
 
 class PDBSymDumper;
 class PDBSymbol;
@@ -68,14 +71,7 @@ class PDBSymbolUnknown;
 /// of PDB_ReaderType::DIA is supported.
 enum class PDB_ReaderType {
   DIA = 0,
-};
-
-/// Defines a 128-bit unique identifier.  This maps to a GUID on Windows, but
-/// is abstracted here for the purposes of non-Windows platforms that don't have
-/// the GUID structure defined.
-struct PDB_UniqueId {
-  uint64_t HighPart;
-  uint64_t LowPart;
+  Raw = 1,
 };
 
 /// An enumeration indicating the type of data contained in this table.
@@ -108,67 +104,7 @@ enum class PDB_Checksum { None = 0, MD5 = 1, SHA1 = 2 };
 
 /// These values correspond to the CV_CPU_TYPE_e enumeration, and are documented
 /// here: https://msdn.microsoft.com/en-us/library/b2fc64ek.aspx
-enum class PDB_Cpu {
-  Intel8080 = 0x0,
-  Intel8086 = 0x1,
-  Intel80286 = 0x2,
-  Intel80386 = 0x3,
-  Intel80486 = 0x4,
-  Pentium = 0x5,
-  PentiumPro = 0x6,
-  Pentium3 = 0x7,
-  MIPS = 0x10,
-  MIPS16 = 0x11,
-  MIPS32 = 0x12,
-  MIPS64 = 0x13,
-  MIPSI = 0x14,
-  MIPSII = 0x15,
-  MIPSIII = 0x16,
-  MIPSIV = 0x17,
-  MIPSV = 0x18,
-  M68000 = 0x20,
-  M68010 = 0x21,
-  M68020 = 0x22,
-  M68030 = 0x23,
-  M68040 = 0x24,
-  Alpha = 0x30,
-  Alpha21164 = 0x31,
-  Alpha21164A = 0x32,
-  Alpha21264 = 0x33,
-  Alpha21364 = 0x34,
-  PPC601 = 0x40,
-  PPC603 = 0x41,
-  PPC604 = 0x42,
-  PPC620 = 0x43,
-  PPCFP = 0x44,
-  PPCBE = 0x45,
-  SH3 = 0x50,
-  SH3E = 0x51,
-  SH3DSP = 0x52,
-  SH4 = 0x53,
-  SHMedia = 0x54,
-  ARM3 = 0x60,
-  ARM4 = 0x61,
-  ARM4T = 0x62,
-  ARM5 = 0x63,
-  ARM5T = 0x64,
-  ARM6 = 0x65,
-  ARM_XMAC = 0x66,
-  ARM_WMMX = 0x67,
-  ARM7 = 0x68,
-  Omni = 0x70,
-  Ia64 = 0x80,
-  Ia64_2 = 0x81,
-  CEE = 0x90,
-  AM33 = 0xa0,
-  M32R = 0xb0,
-  TriCore = 0xc0,
-  X64 = 0xd0,
-  EBC = 0xe0,
-  Thumb = 0xf0,
-  ARMNT = 0xf4,
-  D3D11_Shader = 0x100,
-};
+typedef codeview::CPUType PDB_Cpu;
 
 enum class PDB_Machine {
   Invalid = 0xffff,
@@ -200,56 +136,11 @@ enum class PDB_Machine {
 ///   https://msdn.microsoft.com/en-us/library/b2fc64ek.aspx
 ///   https://msdn.microsoft.com/en-us/library/windows/desktop/ms680207(v=vs.85).aspx
 ///
-enum class PDB_CallingConv {
-  NearCdecl = 0x00,
-  FarCdecl = 0x01,
-  NearPascal = 0x02,
-  FarPascal = 0x03,
-  NearFastcall = 0x04,
-  FarFastcall = 0x05,
-  Skipped = 0x06,
-  NearStdcall = 0x07,
-  FarStdcall = 0x08,
-  NearSyscall = 0x09,
-  FarSyscall = 0x0a,
-  Thiscall = 0x0b,
-  MipsCall = 0x0c,
-  Generic = 0x0d,
-  Alphacall = 0x0e,
-  Ppccall = 0x0f,
-  SuperHCall = 0x10,
-  Armcall = 0x11,
-  AM33call = 0x12,
-  Tricall = 0x13,
-  Sh5call = 0x14,
-  M32R = 0x15,
-  Clrcall = 0x16,
-  Inline = 0x17,
-  NearVectorcall = 0x18,
-  Reserved = 0x19,
-};
+typedef codeview::CallingConvention PDB_CallingConv;
 
 /// These values correspond to the CV_CFL_LANG enumeration, and are documented
 /// here: https://msdn.microsoft.com/en-us/library/bw3aekw6.aspx
-enum class PDB_Lang {
-  C = 0x00,
-  Cpp = 0x01,
-  Fortran = 0x02,
-  Masm = 0x03,
-  Pascal = 0x04,
-  Basic = 0x05,
-  Cobol = 0x06,
-  Link = 0x07,
-  Cvtres = 0x08,
-  Cvtpgd = 0x09,
-  CSharp = 0x0a,
-  VB = 0x0b,
-  ILAsm = 0x0c,
-  Java = 0x0d,
-  JScript = 0x0e,
-  MSIL = 0x0f,
-  HLSL = 0x10
-};
+typedef codeview::SourceLanguage PDB_Lang;
 
 /// These values correspond to the DataKind enumeration, and are documented
 /// here: https://msdn.microsoft.com/en-us/library/b2x2t313.aspx
@@ -320,18 +211,6 @@ enum class PDB_LocType {
   Max
 };
 
-/// These values correspond to the THUNK_ORDINAL enumeration, and are documented
-/// here: https://msdn.microsoft.com/en-us/library/dh0k8hft.aspx
-enum class PDB_ThunkOrdinal {
-  Standard,
-  ThisAdjustor,
-  Vcall,
-  Pcode,
-  UnknownLoad,
-  TrampIncremental,
-  BranchIsland
-};
-
 /// These values correspond to the UdtKind enumeration, and are documented
 /// here: https://msdn.microsoft.com/en-us/library/wcstk66t.aspx
 enum class PDB_UdtType { Struct, Class, Union, Interface };
@@ -367,71 +246,7 @@ enum class PDB_BuiltinType {
   HResult = 31
 };
 
-enum class PDB_RegisterId {
-  Unknown = 0,
-  VFrame = 30006,
-  AL = 1,
-  CL = 2,
-  DL = 3,
-  BL = 4,
-  AH = 5,
-  CH = 6,
-  DH = 7,
-  BH = 8,
-  AX = 9,
-  CX = 10,
-  DX = 11,
-  BX = 12,
-  SP = 13,
-  BP = 14,
-  SI = 15,
-  DI = 16,
-  EAX = 17,
-  ECX = 18,
-  EDX = 19,
-  EBX = 20,
-  ESP = 21,
-  EBP = 22,
-  ESI = 23,
-  EDI = 24,
-  ES = 25,
-  CS = 26,
-  SS = 27,
-  DS = 28,
-  FS = 29,
-  GS = 30,
-  IP = 31,
-  RAX = 328,
-  RBX = 329,
-  RCX = 330,
-  RDX = 331,
-  RSI = 332,
-  RDI = 333,
-  RBP = 334,
-  RSP = 335,
-  R8 = 336,
-  R9 = 337,
-  R10 = 338,
-  R11 = 339,
-  R12 = 340,
-  R13 = 341,
-  R14 = 342,
-  R15 = 343,
-};
-
 enum class PDB_MemberAccess { Private = 1, Protected = 2, Public = 3 };
-
-enum class PDB_ErrorCode {
-  Success,
-  NoPdbImpl,
-  InvalidPath,
-  InvalidFileFormat,
-  InvalidParameter,
-  AlreadyLoaded,
-  UnknownError,
-  NoMemory,
-  DebugInfoMismatch
-};
 
 struct VersionInfo {
   uint32_t Major;
@@ -454,11 +269,19 @@ enum PDB_VariantType {
   UInt32,
   UInt64,
   Bool,
+  String
 };
 
 struct Variant {
-  Variant()
-    : Type(PDB_VariantType::Empty) {
+  Variant() : Type(PDB_VariantType::Empty) {}
+
+  Variant(const Variant &Other) : Type(PDB_VariantType::Empty) {
+    *this = Other;
+  }
+
+  ~Variant() {
+    if (Type == PDB_VariantType::String)
+      delete[] Value.String;
   }
 
   PDB_VariantType Type;
@@ -474,10 +297,13 @@ struct Variant {
     uint16_t UInt16;
     uint32_t UInt32;
     uint64_t UInt64;
-  };
+    char *String;
+  } Value;
+
 #define VARIANT_EQUAL_CASE(Enum)                                               \
   case PDB_VariantType::Enum:                                                  \
-    return Enum == Other.Enum;
+    return Value.Enum == Other.Value.Enum;
+
   bool operator==(const Variant &Other) const {
     if (Type != Other.Type)
       return false;
@@ -493,55 +319,43 @@ struct Variant {
       VARIANT_EQUAL_CASE(UInt16)
       VARIANT_EQUAL_CASE(UInt32)
       VARIANT_EQUAL_CASE(UInt64)
+      VARIANT_EQUAL_CASE(String)
     default:
       return true;
     }
   }
+
 #undef VARIANT_EQUAL_CASE
+
   bool operator!=(const Variant &Other) const { return !(*this == Other); }
+  Variant &operator=(const Variant &Other) {
+    if (this == &Other)
+      return *this;
+    if (Type == PDB_VariantType::String)
+      delete[] Value.String;
+    Type = Other.Type;
+    Value = Other.Value;
+    if (Other.Type == PDB_VariantType::String &&
+        Other.Value.String != nullptr) {
+      Value.String = new char[strlen(Other.Value.String) + 1];
+      ::strcpy(Value.String, Other.Value.String);
+    }
+    return *this;
+  }
 };
 
-namespace PDB {
-static const char Magic[] = {'M',  'i',  'c',    'r', 'o', 's',  'o',  'f',
-                             't',  ' ',  'C',    '/', 'C', '+',  '+',  ' ',
-                             'M',  'S',  'F',    ' ', '7', '.',  '0',  '0',
-                             '\r', '\n', '\x1a', 'D', 'S', '\0', '\0', '\0'};
-
-// The superblock is overlaid at the beginning of the file (offset 0).
-// It starts with a magic header and is followed by information which describes
-// the layout of the file system.
-struct SuperBlock {
-  char MagicBytes[sizeof(Magic)];
-  // The file system is split into a variable number of fixed size elements.
-  // These elements are referred to as blocks.  The size of a block may vary
-  // from system to system.
-  support::ulittle32_t BlockSize;
-  // This field's purpose is not yet known.
-  support::ulittle32_t Unknown0;
-  // This contains the number of blocks resident in the file system.  In
-  // practice, NumBlocks * BlockSize is equivalent to the size of the PDB file.
-  support::ulittle32_t NumBlocks;
-  // This contains the number of bytes which make up the directory.
-  support::ulittle32_t NumDirectoryBytes;
-  // This field's purpose is not yet known.
-  support::ulittle32_t Unknown1;
-  // This contains the block # of the block map.
-  support::ulittle32_t BlockMapAddr;
-};
+} // end namespace llvm
 }
 
-} // namespace llvm
-
 namespace std {
-template <> struct hash<llvm::PDB_SymType> {
-  typedef llvm::PDB_SymType argument_type;
+template <> struct hash<llvm::pdb::PDB_SymType> {
+  typedef llvm::pdb::PDB_SymType argument_type;
   typedef std::size_t result_type;
 
   result_type operator()(const argument_type &Arg) const {
     return std::hash<int>()(static_cast<int>(Arg));
   }
 };
-}
+} // end namespace std
 
-
-#endif
+#endif // LLVM_DEBUGINFO_PDB_PDBTYPES_H

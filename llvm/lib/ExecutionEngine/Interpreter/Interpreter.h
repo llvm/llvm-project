@@ -41,12 +41,9 @@ class AllocaHolder {
 public:
   AllocaHolder() {}
 
-  // Make this type move-only. Define explicit move special members for MSVC.
-  AllocaHolder(AllocaHolder &&RHS) : Allocations(std::move(RHS.Allocations)) {}
-  AllocaHolder &operator=(AllocaHolder &&RHS) {
-    Allocations = std::move(RHS.Allocations);
-    return *this;
-  }
+  // Make this type move-only.
+  AllocaHolder(AllocaHolder &&) = default;
+  AllocaHolder &operator=(AllocaHolder &&RHS) = default;
 
   ~AllocaHolder() {
     for (void *Allocation : Allocations)
@@ -72,22 +69,6 @@ struct ExecutionContext {
   AllocaHolder Allocas;            // Track memory allocated by alloca
 
   ExecutionContext() : CurFunction(nullptr), CurBB(nullptr), CurInst(nullptr) {}
-
-  ExecutionContext(ExecutionContext &&O)
-      : CurFunction(O.CurFunction), CurBB(O.CurBB), CurInst(O.CurInst),
-        Caller(O.Caller), Values(std::move(O.Values)),
-        VarArgs(std::move(O.VarArgs)), Allocas(std::move(O.Allocas)) {}
-
-  ExecutionContext &operator=(ExecutionContext &&O) {
-    CurFunction = O.CurFunction;
-    CurBB = O.CurBB;
-    CurInst = O.CurInst;
-    Caller = O.Caller;
-    Values = std::move(O.Values);
-    VarArgs = std::move(O.VarArgs);
-    Allocas = std::move(O.Allocas);
-    return *this;
-  }
 };
 
 // Interpreter - This class represents the entirety of the interpreter.

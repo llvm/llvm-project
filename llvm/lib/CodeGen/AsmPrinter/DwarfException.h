@@ -16,6 +16,7 @@
 
 #include "EHStreamer.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/MC/MCDwarf.h"
 
 namespace llvm {
 class MachineFunction;
@@ -27,21 +28,25 @@ protected:
 
   /// Per-function flag to indicate if frame CFI info should be emitted.
   bool shouldEmitCFI;
+  /// Per-module flag to indicate if .cfi_section has beeen emitted.
+  bool hasEmittedCFISections;
 
   void markFunctionEnd() override;
+  void endFragment() override;
 };
 
 class LLVM_LIBRARY_VISIBILITY DwarfCFIException : public DwarfCFIExceptionBase {
   /// Per-function flag to indicate if .cfi_personality should be emitted.
   bool shouldEmitPersonality;
 
+  /// Per-function flag to indicate if .cfi_personality must be emitted.
+  bool forceEmitPersonality;
+
   /// Per-function flag to indicate if .cfi_lsda should be emitted.
   bool shouldEmitLSDA;
 
   /// Per-function flag to indicate if frame moves info should be emitted.
   bool shouldEmitMoves;
-
-  AsmPrinter::CFIMoveType moveTypeModule;
 
 public:
   //===--------------------------------------------------------------------===//
@@ -59,6 +64,9 @@ public:
 
   /// Gather and emit post-function exception information.
   void endFunction(const MachineFunction *) override;
+
+  void beginFragment(const MachineBasicBlock *MBB,
+                     ExceptionSymbolProvider ESP) override;
 };
 
 class LLVM_LIBRARY_VISIBILITY ARMException : public DwarfCFIExceptionBase {
@@ -73,7 +81,7 @@ public:
   ~ARMException() override;
 
   /// Emit all exception information that should come after the content.
-  void endModule() override;
+  void endModule() override {}
 
   /// Gather pre-function exception information.  Assumes being emitted
   /// immediately after the function entry point.

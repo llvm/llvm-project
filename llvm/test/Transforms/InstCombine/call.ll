@@ -276,3 +276,14 @@ define <2 x i16> @test16() {
   %X = call <2 x i16> bitcast (i32 ()* @test16a to <2 x i16> ()*)( )
   ret <2 x i16> %X
 }
+
+declare i32 @pr28655(i32 returned %V)
+
+define i32 @test17() {
+entry:
+  %C = call i32 @pr28655(i32 0)
+  ret i32 %C
+}
+; CHECK-LABEL: @test17(
+; CHECK: call i32 @pr28655(i32 0)
+; CHECK: ret i32 0

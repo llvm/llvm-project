@@ -15,7 +15,7 @@
 #include "BugDriver.h"
 #include "ListReducer.h"
 #include "ToolRunner.h"
-#include "llvm/Config/config.h"   // for HAVE_LINK_R
+#include "llvm/Config/config.h" // for HAVE_LINK_R
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -26,73 +26,77 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+
 using namespace llvm;
 
 namespace llvm {
-  extern cl::opt<std::string> OutputPrefix;
-  extern cl::list<std::string> InputArgv;
-}
+extern cl::opt<std::string> OutputPrefix;
+extern cl::list<std::string> InputArgv;
+} // end namespace llvm
 
 namespace {
-  static llvm::cl::opt<bool>
-    DisableLoopExtraction("disable-loop-extraction",
-        cl::desc("Don't extract loops when searching for miscompilations"),
-        cl::init(false));
-  static llvm::cl::opt<bool>
-    DisableBlockExtraction("disable-block-extraction",
-        cl::desc("Don't extract blocks when searching for miscompilations"),
-        cl::init(false));
+static llvm::cl::opt<bool> DisableLoopExtraction(
+    "disable-loop-extraction",
+    cl::desc("Don't extract loops when searching for miscompilations"),
+    cl::init(false));
+static llvm::cl::opt<bool> DisableBlockExtraction(
+    "disable-block-extraction",
+    cl::desc("Don't extract blocks when searching for miscompilations"),
+    cl::init(false));
 
-  class ReduceMiscompilingPasses : public ListReducer<std::string> {
-    BugDriver &BD;
-  public:
-    ReduceMiscompilingPasses(BugDriver &bd) : BD(bd) {}
+class ReduceMiscompilingPasses : public ListReducer<std::string> {
+  BugDriver &BD;
 
-    TestResult doTest(std::vector<std::string> &Prefix,
-                      std::vector<std::string> &Suffix,
-                      std::string &Error) override;
-  };
-}
+public:
+  ReduceMiscompilingPasses(BugDriver &bd) : BD(bd) {}
+
+  Expected<TestResult> doTest(std::vector<std::string> &Prefix,
+                              std::vector<std::string> &Suffix) override;
+};
+} // end anonymous namespace
 
 /// TestResult - After passes have been split into a test group and a control
 /// group, see if they still break the program.
 ///
-ReduceMiscompilingPasses::TestResult
+Expected<ReduceMiscompilingPasses::TestResult>
 ReduceMiscompilingPasses::doTest(std::vector<std::string> &Prefix,
-                                 std::vector<std::string> &Suffix,
-                                 std::string &Error) {
+                                 std::vector<std::string> &Suffix) {
   // First, run the program with just the Suffix passes.  If it is still broken
   // with JUST the kept passes, discard the prefix passes.
   outs() << "Checking to see if '" << getPassesString(Suffix)
          << "' compiles correctly: ";
 
   std::string BitcodeResult;
-  if (BD.runPasses(BD.getProgram(), Suffix, BitcodeResult, false/*delete*/,
-                   true/*quiet*/)) {
+  if (BD.runPasses(BD.getProgram(), Suffix, BitcodeResult, false /*delete*/,
+                   true /*quiet*/)) {
     errs() << " Error running this sequence of passes"
            << " on the input program!\n";
     BD.setPassesToRun(Suffix);
-    BD.EmitProgressBitcode(BD.getProgram(), "pass-error",  false);
-    exit(BD.debugOptimizerCrash());
+    BD.EmitProgressBitcode(BD.getProgram(), "pass-error", false);
+    // TODO: This should propagate the error instead of exiting.
+    if (Error E = BD.debugOptimizerCrash())
+      exit(1);
+    exit(0);
   }
 
   // Check to see if the finished program matches the reference output...
-  bool Diff = BD.diffProgram(BD.getProgram(), BitcodeResult, "",
-                             true /*delete bitcode*/, &Error);
-  if (!Error.empty())
-    return InternalError;
-  if (Diff) {
+  Expected<bool> Diff = BD.diffProgram(BD.getProgram(), BitcodeResult, "",
+                                       true /*delete bitcode*/);
+  if (Error E = Diff.takeError())
+    return std::move(E);
+  if (*Diff) {
     outs() << " nope.\n";
     if (Suffix.empty()) {
       errs() << BD.getToolName() << ": I'm confused: the test fails when "
              << "no passes are run, nondeterministic program?\n";
       exit(1);
     }
-    return KeepSuffix;         // Miscompilation detected!
+    return KeepSuffix; // Miscompilation detected!
   }
-  outs() << " yup.\n";      // No miscompilation!
+  outs() << " yup.\n"; // No miscompilation!
 
-  if (Prefix.empty()) return NoFailure;
+  if (Prefix.empty())
+    return NoFailure;
 
   // Next, see if the program is broken if we run the "prefix" passes first,
   // then separately run the "kept" passes.
@@ -105,25 +109,28 @@ ReduceMiscompilingPasses::doTest(std::vector<std::string> &Prefix,
   // kept passes, we can update our bitcode file to include the result of the
   // prefix passes, then discard the prefix passes.
   //
-  if (BD.runPasses(BD.getProgram(), Prefix, BitcodeResult, false/*delete*/,
-                   true/*quiet*/)) {
+  if (BD.runPasses(BD.getProgram(), Prefix, BitcodeResult, false /*delete*/,
+                   true /*quiet*/)) {
     errs() << " Error running this sequence of passes"
            << " on the input program!\n";
     BD.setPassesToRun(Prefix);
-    BD.EmitProgressBitcode(BD.getProgram(), "pass-error",  false);
-    exit(BD.debugOptimizerCrash());
+    BD.EmitProgressBitcode(BD.getProgram(), "pass-error", false);
+    // TODO: This should propagate the error instead of exiting.
+    if (Error E = BD.debugOptimizerCrash())
+      exit(1);
+    exit(0);
   }
 
   // If the prefix maintains the predicate by itself, only keep the prefix!
-  Diff = BD.diffProgram(BD.getProgram(), BitcodeResult, "", false, &Error);
-  if (!Error.empty())
-    return InternalError;
-  if (Diff) {
+  Diff = BD.diffProgram(BD.getProgram(), BitcodeResult, "", false);
+  if (Error E = Diff.takeError())
+    return std::move(E);
+  if (*Diff) {
     outs() << " nope.\n";
     sys::fs::remove(BitcodeResult);
     return KeepPrefix;
   }
-  outs() << " yup.\n";      // No miscompilation!
+  outs() << " yup.\n"; // No miscompilation!
 
   // Ok, so now we know that the prefix passes work, try running the suffix
   // passes on the result of the prefix passes.
@@ -142,110 +149,107 @@ ReduceMiscompilingPasses::doTest(std::vector<std::string> &Prefix,
     return NoFailure;
 
   outs() << "Checking to see if '" << getPassesString(Suffix)
-            << "' passes compile correctly after the '"
-            << getPassesString(Prefix) << "' passes: ";
+         << "' passes compile correctly after the '" << getPassesString(Prefix)
+         << "' passes: ";
 
   std::unique_ptr<Module> OriginalInput(
       BD.swapProgramIn(PrefixOutput.release()));
-  if (BD.runPasses(BD.getProgram(), Suffix, BitcodeResult, false/*delete*/,
-                   true/*quiet*/)) {
+  if (BD.runPasses(BD.getProgram(), Suffix, BitcodeResult, false /*delete*/,
+                   true /*quiet*/)) {
     errs() << " Error running this sequence of passes"
            << " on the input program!\n";
     BD.setPassesToRun(Suffix);
-    BD.EmitProgressBitcode(BD.getProgram(), "pass-error",  false);
-    exit(BD.debugOptimizerCrash());
+    BD.EmitProgressBitcode(BD.getProgram(), "pass-error", false);
+    // TODO: This should propagate the error instead of exiting.
+    if (Error E = BD.debugOptimizerCrash())
+      exit(1);
+    exit(0);
   }
 
   // Run the result...
   Diff = BD.diffProgram(BD.getProgram(), BitcodeResult, "",
-                        true /*delete bitcode*/, &Error);
-  if (!Error.empty())
-    return InternalError;
-  if (Diff) {
+                        true /*delete bitcode*/);
+  if (Error E = Diff.takeError())
+    return std::move(E);
+  if (*Diff) {
     outs() << " nope.\n";
     return KeepSuffix;
   }
 
   // Otherwise, we must not be running the bad pass anymore.
-  outs() << " yup.\n";      // No miscompilation!
+  outs() << " yup.\n"; // No miscompilation!
   // Restore orig program & free test.
   delete BD.swapProgramIn(OriginalInput.release());
   return NoFailure;
 }
 
 namespace {
-  class ReduceMiscompilingFunctions : public ListReducer<Function*> {
-    BugDriver &BD;
-    bool (*TestFn)(BugDriver &, Module *, Module *, std::string &);
-  public:
-    ReduceMiscompilingFunctions(BugDriver &bd,
-                                bool (*F)(BugDriver &, Module *, Module *,
-                                          std::string &))
+class ReduceMiscompilingFunctions : public ListReducer<Function *> {
+  BugDriver &BD;
+  Expected<bool> (*TestFn)(BugDriver &, std::unique_ptr<Module>,
+                           std::unique_ptr<Module>);
+
+public:
+  ReduceMiscompilingFunctions(BugDriver &bd,
+                              Expected<bool> (*F)(BugDriver &,
+                                                  std::unique_ptr<Module>,
+                                                  std::unique_ptr<Module>))
       : BD(bd), TestFn(F) {}
 
-    TestResult doTest(std::vector<Function*> &Prefix,
-                      std::vector<Function*> &Suffix,
-                      std::string &Error) override {
-      if (!Suffix.empty()) {
-        bool Ret = TestFuncs(Suffix, Error);
-        if (!Error.empty())
-          return InternalError;
-        if (Ret)
-          return KeepSuffix;
-      }
-      if (!Prefix.empty()) {
-        bool Ret = TestFuncs(Prefix, Error);
-        if (!Error.empty())
-          return InternalError;
-        if (Ret)
-          return KeepPrefix;
-      }
-      return NoFailure;
+  Expected<TestResult> doTest(std::vector<Function *> &Prefix,
+                              std::vector<Function *> &Suffix) override {
+    if (!Suffix.empty()) {
+      Expected<bool> Ret = TestFuncs(Suffix);
+      if (Error E = Ret.takeError())
+        return std::move(E);
+      if (*Ret)
+        return KeepSuffix;
     }
-
-    bool TestFuncs(const std::vector<Function*> &Prefix, std::string &Error);
-  };
-}
-
-/// TestMergedProgram - Given two modules, link them together and run the
-/// program, checking to see if the program matches the diff. If there is
-/// an error, return NULL. If not, return the merged module. The Broken argument
-/// will be set to true if the output is different. If the DeleteInputs
-/// argument is set to true then this function deletes both input
-/// modules before it returns.
-///
-static Module *TestMergedProgram(const BugDriver &BD, Module *M1, Module *M2,
-                                 bool DeleteInputs, std::string &Error,
-                                 bool &Broken) {
-  // Link the two portions of the program back to together.
-  if (!DeleteInputs) {
-    M1 = CloneModule(M1);
-    M2 = CloneModule(M2);
+    if (!Prefix.empty()) {
+      Expected<bool> Ret = TestFuncs(Prefix);
+      if (Error E = Ret.takeError())
+        return std::move(E);
+      if (*Ret)
+        return KeepPrefix;
+    }
+    return NoFailure;
   }
-  if (Linker::LinkModules(M1, M2))
+
+  Expected<bool> TestFuncs(const std::vector<Function *> &Prefix);
+};
+} // end anonymous namespace
+
+/// Given two modules, link them together and run the program, checking to see
+/// if the program matches the diff. If there is an error, return NULL. If not,
+/// return the merged module. The Broken argument will be set to true if the
+/// output is different. If the DeleteInputs argument is set to true then this
+/// function deletes both input modules before it returns.
+///
+static Expected<std::unique_ptr<Module>>
+testMergedProgram(const BugDriver &BD, std::unique_ptr<Module> M1,
+                  std::unique_ptr<Module> M2, bool &Broken) {
+  if (Linker::linkModules(*M1, std::move(M2)))
+    // TODO: Shouldn't we thread the error up instead of exiting?
     exit(1);
-  delete M2;   // We are done with this module.
 
   // Execute the program.
-  Broken = BD.diffProgram(M1, "", "", false, &Error);
-  if (!Error.empty()) {
-    // Delete the linked module
-    delete M1;
-    return nullptr;
-  }
-  return M1;
+  Expected<bool> Diff = BD.diffProgram(M1.get(), "", "", false);
+  if (Error E = Diff.takeError())
+    return std::move(E);
+  Broken = *Diff;
+  return std::move(M1);
 }
 
 /// TestFuncs - split functions in a Module into two groups: those that are
 /// under consideration for miscompilation vs. those that are not, and test
 /// accordingly. Each group of functions becomes a separate Module.
 ///
-bool ReduceMiscompilingFunctions::TestFuncs(const std::vector<Function*> &Funcs,
-                                            std::string &Error) {
+Expected<bool>
+ReduceMiscompilingFunctions::TestFuncs(const std::vector<Function *> &Funcs) {
   // Test to see if the function is misoptimized if we ONLY run it on the
   // functions listed in Funcs.
   outs() << "Checking to see if the program is misoptimized when "
-         << (Funcs.size()==1 ? "this function is" : "these functions are")
+         << (Funcs.size() == 1 ? "this function is" : "these functions are")
          << " run through the pass"
          << (BD.getPassesToRun().size() == 1 ? "" : "es") << ":";
   PrintFunctionList(Funcs);
@@ -259,10 +263,10 @@ bool ReduceMiscompilingFunctions::TestFuncs(const std::vector<Function*> &Funcs,
   //   we can conclude that a function triggers the bug when in fact one
   //   needs a larger set of original functions to do so.
   ValueToValueMapTy VMap;
-  Module *Clone = CloneModule(BD.getProgram(), VMap);
+  Module *Clone = CloneModule(BD.getProgram(), VMap).release();
   Module *Orig = BD.swapProgramIn(Clone);
 
-  std::vector<Function*> FuncsOnClone;
+  std::vector<Function *> FuncsOnClone;
   for (unsigned i = 0, e = Funcs.size(); i != e; ++i) {
     Function *F = cast<Function>(VMap[Funcs[i]]);
     FuncsOnClone.push_back(F);
@@ -270,12 +274,12 @@ bool ReduceMiscompilingFunctions::TestFuncs(const std::vector<Function*> &Funcs,
 
   // Split the module into the two halves of the program we want.
   VMap.clear();
-  Module *ToNotOptimize = CloneModule(BD.getProgram(), VMap);
-  Module *ToOptimize = SplitFunctionsOutOfModule(ToNotOptimize, FuncsOnClone,
-                                                 VMap);
+  std::unique_ptr<Module> ToNotOptimize = CloneModule(BD.getProgram(), VMap);
+  std::unique_ptr<Module> ToOptimize =
+      SplitFunctionsOutOfModule(ToNotOptimize.get(), FuncsOnClone, VMap);
 
-  // Run the predicate, note that the predicate will delete both input modules.
-  bool Broken = TestFn(BD, ToOptimize, ToNotOptimize, Error);
+  Expected<bool> Broken =
+      TestFn(BD, std::move(ToOptimize), std::move(ToNotOptimize));
 
   delete BD.swapProgramIn(Orig);
 
@@ -294,29 +298,30 @@ static void DisambiguateGlobalSymbols(Module *M) {
       I->setName("anon_fn");
 }
 
-/// ExtractLoops - Given a reduced list of functions that still exposed the bug,
-/// check to see if we can extract the loops in the region without obscuring the
-/// bug.  If so, it reduces the amount of code identified.
+/// Given a reduced list of functions that still exposed the bug, check to see
+/// if we can extract the loops in the region without obscuring the bug.  If so,
+/// it reduces the amount of code identified.
 ///
-static bool ExtractLoops(BugDriver &BD,
-                         bool (*TestFn)(BugDriver &, Module *, Module *,
-                                        std::string &),
-                         std::vector<Function*> &MiscompiledFunctions,
-                         std::string &Error) {
+static Expected<bool>
+ExtractLoops(BugDriver &BD,
+             Expected<bool> (*TestFn)(BugDriver &, std::unique_ptr<Module>,
+                                      std::unique_ptr<Module>),
+             std::vector<Function *> &MiscompiledFunctions) {
   bool MadeChange = false;
   while (1) {
-    if (BugpointIsInterrupted) return MadeChange;
+    if (BugpointIsInterrupted)
+      return MadeChange;
 
     ValueToValueMapTy VMap;
-    Module *ToNotOptimize = CloneModule(BD.getProgram(), VMap);
-    Module *ToOptimize = SplitFunctionsOutOfModule(ToNotOptimize,
-                                                   MiscompiledFunctions,
-                                                   VMap);
-    Module *ToOptimizeLoopExtracted = BD.extractLoop(ToOptimize).release();
+    std::unique_ptr<Module> ToNotOptimize = CloneModule(BD.getProgram(), VMap);
+    Module *ToOptimize = SplitFunctionsOutOfModule(ToNotOptimize.get(),
+                                                   MiscompiledFunctions, VMap)
+                             .release();
+    std::unique_ptr<Module> ToOptimizeLoopExtracted =
+        BD.extractLoop(ToOptimize);
     if (!ToOptimizeLoopExtracted) {
       // If the loop extractor crashed or if there were no extractible loops,
       // then this chapter of our odyssey is over with.
-      delete ToNotOptimize;
       delete ToOptimize;
       return MadeChange;
     }
@@ -330,13 +335,16 @@ static bool ExtractLoops(BugDriver &BD,
     // extraction.
     AbstractInterpreter *AI = BD.switchToSafeInterpreter();
     bool Failure;
-    Module *New = TestMergedProgram(BD, ToOptimizeLoopExtracted,
-                                    ToNotOptimize, false, Error, Failure);
-    if (!New)
+    Expected<std::unique_ptr<Module>> New =
+        testMergedProgram(BD, std::move(ToOptimizeLoopExtracted),
+                          std::move(ToNotOptimize), Failure);
+    if (Error E = New.takeError())
+      return std::move(E);
+    if (!*New)
       return false;
 
     // Delete the original and set the new program.
-    Module *Old = BD.swapProgramIn(New);
+    Module *Old = BD.swapProgramIn(New->release());
     for (unsigned i = 0, e = MiscompiledFunctions.size(); i != e; ++i)
       MiscompiledFunctions[i] = cast<Function>(VMap[MiscompiledFunctions[i]]);
     delete Old;
@@ -350,16 +358,15 @@ static bool ExtractLoops(BugDriver &BD,
       errs() << "      Continuing on with un-loop-extracted version.\n";
 
       BD.writeProgramToFile(OutputPrefix + "-loop-extract-fail-tno.bc",
-                            ToNotOptimize);
+                            ToNotOptimize.get());
       BD.writeProgramToFile(OutputPrefix + "-loop-extract-fail-to.bc",
                             ToOptimize);
       BD.writeProgramToFile(OutputPrefix + "-loop-extract-fail-to-le.bc",
-                            ToOptimizeLoopExtracted);
+                            ToOptimizeLoopExtracted.get());
 
-      errs() << "Please submit the "
-             << OutputPrefix << "-loop-extract-fail-*.bc files.\n";
+      errs() << "Please submit the " << OutputPrefix
+             << "-loop-extract-fail-*.bc files.\n";
       delete ToOptimize;
-      delete ToNotOptimize;
       return MadeChange;
     }
     delete ToOptimize;
@@ -367,30 +374,33 @@ static bool ExtractLoops(BugDriver &BD,
 
     outs() << "  Testing after loop extraction:\n";
     // Clone modules, the tester function will free them.
-    Module *TOLEBackup = CloneModule(ToOptimizeLoopExtracted, VMap);
-    Module *TNOBackup  = CloneModule(ToNotOptimize, VMap);
+    std::unique_ptr<Module> TOLEBackup =
+        CloneModule(ToOptimizeLoopExtracted.get(), VMap);
+    std::unique_ptr<Module> TNOBackup = CloneModule(ToNotOptimize.get(), VMap);
 
     for (unsigned i = 0, e = MiscompiledFunctions.size(); i != e; ++i)
       MiscompiledFunctions[i] = cast<Function>(VMap[MiscompiledFunctions[i]]);
 
-    Failure = TestFn(BD, ToOptimizeLoopExtracted, ToNotOptimize, Error);
-    if (!Error.empty())
-      return false;
+    Expected<bool> Result = TestFn(BD, std::move(ToOptimizeLoopExtracted),
+                                   std::move(ToNotOptimize));
+    if (Error E = Result.takeError())
+      return std::move(E);
 
-    ToOptimizeLoopExtracted = TOLEBackup;
-    ToNotOptimize = TNOBackup;
+    ToOptimizeLoopExtracted = std::move(TOLEBackup);
+    ToNotOptimize = std::move(TNOBackup);
 
-    if (!Failure) {
+    if (!*Result) {
       outs() << "*** Loop extraction masked the problem.  Undoing.\n";
       // If the program is not still broken, then loop extraction did something
       // that masked the error.  Stop loop extraction now.
 
-      std::vector<std::pair<std::string, FunctionType*> > MisCompFunctions;
+      std::vector<std::pair<std::string, FunctionType *>> MisCompFunctions;
       for (Function *F : MiscompiledFunctions) {
         MisCompFunctions.emplace_back(F->getName(), F->getFunctionType());
       }
 
-      if (Linker::LinkModules(ToNotOptimize, ToOptimizeLoopExtracted))
+      if (Linker::linkModules(*ToNotOptimize,
+                              std::move(ToOptimizeLoopExtracted)))
         exit(1);
 
       MiscompiledFunctions.clear();
@@ -401,16 +411,16 @@ static bool ExtractLoops(BugDriver &BD,
         MiscompiledFunctions.push_back(NewF);
       }
 
-      delete ToOptimizeLoopExtracted;
-      BD.setNewProgram(ToNotOptimize);
+      BD.setNewProgram(ToNotOptimize.release());
       return MadeChange;
     }
 
     outs() << "*** Loop extraction successful!\n";
 
-    std::vector<std::pair<std::string, FunctionType*> > MisCompFunctions;
+    std::vector<std::pair<std::string, FunctionType *>> MisCompFunctions;
     for (Module::iterator I = ToOptimizeLoopExtracted->begin(),
-           E = ToOptimizeLoopExtracted->end(); I != E; ++I)
+                          E = ToOptimizeLoopExtracted->end();
+         I != E; ++I)
       if (!I->isDeclaration())
         MisCompFunctions.emplace_back(I->getName(), I->getFunctionType());
 
@@ -418,10 +428,8 @@ static bool ExtractLoops(BugDriver &BD,
     // extraction both didn't break the program, and didn't mask the problem.
     // Replace the current program with the loop extracted version, and try to
     // extract another loop.
-    if (Linker::LinkModules(ToNotOptimize, ToOptimizeLoopExtracted))
+    if (Linker::linkModules(*ToNotOptimize, std::move(ToOptimizeLoopExtracted)))
       exit(1);
-
-    delete ToOptimizeLoopExtracted;
 
     // All of the Function*'s in the MiscompiledFunctions list are in the old
     // module.  Update this list to include all of the functions in the
@@ -434,52 +442,54 @@ static bool ExtractLoops(BugDriver &BD,
       MiscompiledFunctions.push_back(NewF);
     }
 
-    BD.setNewProgram(ToNotOptimize);
+    BD.setNewProgram(ToNotOptimize.release());
     MadeChange = true;
   }
 }
 
 namespace {
-  class ReduceMiscompiledBlocks : public ListReducer<BasicBlock*> {
-    BugDriver &BD;
-    bool (*TestFn)(BugDriver &, Module *, Module *, std::string &);
-    std::vector<Function*> FunctionsBeingTested;
-  public:
-    ReduceMiscompiledBlocks(BugDriver &bd,
-                            bool (*F)(BugDriver &, Module *, Module *,
-                                      std::string &),
-                            const std::vector<Function*> &Fns)
+class ReduceMiscompiledBlocks : public ListReducer<BasicBlock *> {
+  BugDriver &BD;
+  Expected<bool> (*TestFn)(BugDriver &, std::unique_ptr<Module>,
+                           std::unique_ptr<Module>);
+  std::vector<Function *> FunctionsBeingTested;
+
+public:
+  ReduceMiscompiledBlocks(BugDriver &bd,
+                          Expected<bool> (*F)(BugDriver &,
+                                              std::unique_ptr<Module>,
+                                              std::unique_ptr<Module>),
+                          const std::vector<Function *> &Fns)
       : BD(bd), TestFn(F), FunctionsBeingTested(Fns) {}
 
-    TestResult doTest(std::vector<BasicBlock*> &Prefix,
-                      std::vector<BasicBlock*> &Suffix,
-                      std::string &Error) override {
-      if (!Suffix.empty()) {
-        bool Ret = TestFuncs(Suffix, Error);
-        if (!Error.empty())
-          return InternalError;
-        if (Ret)
-          return KeepSuffix;
-      }
-      if (!Prefix.empty()) {
-        bool Ret = TestFuncs(Prefix, Error);
-        if (!Error.empty())
-          return InternalError;
-        if (Ret)
-          return KeepPrefix;
-      }
-      return NoFailure;
+  Expected<TestResult> doTest(std::vector<BasicBlock *> &Prefix,
+                              std::vector<BasicBlock *> &Suffix) override {
+    if (!Suffix.empty()) {
+      Expected<bool> Ret = TestFuncs(Suffix);
+      if (Error E = Ret.takeError())
+        return std::move(E);
+      if (*Ret)
+        return KeepSuffix;
     }
+    if (!Prefix.empty()) {
+      Expected<bool> Ret = TestFuncs(Prefix);
+      if (Error E = Ret.takeError())
+        return std::move(E);
+      if (*Ret)
+        return KeepPrefix;
+    }
+    return NoFailure;
+  }
 
-    bool TestFuncs(const std::vector<BasicBlock*> &BBs, std::string &Error);
-  };
-}
+  Expected<bool> TestFuncs(const std::vector<BasicBlock *> &BBs);
+};
+} // end anonymous namespace
 
 /// TestFuncs - Extract all blocks for the miscompiled functions except for the
 /// specified blocks.  If the problem still exists, return true.
 ///
-bool ReduceMiscompiledBlocks::TestFuncs(const std::vector<BasicBlock*> &BBs,
-                                        std::string &Error) {
+Expected<bool>
+ReduceMiscompiledBlocks::TestFuncs(const std::vector<BasicBlock *> &BBs) {
   // Test to see if the function is misoptimized if we ONLY run it on the
   // functions listed in Funcs.
   outs() << "Checking to see if the program is misoptimized when all ";
@@ -487,7 +497,8 @@ bool ReduceMiscompiledBlocks::TestFuncs(const std::vector<BasicBlock*> &BBs,
     outs() << "but these " << BBs.size() << " blocks are extracted: ";
     for (unsigned i = 0, e = BBs.size() < 10 ? BBs.size() : 10; i != e; ++i)
       outs() << BBs[i]->getName() << " ";
-    if (BBs.size() > 10) outs() << "...";
+    if (BBs.size() > 10)
+      outs() << "...";
   } else {
     outs() << "blocks are extracted.";
   }
@@ -495,10 +506,10 @@ bool ReduceMiscompiledBlocks::TestFuncs(const std::vector<BasicBlock*> &BBs,
 
   // Split the module into the two halves of the program we want.
   ValueToValueMapTy VMap;
-  Module *Clone = CloneModule(BD.getProgram(), VMap);
+  Module *Clone = CloneModule(BD.getProgram(), VMap).release();
   Module *Orig = BD.swapProgramIn(Clone);
-  std::vector<Function*> FuncsOnClone;
-  std::vector<BasicBlock*> BBsOnClone;
+  std::vector<Function *> FuncsOnClone;
+  std::vector<BasicBlock *> BBsOnClone;
   for (unsigned i = 0, e = FunctionsBeingTested.size(); i != e; ++i) {
     Function *F = cast<Function>(VMap[FunctionsBeingTested[i]]);
     FuncsOnClone.push_back(F);
@@ -509,41 +520,34 @@ bool ReduceMiscompiledBlocks::TestFuncs(const std::vector<BasicBlock*> &BBs,
   }
   VMap.clear();
 
-  Module *ToNotOptimize = CloneModule(BD.getProgram(), VMap);
-  Module *ToOptimize = SplitFunctionsOutOfModule(ToNotOptimize,
-                                                 FuncsOnClone,
-                                                 VMap);
+  std::unique_ptr<Module> ToNotOptimize = CloneModule(BD.getProgram(), VMap);
+  std::unique_ptr<Module> ToOptimize =
+      SplitFunctionsOutOfModule(ToNotOptimize.get(), FuncsOnClone, VMap);
 
   // Try the extraction.  If it doesn't work, then the block extractor crashed
   // or something, in which case bugpoint can't chase down this possibility.
   if (std::unique_ptr<Module> New =
-          BD.extractMappedBlocksFromModule(BBsOnClone, ToOptimize)) {
-    delete ToOptimize;
-    // Run the predicate,
-    // note that the predicate will delete both input modules.
-    bool Ret = TestFn(BD, New.get(), ToNotOptimize, Error);
+          BD.extractMappedBlocksFromModule(BBsOnClone, ToOptimize.get())) {
+    Expected<bool> Ret = TestFn(BD, std::move(New), std::move(ToNotOptimize));
     delete BD.swapProgramIn(Orig);
     return Ret;
   }
   delete BD.swapProgramIn(Orig);
-  delete ToOptimize;
-  delete ToNotOptimize;
   return false;
 }
 
-
-/// ExtractBlocks - Given a reduced list of functions that still expose the bug,
-/// extract as many basic blocks from the region as possible without obscuring
-/// the bug.
+/// Given a reduced list of functions that still expose the bug, extract as many
+/// basic blocks from the region as possible without obscuring the bug.
 ///
-static bool ExtractBlocks(BugDriver &BD,
-                          bool (*TestFn)(BugDriver &, Module *, Module *,
-                                         std::string &),
-                          std::vector<Function*> &MiscompiledFunctions,
-                          std::string &Error) {
-  if (BugpointIsInterrupted) return false;
+static Expected<bool>
+ExtractBlocks(BugDriver &BD,
+              Expected<bool> (*TestFn)(BugDriver &, std::unique_ptr<Module>,
+                                       std::unique_ptr<Module>),
+              std::vector<Function *> &MiscompiledFunctions) {
+  if (BugpointIsInterrupted)
+    return false;
 
-  std::vector<BasicBlock*> Blocks;
+  std::vector<BasicBlock *> Blocks;
   for (unsigned i = 0, e = MiscompiledFunctions.size(); i != e; ++i)
     for (BasicBlock &BB : *MiscompiledFunctions[i])
       Blocks.push_back(&BB);
@@ -554,26 +558,27 @@ static bool ExtractBlocks(BugDriver &BD,
   unsigned OldSize = Blocks.size();
 
   // Check to see if all blocks are extractible first.
-  bool Ret = ReduceMiscompiledBlocks(BD, TestFn, MiscompiledFunctions)
-                                  .TestFuncs(std::vector<BasicBlock*>(), Error);
-  if (!Error.empty())
-    return false;
-  if (Ret) {
+  Expected<bool> Ret = ReduceMiscompiledBlocks(BD, TestFn, MiscompiledFunctions)
+                           .TestFuncs(std::vector<BasicBlock *>());
+  if (Error E = Ret.takeError())
+    return std::move(E);
+  if (*Ret) {
     Blocks.clear();
   } else {
-    ReduceMiscompiledBlocks(BD, TestFn,
-                            MiscompiledFunctions).reduceList(Blocks, Error);
-    if (!Error.empty())
-      return false;
+    Expected<bool> Ret =
+        ReduceMiscompiledBlocks(BD, TestFn, MiscompiledFunctions)
+            .reduceList(Blocks);
+    if (Error E = Ret.takeError())
+      return std::move(E);
     if (Blocks.size() == OldSize)
       return false;
   }
 
   ValueToValueMapTy VMap;
-  Module *ProgClone = CloneModule(BD.getProgram(), VMap);
-  Module *ToExtract = SplitFunctionsOutOfModule(ProgClone,
-                                                MiscompiledFunctions,
-                                                VMap);
+  Module *ProgClone = CloneModule(BD.getProgram(), VMap).release();
+  Module *ToExtract =
+      SplitFunctionsOutOfModule(ProgClone, MiscompiledFunctions, VMap)
+          .release();
   std::unique_ptr<Module> Extracted =
       BD.extractMappedBlocksFromModule(Blocks, ToExtract);
   if (!Extracted) {
@@ -588,13 +593,13 @@ static bool ExtractBlocks(BugDriver &BD,
   // together.
   delete ToExtract;
 
-  std::vector<std::pair<std::string, FunctionType*> > MisCompFunctions;
-  for (Module::iterator I = Extracted->begin(), E = Extracted->end();
-       I != E; ++I)
+  std::vector<std::pair<std::string, FunctionType *>> MisCompFunctions;
+  for (Module::iterator I = Extracted->begin(), E = Extracted->end(); I != E;
+       ++I)
     if (!I->isDeclaration())
       MisCompFunctions.emplace_back(I->getName(), I->getFunctionType());
 
-  if (Linker::LinkModules(ProgClone, Extracted.get()))
+  if (Linker::linkModules(*ProgClone, std::move(Extracted)))
     exit(1);
 
   // Set the new program and delete the old one.
@@ -612,32 +617,31 @@ static bool ExtractBlocks(BugDriver &BD,
   return true;
 }
 
-
-/// DebugAMiscompilation - This is a generic driver to narrow down
-/// miscompilations, either in an optimization or a code generator.
+/// This is a generic driver to narrow down miscompilations, either in an
+/// optimization or a code generator.
 ///
-static std::vector<Function*>
-DebugAMiscompilation(BugDriver &BD,
-                     bool (*TestFn)(BugDriver &, Module *, Module *,
-                                    std::string &),
-                     std::string &Error) {
+static Expected<std::vector<Function *>> DebugAMiscompilation(
+    BugDriver &BD,
+    Expected<bool> (*TestFn)(BugDriver &, std::unique_ptr<Module>,
+                             std::unique_ptr<Module>)) {
   // Okay, now that we have reduced the list of passes which are causing the
   // failure, see if we can pin down which functions are being
   // miscompiled... first build a list of all of the non-external functions in
   // the program.
-  std::vector<Function*> MiscompiledFunctions;
+  std::vector<Function *> MiscompiledFunctions;
   Module *Prog = BD.getProgram();
   for (Function &F : *Prog)
     if (!F.isDeclaration())
       MiscompiledFunctions.push_back(&F);
 
   // Do the reduction...
-  if (!BugpointIsInterrupted)
-    ReduceMiscompilingFunctions(BD, TestFn).reduceList(MiscompiledFunctions,
-                                                       Error);
-  if (!Error.empty()) {
-    errs() << "\n***Cannot reduce functions: ";
-    return MiscompiledFunctions;
+  if (!BugpointIsInterrupted) {
+    Expected<bool> Ret = ReduceMiscompilingFunctions(BD, TestFn)
+                             .reduceList(MiscompiledFunctions);
+    if (Error E = Ret.takeError()) {
+      errs() << "\n***Cannot reduce functions: ";
+      return std::move(E);
+    }
   }
   outs() << "\n*** The following function"
          << (MiscompiledFunctions.size() == 1 ? " is" : "s are")
@@ -649,20 +653,20 @@ DebugAMiscompilation(BugDriver &BD,
   // trigger the problem.
 
   if (!BugpointIsInterrupted && !DisableLoopExtraction) {
-    bool Ret = ExtractLoops(BD, TestFn, MiscompiledFunctions, Error);
-    if (!Error.empty())
-      return MiscompiledFunctions;
-    if (Ret) {
+    Expected<bool> Ret = ExtractLoops(BD, TestFn, MiscompiledFunctions);
+    if (Error E = Ret.takeError())
+      return std::move(E);
+    if (*Ret) {
       // Okay, we extracted some loops and the problem still appears.  See if
       // we can eliminate some of the created functions from being candidates.
       DisambiguateGlobalSymbols(BD.getProgram());
 
       // Do the reduction...
       if (!BugpointIsInterrupted)
-        ReduceMiscompilingFunctions(BD, TestFn).reduceList(MiscompiledFunctions,
-                                                           Error);
-      if (!Error.empty())
-        return MiscompiledFunctions;
+        Ret = ReduceMiscompilingFunctions(BD, TestFn)
+                  .reduceList(MiscompiledFunctions);
+      if (Error E = Ret.takeError())
+        return std::move(E);
 
       outs() << "\n*** The following function"
              << (MiscompiledFunctions.size() == 1 ? " is" : "s are")
@@ -673,19 +677,19 @@ DebugAMiscompilation(BugDriver &BD,
   }
 
   if (!BugpointIsInterrupted && !DisableBlockExtraction) {
-    bool Ret = ExtractBlocks(BD, TestFn, MiscompiledFunctions, Error);
-    if (!Error.empty())
-      return MiscompiledFunctions;
-    if (Ret) {
+    Expected<bool> Ret = ExtractBlocks(BD, TestFn, MiscompiledFunctions);
+    if (Error E = Ret.takeError())
+      return std::move(E);
+    if (*Ret) {
       // Okay, we extracted some blocks and the problem still appears.  See if
       // we can eliminate some of the created functions from being candidates.
       DisambiguateGlobalSymbols(BD.getProgram());
 
       // Do the reduction...
-      ReduceMiscompilingFunctions(BD, TestFn).reduceList(MiscompiledFunctions,
-                                                         Error);
-      if (!Error.empty())
-        return MiscompiledFunctions;
+      Ret = ReduceMiscompilingFunctions(BD, TestFn)
+                .reduceList(MiscompiledFunctions);
+      if (Error E = Ret.takeError())
+        return std::move(E);
 
       outs() << "\n*** The following function"
              << (MiscompiledFunctions.size() == 1 ? " is" : "s are")
@@ -698,86 +702,100 @@ DebugAMiscompilation(BugDriver &BD,
   return MiscompiledFunctions;
 }
 
-/// TestOptimizer - This is the predicate function used to check to see if the
-/// "Test" portion of the program is misoptimized.  If so, return true.  In any
-/// case, both module arguments are deleted.
+/// This is the predicate function used to check to see if the "Test" portion of
+/// the program is misoptimized.  If so, return true.  In any case, both module
+/// arguments are deleted.
 ///
-static bool TestOptimizer(BugDriver &BD, Module *Test, Module *Safe,
-                          std::string &Error) {
+static Expected<bool> TestOptimizer(BugDriver &BD, std::unique_ptr<Module> Test,
+                                    std::unique_ptr<Module> Safe) {
   // Run the optimization passes on ToOptimize, producing a transformed version
   // of the functions being tested.
   outs() << "  Optimizing functions being tested: ";
-  std::unique_ptr<Module> Optimized = BD.runPassesOn(Test, BD.getPassesToRun(),
-                                                     /*AutoDebugCrashes*/ true);
+  std::unique_ptr<Module> Optimized =
+      BD.runPassesOn(Test.get(), BD.getPassesToRun());
+  if (!Optimized) {
+    errs() << " Error running this sequence of passes"
+           << " on the input program!\n";
+    delete BD.swapProgramIn(Test.get());
+    BD.EmitProgressBitcode(Test.get(), "pass-error", false);
+    if (Error E = BD.debugOptimizerCrash())
+      return std::move(E);
+    return false;
+  }
   outs() << "done.\n";
-  delete Test;
 
   outs() << "  Checking to see if the merged program executes correctly: ";
   bool Broken;
-  Module *New =
-      TestMergedProgram(BD, Optimized.get(), Safe, true, Error, Broken);
-  if (New) {
+  auto Result =
+      testMergedProgram(BD, std::move(Optimized), std::move(Safe), Broken);
+  if (Error E = Result.takeError())
+    return std::move(E);
+  if (auto New = std::move(*Result)) {
     outs() << (Broken ? " nope.\n" : " yup.\n");
     // Delete the original and set the new program.
-    delete BD.swapProgramIn(New);
+    delete BD.swapProgramIn(New.release());
   }
   return Broken;
 }
-
 
 /// debugMiscompilation - This method is used when the passes selected are not
 /// crashing, but the generated output is semantically different from the
 /// input.
 ///
-void BugDriver::debugMiscompilation(std::string *Error) {
+Error BugDriver::debugMiscompilation() {
   // Make sure something was miscompiled...
-  if (!BugpointIsInterrupted)
-    if (!ReduceMiscompilingPasses(*this).reduceList(PassesToRun, *Error)) {
-      if (Error->empty())
-        errs() << "*** Optimized program matches reference output!  No problem"
-               << " detected...\nbugpoint can't help you with your problem!\n";
-      return;
-    }
+  if (!BugpointIsInterrupted) {
+    Expected<bool> Result =
+        ReduceMiscompilingPasses(*this).reduceList(PassesToRun);
+    if (Error E = Result.takeError())
+      return E;
+    if (!*Result)
+      return make_error<StringError>(
+          "*** Optimized program matches reference output!  No problem"
+          " detected...\nbugpoint can't help you with your problem!\n",
+          inconvertibleErrorCode());
+  }
 
   outs() << "\n*** Found miscompiling pass"
          << (getPassesToRun().size() == 1 ? "" : "es") << ": "
          << getPassesString(getPassesToRun()) << '\n';
   EmitProgressBitcode(Program, "passinput");
 
-  std::vector<Function *> MiscompiledFunctions =
-    DebugAMiscompilation(*this, TestOptimizer, *Error);
-  if (!Error->empty())
-    return;
+  Expected<std::vector<Function *>> MiscompiledFunctions =
+      DebugAMiscompilation(*this, TestOptimizer);
+  if (Error E = MiscompiledFunctions.takeError())
+    return E;
 
   // Output a bunch of bitcode files for the user...
   outs() << "Outputting reduced bitcode files which expose the problem:\n";
   ValueToValueMapTy VMap;
-  Module *ToNotOptimize = CloneModule(getProgram(), VMap);
-  Module *ToOptimize = SplitFunctionsOutOfModule(ToNotOptimize,
-                                                 MiscompiledFunctions,
-                                                 VMap);
+  Module *ToNotOptimize = CloneModule(getProgram(), VMap).release();
+  Module *ToOptimize =
+      SplitFunctionsOutOfModule(ToNotOptimize, *MiscompiledFunctions, VMap)
+          .release();
 
   outs() << "  Non-optimized portion: ";
   EmitProgressBitcode(ToNotOptimize, "tonotoptimize", true);
-  delete ToNotOptimize;  // Delete hacked module.
+  delete ToNotOptimize; // Delete hacked module.
 
   outs() << "  Portion that is input to optimizer: ";
   EmitProgressBitcode(ToOptimize, "tooptimize");
-  delete ToOptimize;      // Delete hacked module.
+  delete ToOptimize; // Delete hacked module.
 
-  return;
+  return Error::success();
 }
 
-/// CleanupAndPrepareModules - Get the specified modules ready for code
-/// generator testing.
+/// Get the specified modules ready for code generator testing.
 ///
-static void CleanupAndPrepareModules(BugDriver &BD, Module *&Test,
+static void CleanupAndPrepareModules(BugDriver &BD,
+                                     std::unique_ptr<Module> &Test,
                                      Module *Safe) {
   // Clean up the modules, removing extra cruft that we don't need anymore...
-  Test = BD.performFinalCleanups(Test).release();
+  Test = BD.performFinalCleanups(Test.get());
 
   // If we are executing the JIT, we have several nasty issues to take care of.
-  if (!BD.isExecutingJIT()) return;
+  if (!BD.isExecutingJIT())
+    return;
 
   // First, if the main function is in the Safe module, we must add a stub to
   // the Test module to call into it.  Thus, we create a new function `main'
@@ -787,20 +805,21 @@ static void CleanupAndPrepareModules(BugDriver &BD, Module *&Test,
       // Rename it
       oldMain->setName("llvm_bugpoint_old_main");
       // Create a NEW `main' function with same type in the test module.
-      Function *newMain = Function::Create(oldMain->getFunctionType(),
-                                           GlobalValue::ExternalLinkage,
-                                           "main", Test);
+      Function *newMain =
+          Function::Create(oldMain->getFunctionType(),
+                           GlobalValue::ExternalLinkage, "main", Test.get());
       // Create an `oldmain' prototype in the test module, which will
       // corresponds to the real main function in the same module.
       Function *oldMainProto = Function::Create(oldMain->getFunctionType(),
                                                 GlobalValue::ExternalLinkage,
-                                                oldMain->getName(), Test);
+                                                oldMain->getName(), Test.get());
       // Set up and remember the argument list for the main function.
-      std::vector<Value*> args;
-      for (Function::arg_iterator
-             I = newMain->arg_begin(), E = newMain->arg_end(),
-             OI = oldMain->arg_begin(); I != E; ++I, ++OI) {
-        I->setName(OI->getName());    // Copy argument names from oldMain
+      std::vector<Value *> args;
+      for (Function::arg_iterator I = newMain->arg_begin(),
+                                  E = newMain->arg_end(),
+                                  OI = oldMain->arg_begin();
+           I != E; ++I, ++OI) {
+        I->setName(OI->getName()); // Copy argument names from oldMain
         args.push_back(&*I);
       }
 
@@ -819,11 +838,9 @@ static void CleanupAndPrepareModules(BugDriver &BD, Module *&Test,
 
   // Add the resolver to the Safe module.
   // Prototype: void *getPointerToNamedFunction(const char* Name)
-  Constant *resolverFunc =
-    Safe->getOrInsertFunction("getPointerToNamedFunction",
-                    Type::getInt8PtrTy(Safe->getContext()),
-                    Type::getInt8PtrTy(Safe->getContext()),
-                       (Type *)nullptr);
+  Constant *resolverFunc = Safe->getOrInsertFunction(
+      "getPointerToNamedFunction", Type::getInt8PtrTy(Safe->getContext()),
+      Type::getInt8PtrTy(Safe->getContext()), (Type *)nullptr);
 
   // Use the function we just added to get addresses of functions we need.
   for (Module::iterator F = Safe->begin(), E = Safe->end(); F != E; ++F) {
@@ -835,21 +852,20 @@ static void CleanupAndPrepareModules(BugDriver &BD, Module *&Test,
       if (TestFn && !TestFn->isDeclaration()) {
         // 1. Add a string constant with its name to the global file
         Constant *InitArray =
-          ConstantDataArray::getString(F->getContext(), F->getName());
-        GlobalVariable *funcName =
-          new GlobalVariable(*Safe, InitArray->getType(), true /*isConstant*/,
-                             GlobalValue::InternalLinkage, InitArray,
-                             F->getName() + "_name");
+            ConstantDataArray::getString(F->getContext(), F->getName());
+        GlobalVariable *funcName = new GlobalVariable(
+            *Safe, InitArray->getType(), true /*isConstant*/,
+            GlobalValue::InternalLinkage, InitArray, F->getName() + "_name");
 
         // 2. Use `GetElementPtr *funcName, 0, 0' to convert the string to an
         // sbyte* so it matches the signature of the resolver function.
 
         // GetElementPtr *funcName, ulong 0, ulong 0
-        std::vector<Constant*> GEPargs(2,
-                     Constant::getNullValue(Type::getInt32Ty(F->getContext())));
+        std::vector<Constant *> GEPargs(
+            2, Constant::getNullValue(Type::getInt32Ty(F->getContext())));
         Value *GEP = ConstantExpr::getGetElementPtr(InitArray->getType(),
                                                     funcName, GEPargs);
-        std::vector<Value*> ResolverArgs;
+        std::vector<Value *> ResolverArgs;
         ResolverArgs.push_back(GEP);
 
         // Rewrite uses of F in global initializers, etc. to uses of a wrapper
@@ -857,23 +873,21 @@ static void CleanupAndPrepareModules(BugDriver &BD, Module *&Test,
         if (!F->use_empty()) {
           // Create a new global to hold the cached function pointer.
           Constant *NullPtr = ConstantPointerNull::get(F->getType());
-          GlobalVariable *Cache =
-            new GlobalVariable(*F->getParent(), F->getType(),
-                               false, GlobalValue::InternalLinkage,
-                               NullPtr,F->getName()+".fpcache");
+          GlobalVariable *Cache = new GlobalVariable(
+              *F->getParent(), F->getType(), false,
+              GlobalValue::InternalLinkage, NullPtr, F->getName() + ".fpcache");
 
           // Construct a new stub function that will re-route calls to F
           FunctionType *FuncTy = F->getFunctionType();
-          Function *FuncWrapper = Function::Create(FuncTy,
-                                                   GlobalValue::InternalLinkage,
-                                                   F->getName() + "_wrapper",
-                                                   F->getParent());
-          BasicBlock *EntryBB  = BasicBlock::Create(F->getContext(),
-                                                    "entry", FuncWrapper);
-          BasicBlock *DoCallBB = BasicBlock::Create(F->getContext(),
-                                                    "usecache", FuncWrapper);
-          BasicBlock *LookupBB = BasicBlock::Create(F->getContext(),
-                                                    "lookupfp", FuncWrapper);
+          Function *FuncWrapper =
+              Function::Create(FuncTy, GlobalValue::InternalLinkage,
+                               F->getName() + "_wrapper", F->getParent());
+          BasicBlock *EntryBB =
+              BasicBlock::Create(F->getContext(), "entry", FuncWrapper);
+          BasicBlock *DoCallBB =
+              BasicBlock::Create(F->getContext(), "usecache", FuncWrapper);
+          BasicBlock *LookupBB =
+              BasicBlock::Create(F->getContext(), "lookupfp", FuncWrapper);
 
           // Check to see if we already looked up the value.
           Value *CachedVal = new LoadInst(Cache, "fpcache", EntryBB);
@@ -884,26 +898,25 @@ static void CleanupAndPrepareModules(BugDriver &BD, Module *&Test,
           // Resolve the call to function F via the JIT API:
           //
           // call resolver(GetElementPtr...)
-          CallInst *Resolver =
-            CallInst::Create(resolverFunc, ResolverArgs, "resolver", LookupBB);
+          CallInst *Resolver = CallInst::Create(resolverFunc, ResolverArgs,
+                                                "resolver", LookupBB);
 
           // Cast the result from the resolver to correctly-typed function.
-          CastInst *CastedResolver =
-            new BitCastInst(Resolver,
-                            PointerType::getUnqual(F->getFunctionType()),
-                            "resolverCast", LookupBB);
+          CastInst *CastedResolver = new BitCastInst(
+              Resolver, PointerType::getUnqual(F->getFunctionType()),
+              "resolverCast", LookupBB);
 
           // Save the value in our cache.
           new StoreInst(CastedResolver, Cache, LookupBB);
           BranchInst::Create(DoCallBB, LookupBB);
 
-          PHINode *FuncPtr = PHINode::Create(NullPtr->getType(), 2,
-                                             "fp", DoCallBB);
+          PHINode *FuncPtr =
+              PHINode::Create(NullPtr->getType(), 2, "fp", DoCallBB);
           FuncPtr->addIncoming(CastedResolver, LookupBB);
           FuncPtr->addIncoming(CachedVal, EntryBB);
 
           // Save the argument list.
-          std::vector<Value*> Args;
+          std::vector<Value *> Args;
           for (Argument &A : FuncWrapper->args())
             Args.push_back(&A);
 
@@ -912,9 +925,9 @@ static void CleanupAndPrepareModules(BugDriver &BD, Module *&Test,
             CallInst::Create(FuncPtr, Args, "", DoCallBB);
             ReturnInst::Create(F->getContext(), DoCallBB);
           } else {
-            CallInst *Call = CallInst::Create(FuncPtr, Args,
-                                              "retval", DoCallBB);
-            ReturnInst::Create(F->getContext(),Call, DoCallBB);
+            CallInst *Call =
+                CallInst::Create(FuncPtr, Args, "retval", DoCallBB);
+            ReturnInst::Create(F->getContext(), Call, DoCallBB);
           }
 
           // Use the wrapper function instead of the old function
@@ -930,31 +943,29 @@ static void CleanupAndPrepareModules(BugDriver &BD, Module *&Test,
   }
 }
 
-
-
-/// TestCodeGenerator - This is the predicate function used to check to see if
-/// the "Test" portion of the program is miscompiled by the code generator under
-/// test.  If so, return true.  In any case, both module arguments are deleted.
+/// This is the predicate function used to check to see if the "Test" portion of
+/// the program is miscompiled by the code generator under test.  If so, return
+/// true.  In any case, both module arguments are deleted.
 ///
-static bool TestCodeGenerator(BugDriver &BD, Module *Test, Module *Safe,
-                              std::string &Error) {
-  CleanupAndPrepareModules(BD, Test, Safe);
+static Expected<bool> TestCodeGenerator(BugDriver &BD,
+                                        std::unique_ptr<Module> Test,
+                                        std::unique_ptr<Module> Safe) {
+  CleanupAndPrepareModules(BD, Test, Safe.get());
 
   SmallString<128> TestModuleBC;
   int TestModuleFD;
   std::error_code EC = sys::fs::createTemporaryFile("bugpoint.test", "bc",
                                                     TestModuleFD, TestModuleBC);
   if (EC) {
-    errs() << BD.getToolName() << "Error making unique filename: "
-           << EC.message() << "\n";
+    errs() << BD.getToolName()
+           << "Error making unique filename: " << EC.message() << "\n";
     exit(1);
   }
-  if (BD.writeProgramToFile(TestModuleBC.str(), TestModuleFD, Test)) {
+  if (BD.writeProgramToFile(TestModuleBC.str(), TestModuleFD, Test.get())) {
     errs() << "Error writing bitcode to `" << TestModuleBC.str()
            << "'\nExiting.";
     exit(1);
   }
-  delete Test;
 
   FileRemover TestModuleBCRemover(TestModuleBC.str(), !SaveTemps);
 
@@ -964,34 +975,33 @@ static bool TestCodeGenerator(BugDriver &BD, Module *Test, Module *Safe,
   EC = sys::fs::createTemporaryFile("bugpoint.safe", "bc", SafeModuleFD,
                                     SafeModuleBC);
   if (EC) {
-    errs() << BD.getToolName() << "Error making unique filename: "
-           << EC.message() << "\n";
+    errs() << BD.getToolName()
+           << "Error making unique filename: " << EC.message() << "\n";
     exit(1);
   }
 
-  if (BD.writeProgramToFile(SafeModuleBC.str(), SafeModuleFD, Safe)) {
-    errs() << "Error writing bitcode to `" << SafeModuleBC
-           << "'\nExiting.";
+  if (BD.writeProgramToFile(SafeModuleBC.str(), SafeModuleFD, Safe.get())) {
+    errs() << "Error writing bitcode to `" << SafeModuleBC << "'\nExiting.";
     exit(1);
   }
 
   FileRemover SafeModuleBCRemover(SafeModuleBC.str(), !SaveTemps);
 
-  std::string SharedObject = BD.compileSharedObject(SafeModuleBC.str(), Error);
-  if (!Error.empty())
-    return false;
-  delete Safe;
+  Expected<std::string> SharedObject =
+      BD.compileSharedObject(SafeModuleBC.str());
+  if (Error E = SharedObject.takeError())
+    return std::move(E);
 
-  FileRemover SharedObjectRemover(SharedObject, !SaveTemps);
+  FileRemover SharedObjectRemover(*SharedObject, !SaveTemps);
 
   // Run the code generator on the `Test' code, loading the shared library.
   // The function returns whether or not the new output differs from reference.
-  bool Result = BD.diffProgram(BD.getProgram(), TestModuleBC.str(),
-                               SharedObject, false, &Error);
-  if (!Error.empty())
-    return false;
+  Expected<bool> Result =
+      BD.diffProgram(BD.getProgram(), TestModuleBC.str(), *SharedObject, false);
+  if (Error E = Result.takeError())
+    return std::move(E);
 
-  if (Result)
+  if (*Result)
     errs() << ": still failing!\n";
   else
     errs() << ": didn't fail.\n";
@@ -999,57 +1009,54 @@ static bool TestCodeGenerator(BugDriver &BD, Module *Test, Module *Safe,
   return Result;
 }
 
-
 /// debugCodeGenerator - debug errors in LLC, LLI, or CBE.
 ///
-bool BugDriver::debugCodeGenerator(std::string *Error) {
-  if ((void*)SafeInterpreter == (void*)Interpreter) {
-    std::string Result = executeProgramSafely(Program, "bugpoint.safe.out",
-                                              Error);
-    if (Error->empty()) {
+Error BugDriver::debugCodeGenerator() {
+  if ((void *)SafeInterpreter == (void *)Interpreter) {
+    Expected<std::string> Result =
+        executeProgramSafely(Program, "bugpoint.safe.out");
+    if (Result) {
       outs() << "\n*** The \"safe\" i.e. 'known good' backend cannot match "
              << "the reference diff.  This may be due to a\n    front-end "
              << "bug or a bug in the original program, but this can also "
              << "happen if bugpoint isn't running the program with the "
              << "right flags or input.\n    I left the result of executing "
              << "the program with the \"safe\" backend in this file for "
-             << "you: '"
-             << Result << "'.\n";
+             << "you: '" << *Result << "'.\n";
     }
-    return true;
+    return Error::success();
   }
 
   DisambiguateGlobalSymbols(Program);
 
-  std::vector<Function*> Funcs = DebugAMiscompilation(*this, TestCodeGenerator,
-                                                      *Error);
-  if (!Error->empty())
-    return true;
+  Expected<std::vector<Function *>> Funcs =
+      DebugAMiscompilation(*this, TestCodeGenerator);
+  if (Error E = Funcs.takeError())
+    return E;
 
   // Split the module into the two halves of the program we want.
   ValueToValueMapTy VMap;
-  Module *ToNotCodeGen = CloneModule(getProgram(), VMap);
-  Module *ToCodeGen = SplitFunctionsOutOfModule(ToNotCodeGen, Funcs, VMap);
+  std::unique_ptr<Module> ToNotCodeGen = CloneModule(getProgram(), VMap);
+  std::unique_ptr<Module> ToCodeGen =
+      SplitFunctionsOutOfModule(ToNotCodeGen.get(), *Funcs, VMap);
 
   // Condition the modules
-  CleanupAndPrepareModules(*this, ToCodeGen, ToNotCodeGen);
+  CleanupAndPrepareModules(*this, ToCodeGen, ToNotCodeGen.get());
 
   SmallString<128> TestModuleBC;
   int TestModuleFD;
   std::error_code EC = sys::fs::createTemporaryFile("bugpoint.test", "bc",
                                                     TestModuleFD, TestModuleBC);
   if (EC) {
-    errs() << getToolName() << "Error making unique filename: "
-           << EC.message() << "\n";
+    errs() << getToolName() << "Error making unique filename: " << EC.message()
+           << "\n";
     exit(1);
   }
 
-  if (writeProgramToFile(TestModuleBC.str(), TestModuleFD, ToCodeGen)) {
-    errs() << "Error writing bitcode to `" << TestModuleBC
-           << "'\nExiting.";
+  if (writeProgramToFile(TestModuleBC.str(), TestModuleFD, ToCodeGen.get())) {
+    errs() << "Error writing bitcode to `" << TestModuleBC << "'\nExiting.";
     exit(1);
   }
-  delete ToCodeGen;
 
   // Make the shared library
   SmallString<128> SafeModuleBC;
@@ -1057,47 +1064,41 @@ bool BugDriver::debugCodeGenerator(std::string *Error) {
   EC = sys::fs::createTemporaryFile("bugpoint.safe", "bc", SafeModuleFD,
                                     SafeModuleBC);
   if (EC) {
-    errs() << getToolName() << "Error making unique filename: "
-           << EC.message() << "\n";
+    errs() << getToolName() << "Error making unique filename: " << EC.message()
+           << "\n";
     exit(1);
   }
 
-  if (writeProgramToFile(SafeModuleBC.str(), SafeModuleFD, ToNotCodeGen)) {
-    errs() << "Error writing bitcode to `" << SafeModuleBC
-           << "'\nExiting.";
+  if (writeProgramToFile(SafeModuleBC.str(), SafeModuleFD,
+                         ToNotCodeGen.get())) {
+    errs() << "Error writing bitcode to `" << SafeModuleBC << "'\nExiting.";
     exit(1);
   }
-  std::string SharedObject = compileSharedObject(SafeModuleBC.str(), *Error);
-  if (!Error->empty())
-    return true;
-  delete ToNotCodeGen;
+  Expected<std::string> SharedObject = compileSharedObject(SafeModuleBC.str());
+  if (Error E = SharedObject.takeError())
+    return E;
 
   outs() << "You can reproduce the problem with the command line: \n";
   if (isExecutingJIT()) {
-    outs() << "  lli -load " << SharedObject << " " << TestModuleBC;
+    outs() << "  lli -load " << *SharedObject << " " << TestModuleBC;
   } else {
-    outs() << "  llc " << TestModuleBC << " -o " << TestModuleBC
-           << ".s\n";
-    outs() << "  cc " << SharedObject << " " << TestModuleBC.str()
-              << ".s -o " << TestModuleBC << ".exe";
-#if defined (HAVE_LINK_R)
-    outs() << " -Wl,-R.";
-#endif
-    outs() << "\n";
-    outs() << "  " << TestModuleBC << ".exe";
+    outs() << "  llc " << TestModuleBC << " -o " << TestModuleBC << ".s\n";
+    outs() << "  cc " << *SharedObject << " " << TestModuleBC.str() << ".s -o "
+           << TestModuleBC << ".exe\n";
+    outs() << "  ./" << TestModuleBC << ".exe";
   }
   for (unsigned i = 0, e = InputArgv.size(); i != e; ++i)
     outs() << " " << InputArgv[i];
   outs() << '\n';
   outs() << "The shared object was created with:\n  llc -march=c "
          << SafeModuleBC.str() << " -o temporary.c\n"
-         << "  cc -xc temporary.c -O2 -o " << SharedObject;
+         << "  cc -xc temporary.c -O2 -o " << *SharedObject;
   if (TargetTriple.getArch() == Triple::sparc)
-    outs() << " -G";              // Compile a shared library, `-G' for Sparc
+    outs() << " -G"; // Compile a shared library, `-G' for Sparc
   else
-    outs() << " -fPIC -shared";   // `-shared' for Linux/X86, maybe others
+    outs() << " -fPIC -shared"; // `-shared' for Linux/X86, maybe others
 
   outs() << " -fno-strict-aliasing\n";
 
-  return false;
+  return Error::success();
 }

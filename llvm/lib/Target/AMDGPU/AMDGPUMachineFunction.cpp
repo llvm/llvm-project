@@ -1,25 +1,47 @@
+//===-- AMDGPUMachineFunctionInfo.cpp ---------------------------------------=//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #include "AMDGPUMachineFunction.h"
-#include "AMDGPU.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
+#include "AMDGPUSubtarget.h"
+
 using namespace llvm;
-
-static const char *const ShaderTypeAttribute = "ShaderType";
-
-// Pin the vtable to this file.
-void AMDGPUMachineFunction::anchor() {}
 
 AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF) :
   MachineFunctionInfo(),
-  ShaderType(ShaderType::COMPUTE),
+  LocalMemoryObjects(),
+  KernArgSize(0),
+  MaxKernArgAlign(0),
   LDSSize(0),
-  ScratchSize(0),
-  IsKernel(true) {
-  Attribute A = MF.getFunction()->getFnAttribute(ShaderTypeAttribute);
+  ABIArgOffset(0),
+  IsKernel(MF.getFunction()->getCallingConv() == CallingConv::AMDGPU_KERNEL ||
+           MF.getFunction()->getCallingConv() == CallingConv::SPIR_KERNEL) {
+  // FIXME: Should initialize KernArgSize based on ExplicitKernelArgOffset,
+  // except reserved size is not correctly aligned.
+}
 
-  if (A.isStringAttribute()) {
-    StringRef Str = A.getValueAsString();
-    if (Str.getAsInteger(0, ShaderType))
-      llvm_unreachable("Can't parse shader type!");
-  }
+unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
+                                                  const GlobalValue &GV) {
+  auto Entry = LocalMemoryObjects.insert(std::make_pair(&GV, 0));
+  if (!Entry.second)
+    return Entry.first->second;
+
+  unsigned Align = GV.getAlignment();
+  if (Align == 0)
+    Align = DL.getABITypeAlignment(GV.getValueType());
+
+  /// TODO: We should sort these to minimize wasted space due to alignment
+  /// padding. Currently the padding is decided by the first encountered use
+  /// during lowering.
+  unsigned Offset = LDSSize = alignTo(LDSSize, Align);
+
+  Entry.first->second = Offset;
+  LDSSize += DL.getTypeAllocSize(GV.getValueType());
+
+  return Offset;
 }

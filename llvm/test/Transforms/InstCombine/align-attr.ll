@@ -13,3 +13,16 @@ entry:
 ; CHECK: ret i32
 }
 
+define i32 @foo2(i32* align 32 %a) #0 {
+entry:
+  %v = call i32* @func1(i32* %a)
+  %0 = load i32, i32* %v, align 4
+  ret i32 %0
+
+; CHECK-LABEL: @foo2
+; CHECK-DAG: load i32, i32* %v, align 32
+; CHECK: ret i32
+}
+
+declare i32* @func1(i32* returned) nounwind
+

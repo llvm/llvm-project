@@ -17,7 +17,7 @@ _x:	.long 1
 // CHECK: .debug_abbrev contents:
 // CHECK: Abbrev table for offset: 0x00000000
 // CHECK: [1] DW_TAG_compile_unit	DW_CHILDREN_yes
-// CHECK: 	DW_AT_stmt_list	DW_FORM_data4
+// CHECK: 	DW_AT_stmt_list	DW_FORM_sec_offset
 // CHECK: 	DW_AT_low_pc	DW_FORM_addr
 // CHECK: 	DW_AT_high_pc	DW_FORM_addr
 // CHECK: 	DW_AT_name	DW_FORM_string
@@ -39,7 +39,7 @@ _x:	.long 1
 
 // We don't check the leading addresses these are at.
 // CHECK:  DW_TAG_compile_unit [1] *
-// CHECK:    DW_AT_stmt_list [DW_FORM_data4]	(0x00000000)
+// CHECK:    DW_AT_stmt_list [DW_FORM_sec_offset]	(0x00000000)
 // CHECK:    DW_AT_low_pc [DW_FORM_addr]	(0x0000000000000000)
 // CHECK:    DW_AT_high_pc [DW_FORM_addr]	(0x0000000000000008)
 // We don't check the file name as it is a temp directory

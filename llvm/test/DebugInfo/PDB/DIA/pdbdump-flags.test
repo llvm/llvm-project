@@ -1,7 +1,7 @@
-; RUN: llvm-pdbdump %p/../Inputs/empty.pdb | FileCheck %s -check-prefix=NO_ARGS
-; RUN: llvm-pdbdump -types %p/../Inputs/empty.pdb | FileCheck %s -check-prefix=TYPES
-; RUN: llvm-pdbdump -compilands %p/../Inputs/empty.pdb | FileCheck %s -check-prefix=COMPILANDS
-; RUN: llvm-pdbdump -types -compilands %p/../Inputs/empty.pdb | FileCheck %s -check-prefix=MULTIPLE
+; RUN: llvm-pdbdump pretty %p/../Inputs/empty.pdb | FileCheck %s -check-prefix=NO_ARGS
+; RUN: llvm-pdbdump pretty -types %p/../Inputs/empty.pdb | FileCheck %s -check-prefix=TYPES
+; RUN: llvm-pdbdump pretty -compilands %p/../Inputs/empty.pdb | FileCheck %s -check-prefix=COMPILANDS
+; RUN: llvm-pdbdump pretty -types -compilands %p/../Inputs/empty.pdb | FileCheck %s -check-prefix=MULTIPLE
 
 ; Check that neither symbols nor compilands are dumped when neither argument specified.
 ; NO_ARGS: empty.pdb

@@ -1,3 +1,6 @@
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+
 // Test for a fuzzer: must find the case where a particular basic block is
 // executed many times.
 #include <iostream>

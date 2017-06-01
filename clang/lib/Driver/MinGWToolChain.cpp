@@ -20,10 +20,9 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
-namespace {
 // Simplified from Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple.
-bool findGccVersion(StringRef LibDir, std::string &GccLibDir,
-                    std::string &Ver) {
+static bool findGccVersion(StringRef LibDir, std::string &GccLibDir,
+                           std::string &Ver) {
   Generic_GCC::GCCVersion Version = Generic_GCC::GCCVersion::Parse("0.0.0");
   std::error_code EC;
   for (llvm::sys::fs::directory_iterator LI(LibDir, EC), LE; !EC && LI != LE;
@@ -39,7 +38,6 @@ bool findGccVersion(StringRef LibDir, std::string &GccLibDir,
     GccLibDir = LI->path();
   }
   return Ver.size();
-}
 }
 
 void MinGW::findGccLibDir() {
@@ -63,7 +61,7 @@ void MinGW::findGccLibDir() {
 }
 
 MinGW::MinGW(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
-    : ToolChain(D, Triple, Args) {
+    : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
 
 // In Windows there aren't any standard install locations, we search
@@ -133,6 +131,15 @@ bool MinGW::isPICDefaultForced() const {
 
 bool MinGW::UseSEHExceptions() const {
   return getArch() == llvm::Triple::x86_64;
+}
+
+void MinGW::AddCudaIncludeArgs(const ArgList &DriverArgs,
+                               ArgStringList &CC1Args) const {
+  CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
+}
+
+void MinGW::printVerboseInfo(raw_ostream &OS) const {
+  CudaInstallation.print(OS);
 }
 
 // Include directories for various hosts:

@@ -4,7 +4,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 @multvec_i = external unnamed_addr global [100 x i32], align 4
 
-define fastcc void @subs_STMultiExceptIntern() nounwind {
+define fastcc void @subs_STMultiExceptIntern(i32 %input) nounwind {
 entry:
   br i1 undef, label %while.body.lr.ph, label %return
 
@@ -16,10 +16,11 @@ while.body:                                       ; preds = %if.end12, %while.bo
   br i1 undef, label %if.end12, label %if.then
 
 if.then:                                          ; preds = %while.body
+  %0 = add i32 %input, 1
   br label %if.end12
 
 if.end12:                                         ; preds = %if.then, %while.body
-  %i.1 = phi i32 [ %i.0240, %while.body ], [ undef, %if.then ]
+  %i.1 = phi i32 [ %i.0240, %while.body ], [ %0, %if.then ]
   br i1 undef, label %while.body, label %while.end
 
 while.end:                                        ; preds = %if.end12

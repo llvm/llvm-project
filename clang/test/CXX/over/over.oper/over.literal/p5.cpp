@@ -12,11 +12,11 @@ template<typename T> struct U {
   friend U operator "" _a(const T *, size_t); // expected-error {{parameter}}
 };
 template<char...> struct V {
-  friend void operator "" _b(); // expected-error {{parameter}}
+  friend void operator "" _b(); // expected-error {{parameters}}
 };
 
-template<char... C, int N = 0> void operator "" _b(); // expected-error {{parameter}}
-template<char... C> void operator "" _b(int N = 0); // expected-error {{parameter}}
-template<char, char...> void operator "" _b(); // expected-error {{parameter}}
-template<typename T> T operator "" _b(const char *); // expected-error {{parameter}}
-template<typename T> int operator "" _b(const T *, size_t); // expected-error {{parameter}}
+template<char... C, int N = 0> void operator "" _b(); // expected-error {{template}}
+template<char... C> void operator "" _b(int N = 0); // expected-error {{template}}
+template<char, char...> void operator "" _b(); // expected-error {{template}}
+template<typename T> T operator "" _b(const char *); // expected-error {{template}}
+template<typename T> int operator "" _b(const T *, size_t); // expected-error {{template}}

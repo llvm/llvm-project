@@ -36,15 +36,16 @@ def subreg_hr32  : ComposedSubRegIndex<subreg_h64, subreg_r32>;
 // associated operand called NAME.  SIZE is the size and alignment
 // of the registers and REGLIST is the list of individual registers.
 multiclass SystemZRegClass<string name, list<ValueType> types, int size,
-                           dag regList> {
+                           dag regList, bit allocatable = 1> {
   def AsmOperand : AsmOperandClass {
     let Name = name;
     let ParserMethod = "parse"##name;
     let RenderMethod = "addRegOperands";
   }
-  def Bit : RegisterClass<"SystemZ", types, size, regList> {
-    let Size = size;
-  }
+  let isAllocatable = allocatable in
+    def Bit : RegisterClass<"SystemZ", types, size, regList> {
+      let Size = size;
+    }
   def "" : RegisterOperand<!cast<RegisterClass>(name##"Bit")> {
     let ParserMatchClass = !cast<AsmOperandClass>(name##"AsmOperand");
   }
@@ -120,6 +121,14 @@ defm ADDR64 : SystemZRegClass<"ADDR64", [i64], 64, (sub GR64Bit, R0D)>;
 // Not used directly, but needs to exist for ADDR32 and ADDR64 subregs
 // of a GR128.
 defm ADDR128 : SystemZRegClass<"ADDR128", [untyped], 128, (sub GR128Bit, R0Q)>;
+
+// Any type register. Used for .insn directives when we don't know what the
+// register types could be.
+defm AnyReg : SystemZRegClass<"AnyReg",
+                              [i64, f64, v8i8, v4i16, v2i32, v2f32], 64,
+                              (add (sequence "R%uD", 0, 15),
+                                   (sequence "F%uD", 0, 15),
+                                   (sequence "V%u", 0, 15))>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point registers
@@ -284,3 +293,14 @@ def v128any : TypedReg<untyped, VR128>;
 def CC : SystemZReg<"cc">;
 let isAllocatable = 0 in
   def CCRegs : RegisterClass<"SystemZ", [i32], 32, (add CC)>;
+
+// Access registers.
+class ACR32<bits<16> num, string n> : SystemZReg<n> {
+  let HWEncoding = num;
+}
+foreach I = 0-15 in {
+  def A#I : ACR32<I, "a"#I>, DwarfRegNum<[!add(I, 48)]>;
+}
+defm AR32 : SystemZRegClass<"AR32", [i32], 32,
+                            (add (sequence "A%u", 0, 15)), 0>;
+

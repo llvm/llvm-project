@@ -50,3 +50,18 @@ entry:
   ret void
 }
 
+%swift_error = type opaque
+
+define void @unused_swifterror_arg(%swift_error** swifterror %dead_arg) {
+  tail call void @sideeffect() nounwind
+  ret void
+}
+
+; CHECK-LABEL: @dont_replace_by_undef
+; CHECK-NOT: call void @unused_swifterror_arg({{.*}}undef)
+define void @dont_replace_by_undef() {
+  %error_ptr_ref = alloca swifterror %swift_error*
+  store %swift_error* null, %swift_error** %error_ptr_ref
+  call void @unused_swifterror_arg(%swift_error** %error_ptr_ref)
+  ret void
+}

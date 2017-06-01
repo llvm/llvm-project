@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc64 -mattr=+altivec | grep dst | count 4
+; RUN: llc -verify-machineinstrs < %s -march=ppc64 -mattr=+altivec | grep dst | count 4
 
 define hidden void @_Z4borkPc(i8* %image) {
 entry:

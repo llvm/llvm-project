@@ -16,7 +16,7 @@ entry:
 bb:                                               ; preds = %bb, %entry
 ; CHECK: LBB0_1:
 ; CHECK: subs [[R2:r[0-9]+]], #1
-; CHECK: cmp.w [[R2]], #-1
+; CHECK: adds {{.*}}, [[R2]], #1
 ; CHECK: bne LBB0_1
 
   %0 = phi i32 [ %.pre, %entry ], [ %3, %bb ]     ; <i32> [#uses=1]

@@ -1,17 +1,17 @@
 // Tests for instrumentation of C++11 lambdas
 
-// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-lambda.cpp -std=c++11 -o - -emit-llvm -fprofile-instr-generate > %tgen
+// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-lambda.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument=clang > %tgen
 // RUN: FileCheck --input-file=%tgen -check-prefix=PGOGEN %s
 // RUN: FileCheck --input-file=%tgen -check-prefix=LMBGEN %s
 
 // RUN: llvm-profdata merge %S/Inputs/cxx-lambda.proftext -o %t.profdata
-// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-lambda.cpp -std=c++11 -o - -emit-llvm -fprofile-instr-use=%t.profdata > %tuse
+// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-lambda.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata > %tuse
 // RUN: FileCheck --input-file=%tuse -check-prefix=PGOUSE %s
 // RUN: FileCheck --input-file=%tuse -check-prefix=LMBUSE %s
 
-// PGOGEN: @[[LWC:__llvm_profile_counters__Z7lambdasv]] = private global [4 x i64] zeroinitializer
-// PGOGEN: @[[MAC:__llvm_profile_counters_main]] = private global [1 x i64] zeroinitializer
-// LMBGEN: @[[LFC:"__llvm_profile_counters_cxx-lambda.cpp:_ZZ7lambdasvENK3\$_0clEi"]] = private global [3 x i64] zeroinitializer
+// PGOGEN: @[[LWC:__profc__Z7lambdasv]] = private global [4 x i64] zeroinitializer
+// PGOGEN: @[[MAC:__profc_main]] = private global [1 x i64] zeroinitializer
+// LMBGEN: @[[LFC:"__profc_cxx_lambda.cpp__ZZ7lambdasvENK3\$_0clEi"]] = private global [3 x i64] zeroinitializer
 
 // PGOGEN-LABEL: define {{.*}}void @_Z7lambdasv()
 // PGOUSE-LABEL: define {{.*}}void @_Z7lambdasv()

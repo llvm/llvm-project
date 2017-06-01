@@ -12,7 +12,7 @@ declare float @llvm.fma.f32(float, float, float)
 ; CHECK:  v_mov_b32_e32 v{{[0-9]+}}, 0
 ; CHECK:  v_mov_b32_e32 v{{[0-9]+}}, 0
 ; It's probably OK if this is slightly higher:
-; CHECK: ; NumVgprs: 9
+; CHECK: ; NumVgprs: 8
 define void @foobar(<4 x float> addrspace(1)* %out, <4 x float> addrspace(1)* %in, i32 %flag) {
 entry:
   %cmpflag = icmp eq i32 %flag, 1

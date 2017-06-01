@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=thumbv7-apple-ios -disable-block-placement < %s | FileCheck %s
-; RUN: llc -mtriple=armv7-apple-ios   -disable-block-placement < %s | FileCheck %s
+; RUN: llc -mtriple=thumbv7-apple-ios -disable-block-placement < %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-T
+; RUN: llc -mtriple=armv7-apple-ios   -disable-block-placement < %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-A
 
 ; LSR should compare against the post-incremented induction variable.
 ; In this case, the immediate value is -2 which requires a cmn instruction.
@@ -7,7 +7,8 @@
 ; CHECK-LABEL: f:
 ; CHECK: %for.body
 ; CHECK: sub{{.*}}[[IV:r[0-9]+]], #2
-; CHECK: cmn{{.*}}[[IV]], #2
+; CHECK-T: adds{{.*}}[[IV]], #2
+; CHECK-A: cmn{{.*}}[[IV]], #2
 ; CHECK: bne
 define i32 @f(i32* nocapture %a, i32 %i) nounwind readonly ssp {
 entry:

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fprofile-instr-generate -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name macro-expressions.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name macro-expressions.cpp -w %s | FileCheck %s
 
 #define EXPR(x) (x)
 #define NEXPR(x) (!x)
@@ -11,6 +11,44 @@
 #define PRI_64_LENGTH_MODIFIER "ll"
 #define PRIo64 PRI_64_LENGTH_MODIFIER "o"
 #define PRIu64 PRI_64_LENGTH_MODIFIER "u"
+
+#define STMT(s) s
+
+void fn1() {
+  STMT(if (1));
+  STMT(while (1));
+  STMT(for (;;));
+  STMT(if) (1);
+  STMT(while) (1);
+  STMT(for) (;;);
+  if (1)
+    STMT(if (1)
+        STMT(if (1)));
+  if (1)
+    STMT(if (1)) 0;
+  if (1)
+    STMT(while (1)) 0;
+  if (1)
+    STMT(for (;;)) 0;
+  while (1)
+    STMT(if (1)) 0;
+  while (1)
+    STMT(while (1)) 0;
+  while (1)
+    STMT(for (;;)) 0;
+  for (;;)
+    STMT(if (1)) 0;
+  for (;;)
+    STMT(while (1)) 0;
+  for (;;)
+    STMT(for (;;)) 0;
+}
+
+void STMT(fn2()) {
+}
+
+void STMT(fn3)() {
+}
 
 // CHECK: foo
 // CHECK-NEXT: File 0, [[@LINE+1]]:17 -> {{[0-9]+}}:2 = #0

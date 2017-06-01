@@ -1,0 +1,266 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !mach-o
+FileHeader:      
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x0000000A
+  ncmds:           6
+  sizeofcmds:      1376
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:    
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            9304404B-E522-3BBA-A861-AF5938908725
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          4096
+    nsyms:           2
+    stroff:          4128
+    strsize:         28
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          4096
+    fileoff:         0
+    filesize:        0
+    maxprot:         7
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:        
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000100000FA0
+        size:            22
+        offset:          0x00000000
+        align:           4
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x0000000100000FB8
+        size:            72
+        offset:          0x00000000
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294971392
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        60
+    maxprot:         7
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         952
+    segname:         __DWARF
+    vmaddr:          4294975488
+    vmsize:          4096
+    fileoff:         8192
+    filesize:        765
+    maxprot:         7
+    initprot:        3
+    nsects:          11
+    flags:           0
+    Sections:        
+      - sectname:        __debug_line
+        segname:         __DWARF
+        addr:            0x0000000100002000
+        size:            70
+        offset:          0x00002000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_pubnames
+        segname:         __DWARF
+        addr:            0x0000000100002046
+        size:            27
+        offset:          0x00002046
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_pubtypes
+        segname:         __DWARF
+        addr:            0x0000000100002061
+        size:            35
+        offset:          0x00002061
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_aranges
+        segname:         __DWARF
+        addr:            0x0000000100002084
+        size:            48
+        offset:          0x00002084
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x00000001000020B4
+        size:            121
+        offset:          0x000020B4
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0x000000010000212D
+        size:            76
+        offset:          0x0000212D
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0x0000000100002179
+        size:            142
+        offset:          0x00002179
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_names
+        segname:         __DWARF
+        addr:            0x0000000100002207
+        size:            60
+        offset:          0x00002207
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_namespac
+        segname:         __DWARF
+        addr:            0x0000000100002243
+        size:            36
+        offset:          0x00002243
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_types
+        segname:         __DWARF
+        addr:            0x0000000100002267
+        size:            114
+        offset:          0x00002267
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_objc
+        segname:         __DWARF
+        addr:            0x00000001000022D9
+        size:            36
+        offset:          0x000022D9
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+LinkEditData:    
+  NameList:        
+    - n_strx:          2
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+    - n_strx:          22
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294971296
+  StringTable:     
+    - ''
+    - ''
+    - __mh_execute_header
+    - _main
+DWARF:           
+  debug_str:    
+    - ''
+    - 'clang version 4.0.0 (trunk 288677) (llvm/trunk 288676)'
+    - hello_world.c
+    - /Users/cbieneman/dev/open-source/llvm-build-rel
+    - main
+    - argc
+    - argv
+    - int
+    - char
+...
+
+#CHECK: DWARF:           
+#CHECK:   debug_str:    
+#CHECK:     - ''
+#CHECK:     - 'clang version 4.0.0 (trunk 288677) (llvm/trunk 288676)'
+#CHECK:     - hello_world.c
+#CHECK:     - /Users/cbieneman/dev/open-source/llvm-build-rel
+#CHECK:     - main
+#CHECK:     - argc
+#CHECK:     - argv
+#CHECK:     - int
+#CHECK:     - char
+

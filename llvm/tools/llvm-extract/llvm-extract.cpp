@@ -22,6 +22,7 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -102,10 +103,10 @@ static cl::opt<bool> PreserveAssemblyUseListOrder(
 
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
 
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext Context;
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
   cl::ParseCommandLineOptions(argc, argv, "llvm extractor\n");
 
@@ -222,45 +223,40 @@ int main(int argc, char **argv) {
     }
   }
 
+  // Use *argv instead of argv[0] to work around a wrong GCC warning.
+  ExitOnError ExitOnErr(std::string(*argv) + ": error reading input: ");
+
+  auto Materialize = [&](GlobalValue &GV) { ExitOnErr(GV.materialize()); };
+
   // Materialize requisite global values.
-  if (!DeleteFn)
-    for (size_t i = 0, e = GVs.size(); i != e; ++i) {
-      GlobalValue *GV = GVs[i];
-      if (std::error_code EC = GV->materialize()) {
-        errs() << argv[0] << ": error reading input: " << EC.message() << "\n";
-        return 1;
-      }
-    }
-  else {
+  if (!DeleteFn) {
+    for (size_t i = 0, e = GVs.size(); i != e; ++i)
+      Materialize(*GVs[i]);
+  } else {
     // Deleting. Materialize every GV that's *not* in GVs.
     SmallPtrSet<GlobalValue *, 8> GVSet(GVs.begin(), GVs.end());
-    for (auto &G : M->globals()) {
-      if (!GVSet.count(&G)) {
-        if (std::error_code EC = G.materialize()) {
-          errs() << argv[0] << ": error reading input: " << EC.message()
-                 << "\n";
-          return 1;
-        }
-      }
-    }
     for (auto &F : *M) {
-      if (!GVSet.count(&F)) {
-        if (std::error_code EC = F.materialize()) {
-          errs() << argv[0] << ": error reading input: " << EC.message()
-                 << "\n";
-          return 1;
-        }
-      }
+      if (!GVSet.count(&F))
+        Materialize(F);
     }
+  }
+
+  {
+    std::vector<GlobalValue *> Gvs(GVs.begin(), GVs.end());
+    legacy::PassManager Extract;
+    Extract.add(createGVExtractionPass(Gvs, DeleteFn));
+    Extract.run(*M);
+
+    // Now that we have all the GVs we want, mark the module as fully
+    // materialized.
+    // FIXME: should the GVExtractionPass handle this?
+    ExitOnErr(M->materializeAll());
   }
 
   // In addition to deleting all other functions, we also want to spiff it
   // up a little bit.  Do this now.
   legacy::PassManager Passes;
 
-  std::vector<GlobalValue*> Gvs(GVs.begin(), GVs.end());
-
-  Passes.add(createGVExtractionPass(Gvs, DeleteFn));
   if (!DeleteFn)
     Passes.add(createGlobalDCEPass());           // Delete unreachable globals
   Passes.add(createStripDeadDebugInfoPass());    // Remove dead debug info

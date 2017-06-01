@@ -4,6 +4,8 @@
 ; RUN: opt -regions -print-region-style=bb  -analyze < %s 2>&1 | FileCheck -check-prefix=BBIT %s
 ; RUN: opt -regions -print-region-style=rn  -analyze < %s 2>&1 | FileCheck -check-prefix=RNIT %s
 
+; RUN: opt < %s -passes='print<regions>' 2>&1 | FileCheck %s
+
 define void @MAIN__() nounwind {
 entry:
   br label %__label_002001.outer

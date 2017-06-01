@@ -69,7 +69,7 @@ void test_nest_captured_stmt(int param, int size, int param_arr[size]) {
         // CHECK1-NEXT: getelementptr inbounds %struct.A, %struct.A*
         // CHECK1-NEXT: store i8 99
         //
-        // CHECK1: [[SIZE_ADDR_REF:%.*]] = getelementptr inbounds [[T]], [[T]]* {{.*}}, i{{.+}} 0, i{{.+}} 7
+        // CHECK1-DAG: [[SIZE_ADDR_REF:%.*]] = getelementptr inbounds [[T]], [[T]]* {{.*}}, i{{.+}} 0, i{{.+}} 7
         // CHECK1-DAG: [[SIZE_ADDR:%.*]] = load i{{.+}}*, i{{.+}}** [[SIZE_ADDR_REF]]
         // CHECK1-DAG: [[SIZE:%.*]] = load i{{.+}}, i{{.+}}* [[SIZE_ADDR]]
         // CHECK1-DAG: [[PARAM_ARR_IDX:%.*]] = sub nsw i{{.+}} [[SIZE]], 1
@@ -79,7 +79,7 @@ void test_nest_captured_stmt(int param, int size, int param_arr[size]) {
         // CHECK1-DAG: [[PARAM_ARR_SIZE_MINUS_1_ADDR:%.*]] = getelementptr inbounds i{{.+}}, i{{.+}}* [[PARAM_ARR]], i{{.*}}
         // CHECK1: store i{{.+}} 2, i{{.+}}* [[PARAM_ARR_SIZE_MINUS_1_ADDR]]
         //
-        // CHECK1: [[Z_ADDR_REF:%.*]] = getelementptr inbounds [[T]], [[T]]* {{.*}}, i{{.+}} 0, i{{.+}} 2
+        // CHECK1-DAG: [[Z_ADDR_REF:%.*]] = getelementptr inbounds [[T]], [[T]]* {{.*}}, i{{.+}} 0, i{{.+}} 2
         // CHECK1-DAG: [[Z_ADDR:%.*]] = load %struct.A*, %struct.A** [[Z_ADDR_REF]]
         // CHECK1-DAG: [[Z_A_ADDR:%.*]] = getelementptr inbounds %struct.A, %struct.A* [[Z_ADDR]], i{{.+}} 0, i{{.+}} 0
         // CHECK1-DAG: [[ARR_IDX_2:%.*]] = load i{{.+}}, i{{.+}}* [[Z_A_ADDR]]

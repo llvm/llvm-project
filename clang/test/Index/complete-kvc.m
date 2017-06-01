@@ -97,7 +97,7 @@ typedef signed char BOOL;
 // RUN: c-index-test -code-completion-at=%s:41:3 %s | FileCheck -check-prefix=CHECK-CC2 %s
 // CHECK-CC2: ObjCClassMethodDecl:{LeftParen (}{Text BOOL}{RightParen )}{TypedText automaticallyNotifiesObserversOfArrayProperty} (40)
 // CHECK-CC2: ObjCClassMethodDecl:{LeftParen (}{Text BOOL}{RightParen )}{TypedText automaticallyNotifiesObserversOfMutableArrayProperty} (40)
-// CHECK-CC2: ObjCClassMethodDecl:{LeftParen (}{Text NSSet *}{RightParen )}{TypedText keyPathsForValuesAffectingMutableArrayProperty} (40)
+// CHECK-CC2: ObjCClassMethodDecl:{LeftParen (}{Text NSSet<NSString *> *}{RightParen )}{TypedText keyPathsForValuesAffectingMutableArrayProperty} (40)
 
 // RUN: c-index-test -code-completion-at=%s:52:8 %s | FileCheck -check-prefix=CHECK-CC3 %s
 // CHECK-CC3: ObjCInstanceMethodDecl:{TypedText countOfIntProperty} (55)

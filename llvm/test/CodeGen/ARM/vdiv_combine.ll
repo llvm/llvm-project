@@ -153,3 +153,11 @@ define <4 x float> @test8(<4 x i32> %in) {
   %div.i = fdiv <4 x float> %vcvt.i, <float 2.0, float 2.0, float 2.0, float undef>
   ret <4 x float> %div.i
 }
+
+; CHECK-LABEL: test_illegal_int_to_fp:
+; CHECK: vcvt.f32.s32
+define <3 x float> @test_illegal_int_to_fp(<3 x i32> %in) {
+  %conv = sitofp <3 x i32> %in to <3 x float>
+  %res = fdiv <3 x float> %conv, <float 4.0, float 4.0, float 4.0>
+  ret <3 x float> %res
+}

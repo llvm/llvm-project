@@ -1,5 +1,5 @@
 // RUN: mkdir -p %t.dir
-// RUN: %clang_cc1 -analyze -analyzer-output=html -analyzer-checker=core -o %t.dir %s
+// RUN: %clang_analyze_cc1 -analyzer-output=html -analyzer-checker=core -o %t.dir %s
 // RUN: ls %t.dir | not grep report
 // RUN: rm -fR %t.dir
 

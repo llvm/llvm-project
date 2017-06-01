@@ -34,6 +34,10 @@ LSAN_FLAG(bool, use_tls, true,
           "Root set: include TLS and thread-specific storage")
 LSAN_FLAG(bool, use_root_regions, true,
           "Root set: include regions added via __lsan_register_root_region().")
+LSAN_FLAG(bool, use_ld_allocations, true,
+          "Root set: mark as reachable all allocations made from dynamic "
+          "linker. This was the old way to handle dynamic TLS, and will "
+          "be removed soon. Do not use this flag.")
 
 LSAN_FLAG(bool, use_unaligned, false, "Consider unaligned pointers valid.")
 LSAN_FLAG(bool, use_poisoned, false,

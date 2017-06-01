@@ -19,289 +19,346 @@ namespace llvm {
 
 class PassRegistry;
 
-/// initializeCore - Initialize all passes linked into the
-/// TransformUtils library.
+/// Initialize all passes linked into the TransformUtils library.
 void initializeCore(PassRegistry&);
 
-/// initializeTransformUtils - Initialize all passes linked into the
-/// TransformUtils library.
+/// Initialize all passes linked into the TransformUtils library.
 void initializeTransformUtils(PassRegistry&);
 
-/// initializeScalarOpts - Initialize all passes linked into the
-/// ScalarOpts library.
+/// Initialize all passes linked into the ScalarOpts library.
 void initializeScalarOpts(PassRegistry&);
 
-/// initializeObjCARCOpts - Initialize all passes linked into the ObjCARCOpts
-/// library.
+/// Initialize all passes linked into the ObjCARCOpts library.
 void initializeObjCARCOpts(PassRegistry&);
 
-/// initializeVectorization - Initialize all passes linked into the
-/// Vectorize library.
+/// Initialize all passes linked into the Vectorize library.
 void initializeVectorization(PassRegistry&);
 
-/// initializeInstCombine - Initialize all passes linked into the
-/// InstCombine library.
+/// Initialize all passes linked into the InstCombine library.
 void initializeInstCombine(PassRegistry&);
 
-/// initializeIPO - Initialize all passes linked into the IPO library.
+/// Initialize all passes linked into the IPO library.
 void initializeIPO(PassRegistry&);
 
-/// initializeInstrumentation - Initialize all passes linked into the
-/// Instrumentation library.
+/// Initialize all passes linked into the Instrumentation library.
 void initializeInstrumentation(PassRegistry&);
 
-/// initializeAnalysis - Initialize all passes linked into the Analysis library.
+/// Initialize all passes linked into the Analysis library.
 void initializeAnalysis(PassRegistry&);
 
-/// initializeCodeGen - Initialize all passes linked into the CodeGen library.
+/// Initialize all passes linked into the Coroutines library.
+void initializeCoroutines(PassRegistry&);
+
+/// Initialize all passes linked into the CodeGen library.
 void initializeCodeGen(PassRegistry&);
 
-/// initializeCodeGen - Initialize all passes linked into the CodeGen library.
+/// Initialize all passes linked into the GlobalISel library.
+void initializeGlobalISel(PassRegistry &Registry);
+
+/// Initialize all passes linked into the CodeGen library.
 void initializeTarget(PassRegistry&);
 
-void initializeAAEvalPass(PassRegistry&);
-void initializeAddDiscriminatorsPass(PassRegistry&);
+void initializeAAEvalLegacyPassPass(PassRegistry&);
+void initializeAAResultsWrapperPassPass(PassRegistry &);
 void initializeADCELegacyPassPass(PassRegistry&);
-void initializeBDCEPass(PassRegistry&);
+void initializeAddDiscriminatorsLegacyPassPass(PassRegistry&);
+void initializeAddressSanitizerModulePass(PassRegistry&);
+void initializeAddressSanitizerPass(PassRegistry&);
 void initializeAliasSetPrinterPass(PassRegistry&);
-void initializeAlwaysInlinerPass(PassRegistry&);
-void initializeArgPromotionPass(PassRegistry&);
-void initializeAtomicExpandPass(PassRegistry&);
-void initializeSampleProfileLoaderPass(PassRegistry&);
 void initializeAlignmentFromAssumptionsPass(PassRegistry&);
+void initializeAlwaysInlinerLegacyPassPass(PassRegistry&);
+void initializeArgPromotionPass(PassRegistry&);
+void initializeAssumptionCacheTrackerPass(PassRegistry &);
+void initializeAtomicExpandPass(PassRegistry&);
+void initializeBBVectorizePass(PassRegistry&);
+void initializeBDCELegacyPassPass(PassRegistry &);
 void initializeBarrierNoopPass(PassRegistry&);
 void initializeBasicAAWrapperPassPass(PassRegistry&);
-void initializeCallGraphWrapperPassPass(PassRegistry &);
 void initializeBlockExtractorPassPass(PassRegistry&);
 void initializeBlockFrequencyInfoWrapperPassPass(PassRegistry&);
 void initializeBoundsCheckingPass(PassRegistry&);
 void initializeBranchFolderPassPass(PassRegistry&);
 void initializeBranchProbabilityInfoWrapperPassPass(PassRegistry&);
+void initializeBranchRelaxationPass(PassRegistry&);
 void initializeBreakCriticalEdgesPass(PassRegistry&);
-void initializeCallGraphPrinterPass(PassRegistry&);
-void initializeCallGraphViewerPass(PassRegistry&);
-void initializeCFGOnlyPrinterPass(PassRegistry&);
-void initializeCFGOnlyViewerPass(PassRegistry&);
-void initializeCFGPrinterPass(PassRegistry&);
+void initializeCFGOnlyViewerLegacyPassPass(PassRegistry&);
+void initializeCFGPrinterLegacyPassPass(PassRegistry&);
+void initializeCFGOnlyPrinterLegacyPassPass(PassRegistry&);
 void initializeCFGSimplifyPassPass(PassRegistry&);
-void initializeCFLAAWrapperPassPass(PassRegistry&);
-void initializeExternalAAWrapperPassPass(PassRegistry&);
-void initializeForwardControlFlowIntegrityPass(PassRegistry&);
-void initializeFlattenCFGPassPass(PassRegistry&);
-void initializeStructurizeCFGPass(PassRegistry&);
-void initializeCFGViewerPass(PassRegistry&);
-void initializeConstantHoistingPass(PassRegistry&);
+void initializeCFGViewerLegacyPassPass(PassRegistry&);
+void initializeCFLAndersAAWrapperPassPass(PassRegistry&);
+void initializeCFLSteensAAWrapperPassPass(PassRegistry&);
+void initializeCallGraphDOTPrinterPass(PassRegistry&);
+void initializeCallGraphPrinterLegacyPassPass(PassRegistry&);
+void initializeCallGraphViewerPass(PassRegistry&);
+void initializeCallGraphWrapperPassPass(PassRegistry &);
 void initializeCodeGenPreparePass(PassRegistry&);
-void initializeConstantMergePass(PassRegistry&);
+void initializeCountingFunctionInserterPass(PassRegistry&);
+void initializeConstantHoistingLegacyPassPass(PassRegistry&);
+void initializeConstantMergeLegacyPassPass(PassRegistry &);
 void initializeConstantPropagationPass(PassRegistry&);
-void initializeMachineCopyPropagationPass(PassRegistry&);
-void initializeCostModelAnalysisPass(PassRegistry&);
 void initializeCorrelatedValuePropagationPass(PassRegistry&);
+void initializeCostModelAnalysisPass(PassRegistry&);
+void initializeCrossDSOCFIPass(PassRegistry&);
 void initializeDAEPass(PassRegistry&);
 void initializeDAHPass(PassRegistry&);
-void initializeDCEPass(PassRegistry&);
-void initializeDSEPass(PassRegistry&);
+void initializeDCELegacyPassPass(PassRegistry&);
+void initializeDSELegacyPassPass(PassRegistry&);
+void initializeDataFlowSanitizerPass(PassRegistry&);
 void initializeDeadInstEliminationPass(PassRegistry&);
 void initializeDeadMachineInstructionElimPass(PassRegistry&);
 void initializeDelinearizationPass(PassRegistry &);
+void initializeDemandedBitsWrapperPassPass(PassRegistry&);
 void initializeDependenceAnalysisPass(PassRegistry&);
+void initializeDependenceAnalysisWrapperPassPass(PassRegistry&);
+void initializeDetectDeadLanesPass(PassRegistry&);
 void initializeDivergenceAnalysisPass(PassRegistry&);
 void initializeDomOnlyPrinterPass(PassRegistry&);
 void initializeDomOnlyViewerPass(PassRegistry&);
 void initializeDomPrinterPass(PassRegistry&);
 void initializeDomViewerPass(PassRegistry&);
-void initializeDominanceFrontierPass(PassRegistry&);
+void initializeDominanceFrontierWrapperPassPass(PassRegistry&);
 void initializeDominatorTreeWrapperPassPass(PassRegistry&);
+void initializeDwarfEHPreparePass(PassRegistry&);
+void initializeEarlyCSELegacyPassPass(PassRegistry &);
+void initializeEarlyCSEMemSSALegacyPassPass(PassRegistry &);
 void initializeEarlyIfConverterPass(PassRegistry&);
 void initializeEdgeBundlesPass(PassRegistry&);
-void initializeExpandPostRAPass(PassRegistry&);
-void initializeAAResultsWrapperPassPass(PassRegistry &);
-void initializeGCOVProfilerPass(PassRegistry&);
-void initializeInstrProfilingPass(PassRegistry&);
-void initializeAddressSanitizerPass(PassRegistry&);
-void initializeAddressSanitizerModulePass(PassRegistry&);
-void initializeMemorySanitizerPass(PassRegistry&);
-void initializeThreadSanitizerPass(PassRegistry&);
-void initializeSanitizerCoverageModulePass(PassRegistry&);
-void initializeDataFlowSanitizerPass(PassRegistry&);
-void initializeScalarizerPass(PassRegistry&);
-void initializeEarlyCSELegacyPassPass(PassRegistry &);
-void initializeEliminateAvailableExternallyPass(PassRegistry&);
+void initializeEfficiencySanitizerPass(PassRegistry&);
+void initializeEliminateAvailableExternallyLegacyPassPass(PassRegistry &);
+void initializeRAGreedyPass(PassRegistry&);
+void initializeGVNHoistLegacyPassPass(PassRegistry &);
 void initializeExpandISelPseudosPass(PassRegistry&);
-void initializeFunctionAttrsPass(PassRegistry&);
+void initializeExpandPostRAPass(PassRegistry&);
+void initializeExternalAAWrapperPassPass(PassRegistry&);
+void initializeFinalizeMachineBundlesPass(PassRegistry&);
+void initializeFlattenCFGPassPass(PassRegistry&);
+void initializeFloat2IntLegacyPassPass(PassRegistry&);
+void initializeForceFunctionAttrsLegacyPassPass(PassRegistry&);
+void initializeForwardControlFlowIntegrityPass(PassRegistry&);
+void initializeFuncletLayoutPass(PassRegistry &);
+void initializeFunctionImportLegacyPassPass(PassRegistry &);
 void initializeGCMachineCodeAnalysisPass(PassRegistry&);
 void initializeGCModuleInfoPass(PassRegistry&);
-void initializeGVNPass(PassRegistry&);
-void initializeGlobalDCEPass(PassRegistry&);
-void initializeGlobalOptPass(PassRegistry&);
+void initializeGCOVProfilerLegacyPassPass(PassRegistry&);
+void initializeGVNLegacyPassPass(PassRegistry&);
+void initializeGlobalDCELegacyPassPass(PassRegistry&);
+void initializeGlobalMergePass(PassRegistry&);
+void initializeGlobalOptLegacyPassPass(PassRegistry&);
+void initializeGlobalSplitPass(PassRegistry&);
 void initializeGlobalsAAWrapperPassPass(PassRegistry&);
+void initializeGuardWideningLegacyPassPass(PassRegistry&);
 void initializeIPCPPass(PassRegistry&);
-void initializeIPSCCPPass(PassRegistry&);
-void initializeIVUsersPass(PassRegistry&);
+void initializeIPSCCPLegacyPassPass(PassRegistry &);
+void initializeIRTranslatorPass(PassRegistry &);
+void initializeIVUsersWrapperPassPass(PassRegistry&);
 void initializeIfConverterPass(PassRegistry&);
+void initializeImplicitNullChecksPass(PassRegistry&);
+void initializeIndVarSimplifyLegacyPassPass(PassRegistry&);
 void initializeInductiveRangeCheckEliminationPass(PassRegistry&);
-void initializeIndVarSimplifyPass(PassRegistry&);
+void initializeInferFunctionAttrsLegacyPassPass(PassRegistry&);
 void initializeInlineCostAnalysisPass(PassRegistry&);
-void initializeInstructionCombiningPassPass(PassRegistry&);
 void initializeInstCountPass(PassRegistry&);
 void initializeInstNamerPass(PassRegistry&);
-void initializeInternalizePassPass(PassRegistry&);
+void initializeInstSimplifierPass(PassRegistry&);
+void initializeInstrProfilingLegacyPassPass(PassRegistry &);
+void initializeInstructionCombiningPassPass(PassRegistry&);
+void initializeInstructionSelectPass(PassRegistry &);
+void initializeInterleavedAccessPass(PassRegistry &);
+void initializeInternalizeLegacyPassPass(PassRegistry&);
 void initializeIntervalPartitionPass(PassRegistry&);
 void initializeJumpThreadingPass(PassRegistry&);
-void initializeLCSSAPass(PassRegistry&);
-void initializeLICMPass(PassRegistry&);
-void initializeLazyValueInfoPass(PassRegistry&);
+void initializeLCSSAWrapperPassPass(PassRegistry&);
+void initializeLCSSAVerificationPassPass(PassRegistry&);
+void initializeLegacyLICMPassPass(PassRegistry&);
+void initializeLegacyLoopSinkPassPass(PassRegistry&);
+void initializeLazyBranchProbabilityInfoPassPass(PassRegistry&);
+void initializeLazyMachineBlockFrequencyInfoPassPass(PassRegistry&);
+void initializeLazyBlockFrequencyInfoPassPass(PassRegistry&);
+void initializeLazyValueInfoWrapperPassPass(PassRegistry&);
+void initializeLegalizerPass(PassRegistry&);
+void initializeLibCallsShrinkWrapLegacyPassPass(PassRegistry&);
 void initializeLintPass(PassRegistry&);
+void initializeLiveDebugValuesPass(PassRegistry&);
 void initializeLiveDebugVariablesPass(PassRegistry&);
 void initializeLiveIntervalsPass(PassRegistry&);
 void initializeLiveRegMatrixPass(PassRegistry&);
 void initializeLiveStacksPass(PassRegistry&);
 void initializeLiveVariablesPass(PassRegistry&);
+void initializeLoadCombinePass(PassRegistry&);
 void initializeLoaderPassPass(PassRegistry&);
+void initializeLoadStoreVectorizerPass(PassRegistry&);
 void initializeLocalStackSlotPassPass(PassRegistry&);
-void initializeLoopDeletionPass(PassRegistry&);
+void initializeLoopAccessLegacyAnalysisPass(PassRegistry&);
+void initializeLoopDataPrefetchLegacyPassPass(PassRegistry &);
+void initializeLoopDeletionLegacyPassPass(PassRegistry&);
+void initializeLoopDistributeLegacyPass(PassRegistry&);
 void initializeLoopExtractorPass(PassRegistry&);
+void initializeLoopIdiomRecognizeLegacyPassPass(PassRegistry&);
 void initializeLoopInfoWrapperPassPass(PassRegistry&);
+void initializeLoopInstSimplifyLegacyPassPass(PassRegistry&);
 void initializeLoopInterchangePass(PassRegistry &);
-void initializeLoopInstSimplifyPass(PassRegistry&);
-void initializeLoopRotatePass(PassRegistry&);
+void initializeLoopLoadEliminationPass(PassRegistry&);
+void initializeLoopPassPass(PassRegistry&);
+void initializeLoopRerollPass(PassRegistry&);
+void initializeLoopRotateLegacyPassPass(PassRegistry&);
+void initializeLoopSimplifyCFGLegacyPassPass(PassRegistry&);
 void initializeLoopSimplifyPass(PassRegistry&);
 void initializeLoopStrengthReducePass(PassRegistry&);
-void initializeGlobalMergePass(PassRegistry&);
-void initializeLoopRerollPass(PassRegistry&);
 void initializeLoopUnrollPass(PassRegistry&);
 void initializeLoopUnswitchPass(PassRegistry&);
-void initializeLoopIdiomRecognizePass(PassRegistry&);
-void initializeLowerAtomicPass(PassRegistry&);
-void initializeLowerBitSetsPass(PassRegistry&);
+void initializeLoopVectorizePass(PassRegistry&);
+void initializeLoopVersioningLICMPass(PassRegistry&);
+void initializeLoopVersioningPassPass(PassRegistry &);
+void initializeLowerAtomicLegacyPassPass(PassRegistry &);
+void initializeLowerEmuTLSPass(PassRegistry&);
 void initializeLowerExpectIntrinsicPass(PassRegistry&);
+void initializeLowerGuardIntrinsicLegacyPassPass(PassRegistry&);
 void initializeLowerIntrinsicsPass(PassRegistry&);
-void initializeLowerInvokePass(PassRegistry&);
+void initializeLowerInvokeLegacyPassPass(PassRegistry&);
 void initializeLowerSwitchPass(PassRegistry&);
+void initializeLowerTypeTestsPass(PassRegistry&);
+void initializeMIRPrintingPassPass(PassRegistry&);
 void initializeMachineBlockFrequencyInfoPass(PassRegistry&);
 void initializeMachineBlockPlacementPass(PassRegistry&);
 void initializeMachineBlockPlacementStatsPass(PassRegistry&);
 void initializeMachineBranchProbabilityInfoPass(PassRegistry&);
 void initializeMachineCSEPass(PassRegistry&);
-void initializeImplicitNullChecksPass(PassRegistry&);
-void initializeMachineDominatorTreePass(PassRegistry&);
+void initializeMachineCombinerPass(PassRegistry &);
+void initializeMachineCopyPropagationPass(PassRegistry&);
 void initializeMachineDominanceFrontierPass(PassRegistry&);
-void initializeMachinePostDominatorTreePass(PassRegistry&);
+void initializeMachineDominatorTreePass(PassRegistry&);
+void initializeMachineFunctionPrinterPassPass(PassRegistry&);
 void initializeMachineLICMPass(PassRegistry&);
 void initializeMachineLoopInfoPass(PassRegistry&);
 void initializeMachineModuleInfoPass(PassRegistry&);
+void initializeMachineOptimizationRemarkEmitterPassPass(PassRegistry&);
+void initializeMachinePipelinerPass(PassRegistry&);
+void initializeMachinePostDominatorTreePass(PassRegistry&);
 void initializeMachineRegionInfoPassPass(PassRegistry&);
 void initializeMachineSchedulerPass(PassRegistry&);
 void initializeMachineSinkingPass(PassRegistry&);
 void initializeMachineTraceMetricsPass(PassRegistry&);
 void initializeMachineVerifierPassPass(PassRegistry&);
-void initializeMemCpyOptPass(PassRegistry&);
+void initializeMemCpyOptLegacyPassPass(PassRegistry&);
 void initializeMemDepPrinterPass(PassRegistry&);
 void initializeMemDerefPrinterPass(PassRegistry&);
-void initializeMemoryDependenceAnalysisPass(PassRegistry&);
-void initializeMergedLoadStoreMotionPass(PassRegistry &);
-void initializeMetaRenamerPass(PassRegistry&);
+void initializeMemoryDependenceWrapperPassPass(PassRegistry&);
+void initializeMemorySSAWrapperPassPass(PassRegistry&);
+void initializeMemorySSAPrinterLegacyPassPass(PassRegistry &);
+void initializeMemorySanitizerPass(PassRegistry&);
 void initializeMergeFunctionsPass(PassRegistry&);
+void initializeMergedLoadStoreMotionLegacyPassPass(PassRegistry &);
+void initializeMetaRenamerPass(PassRegistry&);
 void initializeModuleDebugInfoPrinterPass(PassRegistry&);
-void initializeNaryReassociatePass(PassRegistry&);
-void initializeNoAAPass(PassRegistry&);
+void initializeModuleSummaryIndexWrapperPassPass(PassRegistry &);
+void initializeNameAnonGlobalLegacyPassPass(PassRegistry &);
+void initializeNaryReassociateLegacyPassPass(PassRegistry &);
+void initializeNewGVNPass(PassRegistry&);
 void initializeObjCARCAAWrapperPassPass(PassRegistry&);
 void initializeObjCARCAPElimPass(PassRegistry&);
-void initializeObjCARCExpandPass(PassRegistry&);
 void initializeObjCARCContractPass(PassRegistry&);
+void initializeObjCARCExpandPass(PassRegistry&);
 void initializeObjCARCOptPass(PassRegistry&);
-void initializePAEvalPass(PassRegistry &);
+void initializeOptimizationRemarkEmitterWrapperPassPass(PassRegistry&);
 void initializeOptimizePHIsPass(PassRegistry&);
-void initializePartiallyInlineLibCallsPass(PassRegistry&);
+void initializePAEvalPass(PassRegistry &);
 void initializePEIPass(PassRegistry&);
+void initializePGOIndirectCallPromotionLegacyPassPass(PassRegistry&);
+void initializePGOInstrumentationGenLegacyPassPass(PassRegistry&);
+void initializePGOInstrumentationUseLegacyPassPass(PassRegistry&);
 void initializePHIEliminationPass(PassRegistry&);
-void initializePartialInlinerPass(PassRegistry&);
+void initializePhysicalRegisterUsageInfoPass(PassRegistry &);
+void initializePartialInlinerLegacyPassPass(PassRegistry &);
+void initializePartiallyInlineLibCallsLegacyPassPass(PassRegistry &);
+void initializePatchableFunctionPass(PassRegistry &);
 void initializePeepholeOptimizerPass(PassRegistry&);
+void initializePlaceBackedgeSafepointsImplPass(PassRegistry&);
+void initializePlaceSafepointsPass(PassRegistry&);
 void initializePostDomOnlyPrinterPass(PassRegistry&);
 void initializePostDomOnlyViewerPass(PassRegistry&);
 void initializePostDomPrinterPass(PassRegistry&);
 void initializePostDomViewerPass(PassRegistry&);
-void initializePostDominatorTreePass(PassRegistry&);
-void initializePostRASchedulerPass(PassRegistry&);
+void initializePostDominatorTreeWrapperPassPass(PassRegistry&);
 void initializePostMachineSchedulerPass(PassRegistry&);
+void initializePostOrderFunctionAttrsLegacyPassPass(PassRegistry&);
+void initializePostRAHazardRecognizerPass(PassRegistry&);
+void initializePostRASchedulerPass(PassRegistry&);
+void initializePreISelIntrinsicLoweringLegacyPassPass(PassRegistry&);
+void initializePrintBasicBlockPassPass(PassRegistry&);
 void initializePrintFunctionPassWrapperPass(PassRegistry&);
 void initializePrintModulePassWrapperPass(PassRegistry&);
-void initializePrintBasicBlockPassPass(PassRegistry&);
 void initializeProcessImplicitDefsPass(PassRegistry&);
-void initializePromotePassPass(PassRegistry&);
+void initializeProfileSummaryInfoWrapperPassPass(PassRegistry &);
+void initializePromoteLegacyPassPass(PassRegistry &);
 void initializePruneEHPass(PassRegistry&);
-void initializeReassociatePass(PassRegistry&);
+void initializeReassociateLegacyPassPass(PassRegistry&);
+void initializeRegBankSelectPass(PassRegistry &);
 void initializeRegToMemPass(PassRegistry&);
 void initializeRegionInfoPassPass(PassRegistry&);
 void initializeRegionOnlyPrinterPass(PassRegistry&);
 void initializeRegionOnlyViewerPass(PassRegistry&);
 void initializeRegionPrinterPass(PassRegistry&);
 void initializeRegionViewerPass(PassRegistry&);
+void initializeRegisterCoalescerPass(PassRegistry&);
+void initializeStripGCRelocatesPass(PassRegistry&);
+void initializeRenameIndependentSubregsPass(PassRegistry&);
+void initializeResetMachineFunctionPass(PassRegistry &);
+void initializeReversePostOrderFunctionAttrsLegacyPassPass(PassRegistry&);
 void initializeRewriteStatepointsForGCPass(PassRegistry&);
-void initializeSafeStackPass(PassRegistry&);
-void initializeSCCPPass(PassRegistry&);
-void initializeSROALegacyPassPass(PassRegistry&);
-void initializeSROA_DTPass(PassRegistry&);
-void initializeSROA_SSAUpPass(PassRegistry&);
+void initializeRewriteSymbolsLegacyPassPass(PassRegistry&);
+void initializeSCCPLegacyPassPass(PassRegistry &);
 void initializeSCEVAAWrapperPassPass(PassRegistry&);
+void initializeSLPVectorizerPass(PassRegistry&);
+void initializeSROALegacyPassPass(PassRegistry&);
+void initializeSafeStackPass(PassRegistry&);
+void initializeSampleProfileLoaderLegacyPassPass(PassRegistry&);
+void initializeSanitizerCoverageModulePass(PassRegistry&);
 void initializeScalarEvolutionWrapperPassPass(PassRegistry&);
+void initializeScalarizerPass(PassRegistry&);
+void initializeScopedNoAliasAAWrapperPassPass(PassRegistry&);
+void initializeSeparateConstOffsetFromGEPPass(PassRegistry &);
+void initializeShadowStackGCLoweringPass(PassRegistry&);
 void initializeShrinkWrapPass(PassRegistry &);
 void initializeSimpleInlinerPass(PassRegistry&);
-void initializeShadowStackGCLoweringPass(PassRegistry&);
-void initializeRegisterCoalescerPass(PassRegistry&);
 void initializeSingleLoopExtractorPass(PassRegistry&);
-void initializeSinkingPass(PassRegistry&);
-void initializeSeparateConstOffsetFromGEPPass(PassRegistry &);
+void initializeSinkingLegacyPassPass(PassRegistry&);
+void initializeSjLjEHPreparePass(PassRegistry&);
 void initializeSlotIndexesPass(PassRegistry&);
+void initializeSpeculativeExecutionLegacyPassPass(PassRegistry&);
 void initializeSpillPlacementPass(PassRegistry&);
-void initializeSpeculativeExecutionPass(PassRegistry&);
-void initializeStackProtectorPass(PassRegistry&);
 void initializeStackColoringPass(PassRegistry&);
+void initializeStackMapLivenessPass(PassRegistry&);
+void initializeStackProtectorPass(PassRegistry&);
 void initializeStackSlotColoringPass(PassRegistry&);
 void initializeStraightLineStrengthReducePass(PassRegistry &);
 void initializeStripDeadDebugInfoPass(PassRegistry&);
 void initializeStripDeadPrototypesLegacyPassPass(PassRegistry&);
 void initializeStripDebugDeclarePass(PassRegistry&);
 void initializeStripNonDebugSymbolsPass(PassRegistry&);
+void initializeStripNonLineTableDebugInfoPass(PassRegistry&);
 void initializeStripSymbolsPass(PassRegistry&);
+void initializeStructurizeCFGPass(PassRegistry&);
 void initializeTailCallElimPass(PassRegistry&);
 void initializeTailDuplicatePassPass(PassRegistry&);
+void initializeTargetLibraryInfoWrapperPassPass(PassRegistry &);
 void initializeTargetPassConfigPass(PassRegistry&);
 void initializeTargetTransformInfoWrapperPassPass(PassRegistry &);
-void initializeTargetLibraryInfoWrapperPassPass(PassRegistry &);
-void initializeAssumptionCacheTrackerPass(PassRegistry &);
+void initializeThreadSanitizerPass(PassRegistry&);
 void initializeTwoAddressInstructionPassPass(PassRegistry&);
 void initializeTypeBasedAAWrapperPassPass(PassRegistry&);
-void initializeScopedNoAliasAAWrapperPassPass(PassRegistry&);
 void initializeUnifyFunctionExitNodesPass(PassRegistry&);
-void initializeUnreachableBlockElimPass(PassRegistry&);
+void initializeUnpackMachineBundlesPass(PassRegistry&);
+void initializeUnreachableBlockElimLegacyPassPass(PassRegistry&);
 void initializeUnreachableMachineBlockElimPass(PassRegistry&);
 void initializeVerifierLegacyPassPass(PassRegistry&);
 void initializeVirtRegMapPass(PassRegistry&);
 void initializeVirtRegRewriterPass(PassRegistry&);
-void initializeInstSimplifierPass(PassRegistry&);
-void initializeUnpackMachineBundlesPass(PassRegistry&);
-void initializeFinalizeMachineBundlesPass(PassRegistry&);
-void initializeLoopAccessAnalysisPass(PassRegistry&);
-void initializeLoopVectorizePass(PassRegistry&);
-void initializeSLPVectorizerPass(PassRegistry&);
-void initializeBBVectorizePass(PassRegistry&);
-void initializeMachineFunctionPrinterPassPass(PassRegistry&);
-void initializeMIRPrintingPassPass(PassRegistry&);
-void initializeStackMapLivenessPass(PassRegistry&);
-void initializeMachineCombinerPass(PassRegistry &);
-void initializeLoadCombinePass(PassRegistry&);
-void initializeRewriteSymbolsPass(PassRegistry&);
+void initializeWholeProgramDevirtPass(PassRegistry &);
 void initializeWinEHPreparePass(PassRegistry&);
-void initializePlaceBackedgeSafepointsImplPass(PassRegistry&);
-void initializePlaceSafepointsPass(PassRegistry&);
-void initializeDwarfEHPreparePass(PassRegistry&);
-void initializeFloat2IntPass(PassRegistry&);
-void initializeLoopDistributePass(PassRegistry&);
-void initializeSjLjEHPreparePass(PassRegistry&);
-void initializeDemandedBitsPass(PassRegistry&);
-void initializeFuncletLayoutPass(PassRegistry &);
-void initializeLoopLoadEliminationPass(PassRegistry&);
+void initializeWriteBitcodePassPass(PassRegistry &);
+void initializeWriteThinLTOBitcodePass(PassRegistry &);
+void initializeXRayInstrumentationPass(PassRegistry &);
 }
 
 #endif

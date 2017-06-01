@@ -13,7 +13,18 @@
 #include "SymbolIndex.h"
 #include "find-all-symbols/SymbolInfo.h"
 #include "llvm/ADT/StringRef.h"
+
+#ifdef _MSC_VER
+// Disable warnings from ppltasks.h transitively included by <future>.
+#pragma warning(push)
+#pragma warning(disable:4530)
+#endif
+
 #include <future>
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 namespace clang {
 namespace include_fixer {

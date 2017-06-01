@@ -24,14 +24,13 @@ class StringRef;
 
 class X86TargetMachine final : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  X86Subtarget Subtarget;
-
   mutable StringMap<std::unique_ptr<X86Subtarget>> SubtargetMap;
 
 public:
   X86TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                   StringRef FS, const TargetOptions &Options, Reloc::Model RM,
-                   CodeModel::Model CM, CodeGenOpt::Level OL);
+                   StringRef FS, const TargetOptions &Options,
+                   Optional<Reloc::Model> RM, CodeModel::Model CM,
+                   CodeGenOpt::Level OL);
   ~X86TargetMachine() override;
   const X86Subtarget *getSubtargetImpl(const Function &F) const override;
 

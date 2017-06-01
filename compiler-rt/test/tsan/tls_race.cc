@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
+// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
 #include "test.h"
 
 void *Thread(void *a) {
@@ -18,4 +18,6 @@ int main() {
 }
 
 // CHECK: WARNING: ThreadSanitizer: data race
-// CHECK:   Location is TLS of main thread.
+// CHECK-Linux:   Location is TLS of main thread.
+// CHECK-FreeBSD:   Location is TLS of main thread.
+// CHECK-Darwin:   Location is heap block of size 4

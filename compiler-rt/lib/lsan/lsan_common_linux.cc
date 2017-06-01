@@ -26,9 +26,8 @@
 namespace __lsan {
 
 static const char kLinkerName[] = "ld";
-// We request 2 modules matching "ld", so we can print a warning if there's more
-// than one match. But only the first one is actually used.
-static char linker_placeholder[2 * sizeof(LoadedModule)] ALIGNED(64);
+
+static char linker_placeholder[sizeof(LoadedModule)] ALIGNED(64);
 static LoadedModule *linker = nullptr;
 
 static bool IsLinker(const char* full_name) {
@@ -36,20 +35,24 @@ static bool IsLinker(const char* full_name) {
 }
 
 void InitializePlatformSpecificModules() {
-  internal_memset(linker_placeholder, 0, sizeof(linker_placeholder));
-  uptr num_matches = GetListOfModules(
-      reinterpret_cast<LoadedModule *>(linker_placeholder), 2, IsLinker);
-  if (num_matches == 1) {
-    linker = reinterpret_cast<LoadedModule *>(linker_placeholder);
-    return;
+  ListOfModules modules;
+  modules.init();
+  for (LoadedModule &module : modules) {
+    if (!IsLinker(module.full_name())) continue;
+    if (linker == nullptr) {
+      linker = reinterpret_cast<LoadedModule *>(linker_placeholder);
+      *linker = module;
+      module = LoadedModule();
+    } else {
+      VReport(1, "LeakSanitizer: Multiple modules match \"%s\". "
+              "TLS will not be handled correctly.\n", kLinkerName);
+      linker->clear();
+      linker = nullptr;
+      return;
+    }
   }
-  if (num_matches == 0)
-    VReport(1, "LeakSanitizer: Dynamic linker not found. "
-            "TLS will not be handled correctly.\n");
-  else if (num_matches > 1)
-    VReport(1, "LeakSanitizer: Multiple modules match \"%s\". "
-            "TLS will not be handled correctly.\n", kLinkerName);
-  linker = nullptr;
+  VReport(1, "LeakSanitizer: Dynamic linker not found. "
+             "TLS will not be handled correctly.\n");
 }
 
 static int ProcessGlobalRegionsCallback(struct dl_phdr_info *info, size_t size,
@@ -68,7 +71,7 @@ static int ProcessGlobalRegionsCallback(struct dl_phdr_info *info, size_t size,
     GetAllocatorGlobalRange(&allocator_begin, &allocator_end);
     if (begin <= allocator_begin && allocator_begin < end) {
       CHECK_LE(allocator_begin, allocator_end);
-      CHECK_LT(allocator_end, end);
+      CHECK_LE(allocator_end, end);
       if (begin < allocator_begin)
         ScanRangeForPointers(begin, allocator_begin, frontier, "GLOBAL",
                              kReachable);
@@ -100,6 +103,7 @@ static uptr GetCallerPC(u32 stack_id, StackDepotReverseMap *map) {
 struct ProcessPlatformAllocParam {
   Frontier *frontier;
   StackDepotReverseMap *stack_depot_reverse_map;
+  bool skip_linker_allocations;
 };
 
 // ForEachChunk callback. Identifies unreachable chunks which must be treated as
@@ -117,7 +121,8 @@ static void ProcessPlatformSpecificAllocationsCb(uptr chunk, void *arg) {
       caller_pc = GetCallerPC(stack_id, param->stack_depot_reverse_map);
     // If caller_pc is unknown, this chunk may be allocated in a coroutine. Mark
     // it as reachable, as we can't properly report its allocation stack anyway.
-    if (caller_pc == 0 || linker->containsAddress(caller_pc)) {
+    if (caller_pc == 0 || (param->skip_linker_allocations &&
+                           linker->containsAddress(caller_pc))) {
       m.set_tag(kReachable);
       param->frontier->push_back(chunk);
     }
@@ -142,10 +147,12 @@ static void ProcessPlatformSpecificAllocationsCb(uptr chunk, void *arg) {
 // guaranteed to include all dynamic TLS blocks (and possibly other allocations
 // which we don't care about).
 void ProcessPlatformSpecificAllocations(Frontier *frontier) {
-  if (!flags()->use_tls) return;
-  if (!linker) return;
   StackDepotReverseMap stack_depot_reverse_map;
-  ProcessPlatformAllocParam arg = {frontier, &stack_depot_reverse_map};
+  ProcessPlatformAllocParam arg;
+  arg.frontier = frontier;
+  arg.stack_depot_reverse_map = &stack_depot_reverse_map;
+  arg.skip_linker_allocations =
+      flags()->use_tls && flags()->use_ld_allocations && linker != nullptr;
   ForEachChunk(ProcessPlatformSpecificAllocationsCb, &arg);
 }
 

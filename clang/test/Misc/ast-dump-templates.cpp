@@ -21,23 +21,23 @@ void baz() {
   double z = foo<2, double, 3>().getSum();
 }
 
-// Template instantiation - foo
-// Since the order of instantiation may vary during runs, run FileCheck twice
-// to make sure each instantiation is in the correct spot.
-// CHECK1: template <int X = 5, typename Y = int, int Z = 5> struct foo {
-// CHECK2: template <int X = 2, typename Y = double, int Z = 3> struct foo {
-
 // Template definition - foo
 // CHECK1: template <int X, typename Y, int Z = 5> struct foo {
 // CHECK2: template <int X, typename Y, int Z = 5> struct foo {
 
-// Template instantiation - bar
-// CHECK1: template <int A = 5, typename B = int> int bar()
-// CHECK2: template <int A = 5, typename B = int> int bar()
+// Template instantiation - foo
+// Since the order of instantiation may vary during runs, run FileCheck twice
+// to make sure each instantiation is in the correct spot.
+// CHECK1: template<> struct foo<5, int, 5> {
+// CHECK2: template<> struct foo<2, double, 3> {
 
 // Template definition - bar
 // CHECK1: template <int A, typename B> B bar()
 // CHECK2: template <int A, typename B> B bar()
+
+// Template instantiation - bar
+// CHECK1: template<> int bar<5, int>()
+// CHECK2: template<> int bar<5, int>()
 
 // CHECK1-LABEL: template <typename ...T> struct A {
 // CHECK1-NEXT:    template <T ...x[3]> struct B {

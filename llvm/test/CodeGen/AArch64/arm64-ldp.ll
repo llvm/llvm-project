@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -verify-machineinstrs | FileCheck %s
 
 ; CHECK-LABEL: ldp_int
 ; CHECK: ldp

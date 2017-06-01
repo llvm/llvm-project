@@ -32,5 +32,12 @@
 // RUN: FileCheck -check-prefix=TEST5 %s < %t.d
 // TEST5: foo $$(bar) b az qu\ ux \ space:
 
+// Test self dependency, PR31644
+
+// RUN: %clang -E -MD -MP -MF %t.d %s
+// RUN: FileCheck -check-prefix=TEST6 %s < %t.d
+// TEST6: dependencies-and-pp.c
+// TEST6-NOT: dependencies-and-pp.c:
+
 // TODO: Test default target without quoting
 // TODO: Test default target with quoting

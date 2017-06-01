@@ -14,12 +14,11 @@
 
 #include "yaml2obj.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/Object/COFFYAML.h"
+#include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -76,14 +75,24 @@ struct COFFParser {
         unsigned Index = getStringIndex(Name);
         std::string str = utostr(Index);
         if (str.size() > 7) {
-          errs() << "String table got too large";
+          errs() << "String table got too large\n";
           return false;
         }
         Sec.Header.Name[0] = '/';
         std::copy(str.begin(), str.end(), Sec.Header.Name + 1);
       }
 
-      Sec.Header.Characteristics |= (Log2_32(Sec.Alignment) + 1) << 20;
+      if (Sec.Alignment) {
+        if (Sec.Alignment > 8192) {
+          errs() << "Section alignment is too large\n";
+          return false;
+        }
+        if (!isPowerOf2_32(Sec.Alignment)) {
+          errs() << "Section alignment is not a power of 2\n";
+          return false;
+        }
+        Sec.Header.Characteristics |= (Log2_32(Sec.Alignment) + 1) << 20;
+      }
     }
     return true;
   }
@@ -173,12 +182,12 @@ static bool layoutCOFF(COFFParser &CP) {
   // Assign each section data address consecutively.
   for (COFFYAML::Section &S : CP.Obj.Sections) {
     if (S.SectionData.binary_size() > 0) {
-      CurrentSectionDataOffset = RoundUpToAlignment(
-          CurrentSectionDataOffset, CP.isPE() ? CP.getFileAlignment() : 4);
+      CurrentSectionDataOffset = alignTo(CurrentSectionDataOffset,
+                                         CP.isPE() ? CP.getFileAlignment() : 4);
       S.Header.SizeOfRawData = S.SectionData.binary_size();
       if (CP.isPE())
         S.Header.SizeOfRawData =
-            RoundUpToAlignment(S.Header.SizeOfRawData, CP.getFileAlignment());
+            alignTo(S.Header.SizeOfRawData, CP.getFileAlignment());
       S.Header.PointerToRawData = CurrentSectionDataOffset;
       CurrentSectionDataOffset += S.Header.SizeOfRawData;
       if (!S.Relocations.empty()) {
@@ -292,10 +301,9 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic, T Heade
   Header->FileAlignment = CP.Obj.OptionalHeader->Header.FileAlignment;
   uint32_t SizeOfCode = 0, SizeOfInitializedData = 0,
            SizeOfUninitializedData = 0;
-  uint32_t SizeOfHeaders = RoundUpToAlignment(
-      CP.SectionTableStart + CP.SectionTableSize, Header->FileAlignment);
-  uint32_t SizeOfImage =
-      RoundUpToAlignment(SizeOfHeaders, Header->SectionAlignment);
+  uint32_t SizeOfHeaders = alignTo(CP.SectionTableStart + CP.SectionTableSize,
+                                   Header->FileAlignment);
+  uint32_t SizeOfImage = alignTo(SizeOfHeaders, Header->SectionAlignment);
   uint32_t BaseOfData = 0;
   for (const COFFYAML::Section &S : CP.Obj.Sections) {
     if (S.Header.Characteristics & COFF::IMAGE_SCN_CNT_CODE)
@@ -309,8 +317,7 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic, T Heade
     else if (S.Name.equals(".data"))
       BaseOfData = S.Header.VirtualAddress; // RVA
     if (S.Header.VirtualAddress)
-      SizeOfImage +=
-          RoundUpToAlignment(S.Header.VirtualSize, Header->SectionAlignment);
+      SizeOfImage += alignTo(S.Header.VirtualSize, Header->SectionAlignment);
   }
   Header->SizeOfCode = SizeOfCode;
   Header->SizeOfInitializedData = SizeOfInitializedData;
@@ -525,14 +532,7 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
   return true;
 }
 
-int yaml2coff(yaml::Input &YIn, raw_ostream &Out) {
-  COFFYAML::Object Doc;
-  YIn >> Doc;
-  if (YIn.error()) {
-    errs() << "yaml2obj: Failed to parse YAML file!\n";
-    return 1;
-  }
-
+int yaml2coff(llvm::COFFYAML::Object &Doc, raw_ostream &Out) {
   COFFParser CP(Doc);
   if (!CP.parse()) {
     errs() << "yaml2obj: Failed to parse YAML file!\n";

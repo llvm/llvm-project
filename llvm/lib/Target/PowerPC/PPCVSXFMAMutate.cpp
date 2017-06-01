@@ -21,6 +21,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -38,8 +39,14 @@
 
 using namespace llvm;
 
-static cl::opt<bool> DisableVSXFMAMutate("disable-ppc-vsx-fma-mutation",
-cl::desc("Disable VSX FMA instruction mutation"), cl::Hidden);
+// Temporarily disable FMA mutation by default, since it doesn't handle
+// cross-basic-block intervals well.
+// See: http://lists.llvm.org/pipermail/llvm-dev/2016-February/095669.html
+//      http://reviews.llvm.org/D17087
+static cl::opt<bool> DisableVSXFMAMutate(
+    "disable-ppc-vsx-fma-mutation",
+    cl::desc("Disable VSX FMA instruction mutation"), cl::init(true),
+    cl::Hidden);
 
 #define DEBUG_TYPE "ppc-vsx-fma-mutate"
 
@@ -68,7 +75,7 @@ protected:
       const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
       for (MachineBasicBlock::iterator I = MBB.begin(), IE = MBB.end();
            I != IE; ++I) {
-        MachineInstr *MI = I;
+        MachineInstr &MI = *I;
 
         // The default (A-type) VSX FMA form kills the addend (it is taken from
         // the target register, which is then updated to reflect the result of
@@ -76,7 +83,7 @@ protected:
         // used for the product, then we can use the M-form instruction (which
         // will take that value from the to-be-defined register).
 
-        int AltOpc = PPC::getAltVSXFMAOpcode(MI->getOpcode());
+        int AltOpc = PPC::getAltVSXFMAOpcode(MI.getOpcode());
         if (AltOpc == -1)
           continue;
 
@@ -102,7 +109,7 @@ protected:
         SlotIndex FMAIdx = LIS->getInstructionIndex(MI);
 
         VNInfo *AddendValNo =
-          LIS->getInterval(MI->getOperand(1).getReg()).Query(FMAIdx).valueIn();
+            LIS->getInterval(MI.getOperand(1).getReg()).Query(FMAIdx).valueIn();
 
         // This can be null if the register is undef.
         if (!AddendValNo)
@@ -112,7 +119,7 @@ protected:
 
         // The addend and this instruction must be in the same block.
 
-        if (!AddendMI || AddendMI->getParent() != MI->getParent())
+        if (!AddendMI || AddendMI->getParent() != MI.getParent())
           continue;
 
         // The addend must be a full copy within the same register class.
@@ -168,21 +175,32 @@ protected:
         if (OtherUsers || KillsAddendSrc)
           continue;
 
-        // Find one of the product operands that is killed by this instruction.
 
+        // The transformation doesn't work well with things like:
+        //    %vreg5 = A-form-op %vreg5, %vreg11, %vreg5;
+        // unless vreg11 is also a kill, so skip when it is not,
+        // and check operand 3 to see it is also a kill to handle the case:
+        //   %vreg5 = A-form-op %vreg5, %vreg5, %vreg11;
+        // where vreg5 and vreg11 are both kills. This case would be skipped
+        // otherwise.
+        unsigned OldFMAReg = MI.getOperand(0).getReg();
+
+        // Find one of the product operands that is killed by this instruction.
         unsigned KilledProdOp = 0, OtherProdOp = 0;
-        if (LIS->getInterval(MI->getOperand(2).getReg())
-                     .Query(FMAIdx).isKill()) {
+        unsigned Reg2 = MI.getOperand(2).getReg();
+        unsigned Reg3 = MI.getOperand(3).getReg();
+        if (LIS->getInterval(Reg2).Query(FMAIdx).isKill()
+            && Reg2 != OldFMAReg) {
           KilledProdOp = 2;
           OtherProdOp  = 3;
-        } else if (LIS->getInterval(MI->getOperand(3).getReg())
-                     .Query(FMAIdx).isKill()) {
+        } else if (LIS->getInterval(Reg3).Query(FMAIdx).isKill()
+            && Reg3 != OldFMAReg) {
           KilledProdOp = 3;
           OtherProdOp  = 2;
         }
 
-        // If there are no killed product operands, then this transformation is
-        // likely not profitable.
+        // If there are no usable killed product operands, then this
+        // transformation is likely not profitable.
         if (!KilledProdOp)
           continue;
 
@@ -197,55 +215,65 @@ protected:
 
         // Transform: (O2 * O3) + O1 -> (O2 * O1) + O3.
 
-        unsigned KilledProdReg = MI->getOperand(KilledProdOp).getReg();
-        unsigned OtherProdReg  = MI->getOperand(OtherProdOp).getReg();
+        unsigned KilledProdReg = MI.getOperand(KilledProdOp).getReg();
+        unsigned OtherProdReg = MI.getOperand(OtherProdOp).getReg();
 
         unsigned AddSubReg = AddendMI->getOperand(1).getSubReg();
-        unsigned KilledProdSubReg = MI->getOperand(KilledProdOp).getSubReg();
-        unsigned OtherProdSubReg  = MI->getOperand(OtherProdOp).getSubReg();
+        unsigned KilledProdSubReg = MI.getOperand(KilledProdOp).getSubReg();
+        unsigned OtherProdSubReg = MI.getOperand(OtherProdOp).getSubReg();
 
         bool AddRegKill = AddendMI->getOperand(1).isKill();
-        bool KilledProdRegKill = MI->getOperand(KilledProdOp).isKill();
-        bool OtherProdRegKill  = MI->getOperand(OtherProdOp).isKill();
+        bool KilledProdRegKill = MI.getOperand(KilledProdOp).isKill();
+        bool OtherProdRegKill = MI.getOperand(OtherProdOp).isKill();
 
         bool AddRegUndef = AddendMI->getOperand(1).isUndef();
-        bool KilledProdRegUndef = MI->getOperand(KilledProdOp).isUndef();
-        bool OtherProdRegUndef  = MI->getOperand(OtherProdOp).isUndef();
+        bool KilledProdRegUndef = MI.getOperand(KilledProdOp).isUndef();
+        bool OtherProdRegUndef = MI.getOperand(OtherProdOp).isUndef();
 
-        unsigned OldFMAReg = MI->getOperand(0).getReg();
-
-        // The transformation doesn't work well with things like:
-        //    %vreg5 = A-form-op %vreg5, %vreg11, %vreg5;
-        // so leave such things alone.
-        if (OldFMAReg == KilledProdReg)
+        // If there isn't a class that fits, we can't perform the transform.
+        // This is needed for correctness with a mixture of VSX and Altivec
+        // instructions to make sure that a low VSX register is not assigned to
+        // the Altivec instruction.
+        if (!MRI.constrainRegClass(KilledProdReg,
+                                   MRI.getRegClass(OldFMAReg)))
           continue;
 
         assert(OldFMAReg == AddendMI->getOperand(0).getReg() &&
                "Addend copy not tied to old FMA output!");
 
-        DEBUG(dbgs() << "VSX FMA Mutation:\n    " << *MI;);
+        DEBUG(dbgs() << "VSX FMA Mutation:\n    " << MI);
 
-        MI->getOperand(0).setReg(KilledProdReg);
-        MI->getOperand(1).setReg(KilledProdReg);
-        MI->getOperand(3).setReg(AddendSrcReg);
-        MI->getOperand(2).setReg(OtherProdReg);
+        MI.getOperand(0).setReg(KilledProdReg);
+        MI.getOperand(1).setReg(KilledProdReg);
+        MI.getOperand(3).setReg(AddendSrcReg);
 
-        MI->getOperand(0).setSubReg(KilledProdSubReg);
-        MI->getOperand(1).setSubReg(KilledProdSubReg);
-        MI->getOperand(3).setSubReg(AddSubReg);
-        MI->getOperand(2).setSubReg(OtherProdSubReg);
+        MI.getOperand(0).setSubReg(KilledProdSubReg);
+        MI.getOperand(1).setSubReg(KilledProdSubReg);
+        MI.getOperand(3).setSubReg(AddSubReg);
 
-        MI->getOperand(1).setIsKill(KilledProdRegKill);
-        MI->getOperand(3).setIsKill(AddRegKill);
-        MI->getOperand(2).setIsKill(OtherProdRegKill);
+        MI.getOperand(1).setIsKill(KilledProdRegKill);
+        MI.getOperand(3).setIsKill(AddRegKill);
 
-        MI->getOperand(1).setIsUndef(KilledProdRegUndef);
-        MI->getOperand(3).setIsUndef(AddRegUndef);
-        MI->getOperand(2).setIsUndef(OtherProdRegUndef);
+        MI.getOperand(1).setIsUndef(KilledProdRegUndef);
+        MI.getOperand(3).setIsUndef(AddRegUndef);
 
-        MI->setDesc(TII->get(AltOpc));
+        MI.setDesc(TII->get(AltOpc));
 
-        DEBUG(dbgs() << " -> " << *MI);
+        // If the addend is also a multiplicand, replace it with the addend
+        // source in both places.
+        if (OtherProdReg == AddendMI->getOperand(0).getReg()) {
+          MI.getOperand(2).setReg(AddendSrcReg);
+          MI.getOperand(2).setSubReg(AddSubReg);
+          MI.getOperand(2).setIsKill(AddRegKill);
+          MI.getOperand(2).setIsUndef(AddRegUndef);
+        } else {
+          MI.getOperand(2).setReg(OtherProdReg);
+          MI.getOperand(2).setSubReg(OtherProdSubReg);
+          MI.getOperand(2).setIsKill(OtherProdRegKill);
+          MI.getOperand(2).setIsUndef(OtherProdRegUndef);
+        }
+
+        DEBUG(dbgs() << " -> " << MI);
 
         // The killed product operand was killed here, so we can reuse it now
         // for the result of the fma.
@@ -262,8 +290,7 @@ protected:
           if (UseMI == AddendMI)
             continue;
 
-          UseMO.setReg(KilledProdReg);
-          UseMO.setSubReg(KilledProdSubReg);
+          UseMO.substVirtReg(KilledProdReg, KilledProdSubReg, *TRI);
         }
 
         // Extend the live intervals of the killed product operand to hold the
@@ -305,7 +332,7 @@ protected:
         // Remove the (now unused) copy.
 
         DEBUG(dbgs() << "  removing: " << *AddendMI << '\n');
-        LIS->RemoveMachineInstrFromMaps(AddendMI);
+        LIS->RemoveMachineInstrFromMaps(*AddendMI);
         AddendMI->eraseFromParent();
 
         Changed = true;
@@ -316,6 +343,9 @@ protected:
 
 public:
     bool runOnMachineFunction(MachineFunction &MF) override {
+      if (skipFunction(*MF.getFunction()))
+        return false;
+
       // If we don't have VSX then go ahead and return without doing
       // anything.
       const PPCSubtarget &STI = MF.getSubtarget<PPCSubtarget>();
@@ -345,6 +375,8 @@ public:
       AU.addPreserved<LiveIntervals>();
       AU.addRequired<SlotIndexes>();
       AU.addPreserved<SlotIndexes>();
+      AU.addRequired<MachineDominatorTree>();
+      AU.addPreserved<MachineDominatorTree>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };
@@ -354,6 +386,7 @@ INITIALIZE_PASS_BEGIN(PPCVSXFMAMutate, DEBUG_TYPE,
                       "PowerPC VSX FMA Mutation", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_END(PPCVSXFMAMutate, DEBUG_TYPE,
                     "PowerPC VSX FMA Mutation", false, false)
 

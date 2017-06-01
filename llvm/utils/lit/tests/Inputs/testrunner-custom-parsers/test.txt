@@ -1,0 +1,13 @@
+
+// MY_TAG.
+// foo bar baz
+// MY_RUN: baz
+// MY_LIST: one, two
+// MY_LIST: three, four
+// MY_RUN: foo \
+// MY_RUN: bar
+//
+// MY_CUSTOM: a b c
+//
+// END.
+// MY_LIST: five

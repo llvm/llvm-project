@@ -50,7 +50,9 @@ void ReadProcMaps(ProcSelfMapsBuff *proc_maps) {
 
 bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
                                char filename[], uptr filename_size,
-                               uptr *protection) {
+                               uptr *protection, ModuleArch *arch, u8 *uuid) {
+  CHECK(!arch && "not implemented");
+  CHECK(!uuid && "not implemented");
   char *last = proc_self_maps_.data + proc_self_maps_.len;
   if (current_ >= last) return false;
   uptr dummy;

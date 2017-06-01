@@ -204,4 +204,20 @@ int main()
 	assert(s == "ABCD");
 	}
 
+  { // test with a move iterator that returns char&&
+    typedef forward_iterator<const char*> It;
+    typedef std::move_iterator<It> MoveIt;
+    const char p[] = "ABCD";
+    std::string s;
+    s.append(MoveIt(It(std::begin(p))), MoveIt(It(std::end(p) - 1)));
+    assert(s == "ABCD");
+  }
+  { // test with a move iterator that returns char&&
+    typedef const char* It;
+    typedef std::move_iterator<It> MoveIt;
+    const char p[] = "ABCD";
+    std::string s;
+    s.append(MoveIt(It(std::begin(p))), MoveIt(It(std::end(p) - 1)));
+    assert(s == "ABCD");
+  }
 }

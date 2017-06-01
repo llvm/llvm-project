@@ -97,7 +97,9 @@ wide variety of meanings:
    BangOperator: one of
                :!eq     !if      !head    !tail      !con
                :!add    !shl     !sra     !srl       !and
-               :!cast   !empty   !subst   !foreach   !listconcat   !strconcat
+               :!or     !empty   !subst   !foreach   !strconcat
+               :!cast   !listconcat
+
 
 Syntax
 ======
@@ -154,7 +156,7 @@ programmer.
 .. productionlist::
    Declaration: `Type` `TokIdentifier` ["=" `Value`]
 
-It assigns the value to the identifer.
+It assigns the value to the identifier.
 
 Types
 -----

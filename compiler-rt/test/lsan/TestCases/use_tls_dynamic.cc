@@ -1,5 +1,5 @@
 // Test that dynamically allocated TLS space is included in the root set.
-// RUN: LSAN_BASE="report_objects=1:use_stacks=0:use_registers=0"
+// RUN: LSAN_BASE="report_objects=1:use_stacks=0:use_registers=0:use_ld_allocations=0"
 // RUN: %clangxx %s -DBUILD_DSO -fPIC -shared -o %t-so.so
 // RUN: %clangxx_lsan %s -o %t
 // RUN: LSAN_OPTIONS=$LSAN_BASE:"use_tls=0" not %run %t 2>&1 | FileCheck %s
@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
+#include "sanitizer_common/print_address.h"
 
 int main(int argc, char *argv[]) {
   std::string path = std::string(argv[0]) + "-so.so";
@@ -26,10 +27,10 @@ int main(int argc, char *argv[]) {
   // If we don't  know about dynamic TLS, we will return a false leak above.
   void **p_in_tls = StoreToTLS(p);
   assert(*p_in_tls == p);
-  fprintf(stderr, "Test alloc: %p.\n", p);
+  print_address("Test alloc: ", 1, p);
   return 0;
 }
-// CHECK: Test alloc: [[ADDR:.*]].
+// CHECK: Test alloc: [[ADDR:0x[0-9,a-f]+]]
 // CHECK: LeakSanitizer: detected memory leaks
 // CHECK: [[ADDR]] (1337 bytes)
 // CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer:

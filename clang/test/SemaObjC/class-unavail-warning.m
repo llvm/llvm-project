@@ -1,4 +1,4 @@
-// RUN: %clang_cc1  -fsyntax-only  -triple x86_64-apple-darwin10 -verify %s
+// RUN: %clang_cc1  -fsyntax-only -fblocks -triple x86_64-apple-darwin10 -verify %s
 // rdar://9092208
 
 __attribute__((unavailable("not available")))
@@ -97,4 +97,27 @@ UNAVAILABLE
 @protocol UnavailProt<SomeProto> // no error
 @end
 @interface UnavailSub(cat)<SomeProto> // no error
+@end
+
+int unavail_global UNAVAILABLE;
+
+UNAVAILABLE __attribute__((objc_root_class))
+@interface TestAttrContext
+-meth;
+@end
+
+@implementation TestAttrContext
+-meth {
+  unavail_global = 2; // no warn
+  (void) ^{
+    unavail_global = 4; // no warn
+  };
+}
+@end
+
+typedef int unavailable_int UNAVAILABLE;
+
+UNAVAILABLE
+@interface A
+extern unavailable_int global_unavailable; // FIXME: this should be an error!
 @end

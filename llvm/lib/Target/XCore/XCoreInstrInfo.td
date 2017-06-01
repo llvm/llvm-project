@@ -146,16 +146,8 @@ def immU6 : PatLeaf<(imm), [{
   return (uint32_t)N->getZExtValue() < (1 << 6);
 }]>;
 
-def immU10 : PatLeaf<(imm), [{
-  return (uint32_t)N->getZExtValue() < (1 << 10);
-}]>;
-
 def immU16 : PatLeaf<(imm), [{
   return (uint32_t)N->getZExtValue() < (1 << 16);
-}]>;
-
-def immU20 : PatLeaf<(imm), [{
-  return (uint32_t)N->getZExtValue() < (1 << 20);
 }]>;
 
 def immMskBitp : PatLeaf<(imm), [{ return immMskBitp(N); }]>;

@@ -109,7 +109,7 @@ int foomain(int argc, char **argv) {
   {
     int v = 0;
     int i;                         // expected-note {{variable with automatic storage duration is predetermined as private; perhaps you forget to enclose 'omp single' directive into a parallel or another task region?}}
-#pragma omp single firstprivate(i) // expected-error {{private variable cannot be firstprivate}}
+#pragma omp single firstprivate(i) // expected-error {{firstprivate variable must be shared}}
     foo();
     v += i;
   }
@@ -232,7 +232,7 @@ int main(int argc, char **argv) {
   {
     int v = 0;
     int i;                         // expected-note {{variable with automatic storage duration is predetermined as private; perhaps you forget to enclose 'omp single' directive into a parallel or another task region?}}
-#pragma omp single firstprivate(i) // expected-error {{private variable cannot be firstprivate}}
+#pragma omp single firstprivate(i) // expected-error {{firstprivate variable must be shared}}
     foo();
     v += i;
   }

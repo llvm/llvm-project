@@ -20,7 +20,7 @@ base_url="https://llvm.org/svn/llvm-project"
 release=""
 rc=""
 
-function usage() {
+usage() {
     echo "Export the SVN sources and build tarballs from them"
     echo "usage: `basename $0`"
     echo " "
@@ -29,7 +29,7 @@ function usage() {
     echo "  -final         The final tag"
 }
 
-function export_sources() {
+export_sources() {
     release_no_dot=`echo $release | sed -e 's,\.,,g'`
     tag_dir="tags/RELEASE_$release_no_dot/$rc"
 

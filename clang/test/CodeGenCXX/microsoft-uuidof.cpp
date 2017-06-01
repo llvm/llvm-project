@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -DDEFINE_GUID -triple=i386-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-DEFINE-GUID
+// RUN: %clang_cc1 -emit-llvm %s -o - -DDEFINE_GUID -DBRACKET_ATTRIB -triple=i386-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-DEFINE-GUID
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-linux -fms-extensions | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-64
 // RUN: %clang_cc1 -emit-llvm %s -o - -DDEFINE_GUID -DWRONG_GUID -triple=i386-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-DEFINE-WRONG-GUID
 
 #ifdef DEFINE_GUID
@@ -16,10 +18,17 @@ struct _GUID {
 #endif
 typedef struct _GUID GUID;
 
+#ifdef BRACKET_ATTRIB
+[uuid(12345678-1234-1234-1234-1234567890aB)] struct S1 { } s1;
+[uuid(87654321-4321-4321-4321-ba0987654321)] struct S2 { };
+[uuid({12345678-1234-1234-1234-1234567890ac})] struct Curly;
+[uuid({12345678-1234-1234-1234-1234567890ac})] struct Curly;
+#else
 struct __declspec(uuid("12345678-1234-1234-1234-1234567890aB")) S1 { } s1;
 struct __declspec(uuid("87654321-4321-4321-4321-ba0987654321")) S2 { };
 struct __declspec(uuid("{12345678-1234-1234-1234-1234567890ac}")) Curly;
 struct __declspec(uuid("{12345678-1234-1234-1234-1234567890ac}")) Curly;
+#endif
 
 #ifdef DEFINE_GUID
 // Make sure we can properly generate code when the UUID has curly braces on it.
@@ -36,6 +45,7 @@ GUID g = __uuidof(S1);
 // First global use of __uuidof(S1) forces the creation of the global.
 // CHECK: @_GUID_12345678_1234_1234_1234_1234567890ab = linkonce_odr constant { i32, i16, i16, [8 x i8] } { i32 305419896, i16 4660, i16 4660, [8 x i8] c"\124\124Vx\90\AB" }, comdat
 // CHECK: @gr = constant %struct._GUID* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to %struct._GUID*), align 4
+// CHECK-64: @gr = constant %struct._GUID* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to %struct._GUID*), align 8
 const GUID& gr = __uuidof(S1);
 
 // CHECK: @gp = global %struct._GUID* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to %struct._GUID*), align 4

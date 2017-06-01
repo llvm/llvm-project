@@ -1,8 +1,5 @@
 // RUN: %clangxx_msan -std=c++11 -O0 %s -o %t && %run %t
 //
-// AArch64 lacks var args instrumentation.
-// XFAIL: aarch64
-
 // Test that va_arg shadow from a signal handler does not leak outside.
 
 #include <signal.h>

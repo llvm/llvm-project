@@ -25,10 +25,8 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/IR/Module.h"
 
 namespace llvm {
-class Module;
 class Constant;
 class Function;
 class GlobalValue;
@@ -40,10 +38,8 @@ class LLVMContext;
 }
 
 namespace clang {
-
 namespace CodeGen {
 
-class CodeGenModule;
 class CGBlockInfo;
 
 // Flags stored in __block variables.
@@ -163,6 +159,11 @@ public:
     EHScopeStack::stable_iterator Cleanup;
     CharUnits::QuantityType Offset;
 
+    /// Type of the capture field. Normally, this is identical to the type of
+    /// the capture's VarDecl, but can be different if there is an enclosing
+    /// lambda.
+    QualType FieldType;
+
   public:
     bool isIndex() const { return (Data & 1) != 0; }
     bool isConstant() const { return !isIndex(); }
@@ -189,10 +190,16 @@ public:
       return reinterpret_cast<llvm::Value*>(Data);
     }
 
-    static Capture makeIndex(unsigned index, CharUnits offset) {
+    QualType fieldType() const {
+      return FieldType;
+    }
+
+    static Capture makeIndex(unsigned index, CharUnits offset,
+                             QualType FieldType) {
       Capture v;
       v.Data = (index << 1) | 1;
       v.Offset = offset.getQuantity();
+      v.FieldType = FieldType;
       return v;
     }
 

@@ -20,6 +20,9 @@
 using namespace llvm;
 
 namespace llvm {
+namespace object {
+class ELFObjectFileBase;
+}
 
 class RuntimeDyldELF : public RuntimeDyldImpl {
 
@@ -37,11 +40,11 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
   void resolveAArch64Relocation(const SectionEntry &Section, uint64_t Offset,
                                 uint64_t Value, uint32_t Type, int64_t Addend);
 
+  bool resolveAArch64ShortBranch(unsigned SectionID, relocation_iterator RelI,
+                                 const RelocationValueRef &Value);
+
   void resolveARMRelocation(const SectionEntry &Section, uint64_t Offset,
                             uint32_t Value, uint32_t Type, int32_t Addend);
-
-  void resolveMIPSRelocation(const SectionEntry &Section, uint64_t Offset,
-                             uint32_t Value, uint32_t Type, int32_t Addend);
 
   void resolvePPC32Relocation(const SectionEntry &Section, uint64_t Offset,
                               uint64_t Value, uint32_t Type, int64_t Addend);
@@ -51,18 +54,6 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
 
   void resolveSystemZRelocation(const SectionEntry &Section, uint64_t Offset,
                                 uint64_t Value, uint32_t Type, int64_t Addend);
-
-  void resolveMIPS64Relocation(const SectionEntry &Section, uint64_t Offset,
-                               uint64_t Value, uint32_t Type, int64_t Addend,
-                               uint64_t SymOffset, SID SectionID);
-
-  int64_t evaluateMIPS64Relocation(const SectionEntry &Section,
-                                   uint64_t Offset, uint64_t Value,
-                                   uint32_t Type,  int64_t Addend,
-                                   uint64_t SymOffset, SID SectionID);
-
-  void applyMIPS64Relocation(uint8_t *TargetPtr, int64_t CalculatedValue,
-                             uint32_t Type);
 
   unsigned getMaxStubSize() override {
     if (Arch == Triple::aarch64 || Arch == Triple::aarch64_be)
@@ -90,15 +81,16 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
 
   void setMipsABI(const ObjectFile &Obj) override;
 
-  void findPPC64TOCSection(const ELFObjectFileBase &Obj,
-                           ObjSectionToIDMap &LocalSections,
-                           RelocationValueRef &Rel);
-  void findOPDEntrySection(const ELFObjectFileBase &Obj,
-                           ObjSectionToIDMap &LocalSections,
-                           RelocationValueRef &Rel);
-
+  Error findPPC64TOCSection(const ELFObjectFileBase &Obj,
+                            ObjSectionToIDMap &LocalSections,
+                            RelocationValueRef &Rel);
+  Error findOPDEntrySection(const ELFObjectFileBase &Obj,
+                            ObjSectionToIDMap &LocalSections,
+                            RelocationValueRef &Rel);
+protected:
   size_t getGOTEntrySize();
 
+private:
   SectionEntry &getSection(unsigned SectionID) { return Sections[SectionID]; }
 
   // Allocate no GOT entries for use in the given section.
@@ -135,10 +127,12 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
   // that consume more than one slot)
   unsigned CurrentGOTIndex;
 
+protected:
   // A map from section to a GOT section that has entries for section's GOT
   // relocations. (Mips64 specific)
   DenseMap<SID, SID> SectionToGOTMap;
 
+private:
   // A map to avoid duplicate got entries (Mips64 specific)
   StringMap<uint64_t> GOTSymbolOffsets;
 
@@ -152,16 +146,22 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
   SmallVector<SID, 2> UnregisteredEHFrameSections;
   SmallVector<SID, 2> RegisteredEHFrameSections;
 
+  bool relocationNeedsStub(const RelocationRef &R) const override;
+
 public:
   RuntimeDyldELF(RuntimeDyld::MemoryManager &MemMgr,
-                 RuntimeDyld::SymbolResolver &Resolver);
+                 JITSymbolResolver &Resolver);
   ~RuntimeDyldELF() override;
+
+  static std::unique_ptr<RuntimeDyldELF>
+  create(Triple::ArchType Arch, RuntimeDyld::MemoryManager &MemMgr,
+         JITSymbolResolver &Resolver);
 
   std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
   loadObject(const object::ObjectFile &O) override;
 
   void resolveRelocation(const RelocationEntry &RE, uint64_t Value) override;
-  relocation_iterator
+  Expected<relocation_iterator>
   processRelocationRef(unsigned SectionID, relocation_iterator RelI,
                        const ObjectFile &Obj,
                        ObjSectionToIDMap &ObjSectionToID,
@@ -169,8 +169,8 @@ public:
   bool isCompatibleFile(const object::ObjectFile &Obj) const override;
   void registerEHFrames() override;
   void deregisterEHFrames() override;
-  void finalizeLoad(const ObjectFile &Obj,
-                    ObjSectionToIDMap &SectionMap) override;
+  Error finalizeLoad(const ObjectFile &Obj,
+                     ObjSectionToIDMap &SectionMap) override;
 };
 
 } // end namespace llvm

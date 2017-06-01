@@ -28,7 +28,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 using namespace clang;
@@ -46,8 +45,7 @@ void Decl::updateOutOfDate(IdentifierInfo &II) const {
 }
 
 #define DECL(DERIVED, BASE)                                                    \
-  static_assert(Decl::DeclObjAlignment >=                                      \
-                    llvm::AlignOf<DERIVED##Decl>::Alignment,                   \
+  static_assert(alignof(Decl) >= alignof(DERIVED##Decl),                       \
                 "Alignment sufficient after objects prepended to " #DERIVED);
 #define ABSTRACT_DECL(DECL)
 #include "clang/AST/DeclNodes.inc"
@@ -56,7 +54,7 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Context,
                          unsigned ID, std::size_t Extra) {
   // Allocate an extra 8 bytes worth of storage, which ensures that the
   // resulting pointer will still be 8-byte aligned.
-  static_assert(sizeof(unsigned) * 2 >= DeclObjAlignment,
+  static_assert(sizeof(unsigned) * 2 >= alignof(Decl),
                 "Decl won't be misaligned");
   void *Start = Context.Allocate(Size + Extra + 8);
   void *Result = (char*)Start + 8;
@@ -81,7 +79,7 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Ctx,
     // Ensure required alignment of the resulting object by adding extra
     // padding at the start if required.
     size_t ExtraAlign =
-        llvm::OffsetToAlignment(sizeof(Module *), DeclObjAlignment);
+        llvm::OffsetToAlignment(sizeof(Module *), alignof(Decl));
     char *Buffer = reinterpret_cast<char *>(
         ::operator new(ExtraAlign + sizeof(Module *) + Size + Extra, Ctx));
     Buffer += ExtraAlign;
@@ -111,11 +109,23 @@ const char *Decl::getDeclKindName() const {
 void Decl::setInvalidDecl(bool Invalid) {
   InvalidDecl = Invalid;
   assert(!isa<TagDecl>(this) || !cast<TagDecl>(this)->isCompleteDefinition());
-  if (Invalid && !isa<ParmVarDecl>(this)) {
+  if (!Invalid) {
+    return;
+  }
+
+  if (!isa<ParmVarDecl>(this)) {
     // Defensive maneuver for ill-formed code: we're likely not to make it to
     // a point where we set the access specifier, so default it to "public"
     // to avoid triggering asserts elsewhere in the front end. 
     setAccess(AS_public);
+  }
+
+  // Marking a DecompositionDecl as invalid implies all the child BindingDecl's
+  // are invalid too.
+  if (DecompositionDecl *DD = dyn_cast<DecompositionDecl>(this)) {
+    for (BindingDecl *Binding : DD->bindings()) {
+      Binding->setInvalidDecl();
+    }
   }
 }
 
@@ -194,6 +204,17 @@ FunctionDecl *Decl::getAsFunction() {
 
 bool Decl::isTemplateDecl() const {
   return isa<TemplateDecl>(this);
+}
+
+TemplateDecl *Decl::getDescribedTemplate() const {
+  if (auto *FD = dyn_cast<FunctionDecl>(this))
+    return FD->getDescribedFunctionTemplate();
+  else if (auto *RD = dyn_cast<CXXRecordDecl>(this))
+    return RD->getDescribedClassTemplate();
+  else if (auto *VD = dyn_cast<VarDecl>(this))
+    return VD->getDescribedVarTemplate();
+
+  return nullptr;
 }
 
 const DeclContext *Decl::getParentFunctionOrMethod() const {
@@ -329,25 +350,29 @@ unsigned Decl::getMaxAlignment() const {
   return Align;
 }
 
-bool Decl::isUsed(bool CheckUsedAttr) const { 
-  if (Used)
-    return true;
-  
-  // Check for used attribute.
-  if (CheckUsedAttr && hasAttr<UsedAttr>())
+bool Decl::isUsed(bool CheckUsedAttr) const {
+  const Decl *CanonD = getCanonicalDecl();
+  if (CanonD->Used)
     return true;
 
-  return false; 
+  // Check for used attribute.
+  // Ask the most recent decl, since attributes accumulate in the redecl chain.
+  if (CheckUsedAttr && getMostRecentDecl()->hasAttr<UsedAttr>())
+    return true;
+
+  // The information may have not been deserialized yet. Force deserialization
+  // to complete the needed information.
+  return getMostRecentDecl()->getCanonicalDecl()->Used;
 }
 
 void Decl::markUsed(ASTContext &C) {
-  if (Used)
+  if (isUsed(false))
     return;
 
   if (C.getASTMutationListener())
     C.getASTMutationListener()->DeclarationMarkedUsed(this);
 
-  Used = true;
+  setIsUsed();
 }
 
 bool Decl::isReferenced() const { 
@@ -362,6 +387,68 @@ bool Decl::isReferenced() const {
   return false; 
 }
 
+bool Decl::isExported() const {
+  if (isModulePrivate())
+    return false;
+  // Namespaces are always exported.
+  if (isa<TranslationUnitDecl>(this) || isa<NamespaceDecl>(this))
+    return true;
+  // Otherwise, this is a strictly lexical check.
+  for (auto *DC = getLexicalDeclContext(); DC; DC = DC->getLexicalParent()) {
+    if (cast<Decl>(DC)->isModulePrivate())
+      return false;
+    if (isa<ExportDecl>(DC))
+      return true;
+  }
+  return false;
+}
+
+ExternalSourceSymbolAttr *Decl::getExternalSourceSymbolAttr() const {
+  const Decl *Definition = nullptr;
+  if (auto ID = dyn_cast<ObjCInterfaceDecl>(this)) {
+    Definition = ID->getDefinition();
+  } else if (auto PD = dyn_cast<ObjCProtocolDecl>(this)) {
+    Definition = PD->getDefinition();
+  } else if (auto TD = dyn_cast<TagDecl>(this)) {
+    Definition = TD->getDefinition();
+  }
+  if (!Definition)
+    Definition = this;
+
+  if (auto *attr = Definition->getAttr<ExternalSourceSymbolAttr>())
+    return attr;
+  if (auto *dcd = dyn_cast<Decl>(getDeclContext())) {
+    return dcd->getAttr<ExternalSourceSymbolAttr>();
+  }
+
+  return nullptr;
+}
+
+bool Decl::hasDefiningAttr() const {
+  return hasAttr<AliasAttr>() || hasAttr<IFuncAttr>();
+}
+
+const Attr *Decl::getDefiningAttr() const {
+  if (AliasAttr *AA = getAttr<AliasAttr>())
+    return AA;
+  if (IFuncAttr *IFA = getAttr<IFuncAttr>())
+    return IFA;
+  return nullptr;
+}
+
+StringRef getRealizedPlatform(const AvailabilityAttr *A,
+                              const ASTContext &Context) {
+  // Check if this is an App Extension "platform", and if so chop off
+  // the suffix for matching with the actual platform.
+  StringRef RealizedPlatform = A->getPlatform()->getName();
+  if (!Context.getLangOpts().AppExt)
+    return RealizedPlatform;
+  size_t suffix = RealizedPlatform.rfind("_app_extension");
+  if (suffix != StringRef::npos)
+    return RealizedPlatform.slice(0, suffix);
+  return RealizedPlatform;
+}
+
 /// \brief Determine the availability of the given declaration based on
 /// the target platform.
 ///
@@ -373,27 +460,19 @@ bool Decl::isReferenced() const {
 /// diagnostics.
 static AvailabilityResult CheckAvailability(ASTContext &Context,
                                             const AvailabilityAttr *A,
-                                            std::string *Message) {
-  VersionTuple TargetMinVersion =
-    Context.getTargetInfo().getPlatformMinVersion();
+                                            std::string *Message,
+                                            VersionTuple EnclosingVersion) {
+  if (EnclosingVersion.empty())
+    EnclosingVersion = Context.getTargetInfo().getPlatformMinVersion();
 
-  if (TargetMinVersion.empty())
+  if (EnclosingVersion.empty())
     return AR_Available;
 
-  // Check if this is an App Extension "platform", and if so chop off
-  // the suffix for matching with the actual platform.
   StringRef ActualPlatform = A->getPlatform()->getName();
-  StringRef RealizedPlatform = ActualPlatform;
-  if (Context.getLangOpts().AppExt) {
-    size_t suffix = RealizedPlatform.rfind("_app_extension");
-    if (suffix != StringRef::npos)
-      RealizedPlatform = RealizedPlatform.slice(0, suffix);
-  }
-
   StringRef TargetPlatform = Context.getTargetInfo().getPlatformName();
 
   // Match the platform name.
-  if (RealizedPlatform != TargetPlatform)
+  if (getRealizedPlatform(A, Context) != TargetPlatform)
     return AR_Available;
 
   StringRef PrettyPlatformName
@@ -422,7 +501,7 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
 
   // Make sure that this declaration has already been introduced.
   if (!A->getIntroduced().empty() && 
-      TargetMinVersion < A->getIntroduced()) {
+      EnclosingVersion < A->getIntroduced()) {
     if (Message) {
       Message->clear();
       llvm::raw_string_ostream Out(*Message);
@@ -432,11 +511,11 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
           << VTI << HintMessage;
     }
 
-    return AR_NotYetIntroduced;
+    return A->getStrict() ? AR_Unavailable : AR_NotYetIntroduced;
   }
 
   // Make sure that this declaration hasn't been obsoleted.
-  if (!A->getObsoleted().empty() && TargetMinVersion >= A->getObsoleted()) {
+  if (!A->getObsoleted().empty() && EnclosingVersion >= A->getObsoleted()) {
     if (Message) {
       Message->clear();
       llvm::raw_string_ostream Out(*Message);
@@ -450,7 +529,7 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   }
 
   // Make sure that this declaration hasn't been deprecated.
-  if (!A->getDeprecated().empty() && TargetMinVersion >= A->getDeprecated()) {
+  if (!A->getDeprecated().empty() && EnclosingVersion >= A->getDeprecated()) {
     if (Message) {
       Message->clear();
       llvm::raw_string_ostream Out(*Message);
@@ -466,7 +545,11 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   return AR_Available;
 }
 
-AvailabilityResult Decl::getAvailability(std::string *Message) const {
+AvailabilityResult Decl::getAvailability(std::string *Message,
+                                         VersionTuple EnclosingVersion) const {
+  if (auto *FTD = dyn_cast<FunctionTemplateDecl>(this))
+    return FTD->getTemplatedDecl()->getAvailability(Message, EnclosingVersion);
+
   AvailabilityResult Result = AR_Available;
   std::string ResultMessage;
 
@@ -490,7 +573,7 @@ AvailabilityResult Decl::getAvailability(std::string *Message) const {
 
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
       AvailabilityResult AR = CheckAvailability(getASTContext(), Availability,
-                                                Message);
+                                                Message, EnclosingVersion);
 
       if (AR == AR_Unavailable)
         return AR_Unavailable;
@@ -507,6 +590,20 @@ AvailabilityResult Decl::getAvailability(std::string *Message) const {
   if (Message)
     Message->swap(ResultMessage);
   return Result;
+}
+
+VersionTuple Decl::getVersionIntroduced() const {
+  const ASTContext &Context = getASTContext();
+  StringRef TargetPlatform = Context.getTargetInfo().getPlatformName();
+  for (const auto *A : attrs()) {
+    if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
+      if (getRealizedPlatform(Availability, Context) != TargetPlatform)
+        continue;
+      if (!Availability->getIntroduced().empty())
+        return Availability->getIntroduced();
+    }
+  }
+  return VersionTuple();
 }
 
 bool Decl::canBeWeakImported(bool &IsDefinition) const {
@@ -549,8 +646,8 @@ bool Decl::isWeakImported() const {
       return true;
 
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
-      if (CheckAvailability(getASTContext(), Availability,
-                            nullptr) == AR_NotYetIntroduced)
+      if (CheckAvailability(getASTContext(), Availability, nullptr,
+                            VersionTuple()) == AR_NotYetIntroduced)
         return true;
     }
   }
@@ -563,13 +660,14 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case Function:
     case CXXMethod:
     case CXXConstructor:
+    case ConstructorUsingShadow:
     case CXXDestructor:
     case CXXConversion:
     case EnumConstant:
     case Var:
+    case Binding:
     case ImplicitParam:
     case ParmVar:
-    case NonTypeTemplateParm:
     case ObjCMethod:
     case ObjCProperty:
     case MSProperty:
@@ -579,6 +677,12 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case IndirectField:
       return IDNS_Ordinary | IDNS_Member;
 
+    case NonTypeTemplateParm:
+      // Non-type template parameters are not found by lookups that ignore
+      // non-types, but they are found by redeclaration lookups for tag types,
+      // so we include them in the tag namespace.
+      return IDNS_Ordinary | IDNS_Tag;
+
     case ObjCCompatibleAlias:
     case ObjCInterface:
       return IDNS_Ordinary | IDNS_Type;
@@ -586,10 +690,12 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case Typedef:
     case TypeAlias:
     case TypeAliasTemplate:
-    case UnresolvedUsingTypename:
     case TemplateTypeParm:
     case ObjCTypeParam:
       return IDNS_Ordinary | IDNS_Type;
+
+    case UnresolvedUsingTypename:
+      return IDNS_Ordinary | IDNS_Type | IDNS_Using;
 
     case UsingShadow:
       return 0; // we'll actually overwrite this later
@@ -598,6 +704,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
       return IDNS_Ordinary | IDNS_Using;
 
     case Using:
+    case UsingPack:
       return IDNS_Using;
 
     case ObjCProtocol:
@@ -625,18 +732,25 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case TemplateTemplateParm:
       return IDNS_Ordinary | IDNS_Tag | IDNS_Type;
 
+    case OMPDeclareReduction:
+      return IDNS_OMPReduction;
+
     // Never have names.
     case Friend:
     case FriendTemplate:
     case AccessSpec:
     case LinkageSpec:
+    case Export:
     case FileScopeAsm:
     case StaticAssert:
     case ObjCPropertyImpl:
+    case PragmaComment:
+    case PragmaDetectMismatch:
     case Block:
     case Captured:
     case TranslationUnit:
     case ExternCContext:
+    case Decomposition:
 
     case UsingDirective:
     case BuiltinTemplate:
@@ -650,6 +764,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case ObjCCategoryImpl:
     case Import:
     case OMPThreadPrivate:
+    case OMPCapturedExpr:
     case Empty:
       // Never looked up by name.
       return 0;
@@ -911,7 +1026,7 @@ bool DeclContext::isDependentContext() const {
 bool DeclContext::isTransparentContext() const {
   if (DeclKind == Decl::Enum)
     return !cast<EnumDecl>(this)->isScoped();
-  else if (DeclKind == Decl::LinkageSpec)
+  else if (DeclKind == Decl::LinkageSpec || DeclKind == Decl::Export)
     return true;
 
   return false;
@@ -929,6 +1044,18 @@ static bool isLinkageSpecContext(const DeclContext *DC,
 
 bool DeclContext::isExternCContext() const {
   return isLinkageSpecContext(this, clang::LinkageSpecDecl::lang_c);
+}
+
+const LinkageSpecDecl *DeclContext::getExternCContext() const {
+  const DeclContext *DC = this;
+  while (DC->getDeclKind() != Decl::TranslationUnit) {
+    if (DC->getDeclKind() == Decl::LinkageSpec &&
+        cast<LinkageSpecDecl>(DC)->getLanguage() ==
+            clang::LinkageSpecDecl::lang_c)
+      return cast<LinkageSpecDecl>(DC);
+    DC = DC->getLexicalParent();
+  }
+  return nullptr;
 }
 
 bool DeclContext::isExternCXXContext() const {
@@ -950,8 +1077,10 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::TranslationUnit:
   case Decl::ExternCContext:
   case Decl::LinkageSpec:
+  case Decl::Export:
   case Decl::Block:
   case Decl::Captured:
+  case Decl::OMPDeclareReduction:
     // There is only one DeclContext for these entities.
     return this;
 
@@ -1210,13 +1339,16 @@ void DeclContext::removeDecl(Decl *D) {
     // Remove only decls that have a name
     if (!ND->getDeclName()) return;
 
-    StoredDeclsMap *Map = getPrimaryContext()->LookupPtr;
-    if (!Map) return;
-
-    StoredDeclsMap::iterator Pos = Map->find(ND->getDeclName());
-    assert(Pos != Map->end() && "no lookup entry for decl");
-    if (Pos->second.getAsVector() || Pos->second.getAsDecl() == ND)
-      Pos->second.remove(ND);
+    auto *DC = this;
+    do {
+      StoredDeclsMap *Map = DC->getPrimaryContext()->LookupPtr;
+      if (Map) {
+        StoredDeclsMap::iterator Pos = Map->find(ND->getDeclName());
+        assert(Pos != Map->end() && "no lookup entry for decl");
+        if (Pos->second.getAsVector() || Pos->second.getAsDecl() == ND)
+          Pos->second.remove(ND);
+      }
+    } while (DC->isTransparentContext() && (DC = DC->getParent()));
   }
 }
 
@@ -1358,8 +1490,8 @@ NamedDecl *const DeclContextLookupResult::SingleElementDummyList = nullptr;
 
 DeclContext::lookup_result
 DeclContext::lookup(DeclarationName Name) const {
-  assert(DeclKind != Decl::LinkageSpec &&
-         "Should not perform lookups into linkage specs!");
+  assert(DeclKind != Decl::LinkageSpec && DeclKind != Decl::Export &&
+         "should not perform lookups into transparent contexts");
 
   const DeclContext *PrimaryContext = getPrimaryContext();
   if (PrimaryContext != this)
@@ -1420,8 +1552,8 @@ DeclContext::lookup(DeclarationName Name) const {
 
 DeclContext::lookup_result
 DeclContext::noload_lookup(DeclarationName Name) {
-  assert(DeclKind != Decl::LinkageSpec &&
-         "Should not perform lookups into linkage specs!");
+  assert(DeclKind != Decl::LinkageSpec && DeclKind != Decl::Export &&
+         "should not perform lookups into transparent contexts");
 
   DeclContext *PrimaryContext = getPrimaryContext();
   if (PrimaryContext != this)
@@ -1541,9 +1673,12 @@ void DeclContext::makeDeclVisibleInContextWithFlags(NamedDecl *D, bool Internal,
                                                     bool Recoverable) {
   assert(this == getPrimaryContext() && "expected a primary DC");
 
-  // Skip declarations within functions.
-  if (isFunctionOrMethod())
+  if (!isLookupContext()) {
+    if (isTransparentContext())
+      getParent()->getPrimaryContext()
+        ->makeDeclVisibleInContextWithFlags(D, Internal, Recoverable);
     return;
+  }
 
   // Skip declarations which should be invisible to name lookup.
   if (shouldBeHidden(D))

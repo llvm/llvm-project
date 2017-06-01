@@ -33,7 +33,6 @@ namespace llvm {
 class AllocaInst;
 class BasicBlock;
 class BranchProbabilityInfo;
-class CallInst;
 class Function;
 class GlobalVariable;
 class Instruction;
@@ -62,12 +61,46 @@ public:
   /// registers.
   bool CanLowerReturn;
 
+  /// True if part of the CSRs will be handled via explicit copies.
+  bool SplitCSR;
+
   /// DemoteRegister - if CanLowerReturn is false, DemoteRegister is a vreg
   /// allocated to hold a pointer to the hidden sret parameter.
   unsigned DemoteRegister;
 
   /// MBBMap - A mapping from LLVM basic blocks to their machine code entry.
   DenseMap<const BasicBlock*, MachineBasicBlock *> MBBMap;
+
+  /// A map from swifterror value in a basic block to the virtual register it is
+  /// currently represented by.
+  llvm::DenseMap<std::pair<const MachineBasicBlock *, const Value *>, unsigned>
+      SwiftErrorVRegDefMap;
+
+  /// A list of upward exposed vreg uses that need to be satisfied by either a
+  /// copy def or a phi node at the beginning of the basic block representing
+  /// the predecessor(s) swifterror value.
+  llvm::DenseMap<std::pair<const MachineBasicBlock *, const Value *>, unsigned>
+      SwiftErrorVRegUpwardsUse;
+
+  /// The swifterror argument of the current function.
+  const Value *SwiftErrorArg;
+
+  typedef SmallVector<const Value*, 1> SwiftErrorValues;
+  /// A function can only have a single swifterror argument. And if it does
+  /// have a swifterror argument, it must be the first entry in
+  /// SwiftErrorVals.
+  SwiftErrorValues SwiftErrorVals;
+
+
+  /// Get or create the swifterror value virtual register in
+  /// SwiftErrorVRegDefMap for this basic block.
+  unsigned getOrCreateSwiftErrorVReg(const MachineBasicBlock *,
+                                     const Value *);
+
+  /// Set the swifterror virtual register in the SwiftErrorVRegDefMap for this
+  /// basic block.
+  void setCurrentSwiftErrorVReg(const MachineBasicBlock *MBB, const Value *,
+                                unsigned);
 
   /// ValueMap - Since we emit code for the function a basic block at a time,
   /// we must remember which virtual registers hold the values for
@@ -77,15 +110,36 @@ public:
   /// Track virtual registers created for exception pointers.
   DenseMap<const Value *, unsigned> CatchPadExceptionPointers;
 
-  // Keep track of frame indices allocated for statepoints as they could be used
-  // across basic block boundaries.
-  // Key of the map is statepoint instruction, value is a map from spilled
-  // llvm Value to the optional stack stack slot index.
-  // If optional is unspecified it means that we have visited this value
-  // but didn't spill it.
-  typedef DenseMap<const Value*, Optional<int>> StatepointSpilledValueMapTy;
-  DenseMap<const Instruction*, StatepointSpilledValueMapTy>
-    StatepointRelocatedValues;
+  /// Keep track of frame indices allocated for statepoints as they could be
+  /// used across basic block boundaries.  This struct is more complex than a
+  /// simple map because the stateopint lowering code de-duplicates gc pointers
+  /// based on their SDValue (so %p and (bitcast %p to T) will get the same
+  /// slot), and we track that here.
+
+  struct StatepointSpillMap {
+    typedef DenseMap<const Value *, Optional<int>> SlotMapTy;
+
+    /// Maps uniqued llvm IR values to the slots they were spilled in.  If a
+    /// value is mapped to None it means we visited the value but didn't spill
+    /// it (because it was a constant, for instance).
+    SlotMapTy SlotMap;
+
+    /// Maps llvm IR values to the values they were de-duplicated to.
+    DenseMap<const Value *, const Value *> DuplicateMap;
+
+    SlotMapTy::const_iterator find(const Value *V) const {
+      auto DuplIt = DuplicateMap.find(V);
+      if (DuplIt != DuplicateMap.end())
+        V = DuplIt->second;
+      return SlotMap.find(V);
+    }
+
+    SlotMapTy::const_iterator end() const { return SlotMap.end(); }
+  };
+
+  /// Maps gc.statepoint instructions to their corresponding StatepointSpillMap
+  /// instances.
+  DenseMap<const Instruction *, StatepointSpillMap> StatepointSpillMaps;
 
   /// StaticAllocaMap - Keep track of frame indices for fixed sized allocas in
   /// the entry block.  This allows the allocas to be efficiently referenced
@@ -116,7 +170,7 @@ public:
 
   struct LiveOutInfo {
     unsigned NumSignBits : 31;
-    bool IsValid : 1;
+    unsigned IsValid : 1;
     APInt KnownOne, KnownZero;
     LiveOutInfo() : NumSignBits(0), IsValid(true), KnownOne(1, 0),
                     KnownZero(1, 0) {}
@@ -241,18 +295,6 @@ private:
   /// LiveOutRegInfo - Information about live out vregs.
   IndexedMap<LiveOutInfo, VirtReg2IndexFunctor> LiveOutRegInfo;
 };
-
-/// ComputeUsesVAFloatArgument - Determine if any floating-point values are
-/// being passed to this variadic function, and set the MachineModuleInfo's
-/// usesVAFloatArgument flag if so. This flag is used to emit an undefined
-/// reference to _fltused on Windows, which will link in MSVCRT's
-/// floating-point support.
-void ComputeUsesVAFloatArgument(const CallInst &I, MachineModuleInfo *MMI);
-
-/// AddLandingPadInfo - Extract the exception handling information from the
-/// landingpad instruction and add them to the specified machine module info.
-void AddLandingPadInfo(const LandingPadInst &I, MachineModuleInfo &MMI,
-                       MachineBasicBlock *MBB);
 
 } // end namespace llvm
 

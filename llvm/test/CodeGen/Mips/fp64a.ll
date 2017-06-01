@@ -11,14 +11,14 @@
 ;        incorrectly using this case. We should fix those test cases then add
 ;        this check here.
 
-; RUN: llc -march=mips -mcpu=mips32r2 -mattr=fp64 < %s | FileCheck %s -check-prefix=ALL -check-prefix=32R2-NO-FP64A-BE
-; RUN: llc -march=mips -mcpu=mips32r2 -mattr=fp64,nooddspreg < %s | FileCheck %s -check-prefix=ALL -check-prefix=32R2-FP64A
-; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=fp64 < %s | FileCheck %s -check-prefix=ALL -check-prefix=32R2-NO-FP64A-LE
-; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=fp64,nooddspreg < %s | FileCheck %s -check-prefix=ALL -check-prefix=32R2-FP64A
+; RUN: llc -march=mips -mcpu=mips32r2 -mattr=fp64 < %s | FileCheck %s -check-prefixes=ALL,32R2-NO-FP64A-BE
+; RUN: llc -march=mips -mcpu=mips32r2 -mattr=fp64,nooddspreg < %s | FileCheck %s -check-prefixes=ALL,32R2-FP64A
+; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=fp64 < %s | FileCheck %s -check-prefixes=ALL,32R2-NO-FP64A-LE
+; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=fp64,nooddspreg < %s | FileCheck %s -check-prefixes=ALL,32R2-FP64A
 
-; RUN: llc -march=mips64 -mcpu=mips64 -mattr=fp64 < %s | FileCheck %s -check-prefix=ALL -check-prefix=64-NO-FP64A
+; RUN: llc -march=mips64 -mcpu=mips64 -mattr=fp64 < %s | FileCheck %s -check-prefixes=ALL,64-NO-FP64A
 ; RUN: not llc -march=mips64 -mcpu=mips64 -mattr=fp64,nooddspreg < %s 2>&1 | FileCheck %s -check-prefix=64-FP64A
-; RUN: llc -march=mips64el -mcpu=mips64 -mattr=fp64 < %s | FileCheck %s -check-prefix=ALL -check-prefix=64-NO-FP64A
+; RUN: llc -march=mips64el -mcpu=mips64 -mattr=fp64 < %s | FileCheck %s -check-prefixes=ALL,64-NO-FP64A
 ; RUN: not llc -march=mips64el -mcpu=mips64 -mattr=fp64,nooddspreg < %s 2>&1 | FileCheck %s -check-prefix=64-FP64A
 
 ; 64-FP64A: LLVM ERROR: -mattr=+nooddspreg requires the O32 ABI.

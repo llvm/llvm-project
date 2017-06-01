@@ -652,10 +652,10 @@ define fp128 @test_f128_v16i8(<16 x i8> %p) {
 
 ; CHECK-LABEL: test_v2f64_f128:
 define <2 x double> @test_v2f64_f128(fp128 %p) {
-; CHECK: vmov.32 [[REG1:d[0-9]+]][0], r0
-; CHECK: vmov.32 [[REG1]][1], r1
 ; CHECK: vmov.32 [[REG2:d[0-9]+]][0], r2
+; CHECK: vmov.32 [[REG1:d[0-9]+]][0], r0
 ; CHECK: vmov.32 [[REG2]][1], r3
+; CHECK: vmov.32 [[REG1]][1], r1
     %1 = fadd fp128 %p, %p
     %2 = bitcast fp128 %1 to <2 x double>
     %3 = fadd <2 x double> %2, %2
@@ -747,10 +747,10 @@ define <2 x double> @test_v2f64_v16i8(<16 x i8> %p) {
 
 ; CHECK-LABEL: test_v2i64_f128:
 define <2 x i64> @test_v2i64_f128(fp128 %p) {
-; CHECK: vmov.32 [[REG1:d[0-9]+]][0], r0
-; CHECK: vmov.32 [[REG1]][1], r1
 ; CHECK: vmov.32 [[REG2:d[0-9]+]][0], r2
+; CHECK: vmov.32 [[REG1:d[0-9]+]][0], r0
 ; CHECK: vmov.32 [[REG2]][1], r3
+; CHECK: vmov.32 [[REG1]][1], r1
     %1 = fadd fp128 %p, %p
     %2 = bitcast fp128 %1 to <2 x i64>
     %3 = add <2 x i64> %2, %2
@@ -827,10 +827,10 @@ define <2 x i64> @test_v2i64_v16i8(<16 x i8> %p) {
 
 ; CHECK-LABEL: test_v4f32_f128:
 define <4 x float> @test_v4f32_f128(fp128 %p) {
-; CHECK: vmov.32 [[REG1:d[0-9]+]][0], r0
-; CHECK: vmov.32 [[REG1]][1], r1
 ; CHECK: vmov.32 [[REG2:d[0-9]+]][0], r2
+; CHECK: vmov.32 [[REG1:d[0-9]+]][0], r0
 ; CHECK: vmov.32 [[REG2]][1], r3
+; CHECK: vmov.32 [[REG1]][1], r1
     %1 = fadd fp128 %p, %p
     %2 = bitcast fp128 %1 to <4 x float>
     %3 = fadd <4 x float> %2, %2
@@ -909,10 +909,10 @@ define <4 x float> @test_v4f32_v16i8(<16 x i8> %p) {
 
 ; CHECK-LABEL: test_v4i32_f128:
 define <4 x i32> @test_v4i32_f128(fp128 %p) {
-; CHECK: vmov.32 [[REG1:d[0-9]+]][0], r0
-; CHECK: vmov.32 [[REG1]][1], r1
 ; CHECK: vmov.32 [[REG2:d[0-9]+]][0], r2
+; CHECK: vmov.32 [[REG1:d[0-9]+]][0], r0
 ; CHECK: vmov.32 [[REG2]][1], r3
+; CHECK: vmov.32 [[REG1]][1], r1
     %1 = fadd fp128 %p, %p
     %2 = bitcast fp128 %1 to <4 x i32>
     %3 = add <4 x i32> %2, %2
@@ -997,10 +997,10 @@ define <4 x i32> @test_v4i32_v16i8(<16 x i8> %p) {
 
 ; CHECK-LABEL: test_v8i16_f128:
 define <8 x i16> @test_v8i16_f128(fp128 %p) {
-; CHECK: vmov.32 [[REG1:d[0-9]+]][0], r0
-; CHECK: vmov.32 [[REG1]][1], r1
 ; CHECK: vmov.32 [[REG2:d[0-9]+]][0], r2
+; CHECK: vmov.32 [[REG1:d[0-9]+]][0], r0
 ; CHECK: vmov.32 [[REG2]][1], r3
+; CHECK: vmov.32 [[REG1]][1], r1
     %1 = fadd fp128 %p, %p
     %2 = bitcast fp128 %1 to <8 x i16>
     %3 = add <8 x i16> %2, %2
@@ -1085,10 +1085,10 @@ define <8 x i16> @test_v8i16_v16i8(<16 x i8> %p) {
 
 ; CHECK-LABEL: test_v16i8_f128:
 define <16 x i8> @test_v16i8_f128(fp128 %p) {
-; CHECK: vmov.32 [[REG1:d[0-9]+]][0], r0
-; CHECK: vmov.32 [[REG1]][1], r1
 ; CHECK: vmov.32 [[REG2:d[0-9]+]][0], r2
+; CHECK: vmov.32 [[REG1:d[0-9]+]][0], r0
 ; CHECK: vmov.32 [[REG2]][1], r3
+; CHECK: vmov.32 [[REG1]][1], r1
     %1 = fadd fp128 %p, %p
     %2 = bitcast fp128 %1 to <16 x i8>
     %3 = add <16 x i8> %2, %2

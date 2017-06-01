@@ -33,7 +33,7 @@ private:
 
 public:
   RuntimeDyldCOFFX86_64(RuntimeDyld::MemoryManager &MM,
-                        RuntimeDyld::SymbolResolver &Resolver)
+                        JITSymbolResolver &Resolver)
     : RuntimeDyldCOFF(MM, Resolver) {}
 
   unsigned getMaxStubSize() override {
@@ -62,7 +62,7 @@ public:
   // symbol in the target address space.
   void resolveRelocation(const RelocationEntry &RE, uint64_t Value) override {
     const SectionEntry &Section = Sections[RE.SectionID];
-    uint8_t *Target = Section.Address + RE.Offset;
+    uint8_t *Target = Section.getAddressWithOffset(RE.Offset);
 
     switch (RE.RelType) {
 
@@ -72,7 +72,7 @@ public:
     case COFF::IMAGE_REL_AMD64_REL32_3:
     case COFF::IMAGE_REL_AMD64_REL32_4:
     case COFF::IMAGE_REL_AMD64_REL32_5: {
-      uint64_t FinalAddress = Section.LoadAddress + RE.Offset;
+      uint64_t FinalAddress = Section.getLoadAddressWithOffset(RE.Offset);
       // Delta is the distance from the start of the reloc to the end of the
       // instruction with the reloc.
       uint64_t Delta = 4 + (RE.RelType - COFF::IMAGE_REL_AMD64_REL32);
@@ -106,17 +106,21 @@ public:
     }
   }
 
-  relocation_iterator processRelocationRef(unsigned SectionID,
-                                           relocation_iterator RelI,
-                                           const ObjectFile &Obj,
-                                           ObjSectionToIDMap &ObjSectionToID,
-                                           StubMap &Stubs) override {
+  Expected<relocation_iterator>
+  processRelocationRef(unsigned SectionID,
+                       relocation_iterator RelI,
+                       const ObjectFile &Obj,
+                       ObjSectionToIDMap &ObjSectionToID,
+                       StubMap &Stubs) override {
     // If possible, find the symbol referred to in the relocation,
     // and the section that contains it.
     symbol_iterator Symbol = RelI->getSymbol();
     if (Symbol == Obj.symbol_end())
       report_fatal_error("Unknown symbol in relocation");
-    section_iterator SecI = *Symbol->getSection();
+    auto SectionOrError = Symbol->getSection();
+    if (!SectionOrError)
+      return SectionOrError.takeError();
+    section_iterator SecI = *SectionOrError;
     // If there is no section, this must be an external reference.
     const bool IsExtern = SecI == Obj.section_end();
 
@@ -125,7 +129,7 @@ public:
     uint64_t Offset = RelI->getOffset();
     uint64_t Addend = 0;
     SectionEntry &Section = Sections[SectionID];
-    uintptr_t ObjTarget = Section.ObjAddress + Offset;
+    uintptr_t ObjTarget = Section.getObjAddress() + Offset;
 
     switch (RelType) {
 
@@ -151,9 +155,9 @@ public:
       break;
     }
 
-    ErrorOr<StringRef> TargetNameOrErr = Symbol->getName();
-    if (std::error_code EC = TargetNameOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> TargetNameOrErr = Symbol->getName();
+    if (!TargetNameOrErr)
+      return TargetNameOrErr.takeError();
     StringRef TargetName = *TargetNameOrErr;
 
     DEBUG(dbgs() << "\t\tIn Section " << SectionID << " Offset " << Offset
@@ -165,8 +169,12 @@ public:
       addRelocationForSymbol(RE, TargetName);
     } else {
       bool IsCode = SecI->isText();
-      unsigned TargetSectionID =
-          findOrEmitSection(Obj, *SecI, IsCode, ObjSectionToID);
+      unsigned TargetSectionID;
+      if (auto TargetSectionIDOrErr =
+          findOrEmitSection(Obj, *SecI, IsCode, ObjSectionToID))
+        TargetSectionID = *TargetSectionIDOrErr;
+      else
+        return TargetSectionIDOrErr.takeError();
       uint64_t TargetOffset = getSymbolOffset(*Symbol);
       RelocationEntry RE(SectionID, Offset, RelType, TargetOffset + Addend);
       addRelocationForSection(RE, TargetSectionID);
@@ -178,9 +186,9 @@ public:
   unsigned getStubAlignment() override { return 1; }
   void registerEHFrames() override {
     for (auto const &EHFrameSID : UnregisteredEHFrameSections) {
-      uint8_t *EHFrameAddr = Sections[EHFrameSID].Address;
-      uint64_t EHFrameLoadAddr = Sections[EHFrameSID].LoadAddress;
-      size_t EHFrameSize = Sections[EHFrameSID].Size;
+      uint8_t *EHFrameAddr = Sections[EHFrameSID].getAddress();
+      uint64_t EHFrameLoadAddr = Sections[EHFrameSID].getLoadAddress();
+      size_t EHFrameSize = Sections[EHFrameSID].getSize();
       MemMgr.registerEHFrames(EHFrameAddr, EHFrameLoadAddr, EHFrameSize);
       RegisteredEHFrameSections.push_back(EHFrameSID);
     }
@@ -189,19 +197,21 @@ public:
   void deregisterEHFrames() override {
     // Stub
   }
-  void finalizeLoad(const ObjectFile &Obj,
-                    ObjSectionToIDMap &SectionMap) override {
+  Error finalizeLoad(const ObjectFile &Obj,
+                     ObjSectionToIDMap &SectionMap) override {
     // Look for and record the EH frame section IDs.
     for (const auto &SectionPair : SectionMap) {
       const SectionRef &Section = SectionPair.first;
       StringRef Name;
-      Check(Section.getName(Name));
+      if (auto EC = Section.getName(Name))
+        return errorCodeToError(EC);
       // Note unwind info is split across .pdata and .xdata, so this
       // may not be sufficiently general for all users.
       if (Name == ".xdata") {
         UnregisteredEHFrameSections.push_back(SectionPair.second);
       }
     }
+    return Error::success();
   }
 };
 

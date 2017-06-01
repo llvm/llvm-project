@@ -15,7 +15,7 @@ define void @foo(%struct.anon* byval %p) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:         movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movaps {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; CHECK-NEXT:    movaps {{.*#+}} xmm2 = [-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00]
 ; CHECK-NEXT:    xorps %xmm2, %xmm0
 ; CHECK-NEXT:    cvtss2sd %xmm0, %xmm0
 ; CHECK-NEXT:    xorps %xmm2, %xmm1
@@ -41,8 +41,8 @@ declare i32 @printf(...)
 define double @PR22371(double %x) {
 ; CHECK-LABEL: PR22371:
 ; CHECK:       movsd  16(%esp), %xmm0
-; CHECK-NEXT:  andpd  LCPI1_0, %xmm0
-; CHECK-NEXT:  movlpd  %xmm0, (%esp)
+; CHECK-NEXT:  andps  LCPI1_0, %xmm0
+; CHECK-NEXT:  movlps  %xmm0, (%esp)
   %call = tail call double @fabs(double %x) #0
   ret double %call
 }

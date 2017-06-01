@@ -1,4 +1,6 @@
 ; RUN: opt < %s -adce -disable-output
+; RUN: opt < %s -adce -adce-remove-loops=true -disable-output
+
 target datalayout = "e-p:32:32"
 	%struct..CppObjTypeDesc = type { i32, i16, i16 }
 	%struct..TypeToken = type { i32, i16, i16 }
@@ -30,6 +32,7 @@ loopentry.1:		; preds = %then.53, %endif.14
 	br i1 false, label %no_exit.1, label %loopentry.0
 
 no_exit.1:		; preds = %loopentry.1
+; CHECK: switch
 	switch i32 0, label %label.17 [
 		 i32 2, label %label.11
 		 i32 19, label %label.10

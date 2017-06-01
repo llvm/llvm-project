@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=-crbits | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 | FileCheck %s -check-prefix=CHECK-CRB
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=-crbits | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 | FileCheck %s -check-prefix=CHECK-CRB
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -37,7 +37,8 @@ for.body:                                         ; preds = %for.body.for.body_c
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body.for.body_crit_edge ]
   %tt = getelementptr inbounds %struct.lua_TValue.17.692, %struct.lua_TValue.17.692* %0, i64 %indvars.iv, i32 1
   %1 = load i32, i32* %tt, align 4
-  store i32 %1, i32* undef, align 4
+  %2 = add i32 %1, %1
+  store i32 %2, i32* %tt, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n

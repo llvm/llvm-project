@@ -6,13 +6,13 @@
 define i64 @trivial_patchpoint_codegen(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 entry:
 ; CHECK-LABEL: trivial_patchpoint_codegen:
-; CHECK:       movz x16, #0xdead, lsl #32
-; CHECK-NEXT:  movk x16, #0xbeef, lsl #16
-; CHECK-NEXT:  movk x16, #0xcafe
+; CHECK:       mov  x16, #244834610708480
+; CHECK-NEXT:  movk x16, #48879, lsl #16
+; CHECK-NEXT:  movk x16, #51966
 ; CHECK-NEXT:  blr  x16
-; CHECK:       movz x16, #0xdead, lsl #32
-; CHECK-NEXT:  movk x16, #0xbeef, lsl #16
-; CHECK-NEXT:  movk x16, #0xcaff
+; CHECK:       mov  x16, #244834610708480
+; CHECK-NEXT:  movk x16, #48879, lsl #16
+; CHECK-NEXT:  movk x16, #51967
 ; CHECK-NEXT:  blr  x16
 ; CHECK:       ret
   %resolveCall2 = inttoptr i64 244837814094590 to i8*
@@ -26,10 +26,11 @@ entry:
 ; as a leaf function.
 ;
 ; CHECK-LABEL: caller_meta_leaf
-; CHECK:       mov x29, sp
-; CHECK-NEXT:  sub sp, sp, #32
+; CHECK:       sub sp, sp, #48
+; CHECK-NEXT:  stp x29, x30, [sp, #32]
+; CHECK-NEXT:  add x29, sp, #32
 ; CHECK:       Ltmp
-; CHECK:       mov sp, x29
+; CHECK:       add sp, sp, #48
 ; CHECK:       ret
 
 define void @caller_meta_leaf() {

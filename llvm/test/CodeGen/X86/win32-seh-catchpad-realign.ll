@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -stack-symbol-ordering=0 < %s | FileCheck %s
 
 ; The aligned alloca means that we have to realign the stack, which forces the
 ; use of ESI to address local variables.
@@ -15,17 +15,14 @@ entry:
           to label %__try.cont unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %pad = catchpad [i8* bitcast (i32 ()* @"\01?filt$0@0@realigned_try@@" to i8*)]
-          to label %__except.ret unwind label %catchendblock
+  %cs1 = catchswitch within none [label %__except.ret] unwind to caller
 
 __except.ret:                                     ; preds = %catch.dispatch
-  catchret %pad to label %__try.cont
+  %pad = catchpad within %cs1 [i8* bitcast (i32 ()* @"\01?filt$0@0@realigned_try@@" to i8*)]
+  catchret from %pad to label %__try.cont
 
 __try.cont:                                       ; preds = %entry, %__except.ret
   ret void
-
-catchendblock:                                    ; preds = %catch.dispatch
-  catchendpad unwind to caller
 }
 
 ; Function Attrs: nounwind argmemonly
@@ -61,7 +58,7 @@ declare i32 @_except_handler3(...)
 ; CHECK: calll _useit
 ;
 ; Epilogue
-; CHECK: LBB0_1:       # %__try.cont
+; CHECK: LBB0_2:       # %__try.cont
 ; CHECK: leal    -12(%ebp), %esp
 ; CHECK: popl    %esi
 ; CHECK: popl    %edi
@@ -69,7 +66,7 @@ declare i32 @_except_handler3(...)
 ; CHECK: popl    %ebp
 ; CHECK: retl
 ;
-; CHECK: LBB0_2:                                 # %catch.dispatch
+; CHECK: LBB0_1:                                 # %__except.ret
 ; Restore ESP
 ; CHECK: movl    -24(%ebp), %esp
 ; Recompute ESI by subtracting 60 from the end of the registration node.
@@ -77,4 +74,4 @@ declare i32 @_except_handler3(...)
 ; Restore EBP
 ; CHECK: movl    12(%esi), %ebp
 ; Rejoin normal control flow
-; CHECK: jmp     LBB0_1
+; CHECK: jmp     LBB0_2

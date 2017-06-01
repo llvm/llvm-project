@@ -1,6 +1,7 @@
-; RUN: opt < %s -indvars -loop-deletion -simplifycfg | opt \
-; RUN:     -analyze -loops | not grep "^Loop Containing" 
+; RUN: opt < %s -indvars -loop-deletion -simplifycfg | opt -analyze -loops | FileCheck %s
 ; PR1179
+
+; CHECK-NOT: Loop Containing
 
 define i32 @ltst(i32 %x) {
 entry:

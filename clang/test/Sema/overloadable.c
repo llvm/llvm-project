@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s -Wincompatible-pointer-types
 
 int var __attribute__((overloadable)); // expected-error{{'overloadable' attribute only applies to functions}}
 void params(void) __attribute__((overloadable(12))); // expected-error {{'overloadable' attribute takes no arguments}}
@@ -23,7 +23,7 @@ float *accept_funcptr(int (*)(int, double)) __attribute__((overloadable)); //  \
 void test_funcptr(int (*f1)(int, double),
                   int (*f2)(int, float)) {
   float *fp = accept_funcptr(f1);
-  accept_funcptr(f2); // expected-error{{no matching function for call to 'accept_funcptr'}}
+  accept_funcptr(f2); // expected-error{{call to 'accept_funcptr' is ambiguous}}
 }
 
 struct X { int x; float y; };
@@ -98,4 +98,56 @@ void conversions() {
   void multi_type(signed char *c) __attribute__((overloadable));
   unsigned char *c;
   multi_type(c);
+}
+
+// Ensure that we allow C-specific type conversions in C
+void fn_type_conversions() {
+  void foo(void *c) __attribute__((overloadable));
+  void foo(char *c) __attribute__((overloadable));
+  void (*ptr1)(void *) = &foo;
+  void (*ptr2)(char *) = &foo;
+  void (*ambiguous)(int *) = &foo; // expected-error{{initializing 'void (*)(int *)' with an expression of incompatible type '<overloaded function type>'}} expected-note@105{{candidate function}} expected-note@106{{candidate function}}
+  void *vp_ambiguous = &foo; // expected-error{{initializing 'void *' with an expression of incompatible type '<overloaded function type>'}} expected-note@105{{candidate function}} expected-note@106{{candidate function}}
+
+  void (*specific1)(int *) = (void (*)(void *))&foo; // expected-warning{{incompatible function pointer types initializing 'void (*)(int *)' with an expression of type 'void (*)(void *)'}}
+  void *specific2 = (void (*)(void *))&foo;
+
+  void disabled(void *c) __attribute__((overloadable, enable_if(0, "")));
+  void disabled(int *c) __attribute__((overloadable, enable_if(c, "")));
+  void disabled(char *c) __attribute__((overloadable, enable_if(1, "The function name lies.")));
+  // To be clear, these should all point to the last overload of 'disabled'
+  void (*dptr1)(char *c) = &disabled;
+  void (*dptr2)(void *c) = &disabled; // expected-warning{{incompatible pointer types initializing 'void (*)(void *)' with an expression of type '<overloaded function type>'}} expected-note@115{{candidate function made ineligible by enable_if}} expected-note@116{{candidate function made ineligible by enable_if}} expected-note@117{{candidate function has type mismatch at 1st parameter (expected 'void *' but has 'char *')}}
+  void (*dptr3)(int *c) = &disabled; // expected-warning{{incompatible pointer types initializing 'void (*)(int *)' with an expression of type '<overloaded function type>'}} expected-note@115{{candidate function made ineligible by enable_if}} expected-note@116{{candidate function made ineligible by enable_if}} expected-note@117{{candidate function has type mismatch at 1st parameter (expected 'int *' but has 'char *')}}
+
+  void *specific_disabled = &disabled;
+}
+
+void incompatible_pointer_type_conversions() {
+  char charbuf[1];
+  unsigned char ucharbuf[1];
+  int intbuf[1];
+
+  void foo(char *c) __attribute__((overloadable));
+  void foo(short *c) __attribute__((overloadable));
+  foo(charbuf);
+  foo(ucharbuf); // expected-error{{call to 'foo' is ambiguous}} expected-note@131{{candidate function}} expected-note@132{{candidate function}}
+  foo(intbuf); // expected-error{{call to 'foo' is ambiguous}} expected-note@131{{candidate function}} expected-note@132{{candidate function}}
+
+  void bar(unsigned char *c) __attribute__((overloadable));
+  void bar(signed char *c) __attribute__((overloadable));
+  bar(charbuf); // expected-error{{call to 'bar' is ambiguous}} expected-note@137{{candidate function}} expected-note@138{{candidate function}}
+  bar(ucharbuf);
+  bar(intbuf); // expected-error{{call to 'bar' is ambiguous}} expected-note@137{{candidate function}} expected-note@138{{candidate function}}
+}
+
+void dropping_qualifiers_is_incompatible() {
+  const char ccharbuf[1];
+  volatile char vcharbuf[1];
+
+  void foo(char *c) __attribute__((overloadable));
+  void foo(const volatile unsigned char *c) __attribute__((overloadable));
+
+  foo(ccharbuf); // expected-error{{call to 'foo' is ambiguous}} expected-note@148{{candidate function}} expected-note@149{{candidate function}}
+  foo(vcharbuf); // expected-error{{call to 'foo' is ambiguous}} expected-note@148{{candidate function}} expected-note@149{{candidate function}}
 }

@@ -1,0 +1,117 @@
+# RUN: llc -O0 -run-pass=legalizer -global-isel %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+  define void @test_load(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_store(i8* %addr) {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_load
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }
+  - { id: 8, class: _ }
+body: |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2, %x3
+    ; CHECK-LABEL: name: test_load
+    %0(p0) = COPY %x0
+
+    ; CHECK: [[BIT8:%[0-9]+]](s8) = G_LOAD %0(p0) :: (load 1 from %ir.addr)
+    ; CHECK: %1(s1) = G_TRUNC [[BIT8]]
+    %1(s1) = G_LOAD %0 :: (load 1 from %ir.addr)
+
+    ; CHECK: %2(s8) = G_LOAD %0(p0) :: (load 1 from %ir.addr)
+    %2(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+
+    ; CHECK: %3(s16) = G_LOAD %0(p0) :: (load 2 from %ir.addr)
+    %3(s16) = G_LOAD %0 :: (load 2 from %ir.addr)
+
+    ; CHECK: %4(s32) = G_LOAD %0(p0) :: (load 4 from %ir.addr)
+    %4(s32) = G_LOAD %0 :: (load 4 from %ir.addr)
+
+    ; CHECK: %5(s64) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
+    %5(s64) = G_LOAD %0 :: (load 8 from %ir.addr)
+
+    ; CHECK: %6(p0) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
+    %6(p0) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
+
+    ; CHECK: %7(<2 x s32>) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
+    %7(<2 x s32>) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
+
+    ; CHECK: [[OFFSET0:%[0-9]+]](s64) = G_CONSTANT i64 0
+    ; CHECK: [[GEP0:%[0-9]+]](p0) = G_GEP %0, [[OFFSET0]](s64)
+    ; CHECK: [[LOAD0:%[0-9]+]](s64) = G_LOAD [[GEP0]](p0) :: (load 16 from %ir.addr)
+    ; CHECK: [[OFFSET1:%[0-9]+]](s64) = G_CONSTANT i64 8
+    ; CHECK: [[GEP1:%[0-9]+]](p0) = G_GEP %0, [[OFFSET1]](s64)
+    ; CHECK: [[LOAD1:%[0-9]+]](s64) = G_LOAD [[GEP1]](p0) :: (load 16 from %ir.addr)
+    ; CHECK: %8(s128) = G_MERGE_VALUES [[LOAD0]](s64), [[LOAD1]](s64)
+    %8(s128) = G_LOAD %0(p0) :: (load 16 from %ir.addr)
+...
+
+---
+name:            test_store
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }
+body: |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2, %x3
+    ; CHECK-LABEL: name: test_store
+
+    %0(p0) = COPY %x0
+    %1(s32) = COPY %w1
+
+    ; CHECK: [[BIT8:%[0-9]+]](s8) = G_ZEXT %2(s1)
+    ; CHECK: G_STORE [[BIT8]](s8), %0(p0) :: (store 1 into %ir.addr)
+    %2(s1) = G_TRUNC %1
+    G_STORE %2, %0 :: (store 1 into %ir.addr)
+
+    ; CHECK: G_STORE %3(s8), %0(p0) :: (store 1 into %ir.addr)
+    %3(s8) = G_TRUNC %1
+    G_STORE %3, %0 :: (store 1 into %ir.addr)
+
+    ; CHECK: G_STORE %4(s16), %0(p0) :: (store 2 into %ir.addr)
+    %4(s16) = G_TRUNC %1
+    G_STORE %4, %0 :: (store 2 into %ir.addr)
+
+    ; CHECK: G_STORE %1(s32), %0(p0) :: (store 4 into %ir.addr)
+    G_STORE %1, %0 :: (store 4 into %ir.addr)
+
+    ; CHECK: G_STORE %5(s64), %0(p0) :: (store 8 into %ir.addr)
+    %5(s64) = G_PTRTOINT %0(p0)
+    G_STORE %5, %0 :: (store 8 into %ir.addr)
+
+    ; CHECK: G_STORE %0(p0), %0(p0) :: (store 8 into %ir.addr)
+    G_STORE %0(p0), %0(p0) :: (store 8 into %ir.addr)
+
+    ; CHECK: [[OFFSET0:%[0-9]+]](s64) = G_CONSTANT i64 0
+    ; CHECK: [[GEP0:%[0-9]+]](p0) = G_GEP %0, [[OFFSET0]](s64)
+    ; CHECK: G_STORE %5(s64), [[GEP0]](p0) :: (store 16 into %ir.addr)
+    ; CHECK: [[OFFSET1:%[0-9]+]](s64) = G_CONSTANT i64 8
+    ; CHECK: [[GEP1:%[0-9]+]](p0) = G_GEP %0, [[OFFSET1]](s64)
+    ; CHECK: G_STORE %6(s64), [[GEP1]](p0) :: (store 16 into %ir.addr)
+    %6(s64) = G_PTRTOINT %0(p0)
+    %7(s128) = G_MERGE_VALUES %5, %6
+    G_STORE %7, %0 :: (store 16 into %ir.addr)
+...

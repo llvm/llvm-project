@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+neon -show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+neon,+fullfp16 -show-encoding < %s | FileCheck %s
 
 // Check that the assembler can handle the documented syntax for AArch64
 
@@ -25,10 +25,14 @@
 //------------------------------------------------------------------------------
 // Vector Add Pairwise (Floating Point
 //------------------------------------------------------------------------------
+         faddp v0.4h, v1.4h, v2.4h
+         faddp v0.8h, v1.8h, v2.8h
          faddp v0.2s, v1.2s, v2.2s
          faddp v0.4s, v1.4s, v2.4s
          faddp v0.2d, v1.2d, v2.2d
 
+// CHECK: faddp   v0.4h, v1.4h, v2.4h     // encoding: [0x20,0x14,0x42,0x2e]
+// CHECK: faddp   v0.8h, v1.8h, v2.8h     // encoding: [0x20,0x14,0x42,0x6e]
 // CHECK: faddp v0.2s, v1.2s, v2.2s       // encoding: [0x20,0xd4,0x22,0x2e]
 // CHECK: faddp v0.4s, v1.4s, v2.4s       // encoding: [0x20,0xd4,0x22,0x6e]
 // CHECK: faddp v0.2d, v1.2d, v2.2d       // encoding: [0x20,0xd4,0x62,0x6e]

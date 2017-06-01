@@ -41,3 +41,6 @@ DEFINE_COMPILERRT_PRIVATE_FUNCTION_UNMANGLED(restFP)
         lwz     r0,8(r1)
         mtlr	r0
         blr
+
+NO_EXEC_STACK_DIRECTIVE
+

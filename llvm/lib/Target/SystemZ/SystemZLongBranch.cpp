@@ -58,7 +58,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetMachine.h"
@@ -134,17 +133,19 @@ public:
   SystemZLongBranch(const SystemZTargetMachine &tm)
     : MachineFunctionPass(ID), TII(nullptr) {}
 
-  const char *getPassName() const override {
-    return "SystemZ Long Branch";
-  }
+  StringRef getPassName() const override { return "SystemZ Long Branch"; }
 
   bool runOnMachineFunction(MachineFunction &F) override;
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoVRegs);
+  }
 
 private:
   void skipNonTerminators(BlockPosition &Position, MBBInfo &Block);
   void skipTerminator(BlockPosition &Position, TerminatorInfo &Terminator,
                       bool AssumeRelaxed);
-  TerminatorInfo describeTerminator(MachineInstr *MI);
+  TerminatorInfo describeTerminator(MachineInstr &MI);
   uint64_t initMBBInfo();
   bool mustRelaxBranch(const TerminatorInfo &Terminator, uint64_t Address);
   bool mustRelaxABranch();
@@ -207,11 +208,11 @@ void SystemZLongBranch::skipTerminator(BlockPosition &Position,
 }
 
 // Return a description of terminator instruction MI.
-TerminatorInfo SystemZLongBranch::describeTerminator(MachineInstr *MI) {
+TerminatorInfo SystemZLongBranch::describeTerminator(MachineInstr &MI) {
   TerminatorInfo Terminator;
   Terminator.Size = TII->getInstSizeInBytes(MI);
-  if (MI->isConditionalBranch() || MI->isUnconditionalBranch()) {
-    switch (MI->getOpcode()) {
+  if (MI.isConditionalBranch() || MI.isUnconditionalBranch()) {
+    switch (MI.getOpcode()) {
     case SystemZ::J:
       // Relaxes to JG, which is 2 bytes longer.
       Terminator.ExtraRelaxSize = 2;
@@ -224,6 +225,10 @@ TerminatorInfo SystemZLongBranch::describeTerminator(MachineInstr *MI) {
     case SystemZ::BRCTG:
       // Relaxes to A(G)HI and BRCL, which is 6 bytes longer.
       Terminator.ExtraRelaxSize = 6;
+      break;
+    case SystemZ::BRCTH:
+      // Never needs to be relaxed.
+      Terminator.ExtraRelaxSize = 0;
       break;
     case SystemZ::CRJ:
     case SystemZ::CLRJ:
@@ -248,7 +253,7 @@ TerminatorInfo SystemZLongBranch::describeTerminator(MachineInstr *MI) {
     default:
       llvm_unreachable("Unrecognized branch instruction");
     }
-    Terminator.Branch = MI;
+    Terminator.Branch = &MI;
     Terminator.TargetBlock =
       TII->getBranchInfo(MI).Target->getMBB()->getNumber();
   }
@@ -280,7 +285,7 @@ uint64_t SystemZLongBranch::initMBBInfo() {
     MachineBasicBlock::iterator MI = MBB->begin();
     MachineBasicBlock::iterator End = MBB->end();
     while (MI != End && !MI->isTerminator()) {
-      Block.Size += TII->getInstSizeInBytes(MI);
+      Block.Size += TII->getInstSizeInBytes(*MI);
       ++MI;
     }
     skipNonTerminators(Position, Block);
@@ -289,7 +294,7 @@ uint64_t SystemZLongBranch::initMBBInfo() {
     while (MI != End) {
       if (!MI->isDebugValue()) {
         assert(MI->isTerminator() && "Terminator followed by non-terminator");
-        Terminators.push_back(describeTerminator(MI));
+        Terminators.push_back(describeTerminator(*MI));
         skipTerminator(Position, Terminators.back(), false);
         ++Block.NumTerminators;
       }

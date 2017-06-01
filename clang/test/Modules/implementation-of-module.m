@@ -1,7 +1,3 @@
-// RUN: not %clang_cc1 -fmodule-implementation-of Foo -fmodule-name=Bar %s 2>&1 \
-// RUN:     | FileCheck -check-prefix=CHECK-IMPL-OF-ERR %s
-// CHECK-IMPL-OF-ERR: conflicting module names specified: '-fmodule-name=Bar' and '-fmodule-implementation-of Foo'
-
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -w -Werror=auto-import %s -I %S/Inputs \
 // RUN:     -fmodule-implementation-of category_right -fsyntax-only

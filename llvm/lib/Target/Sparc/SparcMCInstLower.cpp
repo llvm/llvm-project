@@ -14,7 +14,6 @@
 
 #include "Sparc.h"
 #include "MCTargetDesc/SparcMCExpr.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"

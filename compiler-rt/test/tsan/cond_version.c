@@ -3,6 +3,9 @@
 // previously there were issues with versioned symbols.
 // CHECK: OK
 
+// OS X doesn't have pthread_condattr_setclock.
+// UNSUPPORTED: darwin
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>

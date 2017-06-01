@@ -61,8 +61,9 @@ TSAN_FLAG(bool, stop_on_start, false,
           "Stops on start until __tsan_resume() is called (for debugging).")
 TSAN_FLAG(bool, running_on_valgrind, false,
           "Controls whether RunningOnValgrind() returns true or false.")
+// There are a lot of goroutines in Go, so we use smaller history.
 TSAN_FLAG(
-    int, history_size, kGoMode ? 1 : 3, // There are a lot of goroutines in Go.
+    int, history_size, SANITIZER_GO ? 1 : 3,
     "Per-thread history size, controls how many previous memory accesses "
     "are remembered per thread.  Possible values are [0..7]. "
     "history_size=0 amounts to 32K memory accesses.  Each next value doubles "
@@ -76,3 +77,10 @@ TSAN_FLAG(int, io_sync, 1,
 TSAN_FLAG(bool, die_after_fork, true,
           "Die after multi-threaded fork if the child creates new threads.")
 TSAN_FLAG(const char *, suppressions, "", "Suppressions file name.")
+TSAN_FLAG(bool, ignore_interceptors_accesses, false,
+          "Ignore reads and writes from all interceptors.")
+TSAN_FLAG(bool, ignore_noninstrumented_modules, SANITIZER_MAC ? true : false,
+          "Interceptors should only detect races when called from instrumented "
+          "modules.")
+TSAN_FLAG(bool, shared_ptr_interceptor, true,
+          "Track atomic reference counting in libc++ shared_ptr and weak_ptr.")

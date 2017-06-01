@@ -27,7 +27,7 @@ namespace llvm {
 namespace {
 
 TEST(InstructionsTest, ReturnInst) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   // test for PR6589
   const ReturnInst* r0 = ReturnInst::Create(C);
@@ -103,7 +103,7 @@ TEST_F(ModuleWithFunctionTest, InvokeInst) {
 }
 
 TEST(InstructionsTest, BranchInst) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   // Make a BasicBlocks
   BasicBlock* bb0 = BasicBlock::Create(C);
@@ -169,7 +169,7 @@ TEST(InstructionsTest, BranchInst) {
 }
 
 TEST(InstructionsTest, CastInst) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   Type *Int8Ty = Type::getInt8Ty(C);
   Type *Int16Ty = Type::getInt16Ty(C);
@@ -281,14 +281,18 @@ TEST(InstructionsTest, CastInst) {
   // First form
   BasicBlock *BB = BasicBlock::Create(C);
   Constant *NullV2I32Ptr = Constant::getNullValue(V2Int32PtrTy);
-  CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty, "foo", BB);
+  auto Inst1 = CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty, "foo", BB);
 
   // Second form
-  CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty);
+  auto Inst2 = CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty);
+
+  delete Inst2;
+  Inst1->eraseFromParent();
+  delete BB;
 }
 
 TEST(InstructionsTest, VectorGep) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   // Type Definitions
   Type *I8Ty = IntegerType::get(C, 8);
@@ -391,7 +395,7 @@ TEST(InstructionsTest, VectorGep) {
 }
 
 TEST(InstructionsTest, FPMathOperator) {
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext Context;
   IRBuilder<> Builder(Context);
   MDBuilder MDHelper(Context);
   Instruction *I = Builder.CreatePHI(Builder.getDoubleTy(), 0);
@@ -406,7 +410,7 @@ TEST(InstructionsTest, FPMathOperator) {
 
 
 TEST(InstructionsTest, isEliminableCastPair) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   Type* Int16Ty = Type::getInt16Ty(C);
   Type* Int32Ty = Type::getInt32Ty(C);
@@ -486,7 +490,7 @@ TEST(InstructionsTest, isEliminableCastPair) {
 }
 
 TEST(InstructionsTest, CloneCall) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   Type *ArgTys[] = {Int32Ty, Int32Ty, Int32Ty};
   Type *FnTy = FunctionType::get(Int32Ty, ArgTys, /*isVarArg=*/false);
@@ -518,7 +522,62 @@ TEST(InstructionsTest, CloneCall) {
   }
 }
 
-}  // end anonymous namespace
-}  // end namespace llvm
+TEST(InstructionsTest, AlterCallBundles) {
+  LLVMContext C;
+  Type *Int32Ty = Type::getInt32Ty(C);
+  Type *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
+  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
+  OperandBundleDef OldBundle("before", UndefValue::get(Int32Ty));
+  std::unique_ptr<CallInst> Call(
+      CallInst::Create(Callee, Args, OldBundle, "result"));
+  Call->setTailCallKind(CallInst::TailCallKind::TCK_NoTail);
+  AttrBuilder AB;
+  AB.addAttribute(Attribute::Cold);
+  Call->setAttributes(AttributeSet::get(C, AttributeSet::FunctionIndex, AB));
+  Call->setDebugLoc(DebugLoc(MDNode::get(C, None)));
 
+  OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
+  std::unique_ptr<CallInst> Clone(CallInst::Create(Call.get(), NewBundle));
+  EXPECT_EQ(Call->getNumArgOperands(), Clone->getNumArgOperands());
+  EXPECT_EQ(Call->getArgOperand(0), Clone->getArgOperand(0));
+  EXPECT_EQ(Call->getCallingConv(), Clone->getCallingConv());
+  EXPECT_EQ(Call->getTailCallKind(), Clone->getTailCallKind());
+  EXPECT_TRUE(Clone->hasFnAttr(Attribute::AttrKind::Cold));
+  EXPECT_EQ(Call->getDebugLoc(), Clone->getDebugLoc());
+  EXPECT_EQ(Clone->getNumOperandBundles(), 1U);
+  EXPECT_TRUE(Clone->getOperandBundle("after").hasValue());
+}
 
+TEST(InstructionsTest, AlterInvokeBundles) {
+  LLVMContext C;
+  Type *Int32Ty = Type::getInt32Ty(C);
+  Type *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
+  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
+  std::unique_ptr<BasicBlock> NormalDest(BasicBlock::Create(C));
+  std::unique_ptr<BasicBlock> UnwindDest(BasicBlock::Create(C));
+  OperandBundleDef OldBundle("before", UndefValue::get(Int32Ty));
+  std::unique_ptr<InvokeInst> Invoke(InvokeInst::Create(
+      Callee, NormalDest.get(), UnwindDest.get(), Args, OldBundle, "result"));
+  AttrBuilder AB;
+  AB.addAttribute(Attribute::Cold);
+  Invoke->setAttributes(AttributeSet::get(C, AttributeSet::FunctionIndex, AB));
+  Invoke->setDebugLoc(DebugLoc(MDNode::get(C, None)));
+
+  OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
+  std::unique_ptr<InvokeInst> Clone(
+      InvokeInst::Create(Invoke.get(), NewBundle));
+  EXPECT_EQ(Invoke->getNormalDest(), Clone->getNormalDest());
+  EXPECT_EQ(Invoke->getUnwindDest(), Clone->getUnwindDest());
+  EXPECT_EQ(Invoke->getNumArgOperands(), Clone->getNumArgOperands());
+  EXPECT_EQ(Invoke->getArgOperand(0), Clone->getArgOperand(0));
+  EXPECT_EQ(Invoke->getCallingConv(), Clone->getCallingConv());
+  EXPECT_TRUE(Clone->hasFnAttr(Attribute::AttrKind::Cold));
+  EXPECT_EQ(Invoke->getDebugLoc(), Clone->getDebugLoc());
+  EXPECT_EQ(Clone->getNumOperandBundles(), 1U);
+  EXPECT_TRUE(Clone->getOperandBundle("after").hasValue());
+}
+
+} // end anonymous namespace
+} // end namespace llvm

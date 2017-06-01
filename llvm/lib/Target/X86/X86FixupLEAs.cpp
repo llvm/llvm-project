@@ -9,6 +9,7 @@
 //
 // This file defines the pass that finds instructions that can be
 // re-written as LEA instructions in order to reduce pipeline delays.
+// When optimizing for size it replaces suitable LEAs with INC or DEC.
 //
 //===----------------------------------------------------------------------===//
 
@@ -39,7 +40,7 @@ class FixupLEAPass : public MachineFunctionPass {
   /// where appropriate.
   bool processBasicBlock(MachineFunction &MF, MachineFunction::iterator MFI);
 
-  const char *getPassName() const override { return "X86 LEA Fixup"; }
+  StringRef getPassName() const override { return "X86 LEA Fixup"; }
 
   /// \brief Given a machine register, look for the instruction
   /// which writes it in the current basic block. If found,
@@ -60,6 +61,11 @@ class FixupLEAPass : public MachineFunctionPass {
   /// on Silvermont try to replace it with an equivalent ADD instruction
   void processInstructionForSLM(MachineBasicBlock::iterator &I,
                                 MachineFunction::iterator MFI);
+
+  /// \brief Look for LEAs that add 1 to reg or subtract 1 from reg
+  /// and convert them to INC or DEC respectively.
+  bool fixupIncDec(MachineBasicBlock::iterator &I,
+                   MachineFunction::iterator MFI) const;
 
   /// \brief Determine if an instruction references a machine register
   /// and, if so, whether it reads or writes the register.
@@ -86,9 +92,17 @@ public:
   /// if needed and when possible.
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  // This pass runs after regalloc and doesn't support VReg operands.
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoVRegs);
+  }
+
 private:
   MachineFunction *MF;
   const X86InstrInfo *TII; // Machine instruction info.
+  bool OptIncDec;
+  bool OptLEA;
 };
 char FixupLEAPass::ID = 0;
 }
@@ -96,22 +110,22 @@ char FixupLEAPass::ID = 0;
 MachineInstr *
 FixupLEAPass::postRAConvertToLEA(MachineFunction::iterator &MFI,
                                  MachineBasicBlock::iterator &MBBI) const {
-  MachineInstr *MI = MBBI;
-  MachineInstr *NewMI;
-  switch (MI->getOpcode()) {
+  MachineInstr &MI = *MBBI;
+  switch (MI.getOpcode()) {
   case X86::MOV32rr:
   case X86::MOV64rr: {
-    const MachineOperand &Src = MI->getOperand(1);
-    const MachineOperand &Dest = MI->getOperand(0);
-    NewMI = BuildMI(*MF, MI->getDebugLoc(),
-                    TII->get(MI->getOpcode() == X86::MOV32rr ? X86::LEA32r
-                                                             : X86::LEA64r))
-                .addOperand(Dest)
-                .addOperand(Src)
-                .addImm(1)
-                .addReg(0)
-                .addImm(0)
-                .addReg(0);
+    const MachineOperand &Src = MI.getOperand(1);
+    const MachineOperand &Dest = MI.getOperand(0);
+    MachineInstr *NewMI =
+        BuildMI(*MF, MI.getDebugLoc(),
+                TII->get(MI.getOpcode() == X86::MOV32rr ? X86::LEA32r
+                                                        : X86::LEA64r))
+            .addOperand(Dest)
+            .addOperand(Src)
+            .addImm(1)
+            .addReg(0)
+            .addImm(0)
+            .addReg(0);
     MFI->insert(MBBI, NewMI); // Insert the new inst
     return NewMI;
   }
@@ -127,7 +141,7 @@ FixupLEAPass::postRAConvertToLEA(MachineFunction::iterator &MFI,
   case X86::ADD16ri8:
   case X86::ADD16ri_DB:
   case X86::ADD16ri8_DB:
-    if (!MI->getOperand(2).isImm()) {
+    if (!MI.getOperand(2).isImm()) {
       // convertToThreeAddress will call getImm()
       // which requires isImm() to be true
       return nullptr;
@@ -135,22 +149,28 @@ FixupLEAPass::postRAConvertToLEA(MachineFunction::iterator &MFI,
     break;
   case X86::ADD16rr:
   case X86::ADD16rr_DB:
-    if (MI->getOperand(1).getReg() != MI->getOperand(2).getReg()) {
+    if (MI.getOperand(1).getReg() != MI.getOperand(2).getReg()) {
       // if src1 != src2, then convertToThreeAddress will
       // need to create a Virtual register, which we cannot do
       // after register allocation.
       return nullptr;
     }
   }
-  return TII->convertToThreeAddress(MFI, MBBI, nullptr);
+  return TII->convertToThreeAddress(MFI, MI, nullptr);
 }
 
 FunctionPass *llvm::createX86FixupLEAs() { return new FixupLEAPass(); }
 
 bool FixupLEAPass::runOnMachineFunction(MachineFunction &Func) {
+  if (skipFunction(*Func.getFunction()))
+    return false;
+
   MF = &Func;
   const X86Subtarget &ST = Func.getSubtarget<X86Subtarget>();
-  if (!ST.LEAusesAG() && !ST.slowLEA())
+  OptIncDec = !ST.slowIncDec() || Func.getFunction()->optForMinSize();
+  OptLEA = ST.LEAusesAG() || ST.slowLEA();
+
+  if (!OptLEA && !OptIncDec)
     return false;
 
   TII = ST.getInstrInfo();
@@ -167,10 +187,10 @@ bool FixupLEAPass::runOnMachineFunction(MachineFunction &Func) {
 FixupLEAPass::RegUsageState
 FixupLEAPass::usesRegister(MachineOperand &p, MachineBasicBlock::iterator I) {
   RegUsageState RegUsage = RU_NotUsed;
-  MachineInstr *MI = I;
+  MachineInstr &MI = *I;
 
-  for (unsigned int i = 0; i < MI->getNumOperands(); ++i) {
-    MachineOperand &opnd = MI->getOperand(i);
+  for (unsigned int i = 0; i < MI.getNumOperands(); ++i) {
+    MachineOperand &opnd = MI.getOperand(i);
     if (opnd.isReg() && opnd.getReg() == p.getReg()) {
       if (opnd.isDef())
         return RU_Write;
@@ -216,26 +236,79 @@ FixupLEAPass::searchBackwards(MachineOperand &p, MachineBasicBlock::iterator &I,
       return CurInst;
     }
     InstrDistance += TII->getInstrLatency(
-        MF->getSubtarget().getInstrItineraryData(), CurInst);
+        MF->getSubtarget().getInstrItineraryData(), *CurInst);
     Found = getPreviousInstr(CurInst, MFI);
   }
-  return nullptr;
+  return MachineBasicBlock::iterator();
+}
+
+static inline bool isLEA(const int opcode) {
+  return opcode == X86::LEA16r || opcode == X86::LEA32r ||
+         opcode == X86::LEA64r || opcode == X86::LEA64_32r;
+}
+
+/// isLEASimpleIncOrDec - Does this LEA have one these forms:
+/// lea  %reg, 1(%reg)
+/// lea  %reg, -1(%reg)
+static inline bool isLEASimpleIncOrDec(MachineInstr &LEA) {
+  unsigned SrcReg = LEA.getOperand(1 + X86::AddrBaseReg).getReg();
+  unsigned DstReg = LEA.getOperand(0).getReg();
+  unsigned AddrDispOp = 1 + X86::AddrDisp;
+  return SrcReg == DstReg &&
+         LEA.getOperand(1 + X86::AddrIndexReg).getReg() == 0 &&
+         LEA.getOperand(1 + X86::AddrSegmentReg).getReg() == 0 &&
+         LEA.getOperand(AddrDispOp).isImm() &&
+         (LEA.getOperand(AddrDispOp).getImm() == 1 ||
+          LEA.getOperand(AddrDispOp).getImm() == -1);
+}
+
+bool FixupLEAPass::fixupIncDec(MachineBasicBlock::iterator &I,
+                               MachineFunction::iterator MFI) const {
+  MachineInstr &MI = *I;
+  int Opcode = MI.getOpcode();
+  if (!isLEA(Opcode))
+    return false;
+
+  if (isLEASimpleIncOrDec(MI) && TII->isSafeToClobberEFLAGS(*MFI, I)) {
+    int NewOpcode;
+    bool isINC = MI.getOperand(4).getImm() == 1;
+    switch (Opcode) {
+    case X86::LEA16r:
+      NewOpcode = isINC ? X86::INC16r : X86::DEC16r;
+      break;
+    case X86::LEA32r:
+    case X86::LEA64_32r:
+      NewOpcode = isINC ? X86::INC32r : X86::DEC32r;
+      break;
+    case X86::LEA64r:
+      NewOpcode = isINC ? X86::INC64r : X86::DEC64r;
+      break;
+    }
+
+    MachineInstr *NewMI =
+        BuildMI(*MFI, I, MI.getDebugLoc(), TII->get(NewOpcode))
+            .addOperand(MI.getOperand(0))
+            .addOperand(MI.getOperand(1));
+    MFI->erase(I);
+    I = static_cast<MachineBasicBlock::iterator>(NewMI);
+    return true;
+  }
+  return false;
 }
 
 void FixupLEAPass::processInstruction(MachineBasicBlock::iterator &I,
                                       MachineFunction::iterator MFI) {
   // Process a load, store, or LEA instruction.
-  MachineInstr *MI = I;
-  int opcode = MI->getOpcode();
-  const MCInstrDesc &Desc = MI->getDesc();
-  int AddrOffset = X86II::getMemoryOperandNo(Desc.TSFlags, opcode);
+  MachineInstr &MI = *I;
+  const MCInstrDesc &Desc = MI.getDesc();
+  int AddrOffset = X86II::getMemoryOperandNo(Desc.TSFlags);
   if (AddrOffset >= 0) {
     AddrOffset += X86II::getOperandBias(Desc);
-    MachineOperand &p = MI->getOperand(AddrOffset + X86::AddrBaseReg);
+    MachineOperand &p = MI.getOperand(AddrOffset + X86::AddrBaseReg);
     if (p.isReg() && p.getReg() != X86::ESP) {
       seekLEAFixup(p, I, MFI);
     }
-    MachineOperand &q = MI->getOperand(AddrOffset + X86::AddrIndexReg);
+    MachineOperand &q = MI.getOperand(AddrOffset + X86::AddrIndexReg);
     if (q.isReg() && q.getReg() != X86::ESP) {
       seekLEAFixup(q, I, MFI);
     }
@@ -246,7 +319,7 @@ void FixupLEAPass::seekLEAFixup(MachineOperand &p,
                                 MachineBasicBlock::iterator &I,
                                 MachineFunction::iterator MFI) {
   MachineBasicBlock::iterator MBI = searchBackwards(p, I, MFI);
-  if (MBI) {
+  if (MBI != MachineBasicBlock::iterator()) {
     MachineInstr *NewMI = postRAConvertToLEA(MFI, MBI);
     if (NewMI) {
       ++NumLEAs;
@@ -263,24 +336,24 @@ void FixupLEAPass::seekLEAFixup(MachineOperand &p,
 
 void FixupLEAPass::processInstructionForSLM(MachineBasicBlock::iterator &I,
                                             MachineFunction::iterator MFI) {
-  MachineInstr *MI = I;
-  const int opcode = MI->getOpcode();
-  if (opcode != X86::LEA16r && opcode != X86::LEA32r && opcode != X86::LEA64r &&
-      opcode != X86::LEA64_32r)
+  MachineInstr &MI = *I;
+  const int opcode = MI.getOpcode();
+  if (!isLEA(opcode))
     return;
-  if (MI->getOperand(5).getReg() != 0 || !MI->getOperand(4).isImm() ||
+  if (MI.getOperand(5).getReg() != 0 || !MI.getOperand(4).isImm() ||
       !TII->isSafeToClobberEFLAGS(*MFI, I))
     return;
-  const unsigned DstR = MI->getOperand(0).getReg();
-  const unsigned SrcR1 = MI->getOperand(1).getReg();
-  const unsigned SrcR2 = MI->getOperand(3).getReg();
+  const unsigned DstR = MI.getOperand(0).getReg();
+  const unsigned SrcR1 = MI.getOperand(1).getReg();
+  const unsigned SrcR2 = MI.getOperand(3).getReg();
   if ((SrcR1 == 0 || SrcR1 != DstR) && (SrcR2 == 0 || SrcR2 != DstR))
     return;
-  if (MI->getOperand(2).getImm() > 1)
+  if (MI.getOperand(2).getImm() > 1)
     return;
   int addrr_opcode, addri_opcode;
   switch (opcode) {
-  default: llvm_unreachable("Unexpected LEA instruction");
+  default:
+    llvm_unreachable("Unexpected LEA instruction");
   case X86::LEA16r:
     addrr_opcode = X86::ADD16rr;
     addri_opcode = X86::ADD16ri;
@@ -298,12 +371,12 @@ void FixupLEAPass::processInstructionForSLM(MachineBasicBlock::iterator &I,
   DEBUG(dbgs() << "FixLEA: Candidate to replace:"; I->dump(););
   DEBUG(dbgs() << "FixLEA: Replaced by: ";);
   MachineInstr *NewMI = nullptr;
-  const MachineOperand &Dst = MI->getOperand(0);
+  const MachineOperand &Dst = MI.getOperand(0);
   // Make ADD instruction for two registers writing to LEA's destination
   if (SrcR1 != 0 && SrcR2 != 0) {
-    const MachineOperand &Src1 = MI->getOperand(SrcR1 == DstR ? 1 : 3);
-    const MachineOperand &Src2 = MI->getOperand(SrcR1 == DstR ? 3 : 1);
-    NewMI = BuildMI(*MF, MI->getDebugLoc(), TII->get(addrr_opcode))
+    const MachineOperand &Src1 = MI.getOperand(SrcR1 == DstR ? 1 : 3);
+    const MachineOperand &Src2 = MI.getOperand(SrcR1 == DstR ? 3 : 1);
+    NewMI = BuildMI(*MF, MI.getDebugLoc(), TII->get(addrr_opcode))
                 .addOperand(Dst)
                 .addOperand(Src1)
                 .addOperand(Src2);
@@ -311,12 +384,12 @@ void FixupLEAPass::processInstructionForSLM(MachineBasicBlock::iterator &I,
     DEBUG(NewMI->dump(););
   }
   // Make ADD instruction for immediate
-  if (MI->getOperand(4).getImm() != 0) {
-    const MachineOperand &SrcR = MI->getOperand(SrcR1 == DstR ? 1 : 3);
-    NewMI = BuildMI(*MF, MI->getDebugLoc(), TII->get(addri_opcode))
+  if (MI.getOperand(4).getImm() != 0) {
+    const MachineOperand &SrcR = MI.getOperand(SrcR1 == DstR ? 1 : 3);
+    NewMI = BuildMI(*MF, MI.getDebugLoc(), TII->get(addri_opcode))
                 .addOperand(Dst)
                 .addOperand(SrcR)
-                .addImm(MI->getOperand(4).getImm());
+                .addImm(MI.getOperand(4).getImm());
     MFI->insert(I, NewMI);
     DEBUG(NewMI->dump(););
   }
@@ -330,10 +403,16 @@ bool FixupLEAPass::processBasicBlock(MachineFunction &MF,
                                      MachineFunction::iterator MFI) {
 
   for (MachineBasicBlock::iterator I = MFI->begin(); I != MFI->end(); ++I) {
-    if (MF.getSubtarget<X86Subtarget>().isSLM())
-      processInstructionForSLM(I, MFI);
-    else
-      processInstruction(I, MFI);
+    if (OptIncDec)
+      if (fixupIncDec(I, MFI))
+        continue;
+
+    if (OptLEA) {
+      if (MF.getSubtarget<X86Subtarget>().isSLM())
+        processInstructionForSLM(I, MFI);
+      else
+        processInstruction(I, MFI);
+    }
   }
   return false;
 }

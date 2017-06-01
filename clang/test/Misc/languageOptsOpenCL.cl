@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x cl %s -verify
+// RUN: %clang_cc1 -x cl %s -verify -triple spir-unknown-unknown
 // expected-no-diagnostics
 
 // Test the forced language options for OpenCL are set correctly.

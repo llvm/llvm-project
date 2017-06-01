@@ -14,12 +14,11 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
@@ -80,9 +79,8 @@ struct TestCustomAAResult : AAResultBase<TestCustomAAResult> {
 
   std::function<void()> CB;
 
-  explicit TestCustomAAResult(const TargetLibraryInfo &TLI,
-                              std::function<void()> CB)
-      : AAResultBase(TLI), CB(std::move(CB)) {}
+  explicit TestCustomAAResult(std::function<void()> CB)
+      : AAResultBase(), CB(std::move(CB)) {}
   TestCustomAAResult(TestCustomAAResult &&Arg)
       : AAResultBase(std::move(Arg)), CB(std::move(Arg.CB)) {}
 
@@ -117,8 +115,7 @@ public:
   }
 
   bool doInitialization(Module &M) override {
-    Result.reset(new TestCustomAAResult(
-        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(), std::move(CB)));
+    Result.reset(new TestCustomAAResult(std::move(CB)));
     return true;
   }
 
@@ -155,7 +152,7 @@ protected:
 
   AAResults &getAAResults(Function &F) {
     // Reset the Function AA results first to clear out any references.
-    AAR.reset(new AAResults());
+    AAR.reset(new AAResults(TLI));
 
     // Build the various AA results and register them.
     AC.reset(new AssumptionCache(F));
@@ -181,12 +178,12 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   auto *Load1 = new LoadInst(Addr, "load", BB);
   auto *Add1 = BinaryOperator::CreateAdd(Value, Value, "add", BB);
   auto *VAArg1 = new VAArgInst(Addr, PtrType, "vaarg", BB);
-  auto *CmpXChg1 = new AtomicCmpXchgInst(Addr, ConstantInt::get(IntType, 0),
-                                         ConstantInt::get(IntType, 1),
-                                         Monotonic, Monotonic, CrossThread, BB);
+  auto *CmpXChg1 = new AtomicCmpXchgInst(
+      Addr, ConstantInt::get(IntType, 0), ConstantInt::get(IntType, 1),
+      AtomicOrdering::Monotonic, AtomicOrdering::Monotonic, CrossThread, BB);
   auto *AtomicRMW =
       new AtomicRMWInst(AtomicRMWInst::Xchg, Addr, ConstantInt::get(IntType, 1),
-                        Monotonic, CrossThread, BB);
+                        AtomicOrdering::Monotonic, CrossThread, BB);
 
   ReturnInst::Create(C, nullptr, BB);
 
@@ -209,14 +206,13 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
 
 class AAPassInfraTest : public testing::Test {
 protected:
-  LLVMContext &C;
+  LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M;
 
 public:
   AAPassInfraTest()
-      : C(getGlobalContext()),
-        M(parseAssemblyString("define i32 @f(i32* %x, i32* %y) {\n"
+      : M(parseAssemblyString("define i32 @f(i32* %x, i32* %y) {\n"
                               "entry:\n"
                               "  %lx = load i32, i32* %x\n"
                               "  %ly = load i32, i32* %y\n"

@@ -66,7 +66,7 @@ ENDIF:                                            ; preds = %IF23, %ELSE, %IF
   %45 = insertelement <4 x float> %44, float %temp5.0, i32 1
   %46 = insertelement <4 x float> %45, float %temp6.0, i32 2
   %47 = insertelement <4 x float> %46, float %temp7.0, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %47, i32 0, i32 0)
+  call void @llvm.r600.store.swizzle(<4 x float> %47, i32 0, i32 0)
   ret void
 
 IF23:                                             ; preds = %ELSE
@@ -89,6 +89,6 @@ IF23:                                             ; preds = %ELSE
 
 declare float @fabs(float) #0
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
 attributes #0 = { readonly }

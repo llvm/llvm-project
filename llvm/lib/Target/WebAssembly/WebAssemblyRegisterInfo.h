@@ -41,6 +41,10 @@ public:
 
   // Debug information queries.
   unsigned getFrameRegister(const MachineFunction &MF) const override;
+
+  const TargetRegisterClass *
+  getPointerRegClass(const MachineFunction &MF,
+                     unsigned Kind = 0) const override;
 };
 
 } // end namespace llvm

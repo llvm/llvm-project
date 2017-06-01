@@ -4,11 +4,11 @@ string table or not.
 RUN: mkdir -p %t
 RUN: cd %t
 
-RUN: echo -n bar. > 0123456789abcde
-RUN: echo -n zed. > 0123456789abcdef
+RUN: printf bar. > 0123456789abcde
+RUN: printf zed. > 0123456789abcdef
 RUN: mkdir -p foo
-RUN: echo -n bar2 > foo/0123456789abcde
-RUN: echo -n zed2 > foo/0123456789abcdef
+RUN: printf bar2 > foo/0123456789abcde
+RUN: printf zed2 > foo/0123456789abcdef
 
 RUN: rm -f %t.a
 RUN: llvm-ar --format=gnu rc %t.a 0123456789abcde 0123456789abcdef foo/0123456789abcde foo/0123456789abcdef
@@ -62,3 +62,6 @@ THIN-PATH-NEXT: /0              0           0     0     644     4         `
 THIN-PATH-NEXT: /20             0           0     0     644     4         `
 THIN-PATH-NEXT: /41             0           0     0     644     4         `
 THIN-PATH-NEXT: /65             0           0     0     644     4         `
+
+RUN: not llvm-ar --format=bsd rcT bad.a 0123456789abcde 0123456789abcdef 2>&1 | FileCheck --check-prefix=BSD-THIN %s
+BSD-THIN: Only the gnu format has a thin mode.

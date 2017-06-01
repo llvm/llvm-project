@@ -1,6 +1,6 @@
-; RUN: llc -O3 -mcpu=pwr7 < %s | FileCheck %s
-; RUN: llc -O3 -print-after=codegenprepare -mcpu=ppc64 < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-NoAA <%t %s
-; RUN: llc -O3 -print-after=codegenprepare -mcpu=pwr7  < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-UseAA <%t %s
+; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr7 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O3 -print-after=codegenprepare -mcpu=ppc64 < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-NoAA <%t %s
+; RUN: llc -verify-machineinstrs -O3 -print-after=codegenprepare -mcpu=pwr7  < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-UseAA <%t %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

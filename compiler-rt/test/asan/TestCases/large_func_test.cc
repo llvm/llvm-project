@@ -2,8 +2,7 @@
 // RUN: %clangxx_asan -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
 // RUN: %clangxx_asan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
 // RUN: %clangxx_asan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
-// XFAIL: arm-linux-gnueabi
-// XFAIL: armv7l-unknown-linux-gnueabihf
+// REQUIRES: stable-runtime
 
 #include <stdlib.h>
 __attribute__((noinline))
@@ -49,5 +48,5 @@ int main(int argc, char **argv) {
   // CHECK-Linux: {{    #0 0x.* in operator new.*}}
   // CHECK-Darwin: {{    #0 0x.* in .*_Zna.*}}
   // CHECK: {{    #1 0x.* in main .*large_func_test.cc:}}[[@LINE-7]]
-  delete x;
+  delete[] x;
 }

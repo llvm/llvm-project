@@ -17,7 +17,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -87,7 +87,7 @@ protected:
   /// IsUsed - True if this symbol has been used.
   mutable unsigned IsUsed : 1;
 
-  mutable bool IsRegistered : 1;
+  mutable unsigned IsRegistered : 1;
 
   /// This symbol is visible outside this translation unit.
   mutable unsigned IsExternal : 1;

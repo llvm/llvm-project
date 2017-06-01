@@ -1,4 +1,4 @@
-add_custom_target(safestack)
+add_compiler_rt_component(safestack)
 
 set(SAFESTACK_SOURCES safestack.cc)
 

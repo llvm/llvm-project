@@ -9,4 +9,5 @@ add_clang_library(clangIncludeFixerPlugin
   clangParse
   clangSema
   clangTooling
+  ${LLVM_PTHREAD_LIB}
   )

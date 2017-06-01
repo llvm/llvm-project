@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -O2 -disable-llvm-optzns -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -O2 -disable-llvm-passes -o - %s | FileCheck %s
 
 @interface A
 @end
@@ -21,7 +21,7 @@ void test0() {
   // CHECK: call void @_Z6calleev
   callee();
   // CHECK: call void @objc_release
-  // CHECK-NEXT: ret
+  // CHECK: ret
 }
 
 // No lifetime extension when we're binding a reference to an lvalue.
@@ -44,9 +44,9 @@ void test3() {
   const __weak id &ref = strong_id();
   // CHECK-NEXT: call void @_Z6calleev()
   callee();
+  // CHECK-NEXT: call void @objc_destroyWeak
   // CHECK-NEXT: [[PTR:%.*]] = bitcast i8*** [[REF]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end(i64 8, i8* [[PTR]])
-  // CHECK-NEXT: call void @objc_destroyWeak
   // CHECK-NEXT: ret void
 }
 

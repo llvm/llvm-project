@@ -31,7 +31,7 @@ entry:
 
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
-!2 = !{!"Simple C/C++ TBAA", null}
+!2 = !{!"Simple C/C++ TBAA"}
 !3 = !{!5, !5, i64 0}
 !4 = !{!"double", !1}
 !5 = !{!"int", !1}

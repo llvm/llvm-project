@@ -24,6 +24,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSymbolELF.h"
@@ -94,11 +95,9 @@ void MCELFStreamer::InitSections(bool NoExecStack) {
     SwitchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
 }
 
-void MCELFStreamer::EmitLabel(MCSymbol *S) {
+void MCELFStreamer::EmitLabel(MCSymbol *S, SMLoc Loc) {
   auto *Symbol = cast<MCSymbolELF>(S);
-  assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
-
-  MCObjectStreamer::EmitLabel(Symbol);
+  MCObjectStreamer::EmitLabel(Symbol, Loc);
 
   const MCSectionELF &Section =
       static_cast<const MCSectionELF &>(*getCurrentSectionOnly());
@@ -147,16 +146,7 @@ void MCELFStreamer::ChangeSection(MCSection *Section,
     Asm.registerSymbol(*Grp);
 
   this->MCObjectStreamer::ChangeSection(Section, Subsection);
-  MCContext &Ctx = getContext();
-  auto *Begin = cast_or_null<MCSymbolELF>(Section->getBeginSymbol());
-  if (!Begin) {
-    Begin = Ctx.getOrCreateSectionSymbol(*SectionELF);
-    Section->setBeginSymbol(Begin);
-  }
-  if (Begin->isUndefined()) {
-    Asm.registerSymbol(*Begin);
-    Begin->setType(ELF::STT_SECTION);
-  }
+  Asm.registerSymbol(*Section->getBeginSymbol());
 }
 
 void MCELFStreamer::EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
@@ -283,6 +273,9 @@ bool MCELFStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   case MCSA_Internal:
     Symbol->setVisibility(ELF::STV_INTERNAL);
     break;
+
+  case MCSA_AltEntry:
+    llvm_unreachable("ELF doesn't support the .alt_entry attribute");
   }
 
   return true;
@@ -325,8 +318,8 @@ void MCELFStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
       ->setSize(MCConstantExpr::create(Size, getContext()));
 }
 
-void MCELFStreamer::emitELFSize(MCSymbolELF *Symbol, const MCExpr *Value) {
-  Symbol->setSize(Value);
+void MCELFStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
+  cast<MCSymbolELF>(Symbol)->setSize(Value);
 }
 
 void MCELFStreamer::EmitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
@@ -406,13 +399,10 @@ void MCELFStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
     case MCSymbolRefExpr::VK_TLSLD:
     case MCSymbolRefExpr::VK_TLSLDM:
     case MCSymbolRefExpr::VK_TPOFF:
+    case MCSymbolRefExpr::VK_TPREL:
     case MCSymbolRefExpr::VK_DTPOFF:
-    case MCSymbolRefExpr::VK_Mips_TLSGD:
-    case MCSymbolRefExpr::VK_Mips_GOTTPREL:
-    case MCSymbolRefExpr::VK_Mips_TPREL_HI:
-    case MCSymbolRefExpr::VK_Mips_TPREL_LO:
+    case MCSymbolRefExpr::VK_DTPREL:
     case MCSymbolRefExpr::VK_PPC_DTPMOD:
-    case MCSymbolRefExpr::VK_PPC_TPREL:
     case MCSymbolRefExpr::VK_PPC_TPREL_LO:
     case MCSymbolRefExpr::VK_PPC_TPREL_HI:
     case MCSymbolRefExpr::VK_PPC_TPREL_HA:
@@ -420,7 +410,6 @@ void MCELFStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
     case MCSymbolRefExpr::VK_PPC_TPREL_HIGHERA:
     case MCSymbolRefExpr::VK_PPC_TPREL_HIGHEST:
     case MCSymbolRefExpr::VK_PPC_TPREL_HIGHESTA:
-    case MCSymbolRefExpr::VK_PPC_DTPREL:
     case MCSymbolRefExpr::VK_PPC_DTPREL_LO:
     case MCSymbolRefExpr::VK_PPC_DTPREL_HI:
     case MCSymbolRefExpr::VK_PPC_DTPREL_HA:

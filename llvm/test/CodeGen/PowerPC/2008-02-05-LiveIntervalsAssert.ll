@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin
 
 	%struct.Handle = type { %struct.oopDesc** }
 	%struct.JNI_ArgumentPusher = type { %struct.SignatureIterator, %struct.JavaCallArguments* }

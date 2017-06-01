@@ -62,3 +62,11 @@ define <4 x i32> @t5(<4 x float> %in) {
   %vcvt.i = fptosi <4 x float> %mul.i to <4 x i32>
   ret <4 x i32> %vcvt.i
 }
+
+; CHECK-LABEL: test_illegal_fp_to_int:
+; CHECK: vcvt.s32.f32 {{q[0-9]+}}, {{q[0-9]+}}, #2
+define <3 x i32> @test_illegal_fp_to_int(<3 x float> %in) {
+  %scale = fmul <3 x float> %in, <float 4.0, float 4.0, float 4.0>
+  %val = fptosi <3 x float> %scale to <3 x i32>
+  ret <3 x i32> %val
+}

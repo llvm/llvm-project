@@ -7,15 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/ARCMigrate/ARCMT.h"
-#include "clang/Frontend/ASTUnit.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Frontend/VerifyDiagnosticConsumer.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include <system_error>
 
@@ -341,7 +343,7 @@ static void printSourceRange(CharSourceRange range, ASTContext &Ctx,
 
 int main(int argc, const char **argv) {
   void *MainAddr = (void*) (intptr_t) GetExecutablePath;
-  llvm::sys::PrintStackTraceOnErrorSignal();
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   std::string
     resourcesPath = CompilerInvocation::GetResourcesPath(argv[0], MainAddr);

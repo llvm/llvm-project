@@ -8,7 +8,7 @@ unaligned:
 
 @ CHECK-LABEL: unaligned
 @ CHECK-NEXT:	.byte 1
-@ CHECK-NEXT:	.align 2
+@ CHECK-NEXT:	.p2align 2
 
 aligned:
 	.long 0x1d10c1e5
@@ -16,7 +16,7 @@ aligned:
 
 @ CHECK-LABEL: aligned
 @ CHECK-NEXT:	.long 487637477
-@ CHECK-NEXT:	.align 2
+@ CHECK-NEXT:	.p2align 2
 
 trailer:
 	.long 0xd1ab011c
@@ -24,5 +24,5 @@ trailer:
 
 @ CHECK-LABEL: trailer
 @ CHECK-NEXT:	.long 3517645084
-@ CHECK-NEXT:	.align 2
+@ CHECK-NEXT:	.p2align 2
 

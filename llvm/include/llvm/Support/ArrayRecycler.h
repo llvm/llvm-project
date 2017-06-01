@@ -26,15 +26,14 @@ namespace llvm {
 /// Arrays are allocated in a small number of fixed sizes. For each supported
 /// array size, the ArrayRecycler keeps a free list of available arrays.
 ///
-template<class T, size_t Align = AlignOf<T>::Alignment>
-class ArrayRecycler {
+template <class T, size_t Align = alignof(T)> class ArrayRecycler {
   // The free list for a given array size is a simple singly linked list.
   // We can't use iplist or Recycler here since those classes can't be copied.
   struct FreeList {
     FreeList *Next;
   };
 
-  static_assert(Align >= AlignOf<FreeList>::Alignment, "Object underaligned");
+  static_assert(Align >= alignof(FreeList), "Object underaligned");
   static_assert(sizeof(T) >= sizeof(FreeList), "Objects are too small");
 
   // Keep a free list for each array size.

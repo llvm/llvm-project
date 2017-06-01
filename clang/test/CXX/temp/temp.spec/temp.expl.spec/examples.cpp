@@ -223,8 +223,8 @@ namespace spec_vs_expl_inst {
 
   namespace SID {
     template <typename STRING_TYPE> class BasicStringPiece;
-    template <> class BasicStringPiece<int> { };
-    template class BasicStringPiece<int>;  // expected-note {{explicit instantiation definition is here}}
+    template <> class BasicStringPiece<int> { }; // expected-note {{previous template specialization is here}}
+    template class BasicStringPiece<int>;  // expected-note {{explicit instantiation definition is here}} expected-warning {{has no effect}}
     extern template class BasicStringPiece<int>;  // expected-error {{explicit instantiation declaration (with 'extern') follows explicit instantiation definition (without 'extern')}}
   }
 
@@ -252,8 +252,8 @@ namespace spec_vs_expl_inst {
   namespace DSI {
     template <typename STRING_TYPE> class BasicStringPiece;  // expected-note {{template is declared here}}
     extern template class BasicStringPiece<int>;  // expected-error {{explicit instantiation of undefined template 'spec_vs_expl_inst::DSI::BasicStringPiece<int>'}}
-    template <> class BasicStringPiece<int> { };
-    template class BasicStringPiece<int>;
+    template <> class BasicStringPiece<int> { }; // expected-note {{previous}}
+    template class BasicStringPiece<int>; // expected-warning {{has no effect}}
   }
 
   // The same again, with a defined template class.
@@ -267,8 +267,8 @@ namespace spec_vs_expl_inst {
 
   namespace SID_WithDefinedTemplate {
     template <typename STRING_TYPE> class BasicStringPiece {};
-    template <> class BasicStringPiece<int> { };
-    template class BasicStringPiece<int>;  // expected-note {{explicit instantiation definition is here}}
+    template <> class BasicStringPiece<int> { }; // expected-note {{previous}}
+    template class BasicStringPiece<int>;  // expected-note {{explicit instantiation definition is here}} expected-warning {{has no effect}}
     extern template class BasicStringPiece<int>;  // expected-error {{explicit instantiation declaration (with 'extern') follows explicit instantiation definition (without 'extern')}}
   }
 
@@ -283,7 +283,7 @@ namespace spec_vs_expl_inst {
     template <typename STRING_TYPE> class BasicStringPiece {};
     template class BasicStringPiece<int>;  // expected-note {{explicit instantiation definition is here}} expected-note {{previous definition is here}}
     extern template class BasicStringPiece<int>;  // expected-error {{explicit instantiation declaration (with 'extern') follows explicit instantiation definition (without 'extern')}}
-    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'spec_vs_expl_inst::IDS_WithDefinedTemplate::BasicStringPiece<int>'}}
+    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'BasicStringPiece<int>'}}
   }
 
   namespace DIS_WithDefinedTemplate {
@@ -304,23 +304,23 @@ namespace spec_vs_expl_inst {
 
   namespace SII_WithDefinedTemplate {
     template <typename STRING_TYPE> class BasicStringPiece {};
-    template <> class BasicStringPiece<int> { };
-    template class BasicStringPiece<int>;  // expected-note {{previous explicit instantiation is here}}
+    template <> class BasicStringPiece<int> { }; // expected-note {{previous}}
+    template class BasicStringPiece<int>;  // expected-note {{previous explicit instantiation is here}} expected-warning {{has no effect}}
     template class BasicStringPiece<int>;  // expected-error {{duplicate explicit instantiation of 'BasicStringPiece<int>'}}
   }
 
   namespace SIS {
     template <typename STRING_TYPE> class BasicStringPiece;
-    template <> class BasicStringPiece<int> { };  // expected-note {{previous definition is here}}
-    template class BasicStringPiece<int>;
-    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'spec_vs_expl_inst::SIS::BasicStringPiece<int>'}}
+    template <> class BasicStringPiece<int> { };  // expected-note {{previous definition is here}} expected-note {{previous}}
+    template class BasicStringPiece<int>; // expected-warning {{has no effect}}
+    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'BasicStringPiece<int>'}}
   }
 
   namespace SDS {
     template <typename STRING_TYPE> class BasicStringPiece;
     template <> class BasicStringPiece<int> { };  // expected-note {{previous definition is here}}
     extern template class BasicStringPiece<int>;
-    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'spec_vs_expl_inst::SDS::BasicStringPiece<int>'}}
+    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'BasicStringPiece<int>'}}
   }
 
   namespace SDIS {
@@ -328,7 +328,7 @@ namespace spec_vs_expl_inst {
     template <> class BasicStringPiece<int> { };  // expected-note {{previous definition is here}}
     extern template class BasicStringPiece<int>;
     template class BasicStringPiece<int>;
-    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'spec_vs_expl_inst::SDIS::BasicStringPiece<int>'}}
+    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'BasicStringPiece<int>'}}
   }
 
 }

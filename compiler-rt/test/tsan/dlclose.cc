@@ -1,10 +1,8 @@
 // RUN: %clangxx_tsan -O1 %s -DBUILD_SO -fPIC -shared -o %t-so.so
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 
-// If we mention TSAN_OPTIONS, the test won't run from test_output.sh script.
-
 // Test case for
-// https://code.google.com/p/thread-sanitizer/issues/detail?id=80
+// https://github.com/google/sanitizers/issues/487
 
 #ifdef BUILD_SO
 

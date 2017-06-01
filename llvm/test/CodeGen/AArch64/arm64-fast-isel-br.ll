@@ -94,9 +94,7 @@ entry:
   store i32 %c, i32* %c.addr, align 4
   store i64 %d, i64* %d.addr, align 8
   %0 = load i16, i16* %b.addr, align 2
-; CHECK: and w0, w0, #0x1
-; CHECK: cmp w0, #0
-; CHECK: b.eq LBB4_2
+; CHECK: tbz w0, #0, LBB4_2
   %conv = trunc i16 %0 to i1
   br i1 %conv, label %if.then, label %if.end
 
@@ -106,9 +104,7 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.then, %entry
   %1 = load i32, i32* %c.addr, align 4
-; CHECK: and w[[REG:[0-9]+]], w{{[0-9]+}}, #0x1
-; CHECK: cmp w[[REG]], #0
-; CHECK: b.eq LBB4_4
+; CHECK: tbz w{{[0-9]+}}, #0, LBB4_4
   %conv1 = trunc i32 %1 to i1
   br i1 %conv1, label %if.then3, label %if.end4
 
@@ -118,8 +114,7 @@ if.then3:                                         ; preds = %if.end
 
 if.end4:                                          ; preds = %if.then3, %if.end
   %2 = load i64, i64* %d.addr, align 8
-; CHECK: cmp w{{[0-9]+}}, #0
-; CHECK: b.eq LBB4_6
+; CHECK: tbz w{{[0-9]+}}, #0, LBB4_6
   %conv5 = trunc i64 %2 to i1
   br i1 %conv5, label %if.then7, label %if.end8
 
@@ -139,9 +134,7 @@ define i32 @trunc64(i64 %foo) nounwind {
 ; CHECK: trunc64
 ; CHECK: and  [[REG1:x[0-9]+]], x0, #0x1
 ; CHECK: mov  x[[REG2:[0-9]+]], [[REG1]]
-; CHECK: and  [[REG3:w[0-9]+]], w[[REG2]], #0x1
-; CHECK: cmp  [[REG3]], #0
-; CHECK: b.eq LBB5_2
+; CHECK: tbz w[[REG2]], #0, LBB5_2
   %a = and i64 %foo, 1
   %b = trunc i64 %a to i1
   br i1 %b, label %if.then, label %if.else

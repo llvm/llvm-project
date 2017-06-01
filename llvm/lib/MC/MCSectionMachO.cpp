@@ -17,10 +17,10 @@ using namespace llvm;
 /// types.  This *must* be kept in order with and stay synchronized with the
 /// section type list.
 static const struct {
-  const char *AssemblerName, *EnumName;
+  StringRef AssemblerName, EnumName;
 } SectionTypeDescriptors[MachO::LAST_KNOWN_SECTION_TYPE+1] = {
   { "regular",                  "S_REGULAR" },                    // 0x00
-  { nullptr,                    "S_ZEROFILL" },                   // 0x01
+  { StringRef(),                "S_ZEROFILL" },                   // 0x01
   { "cstring_literals",         "S_CSTRING_LITERALS" },           // 0x02
   { "4byte_literals",           "S_4BYTE_LITERALS" },             // 0x03
   { "8byte_literals",           "S_8BYTE_LITERALS" },             // 0x04
@@ -31,11 +31,11 @@ static const struct {
   { "mod_init_funcs",           "S_MOD_INIT_FUNC_POINTERS" },     // 0x09
   { "mod_term_funcs",           "S_MOD_TERM_FUNC_POINTERS" },     // 0x0A
   { "coalesced",                "S_COALESCED" },                  // 0x0B
-  { nullptr, /*FIXME??*/        "S_GB_ZEROFILL" },                // 0x0C
+  { StringRef(), /*FIXME??*/    "S_GB_ZEROFILL" },                // 0x0C
   { "interposing",              "S_INTERPOSING" },                // 0x0D
   { "16byte_literals",          "S_16BYTE_LITERALS" },            // 0x0E
-  { nullptr, /*FIXME??*/        "S_DTRACE_DOF" },                 // 0x0F
-  { nullptr, /*FIXME??*/        "S_LAZY_DYLIB_SYMBOL_POINTERS" }, // 0x10
+  { StringRef(), /*FIXME??*/    "S_DTRACE_DOF" },                 // 0x0F
+  { StringRef(), /*FIXME??*/    "S_LAZY_DYLIB_SYMBOL_POINTERS" }, // 0x10
   { "thread_local_regular",     "S_THREAD_LOCAL_REGULAR" },       // 0x11
   { "thread_local_zerofill",    "S_THREAD_LOCAL_ZEROFILL" },      // 0x12
   { "thread_local_variables",   "S_THREAD_LOCAL_VARIABLES" },     // 0x13
@@ -51,7 +51,7 @@ static const struct {
 /// by attribute, instead it is searched.
 static const struct {
   unsigned AttrFlag;
-  const char *AssemblerName, *EnumName;
+  StringRef AssemblerName, EnumName;
 } SectionAttrDescriptors[] = {
 #define ENTRY(ASMNAME, ENUM) \
   { MachO::ENUM, ASMNAME, #ENUM },
@@ -62,11 +62,11 @@ ENTRY("no_dead_strip",       S_ATTR_NO_DEAD_STRIP)
 ENTRY("live_support",        S_ATTR_LIVE_SUPPORT)
 ENTRY("self_modifying_code", S_ATTR_SELF_MODIFYING_CODE)
 ENTRY("debug",               S_ATTR_DEBUG)
-ENTRY(nullptr /*FIXME*/,     S_ATTR_SOME_INSTRUCTIONS)
-ENTRY(nullptr /*FIXME*/,     S_ATTR_EXT_RELOC)
-ENTRY(nullptr /*FIXME*/,     S_ATTR_LOC_RELOC)
+ENTRY(StringRef() /*FIXME*/, S_ATTR_SOME_INSTRUCTIONS)
+ENTRY(StringRef() /*FIXME*/, S_ATTR_EXT_RELOC)
+ENTRY(StringRef() /*FIXME*/, S_ATTR_LOC_RELOC)
 #undef ENTRY
-  { 0, "none", nullptr }, // used if section has no attributes but has a stub size
+  { 0, "none", StringRef() }, // used if section has no attributes but has a stub size
 };
 
 MCSectionMachO::MCSectionMachO(StringRef Segment, StringRef Section,
@@ -105,7 +105,7 @@ void MCSectionMachO::PrintSwitchToSection(const MCAsmInfo &MAI,
   assert(SectionType <= MachO::LAST_KNOWN_SECTION_TYPE &&
          "Invalid SectionType specified!");
 
-  if (SectionTypeDescriptors[SectionType].AssemblerName) {
+  if (!SectionTypeDescriptors[SectionType].AssemblerName.empty()) {
     OS << ',';
     OS << SectionTypeDescriptors[SectionType].AssemblerName;
   } else {
@@ -138,7 +138,7 @@ void MCSectionMachO::PrintSwitchToSection(const MCAsmInfo &MAI,
     SectionAttrs &= ~SectionAttrDescriptors[i].AttrFlag;
 
     OS << Separator;
-    if (SectionAttrDescriptors[i].AssemblerName)
+    if (!SectionAttrDescriptors[i].AssemblerName.empty())
       OS << SectionAttrDescriptors[i].AssemblerName;
     else
       OS << "<<" << SectionAttrDescriptors[i].EnumName << ">>";
@@ -212,8 +212,7 @@ std::string MCSectionMachO::ParseSectionSpecifier(StringRef Spec,        // In.
   auto TypeDescriptor = std::find_if(
       std::begin(SectionTypeDescriptors), std::end(SectionTypeDescriptors),
       [&](decltype(*SectionTypeDescriptors) &Descriptor) {
-        return Descriptor.AssemblerName &&
-               SectionType == Descriptor.AssemblerName;
+        return SectionType == Descriptor.AssemblerName;
       });
 
   // If we didn't find the section type, reject it.
@@ -241,8 +240,7 @@ std::string MCSectionMachO::ParseSectionSpecifier(StringRef Spec,        // In.
     auto AttrDescriptorI = std::find_if(
         std::begin(SectionAttrDescriptors), std::end(SectionAttrDescriptors),
         [&](decltype(*SectionAttrDescriptors) &Descriptor) {
-          return Descriptor.AssemblerName &&
-                 SectionAttr.trim() == Descriptor.AssemblerName;
+          return SectionAttr.trim() == Descriptor.AssemblerName;
         });
     if (AttrDescriptorI == std::end(SectionAttrDescriptors))
       return "mach-o section specifier has invalid attribute";

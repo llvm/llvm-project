@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-store=region -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region -fblocks -verify %s
 
 struct FPRec {
   void (*my_func)(int * x);  
@@ -14,7 +14,7 @@ int f1_a(struct FPRec* foo) {
 
 int f1_b() {
   int x;
-  return bar(x)+1;  // expected-warning{{Function call argument is an uninitialized value}}
+  return bar(x)+1;  // expected-warning{{1st function call argument is an uninitialized value}}
 }
 
 int f2() {
@@ -55,6 +55,12 @@ int f5(void) {
   struct f5_struct s;
   f5_aux(&s);
   return s.x; // no-warning
+}
+
+void f6(int x) {
+  int a[20];
+  if (x == 25) {}
+  if (a[x] == 123) {} // expected-warning{{The left operand of '==' is a garbage value due to array index out of bounds}}
 }
 
 int ret_uninit() {

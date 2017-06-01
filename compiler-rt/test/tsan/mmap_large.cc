@@ -16,13 +16,15 @@ int main() {
   const size_t kLog2Size = 39;
 #elif defined(__mips64) || defined(__aarch64__)
   const size_t kLog2Size = 32;
+#elif defined(__powerpc64__)
+  const size_t kLog2Size = 39;
 #endif
   const uintptr_t kLocation = 0x40ULL << kLog2Size;
   void *p = mmap(
       reinterpret_cast<void*>(kLocation),
       1ULL << kLog2Size,
       PROT_READ|PROT_WRITE,
-      MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE,
+      MAP_PRIVATE|MAP_ANON|MAP_NORESERVE,
       -1, 0);
   fprintf(stderr, "DONE %p %d\n", p, errno);
   return p == MAP_FAILED;

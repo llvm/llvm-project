@@ -4,8 +4,7 @@
 // RUN: %clangxx_asan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
 
 // REQUIRES: compiler-rt-optimized
-// XFAIL: arm-linux-gnueabi
-// XFAIL: armv7l-unknown-linux-gnueabihf
+// REQUIRES: stable-runtime
 
 #include <string.h>
 #include <stdlib.h>

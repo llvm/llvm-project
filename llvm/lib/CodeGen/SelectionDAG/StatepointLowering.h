@@ -16,9 +16,9 @@
 #define LLVM_LIB_CODEGEN_SELECTIONDAG_STATEPOINTLOWERING_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
-#include <vector>
 
 namespace llvm {
 class SelectionDAGBuilder;
@@ -45,15 +45,17 @@ public:
   /// statepoint.  Will return SDValue() if this value hasn't been
   /// spilled.  Otherwise, the value has already been spilled and no
   /// further action is required by the caller.
-  SDValue getLocation(SDValue val) {
-    if (!Locations.count(val))
+  SDValue getLocation(SDValue Val) {
+    auto I = Locations.find(Val);
+    if (I == Locations.end())
       return SDValue();
-    return Locations[val];
+    return I->second;
   }
-  void setLocation(SDValue val, SDValue Location) {
-    assert(!Locations.count(val) &&
+
+  void setLocation(SDValue Val, SDValue Location) {
+    assert(!Locations.count(Val) &&
            "Trying to allocate already allocated location");
-    Locations[val] = Location;
+    Locations[Val] = Location;
   }
 
   /// Record the fact that we expect to encounter a given gc_relocate
@@ -62,16 +64,15 @@ public:
   void scheduleRelocCall(const CallInst &RelocCall) {
     PendingGCRelocateCalls.push_back(&RelocCall);
   }
+
   /// Remove this gc_relocate from the list we're expecting to see
   /// before the next statepoint.  If we weren't expecting to see
   /// it, we'll report an assertion.
   void relocCallVisited(const CallInst &RelocCall) {
-    SmallVectorImpl<const CallInst *>::iterator itr =
-        std::find(PendingGCRelocateCalls.begin(), PendingGCRelocateCalls.end(),
-                  &RelocCall);
-    assert(itr != PendingGCRelocateCalls.end() &&
+    auto I = find(PendingGCRelocateCalls, &RelocCall);
+    assert(I != PendingGCRelocateCalls.end() &&
            "Visited unexpected gcrelocate call");
-    PendingGCRelocateCalls.erase(itr);
+    PendingGCRelocateCalls.erase(I);
   }
 
   // TODO: Should add consistency tracking to ensure we encounter
@@ -84,14 +85,15 @@ public:
   void reserveStackSlot(int Offset) {
     assert(Offset >= 0 && Offset < (int)AllocatedStackSlots.size() &&
            "out of bounds");
-    assert(!AllocatedStackSlots[Offset] && "already reserved!");
+    assert(!AllocatedStackSlots.test(Offset) && "already reserved!");
     assert(NextSlotToAllocate <= (unsigned)Offset && "consistency!");
-    AllocatedStackSlots[Offset] = true;
+    AllocatedStackSlots.set(Offset);
   }
+
   bool isStackSlotAllocated(int Offset) {
     assert(Offset >= 0 && Offset < (int)AllocatedStackSlots.size() &&
            "out of bounds");
-    return AllocatedStackSlots[Offset];
+    return AllocatedStackSlots.test(Offset);
   }
 
 private:
@@ -103,7 +105,7 @@ private:
   /// whether it has been used in the current statepoint.  Since we try to
   /// preserve stack slots across safepoints, there can be gaps in which
   /// slots have been allocated.
-  SmallVector<bool, 50> AllocatedStackSlots;
+  SmallBitVector AllocatedStackSlots;
 
   /// Points just beyond the last slot known to have been allocated
   unsigned NextSlotToAllocate;

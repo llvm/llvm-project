@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 < %s | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s
 
 define double @test_direct(float %in) {
 ; CHECK-LABEL: test_direct:

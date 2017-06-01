@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple -verify-machineinstrs -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -verify-machineinstrs -asm-verbose=false | FileCheck %s
 
 %struct.__neon_int8x8x2_t = type { <8 x i8>,  <8 x i8> }
 %struct.__neon_int8x8x3_t = type { <8 x i8>,  <8 x i8>,  <8 x i8> }

@@ -1,0 +1,64 @@
+REQUIRES: x86_64-linux
+RUN: sancov -merge %p/Inputs/test-linux_x86_64.0.symcov| FileCheck --check-prefix=MERGE1 %s
+RUN: sancov -merge %p/Inputs/test-linux_x86_64.0.symcov %p/Inputs/test-linux_x86_64.1.symcov| FileCheck --check-prefix=MERGE2 %s
+
+MERGE1: {
+MERGE1-NEXT:   "covered-points" : ["4e132b", "4e1472", "4e1520", "4e1553", "4e1586"],
+MERGE1-NEXT:   "binary-hash" : "BB3CDD5045AED83906F6ADCC1C4DAF7E2596A6B5",
+MERGE1-NEXT:   "point-symbol-info" : {
+MERGE1-NEXT:     "test/tools/sancov/Inputs/foo.cpp" : {
+MERGE1-NEXT:       "foo()" : {
+MERGE1-NEXT:         "4e178c" : "5:0"
+MERGE1-NEXT:       }
+MERGE1-NEXT:     },
+MERGE1-NEXT:     "test/tools/sancov/Inputs/test.cpp" : {
+MERGE1-NEXT:       "bar(std::string)" : {
+MERGE1-NEXT:         "4e132b" : "12:0"
+MERGE1-NEXT:       },
+MERGE1-NEXT:       "main" : {
+MERGE1-NEXT:         "4e1472" : "14:0",
+MERGE1-NEXT:         "4e14c2" : "16:9",
+MERGE1-NEXT:         "4e1520" : "17:5",
+MERGE1-NEXT:         "4e1553" : "17:5",
+MERGE1-NEXT:         "4e1586" : "17:5",
+MERGE1-NEXT:         "4e1635" : "19:1",
+MERGE1-NEXT:         "4e1690" : "17:5"
+MERGE1-NEXT:       }
+MERGE1-NEXT:     }
+MERGE1-NEXT:   }
+MERGE1-NEXT: }
+
+MERGE2: {
+MERGE2-NEXT:   "covered-points" : ["04e132b", "04e1472", "04e1520", "04e1553", "04e1586", "14e132b", "14e1472", "14e14c2", "14e1520", "14e1553", "14e1586", "14e178c"],
+MERGE2-NEXT:   "point-symbol-info" : {
+MERGE2-NEXT:     "test/tools/sancov/Inputs/foo.cpp" : {
+MERGE2-NEXT:      "foo()" : {
+MERGE2-NEXT:         "04e178c" : "5:0",
+MERGE2-NEXT:         "14e178c" : "5:0"
+MERGE2-NEXT:       }
+MERGE2-NEXT:     },
+MERGE2-NEXT:     "test/tools/sancov/Inputs/test.cpp" : {
+MERGE2-NEXT:       "bar(std::string)" : {
+MERGE2-NEXT:         "04e132b" : "12:0",
+MERGE2-NEXT:         "14e132b" : "12:0"
+MERGE2-NEXT:       },
+MERGE2-NEXT:       "main" : {
+MERGE2-NEXT:         "04e1472" : "14:0",
+MERGE2-NEXT:         "04e14c2" : "16:9",
+MERGE2-NEXT:         "04e1520" : "17:5",
+MERGE2-NEXT:         "04e1553" : "17:5",
+MERGE2-NEXT:         "04e1586" : "17:5",
+MERGE2-NEXT:         "04e1635" : "19:1",
+MERGE2-NEXT:         "04e1690" : "17:5",
+MERGE2-NEXT:         "14e1472" : "14:0",
+MERGE2-NEXT:         "14e14c2" : "16:9",
+MERGE2-NEXT:         "14e1520" : "17:5",
+MERGE2-NEXT:         "14e1553" : "17:5",
+MERGE2-NEXT:         "14e1586" : "17:5",
+MERGE2-NEXT:         "14e1635" : "19:1",
+MERGE2-NEXT:         "14e1690" : "17:5"
+MERGE2-NEXT:       }
+MERGE2-NEXT:     }
+MERGE2-NEXT:   }
+MERGE2-NEXT: }
+

@@ -55,8 +55,8 @@
     by Clang. For instance, in C mode, GCC supports
     <a href="http://gcc.gnu.org/onlinedocs/gcc/Nested-Functions.html">nested
     functions</a> and has an
-    <a href="http://gcc.gnu.org/bugzilla/show_bug.cgi?id=37428">undocumented
-    extension allowing VLAs in structs</a>.
+    <a href="https://gcc.gnu.org/onlinedocs/gcc/Variable-Length.html">extension
+    allowing VLAs in structs</a>.
     </ul>
 
     <p>Pro's of clang vs GCC:</p>
@@ -95,12 +95,13 @@
         that produced it (it is not a structured format).</li>
     <li>Clang is <a href="features.html#performance">much faster and uses far
         less memory</a> than GCC.</li>
-    <li>Clang aims to provide extremely clear and concise diagnostics (error and
-        warning messages), and includes support for <a
-        href="diagnostics.html">expressive diagnostics</a>.  GCC's warnings are 
-        sometimes acceptable, but are often confusing and it does not support
-        expressive diagnostics.  Clang also preserves typedefs in diagnostics
-        consistently, showing macro expansions and many other features.</li>
+    <li>Clang has been designed from the start to provide extremely clear and
+        concise diagnostics (error and warning messages), and includes support
+        for <a href="diagnostics.html">expressive diagnostics</a>.
+        Modern versions of GCC have made significant advances in this area,
+        incorporating various Clang features such as preserving typedefs in
+        diagnostics and showing macro expansions, but GCC is still catching
+        up.</li>
     <li>GCC is licensed under the GPL license. <a href="features.html#license">
         clang uses a BSD license,</a> which allows it to be embedded in
         software that is not GPL-licensed.</li>

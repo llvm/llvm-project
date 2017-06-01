@@ -1,0 +1,10 @@
+# This is a simple instrumentation map with bogus addresses and offsets, but
+# follow the recommended format.
+---
+- { id: 1, address: 0x1, function: 0x1, kind: function-enter, always-instrument: true}
+- { id: 1, address: 0x2, function: 0x1, kind: function-exit, always-instrument: true}
+- { id: 2, address: 0x2, function: 0x2, kind: function-enter, always-instrument: true}
+- { id: 2, address: 0x3, function: 0x2, kind: function-exit, always-instrument: true}
+- { id: 3, address: 0x3, function: 0x3, kind: function-enter, always-instrument: true}
+- { id: 3, address: 0x4, function: 0x3, kind: function-exit, always-instrument: true}
+...

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s
 
 define float @t1(i1 %a, float %b, float %c) nounwind {
 ; CHECK: t1

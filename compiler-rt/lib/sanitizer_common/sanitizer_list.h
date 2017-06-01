@@ -71,7 +71,9 @@ struct IntrusiveList {
   }
 
   Item *front() { return first_; }
+  const Item *front() const { return first_; }
   Item *back() { return last_; }
+  const Item *back() const { return last_; }
 
   void append_front(IntrusiveList<Item> *l) {
     CHECK_NE(this, l);
@@ -116,24 +118,32 @@ struct IntrusiveList {
     }
   }
 
-  template<class ListTy, class ItemTy>
+  template<class ItemTy>
   class IteratorBase {
    public:
-    explicit IteratorBase(ListTy *list)
-        : list_(list), current_(list->first_) { }
-    ItemTy *next() {
-      ItemTy *ret = current_;
-      if (current_) current_ = current_->next;
-      return ret;
+    explicit IteratorBase(ItemTy *current) : current_(current) {}
+    IteratorBase &operator++() {
+      current_ = current_->next;
+      return *this;
     }
-    bool hasNext() const { return current_ != nullptr; }
+    bool operator!=(IteratorBase other) const {
+      return current_ != other.current_;
+    }
+    ItemTy &operator*() {
+      return *current_;
+    }
    private:
-    ListTy *list_;
     ItemTy *current_;
   };
 
-  typedef IteratorBase<IntrusiveList<Item>, Item> Iterator;
-  typedef IteratorBase<const IntrusiveList<Item>, const Item> ConstIterator;
+  typedef IteratorBase<Item> Iterator;
+  typedef IteratorBase<const Item> ConstIterator;
+
+  Iterator begin() { return Iterator(first_); }
+  Iterator end() { return Iterator(0); }
+
+  ConstIterator begin() const { return ConstIterator(first_); }
+  ConstIterator end() const { return ConstIterator(0); }
 
 // private, don't use directly.
   uptr size_;

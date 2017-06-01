@@ -17,6 +17,7 @@ namespace llvm {
 
 class raw_ostream;
 
+namespace pdb {
 class PDBSymbolTypeUDT : public PDBSymbol {
 public:
   PDBSymbolTypeUDT(const IPDBSession &PDBSession,
@@ -40,13 +41,12 @@ public:
   FORWARD_SYMBOL_METHOD(hasOverloadedOperator)
   FORWARD_SYMBOL_METHOD(isPacked)
   FORWARD_SYMBOL_METHOD(isScoped)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
   FORWARD_SYMBOL_METHOD(getUdtKind)
   FORWARD_SYMBOL_METHOD(isUnalignedType)
   FORWARD_SYMBOL_METHOD(getVirtualTableShapeId)
   FORWARD_SYMBOL_METHOD(isVolatileType)
 };
-
+}
 } // namespace llvm
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEUDT_H

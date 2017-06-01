@@ -9,5 +9,5 @@ v4sf foo (struct s a) {
   return a.v;
 }
 
-// CHECK-LABEL: define <4 x float> @foo(<4 x float> inreg %a.coerce)
+// CHECK-LABEL: define <4 x float> @foo(<4 x float> inreg returned %a.coerce)
 // CHECK: ret <4 x float> %a.coerce

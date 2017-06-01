@@ -44,13 +44,10 @@ void IO::setContext(void *Context) {
 //  Input
 //===----------------------------------------------------------------------===//
 
-Input::Input(StringRef InputContent,
-             void *Ctxt,
-             SourceMgr::DiagHandlerTy DiagHandler,
-             void *DiagHandlerCtxt)
-  : IO(Ctxt),
-    Strm(new Stream(InputContent, SrcMgr)),
-    CurrentNode(nullptr) {
+Input::Input(StringRef InputContent, void *Ctxt,
+             SourceMgr::DiagHandlerTy DiagHandler, void *DiagHandlerCtxt)
+    : IO(Ctxt), Strm(new Stream(InputContent, SrcMgr, false, &EC)),
+      CurrentNode(nullptr) {
   if (DiagHandler)
     SrcMgr.setDiagHandler(DiagHandler, DiagHandlerCtxt);
   DocIterator = Strm->begin();
@@ -121,6 +118,18 @@ void Input::beginMapping() {
   }
 }
 
+std::vector<StringRef> Input::keys() {
+  MapHNode *MN = dyn_cast<MapHNode>(CurrentNode);
+  std::vector<StringRef> Ret;
+  if (!MN) {
+    setError(CurrentNode, "not a mapping");
+    return Ret;
+  }
+  for (auto &P : MN->Mapping)
+    Ret.push_back(P.first());
+  return Ret;
+}
+
 bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
                          void *&SaveInfo) {
   UseDefault = false;
@@ -166,7 +175,7 @@ void Input::endMapping() {
   if (!MN)
     return;
   for (const auto &NN : MN->Mapping) {
-    if (!MN->isValidKey(NN.first())) {
+    if (!is_contained(MN->ValidKeys, NN.first())) {
       setError(NN.second.get(), Twine("unknown key '") + NN.first() + "'");
       break;
     }
@@ -376,14 +385,6 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
   }
 }
 
-bool Input::MapHNode::isValidKey(StringRef Key) {
-  for (const char *K : ValidKeys) {
-    if (Key.equals(K))
-      return true;
-  }
-  return false;
-}
-
 void Input::setError(const Twine &Message) {
   this->setError(CurrentNode, Message);
 }
@@ -423,14 +424,39 @@ void Output::beginMapping() {
 
 bool Output::mapTag(StringRef Tag, bool Use) {
   if (Use) {
-    this->output(" ");
+    // If this tag is being written inside a sequence we should write the start
+    // of the sequence before writing the tag, otherwise the tag won't be
+    // attached to the element in the sequence, but rather the sequence itself.
+    bool SequenceElement =
+        StateStack.size() > 1 && (StateStack[StateStack.size() - 2] == inSeq ||
+          StateStack[StateStack.size() - 2] == inFlowSeq);
+    if (SequenceElement && StateStack.back() == inMapFirstKey) {
+      this->newLineCheck();
+    } else {
+      this->output(" ");
+    }
     this->output(Tag);
+    if (SequenceElement) {
+      // If we're writing the tag during the first element of a map, the tag
+      // takes the place of the first element in the sequence.
+      if (StateStack.back() == inMapFirstKey) {
+        StateStack.pop_back();
+        StateStack.push_back(inMapOtherKey);
+      }
+      // Tags inside maps in sequences should act as keys in the map from a
+      // formatting perspective, so we always want a newline in a sequence.
+      NeedsNewLine = true;
+    }
   }
   return Use;
 }
 
 void Output::endMapping() {
   StateStack.pop_back();
+}
+
+std::vector<StringRef> Output::keys() {
+  report_fatal_error("invalid call");
 }
 
 bool Output::preflightKey(const char *Key, bool Required, bool SameAsDefault,

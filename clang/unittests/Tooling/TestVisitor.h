@@ -43,6 +43,7 @@ public:
     Lang_C,
     Lang_CXX98,
     Lang_CXX11,
+    Lang_CXX14,
     Lang_OBJC,
     Lang_OBJCXX11,
     Lang_CXX = Lang_CXX98
@@ -55,6 +56,7 @@ public:
       case Lang_C: Args.push_back("-std=c99"); break;
       case Lang_CXX98: Args.push_back("-std=c++98"); break;
       case Lang_CXX11: Args.push_back("-std=c++11"); break;
+      case Lang_CXX14: Args.push_back("-std=c++14"); break;
       case Lang_OBJC: Args.push_back("-ObjC"); break;
       case Lang_OBJCXX11:
         Args.push_back("-ObjC++");
@@ -127,9 +129,12 @@ public:
   /// \brief Expect 'Match' to occur at the given 'Line' and 'Column'.
   ///
   /// Any number of expected matches can be set by calling this repeatedly.
-  /// Each is expected to be matched exactly once.
-  void ExpectMatch(Twine Match, unsigned Line, unsigned Column) {
-    ExpectedMatches.push_back(ExpectedMatch(Match, Line, Column));
+  /// Each is expected to be matched 'Times' number of times. (This is useful in
+  /// cases in which different AST nodes can match at the same source code
+  /// location.)
+  void ExpectMatch(Twine Match, unsigned Line, unsigned Column,
+                   unsigned Times = 1) {
+    ExpectedMatches.push_back(ExpectedMatch(Match, Line, Column, Times));
   }
 
   /// \brief Checks that all expected matches have been found.
@@ -200,14 +205,17 @@ protected:
   };
 
   struct ExpectedMatch {
-    ExpectedMatch(Twine Name, unsigned LineNumber, unsigned ColumnNumber)
-      : Candidate(Name, LineNumber, ColumnNumber), Found(false) {}
+    ExpectedMatch(Twine Name, unsigned LineNumber, unsigned ColumnNumber,
+                  unsigned Times)
+        : Candidate(Name, LineNumber, ColumnNumber), TimesExpected(Times),
+          TimesSeen(0) {}
 
     void UpdateFor(StringRef Name, FullSourceLoc Location, SourceManager &SM) {
       if (Candidate.Matches(Name, Location)) {
-        EXPECT_TRUE(!Found);
-        Found = true;
-      } else if (!Found && Candidate.PartiallyMatches(Name, Location)) {
+        EXPECT_LT(TimesSeen, TimesExpected);
+        ++TimesSeen;
+      } else if (TimesSeen < TimesExpected &&
+                 Candidate.PartiallyMatches(Name, Location)) {
         llvm::raw_string_ostream Stream(PartialMatches);
         Stream << ", partial match: \"" << Name << "\" at ";
         Location.print(Stream, SM);
@@ -215,7 +223,7 @@ protected:
     }
 
     void ExpectFound() const {
-      EXPECT_TRUE(Found)
+      EXPECT_EQ(TimesExpected, TimesSeen)
           << "Expected \"" << Candidate.ExpectedName
           << "\" at " << Candidate.LineNumber
           << ":" << Candidate.ColumnNumber << PartialMatches;
@@ -223,7 +231,8 @@ protected:
 
     MatchCandidate Candidate;
     std::string PartialMatches;
-    bool Found;
+    unsigned TimesExpected;
+    unsigned TimesSeen;
   };
 
   std::vector<MatchCandidate> DisallowedMatches;

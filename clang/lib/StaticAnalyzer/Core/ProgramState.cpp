@@ -111,24 +111,29 @@ ProgramStateManager::removeDeadBindings(ProgramStateRef state,
   return ConstraintMgr->removeDeadBindings(Result, SymReaper);
 }
 
-ProgramStateRef ProgramState::bindLoc(Loc LV, SVal V, bool notifyChanges) const {
+ProgramStateRef ProgramState::bindLoc(Loc LV,
+                                      SVal V,
+                                      const LocationContext *LCtx,
+                                      bool notifyChanges) const {
   ProgramStateManager &Mgr = getStateManager();
   ProgramStateRef newState = makeWithStore(Mgr.StoreMgr->Bind(getStore(),
                                                              LV, V));
   const MemRegion *MR = LV.getAsRegion();
   if (MR && Mgr.getOwningEngine() && notifyChanges)
-    return Mgr.getOwningEngine()->processRegionChange(newState, MR);
+    return Mgr.getOwningEngine()->processRegionChange(newState, MR, LCtx);
 
   return newState;
 }
 
-ProgramStateRef ProgramState::bindDefault(SVal loc, SVal V) const {
+ProgramStateRef ProgramState::bindDefault(SVal loc,
+                                          SVal V,
+                                          const LocationContext *LCtx) const {
   ProgramStateManager &Mgr = getStateManager();
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
   const StoreRef &newStore = Mgr.StoreMgr->BindDefault(getStore(), R, V);
   ProgramStateRef new_state = makeWithStore(newStore);
   return Mgr.getOwningEngine() ?
-           Mgr.getOwningEngine()->processRegionChange(new_state, R) :
+           Mgr.getOwningEngine()->processRegionChange(new_state, R, LCtx) :
            new_state;
 }
 
@@ -202,7 +207,7 @@ ProgramState::invalidateRegionsImpl(ValueList Values,
     }
 
     return Eng->processRegionChanges(newState, IS, TopLevelInvalidated,
-                                     Invalidated, Call);
+                                     Invalidated, LCtx, Call);
   }
 
   const StoreRef &newStore =
@@ -439,7 +444,7 @@ void ProgramState::printDOT(raw_ostream &Out) const {
   print(Out, "\\l", "\\|");
 }
 
-void ProgramState::dump() const {
+LLVM_DUMP_METHOD void ProgramState::dump() const {
   print(llvm::errs());
 }
 
@@ -527,32 +532,17 @@ bool ScanReachableSymbols::scan(nonloc::CompoundVal val) {
 }
 
 bool ScanReachableSymbols::scan(const SymExpr *sym) {
-  bool wasVisited = !visited.insert(sym).second;
-  if (wasVisited)
-    return true;
+  for (SymExpr::symbol_iterator SI = sym->symbol_begin(),
+                                SE = sym->symbol_end();
+       SI != SE; ++SI) {
+    bool wasVisited = !visited.insert(*SI).second;
+    if (wasVisited)
+      continue;
 
-  if (!visitor.VisitSymbol(sym))
-    return false;
-
-  // TODO: should be rewritten using SymExpr::symbol_iterator.
-  switch (sym->getKind()) {
-    case SymExpr::RegionValueKind:
-    case SymExpr::ConjuredKind:
-    case SymExpr::DerivedKind:
-    case SymExpr::ExtentKind:
-    case SymExpr::MetadataKind:
-      break;
-    case SymExpr::CastSymbolKind:
-      return scan(cast<SymbolCast>(sym)->getOperand());
-    case SymExpr::SymIntKind:
-      return scan(cast<SymIntExpr>(sym)->getLHS());
-    case SymExpr::IntSymKind:
-      return scan(cast<IntSymExpr>(sym)->getRHS());
-    case SymExpr::SymSymKind: {
-      const SymSymExpr *x = cast<SymSymExpr>(sym);
-      return scan(x->getLHS()) && scan(x->getRHS());
-    }
+    if (!visitor.VisitSymbol(*SI))
+      return false;
   }
+
   return true;
 }
 

@@ -6,6 +6,8 @@
 ; RUN:    -version-script=%p/Inputs/linker-script.export
 ; RUN: llvm-dis %t2.o -o - | FileCheck %s
 
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
 ; CHECK: define void @f()
 define void @f() {
   ret void

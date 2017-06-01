@@ -26,7 +26,7 @@ void f() {
 }
 
 void g() {
-  // CHECK: call noalias i8* @_Znwm(i64 1)
+  // CHECK: call i8* @_Znwm(i64 1)
   // CHECK: call void @_ZN1AC1Ev(
   static A& a = *new A;
 }

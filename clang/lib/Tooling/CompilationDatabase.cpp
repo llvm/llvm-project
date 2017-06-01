@@ -32,12 +32,14 @@
 using namespace clang;
 using namespace tooling;
 
+LLVM_INSTANTIATE_REGISTRY(CompilationDatabasePluginRegistry)
+
 CompilationDatabase::~CompilationDatabase() {}
 
 std::unique_ptr<CompilationDatabase>
 CompilationDatabase::loadFromDirectory(StringRef BuildDirectory,
                                        std::string &ErrorMessage) {
-  std::stringstream ErrorStream;
+  llvm::raw_string_ostream ErrorStream(ErrorMessage);
   for (CompilationDatabasePluginRegistry::iterator
        It = CompilationDatabasePluginRegistry::begin(),
        Ie = CompilationDatabasePluginRegistry::end();
@@ -49,7 +51,6 @@ CompilationDatabase::loadFromDirectory(StringRef BuildDirectory,
       return DB;
     ErrorStream << It->getName() << ": " << DatabaseErrorMessage << "\n";
   }
-  ErrorMessage = ErrorStream.str();
   return nullptr;
 }
 
@@ -139,9 +140,8 @@ private:
       ;
     }
 
-    for (driver::ActionList::const_iterator I = A->begin(), E = A->end();
-         I != E; ++I)
-      runImpl(*I, CollectChildren);
+    for (const driver::Action *AI : A->inputs())
+      runImpl(AI, CollectChildren);
   }
 };
 
@@ -300,7 +300,8 @@ FixedCompilationDatabase(Twine Directory, ArrayRef<std::string> CommandLine) {
   ToolCommandLine.insert(ToolCommandLine.end(),
                          CommandLine.begin(), CommandLine.end());
   CompileCommands.emplace_back(Directory, StringRef(),
-                               std::move(ToolCommandLine));
+                               std::move(ToolCommandLine),
+                               StringRef());
 }
 
 std::vector<CompileCommand>

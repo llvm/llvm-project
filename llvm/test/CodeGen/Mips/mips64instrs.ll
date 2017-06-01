@@ -1,7 +1,7 @@
-; RUN: llc -march=mips64el -mcpu=mips4 -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS4 -check-prefix=ACCMULDIV %s
-; RUN: llc -march=mips64el -mcpu=mips64 -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=HAS-DCLO -check-prefix=ACCMULDIV %s
-; RUN: llc -march=mips64el -mcpu=mips64r2 -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=HAS-DCLO -check-prefix=ACCMULDIV %s
-; RUN: llc -march=mips64el -mcpu=mips64r6 -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=HAS-DCLO -check-prefix=GPRMULDIV %s
+; RUN: llc -march=mips64el -mcpu=mips4 -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,MIPS4,ACCMULDIV %s
+; RUN: llc -march=mips64el -mcpu=mips64 -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,HAS-DCLO,ACCMULDIV %s
+; RUN: llc -march=mips64el -mcpu=mips64r2 -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,HAS-DCLO,ACCMULDIV %s
+; RUN: llc -march=mips64el -mcpu=mips64r6 -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,HAS-DCLO,GPRMULDIV %s
 
 @gll0 = common global i64 0, align 8
 @gll1 = common global i64 0, align 8

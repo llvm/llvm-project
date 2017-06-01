@@ -15,13 +15,9 @@
 #define LLVM_LIB_TARGET_AARCH64_INSTPRINTER_AARCH64INSTPRINTER_H
 
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstPrinter.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 
 namespace llvm {
-
-class MCOperand;
 
 class AArch64InstPrinter : public MCInstPrinter {
 public:
@@ -48,11 +44,14 @@ public:
                                      unsigned AltIdx = AArch64::NoRegAltName);
 
 protected:
-  bool printSysAlias(const MCInst *MI, raw_ostream &O);
+  bool printSysAlias(const MCInst *MI, const MCSubtargetInfo &STI,
+                     raw_ostream &O);
   // Operand printers
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
-  void printHexImm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+  void printImm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                raw_ostream &O);
+  void printImmHex(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printPostIncOperand(const MCInst *MI, unsigned OpNo, unsigned Imm,
                            raw_ostream &O);
@@ -121,6 +120,9 @@ protected:
 
   void printPrefetchOp(const MCInst *MI, unsigned OpNum,
                        const MCSubtargetInfo &STI, raw_ostream &O);
+
+  void printPSBHintOp(const MCInst *MI, unsigned OpNum,
+                      const MCSubtargetInfo &STI, raw_ostream &O);
 
   void printFPImmOperand(const MCInst *MI, unsigned OpNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);

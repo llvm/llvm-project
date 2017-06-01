@@ -19,12 +19,10 @@ entry:
 cont:
   ret void
 lpad:
-  %p = catchpad [i8* bitcast (i32 ()* @catchall_filt to i8*)]
-      to label %catch unwind label %endpad
+  %cs = catchswitch within none [label %catch] unwind to caller
 catch:
-  catchret %p to label %cont
-endpad:
-  catchendpad unwind to caller
+  %p = catchpad within %cs [i8* bitcast (i32 ()* @catchall_filt to i8*)]
+  catchret from %p to label %cont
 }
 
 ; CHECK-LABEL: _use_except_handler3:
@@ -45,7 +43,7 @@ endpad:
 ; CHECK: movl -28(%ebp), %[[next:[^ ,]*]]
 ; CHECK: movl %[[next]], %fs:0
 ; CHECK: retl
-; CHECK: LBB1_2: # %lpad{{$}}
+; CHECK: LBB1_2: # %catch{{$}}
 
 ; CHECK: .section .xdata,"dr"
 ; CHECK-LABEL: L__ehtable$use_except_handler3:
@@ -60,12 +58,10 @@ entry:
 cont:
   ret void
 lpad:
-  %p = catchpad [i8* bitcast (i32 ()* @catchall_filt to i8*)]
-      to label %catch unwind label %endpad
+  %cs = catchswitch within none [label %catch] unwind to caller
 catch:
-  catchret %p to label %cont
-endpad:
-  catchendpad unwind to caller
+  %p = catchpad within %cs [i8* bitcast (i32 ()* @catchall_filt to i8*)]
+  catchret from %p to label %cont
 }
 
 ; CHECK-LABEL: _use_except_handler4:
@@ -86,17 +82,63 @@ endpad:
 ; CHECK: movl -28(%ebp), %[[next:[^ ,]*]]
 ; CHECK: movl %[[next]], %fs:0
 ; CHECK: retl
-; CHECK: LBB2_2: # %lpad{{$}}
+; CHECK: LBB2_2: # %catch{{$}}
 
 ; CHECK: .section .xdata,"dr"
 ; CHECK-LABEL: L__ehtable$use_except_handler4:
 ; CHECK-NEXT:  .long   -2
 ; CHECK-NEXT:  .long   0
-; CHECK-NEXT:  .long   9999
+; CHECK-NEXT:  .long   -40
 ; CHECK-NEXT:  .long   0
 ; CHECK-NEXT:  .long   -2
 ; CHECK-NEXT:  .long   _catchall_filt
 ; CHECK-NEXT:  .long   LBB2_2
+
+define void @use_except_handler4_ssp() sspstrong personality i32 (...)* @_except_handler4 {
+entry:
+  invoke void @may_throw_or_crash()
+      to label %cont unwind label %lpad
+cont:
+  ret void
+lpad:
+  %cs = catchswitch within none [label %catch] unwind to caller
+catch:
+  %p = catchpad within %cs [i8* bitcast (i32 ()* @catchall_filt to i8*)]
+  catchret from %p to label %cont
+}
+
+; CHECK-LABEL: _use_except_handler4_ssp:
+; CHECK: pushl %ebp
+; CHECK: movl %esp, %ebp
+; CHECK: subl ${{[0-9]+}}, %esp
+; CHECK: movl %ebp, %[[ehguard:[^ ,]*]]
+; CHECK: movl %esp, -36(%ebp)
+; CHECK: movl $-2, -16(%ebp)
+; CHECK: movl $L__ehtable$use_except_handler4_ssp, %[[lsda:[^ ,]*]]
+; CHECK: xorl ___security_cookie, %[[lsda]]
+; CHECK: movl %[[lsda]], -20(%ebp)
+; CHECK: xorl ___security_cookie, %[[ehguard]]
+; CHECK: movl %[[ehguard]], -40(%ebp)
+; CHECK: leal -28(%ebp), %[[node:[^ ,]*]]
+; CHECK: movl $__except_handler4, -24(%ebp)
+; CHECK: movl %fs:0, %[[next:[^ ,]*]]
+; CHECK: movl %[[next]], -28(%ebp)
+; CHECK: movl %[[node]], %fs:0
+; CHECK: calll _may_throw_or_crash
+; CHECK: movl -28(%ebp), %[[next:[^ ,]*]]
+; CHECK: movl %[[next]], %fs:0   
+; CHECK: retl
+; CHECK: [[catch:[^ ,]*]]: # %catch{{$}}
+
+; CHECK: .section .xdata,"dr"
+; CHECK-LABEL: L__ehtable$use_except_handler4_ssp:
+; CHECK-NEXT:  .long   -2
+; CHECK-NEXT:  .long   0
+; CHECK-NEXT:  .long   -40  
+; CHECK-NEXT:  .long   0
+; CHECK-NEXT:  .long   -2
+; CHECK-NEXT:  .long   _catchall_filt
+; CHECK-NEXT:  .long   [[catch]]
 
 define void @use_CxxFrameHandler3() personality i32 (...)* @__CxxFrameHandler3 {
   invoke void @may_throw_or_crash()
@@ -105,14 +147,10 @@ cont:
   ret void
 
 catchall:
-  %p = catchpad [i8* null, i32 64, i8* null]
-      to label %catch unwind label %endcatch
-
+  %cs = catchswitch within none [label %catch] unwind to caller
 catch:
-  catchret %p to label %cont
-
-endcatch:
-  catchendpad unwind to caller
+  %p = catchpad within %cs [i8* null, i32 64, i8* null]
+  catchret from %p to label %cont
 }
 
 ; CHECK-LABEL: _use_CxxFrameHandler3:
@@ -133,7 +171,7 @@ endcatch:
 ; CHECK: retl
 
 ; CHECK: .section .xdata,"dr"
-; CHECK: .align 4
+; CHECK: .p2align 2
 ; CHECK-LABEL: L__ehtable$use_CxxFrameHandler3:
 ; CHECK-NEXT:  .long   429065506
 ; CHECK-NEXT:  .long   2

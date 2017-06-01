@@ -48,8 +48,41 @@
 
 #include <limits>
 
-#include "gtest/internal/gtest-string.h"
-#include "gtest/internal/gtest-internal.h"
+#include "gtest/internal/gtest-port.h"
+
+#if !GTEST_NO_LLVM_RAW_OSTREAM
+#include "llvm/Support/raw_os_ostream.h"
+
+// LLVM INTERNAL CHANGE: To allow operator<< to work with both
+// std::ostreams and LLVM's raw_ostreams, we define a special
+// std::ostream with an implicit conversion to raw_ostream& and stream
+// to that.  This causes the compiler to prefer std::ostream overloads
+// but still find raw_ostream& overloads.
+namespace llvm {
+class convertible_fwd_ostream : public std::ostream {
+  raw_os_ostream ros_;
+
+public:
+  convertible_fwd_ostream(std::ostream& os)
+    : std::ostream(os.rdbuf()), ros_(*this) {}
+  operator raw_ostream&() { return ros_; }
+};
+}
+template <typename T>
+inline void GTestStreamToHelper(std::ostream& os, const T& val) {
+  llvm::convertible_fwd_ostream cos(os);
+  cos << val;
+}
+#else
+template <typename T>
+inline void GTestStreamToHelper(std::ostream& os, const T& val) {
+  os << val;
+}
+#endif
+
+// Ensures that there is at least one operator<< in the global namespace.
+// See Message& operator<<(...) below for why.
+void operator<<(const testing::internal::Secret&, int);
 
 namespace testing {
 
@@ -87,15 +120,7 @@ class GTEST_API_ Message {
 
  public:
   // Constructs an empty Message.
-  // We allocate the stringstream separately because otherwise each use of
-  // ASSERT/EXPECT in a procedure adds over 200 bytes to the procedure's
-  // stack frame leading to huge stack frames in some cases; gcc does not reuse
-  // the stack space.
-  Message() : ss_(new ::std::stringstream) {
-    // By default, we want there to be enough precision when printing
-    // a double to a Message.
-    *ss_ << std::setprecision(std::numeric_limits<double>::digits10 + 2);
-  }
+  Message();
 
   // Copy constructor.
   Message(const Message& msg) : ss_(new ::std::stringstream) {  // NOLINT
@@ -118,7 +143,26 @@ class GTEST_API_ Message {
   // Streams a non-pointer value to this object.
   template <typename T>
   inline Message& operator <<(const T& val) {
-    ::GTestStreamToHelper(ss_.get(), val);
+    // Some libraries overload << for STL containers.  These
+    // overloads are defined in the global namespace instead of ::std.
+    //
+    // C++'s symbol lookup rule (i.e. Koenig lookup) says that these
+    // overloads are visible in either the std namespace or the global
+    // namespace, but not other namespaces, including the testing
+    // namespace which Google Test's Message class is in.
+    //
+    // To allow STL containers (and other types that has a << operator
+    // defined in the global namespace) to be used in Google Test
+    // assertions, testing::Message must access the custom << operator
+    // from the global namespace.  With this using declaration,
+    // overloads of << defined in the global namespace and those
+    // visible via Koenig lookup are both exposed in this function.
+#if GTEST_NO_LLVM_RAW_OSTREAM
+    using ::operator <<;
+    *ss_ << val;
+#else
+    ::GTestStreamToHelper(*ss_, val);
+#endif
     return *this;
   }
 
@@ -140,7 +184,11 @@ class GTEST_API_ Message {
     if (pointer == NULL) {
       *ss_ << "(null)";
     } else {
-      ::GTestStreamToHelper(ss_.get(), pointer);
+#if GTEST_NO_LLVM_RAW_OSTREAM
+      *ss_ << pointer;
+#else
+      ::GTestStreamToHelper(*ss_, pointer);
+#endif
     }
     return *this;
   }
@@ -164,12 +212,8 @@ class GTEST_API_ Message {
 
   // These two overloads allow streaming a wide C string to a Message
   // using the UTF-8 encoding.
-  Message& operator <<(const wchar_t* wide_c_str) {
-    return *this << internal::String::ShowWideCString(wide_c_str);
-  }
-  Message& operator <<(wchar_t* wide_c_str) {
-    return *this << internal::String::ShowWideCString(wide_c_str);
-  }
+  Message& operator <<(const wchar_t* wide_c_str);
+  Message& operator <<(wchar_t* wide_c_str);
 
 #if GTEST_HAS_STD_WSTRING
   // Converts the given wide string to a narrow string using the UTF-8
@@ -183,13 +227,11 @@ class GTEST_API_ Message {
   Message& operator <<(const ::wstring& wstr);
 #endif  // GTEST_HAS_GLOBAL_WSTRING
 
-  // Gets the text streamed to this object so far as a String.
+  // Gets the text streamed to this object so far as an std::string.
   // Each '\0' character in the buffer is replaced with "\\0".
   //
   // INTERNAL IMPLEMENTATION - DO NOT USE IN A USER PROGRAM.
-  internal::String GetString() const {
-    return internal::StringStreamToString(ss_.get());
-  }
+  std::string GetString() const;
 
  private:
 
@@ -199,16 +241,20 @@ class GTEST_API_ Message {
   // decide between class template specializations for T and T*, so a
   // tr1::type_traits-like is_pointer works, and we can overload on that.
   template <typename T>
-  inline void StreamHelper(internal::true_type /*dummy*/, T* pointer) {
+  inline void StreamHelper(internal::true_type /*is_pointer*/, T* pointer) {
     if (pointer == NULL) {
       *ss_ << "(null)";
     } else {
-      ::GTestStreamToHelper(ss_.get(), pointer);
+      *ss_ << pointer;
     }
   }
   template <typename T>
-  inline void StreamHelper(internal::false_type /*dummy*/, const T& value) {
-    ::GTestStreamToHelper(ss_.get(), value);
+  inline void StreamHelper(internal::false_type /*is_pointer*/,
+                           const T& value) {
+    // See the comments in Message& operator <<(const T&) above for why
+    // we need this using statement.
+    using ::operator <<;
+    *ss_ << value;
   }
 #endif  // GTEST_OS_SYMBIAN
 
@@ -225,6 +271,18 @@ inline std::ostream& operator <<(std::ostream& os, const Message& sb) {
   return os << sb.GetString();
 }
 
+namespace internal {
+
+// Converts a streamable value to an std::string.  A NULL pointer is
+// converted to "(null)".  When the input value is a ::string,
+// ::std::string, ::wstring, or ::std::wstring object, each NUL
+// character in it is replaced with "\\0".
+template <typename T>
+std::string StreamableToString(const T& streamable) {
+  return (Message() << streamable).GetString();
+}
+
+}  // namespace internal
 }  // namespace testing
 
 #endif  // GTEST_INCLUDE_GTEST_GTEST_MESSAGE_H_

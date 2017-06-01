@@ -56,6 +56,7 @@ TEST(SanitizerCommon, PthreadDestructorIterations) {
   EXPECT_TRUE(destructor_executed);
   SpawnThread(GetPthreadDestructorIterations() + 1);
   EXPECT_FALSE(destructor_executed);
+  ASSERT_EQ(0, pthread_key_delete(key));
 }
 
 TEST(SanitizerCommon, IsAccessibleMemoryRange) {

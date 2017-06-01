@@ -19,8 +19,8 @@
 #include "NVPTXISelLowering.h"
 #include "NVPTXInstrInfo.h"
 #include "NVPTXRegisterInfo.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Target/TargetSelectionDAGInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <string>
 
@@ -42,11 +42,15 @@ class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   const NVPTXTargetMachine &TM;
   NVPTXInstrInfo InstrInfo;
   NVPTXTargetLowering TLInfo;
-  TargetSelectionDAGInfo TSInfo;
+  SelectionDAGTargetInfo TSInfo;
 
   // NVPTX does not have any call stack frame, but need a NVPTX specific
   // FrameLowering class because TargetFrameLowering is abstract.
   NVPTXFrameLowering FrameLowering;
+
+protected:
+  // Processor supports scoped atomic operations.
+  bool HasAtomScope;
 
 public:
   /// This constructor initializes the data members to match that
@@ -65,7 +69,7 @@ public:
   const NVPTXTargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
-  const TargetSelectionDAGInfo *getSelectionDAGInfo() const override {
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
 
@@ -77,6 +81,10 @@ public:
   bool hasAtomRedGen32() const { return SmVersion >= 20; }
   bool hasAtomRedGen64() const { return SmVersion >= 20; }
   bool hasAtomAddF32() const { return SmVersion >= 20; }
+  bool hasAtomAddF64() const { return SmVersion >= 60; }
+  bool hasAtomScope() const { return HasAtomScope; }
+  bool hasAtomBitwise64() const { return SmVersion >= 32; }
+  bool hasAtomMinMax64() const { return SmVersion >= 32; }
   bool hasVote() const { return SmVersion >= 12; }
   bool hasDouble() const { return SmVersion >= 13; }
   bool reqPTX20() const { return SmVersion >= 20; }

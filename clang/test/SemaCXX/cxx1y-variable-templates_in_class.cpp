@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fsyntax-only %s -Wno-c++11-extensions -Wno-c++1y-extensions -DPRECXX11
+// RUN: %clang_cc1 -std=c++98 -verify -fsyntax-only %s -Wno-c++11-extensions -Wno-c++1y-extensions -DPRECXX11
 // RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only -Wno-c++1y-extensions %s
-// RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only %s
+// RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only %s -DCPP1Y
 
 #define CONST const
 
@@ -26,10 +26,10 @@ namespace out_of_line {
     template<typename T, typename T0> static CONST T right = T(100);
     template<typename T> static CONST T right<T,int> = T(5);
   };
-  template<> CONST int B0::right<int,int> = 7;
-  template CONST int B0::right<int,int>;
-  template<> CONST int B0::right<int,float>;
-  template CONST int B0::right<int,float>;
+  template<> CONST int B0::right<int,int> = 7; // expected-note {{previous}}
+  template CONST int B0::right<int,int>; // expected-warning {{has no effect}}
+  template<> CONST int B0::right<int,float>; // expected-note {{previous}}
+  template CONST int B0::right<int,float>; // expected-warning {{has no effect}}
 
   class B1 {
     template<typename T, typename T0> static CONST T right;
@@ -338,3 +338,47 @@ namespace b20896909 {
     A<int> ai;  // expected-note {{in instantiation of}}
   }
 }
+namespace member_access_is_ok {
+#ifdef CPP1Y
+  namespace ns1 {
+    struct A {
+      template<class T, T N> constexpr static T Var = N;
+    };
+    static_assert(A{}.Var<int,5> == 5,"");
+  } // end ns1
+#endif // CPP1Y
+
+namespace ns2 {
+  template<class T> struct A {
+    template<class U, T N, U M> static T&& Var;
+  };
+  template<class T> template<class U, T N, U M> T&& A<T>::Var = T(N + M);
+  int *AV = &A<int>().Var<char, 5, 'A'>;
+  
+} //end ns2
+} // end ns member_access_is_ok
+
+#ifdef CPP1Y
+namespace PR24473 {
+struct Value
+{
+    template<class T>
+    static constexpr T value = 0;
+};
+
+template<typename TValue>
+struct Something
+{
+    void foo() {
+        static_assert(TValue::template value<int> == 0, ""); // error
+    }
+};
+
+int main() { 
+    Something<Value>{}.foo();
+    return 0;
+}
+
+} // end ns PR24473
+#endif // CPP1Y
+

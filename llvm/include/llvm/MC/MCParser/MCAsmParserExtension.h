@@ -68,8 +68,8 @@ public:
   bool Warning(SMLoc L, const Twine &Msg) {
     return getParser().Warning(L, Msg);
   }
-  bool Error(SMLoc L, const Twine &Msg) {
-    return getParser().Error(L, Msg);
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = SMRange()) {
+    return getParser().Error(L, Msg, Range);
   }
   void Note(SMLoc L, const Twine &Msg) {
     getParser().Note(L, Msg);
@@ -79,8 +79,31 @@ public:
   }
 
   const AsmToken &Lex() { return getParser().Lex(); }
-
   const AsmToken &getTok() { return getParser().getTok(); }
+  bool parseToken(AsmToken::TokenKind T,
+                  const Twine &Msg = "unexpected token") {
+    return getParser().parseToken(T, Msg);
+  }
+
+  bool parseMany(function_ref<bool()> parseOne, bool hasComma = true) {
+    return getParser().parseMany(parseOne, hasComma);
+  }
+
+  bool parseOptionalToken(AsmToken::TokenKind T) {
+    return getParser().parseOptionalToken(T);
+  }
+
+  bool check(bool P, const llvm::Twine &Msg) {
+    return getParser().check(P, Msg);
+  }
+
+  bool check(bool P, SMLoc Loc, const llvm::Twine &Msg) {
+    return getParser().check(P, Loc, Msg);
+  }
+
+  bool addErrorSuffix(const Twine &Suffix) {
+    return getParser().addErrorSuffix(Suffix);
+  }
 
   bool HasBracketExpressions() const { return BracketExpressionsSupported; }
 

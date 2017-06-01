@@ -31,7 +31,7 @@ class IsPotentiallyReachableTest : public testing::Test {
 protected:
   void ParseAssembly(const char *Assembly) {
     SMDiagnostic Error;
-    M = parseAssemblyString(Assembly, Error, getGlobalContext());
+    M = parseAssemblyString(Assembly, Error, Context);
 
     std::string errMsg;
     raw_string_ostream os(errMsg);
@@ -112,6 +112,7 @@ protected:
     PM.run(*M);
   }
 
+  LLVMContext Context;
   std::unique_ptr<Module> M;
   Instruction *A, *B;
 };

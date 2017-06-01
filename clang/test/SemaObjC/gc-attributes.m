@@ -20,3 +20,7 @@ void test_f1() {
   f1(&a);
   f1(&a2); // expected-warning{{passing 'A *__strong *' to parameter of type 'A *__weak *' discards qualifiers}} 
 }
+
+// These qualifiers should silently expand to nothing in GC mode.
+void test_unsafe_unretained(__unsafe_unretained id *x) {}
+void test_autoreleasing(__autoreleasing id *x) {}

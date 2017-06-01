@@ -25,10 +25,10 @@ protected:
     DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
     tooling::Replacements Replaces = reformat(Style, Code, Ranges);
-    std::string Result = applyAllReplacements(Code, Replaces);
-    EXPECT_NE("", Result);
-    DEBUG(llvm::errs() << "\n" << Result << "\n\n");
-    return Result;
+    auto Result = applyAllReplacements(Code, Replaces);
+    EXPECT_TRUE(static_cast<bool>(Result));
+    DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
+    return *Result;
   }
 
   static std::string format(llvm::StringRef Code) {
@@ -74,8 +74,11 @@ TEST_F(FormatTestProto, FormatsEnums) {
                "  TYPE_B = 2;\n"
                "};");
   verifyFormat("enum Type {\n"
+               "  UNKNOWN = 0 [(some_options) = {a: aa, b: bb}];\n"
+               "};");
+  verifyFormat("enum Type {\n"
                "  UNKNOWN = 0 [(some_options) = {\n"
-               "    a: aa,\n"
+               "    a: aa,  // wrap\n"
                "    b: bb\n"
                "  }];\n"
                "};");
@@ -88,9 +91,10 @@ TEST_F(FormatTestProto, UnderstandsReturns) {
 TEST_F(FormatTestProto, MessageFieldAttributes) {
   verifyFormat("optional string test = 1 [default = \"test\"];");
   verifyFormat("optional bool a = 1 [default = true, deprecated = true];");
-  verifyFormat("optional LongMessageType long_proto_field = 1\n"
-               "    [default = REALLY_REALLY_LONG_CONSTANT_VALUE,\n"
-               "     deprecated = true];");
+  verifyFormat("optional LongMessageType long_proto_field = 1 [\n"
+               "  default = REALLY_REALLY_LONG_CONSTANT_VALUE,\n"
+               "  deprecated = true\n"
+               "];");
   verifyFormat("optional LongMessageType long_proto_field = 1\n"
                "    [default = REALLY_REALLY_LONG_CONSTANT_VALUE];");
   verifyFormat("repeated double value = 1\n"
@@ -103,6 +107,16 @@ TEST_F(FormatTestProto, MessageFieldAttributes) {
                "  aaaaaaaaaaaaaaaa: AAAAAAAAAA\n"
                "  bbbbbbbbbbbbbbbb: BBBBBBBBBB\n"
                "}];");
+  verifyFormat("repeated double value = 1 [\n"
+               "  (aaaaaaa.aaaaaaaaa) = {\n"
+               "    aaaaaaaaaaaaaaaa: AAAAAAAAAA\n"
+               "    bbbbbbbbbbbbbbbb: BBBBBBBBBB\n"
+               "  },\n"
+               "  (bbbbbbb.bbbbbbbbb) = {\n"
+               "    aaaaaaaaaaaaaaaa: AAAAAAAAAA\n"
+               "    bbbbbbbbbbbbbbbb: BBBBBBBBBB\n"
+               "  }\n"
+               "];");
   verifyFormat("repeated double value = 1 [(aaaaaaa.aaaaaaaaa) = {\n"
                "  type: \"AAAAAAAAAA\"\n"
                "  is: \"AAAAAAAAAA\"\n"
@@ -113,6 +127,14 @@ TEST_F(FormatTestProto, MessageFieldAttributes) {
                "  bbbbbbb: BBBB,\n"
                "  bbbb: BBB\n"
                "}];");
+  verifyFormat("optional AAA aaa = 1 [\n"
+               "  foo = {\n"
+               "    key: 'a'  //\n"
+               "  },\n"
+               "  bar = {\n"
+               "    key: 'a'  //\n"
+               "  }\n"
+               "];");
 }
 
 TEST_F(FormatTestProto, DoesntWrapFileOptions) {
@@ -130,27 +152,27 @@ TEST_F(FormatTestProto, FormatsOptions) {
                "  field_c: \"OK\"\n"
                "  msg_field: {field_d: 123}\n"
                "};");
-
   verifyFormat("option (MyProto.options) = {\n"
                "  field_a: OK\n"
                "  field_b: \"OK\"\n"
                "  field_c: \"OK\"\n"
-               "  msg_field: {\n"
-               "    field_d: 123\n"
-               "    field_e: OK\n"
-               "  }\n"
+               "  msg_field: {field_d: 123 field_e: OK}\n"
                "};");
-
   verifyFormat("option (MyProto.options) = {\n"
                "  field_a: OK  // Comment\n"
                "  field_b: \"OK\"\n"
                "  field_c: \"OK\"\n"
                "  msg_field: {field_d: 123}\n"
                "};");
-
   verifyFormat("option (MyProto.options) = {\n"
                "  field_c: \"OK\"\n"
                "  msg_field{field_d: 123}\n"
+               "};");
+
+  // Support syntax with <> instead of {}.
+  verifyFormat("option (MyProto.options) = {\n"
+               "  field_c: \"OK\",\n"
+               "  msg_field: <field_d: 123>\n"
                "};");
 }
 
@@ -160,6 +182,32 @@ TEST_F(FormatTestProto, FormatsService) {
                "    option foo = true;\n"
                "  }\n"
                "};");
+}
+
+TEST_F(FormatTestProto, ExtendingMessage) {
+  verifyFormat("extend .foo.Bar {\n"
+               "}");
+}
+
+TEST_F(FormatTestProto, FormatsImports) {
+  verifyFormat("import \"a.proto\";\n"
+               "import \"b.proto\";\n"
+               "// comment\n"
+               "message A {\n"
+               "}");
+
+  verifyFormat("import public \"a.proto\";\n"
+               "import \"b.proto\";\n"
+               "// comment\n"
+               "message A {\n"
+               "}");
+
+  // Missing semicolons should not confuse clang-format.
+  verifyFormat("import \"a.proto\"\n"
+               "import \"b.proto\"\n"
+               "// comment\n"
+               "message A {\n"
+               "}");
 }
 
 } // end namespace tooling

@@ -10,6 +10,8 @@
 // This file is a part of ThreadSanitizer/AddressSanitizer runtime.
 //
 //===----------------------------------------------------------------------===//
+#include <algorithm>
+
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
@@ -170,15 +172,54 @@ bool UptrLess(uptr a, uptr b) {
   return a < b;
 }
 
-TEST(SanitizerCommon, InternalBinarySearch) {
+TEST(SanitizerCommon, InternalLowerBound) {
   static const uptr kSize = 5;
-  uptr arr[kSize];
-  for (uptr i = 0; i < kSize; i++) arr[i] = i * i;
+  int arr[kSize];
+  arr[0] = 1;
+  arr[1] = 3;
+  arr[2] = 5;
+  arr[3] = 7;
+  arr[4] = 11;
 
-  for (uptr i = 0; i < kSize; i++)
-    ASSERT_EQ(InternalBinarySearch(arr, 0, kSize, i * i, UptrLess), i);
+  EXPECT_EQ(0u, InternalLowerBound(arr, 0, kSize, 0, UptrLess));
+  EXPECT_EQ(0u, InternalLowerBound(arr, 0, kSize, 1, UptrLess));
+  EXPECT_EQ(1u, InternalLowerBound(arr, 0, kSize, 2, UptrLess));
+  EXPECT_EQ(1u, InternalLowerBound(arr, 0, kSize, 3, UptrLess));
+  EXPECT_EQ(2u, InternalLowerBound(arr, 0, kSize, 4, UptrLess));
+  EXPECT_EQ(2u, InternalLowerBound(arr, 0, kSize, 5, UptrLess));
+  EXPECT_EQ(3u, InternalLowerBound(arr, 0, kSize, 6, UptrLess));
+  EXPECT_EQ(3u, InternalLowerBound(arr, 0, kSize, 7, UptrLess));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 8, UptrLess));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 9, UptrLess));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 10, UptrLess));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 11, UptrLess));
+  EXPECT_EQ(5u, InternalLowerBound(arr, 0, kSize, 12, UptrLess));
+}
 
-  ASSERT_EQ(InternalBinarySearch(arr, 0, kSize, 7, UptrLess), kSize + 1);
+TEST(SanitizerCommon, InternalLowerBoundVsStdLowerBound) {
+  std::vector<int> data;
+  auto create_item = [] (size_t i, size_t j) {
+    auto v = i * 10000 + j;
+    return ((v << 6) + (v >> 6) + 0x9e3779b9) % 100;
+  };
+  for (size_t i = 0; i < 1000; ++i) {
+    data.resize(i);
+    for (size_t j = 0; j < i; ++j) {
+      data[j] = create_item(i, j);
+    }
+
+    std::sort(data.begin(), data.end());
+
+    for (size_t j = 0; j < i; ++j) {
+      int val = create_item(i, j);
+      for (auto to_find : {val - 1, val, val + 1}) {
+        uptr expected =
+            std::lower_bound(data.begin(), data.end(), to_find) - data.begin();
+        EXPECT_EQ(expected, InternalLowerBound(data.data(), 0, data.size(),
+                                               to_find, std::less<int>()));
+      }
+    }
+  }
 }
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
@@ -206,6 +247,30 @@ TEST(SanitizerCommon, StripPathPrefix) {
                StripPathPrefix("/usr/lib/dir/file.cc", "/usr/lib/"));
   EXPECT_STREQ("/file.cc", StripPathPrefix("/usr/myroot/file.cc", "/myroot"));
   EXPECT_STREQ("file.h", StripPathPrefix("/usr/lib/./file.h", "/usr/lib/"));
+}
+
+TEST(SanitizerCommon, RemoveANSIEscapeSequencesFromString) {
+  RemoveANSIEscapeSequencesFromString(nullptr);
+  const char *buffs[22] = {
+    "Default",                                "Default",
+    "\033[95mLight magenta",                  "Light magenta",
+    "\033[30mBlack\033[32mGreen\033[90mGray", "BlackGreenGray",
+    "\033[106mLight cyan \033[107mWhite ",    "Light cyan White ",
+    "\033[31mHello\033[0m World",             "Hello World",
+    "\033[38;5;82mHello \033[38;5;198mWorld", "Hello World",
+    "123[653456789012",                       "123[653456789012",
+    "Normal \033[5mBlink \033[25mNormal",     "Normal Blink Normal",
+    "\033[106m\033[107m",                     "",
+    "",                                       "",
+    " ",                                      " ",
+  };
+
+  for (size_t i = 0; i < ARRAY_SIZE(buffs); i+=2) {
+    char *buffer_copy = internal_strdup(buffs[i]);
+    RemoveANSIEscapeSequencesFromString(buffer_copy);
+    EXPECT_STREQ(buffer_copy, buffs[i+1]);
+    InternalFree(buffer_copy);
+  }
 }
 
 TEST(SanitizerCommon, InternalScopedString) {

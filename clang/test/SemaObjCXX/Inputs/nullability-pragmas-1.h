@@ -9,6 +9,8 @@ __attribute__((objc_root_class))
 struct X { };
 
 void f1(int *x); // expected-warning{{pointer is missing a nullability type specifier}}
+// expected-note@-1{{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2{{insert '_Nonnull' if the pointer should never be null}}
 
 typedef struct __attribute__((objc_bridge(NSError))) __CFError *CFErrorRef;
 typedef NSError *NSErrorPtr;
@@ -39,15 +41,29 @@ int * _Null_unspecified f15(void);
 A * _Null_unspecified f16(void);
 void f17(CFErrorRef *error); // expected-note{{no known conversion from 'A * _Nonnull' to 'CFErrorRef  _Nullable * _Nullable' (aka '__CFError **') for 1st argument}}
 void f18(A **); // expected-warning 2{{pointer is missing a nullability type specifier}}
+// expected-note@-1 2 {{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2 2 {{insert '_Nonnull' if the pointer should never be null}}
 void f19(CFErrorRefPtr error); // expected-warning{{pointer is missing a nullability type specifier}}
+// expected-note@-1{{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2{{insert '_Nonnull' if the pointer should never be null}}
 
 void g1(int (^)(int, int));
 void g2(int (^ *bp)(int, int)); // expected-warning{{block pointer is missing a nullability type specifier}}
-// expected-warning@-1{{pointer is missing a nullability type specifier}}
+// expected-note@-1{{insert '_Nullable' if the block pointer may be null}}
+// expected-note@-2{{insert '_Nonnull' if the block pointer should never be null}}
+// expected-warning@-3{{pointer is missing a nullability type specifier}}
+// expected-note@-4{{insert '_Nullable' if the pointer may be null}}
+// expected-note@-5{{insert '_Nonnull' if the pointer should never be null}}
 void g3(block_ptr *bp); // expected-warning{{block pointer is missing a nullability type specifier}}
-// expected-warning@-1{{pointer is missing a nullability type specifier}}
+// expected-note@-1{{insert '_Nullable' if the block pointer may be null}}
+// expected-note@-2{{insert '_Nonnull' if the block pointer should never be null}}
+// expected-warning@-3{{pointer is missing a nullability type specifier}}
+// expected-note@-4{{insert '_Nullable' if the pointer may be null}}
+// expected-note@-5{{insert '_Nonnull' if the pointer should never be null}}
 void g4(int (*fp)(int, int));
 void g5(int (**fp)(int, int)); // expected-warning 2{{pointer is missing a nullability type specifier}}
+// expected-note@-1 2 {{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2 2 {{insert '_Nonnull' if the pointer should never be null}}
 
 @interface A(Pragmas1)
 + (instancetype)aWithA:(A *)a;
@@ -57,9 +73,13 @@ void g5(int (**fp)(int, int)); // expected-warning 2{{pointer is missing a nulla
 - (void)method4:(NSErrorPtr *)error; // expected-note{{passing argument to parameter 'error' here}}
 - (void)method5:(NSErrorPtrPtr)error;
 // expected-warning@-1{{pointer is missing a nullability type specifier}}
+// expected-note@-2{{insert '_Nullable' if the pointer may be null}}
+// expected-note@-3{{insert '_Nonnull' if the pointer should never be null}}
 
 @property A *aProp;
 @property NSError **anError; // expected-warning 2{{pointer is missing a nullability type specifier}}
+// expected-note@-1 2 {{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2 2 {{insert '_Nonnull' if the pointer should never be null}}
 @end
 
 int *global_int_ptr;
@@ -68,6 +88,8 @@ int *global_int_ptr;
 typedef int *int_ptr_2;
 
 typedef int * // expected-warning{{pointer is missing a nullability type specifier}}
+// expected-note@-1{{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2{{insert '_Nonnull' if the pointer should never be null}}
             *int_ptr_ptr;
 
 static inline void f30(void) {
@@ -90,12 +112,22 @@ static inline void f30(void) {
 #pragma clang assume_nonnull end
 
 void f20(A *a); // expected-warning{{pointer is missing a nullability type specifier}}
+// expected-note@-1{{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2{{insert '_Nonnull' if the pointer should never be null}}
 void f21(int_ptr x); // expected-warning{{pointer is missing a nullability type specifier}}
+// expected-note@-1{{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2{{insert '_Nonnull' if the pointer should never be null}}
 void f22(A_ptr y); // expected-warning{{pointer is missing a nullability type specifier}}
+// expected-note@-1{{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2{{insert '_Nonnull' if the pointer should never be null}}
 void f23(int_ptr _Nullable x);
 void f24(A_ptr _Nullable y);
 void f25(int_ptr_2 x); // expected-warning{{pointer is missing a nullability type specifier}}
+// expected-note@-1{{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2{{insert '_Nonnull' if the pointer should never be null}}
 
 @interface A(OutsidePragmas1)
 + (instancetype)aWithInt:(int)value; // expected-warning{{pointer is missing a nullability type specifier}}
+// expected-note@-1{{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2{{insert '_Nonnull' if the pointer should never be null}}
 @end

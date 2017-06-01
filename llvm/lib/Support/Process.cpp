@@ -73,6 +73,13 @@ static const char colorcodes[2][2][8][10] = {
  { ALLCOLORS("4",""), ALLCOLORS("4","1;") }
 };
 
+// This is set to true when Process::PreventCoreFiles() is called.
+static bool coreFilesPrevented = false;
+
+bool Process::AreCoreFilesPrevented() {
+  return coreFilesPrevented;
+}
+
 // Include the platform-specific parts of this class.
 #ifdef LLVM_ON_UNIX
 #include "Unix/Process.inc"

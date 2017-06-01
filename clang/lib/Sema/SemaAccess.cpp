@@ -291,9 +291,10 @@ static AccessResult IsDerivedFromInclusive(const CXXRecordDecl *Derived,
   SmallVector<const CXXRecordDecl*, 8> Queue; // actually a stack
 
   while (true) {
-    if (Derived->isDependentContext() && !Derived->hasDefinition())
+    if (Derived->isDependentContext() && !Derived->hasDefinition() &&
+        !Derived->isLambda())
       return AR_dependent;
-    
+
     for (const auto &I : Derived->bases()) {
       const CXXRecordDecl *RD;
 
@@ -410,14 +411,8 @@ static AccessResult MatchesFriend(Sema &S,
     return AR_accessible;
 
   if (EC.isDependent()) {
-    CanQualType FriendTy
-      = S.Context.getCanonicalType(S.Context.getTypeDeclType(Friend));
-
-    for (EffectiveContext::record_iterator
-           I = EC.Records.begin(), E = EC.Records.end(); I != E; ++I) {
-      CanQualType ContextTy
-        = S.Context.getCanonicalType(S.Context.getTypeDeclType(*I));
-      if (MightInstantiateTo(S, ContextTy, FriendTy))
+    for (const CXXRecordDecl *Context : EC.Records) {
+      if (MightInstantiateTo(Context, Friend))
         return AR_dependent;
     }
   }
@@ -1615,10 +1610,10 @@ Sema::AccessResult Sema::CheckDestructorAccess(SourceLocation Loc,
 /// Checks access to a constructor.
 Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
                                                 CXXConstructorDecl *Constructor,
+                                                DeclAccessPair Found,
                                                 const InitializedEntity &Entity,
-                                                AccessSpecifier Access,
                                                 bool IsCopyBindingRefToTemp) {
-  if (!getLangOpts().AccessControl || Access == AS_public)
+  if (!getLangOpts().AccessControl || Found.getAccess() == AS_public)
     return AR_accessible;
 
   PartialDiagnostic PD(PDiag());
@@ -1652,17 +1647,17 @@ Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
 
   }
 
-  return CheckConstructorAccess(UseLoc, Constructor, Entity, Access, PD);
+  return CheckConstructorAccess(UseLoc, Constructor, Found, Entity, PD);
 }
 
 /// Checks access to a constructor.
 Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
                                                 CXXConstructorDecl *Constructor,
+                                                DeclAccessPair Found,
                                                 const InitializedEntity &Entity,
-                                                AccessSpecifier Access,
                                                 const PartialDiagnostic &PD) {
   if (!getLangOpts().AccessControl ||
-      Access == AS_public)
+      Found.getAccess() == AS_public)
     return AR_accessible;
 
   CXXRecordDecl *NamingClass = Constructor->getParent();
@@ -1670,16 +1665,28 @@ Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
   // Initializing a base sub-object is an instance method call on an
   // object of the derived class.  Otherwise, we have an instance method
   // call on an object of the constructed type.
+  //
+  // FIXME: If we have a parent, we're initializing the base class subobject
+  // in aggregate initialization. It's not clear whether the object class
+  // should be the base class or the derived class in that case.
   CXXRecordDecl *ObjectClass;
-  if (Entity.getKind() == InitializedEntity::EK_Base) {
+  if ((Entity.getKind() == InitializedEntity::EK_Base ||
+       Entity.getKind() == InitializedEntity::EK_Delegating) &&
+      !Entity.getParent()) {
     ObjectClass = cast<CXXConstructorDecl>(CurContext)->getParent();
+  } else if (auto *Shadow =
+                 dyn_cast<ConstructorUsingShadowDecl>(Found.getDecl())) {
+    // If we're using an inheriting constructor to construct an object,
+    // the object class is the derived class, not the base class.
+    ObjectClass = Shadow->getParent();
   } else {
     ObjectClass = NamingClass;
   }
 
-  AccessTarget AccessEntity(Context, AccessTarget::Member, NamingClass,
-                            DeclAccessPair::make(Constructor, Access),
-                            Context.getTypeDeclType(ObjectClass));
+  AccessTarget AccessEntity(
+      Context, AccessTarget::Member, NamingClass,
+      DeclAccessPair::make(Constructor, Found.getAccess()),
+      Context.getTypeDeclType(ObjectClass));
   AccessEntity.setDiag(PD);
 
   return CheckAccess(*this, UseLoc, AccessEntity);
@@ -1767,9 +1774,9 @@ Sema::AccessResult Sema::CheckFriendAccess(NamedDecl *target) {
   // while the ParsingDeclarator is active.
   EffectiveContext EC(CurContext);
   switch (CheckEffectiveAccess(*this, EC, target->getLocation(), entity)) {
-  case AR_accessible: return Sema::AR_accessible;
-  case AR_inaccessible: return Sema::AR_inaccessible;
-  case AR_dependent: return Sema::AR_dependent;
+  case ::AR_accessible: return Sema::AR_accessible;
+  case ::AR_inaccessible: return Sema::AR_inaccessible;
+  case ::AR_dependent: return Sema::AR_dependent;
   }
   llvm_unreachable("invalid access result");
 }

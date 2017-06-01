@@ -8,7 +8,7 @@ entry:
 ; CHECK: it ne
 ; CHECK: cmpne
 ; CHECK: it hi
-; CHECK: pophi {r7, pc}
+; CHECK: bxhi lr
 	%tmp1 = icmp ult i32 %X, 4		; <i1> [#uses=1]
 	%tmp4 = icmp eq i32 %Y, 0		; <i1> [#uses=1]
 	%tmp7 = or i1 %tmp4, %tmp1		; <i1> [#uses=1]
@@ -69,7 +69,7 @@ define fastcc void @t1(%struct.SString* %word, i8 signext  %c) {
 entry:
 ; CHECK-LABEL: t1:
 ; CHECK: it ne
-; CHECK: popne {r7, pc}
+; CHECK: bxne lr
 	%tmp1 = icmp eq %struct.SString* %word, null		; <i1> [#uses=1]
 	br i1 %tmp1, label %cond_true, label %cond_false
 

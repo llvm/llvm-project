@@ -12,6 +12,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -23,7 +24,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 using namespace clang;
 
 namespace {
@@ -73,15 +73,17 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   const char *source =
     "#define M(x) [x]\n"
     "M(foo)";
-  std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(source);
+  std::unique_ptr<llvm::MemoryBuffer> Buf =
+      llvm::MemoryBuffer::getMemBuffer(source);
   FileID mainFileID = SourceMgr.createFileID(std::move(Buf));
   SourceMgr.setMainFileID(mainFileID);
 
   VoidModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(new HeaderSearchOptions, SourceMgr, Diags, LangOpts, 
-                          &*Target);
-  Preprocessor PP(new PreprocessorOptions(), Diags, LangOpts, SourceMgr,
-                  HeaderInfo, ModLoader,
+  MemoryBufferCache PCMCache;
+  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                          Diags, LangOpts, &*Target);
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                  SourceMgr, PCMCache, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
@@ -126,7 +128,8 @@ TEST_F(SourceManagerTest, getColumnNumber) {
     "int x;\n"
     "int y;";
 
-  std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Source);
+  std::unique_ptr<llvm::MemoryBuffer> Buf =
+      llvm::MemoryBuffer::getMemBuffer(Source);
   FileID MainFileID = SourceMgr.createFileID(std::move(Buf));
   SourceMgr.setMainFileID(MainFileID);
 
@@ -185,8 +188,10 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
     "#define CONCAT(X, Y) X##Y\n"
     "CONCAT(1,1)\n";
 
-  std::unique_ptr<MemoryBuffer> HeaderBuf = MemoryBuffer::getMemBuffer(header);
-  std::unique_ptr<MemoryBuffer> MainBuf = MemoryBuffer::getMemBuffer(main);
+  std::unique_ptr<llvm::MemoryBuffer> HeaderBuf =
+      llvm::MemoryBuffer::getMemBuffer(header);
+  std::unique_ptr<llvm::MemoryBuffer> MainBuf =
+      llvm::MemoryBuffer::getMemBuffer(main);
   FileID mainFileID = SourceMgr.createFileID(std::move(MainBuf));
   SourceMgr.setMainFileID(mainFileID);
 
@@ -195,10 +200,11 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
   VoidModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(new HeaderSearchOptions, SourceMgr, Diags, LangOpts, 
-                          &*Target);
-  Preprocessor PP(new PreprocessorOptions(), Diags, LangOpts, SourceMgr,
-                  HeaderInfo, ModLoader,
+  MemoryBufferCache PCMCache;
+  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                          Diags, LangOpts, &*Target);
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                  SourceMgr, PCMCache, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
@@ -284,8 +290,10 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
     "#define INC2 </test-header.h>\n"
     "#include M(INC2)\n";
 
-  std::unique_ptr<MemoryBuffer> HeaderBuf = MemoryBuffer::getMemBuffer(header);
-  std::unique_ptr<MemoryBuffer> MainBuf = MemoryBuffer::getMemBuffer(main);
+  std::unique_ptr<llvm::MemoryBuffer> HeaderBuf =
+      llvm::MemoryBuffer::getMemBuffer(header);
+  std::unique_ptr<llvm::MemoryBuffer> MainBuf =
+      llvm::MemoryBuffer::getMemBuffer(main);
   SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(MainBuf)));
 
   const FileEntry *headerFile = FileMgr.getVirtualFile("/test-header.h",
@@ -293,10 +301,11 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
   VoidModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(new HeaderSearchOptions, SourceMgr, Diags, LangOpts, 
-                          &*Target);
-  Preprocessor PP(new PreprocessorOptions(), Diags, LangOpts, SourceMgr,
-                  HeaderInfo, ModLoader,
+  MemoryBufferCache PCMCache;
+  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                          Diags, LangOpts, &*Target);
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                  SourceMgr, PCMCache, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);

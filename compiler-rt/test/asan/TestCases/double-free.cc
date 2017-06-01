@@ -4,8 +4,10 @@
 // Also works if no malloc context is available.
 // RUN: %env_asan_opts=malloc_context_size=0:fast_unwind_on_malloc=0 not %run %t 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=malloc_context_size=0:fast_unwind_on_malloc=1 not %run %t 2>&1 | FileCheck %s
-// XFAIL: arm-linux-gnueabi
-// XFAIL: armv7l-unknown-linux-gnueabihf
+
+// RUN: %clangxx_asan -O0 -fsanitize-recover=address %s -o %t 2>&1
+// RUN: %env_asan_opts=halt_on_error=false %run %t 2>&1 | FileCheck %s --check-prefix CHECK-RECOVER
+// REQUIRES: stable-runtime
 
 #include <stdlib.h>
 #include <string.h>
@@ -23,5 +25,7 @@ int main(int argc, char **argv) {
   // MALLOC-CTX: #1 0x{{.*}} in main {{.*}}double-free.cc:[[@LINE-7]]
   // CHECK: allocated by thread T0 here:
   // MALLOC-CTX: double-free.cc:[[@LINE-12]]
+  // CHECK-RECOVER: AddressSanitizer: attempting double-free{{.*}}in thread T0
+  // CHECK-RECOVER-NOT: AddressSanitizer CHECK failed:
   return res;
 }

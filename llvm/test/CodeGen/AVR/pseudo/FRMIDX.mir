@@ -1,0 +1,25 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+
+# TODO: Write this test.
+# This instruction isn't expanded by the pseudo expansion passs, but
+# rather AVRRegisterInfo::eliminateFrameIndex.
+
+--- |
+  target triple = "avr--"
+  define void @test() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test
+registers:
+  - { id: 0, class: _ }
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test
+
+    %r29r28 = FRMIDX %r31r30, 0, implicit-def %sreg
+...

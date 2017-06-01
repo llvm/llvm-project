@@ -26,7 +26,7 @@ namespace llvm {
 
 /// A private "module" namespace for types and utilities used by SROA. These
 /// are implementation details and should not be used by clients.
-namespace sroa {
+namespace sroa LLVM_LIBRARY_VISIBILITY {
 class AllocaSliceRewriter;
 class AllocaSlices;
 class Partition;
@@ -51,7 +51,7 @@ class SROALegacyPass;
 ///    onto insert and extract operations on a vector value, and convert them to
 ///    this form. By doing so, it will enable promotion of vector aggregates to
 ///    SSA vector values.
-class SROA {
+class SROA : public PassInfoMixin<SROA> {
   LLVMContext *C;
   DominatorTree *DT;
   AssumptionCache *AC;
@@ -101,10 +101,8 @@ class SROA {
 public:
   SROA() : C(nullptr), DT(nullptr), AC(nullptr) {}
 
-  static StringRef name() { return "SROA"; }
-
   /// \brief Run the pass over the function.
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   friend class sroa::AllocaSliceRewriter;

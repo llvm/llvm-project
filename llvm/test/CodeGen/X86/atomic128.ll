@@ -4,9 +4,14 @@
 
 define i128 @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
 ; CHECK-LABEL: val_compare_and_swap:
+; Due to the scheduling right after isel for cmpxchg and given the
+; machine scheduler and copy coalescer do not mess up with physical
+; register live-ranges, we end up with a useless copy.
+;
+; CHECK: movq %rcx, [[TMP:%r[0-9a-z]+]]
 ; CHECK: movq %rsi, %rax
-; CHECK: movq %rcx, %rbx
 ; CHECK: movq %r8, %rcx
+; CHECK: movq [[TMP]], %rbx
 ; CHECK: lock
 ; CHECK: cmpxchg16b (%rdi)
 
@@ -119,16 +124,9 @@ define void @fetch_and_min(i128* %p, i128 %bits) {
 ; CHECK-DAG:     movq 8(%rdi), %rdx
 
 ; CHECK: [[LOOP:.?LBB[0-9]+_[0-9]+]]:
-; CHECK:         cmpq %rsi, %rax
-; CHECK:         setbe [[CMP:%[a-z0-9]+]]
-; CHECK:         cmpq [[INCHI]], %rdx
-; CHECK:         setle [[HICMP:%[a-z0-9]+]]
-; CHECK:         je [[USE_LO:.?LBB[0-9]+_[0-9]+]]
-
-; CHECK:         movb [[HICMP]], [[CMP]]
-; CHECK: [[USE_LO]]:
-; CHECK:         testb [[CMP]], [[CMP]]
-; CHECK:         movq %rsi, %rbx
+; CHECK:         cmpq
+; CHECK:         sbbq
+; CHECK:         setg
 ; CHECK:         cmovneq %rax, %rbx
 ; CHECK:         movq [[INCHI]], %rcx
 ; CHECK:         cmovneq %rdx, %rcx
@@ -151,16 +149,9 @@ define void @fetch_and_max(i128* %p, i128 %bits) {
 ; CHECK-DAG:     movq 8(%rdi), %rdx
 
 ; CHECK: [[LOOP:.?LBB[0-9]+_[0-9]+]]:
-; CHECK:         cmpq %rsi, %rax
-; CHECK:         setae [[CMP:%[a-z0-9]+]]
-; CHECK:         cmpq [[INCHI]], %rdx
-; CHECK:         setge [[HICMP:%[a-z0-9]+]]
-; CHECK:         je [[USE_LO:.?LBB[0-9]+_[0-9]+]]
-
-; CHECK:         movb [[HICMP]], [[CMP]]
-; CHECK: [[USE_LO]]:
-; CHECK:         testb [[CMP]], [[CMP]]
-; CHECK:         movq %rsi, %rbx
+; CHECK:         cmpq
+; CHECK:         sbbq
+; CHECK:         setge
 ; CHECK:         cmovneq %rax, %rbx
 ; CHECK:         movq [[INCHI]], %rcx
 ; CHECK:         cmovneq %rdx, %rcx
@@ -183,16 +174,9 @@ define void @fetch_and_umin(i128* %p, i128 %bits) {
 ; CHECK-DAG:     movq 8(%rdi), %rdx
 
 ; CHECK: [[LOOP:.?LBB[0-9]+_[0-9]+]]:
-; CHECK:         cmpq %rsi, %rax
-; CHECK:         setbe [[CMP:%[a-z0-9]+]]
-; CHECK:         cmpq [[INCHI]], %rdx
-; CHECK:         setbe [[HICMP:%[a-z0-9]+]]
-; CHECK:         je [[USE_LO:.?LBB[0-9]+_[0-9]+]]
-
-; CHECK:         movb [[HICMP]], [[CMP]]
-; CHECK: [[USE_LO]]:
-; CHECK:         testb [[CMP]], [[CMP]]
-; CHECK:         movq %rsi, %rbx
+; CHECK:         cmpq
+; CHECK:         sbbq
+; CHECK:         seta
 ; CHECK:         cmovneq %rax, %rbx
 ; CHECK:         movq [[INCHI]], %rcx
 ; CHECK:         cmovneq %rdx, %rcx
@@ -215,16 +199,9 @@ define void @fetch_and_umax(i128* %p, i128 %bits) {
 ; CHECK-DAG:     movq 8(%rdi), %rdx
 
 ; CHECK: [[LOOP:.?LBB[0-9]+_[0-9]+]]:
-; CHECK:         cmpq %rax, %rsi
-; CHECK:         setb [[CMP:%[a-z0-9]+]]
-; CHECK:         cmpq [[INCHI]], %rdx
-; CHECK:         seta [[HICMP:%[a-z0-9]+]]
-; CHECK:         je [[USE_LO:.?LBB[0-9]+_[0-9]+]]
-
-; CHECK:         movb [[HICMP]], [[CMP]]
-; CHECK: [[USE_LO]]:
-; CHECK:         testb [[CMP]], [[CMP]]
-; CHECK:         movq %rsi, %rbx
+; CHECK:         cmpq
+; CHECK:         sbbq
+; CHECK:         setb
 ; CHECK:         cmovneq %rax, %rbx
 ; CHECK:         movq [[INCHI]], %rcx
 ; CHECK:         cmovneq %rdx, %rcx
@@ -244,8 +221,8 @@ define i128 @atomic_load_seq_cst(i128* %p) {
 ; CHECK-LABEL: atomic_load_seq_cst:
 ; CHECK: xorl %eax, %eax
 ; CHECK: xorl %edx, %edx
-; CHECK: xorl %ebx, %ebx
 ; CHECK: xorl %ecx, %ecx
+; CHECK: xorl %ebx, %ebx
 ; CHECK: lock
 ; CHECK: cmpxchg16b (%rdi)
 
@@ -257,8 +234,8 @@ define i128 @atomic_load_relaxed(i128* %p) {
 ; CHECK: atomic_load_relaxed:
 ; CHECK: xorl %eax, %eax
 ; CHECK: xorl %edx, %edx
-; CHECK: xorl %ebx, %ebx
 ; CHECK: xorl %ecx, %ecx
+; CHECK: xorl %ebx, %ebx
 ; CHECK: lock
 ; CHECK: cmpxchg16b (%rdi)
 

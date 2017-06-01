@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wunused-value %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wunused-value -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wunused-value -std=c++11 %s
 
 // PR4806
 namespace test0 {
@@ -12,7 +14,10 @@ namespace test0 {
     // pointer to volatile has side effect (thus no warning)
     Box* box = new Box;
     box->i; // expected-warning {{expression result unused}}
-    box->j; // expected-warning {{expression result unused}}
+    box->j;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{expression result unused}}
+#endif
   }
 }
 

@@ -54,7 +54,53 @@ entry:
 define i32 @test.objectsize() {
 ; CHECK-LABEL: @test.objectsize(
 ; CHECK: @llvm.objectsize.i32.p0i8
-; CHECK-DAG: declare i32 @llvm.objectsize.i32.p0i8
   %s = call i32 @llvm.objectsize.i32(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i1 false)
   ret i32 %s
 }
+
+declare <2 x double> @llvm.masked.load.v2f64(<2 x double>* %ptrs, i32, <2 x i1> %mask, <2 x double> %src0)
+
+define <2 x double> @tests.masked.load(<2 x double>* %ptr, <2 x i1> %mask, <2 x double> %passthru)  {
+; CHECK-LABEL: @tests.masked.load(
+; CHECK: @llvm.masked.load.v2f64.p0v2f64
+  %res = call <2 x double> @llvm.masked.load.v2f64(<2 x double>* %ptr, i32 1, <2 x i1> %mask, <2 x double> %passthru)
+  ret <2 x double> %res
+}
+
+declare void @llvm.masked.store.v2f64(<2 x double> %val, <2 x double>* %ptrs, i32, <2 x i1> %mask)
+
+define void @tests.masked.store(<2 x double>* %ptr, <2 x i1> %mask, <2 x double> %val)  {
+; CHECK-LABEL: @tests.masked.store(
+; CHECK: @llvm.masked.store.v2f64.p0v2f64
+  call void @llvm.masked.store.v2f64(<2 x double> %val, <2 x double>* %ptr, i32 3, <2 x i1> %mask)
+  ret void
+}
+
+
+declare {}* @llvm.invariant.start(i64, i8* nocapture) nounwind readonly
+declare void @llvm.invariant.end({}*, i64, i8* nocapture) nounwind
+
+define void @tests.invariant.start.end() {
+  ; CHECK-LABEL: @tests.invariant.start.end(
+  %a = alloca i8
+  %i = call {}* @llvm.invariant.start(i64 1, i8* %a)
+  ; CHECK: call {}* @llvm.invariant.start.p0i8
+  store i8 0, i8* %a
+  call void @llvm.invariant.end({}* %i, i64 1, i8* %a)
+  ; CHECK: call void @llvm.invariant.end.p0i8
+  ret void
+}
+
+@__stack_chk_guard = external global i8*
+declare void @llvm.stackprotectorcheck(i8**)
+
+define void @test.stackprotectorcheck() {
+; CHECK-LABEL: @test.stackprotectorcheck(
+; CHECK-NEXT: ret void
+  call void @llvm.stackprotectorcheck(i8** @__stack_chk_guard)
+  ret void
+}
+
+; This is part of @test.objectsize(), since llvm.objectsize declaration gets
+; emitted at the end.
+; CHECK: declare i32 @llvm.objectsize.i32.p0i8

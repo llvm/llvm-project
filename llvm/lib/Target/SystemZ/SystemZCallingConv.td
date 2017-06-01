@@ -33,6 +33,9 @@ def RetCC_SystemZ : CallingConv<[
   // Promote i32 to i64 if it has an explicit extension type.
   CCIfType<[i32], CCIfExtend<CCPromoteToType<i64>>>,
 
+  // A SwiftError is returned in R9.
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R9D]>>>,
+
   // ABI-compliant code returns 64-bit integers in R2.  Make the other
   // call-clobbered argument registers available for code that doesn't
   // care about the ABI.  (R6 is an argument register too, but is
@@ -65,8 +68,17 @@ def CC_SystemZ : CallingConv<[
   // are smaller than 64 bits shouldn't.
   CCIfType<[i32], CCIfExtend<CCPromoteToType<i64>>>,
 
+  // A SwiftSelf is passed in callee-saved R10.
+  CCIfSwiftSelf<CCIfType<[i64], CCAssignToReg<[R10D]>>>,
+
+  // A SwiftError is passed in callee-saved R9.
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R9D]>>>,
+
   // Force long double values to the stack and pass i64 pointers to them.
   CCIfType<[f128], CCPassIndirect<i64>>,
+  // Same for i128 values.  These are already split into two i64 here,
+  // so we have to use a custom handler.
+  CCIfType<[i64], CCCustom<"CC_SystemZ_I128Indirect">>,
 
   // The first 5 integer arguments are passed in R2-R6.  Note that R6
   // is call-saved.
@@ -105,3 +117,6 @@ def CC_SystemZ : CallingConv<[
 //===----------------------------------------------------------------------===//
 def CSR_SystemZ : CalleeSavedRegs<(add (sequence "R%dD", 6, 15),
                                        (sequence "F%dD", 8, 15))>;
+
+// R9 is used to return SwiftError; remove it from CSR.
+def CSR_SystemZ_SwiftError : CalleeSavedRegs<(sub CSR_SystemZ, R9D)>;

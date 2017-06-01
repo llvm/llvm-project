@@ -27,7 +27,7 @@ namespace llvm {
                                         bool *Fast) const override;
 
     MachineBasicBlock *
-    EmitInstrWithCustomInserter(MachineInstr *MI,
+    EmitInstrWithCustomInserter(MachineInstr &MI,
                                 MachineBasicBlock *MBB) const override;
 
   private:
@@ -50,32 +50,32 @@ namespace llvm {
                 bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
                 SDValue Chain) const override;
 
-    MachineBasicBlock *emitSel16(unsigned Opc, MachineInstr *MI,
+    MachineBasicBlock *emitSel16(unsigned Opc, MachineInstr &MI,
                                  MachineBasicBlock *BB) const;
 
     MachineBasicBlock *emitSeliT16(unsigned Opc1, unsigned Opc2,
-                                   MachineInstr *MI,
+                                   MachineInstr &MI,
                                    MachineBasicBlock *BB) const;
 
     MachineBasicBlock *emitSelT16(unsigned Opc1, unsigned Opc2,
-                                  MachineInstr *MI,
+                                  MachineInstr &MI,
                                   MachineBasicBlock *BB) const;
 
     MachineBasicBlock *emitFEXT_T8I816_ins(unsigned BtOpc, unsigned CmpOpc,
-                                           MachineInstr *MI,
+                                           MachineInstr &MI,
                                            MachineBasicBlock *BB) const;
 
-    MachineBasicBlock *emitFEXT_T8I8I16_ins(
-      unsigned BtOpc, unsigned CmpiOpc, unsigned CmpiXOpc, bool ImmSigned,
-      MachineInstr *MI,  MachineBasicBlock *BB) const;
+    MachineBasicBlock *emitFEXT_T8I8I16_ins(unsigned BtOpc, unsigned CmpiOpc,
+                                            unsigned CmpiXOpc, bool ImmSigned,
+                                            MachineInstr &MI,
+                                            MachineBasicBlock *BB) const;
 
-    MachineBasicBlock *emitFEXT_CCRX16_ins(
-      unsigned SltOpc,
-      MachineInstr *MI,  MachineBasicBlock *BB) const;
+    MachineBasicBlock *emitFEXT_CCRX16_ins(unsigned SltOpc, MachineInstr &MI,
+                                           MachineBasicBlock *BB) const;
 
-    MachineBasicBlock *emitFEXT_CCRXI16_ins(
-      unsigned SltiOpc, unsigned SltiXOpc,
-      MachineInstr *MI,  MachineBasicBlock *BB )const;
+    MachineBasicBlock *emitFEXT_CCRXI16_ins(unsigned SltiOpc, unsigned SltiXOpc,
+                                            MachineInstr &MI,
+                                            MachineBasicBlock *BB) const;
   };
 }
 

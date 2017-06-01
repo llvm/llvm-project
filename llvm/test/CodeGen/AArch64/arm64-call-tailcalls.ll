@@ -89,3 +89,12 @@ declare void @foo() nounwind
 declare i32 @a(i32)
 declare i32 @b(i32)
 declare i32 @c(i32)
+
+; CHECK-LABEL: tswift:
+; CHECK: b _swiftfunc
+define swiftcc i32 @tswift(i32 %a) nounwind {
+  %res = tail call i32 @swiftfunc(i32 %a)
+  ret i32 %res
+}
+
+declare swiftcc i32 @swiftfunc(i32) nounwind

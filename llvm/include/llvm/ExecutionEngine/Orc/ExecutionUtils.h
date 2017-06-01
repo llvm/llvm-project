@@ -14,9 +14,9 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EXECUTIONUTILS_H
 #define LLVM_EXECUTIONENGINE_ORC_EXECUTIONUTILS_H
 
-#include "JITSymbol.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include <vector>
 
@@ -43,12 +43,12 @@ public:
   ///   This class provides a read-only view of the element with any casts on
   /// the function stripped away.
   struct Element {
-    Element(unsigned Priority, const Function *Func, const Value *Data)
+    Element(unsigned Priority, Function *Func, Value *Data)
       : Priority(Priority), Func(Func), Data(Data) {}
 
     unsigned Priority;
-    const Function *Func;
-    const Value *Data;
+    Function *Func;
+    Value *Data;
   };
 
   /// @brief Construct an iterator instance. If End is true then this iterator
@@ -144,10 +144,10 @@ public:
   }
 
   /// Search overrided symbols.
-  RuntimeDyld::SymbolInfo searchOverrides(const std::string &Name) {
+  JITEvaluatedSymbol searchOverrides(const std::string &Name) {
     auto I = CXXRuntimeOverrides.find(Name);
     if (I != CXXRuntimeOverrides.end())
-      return RuntimeDyld::SymbolInfo(I->second, JITSymbolFlags::Exported);
+      return JITEvaluatedSymbol(I->second, JITSymbolFlags::Exported);
     return nullptr;
   }
 
@@ -158,15 +158,15 @@ public:
 private:
 
   template <typename PtrTy>
-  TargetAddress toTargetAddress(PtrTy* P) {
-    return static_cast<TargetAddress>(reinterpret_cast<uintptr_t>(P));
+  JITTargetAddress toTargetAddress(PtrTy* P) {
+    return static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(P));
   }
 
-  void addOverride(const std::string &Name, TargetAddress Addr) {
+  void addOverride(const std::string &Name, JITTargetAddress Addr) {
     CXXRuntimeOverrides.insert(std::make_pair(Name, Addr));
   }
 
-  StringMap<TargetAddress> CXXRuntimeOverrides;
+  StringMap<JITTargetAddress> CXXRuntimeOverrides;
 
   typedef void (*DestructorPtr)(void*);
   typedef std::pair<DestructorPtr, void*> CXXDestructorDataPair;

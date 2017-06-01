@@ -114,13 +114,13 @@ MSP430RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
   unsigned BasePtr = (TFI->hasFP(MF) ? MSP430::FP : MSP430::SP);
-  int Offset = MF.getFrameInfo()->getObjectOffset(FrameIndex);
+  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
 
   // Skip the saved PC
   Offset += 2;
 
   if (!TFI->hasFP(MF))
-    Offset += MF.getFrameInfo()->getStackSize();
+    Offset += MF.getFrameInfo().getStackSize();
   else
     Offset += 2; // Skip the saved FP
 

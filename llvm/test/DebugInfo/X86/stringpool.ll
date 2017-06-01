@@ -1,19 +1,19 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s --check-prefix=LINUX
 ; RUN: llc -mtriple=x86_64-darwin < %s | FileCheck %s --check-prefix=DARWIN
 
-@yyyy = common global i32 0, align 4
+source_filename = "test/DebugInfo/X86/stringpool.ll"
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!9}
+@yyyy = common global i32 0, align 4, !dbg !0
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.1 (trunk 143009)", isOptimized: true, emissionKind: 0, file: !8, enums: !1, retainedTypes: !1, subprograms: !1, globals: !3, imports:  !1)
-!1 = !{}
-!3 = !{!5}
-!5 = !DIGlobalVariable(name: "yyyy", line: 1, isLocal: false, isDefinition: true, scope: null, file: !6, type: !7, variable: i32* @yyyy)
-!6 = !DIFile(filename: "z.c", directory: "/home/nicholas")
-!7 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!8 = !DIFile(filename: "z.c", directory: "/home/nicholas")
+!llvm.dbg.cu = !{!4}
+!llvm.module.flags = !{!7}
 
+!0 = !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "yyyy", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
+!2 = !DIFile(filename: "z.c", directory: "/home/nicholas")
+!3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+!4 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang version 3.1 (trunk 143009)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !6, imports: !5)
+!5 = !{}
 ; Verify that "yyyy" ended up in the stringpool.
 ; LINUX: .section .debug_str,"MS",@progbits,1
 ; LINUX: yyyy
@@ -39,4 +39,5 @@
 ; DARWIN-NEXT:        .byte   9                       ## DW_AT_location
 ; DARWIN-NEXT:        .byte   3
 ; DARWIN-NEXT:        .quad   _yyyy
-!9 = !{i32 1, !"Debug Info Version", i32 3}
+!6 = !{!0}
+!7 = !{i32 1, !"Debug Info Version", i32 3}

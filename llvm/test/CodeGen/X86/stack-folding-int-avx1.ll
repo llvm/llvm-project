@@ -428,16 +428,18 @@ declare <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8>, <16 x i8>, i8) nounwin
 
 define i32 @stack_fold_pextrd(<4 x i32> %a0) {
   ;CHECK-LABEL: stack_fold_pextrd
-  ;CHECK:       pextrd $1, {{%xmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 4-byte Folded Spill
+  ;CHECK:       vpextrd $1, {{%xmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 4-byte Folded Spill
   ;CHECK:       movl    {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Reload
-  %1 = extractelement <4 x i32> %a0, i32 1
-  %2 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
-  ret i32 %1
+  ; add forces execution domain
+  %1 = add <4 x i32> %a0, <i32 1, i32 2, i32 3, i32 4>
+  %2 = extractelement <4 x i32> %1, i32 1
+  %3 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+  ret i32 %2
 }
 
 define i64 @stack_fold_pextrq(<2 x i64> %a0) {
   ;CHECK-LABEL: stack_fold_pextrq
-  ;CHECK:       pextrq $1, {{%xmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 8-byte Folded Spill
+  ;CHECK:       vpextrq $1, {{%xmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 8-byte Folded Spill
   ;CHECK:       movq    {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Reload
   %1 = extractelement <2 x i64> %a0, i32 1
   %2 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
@@ -666,114 +668,6 @@ define <8 x i16> @stack_fold_pminuw(<8 x i16> %a0, <8 x i16> %a1) {
   ret <8 x i16> %2
 }
 declare <8 x i16> @llvm.x86.sse41.pminuw(<8 x i16>, <8 x i16>) nounwind readnone
-
-define <4 x i32> @stack_fold_pmovsxbd(<16 x i8> %a0) {
-  ;CHECK-LABEL: stack_fold_pmovsxbd
-  ;CHECK:       vpmovsxbd {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
-  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = shufflevector <16 x i8> %a0, <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %3 = sext <4 x i8> %2 to <4 x i32>
-  ret <4 x i32> %3
-}
-
-define <2 x i64> @stack_fold_pmovsxbq(<16 x i8> %a0) {
-  ;CHECK-LABEL: stack_fold_pmovsxbq
-  ;CHECK:       vpmovsxbq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
-  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = shufflevector <16 x i8> %a0, <16 x i8> undef, <2 x i32> <i32 0, i32 1>
-  %3 = sext <2 x i8> %2 to <2 x i64>
-  ret <2 x i64> %3
-}
-
-define <8 x i16> @stack_fold_pmovsxbw(<16 x i8> %a0) {
-  ;CHECK-LABEL: stack_fold_pmovsxbw
-  ;CHECK:       vpmovsxbw {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
-  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = shufflevector <16 x i8> %a0, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %3 = sext <8 x i8> %2 to <8 x i16>
-  ret <8 x i16> %3
-}
-
-define <2 x i64> @stack_fold_pmovsxdq(<4 x i32> %a0) {
-  ;CHECK-LABEL: stack_fold_pmovsxdq
-  ;CHECK:       vpmovsxdq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
-  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = shufflevector <4 x i32> %a0, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
-  %3 = sext <2 x i32> %2 to <2 x i64>
-  ret <2 x i64> %3
-}
-
-define <4 x i32> @stack_fold_pmovsxwd(<8 x i16> %a0) {
-  ;CHECK-LABEL: stack_fold_pmovsxwd
-  ;CHECK:       vpmovsxwd {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
-  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = shufflevector <8 x i16> %a0, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %3 = sext <4 x i16> %2 to <4 x i32>
-  ret <4 x i32> %3
-}
-
-define <2 x i64> @stack_fold_pmovsxwq(<8 x i16> %a0) {
-  ;CHECK-LABEL: stack_fold_pmovsxwq
-  ;CHECK:       vpmovsxwq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
-  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = shufflevector <8 x i16> %a0, <8 x i16> undef, <2 x i32> <i32 0, i32 1>
-  %3 = sext <2 x i16> %2 to <2 x i64>
-  ret <2 x i64> %3
-}
-
-define <4 x i32> @stack_fold_pmovzxbd(<16 x i8> %a0) {
-  ;CHECK-LABEL: stack_fold_pmovzxbd
-  ;CHECK:       vpmovzxbd {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
-  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = shufflevector <16 x i8> %a0, <16 x i8> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 1, i32 19, i32 20, i32 21, i32 2, i32 22, i32 23, i32 24, i32 3, i32 25, i32 26, i32 27>
-  %3 = bitcast <16 x i8> %2 to <4 x i32>
-  ret <4 x i32> %3
-}
-
-define <2 x i64> @stack_fold_pmovzxbq(<16 x i8> %a0) {
-  ;CHECK-LABEL: stack_fold_pmovzxbq
-  ;CHECK:       vpmovzxbq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
-  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = shufflevector <16 x i8> %a0, <16 x i8> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 1, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28>
-  %3 = bitcast <16 x i8> %2 to <2 x i64>
-  ret <2 x i64> %3
-}
-
-define <8 x i16> @stack_fold_pmovzxbw(<16 x i8> %a0) {
-  ;CHECK-LABEL: stack_fold_pmovzxbw
-  ;CHECK:       vpmovzxbw {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
-  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = shufflevector <16 x i8> %a0, <16 x i8> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
-  %3 = bitcast <16 x i8> %2 to <8 x i16>
-  ret <8 x i16> %3
-}
-
-define <2 x i64> @stack_fold_pmovzxdq(<4 x i32> %a0) {
-  ;CHECK-LABEL: stack_fold_pmovzxdq
-  ;CHECK:       vpmovzxdq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
-  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = shufflevector <4 x i32> %a0, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %3 = bitcast <4 x i32> %2 to <2 x i64>
-  ret <2 x i64> %3
-}
-
-define <4 x i32> @stack_fold_pmovzxwd(<8 x i16> %a0) {
-  ;CHECK-LABEL: stack_fold_pmovzxwd
-  ;CHECK:       vpmovzxwd {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
-  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = shufflevector <8 x i16> %a0, <8 x i16> zeroinitializer, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-  %3 = bitcast <8 x i16> %2 to <4 x i32>
-  ret <4 x i32> %3
-}
-
-define <2 x i64> @stack_fold_pmovzxwq(<8 x i16> %a0) {
-  ;CHECK-LABEL: stack_fold_pmovzxwq
-  ;CHECK:       vpmovzxwq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
-  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = shufflevector <8 x i16> %a0, <8 x i16> zeroinitializer, <8 x i32> <i32 0, i32 8, i32 9, i32 10, i32 1, i32 11, i32 12, i32 13>
-  %3 = bitcast <8 x i16> %2 to <2 x i64>
-  ret <2 x i64> %3
-}
 
 define <2 x i64> @stack_fold_pmuldq(<4 x i32> %a0, <4 x i32> %a1) {
   ;CHECK-LABEL: stack_fold_pmuldq

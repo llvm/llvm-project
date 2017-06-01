@@ -12,6 +12,7 @@
 ;}
 ;
 ; RUN: opt < %s -adce
+; RUN: opt < %s -adce -adce-remove-loops -S | FileCheck %s
 
 define i32 @rx_bitset_empty(i32 %size, i32* %set) {
 bb1:
@@ -28,6 +29,7 @@ bb1:
         %reg124 = getelementptr i32, i32* %set, i64 %reg114-idxcast-offset.upgrd.1           ; <i32*> [#uses=1]
         %reg125 = load i32, i32* %reg124             ; <i32> [#uses=1]
         %cond232 = icmp ne i32 %reg125, 0               ; <i1> [#uses=1]
+; CHECK: br label %bb3
         br i1 %cond232, label %bb3, label %bb2
 
 bb2:            ; preds = %bb2, %bb1

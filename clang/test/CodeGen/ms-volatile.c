@@ -7,6 +7,13 @@ struct bar {
 };
 typedef _Complex float __declspec(align(8)) baz;
 
+#pragma pack(push)
+#pragma pack(1)
+struct qux {
+   volatile int f;
+};
+#pragma pack(pop)
+
 void test1(struct foo *p, struct foo *q) {
   *p = *q;
   // CHECK-LABEL: @test1
@@ -52,11 +59,29 @@ void test7(volatile struct bar *p, volatile struct bar *q) {
 void test8(volatile double *p, volatile double *q) {
   *p = *q;
   // CHECK-LABEL: @test8
-  // CHECK: load atomic volatile {{.*}} acquire
-  // CHECK: store atomic volatile {{.*}}, {{.*}} release
+  // CHECK: load volatile {{.*}}
+  // CHECK: store volatile {{.*}}, {{.*}}
 }
 void test9(volatile baz *p, baz *q) {
   *p = *q;
   // CHECK-LABEL: @test9
+  // CHECK: store volatile {{.*}}, {{.*}}
+  // CHECK: store volatile {{.*}}, {{.*}}
+}
+void test10(volatile long long *p, volatile long long *q) {
+  *p = *q;
+  // CHECK-LABEL: @test10
+  // CHECK: load volatile {{.*}}
+  // CHECK: store volatile {{.*}}, {{.*}}
+}
+void test11(volatile float *p, volatile float *q) {
+  *p = *q;
+  // CHECK-LABEL: @test11
+  // CHECK: load atomic volatile {{.*}} acquire
   // CHECK: store atomic volatile {{.*}}, {{.*}} release
+}
+int test12(struct qux *p) {
+  return p->f;
+  // CHECK-LABEL: @test12
+  // CHECK: load volatile {{.*}}
 }

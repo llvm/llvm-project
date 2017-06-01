@@ -16,16 +16,13 @@
 #ifndef LLVM_CODEGEN_MACHINEINSTR_H
 #define LLVM_CODEGEN_MACHINEINSTR_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -34,7 +31,11 @@
 
 namespace llvm {
 
+class StringRef;
+template <typename T> class ArrayRef;
 template <typename T> class SmallVectorImpl;
+class DILocalVariable;
+class DIExpression;
 class TargetInstrInfo;
 class TargetRegisterClass;
 class TargetRegisterInfo;
@@ -48,7 +49,9 @@ class MachineMemOperand;
 /// MachineFunction is deleted, all the contained MachineInstrs are deallocated
 /// without having their destructor called.
 ///
-class MachineInstr : public ilist_node<MachineInstr> {
+class MachineInstr
+    : public ilist_node_with_parent<MachineInstr, MachineBasicBlock,
+                                    ilist_sentinel_tracking<true>> {
 public:
   typedef MachineMemOperand **mmo_iterator;
 
@@ -57,7 +60,7 @@ public:
   /// otherwise easily derivable from the IR text.
   ///
   enum CommentFlag {
-    ReloadReuse = 0x1
+    ReloadReuse = 0x1 // higher bits are reserved for target dep comments.
   };
 
   enum MIFlag {
@@ -91,6 +94,12 @@ private:
                                         // information to AsmPrinter.
 
   uint8_t NumMemRefs;                   // Information on memory references.
+  // Note that MemRefs == nullptr,  means 'don't know', not 'no memory access'.
+  // Calling code must treat missing information conservatively.  If the number
+  // of memory operands required to be precise exceeds the maximum value of
+  // NumMemRefs - currently 256 - we remove the operands entirely. Note also
+  // that this is a non-owning reference to a shared copy on write buffer owned
+  // by the MachineFunction and created via MF.allocateMemRefsArray.
   mmo_iterator MemRefs;
 
   DebugLoc debugLoc;                    // Source line information.
@@ -102,7 +111,7 @@ private:
 
   // Intrusive list support
   friend struct ilist_traits<MachineInstr>;
-  friend struct ilist_traits<MachineBasicBlock>;
+  friend struct ilist_callback_traits<MachineBasicBlock>;
   void setParent(MachineBasicBlock *P) { Parent = P; }
 
   /// This constructor creates a copy of the given
@@ -134,8 +143,8 @@ public:
   }
 
   /// Set a flag for the AsmPrinter.
-  void setAsmPrinterFlag(CommentFlag Flag) {
-    AsmPrinterFlags |= (uint8_t)Flag;
+  void setAsmPrinterFlag(uint8_t Flag) {
+    AsmPrinterFlags |= Flag;
   }
 
   /// Clear specific AsmPrinter flags.
@@ -168,6 +177,7 @@ public:
   void clearFlag(MIFlag Flag) {
     Flags &= ~((uint8_t)Flag);
   }
+
 
   /// Return true if MI is in a bundle (but not the first MI in a bundle).
   ///
@@ -241,17 +251,11 @@ public:
 
   /// Return the debug variable referenced by
   /// this DBG_VALUE instruction.
-  const DILocalVariable *getDebugVariable() const {
-    assert(isDebugValue() && "not a DBG_VALUE");
-    return cast<DILocalVariable>(getOperand(2).getMetadata());
-  }
+  const DILocalVariable *getDebugVariable() const;
 
   /// Return the complex address expression referenced by
   /// this DBG_VALUE instruction.
-  const DIExpression *getDebugExpression() const {
-    assert(isDebugValue() && "not a DBG_VALUE");
-    return cast<DIExpression>(getOperand(3).getMetadata());
-  }
+  const DIExpression *getDebugExpression() const;
 
   /// Emit an error referring to the source location of this instruction.
   /// This should only be used for inline assembly that is somehow
@@ -295,48 +299,54 @@ public:
   const_mop_iterator operands_end() const { return Operands + NumOperands; }
 
   iterator_range<mop_iterator> operands() {
-    return iterator_range<mop_iterator>(operands_begin(), operands_end());
+    return make_range(operands_begin(), operands_end());
   }
   iterator_range<const_mop_iterator> operands() const {
-    return iterator_range<const_mop_iterator>(operands_begin(), operands_end());
+    return make_range(operands_begin(), operands_end());
   }
   iterator_range<mop_iterator> explicit_operands() {
-    return iterator_range<mop_iterator>(
-        operands_begin(), operands_begin() + getNumExplicitOperands());
+    return make_range(operands_begin(),
+                      operands_begin() + getNumExplicitOperands());
   }
   iterator_range<const_mop_iterator> explicit_operands() const {
-    return iterator_range<const_mop_iterator>(
-        operands_begin(), operands_begin() + getNumExplicitOperands());
+    return make_range(operands_begin(),
+                      operands_begin() + getNumExplicitOperands());
   }
   iterator_range<mop_iterator> implicit_operands() {
-    return iterator_range<mop_iterator>(explicit_operands().end(),
-                                        operands_end());
+    return make_range(explicit_operands().end(), operands_end());
   }
   iterator_range<const_mop_iterator> implicit_operands() const {
-    return iterator_range<const_mop_iterator>(explicit_operands().end(),
-                                              operands_end());
+    return make_range(explicit_operands().end(), operands_end());
   }
   /// Returns a range over all explicit operands that are register definitions.
   /// Implicit definition are not included!
   iterator_range<mop_iterator> defs() {
-    return iterator_range<mop_iterator>(
-        operands_begin(), operands_begin() + getDesc().getNumDefs());
+    return make_range(operands_begin(),
+                      operands_begin() + getDesc().getNumDefs());
   }
   /// \copydoc defs()
   iterator_range<const_mop_iterator> defs() const {
-    return iterator_range<const_mop_iterator>(
-        operands_begin(), operands_begin() + getDesc().getNumDefs());
+    return make_range(operands_begin(),
+                      operands_begin() + getDesc().getNumDefs());
   }
   /// Returns a range that includes all operands that are register uses.
   /// This may include unrelated operands which are not register uses.
   iterator_range<mop_iterator> uses() {
-    return iterator_range<mop_iterator>(
-        operands_begin() + getDesc().getNumDefs(), operands_end());
+    return make_range(operands_begin() + getDesc().getNumDefs(),
+                      operands_end());
   }
   /// \copydoc uses()
   iterator_range<const_mop_iterator> uses() const {
-    return iterator_range<const_mop_iterator>(
-        operands_begin() + getDesc().getNumDefs(), operands_end());
+    return make_range(operands_begin() + getDesc().getNumDefs(),
+                      operands_end());
+  }
+  iterator_range<mop_iterator> explicit_uses() {
+    return make_range(operands_begin() + getDesc().getNumDefs(),
+                      operands_begin() + getNumExplicitOperands() );
+  }
+  iterator_range<const_mop_iterator> explicit_uses() const {
+    return make_range(operands_begin() + getDesc().getNumDefs(),
+                      operands_begin() + getNumExplicitOperands() );
   }
 
   /// Returns the number of the operand iterator \p I points to.
@@ -347,13 +357,16 @@ public:
   /// Access to memory operands of the instruction
   mmo_iterator memoperands_begin() const { return MemRefs; }
   mmo_iterator memoperands_end() const { return MemRefs + NumMemRefs; }
+  /// Return true if we don't have any memory operands which described the the
+  /// memory access done by this instruction.  If this is true, calling code
+  /// must be conservative.
   bool memoperands_empty() const { return NumMemRefs == 0; }
 
   iterator_range<mmo_iterator>  memoperands() {
-    return iterator_range<mmo_iterator>(memoperands_begin(), memoperands_end());
+    return make_range(memoperands_begin(), memoperands_end());
   }
   iterator_range<mmo_iterator> memoperands() const {
-    return iterator_range<mmo_iterator>(memoperands_begin(), memoperands_end());
+    return make_range(memoperands_begin(), memoperands_end());
   }
 
   /// Return true if this instruction has exactly one MachineMemOperand.
@@ -378,10 +391,10 @@ public:
   bool hasProperty(unsigned MCFlag, QueryType Type = AnyInBundle) const {
     // Inline the fast path for unbundled or bundle-internal instructions.
     if (Type == IgnoreBundle || !isBundled() || isBundledWithPred())
-      return getDesc().getFlags() & (1 << MCFlag);
+      return getDesc().getFlags() & (1ULL << MCFlag);
 
     // If this is the first instruction in a bundle, take the slow path.
-    return hasPropertyInBundle(1 << MCFlag, Type);
+    return hasPropertyInBundle(1ULL << MCFlag, Type);
   }
 
   /// Return true if this instruction can have a variable number of operands.
@@ -500,6 +513,11 @@ public:
   /// Convergent instructions can not be made control-dependent on any
   /// additional values.
   bool isConvergent(QueryType Type = AnyInBundle) const {
+    if (isInlineAsm()) {
+      unsigned ExtraInfo = getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
+      if (ExtraInfo & InlineAsm::Extra_IsConvergent)
+        return true;
+    }
     return hasProperty(MCID::Convergent, Type);
   }
 
@@ -703,9 +721,12 @@ public:
     IgnoreVRegDefs  // Ignore virtual register definitions
   };
 
-  /// Return true if this instruction is identical to (same
-  /// opcode and same operands as) the specified instruction.
-  bool isIdenticalTo(const MachineInstr *Other,
+  /// Return true if this instruction is identical to \p Other.
+  /// Two instructions are identical if they have the same opcode and all their
+  /// operands are identical (with respect to MachineOperand::isIdenticalTo()).
+  /// Note that this means liveness related flags (dead, undef, kill) do not
+  /// affect the notion of identical.
+  bool isIdenticalTo(const MachineInstr &Other,
                      MICheckType Check = CheckDefs) const;
 
   /// Unlink 'this' from the containing basic block, and return it without
@@ -766,7 +787,7 @@ public:
   bool isKill() const { return getOpcode() == TargetOpcode::KILL; }
   bool isImplicitDef() const { return getOpcode()==TargetOpcode::IMPLICIT_DEF; }
   bool isInlineAsm() const { return getOpcode() == TargetOpcode::INLINEASM; }
-  bool isMSInlineAsm() const { 
+  bool isMSInlineAsm() const {
     return getOpcode() == TargetOpcode::INLINEASM && getInlineAsmDialect();
   }
   bool isStackAligningInlineAsm() const;
@@ -805,26 +826,35 @@ public:
       getOperand(0).getSubReg() == getOperand(1).getSubReg();
   }
 
-  /// Return true if this is a transient instruction that is
-  /// either very likely to be eliminated during register allocation (such as
-  /// copy-like instructions), or if this instruction doesn't have an
-  /// execution-time cost.
-  bool isTransient() const {
-    switch(getOpcode()) {
-    default: return false;
-    // Copy-like instructions are usually eliminated during register allocation.
-    case TargetOpcode::PHI:
-    case TargetOpcode::COPY:
-    case TargetOpcode::INSERT_SUBREG:
-    case TargetOpcode::SUBREG_TO_REG:
-    case TargetOpcode::REG_SEQUENCE:
-    // Pseudo-instructions that don't produce any real output.
+  /// Return true if this instruction doesn't produce any output in the form of
+  /// executable instructions.
+  bool isMetaInstruction() const {
+    switch (getOpcode()) {
+    default:
+      return false;
     case TargetOpcode::IMPLICIT_DEF:
     case TargetOpcode::KILL:
     case TargetOpcode::CFI_INSTRUCTION:
     case TargetOpcode::EH_LABEL:
     case TargetOpcode::GC_LABEL:
     case TargetOpcode::DBG_VALUE:
+      return true;
+    }
+  }
+
+  /// Return true if this is a transient instruction that is either very likely
+  /// to be eliminated during register allocation (such as copy-like
+  /// instructions), or if this instruction doesn't have an execution-time cost.
+  bool isTransient() const {
+    switch (getOpcode()) {
+    default:
+      return isMetaInstruction();
+    // Copy-like instructions are usually eliminated during register allocation.
+    case TargetOpcode::PHI:
+    case TargetOpcode::COPY:
+    case TargetOpcode::INSERT_SUBREG:
+    case TargetOpcode::SUBREG_TO_REG:
+    case TargetOpcode::REG_SEQUENCE:
       return true;
     }
   }
@@ -890,6 +920,10 @@ public:
                          const TargetRegisterInfo *TRI = nullptr) const {
     return findRegisterDefOperandIdx(Reg, true, false, TRI) != -1;
   }
+
+  /// Returns true if the MachineInstr has an implicit-use operand of exactly
+  /// the given register (not considering sub/super-registers).
+  bool hasRegisterImplicitUseOperand(unsigned Reg) const;
 
   /// Returns the operand index that is a use of the specific register or -1
   /// if it is not found. It further tightens the search criteria to a use
@@ -1046,8 +1080,8 @@ public:
                          const TargetRegisterInfo *RegInfo,
                          bool AddIfNotFound = false);
 
-  /// Clear all kill flags affecting Reg.  If RegInfo is
-  /// provided, this includes super-register kills.
+  /// Clear all kill flags affecting Reg.  If RegInfo is provided, this includes
+  /// all aliasing registers.
   void clearRegisterKills(unsigned Reg, const TargetRegisterInfo *RegInfo);
 
   /// We have determined MI defined a register without a use.
@@ -1063,7 +1097,7 @@ public:
   /// Mark all subregister defs of register @p Reg with the undef flag.
   /// This function is used when we determined to have a subregister def in an
   /// otherwise undefined super register.
-  void addRegisterDefReadUndef(unsigned Reg);
+  void setRegisterDefReadUndef(unsigned Reg, bool IsUndef = true);
 
   /// We have determined MI defines a register. Make sure there is an operand
   /// defining Reg.
@@ -1089,12 +1123,14 @@ public:
   /// ordered or volatile memory references.
   bool hasOrderedMemoryRef() const;
 
-  /// Return true if this instruction is loading from a
-  /// location whose value is invariant across the function.  For example,
-  /// loading a value from the constant pool or from the argument area of
-  /// a function if it does not change.  This should only return true of *all*
-  /// loads the instruction does are invariant (if it does multiple loads).
-  bool isInvariantLoad(AliasAnalysis *AA) const;
+  /// Return true if this load instruction never traps and points to a memory
+  /// location whose value doesn't change during the execution of this function.
+  ///
+  /// Examples include loading a value from the constant pool or from the
+  /// argument area of a function (if it does not change).  If the instruction
+  /// does multiple loads, this returns true only if all of the loads are
+  /// dereferenceable and invariant.
+  bool isDereferenceableInvariantLoad(AliasAnalysis *AA) const;
 
   /// If the specified instruction is a PHI that always merges together the
   /// same virtual register, return the register, otherwise return 0.
@@ -1117,15 +1153,23 @@ public:
 
   /// Copy implicit register operands from specified
   /// instruction to this instruction.
-  void copyImplicitOps(MachineFunction &MF, const MachineInstr *MI);
+  void copyImplicitOps(MachineFunction &MF, const MachineInstr &MI);
 
-  //
-  // Debugging support
-  //
-  void print(raw_ostream &OS, bool SkipOpers = false) const;
-  void print(raw_ostream &OS, ModuleSlotTracker &MST,
-             bool SkipOpers = false) const;
-  void dump() const;
+  /// Debugging support
+  /// @{
+  /// Print this MI to \p OS.
+  /// Only print the defs and the opcode if \p SkipOpers is true.
+  /// Otherwise, also print operands if \p SkipDebugLoc is true.
+  /// Otherwise, also print the debug loc, with a terminating newline.
+  /// \p TII is used to print the opcode name.  If it's not present, but the
+  /// MI is in a function, the opcode will be printed using the function's TII.
+  void print(raw_ostream &OS, bool SkipOpers = false, bool SkipDebugLoc = false,
+             const TargetInstrInfo *TII = nullptr) const;
+  void print(raw_ostream &OS, ModuleSlotTracker &MST, bool SkipOpers = false,
+             bool SkipDebugLoc = false,
+             const TargetInstrInfo *TII = nullptr) const;
+  void dump(const TargetInstrInfo *TII = nullptr) const;
+  /// @}
 
   //===--------------------------------------------------------------------===//
   // Accessors used to build up machine instructions.
@@ -1160,7 +1204,7 @@ public:
     assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
   }
 
-  /// Erase an operand  from an instruction, leaving it with one
+  /// Erase an operand from an instruction, leaving it with one
   /// fewer operand than it started with.
   void RemoveOperand(unsigned i);
 
@@ -1172,13 +1216,31 @@ public:
   /// Assign this MachineInstr's memory reference descriptor list.
   /// This does not transfer ownership.
   void setMemRefs(mmo_iterator NewMemRefs, mmo_iterator NewMemRefsEnd) {
-    MemRefs = NewMemRefs;
-    NumMemRefs = uint8_t(NewMemRefsEnd - NewMemRefs);
-    assert(NumMemRefs == NewMemRefsEnd - NewMemRefs && "Too many memrefs");
+    setMemRefs(std::make_pair(NewMemRefs, NewMemRefsEnd-NewMemRefs));
   }
 
-  /// Clear this MachineInstr's memory reference descriptor list.
-  void clearMemRefs() {
+  /// Assign this MachineInstr's memory reference descriptor list.  First
+  /// element in the pair is the begin iterator/pointer to the array; the
+  /// second is the number of MemoryOperands.  This does not transfer ownership
+  /// of the underlying memory.
+  void setMemRefs(std::pair<mmo_iterator, unsigned> NewMemRefs) {
+    MemRefs = NewMemRefs.first;
+    NumMemRefs = uint8_t(NewMemRefs.second);
+    assert(NumMemRefs == NewMemRefs.second &&
+           "Too many memrefs - must drop memory operands");
+  }
+
+  /// Return a set of memrefs (begin iterator, size) which conservatively
+  /// describe the memory behavior of both MachineInstrs.  This is appropriate
+  /// for use when merging two MachineInstrs into one. This routine does not
+  /// modify the memrefs of the this MachineInstr.
+  std::pair<mmo_iterator, unsigned> mergeMemRefsWith(const MachineInstr& Other);
+
+  /// Clear this MachineInstr's memory reference descriptor list.  This resets
+  /// the memrefs to their most conservative state.  This should be used only
+  /// as a last resort since it greatly pessimizes our knowledge of the memory
+  /// access performed by the instruction.
+  void dropMemRefs() {
     MemRefs = nullptr;
     NumMemRefs = 0;
   }
@@ -1242,7 +1304,7 @@ struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr*> {
     if (RHS == getEmptyKey() || RHS == getTombstoneKey() ||
         LHS == getEmptyKey() || LHS == getTombstoneKey())
       return LHS == RHS;
-    return LHS->isIdenticalTo(RHS, MachineInstr::IgnoreVRegDefs);
+    return LHS->isIdenticalTo(*RHS, MachineInstr::IgnoreVRegDefs);
   }
 };
 

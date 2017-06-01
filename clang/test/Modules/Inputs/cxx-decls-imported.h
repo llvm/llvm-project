@@ -50,3 +50,8 @@ namespace Alias = Aliased;
 
 struct InhCtorA { InhCtorA(int); };
 struct InhCtorB : InhCtorA { using InhCtorA::InhCtorA; };
+
+struct ClassWithVBases : HasFriends, virtual HasNontrivialDefaultConstructor {
+  int n;
+};
+struct ClassWithVBases;

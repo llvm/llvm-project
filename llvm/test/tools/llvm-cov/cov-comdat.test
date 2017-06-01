@@ -1,0 +1,12 @@
+REQUIRES: shell
+
+# The binary contains two (merged) covmap sections which
+# have duplicate CovMapRecords from comdat (template instantation).
+# This test makes sure the reader reads it properly. It also
+# tests that the coverage data from different instantiations
+# of the same template function are properly merged in show
+# output.
+
+// RUN: llvm-cov show %S/Inputs/binary-formats.v1.linux64l -instr-profile %S/Inputs/elf_binary_comdat.profdata -filename-equivalence %S/Inputs/instrprof-comdat.h | FileCheck --check-prefix=HEADER %S/Inputs/instrprof-comdat.h
+// RUN: llvm-cov show %S/Inputs/binary-formats.v2.linux64l -instr-profile %S/Inputs/elf_binary_comdat.profdata -filename-equivalence %S/Inputs/instrprof-comdat.h | FileCheck --check-prefix=HEADER %S/Inputs/instrprof-comdat.h
+// RUN: llvm-cov show %S/Inputs/binary-formats.v2.linux32l -instr-profile %S/Inputs/elf_binary_comdat.profdata -filename-equivalence %S/Inputs/instrprof-comdat.h | FileCheck --check-prefix=HEADER %S/Inputs/instrprof-comdat.h

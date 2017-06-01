@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin | grep movzbl
+; RUN: llc < %s -mtriple=x86_64-apple-darwin | grep xorl
 
 define i32 @foo(<4 x float> %a, <4 x float> %b) nounwind {
 entry:

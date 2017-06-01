@@ -95,10 +95,57 @@ unsigned HexagonResource::setWeight(unsigned s) {
   return (Weight);
 }
 
+void HexagonCVIResource::SetupTUL(TypeUnitsAndLanes *TUL, StringRef CPU) {
+  (*TUL)[HexagonII::TypeCVI_VA] =
+      UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
+  (*TUL)[HexagonII::TypeCVI_VA_DV] = UnitsAndLanes(CVI_XLANE | CVI_MPY0, 2);
+  (*TUL)[HexagonII::TypeCVI_VX] = UnitsAndLanes(CVI_MPY0 | CVI_MPY1, 1);
+  (*TUL)[HexagonII::TypeCVI_VX_DV] = UnitsAndLanes(CVI_MPY0, 2);
+  (*TUL)[HexagonII::TypeCVI_VP] = UnitsAndLanes(CVI_XLANE, 1);
+  (*TUL)[HexagonII::TypeCVI_VP_VS] = UnitsAndLanes(CVI_XLANE, 2);
+  (*TUL)[HexagonII::TypeCVI_VS] = UnitsAndLanes(CVI_SHIFT, 1);
+  (*TUL)[HexagonII::TypeCVI_VINLANESAT] = UnitsAndLanes(CVI_SHIFT, 1);
+  (*TUL)[HexagonII::TypeCVI_VM_LD] =
+      UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
+  (*TUL)[HexagonII::TypeCVI_VM_TMP_LD] = UnitsAndLanes(CVI_NONE, 0);
+  (*TUL)[HexagonII::TypeCVI_VM_CUR_LD] =
+      UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
+  (*TUL)[HexagonII::TypeCVI_VM_VP_LDU] = UnitsAndLanes(CVI_XLANE, 1);
+  (*TUL)[HexagonII::TypeCVI_VM_ST] =
+      UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
+  (*TUL)[HexagonII::TypeCVI_VM_NEW_ST] = UnitsAndLanes(CVI_NONE, 0);
+  (*TUL)[HexagonII::TypeCVI_VM_STU] = UnitsAndLanes(CVI_XLANE, 1);
+  (*TUL)[HexagonII::TypeCVI_HIST] = UnitsAndLanes(CVI_XLANE, 4);
+}
+
+HexagonCVIResource::HexagonCVIResource(TypeUnitsAndLanes *TUL,
+                                       MCInstrInfo const &MCII, unsigned s,
+                                       MCInst const *id)
+    : HexagonResource(s), TUL(TUL) {
+  unsigned T = HexagonMCInstrInfo::getType(MCII, *id);
+
+  if (TUL->count(T)) {
+    // For an HVX insn.
+    Valid = true;
+    setUnits((*TUL)[T].first);
+    setLanes((*TUL)[T].second);
+    setLoad(HexagonMCInstrInfo::getDesc(MCII, *id).mayLoad());
+    setStore(HexagonMCInstrInfo::getDesc(MCII, *id).mayStore());
+  } else {
+    // For core insns.
+    Valid = false;
+    setUnits(0);
+    setLanes(0);
+    setLoad(false);
+    setStore(false);
+  }
+}
+
 HexagonShuffler::HexagonShuffler(MCInstrInfo const &MCII,
                                  MCSubtargetInfo const &STI)
     : MCII(MCII), STI(STI) {
   reset();
+  HexagonCVIResource::SetupTUL(&TUL, STI.getCPU());
 }
 
 void HexagonShuffler::reset() {
@@ -109,7 +156,7 @@ void HexagonShuffler::reset() {
 
 void HexagonShuffler::append(MCInst const *ID, MCInst const *Extender,
                              unsigned S, bool X) {
-  HexagonInstr PI(ID, Extender, S, X);
+  HexagonInstr PI(&TUL, MCII, ID, Extender, S, X);
 
   Packet.push_back(PI);
 }
@@ -124,10 +171,12 @@ bool HexagonShuffler::check() {
   unsigned slotJump = slotFirstJump;
   unsigned slotLoadStore = slotFirstLoadStore;
   // Number of branches, solo branches, indirect branches.
-  unsigned jumps = 0, jump1 = 0, jumpr = 0;
+  unsigned jumps = 0, jump1 = 0;
   // Number of memory operations, loads, solo loads, stores, solo stores, single
   // stores.
   unsigned memory = 0, loads = 0, load0 = 0, stores = 0, store0 = 0, store1 = 0;
+  // Number of HVX loads, HVX stores.
+  unsigned CVIloads = 0, CVIstores = 0;
   // Number of duplex insns, solo insns.
   unsigned duplex = 0, solo = 0;
   // Number of insns restricting other insns in the packet to A and X types,
@@ -158,6 +207,8 @@ bool HexagonShuffler::check() {
       ++pSlot3Cnt;
       slot3ISJ = ISJ;
     }
+    if (HexagonMCInstrInfo::isCofMax1(MCII, *ID))
+      ++jump1;
 
     switch (HexagonMCInstrInfo::getType(MCII, *ID)) {
     case HexagonII::TypeXTYPE:
@@ -165,11 +216,15 @@ bool HexagonShuffler::check() {
         ++xtypeFloat;
       break;
     case HexagonII::TypeJR:
-      ++jumpr;
-    // Fall-through.
     case HexagonII::TypeJ:
       ++jumps;
       break;
+    case HexagonII::TypeCVI_VM_VP_LDU:
+      ++onlyNo1;
+    case HexagonII::TypeCVI_VM_LD:
+    case HexagonII::TypeCVI_VM_TMP_LD:
+    case HexagonII::TypeCVI_VM_CUR_LD:
+      ++CVIloads;
     case HexagonII::TypeLD:
       ++loads;
       ++memory;
@@ -178,13 +233,18 @@ bool HexagonShuffler::check() {
       if (HexagonMCInstrInfo::getDesc(MCII, *ID).isReturn())
         ++jumps, ++jump1; // DEALLOC_RETURN is of type LD.
       break;
+    case HexagonII::TypeCVI_VM_STU:
+      ++onlyNo1;
+    case HexagonII::TypeCVI_VM_ST:
+    case HexagonII::TypeCVI_VM_NEW_ST:
+      ++CVIstores;
     case HexagonII::TypeST:
       ++stores;
       ++memory;
       if (ISJ->Core.getUnits() == slotSingleStore)
         ++store0;
       break;
-    case HexagonII::TypeMEMOP:
+    case HexagonII::TypeV4LDST:
       ++loads;
       ++stores;
       ++store1;
@@ -205,9 +265,9 @@ bool HexagonShuffler::check() {
   }
 
   // Check if the packet is legal.
-  if ((load0 > 1 || store0 > 1) || (duplex > 1 || (duplex && memory)) ||
-      (solo && size() > 1) || (onlyAX && neitherAnorX > 1) ||
-      (onlyAX && xtypeFloat)) {
+  if ((load0 > 1 || store0 > 1 || CVIloads > 1 || CVIstores > 1) ||
+      (duplex > 1 || (duplex && memory)) || (solo && size() > 1) ||
+      (onlyAX && neitherAnorX > 1) || (onlyAX && xtypeFloat)) {
     Error = SHUFFLE_ERROR_INVALID;
     return false;
   }
@@ -244,7 +304,7 @@ bool HexagonShuffler::check() {
     if (HexagonMCInstrInfo::getDesc(MCII, *ID).isBranch() ||
         HexagonMCInstrInfo::getDesc(MCII, *ID).isCall())
       if (jumps > 1) {
-        if (jumpr || slotJump < slotLastJump) {
+        if (slotJump < slotLastJump) {
           // Error if indirect branch with another branch or
           // no more slots available for branches.
           Error = SHUFFLE_ERROR_BRANCHES;
@@ -337,6 +397,19 @@ bool HexagonShuffler::check() {
         Error = SHUFFLE_ERROR_SLOTS;
         return false;
       }
+  }
+  // Verify the CVI slot subscriptions.
+  {
+    HexagonUnitAuction AuctionCVI;
+
+    std::sort(begin(), end(), HexagonInstr::lessCVI);
+
+    for (iterator I = begin(); I != end(); ++I)
+      for (unsigned i = 0; i < I->CVI.getLanes(); ++i) // TODO: I->CVI.isValid?
+        if (!AuctionCVI.bid(I->CVI.getUnits() << i)) {
+          Error = SHUFFLE_ERROR_SLOTS;
+          return false;
+        }
   }
 
   Error = SHUFFLE_SUCCESS;

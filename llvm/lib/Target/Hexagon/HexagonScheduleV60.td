@@ -20,6 +20,15 @@ def CVI_XLSHF  : FuncUnit;
 def CVI_MPY01  : FuncUnit;
 def CVI_ALL    : FuncUnit;
 
+// Combined functional unit data.
+def HexagonComboFuncsV60 :
+    ComboFuncUnits<[
+      ComboFuncData<CVI_XLSHF    , [CVI_XLANE, CVI_SHIFT]>,
+      ComboFuncData<CVI_MPY01    , [CVI_MPY0, CVI_MPY1]>,
+      ComboFuncData<CVI_ALL      , [CVI_ST, CVI_XLANE, CVI_SHIFT,
+                                    CVI_MPY0, CVI_MPY1, CVI_LD]>
+    ]>;
+
 // Note: When adding additional vector scheduling classes, add the
 // corresponding methods to the class HexagonInstrInfo.
 def CVI_VA           : InstrItinClass;
@@ -158,16 +167,6 @@ def HexagonItinerariesV60 :
         InstrItinData<ST_tc_ld_SLOT0    , [InstrStage<3, [SLOT0]>]>,
         InstrItinData<ST_tc_st_SLOT0    , [InstrStage<1, [SLOT0]>]>,
 
-        // Subinsn
-        InstrItinData<SUBINSN_tc_2early_SLOT0, [InstrStage<2, [SLOT0]>]>,
-        InstrItinData<SUBINSN_tc_3stall_SLOT0, [InstrStage<3, [SLOT0]>]>,
-        InstrItinData<SUBINSN_tc_ld_SLOT0    , [InstrStage<3, [SLOT0]>]>,
-        InstrItinData<SUBINSN_tc_1_SLOT01    , [InstrStage<1, [SLOT0, SLOT1]>]>,
-        InstrItinData<SUBINSN_tc_2early_SLOT01,
-                                               [InstrStage<2, [SLOT0, SLOT1]>]>,
-        InstrItinData<SUBINSN_tc_ld_SLOT01   , [InstrStage<3, [SLOT0, SLOT1]>]>,
-        InstrItinData<SUBINSN_tc_st_SLOT01   , [InstrStage<1, [SLOT0, SLOT1]>]>,
-
         // S
         InstrItinData<S_2op_tc_1_SLOT23     , [InstrStage<1, [SLOT2, SLOT3]>]>,
         InstrItinData<S_2op_tc_2_SLOT23     , [InstrStage<2, [SLOT2, SLOT3]>]>,
@@ -294,6 +293,7 @@ def HexagonModelV60 : SchedMachineModel {
   let IssueWidth = 4;
   let Itineraries = HexagonItinerariesV60;
   let LoadLatency = 1;
+  let CompleteModel = 0;
 }
 
 //===----------------------------------------------------------------------===//

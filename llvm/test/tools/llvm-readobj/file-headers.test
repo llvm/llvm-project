@@ -24,6 +24,8 @@ RUN: llvm-readobj -h %p/Inputs/magic.coff-unknown \
 RUN:   | FileCheck %s -check-prefix COFF-UNKNOWN
 RUN: llvm-readobj -h %p/Inputs/magic.coff-importlib \
 RUN:   | FileCheck %s -check-prefix COFF-IMPORTLIB
+RUN: llvm-readobj -h %p/Inputs/trivial.obj.elf-lanai \
+RUN:   | FileCheck %s -check-prefix ELF-LANAI
 
 COFF-ARM:      File: {{(.*[/\\])?}}trivial.obj.coff-arm
 COFF-ARM-NEXT: Format: COFF-ARM
@@ -335,3 +337,33 @@ COFF-IMPORTLIB-NEXT: Type: code
 COFF-IMPORTLIB-NEXT: Name type: noprefix
 COFF-IMPORTLIB-NEXT: Symbol: __imp__func
 COFF-IMPORTLIB-NEXT: Symbol: _func
+
+ELF-LANAI:      Format: ELF32-lanai
+ELF-LANAI-NEXT: Arch: lanai
+ELF-LANAI-NEXT: AddressSize: 32bit
+ELF-LANAI-NEXT: LoadName:
+ELF-LANAI-NEXT: ElfHeader {
+ELF-LANAI-NEXT:   Ident {
+ELF-LANAI-NEXT:     Magic: (7F 45 4C 46)
+ELF-LANAI-NEXT:     Class: 32-bit (0x1)
+ELF-LANAI-NEXT:     DataEncoding: BigEndian (0x2)
+ELF-LANAI-NEXT:     FileVersion: 1
+ELF-LANAI-NEXT:     OS/ABI: SystemV (0x0)
+ELF-LANAI-NEXT:     ABIVersion: 0
+ELF-LANAI-NEXT:     Unused: (00 00 00 00 00 00 00)
+ELF-LANAI-NEXT:   }
+ELF-LANAI-NEXT:   Type: Relocatable (0x1)
+ELF-LANAI-NEXT:   Machine: EM_LANAI (0xF4)
+ELF-LANAI-NEXT:   Version: 1
+ELF-LANAI-NEXT:   Entry: 0x0
+ELF-LANAI-NEXT:   ProgramHeaderOffset: 0x0
+ELF-LANAI-NEXT:   SectionHeaderOffset: 0x1A0
+ELF-LANAI-NEXT:   Flags [ (0x0)
+ELF-LANAI-NEXT:   ]
+ELF-LANAI-NEXT:   HeaderSize: 52
+ELF-LANAI-NEXT:   ProgramHeaderEntrySize: 0
+ELF-LANAI-NEXT:   ProgramHeaderCount: 0
+ELF-LANAI-NEXT:   SectionHeaderEntrySize: 40
+ELF-LANAI-NEXT:   SectionHeaderCount: 8
+ELF-LANAI-NEXT:   StringTableSectionIndex: 1
+ELF-LANAI-NEXT: }

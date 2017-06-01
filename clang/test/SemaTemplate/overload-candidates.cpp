@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 template<typename T>
 const T& min(const T&, const T&); // expected-note{{candidate template ignored: deduced conflicting types for parameter 'T' ('int' vs. 'long')}}
@@ -94,8 +96,11 @@ namespace PR15673 {
   struct a_trait : std::false_type {};
 
   template<typename T,
-           typename Requires = typename std::enable_if<a_trait<T>::value>::type> // expected-warning {{C++11 extension}}
-  // expected-note@-1 {{candidate template ignored: disabled by 'enable_if' [with T = int]}}
+           typename Requires = typename std::enable_if<a_trait<T>::value>::type>
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{default template arguments for a function template are a C++11 extension}}
+#endif
+  // expected-note@-4 {{candidate template ignored: disabled by 'enable_if' [with T = int]}}
   void foo() {}
   void bar() { foo<int>(); } // expected-error {{no matching function for call to 'foo'}}
 
@@ -108,7 +113,10 @@ namespace PR15673 {
   struct a_pony : std::enable_if<some_trait<T>::value> {};
 
   template<typename T,
-           typename Requires = typename a_pony<T>::type> // expected-warning {{C++11 extension}}
+           typename Requires = typename a_pony<T>::type>
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{default template arguments for a function template are a C++11 extension}}
+#endif
   // FIXME: The source location here is poor.
   void baz() { } // expected-note {{candidate template ignored: substitution failure [with T = int]: no type named 'type' in 'PR15673::a_pony<int>'}}
   void quux() { baz<int>(); } // expected-error {{no matching function for call to 'baz'}}
@@ -116,11 +124,17 @@ namespace PR15673 {
 
   // FIXME: This note doesn't make it clear which candidate we rejected.
   template <typename T>
-  using unicorns = typename std::enable_if<some_trait<T>::value>::type; // expected-warning {{C++11 extension}}
-  // expected-note@-1 {{candidate template ignored: disabled by 'enable_if' [with T = int]}}
+  using unicorns = typename std::enable_if<some_trait<T>::value>::type;
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{alias declarations are a C++11 extension}}
+#endif
+  // expected-note@-4 {{candidate template ignored: disabled by 'enable_if' [with T = int]}}
 
   template<typename T,
-           typename Requires = unicorns<T> > // expected-warning {{C++11 extension}}
+           typename Requires = unicorns<T> >
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{default template arguments for a function template are a C++11 extension}}
+#endif
   void wibble() {}
   void wobble() { wibble<int>(); } // expected-error {{no matching function for call to 'wibble'}}
 }

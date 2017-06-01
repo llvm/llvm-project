@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.Malloc -analyzer-store=region -verify -Wno-objc-root-class -fblocks %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -analyzer-store=region -verify -Wno-objc-root-class -fblocks %s
 #include "Inputs/system-header-simulator-objc.h"
 
 @class NSString;
@@ -29,7 +29,7 @@ void rdar10579586(char x);
     if (error != ((void*)0))
         return error;
 
-    rdar10579586(buffer->str_c); // expected-warning {{Function call argument is an uninitialized value}}
+    rdar10579586(buffer->str_c); // expected-warning {{1st function call argument is an uninitialized value}}
     free(buffer);
     return ((void*)0);
 }

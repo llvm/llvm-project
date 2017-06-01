@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -analyze -analyzer-checker=core,deadcode,alpha.core -std=gnu99 -analyzer-store=region -analyzer-constraints=range -analyzer-purge=none -verify %s -Wno-error=return-type
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -analyze -analyzer-checker=core,deadcode,alpha.core -std=gnu99 -analyzer-store=region -analyzer-constraints=range -verify %s -Wno-error=return-type 
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=core,deadcode,alpha.core -std=gnu99 -analyzer-store=region -analyzer-purge=none -verify %s -Wno-error=return-type
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=core,deadcode,alpha.core -std=gnu99 -analyzer-store=region -verify %s -Wno-error=return-type
 
 typedef unsigned uintptr_t;
 
@@ -286,7 +286,7 @@ void pr4759_aux(int *p) __attribute__((nonnull));
 
 void pr4759() {
   int *p;
-  pr4759_aux(p); // expected-warning{{Function call argument is an uninitialized value}}
+  pr4759_aux(p); // expected-warning{{1st function call argument is an uninitialized value}}
 }
 
 // Relax function call arguments invalidation to be aware of const
@@ -310,4 +310,22 @@ int foo10595327(int b) {
   if (x == y)
       return *p; // no-warning
   return 0;
+}
+
+#define AS_ATTRIBUTE volatile __attribute__((address_space(256)))
+#define _get_base() ((void * AS_ATTRIBUTE *)0)
+void* test_address_space_array(unsigned long slot) {
+  return _get_base()[slot]; // no-warning
+}
+void test_address_space_condition(int AS_ATTRIBUTE *cpu_data) {
+   if (cpu_data == 0) {
+    *cpu_data = 3; // no-warning
+  }
+}
+struct X { int member; };
+int test_address_space_member() {
+  struct X AS_ATTRIBUTE *data = (struct X AS_ATTRIBUTE *)0UL;
+  int ret;
+  ret = data->member; // no-warning
+  return ret;
 }

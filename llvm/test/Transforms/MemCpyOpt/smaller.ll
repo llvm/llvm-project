@@ -1,4 +1,5 @@
 ; RUN: opt -memcpyopt -S < %s | FileCheck %s
+; RUN: opt -passes=memcpyopt -S < %s | FileCheck %s
 ; rdar://8875553
 
 ; Memcpyopt shouldn't optimize the second memcpy using the first

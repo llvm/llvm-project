@@ -1,7 +1,7 @@
 ; Test that vectors are scalarized/lowered correctly.
-; RUN: llc < %s -march=ppc32 -mcpu=g3 | \
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g3 | \
 ; RUN:    grep stfs | count 4
-; RUN: llc < %s -march=ppc32 -mcpu=g5 -o %t
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5 -o %t
 ; RUN: grep vspltw %t | count 2
 ; RUN: grep vsplti %t | count 3
 ; RUN: grep vsplth %t | count 1

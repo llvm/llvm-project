@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=arm64-apple-darwin -enable-misched=false | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-darwin -enable-misched=false -enable-post-misched=false | FileCheck %s
 
 ; rdar://12713765
 ; Make sure we are not creating stack objects that are assumed to be 64-byte

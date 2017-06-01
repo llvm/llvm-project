@@ -35,6 +35,29 @@ void Preprocessor::CommitBacktrackedTokens() {
   BacktrackPositions.pop_back();
 }
 
+Preprocessor::CachedTokensRange Preprocessor::LastCachedTokenRange() {
+  assert(isBacktrackEnabled());
+  auto PrevCachedLexPos = BacktrackPositions.back();
+  return CachedTokensRange{PrevCachedLexPos, CachedLexPos};
+}
+
+void Preprocessor::EraseCachedTokens(CachedTokensRange TokenRange) {
+  assert(TokenRange.Begin <= TokenRange.End);
+  if (CachedLexPos == TokenRange.Begin && TokenRange.Begin != TokenRange.End) {
+    // We have backtracked to the start of the token range as we want to consume
+    // them again. Erase the tokens only after consuming then.
+    assert(!CachedTokenRangeToErase);
+    CachedTokenRangeToErase = TokenRange;
+    return;
+  }
+  // The cached tokens were committed, so they should be erased now.
+  assert(TokenRange.End == CachedLexPos);
+  CachedTokens.erase(CachedTokens.begin() + TokenRange.Begin,
+                     CachedTokens.begin() + TokenRange.End);
+  CachedLexPos = TokenRange.Begin;
+  ExitCachingLexMode();
+}
+
 // Make Preprocessor re-lex the tokens that were lexed since
 // EnableBacktrackAtThisPos() was previously called.
 void Preprocessor::Backtrack() {
@@ -51,6 +74,13 @@ void Preprocessor::CachingLex(Token &Result) {
 
   if (CachedLexPos < CachedTokens.size()) {
     Result = CachedTokens[CachedLexPos++];
+    // Erase the some of the cached tokens after they are consumed when
+    // asked to do so.
+    if (CachedTokenRangeToErase &&
+        CachedTokenRangeToErase->End == CachedLexPos) {
+      EraseCachedTokens(*CachedTokenRangeToErase);
+      CachedTokenRangeToErase = None;
+    }
     return;
   }
 
@@ -86,7 +116,7 @@ void Preprocessor::EnterCachingLexMode() {
 const Token &Preprocessor::PeekAhead(unsigned N) {
   assert(CachedLexPos + N > CachedTokens.size() && "Confused caching.");
   ExitCachingLexMode();
-  for (unsigned C = CachedLexPos + N - CachedTokens.size(); C > 0; --C) {
+  for (size_t C = CachedLexPos + N - CachedTokens.size(); C > 0; --C) {
     CachedTokens.push_back(Token());
     Lex(CachedTokens.back());
   }
@@ -105,7 +135,7 @@ void Preprocessor::AnnotatePreviousCachedTokens(const Token &Tok) {
   for (CachedTokensTy::size_type i = CachedLexPos; i != 0; --i) {
     CachedTokensTy::iterator AnnotBegin = CachedTokens.begin() + i-1;
     if (AnnotBegin->getLocation() == Tok.getLocation()) {
-      assert((BacktrackPositions.empty() || BacktrackPositions.back() < i) &&
+      assert((BacktrackPositions.empty() || BacktrackPositions.back() <= i) &&
              "The backtrack pos points inside the annotated tokens!");
       // Replace the cached tokens with the single annotation token.
       if (i < CachedLexPos)
@@ -115,4 +145,30 @@ void Preprocessor::AnnotatePreviousCachedTokens(const Token &Tok) {
       return;
     }
   }
+}
+
+bool Preprocessor::IsPreviousCachedToken(const Token &Tok) const {
+  // There's currently no cached token...
+  if (!CachedLexPos)
+    return false;
+
+  const Token LastCachedTok = CachedTokens[CachedLexPos - 1];
+  if (LastCachedTok.getKind() != Tok.getKind())
+    return false;
+
+  int RelOffset = 0;
+  if ((!getSourceManager().isInSameSLocAddrSpace(
+          Tok.getLocation(), getLastCachedTokenLocation(), &RelOffset)) ||
+      RelOffset)
+    return false;
+
+  return true;
+}
+
+void Preprocessor::ReplacePreviousCachedToken(ArrayRef<Token> NewToks) {
+  assert(CachedLexPos != 0 && "Expected to have some cached tokens");
+  CachedTokens.insert(CachedTokens.begin() + CachedLexPos - 1, NewToks.begin(),
+                      NewToks.end());
+  CachedTokens.erase(CachedTokens.begin() + CachedLexPos - 1 + NewToks.size());
+  CachedLexPos += NewToks.size() - 1;
 }

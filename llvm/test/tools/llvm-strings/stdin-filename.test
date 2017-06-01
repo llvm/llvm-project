@@ -1,0 +1,3 @@
+RUN: echo abcd | llvm-strings -f - | FileCheck %s
+RUN: echo abcd | llvm-strings --print-file-name - | FileCheck %s
+CHECK: {standard input}: abcd

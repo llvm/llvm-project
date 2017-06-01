@@ -1,9 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck -check-prefix=WITHOUT %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s -fsanitize=thread | FileCheck -check-prefix=TSAN %s
-// RUN: echo "src:%s" > %t
+// RUN: echo "src:%s" | sed -e 's/\\/\\\\/g' > %t
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s -fsanitize=thread -fsanitize-blacklist=%t | FileCheck -check-prefix=BL %s
-
-// REQUIRES: shell
 
 // The sanitize_thread attribute should be attached to functions
 // when ThreadSanitizer is enabled, unless no_sanitize_thread attribute
@@ -56,9 +54,9 @@ int global2 = *(int*)((char*)&global1+1);
 // BL: @__cxx_global_var_init{{.*}}[[NOATTR:#[0-9]+]]
 // TSAN: @__cxx_global_var_init{{.*}}[[WITH:#[0-9]+]]
 
-// WITHOUT: attributes [[NOATTR]] = { nounwind{{.*}} }
+// WITHOUT: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
 
-// BL: attributes [[NOATTR]] = { nounwind{{.*}} }
+// BL: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
 
-// TSAN: attributes [[NOATTR]] = { nounwind{{.*}} }
-// TSAN: attributes [[WITH]] = { nounwind sanitize_thread{{.*}} }
+// TSAN: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
+// TSAN: attributes [[WITH]] = { noinline nounwind sanitize_thread{{.*}} }

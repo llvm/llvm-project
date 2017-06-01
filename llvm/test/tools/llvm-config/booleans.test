@@ -1,0 +1,28 @@
+# Check whether boolean options are consistently normalized to ON/OFF.
+RUN: llvm-config --assertion-mode 2>&1 | FileCheck --check-prefix=CHECK-ONOFF %s
+RUN: llvm-config --has-global-isel 2>&1 | FileCheck --check-prefix=CHECK-ONOFF %s
+CHECK-ONOFF: {{ON|OFF}}
+CHECK-ONOFF-NOT: error:
+CHECK-ONOFF-NOT: warning
+
+# ...or to YES/NO.
+RUN: llvm-config --has-rtti 2>&1 | FileCheck --check-prefix=CHECK-YESNO %s
+CHECK-YESNO: {{YES|NO}}
+CHECK-YESNO-NOT: error:
+CHECK-YESNO-NOT: warning
+
+# Also check some other multi-choice options.
+RUN: llvm-config --build-mode 2>&1 | FileCheck --check-prefix=CHECK-BUILD-MODE %s
+CHECK-BUILD-MODE: {{[Dd][Ee][Bb][Uu][Gg]|[Rr][Ee][Ll][Ee][Aa][Ss][Ee]|[Rr][Ee][Ll][Ww][Ii][Tt][Hh][Dd][Ee][Bb][Ii][Nn][Ff][Oo]|[Mm][Ii][Nn][Ss][Ii][Zz][Ee][Rr][Ee][Ll]}}
+CHECK-BUILD-MODE-NOT: error:
+CHECK-BUILD-MODE-NOT: warning
+
+RUN: llvm-config --build-system 2>&1 | FileCheck --check-prefix=CHECK-BUILD-SYSTEM %s
+CHECK-BUILD-SYSTEM: cmake
+CHECK-BUILD-SYSTEM-NOT: error:
+CHECK-BUILD-SYSTEM-NOT: warning
+
+RUN: llvm-config --shared-mode 2>&1 | FileCheck --check-prefix=CHECK-SHARED-MODE %s
+CHECK-SHARED-MODE: {{static|shared}}
+CHECK-SHARED-MODE-NOT: error:
+CHECK-SHARED-MODE-NOT: warning

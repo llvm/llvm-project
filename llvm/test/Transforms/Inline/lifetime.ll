@@ -1,4 +1,5 @@
 ; RUN: opt -inline -S < %s | FileCheck %s
+; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 declare void @llvm.lifetime.start(i64, i8*)
@@ -95,6 +96,23 @@ define void @test_arrays_alloca() {
 ; CHECK: llvm.lifetime.end(i64 40,
   call void @helper_arrays_alloca()
 ; CHECK-NOT: lifetime
+; CHECK: ret void
+  ret void
+}
+
+%swift.error = type opaque
+
+define void @helper_swifterror_alloca() {
+entry:
+  %swifterror = alloca swifterror %swift.error*, align 8
+  store %swift.error* null, %swift.error** %swifterror, align 8
+  ret void
+}
+
+define void @test_swifterror_alloca() {
+; CHECK-LABEL: @test_swifterror_alloca(
+; CHECK-NOT: lifetime
+  call void @helper_swifterror_alloca()
 ; CHECK: ret void
   ret void
 }

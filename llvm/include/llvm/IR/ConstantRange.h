@@ -38,6 +38,8 @@
 
 namespace llvm {
 
+class MDNode;
+
 /// This class represents a range of values.
 ///
 class ConstantRange {
@@ -82,16 +84,42 @@ public:
   static ConstantRange makeSatisfyingICmpRegion(CmpInst::Predicate Pred,
                                                 const ConstantRange &Other);
 
-  /// Return the largest range containing all X such that "X BinOpC C" does not
-  /// wrap (overflow).
+  /// Produce the exact range such that all values in the returned range satisfy
+  /// the given predicate with any value contained within Other. Formally, this
+  /// returns the exact answer when the superset of 'union over all y in Other
+  /// is exactly same as the subset of intersection over all y in Other.
+  /// { x : icmp op x y is true}'.
   ///
-  /// Example:
+  /// Example: Pred = ult and Other = i8 3 returns [0, 3)
+  static ConstantRange makeExactICmpRegion(CmpInst::Predicate Pred,
+                                           const APInt &Other);
+
+  /// Return the largest range containing all X such that "X BinOpC Y" is
+  /// guaranteed not to wrap (overflow) for all Y in Other.
+  ///
+  /// NB! The returned set does *not* contain **all** possible values of X for
+  /// which "X BinOpC Y" does not wrap -- some viable values of X may be
+  /// missing, so you cannot use this to contrain X's range.  E.g. in the last
+  /// example, "(-2) + 1" is both nsw and nuw (so the "X" could be -2), but (-2)
+  /// is not in the set returned.
+  ///
+  /// Examples:
   ///  typedef OverflowingBinaryOperator OBO;
-  ///  makeNoWrapRegion(Add, i8 1, OBO::NoSignedWrap) == [-128, 127)
-  ///  makeNoWrapRegion(Add, i8 1, OBO::NoUnsignedWrap) == [0, -1)
-  ///  makeNoWrapRegion(Add, i8 0, OBO::NoUnsignedWrap) == Full Set
-  static ConstantRange makeNoWrapRegion(Instruction::BinaryOps BinOp,
-                                        const APInt &C, unsigned NoWrapKind);
+  ///  #define MGNR makeGuaranteedNoWrapRegion
+  ///  MGNR(Add, [i8 1, 2), OBO::NoSignedWrap) == [-128, 127)
+  ///  MGNR(Add, [i8 1, 2), OBO::NoUnsignedWrap) == [0, -1)
+  ///  MGNR(Add, [i8 0, 1), OBO::NoUnsignedWrap) == Full Set
+  ///  MGNR(Add, [i8 1, 2), OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+  ///    == [0,INT_MAX)
+  ///  MGNR(Add, [i8 -1, 6), OBO::NoSignedWrap) == [INT_MIN+1, INT_MAX-4)
+  static ConstantRange makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
+                                                  const ConstantRange &Other,
+                                                  unsigned NoWrapKind);
+
+  /// Set up \p Pred and \p RHS such that
+  /// ConstantRange::makeExactICmpRegion(Pred, RHS) == *this.  Return true if
+  /// successful.
+  bool getEquivalentICmp(CmpInst::Predicate &Pred, APInt &RHS) const;
 
   /// Return the lower value for this range.
   ///
@@ -140,6 +168,14 @@ public:
     return nullptr;
   }
 
+  /// If this set contains all but a single element, return it, otherwise return
+  /// null.
+  const APInt *getSingleMissingElement() const {
+    if (Lower == Upper + 1)
+      return &Upper;
+    return nullptr;
+  }
+
   /// Return true if this set contains exactly one member.
   ///
   bool isSingleElement() const { return getSingleElement() != nullptr; }
@@ -147,6 +183,10 @@ public:
   /// Return the number of elements in this set.
   ///
   APInt getSetSize() const;
+
+  /// Compare set size of this range with the range CR.
+  ///
+  bool isSizeStrictlySmallerThanOf(const ConstantRange &CR) const;
 
   /// Return the largest unsigned value contained in the ConstantRange.
   ///
@@ -197,6 +237,15 @@ public:
   ///
   ConstantRange unionWith(const ConstantRange &CR) const;
 
+  /// Return a new range representing the possible values resulting
+  /// from an application of the specified cast operator to this range. \p
+  /// BitWidth is the target bitwidth of the cast.  For casts which don't
+  /// change bitwidth, it must be the same as the source bitwidth.  For casts
+  /// which do change bitwidth, the bitwidth must be consistent with the
+  /// requested cast and source bitwidth.
+  ConstantRange castOp(Instruction::CastOps CastOp,
+                       uint32_t BitWidth) const;
+
   /// Return a new range in the specified integer type, which must
   /// be strictly larger than the current type.  The returned range will
   /// correspond to the possible range of values if the source range had been
@@ -224,8 +273,18 @@ public:
   ConstantRange sextOrTrunc(uint32_t BitWidth) const;
 
   /// Return a new range representing the possible values resulting
+  /// from an application of the specified binary operator to an left hand side
+  /// of this range and a right hand side of \p Other.
+  ConstantRange binaryOp(Instruction::BinaryOps BinOp,
+                         const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
   /// from an addition of a value in this range and a value in \p Other.
   ConstantRange add(const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting from a
+  /// known NSW addition of a value in this range and \p Other constant.
+  ConstantRange addWithNoSignedWrap(const APInt &Other) const;
 
   /// Return a new range representing the possible values resulting
   /// from a subtraction of a value in this range and a value in \p Other.
@@ -243,6 +302,14 @@ public:
   /// Return a new range representing the possible values resulting
   /// from an unsigned maximum of a value in this range and a value in \p Other.
   ConstantRange umax(const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from a signed minimum of a value in this range and a value in \p Other.
+  ConstantRange smin(const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from an unsigned minimum of a value in this range and a value in \p Other.
+  ConstantRange umin(const ConstantRange &Other) const;
 
   /// Return a new range representing the possible values resulting
   /// from an unsigned division of a value in this range and a value in
@@ -283,6 +350,11 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ConstantRange &CR) {
   CR.print(OS);
   return OS;
 }
+
+/// Parse out a conservative ConstantRange from !range metadata.
+///
+/// E.g. if RangeMD is !{i32 0, i32 10, i32 15, i32 20} then return [0, 20).
+ConstantRange getConstantRangeFromMetadata(const MDNode &RangeMD);
 
 } // End llvm namespace
 

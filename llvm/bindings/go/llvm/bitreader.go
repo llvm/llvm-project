@@ -15,6 +15,7 @@ package llvm
 
 /*
 #include "llvm-c/BitReader.h"
+#include "llvm-c/Core.h"
 #include <stdlib.h>
 */
 import "C"
@@ -40,7 +41,7 @@ func ParseBitcodeFile(name string) (Module, error) {
 	defer C.LLVMDisposeMemoryBuffer(buf)
 
 	var m Module
-	if C.LLVMParseBitcode(buf, &m.C, &errmsg) == 0 {
+	if C.LLVMParseBitcode2(buf, &m.C) == 0 {
 		return m, nil
 	}
 

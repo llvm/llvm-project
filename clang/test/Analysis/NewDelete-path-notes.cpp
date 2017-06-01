@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=cplusplus.NewDelete,unix.Malloc -analyzer-output=text -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=cplusplus.NewDelete,unix.Malloc -analyzer-output=plist -analyzer-config path-diagnostics-alternate=false %s -o %t.plist
+// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.NewDelete,unix.Malloc -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.NewDelete,unix.Malloc -analyzer-output=plist -analyzer-config path-diagnostics-alternate=false %s -o %t.plist
 // RUN: FileCheck --input-file=%t.plist %s
 
 void test() {
@@ -257,7 +257,7 @@ void test(Odd *odd) {
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:    </array>
 // CHECK-NEXT:    <key>description</key><string>Attempt to free released memory</string>
-// CHECK-NEXT:    <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:    <key>category</key><string>Memory error</string>
 // CHECK-NEXT:    <key>type</key><string>Double free</string>
 // CHECK-NEXT:    <key>check_name</key><string>cplusplus.NewDelete</string>
 // CHECK-NEXT:    <!-- This hash is experimental and going to change! -->
@@ -475,7 +475,7 @@ void test(Odd *odd) {
 // CHECK-NEXT:     </dict>
 // CHECK-NEXT:    </array>
 // CHECK-NEXT:    <key>description</key><string>Attempt to free released memory</string>
-// CHECK-NEXT:    <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:    <key>category</key><string>Memory error</string>
 // CHECK-NEXT:    <key>type</key><string>Double free</string>
 // CHECK-NEXT:    <key>check_name</key><string>cplusplus.NewDelete</string>
 // CHECK-NEXT:    <!-- This hash is experimental and going to change! -->

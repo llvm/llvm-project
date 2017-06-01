@@ -15,7 +15,7 @@
 #CHECK: foo	100(200,%r1), 300
 #CHECK: error: invalid address register
 #CHECK: foo	100(%a0), 200
-#CHECK: error: %r0 used in an address
+#CHECK: error: invalid instruction
 #CHECK: foo	100(%r0), 200
 #CHECK: error: %r0 used in an address
 #CHECK: foo	100(%v1,%r0), 200
@@ -23,7 +23,7 @@
 #CHECK: foo	100(%v0,%r1), 200
 #CHECK: error: invalid instruction
 #CHECK: foo	100(%v31), 200
-#CHECK: error: invalid operand
+#CHECK: error: invalid address register
 #CHECK: foo	100(%r1,%a0), 200
 #CHECK: error: %r0 used in an address
 #CHECK: foo	100(%r1,%r0), 200

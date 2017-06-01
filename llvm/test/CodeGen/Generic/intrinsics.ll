@@ -1,4 +1,5 @@
 ; RUN: llc < %s
+; RUN: llc -O0 < %s
 
 ;; SQRT
 declare float @llvm.sqrt.f32(float)
@@ -38,3 +39,9 @@ define double @test_cos(float %F) {
         ret double %I
 }
 
+declare i8* @llvm.invariant.group.barrier(i8*)
+
+define i8* @barrier(i8* %p) {
+        %q = call i8* @llvm.invariant.group.barrier(i8* %p)
+        ret i8* %q
+}

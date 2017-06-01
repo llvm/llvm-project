@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=thumb-eabi -mcpu=arm1156t2-s -mattr=+thumb2 -arm-adjust-jump-tables=0 %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv6-eabi -mcpu=cortex-m0 -arm-adjust-jump-tables=0 %s -o - | FileCheck %s
 
 ; Do not use tbb / tbh if any destination is before the jumptable.
 ; rdar://7102917

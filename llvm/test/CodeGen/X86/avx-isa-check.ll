@@ -1,5 +1,6 @@
 ; check AVX2 instructions that are disabled in case avx512VL/avx512BW present
-   
+
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=corei7-avx                             -o /dev/null
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=core-avx2 -mattr=+avx2                 -o /dev/null
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=knl                                    -o /dev/null
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=knl  -mattr=+avx512vl                  -o /dev/null
@@ -344,3 +345,338 @@ define <16 x i16> @shuffle_v16i16_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_0
   ret <16 x i16> %shuffle
 }
 
+define <8 x float> @shuffle_v8f32_11335577(<8 x float> %a, <8 x float> %b) {
+; vmovshdup 256 test
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
+  ret <8 x float> %shuffle
+}
+
+define <4 x float> @shuffle_v4f32_1133(<4 x float> %a, <4 x float> %b) {
+; vmovshdup 128 test 
+  %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  ret <4 x float> %shuffle
+}
+
+define <8 x float> @shuffle_v8f32_00224466(<8 x float> %a, <8 x float> %b) {
+; vmovsldup 256 test
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
+  ret <8 x float> %shuffle
+}
+
+define <4 x float> @shuffle_v4f32_0022(<4 x float> %a, <4 x float> %b) {
+; vmovsldup 128 test
+  %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  ret <4 x float> %shuffle
+}
+
+define <2 x double> @insert_mem_lo_v2f64(double* %ptr, <2 x double> %b) {
+  %a = load double, double* %ptr
+  %v = insertelement <2 x double> undef, double %a, i32 0
+  %shuffle = shufflevector <2 x double> %v, <2 x double> %b, <2 x i32> <i32 0, i32 3>
+  ret <2 x double> %shuffle
+}
+
+define <2 x double> @insert_mem_hi_v2f64(double* %ptr, <2 x double> %b) {
+  %a = load double, double* %ptr
+  %v = insertelement <2 x double> undef, double %a, i32 0
+  %shuffle = shufflevector <2 x double> %v, <2 x double> %b, <2 x i32> <i32 2, i32 0>
+  ret <2 x double> %shuffle
+}
+
+define void @store_floats(<4 x float> %x, i64* %p) {
+  %a = fadd <4 x float> %x, %x
+  %b = shufflevector <4 x float> %a, <4 x float> undef, <2 x i32> <i32 0, i32 1>
+  %c = bitcast <2 x float> %b to i64
+  store i64 %c, i64* %p
+  ret void
+}
+
+define void @store_double(<2 x double> %x, i64* %p) {
+  %a = fadd <2 x double> %x, %x
+  %b = extractelement <2 x double> %a, i32 0
+  %c = bitcast double %b to i64
+  store i64 %c, i64* %p
+  ret void
+}
+
+define void @store_h_double(<2 x double> %x, i64* %p) {
+  %a = fadd <2 x double> %x, %x
+  %b = extractelement <2 x double> %a, i32 1
+  %c = bitcast double %b to i64
+  store i64 %c, i64* %p
+  ret void
+}
+
+define <2 x double> @test39(double* %ptr) nounwind {
+  %a = load double, double* %ptr
+  %v = insertelement <2 x double> undef, double %a, i32 0
+  %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> <i32 0, i32 0>
+  ret <2 x double> %shuffle
+  }
+
+define <2 x double> @test40(<2 x double>* %ptr) nounwind {
+  %v = load  <2 x double>,  <2 x double>* %ptr
+  %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> <i32 0, i32 0>
+  ret <2 x double> %shuffle
+  }
+
+define <2 x double> @shuffle_v2f64_00(<2 x double> %a, <2 x double> %b) {
+  %shuffle = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 0, i32 0>
+  ret <2 x double> %shuffle
+}
+
+define <4 x double> @shuffle_v4f64_0022(<4 x double> %a, <4 x double> %b) {
+  %shuffle = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  ret <4 x double> %shuffle
+}
+
+define <8 x i32> @ashr_v8i32(<8 x i32> %a, <8 x i32> %b) {
+  %shift = ashr <8 x i32> %a, %b
+  ret <8 x i32> %shift
+}
+
+define <8 x i32> @lshr_v8i32(<8 x i32> %a, <8 x i32> %b) {
+  %shift = lshr <8 x i32> %a, %b
+  ret <8 x i32> %shift
+}
+
+define <8 x i32> @shl_v8i32(<8 x i32> %a, <8 x i32> %b) {
+  %shift = shl <8 x i32> %a, %b
+  ret <8 x i32> %shift
+}
+
+define <8 x i32> @ashr_const_v8i32(<8 x i32> %a) {
+  %shift = ashr <8 x i32> %a,  <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  ret <8 x i32> %shift
+}
+
+define <8 x i32> @lshr_const_v8i32(<8 x i32> %a) {
+  %shift = lshr <8 x i32> %a,  <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  ret <8 x i32> %shift
+}
+
+define <8 x i32> @shl_const_v8i32(<8 x i32> %a) {
+  %shift = shl <8 x i32> %a,  <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  ret <8 x i32> %shift
+}
+
+define <4 x i64> @ashr_v4i64(<4 x i64> %a, <4 x i64> %b) {
+  %shift = ashr <4 x i64> %a, %b
+  ret <4 x i64> %shift
+}
+
+define <4 x i64> @lshr_v4i64(<4 x i64> %a, <4 x i64> %b) {
+  %shift = lshr <4 x i64> %a, %b
+  ret <4 x i64> %shift
+}
+
+define <4 x i64> @shl_v4i64(<4 x i64> %a, <4 x i64> %b) {
+  %shift = shl <4 x i64> %a, %b
+  ret <4 x i64> %shift
+}
+
+define <4 x i64> @ashr_const_v4i64(<4 x i64> %a) {
+  %shift = ashr <4 x i64> %a,  <i64 3, i64 3, i64 3, i64 3>
+  ret <4 x i64> %shift
+}
+
+define <4 x i64> @lshr_const_v4i64(<4 x i64> %a) {
+  %shift = lshr <4 x i64> %a,  <i64 3, i64 3, i64 3, i64 3>
+  ret <4 x i64> %shift
+}
+
+define <4 x i64> @shl_const_v4i64(<4 x i64> %a) {
+  %shift = shl <4 x i64> %a,  <i64 3, i64 3, i64 3, i64 3>
+  ret <4 x i64> %shift
+}
+
+define <16 x i16> @ashr_v16i16(<16 x i16> %a, <16 x i16> %b) {
+  %shift = ashr <16 x i16> %a, %b
+  ret <16 x i16> %shift
+}
+
+define <16 x i16> @lshr_v16i16(<16 x i16> %a, <16 x i16> %b) {
+  %shift = lshr <16 x i16> %a, %b
+  ret <16 x i16> %shift
+}
+
+define <16 x i16> @shl_v16i16(<16 x i16> %a, <16 x i16> %b) {
+  %shift = shl <16 x i16> %a, %b
+  ret <16 x i16> %shift
+}
+
+define <16 x i16> @ashr_const_v16i16(<16 x i16> %a) {
+  %shift = ashr <16 x i16> %a,  <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  ret <16 x i16> %shift
+}
+
+define <16 x i16> @lshr_const_v16i16(<16 x i16> %a) {
+  %shift = lshr <16 x i16> %a,  <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  ret <16 x i16> %shift
+}
+
+define <16 x i16> @shl_const_v16i16(<16 x i16> %a) {
+  %shift = shl <16 x i16> %a,  <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  ret <16 x i16> %shift
+}
+
+define <4 x i32> @ashr_v4i32(<4 x i32> %a, <4 x i32> %b) {
+  %shift = ashr <4 x i32> %a, %b
+  ret <4 x i32> %shift
+}
+
+define <4 x i32> @shl_const_v4i32(<4 x i32> %a) {
+  %shift = shl <4 x i32> %a,  <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x i32> %shift
+}
+
+define <2 x i64> @ashr_v2i64(<2 x i64> %a, <2 x i64> %b) {
+  %shift = ashr <2 x i64> %a, %b
+  ret <2 x i64> %shift
+}
+
+define <2 x i64> @shl_const_v2i64(<2 x i64> %a) {
+  %shift = shl <2 x i64> %a,  <i64 3, i64 3>
+  ret <2 x i64> %shift
+}
+
+define <8 x i16> @ashr_v8i16(<8 x i16> %a, <8 x i16> %b) {
+  %shift = ashr <8 x i16> %a, %b
+  ret <8 x i16> %shift
+}
+
+define <8 x i16> @lshr_v8i16(<8 x i16> %a, <8 x i16> %b) {
+  %shift = lshr <8 x i16> %a, %b
+  ret <8 x i16> %shift
+}
+
+define <8 x i16> @shl_v8i16(<8 x i16> %a, <8 x i16> %b) {
+  %shift = shl <8 x i16> %a, %b
+  ret <8 x i16> %shift
+}
+
+define <8 x i16> @ashr_const_v8i16(<8 x i16> %a) {
+  %shift = ashr <8 x i16> %a,<i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  ret <8 x i16> %shift
+}
+
+define <8 x i16> @lshr_const_v8i16(<8 x i16> %a) {
+  %shift = lshr <8 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  ret <8 x i16> %shift
+}
+
+define <8 x i16> @shl_const_v8i16(<8 x i16> %a) {
+  %shift = shl <8 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  ret <8 x i16> %shift
+}
+
+define <8 x i16> @zext_16i8_to_8i16(<16 x i8> %A) nounwind uwtable readnone ssp {
+entry:
+  %B = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %C = zext <8 x i8> %B to <8 x i16>
+  ret <8 x i16> %C
+}
+
+define   <32 x i8> @_broadcast32xi8(i8 %a) {
+  %b = insertelement <32 x i8> undef, i8 %a, i32 0
+  %c = shufflevector <32 x i8> %b, <32 x i8> undef, <32 x i32> zeroinitializer
+  ret <32 x i8> %c
+}
+
+define   <16 x i8> @_broadcast16xi8(i8 %a) {
+  %b = insertelement <16 x i8> undef, i8 %a, i32 0
+  %c = shufflevector <16 x i8> %b, <16 x i8> undef, <16 x i32> zeroinitializer
+  ret <16 x i8> %c
+}
+
+define   <16 x i16> @_broadcast16xi16(i16 %a) {
+  %b = insertelement <16 x i16> undef, i16 %a, i32 0
+  %c = shufflevector <16 x i16> %b, <16 x i16> undef, <16 x i32> zeroinitializer
+  ret <16 x i16> %c
+}
+
+define   <8 x i16> @_broadcast8xi16(i16 %a) {
+  %b = insertelement <8 x i16> undef, i16 %a, i32 0
+  %c = shufflevector <8 x i16> %b, <8 x i16> undef, <8 x i32> zeroinitializer
+  ret <8 x i16> %c
+}
+
+define <8 x i32> @_broadcast8xi32(i32 %a) {
+  %b = insertelement <8 x i32> undef, i32 %a, i32 0
+  %c = shufflevector <8 x i32> %b, <8 x i32> undef, <8 x i32> zeroinitializer
+  ret <8 x i32> %c
+}
+
+define <4 x i32> @_broadcast4xi32(i32 %a) {
+  %b = insertelement <4 x i32> undef, i32 %a, i32 0
+  %c = shufflevector <4 x i32> %b, <4 x i32> undef, <4 x i32> zeroinitializer
+  ret <4 x i32> %c
+}
+
+define <4 x i64> @_broadcast4xi64(i64 %a) {
+  %b = insertelement <4 x i64> undef, i64 %a, i64 0
+  %c = shufflevector <4 x i64> %b, <4 x i64> undef, <4 x i32> zeroinitializer
+  ret <4 x i64> %c
+}
+
+define <2 x i64> @_broadcast2xi64(i64 %a) {
+  %b = insertelement <2 x i64> undef, i64 %a, i64 0
+  %c = shufflevector <2 x i64> %b, <2 x i64> undef, <2 x i32> zeroinitializer
+  ret <2 x i64> %c
+}
+
+define   <8 x float> @_broadcast8xfloat(float %a) {
+  %b = insertelement <8 x float> undef, float %a, i32 0
+  %c = shufflevector <8 x float> %b, <8 x float> undef, <8 x i32> zeroinitializer
+  ret <8 x float> %c
+}
+
+define   <4 x float> @_broadcast4xfloat(float %a) {
+  %b = insertelement <4 x float> undef, float %a, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  ret <4 x float> %c
+}
+
+define   <4 x double> @_broadcast4xdouble(double %a) {
+  %b = insertelement <4 x double> undef, double %a, i32 0
+  %c = shufflevector <4 x double> %b, <4 x double> undef, <4 x i32> zeroinitializer
+  ret <4 x double> %c
+}
+
+define   <2 x double> @_broadcast2xdouble(double %a) {
+  %b = insertelement <2 x double> undef, double %a, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  ret <2 x double> %c
+}
+
+define <4 x float> @test_x86_fmsub_ps(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2) {
+  %x = fmul <4 x float> %a0, %a1
+  %res = fsub <4 x float> %x, %a2
+  ret <4 x float> %res
+}
+
+define <32 x i8> @test_cmpgtb(<32 x i8> %A) {
+; generate the follow code
+;	 vpxor	 %ymm1, %ymm1, %ymm1
+;  vpcmpgtb %ymm0, %ymm1, %ymm0
+  %B = ashr <32 x i8> %A, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+  ret <32 x i8> %B
+}
+
+define   <4 x float> @_inreg4xfloat(float %a) {
+  %b = insertelement <4 x float> undef, float %a, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  ret <4 x float> %c
+}
+
+define   <8 x float> @_inreg8xfloat(float %a) {
+  %b = insertelement <8 x float> undef, float %a, i32 0
+  %c = shufflevector <8 x float> %b, <8 x float> undef, <8 x i32> zeroinitializer
+  ret <8 x float> %c
+}
+
+define   <4 x double> @_inreg4xdouble(double %a) {
+  %b = insertelement <4 x double> undef, double %a, i32 0
+  %c = shufflevector <4 x double> %b, <4 x double> undef, <4 x i32> zeroinitializer
+  ret <4 x double> %c
+}

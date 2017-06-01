@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-config suppress-inlined-defensive-checks=true -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-config suppress-inlined-defensive-checks=true -verify %s
 
 typedef signed char BOOL;
 typedef struct objc_class *Class;

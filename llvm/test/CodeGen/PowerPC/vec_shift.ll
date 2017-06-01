@@ -1,4 +1,4 @@
-; RUN: llc < %s  -march=ppc32 -mcpu=g5
+; RUN: llc -verify-machineinstrs < %s  -march=ppc32 -mcpu=g5
 ; PR3628
 
 define void @update(<4 x i32> %val, <4 x i32>* %dst) nounwind {

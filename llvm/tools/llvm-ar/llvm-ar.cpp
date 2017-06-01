@@ -19,7 +19,9 @@
 #include "llvm/LibDriver/LibDriver.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
+#include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
@@ -64,12 +66,25 @@ static void failIfError(std::error_code EC, Twine Context = "") {
   fail(Context + ": " + EC.message());
 }
 
+static void failIfError(Error E, Twine Context = "") {
+  if (!E)
+    return;
+
+  handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EIB) {
+    std::string ContextStr = Context.str();
+    if (ContextStr == "")
+      fail(EIB.message());
+    fail(Context + ": " + EIB.message());
+  });
+}
+
 // llvm-ar/llvm-ranlib remaining positional arguments.
 static cl::list<std::string>
     RestOfArgs(cl::Positional, cl::ZeroOrMore,
                cl::desc("[relpos] [count] <archive-file> [members]..."));
 
 static cl::opt<bool> MRI("M", cl::desc(""));
+static cl::opt<std::string> Plugin("plugin", cl::desc("plugin (ignored for compatibility"));
 
 namespace {
 enum Format { Default, GNU, BSD };
@@ -77,9 +92,9 @@ enum Format { Default, GNU, BSD };
 
 static cl::opt<Format>
     FormatOpt("format", cl::desc("Archive format to create"),
-              cl::values(clEnumValN(Default, "defalut", "default"),
+              cl::values(clEnumValN(Default, "default", "default"),
                          clEnumValN(GNU, "gnu", "gnu"),
-                         clEnumValN(BSD, "bsd", "bsd"), clEnumValEnd));
+                         clEnumValN(BSD, "bsd", "bsd")));
 
 static std::string Options;
 
@@ -102,6 +117,7 @@ static cl::extrahelp MoreHelp(
   "  [o] - preserve original dates\n"
   "  [s] - create an archive index (cf. ranlib)\n"
   "  [S] - do not build a symbol table\n"
+  "  [T] - create a thin archive\n"
   "  [u] - update only files newer than archive contents\n"
   "\nMODIFIERS (generic):\n"
   "  [c] - do not warn if the library had to be created\n"
@@ -303,8 +319,8 @@ static void doPrint(StringRef Name, const object::Archive::Child &C) {
   if (Verbose)
     outs() << "Printing " << Name << "\n";
 
-  ErrorOr<StringRef> DataOrErr = C.getBuffer();
-  failIfError(DataOrErr.getError());
+  Expected<StringRef> DataOrErr = C.getBuffer();
+  failIfError(DataOrErr.takeError());
   StringRef Data = *DataOrErr;
   outs().write(Data.data(), Data.size());
 }
@@ -312,18 +328,9 @@ static void doPrint(StringRef Name, const object::Archive::Child &C) {
 // Utility function for printing out the file mode when the 't' operation is in
 // verbose mode.
 static void printMode(unsigned mode) {
-  if (mode & 004)
-    outs() << "r";
-  else
-    outs() << "-";
-  if (mode & 002)
-    outs() << "w";
-  else
-    outs() << "-";
-  if (mode & 001)
-    outs() << "x";
-  else
-    outs() << "-";
+  outs() << ((mode & 004) ? "r" : "-");
+  outs() << ((mode & 002) ? "w" : "-");
+  outs() << ((mode & 001) ? "x" : "-");
 }
 
 // Implement the 't' operation. This function prints out just
@@ -332,17 +339,30 @@ static void printMode(unsigned mode) {
 // modification time are also printed.
 static void doDisplayTable(StringRef Name, const object::Archive::Child &C) {
   if (Verbose) {
-    sys::fs::perms Mode = C.getAccessMode();
+    Expected<sys::fs::perms> ModeOrErr = C.getAccessMode();
+    failIfError(ModeOrErr.takeError());
+    sys::fs::perms Mode = ModeOrErr.get();
     printMode((Mode >> 6) & 007);
     printMode((Mode >> 3) & 007);
     printMode(Mode & 007);
-    outs() << ' ' << C.getUID();
-    outs() << '/' << C.getGID();
-    ErrorOr<uint64_t> Size = C.getSize();
-    failIfError(Size.getError());
+    Expected<unsigned> UIDOrErr = C.getUID();
+    failIfError(UIDOrErr.takeError());
+    outs() << ' ' << UIDOrErr.get();
+    Expected<unsigned> GIDOrErr = C.getGID();
+    failIfError(GIDOrErr.takeError());
+    outs() << '/' << GIDOrErr.get();
+    Expected<uint64_t> Size = C.getSize();
+    failIfError(Size.takeError());
     outs() << ' ' << format("%6llu", Size.get());
-    outs() << ' ' << C.getLastModified().str();
+    auto ModTimeOrErr = C.getLastModified();
+    failIfError(ModTimeOrErr.takeError());
+    outs() << ' ' << ModTimeOrErr.get();
     outs() << ' ';
+  }
+
+  if (C.getParent()->isThin()) {
+    outs() << sys::path::parent_path(ArchiveName);
+    outs() << '/';
   }
   outs() << Name << "\n";
 }
@@ -351,19 +371,20 @@ static void doDisplayTable(StringRef Name, const object::Archive::Child &C) {
 // system.
 static void doExtract(StringRef Name, const object::Archive::Child &C) {
   // Retain the original mode.
-  sys::fs::perms Mode = C.getAccessMode();
-  SmallString<128> Storage = Name;
+  Expected<sys::fs::perms> ModeOrErr = C.getAccessMode();
+  failIfError(ModeOrErr.takeError());
+  sys::fs::perms Mode = ModeOrErr.get();
 
   int FD;
-  failIfError(
-      sys::fs::openFileForWrite(Storage.c_str(), FD, sys::fs::F_None, Mode),
-      Storage.c_str());
+  failIfError(sys::fs::openFileForWrite(Name, FD, sys::fs::F_None, Mode), Name);
 
   {
     raw_fd_ostream file(FD, false);
 
     // Get the data and its length
-    StringRef Data = *C.getBuffer();
+    Expected<StringRef> BufOrErr = C.getBuffer();
+    failIfError(BufOrErr.takeError());
+    StringRef Data = BufOrErr.get();
 
     // Write the data.
     file.write(Data.data(), Data.size());
@@ -371,9 +392,12 @@ static void doExtract(StringRef Name, const object::Archive::Child &C) {
 
   // If we're supposed to retain the original modification times, etc. do so
   // now.
-  if (OriginalDates)
+  if (OriginalDates) {
+    auto ModTimeOrErr = C.getLastModified();
+    failIfError(ModTimeOrErr.takeError());
     failIfError(
-        sys::fs::setLastModificationAndAccessTime(FD, C.getLastModified()));
+        sys::fs::setLastModificationAndAccessTime(FD, ModTimeOrErr.get()));
+  }
 
   if (close(FD))
     fail("Could not close the file");
@@ -399,41 +423,41 @@ static bool shouldCreateArchive(ArchiveOperation Op) {
 
 static void performReadOperation(ArchiveOperation Operation,
                                  object::Archive *OldArchive) {
-  if (Operation == Extract && OldArchive->isThin()) {
-    errs() << "extracting from a thin archive is not supported\n";
-    std::exit(1);
-  }
+  if (Operation == Extract && OldArchive->isThin())
+    fail("extracting from a thin archive is not supported");
 
   bool Filter = !Members.empty();
-  for (auto &ChildOrErr : OldArchive->children()) {
-    failIfError(ChildOrErr.getError());
-    const object::Archive::Child &C = *ChildOrErr;
+  {
+    Error Err = Error::success();
+    for (auto &C : OldArchive->children(Err)) {
+      Expected<StringRef> NameOrErr = C.getName();
+      failIfError(NameOrErr.takeError());
+      StringRef Name = NameOrErr.get();
 
-    ErrorOr<StringRef> NameOrErr = C.getName();
-    failIfError(NameOrErr.getError());
-    StringRef Name = NameOrErr.get();
+      if (Filter) {
+        auto I = find(Members, Name);
+        if (I == Members.end())
+          continue;
+        Members.erase(I);
+      }
 
-    if (Filter) {
-      auto I = std::find(Members.begin(), Members.end(), Name);
-      if (I == Members.end())
-        continue;
-      Members.erase(I);
+      switch (Operation) {
+      default:
+        llvm_unreachable("Not a read operation");
+      case Print:
+        doPrint(Name, C);
+        break;
+      case DisplayTable:
+        doDisplayTable(Name, C);
+        break;
+      case Extract:
+        doExtract(Name, C);
+        break;
+      }
     }
-
-    switch (Operation) {
-    default:
-      llvm_unreachable("Not a read operation");
-    case Print:
-      doPrint(Name, C);
-      break;
-    case DisplayTable:
-      doDisplayTable(Name, C);
-      break;
-    case Extract:
-      doExtract(Name, C);
-      break;
-    }
+    failIfError(std::move(Err));
   }
+
   if (Members.empty())
     return;
   for (StringRef Name : Members)
@@ -441,25 +465,28 @@ static void performReadOperation(ArchiveOperation Operation,
   std::exit(1);
 }
 
-static void addMember(std::vector<NewArchiveIterator> &Members,
+static void addMember(std::vector<NewArchiveMember> &Members,
                       StringRef FileName, int Pos = -1) {
-  NewArchiveIterator NI(FileName);
+  Expected<NewArchiveMember> NMOrErr =
+      NewArchiveMember::getFile(FileName, Deterministic);
+  failIfError(NMOrErr.takeError(), FileName);
   if (Pos == -1)
-    Members.push_back(NI);
+    Members.push_back(std::move(*NMOrErr));
   else
-    Members[Pos] = NI;
+    Members[Pos] = std::move(*NMOrErr);
 }
 
-static void addMember(std::vector<NewArchiveIterator> &Members,
-                      const object::Archive::Child &M, StringRef Name,
-                      int Pos = -1) {
+static void addMember(std::vector<NewArchiveMember> &Members,
+                      const object::Archive::Child &M, int Pos = -1) {
   if (Thin && !M.getParent()->isThin())
     fail("Cannot convert a regular archive to a thin one");
-  NewArchiveIterator NI(M, Name);
+  Expected<NewArchiveMember> NMOrErr =
+      NewArchiveMember::getOldMember(M, Deterministic);
+  failIfError(NMOrErr.takeError());
   if (Pos == -1)
-    Members.push_back(NI);
+    Members.push_back(std::move(*NMOrErr));
   else
-    Members[Pos] = NI;
+    Members[Pos] = std::move(*NMOrErr);
 }
 
 enum InsertAction {
@@ -477,10 +504,9 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
   if (Operation == QuickAppend || Members.empty())
     return IA_AddOldMember;
 
-  auto MI =
-      std::find_if(Members.begin(), Members.end(), [Name](StringRef Path) {
-        return Name == sys::path::filename(Path);
-      });
+  auto MI = find_if(Members, [Name](StringRef Path) {
+    return Name == sys::path::filename(Path);
+  });
 
   if (MI == Members.end())
     return IA_AddOldMember;
@@ -505,7 +531,9 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
     // operation.
     sys::fs::file_status Status;
     failIfError(sys::fs::status(*MI, Status), *MI);
-    if (Status.getLastModificationTime() < Member.getLastModified()) {
+    auto ModTimeOrErr = Member.getLastModified();
+    failIfError(ModTimeOrErr.takeError());
+    if (Status.getLastModificationTime() < ModTimeOrErr.get()) {
       if (PosName.empty())
         return IA_AddOldMember;
       return IA_MoveOldMember;
@@ -520,20 +548,19 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
 
 // We have to walk this twice and computing it is not trivial, so creating an
 // explicit std::vector is actually fairly efficient.
-static std::vector<NewArchiveIterator>
+static std::vector<NewArchiveMember>
 computeNewArchiveMembers(ArchiveOperation Operation,
                          object::Archive *OldArchive) {
-  std::vector<NewArchiveIterator> Ret;
-  std::vector<NewArchiveIterator> Moved;
+  std::vector<NewArchiveMember> Ret;
+  std::vector<NewArchiveMember> Moved;
   int InsertPos = -1;
   StringRef PosName = sys::path::filename(RelPos);
   if (OldArchive) {
-    for (auto &ChildOrErr : OldArchive->children()) {
-      failIfError(ChildOrErr.getError());
-      auto &Child = ChildOrErr.get();
+    Error Err = Error::success();
+    for (auto &Child : OldArchive->children(Err)) {
       int Pos = Ret.size();
-      ErrorOr<StringRef> NameOrErr = Child.getName();
-      failIfError(NameOrErr.getError());
+      Expected<StringRef> NameOrErr = Child.getName();
+      failIfError(NameOrErr.takeError());
       StringRef Name = NameOrErr.get();
       if (Name == PosName) {
         assert(AddAfter || AddBefore);
@@ -548,7 +575,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
           computeInsertAction(Operation, Child, Name, MemberI);
       switch (Action) {
       case IA_AddOldMember:
-        addMember(Ret, Child, Name);
+        addMember(Ret, Child);
         break;
       case IA_AddNewMeber:
         addMember(Ret, *MemberI);
@@ -556,7 +583,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
       case IA_Delete:
         break;
       case IA_MoveOldMember:
-        addMember(Moved, Child, Name);
+        addMember(Moved, Child);
         break;
       case IA_MoveNewMember:
         addMember(Moved, *MemberI);
@@ -565,6 +592,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
       if (MemberI != Members.end())
         Members.erase(MemberI);
     }
+    failIfError(std::move(Err));
   }
 
   if (Operation == Delete)
@@ -577,10 +605,15 @@ computeNewArchiveMembers(ArchiveOperation Operation,
     InsertPos = Ret.size();
 
   assert(unsigned(InsertPos) <= Ret.size());
-  Ret.insert(Ret.begin() + InsertPos, Moved.begin(), Moved.end());
-
-  Ret.insert(Ret.begin() + InsertPos, Members.size(), NewArchiveIterator(""));
   int Pos = InsertPos;
+  for (auto &M : Moved) {
+    Ret.insert(Ret.begin() + Pos, std::move(M));
+    ++Pos;
+  }
+
+  for (unsigned I = 0; I != Members.size(); ++I)
+    Ret.insert(Ret.begin() + InsertPos, NewArchiveMember());
+  Pos = InsertPos;
   for (auto &Member : Members) {
     addMember(Ret, Member, Pos);
     ++Pos;
@@ -589,36 +622,61 @@ computeNewArchiveMembers(ArchiveOperation Operation,
   return Ret;
 }
 
+static object::Archive::Kind getDefaultForHost() {
+  return Triple(sys::getProcessTriple()).isOSDarwin() ? object::Archive::K_BSD
+                                                      : object::Archive::K_GNU;
+}
+
+static object::Archive::Kind getKindFromMember(const NewArchiveMember &Member) {
+  Expected<std::unique_ptr<object::ObjectFile>> OptionalObject =
+      object::ObjectFile::createObjectFile(Member.Buf->getMemBufferRef());
+
+  if (OptionalObject)
+    return isa<object::MachOObjectFile>(**OptionalObject)
+               ? object::Archive::K_BSD
+               : object::Archive::K_GNU;
+
+  // squelch the error in case we had a non-object file
+  consumeError(OptionalObject.takeError());
+  return getDefaultForHost();
+}
+
 static void
-performWriteOperation(ArchiveOperation Operation, object::Archive *OldArchive,
-                      std::vector<NewArchiveIterator> *NewMembersP) {
+performWriteOperation(ArchiveOperation Operation,
+                      object::Archive *OldArchive,
+                      std::unique_ptr<MemoryBuffer> OldArchiveBuf,
+                      std::vector<NewArchiveMember> *NewMembersP) {
+  std::vector<NewArchiveMember> NewMembers;
+  if (!NewMembersP)
+    NewMembers = computeNewArchiveMembers(Operation, OldArchive);
+
   object::Archive::Kind Kind;
   switch (FormatOpt) {
-  case Default: {
-    Triple T(sys::getProcessTriple());
-    if (T.isOSDarwin())
-      Kind = object::Archive::K_BSD;
-    else
+  case Default:
+    if (Thin)
       Kind = object::Archive::K_GNU;
+    else if (OldArchive)
+      Kind = OldArchive->kind();
+    else if (NewMembersP)
+      Kind = NewMembersP->size() ? getKindFromMember(NewMembersP->front())
+                                 : getDefaultForHost();
+    else
+      Kind = NewMembers.size() ? getKindFromMember(NewMembers.front())
+                               : getDefaultForHost();
     break;
-  }
   case GNU:
     Kind = object::Archive::K_GNU;
     break;
   case BSD:
+    if (Thin)
+      fail("Only the gnu format has a thin mode");
     Kind = object::Archive::K_BSD;
     break;
   }
-  if (NewMembersP) {
-    std::pair<StringRef, std::error_code> Result = writeArchive(
-        ArchiveName, *NewMembersP, Symtab, Kind, Deterministic, Thin);
-    failIfError(Result.second, Result.first);
-    return;
-  }
-  std::vector<NewArchiveIterator> NewMembers =
-      computeNewArchiveMembers(Operation, OldArchive);
-  auto Result =
-      writeArchive(ArchiveName, NewMembers, Symtab, Kind, Deterministic, Thin);
+
+  std::pair<StringRef, std::error_code> Result =
+      writeArchive(ArchiveName, NewMembersP ? *NewMembersP : NewMembers, Symtab,
+                   Kind, Deterministic, Thin, std::move(OldArchiveBuf));
   failIfError(Result.second, Result.first);
 }
 
@@ -632,12 +690,13 @@ static void createSymbolTable(object::Archive *OldArchive) {
   if (OldArchive->hasSymbolTable())
     return;
 
-  performWriteOperation(CreateSymTab, OldArchive, nullptr);
+  performWriteOperation(CreateSymTab, OldArchive, nullptr, nullptr);
 }
 
 static void performOperation(ArchiveOperation Operation,
                              object::Archive *OldArchive,
-                             std::vector<NewArchiveIterator> *NewMembers) {
+                             std::unique_ptr<MemoryBuffer> OldArchiveBuf,
+                             std::vector<NewArchiveMember> *NewMembers) {
   switch (Operation) {
   case Print:
   case DisplayTable:
@@ -649,7 +708,8 @@ static void performOperation(ArchiveOperation Operation,
   case Move:
   case QuickAppend:
   case ReplaceOrInsert:
-    performWriteOperation(Operation, OldArchive, NewMembers);
+    performWriteOperation(Operation, OldArchive, std::move(OldArchiveBuf),
+                          NewMembers);
     return;
   case CreateSymTab:
     createSymbolTable(OldArchive);
@@ -659,26 +719,21 @@ static void performOperation(ArchiveOperation Operation,
 }
 
 static int performOperation(ArchiveOperation Operation,
-                            std::vector<NewArchiveIterator> *NewMembers) {
+                            std::vector<NewArchiveMember> *NewMembers) {
   // Create or open the archive object.
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
       MemoryBuffer::getFile(ArchiveName, -1, false);
   std::error_code EC = Buf.getError();
-  if (EC && EC != errc::no_such_file_or_directory) {
-    errs() << ToolName << ": error opening '" << ArchiveName
-           << "': " << EC.message() << "!\n";
-    return 1;
-  }
+  if (EC && EC != errc::no_such_file_or_directory)
+    fail("error opening '" + ArchiveName + "': " + EC.message() + "!");
 
   if (!EC) {
-    object::Archive Archive(Buf.get()->getMemBufferRef(), EC);
-
-    if (EC) {
-      errs() << ToolName << ": error loading '" << ArchiveName
-             << "': " << EC.message() << "!\n";
-      return 1;
-    }
-    performOperation(Operation, &Archive, NewMembers);
+    Error Err = Error::success();
+    object::Archive Archive(Buf.get()->getMemBufferRef(), Err);
+    EC = errorToErrorCode(std::move(Err));
+    failIfError(EC,
+                "error loading '" + ArchiveName + "': " + EC.message() + "!");
+    performOperation(Operation, &Archive, std::move(Buf.get()), NewMembers);
     return 0;
   }
 
@@ -693,7 +748,7 @@ static int performOperation(ArchiveOperation Operation,
     }
   }
 
-  performOperation(Operation, nullptr, NewMembers);
+  performOperation(Operation, nullptr, nullptr, NewMembers);
   return 0;
 }
 
@@ -704,7 +759,7 @@ static void runMRIScript() {
   failIfError(Buf.getError());
   const MemoryBuffer &Ref = *Buf.get();
   bool Saved = false;
-  std::vector<NewArchiveIterator> NewMembers;
+  std::vector<NewArchiveMember> NewMembers;
   std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
   std::vector<std::unique_ptr<object::Archive>> Archives;
 
@@ -730,15 +785,15 @@ static void runMRIScript() {
       ArchiveBuffers.push_back(std::move(*BufOrErr));
       auto LibOrErr =
           object::Archive::create(ArchiveBuffers.back()->getMemBufferRef());
-      failIfError(LibOrErr.getError(), "Could not parse library");
+      failIfError(errorToErrorCode(LibOrErr.takeError()),
+                  "Could not parse library");
       Archives.push_back(std::move(*LibOrErr));
       object::Archive &Lib = *Archives.back();
-      for (auto &MemberOrErr : Lib.children()) {
-        failIfError(MemberOrErr.getError());
-        auto &Member = MemberOrErr.get();
-        ErrorOr<StringRef> NameOrErr = Member.getName();
-        failIfError(NameOrErr.getError());
-        addMember(NewMembers, Member, *NameOrErr);
+      {
+        Error Err = Error::success();
+        for (auto &Member : Lib.children(Err))
+          addMember(NewMembers, Member);
+        failIfError(std::move(Err));
       }
       break;
     }
@@ -778,7 +833,7 @@ static int ar_main() {
 
 static int ranlib_main() {
   if (RestOfArgs.size() != 1)
-    fail(ToolName + "takes just one archive as argument");
+    fail(ToolName + " takes just one archive as an argument");
   ArchiveName = RestOfArgs[0];
   return performOperation(CreateSymTab, nullptr);
 }
@@ -786,7 +841,7 @@ static int ranlib_main() {
 int main(int argc, char **argv) {
   ToolName = argv[0];
   // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 

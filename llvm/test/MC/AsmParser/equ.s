@@ -5,5 +5,6 @@
 .set	a, 1
 .equ	a, 2
 .equiv	a, 3
+.set  b, ""
 // CHECK: error: redefinition of 'a'
-
+// CHECK: error: missing expression in '.set' directive

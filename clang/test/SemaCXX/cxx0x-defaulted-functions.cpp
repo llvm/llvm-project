@@ -87,35 +87,36 @@ namespace DefaultedFnExceptionSpec {
 
   template<typename T>
   struct Error {
-    // FIXME: Type canonicalization causes all the errors to point at the first
-    // declaration which has the type 'void () noexcept (T::error)'. We should
-    // get one error for 'Error<int>::Error()' and one for 'Error<int>::~Error()'.
-    void f() noexcept(T::error); // expected-error 2{{has no members}}
+    void f() noexcept(T::error);
 
-    Error() noexcept(T::error);
-    Error(const Error&) noexcept(T::error);
-    Error(Error&&) noexcept(T::error);
-    Error &operator=(const Error&) noexcept(T::error);
-    Error &operator=(Error&&) noexcept(T::error);
-    ~Error() noexcept(T::error);
+    Error() noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}} expected-error {{type 'char'}}
+    Error(const Error&) noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+    Error(Error&&) noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+    Error &operator=(const Error&) noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}} expected-error {{type 'double'}}
+    Error &operator=(Error&&) noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+    ~Error() noexcept(T::error); // expected-error {{type 'int' cannot be used prior to '::' because it has no members}} expected-error {{type 'char'}}
   };
 
+  Error<char> c; // expected-note 2{{instantiation of}}
   struct DelayImplicit {
-    Error<int> e;
+    // FIXME: The location of this note is terrible. The instantiation was
+    // triggered by the uses of the functions in the decltype expressions below.
+    Error<int> e; // expected-note 6{{instantiation of}}
   };
+  Error<float> *e;
 
-  // Don't instantiate the exception specification here.
+  // An exception specification is needed if the exception specification for a
+  // a defaulted special member function that calls the function is needed.
+  // Use in an unevaluated operand still results in the exception spec being
+  // needed.
   void test1(decltype(declval<DelayImplicit>() = DelayImplicit(DelayImplicit())));
   void test2(decltype(declval<DelayImplicit>() = declval<const DelayImplicit>()));
   void test3(decltype(DelayImplicit(declval<const DelayImplicit>())));
 
-  // Any odr-use causes the exception specification to be evaluated.
-  struct OdrUse { // \
-    expected-note {{instantiation of exception specification for 'Error'}} \
-    expected-note {{instantiation of exception specification for '~Error'}}
-    Error<int> e;
-  };
-  OdrUse use; // expected-note {{implicit default constructor for 'DefaultedFnExceptionSpec::OdrUse' first required here}}
+  // Any odr-use needs the exception specification.
+  void f(Error<double> *p) {
+    *p = *p; // expected-note {{instantiation of}}
+  }
 }
 
 namespace PR13527 {
@@ -142,12 +143,20 @@ namespace PR13527 {
     Y &operator=(Y&&) = default;
     ~Y() = default;
   };
-  Y::Y() = default; // expected-error {{definition of explicitly defaulted}}
-  Y::Y(const Y&) = default; // expected-error {{definition of explicitly defaulted}}
-  Y::Y(Y&&) = default; // expected-error {{definition of explicitly defaulted}}
-  Y &Y::operator=(const Y&) = default; // expected-error {{definition of explicitly defaulted}}
-  Y &Y::operator=(Y&&) = default; // expected-error {{definition of explicitly defaulted}}
+  Y::Y() noexcept = default; // expected-error {{definition of explicitly defaulted}}
+  Y::Y(const Y&) noexcept = default; // expected-error {{definition of explicitly defaulted}}
+  Y::Y(Y&&) noexcept = default; // expected-error {{definition of explicitly defaulted}}
+  Y &Y::operator=(const Y&) noexcept = default; // expected-error {{definition of explicitly defaulted}}
+  Y &Y::operator=(Y&&) noexcept = default; // expected-error {{definition of explicitly defaulted}}
   Y::~Y() = default; // expected-error {{definition of explicitly defaulted}}
+}
+
+namespace PR27699 {
+  struct X {
+    X();
+  };
+  X::X() = default; // expected-note {{here}}
+  X::X() = default; // expected-error {{redefinition of 'X'}}
 }
 
 namespace PR14577 {
@@ -171,7 +180,7 @@ namespace PR14577 {
   Outer<T>::Inner2<T>::~Inner2() = default; // expected-error {{nested name specifier 'Outer<T>::Inner2<T>::' for declaration does not refer into a class, class template or class template partial specialization}}  expected-error {{only special member functions may be defaulted}}
 }
 
-extern "C" {
+extern "C" { // expected-note {{extern "C" language linkage specification begins here}}
  template<typename _Tp> // expected-error {{templates must have C++ linkage}}
  void PR13573(const _Tp&) = delete;
 }
@@ -187,4 +196,51 @@ namespace PR15597 {
   };
   A<int> a;
   B<int> b; // expected-note {{here}}
+}
+
+namespace PR27941 {
+struct ExplicitBool {
+  ExplicitBool &operator=(bool) = default; // expected-error{{only special member functions may be defaulted}}
+  int member;
+};
+
+int fn() {
+  ExplicitBool t;
+  t = true;
+}
+}
+
+namespace dependent_classes {
+template <bool B, typename X, typename Y>
+struct conditional;
+
+template <typename X, typename Y>
+struct conditional<true, X, Y> { typedef X type; };
+
+template <typename X, typename Y>
+struct conditional<false, X, Y> { typedef Y type; };
+
+template<bool B> struct X {
+  X();
+
+  // B == false triggers error for = default.
+  using T = typename conditional<B, const X &, int>::type;
+  X(T) = default;  // expected-error {{only special member functions}}
+
+  // Either value of B creates a constructor that can be default
+  using U = typename conditional<B, X&&, const X&>::type;
+  X(U) = default;
+};
+
+X<true> x1;
+X<false> x2; // expected-note {{in instantiation}}
+
+template <typename Type>
+class E {
+  explicit E(const int &) = default;
+};
+
+template <typename Type>
+E<Type>::E(const int&) {}  // expected-error {{definition of explicitly defaulted function}}
+
 }

@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -fopenmp -x c -triple x86_64-apple-darwin10 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 // expected-no-diagnostics
-// REQUIRES: x86-registered-target
 #ifndef HEADER
 #define HEADER
 
@@ -72,7 +71,10 @@ struct BitFields4_packed {
 typedef float float2 __attribute__((ext_vector_type(2)));
 float2 float2x;
 
-register int rix __asm__("0");
+// Register "0" is currently an invalid register for global register variables.
+// Use "esp" instead of "0".
+// register int rix __asm__("0");
+register int rix __asm__("esp");
 
 int main() {
 // CHECK-NOT: atomicrmw

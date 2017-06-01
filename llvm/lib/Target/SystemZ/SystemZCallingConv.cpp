@@ -12,10 +12,10 @@
 
 using namespace llvm;
 
-const unsigned SystemZ::ArgGPRs[SystemZ::NumArgGPRs] = {
+const MCPhysReg SystemZ::ArgGPRs[SystemZ::NumArgGPRs] = {
   SystemZ::R2D, SystemZ::R3D, SystemZ::R4D, SystemZ::R5D, SystemZ::R6D
 };
 
-const unsigned SystemZ::ArgFPRs[SystemZ::NumArgFPRs] = {
+const MCPhysReg SystemZ::ArgFPRs[SystemZ::NumArgFPRs] = {
   SystemZ::F0D, SystemZ::F2D, SystemZ::F4D, SystemZ::F6D
 };

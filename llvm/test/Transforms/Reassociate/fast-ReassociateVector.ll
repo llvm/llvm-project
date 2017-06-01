@@ -16,9 +16,9 @@ define <4 x float> @test1(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; Check that a*a*b+a*a*c is turned into a*(a*(b+c)).
 define <2 x float> @test2(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; CHECK-LABEL: @test2
-; CHECK-NEXT: fadd fast <2 x float> %c, %b
-; CHECK-NEXT: fmul fast <2 x float> %a, %tmp2
-; CHECK-NEXT: fmul fast <2 x float> %tmp3, %a
+; CHECK-NEXT: [[TMP1:%tmp.*]] = fadd fast <2 x float> %c, %b
+; CHECK-NEXT: [[TMP2:%tmp.*]] = fmul fast <2 x float> %a, %a
+; CHECK-NEXT: fmul fast <2 x float> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT: ret <2 x float>
 
   %t0 = fmul fast <2 x float> %a, %b
@@ -133,8 +133,8 @@ define <2 x float> @test10(<2 x float> %a, <2 x float> %b, <2 x float> %z) {
 ; Check x*y+y*x -> x*y*2.
 define <2 x double> @test11(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @test11
-; CHECK-NEXT: %factor = fmul fast <2 x double> %y, <double 2.000000e+00, double 2.000000e+00>
-; CHECK-NEXT: %tmp1 = fmul fast <2 x double> %factor, %x
+; CHECK-NEXT: %factor = fmul fast <2 x double> %x, <double 2.000000e+00, double 2.000000e+00>
+; CHECK-NEXT: %tmp1 = fmul fast <2 x double> %factor, %y
 ; CHECK-NEXT: ret <2 x double> %tmp1
 
   %1 = fmul fast <2 x double> %x, %y

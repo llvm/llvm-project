@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_BASIC_MODULE_H
 #define LLVM_CLANG_BASIC_MODULE_H
 
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
@@ -35,16 +36,23 @@ namespace llvm {
 
 namespace clang {
   
-class DirectoryEntry;
-class FileEntry;
-class FileManager;
 class LangOptions;
 class TargetInfo;
 class IdentifierInfo;
   
 /// \brief Describes the name of a module.
 typedef SmallVector<std::pair<std::string, SourceLocation>, 2> ModuleId;
-  
+
+/// The signature of a module, which is a hash of the AST content.
+struct ASTFileSignature : std::array<uint32_t, 5> {
+  ASTFileSignature(std::array<uint32_t, 5> S = {{0}})
+      : std::array<uint32_t, 5>(std::move(S)) {}
+
+  explicit operator bool() const {
+    return *this != std::array<uint32_t, 5>({{0}});
+  }
+};
+
 /// \brief Describes a module or submodule.
 class Module {
 public:
@@ -67,7 +75,7 @@ public:
   llvm::PointerUnion<const DirectoryEntry *, const FileEntry *> Umbrella;
 
   /// \brief The module signature.
-  uint64_t Signature;
+  ASTFileSignature Signature;
 
   /// \brief The name of the umbrella entry, as written in the module map.
   std::string UmbrellaAsWritten;
@@ -149,6 +157,9 @@ public:
   /// will be false to indicate that this (sub)module is not available.
   SmallVector<Requirement, 2> Requirements;
 
+  /// \brief A module with the same name that shadows this module.
+  Module *ShadowingModule = nullptr;
+
   /// \brief Whether this module is missing a feature from \c Requirements.
   unsigned IsMissingRequirement : 1;
 
@@ -182,6 +193,9 @@ public:
   /// \brief Whether this is an inferred submodule (module * { ... }).
   unsigned IsInferred : 1;
 
+  /// \brief Whether this is a module who has its swift_names inferred.
+  unsigned IsSwiftInferImportAsMember : 1;
+
   /// \brief Whether we should infer submodules for this module based on 
   /// the headers.
   ///
@@ -202,6 +216,10 @@ public:
   /// that no identifier not in this list should affect how the module is
   /// built.
   unsigned ConfigMacrosExhaustive : 1;
+
+  /// \brief Whether files in this module can only include non-modular headers
+  /// and headers from used modules.
+  unsigned NoUndeclaredIncludes : 1;
 
   /// \brief Describes the visibility of the various names within a
   /// particular module.
@@ -323,13 +341,20 @@ public:
   ///
   /// \param Target The target options used for the current translation unit.
   ///
-  /// \param Req If this module is unavailable, this parameter
-  /// will be set to one of the requirements that is not met for use of
-  /// this module.
+  /// \param Req If this module is unavailable because of a missing requirement,
+  /// this parameter will be set to one of the requirements that is not met for
+  /// use of this module.
+  ///
+  /// \param MissingHeader If this module is unavailable because of a missing
+  /// header, this parameter will be set to one of the missing headers.
+  ///
+  /// \param ShadowingModule If this module is unavailable because it is
+  /// shadowed, this parameter will be set to the shadowing module.
   bool isAvailable(const LangOptions &LangOpts, 
                    const TargetInfo &Target,
                    Requirement &Req,
-                   UnresolvedHeaderDirective &MissingHeader) const;
+                   UnresolvedHeaderDirective &MissingHeader,
+                   Module *&ShadowingModule) const;
 
   /// \brief Determine whether this module is a submodule.
   bool isSubModule() const { return Parent != nullptr; }

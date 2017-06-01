@@ -6,6 +6,57 @@
 #ifndef HEADER
 #define HEADER
 
+struct S1 {
+  S1(): a(0) {}
+  S1(int v) : a(v) {}
+  int a;
+  typedef int type;
+};
+
+template <typename T>
+class S7 : public T {
+protected:
+  T a;
+  S7() : a(0) {}
+
+public:
+  S7(typename T::type v) : a(v) {
+#pragma omp for simd private(a) private(this->a) private(T::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+  }
+  S7 &operator=(S7 &s) {
+#pragma omp for simd private(a) private(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+    return *this;
+  }
+};
+
+// CHECK: #pragma omp for simd private(this->a) private(this->a) private(T::a)
+// CHECK: #pragma omp for simd private(this->a) private(this->a)
+// CHECK: #pragma omp for simd private(this->a) private(this->a) private(this->S1::a)
+
+class S8 : public S7<S1> {
+  S8() {}
+
+public:
+  S8(int v) : S7<S1>(v){
+#pragma omp for simd private(a) private(this->a) private(S7<S1>::a) 
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+  }
+  S8 &operator=(S8 &s) {
+#pragma omp for simd private(a) private(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+    return *this;
+  }
+};
+
+// CHECK: #pragma omp for simd private(this->a) private(this->a) private(this->S7<S1>::a)
+// CHECK: #pragma omp for simd private(this->a) private(this->a)
+
 void foo() {}
 int g_ind = 1;
 template<class T, class N> T reduct(T* arr, N num) {
@@ -14,8 +65,8 @@ template<class T, class N> T reduct(T* arr, N num) {
   N myind;
   T sum = (T)0;
 // CHECK: T sum = (T)0;
-#pragma omp for simd private(myind, g_ind), linear(ind), aligned(arr)
-// CHECK-NEXT: #pragma omp for simd private(myind,g_ind) linear(ind) aligned(arr)
+#pragma omp for simd private(myind, g_ind), linear(ind), aligned(arr) ordered
+// CHECK-NEXT: #pragma omp for simd private(myind,g_ind) linear(ind) aligned(arr) ordered
   for (i = 0; i < num; ++i) {
     myind = ind;
     T cur = arr[myind];
@@ -74,7 +125,7 @@ template<int LEN> struct S2 {
 };
 
 // S2<4>::func is called below in main.
-// CHECK: template <int LEN = 4> struct S2 {
+// CHECK: template<> struct S2<4> {
 // CHECK-NEXT: static void func(int n, float *a, float *b, float *c)     {
 // CHECK-NEXT:   int k1 = 0, k2 = 0;
 // CHECK-NEXT: #pragma omp for simd safelen(4) linear(k1,k2: 4) aligned(a: 4) simdlen(4)
@@ -92,8 +143,8 @@ int main (int argc, char **argv) {
   int k1=0,k2=0;
   static int *a;
 // CHECK: static int *a;
-#pragma omp for simd
-// CHECK-NEXT: #pragma omp for simd
+#pragma omp for simd ordered
+// CHECK-NEXT: #pragma omp for simd ordered
   for (int i=0; i < 2; ++i)*a=2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: *a = 2;

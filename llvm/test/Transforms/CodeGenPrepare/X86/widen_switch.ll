@@ -28,7 +28,7 @@ return:
 ; X86-LABEL: @widen_switch_i16(
 ; X86:       %trunc = trunc i32 %a to i16
 ; X86-NEXT:  switch i16 %trunc, label %sw.default [
-; X86-NEXT:    i16 1, label %return
+; X86-NEXT:    i16 1, label %sw.bb0
 ; X86-NEXT:    i16 -1, label %sw.bb1
 }
 
@@ -58,7 +58,7 @@ return:
 ; X86-LABEL: @widen_switch_i17(
 ; X86:       %0 = zext i17 %trunc to i32
 ; X86-NEXT:  switch i32 %0, label %sw.default [
-; X86-NEXT:    i32 10, label %return
+; X86-NEXT:    i32 10, label %sw.bb0
 ; X86-NEXT:    i32 131071, label %sw.bb1
 }
 
@@ -89,7 +89,7 @@ return:
 ; X86-LABEL: @widen_switch_i16_sext(
 ; X86:       %0 = sext i2 %a to i8
 ; X86-NEXT:  switch i8 %0, label %sw.default [
-; X86-NEXT:    i8 1, label %return
+; X86-NEXT:    i8 1, label %sw.bb0
 ; X86-NEXT:    i8 -1, label %sw.bb1
 }
 

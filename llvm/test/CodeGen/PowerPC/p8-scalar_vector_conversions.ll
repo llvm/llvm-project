@@ -46,10 +46,10 @@ entry:
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %0, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %splat.splat
-; CHECK: sldi [[REG1:[0-9]+]], 3, 32
-; CHECK: mtvsrd {{[0-9]+}}, [[REG1]]
-; CHECK-LE: mtvsrd [[REG1:[0-9]+]], 3
-; CHECK-LE: xxswapd {{[0-9]+}}, [[REG1]]
+; CHECK: mtvsrwz [[REG1:[0-9]+]], 3
+; CHECK: xxspltw 34, [[REG1]]
+; CHECK-LE: mtvsrwz [[REG1:[0-9]+]], 3
+; CHECK-LE: xxspltw 34, [[REG1]]
 }
 
 ; Function Attrs: nounwind
@@ -63,7 +63,7 @@ entry:
   ret <2 x i64> %splat.splat
 ; CHECK: mtvsrd {{[0-9]+}}, 3
 ; CHECK-LE: mtvsrd [[REG1:[0-9]+]], 3
-; CHECK-LE: xxswapd {{[0-9]+}}, [[REG1]]
+; CHECK-LE: xxspltd 34, [[REG1]], 0
 }
 
 ; Function Attrs: nounwind
@@ -75,9 +75,10 @@ entry:
   %splat.splatinsert = insertelement <4 x float> undef, float %0, i32 0
   %splat.splat = shufflevector <4 x float> %splat.splatinsert, <4 x float> undef, <4 x i32> zeroinitializer
   ret <4 x float> %splat.splat
-; CHECK: xscvdpspn {{[0-9]+}}, 1
+; CHECK: xscvdpspn [[REG1:[0-9]+]], 1
+; CHECK: xxspltw 34, [[REG1]]
 ; CHECK-LE: xscvdpspn [[REG1:[0-9]+]], 1
-; CHECK-LE: xxsldwi {{[0-9]+}}, [[REG1]], [[REG1]], 1
+; CHECK-LE: xxspltw 34, [[REG1]]
 }
 
 ; The optimization to remove stack operations from PPCDAGToDAGISel::Select
@@ -1036,7 +1037,7 @@ entry:
 ; CHECK-DAG: mfvsrd [[MOV:[0-9]+]],
 ; CHECK-DAG: li [[IMM3:[0-9]+]], 3
 ; CHECK-DAG: andc [[ANDC:[0-9]+]], [[IMM3]]
-; CHECK-DAG: rldicr [[SHL:[0-9]+]], [[ANDC]], 4, 60
+; CHECK-DAG: sldi [[SHL:[0-9]+]], [[ANDC]], 4
 ; CHECK-DAG: srd 3, [[MOV]], [[SHL]]
 ; CHECK-DAG: extsh 3, 3
 ; CHECK-LE-LABEL: @getvelss
@@ -1072,7 +1073,7 @@ entry:
 ; CHECK-DAG: mfvsrd [[MOV:[0-9]+]],
 ; CHECK-DAG: li [[IMM3:[0-9]+]], 3
 ; CHECK-DAG: andc [[ANDC:[0-9]+]], [[IMM3]]
-; CHECK-DAG: rldicr [[SHL:[0-9]+]], [[ANDC]], 4, 60
+; CHECK-DAG: sldi [[SHL:[0-9]+]], [[ANDC]], 4
 ; CHECK-DAG: srd 3, [[MOV]], [[SHL]]
 ; CHECK-DAG: clrldi   3, 3, 48
 ; CHECK-LE-LABEL: @getvelus
@@ -1102,7 +1103,7 @@ entry:
 ; CHECK: mfvsrwz 3, [[SHL]]
 ; CHECK: extsw 3, 3
 ; CHECK-LE-LABEL: @getsi0
-; CHECK-LE: xxsldwi [[SHL:[0-9]+]], 34, 34, 2
+; CHECK-LE: xxswapd [[SHL:[0-9]+]], 34
 ; CHECK-LE: mfvsrwz 3, [[SHL]]
 ; CHECK-LE: extsw 3, 3
 }
@@ -1150,7 +1151,7 @@ entry:
   %vecext = extractelement <4 x i32> %0, i32 3
   ret i32 %vecext
 ; CHECK-LABEL: @getsi3
-; CHECK: xxsldwi [[SHL:[0-9]+]], 34, 34, 2
+; CHECK: xxswapd [[SHL:[0-9]+]], 34
 ; CHECK: mfvsrwz 3, [[SHL]]
 ; CHECK: extsw 3, 3
 ; CHECK-LE-LABEL: @getsi3
@@ -1172,7 +1173,7 @@ entry:
 ; CHECK: mfvsrwz 3, [[SHL]]
 ; CHECK: clrldi   3, 3, 32
 ; CHECK-LE-LABEL: @getui0
-; CHECK-LE: xxsldwi [[SHL:[0-9]+]], 34, 34, 2
+; CHECK-LE: xxswapd [[SHL:[0-9]+]], 34
 ; CHECK-LE: mfvsrwz 3, [[SHL]]
 ; CHECK-LE: clrldi   3, 3, 32
 }
@@ -1220,7 +1221,7 @@ entry:
   %vecext = extractelement <4 x i32> %0, i32 3
   ret i32 %vecext
 ; CHECK-LABEL: @getui3
-; CHECK: xxsldwi [[SHL:[0-9]+]], 34, 34, 2
+; CHECK: xxswapd [[SHL:[0-9]+]], 34
 ; CHECK: mfvsrwz 3, [[SHL]]
 ; CHECK: clrldi   3, 3, 32
 ; CHECK-LE-LABEL: @getui3
@@ -1380,7 +1381,7 @@ entry:
 ; CHECK: xxsldwi [[SHL:[0-9]+]], 34, 34, 1
 ; CHECK: xscvspdpn 1, [[SHL]]
 ; CHECK-LE-LABEL: @getf1
-; CHECK-LE: xxsldwi [[SHL:[0-9]+]], 34, 34, 2
+; CHECK-LE: xxswapd [[SHL:[0-9]+]], 34
 ; CHECK-LE: xscvspdpn 1, [[SHL]]
 }
 
@@ -1393,7 +1394,7 @@ entry:
   %vecext = extractelement <4 x float> %0, i32 2
   ret float %vecext
 ; CHECK-LABEL: @getf2
-; CHECK: xxsldwi [[SHL:[0-9]+]], 34, 34, 2
+; CHECK: xxswapd [[SHL:[0-9]+]], 34
 ; CHECK: xscvspdpn 1, [[SHL]]
 ; CHECK-LE-LABEL: @getf2
 ; CHECK-LE: xxsldwi [[SHL:[0-9]+]], 34, 34, 1

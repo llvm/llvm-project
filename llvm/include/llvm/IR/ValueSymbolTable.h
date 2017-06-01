@@ -20,6 +20,7 @@
 
 namespace llvm {
   template <typename ValueSubClass> class SymbolTableListTraits;
+  template <unsigned InternalLen> class SmallString;
   class BasicBlock;
   class Function;
   class NamedMDNode;
@@ -38,6 +39,7 @@ class ValueSymbolTable {
   friend class SymbolTableListTraits<Function>;
   friend class SymbolTableListTraits<GlobalVariable>;
   friend class SymbolTableListTraits<GlobalAlias>;
+  friend class SymbolTableListTraits<GlobalIFunc>;
 /// @name Types
 /// @{
 public:
@@ -99,6 +101,8 @@ public:
   /// @name Mutators
   /// @{
 private:
+  ValueName *makeUniqueName(Value *V, SmallString<256> &UniqueName);
+
   /// This method adds the provided value \p N to the symbol table.  The Value
   /// must have a name which is used to place the value in the symbol table.
   /// If the inserted name conflicts, this renames the value.

@@ -42,6 +42,11 @@ namespace {
      initializeDeadMachineInstructionElimPass(*PassRegistry::getPassRegistry());
     }
 
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.setPreservesCFG();
+      MachineFunctionPass::getAnalysisUsage(AU);
+    }
+
   private:
     bool isDead(const MachineInstr *MI) const;
   };
@@ -90,7 +95,7 @@ bool DeadMachineInstructionElim::isDead(const MachineInstr *MI) const {
 }
 
 bool DeadMachineInstructionElim::runOnMachineFunction(MachineFunction &MF) {
-  if (skipOptnoneFunction(*MF.getFunction()))
+  if (skipFunction(*MF.getFunction()))
     return false;
 
   bool AnyChanges = false;
@@ -117,7 +122,7 @@ bool DeadMachineInstructionElim::runOnMachineFunction(MachineFunction &MF) {
     // liveness as we go.
     for (MachineBasicBlock::reverse_iterator MII = MBB.rbegin(),
          MIE = MBB.rend(); MII != MIE; ) {
-      MachineInstr *MI = &*MII;
+      MachineInstr *MI = &*MII++;
 
       // If the instruction is dead, delete it!
       if (isDead(MI)) {
@@ -128,9 +133,6 @@ bool DeadMachineInstructionElim::runOnMachineFunction(MachineFunction &MF) {
         MI->eraseFromParentAndMarkDBGValuesForRemoval();
         AnyChanges = true;
         ++NumDeletes;
-        MIE = MBB.rend();
-        // MII is now pointing to the next instruction to process,
-        // so don't increment it.
         continue;
       }
 
@@ -164,10 +166,6 @@ bool DeadMachineInstructionElim::runOnMachineFunction(MachineFunction &MF) {
           }
         }
       }
-
-      // We didn't delete the current instruction, so increment MII to
-      // the next one.
-      ++MII;
     }
   }
 

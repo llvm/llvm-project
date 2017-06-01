@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 // Tests for sanitizer_libc.h.
 //===----------------------------------------------------------------------===//
+#include <algorithm>
 
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
@@ -15,12 +16,16 @@
 #include "gtest/gtest.h"
 
 #if SANITIZER_WINDOWS
+#define NOMINMAX
 #include <windows.h>
+#undef NOMINMAX
 #endif
 #if SANITIZER_POSIX
 # include <sys/stat.h>
 # include "sanitizer_common/sanitizer_posix.h"
 #endif
+
+using namespace __sanitizer;
 
 // A regression test for internal_memmove() implementation.
 TEST(SanitizerCommon, InternalMemmoveRegression) {
@@ -145,12 +150,65 @@ TEST(SanitizerCommon, FileOps) {
 #endif
 }
 
+static const size_t kStrlcpyBufSize = 8;
+void test_internal_strlcpy(char *dbuf, const char *sbuf) {
+  uptr retval = 0;
+  retval = internal_strlcpy(dbuf, sbuf, kStrlcpyBufSize);
+  EXPECT_EQ(internal_strncmp(dbuf, sbuf, kStrlcpyBufSize - 1), 0);
+  EXPECT_EQ(internal_strlen(dbuf),
+            std::min(internal_strlen(sbuf), (uptr)(kStrlcpyBufSize - 1)));
+  EXPECT_EQ(retval, internal_strlen(sbuf));
+
+  // Test with shorter maxlen.
+  uptr maxlen = 2;
+  if (internal_strlen(sbuf) > maxlen) {
+    retval = internal_strlcpy(dbuf, sbuf, maxlen);
+    EXPECT_EQ(internal_strncmp(dbuf, sbuf, maxlen - 1), 0);
+    EXPECT_EQ(internal_strlen(dbuf), maxlen - 1);
+  }
+}
+
 TEST(SanitizerCommon, InternalStrFunctions) {
   const char *haystack = "haystack";
   EXPECT_EQ(haystack + 2, internal_strchr(haystack, 'y'));
   EXPECT_EQ(haystack + 2, internal_strchrnul(haystack, 'y'));
   EXPECT_EQ(0, internal_strchr(haystack, 'z'));
   EXPECT_EQ(haystack + 8, internal_strchrnul(haystack, 'z'));
+
+  char dbuf[kStrlcpyBufSize] = {};
+  const char *samesizestr = "1234567";
+  const char *shortstr = "123";
+  const char *longerstr = "123456789";
+
+  // Test internal_strlcpy.
+  internal_strlcpy(dbuf, shortstr, 0);
+  EXPECT_EQ(dbuf[0], 0);
+  EXPECT_EQ(dbuf[0], 0);
+  test_internal_strlcpy(dbuf, samesizestr);
+  test_internal_strlcpy(dbuf, shortstr);
+  test_internal_strlcpy(dbuf, longerstr);
+
+  // Test internal_strlcat.
+  char dcatbuf[kStrlcpyBufSize] = {};
+  uptr retval = 0;
+  retval = internal_strlcat(dcatbuf, "aaa", 0);
+  EXPECT_EQ(internal_strlen(dcatbuf), (uptr)0);
+  EXPECT_EQ(retval, (uptr)3);
+
+  retval = internal_strlcat(dcatbuf, "123", kStrlcpyBufSize);
+  EXPECT_EQ(internal_strcmp(dcatbuf, "123"), 0);
+  EXPECT_EQ(internal_strlen(dcatbuf), (uptr)3);
+  EXPECT_EQ(retval, (uptr)3);
+
+  retval = internal_strlcat(dcatbuf, "123", kStrlcpyBufSize);
+  EXPECT_EQ(internal_strcmp(dcatbuf, "123123"), 0);
+  EXPECT_EQ(internal_strlen(dcatbuf), (uptr)6);
+  EXPECT_EQ(retval, (uptr)6);
+
+  retval = internal_strlcat(dcatbuf, "123", kStrlcpyBufSize);
+  EXPECT_EQ(internal_strcmp(dcatbuf, "1231231"), 0);
+  EXPECT_EQ(internal_strlen(dcatbuf), (uptr)7);
+  EXPECT_EQ(retval, (uptr)9);
 }
 
 // FIXME: File manipulations are not yet supported on Windows

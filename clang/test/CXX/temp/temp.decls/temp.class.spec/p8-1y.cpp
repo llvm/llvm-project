@@ -21,15 +21,16 @@ template<template<typename> class...X> int v4<X...>;
 
 template<typename Outer> struct X {
   template<typename Inner> static int y;
-  template<typename Inner> static int y<Outer>; // expected-warning {{cannot be deduced}} expected-note {{'Inner'}}
+  // FIXME: It would be preferable to only diagnose this once.
+  template<typename Inner> static int y<Outer>; // expected-error 3{{cannot be deduced}} expected-note 3{{'Inner'}}
   template<typename Inner> static int y<Inner>; // expected-error {{does not specialize}}
-};
-template<typename Outer> template<typename Inner> int X<Outer>::y<Outer>; // expected-warning {{cannot be deduced}} expected-note {{'Inner'}}
-template<typename Outer> template<typename Inner> int X<Outer>::y<Inner>; // expected-error {{does not specialize}}
 
-// FIXME: Merging this with the above class causes an assertion failure when
-// instantiating one of the bogus partial specializations.
-template<typename Outer> struct Y {
-  template<typename Inner> static int y;
+  template<typename, int> static int z;
+  template<Outer N> static int z<int, N>; // expected-error {{not implicitly convertible}}
 };
-template<> template<typename Inner> int Y<int>::y<Inner>; // expected-error {{does not specialize}}
+template<typename Outer> template<typename Inner> int X<Outer>::y<Outer>; // expected-error {{cannot be deduced}} expected-note {{'Inner'}}
+template<typename Outer> template<typename Inner> int X<Outer>::y<Inner>; // expected-error {{does not specialize}}
+template<> template<typename Inner> int X<int>::y<Inner>; // expected-error {{does not specialize}} expected-note {{instantiation of}}
+
+X<int> xi;
+X<int*> xf; // expected-note {{instantiation of}}

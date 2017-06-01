@@ -1,4 +1,4 @@
-; RUN: llc < %s -disable-fp-elim -mtriple=x86_64-pc-linux-gnu -mcpu=corei7 -o - | FileCheck %s
+; RUN: llc < %s -stack-symbol-ordering=0 -disable-fp-elim -mtriple=x86_64-pc-linux-gnu -mcpu=corei7 -o - | FileCheck %s
 ;  This test is fairly fragile.  The goal is to ensure that "large" stack
 ;  objects are allocated closest to the stack protector (i.e., farthest away 
 ;  from the Stack Pointer.)  In standard SSP mode this means that large (>=

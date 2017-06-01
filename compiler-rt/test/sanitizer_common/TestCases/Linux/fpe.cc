@@ -9,7 +9,7 @@
 // XFAIL: tsan
 //
 // FIXME: seems to fail on ARM
-// REQUIRES: x86_64-supported-target
+// REQUIRES: x86_64-target-arch
 #include <assert.h>
 #include <stdio.h>
 #include <sanitizer/asan_interface.h>

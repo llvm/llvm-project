@@ -3,7 +3,7 @@
 include_directories(../..)
 
 set(DD_CFLAGS ${SANITIZER_COMMON_CFLAGS})
-append_no_rtti_flag(DD_CFLAGS)
+append_rtti_flag(OFF DD_CFLAGS)
 
 set(DD_SOURCES
   dd_rtl.cc

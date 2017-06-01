@@ -27,10 +27,10 @@ entry:
 ; CHECK: ![[LINE2]] = !DILocation(line: 2,
 
 !llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!1}
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !DIFile(filename: "f", directory: "/d"),
-                             subprograms: !{!2})
-!2 = distinct !DISubprogram(name: "foo")
+!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !DIFile(filename: "f", directory: "/d"))
+!2 = distinct !DISubprogram(name: "foo", unit: !1)
 !3 = !DILocation(line: 1, scope: !2)
 !4 = !DILocation(line: 2, scope: !2)

@@ -48,3 +48,21 @@ __attribute__((naked)) void t9(int z) { // expected-note{{attribute is here}}
                "r"(z) // expected-error{{parameter references not allowed in naked functions}}
            );
 }
+
+__attribute__((naked)) void t10() {  // expected-note{{attribute is here}}
+  int a; // expected-error{{non-ASM statement in naked function is not supported}}
+}
+
+__attribute__((naked)) void t11() {  // expected-note{{attribute is here}}
+  register int a asm("eax") = x; // expected-error{{non-ASM statement in naked function is not supported}}
+}
+
+__attribute__((naked)) void t12() {  // expected-note{{attribute is here}}
+  register int a asm("eax"), b asm("ebx") = x; // expected-error{{non-ASM statement in naked function is not supported}}
+}
+
+__attribute__((naked)) void t13() {
+  register int a asm("eax");
+  register int b asm("ebx"), c asm("ecx");
+}
+

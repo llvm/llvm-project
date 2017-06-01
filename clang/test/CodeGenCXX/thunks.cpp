@@ -1,9 +1,5 @@
-// RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -munwind-tables -emit-llvm -o %t
-// RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -munwind-tables -emit-llvm -o %t.opt -O1 -disable-llvm-optzns
-// RUN: FileCheck %s < %t
-// RUN: FileCheck %s < %t.opt
-// RUN: FileCheck --check-prefix=CHECK-NONOPT %s < %t
-// RUN: FileCheck --check-prefix=CHECK-OPT %s < %t.opt
+// RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -munwind-tables -emit-llvm -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-NONOPT %s
+// RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -munwind-tables -emit-llvm -o - -O1 -disable-llvm-passes | FileCheck --check-prefix=CHECK --check-prefix=CHECK-OPT %s
 
 namespace Test1 {
 
@@ -405,4 +401,5 @@ D::~D() {}
 // CHECK-OPT-LABEL: define linkonce_odr void @_ZN6Test101C3fooEv
 // CHECK-OPT-LABEL: define linkonce_odr void @_ZThn8_N6Test101C3fooEv
 
-// CHECK: attributes [[NUW]] = { nounwind uwtable{{.*}} }
+// CHECK-NONOPT: attributes [[NUW]] = { noinline nounwind uwtable{{.*}} }
+// CHECK-OPT: attributes [[NUW]] = { nounwind uwtable{{.*}} }

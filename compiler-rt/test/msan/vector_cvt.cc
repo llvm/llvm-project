@@ -1,6 +1,6 @@
 // RUN: %clangxx_msan -O0 %s -o %t && %run %t
 // RUN: %clangxx_msan -DPOSITIVE -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
-// REQUIRES: x86_64-supported-target
+// REQUIRES: x86_64-target-arch
 
 #include <emmintrin.h>
 

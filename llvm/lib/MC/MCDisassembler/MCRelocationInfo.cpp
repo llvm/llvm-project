@@ -7,9 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCRelocationInfo.h"
+#include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm-c/Disassembler.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
@@ -19,11 +18,6 @@ MCRelocationInfo::MCRelocationInfo(MCContext &Ctx)
 }
 
 MCRelocationInfo::~MCRelocationInfo() {
-}
-
-const MCExpr *
-MCRelocationInfo::createExprForRelocation(object::RelocationRef Rel) {
-  return nullptr;
 }
 
 const MCExpr *

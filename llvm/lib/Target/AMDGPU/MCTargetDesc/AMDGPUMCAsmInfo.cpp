@@ -9,12 +9,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCAsmInfo.h"
+#include "llvm/ADT/Triple.h"
 
 using namespace llvm;
+
 AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT) : MCAsmInfoELF() {
   HasSingleParameterDotFile = false;
   //===------------------------------------------------------------------===//
-  MaxInstLength = 16;
+  MinInstAlignment = 4;
+  MaxInstLength = (TT.getArch() == Triple::amdgcn) ? 8 : 16;
   SeparatorString = "\n";
   CommentString = ";";
   PrivateLabelPrefix = "";
@@ -22,20 +25,12 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT) : MCAsmInfoELF() {
   InlineAsmEnd = ";#ASMEND";
 
   //===--- Data Emission Directives -------------------------------------===//
-  ZeroDirective = ".zero";
-  AsciiDirective = ".ascii\t";
-  AscizDirective = ".asciz\t";
-  Data8bitsDirective = ".byte\t";
-  Data16bitsDirective = ".short\t";
-  Data32bitsDirective = ".long\t";
-  Data64bitsDirective = ".quad\t";
   SunStyleELFSectionSwitchSyntax = true;
   UsesELFSectionDirectiveForBSS = true;
 
   //===--- Global Variable Emission Directives --------------------------===//
   HasAggressiveSymbolFolding = true;
   COMMDirectiveAlignmentIsInBytes = false;
-  HasDotTypeDotSizeDirective = false;
   HasNoDeadStrip = true;
   WeakRefDirective = ".weakref\t";
   //===--- Dwarf Emission Directives -----------------------------------===//
@@ -43,6 +38,8 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT) : MCAsmInfoELF() {
 }
 
 bool AMDGPUMCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
-  return SectionName == ".hsatext" ||
+  return SectionName == ".hsatext" || SectionName == ".hsadata_global_agent" ||
+         SectionName == ".hsadata_global_program" ||
+         SectionName == ".hsarodata_readonly_agent" ||
          MCAsmInfo::shouldOmitSectionDirective(SectionName);
 }

@@ -10,7 +10,11 @@ nop
 .arm
 _a:
 nop
+.long 0xf8765432
+nop
 
 @ CHECK: 00 bf nop
 @ CHECK-NEXT: 00 bf nop
-@ CHECK: 00 f0 20 e3 nop
+@ CHECK:      00 f0 20 e3 nop
+@ CHECK-NEXT: .long 0xf8765432
+@ CHECK-NEXT: nop

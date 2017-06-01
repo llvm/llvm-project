@@ -12,26 +12,20 @@ Welcome to LLVM on Windows! This document only covers LLVM on Windows using
 Visual Studio, not mingw or cygwin. In order to get started, you first need to
 know some basic information.
 
-There are many different projects that compose LLVM. The first is the LLVM
-suite. This contains all of the tools, libraries, and header files needed to
-use LLVM. It contains an assembler, disassembler,
-bitcode analyzer and bitcode optimizer. It also contains a test suite that can
-be used to test the LLVM tools.
+There are many different projects that compose LLVM. The first piece is the
+LLVM suite. This contains all of the tools, libraries, and header files needed
+to use LLVM. It contains an assembler, disassembler, bitcode analyzer and
+bitcode optimizer. It also contains basic regression tests that can be used to
+test the LLVM tools and the Clang front end.
 
-Another useful project on Windows is `Clang <http://clang.llvm.org/>`_.
-Clang is a C family ([Objective]C/C++) compiler. Clang mostly works on
-Windows, but does not currently understand all of the Microsoft extensions
-to C and C++. Because of this, clang cannot parse the C++ standard library
-included with Visual Studio, nor parts of the Windows Platform SDK. However,
-most standard C programs do compile. Clang can be used to emit bitcode,
-directly emit object files or even linked executables using Visual Studio's
-``link.exe``.
+The second piece is the `Clang <http://clang.llvm.org/>`_ front end.  This
+component compiles C, C++, Objective C, and Objective C++ code into LLVM
+bitcode. Clang typically uses LLVM libraries to optimize the bitcode and emit
+machine code. LLVM fully supports the COFF object file format, which is
+compatible with all other existing Windows toolchains.
 
-The large LLVM test suite cannot be run on the Visual Studio port at this
-time.
-
-Most of the tools build and work.  ``bugpoint`` does build, but does
-not work.
+The last major part of LLVM, the execution Test Suite, does not run on Windows,
+and this document does not discuss it.
 
 Additional information about the LLVM directory structure and tool chain
 can be found on the main :doc:`GettingStarted` page.
@@ -45,13 +39,13 @@ and software you will need.
 
 Hardware
 --------
-Any system that can adequately run Visual Studio 2013 is fine. The LLVM
+Any system that can adequately run Visual Studio 2015 is fine. The LLVM
 source tree and object files, libraries and executables will consume
 approximately 3GB.
 
 Software
 --------
-You will need Visual Studio 2013 or higher.
+You will need Visual Studio 2015 or higher, with the latest Update installed.
 
 You will also need the `CMake <http://www.cmake.org/>`_ build system since it
 generates the project files you will use to build with.
@@ -97,6 +91,10 @@ Here's the short story for getting up and running quickly with LLVM:
      using LLVM.  Another important option is ``LLVM_TARGETS_TO_BUILD``,
      which controls the LLVM target architectures that are included on the
      build.
+   * If CMake complains that it cannot find the compiler, make sure that
+     you have the Visual Studio C++ Tools installed, not just Visual Studio
+     itself (trying to create a C++ project in Visual Studio will generally
+     download the C++ tools if they haven't already been).
    * See the :doc:`LLVM CMake guide <CMake>` for detailed information about
      how to configure the LLVM build.
    * CMake generates project files for all build types. To select a specific

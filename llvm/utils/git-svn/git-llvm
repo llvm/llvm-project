@@ -1,0 +1,288 @@
+#!/usr/bin/env python
+#
+# ======- git-llvm - LLVM Git Help Integration ---------*- python -*--========#
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+#
+# ==------------------------------------------------------------------------==#
+
+"""
+git-llvm integration
+====================
+
+This file provides integration for git.
+"""
+
+from __future__ import print_function
+import argparse
+import collections
+import contextlib
+import errno
+import os
+import re
+import subprocess
+import sys
+import tempfile
+import time
+assert sys.version_info >= (2, 7)
+
+
+# It's *almost* a straightforward mapping from the monorepo to svn...
+GIT_TO_SVN_DIR = {
+    d: (d + '/trunk')
+    for d in [
+        'clang-tools-extra',
+        'compiler-rt',
+        'dragonegg',
+        'klee',
+        'libclc',
+        'libcxx',
+        'libcxxabi',
+        'lld',
+        'lldb',
+        'llvm',
+        'polly',
+    ]
+}
+GIT_TO_SVN_DIR.update({'clang': 'cfe/trunk'})
+
+VERBOSE = False
+QUIET = False
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+
+def log(*args, **kwargs):
+    if QUIET:
+        return
+    print(*args, **kwargs)
+
+
+def log_verbose(*args, **kwargs):
+    if not VERBOSE:
+        return
+    print(*args, **kwargs)
+
+
+def die(msg):
+    eprint(msg)
+    sys.exit(1)
+
+
+def first_dirname(d):
+    while True:
+        (head, tail) = os.path.split(d)
+        if not head or head == '/':
+            return tail
+        d = head
+
+
+def shell(cmd, strip=True, cwd=None, stdin=None, die_on_failure=True):
+    log_verbose('Running: %s' % ' '.join(cmd))
+
+    start = time.time()
+    p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+    stdout, stderr = p.communicate(input=stdin)
+    elapsed = time.time() - start
+
+    log_verbose('Command took %0.1fs' % elapsed)
+
+    if p.returncode == 0:
+        if stderr:
+            eprint('`%s` printed to stderr:' % ' '.join(cmd))
+            eprint(stderr.rstrip())
+        if strip:
+            stdout = stdout.rstrip('\r\n')
+        return stdout
+    err_msg = '`%s` returned %s' % (' '.join(cmd), p.returncode)
+    eprint(err_msg)
+    if stderr:
+        eprint(stderr.rstrip())
+    if die_on_failure:
+        sys.exit(2)
+    raise RuntimeError(err_msg)
+
+
+def git(*cmd, **kwargs):
+    return shell(['git'] + list(cmd), kwargs.get('strip', True))
+
+
+def svn(cwd, *cmd, **kwargs):
+    # TODO: Better way to do default arg when we have *cmd?
+    return shell(['svn'] + list(cmd), cwd=cwd, stdin=kwargs.get('stdin', None))
+
+
+def get_default_rev_range():
+    # Get the branch tracked by the current branch, as set by
+    # git branch --set-upstream-to  See http://serverfault.com/a/352236/38694.
+    cur_branch = git('rev-parse', '--symbolic-full-name', 'HEAD')
+    upstream_branch = git('for-each-ref', '--format=%(upstream:short)',
+                          cur_branch)
+    if not upstream_branch:
+        upstream_branch = 'origin/master'
+
+    # Get the newest common ancestor between HEAD and our upstream branch.
+    upstream_rev = git('merge-base', 'HEAD', upstream_branch)
+    return '%s..' % upstream_rev
+
+
+def get_revs_to_push(rev_range):
+    if not rev_range:
+        rev_range = get_default_rev_range()
+    # Use git show rather than some plumbing command to figure out which revs
+    # are in rev_range because it handles single revs (HEAD^) and ranges
+    # (foo..bar) like we want.
+    revs = git('show', '--reverse', '--quiet',
+               '--pretty=%h', rev_range).splitlines()
+    if not revs:
+        die('Nothing to push: No revs in range %s.' % rev_range)
+    return revs
+
+
+def clean_and_update_svn(svn_repo):
+    svn(svn_repo, 'revert', '-R', '.')
+
+    # Unfortunately it appears there's no svn equivalent for git clean, so we
+    # have to do it ourselves.
+    for line in svn(svn_repo, 'status').split('\n'):
+        if not line.startswith('?'):
+            continue
+        filename = line[1:].strip()
+        os.remove(os.path.join(svn_repo, filename))
+
+    svn(svn_repo, 'update', *list(GIT_TO_SVN_DIR.values()))
+
+
+def svn_init(svn_root):
+    if not os.path.exists(svn_root):
+        log('Creating svn staging directory: (%s)' % (svn_root))
+        os.makedirs(svn_root)
+        log('This is a one-time initialization, please be patient for a few'
+            ' minutes...')
+        svn(svn_root, 'checkout', '--depth=immediates',
+            'https://llvm.org/svn/llvm-project/', '.')
+        svn(svn_root, 'update', *list(GIT_TO_SVN_DIR.values()))
+        log("svn staging area ready in '%s'" % svn_root)
+    if not os.path.isdir(svn_root):
+        die("Can't initialize svn staging dir (%s)" % svn_root)
+
+
+def svn_push_one_rev(svn_repo, rev, dry_run):
+    files = git('diff-tree', '--no-commit-id', '--name-only', '-r',
+                rev).split('\n')
+    subrepos = {first_dirname(f) for f in files}
+    if not subrepos:
+        raise RuntimeError('Empty diff for rev %s?' % rev)
+
+    status = svn(svn_repo, 'status')
+    if status:
+        die("Can't push git rev %s because svn status is not empty:\n%s" %
+            (rev, status))
+
+    for sr in subrepos:
+        diff = git('show', '--binary', rev, '--', sr, strip=False)
+        svn_sr_path = os.path.join(svn_repo, GIT_TO_SVN_DIR[sr])
+        # git is the only thing that can handle its own patches...
+        log_verbose('Apply patch: %s' % diff)
+        try:
+            shell(['git', 'apply', '-p2', '-'], cwd=svn_sr_path, stdin=diff,
+                  die_on_failure=False)
+        except RuntimeError as e:
+            eprint("Patch doesn't apply: maybe you should try `git pull -r` "
+                   "first?")
+            sys.exit(2)
+
+    status_lines = svn(svn_repo, 'status').split('\n')
+
+    for l in (l for l in status_lines if l.startswith('?')):
+        svn(svn_repo, 'add', l[1:].strip())
+    for l in (l for l in status_lines if l.startswith('!')):
+        svn(svn_repo, 'remove', l[1:].strip())
+
+    # Now we're ready to commit.
+    commit_msg = git('show', '--pretty=%B', '--quiet', rev)
+    if not dry_run:
+        log(svn(svn_repo, 'commit', '-m', commit_msg, '--force-interactive'))
+        log('Committed %s to svn.' % rev)
+    else:
+        log("Would have committed %s to svn, if this weren't a dry run." % rev)
+
+
+def cmd_push(args):
+    '''Push changes back to SVN: this is extracted from Justin Lebar's script
+    available here: https://github.com/jlebar/llvm-repo-tools/
+
+    Note: a current limitation is that git does not track file rename, so they
+    will show up in SVN as delete+add.
+    '''
+    # Get the git root
+    git_root = git('rev-parse', '--show-toplevel')
+    if not os.path.isdir(git_root):
+        die("Can't find git root dir")
+
+    # Push from the root of the git repo
+    os.chdir(git_root)
+
+    # We need a staging area for SVN, let's hide it in the .git directory.
+    dot_git_dir = git('rev-parse', '--git-common-dir')
+    svn_root = os.path.join(dot_git_dir, 'llvm-upstream-svn')
+    svn_init(svn_root)
+
+    rev_range = args.rev_range
+    dry_run = args.dry_run
+    revs = get_revs_to_push(rev_range)
+    log('Pushing %d commit%s:\n%s' %
+        (len(revs), 's' if len(revs) != 1
+         else '', '\n'.join('  ' + git('show', '--oneline', '--quiet', c)
+                            for c in revs)))
+    for r in revs:
+        clean_and_update_svn(svn_root)
+        svn_push_one_rev(svn_root, r, dry_run)
+
+
+if __name__ == '__main__':
+    argv = sys.argv[1:]
+    p = argparse.ArgumentParser(
+        prog='git llvm', formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=__doc__)
+    subcommands = p.add_subparsers(title='subcommands',
+                                   description='valid subcommands',
+                                   help='additional help')
+    verbosity_group = p.add_mutually_exclusive_group()
+    verbosity_group.add_argument('-q', '--quiet', action='store_true',
+                                 help='print less information')
+    verbosity_group.add_argument('-v', '--verbose', action='store_true',
+                                 help='print more information')
+
+    parser_push = subcommands.add_parser(
+        'push', description=cmd_push.__doc__,
+        help='push changes back to the LLVM SVN repository')
+    parser_push.add_argument(
+        '-n',
+        '--dry-run',
+        dest='dry_run',
+        action='store_true',
+        help='Do everything other than commit to svn.  Leaves junk in the svn '
+        'repo, so probably will not work well if you try to commit more '
+        'than one rev.')
+    parser_push.add_argument(
+        'rev_range',
+        metavar='GIT_REVS',
+        type=str,
+        nargs='?',
+        help="revs to push (default: everything not in the branch's "
+        'upstream, or not in origin/master if the branch lacks '
+        'an explicit upstream)')
+    parser_push.set_defaults(func=cmd_push)
+    args = p.parse_args(argv)
+    VERBOSE = args.verbose
+    QUIET = args.quiet
+
+    # Dispatch to the right subcommand
+    args.func(args)

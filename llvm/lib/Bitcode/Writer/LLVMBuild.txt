@@ -19,4 +19,4 @@
 type = Library
 name = BitWriter
 parent = Bitcode
-required_libraries = Core Support
+required_libraries = Analysis Core Support

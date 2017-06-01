@@ -23,29 +23,71 @@ FOO3EMPTY: Maximum function count: 1
 FOO3EMPTY: Maximum internal block count: 3
 
 RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3bar3-1.proftext -o %t
-RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO3FOO3BAR3
-FOO3FOO3BAR3: foo:
-FOO3FOO3BAR3: Counters: 3
-FOO3FOO3BAR3: Function count: 3
-FOO3FOO3BAR3: Block counts: [5, 8]
-FOO3FOO3BAR3: bar:
-FOO3FOO3BAR3: Counters: 3
-FOO3FOO3BAR3: Function count: 7
-FOO3FOO3BAR3: Block counts: [11, 13]
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO3FOO3BAR3 --check-prefix=FOO3FOO3BAR3-1
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO3FOO3BAR3 --check-prefix=FOO3FOO3BAR3-2
+FOO3FOO3BAR3-1: foo:
+FOO3FOO3BAR3-1: Counters: 3
+FOO3FOO3BAR3-1: Function count: 3
+FOO3FOO3BAR3-1: Block counts: [5, 8]
+FOO3FOO3BAR3-2: bar:
+FOO3FOO3BAR3-2: Counters: 3
+FOO3FOO3BAR3-2: Function count: 7
+FOO3FOO3BAR3-2: Block counts: [11, 13]
 FOO3FOO3BAR3: Total functions: 2
 FOO3FOO3BAR3: Maximum function count: 7
 FOO3FOO3BAR3: Maximum internal block count: 13
 
 RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/bar3-1.proftext -o %t
-RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=DISJOINT
-DISJOINT: foo:
-DISJOINT: Counters: 3
-DISJOINT: Function count: 1
-DISJOINT: Block counts: [2, 3]
-DISJOINT: bar:
-DISJOINT: Counters: 3
-DISJOINT: Function count: 1
-DISJOINT: Block counts: [2, 3]
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=DISJOINT --check-prefix=DISJOINT-1
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=DISJOINT --check-prefix=DISJOINT-2
+DISJOINT-1: foo:
+DISJOINT-1: Counters: 3
+DISJOINT-1: Function count: 1
+DISJOINT-1: Block counts: [2, 3]
+DISJOINT-2: bar:
+DISJOINT-2: Counters: 3
+DISJOINT-2: Function count: 1
+DISJOINT-2: Block counts: [2, 3]
 DISJOINT: Total functions: 2
 DISJOINT: Maximum function count: 1
 DISJOINT: Maximum internal block count: 3
+
+RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     -num-threads 2 -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO4
+RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     -j 3 -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO4
+FOO4: foo:
+FOO4: Counters: 3
+FOO4: Function count: 4
+FOO4: Block counts: [8, 12]
+FOO4: Total functions: 1
+FOO4: Maximum function count: 4
+FOO4: Maximum internal block count: 12
+
+RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext -j 2 -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO5
+RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext -j 3 -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO5
+RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO5
+RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext -j 1 -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO5
+FOO5: foo:
+FOO5: Counters: 3
+FOO5: Function count: 5
+FOO5: Block counts: [10, 15]
+FOO5: Total functions: 1
+FOO5: Maximum function count: 5
+FOO5: Maximum internal block count: 15

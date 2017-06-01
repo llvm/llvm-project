@@ -1,4 +1,5 @@
 ; RUN: opt -S -inline %s -o - | FileCheck %s
+; RUN: opt -S -passes='cgscc(inline)' %s -o - | FileCheck %s
 
 ; Check that memcpy2 is completely inlined away.
 ; CHECK-NOT: memcpy2

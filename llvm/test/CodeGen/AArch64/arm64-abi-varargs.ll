@@ -1,5 +1,4 @@
-; RUN: llc < %s -march=arm64 -mcpu=cyclone -enable-misched=false | FileCheck %s
-target triple = "arm64-apple-ios7.0.0"
+; RUN: llc < %s -mtriple=arm64-apple-ios7.0.0 -mcpu=cyclone -enable-misched=false | FileCheck %s
 
 ; rdar://13625505
 ; Here we have 9 fixed integer arguments the 9th argument in on stack, the
@@ -125,7 +124,7 @@ entry:
 define void @bar(i32 %x, <4 x i32> %y) nounwind {
 entry:
 ; CHECK-LABEL: bar:
-; CHECK: str {{q[0-9]+}}, [sp, #16]
+; CHECK: stp {{q[0-9]+}}, {{q[0-9]+}}, [sp, #16]
 ; CHECK: str {{x[0-9]+}}, [sp]
   %x.addr = alloca i32, align 4
   %y.addr = alloca <4 x i32>, align 16

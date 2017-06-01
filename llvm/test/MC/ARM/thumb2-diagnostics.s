@@ -102,3 +102,19 @@ foo2:
 @ CHECK-ERRORS: error: invalid operand for instruction
 @ CHECK-ERRORS: error: invalid operand for instruction
 
+
+        @ PC is not valid as base of load
+        ldr r0, [pc, r0]
+        ldrb r1, [pc, r2]
+        ldrh r3, [pc, r3]
+        pld r4, [pc, r5]
+        str r6, [pc, r7]
+        strb r7 [pc, r8]
+        strh r9, [pc, r10]
+@ CHECK-ERRORS: error: instruction requires: arm-mode
+@ CHECK-ERRORS: error: instruction requires: arm-mode
+@ CHECK-ERRORS: error: instruction requires: arm-mode
+@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: instruction requires: arm-mode
+@ CHECK-ERRORS: error: immediate value expected for vector index
+@ CHECK-ERRORS: error: instruction requires: arm-mode

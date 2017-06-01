@@ -14,14 +14,9 @@
 #ifndef LLVM_IR_TRACKINGMDREF_H
 #define LLVM_IR_TRACKINGMDREF_H
 
-#include "llvm/IR/MetadataTracking.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/IR/Metadata.h"
 
 namespace llvm {
-
-class Metadata;
-class MDNode;
-class ValueAsMetadata;
 
 /// \brief Tracking metadata reference.
 ///

@@ -122,7 +122,7 @@ int foomain(int argc, char **argv) {
   {
     int v = 0;
     int i;                      // expected-note {{variable with automatic storage duration is predetermined as private; perhaps you forget to enclose 'omp for simd' directive into a parallel or another task region?}}
-#pragma omp for simd firstprivate(i) // expected-error {{private variable cannot be firstprivate}}
+#pragma omp for simd firstprivate(i) // expected-error {{firstprivate variable must be shared}}
     for (int k = 0; k < argc; ++k) {
       i = k;
       v += i;
@@ -147,7 +147,7 @@ int foomain(int argc, char **argv) {
     foo();
 #pragma omp parallel reduction(+ : i) // expected-note {{defined as reduction}}
 #pragma omp for simd firstprivate(i)       // expected-error {{firstprivate variable must be shared}}
-  for (i = 0; i < argc; ++i)
+  for (int k = 0; k < argc; ++k)
     foo();
   return 0;
 }
@@ -286,7 +286,7 @@ int main(int argc, char **argv) {
   {
     int v = 0;
     int i;                      // expected-note {{variable with automatic storage duration is predetermined as private; perhaps you forget to enclose 'omp for simd' directive into a parallel or another task region?}}
-#pragma omp for simd firstprivate(i) // expected-error {{private variable cannot be firstprivate}}
+#pragma omp for simd firstprivate(i) // expected-error {{firstprivate variable must be shared}}
     for (int k = 0; k < argc; ++k) {
       i = k;
       v += i;

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define <2 x float> @ucvt(<2 x i32> %a) nounwind readnone ssp {
 ; CHECK-LABEL: ucvt:

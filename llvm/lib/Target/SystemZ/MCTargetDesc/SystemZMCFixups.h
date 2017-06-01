@@ -16,7 +16,9 @@ namespace llvm {
 namespace SystemZ {
 enum FixupKind {
   // These correspond directly to R_390_* relocations.
-  FK_390_PC16DBL = FirstTargetFixupKind,
+  FK_390_PC12DBL = FirstTargetFixupKind,
+  FK_390_PC16DBL,
+  FK_390_PC24DBL,
   FK_390_PC32DBL,
   FK_390_TLS_CALL,
 

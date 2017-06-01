@@ -1,7 +1,7 @@
 // RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 
 // Test case for recursive signal handlers, adopted from:
-// https://code.google.com/p/thread-sanitizer/issues/detail?id=71
+// https://github.com/google/sanitizers/issues/478
 
 // REQUIRES: disabled
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s
 
 %struct.A = type { i8 }
 %struct.B = type { i32 }

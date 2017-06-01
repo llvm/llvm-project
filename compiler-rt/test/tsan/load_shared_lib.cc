@@ -3,7 +3,7 @@
 // symbolized correctly.
 
 // RUN: %clangxx_tsan -O1 %s -DBUILD_SO -fPIC -shared -o %t-so.so
-// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
+// RUN: %clangxx_tsan -O1 %s -o %t -rdynamic && %deflake %run %t | FileCheck %s
 
 #ifdef BUILD_SO
 

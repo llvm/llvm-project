@@ -31,7 +31,15 @@ class MemLoc {
 
 class Mutex {
  public:
-  enum Type { Normal, Spin, RW };
+  enum Type {
+    Normal,
+    RW,
+#ifndef __APPLE__
+    Spin
+#else
+    Spin = Normal
+#endif
+  };
 
   explicit Mutex(Type type = Normal);
   ~Mutex();

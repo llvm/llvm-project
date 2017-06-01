@@ -20,11 +20,11 @@
 ; right now, so we check the asm output:
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin %s -o - -filetype=asm | FileCheck %s -check-prefix=ASM-CHECK
 ; vla should have a register-indirect address at one point.
-; ASM-CHECK: DEBUG_VALUE: vla <- RCX
+; ASM-CHECK: DEBUG_VALUE: vla <- [DW_OP_deref] [%RCX+0]
 ; ASM-CHECK: DW_OP_breg2
 
 ; RUN: llvm-as %s -o - | llvm-dis - | FileCheck %s --check-prefix=PRETTY-PRINT
-; PRETTY-PRINT: DIExpression(DW_OP_deref, DW_OP_deref)
+; PRETTY-PRINT: DIExpression(DW_OP_deref)
 
 define void @testVLAwithSize(i32 %s) nounwind uwtable ssp !dbg !5 {
 entry:
@@ -80,10 +80,9 @@ declare void @llvm.stackrestore(i8*) nounwind
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!29}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.2 (trunk 156005) (llvm/trunk 156000)", isOptimized: false, emissionKind: 1, file: !28, enums: !1, retainedTypes: !1, subprograms: !3, globals: !1, imports:  !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.2 (trunk 156005) (llvm/trunk 156000)", isOptimized: false, emissionKind: FullDebug, file: !28, enums: !1, retainedTypes: !1, globals: !1, imports:  !1)
 !1 = !{}
-!3 = !{!5}
-!5 = distinct !DISubprogram(name: "testVLAwithSize", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 2, file: !28, scope: !6, type: !7, variables: !1)
+!5 = distinct !DISubprogram(name: "testVLAwithSize", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 2, file: !28, scope: !6, type: !7, variables: !1)
 !6 = !DIFile(filename: "bar.c", directory: "/Users/echristo/tmp")
 !7 = !DISubroutineType(types: !8)
 !8 = !{null, !9}
@@ -108,4 +107,4 @@ declare void @llvm.stackrestore(i8*) nounwind
 !27 = !DILocation(line: 8, column: 1, scope: !13)
 !28 = !DIFile(filename: "bar.c", directory: "/Users/echristo/tmp")
 !29 = !{i32 1, !"Debug Info Version", i32 3}
-!30 = !DIExpression(DW_OP_deref, DW_OP_deref)
+!30 = !DIExpression(DW_OP_deref)

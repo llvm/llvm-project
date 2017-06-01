@@ -1,0 +1,478 @@
+# RUN: llc -mtriple=aarch64-- -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+
+  define void @fptrunc() { ret void }
+  define void @fpext() { ret void }
+
+  define void @sitofp_s32_s32_fpr() { ret void }
+  define void @sitofp_s32_s64_fpr() { ret void }
+  define void @sitofp_s64_s32_fpr() { ret void }
+  define void @sitofp_s64_s64_fpr() { ret void }
+
+  define void @uitofp_s32_s32_fpr() { ret void }
+  define void @uitofp_s32_s64_fpr() { ret void }
+  define void @uitofp_s64_s32_fpr() { ret void }
+  define void @uitofp_s64_s64_fpr() { ret void }
+
+  define void @fptosi_s32_s32_gpr() { ret void }
+  define void @fptosi_s32_s64_gpr() { ret void }
+  define void @fptosi_s64_s32_gpr() { ret void }
+  define void @fptosi_s64_s64_gpr() { ret void }
+
+  define void @fptoui_s32_s32_gpr() { ret void }
+  define void @fptoui_s32_s64_gpr() { ret void }
+  define void @fptoui_s64_s32_gpr() { ret void }
+  define void @fptoui_s64_s64_gpr() { ret void }
+...
+
+---
+# CHECK-LABEL: name: fptrunc
+name:            fptrunc
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK: - { id: 0, class: fpr64 }
+# CHECK: - { id: 1, class: fpr32 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %d0
+# CHECK:    %1 = FCVTSDr %0
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s32) = G_FPTRUNC %0
+    %s0 = COPY %1(s32)
+...
+
+---
+# CHECK-LABEL: name: fpext
+name:            fpext
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK: - { id: 0, class: fpr32 }
+# CHECK: - { id: 1, class: fpr64 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %s0
+# CHECK:    %1 = FCVTDSr %0
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s32) = COPY %s0
+    %1(s64) = G_FPEXT %0
+    %d0 = COPY %1(s64)
+...
+
+---
+# CHECK-LABEL: name: sitofp_s32_s32_fpr
+name:            sitofp_s32_s32_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: fpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = SCVTFUWSri %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s32) = COPY %w0
+    %1(s32) = G_SITOFP %0
+    %s0 = COPY %1(s32)
+...
+
+---
+# CHECK-LABEL: name: sitofp_s32_s64_fpr
+name:            sitofp_s32_s64_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: fpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = SCVTFUXSri %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(s64) = COPY %x0
+    %1(s32) = G_SITOFP %0
+    %s0 = COPY %1(s32)
+...
+
+---
+# CHECK-LABEL: name: sitofp_s64_s32_fpr
+name:            sitofp_s64_s32_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: fpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = SCVTFUWDri %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s32) = COPY %w0
+    %1(s64) = G_SITOFP %0
+    %d0 = COPY %1(s64)
+...
+
+---
+# CHECK-LABEL: name: sitofp_s64_s64_fpr
+name:            sitofp_s64_s64_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: fpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = SCVTFUXDri %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(s64) = COPY %x0
+    %1(s64) = G_SITOFP %0
+    %d0 = COPY %1(s64)
+...
+
+---
+# CHECK-LABEL: name: uitofp_s32_s32_fpr
+name:            uitofp_s32_s32_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: fpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = UCVTFUWSri %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s32) = COPY %w0
+    %1(s32) = G_UITOFP %0
+    %s0 = COPY %1(s32)
+...
+
+---
+# CHECK-LABEL: name: uitofp_s32_s64_fpr
+name:            uitofp_s32_s64_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: fpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = UCVTFUXSri %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(s64) = COPY %x0
+    %1(s32) = G_UITOFP %0
+    %s0 = COPY %1(s32)
+...
+
+---
+# CHECK-LABEL: name: uitofp_s64_s32_fpr
+name:            uitofp_s64_s32_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: fpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = UCVTFUWDri %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s32) = COPY %w0
+    %1(s64) = G_UITOFP %0
+    %d0 = COPY %1(s64)
+...
+
+---
+# CHECK-LABEL: name: uitofp_s64_s64_fpr
+name:            uitofp_s64_s64_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: fpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = UCVTFUXDri %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(s64) = COPY %x0
+    %1(s64) = G_UITOFP %0
+    %d0 = COPY %1(s64)
+...
+
+---
+# CHECK-LABEL: name: fptosi_s32_s32_gpr
+name:            fptosi_s32_s32_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %s0
+# CHECK:    %1 = FCVTZSUWSr %0
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    %1(s32) = G_FPTOSI %0
+    %w0 = COPY %1(s32)
+...
+
+---
+# CHECK-LABEL: name: fptosi_s32_s64_gpr
+name:            fptosi_s32_s64_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %d0
+# CHECK:    %1 = FCVTZSUWDr %0
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s32) = G_FPTOSI %0
+    %w0 = COPY %1(s32)
+...
+
+---
+# CHECK-LABEL: name: fptosi_s64_s32_gpr
+name:            fptosi_s64_s32_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %s0
+# CHECK:    %1 = FCVTZSUXSr %0
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    %1(s64) = G_FPTOSI %0
+    %x0 = COPY %1(s64)
+...
+
+---
+# CHECK-LABEL: name: fptosi_s64_s64_gpr
+name:            fptosi_s64_s64_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %d0
+# CHECK:    %1 = FCVTZSUXDr %0
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s64) = G_FPTOSI %0
+    %x0 = COPY %1(s64)
+...
+
+---
+# CHECK-LABEL: name: fptoui_s32_s32_gpr
+name:            fptoui_s32_s32_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %s0
+# CHECK:    %1 = FCVTZUUWSr %0
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    %1(s32) = G_FPTOUI %0
+    %w0 = COPY %1(s32)
+...
+
+---
+# CHECK-LABEL: name: fptoui_s32_s64_gpr
+name:            fptoui_s32_s64_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %d0
+# CHECK:    %1 = FCVTZUUWDr %0
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s32) = G_FPTOUI %0
+    %w0 = COPY %1(s32)
+...
+
+---
+# CHECK-LABEL: name: fptoui_s64_s32_gpr
+name:            fptoui_s64_s32_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %s0
+# CHECK:    %1 = FCVTZUUXSr %0
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    %1(s64) = G_FPTOUI %0
+    %x0 = COPY %1(s64)
+...
+
+---
+# CHECK-LABEL: name: fptoui_s64_s64_gpr
+name:            fptoui_s64_s64_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %d0
+# CHECK:    %1 = FCVTZUUXDr %0
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s64) = G_FPTOUI %0
+    %x0 = COPY %1(s64)
+...

@@ -19,7 +19,6 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/IssueHash.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 using namespace clang;
@@ -124,7 +123,7 @@ static void ReportControlFlow(raw_ostream &o,
   --indent;
 
   // Output any helper text.
-  const std::string& s = P.getString();
+  const auto &s = P.getString();
   if (!s.empty()) {
     Indent(o, indent) << "<key>alternate</key>";
     EmitString(o, s) << '\n';
@@ -209,19 +208,14 @@ static void ReportCall(raw_ostream &o,
                        unsigned indent,
                        unsigned depth) {
 
-  IntrusiveRefCntPtr<PathDiagnosticEventPiece> callEnter =
-    P.getCallEnterEvent();
-
-  if (callEnter)
+  if (auto callEnter = P.getCallEnterEvent())
     ReportPiece(o, *callEnter, FM, SM, LangOpts, indent, depth, true,
                 P.isLastInMainSourceFile());
 
-  IntrusiveRefCntPtr<PathDiagnosticEventPiece> callEnterWithinCaller =
-    P.getCallEnterWithinCallerEvent();
 
   ++depth;
 
-  if (callEnterWithinCaller)
+  if (auto callEnterWithinCaller = P.getCallEnterWithinCallerEvent())
     ReportPiece(o, *callEnterWithinCaller, FM, SM, LangOpts,
                 indent, depth, true);
 
@@ -230,10 +224,7 @@ static void ReportCall(raw_ostream &o,
 
   --depth;
 
-  IntrusiveRefCntPtr<PathDiagnosticEventPiece> callExit =
-    P.getCallExitEvent();
-
-  if (callExit)
+  if (auto callExit = P.getCallExitEvent())
     ReportPiece(o, *callExit, FM, SM, LangOpts, indent, depth, true);
 }
 
@@ -282,6 +273,9 @@ static void ReportPiece(raw_ostream &o,
       ReportMacro(o, cast<PathDiagnosticMacroPiece>(P), FM, SM, LangOpts,
                   indent, depth);
       break;
+    case PathDiagnosticPiece::Note:
+      // FIXME: Extend the plist format to support those.
+      break;
   }
 }
 
@@ -295,43 +289,41 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
   const SourceManager* SM = nullptr;
 
   if (!Diags.empty())
-    SM = &(*(*Diags.begin())->path.begin())->getLocation().getManager();
+    SM = &Diags.front()->path.front()->getLocation().getManager();
 
+  auto AddPieceFID = [&FM, &Fids, SM](const PathDiagnosticPiece &Piece) {
+    AddFID(FM, Fids, *SM, Piece.getLocation().asLocation());
+    ArrayRef<SourceRange> Ranges = Piece.getRanges();
+    for (const SourceRange &Range : Ranges) {
+      AddFID(FM, Fids, *SM, Range.getBegin());
+      AddFID(FM, Fids, *SM, Range.getEnd());
+    }
+  };
 
-  for (std::vector<const PathDiagnostic*>::iterator DI = Diags.begin(),
-       DE = Diags.end(); DI != DE; ++DI) {
-
-    const PathDiagnostic *D = *DI;
+  for (const PathDiagnostic *D : Diags) {
 
     SmallVector<const PathPieces *, 5> WorkList;
     WorkList.push_back(&D->path);
 
     while (!WorkList.empty()) {
-      const PathPieces &path = *WorkList.pop_back_val();
+      const PathPieces &Path = *WorkList.pop_back_val();
 
-      for (PathPieces::const_iterator I = path.begin(), E = path.end(); I != E;
-           ++I) {
-        const PathDiagnosticPiece *piece = I->get();
-        AddFID(FM, Fids, *SM, piece->getLocation().asLocation());
-        ArrayRef<SourceRange> Ranges = piece->getRanges();
-        for (ArrayRef<SourceRange>::iterator I = Ranges.begin(),
-                                             E = Ranges.end(); I != E; ++I) {
-          AddFID(FM, Fids, *SM, I->getBegin());
-          AddFID(FM, Fids, *SM, I->getEnd());
-        }
+      for (const auto &Iter : Path) {
+        const PathDiagnosticPiece &Piece = *Iter;
+        AddPieceFID(Piece);
 
-        if (const PathDiagnosticCallPiece *call =
-            dyn_cast<PathDiagnosticCallPiece>(piece)) {
-          IntrusiveRefCntPtr<PathDiagnosticEventPiece>
-            callEnterWithin = call->getCallEnterWithinCallerEvent();
-          if (callEnterWithin)
-            AddFID(FM, Fids, *SM, callEnterWithin->getLocation().asLocation());
+        if (const PathDiagnosticCallPiece *Call =
+                dyn_cast<PathDiagnosticCallPiece>(&Piece)) {
+          if (auto CallEnterWithin = Call->getCallEnterWithinCallerEvent())
+            AddPieceFID(*CallEnterWithin);
 
-          WorkList.push_back(&call->path);
-        }
-        else if (const PathDiagnosticMacroPiece *macro =
-                 dyn_cast<PathDiagnosticMacroPiece>(piece)) {
-          WorkList.push_back(&macro->subPieces);
+          if (auto CallEnterEvent = Call->getCallEnterEvent())
+            AddPieceFID(*CallEnterEvent);
+
+          WorkList.push_back(&Call->path);
+        } else if (const PathDiagnosticMacroPiece *Macro =
+                       dyn_cast<PathDiagnosticMacroPiece>(&Piece)) {
+          WorkList.push_back(&Macro->subPieces);
         }
       }
     }
@@ -399,7 +391,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
                     *SM);
     const Decl *DeclWithIssue = D->getDeclWithIssue();
     EmitString(o, GetIssueHash(*SM, L, D->getCheckName(), D->getBugType(),
-                               DeclWithIssue))
+                               DeclWithIssue, LangOpts))
         << '\n';
 
     // Output information about the semantic context where

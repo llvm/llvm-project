@@ -23,22 +23,13 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE ::llvm::ScoreboardHazardRecognizer::DebugType
+#define DEBUG_TYPE DebugType
 
-#ifndef NDEBUG
-const char *ScoreboardHazardRecognizer::DebugType = "";
-#endif
-
-ScoreboardHazardRecognizer::
-ScoreboardHazardRecognizer(const InstrItineraryData *II,
-                           const ScheduleDAG *SchedDAG,
-                           const char *ParentDebugType) :
-  ScheduleHazardRecognizer(), ItinData(II), DAG(SchedDAG), IssueWidth(0),
-  IssueCount(0) {
-
-#ifndef NDEBUG
-  DebugType = ParentDebugType;
-#endif
+ScoreboardHazardRecognizer::ScoreboardHazardRecognizer(
+    const InstrItineraryData *II, const ScheduleDAG *SchedDAG,
+    const char *ParentDebugType)
+    : ScheduleHazardRecognizer(), DebugType(ParentDebugType), ItinData(II),
+      DAG(SchedDAG), IssueWidth(0), IssueCount(0) {
 
   // Determine the maximum depth of any itinerary. This determines the depth of
   // the scoreboard. We always make the scoreboard at least 1 cycle deep to
@@ -91,7 +82,7 @@ void ScoreboardHazardRecognizer::Reset() {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void ScoreboardHazardRecognizer::Scoreboard::dump() const {
+LLVM_DUMP_METHOD void ScoreboardHazardRecognizer::Scoreboard::dump() const {
   dbgs() << "Scoreboard:\n";
 
   unsigned last = Depth - 1;
@@ -154,7 +145,7 @@ ScoreboardHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
       case InstrStage::Required:
         // Required FUs conflict with both reserved and required ones
         freeUnits &= ~ReservedScoreboard[StageCycle];
-        // FALLTHROUGH
+        LLVM_FALLTHROUGH;
       case InstrStage::Reserved:
         // Reserved FUs can conflict only with required ones.
         freeUnits &= ~RequiredScoreboard[StageCycle];
@@ -206,7 +197,7 @@ void ScoreboardHazardRecognizer::EmitInstruction(SUnit *SU) {
       case InstrStage::Required:
         // Required FUs conflict with both reserved and required ones
         freeUnits &= ~ReservedScoreboard[cycle + i];
-        // FALLTHROUGH
+        LLVM_FALLTHROUGH;
       case InstrStage::Reserved:
         // Reserved FUs can conflict only with required ones.
         freeUnits &= ~RequiredScoreboard[cycle + i];

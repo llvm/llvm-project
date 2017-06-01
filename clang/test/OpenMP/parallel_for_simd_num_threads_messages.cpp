@@ -24,7 +24,7 @@ T tmain(T argc, S **argv) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp parallel for simd num_threads ((argc > 0) ? argv[1] : argv[2]) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'char *'}}
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp parallel for simd num_threads (foobool(argc)), num_threads (true), num_threads (-5) // expected-error 2 {{directive '#pragma omp parallel for simd' cannot contain more than one 'num_threads' clause}} expected-error {{argument to 'num_threads' clause must be a positive integer value}}
+  #pragma omp parallel for simd num_threads (foobool(argc)), num_threads (true), num_threads (-5) // expected-error 2 {{directive '#pragma omp parallel for simd' cannot contain more than one 'num_threads' clause}} expected-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp parallel for simd num_threads (S) // expected-error {{'S' does not refer to a value}}
   for (i = 0; i < argc; ++i) foo();
@@ -32,7 +32,7 @@ T tmain(T argc, S **argv) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp parallel for simd num_threads (argc)
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp parallel for simd num_threads (N) // expected-error {{argument to 'num_threads' clause must be a positive integer value}}
+  #pragma omp parallel for simd num_threads (N) // expected-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
   for (i = 0; i < argc; ++i) foo();
 
   return argc;
@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp parallel for simd num_threads (argc > 0 ? argv[1] : argv[2]) // expected-error {{integral }}
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp parallel for simd num_threads (foobool(argc)), num_threads (true), num_threads (-5) // expected-error 2 {{directive '#pragma omp parallel for simd' cannot contain more than one 'num_threads' clause}} expected-error {{argument to 'num_threads' clause must be a positive integer value}}
+  #pragma omp parallel for simd num_threads (foobool(argc)), num_threads (true), num_threads (-5) // expected-error 2 {{directive '#pragma omp parallel for simd' cannot contain more than one 'num_threads' clause}} expected-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp parallel for simd num_threads (S1) // expected-error {{'S1' does not refer to a value}}
   for (i = 0; i < argc; ++i) foo();

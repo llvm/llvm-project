@@ -1,16 +1,13 @@
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 | FileCheck %s -check-prefix=ASM
 #
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -mattr=+o32 -filetype=obj -o -| \
-# RUN:  llvm-objdump -d -r -arch=mips - | \
-# RUN:    FileCheck %s -check-prefix=OBJ-O32
+# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -filetype=obj -o -| \
+# RUN:  llvm-objdump -d -r - | FileCheck %s -check-prefix=OBJ-O32
 
 # RUN: llvm-mc %s -arch=mips64 -mcpu=mips64r2 -target-abi n32 -filetype=obj -o -| \
-# RUN:  llvm-objdump -d -r -arch=mips - | \
-# RUN:    FileCheck %s -check-prefix=OBJ-N32
+# RUN:  llvm-objdump -d -r - | FileCheck %s -check-prefix=OBJ-N32
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64r2 -mattr=+n64 -filetype=obj -o -| \
-# RUN:  llvm-objdump -d -r -arch=mips - | \
-# RUN:    FileCheck %s -check-prefix=OBJ-N64
+# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64r2 -filetype=obj -o -| \
+# RUN:  llvm-objdump -d -r - | FileCheck %s -check-prefix=OBJ-N64
 
 # ASM:    .text
 # ASM:    .option pic2

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1  -analyze -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2 -Wno-format-security -verify %s
+// RUN: %clang_analyze_cc1  -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2 -Wno-format-security -verify %s
 
 int scanf(const char *restrict format, ...);
 int getchar(void);
@@ -169,6 +169,43 @@ void testSocket() {
   sock = socket(AF_LOCAL, SOCK_STREAM, 0);
   read(sock, buffer, 100);
   execl(buffer, "filename", 0); // no-warning
+
+  sock = socket(AF_INET, SOCK_STREAM, 0);
+  // References to both buffer and &buffer as an argument should taint the argument
+  read(sock, &buffer, 100);
+  execl(buffer, "filename", 0); // expected-warning {{Untrusted data is passed to a system call}}
+}
+
+void testStruct() {
+  struct {
+    char buf[16];
+    int length;
+  } tainted;
+
+  char buffer[16];
+  int sock;
+
+  sock = socket(AF_INET, SOCK_STREAM, 0);
+  read(sock, &tainted, sizeof(tainted));
+  __builtin_memcpy(buffer, tainted.buf, tainted.length); // expected-warning {{Untrusted data is used to specify the buffer size}}
+}
+
+void testStructArray() {
+  struct {
+    char buf[16];
+    struct {
+      int length;
+    } st[1];
+  } tainted;
+
+  char buffer[16];
+  int sock;
+
+  sock = socket(AF_INET, SOCK_STREAM, 0);
+  read(sock, &tainted.buf[0], sizeof(tainted.buf));
+  read(sock, &tainted.st[0], sizeof(tainted.st));
+  // FIXME: tainted.st[0].length should be marked tainted
+  __builtin_memcpy(buffer, tainted.buf, tainted.st[0].length); // no-warning
 }
 
 int testDivByZero() {

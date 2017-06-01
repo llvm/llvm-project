@@ -4979,22 +4979,12 @@ __cxa_demangle(const char *mangled_name, char *buf, size_t *n, int *status) {
         return nullptr;
     }
 
-    size_t len = std::strlen(mangled_name);
-    if (len < 2 || strncmp(mangled_name, "_Z", 2))
-    {
-        if (len < 4 || strncmp(mangled_name, "___Z", 4))
-        {
-            if (status)
-                *status = invalid_mangled_name;
-            return nullptr;
-        }
-    }
-
     size_t internal_size = buf != nullptr ? *n : 0;
     arena<bs> a;
     Db db(a);
     db.template_param.emplace_back(a);
     int internal_status = success;
+    size_t len = std::strlen(mangled_name);
     demangle(mangled_name, mangled_name + len, db,
              internal_status);
     if (internal_status == success && db.fix_forward_references &&

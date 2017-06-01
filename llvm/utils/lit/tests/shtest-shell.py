@@ -1,7 +1,7 @@
 # Check the internal shell handling component of the ShTest format.
 #
 # RUN: not %{lit} -j 1 -v %{inputs}/shtest-shell > %t.out
-# RUN: FileCheck < %t.out %s
+# RUN: FileCheck --input-file %t.out %s
 #
 # END.
 
@@ -9,10 +9,10 @@
 
 # CHECK: FAIL: shtest-shell :: error-0.txt
 # CHECK: *** TEST 'shtest-shell :: error-0.txt' FAILED ***
-# CHECK: Command 0: "not-a-real-command"
-# CHECK: Command 0 Result: 127
-# CHECK: Command 0 Stderr:
+# CHECK: $ "not-a-real-command"
+# CHECK: # command stderr:
 # CHECK: 'not-a-real-command': command not found
+# CHECK: error: command failed with exit status: 127
 # CHECK: ***
 
 # FIXME: The output here sucks.

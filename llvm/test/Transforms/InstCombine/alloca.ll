@@ -163,3 +163,14 @@ entry:
   call void (...) @use(i1* %v32, i1* %v64, i1* %v33)
   ret void
 }
+
+define void @test11() {
+entry:
+; ALL-LABEL: @test11(
+; ALL: %y = alloca i32
+; ALL: call void (...) @use(i32* nonnull @int) [ "blah"(i32* %y) ]
+; ALL: ret void
+  %y = alloca i32
+  call void (...) @use(i32* nonnull @int) [ "blah"(i32* %y) ]
+  ret void
+}

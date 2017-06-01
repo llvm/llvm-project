@@ -555,3 +555,195 @@ for.end17:                                        ; preds = %for.inc15
 ; CHECK:   for.end17:                                        ; preds = %for.inc15
 ; CHECK:     ret void
 
+;;-----------------------------------Test case 09-------------------------------
+;; Test that a flow dependency in outer loop doesn't prevent interchange in
+;; loops i and j.
+;;
+;;  for (int k = 0; k < 100; ++k) {
+;;    T[k] = fn1();
+;;    for (int i = 0; i < 1000; ++i)
+;;      for(int j = 1; j < 1000; ++j)
+;;        Arr[j][i] = Arr[j][i]+k;
+;;    fn2(T[k]);
+;;  }
+
+@T = internal global [100 x double] zeroinitializer, align 4
+@Arr = internal global [1000 x [1000 x i32]] zeroinitializer, align 4
+
+define void @interchange_09(i32 %k) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup4
+  ret void
+
+for.body:                                         ; preds = %for.cond.cleanup4, %entry
+  %indvars.iv45 = phi i64 [ 0, %entry ], [ %indvars.iv.next46, %for.cond.cleanup4 ]
+  %call = call double @fn1()
+  %arrayidx = getelementptr inbounds [100 x double], [100 x double]* @T, i64 0, i64 %indvars.iv45
+  store double %call, double* %arrayidx, align 8
+  br label %for.cond6.preheader
+
+for.cond6.preheader:                              ; preds = %for.cond.cleanup8, %for.body
+  %indvars.iv42 = phi i64 [ 0, %for.body ], [ %indvars.iv.next43, %for.cond.cleanup8 ]
+  br label %for.body9
+
+for.cond.cleanup4:                                ; preds = %for.cond.cleanup8
+  %tmp = load double, double* %arrayidx, align 8
+  call void @fn2(double %tmp)
+  %indvars.iv.next46 = add nuw nsw i64 %indvars.iv45, 1
+  %exitcond47 = icmp ne i64 %indvars.iv.next46, 100
+  br i1 %exitcond47, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup8:                                ; preds = %for.body9
+  %indvars.iv.next43 = add nuw nsw i64 %indvars.iv42, 1
+  %exitcond44 = icmp ne i64 %indvars.iv.next43, 1000
+  br i1 %exitcond44, label %for.cond6.preheader, label %for.cond.cleanup4
+
+for.body9:                                        ; preds = %for.body9, %for.cond6.preheader
+  %indvars.iv = phi i64 [ 1, %for.cond6.preheader ], [ %indvars.iv.next, %for.body9 ]
+  %arrayidx13 = getelementptr inbounds [1000 x [1000 x i32]], [1000 x [1000 x i32]]* @Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv42
+  %tmp1 = load i32, i32* %arrayidx13, align 4
+  %tmp2 = trunc i64 %indvars.iv45 to i32
+  %add = add nsw i32 %tmp1, %tmp2
+  store i32 %add, i32* %arrayidx13, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp ne i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.body9, label %for.cond.cleanup8
+}
+
+declare double @fn1()
+declare void @fn2(double)
+
+
+
+
+
+;; After interchange %indvars.iv (j) should increment as the middle loop.
+;; After interchange %indvars.iv42 (i) should increment with the inner most loop.
+
+; CHECK-LABEL: @interchange_09
+
+; CHECK: for.body:
+; CHECK:   %indvars.iv45 = phi i64 [ %indvars.iv.next46, %for.cond.cleanup4 ], [ 0, %for.body.preheader ]
+; CHECK:   %call = call double @fn1()
+; CHECK:   %arrayidx = getelementptr inbounds [100 x double], [100 x double]* @T, i64 0, i64 %indvars.iv45
+; CHECK:   store double %call, double* %arrayidx, align 8
+; CHECK:   br label %for.body9.preheader
+
+; CHECK: for.cond6.preheader.preheader:
+; CHECK:   br label %for.cond6.preheader
+
+; CHECK: for.cond6.preheader:
+; CHECK:   %indvars.iv42 = phi i64 [ %indvars.iv.next43, %for.cond.cleanup8 ], [ 0, %for.cond6.preheader.preheader ]
+; CHECK:   br label %for.body9.split1
+
+; CHECK: for.body9.preheader:
+; CHECK:   br label %for.body9
+
+; CHECK: for.cond.cleanup4:
+; CHECK:   %tmp = load double, double* %arrayidx, align 8
+; CHECK:   call void @fn2(double %tmp)
+; CHECK:   %indvars.iv.next46 = add nuw nsw i64 %indvars.iv45, 1
+; CHECK:   %exitcond47 = icmp ne i64 %indvars.iv.next46, 100
+; CHECK:   br i1 %exitcond47, label %for.body, label %for.cond.cleanup
+
+; CHECK: for.cond.cleanup8:
+; CHECK:   %indvars.iv.next43 = add nuw nsw i64 %indvars.iv42, 1
+; CHECK:   %exitcond44 = icmp ne i64 %indvars.iv.next43, 1000
+; CHECK:   br i1 %exitcond44, label %for.cond6.preheader, label %for.body9.split
+
+; CHECK: for.body9:
+; CHECK:   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body9.split ], [ 1, %for.body9.preheader ]
+; CHECK:   br label %for.cond6.preheader.preheader
+
+; CHECK: for.body9.split1:
+; CHECK:   %arrayidx13 = getelementptr inbounds [1000 x [1000 x i32]], [1000 x [1000 x i32]]* @Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv42
+; CHECK:   store i32 %add, i32* %arrayidx13, align 4
+; CHECK:   br label %for.cond.cleanup8
+
+; CHECK: for.body9.split:
+; CHECK:   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+; CHECK:   %exitcond = icmp ne i64 %indvars.iv.next, 1000
+; CHECK:   br i1 %exitcond, label %for.body9, label %for.cond.cleanup4
+
+
+;;-----------------------------------Test case 10-------------------------------
+;; Test to make sure we can handle output dependencies.
+;;
+;;  for (int i = 0; i < 2; ++i)
+;;    for(int j = 0; j < 3; ++j) {
+;;      A[j][i] = i;
+;;      A[j][i+1] = j;
+;;    }
+
+@A10 = local_unnamed_addr global [3 x [3 x i32]] zeroinitializer, align 16
+
+define void @interchange_10() {
+entry:
+  br label %for.cond1.preheader
+
+for.cond.loopexit:                                ; preds = %for.body4
+  %exitcond28 = icmp ne i64 %indvars.iv.next27, 2
+  br i1 %exitcond28, label %for.cond1.preheader, label %for.cond.cleanup
+
+for.cond1.preheader:                              ; preds = %for.cond.loopexit, %entry
+  %indvars.iv26 = phi i64 [ 0, %entry ], [ %indvars.iv.next27, %for.cond.loopexit ]
+  %indvars.iv.next27 = add nuw nsw i64 %indvars.iv26, 1
+  br label %for.body4
+
+for.cond.cleanup:                                 ; preds = %for.cond.loopexit
+  ret void
+
+for.body4:                                        ; preds = %for.body4, %for.cond1.preheader
+  %indvars.iv = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next, %for.body4 ]
+  %arrayidx6 = getelementptr inbounds [3 x [3 x i32]], [3 x [3 x i32]]* @A10, i64 0, i64 %indvars.iv, i64 %indvars.iv26
+  %tmp = trunc i64 %indvars.iv26 to i32
+  store i32 %tmp, i32* %arrayidx6, align 4
+  %arrayidx10 = getelementptr inbounds [3 x [3 x i32]], [3 x [3 x i32]]* @A10, i64 0, i64 %indvars.iv, i64 %indvars.iv.next27
+  %tmp1 = trunc i64 %indvars.iv to i32
+  store i32 %tmp1, i32* %arrayidx10, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp ne i64 %indvars.iv.next, 3
+  br i1 %exitcond, label %for.body4, label %for.cond.loopexit
+}
+
+; CHECK-LABEL: @interchange_10
+; CHECK: entry:
+; CHECK:   br label %for.body4.preheader
+
+; CHECK: for.cond1.preheader.preheader:
+; CHECK:   br label %for.cond1.preheader
+
+; CHECK: for.cond.loopexit:
+; CHECK:   %exitcond28 = icmp ne i64 %indvars.iv.next27, 2
+; CHECK:   br i1 %exitcond28, label %for.cond1.preheader, label %for.body4.split
+
+; CHECK: for.cond1.preheader:
+; CHECK:   %indvars.iv26 = phi i64 [ %indvars.iv.next27, %for.cond.loopexit ], [ 0, %for.cond1.preheader.preheader ]
+; CHECK:   %indvars.iv.next27 = add nuw nsw i64 %indvars.iv26, 1
+; CHECK:   br label %for.body4.split1
+
+; CHECK: for.body4.preheader:
+; CHECK:   br label %for.body4
+
+; CHECK: for.cond.cleanup:
+; CHECK:   ret void
+
+; CHECK: for.body4:
+; CHECK:   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body4.split ], [ 0, %for.body4.preheader ]
+; CHECK:   br label %for.cond1.preheader.preheader
+
+; CHECK: for.body4.split1:
+; CHECK:   %arrayidx6 = getelementptr inbounds [3 x [3 x i32]], [3 x [3 x i32]]* @A10, i64 0, i64 %indvars.iv, i64 %indvars.iv26
+; CHECK:   %tmp = trunc i64 %indvars.iv26 to i32
+; CHECK:   store i32 %tmp, i32* %arrayidx6, align 4
+; CHECK:   %arrayidx10 = getelementptr inbounds [3 x [3 x i32]], [3 x [3 x i32]]* @A10, i64 0, i64 %indvars.iv, i64 %indvars.iv.next27
+; CHECK:   %tmp1 = trunc i64 %indvars.iv to i32
+; CHECK:   store i32 %tmp1, i32* %arrayidx10, align 4
+; CHECK:   br label %for.cond.loopexit
+
+; CHECK: for.body4.split:
+; CHECK:   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+; CHECK:   %exitcond = icmp ne i64 %indvars.iv.next, 3
+; CHECK:   br i1 %exitcond, label %for.body4, label %for.cond.cleanup

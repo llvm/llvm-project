@@ -85,11 +85,10 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!17, !18, !19, !20}
 !llvm.ident = !{!21}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (http://llvm.org/git/clang.git b1fbc23058e7fa1cdd954ab97ba84f1c549c9879) (http://llvm.org/git/llvm.git 054da58c5398a721d4dab7af63d7de8d7a1e1a1c)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (http://llvm.org/git/clang.git b1fbc23058e7fa1cdd954ab97ba84f1c549c9879) (http://llvm.org/git/llvm.git 054da58c5398a721d4dab7af63d7de8d7a1e1a1c)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "test.c", directory: "/home/weimingz/llvm-build/release/community-tip")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, variables: !11)
+!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !11)
 !5 = !DISubroutineType(types: !6)
 !6 = !{null, !7, !7, !10}
 !7 = !DIDerivedType(tag: DW_TAG_restrict_type, baseType: !8)

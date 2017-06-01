@@ -1,31 +1,50 @@
 // RUN: %clang_cc1 -std=c++98 %s -Wdeprecated -verify -triple x86_64-linux-gnu
 // RUN: %clang_cc1 -std=c++11 %s -Wdeprecated -verify -triple x86_64-linux-gnu
 // RUN: %clang_cc1 -std=c++1y %s -Wdeprecated -verify -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++1z %s -Wdeprecated -verify -triple x86_64-linux-gnu
 
 // RUN: %clang_cc1 -std=c++1y %s -Wdeprecated -verify -triple x86_64-linux-gnu -Wno-deprecated-register -DNO_DEPRECATED_FLAGS
 
 #include "Inputs/register.h"
 
-void f() throw();
-void g() throw(int);
-void h() throw(...);
-#if __cplusplus >= 201103L
+void g() throw();
+void h() throw(int);
+void i() throw(...);
+#if __cplusplus > 201402L
 // expected-warning@-4 {{dynamic exception specifications are deprecated}} expected-note@-4 {{use 'noexcept' instead}}
-// expected-warning@-4 {{dynamic exception specifications are deprecated}} expected-note@-4 {{use 'noexcept(false)' instead}}
-// expected-warning@-4 {{dynamic exception specifications are deprecated}} expected-note@-4 {{use 'noexcept(false)' instead}}
+// expected-error@-4 {{ISO C++1z does not allow dynamic exception specifications}} expected-note@-4 {{use 'noexcept(false)' instead}}
+// expected-error@-4 {{ISO C++1z does not allow dynamic exception specifications}} expected-note@-4 {{use 'noexcept(false)' instead}}
+#elif __cplusplus >= 201103L
+// expected-warning@-8 {{dynamic exception specifications are deprecated}} expected-note@-8 {{use 'noexcept' instead}}
+// expected-warning@-8 {{dynamic exception specifications are deprecated}} expected-note@-8 {{use 'noexcept(false)' instead}}
+// expected-warning@-8 {{dynamic exception specifications are deprecated}} expected-note@-8 {{use 'noexcept(false)' instead}}
 #endif
 
 void stuff() {
   register int n;
-#if __cplusplus >= 201103L && !defined(NO_DEPRECATED_FLAGS)
-  // expected-warning@-2 {{'register' storage class specifier is deprecated}}
+#if __cplusplus > 201402L
+  // expected-error@-2 {{ISO C++1z does not allow 'register' storage class specifier}}
+#elif __cplusplus >= 201103L && !defined(NO_DEPRECATED_FLAGS)
+  // expected-warning@-4 {{'register' storage class specifier is deprecated}}
 #endif
 
   register int m asm("rbx"); // no-warning
 
   int k = to_int(n); // no-warning
   bool b;
-  ++b; // expected-warning {{incrementing expression of type bool is deprecated}}
+  ++b;
+#if __cplusplus > 201402L
+  // expected-error@-2 {{ISO C++1z does not allow incrementing expression of type bool}}
+#else
+  // expected-warning@-4 {{incrementing expression of type bool is deprecated}}
+#endif
+
+  b++;
+#if __cplusplus > 201402L
+  // expected-error@-2 {{ISO C++1z does not allow incrementing expression of type bool}}
+#else
+  // expected-warning@-4 {{incrementing expression of type bool is deprecated}}
+#endif
 
   char *p = "foo";
 #if __cplusplus < 201103L

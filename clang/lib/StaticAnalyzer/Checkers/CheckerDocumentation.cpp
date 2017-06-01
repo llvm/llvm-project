@@ -1,4 +1,4 @@
-//= CheckerDocumentation.cpp - Documentation checker ---------------*- C++ -*-//
+//===- CheckerDocumentation.cpp - Documentation checker ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -45,6 +45,7 @@ class CheckerDocumentation : public Checker< check::PreStmt<ReturnStmt>,
                                        check::Location,
                                        check::Bind,
                                        check::DeadSymbols,
+                                       check::BeginFunction,
                                        check::EndFunction,
                                        check::EndAnalysis,
                                        check::EndOfTranslationUnit,
@@ -57,7 +58,6 @@ class CheckerDocumentation : public Checker< check::PreStmt<ReturnStmt>,
                                        check::Event<ImplicitNullDerefEvent>,
                                        check::ASTDecl<FunctionDecl> > {
 public:
-
   /// \brief Pre-visit the Statement.
   ///
   /// The method will be called before the analyzer core processes the
@@ -147,7 +147,6 @@ public:
   /// check::Bind
   void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &) const {}
 
-
   /// \brief Called whenever a symbol becomes dead.
   ///
   /// This callback should be used by the checkers to aggressively clean
@@ -164,8 +163,16 @@ public:
   /// check::DeadSymbols
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const {}
 
+
+  /// \brief Called when the analyzer core starts analyzing a function,
+  /// regardless of whether it is analyzed at the top level or is inlined.
+  ///
+  /// check::BeginFunction
+  void checkBeginFunction(CheckerContext &Ctx) const {}
+
   /// \brief Called when the analyzer core reaches the end of a
-  /// function being analyzed.
+  /// function being analyzed regardless of whether it is analyzed at the top
+  /// level or is inlined.
   ///
   /// check::EndFunction
   void checkEndFunction(CheckerContext &Ctx) const {}
@@ -189,7 +196,6 @@ public:
   void checkEndOfTranslationUnit(const TranslationUnitDecl *TU,
                                  AnalysisManager &Mgr,
                                  BugReporter &BR) const {}
-
 
   /// \brief Evaluates function call.
   ///
@@ -225,14 +231,6 @@ public:
   /// check::LiveSymbols
   void checkLiveSymbols(ProgramStateRef State, SymbolReaper &SR) const {}
 
-  /// \brief Called to determine if the checker currently needs to know if when
-  /// contents of any regions change.
-  ///
-  /// Since it is not necessarily cheap to compute which regions are being
-  /// changed, this allows the analyzer core to skip the more expensive
-  /// #checkRegionChanges when no checkers are tracking any state.
-  bool wantsRegionChangeUpdate(ProgramStateRef St) const { return true; }
-
   /// \brief Called when the contents of one or more regions change.
   ///
   /// This can occur in many different ways: an explicit bind, a blanket
@@ -249,11 +247,10 @@ public:
   ///        by this change. For a simple bind, this list will be the same as
   ///        \p ExplicitRegions, since a bind does not affect the contents of
   ///        anything accessible through the base region.
+  /// \param LCtx LocationContext that is useful for getting various contextual
+  ///        info, like callstack, CFG etc.
   /// \param Call The opaque call triggering this invalidation. Will be 0 if the
   ///        change was not triggered by a call.
-  ///
-  /// Note that this callback will not be invoked unless
-  /// #wantsRegionChangeUpdate returns \c true.
   ///
   /// check::RegionChanges
   ProgramStateRef
@@ -261,6 +258,7 @@ public:
                        const InvalidatedSymbols *Invalidated,
                        ArrayRef<const MemRegion *> ExplicitRegions,
                        ArrayRef<const MemRegion *> Regions,
+                       const LocationContext *LCtx,
                        const CallEvent *Call) const {
     return State;
   }
@@ -310,12 +308,10 @@ public:
   void checkASTDecl(const FunctionDecl *D,
                     AnalysisManager &Mgr,
                     BugReporter &BR) const {}
-
 };
 
 void CheckerDocumentation::checkPostStmt(const DeclStmt *DS,
                                          CheckerContext &C) const {
-  return;
 }
 
 } // end namespace ento

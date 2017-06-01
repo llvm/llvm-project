@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=r600 -mattr=disable-ifcvt -mcpu=redwood | FileCheck %s
+; RUN: llc -march=r600 -mcpu=redwood -r600-if-convert=0 < %s | FileCheck %s
 
 ; This tests for abug where the AMDILCFGStructurizer was crashing on loops
 ; like this:

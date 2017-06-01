@@ -5,11 +5,15 @@
 #include <sys/mman.h>
 
 // Test for issue:
-// https://code.google.com/p/thread-sanitizer/issues/detail?id=5
+// https://github.com/google/sanitizers/issues/412
 
 // MAP_32BIT flag for mmap is supported only for x86_64.
-// XFAIL: mips64
+// XFAIL: mips
 // XFAIL: aarch64
+// XFAIL: powerpc64
+
+// MAP_32BIT doesn't exist on OS X.
+// UNSUPPORTED: darwin
 
 void *Thread(void *ptr) {
   *(int*)ptr = 42;

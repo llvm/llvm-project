@@ -7,14 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/Comment.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/CharInfo.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace comments {
@@ -114,6 +113,68 @@ bool ParagraphComment::isWhitespaceNoCache() const {
   return true;
 }
 
+static TypeLoc lookThroughTypedefOrTypeAliasLocs(TypeLoc &SrcTL) {
+  TypeLoc TL = SrcTL.IgnoreParens();
+
+  // Look through attribute types.
+  if (AttributedTypeLoc AttributeTL = TL.getAs<AttributedTypeLoc>())
+    return AttributeTL.getModifiedLoc();
+  // Look through qualified types.
+  if (QualifiedTypeLoc QualifiedTL = TL.getAs<QualifiedTypeLoc>())
+    return QualifiedTL.getUnqualifiedLoc();
+  // Look through pointer types.
+  if (PointerTypeLoc PointerTL = TL.getAs<PointerTypeLoc>())
+    return PointerTL.getPointeeLoc().getUnqualifiedLoc();
+  // Look through reference types.
+  if (ReferenceTypeLoc ReferenceTL = TL.getAs<ReferenceTypeLoc>())
+    return ReferenceTL.getPointeeLoc().getUnqualifiedLoc();
+  // Look through adjusted types.
+  if (AdjustedTypeLoc ATL = TL.getAs<AdjustedTypeLoc>())
+    return ATL.getOriginalLoc();
+  if (BlockPointerTypeLoc BlockPointerTL = TL.getAs<BlockPointerTypeLoc>())
+    return BlockPointerTL.getPointeeLoc().getUnqualifiedLoc();
+  if (MemberPointerTypeLoc MemberPointerTL = TL.getAs<MemberPointerTypeLoc>())
+    return MemberPointerTL.getPointeeLoc().getUnqualifiedLoc();
+  if (ElaboratedTypeLoc ETL = TL.getAs<ElaboratedTypeLoc>())
+    return ETL.getNamedTypeLoc();
+
+  return TL;
+}
+
+static bool getFunctionTypeLoc(TypeLoc TL, FunctionTypeLoc &ResFTL) {
+  TypeLoc PrevTL;
+  while (PrevTL != TL) {
+    PrevTL = TL;
+    TL = lookThroughTypedefOrTypeAliasLocs(TL);
+  }
+
+  if (FunctionTypeLoc FTL = TL.getAs<FunctionTypeLoc>()) {
+    ResFTL = FTL;
+    return true;
+  }
+
+  if (TemplateSpecializationTypeLoc STL =
+          TL.getAs<TemplateSpecializationTypeLoc>()) {
+    // If we have a typedef to a template specialization with exactly one
+    // template argument of a function type, this looks like std::function,
+    // boost::function, or other function wrapper.  Treat these typedefs as
+    // functions.
+    if (STL.getNumArgs() != 1)
+      return false;
+    TemplateArgumentLoc MaybeFunction = STL.getArgLoc(0);
+    if (MaybeFunction.getArgument().getKind() != TemplateArgument::Type)
+      return false;
+    TypeSourceInfo *MaybeFunctionTSI = MaybeFunction.getTypeSourceInfo();
+    TypeLoc TL = MaybeFunctionTSI->getTypeLoc().getUnqualifiedLoc();
+    if (FunctionTypeLoc FTL = TL.getAs<FunctionTypeLoc>()) {
+      ResFTL = FTL;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 const char *ParamCommandComment::getDirectionAsString(PassDirection D) {
   switch (D) {
   case ParamCommandComment::In:
@@ -157,7 +218,7 @@ void DeclInfo::fill() {
   case Decl::CXXConversion: {
     const FunctionDecl *FD = cast<FunctionDecl>(CommentDecl);
     Kind = FunctionKind;
-    ParamVars = llvm::makeArrayRef(FD->param_begin(), FD->getNumParams());
+    ParamVars = FD->parameters();
     ReturnType = FD->getReturnType();
     unsigned NumLists = FD->getNumTemplateParameterLists();
     if (NumLists != 0) {
@@ -177,7 +238,7 @@ void DeclInfo::fill() {
   case Decl::ObjCMethod: {
     const ObjCMethodDecl *MD = cast<ObjCMethodDecl>(CommentDecl);
     Kind = FunctionKind;
-    ParamVars = llvm::makeArrayRef(MD->param_begin(), MD->param_size());
+    ParamVars = MD->parameters();
     ReturnType = MD->getReturnType();
     IsObjCMethod = true;
     IsInstanceMethod = MD->isInstanceMethod();
@@ -189,7 +250,7 @@ void DeclInfo::fill() {
     Kind = FunctionKind;
     TemplateKind = Template;
     const FunctionDecl *FD = FTD->getTemplatedDecl();
-    ParamVars = llvm::makeArrayRef(FD->param_begin(), FD->getNumParams());
+    ParamVars = FD->parameters();
     ReturnType = FD->getReturnType();
     TemplateParameters = FTD->getTemplateParameters();
     break;
@@ -222,95 +283,67 @@ void DeclInfo::fill() {
   case Decl::EnumConstant:
   case Decl::ObjCIvar:
   case Decl::ObjCAtDefsField:
+  case Decl::ObjCProperty: {
+    const TypeSourceInfo *TSI;
+    if (const auto *VD = dyn_cast<DeclaratorDecl>(CommentDecl))
+      TSI = VD->getTypeSourceInfo();
+    else if (const auto *PD = dyn_cast<ObjCPropertyDecl>(CommentDecl))
+      TSI = PD->getTypeSourceInfo();
+    else
+      TSI = nullptr;
+    if (TSI) {
+      TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
+      FunctionTypeLoc FTL;
+      if (getFunctionTypeLoc(TL, FTL)) {
+        ParamVars = FTL.getParams();
+        ReturnType = FTL.getReturnLoc().getType();
+      }
+    }
     Kind = VariableKind;
     break;
+  }
   case Decl::Namespace:
     Kind = NamespaceKind;
     break;
+  case Decl::TypeAlias:
   case Decl::Typedef: {
     Kind = TypedefKind;
-    // If this is a typedef to something we consider a function, extract
+    // If this is a typedef / using to something we consider a function, extract
     // arguments and return type.
-    const TypedefDecl *TD = cast<TypedefDecl>(CommentDecl);
-    const TypeSourceInfo *TSI = TD->getTypeSourceInfo();
+    const TypeSourceInfo *TSI =
+        K == Decl::Typedef
+            ? cast<TypedefDecl>(CommentDecl)->getTypeSourceInfo()
+            : cast<TypeAliasDecl>(CommentDecl)->getTypeSourceInfo();
     if (!TSI)
       break;
     TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
-    while (true) {
-      TL = TL.IgnoreParens();
-      // Look through qualified types.
-      if (QualifiedTypeLoc QualifiedTL = TL.getAs<QualifiedTypeLoc>()) {
-        TL = QualifiedTL.getUnqualifiedLoc();
-        continue;
-      }
-      // Look through pointer types.
-      if (PointerTypeLoc PointerTL = TL.getAs<PointerTypeLoc>()) {
-        TL = PointerTL.getPointeeLoc().getUnqualifiedLoc();
-        continue;
-      }
-      // Look through reference types.
-      if (ReferenceTypeLoc ReferenceTL = TL.getAs<ReferenceTypeLoc>()) {
-        TL = ReferenceTL.getPointeeLoc().getUnqualifiedLoc();
-        continue;
-      }
-      // Look through adjusted types.
-      if (AdjustedTypeLoc ATL = TL.getAs<AdjustedTypeLoc>()) {
-        TL = ATL.getOriginalLoc();
-        continue;
-      }
-      if (BlockPointerTypeLoc BlockPointerTL =
-              TL.getAs<BlockPointerTypeLoc>()) {
-        TL = BlockPointerTL.getPointeeLoc().getUnqualifiedLoc();
-        continue;
-      }
-      if (MemberPointerTypeLoc MemberPointerTL =
-              TL.getAs<MemberPointerTypeLoc>()) {
-        TL = MemberPointerTL.getPointeeLoc().getUnqualifiedLoc();
-        continue;
-      }
-      if (ElaboratedTypeLoc ETL = TL.getAs<ElaboratedTypeLoc>()) {
-        TL = ETL.getNamedTypeLoc();
-        continue;
-      }
-      // Is this a typedef for a function type?
-      if (FunctionTypeLoc FTL = TL.getAs<FunctionTypeLoc>()) {
-        Kind = FunctionKind;
-        ParamVars = FTL.getParams();
-        ReturnType = FTL.getReturnLoc().getType();
-        break;
-      }
-      if (TemplateSpecializationTypeLoc STL =
-              TL.getAs<TemplateSpecializationTypeLoc>()) {
-        // If we have a typedef to a template specialization with exactly one
-        // template argument of a function type, this looks like std::function,
-        // boost::function, or other function wrapper.  Treat these typedefs as
-        // functions.
-        if (STL.getNumArgs() != 1)
-          break;
-        TemplateArgumentLoc MaybeFunction = STL.getArgLoc(0);
-        if (MaybeFunction.getArgument().getKind() != TemplateArgument::Type)
-          break;
-        TypeSourceInfo *MaybeFunctionTSI = MaybeFunction.getTypeSourceInfo();
-        TypeLoc TL = MaybeFunctionTSI->getTypeLoc().getUnqualifiedLoc();
-        if (FunctionTypeLoc FTL = TL.getAs<FunctionTypeLoc>()) {
-          Kind = FunctionKind;
-          ParamVars = FTL.getParams();
-          ReturnType = FTL.getReturnLoc().getType();
-        }
-        break;
-      }
-      break;
+    FunctionTypeLoc FTL;
+    if (getFunctionTypeLoc(TL, FTL)) {
+      Kind = FunctionKind;
+      ParamVars = FTL.getParams();
+      ReturnType = FTL.getReturnLoc().getType();
     }
     break;
   }
-  case Decl::TypeAlias:
-    Kind = TypedefKind;
-    break;
   case Decl::TypeAliasTemplate: {
     const TypeAliasTemplateDecl *TAT = cast<TypeAliasTemplateDecl>(CommentDecl);
     Kind = TypedefKind;
     TemplateKind = Template;
     TemplateParameters = TAT->getTemplateParameters();
+    TypeAliasDecl *TAD = TAT->getTemplatedDecl();
+    if (!TAD)
+      break;
+
+    const TypeSourceInfo *TSI = TAD->getTypeSourceInfo();
+    if (!TSI)
+      break;
+    TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
+    FunctionTypeLoc FTL;
+    if (getFunctionTypeLoc(TL, FTL)) {
+      Kind = FunctionKind;
+      ParamVars = FTL.getParams();
+      ReturnType = FTL.getReturnLoc().getType();
+    }
     break;
   }
   case Decl::Enum:

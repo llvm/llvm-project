@@ -98,22 +98,22 @@ let hasSideEffects = 0, isCodeGenOnly = 1 in {
 def MOVZX32_NOREXrr8 : I<0xB6, MRMSrcReg,
                          (outs GR32_NOREX:$dst), (ins GR8_NOREX:$src),
                          "movz{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
-                         [], IIC_MOVZX>, TB, Sched<[WriteALU]>;
+                         [], IIC_MOVZX>, TB, OpSize32, Sched<[WriteALU]>;
 let mayLoad = 1 in
 def MOVZX32_NOREXrm8 : I<0xB6, MRMSrcMem,
                          (outs GR32_NOREX:$dst), (ins i8mem_NOREX:$src),
                          "movz{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
-                         [], IIC_MOVZX>, TB, Sched<[WriteALULd]>;
+                         [], IIC_MOVZX>, TB, OpSize32, Sched<[WriteALULd]>;
 
 def MOVSX32_NOREXrr8 : I<0xBE, MRMSrcReg,
                          (outs GR32_NOREX:$dst), (ins GR8_NOREX:$src),
                          "movs{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
-                         [], IIC_MOVSX>, TB, Sched<[WriteALU]>;
+                         [], IIC_MOVSX>, TB, OpSize32, Sched<[WriteALU]>;
 let mayLoad = 1 in
 def MOVSX32_NOREXrm8 : I<0xBE, MRMSrcMem,
                          (outs GR32_NOREX:$dst), (ins i8mem_NOREX:$src),
                          "movs{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
-                         [], IIC_MOVSX>, TB, Sched<[WriteALULd]>;
+                         [], IIC_MOVSX>, TB, OpSize32, Sched<[WriteALULd]>;
 }
 
 // MOVSX64rr8 always has a REX prefix and it has an 8-bit register
@@ -146,18 +146,22 @@ def MOVSX64rm32: RI<0x63, MRMSrcMem, (outs GR64:$dst), (ins i32mem:$src),
                     Sched<[WriteALULd]>, Requires<[In64BitMode]>;
 
 // movzbq and movzwq encodings for the disassembler
-def MOVZX64rr8_Q : RI<0xB6, MRMSrcReg, (outs GR64:$dst), (ins GR8:$src),
-                       "movz{bq|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVZX>,
-                       TB, Sched<[WriteALU]>;
-def MOVZX64rm8_Q : RI<0xB6, MRMSrcMem, (outs GR64:$dst), (ins i8mem:$src),
-                       "movz{bq|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVZX>,
-                       TB, Sched<[WriteALULd]>;
-def MOVZX64rr16_Q : RI<0xB7, MRMSrcReg, (outs GR64:$dst), (ins GR16:$src),
-                       "movz{wq|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVZX>,
-                       TB, Sched<[WriteALU]>;
-def MOVZX64rm16_Q : RI<0xB7, MRMSrcMem, (outs GR64:$dst), (ins i16mem:$src),
-                       "movz{wq|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVZX>,
-                       TB, Sched<[WriteALULd]>;
+let hasSideEffects = 0 in {
+def MOVZX64rr8 : RI<0xB6, MRMSrcReg, (outs GR64:$dst), (ins GR8:$src),
+                     "movz{bq|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVZX>,
+                     TB, Sched<[WriteALU]>;
+let mayLoad = 1 in
+def MOVZX64rm8 : RI<0xB6, MRMSrcMem, (outs GR64:$dst), (ins i8mem:$src),
+                     "movz{bq|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVZX>,
+                     TB, Sched<[WriteALULd]>;
+def MOVZX64rr16 : RI<0xB7, MRMSrcReg, (outs GR64:$dst), (ins GR16:$src),
+                     "movz{wq|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVZX>,
+                     TB, Sched<[WriteALU]>;
+let mayLoad = 1 in
+def MOVZX64rm16 : RI<0xB7, MRMSrcMem, (outs GR64:$dst), (ins i16mem:$src),
+                     "movz{wq|x}\t{$src, $dst|$dst, $src}", [], IIC_MOVZX>,
+                     TB, Sched<[WriteALULd]>;
+}
 
 // 64-bit zero-extension patterns use SUBREG_TO_REG and an operation writing a
 // 32-bit register.

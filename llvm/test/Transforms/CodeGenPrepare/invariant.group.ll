@@ -7,8 +7,8 @@ define void @foo() {
 enter:
   ; CHECK-NOT: !invariant.group
   ; CHECK-NOT: @llvm.invariant.group.barrier(
-  ; CHECK: %val = load i8, i8* @tmp
-  %val = load i8, i8* @tmp, !invariant.group !0
+  ; CHECK: %val = load i8, i8* @tmp, !tbaa
+  %val = load i8, i8* @tmp, !invariant.group !0, !tbaa !{!1, !1, i64 0}
   %ptr = call i8* @llvm.invariant.group.barrier(i8* @tmp)
   
   ; CHECK: store i8 42, i8* @tmp
@@ -21,3 +21,4 @@ enter:
 declare i8* @llvm.invariant.group.barrier(i8*)
 
 !0 = !{!"something"}
+!1 = !{!"x", !0}

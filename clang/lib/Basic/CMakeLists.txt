@@ -28,7 +28,7 @@ find_first_existing_vc_file(clang_vc "${CLANG_SOURCE_DIR}")
 # The VC revision include that we want to generate.
 set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/SVNVersion.inc")
 
-set(get_svn_script "${LLVM_MAIN_SRC_DIR}/cmake/modules/GetSVN.cmake")
+set(get_svn_script "${LLVM_CMAKE_PATH}/GetSVN.cmake")
 
 if(DEFINED llvm_vc AND DEFINED clang_vc)
   # Create custom target to generate the VC revision include.
@@ -53,12 +53,20 @@ if(DEFINED llvm_vc AND DEFINED clang_vc)
 else()
   # Not producing a VC revision include.
   set(version_inc)
+
+  # Being able to force-set the SVN revision in cases where it isn't available
+  # is useful for performance tracking, and matches compatibility from autoconf.
+  if(SVN_REVISION)
+    set_source_files_properties(Version.cpp
+      PROPERTIES COMPILE_DEFINITIONS "SVN_REVISION=\"${SVN_REVISION}\"")
+  endif()
 endif()
 
 add_clang_library(clangBasic
   Attributes.cpp
   Builtins.cpp
   CharInfo.cpp
+  Cuda.cpp
   Diagnostic.cpp
   DiagnosticIDs.cpp
   DiagnosticOptions.cpp
@@ -66,6 +74,7 @@ add_clang_library(clangBasic
   FileSystemStatCache.cpp
   IdentifierTable.cpp
   LangOptions.cpp
+  MemoryBufferCache.cpp
   Module.cpp
   ObjCRuntime.cpp
   OpenMPKinds.cpp
@@ -74,6 +83,7 @@ add_clang_library(clangBasic
   Sanitizers.cpp
   SourceLocation.cpp
   SourceManager.cpp
+  SourceMgrAdapter.cpp
   TargetInfo.cpp
   Targets.cpp
   TokenKinds.cpp

@@ -396,7 +396,7 @@ define <16 x i8> @test_vpkshs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
 define <16 x i8> @test_vpkshs_all_store(<8 x i16> %a, <8 x i16> %b, i32 *%ptr) {
 ; CHECK-LABEL: test_vpkshs_all_store:
 ; CHECK: vpkshs %v24, %v24, %v26
-; CHECK-NEXT: {{jno|jle}} {{\.L*}}
+; CHECK-NEXT: {{bnor|bler}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<16 x i8>, i32} @llvm.s390.vpkshs(<8 x i16> %a, <8 x i16> %b)
@@ -432,7 +432,7 @@ define <8 x i16> @test_vpksfs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
 define <8 x i16> @test_vpksfs_any_store(<4 x i32> %a, <4 x i32> %b, i32 *%ptr) {
 ; CHECK-LABEL: test_vpksfs_any_store:
 ; CHECK: vpksfs %v24, %v24, %v26
-; CHECK-NEXT: {{jhe|je}} {{\.L*}}
+; CHECK-NEXT: {{bher|ber}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<8 x i16>, i32} @llvm.s390.vpksfs(<4 x i32> %a, <4 x i32> %b)
@@ -469,7 +469,7 @@ define <4 x i32> @test_vpksgs_none_store(<2 x i64> %a, <2 x i64> %b,
                                          i32 *%ptr) {
 ; CHECK-LABEL: test_vpksgs_none_store:
 ; CHECK: vpksgs %v24, %v24, %v26
-; CHECK-NEXT: {{jnhe|jne}} {{\.L*}}
+; CHECK-NEXT: {{bnher|bner}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<4 x i32>, i32} @llvm.s390.vpksgs(<2 x i64> %a, <2 x i64> %b)
@@ -533,7 +533,7 @@ define <16 x i8> @test_vpklshs_all_store(<8 x i16> %a, <8 x i16> %b,
                                          i32 *%ptr) {
 ; CHECK-LABEL: test_vpklshs_all_store:
 ; CHECK: vpklshs %v24, %v24, %v26
-; CHECK-NEXT: {{jno|jle}} {{\.L*}}
+; CHECK-NEXT: {{bnor|bler}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<16 x i8>, i32} @llvm.s390.vpklshs(<8 x i16> %a, <8 x i16> %b)
@@ -570,7 +570,7 @@ define <8 x i16> @test_vpklsfs_any_store(<4 x i32> %a, <4 x i32> %b,
                                          i32 *%ptr) {
 ; CHECK-LABEL: test_vpklsfs_any_store:
 ; CHECK: vpklsfs %v24, %v24, %v26
-; CHECK-NEXT: {{jhe|je}} {{\.L*}}
+; CHECK-NEXT: {{bher|ber}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<8 x i16>, i32} @llvm.s390.vpklsfs(<4 x i32> %a, <4 x i32> %b)
@@ -607,7 +607,7 @@ define <4 x i32> @test_vpklsgs_none_store(<2 x i64> %a, <2 x i64> %b,
                                           i32 *%ptr) {
 ; CHECK-LABEL: test_vpklsgs_none_store:
 ; CHECK: vpklsgs %v24, %v24, %v26
-; CHECK-NEXT: {{jnhe|jne}} {{\.L*}}
+; CHECK-NEXT: {{bnher|bner}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<4 x i32>, i32} @llvm.s390.vpklsgs(<2 x i64> %a, <2 x i64> %b)
@@ -1705,7 +1705,7 @@ define void @test_vtm_all_store(<16 x i8> %a, <16 x i8> %b, i32 *%ptr) {
 ; CHECK-LABEL: test_vtm_all_store:
 ; CHECK-NOT: %r
 ; CHECK: vtm %v24, %v26
-; CHECK-NEXT: {{jno|jle}} {{\.L*}}
+; CHECK-NEXT: {{bnor|bler}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %res = call i32 @llvm.s390.vtm(<16 x i8> %a, <16 x i8> %b)
@@ -1752,7 +1752,7 @@ define <16 x i8> @test_vceqbs_any_store(<16 x i8> %a, <16 x i8> %b, i32 *%ptr) {
 ; CHECK-LABEL: test_vceqbs_any_store:
 ; CHECK-NOT: %r
 ; CHECK: vceqbs %v24, %v24, %v26
-; CHECK-NEXT: {{jo|jnle}} {{\.L*}}
+; CHECK-NEXT: {{bor|bnler}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<16 x i8>, i32} @llvm.s390.vceqbs(<16 x i8> %a, <16 x i8> %b)
@@ -1801,7 +1801,7 @@ define <8 x i16> @test_vceqhs_notall_store(<8 x i16> %a, <8 x i16> %b,
 ; CHECK-LABEL: test_vceqhs_notall_store:
 ; CHECK-NOT: %r
 ; CHECK: vceqhs %v24, %v24, %v26
-; CHECK-NEXT: {{jhe|je}} {{\.L*}}
+; CHECK-NEXT: {{bher|ber}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<8 x i16>, i32} @llvm.s390.vceqhs(<8 x i16> %a, <8 x i16> %b)
@@ -1850,7 +1850,7 @@ define <4 x i32> @test_vceqfs_none_store(<4 x i32> %a, <4 x i32> %b,
 ; CHECK-LABEL: test_vceqfs_none_store:
 ; CHECK-NOT: %r
 ; CHECK: vceqfs %v24, %v24, %v26
-; CHECK-NEXT: {{jno|jle}} {{\.L*}}
+; CHECK-NEXT: {{bnor|bler}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<4 x i32>, i32} @llvm.s390.vceqfs(<4 x i32> %a, <4 x i32> %b)
@@ -1899,7 +1899,7 @@ define <2 x i64> @test_vceqgs_all_store(<2 x i64> %a, <2 x i64> %b, i32 *%ptr) {
 ; CHECK-LABEL: test_vceqgs_all_store:
 ; CHECK-NOT: %r
 ; CHECK: vceqgs %v24, %v24, %v26
-; CHECK-NEXT: {{jnhe|jne}} {{\.L*}}
+; CHECK-NEXT: {{bnher|bner}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<2 x i64>, i32} @llvm.s390.vceqgs(<2 x i64> %a, <2 x i64> %b)
@@ -1948,7 +1948,7 @@ define <16 x i8> @test_vchbs_any_store(<16 x i8> %a, <16 x i8> %b, i32 *%ptr) {
 ; CHECK-LABEL: test_vchbs_any_store:
 ; CHECK-NOT: %r
 ; CHECK: vchbs %v24, %v24, %v26
-; CHECK-NEXT: {{jo|jnle}} {{\.L*}}
+; CHECK-NEXT: {{bor|bnler}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<16 x i8>, i32} @llvm.s390.vchbs(<16 x i8> %a, <16 x i8> %b)
@@ -1997,7 +1997,7 @@ define <8 x i16> @test_vchhs_notall_store(<8 x i16> %a, <8 x i16> %b,
 ; CHECK-LABEL: test_vchhs_notall_store:
 ; CHECK-NOT: %r
 ; CHECK: vchhs %v24, %v24, %v26
-; CHECK-NEXT: {{jhe|je}} {{\.L*}}
+; CHECK-NEXT: {{bher|ber}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<8 x i16>, i32} @llvm.s390.vchhs(<8 x i16> %a, <8 x i16> %b)
@@ -2045,7 +2045,7 @@ define <4 x i32> @test_vchfs_none_store(<4 x i32> %a, <4 x i32> %b, i32 *%ptr) {
 ; CHECK-LABEL: test_vchfs_none_store:
 ; CHECK-NOT: %r
 ; CHECK: vchfs %v24, %v24, %v26
-; CHECK-NEXT: {{jno|jle}} {{\.L*}}
+; CHECK-NEXT: {{bnor|bler}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<4 x i32>, i32} @llvm.s390.vchfs(<4 x i32> %a, <4 x i32> %b)
@@ -2094,7 +2094,7 @@ define <2 x i64> @test_vchgs_all_store(<2 x i64> %a, <2 x i64> %b, i32 *%ptr) {
 ; CHECK-LABEL: test_vchgs_all_store:
 ; CHECK-NOT: %r
 ; CHECK: vchgs %v24, %v24, %v26
-; CHECK-NEXT: {{jnhe|jne}} {{\.L*}}
+; CHECK-NEXT: {{bnher|bner}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<2 x i64>, i32} @llvm.s390.vchgs(<2 x i64> %a, <2 x i64> %b)
@@ -2143,7 +2143,7 @@ define <16 x i8> @test_vchlbs_any_store(<16 x i8> %a, <16 x i8> %b, i32 *%ptr) {
 ; CHECK-LABEL: test_vchlbs_any_store:
 ; CHECK-NOT: %r
 ; CHECK: vchlbs %v24, %v24, %v26
-; CHECK-NEXT: {{jo|jnle}} {{\.L*}}
+; CHECK-NEXT: {{bor|bnler}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<16 x i8>, i32} @llvm.s390.vchlbs(<16 x i8> %a, <16 x i8> %b)
@@ -2192,7 +2192,7 @@ define <8 x i16> @test_vchlhs_notall_store(<8 x i16> %a, <8 x i16> %b,
 ; CHECK-LABEL: test_vchlhs_notall_store:
 ; CHECK-NOT: %r
 ; CHECK: vchlhs %v24, %v24, %v26
-; CHECK-NEXT: {{jhe|je}} {{\.L*}}
+; CHECK-NEXT: {{bher|ber}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<8 x i16>, i32} @llvm.s390.vchlhs(<8 x i16> %a, <8 x i16> %b)
@@ -2241,7 +2241,7 @@ define <4 x i32> @test_vchlfs_none_store(<4 x i32> %a, <4 x i32> %b,
 ; CHECK-LABEL: test_vchlfs_none_store:
 ; CHECK-NOT: %r
 ; CHECK: vchlfs %v24, %v24, %v26
-; CHECK-NEXT: {{jno|jle}} {{\.L*}}
+; CHECK-NEXT: {{bnor|bler}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<4 x i32>, i32} @llvm.s390.vchlfs(<4 x i32> %a, <4 x i32> %b)
@@ -2290,7 +2290,7 @@ define <2 x i64> @test_vchlgs_all_store(<2 x i64> %a, <2 x i64> %b, i32 *%ptr) {
 ; CHECK-LABEL: test_vchlgs_all_store:
 ; CHECK-NOT: %r
 ; CHECK: vchlgs %v24, %v24, %v26
-; CHECK-NEXT: {{jnhe|jne}} {{\.L*}}
+; CHECK-NEXT: {{bnher|bner}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<2 x i64>, i32} @llvm.s390.vchlgs(<2 x i64> %a, <2 x i64> %b)
@@ -3166,7 +3166,7 @@ define <2 x i64> @test_vfcedbs_any_store(<2 x double> %a, <2 x double> %b,
 ; CHECK-LABEL: test_vfcedbs_any_store:
 ; CHECK-NOT: %r
 ; CHECK: vfcedbs %v24, %v24, %v26
-; CHECK-NEXT: {{jo|jnle}} {{\.L*}}
+; CHECK-NEXT: {{bor|bnler}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<2 x i64>, i32} @llvm.s390.vfcedbs(<2 x double> %a,
@@ -3218,7 +3218,7 @@ define <2 x i64> @test_vfchdbs_notall_store(<2 x double> %a, <2 x double> %b,
 ; CHECK-LABEL: test_vfchdbs_notall_store:
 ; CHECK-NOT: %r
 ; CHECK: vfchdbs %v24, %v24, %v26
-; CHECK-NEXT: {{jhe|je}} {{\.L*}}
+; CHECK-NEXT: {{bher|ber}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<2 x i64>, i32} @llvm.s390.vfchdbs(<2 x double> %a,
@@ -3270,7 +3270,7 @@ define <2 x i64> @test_vfchedbs_none_store(<2 x double> %a, <2 x double> %b,
 ; CHECK-LABEL: test_vfchedbs_none_store:
 ; CHECK-NOT: %r
 ; CHECK: vfchedbs %v24, %v24, %v26
-; CHECK-NEXT: {{jno|jle}} {{\.L*}}
+; CHECK-NEXT: {{bnor|bler}} %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %call = call {<2 x i64>, i32} @llvm.s390.vfchedbs(<2 x double> %a,

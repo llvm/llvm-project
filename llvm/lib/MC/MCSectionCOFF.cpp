@@ -64,6 +64,9 @@ void MCSectionCOFF::PrintSwitchToSection(const MCAsmInfo &MAI,
     OS << 'n';
   if (getCharacteristics() & COFF::IMAGE_SCN_MEM_SHARED)
     OS << 's';
+  if ((getCharacteristics() & COFF::IMAGE_SCN_MEM_DISCARDABLE) &&
+      !isImplicitlyDiscardable(SectionName))
+    OS << 'D';
   OS << '"';
 
   if (getCharacteristics() & COFF::IMAGE_SCN_LNK_COMDAT) {

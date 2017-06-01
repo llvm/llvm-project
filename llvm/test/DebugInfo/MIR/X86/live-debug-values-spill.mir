@@ -1,0 +1,468 @@
+# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck -check-prefix=GENERATE %s
+# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck -check-prefix=TERMINATE %s
+# 
+# Check that spills are recognized in the Live Debug Values pass and that
+# DBG_VALUE instructions are generated to keep track of spilled user
+# variables.  
+# In addition we check that the ranges of spilled debug values are properly
+# extended.
+#
+# Test case generated from:
+#
+# extern void use (int);
+# extern void set (int *, int *, int *);
+# 
+# int glob0, glob1, glob2, glob3, glob4, glob5;
+# 
+# void foo(int b0, int b1, int int0, int int1, int int2,
+#          int int3, int int4)
+# {
+#   int inta = glob0;
+#   int intb = glob1;
+#   int intc = glob2;
+#   int intd = glob3;
+#   int inte = glob4;
+#   int intf = glob5;
+#   int intg;
+# 
+#   if (b0)
+#     return;
+# 
+#   int0 += (int1 + int2 + int3) * int4;
+#   use(intf);
+#   use(inte);
+# 
+#   if (b1) {
+#     set(&inte, &intf, &intg);
+#     int0 = (int1 + int2 + int3) * int4;
+#     inta = (intb*inte + intc*inte + intd) * inte;
+#   }
+#   int0 += int4 * inta;
+#   use(int0);
+# }
+#
+#
+# Generated with 
+# clang -g -O2 -S -emit-llvm -fno-omit-frame-pointer spill1.c
+# llc -stop-after=funclet-layout < spill1.ll > spill1.mir                
+#
+# Make sure that we generated DBG_VALUE instructions for the spills
+# GENERATE:      bb.1.if.end:
+# GENERATE:      MOV32mr %rbp, 1, _, -48, _, killed %edx :: (store 4 into %stack.5)
+# GENERATE-NEXT: DBG_VALUE debug-use %rbp, -48, !26, !38
+# GENERATE:      MOV32mr %rbp, 1, _, -52, _, killed %r8d :: (store 4 into %stack.4)
+# GENERATE-NEXT: DBG_VALUE debug-use %rbp, -52, !32, !38
+# GENERATE:      MOV32mr %rbp, 1, _, -56, _, killed %esi :: (store 4 into %stack.3)
+# GENERATE-NEXT: DBG_VALUE debug-use %rbp, -56, !34, !38
+#
+# Check that the spill locations that are valid at the end of bb.1.if.end are
+# propagated to subsequent BBs.
+#
+# GENERATE:      bb.2.if.then4:
+# GENERATE-NOT:  bb.3:
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -56, !34, !38
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -52, !32, !38
+#
+# GENERATE:      bb.3:
+# GENERATE-NOT:  bb.4.if.end13:
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -56, !34, !38
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -52, !32, !38
+#
+# GENERATE:      bb.4.if.end13:
+# GENERATE-NOT:  bb.5.cleanup:
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -56, !34, !38
+# GENERATE-DAG:  DBG_VALUE debug-use %rbp, -52, !32, !38
+# 
+# Check that the spill location rbp-48 (the variable int0) is not propagated 
+# because int0 is redefined within the same basic block.
+#
+# TERMINATE:     bb.2.if.then4:
+# TERMINATE-NOT: DBG_VALUE debug-use %rbp, -48, !26, !38
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "spill1.c"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  @glob0 = common local_unnamed_addr global i32 0, align 4, !dbg !0
+  @glob1 = common local_unnamed_addr global i32 0, align 4, !dbg !6
+  @glob2 = common local_unnamed_addr global i32 0, align 4, !dbg !9
+  @glob3 = common local_unnamed_addr global i32 0, align 4, !dbg !11
+  @glob4 = common local_unnamed_addr global i32 0, align 4, !dbg !13
+  @glob5 = common local_unnamed_addr global i32 0, align 4, !dbg !15
+  
+  ; Function Attrs: nounwind uwtable
+  define void @foo(i32 %b0, i32 %b1, i32 %int0, i32 %int1, i32 %int2, i32 %int3, i32 %int4) local_unnamed_addr #0 !dbg !20 {
+  entry:
+    %inte = alloca i32, align 4
+    %intf = alloca i32, align 4
+    %intg = alloca i32, align 4
+    tail call void @llvm.dbg.value(metadata i32 %b0, i64 0, metadata !24, metadata !38), !dbg !39
+    tail call void @llvm.dbg.value(metadata i32 %b1, i64 0, metadata !25, metadata !38), !dbg !40
+    tail call void @llvm.dbg.value(metadata i32 %int0, i64 0, metadata !26, metadata !38), !dbg !41
+    tail call void @llvm.dbg.value(metadata i32 %int1, i64 0, metadata !27, metadata !38), !dbg !42
+    tail call void @llvm.dbg.value(metadata i32 %int2, i64 0, metadata !28, metadata !38), !dbg !43
+    tail call void @llvm.dbg.value(metadata i32 %int3, i64 0, metadata !29, metadata !38), !dbg !44
+    tail call void @llvm.dbg.value(metadata i32 %int4, i64 0, metadata !30, metadata !38), !dbg !45
+    %0 = load i32, i32* @glob0, align 4, !dbg !46, !tbaa !47
+    tail call void @llvm.dbg.value(metadata i32 %0, i64 0, metadata !31, metadata !38), !dbg !51
+    %1 = load i32, i32* @glob1, align 4, !dbg !52, !tbaa !47
+    tail call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !32, metadata !38), !dbg !53
+    %2 = load i32, i32* @glob2, align 4, !dbg !54, !tbaa !47
+    tail call void @llvm.dbg.value(metadata i32 %2, i64 0, metadata !33, metadata !38), !dbg !55
+    %3 = load i32, i32* @glob3, align 4, !dbg !56, !tbaa !47
+    tail call void @llvm.dbg.value(metadata i32 %3, i64 0, metadata !34, metadata !38), !dbg !57
+    %4 = bitcast i32* %inte to i8*, !dbg !58
+    call void @llvm.lifetime.start(i64 4, i8* nonnull %4) #4, !dbg !58
+    %5 = load i32, i32* @glob4, align 4, !dbg !59, !tbaa !47
+    tail call void @llvm.dbg.value(metadata i32 %5, i64 0, metadata !35, metadata !38), !dbg !60
+    tail call void @llvm.dbg.value(metadata i32 %5, i64 0, metadata !35, metadata !38), !dbg !60
+    store i32 %5, i32* %inte, align 4, !dbg !60, !tbaa !47
+    %6 = bitcast i32* %intf to i8*, !dbg !61
+    call void @llvm.lifetime.start(i64 4, i8* nonnull %6) #4, !dbg !61
+    %7 = load i32, i32* @glob5, align 4, !dbg !62, !tbaa !47
+    tail call void @llvm.dbg.value(metadata i32 %7, i64 0, metadata !36, metadata !38), !dbg !63
+    tail call void @llvm.dbg.value(metadata i32 %7, i64 0, metadata !36, metadata !38), !dbg !63
+    store i32 %7, i32* %intf, align 4, !dbg !63, !tbaa !47
+    %8 = bitcast i32* %intg to i8*, !dbg !64
+    call void @llvm.lifetime.start(i64 4, i8* nonnull %8) #4, !dbg !64
+    %tobool = icmp eq i32 %b0, 0, !dbg !65
+    br i1 %tobool, label %if.end, label %cleanup, !dbg !67
+  
+  if.end:                                           ; preds = %entry
+    %add = add nsw i32 %int2, %int1, !dbg !68
+    %add1 = add nsw i32 %add, %int3, !dbg !69
+    %mul = mul nsw i32 %add1, %int4, !dbg !70
+    call void @llvm.dbg.value(metadata i32 %mul, i64 0, metadata !26, metadata !38), !dbg !41
+    %add2 = add nsw i32 %mul, %int0, !dbg !71
+    tail call void @llvm.dbg.value(metadata i32 %add2, i64 0, metadata !26, metadata !38), !dbg !41
+    tail call void @use(i32 %7) #4, !dbg !72
+    tail call void @use(i32 %5) #4, !dbg !73
+    %tobool3 = icmp eq i32 %b1, 0, !dbg !74
+    br i1 %tobool3, label %if.end13, label %if.then4, !dbg !76
+  
+  if.then4:                                         ; preds = %if.end
+    tail call void @llvm.dbg.value(metadata i32* %inte, i64 0, metadata !35, metadata !77), !dbg !60
+    tail call void @llvm.dbg.value(metadata i32* %intf, i64 0, metadata !36, metadata !77), !dbg !63
+    tail call void @llvm.dbg.value(metadata i32* %intg, i64 0, metadata !37, metadata !77), !dbg !78
+    call void @set(i32* nonnull %inte, i32* nonnull %intf, i32* nonnull %intg) #4, !dbg !79
+    %9 = load i32, i32* %inte, align 4, !dbg !81, !tbaa !47
+    call void @llvm.dbg.value(metadata i32 %9, i64 0, metadata !35, metadata !38), !dbg !60
+    %mul833 = add i32 %2, %1, !dbg !82
+    %add10 = mul i32 %9, %mul833, !dbg !82
+    %add11 = add nsw i32 %add10, %3, !dbg !83
+    %mul12 = mul nsw i32 %add11, %9, !dbg !84
+    call void @llvm.dbg.value(metadata i32 %mul12, i64 0, metadata !31, metadata !38), !dbg !51
+    br label %if.end13, !dbg !85
+  
+  if.end13:                                         ; preds = %if.then4, %if.end
+    %inta.0 = phi i32 [ %mul12, %if.then4 ], [ %0, %if.end ]
+    %int0.addr.0 = phi i32 [ %mul, %if.then4 ], [ %add2, %if.end ]
+    call void @llvm.dbg.value(metadata i32 %inta.0, i64 0, metadata !31, metadata !38), !dbg !51
+    call void @llvm.dbg.value(metadata i32 %int0.addr.0, i64 0, metadata !26, metadata !38), !dbg !41
+    %mul14 = mul nsw i32 %inta.0, %int4, !dbg !86
+    %add15 = add nsw i32 %int0.addr.0, %mul14, !dbg !87
+    call void @llvm.dbg.value(metadata i32 %add15, i64 0, metadata !26, metadata !38), !dbg !41
+    call void @use(i32 %add15) #4, !dbg !88
+    br label %cleanup, !dbg !89
+  
+  cleanup:                                          ; preds = %if.end13, %entry
+    %10 = bitcast i32* %intg to i8*
+    %11 = bitcast i32* %intf to i8*
+    %12 = bitcast i32* %inte to i8*
+    call void @llvm.lifetime.end(i64 4, i8* nonnull %10) #4, !dbg !89
+    call void @llvm.lifetime.end(i64 4, i8* nonnull %11) #4, !dbg !89
+    call void @llvm.lifetime.end(i64 4, i8* nonnull %12) #4, !dbg !89
+    ret void, !dbg !90
+  }
+  
+  ; Function Attrs: argmemonly nounwind
+  declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+  
+  declare void @use(i32) local_unnamed_addr #2
+  
+  declare void @set(i32*, i32*, i32*) local_unnamed_addr #2
+  
+  ; Function Attrs: argmemonly nounwind
+  declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+  
+  ; Function Attrs: nounwind readnone
+  declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #3
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #4
+  
+  attributes #0 = { nounwind uwtable "no-frame-pointer-elim-non-leaf" }
+  attributes #1 = { argmemonly nounwind }
+  attributes #2 = { "no-frame-pointer-elim-non-leaf" }
+  attributes #3 = { nounwind readnone }
+  attributes #4 = { nounwind }
+  
+  !llvm.dbg.cu = !{!2}
+  !llvm.module.flags = !{!17, !18}
+  !llvm.ident = !{!19}
+  
+  !0 = !DIGlobalVariableExpression(var: !1)
+  !1 = distinct !DIGlobalVariable(name: "glob0", scope: !2, file: !3, line: 4, type: !8, isLocal: false, isDefinition: true)
+  !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 5.0.0 (trunk 292962)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+  !3 = !DIFile(filename: "spill1.c", directory: "/home/test")
+  !4 = !{}
+  !5 = !{!0, !6, !9, !11, !13, !15}
+  !6 = !DIGlobalVariableExpression(var: !7)
+  !7 = distinct !DIGlobalVariable(name: "glob1", scope: !2, file: !3, line: 4, type: !8, isLocal: false, isDefinition: true)
+  !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !9 = !DIGlobalVariableExpression(var: !10)
+  !10 = distinct !DIGlobalVariable(name: "glob2", scope: !2, file: !3, line: 4, type: !8, isLocal: false, isDefinition: true)
+  !11 = !DIGlobalVariableExpression(var: !12)
+  !12 = distinct !DIGlobalVariable(name: "glob3", scope: !2, file: !3, line: 4, type: !8, isLocal: false, isDefinition: true)
+  !13 = !DIGlobalVariableExpression(var: !14)
+  !14 = distinct !DIGlobalVariable(name: "glob4", scope: !2, file: !3, line: 4, type: !8, isLocal: false, isDefinition: true)
+  !15 = !DIGlobalVariableExpression(var: !16)
+  !16 = distinct !DIGlobalVariable(name: "glob5", scope: !2, file: !3, line: 4, type: !8, isLocal: false, isDefinition: true)
+  !17 = !{i32 2, !"Dwarf Version", i32 4}
+  !18 = !{i32 2, !"Debug Info Version", i32 3}
+  !19 = !{!"clang version 5.0.0 (trunk 292962)"}
+  !20 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 6, type: !21, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !2, variables: !23)
+  !21 = !DISubroutineType(types: !22)
+  !22 = !{null, !8, !8, !8, !8, !8, !8, !8}
+  !23 = !{!24, !25, !26, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37}
+  !24 = !DILocalVariable(name: "b0", arg: 1, scope: !20, file: !3, line: 6, type: !8)
+  !25 = !DILocalVariable(name: "b1", arg: 2, scope: !20, file: !3, line: 6, type: !8)
+  !26 = !DILocalVariable(name: "int0", arg: 3, scope: !20, file: !3, line: 6, type: !8)
+  !27 = !DILocalVariable(name: "int1", arg: 4, scope: !20, file: !3, line: 6, type: !8)
+  !28 = !DILocalVariable(name: "int2", arg: 5, scope: !20, file: !3, line: 6, type: !8)
+  !29 = !DILocalVariable(name: "int3", arg: 6, scope: !20, file: !3, line: 7, type: !8)
+  !30 = !DILocalVariable(name: "int4", arg: 7, scope: !20, file: !3, line: 7, type: !8)
+  !31 = !DILocalVariable(name: "inta", scope: !20, file: !3, line: 9, type: !8)
+  !32 = !DILocalVariable(name: "intb", scope: !20, file: !3, line: 10, type: !8)
+  !33 = !DILocalVariable(name: "intc", scope: !20, file: !3, line: 11, type: !8)
+  !34 = !DILocalVariable(name: "intd", scope: !20, file: !3, line: 12, type: !8)
+  !35 = !DILocalVariable(name: "inte", scope: !20, file: !3, line: 13, type: !8)
+  !36 = !DILocalVariable(name: "intf", scope: !20, file: !3, line: 14, type: !8)
+  !37 = !DILocalVariable(name: "intg", scope: !20, file: !3, line: 15, type: !8)
+  !38 = !DIExpression()
+  !39 = !DILocation(line: 6, column: 14, scope: !20)
+  !40 = !DILocation(line: 6, column: 22, scope: !20)
+  !41 = !DILocation(line: 6, column: 30, scope: !20)
+  !42 = !DILocation(line: 6, column: 40, scope: !20)
+  !43 = !DILocation(line: 6, column: 50, scope: !20)
+  !44 = !DILocation(line: 7, column: 14, scope: !20)
+  !45 = !DILocation(line: 7, column: 24, scope: !20)
+  !46 = !DILocation(line: 9, column: 14, scope: !20)
+  !47 = !{!48, !48, i64 0}
+  !48 = !{!"int", !49, i64 0}
+  !49 = !{!"omnipotent char", !50, i64 0}
+  !50 = !{!"Simple C/C++ TBAA"}
+  !51 = !DILocation(line: 9, column: 7, scope: !20)
+  !52 = !DILocation(line: 10, column: 14, scope: !20)
+  !53 = !DILocation(line: 10, column: 7, scope: !20)
+  !54 = !DILocation(line: 11, column: 14, scope: !20)
+  !55 = !DILocation(line: 11, column: 7, scope: !20)
+  !56 = !DILocation(line: 12, column: 14, scope: !20)
+  !57 = !DILocation(line: 12, column: 7, scope: !20)
+  !58 = !DILocation(line: 13, column: 3, scope: !20)
+  !59 = !DILocation(line: 13, column: 14, scope: !20)
+  !60 = !DILocation(line: 13, column: 7, scope: !20)
+  !61 = !DILocation(line: 14, column: 3, scope: !20)
+  !62 = !DILocation(line: 14, column: 14, scope: !20)
+  !63 = !DILocation(line: 14, column: 7, scope: !20)
+  !64 = !DILocation(line: 15, column: 3, scope: !20)
+  !65 = !DILocation(line: 17, column: 7, scope: !66)
+  !66 = distinct !DILexicalBlock(scope: !20, file: !3, line: 17, column: 7)
+  !67 = !DILocation(line: 17, column: 7, scope: !20)
+  !68 = !DILocation(line: 20, column: 17, scope: !20)
+  !69 = !DILocation(line: 20, column: 24, scope: !20)
+  !70 = !DILocation(line: 20, column: 32, scope: !20)
+  !71 = !DILocation(line: 20, column: 8, scope: !20)
+  !72 = !DILocation(line: 21, column: 3, scope: !20)
+  !73 = !DILocation(line: 22, column: 3, scope: !20)
+  !74 = !DILocation(line: 24, column: 7, scope: !75)
+  !75 = distinct !DILexicalBlock(scope: !20, file: !3, line: 24, column: 7)
+  !76 = !DILocation(line: 24, column: 7, scope: !20)
+  !77 = !DIExpression(DW_OP_deref)
+  !78 = !DILocation(line: 15, column: 7, scope: !20)
+  !79 = !DILocation(line: 25, column: 5, scope: !80)
+  !80 = distinct !DILexicalBlock(scope: !75, file: !3, line: 24, column: 11)
+  !81 = !DILocation(line: 27, column: 18, scope: !80)
+  !82 = !DILocation(line: 27, column: 23, scope: !80)
+  !83 = !DILocation(line: 27, column: 35, scope: !80)
+  !84 = !DILocation(line: 27, column: 43, scope: !80)
+  !85 = !DILocation(line: 28, column: 3, scope: !80)
+  !86 = !DILocation(line: 29, column: 16, scope: !20)
+  !87 = !DILocation(line: 29, column: 8, scope: !20)
+  !88 = !DILocation(line: 30, column: 3, scope: !20)
+  !89 = !DILocation(line: 31, column: 1, scope: !20)
+  !90 = !DILocation(line: 31, column: 1, scope: !91)
+  !91 = !DILexicalBlockFile(scope: !20, file: !3, discriminator: 2)
+
+...
+---
+name:            foo
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:         
+  - { reg: '%edi' }
+  - { reg: '%esi' }
+  - { reg: '%edx' }
+  - { reg: '%ecx' }
+  - { reg: '%r8d' }
+  - { reg: '%r9d' }
+calleeSavedRegisters: [ '%bh', '%bl', '%bp', '%bpl', '%bx', '%ebp', '%ebx', 
+                        '%rbp', '%rbx', '%r12', '%r13', '%r14', '%r15', 
+                        '%r12b', '%r13b', '%r14b', '%r15b', '%r12d', '%r13d', 
+                        '%r14d', '%r15d', '%r12w', '%r13w', '%r14w', '%r15w' ]
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       72
+  offsetAdjustment: -24
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+fixedStack:      
+  - { id: 0, type: spill-slot, offset: -56, size: 8, alignment: 8, callee-saved-register: '%rbx' }
+  - { id: 1, type: spill-slot, offset: -48, size: 8, alignment: 16, callee-saved-register: '%r12' }
+  - { id: 2, type: spill-slot, offset: -40, size: 8, alignment: 8, callee-saved-register: '%r13' }
+  - { id: 3, type: spill-slot, offset: -32, size: 8, alignment: 16, callee-saved-register: '%r14' }
+  - { id: 4, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '%r15' }
+  - { id: 5, type: spill-slot, offset: -16, size: 8, alignment: 16 }
+  - { id: 6, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
+stack:           
+  - { id: 0, name: inte, offset: -60, size: 4, alignment: 4 }
+  - { id: 1, name: intf, offset: -76, size: 4, alignment: 4 }
+  - { id: 2, name: intg, offset: -80, size: 4, alignment: 4 }
+  - { id: 3, type: spill-slot, offset: -72, size: 4, alignment: 4 }
+  - { id: 4, type: spill-slot, offset: -68, size: 4, alignment: 4 }
+  - { id: 5, type: spill-slot, offset: -64, size: 4, alignment: 4 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1.if.end(0x30000000), %bb.5.cleanup(0x50000000)
+    liveins: %ecx, %edi, %edx, %esi, %r8d, %r9d, %r15, %r14, %r13, %r12, %rbx, %rbp
+  
+    frame-setup PUSH64r killed %rbp, implicit-def %rsp, implicit %rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset %rbp, -16
+    %rbp = frame-setup MOV64rr %rsp
+    CFI_INSTRUCTION def_cfa_register %rbp
+    frame-setup PUSH64r killed %r15, implicit-def %rsp, implicit %rsp
+    frame-setup PUSH64r killed %r14, implicit-def %rsp, implicit %rsp
+    frame-setup PUSH64r killed %r13, implicit-def %rsp, implicit %rsp
+    frame-setup PUSH64r killed %r12, implicit-def %rsp, implicit %rsp
+    frame-setup PUSH64r killed %rbx, implicit-def %rsp, implicit %rsp
+    %rsp = frame-setup SUB64ri8 %rsp, 24, implicit-def dead %eflags
+    CFI_INSTRUCTION offset %rbx, -56
+    CFI_INSTRUCTION offset %r12, -48
+    CFI_INSTRUCTION offset %r13, -40
+    CFI_INSTRUCTION offset %r14, -32
+    CFI_INSTRUCTION offset %r15, -24
+    DBG_VALUE debug-use %edi, debug-use _, !24, !38, debug-location !39
+    DBG_VALUE debug-use %esi, debug-use _, !25, !38, debug-location !40
+    DBG_VALUE debug-use %edx, debug-use _, !26, !38, debug-location !41
+    DBG_VALUE debug-use %ecx, debug-use _, !27, !38, debug-location !42
+    DBG_VALUE debug-use %r8d, debug-use _, !28, !38, debug-location !43
+    DBG_VALUE debug-use %r9d, debug-use _, !29, !38, debug-location !44
+    %r14d = MOV32rr %r8d
+    DBG_VALUE debug-use %r14d, debug-use _, !28, !38, debug-location !43
+    %r12d = MOV32rr %esi
+    DBG_VALUE debug-use %r12d, debug-use _, !25, !38, debug-location !40
+    %eax = MOV32rr %edi
+    DBG_VALUE debug-use %eax, debug-use _, !24, !38, debug-location !39
+    %r13d = MOV32rm %rip, 1, _, @glob0, _, debug-location !46 :: (dereferenceable load 4 from @glob0, !tbaa !47)
+    DBG_VALUE debug-use %r13d, debug-use _, !31, !38, debug-location !51
+    %r8d = MOV32rm %rip, 1, _, @glob1, _, debug-location !52 :: (dereferenceable load 4 from @glob1, !tbaa !47)
+    DBG_VALUE debug-use %r8d, debug-use _, !32, !38, debug-location !53
+    %r15d = MOV32rm %rip, 1, _, @glob2, _, debug-location !54 :: (dereferenceable load 4 from @glob2, !tbaa !47)
+    DBG_VALUE debug-use %r15d, debug-use _, !33, !38, debug-location !55
+    %esi = MOV32rm %rip, 1, _, @glob3, _, debug-location !56 :: (dereferenceable load 4 from @glob3, !tbaa !47)
+    DBG_VALUE debug-use %esi, debug-use _, !34, !38, debug-location !57
+    %ebx = MOV32rm %rip, 1, _, @glob4, _, debug-location !59 :: (dereferenceable load 4 from @glob4, !tbaa !47)
+    DBG_VALUE debug-use %ebx, debug-use _, !35, !38, debug-location !60
+    MOV32mr %rbp, 1, _, -44, _, %ebx, debug-location !60 :: (store 4 into %ir.inte, !tbaa !47)
+    %edi = MOV32rm %rip, 1, _, @glob5, _, debug-location !62 :: (dereferenceable load 4 from @glob5, !tbaa !47)
+    DBG_VALUE debug-use %edi, debug-use _, !36, !38, debug-location !63
+    MOV32mr %rbp, 1, _, -60, _, %edi, debug-location !63 :: (store 4 into %ir.intf, !tbaa !47)
+    TEST32rr killed %eax, %eax, implicit-def %eflags, debug-location !67
+    JNE_1 %bb.5.cleanup, implicit %eflags
+  
+  bb.1.if.end:
+    successors: %bb.2(0x30000000), %bb.3.if.then4(0x50000000)
+    liveins: %ebx, %ecx, %edi, %edx, %esi, %r8d, %r9d, %r12d, %r13d, %r14d, %r15d, %rbp
+  
+    MOV32mr %rbp, 1, _, -48, _, killed %edx :: (store 4 into %stack.5)
+    MOV32mr %rbp, 1, _, -52, _, killed %r8d :: (store 4 into %stack.4)
+    MOV32mr %rbp, 1, _, -56, _, killed %esi :: (store 4 into %stack.3)
+    DBG_VALUE debug-use _, debug-use _, !30, !38, debug-location !45
+    %r14d = ADD32rr killed %r14d, killed %ecx, implicit-def dead %eflags, debug-location !68
+    %r14d = ADD32rr killed %r14d, killed %r9d, implicit-def dead %eflags, debug-location !69
+    %r14d = IMUL32rm killed %r14d, %rbp, 1, _, 16, _, implicit-def dead %eflags, debug-location !70 :: (load 4 from %fixed-stack.6, align 16)
+    DBG_VALUE debug-use %r14d, debug-use _, !26, !38, debug-location !41
+    CALL64pcrel32 @use, csr_64, implicit %rsp, implicit %edi, implicit-def %rsp, debug-location !72
+    %edi = MOV32rr killed %ebx, debug-location !73
+    CALL64pcrel32 @use, csr_64, implicit %rsp, implicit %edi, implicit-def %rsp, debug-location !73
+    TEST32rr killed %r12d, %r12d, implicit-def %eflags, debug-location !74
+    JE_1 %bb.2, implicit %eflags
+  
+  bb.3.if.then4:
+    successors: %bb.4.if.end13(0x80000000)
+    liveins: %r14d, %r15d, %rbp
+  
+    %rdi = LEA64r %rbp, 1, _, -44, _
+    DBG_VALUE %rbp, -44, !35, !38, debug-location !60
+    %rsi = LEA64r %rbp, 1, _, -60, _
+    DBG_VALUE %rbp, -60, !36, !38, debug-location !63
+    %rdx = LEA64r %rbp, 1, _, -64, _
+    DBG_VALUE %rbp, -64, !37, !38, debug-location !78
+    CALL64pcrel32 @set, csr_64, implicit %rsp, implicit %rdi, implicit %rsi, implicit %rdx, implicit-def %rsp, debug-location !79
+    %eax = MOV32rm %rbp, 1, _, -44, _, debug-location !81 :: (dereferenceable load 4 from %ir.inte, !tbaa !47)
+    DBG_VALUE debug-use %eax, debug-use _, !35, !38, debug-location !60
+    %r15d = ADD32rm killed %r15d, %rbp, 1, _, -52, _, implicit-def dead %eflags, debug-location !82 :: (load 4 from %stack.4)
+    %r15d = IMUL32rr killed %r15d, %eax, implicit-def dead %eflags, debug-location !82
+    %r15d = ADD32rm killed %r15d, %rbp, 1, _, -56, _, implicit-def dead %eflags, debug-location !83 :: (load 4 from %stack.3)
+    %r15d = IMUL32rr killed %r15d, killed %eax, implicit-def dead %eflags, debug-location !84
+    DBG_VALUE debug-use %r15d, debug-use _, !31, !38, debug-location !51
+    %r13d = MOV32rr killed %r15d
+    DBG_VALUE debug-use %r13d, debug-use _, !31, !38, debug-location !51
+    JMP_1 %bb.4.if.end13
+  
+  bb.2:
+    successors: %bb.4.if.end13(0x80000000)
+    liveins: %r13d, %r14d, %rbp
+  
+    %r14d = ADD32rm killed %r14d, %rbp, 1, _, -48, _, implicit-def dead %eflags, debug-location !71 :: (load 4 from %stack.5)
+    DBG_VALUE debug-use %r14d, debug-use _, !26, !38, debug-location !41
+  
+  bb.4.if.end13:
+    successors: %bb.5.cleanup(0x80000000)
+    liveins: %r13d, %r14d, %rbp
+  
+    DBG_VALUE debug-use %r14d, debug-use _, !26, !38, debug-location !41
+    DBG_VALUE debug-use %r13d, debug-use _, !31, !38, debug-location !51
+    %r13d = IMUL32rm killed %r13d, %rbp, 1, _, 16, _, implicit-def dead %eflags, debug-location !86 :: (load 4 from %fixed-stack.6, align 16)
+    %r13d = ADD32rr killed %r13d, killed %r14d, implicit-def dead %eflags, debug-location !87
+    DBG_VALUE debug-use %r13d, debug-use _, !26, !38, debug-location !41
+    %edi = MOV32rr killed %r13d, debug-location !88
+    CALL64pcrel32 @use, csr_64, implicit %rsp, implicit %edi, implicit-def %rsp, debug-location !88
+  
+  bb.5.cleanup:
+    liveins: %rbp
+  
+    %rsp = ADD64ri8 %rsp, 24, implicit-def dead %eflags, debug-location !90
+    %rbx = POP64r implicit-def %rsp, implicit %rsp, debug-location !90
+    %r12 = POP64r implicit-def %rsp, implicit %rsp, debug-location !90
+    %r13 = POP64r implicit-def %rsp, implicit %rsp, debug-location !90
+    %r14 = POP64r implicit-def %rsp, implicit %rsp, debug-location !90
+    %r15 = POP64r implicit-def %rsp, implicit %rsp, debug-location !90
+    %rbp = POP64r implicit-def %rsp, implicit %rsp, debug-location !90
+    RETQ debug-location !90
+
+...

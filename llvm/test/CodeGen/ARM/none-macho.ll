@@ -43,8 +43,8 @@ define i32 @test_frame_ptr() {
 ; CHECK-LABEL: test_frame_ptr:
   call void @test_trap()
 
-  ; Frame pointer is r11.
-; CHECK: mov r11, sp
+  ; Frame pointer is r7.
+; CHECK: mov r7, sp
   ret i32 42
 }
 
@@ -58,9 +58,11 @@ define void @test_two_areas(%big_arr* %addr) {
   ; This goes with the choice of r7 as FP (largely). FP and LR have to be stored
   ; consecutively on the stack for the frame record to be valid, which means we
   ; need the 2 register-save areas employed by iOS.
-; CHECK-NON-FAST: push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NON-FAST: push {r4, r5, r6, r7, lr}
+; CHECK-NON-FAST: push.w {r8, r9, r10, r11}
 ; ...
-; CHECK-NON-FAST: pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
+; CHECK-NON-FAST: pop.w {r8, r9, r10, r11}
+; CHECK-NON-FAST: pop {r4, r5, r6, r7, pc}
   ret void
 }
 

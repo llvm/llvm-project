@@ -72,6 +72,9 @@ namespace CallingConv {
     // Swift - Calling convention for Swift.
     Swift = 16,
 
+    // CXX_FAST_TLS - Calling convention for access functions.
+    CXX_FAST_TLS = 17,
+
     // Target - This is the start of the target-specific calling conventions,
     // e.g. fastcall and thiscall on X86.
     FirstTargetCC = 64,
@@ -157,6 +160,41 @@ namespace CallingConv {
 
     /// \brief HHVM calling convention for invoking C/C++ helpers.
     HHVM_C = 82,
+
+    /// X86_INTR - x86 hardware interrupt context. Callee may take one or two
+    /// parameters, where the 1st represents a pointer to hardware context frame
+    /// and the 2nd represents hardware error code, the presence of the later
+    /// depends on the interrupt vector taken. Valid for both 32- and 64-bit
+    /// subtargets.
+    X86_INTR = 83,
+
+    /// Used for AVR interrupt routines.
+    AVR_INTR = 84,
+
+    /// Calling convention used for AVR signal routines.
+    AVR_SIGNAL = 85,
+
+    /// Calling convention used for special AVR rtlib functions
+    /// which have an "optimized" convention to preserve registers.
+    AVR_BUILTIN = 86,
+
+    /// Calling convention used for Mesa vertex shaders.
+    AMDGPU_VS = 87,
+
+    /// Calling convention used for Mesa geometry shaders.
+    AMDGPU_GS = 88,
+
+    /// Calling convention used for Mesa pixel shaders.
+    AMDGPU_PS = 89,
+
+    /// Calling convention used for Mesa compute shaders.
+    AMDGPU_CS = 90,
+
+    /// Calling convention for AMDGPU code object kernels.
+    AMDGPU_KERNEL = 91,
+
+    /// Register calling convention used for parameters transfer optimization
+    X86_RegCall = 92,
 
     /// The highest possible calling convention ID. Must be some 2^k - 1.
     MaxID = 1023

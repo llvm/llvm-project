@@ -7,13 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Frontend/FrontendAction.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/FrontendAction.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -77,7 +79,7 @@ private:
 };
 
 TEST(ASTFrontendAction, Sanity) {
-  CompilerInvocation *invocation = new CompilerInvocation;
+  auto invocation = std::make_shared<CompilerInvocation>();
   invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc",
       MemoryBuffer::getMemBuffer("int main() { float x; }").release());
@@ -86,7 +88,7 @@ TEST(ASTFrontendAction, Sanity) {
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
-  compiler.setInvocation(invocation);
+  compiler.setInvocation(std::move(invocation));
   compiler.createDiagnostics();
 
   TestASTFrontendAction test_action;
@@ -97,7 +99,7 @@ TEST(ASTFrontendAction, Sanity) {
 }
 
 TEST(ASTFrontendAction, IncrementalParsing) {
-  CompilerInvocation *invocation = new CompilerInvocation;
+  auto invocation = std::make_shared<CompilerInvocation>();
   invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc",
       MemoryBuffer::getMemBuffer("int main() { float x; }").release());
@@ -106,7 +108,7 @@ TEST(ASTFrontendAction, IncrementalParsing) {
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
-  compiler.setInvocation(invocation);
+  compiler.setInvocation(std::move(invocation));
   compiler.createDiagnostics();
 
   TestASTFrontendAction test_action(/*enableIncrementalProcessing=*/true);
@@ -117,7 +119,7 @@ TEST(ASTFrontendAction, IncrementalParsing) {
 }
 
 TEST(ASTFrontendAction, LateTemplateIncrementalParsing) {
-  CompilerInvocation *invocation = new CompilerInvocation;
+  auto invocation = std::make_shared<CompilerInvocation>();
   invocation->getLangOpts()->CPlusPlus = true;
   invocation->getLangOpts()->DelayedTemplateParsing = true;
   invocation->getPreprocessorOpts().addRemappedFile(
@@ -133,7 +135,7 @@ TEST(ASTFrontendAction, LateTemplateIncrementalParsing) {
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
-  compiler.setInvocation(invocation);
+  compiler.setInvocation(std::move(invocation));
   compiler.createDiagnostics();
 
   TestASTFrontendAction test_action(/*enableIncrementalProcessing=*/true,
@@ -170,7 +172,7 @@ public:
 };
 
 TEST(PreprocessorFrontendAction, EndSourceFile) {
-  CompilerInvocation *Invocation = new CompilerInvocation;
+  auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc",
       MemoryBuffer::getMemBuffer("int main() { float x; }").release());
@@ -179,7 +181,7 @@ TEST(PreprocessorFrontendAction, EndSourceFile) {
   Invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;
-  Compiler.setInvocation(Invocation);
+  Compiler.setInvocation(std::move(Invocation));
   Compiler.createDiagnostics();
 
   TestPPCallbacks *Callbacks = new TestPPCallbacks;
@@ -189,6 +191,68 @@ TEST(PreprocessorFrontendAction, EndSourceFile) {
   ASSERT_TRUE(Compiler.ExecuteAction(TestAction));
   // Check that EndOfMainFile was called before EndSourceFileAction.
   ASSERT_TRUE(TestAction.SeenEnd);
+}
+
+class TypoExternalSemaSource : public ExternalSemaSource {
+  CompilerInstance &CI;
+
+public:
+  TypoExternalSemaSource(CompilerInstance &CI) : CI(CI) {}
+
+  TypoCorrection CorrectTypo(const DeclarationNameInfo &Typo, int LookupKind,
+                             Scope *S, CXXScopeSpec *SS,
+                             CorrectionCandidateCallback &CCC,
+                             DeclContext *MemberContext, bool EnteringContext,
+                             const ObjCObjectPointerType *OPT) override {
+    // Generate a fake typo correction with one attached note.
+    ASTContext &Ctx = CI.getASTContext();
+    TypoCorrection TC(DeclarationName(&Ctx.Idents.get("moo")));
+    unsigned DiagID = Ctx.getDiagnostics().getCustomDiagID(
+        DiagnosticsEngine::Note, "This is a note");
+    TC.addExtraDiagnostic(PartialDiagnostic(DiagID, Ctx.getDiagAllocator()));
+    return TC;
+  }
+};
+
+struct TypoDiagnosticConsumer : public DiagnosticConsumer {
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const Diagnostic &Info) override {
+    // Capture errors and notes. There should be one of each.
+    if (DiagLevel == DiagnosticsEngine::Error) {
+      assert(Error.empty());
+      Info.FormatDiagnostic(Error);
+    } else {
+      assert(Note.empty());
+      Info.FormatDiagnostic(Note);
+    }
+  }
+  SmallString<32> Error;
+  SmallString<32> Note;
+};
+
+TEST(ASTFrontendAction, ExternalSemaSource) {
+  auto Invocation = std::make_shared<CompilerInvocation>();
+  Invocation->getLangOpts()->CPlusPlus = true;
+  Invocation->getPreprocessorOpts().addRemappedFile(
+      "test.cc", MemoryBuffer::getMemBuffer("void fooo();\n"
+                                            "int main() { foo(); }")
+                     .release());
+  Invocation->getFrontendOpts().Inputs.push_back(
+      FrontendInputFile("test.cc", IK_CXX));
+  Invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
+  Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
+  CompilerInstance Compiler;
+  Compiler.setInvocation(std::move(Invocation));
+  auto *TDC = new TypoDiagnosticConsumer;
+  Compiler.createDiagnostics(TDC, /*ShouldOwnClient=*/true);
+  Compiler.setExternalSemaSource(new TypoExternalSemaSource(Compiler));
+
+  SyntaxOnlyAction TestAction;
+  ASSERT_TRUE(Compiler.ExecuteAction(TestAction));
+  // There should be one error correcting to 'moo' and a note attached to it.
+  EXPECT_EQ("use of undeclared identifier 'foo'; did you mean 'moo'?",
+            TDC->Error.str().str());
+  EXPECT_EQ("This is a note", TDC->Note.str().str());
 }
 
 } // anonymous namespace

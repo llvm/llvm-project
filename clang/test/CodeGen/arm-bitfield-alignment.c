@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple arm-none-eabi -ffreestanding -emit-llvm -o - -O3 %s | FileCheck %s
-// RUN: %clang_cc1 -triple aarch64 -ffreestanding -emit-llvm -o - -O3 %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm-none-eabi -ffreestanding -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -ffreestanding -emit-llvm -o - %s | FileCheck %s
 
 extern struct T {
   int b0 : 8;

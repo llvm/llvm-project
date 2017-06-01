@@ -1,4 +1,4 @@
-// RUN: %clang_cc1  -analyze -analyzer-checker=alpha.security.taint,debug.TaintTest %s -verify
+// RUN: %clang_analyze_cc1  -analyzer-checker=alpha.security.taint,debug.TaintTest %s -verify
 // expected-no-diagnostics
 
 typedef struct _FILE FILE;

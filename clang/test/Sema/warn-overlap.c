@@ -96,3 +96,48 @@ void array_out_of_bounds() {
   int buffer[4];
   x = (-7 > 0) ? (buffer[-7]) : 0;
 }
+
+void bool_contexts(int x) {
+  if (x > 4 || x < 10) {}
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+  for (;x > 4 || x < 10;) {}
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+  while (x > 4 || x < 10) {}
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+  do {} while (x > 4 || x < 10);
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+  x = (x > 4 || x < 10) ? 1 : 2;
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+  if ((void)5, x > 4 || x < 10) {}
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+}
+
+void assignment(int x) {
+  int a = x > 4 || x < 10;
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+  int b = x < 2 && x > 5;
+  // expected-warning@-1{{overlapping comparisons always evaluate to false}}
+
+  int c = x != 1 || x != 3;
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+  int d = x == 1 && x == 2;
+  // expected-warning@-1{{overlapping comparisons always evaluate to false}}
+
+  int e = x < 1 || x != 0;
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+}
+
+int returns(int x) {
+  return x > 4 || x < 10;
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+  return x < 2 && x > 5;
+  // expected-warning@-1{{overlapping comparisons always evaluate to false}}
+
+  return x != 1 || x != 3;
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+  return x == 1 && x == 2;
+  // expected-warning@-1{{overlapping comparisons always evaluate to false}}
+
+  return x < 1 || x != 0;
+  // expected-warning@-1{{overlapping comparisons always evaluate to true}}
+}

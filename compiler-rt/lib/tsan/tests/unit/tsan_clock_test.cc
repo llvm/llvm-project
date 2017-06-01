@@ -13,6 +13,7 @@
 #include "tsan_clock.h"
 #include "tsan_rtl.h"
 #include "gtest/gtest.h"
+#include <sys/time.h>
 #include <time.h>
 
 namespace __tsan {
@@ -416,9 +417,9 @@ static bool ClockFuzzer(bool printing) {
 }
 
 TEST(Clock, Fuzzer) {
-  timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  int seed = ts.tv_sec + ts.tv_nsec;
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  int seed = tv.tv_sec + tv.tv_usec;
   printf("seed=%d\n", seed);
   srand(seed);
   if (!ClockFuzzer(false)) {

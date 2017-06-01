@@ -56,6 +56,14 @@ namespace PPC {
     PRED_BIT_UNSET = 1025
   };
   
+  // Bit for branch taken (plus) or not-taken (minus) hint
+  enum BranchHintBit {
+    BR_NO_HINT       = 0x0,
+    BR_NONTAKEN_HINT = 0x2,
+    BR_TAKEN_HINT    = 0x3,
+    BR_HINT_MASK     = 0X3
+  };
+
   /// Invert the specified predicate.  != -> ==, < -> >=.
   Predicate InvertPredicate(Predicate Opcode);
 

@@ -1,18 +1,18 @@
-// RUN: %clang_cc1 %s -DTEST_XSAVE -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -emit-llvm -o - -Werror | FileCheck %s --check-prefix=XSAVE
-// RUN: %clang_cc1 %s -DTEST_XSAVE -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -fno-signed-char -emit-llvm -o - -Werror | FileCheck %s --check-prefix=XSAVE
+// RUN: %clang_cc1 %s -DTEST_XSAVE -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVE
+// RUN: %clang_cc1 %s -DTEST_XSAVE -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVE
 
-// RUN: %clang_cc1 %s -DTEST_XSAVEOPT -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -target-feature +xsaveopt -emit-llvm -o - -Werror | FileCheck %s --check-prefix=XSAVEOPT
-// RUN: %clang_cc1 %s -DTEST_XSAVEOPT -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -target-feature +xsaveopt -fno-signed-char -emit-llvm -o - -Werror | FileCheck %s --check-prefix=XSAVEOPT
+// RUN: %clang_cc1 %s -DTEST_XSAVEOPT -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -target-feature +xsaveopt -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVEOPT
+// RUN: %clang_cc1 %s -DTEST_XSAVEOPT -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -target-feature +xsaveopt -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVEOPT
 
-// RUN: %clang_cc1 %s -DTEST_XSAVEC -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -target-feature +xsavec -emit-llvm -o - -Werror | FileCheck %s --check-prefix=XSAVEC
-// RUN: %clang_cc1 %s -DTEST_XSAVEC -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -target-feature +xsavec -fno-signed-char -emit-llvm -o - -Werror | FileCheck %s --check-prefix=XSAVEC
+// RUN: %clang_cc1 %s -DTEST_XSAVEC -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -target-feature +xsavec -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVEC
+// RUN: %clang_cc1 %s -DTEST_XSAVEC -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -target-feature +xsavec -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVEC
 
-// RUN: %clang_cc1 %s -DTEST_XSAVES -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -target-feature +xsaves -emit-llvm -o - -Werror | FileCheck %s --check-prefix=XSAVES
-// RUN: %clang_cc1 %s -DTEST_XSAVES -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -target-feature +xsaves -fno-signed-char -emit-llvm -o - -Werror | FileCheck %s --check-prefix=XSAVES
+// RUN: %clang_cc1 %s -DTEST_XSAVES -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -target-feature +xsaves -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVES
+// RUN: %clang_cc1 %s -DTEST_XSAVES -O0 -triple=x86_64-unknown-unknown -target-feature +xsave -target-feature +xsaves -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVES
 
 void test() {
-  unsigned long long tmp_ULLi;
-  void*              tmp_vp;
+  unsigned long long tmp_ULLi = 0;
+  void*              tmp_vp = 0;
 
 #ifdef TEST_XSAVE
 // XSAVE: [[tmp_vp_1:%[0-9a-zA-z]+]] = load i8*, i8** %tmp_vp, align 8

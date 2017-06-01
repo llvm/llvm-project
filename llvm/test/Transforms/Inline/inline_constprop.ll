@@ -1,4 +1,5 @@
 ; RUN: opt < %s -inline -inline-threshold=20 -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline)' -inline-threshold=20 -S | FileCheck %s
 
 define internal i32 @callee1(i32 %A, i32 %B) {
   %C = sdiv i32 %A, %B
@@ -279,3 +280,68 @@ return:
   %retval.0 = phi i32* [ %b, %if.end3 ], [ %a, %if.then ]
   ret i32* %retval.0
 }
+
+declare i32 @PR28802.external(i32 returned %p1)
+
+define internal i32 @PR28802.callee() {
+entry:
+  br label %cont
+
+cont:
+  %0 = phi i32 [ 0, %entry ]
+  %call = call i32 @PR28802.external(i32 %0)
+  ret i32 %call
+}
+
+define i32 @PR28802() {
+entry:
+  %call = call i32 @PR28802.callee()
+  ret i32 %call
+}
+
+; CHECK-LABEL: define i32 @PR28802(
+; CHECK: %[[call:.*]] = call i32 @PR28802.external(i32 0)
+; CHECK: ret i32 %[[call]]
+
+define internal i32 @PR28848.callee(i32 %p2, i1 %c) {
+entry:
+  br i1 %c, label %cond.end, label %cond.true
+
+cond.true:
+  br label %cond.end
+
+cond.end:
+  %cond = phi i32 [ 0, %cond.true ], [ %p2, %entry ]
+  %or = or i32 %cond, %p2
+  ret i32 %or
+}
+
+define i32 @PR28848() {
+entry:
+  %call = call i32 @PR28848.callee(i32 0, i1 false)
+  ret i32 %call
+}
+; CHECK-LABEL: define i32 @PR28848(
+; CHECK: ret i32 0
+
+define internal void @callee7(i16 %param1, i16 %param2) {
+entry:
+  br label %bb
+
+bb:
+  %phi = phi i16 [ %param2, %entry ]
+  %add = add i16 %phi, %param1
+  ret void
+}
+
+declare i16 @caller7.external(i16 returned)
+
+define void @caller7() {
+bb1:
+  %call = call i16 @caller7.external(i16 1)
+  call void @callee7(i16 0, i16 %call)
+  ret void
+}
+; CHECK-LABEL: define void @caller7(
+; CHECK: %call = call i16 @caller7.external(i16 1)
+; CHECK-NEXT: ret void

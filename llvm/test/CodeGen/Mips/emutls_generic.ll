@@ -30,14 +30,14 @@ entry:
 ; MIPS_32:     lw {{.+}}call16(__emutls_get_address
 ; MIPS_32-NOT:  __emutls_t.external_x
 ; MIPS_32-NOT:  __emutls_v.external_x:
-; MIPS_32:       .section .data.rel.local
-; MIPS_32:       .align 2
+; MIPS_32:       .data
+; MIPS_32:       .p2align 2
 ; MIPS_32-LABEL: __emutls_v.external_y:
 ; MIPS_32:       .section .rodata,
 ; MIPS_32-LABEL: __emutls_t.external_y:
 ; MIPS_32-NEXT:  .byte 7
-; MIPS_32:       .section .data.rel.local
-; MIPS_32:       .align 2
+; MIPS_32:       .data
+; MIPS_32:       .p2align 2
 ; MIPS_32-LABEL: __emutls_v.internal_y:
 ; MIPS_32-NEXT:  .4byte 8
 ; MIPS_32-NEXT:  .4byte 16
@@ -58,8 +58,8 @@ entry:
 ; MIPS_64:       .section .rodata,
 ; MIPS_64-LABEL: __emutls_t.external_y:
 ; MIPS_64-NEXT:  .byte 7
-; MIPS_64:       .section .data.rel.local
-; MIPS_64:       .align 3
+; MIPS_64:       .data
+; MIPS_64:       .p2align 3
 ; MIPS_64-LABEL: __emutls_v.internal_y:
 ; MIPS_64-NEXT:  .8byte 8
 ; MIPS_64-NEXT:  .8byte 16

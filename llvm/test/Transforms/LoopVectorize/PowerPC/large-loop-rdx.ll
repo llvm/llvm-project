@@ -12,7 +12,9 @@
 ; CHECK-NEXT: fadd
 ; CHECK-NEXT: fadd
 ; CHECK-NEXT: fadd
-; CHECK-NEXT-NOT: fadd
+; CHECK-NEXT: =
+; CHECK-NOT: fadd
+; CHECK-SAME: >
 
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-ibm-linux-gnu"

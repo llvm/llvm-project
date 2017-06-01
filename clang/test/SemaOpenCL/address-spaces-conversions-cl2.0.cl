@@ -225,3 +225,69 @@ void test_conversion(global int *arg_glob, local int *arg_loc,
 // expected-error@-2{{passing '__constant int *' to parameter of type '__generic int *' changes address space of pointer}}
 #endif
 }
+
+void test_ternary() {
+  AS int *var_cond;
+  generic int *var_gen;
+  global int *var_glob;
+  var_gen = 0 ? var_cond : var_glob;
+#ifdef CONSTANT
+// expected-error@-2{{conditional operator with the second and third operands of type  ('__constant int *' and '__global int *') which are pointers to non-overlapping address spaces}}
+#endif
+
+  local int *var_loc;
+  var_gen = 0 ? var_cond : var_loc;
+#ifndef GENERIC
+// expected-error-re@-2{{conditional operator with the second and third operands of type  ('__{{global|constant}} int *' and '__local int *') which are pointers to non-overlapping address spaces}}
+#endif
+
+  constant int *var_const;
+  var_cond = 0 ? var_cond : var_const;
+#ifndef CONSTANT
+// expected-error-re@-2{{conditional operator with the second and third operands of type  ('__{{global|generic}} int *' and '__constant int *') which are pointers to non-overlapping address spaces}}
+#endif
+
+  private int *var_priv;
+  var_gen = 0 ? var_cond : var_priv;
+#ifndef GENERIC
+// expected-error-re@-2{{conditional operator with the second and third operands of type  ('__{{global|constant}} int *' and 'int *') which are pointers to non-overlapping address spaces}}
+#endif
+
+  var_gen = 0 ? var_cond : var_gen;
+#ifdef CONSTANT
+// expected-error@-2{{conditional operator with the second and third operands of type  ('__constant int *' and '__generic int *') which are pointers to non-overlapping address spaces}}
+#endif
+
+  void *var_void_gen;
+  global char *var_glob_ch;
+  var_void_gen = 0 ? var_cond : var_glob_ch;
+#ifdef CONSTANT
+// expected-error@-2{{conditional operator with the second and third operands of type  ('__constant int *' and '__global char *') which are pointers to non-overlapping address spaces}}
+#endif
+
+  local char *var_loc_ch;
+  var_void_gen = 0 ? var_cond : var_loc_ch;
+#ifndef GENERIC
+// expected-error-re@-2{{conditional operator with the second and third operands of type  ('__{{global|constant}} int *' and '__local char *') which are pointers to non-overlapping address spaces}}
+#endif
+
+  constant void *var_void_const;
+  constant char *var_const_ch;
+  var_void_const = 0 ? var_cond : var_const_ch;
+#ifndef CONSTANT
+// expected-error-re@-2{{conditional operator with the second and third operands of type  ('__{{global|generic}} int *' and '__constant char *') which are pointers to non-overlapping address spaces}}
+#endif
+
+  private char *var_priv_ch;
+  var_void_gen = 0 ? var_cond : var_priv_ch;
+#ifndef GENERIC
+// expected-error-re@-2{{conditional operator with the second and third operands of type  ('__{{global|constant}} int *' and 'char *') which are pointers to non-overlapping address spaces}}
+#endif
+
+  generic char *var_gen_ch;
+  var_void_gen = 0 ? var_cond : var_gen_ch;
+#ifdef CONSTANT
+// expected-error@-2{{conditional operator with the second and third operands of type  ('__constant int *' and '__generic char *') which are pointers to non-overlapping address spaces}}
+#endif
+}
+

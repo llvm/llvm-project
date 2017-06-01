@@ -48,7 +48,7 @@
 # CHECK: sys #2, c0, c5, #7
 # CHECK: sys #7, c6, c10, #7, x7
 # CHECK: sysl  x20, #6, c3, c15, #7
-# CHECK: msr  SPSEL, #0
+# CHECK: msr  SPSel, #0
 # CHECK: msr S3_0_C11_C0_0, x0
 # CHECK: mrs x0, S3_0_C11_C0_0
 

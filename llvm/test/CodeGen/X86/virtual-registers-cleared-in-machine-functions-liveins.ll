@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -o /dev/null -stop-after machine-scheduler %s | FileCheck %s --check-prefix=PRE-RA
-; RUN: llc -mtriple=x86_64-unknown-unknown -o /dev/null -stop-after prologepilog %s | FileCheck %s --check-prefix=POST-RA
+; RUN: llc -mtriple=x86_64-unknown-unknown -o - -stop-after machine-scheduler %s | FileCheck %s --check-prefix=PRE-RA
+; RUN: llc -mtriple=x86_64-unknown-unknown -o - -stop-after prologepilog %s | FileCheck %s --check-prefix=POST-RA
 
 ; This test verifies that the virtual register references in machine function's
 ; liveins are cleared after register allocation.

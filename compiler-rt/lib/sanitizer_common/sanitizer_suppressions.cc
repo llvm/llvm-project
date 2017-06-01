@@ -127,7 +127,7 @@ void SuppressionContext::Parse(const char *str) {
         Printf("%s: failed to parse suppressions\n", SanitizerToolName);
         Die();
       }
-      Suppression s = {};
+      Suppression s;
       s.type = suppression_types_[type];
       s.templ = (char*)InternalAlloc(end2 - line + 1);
       internal_memcpy(s.templ, line, end2 - line);

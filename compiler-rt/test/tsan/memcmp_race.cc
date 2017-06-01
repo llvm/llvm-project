@@ -23,7 +23,7 @@ void *Thread2(void *x) {
 
 int main() {
   barrier_init(&barrier, 2);
-  fprintf(stderr, "addr=%p\n", &data0[5]);
+  print_address("addr=", 1, &data0[5]);
   pthread_t t[2];
   pthread_create(&t[0], NULL, Thread1, NULL);
   pthread_create(&t[1], NULL, Thread2, NULL);
@@ -35,7 +35,7 @@ int main() {
 // CHECK: addr=[[ADDR:0x[0-9,a-f]+]]
 // CHECK: WARNING: ThreadSanitizer: data race
 // CHECK:   Write of size 1 at [[ADDR]] by thread T2:
-// CHECK:     #0 memcpy
+// CHECK:     #0 {{(memcpy|memmove)}}
 // CHECK:     #1 Thread2
 // CHECK:   Previous read of size 1 at [[ADDR]] by thread T1:
 // CHECK:     #0 memcmp

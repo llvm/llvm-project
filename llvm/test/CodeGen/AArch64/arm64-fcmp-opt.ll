@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -mcpu=cyclone -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -mcpu=cyclone -aarch64-neon-syntax=apple | FileCheck %s
 ; rdar://10263824
 
 define i1 @fcmp_float1(float %a) nounwind ssp {

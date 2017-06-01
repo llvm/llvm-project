@@ -55,6 +55,26 @@ void bitwise_rel(unsigned i) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:14}:"("
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:19-[[@LINE-3]]:19}:")"
 
+  (void)(i ^ i | i); // expected-warning {{'^' within '|'}} \
+                     // expected-note {{place parentheses around the '^' expression to silence this warning}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:10}:"("
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:15-[[@LINE-3]]:15}:")"
+
+  (void)(i | i ^ i); // expected-warning {{'^' within '|'}} \
+                     // expected-note {{place parentheses around the '^' expression to silence this warning}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:14}:"("
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:19-[[@LINE-3]]:19}:")"
+
+  (void)(i & i ^ i); // expected-warning {{'&' within '^'}} \
+                     // expected-note {{place parentheses around the '&' expression to silence this warning}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:10}:"("
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:15-[[@LINE-3]]:15}:")"
+
+  (void)(i ^ i & i); // expected-warning {{'&' within '^'}} \
+                     // expected-note {{place parentheses around the '&' expression to silence this warning}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:14}:"("
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:19-[[@LINE-3]]:19}:")"
+
   (void)(i ||
              i && i); // expected-warning {{'&&' within '||'}} \
                       // expected-note {{place parentheses around the '&&' expression to silence this warning}}

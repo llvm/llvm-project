@@ -29,8 +29,6 @@ void NVPTXSubtarget::anchor() {}
 NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                                 StringRef FS) {
     // Provide the default CPU if we don't have one.
-  if (CPU.empty() && FS.size())
-    llvm_unreachable("we are not using FeatureStr");
   TargetName = CPU.empty() ? "sm_20" : CPU;
 
   ParseSubtargetFeatures(TargetName, FS);

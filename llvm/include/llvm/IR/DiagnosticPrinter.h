@@ -19,6 +19,7 @@
 #include <string>
 
 namespace llvm {
+
 // Forward declarations.
 class Module;
 class raw_ostream;
@@ -30,7 +31,7 @@ class Value;
 /// \brief Interface for custom diagnostic printing.
 class DiagnosticPrinter {
 public:
-  virtual ~DiagnosticPrinter() {}
+  virtual ~DiagnosticPrinter() = default;
 
   // Simple types.
   virtual DiagnosticPrinter &operator<<(char C) = 0;
@@ -89,6 +90,7 @@ public:
   // Other types.
   DiagnosticPrinter &operator<<(const SMDiagnostic &Diag) override;
 };
-} // End namespace llvm
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_IR_DIAGNOSTICPRINTER_H

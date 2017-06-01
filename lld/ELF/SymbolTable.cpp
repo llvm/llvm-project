@@ -140,7 +140,7 @@ template <class ELFT>
 DefinedRegular<ELFT> *SymbolTable<ELFT>::addIgnored(StringRef Name,
                                                     uint8_t Visibility) {
   SymbolBody *S = find(Name);
-  if (!S || !S->isUndefined())
+  if (!S || S->isInCurrentDSO())
     return nullptr;
   return addAbsolute(Name, Visibility);
 }
@@ -283,7 +283,7 @@ static int compareDefined(Symbol *S, bool WasInserted, uint8_t Binding) {
   if (WasInserted)
     return 1;
   SymbolBody *Body = S->body();
-  if (Body->isLazy() || Body->isUndefined() || Body->isShared())
+  if (Body->isLazy() || !Body->isInCurrentDSO())
     return 1;
   if (Binding == STB_WEAK)
     return -1;
@@ -426,12 +426,8 @@ void SymbolTable<ELFT>::addShared(SharedFile<ELFT> *F, StringRef Name,
   std::tie(S, WasInserted) =
       insert(Name, Sym.getType(), STV_DEFAULT, /*CanOmitFromDynSym*/ true, F);
   // Make sure we preempt DSO symbols with default visibility.
-  if (Sym.getVisibility() == STV_DEFAULT) {
+  if (Sym.getVisibility() == STV_DEFAULT)
     S->ExportDynamic = true;
-    // Exporting preempting symbols takes precedence over linker scripts.
-    if (S->VersionId == VER_NDX_LOCAL)
-      S->VersionId = VER_NDX_GLOBAL;
-  }
   if (WasInserted || isa<Undefined<ELFT>>(S->body())) {
     replaceBody<SharedSymbol<ELFT>>(S, F, Name, Sym, Verdef);
     if (!S->isWeak())
@@ -465,6 +461,14 @@ template <class ELFT> SymbolBody *SymbolTable<ELFT>::find(StringRef Name) {
   if (V.Idx == -1)
     return nullptr;
   return SymVector[V.Idx]->body();
+}
+
+template <class ELFT>
+SymbolBody *SymbolTable<ELFT>::findInCurrentDSO(StringRef Name) {
+  if (SymbolBody *S = find(Name))
+    if (S->isInCurrentDSO())
+      return S;
+  return nullptr;
 }
 
 template <class ELFT>

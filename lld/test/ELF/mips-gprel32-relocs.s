@@ -21,7 +21,7 @@ v1:
   .gpword bar
 
 # CHECK: Contents of section .rodata:
-# CHECK:  0114 fffe8014 fffe8018
+# CHECK:  00f4 fffe8014 fffe8018
 #              ^ 0x10004 - 0x27ff0
 #                       ^ 0x10008 - 0x27ff0
 

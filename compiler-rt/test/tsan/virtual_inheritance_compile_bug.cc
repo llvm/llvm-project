@@ -1,4 +1,4 @@
-// Regression test for http://code.google.com/p/thread-sanitizer/issues/detail?id=3.
+// Regression test for https://github.com/google/sanitizers/issues/410.
 // The C++ variant is much more compact that the LLVM IR equivalent.
 
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
@@ -10,6 +10,6 @@ struct DDD: CCC, BBB { DDD(); };  // NOLINT
 DDD::DDD()  { }
 int main() {
   DDD d;
-  printf("OK\n");
+  fprintf(stderr, "OK\n");
 }
 // CHECK: OK

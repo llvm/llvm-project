@@ -24,10 +24,6 @@ N: Howard Hinnant
 E: howard.hinnant@gmail.com
 D: builtins library
 
-N: Sergey Matveev
-E: earthdok@google.com
-D: LeakSanitizer
-
 N: Alexander Potapenko
 E: glider@google.com
 D: MacOS/iOS port of sanitizers
@@ -38,7 +34,7 @@ D: CMake build, test suite
 
 N: Kostya Serebryany
 E: kcc@google.com
-D: AddressSanitizer, sanitizer_common, porting sanitizers to another platforms
+D: AddressSanitizer, sanitizer_common, porting sanitizers to another platforms, LeakSanitizer
 
 N: Richard Smith
 E: richard-llvm@metafoo.co.uk

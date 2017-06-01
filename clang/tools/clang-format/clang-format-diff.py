@@ -17,7 +17,7 @@ This script reads input from a unified diff and reformats all the changed
 lines. This is useful to reformat all the lines touched by a specific patch.
 Example usage for git/svn users:
 
-  git diff -U0 HEAD^ | clang-format-diff.py -p1 -i
+  git diff -U0 --no-color HEAD^ | clang-format-diff.py -p1 -i
   svn diff --diff-cmd=diff -x-U0 | clang-format-diff.py -i
 
 """
@@ -29,10 +29,6 @@ import string
 import subprocess
 import StringIO
 import sys
-
-
-# Change this to the full path if clang-format is not on the path.
-binary = 'clang-format'
 
 
 def main():
@@ -56,10 +52,11 @@ def main():
                       help='let clang-format sort include blocks')
   parser.add_argument('-v', '--verbose', action='store_true',
                       help='be more verbose, ineffective without -i')
-  parser.add_argument(
-      '-style',
-      help=
-      'formatting style to apply (LLVM, Google, Chromium, Mozilla, WebKit)')
+  parser.add_argument('-style',
+                      help='formatting style to apply (LLVM, Google, Chromium, '
+                      'Mozilla, WebKit)')
+  parser.add_argument('-binary', default='clang-format',
+                      help='location of binary to use for clang-format')
   args = parser.parse_args()
 
   # Extract changed lines for each file.
@@ -95,7 +92,7 @@ def main():
   for filename, lines in lines_by_file.iteritems():
     if args.i and args.verbose:
       print 'Formatting', filename
-    command = [binary, filename]
+    command = [args.binary, filename]
     if args.i:
       command.append('-i')
     if args.sort_includes:

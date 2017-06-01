@@ -97,7 +97,7 @@
   class matcher_##DefineMatcher##Matcher                                       \
       : public ::clang::ast_matchers::internal::MatcherInterface<Type> {       \
   public:                                                                      \
-    explicit matcher_##DefineMatcher##Matcher() {}                             \
+    explicit matcher_##DefineMatcher##Matcher() = default;                     \
     bool matches(const Type &Node,                                             \
                  ::clang::ast_matchers::internal::ASTMatchFinder *Finder,      \
                  ::clang::ast_matchers::internal::BoundNodesTreeBuilder        \
@@ -401,4 +401,4 @@
       ReturnTypesF>::Func MatcherName##Loc;                                    \
   AST_TYPE_TRAVERSE_MATCHER(MatcherName, FunctionName##Type, ReturnTypesF)
 
-#endif
+#endif // LLVM_CLANG_ASTMATCHERS_ASTMATCHERSMACROS_H

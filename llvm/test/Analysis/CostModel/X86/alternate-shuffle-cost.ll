@@ -207,7 +207,7 @@ define <8 x i16> @test_v8i16(<8 x i16> %a, <8 x i16> %b) {
   ret <8 x i16> %1
 }
 ; CHECK: Printing analysis 'Cost Model Analysis' for function 'test_v8i16':
-; SSE2: Cost Model: {{.*}} 8 for instruction:   %1 = shufflevector
+; SSE2: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
 ; SSSE3: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
 ; SSE41: Cost Model: {{.*}} 1 for instruction:   %1 = shufflevector
 ; AVX: Cost Model: {{.*}} 1 for instruction:   %1 = shufflevector
@@ -219,7 +219,7 @@ define <8 x i16> @test_v8i16_2(<8 x i16> %a, <8 x i16> %b) {
   ret <8 x i16> %1
 }
 ; CHECK: Printing analysis 'Cost Model Analysis' for function 'test_v8i16_2':
-; SSE2: Cost Model: {{.*}} 8 for instruction:   %1 = shufflevector
+; SSE2: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
 ; SSSE3: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
 ; SSE41: Cost Model: {{.*}} 1 for instruction:   %1 = shufflevector
 ; AVX: Cost Model: {{.*}} 1 for instruction:   %1 = shufflevector
@@ -280,11 +280,11 @@ define <16 x i8> @test_v16i8(<16 x i8> %a, <16 x i8> %b) {
   ret <16 x i8> %1
 }
 ; CHECK: Printing analysis 'Cost Model Analysis' for function 'test_v16i8':
-; SSE2: Cost Model: {{.*}} 48 for instruction:   %1 = shufflevector
+; SSE2: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
 ; SSSE3: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
-; SSE41: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
-; AVX: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
-; AVX2: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
+; SSE41: Cost Model: {{.*}} 1 for instruction:   %1 = shufflevector
+; AVX: Cost Model: {{.*}} 1 for instruction:   %1 = shufflevector
+; AVX2: Cost Model: {{.*}} 1 for instruction:   %1 = shufflevector
 
 
 define <16 x i8> @test_v16i8_2(<16 x i8> %a, <16 x i8> %b) {
@@ -292,11 +292,11 @@ define <16 x i8> @test_v16i8_2(<16 x i8> %a, <16 x i8> %b) {
   ret <16 x i8> %1
 }
 ; CHECK: Printing analysis 'Cost Model Analysis' for function 'test_v16i8_2':
-; SSE2: Cost Model: {{.*}} 48 for instruction:   %1 = shufflevector
+; SSE2: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
 ; SSSE3: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
-; SSE41: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
-; AVX: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
-; AVX2: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
+; SSE41: Cost Model: {{.*}} 1 for instruction:   %1 = shufflevector
+; AVX: Cost Model: {{.*}} 1 for instruction:   %1 = shufflevector
+; AVX2: Cost Model: {{.*}} 1 for instruction:   %1 = shufflevector
 
 
 define <16 x i16> @test_v16i16(<16 x i16> %a, <16 x i16> %b) {
@@ -304,10 +304,10 @@ define <16 x i16> @test_v16i16(<16 x i16> %a, <16 x i16> %b) {
   ret <16 x i16> %1
 }
 ; CHECK: Printing analysis 'Cost Model Analysis' for function 'test_v16i16':
-; SSE2: Cost Model: {{.*}} 16 for instruction:   %1 = shufflevector
+; SSE2: Cost Model: {{.*}} 6 for instruction:   %1 = shufflevector
 ; SSSE3: Cost Model: {{.*}} 6 for instruction:   %1 = shufflevector
 ; SSE41: Cost Model: {{.*}} 2 for instruction:   %1 = shufflevector
-; AVX: Cost Model: {{.*}} 5 for instruction:   %1 = shufflevector
+; AVX: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
 ; AVX2: Cost Model: {{.*}} 1 for instruction:   %1 = shufflevector
 
 
@@ -316,10 +316,10 @@ define <16 x i16> @test_v16i16_2(<16 x i16> %a, <16 x i16> %b) {
   ret <16 x i16> %1
 }
 ; CHECK: Printing analysis 'Cost Model Analysis' for function 'test_v16i16_2':
-; SSE2: Cost Model: {{.*}} 16 for instruction:   %1 = shufflevector
+; SSE2: Cost Model: {{.*}} 6 for instruction:   %1 = shufflevector
 ; SSSE3: Cost Model: {{.*}} 6 for instruction:   %1 = shufflevector
 ; SSE41: Cost Model: {{.*}} 2 for instruction:   %1 = shufflevector
-; AVX: Cost Model: {{.*}} 5 for instruction:   %1 = shufflevector
+; AVX: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
 ; AVX2: Cost Model: {{.*}} 1 for instruction:   %1 = shufflevector
 
 define <32 x i8> @test_v32i8(<32 x i8> %a, <32 x i8> %b) {
@@ -327,11 +327,11 @@ define <32 x i8> @test_v32i8(<32 x i8> %a, <32 x i8> %b) {
   ret <32 x i8> %1
 }
 ; CHECK: Printing analysis 'Cost Model Analysis' for function 'test_v32i8':
-; SSE2: Cost Model: {{.*}} 96 for instruction:   %1 = shufflevector
+; SSE2: Cost Model: {{.*}} 6 for instruction:   %1 = shufflevector
 ; SSSE3: Cost Model: {{.*}} 6 for instruction:   %1 = shufflevector
-; SSE41: Cost Model: {{.*}} 6 for instruction:   %1 = shufflevector
-; AVX: Cost Model: {{.*}} 9 for instruction:   %1 = shufflevector
-; AVX2: Cost Model: {{.*}} 9 for instruction:   %1 = shufflevector
+; SSE41: Cost Model: {{.*}} 2 for instruction:   %1 = shufflevector
+; AVX: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
+; AVX2: Cost Model: {{.*}} 1 for instruction:   %1 = shufflevector
 
 
 define <32 x i8> @test_v32i8_2(<32 x i8> %a, <32 x i8> %b) {
@@ -339,9 +339,9 @@ define <32 x i8> @test_v32i8_2(<32 x i8> %a, <32 x i8> %b) {
   ret <32 x i8> %1
 }
 ; CHECK: Printing analysis 'Cost Model Analysis' for function 'test_v32i8_2':
-; SSE2: Cost Model: {{.*}} 96 for instruction:   %1 = shufflevector
+; SSE2: Cost Model: {{.*}} 6 for instruction:   %1 = shufflevector
 ; SSSE3: Cost Model: {{.*}} 6 for instruction:   %1 = shufflevector
-; SSE41: Cost Model: {{.*}} 6 for instruction:   %1 = shufflevector
-; AVX: Cost Model: {{.*}} 9 for instruction:   %1 = shufflevector
-; AVX2: Cost Model: {{.*}} 9 for instruction:   %1 = shufflevector
+; SSE41: Cost Model: {{.*}} 2 for instruction:   %1 = shufflevector
+; AVX: Cost Model: {{.*}} 3 for instruction:   %1 = shufflevector
+; AVX2: Cost Model: {{.*}} 1 for instruction:   %1 = shufflevector
 

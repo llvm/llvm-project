@@ -49,10 +49,28 @@
 # define SANITIZER_IOSSIM  0
 #endif
 
+#if defined(__APPLE__) && TARGET_OS_IPHONE && TARGET_OS_WATCH
+# define SANITIZER_WATCHOS 1
+#else
+# define SANITIZER_WATCHOS 0
+#endif
+
+#if defined(__APPLE__) && TARGET_OS_IPHONE && TARGET_OS_TV
+# define SANITIZER_TVOS 1
+#else
+# define SANITIZER_TVOS 0
+#endif
+
 #if defined(_WIN32)
 # define SANITIZER_WINDOWS 1
 #else
 # define SANITIZER_WINDOWS 0
+#endif
+
+#if defined(_WIN64)
+# define SANITIZER_WINDOWS64 1
+#else
+# define SANITIZER_WINDOWS64 0
 #endif
 
 #if defined(__ANDROID__)
@@ -81,14 +99,67 @@
 # define SANITIZER_X32 0
 #endif
 
-// VMA size definition for architecture that support multiple sizes.
-// AArch64 has 3 VMA sizes: 39, 42 and 48.
-#if !defined(SANITIZER_AARCH64_VMA)
-# define SANITIZER_AARCH64_VMA 39
-#else
-# if SANITIZER_AARCH64_VMA != 39 && SANITIZER_AARCH64_VMA != 42
-#  error "invalid SANITIZER_AARCH64_VMA size"
+#if defined(__mips__)
+# define SANITIZER_MIPS 1
+# if defined(__mips64)
+#  define SANITIZER_MIPS32 0
+#  define SANITIZER_MIPS64 1
+# else
+#  define SANITIZER_MIPS32 1
+#  define SANITIZER_MIPS64 0
 # endif
+#else
+# define SANITIZER_MIPS 0
+# define SANITIZER_MIPS32 0
+# define SANITIZER_MIPS64 0
+#endif
+
+#if defined(__s390__)
+# define SANITIZER_S390 1
+# if defined(__s390x__)
+#  define SANITIZER_S390_31 0
+#  define SANITIZER_S390_64 1
+# else
+#  define SANITIZER_S390_31 1
+#  define SANITIZER_S390_64 0
+# endif
+#else
+# define SANITIZER_S390 0
+# define SANITIZER_S390_31 0
+# define SANITIZER_S390_64 0
+#endif
+
+#if defined(__powerpc__)
+# define SANITIZER_PPC 1
+# if defined(__powerpc64__)
+#  define SANITIZER_PPC32 0
+#  define SANITIZER_PPC64 1
+// 64-bit PPC has two ABIs (v1 and v2).  The old powerpc64 target is
+// big-endian, and uses v1 ABI (known for its function descriptors),
+// while the new powerpc64le target is little-endian and uses v2.
+// In theory, you could convince gcc to compile for their evil twins
+// (eg. big-endian v2), but you won't find such combinations in the wild
+// (it'd require bootstrapping a whole system, which would be quite painful
+// - there's no target triple for that).  LLVM doesn't support them either.
+#  if _CALL_ELF == 2
+#   define SANITIZER_PPC64V1 0
+#   define SANITIZER_PPC64V2 1
+#  else
+#   define SANITIZER_PPC64V1 1
+#   define SANITIZER_PPC64V2 0
+#  endif
+# else
+#  define SANITIZER_PPC32 1
+#  define SANITIZER_PPC64 0
+#  define SANITIZER_PPC64V1 0
+#  define SANITIZER_PPC64V2 0
+# endif
+#else
+# define SANITIZER_PPC 0
+# define SANITIZER_PPC32 0
+# define SANITIZER_PPC64 0
+# define SANITIZER_PPC64V1 0
+# define SANITIZER_PPC64V2 0
 #endif
 
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.
@@ -97,7 +168,9 @@
 // For such platforms build this code with -DSANITIZER_CAN_USE_ALLOCATOR64=0 or
 // change the definition of SANITIZER_CAN_USE_ALLOCATOR64 here.
 #ifndef SANITIZER_CAN_USE_ALLOCATOR64
-# if defined(__mips64) || (defined(__aarch64__) && SANITIZER_AARCH64_VMA == 39)
+# if SANITIZER_ANDROID && defined(__aarch64__)
+#  define SANITIZER_CAN_USE_ALLOCATOR64 1
+# elif defined(__mips64) || defined(__aarch64__)
 #  define SANITIZER_CAN_USE_ALLOCATOR64 0
 # else
 #  define SANITIZER_CAN_USE_ALLOCATOR64 (SANITIZER_WORDSIZE == 64)
@@ -105,17 +178,12 @@
 #endif
 
 // The range of addresses which can be returned my mmap.
-// FIXME: this value should be different on different platforms,
-// e.g. on AArch64 it is most likely (1ULL << 39). Larger values will still work
-// but will consume more memory for TwoLevelByteMap.
-#if defined(__aarch64__)
-# if SANITIZER_AARCH64_VMA == 39
-#  define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 39)
-# elif SANITIZER_AARCH64_VMA == 42
-#  define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 42)
-# endif
-#elif defined(__mips__)
+// FIXME: this value should be different on different platforms.  Larger values
+// will still work but will consume more memory for TwoLevelByteMap.
+#if defined(__mips__)
 # define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 40)
+#elif defined(__aarch64__)
+# define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 48)
 #else
 # define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 47)
 #endif
@@ -144,10 +212,8 @@
 #define SANITIZER_USES_UID16_SYSCALLS 0
 #endif
 
-#if defined(__mips__) || (defined(__aarch64__) && SANITIZER_AARCH64_VMA == 39)
+#if defined(__mips__)
 # define SANITIZER_POINTER_FORMAT_LENGTH FIRST_32_SECOND_64(8, 10)
-#elif defined(__aarch64__) && SANITIZER_AARCH64_VMA == 42
-# define SANITIZER_POINTER_FORMAT_LENGTH FIRST_32_SECOND_64(8, 11)
 #else
 # define SANITIZER_POINTER_FORMAT_LENGTH FIRST_32_SECOND_64(8, 12)
 #endif
@@ -167,6 +233,24 @@
 # define MSC_PREREQ(version) (_MSC_VER >= (version))
 #else
 # define MSC_PREREQ(version) 0
+#endif
+
+#if defined(__arm64__) && SANITIZER_IOS
+# define SANITIZER_NON_UNIQUE_TYPEINFO 1
+#else
+# define SANITIZER_NON_UNIQUE_TYPEINFO 0
+#endif
+
+// On linux, some architectures had an ABI transition from 64-bit long double
+// (ie. same as double) to 128-bit long double.  On those, glibc symbols
+// involving long doubles come in two versions, and we need to pass the
+// correct one to dlvsym when intercepting them.
+#if SANITIZER_LINUX && (SANITIZER_S390 || SANITIZER_PPC32 || SANITIZER_PPC64V1)
+#define SANITIZER_NLDBL_VERSION "GLIBC_2.4"
+#endif
+
+#if SANITIZER_GO == 0
+# define SANITIZER_GO 0
 #endif
 
 #endif // SANITIZER_PLATFORM_H

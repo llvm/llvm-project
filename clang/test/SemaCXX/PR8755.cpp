@@ -7,7 +7,7 @@ struct A {
 
 template <typename T>
 void f() {
-  class A <T> ::iterator foo;  // expected-error{{elaborated type refers to a typedef}}
+  class A <T> ::iterator foo;  // expected-error{{typedef 'iterator' cannot be referenced with a class specifier}}
 }
 
 void g() {

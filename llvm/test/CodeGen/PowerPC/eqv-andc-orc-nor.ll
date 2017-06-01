@@ -1,12 +1,12 @@
-; RUN: llc < %s -march=ppc32 | \
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 | \
 ; RUN:   grep eqv | count 3
-; RUN: llc < %s -march=ppc32 -mcpu=g5 | \
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5 | \
 ; RUN:   grep andc | count 3
-; RUN: llc < %s -march=ppc32 | \
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 | \
 ; RUN:   grep orc | count 2
-; RUN: llc < %s -march=ppc32 -mcpu=g5 | \
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5 | \
 ; RUN:   grep nor | count 3
-; RUN: llc < %s -march=ppc32 | \
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 | \
 ; RUN:   grep nand | count 1
 
 define i32 @EQV1(i32 %X, i32 %Y) nounwind {

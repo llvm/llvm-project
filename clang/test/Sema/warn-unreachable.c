@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -fblocks -Wunreachable-code-aggressive -Wno-unused-value -Wno-covered-switch-default -I %S/Inputs
+// RUN: %clang_cc1 -fsyntax-only -fblocks -Wunreachable-code-aggressive -Wno-unused-value -Wno-covered-switch-default -fdiagnostics-parseable-fixits -I %S/Inputs %s 2>&1 | FileCheck %s
 
 #include "warn-unreachable.h"
 
@@ -395,4 +396,105 @@ void test_with_paren_silencing(int x) {
     calledFun(); // no-warning
   else
     calledFun();
+}
+
+// rdar://24570531
+
+struct StructWithPointer {
+  void *p;
+};
+
+void emitJustOneWarningForOr(struct StructWithPointer *s) {
+  if (1 || !s->p) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
+    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:7}:"/* DISABLES CODE */ ("
+            // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:8-[[@LINE-2]]:8}:")"
+  emitJustOneWarningForOr(s); // expected-warning {{code will never be executed}}
+}
+
+void emitJustOneWarningForOrSilenced(struct StructWithPointer *s) {
+  if ((1) || !s->p)
+    return;
+
+  emitJustOneWarningForOrSilenced(s); // no warning
+}
+
+void emitJustOneWarningForOr2(struct StructWithPointer *s) {
+  if (1 || !s->p) // expected-warning {{code will never be executed}}
+    return; // expected-note@-1 {{silence by adding parentheses to mark code as explicitly dead}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"/* DISABLES CODE */ ("
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:8-[[@LINE-3]]:8}:")"
+}
+
+void wrapOneInFixit(struct StructWithPointer *s) {
+  if (!s->p || 1) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
+    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:16-[[@LINE-1]]:16}:"/* DISABLES CODE */ ("
+            // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:17}:")"
+  wrapOneInFixit(s); // expected-warning {{code will never be executed}}
+}
+
+void unaryOpNoFixit() {
+  if (- 1)
+    return; // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
+  unaryOpNoFixit(); // expected-warning {{code will never be executed}}
+}
+
+void unaryOpStrictFixit(struct StructWithPointer *s) {
+  if (!(s->p && 0)) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
+    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:17-[[@LINE-1]]:17}:"/* DISABLES CODE */ ("
+            // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:18-[[@LINE-2]]:18}:")"
+  unaryOpStrictFixit(s); // expected-warning {{code will never be executed}}
+}
+
+void unaryOpFixitCastSubExpr(int x) {
+  if (! (int)0) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
+    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:7}:"/* DISABLES CODE */ ("
+            // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:")"
+  unaryOpFixitCastSubExpr(x); // expected-warning {{code will never be executed}}
+}
+
+#define false 0
+#define true 1
+
+void testTrueFalseMacros() {
+  if (false) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
+    testTrueFalseMacros(); // expected-warning {{code will never be executed}}
+  if (!true) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
+    testTrueFalseMacros(); // expected-warning {{code will never be executed}}
+}
+
+int pr13910_foo(int x) {
+  if (x == 1)
+    return 0;
+  else
+    return x;
+  __builtin_unreachable(); // expected no warning
+}
+
+int pr13910_bar(int x) {
+  switch (x) {
+  default:
+    return x + 1;
+  }
+  pr13910_foo(x); // expected-warning {{code will never be executed}}
+}
+
+int pr13910_bar2(int x) {
+  if (x == 1)
+    return 0;
+  else
+    return x;
+  pr13910_foo(x);          // expected-warning {{code will never be executed}}
+  __builtin_unreachable(); // expected no warning
+  pr13910_foo(x);          // expected-warning {{code will never be executed}}
+}
+
+void pr13910_noreturn() {
+  raze();
+  __builtin_unreachable(); // expected no warning
+}
+
+void pr13910_assert() {
+  myassert(0 && "unreachable");
+  return;
+  __builtin_unreachable(); // expected no warning
 }

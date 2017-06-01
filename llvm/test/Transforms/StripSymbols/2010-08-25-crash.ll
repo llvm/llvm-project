@@ -1,24 +1,29 @@
 ; RUN: opt -strip-dead-debug-info -disable-output < %s
-define i32 @foo() nounwind ssp !dbg !0 {
+source_filename = "test/Transforms/StripSymbols/2010-08-25-crash.ll"
+
+; Function Attrs: nounwind ssp
+define i32 @foo() #0 !dbg !9 {
 entry:
-  ret i32 0, !dbg !8
+  ret i32 0, !dbg !12
 }
 
-!llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!14}
+attributes #0 = { nounwind ssp }
 
-!0 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !10, scope: !1, type: !3)
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!8}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 2.8 (trunk 112062)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !3)
 !1 = !DIFile(filename: "/tmp/a.c", directory: "/Volumes/Lalgate/clean/D.CW")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.8 (trunk 112062)", isOptimized: true, emissionKind: 1, file: !10, enums: !11, retainedTypes: !11, subprograms: !12, globals: !13)
-!3 = !DISubroutineType(types: !4)
-!4 = !{!5}
-!5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!6 = !DIGlobalVariable(name: "i", linkageName: "i", line: 2, isLocal: true, isDefinition: true, scope: !1, file: !1, type: !7)
-!7 = !DIDerivedType(tag: DW_TAG_const_type, file: !10, scope: !1, baseType: !5)
-!8 = !DILocation(line: 3, column: 13, scope: !9)
-!9 = distinct !DILexicalBlock(line: 3, column: 11, file: !10, scope: !0)
-!10 = !DIFile(filename: "/tmp/a.c", directory: "/Volumes/Lalgate/clean/D.CW")
-!11 = !{}
-!12 = !{!0}
-!13 = !{!6}
-!14 = !{i32 1, !"Debug Info Version", i32 3}
+!2 = !{}
+!3 = !{!4}
+!4 = !DIGlobalVariableExpression(var: !5)
+!5 = !DIGlobalVariable(name: "i", linkageName: "i", scope: !1, file: !1, line: 2, type: !6, isLocal: true, isDefinition: true)
+!6 = !DIDerivedType(tag: DW_TAG_const_type, scope: !1, file: !1, baseType: !7)
+!7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+!8 = !{i32 1, !"Debug Info Version", i32 3}
+!9 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !1, file: !1, line: 3, type: !10, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !0)
+!10 = !DISubroutineType(types: !11)
+!11 = !{!7}
+!12 = !DILocation(line: 3, column: 13, scope: !13)
+!13 = distinct !DILexicalBlock(scope: !9, file: !1, line: 3, column: 11)
+

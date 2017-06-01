@@ -1,10 +1,12 @@
+# Needed for lit support
+include(AddLLVM)
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.common.configured.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.common.configured)
 
-# BlocksRuntime and builtins testsuites are not yet ported to lit.
+# BlocksRuntime (and most of builtins) testsuites are not yet ported to lit.
 # add_subdirectory(BlocksRuntime)
-# add_subdirectory(builtins)
 
 set(SANITIZER_COMMON_LIT_TEST_DEPS)
 if(COMPILER_RT_STANDALONE_BUILD)
@@ -19,8 +21,8 @@ if(NOT ANDROID)
   if(NOT COMPILER_RT_STANDALONE_BUILD)
     # Use LLVM utils and Clang from the same build tree.
     list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS
-      clang clang-headers FileCheck count not llvm-config llvm-nm llvm-symbolizer
-      compiler-rt-headers)
+      clang clang-headers FileCheck count not llvm-config llvm-nm llvm-objdump
+      llvm-readobj llvm-symbolizer compiler-rt-headers sancov)
     if (COMPILER_RT_HAS_PROFILE)
       list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS profile)
     endif()
@@ -28,7 +30,7 @@ if(NOT ANDROID)
       list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS KillTheDoctor)
     endif()
   endif()
-  if(UNIX)
+  if(CMAKE_HOST_UNIX)
     list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS SanitizerLintCheck)
   endif()
 endif()
@@ -36,11 +38,17 @@ endif()
 # Run sanitizer tests only if we're sure that clang would produce
 # working binaries.
 if(COMPILER_RT_CAN_EXECUTE_TESTS)
+  if(COMPILER_RT_BUILD_BUILTINS)
+    add_subdirectory(builtins)
+  endif()
   if(COMPILER_RT_HAS_ASAN)
     add_subdirectory(asan)
   endif()
   if(COMPILER_RT_HAS_DFSAN)
     add_subdirectory(dfsan)
+  endif()
+  if (COMPILER_RT_HAS_INTERCEPTION)
+    add_subdirectory(interception)
   endif()
   if(COMPILER_RT_HAS_LSAN)
     add_subdirectory(lsan)
@@ -67,6 +75,15 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
   if(COMPILER_RT_HAS_SAFESTACK)
     add_subdirectory(safestack)
   endif()
+  if(COMPILER_RT_HAS_ESAN)
+    add_subdirectory(esan)
+  endif()
+  if(COMPILER_RT_HAS_SCUDO)
+    add_subdirectory(scudo)
+  endif()
+  if(COMPILER_RT_HAS_XRAY)
+    add_subdirectory(xray)
+  endif()
 endif()
 
 if(COMPILER_RT_STANDALONE_BUILD)
@@ -74,8 +91,13 @@ if(COMPILER_RT_STANDALONE_BUILD)
   # introduce a rule to run to run all of them.
   get_property(LLVM_LIT_TESTSUITES GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
   get_property(LLVM_LIT_DEPENDS GLOBAL PROPERTY LLVM_LIT_DEPENDS)
-  add_lit_target(check-all
+  add_lit_target(check-compiler-rt
     "Running all regression tests"
     ${LLVM_LIT_TESTSUITES}
     DEPENDS ${LLVM_LIT_DEPENDS})
+  if(NOT TARGET check-all)
+    add_custom_target(check-all)
+  endif()
+  add_custom_target(compiler-rt-test-depends DEPENDS ${LLVM_LIT_DEPENDS})
+  add_dependencies(check-all check-compiler-rt)
 endif()

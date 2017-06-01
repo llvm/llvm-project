@@ -76,14 +76,17 @@ void test_pair_deduction(int *ip, float *fp, double *dp) {
   first_arg_pair(make_pair(ip, 17), 16); // expected-error{{no matching function for call to 'first_arg_pair'}}
 }
 
-// For a function parameter pack that does not occur at the end of the
-// parameter-declaration-list, the type of the parameter pack is a
-// non-deduced context.
+// A function parameter pack not at the end of the parameter list is never
+// deduced. We interpret this as meaning the types within it are never
+// deduced, and thus must match explicitly-specified values.
 template<typename ...Types> struct tuple { };
 
 template<typename ...Types>
-void pack_not_at_end(tuple<Types...>, Types... values, int);
+void pack_not_at_end(tuple<Types...>, Types... values, int); // expected-note {{<int *, double *> vs. <>}}
 
 void test_pack_not_at_end(tuple<int*, double*> t2) {
-  pack_not_at_end(t2, 0, 0, 0);
+  pack_not_at_end(t2, 0, 0, 0); // expected-error {{no match}}
+  // FIXME: Should the "original argument type must match deduced parameter
+  // type" rule apply here?
+  pack_not_at_end<int*, double*>(t2, 0, 0, 0); // ok
 }

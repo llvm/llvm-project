@@ -21,6 +21,12 @@ using namespace llvm;
 static cl::opt<bool> DisablePPCConstHoist("disable-ppc-constant-hoisting",
 cl::desc("disable constant hoisting on PPC"), cl::init(false), cl::Hidden);
 
+// This is currently only used for the data prefetch pass which is only enabled
+// for BG/Q by default.
+static cl::opt<unsigned>
+CacheLineSize("ppc-loop-prefetch-cache-line", cl::Hidden, cl::init(64),
+              cl::desc("The loop prefetch cache line size"));
+
 //===----------------------------------------------------------------------===//
 //
 // PPC cost model.
@@ -30,8 +36,9 @@ cl::desc("disable constant hoisting on PPC"), cl::init(false), cl::Hidden);
 TargetTransformInfo::PopcntSupportKind
 PPCTTIImpl::getPopcntSupport(unsigned TyWidth) {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
-  if (ST->hasPOPCNTD() && TyWidth <= 64)
-    return TTI::PSK_FastHardware;
+  if (ST->hasPOPCNTD() != PPCSubtarget::POPCNTD_Unavailable && TyWidth <= 64)
+    return ST->hasPOPCNTD() == PPCSubtarget::POPCNTD_Slow ?
+             TTI::PSK_SlowHardware : TTI::PSK_FastHardware;
   return TTI::PSK_Software;
 }
 
@@ -124,12 +131,12 @@ int PPCTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
     return TTI::TCC_Free;
   case Instruction::And:
     RunFree = true; // (for the rotate-and-mask instructions)
-    // Fallthrough...
+    LLVM_FALLTHROUGH;
   case Instruction::Add:
   case Instruction::Or:
   case Instruction::Xor:
     ShiftedFree = true;
-    // Fallthrough...
+    LLVM_FALLTHROUGH;
   case Instruction::Sub:
   case Instruction::Mul:
   case Instruction::Shl:
@@ -140,7 +147,8 @@ int PPCTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
   case Instruction::ICmp:
     UnsignedFree = true;
     ImmIdx = 1;
-    // Fallthrough... (zero comparisons can use record-form instructions)
+    // Zero comparisons can use record-form instructions.
+    LLVM_FALLTHROUGH;
   case Instruction::Select:
     ZeroFree = true;
     break;
@@ -230,6 +238,18 @@ unsigned PPCTTIImpl::getRegisterBitWidth(bool Vector) {
 
 }
 
+unsigned PPCTTIImpl::getCacheLineSize() {
+  // This is currently only used for the data prefetch pass which is only
+  // enabled for BG/Q by default.
+  return CacheLineSize;
+}
+
+unsigned PPCTTIImpl::getPrefetchDistance() {
+  // This seems like a reasonable default for the BG/Q (this pass is enabled, by
+  // default, only on the BG/Q).
+  return 300;
+}
+
 unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   unsigned Directive = ST->getDarwinDirective();
   // The 440 has no SIMD support, but floating-point instructions
@@ -248,8 +268,9 @@ unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {
 
   // For P7 and P8, floating-point instructions have a 6-cycle latency and
   // there are two execution units, so unroll by 12x for latency hiding.
-  if (Directive == PPC::DIR_PWR7 ||
-      Directive == PPC::DIR_PWR8)
+  // FIXME: the same for P9 as previous gen until POWER9 scheduling is ready
+  if (Directive == PPC::DIR_PWR7 || Directive == PPC::DIR_PWR8 ||
+      Directive == PPC::DIR_PWR9)
     return 12;
 
   // For most things, modern systems have two execution units (and
@@ -260,7 +281,7 @@ unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {
 int PPCTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::OperandValueKind Op1Info,
     TTI::OperandValueKind Op2Info, TTI::OperandValueProperties Opd1PropInfo,
-    TTI::OperandValueProperties Opd2PropInfo) {
+    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args) {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
 
   // Fallback to the default implementation.
@@ -339,11 +360,6 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
 
   int Cost = BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace);
 
-  // Aligned loads and stores are easy.
-  unsigned SrcBytes = LT.second.getStoreSize();
-  if (!SrcBytes || !Alignment || Alignment >= SrcBytes)
-    return Cost;
-
   bool IsAltivecType = ST->hasAltivec() &&
                        (LT.second == MVT::v16i8 || LT.second == MVT::v8i16 ||
                         LT.second == MVT::v4i32 || LT.second == MVT::v4f32);
@@ -352,10 +368,24 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
   bool IsQPXType = ST->hasQPX() &&
                    (LT.second == MVT::v4f64 || LT.second == MVT::v4f32);
 
+  // VSX has 32b/64b load instructions. Legalization can handle loading of
+  // 32b/64b to VSR correctly and cheaply. But BaseT::getMemoryOpCost and
+  // PPCTargetLowering can't compute the cost appropriately. So here we
+  // explicitly check this case.
+  unsigned MemBytes = Src->getPrimitiveSizeInBits();
+  if (Opcode == Instruction::Load && ST->hasVSX() && IsAltivecType &&
+      (MemBytes == 64 || (ST->hasP8Vector() && MemBytes == 32)))
+    return 1;
+
+  // Aligned loads and stores are easy.
+  unsigned SrcBytes = LT.second.getStoreSize();
+  if (!SrcBytes || !Alignment || Alignment >= SrcBytes)
+    return Cost;
+
   // If we can use the permutation-based load sequence, then this is also
   // relatively cheap (not counting loop-invariant instructions): one load plus
   // one permute (the last load in a series has extra cost, but we're
-  // neglecting that here). Note that on the P7, we should do unaligned loads
+  // neglecting that here). Note that on the P7, we could do unaligned loads
   // for Altivec types using the VSX instructions, but that's more expensive
   // than using the permutation-based load sequence. On the P8, that's no
   // longer true.

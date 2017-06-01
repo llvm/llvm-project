@@ -380,20 +380,18 @@ bool llvm::expandRemainder(BinaryOperator *Rem) {
 
   IRBuilder<> Builder(Rem);
 
-  Type *RemTy = Rem->getType();
-  if (RemTy->isVectorTy())
-    llvm_unreachable("Div over vectors not supported");
-
-  unsigned RemTyBitWidth = RemTy->getIntegerBitWidth();
-
-  if (RemTyBitWidth != 32 && RemTyBitWidth != 64)
-    llvm_unreachable("Div of bitwidth other than 32 or 64 not supported");
+  assert(!Rem->getType()->isVectorTy() && "Div over vectors not supported");
+  assert((Rem->getType()->getIntegerBitWidth() == 32 ||
+          Rem->getType()->getIntegerBitWidth() == 64) &&
+         "Div of bitwidth other than 32 or 64 not supported");
 
   // First prepare the sign if it's a signed remainder
   if (Rem->getOpcode() == Instruction::SRem) {
     Value *Remainder = generateSignedRemainderCode(Rem->getOperand(0),
                                                    Rem->getOperand(1), Builder);
 
+    // Check whether this is the insert point while Rem is still valid.
+    bool IsInsertPoint = Rem->getIterator() == Builder.GetInsertPoint();
     Rem->replaceAllUsesWith(Remainder);
     Rem->dropAllReferences();
     Rem->eraseFromParent();
@@ -401,7 +399,7 @@ bool llvm::expandRemainder(BinaryOperator *Rem) {
     // If we didn't actually generate an urem instruction, we're done
     // This happens for example if the input were constant. In this case the
     // Builder insertion point was unchanged
-    if (Rem == Builder.GetInsertPoint().getNodePtrUnchecked())
+    if (IsInsertPoint)
       return true;
 
     BinaryOperator *BO = dyn_cast<BinaryOperator>(Builder.GetInsertPoint());
@@ -440,20 +438,19 @@ bool llvm::expandDivision(BinaryOperator *Div) {
 
   IRBuilder<> Builder(Div);
 
-  Type *DivTy = Div->getType();
-  if (DivTy->isVectorTy())
-    llvm_unreachable("Div over vectors not supported");
-
-  unsigned DivTyBitWidth = DivTy->getIntegerBitWidth();
-
-  if (DivTyBitWidth != 32 && DivTyBitWidth != 64)
-    llvm_unreachable("Div of bitwidth other than 32 or 64 not supported");
+  assert(!Div->getType()->isVectorTy() && "Div over vectors not supported");
+  assert((Div->getType()->getIntegerBitWidth() == 32 ||
+          Div->getType()->getIntegerBitWidth() == 64) &&
+         "Div of bitwidth other than 32 or 64 not supported");
 
   // First prepare the sign if it's a signed division
   if (Div->getOpcode() == Instruction::SDiv) {
     // Lower the code to unsigned division, and reset Div to point to the udiv.
     Value *Quotient = generateSignedDivisionCode(Div->getOperand(0),
                                                  Div->getOperand(1), Builder);
+
+    // Check whether this is the insert point while Div is still valid.
+    bool IsInsertPoint = Div->getIterator() == Builder.GetInsertPoint();
     Div->replaceAllUsesWith(Quotient);
     Div->dropAllReferences();
     Div->eraseFromParent();
@@ -461,7 +458,7 @@ bool llvm::expandDivision(BinaryOperator *Div) {
     // If we didn't actually generate an udiv instruction, we're done
     // This happens for example if the input were constant. In this case the
     // Builder insertion point was unchanged
-    if (Div == Builder.GetInsertPoint().getNodePtrUnchecked())
+    if (IsInsertPoint)
       return true;
 
     BinaryOperator *BO = dyn_cast<BinaryOperator>(Builder.GetInsertPoint());
@@ -492,15 +489,14 @@ bool llvm::expandRemainderUpTo32Bits(BinaryOperator *Rem) {
           "Trying to expand remainder from a non-remainder function");
 
   Type *RemTy = Rem->getType();
-  if (RemTy->isVectorTy())
-    llvm_unreachable("Div over vectors not supported");
+  assert(!RemTy->isVectorTy() && "Div over vectors not supported");
 
   unsigned RemTyBitWidth = RemTy->getIntegerBitWidth();
 
-  if (RemTyBitWidth > 32) 
-    llvm_unreachable("Div of bitwidth greater than 32 not supported");
+  assert(RemTyBitWidth <= 32 &&
+         "Div of bitwidth greater than 32 not supported");
 
-  if (RemTyBitWidth == 32) 
+  if (RemTyBitWidth == 32)
     return expandRemainder(Rem);
 
   // If bitwidth smaller than 32 extend inputs, extend output and proceed
@@ -542,15 +538,13 @@ bool llvm::expandRemainderUpTo64Bits(BinaryOperator *Rem) {
           "Trying to expand remainder from a non-remainder function");
 
   Type *RemTy = Rem->getType();
-  if (RemTy->isVectorTy())
-    llvm_unreachable("Div over vectors not supported");
+  assert(!RemTy->isVectorTy() && "Div over vectors not supported");
 
   unsigned RemTyBitWidth = RemTy->getIntegerBitWidth();
 
-  if (RemTyBitWidth > 64) 
-    llvm_unreachable("Div of bitwidth greater than 64 not supported");
+  assert(RemTyBitWidth <= 64 && "Div of bitwidth greater than 64 not supported");
 
-  if (RemTyBitWidth == 64) 
+  if (RemTyBitWidth == 64)
     return expandRemainder(Rem);
 
   // If bitwidth smaller than 64 extend inputs, extend output and proceed
@@ -593,13 +587,11 @@ bool llvm::expandDivisionUpTo32Bits(BinaryOperator *Div) {
           "Trying to expand division from a non-division function");
 
   Type *DivTy = Div->getType();
-  if (DivTy->isVectorTy())
-    llvm_unreachable("Div over vectors not supported");
+  assert(!DivTy->isVectorTy() && "Div over vectors not supported");
 
   unsigned DivTyBitWidth = DivTy->getIntegerBitWidth();
 
-  if (DivTyBitWidth > 32)
-    llvm_unreachable("Div of bitwidth greater than 32 not supported");
+  assert(DivTyBitWidth <= 32 && "Div of bitwidth greater than 32 not supported");
 
   if (DivTyBitWidth == 32)
     return expandDivision(Div);
@@ -643,13 +635,12 @@ bool llvm::expandDivisionUpTo64Bits(BinaryOperator *Div) {
           "Trying to expand division from a non-division function");
 
   Type *DivTy = Div->getType();
-  if (DivTy->isVectorTy())
-    llvm_unreachable("Div over vectors not supported");
+  assert(!DivTy->isVectorTy() && "Div over vectors not supported");
 
   unsigned DivTyBitWidth = DivTy->getIntegerBitWidth();
 
-  if (DivTyBitWidth > 64)
-    llvm_unreachable("Div of bitwidth greater than 64 not supported");
+  assert(DivTyBitWidth <= 64 &&
+         "Div of bitwidth greater than 64 not supported");
 
   if (DivTyBitWidth == 64)
     return expandDivision(Div);

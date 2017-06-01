@@ -19,13 +19,17 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
   )
 
-set(LLD_TEST_DEPS
-  FileCheck not llvm-ar llvm-as llvm-dis llvm-dwarfdump llvm-nm
-  llc lld llvm-config llvm-objdump llvm-readobj yaml2obj obj2yaml
-  llvm-mc llvm-lib llvm-pdbdump opt
-  )
+set(LLD_TEST_DEPS lld)
+if (NOT LLD_BUILT_STANDALONE)
+  list(APPEND LLD_TEST_DEPS
+    FileCheck not llvm-ar llvm-as llvm-dis llvm-dwarfdump llvm-nm
+    llc llvm-config llvm-objdump llvm-readobj yaml2obj obj2yaml
+    llvm-mc llvm-lib llvm-pdbdump opt
+    )
+endif()
+
 if (LLVM_INCLUDE_TESTS)
-  set(LLD_TEST_DEPS ${LLD_TEST_DEPS} LLDUnitTests)
+  list(APPEND LLD_TEST_DEPS LLDUnitTests)
 endif()
 
 set(LLD_TEST_PARAMS

@@ -30,8 +30,8 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, 
 ; COREI7: movups _.str3
 
 ; CORE2: .section
-; CORE2: .align  3
+; CORE2: .p2align  3
 ; CORE2-NEXT: _.str1:
 ; CORE2-NEXT: .asciz "DHRYSTONE PROGRAM, SOME STRING"
-; CORE2: .align 3
+; CORE2: .p2align 3
 ; CORE2-NEXT: _.str3:

@@ -20,17 +20,16 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!18}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.0 (trunk 137954)", isOptimized: true, emissionKind: 0, file: !16, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.0 (trunk 137954)", isOptimized: true, emissionKind: FullDebug, file: !16, enums: !2, retainedTypes: !2, globals: !2)
 !1 = !{!2}
 !2 = !{}
-!3 = !{!5}
-!5 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooN2N11AE", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !16, scope: !6, type: !7)
+!5 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooN2N11AE", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, file: !16, scope: !6, type: !7)
 !6 = !DIFile(filename: "n1.c", directory: "/private/tmp")
 !7 = !DISubroutineType(types: !8)
 !8 = !{null}
 !9 = !DILocalVariable(name: "mya", line: 4, arg: 1, scope: !5, file: !6, type: !10)
 !10 = !DICompositeType(tag: DW_TAG_class_type, name: "A", line: 3, size: 8, align: 8, file: !17, scope: !11, elements: !2)
-!11 = !DINamespace(name: "N1", line: 2, file: !17, scope: null)
+!11 = !DINamespace(name: "N1", scope: null)
 !12 = !DIFile(filename: "./n.h", directory: "/private/tmp")
 !13 = !DILocation(line: 4, column: 12, scope: !5)
 !14 = !DILocation(line: 4, column: 18, scope: !15)

@@ -1,0 +1,5 @@
+framework module Nonmodular [extern_c] {
+  umbrella header "umbrella.h"
+  export *
+  module * { export * }
+}

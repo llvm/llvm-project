@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -gvn -S | grep "DEAD = phi i32 "
+; RUN: opt < %s -basicaa -gvn -S | FileCheck %s
 
 ; GVN should eliminate the fully redundant %9 GEP which 
 ; allows DEAD to be removed.  This is PR3198.
@@ -33,6 +33,7 @@ bb1:		; preds = %entry
 bb3:		; preds = %bb1, %bb
 	%9 = getelementptr [100 x i32], [100 x i32]* @H, i32 0, i32 %i		; <i32*> [#uses=1]
 	%DEAD = load i32, i32* %9, align 4		; <i32> [#uses=1]
+; CHECK: %DEAD = phi i32 [ 0, %bb1 ], [ %4, %bb ]
 	ret i32 %DEAD
 
 bb4:		; preds = %bb1

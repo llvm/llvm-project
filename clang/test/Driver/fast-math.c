@@ -231,3 +231,7 @@
 // CHECK-NO-UNSAFE-MATH: "-cc1"
 // CHECK-NO-UNSAFE-MATH-NOT: "-menable-unsafe-fp-math"
 // CHECK-NO-UNSAFE-MATH: "-o"
+//
+// RUN: %clang -### -ftrapping-math -fno-trapping-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-TRAPPING-MATH %s
+// CHECK-NO-TRAPPING-MATH: "-fno-trapping-math"

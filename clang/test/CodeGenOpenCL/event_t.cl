@@ -9,4 +9,6 @@ void kernel ker() {
 // CHECK: call {{.*}}void @foo(%opencl.event_t* %
   foo(0);
 // CHECK: call {{.*}}void @foo(%opencl.event_t* null)
+  foo((event_t)0);
+// CHECK: call {{.*}}void @foo(%opencl.event_t* null)
 }

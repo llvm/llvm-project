@@ -1,7 +1,7 @@
 ;RUN: llc < %s -march=r600 -mcpu=cayman -stress-sched -verify-misched -verify-machineinstrs
 ;REQUIRES: asserts
 
-define void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) #1 {
+define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {
 main_body:
   %0 = extractelement <4 x float> %reg1, i32 0
   %1 = extractelement <4 x float> %reg1, i32 1
@@ -44,15 +44,15 @@ ENDIF:                                            ; preds = %ELSE17, %ELSE, %IF
   %temp1.0 = phi float [ %., %IF ], [ %48, %ELSE17 ], [ 0.000000e+00, %ELSE ]
   %temp2.0 = phi float [ 0.000000e+00, %IF ], [ %49, %ELSE17 ], [ 1.000000e+00, %ELSE ]
   %temp.0 = phi float [ %.18, %IF ], [ %47, %ELSE17 ], [ 0.000000e+00, %ELSE ]
-  %27 = call float @llvm.AMDIL.clamp.(float %temp.0, float 0.000000e+00, float 1.000000e+00)
-  %28 = call float @llvm.AMDIL.clamp.(float %temp1.0, float 0.000000e+00, float 1.000000e+00)
-  %29 = call float @llvm.AMDIL.clamp.(float %temp2.0, float 0.000000e+00, float 1.000000e+00)
-  %30 = call float @llvm.AMDIL.clamp.(float 1.000000e+00, float 0.000000e+00, float 1.000000e+00)
+  %27 = call float @llvm.AMDGPU.clamp.f32(float %temp.0, float 0.000000e+00, float 1.000000e+00)
+  %28 = call float @llvm.AMDGPU.clamp.f32(float %temp1.0, float 0.000000e+00, float 1.000000e+00)
+  %29 = call float @llvm.AMDGPU.clamp.f32(float %temp2.0, float 0.000000e+00, float 1.000000e+00)
+  %30 = call float @llvm.AMDGPU.clamp.f32(float 1.000000e+00, float 0.000000e+00, float 1.000000e+00)
   %31 = insertelement <4 x float> undef, float %27, i32 0
   %32 = insertelement <4 x float> %31, float %28, i32 1
   %33 = insertelement <4 x float> %32, float %29, i32 2
   %34 = insertelement <4 x float> %33, float %30, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %34, i32 0, i32 0)
+  call void @llvm.r600.store.swizzle(<4 x float> %34, i32 0, i32 0)
   ret void
 
 ELSE17:                                           ; preds = %ELSE
@@ -74,9 +74,8 @@ ELSE17:                                           ; preds = %ELSE
   br label %ENDIF
 }
 
-declare float @llvm.AMDIL.clamp.(float, float, float) #0
+declare float @llvm.AMDGPU.clamp.f32(float, float, float) #0
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
 attributes #0 = { readnone }
-attributes #1 = { "ShaderType"="1" }

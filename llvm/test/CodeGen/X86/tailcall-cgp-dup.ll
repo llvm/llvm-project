@@ -85,3 +85,23 @@ someThingWithValue.exit:                          ; preds = %if.else.i, %if.then
   %retval.0.i = bitcast i8* %retval.0.in.i to %0*
   ret %0* %retval.0.i
 }
+
+
+; Correctly handle zext returns.
+declare zeroext i1 @foo_i1()
+
+; CHECK-LABEL: zext_i1
+; CHECK: jmp _foo_i1
+define zeroext i1 @zext_i1(i1 %k) {
+entry:
+  br i1 %k, label %land.end, label %land.rhs
+
+land.rhs:                                         ; preds = %entry
+  %call1 = tail call zeroext i1 @foo_i1()
+  br label %land.end
+
+land.end:                                         ; preds = %entry, %land.rhs
+  %0 = phi i1 [ false, %entry ], [ %call1, %land.rhs ]
+  ret i1 %0
+}
+

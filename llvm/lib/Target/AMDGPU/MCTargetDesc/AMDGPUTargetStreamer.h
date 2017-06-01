@@ -7,18 +7,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_MCTARGETDESC_AMDGPUTARGETSTREAMER_H
-#define LLVM_LIB_TARGET_R600_MCTARGETDESC_AMDGPUTARGETSTREAMER_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUTARGETSTREAMER_H
+#define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUTARGETSTREAMER_H
 
 #include "AMDKernelCodeT.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Debug.h"
-namespace llvm {
 
+namespace llvm {
+#include "AMDGPUPTNote.h"
+
+class DataLayout;
+class Function;
 class MCELFStreamer;
+class MCSymbol;
+class MDNode;
+class Module;
+class Type;
 
 class AMDGPUTargetStreamer : public MCTargetStreamer {
+protected:
+  MCContext &getContext() const { return Streamer.getContext(); }
+
 public:
   AMDGPUTargetStreamer(MCStreamer &S);
   virtual void EmitDirectiveHSACodeObjectVersion(uint32_t Major,
@@ -32,6 +41,14 @@ public:
   virtual void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) = 0;
 
   virtual void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) = 0;
+
+  virtual void EmitAMDGPUHsaModuleScopeGlobal(StringRef GlobalName) = 0;
+
+  virtual void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) = 0;
+
+  virtual void EmitRuntimeMetadata(Module &M) = 0;
+
+  virtual void EmitRuntimeMetadata(StringRef Metadata) = 0;
 };
 
 class AMDGPUTargetAsmStreamer : public AMDGPUTargetStreamer {
@@ -48,22 +65,21 @@ public:
   void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) override;
 
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
+
+  void EmitAMDGPUHsaModuleScopeGlobal(StringRef GlobalName) override;
+
+  void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) override;
+
+  void EmitRuntimeMetadata(Module &M) override;
+
+  void EmitRuntimeMetadata(StringRef Metadata) override;
 };
 
 class AMDGPUTargetELFStreamer : public AMDGPUTargetStreamer {
-
-  enum NoteType {
-    NT_AMDGPU_HSA_CODE_OBJECT_VERSION = 1,
-    NT_AMDGPU_HSA_HSAIL = 2,
-    NT_AMDGPU_HSA_ISA = 3,
-    NT_AMDGPU_HSA_PRODUCER = 4,
-    NT_AMDGPU_HSA_PRODUCER_OPTIONS = 5,
-    NT_AMDGPU_HSA_EXTENSION = 6,
-    NT_AMDGPU_HSA_HLDEBUG_DEBUG = 101,
-    NT_AMDGPU_HSA_HLDEBUG_TARGET = 102
-  };
-
   MCStreamer &Streamer;
+
+  void EmitAMDGPUNote(const MCExpr *DescSize, AMDGPU::PT_NOTE::NoteType Type,
+                      function_ref<void(MCELFStreamer &)> EmitDesc);
 
 public:
   AMDGPUTargetELFStreamer(MCStreamer &S);
@@ -80,6 +96,14 @@ public:
   void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) override;
 
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
+
+  void EmitAMDGPUHsaModuleScopeGlobal(StringRef GlobalName) override;
+
+  void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) override;
+
+  void EmitRuntimeMetadata(Module &M) override;
+
+  void EmitRuntimeMetadata(StringRef Metadata) override;
 };
 
 }

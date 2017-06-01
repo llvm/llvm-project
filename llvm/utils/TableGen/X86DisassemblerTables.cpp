@@ -285,7 +285,7 @@ static inline bool inheritsFrom(InstructionContext child,
     return false;
   case IC_EVEX_L_W_K:
   case IC_EVEX_L_W_B:
-  case IC_EVEX_L_W_K_B:    
+  case IC_EVEX_L_W_K_B:
   case IC_EVEX_L_W_XS_K:
   case IC_EVEX_L_W_XS_B:
   case IC_EVEX_L_W_XS_K_B:

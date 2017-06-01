@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE
 ; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu %s -o - -enable-shrink-wrap=false |  FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
-; XFAIL: *
 ;
 ; Note: Lots of tests use inline asm instead of regular calls.
 ; This allows to have a better control on what the allocation will do.
@@ -47,7 +46,7 @@
 ;
 ; Without shrink-wrapping, epilogue is in the exit block.
 ; Epilogue code. (What we pop does not matter.)
-; DISABLE: mtlr 0
+; DISABLE: mtlr {{[0-9]+}}
 ; DISABLE-NEXT: blr
 ;
 
@@ -81,7 +80,7 @@ declare i32 @doSomething(i32, i32*)
 ;
 ; Prologue code.
 ; Make sure we save the link register
-; CHECK: mflr 0
+; CHECK: mflr {{[0-9]+}}
 ;
 ; DISABLE: cmplwi 0, 3, 0
 ; DISABLE: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
@@ -110,7 +109,7 @@ declare i32 @doSomething(i32, i32*)
 ; DISABLE: .[[EPILOG_BB]]: # %if.end
 ;
 ; Epilogue code.
-; CHECK: mtlr 0
+; CHECK: mtlr {{[0-9]+}}
 ; CHECK-NEXT: blr
 ;
 ; ENABLE: .[[ELSE_LABEL]]: # %if.else
@@ -155,7 +154,7 @@ declare i32 @something(...)
 ; CHECK-LABEL: freqSaveAndRestoreOutsideLoop2:
 ; Prologue code.
 ; Make sure we save the link register before the call
-; CHECK: mflr 0
+; CHECK: mflr {{[0-9]+}}
 ;
 ; Loop preheader
 ; CHECK-DAG: li [[SUM:[0-9]+]], 0
@@ -170,8 +169,8 @@ declare i32 @something(...)
 ; CHECK-NEXT: bne 0, .[[LOOP]]
 ;
 ; Next BB
-; CHECK: %for.exit
-; CHECK: mtlr 0
+; CHECK: %for.end
+; CHECK: mtlr {{[0-9]+}}
 ; CHECK-NEXT: blr
 define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) {
 entry:
@@ -208,9 +207,11 @@ for.end:                                          ; preds = %for.body
 ;
 ; Prologue code.
 ; Make sure we save the link register 
-; CHECK: mflr 0
+; CHECK: mflr {{[0-9]+}}
 ;
 ; DISABLE: cmplwi 0, 3, 0
+; DISABLE-NEXT: std
+; DISABLE-NEXT: std
 ; DISABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Loop preheader
@@ -238,7 +239,7 @@ for.end:                                          ; preds = %for.body
 ;
 ; DISABLE: .[[EPILOG_BB]]: # %if.end
 ; Epilog code
-; CHECK: mtlr 0
+; CHECK: mtlr {{[0-9]+}}
 ; CHECK-NEXT: blr
 ; 
 ; ENABLE: .[[ELSE_LABEL]]: # %if.else
@@ -288,9 +289,11 @@ declare void @somethingElse(...)
 ;
 ; Prologue code.
 ; Make sure we save the link register
-; CHECK: mflr 0
+; CHECK: mflr {{[0-9]+}}
 ;
 ; DISABLE: cmplwi 0, 3, 0
+; DISABLE-NEXT: std
+; DISABLE-NEXT: std
 ; DISABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: bl somethingElse
@@ -318,7 +321,7 @@ declare void @somethingElse(...)
 ; DISABLE: .[[EPILOG_BB]]: # %if.end
 ;
 ; Epilogue code.
-; CHECK: mtlr 0
+; CHECK: mtlr {{[0-9]+}}
 ; CHECK-NEXT: blr
 ;
 ; ENABLE: .[[ELSE_LABEL]]: # %if.else
@@ -378,8 +381,8 @@ entry:
 ; ENABLE-DAG: li [[IV:[0-9]+]], 10
 ; ENABLE-DAG: std 14, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
 ;
-; DISABLE: std 14, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
 ; DISABLE: cmplwi 0, 3, 0
+; DISABLE-NEXT: std 14, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
 ; DISABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ; DISABLE: li [[IV:[0-9]+]], 10
 ;
@@ -400,7 +403,7 @@ entry:
 ; CHECK: [[ELSE_LABEL]]
 ; CHECK-NEXT: slwi 3, 4, 1
 ; DISABLE: ld 14, -[[STACK_OFFSET]](1) # 8-byte Folded Reload
-; CHECK-NEXT blr
+; CHECK-NEXT: blr
 ; 
 define i32 @inlineAsm(i32 %cond, i32 %N) {
 entry:
@@ -439,7 +442,7 @@ if.end:                                           ; preds = %for.body, %if.else
 ; ENABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
-; CHECK: mflr 0
+; CHECK: mflr {{[0-9]+}}
 ; 
 ; DISABLE: cmplwi 0, 3, 0
 ; DISABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
@@ -455,7 +458,7 @@ if.end:                                           ; preds = %for.body, %if.else
 ; CHECK: slwi 3, 3, 3
 ; DISABLE: b .[[EPILOGUE_BB:LBB[0-9_]+]]
 ;
-; ENABLE: mtlr 0
+; ENABLE: mtlr {{[0-9]+}}
 ; ENABLE-NEXT: blr
 ;
 ; CHECK: .[[ELSE_LABEL]]: # %if.else
@@ -492,23 +495,23 @@ declare i32 @someVariadicFunc(i32, ...)
 ; and it hurts the binary size.
 ;
 ; CHECK-LABEL: noreturn:
-; DISABLE: mflr 0
+; DISABLE: mflr {{[0-9]+}}
 ;
-; CHECK: cmplwi 3, 0
-; CHECK-NEXT: bne 0, .[[ABORT:LBB[0-9_]+]]
+; CHECK: cmplwi 0, 3, 0
+; CHECK-NEXT: bne{{[-]?}} 0, .[[ABORT:LBB[0-9_]+]]
 ;
 ; CHECK: li 3, 42
 ;
-; DISABLE: mtlr 0
+; DISABLE: mtlr {{[0-9]+}}
 ;
 ; CHECK-NEXT: blr
 ;
 ; CHECK: .[[ABORT]]: # %if.abort
 ;
-; ENABLE: mflr 0
+; ENABLE: mflr {{[0-9]+}}
 ;
 ; CHECK: bl abort
-; ENABLE-NOT: mtlr 0
+; ENABLE-NOT: mtlr {{[0-9]+}}
 define i32 @noreturn(i8 signext %bad_thing) {
 entry:
   %tobool = icmp eq i8 %bad_thing, 0
@@ -630,10 +633,11 @@ end:
 ; CHECK-LABEL: transpose
 ;
 ; Store of callee-save register saved by shrink wrapping
-; CHECK: std [[CSR:[0-9]+]], -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
+; FIXME: Test disabled: Improved scheduling needs no spills/reloads any longer!
+; CHECKXX: std [[CSR:[0-9]+]], -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
 ;
 ; Reload of callee-save register
-; CHECK: ld [[CSR]], -[[STACK_OFFSET]](1) # 8-byte Folded Reload
+; CHECKXX: ld [[CSR]], -[[STACK_OFFSET]](1) # 8-byte Folded Reload
 ;
 ; Ensure no subsequent uses of callee-save register before end of function
 ; CHECK-NOT: {{[a-z]+}} [[CSR]]

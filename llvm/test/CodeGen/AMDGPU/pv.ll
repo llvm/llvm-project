@@ -3,7 +3,7 @@
 ; CHECK: DOT4 * T{{[0-9]\.W}} (MASKED)
 ; CHECK: MAX T{{[0-9].[XYZW]}}, 0.0, PV.X
 
-define void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4 x float> inreg %reg2, <4 x float> inreg %reg3, <4 x float> inreg %reg4, <4 x float> inreg %reg5, <4 x float> inreg %reg6, <4 x float> inreg %reg7) #0 {
+define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4 x float> inreg %reg2, <4 x float> inreg %reg3, <4 x float> inreg %reg4, <4 x float> inreg %reg5, <4 x float> inreg %reg6, <4 x float> inreg %reg7) {
 main_body:
   %0 = extractelement <4 x float> %reg1, i32 0
   %1 = extractelement <4 x float> %reg1, i32 1
@@ -101,9 +101,9 @@ main_body:
   %93 = insertelement <4 x float> %92, float %5, i32 1
   %94 = insertelement <4 x float> %93, float %6, i32 2
   %95 = insertelement <4 x float> %94, float 0.000000e+00, i32 3
-  %96 = call float @llvm.AMDGPU.dp4(<4 x float> %91, <4 x float> %95)
-  %97 = call float @fabs(float %96)
-  %98 = call float @llvm.AMDGPU.rsq.f32(float %97)
+  %96 = call float @llvm.r600.dot4(<4 x float> %91, <4 x float> %95)
+  %97 = call float @llvm.fabs.f32(float %96)
+  %98 = call float @llvm.r600.recipsqrt.clamped.f32(float %97)
   %99 = fmul float %4, %98
   %100 = fmul float %5, %98
   %101 = fmul float %6, %98
@@ -119,10 +119,10 @@ main_body:
   %111 = extractelement <4 x float> %110, i32 2
   %112 = fmul float %111, %10
   %113 = fadd float %112, %22
-  %114 = call float @llvm.AMDIL.clamp.(float %105, float 0.000000e+00, float 1.000000e+00)
-  %115 = call float @llvm.AMDIL.clamp.(float %109, float 0.000000e+00, float 1.000000e+00)
-  %116 = call float @llvm.AMDIL.clamp.(float %113, float 0.000000e+00, float 1.000000e+00)
-  %117 = call float @llvm.AMDIL.clamp.(float %15, float 0.000000e+00, float 1.000000e+00)
+  %114 = call float @llvm.AMDGPU.clamp.f32(float %105, float 0.000000e+00, float 1.000000e+00)
+  %115 = call float @llvm.AMDGPU.clamp.f32(float %109, float 0.000000e+00, float 1.000000e+00)
+  %116 = call float @llvm.AMDGPU.clamp.f32(float %113, float 0.000000e+00, float 1.000000e+00)
+  %117 = call float @llvm.AMDGPU.clamp.f32(float %15, float 0.000000e+00, float 1.000000e+00)
   %118 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 5)
   %119 = extractelement <4 x float> %118, i32 0
   %120 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 5)
@@ -137,7 +137,7 @@ main_body:
   %129 = insertelement <4 x float> %128, float %121, i32 1
   %130 = insertelement <4 x float> %129, float %123, i32 2
   %131 = insertelement <4 x float> %130, float 0.000000e+00, i32 3
-  %132 = call float @llvm.AMDGPU.dp4(<4 x float> %127, <4 x float> %131)
+  %132 = call float @llvm.r600.dot4(<4 x float> %127, <4 x float> %131)
   %133 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 7)
   %134 = extractelement <4 x float> %133, i32 0
   %135 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 7)
@@ -152,7 +152,7 @@ main_body:
   %144 = insertelement <4 x float> %143, float %136, i32 1
   %145 = insertelement <4 x float> %144, float %138, i32 2
   %146 = insertelement <4 x float> %145, float 0.000000e+00, i32 3
-  %147 = call float @llvm.AMDGPU.dp4(<4 x float> %142, <4 x float> %146)
+  %147 = call float @llvm.r600.dot4(<4 x float> %142, <4 x float> %146)
   %148 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 8)
   %149 = extractelement <4 x float> %148, i32 0
   %150 = fmul float %149, %8
@@ -202,40 +202,39 @@ main_body:
   %194 = fadd float %193, %188
   %195 = fmul float %181, %174
   %196 = fadd float %195, %190
-  %197 = call float @llvm.AMDIL.clamp.(float %192, float 0.000000e+00, float 1.000000e+00)
-  %198 = call float @llvm.AMDIL.clamp.(float %194, float 0.000000e+00, float 1.000000e+00)
-  %199 = call float @llvm.AMDIL.clamp.(float %196, float 0.000000e+00, float 1.000000e+00)
+  %197 = call float @llvm.AMDGPU.clamp.f32(float %192, float 0.000000e+00, float 1.000000e+00)
+  %198 = call float @llvm.AMDGPU.clamp.f32(float %194, float 0.000000e+00, float 1.000000e+00)
+  %199 = call float @llvm.AMDGPU.clamp.f32(float %196, float 0.000000e+00, float 1.000000e+00)
   %200 = insertelement <4 x float> undef, float %75, i32 0
   %201 = insertelement <4 x float> %200, float %79, i32 1
   %202 = insertelement <4 x float> %201, float %83, i32 2
   %203 = insertelement <4 x float> %202, float %87, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %203, i32 60, i32 1)
+  call void @llvm.r600.store.swizzle(<4 x float> %203, i32 60, i32 1)
   %204 = insertelement <4 x float> undef, float %197, i32 0
   %205 = insertelement <4 x float> %204, float %198, i32 1
   %206 = insertelement <4 x float> %205, float %199, i32 2
   %207 = insertelement <4 x float> %206, float %117, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %207, i32 0, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %207, i32 0, i32 2)
   ret void
 }
 
 ; Function Attrs: readnone
-declare float @llvm.AMDGPU.dp4(<4 x float>, <4 x float>) #1
+declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
 
 ; Function Attrs: readonly
-declare float @fabs(float) #2
+declare float @llvm.fabs.f32(float) #1
 
 ; Function Attrs: readnone
-declare float @llvm.AMDGPU.rsq.f32(float) #1
+declare float @llvm.r600.recipsqrt.clamped.f32(float) #1
 
 ; Function Attrs: readnone
-declare float @llvm.AMDIL.clamp.(float, float, float) #1
+declare float @llvm.AMDGPU.clamp.f32(float, float, float) #1
 
 ; Function Attrs: nounwind readonly
-declare float @llvm.pow.f32(float, float) #3
+declare float @llvm.pow.f32(float, float) #2
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32) #3
 
-attributes #0 = { "ShaderType"="1" }
-attributes #1 = { readnone }
-attributes #2 = { readonly }
-attributes #3 = { nounwind readonly }
+attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind readonly }
+attributes #3 = { nounwind }

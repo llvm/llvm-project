@@ -11,14 +11,13 @@
 // classes.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/IdentifierTable.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -96,12 +95,18 @@ int DeclarationName::compare(DeclarationName LHS, DeclarationName RHS) {
   case DeclarationName::ObjCMultiArgSelector: {
     Selector LHSSelector = LHS.getObjCSelector();
     Selector RHSSelector = RHS.getObjCSelector();
+    // getNumArgs for ZeroArgSelector returns 0, but we still need to compare.
+    if (LHS.getNameKind() == DeclarationName::ObjCZeroArgSelector &&
+        RHS.getNameKind() == DeclarationName::ObjCZeroArgSelector) {
+      return LHSSelector.getAsIdentifierInfo()->getName().compare(
+             RHSSelector.getAsIdentifierInfo()->getName());
+    }
     unsigned LN = LHSSelector.getNumArgs(), RN = RHSSelector.getNumArgs();
     for (unsigned I = 0, N = std::min(LN, RN); I != N; ++I) {
       switch (LHSSelector.getNameForSlot(I).compare(
                                                RHSSelector.getNameForSlot(I))) {
-      case -1: return true;
-      case 1: return false;
+      case -1: return -1;
+      case 1: return 1;
       default: break;
       }
     }
@@ -133,36 +138,45 @@ int DeclarationName::compare(DeclarationName LHS, DeclarationName RHS) {
   llvm_unreachable("Invalid DeclarationName Kind!");
 }
 
-raw_ostream &operator<<(raw_ostream &OS, DeclarationName N) {
+static void printCXXConstructorDestructorName(QualType ClassType,
+                                              raw_ostream &OS,
+                                              PrintingPolicy Policy) {
+  // We know we're printing C++ here. Ensure we print types properly.
+  Policy.adjustForCPlusPlus();
+
+  if (const RecordType *ClassRec = ClassType->getAs<RecordType>()) {
+    OS << *ClassRec->getDecl();
+    return;
+  }
+  if (Policy.SuppressTemplateArgsInCXXConstructors) {
+    if (auto *InjTy = ClassType->getAs<InjectedClassNameType>()) {
+      OS << *InjTy->getDecl();
+      return;
+    }
+  }
+  ClassType.print(OS, Policy);
+}
+
+void DeclarationName::print(raw_ostream &OS, const PrintingPolicy &Policy) {
+  DeclarationName &N = *this;
   switch (N.getNameKind()) {
   case DeclarationName::Identifier:
     if (const IdentifierInfo *II = N.getAsIdentifierInfo())
       OS << II->getName();
-    return OS;
+    return;
 
   case DeclarationName::ObjCZeroArgSelector:
   case DeclarationName::ObjCOneArgSelector:
   case DeclarationName::ObjCMultiArgSelector:
     N.getObjCSelector().print(OS);
-    return OS;
+    return;
 
-  case DeclarationName::CXXConstructorName: {
-    QualType ClassType = N.getCXXNameType();
-    if (const RecordType *ClassRec = ClassType->getAs<RecordType>())
-      return OS << *ClassRec->getDecl();
-    LangOptions LO;
-    LO.CPlusPlus = true;
-    return OS << ClassType.getAsString(PrintingPolicy(LO));
-  }
+  case DeclarationName::CXXConstructorName:
+    return printCXXConstructorDestructorName(N.getCXXNameType(), OS, Policy);
 
   case DeclarationName::CXXDestructorName: {
     OS << '~';
-    QualType Type = N.getCXXNameType();
-    if (const RecordType *Rec = Type->getAs<RecordType>())
-      return OS << *Rec->getDecl();
-    LangOptions LO;
-    LO.CPlusPlus = true;
-    return OS << Type.getAsString(PrintingPolicy(LO));
+    return printCXXConstructorDestructorName(N.getCXXNameType(), OS, Policy);
   }
 
   case DeclarationName::CXXOperatorName: {
@@ -178,27 +192,39 @@ raw_ostream &operator<<(raw_ostream &OS, DeclarationName N) {
     OS << "operator";
     if (OpName[0] >= 'a' && OpName[0] <= 'z')
       OS << ' ';
-    return OS << OpName;
+    OS << OpName;
+    return;
   }
 
   case DeclarationName::CXXLiteralOperatorName:
-    return OS << "operator\"\"" << N.getCXXLiteralIdentifier()->getName();
+    OS << "operator\"\"" << N.getCXXLiteralIdentifier()->getName();
+    return;
 
   case DeclarationName::CXXConversionFunctionName: {
     OS << "operator ";
     QualType Type = N.getCXXNameType();
-    if (const RecordType *Rec = Type->getAs<RecordType>())
-      return OS << *Rec->getDecl();
-    LangOptions LO;
-    LO.CPlusPlus = true;
-    LO.Bool = true;
-    return OS << Type.getAsString(PrintingPolicy(LO));
+    if (const RecordType *Rec = Type->getAs<RecordType>()) {
+      OS << *Rec->getDecl();
+      return;
+    }
+    // We know we're printing C++ here, ensure we print 'bool' properly.
+    PrintingPolicy CXXPolicy = Policy;
+    CXXPolicy.adjustForCPlusPlus();
+    Type.print(OS, CXXPolicy);
+    return;
   }
   case DeclarationName::CXXUsingDirective:
-    return OS << "<using-directive>";
+    OS << "<using-directive>";
+    return;
   }
 
   llvm_unreachable("Unexpected declaration name kind");
+}
+
+raw_ostream &operator<<(raw_ostream &OS, DeclarationName N) {
+  LangOptions LO;
+  N.print(OS, PrintingPolicy(LO));
+  return OS;
 }
 
 } // end namespace clang
@@ -333,7 +359,7 @@ DeclarationName DeclarationName::getUsingDirectiveName() {
   return DeclarationName(Ptr);
 }
 
-void DeclarationName::dump() const {
+LLVM_DUMP_METHOD void DeclarationName::dump() const {
   llvm::errs() << *this << '\n';
 }
 
@@ -548,7 +574,9 @@ void DeclarationNameInfo::printName(raw_ostream &OS) const {
       LangOptions LO;
       LO.CPlusPlus = true;
       LO.Bool = true;
-      OS << TInfo->getType().getAsString(PrintingPolicy(LO));
+      PrintingPolicy PP(LO);
+      PP.SuppressScope = true;
+      OS << TInfo->getType().getAsString(PP);
     } else
       OS << Name;
     return;

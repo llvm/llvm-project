@@ -10,9 +10,21 @@
 #include "gtest/gtest.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+
+#define ASSERT_NO_ERROR(x)                                                     \
+  if (std::error_code ASSERT_NO_ERROR_ec = x) {                                \
+    SmallString<128> MessageStorage;                                           \
+    raw_svector_ostream Message(MessageStorage);                               \
+    Message << #x ": did not return errc::success.\n"                          \
+            << "error number: " << ASSERT_NO_ERROR_ec.value() << "\n"          \
+            << "error message: " << ASSERT_NO_ERROR_ec.message() << "\n";      \
+    GTEST_FATAL_FAILURE_(MessageStorage.c_str());                              \
+  } else {                                                                     \
+  }
 
 namespace {
 
@@ -32,10 +44,28 @@ TEST(raw_pwrite_ostreamTest, TestSVector) {
 #endif
 }
 
+#ifdef _WIN32
+#define setenv(name, var, ignore) _putenv_s(name, var)
+#endif
+
 TEST(raw_pwrite_ostreamTest, TestFD) {
   SmallString<64> Path;
   int FD;
-  sys::fs::createTemporaryFile("foo", "bar", FD, Path);
+
+  // If we want to clean up from a death test, we have to remove the file from
+  // the parent process. Have the parent create the file, pass it via
+  // environment variable to the child, let the child crash, and then remove it
+  // in the parent.
+  const char *ParentPath = getenv("RAW_PWRITE_TEST_FILE");
+  if (ParentPath) {
+    Path = ParentPath;
+    ASSERT_NO_ERROR(sys::fs::openFileForRead(Path, FD));
+  } else {
+    ASSERT_NO_ERROR(sys::fs::createTemporaryFile("foo", "bar", FD, Path));
+    setenv("RAW_PWRITE_TEST_FILE", Path.c_str(), true);
+  }
+  FileRemover Cleanup(Path);
+
   raw_fd_ostream OS(FD, true);
   OS << "abcd";
   StringRef Test = "test";

@@ -373,7 +373,8 @@ define <8 x i8> @check_i8_varidx(<16 x i8> %v, i32 %idx) {
 ; CHECK: mov r[[FP:[0-9]+]], sp
 ; CHECK: ldr r[[IDX:[0-9]+]], [r[[FP]], #4]
 ; CHECK: mov r[[SPCOPY:[0-9]+]], sp
-; CHECK: vst1.64 {d{{.*}}, d{{.*}}}, [r[[SPCOPY]]:128], r[[IDX]]
+; CHECK: and r[[MASKED_IDX:[0-9]+]], r[[IDX]], #15
+; CHECK: vst1.64 {d{{.*}}, d{{.*}}}, [r[[SPCOPY]]:128], r[[MASKED_IDX]]
 ; CHECK: vld1.8 {d{{.*}}[]}, [r[[SPCOPY]]]
   %x = extractelement <16 x i8> %v, i32 %idx
   %1 = insertelement  <8 x i8> undef, i8 %x, i32 0

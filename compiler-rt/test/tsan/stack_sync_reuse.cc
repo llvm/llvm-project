@@ -1,7 +1,7 @@
 // RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 #include "test.h"
 
-// Test case https://code.google.com/p/thread-sanitizer/issues/detail?id=87
+// Test case https://github.com/google/sanitizers/issues/494
 // Tsan sees false HB edge on address pointed to by syncp variable.
 // It is false because when acquire is done syncp points to a var in one frame,
 // and during release it points to a var in a different frame.
@@ -31,7 +31,8 @@ void *Thread(void *x) {
 }
 
 void __attribute__((noinline)) foobar() {
-  long s;
+  __attribute__((aligned(64))) long s;
+
   addr = &s;
   __atomic_store_n(&s, 0, __ATOMIC_RELAXED);
   __atomic_store_n(&syncp, &s, __ATOMIC_RELEASE);
@@ -40,7 +41,8 @@ void __attribute__((noinline)) foobar() {
 }
 
 void __attribute__((noinline)) barfoo() {
-  long s;
+  __attribute__((aligned(64))) long s;
+
   if (addr != &s) {
     printf("address mismatch addr=%p &s=%p\n", addr, &s);
     exit(1);

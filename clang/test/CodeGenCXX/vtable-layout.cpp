@@ -1919,6 +1919,8 @@ namespace Test40 {
     virtual int i(int);
     virtual int i();
   };
+  // Force C's vtable to be generated.
+  int C::f() { return 1; }
 
   class D : C {};
 

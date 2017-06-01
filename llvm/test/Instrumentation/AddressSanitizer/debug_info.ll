@@ -24,19 +24,18 @@ entry:
 ;   CHECK: entry:
 ; Verify that llvm.dbg.declare calls are in the entry basic block.
 ;   CHECK-NOT: %entry
-;   CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[ARG_ID:[0-9]+]], metadata ![[OPDEREF:[0-9]+]])
+;   CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[ARG_ID:[0-9]+]], metadata ![[EMPTY:[0-9]+]])
 ;   CHECK-NOT: %entry
-;   CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[VAR_ID:[0-9]+]], metadata ![[OPDEREF:[0-9]+]])
+;   CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[VAR_ID:[0-9]+]], metadata ![[EMPTY:[0-9]+]])
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!17}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 169314)", isOptimized: true, emissionKind: 0, file: !16, enums: !1, retainedTypes: !1, subprograms: !3, globals: !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 169314)", isOptimized: true, emissionKind: FullDebug, file: !16, enums: !1, retainedTypes: !1, globals: !1)
 !1 = !{}
-!3 = !{!5}
-!5 = distinct !DISubprogram(name: "zzz", linkageName: "_Z3zzzi", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 1, file: !16, scope: !6, type: !7, variables: !1)
+!5 = distinct !DISubprogram(name: "zzz", linkageName: "_Z3zzzi", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !16, scope: !6, type: !7, variables: !1)
 !6 = !DIFile(filename: "a.cc", directory: "/usr/local/google/llvm_cmake_clang/tmp/debuginfo")
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9, !9}
@@ -48,7 +47,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 ; Verify that debug descriptors for argument and local variable will be replaced
 ; with descriptors that end with OpDeref (encoded as 2).
 ;   CHECK: ![[ARG_ID]] = !DILocalVariable(name: "p", arg: 1,{{.*}} line: 1
-;   CHECK: ![[OPDEREF]] = !DIExpression(DW_OP_deref)
+;   CHECK: ![[EMPTY]] = !DIExpression()
 ;   CHECK: ![[VAR_ID]] = !DILocalVariable(name: "r",{{.*}} line: 2
 ; Verify that there are no more variable descriptors.
 ;   CHECK-NOT: !DILocalVariable(tag: DW_TAG_arg_variable

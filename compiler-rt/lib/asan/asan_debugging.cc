@@ -14,74 +14,39 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_allocator.h"
+#include "asan_descriptions.h"
 #include "asan_flags.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
 #include "asan_report.h"
 #include "asan_thread.h"
 
-namespace __asan {
+namespace {
+using namespace __asan;
 
-void GetInfoForStackVar(uptr addr, AddressDescription *descr, AsanThread *t) {
-  descr->name[0] = 0;
-  descr->region_address = 0;
-  descr->region_size = 0;
-  descr->region_kind = "stack";
-
-  AsanThread::StackFrameAccess access;
-  if (!t->GetStackFrameAccessByAddr(addr, &access))
-    return;
+static void FindInfoForStackVar(uptr addr, const char *frame_descr, uptr offset,
+                                char *name, uptr name_size,
+                                uptr &region_address, uptr &region_size) {
   InternalMmapVector<StackVarDescr> vars(16);
-  if (!ParseFrameDescription(access.frame_descr, &vars)) {
+  if (!ParseFrameDescription(frame_descr, &vars)) {
     return;
   }
 
   for (uptr i = 0; i < vars.size(); i++) {
-    if (access.offset <= vars[i].beg + vars[i].size) {
-      internal_strncat(descr->name, vars[i].name_pos,
-                       Min(descr->name_size, vars[i].name_len));
-      descr->region_address = addr - (access.offset - vars[i].beg);
-      descr->region_size = vars[i].size;
+    if (offset <= vars[i].beg + vars[i].size) {
+      // We use name_len + 1 because strlcpy will guarantee a \0 at the end, so
+      // if we're limiting the copy due to name_len, we add 1 to ensure we copy
+      // the whole name and then terminate with '\0'.
+      internal_strlcpy(name, vars[i].name_pos,
+                       Min(name_size, vars[i].name_len + 1));
+      region_address = addr - (offset - vars[i].beg);
+      region_size = vars[i].size;
       return;
     }
   }
 }
 
-void GetInfoForHeapAddress(uptr addr, AddressDescription *descr) {
-  AsanChunkView chunk = FindHeapChunkByAddress(addr);
-
-  descr->name[0] = 0;
-  descr->region_address = 0;
-  descr->region_size = 0;
-
-  if (!chunk.IsValid()) {
-    descr->region_kind = "heap-invalid";
-    return;
-  }
-
-  descr->region_address = chunk.Beg();
-  descr->region_size = chunk.UsedSize();
-  descr->region_kind = "heap";
-}
-
-void AsanLocateAddress(uptr addr, AddressDescription *descr) {
-  if (DescribeAddressIfShadow(addr, descr, /* print */ false)) {
-    return;
-  }
-  if (GetInfoForAddressIfGlobal(addr, descr)) {
-    return;
-  }
-  asanThreadRegistry().Lock();
-  AsanThread *thread = FindThreadByStackAddress(addr);
-  asanThreadRegistry().Unlock();
-  if (thread) {
-    GetInfoForStackVar(addr, descr, thread);
-    return;
-  }
-  GetInfoForHeapAddress(addr, descr);
-}
-
-static uptr AsanGetStack(uptr addr, uptr *trace, u32 size, u32 *thread_id,
+uptr AsanGetStack(uptr addr, uptr *trace, u32 size, u32 *thread_id,
                          bool alloc_stack) {
   AsanChunkView chunk = FindHeapChunkByAddress(addr);
   if (!chunk.IsValid()) return 0;
@@ -108,18 +73,58 @@ static uptr AsanGetStack(uptr addr, uptr *trace, u32 size, u32 *thread_id,
   return 0;
 }
 
-} // namespace __asan
-
-using namespace __asan;
+}  // namespace
 
 SANITIZER_INTERFACE_ATTRIBUTE
 const char *__asan_locate_address(uptr addr, char *name, uptr name_size,
-                                  uptr *region_address, uptr *region_size) {
-  AddressDescription descr = { name, name_size, 0, 0, nullptr };
-  AsanLocateAddress(addr, &descr);
-  if (region_address) *region_address = descr.region_address;
-  if (region_size) *region_size = descr.region_size;
-  return descr.region_kind;
+                                  uptr *region_address_ptr,
+                                  uptr *region_size_ptr) {
+  AddressDescription descr(addr);
+  uptr region_address = 0;
+  uptr region_size = 0;
+  const char *region_kind = nullptr;
+  if (name && name_size > 0) name[0] = 0;
+
+  if (auto shadow = descr.AsShadow()) {
+    // region_{address,size} are already 0
+    switch (shadow->kind) {
+      case kShadowKindLow:
+        region_kind = "low shadow";
+        break;
+      case kShadowKindGap:
+        region_kind = "shadow gap";
+        break;
+      case kShadowKindHigh:
+        region_kind = "high shadow";
+        break;
+    }
+  } else if (auto heap = descr.AsHeap()) {
+    region_kind = "heap";
+    region_address = heap->chunk_access.chunk_begin;
+    region_size = heap->chunk_access.chunk_size;
+  } else if (auto stack = descr.AsStack()) {
+    region_kind = "stack";
+    if (!stack->frame_descr) {
+      // region_{address,size} are already 0
+    } else {
+      FindInfoForStackVar(addr, stack->frame_descr, stack->offset, name,
+                          name_size, region_address, region_size);
+    }
+  } else if (auto global = descr.AsGlobal()) {
+    region_kind = "global";
+    auto &g = global->globals[0];
+    internal_strlcpy(name, g.name, name_size);
+    region_address = g.beg;
+    region_size = g.size;
+  } else {
+    // region_{address,size} are already 0
+    region_kind = "heap-invalid";
+  }
+
+  CHECK(region_kind);
+  if (region_address_ptr) *region_address_ptr = region_address;
+  if (region_size_ptr) *region_size_ptr = region_size;
+  return region_kind;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE

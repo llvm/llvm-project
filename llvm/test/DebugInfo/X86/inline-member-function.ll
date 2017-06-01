@@ -32,64 +32,68 @@
 ; CHECK-NOT: DW_AT_artificial
 ; CHECK: DW_TAG
 
+source_filename = "test/DebugInfo/X86/inline-member-function.ll"
+
 %struct.foo = type { i8 }
 
-@i = global i32 0, align 4
+@i = global i32 0, align 4, !dbg !0
 
 ; Function Attrs: uwtable
-define i32 @main() #0 !dbg !13 {
+define i32 @main() #0 !dbg !17 {
 entry:
   %this.addr.i = alloca %struct.foo*, align 8
   %x.addr.i = alloca i32, align 4
   %retval = alloca i32, align 4
   %tmp = alloca %struct.foo, align 1
   store i32 0, i32* %retval
-  %0 = load i32, i32* @i, align 4, !dbg !23
+  %0 = load i32, i32* @i, align 4, !dbg !20
   store %struct.foo* %tmp, %struct.foo** %this.addr.i, align 8
-  call void @llvm.dbg.declare(metadata %struct.foo** %this.addr.i, metadata !24, metadata !DIExpression()), !dbg !26
+  call void @llvm.dbg.declare(metadata %struct.foo** %this.addr.i, metadata !21, metadata !24), !dbg !25
   store i32 %0, i32* %x.addr.i, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr.i, metadata !27, metadata !DIExpression()), !dbg !28
+  call void @llvm.dbg.declare(metadata i32* %x.addr.i, metadata !26, metadata !24), !dbg !27
   %this1.i = load %struct.foo*, %struct.foo** %this.addr.i
-  %1 = load i32, i32* %x.addr.i, align 4, !dbg !28
-  %add.i = add nsw i32 %1, 2, !dbg !28
-  ret i32 %add.i, !dbg !23
+  %1 = load i32, i32* %x.addr.i, align 4, !dbg !27
+  %add.i = add nsw i32 %1, 2, !dbg !27
+  ret i32 %add.i, !dbg !20
 }
 
 ; Function Attrs: nounwind readnone
+
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 attributes #0 = { uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!20, !21}
-!llvm.ident = !{!22}
+!llvm.dbg.cu = !{!4}
+!llvm.module.flags = !{!14, !15}
+!llvm.ident = !{!16}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !12, globals: !18, imports: !2)
-!1 = !DIFile(filename: "inline.cpp", directory: "/tmp/dbginfo")
-!2 = !{}
-!3 = !{!4}
-!4 = !DICompositeType(tag: DW_TAG_structure_type, name: "foo", line: 1, size: 8, align: 8, file: !1, elements: !5, identifier: "_ZTS3foo")
-!5 = !{!6}
-!6 = !DISubprogram(name: "func", linkageName: "_ZN3foo4funcEi", line: 2, isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 2, file: !1, scope: !"_ZTS3foo", type: !7)
-!7 = !DISubroutineType(types: !8)
-!8 = !{!9, !10, !9}
-!9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!10 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer, baseType: !"_ZTS3foo")
-!12 = !{!13, !17}
-!13 = distinct !DISubprogram(name: "main", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 7, file: !1, scope: !14, type: !15, variables: !2)
-!14 = !DIFile(filename: "inline.cpp", directory: "/tmp/dbginfo")
-!15 = !DISubroutineType(types: !16)
-!16 = !{!9}
-!17 = distinct !DISubprogram(name: "func", linkageName: "_ZN3foo4funcEi", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 2, file: !1, scope: !"_ZTS3foo", type: !7, declaration: !6, variables: !2)
-!18 = !{!19}
-!19 = !DIGlobalVariable(name: "i", line: 5, isLocal: false, isDefinition: true, scope: null, file: !14, type: !9, variable: i32* @i)
-!20 = !{i32 2, !"Dwarf Version", i32 4}
-!21 = !{i32 1, !"Debug Info Version", i32 3}
-!22 = !{!"clang version 3.5.0 "}
-!23 = !DILocation(line: 8, scope: !13)
-!24 = !DILocalVariable(name: "this", arg: 1, flags: DIFlagArtificial | DIFlagObjectPointer, scope: !17, type: !25)
-!25 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !"_ZTS3foo")
-!26 = !DILocation(line: 0, scope: !17, inlinedAt: !23)
-!27 = !DILocalVariable(name: "x", line: 2, arg: 2, scope: !17, file: !14, type: !9)
-!28 = !DILocation(line: 2, scope: !17, inlinedAt: !23)
+!0 = !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "i", scope: null, file: !2, line: 5, type: !3, isLocal: false, isDefinition: true)
+!2 = !DIFile(filename: "inline.cpp", directory: "/tmp/dbginfo")
+!3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+!4 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 3.5.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !6, globals: !13, imports: !5)
+!5 = !{}
+!6 = !{!7}
+!7 = !DICompositeType(tag: DW_TAG_structure_type, name: "foo", file: !2, line: 1, size: 8, align: 8, elements: !8, identifier: "_ZTS3foo")
+!8 = !{!9}
+!9 = !DISubprogram(name: "func", linkageName: "_ZN3foo4funcEi", scope: !7, file: !2, line: 2, type: !10, isLocal: false, isDefinition: false, scopeLine: 2, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false)
+!10 = !DISubroutineType(types: !11)
+!11 = !{!3, !12, !3}
+!12 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
+!13 = !{!0}
+!14 = !{i32 2, !"Dwarf Version", i32 4}
+!15 = !{i32 1, !"Debug Info Version", i32 3}
+!16 = !{!"clang version 3.5.0 "}
+!17 = distinct !DISubprogram(name: "main", scope: !2, file: !2, line: 7, type: !18, isLocal: false, isDefinition: true, scopeLine: 7, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !4, variables: !5)
+!18 = !DISubroutineType(types: !19)
+!19 = !{!3}
+!20 = !DILocation(line: 8, scope: !17)
+!21 = !DILocalVariable(name: "this", arg: 1, scope: !22, type: !23, flags: DIFlagArtificial | DIFlagObjectPointer)
+!22 = distinct !DISubprogram(name: "func", linkageName: "_ZN3foo4funcEi", scope: !7, file: !2, line: 2, type: !10, isLocal: false, isDefinition: true, scopeLine: 2, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !4, declaration: !9, variables: !5)
+!23 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64, align: 64)
+!24 = !DIExpression()
+!25 = !DILocation(line: 0, scope: !22, inlinedAt: !20)
+!26 = !DILocalVariable(name: "x", arg: 2, scope: !22, file: !2, line: 2, type: !3)
+!27 = !DILocation(line: 2, scope: !22, inlinedAt: !20)
+

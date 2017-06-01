@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=generic -mtriple=i386-apple-darwin -no-integrated-as | FileCheck %s
+; RUN: llc < %s -mcpu=generic -mtriple=i386-apple-darwin -verify-machineinstrs -no-integrated-as | FileCheck %s
 
 ; There should be no stack manipulations between the inline asm and ret.
 ; CHECK: test1

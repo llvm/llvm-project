@@ -40,7 +40,7 @@ define i32 @test_emulated_init() {
 
 ; EMU-NOT: __emutls_v.general_dynamic_var:
 
-; EMU:      .align 3
+; EMU:      .p2align 3
 ; EMU-LABEL: __emutls_v.emulated_init_var:
 ; EMU-NEXT: .xword 4
 ; EMU-NEXT: .xword 8

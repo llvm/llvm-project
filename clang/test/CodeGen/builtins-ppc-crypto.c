@@ -108,6 +108,30 @@ vector unsigned long long test_vpermxord(void)
 // CHECK: @llvm.ppc.altivec.crypto.vpermxor
 }
 
+// CHECK-LABEL: test_vpermxorbc
+vector bool char test_vpermxorbc(vector bool char a,
+                                vector bool char b,
+                                vector bool char c) {
+  return vec_permxor(a, b, c);
+// CHECK: @llvm.ppc.altivec.crypto.vpermxor
+}
+
+// CHECK-LABEL: test_vpermxorsc
+vector signed char test_vpermxorsc(vector signed char a,
+                                   vector signed char b,
+                                   vector signed char c) {
+  return vec_permxor(a, b, c);
+// CHECK: @llvm.ppc.altivec.crypto.vpermxor
+}
+
+// CHECK-LABEL: test_vpermxoruc
+vector unsigned char test_vpermxoruc(vector unsigned char a,
+                                     vector unsigned char b,
+                                     vector unsigned char c) {
+  return vec_permxor(a, b, c);
+// CHECK: @llvm.ppc.altivec.crypto.vpermxor
+}
+
 // CHECK-LABEL: define <2 x i64> @test_vcipher
 vector unsigned long long test_vcipher(void)
 {

@@ -225,3 +225,19 @@ namespace Test9 {
     return -static_cast<RA&>(*x);
   }
 }
+
+namespace Test10 {
+  struct A {
+    virtual int f();
+  };
+
+  struct B : A {
+    int f() final;
+  };
+
+  // CHECK-LABEL: define i32 @_ZN6Test101fEPNS_1BE
+  int f(B *b) {
+    // CHECK: call i32 @_ZN6Test101B1fEv
+    return static_cast<A *>(b)->f();
+  }
+}

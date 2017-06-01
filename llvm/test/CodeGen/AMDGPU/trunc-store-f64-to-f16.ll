@@ -1,5 +1,4 @@
-; XFAIL: *
-; RUN: llc -march=amdgcn -mcpu=SI < %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}global_truncstore_f64_to_f16:
 ; GCN: s_endpgm

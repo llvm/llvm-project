@@ -1,9 +1,10 @@
 // RUN: %clangxx -O0 %s -o %t
 
 // Recursive include: options1 includes options2
-// RUN: echo -e "symbolize=1\ninclude='%t.options2.txt'" >%t.options1.txt
-// RUN: echo -e "help=1\n" >%t.options2.txt
-// RUN: echo -e "help=1\n" >%t.options.options-include.cc.tmp
+// RUN: echo "symbolize=1" > %t.options1.txt
+// RUN: echo "include='%t.options2.txt'" >>%t.options1.txt
+// RUN: echo "help=1" >%t.options2.txt
+// RUN: echo "help=1" >%t.options.options-include.cc.tmp
 // RUN: cat %t.options1.txt
 // RUN: cat %t.options2.txt
 

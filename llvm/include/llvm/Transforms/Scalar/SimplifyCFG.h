@@ -25,12 +25,10 @@ namespace llvm {
 /// This pass iteratively simplifies the entire CFG of a function, removing
 /// unnecessary control flows and bringing it into the canonical form expected
 /// by the rest of the mid-level optimizer.
-class SimplifyCFGPass {
+class SimplifyCFGPass : public PassInfoMixin<SimplifyCFGPass> {
   int BonusInstThreshold;
 
 public:
-  static StringRef name() { return "SimplifyCFGPass"; }
-
   /// \brief Construct a pass with the default thresholds.
   SimplifyCFGPass();
 
@@ -38,7 +36,7 @@ public:
   SimplifyCFGPass(int BonusInstThreshold);
 
   /// \brief Run the pass over the function.
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 }

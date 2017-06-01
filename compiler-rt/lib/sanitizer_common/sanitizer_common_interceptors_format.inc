@@ -435,10 +435,6 @@ static const char *printf_parse_next(const char *p, PrintfDirective *dir) {
 }
 
 static int printf_get_value_size(PrintfDirective *dir) {
-  if (dir->convSpecifier == 'm') {
-    return sizeof(char *);
-  }
-
   if (char_is_one_of(dir->convSpecifier, "cCsS")) {
     unsigned charSize =
         format_get_char_size(dir->convSpecifier, dir->lengthModifier);
@@ -519,6 +515,9 @@ static void printf_common(void *ctx, const char *format, va_list aq) {
       // Dynamic precision
       SKIP_SCALAR_ARG(&aq, 'd', sizeof(int));
     }
+    // %m does not require an argument: strlen(errno).
+    if (dir.convSpecifier == 'm')
+      continue;
     int size = printf_get_value_size(&dir);
     if (size == FSS_INVALID) {
       Report("WARNING: unexpected format specifier in printf "

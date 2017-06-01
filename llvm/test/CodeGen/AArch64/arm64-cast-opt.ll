@@ -1,4 +1,4 @@
-; RUN: llc -O3 -march=arm64 -mtriple arm64-apple-ios5.0.0 < %s | FileCheck %s
+; RUN: llc -O3 -mtriple arm64-apple-ios5.0.0 < %s | FileCheck %s
 ; <rdar://problem/15992732>
 ; Zero truncation is not necessary when the values are extended properly
 ; already.

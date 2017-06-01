@@ -77,6 +77,6 @@ func1:
 @ add an relocation to __aeabi_unwind_cpp_pr0.
 @-------------------------------------------------------------------------------
 @ CHECK:     Relocations [
-@ CHECK:       0x0 R_ARM_PREL31 .text 0x0
 @ CHECK:       0x0 R_ARM_NONE __aeabi_unwind_cpp_pr0 0x0
+@ CHECK:       0x0 R_ARM_PREL31 .text 0x0
 @ CHECK:     ]

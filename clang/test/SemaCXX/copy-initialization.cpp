@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+
 class X {
 public:
   explicit X(const X&); // expected-note {{candidate constructor}}
@@ -27,7 +30,7 @@ void test(const foo *P) { P->bar(); } // expected-error{{'bar' not viable: 'this
 
 namespace PR6757 {
   struct Foo {
-    Foo();
+    Foo(); // expected-note{{not viable}}
     Foo(Foo&); // expected-note{{candidate constructor not viable}}
   };
 
@@ -58,10 +61,22 @@ namespace DR5 {
 
   namespace Ex2 {
     struct S {
-      S(S&&); // expected-warning {{C++11}}
+      S(S&&);
+#if __cplusplus <= 199711L // C++03 or earlier modes
+      // expected-warning@-2 {{rvalue references are a C++11 extension}}
+#endif
       S(int);
     };
     const S a(0);
     const S b = 0;
   }
 }
+
+struct A {};
+struct B : A {
+  B();
+  B(B&);
+  B(A);
+  B(int);
+};
+B b = 0; // ok, calls B(int) then A(const A&) then B(A).

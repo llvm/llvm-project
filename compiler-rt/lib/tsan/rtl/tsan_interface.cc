@@ -28,6 +28,10 @@ void __tsan_init() {
   Initialize(cur_thread());
 }
 
+void __tsan_flush_memory() {
+  FlushShadowMemory();
+}
+
 void __tsan_read16(void *addr) {
   MemoryRead(cur_thread(), CALLERPC, (uptr)addr, kSizeLog8);
   MemoryRead(cur_thread(), CALLERPC, (uptr)addr + 8, kSizeLog8);

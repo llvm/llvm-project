@@ -4,6 +4,9 @@ RUN:   | FileCheck %s --check-prefix=COFF-I386
 RUN: llvm-cxxdump %p/Inputs/trivial.obj.elf-i386 \
 RUN:   | FileCheck %s --check-prefix=ELF-I386
 
+RUN: llvm-cxxdump %p/Inputs/mixed-archive.coff-i386 \
+RUN:   | FileCheck %s --check-prefix=MIXEDARCOFF-I386
+
 COFF-I386:      ??_7S@@6B@[0]: ??_R4S@@6B@
 COFF-I386-NEXT: ??_7S@@6B@[4]: ??_GS@@UAEPAXI@Z
 COFF-I386-NEXT: ??_8S@@7B@[0]: -4
@@ -56,6 +59,8 @@ ELF-I386:      _ZTS1A: 1A
 ELF-I386-NEXT: _ZTV1A[0]: 0
 ELF-I386-NEXT: _ZTV1A[4]: _ZTI1A
 ELF-I386-NEXT: _ZTV1A[8]: _ZN1A1fEv
+
+MIXEDARCOFF-I386:      ??_7S@@6B@[0]: ??_R4S@@6B@
 
 RUN: not llvm-cxxdump %t.blah 2>&1 | FileCheck --check-prefix=ENOENT %s
 ENOENT: {{.*}}.blah: {{[Nn]}}o such file or directory

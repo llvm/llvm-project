@@ -1,5 +1,5 @@
-; RUN: llc %s -o - -enable-shrink-wrap=true | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE
-; RUN: llc %s -o - -enable-shrink-wrap=false | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
+; RUN: llc %s -o - -enable-shrink-wrap=true -disable-post-ra -disable-fp-elim | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE
+; RUN: llc %s -o - -enable-shrink-wrap=false -disable-post-ra -disable-fp-elim | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios"
 
@@ -13,9 +13,9 @@ target triple = "arm64-apple-ios"
 ; ENABLE-NEXT: b.ge [[EXIT_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
-; CHECK: stp [[SAVE_SP:x[0-9]+]], [[CSR:x[0-9]+]], [sp, #-16]!
-; CHECK-NEXT: mov [[SAVE_SP]], sp
-; CHECK-NEXT: sub sp, sp, #16
+; CHECK: sub sp, sp, #32
+; CHECK-NEXT: stp [[SAVE_SP:x[0-9]+]], [[CSR:x[0-9]+]], [sp, #16]
+; CHECK-NEXT: add [[SAVE_SP]], sp, #16
 ;
 ; Compare the arguments and jump to exit.
 ; After the prologue is set.
@@ -29,12 +29,12 @@ target triple = "arm64-apple-ios"
 ; Set the first argument to zero.
 ; CHECK-NEXT: mov w0, wzr
 ; CHECK-NEXT: bl _doSomething
-; 
+;
 ; Without shrink-wrapping, epilogue is in the exit block.
 ; DISABLE: [[EXIT_LABEL]]:
 ; Epilogue code.
-; CHECK-NEXT: mov sp, [[SAVE_SP]]
-; CHECK-NEXT: ldp [[SAVE_SP]], [[CSR]], [sp], #16
+; CHECK-NEXT: ldp x{{[0-9]+}}, [[CSR]], [sp, #16]
+; CHECK-NEXT: add sp, sp, #32
 ;
 ; With shrink-wrapping, exit block is a simple return.
 ; ENABLE: [[EXIT_LABEL]]:
@@ -73,13 +73,13 @@ declare i32 @doSomething(i32, i32*)
 ; DISABLE: cbz w0, [[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: mov [[SUM:w[0-9]+]], wzr
-; CHECK-NEXT: movz [[IV:w[0-9]+]], #0xa
+; CHECK-NEXT: mov [[IV:w[0-9]+]], #10
 ;
 ; Next BB.
 ; CHECK: [[LOOP:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
-; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: sub [[IV]], [[IV]], #1
+; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: cbnz [[IV]], [[LOOP]]
 ;
 ; Next BB.
@@ -140,12 +140,12 @@ declare i32 @something(...)
 ; CHECK-NEXT: stp [[CSR3:x[0-9]+]], [[CSR4:x[0-9]+]], [sp, #16]
 ; CHECK-NEXT: add [[NEW_SP:x[0-9]+]], sp, #16
 ; CHECK: mov [[SUM:w[0-9]+]], wzr
-; CHECK-NEXT: movz [[IV:w[0-9]+]], #0xa
+; CHECK-NEXT: mov [[IV:w[0-9]+]], #10
 ; Next BB.
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
-; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: sub [[IV]], [[IV]], #1
+; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: cbnz [[IV]], [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: ; %for.end
@@ -184,12 +184,12 @@ for.end:                                          ; preds = %for.body
 ; DISABLE: cbz w0, [[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: mov [[SUM:w[0-9]+]], wzr
-; CHECK-NEXT: movz [[IV:w[0-9]+]], #0xa
+; CHECK-NEXT: mov [[IV:w[0-9]+]], #10
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
-; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: sub [[IV]], [[IV]], #1
+; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: cbnz [[IV]], [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: bl _somethingElse
@@ -255,12 +255,12 @@ declare void @somethingElse(...)
 ;
 ; CHECK: bl _somethingElse
 ; CHECK-NEXT: mov [[SUM:w[0-9]+]], wzr
-; CHECK-NEXT: movz [[IV:w[0-9]+]], #0xa
+; CHECK-NEXT: mov [[IV:w[0-9]+]], #10
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
-; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: sub [[IV]], [[IV]], #1
+; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: cbnz [[IV]], [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: lsl w0, [[SUM]], #3
@@ -332,10 +332,10 @@ entry:
 ; DISABLE: cbz w0, [[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Sum is merged with the returned register.
-; CHECK: mov [[SUM:w0]], wzr
-; CHECK-NEXT: add [[VA_BASE:x[0-9]+]], sp, #16
-; CHECK-NEXT: str [[VA_BASE]], [sp, #8]
+; CHECK: add [[VA_BASE:x[0-9]+]], sp, #16
 ; CHECK-NEXT: cmp w1, #1
+; CHECK-NEXT: str [[VA_BASE]], [sp, #8]
+; CHECK-NEXT: mov [[SUM:w0]], wzr
 ; CHECK-NEXT: b.lt [[IFEND_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
@@ -343,11 +343,11 @@ entry:
 ; CHECK-NEXT: add [[NEXT_VA_ADDR:x[0-9]+]], [[VA_ADDR]], #8
 ; CHECK-NEXT: str [[NEXT_VA_ADDR]], [sp, #8]
 ; CHECK-NEXT: ldr [[VA_VAL:w[0-9]+]], {{\[}}[[VA_ADDR]]]
-; CHECK-NEXT: add [[SUM]], [[SUM]], [[VA_VAL]]
 ; CHECK-NEXT: sub w1, w1, #1
+; CHECK-NEXT: add [[SUM]], [[SUM]], [[VA_VAL]]
 ; CHECK-NEXT: cbnz w1, [[LOOP_LABEL]]
-;
 ; DISABLE-NEXT: b [[IFEND_LABEL]]
+;
 ; DISABLE: [[ELSE_LABEL]]: ; %if.else
 ; DISABLE: lsl w0, w1, #1
 ;
@@ -357,8 +357,8 @@ entry:
 ; CHECK-NEXT: ret
 ;
 ; ENABLE: [[ELSE_LABEL]]: ; %if.else
-; ENABLE: lsl w0, w1, #1
-; ENABLE-NEXT: ret
+; ENABLE-NEXT: lsl w0, w1, #1
+; ENABLE_NEXT: ret
 define i32 @variadicFunc(i32 %cond, i32 %count, ...) #0 {
 entry:
   %ap = alloca i8*, align 8
@@ -409,13 +409,13 @@ declare void @llvm.va_end(i8*)
 ;
 ; DISABLE: cbz w0, [[ELSE_LABEL:LBB[0-9_]+]]
 ;
-; CHECK: movz [[IV:w[0-9]+]], #0xa
+; CHECK: mov [[IV:w[0-9]+]], #10
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; Inline asm statement.
-; CHECK: add x19, x19, #1
 ; CHECK: sub [[IV]], [[IV]], #1
-; CHECK-NEXT: cbnz [[IV]], [[LOOP_LABEL]]
+; CHECK: add x19, x19, #1
+; CHECK: cbnz [[IV]], [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: mov w0, wzr
 ; Epilogue code.
@@ -454,9 +454,9 @@ if.end:                                           ; preds = %for.body, %if.else
 ; ENABLE: cbz w0, [[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
-; CHECK: stp [[CSR1:x[0-9]+]], [[CSR2:x[0-9]+]], [sp, #-16]!
-; CHECK-NEXT: mov [[NEW_SP:x[0-9]+]], sp
-; CHECK-NEXT: sub sp, sp, #48
+; CHECK: sub sp, sp, #64
+; CHECK-NEXT: stp [[CSR1:x[0-9]+]], [[CSR2:x[0-9]+]], [sp, #48]
+; CHECK-NEXT: add [[NEW_SP:x[0-9]+]], sp, #48
 ;
 ; DISABLE: cbz w0, [[ELSE_LABEL:LBB[0-9_]+]]
 ; Setup of the varags.
@@ -473,8 +473,8 @@ if.end:                                           ; preds = %for.body, %if.else
 ; DISABLE: [[IFEND_LABEL]]: ; %if.end
 ;
 ; Epilogue code.
-; CHECK: mov sp, [[NEW_SP]]
-; CHECK-NEXT: ldp [[CSR1]], [[CSR2]], [sp], #16
+; CHECK: ldp [[CSR1]], [[CSR2]], [sp, #48]
+; CHECK-NEXT: add sp, sp, #64
 ; CHECK-NEXT: ret
 ;
 ; ENABLE: [[ELSE_LABEL]]: ; %if.else
@@ -508,10 +508,9 @@ declare i32 @someVariadicFunc(i32, ...)
 ; CHECK-LABEL: noreturn:
 ; DISABLE: stp
 ;
-; CHECK: and [[TEST:w[0-9]+]], w0, #0xff
-; CHECK-NEXT: cbnz [[TEST]], [[ABORT:LBB[0-9_]+]]
+; CHECK: cbnz w0, [[ABORT:LBB[0-9_]+]]
 ;
-; CHECK: movz w0, #0x2a
+; CHECK: mov w0, #42
 ;
 ; DISABLE-NEXT: ldp
 ;
@@ -628,5 +627,94 @@ loop2b:                                           ; preds = %loop1
   br label %loop1
 
 end:
+  ret void
+}
+
+; Re-aligned stack pointer.  See bug 26642.  Avoid clobbering live
+; values in the prologue when re-aligning the stack pointer.
+; CHECK-LABEL: stack_realign:
+; ENABLE-DAG: lsl w[[LSL1:[0-9]+]], w0, w1
+; ENABLE-DAG: lsl w[[LSL2:[0-9]+]], w1, w0
+; DISABLE-NOT: lsl w[[LSL1:[0-9]+]], w0, w1
+; DISABLE-NOT: lsl w[[LSL2:[0-9]+]], w1, w0
+; CHECK: stp x29, x30, [sp, #-16]!
+; CHECK: mov x29, sp
+; ENABLE-NOT: sub x[[LSL1]], sp, #16
+; ENABLE-NOT: sub x[[LSL2]], sp, #16
+; DISABLE: sub x{{[0-9]+}}, sp, #16
+; DISABLE-DAG: lsl w[[LSL1:[0-9]+]], w0, w1
+; DISABLE-DAG: lsl w[[LSL2:[0-9]+]], w1, w0
+; CHECK-DAG: str w[[LSL1]],
+; CHECK-DAG: str w[[LSL2]],
+
+define i32 @stack_realign(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2) {
+  %tmp = alloca i32, align 32
+  %shl1 = shl i32 %a, %b
+  %shl2 = shl i32 %b, %a
+  %tmp2 = icmp slt i32 %a, %b
+  br i1 %tmp2, label %true, label %false
+
+true:
+  store i32 %a, i32* %tmp, align 4
+  %tmp4 = load i32, i32* %tmp
+  br label %false
+
+false:
+  %tmp.0 = phi i32 [ %tmp4, %true ], [ %a, %0 ]
+  store i32 %shl1, i32* %ptr1
+  store i32 %shl2, i32* %ptr2
+  ret i32 %tmp.0
+}
+
+; Re-aligned stack pointer with all caller-save regs live.  See bug
+; 26642.  In this case we currently avoid shrink wrapping because
+; ensuring we have a scratch register to re-align the stack pointer is
+; too complicated.  Output should be the same for both enabled and
+; disabled shrink wrapping.
+; CHECK-LABEL: stack_realign2:
+; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #-{{[0-9]+}}]!
+; CHECK: add x29, sp, #{{[0-9]+}}
+; CHECK: lsl {{w[0-9]+}}, w0, w1
+
+define void @stack_realign2(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2, i32* %ptr3, i32* %ptr4, i32* %ptr5, i32* %ptr6) {
+  %tmp = alloca i32, align 32
+  %tmp1 = shl i32 %a, %b
+  %tmp2 = shl i32 %b, %a
+  %tmp3 = lshr i32 %a, %b
+  %tmp4 = lshr i32 %b, %a
+  %tmp5 = add i32 %b, %a
+  %tmp6 = sub i32 %b, %a
+  %tmp7 = add i32 %tmp1, %tmp2
+  %tmp8 = sub i32 %tmp2, %tmp3
+  %tmp9 = add i32 %tmp3, %tmp4
+  %tmp10 = add i32 %tmp4, %tmp5
+  %cmp = icmp slt i32 %a, %b
+  br i1 %cmp, label %true, label %false
+
+true:
+  store i32 %a, i32* %tmp, align 4
+  call void asm sideeffect "nop", "~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28}"() nounwind
+  br label %false
+
+false:
+  store i32 %tmp1, i32* %ptr1, align 4
+  store i32 %tmp2, i32* %ptr2, align 4
+  store i32 %tmp3, i32* %ptr3, align 4
+  store i32 %tmp4, i32* %ptr4, align 4
+  store i32 %tmp5, i32* %ptr5, align 4
+  store i32 %tmp6, i32* %ptr6, align 4
+  %idx1 = getelementptr inbounds i32, i32* %ptr1, i64 1
+  store i32 %a, i32* %idx1, align 4
+  %idx2 = getelementptr inbounds i32, i32* %ptr1, i64 2
+  store i32 %b, i32* %idx2, align 4
+  %idx3 = getelementptr inbounds i32, i32* %ptr1, i64 3
+  store i32 %tmp7, i32* %idx3, align 4
+  %idx4 = getelementptr inbounds i32, i32* %ptr1, i64 4
+  store i32 %tmp8, i32* %idx4, align 4
+  %idx5 = getelementptr inbounds i32, i32* %ptr1, i64 5
+  store i32 %tmp9, i32* %idx5, align 4
+  %idx6 = getelementptr inbounds i32, i32* %ptr1, i64 6
+  store i32 %tmp10, i32* %idx6, align 4
+
   ret void
 }

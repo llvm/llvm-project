@@ -13,6 +13,6 @@ if( LLVM_USE_SANITIZE_COVERAGE )
   add_llvm_tool(llvm-mc-fuzzer 
                 llvm-mc-fuzzer.cpp)
   target_link_libraries(llvm-mc-fuzzer
-                        LLVMFuzzerNoMain
+                        LLVMFuzzer
                         )
 endif()

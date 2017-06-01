@@ -19,7 +19,6 @@
 #include "clang/Frontend/CodeGenOptions.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -54,8 +53,9 @@ class CoverageMappingModuleGen {
   CoverageSourceInfo &SourceInfo;
   llvm::SmallDenseMap<const FileEntry *, unsigned, 8> FileEntries;
   std::vector<llvm::Constant *> FunctionRecords;
+  std::vector<llvm::Constant *> FunctionNames;
   llvm::StructType *FunctionRecordTy;
-  std::string CoverageMappings;
+  std::vector<std::string> CoverageMappings;
 
 public:
   CoverageMappingModuleGen(CodeGenModule &CGM, CoverageSourceInfo &SourceInfo)
@@ -70,7 +70,8 @@ public:
   void addFunctionMappingRecord(llvm::GlobalVariable *FunctionName,
                                 StringRef FunctionNameValue,
                                 uint64_t FunctionHash,
-                                const std::string &CoverageMapping);
+                                const std::string &CoverageMapping,
+                                bool IsUsed = true);
 
   /// \brief Emit the coverage mapping data for a translation unit.
   void emit();

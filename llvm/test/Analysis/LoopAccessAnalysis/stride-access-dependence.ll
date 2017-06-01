@@ -1,4 +1,5 @@
 ; RUN: opt -loop-accesses -analyze < %s | FileCheck %s
+; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
@@ -384,7 +385,7 @@ for.body:                                         ; preds = %entry, %for.body
 ;   return sum;
 ; }
 
-; CHECK: for function 'vectorizable_unscaled_Write_Read':
+; CHECK: function 'vectorizable_unscaled_Write_Read':
 ; CHECK-NEXT:   for.body:
 ; CHECK-NEXT:     Memory dependences are safe
 ; CHECK-NEXT:     Dependences:

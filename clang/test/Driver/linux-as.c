@@ -110,7 +110,7 @@
 // RUN:   | FileCheck -check-prefix=CHECK-SPARCV9 %s
 // CHECK-SPARCV9: as
 // CHECK-SPARCV9: -64
-// CHECK-SPARCV9: -Av9a
+// CHECK-SPARCV9: -Av9
 // CHECK-SPARCV9-NOT: -KPIC
 // CHECK-SPARCV9: -o
 //
@@ -119,7 +119,7 @@
 // RUN:   | FileCheck -check-prefix=CHECK-SPARCV9PIC %s
 // CHECK-SPARCV9PIC: as
 // CHECK-SPARCV9PIC: -64
-// CHECK-SPARCV9PIC: -Av9a
+// CHECK-SPARCV9PIC: -Av9
 // CHECK-SPARCV9PIC: -KPIC
 // CHECK-SPARCV9PIC: -o
 //
@@ -128,7 +128,7 @@
 // RUN:   | FileCheck -check-prefix=CHECK-SPARCV8 %s
 // CHECK-SPARCV8: as
 // CHECK-SPARCV8: -32
-// CHECK-SPARCV8: -Av8plusa
+// CHECK-SPARCV8: -Av8
 // CHECK-SPARCV8: -o
 //
 // RUN: %clang -target sparcel-linux -mcpu=invalid-cpu -### \
@@ -136,7 +136,7 @@
 // RUN:   | FileCheck -check-prefix=CHECK-SPARCV8EL %s
 // CHECK-SPARCV8EL: as
 // CHECK-SPARCV8EL: -32
-// CHECK-SPARCV8EL: -Av8plusa
+// CHECK-SPARCV8EL: -Av8
 // CHECK-SPARCV8EL: -o
 //
 // RUN: %clang -target s390x-linux -### -no-integrated-as -c %s 2>&1 \

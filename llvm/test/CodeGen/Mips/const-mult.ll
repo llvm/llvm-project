@@ -1,5 +1,5 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s -check-prefix=CHECK
-; RUN: llc -march=mips64el < %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK64
+; RUN: llc -march=mipsel < %s | FileCheck %s
+; RUN: llc -march=mips64el < %s | FileCheck %s -check-prefixes=CHECK,CHECK64
 
 ; CHECK-LABEL: mul5_32:
 ; CHECK: sll $[[R0:[0-9]+]], $4, 2

@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -Wno-int-to-pointer-cast -fsyntax-only -verify -pedantic-errors %s
+// RUN: %clang_cc1 -Wno-int-to-pointer-cast -fsyntax-only -verify -pedantic-errors -std=gnu++98 %s
+// RUN: %clang_cc1 -Wno-int-to-pointer-cast -fsyntax-only -verify -pedantic-errors -std=gnu++11 %s
 // RUN: %clang_cc1 -Wno-int-to-pointer-cast -fsyntax-only -verify -pedantic-errors -x objective-c++ %s
 
 void f() {
@@ -60,6 +62,9 @@ namespace N {
     func(); // expected-warning {{function declaration}} expected-note {{replace parentheses with an initializer}}
 
     S s(); // expected-warning {{function declaration}}
+#if __cplusplus >= 201103L
+    // expected-note@-2 {{replace parentheses with an initializer to declare a variable}}
+#endif
   }
   void nonEmptyParens() {
     int f = 0, // g = 0; expected-note {{change this ',' to a ';' to call 'func2'}}

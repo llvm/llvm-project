@@ -14,15 +14,31 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
+
 using namespace llvm;
+
+/// Returns the number of buckets to allocate to ensure that the DenseMap can
+/// accommodate \p NumEntries without need to grow().
+static unsigned getMinBucketToReserveForEntries(unsigned NumEntries) {
+  // Ensure that "NumEntries * 4 < NumBuckets * 3"
+  if (NumEntries == 0)
+    return 0;
+  // +1 is required because of the strict equality.
+  // For example if NumEntries is 48, we need to return 401.
+  return NextPowerOf2(NumEntries * 4 / 3 + 1);
+}
 
 StringMapImpl::StringMapImpl(unsigned InitSize, unsigned itemSize) {
   ItemSize = itemSize;
   
   // If a size is specified, initialize the table with that many buckets.
   if (InitSize) {
-    init(InitSize);
+    // The table will grow when the number of entries reach 3/4 of the number of
+    // buckets. To guarantee that "InitSize" number of entries can be inserted
+    // in the table without growing, we allocate just what is needed here.
+    init(getMinBucketToReserveForEntries(InitSize));
     return;
   }
   
@@ -49,7 +65,6 @@ void StringMapImpl::init(unsigned InitSize) {
   TheTable[NumBuckets] = (StringMapEntryBase*)2;
 }
 
-
 /// LookupBucketFor - Look up the bucket that the specified string should end
 /// up in.  If it already exists as a key in the map, the Item pointer for the
 /// specified bucket will be non-null.  Otherwise, it will be null.  In either
@@ -67,7 +82,7 @@ unsigned StringMapImpl::LookupBucketFor(StringRef Name) {
 
   unsigned ProbeAmt = 1;
   int FirstTombstone = -1;
-  while (1) {
+  while (true) {
     StringMapEntryBase *BucketItem = TheTable[BucketNo];
     // If we found an empty bucket, this key isn't in the table yet, return it.
     if (LLVM_LIKELY(!BucketItem)) {
@@ -109,7 +124,6 @@ unsigned StringMapImpl::LookupBucketFor(StringRef Name) {
   }
 }
 
-
 /// FindKey - Look up the bucket that contains the specified key. If it exists
 /// in the map, return the bucket number of the key.  Otherwise return -1.
 /// This does not modify the map.
@@ -121,7 +135,7 @@ int StringMapImpl::FindKey(StringRef Key) const {
   unsigned *HashTable = (unsigned *)(TheTable + NumBuckets + 1);
 
   unsigned ProbeAmt = 1;
-  while (1) {
+  while (true) {
     StringMapEntryBase *BucketItem = TheTable[BucketNo];
     // If we found an empty bucket, this key isn't in the table yet, return.
     if (LLVM_LIKELY(!BucketItem))
@@ -176,8 +190,6 @@ StringMapEntryBase *StringMapImpl::RemoveKey(StringRef Key) {
 
   return Result;
 }
-
-
 
 /// RehashTable - Grow the table, redistributing values into the buckets with
 /// the appropriate mod-of-hashtable-size.

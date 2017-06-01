@@ -17,10 +17,12 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/CodeGen.h"
 
 namespace llvm {
 class GlobalValue;
@@ -103,11 +105,21 @@ ISD::CondCode getICmpCondCode(ICmpInst::Predicate Pred);
 /// This function only tests target-independent requirements.
 bool isInTailCallPosition(ImmutableCallSite CS, const TargetMachine &TM);
 
+/// Test if given that the input instruction is in the tail call position, if
+/// there is an attribute mismatch between the caller and the callee that will
+/// inhibit tail call optimizations.
+/// \p AllowDifferingSizes is an output parameter which, if forming a tail call
+/// is permitted, determines whether it's permitted only if the size of the
+/// caller's and callee's return types match exactly.
+bool attributesPermitTailCall(const Function *F, const Instruction *I,
+                              const ReturnInst *Ret,
+                              const TargetLoweringBase &TLI,
+                              bool *AllowDifferingSizes = nullptr);
+
 /// Test if given that the input instruction is in the tail call position if the
 /// return type or any attributes of the function will inhibit tail call
 /// optimization.
-bool returnTypeIsEligibleForTailCall(const Function *F,
-                                     const Instruction *I,
+bool returnTypeIsEligibleForTailCall(const Function *F, const Instruction *I,
                                      const ReturnInst *Ret,
                                      const TargetLoweringBase &TLI);
 

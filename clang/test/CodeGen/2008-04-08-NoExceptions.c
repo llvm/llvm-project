@@ -9,4 +9,4 @@ void g(void) {
 
 // CHECK-NOT: declare void @f() [[NUW]]
 
-// CHECK: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }

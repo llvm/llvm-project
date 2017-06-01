@@ -30,6 +30,8 @@
 #define SYMBOL_IS_FUNC(name)
 #define CONST_SECTION .const
 
+#define NO_EXEC_STACK_DIRECTIVE
+
 #elif defined(__ELF__)
 
 #define HIDDEN(name) .hidden name
@@ -41,6 +43,12 @@
 #define SYMBOL_IS_FUNC(name) .type name,@function
 #endif
 #define CONST_SECTION .section .rodata
+
+#if defined(__GNU__) || defined(__ANDROID__) || defined(__FreeBSD__)
+#define NO_EXEC_STACK_DIRECTIVE .section .note.GNU-stack,"",%progbits
+#else
+#define NO_EXEC_STACK_DIRECTIVE
+#endif
 
 #else // !__APPLE__ && !__ELF__
 
@@ -54,13 +62,15 @@
   .endef
 #define CONST_SECTION .section .rdata,"rd"
 
+#define NO_EXEC_STACK_DIRECTIVE
+
 #endif
 
 #if defined(__arm__)
 #if defined(__ARM_ARCH_4T__) || __ARM_ARCH >= 5
 #define ARM_HAS_BX
 #endif
-#if !defined(__ARM_FEATURE_CLZ) &&                                             \
+#if !defined(__ARM_FEATURE_CLZ) && __ARM_ARCH_ISA_THUMB != 1 &&                \
     (__ARM_ARCH >= 6 || (__ARM_ARCH == 5 && !defined(__ARM_ARCH_5__)))
 #define __ARM_FEATURE_CLZ
 #endif
@@ -139,6 +149,7 @@
 #define DEFINE_COMPILERRT_FUNCTION_ALIAS(name, target)                         \
   .globl SYMBOL_NAME(name) SEPARATOR                                           \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
+  DECLARE_SYMBOL_VISIBILITY(SYMBOL_NAME(name)) SEPARATOR                       \
   .set SYMBOL_NAME(name), SYMBOL_NAME(target) SEPARATOR
 
 #if defined(__ARM_EABI__)

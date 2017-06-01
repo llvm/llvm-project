@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 namespace llvm {
 class MemoryBuffer;
@@ -39,7 +40,9 @@ namespace frontend {
     EmitCodeGenOnly,        ///< Generate machine code, but don't emit anything.
     EmitObj,                ///< Emit a .o file.
     FixIt,                  ///< Parse and apply any fixits to the source.
-    GenerateModule,         ///< Generate pre-compiled module.
+    GenerateModule,         ///< Generate pre-compiled module from a module map.
+    GenerateModuleInterface,///< Generate pre-compiled module from a C++ module
+                            ///< interface file.
     GeneratePCH,            ///< Generate pre-compiled header.
     GeneratePTH,            ///< Generate pre-tokenized header.
     InitOnly,               ///< Only execute frontend initialization.
@@ -73,6 +76,7 @@ enum InputKind {
   IK_OpenCL,
   IK_CUDA,
   IK_PreprocessedCuda,
+  IK_RenderScript,
   IK_AST,
   IK_LLVM_IR
 };
@@ -150,6 +154,10 @@ public:
                                            ///< dumps in AST dumps.
   unsigned BuildingImplicitModule : 1;     ///< Whether we are performing an
                                            ///< implicit module build.
+  unsigned ModulesEmbedAllFiles : 1;       ///< Whether we should embed all used
+                                           ///< files into the PCM file.
+  unsigned IncludeTimestamps : 1;          ///< Whether timestamps should be
+                                           ///< written to the produced PCH file.
 
   CodeCompleteOptions CodeCompleteOpts;
 
@@ -225,20 +233,17 @@ public:
   /// The name of the action to run when using a plugin action.
   std::string ActionName;
 
-  /// Args to pass to the plugin
-  std::vector<std::string> PluginArgs;
+  /// Args to pass to the plugins
+  std::unordered_map<std::string,std::vector<std::string>> PluginArgs;
 
   /// The list of plugin actions to run in addition to the normal action.
   std::vector<std::string> AddPluginActions;
-
-  /// Args to pass to the additional plugins
-  std::vector<std::vector<std::string> > AddPluginArgs;
 
   /// The list of plugins to load.
   std::vector<std::string> Plugins;
 
   /// The list of module file extensions.
-  std::vector<IntrusiveRefCntPtr<ModuleFileExtension>> ModuleFileExtensions;
+  std::vector<std::shared_ptr<ModuleFileExtension>> ModuleFileExtensions;
 
   /// \brief The list of module map files to load before processing the input.
   std::vector<std::string> ModuleMapFiles;
@@ -264,6 +269,13 @@ public:
   /// \brief Auxiliary triple for CUDA compilation.
   std::string AuxTriple;
 
+  /// \brief If non-empty, search the pch input file as it was a header
+  // included by this file.
+  std::string FindPchSource;
+
+  /// Filename to write statistics to.
+  std::string StatsFile;
+
 public:
   FrontendOptions() :
     DisableFree(false), RelocatablePCH(false), ShowHelp(false),
@@ -272,9 +284,9 @@ public:
     FixToTemporaries(false), ARCMTMigrateEmitARCErrors(false),
     SkipFunctionBodies(false), UseGlobalModuleIndex(true),
     GenerateGlobalModuleIndex(true), ASTDumpDecls(false), ASTDumpLookups(false),
-    BuildingImplicitModule(false),
-    ARCMTAction(ARCMT_None), ObjCMTAction(ObjCMT_None),
-    ProgramAction(frontend::ParseSyntaxOnly)
+    BuildingImplicitModule(false), ModulesEmbedAllFiles(false),
+    IncludeTimestamps(true), ARCMTAction(ARCMT_None),
+    ObjCMTAction(ObjCMT_None), ProgramAction(frontend::ParseSyntaxOnly)
   {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file

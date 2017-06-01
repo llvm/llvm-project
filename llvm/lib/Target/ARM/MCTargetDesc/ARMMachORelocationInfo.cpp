@@ -12,7 +12,7 @@
 #include "llvm-c/Disassembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCRelocationInfo.h"
+#include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 
 using namespace llvm;
 using namespace object;

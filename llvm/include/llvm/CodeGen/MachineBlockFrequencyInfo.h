@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_MACHINEBLOCKFREQUENCYINFO_H
 #define LLVM_CODEGEN_MACHINEBLOCKFREQUENCYINFO_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include <climits>
@@ -22,6 +23,7 @@ namespace llvm {
 
 class MachineBasicBlock;
 class MachineBranchProbabilityInfo;
+class MachineLoopInfo;
 template <class BlockT> class BlockFrequencyInfoImpl;
 
 /// MachineBlockFrequencyInfo pass uses BlockFrequencyInfoImpl implementation
@@ -41,6 +43,11 @@ public:
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
+  /// calculate - compute block frequency info for the given function.
+  void calculate(const MachineFunction &F,
+                 const MachineBranchProbabilityInfo &MBPI,
+                 const MachineLoopInfo &MLI);
+
   void releaseMemory() override;
 
   /// getblockFreq - Return block frequency. Return 0 if we don't have the
@@ -50,7 +57,11 @@ public:
   ///
   BlockFrequency getBlockFreq(const MachineBasicBlock *MBB) const;
 
+  Optional<uint64_t> getBlockProfileCount(const MachineBasicBlock *MBB) const;
+  Optional<uint64_t> getProfileCountFromFreq(uint64_t Freq) const;
+
   const MachineFunction *getFunction() const;
+  const MachineBranchProbabilityInfo *getMBPI() const;
   void view() const;
 
   // Print the block frequency Freq to OS using the current functions entry

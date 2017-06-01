@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core,debug.ExprInspection %s -analyzer-store=region -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection %s -analyzer-store=region -verify
 
 void clang_analyzer_eval(int);
 
@@ -16,7 +16,7 @@ struct s {
 
 void f() {
   struct s a;
-  int *p = &(a.n) + 1;
+  int *p = &(a.n) + 1; // expected-warning{{Pointer arithmetic on}}
 }
 
 typedef struct {

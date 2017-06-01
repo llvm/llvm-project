@@ -12,3 +12,5 @@ struct B : NotAggregateBase {
   explicit B() = default; // expected-note {{here}}
 };
 B b = {}; // expected-error {{chosen constructor is explicit}}
+B b2{};
+B b3;

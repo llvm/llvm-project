@@ -110,8 +110,8 @@ public:
     void push_front(value_type&& v);
     void push_back(const value_type& v);
     void push_back(value_type&& v);
-    template <class... Args> reference emplace_front(Args&&... args);
-    template <class... Args> reference emplace_back(Args&&... args);
+    template <class... Args> reference emplace_front(Args&&... args);  // reference in C++17
+    template <class... Args> reference emplace_back(Args&&... args);   // reference in C++17
     template <class... Args> iterator emplace(const_iterator p, Args&&... args);
     iterator insert(const_iterator p, const value_type& v);
     iterator insert(const_iterator p, value_type&& v);
@@ -1342,8 +1342,13 @@ public:
     void push_back(const value_type& __v);
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #ifndef _LIBCPP_HAS_NO_VARIADICS
+#if _LIBCPP_STD_VER > 14
     template <class... _Args> reference emplace_front(_Args&&... __args);
-    template <class... _Args> reference emplace_back(_Args&&... __args);
+    template <class... _Args> reference emplace_back (_Args&&... __args);
+#else
+    template <class... _Args> void      emplace_front(_Args&&... __args);
+    template <class... _Args> void      emplace_back (_Args&&... __args);
+#endif
     template <class... _Args> iterator emplace(const_iterator __p, _Args&&... __args);
 #endif  // _LIBCPP_HAS_NO_VARIADICS
     void push_front(value_type&& __v);
@@ -1822,7 +1827,11 @@ deque<_Tp, _Allocator>::push_back(value_type&& __v)
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
+#if _LIBCPP_STD_VER > 14
 typename deque<_Tp, _Allocator>::reference
+#else
+void
+#endif
 deque<_Tp, _Allocator>::emplace_back(_Args&&... __args)
 {
     allocator_type& __a = __base::__alloc();
@@ -1832,7 +1841,9 @@ deque<_Tp, _Allocator>::emplace_back(_Args&&... __args)
     __alloc_traits::construct(__a, _VSTD::addressof(*__base::end()),
                               _VSTD::forward<_Args>(__args)...);
     ++__base::size();
+#if _LIBCPP_STD_VER > 14
     return *--__base::end();
+#endif
 }
 
 #endif  // _LIBCPP_HAS_NO_VARIADICS
@@ -1870,7 +1881,11 @@ deque<_Tp, _Allocator>::push_front(value_type&& __v)
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
+#if _LIBCPP_STD_VER > 14
 typename deque<_Tp, _Allocator>::reference
+#else
+void
+#endif
 deque<_Tp, _Allocator>::emplace_front(_Args&&... __args)
 {
     allocator_type& __a = __base::__alloc();
@@ -1880,7 +1895,9 @@ deque<_Tp, _Allocator>::emplace_front(_Args&&... __args)
     __alloc_traits::construct(__a, _VSTD::addressof(*--__base::begin()), _VSTD::forward<_Args>(__args)...);
     --__base::__start_;
     ++__base::size();
+#if _LIBCPP_STD_VER > 14
     return *__base::begin();
+#endif
 }
 
 #endif  // _LIBCPP_HAS_NO_VARIADICS

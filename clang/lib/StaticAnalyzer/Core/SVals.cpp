@@ -16,6 +16,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "llvm/Support/raw_ostream.h"
+#include "clang/AST/DeclCXX.h"
 using namespace clang;
 using namespace ento;
 using llvm::APSInt;
@@ -51,11 +52,15 @@ bool SVal::hasConjuredSymbol() const {
 const FunctionDecl *SVal::getAsFunctionDecl() const {
   if (Optional<loc::MemRegionVal> X = getAs<loc::MemRegionVal>()) {
     const MemRegion* R = X->getRegion();
-    if (const FunctionTextRegion *CTR = R->getAs<FunctionTextRegion>())
+    if (const FunctionCodeRegion *CTR = R->getAs<FunctionCodeRegion>())
       if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CTR->getDecl()))
         return FD;
   }
 
+  if (auto X = getAs<nonloc::PointerToMember>()) {
+    if (const CXXMethodDecl *MD = dyn_cast_or_null<CXXMethodDecl>(X->getDecl()))
+      return MD;
+  }
   return nullptr;
 }
 
@@ -155,6 +160,20 @@ const TypedValueRegion *nonloc::LazyCompoundVal::getRegion() const {
   return static_cast<const LazyCompoundValData*>(Data)->getRegion();
 }
 
+const DeclaratorDecl *nonloc::PointerToMember::getDecl() const {
+  const auto PTMD = this->getPTMData();
+  if (PTMD.isNull())
+    return nullptr;
+
+  const DeclaratorDecl *DD = nullptr;
+  if (PTMD.is<const DeclaratorDecl *>())
+    DD = PTMD.get<const DeclaratorDecl *>();
+  else
+    DD = PTMD.get<const PointerToMemberData *>()->getDeclaratorDecl();
+
+  return DD;
+}
+
 //===----------------------------------------------------------------------===//
 // Other Iterators.
 //===----------------------------------------------------------------------===//
@@ -165,6 +184,20 @@ nonloc::CompoundVal::iterator nonloc::CompoundVal::begin() const {
 
 nonloc::CompoundVal::iterator nonloc::CompoundVal::end() const {
   return getValue()->end();
+}
+
+nonloc::PointerToMember::iterator nonloc::PointerToMember::begin() const {
+  const PTMDataType PTMD = getPTMData();
+  if (PTMD.is<const DeclaratorDecl *>())
+    return nonloc::PointerToMember::iterator();
+  return PTMD.get<const PointerToMemberData *>()->begin();
+}
+
+nonloc::PointerToMember::iterator nonloc::PointerToMember::end() const {
+  const PTMDataType PTMD = getPTMData();
+  if (PTMD.is<const DeclaratorDecl *>())
+    return nonloc::PointerToMember::iterator();
+  return PTMD.get<const PointerToMemberData *>()->end();
 }
 
 //===----------------------------------------------------------------------===//
@@ -236,11 +269,11 @@ SVal loc::ConcreteInt::evalBinOp(BasicValueFactory& BasicVals,
 // Pretty-Printing.
 //===----------------------------------------------------------------------===//
 
-void SVal::dump() const { dumpToStream(llvm::errs()); }
+LLVM_DUMP_METHOD void SVal::dump() const { dumpToStream(llvm::errs()); }
 
 void SVal::dumpToStream(raw_ostream &os) const {
   switch (getBaseKind()) {
-    case UnknownKind:
+    case UnknownValKind:
       os << "Unknown";
       break;
     case NonLocKind:
@@ -249,7 +282,7 @@ void SVal::dumpToStream(raw_ostream &os) const {
     case LocKind:
       castAs<Loc>().dumpToStream(os);
       break;
-    case UndefinedKind:
+    case UndefinedValKind:
       os << "Undefined";
       break;
   }
@@ -299,6 +332,26 @@ void NonLoc::dumpToStream(raw_ostream &os) const {
          << '}';
       break;
     }
+    case nonloc::PointerToMemberKind: {
+      os << "pointerToMember{";
+      const nonloc::PointerToMember &CastRes =
+          castAs<nonloc::PointerToMember>();
+      if (CastRes.getDecl())
+        os << "|" << CastRes.getDecl()->getQualifiedNameAsString() << "|";
+      bool first = true;
+      for (const auto &I : CastRes) {
+        if (first) {
+          os << ' '; first = false;
+        }
+        else
+          os << ", ";
+
+        os << (*I).getType().getAsString();
+      }
+
+      os << '}';
+      break;
+    }
     default:
       assert (false && "Pretty-printed not implemented for this NonLoc.");
       break;
@@ -313,7 +366,7 @@ void Loc::dumpToStream(raw_ostream &os) const {
     case loc::GotoLabelKind:
       os << "&&" << castAs<loc::GotoLabel>().getLabel()->getName();
       break;
-    case loc::MemRegionKind:
+    case loc::MemRegionValKind:
       os << '&' << castAs<loc::MemRegionVal>().getRegion()->getString();
       break;
     default:

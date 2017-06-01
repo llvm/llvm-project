@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull -verify %s
+// RUN: %clang_analyze_cc1 -fobjc-arc -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull -DNOSYSTEMHEADERS=0 -verify %s
+// RUN: %clang_analyze_cc1 -fobjc-arc -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull -analyzer-config nullability:NoDiagnoseCallsToSystemHeaders=true -DNOSYSTEMHEADERS=1 -verify %s
+
+#include "Inputs/system-header-simulator-for-nullability.h"
 
 int getRandom();
 
@@ -15,18 +18,18 @@ void testBasicRules() {
   Dummy *q = 0;
   if (getRandom()) {
     takesNullable(q);
-    takesNonnull(q); // expected-warning {{}}
+    takesNonnull(q); // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
   }
 }
 
 Dummy *_Nonnull testNullReturn() {
   Dummy *p = 0;
-  return p; // expected-warning {{}}
+  return p; // expected-warning {{Null returned from a function that is expected to return a non-null value}}
 }
 
 void onlyReportFirstPreconditionViolationOnPath() {
   Dummy *p = 0;
-  takesNonnull(p); // expected-warning {{}}
+  takesNonnull(p); // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
   takesNonnull(p); // No warning.
   // Passing null to nonnull is a sink. Stop the analysis.
   int i = 0;
@@ -84,4 +87,84 @@ Dummy *_Nonnull testDefensiveInlineChecks(Dummy * p) {
   if (getRandom())
     takesNonnull(p);
   return p;
+}
+
+@interface TestObject : NSObject
+@end
+
+TestObject *_Nonnull getNonnullTestObject();
+
+void testObjCARCImplicitZeroInitialization() {
+  TestObject * _Nonnull implicitlyZeroInitialized; // no-warning
+  implicitlyZeroInitialized = getNonnullTestObject();
+}
+
+void testObjCARCExplicitZeroInitialization() {
+  TestObject * _Nonnull explicitlyZeroInitialized = nil; // expected-warning {{nil assigned to a pointer which is expected to have non-null value}}
+}
+
+// Under ARC, returned expressions of ObjC objects types are are implicitly
+// cast to _Nonnull when the functions return type is _Nonnull, so make
+// sure this doesn't implicit cast doesn't suppress a legitimate warning.
+TestObject * _Nonnull returnsNilObjCInstanceIndirectly() {
+  TestObject *local = nil;
+  return local; // expected-warning {{nil returned from a function that is expected to return a non-null value}}
+}
+
+TestObject * _Nonnull returnsNilObjCInstanceIndirectlyWithSupressingCast() {
+  TestObject *local = nil;
+  return (TestObject * _Nonnull)local; // no-warning
+}
+
+TestObject * _Nonnull returnsNilObjCInstanceDirectly() {
+  return nil; // expected-warning {{nil returned from a function that is expected to return a non-null value}}
+}
+
+TestObject * _Nonnull returnsNilObjCInstanceDirectlyWithSuppressingCast() {
+  return (TestObject * _Nonnull)nil; // no-warning
+}
+
+@interface SomeClass : NSObject
+@end
+
+@implementation SomeClass (MethodReturn)
+- (SomeClass * _Nonnull)testReturnsNilInNonnull {
+  SomeClass *local = nil;
+  return local; // expected-warning {{nil returned from a method that is expected to return a non-null value}}
+}
+
+- (SomeClass * _Nonnull)testReturnsCastSuppressedNilInNonnull {
+  SomeClass *local = nil;
+  return (SomeClass * _Nonnull)local; // no-warning
+}
+
+- (SomeClass * _Nonnull)testReturnsNilInNonnullWhenPreconditionViolated:(SomeClass * _Nonnull) p {
+  SomeClass *local = nil;
+  if (!p) // Pre-condition violated here.
+    return local; // no-warning
+  else
+    return p; // no-warning
+}
+@end
+
+
+void callFunctionInSystemHeader() {
+  NSString *s;
+  s = nil;
+
+  NSSystemFunctionTakingNonnull(s);
+  #if !NOSYSTEMHEADERS
+  // expected-warning@-2{{nil passed to a callee that requires a non-null 1st parameter}}
+  #endif
+}
+
+void callMethodInSystemHeader() {
+  NSString *s;
+  s = nil;
+
+  NSSystemClass *sc = [[NSSystemClass alloc] init];
+  [sc takesNonnull:s];
+  #if !NOSYSTEMHEADERS
+  // expected-warning@-2{{nil passed to a callee that requires a non-null 1st parameter}}
+  #endif
 }

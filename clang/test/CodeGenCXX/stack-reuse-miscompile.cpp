@@ -1,4 +1,4 @@
-// RUN: %clang -S -target armv7l-unknown-linux-gnueabihf -emit-llvm -O1 -mllvm -disable-llvm-optzns -S %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -O1 -disable-llvm-passes -std=c++03 %s -o - | FileCheck %s
 
 // This test should not to generate llvm.lifetime.start/llvm.lifetime.end for
 // f function because all temporary objects in this function are used for the

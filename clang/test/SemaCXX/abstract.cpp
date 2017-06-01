@@ -8,6 +8,10 @@
   typedef int __CONCAT(__sa, __LINE__)[__b ? 1 : -1]
 #endif
 
+union IncompleteUnion;
+
+static_assert(!__is_abstract(IncompleteUnion), "unions are never abstract");
+
 class C {
   virtual void f() = 0; // expected-note {{unimplemented pure virtual method 'f'}}
 };

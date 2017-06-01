@@ -16,9 +16,9 @@
 
 // GLOBALS-LABEL @OBJC_METACLASS_A
 //  Strong layout: scan the first word.
-// GLOBALS: @OBJC_CLASS_NAME_{{.*}} = private global [2 x i8] c"\01\00"
+// GLOBALS: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant [2 x i8] c"\01\00"
 //  Weak layout: skip the first word, scan the second word.
-// GLOBALS: @OBJC_CLASS_NAME_{{.*}} = private global [2 x i8] c"\11\00"
+// GLOBALS: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant [2 x i8] c"\11\00"
 
 //  0x04002001
 //     ^ is compiled by ARC (controls interpretation of layouts)
@@ -119,9 +119,9 @@
 // GLOBALS-LABEL: @OBJC_METACLASS_C
 //  Strong layout: skip five, scan four, skip three, scan seven
 //    'T' == 0x54, '7' == 0x37
-// GLOBALS: @OBJC_CLASS_NAME_{{.*}} = private global [3 x i8] c"T7\00"
+// GLOBALS: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant [3 x i8] c"T7\00"
 //  Weak layout: skip nine, scan three
-// GLOBALS: @OBJC_CLASS_NAME_{{.*}} = private global [2 x i8] c"\93\00"
+// GLOBALS: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant [2 x i8] c"\93\00"
 
 extern void useBlock(void (^block)(void));
 

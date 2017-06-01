@@ -62,7 +62,7 @@ void BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineBasicBlock &MBB = *MI.getParent();
 
   if (MI.getOpcode() == BPF::MOV_rr) {
-    int Offset = MF.getFrameInfo()->getObjectOffset(FrameIndex);
+    int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
 
     MI.getOperand(i).ChangeToRegister(FrameReg, false);
     unsigned reg = MI.getOperand(i - 1).getReg();
@@ -72,7 +72,7 @@ void BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     return;
   }
 
-  int Offset = MF.getFrameInfo()->getObjectOffset(FrameIndex) +
+  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) +
                MI.getOperand(i + 1).getImm();
 
   if (!isInt<32>(Offset))

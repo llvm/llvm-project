@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=powerpc64-unknown-linux-gnu -fast-isel=false < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=powerpc64-unknown-linux-gnu -fast-isel=false < %s | FileCheck %s
 
 ; This verifies that single-precision floating point values that can't
 ; be passed in registers are stored in the rightmost word of the parameter

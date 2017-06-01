@@ -16,11 +16,11 @@
 #define LLVM_TRANSFORMS_UTILS_SIMPLIFYLIBCALLS_H
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
+class StringRef;
 class Value;
 class CallInst;
 class DataLayout;
@@ -125,19 +125,19 @@ private:
   Value *optimizeStringMemoryLibCall(CallInst *CI, IRBuilder<> &B);
 
   // Math Library Optimizations
-  Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B, bool CheckRetType);
-  Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B);
   Value *optimizeCos(CallInst *CI, IRBuilder<> &B);
   Value *optimizePow(CallInst *CI, IRBuilder<> &B);
   Value *optimizeExp2(CallInst *CI, IRBuilder<> &B);
   Value *optimizeFabs(CallInst *CI, IRBuilder<> &B);
   Value *optimizeFMinFMax(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeLog(CallInst *CI, IRBuilder<> &B);
   Value *optimizeSqrt(CallInst *CI, IRBuilder<> &B);
   Value *optimizeSinCosPi(CallInst *CI, IRBuilder<> &B);
   Value *optimizeTan(CallInst *CI, IRBuilder<> &B);
 
   // Integer Library Call Optimizations
   Value *optimizeFFS(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeFls(CallInst *CI, IRBuilder<> &B);
   Value *optimizeAbs(CallInst *CI, IRBuilder<> &B);
   Value *optimizeIsDigit(CallInst *CI, IRBuilder<> &B);
   Value *optimizeIsAscii(CallInst *CI, IRBuilder<> &B);
@@ -155,11 +155,10 @@ private:
 
   // Helper methods
   Value *emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len, IRBuilder<> &B);
-  void classifyArgUse(Value *Val, BasicBlock *BB, bool IsFloat,
+  void classifyArgUse(Value *Val, Function *F, bool IsFloat,
                       SmallVectorImpl<CallInst *> &SinCalls,
                       SmallVectorImpl<CallInst *> &CosCalls,
                       SmallVectorImpl<CallInst *> &SinCosCalls);
-  void replaceTrigInsts(SmallVectorImpl<CallInst *> &Calls, Value *Res);
   Value *optimizePrintFString(CallInst *CI, IRBuilder<> &B);
   Value *optimizeSPrintFString(CallInst *CI, IRBuilder<> &B);
   Value *optimizeFPrintFString(CallInst *CI, IRBuilder<> &B);

@@ -27,6 +27,7 @@ T tmain(T argc) {
 }
 
 int main(int argc, char **argv) {
+// CHECK: int main(int argc, char **argv) {
   int b = argc, c, d, e, f, g;
   static int a;
 // CHECK: static int a;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c1x -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c11 -fsyntax-only -verify %s
 
 void g(void);
 
@@ -31,4 +31,16 @@ void foo(int n) {
 
   const int i = 12;
   int a9[_Generic(i, int: 1, default: 2) == 1 ? 1 : -1];
+
+  // This is expected to not trigger any diagnostics because the controlling
+  // expression is not evaluated.
+  (void)_Generic(*(int *)0, int: 1);
+}
+
+int __attribute__((overloadable)) test (int);
+double __attribute__((overloadable)) test (double);
+char testc(char);
+
+void PR30201(void) {
+  _Generic(4, char:testc, default:test)(4);
 }

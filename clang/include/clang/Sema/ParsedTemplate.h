@@ -1,4 +1,4 @@
-//===--- ParsedTemplate.h - Template Parsing Data Types -------------------===//
+//===--- ParsedTemplate.h - Template Parsing Data Types ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,12 +11,19 @@
 //  templates.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_SEMA_PARSEDTEMPLATE_H
 #define LLVM_CLANG_SEMA_PARSEDTEMPLATE_H
 
+#include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TemplateKinds.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Ownership.h"
+#include "llvm/ADT/SmallVector.h"
 #include <cassert>
+#include <cstdlib>
+#include <new>
 
 namespace clang {  
   /// \brief Represents the parsed form of a C++ template argument.
@@ -114,8 +121,8 @@ namespace clang {
     KindType Kind;
     
     /// \brief The actual template argument representation, which may be
-    /// an \c ActionBase::TypeTy* (for a type), an Expr* (for an
-    /// expression), or an ActionBase::TemplateTy (for a template).
+    /// an \c Sema::TypeTy* (for a type), an Expr* (for an
+    /// expression), or an Sema::TemplateTy (for a template).
     void *Arg;
 
     /// \brief The nested-name-specifier that can accompany a template template
@@ -209,6 +216,6 @@ namespace clang {
   /// Retrieves the range of the given template parameter lists.
   SourceRange getTemplateParamsRange(TemplateParameterList const *const *Params,
                                      unsigned NumParams);  
-}
+} // end namespace clang
 
-#endif
+#endif // LLVM_CLANG_SEMA_PARSEDTEMPLATE_H

@@ -73,6 +73,12 @@ public:
   /// containing function.
   bool hasByValAttr() const;
 
+  /// \brief Return true if this argument has the swiftself attribute.
+  bool hasSwiftSelfAttr() const;
+
+  /// \brief Return true if this argument has the swifterror attribute.
+  bool hasSwiftErrorAttr() const;
+
   /// \brief Return true if this argument has the byval attribute or inalloca
   /// attribute on it in its containing function.  These attributes both
   /// represent arguments being passed by value.
@@ -120,8 +126,19 @@ public:
   /// \brief Add a Attribute to an argument.
   void addAttr(AttributeSet AS);
 
+  void addAttr(Attribute::AttrKind Kind) {
+    addAttr(AttributeSet::get(getContext(), getArgNo() + 1, Kind));
+  }
+
   /// \brief Remove a Attribute from an argument.
   void removeAttr(AttributeSet AS);
+
+  void removeAttr(Attribute::AttrKind Kind) {
+    removeAttr(AttributeSet::get(getContext(), getArgNo() + 1, Kind));
+  }
+
+  /// \brief Checks if an argument has a given attribute.
+  bool hasAttribute(Attribute::AttrKind Kind) const;
 
   /// \brief Method for support type inquiry through isa, cast, and
   /// dyn_cast.

@@ -41,6 +41,16 @@ namespace X86 {
     /// AddrNumOperands - Total number of operands in a memory reference.
     AddrNumOperands = 5
   };
+
+  /// AVX512 static rounding constants.  These need to match the values in
+  /// avx512fintrin.h.
+  enum STATIC_ROUNDING {
+    TO_NEAREST_INT = 0,
+    TO_NEG_INF = 1,
+    TO_POS_INF = 2,
+    TO_ZERO = 3,
+    CUR_DIRECTION = 4
+  };
 } // end namespace X86;
 
 /// X86II - This namespace holds all of the target specific flags that
@@ -176,11 +186,6 @@ namespace X86II {
     /// dllimport linkage on windows.
     MO_DLLIMPORT,
 
-    /// MO_DARWIN_STUB - On a symbol operand "FOO", this indicates that the
-    /// reference is actually to the "FOO$stub" symbol.  This is used for calls
-    /// and jumps to external functions on Tiger and earlier.
-    MO_DARWIN_STUB,
-
     /// MO_DARWIN_NONLAZY - On a symbol operand "FOO", this indicates that the
     /// reference is actually to the "FOO$non_lazy_ptr" symbol, which is a
     /// non-PIC-base-relative reference to a non-hidden dyld lazy pointer stub.
@@ -190,12 +195,6 @@ namespace X86II {
     /// that the reference is actually to "FOO$non_lazy_ptr - PICBASE", which is
     /// a PIC-base-relative reference to a non-hidden dyld lazy pointer stub.
     MO_DARWIN_NONLAZY_PIC_BASE,
-
-    /// MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE - On a symbol operand "FOO", this
-    /// indicates that the reference is actually to "FOO$non_lazy_ptr -PICBASE",
-    /// which is a PIC-base-relative reference to a hidden dyld lazy pointer
-    /// stub.
-    MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE,
 
     /// MO_TLVP - On a symbol operand this indicates that the immediate is
     /// some TLS offset.
@@ -235,88 +234,114 @@ namespace X86II {
     /// their one register operand added to their opcode.
     AddRegFrm      = 2,
 
-    /// MRMDestReg - This form is used for instructions that use the Mod/RM byte
-    /// to specify a destination, which in this case is a register.
-    ///
-    MRMDestReg     = 3,
-
-    /// MRMDestMem - This form is used for instructions that use the Mod/RM byte
-    /// to specify a destination, which in this case is memory.
-    ///
-    MRMDestMem     = 4,
-
-    /// MRMSrcReg - This form is used for instructions that use the Mod/RM byte
-    /// to specify a source, which in this case is a register.
-    ///
-    MRMSrcReg      = 5,
-
-    /// MRMSrcMem - This form is used for instructions that use the Mod/RM byte
-    /// to specify a source, which in this case is memory.
-    ///
-    MRMSrcMem      = 6,
-
     /// RawFrmMemOffs - This form is for instructions that store an absolute
     /// memory offset as an immediate with a possible segment override.
-    RawFrmMemOffs  = 7,
+    RawFrmMemOffs  = 3,
 
     /// RawFrmSrc - This form is for instructions that use the source index
     /// register SI/ESI/RSI with a possible segment override.
-    RawFrmSrc      = 8,
+    RawFrmSrc      = 4,
 
     /// RawFrmDst - This form is for instructions that use the destination index
     /// register DI/EDI/ESI.
-    RawFrmDst      = 9,
+    RawFrmDst      = 5,
 
     /// RawFrmSrc - This form is for instructions that use the source index
     /// register SI/ESI/ERI with a possible segment override, and also the
     /// destination index register DI/ESI/RDI.
-    RawFrmDstSrc   = 10,
+    RawFrmDstSrc   = 6,
 
     /// RawFrmImm8 - This is used for the ENTER instruction, which has two
     /// immediates, the first of which is a 16-bit immediate (specified by
     /// the imm encoding) and the second is a 8-bit fixed value.
-    RawFrmImm8 = 11,
+    RawFrmImm8 = 7,
 
     /// RawFrmImm16 - This is used for CALL FAR instructions, which have two
     /// immediates, the first of which is a 16 or 32-bit immediate (specified by
     /// the imm encoding) and the second is a 16-bit fixed value.  In the AMD
     /// manual, this operand is described as pntr16:32 and pntr16:16
-    RawFrmImm16 = 12,
-
-    /// MRMX[rm] - The forms are used to represent instructions that use a
-    /// Mod/RM byte, and don't use the middle field for anything.
-    MRMXr = 14, MRMXm = 15,
+    RawFrmImm16 = 8,
 
     /// MRM[0-7][rm] - These forms are used to represent instructions that use
     /// a Mod/RM byte, and use the middle field to hold extended opcode
     /// information.  In the intel manual these are represented as /0, /1, ...
     ///
 
-    // First, instructions that operate on a register r/m operand...
-    MRM0r = 16,  MRM1r = 17,  MRM2r = 18,  MRM3r = 19, // Format /0 /1 /2 /3
-    MRM4r = 20,  MRM5r = 21,  MRM6r = 22,  MRM7r = 23, // Format /4 /5 /6 /7
+    /// MRMDestMem - This form is used for instructions that use the Mod/RM byte
+    /// to specify a destination, which in this case is memory.
+    ///
+    MRMDestMem     = 32,
+
+    /// MRMSrcMem - This form is used for instructions that use the Mod/RM byte
+    /// to specify a source, which in this case is memory.
+    ///
+    MRMSrcMem      = 33,
+
+    /// MRMSrcMem4VOp3 - This form is used for instructions that encode
+    /// operand 3 with VEX.VVVV and load from memory.
+    ///
+    MRMSrcMem4VOp3 = 34,
+
+    /// MRMSrcMemOp4 - This form is used for instructions that use the Mod/RM
+    /// byte to specify the fourth source, which in this case is memory.
+    ///
+    MRMSrcMemOp4   = 35,
+
+    /// MRMXm - This form is used for instructions that use the Mod/RM byte
+    /// to specify a memory source, but doesn't use the middle field.
+    ///
+    MRMXm = 39, // Instruction that uses Mod/RM but not the middle field.
 
     // Next, instructions that operate on a memory r/m operand...
-    MRM0m = 24,  MRM1m = 25,  MRM2m = 26,  MRM3m = 27, // Format /0 /1 /2 /3
-    MRM4m = 28,  MRM5m = 29,  MRM6m = 30,  MRM7m = 31, // Format /4 /5 /6 /7
+    MRM0m = 40,  MRM1m = 41,  MRM2m = 42,  MRM3m = 43, // Format /0 /1 /2 /3
+    MRM4m = 44,  MRM5m = 45,  MRM6m = 46,  MRM7m = 47, // Format /4 /5 /6 /7
 
-    //// MRM_XX - A mod/rm byte of exactly 0xXX.
-    MRM_C0 = 32, MRM_C1 = 33, MRM_C2 = 34, MRM_C3 = 35,
-    MRM_C4 = 36, MRM_C5 = 37, MRM_C6 = 38, MRM_C7 = 39,
-    MRM_C8 = 40, MRM_C9 = 41, MRM_CA = 42, MRM_CB = 43,
-    MRM_CC = 44, MRM_CD = 45, MRM_CE = 46, MRM_CF = 47,
-    MRM_D0 = 48, MRM_D1 = 49, MRM_D2 = 50, MRM_D3 = 51,
-    MRM_D4 = 52, MRM_D5 = 53, MRM_D6 = 54, MRM_D7 = 55,
-    MRM_D8 = 56, MRM_D9 = 57, MRM_DA = 58, MRM_DB = 59,
-    MRM_DC = 60, MRM_DD = 61, MRM_DE = 62, MRM_DF = 63,
-    MRM_E0 = 64, MRM_E1 = 65, MRM_E2 = 66, MRM_E3 = 67,
-    MRM_E4 = 68, MRM_E5 = 69, MRM_E6 = 70, MRM_E7 = 71,
-    MRM_E8 = 72, MRM_E9 = 73, MRM_EA = 74, MRM_EB = 75,
-    MRM_EC = 76, MRM_ED = 77, MRM_EE = 78, MRM_EF = 79,
-    MRM_F0 = 80, MRM_F1 = 81, MRM_F2 = 82, MRM_F3 = 83,
-    MRM_F4 = 84, MRM_F5 = 85, MRM_F6 = 86, MRM_F7 = 87,
-    MRM_F8 = 88, MRM_F9 = 89, MRM_FA = 90, MRM_FB = 91,
-    MRM_FC = 92, MRM_FD = 93, MRM_FE = 94, MRM_FF = 95,
+    /// MRMDestReg - This form is used for instructions that use the Mod/RM byte
+    /// to specify a destination, which in this case is a register.
+    ///
+    MRMDestReg     = 48,
+
+    /// MRMSrcReg - This form is used for instructions that use the Mod/RM byte
+    /// to specify a source, which in this case is a register.
+    ///
+    MRMSrcReg      = 49,
+
+    /// MRMSrcReg4VOp3 - This form is used for instructions that encode
+    /// operand 3 with VEX.VVVV and do not load from memory.
+    ///
+    MRMSrcReg4VOp3 = 50,
+
+    /// MRMSrcRegOp4 - This form is used for instructions that use the Mod/RM
+    /// byte to specify the fourth source, which in this case is a register.
+    ///
+    MRMSrcRegOp4   = 51,
+
+    /// MRMXr - This form is used for instructions that use the Mod/RM byte
+    /// to specify a register source, but doesn't use the middle field.
+    ///
+    MRMXr = 55, // Instruction that uses Mod/RM but not the middle field.
+
+    // Instructions that operate on a register r/m operand...
+    MRM0r = 56,  MRM1r = 57,  MRM2r = 58,  MRM3r = 59, // Format /0 /1 /2 /3
+    MRM4r = 60,  MRM5r = 61,  MRM6r = 62,  MRM7r = 63, // Format /4 /5 /6 /7
+
+    /// MRM_XX - A mod/rm byte of exactly 0xXX.
+    MRM_C0 = 64,  MRM_C1 = 65,  MRM_C2 = 66,  MRM_C3 = 67,
+    MRM_C4 = 68,  MRM_C5 = 69,  MRM_C6 = 70,  MRM_C7 = 71,
+    MRM_C8 = 72,  MRM_C9 = 73,  MRM_CA = 74,  MRM_CB = 75,
+    MRM_CC = 76,  MRM_CD = 77,  MRM_CE = 78,  MRM_CF = 79,
+    MRM_D0 = 80,  MRM_D1 = 81,  MRM_D2 = 82,  MRM_D3 = 83,
+    MRM_D4 = 84,  MRM_D5 = 85,  MRM_D6 = 86,  MRM_D7 = 87,
+    MRM_D8 = 88,  MRM_D9 = 89,  MRM_DA = 90,  MRM_DB = 91,
+    MRM_DC = 92,  MRM_DD = 93,  MRM_DE = 94,  MRM_DF = 95,
+    MRM_E0 = 96,  MRM_E1 = 97,  MRM_E2 = 98,  MRM_E3 = 99,
+    MRM_E4 = 100, MRM_E5 = 101, MRM_E6 = 102, MRM_E7 = 103,
+    MRM_E8 = 104, MRM_E9 = 105, MRM_EA = 106, MRM_EB = 107,
+    MRM_EC = 108, MRM_ED = 109, MRM_EE = 110, MRM_EF = 111,
+    MRM_F0 = 112, MRM_F1 = 113, MRM_F2 = 114, MRM_F3 = 115,
+    MRM_F4 = 116, MRM_F5 = 117, MRM_F6 = 118, MRM_F7 = 119,
+    MRM_F8 = 120, MRM_F9 = 121, MRM_FA = 122, MRM_FB = 123,
+    MRM_FC = 124, MRM_FD = 125, MRM_FE = 126, MRM_FF = 127,
 
     FormMask       = 127,
 
@@ -404,12 +429,13 @@ namespace X86II {
     ImmMask    = 15 << ImmShift,
     Imm8       = 1 << ImmShift,
     Imm8PCRel  = 2 << ImmShift,
-    Imm16      = 3 << ImmShift,
-    Imm16PCRel = 4 << ImmShift,
-    Imm32      = 5 << ImmShift,
-    Imm32PCRel = 6 << ImmShift,
-    Imm32S     = 7 << ImmShift,
-    Imm64      = 8 << ImmShift,
+    Imm8Reg    = 3 << ImmShift,
+    Imm16      = 4 << ImmShift,
+    Imm16PCRel = 5 << ImmShift,
+    Imm32      = 6 << ImmShift,
+    Imm32PCRel = 7 << ImmShift,
+    Imm32S     = 8 << ImmShift,
+    Imm64      = 9 << ImmShift,
 
     //===------------------------------------------------------------------===//
     // FP Instruction Classification...  Zero is non-fp instruction.
@@ -489,39 +515,15 @@ namespace X86II {
     VEX_4VShift = VEX_WShift + 1,
     VEX_4V      = 1ULL << VEX_4VShift,
 
-    /// VEX_4VOp3 - Similar to VEX_4V, but used on instructions that encode
-    /// operand 3 with VEX.vvvv.
-    VEX_4VOp3Shift = VEX_4VShift + 1,
-    VEX_4VOp3   = 1ULL << VEX_4VOp3Shift,
-
-    /// VEX_I8IMM - Specifies that the last register used in a AVX instruction,
-    /// must be encoded in the i8 immediate field. This usually happens in
-    /// instructions with 4 operands.
-    VEX_I8IMMShift = VEX_4VOp3Shift + 1,
-    VEX_I8IMM   = 1ULL << VEX_I8IMMShift,
-
     /// VEX_L - Stands for a bit in the VEX opcode prefix meaning the current
     /// instruction uses 256-bit wide registers. This is usually auto detected
     /// if a VR256 register is used, but some AVX instructions also have this
     /// field marked when using a f256 memory references.
-    VEX_LShift = VEX_I8IMMShift + 1,
+    VEX_LShift = VEX_4VShift + 1,
     VEX_L       = 1ULL << VEX_LShift,
 
-    // VEX_LIG - Specifies that this instruction ignores the L-bit in the VEX
-    // prefix. Usually used for scalar instructions. Needed by disassembler.
-    VEX_LIGShift = VEX_LShift + 1,
-    VEX_LIG     = 1ULL << VEX_LIGShift,
-
-    // TODO: we should combine VEX_L and VEX_LIG together to form a 2-bit field
-    // with following encoding:
-    // - 00 V128
-    // - 01 V256
-    // - 10 V512
-    // - 11 LIG (but, in insn encoding, leave VEX.L and EVEX.L in zeros.
-    // this will save 1 tsflag bit
-
     // EVEX_K - Set if this instruction requires masking
-    EVEX_KShift = VEX_LIGShift + 1,
+    EVEX_KShift = VEX_LShift + 1,
     EVEX_K      = 1ULL << EVEX_KShift,
 
     // EVEX_Z - Set if this instruction has EVEX.Z field set.
@@ -549,13 +551,8 @@ namespace X86II {
     Has3DNow0F0FOpcodeShift = CD8_Scale_Shift + 7,
     Has3DNow0F0FOpcode = 1ULL << Has3DNow0F0FOpcodeShift,
 
-    /// MemOp4 - Used to indicate swapping of operand 3 and 4 to be encoded in
-    /// ModRM or I8IMM. This is used for FMA4 and XOP instructions.
-    MemOp4Shift = Has3DNow0F0FOpcodeShift + 1,
-    MemOp4 = 1ULL << MemOp4Shift,
-
     /// Explicitly specified rounding control
-    EVEX_RCShift = MemOp4Shift + 1,
+    EVEX_RCShift = Has3DNow0F0FOpcodeShift + 1,
     EVEX_RC = 1ULL << EVEX_RCShift
   };
 
@@ -576,7 +573,8 @@ namespace X86II {
     switch (TSFlags & X86II::ImmMask) {
     default: llvm_unreachable("Unknown immediate size");
     case X86II::Imm8:
-    case X86II::Imm8PCRel:  return 1;
+    case X86II::Imm8PCRel:
+    case X86II::Imm8Reg:    return 1;
     case X86II::Imm16:
     case X86II::Imm16PCRel: return 2;
     case X86II::Imm32:
@@ -596,6 +594,7 @@ namespace X86II {
     case X86II::Imm32PCRel:
       return true;
     case X86II::Imm8:
+    case X86II::Imm8Reg:
     case X86II::Imm16:
     case X86II::Imm32:
     case X86II::Imm32S:
@@ -613,6 +612,7 @@ namespace X86II {
       return true;
     case X86II::Imm8:
     case X86II::Imm8PCRel:
+    case X86II::Imm8Reg:
     case X86II::Imm16:
     case X86II::Imm16PCRel:
     case X86II::Imm32:
@@ -627,26 +627,25 @@ namespace X86II {
   ///                  in this instruction.
   /// If this is a two-address instruction,skip one of the register operands.
   /// FIXME: This should be handled during MCInst lowering.
-  inline int getOperandBias(const MCInstrDesc& Desc)
+  inline unsigned getOperandBias(const MCInstrDesc& Desc)
   {
     unsigned NumOps = Desc.getNumOperands();
-    unsigned CurOp = 0;
     if (NumOps > 1 && Desc.getOperandConstraint(1, MCOI::TIED_TO) == 0)
-      ++CurOp;
-    else if (NumOps > 3 && Desc.getOperandConstraint(2, MCOI::TIED_TO) == 0 &&
-             Desc.getOperandConstraint(3, MCOI::TIED_TO) == 1)
+      return 1;
+    if (NumOps > 3 && Desc.getOperandConstraint(2, MCOI::TIED_TO) == 0 &&
+        Desc.getOperandConstraint(3, MCOI::TIED_TO) == 1)
       // Special case for AVX-512 GATHER with 2 TIED_TO operands
       // Skip the first 2 operands: dst, mask_wb
-      CurOp += 2;
-    else if (NumOps > 3 && Desc.getOperandConstraint(2, MCOI::TIED_TO) == 0 &&
-             Desc.getOperandConstraint(NumOps - 1, MCOI::TIED_TO) == 1)
+      return 2;
+    if (NumOps > 3 && Desc.getOperandConstraint(2, MCOI::TIED_TO) == 0 &&
+        Desc.getOperandConstraint(NumOps - 1, MCOI::TIED_TO) == 1)
       // Special case for GATHER with 2 TIED_TO operands
       // Skip the first 2 operands: dst, mask_wb
-      CurOp += 2;
-    else if (NumOps > 2 && Desc.getOperandConstraint(NumOps - 2, MCOI::TIED_TO) == 0)
+      return 2;
+    if (NumOps > 2 && Desc.getOperandConstraint(NumOps - 2, MCOI::TIED_TO) == 0)
       // SCATTER
-      ++CurOp;
-    return CurOp;
+      return 1;
+    return 0;
   }
 
   /// getMemoryOperandNo - The function returns the MCInst operand # for the
@@ -657,9 +656,8 @@ namespace X86II {
   /// is duplicated in the MCInst (e.g. "EAX = addl EAX, [mem]") it is only
   /// counted as one operand.
   ///
-  inline int getMemoryOperandNo(uint64_t TSFlags, unsigned Opcode) {
+  inline int getMemoryOperandNo(uint64_t TSFlags) {
     bool HasVEX_4V = TSFlags & X86II::VEX_4V;
-    bool HasMemOp4 = TSFlags & X86II::MemOp4;
     bool HasEVEX_K = TSFlags & X86II::EVEX_K;
 
     switch (TSFlags & X86II::FormMask) {
@@ -667,21 +665,29 @@ namespace X86II {
     case X86II::Pseudo:
     case X86II::RawFrm:
     case X86II::AddRegFrm:
-    case X86II::MRMDestReg:
-    case X86II::MRMSrcReg:
     case X86II::RawFrmImm8:
     case X86II::RawFrmImm16:
     case X86II::RawFrmMemOffs:
     case X86II::RawFrmSrc:
     case X86II::RawFrmDst:
     case X86II::RawFrmDstSrc:
-       return -1;
+      return -1;
     case X86II::MRMDestMem:
       return 0;
     case X86II::MRMSrcMem:
       // Start from 1, skip any registers encoded in VEX_VVVV or I8IMM, or a
       // mask register.
-      return 1 + HasVEX_4V + HasMemOp4 + HasEVEX_K;
+      return 1 + HasVEX_4V + HasEVEX_K;
+    case X86II::MRMSrcMem4VOp3:
+      // Skip registers encoded in reg.
+      return 1 + HasEVEX_K;
+    case X86II::MRMSrcMemOp4:
+      // Skip registers encoded in reg, VEX_VVVV, and I8IMM.
+      return 3;
+    case X86II::MRMDestReg:
+    case X86II::MRMSrcReg:
+    case X86II::MRMSrcReg4VOp3:
+    case X86II::MRMSrcRegOp4:
     case X86II::MRMXr:
     case X86II::MRM0r: case X86II::MRM1r:
     case X86II::MRM2r: case X86II::MRM3r:
@@ -696,23 +702,27 @@ namespace X86II {
       // Start from 0, skip registers encoded in VEX_VVVV or a mask register.
       return 0 + HasVEX_4V + HasEVEX_K;
     case X86II::MRM_C0: case X86II::MRM_C1: case X86II::MRM_C2:
-    case X86II::MRM_C3: case X86II::MRM_C4: case X86II::MRM_C8:
+    case X86II::MRM_C3: case X86II::MRM_C4: case X86II::MRM_C5:
+    case X86II::MRM_C6: case X86II::MRM_C7: case X86II::MRM_C8:
     case X86II::MRM_C9: case X86II::MRM_CA: case X86II::MRM_CB:
+    case X86II::MRM_CC: case X86II::MRM_CD: case X86II::MRM_CE:
     case X86II::MRM_CF: case X86II::MRM_D0: case X86II::MRM_D1:
-    case X86II::MRM_D4: case X86II::MRM_D5: case X86II::MRM_D6:
-    case X86II::MRM_D7: case X86II::MRM_D8: case X86II::MRM_D9:
-    case X86II::MRM_DA: case X86II::MRM_DB: case X86II::MRM_DC:
-    case X86II::MRM_DD: case X86II::MRM_DE: case X86II::MRM_DF:
-    case X86II::MRM_E0: case X86II::MRM_E1: case X86II::MRM_E2:
-    case X86II::MRM_E3: case X86II::MRM_E4: case X86II::MRM_E5:
-    case X86II::MRM_E8: case X86II::MRM_E9: case X86II::MRM_EA:
-    case X86II::MRM_EB: case X86II::MRM_EC: case X86II::MRM_ED:
-    case X86II::MRM_EE: case X86II::MRM_F0: case X86II::MRM_F1:
-    case X86II::MRM_F2: case X86II::MRM_F3: case X86II::MRM_F4:
-    case X86II::MRM_F5: case X86II::MRM_F6: case X86II::MRM_F7:
-    case X86II::MRM_F8: case X86II::MRM_F9: case X86II::MRM_FA:
-    case X86II::MRM_FB: case X86II::MRM_FC: case X86II::MRM_FD:
-    case X86II::MRM_FE: case X86II::MRM_FF:
+    case X86II::MRM_D2: case X86II::MRM_D3: case X86II::MRM_D4:
+    case X86II::MRM_D5: case X86II::MRM_D6: case X86II::MRM_D7:
+    case X86II::MRM_D8: case X86II::MRM_D9: case X86II::MRM_DA:
+    case X86II::MRM_DB: case X86II::MRM_DC: case X86II::MRM_DD:
+    case X86II::MRM_DE: case X86II::MRM_DF: case X86II::MRM_E0:
+    case X86II::MRM_E1: case X86II::MRM_E2: case X86II::MRM_E3:
+    case X86II::MRM_E4: case X86II::MRM_E5: case X86II::MRM_E6:
+    case X86II::MRM_E7: case X86II::MRM_E8: case X86II::MRM_E9:
+    case X86II::MRM_EA: case X86II::MRM_EB: case X86II::MRM_EC:
+    case X86II::MRM_ED: case X86II::MRM_EE: case X86II::MRM_EF:
+    case X86II::MRM_F0: case X86II::MRM_F1: case X86II::MRM_F2:
+    case X86II::MRM_F3: case X86II::MRM_F4: case X86II::MRM_F5:
+    case X86II::MRM_F6: case X86II::MRM_F7: case X86II::MRM_F8:
+    case X86II::MRM_F9: case X86II::MRM_FA: case X86II::MRM_FB:
+    case X86II::MRM_FC: case X86II::MRM_FD: case X86II::MRM_FE:
+    case X86II::MRM_FF:
       return -1;
     }
   }
@@ -720,12 +730,9 @@ namespace X86II {
   /// isX86_64ExtendedReg - Is the MachineOperand a x86-64 extended (r8 or
   /// higher) register?  e.g. r8, xmm8, xmm13, etc.
   inline bool isX86_64ExtendedReg(unsigned RegNo) {
-    if ((RegNo > X86::XMM7 && RegNo <= X86::XMM15) ||
-        (RegNo > X86::XMM23 && RegNo <= X86::XMM31) ||
-        (RegNo > X86::YMM7 && RegNo <= X86::YMM15) ||
-        (RegNo > X86::YMM23 && RegNo <= X86::YMM31) ||
-        (RegNo > X86::ZMM7 && RegNo <= X86::ZMM15) ||
-        (RegNo > X86::ZMM23 && RegNo <= X86::ZMM31))
+    if ((RegNo >= X86::XMM8 && RegNo <= X86::XMM31) ||
+        (RegNo >= X86::YMM8 && RegNo <= X86::YMM31) ||
+        (RegNo >= X86::ZMM8 && RegNo <= X86::ZMM31))
       return true;
 
     switch (RegNo) {
@@ -740,7 +747,9 @@ namespace X86II {
     case X86::R12B:  case X86::R13B:  case X86::R14B:  case X86::R15B:
     case X86::CR8:   case X86::CR9:   case X86::CR10:  case X86::CR11:
     case X86::CR12:  case X86::CR13:  case X86::CR14:  case X86::CR15:
-        return true;
+    case X86::DR8:   case X86::DR9:   case X86::DR10:  case X86::DR11:
+    case X86::DR12:  case X86::DR13:  case X86::DR14:  case X86::DR15:
+      return true;
     }
     return false;
   }
@@ -748,15 +757,25 @@ namespace X86II {
   /// is32ExtendedReg - Is the MemoryOperand a 32 extended (zmm16 or higher)
   /// registers? e.g. zmm21, etc.
   static inline bool is32ExtendedReg(unsigned RegNo) {
-    return ((RegNo > X86::XMM15 && RegNo <= X86::XMM31) ||
-            (RegNo > X86::YMM15 && RegNo <= X86::YMM31) ||
-            (RegNo > X86::ZMM15 && RegNo <= X86::ZMM31));
+    return ((RegNo >= X86::XMM16 && RegNo <= X86::XMM31) ||
+            (RegNo >= X86::YMM16 && RegNo <= X86::YMM31) ||
+            (RegNo >= X86::ZMM16 && RegNo <= X86::ZMM31));
   }
 
 
   inline bool isX86_64NonExtLowByteReg(unsigned reg) {
     return (reg == X86::SPL || reg == X86::BPL ||
             reg == X86::SIL || reg == X86::DIL);
+  }
+
+  /// isKMasked - Is this a masked instruction.
+  inline bool isKMasked(uint64_t TSFlags) {
+    return (TSFlags & X86II::EVEX_K) != 0;
+  }
+
+  /// isKMergedMasked - Is this a merge masked instruction.
+  inline bool isKMergeMasked(uint64_t TSFlags) {
+    return isKMasked(TSFlags) && (TSFlags & X86II::EVEX_Z) == 0;
   }
 }
 

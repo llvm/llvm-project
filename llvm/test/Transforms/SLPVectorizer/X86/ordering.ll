@@ -48,7 +48,7 @@ cond.false57:
 ; CHECK-LABEL: invoketest
 
 ; CHECK-LABEL: cond.end60
-; CHECK-NEXT-NOT: phi <2 x double>
+; CHECK-NOT: phi <2 x double>
 ; CHECK: insertelement
 ; CHECK-LABEL: if.then63
 

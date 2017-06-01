@@ -18,3 +18,13 @@
 @property (assign) NSObject<P2> *prop;
 @end
 
+@interface C<T> : NSObject 
+@end
+
+@interface D
+@property (nonatomic,readonly,nonnull) C<D *> *property;
+@end
+
+@interface D ()
+@property (nonatomic, setter=_setProperty:) C *property; // okay
+@end

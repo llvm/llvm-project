@@ -14,9 +14,8 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_IRCOMPILELAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_IRCOMPILELAYER_H
 
-#include "JITSymbol.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
-#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Object/ObjectFile.h"
 #include <memory>
 
@@ -36,9 +35,6 @@ public:
 
 private:
   typedef typename BaseLayerT::ObjSetHandleT ObjSetHandleT;
-
-  typedef std::vector<std::unique_ptr<object::ObjectFile>> OwningObjectVec;
-  typedef std::vector<std::unique_ptr<MemoryBuffer>> OwningBufferVec;
 
 public:
   /// @brief Handle to a set of compiled modules.
@@ -62,28 +58,29 @@ public:
   ModuleSetHandleT addModuleSet(ModuleSetT Ms,
                                 MemoryManagerPtrT MemMgr,
                                 SymbolResolverPtrT Resolver) {
-    OwningObjectVec Objects;
-    OwningBufferVec Buffers;
+    std::vector<std::unique_ptr<object::OwningBinary<object::ObjectFile>>>
+      Objects;
 
     for (const auto &M : Ms) {
-      std::unique_ptr<object::ObjectFile> Object;
-      std::unique_ptr<MemoryBuffer> Buffer;
+      auto Object =
+        llvm::make_unique<object::OwningBinary<object::ObjectFile>>();
 
       if (ObjCache)
-        std::tie(Object, Buffer) = tryToLoadFromObjectCache(*M).takeBinary();
+        *Object = tryToLoadFromObjectCache(*M);
 
-      if (!Object) {
-        std::tie(Object, Buffer) = Compile(*M).takeBinary();
+      if (!Object->getBinary()) {
+        *Object = Compile(*M);
         if (ObjCache)
-          ObjCache->notifyObjectCompiled(&*M, Buffer->getMemBufferRef());
+          ObjCache->notifyObjectCompiled(&*M,
+                                     Object->getBinary()->getMemoryBufferRef());
       }
 
       Objects.push_back(std::move(Object));
-      Buffers.push_back(std::move(Buffer));
     }
 
     ModuleSetHandleT H =
-      BaseLayer.addObjectSet(Objects, std::move(MemMgr), std::move(Resolver));
+      BaseLayer.addObjectSet(std::move(Objects), std::move(MemMgr),
+                             std::move(Resolver));
 
     return H;
   }
@@ -126,10 +123,13 @@ private:
     if (!ObjBuffer)
       return object::OwningBinary<object::ObjectFile>();
 
-    ErrorOr<std::unique_ptr<object::ObjectFile>> Obj =
+    Expected<std::unique_ptr<object::ObjectFile>> Obj =
         object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef());
-    if (!Obj)
+    if (!Obj) {
+      // TODO: Actually report errors helpfully.
+      consumeError(Obj.takeError());
       return object::OwningBinary<object::ObjectFile>();
+    }
 
     return object::OwningBinary<object::ObjectFile>(std::move(*Obj),
                                                     std::move(ObjBuffer));

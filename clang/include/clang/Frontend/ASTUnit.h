@@ -16,7 +16,6 @@
 
 #include "clang-c/Index.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
@@ -30,9 +29,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MD5.h"
-#include "llvm/Support/Path.h"
 #include <cassert>
-#include <map>
 #include <memory>
 #include <string>
 #include <sys/types.h>
@@ -47,7 +44,6 @@ namespace clang {
 class Sema;
 class ASTContext;
 class ASTReader;
-class CodeCompleteConsumer;
 class CompilerInvocation;
 class CompilerInstance;
 class Decl;
@@ -55,12 +51,12 @@ class DiagnosticsEngine;
 class FileEntry;
 class FileManager;
 class HeaderSearch;
+class MemoryBufferCache;
 class Preprocessor;
 class PCHContainerOperations;
 class PCHContainerReader;
-class SourceManager;
 class TargetInfo;
-class ASTFrontendAction;
+class FrontendAction;
 class ASTDeserializationListener;
 
 /// \brief Utility class for loading a ASTContext from an AST file.
@@ -89,12 +85,13 @@ private:
   IntrusiveRefCntPtr<DiagnosticsEngine>   Diagnostics;
   IntrusiveRefCntPtr<FileManager>         FileMgr;
   IntrusiveRefCntPtr<SourceManager>       SourceMgr;
+  IntrusiveRefCntPtr<MemoryBufferCache>   PCMCache;
   std::unique_ptr<HeaderSearch>           HeaderInfo;
   IntrusiveRefCntPtr<TargetInfo>          Target;
-  IntrusiveRefCntPtr<Preprocessor>        PP;
+  std::shared_ptr<Preprocessor>           PP;
   IntrusiveRefCntPtr<ASTContext>          Ctx;
   std::shared_ptr<TargetOptions>          TargetOpts;
-  IntrusiveRefCntPtr<HeaderSearchOptions> HSOpts;
+  std::shared_ptr<HeaderSearchOptions>    HSOpts;
   IntrusiveRefCntPtr<ASTReader> Reader;
   bool HadModuleLoaderFatalFailure;
 
@@ -113,8 +110,8 @@ private:
 
   /// Optional owned invocation, just used to make the invocation used in
   /// LoadFromCommandLine available.
-  IntrusiveRefCntPtr<CompilerInvocation> Invocation;
-  
+  std::shared_ptr<CompilerInvocation> Invocation;
+
   // OnlyLocalDecls - when true, walking this AST should only visit declarations
   // that come from the AST itself, not from included precompiled headers.
   // FIXME: This is temporary; eventually, CIndex will always do this.
@@ -363,22 +360,21 @@ public:
   }
   
   /// \brief Retrieve the allocator used to cache global code completions.
-  IntrusiveRefCntPtr<GlobalCodeCompletionAllocator>
+  std::shared_ptr<GlobalCodeCompletionAllocator>
   getCachedCompletionAllocator() {
     return CachedCompletionAllocator;
   }
 
   CodeCompletionTUInfo &getCodeCompletionTUInfo() {
     if (!CCTUInfo)
-      CCTUInfo.reset(new CodeCompletionTUInfo(
-                                            new GlobalCodeCompletionAllocator));
+      CCTUInfo = llvm::make_unique<CodeCompletionTUInfo>(
+          std::make_shared<GlobalCodeCompletionAllocator>());
     return *CCTUInfo;
   }
 
 private:
   /// \brief Allocator used to store cached code completions.
-  IntrusiveRefCntPtr<GlobalCodeCompletionAllocator>
-    CachedCompletionAllocator;
+  std::shared_ptr<GlobalCodeCompletionAllocator> CachedCompletionAllocator;
 
   std::unique_ptr<CodeCompletionTUInfo> CCTUInfo;
 
@@ -437,9 +433,6 @@ private:
                      bool PreambleEndsAtStartOfLine)
         : Buffer(Buffer), Owner(std::move(Owner)), Size(Size),
           PreambleEndsAtStartOfLine(PreambleEndsAtStartOfLine) {}
-    ComputedPreamble(ComputedPreamble &&C)
-        : Buffer(C.Buffer), Owner(std::move(C.Owner)), Size(C.Size),
-          PreambleEndsAtStartOfLine(C.PreambleEndsAtStartOfLine) {}
   };
   ComputedPreamble ComputePreamble(CompilerInvocation &Invocation,
                                    unsigned MaxLines);
@@ -504,12 +497,13 @@ public:
 
   const Preprocessor &getPreprocessor() const { return *PP; }
         Preprocessor &getPreprocessor()       { return *PP; }
+  std::shared_ptr<Preprocessor> getPreprocessorPtr() const { return PP; }
 
   const ASTContext &getASTContext() const { return *Ctx; }
         ASTContext &getASTContext()       { return *Ctx; }
 
   void setASTContext(ASTContext *ctx) { Ctx = ctx; }
-  void setPreprocessor(Preprocessor *pp);
+  void setPreprocessor(std::shared_ptr<Preprocessor> pp);
 
   bool hasSema() const { return (bool)TheSema; }
   Sema &getSema() const { 
@@ -526,6 +520,8 @@ public:
         FileManager &getFileManager()       { return *FileMgr; }
 
   const FileSystemOptions &getFileSystemOpts() const { return FileSystemOpts; }
+
+  IntrusiveRefCntPtr<ASTReader> getASTReader() const;
 
   StringRef getOriginalSourceFileName() {
     return OriginalSourceFile;
@@ -709,11 +705,11 @@ public:
   /// remapped contents of that file.
   typedef std::pair<std::string, llvm::MemoryBuffer *> RemappedFile;
 
-  /// \brief Create a ASTUnit. Gets ownership of the passed CompilerInvocation. 
-  static ASTUnit *create(CompilerInvocation *CI,
-                         IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-                         bool CaptureDiagnostics,
-                         bool UserFilesAreVolatile);
+  /// \brief Create a ASTUnit. Gets ownership of the passed CompilerInvocation.
+  static std::unique_ptr<ASTUnit>
+  create(std::shared_ptr<CompilerInvocation> CI,
+         IntrusiveRefCntPtr<DiagnosticsEngine> Diags, bool CaptureDiagnostics,
+         bool UserFilesAreVolatile);
 
   /// \brief Create a ASTUnit from an AST file.
   ///
@@ -737,14 +733,15 @@ private:
   /// \brief Helper function for \c LoadFromCompilerInvocation() and
   /// \c LoadFromCommandLine(), which loads an AST from a compiler invocation.
   ///
-  /// \param PrecompilePreamble Whether to precompile the preamble of this
-  /// translation unit, to improve the performance of reparsing.
+  /// \param PrecompilePreambleAfterNParses After how many parses the preamble
+  /// of this translation unit should be precompiled, to improve the performance
+  /// of reparsing. Set to zero to disable preambles.
   ///
   /// \returns \c true if a catastrophic failure occurred (which means that the
   /// \c ASTUnit itself is invalid), or \c false otherwise.
   bool LoadFromCompilerInvocation(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-      bool PrecompilePreamble);
+      unsigned PrecompilePreambleAfterNParses);
 
 public:
   
@@ -777,13 +774,14 @@ public:
   /// created ASTUnit was passed in \p Unit then the caller can check that.
   ///
   static ASTUnit *LoadFromCompilerInvocationAction(
-      CompilerInvocation *CI,
+      std::shared_ptr<CompilerInvocation> CI,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-      ASTFrontendAction *Action = nullptr, ASTUnit *Unit = nullptr,
+      FrontendAction *Action = nullptr, ASTUnit *Unit = nullptr,
       bool Persistent = true, StringRef ResourceFilesPath = StringRef(),
       bool OnlyLocalDecls = false, bool CaptureDiagnostics = false,
-      bool PrecompilePreamble = false, bool CacheCodeCompletionResults = false,
+      unsigned PrecompilePreambleAfterNParses = 0,
+      bool CacheCodeCompletionResults = false,
       bool IncludeBriefCommentsInCodeCompletion = false,
       bool UserFilesAreVolatile = false,
       std::unique_ptr<ASTUnit> *ErrAST = nullptr);
@@ -803,11 +801,12 @@ public:
   // FIXME: Move OnlyLocalDecls, UseBumpAllocator to setters on the ASTUnit, we
   // shouldn't need to specify them at construction time.
   static std::unique_ptr<ASTUnit> LoadFromCompilerInvocation(
-      CompilerInvocation *CI,
+      std::shared_ptr<CompilerInvocation> CI,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags, FileManager *FileMgr,
       bool OnlyLocalDecls = false, bool CaptureDiagnostics = false,
-      bool PrecompilePreamble = false, TranslationUnitKind TUKind = TU_Complete,
+      unsigned PrecompilePreambleAfterNParses = 0,
+      TranslationUnitKind TUKind = TU_Complete,
       bool CacheCodeCompletionResults = false,
       bool IncludeBriefCommentsInCodeCompletion = false,
       bool UserFilesAreVolatile = false);
@@ -827,6 +826,8 @@ public:
   ///
   /// \param ResourceFilesPath - The path to the compiler resource files.
   ///
+  /// \param ModuleFormat - If provided, uses the specific module format.
+  ///
   /// \param ErrAST - If non-null and parsing failed without any AST to return
   /// (e.g. because the PCH could not be loaded), this accepts the ASTUnit
   /// mainly to allow the caller to see the diagnostics.
@@ -840,11 +841,13 @@ public:
       bool OnlyLocalDecls = false, bool CaptureDiagnostics = false,
       ArrayRef<RemappedFile> RemappedFiles = None,
       bool RemappedFilesKeepOriginalName = true,
-      bool PrecompilePreamble = false, TranslationUnitKind TUKind = TU_Complete,
+      unsigned PrecompilePreambleAfterNParses = 0,
+      TranslationUnitKind TUKind = TU_Complete,
       bool CacheCodeCompletionResults = false,
       bool IncludeBriefCommentsInCodeCompletion = false,
       bool AllowPCHWithCompilerErrors = false, bool SkipFunctionBodies = false,
       bool UserFilesAreVolatile = false, bool ForSerialization = false,
+      llvm::Optional<StringRef> ModuleFormat = llvm::None,
       std::unique_ptr<ASTUnit> *ErrAST = nullptr);
 
   /// \brief Reparse the source files using the same command-line options that

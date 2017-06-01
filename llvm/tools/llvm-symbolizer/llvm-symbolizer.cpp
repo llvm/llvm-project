@@ -46,8 +46,7 @@ static cl::opt<FunctionNameKind> ClPrintFunctions(
                clEnumValN(FunctionNameKind::ShortName, "short",
                           "print short function name"),
                clEnumValN(FunctionNameKind::LinkageName, "linkage",
-                          "print function linkage name"),
-               clEnumValEnd));
+                          "print function linkage name")));
 
 static cl::opt<bool>
     ClUseRelativeAddress("relative-address", cl::init(false),
@@ -78,25 +77,31 @@ static cl::opt<bool>
     ClPrintAddress("print-address", cl::init(false),
                    cl::desc("Show address before line information"));
 
-static bool error(std::error_code ec) {
-  if (!ec)
+static cl::opt<bool>
+    ClPrettyPrint("pretty-print", cl::init(false),
+                  cl::desc("Make the output more human friendly"));
+
+static cl::opt<int> ClPrintSourceContextLines(
+    "print-source-context-lines", cl::init(0),
+    cl::desc("Print N number of source file context"));
+
+template<typename T>
+static bool error(Expected<T> &ResOrErr) {
+  if (ResOrErr)
     return false;
-  errs() << "LLVMSymbolizer: error reading file: " << ec.message() << ".\n";
+  logAllUnhandledErrors(ResOrErr.takeError(), errs(),
+                        "LLVMSymbolizer: error reading file: ");
   return true;
 }
 
-static bool parseCommand(bool &IsData, std::string &ModuleName,
-                         uint64_t &ModuleOffset) {
+static bool parseCommand(StringRef InputString, bool &IsData,
+                         std::string &ModuleName, uint64_t &ModuleOffset) {
   const char *kDataCmd = "DATA ";
   const char *kCodeCmd = "CODE ";
-  const int kMaxInputStringLength = 1024;
-  const char kDelimiters[] = " \n";
-  char InputString[kMaxInputStringLength];
-  if (!fgets(InputString, sizeof(InputString), stdin))
-    return false;
+  const char kDelimiters[] = " \n\r";
   IsData = false;
   ModuleName = "";
-  char *pos = InputString;
+  const char *pos = InputString.data();
   if (strncmp(pos, kDataCmd, strlen(kDataCmd)) == 0) {
     IsData = true;
     pos += strlen(kDataCmd);
@@ -113,7 +118,7 @@ static bool parseCommand(bool &IsData, std::string &ModuleName,
     if (*pos == '"' || *pos == '\'') {
       char quote = *pos;
       pos++;
-      char *end = strchr(pos, quote);
+      const char *end = strchr(pos, quote);
       if (!end)
         return false;
       ModuleName = std::string(pos, end - pos);
@@ -134,7 +139,7 @@ static bool parseCommand(bool &IsData, std::string &ModuleName,
 
 int main(int argc, char **argv) {
   // Print stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
@@ -143,6 +148,7 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm-symbolizer\n");
   LLVMSymbolizer::Options Opts(ClPrintFunctions, ClUseSymbolTable, ClDemangle,
                                ClUseRelativeAddress, ClDefaultArch);
+
   for (const auto &hint : ClDsymHint) {
     if (sys::path::extension(hint) == ".dSYM") {
       Opts.DsymHints.push_back(hint);
@@ -153,27 +159,41 @@ int main(int argc, char **argv) {
   }
   LLVMSymbolizer Symbolizer(Opts);
 
-  bool IsData = false;
-  std::string ModuleName;
-  uint64_t ModuleOffset;
-  DIPrinter Printer(outs(), ClPrintFunctions != FunctionNameKind::None);
+  DIPrinter Printer(outs(), ClPrintFunctions != FunctionNameKind::None,
+                    ClPrettyPrint, ClPrintSourceContextLines);
 
-  while (parseCommand(IsData, ModuleName, ModuleOffset)) {
+  const int kMaxInputStringLength = 1024;
+  char InputString[kMaxInputStringLength];
+
+  while (true) {
+    if (!fgets(InputString, sizeof(InputString), stdin))
+      break;
+
+    bool IsData = false;
+    std::string ModuleName;
+    uint64_t ModuleOffset = 0;
+    if (!parseCommand(StringRef(InputString), IsData, ModuleName,
+                      ModuleOffset)) {
+      outs() << InputString;
+      continue;
+    }
+
     if (ClPrintAddress) {
       outs() << "0x";
       outs().write_hex(ModuleOffset);
-      outs() << "\n";
+      StringRef Delimiter = (ClPrettyPrint == true) ? ": " : "\n";
+      outs() << Delimiter;
     }
     if (IsData) {
       auto ResOrErr = Symbolizer.symbolizeData(ModuleName, ModuleOffset);
-      Printer << (error(ResOrErr.getError()) ? DIGlobal() : ResOrErr.get());
+      Printer << (error(ResOrErr) ? DIGlobal() : ResOrErr.get());
     } else if (ClPrintInlining) {
       auto ResOrErr = Symbolizer.symbolizeInlinedCode(ModuleName, ModuleOffset);
-      Printer << (error(ResOrErr.getError()) ? DIInliningInfo()
+      Printer << (error(ResOrErr) ? DIInliningInfo()
                                              : ResOrErr.get());
     } else {
       auto ResOrErr = Symbolizer.symbolizeCode(ModuleName, ModuleOffset);
-      Printer << (error(ResOrErr.getError()) ? DILineInfo() : ResOrErr.get());
+      Printer << (error(ResOrErr) ? DILineInfo() : ResOrErr.get());
     }
     outs() << "\n";
     outs().flush();

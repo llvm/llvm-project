@@ -101,9 +101,11 @@ DEPENDENT_TYPE(InjectedClassName, Type)
 DEPENDENT_TYPE(DependentName, Type)
 DEPENDENT_TYPE(DependentTemplateSpecialization, Type)
 NON_CANONICAL_UNLESS_DEPENDENT_TYPE(PackExpansion, Type)
+NON_CANONICAL_TYPE(ObjCTypeParam, Type)
 TYPE(ObjCObject, Type)
 TYPE(ObjCInterface, ObjCObjectType)
 TYPE(ObjCObjectPointer, Type)
+TYPE(Pipe, Type)
 TYPE(Atomic, Type)
 
 #ifdef LAST_TYPE

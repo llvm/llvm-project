@@ -1,7 +1,7 @@
 ;RUN: llc < %s -march=r600 -mcpu=cayman -stress-sched -verify-misched
 ;REQUIRES: asserts
 
-define void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) #0 {
+define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {
 main_body:
   %0 = extractelement <4 x float> %reg1, i32 0
   %1 = extractelement <4 x float> %reg1, i32 1
@@ -85,12 +85,12 @@ ENDIF:                                            ; preds = %ENDIF16, %LOOP, %ma
   %72 = insertelement <4 x float> %71, float %62, i32 1
   %73 = insertelement <4 x float> %72, float %66, i32 2
   %74 = insertelement <4 x float> %73, float %70, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %74, i32 60, i32 1)
+  call void @llvm.r600.store.swizzle(<4 x float> %74, i32 60, i32 1)
   %75 = insertelement <4 x float> undef, float %temp.0, i32 0
   %76 = insertelement <4 x float> %75, float %temp1.0, i32 1
   %77 = insertelement <4 x float> %76, float %temp2.0, i32 2
   %78 = insertelement <4 x float> %77, float %temp3.0, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %78, i32 0, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %78, i32 0, i32 2)
   ret void
 
 LOOP:                                             ; preds = %main_body, %ENDIF19
@@ -127,6 +127,4 @@ ENDIF19:                                          ; preds = %ENDIF16
   br label %LOOP
 }
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
-
-attributes #0 = { "ShaderType"="1" }
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)

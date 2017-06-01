@@ -17,10 +17,6 @@
     }                                                                   \
   }
 
-long double __gcc_qadd(long double, long double);
-long double __gcc_qsub(long double, long double);
-long double __gcc_qmul(long double, long double);
-
 long double _Complex
 __multc3(long double a, long double b, long double c, long double d)
 {

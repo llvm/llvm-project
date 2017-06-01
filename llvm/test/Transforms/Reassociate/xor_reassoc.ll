@@ -88,8 +88,8 @@ define i32 @xor_special2(i32 %x, i32 %y) {
   %xor1 = xor i32 %xor, %and
   ret i32 %xor1
 ; CHECK-LABEL: @xor_special2(
-; CHECK: %xor = xor i32 %y, 123
-; CHECK: %xor1 = xor i32 %xor, %x
+; CHECK: %xor = xor i32 %x, 123
+; CHECK: %xor1 = xor i32 %xor, %y
 ; CHECK: ret i32 %xor1
 }
 

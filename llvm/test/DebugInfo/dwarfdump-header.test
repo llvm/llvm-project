@@ -1,0 +1,29 @@
+RUN: llvm-dwarfdump %p/Inputs/dwarfdump-header.elf-x86-64 | FileCheck %s
+
+The input file is hand-coded assembler to generate all the units,
+so we're willing to make exact checks for offsets and such.
+
+CHECK-LABEL: .debug_info contents:
+
+The v4 CU header.
+
+CHECK: 0x00000000: Compile Unit: length = 0x00000011 version = 0x0004 abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x00000015)
+CHECK: 0x0000000b: DW_TAG_compile_unit
+
+The v5 normal CU header.
+
+CHECK: 0x00000015: Compile Unit: length = 0x00000012 version = 0x0005 unit_type = DW_UT_compile abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x0000002b)
+CHECK: 0x00000021: DW_TAG_compile_unit
+
+CHECK-LABEL: .debug_types contents:
+
+The v4 type unit header.
+
+CHECK: 0x00000000: Type Unit: length = 0x0000001f version = 0x0004 abbr_offset = 0x0000 addr_size = 0x08 name = 'V4_type_unit' type_signature = 0x1122334455667788 type_offset = 0x001c (next unit at 0x00000023)
+CHECK: 0x00000017: DW_TAG_type_unit
+
+FIXME: DWARF v5 wants type units in .debug_info[.dwo] not .debug_types[.dwo].
+CHECK: .debug_types.dwo contents:
+
+CHECK: 0x00000000: Type Unit: length = 0x00000020 version = 0x0005 unit_type = DW_UT_split_type abbr_offset = 0x0000 addr_size = 0x08 name = 'V5_split_type_unit' type_signature = 0x8899aabbccddeeff type_offset = 0x001d (next unit at 0x00000024)
+CHECK: 0x00000018: DW_TAG_type_unit

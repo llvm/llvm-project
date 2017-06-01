@@ -30,10 +30,9 @@ entry:
 define void @t1(i8* nocapture %C) nounwind {
 entry:
 ; CHECK-LABEL: t1:
-; CHECK: vld1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r1]
-; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0]
-; CHECK: adds r0, #15
-; CHECK: adds r1, #15
+; CHECK: movs [[INC:r[0-9]+]], #15
+; CHECK: vld1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r1], [[INC]]
+; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0], [[INC]]
 ; CHECK: vld1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r1]
 ; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0]
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([31 x i8], [31 x i8]* @.str1, i64 0, i64 0), i64 31, i32 1, i1 false)
@@ -43,13 +42,15 @@ entry:
 define void @t2(i8* nocapture %C) nounwind {
 entry:
 ; CHECK-LABEL: t2:
+; CHECK: vld1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r1]!
+; CHECK: movs [[INC:r[0-9]+]], #32
+; CHECK: add.w   r3, r0, #16
+; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0], [[INC]]
 ; CHECK: movw [[REG2:r[0-9]+]], #16716
 ; CHECK: movt [[REG2:r[0-9]+]], #72
-; CHECK: str [[REG2]], [r0, #32]
-; CHECK: vld1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r1]!
-; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0]!
+; CHECK: str [[REG2]], [r0]
 ; CHECK: vld1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r1]
-; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0]
+; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r3]
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([36 x i8], [36 x i8]* @.str2, i64 0, i64 0), i64 36, i32 1, i1 false)
   ret void
 }

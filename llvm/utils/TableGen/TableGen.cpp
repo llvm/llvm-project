@@ -13,6 +13,7 @@
 
 #include "TableGenBackends.h" // Declares all backends.
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
@@ -41,7 +42,11 @@ enum ActionType {
   PrintEnums,
   PrintSets,
   GenOptParserDefs,
-  GenCTags
+  GenCTags,
+  GenAttributes,
+  GenSearchableTables,
+  GenGlobalISel,
+  GenRegisterBank,
 };
 
 namespace {
@@ -85,11 +90,19 @@ namespace {
                                "Generate option definitions"),
                     clEnumValN(GenCTags, "gen-ctags",
                                "Generate ctags-compatible index"),
-                    clEnumValEnd));
+                    clEnumValN(GenAttributes, "gen-attrs",
+                               "Generate attributes"),
+                    clEnumValN(GenSearchableTables, "gen-searchable-tables",
+                               "Generate generic binary-searchable table"),
+                    clEnumValN(GenGlobalISel, "gen-global-isel",
+                               "Generate GlobalISel selector"),
+                    clEnumValN(GenRegisterBank, "gen-register-bank",
+                               "Generate registers bank descriptions")));
 
+  cl::OptionCategory PrintEnumsCat("Options for -print-enums");
   cl::opt<std::string>
   Class("class", cl::desc("Print Enum list for this class"),
-          cl::value_desc("class name"));
+        cl::value_desc("class name"), cl::cat(PrintEnumsCat));
 
 bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   switch (Action) {
@@ -165,6 +178,18 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   case GenCTags:
     EmitCTags(Records, OS);
     break;
+  case GenAttributes:
+    EmitAttributes(Records, OS);
+    break;
+  case GenSearchableTables:
+    EmitSearchableTables(Records, OS);
+    break;
+  case GenGlobalISel:
+    EmitGlobalISel(Records, OS);
+    break;
+  case GenRegisterBank:
+    EmitRegisterBank(Records, OS);
+    break;
   }
 
   return false;
@@ -172,9 +197,11 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
 }
 
 int main(int argc, char **argv) {
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv);
+
+  llvm_shutdown_obj Y;
 
   return TableGenMain(argv[0], &LLVMTableGenMain);
 }

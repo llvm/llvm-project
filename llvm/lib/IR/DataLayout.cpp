@@ -41,6 +41,7 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
   assert(!ST->isOpaque() && "Cannot get layout of opaque structs");
   StructAlignment = 0;
   StructSize = 0;
+  IsPadded = false;
   NumElements = ST->getNumElements();
 
   // Loop over each of the elements, placing them in memory.
@@ -49,8 +50,10 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
     unsigned TyAlign = ST->isPacked() ? 1 : DL.getABITypeAlignment(Ty);
 
     // Add padding if necessary to align the data element properly.
-    if ((StructSize & (TyAlign-1)) != 0)
-      StructSize = RoundUpToAlignment(StructSize, TyAlign);
+    if ((StructSize & (TyAlign-1)) != 0) {
+      IsPadded = true;
+      StructSize = alignTo(StructSize, TyAlign);
+    }
 
     // Keep track of maximum alignment constraint.
     StructAlignment = std::max(TyAlign, StructAlignment);
@@ -64,8 +67,10 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
 
   // Add padding to the end of the struct so that it could be put in an array
   // and all array elements would be aligned correctly.
-  if ((StructSize & (StructAlignment-1)) != 0)
-    StructSize = RoundUpToAlignment(StructSize, StructAlignment);
+  if ((StructSize & (StructAlignment-1)) != 0) {
+    IsPadded = true;
+    StructSize = alignTo(StructSize, StructAlignment);
+  }
 }
 
 
@@ -177,6 +182,7 @@ void DataLayout::reset(StringRef Desc) {
   BigEndian = false;
   StackNaturalAlign = 0;
   ManglingMode = MM_None;
+  NonIntegralAddressSpaces.clear();
 
   // Default alignments
   for (const LayoutAlignElem &E : DefaultAlignments) {
@@ -228,6 +234,19 @@ void DataLayout::parseSpecifier(StringRef Desc) {
     // Aliases used below.
     StringRef &Tok  = Split.first;  // Current token.
     StringRef &Rest = Split.second; // The rest of the string.
+
+    if (Tok == "ni") {
+      do {
+        Split = split(Rest, ':');
+        Rest = Split.second;
+        unsigned AS = getInt(Split.first);
+        if (AS == 0)
+          report_fatal_error("Address space 0 can never be non-integral");
+        NonIntegralAddressSpaces.push_back(AS);
+      } while (!Rest.empty());
+
+      continue;
+    }
 
     char Specifier = Tok.front();
     Tok = Tok.substr(1);
@@ -487,10 +506,7 @@ unsigned DataLayout::getAlignmentInfo(AlignTypeEnum AlignType,
       // with what clang and llvm-gcc do.
       unsigned Align = getTypeAllocSize(cast<VectorType>(Ty)->getElementType());
       Align *= cast<VectorType>(Ty)->getNumElements();
-      // If the alignment is not a power of 2, round up to the next power of 2.
-      // This happens for non-power-of-2 length vectors.
-      if (Align & (Align-1))
-        Align = NextPowerOf2(Align);
+      Align = PowerOf2Ceil(Align);
       return Align;
     }
   }
@@ -503,8 +519,7 @@ unsigned DataLayout::getAlignmentInfo(AlignTypeEnum AlignType,
   // layout.
   if (BestMatchIdx == -1) {
     unsigned Align = getTypeStoreSize(Ty);
-    if (Align & (Align-1))
-      Align = NextPowerOf2(Align);
+    Align = PowerOf2Ceil(Align);
     return Align;
   }
 
@@ -713,42 +728,33 @@ Type *DataLayout::getSmallestLegalIntType(LLVMContext &C, unsigned Width) const 
   return nullptr;
 }
 
-unsigned DataLayout::getLargestLegalIntTypeSize() const {
+unsigned DataLayout::getLargestLegalIntTypeSizeInBits() const {
   auto Max = std::max_element(LegalIntWidths.begin(), LegalIntWidths.end());
   return Max != LegalIntWidths.end() ? *Max : 0;
 }
 
-uint64_t DataLayout::getIndexedOffset(Type *ptrTy,
-                                      ArrayRef<Value *> Indices) const {
-  Type *Ty = ptrTy;
-  assert(Ty->isPointerTy() && "Illegal argument for getIndexedOffset()");
-  uint64_t Result = 0;
+int64_t DataLayout::getIndexedOffsetInType(Type *ElemTy,
+                                           ArrayRef<Value *> Indices) const {
+  int64_t Result = 0;
 
   generic_gep_type_iterator<Value* const*>
-    TI = gep_type_begin(ptrTy, Indices);
-  for (unsigned CurIDX = 0, EndIDX = Indices.size(); CurIDX != EndIDX;
-       ++CurIDX, ++TI) {
-    if (StructType *STy = dyn_cast<StructType>(*TI)) {
-      assert(Indices[CurIDX]->getType() ==
-             Type::getInt32Ty(ptrTy->getContext()) &&
-             "Illegal struct idx");
-      unsigned FieldNo = cast<ConstantInt>(Indices[CurIDX])->getZExtValue();
+    GTI = gep_type_begin(ElemTy, Indices),
+    GTE = gep_type_end(ElemTy, Indices);
+  for (; GTI != GTE; ++GTI) {
+    Value *Idx = GTI.getOperand();
+    if (StructType *STy = GTI.getStructTypeOrNull()) {
+      assert(Idx->getType()->isIntegerTy(32) && "Illegal struct idx");
+      unsigned FieldNo = cast<ConstantInt>(Idx)->getZExtValue();
 
       // Get structure layout information...
       const StructLayout *Layout = getStructLayout(STy);
 
       // Add in the offset, as calculated by the structure layout info...
       Result += Layout->getElementOffset(FieldNo);
-
-      // Update Ty to refer to current element
-      Ty = STy->getElementType(FieldNo);
     } else {
-      // Update Ty to refer to current element
-      Ty = cast<SequentialType>(Ty)->getElementType();
-
       // Get the array index and the size of each array element.
-      if (int64_t arrayIdx = cast<ConstantInt>(Indices[CurIDX])->getSExtValue())
-        Result += (uint64_t)arrayIdx * getTypeAllocSize(Ty);
+      if (int64_t arrayIdx = cast<ConstantInt>(Idx)->getSExtValue())
+        Result += arrayIdx * getTypeAllocSize(GTI.getIndexedType());
     }
   }
 
@@ -759,7 +765,7 @@ uint64_t DataLayout::getIndexedOffset(Type *ptrTy,
 /// global.  This includes an explicitly requested alignment (if the global
 /// has one).
 unsigned DataLayout::getPreferredAlignment(const GlobalVariable *GV) const {
-  Type *ElemType = GV->getType()->getElementType();
+  Type *ElemType = GV->getValueType();
   unsigned Alignment = getPrefTypeAlignment(ElemType);
   unsigned GVAlignment = GV->getAlignment();
   if (GVAlignment >= Alignment) {

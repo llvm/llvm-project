@@ -29,7 +29,8 @@ if.else:                                          ; preds = %entry
   %4 = load double, double* %a, align 8
   %mul1 = fmul fast double %1, %4
   %sub1 = fsub fast double %mul1, %0
-  store double %sub1, double* %y, align 8
+  %gep1 = getelementptr double, double* %y, i32 1
+  store double %sub1, double* %gep1, align 8
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

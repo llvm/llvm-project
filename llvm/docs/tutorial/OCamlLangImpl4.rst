@@ -130,7 +130,7 @@ exactly the code we have now, except that we would defer running the
 optimizer until the entire file has been parsed.
 
 In order to get per-function optimizations going, we need to set up a
-`Llvm.PassManager <../WritingAnLLVMPass.html#passmanager>`_ to hold and
+`Llvm.PassManager <../WritingAnLLVMPass.html#what-passmanager-does>`_ to hold and
 organize the LLVM optimizations that we want to run. Once we have that,
 we can add a set of optimizations to run. The code looks like this:
 

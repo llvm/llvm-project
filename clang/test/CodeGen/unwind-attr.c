@@ -23,7 +23,7 @@ __attribute__((weak)) int test2(void) {
   return 0;
 }
 
-// CHECK: attributes [[TF]] = { "{{.*}} }
-// CHECK: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK: attributes [[TF]] = { noinline "{{.*}} }
+// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }
 
-// CHECK-NOEXC: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK-NOEXC: attributes [[NUW]] = { noinline nounwind{{.*}} }

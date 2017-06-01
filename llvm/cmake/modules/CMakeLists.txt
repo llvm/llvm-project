@@ -1,9 +1,16 @@
-set(LLVM_INSTALL_PACKAGE_DIR share/llvm/cmake)
+set(LLVM_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm)
 set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
 
+# First for users who use an installed LLVM, create the LLVMExports.cmake file.
+set(LLVM_EXPORTS_FILE ${llvm_cmake_builddir}/LLVMExports.cmake)
 get_property(LLVM_EXPORTS GLOBAL PROPERTY LLVM_EXPORTS)
-export(TARGETS ${LLVM_EXPORTS}
-  FILE ${llvm_cmake_builddir}/LLVMExports.cmake)
+export(TARGETS ${LLVM_EXPORTS} FILE ${LLVM_EXPORTS_FILE})
+
+# Then for users who want to link against the LLVM build tree, provide the
+# normal targets and the build tree only targets.
+set(LLVM_BUILDTREEONLY_EXPORTS_FILE ${llvm_cmake_builddir}/LLVMBuildTreeOnlyTargets.cmake)
+get_property(LLVM_EXPORTS_BUILDTREE_ONLY GLOBAL PROPERTY LLVM_EXPORTS_BUILDTREE_ONLY)
+export(TARGETS ${LLVM_EXPORTS_BUILDTREE_ONLY} FILE ${LLVM_BUILDTREEONLY_EXPORTS_FILE})
 
 get_property(LLVM_AVAILABLE_LIBS GLOBAL PROPERTY LLVM_LIBS)
 
@@ -12,6 +19,15 @@ foreach(lib ${LLVM_AVAILABLE_LIBS})
   set(all_llvm_lib_deps
     "${all_llvm_lib_deps}\nset_property(GLOBAL PROPERTY LLVMBUILD_LIB_DEPS_${lib} ${llvm_lib_deps})")
 endforeach(lib)
+
+# CMake requires that all targets expressed as dependencies exist, so we can't
+# have intrinsics_gen in LLVM_COMMON_DEPENDS when it is written out, otherwise
+# projects building out of tree will have CMake errors. This only gets hit when
+# LLVM_ENABLE_MODULES=On. Eventually we should come up with a better solution to
+# this, but there is no easy solution.
+if(intrinsics_gen IN_LIST LLVM_COMMON_DEPENDS)
+  list(REMOVE_ITEM LLVM_COMMON_DEPENDS intrinsics_gen)
+endif()
 
 # Generate LLVMConfig.cmake for the build tree.
 set(LLVM_CONFIG_CODE "
@@ -29,12 +45,23 @@ set(LLVM_CONFIG_LIBRARY_DIRS
   "${LLVM_LIBRARY_DIR}"
   )
 set(LLVM_CONFIG_CMAKE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(LLVM_CONFIG_BINARY_DIR "${LLVM_BINARY_DIR}")
 set(LLVM_CONFIG_TOOLS_BINARY_DIR "${LLVM_TOOLS_BINARY_DIR}")
-set(LLVM_CONFIG_EXPORTS_FILE "${llvm_cmake_builddir}/LLVMExports.cmake")
+# We need to use the full path to the LLVM Exports file to make sure we get the
+# one from the build tree. This is due to our cmake files being split between
+# this source dir and the binary dir in the build tree configuration and the
+# LLVM_CONFIG_CMAKE_DIR being the source directory. In contrast in the install
+# tree, both the generated LLVMExports.cmake file and the rest of the cmake
+# source files are put in the same cmake directory.
+set(LLVM_CONFIG_EXPORTS_FILE "${LLVM_EXPORTS_FILE}")
+set(LLVM_CONFIG_EXPORTS "${LLVM_EXPORTS};${LLVM_EXPORTS_BUILDTREE_ONLY}")
+set(llvm_config_include_buildtree_only_exports
+"include(\"${LLVM_BUILDTREEONLY_EXPORTS_FILE}\")")
 configure_file(
   LLVMConfig.cmake.in
   ${llvm_cmake_builddir}/LLVMConfig.cmake
   @ONLY)
+set(llvm_config_include_buildtree_only_exports)
 
 # For compatibility with projects that include(LLVMConfig)
 # via CMAKE_MODULE_PATH, place API modules next to it.
@@ -60,8 +87,10 @@ endforeach(p)
 set(LLVM_CONFIG_INCLUDE_DIRS "\${LLVM_INSTALL_PREFIX}/include")
 set(LLVM_CONFIG_LIBRARY_DIRS "\${LLVM_INSTALL_PREFIX}/lib\${LLVM_LIBDIR_SUFFIX}")
 set(LLVM_CONFIG_CMAKE_DIR "\${LLVM_INSTALL_PREFIX}/${LLVM_INSTALL_PACKAGE_DIR}")
+set(LLVM_CONFIG_BINARY_DIR "\${LLVM_INSTALL_PREFIX}")
 set(LLVM_CONFIG_TOOLS_BINARY_DIR "\${LLVM_INSTALL_PREFIX}/bin")
 set(LLVM_CONFIG_EXPORTS_FILE "\${LLVM_CMAKE_DIR}/LLVMExports.cmake")
+set(LLVM_CONFIG_EXPORTS "${LLVM_EXPORTS}")
 configure_file(
   LLVMConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/LLVMConfig.cmake
@@ -74,22 +103,35 @@ configure_file(
   @ONLY)
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  install(EXPORT LLVMExports DESTINATION ${LLVM_INSTALL_PACKAGE_DIR})
+  get_property(llvm_has_exports GLOBAL PROPERTY LLVM_HAS_EXPORTS)
+  if(llvm_has_exports)
+    install(EXPORT LLVMExports DESTINATION ${LLVM_INSTALL_PACKAGE_DIR}
+            COMPONENT cmake-exports)
+  endif()
 
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/LLVMConfig.cmake
     ${llvm_cmake_builddir}/LLVMConfigVersion.cmake
     LLVM-Config.cmake
-    DESTINATION ${LLVM_INSTALL_PACKAGE_DIR})
+    DESTINATION ${LLVM_INSTALL_PACKAGE_DIR}
+    COMPONENT cmake-exports)
 
   install(DIRECTORY .
     DESTINATION ${LLVM_INSTALL_PACKAGE_DIR}
+    COMPONENT cmake-exports
     FILES_MATCHING PATTERN *.cmake
     PATTERN .svn EXCLUDE
     PATTERN LLVMConfig.cmake EXCLUDE
     PATTERN LLVMConfigVersion.cmake EXCLUDE
     PATTERN LLVM-Config.cmake EXCLUDE
-    PATTERN GetHostTriple.cmake EXCLUDE
-    PATTERN VersionFromVCS.cmake EXCLUDE
-    PATTERN CheckAtomic.cmake EXCLUDE)
+    PATTERN GetHostTriple.cmake EXCLUDE)
+
+  if (NOT CMAKE_CONFIGURATION_TYPES)
+    # Add a dummy target so this can be used with LLVM_DISTRIBUTION_COMPONENTS
+    add_custom_target(cmake-exports)
+    add_custom_target(install-cmake-exports
+                      COMMAND "${CMAKE_COMMAND}"
+                                  -DCMAKE_INSTALL_COMPONENT=cmake-exports
+                                  -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  endif()
 endif()

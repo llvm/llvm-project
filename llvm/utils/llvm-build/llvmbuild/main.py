@@ -413,7 +413,7 @@ subdirectories = %s
             if library_name is None:
                 library_name_as_cstr = 'nullptr'
             else:
-                library_name_as_cstr = '"lib%s.a"' % library_name
+                library_name_as_cstr = '"%s"' % library_name
             if is_installed:
                 is_installed_as_cstr = 'true'
             else:

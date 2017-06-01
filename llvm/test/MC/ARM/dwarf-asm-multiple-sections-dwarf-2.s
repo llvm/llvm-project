@@ -25,7 +25,7 @@ b:
 
 // DWARF: .debug_info contents:
 // DWARF: 0x{{[0-9a-f]+}}: DW_TAG_compile_unit [1]
-// CHECK-NOT-DWARF: DW_TAG_
+// DWARF-NOT: DW_TAG_
 // DWARF:               DW_AT_low_pc [DW_FORM_addr]       (0x0000000000000000)
 // DWARF:               DW_AT_high_pc [DW_FORM_addr]      (0x0000000000000004)
 

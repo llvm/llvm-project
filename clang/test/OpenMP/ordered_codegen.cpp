@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
-// REQUIRES: x86-registered-target
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -219,6 +218,14 @@ void foo_simd(int low, int up) {
   // CHECK: store float 0.000000e+00, float* %{{.+}}, align {{[0-9]+}}, !llvm.mem.parallel_loop_access !
   // CHECK-NEXT: call void [[CAP_FUNC:@.+]](i32* %{{.+}}) #{{[0-9]+}}, !llvm.mem.parallel_loop_access !
 #pragma omp simd
+  for (int i = low; i < up; ++i) {
+    f[i] = 0.0;
+#pragma omp ordered simd
+    f[i] = 1.0;
+  }
+  // CHECK: store float 0.000000e+00, float* %{{.+}}, align {{[0-9]+}}
+  // CHECK-NEXT: call void [[CAP_FUNC:@.+]](i32* %{{.+}}) #{{[0-9]+}}
+#pragma omp for simd ordered
   for (int i = low; i < up; ++i) {
     f[i] = 0.0;
 #pragma omp ordered simd

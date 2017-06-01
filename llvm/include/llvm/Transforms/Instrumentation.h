@@ -79,6 +79,12 @@ struct GCOVOptions {
 ModulePass *createGCOVProfilerPass(const GCOVOptions &Options =
                                    GCOVOptions::getDefault());
 
+// PGO Instrumention
+ModulePass *createPGOInstrumentationGenLegacyPass();
+ModulePass *
+createPGOInstrumentationUseLegacyPass(StringRef Filename = StringRef(""));
+ModulePass *createPGOIndirectCallPromotionLegacyPass(bool InLTO = false);
+
 /// Options for the frontend instrumentation based profiling pass.
 struct InstrProfOptions {
   InstrProfOptions() : NoRedZone(false) {}
@@ -91,15 +97,19 @@ struct InstrProfOptions {
 };
 
 /// Insert frontend instrumentation based profiling.
-ModulePass *createInstrProfilingPass(
+ModulePass *createInstrProfilingLegacyPass(
     const InstrProfOptions &Options = InstrProfOptions());
 
 // Insert AddressSanitizer (address sanity checking) instrumentation
-FunctionPass *createAddressSanitizerFunctionPass(bool CompileKernel = false);
-ModulePass *createAddressSanitizerModulePass(bool CompileKernel = false);
+FunctionPass *createAddressSanitizerFunctionPass(bool CompileKernel = false,
+                                                 bool Recover = false,
+                                                 bool UseAfterScope = false);
+ModulePass *createAddressSanitizerModulePass(bool CompileKernel = false,
+                                             bool Recover = false);
 
 // Insert MemorySanitizer instrumentation (detection of uninitialized reads)
-FunctionPass *createMemorySanitizerPass(int TrackOrigins = 0);
+FunctionPass *createMemorySanitizerPass(int TrackOrigins = 0,
+                                        bool Recover = false);
 
 // Insert ThreadSanitizer (race detection) instrumentation
 FunctionPass *createThreadSanitizerPass();
@@ -109,11 +119,26 @@ ModulePass *createDataFlowSanitizerPass(
     const std::vector<std::string> &ABIListFiles = std::vector<std::string>(),
     void *(*getArgTLS)() = nullptr, void *(*getRetValTLS)() = nullptr);
 
+// Options for EfficiencySanitizer sub-tools.
+struct EfficiencySanitizerOptions {
+  EfficiencySanitizerOptions() : ToolType(ESAN_None) {}
+  enum Type {
+    ESAN_None = 0,
+    ESAN_CacheFrag,
+    ESAN_WorkingSet,
+  } ToolType;
+};
+
+// Insert EfficiencySanitizer instrumentation.
+ModulePass *createEfficiencySanitizerPass(
+    const EfficiencySanitizerOptions &Options = EfficiencySanitizerOptions());
+
 // Options for sanitizer coverage instrumentation.
 struct SanitizerCoverageOptions {
   SanitizerCoverageOptions()
       : CoverageType(SCK_None), IndirectCalls(false), TraceBB(false),
-        TraceCmp(false), Use8bitCounters(false) {}
+        TraceCmp(false), TraceDiv(false), TraceGep(false),
+        Use8bitCounters(false), TracePC(false), TracePCGuard(false) {}
 
   enum Type {
     SCK_None = 0,
@@ -124,7 +149,11 @@ struct SanitizerCoverageOptions {
   bool IndirectCalls;
   bool TraceBB;
   bool TraceCmp;
+  bool TraceDiv;
+  bool TraceGep;
   bool Use8bitCounters;
+  bool TracePC;
+  bool TracePCGuard;
 };
 
 // Insert SanitizerCoverage instrumentation.
@@ -143,9 +172,23 @@ inline ModulePass *createDataFlowSanitizerPassForJIT(
 // checking on loads, stores, and other memory intrinsics.
 FunctionPass *createBoundsCheckingPass();
 
-/// \brief This pass splits the stack into a safe stack and an unsafe stack to
-/// protect against stack-based overflow vulnerabilities.
-FunctionPass *createSafeStackPass(const TargetMachine *TM = nullptr);
+/// \brief Calculate what to divide by to scale counts.
+///
+/// Given the maximum count, calculate a divisor that will scale all the
+/// weights to strictly less than UINT32_MAX.
+static inline uint64_t calculateCountScale(uint64_t MaxCount) {
+  return MaxCount < UINT32_MAX ? 1 : MaxCount / UINT32_MAX + 1;
+}
+
+/// \brief Scale an individual branch count.
+///
+/// Scale a 64-bit weight down to 32-bits using \c Scale.
+///
+static inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
+  uint64_t Scaled = Count / Scale;
+  assert(Scaled <= UINT32_MAX && "overflow 32-bits");
+  return Scaled;
+}
 
 } // End llvm namespace
 

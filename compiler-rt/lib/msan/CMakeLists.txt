@@ -17,7 +17,7 @@ set(MSAN_RTL_CXX_SOURCES
 
 
 set(MSAN_RTL_CFLAGS ${SANITIZER_COMMON_CFLAGS})
-append_no_rtti_flag(MSAN_RTL_CFLAGS)
+append_rtti_flag(OFF MSAN_RTL_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FPIE_FLAG -fPIE MSAN_RTL_CFLAGS)
 # Prevent clang from generating libc calls.
 append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding MSAN_RTL_CFLAGS)
@@ -25,7 +25,8 @@ append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding MSAN_RTL_CFLAGS
 set(MSAN_RUNTIME_LIBRARIES)
 
 # Static runtime library.
-add_custom_target(msan)
+add_compiler_rt_component(msan)
+
 foreach(arch ${MSAN_SUPPORTED_ARCH})
   add_compiler_rt_runtime(clang_rt.msan
     STATIC
@@ -58,9 +59,7 @@ foreach(arch ${MSAN_SUPPORTED_ARCH})
   endif()
 endforeach()
 
-add_compiler_rt_resource_file(msan_blacklist msan_blacklist.txt)
-add_dependencies(msan msan_blacklist)
-add_dependencies(compiler-rt msan)
+add_compiler_rt_resource_file(msan_blacklist msan_blacklist.txt msan)
 
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)

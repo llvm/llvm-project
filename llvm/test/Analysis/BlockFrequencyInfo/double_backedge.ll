@@ -1,4 +1,5 @@
 ; RUN: opt < %s -analyze -block-freq | FileCheck %s
+; RUN: opt < %s -passes='print<block-freq>' -disable-output 2>&1 | FileCheck %s
 
 define void @double_backedge(i1 %x) {
 ; CHECK-LABEL: Printing analysis {{.*}} for function 'double_backedge':

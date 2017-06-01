@@ -16,13 +16,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/DCE.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Pass.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
@@ -41,7 +42,7 @@ namespace {
       initializeDeadInstEliminationPass(*PassRegistry::getPassRegistry());
     }
     bool runOnBasicBlock(BasicBlock &BB) override {
-      if (skipOptnoneFunction(BB))
+      if (skipBasicBlock(BB))
         return false;
       auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
       TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI() : nullptr;
@@ -71,28 +72,6 @@ Pass *llvm::createDeadInstEliminationPass() {
   return new DeadInstElimination();
 }
 
-
-namespace {
-  //===--------------------------------------------------------------------===//
-  // DeadCodeElimination pass implementation
-  //
-  struct DCE : public FunctionPass {
-    static char ID; // Pass identification, replacement for typeid
-    DCE() : FunctionPass(ID) {
-      initializeDCEPass(*PassRegistry::getPassRegistry());
-    }
-
-    bool runOnFunction(Function &F) override;
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-    }
- };
-}
-
-char DCE::ID = 0;
-INITIALIZE_PASS(DCE, "dce", "Dead Code Elimination", false, false)
-
 static bool DCEInstruction(Instruction *I,
                            SmallSetVector<Instruction *, 16> &WorkList,
                            const TargetLibraryInfo *TLI) {
@@ -121,13 +100,7 @@ static bool DCEInstruction(Instruction *I,
   return false;
 }
 
-bool DCE::runOnFunction(Function &F) {
-  if (skipOptnoneFunction(F))
-    return false;
-
-  auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-  TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI() : nullptr;
-
+static bool eliminateDeadCode(Function &F, TargetLibraryInfo *TLI) {
   bool MadeChange = false;
   SmallSetVector<Instruction *, 16> WorkList;
   // Iterate over the original function, only adding insts to the worklist
@@ -150,7 +123,38 @@ bool DCE::runOnFunction(Function &F) {
   return MadeChange;
 }
 
-FunctionPass *llvm::createDeadCodeEliminationPass() {
-  return new DCE();
+PreservedAnalyses DCEPass::run(Function &F, FunctionAnalysisManager &AM) {
+  if (eliminateDeadCode(F, AM.getCachedResult<TargetLibraryAnalysis>(F)))
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
 }
 
+namespace {
+struct DCELegacyPass : public FunctionPass {
+  static char ID; // Pass identification, replacement for typeid
+  DCELegacyPass() : FunctionPass(ID) {
+    initializeDCELegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+
+    auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
+    TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI() : nullptr;
+
+    return eliminateDeadCode(F, TLI);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+  }
+};
+}
+
+char DCELegacyPass::ID = 0;
+INITIALIZE_PASS(DCELegacyPass, "dce", "Dead Code Elimination", false, false)
+
+FunctionPass *llvm::createDeadCodeEliminationPass() {
+  return new DCELegacyPass();
+}

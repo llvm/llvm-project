@@ -18,4 +18,4 @@ entry:
   ret i32 %l
 }
 
-declare void @memset_pattern16(i8*, i8*, i64)
+declare void @memset_pattern16(i8*, i8* readonly, i64) argmemonly

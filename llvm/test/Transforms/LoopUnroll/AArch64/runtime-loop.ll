@@ -1,13 +1,19 @@
-; RUN: opt < %s -S -loop-unroll -mtriple aarch64 -mcpu=cortex-a57 | FileCheck %s
+; RUN: opt < %s -S -loop-unroll -mtriple aarch64 -mcpu=cortex-a57 -unroll-runtime-epilog=true  | FileCheck %s -check-prefix=EPILOG
+; RUN: opt < %s -S -loop-unroll -mtriple aarch64 -mcpu=cortex-a57 -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
 
 ; Tests for unrolling loops with run-time trip counts
 
-; CHECK:  %xtraiter = and i32 %n
-; CHECK:  %lcmp.mod = icmp ne i32 %xtraiter, 0
-; CHECK:  br i1 %lcmp.mod, label %for.body.prol, label %for.body.preheader.split
+; EPILOG:  %xtraiter = and i32 %n
+; EPILOG:  for.body:
+; EPILOG:  %lcmp.mod = icmp ne i32 %xtraiter, 0
+; EPILOG:  br i1 %lcmp.mod, label %for.body.epil.preheader, label %for.end.loopexit
+; EPILOG:  for.body.epil:
 
-; CHECK:  for.body.prol:
-; CHECK:  for.body:
+; PROLOG:  %xtraiter = and i32 %n
+; PROLOG:  %lcmp.mod = icmp ne i32 %xtraiter, 0
+; PROLOG:  br i1 %lcmp.mod, label %for.body.prol.preheader, label %for.body.prol.loopexit
+; PROLOG:  for.body.prol:
+; PROLOG:  for.body:
 
 define i32 @test(i32* nocapture %a, i32 %n) nounwind uwtable readonly {
 entry:

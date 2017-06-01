@@ -8,6 +8,6 @@
 
 .text
 foo:
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: fixup value out of range
   ldr x0, =0x10111
   .space 0xdeadb0
-// CHECK: LVM ERROR: fixup value out of range

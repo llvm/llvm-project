@@ -1,4 +1,6 @@
 ; RUN: opt < %s -loop-vectorize -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-vectorize -o /dev/null -pass-remarks-output=%t.yaml
+; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 
 ; C/C++ code for tests
 ; void test(int *A, int Length) {
@@ -24,10 +26,10 @@
 
 ; File, line, and column should match those specified in the metadata
 ; CHECK: remark: source.cpp:4:5: loop not vectorized: could not determine number of loop iterations
-; CHECK: remark: source.cpp:4:5: loop not vectorized: use -Rpass-analysis=loop-vectorize for more info
+; CHECK: remark: source.cpp:4:5: loop not vectorized
 ; CHECK: remark: source.cpp:13:5: loop not vectorized: vectorization and interleaving are explicitly disabled, or vectorize width and interleave count are both set to 1
 ; CHECK: remark: source.cpp:19:5: loop not vectorized: cannot identify array bounds
-; CHECK: remark: source.cpp:19:5: loop not vectorized: use -Rpass-analysis=loop-vectorize for more info
+; CHECK: remark: source.cpp:19:5: loop not vectorized
 ; CHECK: warning: source.cpp:19:5: loop not vectorized: failed explicitly specified loop vectorization
 
 ; CHECK: _Z4testPii
@@ -42,6 +44,61 @@
 ; CHECK-NOT: x i32>
 ; CHECK: ret
 
+; YAML:       --- !Analysis
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            CantComputeNumberOfIterations
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 4, Column: 5 }
+; YAML-NEXT: Function:        _Z4testPii
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: '
+; YAML-NEXT:   - String:          could not determine number of loop iterations
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Missed
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            MissedDetails
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 4, Column: 5 }
+; YAML-NEXT: Function:        _Z4testPii
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          loop not vectorized
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Analysis
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            AllDisabled
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 13, Column: 5 }
+; YAML-NEXT: Function:        _Z13test_disabledPii
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: vectorization and interleaving are explicitly disabled, or vectorize width and interleave count are both set to 1'
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Analysis
+; YAML-NEXT: Pass:            ''
+; YAML-NEXT: Name:            CantIdentifyArrayBounds
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 19, Column: 5 }
+; YAML-NEXT: Function:        _Z17test_array_boundsPiS_i
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: '
+; YAML-NEXT:   - String:          cannot identify array bounds
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Missed
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            MissedDetails
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 19, Column: 5 }
+; YAML-NEXT: Function:        _Z17test_array_boundsPiS_i
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          loop not vectorized
+; YAML-NEXT:   - String:          ' (Force='
+; YAML-NEXT:   - Force:           'true'
+; YAML-NEXT:   - String:          ')'
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Failure
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            FailedRequestedVectorization
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 19, Column: 5 }
+; YAML-NEXT: Function:        _Z17test_array_boundsPiS_i
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: '
+; YAML-NEXT:   - String:          failed explicitly specified loop vectorization
+; YAML-NEXT: ...
+
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind optsize ssp uwtable
@@ -54,8 +111,9 @@ for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv, !dbg !16
   %0 = trunc i64 %indvars.iv to i32, !dbg !16
+  %ld = load i32, i32* %arrayidx, align 4
   store i32 %0, i32* %arrayidx, align 4, !dbg !16, !tbaa !18
-  %cmp3 = icmp sle i32 %0, %Length, !dbg !22
+  %cmp3 = icmp sle i32 %ld, %Length, !dbg !22
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !12
   %1 = trunc i64 %indvars.iv.next to i32
   %cmp = icmp slt i32 %1, %Length, !dbg !12
@@ -122,15 +180,14 @@ attributes #0 = { nounwind }
 !llvm.module.flags = !{!9, !10}
 !llvm.ident = !{!11}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0", isOptimized: true, runtimeVersion: 6, emissionKind: 2, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0", isOptimized: true, runtimeVersion: 6, emissionKind: LineTablesOnly, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "source.cpp", directory: ".")
 !2 = !{}
-!3 = !{!4, !7, !8}
-!4 = distinct !DISubprogram(name: "test", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "test", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "source.cpp", directory: ".")
 !6 = !DISubroutineType(types: !2)
-!7 = distinct !DISubprogram(name: "test_disabled", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 10, file: !1, scope: !5, type: !6, variables: !2)
-!8 = distinct !DISubprogram(name: "test_array_bounds", line: 16, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 16, file: !1, scope: !5, type: !6, variables: !2)
+!7 = distinct !DISubprogram(name: "test_disabled", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 10, file: !1, scope: !5, type: !6, variables: !2)
+!8 = distinct !DISubprogram(name: "test_array_bounds", line: 16, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 16, file: !1, scope: !5, type: !6, variables: !2)
 !9 = !{i32 2, !"Dwarf Version", i32 2}
 !10 = !{i32 2, !"Debug Info Version", i32 3}
 !11 = !{!"clang version 3.5.0"}

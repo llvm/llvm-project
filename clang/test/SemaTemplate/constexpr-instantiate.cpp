@@ -77,20 +77,19 @@ namespace Reference {
 }
 
 namespace Unevaluated {
-  // We follow g++ in treating any reference to a constexpr function template
-  // specialization as requiring an instantiation, even if it occurs in an
-  // unevaluated context.
+  // We follow the current proposed resolution of core issue 1581: a constexpr
+  // function template specialization requires a definition if:
+  //  * it is odr-used, or would be odr-used except that it appears within the
+  //    definition of a template, or
+  //  * it is used within a braced-init-list, where it may be necessary for
+  //    detecting narrowing conversions.
   //
-  // We go slightly further than g++, and also trigger the implicit definition
-  // of a defaulted special member in the same circumstances. This seems scary,
-  // since a lot of classes have constexpr special members in C++11, but the
-  // only observable impact should be the implicit instantiation of constexpr
-  // special member templates (defaulted special members should only be
-  // generated if they are well-formed, and non-constexpr special members in a
-  // base or member cause the class's special member to not be constexpr).
+  // We apply this both for instantiating constexpr function template
+  // specializations and for implicitly defining defaulted constexpr special
+  // member functions.
   //
-  // FIXME: None of this is required by the C++ standard. The rules in this
-  //        area are poorly specified, so this is subject to change.
+  // FIXME: None of this is required by the C++ standard yet. The rules in this
+  //        area are subject to change.
   namespace NotConstexpr {
     template<typename T> struct S {
       S() : n(0) {}
@@ -98,16 +97,35 @@ namespace Unevaluated {
       int n;
     };
     struct U : S<int> {};
-    decltype(U(U())) u; // ok, don't instantiate S<int>::S() because it wasn't declared constexpr
+    decltype(U(U())) u;
   }
   namespace Constexpr {
     template<typename T> struct S {
       constexpr S() : n(0) {}
-      constexpr S(const S&) : n(T::error) {} // expected-error {{has no members}}
+      constexpr S(const S&) : n(T::error) {}
       int n;
     };
-    struct U : S<int> {}; // expected-note {{instantiation}}
-    decltype(U(U())) u; // expected-note {{here}}
+    struct U : S<int> {};
+    decltype(U(U())) u;
+  }
+  namespace ConstexprList {
+    template<int N> struct S {
+      constexpr S() : n(0) {
+        static_assert(N >= 0, "");
+      }
+      constexpr operator int() const { return 0; }
+      int n;
+    };
+    struct U : S<0> {};
+    // ok, trigger instantiation within a list
+    decltype(char{U()}) t0;
+    decltype(new char{S<1>()}) t1; // expected-warning {{side effects}}
+    decltype((char){S<2>()}) t2;
+    decltype(+(char[1]){{S<3>()}}) t3;
+    // do not trigger instantiation outside a list
+    decltype(char(S<-1>())) u1;
+    decltype(new char(S<-2>())) u2; // expected-warning {{side effects}}
+    decltype((char)(S<-3>())) u3;
   }
 
   namespace PR11851_Comment0 {
@@ -190,6 +208,32 @@ namespace Unevaluated {
       constexpr duration max = duration();
     }
   }
+
+  // For variables, we instantiate when they are used in a context in which
+  // evaluation could be required (odr-used, used in a template whose
+  // instantiations would odr-use, or used in list initialization), if they
+  // can be used as a constant (const integral or constexpr).
+  namespace Variables {
+    template<int N> struct A {
+      static const int k;
+      static int n;
+    };
+    template<const int *N> struct B {};
+    template<int N> constexpr int A<N>::k = *(int[N]){N}; // expected-error 1+{{negative}}
+    template<int N> int A<N>::n = *(int[N]){0};
+
+    template <typename> void f() {
+      (void)A<-1>::n; // ok
+      (void)A<-1>::k; // expected-note {{instantiation of }}
+      B<&A<-2>::n> b1; // ok
+      B<&A<-2>::k> b2; // expected-note {{instantiation of }}
+    };
+
+    decltype(A<-3>::k) d1 = 0; // ok
+    decltype(char{A<-4>::k}) d2 = 0; // expected-note {{instantiation of }} expected-error {{narrow}} expected-note {{cast}}
+    decltype(char{A<1>::k}) d3 = 0; // ok
+    decltype(char{A<1 + (unsigned char)-1>::k}) d4 = 0; // expected-error {{narrow}} expected-note {{cast}}
+  }
 }
 
 namespace NoInstantiationWhenSelectingOverload {
@@ -201,10 +245,17 @@ namespace NoInstantiationWhenSelectingOverload {
     int n;
   };
 
-  int f(S);
-  int f(int);
+  constexpr int f(S) { return 0; }
+  constexpr int f(int) { return 0; }
 
   void g() { f(0); }
-  void h() { (void)sizeof(f(0)); }
-  void i() { (void)sizeof(f("oops")); } // expected-note {{instantiation of}}
+  void h() { (void)sizeof(char{f(0)}); }
+  void i() { (void)sizeof(char{f("oops")}); } // expected-note {{instantiation of}}
+}
+
+namespace PR20090 {
+  template <typename T> constexpr T fact(T n) {
+    return n == 0 ? 1 : [=] { return n * fact(n - 1); }();
+  }
+  static_assert(fact(0) == 1, "");
 }

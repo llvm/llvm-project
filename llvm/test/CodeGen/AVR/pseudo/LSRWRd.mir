@@ -1,0 +1,22 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+
+--- |
+  target triple = "avr--"
+  define void @test() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test
+
+    ; CHECK:      %r15 = LSRRd %r15, implicit-def %sreg
+    ; CHECK-NEXT: %r14 = RORRd %r14, implicit-def %sreg, implicit killed %sreg
+
+    %r15r14 = LSRWRd %r15r14, implicit-def %sreg
+...

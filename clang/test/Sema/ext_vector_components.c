@@ -39,6 +39,33 @@ static void test() {
     vec4.x = vec16.sF;
   
     vec4p->yz = vec4p->xy;
+
+    vec2.a; // expected-error {{vector component access exceeds type 'float2'}}
+    vec2.rgba; // expected-error {{vector component access exceeds type 'float2'}}
+    vec4.rgba; // expected-warning {{expression result unused}}
+    vec4.rgbz; // expected-error {{illegal vector component name 'z'}}
+    vec4.rgbc; // expected-error {{illegal vector component name 'c'}}
+    vec4.xyzr; // expected-error {{illegal vector component name 'r'}}
+    vec4.s01b; // expected-error {{vector component access exceeds type 'float4'}}
+
+    vec3 = vec4.rgb; // legal, shorten
+    f = vec2.r; // legal, shorten
+    f = vec4.rg.r; // legal, shorten
+    vec4_2.rgba = vec4.xyzw; // legal, no intermingling
+
+    vec4_2.rgbr = vec4.rgba; // expected-error {{vector is not assignable (contains duplicate components)}}
+    vec4_2.rgbb = vec4.rgba; // expected-error {{vector is not assignable (contains duplicate components)}}
+    vec4_2.rgga = vec4.rgba; // expected-error {{vector is not assignable (contains duplicate components)}}
+    vec2.x = f;
+    vec2.rr = vec2_2.rg; // expected-error {{vector is not assignable (contains duplicate components)}}
+    vec2.gr = vec2_2.rg;
+    vec2.gr.g = vec2_2.r;
+    vec4 = (float4){ 1,2,3,4 };
+    vec4.rg.b; // expected-error {{vector component access exceeds type 'float2'}}
+    vec4.r = vec16.sf;
+    vec4.g = vec16.sF;
+
+    vec4p->gb = vec4p->rg;
 }
 
 float2 lo(float3 x) { return x.lo; }

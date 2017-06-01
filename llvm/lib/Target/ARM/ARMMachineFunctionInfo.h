@@ -15,7 +15,6 @@
 #define LLVM_LIB_TARGET_ARM_ARMMACHINEFUNCTIONINFO_H
 
 #include "ARMSubtarget.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/Target/TargetMachine.h"
@@ -118,6 +117,16 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// coalesced weights.
   DenseMap<const MachineBasicBlock*, unsigned> CoalescedWeights;
 
+  /// True if this function has a subset of CSRs that is handled explicitly via
+  /// copies.
+  bool IsSplitCSR;
+
+  /// Globals that have had their storage promoted into the constant pool.
+  SmallPtrSet<const GlobalVariable*,2> PromotedGlobals;
+
+  /// The amount the literal pool has been increasedby due to promoted globals.
+  int PromotedGlobalsIncrease;
+  
 public:
   ARMFunctionInfo() :
     isThumb(false),
@@ -128,7 +137,8 @@ public:
     FramePtrSpillOffset(0), GPRCS1Offset(0), GPRCS2Offset(0), DPRCSOffset(0),
     GPRCS1Size(0), GPRCS2Size(0), DPRCSAlignGapSize(0), DPRCSSize(0),
     NumAlignedDPRCS2Regs(0), PICLabelUId(0),
-    VarArgsFrameIndex(0), HasITBlocks(false) {}
+    VarArgsFrameIndex(0), HasITBlocks(false), IsSplitCSR(false),
+    PromotedGlobalsIncrease(0) {}
 
   explicit ARMFunctionInfo(MachineFunction &MF);
 
@@ -199,6 +209,9 @@ public:
   bool hasITBlocks() const { return HasITBlocks; }
   void setHasITBlocks(bool h) { HasITBlocks = h; }
 
+  bool isSplitCSR() const { return IsSplitCSR; }
+  void setIsSplitCSR(bool s) { IsSplitCSR = s; }
+
   void recordCPEClone(unsigned CPIdx, unsigned CPCloneIdx) {
     if (!CPEClones.insert(std::make_pair(CPCloneIdx, CPIdx)).second)
       llvm_unreachable("Duplicate entries!");
@@ -219,6 +232,22 @@ public:
       It = CoalescedWeights.insert(std::make_pair(MBB, 0)).first;
     }
     return It;
+  }
+
+  /// Indicate to the backend that \c GV has had its storage changed to inside
+  /// a constant pool. This means it no longer needs to be emitted as a
+  /// global variable.
+  void markGlobalAsPromotedToConstantPool(const GlobalVariable *GV) {
+    PromotedGlobals.insert(GV);
+  }
+  SmallPtrSet<const GlobalVariable*, 2>& getGlobalsPromotedToConstantPool() {
+    return PromotedGlobals;
+  }
+  int getPromotedConstpoolIncrease() const {
+    return PromotedGlobalsIncrease;
+  }
+  void setPromotedConstpoolIncrease(int Sz) {
+    PromotedGlobalsIncrease = Sz;
   }
 };
 } // End llvm namespace

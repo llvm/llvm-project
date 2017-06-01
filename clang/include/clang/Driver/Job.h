@@ -116,7 +116,7 @@ public:
   const llvm::opt::ArgStringList &getArguments() const { return Arguments; }
 
   /// Print a command argument, and optionally quote it.
-  static void printArg(llvm::raw_ostream &OS, const char *Arg, bool Quote);
+  static void printArg(llvm::raw_ostream &OS, StringRef Arg, bool Quote);
 };
 
 /// Like Command, but with a fallback which is executed in case
@@ -136,6 +136,20 @@ public:
 
 private:
   std::unique_ptr<Command> Fallback;
+};
+
+/// Like Command, but always pretends that the wrapped command succeeded.
+class ForceSuccessCommand : public Command {
+public:
+  ForceSuccessCommand(const Action &Source_, const Tool &Creator_,
+                      const char *Executable_, const ArgStringList &Arguments_,
+                      ArrayRef<InputInfo> Inputs);
+
+  void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
+             CrashReportInfo *CrashInfo = nullptr) const override;
+
+  int Execute(const StringRef **Redirects, std::string *ErrMsg,
+              bool *ExecutionFailed) const override;
 };
 
 /// JobList - A sequence of jobs to perform.
@@ -161,6 +175,7 @@ public:
 
   const list_type &getJobs() const { return Jobs; }
 
+  bool empty() const { return Jobs.empty(); }
   size_type size() const { return Jobs.size(); }
   iterator begin() { return Jobs.begin(); }
   const_iterator begin() const { return Jobs.begin(); }

@@ -22,6 +22,7 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -522,11 +523,15 @@ public:
   typedef AdjacentBlocks::const_iterator                  const_pred_iterator;
   typedef AdjacentBlocks::reverse_iterator              pred_reverse_iterator;
   typedef AdjacentBlocks::const_reverse_iterator  const_pred_reverse_iterator;
+  typedef llvm::iterator_range<pred_iterator>                      pred_range;
+  typedef llvm::iterator_range<const_pred_iterator>          pred_const_range;
 
   typedef AdjacentBlocks::iterator                              succ_iterator;
   typedef AdjacentBlocks::const_iterator                  const_succ_iterator;
   typedef AdjacentBlocks::reverse_iterator              succ_reverse_iterator;
   typedef AdjacentBlocks::const_reverse_iterator  const_succ_reverse_iterator;
+  typedef llvm::iterator_range<succ_iterator>                      succ_range;
+  typedef llvm::iterator_range<const_succ_iterator>          succ_const_range;
 
   pred_iterator                pred_begin()        { return Preds.begin();   }
   pred_iterator                pred_end()          { return Preds.end();     }
@@ -538,6 +543,13 @@ public:
   const_pred_reverse_iterator  pred_rbegin() const { return Preds.rbegin();  }
   const_pred_reverse_iterator  pred_rend()   const { return Preds.rend();    }
 
+  pred_range                   preds() {
+    return pred_range(pred_begin(), pred_end());
+  }
+  pred_const_range             preds() const {
+    return pred_const_range(pred_begin(), pred_end());
+  }
+
   succ_iterator                succ_begin()        { return Succs.begin();   }
   succ_iterator                succ_end()          { return Succs.end();     }
   const_succ_iterator          succ_begin()  const { return Succs.begin();   }
@@ -547,6 +559,13 @@ public:
   succ_reverse_iterator        succ_rend()         { return Succs.rend();    }
   const_succ_reverse_iterator  succ_rbegin() const { return Succs.rbegin();  }
   const_succ_reverse_iterator  succ_rend()   const { return Succs.rend();    }
+
+  succ_range                   succs() {
+    return succ_range(succ_begin(), succ_end());
+  }
+  succ_const_range             succs() const {
+    return succ_const_range(succ_begin(), succ_end());
+  }
 
   unsigned                     succ_size()   const { return Succs.size();    }
   bool                         succ_empty()  const { return Succs.empty();   }
@@ -761,55 +780,6 @@ public:
         AddCXXNewAllocator(false), AddCXXDefaultInitExprInCtors(false) {}
   };
 
-  /// \brief Provides a custom implementation of the iterator class to have the
-  /// same interface as Function::iterator - iterator returns CFGBlock
-  /// (not a pointer to CFGBlock).
-  class graph_iterator {
-  public:
-    typedef CFGBlock                        value_type;
-    typedef value_type&                     reference;
-    typedef value_type*                     pointer;
-    typedef BumpVector<CFGBlock*>::iterator ImplTy;
-
-    graph_iterator(const ImplTy &i) : I(i) {}
-
-    bool operator==(const graph_iterator &X) const { return I == X.I; }
-    bool operator!=(const graph_iterator &X) const { return I != X.I; }
-
-    reference operator*()    const { return **I; }
-    pointer operator->()     const { return  *I; }
-    operator CFGBlock* ()          { return  *I; }
-
-    graph_iterator &operator++() { ++I; return *this; }
-    graph_iterator &operator--() { --I; return *this; }
-
-  private:
-    ImplTy I;
-  };
-
-  class const_graph_iterator {
-  public:
-    typedef const CFGBlock                  value_type;
-    typedef value_type&                     reference;
-    typedef value_type*                     pointer;
-    typedef BumpVector<CFGBlock*>::const_iterator ImplTy;
-
-    const_graph_iterator(const ImplTy &i) : I(i) {}
-
-    bool operator==(const const_graph_iterator &X) const { return I == X.I; }
-    bool operator!=(const const_graph_iterator &X) const { return I != X.I; }
-
-    reference operator*() const { return **I; }
-    pointer operator->()  const { return  *I; }
-    operator CFGBlock* () const { return  *I; }
-
-    const_graph_iterator &operator++() { ++I; return *this; }
-    const_graph_iterator &operator--() { --I; return *this; }
-
-  private:
-    ImplTy I;
-  };
-
   /// buildCFG - Builds a CFG from an AST.
   static std::unique_ptr<CFG> buildCFG(const Decl *D, Stmt *AST, ASTContext *C,
                                        const BuildOptions &BO);
@@ -845,14 +815,10 @@ public:
   const_iterator            begin()       const    { return Blocks.begin(); }
   const_iterator            end()         const    { return Blocks.end(); }
 
-  graph_iterator nodes_begin() { return graph_iterator(Blocks.begin()); }
-  graph_iterator nodes_end() { return graph_iterator(Blocks.end()); }
-  const_graph_iterator nodes_begin() const {
-    return const_graph_iterator(Blocks.begin());
-  }
-  const_graph_iterator nodes_end() const {
-    return const_graph_iterator(Blocks.end());
-  }
+  iterator nodes_begin() { return iterator(Blocks.begin()); }
+  iterator nodes_end() { return iterator(Blocks.end()); }
+  const_iterator nodes_begin() const { return const_iterator(Blocks.begin()); }
+  const_iterator nodes_end() const { return const_iterator(Blocks.end()); }
 
   reverse_iterator          rbegin()               { return Blocks.rbegin(); }
   reverse_iterator          rend()                 { return Blocks.rend(); }
@@ -893,6 +859,7 @@ public:
 
   typedef llvm::DenseMap<const DeclStmt *, const DeclStmt *>::const_iterator
     synthetic_stmt_iterator;
+  typedef llvm::iterator_range<synthetic_stmt_iterator> synthetic_stmt_range;
 
   /// Iterates over synthetic DeclStmts in the CFG.
   ///
@@ -906,6 +873,11 @@ public:
   /// \sa synthetic_stmt_begin
   synthetic_stmt_iterator synthetic_stmt_end() const {
     return SyntheticDeclStmts.end();
+  }
+
+  /// \sa synthetic_stmt_begin
+  synthetic_stmt_range synthetic_stmts() const {
+    return synthetic_stmt_range(synthetic_stmt_begin(), synthetic_stmt_end());
   }
 
   //===--------------------------------------------------------------------===//
@@ -998,59 +970,51 @@ template <> struct simplify_type< ::clang::CFGTerminator> {
 // Traits for: CFGBlock
 
 template <> struct GraphTraits< ::clang::CFGBlock *> {
-  typedef ::clang::CFGBlock NodeType;
+  typedef ::clang::CFGBlock *NodeRef;
   typedef ::clang::CFGBlock::succ_iterator ChildIteratorType;
 
-  static NodeType* getEntryNode(::clang::CFGBlock *BB)
-  { return BB; }
+  static NodeRef getEntryNode(::clang::CFGBlock *BB) { return BB; }
 
-  static inline ChildIteratorType child_begin(NodeType* N)
-  { return N->succ_begin(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
 
-  static inline ChildIteratorType child_end(NodeType* N)
-  { return N->succ_end(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 };
 
 template <> struct GraphTraits< const ::clang::CFGBlock *> {
-  typedef const ::clang::CFGBlock NodeType;
+  typedef const ::clang::CFGBlock *NodeRef;
   typedef ::clang::CFGBlock::const_succ_iterator ChildIteratorType;
 
-  static NodeType* getEntryNode(const clang::CFGBlock *BB)
-  { return BB; }
+  static NodeRef getEntryNode(const clang::CFGBlock *BB) { return BB; }
 
-  static inline ChildIteratorType child_begin(NodeType* N)
-  { return N->succ_begin(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
 
-  static inline ChildIteratorType child_end(NodeType* N)
-  { return N->succ_end(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 };
 
 template <> struct GraphTraits<Inverse< ::clang::CFGBlock*> > {
-  typedef ::clang::CFGBlock NodeType;
+  typedef ::clang::CFGBlock *NodeRef;
   typedef ::clang::CFGBlock::const_pred_iterator ChildIteratorType;
 
-  static NodeType *getEntryNode(Inverse< ::clang::CFGBlock*> G)
-  { return G.Graph; }
+  static NodeRef getEntryNode(Inverse<::clang::CFGBlock *> G) {
+    return G.Graph;
+  }
 
-  static inline ChildIteratorType child_begin(NodeType* N)
-  { return N->pred_begin(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->pred_begin(); }
 
-  static inline ChildIteratorType child_end(NodeType* N)
-  { return N->pred_end(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
 };
 
 template <> struct GraphTraits<Inverse<const ::clang::CFGBlock*> > {
-  typedef const ::clang::CFGBlock NodeType;
+  typedef const ::clang::CFGBlock *NodeRef;
   typedef ::clang::CFGBlock::const_pred_iterator ChildIteratorType;
 
-  static NodeType *getEntryNode(Inverse<const ::clang::CFGBlock*> G)
-  { return G.Graph; }
+  static NodeRef getEntryNode(Inverse<const ::clang::CFGBlock *> G) {
+    return G.Graph;
+  }
 
-  static inline ChildIteratorType child_begin(NodeType* N)
-  { return N->pred_begin(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->pred_begin(); }
 
-  static inline ChildIteratorType child_end(NodeType* N)
-  { return N->pred_end(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
 };
 
 // Traits for: CFG
@@ -1058,9 +1022,9 @@ template <> struct GraphTraits<Inverse<const ::clang::CFGBlock*> > {
 template <> struct GraphTraits< ::clang::CFG* >
     : public GraphTraits< ::clang::CFGBlock *>  {
 
-  typedef ::clang::CFG::graph_iterator nodes_iterator;
+  typedef ::clang::CFG::iterator nodes_iterator;
 
-  static NodeType     *getEntryNode(::clang::CFG* F) { return &F->getEntry(); }
+  static NodeRef getEntryNode(::clang::CFG *F) { return &F->getEntry(); }
   static nodes_iterator nodes_begin(::clang::CFG* F) { return F->nodes_begin();}
   static nodes_iterator   nodes_end(::clang::CFG* F) { return F->nodes_end(); }
   static unsigned              size(::clang::CFG* F) { return F->size(); }
@@ -1069,11 +1033,9 @@ template <> struct GraphTraits< ::clang::CFG* >
 template <> struct GraphTraits<const ::clang::CFG* >
     : public GraphTraits<const ::clang::CFGBlock *>  {
 
-  typedef ::clang::CFG::const_graph_iterator nodes_iterator;
+  typedef ::clang::CFG::const_iterator nodes_iterator;
 
-  static NodeType *getEntryNode( const ::clang::CFG* F) {
-    return &F->getEntry();
-  }
+  static NodeRef getEntryNode(const ::clang::CFG *F) { return &F->getEntry(); }
   static nodes_iterator nodes_begin( const ::clang::CFG* F) {
     return F->nodes_begin();
   }
@@ -1088,9 +1050,9 @@ template <> struct GraphTraits<const ::clang::CFG* >
 template <> struct GraphTraits<Inverse< ::clang::CFG*> >
   : public GraphTraits<Inverse< ::clang::CFGBlock*> > {
 
-  typedef ::clang::CFG::graph_iterator nodes_iterator;
+  typedef ::clang::CFG::iterator nodes_iterator;
 
-  static NodeType *getEntryNode( ::clang::CFG* F) { return &F->getExit(); }
+  static NodeRef getEntryNode(::clang::CFG *F) { return &F->getExit(); }
   static nodes_iterator nodes_begin( ::clang::CFG* F) {return F->nodes_begin();}
   static nodes_iterator nodes_end( ::clang::CFG* F) { return F->nodes_end(); }
 };
@@ -1098,9 +1060,9 @@ template <> struct GraphTraits<Inverse< ::clang::CFG*> >
 template <> struct GraphTraits<Inverse<const ::clang::CFG*> >
   : public GraphTraits<Inverse<const ::clang::CFGBlock*> > {
 
-  typedef ::clang::CFG::const_graph_iterator nodes_iterator;
+  typedef ::clang::CFG::const_iterator nodes_iterator;
 
-  static NodeType *getEntryNode(const ::clang::CFG* F) { return &F->getExit(); }
+  static NodeRef getEntryNode(const ::clang::CFG *F) { return &F->getExit(); }
   static nodes_iterator nodes_begin(const ::clang::CFG* F) {
     return F->nodes_begin();
   }

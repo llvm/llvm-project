@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 declare double @fabs(double) readnone
 declare double @llvm.fabs.f64(double) readnone
@@ -11,7 +11,7 @@ declare <4 x double> @llvm.fabs.v4f64(<4 x double>) readnone
 ; SI: v_and_b32
 ; SI: s_endpgm
 define void @v_fabs_f64(double addrspace(1)* %out, double addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tidext = sext i32 %tid to i64
   %gep = getelementptr double, double addrspace(1)* %in, i64 %tidext
   %val = load double, double addrspace(1)* %gep, align 8
@@ -55,7 +55,7 @@ define void @fabs_v4f64(<4 x double> addrspace(1)* %out, <4 x double> %in) {
 ; SI-LABEL: {{^}}fabs_fold_f64:
 ; SI: s_load_dwordx2 [[ABS_VALUE:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; SI-NOT: and
-; SI: v_mul_f64 {{v\[[0-9]+:[0-9]+\]}}, |[[ABS_VALUE]]|, {{v\[[0-9]+:[0-9]+\]}}
+; SI: v_mul_f64 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, |[[ABS_VALUE]]|
 ; SI: s_endpgm
 define void @fabs_fold_f64(double addrspace(1)* %out, double %in0, double %in1) {
   %fabs = call double @llvm.fabs.f64(double %in0)
@@ -67,7 +67,7 @@ define void @fabs_fold_f64(double addrspace(1)* %out, double %in0, double %in1) 
 ; SI-LABEL: {{^}}fabs_fn_fold_f64:
 ; SI: s_load_dwordx2 [[ABS_VALUE:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; SI-NOT: and
-; SI: v_mul_f64 {{v\[[0-9]+:[0-9]+\]}}, |[[ABS_VALUE]]|, {{v\[[0-9]+:[0-9]+\]}}
+; SI: v_mul_f64 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, |[[ABS_VALUE]]|
 ; SI: s_endpgm
 define void @fabs_fn_fold_f64(double addrspace(1)* %out, double %in0, double %in1) {
   %fabs = call double @fabs(double %in0)

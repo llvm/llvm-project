@@ -54,6 +54,7 @@ void rdar8269537(const char *f)
   test_null_format(0); // no-warning
   test_null_format(__null); // no-warning
   test_null_format(f); // expected-warning {{not a string literal}}
+  // expected-note@-1{{treat the string as an argument to avoid this}}
 }
 
 int Foo::printf(const char *fmt, ...) {

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix,core.uninitialized -analyzer-store=region -verify -analyzer-config unix:Optimistic=true %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix,core.uninitialized -analyzer-store=region -verify -analyzer-config unix:Optimistic=true %s
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);
 void free(void *);

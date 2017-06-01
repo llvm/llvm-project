@@ -34,6 +34,7 @@ class ConstantArray;
 class DIE;
 class DIEAbbrev;
 class GCMetadataPrinter;
+class GlobalIndirectSymbol;
 class GlobalValue;
 class GlobalVariable;
 class MachineBasicBlock;
@@ -45,6 +46,7 @@ class MachineLoop;
 class MachineConstantPoolValue;
 class MachineJumpTableInfo;
 class MachineModuleInfo;
+class MachineOptimizationRemarkEmitter;
 class MCAsmInfo;
 class MCCFIInstruction;
 class MCContext;
@@ -88,9 +90,8 @@ public:
   /// This is a pointer to the current MachineModuleInfo.
   MachineModuleInfo *MMI;
 
-  /// Name-mangler for global names.
-  ///
-  Mangler *Mang;
+  /// Optimization remark emitter.
+  MachineOptimizationRemarkEmitter *ORE;
 
   /// The symbol for the current function. This is recalculated at the beginning
   /// of each call to runOnMachineFunction().
@@ -125,11 +126,16 @@ private:
 
   struct HandlerInfo {
     AsmPrinterHandler *Handler;
-    const char *TimerName, *TimerGroupName;
+    const char *TimerName;
+    const char *TimerDescription;
+    const char *TimerGroupName;
+    const char *TimerGroupDescription;
     HandlerInfo(AsmPrinterHandler *Handler, const char *TimerName,
-                const char *TimerGroupName)
+                const char *TimerDescription, const char *TimerGroupName,
+                const char *TimerGroupDescription)
         : Handler(Handler), TimerName(TimerName),
-          TimerGroupName(TimerGroupName) {}
+          TimerDescription(TimerDescription), TimerGroupName(TimerGroupName),
+          TimerGroupDescription(TimerGroupDescription) {}
   };
   /// A vector of all debug/EH info emitters we should use. This vector
   /// maintains ownership of the emitters.
@@ -137,6 +143,9 @@ private:
 
   /// If the target supports dwarf debug info, this pointer is non-null.
   DwarfDebug *DD;
+
+  /// If the current module uses dwarf CFI annotations strictly for debugging.
+  bool isCFIMoveForDebugging;
 
 protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
@@ -146,6 +155,11 @@ public:
 
   DwarfDebug *getDwarfDebug() { return DD; }
   DwarfDebug *getDwarfDebug() const { return DD; }
+
+  uint16_t getDwarfVersion() const;
+  void setDwarfVersion(uint16_t Version);
+
+  bool isPositionIndependent() const;
 
   /// Return true if assembly output should contain comments.
   ///
@@ -173,9 +187,6 @@ public:
 
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
 
-  /// Return the target triple string.
-  StringRef getTargetTriple() const;
-
   /// Return the current section we are emitting to.
   const MCSection *getCurrentSection() const;
 
@@ -183,6 +194,39 @@ public:
                          const GlobalValue *GV) const;
 
   MCSymbol *getSymbol(const GlobalValue *GV) const;
+
+  //===------------------------------------------------------------------===//
+  // XRay instrumentation implementation.
+  //===------------------------------------------------------------------===//
+public:
+  // This describes the kind of sled we're storing in the XRay table.
+  enum class SledKind : uint8_t {
+    FUNCTION_ENTER = 0,
+    FUNCTION_EXIT = 1,
+    TAIL_CALL = 2,
+  };
+
+  // The table will contain these structs that point to the sled, the function
+  // containing the sled, and what kind of sled (and whether they should always
+  // be instrumented).
+  struct XRayFunctionEntry {
+    const MCSymbol *Sled;
+    const MCSymbol *Function;
+    SledKind Kind;
+    bool AlwaysInstrument;
+    const class Function *Fn;
+
+    void emit(int, MCStreamer *, const MCSymbol *) const;
+  };
+
+  // All the sleds to be emitted.
+  std::vector<XRayFunctionEntry> Sleds;
+
+  // Helper function to record a given XRay sled.
+  void recordSled(MCSymbol *Sled, const MachineInstr &MI, SledKind Kind);
+
+  /// Emit a table with all XRay instrumentation points.
+  void emitXRayTable();
 
   //===------------------------------------------------------------------===//
   // MachineFunctionPass Implementation.
@@ -225,6 +269,10 @@ public:
   enum CFIMoveType { CFI_M_None, CFI_M_EH, CFI_M_Debug };
   CFIMoveType needsCFIMoves();
 
+  /// Returns false if needsCFIMoves() == CFI_M_EH for any function
+  /// in the module.
+  bool needsOnlyDebugCFIMoves() const { return isCFIMoveForDebugging; }
+
   bool needsSEHMoves();
 
   /// Print to the current output stream assembly representations of the
@@ -237,11 +285,6 @@ public:
   /// function to the current output stream.
   ///
   virtual void EmitJumpTableInfo();
-
-  /// Emit the control variable for an emulated TLS variable.
-  virtual void EmitEmulatedTLSControlVariable(const GlobalVariable *GV,
-                                              MCSymbol *EmittedSym,
-                                              bool AllZeroInitValue);
 
   /// Emit the specified global variable to the .s file.
   virtual void EmitGlobalVariable(const GlobalVariable *GV);
@@ -259,7 +302,7 @@ public:
   void EmitAlignment(unsigned NumBits, const GlobalObject *GO = nullptr) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
-  const MCExpr *lowerConstant(const Constant *CV);
+  virtual const MCExpr *lowerConstant(const Constant *CV);
 
   /// \brief Print a general LLVM constant to the .s file.
   void EmitGlobalConstant(const DataLayout &DL, const Constant *CV);
@@ -441,9 +484,11 @@ public:
   /// Get the value for DW_AT_APPLE_isa. Zero if no isa encoding specified.
   virtual unsigned getISAEncoding() { return 0; }
 
-  /// EmitDwarfRegOp - Emit a dwarf register operation.
-  virtual void EmitDwarfRegOp(ByteStreamer &BS,
-                              const MachineLocation &MLoc) const;
+  /// Emit the directive and value for debug thread local expression
+  ///
+  /// \p Value - The value to emit.
+  /// \p Size - The size of the integer (in bytes) to emit.
+  virtual void EmitDebugValue(const MCExpr *Value, unsigned Size) const;
 
   //===------------------------------------------------------------------===//
   // Dwarf Lowering Routines
@@ -453,7 +498,16 @@ public:
   void emitCFIInstruction(const MCCFIInstruction &Inst) const;
 
   /// \brief Emit Dwarf abbreviation table.
-  void emitDwarfAbbrevs(const std::vector<DIEAbbrev *>& Abbrevs) const;
+  template <typename T> void emitDwarfAbbrevs(const T &Abbrevs) const {
+    // For each abbreviation.
+    for (const auto &Abbrev : Abbrevs)
+      emitDwarfAbbrev(*Abbrev);
+
+    // Mark end of abbreviations.
+    EmitULEB128(0, "EOM(3)");
+  }
+
+  void emitDwarfAbbrev(const DIEAbbrev &Abbrev) const;
 
   /// \brief Recursively emit Dwarf DIE tree.
   void emitDwarfDIE(const DIE &Die) const;
@@ -542,6 +596,9 @@ private:
   void EmitXXStructorList(const DataLayout &DL, const Constant *List,
                           bool isCtor);
   GCMetadataPrinter *GetOrCreateGCPrinter(GCStrategy &C);
+  /// Emit GlobalAlias or GlobalIFunc.
+  void emitGlobalIndirectSymbol(Module &M,
+                                const GlobalIndirectSymbol& GIS);
 };
 }
 

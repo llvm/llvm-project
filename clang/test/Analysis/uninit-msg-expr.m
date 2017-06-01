@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region -verify %s
 
 //===----------------------------------------------------------------------===//
 // The following code is reduced using delta-debugging from
@@ -52,5 +52,5 @@ unsigned f2() {
 void f3() {
   NSMutableArray *aArray = [NSArray array];
   NSString *aString;
-  [aArray addObject:aString]; // expected-warning {{Argument in message expression is an uninitialized value}}
+  [aArray addObject:aString]; // expected-warning {{1st argument in message expression is an uninitialized value}}
 }

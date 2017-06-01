@@ -40,11 +40,11 @@ class TextTokenRetokenizer {
 
   /// A position in \c Toks.
   struct Position {
-    unsigned CurToken;
     const char *BufferStart;
     const char *BufferEnd;
     const char *BufferPtr;
     SourceLocation BufferStartLoc;
+    unsigned CurToken;
   };
 
   /// Current position in Toks.

@@ -1,6 +1,6 @@
 // Test that the montavista gcc-toolchain is correctly detected
 //
-// RUN: %clang -print-libgcc-file-name 2>&1 \
+// RUN: %clang -rtlib=platform -print-libgcc-file-name 2>&1 \
 // RUN:     --target=i686-montavista-linux \
 // RUN:     --gcc-toolchain=%S/Inputs/montavista_i686_tree/usr \
 // RUN:   | FileCheck %s

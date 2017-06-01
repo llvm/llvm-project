@@ -1,15 +1,26 @@
-; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crashcalls -silence-passes > /dev/null
-; RUN: llvm-dis %t-reduced-simplified.bc -o - | FileCheck %s
 ; REQUIRES: loadable_module
-
+; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crashcalls -silence-passes -disable-namedmd-remove -disable-strip-debuginfo -disable-strip-debug-types > /dev/null
+; RUN: llvm-dis %t-reduced-simplified.bc -o - | FileCheck %s
+;
+; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t-nodebug -bugpoint-crashcalls -silence-passes -disable-namedmd-remove > /dev/null
+; RUN: llvm-dis %t-nodebug-reduced-simplified.bc -o - | FileCheck %s --check-prefix=NODEBUG
+;
+; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t-notype -bugpoint-crashcalls -silence-passes -disable-namedmd-remove -disable-strip-debuginfo > /dev/null
+; RUN: llvm-dis %t-notype-reduced-simplified.bc -o - | FileCheck %s --check-prefix=NOTYPE
+;
 ; Bugpoint should keep the call's metadata attached to the call.
 
 ; CHECK: call void @foo(), !dbg ![[LOC:[0-9]+]], !attach ![[CALL:[0-9]+]]
-; CHECK: ![[LOC]] = !DILocation(line: 104, column: 105, scope: ![[SCOPE:[0-9]+]])
-; CHECK: ![[SCOPE]] = distinct !DISubprogram(name: "test"
-; CHECK-SAME:                                file: ![[FILE:[0-9]+]]
-; CHECK: ![[FILE]] = !DIFile(filename: "source.c", directory: "/dir")
-; CHECK: ![[CALL]] = !{!"the call to foo"}
+; NODEBUG: call void @foo(), !attach ![[CALL:[0-9]+]]
+; NOTYPE: call void @foo(), !dbg ![[LOC:[0-9]+]], !attach ![[CALL:[0-9]+]]
+; NODEBUG-NOT: call void @foo(), !attach ![[CALL:[0-9]+]]
+; NOTYPE-NOT: !DIBasicType
+; NOTYPE: !DICompileUnit
+; NOTYPE-NOT: !DIBasicType
+; CHECK-DAG: ![[LOC]] = !DILocation(line: 104, column: 105, scope: ![[SCOPE:[0-9]+]])
+; CHECK-DAG: ![[SCOPE]] = distinct !DISubprogram(name: "test",{{.*}}file: ![[FILE:[0-9]+]]
+; CHECK-DAG: ![[FILE]] = !DIFile(filename: "source.c", directory: "/dir")
+; CHECK-DAG: ![[CALL]] = !{!"the call to foo"}
 
 %rust_task = type {}
 define void @test(i32* %a, i8* %b) {
@@ -24,6 +35,7 @@ define void @test(i32* %a, i8* %b) {
 declare void @foo()
 
 !llvm.module.flags = !{!17}
+!llvm.dbg.cu = !{!8}
 
 !0 = !{!"boring"}
 !1 = !{!"uninteresting"}
@@ -31,7 +43,8 @@ declare void @foo()
 !3 = !{!"noise"}
 !4 = !{!"filler"}
 
-!9 = distinct !DISubprogram(name: "test", file: !15)
+!8 = distinct !DICompileUnit(language: DW_LANG_C99, file: !15)
+!9 = distinct !DISubprogram(name: "test", file: !15, type: !18, unit: !8)
 !10 = !DILocation(line: 100, column: 101, scope: !9)
 !11 = !DILocation(line: 102, column: 103, scope: !9)
 !12 = !DILocation(line: 104, column: 105, scope: !9)
@@ -40,3 +53,6 @@ declare void @foo()
 !15 = !DIFile(filename: "source.c", directory: "/dir")
 !16 = !{}
 !17 = !{i32 1, !"Debug Info Version", i32 3}
+!18 = !DISubroutineType(types: !19)
+!19 = !{!20, !20}
+!20 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

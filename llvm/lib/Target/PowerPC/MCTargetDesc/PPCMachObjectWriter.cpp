@@ -79,7 +79,7 @@ static unsigned getFixupKindLog2Size(unsigned Kind) {
 }
 
 /// Translates generic PPC fixup kind to Mach-O/PPC relocation type enum.
-/// Outline based on PPCELFObjectWriter::GetRelocType().
+/// Outline based on PPCELFObjectWriter::getRelocType().
 static unsigned getRelocType(const MCValue &Target,
                              const MCFixupKind FixupKind, // from
                                                           // Fixup.getKind()
@@ -241,12 +241,12 @@ bool PPCMachObjectWriter::recordScatteredRelocation(
     if (FixupOffset > 0xffffff) {
       char Buffer[32];
       format("0x%x", FixupOffset).print(Buffer, sizeof(Buffer));
-      Asm.getContext().reportFatalError(Fixup.getLoc(),
+      Asm.getContext().reportError(Fixup.getLoc(),
                                   Twine("Section too large, can't encode "
                                         "r_address (") +
                                       Buffer + ") into 24 bits of scattered "
                                                "relocation entry.");
-      llvm_unreachable("fatal error returned?!");
+      return false;
     }
 
     // Is this supposed to follow MCTarget/PPCAsmBackend.cpp:adjustFixupValue()?

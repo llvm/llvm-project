@@ -9,7 +9,9 @@
 // CHECK: __tls_get_addr: static tls
 // CHECK: after
 
-// XFAIL: powerpc64, aarch64
+// XFAIL: aarch64
+// binutils 2.26 has a change that causes this test to fail on powerpc64.
+// UNSUPPORTED: powerpc64 
 
 #ifndef SHARED
 #include <stdio.h>

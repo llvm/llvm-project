@@ -1,18 +1,30 @@
-; RUN: opt < %s -S -loop-unroll -unroll-runtime=true | FileCheck %s
+; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefix=EPILOG
+; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 ; Tests for unrolling loops with run-time trip counts
 
-; CHECK: %xtraiter = and i32 %n
-; CHECK:  %lcmp.mod = icmp ne i32 %xtraiter, 0
-; CHECK:  br i1 %lcmp.mod, label %for.body.prol, label %for.body.preheader.split
+; EPILOG: %xtraiter = and i32 %n
+; EPILOG:  %lcmp.mod = icmp ne i32 %xtraiter, 0
+; EPILOG:  br i1 %lcmp.mod, label %for.body.epil.preheader, label %for.end.loopexit
 
-; CHECK: for.body.prol:
-; CHECK: %indvars.iv.prol = phi i64 [ %indvars.iv.next.prol, %for.body.prol ], [ 0, %for.body.preheader ]
-; CHECK:  %prol.iter.sub = sub i32 %prol.iter, 1
-; CHECK:  %prol.iter.cmp = icmp ne i32 %prol.iter.sub, 0
-; CHECK:  br i1 %prol.iter.cmp, label %for.body.prol, label %for.body.preheader.split, !llvm.loop !0
+; PROLOG: %xtraiter = and i32 %n
+; PROLOG:  %lcmp.mod = icmp ne i32 %xtraiter, 0
+; PROLOG:  br i1 %lcmp.mod, label %for.body.prol.preheader, label %for.body.prol.loopexit
+
+; EPILOG: for.body.epil:
+; EPILOG: %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %for.body.epil ],  [ %indvars.iv.unr, %for.body.epil.preheader ]
+; EPILOG:  %epil.iter.sub = sub i32 %epil.iter, 1
+; EPILOG:  %epil.iter.cmp = icmp ne i32 %epil.iter.sub, 0
+; EPILOG:  br i1 %epil.iter.cmp, label %for.body.epil, label %for.end.loopexit.epilog-lcssa, !llvm.loop !0
+
+; PROLOG: for.body.prol:
+; PROLOG: %indvars.iv.prol = phi i64 [ %indvars.iv.next.prol, %for.body.prol ], [ 0, %for.body.prol.preheader ]
+; PROLOG:  %prol.iter.sub = sub i32 %prol.iter, 1
+; PROLOG:  %prol.iter.cmp = icmp ne i32 %prol.iter.sub, 0
+; PROLOG:  br i1 %prol.iter.cmp, label %for.body.prol, label %for.body.prol.loopexit.unr-lcssa, !llvm.loop !0
+
 
 define i32 @test(i32* nocapture %a, i32 %n) nounwind uwtable readonly {
 entry:
@@ -39,8 +51,11 @@ for.end:                                          ; preds = %for.body, %entry
 ; Still try to completely unroll loops with compile-time trip counts
 ; even if the -unroll-runtime is specified
 
-; CHECK: for.body:
-; CHECK-NOT: for.body.prol:
+; EPILOG: for.body:
+; EPILOG-NOT: for.body.epil:
+
+; PROLOG: for.body:
+; PROLOG-NOT: for.body.prol:
 
 define i32 @test1(i32* nocapture %a) nounwind uwtable readonly {
 entry:
@@ -64,7 +79,8 @@ for.end:                                          ; preds = %for.body
 ; This is test 2007-05-09-UnknownTripCount.ll which can be unrolled now
 ; if the -unroll-runtime option is turned on
 
-; CHECK: bb72.2:
+; EPILOG: bb72.2:
+; PROLOG: bb72.2:
 
 define void @foo(i32 %trips) {
 entry:
@@ -86,8 +102,11 @@ cond_true138:
 
 ; Test run-time unrolling for a loop that counts down by -2.
 
-; CHECK: for.body.prol:
-; CHECK: br i1 %prol.iter.cmp, label %for.body.prol, label %for.body.preheader.split
+; EPILOG: for.body.epil:
+; EPILOG: br i1 %epil.iter.cmp, label %for.body.epil, label %for.cond.for.end_crit_edge.epilog-lcssa
+
+; PROLOG: for.body.prol:
+; PROLOG: br i1 %prol.iter.cmp, label %for.body.prol, label %for.body.prol.loopexit
 
 define zeroext i16 @down(i16* nocapture %p, i32 %len) nounwind uwtable readonly {
 entry:
@@ -116,8 +135,11 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 }
 
 ; Test run-time unrolling disable metadata.
-; CHECK: for.body:
-; CHECK-NOT: for.body.prol:
+; EPILOG: for.body:
+; EPILOG-NOT: for.body.epil:
+
+; PROLOG: for.body:
+; PROLOG-NOT: for.body.prol:
 
 define zeroext i16 @test2(i16* nocapture %p, i32 %len) nounwind uwtable readonly {
 entry:
@@ -148,6 +170,8 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.unroll.runtime.disable"}
 
-; CHECK: !0 = distinct !{!0, !1}
-; CHECK: !1 = !{!"llvm.loop.unroll.disable"}
+; EPILOG: !0 = distinct !{!0, !1}
+; EPILOG: !1 = !{!"llvm.loop.unroll.disable"}
 
+; PROLOG: !0 = distinct !{!0, !1}
+; PROLOG: !1 = !{!"llvm.loop.unroll.disable"}

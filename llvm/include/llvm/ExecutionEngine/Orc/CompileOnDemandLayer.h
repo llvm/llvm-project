@@ -15,17 +15,35 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_COMPILEONDEMANDLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_COMPILEONDEMANDLAYER_H
 
-#include "IndirectionUtils.h"
-#include "LambdaResolver.h"
-#include "LogicalDylib.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
-#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
+#include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <functional>
+#include <iterator>
 #include <list>
 #include <memory>
 #include <set>
-
-#include "llvm/Support/Debug.h"
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 namespace orc {
@@ -38,18 +56,17 @@ namespace orc {
 /// of the function body from the original module. The extracted body is then
 /// compiled and executed.
 template <typename BaseLayerT,
-          typename CompileCallbackMgrT = JITCompileCallbackManagerBase,
-          typename IndirectStubsMgrT = IndirectStubsManagerBase>
+          typename CompileCallbackMgrT = JITCompileCallbackManager,
+          typename IndirectStubsMgrT = IndirectStubsManager>
 class CompileOnDemandLayer {
 private:
-
   template <typename MaterializerFtor>
   class LambdaMaterializer final : public ValueMaterializer {
   public:
     LambdaMaterializer(MaterializerFtor M) : M(std::move(M)) {}
-    Value* materializeValueFor(Value *V) final {
-      return M(V);
-    }
+
+    Value *materialize(Value *V) final { return M(V); }
+
   private:
     MaterializerFtor M;
   };
@@ -62,75 +79,111 @@ private:
 
   typedef typename BaseLayerT::ModuleSetHandleT BaseLayerModuleSetHandleT;
 
-  class ModuleOwner {
+  // Provide type-erasure for the Modules and MemoryManagers.
+  template <typename ResourceT>
+  class ResourceOwner {
   public:
-    ModuleOwner() = default;
-    ModuleOwner(const ModuleOwner&) = delete;
-    ModuleOwner& operator=(const ModuleOwner&) = delete;
-    virtual ~ModuleOwner() { }
-    virtual Module& getModule() const = 0;
+    ResourceOwner() = default;
+    ResourceOwner(const ResourceOwner&) = delete;
+    ResourceOwner& operator=(const ResourceOwner&) = delete;
+    virtual ~ResourceOwner() = default;
+
+    virtual ResourceT& getResource() const = 0;
   };
 
-  template <typename ModulePtrT>
-  class ModuleOwnerImpl : public ModuleOwner {
+  template <typename ResourceT, typename ResourcePtrT>
+  class ResourceOwnerImpl : public ResourceOwner<ResourceT> {
   public:
-    ModuleOwnerImpl(ModulePtrT ModulePtr) : ModulePtr(std::move(ModulePtr)) {}
-    Module& getModule() const override { return *ModulePtr; }
+    ResourceOwnerImpl(ResourcePtrT ResourcePtr)
+      : ResourcePtr(std::move(ResourcePtr)) {}
+
+    ResourceT& getResource() const override { return *ResourcePtr; }
+
   private:
-    ModulePtrT ModulePtr;
+    ResourcePtrT ResourcePtr;
   };
 
-  template <typename ModulePtrT>
-  std::unique_ptr<ModuleOwner> wrapOwnership(ModulePtrT ModulePtr) {
-    return llvm::make_unique<ModuleOwnerImpl<ModulePtrT>>(std::move(ModulePtr));
+  template <typename ResourceT, typename ResourcePtrT>
+  std::unique_ptr<ResourceOwner<ResourceT>>
+  wrapOwnership(ResourcePtrT ResourcePtr) {
+    typedef ResourceOwnerImpl<ResourceT, ResourcePtrT> RO;
+    return llvm::make_unique<RO>(std::move(ResourcePtr));
   }
 
-  struct LogicalModuleResources {
-    std::unique_ptr<ModuleOwner> SourceModuleOwner;
-    std::set<const Function*> StubsToClone;
+  class StaticGlobalRenamer {
+  public:
+    StaticGlobalRenamer() = default;
+    StaticGlobalRenamer(StaticGlobalRenamer &&) = default;
+    StaticGlobalRenamer &operator=(StaticGlobalRenamer &&) = default;
+
+    void rename(Module &M) {
+      for (auto &F : M)
+        if (F.hasLocalLinkage())
+          F.setName("$static." + Twine(NextId++));
+      for (auto &G : M.globals())
+        if (G.hasLocalLinkage())
+          G.setName("$static." + Twine(NextId++));
+    }
+
+  private:
+    unsigned NextId = 0;
+  };
+
+  struct LogicalDylib {
+    typedef std::function<JITSymbol(const std::string&)> SymbolResolverFtor;
+
+    typedef std::function<typename BaseLayerT::ModuleSetHandleT(
+                            BaseLayerT&,
+                            std::unique_ptr<Module>,
+                            std::unique_ptr<JITSymbolResolver>)>
+      ModuleAdderFtor;
+
+    struct SourceModuleEntry {
+      std::unique_ptr<ResourceOwner<Module>> SourceMod;
+      std::set<Function*> StubsToClone;
+    };
+
+    typedef std::vector<SourceModuleEntry> SourceModulesList;
+    typedef typename SourceModulesList::size_type SourceModuleHandle;
+
+    SourceModuleHandle
+    addSourceModule(std::unique_ptr<ResourceOwner<Module>> M) {
+      SourceModuleHandle H = SourceModules.size();
+      SourceModules.push_back(SourceModuleEntry());
+      SourceModules.back().SourceMod = std::move(M);
+      return H;
+    }
+
+    Module& getSourceModule(SourceModuleHandle H) {
+      return SourceModules[H].SourceMod->getResource();
+    }
+
+    std::set<Function*>& getStubsToClone(SourceModuleHandle H) {
+      return SourceModules[H].StubsToClone;
+    }
+
+    JITSymbol findSymbol(BaseLayerT &BaseLayer, const std::string &Name,
+                         bool ExportedSymbolsOnly) {
+      if (auto Sym = StubsMgr->findStub(Name, ExportedSymbolsOnly))
+        return Sym;
+      for (auto BLH : BaseLayerHandles)
+        if (auto Sym = BaseLayer.findSymbolIn(BLH, Name, ExportedSymbolsOnly))
+          return Sym;
+      return nullptr;
+    }
+
+    std::unique_ptr<JITSymbolResolver> ExternalSymbolResolver;
+    std::unique_ptr<ResourceOwner<RuntimeDyld::MemoryManager>> MemMgr;
     std::unique_ptr<IndirectStubsMgrT> StubsMgr;
-
-    LogicalModuleResources() = default;
-
-    // Explicit move constructor to make MSVC happy.
-    LogicalModuleResources(LogicalModuleResources &&Other)
-        : SourceModuleOwner(std::move(Other.SourceModuleOwner)),
-          StubsToClone(std::move(Other.StubsToClone)),
-          StubsMgr(std::move(Other.StubsMgr)) {}
-
-    // Explicit move assignment to make MSVC happy.
-    LogicalModuleResources& operator=(LogicalModuleResources &&Other) {
-      SourceModuleOwner = std::move(Other.SourceModuleOwner);
-      StubsToClone = std::move(Other.StubsToClone);
-      StubsMgr = std::move(Other.StubsMgr);
-    }
-
-    JITSymbol findSymbol(StringRef Name, bool ExportedSymbolsOnly) {
-      if (Name.endswith("$stub_ptr") && !ExportedSymbolsOnly) {
-        assert(!ExportedSymbolsOnly && "Stubs are never exported");
-        return StubsMgr->findPointer(Name.drop_back(9));
-      }
-      return StubsMgr->findStub(Name, ExportedSymbolsOnly);
-    }
-
+    StaticGlobalRenamer StaticRenamer;
+    ModuleAdderFtor ModuleAdder;
+    SourceModulesList SourceModules;
+    std::vector<BaseLayerModuleSetHandleT> BaseLayerHandles;
   };
 
-
-
-  struct LogicalDylibResources {
-    typedef std::function<RuntimeDyld::SymbolInfo(const std::string&)>
-      SymbolResolverFtor;
-    SymbolResolverFtor ExternalSymbolResolver;
-  };
-
-  typedef LogicalDylib<BaseLayerT, LogicalModuleResources,
-                       LogicalDylibResources> CODLogicalDylib;
-
-  typedef typename CODLogicalDylib::LogicalModuleHandle LogicalModuleHandle;
-  typedef std::list<CODLogicalDylib> LogicalDylibList;
+  typedef std::list<LogicalDylib> LogicalDylibList;
 
 public:
-
   /// @brief Handle to a set of loaded modules.
   typedef typename LogicalDylibList::iterator ModuleSetHandleT;
 
@@ -146,7 +199,7 @@ public:
                        CompileCallbackMgrT &CallbackMgr,
                        IndirectStubsManagerBuilderT CreateIndirectStubsManager,
                        bool CloneStubsIntoPartitions = true)
-      : BaseLayer(BaseLayer),  Partition(Partition),
+      : BaseLayer(BaseLayer), Partition(std::move(Partition)),
         CompileCallbackMgr(CallbackMgr),
         CreateIndirectStubsManager(std::move(CreateIndirectStubsManager)),
         CloneStubsIntoPartitions(CloneStubsIntoPartitions) {}
@@ -158,15 +211,20 @@ public:
                                 MemoryManagerPtrT MemMgr,
                                 SymbolResolverPtrT Resolver) {
 
-    assert(MemMgr == nullptr &&
-           "User supplied memory managers not supported with COD yet.");
+    LogicalDylibs.push_back(LogicalDylib());
+    auto &LD = LogicalDylibs.back();
+    LD.ExternalSymbolResolver = std::move(Resolver);
+    LD.StubsMgr = CreateIndirectStubsManager();
 
-    LogicalDylibs.push_back(CODLogicalDylib(BaseLayer));
-    auto &LDResources = LogicalDylibs.back().getDylibResources();
+    auto &MemMgrRef = *MemMgr;
+    LD.MemMgr = wrapOwnership<RuntimeDyld::MemoryManager>(std::move(MemMgr));
 
-    LDResources.ExternalSymbolResolver =
-      [Resolver](const std::string &Name) {
-        return Resolver->findSymbol(Name);
+    LD.ModuleAdder =
+      [&MemMgrRef](BaseLayerT &B, std::unique_ptr<Module> M,
+                   std::unique_ptr<JITSymbolResolver> R) {
+        std::vector<std::unique_ptr<Module>> Ms;
+        Ms.push_back(std::move(M));
+        return B.addModuleSet(std::move(Ms), &MemMgrRef, std::move(R));
       };
 
     // Process each of the modules in this module set.
@@ -190,9 +248,12 @@ public:
   /// @return A handle for the given named symbol, if it exists.
   JITSymbol findSymbol(StringRef Name, bool ExportedSymbolsOnly) {
     for (auto LDI = LogicalDylibs.begin(), LDE = LogicalDylibs.end();
-         LDI != LDE; ++LDI)
-      if (auto Symbol = findSymbolIn(LDI, Name, ExportedSymbolsOnly))
-        return Symbol;
+         LDI != LDE; ++LDI) {
+      if (auto Sym = LDI->StubsMgr->findStub(Name, ExportedSymbolsOnly))
+        return Sym;
+      if (auto Sym = findSymbolIn(LDI, Name, ExportedSymbolsOnly))
+        return Sym;
+    }
     return BaseLayer.findSymbol(Name, ExportedSymbolsOnly);
   }
 
@@ -200,34 +261,53 @@ public:
   ///        below this one.
   JITSymbol findSymbolIn(ModuleSetHandleT H, const std::string &Name,
                          bool ExportedSymbolsOnly) {
-    return H->findSymbol(Name, ExportedSymbolsOnly);
+    return H->findSymbol(BaseLayer, Name, ExportedSymbolsOnly);
+  }
+
+  /// @brief Update the stub for the given function to point at FnBodyAddr.
+  /// This can be used to support re-optimization.
+  /// @return true if the function exists and the stub is updated, false
+  ///         otherwise.
+  //
+  // FIXME: We should track and free associated resources (unused compile
+  //        callbacks, uncompiled IR, and no-longer-needed/reachable function
+  //        implementations).
+  // FIXME: Return Error once the JIT APIs are Errorized.
+  bool updatePointer(std::string FuncName, JITTargetAddress FnBodyAddr) {
+    //Find out which logical dylib contains our symbol
+    auto LDI = LogicalDylibs.begin();
+    for (auto LDE = LogicalDylibs.end(); LDI != LDE; ++LDI) {
+      if (auto LMResources = LDI->getLogicalModuleResourcesForSymbol(FuncName, false)) {
+        Module &SrcM = LMResources->SourceModule->getResource();
+        std::string CalledFnName = mangle(FuncName, SrcM.getDataLayout());
+        if (auto EC = LMResources->StubsMgr->updatePointer(CalledFnName, FnBodyAddr))
+          return false;
+        else
+          return true;
+      }
+    }
+    return false;
   }
 
 private:
-
   template <typename ModulePtrT>
-  void addLogicalModule(CODLogicalDylib &LD, ModulePtrT SrcMPtr) {
+  void addLogicalModule(LogicalDylib &LD, ModulePtrT SrcMPtr) {
+
+    // Rename all static functions / globals to $static.X :
+    // This will unique the names across all modules in the logical dylib,
+    // simplifying symbol lookup.
+    LD.StaticRenamer.rename(*SrcMPtr);
 
     // Bump the linkage and rename any anonymous/privote members in SrcM to
     // ensure that everything will resolve properly after we partition SrcM.
     makeAllSymbolsExternallyAccessible(*SrcMPtr);
 
     // Create a logical module handle for SrcM within the logical dylib.
-    auto LMH = LD.createLogicalModule();
-    auto &LMResources =  LD.getLogicalModuleResources(LMH);
+    Module &SrcM = *SrcMPtr;
+    auto LMId = LD.addSourceModule(wrapOwnership<Module>(std::move(SrcMPtr)));
 
-    LMResources.SourceModuleOwner = wrapOwnership(std::move(SrcMPtr));
-
-    Module &SrcM = LMResources.SourceModuleOwner->getModule();
-
-    // Create the GlobalValues module.
+    // Create stub functions.
     const DataLayout &DL = SrcM.getDataLayout();
-    auto GVsM = llvm::make_unique<Module>((SrcM.getName() + ".globals").str(),
-                                          SrcM.getContext());
-    GVsM->setDataLayout(DL);
-
-    // Create function stubs.
-    ValueToValueMapTy VMap;
     {
       typename IndirectStubsMgrT::StubInitsMap StubInits;
       for (auto &F : SrcM) {
@@ -235,29 +315,48 @@ private:
         if (F.isDeclaration())
           continue;
 
+        // Skip weak functions for which we already have definitions.
+        auto MangledName = mangle(F.getName(), DL);
+        if (F.hasWeakLinkage() || F.hasLinkOnceLinkage())
+          if (auto Sym = LD.findSymbol(BaseLayer, MangledName, false))
+            continue;
+
         // Record all functions defined by this module.
         if (CloneStubsIntoPartitions)
-          LMResources.StubsToClone.insert(&F);
+          LD.getStubsToClone(LMId).insert(&F);
 
         // Create a callback, associate it with the stub for the function,
         // and set the compile action to compile the partition containing the
         // function.
         auto CCInfo = CompileCallbackMgr.getCompileCallback();
-        StubInits[mangle(F.getName(), DL)] =
+        StubInits[MangledName] =
           std::make_pair(CCInfo.getAddress(),
-                         JITSymbolBase::flagsFromGlobalValue(F));
-        CCInfo.setCompileAction([this, &LD, LMH, &F]() {
-          return this->extractAndCompile(LD, LMH, F);
+                         JITSymbolFlags::fromGlobalValue(F));
+        CCInfo.setCompileAction([this, &LD, LMId, &F]() {
+          return this->extractAndCompile(LD, LMId, F);
         });
       }
 
-      LMResources.StubsMgr = CreateIndirectStubsManager();
-      auto EC = LMResources.StubsMgr->createStubs(StubInits);
+      auto EC = LD.StubsMgr->createStubs(StubInits);
       (void)EC;
       // FIXME: This should be propagated back to the user. Stub creation may
       //        fail for remote JITs.
       assert(!EC && "Error generating stubs");
     }
+
+    // If this module doesn't contain any globals, aliases, or module flags then
+    // we can bail out early and avoid the overhead of creating and managing an
+    // empty globals module.
+    if (SrcM.global_empty() && SrcM.alias_empty() &&
+        !SrcM.getModuleFlagsMetadata())
+      return;
+
+    // Create the GlobalValues module.
+    auto GVsM = llvm::make_unique<Module>((SrcM.getName() + ".globals").str(),
+                                          SrcM.getContext());
+    GVsM->setDataLayout(DL);
+
+    ValueToValueMapTy VMap;
 
     // Clone global variable decls.
     for (auto &GV : SrcM.globals())
@@ -269,12 +368,15 @@ private:
       if (!VMap.count(&A))
         cloneGlobalAliasDecl(*GVsM, A, VMap);
 
+    // Clone the module flags.
+    cloneModuleFlagsMetadata(*GVsM, SrcM, VMap);
+
     // Now we need to clone the GV and alias initializers.
 
     // Initializers may refer to functions declared (but not defined) in this
     // module. Build a materializer to clone decls on demand.
     auto Materializer = createLambdaMaterializer(
-      [this, &GVsM, &LMResources](Value *V) -> Value* {
+      [this, &LD, &GVsM](Value *V) -> Value* {
         if (auto *F = dyn_cast<Function>(V)) {
           // Decls in the original module just get cloned.
           if (F->isDeclaration())
@@ -285,7 +387,7 @@ private:
           // instead.
           const DataLayout &DL = GVsM->getDataLayout();
           std::string FName = mangle(F->getName(), DL);
-          auto StubSym = LMResources.StubsMgr->findStub(FName, false);
+          auto StubSym = LD.StubsMgr->findStub(FName, false);
           unsigned PtrBitWidth = DL.getPointerTypeSizeInBits(F->getType());
           ConstantInt *StubAddr =
             ConstantInt::get(GVsM->getContext(),
@@ -317,23 +419,20 @@ private:
 
     // Build a resolver for the globals module and add it to the base layer.
     auto GVsResolver = createLambdaResolver(
-        [&LD, LMH](const std::string &Name) {
-          auto &LMResources = LD.getLogicalModuleResources(LMH);
-          if (auto Sym = LMResources.StubsMgr->findStub(Name, false))
-            return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
-          return LD.getDylibResources().ExternalSymbolResolver(Name);
+        [this, &LD, LMId](const std::string &Name) {
+          if (auto Sym = LD.StubsMgr->findStub(Name, false))
+            return Sym;
+          if (auto Sym = LD.findSymbol(BaseLayer, Name, false))
+            return Sym;
+          return LD.ExternalSymbolResolver->findSymbolInLogicalDylib(Name);
         },
-        [](const std::string &Name) {
-          return RuntimeDyld::SymbolInfo(nullptr);
+        [&LD](const std::string &Name) {
+          return LD.ExternalSymbolResolver->findSymbol(Name);
         });
 
-    std::vector<std::unique_ptr<Module>> GVsMSet;
-    GVsMSet.push_back(std::move(GVsM));
-    auto GVsH =
-      BaseLayer.addModuleSet(std::move(GVsMSet),
-                             llvm::make_unique<SectionMemoryManager>(),
-                             std::move(GVsResolver));
-    LD.addToLogicalModule(LMH, GVsH);
+    auto GVsH = LD.ModuleAdder(BaseLayer, std::move(GVsM),
+                               std::move(GVsResolver));
+    LD.BaseLayerHandles.push_back(GVsH);
   }
 
   static std::string mangle(StringRef Name, const DataLayout &DL) {
@@ -345,11 +444,11 @@ private:
     return MangledName;
   }
 
-  TargetAddress extractAndCompile(CODLogicalDylib &LD,
-                                  LogicalModuleHandle LMH,
-                                  Function &F) {
-    auto &LMResources = LD.getLogicalModuleResources(LMH);
-    Module &SrcM = LMResources.SourceModuleOwner->getModule();
+  JITTargetAddress
+  extractAndCompile(LogicalDylib &LD,
+                    typename LogicalDylib::SourceModuleHandle LMId,
+                    Function &F) {
+    Module &SrcM = LD.getSourceModule(LMId);
 
     // If F is a declaration we must already have compiled it.
     if (F.isDeclaration())
@@ -359,15 +458,15 @@ private:
     std::string CalledFnName = mangle(F.getName(), SrcM.getDataLayout());
 
     auto Part = Partition(F);
-    auto PartH = emitPartition(LD, LMH, Part);
+    auto PartH = emitPartition(LD, LMId, Part);
 
-    TargetAddress CalledAddr = 0;
+    JITTargetAddress CalledAddr = 0;
     for (auto *SubF : Part) {
       std::string FnName = mangle(SubF->getName(), SrcM.getDataLayout());
       auto FnBodySym = BaseLayer.findSymbolIn(PartH, FnName, false);
       assert(FnBodySym && "Couldn't find function body.");
 
-      TargetAddress FnBodyAddr = FnBodySym.getAddress();
+      JITTargetAddress FnBodyAddr = FnBodySym.getAddress();
 
       // If this is the function we're calling record the address so we can
       // return it from this function.
@@ -375,7 +474,7 @@ private:
         CalledAddr = FnBodyAddr;
 
       // Update the function body pointer for the stub.
-      if (auto EC = LMResources.StubsMgr->updatePointer(FnName, FnBodyAddr))
+      if (auto EC = LD.StubsMgr->updatePointer(FnName, FnBodyAddr))
         return 0;
     }
 
@@ -383,11 +482,11 @@ private:
   }
 
   template <typename PartitionT>
-  BaseLayerModuleSetHandleT emitPartition(CODLogicalDylib &LD,
-                                          LogicalModuleHandle LMH,
-                                          const PartitionT &Part) {
-    auto &LMResources = LD.getLogicalModuleResources(LMH);
-    Module &SrcM = LMResources.SourceModuleOwner->getModule();
+  BaseLayerModuleSetHandleT
+  emitPartition(LogicalDylib &LD,
+                typename LogicalDylib::SourceModuleHandle LMId,
+                const PartitionT &Part) {
+    Module &SrcM = LD.getSourceModule(LMId);
 
     // Create the module.
     std::string NewName = SrcM.getName();
@@ -400,14 +499,14 @@ private:
     M->setDataLayout(SrcM.getDataLayout());
     ValueToValueMapTy VMap;
 
-    auto Materializer = createLambdaMaterializer([this, &LMResources, &M,
+    auto Materializer = createLambdaMaterializer([this, &LD, &LMId, &M,
                                                   &VMap](Value *V) -> Value * {
       if (auto *GV = dyn_cast<GlobalVariable>(V))
         return cloneGlobalVariableDecl(*M, *GV);
 
       if (auto *F = dyn_cast<Function>(V)) {
         // Check whether we want to clone an available_externally definition.
-        if (!LMResources.StubsToClone.count(F))
+        if (!LD.getStubsToClone(LMId).count(F))
           return cloneFunctionDecl(*M, *F);
 
         // Ok - we want an inlinable stub. For that to work we need a decl
@@ -446,24 +545,17 @@ private:
       moveFunctionBody(*F, VMap, &Materializer);
 
     // Create memory manager and symbol resolver.
-    auto MemMgr = llvm::make_unique<SectionMemoryManager>();
     auto Resolver = createLambdaResolver(
-        [this, &LD, LMH](const std::string &Name) {
-          if (auto Symbol = LD.findSymbolInternally(LMH, Name))
-            return RuntimeDyld::SymbolInfo(Symbol.getAddress(),
-                                           Symbol.getFlags());
-          return LD.getDylibResources().ExternalSymbolResolver(Name);
+        [this, &LD, LMId](const std::string &Name) {
+          if (auto Sym = LD.findSymbol(BaseLayer, Name, false))
+            return Sym;
+          return LD.ExternalSymbolResolver->findSymbolInLogicalDylib(Name);
         },
-        [this, &LD, LMH](const std::string &Name) {
-          if (auto Symbol = LD.findSymbolInternally(LMH, Name))
-            return RuntimeDyld::SymbolInfo(Symbol.getAddress(),
-                                           Symbol.getFlags());
-          return RuntimeDyld::SymbolInfo(nullptr);
+        [this, &LD](const std::string &Name) {
+          return LD.ExternalSymbolResolver->findSymbol(Name);
         });
-    std::vector<std::unique_ptr<Module>> PartMSet;
-    PartMSet.push_back(std::move(M));
-    return BaseLayer.addModuleSet(std::move(PartMSet), std::move(MemMgr),
-                                  std::move(Resolver));
+
+    return LD.ModuleAdder(BaseLayer, std::move(M), std::move(Resolver));
   }
 
   BaseLayerT &BaseLayer;
@@ -475,7 +567,7 @@ private:
   bool CloneStubsIntoPartitions;
 };
 
-} // End namespace orc.
-} // End namespace llvm.
+} // end namespace orc
+} // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_COMPILEONDEMANDLAYER_H

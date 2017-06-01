@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin10 -mconstructor-aliases -O1 -disable-llvm-optzns | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin10 -mconstructor-aliases -O1 -disable-llvm-passes | FileCheck %s
 
 struct Member {
   ~Member();

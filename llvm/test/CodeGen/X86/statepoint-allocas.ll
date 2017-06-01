@@ -16,12 +16,12 @@ define i32 addrspace(1)* @test(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK: movq   %rdi, (%rsp)
 ; CHECK: callq return_i1
 ; CHECK: movq   (%rsp), %rax
-; CHECK: popq   %rdx
+; CHECK: popq   %rcx
 ; CHECK: retq
 entry:
   %alloca = alloca i32 addrspace(1)*, align 8
   store i32 addrspace(1)* %ptr, i32 addrspace(1)** %alloca
-  call i32 (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)** %alloca)
+  call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)** %alloca)
   %rel = load i32 addrspace(1)*, i32 addrspace(1)** %alloca
   ret i32 addrspace(1)* %rel
 }
@@ -33,22 +33,22 @@ define i32 addrspace(1)* @test2(i32 addrspace(1)* %ptr) gc "statepoint-example" 
 ; CHECK: movq   %rdi, (%rsp)
 ; CHECK: callq return_i1
 ; CHECK: xorl   %eax, %eax
-; CHECK: popq   %rdx
+; CHECK: popq   %rcx
 ; CHECK: retq
 entry:
   %alloca = alloca i32 addrspace(1)*, align 8
   store i32 addrspace(1)* %ptr, i32 addrspace(1)** %alloca
-  call i32 (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 1, i32 addrspace(1)** %alloca)
+  call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 1, i32 addrspace(1)** %alloca)
   ret i32 addrspace(1)* null
 }
 
-declare i32 @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
 
 
 ; CHECK-LABEL: .section .llvm_stackmaps
 ; CHECK-NEXT:  __LLVM_StackMaps:
 ; Header
-; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 2
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
@@ -61,8 +61,10 @@ declare i32 @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32,
 ; Functions and stack size
 ; CHECK-NEXT:   .quad test
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad test2
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 1
 
 ; Large Constants
 ; Statepoint ID only
@@ -70,7 +72,7 @@ declare i32 @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32,
 
 ; Callsites
 ; The GC one
-; CHECK: .long	.Ltmp1-test
+; CHECK: .long	.Ltmp0-test
 ; CHECK: .short	0
 ; CHECK: .short	4
 ; SmallConstant (0)
@@ -96,10 +98,10 @@ declare i32 @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32,
 ; No Padding or LiveOuts
 ; CHECK: .short	0
 ; CHECK: .short	0
-; CHECK: .align	8
+; CHECK: .p2align	3
 
 ; The Deopt one
-; CHECK: .long	.Ltmp3-test2
+; CHECK: .long	.Ltmp1-test2
 ; CHECK: .short	0
 ; CHECK: .short	4
 ; SmallConstant (0)
@@ -126,5 +128,4 @@ declare i32 @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32,
 ; No Padding or LiveOuts
 ; CHECK: .short	0
 ; CHECK: .short	0
-; CHECK: .align	8
-
+; CHECK: .p2align	3

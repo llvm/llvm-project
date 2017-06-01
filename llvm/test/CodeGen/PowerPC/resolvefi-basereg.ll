@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 < %s | FileCheck %s
 
 ; Due to a bug in resolveFrameIndex we ended up with invalid addresses
 ; containing a base register 0.  Verify that this no longer happens.

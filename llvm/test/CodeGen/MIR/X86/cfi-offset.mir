@@ -1,5 +1,5 @@
-# RUN: llc -march=x86-64 -start-after branch-folder -stop-after branch-folder -o /dev/null %s | FileCheck %s
-# This test ensures that the MIR parser parses the .cfi_offset operands
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the cfi offset operands
 # correctly.
 
 --- |
@@ -31,9 +31,9 @@ body: |
     liveins: %ecx, %edi, %edx, %esi, %rbx
 
     PUSH64r killed %rbx, implicit-def %rsp, implicit %rsp
-    CFI_INSTRUCTION .cfi_def_cfa_offset 16
-    ; CHECK: CFI_INSTRUCTION .cfi_offset %rbx, -16
-    CFI_INSTRUCTION .cfi_offset %rbx, -16
+    CFI_INSTRUCTION def_cfa_offset 16
+    ; CHECK: CFI_INSTRUCTION offset %rbx, -16
+    CFI_INSTRUCTION offset %rbx, -16
     %ebx = COPY %edi, implicit-def %rbx
     %ebx = ADD32rr %ebx, killed %esi, implicit-def dead %eflags
     %ebx = ADD32rr %ebx, killed %edx, implicit-def dead %eflags

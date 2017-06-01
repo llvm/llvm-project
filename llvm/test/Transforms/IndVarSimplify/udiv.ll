@@ -127,12 +127,12 @@ declare i32 @atoi(i8* nocapture) nounwind readonly
 
 declare i32 @printf(i8* nocapture, ...) nounwind
 
-; IndVars shouldn't be afraid to emit a udiv here, since there's a udiv in
-; the original code.
+; IndVars doesn't emit a udiv in for.body.preheader since SCEVExpander::expand will
+; find out there's already a udiv in the original code.
 
 ; CHECK-LABEL: @foo(
 ; CHECK: for.body.preheader:
-; CHECK-NEXT: udiv
+; CHECK-NOT: udiv
 
 define void @foo(double* %p, i64 %n) nounwind {
 entry:

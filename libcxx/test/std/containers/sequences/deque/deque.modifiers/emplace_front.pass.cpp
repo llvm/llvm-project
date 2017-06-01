@@ -12,6 +12,7 @@
 // <deque>
 
 // template <class... Args> reference emplace_front(Args&&... args);
+// return type is 'reference' in C++17; 'void' before
 
 #include <deque>
 #include <cstddef>
@@ -20,6 +21,7 @@
 #include "test_macros.h"
 #include "../../../Emplaceable.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 
 template <class C>
 C
@@ -48,15 +50,21 @@ void
 test(C& c1)
 {
     typedef typename C::iterator I;
-    typedef typename C::reference Ref;
     std::size_t c1_osize = c1.size();
+#if TEST_STD_VER > 14
+    typedef typename C::reference Ref;
     Ref res_ref = c1.emplace_front(Emplaceable(1, 2.5));
+#else
+                  c1.emplace_front(Emplaceable(1, 2.5));
+#endif
     assert(c1.size() == c1_osize + 1);
     assert(distance(c1.begin(), c1.end())
                == static_cast<std::ptrdiff_t>(c1.size()));
     I i = c1.begin();
     assert(*i == Emplaceable(1, 2.5));
+#if TEST_STD_VER > 14
     assert(&res_ref == &(*i));
+#endif
 }
 
 template <class C>
@@ -83,5 +91,16 @@ int main()
     for (int i = 0; i < N; ++i)
         for (int j = 0; j < N; ++j)
             testN<std::deque<Emplaceable, min_allocator<Emplaceable>> >(rng[i], rng[j]);
+    }
+    {
+        std::deque<Tag_X, TaggingAllocator<Tag_X>> c;
+        c.emplace_front();
+        assert(c.size() == 1);
+        c.emplace_front(1, 2, 3);
+        assert(c.size() == 2);
+        c.emplace_front();
+        assert(c.size() == 3);
+        c.emplace_front(1, 2, 3);
+        assert(c.size() == 4);
     }
 }

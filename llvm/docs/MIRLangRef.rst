@@ -111,7 +111,6 @@ Here is an example of a YAML document that contains an LLVM module:
 
 .. code-block:: llvm
 
-     --- |
        define i32 @inc(i32* %x) {
        entry:
          %0 = load i32, i32* %x
@@ -119,7 +118,6 @@ Here is an example of a YAML document that contains an LLVM module:
          store i32 %1, i32* %x
          ret i32 %1
        }
-     ...
 
 .. _YAML block literal string: http://www.yaml.org/spec/1.2/spec.html#id2795688
 
@@ -129,7 +127,7 @@ Machine Functions
 The remaining YAML documents contain the machine functions. This is an example
 of such YAML document:
 
-.. code-block:: llvm
+.. code-block:: text
 
      ---
      name:            inc
@@ -172,7 +170,7 @@ A machine basic block is defined in a single block definition source construct
 that contains the block's ID.
 The example below defines two blocks that have an ID of zero and one:
 
-.. code-block:: llvm
+.. code-block:: text
 
     bb.0:
       <instructions>
@@ -182,7 +180,7 @@ The example below defines two blocks that have an ID of zero and one:
 A machine basic block can also have a name. It should be specified after the ID
 in the block's definition:
 
-.. code-block:: llvm
+.. code-block:: text
 
     bb.0.entry:       ; This block's name is "entry"
        <instructions>
@@ -196,7 +194,7 @@ Block References
 The machine basic blocks are identified by their ID numbers. Individual
 blocks are referenced using the following syntax:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %bb.<id>[.<name>]
 
@@ -213,7 +211,7 @@ Successors
 The machine basic block's successors have to be specified before any of the
 instructions:
 
-.. code-block:: llvm
+.. code-block:: text
 
     bb.0.entry:
       successors: %bb.1.then, %bb.2.else
@@ -227,7 +225,7 @@ The branch weights can be specified in brackets after the successor blocks.
 The example below defines a block that has two successors with branch weights
 of 32 and 16:
 
-.. code-block:: llvm
+.. code-block:: text
 
     bb.0.entry:
       successors: %bb.1.then(32), %bb.2.else(16)
@@ -240,7 +238,7 @@ Live In Registers
 The machine basic block's live in registers have to be specified before any of
 the instructions:
 
-.. code-block:: llvm
+.. code-block:: text
 
     bb.0.entry:
       liveins: %edi, %esi
@@ -255,7 +253,7 @@ Miscellaneous Attributes
 The attributes ``IsAddressTaken``, ``IsLandingPad`` and ``Alignment`` can be
 specified in brackets after the block's definition:
 
-.. code-block:: llvm
+.. code-block:: text
 
     bb.0.entry (address-taken):
       <instructions>
@@ -278,7 +276,7 @@ The instruction's name is usually specified before the operands. The example
 below shows an instance of the X86 ``RETQ`` instruction with a single machine
 operand:
 
-.. code-block:: llvm
+.. code-block:: text
 
     RETQ %eax
 
@@ -287,7 +285,7 @@ operands, the instruction's name has to be specified after them. The example
 below shows an instance of the AArch64 ``LDPXpost`` instruction with three
 defined register operands:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %sp, %fp, %lr = LDPXpost %sp, 2
 
@@ -303,7 +301,7 @@ Instruction Flags
 
 The flag ``frame-setup`` can be specified before the instruction's name:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %fp = frame-setup ADDXri %sp, 0, 0
 
@@ -321,13 +319,13 @@ but they can also be used in a number of other places, like the
 The physical registers are identified by their name. They use the following
 syntax:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %<name>
 
 The example below shows three X86 physical registers:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %eax
     %r15
@@ -336,13 +334,13 @@ The example below shows three X86 physical registers:
 The virtual registers are identified by their ID number. They use the following
 syntax:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %<id>
 
 Example:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %0
 
@@ -366,7 +364,7 @@ The immediate machine operands are untyped, 64-bit signed integers. The
 example below shows an instance of the X86 ``MOV32ri`` instruction that has an
 immediate machine operand ``-42``:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %eax = MOV32ri -42
 
@@ -384,14 +382,14 @@ machine operands. The register operands can also have optional
 and a reference to the tied register operand.
 The full syntax of a register operand is shown below:
 
-.. code-block:: llvm
+.. code-block:: text
 
     [<flags>] <register> [ :<subregister-idx-name> ] [ (tied-def <tied-op>) ]
 
 This example shows an instance of the X86 ``XOR32rr`` instruction that has
 5 register operands with different register flags:
 
-.. code-block:: llvm
+.. code-block:: text
 
   dead %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags, implicit-def %al
 
@@ -446,7 +444,7 @@ the subregister indices. The example below shows an instance of the ``COPY``
 pseudo instruction that uses the X86 ``sub_8bit`` subregister index to copy 8
 lower bits from the 32-bit virtual register 0 to the 8-bit virtual register 1:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %1 = COPY %0:sub_8bit
 
@@ -461,7 +459,7 @@ The global value machine operands reference the global values from the
 The example below shows an instance of the X86 ``MOV64rm`` instruction that has
 a global value operand named ``G``:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %rax = MOV64rm %rip, 1, _, @G, _
 

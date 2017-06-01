@@ -8,7 +8,7 @@
 define void @f1(i8 *%src) {
 ; CHECK-LABEL: f1:
 ; CHECK: tm 0(%r2), 1
-; CHECK: je {{\.L.*}}
+; CHECK: ber %r14
 ; CHECK: br %r14
 entry:
   %byte = load i8 , i8 *%src
@@ -29,9 +29,9 @@ exit:
 define void @f2(i8 *%src) {
 ; CHECK-LABEL: f2:
 ; CHECK: llc [[REG:%r[0-5]]], 0(%r2)
-; CHECK: mvi 0(%r2), 0
 ; CHECK: tmll [[REG]], 1
-; CHECK: je {{\.L.*}}
+; CHECK: mvi 0(%r2), 0
+; CHECK: ber %r14
 ; CHECK: br %r14
 entry:
   %byte = load i8 , i8 *%src

@@ -1,4 +1,5 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/offset.prof | opt -analyze -branch-prob | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/offset.prof | opt -analyze -branch-prob | FileCheck %s
 
 ; Original C++ code for this test case:
 ;
@@ -28,8 +29,8 @@ entry:
   %0 = load i32, i32* %a.addr, align 4, !dbg !14
   %cmp = icmp sgt i32 %0, 0, !dbg !18
   br i1 %cmp, label %if.then, label %if.else, !dbg !19
-; CHECK: edge entry -> if.then probability is 0x0147ae14 / 0x80000000 = 1.00%
-; CHECK: edge entry -> if.else probability is 0x7eb851ec / 0x80000000 = 99.00% [HOT edge]
+; CHECK: edge entry -> if.then probability is 0x0167ba82 / 0x80000000 = 1.10%
+; CHECK: edge entry -> if.else probability is 0x7e98457e / 0x80000000 = 98.90% [HOT edge]
 
 if.then:                                          ; preds = %entry
   store i32 10, i32* %retval, align 4, !dbg !20
@@ -54,11 +55,10 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!8, !9}
 !llvm.ident = !{!10}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 250750)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 250750)", isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, enums: !2)
 !1 = !DIFile(filename: "a.cc", directory: "/tmp")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooi", scope: !1, file: !1, line: 5, type: !5, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+!4 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooi", scope: !1, file: !1, line: 5, type: !5, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !7}
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

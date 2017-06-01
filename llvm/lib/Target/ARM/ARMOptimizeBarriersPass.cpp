@@ -27,9 +27,12 @@ public:
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
-  const char *getPassName() const override {
-    return "optimise barriers pass";
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoVRegs);
   }
+
+  StringRef getPassName() const override { return "optimise barriers pass"; }
 };
 char ARMOptimizeBarriersPass::ID = 0;
 }
@@ -46,6 +49,9 @@ static bool CanMovePastDMB(const MachineInstr *MI) {
 }
 
 bool ARMOptimizeBarriersPass::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   // Vector to store the DMBs we will remove after the first iteration
   std::vector<MachineInstr *> ToRemove;
   // DMBType is the Imm value of the first operand. It determines whether it's a

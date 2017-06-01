@@ -12,28 +12,51 @@ tablegen(LLVM X86GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM X86GenSubtargetInfo.inc -gen-subtarget)
 add_public_tablegen_target(X86CommonTableGen)
 
+# Add GlobalISel files if the build option was enabled.
+set(GLOBAL_ISEL_FILES
+  X86CallLowering.cpp
+  )
+
+if(LLVM_BUILD_GLOBAL_ISEL)
+  set(GLOBAL_ISEL_BUILD_FILES ${GLOBAL_ISEL_FILES})
+else()
+  set(GLOBAL_ISEL_BUILD_FILES "")
+  set(LLVM_OPTIONAL_SOURCES LLVMGlobalISel ${GLOBAL_ISEL_FILES})
+endif()
+
+
 set(sources
   X86AsmPrinter.cpp
   X86CallFrameOptimization.cpp
   X86ExpandPseudo.cpp
   X86FastISel.cpp
+  X86FixupBWInsts.cpp
+  X86FixupLEAs.cpp
+  X86FixupSetCC.cpp
   X86FloatingPoint.cpp
   X86FrameLowering.cpp
   X86ISelDAGToDAG.cpp
   X86ISelLowering.cpp
+  X86InterleavedAccess.cpp
+  X86InstrFMA3Info.cpp
   X86InstrInfo.cpp
+  X86EvexToVex.cpp
   X86MCInstLower.cpp
   X86MachineFunctionInfo.cpp
+  X86OptimizeLEAs.cpp
   X86PadShortFunction.cpp
   X86RegisterInfo.cpp
   X86SelectionDAGInfo.cpp
+  X86ShuffleDecodeConstantPool.cpp
   X86Subtarget.cpp
   X86TargetMachine.cpp
   X86TargetObjectFile.cpp
   X86TargetTransformInfo.cpp
   X86VZeroUpper.cpp
-  X86FixupLEAs.cpp
+  X86WinAllocaExpander.cpp
   X86WinEHState.cpp
+  X86CallingConv.cpp
+  ${GLOBAL_ISEL_BUILD_FILES}
   )
 
 add_llvm_target(X86CodeGen ${sources})

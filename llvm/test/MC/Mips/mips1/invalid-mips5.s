@@ -5,8 +5,8 @@
 # RUN: FileCheck %s < %t1
 
         .set noat
-        bc1f      $fcc1, 4          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-        bc1t      $fcc1, 4          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        bc1f      $fcc1, 4          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        bc1t      $fcc1, 4          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
         ceil.l.d  $f1,$f3           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         ceil.l.s  $f18,$f13         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         ceil.w.d  $f11,$f25         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
@@ -52,19 +52,19 @@
         luxc1     $f19,$s6($s5)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         lwxc1     $f12,$s1($s8)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         movf      $gp,$8,$fcc0      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        movf      $gp,$8,$fcc7      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        movf      $gp,$8,$fcc7      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         movf.d    $f6,$f10,$fcc0    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        movf.d    $f6,$f10,$fcc5    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        movf.d    $f6,$f10,$fcc5    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         movf.s    $f23,$f5,$fcc0    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        movf.s    $f23,$f5,$fcc6    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        movf.s    $f23,$f5,$fcc6    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         movn      $v1,$s1,$s0       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         movn.d    $f27,$f21,$k0     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         movn.s    $f12,$f0,$s7      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         movt      $zero,$s4,$fcc0   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        movt      $zero,$s4,$fcc5   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        movt      $zero,$s4,$fcc5   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         movt.d    $f0,$f2,$fcc0     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         movt.s    $f30,$f2,$fcc0    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        movt.s    $f30,$f2,$fcc1    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        movt.s    $f30,$f2,$fcc1    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         movz      $a1,$s6,$a3       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         movz.d    $f12,$f29,$a3     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         movz.s    $f25,$f7,$v1      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
@@ -88,3 +88,5 @@
         sdxc1     $f11,$a2($t2)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         suxc1     $f12,$k1($t1)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         swxc1     $f19,$t0($k0)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
+        ldc1      $f11,16391($s0)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
+        sdc1      $f31,30574($t5)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset

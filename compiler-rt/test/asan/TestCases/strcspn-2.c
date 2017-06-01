@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
   char s2[4] = "abc";
   __asan_poison_memory_region ((char *)&s2[2], 2);
   r = strcspn(s1, s2);
-  // CHECK:'s2' <== Memory access at offset {{[0-9]+}} partially overflows this variable
+  // CHECK:'s2'{{.*}} <== Memory access at offset {{[0-9]+}} partially overflows this variable
   assert(r == 0);
   return 0;
 }

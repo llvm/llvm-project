@@ -1,0 +1,11 @@
+# This file allows users to call find_package(Clang) and pick up our targets.
+
+find_package(LLVM REQUIRED CONFIG)
+
+@CLANG_CONFIG_CODE@
+
+set(CLANG_EXPORTED_TARGETS "@CLANG_EXPORTS@")
+set(CLANG_CMAKE_DIR "@CLANG_CONFIG_CMAKE_DIR@")
+
+# Provide all our library targets to users.
+include("@CLANG_CONFIG_EXPORTS_FILE@")

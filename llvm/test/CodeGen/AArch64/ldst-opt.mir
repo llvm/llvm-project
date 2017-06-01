@@ -1,0 +1,146 @@
+# RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-ldst-opt %s -verify-machineinstrs -o - | FileCheck %s
+---
+name: promote-load-from-store
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: %w1, %x0, %lr
+
+    STRWui killed %w1, %x0, 0 :: (store 4)
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    %w0 = LDRHHui killed %x0, 1 :: (load 2)
+    RET %lr, implicit %w0
+
+...
+# Don't count transient instructions towards search limits.
+# CHECK-LABEL: name: promote-load-from-store
+# CHECK: STRWui %w1
+# CHECK: UBFMWri %w1
+---
+name: store-pair
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: %w1, %x0, %lr
+
+    STRWui %w1, %x0, 0 :: (store 4)
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    CFI_INSTRUCTION 0
+    STRWui killed %w1, killed %x0, 1 :: (store 4)
+    RET %lr
+
+...
+# CHECK-LABEL: name: store-pair
+# CHECK: STPWi
+---
+name: store-pair-clearkill0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: %w1, %x0, %lr
+
+    STRWui %w1, %x0, 0 :: (store 4)
+    %w2 = COPY %w1
+    %x3 = COPY %x0
+    STRWui killed %w1, killed %x0, 1 :: (store 4)
+    RET %lr
+...
+# When merging a lower store with an upper one, we must clear kill flags on
+# the lower store.
+# CHECK-LABEL: store-pair-clearkill0
+# CHECK-NOT: STPWi %w1, killed %w1, %x0, 0 :: (store 4)
+# CHECK: STPWi %w1, %w1, %x0, 0 :: (store 4)
+# CHECK: %w2 = COPY %w1
+# CHECK: RET %lr
+---
+name: store-pair-clearkill1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: %x0, %lr
+
+    %w1 = MOVi32imm 13
+    %w2 = MOVi32imm 7
+    STRWui %w1, %x0, 1 :: (store 4)
+    %w2 = COPY killed %w1
+    STRWui killed %w2, %x0, 0 :: (store 4)
+
+    %w1 = MOVi32imm 42
+    %w2 = MOVi32imm 7
+    STRWui %w1, %x0, 0 :: (store 4)
+    %w2 = COPY killed %w1
+    STRWui killed %w2, killed %x0, 1 :: (store 4)
+
+    RET %lr
+...
+# When merging an upper store with a lower one, kill flags along the way need
+# to be removed; In this case the kill flag on %w1.
+# CHECK-LABEL: store-pair-clearkill1
+# CHECK: %w1 = MOVi32imm
+# CHECK: %w2 = MOVi32imm
+# CHECK-NOT: %w2 = COPY killed %w1
+# CHECK: %w2 = COPY %w1
+# CHECK: STPWi killed %w2, %w1, %x0, 0
+
+# CHECK: %w1 = MOVi32imm
+# CHECK: %w2 = MOVi32imm
+# CHECK-NOT: %w2 = COPY killed %w1
+# CHECK: %w2 = COPY %w1
+# CHECK: STPWi %w1, killed %w2, killed %x0, 0
+---
+name: store-load-clearkill
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: %w1
+
+    STRWui %w1, %sp, 0 :: (store 4)
+    %wzr = COPY killed %w1 ; killing use of %w1
+    %w11 = LDRWui %sp, 0 :: (load 4)
+    HINT 0, implicit %w11 ; some use of %w11
+...
+# When replaceing the load of a store-load pair with a copy the kill flags
+# along the way need to be cleared.
+# CHECK-LABEL: name: store-load-clearkill
+# CHECK: STRWui %w1, %sp, 0 :: (store 4)
+# CHECK-NOT: COPY killed %w1
+# CHECK: %wzr = COPY %w1
+# CHECK: %w11 = ORRWrs %wzr, %w1, 0
+# CHECK: HINT 0, implicit %w11

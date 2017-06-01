@@ -49,7 +49,7 @@ id foo(void) {
 @end
 
 @implementation NTGridDataObject
-- (id)initWithData:(id<MyObject, MyCoding>)data {
+- (id)initWithData:(id<MyObject, MyCoding>)data { // expected-note {{also found}}
   return data;
 }
 + (NTGridDataObject*)dataObject:(id<MyObject, MyCoding>)data

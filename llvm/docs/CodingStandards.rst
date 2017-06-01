@@ -83,7 +83,8 @@ Supported C++11 Language and Library Features
 
 While LLVM, Clang, and LLD use C++11, not all features are available in all of
 the toolchains which we support. The set of features supported for use in LLVM
-is the intersection of those supported in MSVC 2013, GCC 4.7, and Clang 3.1.
+is the intersection of those supported in the minimum requirements described
+in the :doc:`GettingStarted` page, section `Software`.
 The ultimate definition of this set is what build bots with those respective
 toolchains accept. Don't argue with the build bots. However, we have some
 guidance below to help you know what to expect.
@@ -126,17 +127,12 @@ unlikely to be supported by our host compilers.
 * Variadic templates: N2242_
 * Explicit conversion operators: N2437_
 * Defaulted and deleted functions: N2346_
-
-  * But not defaulted move constructors or move assignment operators, MSVC 2013
-    cannot synthesize them.
 * Initializer lists: N2627_
 * Delegating constructors: N1986_
 * Default member initializers (non-static data member initializers): N2756_
 
-  * Only use these for scalar members that would otherwise be left
-    uninitialized. Non-scalar members generally have appropriate default
-    constructors, and MSVC 2013 has problems when braced initializer lists are
-    involved.
+  * Feel free to use these wherever they make sense and where the `=`
+    syntax is allowed. Don't use braced initialization syntax.
 
 .. _N2118: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2118.html
 .. _N2439: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2439.htm
@@ -188,7 +184,7 @@ you hit a type trait which doesn't work we can then add support to LLVM's
 traits header to emulate it.
 
 .. _the libstdc++ manual:
-  http://gcc.gnu.org/onlinedocs/gcc-4.7.3/libstdc++/manual/manual/status.html#status.iso.2011
+  http://gcc.gnu.org/onlinedocs/gcc-4.8.0/libstdc++/manual/manual/status.html#status.iso.2011
 
 Other Languages
 ---------------
@@ -267,7 +263,7 @@ code can be distributed under and should not be modified in any way.
 
 The main body is a ``doxygen`` comment (identified by the ``///`` comment
 marker instead of the usual ``//``) describing the purpose of the file.  The
-first sentence or a passage beginning with ``\brief`` is used as an abstract.
+first sentence (or a passage beginning with ``\brief``) is used as an abstract.
 Any additional information should be separated by a blank line.  If an
 algorithm is being implemented or something tricky is going on, a reference
 to the paper where it is published should be included, as well as any notes or
@@ -309,8 +305,10 @@ useful to use C style (``/* */``) comments however:
 #. When writing a source file that is used by a tool that only accepts C style
    comments.
 
-To comment out a large block of code, use ``#if 0`` and ``#endif``. These nest
-properly and are better behaved in general than C style comments.
+Commenting out large blocks of code is discouraged, but if you really have to do
+this (for documentation purposes or as a suggestion for debug printing), use
+``#if 0`` and ``#endif``. These nest properly and are better behaved in general
+than C style comments.
 
 Doxygen Use in Documentation Comments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -320,8 +318,9 @@ comment.
 
 Include descriptive paragraphs for all public interfaces (public classes,
 member and non-member functions).  Don't just restate the information that can
-be inferred from the API name.  The first sentence or a paragraph beginning
-with ``\brief`` is used as an abstract. Put detailed discussion into separate
+be inferred from the API name.  The first sentence (or a paragraph beginning
+with ``\brief``) is used as an abstract. Try to use a single sentence as the
+``\brief`` adds visual clutter.  Put detailed discussion into separate
 paragraphs.
 
 To refer to parameter names inside a paragraph, use the ``\p name`` command.
@@ -349,7 +348,7 @@ A documentation comment that uses all Doxygen features in a preferred way:
 
 .. code-block:: c++
 
-  /// \brief Does foo and bar.
+  /// Does foo and bar.
   ///
   /// Does not do foo the usual way if \p Baz is true.
   ///
@@ -451,7 +450,7 @@ listed.  We prefer these ``#include``\s to be listed in this order:
 
 #. Main Module Header
 #. Local/Private Headers
-#. ``llvm/...``
+#. LLVM project/subproject headers (``clang/...``, ``lldb/...``, ``llvm/...``, etc)
 #. System ``#include``\s
 
 and each category should be sorted lexicographically by the full path.
@@ -463,6 +462,16 @@ header file first in the ``.cpp`` files that implement the interfaces, we ensure
 that the header does not have any hidden dependencies which are not explicitly
 ``#include``\d in the header, but should be. It is also a form of documentation
 in the ``.cpp`` file to indicate where the interfaces it implements are defined.
+
+LLVM project and subproject headers should be grouped from most specific to least
+specific, for the same reasons described above.  For example, LLDB depends on
+both clang and LLVM, and clang depends on LLVM.  So an LLDB source file should
+include ``lldb`` headers first, followed by ``clang`` headers, followed by
+``llvm`` headers, to reduce the possibility (for example) of an LLDB header
+accidentally picking up a missing include due to the previous inclusion of that
+header in the main source file or some earlier header file.  clang should
+similarly include its own headers before including llvm headers.  This rule
+applies to all LLVM subprojects.
 
 .. _fit into 80 columns:
 
@@ -1156,7 +1165,7 @@ Here are some examples of good and bad names:
                                 // kind of factories.
   };
 
-  Vehicle MakeVehicle(VehicleType Type) {
+  Vehicle makeVehicle(VehicleType Type) {
     VehicleMaker M;                         // Might be OK if having a short life-span.
     Tire Tmp1 = M.makeTire();               // Bad -- 'Tmp1' provides no information.
     Light Headlight = M.makeLight("head");  // Good -- descriptive.

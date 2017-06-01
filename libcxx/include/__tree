@@ -17,6 +17,8 @@
 #include <stdexcept>
 #include <algorithm>
 
+#include <__undef_min_max>
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif

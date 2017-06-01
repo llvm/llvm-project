@@ -91,6 +91,36 @@ L3:
 }
 
 
+; Jump threading of indirectbr with select as address.  Test increased
+; duplication threshold for cases where indirectbr is being threaded
+; through.
+
+; CHECK-LABEL: @test_indirectbr_thresh(
+; CHECK-NEXT: entry:
+; CHECK-NEXT: br i1 %cond, label %L1, label %L3
+; CHECK-NOT: indirectbr
+define void @test_indirectbr_thresh(i1 %cond, i8* %address) nounwind {
+entry:
+  br i1 %cond, label %L0, label %L3
+L0:
+  %indirect.goto.dest = select i1 %cond, i8* blockaddress(@test_indirectbr_thresh, %L1), i8* %address
+  call void @quux()
+  call void @quux()
+  call void @quux()
+  indirectbr i8* %indirect.goto.dest, [label %L1, label %L2, label %L3]
+
+L1:
+  call void @foo()
+  ret void
+L2:
+  call void @bar()
+  ret void
+L3:
+  call void @baz()
+  ret void
+}
+
+
 ; A more complicated case: the condition is a select based on a comparison.
 
 ; CHECK-LABEL: @test_switch_cmp(
@@ -219,4 +249,41 @@ if.end:                                           ; preds = %if.then, %cond.end4
 ; CHECK: br i1 %cmp1, label %if.then, label %cond.end4
 ; CHECK: br i1 %cmp6, label %if.then, label %if.end
 ; CHECK: br label %if.end
+}
+
+
+define i32 @unfold3(i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z, i32 %j) nounwind {
+entry:
+  %add3 = add nsw i32 %j, 2
+  %cmp.i = icmp slt i32 %u, %v
+  br i1 %cmp.i, label %.exit, label %cond.false.i
+
+cond.false.i:                                     ; preds = %entry
+  %cmp4.i = icmp sgt i32 %u, %v
+  br i1 %cmp4.i, label %.exit, label %cond.false.6.i
+
+cond.false.6.i:                                   ; preds = %cond.false.i
+  %cmp8.i = icmp slt i32 %w, %x
+  br i1 %cmp8.i, label %.exit, label %cond.false.10.i
+
+cond.false.10.i:                                  ; preds = %cond.false.6.i
+  %cmp13.i = icmp sgt i32 %w, %x
+  br i1 %cmp13.i, label %.exit, label %cond.false.15.i
+
+cond.false.15.i:                                  ; preds = %cond.false.10.i
+  %phitmp = icmp sge i32 %y, %z
+  br label %.exit
+
+.exit:                                  ; preds = %entry, %cond.false.i, %cond.false.6.i, %cond.false.10.i, %cond.false.15.i
+  %cond23.i = phi i1 [ false, %entry ], [ true, %cond.false.i ], [ false, %cond.false.6.i ], [ %phitmp, %cond.false.15.i ], [ true, %cond.false.10.i ]
+  %j.add3 = select i1 %cond23.i, i32 %j, i32 %add3
+  ret i32 %j.add3
+
+; CHECK-LABEL: @unfold3
+; CHECK: br i1 %cmp.i, label %.exit.thread2, label %cond.false.i 
+; CHECK: br i1 %cmp4.i, label %.exit.thread, label %cond.false.6.i
+; CHECK: br i1 %cmp8.i, label %.exit.thread2, label %cond.false.10.i
+; CHECK: br i1 %cmp13.i, label %.exit.thread, label %.exit
+; CHECK: br i1 %phitmp, label %.exit.thread, label %.exit.thread2
+; CHECK: br label %.exit.thread2
 }

@@ -70,14 +70,14 @@ define <2 x i32> @vtrni32(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vtrn.32 d17, d16
-; CHECK-NEXT:    vadd.i32 d16, d17, d16
+; CHECK-NEXT:    vmul.i32 d16, d17, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <2 x i32>, <2 x i32>* %A
 	%tmp2 = load <2 x i32>, <2 x i32>* %B
 	%tmp3 = shufflevector <2 x i32> %tmp1, <2 x i32> %tmp2, <2 x i32> <i32 0, i32 2>
 	%tmp4 = shufflevector <2 x i32> %tmp1, <2 x i32> %tmp2, <2 x i32> <i32 1, i32 3>
-        %tmp5 = add <2 x i32> %tmp3, %tmp4
+        %tmp5 = mul <2 x i32> %tmp3, %tmp4
 	ret <2 x i32> %tmp5
 }
 
@@ -343,9 +343,8 @@ entry:
 define <8 x i8> @vtrn_mismatched_builvector0(<8 x i8> %tr0, <8 x i8> %tr1,
                                              <4 x i32> %cmp0, <4 x i32> %cmp1,
                                              <4 x i16> %cmp2, <4 x i16> %cmp3) {
-  ; CHECK-LABEL: vtrn_mismatched_builvector0
+  ; CHECK-LABEL: vtrn_mismatched_builvector0:
   ; CHECK: vmovn.i32
-  ; CHECK: vtrn
   ; CHECK: vbsl
   %c0 = icmp ult <4 x i32> %cmp0, %cmp1
   %c1 = icmp ult <4 x i16> %cmp2, %cmp3
@@ -359,10 +358,9 @@ define <8 x i8> @vtrn_mismatched_builvector0(<8 x i8> %tr0, <8 x i8> %tr1,
 ; (from the icmp operation).
 define <8 x i8> @vtrn_mismatched_builvector1(<8 x i8> %tr0, <8 x i8> %tr1,
                            <4 x i32> %cmp0, <4 x i32> %cmp1, <4 x i8> *%cmp2_ptr) {
-  ; CHECK-LABEL: vtrn_mismatched_builvector1
+  ; CHECK-LABEL: vtrn_mismatched_builvector1:
   ; We need to extend the 4 x i8 to 4 x i16 in order to perform the vtrn
   ; CHECK: vmovl
-  ; CHECK: vtrn.8
   ; CHECK: vbsl
   %cmp2_load = load <4 x i8>, <4 x i8> * %cmp2_ptr, align 4
   %cmp2 = trunc <4 x i8> %cmp2_load to <4 x i1>
@@ -372,13 +370,18 @@ define <8 x i8> @vtrn_mismatched_builvector1(<8 x i8> %tr0, <8 x i8> %tr1,
   ret <8 x i8> %rv
 }
 
-; Negative test that should not generate a vtrn
+; The shuffle mask is half a vtrn; we duplicate the half to produce the
+; full result.
 define void @lower_twice_no_vtrn(<4 x i16>* %A, <4 x i16>* %B, <8 x i16>* %C) {
 entry:
-  ; CHECK-LABEL: lower_twice_no_vtrn
+  ; CHECK-LABEL: lower_twice_no_vtrn:
   ; CHECK: @ BB#0:
-  ; CHECK-NOT: vtrn
-  ; CHECK: mov pc, lr
+  ; CHECK-NEXT: vldr d16, [r1]
+  ; CHECK-NEXT: vldr d18, [r0]
+  ; CHECK-NEXT: vtrn.16 d18, d16
+  ; CHECK-NEXT: vorr d17, d16, d16
+  ; CHECK-NEXT: vst1.64 {d16, d17}, [r2]
+  ; CHECK-NEXT: mov pc, lr
   %tmp1 = load <4 x i16>, <4 x i16>* %A
   %tmp2 = load <4 x i16>, <4 x i16>* %B
   %0 = shufflevector <4 x i16> %tmp1, <4 x i16> %tmp2, <8 x i32> <i32 undef, i32 5, i32 3, i32 7, i32 1, i32 5, i32 3, i32 7>
@@ -386,13 +389,18 @@ entry:
   ret void
 }
 
-; Negative test that should not generate a vtrn
+; The shuffle mask is half a vtrn; we duplicate the half to produce the
+; full result.
 define void @upper_twice_no_vtrn(<4 x i16>* %A, <4 x i16>* %B, <8 x i16>* %C) {
 entry:
-  ; CHECK-LABEL: upper_twice_no_vtrn
+  ; CHECK-LABEL: upper_twice_no_vtrn:
   ; CHECK: @ BB#0:
-  ; CHECK-NOT: vtrn
-  ; CHECK: mov pc, lr
+  ; CHECK-NEXT: vldr d16, [r1]
+  ; CHECK-NEXT: vldr d18, [r0]
+  ; CHECK-NEXT: vtrn.16 d18, d16
+  ; CHECK-NEXT: vorr d19, d18, d18
+  ; CHECK-NEXT: vst1.64 {d18, d19}, [r2]
+  ; CHECK-NEXT: mov pc, lr
   %tmp1 = load <4 x i16>, <4 x i16>* %A
   %tmp2 = load <4 x i16>, <4 x i16>* %B
   %0 = shufflevector <4 x i16> %tmp1, <4 x i16> %tmp2, <8 x i32> <i32 0, i32 undef, i32 2, i32 6, i32 0, i32 4, i32 2, i32 6>

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -E %s -o %t.mm
 // RUN: %clang_cc1 -x objective-c++ -fms-extensions -rewrite-objc %t.mm -o %t-rw.cpp 
 // RUN: FileCheck --input-file=%t-rw.cpp %s
-// RUN: %clang_cc1 -fsyntax-only  -Werror -DSEL="void *" -Did="struct objc_object *" -Wno-attributes -Wno-address-of-temporary -U__declspec -D"__declspec(X)=" %t-rw.cpp
+// RUN: %clang_cc1 -fsyntax-only -std=gnu++98 -Werror -DSEL="void *" -Did="struct objc_object *" -Wno-attributes -Wno-address-of-temporary -U__declspec -D"__declspec(X)=" %t-rw.cpp
 // rdar://11374235
 
 extern "C" void *sel_registerName(const char *);

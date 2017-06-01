@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+
 class Z { };
 
 class Y { 
@@ -28,6 +31,10 @@ public:
 };
 
 class FromShortExplicitly { // expected-note{{candidate constructor (the implicit copy constructor)}}
+#if __cplusplus >= 201103L // C++11 or later
+// expected-note@-2 {{candidate constructor (the implicit move constructor) not viable}}
+#endif
+
 public:
   explicit FromShortExplicitly(short s);
 };

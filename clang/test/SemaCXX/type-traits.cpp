@@ -14,6 +14,7 @@ typedef Int IntAr[10];
 typedef Int IntArNB[];
 class Statics { static int priv; static NonPOD np; };
 union EmptyUnion {};
+union IncompleteUnion;
 union Union { int i; float f; };
 struct HasFunc { void f (); };
 struct HasOp { void operator *(); };
@@ -235,6 +236,7 @@ void is_empty()
   { int arr[F(__is_empty(Int))]; }
   { int arr[F(__is_empty(POD))]; }
   { int arr[F(__is_empty(EmptyUnion))]; }
+  { int arr[F(__is_empty(IncompleteUnion))]; }
   { int arr[F(__is_empty(EmptyAr))]; }
   { int arr[F(__is_empty(HasRef))]; }
   { int arr[F(__is_empty(HasVirt))]; }
@@ -313,8 +315,23 @@ struct PotentiallyFinal<T*> final { };
 template<>
 struct PotentiallyFinal<int> final { };
 
+struct SealedClass sealed {
+};
+
+template<typename T>
+struct PotentiallySealed { };
+
+template<typename T>
+struct PotentiallySealed<T*> sealed { };
+
+template<>
+struct PotentiallySealed<int> sealed { };
+
 void is_final()
 {
+	{ int arr[T(__is_final(SealedClass))]; }
+	{ int arr[T(__is_final(PotentiallySealed<float*>))]; }
+	{ int arr[T(__is_final(PotentiallySealed<int>))]; }
 	{ int arr[T(__is_final(FinalClass))]; }
 	{ int arr[T(__is_final(PotentiallyFinal<float*>))]; }
 	{ int arr[T(__is_final(PotentiallyFinal<int>))]; }
@@ -330,25 +347,17 @@ void is_final()
 	{ int arr[F(__is_final(IntArNB))]; }
 	{ int arr[F(__is_final(HasAnonymousUnion))]; }
 	{ int arr[F(__is_final(PotentiallyFinal<float>))]; }
+	{ int arr[F(__is_final(PotentiallySealed<float>))]; }
 }
-
-struct SealedClass sealed {
-};
-
-template<typename T>
-struct PotentiallySealed { };
-
-template<typename T>
-struct PotentiallySealed<T*> sealed { };
-
-template<>
-struct PotentiallySealed<int> sealed { };
 
 void is_sealed()
 {
 	{ int arr[T(__is_sealed(SealedClass))]; }
 	{ int arr[T(__is_sealed(PotentiallySealed<float*>))]; }
 	{ int arr[T(__is_sealed(PotentiallySealed<int>))]; }
+	{ int arr[T(__is_sealed(FinalClass))]; }
+	{ int arr[T(__is_sealed(PotentiallyFinal<float*>))]; }
+	{ int arr[T(__is_sealed(PotentiallyFinal<int>))]; }
 
 	{ int arr[F(__is_sealed(int))]; }
 	{ int arr[F(__is_sealed(Union))]; }
@@ -361,6 +370,7 @@ void is_sealed()
 	{ int arr[F(__is_sealed(IntArNB))]; }
 	{ int arr[F(__is_sealed(HasAnonymousUnion))]; }
 	{ int arr[F(__is_sealed(PotentiallyFinal<float>))]; }
+	{ int arr[F(__is_sealed(PotentiallySealed<float>))]; }
 }
 
 typedef HasVirt Polymorph;
@@ -373,6 +383,7 @@ void is_polymorphic()
 
   { int arr[F(__is_polymorphic(int))]; }
   { int arr[F(__is_polymorphic(Union))]; }
+  { int arr[F(__is_polymorphic(IncompleteUnion))]; }
   { int arr[F(__is_polymorphic(Int))]; }
   { int arr[F(__is_polymorphic(IntAr))]; }
   { int arr[F(__is_polymorphic(UnionAr))]; }
@@ -1503,6 +1514,9 @@ void has_nothrow_move_assign() {
 
   { int arr[T(__is_nothrow_assignable(HasNoThrowMoveAssign, HasNoThrowMoveAssign))]; }
   { int arr[F(__is_nothrow_assignable(HasThrowMoveAssign, HasThrowMoveAssign))]; }
+
+  { int arr[T(__is_assignable(HasNoThrowMoveAssign, HasNoThrowMoveAssign))]; }
+  { int arr[T(__is_assignable(HasThrowMoveAssign, HasThrowMoveAssign))]; }
 }
 
 void has_trivial_move_assign() {
@@ -1963,6 +1977,46 @@ void trivial_checks()
                                          TrivialMoveButNotCopy)))]; }
   { int arr[T((__is_trivially_assignable(TrivialMoveButNotCopy&,
                                          TrivialMoveButNotCopy&&)))]; }
+  { int arr[T((__is_trivially_assignable(int&, int)))]; }
+  { int arr[T((__is_trivially_assignable(int&, int&)))]; }
+  { int arr[T((__is_trivially_assignable(int&, int&&)))]; }
+  { int arr[T((__is_trivially_assignable(int&, const int&)))]; }
+  { int arr[T((__is_trivially_assignable(POD&, POD)))]; }
+  { int arr[T((__is_trivially_assignable(POD&, POD&)))]; }
+  { int arr[T((__is_trivially_assignable(POD&, POD&&)))]; }
+  { int arr[T((__is_trivially_assignable(POD&, const POD&)))]; }
+  { int arr[T((__is_trivially_assignable(int*&, int*)))]; }
+  { int arr[T((__is_trivially_assignable(AllDefaulted,
+                                         const AllDefaulted &)))]; }
+  { int arr[T((__is_trivially_assignable(AllDefaulted,
+                                         AllDefaulted &&)))]; }
+
+  { int arr[F((__is_assignable(int *&, float *)))]; }
+  { int arr[T((__is_assignable(HasCopyAssign &, HasCopyAssign)))]; }
+  { int arr[T((__is_assignable(HasCopyAssign &, HasCopyAssign &)))]; }
+  { int arr[T((__is_assignable(HasCopyAssign &, const HasCopyAssign &)))]; }
+  { int arr[T((__is_assignable(HasCopyAssign &, HasCopyAssign &&)))]; }
+  { int arr[T((__is_assignable(TrivialMoveButNotCopy &,
+                               TrivialMoveButNotCopy &)))]; }
+  { int arr[T((__is_assignable(TrivialMoveButNotCopy &,
+                               const TrivialMoveButNotCopy &)))]; }
+  { int arr[F((__is_assignable(AllDeleted,
+                               const AllDeleted &)))]; }
+  { int arr[F((__is_assignable(AllDeleted,
+                               AllDeleted &&)))]; }
+  { int arr[T((__is_assignable(ExtDefaulted,
+                               const ExtDefaulted &)))]; }
+  { int arr[T((__is_assignable(ExtDefaulted,
+                               ExtDefaulted &&)))]; }
+
+  { int arr[T((__is_assignable(HasDefaultTrivialCopyAssign &,
+                               HasDefaultTrivialCopyAssign &)))]; }
+  { int arr[T((__is_assignable(HasDefaultTrivialCopyAssign &,
+                               const HasDefaultTrivialCopyAssign &)))]; }
+  { int arr[T((__is_assignable(TrivialMoveButNotCopy &,
+                               TrivialMoveButNotCopy)))]; }
+  { int arr[T((__is_assignable(TrivialMoveButNotCopy &,
+                               TrivialMoveButNotCopy &&)))]; }
 }
 
 void constructible_checks() {
@@ -1991,6 +2045,9 @@ void constructible_checks() {
   // PR20228
   { int arr[T(__is_constructible(VariadicCtor,
                                  int, int, int, int, int, int, int, int, int))]; }
+
+  // PR25513
+  { int arr[F(__is_constructible(int(int)))]; }
 }
 
 // Instantiation of __is_trivially_constructible

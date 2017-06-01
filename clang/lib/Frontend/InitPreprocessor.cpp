@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Frontend/Utils.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/SourceManager.h"
@@ -19,15 +18,13 @@
 #include "clang/Basic/Version.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
+#include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PTHManager.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 using namespace clang;
 
 static bool MacroBodyEndsInBackslash(StringRef MacroBody) {
@@ -115,15 +112,15 @@ template <typename T>
 static T PickFP(const llvm::fltSemantics *Sem, T IEEESingleVal,
                 T IEEEDoubleVal, T X87DoubleExtendedVal, T PPCDoubleDoubleVal,
                 T IEEEQuadVal) {
-  if (Sem == (const llvm::fltSemantics*)&llvm::APFloat::IEEEsingle)
+  if (Sem == (const llvm::fltSemantics*)&llvm::APFloat::IEEEsingle())
     return IEEESingleVal;
-  if (Sem == (const llvm::fltSemantics*)&llvm::APFloat::IEEEdouble)
+  if (Sem == (const llvm::fltSemantics*)&llvm::APFloat::IEEEdouble())
     return IEEEDoubleVal;
-  if (Sem == (const llvm::fltSemantics*)&llvm::APFloat::x87DoubleExtended)
+  if (Sem == (const llvm::fltSemantics*)&llvm::APFloat::x87DoubleExtended())
     return X87DoubleExtendedVal;
-  if (Sem == (const llvm::fltSemantics*)&llvm::APFloat::PPCDoubleDouble)
+  if (Sem == (const llvm::fltSemantics*)&llvm::APFloat::PPCDoubleDouble())
     return PPCDoubleDoubleVal;
-  assert(Sem == (const llvm::fltSemantics*)&llvm::APFloat::IEEEquad);
+  assert(Sem == (const llvm::fltSemantics*)&llvm::APFloat::IEEEquad());
   return IEEEQuadVal;
 }
 
@@ -395,6 +392,15 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     //   C++ translation unit.
     else
       Builder.defineMacro("__cplusplus", "199711L");
+
+    // C++1z [cpp.predefined]p1:
+    //   An integer literal of type std::size_t whose value is the alignment
+    //   guaranteed by a call to operator new(std::size_t)
+    //
+    // We provide this in all language modes, since it seems generally useful.
+    Builder.defineMacro("__STDCPP_DEFAULT_NEW_ALIGNMENT__",
+                        Twine(TI.getNewAlign() / TI.getCharWidth()) +
+                            TI.getTypeConstantSuffix(TI.getSizeType()));
   }
 
   // In C11 these are environment macros. In C++11 they are only defined
@@ -408,9 +414,47 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   if (LangOpts.ObjC1)
     Builder.defineMacro("__OBJC__");
 
+  // OpenCL v1.0/1.1 s6.9, v1.2/2.0 s6.10: Preprocessor Directives and Macros.
+  if (LangOpts.OpenCL) {
+    // OpenCL v1.0 and v1.1 do not have a predefined macro to indicate the
+    // language standard with which the program is compiled. __OPENCL_VERSION__
+    // is for the OpenCL version supported by the OpenCL device, which is not
+    // necessarily the language standard with which the program is compiled.
+    // A shared OpenCL header file requires a macro to indicate the language
+    // standard. As a workaround, __OPENCL_C_VERSION__ is defined for
+    // OpenCL v1.0 and v1.1.
+    switch (LangOpts.OpenCLVersion) {
+    case 100:
+      Builder.defineMacro("__OPENCL_C_VERSION__", "100");
+      break;
+    case 110:
+      Builder.defineMacro("__OPENCL_C_VERSION__", "110");
+      break;
+    case 120:
+      Builder.defineMacro("__OPENCL_C_VERSION__", "120");
+      break;
+    case 200:
+      Builder.defineMacro("__OPENCL_C_VERSION__", "200");
+      break;
+    default:
+      llvm_unreachable("Unsupported OpenCL version");
+    }
+    Builder.defineMacro("CL_VERSION_1_0", "100");
+    Builder.defineMacro("CL_VERSION_1_1", "110");
+    Builder.defineMacro("CL_VERSION_1_2", "120");
+    Builder.defineMacro("CL_VERSION_2_0", "200");
+
+    if (TI.isLittleEndian())
+      Builder.defineMacro("__ENDIAN_LITTLE__");
+
+    if (LangOpts.FastRelaxedMath)
+      Builder.defineMacro("__FAST_RELAXED_MATH__");
+  }
   // Not "standard" per se, but available even with the -undef flag.
   if (LangOpts.AsmPreprocessor)
     Builder.defineMacro("__ASSEMBLER__");
+  if (LangOpts.CUDA)
+    Builder.defineMacro("__CUDA__");
 }
 
 /// Initialize the predefined C++ language feature test macros defined in
@@ -432,8 +476,10 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_lambdas", "200907");
     Builder.defineMacro("__cpp_constexpr",
                         LangOpts.CPlusPlus14 ? "201304" : "200704");
-    Builder.defineMacro("__cpp_range_based_for", "200907");
-    Builder.defineMacro("__cpp_static_assert", "200410");
+    Builder.defineMacro("__cpp_range_based_for",
+                        LangOpts.CPlusPlus1z ? "201603" : "200907");
+    Builder.defineMacro("__cpp_static_assert",
+                        LangOpts.CPlusPlus1z ? "201411" : "200410");
     Builder.defineMacro("__cpp_decltype", "200707");
     Builder.defineMacro("__cpp_attributes", "200809");
     Builder.defineMacro("__cpp_rvalue_references", "200610");
@@ -441,7 +487,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_initializer_lists", "200806");
     Builder.defineMacro("__cpp_delegating_constructors", "200604");
     Builder.defineMacro("__cpp_nsdmi", "200809");
-    Builder.defineMacro("__cpp_inheriting_constructors", "200802");
+    Builder.defineMacro("__cpp_inheriting_constructors", "201511");
     Builder.defineMacro("__cpp_ref_qualifiers", "200710");
     Builder.defineMacro("__cpp_alias_templates", "200704");
   }
@@ -459,9 +505,31 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   }
   if (LangOpts.SizedDeallocation)
     Builder.defineMacro("__cpp_sized_deallocation", "201309");
+
+  // C++17 features.
+  if (LangOpts.CPlusPlus1z) {
+    Builder.defineMacro("__cpp_hex_float", "201603");
+    Builder.defineMacro("__cpp_inline_variables", "201606");
+    Builder.defineMacro("__cpp_noexcept_function_type", "201510");
+    Builder.defineMacro("__cpp_capture_star_this", "201603");
+    Builder.defineMacro("__cpp_if_constexpr", "201606");
+    Builder.defineMacro("__cpp_template_auto", "201606");
+    Builder.defineMacro("__cpp_namespace_attributes", "201411");
+    Builder.defineMacro("__cpp_enumerator_attributes", "201411");
+    Builder.defineMacro("__cpp_nested_namespace_definitions", "201411");
+    Builder.defineMacro("__cpp_variadic_using", "201611");
+    Builder.defineMacro("__cpp_aggregate_bases", "201603");
+    Builder.defineMacro("__cpp_structured_bindings", "201606");
+    Builder.defineMacro("__cpp_nontype_template_args", "201411");
+    Builder.defineMacro("__cpp_fold_expressions", "201603");
+  }
+  if (LangOpts.AlignedAllocation)
+    Builder.defineMacro("__cpp_aligned_new", "201606");
+
+  // TS features.
   if (LangOpts.ConceptsTS)
     Builder.defineMacro("__cpp_experimental_concepts", "1");
-  if (LangOpts.Coroutines)
+  if (LangOpts.CoroutinesTS)
     Builder.defineMacro("__cpp_coroutines", "1");
 }
 
@@ -476,16 +544,12 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 #define TOSTR(X) TOSTR2(X)
   Builder.defineMacro("__clang_major__", TOSTR(CLANG_VERSION_MAJOR));
   Builder.defineMacro("__clang_minor__", TOSTR(CLANG_VERSION_MINOR));
-#ifdef CLANG_VERSION_PATCHLEVEL
   Builder.defineMacro("__clang_patchlevel__", TOSTR(CLANG_VERSION_PATCHLEVEL));
-#else
-  Builder.defineMacro("__clang_patchlevel__", "0");
-#endif
+#undef TOSTR
+#undef TOSTR2
   Builder.defineMacro("__clang_version__", 
                       "\"" CLANG_VERSION_STRING " "
                       + getClangFullRepositoryVersion() + "\"");
-#undef TOSTR
-#undef TOSTR2
   if (!LangOpts.MSVCCompat) {
     // Currently claim to be compatible with GCC 4.2.1-5621, but only if we're
     // not compiling for MSVC compatibility
@@ -558,6 +622,11 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("IBInspectable", "");
     Builder.defineMacro("IB_DESIGNABLE", "");
   }
+
+  // Define a macro that describes the Objective-C boolean type even for C
+  // and C++ since BOOL can be used from non Objective-C code.
+  Builder.defineMacro("__OBJC_BOOL_IS_BOOL",
+                      Twine(TI.useSignedCharForObjCBool() ? "0" : "1"));
 
   if (LangOpts.CPlusPlus)
     InitializeCPlusPlusFeatureTestMacros(LangOpts, Builder);
@@ -642,7 +711,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
   // Define type sizing macros based on the target properties.
   assert(TI.getCharWidth() == 8 && "Only support 8-bit char so far");
-  Builder.defineMacro("__CHAR_BIT__", "8");
+  Builder.defineMacro("__CHAR_BIT__", Twine(TI.getCharWidth()));
 
   DefineTypeSize("__SCHAR_MAX__", TargetInfo::SignedChar, TI, Builder);
   DefineTypeSize("__SHRT_MAX__", TargetInfo::SignedShort, TI, Builder);
@@ -791,8 +860,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineFastIntType(64, true, TI, Builder);
   DefineFastIntType(64, false, TI, Builder);
 
-  if (const char *Prefix = TI.getUserLabelPrefix())
-    Builder.defineMacro("__USER_LABEL_PREFIX__", Prefix);
+  char UserLabelPrefix[2] = {TI.getDataLayout().getGlobalPrefix(), 0};
+  Builder.defineMacro("__USER_LABEL_PREFIX__", UserLabelPrefix);
 
   if (LangOpts.FastMath || LangOpts.FiniteMathOnly)
     Builder.defineMacro("__FINITE_MATH_ONLY__", "1");
@@ -809,7 +878,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     // FIXME: This is target-dependent.
     Builder.defineMacro("__GCC_ATOMIC_TEST_AND_SET_TRUEVAL", "1");
 
-    // Used by libstdc++ to implement ATOMIC_<foo>_LOCK_FREE.
+    // Used by libc++ and libstdc++ to implement ATOMIC_<foo>_LOCK_FREE.
     unsigned InlineWidthBits = TI.getMaxAtomicInlineWidth();
 #define DEFINE_LOCK_FREE_MACRO(TYPE, Type) \
     Builder.defineMacro("__GCC_ATOMIC_" #TYPE "_LOCK_FREE", \
@@ -838,10 +907,10 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (unsigned PICLevel = LangOpts.PICLevel) {
     Builder.defineMacro("__PIC__", Twine(PICLevel));
     Builder.defineMacro("__pic__", Twine(PICLevel));
-  }
-  if (unsigned PIELevel = LangOpts.PIELevel) {
-    Builder.defineMacro("__PIE__", Twine(PIELevel));
-    Builder.defineMacro("__pie__", Twine(PIELevel));
+    if (LangOpts.PIE) {
+      Builder.defineMacro("__PIE__", Twine(PICLevel));
+      Builder.defineMacro("__pie__", Twine(PICLevel));
+    }
   }
 
   // Macros to control C99 numerics and <float.h>
@@ -867,6 +936,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
       LangOpts.getGC() != LangOptions::NonGC) {
     Builder.defineMacro("__weak", "__attribute__((objc_gc(weak)))");
     Builder.defineMacro("__strong", "__attribute__((objc_gc(strong)))");
+    Builder.defineMacro("__autoreleasing", "");
+    Builder.defineMacro("__unsafe_unretained", "");
   } else if (LangOpts.ObjC1) {
     Builder.defineMacro("__weak", "__attribute__((objc_ownership(weak)))");
     Builder.defineMacro("__strong", "__attribute__((objc_ownership(strong)))");
@@ -885,13 +956,24 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   }
 
   // OpenMP definition
-  if (LangOpts.OpenMP) {
-    // OpenMP 2.2:
-    //   In implementations that support a preprocessor, the _OPENMP
-    //   macro name is defined to have the decimal value yyyymm where
-    //   yyyy and mm are the year and the month designations of the
-    //   version of the OpenMP API that the implementation support.
+  // OpenMP 2.2:
+  //   In implementations that support a preprocessor, the _OPENMP
+  //   macro name is defined to have the decimal value yyyymm where
+  //   yyyy and mm are the year and the month designations of the
+  //   version of the OpenMP API that the implementation support.
+  switch (LangOpts.OpenMP) {
+  case 0:
+    break;
+  case 40:
     Builder.defineMacro("_OPENMP", "201307");
+    break;
+  case 45:
+    Builder.defineMacro("_OPENMP", "201511");
+    break;
+  default:
+    // Default version is OpenMP 3.1
+    Builder.defineMacro("_OPENMP", "201107");
+    break;
   }
 
   // CUDA device path compilaton
@@ -899,6 +981,29 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     // The CUDA_ARCH value is set for the GPU target specified in the NVPTX
     // backend's target defines.
     Builder.defineMacro("__CUDA_ARCH__");
+  }
+
+  // We need to communicate this to our CUDA header wrapper, which in turn
+  // informs the proper CUDA headers of this choice.
+  if (LangOpts.CUDADeviceApproxTranscendentals || LangOpts.FastMath) {
+    Builder.defineMacro("__CLANG_CUDA_APPROX_TRANSCENDENTALS__");
+  }
+
+  // OpenCL definitions.
+  if (LangOpts.OpenCL) {
+#define OPENCLEXT(Ext) \
+    if (TI.getSupportedOpenCLOpts().isSupported(#Ext, \
+        LangOpts.OpenCLVersion)) \
+      Builder.defineMacro(#Ext);
+#include "clang/Basic/OpenCLExtensions.def"
+  }
+
+  if (TI.hasInt128Type() && LangOpts.CPlusPlus && LangOpts.GNUMode) {
+    // For each extended integer type, g++ defines a macro mapping the
+    // index of the type (0 in this case) in some list of extended types
+    // to the type.
+    Builder.defineMacro("__GLIBCXX_TYPE_INT_N_0", "__int128");
+    Builder.defineMacro("__GLIBCXX_BITSIZE_INT_N_0", "128");
   }
 
   // Get other target #defines.
@@ -968,6 +1073,10 @@ void clang::InitializePreprocessor(
                          PP.getDiagnostics());
   }
 
+  // Exit the command line and go back to <built-in> (2 is LC_LEAVE).
+  if (!PP.getLangOpts().AsmPreprocessor)
+    Builder.append("# 1 \"<built-in>\" 2");
+
   // If -imacros are specified, include them now.  These are processed before
   // any -include directives.
   for (unsigned i = 0, e = InitOpts.MacroIncludes.size(); i != e; ++i)
@@ -985,10 +1094,6 @@ void clang::InitializePreprocessor(
     const std::string &Path = InitOpts.Includes[i];
     AddImplicitInclude(Builder, Path);
   }
-
-  // Exit the command line and go back to <built-in> (2 is LC_LEAVE).
-  if (!PP.getLangOpts().AsmPreprocessor)
-    Builder.append("# 1 \"<built-in>\" 2");
 
   // Instruct the preprocessor to skip the preamble.
   PP.setSkipMainFilePreamble(InitOpts.PrecompiledPreambleBytes.first,

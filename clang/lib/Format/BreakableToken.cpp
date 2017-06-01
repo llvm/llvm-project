@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BreakableToken.h"
+#include "Comments.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/STLExtras.h"
@@ -180,21 +181,6 @@ void BreakableStringLiteral::insertBreak(unsigned LineIndex,
   Whitespaces.replaceWhitespaceInToken(
       Tok, Prefix.size() + TailOffset + Split.first, Split.second, Postfix,
       Prefix, InPPDirective, 1, IndentLevel, LeadingSpaces);
-}
-
-static StringRef getLineCommentIndentPrefix(StringRef Comment) {
-  static const char *const KnownPrefixes[] = {"///", "//", "//!"};
-  StringRef LongestPrefix;
-  for (StringRef KnownPrefix : KnownPrefixes) {
-    if (Comment.startswith(KnownPrefix)) {
-      size_t PrefixLength = KnownPrefix.size();
-      while (PrefixLength < Comment.size() && Comment[PrefixLength] == ' ')
-        ++PrefixLength;
-      if (PrefixLength > LongestPrefix.size())
-        LongestPrefix = Comment.substr(0, PrefixLength);
-    }
-  }
-  return LongestPrefix;
 }
 
 BreakableLineComment::BreakableLineComment(

@@ -411,7 +411,7 @@ extern "C" {
 
 CXResult clang_findReferencesInFile(CXCursor cursor, CXFile file,
                                     CXCursorAndRangeVisitor visitor) {
-  LogRef Log = Logger::make(LLVM_FUNCTION_NAME);
+  LogRef Log = Logger::make(__func__);
 
   if (clang_Cursor_isNull(cursor)) {
     if (Log)
@@ -485,7 +485,7 @@ CXResult clang_findIncludesInFile(CXTranslationUnit TU, CXFile file,
     return CXResult_Invalid;
   }
 
-  LogRef Log = Logger::make(LLVM_FUNCTION_NAME);
+  LogRef Log = Logger::make(__func__);
   if (!file) {
     if (Log)
       *Log << "Null file";
@@ -535,4 +535,3 @@ CXResult clang_findIncludesInFileWithBlock(CXTranslationUnit TU,
 }
 
 } // end: extern "C"
-

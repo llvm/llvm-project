@@ -1,0 +1,30 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass none -o - %s | FileCheck %s
+
+--- |
+
+  define void @atomic_memoperands() {
+    ret void
+  }
+
+...
+---
+# CHECK-LABEL: name: atomic_memoperands
+# CHECK: %1(s64) = G_LOAD %0(p0) :: (load unordered 8)
+# CHECK: %2(s32) = G_LOAD %0(p0) :: (load monotonic 4)
+# CHECK: %3(s16) = G_LOAD %0(p0) :: (load acquire 2)
+# CHECK: G_STORE %3(s16), %0(p0) :: (store release 2)
+# CHECK: G_STORE %2(s32), %0(p0) :: (store acq_rel 4)
+# CHECK: G_STORE %1(s64), %0(p0) :: (store singlethread seq_cst 8)
+name:            atomic_memoperands
+body: |
+  bb.0:
+
+    %0:_(p0) = COPY %x0
+    %1:_(s64) = G_LOAD %0(p0) :: (load unordered 8)
+    %2:_(s32) = G_LOAD %0(p0) :: (load monotonic 4)
+    %3:_(s16) = G_LOAD %0(p0) :: (load acquire 2)
+    G_STORE %3(s16), %0(p0) :: (store release 2)
+    G_STORE %2(s32), %0(p0) :: (store acq_rel 4)
+    G_STORE %1(s64), %0(p0) :: (store singlethread seq_cst 8)
+    RET_ReallyLR
+...

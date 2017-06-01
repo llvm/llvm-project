@@ -1,1 +1,0 @@
-module TableGen { requires cplusplus umbrella "." module * { export * } }

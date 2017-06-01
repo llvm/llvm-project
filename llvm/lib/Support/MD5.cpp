@@ -248,33 +248,15 @@ void MD5::final(MD5Result &Result) {
   memset(&buffer[used], 0, free - 8);
 
   lo <<= 3;
-  buffer[56] = lo;
-  buffer[57] = lo >> 8;
-  buffer[58] = lo >> 16;
-  buffer[59] = lo >> 24;
-  buffer[60] = hi;
-  buffer[61] = hi >> 8;
-  buffer[62] = hi >> 16;
-  buffer[63] = hi >> 24;
+  support::endian::write32le(&buffer[56], lo);
+  support::endian::write32le(&buffer[60], hi);
 
   body(makeArrayRef(buffer, 64));
 
-  Result[0] = a;
-  Result[1] = a >> 8;
-  Result[2] = a >> 16;
-  Result[3] = a >> 24;
-  Result[4] = b;
-  Result[5] = b >> 8;
-  Result[6] = b >> 16;
-  Result[7] = b >> 24;
-  Result[8] = c;
-  Result[9] = c >> 8;
-  Result[10] = c >> 16;
-  Result[11] = c >> 24;
-  Result[12] = d;
-  Result[13] = d >> 8;
-  Result[14] = d >> 16;
-  Result[15] = d >> 24;
+  support::endian::write32le(&Result[0], a);
+  support::endian::write32le(&Result[4], b);
+  support::endian::write32le(&Result[8], c);
+  support::endian::write32le(&Result[12], d);
 }
 
 void MD5::stringifyResult(MD5Result &Result, SmallString<32> &Str) {
@@ -283,4 +265,14 @@ void MD5::stringifyResult(MD5Result &Result, SmallString<32> &Str) {
     Res << format("%.2x", Result[i]);
 }
 
+std::array<uint8_t, 16> MD5::hash(ArrayRef<uint8_t> Data) {
+  MD5 Hash;
+  Hash.update(Data);
+  MD5::MD5Result Res;
+  Hash.final(Res);
+
+  std::array<uint8_t, 16> Arr;
+  memcpy(Arr.data(), Res, sizeof(Res));
+  return Arr;
+}
 }

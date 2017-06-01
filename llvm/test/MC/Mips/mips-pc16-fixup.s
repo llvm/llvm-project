@@ -1,6 +1,6 @@
 # RUN: llvm-mc %s -triple=mips-unknown-linux -mcpu=mips32r2 -arch=mips 2>&1 -filetype=obj | FileCheck %s
 #
-# CHECK-NOT: LLVM ERROR: out of range PC16 fixup
+# CHECK-NOT: error: out of range PC16 fixup
 
 .text
   b foo

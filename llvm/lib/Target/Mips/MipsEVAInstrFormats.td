@@ -50,7 +50,7 @@ def OPCODE6_TLBINVF    : OPCODE6<0b000100>;
 def OPCODE6_CACHEE     : OPCODE6<0b011011>;
 def OPCODE6_PREFE      : OPCODE6<0b100011>;
 
-def OPGROUP_COP0       : OPGROUP<0b010000>;
+def OPGROUP_COP0_TLB   : OPGROUP<0b010000>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -77,7 +77,7 @@ class SPECIAL3_EVA_LOAD_STORE_FM<OPCODE6 Operation> : MipsEVAInst {
 class TLB_FM<OPCODE6 Operation> : MipsEVAInst {
   bits<32> Inst;
 
-  let Inst{31-26} = OPGROUP_COP0.Value;
+  let Inst{31-26} = OPGROUP_COP0_TLB.Value;
   let Inst{25} = 1;       // CO
   let Inst{24-6} = 0;
   let Inst{5-0} = Operation.Value;

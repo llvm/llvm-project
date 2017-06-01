@@ -67,7 +67,7 @@ static CallInst *ReplaceCallWith(const char *NewFn, CallInst *CI,
                                  Type *RetTy) {
   // If we haven't already looked up this function, check to see if the
   // program already contains a function with this name.
-  Module *M = CI->getParent()->getParent()->getParent();
+  Module *M = CI->getModule();
   // Get or insert the definition now.
   std::vector<Type *> ParamTys;
   for (ArgIt I = ArgBegin; I != ArgEnd; ++I)
@@ -424,13 +424,26 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     break;
   }
     
+  case Intrinsic::get_dynamic_area_offset:
+    errs() << "WARNING: this target does not support the custom llvm.get."
+              "dynamic.area.offset.  It is being lowered to a constant 0\n";
+    // Just lower it to a constant 0 because for most targets
+    // @llvm.get.dynamic.area.offset is lowered to zero.
+    CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 0));
+    break;
   case Intrinsic::returnaddress:
   case Intrinsic::frameaddress:
     errs() << "WARNING: this target does not support the llvm."
            << (Callee->getIntrinsicID() == Intrinsic::returnaddress ?
              "return" : "frame") << "address intrinsic.\n";
-    CI->replaceAllUsesWith(ConstantPointerNull::get(
-                                            cast<PointerType>(CI->getType())));
+    CI->replaceAllUsesWith(
+        ConstantPointerNull::get(cast<PointerType>(CI->getType())));
+    break;
+  case Intrinsic::addressofreturnaddress:
+    errs() << "WARNING: this target does not support the "
+              "llvm.addressofreturnaddress intrinsic.\n";
+    CI->replaceAllUsesWith(
+        ConstantPointerNull::get(cast<PointerType>(CI->getType())));
     break;
 
   case Intrinsic::prefetch:
@@ -589,7 +602,7 @@ bool IntrinsicLowering::LowerToByteSwap(CallInst *CI) {
     return false;
 
   // Okay, we can do this xform, do so now.
-  Module *M = CI->getParent()->getParent()->getParent();
+  Module *M = CI->getModule();
   Constant *Int = Intrinsic::getDeclaration(M, Intrinsic::bswap, Ty);
 
   Value *Op = CI->getArgOperand(0);

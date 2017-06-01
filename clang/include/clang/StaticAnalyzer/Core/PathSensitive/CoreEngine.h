@@ -91,6 +91,9 @@ private:
   void HandleBlockEdge(const BlockEdge &E, ExplodedNode *Pred);
   void HandleBlockEntrance(const BlockEntrance &E, ExplodedNode *Pred);
   void HandleBlockExit(const CFGBlock *B, ExplodedNode *Pred);
+
+  void HandleCallEnter(const CallEnter &CE, ExplodedNode *Pred);
+
   void HandlePostStmt(const CFGBlock *B, unsigned StmtIdx, ExplodedNode *Pred);
 
   void HandleBranch(const Stmt *Cond, const Stmt *Term, const CFGBlock *B,
@@ -106,7 +109,8 @@ private:
   CoreEngine(const CoreEngine &) = delete;
   void operator=(const CoreEngine &) = delete;
 
-  ExplodedNode *generateCallExitBeginNode(ExplodedNode *N);
+  ExplodedNode *generateCallExitBeginNode(ExplodedNode *N,
+                                          const ReturnStmt *RS);
 
 public:
   /// Construct a CoreEngine object to analyze the provided CFG.
@@ -169,7 +173,7 @@ public:
 
   /// \brief enqueue the nodes corresponding to the end of function onto the
   /// end of path / work list.
-  void enqueueEndOfFunction(ExplodedNodeSet &Set);
+  void enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS);
 
   /// \brief Enqueue a single node created as a result of statement processing.
   void enqueueStmtNode(ExplodedNode *N, const CFGBlock *Block, unsigned Idx);

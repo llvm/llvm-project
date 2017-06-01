@@ -49,3 +49,21 @@ define float @test6(float %x, float %y, float %z) nounwind readnone ssp {
 ; CHECK-NEXT: fmul fast
 ; CHECK-NEXT: fdiv fast
 }
+
+; CHECK-LABEL @fdiv_fneg_fneg(
+; CHECK: %div = fdiv float %x, %y
+define float @fdiv_fneg_fneg(float %x, float %y) {
+  %x.fneg = fsub float -0.0, %x
+  %y.fneg = fsub float -0.0, %y
+  %div = fdiv float %x.fneg, %y.fneg
+  ret float %div
+}
+
+; CHECK-LABEL @fdiv_fneg_fneg_fast(
+; CHECK: %div = fdiv fast float %x, %y
+define float @fdiv_fneg_fneg_fast(float %x, float %y) {
+  %x.fneg = fsub float -0.0, %x
+  %y.fneg = fsub float -0.0, %y
+  %div = fdiv fast float %x.fneg, %y.fneg
+  ret float %div
+}

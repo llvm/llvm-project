@@ -1,8 +1,9 @@
-; RUN: opt < %s -indvars -S | not grep sext
+; RUN: opt < %s -indvars -S | FileCheck %s
 
 ; Provide legal integer types.
 target datalayout = "n8:16:32:64"
 
+; CHECK-NOT: sext
 
 define i64 @test(i64* nocapture %first, i32 %count) nounwind readonly {
 entry:

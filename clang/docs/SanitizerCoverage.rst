@@ -16,8 +16,9 @@ How to build and run
 ====================
 
 SanitizerCoverage can be used with :doc:`AddressSanitizer`,
-:doc:`LeakSanitizer`, :doc:`MemorySanitizer`, and UndefinedBehaviorSanitizer.
-In addition to ``-fsanitize=``, pass one of the following compile-time flags:
+:doc:`LeakSanitizer`, :doc:`MemorySanitizer`,
+UndefinedBehaviorSanitizer, or without any sanitizer.  Pass one of the
+following compile-time flags:
 
 * ``-fsanitize-coverage=func`` for function-level coverage (very fast).
 * ``-fsanitize-coverage=bb`` for basic-block-level coverage (may add up to 30%
@@ -27,8 +28,9 @@ In addition to ``-fsanitize=``, pass one of the following compile-time flags:
 You may also specify ``-fsanitize-coverage=indirect-calls`` for
 additional `caller-callee coverage`_.
 
-At run time, pass ``coverage=1`` in ``ASAN_OPTIONS``, ``LSAN_OPTIONS``,
-``MSAN_OPTIONS`` or ``UBSAN_OPTIONS``, as appropriate.
+At run time, pass ``coverage=1`` in ``ASAN_OPTIONS``,
+``LSAN_OPTIONS``, ``MSAN_OPTIONS`` or ``UBSAN_OPTIONS``, as
+appropriate. For the standalone coverage mode, use ``UBSAN_OPTIONS``.
 
 To get `Coverage counters`_, add ``-fsanitize-coverage=8bit-counters``
 to one of the above compile-time flags. At runtime, use
@@ -93,6 +95,49 @@ numbers:
     % sancov.py print a.out.22679.sancov a.out.22673.sancov 2> /dev/null | llvm-symbolizer --obj a.out
     cov.cc:3
     cov.cc:5
+
+Sancov Tool
+===========
+
+A new experimental ``sancov`` tool is developed to process coverage files.
+The tool is part of LLVM project and is currently supported only on Linux.
+It can handle symbolization tasks autonomously without any extra support
+from the environment. You need to pass .sancov files (named 
+``<module_name>.<pid>.sancov`` and paths to all corresponding binary elf files. 
+Sancov matches these files using module names and binaries file names.
+
+.. code-block:: console
+
+    USAGE: sancov [options] <action> (<binary file>|<.sancov file>)...
+
+    Action (required)
+      -print                    - Print coverage addresses
+      -covered-functions        - Print all covered functions.
+      -not-covered-functions    - Print all not covered functions.
+      -symbolize                - Symbolizes the report.
+
+    Options
+      -blacklist=<string>         - Blacklist file (sanitizer blacklist format).
+      -demangle                   - Print demangled function name.
+      -strip_path_prefix=<string> - Strip this prefix from file paths in reports
+
+
+Coverage Reports (Experimental)
+================================
+
+``.sancov`` files do not contain enough information to generate a source-level 
+coverage report. The missing information is contained
+in debug info of the binary. Thus the ``.sancov`` has to be symbolized
+to produce a ``.symcov`` file first:
+
+.. code-block:: console
+
+    sancov -symbolize my_program.123.sancov my_program > my_program.123.symcov
+
+The ``.symcov`` file can be browsed overlayed over the source code by
+running ``tools/sancov/coverage-report-server.py`` script that will start
+an HTTP server.
+
 
 How good is the coverage?
 =========================
@@ -209,7 +254,7 @@ Coverage counters
 =================
 
 This experimental feature is inspired by
-`AFL <http://lcamtuf.coredump.cx/afl/technical_details.txt>`_'s coverage
+`AFL <http://lcamtuf.coredump.cx/afl/technical_details.txt>`__'s coverage
 instrumentation. With additional compile-time and run-time flags you can get
 more sensitive coverage information.  In addition to boolean values assigned to
 every basic block (edge) the instrumentation will collect imprecise counters.
@@ -249,23 +294,168 @@ These counters may also be used for in-process coverage-guided fuzzers. See
     uintptr_t
     __sanitizer_update_counter_bitset_and_clear_counters(uint8_t *bitset);
 
+Tracing basic blocks
+====================
+Experimental support for basic block (or edge) tracing.
+With ``-fsanitize-coverage=trace-bb`` the compiler will insert
+``__sanitizer_cov_trace_basic_block(s32 *id)`` before every function, basic block, or edge
+(depending on the value of ``-fsanitize-coverage=[func,bb,edge]``).
+Example:
+
+.. code-block:: console
+
+    % clang -g -fsanitize=address -fsanitize-coverage=edge,trace-bb foo.cc
+    % ASAN_OPTIONS=coverage=1 ./a.out
+
+This will produce two files after the process exit:
+`trace-points.PID.sancov` and `trace-events.PID.sancov`.
+The first file will contain a textual description of all the instrumented points in the program
+in the form that you can feed into llvm-symbolizer (e.g. `a.out 0x4dca89`), one per line.
+The second file will contain the actual execution trace as a sequence of 4-byte integers
+-- these integers are the indices into the array of instrumented points (the first file).
+
+Basic block tracing is currently supported only for single-threaded applications.
+
+
+Tracing PCs
+===========
+*Experimental* feature similar to tracing basic blocks, but with a different API.
+With ``-fsanitize-coverage=trace-pc`` the compiler will insert
+``__sanitizer_cov_trace_pc()`` on every edge.
+With an additional ``...=trace-pc,indirect-calls`` flag
+``__sanitizer_cov_trace_pc_indirect(void *callee)`` will be inserted on every indirect call.
+These callbacks are not implemented in the Sanitizer run-time and should be defined
+by the user. So, these flags do not require the other sanitizer to be used.
+This mechanism is used for fuzzing the Linux kernel (https://github.com/google/syzkaller)
+and can be used with `AFL <http://lcamtuf.coredump.cx/afl>`__.
+
+Tracing PCs with guards
+=======================
+Another *experimental* feature that tries to combine the functionality of `trace-pc`,
+`8bit-counters` and boolean coverage.
+
+With ``-fsanitize-coverage=trace-pc-guard`` the compiler will insert the following code
+on every edge:
+
+.. code-block:: none
+
+   if (guard_variable)
+     __sanitizer_cov_trace_pc_guard(&guard_variable)
+
+Every edge will have its own `guard_variable` (uint32_t).
+
+The compler will also insert a module constructor that will call
+
+.. code-block:: c++
+
+   // The guards are [start, stop).
+   // This function may be called multiple times with the same values of start/stop.
+   __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *stop);
+
+Similarly to `trace-pc,indirect-calls`, with `trace-pc-guards,indirect-calls`
+``__sanitizer_cov_trace_pc_indirect(void *callee)`` will be inserted on every indirect call.
+
+The functions `__sanitizer_cov_trace_pc_*` should be defined by the user.
+
+Example: 
+
+.. code-block:: c++
+
+  // trace-pc-guard-cb.cc
+  #include <stdint.h>
+  #include <stdio.h>
+  #include <sanitizer/coverage_interface.h>
+
+  // This callback is inserted by the compiler as a module constructor
+  // into every compilation unit. 'start' and 'stop' correspond to the
+  // beginning and end of the section with the guards for the entire
+  // binary (executable or DSO) and so it will be called multiple times
+  // with the same parameters.
+  extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t *start,
+                                                      uint32_t *stop) {
+    static uint64_t N;  // Counter for the guards.
+    if (start == stop || *start) return;  // Initialize only once.
+    printf("INIT: %p %p\n", start, stop);
+    for (uint32_t *x = start; x < stop; x++)
+      *x = ++N;  // Guards should start from 1.
+  }
+
+  // This callback is inserted by the compiler on every edge in the
+  // control flow (some optimizations apply).
+  // Typically, the compiler will emit the code like this:
+  //    if(*guard)
+  //      __sanitizer_cov_trace_pc_guard(guard);
+  // But for large functions it will emit a simple call:
+  //    __sanitizer_cov_trace_pc_guard(guard);
+  extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
+    if (!*guard) return;  // Duplicate the guard check.
+    // If you set *guard to 0 this code will not be called again for this edge.
+    // Now you can get the PC and do whatever you want: 
+    //   store it somewhere or symbolize it and print right away.
+    // The values of `*guard` are as you set them in
+    // __sanitizer_cov_trace_pc_guard_init and so you can make them consecutive
+    // and use them to dereference an array or a bit vector.
+    void *PC = __builtin_return_address(0);
+    char PcDescr[1024];
+    // This function is a part of the sanitizer run-time.
+    // To use it, link with AddressSanitizer or other sanitizer.
+    __sanitizer_symbolize_pc(PC, "%p %F %L", PcDescr, sizeof(PcDescr));
+    printf("guard: %p %x PC %s\n", guard, *guard, PcDescr);
+  }
+
+.. code-block:: c++
+
+  // trace-pc-guard-example.cc
+  void foo() { }
+  int main(int argc, char **argv) {
+    if (argc > 1) foo();
+  }
+
+.. code-block:: console
+  
+  clang++ -g  -fsanitize-coverage=trace-pc-guard trace-pc-guard-example.cc -c
+  clang++ trace-pc-guard-cb.cc trace-pc-guard-example.o -fsanitize=address
+  ASAN_OPTIONS=strip_path_prefix=`pwd`/ ./a.out
+
+.. code-block:: console
+
+  INIT: 0x71bcd0 0x71bce0
+  guard: 0x71bcd4 2 PC 0x4ecd5b in main trace-pc-guard-example.cc:2
+  guard: 0x71bcd8 3 PC 0x4ecd9e in main trace-pc-guard-example.cc:3:7
+
+.. code-block:: console
+
+  ASAN_OPTIONS=strip_path_prefix=`pwd`/ ./a.out with-foo
+
+
+.. code-block:: console
+
+  INIT: 0x71bcd0 0x71bce0
+  guard: 0x71bcd4 2 PC 0x4ecd5b in main trace-pc-guard-example.cc:3
+  guard: 0x71bcdc 4 PC 0x4ecdc7 in main trace-pc-guard-example.cc:4:17
+  guard: 0x71bcd0 1 PC 0x4ecd20 in foo() trace-pc-guard-example.cc:2:14
+
+
 Tracing data flow
 =================
 
-An *experimental* feature to support data-flow-guided fuzzing.
+Support for data-flow-guided fuzzing.
 With ``-fsanitize-coverage=trace-cmp`` the compiler will insert extra instrumentation
 around comparison instructions and switch statements.
-The fuzzer will need to define the following functions,
-they will be called by the instrumented code.
+Similarly, with ``-fsanitize-coverage=trace-div`` the compiler will instrument
+integer division instructions (to capture the right argument of division)
+and with  ``-fsanitize-coverage=trace-gep`` --
+the `LLVM GEP instructions <http://llvm.org/docs/GetElementPtr.html>`_
+(to capture array indices).
 
 .. code-block:: c++
 
   // Called before a comparison instruction.
-  // SizeAndType is a packed value containing
-  //   - [63:32] the Size of the operands of comparison in bits
-  //   - [31:0] the Type of comparison (one of ICMP_EQ, ... ICMP_SLE)
   // Arg1 and Arg2 are arguments of the comparison.
-  void __sanitizer_cov_trace_cmp(uint64_t SizeAndType, uint64_t Arg1, uint64_t Arg2);
+  void __sanitizer_cov_trace_cmp1(uint8_t Arg1, uint8_t Arg2);
+  void __sanitizer_cov_trace_cmp2(uint16_t Arg1, uint16_t Arg2);
+  void __sanitizer_cov_trace_cmp4(uint32_t Arg1, uint32_t Arg2);
+  void __sanitizer_cov_trace_cmp8(uint64_t Arg1, uint64_t Arg2);
 
   // Called before a switch statement.
   // Val is the switch operand.
@@ -274,7 +464,18 @@ they will be called by the instrumented code.
   // Cases[2:] are the case constants.
   void __sanitizer_cov_trace_switch(uint64_t Val, uint64_t *Cases);
 
+  // Called before a division statement.
+  // Val is the second argument of division.
+  void __sanitizer_cov_trace_div4(uint32_t Val);
+  void __sanitizer_cov_trace_div8(uint64_t Val);
+
+  // Called before a GetElemementPtr (GEP) instruction
+  // for every non-constant array index.
+  void __sanitizer_cov_trace_gep(uintptr_t Idx);
+
+
 This interface is a subject to change.
+The current implementation is not thread-safe and thus can be safely used only for single-threaded targets.
 
 Output directory
 ================

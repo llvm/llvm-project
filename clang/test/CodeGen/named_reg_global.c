@@ -1,16 +1,26 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple arm64-linux-gnu -S -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple armv7-linux-gnu -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-X86-64
+// RUN: %clang_cc1 -triple arm64-linux-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ARM
+// RUN: %clang_cc1 -triple armv7-linux-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ARM
 
 // CHECK-NOT: @sp = common global
+
+#if defined(__x86_64__)
+register unsigned long current_stack_pointer asm("rsp");
+#else
 register unsigned long current_stack_pointer asm("sp");
+#endif
+
 struct p4_Thread {
   struct {
     int len;
   } word;
 };
 // Testing pointer types as well
+#if defined(__x86_64__)
+register struct p4_Thread *p4TH asm("rsp");
+#else
 register struct p4_Thread *p4TH asm("sp");
+#endif
 
 // CHECK: define{{.*}} i[[bits:[0-9]+]] @get_stack_pointer_addr()
 // CHECK: [[ret:%[0-9]+]] = call i[[bits]] @llvm.read_register.i[[bits]](metadata !0)
@@ -43,5 +53,7 @@ void fn2(struct p4_Thread *val) {
 // CHECK: %[[regw:[0-9]+]] = ptrtoint %struct.p4_Thread* %{{.*}} to i[[bits]]
 // CHECK: call void @llvm.write_register.i[[bits]](metadata !0, i[[bits]] %[[regw]])
 
-// CHECK: !llvm.named.register.sp = !{!0}
-// CHECK: !0 = !{!"sp"}
+// CHECK-X86-64: !llvm.named.register.rsp = !{!0}
+// CHECK-X86-64: !0 = !{!"rsp"}
+// CHECK-ARM: !llvm.named.register.sp = !{!0}
+// CHECK-ARM: !0 = !{!"sp"}

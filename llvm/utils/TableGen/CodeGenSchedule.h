@@ -189,6 +189,10 @@ struct CodeGenProcModel {
   // This list is empty if no ItinRW refers to this Processor.
   RecVec ItinRWDefs;
 
+  // List of unsupported feature.
+  // This list is empty if the Processor has no UnsupportedFeatures.
+  RecVec UnsupportedFeaturesDefs;
+
   // All read/write resources associated with this processor.
   RecVec WriteResDefs;
   RecVec ReadAdvanceDefs;
@@ -210,6 +214,8 @@ struct CodeGenProcModel {
   }
 
   unsigned getProcResourceIdx(Record *PRDef) const;
+
+  bool isUnsupported(const CodeGenInstruction &Inst) const;
 
 #ifndef NDEBUG
   void dump() const;
@@ -241,6 +247,9 @@ class CodeGenSchedModels {
   // Any inferred SchedClass has an index greater than NumInstrSchedClassses.
   unsigned NumInstrSchedClasses;
 
+  RecVec ProcResourceDefs;
+  RecVec ProcResGroups;
+
   // Map each instruction to its unique SchedClass index considering the
   // combination of it's itinerary class, SchedRW list, and InstRW records.
   typedef DenseMap<Record*, unsigned> InstClassMapTy;
@@ -257,18 +266,16 @@ public:
   class_iterator classes_end() { return SchedClasses.end(); }
   const_class_iterator classes_end() const { return SchedClasses.end(); }
   iterator_range<class_iterator> classes() {
-   return iterator_range<class_iterator>(classes_begin(), classes_end());
+   return make_range(classes_begin(), classes_end());
   }
   iterator_range<const_class_iterator> classes() const {
-   return iterator_range<const_class_iterator>(classes_begin(), classes_end());
+   return make_range(classes_begin(), classes_end());
   }
   iterator_range<class_iterator> explicit_classes() {
-    return iterator_range<class_iterator>(
-        classes_begin(), classes_begin() + NumInstrSchedClasses);
+    return make_range(classes_begin(), classes_begin() + NumInstrSchedClasses);
   }
   iterator_range<const_class_iterator> explicit_classes() const {
-    return iterator_range<const_class_iterator>(
-        classes_begin(), classes_begin() + NumInstrSchedClasses);
+    return make_range(classes_begin(), classes_begin() + NumInstrSchedClasses);
   }
 
   Record *getModelOrItinDef(Record *ProcDef) const {
@@ -302,6 +309,7 @@ public:
   typedef std::vector<CodeGenProcModel>::const_iterator ProcIter;
   ProcIter procModelBegin() const { return ProcModels.begin(); }
   ProcIter procModelEnd() const { return ProcModels.end(); }
+  ArrayRef<CodeGenProcModel> procModels() const { return ProcModels; }
 
   // Return true if any processors have itineraries.
   bool hasItineraries() const;
@@ -355,6 +363,7 @@ public:
   typedef std::vector<CodeGenSchedClass>::const_iterator SchedClassIter;
   SchedClassIter schedClassBegin() const { return SchedClasses.begin(); }
   SchedClassIter schedClassEnd() const { return SchedClasses.end(); }
+  ArrayRef<CodeGenSchedClass> schedClasses() const { return SchedClasses; }
 
   unsigned numInstrSchedClasses() const { return NumInstrSchedClasses; }
 
@@ -399,7 +408,11 @@ private:
 
   void collectProcItinRW();
 
+  void collectProcUnsupportedFeatures();
+
   void inferSchedClasses();
+
+  void checkCompleteness();
 
   void inferFromRW(ArrayRef<unsigned> OperWrites, ArrayRef<unsigned> OperReads,
                    unsigned FromClassIdx, ArrayRef<unsigned> ProcIndices);

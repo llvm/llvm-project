@@ -75,9 +75,9 @@ public:
   ///
   int alignSPAdjust(int SPAdj) const {
     if (SPAdj < 0) {
-      SPAdj = -RoundUpToAlignment(-SPAdj, StackAlignment);
+      SPAdj = -alignTo(-SPAdj, StackAlignment);
     } else {
-      SPAdj = RoundUpToAlignment(SPAdj, StackAlignment);
+      SPAdj = alignTo(SPAdj, StackAlignment);
     }
     return SPAdj;
   }
@@ -151,12 +151,23 @@ public:
     return false;
   }
 
+  /// Returns true if the stack slot holes in the fixed and callee-save stack
+  /// area should be used when allocating other stack locations to reduce stack
+  /// size.
+  virtual bool enableStackSlotScavenging(const MachineFunction &MF) const {
+    return false;
+  }
+
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.
   virtual void emitPrologue(MachineFunction &MF,
                             MachineBasicBlock &MBB) const = 0;
   virtual void emitEpilogue(MachineFunction &MF,
                             MachineBasicBlock &MBB) const = 0;
+
+  /// Replace a StackProbe stub (if any) with the actual probe code inline
+  virtual void inlineStackProbe(MachineFunction &MF,
+                                MachineBasicBlock &PrologueMBB) const {}
 
   /// Adjust the prologue to have the function use segmented stacks. This works
   /// by adding a check even before the "normal" function prologue.
@@ -167,12 +178,6 @@ public:
   /// the assembly prologue to explicitly handle the stack.
   virtual void adjustForHiPEPrologue(MachineFunction &MF,
                                      MachineBasicBlock &PrologueMBB) const {}
-
-  /// Adjust the prologue to add an allocation at a fixed offset from the frame
-  /// pointer.
-  virtual void
-  adjustForFrameAllocatePrologue(MachineFunction &MF,
-                                 MachineBasicBlock &PrologueMBB) const {}
 
   /// spillCalleeSavedRegisters - Issues instruction(s) to spill all callee
   /// saved registers and returns true if it isn't possible / profitable to do
@@ -235,15 +240,17 @@ public:
   virtual int getFrameIndexReference(const MachineFunction &MF, int FI,
                                      unsigned &FrameReg) const;
 
-  /// Same as above, except that the 'base register' will always be RSP, not
-  /// RBP on x86. This is generally used for emitting statepoint or EH tables
-  /// that use offsets from RSP.
-  /// TODO: This should really be a parameterizable choice.
-  virtual int getFrameIndexReferenceFromSP(const MachineFunction &MF, int FI,
-                                           unsigned &FrameReg) const {
-    // default to calling normal version, we override this on x86 only
-    llvm_unreachable("unimplemented for non-x86");
-    return 0;
+  /// Same as \c getFrameIndexReference, except that the stack pointer (as
+  /// opposed to the frame pointer) will be the preferred value for \p
+  /// FrameReg. This is generally used for emitting statepoint or EH tables that
+  /// use offsets from RSP.  If \p IgnoreSPUpdates is true, the returned
+  /// offset is only guaranteed to be valid with respect to the value of SP at
+  /// the end of the prologue.
+  virtual int getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,
+                                             unsigned &FrameReg,
+                                             bool IgnoreSPUpdates) const {
+    // Always safe to dispatch to getFrameIndexReference.
+    return getFrameIndexReference(MF, FI, FrameReg);
   }
 
   /// This method determines which of the registers reported by
@@ -269,19 +276,30 @@ public:
     report_fatal_error("WinEH not implemented for this target");
   }
 
-  /// eliminateCallFramePseudoInstr - This method is called during prolog/epilog
-  /// code insertion to eliminate call frame setup and destroy pseudo
-  /// instructions (but only if the Target is using them).  It is responsible
-  /// for eliminating these instructions, replacing them with concrete
-  /// instructions.  This method need only be implemented if using call frame
-  /// setup/destroy pseudo instructions.
-  ///
-  virtual void
+  /// This method is called during prolog/epilog code insertion to eliminate
+  /// call frame setup and destroy pseudo instructions (but only if the Target
+  /// is using them).  It is responsible for eliminating these instructions,
+  /// replacing them with concrete instructions.  This method need only be
+  /// implemented if using call frame setup/destroy pseudo instructions.
+  /// Returns an iterator pointing to the instruction after the replaced one.
+  virtual MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF,
                                 MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const {
     llvm_unreachable("Call Frame Pseudo Instructions do not exist on this "
                      "target!");
+  }
+
+
+  /// Order the symbols in the local stack frame.
+  /// The list of objects that we want to order is in \p objectsToAllocate as
+  /// indices into the MachineFrameInfo. The array can be reordered in any way
+  /// upon return. The contents of the array, however, may not be modified (i.e.
+  /// only their order may be changed).
+  /// By default, just maintain the original order.
+  virtual void
+  orderFrameObjects(const MachineFunction &MF,
+                    SmallVectorImpl<int> &objectsToAllocate) const {
   }
 
   /// Check whether or not the given \p MBB can be used as a prologue
@@ -305,6 +323,20 @@ public:
   /// this method, we assume that each basic block is a valid
   /// epilogue.
   virtual bool canUseAsEpilogue(const MachineBasicBlock &MBB) const {
+    return true;
+  }
+
+  /// Check if given function is safe for not having callee saved registers.
+  /// This is used when interprocedural register allocation is enabled.
+  static bool isSafeForNoCSROpt(const Function *F) {
+    if (!F->hasLocalLinkage() || F->hasAddressTaken() ||
+        !F->hasFnAttribute(Attribute::NoRecurse))
+      return false;
+    // Function should not be optimized as tail call.
+    for (const User *U : F->users())
+      if (auto CS = ImmutableCallSite(U))
+        if (CS.isTailCall())
+          return false;
     return true;
   }
 };

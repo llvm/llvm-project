@@ -22,8 +22,8 @@ namespace llvm {
 /// RecyclingAllocator - This class wraps an Allocator, adding the
 /// functionality of recycling deleted objects.
 ///
-template<class AllocatorType, class T,
-         size_t Size = sizeof(T), size_t Align = AlignOf<T>::Alignment>
+template <class AllocatorType, class T, size_t Size = sizeof(T),
+          size_t Align = alignof(T)>
 class RecyclingAllocator {
 private:
   /// Base - Implementation details.

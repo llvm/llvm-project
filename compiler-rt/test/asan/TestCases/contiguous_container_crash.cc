@@ -23,6 +23,7 @@ int TestCrash() {
   __sanitizer_annotate_contiguous_container(&t[0], &t[0] + 100, &t[0] + 100,
                                             &t[0] + 50);
 // CHECK-CRASH: AddressSanitizer: container-overflow
+// CHECK-CRASH: if you don't care about these errors you may set ASAN_OPTIONS=detect_container_overflow=0
   return (int)t[60 * one];  // Touches the poisoned memory.
 }
 

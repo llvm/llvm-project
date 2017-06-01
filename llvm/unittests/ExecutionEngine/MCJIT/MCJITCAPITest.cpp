@@ -88,8 +88,9 @@ public:
 
   bool needsToReserveAllocationSpace() override { return true; }
 
-  void reserveAllocationSpace(uintptr_t CodeSize, uintptr_t DataSizeRO,
-                              uintptr_t DataSizeRW) override {
+  void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
+			      uintptr_t DataSizeRO, uint32_t RODataAlign,
+                              uintptr_t DataSizeRW, uint32_t RWDataAlign) override {
     ReservedCodeSize = CodeSize;
     ReservedDataSizeRO = DataSizeRO;
     ReservedDataSizeRW = DataSizeRW;
@@ -284,7 +285,6 @@ protected:
   
   void buildAndRunPasses() {
     LLVMPassManagerRef pass = LLVMCreatePassManager();
-    LLVMAddTargetData(LLVMGetExecutionEngineTargetData(Engine), pass);
     LLVMAddConstantPropagationPass(pass);
     LLVMAddInstructionCombiningPass(pass);
     LLVMRunPassManager(pass, Module);
@@ -302,8 +302,6 @@ protected:
       LLVMCreateFunctionPassManagerForModule(Module);
     LLVMPassManagerRef modulePasses =
       LLVMCreatePassManager();
-    
-    LLVMAddTargetData(LLVMGetExecutionEngineTargetData(Engine), modulePasses);
     
     LLVMPassManagerBuilderPopulateFunctionPassManager(passBuilder,
                                                       functionPasses);

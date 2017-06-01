@@ -31,9 +31,9 @@ declare i32 @bar() nounwind readnone
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!17}
 
-!0 = distinct !DISubprogram(name: "foobar", linkageName: "foobar", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, file: !15, scope: !1, type: !3, variables: !14)
+!0 = distinct !DISubprogram(name: "foobar", linkageName: "foobar", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !2, file: !15, scope: !1, type: !3, variables: !14)
 !1 = !DIFile(filename: "mu.c", directory: "/private/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 114183)", isOptimized: true, emissionKind: 1, file: !15, enums: !16, retainedTypes: !16, subprograms: !13, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 114183)", isOptimized: true, emissionKind: FullDebug, file: !15, enums: !16, retainedTypes: !16, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -44,7 +44,6 @@ declare i32 @bar() nounwind readnone
 !10 = !DILocation(line: 23, column: 3, scope: !7)
 !11 = !DILocation(line: 17, column: 3, scope: !7)
 !12 = !DILocation(line: 18, column: 3, scope: !7)
-!13 = !{!0}
 !14 = !{!6}
 !15 = !DIFile(filename: "mu.c", directory: "/private/tmp")
 !16 = !{}

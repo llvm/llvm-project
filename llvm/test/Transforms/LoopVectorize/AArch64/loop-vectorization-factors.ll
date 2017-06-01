@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -basicaa -loop-vectorize -simplifycfg -instsimplify -instcombine -licm -force-vector-interleave=1 2>&1 | FileCheck %s
+; RUN: opt -S < %s -basicaa -loop-vectorize -force-vector-interleave=1 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64"
@@ -205,39 +205,63 @@ for.body:                                         ; preds = %for.body, %for.body
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-; CHECK-LABEL: @add_g
-; CHECK: load <16 x i8>
-; CHECK: xor <16 x i8>
-; CHECK: icmp ult <16 x i8>
-; CHECK: select <16 x i1> {{.*}}, <16 x i8>
+; CHECK-LABEL: @add_phifail(
+; CHECK: load <16 x i8>, <16 x i8>*
+; CHECK: add nuw nsw <16 x i32>
 ; CHECK: store <16 x i8>
-define void @add_g(i8* noalias nocapture readonly %p, i8* noalias nocapture readonly %q, i8* noalias nocapture %r, i8 %arg1, i32 %len) #0 {
-  %1 = icmp sgt i32 %len, 0
-  br i1 %1, label %.lr.ph, label %._crit_edge
+; Function Attrs: nounwind
+define void @add_phifail(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i32 %len) #0 {
+entry:
+  %cmp8 = icmp sgt i32 %len, 0
+  br i1 %cmp8, label %for.body, label %for.cond.cleanup
 
-.lr.ph:                                           ; preds = %0
-  %2 = sext i8 %arg1 to i64
-  br label %3
-
-._crit_edge:                                      ; preds = %3, %0
+for.cond.cleanup:                                 ; preds = %for.body, %entry
   ret void
 
-; <label>:3                                       ; preds = %3, %.lr.ph
-  %indvars.iv = phi i64 [ 0, %.lr.ph ], [ %indvars.iv.next, %3 ]
-  %x4 = getelementptr inbounds i8, i8* %p, i64 %indvars.iv
-  %x5 = load i8, i8* %x4
-  %x7 = getelementptr inbounds i8, i8* %q, i64 %indvars.iv
-  %x8 = load i8, i8* %x7
-  %x9 = zext i8 %x5 to i32
-  %x10 = xor i32 %x9, 255
-  %x11 = icmp ult i32 %x10, 24
-  %x12 = select i1 %x11, i32 %x10, i32 24
-  %x13 = trunc i32 %x12 to i8
-  store i8 %x13, i8* %x4
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %a_phi = phi i32 [ %conv, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i8, i8* %p, i64 %indvars.iv
+  %0 = load i8, i8* %arrayidx
+  %conv = zext i8 %0 to i32
+  %add = add nuw nsw i32 %conv, 2
+  %conv1 = trunc i32 %add to i8
+  %arrayidx3 = getelementptr inbounds i8, i8* %q, i64 %indvars.iv
+  store i8 %conv1, i8* %arrayidx3
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %len
-  br i1 %exitcond, label %._crit_edge, label %3
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: @add_phifail2(
+; CHECK: load <16 x i8>, <16 x i8>*
+; CHECK: add nuw nsw <16 x i32>
+; CHECK: store <16 x i8>
+; Function Attrs: nounwind
+define i8 @add_phifail2(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i32 %len) #0 {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  %ret = trunc i32 %a_phi to i8
+  ret i8 %ret
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %a_phi = phi i32 [ %conv, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i8, i8* %p, i64 %indvars.iv
+  %0 = load i8, i8* %arrayidx
+  %conv = zext i8 %0 to i32
+  %add = add nuw nsw i32 %conv, 2
+  %conv1 = trunc i32 %add to i8
+  %arrayidx3 = getelementptr inbounds i8, i8* %q, i64 %indvars.iv
+  store i8 %conv1, i8* %arrayidx3
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %len
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
 attributes #0 = { nounwind }
+

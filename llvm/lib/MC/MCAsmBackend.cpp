@@ -12,9 +12,13 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend() : HasDataInCodeSupport(false) {}
+MCAsmBackend::MCAsmBackend() {}
 
 MCAsmBackend::~MCAsmBackend() {}
+
+Optional<MCFixupKind> MCAsmBackend::getFixupKind(StringRef Name) const {
+  return None;
+}
 
 const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   static const MCFixupKindInfo Builtins[] = {
@@ -30,6 +34,10 @@ const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"FK_GPRel_2", 0, 16, 0},
       {"FK_GPRel_4", 0, 32, 0},
       {"FK_GPRel_8", 0, 64, 0},
+      {"FK_DTPRel_4", 0, 32, 0},
+      {"FK_DTPRel_8", 0, 64, 0},
+      {"FK_TPRel_4", 0, 32, 0},
+      {"FK_TPRel_8", 0, 64, 0},
       {"FK_SecRel_1", 0, 8, 0},
       {"FK_SecRel_2", 0, 16, 0},
       {"FK_SecRel_4", 0, 32, 0},

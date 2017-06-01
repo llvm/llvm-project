@@ -33,8 +33,8 @@ define i32* @get_zed1() {
   ret i32* @zed1
 }
 
-; ZED1_AND_ZED2: d zed2
-@zed2 = linkonce_odr unnamed_addr global i32 42
+; ZED1_AND_ZED2: r zed2
+@zed2 = linkonce_odr unnamed_addr constant i32 42
 
 define i32 @useZed2() {
   %x = load i32, i32* @zed2

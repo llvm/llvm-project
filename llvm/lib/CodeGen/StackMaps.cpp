@@ -30,16 +30,20 @@ using namespace llvm;
 #define DEBUG_TYPE "stackmaps"
 
 static cl::opt<int> StackMapVersion(
-    "stackmap-version", cl::init(1),
-    cl::desc("Specify the stackmap encoding version (default = 1)"));
+    "stackmap-version", cl::init(2),
+    cl::desc("Specify the stackmap encoding version (default = 2)"));
 
 const char *StackMaps::WSMP = "Stack Maps: ";
 
+StackMapOpers::StackMapOpers(const MachineInstr *MI)
+  : MI(MI) {
+  assert(getVarIdx() <= MI->getNumOperands() &&
+         "invalid stackmap definition");
+}
+
 PatchPointOpers::PatchPointOpers(const MachineInstr *MI)
     : MI(MI), HasDef(MI->getOperand(0).isReg() && MI->getOperand(0).isDef() &&
-                     !MI->getOperand(0).isImplicit()),
-      IsAnyReg(MI->getOperand(getMetaIdx(CCPos)).getImm() ==
-               CallingConv::AnyReg) {
+                     !MI->getOperand(0).isImplicit()) {
 #ifndef NDEBUG
   unsigned CheckStartIdx = 0, e = MI->getNumOperands();
   while (CheckStartIdx < e && MI->getOperand(CheckStartIdx).isReg() &&
@@ -70,7 +74,7 @@ unsigned PatchPointOpers::getNextScratchIdx(unsigned StartIdx) const {
 }
 
 StackMaps::StackMaps(AsmPrinter &AP) : AP(AP) {
-  if (StackMapVersion != 1)
+  if (StackMapVersion != 2)
     llvm_unreachable("Unsupported stackmap version!");
 }
 
@@ -272,8 +276,7 @@ StackMaps::parseRegisterLiveOutMask(const uint32_t *Mask) const {
   }
 
   LiveOuts.erase(
-      std::remove_if(LiveOuts.begin(), LiveOuts.end(),
-                     [](const LiveOutReg &LO) { return LO.Reg == 0; }),
+      remove_if(LiveOuts, [](const LiveOutReg &LO) { return LO.Reg == 0; }),
       LiveOuts.end());
 
   return LiveOuts;
@@ -332,20 +335,26 @@ void StackMaps::recordStackMapOpers(const MachineInstr &MI, uint64_t ID,
   CSInfos.emplace_back(CSOffsetExpr, ID, std::move(Locations),
                        std::move(LiveOuts));
 
-  // Record the stack size of the current function.
-  const MachineFrameInfo *MFI = AP.MF->getFrameInfo();
+  // Record the stack size of the current function and update callsite count.
+  const MachineFrameInfo &MFI = AP.MF->getFrameInfo();
   const TargetRegisterInfo *RegInfo = AP.MF->getSubtarget().getRegisterInfo();
   bool HasDynamicFrameSize =
-      MFI->hasVarSizedObjects() || RegInfo->needsStackRealignment(*(AP.MF));
-  FnStackSize[AP.CurrentFnSym] =
-      HasDynamicFrameSize ? UINT64_MAX : MFI->getStackSize();
+      MFI.hasVarSizedObjects() || RegInfo->needsStackRealignment(*(AP.MF));
+  uint64_t FrameSize = HasDynamicFrameSize ? UINT64_MAX : MFI.getStackSize();
+
+  auto CurrentIt = FnInfos.find(AP.CurrentFnSym);
+  if (CurrentIt != FnInfos.end())
+    CurrentIt->second.RecordCount++;
+  else
+    FnInfos.insert(std::make_pair(AP.CurrentFnSym, FunctionInfo(FrameSize)));
 }
 
 void StackMaps::recordStackMap(const MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::STACKMAP && "expected stackmap");
 
-  int64_t ID = MI.getOperand(0).getImm();
-  recordStackMapOpers(MI, ID, std::next(MI.operands_begin(), 2),
+  StackMapOpers opers(&MI);
+  const int64_t ID = MI.getOperand(PatchPointOpers::IDPos).getImm();
+  recordStackMapOpers(MI, ID, std::next(MI.operands_begin(), opers.getVarIdx()),
                       MI.operands_end());
 }
 
@@ -353,8 +362,7 @@ void StackMaps::recordPatchPoint(const MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::PATCHPOINT && "expected patchpoint");
 
   PatchPointOpers opers(&MI);
-  int64_t ID = opers.getMetaOper(PatchPointOpers::IDPos).getImm();
-
+  const int64_t ID = opers.getID();
   auto MOI = std::next(MI.operands_begin(), opers.getStackMapStartIdx());
   recordStackMapOpers(MI, ID, MOI, MI.operands_end(),
                       opers.isAnyReg() && opers.hasDef());
@@ -363,7 +371,7 @@ void StackMaps::recordPatchPoint(const MachineInstr &MI) {
   // verify anyregcc
   auto &Locations = CSInfos.back().Locations;
   if (opers.isAnyReg()) {
-    unsigned NArgs = opers.getMetaOper(PatchPointOpers::NArgPos).getImm();
+    unsigned NArgs = opers.getNumCallArgs();
     for (unsigned i = 0, e = (opers.hasDef() ? NArgs + 1 : NArgs); i != e; ++i)
       assert(Locations[i].Type == Location::Register &&
              "anyreg arg must be in reg.");
@@ -384,7 +392,7 @@ void StackMaps::recordStatepoint(const MachineInstr &MI) {
 /// Emit the stackmap header.
 ///
 /// Header {
-///   uint8  : Stack Map Version (currently 1)
+///   uint8  : Stack Map Version (currently 2)
 ///   uint8  : Reserved (expected to be 0)
 ///   uint16 : Reserved (expected to be 0)
 /// }
@@ -398,8 +406,8 @@ void StackMaps::emitStackmapHeader(MCStreamer &OS) {
   OS.EmitIntValue(0, 2);               // Reserved.
 
   // Num functions.
-  DEBUG(dbgs() << WSMP << "#functions = " << FnStackSize.size() << '\n');
-  OS.EmitIntValue(FnStackSize.size(), 4);
+  DEBUG(dbgs() << WSMP << "#functions = " << FnInfos.size() << '\n');
+  OS.EmitIntValue(FnInfos.size(), 4);
   // Num constants.
   DEBUG(dbgs() << WSMP << "#constants = " << ConstPool.size() << '\n');
   OS.EmitIntValue(ConstPool.size(), 4);
@@ -413,15 +421,18 @@ void StackMaps::emitStackmapHeader(MCStreamer &OS) {
 /// StkSizeRecord[NumFunctions] {
 ///   uint64 : Function Address
 ///   uint64 : Stack Size
+///   uint64 : Record Count
 /// }
 void StackMaps::emitFunctionFrameRecords(MCStreamer &OS) {
   // Function Frame records.
   DEBUG(dbgs() << WSMP << "functions:\n");
-  for (auto const &FR : FnStackSize) {
+  for (auto const &FR : FnInfos) {
     DEBUG(dbgs() << WSMP << "function addr: " << FR.first
-                 << " frame size: " << FR.second);
+                 << " frame size: " << FR.second.StackSize
+                 << " callsite count: " << FR.second.RecordCount << '\n');
     OS.EmitSymbolValue(FR.first, 8);
-    OS.EmitIntValue(FR.second, 8);
+    OS.EmitIntValue(FR.second.StackSize, 8);
+    OS.EmitIntValue(FR.second.RecordCount, 8);
   }
 }
 
@@ -520,9 +531,9 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
 void StackMaps::serializeToStackMapSection() {
   (void)WSMP;
   // Bail out if there's no stack map data.
-  assert((!CSInfos.empty() || (CSInfos.empty() && ConstPool.empty())) &&
+  assert((!CSInfos.empty() || ConstPool.empty()) &&
          "Expected empty constant pool too!");
-  assert((!CSInfos.empty() || (CSInfos.empty() && FnStackSize.empty())) &&
+  assert((!CSInfos.empty() || FnInfos.empty()) &&
          "Expected empty function record too!");
   if (CSInfos.empty())
     return;

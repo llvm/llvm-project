@@ -16,7 +16,7 @@
 ; CHECK: Fetch clause
 ; CHECK: Fetch clause
 
-define void @fetch_limits_r700() #0 {
+define amdgpu_ps void @fetch_limits_r700() {
 entry:
   %0 = load <4 x float>, <4 x float> addrspace(8)* null
   %1 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 1)
@@ -35,47 +35,63 @@ entry:
   %14 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 14)
   %15 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 15)
   %16 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 16)
-  %res0 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %0, i32 0, i32 0, i32 1)
-  %res1 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %1, i32 0, i32 0, i32 1)
-  %res2 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %2, i32 0, i32 0, i32 1)
-  %res3 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %3, i32 0, i32 0, i32 1)
-  %res4 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %4, i32 0, i32 0, i32 1)
-  %res5 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %5, i32 0, i32 0, i32 1)
-  %res6 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %6, i32 0, i32 0, i32 1)
-  %res7 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %7, i32 0, i32 0, i32 1)
-  %res8 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %8, i32 0, i32 0, i32 1)
-  %res9 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %9, i32 0, i32 0, i32 1)
-  %res10 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %10, i32 0, i32 0, i32 1)
-  %res11 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %11, i32 0, i32 0, i32 1)
-  %res12 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %12, i32 0, i32 0, i32 1)
-  %res13 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %13, i32 0, i32 0, i32 1)
-  %res14 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %14, i32 0, i32 0, i32 1)
-  %res15 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %15, i32 0, i32 0, i32 1)
-  %res16 = call <4 x float> @llvm.AMDGPU.tex(<4 x float> %16, i32 0, i32 0, i32 1)
-  %a = fadd <4 x float> %res0, %res1
-  %b = fadd <4 x float> %res2, %res3
-  %c = fadd <4 x float> %res4, %res5
-  %d = fadd <4 x float> %res6, %res7
-  %e = fadd <4 x float> %res8, %res9
-  %f = fadd <4 x float> %res10, %res11
-  %g = fadd <4 x float> %res12, %res13
-  %h = fadd <4 x float> %res14, %res15
-  %i = fadd <4 x float> %res16, %a
-
+  %17 = shufflevector <4 x float> %0, <4 x float> %0, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %18 = call <4 x float> @llvm.r600.tex(<4 x float> %17, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %19 = shufflevector <4 x float> %1, <4 x float> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %20 = call <4 x float> @llvm.r600.tex(<4 x float> %19, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %21 = shufflevector <4 x float> %2, <4 x float> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %22 = call <4 x float> @llvm.r600.tex(<4 x float> %21, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %23 = shufflevector <4 x float> %3, <4 x float> %3, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %24 = call <4 x float> @llvm.r600.tex(<4 x float> %23, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %25 = shufflevector <4 x float> %4, <4 x float> %4, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %26 = call <4 x float> @llvm.r600.tex(<4 x float> %25, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %27 = shufflevector <4 x float> %5, <4 x float> %5, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %28 = call <4 x float> @llvm.r600.tex(<4 x float> %27, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %29 = shufflevector <4 x float> %6, <4 x float> %6, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %30 = call <4 x float> @llvm.r600.tex(<4 x float> %29, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %31 = shufflevector <4 x float> %7, <4 x float> %7, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %32 = call <4 x float> @llvm.r600.tex(<4 x float> %31, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %33 = shufflevector <4 x float> %8, <4 x float> %8, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %34 = call <4 x float> @llvm.r600.tex(<4 x float> %33, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %35 = shufflevector <4 x float> %9, <4 x float> %9, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %36 = call <4 x float> @llvm.r600.tex(<4 x float> %35, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %37 = shufflevector <4 x float> %10, <4 x float> %10, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %38 = call <4 x float> @llvm.r600.tex(<4 x float> %37, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %39 = shufflevector <4 x float> %11, <4 x float> %11, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %40 = call <4 x float> @llvm.r600.tex(<4 x float> %39, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %41 = shufflevector <4 x float> %12, <4 x float> %12, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %42 = call <4 x float> @llvm.r600.tex(<4 x float> %41, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %43 = shufflevector <4 x float> %13, <4 x float> %13, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %44 = call <4 x float> @llvm.r600.tex(<4 x float> %43, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %45 = shufflevector <4 x float> %14, <4 x float> %14, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %46 = call <4 x float> @llvm.r600.tex(<4 x float> %45, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %47 = shufflevector <4 x float> %15, <4 x float> %15, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %48 = call <4 x float> @llvm.r600.tex(<4 x float> %47, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %49 = shufflevector <4 x float> %16, <4 x float> %16, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %50 = call <4 x float> @llvm.r600.tex(<4 x float> %49, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1)
+  %a = fadd <4 x float> %18, %20
+  %b = fadd <4 x float> %22, %24
+  %c = fadd <4 x float> %26, %28
+  %d = fadd <4 x float> %30, %32
+  %e = fadd <4 x float> %34, %36
+  %f = fadd <4 x float> %38, %40
+  %g = fadd <4 x float> %42, %44
+  %h = fadd <4 x float> %46, %48
+  %i = fadd <4 x float> %50, %a
   %bc = fadd <4 x float> %b, %c
   %de = fadd <4 x float> %d, %e
   %fg = fadd <4 x float> %f, %g
   %hi = fadd <4 x float> %h, %i
-
   %bcde = fadd <4 x float> %bc, %de
   %fghi = fadd <4 x float> %fg, %hi
-
   %bcdefghi = fadd <4 x float> %bcde, %fghi
-  call void @llvm.R600.store.swizzle(<4 x float> %bcdefghi, i32 0, i32 1)
+  call void @llvm.r600.store.swizzle(<4 x float> %bcdefghi, i32 0, i32 1)
   ret void
 }
 
-attributes #0 = { "ShaderType"="0" } ; Pixel Shader
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
-declare <4 x float> @llvm.AMDGPU.tex(<4 x float>, i32, i32, i32) readnone
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+; Function Attrs: readnone
+declare <4 x float> @llvm.r600.tex(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) #0
+
+attributes #0 = { readnone }

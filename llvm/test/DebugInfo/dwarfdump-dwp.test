@@ -1,0 +1,53 @@
+RUN: llvm-dwarfdump %p/Inputs/dwarfdump-dwp.x86_64.o | FileCheck %s
+
+; Testing the following simple dwp file:
+; a.cpp:
+;   struct foo { };
+;   foo a;
+; b.cpp:
+;   struct bar { };
+;   bar b() {
+;   }
+
+; CHECK-LABEL: .debug_info.dwo contents:
+; CHECK: Compile Unit
+
+; Verify that the second CU uses the index for its abbrev offset
+; CHECK: Compile Unit
+; CHECK-SAME: abbr_offset = 0x0043
+; CHECK: DW_TAG_compile_unit
+; CHECK-NOT: DW_TAG
+; CHECK:   DW_AT_name {{.*}} "b.cpp"
+
+; Verify that abbreviations are decoded using the abbrev offset in the index
+; CHECK:   DW_TAG_structure_type
+; CHECK:   DW_TAG_subprogram
+
+; CHECK-LABEL: .debug_types.dwo contents:
+; CHECK: Type Unit
+; CHECK:   DW_TAG_type_unit
+; CHECK:     DW_AT_stmt_list {{.*}}(0x00000000)
+; CHECK:     DW_TAG_structure_type
+; CHECK:       DW_AT_decl_file {{.*}} ("a.cpp")
+; CHECK: Type Unit
+; CHECK:   DW_TAG_type_unit
+; CHECK:     DW_AT_stmt_list {{.*}}(0x00000000)
+; CHECK:     DW_TAG_structure_type
+; CHECK:       DW_AT_decl_file {{.*}} ("b.cpp")
+
+; CHECK: .debug_cu_index contents:
+; CHECK-NEXT: version = 2 slots = 16
+; CHECK:      Index Signature          INFO                     ABBREV                   LINE                     STR_OFFSETS
+; CHECK-NEXT: ----- ------------------ ------------------------ ------------------------ ------------------------ ------------------------
+; CHECK-NEXT:     3 0xfef104c25502f092 [0x0000002d, 0x0000005f) [0x00000043, 0x0000008e) [0x0000001a, 0x00000034) [0x00000010, 0x00000024)
+; CHECK-NEXT:     9 0x03c30756e2d45008 [0x00000000, 0x0000002d) [0x00000000, 0x00000043) [0x00000000, 0x0000001a) [0x00000000, 0x00000010)
+
+; CHECK: .debug_tu_index contents:
+; CHECK-NEXT: version = 2 slots = 16
+; CHECK:      Index Signature          TYPES                    ABBREV                   LINE                     STR_OFFSETS
+; CHECK-NEXT: ----- ------------------ ------------------------ ------------------------ ------------------------ ------------------------
+; CHECK-NEXT:     9 0x1d02f3be30cc5688 [0x00000024, 0x00000048) [0x00000043, 0x0000008e) [0x0000001a, 0x00000034) [0x00000010, 0x00000024)
+; CHECK-NEXT:    13 0x3875c0e21cda63fc [0x00000000, 0x00000024) [0x00000000, 0x00000043) [0x00000000, 0x0000001a) [0x00000000, 0x00000010)
+
+; TODO: use the index section offset info to correctly dump strings in debug info
+; TODO: use the index section offset info to correctly dump file names in debug info

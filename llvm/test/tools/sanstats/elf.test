@@ -1,0 +1,210 @@
+# RUN: yaml2obj %s > %t1.o
+# RUN: yaml2obj %s > %t2.o
+
+# RUN: printf "\x04" > %t.stats
+
+# RUN: printf "%%s" "%t1.o" >> %t.stats
+# RUN: printf "\x00" >> %t.stats
+# RUN: printf "\x01\x00\x00\x00\x01\x00\x00\x00" >> %t.stats
+# RUN: printf "\x11\x00\x00\x00\x02\x00\x00\x20" >> %t.stats
+# RUN: printf "\x21\x00\x00\x00\x03\x00\x00\x40" >> %t.stats
+# RUN: printf "\x01\x00\x00\x00\x04\x00\x00\x60" >> %t.stats
+# RUN: printf "\x11\x00\x00\x00\x05\x00\x00\x80" >> %t.stats
+# RUN: printf "\x21\x00\x00\x00\x06\x00\x00\xa0" >> %t.stats
+# RUN: printf "\x00\x00\x00\x00\x00\x00\x00\x00" >> %t.stats
+
+# RUN: printf "%%s" "%t2.o" >> %t.stats
+# RUN: printf "\x00" >> %t.stats
+# RUN: printf "\x21\x00\x00\x00\x07\x00\x00\x00" >> %t.stats
+# RUN: printf "\x11\x00\x00\x00\x08\x00\x00\x20" >> %t.stats
+# RUN: printf "\x01\x00\x00\x00\x09\x00\x00\x40" >> %t.stats
+# RUN: printf "\x21\x00\x00\x00\x0b\x00\x00\x60" >> %t.stats
+# RUN: printf "\x11\x00\x00\x00\x0c\x00\x00\x80" >> %t.stats
+# RUN: printf "\x01\x00\x00\x00\x0e\x00\x00\xa0" >> %t.stats
+# RUN: printf "\x00\x00\x00\x00\x00\x00\x00\x00" >> %t.stats
+
+# RUN: sanstats %t.stats | FileCheck %s
+
+# CHECK: /tmp{{[/\\]}}f.c:1 f1 cfi-vcall 1
+# CHECK: /tmp{{[/\\]}}f.c:2 f2 cfi-nvcall 2
+# CHECK: /tmp{{[/\\]}}f.c:3 f3 cfi-derived-cast 3
+# CHECK: /tmp{{[/\\]}}f.c:1 f1 cfi-unrelated-cast 4
+# CHECK: /tmp{{[/\\]}}f.c:2 f2 cfi-icall 5
+# CHECK: /tmp{{[/\\]}}f.c:3 f3 <unknown> 6
+
+# CHECK: /tmp{{[/\\]}}f.c:3 f3 cfi-vcall 7
+# CHECK: /tmp{{[/\\]}}f.c:2 f2 cfi-nvcall 8
+# CHECK: /tmp{{[/\\]}}f.c:1 f1 cfi-derived-cast 9
+# CHECK: /tmp{{[/\\]}}f.c:3 f3 cfi-unrelated-cast 11
+# CHECK: /tmp{{[/\\]}}f.c:2 f2 cfi-icall 12
+# CHECK: /tmp{{[/\\]}}f.c:1 f1 <unknown> 14
+
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:        
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000010
+    Content:         554889E55DC3662E0F1F840000000000554889E55DC3662E0F1F840000000000554889E55DC3
+  - Name:            .debug_str
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x0000000000000001
+    Content:         636C616E672076657273696F6E20332E382E3020287472756E6B203235353339332920286C6C766D2F7472756E6B203235353734352900662E63002F746D7000663100663200663300
+  - Name:            .debug_loc
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         ''
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         011101250E1305030E10171B0E110112060000022E00110112064018030E3A0B3B0B3F19000000
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         660000000400000000000801000000000C0000000000000000000000000000000000000000002600000002000000000000000006000000015600000000010102000000000000000006000000015600000000010202000000000000000006000000015600000000010300
+  - Name:            .rela.debug_info
+    Type:            SHT_RELA
+    Link:            .symtab
+    AddressAlign:    0x0000000000000008
+    Info:            .debug_info
+    Relocations:     
+      - Offset:          0x0000000000000006
+        Symbol:          ''
+        Type:            R_X86_64_32
+      - Offset:          0x000000000000000C
+        Symbol:          ''
+        Type:            R_X86_64_32
+      - Offset:          0x0000000000000012
+        Symbol:          ''
+        Type:            R_X86_64_32
+        Addend:          55
+      - Offset:          0x0000000000000016
+        Symbol:          ''
+        Type:            R_X86_64_32
+      - Offset:          0x000000000000001A
+        Symbol:          ''
+        Type:            R_X86_64_32
+        Addend:          59
+      - Offset:          0x000000000000001E
+        Symbol:          ''
+        Type:            R_X86_64_64
+      - Offset:          0x000000000000002B
+        Symbol:          ''
+        Type:            R_X86_64_64
+      - Offset:          0x0000000000000039
+        Symbol:          ''
+        Type:            R_X86_64_32
+        Addend:          64
+      - Offset:          0x0000000000000040
+        Symbol:          ''
+        Type:            R_X86_64_64
+        Addend:          16
+      - Offset:          0x000000000000004E
+        Symbol:          ''
+        Type:            R_X86_64_32
+        Addend:          67
+      - Offset:          0x0000000000000055
+        Symbol:          ''
+        Type:            R_X86_64_64
+        Addend:          32
+      - Offset:          0x0000000000000063
+        Symbol:          ''
+        Type:            R_X86_64_32
+        Addend:          70
+  - Name:            .debug_ranges
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         ''
+  - Name:            .debug_pubnames
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         230000000200000000006A0000002A0000006631003F0000006632005400000066330000000000
+  - Name:            .rela.debug_pubnames
+    Type:            SHT_RELA
+    Link:            .symtab
+    AddressAlign:    0x0000000000000008
+    Info:            .debug_pubnames
+    Relocations:     
+      - Offset:          0x0000000000000006
+        Symbol:          ''
+        Type:            R_X86_64_32
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x0000000000000001
+    Content:         00636C616E672076657273696F6E20332E382E3020287472756E6B203235353339332920286C6C766D2F7472756E6B203235353734352900
+  - Name:            .note.GNU-stack
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         ''
+  - Name:            .eh_frame
+    Type:            SHT_X86_64_UNWIND
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x0000000000000008
+    Content:         1400000000000000017A5200017810011B0C070890010000180000001C000000000000000600000000410E108602430D060000001800000038000000000000000600000000410E108602430D060000001C00000054000000000000000600000000410E108602430D0600000000000000
+  - Name:            .rela.eh_frame
+    Type:            SHT_RELA
+    Link:            .symtab
+    AddressAlign:    0x0000000000000008
+    Info:            .eh_frame
+    Relocations:     
+      - Offset:          0x0000000000000020
+        Symbol:          ''
+        Type:            R_X86_64_PC32
+      - Offset:          0x000000000000003C
+        Symbol:          ''
+        Type:            R_X86_64_PC32
+        Addend:          16
+      - Offset:          0x0000000000000058
+        Symbol:          ''
+        Type:            R_X86_64_PC32
+        Addend:          32
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         4300000002001A0000000101FB0E0D00010101010000000100000100662E630000000000000902000000000000000001050C0A4A0500BB050C0A4A0500BB050C0A4A0202000101
+  - Name:            .rela.debug_line
+    Type:            SHT_RELA
+    Link:            .symtab
+    AddressAlign:    0x0000000000000008
+    Info:            .debug_line
+    Relocations:     
+      - Offset:          0x0000000000000027
+        Symbol:          ''
+        Type:            R_X86_64_64
+Symbols:         
+  Local:           
+    - Name:            f.c
+      Type:            STT_FILE
+    - Type:            STT_SECTION
+      Section:         .text
+    - Type:            STT_SECTION
+      Section:         .debug_str
+    - Type:            STT_SECTION
+      Section:         .debug_abbrev
+    - Type:            STT_SECTION
+      Section:         .debug_info
+    - Type:            STT_SECTION
+      Section:         .debug_line
+  Global:          
+    - Name:            f1
+      Type:            STT_FUNC
+      Section:         .text
+      Size:            0x0000000000000006
+    - Name:            f2
+      Type:            STT_FUNC
+      Section:         .text
+      Value:           0x0000000000000010
+      Size:            0x0000000000000006
+    - Name:            f3
+      Type:            STT_FUNC
+      Section:         .text
+      Value:           0x0000000000000020
+      Size:            0x0000000000000006
+...

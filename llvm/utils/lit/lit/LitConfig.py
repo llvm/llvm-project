@@ -8,7 +8,8 @@ import lit.formats
 import lit.TestingConfig
 import lit.util
 
-class LitConfig:
+# LitConfig must be a new style class for properties to work
+class LitConfig(object):
     """LitConfig - Configuration data for a 'lit' test runner instance, shared
     across all tests.
 
@@ -21,7 +22,10 @@ class LitConfig:
     def __init__(self, progname, path, quiet,
                  useValgrind, valgrindLeakCheck, valgrindArgs,
                  noExecute, debug, isWindows,
-                 params, config_prefix = None):
+                 params, config_prefix = None,
+                 maxIndividualTestTime = 0,
+                 maxFailures = None,
+                 parallelism_groups = []):
         # The name of the test runner.
         self.progname = progname
         # The items to add to the PATH environment variable.
@@ -57,6 +61,38 @@ class LitConfig:
                 self.valgrindArgs.append('--leak-check=no')
             self.valgrindArgs.extend(self.valgrindUserArgs)
 
+        self.maxIndividualTestTime = maxIndividualTestTime
+        self.maxFailures = maxFailures
+        self.parallelism_groups = parallelism_groups
+
+    @property
+    def maxIndividualTestTime(self):
+        """
+            Interface for getting maximum time to spend executing
+            a single test
+        """
+        return self._maxIndividualTestTime
+
+    @maxIndividualTestTime.setter
+    def maxIndividualTestTime(self, value):
+        """
+            Interface for setting maximum time to spend executing
+            a single test
+        """
+        self._maxIndividualTestTime = value
+        if self.maxIndividualTestTime > 0:
+            # The current implementation needs psutil to set
+            # a timeout per test. Check it's available.
+            # See lit.util.killProcessAndChildren()
+            try:
+                import psutil  # noqa: F401
+            except ImportError:
+                self.fatal("Setting a timeout per test requires the"
+                           " Python psutil module but it could not be"
+                           " found. Try installing it via pip or via"
+                           " your operating system's package manager.")
+        elif self.maxIndividualTestTime < 0:
+            self.fatal('The timeout per test must be >= 0 seconds')
 
     def load_config(self, config, path):
         """load_config(config, path) - Load a config object from an alternate
@@ -100,7 +136,7 @@ class LitConfig:
         # Step out of _write_message, and then out of wrapper.
         f = f.f_back.f_back
         file,line,_,_,_ = inspect.getframeinfo(f)
-        location = '%s:%d' % (os.path.basename(file), line)
+        location = '%s:%d' % (file, line)
 
         sys.stderr.write('%s: %s: %s: %s\n' % (self.progname, location,
                                                kind, message))

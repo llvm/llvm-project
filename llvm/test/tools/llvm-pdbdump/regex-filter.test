@@ -1,18 +1,18 @@
-; RUN: llvm-pdbdump -symbols -globals -types %p/Inputs/FilterTest.pdb \
+; RUN: llvm-pdbdump pretty -symbols -globals -types %p/Inputs/FilterTest.pdb \
 ; RUN:    | FileCheck --check-prefix=NO_FILTER %s
-; RUN: llvm-pdbdump -types -exclude-types="GlobalTypedef|NestedTypedef" \
+; RUN: llvm-pdbdump pretty -types -exclude-types="GlobalTypedef|NestedTypedef" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=EXCLUDE_TYPEDEFS %s
-; RUN: llvm-pdbdump -types -exclude-types="GlobalEnum|NestedEnum" \
+; RUN: llvm-pdbdump pretty -types -exclude-types="GlobalEnum|NestedEnum" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=EXCLUDE_ENUMS %s
-; RUN: llvm-pdbdump -types -symbols -globals -exclude-symbols="MemberVar|GlobalVar" \
+; RUN: llvm-pdbdump pretty -types -symbols -globals -exclude-symbols="MemberVar|GlobalVar" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=EXCLUDE_VARS %s
-; RUN: llvm-pdbdump -types -exclude-types="FilterTestClass" \
+; RUN: llvm-pdbdump pretty -types -exclude-types="FilterTestClass" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck  --check-prefix=EXCLUDE_WHOLE_CLASS %s
-; RUN: llvm-pdbdump -symbols -globals -exclude-compilands="FilterTest.obj"  \
+; RUN: llvm-pdbdump pretty -symbols -globals -exclude-compilands="FilterTest.obj"  \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck  --check-prefix=EXCLUDE_COMPILAND %s
-; RUN: llvm-pdbdump -types -include-types="FilterTestClass" \
+; RUN: llvm-pdbdump pretty -types -include-types="FilterTestClass" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=INCLUDE_ONLY_TYPES %s
-; RUN: llvm-pdbdump -types -symbols -globals -include-symbols="[[:<:]](IntGlobalVar|DoubleGlobalVar)[[:>:]]" \
+; RUN: llvm-pdbdump pretty -types -symbols -globals -include-symbols="[[:<:]](IntGlobalVar|DoubleGlobalVar)[[:>:]]" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=INCLUDE_ONLY_VARS %s
 
 ; NO_FILTER: ---TYPES---

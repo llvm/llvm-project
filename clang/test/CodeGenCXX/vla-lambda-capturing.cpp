@@ -125,11 +125,11 @@ int main() {
 // CHECK: [[SIZE2:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SIZE2_REF]]
 // CHECK: [[SIZE1_REF:%.+]] = getelementptr inbounds [[CAP_TYPE3]], [[CAP_TYPE3]]* [[THIS]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
 // CHECK: [[SIZE1:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SIZE1_REF]]
+// CHECK: [[BUFFER1_ADDR_REF:%.+]] = getelementptr inbounds [[CAP_TYPE3]], [[CAP_TYPE3]]* [[THIS]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
+// CHECK: [[BUFFER1_ADDR:%.+]] = load [[INTPTR_T]]*, [[INTPTR_T]]** [[BUFFER1_ADDR_REF]]
 // CHECK: [[N_ADDR_REF:%.+]] = getelementptr inbounds [[CAP_TYPE3]], [[CAP_TYPE3]]* [[THIS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: [[N_ADDR:%.+]] = load [[INTPTR_T]]*, [[INTPTR_T]]** [[N_ADDR_REF]]
 // CHECK: [[N:%.+]] = load [[INTPTR_T]], [[INTPTR_T]]* [[N_ADDR]]
-// CHECK: [[BUFFER1_ADDR_REF:%.+]] = getelementptr inbounds [[CAP_TYPE3]], [[CAP_TYPE3]]* [[THIS]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
-// CHECK: [[BUFFER1_ADDR:%.+]] = load [[INTPTR_T]]*, [[INTPTR_T]]** [[BUFFER1_ADDR_REF]]
 // CHECK: [[ELEM_OFFSET:%.+]] = mul {{.*}} i{{[0-9]+}} [[N]], [[SIZE1]]
 // CHECK: [[ELEM_ADDR:%.+]] = getelementptr inbounds [[INTPTR_T]], [[INTPTR_T]]* [[BUFFER1_ADDR]], i{{[0-9]+}} [[ELEM_OFFSET]]
 // CHECK: [[SIZEOF:%.+]] = mul {{.*}} i{{[0-9]+}} {{[0-9]+}}, [[SIZE1]]

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fsyntax-only -fobjc-arc -fblocks -verify -Wno-objc-root-class %s
+// RUN: not %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fsyntax-only -fobjc-arc -fblocks -Wno-objc-root-class -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 typedef unsigned long NSUInteger;
 typedef const void * CFTypeRef;
@@ -807,4 +808,38 @@ int garf() {
   id object;
   TKAssertEqual(object, nil);
   TKAssertEqual(object, (id)nil);
+}
+
+void block_capture_autoreleasing(A * __autoreleasing *a,
+                                 A **b, // expected-note {{declare the parameter __autoreleasing explicitly to suppress this warning}} expected-note {{declare the parameter __strong or capture a __block __strong variable to keep values alive across autorelease pools}}
+                                 A * _Nullable *c, // expected-note {{declare the parameter __autoreleasing explicitly to suppress this warning}} expected-note {{declare the parameter __strong or capture a __block __strong variable to keep values alive across autorelease pools}}
+                                 A * _Nullable __autoreleasing *d,
+                                 A ** _Nullable e, // expected-note {{declare the parameter __autoreleasing explicitly to suppress this warning}} expected-note {{declare the parameter __strong or capture a __block __strong variable to keep values alive across autorelease pools}}
+                                 A * __autoreleasing * _Nullable f,
+                                 id __autoreleasing *g,
+                                 id *h, // expected-note {{declare the parameter __autoreleasing explicitly to suppress this warning}} expected-note {{declare the parameter __strong or capture a __block __strong variable to keep values alive across autorelease pools}}
+                                 id _Nullable *i, // expected-note {{declare the parameter __autoreleasing explicitly to suppress this warning}} expected-note {{declare the parameter __strong or capture a __block __strong variable to keep values alive across autorelease pools}}
+                                 id _Nullable __autoreleasing *j,
+                                 id * _Nullable k, // expected-note {{declare the parameter __autoreleasing explicitly to suppress this warning}} expected-note {{declare the parameter __strong or capture a __block __strong variable to keep values alive across autorelease pools}}
+                                 id __autoreleasing * _Nullable l) {
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-11]]:37-[[@LINE-11]]:37}:" __autoreleasing "
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-11]]:47-[[@LINE-11]]:47}:" __autoreleasing"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-10]]:37-[[@LINE-10]]:37}:" __autoreleasing "
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-8]]:36-[[@LINE-8]]:36}:" __autoreleasing"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-8]]:46-[[@LINE-8]]:46}:" __autoreleasing"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-7]]:36-[[@LINE-7]]:36}:" __autoreleasing"
+  ^{
+    (void)*a;
+    (void)*b; // expected-warning {{block captures an autoreleasing out-parameter, which may result in use-after-free bugs}}
+    (void)*c; // expected-warning {{block captures an autoreleasing out-parameter, which may result in use-after-free bugs}}
+    (void)*d;
+    (void)*e; // expected-warning {{block captures an autoreleasing out-parameter, which may result in use-after-free bugs}}
+    (void)*f;
+    (void)*g;
+    (void)*h; // expected-warning {{block captures an autoreleasing out-parameter, which may result in use-after-free bugs}}
+    (void)*i; // expected-warning {{block captures an autoreleasing out-parameter, which may result in use-after-free bugs}}
+    (void)*j;
+    (void)*k; // expected-warning {{block captures an autoreleasing out-parameter, which may result in use-after-free bugs}}
+    (void)*l;
+  }();
 }

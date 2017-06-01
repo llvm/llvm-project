@@ -40,3 +40,5 @@ DEFINE_COMPILERRT_PRIVATE_FUNCTION(__switchu8)
 	bx      ip                      // jump to computed label
 END_COMPILERRT_FUNCTION(__switchu8)
 
+NO_EXEC_STACK_DIRECTIVE
+

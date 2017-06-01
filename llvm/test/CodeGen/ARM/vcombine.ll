@@ -105,3 +105,21 @@ define <8 x i8> @vget_high8(<16 x i8>* %A) nounwind {
         %tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
         ret <8 x i8> %tmp2
 }
+
+; vcombine(vld1_dup(p), vld1_dup(p2))
+define <8 x i16> @vcombine_vdup(<8 x i16> %src, i16* nocapture readonly %p) {
+; CHECK-LABEL: vcombine_vdup:
+; CHECK: vld1.16 {d16[]},
+; CHECK: vld1.16 {d17[]},
+; CHECK-LE: vmov    r0, r1, d16
+; CHECK-LE: vmov    r2, r3, d17
+  %a1 = load i16, i16* %p, align 2
+  %a2 = insertelement <4 x i16> undef, i16 %a1, i32 0
+  %a3 = shufflevector <4 x i16> %a2, <4 x i16> undef, <4 x i32> zeroinitializer
+  %p2 = getelementptr inbounds i16, i16* %p, i32 1
+  %b1 = load i16, i16* %p2, align 2
+  %b2 = insertelement <4 x i16> undef, i16 %b1, i32 0
+  %b3 = shufflevector <4 x i16> %b2, <4 x i16> undef, <4 x i32> zeroinitializer
+  %shuffle = shufflevector <4 x i16> %a3, <4 x i16> %b3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %shuffle
+}

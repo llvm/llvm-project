@@ -16,7 +16,7 @@ namespace CopyCtorIssues {
     Private(const Private&); // expected-note {{declared private here}}
   };
   struct NoViable {
-    NoViable();
+    NoViable(); // expected-note {{not viable}}
     NoViable(NoViable&); // expected-note {{not viable}}
   };
   struct Ambiguous {

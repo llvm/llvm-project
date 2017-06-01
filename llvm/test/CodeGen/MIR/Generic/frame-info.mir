@@ -1,4 +1,4 @@
-# RUN: llc -start-after machine-sink -stop-after machine-sink -o /dev/null %s | FileCheck %s
+# RUN: llc -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses machine frame info properties
 # correctly.
 
@@ -23,7 +23,6 @@
 ...
 ---
 name:            test
-isSSA:           true
 tracksRegLiveness: true
 
 # CHECK: frameInfo:
@@ -37,7 +36,6 @@ tracksRegLiveness: true
 # CHECK-NEXT: maxAlignment:
 # CHECK-NEXT: adjustsStack: false
 # CHECK-NEXT: hasCalls: false
-# CHECK-NEXT: maxCallFrameSize: 0
 # CHECK-NEXT: hasOpaqueSPAdjustment: false
 # CHECK-NEXT: hasVAStart: false
 # CHECK-NEXT: hasMustTailInVarArgFunc: false
@@ -49,7 +47,6 @@ body: |
 ...
 ---
 name:            test2
-isSSA:           true
 tracksRegLiveness: true
 
 # CHECK: test2

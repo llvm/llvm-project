@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.ExprInspection -fblocks -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.ExprInspection -fblocks -analyzer-config c++-template-inlining=false -DNO_INLINE -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -fblocks -analyzer-config c++-template-inlining=false -DNO_INLINE -verify %s
 
 void clang_analyzer_eval(bool);
 

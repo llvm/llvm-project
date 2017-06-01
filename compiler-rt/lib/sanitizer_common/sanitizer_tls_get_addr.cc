@@ -78,6 +78,15 @@ void DTLS_Destroy() {
   DTLS_Deallocate(dtls.dtv, s);
 }
 
+#if defined(__powerpc64__) || defined(__mips__)
+// This is glibc's TLS_DTV_OFFSET:
+// "Dynamic thread vector pointers point 0x8000 past the start of each
+//  TLS block."
+static const uptr kDtvOffset = 0x8000;
+#else
+static const uptr kDtvOffset = 0;
+#endif
+
 DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
                                 uptr static_tls_begin, uptr static_tls_end) {
   if (!common_flags()->intercept_tls_get_addr) return 0;
@@ -87,7 +96,7 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
   DTLS_Resize(dso_id + 1);
   if (dtls.dtv[dso_id].beg) return 0;
   uptr tls_size = 0;
-  uptr tls_beg = reinterpret_cast<uptr>(res) - arg->offset;
+  uptr tls_beg = reinterpret_cast<uptr>(res) - arg->offset - kDtvOffset;
   VPrintf(2, "__tls_get_addr: %p {%p,%p} => %p; tls_beg: %p; sp: %p "
              "num_live_dtls %zd\n",
           arg, arg->dso_id, arg->offset, res, tls_beg, &tls_beg,

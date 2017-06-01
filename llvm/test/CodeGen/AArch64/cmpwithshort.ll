@@ -1,4 +1,4 @@
-; RUN: llc -O3 -march=aarch64 < %s | FileCheck %s 
+; RUN: llc < %s -O3 -mtriple=aarch64-eabi | FileCheck %s 
 
 define i16 @test_1cmp_signed_1(i16* %ptr1) {
 ; CHECK-LABLE: @test_1cmp_signed_1

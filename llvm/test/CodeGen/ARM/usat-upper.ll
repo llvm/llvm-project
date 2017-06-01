@@ -1,4 +1,5 @@
 ; RUN: not llc < %s -O1 -mtriple=armv6-none-none-eabi 2>&1 | FileCheck %s
+; RUN: not llc < %s -O1 -mtriple=thumbv7-none-none-eabi 2>&1 | FileCheck %s
 
 ; immediate argument > upper-bound
 ; CHECK: LLVM ERROR: Cannot select: intrinsic %llvm.arm.usat

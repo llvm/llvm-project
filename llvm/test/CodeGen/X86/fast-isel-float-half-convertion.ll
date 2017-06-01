@@ -4,7 +4,7 @@
 
 define i16 @test_fp32_to_fp16(float %a) {
 ; CHECK-LABEL: test_fp32_to_fp16:
-; CHECK: vcvtps2ph $0, %xmm0, %xmm0
+; CHECK: vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-NEXT: vmovd %xmm0, %eax
 ; CHECK-NEXT: retq
 entry:

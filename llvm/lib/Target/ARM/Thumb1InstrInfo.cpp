@@ -38,9 +38,9 @@ unsigned Thumb1InstrInfo::getUnindexedOpcode(unsigned Opc) const {
 }
 
 void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator I, DebugLoc DL,
-                                  unsigned DestReg, unsigned SrcReg,
-                                  bool KillSrc) const {
+                                  MachineBasicBlock::iterator I,
+                                  const DebugLoc &DL, unsigned DestReg,
+                                  unsigned SrcReg, bool KillSrc) const {
   // Need to check the arch.
   MachineFunction &MF = *MBB.getParent();
   const ARMSubtarget &st = MF.getSubtarget<ARMSubtarget>();
@@ -83,7 +83,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     if (I != MBB.end()) DL = I->getDebugLoc();
 
     MachineFunction &MF = *MBB.getParent();
-    MachineFrameInfo &MFI = *MF.getFrameInfo();
+    MachineFrameInfo &MFI = MF.getFrameInfo();
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOStore,
         MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
@@ -109,7 +109,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     if (I != MBB.end()) DL = I->getDebugLoc();
 
     MachineFunction &MF = *MBB.getParent();
-    MachineFrameInfo &MFI = *MF.getFrameInfo();
+    MachineFrameInfo &MFI = MF.getFrameInfo();
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOLoad,
         MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
@@ -118,11 +118,12 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   }
 }
 
-void
-Thumb1InstrInfo::expandLoadStackGuard(MachineBasicBlock::iterator MI,
-                                      Reloc::Model RM) const {
-  if (RM == Reloc::PIC_)
-    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_pcrel, ARM::tLDRi, RM);
+void Thumb1InstrInfo::expandLoadStackGuard(
+    MachineBasicBlock::iterator MI) const {
+  MachineFunction &MF = *MI->getParent()->getParent();
+  const TargetMachine &TM = MF.getTarget();
+  if (TM.isPositionIndependent())
+    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_pcrel, ARM::tLDRi);
   else
-    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_abs, ARM::tLDRi, RM);
+    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_abs, ARM::tLDRi);
 }

@@ -73,6 +73,8 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
     return VA;
   }
   case SymbolBody::DefinedCommonKind:
+    if (!Config->DefineCommon)
+      return 0;
     return In<ELFT>::Common->OutSec->Addr + In<ELFT>::Common->OutSecOff +
            cast<DefinedCommon>(Body).Offset;
   case SymbolBody::SharedKind: {
@@ -203,8 +205,8 @@ void SymbolBody::parseSymbolVersion() {
   // Truncate the symbol name so that it doesn't include the version string.
   Name = {S.data(), Pos};
 
-  // If this is an undefined or shared symbol it is not a definition.
-  if (isUndefined() || isShared())
+  // If this is not in this DSO, it is not a definition.
+  if (!isInCurrentDSO())
     return;
 
   // '@@' in a symbol name means the default version.
@@ -299,7 +301,8 @@ uint8_t Symbol::computeBinding() const {
     return Binding;
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;
-  if (VersionId == VER_NDX_LOCAL && !body()->isUndefined())
+  const SymbolBody *Body = body();
+  if (VersionId == VER_NDX_LOCAL && Body->isInCurrentDSO())
     return STB_LOCAL;
   if (Config->NoGnuUnique && Binding == STB_GNU_UNIQUE)
     return STB_GLOBAL;

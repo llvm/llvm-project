@@ -19,26 +19,6 @@
 #include "clang/Basic/Version.inc"
 #include "llvm/ADT/StringRef.h"
 
-/// \brief Helper macro for CLANG_VERSION_STRING.
-#define CLANG_MAKE_VERSION_STRING2(X) #X
-
-#ifdef CLANG_VERSION_PATCHLEVEL
-/// \brief Helper macro for CLANG_VERSION_STRING.
-#define CLANG_MAKE_VERSION_STRING(X,Y,Z) CLANG_MAKE_VERSION_STRING2(X.Y.Z)
-
-/// \brief A string that describes the Clang version number, e.g., "1.0".
-#define CLANG_VERSION_STRING \
-  CLANG_MAKE_VERSION_STRING(CLANG_VERSION_MAJOR,CLANG_VERSION_MINOR, \
-                            CLANG_VERSION_PATCHLEVEL)
-#else
-/// \brief Helper macro for CLANG_VERSION_STRING.
-#define CLANG_MAKE_VERSION_STRING(X,Y) CLANG_MAKE_VERSION_STRING2(X.Y)
-
-/// \brief A string that describes the Clang version number, e.g., "1.0".
-#define CLANG_VERSION_STRING \
-  CLANG_MAKE_VERSION_STRING(CLANG_VERSION_MAJOR,CLANG_VERSION_MINOR)
-#endif
-
 namespace clang {
   /// \brief Retrieves the repository path (e.g., Subversion path) that
   /// identifies the particular Clang branch, tag, or trunk from which this

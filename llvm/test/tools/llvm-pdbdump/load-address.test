@@ -1,6 +1,6 @@
-; RUN: llvm-pdbdump -externals %p/Inputs/LoadAddressTest.pdb \
+; RUN: llvm-pdbdump pretty -externals %p/Inputs/LoadAddressTest.pdb \
 ; RUN:    | FileCheck --check-prefix=RVA %s
-; RUN: llvm-pdbdump -externals -load-address=0x40000000 \
+; RUN: llvm-pdbdump pretty -externals -load-address=0x40000000 \
 ; RUN: %p/Inputs/LoadAddressTest.pdb | FileCheck --check-prefix=VA %s
 
 ; RVA: ---EXTERNALS---

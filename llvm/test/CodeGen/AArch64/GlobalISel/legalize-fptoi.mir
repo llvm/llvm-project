@@ -1,0 +1,201 @@
+# RUN: llc -O0 -run-pass=legalizer -global-isel %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+
+  define void @test_fptosi_s32_s32() { ret void }
+  define void @test_fptoui_s32_s32() { ret void }
+  define void @test_fptosi_s32_s64() { ret void }
+  define void @test_fptoui_s32_s64() { ret void }
+
+  define void @test_fptosi_s64_s32() { ret void }
+  define void @test_fptoui_s64_s32() { ret void }
+  define void @test_fptosi_s64_s64() { ret void }
+  define void @test_fptoui_s64_s64() { ret void }
+
+  define void @test_fptosi_s1_s32() { ret void }
+  define void @test_fptoui_s1_s32() { ret void }
+
+  define void @test_fptosi_s8_s64() { ret void }
+  define void @test_fptoui_s8_s64() { ret void }
+
+  define void @test_fptosi_s16_s32() { ret void }
+  define void @test_fptoui_s16_s32() { ret void }
+...
+
+---
+name:            test_fptosi_s32_s32
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+
+    ; CHECK-LABEL: name: test_fptosi_s32_s32
+    ; CHECK: %1(s32) = G_FPTOSI %0
+    %1:_(s32) = G_FPTOSI %0
+...
+
+---
+name:            test_fptoui_s32_s32
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+
+    ; CHECK-LABEL: name: test_fptoui_s32_s32
+    ; CHECK: %1(s32) = G_FPTOUI %0
+    %1:_(s32) = G_FPTOUI %0
+...
+
+---
+name:            test_fptosi_s32_s64
+body: |
+  bb.0:
+    liveins: %x0
+    %0:_(s64) = COPY %x0
+
+    ; CHECK-LABEL: name: test_fptosi_s32_s64
+    ; CHECK: %1(s32) = G_FPTOSI %0
+    %1:_(s32) = G_FPTOSI %0
+...
+
+---
+name:            test_fptoui_s32_s64
+body: |
+  bb.0:
+    liveins: %x0
+    %0:_(s64) = COPY %x0
+
+    ; CHECK-LABEL: name: test_fptoui_s32_s64
+    ; CHECK: %1(s32) = G_FPTOUI %0
+    %1:_(s32) = G_FPTOUI %0
+...
+
+---
+name:            test_fptosi_s64_s32
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+
+    ; CHECK-LABEL: name: test_fptosi_s64_s32
+    ; CHECK: %1(s64) = G_FPTOSI %0
+    %1:_(s64) = G_FPTOSI %0
+...
+
+---
+name:            test_fptoui_s64_s32
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+
+    ; CHECK-LABEL: name: test_fptoui_s64_s32
+    ; CHECK: %1(s64) = G_FPTOUI %0
+    %1:_(s64) = G_FPTOUI %0
+...
+
+---
+name:            test_fptosi_s64_s64
+body: |
+  bb.0:
+    liveins: %x0
+    %0:_(s64) = COPY %x0
+
+    ; CHECK-LABEL: name: test_fptosi_s64_s64
+    ; CHECK: %1(s64) = G_FPTOSI %0
+    %1:_(s64) = G_FPTOSI %0
+...
+
+---
+name:            test_fptoui_s64_s64
+body: |
+  bb.0:
+    liveins: %x0
+    %0:_(s64) = COPY %x0
+
+    ; CHECK-LABEL: name: test_fptoui_s64_s64
+    ; CHECK: %1(s64) = G_FPTOUI %0
+    %1:_(s64) = G_FPTOUI %0
+...
+
+
+
+---
+name:            test_fptosi_s1_s32
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+
+    ; CHECK-LABEL: name: test_fptosi_s1_s32
+    ; CHECK: %2(s32) = G_FPTOSI %0
+    ; CHECK: %1(s1) = G_TRUNC %2
+    %1:_(s1) = G_FPTOSI %0
+...
+
+---
+name:            test_fptoui_s1_s32
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+
+    ; CHECK-LABEL: name: test_fptoui_s1_s32
+    ; CHECK: %2(s32) = G_FPTOUI %0
+    ; CHECK: %1(s1) = G_TRUNC %2
+    %1:_(s1) = G_FPTOUI %0
+...
+
+---
+name:            test_fptosi_s8_s64
+body: |
+  bb.0:
+    liveins: %x0
+    %0:_(s64) = COPY %x0
+
+    ; CHECK-LABEL: name: test_fptosi_s8_s64
+    ; CHECK: %2(s32) = G_FPTOSI %0
+    ; CHECK: %1(s8) = G_TRUNC %2
+    %1:_(s8) = G_FPTOSI %0
+...
+
+---
+name:            test_fptoui_s8_s64
+body: |
+  bb.0:
+    liveins: %x0
+    %0:_(s64) = COPY %x0
+
+    ; CHECK-LABEL: name: test_fptoui_s8_s64
+    ; CHECK: %2(s32) = G_FPTOUI %0
+    ; CHECK: %1(s8) = G_TRUNC %2
+    %1:_(s8) = G_FPTOUI %0
+...
+
+---
+name:            test_fptosi_s16_s32
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+
+    ; CHECK-LABEL: name: test_fptosi_s16_s32
+    ; CHECK: %2(s32) = G_FPTOSI %0
+    ; CHECK: %1(s16) = G_TRUNC %2
+    %1:_(s16) = G_FPTOSI %0
+...
+
+---
+name:            test_fptoui_s16_s32
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+
+    ; CHECK-LABEL: name: test_fptoui_s16_s32
+    ; CHECK: %2(s32) = G_FPTOUI %0
+    ; CHECK: %1(s16) = G_TRUNC %2
+    %1:_(s16) = G_FPTOUI %0
+...

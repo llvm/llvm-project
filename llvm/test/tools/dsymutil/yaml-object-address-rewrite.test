@@ -23,7 +23,7 @@
 # CHECK-NEXT: filename:{{.*}}/Inputs/./libbasic.a(basic3.macho.x86_64.o)'
 # CHECK-NEXT: timestamp: 0
 # CHECK-NEXT: symbols:
-# CHECK-DAG:   sym: _val, objAddr: 0x0000000000000004, binAddr: 0x0000000100001008, size: 0x00000000
+# CHECK-DAG:   sym: _val, binAddr: 0x0000000100001008, size: 0x00000000
 # CHECK-DAG:   sym: _bar, objAddr: 0x0000000000000020, binAddr: 0x0000000100000F40, size: 0x00000050
 # CHECK-DAG:   sym: _inc, objAddr: 0x0000000000000070, binAddr: 0x0000000100000F90, size: 0x00000019
 # CHECK-NOT: { sym:
@@ -42,7 +42,7 @@ objects:
       - { sym: _baz, objAddr: 0x0, binAddr: 0x0000000100001000, size: 0x00000000 }
   - filename: /Inputs/./libbasic.a(basic3.macho.x86_64.o)
     symbols:
-      - { sym: _val, objAddr: 0x0, binAddr: 0x0000000100001008, size: 0x00000000 }
+      - { sym: _val, binAddr: 0x0000000100001008, size: 0x00000000 }
       - { sym: _bar, objAddr: 0x0, binAddr: 0x0000000100000F40, size: 0x00000050 }
       - { sym: _inc, objAddr: 0x0, binAddr: 0x0000000100000F90, size: 0x00000019 }
 ...

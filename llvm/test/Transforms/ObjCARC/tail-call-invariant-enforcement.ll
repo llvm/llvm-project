@@ -5,6 +5,7 @@ declare i8* @objc_retain(i8* %x)
 declare i8* @objc_autorelease(i8* %x)
 declare i8* @objc_autoreleaseReturnValue(i8* %x)
 declare i8* @objc_retainAutoreleasedReturnValue(i8* %x)
+declare i8* @objc_unsafeClaimAutoreleasedReturnValue(i8* %x)
 declare i8* @tmp(i8*)
 
 ; Never tail call objc_autorelease.
@@ -83,6 +84,20 @@ define i8* @test5(i8* %x) nounwind {
 entry:
   %tmp0 = tail call i8* @objc_autoreleaseReturnValue(i8* %x)
   ret i8* %tmp0
+}
+
+; Always tail call objc_unsafeClaimAutoreleasedReturnValue.
+; CHECK: define i8* @test6(i8* %x) [[NUW]] {
+; CHECK: %tmp0 = tail call i8* @objc_unsafeClaimAutoreleasedReturnValue(i8* %y) [[NUW]]
+; CHECK: %tmp1 = tail call i8* @objc_unsafeClaimAutoreleasedReturnValue(i8* %z) [[NUW]]
+; CHECK: }
+define i8* @test6(i8* %x) nounwind {
+entry:
+  %y = call i8* @tmp(i8* %x)
+  %tmp0 = call i8* @objc_unsafeClaimAutoreleasedReturnValue(i8* %y)
+  %z = call i8* @tmp(i8* %x)
+  %tmp1 = tail call i8* @objc_unsafeClaimAutoreleasedReturnValue(i8* %z)
+  ret i8* %x
 }
 
 ; CHECK: attributes [[NUW]] = { nounwind }

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -asm-verbose=false | FileCheck %s
 
 define i32 @t1(i32 %a, i32 %b) nounwind readnone ssp {
 entry:

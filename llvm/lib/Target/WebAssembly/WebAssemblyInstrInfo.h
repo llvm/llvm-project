@@ -34,21 +34,28 @@ public:
 
   const WebAssemblyRegisterInfo &getRegisterInfo() const { return RI; }
 
-  void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                   DebugLoc DL, unsigned DestReg, unsigned SrcReg,
-                   bool KillSrc) const override;
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
+                                         AliasAnalysis *AA) const override;
 
-  bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+  void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                   const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
+                   bool KillSrc) const override;
+  MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
+                                       unsigned OpIdx1,
+                                       unsigned OpIdx2) const override;
+
+  bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify = false) const override;
-  unsigned RemoveBranch(MachineBasicBlock &MBB) const override;
-  unsigned InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
-                        MachineBasicBlock *FBB,
-                        ArrayRef<MachineOperand> Cond,
-                        DebugLoc DL) const override;
+  unsigned removeBranch(MachineBasicBlock &MBB,
+                        int *BytesRemoved = nullptr) const override;
+  unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
+                        MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
+                        const DebugLoc &DL,
+                        int *BytesAdded = nullptr) const override;
   bool
-  ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
+  reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 };
 
 } // end namespace llvm

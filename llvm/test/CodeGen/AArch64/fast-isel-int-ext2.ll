@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-apple-darwin -fast-isel -fast-isel-abort=1 -aarch64-atomic-cfg-tidy=false -disable-cgp-branch-opts -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-apple-darwin -fast-isel -fast-isel-abort=1 -aarch64-enable-atomic-cfg-tidy=false -disable-cgp-branch-opts -verify-machineinstrs < %s | FileCheck %s
 
 ;
 ; Test folding of the sign-/zero-extend into the load instruction.

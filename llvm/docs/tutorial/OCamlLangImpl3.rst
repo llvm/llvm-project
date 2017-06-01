@@ -114,8 +114,8 @@ values that can be in the ``Codegen.named_values`` map are function
 arguments. This code simply checks to see that the specified name is in
 the map (if not, an unknown variable is being referenced) and returns
 the value for it. In future chapters, we'll add support for `loop
-induction variables <LangImpl5.html#for>`_ in the symbol table, and for
-`local variables <LangImpl7.html#localvars>`_.
+induction variables <LangImpl5.html#for-loop-expression>`_ in the symbol table, and for
+`local variables <LangImpl7.html#user-defined-local-variables>`_.
 
 .. code-block:: ocaml
 
@@ -152,22 +152,22 @@ automatically provide each one with an increasing, unique numeric
 suffix. Local value names for instructions are purely optional, but it
 makes it much easier to read the IR dumps.
 
-`LLVM instructions <../LangRef.html#instref>`_ are constrained by strict
+`LLVM instructions <../LangRef.html#instruction-reference>`_ are constrained by strict
 rules: for example, the Left and Right operators of an `add
-instruction <../LangRef.html#i_add>`_ must have the same type, and the
+instruction <../LangRef.html#add-instruction>`_ must have the same type, and the
 result type of the add must match the operand types. Because all values
 in Kaleidoscope are doubles, this makes for very simple code for add,
 sub and mul.
 
 On the other hand, LLVM specifies that the `fcmp
-instruction <../LangRef.html#i_fcmp>`_ always returns an 'i1' value (a
+instruction <../LangRef.html#fcmp-instruction>`_ always returns an 'i1' value (a
 one bit integer). The problem with this is that Kaleidoscope wants the
 value to be a 0.0 or 1.0 value. In order to get these semantics, we
 combine the fcmp instruction with a `uitofp
-instruction <../LangRef.html#i_uitofp>`_. This instruction converts its
+instruction <../LangRef.html#uitofp-to-instruction>`_. This instruction converts its
 input integer into a floating point value by treating the input as an
 unsigned value. In contrast, if we used the `sitofp
-instruction <../LangRef.html#i_sitofp>`_, the Kaleidoscope '<' operator
+instruction <../LangRef.html#sitofp-to-instruction>`_, the Kaleidoscope '<' operator
 would return 0.0 and -1.0, depending on the input value.
 
 .. code-block:: ocaml
@@ -196,7 +196,7 @@ to resolve function names for us.
 
 Once we have the function to call, we recursively codegen each argument
 that is to be passed in, and create an LLVM `call
-instruction <../LangRef.html#i_call>`_. Note that LLVM uses the native C
+instruction <../LangRef.html#call-instruction>`_. Note that LLVM uses the native C
 calling conventions by default, allowing these calls to also call into
 standard library functions like "sin" and "cos", with no additional
 effort.
@@ -253,7 +253,7 @@ The final line above checks if the function has already been defined in
 This indicates the type and name to use, as well as which module to
 insert into. By default we assume a function has
 ``Llvm.Linkage.ExternalLinkage``. "`external
-linkage <LangRef.html#linkage>`_" means that the function may be defined
+linkage <../LangRef.html#linkage>`_" means that the function may be defined
 outside the current module and/or that it is callable by functions
 outside the module. The "``name``" passed in is the name the user
 specified: this name is registered in "``Codegen.the_module``"s symbol
@@ -360,7 +360,7 @@ Once the insertion point is set up, we call the ``Codegen.codegen_func``
 method for the root expression of the function. If no error happens,
 this emits code to compute the expression into the entry block and
 returns the value that was computed. Assuming no error, we then create
-an LLVM `ret instruction <../LangRef.html#i_ret>`_, which completes the
+an LLVM `ret instruction <../LangRef.html#ret-instruction>`_, which completes the
 function. Once the function is built, we call
 ``Llvm_analysis.assert_valid_function``, which is provided by LLVM. This
 function does a variety of consistency checks on the generated code, to
@@ -413,10 +413,10 @@ For example:
 
 Note how the parser turns the top-level expression into anonymous
 functions for us. This will be handy when we add `JIT
-support <OCamlLangImpl4.html#jit>`_ in the next chapter. Also note that
+support <OCamlLangImpl4.html#adding-a-jit-compiler>`_ in the next chapter. Also note that
 the code is very literally transcribed, no optimizations are being
 performed. We will `add
-optimizations <OCamlLangImpl4.html#trivialconstfold>`_ explicitly in the
+optimizations <OCamlLangImpl4.html#trivial-constant-folding>`_ explicitly in the
 next chapter.
 
 ::

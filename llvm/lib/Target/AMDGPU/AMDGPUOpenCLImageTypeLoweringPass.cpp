@@ -25,7 +25,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/Passes.h"
@@ -359,7 +358,7 @@ class AMDGPUOpenCLImageTypeLoweringPass : public ModulePass {
     return transformKernels(M);
   }
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "AMDGPU OpenCL Image Type Pass";
   }
 };

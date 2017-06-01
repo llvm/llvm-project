@@ -70,3 +70,5 @@ namespace EmitDefaultedSpecialMembers {
 inline int *getStaticDataMemberLeft() {
   return WithUndefinedStaticDataMember<int[]>::undefined;
 }
+
+inline WithAttributes<int> make_with_attributes_left() { return WithAttributes<int>(); }

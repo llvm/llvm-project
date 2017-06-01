@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -enable-shrink-wrap=true -start-after shrink-wrap -stop-after shrink-wrap -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses the save and restore points in
 # the machine frame info correctly.
 

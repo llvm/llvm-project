@@ -12,23 +12,32 @@
 // This file defines a family of thunks that should be statically linked into
 // the DLLs that have ASan instrumentation in order to delegate the calls to the
 // shared runtime that lives in the main binary.
-// See https://code.google.com/p/address-sanitizer/issues/detail?id=209 for the
-// details.
+// See https://github.com/google/sanitizers/issues/209 for the details.
 //===----------------------------------------------------------------------===//
 
-// Only compile this code when buidling asan_dll_thunk.lib
+// Only compile this code when building asan_dll_thunk.lib
 // Using #ifdef rather than relying on Makefiles etc.
 // simplifies the build procedure.
 #ifdef ASAN_DLL_THUNK
 #include "asan_init_version.h"
+#include "asan_globals_win.h"
 #include "interception/interception.h"
+#include "sanitizer_common/sanitizer_platform_interceptors.h"
+
+#ifdef _M_IX86
+#define WINAPI __stdcall
+#else
+#define WINAPI
+#endif
 
 // ---------- Function interception helper functions and macros ----------- {{{1
 extern "C" {
-void *__stdcall GetModuleHandleA(const char *module_name);
-void *__stdcall GetProcAddress(void *module, const char *proc_name);
+void *WINAPI GetModuleHandleA(const char *module_name);
+void *WINAPI GetProcAddress(void *module, const char *proc_name);
 void abort();
 }
+
+using namespace __sanitizer;
 
 static uptr getRealProcAddressOrDie(const char *name) {
   uptr ret =
@@ -105,7 +114,7 @@ static void InterceptHooks();
 // ---------- Function wrapping helpers ----------------------------------- {{{1
 #define WRAP_V_V(name)                                                         \
   extern "C" void name() {                                                     \
-    typedef void (*fntype)();                                                  \
+    typedef decltype(name) *fntype;                                            \
     static fntype fn = (fntype)getRealProcAddressOrDie(#name);                 \
     fn();                                                                      \
   }                                                                            \
@@ -113,7 +122,7 @@ static void InterceptHooks();
 
 #define WRAP_V_W(name)                                                         \
   extern "C" void name(void *arg) {                                            \
-    typedef void (*fntype)(void *arg);                                         \
+    typedef decltype(name) *fntype;                                            \
     static fntype fn = (fntype)getRealProcAddressOrDie(#name);                 \
     fn(arg);                                                                   \
   }                                                                            \
@@ -121,7 +130,7 @@ static void InterceptHooks();
 
 #define WRAP_V_WW(name)                                                        \
   extern "C" void name(void *arg1, void *arg2) {                               \
-    typedef void (*fntype)(void *, void *);                                    \
+    typedef decltype(name) *fntype;                                            \
     static fntype fn = (fntype)getRealProcAddressOrDie(#name);                 \
     fn(arg1, arg2);                                                            \
   }                                                                            \
@@ -129,7 +138,7 @@ static void InterceptHooks();
 
 #define WRAP_V_WWW(name)                                                       \
   extern "C" void name(void *arg1, void *arg2, void *arg3) {                   \
-    typedef void *(*fntype)(void *, void *, void *);                           \
+    typedef decltype(name) *fntype;                                            \
     static fntype fn = (fntype)getRealProcAddressOrDie(#name);                 \
     fn(arg1, arg2, arg3);                                                      \
   }                                                                            \
@@ -137,7 +146,7 @@ static void InterceptHooks();
 
 #define WRAP_W_V(name)                                                         \
   extern "C" void *name() {                                                    \
-    typedef void *(*fntype)();                                                 \
+    typedef decltype(name) *fntype;                                            \
     static fntype fn = (fntype)getRealProcAddressOrDie(#name);                 \
     return fn();                                                               \
   }                                                                            \
@@ -145,7 +154,7 @@ static void InterceptHooks();
 
 #define WRAP_W_W(name)                                                         \
   extern "C" void *name(void *arg) {                                           \
-    typedef void *(*fntype)(void *arg);                                        \
+    typedef decltype(name) *fntype;                                            \
     static fntype fn = (fntype)getRealProcAddressOrDie(#name);                 \
     return fn(arg);                                                            \
   }                                                                            \
@@ -153,7 +162,7 @@ static void InterceptHooks();
 
 #define WRAP_W_WW(name)                                                        \
   extern "C" void *name(void *arg1, void *arg2) {                              \
-    typedef void *(*fntype)(void *, void *);                                   \
+    typedef decltype(name) *fntype;                                            \
     static fntype fn = (fntype)getRealProcAddressOrDie(#name);                 \
     return fn(arg1, arg2);                                                     \
   }                                                                            \
@@ -161,7 +170,7 @@ static void InterceptHooks();
 
 #define WRAP_W_WWW(name)                                                       \
   extern "C" void *name(void *arg1, void *arg2, void *arg3) {                  \
-    typedef void *(*fntype)(void *, void *, void *);                           \
+    typedef decltype(name) *fntype;                                            \
     static fntype fn = (fntype)getRealProcAddressOrDie(#name);                 \
     return fn(arg1, arg2, arg3);                                               \
   }                                                                            \
@@ -169,7 +178,7 @@ static void InterceptHooks();
 
 #define WRAP_W_WWWW(name)                                                      \
   extern "C" void *name(void *arg1, void *arg2, void *arg3, void *arg4) {      \
-    typedef void *(*fntype)(void *, void *, void *, void *);                   \
+    typedef decltype(name) *fntype;                                            \
     static fntype fn = (fntype)getRealProcAddressOrDie(#name);                 \
     return fn(arg1, arg2, arg3, arg4);                                         \
   }                                                                            \
@@ -178,7 +187,7 @@ static void InterceptHooks();
 #define WRAP_W_WWWWW(name)                                                     \
   extern "C" void *name(void *arg1, void *arg2, void *arg3, void *arg4,        \
                         void *arg5) {                                          \
-    typedef void *(*fntype)(void *, void *, void *, void *, void *);           \
+    typedef decltype(name) *fntype;                                            \
     static fntype fn = (fntype)getRealProcAddressOrDie(#name);                 \
     return fn(arg1, arg2, arg3, arg4, arg5);                                   \
   }                                                                            \
@@ -187,7 +196,7 @@ static void InterceptHooks();
 #define WRAP_W_WWWWWW(name)                                                    \
   extern "C" void *name(void *arg1, void *arg2, void *arg3, void *arg4,        \
                         void *arg5, void *arg6) {                              \
-    typedef void *(*fntype)(void *, void *, void *, void *, void *, void *);   \
+    typedef decltype(name) *fntype;                                            \
     static fntype fn = (fntype)getRealProcAddressOrDie(#name);                 \
     return fn(arg1, arg2, arg3, arg4, arg5, arg6);                             \
   }                                                                            \
@@ -198,9 +207,11 @@ static void InterceptHooks();
 // Don't use the INTERFACE_FUNCTION machinery for this function as we actually
 // want to call it in the __asan_init interceptor.
 WRAP_W_V(__asan_should_detect_stack_use_after_return)
+WRAP_W_V(__asan_get_shadow_memory_dynamic_address)
 
 extern "C" {
   int __asan_option_detect_stack_use_after_return;
+  uptr __asan_shadow_memory_dynamic_address;
 
   // Manually wrap __asan_init as we need to initialize
   // __asan_option_detect_stack_use_after_return afterwards.
@@ -214,7 +225,8 @@ extern "C" {
     fn();
     __asan_option_detect_stack_use_after_return =
         (__asan_should_detect_stack_use_after_return() != 0);
-
+    __asan_shadow_memory_dynamic_address =
+        (uptr)__asan_get_shadow_memory_dynamic_address();
     InterceptHooks();
   }
 }
@@ -224,6 +236,7 @@ extern "C" void __asan_version_mismatch_check() {
 }
 
 INTERFACE_FUNCTION(__asan_handle_no_return)
+INTERFACE_FUNCTION(__asan_unhandled_exception_filter)
 
 INTERFACE_FUNCTION(__asan_report_store1)
 INTERFACE_FUNCTION(__asan_report_store2)
@@ -256,6 +269,13 @@ INTERFACE_FUNCTION(__asan_loadN)
 INTERFACE_FUNCTION(__asan_memcpy);
 INTERFACE_FUNCTION(__asan_memset);
 INTERFACE_FUNCTION(__asan_memmove);
+
+INTERFACE_FUNCTION(__asan_set_shadow_00);
+INTERFACE_FUNCTION(__asan_set_shadow_f1);
+INTERFACE_FUNCTION(__asan_set_shadow_f2);
+INTERFACE_FUNCTION(__asan_set_shadow_f3);
+INTERFACE_FUNCTION(__asan_set_shadow_f5);
+INTERFACE_FUNCTION(__asan_set_shadow_f8);
 
 INTERFACE_FUNCTION(__asan_alloca_poison);
 INTERFACE_FUNCTION(__asan_allocas_unpoison);
@@ -303,15 +323,18 @@ INTERFACE_FUNCTION(__asan_stack_free_10)
 
 // FIXME: we might want to have a sanitizer_win_dll_thunk?
 INTERFACE_FUNCTION(__sanitizer_annotate_contiguous_container)
+INTERFACE_FUNCTION(__sanitizer_contiguous_container_find_bad_address)
 INTERFACE_FUNCTION(__sanitizer_cov)
 INTERFACE_FUNCTION(__sanitizer_cov_dump)
+INTERFACE_FUNCTION(__sanitizer_dump_coverage)
+INTERFACE_FUNCTION(__sanitizer_dump_trace_pc_guard_coverage)
 INTERFACE_FUNCTION(__sanitizer_cov_indir_call16)
 INTERFACE_FUNCTION(__sanitizer_cov_init)
 INTERFACE_FUNCTION(__sanitizer_cov_module_init)
 INTERFACE_FUNCTION(__sanitizer_cov_trace_basic_block)
 INTERFACE_FUNCTION(__sanitizer_cov_trace_func_enter)
-INTERFACE_FUNCTION(__sanitizer_cov_trace_cmp)
-INTERFACE_FUNCTION(__sanitizer_cov_trace_switch)
+INTERFACE_FUNCTION(__sanitizer_cov_trace_pc_guard)
+INTERFACE_FUNCTION(__sanitizer_cov_trace_pc_guard_init)
 INTERFACE_FUNCTION(__sanitizer_cov_with_check)
 INTERFACE_FUNCTION(__sanitizer_get_allocated_size)
 INTERFACE_FUNCTION(__sanitizer_get_coverage_guards)
@@ -320,10 +343,13 @@ INTERFACE_FUNCTION(__sanitizer_get_estimated_allocated_size)
 INTERFACE_FUNCTION(__sanitizer_get_free_bytes)
 INTERFACE_FUNCTION(__sanitizer_get_heap_size)
 INTERFACE_FUNCTION(__sanitizer_get_ownership)
+INTERFACE_FUNCTION(__sanitizer_get_total_unique_caller_callee_pairs)
 INTERFACE_FUNCTION(__sanitizer_get_total_unique_coverage)
 INTERFACE_FUNCTION(__sanitizer_get_unmapped_bytes)
 INTERFACE_FUNCTION(__sanitizer_maybe_open_cov_file)
 INTERFACE_FUNCTION(__sanitizer_print_stack_trace)
+INTERFACE_FUNCTION(__sanitizer_symbolize_pc)
+INTERFACE_FUNCTION(__sanitizer_symbolize_global)
 INTERFACE_FUNCTION(__sanitizer_ptr_cmp)
 INTERFACE_FUNCTION(__sanitizer_ptr_sub)
 INTERFACE_FUNCTION(__sanitizer_report_error_summary)
@@ -333,6 +359,7 @@ INTERFACE_FUNCTION(__sanitizer_update_counter_bitset_and_clear_counters)
 INTERFACE_FUNCTION(__sanitizer_sandbox_on_notify)
 INTERFACE_FUNCTION(__sanitizer_set_death_callback)
 INTERFACE_FUNCTION(__sanitizer_set_report_path)
+INTERFACE_FUNCTION(__sanitizer_set_report_fd)
 INTERFACE_FUNCTION(__sanitizer_unaligned_load16)
 INTERFACE_FUNCTION(__sanitizer_unaligned_load32)
 INTERFACE_FUNCTION(__sanitizer_unaligned_load64)
@@ -340,23 +367,32 @@ INTERFACE_FUNCTION(__sanitizer_unaligned_store16)
 INTERFACE_FUNCTION(__sanitizer_unaligned_store32)
 INTERFACE_FUNCTION(__sanitizer_unaligned_store64)
 INTERFACE_FUNCTION(__sanitizer_verify_contiguous_container)
+INTERFACE_FUNCTION(__sanitizer_install_malloc_and_free_hooks)
+INTERFACE_FUNCTION(__sanitizer_start_switch_fiber)
+INTERFACE_FUNCTION(__sanitizer_finish_switch_fiber)
+INTERFACE_FUNCTION(__sanitizer_get_module_and_offset_for_pc)
 
 // TODO(timurrrr): Add more interface functions on the as-needed basis.
 
 // ----------------- Memory allocation functions ---------------------
 WRAP_V_W(free)
+WRAP_V_W(_free_base)
 WRAP_V_WW(_free_dbg)
 
 WRAP_W_W(malloc)
+WRAP_W_W(_malloc_base)
 WRAP_W_WWWW(_malloc_dbg)
 
 WRAP_W_WW(calloc)
+WRAP_W_WW(_calloc_base)
 WRAP_W_WWWWW(_calloc_dbg)
 WRAP_W_WWW(_calloc_impl)
 
 WRAP_W_WW(realloc)
+WRAP_W_WW(_realloc_base)
 WRAP_W_WWW(_realloc_dbg)
 WRAP_W_WWW(_recalloc)
+WRAP_W_WWW(_recalloc_base)
 
 WRAP_W_W(_msize)
 WRAP_W_W(_expand)
@@ -369,6 +405,10 @@ WRAP_W_W(_expand_dbg)
 
 INTERCEPT_LIBRARY_FUNCTION(atoi);
 INTERCEPT_LIBRARY_FUNCTION(atol);
+
+#ifdef _WIN64
+INTERCEPT_LIBRARY_FUNCTION(__C_specific_handler);
+#else
 INTERCEPT_LIBRARY_FUNCTION(_except_handler3);
 
 // _except_handler4 checks -GS cookie which is different for each module, so we
@@ -377,10 +417,13 @@ INTERCEPTOR(int, _except_handler4, void *a, void *b, void *c, void *d) {
   __asan_handle_no_return();
   return REAL(_except_handler4)(a, b, c, d);
 }
+#endif
 
 INTERCEPT_LIBRARY_FUNCTION(frexp);
 INTERCEPT_LIBRARY_FUNCTION(longjmp);
+#if SANITIZER_INTERCEPT_MEMCHR
 INTERCEPT_LIBRARY_FUNCTION(memchr);
+#endif
 INTERCEPT_LIBRARY_FUNCTION(memcmp);
 INTERCEPT_LIBRARY_FUNCTION(memcpy);
 INTERCEPT_LIBRARY_FUNCTION(memmove);
@@ -390,12 +433,14 @@ INTERCEPT_LIBRARY_FUNCTION(strchr);
 INTERCEPT_LIBRARY_FUNCTION(strcmp);
 INTERCEPT_LIBRARY_FUNCTION(strcpy);  // NOLINT
 INTERCEPT_LIBRARY_FUNCTION(strcspn);
+INTERCEPT_LIBRARY_FUNCTION(strdup);
 INTERCEPT_LIBRARY_FUNCTION(strlen);
 INTERCEPT_LIBRARY_FUNCTION(strncat);
 INTERCEPT_LIBRARY_FUNCTION(strncmp);
 INTERCEPT_LIBRARY_FUNCTION(strncpy);
 INTERCEPT_LIBRARY_FUNCTION(strnlen);
 INTERCEPT_LIBRARY_FUNCTION(strpbrk);
+INTERCEPT_LIBRARY_FUNCTION(strrchr);
 INTERCEPT_LIBRARY_FUNCTION(strspn);
 INTERCEPT_LIBRARY_FUNCTION(strstr);
 INTERCEPT_LIBRARY_FUNCTION(strtol);
@@ -405,7 +450,9 @@ INTERCEPT_LIBRARY_FUNCTION(wcslen);
 // is defined.
 void InterceptHooks() {
   INTERCEPT_HOOKS();
+#ifndef _WIN64
   INTERCEPT_FUNCTION(_except_handler4);
+#endif
 }
 
 // We want to call __asan_init before C/C++ initializers/constructors are
@@ -421,5 +468,16 @@ static int call_asan_init() {
 }
 #pragma section(".CRT$XIB", long, read)  // NOLINT
 __declspec(allocate(".CRT$XIB")) int (*__asan_preinit)() = call_asan_init;
+
+static void WINAPI asan_thread_init(void *mod, unsigned long reason,
+                                   void *reserved) {
+  if (reason == /*DLL_PROCESS_ATTACH=*/1) __asan_init();
+}
+
+#pragma section(".CRT$XLAB", long, read)  // NOLINT
+__declspec(allocate(".CRT$XLAB")) void (WINAPI *__asan_tls_init)(void *,
+    unsigned long, void *) = asan_thread_init;
+
+ASAN_LINK_GLOBALS_WIN()
 
 #endif // ASAN_DLL_THUNK

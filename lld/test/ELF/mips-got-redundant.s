@@ -8,25 +8,25 @@
 
 # CHECK:      Local entries [
 # CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address: 0x40008
+# CHECK-NEXT:     Address:
 # CHECK-NEXT:     Access: -32744
 # CHECK-NEXT:     Initial: 0x20000
 #                          ^-- loc1
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address: 0x4000C
+# CHECK-NEXT:     Address:
 # CHECK-NEXT:     Access: -32740
 # CHECK-NEXT:     Initial: 0x30000
 #                          ^-- loc2, loc3, loc4
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address: 0x40010
+# CHECK-NEXT:     Address:
 # CHECK-NEXT:     Access: -32736
 # CHECK-NEXT:     Initial: 0x40000
 #                          ^-- redundant
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address: 0x40014
+# CHECK-NEXT:     Address:
 # CHECK-NEXT:     Access: -32732
 # CHECK-NEXT:     Initial: 0x30008
 #                          ^-- glb1

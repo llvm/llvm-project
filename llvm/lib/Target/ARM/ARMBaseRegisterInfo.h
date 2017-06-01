@@ -62,6 +62,12 @@ static inline bool isARMArea3Register(unsigned Reg, bool isIOS) {
   switch (Reg) {
     case D15: case D14: case D13: case D12:
     case D11: case D10: case D9:  case D8:
+    case D7:  case D6:  case D5:  case D4:
+    case D3:  case D2:  case D1:  case D0:
+    case D31: case D30: case D29: case D28:
+    case D27: case D26: case D25: case D24:
+    case D23: case D22: case D21: case D20:
+    case D19: case D18: case D17: case D16:
       return true;
     default:
       return false;
@@ -92,9 +98,13 @@ protected:
 public:
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
+  const MCPhysReg *
+  getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
   const uint32_t *getNoPreservedMask() const override;
+  const uint32_t *getTLSCallPreservedMask(const MachineFunction &MF) const;
+  const uint32_t *getSjLjDispatchPreservedMask(const MachineFunction &MF) const;
 
   /// getThisReturnPreservedMask - Returns a call preserved mask specific to the
   /// case that 'returned' is on an i32 first argument if the calling convention
@@ -157,12 +167,12 @@ public:
 
   /// emitLoadConstPool - Emits a load from constpool to materialize the
   /// specified immediate.
-  virtual void emitLoadConstPool(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator &MBBI,
-                                 DebugLoc dl, unsigned DestReg, unsigned SubIdx,
-                                 int Val, ARMCC::CondCodes Pred = ARMCC::AL,
-                                 unsigned PredReg = 0,
-                                 unsigned MIFlags = MachineInstr::NoFlags)const;
+  virtual void
+  emitLoadConstPool(MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
+                    const DebugLoc &dl, unsigned DestReg, unsigned SubIdx,
+                    int Val, ARMCC::CondCodes Pred = ARMCC::AL,
+                    unsigned PredReg = 0,
+                    unsigned MIFlags = MachineInstr::NoFlags) const;
 
   /// Code Generation virtual methods...
   bool requiresRegisterScavenging(const MachineFunction &MF) const override;

@@ -364,6 +364,32 @@ static inline float getFPImmFloat(unsigned Imm) {
   return FPUnion.F;
 }
 
+/// getFP16Imm - Return an 8-bit floating-point version of the 16-bit
+/// floating-point value. If the value cannot be represented as an 8-bit
+/// floating-point value, then return -1.
+static inline int getFP16Imm(const APInt &Imm) {
+  uint32_t Sign = Imm.lshr(15).getZExtValue() & 1;
+  int32_t Exp = (Imm.lshr(10).getSExtValue() & 0x1f) - 15;  // -14 to 15
+  int32_t Mantissa = Imm.getZExtValue() & 0x3ff;  // 10 bits
+
+  // We can handle 4 bits of mantissa.
+  // mantissa = (16+UInt(e:f:g:h))/16.
+  if (Mantissa & 0x3f)
+    return -1;
+  Mantissa >>= 6;
+
+  // We can handle 3 bits of exponent: exp == UInt(NOT(b):c:d)-3
+  if (Exp < -3 || Exp > 4)
+    return -1;
+  Exp = ((Exp+3) & 0x7) ^ 4;
+
+  return ((int)Sign << 7) | (Exp << 4) | Mantissa;
+}
+
+static inline int getFP16Imm(const APFloat &FPImm) {
+  return getFP16Imm(FPImm.bitcastToAPInt());
+}
+
 /// getFP32Imm - Return an 8-bit floating-point version of the 32-bit
 /// floating-point value. If the value cannot be represented as an 8-bit
 /// floating-point value, then return -1.
@@ -725,6 +751,49 @@ static inline uint64_t decodeAdvSIMDModImmType12(uint8_t Imm) {
   if (Imm & 0x02) EncVal |= 0x0002000000000000ULL;
   if (Imm & 0x01) EncVal |= 0x0001000000000000ULL;
   return (EncVal << 32) | EncVal;
+}
+
+inline static bool isAnyMOVZMovAlias(uint64_t Value, int RegWidth) {
+  for (int Shift = 0; Shift <= RegWidth - 16; Shift += 16)
+    if ((Value & ~(0xffffULL << Shift)) == 0)
+      return true;
+
+  return false;
+}
+
+inline static bool isMOVZMovAlias(uint64_t Value, int Shift, int RegWidth) {
+  if (RegWidth == 32)
+    Value &= 0xffffffffULL;
+
+  // "lsl #0" takes precedence: in practice this only affects "#0, lsl #0".
+  if (Value == 0 && Shift != 0)
+    return false;
+
+  return (Value & ~(0xffffULL << Shift)) == 0;
+}
+
+inline static bool isMOVNMovAlias(uint64_t Value, int Shift, int RegWidth) {
+  // MOVZ takes precedence over MOVN.
+  if (isAnyMOVZMovAlias(Value, RegWidth))
+    return false;
+
+  Value = ~Value;
+  if (RegWidth == 32)
+    Value &= 0xffffffffULL;
+
+  return isMOVZMovAlias(Value, Shift, RegWidth);
+}
+
+inline static bool isAnyMOVWMovAlias(uint64_t Value, int RegWidth) {
+  if (isAnyMOVZMovAlias(Value, RegWidth))
+    return true;
+
+  // It's not a MOVZ, but it might be a MOVN.
+  Value = ~Value;
+  if (RegWidth == 32)
+    Value &= 0xffffffffULL;
+
+  return isAnyMOVZMovAlias(Value, RegWidth);
 }
 
 } // end namespace AArch64_AM

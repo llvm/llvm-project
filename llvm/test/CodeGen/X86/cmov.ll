@@ -33,16 +33,17 @@ entry:
 }
 
 
-; x86's 32-bit cmov doesn't clobber the high 32 bits of the destination
-; if the condition is false. An explicit zero-extend (movl) is needed
-; after the cmov.
+; x86's 32-bit cmov zeroes the high 32 bits of the destination. Make
+; sure CodeGen takes advantage of that to avoid an unnecessary
+; zero-extend (movl) after the cmov.
 
 declare void @bar(i64) nounwind
 
 define void @test3(i64 %a, i64 %b, i1 %p) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:      cmov{{n?}}el %[[R1:e..]], %[[R2:e..]]
-; CHECK-NEXT: movl    %[[R2]], %{{e..}}
+; CHECK-NOT:  movl
+; CHECK:      call
 
   %c = trunc i64 %a to i32
   %d = trunc i64 %b to i32
@@ -120,8 +121,8 @@ declare i32 @printf(i8* nocapture, ...) nounwind
 define i32 @test5(i32* nocapture %P) nounwind readonly {
 entry:
 ; CHECK-LABEL: test5:
+; CHECK:  xorl %eax, %eax
 ; CHECK: 	setg	%al
-; CHECK:	movzbl	%al, %eax
 ; CHECK:	orl	$-2, %eax
 ; CHECK:	ret
 
@@ -134,8 +135,8 @@ entry:
 define i32 @test6(i32* nocapture %P) nounwind readonly {
 entry:
 ; CHECK-LABEL: test6:
+; CHECK:  xorl %eax, %eax
 ; CHECK: 	setl	%al
-; CHECK:	movzbl	%al, %eax
 ; CHECK:	leal	4(%rax,%rax,8), %eax
 ; CHECK:        ret
 	%0 = load i32, i32* %P, align 4		; <i32> [#uses=1]
@@ -155,3 +156,17 @@ define i8 @test7(i1 inreg %c, i8 inreg %a, i8 inreg %b) nounwind {
   %d = select i1 %c, i8 %a, i8 %b
   ret i8 %d
 }
+
+define i32 @smin(i32 %x) {
+; CHECK-LABEL: smin:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl $-1, %edi
+; CHECK-NEXT:    movl $-1, %eax
+; CHECK-NEXT:    cmovsl %edi, %eax
+; CHECK-NEXT:    retq
+  %not_x = xor i32 %x, -1
+  %1 = icmp slt i32 %not_x, -1
+  %sel = select i1 %1, i32 %not_x, i32 -1
+  ret i32 %sel
+}
+

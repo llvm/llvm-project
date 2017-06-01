@@ -18,9 +18,20 @@ void __clear_cache(void* start, void* end)
     if (!FlushInstructionCache(GetCurrentProcess(), start, end-start))
         exit(1);
 }
+
+static uintptr_t get_page_size() {
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    return si.dwPageSize;
+}
 #else
+#include <unistd.h>
 #include <sys/mman.h>
 extern void __clear_cache(void* start, void* end);
+
+static uintptr_t get_page_size() {
+    return sysconf(_SC_PAGE_SIZE);
+}
 #endif
 
 
@@ -56,8 +67,9 @@ unsigned char execution_buffer[128];
 int main()
 {
     // make executable the page containing execution_buffer 
-    char* start = (char*)((uintptr_t)execution_buffer & (-4095));
-    char* end = (char*)((uintptr_t)(&execution_buffer[128+4096]) & (-4095));
+    uintptr_t page_size = get_page_size();
+    char* start = (char*)((uintptr_t)execution_buffer & (-page_size));
+    char* end = (char*)((uintptr_t)(&execution_buffer[128+page_size]) & (-page_size));
 #if defined(_WIN32)
     DWORD dummy_oldProt;
     MEMORY_BASIC_INFORMATION b;

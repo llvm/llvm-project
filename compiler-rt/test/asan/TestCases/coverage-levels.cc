@@ -25,10 +25,10 @@ int main(int argc, char **argv) {
 
 // CHECK1: CovDump: bitset of 1 bits written for '{{.*}}', 1 bits are set
 // CHECK1:  1 PCs written
-// CHECK2: CovDump: bitset of 3 bits written for '{{.*}}', 2 bits are set
-// CHECK2:  2 PCs written
-// CHECK3: CovDump: bitset of 4 bits written for '{{.*}}', 3 bits are set
-// CHECK3:  3 PCs written
+// CHECK2: CovDump: bitset of 2 bits written for '{{.*}}', 1 bits are set
+// CHECK2:  1 PCs written
+// CHECK3: CovDump: bitset of 3 bits written for '{{.*}}', 2 bits are set
+// CHECK3:  2 PCs written
 // CHECK3_NOBITSET-NOT: bitset of
 // CHECK3_NOPCS-NOT: PCs written
-// CHECK_COUNTERS: CovDump: 4 counters written for
+// CHECK_COUNTERS: CovDump: 3 counters written for

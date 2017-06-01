@@ -82,7 +82,7 @@ int main() {
   fprintf(stderr, "1\n");
 
   // CFI-DIAG: runtime error: control flow integrity check for type 'B' failed during base-to-derived cast
-  // CFI-DIAG-NEXT: note: vtable is of type 'A<B>'
+  // CFI-DIAG-NEXT: note: vtable is of type '{{(class )?}}A<{{(class )?}}B>'
   B* b = new B;
   break_optimization(b);
   delete b; // UB here

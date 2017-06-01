@@ -21,8 +21,8 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!15}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 132191)", isOptimized: true, emissionKind: 0, file: !13, enums: !14, retainedTypes: !14, subprograms: !11, imports:  null)
-!1 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, file: !13, scope: !2, type: !3, variables: !12)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 132191)", isOptimized: true, emissionKind: FullDebug, file: !13, enums: !14, retainedTypes: !14, imports:  null)
+!1 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !0, file: !13, scope: !2, type: !3, variables: !12)
 !2 = !DIFile(filename: "a.c", directory: "/private/tmp")
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
@@ -32,7 +32,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !8 = !{i32 42}
 !9 = !DILocation(line: 2, column: 12, scope: !7)
 !10 = !DILocation(line: 3, column: 2, scope: !7)
-!11 = !{!1}
 !12 = !{!6}
 !13 = !DIFile(filename: "a.c", directory: "/private/tmp")
 !14 = !{}

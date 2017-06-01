@@ -21,6 +21,6 @@ f2:
 // CHECK-LABEL: Name: d1
 // CHECK:       Other: 0
 // CHECK-LABEL: Name: f1
-// CHECK:       Other: 128
+// CHECK:       Other [ (0x80)
 // CHECK-LABEL: Name: f2
 // CHECK:       Other: 0

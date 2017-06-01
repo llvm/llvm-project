@@ -1,7 +1,7 @@
 ; Test variable-sized allocas and addresses based on them in cases where
 ; stack arguments are needed.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK
+; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK-A
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK-B
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK-C

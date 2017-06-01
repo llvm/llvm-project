@@ -17,6 +17,7 @@
 #define LLVM_MC_MCREGISTERINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
@@ -161,7 +162,7 @@ private:
   unsigned NumRegUnits;                       // Number of regunits.
   const MCPhysReg (*RegUnitRoots)[2];         // Pointer to regunit root table.
   const MCPhysReg *DiffLists;                 // Pointer to the difflists array
-  const unsigned *RegUnitMaskSequences;       // Pointer to lane mask sequences
+  const LaneBitmask *RegUnitMaskSequences;    // Pointer to lane mask sequences
                                               // for register units.
   const char *RegStrings;                     // Pointer to the string table.
   const char *RegClassStrings;                // Pointer to the class strings.
@@ -182,6 +183,7 @@ private:
   const DwarfLLVMRegPair *Dwarf2LRegs;        // Dwarf to LLVM regs mapping
   const DwarfLLVMRegPair *EHDwarf2LRegs;      // Dwarf to LLVM regs mapping EH
   DenseMap<unsigned, int> L2SEHRegs;          // LLVM to SEH regs mapping
+  DenseMap<unsigned, int> L2CVRegs;           // LLVM to CV regs mapping
 
 public:
   /// DiffListIterator - Base iterator class that can traverse the
@@ -247,7 +249,7 @@ public:
                           const MCPhysReg (*RURoots)[2],
                           unsigned NRU,
                           const MCPhysReg *DL,
-                          const unsigned *RUMS,
+                          const LaneBitmask *RUMS,
                           const char *Strings,
                           const char *ClassStrings,
                           const uint16_t *SubIndices,
@@ -270,6 +272,16 @@ public:
     NumSubRegIndices = NumIndices;
     SubRegIdxRanges = SubIdxRanges;
     RegEncodingTable = RET;
+
+    // Initialize DWARF register mapping variables
+    EHL2DwarfRegs = nullptr;
+    EHL2DwarfRegsSize = 0;
+    L2DwarfRegs = nullptr;
+    L2DwarfRegsSize = 0;
+    EHDwarf2LRegs = nullptr;
+    EHDwarf2LRegsSize = 0;
+    Dwarf2LRegs = nullptr;
+    Dwarf2LRegsSize = 0;
   }
 
   /// \brief Used to initialize LLVM register to Dwarf
@@ -307,6 +319,10 @@ public:
   /// initialization code.
   void mapLLVMRegToSEHReg(unsigned LLVMReg, int SEHReg) {
     L2SEHRegs[LLVMReg] = SEHReg;
+  }
+
+  void mapLLVMRegToCVReg(unsigned LLVMReg, int CVReg) {
+    L2CVRegs[LLVMReg] = CVReg;
   }
 
   /// \brief This method should return the register where the return
@@ -396,6 +412,10 @@ public:
   /// number.  Returns LLVM register number if there is no equivalent value.
   int getSEHRegNum(unsigned RegNum) const;
 
+  /// \brief Map a target register to an equivalent CodeView register
+  /// number.
+  int getCodeViewRegNum(unsigned RegNum) const;
+
   regclass_iterator regclass_begin() const { return Classes; }
   regclass_iterator regclass_end() const { return Classes+NumClasses; }
 
@@ -440,6 +460,11 @@ public:
     return RegA == RegB || isSuperRegister(RegA, RegB);
   }
 
+  /// \brief Returns true if RegB is a super-register or sub-register of RegA
+  /// or if RegB == RegA.
+  bool isSuperOrSubRegisterEq(unsigned RegA, unsigned RegB) const {
+    return isSubRegisterEq(RegA, RegB) || isSuperRegister(RegA, RegB);
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -555,11 +580,12 @@ public:
   }
 };
 
-/// MCRegUnitIterator enumerates a list of register units and their associated
-/// lane masks for Reg. The register units are in ascending numerical order.
+/// MCRegUnitMaskIterator enumerates a list of register units and their
+/// associated lane masks for Reg. The register units are in ascending
+/// numerical order.
 class MCRegUnitMaskIterator {
   MCRegUnitIterator RUIter;
-  const unsigned *MaskListIter;
+  const LaneBitmask *MaskListIter;
 public:
   MCRegUnitMaskIterator() {}
   /// Constructs an iterator that traverses the register units and their
@@ -571,7 +597,7 @@ public:
   }
 
   /// Returns a (RegUnit, LaneMask) pair.
-  std::pair<unsigned,unsigned> operator*() const {
+  std::pair<unsigned,LaneBitmask> operator*() const {
     return std::make_pair(*RUIter, *MaskListIter);
   }
 

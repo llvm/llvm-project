@@ -22,14 +22,16 @@
 #define LLVM_SUPPORT_ALLOCATOR_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/AlignOf.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/Memory.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
+#include <iterator>
+#include <type_traits>
+#include <utility>
 
 namespace llvm {
 
@@ -74,7 +76,7 @@ public:
 
   /// \brief Allocate space for a sequence of objects without constructing them.
   template <typename T> T *Allocate(size_t Num = 1) {
-    return static_cast<T *>(Allocate(Num * sizeof(T), AlignOf<T>::Alignment));
+    return static_cast<T *>(Allocate(Num * sizeof(T), alignof(T)));
   }
 
   /// \brief Deallocate space for a sequence of objects without constructing them.
@@ -114,7 +116,8 @@ namespace detail {
 // printing code uses Allocator.h in its implementation.
 void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t BytesAllocated,
                                 size_t TotalMemory);
-} // End namespace detail.
+
+} // end namespace detail
 
 /// \brief Allocate memory in an ever growing pool, as if by bump-pointer.
 ///
@@ -187,6 +190,7 @@ public:
   /// \brief Deallocate all but the current slab and reset the current pointer
   /// to the beginning of it, freeing all memory allocated so far.
   void Reset() {
+    // Deallocate all but the first slab, and deallocate all custom-sized slabs.
     DeallocateCustomSizedSlabs();
     CustomSizedSlabs.clear();
 
@@ -198,7 +202,7 @@ public:
     CurPtr = (char *)Slabs.front();
     End = CurPtr + SlabSize;
 
-    // Deallocate all but the first slab, and deallocate all custom-sized slabs.
+    __asan_poison_memory_region(*Slabs.begin(), computeSlabSize(0));
     DeallocateSlabs(std::next(Slabs.begin()), Slabs.end());
     Slabs.erase(std::next(Slabs.begin()), Slabs.end());
   }
@@ -222,6 +226,8 @@ public:
       // Without this, MemorySanitizer messages for values originated from here
       // will point to the allocation of the entire slab.
       __msan_allocated_memory(AlignedPtr, Size);
+      // Similarly, tell ASan about this space.
+      __asan_unpoison_memory_region(AlignedPtr, Size);
       return AlignedPtr;
     }
 
@@ -229,12 +235,16 @@ public:
     size_t PaddedSize = Size + Alignment - 1;
     if (PaddedSize > SizeThreshold) {
       void *NewSlab = Allocator.Allocate(PaddedSize, 0);
+      // We own the new slab and don't want anyone reading anyting other than
+      // pieces returned from this method.  So poison the whole slab.
+      __asan_poison_memory_region(NewSlab, PaddedSize);
       CustomSizedSlabs.push_back(std::make_pair(NewSlab, PaddedSize));
 
       uintptr_t AlignedAddr = alignAddr(NewSlab, Alignment);
       assert(AlignedAddr + Size <= (uintptr_t)NewSlab + PaddedSize);
       char *AlignedPtr = (char*)AlignedAddr;
       __msan_allocated_memory(AlignedPtr, Size);
+      __asan_unpoison_memory_region(AlignedPtr, Size);
       return AlignedPtr;
     }
 
@@ -246,13 +256,16 @@ public:
     char *AlignedPtr = (char*)AlignedAddr;
     CurPtr = AlignedPtr + Size;
     __msan_allocated_memory(AlignedPtr, Size);
+    __asan_unpoison_memory_region(AlignedPtr, Size);
     return AlignedPtr;
   }
 
   // Pull in base class overloads.
   using AllocatorBase<BumpPtrAllocatorImpl>::Allocate;
 
-  void Deallocate(const void * /*Ptr*/, size_t /*Size*/) {}
+  void Deallocate(const void *Ptr, size_t Size) {
+    __asan_poison_memory_region(Ptr, Size);
+  }
 
   // Pull in base class overloads.
   using AllocatorBase<BumpPtrAllocatorImpl>::Deallocate;
@@ -267,6 +280,8 @@ public:
       TotalMemory += PtrAndSize.second;
     return TotalMemory;
   }
+
+  size_t getBytesAllocated() const { return BytesAllocated; }
 
   void PrintStats() const {
     detail::printBumpPtrAllocatorStats(Slabs.size(), BytesAllocated,
@@ -310,6 +325,10 @@ private:
     size_t AllocatedSlabSize = computeSlabSize(Slabs.size());
 
     void *NewSlab = Allocator.Allocate(AllocatedSlabSize, 0);
+    // We own the new slab and don't want anyone reading anything other than
+    // pieces returned from this method.  So poison the whole slab.
+    __asan_poison_memory_region(NewSlab, AllocatedSlabSize);
+
     Slabs.push_back(NewSlab);
     CurPtr = (char *)(NewSlab);
     End = ((char *)NewSlab) + AllocatedSlabSize;
@@ -350,7 +369,7 @@ template <typename T> class SpecificBumpPtrAllocator {
   BumpPtrAllocator Allocator;
 
 public:
-  SpecificBumpPtrAllocator() : Allocator() {}
+  SpecificBumpPtrAllocator() = default;
   SpecificBumpPtrAllocator(SpecificBumpPtrAllocator &&Old)
       : Allocator(std::move(Old.Allocator)) {}
   ~SpecificBumpPtrAllocator() { DestroyAll(); }
@@ -365,7 +384,7 @@ public:
   /// all memory allocated so far.
   void DestroyAll() {
     auto DestroyElements = [](char *Begin, char *End) {
-      assert(Begin == (char*)alignAddr(Begin, alignOf<T>()));
+      assert(Begin == (char *)alignAddr(Begin, alignof(T)));
       for (char *Ptr = Begin; Ptr + sizeof(T) <= End; Ptr += sizeof(T))
         reinterpret_cast<T *>(Ptr)->~T();
     };
@@ -374,7 +393,7 @@ public:
          ++I) {
       size_t AllocatedSlabSize = BumpPtrAllocator::computeSlabSize(
           std::distance(Allocator.Slabs.begin(), I));
-      char *Begin = (char*)alignAddr(*I, alignOf<T>());
+      char *Begin = (char *)alignAddr(*I, alignof(T));
       char *End = *I == Allocator.Slabs.back() ? Allocator.CurPtr
                                                : (char *)*I + AllocatedSlabSize;
 
@@ -384,7 +403,7 @@ public:
     for (auto &PtrAndSize : Allocator.CustomSizedSlabs) {
       void *Ptr = PtrAndSize.first;
       size_t Size = PtrAndSize.second;
-      DestroyElements((char*)alignAddr(Ptr, alignOf<T>()), (char *)Ptr + Size);
+      DestroyElements((char *)alignAddr(Ptr, alignof(T)), (char *)Ptr + Size);
     }
 
     Allocator.Reset();
@@ -394,7 +413,7 @@ public:
   T *Allocate(size_t num = 1) { return Allocator.Allocate<T>(num); }
 };
 
-}  // end namespace llvm
+} // end namespace llvm
 
 template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold>
 void *operator new(size_t Size,

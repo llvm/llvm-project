@@ -15,13 +15,12 @@
 #define LLVM_CLANG_AST_BASESUBOBJECT_H
 
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/type_traits.h"
 
 namespace clang {
-  class CXXRecordDecl;
-
 // BaseSubobject - Uniquely identifies a direct or indirect base class. 
 // Stores both the base class decl and the offset from the most derived class to
 // the base class. Used for vtable and VTT generation.

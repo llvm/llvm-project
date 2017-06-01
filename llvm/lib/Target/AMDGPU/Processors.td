@@ -13,11 +13,8 @@ class Proc<string Name, ProcessorItineraries itin, list<SubtargetFeature> Featur
 //===----------------------------------------------------------------------===//
 // R600
 //===----------------------------------------------------------------------===//
-def : Proc<"",           R600_VLIW5_Itin,
-    [FeatureR600, FeatureVertexCache]>;
-
 def : Proc<"r600",       R600_VLIW5_Itin,
-    [FeatureR600 , FeatureVertexCache, FeatureWavefrontSize64]>;
+    [FeatureR600, FeatureVertexCache, FeatureWavefrontSize64]>;
 
 def : Proc<"r630",       R600_VLIW5_Itin,
     [FeatureR600, FeatureVertexCache, FeatureWavefrontSize32]>;
@@ -84,11 +81,11 @@ def : Proc<"cayman",     R600_VLIW4_Itin,
 //===----------------------------------------------------------------------===//
 
 def : ProcessorModel<"SI", SIFullSpeedModel,
-  [FeatureSouthernIslands, FeatureFastFMAF32]
+  [FeatureSouthernIslands, FeatureFastFMAF32, HalfRate64Ops]
 >;
 
-def : ProcessorModel<"tahiti",   SIFullSpeedModel,
-  [FeatureSouthernIslands, FeatureFastFMAF32]
+def : ProcessorModel<"tahiti", SIFullSpeedModel,
+  [FeatureSouthernIslands, FeatureFastFMAF32, HalfRate64Ops]
 >;
 
 def : ProcessorModel<"pitcairn", SIQuarterSpeedModel, [FeatureSouthernIslands]>;
@@ -104,41 +101,89 @@ def : ProcessorModel<"hainan",   SIQuarterSpeedModel, [FeatureSouthernIslands]>;
 //===----------------------------------------------------------------------===//
 
 def : ProcessorModel<"bonaire",    SIQuarterSpeedModel,
-  [FeatureSeaIslands, FeatureLDSBankCount32, FeatureISAVersion7_0_0]
+  [FeatureISAVersion7_0_0]
 >;
 
 def : ProcessorModel<"kabini",     SIQuarterSpeedModel,
-  [FeatureSeaIslands, FeatureLDSBankCount16]
+  [FeatureISAVersion7_0_2]
 >;
 
 def : ProcessorModel<"kaveri",     SIQuarterSpeedModel,
-  [FeatureSeaIslands, FeatureLDSBankCount32, FeatureISAVersion7_0_0]
+  [FeatureISAVersion7_0_0]
 >;
 
-def : ProcessorModel<"hawaii", SIFullSpeedModel,
-  [FeatureSeaIslands, FeatureFastFMAF32, FeatureLDSBankCount32,
-   FeatureISAVersion7_0_1]
+def : ProcessorModel<"hawaii",     SIFullSpeedModel,
+  [FeatureISAVersion7_0_1]
 >;
 
 def : ProcessorModel<"mullins",    SIQuarterSpeedModel,
-  [FeatureSeaIslands, FeatureLDSBankCount16]>;
+  [FeatureISAVersion7_0_2]>;
+
+def : ProcessorModel<"gfx700",     SIQuarterSpeedModel,
+  [FeatureISAVersion7_0_0]
+>;
+
+def : ProcessorModel<"gfx701",     SIFullSpeedModel,
+  [FeatureISAVersion7_0_1]
+>;
+
+def : ProcessorModel<"gfx702",     SIQuarterSpeedModel,
+  [FeatureISAVersion7_0_2]
+>;
 
 //===----------------------------------------------------------------------===//
 // Volcanic Islands
 //===----------------------------------------------------------------------===//
 
 def : ProcessorModel<"tonga",   SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureSGPRInitBug, FeatureISAVersion8_0_0]
+  [FeatureISAVersion8_0_2]
 >;
 
 def : ProcessorModel<"iceland", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureSGPRInitBug, FeatureISAVersion8_0_0]
+  [FeatureISAVersion8_0_0]
 >;
 
 def : ProcessorModel<"carrizo", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureISAVersion8_0_1]
+  [FeatureISAVersion8_0_1]
 >;
 
-def : ProcessorModel<"fiji", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureISAVersion8_0_1]
+def : ProcessorModel<"fiji",    SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_3]
 >;
+
+def : ProcessorModel<"stoney",  SIQuarterSpeedModel,
+  [FeatureISAVersion8_1_0]
+>;
+
+def : ProcessorModel<"polaris10", SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_3]
+>;
+
+def : ProcessorModel<"polaris11", SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_3]
+>;
+
+def : ProcessorModel<"gfx800", SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_0]
+>;
+
+def : ProcessorModel<"gfx801", SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_1]
+>;
+
+def : ProcessorModel<"gfx802", SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_2]
+>;
+
+def : ProcessorModel<"gfx803", SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_3]
+>;
+
+def : ProcessorModel<"gfx804", SIQuarterSpeedModel,
+  [FeatureISAVersion8_0_4]
+>;
+
+def : ProcessorModel<"gfx810", SIQuarterSpeedModel,
+  [FeatureISAVersion8_1_0]
+>;
+

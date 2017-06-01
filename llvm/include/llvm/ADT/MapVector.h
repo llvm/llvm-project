@@ -30,6 +30,7 @@ template<typename KeyT, typename ValueT,
          typename MapType = llvm::DenseMap<KeyT, unsigned>,
          typename VectorType = std::vector<std::pair<KeyT, ValueT> > >
 class MapVector {
+  typedef typename VectorType::value_type value_type;
   typedef typename VectorType::size_type size_type;
 
   MapType Map;
@@ -40,6 +41,12 @@ public:
   typedef typename VectorType::const_iterator const_iterator;
   typedef typename VectorType::reverse_iterator reverse_iterator;
   typedef typename VectorType::const_reverse_iterator const_reverse_iterator;
+
+  /// Clear the MapVector and return the underlying vector.
+  VectorType takeVector() {
+    Map.clear();
+    return std::move(Vector);
+  }
 
   size_type size() const { return Vector.size(); }
 
@@ -83,7 +90,10 @@ public:
     return Vector[I].second;
   }
 
+  // Returns a copy of the value.  Only allowed if ValueT is copyable.
   ValueT lookup(const KeyT &Key) const {
+    static_assert(std::is_copy_constructible<ValueT>::value,
+                  "Cannot call lookup() if ValueT is not copyable.");
     typename MapType::const_iterator Pos = Map.find(Key);
     return Pos == Map.end()? ValueT() : Vector[Pos->second].second;
   }
@@ -94,6 +104,19 @@ public:
     unsigned &I = Result.first->second;
     if (Result.second) {
       Vector.push_back(std::make_pair(KV.first, KV.second));
+      I = Vector.size() - 1;
+      return std::make_pair(std::prev(end()), true);
+    }
+    return std::make_pair(begin() + I, false);
+  }
+
+  std::pair<iterator, bool> insert(std::pair<KeyT, ValueT> &&KV) {
+    // Copy KV.first into the map, then move it into the vector.
+    std::pair<KeyT, unsigned> Pair = std::make_pair(KV.first, 0);
+    std::pair<typename MapType::iterator, bool> Result = Map.insert(Pair);
+    unsigned &I = Result.first->second;
+    if (Result.second) {
+      Vector.push_back(std::move(KV));
       I = Vector.size() - 1;
       return std::make_pair(std::prev(end()), true);
     }

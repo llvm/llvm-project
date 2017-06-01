@@ -20,7 +20,7 @@ void invoke(void* that, unsigned methodIndex,
 // CHECK: call void asm sideeffect inteldialect
 // CHECK: mov edx,dword ptr $1
 // CHECK: test edx,edx
-// CHECK: jz {{[^_]*}}__MSASMLABEL_.0__noparams
+// CHECK: jz {{[^_]*}}__MSASMLABEL_.${:uid}__noparams
 //             ^ Can't use {{.*}} here because the matching is greedy.
 // CHECK: mov eax,edx
 // CHECK: shl eax,$$3
@@ -28,7 +28,7 @@ void invoke(void* that, unsigned methodIndex,
 // CHECK: mov ecx,esp
 // CHECK: push dword ptr $0
 // CHECK: call dword ptr $2
-// CHECK: {{.*}}__MSASMLABEL_.0__noparams:
+// CHECK: {{.*}}__MSASMLABEL_.${:uid}__noparams:
 // CHECK: mov ecx,dword ptr $3
 // CHECK: push ecx
 // CHECK: mov edx,[ecx]

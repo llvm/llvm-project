@@ -23,7 +23,6 @@
 
 #include "llvm/ADT/IntEqClasses.h"
 #include "llvm/CodeGen/SlotIndexes.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
@@ -58,7 +57,7 @@ namespace llvm {
       : id(i), def(d)
     { }
 
-    /// VNInfo construtor, copies values from orig, except for the value number.
+    /// VNInfo constructor, copies values from orig, except for the value number.
     VNInfo(unsigned i, const VNInfo &orig)
       : id(i), def(orig.def)
     { }
@@ -190,8 +189,8 @@ namespace llvm {
       void dump() const;
     };
 
-    typedef SmallVector<Segment,4> Segments;
-    typedef SmallVector<VNInfo*,4> VNInfoList;
+    typedef SmallVector<Segment, 2> Segments;
+    typedef SmallVector<VNInfo *, 2> VNInfoList;
 
     Segments segments;   // the liveness segments
     VNInfoList valnos;   // value#'s
@@ -315,6 +314,10 @@ namespace llvm {
     /// If one already exists, return it. Otherwise allocate a new value and
     /// add liveness for a dead def.
     VNInfo *createDeadDef(SlotIndex Def, VNInfo::Allocator &VNInfoAllocator);
+
+    /// Create a def of value @p VNI. Return @p VNI. If there already exists
+    /// a definition at VNI->def, the value defined there must be @p VNI.
+    VNInfo *createDeadDef(VNInfo *VNI);
 
     /// Create a copy of the given value. The new value will be identical except
     /// for the Value number.
@@ -451,10 +454,29 @@ namespace llvm {
     /// may have grown since it was inserted).
     iterator addSegment(Segment S);
 
+    /// Attempt to extend a value defined after @p StartIdx to include @p Use.
+    /// Both @p StartIdx and @p Use should be in the same basic block. In case
+    /// of subranges, an extension could be prevented by an explicit "undef"
+    /// caused by a <def,read-undef> on a non-overlapping lane. The list of
+    /// location of such "undefs" should be provided in @p Undefs.
+    /// The return value is a pair: the first element is VNInfo of the value
+    /// that was extended (possibly nullptr), the second is a boolean value
+    /// indicating whether an "undef" was encountered.
     /// If this range is live before @p Use in the basic block that starts at
-    /// @p StartIdx, extend it to be live up to @p Use, and return the value. If
-    /// there is no segment before @p Use, return nullptr.
-    VNInfo *extendInBlock(SlotIndex StartIdx, SlotIndex Use);
+    /// @p StartIdx, and there is no intervening "undef", extend it to be live
+    /// up to @p Use, and return the pair {value, false}. If there is no
+    /// segment before @p Use and there is no "undef" between @p StartIdx and
+    /// @p Use, return {nullptr, false}. If there is an "undef" before @p Use,
+    /// return {nullptr, true}.
+    std::pair<VNInfo*,bool> extendInBlock(ArrayRef<SlotIndex> Undefs,
+        SlotIndex StartIdx, SlotIndex Use);
+
+    /// Simplified version of the above "extendInBlock", which assumes that
+    /// no register lanes are undefined by <def,read-undef> operands.
+    /// If this range is live before @p Use in the basic block that starts
+    /// at @p StartIdx, extend it to be live up to @p Use, and return the
+    /// value. If there is no segment before @p Use, return nullptr.
+    VNInfo *extendInBlock(SlotIndex StartIdx, SlotIndex Kill);
 
     /// join - Join two live ranges (this, and other) together.  This applies
     /// mappings to the value numbers in the LHS/RHS ranges as specified.  If
@@ -544,10 +566,25 @@ namespace llvm {
       return true;
     }
 
+    // Returns true if any segment in the live range contains any of the
+    // provided slot indexes.  Slots which occur in holes between
+    // segments will not cause the function to return true.
+    bool isLiveAtIndexes(ArrayRef<SlotIndex> Slots) const;
+
     bool operator<(const LiveRange& other) const {
       const SlotIndex &thisIndex = beginIndex();
       const SlotIndex &otherIndex = other.beginIndex();
       return thisIndex < otherIndex;
+    }
+
+    /// Returns true if there is an explicit "undef" between @p Begin
+    /// @p End.
+    bool isUndefIn(ArrayRef<SlotIndex> Undefs, SlotIndex Begin,
+                   SlotIndex End) const {
+      return std::any_of(Undefs.begin(), Undefs.end(),
+                [Begin,End] (SlotIndex Idx) -> bool {
+                  return Begin <= Idx && Idx < End;
+                });
     }
 
     /// Flush segment set into the regular segment vector.
@@ -576,7 +613,6 @@ namespace llvm {
     friend class LiveRangeUpdater;
     void addSegmentToSet(Segment S);
     void markValNoForDeletion(VNInfo *V);
-
   };
 
   inline raw_ostream &operator<<(raw_ostream &OS, const LiveRange &LR) {
@@ -608,6 +644,9 @@ namespace llvm {
                BumpPtrAllocator &Allocator)
         : LiveRange(Other, Allocator), Next(nullptr), LaneMask(LaneMask) {
       }
+
+      void print(raw_ostream &OS) const;
+      void dump() const;
     };
 
   private:
@@ -633,7 +672,7 @@ namespace llvm {
         P = P->Next;
         return *this;
       }
-      SingleLinkedListIterator<T> &operator++(int) {
+      SingleLinkedListIterator<T> operator++(int) {
         SingleLinkedListIterator res = *this;
         ++*this;
         return res;
@@ -707,10 +746,6 @@ namespace llvm {
     /// are not considered valid and should only exist temporarily).
     void removeEmptySubRanges();
 
-    /// Construct main live range by merging the SubRanges of @p LI.
-    void constructMainRangeFromSubranges(const SlotIndexes &Indexes,
-                                         VNInfo::Allocator &VNIAllocator);
-
     /// getSize - Returns the sum of sizes of all the LiveRange's.
     ///
     unsigned getSize() const;
@@ -724,6 +759,13 @@ namespace llvm {
     void markNotSpillable() {
       weight = llvm::huge_valf;
     }
+
+    /// For a given lane mask @p LaneMask, compute indexes at which the
+    /// lane is marked undefined by subregister <def,read-undef> definitions.
+    void computeSubRangeUndefs(SmallVectorImpl<SlotIndex> &Undefs,
+                               LaneBitmask LaneMask,
+                               const MachineRegisterInfo &MRI,
+                               const SlotIndexes &Indexes) const;
 
     bool operator<(const LiveInterval& other) const {
       const SlotIndex &thisIndex = beginIndex();
@@ -753,6 +795,12 @@ namespace llvm {
     /// Free memory held by SubRange.
     void freeSubRange(SubRange *S);
   };
+
+  inline raw_ostream &operator<<(raw_ostream &OS,
+                                 const LiveInterval::SubRange &SR) {
+    SR.print(OS);
+    return OS;
+  }
 
   inline raw_ostream &operator<<(raw_ostream &OS, const LiveInterval &LI) {
     LI.print(OS);
@@ -848,9 +896,9 @@ namespace llvm {
   public:
     explicit ConnectedVNInfoEqClasses(LiveIntervals &lis) : LIS(lis) {}
 
-    /// Classify - Classify the values in LI into connected components.
-    /// Return the number of connected components.
-    unsigned Classify(const LiveInterval *LI);
+    /// Classify the values in \p LR into connected components.
+    /// Returns the number of connected components.
+    unsigned Classify(const LiveRange &LR);
 
     /// getEqClass - Classify creates equivalence classes numbered 0..N. Return
     /// the equivalence class assigned the VNI.
@@ -863,6 +911,5 @@ namespace llvm {
     void Distribute(LiveInterval &LI, LiveInterval *LIV[],
                     MachineRegisterInfo &MRI);
   };
-
 }
 #endif

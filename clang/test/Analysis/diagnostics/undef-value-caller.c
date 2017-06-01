@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-output=plist -analyzer-config path-diagnostics-alternate=false -o %t %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=plist -analyzer-config path-diagnostics-alternate=false -o %t %s
 // RUN: FileCheck --input-file %t %s
 
 #include "undef-value-callee.h"
