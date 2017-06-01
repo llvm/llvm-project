@@ -1,9 +1,13 @@
-// RUN: %clangxx_asan -fsanitize-coverage=func %s -o %t
+// RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard %s -o %t
 // RUN: rm -rf %T/coverage-fork
 // RUN: mkdir -p %T/coverage-fork && cd %T/coverage-fork
-// RUN: %env_asan_opts=coverage=1:coverage_direct=0:verbosity=1 %run %t 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t 2>&1 | FileCheck %s
 //
 // UNSUPPORTED: android
+//
+// Ideally a forked-subprocess should only report it's own coverage,
+// not parent's one. But trace-pc-guard currently does nothing special for fork,
+// and thus this test is relaxed.
 
 #include <stdio.h>
 #include <string.h>
@@ -32,6 +36,6 @@ int main(int argc, char **argv) {
 }
 
 // CHECK-DAG: Child PID: [[ChildPID:[0-9]+]]
-// CHECK-DAG: [[ChildPID]].sancov: 1 PCs written
+// CHECK-DAG: [[ChildPID]].sancov: {{.*}} PCs written
 // CHECK-DAG: Parent PID: [[ParentPID:[0-9]+]]
 // CHECK-DAG: [[ParentPID]].sancov: 3 PCs written

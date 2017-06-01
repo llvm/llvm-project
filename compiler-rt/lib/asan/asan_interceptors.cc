@@ -707,13 +707,17 @@ INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
 
 #if ASAN_INTERCEPT_FORK
 static void BeforeFork() {
-  get_allocator().ForceLock();
-  StackDepotLockAll();
+  if (SANITIZER_LINUX) {
+    get_allocator().ForceLock();
+    StackDepotLockAll();
+  }
 }
 
 static void AfterFork() {
-  StackDepotUnlockAll();
-  get_allocator().ForceUnlock();
+  if (SANITIZER_LINUX) {
+    StackDepotUnlockAll();
+    get_allocator().ForceUnlock();
+  }
 }
 
 INTERCEPTOR(int, fork, void) {
