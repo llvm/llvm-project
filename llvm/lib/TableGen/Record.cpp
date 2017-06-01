@@ -1597,8 +1597,7 @@ void Record::init() {
 
   // Every record potentially has a def at the top.  This value is
   // replaced with the top-level def name at instantiation time.
-  RecordVal DN("NAME", StringRecTy::get(), false);
-  addValue(DN);
+  addValue(RecordVal(StringInit::get("NAME"), StringRecTy::get(), false));
 }
 
 void Record::checkName() {
@@ -1632,10 +1631,6 @@ void Record::setName(Init *NewName) {
   // record name be an Init is to provide this flexibility.  The extra
   // resolve steps after completely instantiating defs takes care of
   // this.  See TGParser::ParseDef and TGParser::ParseDefm.
-}
-
-void Record::setName(StringRef Name) {
-  setName(StringInit::get(Name));
 }
 
 void Record::resolveReferencesTo(const RecordVal *RV) {

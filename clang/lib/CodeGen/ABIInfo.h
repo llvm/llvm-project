@@ -149,7 +149,6 @@ namespace swiftcall {
       return info->supportsSwift();
     }
   };
-
 }  // end namespace CodeGen
 }  // end namespace clang
 

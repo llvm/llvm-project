@@ -308,13 +308,13 @@ namespace llvm {
 
   public:
     unsigned EnumValue;
-    std::string Namespace;
+    StringRef Namespace;
     SmallVector<MVT::SimpleValueType, 4> VTs;
     unsigned SpillSize;
     unsigned SpillAlignment;
     int CopyCost;
     bool Allocatable;
-    std::string AltOrderSelect;
+    StringRef AltOrderSelect;
     uint8_t AllocationPriority;
     /// Contains the combination of the lane masks of all subregisters.
     LaneBitmask LaneMask;

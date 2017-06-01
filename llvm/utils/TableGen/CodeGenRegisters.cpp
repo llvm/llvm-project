@@ -679,11 +679,6 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
     Name(R->getName()),
     TopoSigs(RegBank.getNumTopoSigs()),
     EnumValue(-1) {
-  // Rename anonymous register classes.
-  if (R->getName().size() > 9 && R->getName()[9] == '.') {
-    static unsigned AnonCounter = 0;
-    R->setName("AnonRegClass_" + utostr(AnonCounter++));
-  }
 
   std::vector<Record*> TypeList = R->getValueAsListOfDefs("RegTypes");
   for (unsigned i = 0, e = TypeList.size(); i != e; ++i) {
@@ -867,7 +862,7 @@ std::string CodeGenRegisterClass::getQualifiedName() const {
   if (Namespace.empty())
     return getName();
   else
-    return Namespace + "::" + getName();
+    return (Namespace + "::" + getName()).str();
 }
 
 // Compute sub-classes of all register classes.

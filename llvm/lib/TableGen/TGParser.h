@@ -110,7 +110,7 @@ private:  // Semantic analysis methods.
   bool AddSubMultiClass(MultiClass *CurMC,
                         SubMultiClassReference &SubMultiClass);
 
-  std::string GetNewAnonymousName();
+  Init *GetNewAnonymousName();
 
   // IterRecord: Map an iterator name to a value.
   struct IterRecord {

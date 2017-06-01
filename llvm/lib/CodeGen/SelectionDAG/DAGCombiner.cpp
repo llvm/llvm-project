@@ -280,6 +280,7 @@ namespace {
     SDValue visitSELECT_CC(SDNode *N);
     SDValue visitSETCC(SDNode *N);
     SDValue visitSETCCE(SDNode *N);
+    SDValue visitSETCCCARRY(SDNode *N);
     SDValue visitSIGN_EXTEND(SDNode *N);
     SDValue visitZERO_EXTEND(SDNode *N);
     SDValue visitANY_EXTEND(SDNode *N);
@@ -1457,6 +1458,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::SELECT_CC:          return visitSELECT_CC(N);
   case ISD::SETCC:              return visitSETCC(N);
   case ISD::SETCCE:             return visitSETCCE(N);
+  case ISD::SETCCCARRY:         return visitSETCCCARRY(N);
   case ISD::SIGN_EXTEND:        return visitSIGN_EXTEND(N);
   case ISD::ZERO_EXTEND:        return visitZERO_EXTEND(N);
   case ISD::ANY_EXTEND:         return visitANY_EXTEND(N);
@@ -1970,6 +1972,44 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   return SDValue();
 }
 
+static SDValue getAsCarry(const TargetLowering &TLI, SDValue V) {
+  bool Masked = false;
+
+  // First, peel away TRUNCATE/ZERO_EXTEND/AND nodes due to legalization.
+  while (true) {
+    if (V.getOpcode() == ISD::TRUNCATE || V.getOpcode() == ISD::ZERO_EXTEND) {
+      V = V.getOperand(0);
+      continue;
+    }
+
+    if (V.getOpcode() == ISD::AND && isOneConstant(V.getOperand(1))) {
+      Masked = true;
+      V = V.getOperand(0);
+      continue;
+    }
+
+    break;
+  }
+
+  // If this is not a carry, return.
+  if (V.getResNo() != 1)
+    return SDValue();
+
+  if (V.getOpcode() != ISD::ADDCARRY && V.getOpcode() != ISD::SUBCARRY &&
+      V.getOpcode() != ISD::UADDO && V.getOpcode() != ISD::USUBO)
+    return SDValue();
+
+  // If the result is masked, then no matter what kind of bool it is we can
+  // return. If it isn't, then we need to make sure the bool type is either 0 or
+  // 1 and not other values.
+  if (Masked ||
+      TLI.getBooleanContents(V.getValueType()) ==
+          TargetLoweringBase::ZeroOrOneBooleanContent)
+    return V;
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitADDLike(SDValue N0, SDValue N1, SDNode *LocReference) {
   EVT VT = N0.getValueType();
   SDLoc DL(LocReference);
@@ -2016,6 +2056,13 @@ SDValue DAGCombiner::visitADDLike(SDValue N0, SDValue N1, SDNode *LocReference) 
   if (N1.getOpcode() == ISD::ADDCARRY && isNullConstant(N1.getOperand(1)))
     return DAG.getNode(ISD::ADDCARRY, DL, N1->getVTList(),
                        N0, N1.getOperand(0), N1.getOperand(2));
+
+  // (add X, Carry) -> (addcarry X, 0, Carry)
+  if (TLI.isOperationLegalOrCustom(ISD::ADDCARRY, VT))
+    if (SDValue Carry = getAsCarry(TLI, N1))
+      return DAG.getNode(ISD::ADDCARRY, DL,
+                         DAG.getVTList(VT, Carry.getValueType()), N0,
+                         DAG.getConstant(0, DL, VT), Carry);
 
   return SDValue();
 }
@@ -2090,6 +2137,8 @@ SDValue DAGCombiner::visitUADDO(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitUADDOLike(SDValue N0, SDValue N1, SDNode *N) {
+  auto VT = N0.getValueType();
+
   // (uaddo X, (addcarry Y, 0, Carry)) -> (addcarry X, Y, Carry)
   // If Y + 1 cannot overflow.
   if (N1.getOpcode() == ISD::ADDCARRY && isNullConstant(N1.getOperand(1))) {
@@ -2099,6 +2148,12 @@ SDValue DAGCombiner::visitUADDOLike(SDValue N0, SDValue N1, SDNode *N) {
       return DAG.getNode(ISD::ADDCARRY, SDLoc(N), N->getVTList(), N0, Y,
                          N1.getOperand(2));
   }
+
+  // (uaddo X, Carry) -> (addcarry X, 0, Carry)
+  if (TLI.isOperationLegalOrCustom(ISD::ADDCARRY, VT))
+    if (SDValue Carry = getAsCarry(TLI, N1))
+      return DAG.getNode(ISD::ADDCARRY, SDLoc(N), N->getVTList(), N0,
+                         DAG.getConstant(0, SDLoc(N), VT), Carry);
 
   return SDValue();
 }
@@ -2166,6 +2221,41 @@ SDValue DAGCombiner::visitADDCARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
       isNullConstant(N1) && !N->hasAnyUseOfValue(1))
     return DAG.getNode(ISD::ADDCARRY, SDLoc(N), N->getVTList(),
                        N0.getOperand(0), N0.getOperand(1), CarryIn);
+
+  /**
+   * When one of the addcarry argument is itself a carry, we may be facing
+   * a diamond carry propagation. In which case we try to transform the DAG
+   * to ensure linear carry propagation if that is possible.
+   *
+   * We are trying to get:
+   *   (addcarry X, 0, (addcarry A, B, Z):Carry)
+   */
+  if (auto Y = getAsCarry(TLI, N1)) {
+    /**
+     *            (uaddo A, B)
+     *             /       \
+     *          Carry      Sum
+     *            |          \
+     *            | (addcarry *, 0, Z)
+     *            |       /
+     *             \   Carry
+     *              |   /
+     * (addcarry X, *, *)
+     */
+    if (Y.getOpcode() == ISD::UADDO &&
+        CarryIn.getResNo() == 1 &&
+        CarryIn.getOpcode() == ISD::ADDCARRY &&
+        isNullConstant(CarryIn.getOperand(1)) &&
+        CarryIn.getOperand(0) == Y.getValue(0)) {
+      auto NewY = DAG.getNode(ISD::ADDCARRY, SDLoc(N), Y->getVTList(),
+                              Y.getOperand(0), Y.getOperand(1),
+                              CarryIn.getOperand(2));
+      AddToWorklist(NewY.getNode());
+      return DAG.getNode(ISD::ADDCARRY, SDLoc(N), N->getVTList(), N0,
+                         DAG.getConstant(0, SDLoc(N), N0.getValueType()),
+                         NewY.getValue(1));
+    }
+  }
 
   return SDValue();
 }
@@ -6749,6 +6839,19 @@ SDValue DAGCombiner::visitSETCCE(SDNode *N) {
 
   // If Carry is false, fold to a regular SETCC.
   if (Carry.getOpcode() == ISD::CARRY_FALSE)
+    return DAG.getNode(ISD::SETCC, SDLoc(N), N->getVTList(), LHS, RHS, Cond);
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitSETCCCARRY(SDNode *N) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue Carry = N->getOperand(2);
+  SDValue Cond = N->getOperand(3);
+
+  // If Carry is false, fold to a regular SETCC.
+  if (isNullConstant(Carry))
     return DAG.getNode(ISD::SETCC, SDLoc(N), N->getVTList(), LHS, RHS, Cond);
 
   return SDValue();

@@ -381,6 +381,11 @@ static bool is_local_impl(struct STATVFS &Vfs) {
 #elif defined(__CYGWIN__)
   // Cygwin doesn't expose this information; would need to use Win32 API.
   return false;
+#elif defined(__sun)
+  // statvfs::f_basetype contains a null-terminated FSType name of the mounted target
+  StringRef fstype(Vfs.f_basetype);
+  // NFS is the only non-local fstype??
+  return !fstype.equals("nfs");
 #else
   return !!(STATVFS_F_FLAG(Vfs) & MNT_LOCAL);
 #endif

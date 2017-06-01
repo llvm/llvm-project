@@ -341,6 +341,9 @@ private:
   /// A queue of (optional) vtables to consider emitting.
   std::vector<const CXXRecordDecl*> DeferredVTables;
 
+  /// A queue of (optional) vtables that may be emitted opportunistically.
+  std::vector<const CXXRecordDecl *> OpportunisticVTables;
+
   /// List of global values which are required to be present in the object file;
   /// bitcast to i8*. This is used for forcing visibility of symbols which may
   /// otherwise be optimized out.
@@ -450,7 +453,7 @@ private:
 
   bool isTriviallyRecursive(const FunctionDecl *F);
   bool shouldEmitFunction(GlobalDecl GD);
-
+  bool shouldOpportunisticallyEmitVTables();
   /// Map used to be sure we don't emit the same CompoundLiteral twice.
   llvm::DenseMap<const CompoundLiteralExpr *, llvm::GlobalVariable *>
       EmittedCompoundLiterals;
@@ -1277,6 +1280,12 @@ private:
 
   /// Emit any needed decls for which code generation was deferred.
   void EmitDeferred();
+
+  /// Try to emit external vtables as available_externally if they have emitted
+  /// all inlined virtual functions.  It runs after EmitDeferred() and therefore
+  /// is not allowed to create new references to things that need to be emitted
+  /// lazily.
+  void EmitVTablesOpportunistically();
 
   /// Call replaceAllUsesWith on all pairs in Replacements.
   void applyReplacements();

@@ -356,9 +356,9 @@ public:
 
 	_LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 	int compare(                       size_type __pos1, size_type __n1, 
-				basic_string_view _sv, size_type __pos2, size_type __n2) const
+				basic_string_view __sv, size_type __pos2, size_type __n2) const
 	{
-		return substr(__pos1, __n1).compare(_sv.substr(__pos2, __n2));
+		return substr(__pos1, __n1).compare(__sv.substr(__pos2, __n2));
 	}
 
 	_LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY

@@ -901,7 +901,7 @@ public:
     void resize(size_type __n, value_type __c);
     _LIBCPP_INLINE_VISIBILITY void resize(size_type __n) {resize(__n, value_type());}
 
-    void reserve(size_type res_arg = 0);
+    void reserve(size_type __res_arg = 0);
     _LIBCPP_INLINE_VISIBILITY
     void shrink_to_fit() _NOEXCEPT {reserve();}
     _LIBCPP_INLINE_VISIBILITY
@@ -987,9 +987,9 @@ public:
     basic_string& assign(const basic_string& __str) { return *this = __str; }
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
-    basic_string& assign(basic_string&& str)
+    basic_string& assign(basic_string&& __str)
         _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value))
-        {*this = _VSTD::move(str); return *this;}
+        {*this = _VSTD::move(__str); return *this;}
 #endif
     basic_string& assign(const basic_string& __str, size_type __pos, size_type __n=npos);
     template <class _Tp>
@@ -999,7 +999,7 @@ public:
             __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
             basic_string&
         >::type
-                  assign(const _Tp & __t, size_type pos, size_type n=npos);
+                  assign(const _Tp & __t, size_type __pos, size_type __n=npos);
     basic_string& assign(const value_type* __s, size_type __n);
     basic_string& assign(const value_type* __s);
     basic_string& assign(size_type __n, value_type __c);

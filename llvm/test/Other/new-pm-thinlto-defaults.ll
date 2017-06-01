@@ -6,30 +6,46 @@
 ; to be invalidated.
 ; Any invalidation that shows up here is a bug, unless we started modifying
 ; the IR, in which case we need to make it immutable harder.
-
+;
+; Prelink pipelines:
 ; RUN: opt -disable-verify -debug-pass-manager \
-; RUN:     -passes='default<O1>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O1
+; RUN:     -passes='thinlto-pre-link<O1>' -S %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O1,CHECK-PRELINK-O,CHECK-PRELINK-O1
 ; RUN: opt -disable-verify -debug-pass-manager \
-; RUN:     -passes='default<O2>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O2
+; RUN:     -passes='thinlto-pre-link<O2>' -S  %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-PRELINK-O,CHECK-PRELINK-O2
 ; RUN: opt -disable-verify -debug-pass-manager \
-; RUN:     -passes='default<O3>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O3
+; RUN:     -passes='thinlto-pre-link<O3>' -S  %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-PRELINK-O,CHECK-PRELINK-O3
 ; RUN: opt -disable-verify -debug-pass-manager \
-; RUN:     -passes='default<Os>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-Os
+; RUN:     -passes='thinlto-pre-link<Os>' -S %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Os,CHECK-PRELINK-O,CHECK-PRELINK-Os
 ; RUN: opt -disable-verify -debug-pass-manager \
-; RUN:     -passes='default<Oz>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-Oz
+; RUN:     -passes='thinlto-pre-link<Oz>' -S %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Oz,CHECK-PRELINK-O,CHECK-PRELINK-Oz
+;
+; Postlink pipelines:
 ; RUN: opt -disable-verify -debug-pass-manager \
-; RUN:     -passes='lto-pre-link<O2>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O2
-
+; RUN:     -passes='thinlto<O1>' -S %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O1,CHECK-POSTLINK-O,CHECK-POSTLINK-O1
+; RUN: opt -disable-verify -debug-pass-manager \
+; RUN:     -passes='thinlto<O2>' -S  %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-POSTLINK-O,CHECK-POSTLINK-O2
+; RUN: opt -disable-verify -debug-pass-manager \
+; RUN:     -passes='thinlto<O3>' -S  %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-POSTLINK-O,CHECK-POSTLINK-O3
+; RUN: opt -disable-verify -debug-pass-manager \
+; RUN:     -passes='thinlto<Os>' -S %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Os,CHECK-POSTLINK-O,CHECK-POSTLINK-Os
+; RUN: opt -disable-verify -debug-pass-manager \
+; RUN:     -passes='thinlto<Oz>' -S %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Oz,CHECK-POSTLINK-O,CHECK-POSTLINK-Oz
+;
 ; CHECK-O: Starting llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: PassManager<{{.*}}Module{{.*}}>
 ; CHECK-O-NEXT: Starting llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: ForceFunctionAttrsPass
+; CHECK-POSTLINK-O-NEXT: Running pass: PGOIndirectCallPromotion
 ; CHECK-O-NEXT: Running pass: PassManager<{{.*}}Module{{.*}}>
 ; CHECK-O-NEXT: Starting llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
@@ -136,41 +152,43 @@
 ; CHECK-O-NEXT: Finished llvm::Function pass manager run.
 ; CHECK-O-NEXT: Finished CGSCC pass manager run.
 ; CHECK-O-NEXT: Finished llvm::Module pass manager run.
-; CHECK-O-NEXT: Running pass: PassManager<{{.*}}Module{{.*}}>
-; CHECK-O-NEXT: Starting llvm::Module pass manager run.
-; CHECK-O-NEXT: Running pass: GlobalOptPass
-; CHECK-O-NEXT: Running pass: EliminateAvailableExternallyPass
-; CHECK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
-; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
-; CHECK-O-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
-; CHECK-O-NEXT: Starting llvm::Function pass manager run.
-; CHECK-O-NEXT: Running pass: Float2IntPass
-; CHECK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopRotatePass
-; CHECK-O-NEXT: Running pass: LoopDistributePass
-; CHECK-O-NEXT: Running pass: LoopVectorizePass
-; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis
-; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis
-; CHECK-O-NEXT: Running pass: LoopLoadEliminationPass
-; CHECK-O-NEXT: Running analysis: LoopAccessAnalysis
-; CHECK-O-NEXT: Running pass: InstCombinePass
-; CHECK-O-NEXT: Running pass: SLPVectorizerPass
-; CHECK-O-NEXT: Running pass: SimplifyCFGPass
-; CHECK-O-NEXT: Running pass: InstCombinePass
-; CHECK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopUnrollPass
-; CHECK-O-NEXT: Running pass: InstCombinePass
-; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}OptimizationRemarkEmitterAnalysis
-; CHECK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LICMPass
-; CHECK-O-NEXT: Running pass: AlignmentFromAssumptionsPass
-; CHECK-O-NEXT: Running pass: LoopSinkPass
-; CHECK-O-NEXT: Running pass: InstSimplifierPass
-; CHECK-O-NEXT: Running pass: SimplifyCFGPass
-; CHECK-O-NEXT: Finished llvm::Function pass manager run.
-; CHECK-O-NEXT: Running pass: GlobalDCEPass
-; CHECK-O-NEXT: Running pass: ConstantMergePass
-; CHECK-O-NEXT: Finished llvm::Module pass manager run.
+; CHECK-PRELINK-O-NEXT: Running pass: GlobalOptPass
+; CHECK-PRELINK-O-NEXT: Running pass: NameAnonGlobalPass
+; CHECK-POSTLINK-O-NEXT: Running pass: PassManager<{{.*}}Module{{.*}}>
+; CHECK-POSTLINK-O-NEXT: Starting llvm::Module pass manager run.
+; CHECK-POSTLINK-O-NEXT: Running pass: GlobalOptPass
+; CHECK-POSTLINK-O-NEXT: Running pass: EliminateAvailableExternallyPass
+; CHECK-POSTLINK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
+; CHECK-POSTLINK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
+; CHECK-POSTLINK-O-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
+; CHECK-POSTLINK-O-NEXT: Starting llvm::Function pass manager run.
+; CHECK-POSTLINK-O-NEXT: Running pass: Float2IntPass
+; CHECK-POSTLINK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopRotatePass
+; CHECK-POSTLINK-O-NEXT: Running pass: LoopDistributePass
+; CHECK-POSTLINK-O-NEXT: Running pass: LoopVectorizePass
+; CHECK-POSTLINK-O-NEXT: Running analysis: BlockFrequencyAnalysis
+; CHECK-POSTLINK-O-NEXT: Running analysis: BranchProbabilityAnalysis
+; CHECK-POSTLINK-O-NEXT: Running pass: LoopLoadEliminationPass
+; CHECK-POSTLINK-O-NEXT: Running analysis: LoopAccessAnalysis
+; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass
+; CHECK-POSTLINK-O-NEXT: Running pass: SLPVectorizerPass
+; CHECK-POSTLINK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass
+; CHECK-POSTLINK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopUnrollPass
+; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass
+; CHECK-POSTLINK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}OptimizationRemarkEmitterAnalysis
+; CHECK-POSTLINK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LICMPass
+; CHECK-POSTLINK-O-NEXT: Running pass: AlignmentFromAssumptionsPass
+; CHECK-POSTLINK-O-NEXT: Running pass: LoopSinkPass
+; CHECK-POSTLINK-O-NEXT: Running pass: InstSimplifierPass
+; CHECK-POSTLINK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-POSTLINK-O-NEXT: Finished llvm::Function pass manager run.
+; CHECK-POSTLINK-O-NEXT: Running pass: GlobalDCEPass
+; CHECK-POSTLINK-O-NEXT: Running pass: ConstantMergePass
+; CHECK-POSTLINK-O-NEXT: Finished llvm::Module pass manager run.
 ; CHECK-O-NEXT: Finished llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: PrintModulePass
-;
+
 ; Make sure we get the IR back out without changes when we print the module.
 ; CHECK-O-LABEL: define void @foo(i32 %n) local_unnamed_addr {
 ; CHECK-O-NEXT: entry:

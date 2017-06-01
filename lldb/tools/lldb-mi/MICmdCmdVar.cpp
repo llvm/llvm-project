@@ -510,22 +510,20 @@ bool CMICmdCmdVarUpdate::ExamineSBValueForChange(lldb::SBValue &vrwValue,
   }
 
   lldb::SBType valueType = vrwValue.GetType();
-  if (!valueType.IsPointerType() && !valueType.IsReferenceType()) {
-    const MIuint nChildren = vrwValue.GetNumChildren();
-    for (MIuint i = 0; i < nChildren; ++i) {
-      lldb::SBValue member = vrwValue.GetChildAtIndex(i);
-      if (!member.IsValid())
-        continue;
 
-      if (member.GetValueDidChange()) {
-        vrwbChanged = true;
-        return MIstatus::success;
-      } else if (ExamineSBValueForChange(member, vrwbChanged) && vrwbChanged)
-        // Handle composite types (i.e. struct or arrays)
-        return MIstatus::success;
-    }
+  const MIuint nChildren = vrwValue.GetNumChildren();
+  for (MIuint i = 0; i < nChildren; ++i) {
+    lldb::SBValue member = vrwValue.GetChildAtIndex(i);
+    if (!member.IsValid())
+      continue;
+
+    if (member.GetValueDidChange()) {
+      vrwbChanged = true;
+      return MIstatus::success;
+    } else if (ExamineSBValueForChange(member, vrwbChanged) && vrwbChanged)
+      // Handle composite types (i.e. struct or arrays)
+      return MIstatus::success;
   }
-
   vrwbChanged = false;
   return MIstatus::success;
 }
