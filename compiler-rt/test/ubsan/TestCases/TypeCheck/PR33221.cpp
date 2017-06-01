@@ -1,7 +1,9 @@
-// RUN: %clangxx -frtti -fsanitize=undefined -g %s -O3 -o %t
+// RUN: %clangxx -frtti -fsanitize=vptr -g %s -O3 -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: cxxabi
+
+#include <string.h>
 
 class Base {
 public:
@@ -15,10 +17,12 @@ public:
 };
 
 int main() {
-  Derived *list = (Derived *)new char[sizeof(Derived)];
+  char *c = new char[sizeof(Derived)];
+  memset((void *)c, 0, sizeof(Derived));
+  Derived *list = (Derived *)c;
 
 // CHECK: PR33221.cpp:[[@LINE+2]]:19: runtime error: member access within address {{.*}} which does not point to an object of type 'Base'
-// CHECK-NEXT: object has invalid vptr
+// CHECK-NEXT: invalid vptr
   int foo = list->i;
   return 0;
 }
