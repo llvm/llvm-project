@@ -3123,6 +3123,7 @@ public:
     case CC_Swift:
     case CC_X86Pascal:
     case CC_IntelOclBicc:
+    case CC_OpenCLKernel:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -4834,6 +4835,7 @@ public:
     case CC_PreserveMost:
     case CC_PreserveAll:
     case CC_X86RegCall:
+    case CC_OpenCLKernel:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -4907,6 +4909,7 @@ public:
     case CC_X86_64SysV:
     case CC_Swift:
     case CC_X86RegCall:
+    case CC_OpenCLKernel:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -5860,6 +5863,7 @@ public:
     case CC_AAPCS:
     case CC_AAPCS_VFP:
     case CC_Swift:
+    case CC_OpenCLKernel:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -6019,6 +6023,7 @@ public:
     case CC_X86VectorCall:
       return CCCR_Ignore;
     case CC_C:
+    case CC_OpenCLKernel:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -6329,6 +6334,7 @@ public:
     case CC_Swift:
     case CC_PreserveMost:
     case CC_PreserveAll:
+    case CC_OpenCLKernel:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -7380,6 +7386,7 @@ public:
     switch (CC) {
     case CC_C:
     case CC_Swift:
+    case CC_OpenCLKernel:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -7662,6 +7669,15 @@ public:
   }
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
     return None;
+  }
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+      default:
+        return CCCR_Warning;
+      case CC_C:
+      case CC_OpenCLKernel:
+        return CCCR_OK;
+    }
   }
 };
 

@@ -382,6 +382,7 @@ void InstrProfStats::reportDiagnostics(DiagnosticsEngine &Diags,
 
 void CodeGenModule::Release() {
   EmitDeferred();
+  EmitVTablesOpportunistically();
   applyGlobalValReplacements();
   applyReplacements();
   checkAliases();
@@ -472,10 +473,10 @@ void CodeGenModule::Release() {
   // Width of wchar_t in bytes
   uint64_t WCharWidth =
       Context.getTypeSizeInChars(Context.getWideCharType()).getQuantity();
-  assert(LangOpts.ShortWChar ||
-         llvm::TargetLibraryInfoImpl::getTargetWCharSize(Target.getTriple()) ==
-                 Target.getWCharWidth() / 8 &&
-             "LLVM wchar_t size out of sync");
+  assert((LangOpts.ShortWChar ||
+          llvm::TargetLibraryInfoImpl::getTargetWCharSize(Target.getTriple()) ==
+              Target.getWCharWidth() / 8) &&
+         "LLVM wchar_t size out of sync");
 
   // We need to record the widths of enums and wchar_t, so that we can generate
   // the correct build attributes in the ARM backend. wchar_size is also used by
@@ -1386,6 +1387,24 @@ void CodeGenModule::EmitDeferred() {
   }
 }
 
+void CodeGenModule::EmitVTablesOpportunistically() {
+  // Try to emit external vtables as available_externally if they have emitted
+  // all inlined virtual functions.  It runs after EmitDeferred() and therefore
+  // is not allowed to create new references to things that need to be emitted
+  // lazily. Note that it also uses fact that we eagerly emitting RTTI.
+
+  assert((OpportunisticVTables.empty() || shouldOpportunisticallyEmitVTables())
+         && "Only emit opportunistic vtables with optimizations");
+
+  for (const CXXRecordDecl *RD : OpportunisticVTables) {
+    assert(getVTables().isVTableExternal(RD) &&
+           "This queue should only contain external vtables");
+    if (getCXXABI().canSpeculativelyEmitVTable(RD))
+      VTables.GenerateClassData(RD);
+  }
+  OpportunisticVTables.clear();
+}
+
 void CodeGenModule::EmitGlobalAnnotations() {
   if (Annotations.empty())
     return;
@@ -1904,6 +1923,10 @@ bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
   // implementation.
   // This happens in glibc's btowc and in some configure checks.
   return !isTriviallyRecursive(F);
+}
+
+bool CodeGenModule::shouldOpportunisticallyEmitVTables() {
+  return CodeGenOpts.OptimizationLevel > 0;
 }
 
 void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {

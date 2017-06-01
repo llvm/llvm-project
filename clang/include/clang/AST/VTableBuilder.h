@@ -154,6 +154,28 @@ public:
 
   bool isRTTIKind() const { return isRTTIKind(getKind()); }
 
+  GlobalDecl getGlobalDecl() const {
+    assert(isUsedFunctionPointerKind() &&
+           "GlobalDecl can be created only from virtual function");
+
+    auto *DtorDecl = dyn_cast<CXXDestructorDecl>(getFunctionDecl());
+    switch (getKind()) {
+    case CK_FunctionPointer:
+      return GlobalDecl(getFunctionDecl());
+    case CK_CompleteDtorPointer:
+      return GlobalDecl(DtorDecl, CXXDtorType::Dtor_Complete);
+    case CK_DeletingDtorPointer:
+      return GlobalDecl(DtorDecl, CXXDtorType::Dtor_Deleting);
+    case CK_VCallOffset:
+    case CK_VBaseOffset:
+    case CK_OffsetToTop:
+    case CK_RTTI:
+    case CK_UnusedFunctionPointer:
+      llvm_unreachable("Only function pointers kinds");
+    }
+    llvm_unreachable("Should already return");
+  }
+
 private:
   static bool isFunctionPointerKind(Kind ComponentKind) {
     return isUsedFunctionPointerKind(ComponentKind) ||

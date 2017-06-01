@@ -65,6 +65,7 @@ namespace clang {
     UTT_IsStandardLayout,
     UTT_IsTrivial,
     UTT_IsTriviallyCopyable,
+    UTT_IsTriviallyDestructible,
     UTT_IsUnion,
     UTT_IsUnsigned,
     UTT_IsVoid,

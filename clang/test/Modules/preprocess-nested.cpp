@@ -8,8 +8,6 @@
 // RUN: FileCheck %s --input-file %t/rewrite.ii    --check-prefix=CHECK --check-prefix=REWRITE
 
 // Check that we can build a module from the preprocessed output.
-// FIXME: For now, the files need to exist.
-// RUN: touch %t/a.h %t/b.h %t/c.h
 // RUN: %clang_cc1 -fmodules -fmodules-local-submodule-visibility -fmodule-name=nested -x c++-module-map-cpp-output %t/no-rewrite.ii -emit-module -o %t/no-rewrite.pcm
 // RUN: %clang_cc1 -fmodules -fmodules-local-submodule-visibility -fmodule-name=nested -x c++-module-map-cpp-output %t/rewrite.ii -emit-module -o %t/rewrite.pcm
 

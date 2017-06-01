@@ -3756,6 +3756,9 @@ llvm::Constant *MicrosoftCXXABI::getAddrOfRTTIDescriptor(QualType Type) {
   if (llvm::GlobalVariable *GV = CGM.getModule().getNamedGlobal(MangledName))
     return llvm::ConstantExpr::getBitCast(GV, CGM.Int8PtrTy);
 
+  // Note for the future: If we would ever like to do deferred emission of
+  // RTTI, check if emitting vtables opportunistically need any adjustment.
+
   // Compute the fields for the TypeDescriptor.
   SmallString<256> TypeInfoString;
   {

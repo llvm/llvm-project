@@ -366,20 +366,30 @@ public:
   void emitCXXStructor(const CXXMethodDecl *MD, StructorType Type) override;
 
  private:
-   bool hasAnyVirtualInlineFunction(const CXXRecordDecl *RD) const {
-    const auto &VtableLayout =
-        CGM.getItaniumVTableContext().getVTableLayout(RD);
+   bool hasAnyUnusedVirtualInlineFunction(const CXXRecordDecl *RD) const {
+     const auto &VtableLayout =
+         CGM.getItaniumVTableContext().getVTableLayout(RD);
 
-    for (const auto &VtableComponent : VtableLayout.vtable_components()) {
-      // Skip empty slot.
-      if (!VtableComponent.isUsedFunctionPointerKind())
-        continue;
+     for (const auto &VtableComponent : VtableLayout.vtable_components()) {
+       // Skip empty slot.
+       if (!VtableComponent.isUsedFunctionPointerKind())
+         continue;
 
-      const CXXMethodDecl *Method = VtableComponent.getFunctionDecl();
-      if (Method->getCanonicalDecl()->isInlined())
-        return true;
-    }
-    return false;
+       const CXXMethodDecl *Method = VtableComponent.getFunctionDecl();
+       if (!Method->getCanonicalDecl()->isInlined())
+         continue;
+
+       StringRef Name = CGM.getMangledName(VtableComponent.getGlobalDecl());
+       auto *Entry = CGM.GetGlobalValue(Name);
+       // This checks if virtual inline function has already been emitted.
+       // Note that it is possible that this inline function would be emitted
+       // after trying to emit vtable speculatively. Because of this we do
+       // an extra pass after emitting all deferred vtables to find and emit
+       // these vtables opportunistically.
+       if (!Entry || Entry->isDeclaration())
+         return true;
+     }
+     return false;
   }
 
   bool isVTableHidden(const CXXRecordDecl *RD) const {
@@ -1687,11 +1697,11 @@ bool ItaniumCXXABI::canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const {
   if (CGM.getLangOpts().AppleKext)
     return false;
 
-  // If we don't have any inline virtual functions, and if vtable is not hidden,
-  // then we are safe to emit available_externally copy of vtable.
+  // If we don't have any not emitted inline virtual function, and if vtable is
+  // not hidden, then we are safe to emit available_externally copy of vtable.
   // FIXME we can still emit a copy of the vtable if we
   // can emit definition of the inline functions.
-  return !hasAnyVirtualInlineFunction(RD) && !isVTableHidden(RD);
+  return !hasAnyUnusedVirtualInlineFunction(RD) && !isVTableHidden(RD);
 }
 static llvm::Value *performTypeAdjustment(CodeGenFunction &CGF,
                                           Address InitialPtr,
@@ -2576,6 +2586,9 @@ ItaniumRTTIBuilder::GetAddrOfExternalRTTIDescriptor(QualType Ty) {
 
   if (!GV) {
     // Create a new global variable.
+    // Note for the future: If we would ever like to do deferred emission of
+    // RTTI, check if emitting vtables opportunistically need any adjustment.
+
     GV = new llvm::GlobalVariable(CGM.getModule(), CGM.Int8PtrTy,
                                   /*Constant=*/true,
                                   llvm::GlobalValue::ExternalLinkage, nullptr,
