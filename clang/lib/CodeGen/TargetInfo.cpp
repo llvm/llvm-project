@@ -398,7 +398,17 @@ TargetCodeGenInfo::getDependentLibraryOption(llvm::StringRef Lib,
 }
 
 unsigned TargetCodeGenInfo::getOpenCLKernelCallingConv() const {
-  return llvm::CallingConv::C;
+  // OpenCL kernels are called via an explicit runtime API with arguments
+  // set with clSetKernelArg(), not as normal sub-functions.
+  // Return SPIR_KERNEL by default as the kernel calling convention to
+  // ensure the fingerprint is fixed such way that each OpenCL argument
+  // gets one matching argument in the produced kernel function argument
+  // list to enable feasible implementation of clSetKernelArg() with
+  // aggregates etc. In case we would use the default C calling conv here,
+  // clSetKernelArg() might break depending on the target-specific
+  // conventions; different targets might split structs passed as values
+  // to multiple function arguments etc.
+  return llvm::CallingConv::SPIR_KERNEL;
 }
 
 llvm::Constant *TargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
@@ -8068,7 +8078,17 @@ public:
                     CodeGen::CodeGenModule &M) const override;
   unsigned getOpenCLKernelCallingConv() const override;
 };
+
 } // End anonymous namespace.
+
+namespace clang {
+namespace CodeGen {
+void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI) {
+  DefaultABIInfo SPIRABI(CGM.getTypes());
+  SPIRABI.computeInfo(FI);
+}
+}
+}
 
 /// Emit SPIR specific metadata: OpenCL and SPIR version.
 void SPIRTargetCodeGenInfo::emitTargetMD(const Decl *D, llvm::GlobalValue *GV,

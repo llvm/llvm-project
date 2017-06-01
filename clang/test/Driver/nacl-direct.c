@@ -46,7 +46,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ARM %s
 // CHECK-ARM: {{.*}}clang{{.*}}" "-cc1"
 // CHECK-ARM: "-fuse-init-array"
-// CHECK-ARM: "-target-cpu" "cortex-a8"
+// CHECK-ARM: "-target-cpu" "generic"
 // CHECK-ARM: "-target-abi" "aapcs-linux"
 // CHECK-ARM: "-mfloat-abi" "hard"
 // CHECK-ARM: "-resource-dir" "foo"

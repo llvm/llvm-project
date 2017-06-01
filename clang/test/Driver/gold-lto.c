@@ -19,7 +19,7 @@
 // RUN:     -march=armv7a -Wl,-plugin-opt=foo -O0 \
 // RUN:     | FileCheck %s --check-prefix=CHECK-ARM-V7A
 // CHECK-ARM-V7A: "-plugin" "{{.*}}/LLVMgold.so"
-// CHECK-ARM-V7A: "-plugin-opt=mcpu=cortex-a8"
+// CHECK-ARM-V7A: "-plugin-opt=mcpu=generic"
 // CHECK-ARM-V7A: "-plugin-opt=O0"
 // CHECK-ARM-V7A: "-plugin-opt=foo"
 //
