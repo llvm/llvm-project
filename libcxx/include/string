@@ -484,13 +484,15 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <cstdint>
 #endif
 
-#include <__undef_min_max>
-
 #include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -4040,5 +4042,7 @@ _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_string<wcha
 _LIBCPP_EXTERN_TEMPLATE(string operator+<char, char_traits<char>, allocator<char> >(char const*, string const&))
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_STRING

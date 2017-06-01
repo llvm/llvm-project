@@ -32,9 +32,6 @@ extern "C" {
   // descriptor. Returns -1 on failure, or if coverage dumping is disabled.
   // This is intended for use by sandboxing code.
   intptr_t __sanitizer_maybe_open_cov_file(const char *name);
-  // Get the number of unique covered blocks (or edges).
-  // This can be useful for coverage-directed in-process fuzzers.
-  uintptr_t __sanitizer_get_total_unique_coverage();
 #ifdef __cplusplus
 }  // extern "C"
 #endif

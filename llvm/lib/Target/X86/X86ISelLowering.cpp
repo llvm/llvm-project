@@ -1,3 +1,4 @@
+
 //===-- X86ISelLowering.cpp - X86 DAG Lowering Implementation -------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -16298,6 +16299,7 @@ SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
     case ISD::SHL:
       if (Op.getNode()->getFlags().hasNoSignedWrap())
         break;
+      LLVM_FALLTHROUGH;
     default:
       NeedOF = true;
       break;
@@ -17161,17 +17163,17 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
 
   switch (SetCCOpcode) {
   default: llvm_unreachable("Unexpected SETCC condition");
-  case ISD::SETNE:  Invert = true;
+  case ISD::SETNE:  Invert = true; LLVM_FALLTHROUGH;
   case ISD::SETEQ:  Opc = X86ISD::PCMPEQ; break;
-  case ISD::SETLT:  Swap = true;
+  case ISD::SETLT:  Swap = true; LLVM_FALLTHROUGH;
   case ISD::SETGT:  Opc = X86ISD::PCMPGT; break;
-  case ISD::SETGE:  Swap = true;
+  case ISD::SETGE:  Swap = true; LLVM_FALLTHROUGH;
   case ISD::SETLE:  Opc = X86ISD::PCMPGT;
                     Invert = true; break;
-  case ISD::SETULT: Swap = true;
+  case ISD::SETULT: Swap = true; LLVM_FALLTHROUGH;
   case ISD::SETUGT: Opc = X86ISD::PCMPGT;
                     FlipSigns = true; break;
-  case ISD::SETUGE: Swap = true;
+  case ISD::SETUGE: Swap = true; LLVM_FALLTHROUGH;
   case ISD::SETULE: Opc = X86ISD::PCMPGT;
                     FlipSigns = true; Invert = true; break;
   }
@@ -29938,6 +29940,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // Converting this to a min would handle both negative zeros and NaNs
         // incorrectly, but we can swap the operands to fix both.
         std::swap(LHS, RHS);
+        LLVM_FALLTHROUGH;
       case ISD::SETOLT:
       case ISD::SETLT:
       case ISD::SETLE:
@@ -29968,6 +29971,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // Converting this to a max would handle both negative zeros and NaNs
         // incorrectly, but we can swap the operands to fix both.
         std::swap(LHS, RHS);
+        LLVM_FALLTHROUGH;
       case ISD::SETOGT:
       case ISD::SETGT:
       case ISD::SETGE:
@@ -30002,6 +30006,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // Converting this to a min would handle both negative zeros and NaNs
         // incorrectly, but we can swap the operands to fix both.
         std::swap(LHS, RHS);
+        LLVM_FALLTHROUGH;
       case ISD::SETOGT:
       case ISD::SETGT:
       case ISD::SETGE:
@@ -30030,6 +30035,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // Converting this to a max would handle both negative zeros and NaNs
         // incorrectly, but we can swap the operands to fix both.
         std::swap(LHS, RHS);
+        LLVM_FALLTHROUGH;
       case ISD::SETOLT:
       case ISD::SETLT:
       case ISD::SETLE:
@@ -35432,6 +35438,7 @@ TargetLowering::ConstraintWeight
   switch (*constraint) {
   default:
     weight = TargetLowering::getSingleConstraintMatchWeight(info, constraint);
+    LLVM_FALLTHROUGH;
   case 'R':
   case 'q':
   case 'Q':
@@ -35783,6 +35790,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           return std::make_pair(0U, &X86::GR64RegClass);
         break;
       }
+      LLVM_FALLTHROUGH;
       // 32-bit fallthrough
     case 'Q':   // Q_REGS
       if (VT == MVT::i32 || VT == MVT::f32)

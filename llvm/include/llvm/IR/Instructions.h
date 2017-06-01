@@ -1660,6 +1660,9 @@ public:
   /// Adds the attribute to the indicated argument
   void addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind);
 
+  /// Adds the attribute to the indicated argument
+  void addParamAttr(unsigned ArgNo, Attribute Attr);
+
   /// removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, Attribute::AttrKind Kind);
 
@@ -1668,6 +1671,9 @@ public:
 
   /// Removes the attribute from the given argument
   void removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind);
+
+  /// Removes the attribute from the given argument
+  void removeParamAttr(unsigned ArgNo, StringRef Kind);
 
   /// adds the dereferenceable attribute to the list of attributes.
   void addDereferenceableAttr(unsigned i, uint64_t Bytes);
@@ -1702,6 +1708,18 @@ public:
   /// Get the attribute of a given kind at a position.
   Attribute getAttribute(unsigned i, StringRef Kind) const {
     return getAttributes().getAttribute(i, Kind);
+  }
+
+  /// Get the attribute of a given kind from a given arg
+  Attribute getParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
+    assert(ArgNo < getNumArgOperands() && "Out of bounds");
+    return getAttributes().getParamAttr(ArgNo, Kind);
+  }
+
+  /// Get the attribute of a given kind from a given arg
+  Attribute getParamAttr(unsigned ArgNo, StringRef Kind) const {
+    assert(ArgNo < getNumArgOperands() && "Out of bounds");
+    return getAttributes().getParamAttr(ArgNo, Kind);
   }
 
   /// Return true if the data operand at index \p i has the attribute \p

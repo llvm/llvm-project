@@ -99,13 +99,17 @@ INTERCEPTOR(void*, valloc, uptr size) {
 #endif
 
 static void BeforeFork() {
-  LockAllocator();
-  StackDepotLockAll();
+  if (SANITIZER_LINUX) {
+    LockAllocator();
+    StackDepotLockAll();
+  }
 }
 
 static void AfterFork() {
-  StackDepotUnlockAll();
-  UnlockAllocator();
+  if (SANITIZER_LINUX) {
+    StackDepotUnlockAll();
+    UnlockAllocator();
+  }
 }
 
 INTERCEPTOR(int, fork, void) {

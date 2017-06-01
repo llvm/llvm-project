@@ -63,6 +63,12 @@ def _SLASH_C : CLFlag<"C">,
 def _SLASH_c : CLFlag<"c">, HelpText<"Compile only">, Alias<c>;
 def _SLASH_d1reportAllClassLayout : CLFlag<"d1reportAllClassLayout">,
   HelpText<"Dump record layout information">, Alias<fdump_record_layouts>;
+def _SLASH_diagnostics_caret : CLFlag<"diagnostics:caret">,
+  HelpText<"Enable caret and column diagnostics (on by default)">;
+def _SLASH_diagnostics_column : CLFlag<"diagnostics:column">,
+  HelpText<"Disable caret diagnostics but keep column info">;
+def _SLASH_diagnostics_classic : CLFlag<"diagnostics:classic">,
+  HelpText<"Disable column and caret diagnostics">;
 def _SLASH_D : CLJoinedOrSeparate<"D">, HelpText<"Define macro">,
   MetaVarName<"<macro[=value]>">, Alias<D>;
 def _SLASH_E : CLFlag<"E">, HelpText<"Preprocess to stdout">, Alias<E>;
@@ -324,6 +330,7 @@ def _SLASH_Zc_forScope : CLIgnoredFlag<"Zc:forScope">;
 def _SLASH_Zc_inline : CLIgnoredFlag<"Zc:inline">;
 def _SLASH_Zc_rvalueCast : CLIgnoredFlag<"Zc:rvalueCast">;
 def _SLASH_Zc_wchar_t : CLIgnoredFlag<"Zc:wchar_t">;
+def _SLASH_Zc_ternary : CLIgnoredFlag<"Zc:ternary">;
 def _SLASH_Zm : CLIgnoredJoined<"Zm">;
 def _SLASH_Zo : CLIgnoredFlag<"Zo">;
 def _SLASH_Zo_ : CLIgnoredFlag<"Zo-">;

@@ -484,9 +484,13 @@ class Configuration(object):
         # Configure extra flags
         compile_flags_str = self.get_lit_conf('compile_flags', '')
         self.cxx.compile_flags += shlex.split(compile_flags_str)
-        # FIXME: Can we remove this?
         if self.is_windows:
+            # FIXME: Can we remove this?
             self.cxx.compile_flags += ['-D_CRT_SECURE_NO_WARNINGS']
+            # Required so that tests using min/max don't fail on Windows,
+            # and so that those tests don't have to be changed to tolerate
+            # this insanity.
+            self.cxx.compile_flags += ['-DNOMINMAX']
 
     def configure_default_compile_flags(self):
         # Try and get the std version from the command line. Fall back to

@@ -373,10 +373,11 @@ collectModuleHeaderIncludes(const LangOptions &LangOpts, FileManager &FileMgr,
   return std::error_code();
 }
 
-static bool
-loadModuleMapForModuleBuild(CompilerInstance &CI, StringRef Filename,
-                            bool IsSystem, bool IsPreprocessed,
-                            unsigned &Offset) {
+static bool loadModuleMapForModuleBuild(CompilerInstance &CI,
+                                        StringRef Filename, bool IsSystem,
+                                        bool IsPreprocessed,
+                                        std::string &PresumedModuleMapFile,
+                                        unsigned &Offset) {
   auto &SrcMgr = CI.getSourceManager();
   HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
 
@@ -388,16 +389,15 @@ loadModuleMapForModuleBuild(CompilerInstance &CI, StringRef Filename,
   // line directives are not part of the module map syntax in general.
   Offset = 0;
   if (IsPreprocessed) {
-    std::string PresumedModuleMapFile;
     SourceLocation EndOfLineMarker =
         ReadOriginalFileName(CI, PresumedModuleMapFile, /*AddLineNote*/true);
     if (EndOfLineMarker.isValid())
       Offset = CI.getSourceManager().getDecomposedLoc(EndOfLineMarker).second;
-    // FIXME: Use PresumedModuleMapFile as the MODULE_MAP_FILE in the PCM.
   }
 
   // Load the module map file.
-  if (HS.loadModuleMapFile(ModuleMap, IsSystem, ModuleMapID, &Offset))
+  if (HS.loadModuleMapFile(ModuleMap, IsSystem, ModuleMapID, &Offset,
+                           PresumedModuleMapFile))
     return true;
 
   if (SrcMgr.getBuffer(ModuleMapID)->getBufferSize() == Offset)
@@ -664,14 +664,18 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   if (Input.getKind().getFormat() == InputKind::ModuleMap) {
     CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleMap);
 
+    std::string PresumedModuleMapFile;
     unsigned OffsetToContents;
     if (loadModuleMapForModuleBuild(CI, Input.getFile(), Input.isSystem(),
-                                    Input.isPreprocessed(), OffsetToContents))
+                                    Input.isPreprocessed(),
+                                    PresumedModuleMapFile, OffsetToContents))
       goto failure;
 
     auto *CurrentModule = prepareToBuildModule(CI, Input.getFile());
     if (!CurrentModule)
       goto failure;
+
+    CurrentModule->PresumedModuleMapFile = PresumedModuleMapFile;
 
     if (OffsetToContents)
       // If the module contents are in the same file, skip to them.

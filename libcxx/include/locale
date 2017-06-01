@@ -192,14 +192,7 @@ template <class charT> class messages_byname;
 #endif
 #include <cstdlib>
 #include <ctime>
-#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
-#include <support/win32/locale_win32.h>
-#elif defined(_NEWLIB_VERSION)
-// FIXME: replace all the uses of _NEWLIB_VERSION with __NEWLIB__ preceded by an
-// include of <sys/cdefs.h> once https://sourceware.org/ml/newlib-cvs/2014-q3/msg00038.html
-// has had a chance to bake for a bit
-#include <support/newlib/xlocale.h>
-#endif
+#include <cstdio>
 #ifdef _LIBCPP_HAS_CATOPEN
 #include <nl_types.h>
 #endif
@@ -208,17 +201,19 @@ template <class charT> class messages_byname;
 #include <Availability.h>
 #endif
 
-#include <__undef_min_max>
-
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
-#endif
-
 #ifdef _LIBCPP_LOCALE__L_EXTENSIONS
 #include <__bsd_locale_defaults.h>
 #else
 #include <__bsd_locale_fallbacks.h>
 #endif
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -4273,5 +4268,7 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::__close()
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_LOCALE

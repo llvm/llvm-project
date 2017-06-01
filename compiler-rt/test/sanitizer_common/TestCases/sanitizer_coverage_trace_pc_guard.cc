@@ -34,7 +34,7 @@ int main() {
 // CHECK: main
 // CHECK-NEXT: foo
 // CHECK-NEXT: foo
-// CHECK-NEXT: SanitizerCoverage: ./sanitizer_coverage_trace_pc_guard.{{.*}}.sancov 2 PCs written
+// CHECK-NEXT: SanitizerCoverage: ./sanitizer_coverage_trace_pc_guard.{{.*}}.sancov: 2 PCs written
 //
 // CHECK-SANCOV: sanitizer_coverage_trace_pc_guard.cc:23 foo
 // CHECK-SANCOV-NEXT: sanitizer_coverage_trace_pc_guard.cc:28 main

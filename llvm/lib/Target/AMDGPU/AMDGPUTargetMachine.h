@@ -69,7 +69,6 @@ public:
       return -1;
     return 0;
   }
-
 };
 
 //===----------------------------------------------------------------------===//
@@ -89,6 +88,10 @@ public:
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
   const R600Subtarget *getSubtargetImpl(const Function &) const override;
+
+  bool isMachineVerifierClean() const override {
+    return false;
+  }
 };
 
 //===----------------------------------------------------------------------===//

@@ -194,7 +194,7 @@ def GetInstrumentedPCs(binary):
   # - with call or callq,
   # - directly or via PLT.
   cmd = "objdump -d %s | " \
-        "grep '^\s\+[0-9a-f]\+:.*\scall\(q\|\)\s\+[0-9a-f]\+ <__sanitizer_cov\(_with_check\|\)\(@plt\|\)>' | " \
+        "grep '^\s\+[0-9a-f]\+:.*\scall\(q\|\)\s\+[0-9a-f]\+ <__sanitizer_cov\(_with_check\|\|_trace_pc_guard\)\(@plt\|\)>' | " \
         "grep '^\s\+[0-9a-f]\+' -o" % binary
   proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                           shell=True)

@@ -39,16 +39,17 @@ SampleIterator sample(PopulationIterator first, PopulationIterator last,
 #include <algorithm>
 #include <type_traits>
 
-#include <__undef_min_max>
-
 #include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_LFTS
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
+
+_LIBCPP_BEGIN_NAMESPACE_LFTS
 
 template <class _ForwardIterator, class _Searcher>
 _LIBCPP_INLINE_VISIBILITY
@@ -66,5 +67,7 @@ _SampleIterator sample(_PopulationIterator __first, _PopulationIterator __last,
 }
 
 _LIBCPP_END_NAMESPACE_LFTS
+
+_LIBCPP_POP_MACROS
 
 #endif /* _LIBCPP_EXPERIMENTAL_ALGORITHM */

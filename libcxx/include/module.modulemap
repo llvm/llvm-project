@@ -484,7 +484,7 @@ module std [system] {
   module __string { header "__string" export * }
   module __tree { header "__tree" export * }
   module __tuple { header "__tuple" export * }
-  module __undef_min_max { header "__undef_min_max" export * }
+  module __undef_macros { header "__undef_macros" export * }
 
   module experimental {
     requires cplusplus11

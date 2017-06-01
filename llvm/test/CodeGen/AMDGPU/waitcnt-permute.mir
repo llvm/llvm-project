@@ -1,0 +1,33 @@
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass si-insert-waits -o - %s | FileCheck %s
+
+--- |
+  define float @waitcnt-permute(i32 %x, i32 %y) {
+  entry:
+    %0 = call i32 @llvm.amdgcn.ds.bpermute(i32 %x, i32 %y)
+    %1 = bitcast i32 %0 to float
+    %2 = fadd float 1.000000e+00, %1
+    ret float %2
+  }
+
+  declare i32 @llvm.amdgcn.ds.bpermute(i32, i32)
+
+...
+---
+# CHECK-LABEL: name: waitcnt-permute{{$}}
+# CHECK: DS_BPERMUTE_B32
+# CHECK-NEXT: S_WAITCNT 127
+
+name:            waitcnt-permute
+liveins:
+  - { reg: '%vgpr0' }
+  - { reg: '%vgpr1' }
+  - { reg: '%sgpr30_sgpr31' }
+body:             |
+  bb.0:
+    liveins: %vgpr0, %vgpr1, %sgpr30_sgpr31
+
+    %vgpr0 = DS_BPERMUTE_B32 killed %vgpr0, killed %vgpr1, 0, implicit %exec
+    %vgpr0 = V_ADD_F32_e32 1065353216, killed %vgpr0, implicit %exec
+    S_SETPC_B64_return killed %sgpr30_sgpr31, implicit killed %vgpr0
+
+...

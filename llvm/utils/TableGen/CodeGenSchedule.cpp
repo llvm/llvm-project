@@ -542,7 +542,7 @@ void CodeGenSchedModels::collectSchedClasses() {
     return;
 
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
-    std::string InstName = Inst->TheDef->getName();
+    StringRef InstName = Inst->TheDef->getName();
     unsigned SCIdx = InstrClassMap.lookup(Inst->TheDef);
     if (!SCIdx) {
       if (!Inst->hasNoSchedulingInfo)

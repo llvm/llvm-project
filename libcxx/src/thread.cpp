@@ -34,7 +34,7 @@
 
 #if defined(_LIBCPP_WIN32API)
 #include <windows.h>
-#endif // defined(_LIBCPP_WIN32API)
+#endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

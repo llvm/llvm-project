@@ -840,12 +840,12 @@ coro<bad_promise_no_return_func> no_return_value_or_return_void() {
 
 struct bad_await_suspend_return {
   bool await_ready();
-  // expected-error@+1 {{the return type of 'await_suspend' is required to be 'void' or 'bool' (have 'char')}}
+  // expected-error@+1 {{return type of 'await_suspend' is required to be 'void' or 'bool' (have 'char')}}
   char await_suspend(std::experimental::coroutine_handle<>);
   void await_resume();
 };
 struct bad_await_ready_return {
-  // expected-note@+1 {{the return type of 'await_ready' is required to be contextually convertible to 'bool'}}
+  // expected-note@+1 {{return type of 'await_ready' is required to be contextually convertible to 'bool'}}
   void await_ready();
   bool await_suspend(std::experimental::coroutine_handle<>);
   void await_resume();
@@ -856,6 +856,14 @@ struct await_ready_explicit_bool {
   };
   BoolT await_ready();
   void await_suspend(std::experimental::coroutine_handle<>);
+  void await_resume();
+};
+template <class SuspendTy>
+struct await_suspend_type_test {
+  bool await_ready();
+  // expected-error@+2 {{return type of 'await_suspend' is required to be 'void' or 'bool' (have 'bool &')}}
+  // expected-error@+1 {{return type of 'await_suspend' is required to be 'void' or 'bool' (have 'bool &&')}}
+  SuspendTy await_suspend(std::experimental::coroutine_handle<>);
   void await_resume();
 };
 void test_bad_suspend() {
@@ -872,5 +880,15 @@ void test_bad_suspend() {
   {
     await_ready_explicit_bool c;
     co_await c; // OK
+  }
+  {
+    await_suspend_type_test<bool &&> a;
+    await_suspend_type_test<bool &> b;
+    await_suspend_type_test<const void> c;
+    await_suspend_type_test<const volatile bool> d;
+    co_await a; // expected-note {{call to 'await_suspend' implicitly required by coroutine function here}}
+    co_await b; // expected-note {{call to 'await_suspend' implicitly required by coroutine function here}}
+    co_await c; // OK
+    co_await d; // OK
   }
 }

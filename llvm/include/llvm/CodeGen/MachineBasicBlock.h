@@ -335,6 +335,9 @@ public:
     return make_range(livein_begin(), livein_end());
   }
 
+  /// Remove entry from the livein set and return iterator to the next.
+  livein_iterator removeLiveIn(livein_iterator I);
+
   /// Get the clobber mask for the start of this basic block. Funclets use this
   /// to prevent register allocation across funclet transitions.
   const uint32_t *getBeginClobberMask(const TargetRegisterInfo *TRI) const;

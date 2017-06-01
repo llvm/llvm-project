@@ -4,11 +4,11 @@ RUN: sancov -covered-functions LLVMFuzzer-NullDerefTest* %t_workdir/*.sancov | F
 RUN: env ASAN_OPTIONS=coverage_dir='"%t_workdir"' LLVMFuzzer-DSOTest -dump_coverage=1 -runs=0 2>&1 | FileCheck %s --check-prefix=DSO
 RUN: env ASAN_OPTIONS=coverage_dir='"%t_workdir"' not LLVMFuzzer-NullDerefTest -dump_coverage=0 2>&1 | FileCheck %s --check-prefix=NOCOV
 
-CHECK: SanitizerCoverage: {{.*}}LLVMFuzzer-NullDerefTest.{{.*}}.sancov {{.*}} PCs written
+CHECK: SanitizerCoverage: {{.*}}LLVMFuzzer-NullDerefTest.{{.*}}.sancov: {{.*}} PCs written
 SANCOV: LLVMFuzzerTestOneInput
 
-DSO: SanitizerCoverage: {{.*}}LLVMFuzzer-DSOTest.{{.*}}.sancov {{.*}} PCs written
-DSO-DAG: SanitizerCoverage: {{.*}}LLVMFuzzer-DSO1.{{.*}}.sancov {{.*}} PCs written
-DSO-DAG: SanitizerCoverage: {{.*}}LLVMFuzzer-DSO2.{{.*}}.sancov {{.*}} PCs written
+DSO: SanitizerCoverage: {{.*}}LLVMFuzzer-DSOTest.{{.*}}.sancov: {{.*}} PCs written
+DSO-DAG: SanitizerCoverage: {{.*}}LLVMFuzzer-DSO1.{{.*}}.sancov: {{.*}} PCs written
+DSO-DAG: SanitizerCoverage: {{.*}}LLVMFuzzer-DSO2.{{.*}}.sancov: {{.*}} PCs written
 
 NOCOV-NOT: SanitizerCoverage: {{.*}} PCs written

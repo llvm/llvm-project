@@ -1277,8 +1277,8 @@ void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS) {
     bool IsSynonym = GroupInfo.DiagsInGroup.empty() &&
                      GroupInfo.SubGroups.size() == 1;
 
-    writeHeader((IsRemarkGroup ? "-R" : "-W") +
-                    G->getValueAsString("GroupName"),
+    writeHeader(((IsRemarkGroup ? "-R" : "-W") +
+                    G->getValueAsString("GroupName")).str(),
                 OS);
 
     if (!IsSynonym) {

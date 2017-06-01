@@ -118,15 +118,13 @@ unsigned Argument::getParamAlignment() const {
 uint64_t Argument::getDereferenceableBytes() const {
   assert(getType()->isPointerTy() &&
          "Only pointers have dereferenceable bytes");
-  return getParent()->getDereferenceableBytes(getArgNo() +
-                                              AttributeList::FirstArgIndex);
+  return getParent()->getParamDereferenceableBytes(getArgNo());
 }
 
 uint64_t Argument::getDereferenceableOrNullBytes() const {
   assert(getType()->isPointerTy() &&
          "Only pointers have dereferenceable bytes");
-  return getParent()->getDereferenceableOrNullBytes(
-      getArgNo() + AttributeList::FirstArgIndex);
+  return getParent()->getParamDereferenceableOrNullBytes(getArgNo());
 }
 
 bool Argument::hasNestAttr() const {
@@ -169,21 +167,20 @@ bool Argument::onlyReadsMemory() const {
 
 void Argument::addAttrs(AttrBuilder &B) {
   AttributeList AL = getParent()->getAttributes();
-  AL = AL.addAttributes(Parent->getContext(),
-                        getArgNo() + AttributeList::FirstArgIndex, B);
+  AL = AL.addParamAttributes(Parent->getContext(), getArgNo(), B);
   getParent()->setAttributes(AL);
 }
 
 void Argument::addAttr(Attribute::AttrKind Kind) {
-  getParent()->addAttribute(getArgNo() + AttributeList::FirstArgIndex, Kind);
+  getParent()->addParamAttr(getArgNo(), Kind);
 }
 
 void Argument::addAttr(Attribute Attr) {
-  getParent()->addAttribute(getArgNo() + AttributeList::FirstArgIndex, Attr);
+  getParent()->addParamAttr(getArgNo(), Attr);
 }
 
 void Argument::removeAttr(Attribute::AttrKind Kind) {
-  getParent()->removeAttribute(getArgNo() + AttributeList::FirstArgIndex, Kind);
+  getParent()->removeParamAttr(getArgNo(), Kind);
 }
 
 bool Argument::hasAttribute(Attribute::AttrKind Kind) const {
@@ -365,6 +362,24 @@ void Function::addAttributes(unsigned i, const AttrBuilder &Attrs) {
   setAttributes(PAL);
 }
 
+void Function::addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
+  AttributeList PAL = getAttributes();
+  PAL = PAL.addParamAttribute(getContext(), ArgNo, Kind);
+  setAttributes(PAL);
+}
+
+void Function::addParamAttr(unsigned ArgNo, Attribute Attr) {
+  AttributeList PAL = getAttributes();
+  PAL = PAL.addParamAttribute(getContext(), ArgNo, Attr);
+  setAttributes(PAL);
+}
+
+void Function::addParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs) {
+  AttributeList PAL = getAttributes();
+  PAL = PAL.addParamAttributes(getContext(), ArgNo, Attrs);
+  setAttributes(PAL);
+}
+
 void Function::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
   AttributeList PAL = getAttributes();
   PAL = PAL.removeAttribute(getContext(), i, Kind);
@@ -383,15 +398,46 @@ void Function::removeAttributes(unsigned i, const AttrBuilder &Attrs) {
   setAttributes(PAL);
 }
 
+void Function::removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
+  AttributeList PAL = getAttributes();
+  PAL = PAL.removeParamAttribute(getContext(), ArgNo, Kind);
+  setAttributes(PAL);
+}
+
+void Function::removeParamAttr(unsigned ArgNo, StringRef Kind) {
+  AttributeList PAL = getAttributes();
+  PAL = PAL.removeParamAttribute(getContext(), ArgNo, Kind);
+  setAttributes(PAL);
+}
+
+void Function::removeParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs) {
+  AttributeList PAL = getAttributes();
+  PAL = PAL.removeParamAttributes(getContext(), ArgNo, Attrs);
+  setAttributes(PAL);
+}
+
 void Function::addDereferenceableAttr(unsigned i, uint64_t Bytes) {
   AttributeList PAL = getAttributes();
   PAL = PAL.addDereferenceableAttr(getContext(), i, Bytes);
   setAttributes(PAL);
 }
 
+void Function::addDereferenceableParamAttr(unsigned ArgNo, uint64_t Bytes) {
+  AttributeList PAL = getAttributes();
+  PAL = PAL.addDereferenceableParamAttr(getContext(), ArgNo, Bytes);
+  setAttributes(PAL);
+}
+
 void Function::addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes) {
   AttributeList PAL = getAttributes();
   PAL = PAL.addDereferenceableOrNullAttr(getContext(), i, Bytes);
+  setAttributes(PAL);
+}
+
+void Function::addDereferenceableOrNullParamAttr(unsigned ArgNo,
+                                                 uint64_t Bytes) {
+  AttributeList PAL = getAttributes();
+  PAL = PAL.addDereferenceableOrNullParamAttr(getContext(), ArgNo, Bytes);
   setAttributes(PAL);
 }
 

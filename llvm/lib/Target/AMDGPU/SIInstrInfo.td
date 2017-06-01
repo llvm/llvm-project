@@ -383,6 +383,14 @@ def SendMsgMatchClass : AsmOperandClass {
   let RenderMethod = "addImmOperands";
 }
 
+def SwizzleMatchClass : AsmOperandClass {
+  let Name = "Swizzle";
+  let PredicateMethod = "isSwizzle";
+  let ParserMethod = "parseSwizzleOp";
+  let RenderMethod = "addImmOperands";
+  let IsOptional = 1;
+}
+
 def ExpTgtMatchClass : AsmOperandClass {
   let Name = "ExpTgt";
   let PredicateMethod = "isExpTgt";
@@ -393,6 +401,11 @@ def ExpTgtMatchClass : AsmOperandClass {
 def SendMsgImm : Operand<i32> {
   let PrintMethod = "printSendMsg";
   let ParserMatchClass = SendMsgMatchClass;
+}
+
+def SwizzleImm : Operand<i16> {
+  let PrintMethod = "printSwizzle";
+  let ParserMatchClass = SwizzleMatchClass;
 }
 
 def SWaitMatchClass : AsmOperandClass {

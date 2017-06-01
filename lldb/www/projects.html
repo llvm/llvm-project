@@ -244,6 +244,25 @@
                                             </li>
 
                                             <li>
+                                              Reimplement the command interpreter commands using the SB API
+                                              <p>
+                                                Currently, all the CommandObject::DoExecute methods are implemented 
+                                                using the lldb_private API's.  That generally means that there's code
+                                                that gets duplicated between the CommandObject and the SB API that does
+                                                roughly the same thing.  We would reduce this code duplication, present a
+                                                single coherent face to the users of lldb, and keep
+                                                ourselves more honest about what we need in the SB API's if we implemented
+                                                the CommandObjects::DoExecute methods using the SB API's.
+                                              </p>
+                                              <p>
+                                                BTW, it is only the way it was much easier to develop lldb if it had a functioning
+                                                command-line early on.  So we did that first, and developed the SB API's when lldb
+                                                was more mature.  There's no good technical reason to have the commands use the
+                                                lldb_private API's.
+                                              </p>
+                                            </li>
+
+                                            <li>
                                               Documentation and better examples
 
                                               <p>

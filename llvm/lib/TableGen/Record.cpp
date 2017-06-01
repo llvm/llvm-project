@@ -1708,7 +1708,7 @@ Init *Record::getValueInit(StringRef FieldName) const {
   return R->getValue();
 }
 
-std::string Record::getValueAsString(StringRef FieldName) const {
+StringRef Record::getValueAsString(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
   if (!R || !R->getValue())
     PrintFatalError(getLoc(), "Record `" + getName() +
@@ -1787,10 +1787,10 @@ Record::getValueAsListOfInts(StringRef FieldName) const {
   return Ints;
 }
 
-std::vector<std::string>
+std::vector<StringRef>
 Record::getValueAsListOfStrings(StringRef FieldName) const {
   ListInit *List = getValueAsListInit(FieldName);
-  std::vector<std::string> Strings;
+  std::vector<StringRef> Strings;
   for (Init *I : List->getValues()) {
     if (StringInit *SI = dyn_cast<StringInit>(I))
       Strings.push_back(SI->getValue());

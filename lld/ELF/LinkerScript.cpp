@@ -51,9 +51,8 @@ LinkerScript *elf::Script;
 
 uint64_t ExprValue::getValue() const {
   if (Sec) {
-    if (Sec->getOutputSection())
-      return alignTo(Sec->getOffset(Val) + Sec->getOutputSection()->Addr,
-                     Alignment);
+    if (OutputSection *OS = Sec->getOutputSection())
+      return alignTo(Sec->getOffset(Val) + OS->Addr, Alignment);
     error("unable to evaluate expression: input section " + Sec->Name +
           " has no output section assigned");
   }
@@ -85,29 +84,28 @@ template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
   return Sym->body();
 }
 
-OutputSection *LinkerScript::getOutputSection(const Twine &Loc,
-                                              StringRef Name) {
-  for (OutputSection *Sec : *OutputSections)
-    if (Sec->Name == Name)
-      return Sec;
-
-  static OutputSection Dummy("", 0, 0);
-  if (ErrorOnMissingSection)
-    error(Loc + ": undefined section " + Name);
-  return &Dummy;
+OutputSectionCommand *
+LinkerScript::createOutputSectionCommand(StringRef Name, StringRef Location) {
+  OutputSectionCommand *&CmdRef = NameToOutputSectionCommand[Name];
+  OutputSectionCommand *Cmd;
+  if (CmdRef && CmdRef->Location.empty()) {
+    // There was a forward reference.
+    Cmd = CmdRef;
+  } else {
+    Cmd = make<OutputSectionCommand>(Name);
+    if (!CmdRef)
+      CmdRef = Cmd;
+  }
+  Cmd->Location = Location;
+  return Cmd;
 }
 
-// This function is essentially the same as getOutputSection(Name)->Size,
-// but it won't print out an error message if a given section is not found.
-//
-// Linker script does not create an output section if its content is empty.
-// We want to allow SIZEOF(.foo) where .foo is a section which happened to
-// be empty. That is why this function is different from getOutputSection().
-uint64_t LinkerScript::getOutputSectionSize(StringRef Name) {
-  for (OutputSection *Sec : *OutputSections)
-    if (Sec->Name == Name)
-      return Sec->Size;
-  return 0;
+OutputSectionCommand *
+LinkerScript::getOrCreateOutputSectionCommand(StringRef Name) {
+  OutputSectionCommand *&CmdRef = NameToOutputSectionCommand[Name];
+  if (!CmdRef)
+    CmdRef = make<OutputSectionCommand>(Name);
+  return CmdRef;
 }
 
 void LinkerScript::setDot(Expr E, const Twine &Loc, bool InSec) {
@@ -457,7 +455,7 @@ void LinkerScript::fabricateDefaultCommands() {
   // For each OutputSection that needs a VA fabricate an OutputSectionCommand
   // with an InputSectionDescription describing the InputSections
   for (OutputSection *Sec : *OutputSections) {
-    auto *OSCmd = make<OutputSectionCommand>(Sec->Name);
+    auto *OSCmd = createOutputSectionCommand(Sec->Name, "<internal>");
     OSCmd->Sec = Sec;
     SecToCommand[Sec] = OSCmd;
 
@@ -489,7 +487,7 @@ void LinkerScript::fabricateDefaultCommands() {
 // Add sections that didn't match any sections command.
 void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
   for (InputSectionBase *S : InputSections) {
-    if (!S->Live || S->OutSec)
+    if (!S->Live || S->Parent)
       continue;
     StringRef Name = getOutputSectionName(S->Name);
     auto I = std::find_if(
@@ -603,7 +601,7 @@ void LinkerScript::process(BaseCommand &Base) {
 
     if (!Sec->Live)
       continue;
-    assert(CurOutSec == Sec->OutSec);
+    assert(CurOutSec == Sec->getParent());
     output(Sec);
   }
 }
@@ -844,7 +842,7 @@ void LinkerScript::placeOrphanSections() {
     // representations agree on which input sections to use.
     OutputSectionCommand *Cmd = getCmd(Sec);
     if (!Cmd) {
-      Cmd = make<OutputSectionCommand>(Name);
+      Cmd = createOutputSectionCommand(Name, "<internal>");
       Opt.Commands.insert(CmdIter, Cmd);
       ++CmdIndex;
 
@@ -1086,7 +1084,12 @@ template <class ELFT> void OutputSectionCommand::writeTo(uint8_t *Buf) {
     return;
 
   // Write leading padding.
-  ArrayRef<InputSection *> Sections = Sec->Sections;
+  std::vector<InputSection *> Sections;
+  for (BaseCommand *Cmd : Commands)
+    if (auto *ISD = dyn_cast<InputSectionDescription>(Cmd))
+      for (InputSection *IS : ISD->Sections)
+        if (IS->Live)
+          Sections.push_back(IS);
   uint32_t Filler = getFiller();
   if (Filler)
     fill(Buf, Sections.empty() ? Sec->Size : Sections[0]->OutSecOff, Filler);

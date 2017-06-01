@@ -587,6 +587,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::VPSLLDQZ256rr:
   case X86::VPSLLDQZ512rr:
     Src1Name = getRegName(MI->getOperand(1).getReg());
+    LLVM_FALLTHROUGH;
   case X86::VPSLLDQZ128rm:
   case X86::VPSLLDQZ256rm:
   case X86::VPSLLDQZ512rm:
@@ -604,6 +605,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::VPSRLDQZ256rr:
   case X86::VPSRLDQZ512rr:
     Src1Name = getRegName(MI->getOperand(1).getReg());
+    LLVM_FALLTHROUGH;
   case X86::VPSRLDQZ128rm:
   case X86::VPSRLDQZ256rm:
   case X86::VPSRLDQZ512rm:
@@ -1091,6 +1093,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z256, r)
   CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z256, r)
     Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
   CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z256, m)
   CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z256, m)
     DecodeSubVectorBroadcast(MVT::v8f32, MVT::v2f32, ShuffleMask);
@@ -1099,6 +1102,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z, r)
   CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z, r)
     Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
+    LLVM_FALLTHROUGH;
   CASE_AVX512_INS_COMMON(BROADCASTF32X2, Z, m)
   CASE_AVX512_INS_COMMON(BROADCASTI32X2, Z, m)
     DecodeSubVectorBroadcast(MVT::v16f32, MVT::v2f32, ShuffleMask);

@@ -90,6 +90,10 @@ namespace llvm {
       ///
       VECSHL,
 
+      /// XXPERMDI - The PPC XXPERMDI instruction
+      ///
+      XXPERMDI,
+
       /// The CMPB instruction (takes two operands of i32 or i64).
       CMPB,
 
@@ -453,6 +457,10 @@ namespace llvm {
     /// isXXSLDWIShuffleMask - Return true if this is a shuffle mask suitable
     /// for a XXSLDWI instruction.
     bool isXXSLDWIShuffleMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
+                              bool &Swap, bool IsLE);
+    /// isXXPERMDIShuffleMask - Return true if this is a shuffle mask suitable
+    /// for a XXPERMDI instruction.
+    bool isXXPERMDIShuffleMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
                               bool &Swap, bool IsLE);
 
     /// isVSLDOIShuffleMask - If this is a vsldoi shuffle mask, return the

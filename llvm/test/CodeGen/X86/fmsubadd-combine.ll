@@ -117,9 +117,9 @@ define <8 x double> @mul_subadd_pd512(<8 x double> %A, <8 x double> %B, <8 x dou
 ; FMA3_256-NEXT:    vsubpd %ymm5, %ymm1, %ymm2
 ; FMA3_256-NEXT:    vsubpd %ymm4, %ymm0, %ymm3
 ; FMA3_256-NEXT:    vaddpd %ymm5, %ymm1, %ymm1
+; FMA3_256-NEXT:    vblendpd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3]
 ; FMA3_256-NEXT:    vaddpd %ymm4, %ymm0, %ymm0
 ; FMA3_256-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm3[1],ymm0[2],ymm3[3]
-; FMA3_256-NEXT:    vblendpd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3]
 ; FMA3_256-NEXT:    retq
 ;
 ; FMA3_512-LABEL: mul_subadd_pd512:
@@ -137,9 +137,9 @@ define <8 x double> @mul_subadd_pd512(<8 x double> %A, <8 x double> %B, <8 x dou
 ; FMA4-NEXT:    vsubpd %ymm5, %ymm1, %ymm2
 ; FMA4-NEXT:    vsubpd %ymm4, %ymm0, %ymm3
 ; FMA4-NEXT:    vaddpd %ymm5, %ymm1, %ymm1
+; FMA4-NEXT:    vblendpd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3]
 ; FMA4-NEXT:    vaddpd %ymm4, %ymm0, %ymm0
 ; FMA4-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm3[1],ymm0[2],ymm3[3]
-; FMA4-NEXT:    vblendpd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3]
 ; FMA4-NEXT:    retq
 entry:
   %AB = fmul <8 x double> %A, %B
@@ -157,9 +157,9 @@ define <16 x float> @mul_subadd_ps512(<16 x float> %A, <16 x float> %B, <16 x fl
 ; FMA3_256-NEXT:    vsubps %ymm5, %ymm1, %ymm2
 ; FMA3_256-NEXT:    vsubps %ymm4, %ymm0, %ymm3
 ; FMA3_256-NEXT:    vaddps %ymm5, %ymm1, %ymm1
+; FMA3_256-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]
 ; FMA3_256-NEXT:    vaddps %ymm4, %ymm0, %ymm0
 ; FMA3_256-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm3[1],ymm0[2],ymm3[3],ymm0[4],ymm3[5],ymm0[6],ymm3[7]
-; FMA3_256-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]
 ; FMA3_256-NEXT:    retq
 ;
 ; FMA3_512-LABEL: mul_subadd_ps512:
@@ -178,9 +178,9 @@ define <16 x float> @mul_subadd_ps512(<16 x float> %A, <16 x float> %B, <16 x fl
 ; FMA4-NEXT:    vsubps %ymm5, %ymm1, %ymm2
 ; FMA4-NEXT:    vsubps %ymm4, %ymm0, %ymm3
 ; FMA4-NEXT:    vaddps %ymm5, %ymm1, %ymm1
+; FMA4-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]
 ; FMA4-NEXT:    vaddps %ymm4, %ymm0, %ymm0
 ; FMA4-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm3[1],ymm0[2],ymm3[3],ymm0[4],ymm3[5],ymm0[6],ymm3[7]
-; FMA4-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]
 ; FMA4-NEXT:    retq
 entry:
   %AB = fmul <16 x float> %A, %B

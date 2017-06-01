@@ -2214,8 +2214,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     llvm::Triple T(TargetOpts.Triple);
     llvm::Triple::ArchType Arch = T.getArch();
     bool emitError = (DefaultCC == LangOptions::DCC_FastCall ||
-                  DefaultCC == LangOptions::DCC_StdCall) &&
-                 Arch != llvm::Triple::x86;
+                      DefaultCC == LangOptions::DCC_StdCall) &&
+                     Arch != llvm::Triple::x86;
     emitError |= DefaultCC == LangOptions::DCC_VectorCall &&
                  !(Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64);
     if (emitError)

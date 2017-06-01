@@ -34,6 +34,18 @@ locale_t uselocale( locale_t newloc )
     // uselocale returns the old locale_t
     return old_locale;
 }
+
+decltype(MB_CUR_MAX) MB_CUR_MAX_L( locale_t __l )
+{
+#if defined(_LIBCPP_MSVCRT)
+  return ___mb_cur_max_l_func(__l);
+#else
+  __libcpp_locale_guard __current(__l);
+  return MB_CUR_MAX;
+#endif
+}
+
+
 lconv *localeconv_l( locale_t loc )
 {
     __libcpp_locale_guard __current(loc);
@@ -109,3 +121,15 @@ int vasprintf_l( char **ret, locale_t loc, const char *format, va_list ap )
     __libcpp_locale_guard __current(loc);
     return vasprintf( ret, format, ap );
 }
+
+#if !defined(_LIBCPP_MSVCRT)
+float strtof_l(const char* nptr, char** endptr, locale_t loc) {
+  __libcpp_locale_guard __current(loc);
+  return strtof(nptr, endptr);
+}
+
+long double strtold_l(const char* nptr, char** endptr, locale_t loc) {
+  __libcpp_locale_guard __current(loc);
+  return strtold(nptr, endptr);
+}
+#endif
