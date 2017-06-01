@@ -651,13 +651,15 @@ template <class BidirectionalIterator, class Compare>
 #include <intrin.h>
 #endif
 
-#include <__undef_min_max>
-
 #include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -2908,11 +2910,11 @@ struct __log2_imp<0, _Rp>
     static const size_t value = _Rp + 1;
 };
 
-template <class _UI, _UI _Xp>
+template <class _UIntType, _UIntType _Xp>
 struct __log2
 {
     static const size_t value = __log2_imp<_Xp,
-                                         sizeof(_UI) * __CHAR_BIT__ - 1>::value;
+                                         sizeof(_UIntType) * __CHAR_BIT__ - 1>::value;
 };
 
 template<class _Engine, class _UIntType>
@@ -5903,5 +5905,7 @@ prev_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last)
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_ALGORITHM

@@ -48,8 +48,8 @@ using namespace lld;
 using namespace lld::elf;
 
 uint64_t SyntheticSection::getVA() const {
-  if (this->OutSec)
-    return this->OutSec->Addr + this->OutSecOff;
+  if (OutputSection *Sec = getParent())
+    return Sec->Addr + OutSecOff;
   return 0;
 }
 
@@ -367,8 +367,8 @@ BssSection::BssSection(StringRef Name)
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 0, Name) {}
 
 size_t BssSection::reserveSpace(uint64_t Size, uint32_t Alignment) {
-  if (OutSec)
-    OutSec->updateAlignment(Alignment);
+  if (OutputSection *Sec = getParent())
+    Sec->updateAlignment(Alignment);
   this->Size = alignTo(this->Size, Alignment) + Size;
   this->Alignment = std::max(this->Alignment, Alignment);
   return this->Size - Size;
@@ -494,7 +494,7 @@ void EhFrameSection<ELFT>::addSectionAux(EhInputSection *Sec,
 template <class ELFT>
 void EhFrameSection<ELFT>::addSection(InputSectionBase *C) {
   auto *Sec = cast<EhInputSection>(C);
-  Sec->EHSec = this;
+  Sec->Parent = this;
   updateAlignment(Sec->Alignment);
   Sections.push_back(Sec);
   for (auto *DS : Sec->DependentSections)
@@ -579,7 +579,7 @@ uint64_t EhFrameSection<ELFT>::getFdePc(uint8_t *Buf, size_t FdeOff,
   if ((Enc & 0x70) == DW_EH_PE_absptr)
     return Addr;
   if ((Enc & 0x70) == DW_EH_PE_pcrel)
-    return Addr + this->OutSec->Addr + Off;
+    return Addr + getParent()->Addr + Off;
   fatal("unknown FDE size relative encoding");
 }
 
@@ -610,7 +610,7 @@ template <class ELFT> void EhFrameSection<ELFT>::writeTo(uint8_t *Buf) {
       uint8_t Enc = getFdeEncoding<ELFT>(Cie->Piece);
       for (SectionPiece *Fde : Cie->FdePieces) {
         uint64_t Pc = getFdePc(Buf, Fde->OutputOff, Enc);
-        uint64_t FdeVA = this->OutSec->Addr + Fde->OutputOff;
+        uint64_t FdeVA = getParent()->Addr + Fde->OutputOff;
         In<ELFT>::EhFrameHdr->addFde(Pc, FdeVA);
       }
     }
@@ -698,8 +698,7 @@ void MipsGotSection::addEntry(SymbolBody &Sym, int64_t Addend, RelExpr Expr) {
     // sections referenced by GOT relocations. Then later in the `finalize`
     // method calculate number of "pages" required to cover all saved output
     // section and allocate appropriate number of GOT entries.
-    auto *DefSym = cast<DefinedRegular>(&Sym);
-    PageIndexMap.insert({DefSym->Section->getOutputSection(), 0});
+    PageIndexMap.insert({Sym.getOutputSection(), 0});
     return;
   }
   if (Sym.isTls()) {
@@ -766,8 +765,7 @@ static uint64_t getMipsPageCount(uint64_t Size) {
 
 uint64_t MipsGotSection::getPageEntryOffset(const SymbolBody &B,
                                             int64_t Addend) const {
-  const OutputSection *OutSec =
-      cast<DefinedRegular>(&B)->Section->getOutputSection();
+  const OutputSection *OutSec = B.getOutputSection();
   uint64_t SecAddr = getMipsPageAddr(OutSec->Addr);
   uint64_t SymAddr = getMipsPageAddr(B.getVA(Addend));
   uint64_t Index = PageIndexMap.lookup(OutSec) + (SymAddr - SecAddr) / 0xffff;
@@ -1071,11 +1069,11 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   if (this->Size)
     return; // Already finalized.
 
-  this->Link = InX::DynStrTab->OutSec->SectionIndex;
-  if (In<ELFT>::RelaDyn->OutSec->Size > 0) {
+  this->Link = InX::DynStrTab->getParent()->SectionIndex;
+  if (In<ELFT>::RelaDyn->getParent()->Size > 0) {
     bool IsRela = Config->IsRela;
     add({IsRela ? DT_RELA : DT_REL, In<ELFT>::RelaDyn});
-    add({IsRela ? DT_RELASZ : DT_RELSZ, In<ELFT>::RelaDyn->OutSec->Size});
+    add({IsRela ? DT_RELASZ : DT_RELSZ, In<ELFT>::RelaDyn->getParent()->Size});
     add({IsRela ? DT_RELAENT : DT_RELENT,
          uint64_t(IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel))});
 
@@ -1088,9 +1086,9 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
         add({IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels});
     }
   }
-  if (In<ELFT>::RelaPlt->OutSec->Size > 0) {
+  if (In<ELFT>::RelaPlt->getParent()->Size > 0) {
     add({DT_JMPREL, In<ELFT>::RelaPlt});
-    add({DT_PLTRELSZ, In<ELFT>::RelaPlt->OutSec->Size});
+    add({DT_PLTRELSZ, In<ELFT>::RelaPlt->getParent()->Size});
     add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
          InX::GotPlt});
     add({DT_PLTREL, uint64_t(Config->IsRela ? DT_RELA : DT_REL)});
@@ -1152,7 +1150,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
       add({DT_MIPS_RLD_MAP, InX::MipsRldMap});
   }
 
-  this->OutSec->Link = this->Link;
+  getParent()->Link = this->Link;
 
   // +1 for DT_NULL
   this->Size = (Entries.size() + 1) * this->Entsize;
@@ -1168,7 +1166,7 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
       P->d_un.d_ptr = E.OutSec->Addr;
       break;
     case Entry::InSecAddr:
-      P->d_un.d_ptr = E.InSec->OutSec->Addr + E.InSec->OutSecOff;
+      P->d_un.d_ptr = E.InSec->getParent()->Addr + E.InSec->OutSecOff;
       break;
     case Entry::SecSize:
       P->d_un.d_val = E.OutSec->Size;
@@ -1185,7 +1183,7 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 uint64_t DynamicReloc::getOffset() const {
-  return InputSec->OutSec->Addr + InputSec->getOffset(OffsetInSec);
+  return InputSec->getOutputSection()->Addr + InputSec->getOffset(OffsetInSec);
 }
 
 int64_t DynamicReloc::getAddend() const {
@@ -1258,11 +1256,11 @@ template <class ELFT> unsigned RelocationSection<ELFT>::getRelocOffset() {
 }
 
 template <class ELFT> void RelocationSection<ELFT>::finalizeContents() {
-  this->Link = InX::DynSymTab ? InX::DynSymTab->OutSec->SectionIndex
-                              : InX::SymTab->OutSec->SectionIndex;
+  this->Link = InX::DynSymTab ? InX::DynSymTab->getParent()->SectionIndex
+                              : InX::SymTab->getParent()->SectionIndex;
 
   // Set required output section properties.
-  this->OutSec->Link = this->Link;
+  getParent()->Link = this->Link;
 }
 
 SymbolTableBaseSection::SymbolTableBaseSection(StringTableSection &StrTabSec)
@@ -1293,14 +1291,14 @@ static bool sortMipsSymbols(const SymbolTableEntry &L,
 // function. (For .dynsym, we don't do that because symbols for
 // dynamic linking are inherently all globals.)
 void SymbolTableBaseSection::finalizeContents() {
-  this->OutSec->Link = StrTabSec.OutSec->SectionIndex;
+  getParent()->Link = StrTabSec.getParent()->SectionIndex;
 
   // If it is a .dynsym, there should be no local symbols, but we need
   // to do a few things for the dynamic linker.
   if (this->Type == SHT_DYNSYM) {
     // Section's Info field has the index of the first non-local symbol.
     // Because the first symbol entry is a null entry, 1 is the first.
-    this->OutSec->Info = 1;
+    getParent()->Info = 1;
 
     if (InX::GnuHashTab) {
       // NB: It also sorts Symbols to meet the GNU hash table requirements.
@@ -1326,7 +1324,7 @@ void SymbolTableBaseSection::postThunkContents() {
                S.Symbol->symbol()->computeBinding() == STB_LOCAL;
       });
   size_t NumLocals = It - Symbols.begin();
-  this->OutSec->Info = NumLocals + 1;
+  getParent()->Info = NumLocals + 1;
 }
 
 void SymbolTableBaseSection::addSymbol(SymbolBody *B) {
@@ -1344,8 +1342,7 @@ size_t SymbolTableBaseSection::getSymbolIndex(SymbolBody *Body) {
     // This is used for -r, so we have to handle multiple section
     // symbols being combined.
     if (Body->Type == STT_SECTION && E.Symbol->Type == STT_SECTION)
-      return cast<DefinedRegular>(Body)->Section->getOutputSection() ==
-             cast<DefinedRegular>(E.Symbol)->Section->getOutputSection();
+      return Body->getOutputSection() == E.Symbol->getOutputSection();
     return false;
   });
   if (I == Symbols.end())
@@ -1456,7 +1453,7 @@ GnuHashTableSection::GnuHashTableSection()
 }
 
 void GnuHashTableSection::finalizeContents() {
-  this->OutSec->Link = InX::DynSymTab->OutSec->SectionIndex;
+  getParent()->Link = InX::DynSymTab->getParent()->SectionIndex;
 
   // Computes bloom filter size in word size. We want to allocate 8
   // bits for each symbol. It must be a power of two.
@@ -1590,7 +1587,7 @@ HashTableSection<ELFT>::HashTableSection()
 }
 
 template <class ELFT> void HashTableSection<ELFT>::finalizeContents() {
-  this->OutSec->Link = InX::DynSymTab->OutSec->SectionIndex;
+  getParent()->Link = InX::DynSymTab->getParent()->SectionIndex;
 
   unsigned NumEntries = 2;                            // nbucket and nchain.
   NumEntries += InX::DynSymTab->getNumSymbols(); // The chain entries.
@@ -1801,7 +1798,7 @@ void GdbIndexSection::finalizeContents() {
 
   for (InputSectionBase *S : InputSections)
     if (InputSection *IS = dyn_cast<InputSection>(S))
-      if (IS->OutSec && IS->Name == ".debug_info")
+      if (IS->getParent() && IS->Name == ".debug_info")
         readDwarf(IS);
 
   SymbolTable.finalizeContents();
@@ -1846,7 +1843,7 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
 
   // Write the address area.
   for (AddressEntry &E : AddressArea) {
-    uint64_t BaseAddr = E.Section->OutSec->Addr + E.Section->getOffset(0);
+    uint64_t BaseAddr = E.Section->getParent()->Addr + E.Section->getOffset(0);
     write64le(Buf, BaseAddr + E.LowAddress);
     write64le(Buf + 8, BaseAddr + E.HighAddress);
     write32le(Buf + 16, E.CuIndex);
@@ -1906,7 +1903,7 @@ template <class ELFT> void EhFrameHeader<ELFT>::writeTo(uint8_t *Buf) {
   Buf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;
   Buf[2] = DW_EH_PE_udata4;
   Buf[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4;
-  write32<E>(Buf + 4, In<ELFT>::EhFrame->OutSec->Addr - this->getVA() - 4);
+  write32<E>(Buf + 4, In<ELFT>::EhFrame->getParent()->Addr - this->getVA() - 4);
   write32<E>(Buf + 8, Fdes.size());
   Buf += 12;
 
@@ -1948,12 +1945,12 @@ template <class ELFT> void VersionDefinitionSection<ELFT>::finalizeContents() {
   for (VersionDefinition &V : Config->VersionDefinitions)
     V.NameOff = InX::DynStrTab->addString(V.Name);
 
-  this->OutSec->Link = InX::DynStrTab->OutSec->SectionIndex;
+  getParent()->Link = InX::DynStrTab->getParent()->SectionIndex;
 
   // sh_info should be set to the number of definitions. This fact is missed in
   // documentation, but confirmed by binutils community:
   // https://sourceware.org/ml/binutils/2014-11/msg00355.html
-  this->OutSec->Info = getVerDefNum();
+  getParent()->Info = getVerDefNum();
 }
 
 template <class ELFT>
@@ -2001,7 +1998,7 @@ VersionTableSection<ELFT>::VersionTableSection()
 template <class ELFT> void VersionTableSection<ELFT>::finalizeContents() {
   // At the moment of june 2016 GNU docs does not mention that sh_link field
   // should be set, but Sun docs do. Also readelf relies on this field.
-  this->OutSec->Link = InX::DynSymTab->OutSec->SectionIndex;
+  getParent()->Link = InX::DynSymTab->getParent()->SectionIndex;
 }
 
 template <class ELFT> size_t VersionTableSection<ELFT>::getSize() const {
@@ -2093,8 +2090,8 @@ template <class ELFT> void VersionNeedSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents() {
-  this->OutSec->Link = InX::DynStrTab->OutSec->SectionIndex;
-  this->OutSec->Info = Needed.size();
+  getParent()->Link = InX::DynStrTab->getParent()->SectionIndex;
+  getParent()->Info = Needed.size();
 }
 
 template <class ELFT> size_t VersionNeedSection<ELFT>::getSize() const {
@@ -2115,7 +2112,7 @@ MergeSyntheticSection::MergeSyntheticSection(StringRef Name, uint32_t Type,
 
 void MergeSyntheticSection::addSection(MergeInputSection *MS) {
   assert(!Finalized);
-  MS->MergeSec = this;
+  MS->Parent = this;
   Sections.push_back(MS);
 }
 
@@ -2186,13 +2183,23 @@ ARMExidxSentinelSection::ARMExidxSentinelSection()
 // This section will have been sorted last in the .ARM.exidx table.
 // This table entry will have the form:
 // | PREL31 upper bound of code that has exception tables | EXIDX_CANTUNWIND |
+// The sentinel must have the PREL31 value of an address higher than any
+// address described by any other table entry.
 void ARMExidxSentinelSection::writeTo(uint8_t *Buf) {
-  // Get the InputSection before us, we are by definition last
-  auto RI = this->OutSec->Sections.rbegin();
-  InputSection *LE = *(++RI);
-  InputSection *LC = cast<InputSection>(LE->getLinkOrderDep());
-  uint64_t S = LC->OutSec->Addr + LC->getOffset(LC->getSize());
-  uint64_t P = this->getVA();
+  // The Sections are sorted in order of ascending PREL31 address with the
+  // sentinel last. We need to find the InputSection that precedes the
+  // sentinel. By construction the Sentinel is in the last
+  // InputSectionDescription as the InputSection that precedes it.
+  OutputSectionCommand *C = Script->getCmd(getParent());
+  auto ISD = std::find_if(C->Commands.rbegin(), C->Commands.rend(),
+                          [](const BaseCommand *Base) {
+                            return isa<InputSectionDescription>(Base);
+                          });
+  auto L = cast<InputSectionDescription>(*ISD);
+  InputSection *Highest = L->Sections[L->Sections.size() - 2];
+  InputSection *LS = Highest->getLinkOrderDep();
+  uint64_t S = LS->getParent()->Addr + LS->getOffset(LS->getSize());
+  uint64_t P = getVA();
   Target->relocateOne(Buf, R_ARM_PREL31, S - P);
   write32le(Buf + 4, 0x1);
 }
@@ -2200,7 +2207,7 @@ void ARMExidxSentinelSection::writeTo(uint8_t *Buf) {
 ThunkSection::ThunkSection(OutputSection *OS, uint64_t Off)
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS,
                        Config->Wordsize, ".text.thunk") {
-  this->OutSec = OS;
+  this->Parent = OS;
   this->OutSecOff = Off;
 }
 

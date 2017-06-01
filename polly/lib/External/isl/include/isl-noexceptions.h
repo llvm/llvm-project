@@ -57,7 +57,7 @@ public:
   bool is_false() const { return val == isl_bool_false; }
   bool is_true() const { return val == isl_bool_true; }
 
-  explicit operator bool() const {
+  operator bool() const {
     ISLPP_ASSERT(!is_error(), "IMPLEMENTATION ERROR: Unhandled error state");
     return is_true();
   }
@@ -1170,6 +1170,7 @@ public:
   inline isl::boolean is_equal(const isl::map &map2) const;
   inline isl::boolean is_identity() const;
   inline isl::boolean is_injective() const;
+  inline isl::boolean is_product() const;
   inline isl::boolean is_single_valued() const;
   inline isl::boolean is_strict_subset(const isl::map &map2) const;
   inline isl::boolean is_subset(const isl::map &map2) const;
@@ -2349,6 +2350,7 @@ public:
   inline isl::boolean is_equal(const isl::space &space2) const;
   inline isl::boolean is_map() const;
   inline isl::boolean is_params() const;
+  inline isl::boolean is_product() const;
   inline isl::boolean is_range(const isl::space &space2) const;
   inline isl::boolean is_set() const;
   inline isl::boolean is_wrapping() const;
@@ -6600,6 +6602,11 @@ isl::boolean map::is_identity() const {
 
 isl::boolean map::is_injective() const {
   auto res = isl_map_is_injective(get());
+  return manage(res);
+}
+
+isl::boolean map::is_product() const {
+  auto res = isl_map_is_product(get());
   return manage(res);
 }
 
@@ -11311,6 +11318,11 @@ isl::boolean space::is_map() const {
 
 isl::boolean space::is_params() const {
   auto res = isl_space_is_params(get());
+  return manage(res);
+}
+
+isl::boolean space::is_product() const {
+  auto res = isl_space_is_product(get());
   return manage(res);
 }
 

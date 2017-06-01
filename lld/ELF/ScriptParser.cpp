@@ -859,7 +859,11 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     Expr E2 = readExpr();
     expect(")");
-    return [=] { return alignTo(E().getValue(), E2().getValue()); };
+    return [=] {
+      ExprValue V = E();
+      V.Alignment = E2().getValue();
+      return V;
+    };
   }
   if (Tok == "ALIGNOF") {
     StringRef Name = readParenLiteral();
