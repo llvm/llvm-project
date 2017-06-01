@@ -37,9 +37,9 @@ void binary_arith(char *p, int i) {
   // CHECK-NEXT: [[POSVALID:%.*]] = icmp uge i64 [[COMPGEP]], [[BASE]], !nosanitize
   // CHECK-NEXT: [[NEGVALID:%.*]] = icmp ult i64 [[COMPGEP]], [[BASE]], !nosanitize
   // CHECK-NEXT: [[POSOFFSET:%.*]] = icmp sge i64 [[SMULVAL]], 0, !nosanitize
-  // CHECK-NEXT: [[OFFSETVALID:%.*]] = xor i1 [[OFFSETOFLOW]], true, !nosanitize
-  // CHECK-NEXT: [[DIFFVALID:%.*]] = select i1 [[POSOFFSET]], i1 [[POSVALID]], i1 [[NEGVALID]], !nosanitize
-  // CHECK-NEXT: [[VALID:%.*]] = and i1 [[OFFSETVALID]], [[DIFFVALID]], !nosanitize
+  // CHECK-DAG: [[OFFSETVALID:%.*]] = xor i1 [[OFFSETOFLOW]], true, !nosanitize
+  // CHECK-DAG: [[DIFFVALID:%.*]] = select i1 [[POSOFFSET]], i1 [[POSVALID]], i1 [[NEGVALID]], !nosanitize
+  // CHECK: [[VALID:%.*]] = and i1 [[OFFSETVALID]], [[DIFFVALID]], !nosanitize
   // CHECK-NEXT: br i1 [[VALID]]{{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}, i64 [[BASE]], i64 [[COMPGEP]]){{.*}}, !nosanitize
   p + i;
@@ -62,9 +62,9 @@ void fixed_len_array(int k) {
   // CHECK-NEXT: [[POSVALID:%.*]] = icmp uge i64 [[COMPGEP]], [[BASE]], !nosanitize
   // CHECK-NEXT: [[NEGVALID:%.*]] = icmp ult i64 [[COMPGEP]], [[BASE]], !nosanitize
   // CHECK-NEXT: [[POSOFFSET:%.*]] = icmp sge i64 [[SMULVAL]], 0, !nosanitize
-  // CHECK-NEXT: [[OFFSETVALID:%.*]] = xor i1 [[OFFSETOFLOW]], true, !nosanitize
-  // CHECK-NEXT: [[DIFFVALID:%.*]] = select i1 [[POSOFFSET]], i1 [[POSVALID]], i1 [[NEGVALID]], !nosanitize
-  // CHECK-NEXT: [[VALID:%.*]] = and i1 [[OFFSETVALID]], [[DIFFVALID]], !nosanitize
+  // CHECK-DAG: [[OFFSETVALID:%.*]] = xor i1 [[OFFSETOFLOW]], true, !nosanitize
+  // CHECK-DAG: [[DIFFVALID:%.*]] = select i1 [[POSOFFSET]], i1 [[POSVALID]], i1 [[NEGVALID]], !nosanitize
+  // CHECK: [[VALID:%.*]] = and i1 [[OFFSETVALID]], [[DIFFVALID]], !nosanitize
   // CHECK-NEXT: br i1 [[VALID]]{{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}, i64 [[BASE]], i64 [[COMPGEP]]){{.*}}, !nosanitize
 
