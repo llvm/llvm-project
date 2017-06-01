@@ -319,7 +319,7 @@ TEST(TargetParserTest, testARMArch) {
       testARMArch("armv6-m", "cortex-m0", "v6m",
                           ARMBuildAttrs::CPUArch::v6_M));
   EXPECT_TRUE(
-      testARMArch("armv7-a", "cortex-a8", "v7",
+      testARMArch("armv7-a", "generic", "v7",
                           ARMBuildAttrs::CPUArch::v7));
   EXPECT_TRUE(
       testARMArch("armv7ve", "generic", "v7ve",
@@ -334,7 +334,7 @@ TEST(TargetParserTest, testARMArch) {
       testARMArch("armv7e-m", "cortex-m4", "v7em",
                           ARMBuildAttrs::CPUArch::v7E_M));
   EXPECT_TRUE(
-      testARMArch("armv8-a", "cortex-a53", "v8",
+      testARMArch("armv8-a", "generic", "v8",
                           ARMBuildAttrs::CPUArch::v8_A));
   EXPECT_TRUE(
       testARMArch("armv8.1-a", "generic", "v8.1a",

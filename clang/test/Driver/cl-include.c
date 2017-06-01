@@ -2,10 +2,10 @@
 // command-line option, e.g. on Mac where %s is commonly under /Users.
 
 // RUN: %clang_cl -### -- %s 2>&1 | FileCheck %s --check-prefix=BUILTIN
-// BUILTIN: "-internal-isystem" "{{.*lib.*clang.*[0-9]\.[0-9].*include}}"
+// BUILTIN: "-internal-isystem" "{{.*lib.*clang.*include}}"
 
 // RUN: %clang_cl -nobuiltininc -### -- %s 2>&1 | FileCheck %s --check-prefix=NOBUILTIN
-// NOBUILTIN-NOT: "-internal-isystem" "{{.*lib.*clang.*[0-9]\.[0-9].*include}}"
+// NOBUILTIN-NOT: "-internal-isystem" "{{.*lib.*clang.*include}}"
 
 // RUN: env INCLUDE=/my/system/inc %clang_cl -### -- %s 2>&1 | FileCheck %s --check-prefix=STDINC
 // STDINC: "-internal-isystem" "/my/system/inc"

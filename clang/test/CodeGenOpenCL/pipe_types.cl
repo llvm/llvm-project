@@ -28,7 +28,7 @@ void test5(read_only pipe int4 p) {
 
 typedef read_only pipe int MyPipe;
 kernel void test6(MyPipe p) {
-// CHECK: define void @test6(%opencl.pipe_t* %p)
+// CHECK: define spir_kernel void @test6(%opencl.pipe_t* %p)
 }
 
 struct Person {

@@ -154,6 +154,33 @@ TEST(AddressSanitizer, MAYBE_StrDupOOBTest) {
   free(str);
 }
 
+#if SANITIZER_TEST_HAS_STRNDUP
+TEST(AddressSanitizer, MAYBE_StrNDupOOBTest) {
+  size_t size = Ident(42);
+  char *str = MallocAndMemsetString(size);
+  char *new_str;
+  // Normal strndup calls.
+  str[size - 1] = '\0';
+  new_str = strndup(str, size - 13);
+  free(new_str);
+  new_str = strndup(str + size - 1, 13);
+  free(new_str);
+  // Argument points to not allocated memory.
+  EXPECT_DEATH(Ident(strndup(str - 1, 13)), LeftOOBReadMessage(1));
+  EXPECT_DEATH(Ident(strndup(str + size, 13)), RightOOBReadMessage(0));
+  // Overwrite the terminating '\0' and hit unallocated memory.
+  str[size - 1] = 'z';
+  EXPECT_DEATH(Ident(strndup(str, size + 13)), RightOOBReadMessage(0));
+  // Check handling of non 0 terminated strings.
+  Ident(new_str = strndup(str + size - 1, 0));
+  free(new_str);
+  Ident(new_str = strndup(str + size - 1, 1));
+  free(new_str);
+  EXPECT_DEATH(Ident(strndup(str + size - 1, 2)), RightOOBReadMessage(0));
+  free(str);
+}
+#endif // SANITIZER_TEST_HAS_STRNDUP
+
 TEST(AddressSanitizer, StrCpyOOBTest) {
   size_t to_size = Ident(30);
   size_t from_size = Ident(6);  // less than to_size

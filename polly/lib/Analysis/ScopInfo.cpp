@@ -2019,7 +2019,7 @@ static std::string getCallParamName(CallInst *Call) {
 
   auto Iterator = KnownNames.find(Name);
   if (Iterator != KnownNames.end())
-    Name = "__" + KnownNames[Name];
+    Name = "__" + Iterator->getValue();
   OS << Name;
   for (auto &Operand : Call->arg_operands()) {
     ConstantInt *Op = cast<ConstantInt>(&Operand);

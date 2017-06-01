@@ -339,7 +339,7 @@ bool TGParser::ProcessForeachDefs(Record *CurRec, SMLoc Loc, IterSet &IterVals){
     if (!IVal)
       return Error(Loc, "foreach iterator value is untyped");
 
-    IterRec->addValue(RecordVal(IterVar->getName(), IVal->getType(), false));
+    IterRec->addValue(RecordVal(IterVar->getNameInit(), IVal->getType(), false));
 
     if (SetValue(IterRec.get(), Loc, IterVar->getNameInit(), None, IVal))
       return Error(Loc, "when instantiating this def");
@@ -378,8 +378,8 @@ static bool isObjectStart(tgtok::TokKind K) {
 
 /// GetNewAnonymousName - Generate a unique anonymous name that can be used as
 /// an identifier.
-std::string TGParser::GetNewAnonymousName() {
-  return "anonymous_" + utostr(AnonCounter++);
+Init *TGParser::GetNewAnonymousName() {
+  return StringInit::get("anonymous_" + utostr(AnonCounter++));
 }
 
 /// ParseObjectName - If an object name is specified, return it.  Otherwise,
@@ -2350,7 +2350,7 @@ Record *TGParser::InstantiateMulticlassDef(MultiClass &MC, Record *DefProto,
 
   bool IsAnonymous = false;
   if (!DefmPrefix) {
-    DefmPrefix = StringInit::get(GetNewAnonymousName());
+    DefmPrefix = GetNewAnonymousName();
     IsAnonymous = true;
   }
 

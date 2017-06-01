@@ -1237,8 +1237,6 @@ class RecordVal {
 
 public:
   RecordVal(Init *N, RecTy *T, bool P);
-  RecordVal(StringRef N, RecTy *T, bool P)
-    : RecordVal(StringInit::get(N), T, P) {}
 
   StringRef getName() const;
   Init *getNameInit() const { return Name; }
@@ -1341,7 +1339,6 @@ public:
   }
 
   void setName(Init *Name);      // Also updates RecordKeeper.
-  void setName(StringRef Name);  // Also updates RecordKeeper.
 
   ArrayRef<SMLoc> getLoc() const { return Locs; }
 

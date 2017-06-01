@@ -410,11 +410,21 @@ namespace ISD {
     /// then the result type must also be a vector type.
     SETCC,
 
-    /// Like SetCC, ops #0 and #1 are the LHS and RHS operands to compare, but
+    /// Like SetCC, ops #0 and #1 are the LHS and RHS operands to compare, and
     /// op #2 is a *carry value*. This operator checks the result of
     /// "LHS - RHS - Carry", and can be used to compare two wide integers:
     /// (setcce lhshi rhshi (subc lhslo rhslo) cc). Only valid for integers.
+    /// FIXME: This node is deprecated in favor of SETCCCARRY.
+    /// It is kept around for now to provide a smooth transition path
+    /// toward the use of SETCCCARRY and will eventually be removed.
     SETCCE,
+
+    /// Like SetCC, ops #0 and #1 are the LHS and RHS operands to compare, but
+    /// op #2 is a boolean indicating if there is an incoming carry. This
+    /// operator checks the result of "LHS - RHS - Carry", and can be used to
+    /// compare two wide integers: (setcce lhshi rhshi (subc lhslo rhslo) cc).
+    /// Only valid for integers.
+    SETCCCARRY,
 
     /// SHL_PARTS/SRA_PARTS/SRL_PARTS - These operators are used for expanded
     /// integer shift operations.  The operation ordering is:
