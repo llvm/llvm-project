@@ -139,21 +139,24 @@ uint64_t SectionBase::getOffset(uint64_t Offset) const {
     return Offset;
   case Merge:
     const MergeInputSection *MS = cast<MergeInputSection>(this);
-    if (MS->MergeSec)
-      return MS->MergeSec->OutSecOff + MS->getOffset(Offset);
+    if (InputSection *IS = MS->getParent())
+      return IS->OutSecOff + MS->getOffset(Offset);
     return MS->getOffset(Offset);
   }
   llvm_unreachable("invalid section kind");
 }
 
 OutputSection *SectionBase::getOutputSection() {
+  InputSection *Sec;
   if (auto *IS = dyn_cast<InputSection>(this))
-    return IS->OutSec;
-  if (auto *MS = dyn_cast<MergeInputSection>(this))
-    return MS->MergeSec ? MS->MergeSec->OutSec : nullptr;
-  if (auto *EH = dyn_cast<EhInputSection>(this))
-    return EH->EHSec->OutSec;
-  return cast<OutputSection>(this);
+    Sec = IS;
+  else if (auto *MS = dyn_cast<MergeInputSection>(this))
+    Sec = MS->getParent();
+  else if (auto *EH = dyn_cast<EhInputSection>(this))
+    Sec = EH->getParent();
+  else
+    return cast<OutputSection>(this);
+  return Sec ? Sec->getParent() : nullptr;
 }
 
 // Uncompress section contents. Note that this function is called
@@ -181,9 +184,15 @@ uint64_t SectionBase::getOffset(const DefinedRegular &Sym) const {
   return getOffset(Sym.Value);
 }
 
-InputSectionBase *InputSectionBase::getLinkOrderDep() const {
-  if ((Flags & SHF_LINK_ORDER) && Link != 0)
-    return File->getSections()[Link];
+InputSection *InputSectionBase::getLinkOrderDep() const {
+  if ((Flags & SHF_LINK_ORDER) && Link != 0) {
+    InputSectionBase *L = File->getSections()[Link];
+    if (auto *IS = dyn_cast<InputSection>(L))
+      return IS;
+    error(
+        "Merge and .eh_frame sections are not supported with SHF_LINK_ORDER " +
+        toString(L));
+  }
   return nullptr;
 }
 
@@ -295,6 +304,10 @@ bool InputSectionBase::classof(const SectionBase *S) {
   return S->kind() != Output;
 }
 
+OutputSection *InputSection::getParent() const {
+  return cast_or_null<OutputSection>(Parent);
+}
+
 void InputSection::copyShtGroup(uint8_t *Buf) {
   assert(this->Type == SHT_GROUP);
 
@@ -309,7 +322,8 @@ void InputSection::copyShtGroup(uint8_t *Buf) {
   ArrayRef<InputSectionBase *> Sections = this->File->getSections();
   for (uint32_t Val : From.slice(1)) {
     uint32_t Index = read32(&Val, Config->Endianness);
-    write32(To++, Sections[Index]->OutSec->SectionIndex, Config->Endianness);
+    write32(To++, Sections[Index]->getOutputSection()->SectionIndex,
+            Config->Endianness);
   }
 }
 
@@ -342,7 +356,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
 
     // Output section VA is zero for -r, so r_offset is an offset within the
     // section, but for --emit-relocs it is an virtual address.
-    P->r_offset = RelocatedSection->OutSec->Addr +
+    P->r_offset = RelocatedSection->getOutputSection()->Addr +
                   RelocatedSection->getOffset(Rel.r_offset);
     P->setSymbolAndType(InX::SymTab->getSymbolIndex(&Body), Type,
                         Config->IsMips64EL);
@@ -596,7 +610,7 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       return;
     }
 
-    uint64_t AddrLoc = this->OutSec->Addr + Offset;
+    uint64_t AddrLoc = getParent()->Addr + Offset;
     uint64_t SymVA = 0;
     if (!Sym.isTls() || Out::TlsPhdr)
       SymVA = SignExtend64<sizeof(typename ELFT::uint) * 8>(
@@ -729,6 +743,10 @@ EhInputSection::EhInputSection(elf::ObjectFile<ELFT> *F,
   this->Live = true;
 }
 
+SyntheticSection *EhInputSection::getParent() const {
+  return cast_or_null<SyntheticSection>(Parent);
+}
+
 bool EhInputSection::classof(const SectionBase *S) {
   return S->kind() == InputSectionBase::EHFrame;
 }
@@ -795,6 +813,10 @@ static size_t findNull(ArrayRef<uint8_t> A, size_t EntSize) {
       return I;
   }
   return StringRef::npos;
+}
+
+SyntheticSection *MergeInputSection::getParent() const {
+  return cast_or_null<SyntheticSection>(Parent);
 }
 
 // Split SHF_STRINGS section. Such section is a sequence of

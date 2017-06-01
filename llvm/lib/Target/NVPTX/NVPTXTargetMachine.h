@@ -65,6 +65,9 @@ public:
 
   TargetIRAnalysis getTargetIRAnalysis() override;
 
+  bool isMachineVerifierClean() const override {
+    return false;
+  }
 }; // NVPTXTargetMachine.
 
 class NVPTXTargetMachine32 : public NVPTXTargetMachine {

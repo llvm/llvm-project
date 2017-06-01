@@ -1237,8 +1237,6 @@ class RecordVal {
 
 public:
   RecordVal(Init *N, RecTy *T, bool P);
-  RecordVal(StringRef N, RecTy *T, bool P)
-    : RecordVal(StringInit::get(N), T, P) {}
 
   StringRef getName() const;
   Init *getNameInit() const { return Name; }
@@ -1341,7 +1339,6 @@ public:
   }
 
   void setName(Init *Name);      // Also updates RecordKeeper.
-  void setName(StringRef Name);  // Also updates RecordKeeper.
 
   ArrayRef<SMLoc> getLoc() const { return Locs; }
 
@@ -1491,7 +1488,7 @@ public:
   /// its value as a string, throwing an exception if the field does not exist
   /// or if the value is not a string.
   ///
-  std::string getValueAsString(StringRef FieldName) const;
+  StringRef getValueAsString(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns
   /// its value as a BitsInit, throwing an exception if the field does not exist
@@ -1521,7 +1518,7 @@ public:
   /// returns its value as a vector of strings, throwing an exception if the
   /// field does not exist or if the value is not the right type.
   ///
-  std::vector<std::string> getValueAsListOfStrings(StringRef FieldName) const;
+  std::vector<StringRef> getValueAsListOfStrings(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its
   /// value as a Record, throwing an exception if the field does not exist or if

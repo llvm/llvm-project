@@ -3838,24 +3838,24 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
   // Mark any parameters that are known to be non-null with the nonnull
   // attribute.  This is helpful for inlining calls to functions with null
   // checks on their arguments.
-  SmallVector<unsigned, 4> Indices;
+  SmallVector<unsigned, 4> ArgNos;
   unsigned ArgNo = 0;
 
   for (Value *V : CS.args()) {
     if (V->getType()->isPointerTy() &&
         !CS.paramHasAttr(ArgNo, Attribute::NonNull) &&
         isKnownNonNullAt(V, CS.getInstruction(), &DT))
-      Indices.push_back(ArgNo + AttributeList::FirstArgIndex);
+      ArgNos.push_back(ArgNo);
     ArgNo++;
   }
 
   assert(ArgNo == CS.arg_size() && "sanity check");
 
-  if (!Indices.empty()) {
+  if (!ArgNos.empty()) {
     AttributeList AS = CS.getAttributes();
     LLVMContext &Ctx = CS.getInstruction()->getContext();
-    AS = AS.addAttribute(Ctx, Indices,
-                         Attribute::get(Ctx, Attribute::NonNull));
+    AS = AS.addParamAttribute(Ctx, ArgNos,
+                              Attribute::get(Ctx, Attribute::NonNull));
     CS.setAttributes(AS);
     Changed = true;
   }

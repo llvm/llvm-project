@@ -430,7 +430,12 @@ void TargetPassConfig::addPrintPass(const std::string &Banner) {
 }
 
 void TargetPassConfig::addVerifyPass(const std::string &Banner) {
-  if (VerifyMachineCode)
+  bool Verify = VerifyMachineCode;
+#ifdef EXPENSIVE_CHECKS
+  if (VerifyMachineCode == cl::BOU_UNSET)
+    Verify = TM->isMachineVerifierClean();
+#endif
+  if (Verify)
     PM->add(createMachineVerifierPass(Banner));
 }
 

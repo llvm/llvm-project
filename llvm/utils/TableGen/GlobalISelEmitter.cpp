@@ -118,7 +118,7 @@ static std::string explainPredicates(const TreePatternNode *N) {
 
 std::string explainOperator(Record *Operator) {
   if (Operator->isSubClassOf("SDNode"))
-    return " (" + Operator->getValueAsString("Opcode") + ")";
+    return (" (" + Operator->getValueAsString("Opcode") + ")").str();
 
   if (Operator->isSubClassOf("Intrinsic"))
     return (" (Operator is an Intrinsic, " + Operator->getName() + ")").str();

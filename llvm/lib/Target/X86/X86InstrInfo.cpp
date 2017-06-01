@@ -195,6 +195,7 @@ X86InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
       // It's not always legal to reference the low 8-bit of the larger
       // register in 32-bit mode.
       return false;
+    LLVM_FALLTHROUGH;
   case X86::MOVSX32rr16:
   case X86::MOVZX32rr16:
   case X86::MOVSX64rr16:

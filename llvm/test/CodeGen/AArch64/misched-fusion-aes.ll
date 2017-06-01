@@ -1,5 +1,7 @@
-; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a57 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKA57A72
-; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a72 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKA57A72
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a53 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKCORTEX
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a57 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKCORTEX
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a72 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKCORTEX
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a73 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKCORTEX
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m1  | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKM1
 
 declare <16 x i8> @llvm.aarch64.crypto.aese(<16 x i8> %d, <16 x i8> %k)
@@ -72,22 +74,22 @@ define void @aesea(<16 x i8>* %a0, <16 x i8>* %b0, <16 x i8>* %c0, <16 x i8> %d,
   ret void
 
 ; CHECK-LABEL: aesea:
-; CHECKA57A72: aese [[VA:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesmc {{v[0-7].16b}}, [[VA]]
-; CHECKA57A72: aese [[VB:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesmc {{v[0-7].16b}}, [[VB]]
-; CHECKA57A72: aese [[VC:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesmc {{v[0-7].16b}}, [[VC]]
-; CHECKA57A72: aese [[VD:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesmc {{v[0-7].16b}}, [[VD]]
-; CHECKA57A72: aese [[VE:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesmc {{v[0-7].16b}}, [[VE]]
-; CHECKA57A72: aese [[VF:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesmc {{v[0-7].16b}}, [[VF]]
-; CHECKA57A72: aese [[VG:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesmc {{v[0-7].16b}}, [[VG]]
-; CHECKA57A72: aese [[VH:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesmc {{v[0-7].16b}}, [[VH]]
+; CHECKCORTEX: aese [[VA:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesmc {{v[0-7].16b}}, [[VA]]
+; CHECKCORTEX: aese [[VB:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesmc {{v[0-7].16b}}, [[VB]]
+; CHECKCORTEX: aese [[VC:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesmc {{v[0-7].16b}}, [[VC]]
+; CHECKCORTEX: aese [[VD:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesmc {{v[0-7].16b}}, [[VD]]
+; CHECKCORTEX: aese [[VE:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesmc {{v[0-7].16b}}, [[VE]]
+; CHECKCORTEX: aese [[VF:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesmc {{v[0-7].16b}}, [[VF]]
+; CHECKCORTEX: aese [[VG:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesmc {{v[0-7].16b}}, [[VG]]
+; CHECKCORTEX: aese [[VH:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesmc {{v[0-7].16b}}, [[VH]]
 
 ; CHECKM1: aese [[VA:v[0-7].16b]], {{v[0-7].16b}}
 ; CHECKM1-NEXT: aesmc {{v[0-7].16b}}, [[VA]]
@@ -173,22 +175,22 @@ define void @aesda(<16 x i8>* %a0, <16 x i8>* %b0, <16 x i8>* %c0, <16 x i8> %d,
   ret void
 
 ; CHECK-LABEL: aesda:
-; CHECKA57A72: aesd [[VA:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesimc {{v[0-7].16b}}, [[VA]]
-; CHECKA57A72: aesd [[VB:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesimc {{v[0-7].16b}}, [[VB]]
-; CHECKA57A72: aesd [[VC:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesimc {{v[0-7].16b}}, [[VC]]
-; CHECKA57A72: aesd [[VD:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesimc {{v[0-7].16b}}, [[VD]]
-; CHECKA57A72: aesd [[VE:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesimc {{v[0-7].16b}}, [[VE]]
-; CHECKA57A72: aesd [[VF:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesimc {{v[0-7].16b}}, [[VF]]
-; CHECKA57A72: aesd [[VG:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesimc {{v[0-7].16b}}, [[VG]]
-; CHECKA57A72: aesd [[VH:v[0-7].16b]], {{v[0-7].16b}}
-; CHECKA57A72-NEXT: aesimc {{v[0-7].16b}}, [[VH]]
+; CHECKCORTEX: aesd [[VA:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesimc {{v[0-7].16b}}, [[VA]]
+; CHECKCORTEX: aesd [[VB:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesimc {{v[0-7].16b}}, [[VB]]
+; CHECKCORTEX: aesd [[VC:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesimc {{v[0-7].16b}}, [[VC]]
+; CHECKCORTEX: aesd [[VD:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesimc {{v[0-7].16b}}, [[VD]]
+; CHECKCORTEX: aesd [[VE:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesimc {{v[0-7].16b}}, [[VE]]
+; CHECKCORTEX: aesd [[VF:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesimc {{v[0-7].16b}}, [[VF]]
+; CHECKCORTEX: aesd [[VG:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesimc {{v[0-7].16b}}, [[VG]]
+; CHECKCORTEX: aesd [[VH:v[0-7].16b]], {{v[0-7].16b}}
+; CHECKCORTEX-NEXT: aesimc {{v[0-7].16b}}, [[VH]]
 
 ; CHECKM1: aesd [[VA:v[0-7].16b]], {{v[0-7].16b}}
 ; CHECKM1-NEXT: aesimc {{v[0-7].16b}}, [[VA]]

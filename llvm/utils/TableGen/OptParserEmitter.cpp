@@ -21,6 +21,8 @@ using namespace llvm;
 
 // Ordering on Info. The logic should match with the consumer-side function in
 // llvm/Option/OptTable.h.
+// FIXME: Mmake this take StringRefs instead of null terminated strings to
+// simplify callers.
 static int StrCmpOptionName(const char *A, const char *B) {
   const char *X = A, *Y = B;
   char a = tolower(*A), b = tolower(*B);
@@ -53,22 +55,22 @@ static int CompareOptionRecords(Record *const *Av, Record *const *Bv) {
 
   // Compare options by name, unless they are sentinels.
   if (!ASent)
-    if (int Cmp = StrCmpOptionName(A->getValueAsString("Name").c_str(),
-                                   B->getValueAsString("Name").c_str()))
+    if (int Cmp = StrCmpOptionName(A->getValueAsString("Name").str().c_str(),
+                                   B->getValueAsString("Name").str().c_str()))
       return Cmp;
 
   if (!ASent) {
-    std::vector<std::string> APrefixes = A->getValueAsListOfStrings("Prefixes");
-    std::vector<std::string> BPrefixes = B->getValueAsListOfStrings("Prefixes");
+    std::vector<StringRef> APrefixes = A->getValueAsListOfStrings("Prefixes");
+    std::vector<StringRef> BPrefixes = B->getValueAsListOfStrings("Prefixes");
 
-    for (std::vector<std::string>::const_iterator APre = APrefixes.begin(),
-                                                  AEPre = APrefixes.end(),
-                                                  BPre = BPrefixes.begin(),
-                                                  BEPre = BPrefixes.end();
-                                                  APre != AEPre &&
-                                                  BPre != BEPre;
-                                                  ++APre, ++BPre) {
-      if (int Cmp = StrCmpOptionName(APre->c_str(), BPre->c_str()))
+    for (std::vector<StringRef>::const_iterator APre = APrefixes.begin(),
+                                                AEPre = APrefixes.end(),
+                                                BPre = BPrefixes.begin(),
+                                                BEPre = BPrefixes.end();
+                                                APre != AEPre &&
+                                                BPre != BEPre;
+                                                ++APre, ++BPre) {
+      if (int Cmp = StrCmpOptionName(APre->str().c_str(), BPre->str().c_str()))
         return Cmp;
     }
   }
@@ -122,7 +124,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   unsigned CurPrefix = 0;
   for (unsigned i = 0, e = Opts.size(); i != e; ++i) {
     const Record &R = *Opts[i];
-    std::vector<std::string> prf = R.getValueAsListOfStrings("Prefixes");
+    std::vector<StringRef> prf = R.getValueAsListOfStrings("Prefixes");
     PrefixKeyT prfkey(prf.begin(), prf.end());
     unsigned NewPrefix = CurPrefix + 1;
     if (Prefixes.insert(std::make_pair(prfkey, (Twine("prefix_") +
@@ -207,7 +209,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     OS << "OPTION(";
 
     // The option prefix;
-    std::vector<std::string> prf = R.getValueAsListOfStrings("Prefixes");
+    std::vector<StringRef> prf = R.getValueAsListOfStrings("Prefixes");
     OS << Prefixes[PrefixKeyT(prf.begin(), prf.end())] << ", ";
 
     // The option string.
@@ -240,7 +242,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     // would become "foo\0bar\0". Note that the compiler adds an implicit
     // terminating \0 at the end.
     OS << ", ";
-    std::vector<std::string> AliasArgs = R.getValueAsListOfStrings("AliasArgs");
+    std::vector<StringRef> AliasArgs = R.getValueAsListOfStrings("AliasArgs");
     if (AliasArgs.size() == 0) {
       OS << "nullptr";
     } else {

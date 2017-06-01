@@ -305,7 +305,7 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI) {
 
 /// Infer nonnull attributes for the arguments at the specified callsite.
 static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
-  SmallVector<unsigned, 4> Indices;
+  SmallVector<unsigned, 4> ArgNos;
   unsigned ArgNo = 0;
 
   for (Value *V : CS.args()) {
@@ -318,18 +318,19 @@ static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
         LVI->getPredicateAt(ICmpInst::ICMP_EQ, V,
                             ConstantPointerNull::get(Type),
                             CS.getInstruction()) == LazyValueInfo::False)
-      Indices.push_back(ArgNo + AttributeList::FirstArgIndex);
+      ArgNos.push_back(ArgNo);
     ArgNo++;
   }
 
   assert(ArgNo == CS.arg_size() && "sanity check");
 
-  if (Indices.empty())
+  if (ArgNos.empty())
     return false;
 
   AttributeList AS = CS.getAttributes();
   LLVMContext &Ctx = CS.getInstruction()->getContext();
-  AS = AS.addAttribute(Ctx, Indices, Attribute::get(Ctx, Attribute::NonNull));
+  AS = AS.addParamAttribute(Ctx, ArgNos,
+                            Attribute::get(Ctx, Attribute::NonNull));
   CS.setAttributes(AS);
 
   return true;

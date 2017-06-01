@@ -607,8 +607,20 @@ MachineInstr *ImplicitNullChecks::insertFaultingInstr(
                  .addMBB(HandlerMBB)
                  .addImm(MI->getOpcode());
 
-  for (auto &MO : MI->uses())
-    MIB.add(MO);
+  for (auto &MO : MI->uses()) {
+    if (MO.isReg()) {
+      MachineOperand NewMO = MO;
+      if (MO.isUse()) {
+        NewMO.setIsKill(false);
+      } else {
+        assert(MO.isDef() && "Expected def or use");
+        NewMO.setIsDead(false);
+      }
+      MIB.add(NewMO);
+    } else {
+      MIB.add(MO);
+    }
+  }
 
   MIB.setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
 

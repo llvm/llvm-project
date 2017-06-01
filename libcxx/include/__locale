@@ -19,7 +19,7 @@
 #include <cstdint>
 #include <cctype>
 #include <locale.h>
-#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
+#if defined(_LIBCPP_MSVCRT_LIKE)
 # include <support/win32/locale_win32.h>
 #elif defined(_AIX)
 # include <support/ibm/xlocale.h>
@@ -367,7 +367,7 @@ public:
     static const mask punct  = _ISpunct;
     static const mask xdigit = _ISxdigit;
     static const mask blank  = _ISblank;
-#elif defined(_LIBCPP_MSVCRT)
+#elif defined(_LIBCPP_MSVCRT_LIKE)
     typedef unsigned short mask;
     static const mask space  = _SPACE;
     static const mask print  = _BLANK|_PUNCT|_ALPHA|_DIGIT;

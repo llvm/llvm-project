@@ -1597,8 +1597,7 @@ void Record::init() {
 
   // Every record potentially has a def at the top.  This value is
   // replaced with the top-level def name at instantiation time.
-  RecordVal DN("NAME", StringRecTy::get(), false);
-  addValue(DN);
+  addValue(RecordVal(StringInit::get("NAME"), StringRecTy::get(), false));
 }
 
 void Record::checkName() {
@@ -1632,10 +1631,6 @@ void Record::setName(Init *NewName) {
   // record name be an Init is to provide this flexibility.  The extra
   // resolve steps after completely instantiating defs takes care of
   // this.  See TGParser::ParseDef and TGParser::ParseDefm.
-}
-
-void Record::setName(StringRef Name) {
-  setName(StringInit::get(Name));
 }
 
 void Record::resolveReferencesTo(const RecordVal *RV) {
@@ -1708,7 +1703,7 @@ Init *Record::getValueInit(StringRef FieldName) const {
   return R->getValue();
 }
 
-std::string Record::getValueAsString(StringRef FieldName) const {
+StringRef Record::getValueAsString(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
   if (!R || !R->getValue())
     PrintFatalError(getLoc(), "Record `" + getName() +
@@ -1787,10 +1782,10 @@ Record::getValueAsListOfInts(StringRef FieldName) const {
   return Ints;
 }
 
-std::vector<std::string>
+std::vector<StringRef>
 Record::getValueAsListOfStrings(StringRef FieldName) const {
   ListInit *List = getValueAsListInit(FieldName);
-  std::vector<std::string> Strings;
+  std::vector<StringRef> Strings;
   for (Init *I : List->getValues()) {
     if (StringInit *SI = dyn_cast<StringInit>(I))
       Strings.push_back(SI->getValue());

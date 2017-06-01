@@ -218,10 +218,12 @@ std::string CodeEmitterGen::getInstructionCase(Record *R,
     AddCodeToMergeInOperand(R, BI, Vals[i].getName(), NumberedOp,
                             NamedOpIndices, Case, Target);
   }
-  
-  std::string PostEmitter = R->getValueAsString("PostEncoderMethod");
+
+  StringRef PostEmitter = R->getValueAsString("PostEncoderMethod");
   if (!PostEmitter.empty()) {
-    Case += "      Value = " + PostEmitter + "(MI, Value";
+    Case += "      Value = ";
+    Case += PostEmitter;
+    Case += "(MI, Value";
     Case += ", STI";
     Case += ");\n";
   }
@@ -278,11 +280,11 @@ void CodeEmitterGen::run(raw_ostream &o) {
     if (R->getValueAsString("Namespace") == "TargetOpcode" ||
         R->getValueAsBit("isPseudo"))
       continue;
-    const std::string &InstName = R->getValueAsString("Namespace") + "::"
-      + R->getName().str();
+    std::string InstName =
+        (R->getValueAsString("Namespace") + "::" + R->getName()).str();
     std::string Case = getInstructionCase(R, Target);
 
-    CaseMap[Case].push_back(InstName);
+    CaseMap[Case].push_back(std::move(InstName));
   }
 
   // Emit initial function code

@@ -112,8 +112,8 @@ private:
 void SearchableTableEmitter::emitMappingEnum(std::vector<Record *> &Items,
                                              Record *InstanceClass,
                                              raw_ostream &OS) {
-  std::string EnumNameField = InstanceClass->getValueAsString("EnumNameField");
-  std::string EnumValueField;
+  StringRef EnumNameField = InstanceClass->getValueAsString("EnumNameField");
+  StringRef EnumValueField;
   if (!InstanceClass->isValueUnset("EnumValueField"))
     EnumValueField = InstanceClass->getValueAsString("EnumValueField");
 

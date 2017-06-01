@@ -1006,6 +1006,10 @@ AttributeList AttributeList::get(LLVMContext &C,
   for (AttributeList List : Attrs)
     MaxSize = std::max(MaxSize, List.getNumAttrSets());
 
+  // If every list was empty, there is no point in merging the lists.
+  if (MaxSize == 0)
+    return AttributeList();
+
   SmallVector<AttributeSet, 8> NewAttrSets(MaxSize);
   for (unsigned I = 0; I < MaxSize; ++I) {
     AttrBuilder CurBuilder;
@@ -1033,24 +1037,11 @@ AttributeList AttributeList::addAttribute(LLVMContext &C, unsigned Index,
   return addAttributes(C, Index, B);
 }
 
-AttributeList AttributeList::addAttribute(LLVMContext &C,
-                                          ArrayRef<unsigned> Indices,
+AttributeList AttributeList::addAttribute(LLVMContext &C, unsigned Index,
                                           Attribute A) const {
-  assert(std::is_sorted(Indices.begin(), Indices.end()));
-
-  SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
-  unsigned MaxIndex = attrIdxToArrayIdx(Indices.back());
-  if (MaxIndex >= AttrSets.size())
-    AttrSets.resize(MaxIndex + 1);
-
-  for (unsigned Index : Indices) {
-    Index = attrIdxToArrayIdx(Index);
-    AttrBuilder B(AttrSets[Index]);
-    B.addAttribute(A);
-    AttrSets[Index] = AttributeSet::get(C, B);
-  }
-
-  return getImpl(C, AttrSets);
+  AttrBuilder B;
+  B.addAttribute(A);
+  return addAttributes(C, Index, B);
 }
 
 AttributeList AttributeList::addAttributes(LLVMContext &C, unsigned Index,
@@ -1078,6 +1069,26 @@ AttributeList AttributeList::addAttributes(LLVMContext &C, unsigned Index,
   AttrBuilder Merged(AttrSets[Index]);
   Merged.merge(B);
   AttrSets[Index] = AttributeSet::get(C, Merged);
+
+  return getImpl(C, AttrSets);
+}
+
+AttributeList AttributeList::addParamAttribute(LLVMContext &C,
+                                               ArrayRef<unsigned> ArgNos,
+                                               Attribute A) const {
+  assert(std::is_sorted(ArgNos.begin(), ArgNos.end()));
+
+  SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
+  unsigned MaxIndex = attrIdxToArrayIdx(ArgNos.back() + FirstArgIndex);
+  if (MaxIndex >= AttrSets.size())
+    AttrSets.resize(MaxIndex + 1);
+
+  for (unsigned ArgNo : ArgNos) {
+    unsigned Index = attrIdxToArrayIdx(ArgNo + FirstArgIndex);
+    AttrBuilder B(AttrSets[Index]);
+    B.addAttribute(A);
+    AttrSets[Index] = AttributeSet::get(C, B);
+  }
 
   return getImpl(C, AttrSets);
 }

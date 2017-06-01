@@ -129,9 +129,9 @@ define i32 @test_unsigned_short(i16* nocapture readonly, i16* nocapture readonly
 ; SSE2-NEXT:    pmullw %xmm2, %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm2
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
+; SSE2-NEXT:    paddd %xmm2, %xmm0
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
 ; SSE2-NEXT:    paddd %xmm3, %xmm1
-; SSE2-NEXT:    paddd %xmm2, %xmm0
 ; SSE2-NEXT:    addq $16, %rsi
 ; SSE2-NEXT:    addq $16, %rdi
 ; SSE2-NEXT:    addq $-8, %rax
@@ -246,23 +246,23 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; SSE2-NEXT:    pmullw %xmm4, %xmm5
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3]
 ; SSE2-NEXT:    psrad $16, %xmm4
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm5 = xmm5[4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    psrad $16, %xmm5
-; SSE2-NEXT:    movq {{.*#+}} xmm6 = mem[0],zero
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    psraw $8, %xmm6
-; SSE2-NEXT:    movq {{.*#+}} xmm7 = mem[0],zero
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm7 = xmm7[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    psraw $8, %xmm7
-; SSE2-NEXT:    pmullw %xmm6, %xmm7
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm7[0],xmm6[1],xmm7[1],xmm6[2],xmm7[2],xmm6[3],xmm7[3]
-; SSE2-NEXT:    psrad $16, %xmm6
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm7 = xmm7[4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    psrad $16, %xmm7
-; SSE2-NEXT:    paddd %xmm7, %xmm2
-; SSE2-NEXT:    paddd %xmm6, %xmm3
-; SSE2-NEXT:    paddd %xmm5, %xmm1
 ; SSE2-NEXT:    paddd %xmm4, %xmm0
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm5[4],xmm4[5],xmm5[5],xmm4[6],xmm5[6],xmm4[7],xmm5[7]
+; SSE2-NEXT:    psrad $16, %xmm4
+; SSE2-NEXT:    paddd %xmm4, %xmm1
+; SSE2-NEXT:    movq {{.*#+}} xmm4 = mem[0],zero
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    psraw $8, %xmm4
+; SSE2-NEXT:    movq {{.*#+}} xmm5 = mem[0],zero
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm5 = xmm5[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    psraw $8, %xmm5
+; SSE2-NEXT:    pmullw %xmm4, %xmm5
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3]
+; SSE2-NEXT:    psrad $16, %xmm4
+; SSE2-NEXT:    paddd %xmm4, %xmm3
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm5[4],xmm4[5],xmm5[5],xmm4[6],xmm5[6],xmm4[7],xmm5[7]
+; SSE2-NEXT:    psrad $16, %xmm4
+; SSE2-NEXT:    paddd %xmm4, %xmm2
 ; SSE2-NEXT:    addq $16, %rsi
 ; SSE2-NEXT:    addq $16, %rdi
 ; SSE2-NEXT:    addq $-16, %rax

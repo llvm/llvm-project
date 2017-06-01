@@ -691,6 +691,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       // load query, we can safely ignore it (scan past it).
       if (isLoad)
         continue;
+      LLVM_FALLTHROUGH;
     default:
       // Otherwise, there is a potential dependence.  Return a clobber.
       return MemDepResult::getClobber(Inst);

@@ -826,7 +826,8 @@ MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
   // NOTE: this could be improved with knowledge of all call sites or
   //   with knowledge of the called routines.
   if (MI.getOpcode() == AMDGPU::RETURN ||
-      MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG) {
+      MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
+      MI.getOpcode() == AMDGPU::S_SETPC_B64_return) {
     for (enum InstCounterType T = VM_CNT; T < NUM_INST_CNTS;
          T = (enum InstCounterType)(T + 1)) {
       if (ScoreBrackets->getScoreUB(T) > ScoreBrackets->getScoreLB(T)) {
@@ -1149,8 +1150,10 @@ void SIInsertWaitcnts::updateEventWaitCntAfter(
   // instruction, update the upper-bound of the appropriate counter's
   // bracket and the destination operand scores.
   // TODO: Use the (TSFlags & SIInstrFlags::LGKM_CNT) property everywhere.
-  if (TII->isDS(Inst) && (Inst.mayLoad() || Inst.mayStore())) {
-    if (TII->getNamedOperand(Inst, AMDGPU::OpName::gds)->getImm() != 0) {
+  uint64_t TSFlags = Inst.getDesc().TSFlags;
+  if (TII->isDS(Inst) && (TSFlags & SIInstrFlags::LGKM_CNT)) {
+    if (TII->getNamedOperand(Inst, AMDGPU::OpName::gds) &&
+	TII->getNamedOperand(Inst, AMDGPU::OpName::gds)->getImm() != 0) {
       ScoreBrackets->updateByEvent(TII, TRI, MRI, GDS_ACCESS, Inst);
       ScoreBrackets->updateByEvent(TII, TRI, MRI, GDS_GPR_LOCK, Inst);
     } else {
@@ -1183,7 +1186,7 @@ void SIInsertWaitcnts::updateEventWaitCntAfter(
              Inst.getOpcode() != AMDGPU::BUFFER_WBINVL1_VOL) {
     ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_ACCESS, Inst);
     if ( // TODO: assumed yes -- target_info->MemWriteNeedsExpWait() &&
-        (Inst.mayStore() || AMDGPU::getAtomicNoRetOp(Inst.getOpcode()))) {
+        (Inst.mayStore() || AMDGPU::getAtomicNoRetOp(Inst.getOpcode()) != -1)) {
       ScoreBrackets->updateByEvent(TII, TRI, MRI, VMW_GPR_LOCK, Inst);
     }
   } else if (TII->isSMRD(Inst)) {
@@ -1715,6 +1718,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   MLI = &getAnalysis<MachineLoopInfo>();
   IV = AMDGPU::IsaInfo::getIsaVersion(ST->getFeatureBits());
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   AMDGPUASI = ST->getAMDGPUAS();
 
   HardwareLimits.VmcntMax = AMDGPU::getVmcntBitMask(IV);
@@ -1857,6 +1861,20 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
         }
       }
     }
+  }
+
+  if (!MFI->isEntryFunction()) {
+    // Wait for any outstanding memory operations that the input registers may
+    // depend on. We can't track them and it's better to to the wait after the
+    // costly call sequence.
+
+    // TODO: Could insert earlier and schedule more liberally with operations
+    // that only use caller preserved registers.
+    MachineBasicBlock &EntryBB = MF.front();
+    BuildMI(EntryBB, EntryBB.getFirstNonPHI(), DebugLoc(), TII->get(AMDGPU::S_WAITCNT))
+      .addImm(0);
+
+    Modified = true;
   }
 
   return Modified;
