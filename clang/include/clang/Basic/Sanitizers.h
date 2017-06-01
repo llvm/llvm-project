@@ -61,8 +61,8 @@ struct SanitizerSet {
     Mask = Value ? (Mask | K) : (Mask & ~K);
   }
 
-  /// \brief Disable all sanitizers.
-  void clear() { Mask = 0; }
+  /// Disable the sanitizers specified in \p K.
+  void clear(SanitizerMask K = SanitizerKind::All) { Mask &= ~K; }
 
   /// \brief Returns true if at least one sanitizer is enabled.
   bool empty() const { return Mask == 0; }
@@ -78,6 +78,12 @@ SanitizerMask parseSanitizerValue(StringRef Value, bool AllowGroups);
 /// For each sanitizer group bit set in \p Kinds, set the bits for sanitizers
 /// this group enables.
 SanitizerMask expandSanitizerGroups(SanitizerMask Kinds);
+
+/// Return the sanitizers which do not affect preprocessing.
+static inline SanitizerMask getPPTransparentSanitizers() {
+  return SanitizerKind::CFI | SanitizerKind::Integer |
+         SanitizerKind::Nullability | SanitizerKind::Undefined;
+}
 
 }  // end namespace clang
 
