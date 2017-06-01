@@ -155,13 +155,6 @@ void CoverageData::DirectOpen() {
 
 void CoverageData::Init() {
   pc_fd = kInvalidFd;
-
-  if (!common_flags()->coverage) return;
-  Printf("**\n***\n***\n");
-  Printf("**WARNING: this implementation of SanitizerCoverage is deprecated\n");
-  Printf("**WARNING: and will be removed in future versions\n");
-  Printf("**WARNING: See https://clang.llvm.org/docs/SanitizerCoverage.html\n");
-  Printf("**\n***\n***\n");
 }
 
 void CoverageData::Enable() {
@@ -495,6 +488,12 @@ static void GenerateHtmlReport(const InternalMmapVector<char *> &cov_files) {
 void CoverageData::DumpOffsets() {
   auto sym = Symbolizer::GetOrInit();
   if (!common_flags()->coverage_pcs) return;
+  Printf("**\n***\n***\n");
+  Printf("**WARNING: this implementation of SanitizerCoverage is deprecated\n");
+  Printf("**WARNING: and will be removed in future versions\n");
+  Printf("**WARNING: See https://clang.llvm.org/docs/SanitizerCoverage.html\n");
+  Printf("**\n***\n***\n");
+
   CHECK_NE(sym, nullptr);
   InternalMmapVector<uptr> offsets(0);
   InternalScopedString path(kMaxPathLength);
@@ -607,47 +606,13 @@ void CoverageUpdateMapping() {
 } // namespace __sanitizer
 
 extern "C" {
-SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov(u32 *guard) {
-  coverage_data.Add(StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),
-                    guard);
-}
-SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_with_check(u32 *guard) {
-  atomic_uint32_t *atomic_guard = reinterpret_cast<atomic_uint32_t*>(guard);
-  if (static_cast<s32>(
-          __sanitizer::atomic_load(atomic_guard, memory_order_relaxed)) < 0)
-  coverage_data.Add(StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),
-                    guard);
-}
-SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_init() {
-  coverage_enabled = true;
-  coverage_dir = common_flags()->coverage_dir;
-  coverage_data.Init();
-}
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_dump() {
-  coverage_data.DumpAll();
   __sanitizer_dump_trace_pc_guard_coverage();
-}
-SANITIZER_INTERFACE_ATTRIBUTE void
-__sanitizer_cov_module_init(s32 *guards, uptr npcs, u8 *counters,
-                            const char *comp_unit_name) {
-  coverage_data.InitializeGuards(guards, npcs, comp_unit_name, GET_CALLER_PC());
-  if (!common_flags()->coverage_direct) return;
-  if (SANITIZER_ANDROID && coverage_enabled) {
-    // dlopen/dlclose interceptors do not work on Android, so we rely on
-    // Extend() calls to update .sancov.map.
-    CovUpdateMapping(coverage_dir, GET_CALLER_PC());
-  }
-  coverage_data.Extend(npcs);
 }
 SANITIZER_INTERFACE_ATTRIBUTE
 sptr __sanitizer_maybe_open_cov_file(const char *name) {
   return (sptr)MaybeOpenCovFile(name);
 }
-SANITIZER_INTERFACE_ATTRIBUTE
-uptr __sanitizer_get_total_unique_coverage() {
-  return atomic_load(&coverage_counter, memory_order_relaxed);
-}
-
 // Default empty implementations (weak). Users should redefine them.
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp1, void) {}

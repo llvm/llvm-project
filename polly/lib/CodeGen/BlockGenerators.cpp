@@ -563,23 +563,19 @@ Value *BlockGenerator::buildContainsCondition(ScopStmt &Stmt,
                                               const isl::set &Subdomain) {
   isl::ast_build AstBuild = give(isl_ast_build_copy(Stmt.getAstBuild()));
   isl::set Domain = give(Stmt.getDomain());
-  isl::union_set UDomain = give(isl_union_set_from_set(Domain.copy()));
 
-  isl::union_map USchedule = give(isl_ast_build_get_schedule(AstBuild.keep()));
-  USchedule =
-      give(isl_union_map_intersect_domain(USchedule.take(), UDomain.copy()));
-  assert(isl_union_map_is_empty(USchedule.keep()) == isl_bool_false);
-  isl::map Schedule = give(isl_map_from_union_map(USchedule.copy()));
+  isl::union_map USchedule = AstBuild.get_schedule();
+  USchedule = USchedule.intersect_domain(Domain);
 
-  isl::set ScheduledDomain = give(isl_map_range(Schedule.copy()));
-  isl::set ScheduledSet =
-      give(isl_set_apply(Subdomain.copy(), Schedule.copy()));
+  assert(!USchedule.is_empty());
+  isl::map Schedule = isl::map::from_union_map(USchedule);
 
-  isl::ast_build RestrictedBuild =
-      give(isl_ast_build_restrict(AstBuild.copy(), ScheduledDomain.copy()));
+  isl::set ScheduledDomain = Schedule.range();
+  isl::set ScheduledSet = Subdomain.apply(Schedule);
 
-  isl::ast_expr IsInSet = give(
-      isl_ast_build_expr_from_set(RestrictedBuild.keep(), ScheduledSet.copy()));
+  isl::ast_build RestrictedBuild = AstBuild.restrict(ScheduledDomain);
+
+  isl::ast_expr IsInSet = RestrictedBuild.expr_from(ScheduledSet);
   Value *IsInSetExpr = ExprBuilder->create(IsInSet.copy());
   IsInSetExpr = Builder.CreateICmpNE(
       IsInSetExpr, ConstantInt::get(IsInSetExpr->getType(), 0));
@@ -594,15 +590,12 @@ void BlockGenerator::generateConditionalExecution(
 
   // Don't call GenThenFunc if it is never executed. An ast index expression
   // might not be defined in this case.
-  bool IsEmpty = isl_set_is_empty(Subdomain.keep()) == isl_bool_true;
-  if (IsEmpty)
+  if (Subdomain.is_empty())
     return;
 
   // If the condition is a tautology, don't generate a condition around the
   // code.
-  bool IsPartial =
-      isl_set_is_subset(StmtDom.keep(), Subdomain.keep()) == isl_bool_false;
-  if (!IsPartial) {
+  if (StmtDom.is_subset(Subdomain)) {
     GenThenFunc();
     return;
   }

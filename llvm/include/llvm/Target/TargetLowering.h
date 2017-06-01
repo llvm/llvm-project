@@ -1143,6 +1143,16 @@ public:
     return OptSize ? MaxStoresPerMemcpyOptSize : MaxStoresPerMemcpy;
   }
 
+  /// Get maximum # of load operations permitted for memcmp
+  ///
+  /// This function returns the maximum number of load operations permitted
+  /// to replace a call to memcmp. The value is set by the target at the
+  /// performance threshold for such a replacement. If OptSize is true,
+  /// return the limit for functions that have OptSize attribute.
+  unsigned getMaxExpandSizeMemcmp(bool OptSize) const {
+    return OptSize ? MaxLoadsPerMemcmpOptSize : MaxLoadsPerMemcmp;
+  }
+
   /// \brief Get maximum # of store operations permitted for llvm.memmove
   ///
   /// This function returns the maximum number of store operations permitted
@@ -2330,6 +2340,8 @@ protected:
   /// Maximum number of store operations that may be substituted for a call to
   /// memcpy, used for functions with OptSize attribute.
   unsigned MaxStoresPerMemcpyOptSize;
+  unsigned MaxLoadsPerMemcmp;
+  unsigned MaxLoadsPerMemcmpOptSize;
 
   /// \brief Specify maximum bytes of store instructions per memmove call.
   ///

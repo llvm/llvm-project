@@ -652,12 +652,21 @@ Function *PartialInlinerImpl::unswitchFunction(Function *F) {
   // only split block when necessary:
   PHINode *FirstPhi = getFirstPHI(PreReturn);
   unsigned NumPredsFromEntries = OI->ReturnBlockPreds.size();
+  auto IsTrivialPhi = [](PHINode *PN) -> Value * {
+    Value *CommonValue = PN->getIncomingValue(0);
+    if (all_of(PN->incoming_values(),
+               [&](Value *V) { return V == CommonValue; }))
+      return CommonValue;
+    return nullptr;
+  };
+
   if (FirstPhi && FirstPhi->getNumIncomingValues() > NumPredsFromEntries + 1) {
 
     NewReturnBlock = NewReturnBlock->splitBasicBlock(
         NewReturnBlock->getFirstNonPHI()->getIterator());
     BasicBlock::iterator I = PreReturn->begin();
     Instruction *Ins = &NewReturnBlock->front();
+    SmallVector<Instruction *, 4> DeadPhis;
     while (I != PreReturn->end()) {
       PHINode *OldPhi = dyn_cast<PHINode>(I);
       if (!OldPhi)
@@ -674,8 +683,22 @@ Function *PartialInlinerImpl::unswitchFunction(Function *F) {
         RetPhi->addIncoming(OldPhi->getIncomingValueForBlock(NewE), NewE);
         OldPhi->removeIncomingValue(NewE);
       }
+
+      // After incoming values splitting, the old phi may become trivial.
+      // Keeping the trivial phi can introduce definition inside the outline
+      // region which is live-out, causing necessary overhead (load, store
+      // arg passing etc).
+      if (auto *OldPhiVal = IsTrivialPhi(OldPhi)) {
+        OldPhi->replaceAllUsesWith(OldPhiVal);
+        DeadPhis.push_back(OldPhi);
+      }
+
       ++I;
     }
+
+    for (auto *DP : DeadPhis)
+      DP->eraseFromParent();
+
     for (auto E : OI->ReturnBlockPreds) {
       BasicBlock *NewE = cast<BasicBlock>(VMap[E]);
       NewE->getTerminator()->replaceUsesOfWith(PreReturn, NewReturnBlock);

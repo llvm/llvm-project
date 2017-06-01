@@ -65,5 +65,18 @@ const char* const IdSymbolic[] = {
 };
 
 } // namespace Hwreg
+
+namespace Swizzle {
+
+// This must be in sync with llvm::AMDGPU::Swizzle::Id enum members, see SIDefines.h.
+const char* const IdSymbolic[] = {
+  "QUAD_PERM",
+  "BITMASK_PERM",
+  "SWAP",
+  "REVERSE",
+  "BROADCAST",
+};
+
+} // namespace Swizzle
 } // namespace AMDGPU
 } // namespace llvm

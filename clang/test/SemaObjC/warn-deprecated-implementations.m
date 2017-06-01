@@ -28,15 +28,14 @@
 - (void) G {} 	// No warning, implementing its own deprecated method
 @end
 
-__attribute__((deprecated)) // expected-note 2 {{'CL' has been explicitly marked deprecated here}}
+__attribute__((deprecated)) // expected-note {{'CL' has been explicitly marked deprecated here}}
 @interface CL // expected-note 2 {{class declared here}} 
 @end
 
 @implementation CL // expected-warning {{Implementing deprecated class}}
 @end
 
-@implementation CL ( SomeCategory ) // expected-warning {{'CL' is deprecated}} \
-                                    // expected-warning {{Implementing deprecated category}}
+@implementation CL (SomeCategory) // expected-warning {{Implementing deprecated category}}
 @end
 
 @interface CL_SUB : CL // expected-warning {{'CL' is deprecated}}

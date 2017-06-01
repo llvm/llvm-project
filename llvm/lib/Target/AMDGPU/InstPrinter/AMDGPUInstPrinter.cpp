@@ -1160,6 +1160,112 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
   O << SImm16; // Unknown simm16 code.
 }
 
+static void printSwizzleBitmask(const uint16_t AndMask,
+                                const uint16_t OrMask,
+                                const uint16_t XorMask,
+                                raw_ostream &O) {
+  using namespace llvm::AMDGPU::Swizzle;
+
+  uint16_t Probe0 = ((0            & AndMask) | OrMask) ^ XorMask;
+  uint16_t Probe1 = ((BITMASK_MASK & AndMask) | OrMask) ^ XorMask;
+
+  O << "\"";
+
+  for (unsigned Mask = 1 << (BITMASK_WIDTH - 1); Mask > 0; Mask >>= 1) {
+    uint16_t p0 = Probe0 & Mask;
+    uint16_t p1 = Probe1 & Mask;
+
+    if (p0 == p1) {
+      if (p0 == 0) {
+        O << "0";
+      } else {
+        O << "1";
+      }
+    } else {
+      if (p0 == 0) {
+        O << "p";
+      } else {
+        O << "i";
+      }
+    }
+  }
+
+  O << "\"";
+}
+
+void AMDGPUInstPrinter::printSwizzle(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  using namespace llvm::AMDGPU::Swizzle;
+
+  uint16_t Imm = MI->getOperand(OpNo).getImm();
+  if (Imm == 0) {
+    return;
+  }
+
+  O << " offset:";
+
+  if ((Imm & QUAD_PERM_ENC_MASK) == QUAD_PERM_ENC) {
+
+    O << "swizzle(" << IdSymbolic[ID_QUAD_PERM];
+    for (auto i = 0; i < LANE_NUM; ++i) {
+      O << ",";
+      O << formatDec(Imm & LANE_MASK);
+      Imm >>= LANE_SHIFT;
+    }
+    O << ")";
+
+  } else if ((Imm & BITMASK_PERM_ENC_MASK) == BITMASK_PERM_ENC) {
+
+    uint16_t AndMask = (Imm >> BITMASK_AND_SHIFT) & BITMASK_MASK;
+    uint16_t OrMask  = (Imm >> BITMASK_OR_SHIFT)  & BITMASK_MASK;
+    uint16_t XorMask = (Imm >> BITMASK_XOR_SHIFT) & BITMASK_MASK;
+
+    if (AndMask == BITMASK_MAX &&
+        OrMask == 0 &&
+        countPopulation(XorMask) == 1) {
+
+      O << "swizzle(" << IdSymbolic[ID_SWAP];
+      O << ",";
+      O << formatDec(XorMask);
+      O << ")";
+
+    } else if (AndMask == BITMASK_MAX &&
+               OrMask == 0 && XorMask > 0 &&
+               isPowerOf2_64(XorMask + 1)) {
+
+      O << "swizzle(" << IdSymbolic[ID_REVERSE];
+      O << ",";
+      O << formatDec(XorMask + 1);
+      O << ")";
+
+    } else {
+
+      uint16_t GroupSize = BITMASK_MAX - AndMask + 1;
+      if (GroupSize > 1 &&
+          isPowerOf2_64(GroupSize) &&
+          OrMask < GroupSize &&
+          XorMask == 0) {
+
+        O << "swizzle(" << IdSymbolic[ID_BROADCAST];
+        O << ",";
+        O << formatDec(GroupSize);
+        O << ",";
+        O << formatDec(OrMask);
+        O << ")";
+
+      } else {
+        O << "swizzle(" << IdSymbolic[ID_BITMASK_PERM];
+        O << ",";
+        printSwizzleBitmask(AndMask, OrMask, XorMask, O);
+        O << ")";
+      }
+    }
+  } else {
+    printU16ImmDecOperand(MI, OpNo, O);
+  }
+}
+
 void AMDGPUInstPrinter::printWaitFlag(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {

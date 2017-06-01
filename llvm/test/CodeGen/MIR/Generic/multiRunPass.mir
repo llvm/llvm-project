@@ -7,8 +7,8 @@
 # This test ensures that the command line accepts
 # several run passes on the same command line and
 # actually create the proper pipeline for it.
-# PSEUDO_PEEPHOLE: -expand-isel-pseudos -peephole-opt
-# PEEPHOLE_PSEUDO: -peephole-opt -expand-isel-pseudos
+# PSEUDO_PEEPHOLE: -expand-isel-pseudos {{(-machineverifier )?}}-peephole-opt
+# PEEPHOLE_PSEUDO: -peephole-opt {{(-machineverifier )?}}-expand-isel-pseudos
 
 # Make sure there are no other passes happening after what we asked.
 # CHECK-NEXT: --- |

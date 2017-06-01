@@ -29,6 +29,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 using namespace llvm;
@@ -47,8 +48,9 @@ static cl::opt<std::string>
                         "pipeline for handling managed aliasing queries"),
                cl::Hidden);
 
-bool llvm::runPassPipeline(StringRef Arg0, Module &M,
-                           TargetMachine *TM, tool_output_file *Out,
+bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
+                           tool_output_file *Out,
+                           tool_output_file *ThinLTOLinkOut,
                            StringRef PassPipeline, OutputKind OK,
                            VerifierKind VK,
                            bool ShouldPreserveAssemblyUseListOrder,
@@ -104,6 +106,10 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M,
     MPM.addPass(BitcodeWriterPass(Out->os(), ShouldPreserveBitcodeUseListOrder,
                                   EmitSummaryIndex, EmitModuleHash));
     break;
+  case OK_OutputThinLTOBitcode:
+    MPM.addPass(ThinLTOBitcodeWriterPass(
+        Out->os(), ThinLTOLinkOut ? &ThinLTOLinkOut->os() : nullptr));
+    break;
   }
 
   // Before executing passes, print the final values of the LLVM options.
@@ -113,7 +119,10 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M,
   MPM.run(M, MAM);
 
   // Declare success.
-  if (OK != OK_NoOutput)
+  if (OK != OK_NoOutput) {
     Out->keep();
+    if (OK == OK_OutputThinLTOBitcode && ThinLTOLinkOut)
+      ThinLTOLinkOut->keep();
+  }
   return true;
 }

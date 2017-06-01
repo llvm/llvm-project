@@ -66,6 +66,10 @@ public:
 
   bool isLittleEndian() const { return isLittle; }
   const MipsABIInfo &getABI() const { return ABI; }
+
+  bool isMachineVerifierClean() const override {
+    return false;
+  }
 };
 
 /// Mips32/64 big endian target machine.

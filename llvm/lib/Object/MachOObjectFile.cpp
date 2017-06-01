@@ -3269,7 +3269,6 @@ void MachOBindEntry::moveNext() {
       if (ImmValue) {
         SignExtended = MachO::BIND_OPCODE_MASK | ImmValue;
         Ordinal = SignExtended;
-        LibraryOrdinalSet = true;
         if (Ordinal < MachO::BIND_SPECIAL_DYLIB_FLAT_LOOKUP) {
           *E = malformedError("for BIND_OPCODE_SET_DYLIB_SPECIAL_IMM unknown "
                "special ordinal: " + Twine((int)Ordinal) + " for opcode at: "
@@ -3279,6 +3278,7 @@ void MachOBindEntry::moveNext() {
         }
       } else
         Ordinal = 0;
+      LibraryOrdinalSet = true;
       DEBUG_WITH_TYPE(
           "mach-o-bind",
           dbgs() << "BIND_OPCODE_SET_DYLIB_SPECIAL_IMM: "

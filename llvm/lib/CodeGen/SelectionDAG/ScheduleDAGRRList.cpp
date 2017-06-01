@@ -226,6 +226,7 @@ private:
   void UnscheduleNodeBottomUp(SUnit*);
   void RestoreHazardCheckerBottomUp();
   void BacktrackBottomUp(SUnit*, SUnit*);
+  SUnit *TryUnfoldSU(SUnit *);
   SUnit *CopyAndMoveSuccessors(SUnit*);
   void InsertCopiesAndMoveSuccs(SUnit*, unsigned,
                                 const TargetRegisterClass*,
@@ -780,7 +781,7 @@ void ScheduleDAGRRList::ScheduleNodeBottomUp(SUnit *SU) {
 }
 
 /// CapturePred - This does the opposite of ReleasePred. Since SU is being
-/// unscheduled, incrcease the succ left count of its predecessors. Remove
+/// unscheduled, increase the succ left count of its predecessors. Remove
 /// them from AvailableQueue if necessary.
 void ScheduleDAGRRList::CapturePred(SDep *PredEdge) {
   SUnit *PredSU = PredEdge->getSUnit();
@@ -934,6 +935,146 @@ static bool isOperandOf(const SUnit *SU, SDNode *N) {
   return false;
 }
 
+/// TryUnfold - Attempt to unfold
+SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
+  SDNode *N = SU->getNode();
+  // Use while over if to ease fall through.
+  SmallVector<SDNode *, 2> NewNodes;
+  if (!TII->unfoldMemoryOperand(*DAG, N, NewNodes))
+    return nullptr;
+
+  // unfolding an x86 DEC64m operation results in store, dec, load which
+  // can't be handled here so quit
+  if (NewNodes.size() == 3)
+    return nullptr;
+
+  assert(NewNodes.size() == 2 && "Expected a load folding node!");
+
+  N = NewNodes[1];
+  SDNode *LoadNode = NewNodes[0];
+  unsigned NumVals = N->getNumValues();
+  unsigned OldNumVals = SU->getNode()->getNumValues();
+
+  // LoadNode may already exist. This can happen when there is another
+  // load from the same location and producing the same type of value
+  // but it has different alignment or volatileness.
+  bool isNewLoad = true;
+  SUnit *LoadSU;
+  if (LoadNode->getNodeId() != -1) {
+    LoadSU = &SUnits[LoadNode->getNodeId()];
+    // If LoadSU has already been scheduled, we should clone it but
+    // this would negate the benefit to unfolding so just return SU.
+    if (LoadSU->isScheduled)
+      return SU;
+    isNewLoad = false;
+  } else {
+    LoadSU = CreateNewSUnit(LoadNode);
+    LoadNode->setNodeId(LoadSU->NodeNum);
+
+    InitNumRegDefsLeft(LoadSU);
+    computeLatency(LoadSU);
+  }
+
+  DEBUG(dbgs() << "Unfolding SU #" << SU->NodeNum << "\n");
+
+  // Now that we are committed to unfolding replace DAG Uses.
+  for (unsigned i = 0; i != NumVals; ++i)
+    DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), i), SDValue(N, i));
+  DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), OldNumVals - 1),
+                                 SDValue(LoadNode, 1));
+
+  SUnit *NewSU = CreateNewSUnit(N);
+  assert(N->getNodeId() == -1 && "Node already inserted!");
+  N->setNodeId(NewSU->NodeNum);
+
+  const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
+  for (unsigned i = 0; i != MCID.getNumOperands(); ++i) {
+    if (MCID.getOperandConstraint(i, MCOI::TIED_TO) != -1) {
+      NewSU->isTwoAddress = true;
+      break;
+    }
+  }
+  if (MCID.isCommutable())
+    NewSU->isCommutable = true;
+
+  InitNumRegDefsLeft(NewSU);
+  computeLatency(NewSU);
+
+  // Record all the edges to and from the old SU, by category.
+  SmallVector<SDep, 4> ChainPreds;
+  SmallVector<SDep, 4> ChainSuccs;
+  SmallVector<SDep, 4> LoadPreds;
+  SmallVector<SDep, 4> NodePreds;
+  SmallVector<SDep, 4> NodeSuccs;
+  for (SDep &Pred : SU->Preds) {
+    if (Pred.isCtrl())
+      ChainPreds.push_back(Pred);
+    else if (isOperandOf(Pred.getSUnit(), LoadNode))
+      LoadPreds.push_back(Pred);
+    else
+      NodePreds.push_back(Pred);
+  }
+  for (SDep &Succ : SU->Succs) {
+    if (Succ.isCtrl())
+      ChainSuccs.push_back(Succ);
+    else
+      NodeSuccs.push_back(Succ);
+  }
+
+  // Now assign edges to the newly-created nodes.
+  for (const SDep &Pred : ChainPreds) {
+    RemovePred(SU, Pred);
+    if (isNewLoad)
+      AddPred(LoadSU, Pred);
+  }
+  for (const SDep &Pred : LoadPreds) {
+    RemovePred(SU, Pred);
+    if (isNewLoad)
+      AddPred(LoadSU, Pred);
+  }
+  for (const SDep &Pred : NodePreds) {
+    RemovePred(SU, Pred);
+    AddPred(NewSU, Pred);
+  }
+  for (SDep D : NodeSuccs) {
+    SUnit *SuccDep = D.getSUnit();
+    D.setSUnit(SU);
+    RemovePred(SuccDep, D);
+    D.setSUnit(NewSU);
+    AddPred(SuccDep, D);
+    // Balance register pressure.
+    if (AvailableQueue->tracksRegPressure() && SuccDep->isScheduled &&
+        !D.isCtrl() && NewSU->NumRegDefsLeft > 0)
+      --NewSU->NumRegDefsLeft;
+  }
+  for (SDep D : ChainSuccs) {
+    SUnit *SuccDep = D.getSUnit();
+    D.setSUnit(SU);
+    RemovePred(SuccDep, D);
+    if (isNewLoad) {
+      D.setSUnit(LoadSU);
+      AddPred(SuccDep, D);
+    }
+  }
+
+  // Add a data dependency to reflect that NewSU reads the value defined
+  // by LoadSU.
+  SDep D(LoadSU, SDep::Data, 0);
+  D.setLatency(LoadSU->Latency);
+  AddPred(NewSU, D);
+
+  if (isNewLoad)
+    AvailableQueue->addNode(LoadSU);
+  AvailableQueue->addNode(NewSU);
+
+  ++NumUnfolds;
+
+  if (NewSU->NumSuccsLeft == 0)
+    NewSU->isAvailable = true;
+
+  return NewSU;
+}
+
 /// CopyAndMoveSuccessors - Clone the specified node and move its scheduled
 /// successors to the newly created node.
 SUnit *ScheduleDAGRRList::CopyAndMoveSuccessors(SUnit *SU) {
@@ -959,135 +1100,16 @@ SUnit *ScheduleDAGRRList::CopyAndMoveSuccessors(SUnit *SU) {
       return nullptr;
   }
 
+  // If possible unfold instruction.
   if (TryUnfold) {
-    SmallVector<SDNode*, 2> NewNodes;
-    if (!TII->unfoldMemoryOperand(*DAG, N, NewNodes))
+    SUnit *UnfoldSU = TryUnfoldSU(SU);
+    if (!UnfoldSU)
       return nullptr;
-
-    // unfolding an x86 DEC64m operation results in store, dec, load which
-    // can't be handled here so quit
-    if (NewNodes.size() == 3)
-      return nullptr;
-
-    DEBUG(dbgs() << "Unfolding SU #" << SU->NodeNum << "\n");
-    assert(NewNodes.size() == 2 && "Expected a load folding node!");
-
-    N = NewNodes[1];
-    SDNode *LoadNode = NewNodes[0];
-    unsigned NumVals = N->getNumValues();
-    unsigned OldNumVals = SU->getNode()->getNumValues();
-    for (unsigned i = 0; i != NumVals; ++i)
-      DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), i), SDValue(N, i));
-    DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), OldNumVals-1),
-                                   SDValue(LoadNode, 1));
-
-    // LoadNode may already exist. This can happen when there is another
-    // load from the same location and producing the same type of value
-    // but it has different alignment or volatileness.
-    bool isNewLoad = true;
-    SUnit *LoadSU;
-    if (LoadNode->getNodeId() != -1) {
-      LoadSU = &SUnits[LoadNode->getNodeId()];
-      isNewLoad = false;
-    } else {
-      LoadSU = CreateNewSUnit(LoadNode);
-      LoadNode->setNodeId(LoadSU->NodeNum);
-
-      InitNumRegDefsLeft(LoadSU);
-      computeLatency(LoadSU);
-    }
-
-    SUnit *NewSU = CreateNewSUnit(N);
-    assert(N->getNodeId() == -1 && "Node already inserted!");
-    N->setNodeId(NewSU->NodeNum);
-
-    const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
-    for (unsigned i = 0; i != MCID.getNumOperands(); ++i) {
-      if (MCID.getOperandConstraint(i, MCOI::TIED_TO) != -1) {
-        NewSU->isTwoAddress = true;
-        break;
-      }
-    }
-    if (MCID.isCommutable())
-      NewSU->isCommutable = true;
-
-    InitNumRegDefsLeft(NewSU);
-    computeLatency(NewSU);
-
-    // Record all the edges to and from the old SU, by category.
-    SmallVector<SDep, 4> ChainPreds;
-    SmallVector<SDep, 4> ChainSuccs;
-    SmallVector<SDep, 4> LoadPreds;
-    SmallVector<SDep, 4> NodePreds;
-    SmallVector<SDep, 4> NodeSuccs;
-    for (SDep &Pred : SU->Preds) {
-      if (Pred.isCtrl())
-        ChainPreds.push_back(Pred);
-      else if (isOperandOf(Pred.getSUnit(), LoadNode))
-        LoadPreds.push_back(Pred);
-      else
-        NodePreds.push_back(Pred);
-    }
-    for (SDep &Succ : SU->Succs) {
-      if (Succ.isCtrl())
-        ChainSuccs.push_back(Succ);
-      else
-        NodeSuccs.push_back(Succ);
-    }
-
-    // Now assign edges to the newly-created nodes.
-    for (const SDep &Pred : ChainPreds) {
-      RemovePred(SU, Pred);
-      if (isNewLoad)
-        AddPred(LoadSU, Pred);
-    }
-    for (const SDep &Pred : LoadPreds) {
-      RemovePred(SU, Pred);
-      if (isNewLoad)
-        AddPred(LoadSU, Pred);
-    }
-    for (const SDep &Pred : NodePreds) {
-      RemovePred(SU, Pred);
-      AddPred(NewSU, Pred);
-    }
-    for (SDep D : NodeSuccs) {
-      SUnit *SuccDep = D.getSUnit();
-      D.setSUnit(SU);
-      RemovePred(SuccDep, D);
-      D.setSUnit(NewSU);
-      AddPred(SuccDep, D);
-      // Balance register pressure.
-      if (AvailableQueue->tracksRegPressure() && SuccDep->isScheduled
-          && !D.isCtrl() && NewSU->NumRegDefsLeft > 0)
-        --NewSU->NumRegDefsLeft;
-    }
-    for (SDep D : ChainSuccs) {
-      SUnit *SuccDep = D.getSUnit();
-      D.setSUnit(SU);
-      RemovePred(SuccDep, D);
-      if (isNewLoad) {
-        D.setSUnit(LoadSU);
-        AddPred(SuccDep, D);
-      }
-    }
-
-    // Add a data dependency to reflect that NewSU reads the value defined
-    // by LoadSU.
-    SDep D(LoadSU, SDep::Data, 0);
-    D.setLatency(LoadSU->Latency);
-    AddPred(NewSU, D);
-
-    if (isNewLoad)
-      AvailableQueue->addNode(LoadSU);
-    AvailableQueue->addNode(NewSU);
-
-    ++NumUnfolds;
-
-    if (NewSU->NumSuccsLeft == 0) {
-      NewSU->isAvailable = true;
-      return NewSU;
-    }
-    SU = NewSU;
+    SU = UnfoldSU;
+    N = SU->getNode();
+    // If this can be scheduled don't bother duplicating and just return
+    if (SU->NumSuccsLeft == 0)
+      return SU;
   }
 
   DEBUG(dbgs() << "    Duplicating SU #" << SU->NodeNum << "\n");

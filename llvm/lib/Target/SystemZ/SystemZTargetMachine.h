@@ -51,6 +51,8 @@ public:
   }
 
   bool targetSchedulesPostRAScheduling() const override { return true; };
+
+  bool isMachineVerifierClean() const override { return false; }
 };
 
 } // end namespace llvm

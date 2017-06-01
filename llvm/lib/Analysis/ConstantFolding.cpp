@@ -1739,6 +1739,7 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
         if ((Name == "round" && TLI->has(LibFunc_round)) ||
             (Name == "roundf" && TLI->has(LibFunc_roundf)))
           return ConstantFoldFP(round, V, Ty);
+        break;
       case 's':
         if ((Name == "sin" && TLI->has(LibFunc_sin)) ||
             (Name == "sinf" && TLI->has(LibFunc_sinf)))
@@ -1807,6 +1808,7 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
                 dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
           return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
                                              /*roundTowardZero=*/false, Ty);
+        LLVM_FALLTHROUGH;
       case Intrinsic::x86_sse_cvttss2si:
       case Intrinsic::x86_sse_cvttss2si64:
       case Intrinsic::x86_sse2_cvttsd2si:

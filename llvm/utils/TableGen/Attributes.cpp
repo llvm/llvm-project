@@ -115,7 +115,7 @@ void Attributes::emitFnAttrCompatCheck(raw_ostream &OS, bool IsStringAttr) {
       Records.getAllDerivedDefinitions("CompatRule");
 
   for (auto *Rule : CompatRules) {
-    std::string FuncName = Rule->getValueAsString("CompatFunc");
+    StringRef FuncName = Rule->getValueAsString("CompatFunc");
     OS << "  Ret &= " << FuncName << "(Caller, Callee);\n";
   }
 
@@ -129,7 +129,7 @@ void Attributes::emitFnAttrCompatCheck(raw_ostream &OS, bool IsStringAttr) {
      << "                                const Function &Callee) {\n";
 
   for (auto *Rule : MergeRules) {
-    std::string FuncName = Rule->getValueAsString("MergeFunc");
+    StringRef FuncName = Rule->getValueAsString("MergeFunc");
     OS << "  " << FuncName << "(Caller, Callee);\n";
   }
 

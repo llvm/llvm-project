@@ -12,6 +12,7 @@
 #include "limits"
 #include "system_error"
 #include "include/atomic_support.h"
+#include "__undef_macros"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 #ifndef _LIBCPP_HAS_NO_THREADS

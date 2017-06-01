@@ -393,7 +393,17 @@ void CallInst::addAttribute(unsigned i, Attribute Attr) {
 }
 
 void CallInst::addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-  addAttribute(ArgNo + AttributeList::FirstArgIndex, Kind);
+  assert(ArgNo < getNumArgOperands() && "Out of bounds");
+  AttributeList PAL = getAttributes();
+  PAL = PAL.addParamAttribute(getContext(), ArgNo, Kind);
+  setAttributes(PAL);
+}
+
+void CallInst::addParamAttr(unsigned ArgNo, Attribute Attr) {
+  assert(ArgNo < getNumArgOperands() && "Out of bounds");
+  AttributeList PAL = getAttributes();
+  PAL = PAL.addParamAttribute(getContext(), ArgNo, Attr);
+  setAttributes(PAL);
 }
 
 void CallInst::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
@@ -409,7 +419,17 @@ void CallInst::removeAttribute(unsigned i, StringRef Kind) {
 }
 
 void CallInst::removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-  removeAttribute(ArgNo + AttributeList::FirstArgIndex, Kind);
+  assert(ArgNo < getNumArgOperands() && "Out of bounds");
+  AttributeList PAL = getAttributes();
+  PAL = PAL.removeParamAttribute(getContext(), ArgNo, Kind);
+  setAttributes(PAL);
+}
+
+void CallInst::removeParamAttr(unsigned ArgNo, StringRef Kind) {
+  assert(ArgNo < getNumArgOperands() && "Out of bounds");
+  AttributeList PAL = getAttributes();
+  PAL = PAL.removeParamAttribute(getContext(), ArgNo, Kind);
+  setAttributes(PAL);
 }
 
 void CallInst::addDereferenceableAttr(unsigned i, uint64_t Bytes) {
@@ -808,7 +828,9 @@ void InvokeInst::addAttribute(unsigned i, Attribute Attr) {
 }
 
 void InvokeInst::addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-  addAttribute(ArgNo + AttributeList::FirstArgIndex, Kind);
+  AttributeList PAL = getAttributes();
+  PAL = PAL.addParamAttribute(getContext(), ArgNo, Kind);
+  setAttributes(PAL);
 }
 
 void InvokeInst::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
@@ -824,7 +846,9 @@ void InvokeInst::removeAttribute(unsigned i, StringRef Kind) {
 }
 
 void InvokeInst::removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
-  removeAttribute(ArgNo + AttributeList::FirstArgIndex, Kind);
+  AttributeList PAL = getAttributes();
+  PAL = PAL.removeParamAttribute(getContext(), ArgNo, Kind);
+  setAttributes(PAL);
 }
 
 void InvokeInst::addDereferenceableAttr(unsigned i, uint64_t Bytes) {

@@ -145,10 +145,10 @@ class DS_1A2D_Off8_RET<string opName,
   let hasPostISelHook = 1;
 }
 
-class DS_1A_RET<string opName, RegisterClass rc = VGPR_32>
+class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, Operand ofs = offset>
 : DS_Pseudo<opName,
   (outs rc:$vdst),
-  (ins VGPR_32:$addr, offset:$offset, gds:$gds),
+  (ins VGPR_32:$addr, ofs:$offset, gds:$gds),
   "$vdst, $addr$offset$gds"> {
 
   let has_data0 = 0;
@@ -440,7 +440,7 @@ def DS_WRITE_SRC2_B32 : DS_1A<"ds_write_src2_b32">;
 def DS_WRITE_SRC2_B64 : DS_1A<"ds_write_src2_b64">;
 
 let Uses = [EXEC], mayLoad = 0, mayStore = 0, isConvergent = 1 in {
-def DS_SWIZZLE_B32 : DS_1A_RET <"ds_swizzle_b32">;
+def DS_SWIZZLE_B32 : DS_1A_RET <"ds_swizzle_b32", VGPR_32, SwizzleImm>;
 }
 
 let mayStore = 0 in {

@@ -83,7 +83,7 @@ Documentation extractDocumentation(RecordKeeper &Records) {
     }
 
     // Pretend no-X and Xno-Y options are aliases of X and XY.
-    auto Name = R->getValueAsString("Name");
+    std::string Name = R->getValueAsString("Name");
     if (Name.size() >= 4) {
       if (Name.substr(0, 3) == "no-" && OptionsByName[Name.substr(3)]) {
         Aliases[OptionsByName[Name.substr(3)]].push_back(R);
@@ -229,7 +229,7 @@ std::string getRSTStringWithTextFallback(const Record *R, StringRef Primary,
 }
 
 void emitOptionWithArgs(StringRef Prefix, const Record *Option,
-                        ArrayRef<std::string> Args, raw_ostream &OS) {
+                        ArrayRef<StringRef> Args, raw_ostream &OS) {
   OS << Prefix << escapeRST(Option->getValueAsString("Name"));
 
   std::pair<StringRef, StringRef> Separators =
@@ -261,14 +261,15 @@ void emitOptionName(StringRef Prefix, const Record *Option, raw_ostream &OS) {
     }
   }
 
-  emitOptionWithArgs(Prefix, Option, Args, OS);
+  emitOptionWithArgs(Prefix, Option, std::vector<StringRef>(Args.begin(), Args.end()), OS);
 
   auto AliasArgs = Option->getValueAsListOfStrings("AliasArgs");
   if (!AliasArgs.empty()) {
     Record *Alias = Option->getValueAsDef("Alias");
     OS << " (equivalent to ";
-    emitOptionWithArgs(Alias->getValueAsListOfStrings("Prefixes").front(),
-                       Alias, Option->getValueAsListOfStrings("AliasArgs"), OS);
+    emitOptionWithArgs(
+        Alias->getValueAsListOfStrings("Prefixes").front(), Alias,
+        AliasArgs, OS);
     OS << ")";
   }
 }
@@ -310,7 +311,7 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
   forEachOptionName(Option, DocInfo, [&](const Record *Option) {
     for (auto &Prefix : Option->getValueAsListOfStrings("Prefixes"))
       SphinxOptionIDs.push_back(
-          getSphinxOptionID(Prefix + Option->getValueAsString("Name")));
+          getSphinxOptionID((Prefix + Option->getValueAsString("Name")).str()));
   });
   assert(!SphinxOptionIDs.empty() && "no flags for option");
   static std::map<std::string, int> NextSuffix;

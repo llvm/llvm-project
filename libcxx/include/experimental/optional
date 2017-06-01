@@ -143,6 +143,21 @@ namespace std { namespace experimental { inline namespace fundamentals_v1 {
 #include <experimental/__config>
 #include <functional>
 #include <stdexcept>
+#if _LIBCPP_STD_VER > 11
+#include <initializer_list>
+#include <type_traits>
+#include <new>
+#include <__functional_base>
+#include <__debug>
+#endif
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL
 class _LIBCPP_EXCEPTION_ABI _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS bad_optional_access
@@ -159,17 +174,6 @@ _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 
 #if _LIBCPP_STD_VER > 11
-
-#include <initializer_list>
-#include <type_traits>
-#include <new>
-#include <__functional_base>
-#include <__undef_min_max>
-#include <__debug>
-
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
-#endif
 
 _LIBCPP_BEGIN_NAMESPACE_LFTS
 
@@ -912,5 +916,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<std::experimental::optional<_Tp> >
 _LIBCPP_END_NAMESPACE_STD
 
 #endif  // _LIBCPP_STD_VER > 11
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_EXPERIMENTAL_OPTIONAL

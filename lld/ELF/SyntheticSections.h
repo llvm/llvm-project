@@ -53,7 +53,7 @@ public:
   virtual bool empty() const { return false; }
   uint64_t getVA() const;
 
-  static bool classof(const InputSectionBase *D) {
+  static bool classof(const SectionBase *D) {
     return D->kind() == InputSectionBase::Synthetic;
   }
 };

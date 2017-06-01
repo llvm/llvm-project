@@ -215,6 +215,11 @@ bool PPCTTIImpl::enableAggressiveInterleaving(bool LoopHasReductions) {
   return LoopHasReductions;
 }
 
+bool PPCTTIImpl::expandMemCmp(Instruction *I, unsigned &MaxLoadSize) {
+  MaxLoadSize = 8;
+  return true;
+}
+
 bool PPCTTIImpl::enableInterleavedAccessVectorization() {
   return true;
 }
@@ -239,9 +244,18 @@ unsigned PPCTTIImpl::getRegisterBitWidth(bool Vector) {
 }
 
 unsigned PPCTTIImpl::getCacheLineSize() {
-  // This is currently only used for the data prefetch pass which is only
-  // enabled for BG/Q by default.
-  return CacheLineSize;
+  // Check first if the user specified a custom line size.
+  if (CacheLineSize.getNumOccurrences() > 0)
+    return CacheLineSize;
+
+  // On P7, P8 or P9 we have a cache line size of 128.
+  unsigned Directive = ST->getDarwinDirective();
+  if (Directive == PPC::DIR_PWR7 || Directive == PPC::DIR_PWR8 ||
+      Directive == PPC::DIR_PWR9)
+    return 128;
+
+  // On other processors return a default of 64 bytes.
+  return 64;
 }
 
 unsigned PPCTTIImpl::getPrefetchDistance() {

@@ -83,7 +83,7 @@ int t5() {
 }
 
 
-__attribute ((deprecated)) // expected-note 2 {{'DEPRECATED' has been explicitly marked deprecated here}}
+__attribute ((deprecated)) // expected-note {{'DEPRECATED' has been explicitly marked deprecated here}}
 @interface DEPRECATED { 
   @public int ivar; 
   DEPRECATED *ivar2; // no warning.
@@ -98,9 +98,17 @@ __attribute ((deprecated)) // expected-note 2 {{'DEPRECATED' has been explicitly
 @end
 
 @interface DEPRECATED (Category2) // no warning.
+- (id)meth;
 @end
 
-@implementation DEPRECATED (Category2) // expected-warning {{'DEPRECATED' is deprecated}}
+__attribute__((deprecated))
+void depr_function();
+
+@implementation DEPRECATED (Category2) // no warning
+- (id)meth {
+  depr_function(); // no warning.
+  return 0;
+}
 @end
 
 @interface NS : DEPRECATED  // expected-warning {{'DEPRECATED' is deprecated}}
