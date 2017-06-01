@@ -9,49 +9,40 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// REQUIRES: fcoroutines-ts
-
-// RUN: %build -fcoroutines-ts
-// RUN: %run
 
 // <experimental/coroutine>
 
 // template <class Promise = void>
 // struct coroutine_handle;
 
-// constexpr explicit operator bool() const noexcept
+// constexpr coroutine_handle() noexcept
+// constexpr coroutine_handle(nullptr_t) noexcept
 
 #include <experimental/coroutine>
 #include <type_traits>
 #include <cassert>
 
-#include "test_macros.h"
-
 namespace coro = std::experimental;
 
 template <class C>
 void do_test() {
-  static_assert(std::is_nothrow_constructible<bool, C>::value, "");
-  static_assert(!std::is_convertible<C, bool>::value, "");
   {
-    constexpr C c; ((void)c);
-    static_assert(bool(c) == false, "");
+    constexpr C c;
+    static_assert(std::is_nothrow_default_constructible<C>::value, "");
+    static_assert(c.address() == nullptr, "");
   }
-  { // null case
-    const C c = {}; ((void)c);
-    ASSERT_NOEXCEPT(bool(c));
-    if (c)
-      assert(false);
-    else
-      assert(true);
+  {
+    constexpr C c(nullptr);
+    static_assert(std::is_nothrow_constructible<C, std::nullptr_t>::value, "");
+    static_assert(c.address() == nullptr, "");
+  }
+  {
+    C c;
     assert(c.address() == nullptr);
-    assert(bool(c) == false);
   }
-  { // non-null case
-    char dummy = 42;
-    C c = C::from_address((void*)&dummy);
-    assert(c.address() == &dummy);
-    assert(bool(c) == true);
+  {
+    C c(nullptr);
+    assert(c.address() == nullptr);
   }
 }
 

@@ -65,7 +65,7 @@ constexpr size_t strerror_buff_size = 1024;
 
 string do_strerror_r(int ev);
 
-#if defined(_LIBCPP_MSVCRT)
+#if defined(_LIBCPP_MSVCRT_LIKE)
 string do_strerror_r(int ev) {
   char buffer[strerror_buff_size];
   if (::strerror_s(buffer, strerror_buff_size, ev) == 0)

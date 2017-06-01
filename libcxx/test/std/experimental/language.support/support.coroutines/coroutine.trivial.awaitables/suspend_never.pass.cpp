@@ -9,10 +9,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// REQUIRES: fcoroutines-ts
-
-// RUN: %build -fcoroutines-ts
-// RUN: %run
 
 #include <experimental/coroutine>
 #include <type_traits>
@@ -22,10 +18,11 @@
 
 namespace coro = std::experimental;
 
-using SuspendT = std::experimental::coroutines_v1::suspend_always;
+// Test that the type is in the correct namespace
+using SuspendT = std::experimental::coroutines_v1::suspend_never;
 
-TEST_SAFE_STATIC SuspendT safe_sa;
-constexpr SuspendT constexpr_sa;
+TEST_SAFE_STATIC SuspendT safe_sn;
+constexpr SuspendT constexpr_sn;
 
 constexpr bool check_suspend_constexpr() {
   SuspendT s{};
@@ -35,6 +32,7 @@ constexpr bool check_suspend_constexpr() {
   s = std::move(smove);
   return true;
 }
+
 
 int main()
 {
@@ -46,8 +44,8 @@ int main()
   {
     LIBCPP_STATIC_ASSERT(noexcept(s.await_ready()), "");
     static_assert(std::is_same<decltype(s.await_ready()), bool>::value, "");
-    assert(s.await_ready() == false);
-    assert(cs.await_ready() == false);
+    assert(s.await_ready() == true);
+    assert(cs.await_ready() == true);
   }
   {
     LIBCPP_STATIC_ASSERT(noexcept(s.await_suspend(h)), "");
@@ -69,5 +67,9 @@ int main()
     static_assert(std::is_nothrow_move_assignable<S>::value, "");
     static_assert(std::is_trivially_copyable<S>::value, "");
     static_assert(check_suspend_constexpr(), "");
+  }
+  {
+    // suppress unused warnings for the global constexpr test variable
+    ((void)constexpr_sn);
   }
 }

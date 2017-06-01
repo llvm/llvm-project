@@ -9,10 +9,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// REQUIRES: fcoroutines-ts
-
-// RUN: %build -fcoroutines-ts
-// RUN: %run
 
 #include <experimental/coroutine>
 #include <cassert>
@@ -58,6 +54,7 @@ coro_t f(int n) {
     co_return;
   }
   int val = co_await A{};
+  ((void)val);
   set_value(42);
 }
 

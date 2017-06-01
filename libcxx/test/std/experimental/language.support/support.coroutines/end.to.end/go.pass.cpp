@@ -9,10 +9,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// REQUIRES: fcoroutines-ts
-
-// RUN: %build -fcoroutines-ts
-// RUN: %run
 
 #include <experimental/coroutine>
 #include <cassert>
@@ -166,9 +162,7 @@ goroutine pusher(channel& left, channel& right)
   }
 }
 
-const int N = 100; //100'000'000;
-const int repeat = 1;
-
+const int N = 100;
 channel* c = new channel[N + 1];
 
 int main() {

@@ -101,12 +101,12 @@ static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
   case SymbolBody::DefinedCommonKind:
     if (!Config->DefineCommon)
       return 0;
-    return InX::Common->OutSec->Addr + InX::Common->OutSecOff +
+    return InX::Common->getParent()->Addr + InX::Common->OutSecOff +
            cast<DefinedCommon>(Body).Offset;
   case SymbolBody::SharedKind: {
     auto &SS = cast<SharedSymbol>(Body);
     if (SS.NeedsCopy)
-      return SS.CopyRelSec->OutSec->Addr + SS.CopyRelSec->OutSecOff +
+      return SS.CopyRelSec->getParent()->Addr + SS.CopyRelSec->OutSecOff +
              SS.CopyRelSecOff;
     if (SS.NeedsPltAddr)
       return Body.getPltVA();
@@ -207,13 +207,13 @@ OutputSection *SymbolBody::getOutputSection() const {
 
   if (auto *S = dyn_cast<SharedSymbol>(this)) {
     if (S->NeedsCopy)
-      return S->CopyRelSec->OutSec;
+      return S->CopyRelSec->getParent();
     return nullptr;
   }
 
   if (isa<DefinedCommon>(this)) {
     if (Config->DefineCommon)
-      return InX::Common->OutSec;
+      return InX::Common->getParent();
     return nullptr;
   }
 

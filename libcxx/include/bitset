@@ -113,10 +113,6 @@ template <size_t N> struct hash<std::bitset<N>>;
 
 */
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
-#endif
-
 #include <__config>
 #include <__bit_reference>
 #include <cstddef>
@@ -126,7 +122,13 @@ template <size_t N> struct hash<std::bitset<N>>;
 #include <iosfwd>
 #include <__functional_base>
 
-#include <__undef_min_max>
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -1089,5 +1091,7 @@ basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const bitset<_Size>& __x);
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_BITSET

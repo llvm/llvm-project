@@ -300,13 +300,13 @@ template <class ELFT> void Writer<ELFT>::run() {
   openFile();
   if (ErrorCount)
     return;
+  clearOutputSections();
   if (!Config->OFormatBinary) {
     writeHeader();
     writeSections();
   } else {
     writeSectionsBinary();
   }
-  clearOutputSections();
 
   // Backfill .note.gnu.build-id section content. This is done at last
   // because the content is usually a hash value of the entire output file.
@@ -613,27 +613,27 @@ bool elf::isRelroSection(const OutputSection *Sec) {
   // .got contains pointers to external symbols. They are resolved by
   // the dynamic linker when a module is loaded into memory, and after
   // that they are not expected to change. So, it can be in RELRO.
-  if (InX::Got && Sec == InX::Got->OutSec)
+  if (InX::Got && Sec == InX::Got->getParent())
     return true;
 
   // .got.plt contains pointers to external function symbols. They are
   // by default resolved lazily, so we usually cannot put it into RELRO.
   // However, if "-z now" is given, the lazy symbol resolution is
   // disabled, which enables us to put it into RELRO.
-  if (Sec == InX::GotPlt->OutSec)
+  if (Sec == InX::GotPlt->getParent())
     return Config->ZNow;
 
   // .dynamic section contains data for the dynamic linker, and
   // there's no need to write to it at runtime, so it's better to put
   // it into RELRO.
-  if (Sec == InX::Dynamic->OutSec)
+  if (Sec == InX::Dynamic->getParent())
     return true;
 
   // .bss.rel.ro is used for copy relocations for read-only symbols.
   // Since the dynamic linker needs to process copy relocations, the
   // section cannot be read-only, but once initialized, they shouldn't
   // change.
-  if (Sec == InX::BssRelRo->OutSec)
+  if (Sec == InX::BssRelRo->getParent())
     return true;
 
   // Sections with some special names are put into RELRO. This is a
@@ -1112,9 +1112,9 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
 static void applySynthetic(const std::vector<SyntheticSection *> &Sections,
                            std::function<void(SyntheticSection *)> Fn) {
   for (SyntheticSection *SS : Sections)
-    if (SS && SS->OutSec && !SS->empty()) {
+    if (SS && SS->getParent() && !SS->empty()) {
       Fn(SS);
-      SS->OutSec->assignOffsets();
+      SS->getParent()->assignOffsets();
     }
 }
 
@@ -1130,16 +1130,15 @@ static void removeUnusedSyntheticSections(std::vector<OutputSection *> &V) {
     SyntheticSection *SS = dyn_cast<SyntheticSection>(S);
     if (!SS)
       return;
-    if (!SS->empty() || !SS->OutSec)
+    OutputSection *OS = SS->getParent();
+    if (!SS->empty() || !OS)
       continue;
-
-    SS->OutSec->Sections.erase(std::find(SS->OutSec->Sections.begin(),
-                                         SS->OutSec->Sections.end(), SS));
+    OS->Sections.erase(std::find(OS->Sections.begin(), OS->Sections.end(), SS));
     SS->Live = false;
     // If there are no other sections in the output section, remove it from the
     // output.
-    if (SS->OutSec->Sections.empty())
-      V.erase(std::find(V.begin(), V.end(), SS->OutSec));
+    if (OS->Sections.empty())
+      V.erase(std::find(V.begin(), V.end(), OS));
   }
 }
 
@@ -1427,8 +1426,8 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
 
   // Add an entry for .dynamic.
   if (InX::DynSymTab)
-    AddHdr(PT_DYNAMIC, InX::Dynamic->OutSec->getPhdrFlags())
-        ->add(InX::Dynamic->OutSec);
+    AddHdr(PT_DYNAMIC, InX::Dynamic->getParent()->getPhdrFlags())
+        ->add(InX::Dynamic->getParent());
 
   // PT_GNU_RELRO includes all sections that should be marked as
   // read-only by dynamic linker after proccessing relocations.
@@ -1441,9 +1440,9 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
 
   // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
   if (!In<ELFT>::EhFrame->empty() && In<ELFT>::EhFrameHdr &&
-      In<ELFT>::EhFrame->OutSec && In<ELFT>::EhFrameHdr->OutSec)
-    AddHdr(PT_GNU_EH_FRAME, In<ELFT>::EhFrameHdr->OutSec->getPhdrFlags())
-        ->add(In<ELFT>::EhFrameHdr->OutSec);
+      In<ELFT>::EhFrame->getParent() && In<ELFT>::EhFrameHdr->getParent())
+    AddHdr(PT_GNU_EH_FRAME, In<ELFT>::EhFrameHdr->getParent()->getPhdrFlags())
+        ->add(In<ELFT>::EhFrameHdr->getParent());
 
   // PT_OPENBSD_RANDOMIZE is an OpenBSD-specific feature. That makes
   // the dynamic linker fill the segment with random data.
@@ -1695,16 +1694,14 @@ template <class ELFT> void Writer<ELFT>::fixPredefinedSymbols() {
 
   // Setup MIPS _gp_disp/__gnu_local_gp symbols which should
   // be equal to the _gp symbol's value.
-  if (Config->EMachine == EM_MIPS) {
-    if (!ElfSym::MipsGp->Value) {
-      // Find GP-relative section with the lowest address
-      // and use this address to calculate default _gp value.
-      uint64_t Gp = -1;
-      for (const OutputSection *OS : OutputSections)
-        if ((OS->Flags & SHF_MIPS_GPREL) && OS->Addr < Gp)
-          Gp = OS->Addr;
-      if (Gp != (uint64_t)-1)
-        ElfSym::MipsGp->Value = Gp + 0x7ff0;
+  if (Config->EMachine == EM_MIPS && !ElfSym::MipsGp->Value) {
+    // Find GP-relative section with the lowest address
+    // and use this address to calculate default _gp value.
+    for (const OutputSection *OS : OutputSections) {
+      if (OS->Flags & SHF_MIPS_GPREL) {
+        ElfSym::MipsGp->Value = OS->Addr + 0x7ff0;
+        break;
+      }
     }
   }
 }
@@ -1728,7 +1725,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_phnum = Phdrs.size();
   EHdr->e_shentsize = sizeof(Elf_Shdr);
   EHdr->e_shnum = OutputSectionCommands.size() + 1;
-  EHdr->e_shstrndx = InX::ShStrTab->OutSec->SectionIndex;
+  EHdr->e_shstrndx = InX::ShStrTab->getParent()->SectionIndex;
 
   if (Config->EMachine == EM_ARM)
     // We don't currently use any features incompatible with EF_ARM_EABI_VER5,
@@ -1804,7 +1801,7 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
 
   OutputSection *EhFrameHdr =
       (In<ELFT>::EhFrameHdr && !In<ELFT>::EhFrameHdr->empty())
-          ? In<ELFT>::EhFrameHdr->OutSec
+          ? In<ELFT>::EhFrameHdr->getParent()
           : nullptr;
 
   // In -r or -emit-relocs mode, write the relocation sections first as in
@@ -1832,7 +1829,7 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
 }
 
 template <class ELFT> void Writer<ELFT>::writeBuildId() {
-  if (!InX::BuildId || !InX::BuildId->OutSec)
+  if (!InX::BuildId || !InX::BuildId->getParent())
     return;
 
   // Compute a hash of all sections of the output file.

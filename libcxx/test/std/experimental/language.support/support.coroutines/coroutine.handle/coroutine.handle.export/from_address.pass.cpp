@@ -9,18 +9,13 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// REQUIRES: fcoroutines-ts
-
-// RUN: %build -fcoroutines-ts
-// RUN: %run
 
 // <experimental/coroutine>
 
 // template <class Promise = void>
 // struct coroutine_handle;
 
-// constexpr coroutine_handle() noexcept
-// constexpr coroutine_handle(nullptr_t) noexcept
+// static coroutine_handle from_address(void*) noexcept
 
 #include <experimental/coroutine>
 #include <type_traits>
@@ -31,22 +26,16 @@ namespace coro = std::experimental;
 template <class C>
 void do_test() {
   {
-    constexpr C c;
-    static_assert(std::is_nothrow_default_constructible<C>::value, "");
-    static_assert(c.address() == nullptr, "");
-  }
-  {
-    constexpr C c(nullptr);
-    static_assert(std::is_nothrow_constructible<C, std::nullptr_t>::value, "");
-    static_assert(c.address() == nullptr, "");
-  }
-  {
-    C c;
+    C c = C::from_address(nullptr);
+    static_assert(noexcept(C::from_address(nullptr)), "");
+    // FIXME: Should the return type not be 'C'?
+    static_assert(std::is_same<decltype(C::from_address(nullptr)), C>::value, "");
     assert(c.address() == nullptr);
   }
   {
-    C c(nullptr);
-    assert(c.address() == nullptr);
+    char dummy = 42;
+    C c = C::from_address((void*)&dummy);
+    assert(c.address() == &dummy);
   }
 }
 

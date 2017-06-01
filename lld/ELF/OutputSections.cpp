@@ -76,10 +76,10 @@ static bool compareByFilePosition(InputSection *A, InputSection *B) {
   if (A->kind() == InputSectionBase::Synthetic ||
       B->kind() == InputSectionBase::Synthetic)
     return false;
-  auto *LA = cast<InputSection>(A->getLinkOrderDep());
-  auto *LB = cast<InputSection>(B->getLinkOrderDep());
-  OutputSection *AOut = LA->OutSec;
-  OutputSection *BOut = LB->OutSec;
+  InputSection *LA = A->getLinkOrderDep();
+  InputSection *LB = B->getLinkOrderDep();
+  OutputSection *AOut = LA->getParent();
+  OutputSection *BOut = LB->getParent();
   if (AOut != BOut)
     return AOut->SectionIndex < BOut->SectionIndex;
   return LA->OutSecOff < LB->OutSecOff;
@@ -115,7 +115,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
 template <class ELFT> static void finalizeShtGroup(OutputSection *Sec) {
   // sh_link field for SHT_GROUP sections should contain the section index of
   // the symbol table.
-  Sec->Link = InX::SymTab->OutSec->SectionIndex;
+  Sec->Link = InX::SymTab->getParent()->SectionIndex;
 
   // sh_info then contain index of an entry in symbol table section which
   // provides signature of the section group.
@@ -135,7 +135,7 @@ template <class ELFT> void OutputSection::finalize() {
     // need to translate the InputSection sh_link to the OutputSection sh_link,
     // all InputSections in the OutputSection have the same dependency.
     if (auto *D = this->Sections.front()->getLinkOrderDep())
-      this->Link = D->OutSec->SectionIndex;
+      this->Link = D->getParent()->SectionIndex;
   }
 
   uint32_t Type = this->Type;
@@ -151,11 +151,11 @@ template <class ELFT> void OutputSection::finalize() {
   if (isa<SyntheticSection>(First))
     return;
 
-  this->Link = InX::SymTab->OutSec->SectionIndex;
+  this->Link = InX::SymTab->getParent()->SectionIndex;
   // sh_info for SHT_REL[A] sections should contain the section header index of
   // the section to which the relocation applies.
   InputSectionBase *S = First->getRelocatedSection();
-  this->Info = S->OutSec->SectionIndex;
+  Info = S->getOutputSection()->SectionIndex;
 }
 
 static uint64_t updateOffset(uint64_t Off, InputSection *S) {
@@ -167,7 +167,7 @@ static uint64_t updateOffset(uint64_t Off, InputSection *S) {
 void OutputSection::addSection(InputSection *S) {
   assert(S->Live);
   Sections.push_back(S);
-  S->OutSec = this;
+  S->Parent = this;
   this->updateAlignment(S->Alignment);
 
   // The actual offsets will be computed by assignAddresses. For now, use

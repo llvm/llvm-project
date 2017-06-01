@@ -9,17 +9,13 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// REQUIRES: fcoroutines-ts
-
-// RUN: %build -fcoroutines-ts
-// RUN: %run
 
 // <experimental/coroutine>
 
-// template <class Promise = void>
-// struct coroutine_handle;
+// template <class Promise>
+// struct coroutine_handle<Promise>;
 
-// bool done() const
+// Promise& promise() const
 
 #include <experimental/coroutine>
 #include <type_traits>
@@ -33,16 +29,21 @@
 namespace coro = std::experimental;
 
 template <class Promise>
-void do_test(coro::coroutine_handle<Promise> const& H) {
+void do_test(coro::coroutine_handle<Promise>&& H) {
+
   // FIXME Add a runtime test
   {
-    ASSERT_SAME_TYPE(decltype(H.done()), bool);
-    ASSERT_NOT_NOEXCEPT(H.done());
+    ASSERT_SAME_TYPE(decltype(H.promise()), Promise&);
+    LIBCPP_ASSERT_NOT_NOEXCEPT(H.promise());
+  }
+  {
+    auto const& CH = H;
+    ASSERT_SAME_TYPE(decltype(CH.promise()), Promise&);
+    LIBCPP_ASSERT_NOT_NOEXCEPT(CH.promise());
   }
 }
 
 int main()
 {
-  do_test(coro::coroutine_handle<>{});
   do_test(coro::coroutine_handle<int>{});
 }

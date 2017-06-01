@@ -1015,7 +1015,7 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *IS, OutputSection *OS) {
   ThunkSection *TS = ThunkedSections.lookup(IS);
   if (TS)
     return TS;
-  auto *TOS = cast<OutputSection>(IS->OutSec);
+  auto *TOS = IS->getParent();
   TS = make<ThunkSection>(TOS, IS->OutSecOff);
   ThunkSections[TOS].push_back(TS);
   ThunkedSections[IS] = TS;

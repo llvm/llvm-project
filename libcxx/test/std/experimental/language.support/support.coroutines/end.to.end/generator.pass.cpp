@@ -9,13 +9,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// REQUIRES: fcoroutines-ts
 
 // FIXME: When run under UBSAN this test hits an assertion inside Clang
 // XFAIL: ubsan
-
-// RUN: %build -fcoroutines-ts
-// RUN: %run
 
 #include <experimental/coroutine>
 #include <vector>

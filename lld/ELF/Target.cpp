@@ -62,10 +62,10 @@ static void or32be(uint8_t *P, int32_t V) { write32be(P, read32be(P) | V); }
 template <class ELFT> static std::string getErrorLoc(const uint8_t *Loc) {
   for (InputSectionBase *D : InputSections) {
     auto *IS = dyn_cast_or_null<InputSection>(D);
-    if (!IS || !IS->OutSec)
+    if (!IS || !IS->getParent())
       continue;
 
-    uint8_t *ISLoc = cast<OutputSection>(IS->OutSec)->Loc + IS->OutSecOff;
+    uint8_t *ISLoc = IS->getParent()->Loc + IS->OutSecOff;
     if (ISLoc <= Loc && Loc < ISLoc + IS->getSize())
       return IS->template getLocation<ELFT>(Loc - ISLoc) + ": ";
   }

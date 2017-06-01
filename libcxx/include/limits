@@ -102,14 +102,7 @@ template<> class numeric_limits<cv long double>;
 
 */
 #include <__config>
-
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
-#endif
-
 #include <type_traits>
-
-#include <__undef_min_max>
 
 #if defined(_LIBCPP_COMPILER_MSVC)
 #include "support/win32/limits_msvc_win32.h"
@@ -118,6 +111,14 @@ template<> class numeric_limits<cv long double>;
 #if defined(__IBMCPP__)
 #include "support/ibm/limits.h"
 #endif // __IBMCPP__
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -810,5 +811,7 @@ template <class _Tp>
     _LIBCPP_CONSTEXPR const float_round_style numeric_limits<const volatile _Tp>::round_style;
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_LIMITS

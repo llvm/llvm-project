@@ -52,20 +52,21 @@ size_t wcsnrtombs_l( char *__restrict dst, const wchar_t **__restrict src,
                      size_t nwc, size_t len, mbstate_t *__restrict ps, locale_t loc);
 wint_t btowc_l( int c, locale_t loc );
 int wctob_l( wint_t c, locale_t loc );
-inline _LIBCPP_ALWAYS_INLINE
-decltype(MB_CUR_MAX) MB_CUR_MAX_L( locale_t __l )
-{
-  return ___mb_cur_max_l_func(__l);
-}
+
+decltype(MB_CUR_MAX) MB_CUR_MAX_L( locale_t __l );
 
 // the *_l functions are prefixed on Windows, only available for msvcr80+, VS2005+
 #define mbtowc_l _mbtowc_l
 #define strtoll_l _strtoi64_l
 #define strtoull_l _strtoui64_l
-#define strtof_l _strtof_l
 #define strtod_l _strtod_l
+#if defined(_LIBCPP_MSVCRT)
+#define strtof_l _strtof_l
 #define strtold_l _strtold_l
-
+#else
+float strtof_l(const char*, char**, locale_t);
+long double strtold_l(const char*, char**, locale_t);
+#endif
 inline _LIBCPP_INLINE_VISIBILITY
 int
 islower_l(int c, _locale_t loc)
