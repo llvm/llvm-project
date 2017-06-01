@@ -53,6 +53,11 @@
 // RUN: %clang_cl /c -### /Zc:inline- -- %s 2>&1 | FileCheck -check-prefix=INLINE-OFF %s
 // INLINE-OFF: argument unused during compilation
 
+// RUN: %clang_cl /c -### /Zc:ternary -- %s 2>&1 | FileCheck -check-prefix=TERNARY-ON %s
+// TERNARY-ON-NOT: argument unused during compilation
+// RUN: %clang_cl /c -### /Zc:ternary- -- %s 2>&1 | FileCheck -check-prefix=TERNARY-OFF %s
+// TERNARY-OFF: argument unused during compilation
+
 
 // These never warn, but don't have an effect yet.
 

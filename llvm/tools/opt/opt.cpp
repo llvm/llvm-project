@@ -518,7 +518,9 @@ int main(int argc, char **argv) {
   if (PassPipeline.getNumOccurrences() > 0) {
     OutputKind OK = OK_NoOutput;
     if (!NoOutput)
-      OK = OutputAssembly ? OK_OutputAssembly : OK_OutputBitcode;
+      OK = OutputAssembly
+               ? OK_OutputAssembly
+               : (OutputThinLTOBC ? OK_OutputThinLTOBitcode : OK_OutputBitcode);
 
     VerifierKind VK = VK_VerifyInAndOut;
     if (NoVerify)
@@ -529,7 +531,7 @@ int main(int argc, char **argv) {
     // The user has asked to use the new pass manager and provided a pipeline
     // string. Hand off the rest of the functionality to the new code for that
     // layer.
-    return runPassPipeline(argv[0], *M, TM.get(), Out.get(),
+    return runPassPipeline(argv[0], *M, TM.get(), Out.get(), ThinLinkOut.get(),
                            PassPipeline, OK, VK, PreserveAssemblyUseListOrder,
                            PreserveBitcodeUseListOrder, EmitSummaryIndex,
                            EmitModuleHash)

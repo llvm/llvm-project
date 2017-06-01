@@ -166,7 +166,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_PREFERRED_OVERLOAD
 }
 #endif
 
-#if defined(__cplusplus) && defined(_LIBCPP_MSVCRT)
+#if defined(__cplusplus) && defined(_LIBCPP_MSVCRT_LIKE)
 extern "C" {
 size_t mbsnrtowcs(wchar_t *__restrict dst, const char **__restrict src,
                   size_t nmc, size_t len, mbstate_t *__restrict ps);

@@ -180,9 +180,9 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
     // Next feature
     Record *Feature = FeatureList[i];
 
-    const std::string &Name = Feature->getName();
-    const std::string &CommandLineName = Feature->getValueAsString("Name");
-    const std::string &Desc = Feature->getValueAsString("Desc");
+    StringRef Name = Feature->getName();
+    StringRef CommandLineName = Feature->getValueAsString("Name");
+    StringRef Desc = Feature->getValueAsString("Desc");
 
     if (CommandLineName.empty()) continue;
 
@@ -237,7 +237,7 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
     // Next processor
     Record *Processor = ProcessorList[i];
 
-    const std::string &Name = Processor->getValueAsString("Name");
+    StringRef Name = Processor->getValueAsString("Name");
     const std::vector<Record*> &FeatureList =
       Processor->getValueAsListOfDefs("Features");
 
@@ -1212,7 +1212,7 @@ void SubtargetEmitter::EmitProcessorLookup(raw_ostream &OS) {
     // Next processor
     Record *Processor = ProcessorList[i];
 
-    const std::string &Name = Processor->getValueAsString("Name");
+    StringRef Name = Processor->getValueAsString("Name");
     const std::string &ProcModelName =
       SchedModels.getModelForProc(Processor).ModelName;
 
@@ -1360,9 +1360,9 @@ void SubtargetEmitter::ParseFeaturesFunction(raw_ostream &OS,
 
   for (Record *R : Features) {
     // Next record
-    const std::string &Instance = R->getName();
-    const std::string &Value = R->getValueAsString("Value");
-    const std::string &Attribute = R->getValueAsString("Attribute");
+    StringRef Instance = R->getName();
+    StringRef Value = R->getValueAsString("Value");
+    StringRef Attribute = R->getValueAsString("Attribute");
 
     if (Value=="true" || Value=="false")
       OS << "  if (Bits[" << Target << "::"

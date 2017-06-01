@@ -1,12 +1,11 @@
 // Check that unloading a module doesn't break coverage dumping for remaining
 // modules.
-// RUN: %clangxx_asan -fsanitize-coverage=func -DSHARED %s -shared -o %dynamiclib1 -fPIC
-// RUN: %clangxx_asan -fsanitize-coverage=func -DSHARED %s -shared -o %dynamiclib2 -fPIC
-// RUN: %clangxx_asan -fsanitize-coverage=func %s %libdl -o %t
-// RUN: mkdir -p %T/coverage-module-unloaded && cd %T/coverage-module-unloaded
-// RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t %dynamiclib1 %dynamiclib2 2>&1        | FileCheck %s
-// RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t %dynamiclib1 %dynamiclib2 foo 2>&1    | FileCheck %s
-// RUN: rm -r %T/coverage-module-unloaded
+// RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard -DSHARED %s -shared -o %dynamiclib1 -fPIC
+// RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard -DSHARED %s -shared -o %dynamiclib2 -fPIC
+// RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard %s %libdl -o %t.exe
+// RUN: mkdir -p %t.tmp/coverage-module-unloaded && cd %t.tmp/coverage-module-unloaded
+// RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t.exe %dynamiclib1 %dynamiclib2 2>&1        | FileCheck %s
+// RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t.exe %dynamiclib1 %dynamiclib2 foo 2>&1    | FileCheck %s
 //
 // https://code.google.com/p/address-sanitizer/issues/detail?id=263
 // XFAIL: android
@@ -48,8 +47,5 @@ int main(int argc, char **argv) {
 #endif
 
 // CHECK: PID: [[PID:[0-9]+]]
-// CHECK: [[PID]].sancov: 1 PCs written
-// CHECK: coverage-module-unloaded{{.*}}1.[[PID]]
-// CHECK: coverage-module-unloaded{{.*}}2.[[PID]]
-// Even though we've unloaded one of the libs we still dump the coverage file
-// for that lib (although the data will be inaccurate, if at all useful)
+// CHECK-DAG: exe{{.*}}[[PID]].sancov: {{.*}}PCs written
+// CHECK-DAG: dynamic{{.*}}[[PID]].sancov: {{.*}}PCs written

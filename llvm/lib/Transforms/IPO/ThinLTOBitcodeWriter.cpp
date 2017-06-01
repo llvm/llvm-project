@@ -6,14 +6,8 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// This pass prepares a module containing type metadata for ThinLTO by splitting
-// it into regular and thin LTO parts if possible, and writing both parts to
-// a multi-module bitcode file. Modules that do not contain type metadata are
-// written unmodified as a single module.
-//
-//===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -435,4 +429,16 @@ INITIALIZE_PASS_END(WriteThinLTOBitcode, "write-thinlto-bitcode",
 ModulePass *llvm::createWriteThinLTOBitcodePass(raw_ostream &Str,
                                                 raw_ostream *ThinLinkOS) {
   return new WriteThinLTOBitcode(Str, ThinLinkOS);
+}
+
+PreservedAnalyses
+llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  writeThinLTOBitcode(OS, ThinLinkOS,
+                      [&FAM](Function &F) -> AAResults & {
+                        return FAM.getResult<AAManager>(F);
+                      },
+                      M, &AM.getResult<ModuleSummaryIndexAnalysis>(M));
+  return PreservedAnalyses::all();
 }

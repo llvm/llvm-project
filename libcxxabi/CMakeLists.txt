@@ -1,3 +1,5 @@
+# See www/CMake.html for instructions on how to build libcxxabi with CMake.
+
 #===============================================================================
 # Setup Project
 #===============================================================================
@@ -16,121 +18,28 @@ set(CMAKE_MODULE_PATH
   )
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  project(libcxxabi)
-
-  # Rely on llvm-config.
-  set(CONFIG_OUTPUT)
-  if (NOT LLVM_CONFIG_PATH)
-    find_program(LLVM_CONFIG_PATH "llvm-config")
-  endif()
-  if(DEFINED LLVM_PATH)
-    set(LLVM_INCLUDE_DIR ${LLVM_INCLUDE_DIR} CACHE PATH "Path to llvm/include")
-    set(LLVM_PATH ${LLVM_PATH} CACHE PATH "Path to LLVM source tree")
-    set(LLVM_MAIN_SRC_DIR ${LLVM_PATH})
-    set(LLVM_CMAKE_PATH "${LLVM_PATH}/cmake/modules")
-  elseif(LLVM_CONFIG_PATH)
-    message(STATUS "Found LLVM_CONFIG_PATH as ${LLVM_CONFIG_PATH}")
-    set(CONFIG_COMMAND ${LLVM_CONFIG_PATH}
-      "--includedir"
-      "--prefix"
-      "--src-root")
-    execute_process(
-      COMMAND ${CONFIG_COMMAND}
-      RESULT_VARIABLE HAD_ERROR
-      OUTPUT_VARIABLE CONFIG_OUTPUT
-    )
-    if(NOT HAD_ERROR)
-      string(REGEX REPLACE
-        "[ \t]*[\r\n]+[ \t]*" ";"
-        CONFIG_OUTPUT ${CONFIG_OUTPUT})
-    else()
-      string(REPLACE ";" " " CONFIG_COMMAND_STR "${CONFIG_COMMAND}")
-      message(STATUS "${CONFIG_COMMAND_STR}")
-      message(FATAL_ERROR "llvm-config failed with status ${HAD_ERROR}")
-    endif()
-
-    list(GET CONFIG_OUTPUT 0 INCLUDE_DIR)
-    list(GET CONFIG_OUTPUT 1 LLVM_OBJ_ROOT)
-    list(GET CONFIG_OUTPUT 2 MAIN_SRC_DIR)
-
-    set(LLVM_INCLUDE_DIR ${INCLUDE_DIR} CACHE PATH "Path to llvm/include")
-    set(LLVM_BINARY_DIR ${LLVM_OBJ_ROOT} CACHE PATH "Path to LLVM build tree")
-    set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
-    set(LLVM_LIT_PATH "${LLVM_PATH}/utils/lit/lit.py")
-
-    # --cmakedir is supported since llvm r291218 (4.0 release)
-    execute_process(
-      COMMAND ${LLVM_CONFIG_PATH} --cmakedir
-      RESULT_VARIABLE HAD_ERROR
-      OUTPUT_VARIABLE CONFIG_OUTPUT
-      ERROR_QUIET)
-    if(NOT HAD_ERROR)
-      string(STRIP "${CONFIG_OUTPUT}" LLVM_CMAKE_PATH)
-    else()
-      set(LLVM_CMAKE_PATH
-          "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
-    endif()
-  else()
-    message(FATAL_ERROR "llvm-config not found and LLVM_MAIN_SRC_DIR not defined. "
-                        "Reconfigure with -DLLVM_CONFIG_PATH=path/to/llvm-config "
-                        "or -DLLVM_PATH=path/to/llvm-source-root.")
-  endif()
-
-  if(EXISTS ${LLVM_CMAKE_PATH})
-    list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
-    include("${LLVM_CMAKE_PATH}/AddLLVM.cmake")
-    include("${LLVM_CMAKE_PATH}/HandleLLVMOptions.cmake")
-  else()
-    message(FATAL_ERROR "Not found: ${LLVM_CMAKE_PATH}")
-  endif()
+  project(libcxxabi CXX C)
 
   set(PACKAGE_NAME libcxxabi)
   set(PACKAGE_VERSION 5.0.0svn)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
-  if (NOT DEFINED LLVM_INCLUDE_TESTS)
-    set(LLVM_INCLUDE_TESTS ON)
-  endif()
-
-  if(EXISTS ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
-    set(LLVM_LIT ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
-  else()
-    # Seek installed Lit.
-    find_program(LLVM_LIT "lit.py" ${LLVM_MAIN_SRC_DIR}/utils/lit
-      DOC "Path to lit.py")
-  endif()
-
-  if(LLVM_LIT)
-    # Define the default arguments to use with 'lit', and an option for the user
-    # to override.
-    set(LIT_ARGS_DEFAULT "-sv")
-    if (MSVC OR XCODE)
-      set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
-    endif()
-    set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
-
-    # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
-    if( WIN32 AND NOT CYGWIN )
-      set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to GnuWin32 tools")
-    endif()
-  else()
-    set(LLVM_INCLUDE_TESTS OFF)
-  endif()
-
-  set(LIBCXXABI_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
-      "Define suffix of library directory name (32/64)")
-
-  set(LIBCXXABI_STANDALONE_BUILD 1)
-else()
-  set(LLVM_MAIN_SRC_DIR "${CMAKE_SOURCE_DIR}" CACHE PATH "Path to LLVM source tree")
-  set(LLVM_LIT "${CMAKE_SOURCE_DIR}/utils/lit/lit.py")
-  set(LIBCXXABI_LIBDIR_SUFFIX ${LLVM_LIBDIR_SUFFIX})
+  # Find the LLVM sources and simulate LLVM CMake options.
+  include(HandleOutOfTreeLLVM)
 endif()
+
+# Require out of source build.
+include(MacroEnsureOutOfSourceBuild)
+MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
+ "${PROJECT_NAME} requires an out of source build. Please create a separate
+ build directory and run 'cmake /path/to/${PROJECT_NAME} [options]' there."
+ )
 
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
+include(CMakeDependentOption)
 include(HandleCompilerRT)
 
 # Define options.
@@ -247,6 +156,7 @@ endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
 
 # By default, for non-standalone builds, libcxx and libcxxabi share a library
 # directory.
@@ -264,30 +174,26 @@ elseif(LIBCXXABI_BUILD_32_BITS)
   message(FATAL_ERROR "LIBCXXABI_BUILD_32_BITS=ON is not supported on this platform.")
 endif()
 
-#===============================================================================
-# Setup Compiler Flags
-#===============================================================================
-
-# Get required flags.
-macro(append_if list condition var)
-  if (${condition})
-    list(APPEND ${list} ${var})
-  endif()
-endmacro()
-
-macro(add_target_flags_if condition var)
-  if (${condition})
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${var}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${var}")
-    list(APPEND LIBCXXABI_COMPILE_FLAGS ${var})
-    list(APPEND LIBCXXABI_LINK_FLAGS ${var})
-  endif()
-endmacro()
+# Declare libc++abi configuration variables.
+# They are intended for use as follows:
+# LIBCXXABI_C_FLAGS: General flags for both the c++ compiler and linker.
+# LIBCXXABI_CXX_FLAGS: General flags for both the c++ compiler and linker.
+# LIBCXXABI_COMPILE_FLAGS: Compile only flags.
+# LIBCXXABI_LINK_FLAGS: Linker only flags.
+# LIBCXXABI_LIBRARIES: libraries libc++abi is linked to.
 
 set(LIBCXXABI_C_FLAGS "")
 set(LIBCXXABI_CXX_FLAGS "")
 set(LIBCXXABI_COMPILE_FLAGS "")
 set(LIBCXXABI_LINK_FLAGS "")
+set(LIBCXXABI_LIBRARIES "")
+
+# Include macros for adding and removing libc++abi flags.
+include(HandleLibcxxabiFlags)
+
+#===============================================================================
+# Setup Compiler Flags
+#===============================================================================
 
 # Configure target flags
 add_target_flags_if(LIBCXXABI_BUILD_32_BITS "-m32")
@@ -325,53 +231,54 @@ if (WIN32 AND LIBCXXABI_ENABLE_STATIC AND NOT LIBCXXABI_ENABLE_SHARED)
   add_definitions(-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS)
 endif()
 
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WERROR_FLAG -Werror=return-type)
+add_compile_flags_if_supported(-Werror=return-type)
 
 # Get warning flags
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_W_FLAG -W)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WALL_FLAG -Wall)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WCHAR_SUBSCRIPTS_FLAG -Wchar-subscripts)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WCONVERSION_FLAG -Wconversion)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WMISMATCHED_TAGS_FLAG -Wmismatched-tags)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WMISSING_BRACES_FLAG -Wmissing-braces)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WNEWLINE_EOF_FLAG -Wnewline-eof)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WUNUSED_FUNCTION_FLAG -Wunused-function)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WSHADOW_FLAG -Wshadow)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WSHORTEN_64_TO_32_FLAG -Wshorten-64-to-32)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WSIGN_COMPARE_FLAG -Wsign-compare)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WSIGN_CONVERSION_FLAG -Wsign-conversion)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WSTRICT_ALIASING_FLAG -Wstrict-aliasing=2)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WSTRICT_OVERFLOW_FLAG -Wstrict-overflow=4)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WUNUSED_PARAMETER_FLAG -Wunused-parameter)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WUNUSED_VARIABLE_FLAG -Wunused-variable)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WWRITE_STRINGS_FLAG -Wwrite-strings)
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WUNDEF_FLAG -Wundef)
+add_compile_flags_if_supported(-W)
+add_compile_flags_if_supported(-Wall)
+add_compile_flags_if_supported(-Wchar-subscripts)
+add_compile_flags_if_supported(-Wconversion)
+add_compile_flags_if_supported(-Wmismatched-tags)
+add_compile_flags_if_supported(-Wmissing-braces)
+add_compile_flags_if_supported(-Wnewline-eof)
+add_compile_flags_if_supported(-Wunused-function)
+add_compile_flags_if_supported(-Wshadow)
+add_compile_flags_if_supported(-Wshorten-64-to-32)
+add_compile_flags_if_supported(-Wsign-compare)
+add_compile_flags_if_supported(-Wsign-conversion)
+add_compile_flags_if_supported(-Wstrict-aliasing=2)
+add_compile_flags_if_supported(-Wstrict-overflow=4)
+add_compile_flags_if_supported(-Wunused-parameter)
+add_compile_flags_if_supported(-Wunused-variable)
+add_compile_flags_if_supported(-Wwrite-strings)
+add_compile_flags_if_supported(-Wundef)
 
 if (LIBCXXABI_ENABLE_WERROR)
-  append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WERROR_FLAG -Werror)
-  append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WX_FLAG -WX)
+  add_compile_flags_if_supported(-Werror)
+  add_compile_flags_if_supported(-WX)
 else()
-  append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WNO_ERROR_FLAG -Wno-error)
-  append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_NO_WX_FLAG -WX-)
+  add_compile_flags_if_supported(-Wno-error)
+  add_compile_flags_if_supported(-WX-)
 endif()
 if (LIBCXXABI_ENABLE_PEDANTIC)
-  append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_PEDANTIC_FLAG -pedantic)
+  add_compile_flags_if_supported(-pedantic)
 endif()
 
 # Get feature flags.
-append_if(LIBCXXABI_CXX_FLAGS LIBCXXABI_HAS_FSTRICT_ALIASING_FLAG -fstrict-aliasing)
+add_compile_flags_if_supported(-fstrict-aliasing)
 
 # Exceptions
 if (LIBCXXABI_ENABLE_EXCEPTIONS)
   # Catches C++ exceptions only and tells the compiler to assume that extern C
   # functions never throw a C++ exception.
-  append_if(LIBCXXABI_CXX_FLAGS LIBCXXABI_HAS_EHSC_FLAG -EHsc)
-  append_if(LIBCXXABI_C_FLAGS LIBCXXABI_HAS_FUNWIND_TABLES -funwind-tables)
+  add_compile_flags_if_supported(-EHsc)
+  # Do we really need to be run through the C compiler ?
+  add_c_compile_flags_if_supported(-funwind-tables)
 else()
   add_definitions(-D_LIBCXXABI_NO_EXCEPTIONS)
-  append_if(LIBCXXABI_CXX_FLAGS LIBCXXABI_HAS_NO_EXCEPTIONS_FLAG -fno-exceptions)
-  append_if(LIBCXXABI_CXX_FLAGS LIBCXXABI_HAS_NO_EHS_FLAG -EHs-)
-  append_if(LIBCXXABI_CXX_FLAGS LIBCXXABI_HAS_NO_EHA_FLAG -EHa-)
+  add_compile_flags_if_supported(-fno-exceptions)
+  add_compile_flags_if_supported(-EHs-)
+  add_compile_flags_if_supported(-EHa-)
 endif()
 
 # Assert
@@ -504,31 +411,12 @@ if (LIBCXXABI_USE_LLVM_UNWINDER OR LLVM_NATIVE_ARCH MATCHES ARM)
     NO_DEFAULT_PATH
   )
 
-  find_path(
-    LIBCXXABI_LIBUNWIND_SOURCES
-    libunwind_ext.h
-    PATHS ${LIBCXXABI_LIBUNWIND_PATH}/src/
-          ${LIBCXXABI_LIBUNWIND_INCLUDES}/../src/
-          ${LLVM_MAIN_SRC_DIR}/projects/libunwind/src/
-          ${LLVM_MAIN_SRC_DIR}/runtimes/libunwind/src/
-    NO_DEFAULT_PATH
-  )
-
-  if (LIBCXXABI_LIBUNWIND_SOURCES STREQUAL "LIBCXXABI_LIBUNWIND_SOURCES-NOTFOUND")
-    message(WARNING "LIBCXXABI_LIBUNWIND_SOURCES was not specified and couldn't be infered.")
-    set(LIBCXXABI_LIBUNWIND_SOURCES "")
-  endif()
-
   if (LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL STREQUAL "LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL-NOTFOUND")
     set(LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL "")
   endif()
 
   if (NOT LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL STREQUAL "")
     include_directories("${LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL}")
-  endif()
-
-  if (NOT LIBCXXABI_LIBUNWIND_SOURCES STREQUAL "")
-    include_directories("${LIBCXXABI_LIBUNWIND_SOURCES}")
   endif()
 endif()
 

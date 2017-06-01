@@ -161,7 +161,8 @@ public:
     ImmTyOpSel,
     ImmTyOpSelHi,
     ImmTyNegLo,
-    ImmTyNegHi
+    ImmTyNegHi,
+    ImmTySwizzle
   };
 
   struct TokOp {
@@ -474,6 +475,7 @@ public:
   bool isSWaitCnt() const;
   bool isHwreg() const;
   bool isSendMsg() const;
+  bool isSwizzle() const;
   bool isSMRDOffset8() const;
   bool isSMRDOffset20() const;
   bool isSMRDLiteralOffset() const;
@@ -659,6 +661,7 @@ public:
     case ImmTyOpSelHi: OS << "OpSelHi"; break;
     case ImmTyNegLo: OS << "NegLo"; break;
     case ImmTyNegHi: OS << "NegHi"; break;
+    case ImmTySwizzle: OS << "Swizzle"; break;
     }
   }
 
@@ -994,6 +997,12 @@ private:
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
   unsigned findImplicitSGPRReadInVOP(const MCInst &Inst) const;
 
+  bool trySkipId(const StringRef Id);
+  bool trySkipToken(const AsmToken::TokenKind Kind);
+  bool skipToken(const AsmToken::TokenKind Kind, const StringRef ErrMsg);
+  bool parseString(StringRef &Val, const StringRef ErrMsg = "expected a string");
+  bool parseExpr(int64_t &Imm);
+
 public:
   OperandMatchResultTy parseOptionalOperand(OperandVector &Operands);
 
@@ -1002,6 +1011,19 @@ public:
   OperandMatchResultTy parseInterpSlot(OperandVector &Operands);
   OperandMatchResultTy parseInterpAttr(OperandVector &Operands);
   OperandMatchResultTy parseSOppBrTarget(OperandVector &Operands);
+
+  bool parseSwizzleOperands(const unsigned OpNum, int64_t* Op,
+                            const unsigned MinVal,
+                            const unsigned MaxVal,
+                            const StringRef ErrMsg);
+  OperandMatchResultTy parseSwizzleOp(OperandVector &Operands);
+  bool parseSwizzleOffset(int64_t &Imm);
+  bool parseSwizzleMacro(int64_t &Imm);
+  bool parseSwizzleQuadPerm(int64_t &Imm);
+  bool parseSwizzleBitmaskPerm(int64_t &Imm);
+  bool parseSwizzleBroadcast(int64_t &Imm);
+  bool parseSwizzleSwap(int64_t &Imm);
+  bool parseSwizzleReverse(int64_t &Imm);
 
   void cvtMubuf(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, false, false); }
   void cvtMubufAtomic(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, true, false); }
@@ -2785,7 +2807,13 @@ void AMDGPUAsmParser::cvtDSImpl(MCInst &Inst, const OperandVector &Operands,
     OptionalIdx[Op.getImmTy()] = i;
   }
 
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOffset);
+  AMDGPUOperand::ImmTy OffsetType =
+    (Inst.getOpcode() == AMDGPU::DS_SWIZZLE_B32_si ||
+     Inst.getOpcode() == AMDGPU::DS_SWIZZLE_B32_vi) ? AMDGPUOperand::ImmTySwizzle :
+                                                      AMDGPUOperand::ImmTyOffset;
+
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, OffsetType);
+
   if (!IsGdsHardcoded) {
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGDS);
   }
@@ -3381,6 +3409,298 @@ AMDGPUAsmParser::parseSendMsgOp(OperandVector &Operands) {
 
 bool AMDGPUOperand::isSendMsg() const {
   return isImmTy(ImmTySendMsg);
+}
+
+//===----------------------------------------------------------------------===//
+// parser helpers
+//===----------------------------------------------------------------------===//
+
+bool
+AMDGPUAsmParser::trySkipId(const StringRef Id) {
+  if (getLexer().getKind() == AsmToken::Identifier &&
+      Parser.getTok().getString() == Id) {
+    Parser.Lex();
+    return true;
+  }
+  return false;
+}
+
+bool
+AMDGPUAsmParser::trySkipToken(const AsmToken::TokenKind Kind) {
+  if (getLexer().getKind() == Kind) {
+    Parser.Lex();
+    return true;
+  }
+  return false;
+}
+
+bool
+AMDGPUAsmParser::skipToken(const AsmToken::TokenKind Kind,
+                           const StringRef ErrMsg) {
+  if (!trySkipToken(Kind)) {
+    Error(Parser.getTok().getLoc(), ErrMsg);
+    return false;
+  }
+  return true;
+}
+
+bool
+AMDGPUAsmParser::parseExpr(int64_t &Imm) {
+  return !getParser().parseAbsoluteExpression(Imm);
+}
+
+bool
+AMDGPUAsmParser::parseString(StringRef &Val, const StringRef ErrMsg) {
+  SMLoc S = Parser.getTok().getLoc();
+  if (getLexer().getKind() == AsmToken::String) {
+    Val = Parser.getTok().getStringContents();
+    Parser.Lex();
+    return true;
+  } else {
+    Error(S, ErrMsg);
+    return false;
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// swizzle
+//===----------------------------------------------------------------------===//
+
+LLVM_READNONE
+static unsigned
+encodeBitmaskPerm(const unsigned AndMask,
+                  const unsigned OrMask,
+                  const unsigned XorMask) {
+  using namespace llvm::AMDGPU::Swizzle;
+
+  return BITMASK_PERM_ENC |
+         (AndMask << BITMASK_AND_SHIFT) |
+         (OrMask  << BITMASK_OR_SHIFT)  |
+         (XorMask << BITMASK_XOR_SHIFT);
+}
+
+bool
+AMDGPUAsmParser::parseSwizzleOperands(const unsigned OpNum, int64_t* Op,
+                                      const unsigned MinVal,
+                                      const unsigned MaxVal,
+                                      const StringRef ErrMsg) {
+  for (unsigned i = 0; i < OpNum; ++i) {
+    if (!skipToken(AsmToken::Comma, "expected a comma")){
+      return false;
+    }
+    SMLoc ExprLoc = Parser.getTok().getLoc();
+    if (!parseExpr(Op[i])) {
+      return false;
+    }
+    if (Op[i] < MinVal || Op[i] > MaxVal) {
+      Error(ExprLoc, ErrMsg);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool
+AMDGPUAsmParser::parseSwizzleQuadPerm(int64_t &Imm) {
+  using namespace llvm::AMDGPU::Swizzle;
+
+  int64_t Lane[LANE_NUM];
+  if (parseSwizzleOperands(LANE_NUM, Lane, 0, LANE_MAX,
+                           "expected a 2-bit lane id")) {
+    Imm = QUAD_PERM_ENC;
+    for (auto i = 0; i < LANE_NUM; ++i) {
+      Imm |= Lane[i] << (LANE_SHIFT * i);
+    }
+    return true;
+  }
+  return false;
+}
+
+bool
+AMDGPUAsmParser::parseSwizzleBroadcast(int64_t &Imm) {
+  using namespace llvm::AMDGPU::Swizzle;
+
+  SMLoc S = Parser.getTok().getLoc();
+  int64_t GroupSize;
+  int64_t LaneIdx;
+
+  if (!parseSwizzleOperands(1, &GroupSize,
+                            2, 32,
+                            "group size must be in the interval [2,32]")) {
+    return false;
+  }
+  if (!isPowerOf2_64(GroupSize)) {
+    Error(S, "group size must be a power of two");
+    return false;
+  }
+  if (parseSwizzleOperands(1, &LaneIdx,
+                           0, GroupSize - 1,
+                           "lane id must be in the interval [0,group size - 1]")) {
+    Imm = encodeBitmaskPerm(BITMASK_MAX - GroupSize + 1, LaneIdx, 0);
+    return true;
+  }
+  return false;
+}
+
+bool
+AMDGPUAsmParser::parseSwizzleReverse(int64_t &Imm) {
+  using namespace llvm::AMDGPU::Swizzle;
+
+  SMLoc S = Parser.getTok().getLoc();
+  int64_t GroupSize;
+
+  if (!parseSwizzleOperands(1, &GroupSize,
+      2, 32, "group size must be in the interval [2,32]")) {
+    return false;
+  }
+  if (!isPowerOf2_64(GroupSize)) {
+    Error(S, "group size must be a power of two");
+    return false;
+  }
+
+  Imm = encodeBitmaskPerm(BITMASK_MAX, 0, GroupSize - 1);
+  return true;
+}
+
+bool
+AMDGPUAsmParser::parseSwizzleSwap(int64_t &Imm) {
+  using namespace llvm::AMDGPU::Swizzle;
+
+  SMLoc S = Parser.getTok().getLoc();
+  int64_t GroupSize;
+
+  if (!parseSwizzleOperands(1, &GroupSize,
+      1, 16, "group size must be in the interval [1,16]")) {
+    return false;
+  }
+  if (!isPowerOf2_64(GroupSize)) {
+    Error(S, "group size must be a power of two");
+    return false;
+  }
+
+  Imm = encodeBitmaskPerm(BITMASK_MAX, 0, GroupSize);
+  return true;
+}
+
+bool
+AMDGPUAsmParser::parseSwizzleBitmaskPerm(int64_t &Imm) {
+  using namespace llvm::AMDGPU::Swizzle;
+
+  if (!skipToken(AsmToken::Comma, "expected a comma")) {
+    return false;
+  }
+
+  StringRef Ctl;
+  SMLoc StrLoc = Parser.getTok().getLoc();
+  if (!parseString(Ctl)) {
+    return false;
+  }
+  if (Ctl.size() != BITMASK_WIDTH) {
+    Error(StrLoc, "expected a 5-character mask");
+    return false;
+  }
+
+  unsigned AndMask = 0;
+  unsigned OrMask = 0;
+  unsigned XorMask = 0;
+
+  for (size_t i = 0; i < Ctl.size(); ++i) {
+    unsigned Mask = 1 << (BITMASK_WIDTH - 1 - i);
+    switch(Ctl[i]) {
+    default:
+      Error(StrLoc, "invalid mask");
+      return false;
+    case '0':
+      break;
+    case '1':
+      OrMask |= Mask;
+      break;
+    case 'p':
+      AndMask |= Mask;
+      break;
+    case 'i':
+      AndMask |= Mask;
+      XorMask |= Mask;
+      break;
+    }
+  }
+
+  Imm = encodeBitmaskPerm(AndMask, OrMask, XorMask);
+  return true;
+}
+
+bool
+AMDGPUAsmParser::parseSwizzleOffset(int64_t &Imm) {
+
+  SMLoc OffsetLoc = Parser.getTok().getLoc();
+
+  if (!parseExpr(Imm)) {
+    return false;
+  }
+  if (!isUInt<16>(Imm)) {
+    Error(OffsetLoc, "expected a 16-bit offset");
+    return false;
+  }
+  return true;
+}
+
+bool
+AMDGPUAsmParser::parseSwizzleMacro(int64_t &Imm) {
+  using namespace llvm::AMDGPU::Swizzle;
+
+  if (skipToken(AsmToken::LParen, "expected a left parentheses")) {
+
+    SMLoc ModeLoc = Parser.getTok().getLoc();
+    bool Ok = false;
+
+    if (trySkipId(IdSymbolic[ID_QUAD_PERM])) {
+      Ok = parseSwizzleQuadPerm(Imm);
+    } else if (trySkipId(IdSymbolic[ID_BITMASK_PERM])) {
+      Ok = parseSwizzleBitmaskPerm(Imm);
+    } else if (trySkipId(IdSymbolic[ID_BROADCAST])) {
+      Ok = parseSwizzleBroadcast(Imm);
+    } else if (trySkipId(IdSymbolic[ID_SWAP])) {
+      Ok = parseSwizzleSwap(Imm);
+    } else if (trySkipId(IdSymbolic[ID_REVERSE])) {
+      Ok = parseSwizzleReverse(Imm);
+    } else {
+      Error(ModeLoc, "expected a swizzle mode");
+    }
+
+    return Ok && skipToken(AsmToken::RParen, "expected a closing parentheses");
+  }
+
+  return false;
+}
+
+OperandMatchResultTy
+AMDGPUAsmParser::parseSwizzleOp(OperandVector &Operands) {
+  SMLoc S = Parser.getTok().getLoc();
+  int64_t Imm = 0;
+
+  if (trySkipId("offset")) {
+
+    bool Ok = false;
+    if (skipToken(AsmToken::Colon, "expected a colon")) {
+      if (trySkipId("swizzle")) {
+        Ok = parseSwizzleMacro(Imm);
+      } else {
+        Ok = parseSwizzleOffset(Imm);
+      }
+    }
+
+    Operands.push_back(AMDGPUOperand::CreateImm(this, Imm, S, AMDGPUOperand::ImmTySwizzle));
+
+    return Ok? MatchOperand_Success : MatchOperand_ParseFail;
+  } else {
+    return MatchOperand_NoMatch;
+  }
+}
+
+bool
+AMDGPUOperand::isSwizzle() const {
+  return isImmTy(ImmTySwizzle);
 }
 
 //===----------------------------------------------------------------------===//

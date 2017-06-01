@@ -221,6 +221,8 @@ struct ScriptConfiguration {
 
 class LinkerScript final {
   llvm::DenseMap<OutputSection *, OutputSectionCommand *> SecToCommand;
+  llvm::DenseMap<StringRef, OutputSectionCommand *> NameToOutputSectionCommand;
+
   void assignSymbol(SymbolAssignment *Cmd, bool InSec);
   void setDot(Expr E, const Twine &Loc, bool InSec);
 
@@ -241,7 +243,6 @@ class LinkerScript final {
   void process(BaseCommand &Base);
 
   OutputSection *Aether;
-  bool ErrorOnMissingSection = false;
 
   uint64_t Dot;
   uint64_t ThreadBssOffset = 0;
@@ -251,11 +252,14 @@ class LinkerScript final {
   MemoryRegion *CurMemRegion = nullptr;
 
 public:
+  bool ErrorOnMissingSection = false;
+  OutputSectionCommand *createOutputSectionCommand(StringRef Name,
+                                                   StringRef Location);
+  OutputSectionCommand *getOrCreateOutputSectionCommand(StringRef Name);
+
   OutputSectionCommand *getCmd(OutputSection *Sec) const;
   bool hasPhdrsCommands() { return !Opt.PhdrsCommands.empty(); }
   uint64_t getDot() { return Dot; }
-  OutputSection *getOutputSection(const Twine &Loc, StringRef S);
-  uint64_t getOutputSectionSize(StringRef S);
   void discard(ArrayRef<InputSectionBase *> V);
 
   ExprValue getSymbolValue(const Twine &Loc, StringRef S);

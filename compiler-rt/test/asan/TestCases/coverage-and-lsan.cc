@@ -1,6 +1,6 @@
 // Make sure coverage is dumped even if there are reported leaks.
 //
-// RUN: %clangxx_asan -fsanitize-coverage=func %s -o %t
+// RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard %s -o %t
 //
 // RUN: rm -rf %T/coverage-and-lsan
 //
@@ -17,4 +17,4 @@ int main(int argc, char **argv) {
 }
 
 // CHECK: LeakSanitizer: detected memory leaks
-// CHECK: CovDump:
+// CHECK: SanitizerCoverage: {{.*}}PCs written

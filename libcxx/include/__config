@@ -220,10 +220,12 @@
 #endif  // __NetBSD__
 
 #if defined(_WIN32)
-#  define _LIBCPP_WIN32API      1
+#  define _LIBCPP_WIN32API
 #  define _LIBCPP_LITTLE_ENDIAN 1
 #  define _LIBCPP_BIG_ENDIAN    0
 #  define _LIBCPP_SHORT_WCHAR   1
+// Both MinGW and native MSVC provide a "MSVC"-like enviroment
+#  define _LIBCPP_MSVCRT_LIKE
 // If mingw not explicitly detected, assume using MS C runtime only.
 #  ifndef __MINGW32__
 #    define _LIBCPP_MSVCRT // Using Microsoft's C Runtime library
@@ -1204,5 +1206,35 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
       __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ <= 70000))
 #define _LIBCPP_AVAILABILITY_NO_STREAMS_EXTERN_TEMPLATE
 #endif
+
+#if defined(_LIBCPP_COMPILER_IBM)
+#define _LIBCPP_HAS_NO_PRAGMA_PUSH_POP_MACRO
+#endif
+
+#if defined(_LIBCPP_HAS_NO_PRAGMA_PUSH_POP_MACRO)
+# define _LIBCPP_PUSH_MACROS
+# define _LIBCPP_POP_MACROS
+#else
+  // Don't warn about macro conflicts when we can restore them at the
+  // end of the header.
+# ifndef _LIBCPP_DISABLE_MACRO_CONFLICT_WARNINGS
+#   define _LIBCPP_DISABLE_MACRO_CONFLICT_WARNINGS
+# endif
+# if defined(_LIBCPP_COMPILER_MSVC)
+#   define _LIBCPP_PUSH_MACROS    \
+      __pragma(push_macro("min")) \
+      __pragma(push_macro("max"))
+#   define _LIBCPP_POP_MACROS     \
+      __pragma(pop_macro("min"))  \
+      __pragma(pop_macro("max"))
+# else
+#   define _LIBCPP_PUSH_MACROS        \
+      _Pragma("push_macro(\"min\")")  \
+      _Pragma("push_macro(\"max\")")
+#   define _LIBCPP_POP_MACROS         \
+      _Pragma("pop_macro(\"min\")")   \
+      _Pragma("pop_macro(\"max\")")
+# endif
+#endif // defined(_LIBCPP_HAS_NO_PRAGMA_PUSH_POP_MACRO)
 
 #endif // _LIBCPP_CONFIG

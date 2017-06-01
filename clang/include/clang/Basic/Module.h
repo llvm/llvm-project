@@ -83,6 +83,10 @@ public:
   /// are found.
   const DirectoryEntry *Directory;
 
+  /// \brief The presumed file name for the module map defining this module.
+  /// Only non-empty when building from preprocessed source.
+  std::string PresumedModuleMapFile;
+
   /// \brief The umbrella header or directory.
   llvm::PointerUnion<const DirectoryEntry *, const FileEntry *> Umbrella;
 

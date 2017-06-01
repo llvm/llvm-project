@@ -281,6 +281,46 @@ enum WidthMinusOne { // WidthMinusOne, (5) [15:11]
 
 } // namespace Hwreg
 
+namespace Swizzle { // Encoding of swizzle macro used in ds_swizzle_b32.
+
+enum Id { // id of symbolic names
+  ID_QUAD_PERM = 0,
+  ID_BITMASK_PERM,
+  ID_SWAP,
+  ID_REVERSE,
+  ID_BROADCAST
+};
+
+enum EncBits {
+
+  // swizzle mode encodings
+
+  QUAD_PERM_ENC         = 0x8000,
+  QUAD_PERM_ENC_MASK    = 0xFF00,
+
+  BITMASK_PERM_ENC      = 0x0000,
+  BITMASK_PERM_ENC_MASK = 0x8000,
+
+  // QUAD_PERM encodings
+
+  LANE_MASK             = 0x3,
+  LANE_MAX              = LANE_MASK,
+  LANE_SHIFT            = 2,
+  LANE_NUM              = 4,
+
+  // BITMASK_PERM encodings
+
+  BITMASK_MASK          = 0x1F,
+  BITMASK_MAX           = BITMASK_MASK,
+  BITMASK_WIDTH         = 5,
+
+  BITMASK_AND_SHIFT     = 0,
+  BITMASK_OR_SHIFT      = 5,
+  BITMASK_XOR_SHIFT     = 10
+};
+
+} // namespace Swizzle
+
 namespace SDWA {
 
 enum SdwaSel {

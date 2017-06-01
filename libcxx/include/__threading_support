@@ -30,8 +30,11 @@
 #include <windows.h>
 #include <process.h>
 #include <fibersapi.h>
-#include <__undef_min_max>
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 #if defined(_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL) || \
     defined(_LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL)
@@ -628,6 +631,8 @@ int __libcpp_tls_set(__libcpp_tls_key __key, void *__p)
 #endif // !_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL || _LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // !_LIBCPP_HAS_NO_THREADS
 

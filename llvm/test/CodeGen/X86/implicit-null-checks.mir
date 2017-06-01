@@ -379,7 +379,7 @@ liveins:
   - { reg: '%esi' }
 # CHECK:  bb.0.entry:
 # CHECK:    %eax = MOV32ri 2200000
-# CHECK-NEXT:    %eax = FAULTING_OP 1, %bb.3.is_null, {{[0-9]+}}, killed %eax, killed %rdi, 1, _, 0, _, implicit-def dead %eflags :: (load 4 from %ir.x)
+# CHECK-NEXT:    %eax = FAULTING_OP 1, %bb.3.is_null, {{[0-9]+}}, %eax, %rdi, 1, _, 0, _, implicit-def %eflags :: (load 4 from %ir.x)
 # CHECK-NEXT:    JMP_1 %bb.1.not_null
 
 body:             |
@@ -544,7 +544,7 @@ liveins:
   - { reg: '%rsi' }
 # CHECK:  bb.0.entry:
 # CHECK:  %rbx = MOV64rr %rdx
-# CHECK-NEXT:  %rdi = FAULTING_OP 1, %bb.3.is_null, {{[0-9]+}}, killed %rbx, killed %rdi, 1, _, 0, _, implicit-def dead %eflags :: (load 4 from %ir.x)
+# CHECK-NEXT:  %rdi = FAULTING_OP 1, %bb.3.is_null, {{[0-9]+}}, %rbx, %rdi, 1, _, 0, _, implicit-def %eflags :: (load 4 from %ir.x)
 
 body:             |
   bb.0.entry:
@@ -656,7 +656,7 @@ body:             |
 name:            use_alternate_load_op
 # CHECK-LABEL: name:            use_alternate_load_op
 # CHECK: bb.0.entry:
-# CHECK: %rax = FAULTING_OP 1, %bb.2.is_null, {{[0-9]+}}, killed %rdi, 1, _, 0, _
+# CHECK: %rax = FAULTING_OP 1, %bb.2.is_null, {{[0-9]+}}, %rdi, 1, _, 0, _
 # CHECK-NEXT: JMP_1 %bb.1.not_null
 # CHECK: bb.1.not_null
 
@@ -689,7 +689,7 @@ body:             |
 name:            imp_null_check_gep_load_with_use_dep
 # CHECK-LABEL: name:            imp_null_check_gep_load_with_use_dep
 # CHECK:  bb.0.entry:
-# CHECK:    %eax = FAULTING_OP 1, %bb.2.is_null, {{[0-9]+}}, killed %rdi, 1, _, 0, _, implicit-def %rax :: (load 4 from %ir.x)
+# CHECK:    %eax = FAULTING_OP 1, %bb.2.is_null, {{[0-9]+}}, %rdi, 1, _, 0, _, implicit-def %rax :: (load 4 from %ir.x)
 # CHECK-NEXT:    JMP_1 %bb.1.not_null
 alignment:       4
 tracksRegLiveness: true
@@ -721,7 +721,7 @@ name:            imp_null_check_load_with_base_sep
 # CHECK-LABEL: name:            imp_null_check_load_with_base_sep
 # CHECK:  bb.0.entry:
 # CHECK:     %rsi = ADD64rr %rsi, %rdi, implicit-def dead %eflags
-# CHECK-NEXT:    %esi = FAULTING_OP 1, %bb.2.is_null, {{[0-9]+}}, killed %esi, %rdi, 1, _, 0, _, implicit-def dead %eflags
+# CHECK-NEXT:    %esi = FAULTING_OP 1, %bb.2.is_null, {{[0-9]+}}, %esi, %rdi, 1, _, 0, _, implicit-def %eflags
 # CHECK-NEXT:    JMP_1 %bb.1.not_null
 alignment:       4
 tracksRegLiveness: true
@@ -752,7 +752,7 @@ body:             |
 name:            inc_store
 # CHECK-LABEL: name:            inc_store
 # CHECK: bb.0.entry:
-# CHECK:  _ = FAULTING_OP 3, %bb.2.is_null, {{[0-9]+}}, killed %rdi, 1, _, 0, _, killed %rsi
+# CHECK:  _ = FAULTING_OP 3, %bb.2.is_null, {{[0-9]+}}, %rdi, 1, _, 0, _, %rsi
 # CHECK-NEXT: JMP_1 %bb.1.not_null
 # CHECK: bb.1.not_null
 
@@ -782,7 +782,7 @@ body:             |
 name:            inc_store_plus_offset
 # CHECK-LABEL: inc_store_plus_offset
 # CHECK: bb.0.entry:
-# CHECK:  _ = FAULTING_OP 3, %bb.2.is_null, {{[0-9]+}}, killed %rdi, 1, _, 16, _, killed %rsi
+# CHECK:  _ = FAULTING_OP 3, %bb.2.is_null, {{[0-9]+}}, %rdi, 1, _, 16, _, %rsi
 # CHECK-NEXT: JMP_1 %bb.1.not_null
 # CHECK: bb.1.not_null
 
@@ -813,7 +813,7 @@ name:            inc_store_with_dep
 # CHECK-LABEL: inc_store_with_dep
 # CHECK: bb.0.entry:
 # CHECK:  %esi = ADD32rr killed %esi, killed %esi, implicit-def dead %eflags
-# CHECK-NEXT:  _ = FAULTING_OP 3, %bb.2.is_null, {{[0-9]+}}, killed %rdi, 1, _, 16, _, killed %esi
+# CHECK-NEXT:  _ = FAULTING_OP 3, %bb.2.is_null, {{[0-9]+}}, %rdi, 1, _, 16, _, %esi
 # CHECK-NEXT: JMP_1 %bb.1.not_null
 # CHECK: bb.1.not_null
 
@@ -972,7 +972,7 @@ body:             |
 name:            inc_store_with_reused_base
 # CHECK-LABEL: inc_store_with_reused_base
 # CHECK: bb.0.entry:
-# CHECK:  _ = FAULTING_OP 3, %bb.2.is_null, {{[0-9]+}}, killed %rdi, 1, _, 16, _, killed %esi
+# CHECK:  _ = FAULTING_OP 3, %bb.2.is_null, {{[0-9]+}}, %rdi, 1, _, 16, _, %esi
 # CHECK-NEXT: JMP_1 %bb.1.not_null
 # CHECK: bb.1.not_null
 
@@ -1174,7 +1174,7 @@ body:             |
 name:            inc_store_with_load_and_store
 # CHECK-LABEL: inc_store_with_load_and_store
 # CHECK: bb.0.entry:
-# CHECK:  _ = FAULTING_OP 2, %bb.2.is_null, {{[0-9]+}}, killed %rdi, 1, _, 0, _, killed %esi, implicit-def dead %eflags
+# CHECK:  _ = FAULTING_OP 2, %bb.2.is_null, {{[0-9]+}}, %rdi, 1, _, 0, _, %esi, implicit-def %eflags
 # CHECK-NEXT: JMP_1 %bb.1.not_null
 # CHECK: bb.1.not_null
 
@@ -1205,7 +1205,7 @@ body:             |
 name:            inc_store_and_load_no_alias
 # CHECK-LABEL: inc_store_and_load_no_alias
 # CHECK: bb.0.entry:
-# CHECK:  %eax = FAULTING_OP 1, %bb.2.is_null, {{[0-9]+}}, killed %rdi, 1, _, 0, _ :: (load 4 from %ir.ptr)
+# CHECK:  %eax = FAULTING_OP 1, %bb.2.is_null, {{[0-9]+}}, %rdi, 1, _, 0, _ :: (load 4 from %ir.ptr)
 # CHECK-NEXT: JMP_1 %bb.1.not_null
 # CHECK: bb.1.not_null
 

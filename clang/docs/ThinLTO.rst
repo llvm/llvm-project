@@ -123,6 +123,8 @@ which currently must be enabled through a linker option.
   ``-Wl,-plugin-opt,cache-dir=/path/to/cache``
 - ld64 (support in clang 3.9 and Xcode 8):
   ``-Wl,-cache_path_lto,/path/to/cache``
+- lld (as of LLVM r296702):
+  ``-Wl,--thinlto-cache-dir=/path/to/cache``
 
 Clang Bootstrap
 ---------------

@@ -166,7 +166,6 @@ namespace std {
 */
 
 #include <__config>
-
 #include <__string>
 #include <algorithm>
 #include <iterator>
@@ -177,6 +176,10 @@ namespace std {
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -353,9 +356,9 @@ public:
 
 	_LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 	int compare(                       size_type __pos1, size_type __n1, 
-				basic_string_view _sv, size_type __pos2, size_type __n2) const
+				basic_string_view __sv, size_type __pos2, size_type __n2) const
 	{
-		return substr(__pos1, __n1).compare(_sv.substr(__pos2, __n2));
+		return substr(__pos1, __n1).compare(__sv.substr(__pos2, __n2));
 	}
 
 	_LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
@@ -783,5 +786,7 @@ inline namespace literals
 }
 #endif
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_STRING_VIEW

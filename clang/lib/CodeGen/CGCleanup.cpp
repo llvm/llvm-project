@@ -448,6 +448,13 @@ void CodeGenFunction::PopCleanupBlocks(
     auto *Inst = dyn_cast_or_null<llvm::Instruction>(*ReloadedValue);
     if (!Inst)
       continue;
+
+    // Don't spill static allocas, they dominate all cleanups. These are created
+    // by binding a reference to a local variable or temporary.
+    auto *AI = dyn_cast<llvm::AllocaInst>(Inst);
+    if (AI && AI->isStaticAlloca())
+      continue;
+
     Address Tmp =
         CreateDefaultAlignTempAlloca(Inst->getType(), "tmp.exprcleanup");
 

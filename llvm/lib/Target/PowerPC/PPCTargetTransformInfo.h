@@ -60,6 +60,7 @@ public:
   /// @{
 
   bool enableAggressiveInterleaving(bool LoopHasReductions);
+  bool expandMemCmp(Instruction *I, unsigned &MaxLoadSize);
   bool enableInterleavedAccessVectorization();
   unsigned getNumberOfRegisters(bool Vector);
   unsigned getRegisterBitWidth(bool Vector);

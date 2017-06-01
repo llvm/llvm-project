@@ -93,8 +93,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
   // Register enums are stored as uint16_t in the tables. Make sure we'll fit.
   assert(Registers.size() <= 0xffff && "Too many regs to fit in tables");
 
-  std::string Namespace =
-      Registers.front().TheDef->getValueAsString("Namespace");
+  StringRef Namespace = Registers.front().TheDef->getValueAsString("Namespace");
 
   emitSourceFileHeader("Target Register Enum Values", OS);
 
@@ -354,7 +353,7 @@ void RegisterInfoEmitter::EmitRegMappingTables(
     for (unsigned i = I->second.size(), e = maxLength; i != e; ++i)
       I->second.push_back(-1);
 
-  std::string Namespace = Regs.front().TheDef->getValueAsString("Namespace");
+  StringRef Namespace = Regs.front().TheDef->getValueAsString("Namespace");
 
   OS << "// " << Namespace << " Dwarf<->LLVM register mappings.\n";
 
@@ -464,7 +463,7 @@ void RegisterInfoEmitter::EmitRegMapping(
   if (!maxLength)
     return;
 
-  std::string Namespace = Regs.front().TheDef->getValueAsString("Namespace");
+  StringRef Namespace = Regs.front().TheDef->getValueAsString("Namespace");
 
   // Emit reverse information about the dwarf register numbers.
   for (unsigned j = 0; j < 2; ++j) {

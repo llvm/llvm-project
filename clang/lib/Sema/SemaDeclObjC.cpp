@@ -1851,10 +1851,6 @@ Decl *Sema::ActOnStartCategoryImplementation(
   // FIXME: PushOnScopeChains?
   CurContext->addDecl(CDecl);
 
-  // If the interface is deprecated/unavailable, warn/error about it.
-  if (IDecl)
-    DiagnoseUseOfDecl(IDecl, ClassLoc);
-
   // If the interface has the objc_runtime_visible attribute, we
   // cannot implement a category for it.
   if (IDecl && IDecl->hasAttr<ObjCRuntimeVisibleAttr>()) {

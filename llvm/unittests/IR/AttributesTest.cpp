@@ -82,4 +82,11 @@ TEST(Attributes, AddMatchingAlignAttr) {
   EXPECT_TRUE(AL.hasParamAttribute(0, Attribute::NonNull));
 }
 
+TEST(Attributes, EmptyGet) {
+  LLVMContext C;
+  AttributeList EmptyLists[] = {AttributeList(), AttributeList()};
+  AttributeList AL = AttributeList::get(C, EmptyLists);
+  EXPECT_TRUE(AL.isEmpty());
+}
+
 } // end anonymous namespace

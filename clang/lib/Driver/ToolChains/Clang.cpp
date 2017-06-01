@@ -3985,9 +3985,30 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                           << value;
   }
 
+  bool CaretDefault = true;
+  bool ColumnDefault = true;
+  if (Arg *DiagArg = Args.getLastArg(options::OPT__SLASH_diagnostics_classic,
+                                     options::OPT__SLASH_diagnostics_column,
+                                     options::OPT__SLASH_diagnostics_caret)) {
+    switch (DiagArg->getOption().getID()) {
+    case options::OPT__SLASH_diagnostics_caret:
+      CaretDefault = true;
+      ColumnDefault = true;
+      break;
+    case options::OPT__SLASH_diagnostics_column:
+      CaretDefault = false;
+      ColumnDefault = true;
+      break;
+    case options::OPT__SLASH_diagnostics_classic:
+      CaretDefault = false;
+      ColumnDefault = false;
+      break;
+    }
+  }
+
   // -fcaret-diagnostics is default.
   if (!Args.hasFlag(options::OPT_fcaret_diagnostics,
-                    options::OPT_fno_caret_diagnostics, true))
+                    options::OPT_fno_caret_diagnostics, CaretDefault))
     CmdArgs.push_back("-fno-caret-diagnostics");
 
   // -fdiagnostics-fixit-info is default, only pass non-default.
@@ -4059,7 +4080,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fdiagnostics-absolute-paths");
 
   if (!Args.hasFlag(options::OPT_fshow_column, options::OPT_fno_show_column,
-                    true))
+                    ColumnDefault))
     CmdArgs.push_back("-fno-show-column");
 
   if (!Args.hasFlag(options::OPT_fspell_checking,
@@ -4781,14 +4802,36 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
       CmdArgs.push_back("-fms-memptr-rep=virtual");
   }
 
-  if (Args.getLastArg(options::OPT__SLASH_Gd))
-     CmdArgs.push_back("-fdefault-calling-conv=cdecl");
-  else if (Args.getLastArg(options::OPT__SLASH_Gr))
-     CmdArgs.push_back("-fdefault-calling-conv=fastcall");
-  else if (Args.getLastArg(options::OPT__SLASH_Gz))
-     CmdArgs.push_back("-fdefault-calling-conv=stdcall");
-  else if (Args.getLastArg(options::OPT__SLASH_Gv))
-     CmdArgs.push_back("-fdefault-calling-conv=vectorcall");
+  // Parse the default calling convention options.
+  if (Arg *CCArg =
+          Args.getLastArg(options::OPT__SLASH_Gd, options::OPT__SLASH_Gr,
+                          options::OPT__SLASH_Gz, options::OPT__SLASH_Gv)) {
+    unsigned DCCOptId = CCArg->getOption().getID();
+    const char *DCCFlag = nullptr;
+    bool ArchSupported = true;
+    llvm::Triple::ArchType Arch = getToolChain().getArch();
+    switch (DCCOptId) {
+    case options::OPT__SLASH_Gd:
+      DCCFlag = "-fdefault-calling-conv=cdecl";
+      break;
+    case options::OPT__SLASH_Gr:
+      ArchSupported = Arch == llvm::Triple::x86;
+      DCCFlag = "-fdefault-calling-conv=fastcall";
+      break;
+    case options::OPT__SLASH_Gz:
+      ArchSupported = Arch == llvm::Triple::x86;
+      DCCFlag = "-fdefault-calling-conv=stdcall";
+      break;
+    case options::OPT__SLASH_Gv:
+      ArchSupported = Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64;
+      DCCFlag = "-fdefault-calling-conv=vectorcall";
+      break;
+    }
+
+    // MSVC doesn't warn if /Gr or /Gz is used on x64, so we don't either.
+    if (ArchSupported && DCCFlag)
+      CmdArgs.push_back(DCCFlag);
+  }
 
   if (Arg *A = Args.getLastArg(options::OPT_vtordisp_mode_EQ))
     A->render(Args, CmdArgs);

@@ -12777,10 +12777,10 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     }
 
     // If we have load/store pair instructions and we only have two values,
-    // don't bother.
+    // don't bother merging.
     unsigned RequiredAlignment;
     if (LoadNodes.size() == 2 && TLI.hasPairedLoad(MemVT, RequiredAlignment) &&
-        St->getAlignment() >= RequiredAlignment) {
+        StoreNodes[0].MemNode->getAlignment() >= RequiredAlignment) {
       StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + 2);
       continue;
     }

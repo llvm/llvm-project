@@ -8,14 +8,9 @@
 //===----------------------------------------------------------------------===//
 // Sanitizer Coverage interface list.
 //===----------------------------------------------------------------------===//
-INTERFACE_FUNCTION(__sanitizer_cov)
 INTERFACE_FUNCTION(__sanitizer_cov_dump)
-INTERFACE_FUNCTION(__sanitizer_cov_init)
-INTERFACE_FUNCTION(__sanitizer_cov_module_init)
-INTERFACE_FUNCTION(__sanitizer_cov_with_check)
 INTERFACE_FUNCTION(__sanitizer_dump_coverage)
 INTERFACE_FUNCTION(__sanitizer_dump_trace_pc_guard_coverage)
-INTERFACE_FUNCTION(__sanitizer_get_total_unique_coverage)
 INTERFACE_FUNCTION(__sanitizer_maybe_open_cov_file)
 INTERFACE_WEAK_FUNCTION(__sancov_default_options)
 INTERFACE_WEAK_FUNCTION(__sanitizer_cov_trace_cmp)
