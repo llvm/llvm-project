@@ -23,7 +23,7 @@ struct coro_t {
     }
     suspend_never initial_suspend() { return {}; }
     suspend_never final_suspend() { return {}; }
-    void return_void(){}
+    void return_void() {}
     static void unhandled_exception() {}
   };
 };
@@ -37,7 +37,7 @@ struct B {
 
 
 struct A {
-  ~A(){}
+  ~A() {}
   bool await_ready() { return true; }
   int await_resume() { return 42; }
   template <typename F> void await_suspend(F) {}

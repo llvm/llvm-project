@@ -26,16 +26,7 @@ class ObjCNewSyntaxTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.m', '// Set breakpoint 0 here.')
 
-    @skipUnlessDarwin
-    @expectedFailureAll(
-        oslist=['macosx'],
-        compiler='clang',
-        compiler_version=[
-            '<',
-            '7.0.0'])
-    @skipIf(macos_version=["<", "10.12"])
-    @expectedFailureAll(archs=["i[3-6]86"])
-    def test_expr(self):
+    def runToBreakpoint(self):
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
@@ -55,6 +46,18 @@ class ObjCNewSyntaxTestCase(TestBase):
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
                     substrs=[' resolved, hit count = 1'])
 
+    @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
+    @skipIf(macos_version=["<", "10.12"])
+    @expectedFailureAll(archs=["i[3-6]86"])
+    def test_read_array(self):
+        self.runToBreakpoint()
+
         self.expect(
             "expr --object-description -- immutable_array[0]",
             VARIABLES_DISPLAYED_CORRECTLY,
@@ -64,6 +67,18 @@ class ObjCNewSyntaxTestCase(TestBase):
             "expr --object-description -- mutable_array[0]",
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["foo"])
+
+    @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
+    @skipIf(macos_version=["<", "10.12"])
+    @expectedFailureAll(archs=["i[3-6]86"])
+    def test_update_array(self):
+        self.runToBreakpoint()
 
         self.expect(
             "expr --object-description -- mutable_array[0] = @\"bar\"",
@@ -75,6 +90,18 @@ class ObjCNewSyntaxTestCase(TestBase):
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["bar"])
 
+    @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
+    @skipIf(macos_version=["<", "10.12"])
+    @expectedFailureAll(archs=["i[3-6]86"])
+    def test_read_dictionary(self):
+        self.runToBreakpoint()
+
         self.expect(
             "expr --object-description -- immutable_dictionary[@\"key\"]",
             VARIABLES_DISPLAYED_CORRECTLY,
@@ -84,6 +111,18 @@ class ObjCNewSyntaxTestCase(TestBase):
             "expr --object-description -- mutable_dictionary[@\"key\"]",
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["value"])
+
+    @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
+    @skipIf(macos_version=["<", "10.12"])
+    @expectedFailureAll(archs=["i[3-6]86"])
+    def test_update_dictionary(self):
+        self.runToBreakpoint()
 
         self.expect(
             "expr --object-description -- mutable_dictionary[@\"key\"] = @\"object\"",
@@ -95,6 +134,18 @@ class ObjCNewSyntaxTestCase(TestBase):
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["object"])
 
+    @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
+    @skipIf(macos_version=["<", "10.12"])
+    @expectedFailureAll(archs=["i[3-6]86"])
+    def test_array_literal(self):
+        self.runToBreakpoint()
+
         self.expect(
             "expr --object-description -- @[ @\"foo\", @\"bar\" ]",
             VARIABLES_DISPLAYED_CORRECTLY,
@@ -103,6 +154,18 @@ class ObjCNewSyntaxTestCase(TestBase):
                 "foo",
                 "bar"])
 
+    @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
+    @skipIf(macos_version=["<", "10.12"])
+    @expectedFailureAll(archs=["i[3-6]86"])
+    def test_dictionary_literal(self):
+        self.runToBreakpoint()
+
         self.expect(
             "expr --object-description -- @{ @\"key\" : @\"object\" }",
             VARIABLES_DISPLAYED_CORRECTLY,
@@ -110,8 +173,32 @@ class ObjCNewSyntaxTestCase(TestBase):
                 "key",
                 "object"])
 
+    @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
+    @skipIf(macos_version=["<", "10.12"])
+    @expectedFailureAll(archs=["i[3-6]86"])
+    def test_char_literal(self):
+        self.runToBreakpoint()
+
         self.expect("expr --object-description -- @'a'",
                     VARIABLES_DISPLAYED_CORRECTLY, substrs=[str(ord('a'))])
+
+    @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
+    @skipIf(macos_version=["<", "10.12"])
+    @expectedFailureAll(archs=["i[3-6]86"])
+    def test_integer_literals(self):
+        self.runToBreakpoint()
 
         self.expect(
             "expr --object-description -- @1",
@@ -138,8 +225,32 @@ class ObjCNewSyntaxTestCase(TestBase):
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["1"])
 
+    @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
+    @skipIf(macos_version=["<", "10.12"])
+    @expectedFailureAll(archs=["i[3-6]86"])
+    def test_float_literal(self):
+        self.runToBreakpoint()
+
         self.expect("expr -- @123.45", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=["NSNumber", "123.45"])
+
+    @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
+    @skipIf(macos_version=["<", "10.12"])
+    @expectedFailureAll(archs=["i[3-6]86"])
+    def test_expressions_in_literals(self):
+        self.runToBreakpoint()
 
         self.expect(
             "expr --object-description -- @( 1 + 3 )",

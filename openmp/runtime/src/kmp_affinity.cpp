@@ -2092,7 +2092,7 @@ restart_radix_check:
         if (threadInfo[i][threadIdIndex] == UINT_MAX) {
           threadInfo[i][threadIdIndex] = threadIdCt++;
         }
-        // Aparrently the thread id field was specified for some entries and not
+        // Apparently the thread id field was specified for some entries and not
         // others. Start the thread id counter off at the next higher thread id.
         else if (threadIdCt <= threadInfo[i][threadIdIndex]) {
           threadIdCt = threadInfo[i][threadIdIndex] + 1;
