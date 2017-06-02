@@ -3616,6 +3616,8 @@ static void updateModuleTimestamp(ModuleFile &MF) {
   if (EC)
     return;
   OS << "Timestamp file\n";
+  OS.close();
+  OS.clear_error(); // Avoid triggering a fatal error.
 }
 
 /// \brief Given a cursor at the start of an AST file, scan ahead and drop the
