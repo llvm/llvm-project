@@ -33,6 +33,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferLLVM.h"
@@ -1762,4 +1763,80 @@ PlatformDarwin::LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) {
 
   // Let our parent class do the real launching.
   return PlatformPOSIX::LaunchProcess(launch_info);
+}
+
+lldb_private::Status
+PlatformDarwin::FindBundleBinaryInExecSearchPaths (const ModuleSpec &module_spec, Process *process, 
+                                                   ModuleSP &module_sp, 
+                                                   const FileSpecList *module_search_paths_ptr, 
+                                                   ModuleSP *old_module_sp_ptr, bool *did_create_ptr)
+{
+  const FileSpec &platform_file = module_spec.GetFileSpec();
+  // See if the file is present in any of the module_search_paths_ptr directories.
+  if (!module_sp && module_search_paths_ptr && platform_file) {
+    // create a vector of all the file / directory names in platform_file
+    // e.g. this might be
+    // /System/Library/PrivateFrameworks/UIFoundation.framework/UIFoundation
+    //
+    // We'll need to look in the module_search_paths_ptr directories for
+    // both "UIFoundation" and "UIFoundation.framework" -- most likely the
+    // latter will be the one we find there.
+
+    FileSpec platform_pull_apart(platform_file);
+    std::vector<std::string> path_parts;
+    ConstString unix_root_dir("/");
+    while (true) {
+      ConstString part = platform_pull_apart.GetLastPathComponent();
+      platform_pull_apart.RemoveLastPathComponent();
+      if (part.IsEmpty() || part == unix_root_dir)
+        break;
+      path_parts.push_back(part.AsCString());
+    }
+    const size_t path_parts_size = path_parts.size();
+
+    size_t num_module_search_paths = module_search_paths_ptr->GetSize();
+    for (size_t i = 0; i < num_module_search_paths; ++i) {
+      Log *log_verbose = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+      if (log_verbose)
+          log_verbose->Printf ("PlatformRemoteDarwinDevice::GetSharedModule searching for binary in search-path %s", module_search_paths_ptr->GetFileSpecAtIndex(i).GetPath().c_str());
+      // Create a new FileSpec with this module_search_paths_ptr
+      // plus just the filename ("UIFoundation"), then the parent
+      // dir plus filename ("UIFoundation.framework/UIFoundation")
+      // etc - up to four names (to handle "Foo.framework/Contents/MacOS/Foo")
+
+      for (size_t j = 0; j < 4 && j < path_parts_size - 1; ++j) {
+        FileSpec path_to_try(module_search_paths_ptr->GetFileSpecAtIndex(i));
+
+        // Add the components backwards.  For
+        // .../PrivateFrameworks/UIFoundation.framework/UIFoundation
+        // path_parts is
+        //   [0] UIFoundation
+        //   [1] UIFoundation.framework
+        //   [2] PrivateFrameworks
+        //
+        // and if 'j' is 2, we want to append path_parts[1] and then
+        // path_parts[0], aka
+        // 'UIFoundation.framework/UIFoundation', to the module_search_paths_ptr
+        // path.
+
+        for (int k = j; k >= 0; --k) {
+          path_to_try.AppendPathComponent(path_parts[k]);
+        }
+
+        if (path_to_try.Exists()) {
+          ModuleSpec new_module_spec(module_spec);
+          new_module_spec.GetFileSpec() = path_to_try;
+          Status new_error(Platform::GetSharedModule(
+              new_module_spec, process, module_sp, NULL, old_module_sp_ptr,
+              did_create_ptr));
+
+          if (module_sp) {
+            module_sp->SetPlatformFileSpec(path_to_try);
+            return new_error;
+          }
+        }
+      }
+    }
+  }
+  return Status();
 }
