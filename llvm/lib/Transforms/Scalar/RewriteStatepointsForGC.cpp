@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Rewrite an existing set of gc.statepoints such that they make potential
-// relocations performed by the garbage collector explicit in the IR.
+// Rewrite call/invoke instructions so as to make potential relocations
+// performed by the garbage collector explicit in the IR.
 //
 //===----------------------------------------------------------------------===//
 

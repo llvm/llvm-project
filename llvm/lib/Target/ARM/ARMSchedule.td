@@ -147,6 +147,9 @@ def : PredicateProlog<[{
   const ARMBaseInstrInfo *TII =
     static_cast<const ARMBaseInstrInfo*>(SchedModel->getInstrInfo());
   (void)TII;
+  const ARMSubtarget *STI =
+    static_cast<const ARMSubtarget*>(SchedModel->getSubtargetInfo());
+  (void)STI;
 }]>;
 
 def IsPredicatedPred : SchedPredicate<[{TII->isPredicated(*MI)}]>;
@@ -420,3 +423,4 @@ include "ARMScheduleA8.td"
 include "ARMScheduleA9.td"
 include "ARMScheduleSwift.td"
 include "ARMScheduleR52.td"
+include "ARMScheduleA57.td"

@@ -2022,7 +2022,7 @@ static SDNode *findGlueUse(SDNode *N) {
 }
 
 /// findNonImmUse - Return true if "Use" is a non-immediate use of "Def".
-/// This function recursively traverses up the operand chain, ignoring
+/// This function iteratively traverses up the operand chain, ignoring
 /// certain nodes.
 static bool findNonImmUse(SDNode *Use, SDNode* Def, SDNode *ImmedUse,
                           SDNode *Root, SmallPtrSetImpl<SDNode*> &Visited,
@@ -2035,30 +2035,36 @@ static bool findNonImmUse(SDNode *Use, SDNode* Def, SDNode *ImmedUse,
   // The Use may be -1 (unassigned) if it is a newly allocated node.  This can
   // happen because we scan down to newly selected nodes in the case of glue
   // uses.
-  if ((Use->getNodeId() < Def->getNodeId() && Use->getNodeId() != -1))
-    return false;
+  std::vector<SDNode *> WorkList;
+  WorkList.push_back(Use);
 
-  // Don't revisit nodes if we already scanned it and didn't fail, we know we
-  // won't fail if we scan it again.
-  if (!Visited.insert(Use).second)
-    return false;
-
-  for (const SDValue &Op : Use->op_values()) {
-    // Ignore chain uses, they are validated by HandleMergeInputChains.
-    if (Op.getValueType() == MVT::Other && IgnoreChains)
+  while (!WorkList.empty()) {
+    Use = WorkList.back();
+    WorkList.pop_back();
+    if (Use->getNodeId() < Def->getNodeId() && Use->getNodeId() != -1)
       continue;
 
-    SDNode *N = Op.getNode();
-    if (N == Def) {
-      if (Use == ImmedUse || Use == Root)
-        continue;  // We are not looking for immediate use.
-      assert(N != Root);
-      return true;
-    }
+    // Don't revisit nodes if we already scanned it and didn't fail, we know we
+    // won't fail if we scan it again.
+    if (!Visited.insert(Use).second)
+      continue;
 
-    // Traverse up the operand chain.
-    if (findNonImmUse(N, Def, ImmedUse, Root, Visited, IgnoreChains))
-      return true;
+    for (const SDValue &Op : Use->op_values()) {
+      // Ignore chain uses, they are validated by HandleMergeInputChains.
+      if (Op.getValueType() == MVT::Other && IgnoreChains)
+        continue;
+
+      SDNode *N = Op.getNode();
+      if (N == Def) {
+        if (Use == ImmedUse || Use == Root)
+          continue;  // We are not looking for immediate use.
+        assert(N != Root);
+        return true;
+      }
+
+      // Traverse up the operand chain.
+      WorkList.push_back(N);
+    }
   }
   return false;
 }

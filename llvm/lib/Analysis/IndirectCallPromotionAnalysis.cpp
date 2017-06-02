@@ -43,7 +43,7 @@ static cl::opt<unsigned>
 // The percent threshold for the direct-call target (this call site vs the
 // total call count) for it to be considered as the promotion target.
 static cl::opt<unsigned>
-    ICPPercentThreshold("icp-percent-threshold", cl::init(33), cl::Hidden,
+    ICPPercentThreshold("icp-percent-threshold", cl::init(30), cl::Hidden,
                         cl::ZeroOrMore,
                         cl::desc("The percentage threshold for the promotion"));
 

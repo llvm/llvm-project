@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa-opencl -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,HSA,ALL,HSA-OPENCL %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,OS-MESA3D,MESA,ALL %s
 ; RUN: llc -mtriple=amdgcn-mesa-unknown -verify-machineinstrs < %s | FileCheck -check-prefixes=OS-UNKNOWN,MESA,ALL %s
+; RUN: llc -mtriple=amdgcn--amdhsa-amdgiz -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,HSA,ALL,HSA-NOENV %s
+; RUN: llc -mtriple=amdgcn--amdhsa-amdgizcl -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,HSA,ALL,HSA-OPENCL %s
 
 ; ALL-LABEL: {{^}}test:
 ; CO-V2: enable_sgpr_kernarg_segment_ptr = 1

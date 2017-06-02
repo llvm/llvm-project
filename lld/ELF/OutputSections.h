@@ -59,10 +59,6 @@ public:
       Alignment = Val;
   }
 
-  // If true, this section will be page aligned on disk.
-  // Typically the first section of each PT_LOAD segment has this flag.
-  bool PageAlign = false;
-
   // Pointer to the first section in PT_LOAD segment, which this section
   // also resides in. This field is used to correctly compute file offset
   // of a section. When two sections share the same load segment, difference

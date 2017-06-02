@@ -463,12 +463,7 @@ void LinkerScript::fabricateDefaultCommands() {
     // Prefer user supplied address over additional alignment constraint
     auto I = Config->SectionStartMap.find(Sec->Name);
     if (I != Config->SectionStartMap.end())
-      Commands.push_back(
-          make<SymbolAssignment>(".", [=] { return I->second; }, ""));
-    else if (Sec->PageAlign)
-      OSCmd->AddrExpr = [=] {
-        return alignTo(Script->getDot(), Config->MaxPageSize);
-      };
+      OSCmd->AddrExpr = [=] { return I->second; };
 
     Commands.push_back(OSCmd);
     if (Sec->Sections.size()) {

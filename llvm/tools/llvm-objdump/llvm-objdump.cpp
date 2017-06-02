@@ -2064,7 +2064,10 @@ static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
   if (DwarfDumpType != DIDT_Null) {
     std::unique_ptr<DIContext> DICtx(new DWARFContextInMemory(*o));
     // Dump the complete DWARF structure.
-    DICtx->dump(outs(), DwarfDumpType, true /* DumpEH */);
+    DIDumpOptions DumpOpts;
+    DumpOpts.DumpType = DwarfDumpType;
+    DumpOpts.DumpEH = true;
+    DICtx->dump(outs(), DumpOpts);
   }
 }
 

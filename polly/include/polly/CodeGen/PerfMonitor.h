@@ -25,8 +25,10 @@ class PerfMonitor {
 public:
   /// Create a new performance monitor.
   ///
+  /// @param S The scop for which to generate fine-grained performance
+  ///          monitoring information.
   /// @param M The module for which to generate the performance monitor.
-  PerfMonitor(llvm::Module *M);
+  PerfMonitor(const Scop &S, llvm::Module *M);
 
   /// Initialize the performance monitor.
   ///
@@ -48,11 +50,17 @@ private:
   llvm::Module *M;
   PollyIRBuilder Builder;
 
+  // The scop to profile against.
+  const Scop &S;
+
   /// Indicates if performance profiling is supported on this architecture.
   bool Supported;
 
   /// The cycle counter at the beginning of the program execution.
   llvm::Value *CyclesTotalStartPtr;
+
+  /// The total number of cycles spent in the current scop S.
+  llvm::Value *CyclesInCurrentScopPtr;
 
   /// The total number of cycles spent within scops.
   llvm::Value *CyclesInScopsPtr;
@@ -88,6 +96,12 @@ private:
   /// Insert a set of global variables that are used to track performance,
   /// into the module (or obtain references to them if they already exist).
   void addGlobalVariables();
+
+  /// Add per-scop tracking to module.
+  ///
+  /// Insert the global variable which is used to track the number of cycles
+  /// this scop runs.
+  void addScopCounter();
 
   /// Get a reference to the intrinsic "i64 @llvm.x86.rdtscp(i8*)".
   ///
@@ -126,6 +140,12 @@ private:
   /// This function finalizes the performance measurements and prints the
   /// results to stdout. It is expected to be registered with 'atexit()'.
   llvm::Function *insertFinalReporting();
+
+  /// Append Scop reporting data to "__polly_perf_final_reporting".
+  ///
+  /// This function appends the current scop (S)'s information to the final
+  /// printing function.
+  void AppendScopReporting();
 };
 } // namespace polly
 

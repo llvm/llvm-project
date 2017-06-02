@@ -1638,14 +1638,13 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           return DAG.getSetCC(dl, VT, TopSetCC.getOperand(0),
                                       TopSetCC.getOperand(1),
                                       InvCond);
-
         }
       }
     }
 
-    // If the LHS is '(and load, const)', the RHS is 0,
-    // the test is for equality or unsigned, and all 1 bits of the const are
-    // in the same partial word, see if we can shorten the load.
+    // If the LHS is '(and load, const)', the RHS is 0, the test is for
+    // equality or unsigned, and all 1 bits of the const are in the same
+    // partial word, see if we can shorten the load.
     if (DCI.isBeforeLegalize() &&
         !ISD::isSignedIntSetCC(Cond) &&
         N0.getOpcode() == ISD::AND && C1 == 0 &&
@@ -1669,10 +1668,10 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           APInt newMask = APInt::getLowBitsSet(maskWidth, width);
           for (unsigned offset=0; offset<origWidth/width; offset++) {
             if ((newMask & Mask) == Mask) {
-              if (!DAG.getDataLayout().isLittleEndian())
-                bestOffset = (origWidth/width - offset - 1) * (width/8);
-              else
+              if (DAG.getDataLayout().isLittleEndian())
                 bestOffset = (uint64_t)offset * (width/8);
+              else
+                bestOffset = (origWidth/width - offset - 1) * (width/8);
               bestMask = Mask.lshr(offset * (width/8) * 8);
               bestWidth = width;
               break;
@@ -1713,10 +1712,12 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         switch (Cond) {
         case ISD::SETUGT:
         case ISD::SETUGE:
-        case ISD::SETEQ: return DAG.getConstant(0, dl, VT);
+        case ISD::SETEQ:
+          return DAG.getConstant(0, dl, VT);
         case ISD::SETULT:
         case ISD::SETULE:
-        case ISD::SETNE: return DAG.getConstant(1, dl, VT);
+        case ISD::SETNE:
+          return DAG.getConstant(1, dl, VT);
         case ISD::SETGT:
         case ISD::SETGE:
           // True if the sign bit of C1 is set.
@@ -1816,9 +1817,9 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                                                         BitWidth-1))) {
           // Okay, get the un-inverted input value.
           SDValue Val;
-          if (N0.getOpcode() == ISD::XOR)
+          if (N0.getOpcode() == ISD::XOR) {
             Val = N0.getOperand(0);
-          else {
+          } else {
             assert(N0.getOpcode() == ISD::AND &&
                     N0.getOperand(0).getOpcode() == ISD::XOR);
             // ((X^1)&1)^1 -> X & 1
@@ -1883,7 +1884,10 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
 
     // Canonicalize GE/LE comparisons to use GT/LT comparisons.
     if (Cond == ISD::SETGE || Cond == ISD::SETUGE) {
-      if (C1 == MinVal) return DAG.getConstant(1, dl, VT);  // X >= MIN --> true
+      // X >= MIN --> true
+      if (C1 == MinVal)
+        return DAG.getConstant(1, dl, VT);
+
       // X >= C0 --> X > (C0 - 1)
       APInt C = C1 - 1;
       ISD::CondCode NewCC = (Cond == ISD::SETGE) ? ISD::SETGT : ISD::SETUGT;
@@ -1898,7 +1902,10 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     }
 
     if (Cond == ISD::SETLE || Cond == ISD::SETULE) {
-      if (C1 == MaxVal) return DAG.getConstant(1, dl, VT);  // X <= MAX --> true
+      // X <= MAX --> true
+      if (C1 == MaxVal)
+          return DAG.getConstant(1, dl, VT);
+
       // X <= C0 --> X < (C0 + 1)
       APInt C = C1 + 1;
       ISD::CondCode NewCC = (Cond == ISD::SETLE) ? ISD::SETLT : ISD::SETULT;

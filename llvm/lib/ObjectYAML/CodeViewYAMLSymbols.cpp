@@ -148,7 +148,8 @@ struct SymbolRecordBase {
   virtual ~SymbolRecordBase() {}
   virtual void map(yaml::IO &io) = 0;
   virtual codeview::CVSymbol
-  toCodeViewSymbol(BumpPtrAllocator &Allocator) const = 0;
+  toCodeViewSymbol(BumpPtrAllocator &Allocator,
+                   CodeViewContainer Container) const = 0;
   virtual Error fromCodeViewSymbol(codeview::CVSymbol Type) = 0;
 };
 
@@ -159,8 +160,9 @@ template <typename T> struct SymbolRecordImpl : public SymbolRecordBase {
   void map(yaml::IO &io) override;
 
   codeview::CVSymbol
-  toCodeViewSymbol(BumpPtrAllocator &Allocator) const override {
-    return SymbolSerializer::writeOneSymbol(Symbol, Allocator);
+  toCodeViewSymbol(BumpPtrAllocator &Allocator,
+                   CodeViewContainer Container) const override {
+    return SymbolSerializer::writeOneSymbol(Symbol, Allocator, Container);
   }
   Error fromCodeViewSymbol(codeview::CVSymbol CVS) override {
     return SymbolDeserializer::deserializeAs<T>(CVS, Symbol);
@@ -429,8 +431,8 @@ template <> void SymbolRecordImpl<ThreadLocalDataSym>::map(IO &IO) {
 }
 
 CVSymbol CodeViewYAML::SymbolRecord::toCodeViewSymbol(
-    BumpPtrAllocator &Allocator) const {
-  return Symbol->toCodeViewSymbol(Allocator);
+    BumpPtrAllocator &Allocator, CodeViewContainer Container) const {
+  return Symbol->toCodeViewSymbol(Allocator, Container);
 }
 
 namespace llvm {

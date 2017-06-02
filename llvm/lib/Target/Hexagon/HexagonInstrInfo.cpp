@@ -1769,161 +1769,6 @@ bool HexagonInstrInfo::isCompoundBranchInstr(const MachineInstr &MI) const {
   return getType(MI) == HexagonII::TypeCJ && MI.isBranch();
 }
 
-bool HexagonInstrInfo::isCondInst(const MachineInstr &MI) const {
-  return (MI.isBranch() && isPredicated(MI)) ||
-         isConditionalTransfer(MI) ||
-         isConditionalALU32(MI)    ||
-         isConditionalLoad(MI)     ||
-         // Predicated stores which don't have a .new on any operands.
-         (MI.mayStore() && isPredicated(MI) && !isNewValueStore(MI) &&
-          !isPredicatedNew(MI));
-}
-
-bool HexagonInstrInfo::isConditionalALU32(const MachineInstr &MI) const {
-  switch (MI.getOpcode()) {
-    case Hexagon::A2_paddf:
-    case Hexagon::A2_paddfnew:
-    case Hexagon::A2_paddif:
-    case Hexagon::A2_paddifnew:
-    case Hexagon::A2_paddit:
-    case Hexagon::A2_padditnew:
-    case Hexagon::A2_paddt:
-    case Hexagon::A2_paddtnew:
-    case Hexagon::A2_pandf:
-    case Hexagon::A2_pandfnew:
-    case Hexagon::A2_pandt:
-    case Hexagon::A2_pandtnew:
-    case Hexagon::A2_porf:
-    case Hexagon::A2_porfnew:
-    case Hexagon::A2_port:
-    case Hexagon::A2_portnew:
-    case Hexagon::A2_psubf:
-    case Hexagon::A2_psubfnew:
-    case Hexagon::A2_psubt:
-    case Hexagon::A2_psubtnew:
-    case Hexagon::A2_pxorf:
-    case Hexagon::A2_pxorfnew:
-    case Hexagon::A2_pxort:
-    case Hexagon::A2_pxortnew:
-    case Hexagon::A4_paslhf:
-    case Hexagon::A4_paslhfnew:
-    case Hexagon::A4_paslht:
-    case Hexagon::A4_paslhtnew:
-    case Hexagon::A4_pasrhf:
-    case Hexagon::A4_pasrhfnew:
-    case Hexagon::A4_pasrht:
-    case Hexagon::A4_pasrhtnew:
-    case Hexagon::A4_psxtbf:
-    case Hexagon::A4_psxtbfnew:
-    case Hexagon::A4_psxtbt:
-    case Hexagon::A4_psxtbtnew:
-    case Hexagon::A4_psxthf:
-    case Hexagon::A4_psxthfnew:
-    case Hexagon::A4_psxtht:
-    case Hexagon::A4_psxthtnew:
-    case Hexagon::A4_pzxtbf:
-    case Hexagon::A4_pzxtbfnew:
-    case Hexagon::A4_pzxtbt:
-    case Hexagon::A4_pzxtbtnew:
-    case Hexagon::A4_pzxthf:
-    case Hexagon::A4_pzxthfnew:
-    case Hexagon::A4_pzxtht:
-    case Hexagon::A4_pzxthtnew:
-    case Hexagon::C2_ccombinewf:
-    case Hexagon::C2_ccombinewt:
-      return true;
-  }
-  return false;
-}
-
-// FIXME - Function name and it's functionality don't match.
-// It should be renamed to hasPredNewOpcode()
-bool HexagonInstrInfo::isConditionalLoad(const MachineInstr &MI) const {
-  if (!MI.getDesc().mayLoad() || !isPredicated(MI))
-    return false;
-
-  int PNewOpcode = Hexagon::getPredNewOpcode(MI.getOpcode());
-  // Instruction with valid predicated-new opcode can be promoted to .new.
-  return PNewOpcode >= 0;
-}
-
-// Returns true if an instruction is a conditional store.
-//
-// Note: It doesn't include conditional new-value stores as they can't be
-// converted to .new predicate.
-bool HexagonInstrInfo::isConditionalStore(const MachineInstr &MI) const {
-  switch (MI.getOpcode()) {
-    default: return false;
-    case Hexagon::S4_storeirbt_io:
-    case Hexagon::S4_storeirbf_io:
-    case Hexagon::S4_pstorerbt_rr:
-    case Hexagon::S4_pstorerbf_rr:
-    case Hexagon::S2_pstorerbt_io:
-    case Hexagon::S2_pstorerbf_io:
-    case Hexagon::S2_pstorerbt_pi:
-    case Hexagon::S2_pstorerbf_pi:
-    case Hexagon::S2_pstorerdt_io:
-    case Hexagon::S2_pstorerdf_io:
-    case Hexagon::S4_pstorerdt_rr:
-    case Hexagon::S4_pstorerdf_rr:
-    case Hexagon::S2_pstorerdt_pi:
-    case Hexagon::S2_pstorerdf_pi:
-    case Hexagon::S2_pstorerht_io:
-    case Hexagon::S2_pstorerhf_io:
-    case Hexagon::S4_storeirht_io:
-    case Hexagon::S4_storeirhf_io:
-    case Hexagon::S4_pstorerht_rr:
-    case Hexagon::S4_pstorerhf_rr:
-    case Hexagon::S2_pstorerht_pi:
-    case Hexagon::S2_pstorerhf_pi:
-    case Hexagon::S2_pstorerit_io:
-    case Hexagon::S2_pstorerif_io:
-    case Hexagon::S4_storeirit_io:
-    case Hexagon::S4_storeirif_io:
-    case Hexagon::S4_pstorerit_rr:
-    case Hexagon::S4_pstorerif_rr:
-    case Hexagon::S2_pstorerit_pi:
-    case Hexagon::S2_pstorerif_pi:
-
-    // V4 global address store before promoting to dot new.
-    case Hexagon::S4_pstorerdt_abs:
-    case Hexagon::S4_pstorerdf_abs:
-    case Hexagon::S4_pstorerbt_abs:
-    case Hexagon::S4_pstorerbf_abs:
-    case Hexagon::S4_pstorerht_abs:
-    case Hexagon::S4_pstorerhf_abs:
-    case Hexagon::S4_pstorerit_abs:
-    case Hexagon::S4_pstorerif_abs:
-      return true;
-
-    // Predicated new value stores (i.e. if (p0) memw(..)=r0.new) are excluded
-    // from the "Conditional Store" list. Because a predicated new value store
-    // would NOT be promoted to a double dot new store.
-    // This function returns yes for those stores that are predicated but not
-    // yet promoted to predicate dot new instructions.
-  }
-}
-
-bool HexagonInstrInfo::isConditionalTransfer(const MachineInstr &MI) const {
-  switch (MI.getOpcode()) {
-    case Hexagon::A2_tfrt:
-    case Hexagon::A2_tfrf:
-    case Hexagon::C2_cmoveit:
-    case Hexagon::C2_cmoveif:
-    case Hexagon::A2_tfrtnew:
-    case Hexagon::A2_tfrfnew:
-    case Hexagon::C2_cmovenewit:
-    case Hexagon::C2_cmovenewif:
-    case Hexagon::A2_tfrpt:
-    case Hexagon::A2_tfrpf:
-      return true;
-
-    default:
-      return false;
-  }
-  return false;
-}
-
 // TODO: In order to have isExtendable for fpimm/f32Ext, we need to handle
 // isFPImm and later getFPImm as well.
 bool HexagonInstrInfo::isConstExtended(const MachineInstr &MI) const {
@@ -3474,6 +3319,8 @@ int HexagonInstrInfo::getDotNewOp(const MachineInstr &MI) const {
 // Returns the opcode to use when converting MI, which is a conditional jump,
 // into a conditional instruction which uses the .new value of the predicate.
 // We also use branch probabilities to add a hint to the jump.
+// If MBPI is null, all edges will be treated as equally likely for the
+// purposes of establishing a predication hint.
 int HexagonInstrInfo::getDotNewPredJumpOp(const MachineInstr &MI,
       const MachineBranchProbabilityInfo *MBPI) const {
   // We assume that block can have at most two successors.
@@ -3482,9 +3329,16 @@ int HexagonInstrInfo::getDotNewPredJumpOp(const MachineInstr &MI,
   bool Taken = false;
   const BranchProbability OneHalf(1, 2);
 
+  auto getEdgeProbability = [MBPI] (const MachineBasicBlock *Src,
+                                    const MachineBasicBlock *Dst) {
+    if (MBPI)
+      return MBPI->getEdgeProbability(Src, Dst);
+    return BranchProbability(1, Src->succ_size());
+  };
+
   if (BrTarget.isMBB()) {
     const MachineBasicBlock *Dst = BrTarget.getMBB();
-    Taken = MBPI->getEdgeProbability(Src, Dst) >= OneHalf;
+    Taken = getEdgeProbability(Src, Dst) >= OneHalf;
   } else {
     // The branch target is not a basic block (most likely a function).
     // Since BPI only gives probabilities for targets that are basic blocks,
@@ -3521,7 +3375,7 @@ int HexagonInstrInfo::getDotNewPredJumpOp(const MachineInstr &MI,
         for (const MachineBasicBlock *SB : B.successors()) {
           if (!B.isLayoutSuccessor(SB))
             continue;
-          Taken = MBPI->getEdgeProbability(Src, SB) < OneHalf;
+          Taken = getEdgeProbability(Src, SB) < OneHalf;
           break;
         }
       } else {
@@ -3534,7 +3388,7 @@ int HexagonInstrInfo::getDotNewPredJumpOp(const MachineInstr &MI,
           BT = Op.getMBB();
           break;
         }
-        Taken = BT && MBPI->getEdgeProbability(Src, BT) < OneHalf;
+        Taken = BT && getEdgeProbability(Src, BT) < OneHalf;
       }
     } // if (!Bad)
   }

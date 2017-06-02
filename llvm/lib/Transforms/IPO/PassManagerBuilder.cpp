@@ -157,7 +157,7 @@ static cl::opt<bool>
 
 static cl::opt<bool> EnableGVNSink(
     "enable-gvn-sink", cl::init(false), cl::Hidden,
-    cl::desc("Enable the GVN sinking pass (default = on)"));
+    cl::desc("Enable the GVN sinking pass (default = off)"));
 
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;

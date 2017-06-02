@@ -668,7 +668,7 @@ Error CVSymbolDumperImpl::visitUnknownSymbol(CVSymbol &CVR) {
 
 Error CVSymbolDumper::dump(CVRecord<SymbolKind> &Record) {
   SymbolVisitorCallbackPipeline Pipeline;
-  SymbolDeserializer Deserializer(ObjDelegate.get());
+  SymbolDeserializer Deserializer(ObjDelegate.get(), Container);
   CVSymbolDumperImpl Dumper(Types, ObjDelegate.get(), W, PrintRecordBytes);
 
   Pipeline.addCallbackToPipeline(Deserializer);
@@ -679,7 +679,7 @@ Error CVSymbolDumper::dump(CVRecord<SymbolKind> &Record) {
 
 Error CVSymbolDumper::dump(const CVSymbolArray &Symbols) {
   SymbolVisitorCallbackPipeline Pipeline;
-  SymbolDeserializer Deserializer(ObjDelegate.get());
+  SymbolDeserializer Deserializer(ObjDelegate.get(), Container);
   CVSymbolDumperImpl Dumper(Types, ObjDelegate.get(), W, PrintRecordBytes);
 
   Pipeline.addCallbackToPipeline(Deserializer);

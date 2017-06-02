@@ -339,5 +339,9 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
       }
     }
   }
+
+  if (!module_sp) {
+      error = FindBundleBinaryInExecSearchPaths (module_spec, process, module_sp, module_search_paths_ptr, old_module_sp_ptr, did_create_ptr);
+  }
   return error;
 }

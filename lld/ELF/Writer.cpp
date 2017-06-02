@@ -258,9 +258,9 @@ template <class ELFT> void Writer<ELFT>::run() {
     return;
 
   if (!Script->Opt.HasSections) {
+    Script->fabricateDefaultCommands();
     if (!Config->Relocatable)
       fixSectionAlignments();
-    Script->fabricateDefaultCommands();
   } else {
     Script->synchronize();
   }
@@ -1504,15 +1504,23 @@ void Writer<ELFT>::addPtArmExid(std::vector<PhdrEntry> &Phdrs) {
 // first section after PT_GNU_RELRO have to be page aligned so that the dynamic
 // linker can set the permissions.
 template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
+  auto PageAlign = [](OutputSection *Sec) {
+    OutputSectionCommand *Cmd = Script->getCmd(Sec);
+    if (Cmd && !Cmd->AddrExpr)
+      Cmd->AddrExpr = [=] {
+        return alignTo(Script->getDot(), Config->MaxPageSize);
+      };
+  };
+
   for (const PhdrEntry &P : Phdrs)
     if (P.p_type == PT_LOAD && P.First)
-      P.First->PageAlign = true;
+      PageAlign(P.First);
 
   for (const PhdrEntry &P : Phdrs) {
     if (P.p_type != PT_GNU_RELRO)
       continue;
     if (P.First)
-      P.First->PageAlign = true;
+      PageAlign(P.First);
     // Find the first section after PT_GNU_RELRO. If it is in a PT_LOAD we
     // have to align it to a page.
     auto End = OutputSections.end();
@@ -1521,7 +1529,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       continue;
     OutputSection *Sec = *(I + 1);
     if (needsPtLoad(Sec))
-      Sec->PageAlign = true;
+      PageAlign(Sec);
   }
 }
 

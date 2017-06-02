@@ -1,4 +1,4 @@
-//==- ScheduleDAGInstrs.h - MachineInstr Scheduling --------------*- C++ -*-==//
+//===- ScheduleDAGInstrs.h - MachineInstr Scheduling ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,22 +15,38 @@
 #ifndef LLVM_CODEGEN_SCHEDULEDAGINSTRS_H
 #define LLVM_CODEGEN_SCHEDULEDAGINSTRS_H
 
-#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseMultiSet.h"
 #include "llvm/ADT/SparseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/TargetSchedule.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
+#include <cstdint>
 #include <list>
+#include <utility>
+#include <vector>
 
 namespace llvm {
+
+  class LiveIntervals;
   class MachineFrameInfo;
+  class MachineFunction;
+  class MachineInstr;
   class MachineLoopInfo;
-  class MachineDominatorTree;
-  class RegPressureTracker;
+  class MachineOperand;
+  struct MCSchedClassDesc;
   class PressureDiffs;
+  class PseudoSourceValue;
+  class RegPressureTracker;
+  class UndefValue;
+  class Value;
 
   /// An individual mapping from virtual register number to SUnit.
   struct VReg2SUnit {
@@ -70,31 +86,34 @@ namespace llvm {
   /// Use a SparseMultiSet to track physical registers. Storage is only
   /// allocated once for the pass. It can be cleared in constant time and reused
   /// without any frees.
-  typedef SparseMultiSet<PhysRegSUOper, llvm::identity<unsigned>, uint16_t>
-  Reg2SUnitsMap;
+  using Reg2SUnitsMap =
+      SparseMultiSet<PhysRegSUOper, identity<unsigned>, uint16_t>;
 
   /// Use SparseSet as a SparseMap by relying on the fact that it never
   /// compares ValueT's, only unsigned keys. This allows the set to be cleared
   /// between scheduling regions in constant time as long as ValueT does not
   /// require a destructor.
-  typedef SparseSet<VReg2SUnit, VirtReg2IndexFunctor> VReg2SUnitMap;
+  using VReg2SUnitMap = SparseSet<VReg2SUnit, VirtReg2IndexFunctor>;
 
   /// Track local uses of virtual registers. These uses are gathered by the DAG
   /// builder and may be consulted by the scheduler to avoid iterating an entire
   /// vreg use list.
-  typedef SparseMultiSet<VReg2SUnit, VirtReg2IndexFunctor> VReg2SUnitMultiMap;
+  using VReg2SUnitMultiMap = SparseMultiSet<VReg2SUnit, VirtReg2IndexFunctor>;
 
-  typedef SparseMultiSet<VReg2SUnitOperIdx, VirtReg2IndexFunctor>
-    VReg2SUnitOperIdxMultiMap;
+  using VReg2SUnitOperIdxMultiMap =
+      SparseMultiSet<VReg2SUnitOperIdx, VirtReg2IndexFunctor>;
 
-  typedef PointerUnion<const Value *, const PseudoSourceValue *> ValueType;
+  using ValueType = PointerUnion<const Value *, const PseudoSourceValue *>;
+
   struct UnderlyingObject : PointerIntPair<ValueType, 1, bool> {
     UnderlyingObject(ValueType V, bool MayAlias)
         : PointerIntPair<ValueType, 1, bool>(V, MayAlias) {}
+
     ValueType getValue() const { return getPointer(); }
     bool mayAlias() const { return getInt(); }
   };
-  typedef SmallVector<UnderlyingObject, 4> UnderlyingObjectsVector;
+
+  using UnderlyingObjectsVector = SmallVector<UnderlyingObject, 4>;
 
   /// A ScheduleDAG for scheduling lists of MachineInstr.
   class ScheduleDAGInstrs : public ScheduleDAG {
@@ -114,10 +133,10 @@ namespace llvm {
     /// reordering. A specialized scheduler can override
     /// TargetInstrInfo::isSchedulingBoundary then enable this flag to indicate
     /// it has taken responsibility for scheduling the terminator correctly.
-    bool CanHandleTerminators;
+    bool CanHandleTerminators = false;
 
     /// Whether lane masks should get tracked.
-    bool TrackLaneMasks;
+    bool TrackLaneMasks = false;
 
     // State specific to the current scheduling region.
     // ------------------------------------------------
@@ -155,12 +174,12 @@ namespace llvm {
     /// Tracks the last instructions in this region using each virtual register.
     VReg2SUnitOperIdxMultiMap CurrentVRegUses;
 
-    AliasAnalysis *AAForDep;
+    AliasAnalysis *AAForDep = nullptr;
 
     /// Remember a generic side-effecting instruction as we proceed.
     /// No other SU ever gets scheduled around it (except in the special
     /// case of a huge region that gets reduced).
-    SUnit *BarrierChain;
+    SUnit *BarrierChain = nullptr;
 
   public:
     /// A list of SUnits, used in Value2SUsMap, during DAG construction.
@@ -168,7 +187,7 @@ namespace llvm {
     /// implementation of this data structure, such as a singly linked list
     /// with a memory pool (SmallVector was tried but slow and SparseSet is not
     /// applicable).
-    typedef std::list<SUnit *> SUList;
+    using SUList = std::list<SUnit *>;
 
   protected:
     /// \brief A map from ValueType to SUList, used during DAG construction, as
@@ -216,13 +235,13 @@ namespace llvm {
     /// For an unanalyzable memory access, this Value is used in maps.
     UndefValue *UnknownValue;
 
-    typedef std::vector<std::pair<MachineInstr *, MachineInstr *>>
-      DbgValueVector;
+    using DbgValueVector =
+        std::vector<std::pair<MachineInstr *, MachineInstr *>>;
     /// Remember instruction that precedes DBG_VALUE.
     /// These are generated by buildSchedGraph but persist so they can be
     /// referenced when emitting the final schedule.
     DbgValueVector DbgValues;
-    MachineInstr *FirstDbgValue;
+    MachineInstr *FirstDbgValue = nullptr;
 
     /// Set of live physical registers for updating kill flags.
     LivePhysRegs LiveRegs;
@@ -232,7 +251,7 @@ namespace llvm {
                                const MachineLoopInfo *mli,
                                bool RemoveKillFlags = false);
 
-    ~ScheduleDAGInstrs() override {}
+    ~ScheduleDAGInstrs() override = default;
 
     /// Gets the machine model for instruction scheduling.
     const TargetSchedModel *getSchedModel() const { return &SchedModel; }
@@ -354,6 +373,7 @@ namespace llvm {
       return nullptr;
     return I->second;
   }
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_SCHEDULEDAGINSTRS_H

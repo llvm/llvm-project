@@ -42,11 +42,6 @@
 using namespace llvm;
 using namespace lto;
 
-static cl::opt<bool>
-    LTOUseNewPM("lto-use-new-pm",
-                cl::desc("Run LTO passes using the new pass manager"),
-                cl::init(false), cl::Hidden);
-
 LLVM_ATTRIBUTE_NORETURN static void reportOpenError(StringRef Path, Twine Msg) {
   errs() << "failed to open " << Path << ": " << Msg << '\n';
   errs().flush();
@@ -136,7 +131,8 @@ createTargetMachine(Config &Conf, const Target *TheTarget, Module &M) {
       Conf.CodeModel, Conf.CGOptLevel));
 }
 
-static void runNewPMPasses(Module &Mod, TargetMachine *TM, unsigned OptLevel) {
+static void runNewPMPasses(Module &Mod, TargetMachine *TM, unsigned OptLevel,
+                           bool IsThinLTO) {
   PassBuilder PB(TM);
   AAManager AA;
 
@@ -180,7 +176,10 @@ static void runNewPMPasses(Module &Mod, TargetMachine *TM, unsigned OptLevel) {
     break;
   }
 
-  MPM = PB.buildLTODefaultPipeline(OL, false /* DebugLogging */);
+  if (IsThinLTO)
+    MPM = PB.buildThinLTODefaultPipeline(OL, false /* DebugLogging */);
+  else
+    MPM = PB.buildLTODefaultPipeline(OL, false /* DebugLogging */);
   MPM.run(Mod, MAM);
 
   // FIXME (davide): verify the output.
@@ -258,17 +257,12 @@ static void runOldPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
 bool opt(Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
          bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
          const ModuleSummaryIndex *ImportSummary) {
-  // There's still no ThinLTO pipeline hooked up in the new pass manager,
-  // once there is one, we can just remove this.
-  if (LTOUseNewPM && IsThinLTO)
-    report_fatal_error("ThinLTO not supported with the new PM yet!");
-
   // FIXME: Plumb the combined index into the new pass manager.
   if (!Conf.OptPipeline.empty())
     runNewPMCustomPasses(Mod, TM, Conf.OptPipeline, Conf.AAPipeline,
                          Conf.DisableVerify);
-  else if (LTOUseNewPM)
-    runNewPMPasses(Mod, TM, Conf.OptLevel);
+  else if (Conf.UseNewPM)
+    runNewPMPasses(Mod, TM, Conf.OptLevel, IsThinLTO);
   else
     runOldPMPasses(Conf, Mod, TM, IsThinLTO, ExportSummary, ImportSummary);
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);

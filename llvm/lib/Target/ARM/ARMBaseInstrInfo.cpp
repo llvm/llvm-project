@@ -558,11 +558,66 @@ bool ARMBaseInstrInfo::DefinesPredicate(
   return Found;
 }
 
-static bool isCPSRDefined(const MachineInstr *MI) {
-  for (const auto &MO : MI->operands())
+bool ARMBaseInstrInfo::isCPSRDefined(const MachineInstr &MI) {
+  for (const auto &MO : MI.operands())
     if (MO.isReg() && MO.getReg() == ARM::CPSR && MO.isDef() && !MO.isDead())
       return true;
   return false;
+}
+
+bool ARMBaseInstrInfo::isAddrMode3OpImm(const MachineInstr &MI,
+                                        unsigned Op) const {
+  const MachineOperand &Offset = MI.getOperand(Op + 1);
+  return Offset.getReg() != 0;
+}
+
+// Load with negative register offset requires additional 1cyc and +I unit
+// for Cortex A57
+bool ARMBaseInstrInfo::isAddrMode3OpMinusReg(const MachineInstr &MI,
+                                             unsigned Op) const {
+  const MachineOperand &Offset = MI.getOperand(Op + 1);
+  const MachineOperand &Opc = MI.getOperand(Op + 2);
+  assert(Opc.isImm());
+  assert(Offset.isReg());
+  int64_t OpcImm = Opc.getImm();
+
+  bool isSub = ARM_AM::getAM3Op(OpcImm) == ARM_AM::sub;
+  return (isSub && Offset.getReg() != 0);
+}
+
+bool ARMBaseInstrInfo::isLdstScaledReg(const MachineInstr &MI,
+                                       unsigned Op) const {
+  const MachineOperand &Opc = MI.getOperand(Op + 2);
+  unsigned OffImm = Opc.getImm();
+  return ARM_AM::getAM2ShiftOpc(OffImm) != ARM_AM::no_shift;
+}
+
+// Load, scaled register offset, not plus LSL2
+bool ARMBaseInstrInfo::isLdstScaledRegNotPlusLsl2(const MachineInstr &MI,
+                                                  unsigned Op) const {
+  const MachineOperand &Opc = MI.getOperand(Op + 2);
+  unsigned OffImm = Opc.getImm();
+
+  bool isAdd = ARM_AM::getAM2Op(OffImm) == ARM_AM::add;
+  unsigned Amt = ARM_AM::getAM2Offset(OffImm);
+  ARM_AM::ShiftOpc ShiftOpc = ARM_AM::getAM2ShiftOpc(OffImm);
+  if (ShiftOpc == ARM_AM::no_shift) return false; // not scaled
+  bool SimpleScaled = (isAdd && ShiftOpc == ARM_AM::lsl && Amt == 2);
+  return !SimpleScaled;
+}
+
+// Minus reg for ldstso addr mode
+bool ARMBaseInstrInfo::isLdstSoMinusReg(const MachineInstr &MI,
+                                        unsigned Op) const {
+  unsigned OffImm = MI.getOperand(Op + 2).getImm();
+  return ARM_AM::getAM2Op(OffImm) == ARM_AM::sub;
+}
+
+// Load, scaled register offset
+bool ARMBaseInstrInfo::isAm2ScaledReg(const MachineInstr &MI,
+                                      unsigned Op) const {
+  unsigned OffImm = MI.getOperand(Op + 2).getImm();
+  return ARM_AM::getAM2ShiftOpc(OffImm) != ARM_AM::no_shift;
 }
 
 static bool isEligibleForITBlock(const MachineInstr *MI) {
@@ -590,7 +645,7 @@ static bool isEligibleForITBlock(const MachineInstr *MI) {
   case ARM::tSUBi3: // SUB (immediate) T1
   case ARM::tSUBi8: // SUB (immediate) T2
   case ARM::tSUBrr: // SUB (register) T1
-    return !isCPSRDefined(MI);
+    return !ARMBaseInstrInfo::isCPSRDefined(*MI);
   }
 }
 
@@ -3349,6 +3404,22 @@ ARMBaseInstrInfo::getVLDMDefCycle(const InstrItineraryData *ItinData,
   return DefCycle;
 }
 
+bool ARMBaseInstrInfo::isLDMBaseRegInList(const MachineInstr &MI) const {
+  unsigned BaseReg = MI.getOperand(0).getReg();
+  for (unsigned i = 1, sz = MI.getNumOperands(); i < sz; ++i) {
+    const auto &Op = MI.getOperand(i);
+    if (Op.isReg() && Op.getReg() == BaseReg)
+      return true;
+  }
+  return false;
+}
+unsigned
+ARMBaseInstrInfo::getLDMVariableDefsSize(const MachineInstr &MI) const {
+  // ins GPR:$Rn, pred:$p (2xOp), reglist:$regs, variable_ops
+  // (outs GPR:$wb), (ins GPR:$Rn, pred:$p (2xOp), reglist:$regs, variable_ops)
+  return MI.getNumOperands() + 1 - MI.getDesc().getNumOperands();
+}
+
 int
 ARMBaseInstrInfo::getLDMDefCycle(const InstrItineraryData *ItinData,
                                  const MCInstrDesc &DefMCID,
@@ -4119,7 +4190,8 @@ unsigned ARMBaseInstrInfo::getPredicationCost(const MachineInstr &MI) const {
 
   const MCInstrDesc &MCID = MI.getDesc();
 
-  if (MCID.isCall() || MCID.hasImplicitDefOfPhysReg(ARM::CPSR)) {
+  if (MCID.isCall() || (MCID.hasImplicitDefOfPhysReg(ARM::CPSR) &&
+                        !Subtarget.cheapPredicableCPSRDef())) {
     // When predicated, CPSR is an additional source operand for CPSR updating
     // instructions, this apparently increases their latencies.
     return 1;
@@ -4148,7 +4220,8 @@ unsigned ARMBaseInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   }
 
   const MCInstrDesc &MCID = MI.getDesc();
-  if (PredCost && (MCID.isCall() || MCID.hasImplicitDefOfPhysReg(ARM::CPSR))) {
+  if (PredCost && (MCID.isCall() || (MCID.hasImplicitDefOfPhysReg(ARM::CPSR) &&
+                                     !Subtarget.cheapPredicableCPSRDef()))) {
     // When predicated, CPSR is an additional source operand for CPSR updating
     // instructions, this apparently increases their latencies.
     *PredCost = 1;

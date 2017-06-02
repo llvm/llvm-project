@@ -228,7 +228,7 @@ static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
 
   SmallVector<ReturnInst *, 4> Returns;
 
-  CloneFunctionInto(NewF, &F, VMap, /*ModuleLevelChanges=*/false, Returns);
+  CloneFunctionInto(NewF, &F, VMap, /*ModuleLevelChanges=*/true, Returns);
 
   // Remove old returns.
   for (ReturnInst *Return : Returns)

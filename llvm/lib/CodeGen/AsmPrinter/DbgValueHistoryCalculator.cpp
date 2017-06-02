@@ -194,6 +194,10 @@ void llvm::calculateDbgValueHistory(const MachineFunction *MF,
         // some variables.
         for (const MachineOperand &MO : MI.operands()) {
           if (MO.isReg() && MO.isDef() && MO.getReg()) {
+            // Ignore call instructions that claim to clobber SP. The AArch64
+            // backend does this for aggregate function arguments.
+            if (MI.isCall() && MO.getReg() == SP)
+              continue;
             // If this is a virtual register, only clobber it since it doesn't
             // have aliases.
             if (TRI->isVirtualRegister(MO.getReg()))

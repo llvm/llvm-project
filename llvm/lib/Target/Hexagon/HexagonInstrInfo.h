@@ -314,11 +314,6 @@ public:
   bool isAccumulator(const MachineInstr &MI) const;
   bool isComplex(const MachineInstr &MI) const;
   bool isCompoundBranchInstr(const MachineInstr &MI) const;
-  bool isCondInst(const MachineInstr &MI) const;
-  bool isConditionalALU32 (const MachineInstr &MI) const;
-  bool isConditionalLoad(const MachineInstr &MI) const;
-  bool isConditionalStore(const MachineInstr &MI) const;
-  bool isConditionalTransfer(const MachineInstr &MI) const;
   bool isConstExtended(const MachineInstr &MI) const;
   bool isDeallocRet(const MachineInstr &MI) const;
   bool isDependent(const MachineInstr &ProdMI,

@@ -88,6 +88,3 @@ pr45695.c wasm-o
 pr49279.c wasm-o
 pr49390.c wasm-o
 pr52286.c wasm-o
-
-# fatal error: error in backend: data symbols must have a size set with .size
-921110-1.c wasm-o

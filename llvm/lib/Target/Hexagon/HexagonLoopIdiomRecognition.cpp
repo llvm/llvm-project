@@ -59,6 +59,9 @@ cl::opt<bool> HexagonVolatileMemcpy("disable-hexagon-volatile-memcpy",
   cl::Hidden, cl::init(false),
   cl::desc("Enable Hexagon-specific memcpy for volatile destination."));
 
+static cl::opt<unsigned> SimplifyLimit("hlir-simplify-limit", cl::init(10000),
+  cl::Hidden, cl::desc("Maximum number of simplification steps in HLIR"));
+
 static const char *HexagonVolatileMemcpyName
   = "hexagon_memcpy_forward_vp4cp4n2";
 
@@ -477,7 +480,7 @@ Value *Simplifier::simplify(Context &C) {
   WorkListType Q;
   Q.push_back(C.Root);
   unsigned Count = 0;
-  const unsigned Limit = 100000;
+  const unsigned Limit = SimplifyLimit;
 
   while (!Q.empty()) {
     if (Count++ >= Limit)
@@ -501,8 +504,7 @@ Value *Simplifier::simplify(Context &C) {
         Q.push_back(Op);
     }
   }
-  assert(Count < Limit && "Infinite loop in HLIR/simplify?");
-  return C.Root;
+  return Count < Limit ? C.Root : nullptr;
 }
 
 

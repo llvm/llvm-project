@@ -6,68 +6,35 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -mcpu=x86-64 -mattr=+avx512f,+avx512vl,+avx512bw < %s | FileCheck %s --check-prefixes=AVX512
 
 define i8 @v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d) {
-; SSE2-SSSE3-LABEL: v8i16:
-; SSE2-SSSE3:       ## BB#0:
-; SSE2-SSSE3-NEXT:    pcmpgtw %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pcmpgtw %xmm3, %xmm2
-; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    pextrw $7, %xmm2, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pextrw $6, %xmm2, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pextrw $5, %xmm2, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pextrw $4, %xmm2, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pextrw $3, %xmm2, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pextrw $2, %xmm2, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pextrw $1, %xmm2, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movd %xmm2, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    retq
+; SSE2-LABEL: v8i16:
+; SSE2:       ## BB#0:
+; SSE2-NEXT:    pcmpgtw %xmm1, %xmm0
+; SSE2-NEXT:    pcmpgtw %xmm3, %xmm2
+; SSE2-NEXT:    pand %xmm0, %xmm2
+; SSE2-NEXT:    pand {{.*}}(%rip), %xmm2
+; SSE2-NEXT:    packuswb %xmm2, %xmm2
+; SSE2-NEXT:    pmovmskb %xmm2, %eax
+; SSE2-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: v8i16:
+; SSSE3:       ## BB#0:
+; SSSE3-NEXT:    pcmpgtw %xmm1, %xmm0
+; SSSE3-NEXT:    pcmpgtw %xmm3, %xmm2
+; SSSE3-NEXT:    pand %xmm0, %xmm2
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm2 = xmm2[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; SSSE3-NEXT:    pmovmskb %xmm2, %eax
+; SSSE3-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v8i16:
 ; AVX12:       ## BB#0:
 ; AVX12-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vpcmpgtw %xmm3, %xmm2, %xmm1
 ; AVX12-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX12-NEXT:    vpextrw $7, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrw $6, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrw $5, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrw $4, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrw $3, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrw $2, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vmovd %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX12-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX12-NEXT:    vpmovmskb %xmm0, %eax
+; AVX12-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: v8i16:
@@ -90,22 +57,8 @@ define i4 @v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm2
 ; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    movd %xmm2, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[3,1,2,3]
-; SSE2-SSSE3-NEXT:    movd %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
-; SSE2-SSSE3-NEXT:    movd %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,2,3]
-; SSE2-SSSE3-NEXT:    movd %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movmskps %xmm2, %eax
+; SSE2-SSSE3-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v4i32:
@@ -113,19 +66,8 @@ define i4 @v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; AVX12-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm1
 ; AVX12-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX12-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vmovd %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX12-NEXT:    vmovmskps %xmm0, %eax
+; AVX12-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: v4i32:
@@ -149,22 +91,8 @@ define i4 @v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d)
 ; SSE2-SSSE3-NEXT:    cmpltps %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    cmpltps %xmm2, %xmm3
 ; SSE2-SSSE3-NEXT:    andps %xmm1, %xmm3
-; SSE2-SSSE3-NEXT:    movd %xmm3, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[3,1,2,3]
-; SSE2-SSSE3-NEXT:    movd %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,0,1]
-; SSE2-SSSE3-NEXT:    movd %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[1,1,2,3]
-; SSE2-SSSE3-NEXT:    movd %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movmskps %xmm3, %eax
+; SSE2-SSSE3-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v4f32:
@@ -172,19 +100,8 @@ define i4 @v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d)
 ; AVX12-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0
 ; AVX12-NEXT:    vcmpltps %xmm2, %xmm3, %xmm1
 ; AVX12-NEXT:    vandps %xmm1, %xmm0, %xmm0
-; AVX12-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vmovd %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX12-NEXT:    vmovmskps %xmm0, %eax
+; AVX12-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: v4f32:
@@ -208,56 +125,8 @@ define i16 @v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 ; SSE2-SSSE3-NEXT:    pcmpgtb %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    pcmpgtb %xmm3, %xmm2
 ; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    movdqa %xmm2, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %cl
-; SSE2-SSSE3-NEXT:    andb $1, %cl
-; SSE2-SSSE3-NEXT:    movb %cl, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm2, %eax
+; SSE2-SSSE3-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v16i8:
@@ -265,55 +134,8 @@ define i16 @v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 ; AVX12-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vpcmpgtb %xmm3, %xmm2, %xmm1
 ; AVX12-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX12-NEXT:    vpextrb $15, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $14, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $13, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $12, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $11, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $10, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $9, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $8, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $7, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $6, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $5, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $4, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $3, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $2, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $1, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
+; AVX12-NEXT:    vpmovmskb %xmm0, %eax
+; AVX12-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: v16i8:
@@ -383,14 +205,8 @@ define i2 @v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    movq %xmm0, %rax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; SSE2-SSSE3-NEXT:    movq %xmm0, %rax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movmskpd %xmm0, %eax
+; SSE2-SSSE3-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: v2i8:
@@ -418,13 +234,8 @@ define i2 @v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm3[2,3],xmm0[4,5],xmm3[6,7]
 ; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX1-NEXT:    andl $1, %eax
-; AVX1-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    andl $1, %eax
-; AVX1-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX1-NEXT:    vmovmskpd %xmm0, %eax
+; AVX1-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: v2i8:
@@ -452,13 +263,8 @@ define i2 @v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm3[1],xmm0[2],xmm3[3]
 ; AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX2-NEXT:    vmovmskpd %xmm0, %eax
+; AVX2-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: v2i8:
@@ -537,14 +343,8 @@ define i2 @v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d) {
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    movq %xmm0, %rax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; SSE2-SSSE3-NEXT:    movq %xmm0, %rax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movmskpd %xmm0, %eax
+; SSE2-SSSE3-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: v2i16:
@@ -572,13 +372,8 @@ define i2 @v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d) {
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm3[2,3],xmm0[4,5],xmm3[6,7]
 ; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX1-NEXT:    andl $1, %eax
-; AVX1-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    andl $1, %eax
-; AVX1-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX1-NEXT:    vmovmskpd %xmm0, %eax
+; AVX1-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: v2i16:
@@ -606,13 +401,8 @@ define i2 @v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d) {
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm3[1],xmm0[2],xmm3[3]
 ; AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX2-NEXT:    vmovmskpd %xmm0, %eax
+; AVX2-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: v2i16:
@@ -683,14 +473,8 @@ define i2 @v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm0
-; SSE2-SSSE3-NEXT:    movq %xmm0, %rax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; SSE2-SSSE3-NEXT:    movq %xmm0, %rax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movmskpd %xmm0, %eax
+; SSE2-SSSE3-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: v2i32:
@@ -714,13 +498,8 @@ define i2 @v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm3[2,3],xmm0[4,5],xmm3[6,7]
 ; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX1-NEXT:    andl $1, %eax
-; AVX1-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    andl $1, %eax
-; AVX1-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX1-NEXT:    vmovmskpd %xmm0, %eax
+; AVX1-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: v2i32:
@@ -744,13 +523,8 @@ define i2 @v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm3[1],xmm0[2],xmm3[3]
 ; AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX2-NEXT:    vmovmskpd %xmm0, %eax
+; AVX2-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: v2i32:
@@ -801,14 +575,8 @@ define i2 @v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i64> %d) {
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    movq %xmm0, %rax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; SSE2-SSSE3-NEXT:    movq %xmm0, %rax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movmskpd %xmm0, %eax
+; SSE2-SSSE3-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v2i64:
@@ -816,13 +584,8 @@ define i2 @v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i64> %d) {
 ; AVX12-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm1
 ; AVX12-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX12-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vmovq %xmm0, %rax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX12-NEXT:    vmovmskpd %xmm0, %eax
+; AVX12-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: v2i64:
@@ -846,14 +609,8 @@ define i2 @v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double>
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm2, %xmm3
 ; SSE2-SSSE3-NEXT:    andpd %xmm1, %xmm3
-; SSE2-SSSE3-NEXT:    movq %xmm3, %rax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,0,1]
-; SSE2-SSSE3-NEXT:    movq %xmm0, %rax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movmskpd %xmm3, %eax
+; SSE2-SSSE3-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v2f64:
@@ -861,13 +618,8 @@ define i2 @v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double>
 ; AVX12-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
 ; AVX12-NEXT:    vcmpltpd %xmm2, %xmm3, %xmm1
 ; AVX12-NEXT:    vandpd %xmm1, %xmm0, %xmm0
-; AVX12-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vmovq %xmm0, %rax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX12-NEXT:    vmovmskpd %xmm0, %eax
+; AVX12-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: v2f64:
@@ -899,22 +651,8 @@ define i4 @v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> %d) {
 ; SSE2-SSSE3-NEXT:    psrad $24, %xmm0
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm0
-; SSE2-SSSE3-NEXT:    movd %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,1,2,3]
-; SSE2-SSSE3-NEXT:    movd %xmm1, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; SSE2-SSSE3-NEXT:    movd %xmm1, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; SSE2-SSSE3-NEXT:    movd %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movmskps %xmm0, %eax
+; SSE2-SSSE3-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v4i8:
@@ -930,19 +668,8 @@ define i4 @v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> %d) {
 ; AVX12-NEXT:    vpsrad $24, %xmm0, %xmm0
 ; AVX12-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX12-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vmovd %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX12-NEXT:    vmovmskps %xmm0, %eax
+; AVX12-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: v4i8:
@@ -982,22 +709,8 @@ define i4 @v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d) {
 ; SSE2-SSSE3-NEXT:    psrad $16, %xmm0
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm0
-; SSE2-SSSE3-NEXT:    movd %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,1,2,3]
-; SSE2-SSSE3-NEXT:    movd %xmm1, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; SSE2-SSSE3-NEXT:    movd %xmm1, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; SSE2-SSSE3-NEXT:    movd %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-SSSE3-NEXT:    movmskps %xmm0, %eax
+; SSE2-SSSE3-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v4i16:
@@ -1013,19 +726,8 @@ define i4 @v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d) {
 ; AVX12-NEXT:    vpsrad $16, %xmm0, %xmm0
 ; AVX12-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX12-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vmovd %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX12-NEXT:    vmovmskps %xmm0, %eax
+; AVX12-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: v4i16:
@@ -1052,45 +754,42 @@ define i4 @v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d) {
 }
 
 define i8 @v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) {
-; SSE2-SSSE3-LABEL: v8i8:
-; SSE2-SSSE3:       ## BB#0:
-; SSE2-SSSE3-NEXT:    psllw $8, %xmm3
-; SSE2-SSSE3-NEXT:    psraw $8, %xmm3
-; SSE2-SSSE3-NEXT:    psllw $8, %xmm2
-; SSE2-SSSE3-NEXT:    psraw $8, %xmm2
-; SSE2-SSSE3-NEXT:    pcmpgtw %xmm3, %xmm2
-; SSE2-SSSE3-NEXT:    psllw $8, %xmm1
-; SSE2-SSSE3-NEXT:    psraw $8, %xmm1
-; SSE2-SSSE3-NEXT:    psllw $8, %xmm0
-; SSE2-SSSE3-NEXT:    psraw $8, %xmm0
-; SSE2-SSSE3-NEXT:    pcmpgtw %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm0
-; SSE2-SSSE3-NEXT:    pextrw $7, %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pextrw $6, %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pextrw $5, %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pextrw $4, %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pextrw $3, %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pextrw $2, %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    pextrw $1, %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movd %xmm0, %eax
-; SSE2-SSSE3-NEXT:    andl $1, %eax
-; SSE2-SSSE3-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; SSE2-SSSE3-NEXT:    retq
+; SSE2-LABEL: v8i8:
+; SSE2:       ## BB#0:
+; SSE2-NEXT:    psllw $8, %xmm3
+; SSE2-NEXT:    psraw $8, %xmm3
+; SSE2-NEXT:    psllw $8, %xmm2
+; SSE2-NEXT:    psraw $8, %xmm2
+; SSE2-NEXT:    pcmpgtw %xmm3, %xmm2
+; SSE2-NEXT:    psllw $8, %xmm1
+; SSE2-NEXT:    psraw $8, %xmm1
+; SSE2-NEXT:    psllw $8, %xmm0
+; SSE2-NEXT:    psraw $8, %xmm0
+; SSE2-NEXT:    pcmpgtw %xmm1, %xmm0
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: v8i8:
+; SSSE3:       ## BB#0:
+; SSSE3-NEXT:    psllw $8, %xmm3
+; SSSE3-NEXT:    psraw $8, %xmm3
+; SSSE3-NEXT:    psllw $8, %xmm2
+; SSSE3-NEXT:    psraw $8, %xmm2
+; SSSE3-NEXT:    pcmpgtw %xmm3, %xmm2
+; SSSE3-NEXT:    psllw $8, %xmm1
+; SSSE3-NEXT:    psraw $8, %xmm1
+; SSSE3-NEXT:    psllw $8, %xmm0
+; SSSE3-NEXT:    psraw $8, %xmm0
+; SSSE3-NEXT:    pcmpgtw %xmm1, %xmm0
+; SSSE3-NEXT:    pand %xmm2, %xmm0
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; SSSE3-NEXT:    pmovmskb %xmm0, %eax
+; SSSE3-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v8i8:
 ; AVX12:       ## BB#0:
@@ -1105,31 +804,9 @@ define i8 @v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) {
 ; AVX12-NEXT:    vpsraw $8, %xmm0, %xmm0
 ; AVX12-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX12-NEXT:    vpextrw $7, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrw $6, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrw $5, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrw $4, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrw $3, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrw $2, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    vmovd %xmm0, %eax
-; AVX12-NEXT:    andl $1, %eax
-; AVX12-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX12-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX12-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX12-NEXT:    vpmovmskb %xmm0, %eax
+; AVX12-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: v8i8:
