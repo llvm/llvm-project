@@ -4,6 +4,7 @@
 // This should not emit anything.
 // RUN: %clang_cc1 %s -w 2>&1 | not grep diagnostic
 // RUN: %clang_cc1 %s -Wno-#warnings 2>&1 | not grep diagnostic
+// RUN: %clang_cc1 %s -Wno-cpp 2>&1 | not grep diagnostic
 
 // -Werror can map all warnings to error.
 // RUN: not %clang_cc1 %s -Werror 2>&1 | grep "error: foo"

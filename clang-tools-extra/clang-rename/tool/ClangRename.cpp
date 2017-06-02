@@ -95,6 +95,9 @@ static cl::opt<std::string>
 static cl::opt<std::string>
     Input("input", cl::desc("YAML file to load oldname-newname pairs from."),
           cl::Optional, cl::cat(ClangRenameOptions));
+static cl::opt<bool> Force("force",
+                           cl::desc("Ignore nonexistent qualified names."),
+                           cl::cat(ClangRenameOptions));
 
 int main(int argc, const char **argv) {
   tooling::CommonOptionsParser OP(argc, argv, ClangRenameOptions);
@@ -157,7 +160,7 @@ int main(int argc, const char **argv) {
 
   auto Files = OP.getSourcePathList();
   tooling::RefactoringTool Tool(OP.getCompilations(), Files);
-  rename::USRFindingAction FindingAction(SymbolOffsets, QualifiedNames);
+  rename::USRFindingAction FindingAction(SymbolOffsets, QualifiedNames, Force);
   Tool.run(tooling::newFrontendActionFactory(&FindingAction).get());
   const std::vector<std::vector<std::string>> &USRList =
       FindingAction.getUSRList();
@@ -171,6 +174,12 @@ int main(int argc, const char **argv) {
   if (FindingAction.errorOccurred()) {
     // Diagnostics are already issued at this point.
     exit(1);
+  }
+
+  if (Force && PrevNames.size() < NewNames.size()) {
+    // No matching PrevName for all NewNames. Without Force this is an error
+    // above already.
+    exit(0);
   }
 
   // Perform the renaming.

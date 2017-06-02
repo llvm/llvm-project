@@ -152,6 +152,15 @@ Function *PerfMonitor::insertFinalReporting() {
   RuntimeDebugBuilder::createCPUPrinter(Builder, "Total: ", CyclesTotal, "\n");
   RuntimeDebugBuilder::createCPUPrinter(Builder, "Scops: ", CyclesInScops,
                                         "\n");
+
+  // Print the preamble for per-scop information.
+  RuntimeDebugBuilder::createCPUPrinter(Builder, "\n");
+  RuntimeDebugBuilder::createCPUPrinter(Builder, "Per SCoP information\n");
+  RuntimeDebugBuilder::createCPUPrinter(Builder, "--------------------\n");
+
+  RuntimeDebugBuilder::createCPUPrinter(
+      Builder, "scop function, "
+               "entry block name, exit block name, total time\n");
   ReturnFromFinal = Builder.CreateRetVoid();
   return ExitFn;
 }
@@ -173,9 +182,10 @@ void PerfMonitor::AppendScopReporting() {
   std::string EntryName, ExitName;
   std::tie(EntryName, ExitName) = S.getEntryExitStr();
 
-  RuntimeDebugBuilder::createCPUPrinter(
-      Builder, "Scop(", S.getFunction().getName(), " |from: ", EntryName,
-      " |to: ", ExitName, "): ", CyclesInCurrentScop, "\n");
+  // print in CSV for easy parsing with other tools.
+  RuntimeDebugBuilder::createCPUPrinter(Builder, S.getFunction().getName(),
+                                        ", ", EntryName, ", ", ExitName, ", ",
+                                        CyclesInCurrentScop, "\n");
 
   ReturnFromFinal = Builder.CreateRetVoid();
 }

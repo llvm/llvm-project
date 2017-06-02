@@ -28,12 +28,21 @@
 // RUN: %clang_cc1 -fmodules -fmodule-file=%t/no-rewrite.pcm %s -I%t -verify -fno-modules-error-recovery -DINCLUDE -I%S/Inputs/preprocess
 // RUN: %clang_cc1 -fmodules -fmodule-file=%t/rewrite.pcm %s -I%t -verify -fno-modules-error-recovery -DREWRITE -DINCLUDE -I%S/Inputs/preprocess
 
+// Now try building the module when the header files are missing.
+// RUN: cp %S/Inputs/preprocess/fwd.h %S/Inputs/preprocess/file.h %S/Inputs/preprocess/file2.h %S/Inputs/preprocess/module.modulemap %t
+// RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -I%t -x c++-module-map %t/module.modulemap -E -frewrite-includes -o %t/copy.ii
+// RUN: rm %t/fwd.h %t/file.h %t/file2.h %t/module.modulemap
+// RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -x c++-module-map-cpp-output %t/copy.ii -emit-module -o %t/copy.pcm
+
+// Finally, check that our module contains correct mapping information for the headers.
+// RUN: cp %S/Inputs/preprocess/fwd.h %S/Inputs/preprocess/file.h %S/Inputs/preprocess/file2.h %S/Inputs/preprocess/module.modulemap %t
+// RUN: %clang_cc1 -fmodules -fmodule-file=%t/copy.pcm %s -I%t -verify -fno-modules-error-recovery -DCOPY -DINCLUDE
 
 // == module map
 // CHECK: # 1 "{{.*}}module.modulemap"
 // CHECK: module file {
-// CHECK:   header "file.h"
-// CHECK:   header "file2.h"
+// CHECK:   header "file.h" { size
+// CHECK:   header "file2.h" { size
 // CHECK: }
 
 // == file.h
@@ -98,6 +107,8 @@
 __FILE *a; // expected-error {{declaration of '__FILE' must be imported}}
 #ifdef REWRITE
 // expected-note@rewrite.ii:1 {{here}}
+#elif COPY
+// expected-note@copy.ii:1 {{here}}
 #else
 // expected-note@no-rewrite.ii:1 {{here}}
 #endif

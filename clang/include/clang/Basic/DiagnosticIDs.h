@@ -32,7 +32,7 @@ namespace clang {
       DIAG_START_FRONTEND      = DIAG_START_DRIVER          +  200,
       DIAG_START_SERIALIZATION = DIAG_START_FRONTEND        +  100,
       DIAG_START_LEX           = DIAG_START_SERIALIZATION   +  120,
-      DIAG_START_PARSE         = DIAG_START_LEX             +  300,
+      DIAG_START_PARSE         = DIAG_START_LEX             +  400,
       DIAG_START_AST           = DIAG_START_PARSE           +  500,
       DIAG_START_COMMENT       = DIAG_START_AST             +  110,
       DIAG_START_SEMA          = DIAG_START_COMMENT         +  100,

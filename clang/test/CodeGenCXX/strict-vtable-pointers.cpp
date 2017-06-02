@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -fstrict-vtable-pointers -disable-llvm-passes -O2 -emit-llvm -o %t.ll
+// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -fstrict-vtable-pointers -std=c++11 -disable-llvm-passes -O2 -emit-llvm -o %t.ll
 // RUN: FileCheck --check-prefix=CHECK-CTORS %s < %t.ll
 // RUN: FileCheck --check-prefix=CHECK-NEW %s < %t.ll
 // RUN: FileCheck --check-prefix=CHECK-DTORS %s < %t.ll
@@ -180,6 +180,119 @@ struct DynamicFromStatic;
 // CHECK-CTORS-NOT: @llvm.invariant.group.barrier(
 // CHECK-CTORS-LABEL: {{^}}}
 
+struct A {
+  virtual void foo();
+};
+struct B : A {
+  virtual void foo();
+};
+
+union U {
+  A a;
+  B b;
+};
+
+void changeToB(U *u);
+void changeToA(U *u);
+
+void g2(A *a) {
+  a->foo();
+}
+// We have to guard access to union fields with invariant.group, because
+// it is very easy to skip the barrier with unions. In this example the inlined
+// g2 will produce loads with the same !invariant.group metadata, and
+// u->a and u->b would use the same pointer.
+// CHECK-NEW-LABEL: define void @_Z14UnionsBarriersP1U
+void UnionsBarriers(U *u) {
+  // CHECK-NEW: call void @_Z9changeToBP1U(
+  changeToB(u);
+  // CHECK-NEW: call i8* @llvm.invariant.group.barrier(i8*
+  // CHECK-NEW: call void @_Z2g2P1A(%struct.A*
+  g2(&u->b);
+  // CHECK-NEW: call void @_Z9changeToAP1U(%union.U* 
+  changeToA(u);
+  // CHECK-NEW: call i8* @llvm.invariant.group.barrier(i8*
+  // call void @_Z2g2P1A(%struct.A* %a)
+  g2(&u->a);
+  // CHECK-NEW-NOT: call i8* @llvm.invariant.group.barrier(i8*
+}
+
+struct HoldingVirtuals {
+  A a;
+};
+
+struct Empty {};
+struct AnotherEmpty {
+  Empty e;
+};
+union NoVptrs {
+  int a;
+  AnotherEmpty empty;
+};
+void take(AnotherEmpty &);
+
+// CHECK-NEW-LABEL: noBarriers
+void noBarriers(NoVptrs &noVptrs) {
+  // CHECK-NEW-NOT: call i8* @llvm.invariant.group.barrier(i8*
+  // CHECK-NEW: 42
+  noVptrs.a += 42;
+  // CHECK-NEW-NOT: call i8* @llvm.invariant.group.barrier(i8*
+  // CHECK-NEW: call void @_Z4takeR12AnotherEmpty(
+  take(noVptrs.empty);
+}
+
+union U2 {
+  HoldingVirtuals h;
+  int z;
+};
+void take(HoldingVirtuals &);
+
+// CHECK-NEW-LABEL: define void @_Z15UnionsBarriers2R2U2
+void UnionsBarriers2(U2 &u) {
+  // CHECK-NEW-NOT: call i8* @llvm.invariant.group.barrier(i8*
+  // CHECK-NEW: 42
+  u.z += 42;
+  // CHECK-NEW: call i8* @llvm.invariant.group.barrier(i8*
+  // CHECK-NEW: call void @_Z4takeR15HoldingVirtuals(
+  take(u.h);
+}
+
+struct VirtualInBase : HoldingVirtuals, Empty {
+};
+
+struct VirtualInVBase : virtual Empty, virtual HoldingVirtuals {
+};
+
+// It has vtable by virtual inheritance.
+struct VirtualInheritance : virtual Empty {
+};
+
+union U3 {
+  VirtualInBase v1;
+  VirtualInBase v2;
+  VirtualInheritance v3;
+  int z;
+};
+
+void take(VirtualInBase &);
+void take(VirtualInVBase &);
+void take(VirtualInheritance &);
+
+void UnionsBarrier3(U3 &u) {
+  // CHECK-NEW-NOT: call i8* @llvm.invariant.group.barrier(i8*
+  // CHECK-NEW: 42
+  u.z += 42;
+  // CHECK-NEW: call i8* @llvm.invariant.group.barrier(i8*
+  // CHECK-NEW: call void @_Z4takeR13VirtualInBase(
+  take(u.v1);
+  // CHECK-NEW: call i8* @llvm.invariant.group.barrier(i8*
+  // CHECK-NEW: call void @_Z4takeR13VirtualInBase(
+  take(u.v2);
+
+  // CHECK-NEW: call i8* @llvm.invariant.group.barrier(i8*
+  // CHECK-NEW: call void @_Z4takeR18VirtualInheritance(
+  take(u.v3);
+}
 
 /** DTORS **/
 // CHECK-DTORS-LABEL: define linkonce_odr void @_ZN10StaticBaseD2Ev(

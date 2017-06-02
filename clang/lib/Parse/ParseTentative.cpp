@@ -1450,6 +1450,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
       return TPResult::False;
     }
     // If that succeeded, fallthrough into the generic simple-type-id case.
+    LLVM_FALLTHROUGH;
 
     // The ambiguity resides in a simple-type-specifier/typename-specifier
     // followed by a '('. The '(' could either be the start of:
@@ -1492,6 +1493,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
       
       return TPResult::True;
     }
+    LLVM_FALLTHROUGH;
       
   case tok::kw_char:
   case tok::kw_wchar_t:
