@@ -267,6 +267,20 @@ def usePlatformSdkOnDarwin(config, lit_config):
             lit_config.note('using SDKROOT: %r' % sdk_path)
             config.environment['SDKROOT'] = sdk_path
 
+def findPlatformSdkVersionOnMacOS(config, lit_config):
+    if 'darwin' in config.target_triple:
+        try:
+            cmd = subprocess.Popen(['xcrun', '--show-sdk-version', '--sdk', 'macosx'],
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = cmd.communicate()
+            out = out.strip()
+            res = cmd.wait()
+        except OSError:
+            res = -1
+        if res == 0 and out:
+            return out
+    return None
+
 def killProcessAndChildren(pid):
     """
     This function kills a process with ``pid`` and all its

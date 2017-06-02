@@ -101,6 +101,11 @@ const char *const NoFoldSet[] = {
     "BTS16rr", "BTS32rr", "BTS64rr",
     "BTS16mr", "BTS32mr", "BTS64mr",
 
+    // insertps cannot be folded without adjusting the immediate. There's custom
+    // code to handle it in X86InstrInfo.cpp, ignore it here.
+    "INSERTPSrr", "INSERTPSrm",
+    "VINSERTPSrr", "VINSERTPSrm", "VINSERTPSZrr", "VINSERTPSZrm",
+
     // Memory folding is enabled only when optimizing for size by DAG
     // patterns only. (issue detailed in D28744 review)
     "VCVTSS2SDrm",            "VCVTSS2SDrr",

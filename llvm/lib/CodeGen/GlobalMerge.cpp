@@ -556,6 +556,10 @@ bool GlobalMerge::doInitialization(Module &M) {
     if (GV.isDeclaration() || GV.isThreadLocal() || GV.hasSection())
       continue;
 
+    // It's not safe to merge globals that may be preempted
+    if (TM && !TM->shouldAssumeDSOLocal(M, &GV))
+      continue;
+
     if (!(MergeExternalGlobals && GV.hasExternalLinkage()) &&
         !GV.hasInternalLinkage())
       continue;

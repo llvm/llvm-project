@@ -128,9 +128,15 @@ protected:
                                              std::vector<std::string> &options,
                                              SDKType sdk_type);
 
+  const char *GetDeveloperDirectory();
+
+  lldb_private::Status
+  FindBundleBinaryInExecSearchPaths (const lldb_private::ModuleSpec &module_spec, lldb_private::Process *process,
+                                     lldb::ModuleSP &module_sp, const lldb_private::FileSpecList *module_search_paths_ptr, 
+                                     lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr);
+
   std::string m_developer_directory;
 
-  const char *GetDeveloperDirectory();
 
 private:
   DISALLOW_COPY_AND_ASSIGN(PlatformDarwin);

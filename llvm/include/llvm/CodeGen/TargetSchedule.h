@@ -55,6 +55,9 @@ public:
   /// Return the MCSchedClassDesc for this instruction.
   const MCSchedClassDesc *resolveSchedClass(const MachineInstr *MI) const;
 
+  /// \brief TargetSubtargetInfo getter.
+  const TargetSubtargetInfo *getSubtargetInfo() const { return STI; }
+
   /// \brief TargetInstrInfo getter.
   const TargetInstrInfo *getInstrInfo() const { return TII; }
 

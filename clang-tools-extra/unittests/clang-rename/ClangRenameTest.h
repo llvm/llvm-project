@@ -56,7 +56,7 @@ protected:
     Context.createInMemoryFile(HeaderName, HeaderContent);
     clang::FileID InputFileID = Context.createInMemoryFile(CCName, NewCode);
 
-    rename::USRFindingAction FindingAction({}, {OldName});
+    rename::USRFindingAction FindingAction({}, {OldName}, false);
     std::unique_ptr<tooling::FrontendActionFactory> USRFindingActionFactory =
         tooling::newFrontendActionFactory(&FindingAction);
 

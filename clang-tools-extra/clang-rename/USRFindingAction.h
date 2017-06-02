@@ -30,9 +30,9 @@ namespace rename {
 
 struct USRFindingAction {
   USRFindingAction(ArrayRef<unsigned> SymbolOffsets,
-                   ArrayRef<std::string> QualifiedNames)
+                   ArrayRef<std::string> QualifiedNames, bool Force)
       : SymbolOffsets(SymbolOffsets), QualifiedNames(QualifiedNames),
-        ErrorOccurred(false) {}
+        ErrorOccurred(false), Force(Force) {}
   std::unique_ptr<ASTConsumer> newASTConsumer();
 
   ArrayRef<std::string> getUSRSpellings() { return SpellingNames; }
@@ -45,6 +45,7 @@ private:
   std::vector<std::string> SpellingNames;
   std::vector<std::vector<std::string>> USRList;
   bool ErrorOccurred;
+  bool Force;
 };
 
 } // namespace rename
