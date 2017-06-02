@@ -136,6 +136,7 @@ public:
   Error mapByteVectorTail(ArrayRef<uint8_t> &Bytes);
   Error mapByteVectorTail(std::vector<uint8_t> &Bytes);
 
+  Error padToAlignment(uint32_t Align);
   Error skipPadding();
 
 private:

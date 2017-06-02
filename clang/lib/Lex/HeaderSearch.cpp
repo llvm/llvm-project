@@ -1114,6 +1114,8 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
   auto TryEnterImported = [&](void) -> bool {
     if (!ModulesEnabled)
       return false;
+    // Ensure FileInfo bits are up to date.
+    ModMap.resolveHeaderDirectives(File);
     // Modules with builtins are special; multiple modules use builtins as
     // modular headers, example:
     //

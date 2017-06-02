@@ -333,7 +333,9 @@ int main(int argc, char **argv) {
   } else {
     ActivePrefix = CurrentExecPrefix;
     ActiveIncludeDir = ActivePrefix + "/include";
-    ActiveBinDir = ActivePrefix + "/bin";
+    SmallString<256> path(StringRef(LLVM_TOOLS_INSTALL_DIR));
+    sys::fs::make_absolute(ActivePrefix, path);
+    ActiveBinDir = path.str();
     ActiveLibDir = ActivePrefix + "/lib" + LLVM_LIBDIR_SUFFIX;
     ActiveCMakeDir = ActiveLibDir + "/cmake/llvm";
     ActiveIncludeOption = "-I" + ActiveIncludeDir;

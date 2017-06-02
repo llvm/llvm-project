@@ -68,10 +68,10 @@ private:
 
 std::vector<int> yielded_values = {};
 int yield(int x) { yielded_values.push_back(x); return x + 1; }
-float fyield(int x) { yielded_values.push_back(x); return x + 2; }
+float fyield(int x) { yielded_values.push_back(x); return static_cast<float>(x + 2); }
 
 void Do1(func<int> f) { yield(f()); }
-void Do2(func<double> f) { yield(f()); }
+void Do2(func<double> f) { yield(static_cast<int>(f())); }
 
 int main() {
   Do1([] { return yield(43); });

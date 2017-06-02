@@ -177,7 +177,9 @@ void InclusionRewriter::FileSkipped(const FileEntry &/*SkippedFile*/,
 /// directives. It does not say whether the file has been included, but it
 /// provides more information about the directive (hash location instead
 /// of location inside the included file). It is assumed that the matching
-/// FileChanged() or FileSkipped() is called after this.
+/// FileChanged() or FileSkipped() is called after this (or neither is
+/// called if this #include results in an error or does not textually include
+/// anything).
 void InclusionRewriter::InclusionDirective(SourceLocation HashLoc,
                                            const Token &/*IncludeTok*/,
                                            StringRef /*FileName*/,
@@ -187,9 +189,6 @@ void InclusionRewriter::InclusionDirective(SourceLocation HashLoc,
                                            StringRef /*SearchPath*/,
                                            StringRef /*RelativePath*/,
                                            const Module *Imported) {
-  assert(LastInclusionLocation.isInvalid() &&
-         "Another inclusion directive was found before the previous one "
-         "was processed");
   if (Imported) {
     auto P = ModuleIncludes.insert(
         std::make_pair(HashLoc.getRawEncoding(), Imported));

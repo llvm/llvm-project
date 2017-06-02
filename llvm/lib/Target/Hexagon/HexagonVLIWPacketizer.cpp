@@ -273,25 +273,17 @@ bool HexagonPacketizerList::isCallDependent(const MachineInstr &MI,
     if (DepReg == HRI->getFrameRegister() || DepReg == HRI->getStackRegister())
       return true;
 
-  // Check if this is a predicate dependence.
-  const TargetRegisterClass* RC = HRI->getMinimalPhysRegClass(DepReg);
-  if (RC == &Hexagon::PredRegsRegClass)
-    return true;
-
-  // Assumes that the first operand of the CALLr is the function address.
-  if (HII->isIndirectCall(MI) && (DepType == SDep::Data)) {
-    const MachineOperand MO = MI.getOperand(0);
-    if (MO.isReg() && MO.isUse() && (MO.getReg() == DepReg))
-      return true;
+  // Call-like instructions can be packetized with preceding instructions
+  // that define registers implicitly used or modified by the call. Explicit
+  // uses are still prohibited, as in the case of indirect calls:
+  //   r0 = ...
+  //   J2_jumpr r0
+  if (DepType == SDep::Data) {
+    for (const MachineOperand MO : MI.operands())
+      if (MO.isReg() && MO.getReg() == DepReg && !MO.isImplicit())
+        return true;
   }
 
-  if (HII->isJumpR(MI)) {
-    const MachineOperand &MO = HII->isPredicated(MI) ? MI.getOperand(1)
-                                                     : MI.getOperand(0);
-    assert(MO.isReg() && MO.isUse());
-    if (MO.getReg() == DepReg)
-      return true;
-  }
   return false;
 }
 
@@ -333,11 +325,13 @@ bool HexagonPacketizerList::isNewifiable(const MachineInstr &MI,
       const TargetRegisterClass *NewRC) {
   // Vector stores can be predicated, and can be new-value stores, but
   // they cannot be predicated on a .new predicate value.
-  if (NewRC == &Hexagon::PredRegsRegClass)
+  if (NewRC == &Hexagon::PredRegsRegClass) {
     if (HII->isHVXVec(MI) && MI.mayStore())
       return false;
-  return HII->isCondInst(MI) || HII->isJumpR(MI) || MI.isReturn() ||
-         HII->mayBeNewStore(MI);
+    return HII->isPredicated(MI) && HII->getDotNewPredOp(MI, nullptr) > 0;
+  }
+  // If the class is not PredRegs, it could only apply to new-value stores.
+  return HII->mayBeNewStore(MI);
 }
 
 // Promote an instructiont to its .cur form.
@@ -760,11 +754,14 @@ bool HexagonPacketizerList::canPromoteToNewValue(const MachineInstr &MI,
   return false;
 }
 
-static bool isImplicitDependency(const MachineInstr &I, unsigned DepReg) {
+static bool isImplicitDependency(const MachineInstr &I, bool CheckDef,
+      unsigned DepReg) {
   for (auto &MO : I.operands()) {
-    if (MO.isRegMask() && MO.clobbersPhysReg(DepReg))
+    if (CheckDef && MO.isRegMask() && MO.clobbersPhysReg(DepReg))
       return true;
-    if (MO.isReg() && MO.isDef() && (MO.getReg() == DepReg) && MO.isImplicit())
+    if (!MO.isReg() || MO.getReg() != DepReg || !MO.isImplicit())
+      continue;
+    if (CheckDef == MO.isDef())
       return true;
   }
   return false;
@@ -798,7 +795,8 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
 
   // If dependency is trough an implicitly defined register, we should not
   // newify the use.
-  if (isImplicitDependency(PI, DepReg))
+  if (isImplicitDependency(PI, true, DepReg) ||
+      isImplicitDependency(MI, false, DepReg))
     return false;
 
   const MCInstrDesc& MCID = PI.getDesc();
@@ -808,8 +806,7 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
 
   // predicate .new
   if (RC == &Hexagon::PredRegsRegClass)
-    if (HII->isCondInst(MI) || HII->isJumpR(MI) || MI.isReturn())
-      return HII->predCanBeUsedAsDotNew(PI, DepReg);
+    return HII->predCanBeUsedAsDotNew(PI, DepReg);
 
   if (RC != &Hexagon::PredRegsRegClass && !HII->mayBeNewStore(MI))
     return false;

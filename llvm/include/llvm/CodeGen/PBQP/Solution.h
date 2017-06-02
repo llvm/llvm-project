@@ -26,7 +26,7 @@ namespace PBQP {
   /// To get the selection for each node in the problem use the getSelection method.
   class Solution {
   private:
-    typedef std::map<GraphBase::NodeId, unsigned> SelectionsMap;
+    using SelectionsMap = std::map<GraphBase::NodeId, unsigned>;
     SelectionsMap selections;
 
     unsigned r0Reductions = 0;

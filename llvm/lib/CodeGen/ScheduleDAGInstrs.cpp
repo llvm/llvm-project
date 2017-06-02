@@ -12,32 +12,54 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/ADT/IntEqClasses.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SparseSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/RegisterPressure.h"
+#include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/ScheduleDFS.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Type.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/MC/LaneBitmask.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -90,11 +112,9 @@ ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
                                      const MachineLoopInfo *mli,
                                      bool RemoveKillFlags)
     : ScheduleDAG(mf), MLI(mli), MFI(mf.getFrameInfo()),
-      RemoveKillFlags(RemoveKillFlags), CanHandleTerminators(false),
-      TrackLaneMasks(false), AAForDep(nullptr), BarrierChain(nullptr),
+      RemoveKillFlags(RemoveKillFlags),
       UnknownValue(UndefValue::get(
-                     Type::getVoidTy(mf.getFunction()->getContext()))),
-      FirstDbgValue(nullptr) {
+                             Type::getVoidTy(mf.getFunction()->getContext()))) {
   DbgValues.clear();
 
   const TargetSubtargetInfo &ST = mf.getSubtarget();
@@ -126,7 +146,7 @@ static const Value *getUnderlyingObjectFromInt(const Value *V) {
       return V;
     }
     assert(V->getType()->isIntegerTy() && "Unexpected operand type!");
-  } while (1);
+  } while (true);
 }
 
 /// This is a wrapper around GetUnderlyingObjects and adds support for basic
@@ -563,7 +583,7 @@ void ScheduleDAGInstrs::initSUnits() {
   // which is contained within a basic block.
   SUnits.reserve(NumRegionInstrs);
 
-  for (MachineInstr &MI : llvm::make_range(RegionBegin, RegionEnd)) {
+  for (MachineInstr &MI : make_range(RegionBegin, RegionEnd)) {
     if (MI.isDebugValue())
       continue;
 
@@ -606,13 +626,13 @@ void ScheduleDAGInstrs::initSUnits() {
 
 class ScheduleDAGInstrs::Value2SUsMap : public MapVector<ValueType, SUList> {
   /// Current total number of SUs in map.
-  unsigned NumNodes;
+  unsigned NumNodes = 0;
 
   /// 1 for loads, 0 for stores. (see comment in SUList)
   unsigned TrueMemOrderLatency;
 
 public:
-  Value2SUsMap(unsigned lat = 0) : NumNodes(0), TrueMemOrderLatency(lat) {}
+  Value2SUsMap(unsigned lat = 0) : TrueMemOrderLatency(lat) {}
 
   /// To keep NumNodes up to date, insert() is used instead of
   /// this operator w/ push_back().
@@ -630,7 +650,7 @@ public:
   void inline clearList(ValueType V) {
     iterator Itr = find(V);
     if (Itr != end()) {
-      assert (NumNodes >= Itr->second.size());
+      assert(NumNodes >= Itr->second.size());
       NumNodes -= Itr->second.size();
 
       Itr->second.clear();
@@ -646,7 +666,7 @@ public:
   unsigned inline size() const { return NumNodes; }
 
   /// Counts the number of SUs in this map after a reduction.
-  void reComputeSize(void) {
+  void reComputeSize() {
     NumNodes = 0;
     for (auto &I : *this)
       NumNodes += I.second.size();
@@ -676,7 +696,7 @@ void ScheduleDAGInstrs::addChainDependencies(SUnit *SU,
 }
 
 void ScheduleDAGInstrs::addBarrierChain(Value2SUsMap &map) {
-  assert (BarrierChain != nullptr);
+  assert(BarrierChain != nullptr);
 
   for (auto &I : map) {
     SUList &sus = I.second;
@@ -687,7 +707,7 @@ void ScheduleDAGInstrs::addBarrierChain(Value2SUsMap &map) {
 }
 
 void ScheduleDAGInstrs::insertBarrierChain(Value2SUsMap &map) {
-  assert (BarrierChain != nullptr);
+  assert(BarrierChain != nullptr);
 
   // Go through all lists of SUs.
   for (Value2SUsMap::iterator I = map.begin(), EE = map.end(); I != EE;) {
@@ -1028,7 +1048,7 @@ void ScheduleDAGInstrs::reduceHugeMemNodeMaps(Value2SUsMap &stores,
   // The N last elements in NodeNums will be removed, and the SU with
   // the lowest NodeNum of them will become the new BarrierChain to
   // let the not yet seen SUs have a dependency to the removed SUs.
-  assert (N <= NodeNums.size());
+  assert(N <= NodeNums.size());
   SUnit *newBarrierChain = &SUnits[*(NodeNums.end() - N)];
   if (BarrierChain) {
     // The aliasing and non-aliasing maps reduce independently of each
@@ -1156,6 +1176,7 @@ std::string ScheduleDAGInstrs::getDAGName() const {
 //===----------------------------------------------------------------------===//
 
 namespace llvm {
+
 /// Internal state used to compute SchedDFSResult.
 class SchedDFSImpl {
   SchedDFSResult &R;
@@ -1163,16 +1184,16 @@ class SchedDFSImpl {
   /// Join DAG nodes into equivalence classes by their subtree.
   IntEqClasses SubtreeClasses;
   /// List PredSU, SuccSU pairs that represent data edges between subtrees.
-  std::vector<std::pair<const SUnit*, const SUnit*> > ConnectionPairs;
+  std::vector<std::pair<const SUnit *, const SUnit*>> ConnectionPairs;
 
   struct RootData {
     unsigned NodeID;
     unsigned ParentNodeID;  ///< Parent node (member of the parent subtree).
-    unsigned SubInstrCount; ///< Instr count in this tree only, not children.
+    unsigned SubInstrCount = 0; ///< Instr count in this tree only, not
+                                /// children.
 
     RootData(unsigned id): NodeID(id),
-                           ParentNodeID(SchedDFSResult::InvalidSubtreeID),
-                           SubInstrCount(0) {}
+                           ParentNodeID(SchedDFSResult::InvalidSubtreeID) {}
 
     unsigned getSparseSetIndex() const { return NodeID; }
   };
@@ -1340,12 +1361,15 @@ protected:
     } while (FromTree != SchedDFSResult::InvalidSubtreeID);
   }
 };
+
 } // end namespace llvm
 
 namespace {
+
 /// Manage the stack used by a reverse depth-first search over the DAG.
 class SchedDAGReverseDFS {
-  std::vector<std::pair<const SUnit*, SUnit::const_pred_iterator> > DFSStack;
+  std::vector<std::pair<const SUnit *, SUnit::const_pred_iterator>> DFSStack;
+
 public:
   bool isComplete() const { return DFSStack.empty(); }
 
@@ -1367,7 +1391,8 @@ public:
     return getCurr()->Preds.end();
   }
 };
-} // anonymous
+
+} // end anonymous namespace
 
 static bool hasDataSucc(const SUnit *SU) {
   for (const SDep &SuccDep : SU->Succs) {
@@ -1392,7 +1417,7 @@ void SchedDFSResult::compute(ArrayRef<SUnit> SUnits) {
     SchedDAGReverseDFS DFS;
     Impl.visitPreorder(&SU);
     DFS.follow(&SU);
-    for (;;) {
+    while (true) {
       // Traverse the leftmost path as far as possible.
       while (DFS.getPred() != DFS.getPredEnd()) {
         const SDep &PredDep = *DFS.getPred();
@@ -1457,4 +1482,5 @@ raw_ostream &operator<<(raw_ostream &OS, const ILPValue &Val) {
 }
 
 } // end namespace llvm
+
 #endif

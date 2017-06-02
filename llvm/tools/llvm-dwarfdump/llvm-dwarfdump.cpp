@@ -95,8 +95,12 @@ static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
 
   outs() << Filename.str() << ":\tfile format " << Obj.getFileFormatName()
          << "\n\n";
+
   // Dump the complete DWARF structure.
-  DICtx->dump(outs(), DumpType, false, SummarizeTypes);
+  DIDumpOptions DumpOpts;
+  DumpOpts.DumpType = DumpType;
+  DumpOpts.SummarizeTypes = SummarizeTypes;
+  DICtx->dump(outs(), DumpOpts);
 }
 
 static void DumpInput(StringRef Filename) {

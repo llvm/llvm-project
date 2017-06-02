@@ -441,8 +441,12 @@ void BlockGenerator::copyBB(ScopStmt &Stmt, BasicBlock *BB, BasicBlock *CopyBB,
                             isl_id_to_ast_expr *NewAccesses) {
   EntryBB = &CopyBB->getParent()->getEntryBlock();
 
-  for (Instruction &Inst : *BB)
-    copyInstruction(Stmt, &Inst, BBMap, LTS, NewAccesses);
+  if (Stmt.isBlockStmt())
+    for (Instruction *Inst : Stmt.getInstructions())
+      copyInstruction(Stmt, Inst, BBMap, LTS, NewAccesses);
+  else
+    for (Instruction &Inst : *BB)
+      copyInstruction(Stmt, &Inst, BBMap, LTS, NewAccesses);
 }
 
 Value *BlockGenerator::getOrCreateAlloca(const MemoryAccess &Access) {

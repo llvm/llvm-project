@@ -218,6 +218,8 @@ void coro::Shape::buildFrom(Function &F) {
   size_t FinalSuspendIndex = 0;
   clear(*this);
   SmallVector<CoroFrameInst *, 8> CoroFrames;
+  SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
+
   for (Instruction &I : instructions(F)) {
     if (auto II = dyn_cast<IntrinsicInst>(&I)) {
       switch (II->getIntrinsicID()) {
@@ -228,6 +230,12 @@ void coro::Shape::buildFrom(Function &F) {
         break;
       case Intrinsic::coro_frame:
         CoroFrames.push_back(cast<CoroFrameInst>(II));
+        break;
+      case Intrinsic::coro_save:
+        // After optimizations, coro_suspends using this coro_save might have
+        // been removed, remember orphaned coro_saves to remove them later.
+        if (II->use_empty())
+          UnusedCoroSaves.push_back(cast<CoroSaveInst>(II));
         break;
       case Intrinsic::coro_suspend:
         CoroSuspends.push_back(cast<CoroSuspendInst>(II));
@@ -311,4 +319,8 @@ void coro::Shape::buildFrom(Function &F) {
   if (HasFinalSuspend &&
       FinalSuspendIndex != CoroSuspends.size() - 1)
     std::swap(CoroSuspends[FinalSuspendIndex], CoroSuspends.back());
+
+  // Remove orphaned coro.saves.
+  for (CoroSaveInst *CoroSave : UnusedCoroSaves)
+    CoroSave->eraseFromParent();
 }

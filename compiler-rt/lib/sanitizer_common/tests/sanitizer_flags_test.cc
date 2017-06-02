@@ -167,13 +167,13 @@ TEST(SanitizerCommon, CommonFlags) {
 
   cf.symbolize = false;
   cf.coverage = true;
-  cf.coverage_direct = true;
+  cf.heap_profile = true;
   cf.log_path = "path/one";
 
-  parser.ParseString("symbolize=1:coverage_direct=false log_path='path/two'");
+  parser.ParseString("symbolize=1:heap_profile=false log_path='path/two'");
   EXPECT_TRUE(cf.symbolize);
   EXPECT_TRUE(cf.coverage);
-  EXPECT_FALSE(cf.coverage_direct);
+  EXPECT_FALSE(cf.heap_profile);
   EXPECT_STREQ("path/two", cf.log_path);
 }
 

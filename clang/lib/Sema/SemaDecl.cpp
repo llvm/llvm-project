@@ -11116,6 +11116,17 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
           << Init->getSourceRange();
         Diag(attr->getLocation(), diag::note_declared_required_constant_init_here)
           << attr->getRange();
+        if (getLangOpts().CPlusPlus11) {
+          APValue Value;
+          SmallVector<PartialDiagnosticAt, 8> Notes;
+          Init->EvaluateAsInitializer(Value, getASTContext(), var, Notes);
+          for (auto &it : Notes)
+            Diag(it.first, it.second);
+        } else {
+          Diag(CacheCulprit->getExprLoc(),
+               diag::note_invalid_subexpr_in_const_expr)
+              << CacheCulprit->getSourceRange();
+        }
       }
     }
     else if (!var->isConstexpr() && IsGlobal &&
@@ -12298,7 +12309,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
         TypeSourceInfo *TI = FD->getTypeSourceInfo();
         TypeLoc TL = TI->getTypeLoc();
         FunctionTypeLoc FTL = TL.getAsAdjusted<FunctionTypeLoc>();
-        Diag(FTL.getLParenLoc(), diag::warn_strict_prototypes) << 1;
+        Diag(FTL.getLParenLoc(), diag::warn_strict_prototypes) << 2;
       }
     }
 

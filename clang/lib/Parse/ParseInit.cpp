@@ -501,7 +501,8 @@ bool Parser::ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
     Diag(Result.KeywordLoc, diag::warn_microsoft_dependent_exists)
       << Result.IsIfExists;
     // Fall through to skip.
-      
+    LLVM_FALLTHROUGH;
+
   case IEB_Skip:
     Braces.skipToEnd();
     return false;

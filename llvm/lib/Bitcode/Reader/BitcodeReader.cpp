@@ -865,11 +865,11 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   auto Linkage = GlobalValue::LinkageTypes(RawFlags & 0xF); // 4 bits
   RawFlags = RawFlags >> 4;
   bool NotEligibleToImport = (RawFlags & 0x1) || Version < 3;
-  // The LiveRoot flag wasn't introduced until version 3. For dead stripping
+  // The Live flag wasn't introduced until version 3. For dead stripping
   // to work correctly on earlier versions, we must conservatively treat all
   // values as live.
-  bool LiveRoot = (RawFlags & 0x2) || Version < 3;
-  return GlobalValueSummary::GVFlags(Linkage, NotEligibleToImport, LiveRoot);
+  bool Live = (RawFlags & 0x2) || Version < 3;
+  return GlobalValueSummary::GVFlags(Linkage, NotEligibleToImport, Live);
 }
 
 static GlobalValue::VisibilityTypes getDecodedVisibility(unsigned Val) {

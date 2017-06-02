@@ -4584,7 +4584,7 @@ def warn_missing_prototype : Warning<
 def note_declaration_not_a_prototype : Note<
   "this declaration is not a prototype; add 'void' to make it a prototype for a zero-parameter function">; 
 def warn_strict_prototypes : Warning<
-  "this %select{function declaration is not|"
+  "this %select{function declaration is not|block declaration is not|"
   "old-style function definition is not preceded by}0 a prototype">,
   InGroup<DiagGroup<"strict-prototypes">>, DefaultIgnore;
 def warn_missing_variable_declarations : Warning<

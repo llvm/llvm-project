@@ -24,9 +24,9 @@ namespace codeview {
 class SymbolVisitorDelegate;
 class SymbolDeserializer : public SymbolVisitorCallbacks {
   struct MappingInfo {
-    explicit MappingInfo(ArrayRef<uint8_t> RecordData)
+    MappingInfo(ArrayRef<uint8_t> RecordData, CodeViewContainer Container)
         : Stream(RecordData, llvm::support::little), Reader(Stream),
-          Mapping(Reader) {}
+          Mapping(Reader, Container) {}
 
     BinaryByteStream Stream;
     BinaryStreamReader Reader;
@@ -35,7 +35,9 @@ class SymbolDeserializer : public SymbolVisitorCallbacks {
 
 public:
   template <typename T> static Error deserializeAs(CVSymbol Symbol, T &Record) {
-    SymbolDeserializer S(nullptr);
+    // If we're just deserializing one record, then don't worry about alignment
+    // as there's nothing that comes after.
+    SymbolDeserializer S(nullptr, CodeViewContainer::ObjectFile);
     if (auto EC = S.visitSymbolBegin(Symbol))
       return EC;
     if (auto EC = S.visitKnownRecord(Symbol, Record))
@@ -45,12 +47,13 @@ public:
     return Error::success();
   }
 
-  explicit SymbolDeserializer(SymbolVisitorDelegate *Delegate)
-      : Delegate(Delegate) {}
+  explicit SymbolDeserializer(SymbolVisitorDelegate *Delegate,
+                              CodeViewContainer Container)
+      : Delegate(Delegate), Container(Container) {}
 
   Error visitSymbolBegin(CVSymbol &Record) override {
     assert(!Mapping && "Already in a symbol mapping!");
-    Mapping = llvm::make_unique<MappingInfo>(Record.content());
+    Mapping = llvm::make_unique<MappingInfo>(Record.content(), Container);
     return Mapping->Mapping.visitSymbolBegin(Record);
   }
   Error visitSymbolEnd(CVSymbol &Record) override {
@@ -78,6 +81,7 @@ private:
   }
 
   SymbolVisitorDelegate *Delegate;
+  CodeViewContainer Container;
   std::unique_ptr<MappingInfo> Mapping;
 };
 }

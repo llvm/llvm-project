@@ -137,6 +137,7 @@ struct OutputSectionCommand : BaseCommand {
   std::string MemoryRegionName;
 
   template <class ELFT> void writeTo(uint8_t *Buf);
+  template <class ELFT> void maybeCompress();
   uint32_t getFiller();
 };
 
@@ -281,7 +282,8 @@ public:
   void placeOrphanSections();
   void processNonSectionCommands();
   void synchronize();
-  void assignAddresses(std::vector<PhdrEntry> &Phdrs);
+  void assignAddresses(std::vector<PhdrEntry> &Phdrs,
+                       ArrayRef<OutputSectionCommand *> OutputSectionCommands);
 
   void addSymbol(SymbolAssignment *Cmd);
   void processCommands(OutputSectionFactory &Factory);

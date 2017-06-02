@@ -200,8 +200,11 @@ void RewriteIncludesAction::ExecuteAction() {
   // module itself before switching to the input buffer.
   auto &Input = getCurrentInput();
   if (Input.getKind().getFormat() == InputKind::ModuleMap) {
-    if (Input.isFile())
-      (*OS) << "# 1 \"" << Input.getFile() << "\"\n";
+    if (Input.isFile()) {
+      (*OS) << "# 1 \"";
+      OS->write_escaped(Input.getFile());
+      (*OS) << "\"\n";
+    }
     // FIXME: Include additional information here so that we don't need the
     // original source files to exist on disk.
     getCurrentModule()->print(*OS);

@@ -86,6 +86,10 @@ namespace llvm {
     /// Construct any deferred debug info descriptors.
     void finalize();
 
+    /// Finalize a specific subprogram - no new variables may be added to this
+    /// subprogram afterwards.
+    void finalizeSubprogram(DISubprogram *SP);
+
     /// A CompileUnit provides an anchor for all debugging
     /// information generated during this instance of compilation.
     /// \param Lang          Source programming language, eg. dwarf::DW_LANG_C99

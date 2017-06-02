@@ -15,6 +15,9 @@
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.l.profdata -S | FileCheck %s --check-prefix=USE-LARGE
 
+; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -pass-remarks-analysis=pgo-use-annot -pgo-emit-branch-prob -S 2>&1| FileCheck %s --check-prefix=ANALYSIS
+; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -pass-remarks-analysis=pgo-use-annot -pgo-emit-branch-prob -S 2>&1| FileCheck %s --check-prefix=ANALYSIS
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 ; GEN-DARWIN-LINKONCE: target triple = "x86_64-apple-darwin"
@@ -54,3 +57,5 @@ if.end:
 ; USE-DAG: {{![0-9]+}} = !{i32 1, !"ProfileSummary", {{![0-9]+}}}
 ; USE-DAG: {{![0-9]+}} = !{!"DetailedSummary", {{![0-9]+}}}
 ; USE-DAG: ![[FUNC_ENTRY_COUNT]] = !{!"function_entry_count", i64 3}
+
+; ANALYSIS:remark: <unknown>:0:0: sgt_i32_Zero {{.*}}66.67% (total count : 3)

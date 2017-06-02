@@ -978,7 +978,8 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
                                Subsection.bytes_end());
   auto CODD = llvm::make_unique<COFFObjectDumpDelegate>(*this, Section, Obj,
                                                         SectionContents);
-  CVSymbolDumper CVSD(W, Types, std::move(CODD), opts::CodeViewSubsectionBytes);
+  CVSymbolDumper CVSD(W, Types, CodeViewContainer::ObjectFile, std::move(CODD),
+                      opts::CodeViewSubsectionBytes);
   CVSymbolArray Symbols;
   BinaryStreamReader Reader(BinaryData, llvm::support::little);
   if (auto EC = Reader.readArray(Symbols, Reader.getLength())) {

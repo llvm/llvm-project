@@ -157,7 +157,8 @@ static void dumpDebugS(ScopedPrinter &W, ObjectFile *File) {
     fatal(EC, "StreamReader.readArray<CVSymbolArray> failed");
 
   TypeDatabase TDB(0);
-  CVSymbolDumper SymbolDumper(W, TDB, nullptr, false);
+  CVSymbolDumper SymbolDumper(W, TDB, CodeViewContainer::ObjectFile, nullptr,
+                              false);
   if (auto EC = SymbolDumper.dump(Symbols))
     fatal(EC, "CVSymbolDumper::dump failed");
 }

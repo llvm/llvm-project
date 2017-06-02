@@ -68,3 +68,31 @@ void blockTest(NSMutableArray<void (^)(void)> *array, NSString *name) {
   // CHECK: call i8* @objc_retainBlock
   // CHECK: ret void
 }
+
+// CHECK-LABEL: define internal void @"\01-[Derived setDest:]
+// CHECK: %[[SELFADDR:.*]] = alloca %[[SELFTY:.*]]*
+// CHECK: %[[AADDR:.*]] = alloca %[[IVARTY:.*]]*
+// CHECK: %[[V2:.*]] = load %[[IVARTY]]*, %[[IVARTY]]** %[[AADDR]]
+// CHECK: %[[V3:.*]] = load %[[SELFTY]]*, %[[SELFTY]]** %[[SELFADDR]]
+// CHECK: %[[IVAR:.*]] = load i64, i64* @"OBJC_IVAR_$_Base._destination"
+// CHECK: %[[V4:.*]] = bitcast %[[SELFTY]]* %[[V3]] to i8*
+// CHECK: %[[ADDPTR:.*]] = getelementptr inbounds i8, i8* %[[V4]], i64 %[[IVAR]]
+// CHECK: %[[V5:.*]] = bitcast i8* %[[ADDPTR]] to %[[IVARTY]]**
+// CHECK: %[[V6:.*]] = bitcast %[[IVARTY]]** %[[V5]] to i8**
+// CHECK: %[[V7:.*]] = bitcast %[[IVARTY]]* %[[V2]] to i8*
+// CHECK: call void @objc_storeStrong(i8** %[[V6]], i8* %[[V7]])
+
+@interface Base<DestType> : NSObject {
+  DestType _destination;
+}
+@end
+
+@interface Derived : Base<NSObject *>
+- (void)setDest:(NSObject *)a;
+@end
+
+@implementation Derived
+- (void)setDest:(NSObject *)a {
+  _destination = a;
+}
+@end

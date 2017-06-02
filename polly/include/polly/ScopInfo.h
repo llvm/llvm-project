@@ -1502,6 +1502,10 @@ public:
   Scop *getParent() { return &Parent; }
   const Scop *getParent() const { return &Parent; }
 
+  const std::vector<Instruction *> &getInstructions() const {
+    return Instructions;
+  }
+
   const char *getBaseName() const;
 
   /// Set the isl AST build.

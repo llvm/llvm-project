@@ -394,11 +394,30 @@ void Module::print(raw_ostream &OS, unsigned Indent) const {
                {"exclude ", HK_Excluded}};
 
   for (auto &K : Kinds) {
+    assert(&K == &Kinds[K.Kind] && "kinds in wrong order");
     for (auto &H : Headers[K.Kind]) {
       OS.indent(Indent + 2);
       OS << K.Prefix << "header \"";
       OS.write_escaped(H.NameAsWritten);
-      OS << "\"\n";
+      OS << "\" { size " << H.Entry->getSize()
+         << " mtime " << H.Entry->getModificationTime() << " }\n";
+    }
+  }
+  for (auto *Unresolved : {&UnresolvedHeaders, &MissingHeaders}) {
+    for (auto &U : *Unresolved) {
+      OS.indent(Indent + 2);
+      OS << Kinds[U.Kind].Prefix << "header \"";
+      OS.write_escaped(U.FileName);
+      OS << "\"";
+      if (U.Size || U.ModTime) {
+        OS << " {";
+        if (U.Size)
+          OS << " size " << *U.Size;
+        if (U.ModTime)
+          OS << " mtime " << *U.ModTime;
+        OS << " }";
+      }
+      OS << "\n";
     }
   }
 
