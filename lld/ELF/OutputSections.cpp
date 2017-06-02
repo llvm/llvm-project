@@ -128,6 +128,7 @@ template <class ELFT> void OutputSection::finalize() {
   // the section to which the relocation applies.
   InputSectionBase *S = First->getRelocatedSection();
   Info = S->getOutputSection()->SectionIndex;
+  Flags |= SHF_INFO_LINK;
 }
 
 static uint64_t updateOffset(uint64_t Off, InputSection *S) {

@@ -174,10 +174,6 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "method %2 with %ordinal3 parameter of type %4%select{| decayed from %6}5|"
   "method %2 with %ordinal3 parameter named %4}1">;
 
-def warn_module_uses_date_time : Warning<
-  "%select{precompiled header|module}0 uses __DATE__ or __TIME__">,
-  InGroup<DiagGroup<"pch-date-time">>;
-
 def warn_duplicate_module_file_extension : Warning<
   "duplicate module file extension block name '%0'">,
   InGroup<ModuleFileExtension>;
@@ -186,7 +182,15 @@ def warn_module_system_bit_conflict : Warning<
   "module file '%0' was validated as a system module and is now being imported "
   "as a non-system module; any difference in diagnostic options will be ignored">,
   InGroup<ModuleConflict>;
+} // let CategoryName
 
+let CategoryName = "AST Serialization Issue" in {
+def warn_module_uses_date_time : Warning<
+  "%select{precompiled header|module}0 uses __DATE__ or __TIME__">,
+  InGroup<DiagGroup<"pch-date-time">>;
+def err_module_no_size_mtime_for_header : Error<
+  "cannot emit module %0: %select{size|mtime}1 must be explicitly specified "
+  "for missing header file \"%2\"">;
 } // let CategoryName
 } // let Component
 

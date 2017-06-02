@@ -11,8 +11,10 @@
 
 #include "polly/CodeGen/PerfMonitor.h"
 #include "polly/CodeGen/RuntimeDebugBuilder.h"
+#include "polly/ScopInfo.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/Intrinsics.h"
+#include <sstream>
 
 using namespace llvm;
 using namespace polly;
@@ -60,42 +62,64 @@ Function *PerfMonitor::getRDTSCP() {
   return Intrinsic::getDeclaration(M, Intrinsic::x86_rdtscp);
 }
 
-PerfMonitor::PerfMonitor(Module *M) : M(M), Builder(M->getContext()) {
+PerfMonitor::PerfMonitor(const Scop &S, Module *M)
+    : M(M), Builder(M->getContext()), S(S) {
   if (Triple(M->getTargetTriple()).getArch() == llvm::Triple::x86_64)
     Supported = true;
   else
     Supported = false;
 }
 
+static void TryRegisterGlobal(Module *M, const char *Name,
+                              Constant *InitialValue, Value **Location) {
+  *Location = M->getGlobalVariable(Name);
+
+  if (!*Location)
+    *Location = new GlobalVariable(
+        *M, InitialValue->getType(), true, GlobalValue::WeakAnyLinkage,
+        InitialValue, Name, nullptr, GlobalVariable::InitialExecTLSModel);
+};
+
+// Generate a unique name that is usable as a LLVM name for a scop to name its
+// performance counter.
+static std::string GetScopUniqueVarname(const Scop &S) {
+  std::stringstream Name;
+  std::string EntryString, ExitString;
+  std::tie(EntryString, ExitString) = S.getEntryExitStr();
+
+  Name << "__polly_perf_cycles_in_" << std::string(S.getFunction().getName())
+       << "_from__" << EntryString << "__to__" << ExitString;
+  return Name.str();
+}
+
+void PerfMonitor::addScopCounter() {
+  const std::string varname = GetScopUniqueVarname(S);
+  TryRegisterGlobal(M, varname.c_str(), Builder.getInt64(0),
+                    &CyclesInCurrentScopPtr);
+}
+
 void PerfMonitor::addGlobalVariables() {
-  auto TryRegisterGlobal = [=](const char *Name, Constant *InitialValue,
-                               Value **Location) {
-    *Location = M->getGlobalVariable(Name);
-
-    if (!*Location)
-      *Location = new GlobalVariable(
-          *M, InitialValue->getType(), true, GlobalValue::WeakAnyLinkage,
-          InitialValue, Name, nullptr, GlobalVariable::InitialExecTLSModel);
-  };
-
-  TryRegisterGlobal("__polly_perf_cycles_total_start", Builder.getInt64(0),
+  TryRegisterGlobal(M, "__polly_perf_cycles_total_start", Builder.getInt64(0),
                     &CyclesTotalStartPtr);
 
-  TryRegisterGlobal("__polly_perf_initialized", Builder.getInt1(0),
+  TryRegisterGlobal(M, "__polly_perf_initialized", Builder.getInt1(0),
                     &AlreadyInitializedPtr);
 
-  TryRegisterGlobal("__polly_perf_cycles_in_scops", Builder.getInt64(0),
+  TryRegisterGlobal(M, "__polly_perf_cycles_in_scops", Builder.getInt64(0),
                     &CyclesInScopsPtr);
 
-  TryRegisterGlobal("__polly_perf_cycles_in_scop_start", Builder.getInt64(0),
+  TryRegisterGlobal(M, "__polly_perf_cycles_in_scop_start", Builder.getInt64(0),
                     &CyclesInScopStartPtr);
 
-  TryRegisterGlobal("__polly_perf_write_loation", Builder.getInt32(0),
+  TryRegisterGlobal(M, "__polly_perf_write_loation", Builder.getInt32(0),
                     &RDTSCPWriteLocation);
 }
 
 static const char *InitFunctionName = "__polly_perf_init";
 static const char *FinalReportingFunctionName = "__polly_perf_final";
+
+static BasicBlock *FinalStartBB = nullptr;
+static ReturnInst *ReturnFromFinal = nullptr;
 
 Function *PerfMonitor::insertFinalReporting() {
   // Create new function.
@@ -103,8 +127,8 @@ Function *PerfMonitor::insertFinalReporting() {
   FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), {}, false);
   Function *ExitFn =
       Function::Create(Ty, Linkage, FinalReportingFunctionName, M);
-  BasicBlock *Start = BasicBlock::Create(M->getContext(), "start", ExitFn);
-  Builder.SetInsertPoint(Start);
+  FinalStartBB = BasicBlock::Create(M->getContext(), "start", ExitFn);
+  Builder.SetInsertPoint(FinalStartBB);
 
   if (!Supported) {
     RuntimeDebugBuilder::createCPUPrinter(
@@ -129,22 +153,59 @@ Function *PerfMonitor::insertFinalReporting() {
   RuntimeDebugBuilder::createCPUPrinter(Builder, "Scops: ", CyclesInScops,
                                         "\n");
 
-  // Finalize function.
-  Builder.CreateRetVoid();
+  // Print the preamble for per-scop information.
+  RuntimeDebugBuilder::createCPUPrinter(Builder, "\n");
+  RuntimeDebugBuilder::createCPUPrinter(Builder, "Per SCoP information\n");
+  RuntimeDebugBuilder::createCPUPrinter(Builder, "--------------------\n");
+
+  RuntimeDebugBuilder::createCPUPrinter(
+      Builder, "scop function, "
+               "entry block name, exit block name, total time\n");
+  ReturnFromFinal = Builder.CreateRetVoid();
   return ExitFn;
 }
 
-void PerfMonitor::initialize() {
-  addGlobalVariables();
-
-  Function *F = M->getFunction(InitFunctionName);
-  if (F)
+void PerfMonitor::AppendScopReporting() {
+  if (!Supported)
     return;
 
-  // initialize
-  Function *FinalReporting = insertFinalReporting();
-  Function *InitFn = insertInitFunction(FinalReporting);
-  addToGlobalConstructors(InitFn);
+  assert(FinalStartBB && "Expected FinalStartBB to be initialized by "
+                         "PerfMonitor::insertFinalReporting.");
+  assert(ReturnFromFinal && "Expected ReturnFromFinal to be initialized by "
+                            "PerfMonitor::insertFinalReporting.");
+
+  Builder.SetInsertPoint(FinalStartBB);
+  ReturnFromFinal->eraseFromParent();
+
+  Value *CyclesInCurrentScop =
+      Builder.CreateLoad(this->CyclesInCurrentScopPtr, true);
+  std::string EntryName, ExitName;
+  std::tie(EntryName, ExitName) = S.getEntryExitStr();
+
+  // print in CSV for easy parsing with other tools.
+  RuntimeDebugBuilder::createCPUPrinter(Builder, S.getFunction().getName(),
+                                        ", ", EntryName, ", ", ExitName, ", ",
+                                        CyclesInCurrentScop, "\n");
+
+  ReturnFromFinal = Builder.CreateRetVoid();
+}
+
+static Function *FinalReporting = nullptr;
+
+void PerfMonitor::initialize() {
+  addGlobalVariables();
+  addScopCounter();
+
+  // Ensure that we only add the final reporting function once.
+  // On later invocations, append to the reporting function.
+  if (!FinalReporting) {
+    FinalReporting = insertFinalReporting();
+
+    Function *InitFn = insertInitFunction(FinalReporting);
+    addToGlobalConstructors(InitFn);
+  }
+
+  AppendScopReporting();
 }
 
 Function *PerfMonitor::insertInitFunction(Function *FinalReporting) {
@@ -223,4 +284,8 @@ void PerfMonitor::insertRegionEnd(Instruction *InsertBefore) {
   Value *CyclesInScops = Builder.CreateLoad(CyclesInScopsPtr, true);
   CyclesInScops = Builder.CreateAdd(CyclesInScops, CyclesInScop);
   Builder.CreateStore(CyclesInScops, CyclesInScopsPtr, true);
+
+  Value *CyclesInCurrentScop = Builder.CreateLoad(CyclesInCurrentScopPtr, true);
+  CyclesInCurrentScop = Builder.CreateAdd(CyclesInCurrentScop, CyclesInScop);
+  Builder.CreateStore(CyclesInCurrentScop, CyclesInCurrentScopPtr, true);
 }

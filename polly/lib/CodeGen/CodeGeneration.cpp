@@ -184,7 +184,7 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
   IslNodeBuilder NodeBuilder(Builder, Annotator, DL, LI, SE, DT, S, StartBlock);
 
   if (PerfMonitoring) {
-    PerfMonitor P(EnteringBB->getParent()->getParent());
+    PerfMonitor P(S, EnteringBB->getParent()->getParent());
     P.initialize();
     P.insertRegionStart(SplitBlock->getTerminator());
 

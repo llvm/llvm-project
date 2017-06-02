@@ -289,13 +289,27 @@ static void addHeaderInclude(StringRef HeaderName,
 ///
 /// \param Includes Will be augmented with the set of \#includes or \#imports
 /// needed to load all of the named headers.
-static std::error_code
-collectModuleHeaderIncludes(const LangOptions &LangOpts, FileManager &FileMgr,
-                            ModuleMap &ModMap, clang::Module *Module,
-                            SmallVectorImpl<char> &Includes) {
+static std::error_code collectModuleHeaderIncludes(
+    const LangOptions &LangOpts, FileManager &FileMgr, DiagnosticsEngine &Diag,
+    ModuleMap &ModMap, clang::Module *Module, SmallVectorImpl<char> &Includes) {
   // Don't collect any headers for unavailable modules.
   if (!Module->isAvailable())
     return std::error_code();
+
+  // Resolve all lazy header directives to header files.
+  ModMap.resolveHeaderDirectives(Module);
+
+  // If any headers are missing, we can't build this module. In most cases,
+  // diagnostics for this should have already been produced; we only get here
+  // if explicit stat information was provided.
+  // FIXME: If the name resolves to a file with different stat information,
+  // produce a better diagnostic.
+  if (!Module->MissingHeaders.empty()) {
+    auto &MissingHeader = Module->MissingHeaders.front();
+    Diag.Report(MissingHeader.FileNameLoc, diag::err_module_header_missing)
+      << MissingHeader.IsUmbrella << MissingHeader.FileName;
+    return std::error_code();
+  }
 
   // Add includes for each of these headers.
   for (auto HK : {Module::HK_Normal, Module::HK_Private}) {
@@ -367,7 +381,7 @@ collectModuleHeaderIncludes(const LangOptions &LangOpts, FileManager &FileMgr,
                                       SubEnd = Module->submodule_end();
        Sub != SubEnd; ++Sub)
     if (std::error_code Err = collectModuleHeaderIncludes(
-            LangOpts, FileMgr, ModMap, *Sub, Includes))
+            LangOpts, FileMgr, Diag, ModMap, *Sub, Includes))
       return Err;
 
   return std::error_code();
@@ -494,7 +508,7 @@ getInputBufferForModule(CompilerInstance &CI, Module *M) {
     addHeaderInclude(UmbrellaHeader.NameAsWritten, HeaderContents,
                      CI.getLangOpts(), M->IsExternC);
   Err = collectModuleHeaderIncludes(
-      CI.getLangOpts(), FileMgr,
+      CI.getLangOpts(), FileMgr, CI.getDiagnostics(),
       CI.getPreprocessor().getHeaderSearchInfo().getModuleMap(), M,
       HeaderContents);
 

@@ -14,6 +14,7 @@
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -81,6 +82,149 @@ static bool handleSwitchExpect(SwitchInst &SI) {
 
   SI.setCondition(ArgValue);
   return true;
+}
+
+/// Handler for PHINodes that define the value argument to an
+/// @llvm.expect call.
+///
+/// If the operand of the phi has a constant value and it 'contradicts'
+/// with the expected value of phi def, then the corresponding incoming
+/// edge of the phi is unlikely to be taken. Using that information,
+/// the branch probability info for the originating branch can be inferred.
+static void handlePhiDef(CallInst *Expect) {
+  Value &Arg = *Expect->getArgOperand(0);
+  ConstantInt *ExpectedValue = cast<ConstantInt>(Expect->getArgOperand(1));
+  const APInt &ExpectedPhiValue = ExpectedValue->getValue();
+
+  // Walk up in backward a list of instructions that
+  // have 'copy' semantics by 'stripping' the copies
+  // until a PHI node or an instruction of unknown kind
+  // is reached. Negation via xor is also handled.
+  //
+  //       C = PHI(...);
+  //       B = C;
+  //       A = B;
+  //       D = __builtin_expect(A, 0);
+  //
+  Value *V = &Arg;
+  SmallVector<Instruction *, 4> Operations;
+  while (!isa<PHINode>(V)) {
+    if (ZExtInst *ZExt = dyn_cast<ZExtInst>(V)) {
+      V = ZExt->getOperand(0);
+      Operations.push_back(ZExt);
+      continue;
+    }
+
+    if (SExtInst *SExt = dyn_cast<SExtInst>(V)) {
+      V = SExt->getOperand(0);
+      Operations.push_back(SExt);
+      continue;
+    }
+
+    BinaryOperator *BinOp = dyn_cast<BinaryOperator>(V);
+    if (!BinOp || BinOp->getOpcode() != Instruction::Xor)
+      return;
+
+    ConstantInt *CInt = dyn_cast<ConstantInt>(BinOp->getOperand(1));
+    if (!CInt)
+      return;
+
+    V = BinOp->getOperand(0);
+    Operations.push_back(BinOp);
+  }
+
+  // Executes the recorded operations on input 'Value'.
+  auto ApplyOperations = [&](const APInt &Value) {
+    APInt Result = Value;
+    for (auto Op : llvm::reverse(Operations)) {
+      switch (Op->getOpcode()) {
+      case Instruction::Xor:
+        Result ^= cast<ConstantInt>(Op->getOperand(1))->getValue();
+        break;
+      case Instruction::ZExt:
+        Result = Result.zext(Op->getType()->getIntegerBitWidth());
+        break;
+      case Instruction::SExt:
+        Result = Result.sext(Op->getType()->getIntegerBitWidth());
+        break;
+      default:
+        llvm_unreachable("Unexpected operation");
+      }
+    }
+    return Result;
+  };
+
+  auto *PhiDef = dyn_cast<PHINode>(V);
+
+  // Get the first dominating conditional branch of the operand
+  // i's incoming block.
+  auto GetDomConditional = [&](unsigned i) -> BranchInst * {
+    BasicBlock *BB = PhiDef->getIncomingBlock(i);
+    BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
+    if (BI && BI->isConditional())
+      return BI;
+    BB = BB->getSinglePredecessor();
+    if (!BB)
+      return nullptr;
+    BI = dyn_cast<BranchInst>(BB->getTerminator());
+    if (!BI || BI->isUnconditional())
+      return nullptr;
+    return BI;
+  };
+
+  // Now walk through all Phi operands to find phi oprerands with values
+  // conflicting with the expected phi output value. Any such operand
+  // indicates the incoming edge to that operand is unlikely.
+  for (unsigned i = 0, e = PhiDef->getNumIncomingValues(); i != e; ++i) {
+
+    Value *PhiOpnd = PhiDef->getIncomingValue(i);
+    ConstantInt *CI = dyn_cast<ConstantInt>(PhiOpnd);
+    if (!CI)
+      continue;
+
+    // Not an interesting case when IsUnlikely is false -- we can not infer
+    // anything useful when the operand value matches the expected phi
+    // output.
+    if (ExpectedPhiValue == ApplyOperations(CI->getValue()))
+      continue;
+
+    BranchInst *BI = GetDomConditional(i);
+    if (!BI)
+      continue;
+
+    MDBuilder MDB(PhiDef->getContext());
+
+    // There are two situations in which an operand of the PhiDef comes
+    // from a given successor of a branch instruction BI.
+    // 1) When the incoming block of the operand is the successor block;
+    // 2) When the incoming block is BI's enclosing block and the
+    // successor is the PhiDef's enclosing block.
+    //
+    // Returns true if the operand which comes from OpndIncomingBB
+    // comes from outgoing edge of BI that leads to Succ block.
+    auto *OpndIncomingBB = PhiDef->getIncomingBlock(i);
+    auto IsOpndComingFromSuccessor = [&](BasicBlock *Succ) {
+      if (OpndIncomingBB == Succ)
+        // If this successor is the incoming block for this
+        // Phi operand, then this successor does lead to the Phi.
+        return true;
+      if (OpndIncomingBB == BI->getParent() && Succ == PhiDef->getParent())
+        // Otherwise, if the edge is directly from the branch
+        // to the Phi, this successor is the one feeding this
+        // Phi operand.
+        return true;
+      return false;
+    };
+
+    if (IsOpndComingFromSuccessor(BI->getSuccessor(1)))
+      BI->setMetadata(
+          LLVMContext::MD_prof,
+          MDB.createBranchWeights(LikelyBranchWeight, UnlikelyBranchWeight));
+    else if (IsOpndComingFromSuccessor(BI->getSuccessor(0)))
+      BI->setMetadata(
+          LLVMContext::MD_prof,
+          MDB.createBranchWeights(UnlikelyBranchWeight, LikelyBranchWeight));
+  }
 }
 
 // Handle both BranchInst and SelectInst.
@@ -187,6 +331,10 @@ static bool lowerExpectIntrinsic(Function &F) {
 
       Function *Fn = CI->getCalledFunction();
       if (Fn && Fn->getIntrinsicID() == Intrinsic::expect) {
+        // Before erasing the llvm.expect, walk backward to find
+        // phi that define llvm.expect's first arg, and
+        // infer branch probability:
+        handlePhiDef(CI);
         Value *Exp = CI->getArgOperand(0);
         CI->replaceAllUsesWith(Exp);
         CI->eraseFromParent();

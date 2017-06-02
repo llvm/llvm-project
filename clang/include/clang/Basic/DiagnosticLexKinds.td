@@ -664,6 +664,12 @@ def warn_mmap_mismatched_top_level_private : Warning<
   InGroup<PrivateModule>;
 def note_mmap_rename_top_level_private_as_submodule : Note<
   "make '%0' a submodule of '%1' to ensure it can be found by name">;
+def err_mmap_duplicate_header_attribute : Error<
+  "header attribute '%0' specified multiple times">;
+def err_mmap_invalid_header_attribute_value : Error<
+  "expected integer literal as value for header attribute '%0'">;
+def err_mmap_expected_header_attribute : Error<
+  "expected a header attribute name ('size' or 'mtime')">;
 
 def warn_auto_module_import : Warning<
   "treating #%select{include|import|include_next|__include_macros}0 as an "

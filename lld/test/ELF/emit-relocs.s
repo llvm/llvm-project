@@ -1,16 +1,23 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1.o
 # RUN: ld.lld --emit-relocs %t1.o -o %t
-# RUN: llvm-readobj -t -r %t | FileCheck %s
+# RUN: llvm-readobj -t -r -s %t | FileCheck %s
 
 ## Check single dash form.
 # RUN: ld.lld -emit-relocs %t1.o -o %t1
-# RUN: llvm-readobj -t -r %t1 | FileCheck %s
+# RUN: llvm-readobj -t -r -s %t1 | FileCheck %s
 
 ## Check alias.
 # RUN: ld.lld -q %t1.o -o %t2
-# RUN: llvm-readobj -t -r %t2 | FileCheck %s
+# RUN: llvm-readobj -t -r -s %t2 | FileCheck %s
 
+# CHECK:      Section {
+# CHECK:        Index: 2
+# CHECK-NEXT:   Name: .rela.text
+# CHECK-NEXT:   Type: SHT_RELA
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     SHF_INFO_LINK
+# CHECK-NEXT:   ]
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section ({{.*}}) .rela.text {
 # CHECK-NEXT:     0x201002 R_X86_64_32 .text 0x1

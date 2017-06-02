@@ -974,6 +974,68 @@ entry:
   ret [2 x i32*] %r
 }
 
+declare arm_aapcscc {i32, i32} @structs_target({i32, i32}, {i32*, float, i32, double})
+
+define arm_aapcscc {i32, i32} @test_structs({i32, i32} %x, {i32*, float, i32, double} %y) {
+; CHECK-LABEL: test_structs
+; CHECK: fixedStack:
+; CHECK-DAG: id: [[Y2_ID:[0-9]+]], offset: 0, size: 4
+; CHECK-DAG: id: [[Y3_ID:[0-9]+]], offset: 8, size: 8
+; CHECK: liveins: %r0, %r1, %r2, %r3
+; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
+; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
+; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
+; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+; CHECK: [[Y2_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[Y2_ID]]
+; CHECK: [[Y2:%[0-9]+]](s32) = G_LOAD [[Y2_ADDR]](p0){{.*}}load 4
+; CHECK: [[Y3_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[Y3_ID]]
+; CHECK: [[Y3:%[0-9]+]](s64) = G_LOAD [[Y3_ADDR]](p0){{.*}}load 8
+; CHECK: [[X_0:%[0-9]+]](s64) = IMPLICIT_DEF
+; CHECK: [[X_1:%[0-9]+]](s64) = G_INSERT [[X_0]], [[X0]](s32), 0
+; CHECK: [[X_2:%[0-9]+]](s64) = G_INSERT [[X_1]], [[X1]](s32), 32
+; CHECK: [[X:%[0-9]+]](s64) = COPY [[X_2]]
+; CHECK: [[Y_0:%[0-9]+]](s192) = IMPLICIT_DEF
+; CHECK: [[Y_1:%[0-9]+]](s192) = G_INSERT [[Y_0]], [[Y0]](s32), 0
+; CHECK: [[Y_2:%[0-9]+]](s192) = G_INSERT [[Y_1]], [[Y1]](s32), 32
+; CHECK: [[Y_3:%[0-9]+]](s192) = G_INSERT [[Y_2]], [[Y2]](s32), 64
+; CHECK: [[Y_4:%[0-9]+]](s192) = G_INSERT [[Y_3]], [[Y3]](s64), 128
+; CHECK: [[Y:%[0-9]+]](s192) = COPY [[Y_4]]
+; CHECK: ADJCALLSTACKDOWN 16, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: [[X0:%[0-9]+]](s32) = G_EXTRACT [[X]](s64), 0
+; CHECK: [[X1:%[0-9]+]](s32) = G_EXTRACT [[X]](s64), 32
+; CHECK: [[Y0:%[0-9]+]](s32) = G_EXTRACT [[Y]](s192), 0
+; CHECK: [[Y1:%[0-9]+]](s32) = G_EXTRACT [[Y]](s192), 32
+; CHECK: [[Y2:%[0-9]+]](s32) = G_EXTRACT [[Y]](s192), 64
+; CHECK: [[Y3:%[0-9]+]](s64) = G_EXTRACT [[Y]](s192), 128
+; CHECK-DAG: %r0 = COPY [[X0]](s32)
+; CHECK-DAG: %r1 = COPY [[X1]](s32)
+; CHECK-DAG: %r2 = COPY [[Y0]](s32)
+; CHECK-DAG: %r3 = COPY [[Y1]](s32)
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[Y2_OFF:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK: [[Y2_ADDR:%[0-9]+]](p0) = G_GEP [[SP]], [[Y2_OFF]](s32)
+; CHECK: G_STORE [[Y2]](s32), [[Y2_ADDR]](p0){{.*}}store 4
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[Y3_OFF:%[0-9]+]](s32) = G_CONSTANT i32 8
+; CHECK: [[Y3_ADDR:%[0-9]+]](p0) = G_GEP [[SP]], [[Y3_OFF]](s32)
+; CHECK: G_STORE [[Y3]](s64), [[Y3_ADDR]](p0){{.*}}store 8
+; CHECK: BLX @structs_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
+; CHECK: [[R0:%[0-9]+]](s32) = COPY %r0
+; CHECK: [[R1:%[0-9]+]](s32) = COPY %r1
+; CHECK: [[R_0:%[0-9]+]](s64) = IMPLICIT_DEF
+; CHECK: [[R_1:%[0-9]+]](s64) = G_INSERT [[R_0]], [[R0]](s32), 0
+; CHECK: [[R_2:%[0-9]+]](s64) = G_INSERT [[R_1]], [[R1]](s32), 32
+; CHECK: [[R:%[0-9]+]](s64) = COPY [[R_2]]
+; CHECK: ADJCALLSTACKUP 16, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: [[R0:%[0-9]+]](s32) = G_EXTRACT [[R]](s64), 0
+; CHECK: [[R1:%[0-9]+]](s32) = G_EXTRACT [[R]](s64), 32
+; CHECK: %r0 = COPY [[R0]](s32)
+; CHECK: %r1 = COPY [[R1]](s32)
+; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
+  %r = notail call arm_aapcscc {i32, i32} @structs_target({i32, i32} %x, {i32*, float, i32, double} %y)
+  ret {i32, i32} %r
+}
+
 define i32 @test_shufflevector_s32_v2s32(i32 %arg) {
 ; CHECK-LABEL: name: test_shufflevector_s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]](s32) = COPY %r0
