@@ -72,12 +72,15 @@ void CodePreparation::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool CodePreparation::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
   splitEntryBlockForAlloca(&F.getEntryBlock(), this);
 
-  return false;
+  return true;
 }
 
 void CodePreparation::releaseMemory() { clear(); }

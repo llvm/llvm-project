@@ -146,6 +146,17 @@ static TracePcGuardController pc_guard_controller;
 }  // namespace
 }  // namespace __sancov
 
+namespace __sanitizer {
+void InitializeCoverage(bool enabled, const char *dir) {
+  static bool coverage_enabled = false;
+  if (coverage_enabled)
+    return;  // May happen if two sanitizer enable coverage in the same process.
+  coverage_enabled = enabled;
+  Atexit(__sanitizer_cov_dump);
+  AddDieCallback(__sanitizer_cov_dump);
+}
+} // namespace __sanitizer
+
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_coverage(  // NOLINT
     const uptr* pcs, uptr len) {
@@ -166,4 +177,18 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_guard_init,
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_trace_pc_guard_coverage() {
   __sancov::pc_guard_controller.Dump();
 }
+SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_dump() {
+  __sanitizer_dump_trace_pc_guard_coverage();
+}
+// Default empty implementations (weak). Users should redefine them.
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp1, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp2, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp4, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp8, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_switch, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div4, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div8, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_gep, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_indir, void) {}
 }  // extern "C"

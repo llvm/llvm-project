@@ -26,6 +26,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -919,9 +920,10 @@ void LinkerScript::synchronize() {
   }
 }
 
-static bool allocateHeaders(std::vector<PhdrEntry> &Phdrs,
-                            ArrayRef<OutputSection *> OutputSections,
-                            uint64_t Min) {
+static bool
+allocateHeaders(std::vector<PhdrEntry> &Phdrs,
+                ArrayRef<OutputSectionCommand *> OutputSectionCommands,
+                uint64_t Min) {
   auto FirstPTLoad =
       std::find_if(Phdrs.begin(), Phdrs.end(),
                    [](const PhdrEntry &E) { return E.p_type == PT_LOAD; });
@@ -938,16 +940,19 @@ static bool allocateHeaders(std::vector<PhdrEntry> &Phdrs,
 
   assert(FirstPTLoad->First == Out::ElfHeader);
   OutputSection *ActualFirst = nullptr;
-  for (OutputSection *Sec : OutputSections) {
+  for (OutputSectionCommand *Cmd : OutputSectionCommands) {
+    OutputSection *Sec = Cmd->Sec;
     if (Sec->FirstInPtLoad == Out::ElfHeader) {
       ActualFirst = Sec;
       break;
     }
   }
   if (ActualFirst) {
-    for (OutputSection *Sec : OutputSections)
+    for (OutputSectionCommand *Cmd : OutputSectionCommands) {
+      OutputSection *Sec = Cmd->Sec;
       if (Sec->FirstInPtLoad == Out::ElfHeader)
         Sec->FirstInPtLoad = ActualFirst;
+    }
     FirstPTLoad->First = ActualFirst;
   } else {
     Phdrs.erase(FirstPTLoad);
@@ -961,7 +966,9 @@ static bool allocateHeaders(std::vector<PhdrEntry> &Phdrs,
   return false;
 }
 
-void LinkerScript::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
+void LinkerScript::assignAddresses(
+    std::vector<PhdrEntry> &Phdrs,
+    ArrayRef<OutputSectionCommand *> OutputSectionCommands) {
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
   Dot = 0;
   ErrorOnMissingSection = true;
@@ -983,14 +990,15 @@ void LinkerScript::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
   }
 
   uint64_t MinVA = std::numeric_limits<uint64_t>::max();
-  for (OutputSection *Sec : *OutputSections) {
+  for (OutputSectionCommand *Cmd : OutputSectionCommands) {
+    OutputSection *Sec = Cmd->Sec;
     if (Sec->Flags & SHF_ALLOC)
       MinVA = std::min<uint64_t>(MinVA, Sec->Addr);
     else
       Sec->Addr = 0;
   }
 
-  allocateHeaders(Phdrs, *OutputSections, MinVA);
+  allocateHeaders(Phdrs, OutputSectionCommands, MinVA);
 }
 
 // Creates program headers as instructed by PHDRS linker script command.
@@ -1066,6 +1074,33 @@ static void writeInt(uint8_t *Buf, uint64_t Data, uint64_t Size) {
     write64(Buf, Data, Config->Endianness);
   else
     llvm_unreachable("unsupported Size argument");
+}
+
+// Compress section contents if this section contains debug info.
+template <class ELFT> void OutputSectionCommand::maybeCompress() {
+  typedef typename ELFT::Chdr Elf_Chdr;
+
+  // Compress only DWARF debug sections.
+  if (!Config->CompressDebugSections || (Sec->Flags & SHF_ALLOC) ||
+      !Name.startswith(".debug_"))
+    return;
+
+  // Create a section header.
+  Sec->ZDebugHeader.resize(sizeof(Elf_Chdr));
+  auto *Hdr = reinterpret_cast<Elf_Chdr *>(Sec->ZDebugHeader.data());
+  Hdr->ch_type = ELFCOMPRESS_ZLIB;
+  Hdr->ch_size = Sec->Size;
+  Hdr->ch_addralign = Sec->Alignment;
+
+  // Write section contents to a temporary buffer and compress it.
+  std::vector<uint8_t> Buf(Sec->Size);
+  writeTo<ELFT>(Buf.data());
+  if (Error E = zlib::compress(toStringRef(Buf), Sec->CompressedData))
+    fatal("compress failed: " + llvm::toString(std::move(E)));
+
+  // Update section headers.
+  Sec->Size = sizeof(Elf_Chdr) + Sec->CompressedData.size();
+  Sec->Flags |= SHF_COMPRESSED;
 }
 
 template <class ELFT> void OutputSectionCommand::writeTo(uint8_t *Buf) {
@@ -1166,3 +1201,8 @@ template void OutputSectionCommand::writeTo<ELF32LE>(uint8_t *Buf);
 template void OutputSectionCommand::writeTo<ELF32BE>(uint8_t *Buf);
 template void OutputSectionCommand::writeTo<ELF64LE>(uint8_t *Buf);
 template void OutputSectionCommand::writeTo<ELF64BE>(uint8_t *Buf);
+
+template void OutputSectionCommand::maybeCompress<ELF32LE>();
+template void OutputSectionCommand::maybeCompress<ELF32BE>();
+template void OutputSectionCommand::maybeCompress<ELF64LE>();
+template void OutputSectionCommand::maybeCompress<ELF64BE>();

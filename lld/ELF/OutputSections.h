@@ -83,7 +83,6 @@ public:
   void sortInitFini();
   void sortCtorsDtors();
   template <class ELFT> void finalize();
-  template <class ELFT> void maybeCompress();
   void assignOffsets();
   std::vector<InputSection *> Sections;
 
