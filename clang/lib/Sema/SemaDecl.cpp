@@ -6160,7 +6160,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     QualType NR = R;
     while (NR->isPointerType()) {
       if (NR->isFunctionPointerType()) {
-        Diag(D.getIdentifierLoc(), diag::err_opencl_function_pointer_variable);
+        Diag(D.getIdentifierLoc(), diag::err_opencl_function_pointer);
         D.setInvalidType();
         break;
       }

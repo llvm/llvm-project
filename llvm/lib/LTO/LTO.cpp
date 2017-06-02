@@ -622,6 +622,19 @@ unsigned LTO::getMaxTasks() const {
 }
 
 Error LTO::run(AddStreamFn AddStream, NativeObjectCache Cache) {
+  // Compute "dead" symbols, we don't want to import/export these!
+  DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
+  for (auto &Res : GlobalResolutions) {
+    if (Res.second.VisibleOutsideThinLTO &&
+        // IRName will be defined if we have seen the prevailing copy of
+        // this value. If not, no need to preserve any ThinLTO copies.
+        !Res.second.IRName.empty())
+      GUIDPreservedSymbols.insert(GlobalValue::getGUID(
+          GlobalValue::dropLLVMManglingEscape(Res.second.IRName)));
+  }
+
+  computeDeadSymbols(ThinLTO.CombinedIndex, GUIDPreservedSymbols);
+
   // Save the status of having a regularLTO combined module, as
   // this is needed for generating the ThinLTO Task ID, and
   // the CombinedModule will be moved at the end of runRegularLTO.
@@ -974,19 +987,6 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
 
   if (Conf.OptLevel > 0) {
-    // Compute "dead" symbols, we don't want to import/export these!
-    DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
-    for (auto &Res : GlobalResolutions) {
-      if (Res.second.VisibleOutsideThinLTO &&
-          // IRName will be defined if we have seen the prevailing copy of
-          // this value. If not, no need to preserve any ThinLTO copies.
-          !Res.second.IRName.empty())
-        GUIDPreservedSymbols.insert(GlobalValue::getGUID(
-            GlobalValue::dropLLVMManglingEscape(Res.second.IRName)));
-    }
-
-    computeDeadSymbols(ThinLTO.CombinedIndex, GUIDPreservedSymbols);
-
     ComputeCrossModuleImport(ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
                              ImportLists, ExportLists);
 

@@ -4753,7 +4753,7 @@ static void scaleShuffleMask(int Scale, ArrayRef<int> Mask,
                              SmallVectorImpl<int> &ScaledMask) {
   assert(0 < Scale && "Unexpected scaling factor");
   int NumElts = Mask.size();
-  ScaledMask.assign(NumElts * Scale, -1);
+  ScaledMask.assign(static_cast<size_t>(NumElts * Scale), -1);
 
   for (int i = 0; i != NumElts; ++i) {
     int M = Mask[i];
@@ -8003,7 +8003,7 @@ static bool is128BitLaneCrossingShuffleMask(MVT VT, ArrayRef<int> Mask) {
 static bool isRepeatedShuffleMask(unsigned LaneSizeInBits, MVT VT,
                                   ArrayRef<int> Mask,
                                   SmallVectorImpl<int> &RepeatedMask) {
-  int LaneSize = LaneSizeInBits / VT.getScalarSizeInBits();
+  auto LaneSize = LaneSizeInBits / VT.getScalarSizeInBits();
   RepeatedMask.assign(LaneSize, -1);
   int Size = Mask.size();
   for (int i = 0; i < Size; ++i) {
@@ -17144,7 +17144,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
                        DAG.getConstant(CmpMode, dl, MVT::i8));
   }
 
-  // We are handling one of the integer comparisons here.  Since SSE only has
+  // We are handling one of the integer comparisons here. Since SSE only has
   // GT and EQ comparisons for integer, swapping operands and multiple
   // operations may be required for some comparisons.
   unsigned Opc;
@@ -17170,22 +17170,23 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
 
   // Special case: Use min/max operations for SETULE/SETUGE
   MVT VET = VT.getVectorElementType();
-  bool hasMinMax =
-       (Subtarget.hasSSE41() && (VET >= MVT::i8 && VET <= MVT::i32))
-    || (Subtarget.hasSSE2()  && (VET == MVT::i8));
+  bool HasMinMax =
+      (Subtarget.hasSSE41() && (VET >= MVT::i8 && VET <= MVT::i32)) ||
+      (Subtarget.hasSSE2() && (VET == MVT::i8));
 
-  if (hasMinMax) {
+  if (HasMinMax) {
     switch (SetCCOpcode) {
     default: break;
     case ISD::SETULE: Opc = ISD::UMIN; MinMax = true; break;
     case ISD::SETUGE: Opc = ISD::UMAX; MinMax = true; break;
     }
 
-    if (MinMax) { Swap = false; Invert = false; FlipSigns = false; }
+    if (MinMax)
+      Swap = Invert = FlipSigns = false;
   }
 
-  bool hasSubus = Subtarget.hasSSE2() && (VET == MVT::i8 || VET == MVT::i16);
-  if (!MinMax && hasSubus) {
+  bool HasSubus = Subtarget.hasSSE2() && (VET == MVT::i8 || VET == MVT::i16);
+  if (!MinMax && HasSubus) {
     // As another special case, use PSUBUS[BW] when it's profitable. E.g. for
     // Op0 u<= Op1:
     //   t = psubus Op0, Op1

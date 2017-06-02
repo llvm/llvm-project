@@ -434,7 +434,8 @@ std::vector<COFFShortExport> createCOFFShortExportFromConfig() {
   std::vector<COFFShortExport> Exports;
   for (Export &E1 : Config->Exports) {
     COFFShortExport E2;
-    E2.Name = E1.Name;
+    // Use SymbolName, which will have any stdcall or fastcall qualifiers.
+    E2.Name = E1.SymbolName;
     E2.ExtName = E1.ExtName;
     E2.Ordinal = E1.Ordinal;
     E2.Noname = E1.Noname;

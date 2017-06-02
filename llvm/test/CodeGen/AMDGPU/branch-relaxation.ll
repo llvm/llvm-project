@@ -223,7 +223,6 @@ bb3:
 ; GCN-NEXT: [[BB2]]: ; %bb2
 ; GCN: v_mov_b32_e32 [[BB2_K:v[0-9]+]], 17
 ; GCN: buffer_store_dword [[BB2_K]]
-; GCN: s_waitcnt vmcnt(0)
 
 ; GCN-NEXT: [[LONG_JUMP1:BB[0-9]+_[0-9]+]]: ; %bb2
 ; GCN-NEXT: s_getpc_b64 vcc
@@ -393,7 +392,6 @@ bb3:
 
 ; GCN-NEXT: ; BB#2: ; %if_uniform
 ; GCN: buffer_store_dword
-; GCN: s_waitcnt vmcnt(0)
 
 ; GCN-NEXT: [[ENDIF]]: ; %endif
 ; GCN-NEXT: s_or_b64 exec, exec, [[MASK]]

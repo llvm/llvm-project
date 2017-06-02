@@ -56,12 +56,14 @@ def FalkorWr_1Z_0cyc    : SchedWriteRes<[FalkorUnitZ]>   { let Latency = 0; }
 def FalkorWr_1ZB_0cyc   : SchedWriteRes<[FalkorUnitZB]>  { let Latency = 0; }
 def FalkorWr_1LD_3cyc   : SchedWriteRes<[FalkorUnitLD]>  { let Latency = 3; }
 def FalkorWr_1LD_4cyc   : SchedWriteRes<[FalkorUnitLD]>  { let Latency = 4; }
+def FalkorWr_1XYZ_0cyc  : SchedWriteRes<[FalkorUnitXYZ]> { let Latency = 0; }
 def FalkorWr_1XYZ_1cyc  : SchedWriteRes<[FalkorUnitXYZ]> { let Latency = 1; }
 def FalkorWr_1XYZ_2cyc  : SchedWriteRes<[FalkorUnitXYZ]> { let Latency = 2; }
 def FalkorWr_1XYZB_0cyc : SchedWriteRes<[FalkorUnitXYZB]>{ let Latency = 0; }
 def FalkorWr_1XYZB_1cyc : SchedWriteRes<[FalkorUnitXYZB]>{ let Latency = 1; }
 def FalkorWr_1none_0cyc : SchedWriteRes<[]>              { let Latency = 0; }
 
+def FalkorWr_1VXVY_0cyc : SchedWriteRes<[FalkorUnitVXVY]>{ let Latency = 0; }
 def FalkorWr_1VXVY_1cyc : SchedWriteRes<[FalkorUnitVXVY]>{ let Latency = 1; }
 def FalkorWr_1VXVY_2cyc : SchedWriteRes<[FalkorUnitVXVY]>{ let Latency = 2; }
 def FalkorWr_1VXVY_3cyc : SchedWriteRes<[FalkorUnitVXVY]>{ let Latency = 3; }
@@ -76,6 +78,7 @@ def FalkorWr_1LD_0cyc   : SchedWriteRes<[FalkorUnitLD]>  { let Latency = 0; }
 def FalkorWr_1ST_0cyc   : SchedWriteRes<[FalkorUnitST]>  { let Latency = 0; }
 def FalkorWr_1ST_3cyc   : SchedWriteRes<[FalkorUnitST]>  { let Latency = 3; }
 
+def FalkorWr_1GTOV_0cyc : SchedWriteRes<[FalkorUnitGTOV]>{ let Latency = 0; }
 def FalkorWr_1GTOV_1cyc : SchedWriteRes<[FalkorUnitGTOV]>{ let Latency = 1; }
 def FalkorWr_1GTOV_4cyc : SchedWriteRes<[FalkorUnitGTOV]>{ let Latency = 4; }
 def FalkorWr_1VTOG_1cyc : SchedWriteRes<[FalkorUnitVTOG]>{ let Latency = 1; }
@@ -83,6 +86,10 @@ def FalkorWr_1VTOG_1cyc : SchedWriteRes<[FalkorUnitVTOG]>{ let Latency = 1; }
 //===----------------------------------------------------------------------===//
 // Define 2 micro-op types
 
+def FalkorWr_2VXVY_0cyc   : SchedWriteRes<[FalkorUnitVXVY, FalkorUnitVXVY]> {
+  let Latency = 0;
+  let NumMicroOps = 2;
+}
 def FalkorWr_2VXVY_1cyc   : SchedWriteRes<[FalkorUnitVXVY, FalkorUnitVXVY]> {
   let Latency = 1;
   let NumMicroOps = 2;
@@ -476,17 +483,19 @@ def FalkorReadFMA64  : SchedReadAdvance<2, [FalkorWr_FMUL64_1VXVY_6cyc, FalkorWr
 // SchedPredicates and WriteVariants for Immediate Zero and LSLFast/ASRFast
 // -----------------------------------------------------------------------------
 def FalkorImmZPred    : SchedPredicate<[{MI->getOperand(1).getImm() == 0}]>;
-def FalkorFMOVZrReg   : SchedPredicate<[{MI->getOperand(1).getReg() == AArch64::WZR ||
+def FalkorOp1ZrReg    : SchedPredicate<[{MI->getOperand(1).getReg() == AArch64::WZR ||
+
                                          MI->getOperand(1).getReg() == AArch64::XZR}]>;
 def FalkorShiftExtFastPred : SchedPredicate<[{TII->isFalkorShiftExtFast(*MI)}]>;
 
 def FalkorWr_FMOV  : SchedWriteVariant<[
-                       SchedVar<FalkorFMOVZrReg, [FalkorWr_1none_0cyc]>,
+                       SchedVar<FalkorOp1ZrReg,  [FalkorWr_1none_0cyc]>,
                        SchedVar<NoSchedPred,     [FalkorWr_1GTOV_1cyc]>]>;
 
 def FalkorWr_MOVZ  : SchedWriteVariant<[
                        SchedVar<FalkorImmZPred, [FalkorWr_1none_0cyc]>,
-                       SchedVar<NoSchedPred,    [FalkorWr_1XYZB_1cyc]>]>;
+                       SchedVar<NoSchedPred,    [FalkorWr_1XYZB_0cyc]>]>; // imm fwd
+
 
 def FalkorWr_ADDSUBsx : SchedWriteVariant<[
                           SchedVar<FalkorShiftExtFastPred, [FalkorWr_1XYZ_1cyc]>,
@@ -499,6 +508,10 @@ def FalkorWr_LDRro : SchedWriteVariant<[
 def FalkorWr_LDRSro : SchedWriteVariant<[
                         SchedVar<FalkorShiftExtFastPred, [FalkorWr_1LD_4cyc]>,
                         SchedVar<NoSchedPred,            [FalkorWr_1XYZ_1LD_5cyc]>]>;
+
+def FalkorWr_ORRi : SchedWriteVariant<[
+                      SchedVar<FalkorOp1ZrReg, [FalkorWr_1XYZ_0cyc]>, // imm fwd
+                      SchedVar<NoSchedPred,    [FalkorWr_1XYZ_1cyc]>]>;
 
 def FalkorWr_PRFMro : SchedWriteVariant<[
                         SchedVar<FalkorShiftExtFastPred, [FalkorWr_1ST_3cyc]>,
@@ -810,7 +823,8 @@ def : InstRW<[FalkorWr_1XYZ_1cyc],    (instregex "^BIC(S)?(W|X)r(r|s)$")>;
 def : InstRW<[FalkorWr_1XYZ_1cyc],    (instregex "^EON(W|X)r(r|s)$")>;
 def : InstRW<[FalkorWr_1XYZ_1cyc],    (instregex "^EOR(W|X)r(i|r|s)$")>;
 def : InstRW<[FalkorWr_1XYZ_1cyc],    (instregex "^ORN(W|X)r(r|s)$")>;
-def : InstRW<[FalkorWr_1XYZ_1cyc],    (instregex "^ORR(W|X)r(i|r|s)$")>;
+def : InstRW<[FalkorWr_ORRi],         (instregex "^ORR(W|X)ri$")>;
+def : InstRW<[FalkorWr_1XYZ_1cyc],    (instregex "^ORR(W|X)r(r|s)$")>;
 def : InstRW<[FalkorWr_1XYZ_1cyc],    (instregex "^SBC(S)?(W|X)r$")>;
 def : InstRW<[FalkorWr_1XYZ_1cyc],    (instregex "^SUB(S)?(W|X)r(r|i)$")>;
 def : InstRW<[FalkorWr_ADDSUBsx],     (instregex "^ADD(S)?(W|X)r(s|x|x64)$")>;
@@ -825,7 +839,7 @@ def : InstRW<[FalkorWr_1GTOV_1cyc],   (instregex "^INSv(i8|i16)(gpr|lane)$")>;
 def : InstRW<[FalkorWr_1VTOG_1cyc],   (instregex "^(S|U)MOVv.*$")>;
 def : InstRW<[FalkorWr_1VXVY_1cyc],   (instregex "^(BIF|BIT|BSL)v8i8$")>;
 def : InstRW<[FalkorWr_1VXVY_1cyc],   (instrs EXTv8i8)>;
-def : InstRW<[FalkorWr_1VXVY_1cyc],   (instregex "(MOVI|MVNI)(D|v8b_ns|v2i32|v4i16|v2s_msl)$")>;
+def : InstRW<[FalkorWr_1VXVY_0cyc],   (instregex "(MOVI|MVNI)(D|v8b_ns|v2i32|v4i16|v2s_msl)$")>; // imm fwd
 def : InstRW<[FalkorWr_1VXVY_1cyc],   (instrs TBLv8i8One)>;
 def : InstRW<[FalkorWr_1VXVY_1cyc],   (instrs NOTv8i8)>;
 def : InstRW<[FalkorWr_1VXVY_1cyc],   (instregex "^REV(16|32|64)v.*$")>;
@@ -849,7 +863,7 @@ def : InstRW<[FalkorWr_1GTOV_1VXVY_2cyc],
 def : InstRW<[FalkorWr_2GTOV_1cyc],   (instregex "^DUP(v4i32|v2i64)(gpr|lane)$")>;
 def : InstRW<[FalkorWr_2VXVY_1cyc],   (instregex "^(BIF|BIT|BSL)v16i8$")>;
 def : InstRW<[FalkorWr_2VXVY_1cyc],   (instrs EXTv16i8)>;
-def : InstRW<[FalkorWr_2VXVY_1cyc],   (instregex "(MOVI|MVNI)(v2d_ns|v16b_ns|v4i32|v8i16|v4s_msl)$")>;
+def : InstRW<[FalkorWr_2VXVY_0cyc],   (instregex "(MOVI|MVNI)(v2d_ns|v16b_ns|v4i32|v8i16|v4s_msl)$")>; // imm fwd
 def : InstRW<[FalkorWr_2VXVY_1cyc],   (instrs NOTv16i8)>;
 def : InstRW<[FalkorWr_2VXVY_1cyc],   (instrs TBLv16i8One)>;
 
@@ -1036,13 +1050,13 @@ def : InstRW<[FalkorWr_FMUL64_1VXVY_6cyc, ReadDefault, ReadDefault, FalkorReadFM
 // FP Miscellaneous Instructions
 // -----------------------------------------------------------------------------
 def : InstRW<[FalkorWr_FMOV],         (instregex "^FMOV(WS|XD|XDHigh)r$")>;
-def : InstRW<[FalkorWr_1GTOV_1cyc],   (instregex "^FMOV(S|D)i$")>;
+def : InstRW<[FalkorWr_1GTOV_0cyc],   (instregex "^FMOV(S|D)i$")>; // imm fwd
 def : InstRW<[FalkorWr_1VTOG_1cyc],   (instregex "^FCVTZ(S|U)S(W|X)(D|S)ri$")>;
 def : InstRW<[FalkorWr_1VTOG_1cyc],   (instregex "^FCVTZ(S|U)(d|s)$")>;
 def : InstRW<[FalkorWr_1VTOG_1cyc],   (instregex "^FMOV(SW|DX|DXHigh)r$")>;
-def : InstRW<[FalkorWr_1VXVY_1cyc],   (instregex "^FMOV(Sr|Dr|v.*_ns)$")>;
+def : InstRW<[FalkorWr_1VXVY_0cyc],   (instregex "^FMOV(Sr|Dr|v.*_ns)$")>; // imm fwd
 // FIXME: We are currently generating movi v0.2d, #0 for these, which is worse than fmov wzr/xzr
-def : InstRW<[FalkorWr_2VXVY_1cyc],   (instrs FMOVD0, FMOVS0)>;
+def : InstRW<[FalkorWr_2VXVY_0cyc],   (instrs FMOVD0, FMOVS0)>; // imm fwd
 
 def : InstRW<[FalkorWr_1GTOV_4cyc],   (instregex "^(S|U)CVTF(S|U)(W|X)(D|S)ri$")>;
 def : InstRW<[FalkorWr_1VXVY_4cyc],   (instregex "^(S|U)CVTF(v1i32|v2i32|v1i64|v2f32|d|s)(_shift)?")>;
@@ -1107,11 +1121,12 @@ def : InstRW<[FalkorWr_VMUL32_2VXVY_4cyc, FalkorReadVMA],
 
 // Move and Shift Instructions
 // -----------------------------------------------------------------------------
-def : InstRW<[FalkorWr_1XYZ_1cyc],    (instregex "^(LSLV|LSRV|ASRV|RORV|MOVK)(W|X).*")>;
-def : InstRW<[FalkorWr_1XYZB_1cyc],   (instregex "^ADRP?$")>;
-def : InstRW<[FalkorWr_1XYZB_1cyc],   (instregex "^MOVN(W|X)i$")>;
+def : InstRW<[FalkorWr_1XYZ_1cyc],    (instregex "^(LSLV|LSRV|ASRV|RORV)(W|X)r$")>;
+def : InstRW<[FalkorWr_1XYZ_0cyc],    (instregex "^MOVK(W|X)i$")>; // imm fwd
+def : InstRW<[FalkorWr_1XYZB_0cyc],   (instregex "^ADRP?$")>; // imm fwd
+def : InstRW<[FalkorWr_1XYZB_0cyc],   (instregex "^MOVN(W|X)i$")>; // imm fwd
 def : InstRW<[FalkorWr_MOVZ],         (instregex "^MOVZ(W|X)i$")>;
-def : InstRW<[FalkorWr_1XYZ_1cyc],    (instrs MOVi32imm, MOVi64imm)>;
+def : InstRW<[FalkorWr_1XYZ_0cyc],    (instrs MOVi32imm, MOVi64imm)>; // imm fwd (approximation)
 def : InstRW<[WriteSequence<[FalkorWr_1XYZ_1cyc, FalkorWr_1XYZ_1cyc]>],
                                       (instrs MOVaddr, MOVaddrBA, MOVaddrCP, MOVaddrEXT, MOVaddrJT, MOVaddrTLS)>;
 def : InstRW<[WriteSequence<[FalkorWr_1LD_3cyc, FalkorWr_1XYZ_1cyc]>],

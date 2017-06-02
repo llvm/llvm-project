@@ -38,6 +38,7 @@
 ; SUMMARY-NEXT:         Kind:            SingleImpl
 ; SUMMARY-NEXT:         SingleImplName:  'vf4$merged'
 ; SUMMARY-NEXT:         ResByArg:
+; SUMMARY-NEXT: WithGlobalValueDeadStripping: false
 ; SUMMARY-NEXT: ...
 
 ; CHECK: @vt1 = constant void (i8*)* @vf1

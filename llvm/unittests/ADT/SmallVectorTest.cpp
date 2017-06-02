@@ -424,6 +424,16 @@ TYPED_TEST(SmallVectorTest, AssignTest) {
   this->assertValuesInOrder(this->theVector, 2u, 77, 77);
 }
 
+// Assign test
+TYPED_TEST(SmallVectorTest, AssignRangeTest) {
+  SCOPED_TRACE("AssignTest");
+
+  this->theVector.push_back(Constructable(1));
+  int arr[] = {1, 2, 3};
+  this->theVector.assign(std::begin(arr), std::end(arr));
+  this->assertValuesInOrder(this->theVector, 3u, 1, 2, 3);
+}
+
 // Move-assign test
 TYPED_TEST(SmallVectorTest, MoveAssignTest) {
   SCOPED_TRACE("MoveAssignTest");

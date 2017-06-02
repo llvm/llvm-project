@@ -1,8 +1,7 @@
 ; RUN: opt -wholeprogramdevirt -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -S -o - %s | FileCheck %s
 ; RUN: FileCheck --check-prefix=SUMMARY %s < %t
 
-; SUMMARY:     - TypeTests:
-; SUMMARY-NEXT:  TypeTestAssumeVCalls:
+; SUMMARY-NOT:  TypeTests:
 
 ; SUMMARY:      TypeIdMap:
 ; SUMMARY-NEXT:   typeid3:

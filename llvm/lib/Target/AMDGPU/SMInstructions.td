@@ -229,6 +229,7 @@ def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{
     ((Ld->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS &&
     static_cast<const SITargetLowering *>(getTargetLowering())->isMemOpUniform(N)) ||
     (Subtarget->getScalarizeGlobalBehavior() && Ld->getAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS &&
+    !Ld->isVolatile() &&
     static_cast<const SITargetLowering *>(getTargetLowering())->isMemOpUniform(N) &&
     static_cast<const SITargetLowering *>(getTargetLowering())->isMemOpHasNoClobberedMemOperand(N)));
 }]>;

@@ -9,7 +9,6 @@
 ; GCN-NEXT: BB{{[0-9]+_[0-9]+}}: ; %unreachable
 ; GCN: ds_write_b32
 ; GCN: ; divergent unreachable
-; GCN: s_waitcnt
 
 ; GCN-NEXT: [[RET]]: ; %UnifiedReturnBlock
 ; GCN-NEXT: s_or_b64 exec, exec
@@ -38,7 +37,6 @@ ret:
 ; GCN-NEXT: {{^BB[0-9]+_[0-9]+}}: ; %unreachable
 ; GCN: ds_write_b32
 ; GCN: ; divergent unreachable
-; GCN: s_waitcnt
 
 ; GCN: [[RETURN]]:
 ; GCN-NEXT: s_or_b64 exec, exec
@@ -66,7 +64,6 @@ unreachable:
 
 ; GCN: [[UNREACHABLE]]:
 ; GCN: ds_write_b32
-; GCN: s_waitcnt
 define amdgpu_kernel void @uniform_lower_control_flow_unreachable_terminator(i32 %arg0) #0 {
 bb:
   %tmp63 = icmp eq i32 %arg0, 32

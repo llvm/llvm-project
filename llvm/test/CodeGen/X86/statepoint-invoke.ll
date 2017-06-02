@@ -1,4 +1,4 @@
-; RUN: llc < %s 2>&1 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s 2>&1 | FileCheck %s
 
 target triple = "x86_64-pc-linux-gnu"
 

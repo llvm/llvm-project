@@ -135,6 +135,14 @@ private:
   // returns true on success.
   static bool ReduceXWtoXWSP(MachineInstr *MI, const ReduceEntry &Entry);
 
+  // Attempts to reduce LBU/LHU instruction into LBU16/LHU16,
+  // returns true on success.
+  static bool ReduceLXUtoLXU16(MachineInstr *MI, const ReduceEntry &Entry);
+
+  // Attempts to reduce SB/SH instruction into SB16/SH16,
+  // returns true on success.
+  static bool ReduceSXtoSX16(MachineInstr *MI, const ReduceEntry &Entry);
+
   // Attempts to reduce arithmetic instructions, returns true on success
   static bool ReduceArithmeticInstructions(MachineInstr *MI,
                                            const ReduceEntry &Entry);
@@ -162,10 +170,26 @@ llvm::SmallVector<ReduceEntry, 16> MicroMipsSizeReduce::ReduceTable = {
     {RT_OneInstr, OpCodes(Mips::ADDu_MM, Mips::ADDU16_MM),
      ReduceArithmeticInstructions, OpInfo(OT_OperandsAll),
      ImmField(0, 0, 0, -1)},
+    {RT_OneInstr, OpCodes(Mips::LBu, Mips::LBU16_MM), ReduceLXUtoLXU16,
+     OpInfo(OT_OperandsAll), ImmField(0, -1, 15, 2)},
+    {RT_OneInstr, OpCodes(Mips::LBu_MM, Mips::LBU16_MM), ReduceLXUtoLXU16,
+     OpInfo(OT_OperandsAll), ImmField(0, -1, 15, 2)},
+    {RT_OneInstr, OpCodes(Mips::LHu, Mips::LHU16_MM), ReduceLXUtoLXU16,
+     OpInfo(OT_OperandsAll), ImmField(1, 0, 16, 2)},
+    {RT_OneInstr, OpCodes(Mips::LHu_MM, Mips::LHU16_MM), ReduceLXUtoLXU16,
+     OpInfo(OT_OperandsAll), ImmField(1, 0, 16, 2)},
     {RT_OneInstr, OpCodes(Mips::LW, Mips::LWSP_MM), ReduceXWtoXWSP,
      OpInfo(OT_OperandsAll), ImmField(2, 0, 32, 2)},
     {RT_OneInstr, OpCodes(Mips::LW_MM, Mips::LWSP_MM), ReduceXWtoXWSP,
      OpInfo(OT_OperandsAll), ImmField(2, 0, 32, 2)},
+    {RT_OneInstr, OpCodes(Mips::SB, Mips::SB16_MM), ReduceSXtoSX16,
+     OpInfo(OT_OperandsAll), ImmField(0, 0, 16, 2)},
+    {RT_OneInstr, OpCodes(Mips::SB_MM, Mips::SB16_MM), ReduceSXtoSX16,
+     OpInfo(OT_OperandsAll), ImmField(0, 0, 16, 2)},
+    {RT_OneInstr, OpCodes(Mips::SH, Mips::SH16_MM), ReduceSXtoSX16,
+     OpInfo(OT_OperandsAll), ImmField(1, 0, 16, 2)},
+    {RT_OneInstr, OpCodes(Mips::SH_MM, Mips::SH16_MM), ReduceSXtoSX16,
+     OpInfo(OT_OperandsAll), ImmField(1, 0, 16, 2)},
     {RT_OneInstr, OpCodes(Mips::SUBu, Mips::SUBU16_MM),
      ReduceArithmeticInstructions, OpInfo(OT_OperandsAll),
      ImmField(0, 0, 0, -1)},
@@ -189,6 +213,13 @@ static bool IsSP(const MachineOperand &MO) {
 // Returns true if the machine operand MO is register $16, $17, or $2-$7.
 static bool isMMThreeBitGPRegister(const MachineOperand &MO) {
   if (MO.isReg() && Mips::GPRMM16RegClass.contains(MO.getReg()))
+    return true;
+  return false;
+}
+
+// Returns true if the machine operand MO is register $0, $17, or $2-$7.
+static bool isMMSourceRegister(const MachineOperand &MO) {
+  if (MO.isReg() && Mips::GPRMM16ZeroRegClass.contains(MO.getReg()))
     return true;
   return false;
 }
@@ -274,6 +305,32 @@ bool MicroMipsSizeReduce::ReduceArithmeticInstructions(
   if (!isMMThreeBitGPRegister(MI->getOperand(0)) ||
       !isMMThreeBitGPRegister(MI->getOperand(1)) ||
       !isMMThreeBitGPRegister(MI->getOperand(2)))
+    return false;
+
+  return ReplaceInstruction(MI, Entry);
+}
+
+bool MicroMipsSizeReduce::ReduceLXUtoLXU16(MachineInstr *MI,
+                                           const ReduceEntry &Entry) {
+
+  if (!ImmInRange(MI, Entry))
+    return false;
+
+  if (!isMMThreeBitGPRegister(MI->getOperand(0)) ||
+      !isMMThreeBitGPRegister(MI->getOperand(1)))
+    return false;
+
+  return ReplaceInstruction(MI, Entry);
+}
+
+bool MicroMipsSizeReduce::ReduceSXtoSX16(MachineInstr *MI,
+                                         const ReduceEntry &Entry) {
+
+  if (!ImmInRange(MI, Entry))
+    return false;
+
+  if (!isMMSourceRegister(MI->getOperand(0)) ||
+      !isMMThreeBitGPRegister(MI->getOperand(1)))
     return false;
 
   return ReplaceInstruction(MI, Entry);
