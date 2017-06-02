@@ -1,4 +1,4 @@
-//===------ Math.h - PBQP Vector and Matrix classes -------------*- C++ -*-===//
+//===- Math.h - PBQP Vector and Matrix classes ------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,20 +11,22 @@
 #define LLVM_CODEGEN_PBQP_MATH_H
 
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLExtras.h"
 #include <algorithm>
 #include <cassert>
 #include <functional>
+#include <memory>
 
 namespace llvm {
 namespace PBQP {
 
-typedef float PBQPNum;
+using PBQPNum = float;
 
 /// \brief PBQP Vector class.
 class Vector {
   friend hash_code hash_value(const Vector &);
-public:
 
+public:
   /// \brief Construct a PBQP vector of the given size.
   explicit Vector(unsigned Length)
     : Length(Length), Data(llvm::make_unique<PBQPNum []>(Length)) {}
@@ -120,8 +122,8 @@ OStream& operator<<(OStream &OS, const Vector &V) {
 class Matrix {
 private:
   friend hash_code hash_value(const Matrix &);
-public:
 
+public:
   /// \brief Construct a PBQP Matrix with the given dimensions.
   Matrix(unsigned Rows, unsigned Cols) :
     Rows(Rows), Cols(Cols), Data(llvm::make_unique<PBQPNum []>(Rows * Cols)) {
@@ -253,9 +255,11 @@ OStream& operator<<(OStream &OS, const Matrix &M) {
 template <typename Metadata>
 class MDVector : public Vector {
 public:
-  MDVector(const Vector &v) : Vector(v), md(*this) { }
+  MDVector(const Vector &v) : Vector(v), md(*this) {}
   MDVector(Vector &&v) : Vector(std::move(v)), md(*this) { }
+
   const Metadata& getMetadata() const { return md; }
+
 private:
   Metadata md;
 };
@@ -268,9 +272,11 @@ inline hash_code hash_value(const MDVector<Metadata> &V) {
 template <typename Metadata>
 class MDMatrix : public Matrix {
 public:
-  MDMatrix(const Matrix &m) : Matrix(m), md(*this) { }
+  MDMatrix(const Matrix &m) : Matrix(m), md(*this) {}
   MDMatrix(Matrix &&m) : Matrix(std::move(m)), md(*this) { }
+
   const Metadata& getMetadata() const { return md; }
+
 private:
   Metadata md;
 };
@@ -280,7 +286,7 @@ inline hash_code hash_value(const MDMatrix<Metadata> &M) {
   return hash_value(static_cast<const Matrix&>(M));
 }
 
-} // namespace PBQP
-} // namespace llvm
+} // end namespace PBQP
+} // end namespace llvm
 
 #endif // LLVM_CODEGEN_PBQP_MATH_H

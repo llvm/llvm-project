@@ -28,7 +28,9 @@ struct SymbolRecordBase;
 struct SymbolRecord {
   std::shared_ptr<detail::SymbolRecordBase> Symbol;
 
-  codeview::CVSymbol toCodeViewSymbol(BumpPtrAllocator &Allocator) const;
+  codeview::CVSymbol
+  toCodeViewSymbol(BumpPtrAllocator &Allocator,
+                   codeview::CodeViewContainer Container) const;
   static Expected<SymbolRecord> fromCodeViewSymbol(codeview::CVSymbol Symbol);
 };
 

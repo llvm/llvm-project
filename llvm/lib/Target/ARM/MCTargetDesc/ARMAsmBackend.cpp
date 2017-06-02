@@ -729,6 +729,15 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
     // linker can handle it. GNU AS produces an error in this case.
     if (Sym->isExternal() || Value >= 0x400004)
       IsResolved = false;
+    // When an ARM function is called from a Thumb function, produce a
+    // relocation so the linker will use the correct branch instruction for ELF
+    // binaries.
+    if (Sym->isELF()) {
+      unsigned Type = dyn_cast<MCSymbolELF>(Sym)->getType();
+      if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC) &&
+          !Asm.isThumbFunc(Sym))
+        IsResolved = false;
+    }
   }
   // We must always generate a relocation for BL/BLX instructions if we have
   // a symbol to reference, as the linker relies on knowing the destination

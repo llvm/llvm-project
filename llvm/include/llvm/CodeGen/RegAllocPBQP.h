@@ -130,10 +130,10 @@ inline hash_code hash_value(const AllowedRegVector &OptRegs) {
 /// \brief Holds graph-level metadata relevant to PBQP RA problems.
 class GraphMetadata {
 private:
-  typedef ValuePool<AllowedRegVector> AllowedRegVecPool;
+  using AllowedRegVecPool = ValuePool<AllowedRegVector>;
 
 public:
-  typedef AllowedRegVecPool::PoolRef AllowedRegVecRef;
+  using AllowedRegVecRef = AllowedRegVecPool::PoolRef;
 
   GraphMetadata(MachineFunction &MF,
                 LiveIntervals &LIS,
@@ -167,17 +167,17 @@ private:
 /// \brief Holds solver state and other metadata relevant to each PBQP RA node.
 class NodeMetadata {
 public:
-  typedef RegAlloc::AllowedRegVector AllowedRegVector;
+  using AllowedRegVector = RegAlloc::AllowedRegVector;
 
   // The node's reduction state. The order in this enum is important,
   // as it is assumed nodes can only progress up (i.e. towards being
   // optimally reducible) when reducing the graph.
-  typedef enum {
+  using ReductionState = enum {
     Unprocessed,
     NotProvablyAllocatable,
     ConservativelyAllocatable,
     OptimallyReducible
-  } ReductionState;
+  };
 
   NodeMetadata() = default;
 
@@ -267,23 +267,23 @@ private:
 
 class RegAllocSolverImpl {
 private:
-  typedef MDMatrix<MatrixMetadata> RAMatrix;
+  using RAMatrix = MDMatrix<MatrixMetadata>;
 
 public:
-  typedef PBQP::Vector RawVector;
-  typedef PBQP::Matrix RawMatrix;
-  typedef PBQP::Vector Vector;
-  typedef RAMatrix     Matrix;
-  typedef PBQP::PoolCostAllocator<Vector, Matrix> CostAllocator;
+  using RawVector = PBQP::Vector;
+  using RawMatrix = PBQP::Matrix;
+  using Vector = PBQP::Vector;
+  using Matrix = RAMatrix;
+  using CostAllocator = PBQP::PoolCostAllocator<Vector, Matrix>;
 
-  typedef GraphBase::NodeId NodeId;
-  typedef GraphBase::EdgeId EdgeId;
+  using NodeId = GraphBase::NodeId;
+  using EdgeId = GraphBase::EdgeId;
 
-  typedef RegAlloc::NodeMetadata NodeMetadata;
-  struct EdgeMetadata { };
-  typedef RegAlloc::GraphMetadata GraphMetadata;
+  using NodeMetadata = RegAlloc::NodeMetadata;
+  struct EdgeMetadata {};
+  using GraphMetadata = RegAlloc::GraphMetadata;
 
-  typedef PBQP::Graph<RegAllocSolverImpl> Graph;
+  using Graph = PBQP::Graph<RegAllocSolverImpl>;
 
   RegAllocSolverImpl(Graph &G) : G(G) {}
 
@@ -426,7 +426,7 @@ private:
   std::vector<GraphBase::NodeId> reduce() {
     assert(!G.empty() && "Cannot reduce empty graph.");
 
-    typedef GraphBase::NodeId NodeId;
+    using NodeId = GraphBase::NodeId;
     std::vector<NodeId> NodeStack;
 
     // Consume worklists.
@@ -459,7 +459,6 @@ private:
         ConservativelyAllocatableNodes.erase(NItr);
         NodeStack.push_back(NId);
         G.disconnectAllNeighborsFromNode(NId);
-
       } else if (!NotProvablyAllocatableNodes.empty()) {
         NodeSet::iterator NItr =
           std::min_element(NotProvablyAllocatableNodes.begin(),
@@ -493,7 +492,7 @@ private:
   };
 
   Graph& G;
-  typedef std::set<NodeId> NodeSet;
+  using NodeSet = std::set<NodeId>;
   NodeSet OptimallyReducibleNodes;
   NodeSet ConservativelyAllocatableNodes;
   NodeSet NotProvablyAllocatableNodes;
@@ -501,7 +500,7 @@ private:
 
 class PBQPRAGraph : public PBQP::Graph<RegAllocSolverImpl> {
 private:
-  typedef PBQP::Graph<RegAllocSolverImpl> BaseT;
+  using BaseT = PBQP::Graph<RegAllocSolverImpl>;
 
 public:
   PBQPRAGraph(GraphMetadata Metadata) : BaseT(std::move(Metadata)) {}

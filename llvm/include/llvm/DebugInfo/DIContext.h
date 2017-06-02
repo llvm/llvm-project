@@ -146,6 +146,14 @@ enum DIDumpType {
   DIDT_TUIndex,
 };
 
+/// Container for dump options that control which debug information will be
+/// dumped.
+struct DIDumpOptions {
+    DIDumpType DumpType = DIDT_All;
+    bool DumpEH = false;
+    bool SummarizeTypes = false;
+};
+
 class DIContext {
 public:
   enum DIContextKind {
@@ -158,8 +166,7 @@ public:
 
   DIContextKind getKind() const { return Kind; }
 
-  virtual void dump(raw_ostream &OS, DIDumpType DumpType = DIDT_All,
-                    bool DumpEH = false, bool SummarizeTypes = false) = 0;
+  virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) = 0;
 
   virtual bool verify(raw_ostream &OS, DIDumpType DumpType = DIDT_All) {
     // No verifier? Just say things went well.

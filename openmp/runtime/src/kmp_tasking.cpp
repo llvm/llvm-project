@@ -869,8 +869,8 @@ void __kmp_init_implicit_task(ident_t *loc_ref, kmp_info_t *this_thr,
 
   if (set_curr_task) { // only do this init first time thread is created
     task->td_incomplete_child_tasks = 0;
-    task->td_allocated_child_tasks = 0; // Not used: don't need to
-// deallocate implicit task
+    // Not used: don't need to deallocate implicit task
+    task->td_allocated_child_tasks = 0;
 #if OMP_40_ENABLED
     task->td_taskgroup = NULL; // An implicit task does not have taskgroup
     task->td_dephash = NULL;

@@ -927,6 +927,7 @@ void TargetLoweringBase::initActions() {
     // ADDCARRY operations default to expand
     setOperationAction(ISD::ADDCARRY, VT, Expand);
     setOperationAction(ISD::SUBCARRY, VT, Expand);
+    setOperationAction(ISD::SETCCCARRY, VT, Expand);
 
     // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Expand);

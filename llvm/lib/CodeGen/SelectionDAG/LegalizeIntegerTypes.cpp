@@ -2875,6 +2875,7 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::SELECT_CC:         Res = ExpandIntOp_SELECT_CC(N); break;
   case ISD::SETCC:             Res = ExpandIntOp_SETCC(N); break;
   case ISD::SETCCE:            Res = ExpandIntOp_SETCCE(N); break;
+  case ISD::SETCCCARRY:        Res = ExpandIntOp_SETCCCARRY(N); break;
   case ISD::SINT_TO_FP:        Res = ExpandIntOp_SINT_TO_FP(N); break;
   case ISD::STORE:   Res = ExpandIntOp_STORE(cast<StoreSDNode>(N), OpNo); break;
   case ISD::TRUNCATE:          Res = ExpandIntOp_TRUNCATE(N); break;
@@ -3009,14 +3010,16 @@ void DAGTypeLegalizer::IntegerExpandSetCCOperands(SDValue &NewLHS,
     return;
   }
 
-  // Lower with SETCCE if the target supports it.
+  // Lower with SETCCE or SETCCCARRY if the target supports it.
+  EVT HiVT = LHSHi.getValueType();
+  EVT ExpandVT = TLI.getTypeToExpandTo(*DAG.getContext(), HiVT);
+  bool HasSETCCCARRY = TLI.isOperationLegalOrCustom(ISD::SETCCCARRY, ExpandVT);
+
   // FIXME: Make all targets support this, then remove the other lowering.
-  if (TLI.getOperationAction(
-          ISD::SETCCE,
-          TLI.getTypeToExpandTo(*DAG.getContext(), LHSLo.getValueType())) ==
-      TargetLowering::Custom) {
-    // SETCCE can detect < and >= directly. For > and <=, flip operands and
-    // condition code.
+  if (HasSETCCCARRY ||
+      TLI.getOperationAction(ISD::SETCCE, ExpandVT) == TargetLowering::Custom) {
+    // SETCCE/SETCCCARRY can detect < and >= directly. For > and <=, flip
+    // operands and condition code.
     bool FlipOperands = false;
     switch (CCCode) {
     case ISD::SETGT:  CCCode = ISD::SETLT;  FlipOperands = true; break;
@@ -3030,27 +3033,28 @@ void DAGTypeLegalizer::IntegerExpandSetCCOperands(SDValue &NewLHS,
       std::swap(LHSHi, RHSHi);
     }
     // Perform a wide subtraction, feeding the carry from the low part into
-    // SETCCE. The SETCCE operation is essentially looking at the high part of
-    // the result of LHS - RHS. It is negative iff LHS < RHS. It is zero or
-    // positive iff LHS >= RHS.
-    SDVTList VTList = DAG.getVTList(LHSLo.getValueType(), MVT::Glue);
-    SDValue LowCmp = DAG.getNode(ISD::SUBC, dl, VTList, LHSLo, RHSLo);
-    SDValue Res =
-        DAG.getNode(ISD::SETCCE, dl, getSetCCResultType(LHSLo.getValueType()),
-                    LHSHi, RHSHi, LowCmp.getValue(1), DAG.getCondCode(CCCode));
+    // SETCCE/SETCCCARRY. The SETCCE/SETCCCARRY operation is essentially
+    // looking at the high part of the result of LHS - RHS. It is negative
+    // iff LHS < RHS. It is zero or positive iff LHS >= RHS.
+    EVT LoVT = LHSLo.getValueType();
+    SDVTList VTList = DAG.getVTList(
+        LoVT, HasSETCCCARRY ? getSetCCResultType(LoVT) : MVT::Glue);
+    SDValue LowCmp = DAG.getNode(HasSETCCCARRY ? ISD::USUBO : ISD::SUBC, dl,
+                                 VTList, LHSLo, RHSLo);
+    SDValue Res = DAG.getNode(HasSETCCCARRY ? ISD::SETCCCARRY : ISD::SETCCE, dl,
+                              getSetCCResultType(HiVT), LHSHi, RHSHi,
+                              LowCmp.getValue(1), DAG.getCondCode(CCCode));
     NewLHS = Res;
     NewRHS = SDValue();
     return;
   }
 
-  NewLHS = TLI.SimplifySetCC(getSetCCResultType(LHSHi.getValueType()),
-                             LHSHi, RHSHi, ISD::SETEQ, false,
-                             DagCombineInfo, dl);
+  NewLHS = TLI.SimplifySetCC(getSetCCResultType(HiVT), LHSHi, RHSHi, ISD::SETEQ,
+                             false, DagCombineInfo, dl);
   if (!NewLHS.getNode())
-    NewLHS = DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()),
-                          LHSHi, RHSHi, ISD::SETEQ);
-  NewLHS = DAG.getSelect(dl, LoCmp.getValueType(),
-                         NewLHS, LoCmp, HiCmp);
+    NewLHS =
+        DAG.getSetCC(dl, getSetCCResultType(HiVT), LHSHi, RHSHi, ISD::SETEQ);
+  NewLHS = DAG.getSelect(dl, LoCmp.getValueType(), NewLHS, LoCmp, HiCmp);
   NewRHS = SDValue();
 }
 
@@ -3103,8 +3107,8 @@ SDValue DAGTypeLegalizer::ExpandIntOp_SETCC(SDNode *N) {
   }
 
   // Otherwise, update N to have the operands specified.
-  return SDValue(DAG.UpdateNodeOperands(N, NewLHS, NewRHS,
-                                DAG.getCondCode(CCCode)), 0);
+  return SDValue(
+      DAG.UpdateNodeOperands(N, NewLHS, NewRHS, DAG.getCondCode(CCCode)), 0);
 }
 
 SDValue DAGTypeLegalizer::ExpandIntOp_SETCCE(SDNode *N) {
@@ -3122,6 +3126,24 @@ SDValue DAGTypeLegalizer::ExpandIntOp_SETCCE(SDNode *N) {
   SDVTList VTList = DAG.getVTList(LHSLo.getValueType(), MVT::Glue);
   SDValue LowCmp = DAG.getNode(ISD::SUBE, dl, VTList, LHSLo, RHSLo, Carry);
   return DAG.getNode(ISD::SETCCE, dl, N->getValueType(0), LHSHi, RHSHi,
+                     LowCmp.getValue(1), Cond);
+}
+
+SDValue DAGTypeLegalizer::ExpandIntOp_SETCCCARRY(SDNode *N) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue Carry = N->getOperand(2);
+  SDValue Cond = N->getOperand(3);
+  SDLoc dl = SDLoc(N);
+
+  SDValue LHSLo, LHSHi, RHSLo, RHSHi;
+  GetExpandedInteger(LHS, LHSLo, LHSHi);
+  GetExpandedInteger(RHS, RHSLo, RHSHi);
+
+  // Expand to a SUBE for the low part and a smaller SETCCCARRY for the high.
+  SDVTList VTList = DAG.getVTList(LHSLo.getValueType(), Carry.getValueType());
+  SDValue LowCmp = DAG.getNode(ISD::SUBCARRY, dl, VTList, LHSLo, RHSLo, Carry);
+  return DAG.getNode(ISD::SETCCCARRY, dl, N->getValueType(0), LHSHi, RHSHi,
                      LowCmp.getValue(1), Cond);
 }
 

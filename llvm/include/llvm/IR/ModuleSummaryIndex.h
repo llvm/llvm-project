@@ -134,16 +134,18 @@ public:
     /// be renamed or references something that can't be renamed).
     unsigned NotEligibleToImport : 1;
 
-    /// Indicate that the global value must be considered a live root for
-    /// index-based liveness analysis. Used for special LLVM values such as
-    /// llvm.global_ctors that the linker does not know about.
-    unsigned LiveRoot : 1;
+    /// In per-module summary, indicate that the global value must be considered
+    /// a live root for index-based liveness analysis. Used for special LLVM
+    /// values such as llvm.global_ctors that the linker does not know about.
+    ///
+    /// In combined summary, indicate that the global value is live.
+    unsigned Live : 1;
 
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
-                     bool NotEligibleToImport, bool LiveRoot)
+                     bool NotEligibleToImport, bool Live)
         : Linkage(Linkage), NotEligibleToImport(NotEligibleToImport),
-          LiveRoot(LiveRoot) {}
+          Live(Live) {}
   };
 
 private:
@@ -171,6 +173,8 @@ private:
   /// from within a function). This does not include functions called, which
   /// are listed in the derived FunctionSummary object.
   std::vector<ValueInfo> RefEdgeList;
+
+  bool isLive() const { return Flags.Live; }
 
 protected:
   GlobalValueSummary(SummaryKind K, GVFlags Flags, std::vector<ValueInfo> Refs)
@@ -213,19 +217,17 @@ public:
   /// Return true if this global value can't be imported.
   bool notEligibleToImport() const { return Flags.NotEligibleToImport; }
 
-  /// Return true if this global value must be considered a root for live
-  /// value analysis on the index.
-  bool liveRoot() const { return Flags.LiveRoot; }
-
-  /// Flag that this global value must be considered a root for live
-  /// value analysis on the index.
-  void setLiveRoot() { Flags.LiveRoot = true; }
+  void setLive(bool Live) { Flags.Live = Live; }
 
   /// Flag that this global value cannot be imported.
   void setNotEligibleToImport() { Flags.NotEligibleToImport = true; }
 
   /// Return the list of values referenced by this global value definition.
   ArrayRef<ValueInfo> refs() const { return RefEdgeList; }
+
+  friend class ModuleSummaryIndex;
+  friend void computeDeadSymbols(class ModuleSummaryIndex &,
+                                 const DenseSet<GlobalValue::GUID> &);
 };
 
 /// \brief Alias summary information.
@@ -535,6 +537,11 @@ private:
   /// GUIDs, it will be mapped to 0.
   std::map<GlobalValue::GUID, GlobalValue::GUID> OidGuidMap;
 
+  /// Indicates that summary-based GlobalValue GC has run, and values with
+  /// GVFlags::Live==false are really dead. Otherwise, all values must be
+  /// considered live.
+  bool WithGlobalValueDeadStripping = false;
+
   // YAML I/O support.
   friend yaml::MappingTraits<ModuleSummaryIndex>;
 
@@ -549,6 +556,17 @@ public:
   gvsummary_iterator end() { return GlobalValueMap.end(); }
   const_gvsummary_iterator end() const { return GlobalValueMap.end(); }
   size_t size() const { return GlobalValueMap.size(); }
+
+  bool withGlobalValueDeadStripping() const {
+    return WithGlobalValueDeadStripping;
+  }
+  void setWithGlobalValueDeadStripping() {
+    WithGlobalValueDeadStripping = true;
+  }
+
+  bool isGlobalValueLive(const GlobalValueSummary *GVS) const {
+    return !WithGlobalValueDeadStripping || GVS->isLive();
+  }
 
   /// Return a ValueInfo for GUID if it exists, otherwise return ValueInfo().
   ValueInfo getValueInfo(GlobalValue::GUID GUID) const {

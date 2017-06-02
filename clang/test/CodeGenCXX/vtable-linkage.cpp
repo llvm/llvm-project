@@ -145,12 +145,14 @@ void use_F() {
 // F<int> is an explicit template instantiation declaration without a
 // key function, so its vtable should have external linkage.
 // CHECK-DAG: @_ZTV1FIiE = external unnamed_addr constant
-// CHECK-OPT-DAG: @_ZTV1FIiE = external unnamed_addr constant
+// CHECK-OPT-DAG: @_ZTV1FIiE = available_externally unnamed_addr constant
 
 // E<int> is an explicit template instantiation declaration. It has a
 // key function is not instantiated, so we know that vtable definition
 // will be generated in TU where key function will be defined
-// so we can mark it as available_externally (only with optimizations)
+// so we can mark it as external (without optimizations) and
+// available_externally (with optimizations) because all of the inline
+// virtual functions have been emitted.
 // CHECK-DAG: @_ZTV1EIiE = external unnamed_addr constant
 // CHECK-OPT-DAG: @_ZTV1EIiE = available_externally unnamed_addr constant
 

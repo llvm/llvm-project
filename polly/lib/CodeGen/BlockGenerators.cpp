@@ -441,8 +441,12 @@ void BlockGenerator::copyBB(ScopStmt &Stmt, BasicBlock *BB, BasicBlock *CopyBB,
                             isl_id_to_ast_expr *NewAccesses) {
   EntryBB = &CopyBB->getParent()->getEntryBlock();
 
-  for (Instruction &Inst : *BB)
-    copyInstruction(Stmt, &Inst, BBMap, LTS, NewAccesses);
+  if (Stmt.isBlockStmt())
+    for (Instruction *Inst : Stmt.getInstructions())
+      copyInstruction(Stmt, Inst, BBMap, LTS, NewAccesses);
+  else
+    for (Instruction &Inst : *BB)
+      copyInstruction(Stmt, &Inst, BBMap, LTS, NewAccesses);
 }
 
 Value *BlockGenerator::getOrCreateAlloca(const MemoryAccess &Access) {
@@ -595,7 +599,10 @@ void BlockGenerator::generateConditionalExecution(
 
   // If the condition is a tautology, don't generate a condition around the
   // code.
-  if (StmtDom.is_subset(Subdomain)) {
+  bool IsPartialWrite =
+      !StmtDom.intersect_params(give(Stmt.getParent()->getContext()))
+           .is_subset(Subdomain);
+  if (!IsPartialWrite) {
     GenThenFunc();
     return;
   }

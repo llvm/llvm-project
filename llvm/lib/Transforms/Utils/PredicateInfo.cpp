@@ -541,7 +541,40 @@ Value *PredicateInfo::materializeStack(unsigned int &Counter,
 //
 // TODO: Use this algorithm to perform fast single-variable renaming in
 // promotememtoreg and memoryssa.
-void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpsToRename) {
+void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
+  // Sort OpsToRename since we are going to iterate it.
+  SmallVector<Value *, 8> OpsToRename(OpSet.begin(), OpSet.end());
+  std::sort(OpsToRename.begin(), OpsToRename.end(), [&](const Value *A,
+                                                        const Value *B) {
+    auto *ArgA = dyn_cast_or_null<Argument>(A);
+    auto *ArgB = dyn_cast_or_null<Argument>(B);
+
+    // If A and B are args, order them based on their arg no.
+    if (ArgA && !ArgB)
+      return true;
+    if (ArgB && !ArgA)
+      return false;
+    if (ArgA && ArgB)
+      return ArgA->getArgNo() < ArgB->getArgNo();
+
+    // Else, A are B are instructions.
+    // If they belong to different BBs, order them by the dominance of BBs.
+    auto *AInst = cast<Instruction>(A);
+    auto *BInst = cast<Instruction>(B);
+    if (AInst->getParent() != BInst->getParent())
+      return DT.dominates(AInst->getParent(), BInst->getParent());
+
+    // Else, A and B belong to the same BB.
+    // Order A and B by their dominance.
+    auto *BB = AInst->getParent();
+    auto LookupResult = OBBMap.find(BB);
+    if (LookupResult != OBBMap.end())
+      return LookupResult->second->dominates(AInst, BInst);
+
+    auto Result = OBBMap.insert({BB, make_unique<OrderedBasicBlock>(BB)});
+    return Result.first->second->dominates(AInst, BInst);
+  });
+
   ValueDFS_Compare Compare(OBBMap);
   // Compute liveness, and rename in O(uses) per Op.
   for (auto *Op : OpsToRename) {

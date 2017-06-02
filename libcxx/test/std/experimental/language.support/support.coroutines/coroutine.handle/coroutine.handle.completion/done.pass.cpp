@@ -33,7 +33,7 @@ void do_test(coro::coroutine_handle<Promise> const& H) {
   // FIXME Add a runtime test
   {
     ASSERT_SAME_TYPE(decltype(H.done()), bool);
-    ASSERT_NOT_NOEXCEPT(H.done());
+    LIBCPP_ASSERT_NOT_NOEXCEPT(H.done());
   }
 }
 

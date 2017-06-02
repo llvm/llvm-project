@@ -39,6 +39,21 @@ void DIBuilder::trackIfUnresolved(MDNode *N) {
   UnresolvedNodes.emplace_back(N);
 }
 
+void DIBuilder::finalizeSubprogram(DISubprogram *SP) {
+  MDTuple *Temp = SP->getVariables().get();
+  if (!Temp || !Temp->isTemporary())
+    return;
+
+  SmallVector<Metadata *, 4> Variables;
+
+  auto PV = PreservedVariables.find(SP);
+  if (PV != PreservedVariables.end())
+    Variables.append(PV->second.begin(), PV->second.end());
+
+  DINodeArray AV = getOrCreateArray(Variables);
+  TempMDTuple(Temp)->replaceAllUsesWith(AV.get());
+}
+
 void DIBuilder::finalize() {
   if (!CUNode) {
     assert(!AllowUnresolvedNodes &&
@@ -62,25 +77,11 @@ void DIBuilder::finalize() {
     CUNode->replaceRetainedTypes(MDTuple::get(VMContext, RetainValues));
 
   DISubprogramArray SPs = MDTuple::get(VMContext, AllSubprograms);
-  auto resolveVariables = [&](DISubprogram *SP) {
-    MDTuple *Temp = SP->getVariables().get();
-    if (!Temp)
-      return;
-
-    SmallVector<Metadata *, 4> Variables;
-
-    auto PV = PreservedVariables.find(SP);
-    if (PV != PreservedVariables.end())
-      Variables.append(PV->second.begin(), PV->second.end());
-
-    DINodeArray AV = getOrCreateArray(Variables);
-    TempMDTuple(Temp)->replaceAllUsesWith(AV.get());
-  };
   for (auto *SP : SPs)
-    resolveVariables(SP);
+    finalizeSubprogram(SP);
   for (auto *N : RetainValues)
     if (auto *SP = dyn_cast<DISubprogram>(N))
-      resolveVariables(SP);
+      finalizeSubprogram(SP);
 
   if (!AllGVs.empty())
     CUNode->replaceGlobalVariables(MDTuple::get(VMContext, AllGVs));

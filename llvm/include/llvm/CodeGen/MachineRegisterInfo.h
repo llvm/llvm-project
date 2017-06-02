@@ -14,11 +14,13 @@
 #ifndef LLVM_CODEGEN_MACHINEREGISTERINFO_H
 #define LLVM_CODEGEN_MACHINEREGISTERINFO_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -41,8 +43,8 @@ namespace llvm {
 class PSetIterator;
 
 /// Convenient type to represent either a register class or a register bank.
-typedef PointerUnion<const TargetRegisterClass *, const RegisterBank *>
-    RegClassOrRegBank;
+using RegClassOrRegBank =
+    PointerUnion<const TargetRegisterClass *, const RegisterBank *>;
 
 /// MachineRegisterInfo - Keep track of information for virtual and physical
 /// registers, including vreg register classes, use/def chains for registers,
@@ -125,7 +127,7 @@ private:
   /// started.
   BitVector ReservedRegs;
 
-  typedef DenseMap<unsigned, LLT> VRegToTypeMap;
+  using VRegToTypeMap = DenseMap<unsigned, LLT>;
   /// Map generic virtual registers to their actual size.
   mutable std::unique_ptr<VRegToTypeMap> VRegToType;
 
@@ -266,8 +268,8 @@ public:
 
   /// reg_iterator/reg_begin/reg_end - Walk all defs and uses of the specified
   /// register.
-  typedef defusechain_iterator<true,true,false,true,false,false>
-          reg_iterator;
+  using reg_iterator =
+      defusechain_iterator<true, true, false, true, false, false>;
   reg_iterator reg_begin(unsigned RegNo) const {
     return reg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -279,8 +281,8 @@ public:
 
   /// reg_instr_iterator/reg_instr_begin/reg_instr_end - Walk all defs and uses
   /// of the specified register, stepping by MachineInstr.
-  typedef defusechain_instr_iterator<true,true,false,false,true,false>
-          reg_instr_iterator;
+  using reg_instr_iterator =
+      defusechain_instr_iterator<true, true, false, false, true, false>;
   reg_instr_iterator reg_instr_begin(unsigned RegNo) const {
     return reg_instr_iterator(getRegUseDefListHead(RegNo));
   }
@@ -295,8 +297,8 @@ public:
 
   /// reg_bundle_iterator/reg_bundle_begin/reg_bundle_end - Walk all defs and uses
   /// of the specified register, stepping by bundle.
-  typedef defusechain_instr_iterator<true,true,false,false,false,true>
-          reg_bundle_iterator;
+  using reg_bundle_iterator =
+      defusechain_instr_iterator<true, true, false, false, false, true>;
   reg_bundle_iterator reg_bundle_begin(unsigned RegNo) const {
     return reg_bundle_iterator(getRegUseDefListHead(RegNo));
   }
@@ -314,8 +316,8 @@ public:
 
   /// reg_nodbg_iterator/reg_nodbg_begin/reg_nodbg_end - Walk all defs and uses
   /// of the specified register, skipping those marked as Debug.
-  typedef defusechain_iterator<true,true,true,true,false,false>
-          reg_nodbg_iterator;
+  using reg_nodbg_iterator =
+      defusechain_iterator<true, true, true, true, false, false>;
   reg_nodbg_iterator reg_nodbg_begin(unsigned RegNo) const {
     return reg_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -331,8 +333,8 @@ public:
   /// reg_instr_nodbg_iterator/reg_instr_nodbg_begin/reg_instr_nodbg_end - Walk
   /// all defs and uses of the specified register, stepping by MachineInstr,
   /// skipping those marked as Debug.
-  typedef defusechain_instr_iterator<true,true,true,false,true,false>
-          reg_instr_nodbg_iterator;
+  using reg_instr_nodbg_iterator =
+      defusechain_instr_iterator<true, true, true, false, true, false>;
   reg_instr_nodbg_iterator reg_instr_nodbg_begin(unsigned RegNo) const {
     return reg_instr_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -348,8 +350,8 @@ public:
   /// reg_bundle_nodbg_iterator/reg_bundle_nodbg_begin/reg_bundle_nodbg_end - Walk
   /// all defs and uses of the specified register, stepping by bundle,
   /// skipping those marked as Debug.
-  typedef defusechain_instr_iterator<true,true,true,false,false,true>
-          reg_bundle_nodbg_iterator;
+  using reg_bundle_nodbg_iterator =
+      defusechain_instr_iterator<true, true, true, false, false, true>;
   reg_bundle_nodbg_iterator reg_bundle_nodbg_begin(unsigned RegNo) const {
     return reg_bundle_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -369,8 +371,8 @@ public:
   }
 
   /// def_iterator/def_begin/def_end - Walk all defs of the specified register.
-  typedef defusechain_iterator<false,true,false,true,false,false>
-          def_iterator;
+  using def_iterator =
+      defusechain_iterator<false, true, false, true, false, false>;
   def_iterator def_begin(unsigned RegNo) const {
     return def_iterator(getRegUseDefListHead(RegNo));
   }
@@ -382,8 +384,8 @@ public:
 
   /// def_instr_iterator/def_instr_begin/def_instr_end - Walk all defs of the
   /// specified register, stepping by MachineInst.
-  typedef defusechain_instr_iterator<false,true,false,false,true,false>
-          def_instr_iterator;
+  using def_instr_iterator =
+      defusechain_instr_iterator<false, true, false, false, true, false>;
   def_instr_iterator def_instr_begin(unsigned RegNo) const {
     return def_instr_iterator(getRegUseDefListHead(RegNo));
   }
@@ -398,8 +400,8 @@ public:
 
   /// def_bundle_iterator/def_bundle_begin/def_bundle_end - Walk all defs of the
   /// specified register, stepping by bundle.
-  typedef defusechain_instr_iterator<false,true,false,false,false,true>
-          def_bundle_iterator;
+  using def_bundle_iterator =
+      defusechain_instr_iterator<false, true, false, false, false, true>;
   def_bundle_iterator def_bundle_begin(unsigned RegNo) const {
     return def_bundle_iterator(getRegUseDefListHead(RegNo));
   }
@@ -425,8 +427,8 @@ public:
   }
 
   /// use_iterator/use_begin/use_end - Walk all uses of the specified register.
-  typedef defusechain_iterator<true,false,false,true,false,false>
-          use_iterator;
+  using use_iterator =
+      defusechain_iterator<true, false, false, true, false, false>;
   use_iterator use_begin(unsigned RegNo) const {
     return use_iterator(getRegUseDefListHead(RegNo));
   }
@@ -438,8 +440,8 @@ public:
 
   /// use_instr_iterator/use_instr_begin/use_instr_end - Walk all uses of the
   /// specified register, stepping by MachineInstr.
-  typedef defusechain_instr_iterator<true,false,false,false,true,false>
-          use_instr_iterator;
+  using use_instr_iterator =
+      defusechain_instr_iterator<true, false, false, false, true, false>;
   use_instr_iterator use_instr_begin(unsigned RegNo) const {
     return use_instr_iterator(getRegUseDefListHead(RegNo));
   }
@@ -454,8 +456,8 @@ public:
 
   /// use_bundle_iterator/use_bundle_begin/use_bundle_end - Walk all uses of the
   /// specified register, stepping by bundle.
-  typedef defusechain_instr_iterator<true,false,false,false,false,true>
-          use_bundle_iterator;
+  using use_bundle_iterator =
+      defusechain_instr_iterator<true, false, false, false, false, true>;
   use_bundle_iterator use_bundle_begin(unsigned RegNo) const {
     return use_bundle_iterator(getRegUseDefListHead(RegNo));
   }
@@ -482,8 +484,8 @@ public:
 
   /// use_nodbg_iterator/use_nodbg_begin/use_nodbg_end - Walk all uses of the
   /// specified register, skipping those marked as Debug.
-  typedef defusechain_iterator<true,false,true,true,false,false>
-          use_nodbg_iterator;
+  using use_nodbg_iterator =
+      defusechain_iterator<true, false, true, true, false, false>;
   use_nodbg_iterator use_nodbg_begin(unsigned RegNo) const {
     return use_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -499,8 +501,8 @@ public:
   /// use_instr_nodbg_iterator/use_instr_nodbg_begin/use_instr_nodbg_end - Walk
   /// all uses of the specified register, stepping by MachineInstr, skipping
   /// those marked as Debug.
-  typedef defusechain_instr_iterator<true,false,true,false,true,false>
-          use_instr_nodbg_iterator;
+  using use_instr_nodbg_iterator =
+      defusechain_instr_iterator<true, false, true, false, true, false>;
   use_instr_nodbg_iterator use_instr_nodbg_begin(unsigned RegNo) const {
     return use_instr_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -516,8 +518,8 @@ public:
   /// use_bundle_nodbg_iterator/use_bundle_nodbg_begin/use_bundle_nodbg_end - Walk
   /// all uses of the specified register, stepping by bundle, skipping
   /// those marked as Debug.
-  typedef defusechain_instr_iterator<true,false,true,false,false,true>
-          use_bundle_nodbg_iterator;
+  using use_bundle_nodbg_iterator =
+      defusechain_instr_iterator<true, false, true, false, false, true>;
   use_bundle_nodbg_iterator use_bundle_nodbg_begin(unsigned RegNo) const {
     return use_bundle_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -593,7 +595,6 @@ public:
   /// Return the register class of the specified virtual register.
   /// This shouldn't be used directly unless \p Reg has a register class.
   /// \see getRegClassOrNull when this might happen.
-  ///
   const TargetRegisterClass *getRegClass(unsigned Reg) const {
     assert(VRegInfo[Reg].first.is<const TargetRegisterClass *>() &&
            "Register class not set, wrong accessor");
@@ -620,7 +621,6 @@ public:
   /// a register bank or has been assigned a register class.
   /// \note It is possible to get the register bank from the register class via
   /// RegisterBankInfo::getRegBankFromRegClass.
-  ///
   const RegisterBank *getRegBankOrNull(unsigned Reg) const {
     const RegClassOrRegBank &Val = VRegInfo[Reg].first;
     return Val.dyn_cast<const RegisterBank *>();
@@ -629,17 +629,14 @@ public:
   /// Return the register bank or register class of \p Reg.
   /// \note Before the register bank gets assigned (i.e., before the
   /// RegBankSelect pass) \p Reg may not have either.
-  ///
   const RegClassOrRegBank &getRegClassOrRegBank(unsigned Reg) const {
     return VRegInfo[Reg].first;
   }
 
   /// setRegClass - Set the register class of the specified virtual register.
-  ///
   void setRegClass(unsigned Reg, const TargetRegisterClass *RC);
 
   /// Set the register bank to \p RegBank for \p Reg.
-  ///
   void setRegBank(unsigned Reg, const RegisterBank &RegBank);
 
   void setRegClassOrRegBank(unsigned Reg,
@@ -653,7 +650,6 @@ public:
   /// new register class, or NULL if no such class exists.
   /// This should only be used when the constraint is known to be trivial, like
   /// GR32 -> GR32_NOSP. Beware of increasing register pressure.
-  ///
   const TargetRegisterClass *constrainRegClass(unsigned Reg,
                                                const TargetRegisterClass *RC,
                                                unsigned MinNumRegs = 0);
@@ -665,12 +661,10 @@ public:
   /// This method can be used after constraints have been removed from a
   /// virtual register, for example after removing instructions or splitting
   /// the live range.
-  ///
   bool recomputeRegClass(unsigned Reg);
 
   /// createVirtualRegister - Create and return a new virtual register in the
   /// function with the specified register class.
-  ///
   unsigned createVirtualRegister(const TargetRegisterClass *RegClass);
 
   /// Accessor for VRegToType. This accessor should only be used
@@ -704,7 +698,6 @@ public:
   unsigned createIncompleteVirtualRegister();
 
   /// getNumVirtRegs - Return the number of virtual registers created.
-  ///
   unsigned getNumVirtRegs() const { return VRegInfo.size(); }
 
   /// clearVirtRegs - Remove all virtual registers (after physreg assignment).
@@ -810,7 +803,6 @@ public:
   ///
   /// Reserved registers may belong to an allocatable register class, but the
   /// target has explicitly requested that they are not used.
-  ///
   bool isReserved(unsigned PhysReg) const {
     return getReservedRegs().test(PhysReg);
   }
@@ -838,8 +830,8 @@ public:
 
   // Iteration support for the live-ins set.  It's kept in sorted order
   // by register number.
-  typedef std::vector<std::pair<unsigned,unsigned>>::const_iterator
-  livein_iterator;
+  using livein_iterator =
+      std::vector<std::pair<unsigned,unsigned>>::const_iterator;
   livein_iterator livein_begin() const { return LiveIns.begin(); }
   livein_iterator livein_end()   const { return LiveIns.end(); }
   bool            livein_empty() const { return LiveIns.empty(); }
@@ -910,10 +902,10 @@ public:
     }
 
   public:
-    typedef std::iterator<std::forward_iterator_tag,
-                          MachineInstr, ptrdiff_t>::reference reference;
-    typedef std::iterator<std::forward_iterator_tag,
-                          MachineInstr, ptrdiff_t>::pointer pointer;
+    using reference = std::iterator<std::forward_iterator_tag,
+                                    MachineInstr, ptrdiff_t>::reference;
+    using pointer = std::iterator<std::forward_iterator_tag,
+                                  MachineInstr, ptrdiff_t>::pointer;
 
     defusechain_iterator() = default;
 
@@ -1016,10 +1008,10 @@ public:
     }
 
   public:
-    typedef std::iterator<std::forward_iterator_tag,
-                          MachineInstr, ptrdiff_t>::reference reference;
-    typedef std::iterator<std::forward_iterator_tag,
-                          MachineInstr, ptrdiff_t>::pointer pointer;
+    using reference = std::iterator<std::forward_iterator_tag,
+                                    MachineInstr, ptrdiff_t>::reference;
+    using pointer = std::iterator<std::forward_iterator_tag,
+                                  MachineInstr, ptrdiff_t>::pointer;
 
     defusechain_instr_iterator() = default;
 

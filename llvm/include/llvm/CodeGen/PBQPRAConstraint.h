@@ -1,4 +1,4 @@
-//===-- RegAllocPBQP.h ------------------------------------------*- C++ -*-===//
+//===- RegAllocPBQP.h -------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,23 +16,22 @@
 #ifndef LLVM_CODEGEN_PBQPRACONSTRAINT_H
 #define LLVM_CODEGEN_PBQPRACONSTRAINT_H
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 
 namespace llvm {
+
 namespace PBQP {
 namespace RegAlloc {
+
 // Forward declare PBQP graph class.
 class PBQPRAGraph;
-}
-}
 
-class LiveIntervals;
-class MachineBlockFrequencyInfo;
-class MachineFunction;
-class TargetRegisterInfo;
+} // end namespace RegAlloc
+} // end namespace PBQP
 
-typedef PBQP::RegAlloc::PBQPRAGraph PBQPRAGraph;
+using PBQPRAGraph = PBQP::RegAlloc::PBQPRAGraph;
 
 /// @brief Abstract base for classes implementing PBQP register allocation
 ///        constraints (e.g. Spill-costs, interference, coalescing).
@@ -40,6 +39,7 @@ class PBQPRAConstraint {
 public:
   virtual ~PBQPRAConstraint() = 0;
   virtual void apply(PBQPRAGraph &G) = 0;
+
 private:
   virtual void anchor();
 };
@@ -59,11 +59,13 @@ public:
     if (C)
       Constraints.push_back(std::move(C));
   }
+
 private:
   std::vector<std::unique_ptr<PBQPRAConstraint>> Constraints;
+
   void anchor() override;
 };
 
-}
+} // end namespace llvm
 
-#endif /* LLVM_CODEGEN_PBQPRACONSTRAINT_H */
+#endif // LLVM_CODEGEN_PBQPRACONSTRAINT_H

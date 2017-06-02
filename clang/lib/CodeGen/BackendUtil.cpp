@@ -49,6 +49,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
@@ -897,6 +898,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   // create that pass manager here and use it as needed below.
   legacy::PassManager CodeGenPasses;
   bool NeedCodeGen = false;
+  Optional<raw_fd_ostream> ThinLinkOS;
 
   // Append any output we need to the pass manager.
   switch (Action) {
@@ -904,9 +906,24 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     break;
 
   case Backend_EmitBC:
-    MPM.addPass(BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists,
-                                  CodeGenOpts.EmitSummaryIndex,
-                                  CodeGenOpts.EmitSummaryIndex));
+    if (CodeGenOpts.EmitSummaryIndex) {
+      if (!CodeGenOpts.ThinLinkBitcodeFile.empty()) {
+        std::error_code EC;
+        ThinLinkOS.emplace(CodeGenOpts.ThinLinkBitcodeFile, EC,
+                           llvm::sys::fs::F_None);
+        if (EC) {
+          Diags.Report(diag::err_fe_unable_to_open_output)
+              << CodeGenOpts.ThinLinkBitcodeFile << EC.message();
+          return;
+        }
+      }
+      MPM.addPass(
+          ThinLTOBitcodeWriterPass(*OS, ThinLinkOS ? &*ThinLinkOS : nullptr));
+    } else {
+      MPM.addPass(BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists,
+                                    CodeGenOpts.EmitSummaryIndex,
+                                    CodeGenOpts.EmitSummaryIndex));
+    }
     break;
 
   case Backend_EmitLL:
@@ -1029,6 +1046,7 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
   Conf.CGOptLevel = getCGOptLevel(CGOpts);
   initTargetOptions(Conf.Options, CGOpts, TOpts, LOpts, HeaderOpts);
   Conf.SampleProfile = std::move(SampleProfile);
+  Conf.UseNewPM = CGOpts.ExperimentalNewPassManager;
   switch (Action) {
   case Backend_EmitNothing:
     Conf.PreCodeGenModuleHook = [](size_t Task, const Module &Mod) {

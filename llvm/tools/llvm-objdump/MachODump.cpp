@@ -1271,7 +1271,10 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   if (DwarfDumpType != DIDT_Null) {
     std::unique_ptr<DIContext> DICtx(new DWARFContextInMemory(*MachOOF));
     // Dump the complete DWARF structure.
-    DICtx->dump(outs(), DwarfDumpType, true /* DumpEH */);
+    DIDumpOptions DumpOpts;
+    DumpOpts.DumpType = DwarfDumpType;
+    DumpOpts.DumpEH = true;
+    DICtx->dump(outs(), DumpOpts);
   }
 }
 

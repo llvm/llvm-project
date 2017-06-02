@@ -46,6 +46,9 @@ struct Config {
   unsigned OptLevel = 2;
   bool DisableVerify = false;
 
+  /// Use the new pass manager
+  bool UseNewPM = false;
+
   /// Disable entirely the optimizer, including importing for ThinLTO
   bool CodeGenOnly = false;
 

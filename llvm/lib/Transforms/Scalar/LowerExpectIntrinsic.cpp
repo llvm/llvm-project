@@ -98,16 +98,31 @@ template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
   CallInst *CI;
 
   ICmpInst *CmpI = dyn_cast<ICmpInst>(BSI.getCondition());
+  CmpInst::Predicate Predicate;
+  ConstantInt *CmpConstOperand = nullptr;
   if (!CmpI) {
     CI = dyn_cast<CallInst>(BSI.getCondition());
+    Predicate = CmpInst::ICMP_NE;
   } else {
-    if (CmpI->getPredicate() != CmpInst::ICMP_NE)
+    Predicate = CmpI->getPredicate();
+    if (Predicate != CmpInst::ICMP_NE && Predicate != CmpInst::ICMP_EQ)
+      return false;
+
+    CmpConstOperand = dyn_cast<ConstantInt>(CmpI->getOperand(1));
+    if (!CmpConstOperand)
       return false;
     CI = dyn_cast<CallInst>(CmpI->getOperand(0));
   }
 
   if (!CI)
     return false;
+
+  uint64_t ValueComparedTo = 0;
+  if (CmpConstOperand) {
+    if (CmpConstOperand->getBitWidth() > 64)
+      return false;
+    ValueComparedTo = CmpConstOperand->getZExtValue();
+  }
 
   Function *Fn = CI->getCalledFunction();
   if (!Fn || Fn->getIntrinsicID() != Intrinsic::expect)
@@ -121,9 +136,8 @@ template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
   MDBuilder MDB(CI->getContext());
   MDNode *Node;
 
-  // If expect value is equal to 1 it means that we are more likely to take
-  // branch 0, in other case more likely is branch 1.
-  if (ExpectedValue->isOne())
+  if ((ExpectedValue->getZExtValue() == ValueComparedTo) ==
+      (Predicate == CmpInst::ICMP_EQ))
     Node = MDB.createBranchWeights(LikelyBranchWeight, UnlikelyBranchWeight);
   else
     Node = MDB.createBranchWeights(UnlikelyBranchWeight, LikelyBranchWeight);

@@ -730,16 +730,21 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       if (IsAddressTaken.count(&WS))
         TableElems.push_back(Index);
     } else {
-      if (WS.getOffset() != 0)
-        report_fatal_error("data sections must contain one variable each");
-      if (!WS.getSize())
-        report_fatal_error("data symbols must have a size set with .size");
-
-      int64_t Size = 0;
-      if (!WS.getSize()->evaluateAsAbsolute(Size, Layout))
-        report_fatal_error(".size expression must be evaluatable");
+      if (WS.isTemporary() && !WS.getSize())
+        continue;
 
       if (WS.isDefined(false)) {
+        if (WS.getOffset() != 0)
+          report_fatal_error("data sections must contain one variable each: " +
+                             WS.getName());
+        if (!WS.getSize())
+          report_fatal_error("data symbols must have a size set with .size: " +
+                             WS.getName());
+
+        int64_t Size = 0;
+        if (!WS.getSize()->evaluateAsAbsolute(Size, Layout))
+          report_fatal_error(".size expression must be evaluatable");
+
         MCSectionWasm &DataSection =
             static_cast<MCSectionWasm &>(WS.getSection());
 

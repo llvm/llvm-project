@@ -27,6 +27,14 @@ Error CodeViewRecordIO::beginRecord(Optional<uint32_t> MaxLength) {
 Error CodeViewRecordIO::endRecord() {
   assert(!Limits.empty() && "Not in a record!");
   Limits.pop_back();
+  // We would like to assert that we actually read / wrote all the bytes that we
+  // expected to for this record, but unfortunately we can't do this.  Some
+  // producers such as MASM over-allocate for certain types of records and
+  // commit the extraneous data, so when reading we can't be sure every byte
+  // will have been read.  And when writing we over-allocate temporarily since
+  // we don't know how big the record is until we're finished writing it, so
+  // even though we don't commit the extraneous data, we still can't guarantee
+  // we're at the end of the allocated data.
   return Error::success();
 }
 
@@ -47,6 +55,12 @@ uint32_t CodeViewRecordIO::maxFieldLength() const {
   assert(Min.hasValue() && "Every field must have a maximum length!");
 
   return *Min;
+}
+
+Error CodeViewRecordIO::padToAlignment(uint32_t Align) {
+  if (isReading())
+    return Reader->padToAlignment(Align);
+  return Writer->padToAlignment(Align);
 }
 
 Error CodeViewRecordIO::skipPadding() {

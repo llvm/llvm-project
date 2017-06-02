@@ -16,7 +16,6 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Threads.h"
-#include "llvm/Support/Compression.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
@@ -83,33 +82,6 @@ static bool compareByFilePosition(InputSection *A, InputSection *B) {
   if (AOut != BOut)
     return AOut->SectionIndex < BOut->SectionIndex;
   return LA->OutSecOff < LB->OutSecOff;
-}
-
-// Compress section contents if this section contains debug info.
-template <class ELFT> void OutputSection::maybeCompress() {
-  typedef typename ELFT::Chdr Elf_Chdr;
-
-  // Compress only DWARF debug sections.
-  if (!Config->CompressDebugSections || (Flags & SHF_ALLOC) ||
-      !Name.startswith(".debug_"))
-    return;
-
-  // Create a section header.
-  ZDebugHeader.resize(sizeof(Elf_Chdr));
-  auto *Hdr = reinterpret_cast<Elf_Chdr *>(ZDebugHeader.data());
-  Hdr->ch_type = ELFCOMPRESS_ZLIB;
-  Hdr->ch_size = Size;
-  Hdr->ch_addralign = Alignment;
-
-  // Write section contents to a temporary buffer and compress it.
-  std::vector<uint8_t> Buf(Size);
-  Script->getCmd(this)->writeTo<ELFT>(Buf.data());
-  if (Error E = zlib::compress(toStringRef(Buf), CompressedData))
-    fatal("compress failed: " + llvm::toString(std::move(E)));
-
-  // Update section headers.
-  Size = sizeof(Elf_Chdr) + CompressedData.size();
-  Flags |= SHF_COMPRESSED;
 }
 
 template <class ELFT> static void finalizeShtGroup(OutputSection *Sec) {
@@ -437,8 +409,3 @@ template void OutputSection::finalize<ELF32LE>();
 template void OutputSection::finalize<ELF32BE>();
 template void OutputSection::finalize<ELF64LE>();
 template void OutputSection::finalize<ELF64BE>();
-
-template void OutputSection::maybeCompress<ELF32LE>();
-template void OutputSection::maybeCompress<ELF32BE>();
-template void OutputSection::maybeCompress<ELF64LE>();
-template void OutputSection::maybeCompress<ELF64BE>();

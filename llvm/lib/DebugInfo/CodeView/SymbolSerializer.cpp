@@ -12,9 +12,11 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-SymbolSerializer::SymbolSerializer(BumpPtrAllocator &Allocator)
-  : Storage(Allocator), RecordBuffer(MaxRecordLength), Stream(RecordBuffer, llvm::support::little),
-  Writer(Stream), Mapping(Writer) { }
+SymbolSerializer::SymbolSerializer(BumpPtrAllocator &Allocator,
+                                   CodeViewContainer Container)
+    : Storage(Allocator), RecordBuffer(MaxRecordLength),
+      Stream(RecordBuffer, llvm::support::little), Writer(Stream),
+      Mapping(Writer, Container) {}
 
 Error SymbolSerializer::visitSymbolBegin(CVSymbol &Record) {
   assert(!CurrentSymbol.hasValue() && "Already in a symbol mapping!");

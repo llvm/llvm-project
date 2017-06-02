@@ -1278,3 +1278,19 @@ define void @icmp_slt_sge_or(i32 %Ax, i32 %Bx) {
 ; CHECK: call void @helper_i1(i1 true)
   ret void
 }
+
+define i1 @constant_fold_inttoptr_null() {
+; CHECK-LABEL: @constant_fold_inttoptr_null(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = icmp eq i32* inttoptr (i64 32 to i32*), null
+  ret i1 %x
+}
+
+define i1 @constant_fold_null_inttoptr() {
+; CHECK-LABEL: @constant_fold_null_inttoptr(
+; CHECK-NEXT:    ret i1 icmp eq (i32* inttoptr (i64 32 to i32*), i32* null)
+;
+  %x = icmp eq i32* null, inttoptr (i64 32 to i32*)
+  ret i1 %x
+}

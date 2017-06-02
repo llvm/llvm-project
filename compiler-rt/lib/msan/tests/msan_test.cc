@@ -1581,11 +1581,19 @@ TEST(MemorySanitizer, strdup) {
 TEST(MemorySanitizer, strndup) {
   char buf[4] = "abc";
   __msan_poison(buf + 2, sizeof(*buf));
-  char *x = strndup(buf, 3);
+  char *x;
+  EXPECT_UMR(x = strndup(buf, 3));
   EXPECT_NOT_POISONED(x[0]);
   EXPECT_NOT_POISONED(x[1]);
   EXPECT_POISONED(x[2]);
   EXPECT_NOT_POISONED(x[3]);
+  free(x);
+  // Check handling of non 0 terminated strings.
+  buf[3] = 'z';
+  __msan_poison(buf + 3, sizeof(*buf));
+  EXPECT_UMR(x = strndup(buf + 3, 1));
+  EXPECT_POISONED(x[0]);
+  EXPECT_NOT_POISONED(x[1]);
   free(x);
 }
 
@@ -1593,7 +1601,8 @@ TEST(MemorySanitizer, strndup_short) {
   char buf[4] = "abc";
   __msan_poison(buf + 1, sizeof(*buf));
   __msan_poison(buf + 2, sizeof(*buf));
-  char *x = strndup(buf, 2);
+  char *x;
+  EXPECT_UMR(x = strndup(buf, 2));
   EXPECT_NOT_POISONED(x[0]);
   EXPECT_POISONED(x[1]);
   EXPECT_NOT_POISONED(x[2]);

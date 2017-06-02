@@ -1,4 +1,4 @@
-//===-- AArch64PBQPRegAlloc.h - AArch64 specific PBQP constraints -------===//
+//==- AArch64PBQPRegAlloc.h - AArch64 specific PBQP constraints --*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,6 +14,8 @@
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 
 namespace llvm {
+
+class TargetRegisterInfo;
 
 /// Add the accumulator chaining constraint to a PBQP graph
 class A57ChainingConstraint : public PBQPRAConstraint {
@@ -33,6 +35,7 @@ private:
   // Add constraints between existing chains
   void addInterChainConstraint(PBQPRAGraph &G, unsigned Rd, unsigned Ra);
 };
-}
+
+} // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_AARCH64_AARCH64PBQPREGALOC_H
