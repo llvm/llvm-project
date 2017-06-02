@@ -105,8 +105,7 @@ public:
     return DICtx->getKind() == CK_DWARF;
   }
 
-  void dump(raw_ostream &OS, DIDumpType DumpType = DIDT_All,
-            bool DumpEH = false, bool SummarizeTypes = false) override;
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) override;
 
   bool verify(raw_ostream &OS, DIDumpType DumpType = DIDT_All) override;
 

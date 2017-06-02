@@ -1828,9 +1828,8 @@ void __kmp_fork_barrier(int gtid, int tid) {
 #endif
 
     if (__kmp_tasking_mode != tskm_immediate_exec) {
-      __kmp_task_team_setup(
-          this_thr, team,
-          0); // 0 indicates setup current task team if nthreads > 1
+      // 0 indicates setup current task team if nthreads > 1
+      __kmp_task_team_setup(this_thr, team, 0);
     }
 
     /* The master thread may have changed its blocktime between the join barrier

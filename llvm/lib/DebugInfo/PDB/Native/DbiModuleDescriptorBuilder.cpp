@@ -66,7 +66,11 @@ void DbiModuleDescriptorBuilder::setObjFileName(StringRef Name) {
 
 void DbiModuleDescriptorBuilder::addSymbol(CVSymbol Symbol) {
   Symbols.push_back(Symbol);
-  SymbolByteSize += Symbol.data().size();
+  // Symbols written to a PDB file are required to be 4 byte aligned.  The same
+  // is not true of object files.
+  assert(Symbol.length() % alignOf(CodeViewContainer::Pdb) == 0 &&
+         "Invalid Symbol alignment!");
+  SymbolByteSize += Symbol.length();
 }
 
 void DbiModuleDescriptorBuilder::addSourceFile(StringRef Path) {
@@ -153,7 +157,8 @@ Error DbiModuleDescriptorBuilder::commit(BinaryStreamWriter &ModiWriter,
     if (auto EC = SymbolWriter.writeStreamRef(RecordsRef))
       return EC;
     // TODO: Write C11 Line data
-
+    assert(SymbolWriter.getOffset() % alignOf(CodeViewContainer::Pdb) == 0 &&
+           "Invalid debug section alignment!");
     for (const auto &Builder : C13Builders) {
       assert(Builder && "Empty C13 Fragment Builder!");
       if (auto EC = Builder->commit(SymbolWriter))
@@ -179,8 +184,8 @@ void DbiModuleDescriptorBuilder::addC13Fragment(
     C13Builders.push_back(nullptr);
 
   this->LineInfo.push_back(std::move(Lines));
-  C13Builders.push_back(
-      llvm::make_unique<DebugSubsectionRecordBuilder>(Frag.kind(), Frag));
+  C13Builders.push_back(llvm::make_unique<DebugSubsectionRecordBuilder>(
+      Frag.kind(), Frag, CodeViewContainer::Pdb));
 }
 
 void DbiModuleDescriptorBuilder::addC13Fragment(
@@ -193,8 +198,8 @@ void DbiModuleDescriptorBuilder::addC13Fragment(
     C13Builders.push_back(nullptr);
 
   this->Inlinees.push_back(std::move(Inlinees));
-  C13Builders.push_back(
-      llvm::make_unique<DebugSubsectionRecordBuilder>(Frag.kind(), Frag));
+  C13Builders.push_back(llvm::make_unique<DebugSubsectionRecordBuilder>(
+      Frag.kind(), Frag, CodeViewContainer::Pdb));
 }
 
 void DbiModuleDescriptorBuilder::setC13FileChecksums(
@@ -206,5 +211,5 @@ void DbiModuleDescriptorBuilder::setC13FileChecksums(
 
   ChecksumInfo = std::move(Checksums);
   C13Builders[0] = llvm::make_unique<DebugSubsectionRecordBuilder>(
-      ChecksumInfo->kind(), *ChecksumInfo);
+      ChecksumInfo->kind(), *ChecksumInfo, CodeViewContainer::Pdb);
 }

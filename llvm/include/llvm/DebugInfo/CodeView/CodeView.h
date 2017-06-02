@@ -574,6 +574,14 @@ struct FrameData {
     IsFunctionStart = 1 << 2,
   };
 };
+
+enum class CodeViewContainer { ObjectFile, Pdb };
+
+inline uint32_t alignOf(CodeViewContainer Container) {
+  if (Container == CodeViewContainer::ObjectFile)
+    return 1;
+  return 4;
+}
 }
 }
 

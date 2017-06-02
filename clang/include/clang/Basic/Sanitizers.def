@@ -73,6 +73,7 @@ SANITIZER("nullability-return", NullabilityReturn)
 SANITIZER_GROUP("nullability", Nullability,
                 NullabilityArg | NullabilityAssign | NullabilityReturn)
 SANITIZER("object-size", ObjectSize)
+SANITIZER("pointer-overflow", PointerOverflow)
 SANITIZER("return", Return)
 SANITIZER("returns-nonnull-attribute", ReturnsNonnullAttribute)
 SANITIZER("shift-base", ShiftBase)
@@ -108,9 +109,9 @@ SANITIZER("safe-stack", SafeStack)
 SANITIZER_GROUP("undefined", Undefined,
                 Alignment | Bool | ArrayBounds | Enum | FloatCastOverflow |
                     FloatDivideByZero | IntegerDivideByZero | NonnullAttribute |
-                    Null | ObjectSize | Return | ReturnsNonnullAttribute |
-                    Shift | SignedIntegerOverflow | Unreachable | VLABound |
-                    Function | Vptr)
+                    Null | ObjectSize | PointerOverflow | Return |
+                    ReturnsNonnullAttribute | Shift | SignedIntegerOverflow |
+                    Unreachable | VLABound | Function | Vptr)
 
 // -fsanitize=undefined-trap is an alias for -fsanitize=undefined.
 SANITIZER_GROUP("undefined-trap", UndefinedTrap, Undefined)

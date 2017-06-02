@@ -264,7 +264,6 @@ void PrepareForSandboxing(__sanitizer_sandbox_arguments *args) {
   // Same for /proc/self/exe in the symbolizer.
 #if !SANITIZER_GO
   Symbolizer::GetOrInit()->PrepareForSandboxing();
-  CovPrepareForSandboxing(args);
 #endif
 }
 

@@ -26,9 +26,11 @@ class TypeCollection;
 class CVSymbolDumper {
 public:
   CVSymbolDumper(ScopedPrinter &W, TypeCollection &Types,
+                 CodeViewContainer Container,
                  std::unique_ptr<SymbolDumpDelegate> ObjDelegate,
                  bool PrintRecordBytes)
-      : W(W), Types(Types), ObjDelegate(std::move(ObjDelegate)),
+      : W(W), Types(Types), Container(Container),
+        ObjDelegate(std::move(ObjDelegate)),
         PrintRecordBytes(PrintRecordBytes) {}
 
   /// Dumps one type record.  Returns false if there was a type parsing error,
@@ -44,6 +46,7 @@ public:
 private:
   ScopedPrinter &W;
   TypeCollection &Types;
+  CodeViewContainer Container;
   std::unique_ptr<SymbolDumpDelegate> ObjDelegate;
 
   bool PrintRecordBytes;

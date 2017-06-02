@@ -46,17 +46,18 @@ class SymbolSerializer : public SymbolVisitorCallbacks {
 
 public:
   template <typename SymType>
-  static CVSymbol writeOneSymbol(SymType &Sym, BumpPtrAllocator &Storage) {
+  static CVSymbol writeOneSymbol(SymType &Sym, BumpPtrAllocator &Storage,
+                                 CodeViewContainer Container) {
     CVSymbol Result;
     Result.Type = static_cast<SymbolKind>(Sym.Kind);
-    SymbolSerializer Serializer(Storage);
+    SymbolSerializer Serializer(Storage, Container);
     consumeError(Serializer.visitSymbolBegin(Result));
     consumeError(Serializer.visitKnownRecord(Result, Sym));
     consumeError(Serializer.visitSymbolEnd(Result));
     return Result;
   }
 
-  explicit SymbolSerializer(BumpPtrAllocator &Storage);
+  SymbolSerializer(BumpPtrAllocator &Storage, CodeViewContainer Container);
 
   virtual Error visitSymbolBegin(CVSymbol &Record) override;
   virtual Error visitSymbolEnd(CVSymbol &Record) override;

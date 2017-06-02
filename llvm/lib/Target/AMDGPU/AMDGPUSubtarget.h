@@ -195,7 +195,8 @@ public:
   }
 
   bool isOpenCLEnv() const {
-    return TargetTriple.getEnvironment() == Triple::OpenCL;
+    return TargetTriple.getEnvironment() == Triple::OpenCL ||
+           TargetTriple.getEnvironmentName() == "amdgizcl";
   }
 
   Generation getGeneration() const {

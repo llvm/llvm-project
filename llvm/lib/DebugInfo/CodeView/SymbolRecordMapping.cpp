@@ -40,6 +40,7 @@ Error SymbolRecordMapping::visitSymbolBegin(CVSymbol &Record) {
 }
 
 Error SymbolRecordMapping::visitSymbolEnd(CVSymbol &Record) {
+  error(IO.padToAlignment(alignOf(Container)));
   error(IO.endRecord());
   return Error::success();
 }

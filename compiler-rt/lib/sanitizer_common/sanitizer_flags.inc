@@ -138,16 +138,6 @@ COMMON_FLAG(
     bool, coverage, false,
     "If set, coverage information will be dumped at program shutdown (if the "
     "coverage instrumentation was enabled at compile time).")
-COMMON_FLAG(bool, coverage_pcs, true,
-            "If set (and if 'coverage' is set too), the coverage information "
-            "will be dumped as a set of PC offsets for every module.")
-COMMON_FLAG(bool, coverage_order_pcs, false,
-             "If true, the PCs will be dumped in the order they've"
-             " appeared during the execution.")
-COMMON_FLAG(bool, coverage_direct, SANITIZER_ANDROID,
-            "If set, coverage information will be dumped directly to a memory "
-            "mapped file. This way data is not lost even if the process is "
-            "suddenly killed.")
 COMMON_FLAG(const char *, coverage_dir, ".",
             "Target directory for coverage dumps. Defaults to the current "
             "directory.")

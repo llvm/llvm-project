@@ -99,6 +99,11 @@ static cl::opt<bool> OptRemarksWithHotness(
     cl::desc("Whether to include hotness informations in the remarks.\n"
              "Has effect only if -pass-remarks-output is specified."));
 
+static cl::opt<bool>
+    UseNewPM("use-new-pm",
+             cl::desc("Run LTO passes using the new pass manager"),
+             cl::init(false), cl::Hidden);
+
 static void check(Error E, std::string Msg) {
   if (!E)
     return;
@@ -196,6 +201,7 @@ static int run(int argc, char **argv) {
   Conf.AAPipeline = AAPipeline;
 
   Conf.OptLevel = OptLevel - '0';
+  Conf.UseNewPM = UseNewPM;
   switch (CGOptLevel) {
   case '0':
     Conf.CGOptLevel = CodeGenOpt::None;
@@ -351,7 +357,7 @@ int main(int argc, char **argv) {
 
   // FIXME: This should use llvm::cl subcommands, but it isn't currently
   // possible to pass an argument not associated with a subcommand to a
-  // subcommand (e.g. -lto-use-new-pm).
+  // subcommand (e.g. -use-new-pm).
   if (argc < 2)
     return usage();
 

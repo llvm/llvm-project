@@ -122,6 +122,7 @@ static void computeCacheKey(
   AddUnsigned(Conf.CGOptLevel);
   AddUnsigned(Conf.CGFileType);
   AddUnsigned(Conf.OptLevel);
+  AddUnsigned(Conf.UseNewPM);
   AddString(Conf.OptPipeline);
   AddString(Conf.AAPipeline);
   AddString(Conf.OverrideTriple);
@@ -930,6 +931,17 @@ ThinBackend lto::createWriteIndexesThinBackend(std::string OldPrefix,
   };
 }
 
+static bool IsLiveByGUID(const ModuleSummaryIndex &Index,
+                         GlobalValue::GUID GUID) {
+  auto VI = Index.getValueInfo(GUID);
+  if (!VI)
+    return false;
+  for (auto &I : VI.getSummaryList())
+    if (Index.isGlobalValueLive(I.get()))
+      return true;
+  return false;
+}
+
 Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
                       bool HasRegularLTO) {
   if (ThinLTO.ModuleMap.empty())
@@ -973,11 +985,10 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
             GlobalValue::dropLLVMManglingEscape(Res.second.IRName)));
     }
 
-    auto DeadSymbols =
-        computeDeadSymbols(ThinLTO.CombinedIndex, GUIDPreservedSymbols);
+    computeDeadSymbols(ThinLTO.CombinedIndex, GUIDPreservedSymbols);
 
     ComputeCrossModuleImport(ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
-                             ImportLists, ExportLists, &DeadSymbols);
+                             ImportLists, ExportLists);
 
     std::set<GlobalValue::GUID> ExportedGUIDs;
     for (auto &Res : GlobalResolutions) {
@@ -992,7 +1003,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
       auto GUID = GlobalValue::getGUID(
           GlobalValue::dropLLVMManglingEscape(Res.second.IRName));
       // Mark exported unless index-based analysis determined it to be dead.
-      if (!DeadSymbols.count(GUID))
+      if (IsLiveByGUID(ThinLTO.CombinedIndex, GUID))
         ExportedGUIDs.insert(GUID);
     }
 

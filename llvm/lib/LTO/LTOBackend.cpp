@@ -42,11 +42,6 @@
 using namespace llvm;
 using namespace lto;
 
-static cl::opt<bool>
-    LTOUseNewPM("lto-use-new-pm",
-                cl::desc("Run LTO passes using the new pass manager"),
-                cl::init(false), cl::Hidden);
-
 LLVM_ATTRIBUTE_NORETURN static void reportOpenError(StringRef Path, Twine Msg) {
   errs() << "failed to open " << Path << ": " << Msg << '\n';
   errs().flush();
@@ -266,7 +261,7 @@ bool opt(Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   if (!Conf.OptPipeline.empty())
     runNewPMCustomPasses(Mod, TM, Conf.OptPipeline, Conf.AAPipeline,
                          Conf.DisableVerify);
-  else if (LTOUseNewPM)
+  else if (Conf.UseNewPM)
     runNewPMPasses(Mod, TM, Conf.OptLevel, IsThinLTO);
   else
     runOldPMPasses(Conf, Mod, TM, IsThinLTO, ExportSummary, ImportSummary);

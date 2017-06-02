@@ -11,10 +11,10 @@
 ; (for example if we don't write the entire stream)
 ;
 ; RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory \
-; RUN:   -pdb-stream -tpi-stream %p/Inputs/empty.pdb > %t.1
+; RUN:   -pdb-stream -tpi-stream -dbi-module-syms %p/Inputs/empty.pdb > %t.1
 ; RUN: llvm-pdbdump yaml2pdb -pdb=%t.2 %t.1
 ; RUN: llvm-pdbdump pdb2yaml -pdb-stream -tpi-stream \
-; RUN:   -no-file-headers %p/Inputs/empty.pdb > %t.3
+; RUN:   -dbi-module-syms -no-file-headers %p/Inputs/empty.pdb > %t.3
 ; RUN: llvm-pdbdump pdb2yaml -pdb-stream -tpi-stream \
-; RUN:   -no-file-headers %t.2 > %t.4
+; RUN:   -dbi-module-syms -no-file-headers %t.2 > %t.4
 ; RUN: diff %t.3 %t.4
