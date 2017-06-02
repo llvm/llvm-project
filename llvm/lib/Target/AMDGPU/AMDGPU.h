@@ -57,6 +57,8 @@ FunctionPass *createAMDGPUMachineCFGStructurizerPass();
 void initializeAMDGPUMachineCFGStructurizerPass(PassRegistry&);
 extern char &AMDGPUMachineCFGStructurizerID;
 
+void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
+
 ModulePass *createAMDGPUAnnotateKernelFeaturesPass();
 void initializeAMDGPUAnnotateKernelFeaturesPass(PassRegistry &);
 extern char &AMDGPUAnnotateKernelFeaturesID;

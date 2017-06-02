@@ -662,13 +662,13 @@ namespace {
   bool solveBlockValuePHINode(LVILatticeVal &BBLV, PHINode *PN, BasicBlock *BB);
   bool solveBlockValueSelect(LVILatticeVal &BBLV, SelectInst *S,
                              BasicBlock *BB);
-  bool solveBlockValueBinaryOp(LVILatticeVal &BBLV, Instruction *BBI,
+  bool solveBlockValueBinaryOp(LVILatticeVal &BBLV, BinaryOperator *BBI,
                                BasicBlock *BB);
   bool solveBlockValueCast(LVILatticeVal &BBLV, Instruction *BBI,
                            BasicBlock *BB);
   void intersectAssumeOrGuardBlockValueConstantRange(Value *Val,
                                                      LVILatticeVal &BBLV,
-                                              Instruction *BBI);
+                                                     Instruction *BBI);
 
   void solve();
 
@@ -854,7 +854,7 @@ bool LazyValueInfoImpl::solveBlockValueImpl(LVILatticeVal &Res,
     
     BinaryOperator *BO = dyn_cast<BinaryOperator>(BBI);
     if (BO && isa<ConstantInt>(BO->getOperand(1)))
-      return solveBlockValueBinaryOp(Res, BBI, BB);
+      return solveBlockValueBinaryOp(Res, BO, BB);
   }
 
   DEBUG(dbgs() << " compute BB '" << BB->getName()
@@ -1225,16 +1225,16 @@ bool LazyValueInfoImpl::solveBlockValueCast(LVILatticeVal &BBLV,
 }
 
 bool LazyValueInfoImpl::solveBlockValueBinaryOp(LVILatticeVal &BBLV,
-                                                 Instruction *BBI,
+                                                 BinaryOperator *BO,
                                                  BasicBlock *BB) {
 
-  assert(BBI->getOperand(0)->getType()->isSized() &&
+  assert(BO->getOperand(0)->getType()->isSized() &&
          "all operands to binary operators are sized");
 
   // Filter out operators we don't know how to reason about before attempting to
   // recurse on our operand(s).  This can cut a long search short if we know
-  // we're not going to be able to get any useful information anways.
-  switch (BBI->getOpcode()) {
+  // we're not going to be able to get any useful information anyways.
+  switch (BO->getOpcode()) {
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
@@ -1256,29 +1256,29 @@ bool LazyValueInfoImpl::solveBlockValueBinaryOp(LVILatticeVal &BBLV,
   // Figure out the range of the LHS.  If that fails, use a conservative range,
   // but apply the transfer rule anyways.  This lets us pick up facts from
   // expressions like "and i32 (call i32 @foo()), 32"
-  if (!hasBlockValue(BBI->getOperand(0), BB))
-    if (pushBlockValue(std::make_pair(BB, BBI->getOperand(0))))
+  if (!hasBlockValue(BO->getOperand(0), BB))
+    if (pushBlockValue(std::make_pair(BB, BO->getOperand(0))))
       // More work to do before applying this transfer rule.
       return false;
 
   const unsigned OperandBitWidth =
-    DL.getTypeSizeInBits(BBI->getOperand(0)->getType());
+    DL.getTypeSizeInBits(BO->getOperand(0)->getType());
   ConstantRange LHSRange = ConstantRange(OperandBitWidth);
-  if (hasBlockValue(BBI->getOperand(0), BB)) {
-    LVILatticeVal LHSVal = getBlockValue(BBI->getOperand(0), BB);
-    intersectAssumeOrGuardBlockValueConstantRange(BBI->getOperand(0), LHSVal,
-                                                  BBI);
+  if (hasBlockValue(BO->getOperand(0), BB)) {
+    LVILatticeVal LHSVal = getBlockValue(BO->getOperand(0), BB);
+    intersectAssumeOrGuardBlockValueConstantRange(BO->getOperand(0), LHSVal,
+                                                  BO);
     if (LHSVal.isConstantRange())
       LHSRange = LHSVal.getConstantRange();
   }
 
-  ConstantInt *RHS = cast<ConstantInt>(BBI->getOperand(1));
+  ConstantInt *RHS = cast<ConstantInt>(BO->getOperand(1));
   ConstantRange RHSRange = ConstantRange(RHS->getValue());
 
   // NOTE: We're currently limited by the set of operations that ConstantRange
   // can evaluate symbolically.  Enhancing that set will allows us to analyze
   // more definitions.
-  auto BinOp = (Instruction::BinaryOps) BBI->getOpcode();
+  Instruction::BinaryOps BinOp = BO->getOpcode();
   BBLV = LVILatticeVal::getRange(LHSRange.binaryOp(BinOp, RHSRange));
   return true;
 }

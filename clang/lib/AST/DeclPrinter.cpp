@@ -1189,7 +1189,9 @@ void DeclPrinter::VisitObjCMethodDecl(ObjCMethodDecl *OMD) {
   for (const auto *PI : OMD->parameters()) {
     // FIXME: selector is missing here!
     pos = name.find_first_of(':', lastPos);
-    Out << " " << name.substr(lastPos, pos - lastPos) << ':';
+    if (lastPos != 0)
+      Out << " ";
+    Out << name.substr(lastPos, pos - lastPos) << ':';
     PrintObjCMethodType(OMD->getASTContext(), 
                         PI->getObjCDeclQualifier(),
                         PI->getType());
@@ -1198,7 +1200,7 @@ void DeclPrinter::VisitObjCMethodDecl(ObjCMethodDecl *OMD) {
   }
 
   if (OMD->param_begin() == OMD->param_end())
-    Out << " " << name;
+    Out << name;
 
   if (OMD->isVariadic())
       Out << ", ...";

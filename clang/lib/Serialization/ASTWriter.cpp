@@ -1989,6 +1989,7 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
   // have resolved them before we get here, but not necessarily: we might be
   // compiling a preprocessed module, where there is no requirement for the
   // original files to exist any more.
+  const HeaderFileInfo Empty; // So we can take a reference.
   if (WritingModule) {
     llvm::SmallVector<Module *, 16> Worklist(1, WritingModule);
     while (!Worklist.empty()) {
@@ -2027,7 +2028,7 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
           FilenameDup, *U.Size, IncludeTimestamps ? *U.ModTime : 0
         };
         HeaderFileInfoTrait::data_type Data = {
-          {}, {}, {M, ModuleMap::headerKindToRole(U.Kind)}
+          Empty, {}, {M, ModuleMap::headerKindToRole(U.Kind)}
         };
         // FIXME: Deal with cases where there are multiple unresolved header
         // directives in different submodules for the same header.

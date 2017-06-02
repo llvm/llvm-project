@@ -54,11 +54,6 @@ static cl::opt<int>
                           cl::init(45),
                           cl::desc("Threshold for inlining cold callsites"));
 
-static cl::opt<bool>
-    EnableGenericSwitchCost("inline-generic-switch-cost", cl::Hidden,
-                            cl::init(false),
-                            cl::desc("Enable generic switch cost model"));
-
 // We introduce this threshold to help performance of instrumentation based
 // PGO before we actually hook up inliner with analysis passes such as BPI and
 // BFI.
@@ -1015,83 +1010,68 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
     if (isa<ConstantInt>(V))
       return true;
 
-  if (EnableGenericSwitchCost) {
-    // Assume the most general case where the swith is lowered into
-    // either a jump table, bit test, or a balanced binary tree consisting of
-    // case clusters without merging adjacent clusters with the same
-    // destination. We do not consider the switches that are lowered with a mix
-    // of jump table/bit test/binary search tree. The cost of the switch is
-    // proportional to the size of the tree or the size of jump table range.
-
-    // Exit early for a large switch, assuming one case needs at least one
-    // instruction.
-    // FIXME: This is not true for a bit test, but ignore such case for now to
-    // save compile-time.
-    int64_t CostLowerBound =
-        std::min((int64_t)INT_MAX,
-                 (int64_t)SI.getNumCases() * InlineConstants::InstrCost + Cost);
-
-    if (CostLowerBound > Threshold) {
-      Cost = CostLowerBound;
-      return false;
-    }
-
-    unsigned JumpTableSize = 0;
-    unsigned NumCaseCluster =
-        TTI.getEstimatedNumberOfCaseClusters(SI, JumpTableSize);
-
-    // If suitable for a jump table, consider the cost for the table size and
-    // branch to destination.
-    if (JumpTableSize) {
-      int64_t JTCost = (int64_t)JumpTableSize * InlineConstants::InstrCost +
-                       4 * InlineConstants::InstrCost;
-      Cost = std::min((int64_t)INT_MAX, JTCost + Cost);
-      return false;
-    }
-
-    // Considering forming a binary search, we should find the number of nodes
-    // which is same as the number of comparisons when lowered. For a given
-    // number of clusters, n, we can define a recursive function, f(n), to find
-    // the number of nodes in the tree. The recursion is :
-    // f(n) = 1 + f(n/2) + f (n - n/2), when n > 3,
-    // and f(n) = n, when n <= 3.
-    // This will lead a binary tree where the leaf should be either f(2) or f(3)
-    // when n > 3.  So, the number of comparisons from leaves should be n, while
-    // the number of non-leaf should be :
-    //   2^(log2(n) - 1) - 1
-    //   = 2^log2(n) * 2^-1 - 1
-    //   = n / 2 - 1.
-    // Considering comparisons from leaf and non-leaf nodes, we can estimate the
-    // number of comparisons in a simple closed form :
-    //   n + n / 2 - 1 = n * 3 / 2 - 1
-    if (NumCaseCluster <= 3) {
-      // Suppose a comparison includes one compare and one conditional branch.
-      Cost += NumCaseCluster * 2 * InlineConstants::InstrCost;
-      return false;
-    }
-    int64_t ExpectedNumberOfCompare = 3 * (uint64_t)NumCaseCluster / 2 - 1;
-    uint64_t SwitchCost =
-        ExpectedNumberOfCompare * 2 * InlineConstants::InstrCost;
-    Cost = std::min((uint64_t)INT_MAX, SwitchCost + Cost);
-    return false;
-  }
-
-  // Use a simple switch cost model where we accumulate a cost proportional to
-  // the number of distinct successor blocks. This fan-out in the CFG cannot
-  // be represented for free even if we can represent the core switch as a
-  // jumptable that takes a single instruction.
-  ///
+  // Assume the most general case where the swith is lowered into
+  // either a jump table, bit test, or a balanced binary tree consisting of
+  // case clusters without merging adjacent clusters with the same
+  // destination. We do not consider the switches that are lowered with a mix
+  // of jump table/bit test/binary search tree. The cost of the switch is
+  // proportional to the size of the tree or the size of jump table range.
+  //
   // NB: We convert large switches which are just used to initialize large phi
   // nodes to lookup tables instead in simplify-cfg, so this shouldn't prevent
   // inlining those. It will prevent inlining in cases where the optimization
   // does not (yet) fire.
-  SmallPtrSet<BasicBlock *, 8> SuccessorBlocks;
-  SuccessorBlocks.insert(SI.getDefaultDest());
-  for (auto Case : SI.cases())
-    SuccessorBlocks.insert(Case.getCaseSuccessor());
-  // Add cost corresponding to the number of distinct destinations. The first
-  // we model as free because of fallthrough.
-  Cost += (SuccessorBlocks.size() - 1) * InlineConstants::InstrCost;
+
+  // Exit early for a large switch, assuming one case needs at least one
+  // instruction.
+  // FIXME: This is not true for a bit test, but ignore such case for now to
+  // save compile-time.
+  int64_t CostLowerBound =
+      std::min((int64_t)INT_MAX,
+               (int64_t)SI.getNumCases() * InlineConstants::InstrCost + Cost);
+
+  if (CostLowerBound > Threshold) {
+    Cost = CostLowerBound;
+    return false;
+  }
+
+  unsigned JumpTableSize = 0;
+  unsigned NumCaseCluster =
+      TTI.getEstimatedNumberOfCaseClusters(SI, JumpTableSize);
+
+  // If suitable for a jump table, consider the cost for the table size and
+  // branch to destination.
+  if (JumpTableSize) {
+    int64_t JTCost = (int64_t)JumpTableSize * InlineConstants::InstrCost +
+                     4 * InlineConstants::InstrCost;
+    Cost = std::min((int64_t)INT_MAX, JTCost + Cost);
+    return false;
+  }
+
+  // Considering forming a binary search, we should find the number of nodes
+  // which is same as the number of comparisons when lowered. For a given
+  // number of clusters, n, we can define a recursive function, f(n), to find
+  // the number of nodes in the tree. The recursion is :
+  // f(n) = 1 + f(n/2) + f (n - n/2), when n > 3,
+  // and f(n) = n, when n <= 3.
+  // This will lead a binary tree where the leaf should be either f(2) or f(3)
+  // when n > 3.  So, the number of comparisons from leaves should be n, while
+  // the number of non-leaf should be :
+  //   2^(log2(n) - 1) - 1
+  //   = 2^log2(n) * 2^-1 - 1
+  //   = n / 2 - 1.
+  // Considering comparisons from leaf and non-leaf nodes, we can estimate the
+  // number of comparisons in a simple closed form :
+  //   n + n / 2 - 1 = n * 3 / 2 - 1
+  if (NumCaseCluster <= 3) {
+    // Suppose a comparison includes one compare and one conditional branch.
+    Cost += NumCaseCluster * 2 * InlineConstants::InstrCost;
+    return false;
+  }
+  int64_t ExpectedNumberOfCompare = 3 * (uint64_t)NumCaseCluster / 2 - 1;
+  uint64_t SwitchCost =
+      ExpectedNumberOfCompare * 2 * InlineConstants::InstrCost;
+  Cost = std::min((uint64_t)INT_MAX, SwitchCost + Cost);
   return false;
 }
 

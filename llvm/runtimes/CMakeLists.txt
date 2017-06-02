@@ -188,6 +188,7 @@ else() # if this is included from LLVM's CMake
     else()
       get_cmake_property(variableNames VARIABLES)
       add_custom_target(builtins)
+      add_custom_target(install-builtins)
       foreach(target ${LLVM_BUILTIN_TARGETS})
         string(REPLACE "-" ";" builtin_target_list ${target})
         foreach(item ${builtin_target_list})
@@ -218,6 +219,7 @@ else() # if this is included from LLVM's CMake
                                USE_TOOLCHAIN
                                ${EXTRA_ARGS})
         add_dependencies(builtins builtins-${target})
+        add_dependencies(install-builtins install-builtins-${target})
       endforeach()
     endif()
     set(deps builtins)

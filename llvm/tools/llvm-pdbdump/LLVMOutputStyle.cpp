@@ -831,8 +831,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
             return ExpectedTypes.takeError();
           auto &IpiItems = *ExpectedTypes;
           C13RawVisitor V(P, File, IpiItems);
-          if (auto EC =
-                  codeview::visitDebugSubsections(ModS.linesAndChecksums(), V))
+          if (auto EC = codeview::visitDebugSubsections(ModS.subsections(), V))
             return EC;
         }
       }

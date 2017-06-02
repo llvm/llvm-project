@@ -415,12 +415,20 @@ public:
     append(IL.begin(), IL.end());
   }
 
+  // FIXME: Consider assigning over existing elements, rather than clearing &
+  // re-initializing them - for all assign(...) variants.
+
   void assign(size_type NumElts, const T &Elt) {
     clear();
     if (this->capacity() < NumElts)
       this->grow(NumElts);
     this->setEnd(this->begin()+NumElts);
     std::uninitialized_fill(this->begin(), this->end(), Elt);
+  }
+
+  template <typename in_iter> void assign(in_iter in_start, in_iter in_end) {
+    clear();
+    append(in_start, in_end);
   }
 
   void assign(std::initializer_list<T> IL) {

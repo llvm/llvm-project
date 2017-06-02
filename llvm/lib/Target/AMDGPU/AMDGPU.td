@@ -365,6 +365,13 @@ def FeatureFlatForGlobal : SubtargetFeature<"flat-for-global",
   "Force to generate flat instruction for global"
 >;
 
+def FeatureAutoWaitcntBeforeBarrier : SubtargetFeature <
+  "auto-waitcnt-before-barrier",
+  "AutoWaitcntBeforeBarrier",
+  "true",
+  "Hardware automatically inserts waitcnt before barrier"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",

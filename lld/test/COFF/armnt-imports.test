@@ -6,7 +6,7 @@
 # CHECK: Import {
 # CHECK:   Name: library.dll
 # CHECK:   ImportLookupTableRVA: 0x2028
-# CHECK:   ImportAddressTableRVA: 0x2028
+# CHECK:   ImportAddressTableRVA: 0x2030
 # CHECK:   Symbol: function (0)
 # CHECK: }
 

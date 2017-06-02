@@ -174,42 +174,9 @@ Error DbiModuleDescriptorBuilder::commit(BinaryStreamWriter &ModiWriter,
   return Error::success();
 }
 
-void DbiModuleDescriptorBuilder::addC13Fragment(
-    std::unique_ptr<DebugLinesSubsection> Lines) {
-  DebugLinesSubsection &Frag = *Lines;
-
-  // File Checksums have to come first, so push an empty entry on if this
-  // is the first.
-  if (C13Builders.empty())
-    C13Builders.push_back(nullptr);
-
-  this->LineInfo.push_back(std::move(Lines));
+void DbiModuleDescriptorBuilder::addDebugSubsection(
+    std::unique_ptr<DebugSubsection> Subsection) {
+  assert(Subsection);
   C13Builders.push_back(llvm::make_unique<DebugSubsectionRecordBuilder>(
-      Frag.kind(), Frag, CodeViewContainer::Pdb));
-}
-
-void DbiModuleDescriptorBuilder::addC13Fragment(
-    std::unique_ptr<codeview::DebugInlineeLinesSubsection> Inlinees) {
-  DebugInlineeLinesSubsection &Frag = *Inlinees;
-
-  // File Checksums have to come first, so push an empty entry on if this
-  // is the first.
-  if (C13Builders.empty())
-    C13Builders.push_back(nullptr);
-
-  this->Inlinees.push_back(std::move(Inlinees));
-  C13Builders.push_back(llvm::make_unique<DebugSubsectionRecordBuilder>(
-      Frag.kind(), Frag, CodeViewContainer::Pdb));
-}
-
-void DbiModuleDescriptorBuilder::setC13FileChecksums(
-    std::unique_ptr<DebugChecksumsSubsection> Checksums) {
-  assert(!ChecksumInfo && "Can't have more than one checksum info!");
-
-  if (C13Builders.empty())
-    C13Builders.push_back(nullptr);
-
-  ChecksumInfo = std::move(Checksums);
-  C13Builders[0] = llvm::make_unique<DebugSubsectionRecordBuilder>(
-      ChecksumInfo->kind(), *ChecksumInfo, CodeViewContainer::Pdb);
+      std::move(Subsection), CodeViewContainer::Pdb));
 }

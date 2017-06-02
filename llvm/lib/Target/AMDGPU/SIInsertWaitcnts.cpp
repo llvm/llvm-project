@@ -1009,7 +1009,8 @@ MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
   // occurs before the instruction. Doing it here prevents any additional
   // S_WAITCNTs from being emitted if the instruction was marked as
   // requiring a WAITCNT beforehand.
-  if (MI.getOpcode() == AMDGPU::S_BARRIER && ST->needWaitcntBeforeBarrier()) {
+  if (MI.getOpcode() == AMDGPU::S_BARRIER &&
+      !ST->hasAutoWaitcntBeforeBarrier()) {
     EmitSwaitcnt |=
         ScoreBrackets->updateByWait(VM_CNT, ScoreBrackets->getScoreUB(VM_CNT));
     EmitSwaitcnt |= ScoreBrackets->updateByWait(

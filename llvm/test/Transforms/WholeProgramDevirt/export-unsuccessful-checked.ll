@@ -1,7 +1,7 @@
 ; RUN: opt -wholeprogramdevirt -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -o /dev/null %s
 ; RUN: FileCheck %s < %t
 
-; CHECK:     - TypeTests: [ 15427464259790519041, 17525413373118030901 ]
+; CHECK:       TypeTests: [ 15427464259790519041, 17525413373118030901 ]
 ; CHECK-NEXT:  TypeTestAssumeVCalls:
 
 @vt1a = constant void (i8*)* @vf1a, !type !0

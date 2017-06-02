@@ -101,117 +101,6 @@ Error YAMLOutputStyle::dump() {
   return Error::success();
 }
 
-namespace {
-class C13YamlVisitor : public C13DebugFragmentVisitor {
-public:
-  C13YamlVisitor(CodeViewYAML::SourceFileInfo &Info, PDBFile &F)
-      : C13DebugFragmentVisitor(F), Info(Info) {}
-
-  Error handleFileChecksums() override {
-    for (const auto &C : *Checksums) {
-      CodeViewYAML::SourceFileChecksumEntry Entry;
-      if (auto Result = getNameFromStringTable(C.FileNameOffset))
-        Entry.FileName = *Result;
-      else
-        return Result.takeError();
-
-      Entry.Kind = C.Kind;
-      Entry.ChecksumBytes.Bytes = C.Checksum;
-      Info.FileChecksums.push_back(Entry);
-    }
-    return Error::success();
-  }
-
-  Error handleLines() override {
-    for (const auto &LF : Lines) {
-      Info.LineFragments.emplace_back();
-      auto &Fragment = Info.LineFragments.back();
-
-      Fragment.CodeSize = LF.header()->CodeSize;
-      Fragment.Flags =
-          static_cast<codeview::LineFlags>(uint16_t(LF.header()->Flags));
-      Fragment.RelocOffset = LF.header()->RelocOffset;
-      Fragment.RelocSegment = LF.header()->RelocSegment;
-
-      for (const auto &L : LF) {
-        Fragment.Blocks.emplace_back();
-        auto &Block = Fragment.Blocks.back();
-
-        if (auto Result = getNameFromChecksumsBuffer(L.NameIndex))
-          Block.FileName = *Result;
-        else
-          return Result.takeError();
-
-        for (const auto &N : L.LineNumbers) {
-          CodeViewYAML::SourceLineEntry Line;
-          Line.Offset = N.Offset;
-          codeview::LineInfo LI(N.Flags);
-          Line.LineStart = LI.getStartLine();
-          Line.EndDelta = LI.getLineDelta();
-          Line.IsStatement = LI.isStatement();
-          Block.Lines.push_back(Line);
-        }
-
-        if (LF.hasColumnInfo()) {
-          for (const auto &C : L.Columns) {
-            CodeViewYAML::SourceColumnEntry Column;
-            Column.StartColumn = C.StartColumn;
-            Column.EndColumn = C.EndColumn;
-            Block.Columns.push_back(Column);
-          }
-        }
-      }
-    }
-    return Error::success();
-  }
-
-  Error handleInlineeLines() override {
-    for (const auto &ILF : InlineeLines) {
-      Info.Inlinees.emplace_back();
-      auto &Inlinee = Info.Inlinees.back();
-
-      Inlinee.HasExtraFiles = ILF.hasExtraFiles();
-      for (const auto &IL : ILF) {
-        Inlinee.Sites.emplace_back();
-        auto &Site = Inlinee.Sites.back();
-        if (auto Result = getNameFromChecksumsBuffer(IL.Header->FileID))
-          Site.FileName = *Result;
-        else
-          return Result.takeError();
-
-        Site.Inlinee = IL.Header->Inlinee.getIndex();
-        Site.SourceLineNum = IL.Header->SourceLineNum;
-        if (ILF.hasExtraFiles()) {
-          for (const auto &EF : IL.ExtraFiles) {
-            if (auto Result = getNameFromChecksumsBuffer(EF))
-              Site.ExtraFiles.push_back(*Result);
-            else
-              return Result.takeError();
-          }
-        }
-      }
-    }
-    return Error::success();
-  }
-
-private:
-  CodeViewYAML::SourceFileInfo &Info;
-};
-}
-
-Expected<Optional<CodeViewYAML::SourceFileInfo>>
-YAMLOutputStyle::getFileLineInfo(const pdb::ModuleDebugStreamRef &ModS) {
-  if (!ModS.hasLineInfo())
-    return None;
-
-  CodeViewYAML::SourceFileInfo Info;
-  C13YamlVisitor Visitor(Info, File);
-  if (auto EC =
-          codeview::visitDebugSubsections(ModS.linesAndChecksums(), Visitor))
-    return std::move(EC);
-
-  return Info;
-}
 
 Error YAMLOutputStyle::dumpFileHeaders() {
   if (opts::pdb2yaml::NoFileHeaders)
@@ -236,14 +125,17 @@ Error YAMLOutputStyle::dumpFileHeaders() {
 }
 
 Error YAMLOutputStyle::dumpStringTable() {
-  if (!opts::pdb2yaml::StringTable)
+  bool RequiresStringTable = opts::pdb2yaml::DbiModuleSourceFileInfo ||
+                             opts::pdb2yaml::DbiModuleSourceLineInfo;
+  bool RequestedStringTable = opts::pdb2yaml::StringTable;
+  if (!RequiresStringTable && !RequestedStringTable)
     return Error::success();
 
-  Obj.StringTable.emplace();
   auto ExpectedST = File.getStringTable();
   if (!ExpectedST)
     return ExpectedST.takeError();
 
+  Obj.StringTable.emplace();
   const auto &ST = ExpectedST.get();
   for (auto ID : ST.name_ids()) {
     auto S = ST.getStringForID(ID);
@@ -343,11 +235,23 @@ Error YAMLOutputStyle::dumpDbiStream() {
       if (auto EC = ModS.reload())
         return EC;
 
-      if (opts::pdb2yaml::DbiModuleSourceLineInfo) {
-        auto ExpectedInfo = getFileLineInfo(ModS);
-        if (!ExpectedInfo)
-          return ExpectedInfo.takeError();
-        DMI.FileLineInfo = *ExpectedInfo;
+      auto ExpectedST = File.getStringTable();
+      if (!ExpectedST)
+        return ExpectedST.takeError();
+      if (opts::pdb2yaml::DbiModuleSourceLineInfo &&
+          ModS.hasDebugSubsections()) {
+        auto ExpectedChecksums = ModS.findChecksumsSubsection();
+        if (!ExpectedChecksums)
+          return ExpectedChecksums.takeError();
+
+        for (const auto &SS : ModS.subsections()) {
+          auto Converted =
+              CodeViewYAML::YAMLDebugSubsection::fromCodeViewSubection(
+                  ExpectedST->getStringTable(), *ExpectedChecksums, SS);
+          if (!Converted)
+            return Converted.takeError();
+          DMI.Subsections.push_back(*Converted);
+        }
       }
 
       if (opts::pdb2yaml::DbiModuleSyms) {

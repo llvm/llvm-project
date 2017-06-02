@@ -4,7 +4,14 @@
 void vararg_f(int, ...);                    // expected-error {{invalid prototype, variadic arguments are not allowed in OpenCL}}
 void __vararg_f(int, ...);
 typedef void (*vararg_fptr_t)(int, ...);    // expected-error {{invalid prototype, variadic arguments are not allowed in OpenCL}}
+                                            // expected-error@-1{{pointers to functions are not allowed}}
 int printf(__constant const char *st, ...); // expected-error {{invalid prototype, variadic arguments are not allowed in OpenCL}}
+
+// Struct type with function pointer field
+typedef struct s
+{
+   void (*f)(struct s *self, int *i);       // expected-error{{pointers to functions are not allowed}}
+} s_t;
 
 //Function pointer
 void foo(void*);

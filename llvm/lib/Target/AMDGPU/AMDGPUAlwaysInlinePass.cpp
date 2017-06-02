@@ -22,17 +22,21 @@ using namespace llvm;
 namespace {
 
 class AMDGPUAlwaysInline : public ModulePass {
-  static char ID;
-
   bool GlobalOpt;
 
 public:
-  AMDGPUAlwaysInline(bool GlobalOpt) : ModulePass(ID), GlobalOpt(GlobalOpt) { }
+  static char ID;
+
+  AMDGPUAlwaysInline(bool GlobalOpt = false) :
+    ModulePass(ID), GlobalOpt(GlobalOpt) { }
   bool runOnModule(Module &M) override;
   StringRef getPassName() const override { return "AMDGPU Always Inline Pass"; }
 };
 
 } // End anonymous namespace
+
+INITIALIZE_PASS(AMDGPUAlwaysInline, "amdgpu-always-inline",
+                "AMDGPU Inline All Functions", false, false)
 
 char AMDGPUAlwaysInline::ID = 0;
 

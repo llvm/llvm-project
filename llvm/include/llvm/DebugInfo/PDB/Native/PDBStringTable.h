@@ -45,6 +45,8 @@ public:
 
   FixedStreamArray<support::ulittle32_t> name_ids() const;
 
+  codeview::DebugStringTableSubsectionRef getStringTable() const;
+
 private:
   Error readHeader(BinaryStreamReader &Reader);
   Error readStrings(BinaryStreamReader &Reader);

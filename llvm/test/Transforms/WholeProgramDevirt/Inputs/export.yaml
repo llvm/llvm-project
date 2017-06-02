@@ -1,7 +1,8 @@
 ---
 GlobalValueMap:
   42:
-    - TypeTestAssumeVCalls:
+    - Live: true
+      TypeTestAssumeVCalls:
         - GUID: 14276520915468743435  # typeid1
           Offset: 0
       TypeCheckedLoadVCalls:

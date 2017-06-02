@@ -900,6 +900,24 @@ S2 s2;
 #endif
 }
 
+namespace TemplateArgument {
+#if defined(FIRST)
+template<typename> struct U1 {};
+struct S1 {
+  U1<int> u;
+};
+#elif defined(SECOND)
+template<typename> struct U1 {};
+struct S1 {
+  U1<double> u;
+};
+#else
+S1 s1;
+// expected-error@first.h:* {{'TemplateArgument::S1::u' from module 'FirstModule' is not present in definition of 'TemplateArgument::S1' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'u' does not match}}
+#endif
+}
+
 // Interesting cases that should not cause errors.  struct S should not error
 // while struct T should error at the access specifier mismatch at the end.
 namespace AllDecls {

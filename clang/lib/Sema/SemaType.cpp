@@ -1881,6 +1881,11 @@ QualType Sema::BuildPointerType(QualType T,
     return QualType();
   }
 
+  if (T->isFunctionType() && getLangOpts().OpenCL) {
+    Diag(Loc, diag::err_opencl_function_pointer);
+    return QualType();
+  }
+
   if (checkQualifiedFunction(*this, T, Loc, QFK_Pointer))
     return QualType();
 

@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -38,6 +39,8 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "reg-scavenging"
+
+STATISTIC(NumScavengedRegs, "Number of frame index regs scavenged");
 
 void RegScavenger::setRegUsed(unsigned Reg, LaneBitmask LaneMask) {
   LiveUnits.addRegMasked(Reg, LaneMask);
@@ -468,4 +471,89 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
         "\n");
 
   return SReg;
+}
+
+void llvm::scavengeFrameVirtualRegs(MachineFunction &MF, RegScavenger &RS) {
+  // FIXME: Iterating over the instruction stream is unnecessary. We can simply
+  // iterate over the vreg use list, which at this point only contains machine
+  // operands for which eliminateFrameIndex need a new scratch reg.
+
+  // Run through the instructions and find any virtual registers.
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (MachineBasicBlock &MBB : MF) {
+    RS.enterBasicBlock(MBB);
+
+    int SPAdj = 0;
+
+    // The instruction stream may change in the loop, so check MBB.end()
+    // directly.
+    for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ) {
+      // We might end up here again with a NULL iterator if we scavenged a
+      // register for which we inserted spill code for definition by what was
+      // originally the first instruction in MBB.
+      if (I == MachineBasicBlock::iterator(nullptr))
+        I = MBB.begin();
+
+      const MachineInstr &MI = *I;
+      MachineBasicBlock::iterator J = std::next(I);
+      MachineBasicBlock::iterator P =
+                         I == MBB.begin() ? MachineBasicBlock::iterator(nullptr)
+                                          : std::prev(I);
+
+      // RS should process this instruction before we might scavenge at this
+      // location. This is because we might be replacing a virtual register
+      // defined by this instruction, and if so, registers killed by this
+      // instruction are available, and defined registers are not.
+      RS.forward(I);
+
+      for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isReg())
+          continue;
+        unsigned Reg = MO.getReg();
+        if (!TargetRegisterInfo::isVirtualRegister(Reg))
+          continue;
+
+        // When we first encounter a new virtual register, it
+        // must be a definition.
+        assert(MO.isDef() && "frame index virtual missing def!");
+        // Scavenge a new scratch register
+        const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+        unsigned ScratchReg = RS.scavengeRegister(RC, J, SPAdj);
+
+        ++NumScavengedRegs;
+
+        // Replace this reference to the virtual register with the
+        // scratch register.
+        assert(ScratchReg && "Missing scratch register!");
+        MRI.replaceRegWith(Reg, ScratchReg);
+
+        // Because this instruction was processed by the RS before this
+        // register was allocated, make sure that the RS now records the
+        // register as being used.
+        RS.setRegUsed(ScratchReg);
+      }
+
+      // If the scavenger needed to use one of its spill slots, the
+      // spill code will have been inserted in between I and J. This is a
+      // problem because we need the spill code before I: Move I to just
+      // prior to J.
+      if (I != std::prev(J)) {
+        MBB.splice(J, &MBB, I);
+
+        // Before we move I, we need to prepare the RS to visit I again.
+        // Specifically, RS will assert if it sees uses of registers that
+        // it believes are undefined. Because we have already processed
+        // register kills in I, when it visits I again, it will believe that
+        // those registers are undefined. To avoid this situation, unprocess
+        // the instruction I.
+        assert(RS.getCurrentPosition() == I &&
+          "The register scavenger has an unexpected position");
+        I = P;
+        RS.unprocess(P);
+      } else
+        ++I;
+    }
+  }
+
+  MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
 }
