@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
@@ -25,7 +26,7 @@ class PDBFile;
 class DbiModuleDescriptor;
 
 class ModuleDebugStreamRef {
-  typedef codeview::DebugSubsectionArray::Iterator LinesAndChecksumsIterator;
+  typedef codeview::DebugSubsectionArray::Iterator DebugSubsectionIterator;
 
 public:
   ModuleDebugStreamRef(const DbiModuleDescriptor &Module,
@@ -39,11 +40,14 @@ public:
   iterator_range<codeview::CVSymbolArray::Iterator>
   symbols(bool *HadError) const;
 
-  llvm::iterator_range<LinesAndChecksumsIterator> linesAndChecksums() const;
+  llvm::iterator_range<DebugSubsectionIterator> subsections() const;
 
-  bool hasLineInfo() const;
+  bool hasDebugSubsections() const;
 
   Error commit();
+
+  Expected<codeview::DebugChecksumsSubsectionRef>
+  findChecksumsSubsection() const;
 
 private:
   const DbiModuleDescriptor &Mod;
@@ -57,7 +61,7 @@ private:
   BinaryStreamRef C13LinesSubstream;
   BinaryStreamRef GlobalRefsSubstream;
 
-  codeview::DebugSubsectionArray LinesAndChecksums;
+  codeview::DebugSubsectionArray Subsections;
 };
 }
 }

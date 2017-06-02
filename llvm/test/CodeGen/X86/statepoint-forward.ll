@@ -1,5 +1,5 @@
 ; RUN: opt -O3 -S < %s | FileCheck --check-prefix=CHECK-OPT %s
-; RUN: llc < %s | FileCheck --check-prefix=CHECK-LLC %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-LLC %s
 ; These tests are targetted at making sure we don't retain information
 ; about memory which contains potential gc references across a statepoint.
 ; They're carefully written to only outlaw forwarding of references. 

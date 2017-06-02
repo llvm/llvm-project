@@ -72,7 +72,7 @@ Error DebugStringTableSubsection::commit(BinaryStreamWriter &Writer) const {
 uint32_t DebugStringTableSubsection::size() const { return Strings.size(); }
 
 uint32_t DebugStringTableSubsection::getStringId(StringRef S) const {
-  auto P = Strings.find(S);
-  assert(P != Strings.end());
-  return P->second;
+  auto Iter = Strings.find(S);
+  assert(Iter != Strings.end());
+  return Iter->second;
 }

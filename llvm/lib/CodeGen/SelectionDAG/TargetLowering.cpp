@@ -1493,8 +1493,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   }
   }
 
-  // Ensure that the constant occurs on the RHS, and fold constant
-  // comparisons.
+  // Ensure that the constant occurs on the RHS and fold constant comparisons.
   ISD::CondCode SwappedCC = ISD::getSetCCSwappedOperands(Cond);
   if (isa<ConstantSDNode>(N0.getNode()) &&
       (DCI.isBeforeLegalizeOps() ||

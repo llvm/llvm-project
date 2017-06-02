@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 
 ; Checks for a crash we had when two gc.relocate calls would
 ; relocating identical values

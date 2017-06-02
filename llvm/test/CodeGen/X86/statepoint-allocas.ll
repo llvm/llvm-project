@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 ; Check that we can lower a use of an alloca both as a deopt value (where the
 ; exact meaning is up to the consumer of the stackmap) and as an explicit spill
 ; slot used for GC.  

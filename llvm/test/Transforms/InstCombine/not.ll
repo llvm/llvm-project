@@ -33,17 +33,46 @@ define i1 @invert_fcmp(float %X, float %Y) {
 
 ; PR2298
 
-define zeroext i8 @test6(i32 %a, i32 %b) {
-; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 %b, %a
-; CHECK-NEXT:    [[RETVAL67:%.*]] = zext i1 [[TMP3]] to i8
-; CHECK-NEXT:    ret i8 [[RETVAL67]]
+define i1 @not_not_cmp(i32 %a, i32 %b) {
+; CHECK-LABEL: @not_not_cmp(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 %b, %a
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %tmp1not = xor i32 %a, -1
-  %tmp2not = xor i32 %b, -1
-  %tmp3 = icmp slt i32 %tmp1not, %tmp2not
-  %retval67 = zext i1 %tmp3 to i8
-  ret i8 %retval67
+  %nota = xor i32 %a, -1
+  %notb = xor i32 %b, -1
+  %cmp = icmp slt i32 %nota, %notb
+  ret i1 %cmp
+}
+
+define <2 x i1> @not_not_cmp_vector(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @not_not_cmp_vector(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> %b, %a
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %nota = xor <2 x i32> %a, <i32 -1, i32 -1>
+  %notb = xor <2 x i32> %b, <i32 -1, i32 -1>
+  %cmp = icmp ugt <2 x i32> %nota, %notb
+  ret <2 x i1> %cmp
+}
+
+define i1 @not_cmp_constant(i32 %a) {
+; CHECK-LABEL: @not_cmp_constant(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 %a, -43
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %nota = xor i32 %a, -1
+  %cmp = icmp ugt i32 %nota, 42
+  ret i1 %cmp
+}
+
+define <2 x i1> @not_cmp_constant_vector(<2 x i32> %a) {
+; CHECK-LABEL: @not_cmp_constant_vector(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> %a, <i32 -43, i32 -43>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %nota = xor <2 x i32> %a, <i32 -1, i32 -1>
+  %cmp = icmp slt <2 x i32> %nota, <i32 42, i32 42>
+  ret <2 x i1> %cmp
 }
 
 define <2 x i1> @test7(<2 x i32> %A, <2 x i32> %B) {

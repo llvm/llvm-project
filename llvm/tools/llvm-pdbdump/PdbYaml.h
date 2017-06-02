@@ -28,6 +28,9 @@
 #include <vector>
 
 namespace llvm {
+namespace codeview {
+class DebugStringTableSubsection;
+}
 namespace pdb {
 
 namespace yaml {
@@ -68,7 +71,7 @@ struct PdbDbiModuleInfo {
   StringRef Obj;
   StringRef Mod;
   std::vector<StringRef> SourceFiles;
-  Optional<CodeViewYAML::SourceFileInfo> FileLineInfo;
+  std::vector<CodeViewYAML::YAMLDebugSubsection> Subsections;
   Optional<PdbModiStream> Modi;
 };
 

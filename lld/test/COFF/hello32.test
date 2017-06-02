@@ -78,7 +78,7 @@ HEADER-NEXT:     LoadConfigTableRVA: 0x0
 HEADER-NEXT:     LoadConfigTableSize: 0x0
 HEADER-NEXT:     BoundImportRVA: 0x0
 HEADER-NEXT:     BoundImportSize: 0x0
-HEADER-NEXT:     IATRVA: 0x3028
+HEADER-NEXT:     IATRVA: 0x3034
 HEADER-NEXT:     IATSize: 0xC
 HEADER-NEXT:     DelayImportDescriptorRVA: 0x0
 HEADER-NEXT:     DelayImportDescriptorSize: 0x0
@@ -114,7 +114,7 @@ IMPORTS: AddressSize: 32bit
 IMPORTS: Import {
 IMPORTS:   Name: std32.dll
 IMPORTS:   ImportLookupTableRVA: 0x3028
-IMPORTS:   ImportAddressTableRVA: 0x3028
+IMPORTS:   ImportAddressTableRVA: 0x3034
 IMPORTS:   Symbol: ExitProcess (0)
 IMPORTS:   Symbol: MessageBoxA (1)
 IMPORTS: }

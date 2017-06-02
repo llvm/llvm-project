@@ -1170,7 +1170,9 @@ Constant *llvm::ConstantFoldCompareInstOperands(unsigned Predicate,
                                                 const DataLayout &DL,
                                                 const TargetLibraryInfo *TLI) {
   // fold: icmp (inttoptr x), null         -> icmp x, 0
+  // fold: icmp null, (inttoptr x)         -> icmp 0, x
   // fold: icmp (ptrtoint x), 0            -> icmp x, null
+  // fold: icmp 0, (ptrtoint x)            -> icmp null, x
   // fold: icmp (inttoptr x), (inttoptr y) -> icmp trunc/zext x, trunc/zext y
   // fold: icmp (ptrtoint x), (ptrtoint y) -> icmp x, y
   //
@@ -1240,6 +1242,11 @@ Constant *llvm::ConstantFoldCompareInstOperands(unsigned Predicate,
         Predicate == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or;
       return ConstantFoldBinaryOpOperands(OpC, LHS, RHS, DL);
     }
+  } else if (isa<ConstantExpr>(Ops1)) {
+    // If RHS is a constant expression, but the left side isn't, swap the
+    // operands and try again.
+    Predicate = ICmpInst::getSwappedPredicate((ICmpInst::Predicate)Predicate);
+    return ConstantFoldCompareInstOperands(Predicate, Ops1, Ops0, DL, TLI);
   }
 
   return ConstantExpr::getCompare(Predicate, Ops0, Ops1);

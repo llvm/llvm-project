@@ -334,28 +334,6 @@ if (HAVE_LIBDL)
   list(APPEND system_libs ${CMAKE_DL_LIBS})
 endif()
 
-# Check for syscall used by lldb-server on linux.
-# If these are not found, it will fall back to ptrace (slow) for memory reads.
-check_cxx_source_compiles("
-  #include <sys/uio.h>
-  int main() { process_vm_readv(0, nullptr, 0, nullptr, 0, 0); return 0; }"
-  HAVE_PROCESS_VM_READV)
-
-if (HAVE_PROCESS_VM_READV)
-  add_definitions(-DHAVE_PROCESS_VM_READV)
-else()
-  # If we don't have the syscall wrapper function, but we know the syscall number, we can
-  # still issue the syscall manually
-  check_cxx_source_compiles("
-      #include <sys/syscall.h>
-      int main() { return __NR_process_vm_readv; }"
-      HAVE_NR_PROCESS_VM_READV)
-
-  if (HAVE_NR_PROCESS_VM_READV)
-      add_definitions(-DHAVE_NR_PROCESS_VM_READV)
-  endif()
-endif()
-
 # Figure out if lldb could use lldb-server.  If so, then we'll
 # ensure we build lldb-server when an lldb target is being built.
 if (CMAKE_SYSTEM_NAME MATCHES "Android|Darwin|FreeBSD|Linux|NetBSD")

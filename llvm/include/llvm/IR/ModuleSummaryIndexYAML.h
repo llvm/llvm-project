@@ -128,6 +128,8 @@ template <> struct MappingTraits<TypeIdSummary> {
 };
 
 struct FunctionSummaryYaml {
+  unsigned Linkage;
+  bool NotEligibleToImport, Live;
   std::vector<uint64_t> TypeTests;
   std::vector<FunctionSummary::VFuncId> TypeTestAssumeVCalls,
       TypeCheckedLoadVCalls;
@@ -168,6 +170,9 @@ namespace yaml {
 
 template <> struct MappingTraits<FunctionSummaryYaml> {
   static void mapping(IO &io, FunctionSummaryYaml& summary) {
+    io.mapOptional("Linkage", summary.Linkage);
+    io.mapOptional("NotEligibleToImport", summary.NotEligibleToImport);
+    io.mapOptional("Live", summary.Live);
     io.mapOptional("TypeTests", summary.TypeTests);
     io.mapOptional("TypeTestAssumeVCalls", summary.TypeTestAssumeVCalls);
     io.mapOptional("TypeCheckedLoadVCalls", summary.TypeCheckedLoadVCalls);
@@ -199,12 +204,12 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
     }
     auto &Elem = V[KeyInt];
     for (auto &FSum : FSums) {
-      GlobalValueSummary::GVFlags GVFlags(GlobalValue::ExternalLinkage, false,
-                                          false);
       Elem.SummaryList.push_back(llvm::make_unique<FunctionSummary>(
-          GVFlags, 0, ArrayRef<ValueInfo>{},
-          ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests),
-          std::move(FSum.TypeTestAssumeVCalls),
+          GlobalValueSummary::GVFlags(
+              static_cast<GlobalValue::LinkageTypes>(FSum.Linkage),
+              FSum.NotEligibleToImport, FSum.Live),
+          0, ArrayRef<ValueInfo>{}, ArrayRef<FunctionSummary::EdgeTy>{},
+          std::move(FSum.TypeTests), std::move(FSum.TypeTestAssumeVCalls),
           std::move(FSum.TypeCheckedLoadVCalls),
           std::move(FSum.TypeTestAssumeConstVCalls),
           std::move(FSum.TypeCheckedLoadConstVCalls)));
@@ -216,8 +221,10 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
       for (auto &Sum : P.second.SummaryList) {
         if (auto *FSum = dyn_cast<FunctionSummary>(Sum.get()))
           FSums.push_back(FunctionSummaryYaml{
-              FSum->type_tests(), FSum->type_test_assume_vcalls(),
-              FSum->type_checked_load_vcalls(),
+              FSum->flags().Linkage,
+              static_cast<bool>(FSum->flags().NotEligibleToImport),
+              static_cast<bool>(FSum->flags().Live), FSum->type_tests(),
+              FSum->type_test_assume_vcalls(), FSum->type_checked_load_vcalls(),
               FSum->type_test_assume_const_vcalls(),
               FSum->type_checked_load_const_vcalls()});
       }
@@ -231,6 +238,8 @@ template <> struct MappingTraits<ModuleSummaryIndex> {
   static void mapping(IO &io, ModuleSummaryIndex& index) {
     io.mapOptional("GlobalValueMap", index.GlobalValueMap);
     io.mapOptional("TypeIdMap", index.TypeIdMap);
+    io.mapOptional("WithGlobalValueDeadStripping",
+                   index.WithGlobalValueDeadStripping);
   }
 };
 

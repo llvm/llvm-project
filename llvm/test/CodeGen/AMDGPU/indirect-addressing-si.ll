@@ -120,8 +120,7 @@ entry:
 ; FIXME: The waitcnt for the argument load can go after the loop
 ; IDXMODE: s_set_gpr_idx_on 0, src0
 ; GCN: s_mov_b64 s{{\[[0-9]+:[0-9]+\]}}, exec
-; GCN: s_waitcnt lgkmcnt(0)
-
+; GCN: [[LOOPBB:BB[0-9]+_[0-9]+]]:
 ; GCN: v_readfirstlane_b32 [[READLANE:s[0-9]+]], v{{[0-9]+}}
 
 ; MOVREL: s_add_i32 m0, [[READLANE]], 0xfffffe0
@@ -250,8 +249,6 @@ entry:
 ; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 4{{$}}
 
 ; GCN: s_mov_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], exec
-; GCN: s_waitcnt lgkmcnt(0)
-
 ; GCN: [[LOOPBB:BB[0-9]+_[0-9]+]]:
 ; GCN: v_readfirstlane_b32 [[READLANE:s[0-9]+]]
 
@@ -290,7 +287,6 @@ entry:
 ; IDXMODE: s_set_gpr_idx_on 0, dst
 
 ; GCN: s_mov_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], exec
-; GCN: s_waitcnt lgkmcnt(0)
 
 ; The offset depends on the register that holds the first element of the vector.
 ; GCN: v_readfirstlane_b32 [[READLANE:s[0-9]+]]
@@ -330,9 +326,9 @@ entry:
 ; IDXMODE: s_set_gpr_idx_on 0, src0
 
 ; GCN: s_mov_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], exec
-; GCN: s_waitcnt vmcnt(0)
 
 ; GCN: [[LOOP0:BB[0-9]+_[0-9]+]]:
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: v_readfirstlane_b32 [[READLANE:s[0-9]+]], [[IDX0]]
 ; GCN: v_cmp_eq_u32_e32 vcc, [[READLANE]], [[IDX0]]
 
@@ -411,6 +407,7 @@ bb2:
 ; IDXMODE: s_set_gpr_idx_on 0, dst
 
 ; GCN: [[LOOP0:BB[0-9]+_[0-9]+]]:
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: v_readfirstlane_b32 [[READLANE:s[0-9]+]], [[IDX0]]
 ; GCN: v_cmp_eq_u32_e32 vcc, [[READLANE]], [[IDX0]]
 

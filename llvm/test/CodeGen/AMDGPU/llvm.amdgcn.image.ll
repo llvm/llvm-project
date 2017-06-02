@@ -130,7 +130,7 @@ main_body:
 ;
 ; GCN-LABEL: {{^}}image_store_wait:
 ; GCN: image_store v[0:3], v4, s[0:7] dmask:0xf unorm
-; GCN: s_waitcnt vmcnt(0) expcnt(0)
+; GCN: s_waitcnt expcnt(0)
 ; GCN: image_load v[0:3], v4, s[8:15] dmask:0xf unorm
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN: image_store v[0:3], v4, s[16:23] dmask:0xf unorm
