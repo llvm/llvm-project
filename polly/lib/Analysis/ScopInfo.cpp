@@ -4126,6 +4126,12 @@ std::string Scop::getInvalidContextStr() const {
 
 std::string Scop::getNameStr() const {
   std::string ExitName, EntryName;
+  std::tie(EntryName, ExitName) = getEntryExitStr();
+  return EntryName + "---" + ExitName;
+}
+
+std::pair<std::string, std::string> Scop::getEntryExitStr() const {
+  std::string ExitName, EntryName;
   raw_string_ostream ExitStr(ExitName);
   raw_string_ostream EntryStr(EntryName);
 
@@ -4138,7 +4144,7 @@ std::string Scop::getNameStr() const {
   } else
     ExitName = "FunctionExit";
 
-  return EntryName + "---" + ExitName;
+  return std::make_pair(EntryName, ExitName);
 }
 
 __isl_give isl_set *Scop::getContext() const { return isl_set_copy(Context); }
