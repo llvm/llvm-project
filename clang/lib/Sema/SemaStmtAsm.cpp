@@ -277,6 +277,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       if (RequireCompleteType(OutputExpr->getLocStart(), Exprs[i]->getType(),
                               diag::err_dereference_incomplete_type))
         return StmtError();
+      LLVM_FALLTHROUGH;
     default:
       return StmtError(Diag(OutputExpr->getLocStart(),
                             diag::err_asm_invalid_lvalue_in_output)

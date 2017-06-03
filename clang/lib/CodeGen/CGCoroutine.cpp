@@ -625,6 +625,7 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
     CGM.Error(E->getLocStart(), "this builtin expect that __builtin_coro_id has"
                                 " been used earlier in this function");
     // Fallthrough to the next case to add TokenNone as the first argument.
+    LLVM_FALLTHROUGH;
   }
   // @llvm.coro.suspend takes a token parameter. Add token 'none' as the first
   // argument.

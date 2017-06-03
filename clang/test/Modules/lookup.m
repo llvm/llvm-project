@@ -14,7 +14,7 @@ void test(id x) {
 // expected-note@Inputs/lookup_right.h:3{{also found}}
 }
 
-// CHECK-PRINT: - (int) method;
-// CHECK-PRINT: - (double) method
+// CHECK-PRINT: - (int)method;
+// CHECK-PRINT: - (double)method
 // CHECK-PRINT: void test(id x)
 

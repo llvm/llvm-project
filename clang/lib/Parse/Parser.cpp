@@ -771,6 +771,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     }
     // This must be 'export template'. Parse it so we can diagnose our lack
     // of support.
+    LLVM_FALLTHROUGH;
   case tok::kw_using:
   case tok::kw_namespace:
   case tok::kw_typedef:
@@ -1883,6 +1884,7 @@ bool Parser::isTokenEqualOrEqualTypo() {
     Diag(Tok, diag::err_invalid_token_after_declarator_suggest_equal)
         << Kind
         << FixItHint::CreateReplacement(SourceRange(Tok.getLocation()), "=");
+    LLVM_FALLTHROUGH;
   case tok::equal:
     return true;
   }

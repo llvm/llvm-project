@@ -892,3 +892,16 @@ void test_bad_suspend() {
     co_await d; // OK
   }
 }
+
+template <int ID = 0>
+struct NoCopy {
+  NoCopy(NoCopy const&) = delete; // expected-note 2 {{deleted here}}
+};
+template <class T, class U>
+void test_dependent_param(T t, U) {
+  // expected-error@-1 {{call to deleted constructor of 'NoCopy<0>'}}
+  // expected-error@-2 {{call to deleted constructor of 'NoCopy<1>'}}
+  ((void)t);
+  co_return 42;
+}
+template void test_dependent_param(NoCopy<0>, NoCopy<1>); // expected-note {{requested here}}

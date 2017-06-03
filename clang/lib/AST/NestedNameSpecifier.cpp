@@ -290,6 +290,7 @@ NestedNameSpecifier::print(raw_ostream &OS,
   case TypeSpecWithTemplate:
     OS << "template ";
     // Fall through to print the type.
+    LLVM_FALLTHROUGH;
 
   case TypeSpec: {
     const Type *T = getAsType();

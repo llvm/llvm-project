@@ -2659,6 +2659,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
           Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name),
                              llvm::ArrayRef<llvm::Value *>(Args)));
     }
+    LLVM_FALLTHROUGH;
   }
   // OpenCL v2.0 s6.13.17.6 - Kernel query functions need bitcast of block
   // parameter.
@@ -3813,6 +3814,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vcalt_v:
   case NEON::BI__builtin_neon_vcaltq_v:
     std::swap(Ops[0], Ops[1]);
+    LLVM_FALLTHROUGH;
   case NEON::BI__builtin_neon_vcage_v:
   case NEON::BI__builtin_neon_vcageq_v:
   case NEON::BI__builtin_neon_vcagt_v:
@@ -5056,6 +5058,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vsri_n_v:
   case NEON::BI__builtin_neon_vsriq_n_v:
     rightShift = true;
+    LLVM_FALLTHROUGH;
   case NEON::BI__builtin_neon_vsli_n_v:
   case NEON::BI__builtin_neon_vsliq_n_v:
     Ops[2] = EmitNeonShiftVector(Ops[2], Ty, rightShift);

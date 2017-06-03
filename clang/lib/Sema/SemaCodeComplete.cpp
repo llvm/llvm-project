@@ -1866,6 +1866,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
   case Sema::PCC_Condition:
     AddStorageSpecifiers(CCC, SemaRef.getLangOpts(), Results);
     // Fall through: conditions and statements can have expressions.
+    LLVM_FALLTHROUGH;
 
   case Sema::PCC_ParenthesizedExpression:
     if (SemaRef.getLangOpts().ObjCAutoRefCount &&
@@ -1895,6 +1896,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
       Results.AddResult(Result(Builder.TakeString()));      
     }
     // Fall through
+    LLVM_FALLTHROUGH;
 
   case Sema::PCC_Expression: {
     if (SemaRef.getLangOpts().CPlusPlus) {

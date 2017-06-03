@@ -643,6 +643,7 @@ static void distributeTypeAttrsFromDeclarator(TypeProcessingState &state,
       if (!state.getSema().getLangOpts().ObjCAutoRefCount)
         break;
       // fallthrough
+      LLVM_FALLTHROUGH;
 
     FUNCTION_TYPE_ATTRS_CASELIST:
       distributeFunctionTypeAttrFromDeclarator(state, *attr, declSpecType);
@@ -1864,6 +1865,11 @@ QualType Sema::BuildPointerType(QualType T,
     // C++ 8.3.2p4: There shall be no ... pointers to references ...
     Diag(Loc, diag::err_illegal_decl_pointer_to_reference)
       << getPrintableNameForEntity(Entity) << T;
+    return QualType();
+  }
+
+  if (T->isFunctionType() && getLangOpts().OpenCL) {
+    Diag(Loc, diag::err_opencl_function_pointer);
     return QualType();
   }
 
@@ -6956,6 +6962,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       if (!state.getSema().getLangOpts().ObjCAutoRefCount)
         break;
       // fallthrough into the function attrs
+      LLVM_FALLTHROUGH;
 
     FUNCTION_TYPE_ATTRS_CASELIST:
       attr.setUsedAsTypeAttr();

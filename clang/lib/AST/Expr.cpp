@@ -1576,6 +1576,7 @@ bool CastExpr::CastConsistency() const {
            getSubExpr()->getType()->isBlockPointerType());
     assert(getType()->getPointeeType().getAddressSpace() !=
            getSubExpr()->getType()->getPointeeType().getAddressSpace());
+    LLVM_FALLTHROUGH;
   // These should not have an inheritance path.
   case CK_Dynamic:
   case CK_ToUnion:
@@ -2102,6 +2103,7 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     }
 
     // Fallthrough for generic call handling.
+    LLVM_FALLTHROUGH;
   }
   case CallExprClass:
   case CXXMemberCallExprClass:

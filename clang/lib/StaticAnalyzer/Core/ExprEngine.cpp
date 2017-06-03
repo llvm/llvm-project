@@ -1176,6 +1176,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         }
       }
       // FALLTHROUGH
+      LLVM_FALLTHROUGH;
     }
     case Stmt::CallExprClass:
     case Stmt::CXXMemberCallExprClass:
