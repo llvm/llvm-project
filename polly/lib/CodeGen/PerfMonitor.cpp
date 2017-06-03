@@ -87,15 +87,18 @@ static std::string GetScopUniqueVarname(const Scop &S) {
   std::string EntryString, ExitString;
   std::tie(EntryString, ExitString) = S.getEntryExitStr();
 
-  Name << "__polly_perf_cycles_in_" << std::string(S.getFunction().getName())
+  Name << "__polly_perf_in_" << std::string(S.getFunction().getName())
        << "_from__" << EntryString << "__to__" << ExitString;
   return Name.str();
 }
 
 void PerfMonitor::addScopCounter() {
   const std::string varname = GetScopUniqueVarname(S);
-  TryRegisterGlobal(M, varname.c_str(), Builder.getInt64(0),
+  TryRegisterGlobal(M, (varname + "_cycles").c_str(), Builder.getInt64(0),
                     &CyclesInCurrentScopPtr);
+
+  TryRegisterGlobal(M, (varname + "_trip_count").c_str(), Builder.getInt64(0),
+                    &TripCountForCurrentScopPtr);
 }
 
 void PerfMonitor::addGlobalVariables() {
@@ -160,7 +163,7 @@ Function *PerfMonitor::insertFinalReporting() {
 
   RuntimeDebugBuilder::createCPUPrinter(
       Builder, "scop function, "
-               "entry block name, exit block name, total time\n");
+               "entry block name, exit block name, total time, trip count\n");
   ReturnFromFinal = Builder.CreateRetVoid();
   return ExitFn;
 }
@@ -179,13 +182,17 @@ void PerfMonitor::AppendScopReporting() {
 
   Value *CyclesInCurrentScop =
       Builder.CreateLoad(this->CyclesInCurrentScopPtr, true);
+
+  Value *TripCountForCurrentScop =
+      Builder.CreateLoad(this->TripCountForCurrentScopPtr, true);
+
   std::string EntryName, ExitName;
   std::tie(EntryName, ExitName) = S.getEntryExitStr();
 
   // print in CSV for easy parsing with other tools.
-  RuntimeDebugBuilder::createCPUPrinter(Builder, S.getFunction().getName(),
-                                        ", ", EntryName, ", ", ExitName, ", ",
-                                        CyclesInCurrentScop, "\n");
+  RuntimeDebugBuilder::createCPUPrinter(
+      Builder, S.getFunction().getName(), ", ", EntryName, ", ", ExitName, ", ",
+      CyclesInCurrentScop, ", ", TripCountForCurrentScop, "\n");
 
   ReturnFromFinal = Builder.CreateRetVoid();
 }
@@ -288,4 +295,11 @@ void PerfMonitor::insertRegionEnd(Instruction *InsertBefore) {
   Value *CyclesInCurrentScop = Builder.CreateLoad(CyclesInCurrentScopPtr, true);
   CyclesInCurrentScop = Builder.CreateAdd(CyclesInCurrentScop, CyclesInScop);
   Builder.CreateStore(CyclesInCurrentScop, CyclesInCurrentScopPtr, true);
+
+  Value *TripCountForCurrentScop =
+      Builder.CreateLoad(TripCountForCurrentScopPtr, true);
+  TripCountForCurrentScop =
+      Builder.CreateAdd(TripCountForCurrentScop, Builder.getInt64(1));
+  Builder.CreateStore(TripCountForCurrentScop, TripCountForCurrentScopPtr,
+                      true);
 }

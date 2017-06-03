@@ -23,6 +23,10 @@
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
+#if SANITIZER_USE_GETAUXVAL
+#include <sys/auxv.h>
+#endif  // SANITIZER_USE_GETAUXVAL
+
 namespace __lsan {
 
 static const char kLinkerName[] = "ld";
@@ -30,8 +34,12 @@ static const char kLinkerName[] = "ld";
 static char linker_placeholder[sizeof(LoadedModule)] ALIGNED(64);
 static LoadedModule *linker = nullptr;
 
-static bool IsLinker(const char* full_name) {
-  return LibraryNameIs(full_name, kLinkerName);
+static bool IsLinker(const LoadedModule& module) {
+#if SANITIZER_USE_GETAUXVAL
+  return module.base_address() == getauxval(AT_BASE);
+#else
+  return LibraryNameIs(module.full_name(), kLinkerName);
+#endif  // SANITIZER_USE_GETAUXVAL
 }
 
 __attribute__((tls_model("initial-exec")))
@@ -49,22 +57,25 @@ void InitializePlatformSpecificModules() {
   ListOfModules modules;
   modules.init();
   for (LoadedModule &module : modules) {
-    if (!IsLinker(module.full_name())) continue;
+    if (!IsLinker(module))
+      continue;
     if (linker == nullptr) {
       linker = reinterpret_cast<LoadedModule *>(linker_placeholder);
       *linker = module;
       module = LoadedModule();
     } else {
       VReport(1, "LeakSanitizer: Multiple modules match \"%s\". "
-              "TLS will not be handled correctly.\n", kLinkerName);
+                 "TLS and other allocations originating from linker might be "
+                 "falsely reported as leaks.\n", kLinkerName);
       linker->clear();
       linker = nullptr;
       return;
     }
   }
   if (linker == nullptr) {
-    VReport(1, "LeakSanitizer: Dynamic linker not found. "
-               "TLS will not be handled correctly.\n");
+    VReport(1, "LeakSanitizer: Dynamic linker not found. TLS and other "
+               "allocations originating from linker might be falsely reported "
+                "as leaks.\n");
   }
 }
 

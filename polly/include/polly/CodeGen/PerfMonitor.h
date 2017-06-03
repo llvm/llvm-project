@@ -62,6 +62,9 @@ private:
   /// The total number of cycles spent in the current scop S.
   llvm::Value *CyclesInCurrentScopPtr;
 
+  /// The total number of times the current scop S is executed.
+  llvm::Value *TripCountForCurrentScopPtr;
+
   /// The total number of cycles spent within scops.
   llvm::Value *CyclesInScopsPtr;
 

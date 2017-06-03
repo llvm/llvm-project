@@ -5,11 +5,11 @@
 
 ## Check single dash form.
 # RUN: ld.lld -emit-relocs %t1.o -o %t1
-# RUN: llvm-readobj -t -r %t1 | FileCheck %s
+# RUN: llvm-readobj -t -r -s %t1 | FileCheck %s
 
 ## Check alias.
 # RUN: ld.lld -q %t1.o -o %t2
-# RUN: llvm-readobj -t -r %t2 | FileCheck %s
+# RUN: llvm-readobj -t -r -s %t2 | FileCheck %s
 
 # CHECK:      Section {
 # CHECK:        Index: 2
