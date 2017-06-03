@@ -539,6 +539,7 @@ void TransformActionsImpl::addRemoval(CharSourceRange range) {
       return;
     case Range_Contains:
       RI->End = newRange.End;
+      LLVM_FALLTHROUGH;
     case Range_ExtendsBegin:
       newRange.End = RI->End;
       Removals.erase(RI);

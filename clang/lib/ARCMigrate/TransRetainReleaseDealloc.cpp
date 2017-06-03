@@ -78,6 +78,7 @@ public:
         }
       }
       // Pass through.
+      LLVM_FALLTHROUGH;
     case OMF_retain:
     case OMF_release:
       if (E->getReceiverKind() == ObjCMessageExpr::Instance)

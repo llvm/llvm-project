@@ -456,10 +456,17 @@ static void EncodeUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
   // Finally, we write the bytes into ResultBuf.
   ResultBuf += bytesToWrite;
   switch (bytesToWrite) { // note: everything falls through.
-  case 4: *--ResultBuf = (UTF8)((UcnVal | byteMark) & byteMask); UcnVal >>= 6;
-  case 3: *--ResultBuf = (UTF8)((UcnVal | byteMark) & byteMask); UcnVal >>= 6;
-  case 2: *--ResultBuf = (UTF8)((UcnVal | byteMark) & byteMask); UcnVal >>= 6;
-  case 1: *--ResultBuf = (UTF8) (UcnVal | firstByteMark[bytesToWrite]);
+  case 4:
+    *--ResultBuf = (UTF8)((UcnVal | byteMark) & byteMask); UcnVal >>= 6;
+    LLVM_FALLTHROUGH;
+  case 3:
+    *--ResultBuf = (UTF8)((UcnVal | byteMark) & byteMask); UcnVal >>= 6;
+    LLVM_FALLTHROUGH;
+  case 2:
+    *--ResultBuf = (UTF8)((UcnVal | byteMark) & byteMask); UcnVal >>= 6;
+    LLVM_FALLTHROUGH;
+  case 1:
+    *--ResultBuf = (UTF8) (UcnVal | firstByteMark[bytesToWrite]);
   }
   // Update the buffer.
   ResultBuf += bytesToWrite;

@@ -3841,6 +3841,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     // Skip variable templates
     if (cast<VarDecl>(D)->getDescribedVarTemplate())
       return;
+    LLVM_FALLTHROUGH;
   case Decl::VarTemplateSpecialization:
     EmitGlobal(cast<VarDecl>(D));
     if (auto *DD = dyn_cast<DecompositionDecl>(D))

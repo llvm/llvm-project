@@ -5094,6 +5094,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
                                cast<DependentSizedArrayType>(T)->getSizeExpr(),
                                OnlyDeduced, Depth, Used);
     // Fall through to check the element type
+    LLVM_FALLTHROUGH;
 
   case Type::ConstantArray:
   case Type::IncompleteArray:
