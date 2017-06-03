@@ -1203,3 +1203,35 @@ define <8 x double> @f8xf64_f256(<8 x double> %a) {
   ret <8 x double> %res2
 }
 
+
+
+; ALL:       .LCPI38
+; ALL-NEXT:  .long	4290379776              # 0xffba0000
+
+; AVX:       .LCPI38
+; AVX-NEXT:  .long	4290379776              # float NaN
+
+define <8 x i16> @f8xi16_i32_NaN(<8 x i16> %a) {
+; ALL32-LABEL: f8xi16_i32_NaN:
+; ALL32:       # BB#0:
+; ALL32-NEXT:    vpbroadcastd {{\.LCPI.*}}, %xmm1
+; ALL32-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; ALL32-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; ALL32-NEXT:    retl
+;
+; ALL64-LABEL: f8xi16_i32_NaN:
+; ALL64:       # BB#0:
+; ALL64-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; ALL64-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; ALL64-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; ALL64-NEXT:    retq
+;
+; AVX-LABEL: f8xi16_i32_NaN:
+; AVX:       # BB#0:
+; AVX-NEXT:    vbroadcastss {{\.LCPI.*}}, %xmm1
+; AVX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+  %res1 = add <8 x i16> <i16 0, i16 -70, i16 0, i16 -70, i16 0, i16 -70, i16 0, i16 -70>, %a
+  %res2 = and <8 x i16> <i16 0, i16 -70, i16 0, i16 -70, i16 0, i16 -70, i16 0, i16 -70>, %res1
+  ret <8 x i16> %res2
+}

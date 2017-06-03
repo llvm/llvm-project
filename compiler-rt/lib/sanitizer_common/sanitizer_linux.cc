@@ -77,16 +77,6 @@ extern char **environ;  // provided by crt1
 #include <sys/signal.h>
 #endif
 
-#ifndef __GLIBC_PREREQ
-#define __GLIBC_PREREQ(x, y) 0
-#endif
-
-#if SANITIZER_LINUX && __GLIBC_PREREQ(2, 16)
-# define SANITIZER_USE_GETAUXVAL 1
-#else
-# define SANITIZER_USE_GETAUXVAL 0
-#endif
-
 #if SANITIZER_USE_GETAUXVAL
 #include <sys/auxv.h>
 #endif

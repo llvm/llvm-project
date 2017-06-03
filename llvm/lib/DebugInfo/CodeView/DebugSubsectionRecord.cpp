@@ -60,13 +60,13 @@ DebugSubsectionKind DebugSubsectionRecord::kind() const { return Kind; }
 BinaryStreamRef DebugSubsectionRecord::getRecordData() const { return Data; }
 
 DebugSubsectionRecordBuilder::DebugSubsectionRecordBuilder(
-    DebugSubsectionKind Kind, DebugSubsection &Frag,
-    CodeViewContainer Container)
-    : Container(Container), Kind(Kind), Frag(Frag) {}
+    std::unique_ptr<DebugSubsection> Subsection, CodeViewContainer Container)
+    : Subsection(std::move(Subsection)), Container(Container) {}
 
 uint32_t DebugSubsectionRecordBuilder::calculateSerializedLength() {
-  uint32_t Size = sizeof(DebugSubsectionHeader) +
-                  alignTo(Frag.calculateSerializedSize(), alignOf(Container));
+  uint32_t Size =
+      sizeof(DebugSubsectionHeader) +
+      alignTo(Subsection->calculateSerializedSize(), alignOf(Container));
   return Size;
 }
 
@@ -75,12 +75,12 @@ Error DebugSubsectionRecordBuilder::commit(BinaryStreamWriter &Writer) {
          "Debug Subsection not properly aligned");
 
   DebugSubsectionHeader Header;
-  Header.Kind = uint32_t(Kind);
+  Header.Kind = uint32_t(Subsection->kind());
   Header.Length = calculateSerializedLength() - sizeof(DebugSubsectionHeader);
 
   if (auto EC = Writer.writeObject(Header))
     return EC;
-  if (auto EC = Frag.commit(Writer))
+  if (auto EC = Subsection->commit(Writer))
     return EC;
   if (auto EC = Writer.padToAlignment(alignOf(Container)))
     return EC;

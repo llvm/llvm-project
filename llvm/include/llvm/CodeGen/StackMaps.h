@@ -226,7 +226,7 @@ public:
   // OpTypes are used to encode information about the following logical
   // operand (which may consist of several MachineOperands) for the
   // OpParser.
-  typedef enum { DirectMemRefOp, IndirectMemRefOp, ConstantOp } OpType;
+  using OpType = enum { DirectMemRefOp, IndirectMemRefOp, ConstantOp };
 
   StackMaps(AsmPrinter &AP);
 
@@ -254,9 +254,10 @@ public:
 
 private:
   static const char *WSMP;
-  typedef SmallVector<Location, 8> LocationVec;
-  typedef SmallVector<LiveOutReg, 8> LiveOutVec;
-  typedef MapVector<uint64_t, uint64_t> ConstantPool;
+
+  using LocationVec = SmallVector<Location, 8>;
+  using LiveOutVec = SmallVector<LiveOutReg, 8>;
+  using ConstantPool = MapVector<uint64_t, uint64_t>;
 
   struct FunctionInfo {
     uint64_t StackSize = 0;
@@ -279,8 +280,8 @@ private:
           LiveOuts(std::move(LiveOuts)) {}
   };
 
-  typedef MapVector<const MCSymbol *, FunctionInfo> FnInfoMap;
-  typedef std::vector<CallsiteInfo> CallsiteInfoList;
+  using FnInfoMap = MapVector<const MCSymbol *, FunctionInfo>;
+  using CallsiteInfoList = std::vector<CallsiteInfo>;
 
   AsmPrinter &AP;
   CallsiteInfoList CSInfos;

@@ -252,7 +252,7 @@ Error DbiStream::initializeSectionHeadersData() {
     return make_error<RawError>(raw_error_code::no_stream);
 
   auto SHS = MappedBlockStream::createIndexedStream(
-      Pdb.getMsfLayout(), Pdb.getMsfBuffer(), StreamNum);
+      Pdb.getMsfLayout(), Pdb.getMsfBuffer(), StreamNum, Pdb.getAllocator());
 
   size_t StreamLen = SHS->getLength();
   if (StreamLen % sizeof(object::coff_section))
@@ -284,7 +284,7 @@ Error DbiStream::initializeFpoRecords() {
     return make_error<RawError>(raw_error_code::no_stream);
 
   auto FS = MappedBlockStream::createIndexedStream(
-      Pdb.getMsfLayout(), Pdb.getMsfBuffer(), StreamNum);
+      Pdb.getMsfLayout(), Pdb.getMsfBuffer(), StreamNum, Pdb.getAllocator());
 
   size_t StreamLen = FS->getLength();
   if (StreamLen % sizeof(object::FpoData))

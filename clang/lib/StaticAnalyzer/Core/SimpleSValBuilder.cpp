@@ -163,6 +163,7 @@ SVal SimpleSValBuilder::evalCastFromLoc(Loc val, QualType castTy) {
           return nonloc::SymbolVal(SymR->getSymbol());
 
         // FALL-THROUGH
+        LLVM_FALLTHROUGH;
       }
 
       case loc::GotoLabelKind:

@@ -27,9 +27,6 @@ public:
   Error dump() override;
 
 private:
-  Expected<Optional<CodeViewYAML::SourceFileInfo>>
-  getFileLineInfo(const pdb::ModuleDebugStreamRef &ModS);
-
   Error dumpStringTable();
   Error dumpFileHeaders();
   Error dumpStreamMetadata();

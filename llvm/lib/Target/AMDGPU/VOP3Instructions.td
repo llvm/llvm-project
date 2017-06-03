@@ -245,9 +245,10 @@ def V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
 
 let SubtargetPredicate = Has16BitInsts in {
 
+def V_DIV_FIXUP_F16   : VOP3Inst <"v_div_fixup_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUdiv_fixup>;
+
 let isCommutable = 1 in {
 
-def V_DIV_FIXUP_F16   : VOP3Inst <"v_div_fixup_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUdiv_fixup>;
 def V_FMA_F16         : VOP3Inst <"v_fma_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, fma>;
 def V_INTERP_P1LL_F16 : VOP3Inst <"v_interp_p1ll_f16", VOP3_Profile<VOP_F32_F32_F16>>;
 def V_INTERP_P1LV_F16 : VOP3Inst <"v_interp_p1lv_f16", VOP3_Profile<VOP_F32_F32_F16_F16>>;

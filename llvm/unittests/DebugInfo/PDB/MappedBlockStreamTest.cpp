@@ -70,6 +70,8 @@ public:
     return MSFStreamLayout{static_cast<uint32_t>(Data.size()), Blocks};
   }
 
+  BumpPtrAllocator Allocator;
+
 private:
   std::vector<support::ulittle32_t> Blocks;
   MutableArrayRef<uint8_t> Data;
@@ -77,7 +79,8 @@ private:
 
 TEST(MappedBlockStreamTest, NumBlocks) {
   DiscontiguousStream F(BlocksAry, DataAry);
-  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F);
+  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F,
+                                           F.Allocator);
   EXPECT_EQ(F.block_size(), S->getBlockSize());
   EXPECT_EQ(F.layout().Blocks.size(), S->getNumBlocks());
 
@@ -87,7 +90,8 @@ TEST(MappedBlockStreamTest, NumBlocks) {
 // and does not allocate.
 TEST(MappedBlockStreamTest, ReadBeyondEndOfStreamRef) {
   DiscontiguousStream F(BlocksAry, DataAry);
-  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F);
+  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F,
+                                           F.Allocator);
 
   BinaryStreamReader R(*S);
   BinaryStreamRef SR;
@@ -102,13 +106,14 @@ TEST(MappedBlockStreamTest, ReadBeyondEndOfStreamRef) {
 // does not fail due to the length of the output buffer.
 TEST(MappedBlockStreamTest, ReadOntoNonEmptyBuffer) {
   DiscontiguousStream F(BlocksAry, DataAry);
-  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F);
+  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F,
+                                           F.Allocator);
 
   BinaryStreamReader R(*S);
   StringRef Str = "ZYXWVUTSRQPONMLKJIHGFEDCBA";
   EXPECT_NO_ERROR(R.readFixedString(Str, 1));
   EXPECT_EQ(Str, StringRef("A"));
-  EXPECT_EQ(0U, S->getNumBytesCopied());
+  EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
 // Tests that a read which crosses a block boundary, but where the subsequent
@@ -116,18 +121,18 @@ TEST(MappedBlockStreamTest, ReadOntoNonEmptyBuffer) {
 // not allocate memory.
 TEST(MappedBlockStreamTest, ZeroCopyReadContiguousBreak) {
   DiscontiguousStream F(BlocksAry, DataAry);
-  auto S = MappedBlockStream::createStream(F.block_size(),
-                                           F.layout(), F);
+  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F,
+                                           F.Allocator);
   BinaryStreamReader R(*S);
   StringRef Str;
   EXPECT_NO_ERROR(R.readFixedString(Str, 2));
   EXPECT_EQ(Str, StringRef("AB"));
-  EXPECT_EQ(0U, S->getNumBytesCopied());
+  EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 
   R.setOffset(6);
   EXPECT_NO_ERROR(R.readFixedString(Str, 4));
   EXPECT_EQ(Str, StringRef("GHIJ"));
-  EXPECT_EQ(0U, S->getNumBytesCopied());
+  EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
 // Tests that a read which crosses a block boundary and cannot be referenced
@@ -135,62 +140,67 @@ TEST(MappedBlockStreamTest, ZeroCopyReadContiguousBreak) {
 // requested.
 TEST(MappedBlockStreamTest, CopyReadNonContiguousBreak) {
   DiscontiguousStream F(BlocksAry, DataAry);
-  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F);
+  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F,
+                                           F.Allocator);
   BinaryStreamReader R(*S);
   StringRef Str;
   EXPECT_NO_ERROR(R.readFixedString(Str, 10));
   EXPECT_EQ(Str, StringRef("ABCDEFGHIJ"));
-  EXPECT_EQ(10U, S->getNumBytesCopied());
+  EXPECT_EQ(10U, F.Allocator.getBytesAllocated());
 }
 
 // Test that an out of bounds read which doesn't cross a block boundary
 // fails and allocates no memory.
 TEST(MappedBlockStreamTest, InvalidReadSizeNoBreak) {
   DiscontiguousStream F(BlocksAry, DataAry);
-  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F);
+  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F,
+                                           F.Allocator);
   BinaryStreamReader R(*S);
   StringRef Str;
 
   R.setOffset(10);
   EXPECT_ERROR(R.readFixedString(Str, 1));
-  EXPECT_EQ(0U, S->getNumBytesCopied());
+  EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
 // Test that an out of bounds read which crosses a contiguous block boundary
 // fails and allocates no memory.
 TEST(MappedBlockStreamTest, InvalidReadSizeContiguousBreak) {
   DiscontiguousStream F(BlocksAry, DataAry);
-  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F);
+  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F,
+                                           F.Allocator);
   BinaryStreamReader R(*S);
   StringRef Str;
 
   R.setOffset(6);
   EXPECT_ERROR(R.readFixedString(Str, 5));
-  EXPECT_EQ(0U, S->getNumBytesCopied());
+  EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
 // Test that an out of bounds read which crosses a discontiguous block
 // boundary fails and allocates no memory.
 TEST(MappedBlockStreamTest, InvalidReadSizeNonContiguousBreak) {
   DiscontiguousStream F(BlocksAry, DataAry);
-  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F);
+  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F,
+                                           F.Allocator);
   BinaryStreamReader R(*S);
   StringRef Str;
 
   EXPECT_ERROR(R.readFixedString(Str, 11));
-  EXPECT_EQ(0U, S->getNumBytesCopied());
+  EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
 // Tests that a read which is entirely contained within a single block but
 // beyond the end of a StreamRef fails.
 TEST(MappedBlockStreamTest, ZeroCopyReadNoBreak) {
   DiscontiguousStream F(BlocksAry, DataAry);
-  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F);
+  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F,
+                                           F.Allocator);
   BinaryStreamReader R(*S);
   StringRef Str;
   EXPECT_NO_ERROR(R.readFixedString(Str, 1));
   EXPECT_EQ(Str, StringRef("A"));
-  EXPECT_EQ(0U, S->getNumBytesCopied());
+  EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
 // Tests that a read which is not aligned on the same boundary as a previous
@@ -198,19 +208,20 @@ TEST(MappedBlockStreamTest, ZeroCopyReadNoBreak) {
 // previous allocation.
 TEST(MappedBlockStreamTest, UnalignedOverlappingRead) {
   DiscontiguousStream F(BlocksAry, DataAry);
-  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F);
+  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F,
+                                           F.Allocator);
   BinaryStreamReader R(*S);
   StringRef Str1;
   StringRef Str2;
   EXPECT_NO_ERROR(R.readFixedString(Str1, 7));
   EXPECT_EQ(Str1, StringRef("ABCDEFG"));
-  EXPECT_EQ(7U, S->getNumBytesCopied());
+  EXPECT_EQ(7U, F.Allocator.getBytesAllocated());
 
   R.setOffset(2);
   EXPECT_NO_ERROR(R.readFixedString(Str2, 3));
   EXPECT_EQ(Str2, StringRef("CDE"));
   EXPECT_EQ(Str1.data() + 2, Str2.data());
-  EXPECT_EQ(7U, S->getNumBytesCopied());
+  EXPECT_EQ(7U, F.Allocator.getBytesAllocated());
 }
 
 // Tests that a read which is not aligned on the same boundary as a previous
@@ -218,18 +229,19 @@ TEST(MappedBlockStreamTest, UnalignedOverlappingRead) {
 // still works correctly and allocates again from the shared pool.
 TEST(MappedBlockStreamTest, UnalignedOverlappingReadFail) {
   DiscontiguousStream F(BlocksAry, DataAry);
-  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F);
+  auto S = MappedBlockStream::createStream(F.block_size(), F.layout(), F,
+                                           F.Allocator);
   BinaryStreamReader R(*S);
   StringRef Str1;
   StringRef Str2;
   EXPECT_NO_ERROR(R.readFixedString(Str1, 6));
   EXPECT_EQ(Str1, StringRef("ABCDEF"));
-  EXPECT_EQ(6U, S->getNumBytesCopied());
+  EXPECT_EQ(6U, F.Allocator.getBytesAllocated());
 
   R.setOffset(4);
   EXPECT_NO_ERROR(R.readFixedString(Str2, 4));
   EXPECT_EQ(Str2, StringRef("EFGH"));
-  EXPECT_EQ(10U, S->getNumBytesCopied());
+  EXPECT_EQ(10U, F.Allocator.getBytesAllocated());
 }
 
 TEST(MappedBlockStreamTest, WriteBeyondEndOfStream) {
@@ -241,8 +253,8 @@ TEST(MappedBlockStreamTest, WriteBeyondEndOfStream) {
                 "LargeBuffer is not big enough");
 
   DiscontiguousStream F(BlocksAry, Data);
-  auto S = WritableMappedBlockStream::createStream(
-      F.block_size(), F.layout(), F);
+  auto S = WritableMappedBlockStream::createStream(F.block_size(), F.layout(),
+                                                   F, F.Allocator);
   ArrayRef<uint8_t> Buffer;
 
   EXPECT_ERROR(S->writeBytes(0, ArrayRef<uint8_t>(LargeBuffer)));
@@ -254,8 +266,8 @@ TEST(MappedBlockStreamTest, WriteBeyondEndOfStream) {
 TEST(MappedBlockStreamTest, TestWriteBytesNoBreakBoundary) {
   static uint8_t Data[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'};
   DiscontiguousStream F(BlocksAry, Data);
-  auto S = WritableMappedBlockStream::createStream(
-      F.block_size(), F.layout(), F);
+  auto S = WritableMappedBlockStream::createStream(F.block_size(), F.layout(),
+                                                   F, F.Allocator);
   ArrayRef<uint8_t> Buffer;
 
   EXPECT_NO_ERROR(S->readBytes(0, 1, Buffer));
@@ -287,8 +299,8 @@ TEST(MappedBlockStreamTest, TestWriteBytesBreakBoundary) {
                                'T', 'G', '.', '0', '0'};
 
   DiscontiguousStream F(BlocksAry, Data);
-  auto S = WritableMappedBlockStream::createStream(
-      F.block_size(), F.layout(), F);
+  auto S = WritableMappedBlockStream::createStream(F.block_size(), F.layout(),
+                                                   F, F.Allocator);
   ArrayRef<uint8_t> Buffer;
 
   EXPECT_NO_ERROR(S->writeBytes(0, TestData));
@@ -306,8 +318,8 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
   const uint32_t Blocks[] = {2, 1, 0, 6, 3, 4, 5, 7, 9, 8};
 
   DiscontiguousStream F(Blocks, Data);
-  auto S = WritableMappedBlockStream::createStream(
-      F.block_size(), F.layout(), F);
+  auto S = WritableMappedBlockStream::createStream(F.block_size(), F.layout(),
+                                                   F, F.Allocator);
 
   enum class MyEnum : uint32_t { Val1 = 2908234, Val2 = 120891234 };
   using support::ulittle32_t;
@@ -399,7 +411,7 @@ TEST(MappedBlockStreamTest, TestWriteContiguousStreamRef) {
 
   DiscontiguousStream F(DestBlocks, DestData);
   auto DestStream = WritableMappedBlockStream::createStream(
-      F.block_size(), F.layout(), F);
+      F.block_size(), F.layout(), F, F.Allocator);
 
   // First write "Test Str" into the source stream.
   MutableBinaryByteStream SourceStream(SrcData, little);
@@ -434,9 +446,9 @@ TEST(MappedBlockStreamTest, TestWriteDiscontiguousStreamRef) {
   DiscontiguousStream SrcF(SrcBlocks, SrcData);
 
   auto Dest = WritableMappedBlockStream::createStream(
-      DestF.block_size(), DestF.layout(), DestF);
+      DestF.block_size(), DestF.layout(), DestF, DestF.Allocator);
   auto Src = WritableMappedBlockStream::createStream(
-      SrcF.block_size(), SrcF.layout(), SrcF);
+      SrcF.block_size(), SrcF.layout(), SrcF, SrcF.Allocator);
 
   // First write "Test Str" into the source stream.
   BinaryStreamWriter SourceWriter(*Src);
@@ -455,6 +467,29 @@ TEST(MappedBlockStreamTest, TestWriteDiscontiguousStreamRef) {
   BinaryStreamReader DestReader(*Dest);
   EXPECT_NO_ERROR(DestReader.readCString(Result));
   EXPECT_EQ(Result, "Test Str");
+}
+
+TEST(MappedBlockStreamTest, DataLivesAfterStreamDestruction) {
+  std::vector<uint8_t> DataBytes(10);
+  MutableArrayRef<uint8_t> Data(DataBytes);
+  const uint32_t Blocks[] = {2, 1, 0, 6, 3, 4, 5, 7, 9, 8};
+
+  StringRef Str[] = {"Zero Str", ""};
+
+  DiscontiguousStream F(Blocks, Data);
+  {
+    auto S = WritableMappedBlockStream::createStream(F.block_size(), F.layout(),
+                                                     F, F.Allocator);
+
+    BinaryStreamReader Reader(*S);
+    BinaryStreamWriter Writer(*S);
+    ::memset(DataBytes.data(), 0, 10);
+    EXPECT_NO_ERROR(Writer.writeCString(Str[0]));
+    EXPECT_NO_ERROR(Reader.readCString(Str[1]));
+    EXPECT_EQ(Str[0], Str[1]);
+  }
+
+  EXPECT_EQ(Str[0], Str[1]);
 }
 
 } // end anonymous namespace

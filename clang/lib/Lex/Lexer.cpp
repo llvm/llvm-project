@@ -2498,6 +2498,7 @@ void Lexer::ReadToEndOfLine(SmallVectorImpl<char> *Result) {
         break;
       }
       // FALL THROUGH.
+      LLVM_FALLTHROUGH;
     case '\r':
     case '\n':
       // Okay, we found the end of the line. First, back up past the \0, \r, \n.
@@ -3247,6 +3248,7 @@ LexNextToken:
       return LexCharConstant(Result, ConsumeChar(CurPtr, SizeTmp, Result),
                              tok::wide_char_constant);
     // FALL THROUGH, treating L like the start of an identifier.
+    LLVM_FALLTHROUGH;
 
   // C99 6.4.2: Identifiers.
   case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': case 'G':

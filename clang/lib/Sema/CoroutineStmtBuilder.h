@@ -51,6 +51,9 @@ public:
   /// name lookup.
   bool buildDependentStatements();
 
+  /// \brief Build just parameter moves. To use for rebuilding in TreeTransform.
+  bool buildParameterMoves();
+
   bool isInvalid() const { return !this->IsValid; }
 
 private:

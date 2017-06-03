@@ -1,14 +1,10 @@
-// RUN: not %clang_cc1 -fsyntax-only %s -std=c++11 2>&1| FileCheck %s
-
-// Note that the error count below doesn't matter. We just want to
-// make sure that the parser doesn't crash.
-// CHECK: 17 errors
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++1z -verify
 
 // PR7511
-template<a>
+template<a> // expected-error +{{}}
 struct int_;
 
-template<a>
+template<a> // expected-error +{{}}
 template<int,typename T1,typename>
 struct ac
 {
@@ -17,7 +13,7 @@ struct ac
 
 template<class>struct aaa
 {
-  typedef ac<1,int,int>::ae ae
+  typedef ac<1,int,int>::ae ae // expected-error +{{}}
 };
 
 template<class>
@@ -36,19 +32,19 @@ struct state_machine
     struct In;
     
     template<int my>
-    struct In<a::int_<aaa::a>,my>;
+    struct In<a::int_<aaa::a>,my>; // expected-error +{{}}
         
     template<class Event>
     int process(Event)
     {
-      In<a::int_<0> > a;
+      In<a::int_<0> > a; // expected-error +{{}}
     }
-  }
+  } // expected-error +{{}}
   template<class Event>
   int ant(Event)
   {
     region_processing_helper<int>* helper;
-    helper->process(0)
+    helper->process(0) // expected-error +{{}}
   }
 };
 
@@ -81,21 +77,21 @@ void endl( ) ;
 
 extern basic_ostream<char> cout;
 
-int operator<<( basic_ostream<char> , pair ) ;
+int operator<<( basic_ostream<char> , pair ) ; // expected-note +{{}}
 
 void register_object_imp ( )
 {
-cout << endl<1>;
+cout << endl<1>; // expected-error +{{}}
 }
 
 // PR12933
-namespacae PR12933 {
-  template<typename S>
+namespace PR12933 {
+  template<typename S> // expected-error +{{}}
     template<typename T>
     void function(S a, T b) {}
 
   int main() {
-    function(0, 1);
+    function(0, 1); // expected-error +{{}}
     return 0;
   }
 }
@@ -141,4 +137,10 @@ namespace PR14281_part3 {
   };
   template <class T, int* i> struct B {};
   A<B<int, &some_decl>, &some_decl>::type x;
+}
+
+namespace var_template_partial_spec_incomplete {
+  template<typename T> int n;
+  template<typename T, typename U = void> int n<T *>; // expected-error +{{}} expected-note {{}}
+  int k = n<void *>;
 }
