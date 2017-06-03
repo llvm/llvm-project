@@ -55,7 +55,7 @@ bool OrderedBasicBlock::comesBefore(const Instruction *A,
   assert(II != IE && "Instruction not found?");
   assert((Inst == A || Inst == B) && "Should find A or B");
   LastInstFound = II;
-  return Inst == A;
+  return Inst != B;
 }
 
 /// \brief Find out whether \p A dominates \p B, meaning whether \p A

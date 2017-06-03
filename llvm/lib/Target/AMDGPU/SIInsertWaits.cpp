@@ -630,7 +630,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
       // but we also want to wait for any other outstanding transfers before
       // signalling other hardware blocks
       if ((I->getOpcode() == AMDGPU::S_BARRIER &&
-               ST->needWaitcntBeforeBarrier()) ||
+               !ST->hasAutoWaitcntBeforeBarrier()) ||
            I->getOpcode() == AMDGPU::S_SENDMSG ||
            I->getOpcode() == AMDGPU::S_SENDMSGHALT)
         Required = LastIssued;

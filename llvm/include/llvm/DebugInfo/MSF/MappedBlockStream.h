@@ -44,17 +44,19 @@ class MappedBlockStream : public BinaryStream {
 public:
   static std::unique_ptr<MappedBlockStream>
   createStream(uint32_t BlockSize, const MSFStreamLayout &Layout,
-               BinaryStreamRef MsfData);
+               BinaryStreamRef MsfData, BumpPtrAllocator &Allocator);
 
   static std::unique_ptr<MappedBlockStream>
   createIndexedStream(const MSFLayout &Layout, BinaryStreamRef MsfData,
-                      uint32_t StreamIndex);
+                      uint32_t StreamIndex, BumpPtrAllocator &Allocator);
 
   static std::unique_ptr<MappedBlockStream>
-  createFpmStream(const MSFLayout &Layout, BinaryStreamRef MsfData);
+  createFpmStream(const MSFLayout &Layout, BinaryStreamRef MsfData,
+                  BumpPtrAllocator &Allocator);
 
   static std::unique_ptr<MappedBlockStream>
-  createDirectoryStream(const MSFLayout &Layout, BinaryStreamRef MsfData);
+  createDirectoryStream(const MSFLayout &Layout, BinaryStreamRef MsfData,
+                        BumpPtrAllocator &Allocator);
 
   llvm::support::endianness getEndian() const override {
     return llvm::support::little;
@@ -67,9 +69,7 @@ public:
 
   uint32_t getLength() override;
 
-  uint32_t getNumBytesCopied() const;
-
-  llvm::BumpPtrAllocator &getAllocator() { return Pool; }
+  llvm::BumpPtrAllocator &getAllocator() { return Allocator; }
 
   void invalidateCache();
 
@@ -79,7 +79,7 @@ public:
 
 protected:
   MappedBlockStream(uint32_t BlockSize, const MSFStreamLayout &StreamLayout,
-                    BinaryStreamRef MsfData);
+                    BinaryStreamRef MsfData, BumpPtrAllocator &Allocator);
 
 private:
   const MSFStreamLayout &getStreamLayout() const { return StreamLayout; }
@@ -94,7 +94,15 @@ private:
   BinaryStreamRef MsfData;
 
   typedef MutableArrayRef<uint8_t> CacheEntry;
-  llvm::BumpPtrAllocator Pool;
+
+  // We just store the allocator by reference.  We use this to allocate
+  // contiguous memory for things like arrays or strings that cross a block
+  // boundary, and this memory is expected to outlive the stream.  For example,
+  // someone could create a stream, read some stuff, then close the stream, and
+  // we would like outstanding references to fields to remain valid since the
+  // entire file is mapped anyway.  Because of that, the user must supply the
+  // allocator to allocate broken records from.
+  BumpPtrAllocator &Allocator;
   DenseMap<uint32_t, std::vector<CacheEntry>> CacheMap;
 };
 
@@ -102,18 +110,20 @@ class WritableMappedBlockStream : public WritableBinaryStream {
 public:
   static std::unique_ptr<WritableMappedBlockStream>
   createStream(uint32_t BlockSize, const MSFStreamLayout &Layout,
-               WritableBinaryStreamRef MsfData);
+               WritableBinaryStreamRef MsfData, BumpPtrAllocator &Allocator);
 
   static std::unique_ptr<WritableMappedBlockStream>
   createIndexedStream(const MSFLayout &Layout, WritableBinaryStreamRef MsfData,
-                      uint32_t StreamIndex);
+                      uint32_t StreamIndex, BumpPtrAllocator &Allocator);
 
   static std::unique_ptr<WritableMappedBlockStream>
   createDirectoryStream(const MSFLayout &Layout,
-                        WritableBinaryStreamRef MsfData);
+                        WritableBinaryStreamRef MsfData,
+                        BumpPtrAllocator &Allocator);
 
   static std::unique_ptr<WritableMappedBlockStream>
-  createFpmStream(const MSFLayout &Layout, WritableBinaryStreamRef MsfData);
+  createFpmStream(const MSFLayout &Layout, WritableBinaryStreamRef MsfData,
+                  BumpPtrAllocator &Allocator);
 
   llvm::support::endianness getEndian() const override {
     return llvm::support::little;
@@ -139,7 +149,8 @@ public:
 protected:
   WritableMappedBlockStream(uint32_t BlockSize,
                             const MSFStreamLayout &StreamLayout,
-                            WritableBinaryStreamRef MsfData);
+                            WritableBinaryStreamRef MsfData,
+                            BumpPtrAllocator &Allocator);
 
 private:
   MappedBlockStream ReadInterface;

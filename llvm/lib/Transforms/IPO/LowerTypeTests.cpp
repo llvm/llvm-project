@@ -1442,9 +1442,8 @@ bool LowerTypeTestsModule::lower() {
     for (auto &P : *ExportSummary) {
       for (auto &S : P.second.SummaryList) {
         auto *FS = dyn_cast<FunctionSummary>(S.get());
-        if (!FS)
+        if (!FS || !ExportSummary->isGlobalValueLive(FS))
           continue;
-        // FIXME: Only add live functions.
         for (GlobalValue::GUID G : FS->type_tests())
           for (Metadata *MD : MetadataByGUID[G])
             AddTypeIdUse(MD).IsExported = true;

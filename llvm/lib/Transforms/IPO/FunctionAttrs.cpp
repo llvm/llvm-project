@@ -1188,6 +1188,10 @@ static bool runImpl(CallGraphSCC &SCC, AARGetterT AARGetter) {
     SCCNodes.insert(F);
   }
 
+  // Skip it if the SCC only contains optnone functions.
+  if (SCCNodes.empty())
+    return Changed;
+
   Changed |= addArgumentReturnedAttrs(SCCNodes);
   Changed |= addReadAttrs(SCCNodes, AARGetter);
   Changed |= addArgumentAttrs(SCCNodes);

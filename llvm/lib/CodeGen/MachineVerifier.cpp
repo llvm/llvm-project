@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
@@ -909,17 +910,43 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     }
   }
 
-  // Generic loads and stores must have a single MachineMemOperand
-  // describing that access.
-  if ((MI->getOpcode() == TargetOpcode::G_LOAD ||
-       MI->getOpcode() == TargetOpcode::G_STORE) &&
-      !MI->hasOneMemOperand())
-    report("Generic instruction accessing memory must have one mem operand",
-           MI);
-
   StringRef ErrorInfo;
   if (!TII->verifyInstruction(*MI, ErrorInfo))
     report(ErrorInfo.data(), MI);
+
+  // Verify properties of various specific instruction types
+  switch(MI->getOpcode()) {
+  default:
+    break;
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE:
+    // Generic loads and stores must have a single MachineMemOperand
+    // describing that access.
+    if (!MI->hasOneMemOperand())
+      report("Generic instruction accessing memory must have one mem operand",
+             MI);
+    break;
+  case TargetOpcode::STATEPOINT:
+    if (!MI->getOperand(StatepointOpers::IDPos).isImm() ||
+        !MI->getOperand(StatepointOpers::NBytesPos).isImm() ||
+        !MI->getOperand(StatepointOpers::NCallArgsPos).isImm())
+      report("meta operands to STATEPOINT not constant!", MI);
+    break;
+
+    auto VerifyStackMapConstant = [&](unsigned Offset) {
+      if (!MI->getOperand(Offset).isImm() ||
+          MI->getOperand(Offset).getImm() != StackMaps::ConstantOp || 
+          !MI->getOperand(Offset + 1).isImm()) 
+        report("stack map constant to STATEPOINT not well formed!", MI);
+    };
+    const unsigned VarStart = StatepointOpers(MI).getVarIdx();
+    VerifyStackMapConstant(VarStart + StatepointOpers::CCOffset);
+    VerifyStackMapConstant(VarStart + StatepointOpers::FlagsOffset);
+    VerifyStackMapConstant(VarStart + StatepointOpers::NumDeoptOperandsOffset);
+
+    // TODO: verify we have properly encoded deopt arguments
+   
+  };
 }
 
 void

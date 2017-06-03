@@ -28,12 +28,8 @@ YAML:   - Module:          'd:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj'
 YAML:     ObjFile:         'd:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj'
 YAML:     SourceFiles:
 YAML:       - 'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
-YAML:     LineInfo:
-YAML:       Checksums:
-YAML:         - FileName:        'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
-YAML:           Kind:            MD5
-YAML:           Checksum:        A0A5BD0D3ECD93FC29D19DE826FBF4BC
-YAML:       Lines:
+YAML:     Subsections:
+YAML:       - !Lines
 YAML:         CodeSize:        10
 YAML:         Flags:           [  ]
 YAML:         RelocOffset:     16
@@ -54,6 +50,11 @@ YAML:                 LineStart:       7
 YAML:                 IsStatement:     true
 YAML:                 EndDelta:        0
 YAML:             Columns:
+YAML:       - !FileChecksums
+YAML:         Checksums:
+YAML:           - FileName:        'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
+YAML:             Kind:            MD5
+YAML:             Checksum:        A0A5BD0D3ECD93FC29D19DE826FBF4BC
 YAML:  - Module:          '* Linker *'
 YAML:    ObjFile:         ''
 YAML: ...

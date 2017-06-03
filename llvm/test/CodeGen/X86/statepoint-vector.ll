@@ -1,4 +1,4 @@
-; RUN: llc -stack-symbol-ordering=0 -mcpu=nehalem -debug-only=stackmaps < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -stack-symbol-ordering=0 -mcpu=nehalem -debug-only=stackmaps < %s | FileCheck %s
 ; REQUIRES: asserts
 
 target triple = "x86_64-pc-linux-gnu"

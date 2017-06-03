@@ -34,7 +34,7 @@ ARMCallLowering::ARMCallLowering(const ARMTargetLowering &TLI)
 
 static bool isSupportedType(const DataLayout &DL, const ARMTargetLowering &TLI,
                             Type *T) {
-  if (T->isArrayTy())
+  if (T->isArrayTy() || T->isStructTy())
     return true;
 
   EVT VT = TLI.getValueType(DL, T, true);
@@ -167,8 +167,11 @@ void ARMCallLowering::splitToValueTypes(
   if (SplitVTs.size() == 1) {
     // Even if there is no splitting to do, we still want to replace the
     // original type (e.g. pointer type -> integer).
-    SplitArgs.emplace_back(OrigArg.Reg, SplitVTs[0].getTypeForEVT(Ctx),
-                           OrigArg.Flags, OrigArg.IsFixed);
+    auto Flags = OrigArg.Flags;
+    unsigned OriginalAlignment = DL.getABITypeAlignment(OrigArg.Ty);
+    Flags.setOrigAlign(OriginalAlignment);
+    SplitArgs.emplace_back(OrigArg.Reg, SplitVTs[0].getTypeForEVT(Ctx), Flags,
+                           OrigArg.IsFixed);
     return;
   }
 
@@ -177,6 +180,10 @@ void ARMCallLowering::splitToValueTypes(
     EVT SplitVT = SplitVTs[i];
     Type *SplitTy = SplitVT.getTypeForEVT(Ctx);
     auto Flags = OrigArg.Flags;
+
+    unsigned OriginalAlignment = DL.getABITypeAlignment(SplitTy);
+    Flags.setOrigAlign(OriginalAlignment);
+
     bool NeedsConsecutiveRegisters =
         TLI.functionArgumentNeedsConsecutiveRegisters(
             SplitTy, F->getCallingConv(), F->isVarArg());
@@ -185,6 +192,7 @@ void ARMCallLowering::splitToValueTypes(
       if (i == e - 1)
         Flags.setInConsecutiveRegsLast();
     }
+
     SplitArgs.push_back(
         ArgInfo{MRI.createGenericVirtualRegister(getLLTForType(*SplitTy, DL)),
                 SplitTy, Flags, OrigArg.IsFixed});

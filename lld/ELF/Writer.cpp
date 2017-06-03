@@ -257,19 +257,20 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
-  if (!Script->Opt.HasSections) {
+  if (!Script->Opt.HasSections)
     Script->fabricateDefaultCommands();
-    if (!Config->Relocatable)
-      fixSectionAlignments();
-  } else {
+  else
     Script->synchronize();
-  }
 
   for (BaseCommand *Base : Script->Opt.Commands)
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
       OutputSectionCommands.push_back(Cmd);
 
   clearOutputSections();
+
+  if (!Script->Opt.HasSections &&!Config->Relocatable)
+    fixSectionAlignments();
+
   // If -compressed-debug-sections is specified, we need to compress
   // .debug_* sections. Do it right now because it changes the size of
   // output sections.
@@ -1523,11 +1524,12 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       PageAlign(P.First);
     // Find the first section after PT_GNU_RELRO. If it is in a PT_LOAD we
     // have to align it to a page.
-    auto End = OutputSections.end();
-    auto I = std::find(OutputSections.begin(), End, P.Last);
+    auto End = OutputSectionCommands.end();
+    auto I =
+        std::find(OutputSectionCommands.begin(), End, Script->getCmd(P.Last));
     if (I == End || (I + 1) == End)
       continue;
-    OutputSection *Sec = *(I + 1);
+    OutputSection *Sec = (*(I + 1))->Sec;
     if (needsPtLoad(Sec))
       PageAlign(Sec);
   }

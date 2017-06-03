@@ -11,7 +11,6 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; SI: v_cmp_lt_i32_e32 vcc, 0,
 ; SI-NEXT: s_and_saveexec_b64 [[SAVE1:s\[[0-9]+:[0-9]+\]]], vcc
 ; SI-NEXT: s_xor_b64 [[SAVE2:s\[[0-9]+:[0-9]+\]]], exec, [[SAVE1]]
-; SI-NEXT: s_waitcnt lgkmcnt(0)
 ; SI-NEXT: ; mask branch [[FLOW_BB:BB[0-9]+_[0-9]+]]
 ; SI-NEXT: s_cbranch_execz [[FLOW_BB]]
 
@@ -72,7 +71,6 @@ end:
 
 ; SI-NEXT: BB{{[0-9]+_[0-9]+}}:
 ; SI: buffer_store_dword
-; SI-NEXT: s_waitcnt
 
 ; SI-NEXT: {{^}}[[EXIT]]:
 ; SI: s_or_b64 exec, exec, [[BR_SREG]]
@@ -101,7 +99,6 @@ exit:
 
 ; SI-NEXT: BB{{[0-9]+_[0-9]+}}:
 ; SI: buffer_store_dword
-; SI-NEXT: s_waitcnt
 
 ; SI-NEXT: {{^}}[[EXIT]]:
 ; SI: s_or_b64 exec, exec, [[BR_SREG]]
@@ -132,7 +129,6 @@ exit:
 
 ; SI-NEXT: {{^BB[0-9]+_[0-9]+}}: ; %exit
 ; SI: ds_write_b32
-; SI: s_waitcnt
 
 ; SI-NEXT: {{^}}[[FLOW]]:
 ; SI-NEXT: s_or_saveexec_b64
@@ -140,8 +136,8 @@ exit:
 ; SI-NEXT: ; mask branch [[UNIFIED_RETURN:BB[0-9]+_[0-9]+]]
 
 ; SI-NEXT: {{^BB[0-9]+_[0-9]+}}: ; %then
-; SI: buffer_store_dword
-; SI-NEXT: s_waitcnt
+; SI: s_waitcnt
+; SI-NEXT: buffer_store_dword
 
 ; SI-NEXT: {{^}}[[UNIFIED_RETURN]]: ; %UnifiedReturnBlock
 ; SI: s_or_b64 exec, exec

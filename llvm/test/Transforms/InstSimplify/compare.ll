@@ -1289,7 +1289,7 @@ define i1 @constant_fold_inttoptr_null() {
 
 define i1 @constant_fold_null_inttoptr() {
 ; CHECK-LABEL: @constant_fold_null_inttoptr(
-; CHECK-NEXT:    ret i1 icmp eq (i32* inttoptr (i64 32 to i32*), i32* null)
+; CHECK-NEXT:    ret i1 false
 ;
   %x = icmp eq i32* null, inttoptr (i64 32 to i32*)
   ret i1 %x

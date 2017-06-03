@@ -55,9 +55,9 @@ Error ModuleDebugStreamRef::reload() {
   if (auto EC = Reader.readStreamRef(C13LinesSubstream, C13Size))
     return EC;
 
-  BinaryStreamReader LineReader(C13LinesSubstream);
-  if (auto EC =
-          LineReader.readArray(LinesAndChecksums, LineReader.bytesRemaining()))
+  BinaryStreamReader SubsectionsReader(C13LinesSubstream);
+  if (auto EC = SubsectionsReader.readArray(Subsections,
+                                            SubsectionsReader.bytesRemaining()))
     return EC;
 
   uint32_t GlobalRefsSize;
@@ -77,13 +77,27 @@ ModuleDebugStreamRef::symbols(bool *HadError) const {
   return make_range(SymbolsSubstream.begin(HadError), SymbolsSubstream.end());
 }
 
-llvm::iterator_range<ModuleDebugStreamRef::LinesAndChecksumsIterator>
-ModuleDebugStreamRef::linesAndChecksums() const {
-  return make_range(LinesAndChecksums.begin(), LinesAndChecksums.end());
+llvm::iterator_range<ModuleDebugStreamRef::DebugSubsectionIterator>
+ModuleDebugStreamRef::subsections() const {
+  return make_range(Subsections.begin(), Subsections.end());
 }
 
-bool ModuleDebugStreamRef::hasLineInfo() const {
+bool ModuleDebugStreamRef::hasDebugSubsections() const {
   return C13LinesSubstream.getLength() > 0;
 }
 
 Error ModuleDebugStreamRef::commit() { return Error::success(); }
+
+Expected<codeview::DebugChecksumsSubsectionRef>
+ModuleDebugStreamRef::findChecksumsSubsection() const {
+  for (const auto &SS : subsections()) {
+    if (SS.kind() != DebugSubsectionKind::FileChecksums)
+      continue;
+
+    codeview::DebugChecksumsSubsectionRef Result;
+    if (auto EC = Result.initialize(SS.getRecordData()))
+      return std::move(EC);
+    return Result;
+  }
+  return make_error<RawError>(raw_error_code::no_entry);
+}

@@ -49,15 +49,14 @@ private:
 
 class DebugSubsectionRecordBuilder {
 public:
-  DebugSubsectionRecordBuilder(DebugSubsectionKind Kind, DebugSubsection &Frag,
+  DebugSubsectionRecordBuilder(std::unique_ptr<DebugSubsection> Subsection,
                                CodeViewContainer Container);
   uint32_t calculateSerializedLength();
   Error commit(BinaryStreamWriter &Writer);
 
 private:
+  std::unique_ptr<DebugSubsection> Subsection;
   CodeViewContainer Container;
-  DebugSubsectionKind Kind;
-  DebugSubsection &Frag;
 };
 
 } // namespace codeview

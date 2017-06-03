@@ -4508,13 +4508,16 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
                           Builder->CreateAnd(A, B),
                           Op1);
 
-    // ~x < ~y --> y < x
-    // ~x < cst --> ~cst < x
+    // ~X < ~Y --> Y < X
+    // ~X < C -->  X > ~C
     if (match(Op0, m_Not(m_Value(A)))) {
       if (match(Op1, m_Not(m_Value(B))))
         return new ICmpInst(I.getPredicate(), B, A);
-      if (ConstantInt *RHSC = dyn_cast<ConstantInt>(Op1))
-        return new ICmpInst(I.getPredicate(), ConstantExpr::getNot(RHSC), A);
+
+      const APInt *C;
+      if (match(Op1, m_APInt(C)))
+        return new ICmpInst(I.getSwappedPredicate(), A,
+                            ConstantInt::get(Op1->getType(), ~(*C)));
     }
 
     Instruction *AddI = nullptr;

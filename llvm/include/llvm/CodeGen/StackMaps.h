@@ -145,21 +145,27 @@ public:
 ///
 /// Statepoint operands take the form:
 ///   <id>, <num patch bytes >, <num call arguments>, <call target>,
-///   [call arguments], <StackMaps::ConstantOp>, <calling convention>,
+///   [call arguments...],
+///   <StackMaps::ConstantOp>, <calling convention>,
 ///   <StackMaps::ConstantOp>, <statepoint flags>,
-///   <StackMaps::ConstantOp>, <num other args>, [other args],
-///   [gc values]
+///   <StackMaps::ConstantOp>, <num deopt args>, [deopt args...],
+///   <gc base/derived pairs...> <gc allocas...>
+/// Note that the last two sets of arguments are not currently length
+///   prefixed.
 class StatepointOpers {
-private:
+  // TODO:: we should change the STATEPOINT representation so that CC and
+  // Flags should be part of meta operands, with args and deopt operands, and
+  // gc operands all prefixed by their length and a type code. This would be
+  // much more consistent. 
+public:
   // These values are aboolute offsets into the operands of the statepoint
   // instruction.
   enum { IDPos, NBytesPos, NCallArgsPos, CallTargetPos, MetaEnd };
 
   // These values are relative offests from the start of the statepoint meta
   // arguments (i.e. the end of the call arguments).
-  enum { CCOffset = 1, FlagsOffset = 3, NumVMSArgsOffset = 5 };
+  enum { CCOffset = 1, FlagsOffset = 3, NumDeoptOperandsOffset = 5 };
 
-public:
   explicit StatepointOpers(const MachineInstr *MI) : MI(MI) {}
 
   /// Get starting index of non call related arguments
@@ -220,7 +226,7 @@ public:
   // OpTypes are used to encode information about the following logical
   // operand (which may consist of several MachineOperands) for the
   // OpParser.
-  typedef enum { DirectMemRefOp, IndirectMemRefOp, ConstantOp } OpType;
+  using OpType = enum { DirectMemRefOp, IndirectMemRefOp, ConstantOp };
 
   StackMaps(AsmPrinter &AP);
 
@@ -248,9 +254,10 @@ public:
 
 private:
   static const char *WSMP;
-  typedef SmallVector<Location, 8> LocationVec;
-  typedef SmallVector<LiveOutReg, 8> LiveOutVec;
-  typedef MapVector<uint64_t, uint64_t> ConstantPool;
+
+  using LocationVec = SmallVector<Location, 8>;
+  using LiveOutVec = SmallVector<LiveOutReg, 8>;
+  using ConstantPool = MapVector<uint64_t, uint64_t>;
 
   struct FunctionInfo {
     uint64_t StackSize = 0;
@@ -273,8 +280,8 @@ private:
           LiveOuts(std::move(LiveOuts)) {}
   };
 
-  typedef MapVector<const MCSymbol *, FunctionInfo> FnInfoMap;
-  typedef std::vector<CallsiteInfo> CallsiteInfoList;
+  using FnInfoMap = MapVector<const MCSymbol *, FunctionInfo>;
+  using CallsiteInfoList = std::vector<CallsiteInfo>;
 
   AsmPrinter &AP;
   CallsiteInfoList CSInfos;

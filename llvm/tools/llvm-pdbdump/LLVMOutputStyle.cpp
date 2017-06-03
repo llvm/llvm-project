@@ -483,8 +483,8 @@ Error LLVMOutputStyle::dumpStreamBytes() {
     if (SI >= File.getNumStreams())
       return make_error<RawError>(raw_error_code::no_stream);
 
-    auto S = MappedBlockStream::createIndexedStream(File.getMsfLayout(),
-                                                    File.getMsfBuffer(), SI);
+    auto S = MappedBlockStream::createIndexedStream(
+        File.getMsfLayout(), File.getMsfBuffer(), SI, File.getAllocator());
     if (!S)
       continue;
     DictScope DD(P, "Stream");
@@ -791,7 +791,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
       if (HasModuleDI && (ShouldDumpSymbols || opts::raw::DumpLineInfo)) {
         auto ModStreamData = MappedBlockStream::createIndexedStream(
             File.getMsfLayout(), File.getMsfBuffer(),
-            Modi.getModuleStreamIndex());
+            Modi.getModuleStreamIndex(), File.getAllocator());
 
         ModuleDebugStreamRef ModS(Modi, std::move(ModStreamData));
         if (auto EC = ModS.reload())
@@ -831,8 +831,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
             return ExpectedTypes.takeError();
           auto &IpiItems = *ExpectedTypes;
           C13RawVisitor V(P, File, IpiItems);
-          if (auto EC =
-                  codeview::visitDebugSubsections(ModS.linesAndChecksums(), V))
+          if (auto EC = codeview::visitDebugSubsections(ModS.subsections(), V))
             return EC;
         }
       }

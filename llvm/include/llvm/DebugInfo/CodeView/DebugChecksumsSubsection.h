@@ -60,8 +60,8 @@ public:
   Error initialize(BinaryStreamReader Reader);
   Error initialize(BinaryStreamRef Stream);
 
-  Iterator begin() { return Checksums.begin(); }
-  Iterator end() { return Checksums.end(); }
+  Iterator begin() const { return Checksums.begin(); }
+  Iterator end() const { return Checksums.end(); }
 
   const FileChecksumArray &getArray() const { return Checksums; }
 

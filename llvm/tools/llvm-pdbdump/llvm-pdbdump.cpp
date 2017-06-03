@@ -476,7 +476,6 @@ static void yamlToPdb(StringRef Path) {
   std::unique_ptr<MemoryBuffer> &Buffer = ErrorOrBuffer.get();
 
   llvm::yaml::Input In(Buffer->getBuffer());
-  In.setContext(&Allocator);
   pdb::yaml::PdbObject YamlObj(Allocator);
   In >> YamlObj;
 
@@ -540,64 +539,11 @@ static void yamlToPdb(StringRef Path) {
             Symbol.toCodeViewSymbol(Allocator, CodeViewContainer::Pdb));
       }
     }
-    if (MI.FileLineInfo.hasValue()) {
-      const auto &FLI = *MI.FileLineInfo;
 
-      // File Checksums must be emitted before line information, because line
-      // info records use offsets into the checksum buffer to reference a file's
-      // source file name.
-      auto Checksums = llvm::make_unique<DebugChecksumsSubsection>(Strings);
-      auto &ChecksumRef = *Checksums;
-      if (!FLI.FileChecksums.empty()) {
-        for (auto &FC : FLI.FileChecksums)
-          Checksums->addChecksum(FC.FileName, FC.Kind, FC.ChecksumBytes.Bytes);
-      }
-      ModiBuilder.setC13FileChecksums(std::move(Checksums));
-
-      for (const auto &Fragment : FLI.LineFragments) {
-        auto Lines =
-            llvm::make_unique<DebugLinesSubsection>(ChecksumRef, Strings);
-        Lines->setCodeSize(Fragment.CodeSize);
-        Lines->setRelocationAddress(Fragment.RelocSegment,
-                                    Fragment.RelocOffset);
-        Lines->setFlags(Fragment.Flags);
-        for (const auto &LC : Fragment.Blocks) {
-          Lines->createBlock(LC.FileName);
-          if (Lines->hasColumnInfo()) {
-            for (const auto &Item : zip(LC.Lines, LC.Columns)) {
-              auto &L = std::get<0>(Item);
-              auto &C = std::get<1>(Item);
-              uint32_t LE = L.LineStart + L.EndDelta;
-              Lines->addLineAndColumnInfo(
-                  L.Offset, LineInfo(L.LineStart, LE, L.IsStatement),
-                  C.StartColumn, C.EndColumn);
-            }
-          } else {
-            for (const auto &L : LC.Lines) {
-              uint32_t LE = L.LineStart + L.EndDelta;
-              Lines->addLineInfo(L.Offset,
-                                 LineInfo(L.LineStart, LE, L.IsStatement));
-            }
-          }
-        }
-        ModiBuilder.addC13Fragment(std::move(Lines));
-      }
-
-      for (const auto &Inlinee : FLI.Inlinees) {
-        auto Inlinees = llvm::make_unique<DebugInlineeLinesSubsection>(
-            ChecksumRef, Inlinee.HasExtraFiles);
-        for (const auto &Site : Inlinee.Sites) {
-          Inlinees->addInlineSite(TypeIndex(Site.Inlinee), Site.FileName,
-                                  Site.SourceLineNum);
-          if (!Inlinee.HasExtraFiles)
-            continue;
-
-          for (auto EF : Site.ExtraFiles) {
-            Inlinees->addExtraFile(EF);
-          }
-        }
-        ModiBuilder.addC13Fragment(std::move(Inlinees));
-      }
+    auto CodeViewSubsections =
+        ExitOnErr(CodeViewYAML::convertSubsectionList(MI.Subsections, Strings));
+    for (auto &SS : CodeViewSubsections) {
+      ModiBuilder.addDebugSubsection(std::move(SS));
     }
   }
 

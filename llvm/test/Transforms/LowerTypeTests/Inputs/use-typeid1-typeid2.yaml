@@ -1,5 +1,6 @@
 ---
 GlobalValueMap:
   42:
-    - TypeTests: [14276520915468743435, 15427464259790519041] # guid("typeid1"), guid("typeid2")
+    - Live: true
+      TypeTests: [14276520915468743435, 15427464259790519041] # guid("typeid1"), guid("typeid2")
 ...

@@ -1,10 +1,13 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8 -check-prefix=NOAUTO %s
+; RUN: llc -march=amdgcn -mattr=+auto-waitcnt-before-barrier -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX8 -check-prefix=AUTO %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=NOAUTO %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=+auto-waitcnt-before-barrier -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=AUTO %s
 
 ; GCN-LABEL: {{^}}test_barrier:
 ; GFX8: buffer_store_dword
 ; GFX9: flat_store_dword
-; GCN: s_waitcnt
+; NOAUTO: s_waitcnt
+; AUTO-NOT: s_waitcnt
 ; GCN: s_barrier
 define amdgpu_kernel void @test_barrier(i32 addrspace(1)* %out, i32 %size) #0 {
 entry:

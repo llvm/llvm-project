@@ -3419,9 +3419,7 @@ int HexagonInstrInfo::getDotNewPredOp(const MachineInstr &MI,
   int NewOpcode = Hexagon::getPredNewOpcode(MI.getOpcode());
   if (NewOpcode >= 0)
     return NewOpcode;
-
-  dbgs() << "Cannot convert to .new: " << getName(MI.getOpcode()) << '\n';
-  llvm_unreachable(nullptr);
+  return 0;
 }
 
 int HexagonInstrInfo::getDotOldOp(const MachineInstr &MI) const {

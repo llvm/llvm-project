@@ -4,7 +4,9 @@
 
 ; SUMMARY:     GlobalValueMap:
 ; SUMMARY-NEXT:  42:
-; SUMMARY-NEXT:    - TypeTests:
+; SUMMARY-NEXT:    - Linkage:             0
+; SUMMARY-NEXT:      NotEligibleToImport: false
+; SUMMARY-NEXT:      Live:                true
 ; SUMMARY-NEXT:      TypeTestAssumeVCalls:
 ; SUMMARY-NEXT:        - GUID:            123
 ; SUMMARY-NEXT:          Offset:          0

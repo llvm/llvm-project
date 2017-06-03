@@ -34,8 +34,6 @@ end:
 ; GCN: s_cbranch_vccnz [[END:BB[0-9]+_[0-9]+]]
 
 ; GCN: buffer_store_dword
-; GCNOPT-NEXT: s_waitcnt vmcnt(0) expcnt(0)
-; TODO: This waitcnt can be eliminated
 
 ; GCN: {{^}}[[END]]:
 ; GCN: s_endpgm

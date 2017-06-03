@@ -116,7 +116,7 @@ static cl::opt<bool> EnableAMDGPUAliasAnalysis("enable-amdgpu-aa", cl::Hidden,
 static cl::opt<bool> EnableSIInsertWaitcntsPass(
   "enable-si-insert-waitcnts",
   cl::desc("Use new waitcnt insertion pass"),
-  cl::init(false));
+  cl::init(true));
 
 // Option to run late CFG structurizer
 static cl::opt<bool> LateCFGStructurize(
@@ -139,6 +139,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIShrinkInstructionsPass(*PR);
   initializeSIFixControlFlowLiveIntervalsPass(*PR);
   initializeSILoadStoreOptimizerPass(*PR);
+  initializeAMDGPUAlwaysInlinePass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
   initializeAMDGPUAnnotateUniformValuesPass(*PR);
   initializeAMDGPULowerIntrinsicsPass(*PR);

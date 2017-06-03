@@ -17,12 +17,20 @@
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/ObjectYAML/YAML.h"
 
 namespace llvm {
+
+namespace codeview {
+class DebugStringTableSubsection;
+class DebugStringTableSubsectionRef;
+class DebugChecksumsSubsectionRef;
+}
 namespace CodeViewYAML {
+
 namespace detail {
-struct C13FragmentBase;
+struct YAMLSubsectionBase;
 }
 
 struct SourceLineEntry {
@@ -74,18 +82,24 @@ struct InlineeInfo {
   std::vector<InlineeSite> Sites;
 };
 
-struct SourceFileInfo {
-  std::vector<SourceFileChecksumEntry> FileChecksums;
-  std::vector<SourceLineInfo> LineFragments;
-  std::vector<InlineeInfo> Inlinees;
+struct YAMLDebugSubsection {
+  static Expected<YAMLDebugSubsection>
+  fromCodeViewSubection(const codeview::DebugStringTableSubsectionRef &Strings,
+                        const codeview::DebugChecksumsSubsectionRef &Checksums,
+                        const codeview::DebugSubsectionRecord &SS);
+
+  std::shared_ptr<detail::YAMLSubsectionBase> Subsection;
 };
 
-struct C13DebugSection {
-  std::vector<detail::C13FragmentBase> Fragments;
-};
+Expected<std::vector<std::unique_ptr<codeview::DebugSubsection>>>
+convertSubsectionList(ArrayRef<YAMLDebugSubsection> Subsections,
+                      codeview::DebugStringTableSubsection &Strings);
+
 } // namespace CodeViewYAML
 } // namespace llvm
 
-LLVM_YAML_DECLARE_MAPPING_TRAITS(CodeViewYAML::SourceFileInfo)
+LLVM_YAML_DECLARE_MAPPING_TRAITS(CodeViewYAML::YAMLDebugSubsection)
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(CodeViewYAML::YAMLDebugSubsection)
 
 #endif

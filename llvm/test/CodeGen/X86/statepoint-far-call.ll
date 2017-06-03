@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 ; Test to check that Statepoints with X64 far-immediate targets
 ; are lowered correctly to an indirect call via a scratch register.
 

@@ -19,9 +19,8 @@
 
 ; GCN-NEXT: BB{{[0-9]+_[0-9]+}}: ; %bb4
 ; GCN: ds_write_b32
-; GCN: s_waitcnt
 
-; GCN-NEXT: [[BB5]]
+; GCN: [[BB5]]
 ; GCN: s_or_b64 exec, exec
 ; GCN-NEXT: s_endpgm
 ; GCN-NEXT: .Lfunc_end
