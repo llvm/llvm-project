@@ -2034,6 +2034,13 @@ Constant *ConstantFoldVectorCall(StringRef Name, unsigned IntrinsicID,
   for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
     // Gather a column of constants.
     for (unsigned J = 0, JE = Operands.size(); J != JE; ++J) {
+      // These intrinsics use a scalar type for their second argument.
+      if (J == 1 &&
+          (IntrinsicID == Intrinsic::cttz || IntrinsicID == Intrinsic::ctlz)) {
+        Lane[J] = Operands[J];
+        continue;
+      }
+
       Constant *Agg = Operands[J]->getAggregateElement(I);
       if (!Agg)
         return nullptr;

@@ -21,6 +21,7 @@ declare <2 x i32> @llvm.cttz.v2i32(<2 x i32>, i1) nounwind readnone
 declare <2 x i32> @llvm.ctlz.v2i32(<2 x i32>, i1) nounwind readnone
 declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>) nounwind readnone
 declare i8 @llvm.ctlz.i8(i8, i1) nounwind readnone
+declare <2 x i8> @llvm.ctlz.v2i8(<2 x i8>, i1) nounwind readnone
 declare double @llvm.cos.f64(double %Val) nounwind readonly
 declare double @llvm.sin.f64(double %Val) nounwind readonly
 declare double @llvm.floor.f64(double %Val) nounwind readonly
@@ -282,6 +283,16 @@ define i32 @cttz(i32 %a) {
   ret i32 %count
 }
 
+define <2 x i32> @cttz_vec(<2 x i32> %a) {
+; CHECK-LABEL: @cttz_vec(
+; CHECK-NEXT:    ret <2 x i32> <i32 3, i32 3>
+;
+  %or = or <2 x i32> %a, <i32 8, i32 8>
+  %and = and <2 x i32> %or, <i32 -8, i32 -8>
+  %count = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %and, i1 true) nounwind readnone
+  ret <2 x i32> %count
+}
+
 define i1 @cttz_knownbits(i32 %arg) {
 ; CHECK-LABEL: @cttz_knownbits(
 ; CHECK-NEXT:    ret i1 false
@@ -290,6 +301,16 @@ define i1 @cttz_knownbits(i32 %arg) {
   %cnt = call i32 @llvm.cttz.i32(i32 %or, i1 true) nounwind readnone
   %res = icmp eq i32 %cnt, 4
   ret i1 %res
+}
+
+define <2 x i1> @cttz_knownbits_vec(<2 x i32> %arg) {
+; CHECK-LABEL: @cttz_knownbits_vec(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %or = or <2 x i32> %arg, <i32 4, i32 4>
+  %cnt = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %or, i1 true) nounwind readnone
+  %res = icmp eq <2 x i32> %cnt, <i32 4, i32 4>
+  ret <2 x i1> %res
 }
 
 define i1 @cttz_knownbits2(i32 %arg) {
@@ -303,6 +324,19 @@ define i1 @cttz_knownbits2(i32 %arg) {
   %cnt = call i32 @llvm.cttz.i32(i32 %or, i1 true) nounwind readnone
   %res = icmp eq i32 %cnt, 2
   ret i1 %res
+}
+
+define <2 x i1> @cttz_knownbits2_vec(<2 x i32> %arg) {
+; CHECK-LABEL: @cttz_knownbits2_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ARG:%.*]], <i32 4, i32 4>
+; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[OR]], i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i32> [[CNT]], <i32 2, i32 2>
+; CHECK-NEXT:    ret <2 x i1> [[RES]]
+;
+  %or = or <2 x i32> %arg, <i32 4, i32 4>
+  %cnt = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %or, i1 true) nounwind readnone
+  %res = icmp eq <2 x i32> %cnt, <i32 2, i32 2>
+  ret <2 x i1> %res
 }
 
 ; TODO: The icmp is unnecessary given the known bits of the input.
@@ -319,6 +353,20 @@ define i1 @cttz_knownbits3(i32 %arg) {
   ret i1 %res
 }
 
+; TODO: The icmp is unnecessary given the known bits of the input.
+define <2 x i1> @cttz_knownbits3_vec(<2 x i32> %arg) {
+; CHECK-LABEL: @cttz_knownbits3_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ARG:%.*]], <i32 4, i32 4>
+; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[OR]], i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i32> [[CNT]], <i32 3, i32 3>
+; CHECK-NEXT:    ret <2 x i1> [[RES]]
+;
+  %or = or <2 x i32> %arg, <i32 4, i32 4>
+  %cnt = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %or, i1 true) nounwind readnone
+  %res = icmp eq <2 x i32> %cnt, <i32 3, i32 3>
+  ret <2 x i1> %res
+}
+
 define i8 @ctlz(i8 %a) {
 ; CHECK-LABEL: @ctlz(
 ; CHECK-NEXT:    ret i8 2
@@ -329,6 +377,16 @@ define i8 @ctlz(i8 %a) {
   ret i8 %count
 }
 
+define <2 x i8> @ctlz_vec(<2 x i8> %a) {
+; CHECK-LABEL: @ctlz_vec(
+; CHECK-NEXT:    ret <2 x i8> <i8 2, i8 2>
+;
+  %or = or <2 x i8> %a, <i8 32, i8 32>
+  %and = and <2 x i8> %or, <i8 63, i8 63>
+  %count = tail call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %and, i1 true) nounwind readnone
+  ret <2 x i8> %count
+}
+
 define i1 @ctlz_knownbits(i8 %arg) {
 ; CHECK-LABEL: @ctlz_knownbits(
 ; CHECK-NEXT:    ret i1 false
@@ -337,6 +395,16 @@ define i1 @ctlz_knownbits(i8 %arg) {
   %cnt = call i8 @llvm.ctlz.i8(i8 %or, i1 true) nounwind readnone
   %res = icmp eq i8 %cnt, 4
   ret i1 %res
+}
+
+define <2 x i1> @ctlz_knownbits_vec(<2 x i8> %arg) {
+; CHECK-LABEL: @ctlz_knownbits_vec(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %or = or <2 x i8> %arg, <i8 32, i8 32>
+  %cnt = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %or, i1 true) nounwind readnone
+  %res = icmp eq <2 x i8> %cnt, <i8 4, i8 4>
+  ret <2 x i1> %res
 }
 
 define i1 @ctlz_knownbits2(i8 %arg) {
@@ -352,6 +420,19 @@ define i1 @ctlz_knownbits2(i8 %arg) {
   ret i1 %res
 }
 
+define <2 x i1> @ctlz_knownbits2_vec(<2 x i8> %arg) {
+; CHECK-LABEL: @ctlz_knownbits2_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[ARG:%.*]], <i8 32, i8 32>
+; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[OR]], i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i8> [[CNT]], <i8 2, i8 2>
+; CHECK-NEXT:    ret <2 x i1> [[RES]]
+;
+  %or = or <2 x i8> %arg, <i8 32, i8 32>
+  %cnt = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %or, i1 true) nounwind readnone
+  %res = icmp eq <2 x i8> %cnt, <i8 2, i8 2>
+  ret <2 x i1> %res
+}
+
 ; TODO: The icmp is unnecessary given the known bits of the input.
 define i1 @ctlz_knownbits3(i8 %arg) {
 ; CHECK-LABEL: @ctlz_knownbits3(
@@ -364,6 +445,20 @@ define i1 @ctlz_knownbits3(i8 %arg) {
   %cnt = call i8 @llvm.ctlz.i8(i8 %or, i1 true) nounwind readnone
   %res = icmp eq i8 %cnt, 3
   ret i1 %res
+}
+
+; TODO: The icmp is unnecessary given the known bits of the input.
+define <2 x i1> @ctlz_knownbits3_vec(<2 x i8> %arg) {
+; CHECK-LABEL: @ctlz_knownbits3_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[ARG:%.*]], <i8 32, i8 32>
+; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[OR]], i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i8> [[CNT]], <i8 3, i8 3>
+; CHECK-NEXT:    ret <2 x i1> [[RES]]
+;
+  %or = or <2 x i8> %arg, <i8 32, i8 32>
+  %cnt = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %or, i1 true) nounwind readnone
+  %res = icmp eq <2 x i8> %cnt, <i8 3, i8 3>
+  ret <2 x i1> %res
 }
 
 define void @cmp.simplify(i32 %a, i32 %b, i1* %c) {
@@ -406,7 +501,7 @@ define <2 x i1> @cttz_cmp_vec(<2 x i32> %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> %a, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
-  %x = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %a, i1 false) nounwind readnone
+  %x = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %a, i1 false) nounwind readnone
   %cmp = icmp ne <2 x i32> %x, <i32 32, i32 32>
   ret <2 x i1> %cmp
 }
@@ -434,6 +529,14 @@ define i32 @ctlz_undef(i32 %Value) {
   ret i32 %ctlz
 }
 
+define <2 x i32> @ctlz_undef_vec(<2 x i32> %Value) {
+; CHECK-LABEL: @ctlz_undef_vec(
+; CHECK-NEXT:    ret <2 x i32> undef
+;
+  %ctlz = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> zeroinitializer, i1 true)
+  ret <2 x i32> %ctlz
+}
+
 define i32 @ctlz_make_undef(i32 %a) {
   %or = or i32 %a, 8
   %ctlz = tail call i32 @llvm.ctlz.i32(i32 %or, i1 false)
@@ -444,13 +547,31 @@ define i32 @ctlz_make_undef(i32 %a) {
 ; CHECK-NEXT: ret i32 %ctlz
 }
 
+define <2 x i32> @ctlz_make_undef_vec(<2 x i32> %a) {
+; CHECK-LABEL: @ctlz_make_undef_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[A:%.*]], <i32 8, i32 8>
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[OR]], i1 true)
+; CHECK-NEXT:    ret <2 x i32> [[CTLZ]]
+;
+  %or = or <2 x i32> %a, <i32 8, i32 8>
+  %ctlz = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %or, i1 false)
+  ret <2 x i32> %ctlz
+}
+
 define i32 @cttz_undef(i32 %Value) nounwind {
 ; CHECK-LABEL: @cttz_undef(
 ; CHECK-NEXT:    ret i32 undef
 ;
   %cttz = call i32 @llvm.cttz.i32(i32 0, i1 true)
   ret i32 %cttz
+}
 
+define <2 x i32> @cttz_undef_vec(<2 x i32> %Value) nounwind {
+; CHECK-LABEL: @cttz_undef_vec(
+; CHECK-NEXT:    ret <2 x i32> undef
+;
+  %cttz = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> zeroinitializer, i1 true)
+  ret <2 x i32> %cttz
 }
 
 define i32 @cttz_make_undef(i32 %a) {
@@ -463,6 +584,17 @@ define i32 @cttz_make_undef(i32 %a) {
 ; CHECK-NEXT: ret i32 %cttz
 }
 
+define <2 x i32> @cttz_make_undef_vec(<2 x i32> %a) {
+; CHECK-LABEL: @cttz_make_undef_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[A:%.*]], <i32 8, i32 8>
+; CHECK-NEXT:    [[CTTZ:%.*]] = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[OR]], i1 true)
+; CHECK-NEXT:    ret <2 x i32> [[CTTZ]]
+;
+  %or = or <2 x i32> %a, <i32 8, i32 8>
+  %cttz = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %or, i1 false)
+  ret <2 x i32> %cttz
+}
+
 define i32 @ctlz_select(i32 %Value) nounwind {
 ; CHECK-LABEL: @ctlz_select(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 %Value, i1 false)
@@ -472,7 +604,17 @@ define i32 @ctlz_select(i32 %Value) nounwind {
   %ctlz = call i32 @llvm.ctlz.i32(i32 %Value, i1 true)
   %s = select i1 %tobool, i32 %ctlz, i32 32
   ret i32 %s
+}
 
+define <2 x i32> @ctlz_select_vec(<2 x i32> %Value) nounwind {
+; CHECK-LABEL: @ctlz_select_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[VALUE:%.*]], i1 false)
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+;
+  %tobool = icmp ne <2 x i32> %Value, zeroinitializer
+  %ctlz = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %Value, i1 true)
+  %s = select <2 x i1> %tobool, <2 x i32> %ctlz, <2 x i32> <i32 32, i32 32>
+  ret <2 x i32> %s
 }
 
 define i32 @cttz_select(i32 %Value) nounwind {
@@ -484,7 +626,17 @@ define i32 @cttz_select(i32 %Value) nounwind {
   %cttz = call i32 @llvm.cttz.i32(i32 %Value, i1 true)
   %s = select i1 %tobool, i32 %cttz, i32 32
   ret i32 %s
+}
 
+define <2 x i32> @cttz_select_vec(<2 x i32> %Value) nounwind {
+; CHECK-LABEL: @cttz_select_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[VALUE:%.*]], i1 false)
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+;
+  %tobool = icmp ne <2 x i32> %Value, zeroinitializer
+  %cttz = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %Value, i1 true)
+  %s = select <2 x i1> %tobool, <2 x i32> %cttz, <2 x i32> <i32 32, i32 32>
+  ret <2 x i32> %s
 }
 
 define i1 @overflow_div_add(i32 %v1, i32 %v2) nounwind {

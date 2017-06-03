@@ -199,6 +199,16 @@ define i256 @test_cttz() {
   ret i256 %x
 }
 
+declare <2 x i256> @llvm.cttz.v2i256(<2 x i256> %src, i1 %is_zero_undef)
+
+define <2 x i256> @test_cttz_vec() {
+; CHECK-LABEL: @test_cttz_vec(
+; CHECK-NEXT:    ret <2 x i256> <i256 1, i256 1>
+;
+  %x = call <2 x i256> @llvm.cttz.v2i256(<2 x i256> <i256 10, i256 10>, i1 false)
+  ret <2 x i256> %x
+}
+
 declare i256 @llvm.ctpop.i256(i256 %src)
 
 define i256 @test_ctpop() {

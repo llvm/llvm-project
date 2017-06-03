@@ -66,7 +66,7 @@ entry:
 ; VI-DAG: v_cvt_f32_f16_sdwa v[[A_F32_0:[0-9]+]], v[[A_V2_F16]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; VI:      v_cvt_i32_f32_e32 v[[R_I16_1:[0-9]+]], v[[A_F32_1]]
 ; VI:      v_cvt_i32_f32_sdwa v[[R_I16_0:[0-9]+]], v[[A_F32_0]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
-; VI:     v_or_b32_sdwa v[[R_V2_I16:[0-9]+]], v[[R_I16_0]], v[[R_I16_1]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; VI:     v_or_b32_sdwa v[[R_V2_I16:[0-9]+]], v[[R_I16_1]], v[[R_I16_0]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 
 ; GCN:     buffer_store_dword v[[R_V2_I16]]
 ; GCN:     s_endpgm
