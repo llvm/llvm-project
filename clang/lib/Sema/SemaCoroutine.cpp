@@ -832,6 +832,12 @@ bool CoroutineStmtBuilder::buildDependentStatements() {
   return this->IsValid;
 }
 
+bool CoroutineStmtBuilder::buildParameterMoves() {
+  assert(this->IsValid && "coroutine already invalid");
+  assert(this->ParamMoves.empty() && "param moves already built");
+  return this->IsValid = makeParamMoves();
+}
+
 bool CoroutineStmtBuilder::makePromiseStmt() {
   // Form a declaration statement for the promise declaration, so that AST
   // visitors can more easily find it.
@@ -1244,14 +1250,13 @@ static Expr *castForMoving(Sema &S, Expr *E, QualType T = QualType()) {
       .get();
 }
 
+
 /// \brief Build a variable declaration for move parameter.
 static VarDecl *buildVarDecl(Sema &S, SourceLocation Loc, QualType Type,
-                             StringRef Name) {
-  DeclContext *DC = S.CurContext;
-  IdentifierInfo *II = &S.PP.getIdentifierTable().get(Name);
+                             IdentifierInfo *II) {
   TypeSourceInfo *TInfo = S.Context.getTrivialTypeSourceInfo(Type, Loc);
   VarDecl *Decl =
-      VarDecl::Create(S.Context, DC, Loc, Loc, II, Type, TInfo, SC_None);
+      VarDecl::Create(S.Context, S.CurContext, Loc, Loc, II, Type, TInfo, SC_None);
   Decl->setImplicit();
   return Decl;
 }
@@ -1264,9 +1269,6 @@ bool CoroutineStmtBuilder::makeParamMoves() {
 
     // No need to copy scalars, llvm will take care of them.
     if (Ty->getAsCXXRecordDecl()) {
-      if (!paramDecl->getIdentifier())
-        continue;
-
       ExprResult ParamRef =
           S.BuildDeclRefExpr(paramDecl, paramDecl->getType(),
                              ExprValueKind::VK_LValue, Loc); // FIXME: scope?
@@ -1275,8 +1277,7 @@ bool CoroutineStmtBuilder::makeParamMoves() {
 
       Expr *RCast = castForMoving(S, ParamRef.get());
 
-      auto D = buildVarDecl(S, Loc, Ty, paramDecl->getIdentifier()->getName());
-
+      auto D = buildVarDecl(S, Loc, Ty, paramDecl->getIdentifier());
       S.AddInitializerToDecl(D, RCast, /*DirectInit=*/true);
 
       // Convert decl to a statement.

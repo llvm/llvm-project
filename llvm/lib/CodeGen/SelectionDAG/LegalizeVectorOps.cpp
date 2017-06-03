@@ -225,6 +225,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
           }
           return TranslateLegalizeResults(Op, Lowered);
         }
+        LLVM_FALLTHROUGH;
       case TargetLowering::Expand:
         Changed = true;
         return LegalizeOp(ExpandLoad(Op));

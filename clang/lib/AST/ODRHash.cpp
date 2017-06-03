@@ -128,25 +128,7 @@ void ODRHash::AddTemplateName(TemplateName Name) {
   }
 }
 
-void ODRHash::AddTemplateArgument(TemplateArgument TA) {
-  auto Kind = TA.getKind();
-  ID.AddInteger(Kind);
-
-  switch (Kind) {
-  case TemplateArgument::Null:
-  case TemplateArgument::Declaration:
-  case TemplateArgument::NullPtr:
-  case TemplateArgument::Integral:
-  case TemplateArgument::Template:
-  case TemplateArgument::TemplateExpansion:
-  case TemplateArgument::Expression:
-  case TemplateArgument::Pack:
-    break;
-  case TemplateArgument::Type:
-    AddQualType(TA.getAsType());
-    break;
-  }
-}
+void ODRHash::AddTemplateArgument(TemplateArgument TA) {}
 void ODRHash::AddTemplateParameterList(const TemplateParameterList *TPL) {}
 
 void ODRHash::clear() {

@@ -140,6 +140,9 @@ namespace llvm {
   /// Greedy register allocator.
   extern char &RAGreedyID;
 
+  /// Basic register allocator.
+  extern char &RABasicID;
+
   /// VirtRegRewriter pass. Rewrite virtual registers to physical registers as
   /// assigned in VirtRegMap.
   extern char &VirtRegRewriterID;

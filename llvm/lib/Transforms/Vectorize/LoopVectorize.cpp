@@ -4779,6 +4779,7 @@ void InnerLoopVectorizer::vectorizeInstruction(Instruction &I) {
       scalarizeInstruction(&I, true);
       break;
     }
+    LLVM_FALLTHROUGH;
   case Instruction::Add:
   case Instruction::FAdd:
   case Instruction::Sub:
@@ -7396,6 +7397,7 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       // likely.
       return Cost / getReciprocalPredBlockProb();
     }
+    LLVM_FALLTHROUGH;
   case Instruction::Add:
   case Instruction::FAdd:
   case Instruction::Sub:

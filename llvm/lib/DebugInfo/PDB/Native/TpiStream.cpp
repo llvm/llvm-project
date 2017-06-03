@@ -32,8 +32,7 @@ using namespace llvm::support;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-TpiStream::TpiStream(const PDBFile &File,
-                     std::unique_ptr<MappedBlockStream> Stream)
+TpiStream::TpiStream(PDBFile &File, std::unique_ptr<MappedBlockStream> Stream)
     : Pdb(File), Stream(std::move(Stream)) {}
 
 TpiStream::~TpiStream() = default;
@@ -77,7 +76,8 @@ Error TpiStream::reload() {
                                   "Invalid TPI hash stream index.");
 
     auto HS = MappedBlockStream::createIndexedStream(
-        Pdb.getMsfLayout(), Pdb.getMsfBuffer(), Header->HashStreamIndex);
+        Pdb.getMsfLayout(), Pdb.getMsfBuffer(), Header->HashStreamIndex,
+        Pdb.getAllocator());
     BinaryStreamReader HSR(*HS);
 
     // There should be a hash value for every type record, or no hashes at all.

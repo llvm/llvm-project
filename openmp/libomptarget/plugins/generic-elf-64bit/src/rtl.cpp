@@ -301,7 +301,9 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
 
   DP("Running entry point at " DPxMOD "...\n", DPxPTR(tgt_entry_ptr));
 
-  ffi_call(&cif, FFI_FN(tgt_entry_ptr), NULL, &args[0]);
+  void (*entry)(void);
+  *((void**) &entry) = tgt_entry_ptr;
+  ffi_call(&cif, entry, NULL, &args[0]);
   return OFFLOAD_SUCCESS;
 }
 

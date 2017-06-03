@@ -1,12 +1,13 @@
 // This test checks that the implementation of use-after-return
 // is async-signal-safe.
-// RUN: %clangxx_asan -O1 %s -o %t -pthread && %run %t
+// RUN: %clangxx_asan -std=c++11 -O1 %s -o %t -pthread && %run %t
 // REQUIRES: stable-runtime
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
 #include <pthread.h>
+#include <initializer_list>
 
 int *g;
 int n_signals;
@@ -17,7 +18,6 @@ void SignalHandler(int, siginfo_t*, void*) {
   int local;
   g = &local;
   n_signals++;
-  // printf("s: %p\n", &local);
 }
 
 static void EnableSigprof(Sigaction SignalHandler) {
@@ -49,22 +49,29 @@ void RecursiveFunction(int depth) {
   RecursiveFunction(depth - 1);
 }
 
-void *Thread(void *) {
-  RecursiveFunction(18);
+void *FastThread(void *) {
+  RecursiveFunction(1);
+  return NULL;
+}
+
+void *SlowThread(void *) {
+  RecursiveFunction(1);
   return NULL;
 }
 
 int main(int argc, char **argv) {
   EnableSigprof(SignalHandler);
 
-  for (int i = 0; i < 4; i++) {
-    fprintf(stderr, ".");
-    const int kNumThread = sizeof(void*) == 8 ? 16 : 8;
-    pthread_t t[kNumThread];
-    for (int i = 0; i < kNumThread; i++)
-      pthread_create(&t[i], 0, Thread, 0);
-    for (int i = 0; i < kNumThread; i++)
-      pthread_join(t[i], 0);
+  for (auto Thread : {&FastThread, &SlowThread}) {
+    for (int i = 0; i < 1000; i++) {
+      fprintf(stderr, ".");
+      const int kNumThread = sizeof(void*) == 8 ? 32 : 8;
+      pthread_t t[kNumThread];
+      for (int i = 0; i < kNumThread; i++)
+        pthread_create(&t[i], 0, Thread, 0);
+      for (int i = 0; i < kNumThread; i++)
+        pthread_join(t[i], 0);
+    }
+    fprintf(stderr, "\n");
   }
-  fprintf(stderr, "\n");
 }

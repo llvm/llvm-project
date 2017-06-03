@@ -93,3 +93,37 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
   // CHECK-NEXT: call void @_ZN8MoveOnlyD1Ev(%struct.MoveOnly* %[[MoCopy]]
   // CHECK-NEXT: call i8* @llvm.coro.free(
 }
+
+// CHECK-LABEL: void @_Z16dependent_paramsI1A1BEvT_T0_S3_(%struct.A* %x, %struct.B*, %struct.B* %y)
+template <typename T, typename U>
+void dependent_params(T x, U, U y) {
+  // CHECK: %[[x_copy:.+]] = alloca %struct.A
+  // CHECK-NEXT: %[[unnamed_copy:.+]] = alloca %struct.B
+  // CHECK-NEXT: %[[y_copy:.+]] = alloca %struct.B
+
+  // CHECK: call i8* @llvm.coro.begin
+  // CHECK-NEXT: call void @_ZN1AC1EOS_(%struct.A* %[[x_copy]], %struct.A* dereferenceable(512) %x)
+  // CHECK-NEXT: call void @_ZN1BC1EOS_(%struct.B* %[[unnamed_copy]], %struct.B* dereferenceable(512) %0)
+  // CHECK-NEXT: call void @_ZN1BC1EOS_(%struct.B* %[[y_copy]], %struct.B* dereferenceable(512) %y)
+  // CHECK-NEXT: invoke void @_ZNSt12experimental16coroutine_traitsIJv1A1BS2_EE12promise_typeC1Ev(
+
+  co_return;
+}
+
+struct A {
+  int WontFitIntoRegisterForSure[128];
+  A();
+  A(A&&) noexcept;
+  ~A();
+};
+
+struct B {
+  int WontFitIntoRegisterForSure[128];
+  B();
+  B(B&&) noexcept;
+  ~B();
+};
+
+void call_dependent_params() {
+  dependent_params(A{}, B{}, B{});
+}

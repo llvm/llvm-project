@@ -34,8 +34,7 @@ class TpiStream {
   friend class TpiStreamBuilder;
 
 public:
-  TpiStream(const PDBFile &File,
-            std::unique_ptr<msf::MappedBlockStream> Stream);
+  TpiStream(PDBFile &File, std::unique_ptr<msf::MappedBlockStream> Stream);
   ~TpiStream();
   Error reload();
 
@@ -61,7 +60,7 @@ public:
   Error commit();
 
 private:
-  const PDBFile &Pdb;
+  PDBFile &Pdb;
   std::unique_ptr<msf::MappedBlockStream> Stream;
 
   std::unique_ptr<codeview::LazyRandomTypeCollection> Types;

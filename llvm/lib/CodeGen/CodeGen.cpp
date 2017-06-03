@@ -77,6 +77,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializePostRASchedulerPass(Registry);
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
   initializeProcessImplicitDefsPass(Registry);
+  initializeRABasicPass(Registry);
   initializeRAGreedyPass(Registry);
   initializeRegisterCoalescerPass(Registry);
   initializeRenameIndependentSubregsPass(Registry);

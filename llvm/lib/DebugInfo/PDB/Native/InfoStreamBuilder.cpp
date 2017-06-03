@@ -50,8 +50,8 @@ Error InfoStreamBuilder::finalizeMsfLayout() {
 
 Error InfoStreamBuilder::commit(const msf::MSFLayout &Layout,
                                 WritableBinaryStreamRef Buffer) const {
-  auto InfoS =
-      WritableMappedBlockStream::createIndexedStream(Layout, Buffer, StreamPDB);
+  auto InfoS = WritableMappedBlockStream::createIndexedStream(
+      Layout, Buffer, StreamPDB, Msf.getAllocator());
   BinaryStreamWriter Writer(*InfoS);
 
   InfoStreamHeader H;

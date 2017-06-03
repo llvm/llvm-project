@@ -818,7 +818,7 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
   SI.GCTransitionArgs =
       ArrayRef<const Use>(ISP.gc_args_begin(), ISP.gc_args_end());
   SI.ID = ISP.getID();
-  SI.DeoptState = ArrayRef<const Use>(ISP.vm_state_begin(), ISP.vm_state_end());
+  SI.DeoptState = ArrayRef<const Use>(ISP.deopt_begin(), ISP.deopt_end());
   SI.StatepointFlags = ISP.getFlags();
   SI.NumPatchBytes = ISP.getNumPatchBytes();
   SI.EHPadBB = EHPadBB;

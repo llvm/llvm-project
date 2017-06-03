@@ -198,13 +198,12 @@ void LivePhysRegs::addLiveOutsNoPristines(const MachineBasicBlock &MBB) {
 }
 
 void LivePhysRegs::addLiveOuts(const MachineBasicBlock &MBB) {
+  const MachineFunction &MF = *MBB.getParent();
   if (!MBB.succ_empty()) {
-    const MachineFunction &MF = *MBB.getParent();
     addPristines(*this, MF);
     addLiveOutsNoPristines(MBB);
   } else if (MBB.isReturnBlock()) {
     // For the return block: Add all callee saved registers.
-    const MachineFunction &MF = *MBB.getParent();
     const MachineFrameInfo &MFI = MF.getFrameInfo();
     if (MFI.isCalleeSavedInfoValid())
       addCalleeSavedRegs(*this, MF);

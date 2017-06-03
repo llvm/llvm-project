@@ -16999,7 +16999,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Op1 = Op.getOperand(1);
   SDValue CC = Op.getOperand(2);
   MVT VT = Op.getSimpleValueType();
-  ISD::CondCode SetCCOpcode = cast<CondCodeSDNode>(CC)->get();
+  ISD::CondCode Cond = cast<CondCodeSDNode>(CC)->get();
   bool isFP = Op.getOperand(1).getSimpleValueType().isFloatingPoint();
   SDLoc dl(Op);
 
@@ -17026,18 +17026,18 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     // TODO: This can be avoided if Intel (and only Intel as of 2016) AVX is
     // available.
     SDValue Cmp;
-    unsigned SSECC = translateX86FSETCC(SetCCOpcode, Op0, Op1);
+    unsigned SSECC = translateX86FSETCC(Cond, Op0, Op1);
     if (SSECC == 8) {
       // LLVM predicate is SETUEQ or SETONE.
       unsigned CC0, CC1;
       unsigned CombineOpc;
-      if (SetCCOpcode == ISD::SETUEQ) {
+      if (Cond == ISD::SETUEQ) {
         CC0 = 3; // UNORD
         CC1 = 0; // EQ
         CombineOpc = Opc == X86ISD::CMPP ? static_cast<unsigned>(X86ISD::FOR) :
                                            static_cast<unsigned>(ISD::OR);
       } else {
-        assert(SetCCOpcode == ISD::SETONE);
+        assert(Cond == ISD::SETONE);
         CC0 = 7; // ORD
         CC1 = 4; // NEQ
         CombineOpc = Opc == X86ISD::CMPP ? static_cast<unsigned>(X86ISD::FAND) :
@@ -17084,7 +17084,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     // 2. The original operand type has been promoted to a 256-bit vector.
     //
     // Note that condition 2. only applies for AVX targets.
-    SDValue NewOp = DAG.getSetCC(dl, VTOp0, Op0, Op1, SetCCOpcode);
+    SDValue NewOp = DAG.getSetCC(dl, VTOp0, Op0, Op1, Cond);
     return DAG.getZExtOrTrunc(NewOp, dl, VT);
   }
 
@@ -17124,7 +17124,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
        VT == MVT::v4i32 || VT == MVT::v2i64) && Subtarget.hasXOP()) {
     // Translate compare code to XOP PCOM compare mode.
     unsigned CmpMode = 0;
-    switch (SetCCOpcode) {
+    switch (Cond) {
     default: llvm_unreachable("Unexpected SETCC condition");
     case ISD::SETULT:
     case ISD::SETLT: CmpMode = 0x00; break;
@@ -17139,8 +17139,8 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     }
 
     // Are we comparing unsigned or signed integers?
-    unsigned Opc = ISD::isUnsignedIntSetCC(SetCCOpcode)
-      ? X86ISD::VPCOMU : X86ISD::VPCOM;
+    unsigned Opc =
+        ISD::isUnsignedIntSetCC(Cond) ? X86ISD::VPCOMU : X86ISD::VPCOM;
 
     return DAG.getNode(Opc, dl, VT, Op0, Op1,
                        DAG.getConstant(CmpMode, dl, MVT::i8));
@@ -17149,35 +17149,22 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   // We are handling one of the integer comparisons here. Since SSE only has
   // GT and EQ comparisons for integer, swapping operands and multiple
   // operations may be required for some comparisons.
-  unsigned Opc;
-  bool Swap = false, Invert = false, FlipSigns = false, MinMax = false;
-  bool Subus = false;
-
-  switch (SetCCOpcode) {
-  default: llvm_unreachable("Unexpected SETCC condition");
-  case ISD::SETNE:  Invert = true; LLVM_FALLTHROUGH;
-  case ISD::SETEQ:  Opc = X86ISD::PCMPEQ; break;
-  case ISD::SETLT:  Swap = true; LLVM_FALLTHROUGH;
-  case ISD::SETGT:  Opc = X86ISD::PCMPGT; break;
-  case ISD::SETGE:  Swap = true; LLVM_FALLTHROUGH;
-  case ISD::SETLE:  Opc = X86ISD::PCMPGT;
-                    Invert = true; break;
-  case ISD::SETULT: Swap = true; LLVM_FALLTHROUGH;
-  case ISD::SETUGT: Opc = X86ISD::PCMPGT;
-                    FlipSigns = true; break;
-  case ISD::SETUGE: Swap = true; LLVM_FALLTHROUGH;
-  case ISD::SETULE: Opc = X86ISD::PCMPGT;
-                    FlipSigns = true; Invert = true; break;
-  }
+  unsigned Opc = (Cond == ISD::SETEQ || Cond == ISD::SETNE) ? X86ISD::PCMPEQ
+                                                            : X86ISD::PCMPGT;
+  bool Swap = Cond == ISD::SETLT || Cond == ISD::SETULT ||
+              Cond == ISD::SETGE || Cond == ISD::SETUGE;
+  bool Invert = Cond == ISD::SETNE ||
+                (Cond != ISD::SETEQ && ISD::isTrueWhenEqual(Cond));
+  bool FlipSigns = ISD::isUnsignedIntSetCC(Cond);
 
   // Special case: Use min/max operations for SETULE/SETUGE
   MVT VET = VT.getVectorElementType();
   bool HasMinMax =
       (Subtarget.hasSSE41() && (VET >= MVT::i8 && VET <= MVT::i32)) ||
       (Subtarget.hasSSE2() && (VET == MVT::i8));
-
+  bool MinMax = false;
   if (HasMinMax) {
-    switch (SetCCOpcode) {
+    switch (Cond) {
     default: break;
     case ISD::SETULE: Opc = ISD::UMIN; MinMax = true; break;
     case ISD::SETUGE: Opc = ISD::UMAX; MinMax = true; break;
@@ -17188,12 +17175,13 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   bool HasSubus = Subtarget.hasSSE2() && (VET == MVT::i8 || VET == MVT::i16);
+  bool Subus = false;
   if (!MinMax && HasSubus) {
     // As another special case, use PSUBUS[BW] when it's profitable. E.g. for
     // Op0 u<= Op1:
     //   t = psubus Op0, Op1
     //   pcmpeq t, <0..0>
-    switch (SetCCOpcode) {
+    switch (Cond) {
     default: break;
     case ISD::SETULT: {
       // If the comparison is against a constant we can turn this into a
