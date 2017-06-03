@@ -4749,56 +4749,18 @@ static Value *getReductionValue(const DominatorTree *DT, PHINode *P,
   return nullptr;
 }
 
-namespace {
-/// Tracks instructons and its children.
-class WeakTrackingVHWithLevel final : public CallbackVH {
-  /// Operand index of the instruction currently beeing analized.
-  unsigned Level = 0;
-  /// Is this the instruction that should be vectorized, or are we now
-  /// processing children (i.e. operands of this instruction) for potential
-  /// vectorization?
-  bool IsInitial = true;
-
-public:
-  explicit WeakTrackingVHWithLevel() = default;
-  WeakTrackingVHWithLevel(Value *V) : CallbackVH(V){};
-  /// Restart children analysis each time it is repaced by the new instruction.
-  void allUsesReplacedWith(Value *New) override {
-    setValPtr(New);
-    Level = 0;
-    IsInitial = true;
-  }
-  /// Check if the instruction was not deleted during vectorization.
-  bool isValid() const { return !getValPtr(); }
-  /// Is the istruction itself must be vectorized?
-  bool isInitial() const { return IsInitial; }
-  /// Try to vectorize children.
-  void clearInitial() { IsInitial = false; }
-  /// Are all children processed already?
-  bool isFinal() const {
-    assert(getValPtr() &&
-           (isa<Instruction>(getValPtr()) &&
-            cast<Instruction>(getValPtr())->getNumOperands() >= Level));
-    return getValPtr() &&
-           cast<Instruction>(getValPtr())->getNumOperands() == Level;
-  }
-  /// Get next child operation.
-  Value *nextOperand() {
-    assert(getValPtr() && isa<Instruction>(getValPtr()) &&
-           cast<Instruction>(getValPtr())->getNumOperands() > Level);
-    return cast<Instruction>(getValPtr())->getOperand(Level++);
-  }
-  virtual ~WeakTrackingVHWithLevel() = default;
-};
-} // namespace
-
-/// \brief Attempt to reduce a horizontal reduction.
-/// If it is legal to match a horizontal reduction feeding
-/// the phi node P with reduction operators Root in a basic block BB, then check
-/// if it can be done.
-/// \returns true if a horizontal reduction was matched and reduced.
-/// \returns false if a horizontal reduction was not matched.
-static bool canBeVectorized(
+/// Attempt to reduce a horizontal reduction.
+/// If it is legal to match a horizontal reduction feeding the phi node \a P
+/// with reduction operators \a Root (or one of its operands) in a basic block
+/// \a BB, then check if it can be done. If horizontal reduction is not found
+/// and root instruction is a binary operation, vectorization of the operands is
+/// attempted.
+/// \returns true if a horizontal reduction was matched and reduced or operands
+/// of one of the binary instruction were vectorized.
+/// \returns false if a horizontal reduction was not matched (or not possible)
+/// or no vectorization of any binary operation feeding \a Root instruction was
+/// performed.
+static bool tryToVectorizeHorReductionOrInstOperands(
     PHINode *P, Instruction *Root, BasicBlock *BB, BoUpSLP &R,
     TargetTransformInfo *TTI,
     const function_ref<bool(BinaryOperator *, BoUpSLP &)> Vectorize) {
@@ -4810,56 +4772,62 @@ static bool canBeVectorized(
 
   if (Root->getParent() != BB)
     return false;
-  SmallVector<WeakTrackingVHWithLevel, 8> Stack(1, Root);
+  // Start analysis starting from Root instruction. If horizontal reduction is
+  // found, try to vectorize it. If it is not a horizontal reduction or
+  // vectorization is not possible or not effective, and currently analyzed
+  // instruction is a binary operation, try to vectorize the operands, using
+  // pre-order DFS traversal order. If the operands were not vectorized, repeat
+  // the same procedure considering each operand as a possible root of the
+  // horizontal reduction.
+  // Interrupt the process if the Root instruction itself was vectorized or all
+  // sub-trees not higher that RecursionMaxDepth were analyzed/vectorized.
+  SmallVector<std::pair<WeakTrackingVH, unsigned>, 8> Stack(1, {Root, 0});
   SmallSet<Value *, 8> VisitedInstrs;
   bool Res = false;
   while (!Stack.empty()) {
-    Value *V = Stack.back();
-    if (!V) {
-      Stack.pop_back();
+    Value *V;
+    unsigned Level;
+    std::tie(V, Level) = Stack.pop_back_val();
+    if (!V)
       continue;
-    }
     auto *Inst = dyn_cast<Instruction>(V);
-    if (!Inst || isa<PHINode>(Inst)) {
-      Stack.pop_back();
+    if (!Inst || isa<PHINode>(Inst))
       continue;
-    }
-    if (Stack.back().isInitial()) {
-      Stack.back().clearInitial();
-      if (auto *BI = dyn_cast<BinaryOperator>(Inst)) {
-        HorizontalReduction HorRdx;
-        if (HorRdx.matchAssociativeReduction(P, BI)) {
-          if (HorRdx.tryToReduce(R, TTI)) {
-            Res = true;
-            P = nullptr;
-            continue;
-          }
-        }
-        if (P) {
-          Inst = dyn_cast<Instruction>(BI->getOperand(0));
-          if (Inst == P)
-            Inst = dyn_cast<Instruction>(BI->getOperand(1));
-          if (!Inst) {
-            P = nullptr;
-            continue;
-          }
+    if (auto *BI = dyn_cast<BinaryOperator>(Inst)) {
+      HorizontalReduction HorRdx;
+      if (HorRdx.matchAssociativeReduction(P, BI)) {
+        if (HorRdx.tryToReduce(R, TTI)) {
+          Res = true;
+          // Set P to nullptr to avoid re-analysis of phi node in
+          // matchAssociativeReduction function unless this is the root node.
+          P = nullptr;
+          continue;
         }
       }
-      P = nullptr;
-      if (Vectorize(dyn_cast<BinaryOperator>(Inst), R)) {
-        Res = true;
-        continue;
+      if (P) {
+        Inst = dyn_cast<Instruction>(BI->getOperand(0));
+        if (Inst == P)
+          Inst = dyn_cast<Instruction>(BI->getOperand(1));
+        if (!Inst) {
+          // Set P to nullptr to avoid re-analysis of phi node in
+          // matchAssociativeReduction function unless this is the root node.
+          P = nullptr;
+          continue;
+        }
       }
     }
-    if (Stack.back().isFinal()) {
-      Stack.pop_back();
+    // Set P to nullptr to avoid re-analysis of phi node in
+    // matchAssociativeReduction function unless this is the root node.
+    P = nullptr;
+    if (Vectorize(dyn_cast<BinaryOperator>(Inst), R)) {
+      Res = true;
       continue;
     }
 
-    if (auto *NextV = dyn_cast<Instruction>(Stack.back().nextOperand()))
-      if (NextV->getParent() == BB && VisitedInstrs.insert(NextV).second &&
-          Stack.size() < RecursionMaxDepth)
-        Stack.push_back(NextV);
+    // Try to vectorize operands.
+    if (++Level < RecursionMaxDepth)
+      for (auto *Op : Inst->operand_values())
+        Stack.emplace_back(Op, Level);
   }
   return Res;
 }
@@ -4876,10 +4844,10 @@ bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Value *V,
   if (!isa<BinaryOperator>(I))
     P = nullptr;
   // Try to match and vectorize a horizontal reduction.
-  return canBeVectorized(P, I, BB, R, TTI,
-                         [this](BinaryOperator *BI, BoUpSLP &R) -> bool {
-                           return tryToVectorize(BI, R);
-                         });
+  return tryToVectorizeHorReductionOrInstOperands(
+      P, I, BB, R, TTI, [this](BinaryOperator *BI, BoUpSLP &R) -> bool {
+        return tryToVectorize(BI, R);
+      });
 }
 
 bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {

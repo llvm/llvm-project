@@ -397,7 +397,7 @@ llvm::CodeViewYAML::convertSubsectionList(
     DebugStringTableSubsection &Strings) {
   std::vector<std::unique_ptr<DebugSubsection>> Result;
   if (Subsections.empty())
-    return Result;
+    return std::move(Result);
 
   auto Checksums = findChecksums(Subsections);
   if (!Checksums)

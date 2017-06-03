@@ -357,8 +357,8 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
   if (auto EC = finalize())
     return EC;
 
-  auto DbiS = WritableMappedBlockStream::createIndexedStream(Layout, MsfBuffer,
-                                                             StreamDBI);
+  auto DbiS = WritableMappedBlockStream::createIndexedStream(
+      Layout, MsfBuffer, StreamDBI, Allocator);
 
   BinaryStreamWriter Writer(*DbiS);
   if (auto EC = Writer.writeObject(*Header))
@@ -396,7 +396,7 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
     if (Stream.StreamNumber == kInvalidStreamIndex)
       continue;
     auto WritableStream = WritableMappedBlockStream::createIndexedStream(
-        Layout, MsfBuffer, Stream.StreamNumber);
+        Layout, MsfBuffer, Stream.StreamNumber, Allocator);
     BinaryStreamWriter DbgStreamWriter(*WritableStream);
     if (auto EC = DbgStreamWriter.writeArray(Stream.Data))
       return EC;

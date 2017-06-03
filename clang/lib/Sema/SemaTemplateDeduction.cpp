@@ -2383,7 +2383,8 @@ static Sema::TemplateDeductionResult ConvertDeducedTemplateArguments(
     bool HasDefaultArg = false;
     TemplateDecl *TD = dyn_cast<TemplateDecl>(Template);
     if (!TD) {
-      assert(isa<ClassTemplatePartialSpecializationDecl>(Template));
+      assert(isa<ClassTemplatePartialSpecializationDecl>(Template) ||
+             isa<VarTemplatePartialSpecializationDecl>(Template));
       return Sema::TDK_Incomplete;
     }
 

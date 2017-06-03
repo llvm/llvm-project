@@ -144,7 +144,7 @@ Error DbiModuleDescriptorBuilder::commit(BinaryStreamWriter &ModiWriter,
 
   if (Layout.ModDiStream != kInvalidStreamIndex) {
     auto NS = WritableMappedBlockStream::createIndexedStream(
-        MsfLayout, MsfBuffer, Layout.ModDiStream);
+        MsfLayout, MsfBuffer, Layout.ModDiStream, MSF.getAllocator());
     WritableBinaryStreamRef Ref(*NS);
     BinaryStreamWriter SymbolWriter(Ref);
     // Write the symbols.

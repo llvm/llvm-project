@@ -85,7 +85,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
 
   for (auto &Modi : DS.modules()) {
     auto ModStreamData = pdb::MappedBlockStream::createIndexedStream(
-      Modi.Info.getModuleStreamIndex(), *File);
+        Modi.Info.getModuleStreamIndex(), *File, File->getAllocator());
     if (!ModStreamData) {
       consumeError(ModStreamData.takeError());
       return 0;

@@ -18,7 +18,7 @@ fi
 # Filters
 # TODO: remove some of these filters
 COMMON_LINT_FILTER=-build/include,-build/header_guard,-legal/copyright,-whitespace/comments,-readability/casting,\
--build/namespaces
+-build/namespaces,-readability/braces
 ASAN_RTL_LINT_FILTER=${COMMON_LINT_FILTER},-runtime/int
 ASAN_TEST_LINT_FILTER=${COMMON_LINT_FILTER},-runtime/sizeof,-runtime/int,-runtime/printf,-runtime/threadsafe_fn
 ASAN_LIT_TEST_LINT_FILTER=${ASAN_TEST_LINT_FILTER},-whitespace/line_length

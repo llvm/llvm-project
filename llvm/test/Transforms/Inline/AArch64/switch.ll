@@ -1,5 +1,5 @@
-; RUN: opt < %s -inline -inline-threshold=20 -S -mtriple=aarch64-none-linux -inline-generic-switch-cost=true | FileCheck %s
-; RUN: opt < %s -passes='cgscc(inline)' -inline-threshold=20 -S -mtriple=aarch64-none-linux -inline-generic-switch-cost=true | FileCheck %s
+; RUN: opt < %s -inline -inline-threshold=20 -S -mtriple=aarch64-none-linux  | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline)' -inline-threshold=20 -S -mtriple=aarch64-none-linux | FileCheck %s
 
 define i32 @callee_range(i32 %a, i32* %P) {
   switch i32 %a, label %sw.default [

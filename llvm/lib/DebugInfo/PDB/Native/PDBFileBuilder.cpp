@@ -140,8 +140,8 @@ Error PDBFileBuilder::commit(StringRef Filename) {
   if (auto EC = Writer.writeArray(Layout.DirectoryBlocks))
     return EC;
 
-  auto DirStream =
-      WritableMappedBlockStream::createDirectoryStream(Layout, Buffer);
+  auto DirStream = WritableMappedBlockStream::createDirectoryStream(
+      Layout, Buffer, Allocator);
   BinaryStreamWriter DW(*DirStream);
   if (auto EC = DW.writeInteger<uint32_t>(Layout.StreamSizes.size()))
     return EC;
@@ -158,8 +158,8 @@ Error PDBFileBuilder::commit(StringRef Filename) {
   if (!ExpectedSN)
     return ExpectedSN.takeError();
 
-  auto NS = WritableMappedBlockStream::createIndexedStream(Layout, Buffer,
-                                                           *ExpectedSN);
+  auto NS = WritableMappedBlockStream::createIndexedStream(
+      Layout, Buffer, *ExpectedSN, Allocator);
   BinaryStreamWriter NSWriter(*NS);
   if (auto EC = Strings.commit(NSWriter))
     return EC;

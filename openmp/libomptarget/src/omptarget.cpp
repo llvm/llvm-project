@@ -314,34 +314,34 @@ void RTLsTy::LoadRTLs() {
     R.RTLName = Name;
 #endif
 
-    if (!(R.is_valid_binary = (RTLInfoTy::is_valid_binary_ty *)dlsym(
+    if (!(*((void**) &R.is_valid_binary) = dlsym(
               dynlib_handle, "__tgt_rtl_is_valid_binary")))
       continue;
-    if (!(R.number_of_devices = (RTLInfoTy::number_of_devices_ty *)dlsym(
+    if (!(*((void**) &R.number_of_devices) = dlsym(
               dynlib_handle, "__tgt_rtl_number_of_devices")))
       continue;
-    if (!(R.init_device = (RTLInfoTy::init_device_ty *)dlsym(
+    if (!(*((void**) &R.init_device) = dlsym(
               dynlib_handle, "__tgt_rtl_init_device")))
       continue;
-    if (!(R.load_binary = (RTLInfoTy::load_binary_ty *)dlsym(
+    if (!(*((void**) &R.load_binary) = dlsym(
               dynlib_handle, "__tgt_rtl_load_binary")))
       continue;
-    if (!(R.data_alloc = (RTLInfoTy::data_alloc_ty *)dlsym(
+    if (!(*((void**) &R.data_alloc) = dlsym(
               dynlib_handle, "__tgt_rtl_data_alloc")))
       continue;
-    if (!(R.data_submit = (RTLInfoTy::data_submit_ty *)dlsym(
+    if (!(*((void**) &R.data_submit) = dlsym(
               dynlib_handle, "__tgt_rtl_data_submit")))
       continue;
-    if (!(R.data_retrieve = (RTLInfoTy::data_retrieve_ty *)dlsym(
+    if (!(*((void**) &R.data_retrieve) = dlsym(
               dynlib_handle, "__tgt_rtl_data_retrieve")))
       continue;
-    if (!(R.data_delete = (RTLInfoTy::data_delete_ty *)dlsym(
+    if (!(*((void**) &R.data_delete) = dlsym(
               dynlib_handle, "__tgt_rtl_data_delete")))
       continue;
-    if (!(R.run_region = (RTLInfoTy::run_region_ty *)dlsym(
+    if (!(*((void**) &R.run_region) = dlsym(
               dynlib_handle, "__tgt_rtl_run_target_region")))
       continue;
-    if (!(R.run_team_region = (RTLInfoTy::run_team_region_ty *)dlsym(
+    if (!(*((void**) &R.run_team_region) = dlsym(
               dynlib_handle, "__tgt_rtl_run_target_team_region")))
       continue;
 

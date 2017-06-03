@@ -229,7 +229,8 @@ Error YAMLOutputStyle::dumpDbiStream() {
         continue;
 
       auto ModStreamData = msf::MappedBlockStream::createIndexedStream(
-          File.getMsfLayout(), File.getMsfBuffer(), ModiStream);
+          File.getMsfLayout(), File.getMsfBuffer(), ModiStream,
+          File.getAllocator());
 
       pdb::ModuleDebugStreamRef ModS(MI, std::move(ModStreamData));
       if (auto EC = ModS.reload())

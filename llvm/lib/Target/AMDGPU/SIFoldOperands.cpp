@@ -35,9 +35,12 @@ struct FoldCandidate {
   };
   unsigned char UseOpNo;
   MachineOperand::MachineOperandType Kind;
+  bool Commuted;
 
-  FoldCandidate(MachineInstr *MI, unsigned OpNo, MachineOperand *FoldOp) :
-    UseMI(MI), OpToFold(nullptr), UseOpNo(OpNo), Kind(FoldOp->getType()) {
+  FoldCandidate(MachineInstr *MI, unsigned OpNo, MachineOperand *FoldOp,
+                bool Commuted_ = false) :
+    UseMI(MI), OpToFold(nullptr), UseOpNo(OpNo), Kind(FoldOp->getType()),
+    Commuted(Commuted_) {
     if (FoldOp->isImm()) {
       ImmToFold = FoldOp->getImm();
     } else if (FoldOp->isFI()) {
@@ -58,6 +61,10 @@ struct FoldCandidate {
 
   bool isReg() const {
     return Kind == MachineOperand::MO_Register;
+  }
+
+  bool isCommuted() const {
+    return Commuted;
   }
 };
 
@@ -237,8 +244,13 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
         !TII->commuteInstruction(*MI, false, CommuteIdx0, CommuteIdx1))
       return false;
 
-    if (!TII->isOperandLegal(*MI, OpNo, OpToFold))
+    if (!TII->isOperandLegal(*MI, OpNo, OpToFold)) {
+      TII->commuteInstruction(*MI, false, CommuteIdx0, CommuteIdx1);
       return false;
+    }
+
+    FoldList.push_back(FoldCandidate(MI, OpNo, OpToFold, true));
+    return true;
   }
 
   FoldList.push_back(FoldCandidate(MI, OpNo, OpToFold));
@@ -699,6 +711,9 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
       DEBUG(dbgs() << "Folded source from " << MI << " into OpNo " <<
             static_cast<int>(Fold.UseOpNo) << " of " << *Fold.UseMI << '\n');
       tryFoldInst(TII, Fold.UseMI);
+    } else if (Fold.isCommuted()) {
+      // Restoring instruction's original operand order if fold has failed.
+      TII->commuteInstruction(*Fold.UseMI, false);
     }
   }
 }

@@ -293,6 +293,9 @@ def fsanitize_coverage_trace_gep
 def fsanitize_coverage_8bit_counters
     : Flag<["-"], "fsanitize-coverage-8bit-counters">,
       HelpText<"Enable frequency counters in sanitizer coverage">;
+def fsanitize_coverage_inline_8bit_counters
+    : Flag<["-"], "fsanitize-coverage-inline-8bit-counters">,
+      HelpText<"Enable inline 8-bit counters in sanitizer coverage">;
 def fsanitize_coverage_trace_pc
     : Flag<["-"], "fsanitize-coverage-trace-pc">,
       HelpText<"Enable PC tracing in sanitizer coverage">;

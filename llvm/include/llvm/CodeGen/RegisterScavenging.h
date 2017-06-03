@@ -204,6 +204,10 @@ private:
   void setLiveInsUsed(const MachineBasicBlock &MBB);
 };
 
+/// Replaces all frame index virtual registers with physical registers. Uses the
+/// register scavenger to find an appropriate register to use.
+void scavengeFrameVirtualRegs(MachineFunction &MF, RegScavenger &RS);
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_REGISTERSCAVENGING_H

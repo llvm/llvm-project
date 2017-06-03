@@ -304,6 +304,9 @@ int main(int argc, char **argv) {
   initializeScalarizeMaskedMemIntrinPass(*Registry);
   initializeExpandReductionsPass(*Registry);
 
+  // Initialize debugging passes.
+  initializeScavengerTestPass(*Registry);
+
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
