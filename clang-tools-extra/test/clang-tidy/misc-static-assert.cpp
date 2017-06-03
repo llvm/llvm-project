@@ -76,6 +76,9 @@ int main() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found assert() that could be
   // CHECK-FIXES: {{^  }}static_assert(ZERO_MACRO, "");
 
+  assert(!"Don't report me!");
+  // CHECK-FIXES: {{^  }}assert(!"Don't report me!");
+
   assert(0 && "Don't report me!");
   // CHECK-FIXES: {{^  }}assert(0 && "Don't report me!");
 

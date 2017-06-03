@@ -12,7 +12,7 @@
 // CHECK: @"\01l_OBJC_$_PROTOCOL_INSTANCE_METHODS_P" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_$_PROTOCOL_CLASS_METHODS_P" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_PROTOCOL_$_P" = weak hidden global {{.*}}, align 8
-// CHECK: @"\01l_OBJC_LABEL_PROTOCOL_$_P" = weak hidden global {{.*}} section "__DATA, __objc_protolist, coalesced, no_dead_strip", align 8
+// CHECK: @"\01l_OBJC_LABEL_PROTOCOL_$_P" = weak hidden global {{.*}} section "__DATA,__objc_protolist,coalesced,no_dead_strip", align 8
 // CHECK: @"\01l_OBJC_CLASS_PROTOCOLS_$_A" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_METACLASS_RO_$_A" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_$_INSTANCE_METHODS_A" = private global {{.*}} section "__DATA, __objc_const", align 8
@@ -23,14 +23,14 @@
 // CHECK: @"\01l_OBJC_$_CATEGORY_INSTANCE_METHODS_A_$_Cat" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_$_CATEGORY_CLASS_METHODS_A_$_Cat" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_$_CATEGORY_A_$_Cat" = private global {{.*}} section "__DATA, __objc_const", align 8
-// CHECK: @"OBJC_CLASSLIST_SUP_REFS_$_{{[0-9]*}}" = private global {{.*}} section "__DATA, __objc_superrefs, regular, no_dead_strip", align 8
-// CHECK: @OBJC_SELECTOR_REFERENCES_ = private externally_initialized global {{.*}} section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"
-// CHECK: @"OBJC_CLASSLIST_SUP_REFS_$_{{[\.0-9]*}}" = private global {{.*}} section "__DATA, __objc_superrefs, regular, no_dead_strip", align 8
+// CHECK: @"OBJC_CLASSLIST_SUP_REFS_$_{{[0-9]*}}" = private global {{.*}} section "__DATA,__objc_superrefs,regular,no_dead_strip", align 8
+// CHECK: @OBJC_SELECTOR_REFERENCES_ = private externally_initialized global {{.*}} section "__DATA,__objc_selrefs,literal_pointers,no_dead_strip"
+// CHECK: @"OBJC_CLASSLIST_SUP_REFS_$_{{[\.0-9]*}}" = private global {{.*}} section "__DATA,__objc_superrefs,regular,no_dead_strip", align 8
 // CHECK: @"OBJC_CLASS_$_B" = external global
-// CHECK: @"OBJC_CLASSLIST_REFERENCES_$_{{[0-9]*}}" = private global {{.*}} section "__DATA, __objc_classrefs, regular, no_dead_strip", align 8
-// CHECK: @"\01l_objc_msgSend_fixup_alloc" = weak hidden global {{.*}} section "__DATA, __objc_msgrefs, coalesced", align 16
-// CHECK: @"OBJC_LABEL_CLASS_$" = private global {{.*}} section "__DATA, __objc_classlist, regular, no_dead_strip", align 8
-// CHECK: @"OBJC_LABEL_CATEGORY_$" = private global {{.*}} section "__DATA, __objc_catlist, regular, no_dead_strip", align 8
+// CHECK: @"OBJC_CLASSLIST_REFERENCES_$_{{[0-9]*}}" = private global {{.*}} section "__DATA,__objc_classrefs,regular,no_dead_strip", align 8
+// CHECK: @"\01l_objc_msgSend_fixup_alloc" = weak hidden global {{.*}} section "__DATA,__objc_msgrefs,coalesced", align 16
+// CHECK: @"OBJC_LABEL_CLASS_$" = private global {{.*}} section "__DATA,__objc_classlist,regular,no_dead_strip", align 8
+// CHECK: @"OBJC_LABEL_CATEGORY_$" = private global {{.*}} section "__DATA,__objc_catlist,regular,no_dead_strip", align 8
 // CHECK: @objc_msgSend_fpret(
 // CHECK: @objc_msgSend_fixup(
 

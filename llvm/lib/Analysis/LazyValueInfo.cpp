@@ -664,7 +664,7 @@ namespace {
                              BasicBlock *BB);
   bool solveBlockValueBinaryOp(LVILatticeVal &BBLV, BinaryOperator *BBI,
                                BasicBlock *BB);
-  bool solveBlockValueCast(LVILatticeVal &BBLV, Instruction *BBI,
+  bool solveBlockValueCast(LVILatticeVal &BBLV, CastInst *CI,
                            BasicBlock *BB);
   void intersectAssumeOrGuardBlockValueConstantRange(Value *Val,
                                                      LVILatticeVal &BBLV,
@@ -849,9 +849,9 @@ bool LazyValueInfoImpl::solveBlockValueImpl(LVILatticeVal &Res,
     return true;
   }
   if (BBI->getType()->isIntegerTy()) {
-    if (isa<CastInst>(BBI))
-      return solveBlockValueCast(Res, BBI, BB);
-    
+    if (auto *CI = dyn_cast<CastInst>(BBI))
+      return solveBlockValueCast(Res, CI, BB);
+
     BinaryOperator *BO = dyn_cast<BinaryOperator>(BBI);
     if (BO && isa<ConstantInt>(BO->getOperand(1)))
       return solveBlockValueBinaryOp(Res, BO, BB);
@@ -1168,9 +1168,9 @@ bool LazyValueInfoImpl::solveBlockValueSelect(LVILatticeVal &BBLV,
 }
 
 bool LazyValueInfoImpl::solveBlockValueCast(LVILatticeVal &BBLV,
-                                             Instruction *BBI,
-                                             BasicBlock *BB) {
-  if (!BBI->getOperand(0)->getType()->isSized()) {
+                                            CastInst *CI,
+                                            BasicBlock *BB) {
+  if (!CI->getOperand(0)->getType()->isSized()) {
     // Without knowing how wide the input is, we can't analyze it in any useful
     // way.
     BBLV = LVILatticeVal::getOverdefined();
@@ -1180,7 +1180,7 @@ bool LazyValueInfoImpl::solveBlockValueCast(LVILatticeVal &BBLV,
   // Filter out casts we don't know how to reason about before attempting to
   // recurse on our operand.  This can cut a long search short if we know we're
   // not going to be able to get any useful information anways.
-  switch (BBI->getOpcode()) {
+  switch (CI->getOpcode()) {
   case Instruction::Trunc:
   case Instruction::SExt:
   case Instruction::ZExt:
@@ -1197,30 +1197,29 @@ bool LazyValueInfoImpl::solveBlockValueCast(LVILatticeVal &BBLV,
   // Figure out the range of the LHS.  If that fails, we still apply the
   // transfer rule on the full set since we may be able to locally infer
   // interesting facts.
-  if (!hasBlockValue(BBI->getOperand(0), BB))
-    if (pushBlockValue(std::make_pair(BB, BBI->getOperand(0))))
+  if (!hasBlockValue(CI->getOperand(0), BB))
+    if (pushBlockValue(std::make_pair(BB, CI->getOperand(0))))
       // More work to do before applying this transfer rule.
       return false;
 
   const unsigned OperandBitWidth =
-    DL.getTypeSizeInBits(BBI->getOperand(0)->getType());
+    DL.getTypeSizeInBits(CI->getOperand(0)->getType());
   ConstantRange LHSRange = ConstantRange(OperandBitWidth);
-  if (hasBlockValue(BBI->getOperand(0), BB)) {
-    LVILatticeVal LHSVal = getBlockValue(BBI->getOperand(0), BB);
-    intersectAssumeOrGuardBlockValueConstantRange(BBI->getOperand(0), LHSVal,
-                                                  BBI);
+  if (hasBlockValue(CI->getOperand(0), BB)) {
+    LVILatticeVal LHSVal = getBlockValue(CI->getOperand(0), BB);
+    intersectAssumeOrGuardBlockValueConstantRange(CI->getOperand(0), LHSVal,
+                                                  CI);
     if (LHSVal.isConstantRange())
       LHSRange = LHSVal.getConstantRange();
   }
 
-  const unsigned ResultBitWidth =
-    cast<IntegerType>(BBI->getType())->getBitWidth();
+  const unsigned ResultBitWidth = CI->getType()->getIntegerBitWidth();
 
   // NOTE: We're currently limited by the set of operations that ConstantRange
   // can evaluate symbolically.  Enhancing that set will allows us to analyze
   // more definitions.
-  auto CastOp = (Instruction::CastOps) BBI->getOpcode();
-  BBLV = LVILatticeVal::getRange(LHSRange.castOp(CastOp, ResultBitWidth));
+  BBLV = LVILatticeVal::getRange(LHSRange.castOp(CI->getOpcode(),
+                                                 ResultBitWidth));
   return true;
 }
 
