@@ -259,6 +259,7 @@ static bool InTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
     if (hasVectorInstrinsicScalarOpd(ID, 1)) {
       return (CI->getArgOperand(1) == Scalar);
     }
+    LLVM_FALLTHROUGH;
   }
   default:
     return false;

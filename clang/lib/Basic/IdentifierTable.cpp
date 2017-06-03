@@ -551,6 +551,7 @@ ObjCInstanceTypeFamily Selector::getInstTypeMethodFamily(Selector sel) {
     case 's':
       if (startsWithWord(name, "shared")) return OIT_ReturnsSelf;
       if (startsWithWord(name, "standard")) return OIT_Singleton;
+      break;
     case 'i':
       if (startsWithWord(name, "init")) return OIT_Init;
     default:
