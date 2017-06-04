@@ -1,7 +1,7 @@
 // Tests -fsanitize-coverage=inline-8bit-counters
 //
 // REQUIRES: has_sancovcc,stable-runtime
-// UNSUPPORTED: i386-darwin
+// UNSUPPORTED: i386-darwin, x86_64-darwin
 //
 // RUN: %clangxx -O0 %s -fsanitize-coverage=inline-8bit-counters 2>&1
 
