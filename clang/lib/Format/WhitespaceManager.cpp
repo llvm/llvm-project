@@ -111,7 +111,7 @@ void WhitespaceManager::calculateLineBreakInformation() {
 
     // If there are multiple changes in this token, sum up all the changes until
     // the end of the line.
-    if (Changes[i - 1].IsInsideToken)
+    if (Changes[i - 1].IsInsideToken && Changes[i - 1].NewlinesBefore == 0)
       LastOutsideTokenChange->TokenLength +=
           Changes[i - 1].TokenLength + Changes[i - 1].Spaces;
     else
@@ -434,7 +434,9 @@ void WhitespaceManager::alignTrailingComments() {
       continue;
 
     unsigned ChangeMinColumn = Changes[i].StartOfTokenColumn;
-    unsigned ChangeMaxColumn = Style.ColumnLimit - Changes[i].TokenLength;
+    unsigned ChangeMaxColumn = Style.ColumnLimit >= Changes[i].TokenLength
+                                   ? Style.ColumnLimit - Changes[i].TokenLength
+                                   : ChangeMinColumn;
 
     // If we don't create a replacement for this change, we have to consider
     // it to be immovable.
