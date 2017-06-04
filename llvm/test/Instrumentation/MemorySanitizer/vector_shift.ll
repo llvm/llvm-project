@@ -1,5 +1,5 @@
 ; RUN: opt < %s -msan -msan-check-access-address=0 -S | FileCheck %s
-; REQUIRES: x86
+; REQUIRES: x86-registered-target
 
 ; Test instrumentation of vector shift instructions.
 
