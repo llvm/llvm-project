@@ -278,9 +278,9 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(<2 x half> addrspa
 }
 
 ; GCN-LABEL: {{^}}s_test_canonicalize_var_v2f16:
-; VI: v_mul_f16_e64 [[REG0:v[0-9]+]], 1.0, {{s[0-9]+}}
-; VI-DAG: v_mul_f16_e64 [[REG1:v[0-9]+]], 1.0, {{s[0-9]+}}
-; VI-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 16,
+; VI: v_mov_b32_e32 [[ONE:v[0-9]+]], 0x3c00
+; VI: v_mul_f16_sdwa [[REG0:v[0-9]+]], [[ONE]], {{v[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI: v_mul_f16_e64 [[REG1:v[0-9]+]], 1.0, {{s[0-9]+}}
 ; VI-NOT: v_and_b32
 
 ; GFX9: v_pk_mul_f16 [[REG:v[0-9]+]], 1.0, {{s[0-9]+$}}

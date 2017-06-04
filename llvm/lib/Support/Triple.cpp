@@ -877,6 +877,10 @@ std::string Triple::normalize(StringRef Str) {
     }
   }
 
+  // SUSE uses "gnueabi" to mean "gnueabihf"
+  if (Vendor == Triple::SUSE && Environment == llvm::Triple::GNUEABI)
+    Components[3] = "gnueabihf";
+
   if (OS == Triple::Win32) {
     Components.resize(4);
     Components[2] = "windows";

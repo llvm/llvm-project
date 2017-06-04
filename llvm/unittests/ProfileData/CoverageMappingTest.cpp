@@ -584,6 +584,6 @@ INSTANTIATE_TEST_CASE_P(ParameterizedCovMapTest, CoverageMappingTest,
                         ::testing::Values(std::pair<bool, bool>({false, false}),
                                           std::pair<bool, bool>({false, true}),
                                           std::pair<bool, bool>({true, false}),
-                                          std::pair<bool, bool>({true, true})));
+                                          std::pair<bool, bool>({true, true})),);
 
 } // end anonymous namespace

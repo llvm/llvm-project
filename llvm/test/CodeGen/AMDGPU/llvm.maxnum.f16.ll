@@ -82,7 +82,7 @@ entry:
 ; SI: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 
 ; VI-DAG: v_max_f16_e32 v[[R_F16_0:[0-9]+]], v[[B_V2_F16]], v[[A_V2_F16]]
-; VI-DAG: v_max_f16_sdwa v[[R_F16_1:[0-9]+]], v[[B_V2_F16]], v[[A_V2_F16]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_sdwa v[[R_F16_1:[0-9]+]], v[[A_V2_F16]], v[[B_V2_F16]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-NOT: and
 ; VI:     v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_1]], v[[R_F16_0]]
 
@@ -110,7 +110,7 @@ entry:
 ; SI:  v_max_f32_e32 v[[R_F32_1:[0-9]+]], 4.0, v[[B_F32_1]]
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[R_F32_1]]
 ; VI-DAG:  v_mov_b32_e32 [[CONST4:v[0-9]+]], 0x4400
-; VI-DAG:  v_max_f16_sdwa v[[R_F16_HI:[0-9]+]], [[CONST4]], v[[B_V2_F16]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; VI-DAG:  v_max_f16_sdwa v[[R_F16_HI:[0-9]+]], v[[B_V2_F16]], [[CONST4]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-DAG:  v_max_f16_e32 v[[R_F16_0:[0-9]+]], 0x4200, v[[B_V2_F16]]
 
 ; SI-DAG: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[R_F16_1]]
@@ -138,7 +138,7 @@ entry:
 ; SI:  v_max_f32_e32 v[[R_F32_1:[0-9]+]], 0x40400000, v[[A_F32_1]]
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[R_F32_1]]
 ; VI-DAG:  v_mov_b32_e32 [[CONST3:v[0-9]+]], 0x4200
-; VI-DAG:  v_max_f16_sdwa v[[R_F16_HI:[0-9]+]], [[CONST3]], v[[B_V2_F16]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; VI-DAG:  v_max_f16_sdwa v[[R_F16_HI:[0-9]+]], v[[B_V2_F16]], [[CONST3]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-DAG:  v_max_f16_e32 v[[R_F16_0:[0-9]+]], 4.0, v[[A_V2_F16]]
 
 ; SI-DAG: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[R_F16_1]]

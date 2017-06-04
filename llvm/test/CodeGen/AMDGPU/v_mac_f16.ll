@@ -304,14 +304,14 @@ entry:
 ; GCN: {{buffer|flat}}_load_dword v[[C_V2_F16:[0-9]+]]
 
 ; SI:  v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_V2_F16]]
-; SI: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
-; SI:  v_cvt_f32_f16_e32 v[[B_F32_0:[0-9]+]], v[[B_V2_F16]]
-; SI-DAG: v_lshrrev_b32_e32 v[[B_F16_1:[0-9]+]], 16, v[[B_V2_F16]]
-; SI-DAG: v_lshrrev_b32_e32 v[[C_F16_1:[0-9]+]], 16, v[[C_V2_F16]]
-; SI-DAG:  v_cvt_f32_f16_e32 v[[C_F32_0:[0-9]+]], v[[C_V2_F16]]
-; SI-DAG:  v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], v[[A_F16_1]]
+; SI:  v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
+; SI:  v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], v[[A_F16_1]]
+; SI:  v_lshrrev_b32_e32 v[[B_F16_1:[0-9]+]], 16, v[[B_V2_F16]]
 ; SI:  v_cvt_f32_f16_e32 v[[B_F32_1:[0-9]+]], v[[B_F16_1]]
+; SI:  v_cvt_f32_f16_e32 v[[B_F32_0:[0-9]+]], v[[B_V2_F16]]
+; SI:  v_lshrrev_b32_e32 v[[C_F16_1:[0-9]+]], 16, v[[C_V2_F16]]
 ; SI:  v_cvt_f32_f16_e32 v[[C_F32_1:[0-9]+]], v[[C_F16_1]]
+; SI-DAG:  v_cvt_f32_f16_e32 v[[C_F32_0:[0-9]+]], v[[C_V2_F16]]
 ; SI-DAG:  v_mac_f32_e32 v[[C_F32_0]], v[[B_F32_0]], v[[A_F32_0]]
 ; SI-DAG:  v_cvt_f16_f32_e32 v[[R_F16_LO:[0-9]+]], v[[C_F32_0]]
 ; SI-DAG:  v_mac_f32_e32 v[[C_F32_1]], v[[B_F32_1]], v[[A_F32_1]]
@@ -320,12 +320,12 @@ entry:
 ; VI-NOT: and
 ; SI:  v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_LO]]
 
-; VI-DAG: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
-; VI-DAG: v_mac_f16_sdwa v[[A_F16_1]], v[[C_V2_F16]], v[[B_V2_F16]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-DAG: v_mac_f16_e32 v[[A_V2_F16]], v[[C_V2_F16]], v[[B_V2_F16]]
-; VI-DAG: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[A_F16_1]]
+; VI-DAG: v_lshrrev_b32_e32 v[[C_F16_1:[0-9]+]], 16, v[[C_V2_F16]]
+; VI-DAG: v_mac_f16_sdwa v[[C_F16_1]], v[[A_V2_F16]], v[[B_V2_F16]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_mac_f16_e32 v[[C_V2_F16]], v[[B_V2_F16]], v[[A_V2_F16]]
+; VI-DAG: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[C_F16_1]]
 ; VI-NOT: and
-; VI:  v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[A_V2_F16]]
+; VI:  v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[C_V2_F16]]
 
 ; GCN: {{buffer|flat}}_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
@@ -336,7 +336,9 @@ define amdgpu_kernel void @mac_v2f16(
     <2 x half> addrspace(1)* %c) #0 {
 entry:
   %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
+  call void @llvm.amdgcn.s.barrier() #2
   %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
+  call void @llvm.amdgcn.s.barrier() #2
   %c.val = load <2 x half>, <2 x half> addrspace(1)* %c
 
   %t.val = fmul <2 x half> %a.val, %b.val
@@ -485,7 +487,7 @@ entry:
 ; VI-DAG:  v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; VI-DAG:  v_sub_f16_e32 v[[NEG_A1:[0-9]+]], 0, v{{[0-9]+}}
 ; VI-DAG:  v_sub_f16_sdwa v[[NEG_A0:[0-9]+]], [[ZERO]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; VI-DAG:  v_mac_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A0]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-DAG:  v_mac_f16_sdwa v{{[0-9]+}}, v[[NEG_A0]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-DAG:  v_mac_f16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A1]]
 
 ; GCN: s_endpgm
@@ -517,7 +519,7 @@ entry:
 ; VI:  v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; VI:  v_sub_f16_e32 v[[NEG_A1:[0-9]+]], 0, v{{[0-9]+}}
 ; VI:  v_sub_f16_sdwa v[[NEG_A0:[0-9]+]], [[ZERO]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; VI-DAG:  v_mac_f16_sdwa v{{[0-9]+}}, v[[NEG_A0]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; VI-DAG:  v_mac_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A0]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-DAG:  v_mac_f16_e32 v{{[0-9]+}}, v[[NEG_A1]], v{{[0-9]+}}
 
 ; GCN: s_endpgm
@@ -670,5 +672,8 @@ entry:
   ret void
 }
 
+declare void @llvm.amdgcn.s.barrier() #2
+
 attributes #0 = { nounwind "no-signed-zeros-fp-math"="false" }
 attributes #1 = { nounwind "no-signed-zeros-fp-math"="true" }
+attributes #2 = { nounwind convergent }

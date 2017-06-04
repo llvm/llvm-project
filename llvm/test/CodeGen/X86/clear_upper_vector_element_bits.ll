@@ -405,12 +405,7 @@ define <16 x i8> @_clearupper16xi8a(<16 x i8>) nounwind {
 ;
 ; AVX-LABEL: _clearupper16xi8a:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX-NEXT:    vpextrb $1, %xmm0, %ecx
-; AVX-NEXT:    vmovd %eax, %xmm1
-; AVX-NEXT:    vpinsrb $1, %ecx, %xmm1, %xmm1
-; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3,4,5,6,7]
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x0  = extractelement <16 x i8> %0, i32 0
   %x1  = extractelement <16 x i8> %0, i32 1
@@ -575,39 +570,10 @@ define <32 x i8> @_clearupper32xi8a(<32 x i8>) nounwind {
 ; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: _clearupper32xi8a:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX1-NEXT:    vpextrb $1, %xmm0, %ecx
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpextrb $0, %xmm1, %edx
-; AVX1-NEXT:    vpextrb $1, %xmm1, %esi
-; AVX1-NEXT:    vmovd %edx, %xmm2
-; AVX1-NEXT:    vpinsrb $1, %esi, %xmm2, %xmm2
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3,4,5,6,7]
-; AVX1-NEXT:    vmovd %eax, %xmm2
-; AVX1-NEXT:    vpinsrb $1, %ecx, %xmm2, %xmm2
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3,4,5,6,7]
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: _clearupper32xi8a:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX2-NEXT:    vpextrb $1, %xmm0, %ecx
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpextrb $0, %xmm1, %edx
-; AVX2-NEXT:    vpextrb $1, %xmm1, %esi
-; AVX2-NEXT:    vmovd %edx, %xmm2
-; AVX2-NEXT:    vpinsrb $1, %esi, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3,4,5,6,7]
-; AVX2-NEXT:    vmovd %eax, %xmm2
-; AVX2-NEXT:    vpinsrb $1, %ecx, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3,4,5,6,7]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: _clearupper32xi8a:
+; AVX:       # BB#0:
+; AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    retq
   %x0  = extractelement <32 x i8> %0, i32 0
   %x1  = extractelement <32 x i8> %0, i32 1
   %x2  = extractelement <32 x i8> %0, i32 2

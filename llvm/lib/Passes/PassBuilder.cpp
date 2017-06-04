@@ -164,6 +164,10 @@ static cl::opt<bool> EnableGVNHoist(
     "enable-npm-gvn-hoist", cl::init(false), cl::Hidden,
     cl::desc("Enable the GVN hoisting pass for the new PM (default = off)"));
 
+static cl::opt<bool> EnableGVNSink(
+    "enable-npm-gvn-sink", cl::init(false), cl::Hidden,
+    cl::desc("Enable the GVN hoisting pass for the new PM (default = off)"));
+
 static Regex DefaultAliasRegex(
     "^(default|thinlto-pre-link|thinlto|lto-pre-link|lto)<(O[0123sz])>$");
 
@@ -313,6 +317,12 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // Hoisting of scalars and load expressions.
   if (EnableGVNHoist)
     FPM.addPass(GVNHoistPass());
+
+  // Global value numbering based sinking.
+  if (EnableGVNSink) {
+    FPM.addPass(GVNSinkPass());
+    FPM.addPass(SimplifyCFGPass());
+  }
 
   // Speculative execution if the target has divergent branches; otherwise nop.
   FPM.addPass(SpeculativeExecutionPass());
