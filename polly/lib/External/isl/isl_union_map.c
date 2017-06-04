@@ -3463,6 +3463,24 @@ __isl_give isl_union_set *isl_union_set_reset_user(
 	return isl_union_map_reset_user(uset);
 }
 
+/* Remove all existentially quantified variables and integer divisions
+ * from "umap" using Fourier-Motzkin elimination.
+ */
+__isl_give isl_union_map *isl_union_map_remove_divs(
+	__isl_take isl_union_map *umap)
+{
+	return total(umap, &isl_map_remove_divs);
+}
+
+/* Remove all existentially quantified variables and integer divisions
+ * from "uset" using Fourier-Motzkin elimination.
+ */
+__isl_give isl_union_set *isl_union_set_remove_divs(
+	__isl_take isl_union_set *uset)
+{
+	return isl_union_map_remove_divs(uset);
+}
+
 /* Internal data structure for isl_union_map_project_out.
  * "type", "first" and "n" are the arguments for the isl_map_project_out
  * call.
@@ -3788,4 +3806,69 @@ uint32_t isl_union_map_get_hash(__isl_keep isl_union_map *umap)
 uint32_t isl_union_set_get_hash(__isl_keep isl_union_set *uset)
 {
 	return isl_union_map_get_hash(uset);
+}
+
+/* Add the number of basic sets in "set" to "n".
+ */
+static isl_stat add_n(__isl_take isl_set *set, void *user)
+{
+	int *n = user;
+
+	*n += isl_set_n_basic_set(set);
+	isl_set_free(set);
+
+	return isl_stat_ok;
+}
+
+/* Return the total number of basic sets in "uset".
+ */
+int isl_union_set_n_basic_set(__isl_keep isl_union_set *uset)
+{
+	int n = 0;
+
+	if (isl_union_set_foreach_set(uset, &add_n, &n) < 0)
+		return -1;
+
+	return n;
+}
+
+/* Add the basic sets in "set" to "list".
+ */
+static isl_stat add_list(__isl_take isl_set *set, void *user)
+{
+	isl_basic_set_list **list = user;
+	isl_basic_set_list *list_i;
+
+	list_i = isl_set_get_basic_set_list(set);
+	*list = isl_basic_set_list_concat(*list, list_i);
+	isl_set_free(set);
+
+	if (!*list)
+		return isl_stat_error;
+	return isl_stat_ok;
+}
+
+/* Return a list containing all the basic sets in "uset".
+ *
+ * First construct a list of the appropriate size and
+ * then add all the elements.
+ */
+__isl_give isl_basic_set_list *isl_union_set_get_basic_set_list(
+	__isl_keep isl_union_set *uset)
+{
+	int n;
+	isl_ctx *ctx;
+	isl_basic_set_list *list;
+
+	if (!uset)
+		return NULL;
+	ctx = isl_union_set_get_ctx(uset);
+	n = isl_union_set_n_basic_set(uset);
+	if (n < 0)
+		return NULL;
+	list = isl_basic_set_list_alloc(ctx, n);
+	if (isl_union_set_foreach_set(uset, &add_list, &list) < 0)
+		list = isl_basic_set_list_free(list);
+
+	return list;
 }
