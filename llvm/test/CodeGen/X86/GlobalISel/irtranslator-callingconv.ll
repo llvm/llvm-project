@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i386-linux-gnu   -global-isel -stop-after=irtranslator < %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X32
-; RUN: llc -mtriple=x86_64-linux-gnu -global-isel -stop-after=irtranslator < %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
+; RUN: llc -mtriple=i386-linux-gnu   -mattr=+sse2 -global-isel -stop-after=irtranslator < %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X32
+; RUN: llc -mtriple=x86_64-linux-gnu              -global-isel -stop-after=irtranslator < %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
 
 @a1_8bit = external global i8
 @a7_8bit = external global i8
@@ -280,6 +280,38 @@ define double @test_double_args(double %arg1, double %arg2) {
 ; X32-NEXT:  RET 0, implicit %fp0
 
   ret double %arg2
+}
+
+define <4 x i32> @test_v4i32_args(<4 x i32> %arg1, <4 x i32> %arg2) {
+; ALL: name:            test_v4i32_args
+; ALL: liveins: %xmm0, %xmm1
+; ALL:      [[ARG1:%[0-9]+]](<4 x s32>) = COPY %xmm0
+; ALL-NEXT: [[ARG2:%[0-9]+]](<4 x s32>) = COPY %xmm1
+; ALL-NEXT: %xmm0 = COPY [[ARG2:%[0-9]+]](<4 x s32>)
+; ALL-NEXT: RET 0, implicit %xmm0
+  ret <4 x i32> %arg2
+}
+
+define <8 x i32> @test_v8i32_args(<8 x i32> %arg1) {
+; ALL: name:            test_v8i32_args
+; ALL: liveins: %xmm0, %xmm1
+; ALL:      [[ARG1L:%[0-9]+]](<4 x s32>) = COPY %xmm0
+; ALL-NEXT: [[ARG1H:%[0-9]+]](<4 x s32>) = COPY %xmm1
+; ALL-NEXT: [[ARG1:%[0-9]+]](<8 x s32>) = G_MERGE_VALUES [[ARG1L]](<4 x s32>), [[ARG1H]](<4 x s32>)
+; ALL-NEXT: [[RETL:%[0-9]+]](<4 x s32>), [[RETH:%[0-9]+]](<4 x s32>) = G_UNMERGE_VALUES [[ARG1:%[0-9]+]](<8 x s32>)
+; ALL-NEXT: %xmm0 = COPY [[RETL:%[0-9]+]](<4 x s32>)
+; ALL-NEXT: %xmm1 = COPY [[RETH:%[0-9]+]](<4 x s32>)
+; ALL-NEXT: RET 0, implicit %xmm0, implicit %xmm1
+
+  ret <8 x i32> %arg1
+}
+
+define void @test_void_return() {
+; ALL-LABEL: name:            test_void_return
+; ALL:        bb.1.entry:
+; ALL-NEXT:     RET 0
+entry:
+  ret void
 }
 
 define i32 * @test_memop_i32(i32 * %p1) {
