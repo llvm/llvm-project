@@ -360,6 +360,6 @@ unsigned MemoryFlags[] = {
 
 INSTANTIATE_TEST_CASE_P(AllocationTests,
 			MappedMemoryTest,
-			::testing::ValuesIn(MemoryFlags));
+			::testing::ValuesIn(MemoryFlags),);
 
 }  // anonymous namespace
