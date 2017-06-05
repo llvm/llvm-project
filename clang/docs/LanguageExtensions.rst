@@ -2521,3 +2521,45 @@ whether or not an attribute is supported by the pragma by referring to the
 The attributes are applied to all matching declarations individually, even when
 the attribute is semantically incorrect. The attributes that aren't applied to
 any declaration are not verified semantically.
+
+Specifying section names for global objects (#pragma clang section)
+===================================================================
+
+The ``#pragma clang section`` directive provides a means to assign section-names
+to global variables, functions and static variables.
+
+The section names can be specified as:
+
+.. code-block:: c++
+
+  #pragma clang section bss="myBSS" data="myData" rodata="myRodata" text="myText"
+
+The section names can be reverted back to default name by supplying an empty
+string to the section kind, for example:
+
+.. code-block:: c++
+
+  #pragma clang section bss="" data="" text="" rodata=""
+
+The ``#pragma clang section`` directive obeys the following rules:
+
+* The pragma applies to all global variable, statics and function declarations
+  from the pragma to the end of the translation unit.
+
+* The pragma clang section is enabled automatically, without need of any flags.
+
+* This feature is only defined to work sensibly for ELF targets.
+
+* If section name is specified through _attribute_((section("myname"))), then
+  the attribute name gains precedence.
+
+* Global variables that are initialized to zero will be placed in the named
+  bss section, if one is present.
+
+* The ``#pragma clang section`` directive does not does try to infer section-kind
+  from the name. For example, naming a section "``.bss.mySec``" does NOT mean
+  it will be a bss section name.
+
+* The decision about which section-kind applies to each global is taken in the back-end.
+  Once the section-kind is known, appropriate section name, as specified by the user using
+  ``#pragma clang section`` directive, is applied to that global.

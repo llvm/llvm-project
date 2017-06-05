@@ -387,8 +387,7 @@ static std::error_code collectModuleHeaderIncludes(
   return std::error_code();
 }
 
-static bool loadModuleMapForModuleBuild(CompilerInstance &CI,
-                                        StringRef Filename, bool IsSystem,
+static bool loadModuleMapForModuleBuild(CompilerInstance &CI, bool IsSystem,
                                         bool IsPreprocessed,
                                         std::string &PresumedModuleMapFile,
                                         unsigned &Offset) {
@@ -528,7 +527,8 @@ getInputBufferForModule(CompilerInstance &CI, Module *M) {
 }
 
 bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
-                                     const FrontendInputFile &Input) {
+                                     const FrontendInputFile &RealInput) {
+  FrontendInputFile Input(RealInput);
   assert(!Instance && "Already processing a source file!");
   assert(!Input.isEmpty() && "Unexpected empty filename!");
   setCurrentInput(Input);
@@ -536,15 +536,69 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   StringRef InputFile = Input.getFile();
   bool HasBegunSourceFile = false;
+  bool ReplayASTFile = Input.getKind().getFormat() == InputKind::Precompiled &&
+                       usesPreprocessorOnly();
   if (!BeginInvocation(CI))
     goto failure;
+
+  // If we're replaying the build of an AST file, import it and set up
+  // the initial state from its build.
+  if (ReplayASTFile) {
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
+
+    // The AST unit populates its own diagnostics engine rather than ours.
+    IntrusiveRefCntPtr<DiagnosticsEngine> ASTDiags(
+        new DiagnosticsEngine(Diags->getDiagnosticIDs(),
+                              &Diags->getDiagnosticOptions()));
+    ASTDiags->setClient(Diags->getClient(), /*OwnsClient*/false);
+
+    std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
+        InputFile, CI.getPCHContainerReader(), ASTDiags, CI.getFileSystemOpts(),
+        CI.getCodeGenOpts().DebugTypeExtRefs);
+    if (!AST)
+      goto failure;
+
+    // Options relating to how we treat the input (but not what we do with it)
+    // are inherited from the AST unit.
+    CI.getLangOpts() = AST->getLangOpts();
+
+    // Preload all the module files loaded transitively by the AST unit.
+    if (auto ASTReader = AST->getASTReader()) {
+      auto &MM = ASTReader->getModuleManager();
+      for (ModuleFile &MF : MM)
+        if (&MF != &MM.getPrimaryModule())
+          CI.getFrontendOpts().ModuleFiles.push_back(MF.FileName);
+    }
+
+    // Set the shared objects, these are reset when we finish processing the
+    // file, otherwise the CompilerInstance will happily destroy them.
+    CI.setFileManager(&AST->getFileManager());
+    CI.createSourceManager(CI.getFileManager());
+    CI.getSourceManager().initializeForReplay(AST->getSourceManager());
+    CI.createPreprocessor(getTranslationUnitKind());
+
+    // Set up the input file for replay purposes.
+    auto Kind = AST->getInputKind();
+    if (Kind.getFormat() == InputKind::ModuleMap) {
+      Module *ASTModule =
+          AST->getPreprocessor().getHeaderSearchInfo().lookupModule(
+              AST->getLangOpts().CurrentModule, /*AllowSearch*/ false);
+      Input = FrontendInputFile(ASTModule->PresumedModuleMapFile, Kind);
+    } else {
+      auto &SM = CI.getSourceManager();
+      FileID ID = SM.getMainFileID();
+      if (auto *File = SM.getFileEntryForID(ID))
+        Input = FrontendInputFile(File->getName(), Kind);
+      else
+        Input = FrontendInputFile(SM.getBuffer(ID), Kind);
+    }
+    setCurrentInput(Input, std::move(AST));
+  }
 
   // AST files follow a very different path, since they share objects via the
   // AST unit.
   if (Input.getKind().getFormat() == InputKind::Precompiled) {
-    // FIXME: We should not be asserting on bad command-line arguments.
-    assert(!usesPreprocessorOnly() &&
-           "Attempt to pass AST file to preprocessor only action!");
+    assert(!usesPreprocessorOnly() && "this case was handled above");
     assert(hasASTFileSupport() &&
            "This action does not have AST file support!");
 
@@ -685,7 +739,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     std::string PresumedModuleMapFile;
     unsigned OffsetToContents;
-    if (loadModuleMapForModuleBuild(CI, Input.getFile(), Input.isSystem(),
+    if (loadModuleMapForModuleBuild(CI, Input.isSystem(),
                                     Input.isPreprocessed(),
                                     PresumedModuleMapFile, OffsetToContents))
       goto failure;
@@ -841,14 +895,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // If we failed, reset state since the client will not end up calling the
   // matching EndSourceFile().
-  failure:
-  if (isCurrentFileAST()) {
-    CI.setASTContext(nullptr);
-    CI.setPreprocessor(nullptr);
-    CI.setSourceManager(nullptr);
-    CI.setFileManager(nullptr);
-  }
-
+failure:
   if (HasBegunSourceFile)
     CI.getDiagnosticClient().EndSourceFile();
   CI.clearOutputFiles(/*EraseFiles=*/true);
@@ -926,6 +973,7 @@ void FrontendAction::EndSourceFile() {
       CI.resetAndLeakPreprocessor();
       CI.resetAndLeakSourceManager();
       CI.resetAndLeakFileManager();
+      BuryPointer(CurrentASTUnit.release());
     } else {
       CI.setPreprocessor(nullptr);
       CI.setSourceManager(nullptr);

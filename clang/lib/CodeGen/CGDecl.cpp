@@ -406,6 +406,13 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   if (D.hasAttr<AnnotateAttr>())
     CGM.AddGlobalAnnotations(&D, var);
 
+  if (auto *SA = D.getAttr<PragmaClangBSSSectionAttr>())
+    var->addAttribute("bss-section", SA->getName());
+  if (auto *SA = D.getAttr<PragmaClangDataSectionAttr>())
+    var->addAttribute("data-section", SA->getName());
+  if (auto *SA = D.getAttr<PragmaClangRodataSectionAttr>())
+    var->addAttribute("rodata-section", SA->getName());
+
   if (const SectionAttr *SA = D.getAttr<SectionAttr>())
     var->setSection(SA->getName());
 

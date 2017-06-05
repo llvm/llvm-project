@@ -51,6 +51,7 @@ class DiagnosticsEngine;
 class FileEntry;
 class FileManager;
 class HeaderSearch;
+class InputKind;
 class MemoryBufferCache;
 class Preprocessor;
 class PCHContainerOperations;
@@ -305,9 +306,6 @@ private:
   /// (likely to change while trying to use them).
   bool UserFilesAreVolatile : 1;
  
-  /// \brief The language options used when we load an AST file.
-  LangOptions ASTFileLangOpts;
-
   static void ConfigureDiags(IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                              ASTUnit &AST, bool CaptureDiagnostics);
 
@@ -701,6 +699,9 @@ public:
 
   /// \brief Determine what kind of translation unit this AST represents.
   TranslationUnitKind getTranslationUnitKind() const { return TUKind; }
+
+  /// \brief Determine the input kind this AST unit represents.
+  InputKind getInputKind() const;
 
   /// \brief A mapping from a file name to the memory buffer that stores the
   /// remapped contents of that file.

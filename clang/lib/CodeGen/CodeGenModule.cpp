@@ -1026,9 +1026,25 @@ void CodeGenModule::setNonAliasAttributes(const Decl *D,
                                           llvm::GlobalObject *GO) {
   SetCommonAttributes(D, GO);
 
-  if (D)
+  if (D) {
+    if (auto *GV = dyn_cast<llvm::GlobalVariable>(GO)) {
+      if (auto *SA = D->getAttr<PragmaClangBSSSectionAttr>())
+        GV->addAttribute("bss-section", SA->getName());
+      if (auto *SA = D->getAttr<PragmaClangDataSectionAttr>())
+        GV->addAttribute("data-section", SA->getName());
+      if (auto *SA = D->getAttr<PragmaClangRodataSectionAttr>())
+        GV->addAttribute("rodata-section", SA->getName());
+    }
+
+    if (auto *F = dyn_cast<llvm::Function>(GO)) {
+      if (auto *SA = D->getAttr<PragmaClangTextSectionAttr>())
+       if (!D->getAttr<SectionAttr>())
+         F->addFnAttr("implicit-section-name", SA->getName());
+    }
+
     if (const SectionAttr *SA = D->getAttr<SectionAttr>())
       GO->setSection(SA->getName());
+  }
 
   getTargetCodeGenInfo().setTargetAttributes(D, GO, *this);
 }
@@ -1126,6 +1142,10 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   // overridden by a definition.
 
   setLinkageAndVisibilityForGV(F, FD);
+
+  if (FD->getAttr<PragmaClangTextSectionAttr>()) {
+    F->addFnAttr("implicit-section-name");
+  }
 
   if (const SectionAttr *SA = FD->getAttr<SectionAttr>())
     F->setSection(SA->getName());
@@ -2826,6 +2846,14 @@ static bool isVarDeclStrongDefinition(const ASTContext &Context,
 
   // A variable cannot be both common and exist in a section.
   if (D->hasAttr<SectionAttr>())
+    return true;
+
+  // A variable cannot be both common and exist in a section.
+  // We dont try to determine which is the right section in the front-end.
+  // If no specialized section name is applicable, it will resort to default.
+  if (D->hasAttr<PragmaClangBSSSectionAttr>() ||
+      D->hasAttr<PragmaClangDataSectionAttr>() ||
+      D->hasAttr<PragmaClangRodataSectionAttr>())
     return true;
 
   // Thread local vars aren't considered common linkage.

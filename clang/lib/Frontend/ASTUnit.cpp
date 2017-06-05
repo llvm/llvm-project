@@ -667,6 +667,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
 
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
 
+  AST->LangOpts = std::make_shared<LangOptions>();
   AST->OnlyLocalDecls = OnlyLocalDecls;
   AST->CaptureDiagnostics = CaptureDiagnostics;
   AST->Diagnostics = Diags;
@@ -682,7 +683,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   AST->HeaderInfo.reset(new HeaderSearch(AST->HSOpts,
                                          AST->getSourceManager(),
                                          AST->getDiagnostics(),
-                                         AST->ASTFileLangOpts,
+                                         AST->getLangOpts(),
                                          /*Target=*/nullptr));
 
   auto PPOpts = std::make_shared<PreprocessorOptions>();
@@ -696,13 +697,13 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   unsigned Counter;
 
   AST->PP = std::make_shared<Preprocessor>(
-      std::move(PPOpts), AST->getDiagnostics(), AST->ASTFileLangOpts,
+      std::move(PPOpts), AST->getDiagnostics(), *AST->LangOpts,
       AST->getSourceManager(), *AST->PCMCache, HeaderInfo, *AST,
       /*IILookup=*/nullptr,
       /*OwnsHeaderSearch=*/false);
   Preprocessor &PP = *AST->PP;
 
-  AST->Ctx = new ASTContext(AST->ASTFileLangOpts, AST->getSourceManager(),
+  AST->Ctx = new ASTContext(*AST->LangOpts, AST->getSourceManager(),
                             PP.getIdentifierTable(), PP.getSelectorTable(),
                             PP.getBuiltinInfo());
   ASTContext &Context = *AST->Ctx;
@@ -716,7 +717,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
                               AllowPCHWithCompilerErrors);
 
   AST->Reader->setListener(llvm::make_unique<ASTInfoCollector>(
-      *AST->PP, Context, AST->ASTFileLangOpts, AST->TargetOpts, AST->Target,
+      *AST->PP, Context, *AST->LangOpts, AST->TargetOpts, AST->Target,
       Counter));
 
   // Attach the AST reader to the AST context as an external AST
@@ -2879,7 +2880,32 @@ const FileEntry *ASTUnit::getPCHFile() {
 }
 
 bool ASTUnit::isModuleFile() {
-  return isMainFileAST() && ASTFileLangOpts.isCompilingModule();
+  return isMainFileAST() && getLangOpts().isCompilingModule();
+}
+
+InputKind ASTUnit::getInputKind() const {
+  auto &LangOpts = getLangOpts();
+
+  InputKind::Language Lang;
+  if (LangOpts.OpenCL)
+    Lang = InputKind::OpenCL;
+  else if (LangOpts.CUDA)
+    Lang = InputKind::CUDA;
+  else if (LangOpts.RenderScript)
+    Lang = InputKind::RenderScript;
+  else if (LangOpts.CPlusPlus)
+    Lang = LangOpts.ObjC1 ? InputKind::ObjCXX : InputKind::CXX;
+  else
+    Lang = LangOpts.ObjC1 ? InputKind::ObjC : InputKind::C;
+
+  InputKind::Format Fmt = InputKind::Source;
+  if (LangOpts.getCompilingModule() == LangOptions::CMK_ModuleMap)
+    Fmt = InputKind::ModuleMap;
+
+  // We don't know if input was preprocessed. Assume not.
+  bool PP = false;
+
+  return InputKind(Lang, Fmt, PP);
 }
 
 void ASTUnit::PreambleData::countLines() const {

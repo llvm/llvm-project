@@ -887,9 +887,18 @@ def warn_pragma_expected_rparen : Warning<
   "missing ')' after '#pragma %0' - ignoring">, InGroup<IgnoredPragmas>;
 def warn_pragma_expected_identifier : Warning<
   "expected identifier in '#pragma %0' - ignored">, InGroup<IgnoredPragmas>;
+
+// '#pragma clang section' related errors
+def err_pragma_expected_clang_section_name : Error<
+  "expected one of [bss|data|rodata|text] section kind in '#pragma %0'">;
+def err_pragma_clang_section_expected_equal : Error<
+  "expected '=' following '#pragma clang section %select{invalid|bss|data|rodata|text}0'">;
+def err_pragma_clang_section_expected_name_or_clear : Error<
+  "expected section name or '\"\"' following '#pragma clang section %select{invalid|bss|data|rodata|text}0'">;
 def warn_pragma_expected_section_name : Warning<
   "expected a string literal for the section name in '#pragma %0' - ignored">,
   InGroup<IgnoredPragmas>;
+
 def warn_pragma_expected_section_push_pop_or_name : Warning<
   "expected push, pop or a string literal for the section name in '#pragma %0' - ignored">,
   InGroup<IgnoredPragmas>;
