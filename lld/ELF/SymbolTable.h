@@ -39,6 +39,9 @@ template <class ELFT> class SymbolTable {
 public:
   void addFile(InputFile *File);
   void addCombinedLTOObject();
+  void addSymbolAlias(StringRef Alias, StringRef Name);
+  void addSymbolWrap(StringRef Name);
+  void applySymbolRenames();
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
   ArrayRef<ObjectFile<ELFT> *> getObjectFiles() const { return ObjectFiles; }
@@ -85,8 +88,6 @@ public:
   SymbolBody *findInCurrentDSO(StringRef Name);
 
   void trace(StringRef Name);
-  void wrap(StringRef Name);
-  void alias(StringRef Alias, StringRef Name);
 
 private:
   std::vector<SymbolBody *> findByVersion(SymbolVersion Ver);

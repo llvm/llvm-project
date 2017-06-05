@@ -21,6 +21,7 @@
 #include "InaccurateEraseCheck.h"
 #include "IncorrectRoundings.h"
 #include "InefficientAlgorithmCheck.h"
+#include "LambdaFunctionNameCheck.h"
 #include "MacroParenthesesCheck.h"
 #include "MacroRepeatedSideEffectsCheck.h"
 #include "MisplacedConstCheck.h"
@@ -68,6 +69,8 @@ public:
         "misc-assert-side-effect");
     CheckFactories.registerCheck<ForwardingReferenceOverloadCheck>(
         "misc-forwarding-reference-overload");
+    CheckFactories.registerCheck<LambdaFunctionNameCheck>(
+        "misc-lambda-function-name");
     CheckFactories.registerCheck<MisplacedConstCheck>("misc-misplaced-const");
     CheckFactories.registerCheck<UnconventionalAssignOperatorCheck>(
         "misc-unconventional-assign-operator");

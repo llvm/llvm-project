@@ -5426,6 +5426,20 @@ __isl_give isl_tab_lexmin *isl_tab_lexmin_add_eq(__isl_take isl_tab_lexmin *tl,
 	return tl;
 }
 
+/* Add cuts to "tl" until the sample value reaches an integer value or
+ * until the result becomes empty.
+ */
+__isl_give isl_tab_lexmin *isl_tab_lexmin_cut_to_integer(
+	__isl_take isl_tab_lexmin *tl)
+{
+	if (!tl)
+		return NULL;
+	tl->tab = cut_to_integer_lexmin(tl->tab, CUT_ONE);
+	if (!tl->tab)
+		return isl_tab_lexmin_free(tl);
+	return tl;
+}
+
 /* Return the lexicographically smallest rational point in the basic set
  * from which "tl" was constructed.
  * If the original input was empty, then return a zero-length vector.
