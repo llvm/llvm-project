@@ -90,7 +90,11 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
                                                unsigned CVRQualifiers,
                                                llvm::Value *Offset) {
   // Compute (type*) ( (char *) BaseValue + Offset)
-  QualType IvarTy = Ivar->getType().withCVRQualifiers(CVRQualifiers);
+  QualType InterfaceTy{OID->getTypeForDecl(), 0};
+  QualType ObjectPtrTy =
+      CGF.CGM.getContext().getObjCObjectPointerType(InterfaceTy);
+  QualType IvarTy =
+      Ivar->getUsageType(ObjectPtrTy).withCVRQualifiers(CVRQualifiers);
   llvm::Type *LTy = CGF.CGM.getTypes().ConvertTypeForMem(IvarTy);
   llvm::Value *V = CGF.Builder.CreateBitCast(BaseValue, CGF.Int8PtrTy);
   V = CGF.Builder.CreateInBoundsGEP(V, Offset, "add.ptr");
