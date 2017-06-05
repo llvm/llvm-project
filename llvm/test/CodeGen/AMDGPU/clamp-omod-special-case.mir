@@ -24,6 +24,10 @@
     ret void
   }
 
+  define amdgpu_ps void @v_max_reg_imm_f32() #0 {
+    ret void
+  }
+
   attributes #0 = { nounwind "no-signed-zeros-fp-math"="false" }
 
 ...
@@ -420,5 +424,21 @@ body:             |
     %21 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 1, 0, implicit %exec
     BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit %exec
     S_ENDPGM
+
+...
+---
+
+# Pass used to crash with immediate second operand of max
+name:            v_max_reg_imm_f32
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %vgpr0
+
+    %0 = COPY %vgpr0
+    %1 = V_MAX_F32_e64 0, killed %0, 0, 1056964608, 1, 0, implicit %exec
 
 ...

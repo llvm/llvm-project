@@ -99,8 +99,20 @@ template <class ELFT> static void finalizeShtGroup(OutputSection *Sec) {
 
 template <class ELFT> void OutputSection::finalize() {
   if ((this->Flags & SHF_LINK_ORDER) && !this->Sections.empty()) {
+    OutputSectionCommand *Cmd = Script->getCmd(this);
+    // Link order may be distributed across several InputSectionDescriptions
+    // but sort must consider them all at once.
+    std::vector<InputSection **> ScriptSections;
+    std::vector<InputSection *> Sections;
+    for (BaseCommand *Base : Cmd->Commands)
+      if (auto *ISD = dyn_cast<InputSectionDescription>(Base))
+        for (InputSection *&IS : ISD->Sections) {
+          ScriptSections.push_back(&IS);
+          Sections.push_back(IS);
+        }
     std::sort(Sections.begin(), Sections.end(), compareByFilePosition);
-    assignOffsets();
+    for (int I = 0, N = Sections.size(); I < N; ++I)
+      *ScriptSections[I] = Sections[I];
 
     // We must preserve the link order dependency of sections with the
     // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We

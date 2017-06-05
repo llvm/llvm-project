@@ -730,7 +730,8 @@ const MachineOperand *SIFoldOperands::isClamp(const MachineInstr &MI) const {
     // Make sure sources are identical.
     const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
     const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-    if (!Src0->isReg() || Src0->getSubReg() != Src1->getSubReg() ||
+    if (!Src0->isReg() || !Src1->isReg() ||
+        Src0->getSubReg() != Src1->getSubReg() ||
         Src0->getSubReg() != AMDGPU::NoSubRegister)
       return nullptr;
 

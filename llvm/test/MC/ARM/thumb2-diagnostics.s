@@ -76,10 +76,8 @@
 @ CHECK-ERRORS: error: branch target out of range
 
 foo2:
-        mov r0, foo2
         movw r0, foo2
         movt r0, foo2
-@ CHECK-ERRORS: error: instruction requires: arm-mode
 @ CHECK-ERRORS: error: immediate expression for mov requires :lower16: or :upper16
 @ CHECK-ERRORS:                  ^
 @ CHECK-ERRORS: error: immediate expression for mov requires :lower16: or :upper16

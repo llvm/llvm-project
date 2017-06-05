@@ -257,11 +257,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
-  if (!Script->Opt.HasSections)
-    Script->fabricateDefaultCommands();
-  else
-    Script->synchronize();
-
   for (BaseCommand *Base : Script->Opt.Commands)
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
       OutputSectionCommands.push_back(Cmd);
@@ -1261,6 +1256,12 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       applySynthetic({InX::MipsGot},
                      [](SyntheticSection *SS) { SS->updateAllocSize(); });
   }
+
+  if (!Script->Opt.HasSections)
+    Script->fabricateDefaultCommands();
+  else
+    Script->synchronize();
+
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
   // of finalizing other sections.
