@@ -3896,9 +3896,8 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
   }
 
   // Check to see if this is constant foldable.
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-    if (!isa<Constant>(Ops[i]))
-      return nullptr;
+  if (!all_of(Ops, [](Value *V) { return isa<Constant>(V); }))
+    return nullptr;
 
   return ConstantExpr::getGetElementPtr(SrcTy, cast<Constant>(Ops[0]),
                                         Ops.slice(1));
