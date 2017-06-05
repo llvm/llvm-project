@@ -269,14 +269,5 @@
 # define SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT 0
 #endif
 
-#ifndef __GLIBC_PREREQ
-#define __GLIBC_PREREQ(x, y) 0
-#endif
-
-#if SANITIZER_LINUX && __GLIBC_PREREQ(2, 16)
-# define SANITIZER_USE_GETAUXVAL 1
-#else
-# define SANITIZER_USE_GETAUXVAL 0
-#endif
 
 #endif // SANITIZER_PLATFORM_H
