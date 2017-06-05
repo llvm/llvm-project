@@ -6391,12 +6391,12 @@ static Constant *getConstantVector(MVT VT, const APInt &SplatValue,
     APInt Val = SplatValue.lshr(ScalarSize * i).trunc(ScalarSize);
     Constant *Const;
     if (VT.isFloatingPoint()) {
-      assert((ScalarSize == 32 || ScalarSize == 64) &&
-             "Unsupported floating point scalar size");
-      if (ScalarSize == 32)
-        Const = ConstantFP::get(Type::getFloatTy(C), Val.bitsToFloat());
-      else
-        Const = ConstantFP::get(Type::getDoubleTy(C), Val.bitsToDouble());
+      if (ScalarSize == 32) {
+        Const = ConstantFP::get(C, APFloat(APFloat::IEEEsingle(), Val));
+      } else {
+        assert(ScalarSize == 64 && "Unsupported floating point scalar size");
+        Const = ConstantFP::get(C, APFloat(APFloat::IEEEdouble(), Val));
+      }
     } else
       Const = Constant::getIntegerValue(Type::getIntNTy(C, ScalarSize), Val);
     ConstantVec.push_back(Const);
@@ -6484,11 +6484,13 @@ static SDValue LowerVectorBroadcast(BuildVectorSDNode *BVOp, const X86Subtarget 
           // AVX have support for 32 and 64 bit broadcast for floats only.
           // No 64bit integer in 32bit subtarget.
           MVT CVT = MVT::getFloatingPointVT(SplatBitSize);
-          Constant *C = SplatBitSize == 32
-                            ? ConstantFP::get(Type::getFloatTy(*Ctx),
-                                              SplatValue.bitsToFloat())
-                            : ConstantFP::get(Type::getDoubleTy(*Ctx),
-                                              SplatValue.bitsToDouble());
+          // Lower the splat via APFloat directly, to avoid any conversion.
+          Constant *C =
+              SplatBitSize == 32
+                  ? ConstantFP::get(*Ctx,
+                                    APFloat(APFloat::IEEEsingle(), SplatValue))
+                  : ConstantFP::get(*Ctx,
+                                    APFloat(APFloat::IEEEdouble(), SplatValue));
           SDValue CP = DAG.getConstantPool(C, PVT);
           unsigned Repeat = VT.getSizeInBits() / SplatBitSize;
 
