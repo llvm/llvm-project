@@ -907,6 +907,11 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (!InX::DynSymTab)
     Symtab<ELFT>::X->addIgnored("__tls_get_addr");
 
+  // __dso_handle symbol is passed to cxa_finalize as a marker to identify
+  // each DSO. The address of the symbol doesn't matter as long as they are
+  // different in different DSOs, so we chose the start address of the DSO.
+  addOptionalRegular<ELFT>("__dso_handle", Out::ElfHeader, 0, STV_HIDDEN);
+
   // __ehdr_start is the location of ELF file headers. Note that we define
   // this symbol unconditionally even when using a linker script, which
   // differs from the behavior implemented by GNU linker which only define

@@ -1201,7 +1201,6 @@ INTERCEPTOR(void *, shmat, int shmid, const void *shmaddr, int shmflg) {
 }
 
 static void BeforeFork() {
-  get_allocator().ForceLock();
   StackDepotLockAll();
   ChainedOriginDepotLockAll();
 }
@@ -1209,7 +1208,6 @@ static void BeforeFork() {
 static void AfterFork() {
   ChainedOriginDepotUnlockAll();
   StackDepotUnlockAll();
-  get_allocator().ForceUnlock();
 }
 
 INTERCEPTOR(int, fork, void) {

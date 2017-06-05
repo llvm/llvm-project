@@ -257,13 +257,6 @@ private:
         return alloc;
     }
 
-#ifdef TEST_WORKAROUND_C1XX_EMPTY_PARAMETER_PACK_EXPANSION
-    template <class ...LArgs>
-    static CtorAlloc getAllocatorFromPackImp(CtorAlloc const& alloc) {
-        return alloc;
-    }
-#endif
-
     bool has_alloc() const { return alloc_store.get_allocator() != nullptr; }
     const CtorAlloc *get_alloc() const { return alloc_store.get_allocator(); }
 public:
