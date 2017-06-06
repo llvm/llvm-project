@@ -901,16 +901,18 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (!InX::DynSymTab)
     Symtab<ELFT>::X->addIgnored("__tls_get_addr");
 
-  // __dso_handle symbol is passed to cxa_finalize as a marker to identify
-  // each DSO. The address of the symbol doesn't matter as long as they are
-  // different in different DSOs, so we chose the start address of the DSO.
-  addOptionalRegular<ELFT>("__dso_handle", Out::ElfHeader, 0, STV_HIDDEN);
-
   // __ehdr_start is the location of ELF file headers. Note that we define
   // this symbol unconditionally even when using a linker script, which
   // differs from the behavior implemented by GNU linker which only define
   // this symbol if ELF headers are in the memory mapped segment.
-  addOptionalRegular<ELFT>("__ehdr_start", Out::ElfHeader, 0, STV_HIDDEN);
+  // __executable_start is not documented, but the expectation of at
+  // least the android libc is that it points to the elf header too.
+  // __dso_handle symbol is passed to cxa_finalize as a marker to identify
+  // each DSO. The address of the symbol doesn't matter as long as they are
+  // different in different DSOs, so we chose the start address of the DSO.
+  for (const char *Name :
+       {"__ehdr_start", "__executable_start", "__dso_handle"})
+    addOptionalRegular<ELFT>(Name, Out::ElfHeader, 0, STV_HIDDEN);
 
   // If linker script do layout we do not need to create any standart symbols.
   if (Script->Opt.HasSections)
@@ -1268,8 +1270,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
   // of finalizing other sections.
-  for (OutputSection *Sec : OutputSections)
-    Sec->finalize<ELFT>();
+  for (OutputSectionCommand *Cmd : OutputSectionCommands)
+    Cmd->finalize<ELFT>();
 
   // createThunks may have added local symbols to the static symbol table
   applySynthetic({InX::SymTab, InX::ShStrTab, InX::StrTab},

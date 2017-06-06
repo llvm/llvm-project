@@ -7,7 +7,6 @@ define void @tinkywinky(i64* %b) {
 ; CHECK-NEXT:    br label [[BODY:%.*]]
 ; CHECK:       body:
 ; CHECK-NEXT:    store i64 undef, i64* [[B:%.*]]
-; CHECK-NEXT:    [[B2:%.*]] = load i64, i64* [[B]]
 ; CHECK-NEXT:    br i1 undef, label [[BODY]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    br label [[BODY]]

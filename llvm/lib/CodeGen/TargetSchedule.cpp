@@ -337,8 +337,8 @@ computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
 }
 
 static Optional<double>
-getRTroughputFromItineraries(unsigned schedClass,
-                             const InstrItineraryData *IID){
+getRThroughputFromItineraries(unsigned schedClass,
+                              const InstrItineraryData *IID){
   double Unknown = std::numeric_limits<double>::infinity();
   double Throughput = Unknown;
 
@@ -356,9 +356,9 @@ getRTroughputFromItineraries(unsigned schedClass,
 }
 
 static Optional<double>
-getRTroughputFromInstrSchedModel(const MCSchedClassDesc *SCDesc,
-                                 const TargetSubtargetInfo *STI,
-                                 const MCSchedModel &SchedModel) {
+getRThroughputFromInstrSchedModel(const MCSchedClassDesc *SCDesc,
+                                  const TargetSubtargetInfo *STI,
+                                  const MCSchedModel &SchedModel) {
   double Unknown = std::numeric_limits<double>::infinity();
   double Throughput = Unknown;
 
@@ -380,11 +380,11 @@ getRTroughputFromInstrSchedModel(const MCSchedClassDesc *SCDesc,
 Optional<double>
 TargetSchedModel::computeInstrRThroughput(const MachineInstr *MI) const {
   if (hasInstrItineraries())
-    return getRTroughputFromItineraries(MI->getDesc().getSchedClass(),
-                                        getInstrItineraries());
+    return getRThroughputFromItineraries(MI->getDesc().getSchedClass(),
+                                         getInstrItineraries());
   if (hasInstrSchedModel())
-    return getRTroughputFromInstrSchedModel(resolveSchedClass(MI), STI,
-                                            SchedModel);
+    return getRThroughputFromInstrSchedModel(resolveSchedClass(MI), STI,
+                                             SchedModel);
   return Optional<double>();
 }
 
@@ -392,11 +392,11 @@ Optional<double>
 TargetSchedModel::computeInstrRThroughput(unsigned Opcode) const {
   unsigned SchedClass = TII->get(Opcode).getSchedClass();
   if (hasInstrItineraries())
-    return getRTroughputFromItineraries(SchedClass, getInstrItineraries());
+    return getRThroughputFromItineraries(SchedClass, getInstrItineraries());
   if (hasInstrSchedModel()) {
     const MCSchedClassDesc *SCDesc = SchedModel.getSchedClassDesc(SchedClass);
     if (SCDesc->isValid() && !SCDesc->isVariant())
-      return getRTroughputFromInstrSchedModel(SCDesc, STI, SchedModel);
+      return getRThroughputFromInstrSchedModel(SCDesc, STI, SchedModel);
   }
   return Optional<double>();
 }

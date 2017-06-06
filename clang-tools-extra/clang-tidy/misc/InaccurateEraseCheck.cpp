@@ -18,6 +18,10 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
+namespace {
+AST_MATCHER(Decl, isInStdNamespace) { return Node.isInStdNamespace(); }
+}
+
 void InaccurateEraseCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matchers for C++; the functionality currently does not
   // provide any benefit to other languages, despite being benign.
@@ -30,13 +34,14 @@ void InaccurateEraseCheck::registerMatchers(MatchFinder *Finder) {
                        .bind("InaccEndCall")))),
                anything()));
 
+  const auto DeclInStd = decl(isInStdNamespace());
   Finder->addMatcher(
       cxxMemberCallExpr(
-          on(hasType(namedDecl(matchesName("^::std::")))),
+          on(anyOf(hasType(DeclInStd), hasType(pointsTo(DeclInStd)))),
           callee(cxxMethodDecl(hasName("erase"))), argumentCountIs(1),
           hasArgument(0, has(ignoringParenImpCasts(
-                             callExpr(callee(functionDecl(matchesName(
-                                          "^::std::(remove(_if)?|unique)$"))),
+                             callExpr(callee(functionDecl(hasAnyName(
+                                          "remove", "remove_if", "unique"))),
                                       CheckForEndCall)
                                  .bind("InaccAlgCall")))),
           unless(isInTemplateInstantiation()))

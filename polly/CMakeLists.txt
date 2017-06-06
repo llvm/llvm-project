@@ -163,10 +163,10 @@ endif(POLLY_ENABLE_GPGPU_CODEGEN)
 
 
 # Support GPGPU code generation if the library is available.
-if (CUDALIB_FOUND)
+if (CUDA_FOUND)
   add_definitions(-DHAS_LIBCUDART)
-  INCLUDE_DIRECTORIES( ${CUDALIB_INCLUDE_DIR} )
-endif(CUDALIB_FOUND)
+  INCLUDE_DIRECTORIES( ${CUDA_INCLUDE_DIRS} )
+endif(CUDA_FOUND)
 if (OpenCL_FOUND)
   add_definitions(-DHAS_LIBOPENCL)
   INCLUDE_DIRECTORIES( ${OpenCL_INCLUDE_DIR} )

@@ -475,7 +475,10 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     const std::vector<CallGraphNode *> &SCC = *I;
     assert(!SCC.empty() && "SCC with no functions?");
 
-    if (!SCC[0]->getFunction() || !SCC[0]->getFunction()->isDefinitionExact()) {
+    Function *F = SCC[0]->getFunction();
+
+    if (!F || !F->isDefinitionExact() ||
+        F->hasFnAttribute(Attribute::OptimizeNone)) {
       // Calls externally or not exact - can't say anything useful. Remove any
       // existing function records (may have been created when scanning
       // globals).
@@ -484,13 +487,12 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
       continue;
     }
 
-    FunctionInfo &FI = FunctionInfos[SCC[0]->getFunction()];
+    FunctionInfo &FI = FunctionInfos[F];
     bool KnowNothing = false;
 
     // Collect the mod/ref properties due to called functions.  We only compute
     // one mod-ref set.
     for (unsigned i = 0, e = SCC.size(); i != e && !KnowNothing; ++i) {
-      Function *F = SCC[i]->getFunction();
       if (!F) {
         KnowNothing = true;
         break;
@@ -545,6 +547,15 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     for (auto *Node : SCC) {
       if (FI.getModRefInfo() == MRI_ModRef)
         break; // The mod/ref lattice saturates here.
+
+      // Don't prove any properties based on the implementation of an optnone
+      // function.
+      if (Node->getFunction()->hasFnAttribute(Attribute::OptimizeNone)) {
+        FI.addModRefInfo(MRI_Ref);
+        FI.addModRefInfo(MRI_Mod);
+        continue;
+      }
+
       for (Instruction &I : instructions(Node->getFunction())) {
         if (FI.getModRefInfo() == MRI_ModRef)
           break; // The mod/ref lattice saturates here.

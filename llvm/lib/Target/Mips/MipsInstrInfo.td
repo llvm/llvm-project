@@ -238,6 +238,8 @@ def HasEVA       :    Predicate<"Subtarget->hasEVA()">,
                       AssemblerPredicate<"FeatureEVA,FeatureMips32r2">;
 def HasMSA : Predicate<"Subtarget->hasMSA()">,
              AssemblerPredicate<"FeatureMSA">;
+def HasMadd4 : Predicate<"!Subtarget->disableMadd4()">,
+               AssemblerPredicate<"!FeatureMadd4">;
 
 
 //===----------------------------------------------------------------------===//
@@ -388,6 +390,10 @@ class ISA_MICROMIPS_NOT_32R6_64R6 : PredicateControl {
 
 class ASE_NOT_DSP {
   list<Predicate> InsnPredicates = [NotDSP];
+}
+
+class MADD4 {
+  list<Predicate> AdditionalPredicates = [HasMadd4];
 }
 
 //===----------------------------------------------------------------------===//

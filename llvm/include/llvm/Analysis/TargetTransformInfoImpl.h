@@ -427,6 +427,15 @@ public:
     return false;
   }
 
+  unsigned getAtomicMemIntrinsicMaxElementSize() const {
+    // Note for overrides: You must ensure for all element unordered-atomic
+    // memory intrinsics that all power-of-2 element sizes up to, and
+    // including, the return value of this method have a corresponding
+    // runtime lib call. These runtime lib call definitions can be found
+    // in RuntimeLibcalls.h
+    return 0;
+  }
+
   Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
                                            Type *ExpectedType) {
     return nullptr;

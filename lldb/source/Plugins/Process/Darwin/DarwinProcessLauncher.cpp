@@ -35,6 +35,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Support/Errno.h"
 
 #include "CFBundle.h"
 #include "CFString.h"
@@ -319,13 +320,12 @@ static Status PosixSpawnChildForPTraceDebugging(const char *path,
   ::posix_spawnattr_setsigdefault(&attr, &all_signals);
 
   if ((error_code = ::posix_spawnattr_setflags(&attr, flags)) != 0) {
-    if (log)
-      log->Printf("::posix_spawnattr_setflags(&attr, "
-                  "POSIX_SPAWN_START_SUSPENDED%s) failed: %s",
-                  flags & _POSIX_SPAWN_DISABLE_ASLR
-                      ? " | _POSIX_SPAWN_DISABLE_ASLR"
-                      : "",
-                  strerror(error_code));
+    LLDB_LOG(log,
+             "::posix_spawnattr_setflags(&attr, "
+             "POSIX_SPAWN_START_SUSPENDED{0}) failed: {1}",
+             flags & _POSIX_SPAWN_DISABLE_ASLR ? " | _POSIX_SPAWN_DISABLE_ASLR"
+                                               : "",
+             llvm::sys::StrError(error_code));
     error.SetError(error_code, eErrorTypePOSIX);
     return error;
   }
@@ -341,10 +341,10 @@ static Status PosixSpawnChildForPTraceDebugging(const char *path,
     error_code =
         ::posix_spawnattr_setbinpref_np(&attr, 1, &desired_cpu_type, &ocount);
     if (error_code != 0) {
-      if (log)
-        log->Printf("::posix_spawnattr_setbinpref_np(&attr, 1, "
-                    "cpu_type = 0x%8.8x, count => %llu): %s",
-                    desired_cpu_type, (uint64_t)ocount, strerror(error_code));
+      LLDB_LOG(log,
+               "::posix_spawnattr_setbinpref_np(&attr, 1, "
+               "cpu_type = {0:x8}, count => {1}): {2}",
+               desired_cpu_type, ocount, llvm::sys::StrError(error_code));
       error.SetError(error_code, eErrorTypePOSIX);
       return error;
     }
@@ -361,10 +361,8 @@ static Status PosixSpawnChildForPTraceDebugging(const char *path,
 
   posix_spawn_file_actions_t file_actions;
   if ((error_code = ::posix_spawn_file_actions_init(&file_actions)) != 0) {
-    if (log)
-      log->Printf("::posix_spawn_file_actions_init(&file_actions) "
-                  "failed: %s",
-                  strerror(error_code));
+    LLDB_LOG(log, "::posix_spawn_file_actions_init(&file_actions) failed: {0}",
+             llvm::sys::StrError(error_code));
     error.SetError(error_code, eErrorTypePOSIX);
     return error;
   }
@@ -409,11 +407,11 @@ static Status PosixSpawnChildForPTraceDebugging(const char *path,
   error_code = ::posix_spawnp(pid, path, &file_actions, &attr,
                               (char *const *)argv, (char *const *)envp);
   if (error_code != 0) {
-    if (log)
-      log->Printf("::posix_spawnp(pid => %p, path = '%s', file_actions "
-                  "= %p, attr = %p, argv = %p, envp = %p) failed: %s",
-                  pid, path, &file_actions, &attr, argv, envp,
-                  strerror(error_code));
+    LLDB_LOG(log,
+             "::posix_spawnp(pid => {0}, path = '{1}', file_actions "
+             "= {2}, attr = {3}, argv = {4}, envp = {5}) failed: {6}",
+             pid, path, &file_actions, &attr, argv, envp,
+             llvm::sys::StrError(error_code));
     error.SetError(error_code, eErrorTypePOSIX);
     return error;
   }

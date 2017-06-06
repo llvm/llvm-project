@@ -54,6 +54,11 @@ static bool IsFunctionExpr(const MCExpr *Expr) {
   return false;
 }
 
+static bool IsFunctionType(const MCValue &Target) {
+  const MCSymbolRefExpr *RefA = Target.getSymA();
+  return RefA && RefA->getKind() == MCSymbolRefExpr::VK_WebAssembly_TYPEINDEX;
+}
+
 unsigned WebAssemblyWasmObjectWriter::getRelocType(MCContext &Ctx,
                                                    const MCValue &Target,
                                                    const MCFixup &Fixup,
@@ -71,6 +76,8 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(MCContext &Ctx,
   case WebAssembly::fixup_code_sleb128_i64:
     llvm_unreachable("fixup_sleb128_i64 not implemented yet");
   case WebAssembly::fixup_code_uleb128_i32:
+    if (IsFunctionType(Target))
+      return wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB;
     if (IsFunction)
       return wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB;
     return wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB;

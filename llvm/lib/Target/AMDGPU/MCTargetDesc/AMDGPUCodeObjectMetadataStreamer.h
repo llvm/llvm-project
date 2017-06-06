@@ -17,9 +17,9 @@
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUCODEOBJECTMETADATASTREAMER_H
 
 #include "AMDGPU.h"
-#include "AMDGPUCodeObjectMetadata.h"
 #include "AMDKernelCodeT.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/AMDGPUCodeObjectMetadata.h"
 #include "llvm/Support/ErrorOr.h"
 
 namespace llvm {

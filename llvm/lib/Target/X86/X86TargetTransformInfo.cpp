@@ -1383,6 +1383,8 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
 }
 
+unsigned X86TTIImpl::getAtomicMemIntrinsicMaxElementSize() const { return 16; }
+
 int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
                                       ArrayRef<Type *> Tys, FastMathFlags FMF,
                                       unsigned ScalarizationCostPassed) {
@@ -2174,6 +2176,17 @@ int X86TTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *SrcVTy,
                            AddressSpace);
 
   return getGSVectorCost(Opcode, SrcVTy, Ptr, Alignment, AddressSpace);
+}
+
+bool X86TTIImpl::isLSRCostLess(TargetTransformInfo::LSRCost &C1,
+                               TargetTransformInfo::LSRCost &C2) {
+    // X86 specific here are "instruction number 1st priority".
+    return std::tie(C1.Insns, C1.NumRegs, C1.AddRecCost,
+                    C1.NumIVMuls, C1.NumBaseAdds,
+                    C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
+           std::tie(C2.Insns, C2.NumRegs, C2.AddRecCost,
+                    C2.NumIVMuls, C2.NumBaseAdds,
+                    C2.ScaleCost, C2.ImmCost, C2.SetupCost);
 }
 
 bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy) {

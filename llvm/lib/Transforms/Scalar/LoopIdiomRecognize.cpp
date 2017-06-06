@@ -116,6 +116,7 @@ private:
     Memset,
     MemsetPattern,
     Memcpy,
+    UnorderedAtomicMemcpy,
     DontUse // Dummy retval never to be used. Allows catching errors in retval
             // handling.
   };
@@ -353,8 +354,12 @@ static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
 
 LoopIdiomRecognize::LegalStoreKind
 LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
+
   // Don't touch volatile stores.
-  if (!SI->isSimple())
+  if (SI->isVolatile())
+    return LegalStoreKind::None;
+  // We only want simple or unordered-atomic stores.
+  if (!SI->isUnordered())
     return LegalStoreKind::None;
 
   // Don't convert stores of non-integral pointer types to memsets (which stores
@@ -395,15 +400,18 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   Value *SplatValue = isBytewiseValue(StoredVal);
   Constant *PatternValue = nullptr;
 
+  // Note: memset and memset_pattern on unordered-atomic is yet not supported
+  bool UnorderedAtomic = SI->isUnordered() && !SI->isSimple();
+
   // If we're allowed to form a memset, and the stored value would be
   // acceptable for memset, use it.
-  if (HasMemset && SplatValue &&
+  if (!UnorderedAtomic && HasMemset && SplatValue &&
       // Verify that the stored value is loop invariant.  If not, we can't
       // promote the memset.
       CurLoop->isLoopInvariant(SplatValue)) {
     // It looks like we can use SplatValue.
     return LegalStoreKind::Memset;
-  } else if (HasMemsetPattern &&
+  } else if (!UnorderedAtomic && HasMemsetPattern &&
              // Don't create memset_pattern16s with address spaces.
              StorePtr->getType()->getPointerAddressSpace() == 0 &&
              (PatternValue = getMemSetPatternValue(StoredVal, DL))) {
@@ -422,7 +430,12 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
 
     // The store must be feeding a non-volatile load.
     LoadInst *LI = dyn_cast<LoadInst>(SI->getValueOperand());
-    if (!LI || !LI->isSimple())
+
+    // Only allow non-volatile loads
+    if (!LI || LI->isVolatile())
+      return LegalStoreKind::None;
+    // Only allow simple or unordered-atomic loads
+    if (!LI->isUnordered())
       return LegalStoreKind::None;
 
     // See if the pointer expression is an AddRec like {base,+,1} on the current
@@ -438,7 +451,9 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
       return LegalStoreKind::None;
 
     // Success.  This store can be converted into a memcpy.
-    return LegalStoreKind::Memcpy;
+    UnorderedAtomic = UnorderedAtomic || LI->isAtomic();
+    return UnorderedAtomic ? LegalStoreKind::UnorderedAtomicMemcpy
+                           : LegalStoreKind::Memcpy;
   }
   // This store can't be transformed into a memset/memcpy.
   return LegalStoreKind::None;
@@ -469,6 +484,7 @@ void LoopIdiomRecognize::collectStores(BasicBlock *BB) {
       StoreRefsForMemsetPattern[Ptr].push_back(SI);
     } break;
     case LegalStoreKind::Memcpy:
+    case LegalStoreKind::UnorderedAtomicMemcpy:
       StoreRefsForMemcpy.push_back(SI);
       break;
     default:
@@ -882,7 +898,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 /// for (i) A[i] = B[i];
 bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
                                                     const SCEV *BECount) {
-  assert(SI->isSimple() && "Expected only non-volatile stores.");
+  assert(SI->isUnordered() && "Expected only non-volatile non-ordered stores.");
 
   Value *StorePtr = SI->getPointerOperand();
   const SCEVAddRecExpr *StoreEv = cast<SCEVAddRecExpr>(SE->getSCEV(StorePtr));
@@ -892,7 +908,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
 
   // The store must be feeding a non-volatile load.
   LoadInst *LI = cast<LoadInst>(SI->getValueOperand());
-  assert(LI->isSimple() && "Expected only non-volatile stores.");
+  assert(LI->isUnordered() && "Expected only non-volatile non-ordered loads.");
 
   // See if the pointer expression is an AddRec like {base,+,1} on the current
   // loop, which indicates a strided load.  If we have something else, it's a
@@ -966,16 +982,47 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
 
   const SCEV *NumBytesS =
       SE->getAddExpr(BECount, SE->getOne(IntPtrTy), SCEV::FlagNUW);
-  if (StoreSize != 1)
-    NumBytesS = SE->getMulExpr(NumBytesS, SE->getConstant(IntPtrTy, StoreSize),
-                               SCEV::FlagNUW);
 
-  Value *NumBytes =
-      Expander.expandCodeFor(NumBytesS, IntPtrTy, Preheader->getTerminator());
+  unsigned Align = std::min(SI->getAlignment(), LI->getAlignment());
+  CallInst *NewCall = nullptr;
+  // Check whether to generate an unordered atomic memcpy:
+  //  If the load or store are atomic, then they must neccessarily be unordered
+  //  by previous checks.
+  if (!SI->isAtomic() && !LI->isAtomic()) {
+    if (StoreSize != 1)
+      NumBytesS = SE->getMulExpr(
+          NumBytesS, SE->getConstant(IntPtrTy, StoreSize), SCEV::FlagNUW);
 
-  CallInst *NewCall =
-      Builder.CreateMemCpy(StoreBasePtr, LoadBasePtr, NumBytes,
-                           std::min(SI->getAlignment(), LI->getAlignment()));
+    Value *NumBytes =
+        Expander.expandCodeFor(NumBytesS, IntPtrTy, Preheader->getTerminator());
+
+    NewCall = Builder.CreateMemCpy(StoreBasePtr, LoadBasePtr, NumBytes, Align);
+  } else {
+    // We cannot allow unaligned ops for unordered load/store, so reject
+    // anything where the alignment isn't at least the element size.
+    if (Align < StoreSize)
+      return false;
+
+    // If the element.atomic memcpy is not lowered into explicit
+    // loads/stores later, then it will be lowered into an element-size
+    // specific lib call. If the lib call doesn't exist for our store size, then
+    // we shouldn't generate the memcpy.
+    if (StoreSize > TTI->getAtomicMemIntrinsicMaxElementSize())
+      return false;
+
+    Value *NumElements =
+        Expander.expandCodeFor(NumBytesS, IntPtrTy, Preheader->getTerminator());
+
+    NewCall = Builder.CreateElementAtomicMemCpy(StoreBasePtr, LoadBasePtr,
+                                                NumElements, StoreSize);
+    // Propagate alignment info onto the pointer args. Note that unordered
+    // atomic loads/stores are *required* by the spec to have an alignment
+    // but non-atomic loads/stores may not.
+    NewCall->addParamAttr(0, Attribute::getWithAlignment(NewCall->getContext(),
+                                                         SI->getAlignment()));
+    NewCall->addParamAttr(1, Attribute::getWithAlignment(NewCall->getContext(),
+                                                         LI->getAlignment()));
+  }
   NewCall->setDebugLoc(SI->getDebugLoc());
 
   DEBUG(dbgs() << "  Formed memcpy: " << *NewCall << "\n"
