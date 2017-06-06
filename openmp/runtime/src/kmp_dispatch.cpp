@@ -681,6 +681,35 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
       schedule = kmp_sch_guided_iterative_chunked;
       KMP_WARNING(DispatchManyThreads);
     }
+    if (schedule == kmp_sch_runtime_simd) {
+      // compiler provides simd_width in the chunk parameter
+      schedule = team->t.t_sched.r_sched_type;
+      // Detail the schedule if needed (global controls are differentiated
+      // appropriately)
+      if (schedule == kmp_sch_static || schedule == kmp_sch_auto ||
+          schedule == __kmp_static) {
+        schedule = kmp_sch_static_balanced_chunked;
+      } else {
+        if (schedule == kmp_sch_guided_chunked || schedule == __kmp_guided) {
+          schedule = kmp_sch_guided_simd;
+        }
+        chunk = team->t.t_sched.chunk * chunk;
+      }
+#if USE_ITT_BUILD
+      cur_chunk = chunk;
+#endif
+#ifdef KMP_DEBUG
+      {
+        const char *buff;
+        // create format specifiers before the debug output
+        buff = __kmp_str_format("__kmp_dispatch_init: T#%%d new: schedule:%%d"
+                                " chunk:%%%s\n",
+                                traits_t<ST>::spec);
+        KD_TRACE(10, (buff, gtid, schedule, chunk));
+        __kmp_str_free(&buff);
+      }
+#endif
+    }
     pr->u.p.parm1 = chunk;
   }
   KMP_ASSERT2((kmp_sch_lower < schedule && schedule < kmp_sch_upper),
@@ -878,7 +907,21 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
     }
     break;
   } // case
-  case kmp_sch_guided_iterative_chunked: {
+  case kmp_sch_static_balanced_chunked: {
+    // similar to balanced, but chunk adjusted to multiple of simd width
+    T nth = th->th.th_team_nproc;
+    KD_TRACE(100, ("__kmp_dispatch_init: T#%d runtime(simd:static)"
+                   " -> falling-through to static_greedy\n",
+                   gtid));
+    schedule = kmp_sch_static_greedy;
+    if (nth > 1)
+      pr->u.p.parm1 = ((tc + nth - 1) / nth + chunk - 1) & ~(chunk - 1);
+    else
+      pr->u.p.parm1 = tc;
+    break;
+  } // case
+  case kmp_sch_guided_iterative_chunked:
+  case kmp_sch_guided_simd: {
     T nproc = th->th.th_team_nproc;
     KD_TRACE(100, ("__kmp_dispatch_init: T#%d kmp_sch_guided_iterative_chunked"
                    " case\n",
@@ -1140,6 +1183,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
         break;
       case kmp_sch_guided_iterative_chunked:
       case kmp_sch_guided_analytical_chunked:
+      case kmp_sch_guided_simd:
         schedtype = 2;
         break;
       default:
@@ -1951,6 +1995,89 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
           } // if
           limit = init + (UT)(remaining *
                               *(double *)&pr->u.p.parm3); // divide by K*nproc
+          if (compare_and_swap<ST>((ST *)&sh->u.s.iteration, (ST)init,
+                                   (ST)limit)) {
+            // CAS was successful, chunk obtained
+            status = 1;
+            --limit;
+            break;
+          } // if
+        } // while
+        if (status != 0) {
+          start = pr->u.p.lb;
+          incr = pr->u.p.st;
+          if (p_st != NULL)
+            *p_st = incr;
+          *p_lb = start + init * incr;
+          *p_ub = start + limit * incr;
+          if (pr->ordered) {
+            pr->u.p.ordered_lower = init;
+            pr->u.p.ordered_upper = limit;
+#ifdef KMP_DEBUG
+            {
+              const char *buff;
+              // create format specifiers before the debug output
+              buff = __kmp_str_format("__kmp_dispatch_next: T#%%d "
+                                      "ordered_lower:%%%s ordered_upper:%%%s\n",
+                                      traits_t<UT>::spec, traits_t<UT>::spec);
+              KD_TRACE(1000, (buff, gtid, pr->u.p.ordered_lower,
+                              pr->u.p.ordered_upper));
+              __kmp_str_free(&buff);
+            }
+#endif
+          } // if
+        } else {
+          *p_lb = 0;
+          *p_ub = 0;
+          if (p_st != NULL)
+            *p_st = 0;
+        } // if
+      } // case
+      break;
+
+      case kmp_sch_guided_simd: {
+        // same as iterative but curr-chunk adjusted to be multiple of given
+        // chunk
+        T chunk = pr->u.p.parm1;
+        KD_TRACE(100, ("__kmp_dispatch_next: T#%d kmp_sch_guided_simd case\n",
+                       gtid));
+        trip = pr->u.p.tc;
+        // Start atomic part of calculations
+        while (1) {
+          ST remaining; // signed, because can be < 0
+          init = sh->u.s.iteration; // shared value
+          remaining = trip - init;
+          if (remaining <= 0) { // AC: need to compare with 0 first
+            status = 0; // nothing to do, don't try atomic op
+            break;
+          }
+          KMP_DEBUG_ASSERT(init % chunk == 0);
+          // compare with K*nproc*(chunk+1), K=2 by default
+          if ((T)remaining < pr->u.p.parm2) {
+            // use dynamic-style shcedule
+            // atomically inrement iterations, get old value
+            init = test_then_add<ST>((ST *)&sh->u.s.iteration, (ST)chunk);
+            remaining = trip - init;
+            if (remaining <= 0) {
+              status = 0; // all iterations got by other threads
+            } else {
+              // got some iterations to work on
+              status = 1;
+              if ((T)remaining > chunk) {
+                limit = init + chunk - 1;
+              } else {
+                last = 1; // the last chunk
+                limit = init + remaining - 1;
+              } // if
+            } // if
+            break;
+          } // if
+          // divide by K*nproc
+          UT span = remaining * (*(double *)&pr->u.p.parm3);
+          UT rem = span % chunk;
+          if (rem) // adjust so that span%chunk == 0
+            span += chunk - rem;
+          limit = init + span;
           if (compare_and_swap<ST>((ST *)&sh->u.s.iteration, (ST)init,
                                    (ST)limit)) {
             // CAS was successful, chunk obtained

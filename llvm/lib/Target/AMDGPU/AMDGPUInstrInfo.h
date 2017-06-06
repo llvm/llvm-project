@@ -17,8 +17,8 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRINFO_H
 
 #include "AMDGPU.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/Target/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "AMDGPUGenInstrInfo.inc"

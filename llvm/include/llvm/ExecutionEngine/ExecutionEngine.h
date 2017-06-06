@@ -27,10 +27,10 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
-#include <functional>
 
 namespace llvm {
 

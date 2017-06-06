@@ -12,8 +12,8 @@
 Usage:
 ################################################################################
 cat << EOF > test_fuzzer.cc
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   if (size > 0 && data[0] == 'H')
     if (size > 1 && data[1] == 'I')
@@ -50,18 +50,18 @@ statistics from the file. If that fails then the process will quit.
 
 */
 #include <assert.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <unistd.h>
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <vector>
 
 // Platform detection. Copied from FuzzerInternal.h

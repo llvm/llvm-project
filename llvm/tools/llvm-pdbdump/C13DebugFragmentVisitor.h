@@ -38,12 +38,20 @@ public:
   Error
   visitInlineeLines(codeview::DebugInlineeLinesSubsectionRef &Lines) final;
 
+  Error visitCrossModuleExports(
+      codeview::DebugCrossModuleExportsSubsectionRef &Lines) final;
+
+  Error visitCrossModuleImports(
+      codeview::DebugCrossModuleImportsSubsectionRef &Imports) final;
+
   Error finished() final;
 
 protected:
   virtual Error handleFileChecksums() { return Error::success(); }
   virtual Error handleLines() { return Error::success(); }
   virtual Error handleInlineeLines() { return Error::success(); }
+  virtual Error handleCrossModuleExports() { return Error::success(); }
+  virtual Error handleCrossModuleImports() { return Error::success(); }
 
   Expected<StringRef> getNameFromStringTable(uint32_t Offset);
   Expected<StringRef> getNameFromChecksumsBuffer(uint32_t Offset);
@@ -51,6 +59,8 @@ protected:
   Optional<codeview::DebugChecksumsSubsectionRef> Checksums;
   std::vector<codeview::DebugInlineeLinesSubsectionRef> InlineeLines;
   std::vector<codeview::DebugLinesSubsectionRef> Lines;
+  std::vector<codeview::DebugCrossModuleExportsSubsectionRef> CrossExports;
+  std::vector<codeview::DebugCrossModuleImportsSubsectionRef> CrossImports;
 
   PDBFile &F;
 };

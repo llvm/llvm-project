@@ -395,7 +395,7 @@ define void @test10() {
 ; CHECK:       g:
 ; CHECK-NEXT:    [[N:%.*]] = phi i32* [ [[H:%.*]], [[I:%.*]] ], [ null, [[B:%.*]] ]
 ; CHECK-NEXT:    [[H]] = getelementptr i32, i32* [[N]], i64 1
-; CHECK-NEXT:    [[J:%.*]] = icmp eq i32* [[H]], getelementptr (i32, i32* null, i64 8)
+; CHECK-NEXT:    [[J:%.*]] = icmp eq i32* %h, inttoptr (i64 32 to i32*)
 ; CHECK-NEXT:    br i1 [[J]], label [[C:%.*]], label [[I]]
 ; CHECK:       i:
 ; CHECK-NEXT:    br i1 undef, label [[K:%.*]], label [[G]]

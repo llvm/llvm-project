@@ -1824,20 +1824,10 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     }
 
     // Check whether this module is available.
-    clang::Module::Requirement Requirement;
-    clang::Module::UnresolvedHeaderDirective MissingHeader;
-    if (!Module->isAvailable(getLangOpts(), getTarget(), Requirement,
-                             MissingHeader)) {
-      if (MissingHeader.FileNameLoc.isValid()) {
-        getDiagnostics().Report(MissingHeader.FileNameLoc,
-                                diag::err_module_header_missing)
-          << MissingHeader.IsUmbrella << MissingHeader.FileName;
-      } else {
-        getDiagnostics().Report(ImportLoc, diag::err_module_unavailable)
-          << Module->getFullModuleName()
-          << Requirement.second << Requirement.first
-          << SourceRange(Path.front().second, Path.back().second);
-      }
+    if (Preprocessor::checkModuleIsAvailable(getLangOpts(), getTarget(),
+                                             getDiagnostics(), Module)) {
+      getDiagnostics().Report(ImportLoc, diag::note_module_import_here)
+        << SourceRange(Path.front().second, Path.back().second);
       LastModuleImportLoc = ImportLoc;
       LastModuleImportResult = ModuleLoadResult();
       return ModuleLoadResult();

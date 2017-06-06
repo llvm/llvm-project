@@ -1954,6 +1954,13 @@ private:
   void HandleMicrosoftImportDirective(Token &Tok);
 
 public:
+  /// Check that the given module is available, producing a diagnostic if not.
+  /// \return \c true if the check failed (because the module is not available).
+  ///         \c false if the module appears to be usable.
+  static bool checkModuleIsAvailable(const LangOptions &LangOpts,
+                                     const TargetInfo &TargetInfo,
+                                     DiagnosticsEngine &Diags, Module *M);
+
   // Module inclusion testing.
   /// \brief Find the module that owns the source or header file that
   /// \p Loc points to. If the location is in a file that was included

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/Support/DataExtractor.h"
+#include "gtest/gtest.h"
 using namespace llvm;
 
 namespace {

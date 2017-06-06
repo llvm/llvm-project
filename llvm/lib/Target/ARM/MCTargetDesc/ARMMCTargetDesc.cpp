@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ARMMCTargetDesc.h"
 #include "ARMBaseInfo.h"
 #include "ARMMCAsmInfo.h"
-#include "ARMMCTargetDesc.h"
 #include "InstPrinter/ARMInstPrinter.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCELFStreamer.h"

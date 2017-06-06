@@ -99,8 +99,20 @@ template <class ELFT> static void finalizeShtGroup(OutputSection *Sec) {
 
 template <class ELFT> void OutputSection::finalize() {
   if ((this->Flags & SHF_LINK_ORDER) && !this->Sections.empty()) {
+    OutputSectionCommand *Cmd = Script->getCmd(this);
+    // Link order may be distributed across several InputSectionDescriptions
+    // but sort must consider them all at once.
+    std::vector<InputSection **> ScriptSections;
+    std::vector<InputSection *> Sections;
+    for (BaseCommand *Base : Cmd->Commands)
+      if (auto *ISD = dyn_cast<InputSectionDescription>(Base))
+        for (InputSection *&IS : ISD->Sections) {
+          ScriptSections.push_back(&IS);
+          Sections.push_back(IS);
+        }
     std::sort(Sections.begin(), Sections.end(), compareByFilePosition);
-    assignOffsets();
+    for (int I = 0, N = Sections.size(); I < N; ++I)
+      *ScriptSections[I] = Sections[I];
 
     // We must preserve the link order dependency of sections with the
     // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We
@@ -333,6 +345,17 @@ void elf::reportDiscarded(InputSectionBase *IS) {
 
 void OutputSectionFactory::addInputSec(InputSectionBase *IS,
                                        StringRef OutsecName) {
+  // Sections with the SHT_GROUP attribute reach here only when the - r option
+  // is given. Such sections define "section groups", and InputFiles.cpp has
+  // dedup'ed section groups by their signatures. For the -r, we want to pass
+  // through all SHT_GROUP sections without merging them because merging them
+  // creates broken section contents.
+  if (IS->Type == SHT_GROUP) {
+    OutputSection *Out = nullptr;
+    addInputSec(IS, OutsecName, Out);
+    return;
+  }
+
   SectionKey Key = createKey(IS, OutsecName);
   OutputSection *&Sec = Map[Key];
   return addInputSec(IS, OutsecName, Sec);

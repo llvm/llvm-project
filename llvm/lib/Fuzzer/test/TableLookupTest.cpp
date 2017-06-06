@@ -3,11 +3,11 @@
 
 // Make sure the fuzzer eventually finds all possible values of a variable
 // within a range.
-#include <cstring>
+#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <cassert>
+#include <cstring>
 #include <set>
 
 const size_t N = 1 << 12;

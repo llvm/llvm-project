@@ -3,9 +3,9 @@
 
 // Tests OOM handling.
 #include <assert.h>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <cstddef>
 #include <cstring>
 #include <iostream>
 

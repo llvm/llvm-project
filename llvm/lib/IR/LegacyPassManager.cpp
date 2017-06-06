@@ -593,7 +593,7 @@ AnalysisUsage *PMTopLevelManager::findAnalysisUsage(Pass *P) {
     assert(Node && "cached analysis usage must be non null");
 
     AnUsageMap[P] = &Node->AU;
-    AnUsage = &Node->AU;;
+    AnUsage = &Node->AU;
   }
   return AnUsage;
 }

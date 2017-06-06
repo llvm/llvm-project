@@ -17,11 +17,11 @@
 #define LLVM_CODEGEN_BASICTTIIMPL_H
 
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfoImpl.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 
 namespace llvm {
 
@@ -115,6 +115,10 @@ public:
     AM.HasBaseReg = HasBaseReg;
     AM.Scale = Scale;
     return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace);
+  }
+
+  bool isLSRCostLess(TTI::LSRCost C1, TTI::LSRCost C2) {
+    return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
   }
 
   int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,

@@ -8,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "LLVMContextImpl.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/IntrinsicInst.h"
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//

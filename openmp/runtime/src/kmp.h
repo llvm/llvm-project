@@ -334,10 +334,12 @@ enum sched_type {
 #if OMP_45_ENABLED
   /* static with chunk adjustment (e.g., simd) */
   kmp_sch_static_balanced_chunked = 45,
+  kmp_sch_guided_simd = 46, /**< guided with chunk adjustment */
+  kmp_sch_runtime_simd = 47, /**< runtime with chunk adjustment */
 #endif
 
   /* accessible only through KMP_SCHEDULE environment variable */
-  kmp_sch_upper = 46, /**< upper bound for unordered values */
+  kmp_sch_upper = 48, /**< upper bound for unordered values */
 
   kmp_ord_lower = 64, /**< lower bound for ordered values, must be power of 2 */
   kmp_ord_static_chunked = 65,

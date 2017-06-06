@@ -10,8 +10,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUMACHINEFUNCTION_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUMACHINEFUNCTION_H
 
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
 

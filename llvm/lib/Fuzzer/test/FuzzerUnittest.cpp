@@ -6,12 +6,12 @@
 #define _LIBCPP_HAS_NO_ASAN
 
 #include "FuzzerCorpus.h"
-#include "FuzzerInternal.h"
 #include "FuzzerDictionary.h"
+#include "FuzzerInternal.h"
 #include "FuzzerMerge.h"
 #include "FuzzerMutate.h"
-#include "FuzzerTracePC.h"
 #include "FuzzerRandom.h"
+#include "FuzzerTracePC.h"
 #include "gtest/gtest.h"
 #include <memory>
 #include <set>

@@ -25,10 +25,10 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZHAZARDRECOGNIZER_H
 
 #include "SystemZSubtarget.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>

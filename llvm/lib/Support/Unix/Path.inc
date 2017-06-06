@@ -75,8 +75,8 @@
 #define STATVFS_F_FRSIZE(vfs) vfs.f_frsize
 #else
 #if defined(__OpenBSD__) || defined(__FreeBSD__)
-#include <sys/param.h>
 #include <sys/mount.h>
+#include <sys/param.h>
 #elif defined(__linux__)
 #if defined(HAVE_LINUX_MAGIC_H)
 #include <linux/magic.h>

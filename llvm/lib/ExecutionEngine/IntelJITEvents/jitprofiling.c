@@ -22,8 +22,8 @@
 #include <windows.h>
 #pragma optimize("", off)
 #else  /* ITT_PLATFORM==ITT_PLATFORM_WIN */
-#include <pthread.h>
 #include <dlfcn.h>
+#include <pthread.h>
 #include <stdint.h>
 #endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 #include <malloc.h>

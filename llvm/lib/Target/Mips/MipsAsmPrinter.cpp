@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MipsAsmPrinter.h"
 #include "InstPrinter/MipsInstPrinter.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsMCNaCl.h"
 #include "Mips.h"
-#include "MipsAsmPrinter.h"
 #include "MipsInstrInfo.h"
 #include "MipsMCInstLower.h"
 #include "MipsTargetMachine.h"

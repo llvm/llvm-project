@@ -33,7 +33,7 @@ regBankSelected: true
 selected:        false
 # CHECK-LABEL: name:            const_i8
 # CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gr8 }
+# CHECK-NEXT:  - { id: 0, class: gr8, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
 # CHECK:  body:
@@ -52,7 +52,7 @@ regBankSelected: true
 selected:        false
 # CHECK-LABEL: name:            const_i16
 # CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gr16 }
+# CHECK-NEXT:  - { id: 0, class: gr16, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
 # CHECK:  body:
@@ -71,7 +71,7 @@ regBankSelected: true
 selected:        false
 # CHECK-LABEL: name:            const_i32
 # CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gr32 }
+# CHECK-NEXT:  - { id: 0, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
 # CHECK:  body:
@@ -90,7 +90,7 @@ regBankSelected: true
 selected:        false
 # CHECK-LABEL: name:            const_i64
 # CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gr64 }
+# CHECK-NEXT:  - { id: 0, class: gr64, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
 # CHECK:  body:
@@ -110,7 +110,7 @@ regBankSelected: true
 selected:        false
 # CHECK-LABEL: name:            const_i64_u32
 # CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gr64 }
+# CHECK-NEXT:  - { id: 0, class: gr64, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
 # CHECK:  body:
@@ -129,7 +129,7 @@ regBankSelected: true
 selected:        false
 # CHECK-LABEL: name:            const_i64_i32
 # CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gr64 }
+# CHECK-NEXT:  - { id: 0, class: gr64, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
 # CHECK:  body:

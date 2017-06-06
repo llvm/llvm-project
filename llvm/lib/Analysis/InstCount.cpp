@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/Passes.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/Passes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Pass.h"
@@ -32,7 +32,6 @@ STATISTIC(TotalMemInst, "Number of memory instructions");
   STATISTIC(Num ## OPCODE ## Inst, "Number of " #OPCODE " insts");
 
 #include "llvm/IR/Instruction.def"
-
 
 namespace {
   class InstCount : public FunctionPass, public InstVisitor<InstCount> {

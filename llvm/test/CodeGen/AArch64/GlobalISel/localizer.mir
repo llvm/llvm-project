@@ -44,11 +44,11 @@ regBankSelected: true
 
 # CHECK:      registers:
 # Existing registers should be left untouched
-# CHECK:  - { id: 0, class: gpr }
-#CHECK-NEXT:  - { id: 1, class: gpr }
-#CHECK-NEXT:  - { id: 2, class: gpr }
+# CHECK:  - { id: 0, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 2, class: gpr, preferred-register: '' }
 # The newly created reg should be on the same regbank/regclass as its origin.
-#CHECK-NEXT:  - { id: 3, class: gpr }
+#CHECK-NEXT:  - { id: 3, class: gpr, preferred-register: '' }
 
 registers:
   - { id: 0, class: gpr }
@@ -82,11 +82,11 @@ regBankSelected: true
 
 # CHECK:      registers:
 # Existing registers should be left untouched
-# CHECK:  - { id: 0, class: gpr }
-#CHECK-NEXT:  - { id: 1, class: gpr }
-#CHECK-NEXT:  - { id: 2, class: gpr }
+# CHECK:  - { id: 0, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 2, class: gpr, preferred-register: '' }
 # The newly created reg should be on the same regbank/regclass as its origin.
-#CHECK-NEXT:  - { id: 3, class: gpr }
+#CHECK-NEXT:  - { id: 3, class: gpr, preferred-register: '' }
 
 registers:
   - { id: 0, class: gpr }
@@ -120,13 +120,13 @@ tracksRegLiveness: true
 
 # CHECK:      registers:
 # Existing registers should be left untouched
-# CHECK:  - { id: 0, class: gpr }
-#CHECK-NEXT:  - { id: 1, class: gpr }
-#CHECK-NEXT:  - { id: 2, class: gpr }
-#CHECK-NEXT:  - { id: 3, class: gpr }
-#CHECK-NEXT:  - { id: 4, class: gpr }
+# CHECK:  - { id: 0, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 2, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 3, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 4, class: gpr, preferred-register: '' }
 # The newly created reg should be on the same regbank/regclass as its origin.
-#CHECK-NEXT:  - { id: 5, class: gpr }
+#CHECK-NEXT:  - { id: 5, class: gpr, preferred-register: '' }
 
 registers:
   - { id: 0, class: gpr }
@@ -168,14 +168,14 @@ tracksRegLiveness: true
 
 # CHECK:      registers:
 # Existing registers should be left untouched
-# CHECK:  - { id: 0, class: gpr }
-#CHECK-NEXT:  - { id: 1, class: gpr }
-#CHECK-NEXT:  - { id: 2, class: gpr }
-#CHECK-NEXT:  - { id: 3, class: gpr }
-#CHECK-NEXT:  - { id: 4, class: gpr }
+# CHECK:  - { id: 0, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 2, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 3, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 4, class: gpr, preferred-register: '' }
 # The newly created regs should be on the same regbank/regclass as its origin.
-#CHECK-NEXT:  - { id: 5, class: gpr }
-#CHECK-NEXT:  - { id: 6, class: gpr }
+#CHECK-NEXT:  - { id: 5, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 6, class: gpr, preferred-register: '' }
 
 registers:
   - { id: 0, class: gpr }
@@ -219,14 +219,14 @@ tracksRegLiveness: true
 
 # CHECK:      registers:
 # Existing registers should be left untouched
-# CHECK:  - { id: 0, class: gpr }
-#CHECK-NEXT:  - { id: 1, class: gpr }
-#CHECK-NEXT:  - { id: 2, class: gpr }
-#CHECK-NEXT:  - { id: 3, class: gpr }
-#CHECK-NEXT:  - { id: 4, class: gpr }
+# CHECK:  - { id: 0, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 2, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 3, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 4, class: gpr, preferred-register: '' }
 # The newly created reg should be on the same regbank/regclass as its origin.
-#CHECK-NEXT:  - { id: 5, class: gpr }
-#CHECK-NEXT:  - { id: 6, class: gpr }
+#CHECK-NEXT:  - { id: 5, class: gpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 6, class: gpr, preferred-register: '' }
 
 registers:
   - { id: 0, class: gpr }
@@ -270,14 +270,14 @@ tracksRegLiveness: true
 
 # CHECK:      registers:
 # Existing registers should be left untouched
-# CHECK:  - { id: 0, class: fpr }
-#CHECK-NEXT:  - { id: 1, class: fpr }
-#CHECK-NEXT:  - { id: 2, class: fpr }
-#CHECK-NEXT:  - { id: 3, class: fpr }
-#CHECK-NEXT:  - { id: 4, class: fpr }
+# CHECK:  - { id: 0, class: fpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 1, class: fpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 2, class: fpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 3, class: fpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 4, class: fpr, preferred-register: '' }
 # The newly created reg should be on the same regbank/regclass as its origin.
-#CHECK-NEXT:  - { id: 5, class: fpr }
-#CHECK-NEXT:  - { id: 6, class: fpr }
+#CHECK-NEXT:  - { id: 5, class: fpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 6, class: fpr, preferred-register: '' }
 
 registers:
   - { id: 0, class: fpr }
@@ -323,12 +323,12 @@ tracksRegLiveness: true
 
 # CHECK:      registers:
 # Existing registers should be left untouched
-# CHECK:  - { id: 0, class: fpr }
-#CHECK-NEXT:  - { id: 1, class: fpr }
-#CHECK-NEXT:  - { id: 2, class: fpr }
-#CHECK-NEXT:  - { id: 3, class: fpr }
+# CHECK:  - { id: 0, class: fpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 1, class: fpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 2, class: fpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 3, class: fpr, preferred-register: '' }
 # The newly created reg should be on the same regbank/regclass as its origin.
-#CHECK-NEXT:  - { id: 4, class: fpr }
+#CHECK-NEXT:  - { id: 4, class: fpr, preferred-register: '' }
 
 registers:
   - { id: 0, class: fpr }

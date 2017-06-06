@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestGraph.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "TestGraph.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

@@ -213,7 +213,5 @@ void asan_mz_force_unlock();
 void PrintInternalAllocatorStats();
 void AsanSoftRssLimitExceededCallback(bool exceeded);
 
-AsanAllocator &get_allocator();
-
 }  // namespace __asan
 #endif  // ASAN_ALLOCATOR_H

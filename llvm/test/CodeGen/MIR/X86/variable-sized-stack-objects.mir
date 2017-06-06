@@ -24,9 +24,11 @@ frameInfo:
   maxAlignment:    8
   adjustsStack:    true
 # CHECK: stack:
-# CHECK-NEXT: - { id: 0, offset: -20, size: 4, alignment: 4 }
-# CHECK-NEXT: - { id: 1, offset: -32, size: 8, alignment: 8 }
-# CHECK-NEXT: - { id: 2, name: y, type: variable-sized, offset: -32, alignment: 1 }
+# CHECK-NEXT: - { id: 0, name: '', type: default, offset: -20, size: 4, alignment: 4,
+# CHECK-NEXT:  callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+# CHECK-NEXT: - { id: 1, name: '', type: default, offset: -32, size: 8, alignment: 8,
+# CHECK-NEXT:  callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+# CHECK-NEXT: - { id: 2, name: y, type: variable-sized, offset: -32, alignment: 1,
 stack:
   - { id: 0, offset: -20, size: 4, alignment: 4 }
   - { id: 1, offset: -32, size: 8, alignment: 8 }

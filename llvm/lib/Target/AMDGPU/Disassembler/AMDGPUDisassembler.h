@@ -20,8 +20,8 @@
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
-#include <cstdint>
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 
 namespace llvm {

@@ -1,0 +1,67 @@
+# RUN: llc %s -run-pass greedy -o - | FileCheck %s
+# Check that we don't insert spill code for undef values.
+# Uninitialized memory for them is fine.
+# PR33311
+--- |
+  ; ModuleID = 'stuff.ll'
+  target triple = "aarch64--"
+  
+  @g = external global i32
+  
+  define void @foobar() {
+    ret void
+  }
+  
+...
+---
+name:            foobar
+alignment:       2
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: gpr32all }
+  - { id: 3, class: gpr32 }
+  - { id: 4, class: gpr64common }
+  - { id: 5, class: gpr32 }
+  - { id: 6, class: gpr64common }
+  - { id: 7, class: gpr32 }
+  - { id: 8, class: gpr32 }
+  - { id: 9, class: gpr64 }
+body:             |
+  bb.0:
+    liveins: %x0
+    successors: %bb.1, %bb.2
+
+    ; %8 is going to be spilled.
+    ; But on that path, we don't care about its value.
+    ; Emit a simple KILL instruction instead of an
+    ; actual spill.
+    ; CHECK: [[UNDEF:%[0-9]+]] = IMPLICIT_DEF
+    ; CHECK-NEXT: KILL [[UNDEF]]
+    %8 = IMPLICIT_DEF
+    ; %9 us going to be spilled.
+    ; But it is only partially undef.
+    ; Make sure we spill it properly
+    ; CHECK: [[NINE:%[0-9]+]] = COPY %x0
+    ; CHECK: [[NINE]].sub_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: STRXui [[NINE]]
+    %9 = COPY %x0
+    %9.sub_32 = IMPLICIT_DEF
+    CBNZW %wzr, %bb.2
+    B %bb.1
+  
+  bb.1:
+    %4 = ADRP target-flags(aarch64-page) @g
+    %8 = LDRWui %4, target-flags(aarch64-pageoff, aarch64-nc) @g :: (volatile dereferenceable load 4 from @g)
+    INLINEASM $nop, 1, 12, implicit-def dead early-clobber %x0, 12, implicit-def dead early-clobber %x1, 12, implicit-def dead early-clobber %x2, 12, implicit-def dead early-clobber %x3, 12, implicit-def dead early-clobber %x4, 12, implicit-def dead early-clobber %x5, 12, implicit-def dead early-clobber %x6, 12, implicit-def dead early-clobber %x7, 12, implicit-def dead early-clobber %x8, 12, implicit-def dead early-clobber %x9, 12, implicit-def dead early-clobber %x10, 12, implicit-def dead early-clobber %x11, 12, implicit-def dead early-clobber %x12, 12, implicit-def dead early-clobber %x13, 12, implicit-def dead early-clobber %x14, 12, implicit-def dead early-clobber %x15, 12, implicit-def dead early-clobber %x16, 12, implicit-def dead early-clobber %x17, 12, implicit-def dead early-clobber %x18, 12, implicit-def dead early-clobber %x19, 12, implicit-def dead early-clobber %x20, 12, implicit-def dead early-clobber %x21, 12, implicit-def dead early-clobber %x22, 12, implicit-def dead early-clobber %x23, 12, implicit-def dead early-clobber %x24, 12, implicit-def dead early-clobber %x25, 12, implicit-def dead early-clobber %x26, 12, implicit-def dead early-clobber %x27, 12, implicit-def dead early-clobber %x28, 12, implicit-def dead early-clobber %fp, 12, implicit-def dead early-clobber %lr
+  
+  bb.2:
+    INLINEASM $nop, 1, 12, implicit-def dead early-clobber %x0, 12, implicit-def dead early-clobber %x1, 12, implicit-def dead early-clobber %x2, 12, implicit-def dead early-clobber %x3, 12, implicit-def dead early-clobber %x4, 12, implicit-def dead early-clobber %x5, 12, implicit-def dead early-clobber %x6, 12, implicit-def dead early-clobber %x7, 12, implicit-def dead early-clobber %x8, 12, implicit-def dead early-clobber %x9, 12, implicit-def dead early-clobber %x10, 12, implicit-def dead early-clobber %x11, 12, implicit-def dead early-clobber %x12, 12, implicit-def dead early-clobber %x13, 12, implicit-def dead early-clobber %x14, 12, implicit-def dead early-clobber %x15, 12, implicit-def dead early-clobber %x16, 12, implicit-def dead early-clobber %x17, 12, implicit-def dead early-clobber %x18, 12, implicit-def dead early-clobber %x19, 12, implicit-def dead early-clobber %x20, 12, implicit-def dead early-clobber %x21, 12, implicit-def dead early-clobber %x22, 12, implicit-def dead early-clobber %x23, 12, implicit-def dead early-clobber %x24, 12, implicit-def dead early-clobber %x25, 12, implicit-def dead early-clobber %x26, 12, implicit-def dead early-clobber %x27, 12, implicit-def dead early-clobber %x28, 12, implicit-def dead early-clobber %fp, 12, implicit-def dead early-clobber %lr
+    %6 = ADRP target-flags(aarch64-page) @g
+    %w0 = MOVi32imm 42
+    STRWui %8, %6, target-flags(aarch64-pageoff, aarch64-nc) @g :: (volatile store 4 into @g)
+    STRXui %9, %6, target-flags(aarch64-pageoff, aarch64-nc) @g :: (volatile store 8 into @g)
+    RET_ReallyLR implicit killed %w0
+
+...

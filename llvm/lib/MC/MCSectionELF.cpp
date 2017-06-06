@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCSectionELF.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"

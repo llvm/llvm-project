@@ -2566,7 +2566,7 @@ bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
   // pstatefield for the MSR (immediate) instruction, we also require that an
   // immediate value has been provided as an argument, we know that this is
   // the case as it has been ensured by semantic checking.
-  auto PMapper = AArch64PState::lookupPStateByName(RegString->getString());;
+  auto PMapper = AArch64PState::lookupPStateByName(RegString->getString());
   if (PMapper) {
     assert (isa<ConstantSDNode>(N->getOperand(2))
               && "Expected a constant integer expression.");

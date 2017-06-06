@@ -14,14 +14,14 @@
 #ifndef LLVM_SUPPORT_MEMORYBUFFER_H
 #define LLVM_SUPPORT_MEMORYBUFFER_H
 
+#include "llvm-c/Types.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm-c/Types.h"
-#include <memory>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 
 namespace llvm {
 

@@ -3,9 +3,9 @@
 
 // Simple test for a fuzzer: find interesting value of array index.
 #include <assert.h>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <cstddef>
 #include <iostream>
 
 static volatile int Sink;

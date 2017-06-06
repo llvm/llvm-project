@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/TargetParser.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ARMBuildAttributes.h"
-#include "llvm/Support/TargetParser.h"
 #include "gtest/gtest.h"
 #include <string>
 

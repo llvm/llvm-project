@@ -136,6 +136,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
         Sym->IsUsedInRegularObj || (R.Prevailing && Sym->includeInDynsym());
     if (R.Prevailing)
       undefine(Sym);
+    R.LinkerRedefined = Config->RenamedSymbols.count(Sym);
   }
   checkError(LTOObj->add(std::move(F.Obj), Resols));
 }

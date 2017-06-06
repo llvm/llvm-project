@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
 #include "AMDGPUCodeObjectMetadataStreamer.h"
+#include "AMDGPU.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"

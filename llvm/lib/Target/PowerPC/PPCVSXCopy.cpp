@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPC.h"
 #include "MCTargetDesc/PPCPredicates.h"
+#include "PPC.h"
 #include "PPCHazardRecognizers.h"
 #include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"

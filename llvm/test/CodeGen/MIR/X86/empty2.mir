@@ -1,0 +1,8 @@
+# RUN: llc -run-pass none -o - %s | FileCheck %s
+# Make sure empty files don't crash us
+---
+...
+# CHECK: --- |
+# ... moduleid, sourcefilename stuff here ..
+# CHECK: target datalayout =
+# CHECK: ...

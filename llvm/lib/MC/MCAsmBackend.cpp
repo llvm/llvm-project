@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include <cassert>
 #include <cstddef>

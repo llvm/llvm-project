@@ -32,10 +32,10 @@
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 
 using namespace llvm;
 
@@ -212,7 +212,7 @@ void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
     const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
     const SmallVectorImpl<LiveInterval*> &Intervals) const {
   const TargetRegisterInfo &TRI = *MRI->getTargetRegisterInfo();
-  unsigned Reg = Intervals[0]->reg;;
+  unsigned Reg = Intervals[0]->reg;
   for (MachineRegisterInfo::reg_nodbg_iterator I = MRI->reg_nodbg_begin(Reg),
        E = MRI->reg_nodbg_end(); I != E; ) {
     MachineOperand &MO = *I++;
@@ -243,6 +243,11 @@ void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
 
     unsigned VReg = Intervals[ID]->reg;
     MO.setReg(VReg);
+    if (MO.isTied()) {
+      /// Undef use operands are not tracked in the equivalence class but need
+      /// to be update if they are tied.
+      MO.getParent()->substituteRegister(Reg, VReg, 0, TRI);
+    }
   }
   // TODO: We could attempt to recompute new register classes while visiting
   // the operands: Some of the split register may be fine with less constraint

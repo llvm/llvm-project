@@ -1099,6 +1099,9 @@ template <class ELFT> void OutputSectionCommand::maybeCompress() {
 }
 
 template <class ELFT> void OutputSectionCommand::writeTo(uint8_t *Buf) {
+  if (Sec->Type == SHT_NOBITS)
+    return;
+
   Sec->Loc = Buf;
 
   // We may have already rendered compressed content when using
@@ -1109,9 +1112,6 @@ template <class ELFT> void OutputSectionCommand::writeTo(uint8_t *Buf) {
            Sec->CompressedData.size());
     return;
   }
-
-  if (Sec->Type == SHT_NOBITS)
-    return;
 
   // Write leading padding.
   std::vector<InputSection *> Sections;

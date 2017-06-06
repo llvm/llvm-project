@@ -98,8 +98,8 @@ name:            defaultMapping
 legalized:       true
 # CHECK-LABEL: name: defaultMapping
 # CHECK:      registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -119,8 +119,8 @@ name:            defaultMappingVector
 legalized:       true
 # CHECK-LABEL: name: defaultMappingVector
 # CHECK:      registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -141,10 +141,10 @@ name:            defaultMapping1Repair
 legalized:       true
 # CHECK-LABEL: name: defaultMapping1Repair
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: fpr }
-# CHECK-NEXT:   - { id: 1, class: gpr }
-# CHECK-NEXT:   - { id: 2, class: gpr }
-# CHECK-NEXT:   - { id: 3, class: gpr }
+# CHECK-NEXT:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -166,10 +166,10 @@ name:            defaultMapping2Repairs
 legalized:       true
 # CHECK-LABEL: name: defaultMapping2Repairs
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: fpr }
-# CHECK-NEXT:   - { id: 1, class: gpr }
-# CHECK-NEXT:   - { id: 2, class: gpr }
-# CHECK-NEXT:   - { id: 3, class: gpr }
+# CHECK-NEXT:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -193,9 +193,9 @@ name:            defaultMappingDefRepair
 legalized:       true
 # CHECK-LABEL: name: defaultMappingDefRepair
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: gpr }
-# CHECK-NEXT:   - { id: 1, class: fpr }
-# CHECK-NEXT:   - { id: 2, class: gpr }
+# CHECK-NEXT:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: fpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: fpr }
@@ -215,11 +215,11 @@ name:            phiPropagation
 legalized:       true
 tracksRegLiveness:   true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: gpr32 }
-# CHECK-NEXT:   - { id: 1, class: gpr64sp }
-# CHECK-NEXT:   - { id: 2, class: gpr32 }
-# CHECK-NEXT:   - { id: 3, class: gpr }
-# CHECK-NEXT:   - { id: 4, class: gpr }
+# CHECK-NEXT:   - { id: 0, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gpr64sp, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr64sp }
@@ -254,10 +254,10 @@ name:            defaultMappingUseRepairPhysReg
 legalized:       true
 # CHECK-LABEL: name: defaultMappingUseRepairPhysReg
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: gpr }
-# CHECK-NEXT:   - { id: 1, class: fpr }
-# CHECK-NEXT:   - { id: 2, class: gpr }
-# CHECK-NEXT:   - { id: 3, class: gpr }
+# CHECK-NEXT:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: fpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -280,8 +280,8 @@ name:            defaultMappingDefRepairPhysReg
 legalized:       true
 # CHECK-LABEL: name: defaultMappingDefRepairPhysReg
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: gpr }
-# CHECK-NEXT:   - { id: 1, class: gpr }
+# CHECK-NEXT:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -303,18 +303,18 @@ name:            greedyMappingOr
 legalized:       true
 # CHECK-LABEL: name: greedyMappingOr
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr }
-# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
 
 # Fast mode maps vector instruction on FPR.
-# FAST-NEXT:  - { id: 2, class: fpr }
+# FAST-NEXT:  - { id: 2, class: fpr, preferred-register: '' }
 # Fast mode needs two extra copies.
-# FAST-NEXT:  - { id: 3, class: fpr }
-# FAST-NEXT:  - { id: 4, class: fpr }
+# FAST-NEXT:  - { id: 3, class: fpr, preferred-register: '' }
+# FAST-NEXT:  - { id: 4, class: fpr, preferred-register: '' }
 
 # Greedy mode coalesce the computation on the GPR register
 # because it is the cheapest.
-# GREEDY-NEXT:  - { id: 2, class: gpr }
+# GREEDY-NEXT:  - { id: 2, class: gpr, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -350,18 +350,18 @@ name:            greedyMappingOrWithConstraints
 legalized:       true
 # CHECK-LABEL: name: greedyMappingOrWithConstraints
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr }
-# CHECK-NEXT:  - { id: 1, class: gpr }
-# CHECK-NEXT:  - { id: 2, class: fpr }
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 2, class: fpr, preferred-register: '' }
 
 # Fast mode maps vector instruction on FPR.
 # Fast mode needs two extra copies.
-# FAST-NEXT:  - { id: 3, class: fpr }
-# FAST-NEXT:  - { id: 4, class: fpr }
+# FAST-NEXT:  - { id: 3, class: fpr, preferred-register: '' }
+# FAST-NEXT:  - { id: 4, class: fpr, preferred-register: '' }
 
 # Greedy mode coalesce the computation on the GPR register because it
 # is the cheapest, but will need one extra copy to materialize %2 into a FPR.
-# GREEDY-NEXT:  - { id: 3, class: gpr }
+# GREEDY-NEXT:  - { id: 3, class: gpr, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -396,8 +396,8 @@ body: |
 name:            ignoreTargetSpecificInst
 legalized:       true
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr64 }
-# CHECK-NEXT:  - { id: 1, class: gpr64 }
+# CHECK-NEXT:  - { id: 0, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr64, preferred-register: '' }
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -434,8 +434,8 @@ name:            bitcast_s32_gpr
 legalized:       true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr }
-# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -457,8 +457,8 @@ name:            bitcast_s32_fpr
 legalized:       true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: fpr }
-# CHECK-NEXT:  - { id: 1, class: fpr }
+# CHECK-NEXT:  - { id: 0, class: fpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -480,9 +480,9 @@ name:            bitcast_s32_gpr_fpr
 legalized:       true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr }
-# FAST-NEXT:  - { id: 1, class: fpr }
-# GREEDY-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# FAST-NEXT:  - { id: 1, class: fpr, preferred-register: '' }
+# GREEDY-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -504,9 +504,9 @@ name:            bitcast_s32_fpr_gpr
 legalized:       true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: fpr }
-# FAST-NEXT:  - { id: 1, class: gpr }
-# GREEDY-NEXT:  - { id: 1, class: fpr }
+# CHECK-NEXT:  - { id: 0, class: fpr, preferred-register: '' }
+# FAST-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+# GREEDY-NEXT:  - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -528,8 +528,8 @@ name:            bitcast_s64_gpr
 legalized:       true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr }
-# CHECK-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -551,8 +551,8 @@ name:            bitcast_s64_fpr
 legalized:       true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: fpr }
-# CHECK-NEXT:  - { id: 1, class: fpr }
+# CHECK-NEXT:  - { id: 0, class: fpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -574,9 +574,9 @@ name:            bitcast_s64_gpr_fpr
 legalized:       true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr }
-# FAST-NEXT:  - { id: 1, class: fpr }
-# GREEDY-NEXT:  - { id: 1, class: gpr }
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# FAST-NEXT:  - { id: 1, class: fpr, preferred-register: '' }
+# GREEDY-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -597,9 +597,9 @@ name:            bitcast_s64_fpr_gpr
 legalized:       true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: fpr }
-# FAST-NEXT:  - { id: 1, class: gpr }
-# GREEDY-NEXT:  - { id: 1, class: fpr }
+# CHECK-NEXT:  - { id: 0, class: fpr, preferred-register: '' }
+# FAST-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+# GREEDY-NEXT:  - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -624,15 +624,15 @@ name:            greedyWithChainOfComputation
 legalized:       true
 
 # CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gpr }
-# CHECK-NEXT:  - { id: 1, class: gpr }
-# FAST-NEXT:   - { id: 2, class: fpr }
-# FAST-NEXT:   - { id: 3, class: fpr }
-# FAST-NEXT:   - { id: 4, class: fpr }
-# GREEDY-NEXT: - { id: 2, class: gpr }
-# GREEDY-NEXT: - { id: 3, class: gpr }
-# GREEDY-NEXT: - { id: 4, class: gpr }
-# CHECK-NEXT:  - { id: 5, class: gpr }
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+# FAST-NEXT:   - { id: 2, class: fpr, preferred-register: '' }
+# FAST-NEXT:   - { id: 3, class: fpr, preferred-register: '' }
+# FAST-NEXT:   - { id: 4, class: fpr, preferred-register: '' }
+# GREEDY-NEXT: - { id: 2, class: gpr, preferred-register: '' }
+# GREEDY-NEXT: - { id: 3, class: gpr, preferred-register: '' }
+# GREEDY-NEXT: - { id: 4, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 5, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -674,11 +674,11 @@ name:            floatingPointLoad
 legalized:       true
 
 # CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gpr }
-# CHECK-NEXT:  - { id: 1, class: gpr }
-# CHECK-NEXT:   - { id: 2, class: fpr }
-# CHECK-NEXT:   - { id: 3, class: fpr }
-# CHECK-NEXT:   - { id: 4, class: fpr }
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: fpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: fpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -716,11 +716,11 @@ name:            floatingPointStore
 legalized:       true
 
 # CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gpr }
-# CHECK-NEXT:  - { id: 1, class: gpr }
-# CHECK-NEXT:   - { id: 2, class: fpr }
-# CHECK-NEXT:   - { id: 3, class: fpr }
-# CHECK-NEXT:   - { id: 4, class: fpr }
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: fpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: fpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

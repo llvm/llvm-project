@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "gtest/gtest.h"
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
 using namespace llvm;

@@ -65,9 +65,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetRegisterInfo.h"
-#include <iterator>
 #include <cassert>
 #include <cstdint>
+#include <iterator>
 
 using namespace llvm;
 

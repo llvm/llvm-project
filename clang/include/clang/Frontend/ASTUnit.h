@@ -51,8 +51,10 @@ class DiagnosticsEngine;
 class FileEntry;
 class FileManager;
 class HeaderSearch;
+class InputKind;
 class MemoryBufferCache;
 class Preprocessor;
+class PreprocessorOptions;
 class PCHContainerOperations;
 class PCHContainerReader;
 class TargetInfo;
@@ -96,6 +98,7 @@ private:
   IntrusiveRefCntPtr<ASTContext>          Ctx;
   std::shared_ptr<TargetOptions>          TargetOpts;
   std::shared_ptr<HeaderSearchOptions>    HSOpts;
+  std::shared_ptr<PreprocessorOptions>    PPOpts;
   IntrusiveRefCntPtr<ASTReader> Reader;
   bool HadModuleLoaderFatalFailure;
 
@@ -305,9 +308,6 @@ private:
   /// (likely to change while trying to use them).
   bool UserFilesAreVolatile : 1;
  
-  /// \brief The language options used when we load an AST file.
-  LangOptions ASTFileLangOpts;
-
   static void ConfigureDiags(IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                              ASTUnit &AST, bool CaptureDiagnostics);
 
@@ -518,8 +518,18 @@ public:
   }
 
   const LangOptions &getLangOpts() const {
-    assert(LangOpts && " ASTUnit does not have language options");
+    assert(LangOpts && "ASTUnit does not have language options");
     return *LangOpts;
+  }
+
+  const HeaderSearchOptions &getHeaderSearchOpts() const {
+    assert(HSOpts && "ASTUnit does not have header search options");
+    return *HSOpts;
+  }
+  
+  const PreprocessorOptions &getPreprocessorOpts() const {
+    assert(PPOpts && "ASTUnit does not have preprocessor options");
+    return *PPOpts;
   }
   
   const FileManager &getFileManager() const { return *FileMgr; }
@@ -701,6 +711,9 @@ public:
 
   /// \brief Determine what kind of translation unit this AST represents.
   TranslationUnitKind getTranslationUnitKind() const { return TUKind; }
+
+  /// \brief Determine the input kind this AST unit represents.
+  InputKind getInputKind() const;
 
   /// \brief A mapping from a file name to the memory buffer that stores the
   /// remapped contents of that file.

@@ -12,8 +12,8 @@
 // modules, accessing global variables, etc.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/MCJIT.h"
 #include "MCJITTestBase.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

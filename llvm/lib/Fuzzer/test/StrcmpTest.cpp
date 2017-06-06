@@ -2,11 +2,11 @@
 // License. See LICENSE.TXT for details.
 
 // Break through a series of strcmp.
-#include <cstring>
+#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <cassert>
+#include <cstring>
 
 bool Eq(const uint8_t *Data, size_t Size, const char *Str) {
   char Buff[1024];

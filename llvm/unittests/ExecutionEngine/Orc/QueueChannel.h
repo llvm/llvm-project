@@ -13,8 +13,8 @@
 #include "llvm/ExecutionEngine/Orc/RawByteChannel.h"
 #include "llvm/Support/Error.h"
 
-#include <queue>
 #include <condition_variable>
+#include <queue>
 
 namespace llvm {
 

@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86AsmInstrumentation.h"
+#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86Operand.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"

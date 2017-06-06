@@ -73,11 +73,11 @@ void ContentCache::replaceBuffer(llvm::MemoryBuffer *B, bool DoNotFree) {
     Buffer.setInt(DoNotFree? DoNotFreeFlag : 0);
     return;
   }
-  
+
   if (shouldFreeBuffer())
     delete Buffer.getPointer();
   Buffer.setPointer(B);
-  Buffer.setInt(DoNotFree? DoNotFreeFlag : 0);
+  Buffer.setInt((B && DoNotFree) ? DoNotFreeFlag : 0);
 }
 
 llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
@@ -343,6 +343,43 @@ void SourceManager::clearIDTables() {
   NextLocalOffset = 0;
   CurrentLoadedOffset = MaxLoadedOffset;
   createExpansionLoc(SourceLocation(),SourceLocation(),SourceLocation(), 1);
+}
+
+void SourceManager::initializeForReplay(const SourceManager &Old) {
+  assert(MainFileID.isInvalid() && "expected uninitialized SourceManager");
+
+  auto CloneContentCache = [&](const ContentCache *Cache) -> ContentCache * {
+    auto *Clone = new (ContentCacheAlloc.Allocate<ContentCache>()) ContentCache;
+    Clone->OrigEntry = Cache->OrigEntry;
+    Clone->ContentsEntry = Cache->ContentsEntry;
+    Clone->BufferOverridden = Cache->BufferOverridden;
+    Clone->IsSystemFile = Cache->IsSystemFile;
+    Clone->IsTransient = Cache->IsTransient;
+    Clone->replaceBuffer(Cache->getRawBuffer(), /*DoNotFree*/true);
+    return Clone;
+  };
+
+  // Set up our main file ID as a copy of the old source manager's main file.
+  const SLocEntry &OldMainFile = Old.getSLocEntry(Old.getMainFileID());
+  assert(OldMainFile.isFile() && "main file is macro expansion?");
+  auto *MainCC = CloneContentCache(OldMainFile.getFile().getContentCache());
+  MemBufferInfos.push_back(MainCC);
+  setMainFileID(createFileID(MainCC, SourceLocation(),
+                             OldMainFile.getFile().getFileCharacteristic(),
+                             0, 0));
+
+  // Ensure all SLocEntries are loaded from the external source.
+  for (unsigned I = 0, N = Old.LoadedSLocEntryTable.size(); I != N; ++I)
+    if (!Old.SLocEntryLoaded[I])
+      Old.loadSLocEntry(I, nullptr);
+
+  // Inherit any content cache data from the old source manager.
+  for (auto &FileInfo : Old.FileInfos) {
+    SrcMgr::ContentCache *&Slot = FileInfos[FileInfo.first];
+    if (Slot)
+      continue;
+    Slot = CloneContentCache(FileInfo.second);
+  }
 }
 
 /// getOrCreateContentCache - Create or return a cached ContentCache for the

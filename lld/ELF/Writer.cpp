@@ -93,6 +93,11 @@ private:
 } // anonymous namespace
 
 StringRef elf::getOutputSectionName(StringRef Name) {
+  // ".zdebug_" is a prefix for ZLIB-compressed sections.
+  // Because we decompressed input sections, we want to remove 'z'.
+  if (Name.startswith(".zdebug_"))
+    return Saver.save("." + Name.substr(2));
+
   if (Config->Relocatable)
     return Name;
 
@@ -122,10 +127,6 @@ StringRef elf::getOutputSectionName(StringRef Name) {
   if (Name == "COMMON")
     return ".bss";
 
-  // ".zdebug_" is a prefix for ZLIB-compressed sections.
-  // Because we decompressed input sections, we want to remove 'z'.
-  if (Name.startswith(".zdebug_"))
-    return Saver.save("." + Name.substr(2));
   return Name;
 }
 
@@ -257,18 +258,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
-  if (!Script->Opt.HasSections)
-    Script->fabricateDefaultCommands();
-  else
-    Script->synchronize();
-
-  for (BaseCommand *Base : Script->Opt.Commands)
-    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
-      OutputSectionCommands.push_back(Cmd);
-
-  clearOutputSections();
-
-  if (!Script->Opt.HasSections &&!Config->Relocatable)
+  if (!Script->Opt.HasSections && !Config->Relocatable)
     fixSectionAlignments();
 
   // If -compressed-debug-sections is specified, we need to compress
@@ -911,6 +901,11 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (!InX::DynSymTab)
     Symtab<ELFT>::X->addIgnored("__tls_get_addr");
 
+  // __dso_handle symbol is passed to cxa_finalize as a marker to identify
+  // each DSO. The address of the symbol doesn't matter as long as they are
+  // different in different DSOs, so we chose the start address of the DSO.
+  addOptionalRegular<ELFT>("__dso_handle", Out::ElfHeader, 0, STV_HIDDEN);
+
   // __ehdr_start is the location of ELF file headers. Note that we define
   // this symbol unconditionally even when using a linker script, which
   // differs from the behavior implemented by GNU linker which only define
@@ -1261,6 +1256,15 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       applySynthetic({InX::MipsGot},
                      [](SyntheticSection *SS) { SS->updateAllocSize(); });
   }
+
+  if (!Script->Opt.HasSections)
+    Script->fabricateDefaultCommands();
+  else
+    Script->synchronize();
+  for (BaseCommand *Base : Script->Opt.Commands)
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
+      OutputSectionCommands.push_back(Cmd);
+
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
   // of finalizing other sections.
@@ -1270,6 +1274,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // createThunks may have added local symbols to the static symbol table
   applySynthetic({InX::SymTab, InX::ShStrTab, InX::StrTab},
                  [](SyntheticSection *SS) { SS->postThunkContents(); });
+
+  clearOutputSections();
 }
 
 template <class ELFT> void Writer<ELFT>::addPredefinedSections() {

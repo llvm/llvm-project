@@ -46,13 +46,11 @@
 
 ------------------------------------------------------------------------ */
 
-
 #include "llvm/Support/ConvertUTF.h"
 #ifdef CVTUTF_DEBUG
 #include <stdio.h>
 #endif
 #include <assert.h>
-
 
 /*
  * This code extensively uses fall-through switches.

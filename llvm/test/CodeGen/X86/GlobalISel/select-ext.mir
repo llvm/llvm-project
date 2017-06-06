@@ -35,9 +35,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: gr8 }
-# ALL-NEXT:   - { id: 1, class: gr32 }
-# ALL-NEXT:   - { id: 2, class: gr32 }
+# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -63,8 +63,8 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: gr8 }
-# ALL-NEXT:   - { id: 1, class: gr32 }
+# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -89,8 +89,8 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: gr16 }
-# ALL-NEXT:   - { id: 1, class: gr32 }
+# ALL-NEXT:   - { id: 0, class: gr16, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -115,8 +115,8 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: gr8 }
-# ALL-NEXT:   - { id: 1, class: gr32 }
+# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -141,8 +141,8 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:   - { id: 0, class: gr16 }
-# ALL-NEXT:   - { id: 1, class: gr32 }
+# ALL-NEXT:   - { id: 0, class: gr16, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }

@@ -38,8 +38,8 @@
 #include <cstring>
 
 #if defined(_MSC_VER)
-#include <Windows.h>
 #include <DbgHelp.h>
+#include <Windows.h>
 #pragma comment(lib, "dbghelp.lib")
 
 // Windows.h conflicts with our COFF header definitions.

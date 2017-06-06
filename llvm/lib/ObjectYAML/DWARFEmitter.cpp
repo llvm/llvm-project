@@ -16,8 +16,8 @@
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "DWARFVisitor.h"
 

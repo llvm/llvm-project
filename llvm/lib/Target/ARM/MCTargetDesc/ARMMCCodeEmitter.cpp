@@ -339,7 +339,17 @@ public:
   unsigned getT2SOImmOpValue(const MCInst &MI, unsigned Op,
                            SmallVectorImpl<MCFixup> &Fixups,
                            const MCSubtargetInfo &STI) const {
-    unsigned SoImm = MI.getOperand(Op).getImm();
+    const MCOperand &MO = MI.getOperand(Op);
+
+    // Support for fixups (MCFixup)
+    if (MO.isExpr()) {
+      const MCExpr *Expr = MO.getExpr();
+      // Fixups resolve to plain values that need to be encoded.
+      MCFixupKind Kind = MCFixupKind(ARM::fixup_t2_so_imm);
+      Fixups.push_back(MCFixup::create(0, Expr, Kind, MI.getLoc()));
+      return 0;
+    }
+    unsigned SoImm = MO.getImm();
     unsigned Encoded =  ARM_AM::getT2SOImmVal(SoImm);
     assert(Encoded != ~0U && "Not a Thumb2 so_imm value?");
     return Encoded;

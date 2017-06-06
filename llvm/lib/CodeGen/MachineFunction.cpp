@@ -20,7 +20,6 @@
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunctionInitializer.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -51,8 +50,6 @@ static cl::opt<unsigned>
     AlignAllFunctions("align-all-functions",
                       cl::desc("Force the alignment of all functions."),
                       cl::init(0), cl::Hidden);
-
-void MachineFunctionInitializer::anchor() {}
 
 static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   typedef MachineFunctionProperties::Property P;

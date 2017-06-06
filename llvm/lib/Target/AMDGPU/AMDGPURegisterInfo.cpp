@@ -40,7 +40,6 @@ unsigned AMDGPURegisterInfo::getSubRegFromChannel(unsigned Channel) const {
 #define GET_REGINFO_TARGET_DESC
 #include "AMDGPUGenRegisterInfo.inc"
 
-
 // Forced to be here by one .inc
 const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
   const MachineFunction *MF) const {

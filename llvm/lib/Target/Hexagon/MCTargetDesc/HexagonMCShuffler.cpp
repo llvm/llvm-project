@@ -14,9 +14,9 @@
 
 #define DEBUG_TYPE "hexagon-shuffle"
 
+#include "MCTargetDesc/HexagonMCShuffler.h"
 #include "Hexagon.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
-#include "MCTargetDesc/HexagonMCShuffler.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"

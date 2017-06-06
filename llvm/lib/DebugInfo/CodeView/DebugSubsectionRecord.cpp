@@ -38,6 +38,8 @@ Error DebugSubsectionRecord::initialize(BinaryStreamRef Stream,
   case DebugSubsectionKind::FileChecksums:
   case DebugSubsectionKind::Lines:
   case DebugSubsectionKind::InlineeLines:
+  case DebugSubsectionKind::CrossScopeExports:
+  case DebugSubsectionKind::CrossScopeImports:
     break;
   default:
     llvm_unreachable("Unexpected debug fragment kind!");

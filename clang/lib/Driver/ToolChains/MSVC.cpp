@@ -529,9 +529,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   SkipSettingEnvironment:;
 #endif
   } else {
-    linkPath = Linker;
-    llvm::sys::path::replace_extension(linkPath, "exe");
-    linkPath = TC.GetProgramPath(linkPath.c_str());
+    linkPath = TC.GetProgramPath(Linker.str().c_str());
   }
 
   auto LinkCmd = llvm::make_unique<Command>(

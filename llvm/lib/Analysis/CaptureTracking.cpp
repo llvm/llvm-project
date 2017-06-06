@@ -16,11 +16,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/OrderedBasicBlock.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"

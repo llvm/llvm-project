@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "InstPrinter/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCAsmInfo.h"
-#include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "PPCTargetStreamer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
@@ -33,8 +33,8 @@
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 

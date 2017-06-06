@@ -34,9 +34,29 @@
 // RUN: rm %t/fwd.h %t/file.h %t/file2.h %t/module.modulemap
 // RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -x c++-module-map-cpp-output %t/copy.ii -emit-module -o %t/copy.pcm
 
-// Finally, check that our module contains correct mapping information for the headers.
+// Check that our module contains correct mapping information for the headers.
 // RUN: cp %S/Inputs/preprocess/fwd.h %S/Inputs/preprocess/file.h %S/Inputs/preprocess/file2.h %S/Inputs/preprocess/module.modulemap %t
 // RUN: %clang_cc1 -fmodules -fmodule-file=%t/copy.pcm %s -I%t -verify -fno-modules-error-recovery -DCOPY -DINCLUDE
+// RUN: rm %t/fwd.h %t/file.h %t/file2.h %t/module.modulemap
+
+// Check that we can preprocess from a .pcm file and that we get the same result as preprocessing from the original sources.
+// RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -I%S/Inputs/preprocess -x c++-module-map %S/Inputs/preprocess/module.modulemap -emit-module -o %t/file.pcm
+// RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -I%S/Inputs/preprocess %t/file.pcm -E -frewrite-includes -o %t/file.rewrite.ii
+// FIXME: This check fails on Windows targets, due to canonicalization of directory separators.
+// FIXME: cmp %t/rewrite.ii %t/file.rewrite.ii
+// FIXME: Instead, just check that the preprocessed output is functionally equivalent to the output when preprocessing from the original sources.
+// RUN: FileCheck %s --input-file %t/file.rewrite.ii    --check-prefix=CHECK --check-prefix=REWRITE
+// RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -x c++-module-map-cpp-output %t/file.rewrite.ii -emit-module -o %t/file.rewrite.pcm
+// RUN: %clang_cc1 -fmodules -fmodule-file=%t/file.rewrite.pcm %s -I%t -verify -fno-modules-error-recovery -DFILE_REWRITE
+// RUN: %clang_cc1 -fmodules -fmodule-file=%t/file.rewrite.pcm %s -I%t -verify -fno-modules-error-recovery -DFILE_REWRITE -DINCLUDE -I%S/Inputs/preprocess
+//
+// Check that language / header search options are ignored when preprocessing from a .pcm file.
+// RUN: %clang_cc1 %t/file.pcm -E -frewrite-includes -o %t/file.rewrite.ii.2
+// RUN: cmp %t/file.rewrite.ii %t/file.rewrite.ii.2
+//
+// RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -I%S/Inputs/preprocess %t/file.pcm -E -o %t/file.no-rewrite.ii
+// RUN: %clang_cc1 %t/file.pcm -E -o %t/file.no-rewrite.ii.2 -Dstruct=error
+// RUN: cmp %t/file.no-rewrite.ii %t/file.no-rewrite.ii.2
 
 // == module map
 // CHECK: # 1 "{{.*}}module.modulemap"
@@ -105,7 +125,9 @@
 
 
 __FILE *a; // expected-error {{declaration of '__FILE' must be imported}}
-#ifdef REWRITE
+#if FILE_REWRITE
+// expected-note@file.rewrite.ii:1 {{here}}
+#elif REWRITE
 // expected-note@rewrite.ii:1 {{here}}
 #elif COPY
 // expected-note@copy.ii:1 {{here}}

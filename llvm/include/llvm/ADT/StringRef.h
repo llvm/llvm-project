@@ -18,8 +18,8 @@
 #include <cstddef>
 #include <cstring>
 #include <limits>
-#include <type_traits>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {

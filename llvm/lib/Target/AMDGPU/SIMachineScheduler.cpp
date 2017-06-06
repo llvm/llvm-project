@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SIMachineScheduler.h"
 #include "AMDGPU.h"
 #include "SIInstrInfo.h"
-#include "SIMachineScheduler.h"
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"

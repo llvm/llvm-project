@@ -149,13 +149,6 @@ int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
                                const FeatureBitset &Features);
-MCSection *getHSATextSection(MCContext &Ctx);
-
-MCSection *getHSADataGlobalAgentSection(MCContext &Ctx);
-
-MCSection *getHSADataGlobalProgramSection(MCContext &Ctx);
-
-MCSection *getHSARodataReadonlyAgentSection(MCContext &Ctx);
 
 bool isGroupSegment(const GlobalValue *GV, AMDGPUAS AS);
 bool isGlobalSegment(const GlobalValue *GV, AMDGPUAS AS);

@@ -16,9 +16,9 @@
 
 #include "llvm/CodeGen/GlobalISel/Types.h"
 
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
 

@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyFixupKinds.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/MCWasmObjectWriter.h"

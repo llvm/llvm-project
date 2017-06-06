@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "X86InstrInfo.h"
+#include "X86SelectionDAGInfo.h"
 #include "X86ISelLowering.h"
+#include "X86InstrInfo.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
-#include "X86SelectionDAGInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Target/TargetLowering.h"

@@ -14,8 +14,8 @@
 #ifndef LLVM_ANALYSIS_INLINECOST_H
 #define LLVM_ANALYSIS_INLINECOST_H
 
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/CallGraphSCCPass.h"
 #include <cassert>
 #include <climits>
 

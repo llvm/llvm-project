@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIRegisterInfo.h"
+#include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
-#include "AMDGPUSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/RegisterScavenging.h"

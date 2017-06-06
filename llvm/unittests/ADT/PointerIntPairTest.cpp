@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "gtest/gtest.h"
 #include <limits>
 using namespace llvm;
 

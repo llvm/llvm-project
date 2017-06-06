@@ -1026,6 +1026,15 @@ public:
             ARM_AM::getSOImmVal(-Value) != -1);
   }
   bool isT2SOImm() const {
+    // If we have an immediate that's not a constant, treat it as an expression
+    // needing a fixup.
+    if (isImm() && !isa<MCConstantExpr>(getImm())) {
+      // We want to avoid matching :upper16: and :lower16: as we want these
+      // expressions to match in isImm0_65535Expr()
+      const ARMMCExpr *ARM16Expr = dyn_cast<ARMMCExpr>(getImm());
+      return (!ARM16Expr || (ARM16Expr->getKind() != ARMMCExpr::VK_ARM_HI16 &&
+                             ARM16Expr->getKind() != ARMMCExpr::VK_ARM_LO16));
+    }
     if (!isImm()) return false;
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
     if (!CE) return false;
@@ -8404,7 +8413,8 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     // wide encoding wasn't explicit.
     if (Inst.getOperand(0).getReg() != Inst.getOperand(1).getReg() ||
         !isARMLowRegister(Inst.getOperand(0).getReg()) ||
-        (unsigned)Inst.getOperand(2).getImm() > 255 ||
+        (Inst.getOperand(2).isImm() &&
+         (unsigned)Inst.getOperand(2).getImm() > 255) ||
         ((!inITBlock() && Inst.getOperand(5).getReg() != ARM::CPSR) ||
          (inITBlock() && Inst.getOperand(5).getReg() != 0)) ||
         (static_cast<ARMOperand &>(*Operands[3]).isToken() &&
@@ -8556,7 +8566,8 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     // If we can use the 16-bit encoding and the user didn't explicitly
     // request the 32-bit variant, transform it here.
     if (isARMLowRegister(Inst.getOperand(0).getReg()) &&
-        (unsigned)Inst.getOperand(1).getImm() <= 255 &&
+        (Inst.getOperand(1).isImm() &&
+         (unsigned)Inst.getOperand(1).getImm() <= 255) &&
         ((!inITBlock() && Inst.getOperand(2).getImm() == ARMCC::AL &&
           Inst.getOperand(4).getReg() == ARM::CPSR) ||
          (inITBlock() && Inst.getOperand(4).getReg() == 0)) &&

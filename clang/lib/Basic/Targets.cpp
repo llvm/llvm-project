@@ -5438,7 +5438,17 @@ public:
       if (Feature[0] == '+')
         Features[Feature.drop_front(1)] = true;
 
-    return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
+    // Convert user-provided arm and thumb GNU target attributes to
+    // [-|+]thumb-mode target features respectively.
+    std::vector<std::string> UpdatedFeaturesVec(FeaturesVec);
+    for (auto &Feature : UpdatedFeaturesVec) {
+      if (Feature.compare("+arm") == 0)
+        Feature = "-thumb-mode";
+      else if (Feature.compare("+thumb") == 0)
+        Feature = "+thumb-mode";
+    }
+
+    return TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec);
   }
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
