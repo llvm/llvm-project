@@ -14,6 +14,7 @@
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
+#include "llvm/Support/Errno.h"
 
 #include <limits.h>
 #include <sys/ptrace.h>
@@ -204,8 +205,8 @@ ProcessLauncherPosixFork::LaunchProcess(const ProcessLaunchInfo &launch_info,
   ::pid_t pid = ::fork();
   if (pid == -1) {
     // Fork failed
-    error.SetErrorStringWithFormat("Fork failed with error message: %s",
-                                   strerror(errno));
+    error.SetErrorStringWithFormatv("Fork failed with error message: {0}",
+                                    llvm::sys::StrError());
     return HostProcess(LLDB_INVALID_PROCESS_ID);
   }
   if (pid == 0) {

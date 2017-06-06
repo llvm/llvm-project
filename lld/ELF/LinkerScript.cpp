@@ -1071,6 +1071,78 @@ static void writeInt(uint8_t *Buf, uint64_t Data, uint64_t Size) {
     llvm_unreachable("unsupported Size argument");
 }
 
+static bool compareByFilePosition(InputSection *A, InputSection *B) {
+  // Synthetic doesn't have link order dependecy, stable_sort will keep it last
+  if (A->kind() == InputSectionBase::Synthetic ||
+      B->kind() == InputSectionBase::Synthetic)
+    return false;
+  InputSection *LA = A->getLinkOrderDep();
+  InputSection *LB = B->getLinkOrderDep();
+  OutputSection *AOut = LA->getParent();
+  OutputSection *BOut = LB->getParent();
+  if (AOut != BOut)
+    return AOut->SectionIndex < BOut->SectionIndex;
+  return LA->OutSecOff < LB->OutSecOff;
+}
+
+template <class ELFT> static void finalizeShtGroup(OutputSection *Sec) {
+  // sh_link field for SHT_GROUP sections should contain the section index of
+  // the symbol table.
+  Sec->Link = InX::SymTab->getParent()->SectionIndex;
+
+  // sh_info then contain index of an entry in symbol table section which
+  // provides signature of the section group.
+  elf::ObjectFile<ELFT> *Obj = Sec->Sections[0]->getFile<ELFT>();
+  assert(Config->Relocatable && Sec->Sections.size() == 1);
+  ArrayRef<SymbolBody *> Symbols = Obj->getSymbols();
+  Sec->Info = InX::SymTab->getSymbolIndex(Symbols[Sec->Sections[0]->Info - 1]);
+}
+
+template <class ELFT> void OutputSectionCommand::finalize() {
+  if ((Sec->Flags & SHF_LINK_ORDER) && !Sec->Sections.empty()) {
+    // Link order may be distributed across several InputSectionDescriptions
+    // but sort must consider them all at once.
+    std::vector<InputSection **> ScriptSections;
+    std::vector<InputSection *> Sections;
+    for (BaseCommand *Base : Commands)
+      if (auto *ISD = dyn_cast<InputSectionDescription>(Base))
+        for (InputSection *&IS : ISD->Sections) {
+          ScriptSections.push_back(&IS);
+          Sections.push_back(IS);
+        }
+    std::sort(Sections.begin(), Sections.end(), compareByFilePosition);
+    for (int I = 0, N = Sections.size(); I < N; ++I)
+      *ScriptSections[I] = Sections[I];
+
+    // We must preserve the link order dependency of sections with the
+    // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We
+    // need to translate the InputSection sh_link to the OutputSection sh_link,
+    // all InputSections in the OutputSection have the same dependency.
+    if (auto *D = Sec->Sections.front()->getLinkOrderDep())
+      Sec->Link = D->getParent()->SectionIndex;
+  }
+
+  uint32_t Type = Sec->Type;
+  if (Type == SHT_GROUP) {
+    finalizeShtGroup<ELFT>(Sec);
+    return;
+  }
+
+  if (!Config->CopyRelocs || (Type != SHT_RELA && Type != SHT_REL))
+    return;
+
+  InputSection *First = Sec->Sections[0];
+  if (isa<SyntheticSection>(First))
+    return;
+
+  Sec->Link = InX::SymTab->getParent()->SectionIndex;
+  // sh_info for SHT_REL[A] sections should contain the section header index of
+  // the section to which the relocation applies.
+  InputSectionBase *S = First->getRelocatedSection();
+  Sec->Info = S->getOutputSection()->SectionIndex;
+  Sec->Flags |= SHF_INFO_LINK;
+}
+
 // Compress section contents if this section contains debug info.
 template <class ELFT> void OutputSectionCommand::maybeCompress() {
   typedef typename ELFT::Chdr Elf_Chdr;
@@ -1201,3 +1273,8 @@ template void OutputSectionCommand::maybeCompress<ELF32LE>();
 template void OutputSectionCommand::maybeCompress<ELF32BE>();
 template void OutputSectionCommand::maybeCompress<ELF64LE>();
 template void OutputSectionCommand::maybeCompress<ELF64BE>();
+
+template void OutputSectionCommand::finalize<ELF32LE>();
+template void OutputSectionCommand::finalize<ELF32BE>();
+template void OutputSectionCommand::finalize<ELF64LE>();
+template void OutputSectionCommand::finalize<ELF64BE>();

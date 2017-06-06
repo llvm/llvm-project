@@ -36,16 +36,6 @@ entry:
 ; CHECK-NEXT:       Addend: 0
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
-; CHECK-NEXT:       Offset: 0x2D
-; CHECK-NEXT:       Index: 0x0
-; CHECK-NEXT:     }
-; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
-; CHECK-NEXT:       Offset: 0x34
-; CHECK-NEXT:       Index: 0x1
-; CHECK-NEXT:     }
-; CHECK-NEXT:     Relocation {
 ; CHECK-NEXT:       Type: R_WEBASSEMBLY_TYPE_INDEX_LEB (6)
 ; CHECK-NEXT:       Offset: 0x1A
 ; CHECK-NEXT:       Index: 0x1
@@ -54,6 +44,16 @@ entry:
 ; CHECK-NEXT:       Type: R_WEBASSEMBLY_TYPE_INDEX_LEB (6)
 ; CHECK-NEXT:       Offset: 0x24
 ; CHECK-NEXT:       Index: 0x0
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Relocation {
+; CHECK-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
+; CHECK-NEXT:       Offset: 0x2D
+; CHECK-NEXT:       Index: 0x0
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Relocation {
+; CHECK-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
+; CHECK-NEXT:       Offset: 0x34
+; CHECK-NEXT:       Index: 0x1
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   }
 ; CHECK-NEXT: ]

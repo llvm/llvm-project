@@ -18,6 +18,8 @@ using namespace llvm;
 
 #if defined(_MSC_VER)
 #include <Intrin.h>
+
+// We must include windows.h after Intrin.h.
 #include <windows.h>
 #undef MemoryFence
 #endif

@@ -56,6 +56,12 @@ int main() {
   // CHECK-FIXES: {{^  }}v.erase(remove(v.begin(), v.end(), 10), v.end());{{$}}
   v.erase(remove(v.begin(), v.end(), 20), v.end());
 
+  auto *p = &v;
+  p->erase(remove(p->begin(), p->end(), 11));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this call will remove at most one
+  // CHECK-FIXES: {{^  }}p->erase(remove(p->begin(), p->end(), 11), p->end());{{$}}
+
+
   // Fix is not trivial.
   auto it = v.end();
   v.erase(remove(v.begin(), it, 10));

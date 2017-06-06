@@ -78,7 +78,7 @@ static void TryRegisterGlobal(Module *M, const char *Name,
     *Location = new GlobalVariable(
         *M, InitialValue->getType(), true, GlobalValue::WeakAnyLinkage,
         InitialValue, Name, nullptr, GlobalVariable::InitialExecTLSModel);
-};
+}
 
 // Generate a unique name that is usable as a LLVM name for a scop to name its
 // performance counter.

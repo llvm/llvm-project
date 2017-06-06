@@ -1371,28 +1371,35 @@ bool LoopConstrainer::run() {
 
   DT.recalculate(F);
 
+  // We need to first add all the pre and post loop blocks into the loop
+  // structures (as part of createClonedLoopStructure), and then update the
+  // LCSSA form and LoopSimplifyForm. This is necessary for correctly updating
+  // LI when LoopSimplifyForm is generated.
+  Loop *PreL = nullptr, *PostL = nullptr;
   if (!PreLoop.Blocks.empty()) {
-    auto *L = createClonedLoopStructure(
+    PreL = createClonedLoopStructure(
         &OriginalLoop, OriginalLoop.getParentLoop(), PreLoop.Map);
-    formLCSSARecursively(*L, DT, &LI, &SE);
-    simplifyLoop(L, &DT, &LI, &SE, nullptr, true);
-    // Pre loops are slow paths, we do not need to perform any loop
-    // optimizations on them.
-    DisableAllLoopOptsOnLoop(*L);
   }
 
   if (!PostLoop.Blocks.empty()) {
-    auto *L = createClonedLoopStructure(
+    PostL = createClonedLoopStructure(
         &OriginalLoop, OriginalLoop.getParentLoop(), PostLoop.Map);
-    formLCSSARecursively(*L, DT, &LI, &SE);
-    simplifyLoop(L, &DT, &LI, &SE, nullptr, true);
-    // Post loops are slow paths, we do not need to perform any loop
-    // optimizations on them.
-    DisableAllLoopOptsOnLoop(*L);
   }
 
-  formLCSSARecursively(OriginalLoop, DT, &LI, &SE);
-  simplifyLoop(&OriginalLoop, &DT, &LI, &SE, nullptr, true);
+  // This function canonicalizes the loop into Loop-Simplify and LCSSA forms.
+  auto CanonicalizeLoop = [&] (Loop *L, bool IsOriginalLoop) {
+    formLCSSARecursively(*L, DT, &LI, &SE);
+    simplifyLoop(L, &DT, &LI, &SE, nullptr, true);
+    // Pre/post loops are slow paths, we do not need to perform any loop
+    // optimizations on them.
+    if (!IsOriginalLoop)
+      DisableAllLoopOptsOnLoop(*L);
+  };
+  if (PreL)
+    CanonicalizeLoop(PreL, false);
+  if (PostL)
+    CanonicalizeLoop(PostL, false);
+  CanonicalizeLoop(&OriginalLoop, true);
 
   return true;
 }

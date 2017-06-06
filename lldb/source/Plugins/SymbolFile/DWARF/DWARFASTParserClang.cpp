@@ -3732,8 +3732,8 @@ static DWARFDIE GetContainingFunctionWithAbstractOrigin(const DWARFDIE &die) {
       }
     }
   }
-  assert(!"Shouldn't call GetContainingFunctionWithAbstractOrigin on something "
-          "not in a function");
+  assert(0 && "Shouldn't call GetContainingFunctionWithAbstractOrigin on "
+              "something not in a function");
   return DWARFDIE();
 }
 

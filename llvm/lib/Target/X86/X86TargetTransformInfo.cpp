@@ -1383,6 +1383,8 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
 }
 
+unsigned X86TTIImpl::getAtomicMemIntrinsicMaxElementSize() const { return 16; }
+
 int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
                                       ArrayRef<Type *> Tys, FastMathFlags FMF,
                                       unsigned ScalarizationCostPassed) {

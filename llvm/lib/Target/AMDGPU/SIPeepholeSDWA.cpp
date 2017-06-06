@@ -786,8 +786,9 @@ bool SIPeepholeSDWA::runOnMachineFunction(MachineFunction &MF) {
   PotentialMatches.clear();
   SDWAOperands.clear();
 
+  bool Ret = !ConvertedInstructions.empty();
   while (!ConvertedInstructions.empty())
     legalizeScalarOperands(*ConvertedInstructions.pop_back_val());
 
-  return false;
+  return Ret;
 }

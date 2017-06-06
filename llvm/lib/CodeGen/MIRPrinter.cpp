@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -924,11 +925,17 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
   case MachineOperand::MO_JumpTableIndex:
     OS << "%jump-table." << Op.getIndex();
     break;
-  case MachineOperand::MO_ExternalSymbol:
+  case MachineOperand::MO_ExternalSymbol: {
+    StringRef Name = Op.getSymbolName();
     OS << '$';
-    printLLVMNameWithoutPrefix(OS, Op.getSymbolName());
+    if (Name.empty()) {
+      OS << "\"\"";
+    } else {
+      printLLVMNameWithoutPrefix(OS, Name);
+    }
     printOffset(Op.getOffset());
     break;
+  }
   case MachineOperand::MO_GlobalAddress:
     Op.getGlobal()->printAsOperand(OS, /*PrintType=*/false, MST);
     printOffset(Op.getOffset());

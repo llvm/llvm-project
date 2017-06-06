@@ -134,6 +134,38 @@ CreateMemCpy(Value *Dst, Value *Src, Value *Size, unsigned Align,
   return CI;  
 }
 
+CallInst *IRBuilderBase::CreateElementAtomicMemCpy(
+    Value *Dst, Value *Src, Value *NumElements, uint32_t ElementSize,
+    MDNode *TBAATag, MDNode *TBAAStructTag, MDNode *ScopeTag,
+    MDNode *NoAliasTag) {
+  Dst = getCastedInt8PtrValue(Dst);
+  Src = getCastedInt8PtrValue(Src);
+
+  Value *Ops[] = {Dst, Src, NumElements, getInt32(ElementSize)};
+  Type *Tys[] = {Dst->getType(), Src->getType()};
+  Module *M = BB->getParent()->getParent();
+  Value *TheFn =
+      Intrinsic::getDeclaration(M, Intrinsic::memcpy_element_atomic, Tys);
+
+  CallInst *CI = createCallHelper(TheFn, Ops, this);
+
+  // Set the TBAA info if present.
+  if (TBAATag)
+    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
+
+  // Set the TBAA Struct info if present.
+  if (TBAAStructTag)
+    CI->setMetadata(LLVMContext::MD_tbaa_struct, TBAAStructTag);
+
+  if (ScopeTag)
+    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
+
+  if (NoAliasTag)
+    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
+
+  return CI;
+}
+
 CallInst *IRBuilderBase::
 CreateMemMove(Value *Dst, Value *Src, Value *Size, unsigned Align,
               bool isVolatile, MDNode *TBAATag, MDNode *ScopeTag,

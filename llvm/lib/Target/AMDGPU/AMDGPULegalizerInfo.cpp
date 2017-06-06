@@ -47,6 +47,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo() {
   setAction({G_GEP, P2}, Legal);
   setAction({G_GEP, 1, S64}, Legal);
 
+  setAction({G_ICMP, S1}, Legal);
+  setAction({G_ICMP, 1, S32}, Legal);
+
   setAction({G_LOAD, P1}, Legal);
   setAction({G_LOAD, P2}, Legal);
   setAction({G_LOAD, S32}, Legal);

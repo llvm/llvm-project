@@ -3367,7 +3367,7 @@ classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
     if (auto objcClass = type->getAs<ObjCInterfaceType>()) {
       if (objcClass->getInterface()->getIdentifier() == S.getNSErrorIdent()) {
         if (numNormalPointers == 2 && numTypeSpecifierPointers < 2)
-          return PointerDeclaratorKind::NSErrorPointerPointer;;
+          return PointerDeclaratorKind::NSErrorPointerPointer;
       }
 
       break;

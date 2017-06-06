@@ -93,6 +93,11 @@ public:
   }
 
   virtual bool equals(const Expression &Other) const { return true; }
+  // Return true if the two expressions are exactly the same, including the
+  // normally ignored fields.
+  virtual bool exactlyEquals(const Expression &Other) const {
+    return getExpressionType() == Other.getExpressionType() && equals(Other);
+  }
 
   unsigned getOpcode() const { return Opcode; }
   void setOpcode(unsigned opcode) { Opcode = opcode; }
@@ -345,6 +350,10 @@ public:
   void setAlignment(unsigned Align) { Alignment = Align; }
 
   bool equals(const Expression &Other) const override;
+  bool exactlyEquals(const Expression &Other) const override {
+    return Expression::exactlyEquals(Other) &&
+           cast<LoadExpression>(Other).getLoadInst() == getLoadInst();
+  }
 
   //
   // Debugging support
@@ -382,6 +391,10 @@ public:
   Value *getStoredValue() const { return StoredValue; }
 
   bool equals(const Expression &Other) const override;
+  bool exactlyEquals(const Expression &Other) const override {
+    return Expression::exactlyEquals(Other) &&
+           cast<StoreExpression>(Other).getStoreInst() == getStoreInst();
+  }
 
   // Debugging support
   //

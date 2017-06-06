@@ -76,6 +76,8 @@ public:
   int getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
                                 const SCEV *Ptr);
 
+  unsigned getAtomicMemIntrinsicMaxElementSize() const;
+
   int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
                             ArrayRef<Type *> Tys, FastMathFlags FMF,
                             unsigned ScalarizationCostPassed = UINT_MAX);
