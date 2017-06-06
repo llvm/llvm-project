@@ -10,9 +10,9 @@
 #ifndef LLVM_LIB_CODEGEN_ASMPRINTER_DEBUGLOCSTREAM_H
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DEBUGLOCSTREAM_H
 
+#include "ByteStreamer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "ByteStreamer.h"
 
 namespace llvm {
 

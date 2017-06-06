@@ -23,7 +23,7 @@
 
 
 DynamicLibrary::HandleSet::~HandleSet() {
-  for (void *Handle : Handles)
+  for (void *Handle : llvm::reverse(Handles))
     FreeLibrary(HMODULE(Handle));
 
   // 'Process' should not be released on Windows.

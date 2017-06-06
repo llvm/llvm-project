@@ -85,11 +85,11 @@ typedef u_int64_t uint64_t;
 
 #else /* _MSC_VER */
 #ifdef __cplusplus
-#include <cstdlib>
 #include <cstddef>
+#include <cstdlib>
 #else
-#include <stdlib.h>
 #include <stddef.h>
+#include <stdlib.h>
 #endif
 #include <sys/types.h>
 

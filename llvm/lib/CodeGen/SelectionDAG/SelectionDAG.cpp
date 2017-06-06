@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/SelectionDAG.h"
 #include "SDNodeDbgValue.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -19,9 +20,9 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -33,7 +34,6 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
-#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -2661,7 +2661,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
       if (DemandedElts[EltIdx]) {
         computeKnownBits(InVal, Known2, Depth + 1);
         Known.One &= Known2.One.zextOrTrunc(Known.One.getBitWidth());
-        Known.Zero &= Known2.Zero.zextOrTrunc(Known.Zero.getBitWidth());;
+        Known.Zero &= Known2.Zero.zextOrTrunc(Known.Zero.getBitWidth());
       }
 
       // If we demand the source vector then add its common known bits, ensuring
@@ -2677,7 +2677,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
       computeKnownBits(InVec, Known, Depth + 1);
       computeKnownBits(InVal, Known2, Depth + 1);
       Known.One &= Known2.One.zextOrTrunc(Known.One.getBitWidth());
-      Known.Zero &= Known2.Zero.zextOrTrunc(Known.Zero.getBitWidth());;
+      Known.Zero &= Known2.Zero.zextOrTrunc(Known.Zero.getBitWidth());
     }
     break;
   }

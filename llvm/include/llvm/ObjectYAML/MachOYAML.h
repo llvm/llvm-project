@@ -16,8 +16,8 @@
 #ifndef LLVM_OBJECTYAML_MACHOYAML_H
 #define LLVM_OBJECTYAML_MACHOYAML_H
 
-#include "llvm/ObjectYAML/YAML.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
+#include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/MachO.h"
 
 namespace llvm {

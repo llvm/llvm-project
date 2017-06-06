@@ -3,9 +3,9 @@
 
 // The fuzzer must find several constants with swapped bytes.
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cstdio>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (Size < 14) return 0;

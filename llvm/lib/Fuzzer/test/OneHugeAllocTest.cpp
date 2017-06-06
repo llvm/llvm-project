@@ -3,9 +3,9 @@
 
 // Tests OOM handling when there is a single large allocation.
 #include <assert.h>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <cstddef>
 #include <cstring>
 #include <iostream>
 

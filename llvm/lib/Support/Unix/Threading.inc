@@ -26,19 +26,19 @@
 #endif
 
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+#include <errno.h>
 #include <sys/sysctl.h>
 #include <sys/user.h>
-#include <errno.h>
 #include <unistd.h>
 #endif
 
 #if defined(__NetBSD__)
-#include <lwp.h>  // For _lwp_self()
+#include <lwp.h> // For _lwp_self()
 #endif
 
 #if defined(__linux__)
-#include <unistd.h> // For syscall()
-#include <sys/syscall.h>  // For syscall codes
+#include <sys/syscall.h> // For syscall codes
+#include <unistd.h>      // For syscall()
 #endif
 
 namespace {

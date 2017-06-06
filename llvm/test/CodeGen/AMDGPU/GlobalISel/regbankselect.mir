@@ -24,8 +24,8 @@ legalized: true
 
 # CHECK-LABEL: name: load_constant
 # CHECK: registers:
-# CHECK: - { id: 0, class: sgpr }
-# CHECK: - { id: 1, class: sgpr }
+# CHECK: - { id: 0, class: sgpr, preferred-register: '' }
+# CHECK: - { id: 1, class: sgpr, preferred-register: '' }
 
 body: |
   bb.0:
@@ -40,8 +40,8 @@ legalized: true
 
 # CHECK-LABEL: name: load_global_uniform
 # CHECK: registers:
-# CHECK: - { id: 0, class: sgpr }
-# CHECK: - { id: 1, class: sgpr }
+# CHECK: - { id: 0, class: sgpr, preferred-register: '' }
+# CHECK: - { id: 1, class: sgpr, preferred-register: '' }
 
 body: |
   bb.0:
@@ -56,9 +56,9 @@ legalized: true
 
 # CHECK-LABEL: name: load_global_non_uniform
 # CHECK: registers:
-# CHECK: - { id: 0, class: sgpr }
-# CHECK: - { id: 1, class: vgpr }
-# CHECK: - { id: 2, class: vgpr }
+# CHECK: - { id: 0, class: sgpr, preferred-register: '' }
+# CHECK: - { id: 1, class: vgpr, preferred-register: '' }
+# CHECK: - { id: 2, class: vgpr, preferred-register: '' }
 
 
 body: |

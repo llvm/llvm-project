@@ -2,9 +2,9 @@
 // License. See LICENSE.TXT for details.
 
 // Test that we don't creash in case of bad strcmp params.
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <cstddef>
 
 static volatile int Sink;
 

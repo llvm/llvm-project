@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MipsMachineFunction.h"
-#include "Mips.h"
-#include "MipsRegisterInfo.h"
 #include "MipsSubtarget.h"
+#include "Mips.h"
+#include "MipsMachineFunction.h"
+#include "MipsRegisterInfo.h"
 #include "MipsTargetMachine.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"

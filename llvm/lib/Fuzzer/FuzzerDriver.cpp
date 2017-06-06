@@ -10,9 +10,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "FuzzerCorpus.h"
+#include "FuzzerIO.h"
 #include "FuzzerInterface.h"
 #include "FuzzerInternal.h"
-#include "FuzzerIO.h"
 #include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
 #include "FuzzerShmem.h"
@@ -149,7 +149,7 @@ static bool ParseOneFlag(const char *Param) {
         int Val = MyStol(Str);
         *FlagDescriptions[F].IntFlag = Val;
         if (Flags.verbosity >= 2)
-          Printf("Flag: %s %d\n", Name, Val);;
+          Printf("Flag: %s %d\n", Name, Val);
         return true;
       } else if (FlagDescriptions[F].UIntFlag) {
         unsigned int Val = std::stoul(Str);

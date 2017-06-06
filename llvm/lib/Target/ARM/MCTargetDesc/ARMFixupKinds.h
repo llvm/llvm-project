@@ -110,6 +110,9 @@ enum Fixups {
   // fixup_arm_mod_imm - Fixup for mod_imm
   fixup_arm_mod_imm,
 
+  // fixup_t2_so_imm - Fixup for Thumb2 8-bit rotated operand
+  fixup_t2_so_imm,
+
   // Marker
   LastTargetFixupKind,
   NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind

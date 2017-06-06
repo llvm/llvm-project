@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri %s -o %t.o
-# RUN: ld.lld %t.o -o %t
+# RUN: ld.lld -shared %t.o -o %t
 # RUN: llvm-readobj -sections -symbols -program-headers %t | FileCheck %s
 
 # REQUIRES: amdgpu
@@ -7,7 +7,7 @@
 .hsa_code_object_version 1,0
 .hsa_code_object_isa 7,0,0,"AMD","AMDGPU"
 
-.hsatext
+.text
 .globl kernel0
 .align 256
 .amdgpu_hsa_kernel kernel0
@@ -27,16 +27,12 @@ kernel1:
 
 
 # CHECK: Section {
-# CHECK: Name: .hsatext
+# CHECK: Name: .text
 # CHECK: Type: SHT_PROGBITS
-# CHECK: Flags [ (0xC00007)
+# CHECK: Flags [ (0x6)
 # CHECK: SHF_ALLOC (0x2)
-# CHECK: SHF_AMDGPU_HSA_AGENT (0x800000)
-# CHECK: SHF_AMDGPU_HSA_CODE (0x400000)
 # CHECK: SHF_EXECINSTR (0x4)
-# CHECK: SHF_WRITE (0x1)
 # CHECK: ]
-# CHECK: Address: [[HSATEXT_ADDR:[0-9xa-f]+]]
 # CHECK: }
 
 # CHECK: Symbol {
@@ -45,7 +41,7 @@ kernel1:
 # CHECK: Size: 4
 # CHECK: Binding: Global
 # CHECK: Type: AMDGPU_HSA_KERNEL
-# CHECK: Section: .hsatext
+# CHECK: Section: .text
 # CHECK: }
 
 # CHECK: Symbol {
@@ -54,7 +50,7 @@ kernel1:
 # CHECK: Size: 8
 # CHECK: Binding: Global
 # CHECK: Type: AMDGPU_HSA_KERNEL
-# CHECK: Section: .hsatext
+# CHECK: Section: .text
 # CHECK: }
 
 # CHECK: ProgramHeader {

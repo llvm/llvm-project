@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/MipsABIInfo.h"
 #include "MipsTargetStreamer.h"
 #include "InstPrinter/MipsInstPrinter.h"
+#include "MCTargetDesc/MipsABIInfo.h"
 #include "MipsELFStreamer.h"
 #include "MipsMCExpr.h"
 #include "MipsMCTargetDesc.h"

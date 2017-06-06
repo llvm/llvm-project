@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SCCIterator.h"
-#include "gtest/gtest.h"
 #include "TestGraph.h"
+#include "gtest/gtest.h"
 #include <limits.h>
 
 using namespace llvm;

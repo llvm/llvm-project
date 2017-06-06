@@ -326,7 +326,7 @@ NullabilityChecker::NullabilityBugVisitor::VisitNode(const ExplodedNode *N,
 
   // Retrieve the associated statement.
   const Stmt *S = TrackedNullab->getNullabilitySource();
-  if (!S) {
+  if (!S || S->getLocStart().isInvalid()) {
     S = PathDiagnosticLocation::getStmt(N);
   }
 

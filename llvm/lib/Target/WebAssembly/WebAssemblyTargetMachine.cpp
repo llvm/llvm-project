@@ -12,9 +12,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "WebAssembly.h"
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblyTargetMachine.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssembly.h"
 #include "WebAssemblyTargetObjectFile.h"
 #include "WebAssemblyTargetTransformInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"

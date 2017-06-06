@@ -9,9 +9,9 @@
 //
 // RDF-based generic dead code elimination.
 
+#include "RDFDeadCode.h"
 #include "RDFGraph.h"
 #include "RDFLiveness.h"
-#include "RDFDeadCode.h"
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"

@@ -10,8 +10,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "FuzzerDictionary.h"
-#include "FuzzerInternal.h"
 #include "FuzzerIO.h"
+#include "FuzzerInternal.h"
 #include "FuzzerMutate.h"
 #include "FuzzerTracePC.h"
 #include <algorithm>

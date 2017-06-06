@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SystemZInstrInfo.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZ.h"
 #include "SystemZInstrBuilder.h"
-#include "SystemZInstrInfo.h"
 #include "SystemZSubtarget.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"

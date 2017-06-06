@@ -10,8 +10,8 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGRANGELIST_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGRANGELIST_H
 
-#include "llvm/Support/DataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
+#include "llvm/Support/DataExtractor.h"
 
 #include <cassert>
 #include <cstdint>

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OrcTestCommon.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
+#include "OrcTestCommon.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

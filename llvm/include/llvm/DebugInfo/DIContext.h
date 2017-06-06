@@ -135,6 +135,7 @@ enum DIDumpType {
   DIDT_GnuPubnames,
   DIDT_GnuPubtypes,
   DIDT_Str,
+  DIDT_StrOffsets,
   DIDT_StrDwo,
   DIDT_StrOffsetsDwo,
   DIDT_AppleNames,

@@ -21,9 +21,9 @@
 #ifndef LLVM_ADT_SPARSEMULTISET_H
 #define LLVM_ADT_SPARSEMULTISET_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>

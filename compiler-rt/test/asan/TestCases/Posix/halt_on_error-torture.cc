@@ -10,12 +10,12 @@
 //
 // Collisions are unlikely but still possible so we need the ||.
 // RUN: rm -f 10.txt
-// RUN: %env_asan_opts=halt_on_error=false:suppress_equal_pcs=false %run %t 10 20 >>10.txt 2>&1 || true
+// RUN: %env_asan_opts=halt_on_error=false:suppress_equal_pcs=false:exitcode=0 %run %t 10 20 2>&1 | cat > 10.txt
 // RUN: FileCheck --check-prefix=CHECK-COLLISION %s < 10.txt || FileCheck --check-prefix=CHECK-NO-COLLISION %s < 10.txt
 //
 // Collisions are unlikely but still possible so we need the ||.
 // RUN: rm -f 20.txt
-// RUN: %env_asan_opts=halt_on_error=false %run %t 10 20 >>20.txt 2>&1 || true
+// RUN: %env_asan_opts=halt_on_error=false:exitcode=0 %run %t 10 20 2>&1 | cat > 20.txt
 // RUN: FileCheck --check-prefix=CHECK-COLLISION %s < 20.txt || FileCheck --check-prefix=CHECK-NO-COLLISION %s < 20.txt
 
 #include <stdio.h>
@@ -38,7 +38,7 @@ void *run(void *arg) {
   unsigned seed = (unsigned)(size_t)arg;
 
   volatile char tmp[2];
-  __asan_poison_memory_region(&tmp, sizeof(tmp)); 
+  __asan_poison_memory_region(&tmp, sizeof(tmp));
 
   for (size_t i = 0; i < niter; ++i) {
     random_delay(&seed);

@@ -16,6 +16,8 @@
 
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugCrossExSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugCrossImpSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionVisitor.h"
@@ -169,6 +171,32 @@ public:
               return EC;
           }
         }
+      }
+    }
+    return Error::success();
+  }
+
+  Error handleCrossModuleExports() override {
+    for (const auto &M : CrossExports) {
+      DictScope D(P, "CrossModuleExports");
+      for (const auto &E : M) {
+        P.printHex("Local", E.Local);
+        P.printHex("Global", E.Global);
+      }
+    }
+    return Error::success();
+  }
+
+  Error handleCrossModuleImports() override {
+    for (const auto &M : CrossImports) {
+      DictScope D(P, "CrossModuleImports");
+      for (const auto &ImportGroup : M) {
+        auto Name =
+            getNameFromStringTable(ImportGroup.Header->ModuleNameOffset);
+        if (!Name)
+          return Name.takeError();
+        P.printString("Module", *Name);
+        P.printHexList("Imports", ImportGroup.Imports);
       }
     }
     return Error::success();

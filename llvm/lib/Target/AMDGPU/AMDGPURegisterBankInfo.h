@@ -36,7 +36,6 @@ protected:
 
 #define GET_TARGET_REGBANK_CLASS
 #include "AMDGPUGenRegisterBank.inc"
-
 };
 class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
   const SIRegisterInfo *TRI;

@@ -95,7 +95,7 @@ bool ObjCLanguage::MethodName::SetName(llvm::StringRef name, bool strict) {
   // or '-' can be omitted
   bool valid_prefix = false;
 
-  if (name[0] == '+' || name[0] == '-') {
+  if (name.size() > 1 && (name[0] == '+' || name[0] == '-')) {
     valid_prefix = name[1] == '[';
     if (name[0] == '+')
       m_type = eTypeClassMethod;

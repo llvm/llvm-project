@@ -22,11 +22,11 @@
 #ifndef LLVM_ANALYSIS_DEMANDED_BITS_H
 #define LLVM_ANALYSIS_DEMANDED_BITS_H
 
-#include "llvm/Pass.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 

@@ -229,7 +229,7 @@ public:
                      MachineInstr &MI);
 
   BlockWaitcntBrackets()
-      : WaitAtBeginning(false), ValidLoop(false), MixedExpTypes(false),
+      : WaitAtBeginning(false), RevisitLoop(false), ValidLoop(false), MixedExpTypes(false),
         LoopRegion(NULL), PostOrder(0), Waitcnt(NULL), VgprUB(0), SgprUB(0) {
     for (enum InstCounterType T = VM_CNT; T < NUM_INST_CNTS;
          T = (enum InstCounterType)(T + 1)) {

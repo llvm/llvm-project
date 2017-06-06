@@ -45,9 +45,9 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -71,12 +71,12 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
-# CHECK: - { id: 3, class: gprb }
-# CHECK: - { id: 4, class: gprb }
-# CHECK: - { id: 5, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
+# CHECK: - { id: 3, class: gprb, preferred-register: '' }
+# CHECK: - { id: 4, class: gprb, preferred-register: '' }
+# CHECK: - { id: 5, class: gprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -106,12 +106,12 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
-# CHECK: - { id: 3, class: gprb }
-# CHECK: - { id: 4, class: gprb }
-# CHECK: - { id: 5, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
+# CHECK: - { id: 3, class: gprb, preferred-register: '' }
+# CHECK: - { id: 4, class: gprb, preferred-register: '' }
+# CHECK: - { id: 5, class: gprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -141,12 +141,12 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
-# CHECK: - { id: 3, class: gprb }
-# CHECK: - { id: 4, class: gprb }
-# CHECK: - { id: 5, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
+# CHECK: - { id: 3, class: gprb, preferred-register: '' }
+# CHECK: - { id: 4, class: gprb, preferred-register: '' }
+# CHECK: - { id: 5, class: gprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -176,9 +176,9 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -202,12 +202,12 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
-# CHECK: - { id: 3, class: gprb }
-# CHECK: - { id: 4, class: gprb }
-# CHECK: - { id: 5, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
+# CHECK: - { id: 3, class: gprb, preferred-register: '' }
+# CHECK: - { id: 4, class: gprb, preferred-register: '' }
+# CHECK: - { id: 5, class: gprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -237,12 +237,12 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
-# CHECK: - { id: 3, class: gprb }
-# CHECK: - { id: 4, class: gprb }
-# CHECK: - { id: 5, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
+# CHECK: - { id: 3, class: gprb, preferred-register: '' }
+# CHECK: - { id: 4, class: gprb, preferred-register: '' }
+# CHECK: - { id: 5, class: gprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -272,9 +272,9 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -298,12 +298,12 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
-# CHECK: - { id: 3, class: gprb }
-# CHECK: - { id: 4, class: gprb }
-# CHECK: - { id: 5, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
+# CHECK: - { id: 3, class: gprb, preferred-register: '' }
+# CHECK: - { id: 4, class: gprb, preferred-register: '' }
+# CHECK: - { id: 5, class: gprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -333,12 +333,12 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
-# CHECK: - { id: 3, class: gprb }
-# CHECK: - { id: 4, class: gprb }
-# CHECK: - { id: 5, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
+# CHECK: - { id: 3, class: gprb, preferred-register: '' }
+# CHECK: - { id: 4, class: gprb, preferred-register: '' }
+# CHECK: - { id: 5, class: gprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -368,9 +368,9 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -394,9 +394,9 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -420,13 +420,13 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
-# CHECK: - { id: 3, class: gprb }
-# CHECK: - { id: 4, class: gprb }
-# CHECK: - { id: 5, class: gprb }
-# CHECK: - { id: 6, class: fprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
+# CHECK: - { id: 3, class: gprb, preferred-register: '' }
+# CHECK: - { id: 4, class: gprb, preferred-register: '' }
+# CHECK: - { id: 5, class: gprb, preferred-register: '' }
+# CHECK: - { id: 6, class: fprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -456,13 +456,13 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
-# CHECK: - { id: 3, class: gprb }
-# CHECK: - { id: 4, class: gprb }
-# CHECK: - { id: 5, class: gprb }
-# CHECK: - { id: 6, class: fprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
+# CHECK: - { id: 3, class: gprb, preferred-register: '' }
+# CHECK: - { id: 4, class: gprb, preferred-register: '' }
+# CHECK: - { id: 5, class: gprb, preferred-register: '' }
+# CHECK: - { id: 6, class: fprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -498,11 +498,11 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
-# CHECK: - { id: 3, class: gprb }
-# CHECK: - { id: 4, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
+# CHECK: - { id: 3, class: gprb, preferred-register: '' }
+# CHECK: - { id: 4, class: gprb, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -531,9 +531,9 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: gprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -556,7 +556,7 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
 body:             |
@@ -572,8 +572,8 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -593,8 +593,8 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -614,8 +614,8 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -635,9 +635,9 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: fprb }
-# CHECK: - { id: 1, class: fprb }
-# CHECK: - { id: 2, class: fprb }
+# CHECK: - { id: 0, class: fprb, preferred-register: '' }
+# CHECK: - { id: 1, class: fprb, preferred-register: '' }
+# CHECK: - { id: 2, class: fprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -661,9 +661,9 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: fprb }
-# CHECK: - { id: 1, class: fprb }
-# CHECK: - { id: 2, class: fprb }
+# CHECK: - { id: 0, class: fprb, preferred-register: '' }
+# CHECK: - { id: 1, class: fprb, preferred-register: '' }
+# CHECK: - { id: 2, class: fprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -687,11 +687,11 @@ legalized:       true
 regBankSelected: false
 selected:        false
 # CHECK: registers:
-# CHECK: - { id: 0, class: gprb }
-# CHECK: - { id: 1, class: gprb }
-# CHECK: - { id: 2, class: fprb }
-# CHECK: - { id: 3, class: gprb }
-# CHECK: - { id: 4, class: gprb }
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+# CHECK: - { id: 2, class: fprb, preferred-register: '' }
+# CHECK: - { id: 3, class: gprb, preferred-register: '' }
+# CHECK: - { id: 4, class: gprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }

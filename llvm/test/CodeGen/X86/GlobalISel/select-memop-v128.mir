@@ -32,9 +32,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 registers:
-# ALL:          - { id: 0, class: gr64 }
-# NO_AVX512F:   - { id: 1, class: vr128 }
-# AVX512ALL:    - { id: 1, class: vr128x }
+# ALL:          - { id: 0, class: gr64, preferred-register: '' }
+# NO_AVX512F:   - { id: 1, class: vr128, preferred-register: '' }
+# AVX512ALL:    - { id: 1, class: vr128x, preferred-register: '' }
   - { id: 0, class: gpr }
   - { id: 1, class: vecr }
 # ALL:      %0 = COPY %rdi
@@ -60,9 +60,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 registers:
-# ALL:   - { id: 0, class: gr64 }
-# NO_AVX512F:   - { id: 1, class: vr128 }
-# AVX512ALL:    - { id: 1, class: vr128x }
+# ALL:   - { id: 0, class: gr64, preferred-register: '' }
+# NO_AVX512F:   - { id: 1, class: vr128, preferred-register: '' }
+# AVX512ALL:    - { id: 1, class: vr128x, preferred-register: '' }
   - { id: 0, class: gpr }
   - { id: 1, class: vecr }
 # ALL:      %0 = COPY %rdi
@@ -88,9 +88,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 registers:
-# NO_AVX512F:   - { id: 0, class: vr128 }
-# AVX512ALL:    - { id: 0, class: vr128x }
-# ALL:   - { id: 1, class: gr64 }
+# NO_AVX512F:   - { id: 0, class: vr128, preferred-register: '' }
+# AVX512ALL:    - { id: 0, class: vr128x, preferred-register: '' }
+# ALL:   - { id: 1, class: gr64, preferred-register: '' }
   - { id: 0, class: vecr }
   - { id: 1, class: gpr }
 # ALL:       %0 = COPY %xmm0
@@ -118,9 +118,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 registers:
-# NO_AVX512F:   - { id: 0, class: vr128 }
-# AVX512ALL:    - { id: 0, class: vr128x }
-# ALL:   - { id: 1, class: gr64 }
+# NO_AVX512F:   - { id: 0, class: vr128, preferred-register: '' }
+# AVX512ALL:    - { id: 0, class: vr128x, preferred-register: '' }
+# ALL:   - { id: 1, class: gr64, preferred-register: '' }
   - { id: 0, class: vecr }
   - { id: 1, class: gpr }
 # ALL:       %0 = COPY %xmm0

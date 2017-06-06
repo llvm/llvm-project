@@ -3,8 +3,8 @@
 
 // Contains dummy functions used to avoid dependency on AFL.
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 extern "C" void __afl_manual_init() {}
 

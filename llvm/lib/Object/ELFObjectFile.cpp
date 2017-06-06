@@ -11,14 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/ELF.h"
-#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/ARMAttributeParser.h"
+#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"

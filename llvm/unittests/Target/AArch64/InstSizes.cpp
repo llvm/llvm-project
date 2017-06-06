@@ -60,18 +60,20 @@ void runChecks(
       createMIRParser(std::move(MBuffer), Context);
   assert(MParser && "Couldn't create MIR parser");
 
-  std::unique_ptr<Module> M = MParser->parseLLVMModule();
+  std::unique_ptr<Module> M = MParser->parseIRModule();
   assert(M && "Couldn't parse module");
 
   M->setTargetTriple(TM->getTargetTriple().getTriple());
   M->setDataLayout(TM->createDataLayout());
 
+  MachineModuleInfo MMI(TM);
+  bool Res = MParser->parseMachineFunctions(*M, MMI);
+  (void)Res;
+  assert(!Res && "Couldn't parse MIR functions");
+
   auto F = M->getFunction("sizes");
   assert(F && "Couldn't find intended function");
-
-  MachineModuleInfo MMI(TM);
-  MMI.setMachineFunctionInitializer(MParser.get());
-  auto &MF = MMI.getMachineFunction(*F);
+  auto &MF = MMI.getOrCreateMachineFunction(*F);
 
   Checks(*II, MF);
 }

@@ -1671,9 +1671,15 @@ static bool GenerateAlternateExtensivePathDiagnostic(
         // Add an edge to the start of the function.
         const StackFrameContext *CalleeLC = CE->getCalleeContext();
         const Decl *D = CalleeLC->getDecl();
-        addEdgeToPath(PD.getActivePath(), PrevLoc,
-                      PathDiagnosticLocation::createBegin(D, SM),
-                      CalleeLC);
+        // Add the edge only when the callee has body. We jump to the beginning
+        // of the *declaration*, however we expect it to be followed by the
+        // body. This isn't the case for autosynthesized property accessors in
+        // Objective-C. No need for a similar extra check for CallExit points
+        // because the exit edge comes from a statement (i.e. return),
+        // not from declaration.
+        if (D->hasBody())
+          addEdgeToPath(PD.getActivePath(), PrevLoc,
+                        PathDiagnosticLocation::createBegin(D, SM), CalleeLC);
 
         // Did we visit an entire call?
         bool VisitedEntireCall = PD.isWithinCall();

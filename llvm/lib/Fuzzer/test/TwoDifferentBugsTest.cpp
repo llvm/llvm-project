@@ -2,9 +2,9 @@
 // License. See LICENSE.TXT for details.
 
 // Simple test for a fuzzer. This test may trigger two different bugs.
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <cstddef>
 #include <iostream>
 
 static volatile int *Null = 0;

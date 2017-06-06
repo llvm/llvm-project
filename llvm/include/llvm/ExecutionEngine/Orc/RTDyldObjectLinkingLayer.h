@@ -23,8 +23,8 @@
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
-#include <cassert>
 #include <algorithm>
+#include <cassert>
 #include <functional>
 #include <list>
 #include <memory>

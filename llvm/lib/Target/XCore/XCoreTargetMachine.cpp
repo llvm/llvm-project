@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "XCoreTargetMachine.h"
 #include "MCTargetDesc/XCoreMCTargetDesc.h"
 #include "XCore.h"
-#include "XCoreTargetMachine.h"
 #include "XCoreTargetObjectFile.h"
 #include "XCoreTargetTransformInfo.h"
 #include "llvm/ADT/Optional.h"

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "gtest/gtest.h"
 #include <cstdlib>
 #include <ctime>
 using namespace llvm;

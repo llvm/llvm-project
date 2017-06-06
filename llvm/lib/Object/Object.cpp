@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm-c/Object.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Object/ObjectFile.h"
 
 using namespace llvm;

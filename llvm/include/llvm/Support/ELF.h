@@ -808,12 +808,7 @@ enum : unsigned {
   SHF_MIPS_STRING = 0x80000000,
 
   // Make code section unreadable when in execute-only mode
-  SHF_ARM_PURECODE = 0x20000000,
-
-  SHF_AMDGPU_HSA_GLOBAL = 0x00100000,
-  SHF_AMDGPU_HSA_READONLY = 0x00200000,
-  SHF_AMDGPU_HSA_CODE = 0x00400000,
-  SHF_AMDGPU_HSA_AGENT = 0x00800000
+  SHF_ARM_PURECODE = 0x20000000
 };
 
 // Section Group Flags
@@ -897,9 +892,7 @@ enum {
   STT_HIPROC = 15,    // Highest processor-specific symbol type
 
   // AMDGPU symbol types
-  STT_AMDGPU_HSA_KERNEL = 10,
-  STT_AMDGPU_HSA_INDIRECT_FUNCTION = 11,
-  STT_AMDGPU_HSA_METADATA = 12
+  STT_AMDGPU_HSA_KERNEL = 10
 };
 
 enum {
@@ -1049,12 +1042,6 @@ enum {
   PT_MIPS_RTPROC = 0x70000001,   // Runtime procedure table.
   PT_MIPS_OPTIONS = 0x70000002,  // Options segment.
   PT_MIPS_ABIFLAGS = 0x70000003, // Abiflags segment.
-
-  // AMDGPU program header types.
-  PT_AMDGPU_HSA_LOAD_GLOBAL_PROGRAM = 0x60000000,
-  PT_AMDGPU_HSA_LOAD_GLOBAL_AGENT = 0x60000001,
-  PT_AMDGPU_HSA_LOAD_READONLY_AGENT = 0x60000002,
-  PT_AMDGPU_HSA_LOAD_CODE_AGENT = 0x60000003,
 
   // WebAssembly program header types.
   PT_WEBASSEMBLY_FUNCTIONS = PT_LOPROC + 0, // Function definitions.

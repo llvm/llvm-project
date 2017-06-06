@@ -52,7 +52,6 @@ struct GraphTraits {
   //    Return total number of nodes in the graph
   //
 
-
   // If anyone tries to use this class without having an appropriate
   // specialization, make an error.  If you get this error, it's because you
   // need to include the appropriate specialization of GraphTraits<> for your

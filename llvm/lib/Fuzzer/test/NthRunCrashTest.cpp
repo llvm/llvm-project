@@ -2,8 +2,8 @@
 // License. See LICENSE.TXT for details.
 
 // Crash on the N-th execution.
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <iostream>
 
 static int Counter;

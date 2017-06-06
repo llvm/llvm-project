@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/MipsABIInfo.h"
 #include "MipsMachineFunction.h"
+#include "MCTargetDesc/MipsABIInfo.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"

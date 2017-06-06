@@ -1,4 +1,3 @@
-#include "gtest/gtest.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
@@ -6,6 +5,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -13,7 +13,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/IR/LegacyPassManager.h"
+#include "gtest/gtest.h"
 
 using namespace llvm;
 
@@ -59,18 +59,15 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
   if (!MIR)
     return nullptr;
 
-  std::unique_ptr<Module> M = MIR->parseLLVMModule();
+  std::unique_ptr<Module> M = MIR->parseIRModule();
   if (!M)
     return nullptr;
 
   M->setDataLayout(TM.createDataLayout());
 
-  Function *F = M->getFunction(FuncName);
-  if (!F)
-    return nullptr;
-
   MachineModuleInfo *MMI = new MachineModuleInfo(&TM);
-  MMI->setMachineFunctionInitializer(MIR.get());
+  if (MIR->parseMachineFunctions(*M, *MMI))
+    return nullptr;
   PM.add(MMI);
 
   return M;
@@ -154,6 +151,7 @@ body: |
   std::unique_ptr<MIRParser> MIR;
   std::unique_ptr<Module> M = parseMIR(Context, PM, MIR, *TM, MIRString,
                                        "func");
+  assert(M && "MIR parsing successfull");
 
   PM.add(new TestPass(T));
 

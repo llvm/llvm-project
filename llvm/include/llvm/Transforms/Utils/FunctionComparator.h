@@ -19,8 +19,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/ValueMap.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include <cstdint>

@@ -9,9 +9,9 @@
 // Merging corpora.
 //===----------------------------------------------------------------------===//
 
-#include "FuzzerInternal.h"
-#include "FuzzerIO.h"
 #include "FuzzerMerge.h"
+#include "FuzzerIO.h"
+#include "FuzzerInternal.h"
 #include "FuzzerTracePC.h"
 #include "FuzzerUtil.h"
 

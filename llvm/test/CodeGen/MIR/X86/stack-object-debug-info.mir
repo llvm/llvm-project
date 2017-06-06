@@ -51,8 +51,9 @@ frameInfo:
   maxAlignment:    16
 # CHECK-LABEL: foo
 # CHECK: stack:
-# CHECK:  - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16, di-variable: '!4',
-# CHECK-NEXT: di-expression: '!10', di-location: '!11' }
+# CHECK:  - { id: 0, name: y.i, type: default, offset: 0, size: 256, alignment: 16,
+# CHECK-NEXT: callee-saved-register: '', di-variable: '!4', di-expression: '!10',
+# CHECK-NEXT: di-location: '!11' }
 stack:
   - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16, di-variable: '!4',
       di-expression: '!7', di-location: '!8' }

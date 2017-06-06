@@ -44,7 +44,7 @@ entry:
   %9 = add i32 %f.promoted, %smax
   %10 = add i32 %9, 2
   call void @llvm.memset.p0i8.i32(i8* %scevgep, i8 %conv6, i32 %10, i32 1, i1 false)
-; CHECK:  call void @llvm.memset.p0i8.i32(i8* getelementptr inbounds ([6 x [6 x [7 x i8]]], [6 x [6 x [7 x i8]]]* @j, i32 0, i64 5, i64 4, i32 1), i8 %conv6, i32 1, i32 1, i1 false)
+; CHECK:  call void @llvm.memset.p0i8.i32(i8* getelementptr inbounds ([6 x [6 x [7 x i8]]], [6 x [6 x [7 x i8]]]* @j, i32 0, i{{32|64}} 5, i{{32|64}} 4, i32 1), i8 %conv6, i32 1, i32 1, i1 false)
 ; CHECK-NOT: call void @llvm.memset.p0i8.i32(i8* getelementptr ([6 x [6 x [7 x i8]]], [6 x [6 x [7 x i8]]]* @j, i64 1, i64 4, i64 4, i32 1)
   ret i32 0
 }

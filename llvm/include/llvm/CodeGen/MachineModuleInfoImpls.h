@@ -15,8 +15,8 @@
 #ifndef LLVM_CODEGEN_MACHINEMODULEINFOIMPLS_H
 #define LLVM_CODEGEN_MACHINEMODULEINFOIMPLS_H
 
-#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/Support/Wasm.h"
 
 namespace llvm {

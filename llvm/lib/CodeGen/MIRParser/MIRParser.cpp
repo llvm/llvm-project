@@ -50,18 +50,24 @@ namespace llvm {
 /// file.
 class MIRParserImpl {
   SourceMgr SM;
+  yaml::Input In;
   StringRef Filename;
   LLVMContext &Context;
-  StringMap<std::unique_ptr<yaml::MachineFunction>> Functions;
   SlotMapping IRSlots;
   /// Maps from register class names to register classes.
   Name2RegClassMap Names2RegClasses;
   /// Maps from register bank names to register banks.
   Name2RegBankMap Names2RegBanks;
+  /// True when the MIR file doesn't have LLVM IR. Dummy IR functions are
+  /// created and inserted into the given module when this is true.
+  bool NoLLVMIR = false;
+  /// True when a well formed MIR file does not contain any MIR/machine function
+  /// parts.
+  bool NoMIRDocuments = false;
 
 public:
-  MIRParserImpl(std::unique_ptr<MemoryBuffer> Contents, StringRef Filename,
-                LLVMContext &Context);
+  MIRParserImpl(std::unique_ptr<MemoryBuffer> Contents,
+                StringRef Filename, LLVMContext &Context);
 
   void reportDiagnostic(const SMDiagnostic &Diag);
 
@@ -85,22 +91,22 @@ public:
   /// file.
   ///
   /// Return null if an error occurred.
-  std::unique_ptr<Module> parse();
+  std::unique_ptr<Module> parseIRModule();
+
+  bool parseMachineFunctions(Module &M, MachineModuleInfo &MMI);
 
   /// Parse the machine function in the current YAML document.
   ///
-  /// \param NoLLVMIR - set to true when the MIR file doesn't have LLVM IR.
-  /// A dummy IR function is created and inserted into the given module when
-  /// this parameter is true.
   ///
   /// Return true if an error occurred.
-  bool parseMachineFunction(yaml::Input &In, Module &M, bool NoLLVMIR);
+  bool parseMachineFunction(Module &M, MachineModuleInfo &MMI);
 
   /// Initialize the machine function to the state that's described in the MIR
   /// file.
   ///
   /// Return true if error occurred.
-  bool initializeMachineFunction(MachineFunction &MF);
+  bool initializeMachineFunction(const yaml::MachineFunction &YamlMF,
+                                 MachineFunction &MF);
 
   bool parseRegisterInfo(PerFunctionMIParsingState &PFS,
                          const yaml::MachineFunction &YamlMF);
@@ -144,9 +150,6 @@ private:
   SMDiagnostic diagFromBlockStringDiag(const SMDiagnostic &Error,
                                        SMRange SourceRange);
 
-  /// Create an empty function with the given name.
-  void createDummyFunction(StringRef Name, Module &M);
-
   void initNames2RegClasses(const MachineFunction &MF);
   void initNames2RegBanks(const MachineFunction &MF);
 
@@ -166,10 +169,19 @@ private:
 
 } // end namespace llvm
 
+static void handleYAMLDiag(const SMDiagnostic &Diag, void *Context) {
+  reinterpret_cast<MIRParserImpl *>(Context)->reportDiagnostic(Diag);
+}
+
 MIRParserImpl::MIRParserImpl(std::unique_ptr<MemoryBuffer> Contents,
                              StringRef Filename, LLVMContext &Context)
-    : SM(), Filename(Filename), Context(Context) {
-  SM.AddNewSourceBuffer(std::move(Contents), SMLoc());
+    : SM(),
+      In(SM.getMemoryBuffer(
+            SM.AddNewSourceBuffer(std::move(Contents), SMLoc()))->getBuffer(),
+            nullptr, handleYAMLDiag, this),
+      Filename(Filename),
+      Context(Context) {
+  In.setContext(&In);
 }
 
 bool MIRParserImpl::error(const Twine &Message) {
@@ -206,24 +218,16 @@ void MIRParserImpl::reportDiagnostic(const SMDiagnostic &Diag) {
   Context.diagnose(DiagnosticInfoMIRParser(Kind, Diag));
 }
 
-static void handleYAMLDiag(const SMDiagnostic &Diag, void *Context) {
-  reinterpret_cast<MIRParserImpl *>(Context)->reportDiagnostic(Diag);
-}
-
-std::unique_ptr<Module> MIRParserImpl::parse() {
-  yaml::Input In(SM.getMemoryBuffer(SM.getMainFileID())->getBuffer(),
-                 /*Ctxt=*/nullptr, handleYAMLDiag, this);
-  In.setContext(&In);
-
+std::unique_ptr<Module> MIRParserImpl::parseIRModule() {
   if (!In.setCurrentDocument()) {
     if (In.error())
       return nullptr;
     // Create an empty module when the MIR file is empty.
+    NoMIRDocuments = true;
     return llvm::make_unique<Module>(Filename, Context);
   }
 
   std::unique_ptr<Module> M;
-  bool NoLLVMIR = false;
   // Parse the block scalar manually so that we can return unique pointer
   // without having to go trough YAML traits.
   if (const auto *BSN =
@@ -237,49 +241,68 @@ std::unique_ptr<Module> MIRParserImpl::parse() {
     }
     In.nextDocument();
     if (!In.setCurrentDocument())
-      return M;
+      NoMIRDocuments = true;
   } else {
     // Create an new, empty module.
     M = llvm::make_unique<Module>(Filename, Context);
     NoLLVMIR = true;
   }
-
-  // Parse the machine functions.
-  do {
-    if (parseMachineFunction(In, *M, NoLLVMIR))
-      return nullptr;
-    In.nextDocument();
-  } while (In.setCurrentDocument());
-
   return M;
 }
 
-bool MIRParserImpl::parseMachineFunction(yaml::Input &In, Module &M,
-                                         bool NoLLVMIR) {
-  auto MF = llvm::make_unique<yaml::MachineFunction>();
-  yaml::EmptyContext Ctx;
-  yaml::yamlize(In, *MF, false, Ctx);
-  if (In.error())
-    return true;
-  auto FunctionName = MF->Name;
-  if (Functions.find(FunctionName) != Functions.end())
-    return error(Twine("redefinition of machine function '") + FunctionName +
-                 "'");
-  Functions.insert(std::make_pair(FunctionName, std::move(MF)));
-  if (NoLLVMIR)
-    createDummyFunction(FunctionName, M);
-  else if (!M.getFunction(FunctionName))
-    return error(Twine("function '") + FunctionName +
-                 "' isn't defined in the provided LLVM IR");
+bool MIRParserImpl::parseMachineFunctions(Module &M, MachineModuleInfo &MMI) {
+  if (NoMIRDocuments)
+    return false;
+
+  // Parse the machine functions.
+  do {
+    if (parseMachineFunction(M, MMI))
+      return true;
+    In.nextDocument();
+  } while (In.setCurrentDocument());
+
   return false;
 }
 
-void MIRParserImpl::createDummyFunction(StringRef Name, Module &M) {
+/// Create an empty function with the given name.
+static Function *createDummyFunction(StringRef Name, Module &M) {
   auto &Context = M.getContext();
   Function *F = cast<Function>(M.getOrInsertFunction(
       Name, FunctionType::get(Type::getVoidTy(Context), false)));
   BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
   new UnreachableInst(Context, BB);
+  return F;
+}
+
+bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI) {
+  // Parse the yaml.
+  yaml::MachineFunction YamlMF;
+  yaml::EmptyContext Ctx;
+  yaml::yamlize(In, YamlMF, false, Ctx);
+  if (In.error())
+    return true;
+
+  // Search for the corresponding IR function.
+  StringRef FunctionName = YamlMF.Name;
+  Function *F = M.getFunction(FunctionName);
+  if (!F) {
+    if (NoLLVMIR) {
+      F = createDummyFunction(FunctionName, M);
+    } else {
+      return error(Twine("function '") + FunctionName +
+                   "' isn't defined in the provided LLVM IR");
+    }
+  }
+  if (MMI.getMachineFunction(*F) != nullptr)
+    return error(Twine("redefinition of machine function '") + FunctionName +
+                 "'");
+
+  // Create the MachineFunction.
+  MachineFunction &MF = MMI.getOrCreateMachineFunction(*F);
+  if (initializeMachineFunction(YamlMF, MF))
+    return true;
+
+  return false;
 }
 
 static bool isSSA(const MachineFunction &MF) {
@@ -319,15 +342,12 @@ void MIRParserImpl::computeFunctionProperties(MachineFunction &MF) {
     Properties.set(MachineFunctionProperties::Property::NoVRegs);
 }
 
-bool MIRParserImpl::initializeMachineFunction(MachineFunction &MF) {
-  auto It = Functions.find(MF.getName());
-  if (It == Functions.end())
-    return error(Twine("no machine function information for function '") +
-                 MF.getName() + "' in the MIR file");
+bool
+MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
+                                         MachineFunction &MF) {
   // TODO: Recreate the machine function.
   initNames2RegClasses(MF);
   initNames2RegBanks(MF);
-  const yaml::MachineFunction &YamlMF = *It->getValue();
   if (YamlMF.Alignment)
     MF.setAlignment(YamlMF.Alignment);
   MF.setExposesReturnsTwice(YamlMF.ExposesReturnsTwice);
@@ -838,10 +858,12 @@ MIRParser::MIRParser(std::unique_ptr<MIRParserImpl> Impl)
 
 MIRParser::~MIRParser() {}
 
-std::unique_ptr<Module> MIRParser::parseLLVMModule() { return Impl->parse(); }
+std::unique_ptr<Module> MIRParser::parseIRModule() {
+  return Impl->parseIRModule();
+}
 
-bool MIRParser::initializeMachineFunction(MachineFunction &MF) {
-  return Impl->initializeMachineFunction(MF);
+bool MIRParser::parseMachineFunctions(Module &M, MachineModuleInfo &MMI) {
+  return Impl->parseMachineFunctions(M, MMI);
 }
 
 std::unique_ptr<MIRParser> llvm::createMIRParserFromFile(StringRef Filename,

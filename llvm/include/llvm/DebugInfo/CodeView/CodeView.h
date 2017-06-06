@@ -575,6 +575,24 @@ struct FrameData {
   };
 };
 
+// Corresponds to LocalIdAndGlobalIdPair structure.
+// This structure information allows cross-referencing between PDBs.  For
+// example, when a PDB is being built during compilation it is not yet known
+// what other modules may end up in the PDB at link time.  So certain types of
+// IDs may clash between the various compile time PDBs.  For each affected
+// module, a subsection would be put into the PDB containing a mapping from its
+// local IDs to a single ID namespace for all items in the PDB file.
+struct CrossModuleExport {
+  support::ulittle32_t Local;
+  support::ulittle32_t Global;
+};
+
+struct CrossModuleImport {
+  support::ulittle32_t ModuleNameOffset;
+  support::ulittle32_t Count; // Number of elements
+  // support::ulittle32_t ids[Count]; // id from referenced module
+};
+
 enum class CodeViewContainer { ObjectFile, Pdb };
 
 inline uint32_t alignOf(CodeViewContainer Container) {

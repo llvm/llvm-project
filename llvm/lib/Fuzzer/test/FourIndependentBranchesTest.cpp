@@ -2,9 +2,9 @@
 // License. See LICENSE.TXT for details.
 
 // Simple test for a fuzzer. The fuzzer must find the string "FUZZ".
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <cstddef>
 #include <iostream>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {

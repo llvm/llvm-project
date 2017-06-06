@@ -10,9 +10,9 @@
 #ifndef LLVM_DEBUGINFO_DWARFABBREVIATIONDECLARATION_H
 #define LLVM_DEBUGINFO_DWARFABBREVIATIONDECLARATION_H
 
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Dwarf.h"
 #include <cassert>

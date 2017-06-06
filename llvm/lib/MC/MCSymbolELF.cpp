@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/Support/ELF.h"
 

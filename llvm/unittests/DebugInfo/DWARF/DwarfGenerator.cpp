@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../lib/CodeGen/AsmPrinter/DwarfStringPool.h"
 #include "DwarfGenerator.h"
+#include "../lib/CodeGen/AsmPrinter/DwarfStringPool.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"

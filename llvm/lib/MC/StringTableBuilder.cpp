@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/COFF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"

@@ -21,6 +21,7 @@
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "R600MachineFunctionInfo.h"
+#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -30,7 +31,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/KnownBits.h"
-#include "SIInstrInfo.h"
 using namespace llvm;
 
 static bool allocateKernArg(unsigned ValNo, MVT ValVT, MVT LocVT,

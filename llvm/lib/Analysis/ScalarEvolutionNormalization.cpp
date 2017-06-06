@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/ScalarEvolutionNormalization.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/Analysis/ScalarEvolutionNormalization.h"
 using namespace llvm;
 
 /// TransformKind - Different types of transformations that

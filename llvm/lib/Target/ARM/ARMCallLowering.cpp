@@ -21,6 +21,7 @@
 
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 using namespace llvm;
@@ -461,7 +462,8 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   const auto &TLI = *getTLI<ARMTargetLowering>();
   const auto &DL = MF.getDataLayout();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const auto &STI = MF.getSubtarget();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   if (MF.getSubtarget<ARMSubtarget>().genLongCalls())
@@ -473,6 +475,13 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // registers, but don't insert it yet.
   auto MIB = MIRBuilder.buildInstrNoInsert(ARM::BLX).add(Callee).addRegMask(
       TRI->getCallPreservedMask(MF, CallConv));
+  if (Callee.isReg()) {
+    auto CalleeReg = Callee.getReg();
+    if (CalleeReg && !TRI->isPhysicalRegister(CalleeReg))
+      MIB->getOperand(0).setReg(constrainOperandRegClass(
+          MF, *TRI, MRI, *STI.getInstrInfo(), *STI.getRegBankInfo(),
+          *MIB.getInstr(), MIB->getDesc(), CalleeReg, 0));
+  }
 
   SmallVector<ArgInfo, 8> ArgInfos;
   for (auto Arg : OrigArgs) {

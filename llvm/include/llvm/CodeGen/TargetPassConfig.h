@@ -119,6 +119,10 @@ protected:
   /// callers.
   bool RequireCodeGenSCCOrder;
 
+  /// Add the actual instruction selection passes. This does not include
+  /// preparation passes on IR.
+  bool addCoreISelPasses();
+
 public:
   TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm);
   // Dummy constructor.
@@ -205,6 +209,13 @@ public:
   /// Return true if the default global register allocator is in use and
   /// has not be overriden on the command line with '-regalloc=...'
   bool usingDefaultRegAlloc() const;
+
+  /// High level function that adds all passes necessary to go from llvm IR
+  /// representation to the MI representation.
+  /// Adds IR based lowering and target specific optimization passes and finally
+  /// the core instruction selection passes.
+  /// \returns true if an error occured, false otherwise.
+  bool addISelPasses();
 
   /// Add common target configurable passes that perform LLVM IR to IR
   /// transforms following machine independent optimization.

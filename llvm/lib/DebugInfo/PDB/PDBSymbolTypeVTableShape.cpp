@@ -9,8 +9,8 @@
 
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeVTableShape.h"
 
-#include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
+#include "llvm/DebugInfo/PDB/PDBSymbol.h"
 
 #include <utility>
 

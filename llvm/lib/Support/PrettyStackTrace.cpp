@@ -15,7 +15,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm-c/ErrorHandling.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Config/config.h"     // Get autoconf configuration settings
+#include "llvm/Config/config.h" // Get autoconf configuration settings
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Watchdog.h"

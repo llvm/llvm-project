@@ -31,10 +31,13 @@ define i64 @muli64(i64 %arg1, i64 %arg2) {
 ; Tests for alloca
 ; CHECK-LABEL: name: allocai64
 ; CHECK: stack:
-; CHECK-NEXT:   - { id: 0, name: ptr1, offset: 0, size: 8, alignment: 8 }
-; CHECK-NEXT:   - { id: 1, name: ptr2, offset: 0, size: 8, alignment: 1 }
-; CHECK-NEXT:   - { id: 2, name: ptr3, offset: 0, size: 128, alignment: 8 }
-; CHECK-NEXT:   - { id: 3, name: ptr4, offset: 0, size: 1, alignment: 8 }
+; CHECK-NEXT:   - { id: 0, name: ptr1, type: default, offset: 0, size: 8, alignment: 8,
+; CHECK-NEXT:       callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+; CHECK-NEXT:   - { id: 1, name: ptr2, type: default, offset: 0, size: 8, alignment: 1,
+; CHECK-NEXT:       callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+; CHECK-NEXT:   - { id: 2, name: ptr3, type: default, offset: 0, size: 128, alignment: 8,
+; CHECK-NEXT:       callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+; CHECK-NEXT:   - { id: 3, name: ptr4, type: default, offset: 0, size: 1, alignment: 8,
 ; CHECK: %{{[0-9]+}}(p0) = G_FRAME_INDEX %stack.0.ptr1
 ; CHECK: %{{[0-9]+}}(p0) = G_FRAME_INDEX %stack.1.ptr2
 ; CHECK: %{{[0-9]+}}(p0) = G_FRAME_INDEX %stack.2.ptr3
@@ -1550,3 +1553,15 @@ define <16 x i8> @test_shufflevector_v8s8_v16s8(<8 x i8> %arg1, <8 x i8> %arg2) 
 define <4 x half> @test_constant_vector() {
   ret <4 x half> <half undef, half undef, half undef, half 0xH3C00>
 }
+
+define i32 @test_target_mem_intrinsic(i32* %addr) {
+; CHECK-LABEL: name: test_target_mem_intrinsic
+; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x0
+; CHECK: [[VAL:%[0-9]+]](s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.ldxr), [[ADDR]](p0) :: (volatile load 4 from %ir.addr)
+; CHECK: G_TRUNC [[VAL]](s64)
+  %val = call i64 @llvm.aarch64.ldxr.p0i32(i32* %addr)
+  %trunc = trunc i64 %val to i32
+  ret i32 %trunc
+}
+
+declare i64 @llvm.aarch64.ldxr.p0i32(i32*) nounwind

@@ -3308,11 +3308,9 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   }
 
   // icmp eq|ne X, Y -> false|true if X != Y
-  if ((Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE) &&
+  if (ICmpInst::isEquality(Pred) &&
       isKnownNonEqual(LHS, RHS, Q.DL, Q.AC, Q.CxtI, Q.DT)) {
-    LLVMContext &Ctx = LHS->getType()->getContext();
-    return Pred == ICmpInst::ICMP_NE ?
-      ConstantInt::getTrue(Ctx) : ConstantInt::getFalse(Ctx);
+    return Pred == ICmpInst::ICMP_NE ? getTrue(ITy) : getFalse(ITy);
   }
 
   if (Value *V = simplifyICmpWithBinOp(Pred, LHS, RHS, Q, MaxRecurse))
@@ -3357,19 +3355,6 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
             GLHS->getSourceElementType(), Null, IndicesRHS);
         return ConstantExpr::getICmp(Pred, NewLHS, NewRHS);
       }
-    }
-  }
-
-  // If a bit is known to be zero for A and known to be one for B,
-  // then A and B cannot be equal.
-  if (ICmpInst::isEquality(Pred)) {
-    const APInt *RHSVal;
-    if (match(RHS, m_APInt(RHSVal))) {
-      KnownBits LHSKnown = computeKnownBits(LHS, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
-      if (LHSKnown.Zero.intersects(*RHSVal) ||
-          !LHSKnown.One.isSubsetOf(*RHSVal))
-        return Pred == ICmpInst::ICMP_EQ ? ConstantInt::getFalse(ITy)
-                                         : ConstantInt::getTrue(ITy);
     }
   }
 
@@ -3899,8 +3884,11 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
   if (!all_of(Ops, [](Value *V) { return isa<Constant>(V); }))
     return nullptr;
 
-  return ConstantExpr::getGetElementPtr(SrcTy, cast<Constant>(Ops[0]),
-                                        Ops.slice(1));
+  auto *CE = ConstantExpr::getGetElementPtr(SrcTy, cast<Constant>(Ops[0]),
+                                            Ops.slice(1));
+  if (auto *CEFolded = ConstantFoldConstant(CE, Q.DL))
+    return CEFolded;
+  return CE;
 }
 
 Value *llvm::SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,

@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_IRBUILDER_H
 #define LLVM_IR_IRBUILDER_H
 
+#include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
@@ -41,11 +42,10 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
-#include "llvm-c/Types.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <algorithm>
 #include <functional>
 
 namespace llvm {
