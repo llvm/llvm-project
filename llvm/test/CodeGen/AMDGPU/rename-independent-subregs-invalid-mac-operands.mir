@@ -1,0 +1,69 @@
+# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass=simple-register-coalescing,rename-independent-subregs -o - %s | FileCheck -check-prefix=GCN %s
+---
+
+# GCN-LABEL: name: mac_invalid_operands
+# GCN: undef %18.sub0 = V_MAC_F32_e32 undef %3, undef %9, undef %18.sub0, implicit %exec
+
+name:            mac_invalid_operands
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_128 }
+  - { id: 2, class: sgpr_64 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: vgpr_32 }
+  - { id: 6, class: vgpr_32 }
+  - { id: 7, class: sreg_64 }
+  - { id: 8, class: vgpr_32 }
+  - { id: 9, class: vgpr_32 }
+  - { id: 10, class: vreg_64 }
+  - { id: 11, class: vreg_64 }
+  - { id: 12, class: vreg_128 }
+  - { id: 13, class: vreg_128 }
+  - { id: 14, class: vgpr_32 }
+  - { id: 15, class: vreg_64 }
+  - { id: 16, class: vgpr_32 }
+  - { id: 17, class: vreg_128 }
+body:             |
+  bb.0:
+    successors: %bb.2, %bb.1
+
+    %7 = V_CMP_NEQ_F32_e64 0, 0, 0, undef %3, 0, 0, implicit %exec
+    %vcc = COPY killed %7
+    S_CBRANCH_VCCZ %bb.2, implicit killed %vcc
+
+  bb.1:
+    successors: %bb.3
+
+    %4 = V_ADD_F32_e32 undef %6, undef %5, implicit %exec
+    undef %12.sub0 = COPY killed %4
+    %17 = COPY killed %12
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    %8 = V_MAC_F32_e32 undef %3, undef %9, undef %8, implicit %exec
+    undef %13.sub0 = COPY %8
+    %13.sub1 = COPY %8
+    %13.sub2 = COPY killed %8
+    %0 = COPY killed %13
+    %17 = COPY killed %0
+
+  bb.3:
+    %1 = COPY killed %17
+    FLAT_STORE_DWORD undef %10, %1.sub2, 0, 0, implicit %exec, implicit %flat_scr
+    %14 = COPY %1.sub1
+    %16 = COPY killed %1.sub0
+    undef %15.sub0 = COPY killed %16
+    %15.sub1 = COPY killed %14
+    FLAT_STORE_DWORDX2 undef %11, killed %15, 0, 0, implicit %exec, implicit %flat_scr
+    S_ENDPGM
+
+...

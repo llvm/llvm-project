@@ -2276,7 +2276,7 @@ Undetermined:
       goto Undetermined;
 
     uint32_t Props = PredC.properties();
-    bool CTrue = false, CFalse = false;;
+    bool CTrue = false, CFalse = false;
     if (Props & ConstantProperties::Zero)
       CFalse = true;
     else if (Props & ConstantProperties::NonZero)

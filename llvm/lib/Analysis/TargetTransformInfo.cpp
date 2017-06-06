@@ -133,6 +133,10 @@ bool TargetTransformInfo::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                         Scale, AddrSpace);
 }
 
+bool TargetTransformInfo::isLSRCostLess(LSRCost &C1, LSRCost &C2) const {
+  return TTIImpl->isLSRCostLess(C1, C2);
+}
+
 bool TargetTransformInfo::isLegalMaskedStore(Type *DataType) const {
   return TTIImpl->isLegalMaskedStore(DataType);
 }

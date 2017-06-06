@@ -577,9 +577,6 @@ ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
   if (isFullSet())
     return ConstantRange(DstTySize, /*isFullSet=*/true);
 
-  APInt MaxValue = APInt::getLowBitsSet(getBitWidth(), DstTySize);
-  APInt MaxBitValue = APInt::getOneBitSet(getBitWidth(), DstTySize);
-
   APInt LowerDiv(Lower), UpperDiv(Upper);
   ConstantRange Union(DstTySize, /*isFullSet=*/false);
 
@@ -587,35 +584,42 @@ ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
   // We use the non-wrapped set code to analyze the [Lower, MaxValue) part, and
   // then we do the union with [MaxValue, Upper)
   if (isWrappedSet()) {
-    // If Upper is greater than Max Value, it covers the whole truncated range.
-    if (Upper.uge(MaxValue))
+    // If Upper is greater than or equal to MaxValue(DstTy), it covers the whole
+    // truncated range.
+    if (Upper.getActiveBits() > DstTySize ||
+        Upper.countTrailingOnes() == DstTySize)
       return ConstantRange(DstTySize, /*isFullSet=*/true);
 
     Union = ConstantRange(APInt::getMaxValue(DstTySize),Upper.trunc(DstTySize));
     UpperDiv.setAllBits();
 
     // Union covers the MaxValue case, so return if the remaining range is just
-    // MaxValue.
+    // MaxValue(DstTy).
     if (LowerDiv == UpperDiv)
       return Union;
   }
 
   // Chop off the most significant bits that are past the destination bitwidth.
-  if (LowerDiv.uge(MaxValue)) {
-    APInt Div(getBitWidth(), 0);
-    APInt::udivrem(LowerDiv, MaxBitValue, Div, LowerDiv);
-    UpperDiv -= MaxBitValue * Div;
+  if (LowerDiv.getActiveBits() > DstTySize) {
+    // Mask to just the signficant bits and subtract from LowerDiv/UpperDiv.
+    APInt Adjust = LowerDiv & APInt::getBitsSetFrom(getBitWidth(), DstTySize);
+    LowerDiv -= Adjust;
+    UpperDiv -= Adjust;
   }
 
-  if (UpperDiv.ule(MaxValue))
+  unsigned UpperDivWidth = UpperDiv.getActiveBits();
+  if (UpperDivWidth <= DstTySize)
     return ConstantRange(LowerDiv.trunc(DstTySize),
                          UpperDiv.trunc(DstTySize)).unionWith(Union);
 
   // The truncated value wraps around. Check if we can do better than fullset.
-  UpperDiv -= MaxBitValue;
-  if (UpperDiv.ult(LowerDiv))
-    return ConstantRange(LowerDiv.trunc(DstTySize),
-                         UpperDiv.trunc(DstTySize)).unionWith(Union);
+  if (UpperDivWidth == DstTySize + 1) {
+    // Clear the MSB so that UpperDiv wraps around.
+    UpperDiv.clearBit(DstTySize);
+    if (UpperDiv.ult(LowerDiv))
+      return ConstantRange(LowerDiv.trunc(DstTySize),
+                           UpperDiv.trunc(DstTySize)).unionWith(Union);
+  }
 
   return ConstantRange(DstTySize, /*isFullSet=*/true);
 }

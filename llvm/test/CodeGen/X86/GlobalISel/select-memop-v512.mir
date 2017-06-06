@@ -28,8 +28,8 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # AVX512F:      registers:
-# AVX512F-NEXT:   - { id: 0, class: gr64 }
-# AVX512F-NEXT:   - { id: 1, class: vr512 }
+# AVX512F-NEXT:   - { id: 0, class: gr64, preferred-register: '' }
+# AVX512F-NEXT:   - { id: 1, class: vr512, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: vecr }
@@ -54,8 +54,8 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # AVX512F:      registers:
-# AVX512F-NEXT:   - { id: 0, class: gr64 }
-# AVX512F-NEXT:   - { id: 1, class: vr512 }
+# AVX512F-NEXT:   - { id: 0, class: gr64, preferred-register: '' }
+# AVX512F-NEXT:   - { id: 1, class: vr512, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: vecr }
@@ -80,8 +80,8 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # AVX512F:      registers:
-# AVX512F-NEXT:   - { id: 0, class: vr512 }
-# AVX512F-NEXT:   - { id: 1, class: gr64 }
+# AVX512F-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# AVX512F-NEXT:   - { id: 1, class: gr64, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: gpr }
@@ -106,8 +106,8 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # AVX512F:      registers:
-# AVX512F-NEXT:   - { id: 0, class: vr512 }
-# AVX512F-NEXT:   - { id: 1, class: gr64 }
+# AVX512F-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# AVX512F-NEXT:   - { id: 1, class: gr64, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: gpr }

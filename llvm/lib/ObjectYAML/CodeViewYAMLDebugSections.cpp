@@ -18,6 +18,8 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugCrossExSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugCrossImpSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
@@ -38,13 +40,19 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(SourceLineBlock)
 LLVM_YAML_IS_SEQUENCE_VECTOR(SourceLineInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(InlineeSite)
 LLVM_YAML_IS_SEQUENCE_VECTOR(InlineeInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(CrossModuleExport)
+LLVM_YAML_IS_SEQUENCE_VECTOR(YAMLCrossModuleImport)
 LLVM_YAML_IS_SEQUENCE_VECTOR(StringRef)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(uint32_t)
 
 LLVM_YAML_DECLARE_SCALAR_TRAITS(HexFormattedString, false)
 LLVM_YAML_DECLARE_ENUM_TRAITS(DebugSubsectionKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(FileChecksumKind)
 LLVM_YAML_DECLARE_BITSET_TRAITS(LineFlags)
 
+LLVM_YAML_DECLARE_MAPPING_TRAITS(CrossModuleExport)
+LLVM_YAML_DECLARE_MAPPING_TRAITS(YAMLCrossModuleImport)
+LLVM_YAML_DECLARE_MAPPING_TRAITS(CrossModuleImportItem)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(SourceLineEntry)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(SourceColumnEntry)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(SourceFileChecksumEntry)
@@ -114,6 +122,35 @@ struct YAMLInlineeLinesSubsection : public YAMLSubsectionBase {
 
   InlineeInfo InlineeLines;
 };
+
+struct YAMLCrossModuleExportsSubsection : public YAMLSubsectionBase {
+  YAMLCrossModuleExportsSubsection()
+      : YAMLSubsectionBase(DebugSubsectionKind::CrossScopeExports) {}
+
+  void map(IO &IO) override;
+  std::unique_ptr<DebugSubsection>
+  toCodeViewSubsection(DebugStringTableSubsection *Strings,
+                       DebugChecksumsSubsection *Checksums) const override;
+  static Expected<std::shared_ptr<YAMLCrossModuleExportsSubsection>>
+  fromCodeViewSubsection(const DebugCrossModuleExportsSubsectionRef &Exports);
+
+  std::vector<CrossModuleExport> Exports;
+};
+
+struct YAMLCrossModuleImportsSubsection : public YAMLSubsectionBase {
+  YAMLCrossModuleImportsSubsection()
+      : YAMLSubsectionBase(DebugSubsectionKind::CrossScopeImports) {}
+
+  void map(IO &IO) override;
+  std::unique_ptr<DebugSubsection>
+  toCodeViewSubsection(DebugStringTableSubsection *Strings,
+                       DebugChecksumsSubsection *Checksums) const override;
+  static Expected<std::shared_ptr<YAMLCrossModuleImportsSubsection>>
+  fromCodeViewSubsection(const DebugStringTableSubsectionRef &Strings,
+                         const DebugCrossModuleImportsSubsectionRef &Imports);
+
+  std::vector<YAMLCrossModuleImport> Imports;
+};
 }
 
 void ScalarBitSetTraits<LineFlags>::bitset(IO &io, LineFlags &Flags) {
@@ -161,6 +198,17 @@ void MappingTraits<SourceLineBlock>::mapping(IO &IO, SourceLineBlock &Obj) {
   IO.mapRequired("Columns", Obj.Columns);
 }
 
+void MappingTraits<CrossModuleExport>::mapping(IO &IO, CrossModuleExport &Obj) {
+  IO.mapRequired("LocalId", Obj.Local);
+  IO.mapRequired("GlobalId", Obj.Global);
+}
+
+void MappingTraits<YAMLCrossModuleImport>::mapping(IO &IO,
+                                                   YAMLCrossModuleImport &Obj) {
+  IO.mapRequired("Module", Obj.ModuleName);
+  IO.mapRequired("Imports", Obj.ImportIds);
+}
+
 void MappingTraits<SourceFileChecksumEntry>::mapping(
     IO &IO, SourceFileChecksumEntry &Obj) {
   IO.mapRequired("FileName", Obj.FileName);
@@ -196,6 +244,16 @@ void YAMLInlineeLinesSubsection::map(IO &IO) {
   IO.mapRequired("Sites", InlineeLines.Sites);
 }
 
+void YAMLCrossModuleExportsSubsection::map(IO &IO) {
+  IO.mapTag("!CrossModuleExports", true);
+  IO.mapOptional("Exports", Exports);
+}
+
+void YAMLCrossModuleImportsSubsection::map(IO &IO) {
+  IO.mapTag("!CrossModuleImports", true);
+  IO.mapOptional("Imports", Imports);
+}
+
 void MappingTraits<YAMLDebugSubsection>::mapping(
     IO &IO, YAMLDebugSubsection &Subsection) {
   if (!IO.outputting()) {
@@ -206,6 +264,12 @@ void MappingTraits<YAMLDebugSubsection>::mapping(
       Subsection.Subsection = std::make_shared<YAMLLinesSubsection>();
     } else if (IO.mapTag("!InlineeLines")) {
       Subsection.Subsection = std::make_shared<YAMLInlineeLinesSubsection>();
+    } else if (IO.mapTag("!CrossModuleExports")) {
+      Subsection.Subsection =
+          std::make_shared<YAMLCrossModuleExportsSubsection>();
+    } else if (IO.mapTag("!CrossModuleImports")) {
+      Subsection.Subsection =
+          std::make_shared<YAMLCrossModuleImportsSubsection>();
     } else {
       llvm_unreachable("Unexpected subsection tag!");
     }
@@ -213,14 +277,15 @@ void MappingTraits<YAMLDebugSubsection>::mapping(
   Subsection.Subsection->map(IO);
 }
 
-static Expected<const YAMLChecksumsSubsection &>
+static std::shared_ptr<YAMLChecksumsSubsection>
 findChecksums(ArrayRef<YAMLDebugSubsection> Subsections) {
   for (const auto &SS : Subsections) {
     if (SS.Subsection->Kind == DebugSubsectionKind::FileChecksums) {
-      return static_cast<const YAMLChecksumsSubsection &>(*SS.Subsection);
+      return std::static_pointer_cast<YAMLChecksumsSubsection>(SS.Subsection);
     }
   }
-  return make_error<CodeViewError>(cv_error_code::no_records);
+
+  return nullptr;
 }
 
 std::unique_ptr<DebugSubsection> YAMLChecksumsSubsection::toCodeViewSubsection(
@@ -281,6 +346,28 @@ YAMLInlineeLinesSubsection::toCodeViewSubsection(
     for (auto EF : Site.ExtraFiles) {
       Result->addExtraFile(EF);
     }
+  }
+  return llvm::cast<DebugSubsection>(std::move(Result));
+}
+
+std::unique_ptr<DebugSubsection>
+YAMLCrossModuleExportsSubsection::toCodeViewSubsection(
+    DebugStringTableSubsection *Strings,
+    DebugChecksumsSubsection *Checksums) const {
+  auto Result = llvm::make_unique<DebugCrossModuleExportsSubsection>();
+  for (const auto &M : Exports)
+    Result->addMapping(M.Local, M.Global);
+  return llvm::cast<DebugSubsection>(std::move(Result));
+}
+
+std::unique_ptr<DebugSubsection>
+YAMLCrossModuleImportsSubsection::toCodeViewSubsection(
+    DebugStringTableSubsection *Strings,
+    DebugChecksumsSubsection *Checksums) const {
+  auto Result = llvm::make_unique<DebugCrossModuleImportsSubsection>(*Strings);
+  for (const auto &M : Imports) {
+    for (const auto Id : M.ImportIds)
+      Result->addImport(M.ModuleName, Id);
   }
   return llvm::cast<DebugSubsection>(std::move(Result));
 }
@@ -391,6 +478,31 @@ YAMLInlineeLinesSubsection::fromCodeViewSubsection(
   return Result;
 }
 
+Expected<std::shared_ptr<YAMLCrossModuleExportsSubsection>>
+YAMLCrossModuleExportsSubsection::fromCodeViewSubsection(
+    const DebugCrossModuleExportsSubsectionRef &Exports) {
+  auto Result = std::make_shared<YAMLCrossModuleExportsSubsection>();
+  Result->Exports.assign(Exports.begin(), Exports.end());
+  return Result;
+}
+
+Expected<std::shared_ptr<YAMLCrossModuleImportsSubsection>>
+YAMLCrossModuleImportsSubsection::fromCodeViewSubsection(
+    const DebugStringTableSubsectionRef &Strings,
+    const DebugCrossModuleImportsSubsectionRef &Imports) {
+  auto Result = std::make_shared<YAMLCrossModuleImportsSubsection>();
+  for (const auto &CMI : Imports) {
+    YAMLCrossModuleImport YCMI;
+    auto ExpectedStr = Strings.getString(CMI.Header->ModuleNameOffset);
+    if (!ExpectedStr)
+      return ExpectedStr.takeError();
+    YCMI.ModuleName = *ExpectedStr;
+    YCMI.ImportIds.assign(CMI.Imports.begin(), CMI.Imports.end());
+    Result->Imports.push_back(YCMI);
+  }
+  return Result;
+}
+
 Expected<std::vector<std::unique_ptr<DebugSubsection>>>
 llvm::CodeViewYAML::convertSubsectionList(
     ArrayRef<YAMLDebugSubsection> Subsections,
@@ -400,11 +512,11 @@ llvm::CodeViewYAML::convertSubsectionList(
     return std::move(Result);
 
   auto Checksums = findChecksums(Subsections);
-  if (!Checksums)
-    return Checksums.takeError();
-  auto ChecksumsBase = Checksums->toCodeViewSubsection(&Strings, nullptr);
-  DebugChecksumsSubsection &CS =
-      llvm::cast<DebugChecksumsSubsection>(*ChecksumsBase);
+  std::unique_ptr<DebugSubsection> ChecksumsBase;
+  if (Checksums)
+    ChecksumsBase = Checksums->toCodeViewSubsection(&Strings, nullptr);
+  DebugChecksumsSubsection *CS =
+      static_cast<DebugChecksumsSubsection *>(ChecksumsBase.get());
   for (const auto &SS : Subsections) {
     // We've already converted the checksums subsection, don't do it
     // twice.
@@ -412,7 +524,8 @@ llvm::CodeViewYAML::convertSubsectionList(
     if (SS.Subsection->Kind == DebugSubsectionKind::FileChecksums)
       CVS = std::move(ChecksumsBase);
     else
-      CVS = SS.Subsection->toCodeViewSubsection(&Strings, &CS);
+      CVS = SS.Subsection->toCodeViewSubsection(&Strings, CS);
+    assert(CVS != nullptr);
     Result.push_back(std::move(CVS));
   }
   return std::move(Result);
@@ -429,6 +542,10 @@ struct SubsectionConversionVisitor : public DebugSubsectionVisitor {
   Error visitLines(DebugLinesSubsectionRef &Lines) override;
   Error visitFileChecksums(DebugChecksumsSubsectionRef &Checksums) override;
   Error visitInlineeLines(DebugInlineeLinesSubsectionRef &Inlinees) override;
+  Error visitCrossModuleExports(
+      DebugCrossModuleExportsSubsectionRef &Checksums) override;
+  Error visitCrossModuleImports(
+      DebugCrossModuleImportsSubsectionRef &Inlinees) override;
 
   YAMLDebugSubsection Subsection;
 
@@ -465,6 +582,26 @@ Error SubsectionConversionVisitor::visitInlineeLines(
     DebugInlineeLinesSubsectionRef &Inlinees) {
   auto Result = YAMLInlineeLinesSubsection::fromCodeViewSubsection(
       Strings, Checksums, Inlinees);
+  if (!Result)
+    return Result.takeError();
+  Subsection.Subsection = *Result;
+  return Error::success();
+}
+
+Error SubsectionConversionVisitor::visitCrossModuleExports(
+    DebugCrossModuleExportsSubsectionRef &Exports) {
+  auto Result =
+      YAMLCrossModuleExportsSubsection::fromCodeViewSubsection(Exports);
+  if (!Result)
+    return Result.takeError();
+  Subsection.Subsection = *Result;
+  return Error::success();
+}
+
+Error SubsectionConversionVisitor::visitCrossModuleImports(
+    DebugCrossModuleImportsSubsectionRef &Imports) {
+  auto Result = YAMLCrossModuleImportsSubsection::fromCodeViewSubsection(
+      Strings, Imports);
   if (!Result)
     return Result.takeError();
   Subsection.Subsection = *Result;

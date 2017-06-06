@@ -3,8 +3,8 @@
 
 ; CHECK-LABEL: name: test_stack_slots
 ; CHECK: fixedStack:
-; CHECK-DAG:  - { id: [[STACK0:[0-9]+]], offset: 0, size: 1
-; CHECK-DAG:  - { id: [[STACK8:[0-9]+]], offset: 1, size: 1
+; CHECK-DAG:  - { id: [[STACK0:[0-9]+]], type: default, offset: 0, size: 1,
+; CHECK-DAG:  - { id: [[STACK8:[0-9]+]], type: default, offset: 1, size: 1,
 ; CHECK: [[LHS_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK0]]
 ; CHECK: [[LHS:%[0-9]+]](s8) = G_LOAD [[LHS_ADDR]](p0) :: (invariant load 1 from %fixed-stack.[[STACK0]], align 0)
 ; CHECK: [[RHS_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK8]]

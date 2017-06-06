@@ -203,6 +203,7 @@ void dumpDebugInfo(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
             case dwarf::DW_FORM_line_strp:
             case dwarf::DW_FORM_strp_sup:
             case dwarf::DW_FORM_GNU_str_index:
+            case dwarf::DW_FORM_strx:
               if (auto Val = FormValue.getValue().getAsCStringOffset())
                 NewValue.Value = Val.getValue();
               break;

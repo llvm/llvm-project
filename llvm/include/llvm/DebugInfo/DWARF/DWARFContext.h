@@ -72,6 +72,9 @@ class DWARFContext : public DIContext {
   std::unique_ptr<DWARFDebugAbbrev> AbbrevDWO;
   std::unique_ptr<DWARFDebugLocDWO> LocDWO;
 
+  /// The maximum DWARF version of all units.
+  unsigned MaxVersion;
+
   struct DWOFile {
     object::OwningBinary<object::ObjectFile> File;
     std::unique_ptr<DWARFContext> Context;
@@ -97,7 +100,7 @@ class DWARFContext : public DIContext {
   void parseDWOTypeUnits();
 
 public:
-  DWARFContext() : DIContext(CK_DWARF) {}
+  DWARFContext() : DIContext(CK_DWARF), MaxVersion(0) {}
   DWARFContext(DWARFContext &) = delete;
   DWARFContext &operator=(DWARFContext &) = delete;
 
@@ -178,6 +181,13 @@ public:
   /// Get a DIE given an exact offset.
   DWARFDie getDIEForOffset(uint32_t Offset);
 
+  unsigned getMaxVersion() const { return MaxVersion; }
+
+  void setMaxVersionIfGreater(unsigned Version) {
+    if (Version > MaxVersion)
+      MaxVersion = Version;
+  }
+
   const DWARFUnitIndex &getCUIndex();
   DWARFGdbIndex &getGdbIndex();
   const DWARFUnitIndex &getTUIndex();
@@ -237,6 +247,11 @@ public:
   virtual StringRef getGnuPubNamesSection() = 0;
   virtual StringRef getGnuPubTypesSection() = 0;
 
+  /// DWARF v5
+  /// @{
+  virtual const DWARFSection &getStringOffsetSection() = 0;
+  /// @}
+
   // Sections for DWARF5 split dwarf proposal.
   virtual const DWARFSection &getInfoDWOSection() = 0;
   virtual const TypeSectionMap &getTypesDWOSections() = 0;
@@ -244,7 +259,7 @@ public:
   virtual const DWARFSection &getLineDWOSection() = 0;
   virtual const DWARFSection &getLocDWOSection() = 0;
   virtual StringRef getStringDWOSection() = 0;
-  virtual StringRef getStringOffsetDWOSection() = 0;
+  virtual const DWARFSection &getStringOffsetDWOSection() = 0;
   virtual const DWARFSection &getRangeDWOSection() = 0;
   virtual const DWARFSection &getAddrSection() = 0;
   virtual const DWARFSection& getAppleNamesSection() = 0;
@@ -295,6 +310,11 @@ class DWARFContextInMemory : public DWARFContext {
   StringRef GnuPubNamesSection;
   StringRef GnuPubTypesSection;
 
+  /// DWARF v5
+  /// @{
+  DWARFSection StringOffsetSection;
+  /// @}
+
   // Sections for DWARF5 split dwarf proposal.
   DWARFSection InfoDWOSection;
   TypeSectionMap TypesDWOSections;
@@ -302,7 +322,7 @@ class DWARFContextInMemory : public DWARFContext {
   DWARFSection LineDWOSection;
   DWARFSection LocDWOSection;
   StringRef StringDWOSection;
-  StringRef StringOffsetDWOSection;
+  DWARFSection StringOffsetDWOSection;
   DWARFSection RangeDWOSection;
   DWARFSection AddrSection;
   DWARFSection AppleNamesSection;
@@ -353,6 +373,11 @@ public:
   const DWARFSection& getAppleNamespacesSection() override { return AppleNamespacesSection; }
   const DWARFSection& getAppleObjCSection() override { return AppleObjCSection; }
 
+  // DWARF v5
+  const DWARFSection &getStringOffsetSection() override {
+    return StringOffsetSection;
+  }
+
   // Sections for DWARF5 split dwarf proposal.
   const DWARFSection &getInfoDWOSection() override { return InfoDWOSection; }
 
@@ -365,7 +390,7 @@ public:
   const DWARFSection &getLocDWOSection() override { return LocDWOSection; }
   StringRef getStringDWOSection() override { return StringDWOSection; }
 
-  StringRef getStringOffsetDWOSection() override {
+  const DWARFSection &getStringOffsetDWOSection() override {
     return StringOffsetDWOSection;
   }
 

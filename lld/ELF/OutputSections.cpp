@@ -345,6 +345,17 @@ void elf::reportDiscarded(InputSectionBase *IS) {
 
 void OutputSectionFactory::addInputSec(InputSectionBase *IS,
                                        StringRef OutsecName) {
+  // Sections with the SHT_GROUP attribute reach here only when the - r option
+  // is given. Such sections define "section groups", and InputFiles.cpp has
+  // dedup'ed section groups by their signatures. For the -r, we want to pass
+  // through all SHT_GROUP sections without merging them because merging them
+  // creates broken section contents.
+  if (IS->Type == SHT_GROUP) {
+    OutputSection *Out = nullptr;
+    addInputSec(IS, OutsecName, Out);
+    return;
+  }
+
   SectionKey Key = createKey(IS, OutsecName);
   OutputSection *&Sec = Map[Key];
   return addInputSec(IS, OutsecName, Sec);

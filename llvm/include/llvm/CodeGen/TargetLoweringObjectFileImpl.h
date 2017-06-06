@@ -41,6 +41,11 @@ public:
   TargetLoweringObjectFileELF() = default;
   ~TargetLoweringObjectFileELF() override = default;
 
+  /// Emit Obj-C garbage collection and linker options.
+  void emitModuleFlags(MCStreamer &Streamer,
+                       ArrayRef<Module::ModuleFlagEntry> ModuleFlags,
+                       const TargetMachine &TM) const override;
+
   void emitPersonalityValue(MCStreamer &Streamer, const DataLayout &TM,
                             const MCSymbol *Sym) const override;
 
@@ -149,8 +154,7 @@ public:
   MCSection *getSectionForJumpTable(const Function &F,
                                     const TargetMachine &TM) const override;
 
-  /// Emit Obj-C garbage collection and linker options. Only linker option
-  /// emission is implemented for COFF.
+  /// Emit Obj-C garbage collection and linker options.
   void emitModuleFlags(MCStreamer &Streamer,
                        ArrayRef<Module::ModuleFlagEntry> ModuleFlags,
                        const TargetMachine &TM) const override;

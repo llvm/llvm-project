@@ -33,6 +33,11 @@ namespace detail {
 struct YAMLSubsectionBase;
 }
 
+struct YAMLCrossModuleImport {
+  StringRef ModuleName;
+  std::vector<uint32_t> ImportIds;
+};
+
 struct SourceLineEntry {
   uint32_t Offset;
   uint32_t LineStart;

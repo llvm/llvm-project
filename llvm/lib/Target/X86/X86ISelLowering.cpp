@@ -6391,6 +6391,7 @@ static SDValue LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, const SDLoc &dl,
 /// Example: <load i32 *a, load i32 *a+4, zero, undef> -> zextload a
 static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
                                         const SDLoc &DL, SelectionDAG &DAG,
+                                        const X86Subtarget &Subtarget,
                                         bool isAfterLegalize) {
   unsigned NumElems = Elts.size();
 
@@ -6493,6 +6494,12 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       return SDValue();
 
     if (isAfterLegalize && !TLI.isOperationLegal(ISD::LOAD, VT))
+      return SDValue();
+
+    // Don't create 256-bit non-temporal aligned loads without AVX2 as these
+    // will lower to regular temporal loads and use the cache.
+    if (LDBase->isNonTemporal() && LDBase->getAlignment() >= 32 &&
+        VT.is256BitVector() && !Subtarget.hasInt256())
       return SDValue();
 
     if (IsConsecutiveLoad)
@@ -7701,7 +7708,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   // See if we can use a vector load to get all of the elements.
   if (VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) {
     SmallVector<SDValue, 64> Ops(Op->op_begin(), Op->op_begin() + NumElems);
-    if (SDValue LD = EltsFromConsecutiveLoads(VT, Ops, dl, DAG, false))
+    if (SDValue LD =
+            EltsFromConsecutiveLoads(VT, Ops, dl, DAG, Subtarget, false))
       return LD;
   }
 
@@ -28784,7 +28792,8 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
   }
 
   if (Elts.size() == VT.getVectorNumElements())
-    if (SDValue LD = EltsFromConsecutiveLoads(VT, Elts, dl, DAG, true))
+    if (SDValue LD =
+            EltsFromConsecutiveLoads(VT, Elts, dl, DAG, Subtarget, true))
       return LD;
 
   // For AVX2, we sometimes want to combine
@@ -32377,15 +32386,17 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // For chips with slow 32-byte unaligned loads, break the 32-byte operation
-  // into two 16-byte operations.
+  // into two 16-byte operations. Also split non-temporal aligned loads on
+  // pre-AVX2 targets as 32-byte loads will lower to regular temporal loads.
   ISD::LoadExtType Ext = Ld->getExtensionType();
   bool Fast;
   unsigned AddressSpace = Ld->getAddressSpace();
   unsigned Alignment = Ld->getAlignment();
   if (RegVT.is256BitVector() && !DCI.isBeforeLegalizeOps() &&
       Ext == ISD::NON_EXTLOAD &&
-      TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), RegVT,
-                             AddressSpace, Alignment, &Fast) && !Fast) {
+      ((Ld->isNonTemporal() && !Subtarget.hasInt256() && Alignment >= 16) ||
+       (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), RegVT,
+                               AddressSpace, Alignment, &Fast) && !Fast))) {
     unsigned NumElems = RegVT.getVectorNumElements();
     if (NumElems < 2)
       return SDValue();
@@ -35093,7 +35104,8 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
         if (TLI->allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
                                     OpVT, AS, Alignment, &Fast) && Fast) {
           SDValue Ops[] = {SubVec2, SubVec};
-          if (SDValue Ld = EltsFromConsecutiveLoads(OpVT, Ops, dl, DAG, false))
+          if (SDValue Ld = EltsFromConsecutiveLoads(OpVT, Ops, dl, DAG,
+                                                    Subtarget, false))
             return Ld;
         }
       }

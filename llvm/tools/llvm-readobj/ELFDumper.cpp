@@ -978,9 +978,7 @@ static const EnumEntry<unsigned> ElfSymbolTypes[] = {
     {"GNU_IFunc", "IFUNC",   ELF::STT_GNU_IFUNC}};
 
 static const EnumEntry<unsigned> AMDGPUSymbolTypes[] = {
-  { "AMDGPU_HSA_KERNEL",            ELF::STT_AMDGPU_HSA_KERNEL },
-  { "AMDGPU_HSA_INDIRECT_FUNCTION", ELF::STT_AMDGPU_HSA_INDIRECT_FUNCTION },
-  { "AMDGPU_HSA_METADATA",          ELF::STT_AMDGPU_HSA_METADATA }
+  { "AMDGPU_HSA_KERNEL",            ELF::STT_AMDGPU_HSA_KERNEL }
 };
 
 static const char *getGroupType(uint32_t Flag) {
@@ -1010,13 +1008,6 @@ static const EnumEntry<unsigned> ElfSectionFlags[] = {
 static const EnumEntry<unsigned> ElfXCoreSectionFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, XCORE_SHF_CP_SECTION),
   LLVM_READOBJ_ENUM_ENT(ELF, XCORE_SHF_DP_SECTION)
-};
-
-static const EnumEntry<unsigned> ElfAMDGPUSectionFlags[] = {
-  LLVM_READOBJ_ENUM_ENT(ELF, SHF_AMDGPU_HSA_GLOBAL),
-  LLVM_READOBJ_ENUM_ENT(ELF, SHF_AMDGPU_HSA_READONLY),
-  LLVM_READOBJ_ENUM_ENT(ELF, SHF_AMDGPU_HSA_CODE),
-  LLVM_READOBJ_ENUM_ENT(ELF, SHF_AMDGPU_HSA_AGENT)
 };
 
 static const EnumEntry<unsigned> ElfARMSectionFlags[] = {
@@ -1077,13 +1068,6 @@ static const char *getElfSegmentType(unsigned Arch, unsigned Type) {
   // Check potentially overlapped processor-specific
   // program header type.
   switch (Arch) {
-  case ELF::EM_AMDGPU:
-    switch (Type) {
-    LLVM_READOBJ_ENUM_CASE(ELF, PT_AMDGPU_HSA_LOAD_GLOBAL_PROGRAM);
-    LLVM_READOBJ_ENUM_CASE(ELF, PT_AMDGPU_HSA_LOAD_GLOBAL_AGENT);
-    LLVM_READOBJ_ENUM_CASE(ELF, PT_AMDGPU_HSA_LOAD_READONLY_AGENT);
-    LLVM_READOBJ_ENUM_CASE(ELF, PT_AMDGPU_HSA_LOAD_CODE_AGENT);
-    }
   case ELF::EM_ARM:
     switch (Type) {
     LLVM_READOBJ_ENUM_CASE(ELF, PT_ARM_EXIDX);
@@ -1139,14 +1123,6 @@ static std::string getElfPtType(unsigned Arch, unsigned Type) {
   default:
     // All machine specific PT_* types
     switch (Arch) {
-    case ELF::EM_AMDGPU:
-      switch (Type) {
-        LLVM_READOBJ_ENUM_CASE(ELF, PT_AMDGPU_HSA_LOAD_GLOBAL_PROGRAM);
-        LLVM_READOBJ_ENUM_CASE(ELF, PT_AMDGPU_HSA_LOAD_GLOBAL_AGENT);
-        LLVM_READOBJ_ENUM_CASE(ELF, PT_AMDGPU_HSA_LOAD_READONLY_AGENT);
-        LLVM_READOBJ_ENUM_CASE(ELF, PT_AMDGPU_HSA_LOAD_CODE_AGENT);
-      }
-      return "";
     case ELF::EM_ARM:
       if (Type == ELF::PT_ARM_EXIDX)
         return "EXIDX";
@@ -3592,10 +3568,6 @@ template <class ELFT> void LLVMStyle<ELFT>::printSections(const ELFO *Obj) {
     std::vector<EnumEntry<unsigned>> SectionFlags(std::begin(ElfSectionFlags),
                                                   std::end(ElfSectionFlags));
     switch (Obj->getHeader()->e_machine) {
-    case EM_AMDGPU:
-      SectionFlags.insert(SectionFlags.end(), std::begin(ElfAMDGPUSectionFlags),
-                          std::end(ElfAMDGPUSectionFlags));
-      break;
     case EM_ARM:
       SectionFlags.insert(SectionFlags.end(), std::begin(ElfARMSectionFlags),
                           std::end(ElfARMSectionFlags));

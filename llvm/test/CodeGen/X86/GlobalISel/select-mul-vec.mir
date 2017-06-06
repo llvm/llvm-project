@@ -95,9 +95,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr128 }
-# CHECK-NEXT:   - { id: 1, class: vr128 }
-# CHECK-NEXT:   - { id: 2, class: vr128 }
+# CHECK-NEXT:   - { id: 0, class: vr128, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr128, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr128, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -121,9 +121,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr128 }
-# CHECK-NEXT:   - { id: 1, class: vr128 }
-# CHECK-NEXT:   - { id: 2, class: vr128 }
+# CHECK-NEXT:   - { id: 0, class: vr128, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr128, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr128, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -147,9 +147,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr128x }
-# CHECK-NEXT:   - { id: 1, class: vr128x }
-# CHECK-NEXT:   - { id: 2, class: vr128x }
+# CHECK-NEXT:   - { id: 0, class: vr128x, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr128x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -173,9 +173,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr128 }
-# CHECK-NEXT:   - { id: 1, class: vr128 }
-# CHECK-NEXT:   - { id: 2, class: vr128 }
+# CHECK-NEXT:   - { id: 0, class: vr128, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr128, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr128, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -199,9 +199,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr128 }
-# CHECK-NEXT:   - { id: 1, class: vr128 }
-# CHECK-NEXT:   - { id: 2, class: vr128 }
+# CHECK-NEXT:   - { id: 0, class: vr128, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr128, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr128, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -225,9 +225,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr128x }
-# CHECK-NEXT:   - { id: 1, class: vr128x }
-# CHECK-NEXT:   - { id: 2, class: vr128x }
+# CHECK-NEXT:   - { id: 0, class: vr128x, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr128x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -251,9 +251,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr128x }
-# CHECK-NEXT:   - { id: 1, class: vr128x }
-# CHECK-NEXT:   - { id: 2, class: vr128x }
+# CHECK-NEXT:   - { id: 0, class: vr128x, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr128x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -277,9 +277,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr256 }
-# CHECK-NEXT:   - { id: 1, class: vr256 }
-# CHECK-NEXT:   - { id: 2, class: vr256 }
+# CHECK-NEXT:   - { id: 0, class: vr256, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr256, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr256, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -303,9 +303,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr256x }
-# CHECK-NEXT:   - { id: 1, class: vr256x }
-# CHECK-NEXT:   - { id: 2, class: vr256x }
+# CHECK-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr256x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -329,9 +329,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr256 }
-# CHECK-NEXT:   - { id: 1, class: vr256 }
-# CHECK-NEXT:   - { id: 2, class: vr256 }
+# CHECK-NEXT:   - { id: 0, class: vr256, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr256, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr256, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -355,9 +355,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr256x }
-# CHECK-NEXT:   - { id: 1, class: vr256x }
-# CHECK-NEXT:   - { id: 2, class: vr256x }
+# CHECK-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr256x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -381,9 +381,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr256x }
-# CHECK-NEXT:   - { id: 1, class: vr256x }
-# CHECK-NEXT:   - { id: 2, class: vr256x }
+# CHECK-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr256x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -407,9 +407,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr512 }
-# CHECK-NEXT:   - { id: 1, class: vr512 }
-# CHECK-NEXT:   - { id: 2, class: vr512 }
+# CHECK-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr512, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -433,9 +433,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr512 }
-# CHECK-NEXT:   - { id: 1, class: vr512 }
-# CHECK-NEXT:   - { id: 2, class: vr512 }
+# CHECK-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr512, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -459,9 +459,9 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: vr512 }
-# CHECK-NEXT:   - { id: 1, class: vr512 }
-# CHECK-NEXT:   - { id: 2, class: vr512 }
+# CHECK-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: vr512, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }

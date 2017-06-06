@@ -1,0 +1,24 @@
+DbiStream:       
+  Modules:         
+    - Module:          'Foo.obj'
+      ObjFile:         'Foo.obj'
+      Subsections:     
+        - !CrossModuleExports
+          Exports:         
+            - LocalId:         4852
+              GlobalId:        9283
+            - LocalId:         2147487875
+              GlobalId:        9123
+    - Module:          'Bar.obj'
+      ObjFile:         'Bar.obj'
+      Subsections:     
+        - !CrossModuleExports
+          Exports:         
+            - LocalId:         4265
+              GlobalId:        6097
+            - LocalId:         4297
+              GlobalId:        4677
+        - !CrossModuleImports
+          Imports:         
+            - Module:          'Foo.obj'
+              Imports:         [ 4852, 2147487875 ]

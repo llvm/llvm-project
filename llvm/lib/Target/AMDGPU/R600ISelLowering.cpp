@@ -1120,7 +1120,7 @@ SDValue R600TargetLowering::lowerPrivateTruncStore(StoreSDNode *Store,
     Mask = DAG.getConstant(0xff, DL, MVT::i32);
   } else if (Store->getMemoryVT() == MVT::i16) {
     assert(Store->getAlignment() >= 2);
-    Mask = DAG.getConstant(0xffff, DL, MVT::i32);;
+    Mask = DAG.getConstant(0xffff, DL, MVT::i32);
   } else {
     llvm_unreachable("Unsupported private trunc store");
   }

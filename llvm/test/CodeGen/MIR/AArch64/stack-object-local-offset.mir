@@ -25,7 +25,9 @@ frameInfo:
   maxAlignment:    8
 # CHECK-LABEL: stack_local
 # CHECK: stack:
-# CHECK-NEXT: { id: 0, name: local_var, offset: 0, size: 8, alignment: 8, local-offset: -8 }
+# CHECK-NEXT: { id: 0, name: local_var, type: default, offset: 0, size: 8, alignment: 8,
+# CHECK-NEXT: callee-saved-register: '', local-offset: -8, di-variable: '', di-expression: '',
+# CHECK-NEXT: di-location: '' }
 stack:
   - { id: 0,name: local_var,offset: 0,size: 8,alignment: 8, local-offset: -8 }
 body: |

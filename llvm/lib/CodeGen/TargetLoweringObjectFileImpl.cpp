@@ -61,9 +61,52 @@
 using namespace llvm;
 using namespace dwarf;
 
+static void GetObjCImageInfo(ArrayRef<Module::ModuleFlagEntry> ModuleFlags,
+                             unsigned &Version, unsigned &Flags,
+                             StringRef &Section) {
+  for (const auto &MFE: ModuleFlags) {
+    // Ignore flags with 'Require' behaviour.
+    if (MFE.Behavior == Module::Require)
+      continue;
+
+    StringRef Key = MFE.Key->getString();
+    if (Key == "Objective-C Image Info Version") {
+      Version = mdconst::extract<ConstantInt>(MFE.Val)->getZExtValue();
+    } else if (Key == "Objective-C Garbage Collection" ||
+               Key == "Objective-C GC Only" ||
+               Key == "Objective-C Is Simulated" ||
+               Key == "Objective-C Class Properties" ||
+               Key == "Objective-C Image Swift Version") {
+      Flags |= mdconst::extract<ConstantInt>(MFE.Val)->getZExtValue();
+    } else if (Key == "Objective-C Image Info Section") {
+      Section = cast<MDString>(MFE.Val)->getString();
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 //                                  ELF
 //===----------------------------------------------------------------------===//
+
+void TargetLoweringObjectFileELF::emitModuleFlags(
+    MCStreamer &Streamer, ArrayRef<Module::ModuleFlagEntry> ModuleFlags,
+    const TargetMachine &TM) const {
+  unsigned Version = 0;
+  unsigned Flags = 0;
+  StringRef Section;
+
+  GetObjCImageInfo(ModuleFlags, Version, Flags, Section);
+  if (Section.empty())
+    return;
+
+  auto &C = getContext();
+  auto *S = C.getELFSection(Section, ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
+  Streamer.SwitchSection(S);
+  Streamer.EmitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
+  Streamer.EmitIntValue(Version, 4);
+  Streamer.EmitIntValue(Flags, 4);
+  Streamer.AddBlankLine();
+}
 
 MCSymbol *TargetLoweringObjectFileELF::getCFIPersonalitySymbol(
     const GlobalValue *GV, const TargetMachine &TM,
@@ -247,6 +290,25 @@ static const MCSymbolELF *getAssociatedSymbol(const GlobalObject *GO,
 MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   StringRef SectionName = GO->getSection();
+
+  // Check if '#pragma clang section' name is applicable.
+  // Note that pragma directive overrides -ffunction-section, -fdata-section
+  // and so section name is exactly as user specified and not uniqued.
+  const GlobalVariable *GV = dyn_cast<GlobalVariable>(GO);
+  if (GV && GV->hasImplicitSection()) {
+    auto Attrs = GV->getAttributes();
+    if (Attrs.hasAttribute("bss-section") && Kind.isBSS()) {
+      SectionName = Attrs.getAttribute("bss-section").getValueAsString();
+    } else if (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly()) {
+      SectionName = Attrs.getAttribute("rodata-section").getValueAsString();
+    } else if (Attrs.hasAttribute("data-section") && Kind.isData()) {
+      SectionName = Attrs.getAttribute("data-section").getValueAsString();
+    }
+  }
+  const Function *F = dyn_cast<Function>(GO);
+  if (F && F->hasFnAttribute("implicit-section-name")) {
+    SectionName = F->getFnAttribute("implicit-section-name").getValueAsString();
+  }
 
   // Infer section flags from the section name if we can.
   Kind = getELFKindForNamedSection(SectionName, Kind);
@@ -560,32 +622,12 @@ void TargetLoweringObjectFileMachO::Initialize(MCContext &Ctx,
 void TargetLoweringObjectFileMachO::emitModuleFlags(
     MCStreamer &Streamer, ArrayRef<Module::ModuleFlagEntry> ModuleFlags,
     const TargetMachine &TM) const {
-  unsigned VersionVal = 0;
-  unsigned ImageInfoFlags = 0;
   MDNode *LinkerOptions = nullptr;
-  StringRef SectionVal;
 
   for (const auto &MFE : ModuleFlags) {
-    // Ignore flags with 'Require' behavior.
-    if (MFE.Behavior == Module::Require)
-      continue;
-
     StringRef Key = MFE.Key->getString();
-    Metadata *Val = MFE.Val;
-
-    if (Key == "Objective-C Image Info Version") {
-      VersionVal = mdconst::extract<ConstantInt>(Val)->getZExtValue();
-    } else if (Key == "Objective-C Garbage Collection" ||
-               Key == "Objective-C GC Only" ||
-               Key == "Objective-C Is Simulated" ||
-               Key == "Objective-C Class Properties" ||
-               Key == "Objective-C Image Swift Version") {
-      ImageInfoFlags |= mdconst::extract<ConstantInt>(Val)->getZExtValue();
-    } else if (Key == "Objective-C Image Info Section") {
-      SectionVal = cast<MDString>(Val)->getString();
-    } else if (Key == "Linker Options") {
-      LinkerOptions = cast<MDNode>(Val);
-    }
+    if (Key == "Linker Options")
+      LinkerOptions = cast<MDNode>(MFE.Val);
   }
 
   // Emit the linker options if present.
@@ -598,8 +640,14 @@ void TargetLoweringObjectFileMachO::emitModuleFlags(
     }
   }
 
+  unsigned VersionVal = 0;
+  unsigned ImageInfoFlags = 0;
+  StringRef SectionVal;
+  GetObjCImageInfo(ModuleFlags, VersionVal, ImageInfoFlags, SectionVal);
+
   // The section is mandatory. If we don't have it, then we don't have GC info.
-  if (SectionVal.empty()) return;
+  if (SectionVal.empty())
+    return;
 
   StringRef Segment, Section;
   unsigned TAA = 0, StubSize = 0;
@@ -1137,6 +1185,24 @@ void TargetLoweringObjectFileCOFF::emitModuleFlags(
       }
     }
   }
+
+  unsigned Version = 0;
+  unsigned Flags = 0;
+  StringRef Section;
+
+  GetObjCImageInfo(ModuleFlags, Version, Flags, Section);
+  if (Section.empty())
+    return;
+
+  auto &C = getContext();
+  auto *S = C.getCOFFSection(
+      Section, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
+      SectionKind::getReadOnly());
+  Streamer.SwitchSection(S);
+  Streamer.EmitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
+  Streamer.EmitIntValue(Version, 4);
+  Streamer.EmitIntValue(Flags, 4);
+  Streamer.AddBlankLine();
 }
 
 void TargetLoweringObjectFileCOFF::Initialize(MCContext &Ctx,

@@ -81,6 +81,9 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 
     // Silence warnings about raw pointers and other unchecked iterators.
     #define _SCL_SECURE_NO_WARNINGS
+
+    // Silence warnings about features that are deprecated in C++17.
+    #define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
 #endif // _LIBCXX_IN_DEVCRT
 
 #include <ciso646>

@@ -162,6 +162,8 @@ static int run(int argc, char **argv) {
         Res.FinalDefinitionInLinkageUnit = true;
       else if (C == 'x')
         Res.VisibleToRegularObj = true;
+      else if (C == 'r')
+        Res.LinkerRedefined = true;
       else {
         llvm::errs() << "invalid character " << C << " in resolution: " << R
                      << '\n';

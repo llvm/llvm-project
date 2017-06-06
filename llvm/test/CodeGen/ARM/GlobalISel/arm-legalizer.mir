@@ -317,7 +317,7 @@ fixedStack:
   - { id: 0, offset: 0, size: 4, alignment: 4, isImmutable: true, isAliased: false }
   - { id: 1, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
   - { id: 2, offset: 8, size: 4, alignment: 4, isImmutable: true, isAliased: false }
-  # CHECK: id: [[FRAME_INDEX:[0-9]+]], offset: 8
+  # CHECK: id: [[FRAME_INDEX:[0-9]+]], type: default, offset: 8
 body:             |
   bb.0:
     liveins: %r0, %r1, %r2, %r3

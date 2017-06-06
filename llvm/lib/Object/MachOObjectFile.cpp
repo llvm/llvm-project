@@ -4314,3 +4314,9 @@ ObjectFile::createMachOObjectFile(MemoryBufferRef Buffer,
   return make_error<GenericBinaryError>("Unrecognized MachO magic number",
                                         object_error::invalid_file_type);
 }
+
+StringRef MachOObjectFile::mapDebugSectionName(StringRef Name) const {
+  return StringSwitch<StringRef>(Name)
+      .Case("debug_str_offs", "debug_str_offsets")
+      .Default(Name);
+}

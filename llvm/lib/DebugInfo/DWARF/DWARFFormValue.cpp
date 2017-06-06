@@ -301,6 +301,7 @@ bool DWARFFormValue::isFormClass(DWARFFormValue::FormClass FC) const {
     return (FC == FC_Address);
   case DW_FORM_GNU_str_index:
   case DW_FORM_GNU_strp_alt:
+  case DW_FORM_strx:
     return (FC == FC_String);
   case DW_FORM_implicit_const:
     return (FC == FC_Constant);
@@ -415,6 +416,7 @@ bool DWARFFormValue::extractValue(const DataExtractor &Data,
       break;
     case DW_FORM_GNU_addr_index:
     case DW_FORM_GNU_str_index:
+    case DW_FORM_strx:
       Value.uval = Data.getULEB128(OffsetPtr);
       break;
     default:
@@ -542,6 +544,7 @@ void DWARFFormValue::dump(raw_ostream &OS) const {
     OS << format(" .debug_str[0x%8.8x] = ", (uint32_t)UValue);
     dumpString(OS);
     break;
+  case DW_FORM_strx:
   case DW_FORM_GNU_str_index:
     OS << format(" indexed (%8.8x) string = ", (uint32_t)UValue);
     dumpString(OS);
@@ -620,10 +623,11 @@ Optional<const char *> DWARFFormValue::getAsCString() const {
   if (Form == DW_FORM_GNU_strp_alt || U == nullptr)
     return None;
   uint32_t Offset = Value.uval;
-  if (Form == DW_FORM_GNU_str_index) {
-    uint32_t StrOffset;
+  if (Form == DW_FORM_GNU_str_index || Form == DW_FORM_strx) {
+    uint64_t StrOffset;
     if (!U->getStringOffsetSectionItem(Offset, StrOffset))
       return None;
+    StrOffset += U->getStringOffsetSectionRelocation(Offset);
     Offset = StrOffset;
   }
   if (const char *Str = U->getStringExtractor().getCStr(&Offset)) {

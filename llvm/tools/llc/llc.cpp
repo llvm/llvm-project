@@ -401,7 +401,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     if (StringRef(InputFilename).endswith_lower(".mir")) {
       MIR = createMIRParserFromFile(InputFilename, Err, Context);
       if (MIR)
-        M = MIR->parseLLVMModule();
+        M = MIR->parseIRModule();
     } else
       M = parseIRFile(InputFilename, Err, Context);
     if (!M) {
@@ -518,54 +518,67 @@ static int compileModule(char **argv, LLVMContext &Context) {
       OS = BOS.get();
     }
 
-    if (!RunPassNames->empty()) {
-      if (!StartAfter.empty() || !StopAfter.empty() || !StartBefore.empty() ||
-          !StopBefore.empty()) {
-        errs() << argv[0] << ": start-after and/or stop-after passes are "
-                             "redundant when run-pass is specified.\n";
-        return 1;
-      }
-      if (!MIR) {
-        errs() << argv[0] << ": run-pass needs a .mir input.\n";
-        return 1;
-      }
+    const char *argv0 = argv[0];
+    AnalysisID StartBeforeID = getPassID(argv0, "start-before", StartBefore);
+    AnalysisID StartAfterID = getPassID(argv0, "start-after", StartAfter);
+    AnalysisID StopAfterID = getPassID(argv0, "stop-after", StopAfter);
+    AnalysisID StopBeforeID = getPassID(argv0, "stop-before", StopBefore);
+    if (StartBeforeID && StartAfterID) {
+      errs() << argv0 << ": -start-before and -start-after specified!\n";
+      return 1;
+    }
+    if (StopBeforeID && StopAfterID) {
+      errs() << argv0 << ": -stop-before and -stop-after specified!\n";
+      return 1;
+    }
+
+    if (MIR) {
+      // Construct a custom pass pipeline that starts after instruction
+      // selection.
       LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine&>(*Target);
       TargetPassConfig &TPC = *LLVMTM.createPassConfig(PM);
+      TPC.setDisableVerify(NoVerify);
       PM.add(&TPC);
       MachineModuleInfo *MMI = new MachineModuleInfo(&LLVMTM);
-      MMI->setMachineFunctionInitializer(MIR.get());
+      if (MIR->parseMachineFunctions(*M, *MMI))
+        return 1;
       PM.add(MMI);
       TPC.printAndVerify("");
 
-      for (const std::string &RunPassName : *RunPassNames) {
-        if (addPass(PM, argv[0], RunPassName, TPC))
+      if (!RunPassNames->empty()) {
+        if (!StartAfter.empty() || !StopAfter.empty() || !StartBefore.empty() ||
+            !StopBefore.empty()) {
+          errs() << argv0 << ": start-after and/or stop-after passes are "
+                               "redundant when run-pass is specified.\n";
           return 1;
-      }
-      PM.add(createPrintMIRPass(*OS));
-    } else {
-      const char *argv0 = argv[0];
-      AnalysisID StartBeforeID = getPassID(argv0, "start-before", StartBefore);
-      AnalysisID StartAfterID = getPassID(argv0, "start-after", StartAfter);
-      AnalysisID StopAfterID = getPassID(argv0, "stop-after", StopAfter);
-      AnalysisID StopBeforeID = getPassID(argv0, "stop-before", StopBefore);
+        }
 
-      if (StartBeforeID && StartAfterID) {
-        errs() << argv[0] << ": -start-before and -start-after specified!\n";
-        return 1;
+        for (const std::string &RunPassName : *RunPassNames) {
+          if (addPass(PM, argv0, RunPassName, TPC))
+            return 1;
+        }
+      } else {
+        TPC.setStartStopPasses(StartBeforeID, StartAfterID, StopBeforeID,
+                               StopAfterID);
+        TPC.addISelPasses();
+        TPC.addMachinePasses();
       }
-      if (StopBeforeID && StopAfterID) {
-        errs() << argv[0] << ": -stop-before and -stop-after specified!\n";
-        return 1;
-      }
+      TPC.setInitialized();
 
-      // Ask the target to add backend passes as necessary.
-      if (Target->addPassesToEmitFile(PM, *OS, FileType, NoVerify,
-                                      StartBeforeID, StartAfterID, StopBeforeID,
-                                      StopAfterID, MIR.get())) {
-        errs() << argv[0] << ": target does not support generation of this"
+      if (!StopBefore.empty() || !StopAfter.empty() || !RunPassNames->empty()) {
+        PM.add(createPrintMIRPass(*OS));
+      } else if (LLVMTM.addAsmPrinter(PM, *OS, FileType, MMI->getContext())) {
+        errs() << argv0 << ": target does not support generation of this"
                << " file type!\n";
         return 1;
       }
+      PM.add(createFreeMachineFunctionPass());
+    } else if (Target->addPassesToEmitFile(PM, *OS, FileType, NoVerify,
+                                           StartBeforeID, StartAfterID,
+                                           StopBeforeID, StopAfterID)) {
+      errs() << argv0 << ": target does not support generation of this"
+        << " file type!\n";
+      return 1;
     }
 
     // Before executing passes, print the final values of the LLVM options.

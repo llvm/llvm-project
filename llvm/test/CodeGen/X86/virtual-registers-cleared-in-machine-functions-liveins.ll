@@ -15,5 +15,5 @@ body:
 ; PRE-RA-NEXT: - { reg: '%esi', virtual-reg: '%1' }
 
 ; POST-RA: liveins:
-; POST-RA-NEXT: - { reg: '%edi' }
-; POST-RA-NEXT: - { reg: '%esi' }
+; POST-RA-NEXT: - { reg: '%edi', virtual-reg: '' }
+; POST-RA-NEXT: - { reg: '%esi', virtual-reg: '' }

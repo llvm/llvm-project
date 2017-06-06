@@ -10,6 +10,8 @@
 #include "C13DebugFragmentVisitor.h"
 
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugCrossExSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugCrossImpSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
@@ -48,18 +50,34 @@ Error C13DebugFragmentVisitor::visitInlineeLines(
   return Error::success();
 }
 
+Error C13DebugFragmentVisitor::visitCrossModuleExports(
+    codeview::DebugCrossModuleExportsSubsectionRef &Exports) {
+  this->CrossExports.push_back(Exports);
+  return Error::success();
+}
+
+Error C13DebugFragmentVisitor::visitCrossModuleImports(
+    codeview::DebugCrossModuleImportsSubsectionRef &Imports) {
+  this->CrossImports.push_back(Imports);
+  return Error::success();
+}
+
 Error C13DebugFragmentVisitor::finished() {
-  if (!Checksums.hasValue()) {
-    assert(Lines.empty());
-    return Error::success();
+  if (Checksums.hasValue()) {
+    if (auto EC = handleFileChecksums())
+      return EC;
+
+    if (auto EC = handleLines())
+      return EC;
+
+    if (auto EC = handleInlineeLines())
+      return EC;
   }
-  if (auto EC = handleFileChecksums())
+
+  if (auto EC = handleCrossModuleExports())
     return EC;
 
-  if (auto EC = handleLines())
-    return EC;
-
-  if (auto EC = handleInlineeLines())
+  if (auto EC = handleCrossModuleImports())
     return EC;
 
   return Error::success();

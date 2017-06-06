@@ -784,6 +784,21 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
       return false;
     MIB.addUse(getOrCreateVReg(*Arg));
   }
+
+  // Add a MachineMemOperand if it is a target mem intrinsic.
+  const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
+  TargetLowering::IntrinsicInfo Info;
+  // TODO: Add a GlobalISel version of getTgtMemIntrinsic.
+  if (TLI.getTgtMemIntrinsic(Info, CI, ID)) {
+    MachineMemOperand::Flags Flags =
+        Info.vol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
+    Flags |=
+        Info.readMem ? MachineMemOperand::MOLoad : MachineMemOperand::MOStore;
+    uint64_t Size = Info.memVT.getSizeInBits() >> 3;
+    MIB.addMemOperand(MF->getMachineMemOperand(MachinePointerInfo(Info.ptrVal),
+                                               Flags, Size, Info.align));
+  }
+
   return true;
 }
 

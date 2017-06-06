@@ -20,6 +20,8 @@ namespace codeview {
 class DebugChecksumsSubsectionRef;
 class DebugSubsectionRecord;
 class DebugInlineeLinesSubsectionRef;
+class DebugCrossModuleExportsSubsectionRef;
+class DebugCrossModuleImportsSubsectionRef;
 class DebugLinesSubsectionRef;
 class DebugUnknownSubsectionRef;
 
@@ -39,6 +41,16 @@ public:
   }
 
   virtual Error visitInlineeLines(DebugInlineeLinesSubsectionRef &Inlinees) {
+    return Error::success();
+  }
+
+  virtual Error
+  visitCrossModuleExports(DebugCrossModuleExportsSubsectionRef &CSE) {
+    return Error::success();
+  }
+
+  virtual Error
+  visitCrossModuleImports(DebugCrossModuleImportsSubsectionRef &CSE) {
     return Error::success();
   }
 

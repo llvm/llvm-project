@@ -20,6 +20,7 @@
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
@@ -95,6 +96,16 @@ static cl::opt<bool> VerifyMachineCode("verify-machineinstrs", cl::Hidden,
 static cl::opt<bool> EnableMachineOutliner("enable-machine-outliner",
     cl::Hidden,
     cl::desc("Enable machine outliner"));
+// Enable or disable FastISel. Both options are needed, because
+// FastISel is enabled by default with -fast, and we wish to be
+// able to enable or disable fast-isel independently from -O0.
+static cl::opt<cl::boolOrDefault>
+EnableFastISelOption("fast-isel", cl::Hidden,
+  cl::desc("Enable the \"fast\" instruction selector"));
+
+static cl::opt<cl::boolOrDefault>
+    EnableGlobalISel("global-isel", cl::Hidden,
+                     cl::desc("Enable the \"global\" instruction selector"));
 
 static cl::opt<std::string>
 PrintMachineInstrs("print-machineinstrs", cl::ValueOptional,
@@ -569,6 +580,66 @@ void TargetPassConfig::addISelPrepare() {
   // to ensure that the IR is valid.
   if (!DisableVerify)
     addPass(createVerifierPass());
+}
+
+bool TargetPassConfig::addCoreISelPasses() {
+  // Enable FastISel with -fast, but allow that to be overridden.
+  TM->setO0WantsFastISel(EnableFastISelOption != cl::BOU_FALSE);
+  if (EnableFastISelOption == cl::BOU_TRUE ||
+      (TM->getOptLevel() == CodeGenOpt::None && TM->getO0WantsFastISel()))
+    TM->setFastISel(true);
+
+  // Ask the target for an isel.
+  // Enable GlobalISel if the target wants to, but allow that to be overriden.
+  if (EnableGlobalISel == cl::BOU_TRUE ||
+      (EnableGlobalISel == cl::BOU_UNSET && isGlobalISelEnabled())) {
+    if (addIRTranslator())
+      return true;
+
+    addPreLegalizeMachineIR();
+
+    if (addLegalizeMachineIR())
+      return true;
+
+    // Before running the register bank selector, ask the target if it
+    // wants to run some passes.
+    addPreRegBankSelect();
+
+    if (addRegBankSelect())
+      return true;
+
+    addPreGlobalInstructionSelect();
+
+    if (addGlobalInstructionSelect())
+      return true;
+
+    // Pass to reset the MachineFunction if the ISel failed.
+    addPass(createResetMachineFunctionPass(
+        reportDiagnosticWhenGlobalISelFallback(), isGlobalISelAbortEnabled()));
+
+    // Provide a fallback path when we do not want to abort on
+    // not-yet-supported input.
+    if (!isGlobalISelAbortEnabled() && addInstSelector())
+      return true;
+
+  } else if (addInstSelector())
+    return true;
+
+  return false;
+}
+
+bool TargetPassConfig::addISelPasses() {
+  if (TM->Options.EmulatedTLS)
+    addPass(createLowerEmuTLSPass());
+
+  addPass(createPreISelIntrinsicLoweringPass());
+  addPass(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
+  addIRPasses();
+  addCodeGenPrepare();
+  addPassesToHandleExceptions();
+  addISelPrepare();
+
+  return addCoreISelPasses();
 }
 
 /// -regalloc=... command line option.

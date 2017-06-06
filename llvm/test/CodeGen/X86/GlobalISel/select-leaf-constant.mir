@@ -29,7 +29,7 @@ regBankSelected: true
 selected:        false
 # CHECK-LABEL: name: const_i32_1
 # CHECK:       registers:
-# CHECK-NEXT:  - { id: 0, class: gr32 }
+# CHECK-NEXT:  - { id: 0, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
 # CHECK:  body:
@@ -47,7 +47,7 @@ regBankSelected: true
 selected:        false
 # CHECK-LABEL: name: const_i32_1_optsize
 # CHECK:       registers:
-# CHECK-NEXT:  - { id: 0, class: gr32 }
+# CHECK-NEXT:  - { id: 0, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
 # CHECK:  body:
@@ -65,7 +65,7 @@ regBankSelected: true
 selected:        false
 # CHECK-LABEL: name: const_i32_1b
 # CHECK:       registers:
-# CHECK-NEXT:  - { id: 0, class: gr32 }
+# CHECK-NEXT:  - { id: 0, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
 # CHECK:  body:
@@ -83,7 +83,7 @@ regBankSelected: true
 selected:        false
 # CHECK-LABEL: name: const_i32_1_optsizeb
 # CHECK:       registers:
-# CHECK-NEXT:  - { id: 0, class: gr32 }
+# CHECK-NEXT:  - { id: 0, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
 # CHECK:  body:

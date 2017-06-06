@@ -15,26 +15,26 @@
 #include "gtest/gtest.h"
 
 #include "PipSqueak.h"
-#include <string>
 
 using namespace llvm;
 using namespace llvm::sys;
 
 extern "C" PIPSQUEAK_EXPORT const char *TestA() { return "ProcessCall"; }
 
-std::string LibPath() {
+std::string LibPath(const std::string Name = "PipSqueak") {
   const std::vector<testing::internal::string>& Argvs = testing::internal::GetArgvs();
   const char *Argv0 = Argvs.size() > 0 ? Argvs[0].c_str() : "DynamicLibraryTests";
   void *Ptr = (void*)(intptr_t)TestA;
   std::string Path = fs::getMainExecutable(Argv0, Ptr);
   llvm::SmallString<256> Buf(path::parent_path(Path));
-  path::append(Buf, "PipSqueak.so");
+  path::append(Buf, (Name+".so").c_str());
   return Buf.str();
 }
 
 #if defined(_WIN32) || (defined(HAVE_DLFCN_H) && defined(HAVE_DLOPEN))
 
 typedef void (*SetStrings)(std::string &GStr, std::string &LStr);
+typedef void (*TestOrder)(std::vector<std::string> &V);
 typedef const char *(*GetString)();
 
 template <class T> static T FuncPtr(void *Ptr) {
@@ -100,26 +100,59 @@ TEST(DynamicLibrary, Overload) {
 }
 
 TEST(DynamicLibrary, Shutdown) {
-  std::string A, B;
+  std::string A("PipSqueak"), B, C("SecondLib");
+  std::vector<std::string> Order;
   {
     std::string Err;
     llvm_shutdown_obj Shutdown;
     DynamicLibrary DL =
-        DynamicLibrary::getPermanentLibrary(LibPath().c_str(), &Err);
+        DynamicLibrary::getPermanentLibrary(LibPath(A).c_str(), &Err);
     EXPECT_TRUE(DL.isValid());
     EXPECT_TRUE(Err.empty());
 
-    SetStrings SS = FuncPtr<SetStrings>(
+    SetStrings SS_0 = FuncPtr<SetStrings>(
         DynamicLibrary::SearchForAddressOfSymbol("SetStrings"));
-    EXPECT_TRUE(SS != nullptr);
+    EXPECT_TRUE(SS_0 != nullptr);
 
-    SS(A, B);
-    EXPECT_EQ(B, "Local::Local");
+    SS_0(A, B);
+    EXPECT_EQ(B, "Local::Local(PipSqueak)");
+
+    TestOrder TO_0 = FuncPtr<TestOrder>(
+        DynamicLibrary::SearchForAddressOfSymbol("TestOrder"));
+    EXPECT_TRUE(TO_0 != nullptr);
+    
+    DynamicLibrary DL2 =
+        DynamicLibrary::getPermanentLibrary(LibPath(C).c_str(), &Err);
+    EXPECT_TRUE(DL2.isValid());
+    EXPECT_TRUE(Err.empty());
+
+    // Should find latest version of symbols in SecondLib
+    SetStrings SS_1 = FuncPtr<SetStrings>(
+        DynamicLibrary::SearchForAddressOfSymbol("SetStrings"));
+    EXPECT_TRUE(SS_1 != nullptr);
+    EXPECT_TRUE(SS_0 != SS_1);
+
+    TestOrder TO_1 = FuncPtr<TestOrder>(
+        DynamicLibrary::SearchForAddressOfSymbol("TestOrder"));
+    EXPECT_TRUE(TO_1 != nullptr);
+    EXPECT_TRUE(TO_0 != TO_1);
+
+    B.clear();
+    SS_1(C, B);
+    EXPECT_EQ(B, "Local::Local(SecondLib)");
+
+    TO_0(Order);
+    TO_1(Order);
   }
   EXPECT_EQ(A, "Global::~Global");
   EXPECT_EQ(B, "Local::~Local");
   EXPECT_TRUE(FuncPtr<SetStrings>(DynamicLibrary::SearchForAddressOfSymbol(
                   "SetStrings")) == nullptr);
+
+  // Test unload/destruction ordering
+  EXPECT_EQ(Order.size(), 2UL);
+  EXPECT_EQ(Order.front(), "SecondLib");
+  EXPECT_EQ(Order.back(), "PipSqueak");
 }
 
 #else

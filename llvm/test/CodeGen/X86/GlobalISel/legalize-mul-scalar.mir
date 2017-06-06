@@ -24,9 +24,9 @@ alignment:       4
 legalized:       false
 regBankSelected: false
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: _ }
-# CHECK-NEXT:   - { id: 1, class: _ }
-# CHECK-NEXT:   - { id: 2, class: _ }
+# CHECK-NEXT:   - { id: 0, class: _, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: _, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: _, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -56,9 +56,9 @@ alignment:       4
 legalized:       false
 regBankSelected: false
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: _ }
-# CHECK-NEXT:   - { id: 1, class: _ }
-# CHECK-NEXT:   - { id: 2, class: _ }
+# CHECK-NEXT:   - { id: 0, class: _, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: _, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: _, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -88,9 +88,9 @@ alignment:       4
 legalized:       false
 regBankSelected: false
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: _ }
-# CHECK-NEXT:   - { id: 1, class: _ }
-# CHECK-NEXT:   - { id: 2, class: _ }
+# CHECK-NEXT:   - { id: 0, class: _, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: _, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: _, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

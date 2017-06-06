@@ -506,6 +506,20 @@ CAMLprim value llvm_is_opaque(LLVMTypeRef StructTy) {
 
 /*--... Operations on array, pointer, and vector types .....................--*/
 
+/* lltype -> lltype array */
+CAMLprim value llvm_subtypes(LLVMTypeRef Ty) {
+    CAMLparam0();
+    CAMLlocal1(Arr);
+
+    unsigned Size = LLVMGetNumContainedTypes(Ty);
+
+    Arr = caml_alloc(Size, 0);
+
+    LLVMGetSubtypes(Ty, (LLVMTypeRef *) Arr);
+
+    CAMLreturn(Arr);
+}
+
 /* lltype -> int -> lltype */
 CAMLprim LLVMTypeRef llvm_array_type(LLVMTypeRef ElementTy, value Count) {
   return LLVMArrayType(ElementTy, Int_val(Count));

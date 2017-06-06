@@ -1111,7 +1111,7 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   Builder.CreateRetVoid();
 
   MachineModuleInfo &MMI = getAnalysis<MachineModuleInfo>();
-  MachineFunction &MF = MMI.getMachineFunction(*F);
+  MachineFunction &MF = MMI.getOrCreateMachineFunction(*F);
   MachineBasicBlock &MBB = *MF.CreateMachineBasicBlock();
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
@@ -1207,7 +1207,7 @@ bool MachineOutliner::runOnModule(Module &M) {
     return false;
 
   MachineModuleInfo &MMI = getAnalysis<MachineModuleInfo>();
-  const TargetSubtargetInfo &STI = MMI.getMachineFunction(*M.begin())
+  const TargetSubtargetInfo &STI = MMI.getOrCreateMachineFunction(*M.begin())
                                       .getSubtarget();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   const TargetInstrInfo *TII = STI.getInstrInfo();
@@ -1216,7 +1216,7 @@ bool MachineOutliner::runOnModule(Module &M) {
 
   // Build instruction mappings for each function in the module.
   for (Function &F : M) {
-    MachineFunction &MF = MMI.getMachineFunction(F);
+    MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
 
     // Is the function empty? Safe to outline from?
     if (F.empty() || !TII->isFunctionSafeToOutlineFrom(MF))

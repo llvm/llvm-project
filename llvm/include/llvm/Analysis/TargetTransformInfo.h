@@ -267,6 +267,19 @@ public:
   /// incurs significant execution cost.
   bool isLoweredToCall(const Function *F) const;
 
+  struct LSRCost {
+    /// TODO: Some of these could be merged. Also, a lexical ordering
+    /// isn't always optimal.
+    unsigned Insns;
+    unsigned NumRegs;
+    unsigned AddRecCost;
+    unsigned NumIVMuls;
+    unsigned NumBaseAdds;
+    unsigned ImmCost;
+    unsigned SetupCost;
+    unsigned ScaleCost;
+  };
+
   /// Parameters that control the generic loop unrolling transformation.
   struct UnrollingPreferences {
     /// The cost threshold for the unrolled loop. Should be relative to the
@@ -384,6 +397,10 @@ public:
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                              bool HasBaseReg, int64_t Scale,
                              unsigned AddrSpace = 0) const;
+
+  /// \brief Return true if LSR cost of C1 is lower than C1.
+  bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
+                     TargetTransformInfo::LSRCost &C2) const;
 
   /// \brief Return true if the target supports masked load/store
   /// AVX2 and AVX-512 targets allow masks for consecutive load and store
@@ -809,6 +826,8 @@ public:
                                      int64_t BaseOffset, bool HasBaseReg,
                                      int64_t Scale,
                                      unsigned AddrSpace) = 0;
+  virtual bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
+                             TargetTransformInfo::LSRCost &C2) = 0;
   virtual bool isLegalMaskedStore(Type *DataType) = 0;
   virtual bool isLegalMaskedLoad(Type *DataType) = 0;
   virtual bool isLegalMaskedScatter(Type *DataType) = 0;
@@ -995,6 +1014,10 @@ public:
                              unsigned AddrSpace) override {
     return Impl.isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg,
                                       Scale, AddrSpace);
+  }
+  bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
+                     TargetTransformInfo::LSRCost &C2) override {
+    return Impl.isLSRCostLess(C1, C2);
   }
   bool isLegalMaskedStore(Type *DataType) override {
     return Impl.isLegalMaskedStore(DataType);

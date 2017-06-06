@@ -1,29 +1,6 @@
 # Check that llvm-readobj shows arch specific ELF section flags.
 
-# RUN: yaml2obj -docnum 1 %s > %t-amdgpu.o
-# RUN: llvm-readobj -s %t-amdgpu.o | FileCheck -check-prefix=AMD %s
-
-# AMD:      Flags [ (0x300000)
-# AMD-NEXT:   SHF_AMDGPU_HSA_GLOBAL (0x100000)
-# AMD-NEXT:   SHF_AMDGPU_HSA_READONLY (0x200000)
-# AMD-NEXT: ]
-
-# amdgpu.o
---- !ELF
-FileHeader:
-  Class:    ELFCLASS64
-  Data:     ELFDATA2LSB
-  OSABI:    ELFOSABI_GNU
-  Type:     ET_REL
-  Machine:  EM_AMDGPU
-  Flags:    []
-Sections:
-  - Name:   .amdgpu
-    Type:   SHT_PROGBITS
-    Flags:  [SHF_AMDGPU_HSA_GLOBAL, SHF_AMDGPU_HSA_READONLY]
-    Size:   4
-
-# RUN: yaml2obj -docnum 2 %s > %t-hex.o
+# RUN: yaml2obj -docnum 1 %s > %t-hex.o
 # RUN: llvm-readobj -s %t-hex.o | FileCheck -check-prefix=HEX %s
 
 # HEX:      Flags [ (0x10000000)
@@ -44,7 +21,7 @@ Sections:
     Flags:  [SHF_HEX_GPREL]
     Size:   4
 
-# RUN: yaml2obj -docnum 3 %s > %t-mips.o
+# RUN: yaml2obj -docnum 2 %s > %t-mips.o
 # RUN: llvm-readobj -s %t-mips.o | FileCheck -check-prefix=MIPS %s
 
 # MIPS:      Flags [ (0x38000000)
@@ -67,7 +44,7 @@ Sections:
     Flags:  [SHF_MIPS_GPREL, SHF_MIPS_MERGE, SHF_MIPS_NOSTRIP]
     Size:   4
 
-# RUN: yaml2obj -docnum 4 %s > %t-x86_64.o
+# RUN: yaml2obj -docnum 3 %s > %t-x86_64.o
 # RUN: llvm-readobj -s %t-x86_64.o | FileCheck -check-prefix=X86_64 %s
 
 # X86_64:      Flags [ (0x10000000)

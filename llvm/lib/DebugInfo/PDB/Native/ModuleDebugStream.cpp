@@ -90,14 +90,14 @@ Error ModuleDebugStreamRef::commit() { return Error::success(); }
 
 Expected<codeview::DebugChecksumsSubsectionRef>
 ModuleDebugStreamRef::findChecksumsSubsection() const {
+  codeview::DebugChecksumsSubsectionRef Result;
   for (const auto &SS : subsections()) {
     if (SS.kind() != DebugSubsectionKind::FileChecksums)
       continue;
 
-    codeview::DebugChecksumsSubsectionRef Result;
     if (auto EC = Result.initialize(SS.getRecordData()))
       return std::move(EC);
     return Result;
   }
-  return make_error<RawError>(raw_error_code::no_entry);
+  return Result;
 }

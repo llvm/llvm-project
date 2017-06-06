@@ -10,6 +10,8 @@
 #include "llvm/DebugInfo/CodeView/DebugSubsectionVisitor.h"
 
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugCrossExSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugCrossImpSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
@@ -43,6 +45,18 @@ Error llvm::codeview::visitDebugSubsection(const DebugSubsectionRecord &R,
     if (auto EC = Fragment.initialize(Reader))
       return EC;
     return V.visitInlineeLines(Fragment);
+  }
+  case DebugSubsectionKind::CrossScopeExports: {
+    DebugCrossModuleExportsSubsectionRef Section;
+    if (auto EC = Section.initialize(Reader))
+      return EC;
+    return V.visitCrossModuleExports(Section);
+  }
+  case DebugSubsectionKind::CrossScopeImports: {
+    DebugCrossModuleImportsSubsectionRef Section;
+    if (auto EC = Section.initialize(Reader))
+      return EC;
+    return V.visitCrossModuleImports(Section);
   }
   default: {
     DebugUnknownSubsectionRef Fragment(R.kind(), R.getRecordData());

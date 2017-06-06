@@ -17,7 +17,6 @@
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
-#include "llvm/DebugInfo/CodeView/DebugSubsectionVisitor.h"
 #include "llvm/DebugInfo/CodeView/DebugUnknownSubsection.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"

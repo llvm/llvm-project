@@ -258,13 +258,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
-  for (BaseCommand *Base : Script->Opt.Commands)
-    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
-      OutputSectionCommands.push_back(Cmd);
-
-  clearOutputSections();
-
-  if (!Script->Opt.HasSections &&!Config->Relocatable)
+  if (!Script->Opt.HasSections && !Config->Relocatable)
     fixSectionAlignments();
 
   // If -compressed-debug-sections is specified, we need to compress
@@ -1267,6 +1261,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     Script->fabricateDefaultCommands();
   else
     Script->synchronize();
+  for (BaseCommand *Base : Script->Opt.Commands)
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
+      OutputSectionCommands.push_back(Cmd);
 
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
@@ -1277,6 +1274,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // createThunks may have added local symbols to the static symbol table
   applySynthetic({InX::SymTab, InX::ShStrTab, InX::StrTab},
                  [](SyntheticSection *SS) { SS->postThunkContents(); });
+
+  clearOutputSections();
 }
 
 template <class ELFT> void Writer<ELFT>::addPredefinedSections() {

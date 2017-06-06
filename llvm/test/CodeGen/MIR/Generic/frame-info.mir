@@ -36,9 +36,13 @@ tracksRegLiveness: true
 # CHECK-NEXT: maxAlignment:
 # CHECK-NEXT: adjustsStack: false
 # CHECK-NEXT: hasCalls: false
+# CHECK-NEXT: stackProtector:  ''
+# CHECK-NEXT: maxCallFrameSize:
 # CHECK-NEXT: hasOpaqueSPAdjustment: false
 # CHECK-NEXT: hasVAStart: false
 # CHECK-NEXT: hasMustTailInVarArgFunc: false
+# CHECK-NEXT: savePoint:       ''
+# CHECK-NEXT: restorePoint:    ''
 # CHECK: body
 frameInfo:
   maxAlignment:    4
@@ -61,6 +65,7 @@ tracksRegLiveness: true
 # CHECK-NEXT: maxAlignment:
 # CHECK-NEXT: adjustsStack: true
 # CHECK-NEXT: hasCalls: true
+# CHECK-NEXT: stackProtector:  ''
 # CHECK-NEXT: maxCallFrameSize: 4
 # CHECK-NEXT: hasOpaqueSPAdjustment: true
 # CHECK-NEXT: hasVAStart: true

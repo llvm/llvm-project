@@ -47,6 +47,18 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(RegisterId)
 LLVM_YAML_DECLARE_ENUM_TRAITS(TrampolineType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(ThunkOrdinal)
 
+LLVM_YAML_STRONG_TYPEDEF(llvm::StringRef, TypeName)
+
+LLVM_YAML_DECLARE_SCALAR_TRAITS(TypeName, true)
+
+StringRef ScalarTraits<TypeName>::input(StringRef S, void *V, TypeName &T) {
+  return ScalarTraits<StringRef>::input(S, V, T.value);
+}
+void ScalarTraits<TypeName>::output(const TypeName &T, void *V,
+                                    llvm::raw_ostream &R) {
+  ScalarTraits<StringRef>::output(T.value, V, R);
+}
+
 void ScalarEnumerationTraits<SymbolKind>::enumeration(IO &io,
                                                       SymbolKind &Value) {
   auto SymbolNames = getSymbolTypeNames();
@@ -264,6 +276,7 @@ template <> void SymbolRecordImpl<InlineSiteSym>::map(IO &IO) {
 template <> void SymbolRecordImpl<LocalSym>::map(IO &IO) {
   IO.mapRequired("Type", Symbol.Type);
   IO.mapRequired("Flags", Symbol.Flags);
+
   IO.mapRequired("VarName", Symbol.Name);
 }
 

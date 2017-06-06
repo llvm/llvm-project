@@ -3,15 +3,12 @@
 
 # CHECK: Format: ELF64-amdgpu-hsacobj
 # CHECK: Arch: amdgcn
-# CHECK:  Machine: EM_AMDGPU (0xE0)
-# CHECK: Sections [
-# CHECK: Section {
-# CHECK: Name: .shf_amdgpu
-# CHECK: Flags [ (0xF00000)
-# CHECK: SHF_AMDGPU_HSA_AGENT (0x800000)
-# CHECK: SHF_AMDGPU_HSA_CODE (0x400000)
-# CHECK: SHF_AMDGPU_HSA_GLOBAL (0x100000)
-# CHECK: SHF_AMDGPU_HSA_READONLY (0x200000)
+# CHECK: ElfHeader {
+# CHECK:   Ident {
+# CHECK:     OS/ABI: AMDGPU_HSA (0x40)
+# CHECK:     ABIVersion: 0
+# CHECK:   }
+# CHECK:   Machine: EM_AMDGPU (0xE0)
 # CHECK: }
 
 --- !ELF
@@ -21,10 +18,4 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_AMDGPU
   OSABI:   ELFOSABI_AMDGPU_HSA
-
-Sections:
-  - Name:  .shf_amdgpu
-    Type:  SHT_PROGBITS
-    Flags: [ SHF_AMDGPU_HSA_GLOBAL, SHF_AMDGPU_HSA_READONLY,
-             SHF_AMDGPU_HSA_CODE, SHF_AMDGPU_HSA_AGENT]
 ...

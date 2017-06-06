@@ -257,3 +257,55 @@ TEST(DominatorTree, Unreachable) {
         DT->verifyDomTree();
       });
 }
+
+TEST(DominatorTree, NonUniqueEdges) {
+  StringRef ModuleString =
+      "define i32 @f(i32 %i, i32 *%p) {\n"
+      "bb0:\n"
+      "   store i32 %i, i32 *%p\n"
+      "   switch i32 %i, label %bb2 [\n"
+      "     i32 0, label %bb1\n"
+      "     i32 1, label %bb1\n"
+      "   ]\n"
+      " bb1:\n"
+      "   ret i32 1\n"
+      " bb2:\n"
+      "   ret i32 4\n"
+      "}\n";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  runWithDomTree(
+      *M, "f",
+      [&](Function &F, DominatorTree *DT, DominatorTreeBase<BasicBlock> *PDT) {
+        Function::iterator FI = F.begin();
+
+        BasicBlock *BB0 = &*FI++;
+        BasicBlock *BB1 = &*FI++;
+        BasicBlock *BB2 = &*FI++;
+
+        const TerminatorInst *TI = BB0->getTerminator();
+        assert(TI->getNumSuccessors() == 3 && "Switch has three successors");
+
+        BasicBlockEdge Edge_BB0_BB2(BB0, TI->getSuccessor(0));
+        assert(Edge_BB0_BB2.getEnd() == BB2 &&
+               "Default label is the 1st successor");
+
+        BasicBlockEdge Edge_BB0_BB1_a(BB0, TI->getSuccessor(1));
+        assert(Edge_BB0_BB1_a.getEnd() == BB1 && "BB1 is the 2nd successor");
+
+        BasicBlockEdge Edge_BB0_BB1_b(BB0, TI->getSuccessor(2));
+        assert(Edge_BB0_BB1_b.getEnd() == BB1 && "BB1 is the 3rd successor");
+
+        EXPECT_TRUE(DT->dominates(Edge_BB0_BB2, BB2));
+        EXPECT_FALSE(DT->dominates(Edge_BB0_BB2, BB1));
+
+        EXPECT_FALSE(DT->dominates(Edge_BB0_BB1_a, BB1));
+        EXPECT_FALSE(DT->dominates(Edge_BB0_BB1_b, BB1));
+
+        EXPECT_FALSE(DT->dominates(Edge_BB0_BB1_a, BB2));
+        EXPECT_FALSE(DT->dominates(Edge_BB0_BB1_b, BB2));
+      });
+}

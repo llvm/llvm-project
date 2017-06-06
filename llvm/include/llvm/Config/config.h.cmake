@@ -350,27 +350,6 @@
 /* Host triple LLVM will be executed on */
 #cmakedefine LLVM_HOST_TRIPLE "${LLVM_HOST_TRIPLE}"
 
-/* LLVM architecture name for the native architecture, if available */
-#cmakedefine LLVM_NATIVE_ARCH ${LLVM_NATIVE_ARCH}
-
-/* LLVM name for the native AsmParser init function, if available */
-#cmakedefine LLVM_NATIVE_ASMPARSER LLVMInitialize${LLVM_NATIVE_ARCH}AsmParser
-
-/* LLVM name for the native AsmPrinter init function, if available */
-#cmakedefine LLVM_NATIVE_ASMPRINTER LLVMInitialize${LLVM_NATIVE_ARCH}AsmPrinter
-
-/* LLVM name for the native Disassembler init function, if available */
-#cmakedefine LLVM_NATIVE_DISASSEMBLER LLVMInitialize${LLVM_NATIVE_ARCH}Disassembler
-
-/* LLVM name for the native Target init function, if available */
-#cmakedefine LLVM_NATIVE_TARGET LLVMInitialize${LLVM_NATIVE_ARCH}Target
-
-/* LLVM name for the native TargetInfo init function, if available */
-#cmakedefine LLVM_NATIVE_TARGETINFO LLVMInitialize${LLVM_NATIVE_ARCH}TargetInfo
-
-/* LLVM name for the native target MC init function, if available */
-#cmakedefine LLVM_NATIVE_TARGETMC LLVMInitialize${LLVM_NATIVE_ARCH}TargetMC
-
 /* Define if this is Unixish platform */
 #cmakedefine LLVM_ON_UNIX ${LLVM_ON_UNIX}
 

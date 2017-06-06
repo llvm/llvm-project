@@ -44,10 +44,6 @@ public:
 
   virtual void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) = 0;
 
-  virtual void EmitAMDGPUHsaModuleScopeGlobal(StringRef GlobalName) = 0;
-
-  virtual void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) = 0;
-
   virtual void EmitStartOfCodeObjectMetadata(const Module &Mod);
 
   virtual void EmitKernelCodeObjectMetadata(
@@ -73,10 +69,6 @@ public:
   void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) override;
 
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
-
-  void EmitAMDGPUHsaModuleScopeGlobal(StringRef GlobalName) override;
-
-  void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) override;
 
   /// \returns True on success, false on failure.
   bool EmitCodeObjectMetadata(StringRef YamlString) override;
@@ -104,10 +96,6 @@ public:
   void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) override;
 
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
-
-  void EmitAMDGPUHsaModuleScopeGlobal(StringRef GlobalName) override;
-
-  void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) override;
 
   /// \returns True on success, false on failure.
   bool EmitCodeObjectMetadata(StringRef YamlString) override;

@@ -1,0 +1,60 @@
+; RUN: llvm-pdbdump yaml2pdb -pdb=%t.pdb %p/Inputs/cross-module-import-export.yaml
+
+; RUN: llvm-pdbdump pdb2yaml -all -no-file-headers %t.pdb | FileCheck --check-prefix=YAML %s
+; RUN: llvm-pdbdump raw -all %t.pdb | FileCheck --check-prefix=RAW %s
+
+YAML:      Modules:
+YAML-NEXT:   - Module:          Foo.obj
+YAML-NEXT:     ObjFile:         Foo.obj
+YAML-NEXT:     Subsections:
+YAML-NEXT:       - !CrossModuleExports
+YAML-NEXT:         Exports:
+YAML-NEXT:           - LocalId:         4852
+YAML-NEXT:             GlobalId:        9283
+YAML-NEXT:           - LocalId:         2147487875
+YAML-NEXT:             GlobalId:        9123
+YAML:        - Module:          Bar.obj
+YAML-NEXT:     ObjFile:         Bar.obj
+YAML-NEXT:     Subsections:
+YAML-NEXT:       - !CrossModuleExports
+YAML-NEXT:         Exports:
+YAML-NEXT:           - LocalId:         4265
+YAML-NEXT:             GlobalId:        6097
+YAML-NEXT:           - LocalId:         4297
+YAML-NEXT:             GlobalId:        4677
+YAML-NEXT:       - !CrossModuleImports
+YAML-NEXT:         Imports:
+YAML-NEXT:           - Module:          Foo.obj
+YAML-NEXT:             Imports:         [ 4852, 2147487875 ]
+
+
+RAW:      DBI Stream {
+RAW:        Modules [
+RAW-NEXT:     {
+RAW-NEXT:       Name: Foo.obj
+RAW:            LineInfo [
+RAW-NEXT:         CrossModuleExports {
+RAW-NEXT:           Local: 0x12F4
+RAW-NEXT:           Global: 0x2443
+RAW-NEXT:           Local: 0x80001083
+RAW-NEXT:           Global: 0x23A3
+RAW-NEXT:         }
+RAW-NEXT:       ]
+RAW-NEXT:     }
+RAW-NEXT:     {
+RAW-NEXT:       Name: Bar.obj
+RAW:            LineInfo [
+RAW-NEXT:         CrossModuleExports {
+RAW-NEXT:           Local: 0x10A9
+RAW-NEXT:           Global: 0x17D1
+RAW-NEXT:           Local: 0x10C9
+RAW-NEXT:           Global: 0x1245
+RAW-NEXT:         }
+RAW-NEXT:         CrossModuleImports {
+RAW-NEXT:           Module: Foo.obj
+RAW-NEXT:           Imports: [0x12F4, 0x80001083]
+RAW-NEXT:         }
+RAW-NEXT:       ]
+RAW-NEXT:     }
+RAW-NEXT:   ]
+RAW-NEXT: }
